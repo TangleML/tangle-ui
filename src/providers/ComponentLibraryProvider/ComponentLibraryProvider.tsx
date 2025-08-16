@@ -8,7 +8,10 @@ import {
 } from "react";
 
 import ComponentDuplicateDialog from "@/components/shared/Dialogs/ComponentDuplicateDialog";
-import { fetchAndStoreComponentLibrary } from "@/services/componentService";
+import {
+  COMPONENT_LIBRARY_URL,
+  fetchAndStoreComponentLibrary,
+} from "@/services/componentService";
 import type {
   ComponentFolder,
   ComponentLibrary,
@@ -46,10 +49,21 @@ import {
   populateComponentRefs,
 } from "./componentLibrary";
 import { useForcedSearchContext } from "./ForcedSearchProvider";
+import { BrowserPersistedLibrary } from "./libraries/browserPersistedLibrary";
+import { GraphSpecReadonlyLibrary } from "./libraries/graphSpecReadonlyLibrary";
+import {
+  FAVORITE_COMPONENTS_LIBRARY_ID,
+  migrateLegacyFavoriteFolder,
+} from "./libraries/migrateLegacyFavoriteFolder";
 import { PublishedComponentsLibrary } from "./libraries/publishedComponentsLibrary";
 import type { Library } from "./libraries/types";
+import { YamlFileLibrary } from "./libraries/yamlFileLibrary";
 
-type AvailableComponentLibraries = "published_components";
+type AvailableComponentLibraries =
+  | "published_components"
+  | "favorite_components"
+  | "used_components"
+  | "standard_components";
 
 type ComponentLibraryContextType = {
   componentLibrary: ComponentLibrary | undefined;
@@ -102,6 +116,21 @@ export const ComponentLibraryProvider = ({
     () =>
       new Map<AvailableComponentLibraries, Library>([
         ["published_components", new PublishedComponentsLibrary(queryClient)],
+        [
+          FAVORITE_COMPONENTS_LIBRARY_ID,
+          new BrowserPersistedLibrary(
+            FAVORITE_COMPONENTS_LIBRARY_ID,
+            migrateLegacyFavoriteFolder,
+          ),
+        ],
+        [
+          "standard_components",
+          new YamlFileLibrary("Standard library", COMPONENT_LIBRARY_URL),
+        ],
+        [
+          "used_components",
+          new GraphSpecReadonlyLibrary("Used components", undefined),
+        ],
       ]),
     [queryClient],
   );
@@ -116,6 +145,16 @@ export const ComponentLibraryProvider = ({
     },
     [componentLibraries],
   );
+
+  useEffect(() => {
+    // kinda hacky yet
+    const usedComponentsLibrary = componentLibraries.get("used_components");
+    if (usedComponentsLibrary) {
+      (usedComponentsLibrary as GraphSpecReadonlyLibrary).setGraphSpec(
+        graphSpec,
+      );
+    }
+  }, [graphSpec]);
 
   const [componentLibrary, setComponentLibrary] = useState<ComponentLibrary>();
   const [userComponentsFolder, setUserComponentsFolder] =

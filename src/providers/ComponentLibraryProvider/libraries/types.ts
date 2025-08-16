@@ -23,6 +23,8 @@ export interface Library {
   ): Promise<void>;
 
   getComponents(filter?: LibraryFilterRequest): Promise<ComponentFolder>;
+
+  eventEmitter?: EventTarget;
 }
 
 export class InvalidComponentReferenceError extends Error {
@@ -42,5 +44,13 @@ export class DuplicateComponentError extends Error {
     super(
       `Component already exists in library: ${component.digest ?? component.url ?? ""}`,
     );
+  }
+}
+
+export class ReadOnlyLibraryError extends Error {
+  name = "ReadOnlyLibraryError";
+
+  constructor(message: string) {
+    super(message);
   }
 }

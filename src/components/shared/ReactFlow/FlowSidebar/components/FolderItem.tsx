@@ -6,9 +6,14 @@ import {
   useState,
 } from "react";
 
+import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
+import type { Library } from "@/providers/ComponentLibraryProvider/libraries/types";
+import { useLibraryComponents } from "@/providers/ComponentLibraryProvider/useLibraryComponents";
 import type { UIComponentFolder } from "@/types/componentLibrary";
 
 import { ComponentItemFromUrl, ComponentMarkup } from "./ComponentItem";
@@ -86,5 +91,40 @@ const FolderItem = ({ folder, icon }: FolderItemProps) => {
     </div>
   );
 };
+
+const FolderSkeleton = () => {
+  return (
+    <div className="w-full">
+      <div className="flex items-center px-4 py-1 cursor-pointer hover:bg-gray-100">
+        <Spinner />
+        <span className="truncate text-sm font-medium pl-1">
+          <Skeleton size="lg" color="dark" />
+        </span>
+        <div className="ml-auto">
+          <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export const LibraryFolderItem = withSuspenseWrapper(
+  ({
+    library,
+    ...rest
+  }: Omit<FolderItemProps, "folder"> & { library: Library }) => {
+    const folder = useLibraryComponents(library);
+
+    if (
+      (!folder.components || folder.components.length === 0) &&
+      (!folder.folders || folder.folders.length === 0)
+    ) {
+      return null;
+    }
+
+    return <FolderItem {...rest} folder={folder} />;
+  },
+  FolderSkeleton,
+);
 
 export default FolderItem;
