@@ -34,6 +34,17 @@ interface TaskNodeCallbacks {
   onUpgrade: (newComponentRef: ComponentReference) => void;
 }
 
+function noop() {}
+
+export const DEFAULT_TASK_NODE_CALLBACKS: TaskNodeCallbacks = {
+  setArguments: noop,
+  setAnnotations: noop,
+  onDelete: noop,
+  onDuplicate: noop,
+  onUpgrade: noop,
+  setCacheStaleness: noop,
+};
+
 // Dynamic Node Callback types - every callback has a version with the node & task id added to it as an input parameter
 export type CallbackWithIds<K extends keyof TaskNodeCallbacks> =
   TaskNodeCallbacks[K] extends (...args: infer A) => infer R
