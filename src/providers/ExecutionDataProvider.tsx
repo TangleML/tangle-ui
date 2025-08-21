@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { PropsWithChildren } from "react";
-import { useContext, useEffect, useMemo, useRef } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 
 import type {
   GetExecutionInfoResponse,
@@ -13,8 +13,8 @@ import {
 } from "@/hooks/useRequiredContext";
 import type { BreadcrumbSegment } from "@/hooks/useSubgraphBreadcrumbs";
 import { useSubgraphBreadcrumbs } from "@/hooks/useSubgraphBreadcrumbs";
-import { convertExecutionStatsToStatusCounts } from "@/services/executionService";
-import type { TaskStatusCounts } from "@/types/pipelineRun";
+import { processExecutionStatuses } from "@/services/executionService";
+import type { ExecutionStatus } from "@/types/pipelineRun";
 
 import { useComponentSpec } from "./ComponentSpecProvider";
 
@@ -32,9 +32,9 @@ interface ExecutionDataContextType {
   rootDetails: GetExecutionInfoResponse | undefined;
   rootState: GetGraphExecutionStateResponse | undefined;
   runId: string | undefined | null;
+  status: ExecutionStatus | undefined;
   isLoading: boolean;
   error: Error | null;
-  taskStatusCountsMap: Map<string, TaskStatusCounts>;
   segments: BreadcrumbSegment[];
 }
 
@@ -49,30 +49,10 @@ const isAtRootLevel = (path: string[]) => path.length <= 1;
 
 const buildPathKey = (path: string[]) => path.join(PATH_DELIMITER);
 
-const buildTaskStatusCountsMap = (
-  details?: GetExecutionInfoResponse,
-  state?: GetGraphExecutionStateResponse,
-): Map<string, TaskStatusCounts> => {
-  const taskStatusCountsMap = new Map<string, TaskStatusCounts>();
-
-  if (!details?.child_task_execution_ids) {
-    return taskStatusCountsMap;
-  }
-
-  Object.entries(details.child_task_execution_ids).forEach(
-    ([taskId, executionId]) => {
-      const statusStats = state?.child_execution_status_stats?.[executionId];
-
-      if (statusStats) {
-        const statusCounts = convertExecutionStatsToStatusCounts(statusStats);
-        taskStatusCountsMap.set(taskId, statusCounts);
-      }
-    },
-  );
-
-  return taskStatusCountsMap;
-};
-
+/**
+ * Traverses subgraph path to find execution ID at target level.
+ * Example: ["root", "task-1", "task-2"] returns execution ID for task-2.
+ */
 const findExecutionIdAtPath = (
   path: string[],
   rootExecutionId: string | undefined,
@@ -135,6 +115,7 @@ export function ExecutionDataProvider({
 }>) {
   const queryClient = useQueryClient();
   const { currentSubgraphPath, navigateToPath } = useComponentSpec();
+  const [status, setStatus] = useState<ExecutionStatus>();
 
   const executionDataCache = useRef<Map<string, CachedExecutionData>>(
     new Map(),
@@ -251,10 +232,10 @@ export function ExecutionDataProvider({
     isAtRoot,
   ]);
 
-  const taskStatusCountsMap = useMemo(
-    () => buildTaskStatusCountsMap(details, state),
-    [details, state],
-  );
+  useEffect(() => {
+    const status = processExecutionStatuses(details, state);
+    setStatus(status);
+  }, [details, state]);
 
   const value = useMemo(
     () => ({
@@ -265,9 +246,9 @@ export function ExecutionDataProvider({
       rootDetails,
       rootState,
       runId,
+      status,
       isLoading,
       error,
-      taskStatusCountsMap,
       segments,
     }),
     [
@@ -278,9 +259,9 @@ export function ExecutionDataProvider({
       rootDetails,
       rootState,
       runId,
+      status,
       isLoading,
       error,
-      taskStatusCountsMap,
       segments,
     ],
   );

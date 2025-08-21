@@ -18,10 +18,12 @@ const useLoadPipelineRuns = (pipelineName: string, backendUrl: string) => {
     if (res.latestRun) {
       const latestRun = res.latestRun as PipelineRun;
 
-      latestRun.status = await fetchExecutionStatus(
+      const runStatus = await fetchExecutionStatus(
         `${latestRun.root_execution_id}`,
         backendUrl,
       );
+
+      latestRun.status = runStatus?.run;
 
       setLatestRun(latestRun);
     }

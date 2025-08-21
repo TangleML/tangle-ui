@@ -1,3 +1,4 @@
+import type { ContainerExecutionStatus } from "@/api/types.gen";
 /**
  * Possible status values for a pipeline run, derived from aggregating task statuses
  */
@@ -28,4 +29,10 @@ export interface TaskStatusCounts {
   waiting: number;
   skipped: number;
   cancelled: number;
+}
+
+export interface ExecutionStatus {
+  run: RunStatus;
+  map: Record<string, ContainerExecutionStatus>;
+  counts: TaskStatusCounts;
 }
