@@ -39,8 +39,8 @@ const TaskOverview = ({ taskNode, actions }: TaskOverviewProps) => {
   const executionData = useExecutionDataOptional();
   const details = executionData?.details;
 
-  const { readOnly, runStatus } = state;
-  const disabled = !!runStatus;
+  const { readOnly, status } = state;
+  const disabled = !!status;
 
   if (!taskSpec || !taskId) {
     return null;
@@ -69,7 +69,7 @@ const TaskOverview = ({ taskNode, actions }: TaskOverviewProps) => {
           displayName={name}
           component={taskSpec.componentRef}
         />
-        {!!runStatus && <StatusIcon status={runStatus} tooltip label="task" />}
+        {readOnly && <StatusIcon status={status} tooltip label="task" />}
       </InlineStack>
 
       <div className="px-4 overflow-y-auto pb-4 h-full w-full">
@@ -110,7 +110,7 @@ const TaskOverview = ({ taskNode, actions }: TaskOverviewProps) => {
               componentDigest={taskSpec.componentRef.digest}
               url={taskSpec.componentRef.url}
               onDelete={callbacks.onDelete}
-              runStatus={runStatus}
+              status={status}
               hasDeletionConfirmation={false}
               readOnly={readOnly}
               additionalSection={[
@@ -159,11 +159,11 @@ const TaskOverview = ({ taskNode, actions }: TaskOverviewProps) => {
                 <div className="flex w-full justify-end pr-4">
                   <OpenLogsInNewWindowLink
                     executionId={executionId}
-                    status={runStatus}
+                    status={status}
                   />
                 </div>
               )}
-              <Logs executionId={executionId} status={runStatus} />
+              <Logs executionId={executionId} status={status} />
             </TabsContent>
           )}
           {!readOnly && (

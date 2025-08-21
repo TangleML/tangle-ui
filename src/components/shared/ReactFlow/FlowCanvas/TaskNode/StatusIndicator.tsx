@@ -12,7 +12,7 @@ import { QuickTooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 type StatusIndicatorProps = {
-  status?: ContainerExecutionStatus;
+  status: ContainerExecutionStatus;
   disabledCache?: boolean;
 };
 
@@ -20,9 +20,7 @@ export const StatusIndicator = ({
   status,
   disabledCache = false,
 }: StatusIndicatorProps) => {
-  if (!status) return null;
-
-  const { style, text, icon } = getRunStatus(status);
+  const { style, text, icon } = getStatusMetadata(status);
 
   return (
     <div className="absolute -z-1 -top-5 left-0 flex items-start">
@@ -47,7 +45,7 @@ export const StatusIndicator = ({
   );
 };
 
-const getRunStatus = (status: ContainerExecutionStatus) => {
+const getStatusMetadata = (status: ContainerExecutionStatus) => {
   switch (status) {
     case "SUCCEEDED":
       return {
