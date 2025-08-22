@@ -1,8 +1,9 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { PropsWithChildren } from "react";
-import { useContext, useEffect, useMemo, useRef } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 
 import type {
+  ContainerExecutionStatus,
   GetExecutionInfoResponse,
   GetGraphExecutionStateResponse,
 } from "@/api/types.gen";
@@ -28,6 +29,7 @@ interface ExecutionDataContextType {
   rootDetails: GetExecutionInfoResponse | undefined;
   rootState: GetGraphExecutionStateResponse | undefined;
   runId: string | undefined | null;
+  taskStatusMap: Record<string, ContainerExecutionStatus>;
   isLoading: boolean;
   error: Error | null;
 }
@@ -44,18 +46,45 @@ const isAtRootLevel = (path: string[]) => path.length <= 1;
 
 const buildPathKey = (path: string[]) => path.join(PATH_DELIMITER);
 
-const extractStatusFromStats = (
-  statusStats: Record<string, number>,
-): string | undefined => {
+const CONTAINER_EXECUTION_STATUSES = [
+  "INVALID",
+  "UNINITIALIZED",
+  "QUEUED",
+  "WAITING_FOR_UPSTREAM",
+  "PENDING",
+  "RUNNING",
+  "SUCCEEDED",
+  "FAILED",
+  "SYSTEM_ERROR",
+  "CANCELLING",
+  "CANCELLED",
+  "SKIPPED",
+] as const;
+
+const isContainerExecutionStatus = (
+  status: string,
+): status is ContainerExecutionStatus => {
+  return CONTAINER_EXECUTION_STATUSES.includes(
+    status as ContainerExecutionStatus,
+  );
+};
+
+const extractStatusFromStats = (statusStats: Record<string, number>) => {
   const statuses = Object.keys(statusStats);
-  return statuses.length > 0 ? statuses[0] : undefined;
+  const status = statuses.length > 0 ? statuses[0] : undefined;
+
+  if (status && isContainerExecutionStatus(status)) {
+    return status;
+  }
+
+  return undefined;
 };
 
 const buildTaskStatusMap = (
   details?: GetExecutionInfoResponse,
   state?: GetGraphExecutionStateResponse,
-): Map<string, string> => {
-  const taskStatusMap = new Map<string, string>();
+): Record<string, ContainerExecutionStatus> => {
+  const taskStatusMap: Record<string, ContainerExecutionStatus> = {};
 
   if (!details?.child_task_execution_ids) {
     return taskStatusMap;
@@ -70,7 +99,7 @@ const buildTaskStatusMap = (
         ? extractStatusFromStats(statusStats)
         : undefined;
 
-      taskStatusMap.set(taskId, status ?? DEFAULT_TASK_STATUS);
+      taskStatusMap[taskId] = status ?? DEFAULT_TASK_STATUS;
     },
   );
 
@@ -138,7 +167,11 @@ export function ExecutionDataProvider({
   children,
 }: PropsWithChildren<{ pipelineRunId: string }>) {
   const queryClient = useQueryClient();
-  const { currentSubgraphPath, setTaskStatusMap } = useComponentSpec();
+  const { currentSubgraphPath } = useComponentSpec();
+
+  const [taskStatusMap, setTaskStatusMap] = useState<
+    Record<string, ContainerExecutionStatus>
+  >({});
 
   const executionDataCache = useRef<Map<string, CachedExecutionData>>(
     new Map(),
@@ -210,9 +243,9 @@ export function ExecutionDataProvider({
   ]);
 
   useEffect(() => {
-    const taskStatusMap = buildTaskStatusMap(details, state);
-    setTaskStatusMap(taskStatusMap);
-  }, [details, state, setTaskStatusMap]);
+    const newTaskStatusMap = buildTaskStatusMap(details, state);
+    setTaskStatusMap(newTaskStatusMap);
+  }, [details, state]);
 
   const value = useMemo(
     () => ({
@@ -223,6 +256,7 @@ export function ExecutionDataProvider({
       rootDetails,
       rootState,
       runId,
+      taskStatusMap,
       isLoading,
       error,
     }),
@@ -234,6 +268,7 @@ export function ExecutionDataProvider({
       rootDetails,
       rootState,
       runId,
+      taskStatusMap,
       isLoading,
       error,
     ],
