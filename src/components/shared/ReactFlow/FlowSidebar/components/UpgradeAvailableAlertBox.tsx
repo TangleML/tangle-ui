@@ -5,8 +5,9 @@ import { useOutdatedComponents } from "@/components/shared/ManageComponent/hooks
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { Button } from "@/components/ui/button";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { Paragraph } from "@/components/ui/typography";
+import { Text } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
 import { getStorage } from "@/utils/typedStorage";
@@ -15,9 +16,12 @@ import { useNodesOverlay } from "../../NodesOverlay/NodesOverlayProvider";
 
 const UpgradeAvailableAlertBoxSkeleton = () => {
   return (
-    <BlockStack className="px-2">
-      <Skeleton size="lg" className="h-4 w-full" />
-    </BlockStack>
+    <InlineStack className="px-2">
+      <Spinner size={10} />
+      <Text size="xs" tone="subdued">
+        Looking for updates...
+      </Text>
+    </InlineStack>
   );
 };
 

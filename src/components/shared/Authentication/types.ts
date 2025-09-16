@@ -10,6 +10,7 @@ export interface JwtAuthStorage {
 }
 
 export interface JWTPayload {
+  access_token: string;
   original_token: string;
 
   auth_provider: AuthProvider | undefined;
