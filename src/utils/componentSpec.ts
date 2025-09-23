@@ -1,3 +1,5 @@
+import type { XYPosition } from "@xyflow/react";
+
 import type {
   ContainerImplementationOutput,
   GraphImplementationOutput,
@@ -136,12 +138,20 @@ interface ContainerImplementation {
   container: ContainerSpec;
 }
 type ImplementationType = ContainerImplementation | GraphImplementation;
+
+export type Comment = {
+  id: string;
+  message: string;
+  position: XYPosition;
+};
+
 export interface MetadataSpec {
   annotations?: {
     [k: string]: unknown;
     canonical_location?: string;
     author?: string;
     python_original_code?: string;
+    comments?: Comment[];
   };
 }
 /**

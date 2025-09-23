@@ -94,6 +94,22 @@ export const updateNodePositions = (
 
         newComponentSpec.outputs = outputs;
       }
+    } else if (node.type === "comment") {
+      if (newComponentSpec.metadata?.annotations?.comments) {
+        const comments = [...newComponentSpec.metadata.annotations.comments];
+        const commentIndex = comments.findIndex(
+          (comment) => comment.id === node.id,
+        );
+
+        if (commentIndex >= 0) {
+          comments[commentIndex] = {
+            ...comments[commentIndex],
+            position: newPosition,
+          };
+
+          newComponentSpec.metadata.annotations.comments = comments;
+        }
+      }
     }
   }
 
