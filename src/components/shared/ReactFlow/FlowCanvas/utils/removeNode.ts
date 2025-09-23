@@ -29,6 +29,21 @@ export const removeNode = (node: Node, componentSpec: ComponentSpec) => {
     return removeGraphOutput(outputName, componentSpec);
   }
 
+  if (node.type === "comment") {
+    // Comments can be removed directly from the component spec
+    const commentId = node.id;
+    const newMetadata = {
+      ...componentSpec.metadata,
+      annotations: {
+        ...componentSpec.metadata?.annotations,
+        comments: (componentSpec.metadata?.annotations?.comments || []).filter(
+          (comment) => comment.id !== commentId,
+        ),
+      },
+    };
+    return { ...componentSpec, metadata: newMetadata };
+  }
+
   return componentSpec;
 };
 
