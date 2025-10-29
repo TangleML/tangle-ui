@@ -1,6 +1,9 @@
-import { CircleFadingArrowUp, ClipboardPlus, Copy, Trash } from "lucide-react";
+import { icons } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
+import { InlineStack } from "@/components/ui/layout";
+import { cn } from "@/lib/utils";
 
 interface SelectionToolbarProps {
   onCopy?: () => void;
@@ -16,54 +19,46 @@ const SelectionToolbar = ({
   onUpgrade,
 }: SelectionToolbarProps) => {
   return (
-    <div
-      className="flex gap-1 bg-white rounded-xs items-center justify-center"
-      style={{
-        border: "1px solid rgba(0, 89, 220, 0.4)",
-      }}
+    <InlineStack
+      gap="1"
+      blockAlign="center"
+      className="bg-white border border-[#0059dc66] border-b-0 rounded-xs"
     >
-      {onUpgrade && (
-        <Button
-          className="h-full aspect-square w-min rounded-sm p-1"
-          variant="ghost"
-          onClick={onUpgrade}
-          size="icon"
-        >
-          <CircleFadingArrowUp className="p-0.5" />
-        </Button>
-      )}
-      {onDuplicate && (
-        <Button
-          className="cursor-pointer h-full aspect-square w-min rounded-sm p-1"
-          variant="ghost"
-          onClick={onDuplicate}
-          size="icon"
-        >
-          <Copy className="p-0.5" />
-        </Button>
-      )}
-      {onCopy && (
-        <Button
-          className="cursor-pointer h-full aspect-square w-min rounded-sm p-1"
-          variant="ghost"
-          onClick={onCopy}
-          size="icon"
-        >
-          <ClipboardPlus className="p-0.5" />
-        </Button>
-      )}
-      {onDelete && (
-        <Button
-          className="h-full aspect-square w-min rounded-sm text-destructive hover:text-destructive p-1"
-          variant="ghost"
-          onClick={onDelete}
-          size="icon"
-        >
-          <Trash className="p-0.5" />
-        </Button>
-      )}
-    </div>
+      <ToolbarButton callback={onUpgrade} icon="CircleFadingArrowUp" />
+      <ToolbarButton callback={onDuplicate} icon="Copy" />
+      <ToolbarButton callback={onCopy} icon="ClipboardPlus" />
+      <ToolbarButton callback={onDelete} icon="Trash" dangerous />
+    </InlineStack>
   );
 };
 
 export default SelectionToolbar;
+
+const ToolbarButton = ({
+  icon,
+  dangerous,
+  callback,
+}: {
+  icon: keyof typeof icons;
+  dangerous?: boolean;
+  callback?: () => void;
+}) => {
+  if (!callback) {
+    return null;
+  }
+
+  const baseStyle = "h-full aspect-square w-min rounded-sm p-1";
+
+  return (
+    <Button
+      className={cn(baseStyle, {
+        "text-destructive hover:text-destructive": dangerous,
+      })}
+      variant="ghost"
+      onClick={callback}
+      size="icon"
+    >
+      <Icon name={icon} className="p-0.5" />
+    </Button>
+  );
+};
