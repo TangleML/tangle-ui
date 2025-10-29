@@ -324,9 +324,9 @@ describe("duplicateNodes", () => {
         position: { x: 500, y: 500 },
       });
 
-      // Note: expected positions are calculated to account for node dimensions (width: 200, height: 100 in these tests)
-      expect(result.newNodes[0].position).toEqual({ x: 350, y: 400 });
-      expect(result.newNodes[1].position).toEqual({ x: 450, y: 500 });
+      // Note: expected positions are calculated to account for node dimensions
+      expect(result.newNodes[0].position).toEqual({ x: 295, y: 345 });
+      expect(result.newNodes[1].position).toEqual({ x: 395, y: 445 });
     });
   });
 

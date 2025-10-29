@@ -41,12 +41,14 @@ import {
 } from "@/utils/componentSpec";
 import { loadComponentAsRefFromText } from "@/utils/componentStore";
 import createNodesFromComponentSpec from "@/utils/nodes/createNodesFromComponentSpec";
+import { createSubgraphFromNodes } from "@/utils/nodes/createSubgraphFromNodes";
 import {
   getSubgraphComponentSpec,
   updateSubgraphSpec,
 } from "@/utils/subgraphUtils";
 
 import ComponentDuplicateDialog from "../../Dialogs/ComponentDuplicateDialog";
+import { useBetaFlagValue } from "../../Settings/useBetaFlags";
 import { useNodesOverlay } from "../NodesOverlay/NodesOverlayProvider";
 import { getBulkUpdateConfirmationDetails } from "./ConfirmationDialogs/BulkUpdateConfirmationDialog";
 import { getDeleteConfirmationDetails } from "./ConfirmationDialogs/DeleteConfirmation";
@@ -62,10 +64,10 @@ import type { NodesAndEdges } from "./types";
 import { addAndConnectNode } from "./utils/addAndConnectNode";
 import addTask from "./utils/addTask";
 import { duplicateNodes } from "./utils/duplicateNodes";
+import { calculateNodesCenter, isPositionInNode } from "./utils/geometry";
 import { getPositionFromEvent } from "./utils/getPositionFromEvent";
 import { getTaskFromEvent } from "./utils/getTaskFromEvent";
 import { handleConnection } from "./utils/handleConnection";
-import { isPositionInNode } from "./utils/isPositionInNode";
 import { removeEdge } from "./utils/removeEdge";
 import { removeNode } from "./utils/removeNode";
 import { replaceTaskNode } from "./utils/replaceTaskNode";
@@ -123,6 +125,8 @@ const FlowCanvas = ({
   } = useComponentSpec();
   const { preserveIOSelectionOnSpecChange, resetPrevSpec } =
     useIOSelectionPersistence();
+
+  const isSubgraphNavigationEnabled = useBetaFlagValue("subgraph-navigation");
 
   const { edges, onEdgesChange } = useComponentSpecToEdges(currentSubgraphSpec);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -278,6 +282,14 @@ const FlowCanvas = ({
         (node) => node.type && UPGRADEABLE_NODES.has(node.type),
       ),
     [selectedNodes],
+  );
+
+  const canGroup = useMemo(
+    () =>
+      selectedNodes.length > 1 &&
+      selectedNodes.filter((node) => node.type === "task").length > 0 &&
+      isSubgraphNavigationEnabled,
+    [selectedNodes, isSubgraphNavigationEnabled],
   );
 
   const onElementsRemove = useCallback(
@@ -763,6 +775,52 @@ const FlowCanvas = ({
     triggerConfirmation,
   ]);
 
+  const onGroupNodes = useCallback(async () => {
+    if (!canGroup) {
+      return;
+    }
+
+    try {
+      const subgraphTaskSpec = await createSubgraphFromNodes(
+        selectedNodes,
+        currentSubgraphSpec,
+      );
+
+      let updatedSubgraphSpec = { ...currentSubgraphSpec };
+
+      selectedNodes.forEach((node) => {
+        updatedSubgraphSpec = removeNode(node, updatedSubgraphSpec);
+      });
+
+      const position = calculateNodesCenter(selectedNodes);
+      const finalSubgraphSpec = addTask(
+        "task",
+        subgraphTaskSpec,
+        position,
+        updatedSubgraphSpec,
+      );
+
+      const updatedRootSpec = updateSubgraphSpec(
+        componentSpec,
+        currentSubgraphPath,
+        finalSubgraphSpec,
+      );
+
+      setComponentSpec(updatedRootSpec);
+    } catch (error) {
+      console.error("Failed to create subgraph:", error);
+      notify("Failed to create subgraph", "error");
+    }
+  }, [
+    selectedNodes,
+    componentSpec,
+    currentSubgraphSpec,
+    currentSubgraphPath,
+    canGroup,
+    setComponentSpec,
+    notify,
+  ]);
+
   const handleSelectionChange = useCallback(() => {
     if (selectedNodes.length < 1) {
       setShowToolbar(false);
@@ -960,6 +1018,7 @@ const FlowCanvas = ({
             onDuplicate={!readOnly ? onDuplicateNodes : undefined}
             onCopy={!readOnly ? undefined : onCopy}
             onUpgrade={!readOnly && canUpgrade ? onUpgradeNodes : undefined}
+            onGroup={!readOnly && canGroup ? onGroupNodes : undefined}
           />
         </NodeToolbar>
         {children}

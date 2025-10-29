@@ -13,7 +13,6 @@ import {
 import { createInputNode } from "@/utils/nodes/createInputNode";
 import { createOutputNode } from "@/utils/nodes/createOutputNode";
 import { createTaskNode } from "@/utils/nodes/createTaskNode";
-import { getNodesBounds } from "@/utils/nodes/getNodesBounds";
 import {
   inputNameToNodeId,
   nodeIdToInputName,
@@ -28,6 +27,8 @@ import {
   getUniqueOutputName,
   getUniqueTaskName,
 } from "@/utils/unique";
+
+import { getNodesBounds } from "./geometry";
 
 const OFFSET = 10;
 
