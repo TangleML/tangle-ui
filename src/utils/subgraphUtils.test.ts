@@ -625,5 +625,424 @@ describe("subgraphUtils", () => {
         result.implementation.graph.tasks["subgraph1"]?.componentRef.spec?.name,
       ).toBe("updated-subgraph1");
     });
+
+    describe("output renaming propagation", () => {
+      it("should update parent outputValues when subgraph output is renamed", () => {
+        const rootSpec: ComponentSpec = {
+          name: "root",
+          outputs: [{ name: "rootOutput", type: "string" }],
+          implementation: {
+            graph: {
+              tasks: {
+                subgraph1: {
+                  componentRef: {
+                    spec: {
+                      name: "subgraph",
+                      outputs: [{ name: "oldOutputName", type: "string" }],
+                      implementation: {
+                        graph: {
+                          tasks: {
+                            innerTask: createContainerTaskSpec(),
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+              outputValues: {
+                rootOutput: {
+                  taskOutput: {
+                    taskId: "subgraph1",
+                    outputName: "oldOutputName",
+                  },
+                },
+              },
+            },
+          },
+        };
+
+        const updatedSubgraphSpec: ComponentSpec = {
+          name: "subgraph",
+          outputs: [{ name: "newOutputName", type: "string" }],
+          implementation: {
+            graph: {
+              tasks: {
+                innerTask: createContainerTaskSpec(),
+              },
+            },
+          },
+        };
+
+        const result = updateSubgraphSpec(
+          rootSpec,
+          ["root", "subgraph1"],
+          updatedSubgraphSpec,
+        );
+
+        expect(isGraphImplementation(result.implementation)).toBe(true);
+        if (!isGraphImplementation(result.implementation)) return;
+
+        // Parent output should now reference the new output name
+        expect(result.implementation.graph.outputValues?.rootOutput).toEqual({
+          taskOutput: {
+            taskId: "subgraph1",
+            outputName: "newOutputName",
+          },
+        });
+      });
+
+      it("should update sibling task arguments when subgraph output is renamed", () => {
+        const rootSpec: ComponentSpec = {
+          name: "root",
+          implementation: {
+            graph: {
+              tasks: {
+                subgraph1: {
+                  componentRef: {
+                    spec: {
+                      name: "subgraph",
+                      outputs: [{ name: "oldOutputName", type: "string" }],
+                      implementation: {
+                        graph: {
+                          tasks: {
+                            innerTask: createContainerTaskSpec(),
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+                consumerTask: {
+                  componentRef: {
+                    spec: {
+                      name: "consumer",
+                      inputs: [{ name: "input1", type: "string" }],
+                      implementation: {
+                        container: {
+                          image: "consumer:latest",
+                        },
+                      },
+                    },
+                  },
+                  arguments: {
+                    input1: {
+                      taskOutput: {
+                        taskId: "subgraph1",
+                        outputName: "oldOutputName",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        };
+
+        const updatedSubgraphSpec: ComponentSpec = {
+          name: "subgraph",
+          outputs: [{ name: "newOutputName", type: "string" }],
+          implementation: {
+            graph: {
+              tasks: {
+                innerTask: createContainerTaskSpec(),
+              },
+            },
+          },
+        };
+
+        const result = updateSubgraphSpec(
+          rootSpec,
+          ["root", "subgraph1"],
+          updatedSubgraphSpec,
+        );
+
+        expect(isGraphImplementation(result.implementation)).toBe(true);
+        if (!isGraphImplementation(result.implementation)) return;
+
+        // Consumer task should now reference the new output name
+        const consumerTask = result.implementation.graph.tasks.consumerTask;
+        expect(consumerTask?.arguments?.input1).toEqual({
+          taskOutput: {
+            taskId: "subgraph1",
+            outputName: "newOutputName",
+          },
+        });
+      });
+
+      it("should update both outputValues and task arguments together", () => {
+        const rootSpec: ComponentSpec = {
+          name: "root",
+          outputs: [{ name: "rootOutput", type: "string" }],
+          implementation: {
+            graph: {
+              tasks: {
+                subgraph1: {
+                  componentRef: {
+                    spec: {
+                      name: "subgraph",
+                      outputs: [{ name: "oldOutputName", type: "string" }],
+                      implementation: {
+                        graph: {
+                          tasks: {
+                            innerTask: createContainerTaskSpec(),
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+                consumerTask: {
+                  componentRef: {
+                    spec: {
+                      name: "consumer",
+                      inputs: [{ name: "input1", type: "string" }],
+                      implementation: {
+                        container: {
+                          image: "consumer:latest",
+                        },
+                      },
+                    },
+                  },
+                  arguments: {
+                    input1: {
+                      taskOutput: {
+                        taskId: "subgraph1",
+                        outputName: "oldOutputName",
+                      },
+                    },
+                  },
+                },
+              },
+              outputValues: {
+                rootOutput: {
+                  taskOutput: {
+                    taskId: "subgraph1",
+                    outputName: "oldOutputName",
+                  },
+                },
+              },
+            },
+          },
+        };
+
+        const updatedSubgraphSpec: ComponentSpec = {
+          name: "subgraph",
+          outputs: [{ name: "newOutputName", type: "string" }],
+          implementation: {
+            graph: {
+              tasks: {
+                innerTask: createContainerTaskSpec(),
+              },
+            },
+          },
+        };
+
+        const result = updateSubgraphSpec(
+          rootSpec,
+          ["root", "subgraph1"],
+          updatedSubgraphSpec,
+        );
+
+        expect(isGraphImplementation(result.implementation)).toBe(true);
+        if (!isGraphImplementation(result.implementation)) return;
+
+        // Both should be updated
+        expect(result.implementation.graph.outputValues?.rootOutput).toEqual({
+          taskOutput: {
+            taskId: "subgraph1",
+            outputName: "newOutputName",
+          },
+        });
+
+        const consumerTask = result.implementation.graph.tasks.consumerTask;
+        expect(consumerTask?.arguments?.input1).toEqual({
+          taskOutput: {
+            taskId: "subgraph1",
+            outputName: "newOutputName",
+          },
+        });
+      });
+
+      it("should handle output renaming at multiple nesting levels", () => {
+        const rootSpec: ComponentSpec = {
+          name: "root",
+          outputs: [{ name: "rootOutput", type: "string" }],
+          implementation: {
+            graph: {
+              tasks: {
+                level1: {
+                  componentRef: {
+                    spec: {
+                      name: "level1",
+                      outputs: [{ name: "level1Output", type: "string" }],
+                      implementation: {
+                        graph: {
+                          tasks: {
+                            level2: {
+                              componentRef: {
+                                spec: {
+                                  name: "level2",
+                                  outputs: [
+                                    { name: "oldOutputName", type: "string" },
+                                  ],
+                                  implementation: {
+                                    graph: {
+                                      tasks: {
+                                        innerTask: createContainerTaskSpec(),
+                                      },
+                                    },
+                                  },
+                                },
+                              },
+                            },
+                          },
+                          outputValues: {
+                            level1Output: {
+                              taskOutput: {
+                                taskId: "level2",
+                                outputName: "oldOutputName",
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+              outputValues: {
+                rootOutput: {
+                  taskOutput: {
+                    taskId: "level1",
+                    outputName: "level1Output",
+                  },
+                },
+              },
+            },
+          },
+        };
+
+        const updatedLevel2Spec: ComponentSpec = {
+          name: "level2",
+          outputs: [{ name: "newOutputName", type: "string" }],
+          implementation: {
+            graph: {
+              tasks: {
+                innerTask: createContainerTaskSpec(),
+              },
+            },
+          },
+        };
+
+        const result = updateSubgraphSpec(
+          rootSpec,
+          ["root", "level1", "level2"],
+          updatedLevel2Spec,
+        );
+
+        expect(isGraphImplementation(result.implementation)).toBe(true);
+        if (!isGraphImplementation(result.implementation)) return;
+
+        // Check level1's outputValues were updated
+        const level1Task = result.implementation.graph.tasks.level1;
+        const level1Spec = level1Task?.componentRef.spec;
+        expect(level1Spec).toBeDefined();
+
+        if (level1Spec && isGraphImplementation(level1Spec.implementation)) {
+          expect(
+            level1Spec.implementation.graph.outputValues?.level1Output,
+          ).toEqual({
+            taskOutput: {
+              taskId: "level2",
+              outputName: "newOutputName",
+            },
+          });
+        }
+      });
+
+      it("should not affect unrelated outputs", () => {
+        const rootSpec: ComponentSpec = {
+          name: "root",
+          outputs: [
+            { name: "output1", type: "string" },
+            { name: "output2", type: "string" },
+          ],
+          implementation: {
+            graph: {
+              tasks: {
+                subgraph1: {
+                  componentRef: {
+                    spec: {
+                      name: "subgraph",
+                      outputs: [{ name: "oldOutputName", type: "string" }],
+                      implementation: {
+                        graph: {
+                          tasks: {
+                            innerTask: createContainerTaskSpec(),
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+                otherTask: createContainerTaskSpec(),
+              },
+              outputValues: {
+                output1: {
+                  taskOutput: {
+                    taskId: "subgraph1",
+                    outputName: "oldOutputName",
+                  },
+                },
+                output2: {
+                  taskOutput: {
+                    taskId: "otherTask",
+                    outputName: "unrelatedOutput",
+                  },
+                },
+              },
+            },
+          },
+        };
+
+        const updatedSubgraphSpec: ComponentSpec = {
+          name: "subgraph",
+          outputs: [{ name: "newOutputName", type: "string" }],
+          implementation: {
+            graph: {
+              tasks: {
+                innerTask: createContainerTaskSpec(),
+              },
+            },
+          },
+        };
+
+        const result = updateSubgraphSpec(
+          rootSpec,
+          ["root", "subgraph1"],
+          updatedSubgraphSpec,
+        );
+
+        expect(isGraphImplementation(result.implementation)).toBe(true);
+        if (!isGraphImplementation(result.implementation)) return;
+
+        // output1 should be updated
+        expect(result.implementation.graph.outputValues?.output1).toEqual({
+          taskOutput: {
+            taskId: "subgraph1",
+            outputName: "newOutputName",
+          },
+        });
+
+        // output2 should be unchanged
+        expect(result.implementation.graph.outputValues?.output2).toEqual({
+          taskOutput: {
+            taskId: "otherTask",
+            outputName: "unrelatedOutput",
+          },
+        });
+      });
+    });
   });
 });
