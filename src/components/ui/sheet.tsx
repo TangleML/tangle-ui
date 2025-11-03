@@ -61,57 +61,54 @@ function SheetContent({
   const [isResizing, setIsResizing] = React.useState(false);
   const contentRef = React.useRef<HTMLDivElement>(null);
 
-  const handleMouseDown = React.useCallback(
-    (e: React.MouseEvent) => {
-      if (!resizable) return;
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!resizable) return;
 
-      e.preventDefault();
-      setIsResizing(true);
+    e.preventDefault();
+    setIsResizing(true);
 
-      const startPos =
-        side === "left" || side === "right" ? e.clientX : e.clientY;
-      const startSize =
-        size ||
-        (side === "left" || side === "right"
-          ? contentRef.current?.offsetWidth
-          : contentRef.current?.offsetHeight) ||
-        0;
+    const startPos =
+      side === "left" || side === "right" ? e.clientX : e.clientY;
+    const startSize =
+      size ||
+      (side === "left" || side === "right"
+        ? contentRef.current?.offsetWidth
+        : contentRef.current?.offsetHeight) ||
+      0;
 
-      const handleMouseMove = (e: MouseEvent) => {
-        let newSize: number;
+    const handleMouseMove = (e: MouseEvent) => {
+      let newSize: number;
 
-        if (side === "right") {
-          newSize = startSize + (startPos - e.clientX);
-        } else if (side === "left") {
-          newSize = startSize + (e.clientX - startPos);
-        } else if (side === "bottom") {
-          newSize = startSize + (startPos - e.clientY);
-        } else {
-          newSize = startSize + (e.clientY - startPos);
-        }
+      if (side === "right") {
+        newSize = startSize + (startPos - e.clientX);
+      } else if (side === "left") {
+        newSize = startSize + (e.clientX - startPos);
+      } else if (side === "bottom") {
+        newSize = startSize + (startPos - e.clientY);
+      } else {
+        newSize = startSize + (e.clientY - startPos);
+      }
 
-        const minSize = 256;
-        const maxSize =
-          side === "left" || side === "right"
-            ? window.innerWidth * 0.8
-            : window.innerHeight * 0.8;
+      const minSize = 256;
+      const maxSize =
+        side === "left" || side === "right"
+          ? window.innerWidth * 0.8
+          : window.innerHeight * 0.8;
 
-        newSize = Math.max(minSize, Math.min(maxSize, newSize));
+      newSize = Math.max(minSize, Math.min(maxSize, newSize));
 
-        setSize(newSize);
-      };
+      setSize(newSize);
+    };
 
-      const handleMouseUp = () => {
-        setIsResizing(false);
-        document.removeEventListener("mousemove", handleMouseMove);
-        document.removeEventListener("mouseup", handleMouseUp);
-      };
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
 
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-    },
-    [resizable, side, size],
-  );
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+  };
 
   const resizeHandleClasses = cn(
     "absolute bg-transparent hover:bg-blue-500/20 transition-colors",
@@ -127,7 +124,7 @@ function SheetContent({
     },
   );
 
-  const sizeStyles = React.useMemo(() => {
+  const sizeStyles = (() => {
     if (size === null) return {};
 
     if (side === "left" || side === "right") {
@@ -135,7 +132,7 @@ function SheetContent({
     } else {
       return { height: `${size}px` };
     }
-  }, [size, side]);
+  })();
 
   return (
     <SheetPortal>

@@ -1,10 +1,4 @@
-import {
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { type ReactNode, useEffect, useEffectEvent, useState } from "react";
 
 import useToastNotification from "@/hooks/useToastNotification";
 import { API_URL } from "@/utils/constants";
@@ -66,70 +60,71 @@ export const BackendProvider = ({ children }: { children: ReactNode }) => {
 
   const configured = !!backendUrl.trim() || useRelativePath;
 
-  const setBackendUrl = useCallback(async (url: string) => {
+  const setBackendUrl = async (url: string) => {
     const normalized = normalizeUrl(url);
     setUserBackendUrl(normalized);
     await setUserBackendUrlInLocalStorage(normalized);
-  }, []);
+  };
 
-  const setEnvConfig = useCallback(async (flag: boolean) => {
+  const setEnvConfig = async (flag: boolean) => {
     await setUseEnvInLocalStorage(flag);
     setUseEnv(flag);
     if (flag) {
       setUseRelativePath(false);
       await setUseRelativePathInLocalStorage(false);
     }
-  }, []);
+  };
 
-  const setRelativePathConfig = useCallback(async (flag: boolean) => {
+  const setRelativePathConfig = async (flag: boolean) => {
     await setUseRelativePathInLocalStorage(flag);
     setUseRelativePath(flag);
     if (flag) {
       setUseEnv(false);
       await setUseEnvInLocalStorage(false);
     }
-  }, []);
+  };
 
-  const ping = useCallback(
-    ({
-      url = backendUrl,
-      notifyResult = true,
-      saveAvailability = true,
-    }: {
-      url?: string;
-      notifyResult?: boolean;
-      saveAvailability?: boolean;
-    }) => {
-      const normalizedUrl = normalizeUrl(url);
-      if (!normalizedUrl) {
-        if (notifyResult) notify("Backend is not configured", "error");
+  const ping = ({
+    url = backendUrl,
+    notifyResult = true,
+    saveAvailability = true,
+  }: {
+    url?: string;
+    notifyResult?: boolean;
+    saveAvailability?: boolean;
+  }) => {
+    const normalizedUrl = normalizeUrl(url);
+    if (!normalizedUrl) {
+      if (notifyResult) notify("Backend is not configured", "error");
+      if (saveAvailability) setAvailable(false);
+      return Promise.resolve(false);
+    }
+    return fetch(`${normalizedUrl}/services/ping`)
+      .then((res) => {
+        if (notifyResult) {
+          if (res.ok) notify("Backend available", "success");
+          else notify(`Backend unavailable: ${res.statusText}`, "error");
+        }
+        if (saveAvailability) setAvailable(res.ok);
+
+        setReady(true);
+
+        return res.ok;
+      })
+      .catch(() => {
+        if (notifyResult) notify("Backend unavailable", "error");
         if (saveAvailability) setAvailable(false);
-        return Promise.resolve(false);
-      }
-      return fetch(`${normalizedUrl}/services/ping`)
-        .then((res) => {
-          if (notifyResult) {
-            if (res.ok) notify("Backend available", "success");
-            else notify(`Backend unavailable: ${res.statusText}`, "error");
-          }
-          if (saveAvailability) setAvailable(res.ok);
+        return false;
+      });
+  };
 
-          setReady(true);
-
-          return res.ok;
-        })
-        .catch(() => {
-          if (notifyResult) notify("Backend unavailable", "error");
-          if (saveAvailability) setAvailable(false);
-          return false;
-        });
-    },
-    [backendUrl],
-  );
+  const checkBackendAvailability = useEffectEvent(() => {
+    ping({ notifyResult: false });
+  });
 
   useEffect(() => {
     if (settingsLoaded) {
-      ping({ notifyResult: false });
+      checkBackendAvailability();
     }
   }, [backendUrl, settingsLoaded]);
 
@@ -147,35 +142,21 @@ export const BackendProvider = ({ children }: { children: ReactNode }) => {
       setSettingsLoaded(true);
     };
     getSettings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const contextValue = useMemo(
-    () => ({
-      configured,
-      available,
-      ready,
-      backendUrl,
-      isConfiguredFromEnv: useEnv && !!backendUrlFromEnv,
-      isConfiguredFromRelativePath: useRelativePath,
-      setEnvConfig,
-      setRelativePathConfig,
-      setBackendUrl,
-      ping,
-    }),
-    [
-      configured,
-      available,
-      ready,
-      backendUrl,
-      useEnv,
-      useRelativePath,
-      backendUrlFromEnv,
-      setEnvConfig,
-      setRelativePathConfig,
-      setBackendUrl,
-      ping,
-    ],
-  );
+  const contextValue = {
+    configured,
+    available,
+    ready,
+    backendUrl,
+    isConfiguredFromEnv: useEnv && !!backendUrlFromEnv,
+    isConfiguredFromRelativePath: useRelativePath,
+    setEnvConfig,
+    setRelativePathConfig,
+    setBackendUrl,
+    ping,
+  };
 
   return (
     <BackendContext.Provider value={contextValue}>

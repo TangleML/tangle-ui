@@ -33,6 +33,7 @@ const useComponentSpecToEdges = (
   useEffect(() => {
     const newEdges = getEdges(componentSpec);
     setFlowEdges(newEdges);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [componentSpec]);
 
   return {

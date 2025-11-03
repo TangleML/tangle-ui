@@ -21,6 +21,7 @@ export const AnnotationsSection = ({
 }: AnnotationsSectionProps) => {
   const notify = useToastNotification();
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const rawAnnotations = (taskSpec.annotations || {}) as Annotations;
 
   const [annotations, setAnnotations] = useState<Annotations>({

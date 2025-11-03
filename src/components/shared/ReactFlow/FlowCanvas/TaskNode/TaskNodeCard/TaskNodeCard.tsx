@@ -1,6 +1,6 @@
 import { useStore } from "@xyflow/react";
 import { CircleFadingArrowUp, CopyIcon } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 
 import type { TooltipButtonProps } from "@/components/shared/Buttons/TooltipButton";
 import { ComponentEditorDialog } from "@/components/shared/ComponentEditor/ComponentEditorDialog";
@@ -63,19 +63,13 @@ const TaskNodeCard = () => {
   const { dimensions, selected, highlighted, isCustomComponent, readOnly } =
     state;
 
-  const isSubgraphNode = useMemo(() => {
-    if (!taskSpec) return false;
-    return isSubgraph(taskSpec);
-  }, [taskSpec]);
+  const isSubgraphNode = taskSpec ? isSubgraph(taskSpec) : false;
 
-  const subgraphDescription = useMemo(() => {
-    if (!taskSpec) return "";
-    return getSubgraphDescription(taskSpec);
-  }, [taskSpec]);
+  const subgraphDescription = taskSpec ? getSubgraphDescription(taskSpec) : "";
 
   const disabledCache = isCacheDisabled(taskSpec);
 
-  const onNotify = useCallback((message: NotifyMessage) => {
+  const onNotify = (message: NotifyMessage) => {
     switch (message.type) {
       case "highlight":
         setHighlighted(true);
@@ -90,7 +84,7 @@ const TaskNodeCard = () => {
         });
         break;
     }
-  }, []);
+  };
 
   useEffect(() => {
     if (!taskSpec) return;
@@ -101,23 +95,23 @@ const TaskNodeCard = () => {
     });
   }, [registerNode, nodeId, taskSpec, onNotify]);
 
-  const closeOverlayPopover = useCallback((open: boolean) => {
+  const closeOverlayPopover = (open: boolean) => {
     setHighlighted(open);
 
     if (!open) {
       setUpdateOverlayDialogOpen(undefined);
     }
-  }, []);
+  };
 
-  const handleEditComponent = useCallback(() => {
+  const handleEditComponent = () => {
     setIsEditDialogOpen(true);
-  }, []);
+  };
 
-  const handleCloseEditDialog = useCallback(() => {
+  const handleCloseEditDialog = () => {
     setIsEditDialogOpen(false);
-  }, []);
+  };
 
-  const taskConfigMarkup = useMemo(() => {
+  const taskConfigMarkup = (() => {
     const actions: Array<TooltipButtonProps> = [];
 
     if (!readOnly) {
@@ -173,33 +167,21 @@ const TaskNodeCard = () => {
     }
 
     return <TaskOverview taskNode={taskNode} key={nodeId} actions={actions} />;
-  }, [
-    nodeId,
-    readOnly,
-    callbacks.onDuplicate,
-    callbacks.onUpgrade,
-    isInAppEditorEnabled,
-    isCustomComponent,
-    isSubgraphNode,
-    taskId,
-    subgraphDescription,
-    navigateToSubgraph,
-    handleEditComponent,
-  ]);
+  })();
 
-  const handleInputSectionClick = useCallback(() => {
+  const handleInputSectionClick = () => {
     setExpandedInputs((prev) => !prev);
-  }, []);
+  };
 
-  const handleOutputSectionClick = useCallback(() => {
+  const handleOutputSectionClick = () => {
     setExpandedOutputs((prev) => !prev);
-  }, []);
+  };
 
-  const handleDoubleClick = useCallback(() => {
+  const handleDoubleClick = () => {
     if (isSubgraphNode && taskId && isSubgraphNavigationEnabled) {
       navigateToSubgraph(taskId);
     }
-  }, [isSubgraphNode, taskId, navigateToSubgraph, isSubgraphNavigationEnabled]);
+  };
 
   useEffect(() => {
     if (nodeRef.current) {
@@ -207,23 +189,35 @@ const TaskNodeCard = () => {
     }
   }, []);
 
+  const updateCondensedState = useEffectEvent((isCondensed: boolean) => {
+    setCondensed(isCondensed);
+  });
+
   useEffect(() => {
     if (contentRef.current && scrollHeight > 0 && dimensions.h) {
-      setCondensed(scrollHeight > dimensions.h);
+      updateCondensedState(scrollHeight > dimensions.h);
     }
   }, [scrollHeight, dimensions.h]);
 
+  const updateContextPanel = useEffectEvent(() => {
+    setContent(taskConfigMarkup);
+  });
+
+  const clearContextPanel = useEffectEvent(() => {
+    clearContent();
+  });
+
   useEffect(() => {
     if (selected && !isDragging) {
-      setContent(taskConfigMarkup);
+      updateContextPanel();
     }
 
     return () => {
       if (selected) {
-        clearContent();
+        clearContextPanel();
       }
     };
-  }, [selected, taskConfigMarkup, setContent, clearContent]);
+  }, [selected, isDragging]);
 
   if (!taskSpec) {
     return null;

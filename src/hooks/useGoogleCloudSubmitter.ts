@@ -1,7 +1,7 @@
 /// <reference types="gapi" />
 /* global gapi */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 
 import { getAppSettings } from "@/appSettings";
 import { buildVertexPipelineJobFromGraphComponent } from "@/components/shared/Submitters/GoogleCloud/compiler/vertexAiCompiler";
@@ -49,49 +49,38 @@ export const useGoogleCloudSubmitter = ({
 
   const [error, setError] = useState<string>();
 
-  const argumentInputs = useMemo(
-    () =>
-      componentSpec?.inputs?.map((input) => ({
-        key: input.name,
-        value: "",
-        initialValue: "",
-        inputSpec: input,
-        isRemoved: false,
-      })) ?? [],
-    [componentSpec?.inputs],
+  const argumentInputs =
+    componentSpec?.inputs?.map((input) => ({
+      key: input.name,
+      value: "",
+      initialValue: "",
+      inputSpec: input,
+      isRemoved: false,
+    })) ?? [];
+
+  const pipelineArguments = new Map(
+    argumentInputs
+      .filter((arg) => typeof arg.value === "string")
+      .map((arg) => [arg.key, arg.value as string]),
   );
 
-  const pipelineArguments = useMemo(
-    () =>
-      new Map(
-        argumentInputs
-          .filter((arg) => typeof arg.value === "string")
-          .map((arg) => [arg.key, arg.value as string]),
-      ),
-    [argumentInputs],
-  );
+  const isValid =
+    !!config.projectId &&
+    !!config.region &&
+    !!config.gcsOutputDirectory &&
+    !!config.googleCloudOAuthClientId &&
+    vertexPipelineJob !== undefined;
 
-  const isValid = useMemo(
-    () =>
-      !!config.projectId &&
-      !!config.region &&
-      !!config.gcsOutputDirectory &&
-      !!config.googleCloudOAuthClientId &&
-      vertexPipelineJob !== undefined,
-    [config, vertexPipelineJob],
-  );
+  const updateConfig = (
+    configPartial: Partial<GoogleCloudSubmitterConfiguration>,
+  ) => {
+    setConfig((prevConfig) => ({
+      ...prevConfig,
+      ...configPartial,
+    }));
+  };
 
-  const updateConfig = useCallback(
-    (configPartial: Partial<GoogleCloudSubmitterConfiguration>) => {
-      setConfig((prevConfig) => ({
-        ...prevConfig,
-        ...configPartial,
-      }));
-    },
-    [],
-  );
-
-  const refreshProjectList = useCallback(async () => {
+  const refreshProjectList = async () => {
     try {
       const result = await cloudresourcemanagerListProjects(
         config.googleCloudOAuthClientId,
@@ -124,9 +113,9 @@ export const useGoogleCloudSubmitter = ({
         result: "failed",
       });
     }
-  }, [config.googleCloudOAuthClientId]);
+  };
 
-  const submit = useCallback(async () => {
+  const submit = async () => {
     if (vertexPipelineJob === undefined) {
       return;
     }
@@ -157,11 +146,14 @@ export const useGoogleCloudSubmitter = ({
         .toLowerCase()
         .replace(/[^-a-z0-9]/g, "-")
         .replace(/^-+/, ""); // No leading dashes
-      vertexPipelineJob.displayName = displayName;
+      const pipelineJobWithDisplayName = {
+        ...vertexPipelineJob,
+        displayName,
+      };
       const result = await aiplatformCreatePipelineJob(
         config.projectId,
         config.region,
-        vertexPipelineJob,
+        pipelineJobWithDisplayName,
         config.googleCloudOAuthClientId,
         desiredPipelineJobId,
       );
@@ -179,7 +171,19 @@ export const useGoogleCloudSubmitter = ({
         result: "failed",
       });
     }
-  }, [vertexPipelineJob, config, componentSpec]);
+  };
+
+  const updatePipelineJob = useEffectEvent(
+    (job: PipelineJob, jsonUrl: string) => {
+      setError(undefined);
+      setVertexPipelineJob(job);
+      setJsonBlobUrl(jsonUrl);
+    },
+  );
+
+  const updateErrorState = useEffectEvent((errorMessage: string) => {
+    setError(errorMessage);
+  });
 
   useEffect(() => {
     if (componentSpec !== undefined) {
@@ -189,12 +193,10 @@ export const useGoogleCloudSubmitter = ({
           config.gcsOutputDirectory,
           pipelineArguments,
         );
-        setError(undefined);
         newVertexPipelineJob.labels = {
           sdk: "cloud-pipelines-editor",
           "cloud-pipelines-editor-version": "0-0-1",
         };
-        setVertexPipelineJob(newVertexPipelineJob);
         const vertexPipelineJobJson = JSON.stringify(
           vertexPipelineJob,
           undefined,
@@ -203,16 +205,15 @@ export const useGoogleCloudSubmitter = ({
         const vertexPipelineJsonBlobUrl = URL.createObjectURL(
           new Blob([vertexPipelineJobJson], { type: "application/json" }),
         );
-        setJsonBlobUrl(vertexPipelineJsonBlobUrl);
+        updatePipelineJob(newVertexPipelineJob, vertexPipelineJsonBlobUrl);
       } catch (err) {
         const message =
           typeof err === "object" && err instanceof Error
             ? err.toString()
             : String(err);
-        setError(message);
+        updateErrorState(message);
         notify(message, "error");
-        setVertexPipelineJob(undefined);
-        setJsonBlobUrl(undefined);
+        updatePipelineJob(undefined as any, undefined as any);
       }
     }
     return () => {
@@ -220,6 +221,7 @@ export const useGoogleCloudSubmitter = ({
         URL.revokeObjectURL(jsonBlobUrl);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [componentSpec, pipelineArguments, config.gcsOutputDirectory]);
 
   return {

@@ -1,5 +1,5 @@
 import equal from "fast-deep-equal";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 
 import { deepClone } from "@/utils/deepClone";
 
@@ -17,11 +17,23 @@ export const useAutoSave = <T>(
   shouldSave: boolean = true,
 ) => {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const lastSavedDataRef = useRef<T>(deepClone(data));
+  const [lastSavedData, setLastSavedData] = useState<T>(() => deepClone(data));
   const [isSaving, setIsSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
 
-  const isDirty = !equal(data, lastSavedDataRef.current);
+  const isDirty = !equal(data, lastSavedData);
+
+  const updateLastSavedData = useEffectEvent((newData: T) => {
+    setLastSavedData(deepClone(newData));
+  });
+
+  const updateSaveStatus = useEffectEvent((saving: boolean) => {
+    setIsSaving(saving);
+  });
+
+  const updateLastSavedAt = useEffectEvent((date: Date) => {
+    setLastSavedAt(date);
+  });
 
   useEffect(() => {
     let isCancelled = false;
@@ -31,7 +43,7 @@ export const useAutoSave = <T>(
     }
 
     if (!shouldSave && isDirty) {
-      lastSavedDataRef.current = deepClone(data);
+      updateLastSavedData(data);
       return;
     }
 
@@ -39,14 +51,14 @@ export const useAutoSave = <T>(
       timeoutRef.current = setTimeout(async () => {
         if (isCancelled) return;
 
-        setIsSaving(true);
+        updateSaveStatus(true);
 
         const savePromise = (async () => {
           try {
             await saveFunction(data);
             if (!isCancelled) {
-              lastSavedDataRef.current = deepClone(data);
-              setLastSavedAt(new Date());
+              updateLastSavedData(data);
+              updateLastSavedAt(new Date());
             }
           } catch (error) {
             console.error("Auto-save failed:", error);
@@ -59,7 +71,7 @@ export const useAutoSave = <T>(
 
         await Promise.all([savePromise, minDisplayPromise]);
 
-        setIsSaving(false);
+        updateSaveStatus(false);
       }, debounceMs);
     }
 

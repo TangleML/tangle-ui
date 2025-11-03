@@ -1,5 +1,11 @@
 import { useConnection } from "@xyflow/react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useMemo,
+  useState,
+} from "react";
 
 import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
 
@@ -99,12 +105,16 @@ export const useGhostNode = () => {
     [connectionInProgress, allSearchResults.length],
   );
 
+  const resetGhostNodeState = useEffectEvent(() => {
+    setTabCycleIndex(-1);
+    setHighlightedComponentDigest(null);
+  });
+
   useEffect(() => {
     if (!connectionInProgress) {
-      setTabCycleIndex(-1);
-      setHighlightedComponentDigest(null);
+      resetGhostNodeState();
     }
-  }, [connectionInProgress, setHighlightedComponentDigest]);
+  }, [connectionInProgress]);
 
   useEffect(() => {
     setHighlightedComponentDigest(activeSearchResult?.digest || null);

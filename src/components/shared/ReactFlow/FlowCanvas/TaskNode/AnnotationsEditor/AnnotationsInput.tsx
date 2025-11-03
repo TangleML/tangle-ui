@@ -87,6 +87,7 @@ export const AnnotationsInput = ({
         setIsInvalid(true);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleQuantityKeyInputChange = useCallback(

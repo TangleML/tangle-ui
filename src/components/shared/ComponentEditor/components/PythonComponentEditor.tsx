@@ -77,6 +77,7 @@ export const PythonComponentEditor = withSuspenseWrapper(
           setValidationErrors(errors);
         }
       },
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       [yamlGenerator, onComponentTextChange, yamlGeneratorOptions],
     );
 

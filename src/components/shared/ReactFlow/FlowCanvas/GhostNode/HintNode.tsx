@@ -1,12 +1,12 @@
 import { type NodeProps, useReactFlow } from "@xyflow/react";
-import { memo, type PropsWithChildren, useMemo } from "react";
+import { memo, type PropsWithChildren } from "react";
 
 import { cn } from "@/lib/utils";
 import type { HintNodeData } from "@/types/hintNode";
 
 const HintNode = ({ data }: NodeProps) => {
   const { getZoom } = useReactFlow();
-  const typedData = useMemo(() => data as HintNodeData, [data]);
+  const typedData = data as HintNodeData;
 
   const zoom = getZoom();
 
@@ -51,14 +51,14 @@ const KeyboardKey = ({ children }: PropsWithChildren) => {
   return (
     <div
       className="
-      px-2 py-1 
-      border border-gray-300/60 
-      rounded-md 
-      shadow-md 
+      px-2 py-1
+      border border-gray-300/60
+      rounded-md
+      shadow-md
       backdrop-blur-sm
       text-gray-700/80
-      text-xs 
-      font-medium 
+      text-xs
+      font-medium
       select-none
       bg-gradient-to-br
       from-white/80

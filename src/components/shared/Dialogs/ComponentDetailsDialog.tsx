@@ -1,5 +1,6 @@
 import { Code, InfoIcon, ListFilter } from "lucide-react";
-import { type ReactNode, useCallback, useMemo, useState } from "react";
+import type { ReactNode } from "react";
+import { useState } from "react";
 
 import {
   Dialog,
@@ -187,47 +188,41 @@ const ComponentDetails = ({
 
   const componentText = component.text;
 
-  const dialogContextValue = useMemo(
-    () => ({
-      name: "ComponentDetails",
-      close: () => {
-        setOpen(false);
-      },
-    }),
-    [],
-  );
+  const dialogContextValue = {
+    name: "ComponentDetails",
+    close: () => {
+      setOpen(false);
+    },
+  };
 
-  const handleCloseEditDialog = useCallback(() => {
+  const handleCloseEditDialog = () => {
     setIsEditDialogOpen(false);
-  }, []);
+  };
 
-  const onOpenChange = useCallback((open: boolean) => {
+  const onOpenChange = (open: boolean) => {
     setOpen(open);
     if (!open) {
       onClose?.();
     }
-  }, []);
+  };
 
-  const handleEditComponent = useCallback(() => {
+  const handleEditComponent = () => {
     setIsEditDialogOpen(true);
-  }, []);
+  };
 
-  const actionsWithEdit = useMemo(() => {
-    if (!hasEnabledInAppEditor) return actions;
-
-    const EditButton = (
-      <TooltipButton
-        variant="secondary"
-        onClick={handleEditComponent}
-        tooltip="Edit Component Definition"
-        key={`${displayName}-edit-button`}
-      >
-        <Icon name="FilePenLine" />
-      </TooltipButton>
-    );
-
-    return [...actions, EditButton];
-  }, [actions, hasEnabledInAppEditor, handleEditComponent]);
+  const actionsWithEdit = !hasEnabledInAppEditor
+    ? actions
+    : [
+        ...actions,
+        <TooltipButton
+          variant="secondary"
+          onClick={handleEditComponent}
+          tooltip="Edit Component Definition"
+          key={`${displayName}-edit-button`}
+        >
+          <Icon name="FilePenLine" />
+        </TooltipButton>,
+      ];
 
   return (
     <>

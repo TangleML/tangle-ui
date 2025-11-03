@@ -1,4 +1,4 @@
-import { type ReactNode, useCallback, useMemo, useRef, useState } from "react";
+import { type ReactNode, useState } from "react";
 
 import { type UndoRedo, useUndoRedo } from "@/hooks/useUndoRedo";
 import { loadPipelineByName } from "@/services/pipelineService";
@@ -86,182 +86,138 @@ export const ComponentSpecProvider = ({
   ]);
 
   const undoRedo = useUndoRedo(componentSpec, setComponentSpec);
-  const undoRedoRef = useRef(undoRedo);
-  undoRedoRef.current = undoRedo;
 
-  const currentSubgraphSpec = useMemo(() => {
-    return getSubgraphComponentSpec(componentSpec, currentSubgraphPath);
-  }, [componentSpec, currentSubgraphPath]);
-
-  const { isValid, errors } = useMemo(
-    () => checkComponentSpecValidity(currentSubgraphSpec),
-    [currentSubgraphSpec],
+  const currentSubgraphSpec = getSubgraphComponentSpec(
+    componentSpec,
+    currentSubgraphPath,
   );
 
-  const clearComponentSpec = useCallback(() => {
+  const { isValid, errors } = checkComponentSpecValidity(currentSubgraphSpec);
+
+  const clearComponentSpec = () => {
     setComponentSpec(EMPTY_GRAPH_COMPONENT_SPEC);
     setTaskStatusMap(new Map());
     setIsLoading(false);
     setCurrentSubgraphPath(["root"]);
-    undoRedoRef.current.clearHistory();
-  }, []);
+    undoRedo.clearHistory();
+  };
 
-  const graphSpec = useMemo(() => {
-    if (isGraphImplementation(componentSpec.implementation)) {
-      return componentSpec.implementation.graph;
+  const graphSpec = isGraphImplementation(componentSpec.implementation)
+    ? componentSpec.implementation.graph
+    : EMPTY_GRAPH_SPEC;
+
+  const currentGraphSpec = isGraphImplementation(
+    currentSubgraphSpec.implementation,
+  )
+    ? currentSubgraphSpec.implementation.graph
+    : EMPTY_GRAPH_SPEC;
+
+  const loadPipeline = async (newName?: string) => {
+    if (componentSpec) {
+      setComponentSpec(componentSpec);
     }
 
-    return EMPTY_GRAPH_SPEC;
-  }, [componentSpec]);
+    const name = newName ?? componentSpec.name;
+    if (!name) return;
 
-  const currentGraphSpec = useMemo(() => {
-    if (isGraphImplementation(currentSubgraphSpec.implementation)) {
-      return currentSubgraphSpec.implementation.graph;
+    const result = await loadPipelineByName(name);
+    if (!result.experiment) return;
+
+    const preparedComponentRef = await prepareComponentRefForEditor(
+      result.experiment.componentRef as ComponentReferenceWithSpec,
+    );
+
+    if (!preparedComponentRef) {
+      console.error("Failed to prepare component reference for editor");
+      return;
     }
 
-    return EMPTY_GRAPH_SPEC;
-  }, [currentSubgraphSpec]);
+    setComponentSpec(preparedComponentRef);
+    setIsLoading(false);
+  };
 
-  const loadPipeline = useCallback(
-    async (newName?: string) => {
-      if (componentSpec) {
-        setComponentSpec(componentSpec);
-      }
-
-      const name = newName ?? componentSpec.name;
-      if (!name) return;
-
-      const result = await loadPipelineByName(name);
-      if (!result.experiment) return;
-
-      const preparedComponentRef = await prepareComponentRefForEditor(
-        result.experiment.componentRef as ComponentReferenceWithSpec,
-      );
-
-      if (!preparedComponentRef) {
-        console.error("Failed to prepare component reference for editor");
-        return;
-      }
-
-      setComponentSpec(preparedComponentRef);
-      setIsLoading(false);
-    },
-    [componentSpec],
-  );
-
-  const refetch = useCallback(() => {
+  const refetch = () => {
     loadPipeline();
-  }, [loadPipeline]);
+  };
 
-  const saveComponentSpec = useCallback(
-    async (name: string) => {
-      if (readOnly) {
-        return;
-      }
+  const saveComponentSpec = async (name: string) => {
+    if (readOnly) {
+      return;
+    }
 
-      const specWithName = { ...componentSpec, name };
+    const specWithName = { ...componentSpec, name };
 
-      const componentText = componentSpecToYaml(specWithName);
-      await writeComponentToFileListFromText(
-        USER_PIPELINES_LIST_NAME,
-        name,
-        componentText,
+    const componentText = componentSpecToYaml(specWithName);
+    await writeComponentToFileListFromText(
+      USER_PIPELINES_LIST_NAME,
+      name,
+      componentText,
+    );
+  };
+
+  const updateGraphSpec = (newGraphSpec: GraphSpec) => {
+    setComponentSpec((prevSpec) => {
+      // Get current subgraph spec (at root, this is prevSpec itself)
+      const currentSubgraphSpec = getSubgraphComponentSpec(
+        prevSpec,
+        currentSubgraphPath,
       );
-    },
-    [componentSpec, readOnly],
-  );
 
-  const updateGraphSpec = useCallback(
-    (newGraphSpec: GraphSpec) => {
-      setComponentSpec((prevSpec) => {
-        // Get current subgraph spec (at root, this is prevSpec itself)
-        const currentSubgraphSpec = getSubgraphComponentSpec(
-          prevSpec,
-          currentSubgraphPath,
-        );
+      // Update its graph
+      const updatedSubgraphSpec: ComponentSpec = {
+        ...currentSubgraphSpec,
+        implementation: {
+          ...currentSubgraphSpec.implementation,
+          graph: newGraphSpec,
+        },
+      };
 
-        // Update its graph
-        const updatedSubgraphSpec: ComponentSpec = {
-          ...currentSubgraphSpec,
-          implementation: {
-            ...currentSubgraphSpec.implementation,
-            graph: newGraphSpec,
-          },
-        };
+      // Propagate changes back to root (handles root as early return)
+      return updateSubgraphSpec(
+        prevSpec,
+        currentSubgraphPath,
+        updatedSubgraphSpec,
+      );
+    });
+  };
 
-        // Propagate changes back to root (handles root as early return)
-        return updateSubgraphSpec(
-          prevSpec,
-          currentSubgraphPath,
-          updatedSubgraphSpec,
-        );
-      });
-    },
-    [currentSubgraphPath],
-  );
-
-  const navigateToSubgraph = useCallback((taskId: string) => {
+  const navigateToSubgraph = (taskId: string) => {
     setCurrentSubgraphPath((prev) => [...prev, taskId]);
-  }, []);
+  };
 
-  const navigateBack = useCallback(() => {
+  const navigateBack = () => {
     setCurrentSubgraphPath((prev) => prev.slice(0, -1));
-  }, []);
+  };
 
-  const navigateToPath = useCallback((targetPath: string[]) => {
+  const navigateToPath = (targetPath: string[]) => {
     setCurrentSubgraphPath(targetPath);
-  }, []);
+  };
 
   const canNavigateBack = currentSubgraphPath.length > 1;
 
-  const value = useMemo(
-    () => ({
-      componentSpec,
-      graphSpec,
-      currentGraphSpec,
-      currentSubgraphSpec,
-      taskStatusMap,
-      isLoading,
-      isValid,
-      errors,
-      refetch,
-      setComponentSpec,
-      clearComponentSpec,
-      saveComponentSpec,
-      updateGraphSpec,
-      setTaskStatusMap,
-      undoRedo,
+  const value = {
+    componentSpec,
+    graphSpec,
+    currentGraphSpec,
+    currentSubgraphSpec,
+    taskStatusMap,
+    isLoading,
+    isValid,
+    errors,
+    refetch,
+    setComponentSpec,
+    clearComponentSpec,
+    saveComponentSpec,
+    updateGraphSpec,
+    setTaskStatusMap,
+    undoRedo,
 
-      currentSubgraphPath,
-      navigateToSubgraph,
-      navigateBack,
-      navigateToPath,
-      canNavigateBack,
-    }),
-    [
-      componentSpec,
-      graphSpec,
-      currentGraphSpec,
-      currentSubgraphSpec,
-      taskStatusMap,
-      isLoading,
-      isValid,
-      errors,
-      refetch,
-      setComponentSpec,
-      clearComponentSpec,
-      saveComponentSpec,
-      updateGraphSpec,
-      setTaskStatusMap,
-      undoRedo,
-
-      currentSubgraphPath,
-      navigateToSubgraph,
-      navigateBack,
-      navigateToPath,
-      canNavigateBack,
-    ],
-  );
+    currentSubgraphPath,
+    navigateToSubgraph,
+    navigateBack,
+    navigateToPath,
+    canNavigateBack,
+  };
 
   return (
     <ComponentSpecContext.Provider value={value}>

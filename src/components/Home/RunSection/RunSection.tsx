@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useNavigate, useSearch } from "@tanstack/react-router";
 import { ChevronFirst, ChevronLeft, ChevronRight } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 
 import type { ListPipelineJobsResponse } from "@/api/types.gen";
 import { InfoBox } from "@/components/shared/InfoBox";
@@ -93,12 +93,6 @@ export const RunSection = () => {
       },
     });
 
-  useEffect(() => {
-    if (!search.page_token && search.filter === undefined) {
-      handleFilterChange(isCreatedByMeDefault);
-    }
-  }, [isCreatedByMeDefault]);
-
   const handleFilterChange = (value: boolean) => {
     const nextSearch: RunSectionSearch = { ...search };
     delete nextSearch.page_token;
@@ -133,6 +127,17 @@ export const RunSection = () => {
     setPreviousPageTokens([]);
     navigate({ to: pathname, search: nextSearch });
   };
+
+  const applyFilterChange = useEffectEvent((value: boolean) => {
+    handleFilterChange(value);
+  });
+
+  useEffect(() => {
+    if (!search.page_token && search.filter === undefined) {
+      applyFilterChange(isCreatedByMeDefault);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isCreatedByMeDefault]);
 
   const handleUserSearch = () => {
     if (!searchUser.trim()) return;

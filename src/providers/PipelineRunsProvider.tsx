@@ -1,11 +1,4 @@
-import {
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import { GitHubAuthFlowBackdrop } from "@/components/shared/GitHubAuth/GitHubAuthFlowBackdrop";
 import { isAuthorizationRequired } from "@/components/shared/GitHubAuth/helpers";
@@ -79,7 +72,7 @@ export const PipelineRunsProvider = ({
 
   const authorizationToken = useRef<string | undefined>(getToken());
 
-  const refetch = useCallback(async () => {
+  const refetch = async () => {
     if (!configured || !available) {
       setRuns([]);
       setRecentRuns([]);
@@ -131,67 +124,56 @@ export const PipelineRunsProvider = ({
       setIsLoading(false);
       setError((e as Error).message);
     }
-  }, [pipelineName, backendUrl, configured, available, recentRunsCount]);
+  };
 
-  const submit = useCallback(
-    async (
-      componentSpec: ComponentSpec,
-      options?: {
-        onSuccess?: (data: PipelineRun) => void;
-        onError?: (error: Error | string) => void;
-      },
-    ) => {
-      setIsSubmitting(true);
-      setError(null);
-
-      const authorizationRequired = isAuthorizationRequired();
-      if (authorizationRequired && !isAuthorized) {
-        const token = await awaitAuthorization();
-        if (token) {
-          authorizationToken.current = token;
-        }
-      }
-
-      await submitPipelineRun(componentSpec, backendUrl, {
-        authorizationToken: authorizationToken.current,
-        onSuccess: async (data) => {
-          await refetch();
-          setIsSubmitting(false);
-          options?.onSuccess?.(data);
-        },
-        onError: (error) => {
-          setIsSubmitting(false);
-          options?.onError?.(error);
-          setError(error.message);
-        },
-      });
+  const submit = async (
+    componentSpec: ComponentSpec,
+    options?: {
+      onSuccess?: (data: PipelineRun) => void;
+      onError?: (error: Error | string) => void;
     },
-    [
-      backendUrl,
-      refetch,
-      isAuthorized,
-      awaitAuthorization,
-      isAuthorizationRequired,
-    ],
-  );
+  ) => {
+    setIsSubmitting(true);
+    setError(null);
+
+    const authorizationRequired = isAuthorizationRequired();
+    if (authorizationRequired && !isAuthorized) {
+      const token = await awaitAuthorization();
+      if (token) {
+        authorizationToken.current = token;
+      }
+    }
+
+    await submitPipelineRun(componentSpec, backendUrl, {
+      authorizationToken: authorizationToken.current,
+      onSuccess: async (data) => {
+        await refetch();
+        setIsSubmitting(false);
+        options?.onSuccess?.(data);
+      },
+      onError: (error) => {
+        setIsSubmitting(false);
+        options?.onError?.(error);
+        setError(error.message);
+      },
+    });
+  };
 
   useEffect(() => {
     if (pipelineName) refetch();
-  }, [pipelineName, backendUrl, refetch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pipelineName]);
 
-  const value = useMemo(
-    () => ({
-      runs,
-      recentRuns,
-      isLoading,
-      isSubmitting,
-      error,
-      refetch,
-      submit,
-      setRecentRunsCount,
-    }),
-    [runs, recentRuns, isLoading, error, refetch, submit, setRecentRunsCount],
-  );
+  const value = {
+    runs,
+    recentRuns,
+    isLoading,
+    isSubmitting,
+    error,
+    refetch,
+    submit,
+    setRecentRunsCount,
+  };
 
   return (
     <PipelineRunsContext.Provider value={value}>

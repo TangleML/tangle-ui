@@ -13,7 +13,7 @@ import {
   useStoreApi,
 } from "@xyflow/react";
 import type { ComponentType, DragEvent } from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
 import { BlockStack } from "@/components/ui/layout";
@@ -105,7 +105,7 @@ const FlowCanvas = ({
   children,
   ...rest
 }: ReactFlowProps & { readOnly?: boolean }) => {
-  const initialCanvasLoaded = useRef(false);
+  const [initialCanvasLoaded, setInitialCanvasLoaded] = useState(false);
 
   const { clearContent } = useContextPanel();
 
@@ -134,7 +134,7 @@ const FlowCanvas = ({
     hint: "cycle compatible components",
   });
 
-  const allNodes = useMemo(() => {
+  const allNodes = (() => {
     if (readOnly) return nodes;
     if (ghostNode) {
       return [...nodes, ghostNode];
@@ -142,7 +142,7 @@ const FlowCanvas = ({
       return [...nodes, tabHintNode];
     }
     return nodes;
-  }, [readOnly, nodes, ghostNode, tabHintNode]);
+  })();
 
   const {
     handlers: confirmationHandlers,
@@ -158,55 +158,52 @@ const FlowCanvas = ({
   const [replaceTarget, setReplaceTarget] = useState<Node | null>(null);
   const [shiftKeyPressed, setShiftKeyPressed] = useState(false);
 
-  const handleKeyDown = useCallback(
-    (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement;
-      const isInputFocused =
-        target.tagName === "INPUT" ||
-        target.tagName === "TEXTAREA" ||
-        target.isContentEditable ||
-        target.closest('[data-slot="input"]');
+  const handleKeyDown = (event: KeyboardEvent) => {
+    const target = event.target as HTMLElement;
+    const isInputFocused =
+      target.tagName === "INPUT" ||
+      target.tagName === "TEXTAREA" ||
+      target.isContentEditable ||
+      target.closest('[data-slot="input"]');
 
-      // Skip canvas shortcuts if an input is focused
-      if (isInputFocused) {
-        return;
-      }
+    // Skip canvas shortcuts if an input is focused
+    if (isInputFocused) {
+      return;
+    }
 
-      if (event.key === "Shift") {
-        setShiftKeyPressed(true);
-      }
+    if (event.key === "Shift") {
+      setShiftKeyPressed(true);
+    }
 
-      if (event.key === "Tab") {
-        const direction = event.shiftKey ? "back" : "forward";
-        const handled = handleTabCycle(direction);
-        if (handled) {
-          event.preventDefault();
-        }
-      }
-
-      if (event.key === "a" && (event.metaKey || event.ctrlKey)) {
+    if (event.key === "Tab") {
+      const direction = event.shiftKey ? "back" : "forward";
+      const handled = handleTabCycle(direction);
+      if (handled) {
         event.preventDefault();
-
-        const nodeTypesToSelect = ["task", "input", "output"];
-        setNodes((currentNodes) =>
-          currentNodes.map((node) => ({
-            ...node,
-            selected:
-              event.shiftKey || !node.type
-                ? false
-                : nodeTypesToSelect.includes(node.type),
-          })),
-        );
       }
-    },
-    [handleTabCycle, setNodes],
-  );
+    }
 
-  const handleKeyUp = useCallback((event: KeyboardEvent) => {
+    if (event.key === "a" && (event.metaKey || event.ctrlKey)) {
+      event.preventDefault();
+
+      const nodeTypesToSelect = ["task", "input", "output"];
+      setNodes((currentNodes) =>
+        currentNodes.map((node) => ({
+          ...node,
+          selected:
+            event.shiftKey || !node.type
+              ? false
+              : nodeTypesToSelect.includes(node.type),
+        })),
+      );
+    }
+  };
+
+  const handleKeyUp = (event: KeyboardEvent) => {
     if (event.key === "Shift") {
       setShiftKeyPressed(false);
     }
-  }, []);
+  };
 
   useEffect(() => {
     document.addEventListener("keydown", handleKeyDown);
@@ -216,7 +213,8 @@ const FlowCanvas = ({
       document.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("keyup", handleKeyUp);
     };
-  }, [handleKeyDown, handleKeyUp]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance>();
@@ -226,81 +224,61 @@ const FlowCanvas = ({
     setReactFlowInstanceForOverlay(instance);
   };
 
-  const updateOrAddNodes = useCallback(
-    ({
-      updatedNodes,
-      newNodes,
-    }: {
-      updatedNodes?: Node[];
-      newNodes?: Node[];
-    }) => {
-      setNodes((prev) => {
-        const updated = prev.map((node) => {
-          const updatedNode = updatedNodes?.find(
-            (updatedNode) => updatedNode.id === node.id,
-          );
-          return updatedNode ? { ...node, ...updatedNode } : node;
-        });
-
-        if (!newNodes) {
-          return updated;
-        }
-
-        return [...updated, ...newNodes];
+  const updateOrAddNodes = ({
+    updatedNodes,
+    newNodes,
+  }: {
+    updatedNodes?: Node[];
+    newNodes?: Node[];
+  }) => {
+    setNodes((prev) => {
+      const updated = prev.map((node) => {
+        const updatedNode = updatedNodes?.find(
+          (updatedNode) => updatedNode.id === node.id,
+        );
+        return updatedNode ? { ...node, ...updatedNode } : node;
       });
-    },
-    [setNodes],
-  );
 
-  const selectedNodes = useMemo(
-    () =>
-      nodes.filter(
-        (node) => node.selected && node.type && SELECTABLE_NODES.has(node.type),
-      ),
-    [nodes],
-  );
-  const selectedEdges = useMemo(
-    () => edges.filter((edge) => edge.selected),
-    [edges],
-  );
-
-  const selectedElements = useMemo(
-    () => ({
-      nodes: selectedNodes,
-      edges: selectedEdges,
-    }),
-    [selectedNodes, selectedEdges],
-  );
-
-  const canUpgrade = useMemo(
-    () =>
-      selectedNodes.some(
-        (node) => node.type && UPGRADEABLE_NODES.has(node.type),
-      ),
-    [selectedNodes],
-  );
-
-  const onElementsRemove = useCallback(
-    (params: NodesAndEdges) => {
-      let updatedSubgraphSpec = { ...currentSubgraphSpec };
-
-      for (const edge of params.edges) {
-        updatedSubgraphSpec = removeEdge(edge, updatedSubgraphSpec);
-      }
-      for (const node of params.nodes) {
-        updatedSubgraphSpec = removeNode(node, updatedSubgraphSpec);
+      if (!newNodes) {
+        return updated;
       }
 
-      const updatedRootSpec = updateSubgraphSpec(
-        componentSpec,
-        currentSubgraphPath,
-        updatedSubgraphSpec,
-      );
+      return [...updated, ...newNodes];
+    });
+  };
 
-      setComponentSpec(updatedRootSpec);
-    },
-    [componentSpec, currentSubgraphSpec, currentSubgraphPath, setComponentSpec],
+  const selectedNodes = nodes.filter(
+    (node) => node.selected && node.type && SELECTABLE_NODES.has(node.type),
   );
+  const selectedEdges = edges.filter((edge) => edge.selected);
+
+  const selectedElements = {
+    nodes: selectedNodes,
+    edges: selectedEdges,
+  };
+
+  const canUpgrade = selectedNodes.some(
+    (node) => node.type && UPGRADEABLE_NODES.has(node.type),
+  );
+
+  const onElementsRemove = (params: NodesAndEdges) => {
+    let updatedSubgraphSpec = { ...currentSubgraphSpec };
+
+    for (const edge of params.edges) {
+      updatedSubgraphSpec = removeEdge(edge, updatedSubgraphSpec);
+    }
+    for (const node of params.nodes) {
+      updatedSubgraphSpec = removeNode(node, updatedSubgraphSpec);
+    }
+
+    const updatedRootSpec = updateSubgraphSpec(
+      componentSpec,
+      currentSubgraphPath,
+      updatedSubgraphSpec,
+    );
+
+    setComponentSpec(updatedRootSpec);
+  };
 
   const nodeCallbacks = useNodeCallbacks({
     triggerConfirmation,
@@ -308,79 +286,67 @@ const FlowCanvas = ({
     updateOrAddNodes,
   });
 
-  const nodeData = useMemo(
-    () => ({
-      connectable: !readOnly && !!nodesConnectable,
-      readOnly,
-      nodeCallbacks,
-    }),
-    [readOnly, nodesConnectable, nodeCallbacks],
-  );
+  const nodeData = {
+    connectable: !readOnly && !!nodesConnectable,
+    readOnly,
+    nodeCallbacks,
+  };
 
-  const onConnect = useCallback(
-    (connection: Connection) => {
-      if (connection.source === connection.target) return;
+  const onConnect = (connection: Connection) => {
+    if (connection.source === connection.target) return;
 
-      const updatedGraphSpec = handleConnection(currentGraphSpec, connection);
-      updateGraphSpec(updatedGraphSpec);
-    },
-    [currentGraphSpec, handleConnection, updateGraphSpec],
-  );
+    const updatedGraphSpec = handleConnection(currentGraphSpec, connection);
+    updateGraphSpec(updatedGraphSpec);
+  };
 
-  const onConnectEnd = useCallback(
-    (_e: MouseEvent | TouchEvent, connectionState: FinalConnectionState) => {
-      if (connectionState.isValid) {
-        // Valid connections are handled by onConnect
-        return;
-      }
+  const onConnectEnd = (
+    _e: MouseEvent | TouchEvent,
+    connectionState: FinalConnectionState,
+  ) => {
+    if (connectionState.isValid) {
+      // Valid connections are handled by onConnect
+      return;
+    }
 
-      const ghostNode = reactFlowInstance
-        ?.getNodes()
-        .find((node) => node.type === "ghost");
+    const ghostNode = reactFlowInstance
+      ?.getNodes()
+      .find((node) => node.type === "ghost");
 
-      if (!ghostNode) {
-        return;
-      }
+    if (!ghostNode) {
+      return;
+    }
 
-      const { componentRef } = ghostNode.data as {
-        componentRef: ComponentReference;
-      };
+    const { componentRef } = ghostNode.data as {
+      componentRef: ComponentReference;
+    };
 
-      const position = latestFlowPosRef.current;
-      if (!position) return;
+    const position = latestFlowPosRef.current;
+    if (!position) return;
 
-      let newComponentSpec = { ...componentSpec };
-      const fromHandle = connectionState.fromHandle;
+    let newComponentSpec = { ...componentSpec };
+    const fromHandle = connectionState.fromHandle;
 
-      const existingInputEdge = reactFlowInstance
-        ?.getEdges()
-        .find(
-          (edge) =>
-            edge.target === fromHandle?.nodeId &&
-            edge.targetHandle === fromHandle.id,
-        );
+    const existingInputEdge = reactFlowInstance
+      ?.getEdges()
+      .find(
+        (edge) =>
+          edge.target === fromHandle?.nodeId &&
+          edge.targetHandle === fromHandle.id,
+      );
 
-      if (existingInputEdge) {
-        newComponentSpec = removeEdge(existingInputEdge, newComponentSpec);
-      }
+    if (existingInputEdge) {
+      newComponentSpec = removeEdge(existingInputEdge, newComponentSpec);
+    }
 
-      const updatedComponentSpec = addAndConnectNode({
-        componentRef,
-        fromHandle,
-        position,
-        componentSpec: newComponentSpec,
-      });
+    const updatedComponentSpec = addAndConnectNode({
+      componentRef,
+      fromHandle,
+      position,
+      componentSpec: newComponentSpec,
+    });
 
-      setComponentSpec(updatedComponentSpec);
-    },
-    [
-      reactFlowInstance,
-      componentSpec,
-      nodeData,
-      setComponentSpec,
-      updateOrAddNodes,
-    ],
-  );
+    setComponentSpec(updatedComponentSpec);
+  };
 
   useEffect(() => {
     function handleMouseMove(event: MouseEvent) {
@@ -460,202 +426,175 @@ const FlowCanvas = ({
     },
   });
 
-  const onDragOver = useCallback(
-    (event: DragEvent<HTMLDivElement>) => {
-      event.preventDefault();
+  const onDragOver = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
 
-      // Check if we're dragging files
-      const hasFiles = event.dataTransfer.types.includes("Files");
-      if (hasFiles) {
-        return;
-      }
+    // Check if we're dragging files
+    const hasFiles = event.dataTransfer.types.includes("Files");
+    if (hasFiles) {
+      return;
+    }
 
-      event.dataTransfer.dropEffect = "move";
+    event.dataTransfer.dropEffect = "move";
 
-      const cursorPosition = reactFlowInstance?.screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
-      });
+    const cursorPosition = reactFlowInstance?.screenToFlowPosition({
+      x: event.clientX,
+      y: event.clientY,
+    });
 
-      if (cursorPosition) {
-        const hoveredNode = nodes.find((node) =>
-          isPositionInNode(node, cursorPosition),
-        );
+    if (cursorPosition) {
+      const hoveredNode = nodes.find((node) =>
+        isPositionInNode(node, cursorPosition),
+      );
 
-        if (hoveredNode?.id === replaceTarget?.id) return;
-        if (hoveredNode?.type && !REPLACEABLE_NODES.has(hoveredNode.type)) {
-          setReplaceTarget(null);
-          return;
-        }
-
-        setReplaceTarget(hoveredNode || null);
-      }
-    },
-    [reactFlowInstance, nodes, replaceTarget, setReplaceTarget],
-  );
-
-  const onDrop = useCallback(
-    async (event: DragEvent<HTMLDivElement>) => {
-      event.preventDefault();
-
-      // Handle file drops
-      if (event.dataTransfer.files.length > 0) {
-        handleDrop(event);
-        return;
-      }
-
-      const { taskSpec: droppedTask, taskType } = getTaskFromEvent(event);
-
-      if (!taskType) {
-        console.error("Dropped task type not identified.");
-        return;
-      }
-
-      if (!droppedTask && taskType === "task") {
-        console.error("Unable to find dropped task.");
-        return;
-      }
-
-      if (isNotMaterializedComponentReference(droppedTask?.componentRef)) {
-        // load spec
-        const hydratedComponentRef = await hydrateComponentReference(
-          droppedTask.componentRef,
-        );
-
-        if (hydratedComponentRef) {
-          droppedTask.componentRef = hydratedComponentRef;
-        } else {
-          notify(
-            "Failed to add component to canvas. Please, try again.",
-            "error",
-          );
-          return;
-        }
-      }
-
-      // Replacing an existing node
-      if (replaceTarget) {
-        if (!droppedTask) {
-          console.error(
-            "Replacement by Input or Output node is currently unsupported.",
-          );
-          return;
-        }
-
-        const { updatedGraphSpec, lostInputs, newTaskId } = replaceTaskNode(
-          replaceTarget.data.taskId as string,
-          droppedTask.componentRef,
-          currentGraphSpec,
-        );
-
-        const dialogData = getReplaceConfirmationDetails(
-          replaceTarget,
-          newTaskId,
-          lostInputs,
-        );
-
-        const confirmed = await triggerConfirmation(dialogData);
-
+      if (hoveredNode?.id === replaceTarget?.id) return;
+      if (hoveredNode?.type && !REPLACEABLE_NODES.has(hoveredNode.type)) {
         setReplaceTarget(null);
-
-        if (confirmed) {
-          updateGraphSpec(updatedGraphSpec);
-        }
-
         return;
       }
 
-      if (reactFlowInstance) {
-        const position = getPositionFromEvent(event, reactFlowInstance);
+      setReplaceTarget(hoveredNode || null);
+    }
+  };
 
-        const newSubgraphSpec = addTask(
-          taskType,
-          droppedTask,
-          position,
-          currentSubgraphSpec,
+  const onDrop = async (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+
+    // Handle file drops
+    if (event.dataTransfer.files.length > 0) {
+      handleDrop(event);
+      return;
+    }
+
+    const { taskSpec: droppedTask, taskType } = getTaskFromEvent(event);
+
+    if (!taskType) {
+      console.error("Dropped task type not identified.");
+      return;
+    }
+
+    if (!droppedTask && taskType === "task") {
+      console.error("Unable to find dropped task.");
+      return;
+    }
+
+    if (isNotMaterializedComponentReference(droppedTask?.componentRef)) {
+      // load spec
+      const hydratedComponentRef = await hydrateComponentReference(
+        droppedTask.componentRef,
+      );
+
+      if (hydratedComponentRef) {
+        droppedTask.componentRef = hydratedComponentRef;
+      } else {
+        notify(
+          "Failed to add component to canvas. Please, try again.",
+          "error",
         );
-
-        const newRootSpec = updateSubgraphSpec(
-          componentSpec,
-          currentSubgraphPath,
-          newSubgraphSpec,
-        );
-
-        setComponentSpec(newRootSpec);
+        return;
       }
-    },
-    [
-      componentSpec,
-      currentSubgraphSpec,
-      currentSubgraphPath,
-      reactFlowInstance,
-      replaceTarget,
-      setComponentSpec,
-      updateGraphSpec,
-      triggerConfirmation,
-      handleDrop,
-      notify,
-    ],
-  );
+    }
 
-  const onRemoveNodes = useCallback(async () => {
+    // Replacing an existing node
+    if (replaceTarget) {
+      if (!droppedTask) {
+        console.error(
+          "Replacement by Input or Output node is currently unsupported.",
+        );
+        return;
+      }
+
+      const { updatedGraphSpec, lostInputs, newTaskId } = replaceTaskNode(
+        replaceTarget.data.taskId as string,
+        droppedTask.componentRef,
+        currentGraphSpec,
+      );
+
+      const dialogData = getReplaceConfirmationDetails(
+        replaceTarget,
+        newTaskId,
+        lostInputs,
+      );
+
+      const confirmed = await triggerConfirmation(dialogData);
+
+      setReplaceTarget(null);
+
+      if (confirmed) {
+        updateGraphSpec(updatedGraphSpec);
+      }
+
+      return;
+    }
+
+    if (reactFlowInstance) {
+      const position = getPositionFromEvent(event, reactFlowInstance);
+
+      const newSubgraphSpec = addTask(
+        taskType,
+        droppedTask,
+        position,
+        currentSubgraphSpec,
+      );
+
+      const newRootSpec = updateSubgraphSpec(
+        componentSpec,
+        currentSubgraphPath,
+        newSubgraphSpec,
+      );
+
+      setComponentSpec(newRootSpec);
+    }
+  };
+
+  const onRemoveNodes = async () => {
     const confirmed = await triggerConfirmation(
       getDeleteConfirmationDetails({ nodes: selectedNodes, edges: [] }),
     );
     if (confirmed) {
       onElementsRemove(selectedElements);
     }
-  }, [selectedElements, onElementsRemove, triggerConfirmation]);
+  };
 
-  const handleOnNodesChange = useCallback(
-    (changes: NodeChange[]) => {
-      const positionChanges = changes.filter(
-        (change) => change.type === "position" && change.dragging === false,
-      );
+  const handleOnNodesChange = (changes: NodeChange[]) => {
+    const positionChanges = changes.filter(
+      (change) => change.type === "position" && change.dragging === false,
+    );
 
-      if (positionChanges.length > 0) {
-        const updatedNodes = positionChanges
-          .map((change) => {
-            if ("id" in change && "position" in change && change.position) {
-              const node = nodes.find((n) => n.id === change.id);
-              return node
-                ? {
-                    ...node,
-                    position: { x: change.position.x, y: change.position.y },
-                  }
-                : null;
-            }
-            return null;
-          })
-          .filter(Boolean) as Node[];
+    if (positionChanges.length > 0) {
+      const updatedNodes = positionChanges
+        .map((change) => {
+          if ("id" in change && "position" in change && change.position) {
+            const node = nodes.find((n) => n.id === change.id);
+            return node
+              ? {
+                  ...node,
+                  position: { x: change.position.x, y: change.position.y },
+                }
+              : null;
+          }
+          return null;
+        })
+        .filter(Boolean) as Node[];
 
-        if (updatedNodes.length > 0) {
-          const updatedSubgraphSpec = updateNodePositions(
-            updatedNodes,
-            currentSubgraphSpec,
-          );
+      if (updatedNodes.length > 0) {
+        const updatedSubgraphSpec = updateNodePositions(
+          updatedNodes,
+          currentSubgraphSpec,
+        );
 
-          const updatedRootSpec = updateSubgraphSpec(
-            componentSpec,
-            currentSubgraphPath,
-            updatedSubgraphSpec,
-          );
+        const updatedRootSpec = updateSubgraphSpec(
+          componentSpec,
+          currentSubgraphPath,
+          updatedSubgraphSpec,
+        );
 
-          setComponentSpec(updatedRootSpec);
-        }
+        setComponentSpec(updatedRootSpec);
       }
+    }
 
-      onNodesChange(changes);
-    },
-    [
-      nodes,
-      componentSpec,
-      currentSubgraphSpec,
-      currentSubgraphPath,
-      setComponentSpec,
-      onNodesChange,
-    ],
-  );
+    onNodesChange(changes);
+  };
 
   const handleBeforeDelete = async (params: NodesAndEdges) => {
     if (readOnly) {
@@ -678,7 +617,7 @@ const FlowCanvas = ({
     return confirmed;
   };
 
-  const onDuplicateNodes = useCallback(() => {
+  const onDuplicateNodes = () => {
     const {
       updatedComponentSpec: updatedSubgraphSpec,
       newNodes,
@@ -697,16 +636,9 @@ const FlowCanvas = ({
       updatedNodes,
       newNodes,
     });
-  }, [
-    componentSpec,
-    currentSubgraphSpec,
-    currentSubgraphPath,
-    selectedNodes,
-    setComponentSpec,
-    setNodes,
-  ]);
+  };
 
-  const onUpgradeNodes = useCallback(async () => {
+  const onUpgradeNodes = async () => {
     let newGraphSpec = currentGraphSpec;
     const allLostInputs: InputSpec[] = [];
     const includedNodes: Node[] = [];
@@ -755,57 +687,53 @@ const FlowCanvas = ({
       updateGraphSpec(newGraphSpec);
       notify(`${includedNodes.length} nodes updated`, "success");
     }
-  }, [
-    currentGraphSpec,
-    selectedNodes,
-    updateGraphSpec,
-    notify,
-    triggerConfirmation,
-  ]);
+  };
 
-  const handleSelectionChange = useCallback(() => {
+  const handleSelectionChange = () => {
     if (selectedNodes.length < 1) {
       setShowToolbar(false);
     }
-  }, [selectedNodes]);
+  };
 
-  const handleSelectionEnd = useCallback(() => {
+  const handleSelectionEnd = () => {
     setShowToolbar(true);
-  }, []);
+  };
 
-  const updateReactFlow = useCallback(
-    (newComponentSpec: ComponentSpec) => {
-      const subgraphSpec = getSubgraphComponentSpec(
-        newComponentSpec,
-        currentSubgraphPath,
-        notify,
-      );
-      const newNodes = createNodesFromComponentSpec(subgraphSpec, nodeData);
+  const updateReactFlow = (newComponentSpec: ComponentSpec) => {
+    const subgraphSpec = getSubgraphComponentSpec(
+      newComponentSpec,
+      currentSubgraphPath,
+      notify,
+    );
+    const newNodes = createNodesFromComponentSpec(subgraphSpec, nodeData);
 
-      const updatedNewNodes = newNodes.map((node) => ({
-        ...node,
-        data: {
-          ...node.data,
-          highlighted: node.id === replaceTarget?.id,
-        },
-      }));
+    const updatedNewNodes = newNodes.map((node) => ({
+      ...node,
+      data: {
+        ...node.data,
+        highlighted: node.id === replaceTarget?.id,
+      },
+    }));
 
-      setNodes((prevNodes) => {
-        const updatedNodes = updatedNewNodes.map((newNode) => {
-          const existingNode = prevNodes.find((node) => node.id === newNode.id);
-          return existingNode ? { ...existingNode, ...newNode } : newNode;
-        });
-
-        return updatedNodes;
+    setNodes((prevNodes) => {
+      const updatedNodes = updatedNewNodes.map((newNode) => {
+        const existingNode = prevNodes.find((node) => node.id === newNode.id);
+        return existingNode ? { ...existingNode, ...newNode } : newNode;
       });
-    },
-    [setNodes, nodeData, replaceTarget, currentSubgraphPath],
-  );
+
+      return updatedNodes;
+    });
+  };
+
+  const markCanvasLoaded = useEffectEvent(() => {
+    setInitialCanvasLoaded(true);
+  });
 
   useEffect(() => {
     preserveIOSelectionOnSpecChange(componentSpec);
     updateReactFlow(componentSpec);
-    initialCanvasLoaded.current = true;
+    markCanvasLoaded();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [componentSpec, currentSubgraphPath, preserveIOSelectionOnSpecChange]);
 
   useEffect(() => {
@@ -820,20 +748,20 @@ const FlowCanvas = ({
     resetPrevSpec();
   }, [componentSpec?.name, resetPrevSpec]);
 
-  const fitView = useCallback(() => {
+  const fitView = () => {
     reactFlowInstance?.fitView({
       maxZoom: 1,
     });
-  }, [reactFlowInstance]);
+  };
 
   useScheduleExecutionOnceWhenConditionMet(
-    initialCanvasLoaded.current && !!reactFlowInstance,
+    initialCanvasLoaded && !!reactFlowInstance,
     fitView,
   );
 
   const store = useStoreApi();
 
-  const onCopy = useCallback(() => {
+  const onCopy = () => {
     // Copy selected nodes to clipboard
     if (selectedNodes.length > 0) {
       const selectedNodesJson = JSON.stringify(selectedNodes);
@@ -843,9 +771,9 @@ const FlowCanvas = ({
       const message = `Copied ${selectedNodes.length} nodes to clipboard`;
       notify(message, "success");
     }
-  }, [selectedNodes]);
+  };
 
-  const onPaste = useCallback(() => {
+  const onPaste = () => {
     if (readOnly) return;
 
     // Paste nodes from clipboard to the centre of the Canvas
@@ -899,15 +827,7 @@ const FlowCanvas = ({
         console.error("Failed to paste nodes from clipboard:", err);
       }
     });
-  }, [
-    componentSpec,
-    nodes,
-    reactFlowInstance,
-    store,
-    updateOrAddNodes,
-    setComponentSpec,
-    readOnly,
-  ]);
+  };
 
   useCopyPaste({
     onCopy,

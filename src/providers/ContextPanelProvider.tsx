@@ -1,11 +1,5 @@
 import { useReactFlow } from "@xyflow/react";
-import {
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { type ReactNode, useEffect, useEffectEvent, useState } from "react";
 
 import { deselectAllNodes } from "@/utils/flowUtils";
 
@@ -40,19 +34,23 @@ export const ContextPanelProvider = ({
   const { setNodes } = useReactFlow();
   const [content, setContentState] = useState<ReactNode>(defaultContent);
 
-  const setContent = useCallback((content: ReactNode) => {
+  const setContent = (content: ReactNode) => {
     setContentState(content);
-  }, []);
+  };
 
-  const clearContent = useCallback(() => {
+  const clearContent = () => {
     setContentState(defaultContent);
-  }, [defaultContent]);
+  };
+
+  const onEscapeKey = useEffectEvent(() => {
+    clearContent();
+    setNodes(deselectAllNodes);
+  });
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        clearContent();
-        setNodes(deselectAllNodes);
+        onEscapeKey();
       }
     };
 
@@ -61,12 +59,9 @@ export const ContextPanelProvider = ({
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [defaultContent]);
+  }, []);
 
-  const value = useMemo(
-    () => ({ content, setContent, clearContent }),
-    [content, setContent, clearContent],
-  );
+  const value = { content, setContent, clearContent };
 
   return (
     <ContextPanelContext.Provider value={value}>

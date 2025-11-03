@@ -2,7 +2,6 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import {
   type ChangeEvent,
   type PropsWithChildren,
-  useCallback,
   useEffect,
   useReducer,
   useState,
@@ -88,17 +87,14 @@ const SearchFilter = ({
   const [open, setOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<ApiSearchFilter>("name");
 
-  const handleFilterChange = useCallback(
-    (filter: ApiSearchFilter) => {
-      setActiveFilter(filter);
-      onFiltersChange([filter]);
-      // it is more convenient to close the popover after the filter is changed, saves at least one click
-      setTimeout(() => {
-        setOpen(false);
-      }, 200);
-    },
-    [onFiltersChange],
-  );
+  const handleFilterChange = (filter: ApiSearchFilter) => {
+    setActiveFilter(filter);
+    onFiltersChange([filter]);
+    // it is more convenient to close the popover after the filter is changed, saves at least one click
+    setTimeout(() => {
+      setOpen(false);
+    }, 200);
+  };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -144,20 +140,6 @@ const SearchFilter = ({
   );
 };
 
-const debounce = <F extends (...args: Parameters<F>) => ReturnType<F>>(
-  func: F,
-  waitFor: number,
-) => {
-  let timeout: ReturnType<typeof setTimeout>;
-
-  const debounced = (...args: Parameters<F>) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), waitFor);
-  };
-
-  return debounced;
-};
-
 const SearchRequestInput = ({ value, onChange }: SearchRequestProps) => {
   const DEBOUNCE_TIME_MS = 200;
 
@@ -165,26 +147,19 @@ const SearchRequestInput = ({ value, onChange }: SearchRequestProps) => {
     | { type: "SET_SEARCH_TERM"; payload: string }
     | { type: "SET_FILTERS"; payload: string[] };
 
-  const searchRequestReducer = useCallback(
-    (state: LibraryFilterRequest, action: SearchRequestAction) => {
-      switch (action.type) {
-        case "SET_SEARCH_TERM":
-          return { ...state, searchTerm: action.payload };
-        case "SET_FILTERS":
-          return { ...state, filters: action.payload };
-        default:
-          return state;
-      }
-    },
-    [],
-  );
-
-  const debouncedOnChange = useCallback(
-    debounce((searchRequest: LibraryFilterRequest) => {
-      onChange(searchRequest);
-    }, DEBOUNCE_TIME_MS),
-    [onChange],
-  );
+  const searchRequestReducer = (
+    state: LibraryFilterRequest,
+    action: SearchRequestAction,
+  ) => {
+    switch (action.type) {
+      case "SET_SEARCH_TERM":
+        return { ...state, searchTerm: action.payload };
+      case "SET_FILTERS":
+        return { ...state, filters: action.payload };
+      default:
+        return state;
+    }
+  };
 
   const [searchRequest, dispatch] = useReducer(searchRequestReducer, {
     searchTerm: value,
@@ -192,16 +167,20 @@ const SearchRequestInput = ({ value, onChange }: SearchRequestProps) => {
   });
 
   useEffect(() => {
-    debouncedOnChange(searchRequest);
-  }, [searchRequest, debouncedOnChange]);
+    const timeoutId = setTimeout(
+      () => onChange(searchRequest),
+      DEBOUNCE_TIME_MS,
+    );
+    return () => clearTimeout(timeoutId);
+  }, [searchRequest, onChange]);
 
-  const onFiltersChange = useCallback((filters: string[]) => {
+  const onFiltersChange = (filters: string[]) => {
     dispatch({ type: "SET_FILTERS", payload: filters });
-  }, []);
+  };
 
-  const handleChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     dispatch({ type: "SET_SEARCH_TERM", payload: e.target.value });
-  }, []);
+  };
 
   return (
     <InlineStack align="space-between" gap="2" className="w-full">
@@ -408,12 +387,9 @@ const PublishedComponentsSearch = ({ children }: PropsWithChildren) => {
     LibraryFilterRequest | undefined
   >();
 
-  const handleSearchRequestChange = useCallback(
-    (searchRequest: LibraryFilterRequest) => {
-      setSearchRequest(searchRequest);
-    },
-    [setSearchRequest],
-  );
+  const handleSearchRequestChange = (searchRequest: LibraryFilterRequest) => {
+    setSearchRequest(searchRequest);
+  };
 
   return (
     <BlockStack gap="2">

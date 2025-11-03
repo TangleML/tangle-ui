@@ -2,9 +2,11 @@ import { Handle, Position, useConnection } from "@xyflow/react";
 import {
   type MouseEvent as ReactMouseEvent,
   useCallback,
+  useEffect,
+  useEffectEvent,
+  useRef,
   useState,
 } from "react";
-import { useEffect, useRef } from "react";
 
 import {
   Tooltip,
@@ -68,15 +70,15 @@ export const InputHandle = ({
     [onLabelClick, selected],
   );
 
+  const updateActiveState = useEffectEvent((isActive: boolean) => {
+    setActive(isActive);
+  });
+
   useEffect(() => {
-    if (
+    const isActive =
       (fromHandle === handleId && fromNode === nodeId) ||
-      (toHandle === handleId && toNode === nodeId)
-    ) {
-      setActive(true);
-    } else {
-      setActive(false);
-    }
+      (toHandle === handleId && toNode === nodeId);
+    updateActiveState(isActive);
   }, [fromHandle, fromNode, toHandle, toNode, handleId, nodeId]);
 
   useEffect(() => {
@@ -251,15 +253,15 @@ export const OutputHandle = ({
     [onLabelClick, selected],
   );
 
+  const updateActiveState = useEffectEvent((isActive: boolean) => {
+    setActive(isActive);
+  });
+
   useEffect(() => {
-    if (
+    const isActive =
       (fromHandle === handleId && fromNode === nodeId) ||
-      (toHandle === handleId && toNode === nodeId)
-    ) {
-      setActive(true);
-    } else {
-      setActive(false);
-    }
+      (toHandle === handleId && toNode === nodeId);
+    updateActiveState(isActive);
   }, [fromHandle, fromNode, toHandle, toNode, handleId, nodeId]);
 
   useEffect(() => {

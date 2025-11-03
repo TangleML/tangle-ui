@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { ArtifactDataResponse } from "@/api/types.gen";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
@@ -32,16 +32,16 @@ const IOCell = ({ io, artifactData }: IOCellProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const tooltipTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const handleTooltipOpen = useCallback((open: boolean) => {
+  const handleTooltipOpen = (open: boolean) => {
     // When the tooltip is closed, we need to clear the copied state
     if (!open) {
       if (tooltipTimerRef.current) clearTimeout(tooltipTimerRef.current);
       setIsCopied(false);
     }
     setIsTooltipOpen(open);
-  }, []);
+  };
 
-  const handleCopy = useCallback((value: string, type: "Name" | "Value") => {
+  const handleCopy = (value: string, type: "Name" | "Value") => {
     copyToClipboard(value);
     setIsCopied(true);
     setIsTooltipOpen(true);
@@ -55,17 +55,17 @@ const IOCell = ({ io, artifactData }: IOCellProps) => {
       setCopyType(undefined);
       setIsCopied(false);
     }, 1500);
-  }, []);
+  };
 
-  const handleCopyName = useCallback(() => {
+  const handleCopyName = () => {
     handleCopy(io.name, "Name");
-  }, [io.name, handleCopy]);
+  };
 
-  const handleCopyValue = useCallback(() => {
+  const handleCopyValue = () => {
     if (!artifactData?.value) return;
 
     handleCopy(artifactData.value, "Value");
-  }, [artifactData?.value, handleCopy]);
+  };
 
   useEffect(() => {
     return () => {

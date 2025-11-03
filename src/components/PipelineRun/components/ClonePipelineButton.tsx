@@ -1,7 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { CopyPlus } from "lucide-react";
-import { useCallback } from "react";
 
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import useToastNotification from "@/hooks/useToastNotification";
@@ -34,9 +33,10 @@ export const ClonePipelineButton = ({
       notify(`Error cloning pipeline: ${error}`, "error");
     },
   });
-  const handleClone = useCallback(() => {
+
+  const handleClone = () => {
     clonePipeline();
-  }, [clonePipeline]);
+  };
 
   return (
     <TooltipButton

@@ -49,6 +49,7 @@ export function useDebouncedState<T>(
     }, debounceMs);
 
     return clearDebounce;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentState, debounceMs, onStateChange, shouldIgnoreChange]);
 
   return { clearDebounce, updatePreviousState };

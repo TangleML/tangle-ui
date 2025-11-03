@@ -1,12 +1,6 @@
 import { PackagePlus, X } from "lucide-react";
 import { Upload } from "lucide-react";
-import {
-  type ChangeEvent,
-  type ReactNode,
-  useCallback,
-  useRef,
-  useState,
-} from "react";
+import { type ChangeEvent, type ReactNode, useRef, useState } from "react";
 
 import { ComponentEditorDialog } from "@/components/shared/ComponentEditor/ComponentEditorDialog";
 import { NewComponentTemplateSelector } from "@/components/shared/ComponentEditor/components/NewComponentTemplateSelector";
@@ -78,72 +72,73 @@ const ImportComponent = ({
     },
   });
 
-  const handleTabChange = useCallback((value: TabType) => {
-    setTab(value);
-  }, []);
+  const handleTabChange = (value: string) => {
+    if (
+      value === TabType.URL ||
+      value === TabType.File ||
+      value === TabType.New
+    ) {
+      setTab(value as TabType);
+    }
+  };
 
-  const handleFileChange = useCallback(
-    (event: ChangeEvent<HTMLInputElement>) => {
-      const files = event.target.files;
-      // Don't clear the file if the user cancels the dialog
-      if (!files || files.length === 0) {
-        return;
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    // Don't clear the file if the user cancels the dialog
+    if (!files || files.length === 0) {
+      return;
+    }
+
+    const file = files[0];
+    setSelectedFileName(file.name);
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result;
+      if (content) {
+        setSelectedFile(content);
       }
+    };
 
-      const file = files[0];
-      setSelectedFileName(file.name);
+    reader.readAsText(file);
+  };
 
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const content = e.target?.result;
-        if (content) {
-          setSelectedFile(content);
-        }
-      };
-
-      reader.readAsText(file);
-    },
-    [],
-  );
-
-  const clearSelectedFile = useCallback(() => {
+  const clearSelectedFile = () => {
     setSelectedFile(null);
     setSelectedFileName("");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
-  }, []);
+  };
 
-  const handleImport = useCallback(() => {
+  const handleImport = () => {
     setIsSubmitting(true);
     if (tab === TabType.URL) {
       onImportFromUrl(url);
-    } else if (tab === TabType.File && selectedFile) {
-      onImportFromFile(selectedFile as string);
+    } else if (
+      tab === TabType.File &&
+      selectedFile &&
+      typeof selectedFile === "string"
+    ) {
+      onImportFromFile(selectedFile);
     }
-  }, [tab, url, selectedFile]);
+  };
 
-  const handleUrlChange = useCallback(
-    (event: ChangeEvent<HTMLInputElement>) => {
-      setUrl(event.target.value);
-    },
-    [],
-  );
+  const handleUrlChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setUrl(event.target.value);
+  };
 
-  const handleOpenChange = useCallback(
-    (open: boolean) => {
-      if (!open && (isLoading || isSubmitting)) return;
+  const handleOpenChange = (open: boolean) => {
+    if (!open && (isLoading || isSubmitting)) return;
 
-      if (!open) {
-        setUrl("");
-        setSelectedFile(null);
-        setSelectedFileName("");
-        setIsSubmitting(false);
-      }
-      setIsOpen(open);
-    },
-    [isLoading, isSubmitting],
-  );
+    if (!open) {
+      setUrl("");
+      setSelectedFile(null);
+      setSelectedFileName("");
+      setIsSubmitting(false);
+    }
+    setIsOpen(open);
+  };
 
   const isButtonDisabled =
     isLoading ||
@@ -178,7 +173,7 @@ const ImportComponent = ({
             <Tabs
               value={tab}
               className="w-full"
-              onValueChange={(value) => handleTabChange(value as TabType)}
+              onValueChange={handleTabChange}
             >
               <TabsList
                 className={cn(

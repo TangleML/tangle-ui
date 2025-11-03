@@ -1,9 +1,4 @@
-import {
-  createContext,
-  type PropsWithChildren,
-  useContext,
-  useMemo,
-} from "react";
+import { createContext, type PropsWithChildren, useContext } from "react";
 
 import type {
   GetExecutionInfoResponse,
@@ -30,16 +25,13 @@ export function RootExecutionStatusProvider({
   const { details, state } = executionData ?? {};
   const runId = details?.pipeline_run_id;
 
-  const value = useMemo(
-    () => ({
-      details,
-      state,
-      runId,
-      isLoading,
-      error,
-    }),
-    [details, state, runId, isLoading, error],
-  );
+  const value = {
+    details,
+    state,
+    runId,
+    isLoading,
+    error,
+  };
 
   return (
     <RootExecutionContext.Provider value={value}>

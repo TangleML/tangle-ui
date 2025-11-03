@@ -1,6 +1,6 @@
 import { DndContext } from "@dnd-kit/core";
 import { ReactFlowProvider } from "@xyflow/react";
-import { useEffect } from "react";
+import { useEffect, useEffectEvent } from "react";
 
 import PipelineRunPage from "@/components/PipelineRun";
 import { InfoBox } from "@/components/shared/InfoBox";
@@ -38,6 +38,18 @@ const PipelineRunContent = () => {
   const isLoading = isLoadingCurrentLevelData;
   const error = currentLevelError;
 
+  const onLoadSpec = useEffectEvent(() => {
+    if (rootDetails?.task_spec.componentRef.spec) {
+      setComponentSpec(
+        rootDetails.task_spec.componentRef.spec as ComponentSpec,
+      );
+    }
+  });
+
+  const onCleanup = useEffectEvent(() => {
+    clearComponentSpec();
+  });
+
   useEffect(() => {
     if (!details || !state) {
       faviconManager.reset();
@@ -55,16 +67,12 @@ const PipelineRunContent = () => {
   }, [details, state]);
 
   useEffect(() => {
-    if (rootDetails?.task_spec.componentRef.spec) {
-      setComponentSpec(
-        rootDetails.task_spec.componentRef.spec as ComponentSpec,
-      );
-    }
+    onLoadSpec();
 
     return () => {
-      clearComponentSpec();
+      onCleanup();
     };
-  }, [rootDetails, setComponentSpec, clearComponentSpec]);
+  }, [rootDetails]);
 
   useDocumentTitle({
     "/runs/$id": (params) =>

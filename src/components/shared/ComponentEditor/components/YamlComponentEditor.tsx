@@ -39,6 +39,7 @@ export const YamlComponentEditor = withSuspenseWrapper(
         setValidationErrors([]);
         onErrorsChange([]);
       },
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       [onComponentTextChange, validateComponentSpec],
     );
 

@@ -1,5 +1,5 @@
 import { Background, MiniMap, type ReactFlowProps } from "@xyflow/react";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 
 import { FlowCanvas, FlowControls } from "@/components/shared/ReactFlow";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -20,15 +20,12 @@ const PipelineRunPage = () => {
     nodesDraggable: true,
   });
 
-  const updateFlowConfig = useCallback(
-    (updatedConfig: Partial<ReactFlowProps>) => {
-      setFlowConfig((prevConfig) => ({
-        ...prevConfig,
-        ...updatedConfig,
-      }));
-    },
-    [],
-  );
+  const updateFlowConfig = (updatedConfig: Partial<ReactFlowProps>) => {
+    setFlowConfig((prevConfig) => ({
+      ...prevConfig,
+      ...updatedConfig,
+    }));
+  };
 
   return (
     <ContextPanelProvider defaultContent={<RunDetails />}>

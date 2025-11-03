@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 
 import type { ContainerExecutionStatus } from "@/api/types.gen";
 import { CodeViewer } from "@/components/shared/CodeViewer";
@@ -121,23 +121,38 @@ const Logs = ({
     refetchIntervalInBackground: false,
   });
 
+  const updateLoggingState = useEffectEvent(
+    (isLogging: boolean, shouldHave: boolean) => {
+      setIsLogging(isLogging);
+      setShouldHaveLogs(shouldHave);
+    },
+  );
+
   useEffect(() => {
     if (status) {
-      setIsLogging(isStatusActivelyLogging(status));
-      setShouldHaveLogs(shouldStatusHaveLogs(status));
+      updateLoggingState(
+        isStatusActivelyLogging(status),
+        shouldStatusHaveLogs(status),
+      );
     }
   }, [status]);
 
+  const updateLogs = useEffectEvent(
+    (logs: { log_text?: string; system_error_exception_full?: string }) => {
+      setLogs(logs);
+    },
+  );
+
   useEffect(() => {
     if (data && !error) {
-      setLogs({
+      updateLogs({
         log_text: data?.log_text,
         system_error_exception_full: data?.system_error_exception_full,
       });
     }
 
     if (error) {
-      setLogs({ log_text: "No logs available" });
+      updateLogs({ log_text: "No logs available" });
     }
   }, [data, error]);
 

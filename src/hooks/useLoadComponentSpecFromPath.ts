@@ -1,5 +1,5 @@
 import { useLocation } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useEffectEvent, useMemo, useState } from "react";
 
 import { useBackend } from "@/providers/BackendProvider";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
@@ -28,12 +28,15 @@ export const useLoadComponentSpecFromPath = () => {
     [pathname],
   );
 
+  const updateSpec = useEffectEvent(setComponentSpec);
+  const cleanupSpec = useEffectEvent(clearComponentSpec);
+
   useEffect(() => {
     const loadPipelineFromStorage = async () => {
       setError(null);
 
       if (!title && !id) {
-        clearComponentSpec();
+        cleanupSpec();
         return;
       }
 
@@ -48,7 +51,7 @@ export const useLoadComponentSpecFromPath = () => {
               result.task_spec.componentRef as ComponentReferenceWithSpec,
             );
             if (preparedComponentRef) {
-              setComponentSpec(preparedComponentRef);
+              updateSpec(preparedComponentRef);
               return;
             }
           }
@@ -63,14 +66,14 @@ export const useLoadComponentSpecFromPath = () => {
               result.experiment.componentRef as ComponentReferenceWithSpec,
             );
             if (preparedComponentRef) {
-              setComponentSpec(preparedComponentRef);
+              updateSpec(preparedComponentRef);
               return;
             }
           }
         }
 
         setError("No component spec found for the current path.");
-        clearComponentSpec();
+        cleanupSpec();
       } catch (error) {
         console.error("Error loading pipeline from storage:", error);
         if (error instanceof Error) {
@@ -83,9 +86,9 @@ export const useLoadComponentSpecFromPath = () => {
 
     loadPipelineFromStorage();
     return () => {
-      clearComponentSpec();
+      cleanupSpec();
     };
-  }, [id, title, backendUrl, isRunPath, setComponentSpec, clearComponentSpec]);
+  }, [id, title, backendUrl, isRunPath]);
 
   return {
     componentSpec,

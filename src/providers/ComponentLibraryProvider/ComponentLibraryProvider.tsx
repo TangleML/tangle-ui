@@ -1,11 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { type ReactNode, useEffect, useEffectEvent, useState } from "react";
 
 import ComponentDuplicateDialog from "@/components/shared/Dialogs/ComponentDuplicateDialog";
 import { fetchAndStoreComponentLibrary } from "@/services/componentService";
@@ -98,24 +92,19 @@ export const ComponentLibraryProvider = ({
   const { currentSearchFilter } = useForcedSearchContext();
   const queryClient = useQueryClient();
 
-  const componentLibraries = useMemo(
-    () =>
-      new Map<AvailableComponentLibraries, Library>([
-        ["published_components", new PublishedComponentsLibrary(queryClient)],
-      ]),
-    [queryClient],
-  );
+  const componentLibraries = new Map<AvailableComponentLibraries, Library>([
+    ["published_components", new PublishedComponentsLibrary(queryClient)],
+  ]);
 
-  const getComponentLibraryObject = useCallback(
-    (libraryName: AvailableComponentLibraries) => {
-      if (!componentLibraries.has(libraryName)) {
-        throw new Error(`Component library "${libraryName}" is not supported.`);
-      }
+  const getComponentLibraryObject = (
+    libraryName: AvailableComponentLibraries,
+  ) => {
+    if (!componentLibraries.has(libraryName)) {
+      throw new Error(`Component library "${libraryName}" is not supported.`);
+    }
 
-      return componentLibraries.get(libraryName) as Library;
-    },
-    [componentLibraries],
-  );
+    return componentLibraries.get(libraryName) as Library;
+  };
 
   const [componentLibrary, setComponentLibrary] = useState<ComponentLibrary>();
   const [userComponentsFolder, setUserComponentsFolder] =
@@ -156,19 +145,14 @@ export const ComponentLibraryProvider = ({
   });
 
   // Fetch "Used in Pipeline" components
-  const usedComponentsFolder: ComponentFolder = useMemo(
-    () => fetchUsedComponents(graphSpec),
-    [graphSpec],
-  );
+  const usedComponentsFolder: ComponentFolder = fetchUsedComponents(graphSpec);
 
   // Fetch "Starred" components
-  const favoritesFolder: ComponentFolder = useMemo(
-    () => fetchFavoriteComponents(componentLibrary),
-    [componentLibrary],
-  );
+  const favoritesFolder: ComponentFolder =
+    fetchFavoriteComponents(componentLibrary);
 
   // Methods
-  const refreshComponentLibrary = useCallback(async () => {
+  const refreshComponentLibrary = async () => {
     const { data: updatedLibrary } = await refetchLibrary();
 
     if (updatedLibrary) {
@@ -176,9 +160,9 @@ export const ComponentLibraryProvider = ({
         setComponentLibrary(result);
       });
     }
-  }, [refetchLibrary]);
+  };
 
-  const refreshUserComponents = useCallback(async () => {
+  const refreshUserComponents = async () => {
     const { data: updatedUserComponents } = await refetchUserComponents();
 
     if (updatedUserComponents) {
@@ -186,353 +170,300 @@ export const ComponentLibraryProvider = ({
         setUserComponentsFolder(result);
       });
     }
-  }, [refetchUserComponents]);
+  };
 
-  const setComponentFavorite = useCallback(
-    async (component: ComponentReference, favorited: boolean) => {
-      // Update via filename (User Components)
-      if (!component.url && component.name) {
-        component.favorited = favorited;
+  const setComponentFavorite = async (
+    component: ComponentReference,
+    favorited: boolean,
+  ) => {
+    // Update via filename (User Components)
+    if (!component.url && component.name) {
+      component.favorited = favorited;
 
-        if (component.spec) {
-          await updateComponentRefInList(
-            USER_COMPONENTS_LIST_NAME,
-            component as ComponentReferenceWithSpec,
-            component.name,
-          ).then(async () => {
-            await refreshUserComponents();
-          });
-        } else if (component.text) {
-          await updateComponentInListByText(
-            USER_COMPONENTS_LIST_NAME,
-            component.text,
-            component.name,
-            { favorited },
-          ).then(async () => {
-            await refreshUserComponents();
-          });
-        } else {
-          console.warn(
-            `Component "${
-              component.name
-            }" does not have spec or text, cannot favorite.`,
-          );
-        }
-
-        return;
-      }
-
-      if (!component.url) {
-        console.warn(
-          `Component "${component.name}" does not have a url, cannot favorite.`,
-        );
-        return;
-      }
-
-      // Update via url (Standard Components)
-      const storedComponent = await getComponentByUrl(component.url);
-
-      if (storedComponent) {
-        await saveComponent({
-          ...storedComponent,
-          favorited,
-        }).then(async () => {
-          await refreshComponentLibrary();
+      if (component.spec) {
+        await updateComponentRefInList(
+          USER_COMPONENTS_LIST_NAME,
+          component as ComponentReferenceWithSpec,
+          component.name,
+        ).then(async () => {
           await refreshUserComponents();
         });
-      }
-    },
-    [refreshComponentLibrary, refreshUserComponents],
-  );
-
-  const checkIfFavorited = useCallback(
-    (component: ComponentReference) => {
-      if (componentLibrary) {
-        const uniqueLibraryComponents = filterToUniqueByDigest(
-          flattenFolders(componentLibrary),
+      } else if (component.text) {
+        await updateComponentInListByText(
+          USER_COMPONENTS_LIST_NAME,
+          component.text,
+          component.name,
+          { favorited },
+        ).then(async () => {
+          await refreshUserComponents();
+        });
+      } else {
+        console.warn(
+          `Component "${
+            component.name
+          }" does not have spec or text, cannot favorite.`,
         );
-
-        const isFavourited = uniqueLibraryComponents.some(
-          (c) => c.digest === component.digest && c.favorited,
-        );
-
-        if (isFavourited) {
-          return true;
-        }
       }
 
-      if (userComponentsFolder) {
-        const uniqueUserComponents = filterToUniqueByDigest(
-          flattenFolders(userComponentsFolder),
-        );
+      return;
+    }
 
-        const isFavourited = uniqueUserComponents.some(
-          (c) => c.digest === component.digest && c.favorited,
-        );
+    if (!component.url) {
+      console.warn(
+        `Component "${component.name}" does not have a url, cannot favorite.`,
+      );
+      return;
+    }
 
-        if (isFavourited) {
-          return true;
-        }
+    // Update via url (Standard Components)
+    const storedComponent = await getComponentByUrl(component.url);
+
+    if (storedComponent) {
+      await saveComponent({
+        ...storedComponent,
+        favorited,
+      }).then(async () => {
+        await refreshComponentLibrary();
+        await refreshUserComponents();
+      });
+    }
+  };
+
+  const checkIfFavorited = (component: ComponentReference) => {
+    if (componentLibrary) {
+      const uniqueLibraryComponents = filterToUniqueByDigest(
+        flattenFolders(componentLibrary),
+      );
+
+      const isFavourited = uniqueLibraryComponents.some(
+        (c) => c.digest === component.digest && c.favorited,
+      );
+
+      if (isFavourited) {
+        return true;
       }
+    }
 
-      return false;
-    },
-    [componentLibrary, userComponentsFolder],
-  );
-
-  const checkIfUserComponent = useCallback(
-    (component: ComponentReference) => {
-      if (!userComponentsFolder) return false;
-
+    if (userComponentsFolder) {
       const uniqueUserComponents = filterToUniqueByDigest(
         flattenFolders(userComponentsFolder),
       );
 
-      return uniqueUserComponents.some((c) => c.digest === component.digest);
-    },
-    [userComponentsFolder],
-  );
-
-  const checkLibraryContainsComponent = useCallback(
-    (component: ComponentReference) => {
-      if (!componentLibrary) return false;
-
-      if (checkIfUserComponent(component)) return true;
-
-      const uniqueComponents = filterToUniqueByDigest(
-        flattenFolders(componentLibrary),
+      const isFavourited = uniqueUserComponents.some(
+        (c) => c.digest === component.digest && c.favorited,
       );
 
-      return uniqueComponents.some((c) => c.digest === component.digest);
-    },
-    [componentLibrary, checkIfUserComponent],
-  );
+      if (isFavourited) {
+        return true;
+      }
+    }
 
-  const checkIfHighlighted = useCallback(
-    (component: ComponentReference) => {
-      return component.digest === highlightedComponentDigest;
-    },
-    [highlightedComponentDigest],
-  );
+    return false;
+  };
+
+  const checkIfUserComponent = (component: ComponentReference) => {
+    if (!userComponentsFolder) return false;
+
+    const uniqueUserComponents = filterToUniqueByDigest(
+      flattenFolders(userComponentsFolder),
+    );
+
+    return uniqueUserComponents.some((c) => c.digest === component.digest);
+  };
+
+  const checkLibraryContainsComponent = (component: ComponentReference) => {
+    if (!componentLibrary) return false;
+
+    if (checkIfUserComponent(component)) return true;
+
+    const uniqueComponents = filterToUniqueByDigest(
+      flattenFolders(componentLibrary),
+    );
+
+    return uniqueComponents.some((c) => c.digest === component.digest);
+  };
+
+  const checkIfHighlighted = (component: ComponentReference) => {
+    return component.digest === highlightedComponentDigest;
+  };
 
   /**
    * Local component library search
    */
-  const searchComponentLibrary = useCallback(
-    (search: string, filters: string[]) => {
-      if (!search.trim()) return null;
+  const searchComponentLibrary = (search: string, filters: string[]) => {
+    if (!search.trim()) return null;
 
-      const result: SearchResult = {
-        components: {
-          standard: [],
-          user: [],
-          used: [],
-        },
-      };
+    const result: SearchResult = {
+      components: {
+        standard: [],
+        user: [],
+        used: [],
+      },
+    };
 
-      if (componentLibrary) {
-        const uniqueComponents = filterToUniqueByDigest(
-          flattenFolders(componentLibrary),
-        );
+    if (componentLibrary) {
+      const uniqueComponents = filterToUniqueByDigest(
+        flattenFolders(componentLibrary),
+      );
 
-        result.components.standard = uniqueComponents.filter(
-          (c) => c.spec && componentMatchesSearch(c.spec, search, filters),
-        );
-      }
+      result.components.standard = uniqueComponents.filter(
+        (c) => c.spec && componentMatchesSearch(c.spec, search, filters),
+      );
+    }
 
-      if (userComponentsFolder) {
-        const uniqueComponents = filterToUniqueByDigest(
-          flattenFolders(userComponentsFolder),
-        );
-        result.components.user = uniqueComponents.filter(
-          (c) => c.spec && componentMatchesSearch(c.spec, search, filters),
-        );
-      }
+    if (userComponentsFolder) {
+      const uniqueComponents = filterToUniqueByDigest(
+        flattenFolders(userComponentsFolder),
+      );
+      result.components.user = uniqueComponents.filter(
+        (c) => c.spec && componentMatchesSearch(c.spec, search, filters),
+      );
+    }
 
-      if (usedComponentsFolder) {
-        const uniqueComponents = filterToUniqueByDigest(
-          flattenFolders(usedComponentsFolder),
-        );
-        result.components.used = uniqueComponents.filter(
-          (c) => c.spec && componentMatchesSearch(c.spec, search, filters),
-        );
-      }
+    if (usedComponentsFolder) {
+      const uniqueComponents = filterToUniqueByDigest(
+        flattenFolders(usedComponentsFolder),
+      );
+      result.components.used = uniqueComponents.filter(
+        (c) => c.spec && componentMatchesSearch(c.spec, search, filters),
+      );
+    }
 
-      return result;
-    },
-    [componentLibrary, userComponentsFolder, usedComponentsFolder],
-  );
+    return result;
+  };
 
-  const handleImportComponent = useCallback(
-    async (yamlString: string) => {
-      const component = { ...newComponent, text: yamlString };
+  const handleImportComponent = async (yamlString: string) => {
+    const component = { ...newComponent, text: yamlString };
 
-      await importComponent(component)
-        .then(async () => {
+    await importComponent(component)
+      .then(async () => {
+        await refreshComponentLibrary();
+        await refreshUserComponents();
+        setNewComponent(null);
+        setExistingComponent(null);
+      })
+      .catch((error) => {
+        console.error("Error importing component:", error);
+      });
+  };
+
+  const addToComponentLibrary = async (component: ComponentReference) => {
+    const duplicate = userComponentsFolder
+      ? flattenFolders(userComponentsFolder).find(
+          (c) => getComponentName(c) === getComponentName(component),
+        )
+      : undefined;
+
+    if (duplicate?.name) {
+      const existingUserComponent = await getUserComponentByName(
+        duplicate.name,
+      );
+      setExistingComponent(existingUserComponent);
+      setNewComponent(component);
+      return;
+    }
+
+    await importComponent(component)
+      .then(async () => {
+        await refreshComponentLibrary();
+        await refreshUserComponents();
+      })
+      .catch((error) => {
+        console.error("Error adding component to library:", error);
+      });
+  };
+
+  const removeFromComponentLibrary = async (component: ComponentReference) => {
+    try {
+      if (component.name) {
+        await deleteComponentFileFromList(
+          USER_COMPONENTS_LIST_NAME,
+          component.name,
+        ).then(async () => {
           await refreshComponentLibrary();
           await refreshUserComponents();
-          setNewComponent(null);
-          setExistingComponent(null);
-        })
-        .catch((error) => {
-          console.error("Error importing component:", error);
         });
-    },
-    [
-      refreshUserComponents,
-      refreshComponentLibrary,
-      importComponent,
-      newComponent,
-    ],
-  );
-
-  const addToComponentLibrary = useCallback(
-    async (component: ComponentReference) => {
-      const duplicate = userComponentsFolder
-        ? flattenFolders(userComponentsFolder).find(
-            (c) => getComponentName(c) === getComponentName(component),
-          )
-        : undefined;
-
-      if (duplicate?.name) {
-        const existingUserComponent = await getUserComponentByName(
-          duplicate.name,
+      } else {
+        console.error(
+          `Error deleting component: Component ${component.digest} does not have a name.`,
         );
-        setExistingComponent(existingUserComponent);
-        setNewComponent(component);
-        return;
       }
+    } catch (error) {
+      console.error("Error deleting component:", error);
+    }
+  };
 
-      await importComponent(component)
-        .then(async () => {
-          await refreshComponentLibrary();
-          await refreshUserComponents();
-        })
-        .catch((error) => {
-          console.error("Error adding component to library:", error);
-        });
-    },
-    [
-      userComponentsFolder,
-      refreshComponentLibrary,
-      refreshUserComponents,
-      importComponent,
-    ],
-  );
-
-  const removeFromComponentLibrary = useCallback(
-    async (component: ComponentReference) => {
-      try {
-        if (component.name) {
-          await deleteComponentFileFromList(
-            USER_COMPONENTS_LIST_NAME,
-            component.name,
-          ).then(async () => {
-            await refreshComponentLibrary();
-            await refreshUserComponents();
-          });
-        } else {
-          console.error(
-            `Error deleting component: Component ${component.digest} does not have a name.`,
-          );
-        }
-      } catch (error) {
-        console.error("Error deleting component:", error);
-      }
-    },
-    [refreshComponentLibrary, refreshUserComponents],
-  );
-
-  const handleCloseDuplicationDialog = useCallback(() => {
+  const handleCloseDuplicationDialog = () => {
     setExistingComponent(null);
     setNewComponent(null);
-  }, []);
+  };
 
-  const searchResult = useMemo(
-    () =>
-      searchComponentLibrary(
-        currentSearchFilter.searchTerm,
-        currentSearchFilter.filters,
-      ),
-    [currentSearchFilter, searchComponentLibrary],
+  const searchResult = searchComponentLibrary(
+    currentSearchFilter.searchTerm,
+    currentSearchFilter.filters,
+  );
+
+  const updateComponentLibrary = useEffectEvent(
+    (library: ComponentLibrary | undefined) => {
+      setComponentLibrary(library);
+    },
+  );
+
+  const updateUserComponentsFolder = useEffectEvent(
+    (folder: ComponentFolder | undefined) => {
+      setUserComponentsFolder(folder);
+    },
   );
 
   useEffect(() => {
     if (!rawComponentLibrary) {
-      setComponentLibrary(undefined);
+      updateComponentLibrary(undefined);
       return;
     }
     populateComponentRefs(rawComponentLibrary).then((result) => {
-      setComponentLibrary(result);
+      updateComponentLibrary(result);
     });
   }, [rawComponentLibrary]);
 
   useEffect(() => {
     if (!rawUserComponentsFolder) {
-      setUserComponentsFolder(undefined);
+      updateUserComponentsFolder(undefined);
       return;
     }
     populateComponentRefs(rawUserComponentsFolder).then((result) => {
-      setUserComponentsFolder(result);
+      updateUserComponentsFolder(result);
     });
   }, [rawUserComponentsFolder]);
 
-  const getComponentLibrary = useCallback(
-    (libraryName: AvailableComponentLibraries) => {
-      return getComponentLibraryObject(libraryName);
-    },
-    [],
-  );
+  const getComponentLibrary = (libraryName: AvailableComponentLibraries) => {
+    return getComponentLibraryObject(libraryName);
+  };
 
   const isLoading = isLibraryLoading || isUserComponentsLoading;
   const error = libraryError || userComponentsError;
 
-  const value = useMemo(
-    () => ({
-      componentLibrary,
-      userComponentsFolder,
-      usedComponentsFolder,
-      favoritesFolder,
-      isLoading,
-      error,
-      searchResult,
-      highlightedComponentDigest,
-      searchComponentLibrary,
-      getComponentLibrary,
-      addToComponentLibrary,
-      removeFromComponentLibrary,
-      refetchLibrary,
-      refetchUserComponents,
-      setHighlightedComponentDigest,
-      setComponentFavorite,
-      checkIfFavorited,
-      checkIfUserComponent,
-      checkLibraryContainsComponent,
-      checkIfHighlighted,
-    }),
-    [
-      componentLibrary,
-      userComponentsFolder,
-      usedComponentsFolder,
-      favoritesFolder,
-      isLoading,
-      error,
-      searchResult,
-      highlightedComponentDigest,
-      searchComponentLibrary,
-      getComponentLibrary,
-      addToComponentLibrary,
-      removeFromComponentLibrary,
-      refetchLibrary,
-      refetchUserComponents,
-      setHighlightedComponentDigest,
-      setComponentFavorite,
-      checkIfFavorited,
-      checkIfUserComponent,
-      checkLibraryContainsComponent,
-      checkIfHighlighted,
-    ],
-  );
+  const value = {
+    componentLibrary,
+    userComponentsFolder,
+    usedComponentsFolder,
+    favoritesFolder,
+    isLoading,
+    error,
+    searchResult,
+    highlightedComponentDigest,
+    searchComponentLibrary,
+    getComponentLibrary,
+    addToComponentLibrary,
+    removeFromComponentLibrary,
+    refetchLibrary,
+    refetchUserComponents,
+    setHighlightedComponentDigest,
+    setComponentFavorite,
+    checkIfFavorited,
+    checkIfUserComponent,
+    checkLibraryContainsComponent,
+    checkIfHighlighted,
+  };
 
   return (
     <ComponentLibraryContext.Provider value={value}>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 
 import { fetchExecutionStatus } from "@/services/executionService";
 import { fetchPipelineRuns } from "@/services/pipelineRunService";
@@ -29,8 +29,12 @@ const useLoadPipelineRuns = (pipelineName: string, backendUrl: string) => {
     setPipelineRuns(res.runs);
   };
 
+  const runFetchData = useEffectEvent(() => {
+    void fetchData();
+  });
+
   useEffect(() => {
-    fetchData();
+    runFetchData();
   }, [pipelineName]);
 
   return { pipelineRuns, latestRun, refetch: fetchData };

@@ -1,5 +1,5 @@
 import { useReactFlow } from "@xyflow/react";
-import { type ReactNode, useCallback, useMemo } from "react";
+import { type ReactNode } from "react";
 
 import type { ContainerExecutionStatus } from "@/api/types.gen";
 import useComponentFromUrl from "@/hooks/useComponentFromUrl";
@@ -92,106 +92,74 @@ export const TaskNodeProvider = ({
 
   const dimensions = useTaskNodeDimensions(taskSpec);
 
-  const handleSetArguments = useCallback(
-    (args: Record<string, ArgumentType>) => {
-      data.callbacks?.setArguments(args);
-    },
-    [data.callbacks],
-  );
+  const handleSetArguments = (args: Record<string, ArgumentType>) => {
+    data.callbacks?.setArguments(args);
+  };
 
-  const handleSetAnnotations = useCallback(
-    (annotations: Annotations) => {
-      data.callbacks?.setAnnotations(annotations);
-    },
-    [data.callbacks],
-  );
+  const handleSetAnnotations = (annotations: Annotations) => {
+    data.callbacks?.setAnnotations(annotations);
+  };
 
-  const handleSetCacheStaleness = useCallback(
-    (cacheStaleness: string | undefined) => {
-      data.callbacks?.setCacheStaleness(cacheStaleness);
-    },
-    [data.callbacks],
-  );
+  const handleSetCacheStaleness = (cacheStaleness: string | undefined) => {
+    data.callbacks?.setCacheStaleness(cacheStaleness);
+  };
 
-  const handleDeleteTaskNode = useCallback(() => {
+  const handleDeleteTaskNode = () => {
     data.callbacks?.onDelete();
-  }, [data.callbacks]);
+  };
 
-  const handleDuplicateTaskNode = useCallback(() => {
+  const handleDuplicateTaskNode = () => {
     data.callbacks?.onDuplicate();
-  }, [data.callbacks]);
+  };
 
-  const handleUpgradeTaskNode = useCallback(() => {
+  const handleUpgradeTaskNode = () => {
     if (!isOutdated) {
       notify("Component version already matches source URL", "info");
       return;
     }
 
     data.callbacks?.onUpgrade(mostRecentComponentRef);
-  }, [data.callbacks, isOutdated, mostRecentComponentRef, notify]);
+  };
 
-  const select = useCallback(() => {
+  const select = () => {
     reactFlowInstance.setNodes((nodes) =>
       nodes.map((node) =>
         node.id === nodeId ? { ...node, selected: true } : node,
       ),
     );
-  }, [nodeId, reactFlowInstance]);
+  };
 
-  const state = useMemo(
-    (): TaskNodeState => ({
-      selected: selected && !data.isGhost,
-      highlighted: !!data.highlighted && !data.isGhost,
-      readOnly: !!data.readOnly || !!data.isGhost,
-      connectable: !!data.connectable,
-      runStatus: data.isGhost ? undefined : runStatus,
-      disabled: data.isGhost ?? false,
-      isCustomComponent,
-      dimensions,
-    }),
-    [
-      selected,
-      data.highlighted,
-      data.readOnly,
-      data.isGhost,
-      runStatus,
-      isCustomComponent,
-      dimensions,
-    ],
-  );
+  const state: TaskNodeState = {
+    selected: selected && !data.isGhost,
+    highlighted: !!data.highlighted && !data.isGhost,
+    readOnly: !!data.readOnly || !!data.isGhost,
+    connectable: !!data.connectable,
+    runStatus: data.isGhost ? undefined : runStatus,
+    disabled: data.isGhost ?? false,
+    isCustomComponent,
+    dimensions,
+  };
 
-  const callbacks = useMemo(
-    () => ({
-      setArguments: handleSetArguments,
-      setAnnotations: handleSetAnnotations,
-      setCacheStaleness: handleSetCacheStaleness,
-      onDelete: handleDeleteTaskNode,
-      onDuplicate: handleDuplicateTaskNode,
-      onUpgrade: handleUpgradeTaskNode,
-    }),
-    [
-      handleSetArguments,
-      handleSetAnnotations,
-      handleDeleteTaskNode,
-      handleDuplicateTaskNode,
-      handleUpgradeTaskNode,
-    ],
-  );
+  const callbacks = {
+    setArguments: handleSetArguments,
+    setAnnotations: handleSetAnnotations,
+    setCacheStaleness: handleSetCacheStaleness,
+    onDelete: handleDeleteTaskNode,
+    onDuplicate: handleDuplicateTaskNode,
+    onUpgrade: handleUpgradeTaskNode,
+  };
 
-  const value = useMemo(
-    () => ({
-      taskSpec,
-      taskId,
-      nodeId,
-      inputs,
-      outputs,
-      name,
-      state,
-      callbacks,
-      select,
-    }),
-    [taskSpec, taskId, nodeId, inputs, outputs, name, state, callbacks, select],
-  );
+  const value = {
+    taskSpec,
+    taskId,
+    nodeId,
+    inputs,
+    outputs,
+    name,
+    state,
+    callbacks,
+    select,
+  };
 
   return (
     <TaskNodeContext.Provider value={value}>

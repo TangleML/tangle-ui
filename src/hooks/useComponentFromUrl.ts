@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   fetchAndStoreComponentByUrl,
@@ -83,15 +83,12 @@ const useComponentFromUrl = (url?: string) => {
     return () => controller.abort();
   }, [url]);
 
-  const componentRef = useMemo(
-    () => ({
-      spec: componentSpec,
-      digest: componentDigest,
-      text: componentText,
-      url: url,
-    }),
-    [componentSpec, componentDigest, componentText],
-  );
+  const componentRef = {
+    spec: componentSpec,
+    digest: componentDigest,
+    text: componentText,
+    url: url,
+  };
 
   return { isLoading, error, componentRef };
 };

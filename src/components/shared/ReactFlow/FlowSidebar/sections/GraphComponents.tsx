@@ -1,5 +1,5 @@
 import { PackagePlus } from "lucide-react";
-import { type ChangeEvent, useCallback, useMemo } from "react";
+import type { ChangeEvent } from "react";
 
 import { useBetaFlagValue } from "@/components/shared/Settings/useBetaFlags";
 import { BlockStack } from "@/components/ui/layout";
@@ -54,18 +54,20 @@ const GraphComponents = ({ isOpen }: { isOpen: boolean }) => {
     });
   };
 
-  const handleFiltersChange = useCallback(
-    (filters: string[]) => {
-      updateSearchFilter({
-        filters,
-      });
-    },
-    [updateSearchFilter],
-  );
+  const handleFiltersChange = (filters: string[]) => {
+    updateSearchFilter({
+      filters,
+    });
+  };
 
-  const memoizedContent = useMemo(() => {
+  const memoizedContent = (() => {
     if (isLoading) return <LoadingState />;
-    if (error) return <ErrorState message={(error as Error).message} />;
+    if (error)
+      return (
+        <ErrorState
+          message={error instanceof Error ? error.message : String(error)}
+        />
+      );
     if (!componentLibrary) return <EmptyState />;
 
     if (!remoteComponentLibrarySearchEnabled && searchResult) {
@@ -146,16 +148,7 @@ const GraphComponents = ({ isOpen }: { isOpen: boolean }) => {
         </BlockStack>
       </BlockStack>
     );
-  }, [
-    componentLibrary,
-    usedComponentsFolder,
-    userComponentsFolder,
-    favoritesFolder,
-    isLoading,
-    error,
-    searchResult,
-    remoteComponentLibrarySearchEnabled,
-  ]);
+  })();
 
   if (!isOpen) {
     return (

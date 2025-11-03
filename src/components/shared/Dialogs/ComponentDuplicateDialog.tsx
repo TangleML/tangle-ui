@@ -1,5 +1,5 @@
 import yaml from "js-yaml";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -41,7 +41,7 @@ const ComponentDuplicateDialog = ({
   const disableImportAsNew =
     !newName || newName.trim() === existingComponent?.name?.trim();
 
-  const generateNewDigestOnBlur = useCallback(async () => {
+  const generateNewDigestOnBlur = async () => {
     if (
       newComponent &&
       newComponentDigest &&
@@ -60,32 +60,26 @@ const ComponentDuplicateDialog = ({
       );
       setNewDigest(digest);
     }
-  }, [newComponent, newName]);
+  };
 
-  const handleOnOpenChange = useCallback(
-    (open: boolean) => {
-      if (!open) {
-        setClose();
-      }
-    },
-    [setClose],
-  );
-
-  const handleRenameAndImport = useCallback(
-    async (newName: string) => {
-      const newComponentWithNewName = {
-        ...newComponent,
-        name: newName,
-      };
-      const yamlString = yaml.dump(newComponentWithNewName);
-      handleImportComponent(yamlString);
-
+  const handleOnOpenChange = (open: boolean) => {
+    if (!open) {
       setClose();
-    },
-    [handleImportComponent, setClose],
-  );
+    }
+  };
 
-  const handleReplaceAndImport = useCallback(async () => {
+  const handleRenameAndImport = async (newName: string) => {
+    const newComponentWithNewName = {
+      ...newComponent,
+      name: newName,
+    };
+    const yamlString = yaml.dump(newComponentWithNewName);
+    handleImportComponent(yamlString);
+
+    setClose();
+  };
+
+  const handleReplaceAndImport = async () => {
     const yamlString = yaml.dump(newComponent);
     await deleteComponentFileFromList(
       USER_COMPONENTS_LIST_NAME,
@@ -94,30 +88,39 @@ const ComponentDuplicateDialog = ({
     handleImportComponent(yamlString);
 
     setClose();
-  }, [handleImportComponent, setClose]);
+  };
 
-  const handleCancel = useCallback(() => {
+  const handleCancel = () => {
     setClose();
-  }, [setClose]);
+  };
+
+  const syncNewName = useEffectEvent((name: string) => {
+    setNewName(name);
+  });
+
+  const syncNewDigest = useEffectEvent((digest: string) => {
+    setNewDigest(digest);
+  });
 
   useEffect(() => {
     const generateNewDigest = async () => {
       if (newComponent) {
         const digest = await generateDigest(yaml.dump(newComponent));
-        setNewDigest(digest);
+        syncNewDigest(digest);
       }
     };
 
     if (newComponent && newComponent?.name) {
-      setNewName(newComponent?.name);
+      syncNewName(newComponent?.name);
     }
 
     if (newComponentDigest) {
-      setNewDigest(newComponentDigest);
+      syncNewDigest(newComponentDigest);
       return;
     }
 
     generateNewDigest();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [existingComponent, newComponent]);
 
   return (

@@ -1,7 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { RefreshCcw } from "lucide-react";
-import { useCallback } from "react";
 
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { isAuthorizationRequired } from "@/components/shared/GitHubAuth/helpers";
@@ -28,19 +27,16 @@ export const RerunPipelineButton = ({
   const { awaitAuthorization, isAuthorized } = useAwaitAuthorization();
   const { getToken } = useAuthLocalStorage();
 
-  const onSuccess = useCallback((response: PipelineRun) => {
+  const onSuccess = (response: PipelineRun) => {
     navigate({ to: `${APP_ROUTES.RUNS}/${response.id}` });
-  }, []);
+  };
 
-  const onError = useCallback(
-    (error: Error | string) => {
-      const message = `Failed to submit pipeline. ${error instanceof Error ? error.message : String(error)}`;
-      notify(message, "error");
-    },
-    [notify],
-  );
+  const onError = (error: Error | string) => {
+    const message = `Failed to submit pipeline. ${error instanceof Error ? error.message : String(error)}`;
+    notify(message, "error");
+  };
 
-  const getAuthToken = useCallback(async (): Promise<string | undefined> => {
+  const getAuthToken = async (): Promise<string | undefined> => {
     const authorizationRequired = isAuthorizationRequired();
 
     if (authorizationRequired && !isAuthorized) {
@@ -51,7 +47,7 @@ export const RerunPipelineButton = ({
     }
 
     return getToken();
-  }, [awaitAuthorization, getToken, isAuthorized]);
+  };
 
   const { mutate, isPending } = useMutation({
     mutationFn: async () => {

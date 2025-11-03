@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useRef } from "react";
 
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
@@ -19,54 +19,48 @@ export const VerticalResizeHandle = ({
     null,
   );
 
-  const captureParentElement = useCallback((element: HTMLElement | null) => {
+  const captureParentElement = (element: HTMLElement | null) => {
     parentElementRef.current = element?.parentElement ?? null;
-  }, []);
+  };
 
-  const handleMouseMove = useCallback(
-    (e: MouseEvent) => {
-      if (!resizingRef.current || !parentElementRef.current) return;
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!resizingRef.current || !parentElementRef.current) return;
 
-      const deltaX = e.clientX - resizingRef.current.startX;
+    const deltaX = e.clientX - resizingRef.current.startX;
 
-      let newWidth: number;
-      if (side === "left") {
-        newWidth = resizingRef.current.startWidth - deltaX;
-      } else {
-        newWidth = resizingRef.current.startWidth + deltaX;
-      }
+    let newWidth: number;
+    if (side === "left") {
+      newWidth = resizingRef.current.startWidth - deltaX;
+    } else {
+      newWidth = resizingRef.current.startWidth + deltaX;
+    }
 
-      const constrainedWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+    const constrainedWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
 
-      parentElementRef.current.style.width = `${constrainedWidth}px`;
-    },
-    [minWidth, maxWidth, side],
-  );
+    parentElementRef.current.style.width = `${constrainedWidth}px`;
+  };
 
-  const handleMouseUp = useCallback(() => {
+  const handleMouseUp = () => {
     resizingRef.current = null;
 
     document.removeEventListener("mousemove", handleMouseMove);
     document.removeEventListener("mouseup", handleMouseUp);
-  }, [handleMouseMove]);
+  };
 
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
 
-      if (!parentElementRef.current) return;
+    if (!parentElementRef.current) return;
 
-      resizingRef.current = {
-        startX: e.clientX,
-        startWidth: parentElementRef.current.offsetWidth,
-      };
+    resizingRef.current = {
+      startX: e.clientX,
+      startWidth: parentElementRef.current.offsetWidth,
+    };
 
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-    },
-    [handleMouseMove, handleMouseUp],
-  );
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+  };
 
   return (
     <div

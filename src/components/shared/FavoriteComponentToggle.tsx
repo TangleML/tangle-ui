@@ -1,6 +1,6 @@
 import { PackagePlus, Star } from "lucide-react";
 import type { MouseEvent, PropsWithChildren } from "react";
-import { useCallback, useMemo, useState } from "react";
+import { useState } from "react";
 
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
 import { Button } from "@/components/ui/button";
@@ -27,14 +27,11 @@ const IconStateButton = ({
   onClick,
   children,
 }: PropsWithChildren<StateButtonProps>) => {
-  const handleFavorite = useCallback(
-    (e: MouseEvent) => {
-      e.stopPropagation();
+  const handleFavorite = (e: MouseEvent) => {
+    e.stopPropagation();
 
-      onClick?.();
-    },
-    [onClick],
-  );
+    onClick?.();
+  };
 
   return (
     <Button
@@ -100,45 +97,33 @@ export const ComponentFavoriteToggle = ({
 
   const { spec, url } = component;
 
-  const isFavorited = useMemo(
-    () => checkIfFavorited(component),
-    [component, checkIfFavorited],
-  );
+  const isFavorited = checkIfFavorited(component);
 
-  const isUserComponent = useMemo(
-    () => checkIfUserComponent(component),
-    [component, checkIfUserComponent],
-  );
+  const isUserComponent = checkIfUserComponent(component);
 
-  const isInLibrary = useMemo(
-    () => checkLibraryContainsComponent(component),
-    [component, checkLibraryContainsComponent],
-  );
+  const isInLibrary = checkLibraryContainsComponent(component);
 
-  const displayName = useMemo(
-    () => getComponentName({ spec, url }),
-    [spec, url],
-  );
+  const displayName = getComponentName({ spec, url });
 
-  const onFavorite = useCallback(() => {
+  const onFavorite = () => {
     setComponentFavorite(component, !isFavorited);
-  }, [isFavorited, setComponentFavorite]);
+  };
 
   // Delete User Components
-  const handleDelete = useCallback(async () => {
+  const handleDelete = async () => {
     removeFromComponentLibrary(component);
-  }, [removeFromComponentLibrary]);
+  };
 
   /* Confirmation Dialog handlers */
-  const openConfirmationDialog = useCallback(() => {
+  const openConfirmationDialog = () => {
     setIsOpen(true);
-  }, []);
+  };
 
-  const handleCancel = useCallback(() => {
+  const handleCancel = () => {
     setIsOpen(false);
-  }, []);
+  };
 
-  const handleConfirm = useCallback(() => {
+  const handleConfirm = () => {
     setIsOpen(false);
 
     if (!isInLibrary) {
@@ -147,7 +132,7 @@ export const ComponentFavoriteToggle = ({
     }
 
     handleDelete();
-  }, [component, isInLibrary, addToComponentLibrary, handleDelete]);
+  };
 
   const showDeleteButton = isInLibrary && isUserComponent && !hideDelete;
 

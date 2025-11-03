@@ -11,9 +11,8 @@ import { HelpCircle, Info, Maximize2, PlusSquare } from "lucide-react";
 import {
   type ChangeEvent,
   type MouseEvent,
-  useCallback,
   useEffect,
-  useMemo,
+  useEffectEvent,
   useState,
 } from "react";
 
@@ -60,7 +59,7 @@ export const ArgumentInputField = ({
 
   const [isTextareaDialogOpen, setIsTextareaDialogOpen] = useState(false);
 
-  const undoValue = useMemo(() => argument, []);
+  const undoValue = argument;
   const hint = argument.inputSpec.annotations?.hint as string | undefined;
 
   const handleInputChange = (e: ChangeEvent) => {
@@ -68,26 +67,23 @@ export const ArgumentInputField = ({
     setInputValue(value);
   };
 
+  const handleSubmit = (value: string) => {
+    if (value === lastSubmittedValue) return;
+
+    const updatedArgument = {
+      ...argument,
+      value,
+      isRemoved: false,
+    };
+
+    onSave(updatedArgument);
+    setLastSubmittedValue(value);
+  };
+
   const handleBlur = () => {
     const value = inputValue.trim();
     handleSubmit(value);
   };
-
-  const handleSubmit = useCallback(
-    (value: string) => {
-      if (value === lastSubmittedValue) return;
-
-      const updatedArgument = {
-        ...argument,
-        value,
-        isRemoved: false,
-      };
-
-      onSave(updatedArgument);
-      setLastSubmittedValue(value);
-    },
-    [inputValue, lastSubmittedValue, argument, onSave],
-  );
 
   const handleRemove = () => {
     const updatedArgument = {
@@ -123,7 +119,7 @@ export const ArgumentInputField = ({
     onSave({ ...undoValue });
   };
 
-  const handleBackgroundClick = useCallback((e: MouseEvent) => {
+  const handleBackgroundClick = (e: MouseEvent) => {
     // Prevent toggling description if a child input or button is clicked
     const target = e.target as HTMLElement;
     if (
@@ -135,29 +131,26 @@ export const ArgumentInputField = ({
     }
     e.stopPropagation();
     setShowDescription((prev) => !prev);
-  }, []);
+  };
 
-  const handleExpand = useCallback(() => {
+  const handleExpand = () => {
     if (disabled) return;
 
     setIsTextareaDialogOpen(true);
-  }, [disabled]);
+  };
 
-  const handleDialogConfirm = useCallback(
-    (value: string) => {
-      setInputValue(value);
-      setIsTextareaDialogOpen(false);
-
-      handleSubmit(value);
-    },
-    [handleSubmit],
-  );
-
-  const handleDialogCancel = useCallback(() => {
+  const handleDialogConfirm = (value: string) => {
+    setInputValue(value);
     setIsTextareaDialogOpen(false);
-  }, []);
 
-  const handleCopy = useCallback(() => {
+    handleSubmit(value);
+  };
+
+  const handleDialogCancel = () => {
+    setIsTextareaDialogOpen(false);
+  };
+
+  const handleCopy = () => {
     if (disabled || argument.isRemoved) return;
 
     void navigator.clipboard
@@ -174,14 +167,11 @@ export const ArgumentInputField = ({
           "error",
         );
       });
-  }, [inputValue, disabled, argument]);
+  };
 
-  const canUndo = useMemo(
-    () => !equal(argument, undoValue),
-    [argument, undoValue],
-  );
+  const canUndo = !equal(argument, undoValue);
 
-  const placeholder = useMemo(() => {
+  const placeholder = (() => {
     const inputPlaceholder = getPlaceholder(argument.value);
     if (inputPlaceholder) {
       return inputPlaceholder;
@@ -196,28 +186,26 @@ export const ArgumentInputField = ({
     }
 
     return "";
-  }, [argument]);
+  })();
 
-  useEffect(() => {
+  const syncInputValue = useEffectEvent(() => {
     const value = getInputValue(argument);
     if (value !== undefined && value !== inputValue) {
       setInputValue(value);
       setLastSubmittedValue(value);
     }
+  });
+
+  useEffect(() => {
+    syncInputValue();
   }, [argument]);
 
-  const disabledCopy = useMemo(
-    () => disabled || argument.isRemoved || inputValue === "",
-    [inputValue, argument.isRemoved, disabled],
-  );
+  const disabledCopy = disabled || argument.isRemoved || inputValue === "";
 
-  const disabledReset = useMemo(
-    () =>
-      disabled ||
-      argument.isRemoved ||
-      argument.value === getDefaultValue(argument),
-    [argument, disabled],
-  );
+  const disabledReset =
+    disabled ||
+    argument.isRemoved ||
+    argument.value === getDefaultValue(argument);
 
   useCallbackOnUnmount(handleBlur);
 

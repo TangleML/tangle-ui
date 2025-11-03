@@ -1,5 +1,5 @@
 import { type NodeProps } from "@xyflow/react";
-import { memo, useMemo } from "react";
+import { memo } from "react";
 
 import type { ContainerExecutionStatus } from "@/api/types.gen";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
@@ -13,7 +13,7 @@ import { TaskNodeCard } from "./TaskNodeCard";
 const TaskNode = ({ data, selected }: NodeProps) => {
   const { taskStatusMap } = useComponentSpec();
 
-  const typedData = useMemo(() => data as TaskNodeData, [data]);
+  const typedData = data as TaskNodeData;
 
   const runStatus = taskStatusMap.get(
     typedData.taskId ?? "",

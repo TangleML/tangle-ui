@@ -2,9 +2,7 @@ import type { ReactFlowInstance } from "@xyflow/react";
 import {
   createContext,
   type PropsWithChildren,
-  useCallback,
   useContext,
-  useMemo,
   useRef,
 } from "react";
 
@@ -72,22 +70,23 @@ export const NodesOverlayProvider = ({ children }: PropsWithChildren<{}>) => {
   const instanceRef = useRef<ReactFlowInstance | null | undefined>(null);
   const nodesRef = useRef(new Map<string, NodeRegistryRecord>());
 
-  const setReactFlowInstance = useCallback((instance: ReactFlowInstance) => {
+  const setReactFlowInstance = (instance: ReactFlowInstance) => {
     instanceRef.current = instance;
-  }, []);
+  };
 
-  const registerNode = useCallback(
-    ({ nodeId, taskSpec, onNotify }: RegisterNodeOptions) => {
-      nodesRef.current.set(nodeId, { taskSpec, onNotify });
+  const registerNode = ({
+    nodeId,
+    taskSpec,
+    onNotify,
+  }: RegisterNodeOptions) => {
+    nodesRef.current.set(nodeId, { taskSpec, onNotify });
 
-      return () => {
-        nodesRef.current.delete(nodeId);
-      };
-    },
-    [],
-  );
+    return () => {
+      nodesRef.current.delete(nodeId);
+    };
+  };
 
-  const fitNodeIntoView = useCallback(async (nodeId: string) => {
+  const fitNodeIntoView = async (nodeId: string) => {
     const node = instanceRef.current?.getNode(nodeId);
     if (!node) return false;
 
@@ -98,44 +97,32 @@ export const NodesOverlayProvider = ({ children }: PropsWithChildren<{}>) => {
         maxZoom: 1,
       })) ?? false
     );
-  }, []);
+  };
 
-  const getNodeIdsByDigest = useCallback((digest: string) => {
-    return (
-      Array.from(nodesRef.current.entries())
-        .filter(([_, { taskSpec }]) => taskSpec.componentRef.digest === digest)
-        // In most cases we want to navigate to selected node first
-        .sort((a, b) => {
-          const aNode = instanceRef.current?.getNode(a[0]);
-          const bNode = instanceRef.current?.getNode(b[0]);
-          return (aNode?.selected ? 1 : 0) - (bNode?.selected ? 1 : 0);
-        })
-        .map(([nodeId]) => nodeId)
-    );
-  }, []);
+  const getNodeIdsByDigest = (digest: string) => {
+    return Array.from(nodesRef.current.entries())
+      .filter(([_, { taskSpec }]) => taskSpec.componentRef.digest === digest)
+      .sort((a, b) => {
+        const aNode = instanceRef.current?.getNode(a[0]);
+        const bNode = instanceRef.current?.getNode(b[0]);
+        return (aNode?.selected ? 1 : 0) - (bNode?.selected ? 1 : 0);
+      })
+      .map(([nodeId]) => nodeId);
+  };
 
-  const notifyNode = useCallback((nodeId: string, message: NotifyMessage) => {
+  const notifyNode = (nodeId: string, message: NotifyMessage) => {
     const node = nodesRef.current.get(nodeId);
     if (!node) return;
     node.onNotify?.(message);
-  }, []);
+  };
 
-  const value = useMemo(
-    () => ({
-      setReactFlowInstance,
-      registerNode,
-      fitNodeIntoView,
-      getNodeIdsByDigest,
-      notifyNode,
-    }),
-    [
-      setReactFlowInstance,
-      registerNode,
-      fitNodeIntoView,
-      getNodeIdsByDigest,
-      notifyNode,
-    ],
-  );
+  const value = {
+    setReactFlowInstance,
+    registerNode,
+    fitNodeIntoView,
+    getNodeIdsByDigest,
+    notifyNode,
+  };
 
   return (
     <NodesOverlayContext.Provider value={value}>

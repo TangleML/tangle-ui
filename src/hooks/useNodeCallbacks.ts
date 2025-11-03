@@ -1,5 +1,4 @@
 import { type Node, useReactFlow } from "@xyflow/react";
-import { useCallback } from "react";
 
 import { getDeleteConfirmationDetails } from "@/components/shared/ReactFlow/FlowCanvas/ConfirmationDialogs/DeleteConfirmation";
 import { getUpgradeConfirmationDetails } from "@/components/shared/ReactFlow/FlowCanvas/ConfirmationDialogs/UpgradeComponent";
@@ -45,211 +44,186 @@ export const useNodeCallbacks = ({
   } = useComponentSpec();
 
   // Workaround for nodes state being stale in task node callbacks
-  const getNodeById = useCallback(
-    (id: string) => {
-      if (!reactFlowInstance) {
-        console.warn("React Flow instance is not available.");
-        return undefined;
-      }
+  const getNodeById = (id: string) => {
+    if (!reactFlowInstance) {
+      console.warn("React Flow instance is not available.");
+      return undefined;
+    }
 
-      const { getNodes } = reactFlowInstance;
-      const nodes = getNodes();
-      if (!nodes) {
-        console.warn("No nodes found in the current React Flow instance.");
-        return undefined;
-      }
+    const { getNodes } = reactFlowInstance;
+    const nodes = getNodes();
+    if (!nodes) {
+      console.warn("No nodes found in the current React Flow instance.");
+      return undefined;
+    }
 
-      const node = nodes.find((n) => n.id === id);
-      if (!node) {
-        console.warn(`Node with id ${id} not found.`);
-        return undefined;
-      }
-      return node;
-    },
-    [reactFlowInstance],
-  );
+    const node = nodes.find((n) => n.id === id);
+    if (!node) {
+      console.warn(`Node with id ${id} not found.`);
+      return undefined;
+    }
+    return node;
+  };
 
-  const onDelete = useCallback(
-    async (ids: NodeAndTaskId) => {
-      const nodeId = ids.nodeId;
+  const onDelete = async (ids: NodeAndTaskId) => {
+    const nodeId = ids.nodeId;
 
-      const nodeToDelete = getNodeById(nodeId);
+    const nodeToDelete = getNodeById(nodeId);
 
-      if (!nodeToDelete) {
-        console.warn(`Node with id ${nodeId} not found.`);
-        return;
-      }
+    if (!nodeToDelete) {
+      console.warn(`Node with id ${nodeId} not found.`);
+      return;
+    }
 
-      if (!reactFlowInstance) {
-        console.warn("React Flow instance is not available.");
-        return;
-      }
+    if (!reactFlowInstance) {
+      console.warn("React Flow instance is not available.");
+      return;
+    }
 
-      const currentEdges = reactFlowInstance.getEdges();
+    const currentEdges = reactFlowInstance.getEdges();
 
-      const edgesToRemove = currentEdges.filter(
-        (edge) => edge.source === nodeId || edge.target === nodeId,
-      );
+    const edgesToRemove = currentEdges.filter(
+      (edge) => edge.source === nodeId || edge.target === nodeId,
+    );
 
-      const params = {
-        nodes: [nodeToDelete],
-        edges: edgesToRemove,
-      } as NodesAndEdges;
+    const params = {
+      nodes: [nodeToDelete],
+      edges: edgesToRemove,
+    } as NodesAndEdges;
 
-      const confirmed = await triggerConfirmation(
-        getDeleteConfirmationDetails(params),
-      );
+    const confirmed = await triggerConfirmation(
+      getDeleteConfirmationDetails(params),
+    );
 
-      if (confirmed) {
-        onElementsRemove(params);
-      }
-    },
-    [triggerConfirmation, onElementsRemove, getNodeById],
-  );
+    if (confirmed) {
+      onElementsRemove(params);
+    }
+  };
 
-  const setArguments = useCallback(
-    (ids: NodeAndTaskId, args: Record<string, ArgumentType>) => {
-      const taskId = ids.taskId;
-      const newGraphSpec = replaceTaskArgumentsInGraphSpec(
-        taskId,
-        currentGraphSpec,
-        args,
-      );
-      updateGraphSpec(newGraphSpec);
-    },
-    [currentGraphSpec, updateGraphSpec],
-  );
-
-  const setAnnotations = useCallback(
-    (ids: NodeAndTaskId, annotations: Annotations) => {
-      const taskId = ids.taskId;
-      const newGraphSpec = replaceTaskAnnotationsInGraphSpec(
-        taskId,
-        currentGraphSpec,
-        annotations,
-      );
-      updateGraphSpec(newGraphSpec);
-    },
-    [currentGraphSpec, updateGraphSpec],
-  );
-
-  const setCacheStaleness = useCallback(
-    (ids: NodeAndTaskId, cacheStaleness: string | undefined) => {
-      const taskId = ids.taskId;
-      const task = currentGraphSpec.tasks[taskId];
-
-      if (!task) {
-        console.warn(`Task with id ${taskId} not found in graph spec.`);
-        return;
-      }
-
-      const cachingStrategy = cacheStaleness
-        ? { maxCacheStaleness: cacheStaleness }
-        : undefined;
-
-      const updatedTask: TaskSpec = {
-        ...task,
-        executionOptions: {
-          ...task.executionOptions,
-          cachingStrategy,
-        },
-      };
-
-      const newGraphSpec = {
-        ...currentGraphSpec,
-        tasks: {
-          ...currentGraphSpec.tasks,
-          [taskId]: updatedTask,
-        },
-      };
-
-      updateGraphSpec(newGraphSpec);
-    },
-    [currentGraphSpec, updateGraphSpec],
-  );
-
-  const onDuplicate = useCallback(
-    (ids: NodeAndTaskId, selected = true) => {
-      const nodeId = ids.nodeId;
-      const node = getNodeById(nodeId);
-
-      if (!node) {
-        console.warn(`Node with id ${nodeId} not found.`);
-        return;
-      }
-
-      const {
-        updatedComponentSpec: updatedSubgraphSpec,
-        newNodes,
-        updatedNodes,
-      } = duplicateNodes(currentSubgraphSpec, [node], { selected });
-
-      const updatedRootSpec = updateSubgraphSpec(
-        componentSpec,
-        currentSubgraphPath,
-        updatedSubgraphSpec,
-      );
-
-      setComponentSpec(updatedRootSpec);
-
-      updateOrAddNodes({
-        updatedNodes,
-        newNodes,
-      });
-    },
-    [
-      componentSpec,
-      currentSubgraphSpec,
-      currentSubgraphPath,
-      getNodeById,
-      setComponentSpec,
-      updateOrAddNodes,
-    ],
-  );
-
-  const onUpgrade = useCallback(
-    async (ids: NodeAndTaskId, newComponentRef: ComponentReference) => {
-      const nodeId = ids.nodeId;
-      const node = getNodeById(nodeId);
-
-      if (!node) {
-        console.warn(`Node with id ${nodeId} not found.`);
-        return;
-      }
-
-      const { updatedGraphSpec, lostInputs } = replaceTaskNode(
-        node.data.taskId as string,
-        newComponentRef,
-        currentGraphSpec,
-      );
-
-      if (!newComponentRef.digest) {
-        console.error("Component reference does not have a digest.");
-        return;
-      }
-
-      const dialogData = getUpgradeConfirmationDetails(
-        node.data.taskId as string,
-        node.data.taskSpec as TaskSpec | undefined,
-        newComponentRef.digest,
-        lostInputs,
-      );
-
-      const confirmed = await triggerConfirmation(dialogData);
-
-      if (confirmed) {
-        updateGraphSpec(updatedGraphSpec);
-        notify("Component updated", "success");
-      }
-    },
-    [
+  const setArguments = (
+    ids: NodeAndTaskId,
+    args: Record<string, ArgumentType>,
+  ) => {
+    const taskId = ids.taskId;
+    const newGraphSpec = replaceTaskArgumentsInGraphSpec(
+      taskId,
       currentGraphSpec,
-      getNodeById,
-      updateGraphSpec,
-      triggerConfirmation,
-      notify,
-    ],
-  );
+      args,
+    );
+    updateGraphSpec(newGraphSpec);
+  };
+
+  const setAnnotations = (ids: NodeAndTaskId, annotations: Annotations) => {
+    const taskId = ids.taskId;
+    const newGraphSpec = replaceTaskAnnotationsInGraphSpec(
+      taskId,
+      currentGraphSpec,
+      annotations,
+    );
+    updateGraphSpec(newGraphSpec);
+  };
+
+  const setCacheStaleness = (
+    ids: NodeAndTaskId,
+    cacheStaleness: string | undefined,
+  ) => {
+    const taskId = ids.taskId;
+    const task = currentGraphSpec.tasks[taskId];
+
+    if (!task) {
+      console.warn(`Task with id ${taskId} not found in graph spec.`);
+      return;
+    }
+
+    const cachingStrategy = cacheStaleness
+      ? { maxCacheStaleness: cacheStaleness }
+      : undefined;
+
+    const updatedTask: TaskSpec = {
+      ...task,
+      executionOptions: {
+        ...task.executionOptions,
+        cachingStrategy,
+      },
+    };
+
+    const newGraphSpec = {
+      ...currentGraphSpec,
+      tasks: {
+        ...currentGraphSpec.tasks,
+        [taskId]: updatedTask,
+      },
+    };
+
+    updateGraphSpec(newGraphSpec);
+  };
+
+  const onDuplicate = (ids: NodeAndTaskId, selected = true) => {
+    const nodeId = ids.nodeId;
+    const node = getNodeById(nodeId);
+
+    if (!node) {
+      console.warn(`Node with id ${nodeId} not found.`);
+      return;
+    }
+
+    const {
+      updatedComponentSpec: updatedSubgraphSpec,
+      newNodes,
+      updatedNodes,
+    } = duplicateNodes(currentSubgraphSpec, [node], { selected });
+
+    const updatedRootSpec = updateSubgraphSpec(
+      componentSpec,
+      currentSubgraphPath,
+      updatedSubgraphSpec,
+    );
+
+    setComponentSpec(updatedRootSpec);
+
+    updateOrAddNodes({
+      updatedNodes,
+      newNodes,
+    });
+  };
+
+  const onUpgrade = async (
+    ids: NodeAndTaskId,
+    newComponentRef: ComponentReference,
+  ) => {
+    const nodeId = ids.nodeId;
+    const node = getNodeById(nodeId);
+
+    if (!node) {
+      console.warn(`Node with id ${nodeId} not found.`);
+      return;
+    }
+
+    const { updatedGraphSpec, lostInputs } = replaceTaskNode(
+      node.data.taskId as string,
+      newComponentRef,
+      currentGraphSpec,
+    );
+
+    if (!newComponentRef.digest) {
+      console.error("Component reference does not have a digest.");
+      return;
+    }
+
+    const dialogData = getUpgradeConfirmationDetails(
+      node.data.taskId as string,
+      node.data.taskSpec as TaskSpec | undefined,
+      newComponentRef.digest,
+      lostInputs,
+    );
+
+    const confirmed = await triggerConfirmation(dialogData);
+
+    if (confirmed) {
+      updateGraphSpec(updatedGraphSpec);
+      notify("Component updated", "success");
+    }
+  };
 
   return {
     onDelete,

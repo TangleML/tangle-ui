@@ -1,5 +1,5 @@
 import { type NodeProps } from "@xyflow/react";
-import { memo, useMemo } from "react";
+import { memo } from "react";
 
 import { cn } from "@/lib/utils";
 import { TaskNodeProvider } from "@/providers/TaskNodeProvider";
@@ -20,9 +20,7 @@ const GhostNode = memo(({ data }: NodeProps) => {
 
   const componentRef = data.componentRef as ComponentReference;
 
-  const ghostTaskData = useMemo(() => {
-    return generateGhostTaskNodeData(componentRef);
-  }, [componentRef]);
+  const ghostTaskData = generateGhostTaskNodeData(componentRef);
 
   return (
     <div
@@ -38,10 +36,10 @@ const GhostNode = memo(({ data }: NodeProps) => {
     >
       <div
         className="
-          border-2 
-          border-dashed 
-          border-blue-400/60 
-          rounded-lg 
+          border-2
+          border-dashed
+          border-blue-400/60
+          rounded-lg
           p-1
         "
       >

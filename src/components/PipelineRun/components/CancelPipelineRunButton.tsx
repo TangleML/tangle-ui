@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { CircleSlash, CircleX } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import ConfirmationDialog from "@/components/shared/Dialogs/ConfirmationDialog";
@@ -35,7 +35,7 @@ export const CancelPipelineRunButton = ({
     },
   });
 
-  const handleConfirm = useCallback(() => {
+  const handleConfirm = () => {
     setIsOpen(false);
 
     if (!runId) {
@@ -53,15 +53,15 @@ export const CancelPipelineRunButton = ({
     } catch (error) {
       notify(`Error cancelling run: ${error}`, "error");
     }
-  }, [runId, available]);
+  };
 
-  const onClick = useCallback(() => {
+  const onClick = () => {
     setIsOpen(true);
-  }, []);
+  };
 
-  const handleCancel = useCallback(() => {
+  const handleCancel = () => {
     setIsOpen(false);
-  }, []);
+  };
 
   if (isSuccess) {
     return (

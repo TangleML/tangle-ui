@@ -9,7 +9,7 @@ import {
   LockKeyholeOpen,
   SquareDashedMousePointerIcon,
 } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -26,20 +26,20 @@ export default function FlowControls({
   const [multiSelectActive, setMultiSelectActive] = useState(false);
   const [lockActive, setLockActive] = useState(!config.nodesDraggable);
 
-  const onClickMultiSelect = useCallback(() => {
+  const onClickMultiSelect = () => {
     updateConfig({
       selectionOnDrag: !multiSelectActive,
       panOnDrag: multiSelectActive,
     });
     setMultiSelectActive(!multiSelectActive);
-  }, [multiSelectActive, updateConfig]);
+  };
 
-  const handleLockChange = useCallback(() => {
+  const handleLockChange = () => {
     updateConfig({
       nodesDraggable: lockActive,
     });
     setLockActive(!lockActive);
-  }, [lockActive, updateConfig]);
+  };
 
   return (
     <Controls {...props}>

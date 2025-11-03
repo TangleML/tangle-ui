@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { PipelineNameDialog } from "@/components/shared/Dialogs";
 import ImportPipeline from "@/components/shared/ImportPipeline";
@@ -33,46 +33,35 @@ const FileActions = ({ isOpen }: { isOpen: boolean }) => {
 
   const [onLoadLastSavedAt, setOnLoadLastSavedAt] = useState<Date | null>(null);
 
-  const componentText = useMemo(() => {
+  const componentText = (() => {
     try {
       return componentSpecToYaml(componentSpec);
     } catch (err) {
       console.error("Error preparing pipeline for export:", err);
       return componentSpec ? componentSpecToYaml(componentSpec) : "";
     }
-  }, [componentSpec]);
+  })();
 
-  const notifyPipelineSaved = useCallback(
-    (name: string) => {
-      notify(`Pipeline saved as "${name}"`, "success");
-    },
-    [notify],
-  );
+  const notifyPipelineSaved = (name: string) => {
+    notify(`Pipeline saved as "${name}"`, "success");
+  };
 
-  const handleSavePipeline = useCallback(async () => {
+  const handleSavePipeline = async () => {
     await savePipeline();
     setOnLoadLastSavedAt(new Date());
     notifyPipelineSaved(componentSpec?.name ?? "Untitled Pipeline");
-  }, [
-    savePipeline,
-    setOnLoadLastSavedAt,
-    notifyPipelineSaved,
-    componentSpec?.name,
-  ]);
+  };
 
-  const handleSavePipelineAs = useCallback(
-    async (name: string) => {
-      await savePipeline(name);
-      notifyPipelineSaved(name);
+  const handleSavePipelineAs = async (name: string) => {
+    await savePipeline(name);
+    notifyPipelineSaved(name);
 
-      navigate({
-        to: `${EDITOR_PATH}/${encodeURIComponent(name)}`,
-      });
-    },
-    [navigate, savePipeline, notifyPipelineSaved],
-  );
+    navigate({
+      to: `${EDITOR_PATH}/${encodeURIComponent(name)}`,
+    });
+  };
 
-  const getAutoSaveStatusText = useCallback(() => {
+  const getAutoSaveStatusText = () => {
     if (autoSaveStatus.isSaving) {
       return "Saving...";
     }
@@ -82,13 +71,13 @@ const FileActions = ({ isOpen }: { isOpen: boolean }) => {
       )}`;
     }
     return "All changes saved";
-  }, [autoSaveStatus, onLoadLastSavedAt]);
+  };
 
-  const getDuplicatePipelineName = useCallback(() => {
+  const getDuplicatePipelineName = () => {
     return componentSpec?.name
       ? `${componentSpec.name} (Copy)`
       : `Untitled Pipeline ${new Date().toLocaleTimeString()}`;
-  }, [componentSpec?.name]);
+  };
 
   useEffect(() => {
     const fetchLastSaved = async () => {

@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useRef } from "react";
 
 import { deepClone } from "@/utils/deepClone";
 
@@ -35,7 +35,7 @@ export function useUndoRedo<T>(
     { debounceMs },
   );
 
-  const undo = useCallback(() => {
+  const undo = () => {
     clearDebounce();
 
     if (historyManager.canUndo) {
@@ -50,9 +50,9 @@ export function useUndoRedo<T>(
 
       isUndoRedoOperationRef.current = false;
     }
-  }, [historyManager, setState, clearDebounce, updatePreviousState]);
+  };
 
-  const redo = useCallback(() => {
+  const redo = () => {
     clearDebounce();
 
     if (historyManager.canRedo) {
@@ -67,13 +67,13 @@ export function useUndoRedo<T>(
 
       isUndoRedoOperationRef.current = false;
     }
-  }, [historyManager, setState, clearDebounce, updatePreviousState]);
+  };
 
-  const clearHistory = useCallback(() => {
+  const clearHistory = () => {
     clearDebounce();
     historyManager.clearHistory();
     updatePreviousState(currentState);
-  }, [historyManager, clearDebounce, updatePreviousState, currentState]);
+  };
 
   return {
     undo,

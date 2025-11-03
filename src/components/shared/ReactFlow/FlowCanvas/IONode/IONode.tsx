@@ -1,5 +1,5 @@
 import { Handle, Position } from "@xyflow/react";
-import { memo, useEffect, useMemo } from "react";
+import { memo, useEffect } from "react";
 
 import { InputValueEditor } from "@/components/Editor/IOEditor/InputValueEditor";
 import { OutputNameEditor } from "@/components/Editor/IOEditor/OutputNameEditor";
@@ -43,16 +43,12 @@ const IONode = ({ type, data, selected = false }: IONodeProps) => {
     : "border-violet-300 bg-violet-100";
   const borderColor = selected ? selectedColor : defaultColor;
 
-  const input = useMemo(
-    () =>
-      currentSubgraphSpec.inputs?.find((input) => input.name === data.label),
-    [currentSubgraphSpec.inputs, data.label],
+  const input = currentSubgraphSpec.inputs?.find(
+    (input) => input.name === data.label,
   );
 
-  const output = useMemo(
-    () =>
-      currentSubgraphSpec.outputs?.find((output) => output.name === data.label),
-    [currentSubgraphSpec.outputs, data.label],
+  const output = currentSubgraphSpec.outputs?.find(
+    (output) => output.name === data.label,
   );
 
   useEffect(() => {
@@ -88,6 +84,7 @@ const IONode = ({ type, data, selected = false }: IONodeProps) => {
         clearContent();
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [input, output, selected, readOnly]);
 
   const connectedOutput = getOutputConnectedDetails(

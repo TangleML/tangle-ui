@@ -1,9 +1,7 @@
 import {
   createContext,
   type PropsWithChildren,
-  useCallback,
   useContext,
-  useMemo,
   useReducer,
 } from "react";
 
@@ -86,33 +84,24 @@ export const ForcedSearchProvider = ({ children }: PropsWithChildren) => {
     highlightSearchResults: false,
   });
 
-  const updateSearchFilter = useCallback(
-    (payload: Partial<LibraryFilterRequest>) => {
-      dispatch({ type: "updateSearchFilter", payload });
-    },
-    [],
-  );
+  const updateSearchFilter = (payload: Partial<LibraryFilterRequest>) => {
+    dispatch({ type: "updateSearchFilter", payload });
+  };
 
-  const resetSearchFilter = useCallback(() => {
+  const resetSearchFilter = () => {
     dispatch({ type: "resetSearchFilter" });
-  }, []);
+  };
 
-  const highlightSearchFilter = useCallback(
-    (payload: Partial<LibraryFilterRequest>) => {
-      dispatch({ type: "highlightSearchFilter", payload });
-    },
-    [],
-  );
+  const highlightSearchFilter = (payload: Partial<LibraryFilterRequest>) => {
+    dispatch({ type: "highlightSearchFilter", payload });
+  };
 
-  const value = useMemo(
-    () => ({
-      ...state,
-      updateSearchFilter,
-      resetSearchFilter,
-      highlightSearchFilter,
-    }),
-    [state, updateSearchFilter, resetSearchFilter, highlightSearchFilter],
-  );
+  const value = {
+    ...state,
+    updateSearchFilter,
+    resetSearchFilter,
+    highlightSearchFilter,
+  };
 
   return (
     <ForcedComponentSearchContext.Provider value={value}>

@@ -2,8 +2,8 @@ import {
   type PropsWithChildren,
   type RefObject,
   useEffect,
-  useMemo,
   useRef,
+  useState,
 } from "react";
 import { createPortal } from "react-dom";
 
@@ -19,15 +19,19 @@ function FullscreenElementPortal({
   fullscreen,
   defaultMountElement,
 }: FullscreenElementProps) {
-  const id = useRef(Math.random().toString(15).substring(2, 15));
+  const [id] = useState(() => Math.random().toString(15).substring(2, 15));
   const containerElementRef = useRef<HTMLElement>(
     document.createElement("div"),
   );
+  const [containerElement, setContainerElement] = useState<HTMLElement | null>(
+    null,
+  );
 
   useEffect(() => {
-    containerElementRef.current.dataset.testid = "fullscreen-container";
+    const container = containerElementRef.current;
+    container.dataset.testid = "fullscreen-container";
     if (fullscreen) {
-      containerElementRef.current.className = cn(
+      container.className = cn(
         "fixed",
         "top-0",
         "left-0",
@@ -37,26 +41,27 @@ function FullscreenElementPortal({
         "overflow-hidden",
         "pointer-events-auto",
       );
-      document.body.appendChild(containerElementRef.current);
+      document.body.appendChild(container);
     } else {
-      containerElementRef.current.className = cn(
-        "contents",
-        "pointer-events-auto",
-      );
+      container.className = cn("contents", "pointer-events-auto");
 
       if (defaultMountElement.current) {
-        defaultMountElement.current.appendChild(containerElementRef.current);
+        defaultMountElement.current.appendChild(container);
       }
     }
 
+    setContainerElement(container);
+
     return () => {
-      containerElementRef.current.remove();
+      container.remove();
     };
   }, [fullscreen, defaultMountElement]);
 
-  const fragment = useMemo(() => <>{children}</>, [children]);
+  if (!containerElement) {
+    return null;
+  }
 
-  return createPortal(fragment, containerElementRef.current, id.current);
+  return createPortal(<>{children}</>, containerElement, id);
 }
 
 export function FullscreenElement({

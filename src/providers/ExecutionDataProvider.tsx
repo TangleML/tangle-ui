@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { PropsWithChildren } from "react";
-import { useContext, useEffect, useMemo, useRef } from "react";
+import { useContext, useEffect, useState } from "react";
 
 import type {
   GetExecutionInfoResponse,
@@ -140,8 +140,8 @@ export function ExecutionDataProvider({
   const queryClient = useQueryClient();
   const { currentSubgraphPath, setTaskStatusMap } = useComponentSpec();
 
-  const executionDataCache = useRef<Map<string, CachedExecutionData>>(
-    new Map(),
+  const [executionDataCache] = useState(
+    () => new Map<string, CachedExecutionData>(),
   );
 
   const {
@@ -156,25 +156,15 @@ export function ExecutionDataProvider({
 
   const isAtRoot = isAtRootLevel(currentSubgraphPath);
 
-  const currentExecutionId = useMemo(() => {
-    if (isAtRoot) {
-      return rootExecutionId;
-    }
-
-    return findExecutionIdAtPath(
-      currentSubgraphPath,
-      rootExecutionId,
-      rootDetails,
-      executionDataCache.current,
-      queryClient,
-    );
-  }, [
-    currentSubgraphPath,
-    rootExecutionId,
-    rootDetails,
-    isAtRoot,
-    queryClient,
-  ]);
+  const currentExecutionId = isAtRoot
+    ? rootExecutionId
+    : findExecutionIdAtPath(
+        currentSubgraphPath,
+        rootExecutionId,
+        rootDetails,
+        executionDataCache,
+        queryClient,
+      );
 
   const {
     executionData: nestedExecutionData,
@@ -196,7 +186,7 @@ export function ExecutionDataProvider({
     }
 
     const pathKey = buildPathKey(currentSubgraphPath);
-    executionDataCache.current.set(pathKey, {
+    executionDataCache.set(pathKey, {
       executionId: currentExecutionId || "",
       details: nestedDetails,
       state: nestedState,
@@ -207,6 +197,7 @@ export function ExecutionDataProvider({
     currentExecutionId,
     currentSubgraphPath,
     isAtRoot,
+    executionDataCache,
   ]);
 
   useEffect(() => {
@@ -214,30 +205,17 @@ export function ExecutionDataProvider({
     setTaskStatusMap(taskStatusMap);
   }, [details, state, setTaskStatusMap]);
 
-  const value = useMemo(
-    () => ({
-      currentExecutionId,
-      details,
-      state,
-      rootExecutionId,
-      rootDetails,
-      rootState,
-      runId,
-      isLoading,
-      error,
-    }),
-    [
-      currentExecutionId,
-      details,
-      state,
-      rootExecutionId,
-      rootDetails,
-      rootState,
-      runId,
-      isLoading,
-      error,
-    ],
-  );
+  const value = {
+    currentExecutionId,
+    details,
+    state,
+    rootExecutionId,
+    rootDetails,
+    rootState,
+    runId,
+    isLoading,
+    error,
+  };
 
   return (
     <ExecutionDataContext.Provider value={value}>

@@ -1,4 +1,4 @@
-import { type ChangeEvent, useCallback, useEffect, useState } from "react";
+import { type ChangeEvent, useEffect, useEffectEvent, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -60,63 +60,63 @@ const BackendConfigurationDialog = ({
   const hasEnvConfig = !!API_URL;
   const showRelativePathOption = !API_URL;
 
-  const handleInputChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     setInputBackendUrl(e.target.value);
     setInputBackendTestResult(null);
-  }, []);
+  };
 
-  const handleRefresh = useCallback(() => {
+  const handleRefresh = () => {
     ping({});
-  }, [ping]);
+  };
 
-  const handleTest = useCallback(async () => {
+  const handleTest = async () => {
     const result = await ping({
       url: inputBackendUrl,
       notifyResult: true,
       saveAvailability: false,
     });
     setInputBackendTestResult(result);
-  }, [inputBackendUrl, ping]);
+  };
 
-  const handleEnvSwitch = useCallback((checked: boolean) => {
+  const handleEnvSwitch = (checked: boolean) => {
     setIsEnvConfig(checked);
     if (checked) setIsRelativePathConfig(false);
-  }, []);
+  };
 
-  const handleConfirm = useCallback(() => {
+  const handleConfirm = () => {
     setEnvConfig(isEnvConfig);
     setRelativePathConfig(isRelativePathConfig);
     setBackendUrl(inputBackendUrl);
     setInputBackendUrl(inputBackendUrl.trim());
     setInputBackendTestResult(null);
     setOpen(false);
-  }, [
-    isEnvConfig,
-    isRelativePathConfig,
-    inputBackendUrl,
-    setEnvConfig,
-    setRelativePathConfig,
-    setBackendUrl,
-    setOpen,
-  ]);
+  };
 
-  const handleClose = useCallback(() => {
+  const handleClose = () => {
     setIsEnvConfig(isConfiguredFromEnv);
     setIsRelativePathConfig(isConfiguredFromRelativePath);
     setInputBackendUrl("");
     setInputBackendTestResult(null);
     setOpen(false);
-  }, [isConfiguredFromEnv, isConfiguredFromRelativePath, setOpen]);
+  };
 
-  useEffect(() => {
+  const syncEnvConfig = useEffectEvent(() => {
     setIsEnvConfig(isConfiguredFromEnv);
     setIsRelativePathConfig(isConfiguredFromRelativePath);
-  }, [isConfiguredFromEnv, isConfiguredFromRelativePath]);
+  });
 
   useEffect(() => {
+    syncEnvConfig();
+  }, [isConfiguredFromEnv, isConfiguredFromRelativePath]);
+
+  const syncBackendUrl = useEffectEvent(() => {
     setInputBackendUrl(
       isConfiguredFromEnv || isConfiguredFromRelativePath ? "" : backendUrl,
     );
+  });
+
+  useEffect(() => {
+    syncBackendUrl();
   }, [isConfiguredFromEnv, isConfiguredFromRelativePath, backendUrl]);
 
   const hasBackendConfigured =

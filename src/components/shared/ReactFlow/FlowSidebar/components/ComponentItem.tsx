@@ -1,5 +1,5 @@
 import type { ComponentProps, DragEvent } from "react";
-import { useCallback, useMemo, useRef } from "react";
+import { useRef } from "react";
 
 import { ComponentDetailsDialog } from "@/components/shared/Dialogs";
 import { ComponentFavoriteToggle } from "@/components/shared/FavoriteComponentToggle";
@@ -69,36 +69,30 @@ const ComponentMarkup = ({
 
   const { spec, digest, url, name, published_by: author, owned } = component;
 
-  const displayName = useMemo(
-    () => name ?? getComponentName({ spec, url }),
-    [spec, url, name],
-  );
+  const displayName = name ?? getComponentName({ spec, url });
 
-  const onDragStart = useCallback(
-    (event: DragEvent) => {
-      const taskSpec: TaskSpec = {
-        componentRef: component,
-      };
+  const onDragStart = (event: DragEvent) => {
+    const taskSpec: TaskSpec = {
+      componentRef: component,
+    };
 
-      event.dataTransfer.setData(
-        "application/reactflow",
-        JSON.stringify({ task: taskSpec }),
-      );
+    event.dataTransfer.setData(
+      "application/reactflow",
+      JSON.stringify({ task: taskSpec }),
+    );
 
-      event.dataTransfer.setData(
-        "DragStart.offset",
-        JSON.stringify({
-          offsetX: event.nativeEvent.offsetX,
-          offsetY: event.nativeEvent.offsetY,
-        }),
-      );
+    event.dataTransfer.setData(
+      "DragStart.offset",
+      JSON.stringify({
+        offsetX: event.nativeEvent.offsetX,
+        offsetY: event.nativeEvent.offsetY,
+      }),
+    );
 
-      event.dataTransfer.effectAllowed = "move";
-    },
-    [component],
-  );
+    event.dataTransfer.effectAllowed = "move";
+  };
 
-  const onMouseEnter = useCallback(() => {
+  const onMouseEnter = () => {
     if (!isHighlightTasksOnComponentHoverEnabled) return;
 
     if (!digest) return;
@@ -109,9 +103,9 @@ const ComponentMarkup = ({
         type: "highlight",
       });
     });
-  }, [digest, isHighlightTasksOnComponentHoverEnabled]);
+  };
 
-  const onMouseLeave = useCallback(() => {
+  const onMouseLeave = () => {
     if (!isHighlightTasksOnComponentHoverEnabled) return;
 
     if (!digest) return;
@@ -122,9 +116,9 @@ const ComponentMarkup = ({
         type: "clear",
       });
     });
-  }, [digest, isHighlightTasksOnComponentHoverEnabled]);
+  };
 
-  const onMouseClick = useCallback(() => {
+  const onMouseClick = () => {
     if (!isHighlightTasksOnComponentHoverEnabled) return;
 
     if (!digest) return;
@@ -135,12 +129,7 @@ const ComponentMarkup = ({
     carousel.current = carousel.current + 1;
 
     fitNodeIntoView(nodeIds[idx]);
-  }, [
-    digest,
-    getNodeIdsByDigest,
-    fitNodeIntoView,
-    isHighlightTasksOnComponentHoverEnabled,
-  ]);
+  };
 
   return (
     <SidebarMenuItem
@@ -215,17 +204,17 @@ const ComponentMarkup = ({
 };
 
 const ComponentItemFromUrl = ({ url }: ComponentItemFromUrlProps) => {
-  if (!url) return null;
-
   const { isLoading, error, componentRef } = useComponentFromUrl(url);
 
-  if (!componentRef.spec) {
-    componentRef.spec = EMPTY_GRAPH_COMPONENT_SPEC;
-  }
+  if (!url) return null;
+
+  const component = componentRef.spec
+    ? componentRef
+    : { ...componentRef, spec: EMPTY_GRAPH_COMPONENT_SPEC };
 
   return (
     <ComponentMarkup
-      component={componentRef}
+      component={component}
       isLoading={isLoading}
       error={error}
     />
@@ -237,23 +226,20 @@ interface IONodeSidebarItemProps {
 }
 
 export const IONodeSidebarItem = ({ nodeType }: IONodeSidebarItemProps) => {
-  const onDragStart = useCallback(
-    (event: DragEvent) => {
-      event.dataTransfer.setData(
-        "application/reactflow",
-        JSON.stringify({ [nodeType]: null }),
-      );
-      event.dataTransfer.setData(
-        "DragStart.offset",
-        JSON.stringify({
-          offsetX: event.nativeEvent.offsetX,
-          offsetY: event.nativeEvent.offsetY,
-        }),
-      );
-      event.dataTransfer.effectAllowed = "move";
-    },
-    [nodeType],
-  );
+  const onDragStart = (event: DragEvent) => {
+    event.dataTransfer.setData(
+      "application/reactflow",
+      JSON.stringify({ [nodeType]: null }),
+    );
+    event.dataTransfer.setData(
+      "DragStart.offset",
+      JSON.stringify({
+        offsetX: event.nativeEvent.offsetX,
+        offsetY: event.nativeEvent.offsetY,
+      }),
+    );
+    event.dataTransfer.effectAllowed = "move";
+  };
 
   return (
     <SidebarMenuItem

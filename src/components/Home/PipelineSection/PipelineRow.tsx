@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { type MouseEvent, useCallback, useMemo } from "react";
+import type { MouseEvent } from "react";
 
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
 import RunOverview from "@/components/shared/RunOverview";
@@ -48,25 +48,19 @@ const PipelineRow = ({
     backendUrl,
   );
 
-  const handleRowClick = useCallback(
-    (e: MouseEvent) => {
-      // Don't navigate if clicking on the popover trigger
-      if ((e.target as HTMLElement).closest("[data-popover-trigger]")) {
-        return;
-      }
-      navigate({ to: `${EDITOR_PATH}/${name}` });
-    },
-    [navigate, name],
-  );
+  const handleRowClick = (e: MouseEvent) => {
+    // Don't navigate if clicking on the popover trigger
+    if ((e.target as HTMLElement).closest("[data-popover-trigger]")) {
+      return;
+    }
+    navigate({ to: `${EDITOR_PATH}/${name}` });
+  };
 
-  const handleCheckboxChange = useCallback(
-    (checked: boolean) => {
-      onSelect?.(checked);
-    },
-    [onSelect],
-  );
+  const handleCheckboxChange = (checked: boolean) => {
+    onSelect?.(checked);
+  };
 
-  const confirmPipelineDelete = useCallback(async () => {
+  const confirmPipelineDelete = async () => {
     if (!name) return;
 
     const deleteCallback = () => {
@@ -74,17 +68,16 @@ const PipelineRow = ({
     };
 
     await deletePipeline(name, deleteCallback);
-  }, [name]);
+  };
 
-  const handleClick = useCallback((e: MouseEvent) => {
+  const handleClick = (e: MouseEvent) => {
     // Prevent row click when clicking on the checkbox
     e.stopPropagation();
-  }, []);
+  };
 
-  const formattedDate = useMemo(() => {
-    if (!modificationTime) return "N/A";
-    return formatDate(modificationTime.toISOString());
-  }, [modificationTime]);
+  const formattedDate = modificationTime
+    ? formatDate(modificationTime.toISOString())
+    : "N/A";
 
   const linkProps = {
     to: `${EDITOR_PATH}/$name`,

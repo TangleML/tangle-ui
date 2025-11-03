@@ -1,5 +1,4 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useCallback } from "react";
 
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { Icon } from "@/components/ui/icon";
@@ -13,9 +12,9 @@ export const InspectPipelineButton = ({
 }: InspectPipelineButtonProps) => {
   const navigate = useNavigate();
 
-  const handleInspect = useCallback(() => {
+  const handleInspect = () => {
     navigate({ to: `/editor/${encodeURIComponent(pipelineName)}` });
-  }, [pipelineName, navigate]);
+  };
 
   return (
     <TooltipButton

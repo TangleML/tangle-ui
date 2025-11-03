@@ -56,25 +56,22 @@ function DialogContent({
   showCloseButton?: boolean;
   preventKeyboardPropagation?: boolean;
 }) {
-  const handleKeyDown = React.useCallback(
-    (e: React.KeyboardEvent) => {
-      if (!preventKeyboardPropagation) return;
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!preventKeyboardPropagation) return;
 
-      // Stop propagation for common keyboard shortcuts that might interfere with canvas
-      const shouldStopPropagation =
-        (e.key === "a" && (e.metaKey || e.ctrlKey)) ||
-        (e.key === "c" && (e.metaKey || e.ctrlKey)) ||
-        (e.key === "v" && (e.metaKey || e.ctrlKey)) ||
-        e.key === "Tab" ||
-        e.key === "Enter" ||
-        e.key === "Escape";
+    // Stop propagation for common keyboard shortcuts that might interfere with canvas
+    const shouldStopPropagation =
+      (e.key === "a" && (e.metaKey || e.ctrlKey)) ||
+      (e.key === "c" && (e.metaKey || e.ctrlKey)) ||
+      (e.key === "v" && (e.metaKey || e.ctrlKey)) ||
+      e.key === "Tab" ||
+      e.key === "Enter" ||
+      e.key === "Escape";
 
-      if (shouldStopPropagation) {
-        e.stopPropagation();
-      }
-    },
-    [preventKeyboardPropagation],
-  );
+    if (shouldStopPropagation) {
+      e.stopPropagation();
+    }
+  };
 
   return (
     <DialogPortal data-slot="dialog-portal">

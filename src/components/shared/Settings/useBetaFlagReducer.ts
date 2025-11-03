@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer } from "react";
+import { useEffect, useReducer } from "react";
 
 import type { BetaFlag, BetaFlags } from "@/types/betaFlags";
 
@@ -27,7 +27,7 @@ export function useBetaFlagsReducer(betaFlags: BetaFlags) {
       .forEach((flag) => removeFlag(flag));
   }, [betaFlags, getFlags, removeFlag]);
 
-  const reducer = useCallback((state: State, action: Action) => {
+  const reducer = (state: State, action: Action) => {
     switch (action.type) {
       case "setFlag":
         setFlag(action.payload.key, action.payload.enabled);
@@ -40,7 +40,7 @@ export function useBetaFlagsReducer(betaFlags: BetaFlags) {
       default:
         return state;
     }
-  }, []);
+  };
 
   return useReducer(
     reducer,
