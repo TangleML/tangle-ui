@@ -27,6 +27,7 @@ This is a React + TypeScript application for building and running Machine Learni
 - Do not use barrel exports
 - Use React 19 features and patterns
 - **Import modules from React**: `import module from react`. Do not use inline `React.[module]`
+- **Follow Rules of React**: The compiler requires strict adherence to React's rules for optimization
 
 ### File Structure & Imports
 
@@ -103,10 +104,33 @@ This is a React + TypeScript application for building and running Machine Learni
 
 ### Performance
 
-- Use memo for expensive components
-- Use useMemo and useCallback appropriately
+- **React Compiler handles memoization automatically** - avoid manual `memo`, `useMemo`, and `useCallback` in new code
+- For existing code with manual memoization, only remove it when refactoring or if ESLint reports issues
 - Lazy load heavy components when possible
 - Follow existing patterns for optimization
+
+### React Compiler
+
+This project uses React Compiler for automatic memoization and optimization. Follow these guidelines:
+
+- **Trust the compiler**: Don't add manual `memo`, `useMemo`, or `useCallback` unless absolutely necessary
+- **Follow Rules of React**: The compiler requires strict adherence to React's rules
+  - Don't mutate props, state, or context
+  - Don't call hooks conditionally
+  - Keep components and hooks pure
+  - Don't mutate values used in JSX
+- **Handle ESLint warnings**: When `react-compiler/react-compiler` reports issues:
+  - Fix the underlying code pattern (preferred)
+  - Or use `"use no memo"` directive at the top of the component/hook to opt out temporarily
+- **Opt-out when needed**: Use the `"use no memo"` directive sparingly:
+  ```typescript
+  function ProblematicComponent() {
+    "use no memo";
+    // Component code that can't be optimized
+  }
+  ```
+- **Don't fight the compiler**: If manual memoization dependencies don't match compiler inference, trust the compiler's analysis
+- Components optimized by the compiler will show "Memo ✨" in React DevTools
 
 ## Component Architecture
 
@@ -202,6 +226,9 @@ export const useContext = () => {
 - Don't create side effects in render functions
 - Don't use barrel exports
 - Don't modify componentSpec structure without express permission
+- **Don't add manual memoization** (`memo`, `useMemo`, `useCallback`) in new code - React Compiler handles this
+- **Don't ignore React Compiler ESLint warnings** - fix the code pattern or explicitly opt out with `"use no memo"`
+- **Don't violate Rules of React** - the compiler requires pure components and proper hook usage
 
 ## Other rules
 
