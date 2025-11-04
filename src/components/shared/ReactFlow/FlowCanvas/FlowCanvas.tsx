@@ -11,6 +11,7 @@ import {
   useConnection,
   useNodesState,
   useStoreApi,
+  type XYPosition,
 } from "@xyflow/react";
 import type { ComponentType, DragEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -152,7 +153,7 @@ const FlowCanvas = ({
 
   const notify = useToastNotification();
 
-  const latestFlowPosRef = useRef<{ x: number; y: number } | null>(null);
+  const latestFlowPosRef = useRef<XYPosition>(null);
 
   const [showToolbar, setShowToolbar] = useState(false);
   const [replaceTarget, setReplaceTarget] = useState<Node | null>(null);
@@ -187,14 +188,13 @@ const FlowCanvas = ({
       if (event.key === "a" && (event.metaKey || event.ctrlKey)) {
         event.preventDefault();
 
-        const nodeTypesToSelect = ["task", "input", "output"];
         setNodes((currentNodes) =>
           currentNodes.map((node) => ({
             ...node,
             selected:
               event.shiftKey || !node.type
                 ? false
-                : nodeTypesToSelect.includes(node.type),
+                : SELECTABLE_NODES.has(node.type),
           })),
         );
       }
@@ -919,7 +919,7 @@ const FlowCanvas = ({
   };
 
   return (
-    <BlockStack gap="0" className="h-full w-full">
+    <BlockStack className="h-full w-full">
       <SubgraphBreadcrumbs />
       <ReactFlow
         {...rest}
