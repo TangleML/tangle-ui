@@ -44,7 +44,11 @@ export const removeGraphInput = (
       )) {
         if (typeof argument !== "string" && "graphInput" in argument) {
           if (argument.graphInput.inputName === inputNameToRemove) {
-            const newGraphSpec = setTaskArgument(graphSpec, taskId, inputName);
+            const newGraphSpec = setTaskArgument(
+              componentSpec.implementation.graph,
+              taskId,
+              inputName,
+            );
             componentSpec.implementation.graph = newGraphSpec;
           }
         }
@@ -95,7 +99,11 @@ const removeTask = (taskIdToRemove: string, componentSpec: ComponentSpec) => {
           argument.taskOutput.taskId === taskIdToRemove;
 
         if (isReferencingRemovedTask) {
-          const newGraphSpec = setTaskArgument(graphSpec, taskId, inputName);
+          const newGraphSpec = setTaskArgument(
+            componentSpec.implementation.graph,
+            taskId,
+            inputName,
+          );
           componentSpec.implementation.graph = newGraphSpec;
         }
       }
