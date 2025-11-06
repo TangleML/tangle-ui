@@ -15,19 +15,17 @@ const TaskNode = ({ data, selected }: NodeProps) => {
 
   const typedData = useMemo(() => data as TaskNodeData, [data]);
 
-  const runStatus = taskStatusMap.get(
+  const status = taskStatusMap.get(
     typedData.taskId ?? "",
   ) as ContainerExecutionStatus;
 
   const disabledCache = isCacheDisabled(typedData.taskSpec);
 
   return (
-    <TaskNodeProvider
-      data={typedData}
-      selected={selected}
-      runStatus={runStatus}
-    >
-      <StatusIndicator status={runStatus} disabledCache={disabledCache} />
+    <TaskNodeProvider data={typedData} selected={selected} status={status}>
+      {!!status && (
+        <StatusIndicator status={status} disabledCache={disabledCache} />
+      )}
       <TaskNodeCard />
     </TaskNodeProvider>
   );

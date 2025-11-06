@@ -27,7 +27,7 @@ type TaskNodeState = Readonly<{
   readOnly: boolean;
   disabled: boolean;
   connectable: boolean;
-  runStatus?: ContainerExecutionStatus;
+  status?: ContainerExecutionStatus;
   isCustomComponent: boolean;
   dimensions: TaskNodeDimensions;
 }>;
@@ -45,7 +45,7 @@ type TaskNodeProviderProps = {
   children: ReactNode;
   data: TaskNodeData;
   selected: boolean;
-  runStatus?: ContainerExecutionStatus;
+  status?: ContainerExecutionStatus;
 };
 
 export type TaskNodeContextType = {
@@ -67,7 +67,7 @@ export const TaskNodeProvider = ({
   children,
   data,
   selected,
-  runStatus,
+  status,
 }: TaskNodeProviderProps) => {
   const notify = useToastNotification();
   const reactFlowInstance = useReactFlow();
@@ -144,7 +144,7 @@ export const TaskNodeProvider = ({
       highlighted: !!data.highlighted && !data.isGhost,
       readOnly: !!data.readOnly || !!data.isGhost,
       connectable: !!data.connectable,
-      runStatus: data.isGhost ? undefined : runStatus,
+      status: data.isGhost ? undefined : status,
       disabled: data.isGhost ?? false,
       isCustomComponent,
       dimensions,
@@ -154,7 +154,7 @@ export const TaskNodeProvider = ({
       data.highlighted,
       data.readOnly,
       data.isGhost,
-      runStatus,
+      status,
       isCustomComponent,
       dimensions,
     ],
