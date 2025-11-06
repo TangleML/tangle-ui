@@ -1,8 +1,10 @@
 import { type NodeProps } from "@xyflow/react";
 import { memo, useMemo } from "react";
 
+import type { ContainerExecutionStatus } from "@/api/types.gen";
 import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
 import { TaskNodeProvider } from "@/providers/TaskNodeProvider";
+import { getRunStatus } from "@/services/executionService";
 import type { TaskNodeData } from "@/types/taskNode";
 import { isCacheDisabled } from "@/utils/cache";
 
@@ -11,9 +13,19 @@ import { TaskNodeCard } from "./TaskNodeCard";
 
 const TaskNode = ({ data, selected }: NodeProps) => {
   const executionData = useExecutionDataOptional();
+
   const typedData = useMemo(() => data as TaskNodeData, [data]);
 
-  const status = executionData?.taskStatusMap?.[typedData.taskId ?? ""];
+  const status = useMemo(() => {
+    const taskId = typedData.taskId ?? "";
+    const statusCounts = executionData?.taskStatusCountsMap.get(taskId);
+
+    if (!statusCounts) {
+      return undefined;
+    }
+
+    return getRunStatus(statusCounts) as ContainerExecutionStatus;
+  }, [executionData?.taskStatusCountsMap, typedData.taskId]);
 
   const disabledCache = isCacheDisabled(typedData.taskSpec);
 
