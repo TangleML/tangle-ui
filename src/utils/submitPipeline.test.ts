@@ -33,7 +33,7 @@ describe("submitPipelineRun", () => {
     created_at: "2024-01-01T00:00:00Z",
     created_by: "test-user",
     pipeline_name: "test-pipeline",
-    status: "running",
+    status: "RUNNING",
   };
 
   beforeEach(() => {
@@ -693,7 +693,7 @@ describe("submitPipelineRun", () => {
         created_at: "2024-01-01T00:00:00Z",
         created_by: "test-user",
         pipeline_name: "test-pipeline",
-        status: "running",
+        status: "RUNNING",
       } as PipelineRun;
 
       vi.mocked(pipelineRunService.createPipelineRun).mockResolvedValueOnce(

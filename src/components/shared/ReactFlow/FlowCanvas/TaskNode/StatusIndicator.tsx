@@ -10,9 +10,10 @@ import type { ContainerExecutionStatus } from "@/api/types.gen";
 import { Icon } from "@/components/ui/icon";
 import { QuickTooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import type { RunStatus } from "@/types/pipelineRun";
 
 type StatusIndicatorProps = {
-  status: ContainerExecutionStatus;
+  status: ContainerExecutionStatus | RunStatus;
   disabledCache?: boolean;
 };
 
@@ -45,7 +46,7 @@ export const StatusIndicator = ({
   );
 };
 
-const getStatusMetadata = (status: ContainerExecutionStatus) => {
+const getStatusMetadata = (status: ContainerExecutionStatus | RunStatus) => {
   switch (status) {
     case "SUCCEEDED":
       return {
@@ -67,6 +68,7 @@ const getStatusMetadata = (status: ContainerExecutionStatus) => {
         text: "Running",
         icon: <Loader2Icon className="w-2 h-2 animate-spin" />,
       };
+    case "WAITING":
     case "PENDING":
       return {
         style: "bg-yellow-500",
