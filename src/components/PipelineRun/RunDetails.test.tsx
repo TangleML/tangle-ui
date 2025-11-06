@@ -15,6 +15,7 @@ import { ComponentSpecProvider } from "@/providers/ComponentSpecProvider";
 import { ExecutionDataProvider } from "@/providers/ExecutionDataProvider";
 import { PipelineRunsProvider } from "@/providers/PipelineRunsProvider";
 import * as pipelineRunService from "@/services/pipelineRunService";
+import type { PipelineRun } from "@/types/pipelineRun";
 import type { ComponentSpec } from "@/utils/componentSpec";
 
 import { RunDetails } from "./RunDetails";
@@ -113,7 +114,7 @@ describe("<RunDetails/>", () => {
     },
   };
 
-  const mockPipelineRun = {
+  const mockPipelineRun: PipelineRun = {
     id: 123,
     root_execution_id: 456,
     created_by: "test-user",

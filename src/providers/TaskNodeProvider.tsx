@@ -6,6 +6,7 @@ import useComponentFromUrl from "@/hooks/useComponentFromUrl";
 import { useTaskNodeDimensions } from "@/hooks/useTaskNodeDimensions";
 import useToastNotification from "@/hooks/useToastNotification";
 import type { Annotations } from "@/types/annotations";
+import type { RunStatus } from "@/types/pipelineRun";
 import type { TaskNodeData, TaskNodeDimensions } from "@/types/taskNode";
 import type {
   ArgumentType,
@@ -27,7 +28,7 @@ type TaskNodeState = Readonly<{
   readOnly: boolean;
   disabled: boolean;
   connectable: boolean;
-  status?: ContainerExecutionStatus;
+  status?: ContainerExecutionStatus | RunStatus;
   isCustomComponent: boolean;
   dimensions: TaskNodeDimensions;
 }>;
@@ -45,7 +46,7 @@ type TaskNodeProviderProps = {
   children: ReactNode;
   data: TaskNodeData;
   selected: boolean;
-  status?: ContainerExecutionStatus;
+  status?: ContainerExecutionStatus | RunStatus;
 };
 
 export type TaskNodeContextType = {

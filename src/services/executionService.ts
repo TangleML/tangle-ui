@@ -7,7 +7,7 @@ import type {
   GetGraphExecutionStateResponse,
   PipelineRunResponse,
 } from "@/api/types.gen";
-import type { TaskStatusCounts } from "@/types/pipelineRun";
+import type { RunStatus, TaskStatusCounts } from "@/types/pipelineRun";
 import { fetchWithErrorHandling } from "@/utils/fetchWithErrorHandling";
 
 export const fetchExecutionState = async (
@@ -85,9 +85,9 @@ export const fetchExecutionStatus = async (
 };
 
 /**
- * Determine the overall run status based on the task statuses.
+ * Status constants for determining overall run status based on task statuses.
  */
-export const STATUS = {
+export const STATUS: Record<RunStatus, RunStatus> = {
   FAILED: "FAILED",
   RUNNING: "RUNNING",
   SUCCEEDED: "SUCCEEDED",
@@ -96,7 +96,7 @@ export const STATUS = {
   UNKNOWN: "UNKNOWN",
 } as const;
 
-export const getRunStatus = (statusData: TaskStatusCounts) => {
+export const getRunStatus = (statusData: TaskStatusCounts): RunStatus => {
   if (statusData.cancelled > 0) {
     return STATUS.CANCELLED;
   }

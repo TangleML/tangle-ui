@@ -7,6 +7,7 @@ import { InfoBox } from "@/components/shared/InfoBox";
 import { Link } from "@/components/ui/link";
 import { Spinner } from "@/components/ui/spinner";
 import { useBackend } from "@/providers/BackendProvider";
+import type { RunStatus } from "@/types/pipelineRun";
 import { getBackendStatusString } from "@/utils/backend";
 
 const LogDisplay = ({
@@ -54,7 +55,7 @@ const LogDisplay = ({
 };
 
 const isStatusActivelyLogging = (
-  status?: ContainerExecutionStatus,
+  status?: ContainerExecutionStatus | RunStatus,
 ): boolean => {
   if (!status) {
     return false;
@@ -71,7 +72,9 @@ const isStatusActivelyLogging = (
   }
 };
 
-const shouldStatusHaveLogs = (status?: ContainerExecutionStatus): boolean => {
+const shouldStatusHaveLogs = (
+  status?: ContainerExecutionStatus | RunStatus,
+): boolean => {
   if (!status) {
     return false;
   }
@@ -103,7 +106,7 @@ const Logs = ({
   status,
 }: {
   executionId?: string | number;
-  status?: ContainerExecutionStatus;
+  status?: ContainerExecutionStatus | RunStatus;
 }) => {
   const { backendUrl, configured, available } = useBackend();
 
@@ -193,7 +196,7 @@ export const OpenLogsInNewWindowLink = ({
   status,
 }: {
   executionId: string;
-  status?: ContainerExecutionStatus;
+  status?: ContainerExecutionStatus | RunStatus;
 }) => {
   const { backendUrl, available } = useBackend();
   const logsUrl = `${backendUrl}/api/executions/${executionId}/stream_container_log`;

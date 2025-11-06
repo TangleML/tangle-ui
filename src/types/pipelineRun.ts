@@ -1,3 +1,14 @@
+/**
+ * Possible status values for a pipeline run, derived from aggregating task statuses
+ */
+export type RunStatus =
+  | "FAILED"
+  | "RUNNING"
+  | "SUCCEEDED"
+  | "WAITING"
+  | "CANCELLED"
+  | "UNKNOWN";
+
 export interface PipelineRun {
   id: number;
   root_execution_id: number;
@@ -5,7 +16,7 @@ export interface PipelineRun {
   created_by: string;
   pipeline_name: string;
   pipeline_digest?: string;
-  status?: string;
+  status?: RunStatus;
   statusCounts?: TaskStatusCounts;
 }
 
