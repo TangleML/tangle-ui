@@ -10,6 +10,7 @@ interface SelectionToolbarProps {
   onDuplicate?: () => void;
   onDelete?: () => void;
   onUpgrade?: () => void;
+  onGroup?: () => void;
 }
 
 const SelectionToolbar = ({
@@ -17,6 +18,7 @@ const SelectionToolbar = ({
   onDuplicate,
   onDelete,
   onUpgrade,
+  onGroup,
 }: SelectionToolbarProps) => {
   return (
     <InlineStack
@@ -25,6 +27,7 @@ const SelectionToolbar = ({
       className="bg-white border border-[#0059dc66] border-b-0 rounded-xs"
     >
       <ToolbarButton callback={onUpgrade} icon="CircleFadingArrowUp" />
+      <ToolbarButton callback={onGroup} icon="Workflow" />
       <ToolbarButton callback={onDuplicate} icon="Copy" />
       <ToolbarButton callback={onCopy} icon="ClipboardPlus" />
       <ToolbarButton callback={onDelete} icon="Trash" dangerous />

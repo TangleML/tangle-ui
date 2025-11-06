@@ -385,15 +385,6 @@ export interface TaskOutputArgument {
 export type ArgumentType = string | GraphInputArgument | TaskOutputArgument;
 
 /**
- * Type guard to check if an argument is a TaskOutputArgument
- */
-export const isTaskOutputArgument = (
-  argument: ArgumentType,
-): argument is TaskOutputArgument => {
-  return typeof argument !== "string" && "taskOutput" in argument;
-};
-
-/**
  * Pair of operands for a binary operation.
  */
 interface TwoArgumentOperands {
@@ -499,3 +490,13 @@ export const isContainerImplementation = (
 export const isGraphImplementation = (
   implementation: ImplementationType,
 ): implementation is GraphImplementation => "graph" in implementation;
+
+export const isTaskOutputArgument = (
+  arg: ArgumentType,
+): arg is TaskOutputArgument =>
+  typeof arg === "object" && arg !== null && "taskOutput" in arg;
+
+export const isGraphInputArgument = (
+  arg: ArgumentType,
+): arg is GraphInputArgument =>
+  typeof arg === "object" && arg !== null && "graphInput" in arg;

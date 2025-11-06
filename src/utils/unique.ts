@@ -42,3 +42,7 @@ export const getUniqueTaskName = (
     new Set(Object.keys(graphSpec.tasks)),
   );
 };
+
+export const getUniqueName = (names: string[], name: string = "Untitled") => {
+  return makeNameUniqueByAddingIndex(name, new Set(names));
+};

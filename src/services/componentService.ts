@@ -249,7 +249,7 @@ export const fetchAndStoreComponent = async (
 /**
  * Get component text from any available source (text, URL, or spec)
  */
-const getComponentText = async (
+export const getComponentText = async (
   component: ComponentReference,
 ): Promise<string | undefined> => {
   if (component.text) {
