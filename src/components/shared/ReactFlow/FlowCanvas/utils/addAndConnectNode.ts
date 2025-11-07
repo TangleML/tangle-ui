@@ -50,7 +50,7 @@ export function addAndConnectNode({
       ? { ...position, x: position.x - DEFAULT_NODE_DIMENSIONS.w }
       : position;
 
-  const newComponentSpec = addTask(
+  const { spec: newComponentSpec } = addTask(
     "task",
     taskSpec,
     adjustedPosition,

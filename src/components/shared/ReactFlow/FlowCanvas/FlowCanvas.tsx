@@ -71,6 +71,7 @@ import { handleConnection } from "./utils/handleConnection";
 import { removeEdge } from "./utils/removeEdge";
 import { removeNode } from "./utils/removeNode";
 import { replaceTaskNode } from "./utils/replaceTaskNode";
+import { updateDownstreamSubgraphConnections } from "./utils/updateDownstreamSubgraphConnections";
 import { updateNodePositions } from "./utils/updateNodePosition";
 
 const nodeTypes: Record<string, ComponentType<any>> = {
@@ -456,7 +457,7 @@ const FlowCanvas = ({
             annotations: {},
             componentRef: { ...componentRef },
           };
-          const newComponentSpec = addTask(
+          const { spec: newComponentSpec } = addTask(
             "task",
             taskSpec,
             position,
@@ -580,7 +581,7 @@ const FlowCanvas = ({
       if (reactFlowInstance) {
         const position = getPositionFromEvent(event, reactFlowInstance);
 
-        const newSubgraphSpec = addTask(
+        const { spec: newSubgraphSpec } = addTask(
           taskType,
           droppedTask,
           position,
@@ -786,19 +787,29 @@ const FlowCanvas = ({
         currentSubgraphSpec,
       );
 
-      let updatedSubgraphSpec = { ...currentSubgraphSpec };
+      const position = calculateNodesCenter(selectedNodes);
+      const { spec: currentSubgraphSpecWithNewTask, taskId: subgraphTaskId } =
+        addTask("task", subgraphTaskSpec, position, currentSubgraphSpec);
+
+      if (!subgraphTaskId) {
+        throw new Error("Subgraph Task ID is undefined.");
+      }
+
+      const selectedTaskIds = selectedNodes
+        .filter((node) => node.type === "task")
+        .map((node) => node.data.taskId as string);
+
+      const updatedSubgraphSpec = updateDownstreamSubgraphConnections(
+        currentSubgraphSpecWithNewTask,
+        selectedTaskIds,
+        subgraphTaskId,
+      );
+
+      let finalSubgraphSpec = updatedSubgraphSpec;
 
       selectedNodes.forEach((node) => {
-        updatedSubgraphSpec = removeNode(node, updatedSubgraphSpec);
+        finalSubgraphSpec = removeNode(node, finalSubgraphSpec);
       });
-
-      const position = calculateNodesCenter(selectedNodes);
-      const finalSubgraphSpec = addTask(
-        "task",
-        subgraphTaskSpec,
-        position,
-        updatedSubgraphSpec,
-      );
 
       const updatedRootSpec = updateSubgraphSpec(
         componentSpec,
