@@ -140,6 +140,7 @@ export const createSubgraphFromNodes = async (
   if (text) {
     const subgraphDigest = await generateDigest(text);
     subgraphTask.componentRef.digest = subgraphDigest;
+    subgraphTask.componentRef.text = text;
   }
 
   return subgraphTask;
