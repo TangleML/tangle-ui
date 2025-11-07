@@ -2,16 +2,26 @@ annotations: {}
 folders:
   - name: "Quick start"
     components:
-      # - url: "https://raw.githubusercontent.com/Ark-kun/pipelines/60a2612541ec08c6a85c237d2ec7525b12543a43/components/datasets/Chicago_Taxi_Trips/component.yaml"
-      - url: "https://raw.githubusercontent.com/Ark-kun/pipelines/2463ecda532517462590d75e6e14a8af6b55869a/components/datasets/Chicago_Taxi_Trips/component.yaml"
+      # - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/f328b3f4842838b6578b701d975b22f7908aca48/components/datasets/Chicago_Taxi_Trips/component.yaml"
+      - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/57f780b15922061e59833541b71f3d099e710177/components/datasets/Chicago_Taxi_Trips/quick_start_version/component.yaml"
       - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/96a177dd71d54c98573c4101d9a05ac801f1fa54/components/XGBoost/Train/component.yaml"
       - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/96a177dd71d54c98573c4101d9a05ac801f1fa54/components/XGBoost/Predict/component.yaml"
 
+  - name: "Basics"
+    components:
+      - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/c36d9a4893c3caae0d166d9e783af28fcd3cdfe4/components/basics/Format_date_time/component.yaml"
+      - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/37d98d43ad3193cf3516c134899f272d9643117c/components/basics/Calculate_hash/component.yaml"
+    folders:
+      - name: File system
+        components:
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/605cefc151797369752b51530a91cc02e7f913f8/components/filesystem/create_directory/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/d8c4cf5e6403bc65bcf8d606e6baf87e2528a3dc/components/filesystem/get_file/component.yaml"
+
   - name: "Datasets"
     components:
-      # - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/8dda6ec74d859a0112907fab8bc987a177b9fa4b/components/datasets/Chicago_Taxi_Trips/component.yaml"
+      # - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/f328b3f4842838b6578b701d975b22f7908aca48/components/datasets/Chicago_Taxi_Trips/component.yaml"
       # Has modified default column set. TODO: Perhaps replace with a graph component.
-      - url: "https://raw.githubusercontent.com/Ark-kun/pipelines/2463ecda532517462590d75e6e14a8af6b55869a/components/datasets/Chicago_Taxi_Trips/component.yaml"
+      - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/57f780b15922061e59833541b71f3d099e710177/components/datasets/Chicago_Taxi_Trips/quick_start_version/component.yaml"
       # - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/d8c4cf5e6403bc65bcf8d606e6baf87e2528a3dc/components/datasets/HuggingFace/Load_dataset/component.yaml"
 
   - name: "Data manipulation"
@@ -48,7 +58,7 @@ folders:
 
   - name: "Upload/Download"
     components:
-      - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/d8c4cf5e6403bc65bcf8d606e6baf87e2528a3dc/components/web/Download/component.yaml"
+      - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/f328b3f4842838b6578b701d975b22f7908aca48/components/web/Download/component.yaml"
       - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/d8c4cf5e6403bc65bcf8d606e6baf87e2528a3dc/components/google-cloud/storage/download/component.yaml"
       - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/6210648f30b2b3a8c01cc10be338da98300efb6b/components/google-cloud/storage/upload_to_unique_uri/component.yaml"
       - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/6210648f30b2b3a8c01cc10be338da98300efb6b/components/google-cloud/storage/upload_to_explicit_uri/component.yaml"

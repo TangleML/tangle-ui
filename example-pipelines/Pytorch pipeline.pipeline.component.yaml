@@ -1,0 +1,608 @@
+name: Pytorch pipeline
+metadata:
+  annotations:
+    sdk: https://cloud-pipelines.github.io/pipeline-editor/
+implementation:
+  graph:
+    tasks:
+      Create fully connected pytorch network:
+        componentRef:
+          url: https://raw.githubusercontent.com/Ark-kun/pipelines/4e1facea1a270535b515a9e8cc59422d1ad76a9e/components/PyTorch/Create_fully_connected_network/component.yaml
+          spec:
+            name: Create fully connected pytorch network
+            description: Creates fully-connected network in PyTorch ScriptModule format
+            metadata:
+              annotations:
+                author: Alexey Volkov <alexey.volkov@ark-kun.com>
+            inputs:
+              - name: layer_sizes
+                type: JsonArray
+              - name: activation_name
+                type: String
+                default: relu
+                optional: true
+              - name: random_seed
+                type: Integer
+                default: '0'
+                optional: true
+            outputs:
+              - name: network
+                type: PyTorchScriptModule
+            implementation:
+              container:
+                image: pytorch/pytorch:1.7.1-cuda11.0-cudnn8-runtime
+                command:
+                  - sh
+                  - '-ec'
+                  - |
+                    program_path=$(mktemp)
+                    printf "%s" "$0" > "$program_path"
+                    python3 -u "$program_path" "$@"
+                  - |
+                    def _make_parent_dirs_and_return_path(file_path: str):
+                        import os
+                        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                        return file_path
+
+                    def create_fully_connected_pytorch_network(
+                        layer_sizes,
+                        network_path,
+                        activation_name = 'relu',
+                        random_seed = 0,
+                    ):
+                        '''Creates fully-connected network in PyTorch ScriptModule format'''
+                        import torch
+                        torch.manual_seed(random_seed)
+
+                        activation = getattr(torch, activation_name, None) or getattr(torch.nn.functional, activation_name, None)
+                        if not activation:
+                            raise ValueError(f'Activation "{activation_name}" was not found.')
+
+                        class ActivationLayer(torch.nn.Module):
+                            def forward(self, input):
+                                return activation(input)
+
+                        layers = []
+                        for layer_idx in range(len(layer_sizes) - 1):
+                            layer = torch.nn.Linear(layer_sizes[layer_idx], layer_sizes[layer_idx + 1])
+                            layers.append(layer)
+                            if layer_idx < len(layer_sizes) - 2:
+                                layers.append(ActivationLayer())
+
+                        network = torch.nn.Sequential(*layers)
+                        script_module = torch.jit.script(network)
+                        print(script_module)
+                        script_module.save(network_path)
+
+                    import json
+                    import argparse
+                    _parser = argparse.ArgumentParser(prog='Create fully connected pytorch network', description='Creates fully-connected network in PyTorch ScriptModule format')
+                    _parser.add_argument("--layer-sizes", dest="layer_sizes", type=json.loads, required=True, default=argparse.SUPPRESS)
+                    _parser.add_argument("--activation-name", dest="activation_name", type=str, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--random-seed", dest="random_seed", type=int, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--network", dest="network_path", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+                    _parsed_args = vars(_parser.parse_args())
+
+                    _outputs = create_fully_connected_pytorch_network(**_parsed_args)
+                args:
+                  - '--layer-sizes'
+                  - inputValue: layer_sizes
+                  - if:
+                      cond:
+                        isPresent: activation_name
+                      then:
+                        - '--activation-name'
+                        - inputValue: activation_name
+                  - if:
+                      cond:
+                        isPresent: random_seed
+                      then:
+                        - '--random-seed'
+                        - inputValue: random_seed
+                  - '--network'
+                  - outputPath: network
+        annotations:
+          editor.position: '{"x":680,"y":-30}'
+        arguments:
+          layer_sizes: '[8,20,1]'
+      dataset:
+        componentRef:
+          url: https://raw.githubusercontent.com/Ark-kun/pipelines/60a2612541ec08c6a85c237d2ec7525b12543a43/components/datasets/Chicago_Taxi_Trips/component.yaml
+          spec:
+            name: Chicago Taxi Trips dataset
+            description: |
+              City of Chicago Taxi Trips dataset: https://data.cityofchicago.org/Transportation/Taxi-Trips/wrvz-psew
+
+              The input parameters configure the SQL query to the database.
+              The dataset is pretty big, so limit the number of results using the `Limit` or `Where` parameters.
+              Read [Socrata dev](https://dev.socrata.com/docs/queries/) for the advanced query syntax
+            metadata:
+              annotations:
+                author: Alexey Volkov <alexey.volkov@ark-kun.com>
+            inputs:
+              - name: Where
+                type: String
+                default: trip_start_timestamp>="1900-01-01" AND trip_start_timestamp<"2100-01-01"
+              - name: Limit
+                type: Integer
+                default: '1000'
+                description: Number of rows to return. The rows are randomly sampled.
+              - name: Select
+                type: String
+                default: trip_id,taxi_id,trip_start_timestamp,trip_end_timestamp,trip_seconds,trip_miles,pickup_census_tract,dropoff_census_tract,pickup_community_area,dropoff_community_area,fare,tips,tolls,extras,trip_total,payment_type,company,pickup_centroid_latitude,pickup_centroid_longitude,pickup_centroid_location,dropoff_centroid_latitude,dropoff_centroid_longitude,dropoff_centroid_location
+              - name: Format
+                type: String
+                default: csv
+                description: Output data format. Suports csv,tsv,cml,rdf,json
+            outputs:
+              - name: Table
+                description: Result type depends on format. CSV and TSV have header.
+            implementation:
+              container:
+                image: byrnedo/alpine-curl@sha256:548379d0a4a0c08b9e55d9d87a592b7d35d9ab3037f4936f5ccd09d0b625a342
+                command:
+                  - sh
+                  - '-c'
+                  - |
+                    set -e -x -o pipefail
+                    output_path="$0"
+                    select="$1"
+                    where="$2"
+                    limit="$3"
+                    format="$4"
+                    mkdir -p "$(dirname "$output_path")"
+                    curl --get 'https://data.cityofchicago.org/resource/wrvz-psew.'"${format}" \
+                        --data-urlencode '$limit='"${limit}" \
+                        --data-urlencode '$where='"${where}" \
+                        --data-urlencode '$select='"${select}" \
+                        | tr -d '"' > "$output_path"  # Removing unneeded quotes around all numbers
+                  - outputPath: Table
+                  - inputValue: Select
+                  - inputValue: Where
+                  - inputValue: Limit
+                  - inputValue: Format
+        annotations:
+          editor.position: '{"x":240,"y":190}'
+        arguments:
+          Select: tips,trip_seconds,trip_miles,pickup_community_area,dropoff_community_area,fare,tolls,extras,trip_total
+          Where: trip_start_timestamp >= "2019-01-01" AND trip_start_timestamp < "2019-02-01"
+      Pandas Transform DataFrame in CSV format:
+        componentRef:
+          url: https://raw.githubusercontent.com/Ark-kun/pipelines/6162d55998b176b50267d351241100bb0ee715bc/components/pandas/Transform_DataFrame/in_CSV_format/component.yaml
+          spec:
+            name: Pandas Transform DataFrame in CSV format
+            description: |-
+              Transform DataFrame loaded from a CSV file.
+
+                  Inputs:
+                      table: Table to transform.
+                      transform_code: Transformation code. Code is written in Python and can consist of multiple lines.
+                          The DataFrame variable is called "df".
+                          Examples:
+                          - `df['prod'] = df['X'] * df['Y']`
+                          - `df = df[['X', 'prod']]`
+                          - `df.insert(0, "is_positive", df["X"] > 0)`
+
+                  Outputs:
+                      transformed_table: Transformed table.
+
+                  Annotations:
+                      author: Alexey Volkov <alexey.volkov@ark-kun.com>
+            inputs:
+              - name: table
+                type: CSV
+              - name: transform_code
+                type: PythonCode
+            outputs:
+              - name: transformed_table
+                type: CSV
+            implementation:
+              container:
+                image: python:3.7
+                command:
+                  - sh
+                  - '-c'
+                  - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'pandas==1.0.4' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'pandas==1.0.4' --user) && "$0" "$@"
+                  - python3
+                  - '-u'
+                  - '-c'
+                  - |
+                    def _make_parent_dirs_and_return_path(file_path: str):
+                        import os
+                        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                        return file_path
+
+                    def Pandas_Transform_DataFrame_in_CSV_format(
+                        table_path,
+                        transformed_table_path,
+                        transform_code,
+                    ):
+                        '''Transform DataFrame loaded from a CSV file.
+
+                        Inputs:
+                            table: Table to transform.
+                            transform_code: Transformation code. Code is written in Python and can consist of multiple lines.
+                                The DataFrame variable is called "df".
+                                Examples:
+                                - `df['prod'] = df['X'] * df['Y']`
+                                - `df = df[['X', 'prod']]`
+                                - `df.insert(0, "is_positive", df["X"] > 0)`
+
+                        Outputs:
+                            transformed_table: Transformed table.
+
+                        Annotations:
+                            author: Alexey Volkov <alexey.volkov@ark-kun.com>
+                        '''
+                        import pandas
+
+                        df = pandas.read_csv(
+                            table_path,
+                        )
+                        # The namespace is needed so that the code can replace `df`. For example df = df[['X']]
+                        namespace = locals()
+                        exec(transform_code, namespace)
+                        namespace['df'].to_csv(
+                            transformed_table_path,
+                            index=False,
+                        )
+
+                    import argparse
+                    _parser = argparse.ArgumentParser(prog='Pandas Transform DataFrame in CSV format', description='Transform DataFrame loaded from a CSV file.\n\n    Inputs:\n        table: Table to transform.\n        transform_code: Transformation code. Code is written in Python and can consist of multiple lines.\n            The DataFrame variable is called "df".\n            Examples:\n            - `df[\'prod\'] = df[\'X\'] * df[\'Y\']`\n            - `df = df[[\'X\', \'prod\']]`\n            - `df.insert(0, "is_positive", df["X"] > 0)`\n\n    Outputs:\n        transformed_table: Transformed table.\n\n    Annotations:\n        author: Alexey Volkov <alexey.volkov@ark-kun.com>')
+                    _parser.add_argument("--table", dest="table_path", type=str, required=True, default=argparse.SUPPRESS)
+                    _parser.add_argument("--transform-code", dest="transform_code", type=str, required=True, default=argparse.SUPPRESS)
+                    _parser.add_argument("--transformed-table", dest="transformed_table_path", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+                    _parsed_args = vars(_parser.parse_args())
+
+                    _outputs = Pandas_Transform_DataFrame_in_CSV_format(**_parsed_args)
+                args:
+                  - '--table'
+                  - inputPath: table
+                  - '--transform-code'
+                  - inputValue: transform_code
+                  - '--transformed-table'
+                  - outputPath: transformed_table
+        annotations:
+          editor.position: '{"x":680,"y":230}'
+        arguments:
+          table:
+            taskOutput:
+              taskId: dataset
+              outputName: Table
+          transform_code: df = df.fillna(0)
+      Train pytorch model from csv:
+        componentRef:
+          url: https://raw.githubusercontent.com/Ark-kun/pipelines/603342c4b88fe2d69ff07682f702cd3601e883bb/components/PyTorch/Train_PyTorch_model/from_CSV/component.yaml
+          spec:
+            name: Train pytorch model from csv
+            description: Trains PyTorch model
+            metadata:
+              annotations:
+                author: Alexey Volkov <alexey.volkov@ark-kun.com>
+            inputs:
+              - name: model
+                type: PyTorchScriptModule
+              - name: training_data
+                type: CSV
+              - name: label_column_name
+                type: String
+              - name: loss_function_name
+                type: String
+                default: mse_loss
+                optional: true
+              - name: number_of_epochs
+                type: Integer
+                default: '1'
+                optional: true
+              - name: learning_rate
+                type: Float
+                default: '0.1'
+                optional: true
+              - name: optimizer_name
+                type: String
+                default: Adadelta
+                optional: true
+              - name: optimizer_parameters
+                type: JsonObject
+                optional: true
+              - name: batch_size
+                type: Integer
+                default: '32'
+                optional: true
+              - name: batch_log_interval
+                type: Integer
+                default: '100'
+                optional: true
+              - name: random_seed
+                type: Integer
+                default: '0'
+                optional: true
+            outputs:
+              - name: trained_model
+                type: PyTorchScriptModule
+            implementation:
+              container:
+                image: pytorch/pytorch:1.7.1-cuda11.0-cudnn8-runtime
+                command:
+                  - sh
+                  - '-c'
+                  - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'pandas==1.1.5' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'pandas==1.1.5' --user) && "$0" "$@"
+                  - sh
+                  - '-ec'
+                  - |
+                    program_path=$(mktemp)
+                    printf "%s" "$0" > "$program_path"
+                    python3 -u "$program_path" "$@"
+                  - |
+                    def _make_parent_dirs_and_return_path(file_path: str):
+                        import os
+                        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                        return file_path
+
+                    def train_pytorch_model_from_csv(
+                        model_path,
+                        training_data_path,
+                        trained_model_path,
+                        label_column_name,
+                        loss_function_name = 'mse_loss',
+                        number_of_epochs = 1,
+                        learning_rate = 0.1,
+                        optimizer_name = 'Adadelta',
+                        optimizer_parameters = None,
+                        batch_size = 32,
+                        batch_log_interval = 100,
+                        random_seed = 0,
+                    ):
+                        '''Trains PyTorch model'''
+                        import pandas
+                        import torch
+
+                        torch.manual_seed(random_seed)
+
+                        use_cuda = torch.cuda.is_available()
+                        device = torch.device("cuda" if use_cuda else "cpu")
+
+                        model = torch.jit.load(model_path)
+                        model.to(device)
+                        model.train()
+
+                        optimizer_class = getattr(torch.optim, optimizer_name, None)
+                        if not optimizer_class:
+                            raise ValueError(f'Optimizer "{optimizer_name}" was not found.')
+
+                        optimizer_parameters = optimizer_parameters or {}
+                        optimizer_parameters['lr'] = learning_rate
+                        optimizer = optimizer_class(model.parameters(), **optimizer_parameters)
+
+                        loss_function = getattr(torch, loss_function_name, None) or getattr(torch.nn, loss_function_name, None) or getattr(torch.nn.functional, loss_function_name, None)
+                        if not loss_function:
+                            raise ValueError(f'Loss function "{loss_function_name}" was not found.')
+
+                        class CsvDataset(torch.utils.data.Dataset):
+
+                            def __init__(self, file_path, label_column_name, drop_nan_clumns_or_rows = 'columns'):
+                                dataframe = pandas.read_csv(file_path)
+                                # Preventing error: default_collate: batch must contain tensors, numpy arrays, numbers, dicts or lists; found object
+                                if drop_nan_clumns_or_rows == 'columns':
+                                    non_nan_data = dataframe.dropna(axis='columns')
+                                    removed_columns = set(dataframe.columns) - set(non_nan_data.columns)
+                                    if removed_columns:
+                                        print('Skipping columns with NaNs: ' + str(removed_columns))
+                                    dataframe = non_nan_data
+                                if drop_nan_clumns_or_rows == 'rows':
+                                    non_nan_data = dataframe.dropna(axis='index')
+                                    number_of_removed_rows = len(dataframe) - len(non_nan_data)
+                                    if number_of_removed_rows:
+                                        print(f'Skipped {number_of_removed_rows} rows with NaNs.')
+                                    dataframe = non_nan_data
+                                numerical_data = dataframe.select_dtypes(include='number')
+                                non_numerical_data = dataframe.select_dtypes(exclude='number')
+                                if not non_numerical_data.empty:
+                                    print('Skipping non-number columns:')
+                                    print(non_numerical_data.dtypes)
+                                self._dataframe = dataframe
+                                self.labels = numerical_data[[label_column_name]]
+                                self.features = numerical_data.drop(columns=[label_column_name])
+
+                            def __len__(self):
+                                return len(self._dataframe)
+
+                            def __getitem__(self, index):
+                                return [self.features.loc[index].to_numpy(dtype='float32'), self.labels.loc[index].to_numpy(dtype='float32')]
+
+                        dataset = CsvDataset(
+                            file_path=training_data_path,
+                            label_column_name=label_column_name,
+                        )
+                        train_loader = torch.utils.data.DataLoader(
+                            dataset=dataset,
+                            batch_size=batch_size,
+                            shuffle=True,
+                        )
+
+                        last_full_batch_loss = None
+                        for epoch in range(1, number_of_epochs + 1):
+                            for batch_idx, (data, target) in enumerate(train_loader):
+                                data, target = data.to(device), target.to(device)
+                                optimizer.zero_grad()
+                                output = model(data)
+                                loss = loss_function(output, target)
+                                loss.backward()
+                                optimizer.step()
+                                if len(data) == batch_size:
+                                    last_full_batch_loss = loss.item()
+                                if batch_idx % batch_log_interval == 0:
+                                    print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+                                        epoch, batch_idx * len(data), len(train_loader.dataset),
+                                        100. * batch_idx / len(train_loader), loss.item()))
+                            print(f'Training epoch {epoch} completed. Last full batch loss: {last_full_batch_loss:.6f}')
+
+                        # print(optimizer.state_dict())
+                        model.save(trained_model_path)
+
+                    import json
+                    import argparse
+                    _parser = argparse.ArgumentParser(prog='Train pytorch model from csv', description='Trains PyTorch model')
+                    _parser.add_argument("--model", dest="model_path", type=str, required=True, default=argparse.SUPPRESS)
+                    _parser.add_argument("--training-data", dest="training_data_path", type=str, required=True, default=argparse.SUPPRESS)
+                    _parser.add_argument("--label-column-name", dest="label_column_name", type=str, required=True, default=argparse.SUPPRESS)
+                    _parser.add_argument("--loss-function-name", dest="loss_function_name", type=str, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--number-of-epochs", dest="number_of_epochs", type=int, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--learning-rate", dest="learning_rate", type=float, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--optimizer-name", dest="optimizer_name", type=str, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--optimizer-parameters", dest="optimizer_parameters", type=json.loads, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--batch-size", dest="batch_size", type=int, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--batch-log-interval", dest="batch_log_interval", type=int, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--random-seed", dest="random_seed", type=int, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--trained-model", dest="trained_model_path", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+                    _parsed_args = vars(_parser.parse_args())
+
+                    _outputs = train_pytorch_model_from_csv(**_parsed_args)
+                args:
+                  - '--model'
+                  - inputPath: model
+                  - '--training-data'
+                  - inputPath: training_data
+                  - '--label-column-name'
+                  - inputValue: label_column_name
+                  - if:
+                      cond:
+                        isPresent: loss_function_name
+                      then:
+                        - '--loss-function-name'
+                        - inputValue: loss_function_name
+                  - if:
+                      cond:
+                        isPresent: number_of_epochs
+                      then:
+                        - '--number-of-epochs'
+                        - inputValue: number_of_epochs
+                  - if:
+                      cond:
+                        isPresent: learning_rate
+                      then:
+                        - '--learning-rate'
+                        - inputValue: learning_rate
+                  - if:
+                      cond:
+                        isPresent: optimizer_name
+                      then:
+                        - '--optimizer-name'
+                        - inputValue: optimizer_name
+                  - if:
+                      cond:
+                        isPresent: optimizer_parameters
+                      then:
+                        - '--optimizer-parameters'
+                        - inputValue: optimizer_parameters
+                  - if:
+                      cond:
+                        isPresent: batch_size
+                      then:
+                        - '--batch-size'
+                        - inputValue: batch_size
+                  - if:
+                      cond:
+                        isPresent: batch_log_interval
+                      then:
+                        - '--batch-log-interval'
+                        - inputValue: batch_log_interval
+                  - if:
+                      cond:
+                        isPresent: random_seed
+                      then:
+                        - '--random-seed'
+                        - inputValue: random_seed
+                  - '--trained-model'
+                  - outputPath: trained_model
+        annotations:
+          editor.position: '{"x":1180,"y":290}'
+        arguments:
+          model:
+            taskOutput:
+              taskId: Create fully connected pytorch network
+              outputName: network
+          label_column_name: tips
+          training_data:
+            taskOutput:
+              taskId: Pandas Transform DataFrame in CSV format
+              outputName: transformed_table
+      Convert to onnx from pytorch script module:
+        componentRef:
+          url: https://raw.githubusercontent.com/Ark-kun/pipelines/e011e4affa85542ef2b24d63fdac27f8d939bbee/components/PyTorch/Convert_to_OnnxModel_from_PyTorchScriptModule/component.yaml
+          spec:
+            name: Convert to onnx from pytorch script module
+            description: Creates fully-connected network in PyTorch ScriptModule format
+            metadata:
+              annotations:
+                author: Alexey Volkov <alexey.volkov@ark-kun.com>
+            inputs:
+              - name: model
+                type: PyTorchScriptModule
+              - name: list_of_input_shapes
+                type: JsonArray
+            outputs:
+              - name: converted_model
+                type: OnnxModel
+            implementation:
+              container:
+                image: pytorch/pytorch:1.7.1-cuda11.0-cudnn8-runtime
+                command:
+                  - sh
+                  - '-ec'
+                  - |
+                    program_path=$(mktemp)
+                    printf "%s" "$0" > "$program_path"
+                    python3 -u "$program_path" "$@"
+                  - |
+                    def _make_parent_dirs_and_return_path(file_path: str):
+                        import os
+                        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                        return file_path
+
+                    def convert_to_onnx_from_pytorch_script_module(
+                        model_path,
+                        converted_model_path,
+                        list_of_input_shapes,
+                    ):
+                        '''Creates fully-connected network in PyTorch ScriptModule format'''
+                        import torch
+                        model = torch.jit.load(model_path)
+                        example_inputs = [
+                            torch.ones(*input_shape)
+                            for input_shape in list_of_input_shapes
+                        ]
+                        example_outputs = model.forward(*example_inputs)
+                        torch.onnx.export(
+                            model=model,
+                            args=example_inputs,
+                            f=converted_model_path,
+                            verbose=True,
+                            training=torch.onnx.TrainingMode.EVAL,
+                            example_outputs=example_outputs,
+                        )
+
+                    import json
+                    import argparse
+                    _parser = argparse.ArgumentParser(prog='Convert to onnx from pytorch script module', description='Creates fully-connected network in PyTorch ScriptModule format')
+                    _parser.add_argument("--model", dest="model_path", type=str, required=True, default=argparse.SUPPRESS)
+                    _parser.add_argument("--list-of-input-shapes", dest="list_of_input_shapes", type=json.loads, required=True, default=argparse.SUPPRESS)
+                    _parser.add_argument("--converted-model", dest="converted_model_path", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+                    _parsed_args = vars(_parser.parse_args())
+
+                    _outputs = convert_to_onnx_from_pytorch_script_module(**_parsed_args)
+                args:
+                  - '--model'
+                  - inputPath: model
+                  - '--list-of-input-shapes'
+                  - inputValue: list_of_input_shapes
+                  - '--converted-model'
+                  - outputPath: converted_model
+        annotations:
+          editor.position: '{"x":1580,"y":320}'
+        arguments:
+          model:
+            taskOutput:
+              taskId: Train pytorch model from csv
+              outputName: trained_model
+          list_of_input_shapes: '[[8]]'

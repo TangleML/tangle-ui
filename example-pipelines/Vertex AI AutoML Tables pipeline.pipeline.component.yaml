@@ -1,0 +1,1288 @@
+name: Vertex AI AutoML Tables pipeline
+metadata:
+  annotations:
+    sdk: https://cloud-pipelines.net/pipeline-editor/
+inputs: []
+implementation:
+  graph:
+    tasks:
+      Chicago Taxi Trips dataset:
+        componentRef:
+          url: https://raw.githubusercontent.com/Ark-kun/pipelines/2463ecda532517462590d75e6e14a8af6b55869a/components/datasets/Chicago_Taxi_Trips/component.yaml
+          spec:
+            name: Chicago Taxi Trips dataset
+            description: |
+              City of Chicago Taxi Trips dataset: https://data.cityofchicago.org/Transportation/Taxi-Trips/wrvz-psew
+
+              The input parameters configure the SQL query to the database.
+              The dataset is pretty big, so limit the number of results using the `Limit` or `Where` parameters.
+              Read [Socrata dev](https://dev.socrata.com/docs/queries/) for the advanced query syntax
+            metadata:
+              annotations:
+                author: Alexey Volkov <alexey.volkov@ark-kun.com>
+            inputs:
+              - name: Where
+                type: String
+                default: trip_start_timestamp>="1900-01-01" AND trip_start_timestamp<"2100-01-01"
+              - name: Limit
+                type: Integer
+                default: '1000'
+                description: Number of rows to return. The rows are randomly sampled.
+              - name: Select
+                type: String
+                default: tips,trip_seconds,trip_miles,pickup_community_area,dropoff_community_area,fare,tolls,extras,trip_total
+              - name: Format
+                type: String
+                default: csv
+                description: Output data format. Suports csv,tsv,cml,rdf,json
+            outputs:
+              - name: Table
+                description: Result type depends on format. CSV and TSV have header.
+            implementation:
+              container:
+                image: byrnedo/alpine-curl@sha256:548379d0a4a0c08b9e55d9d87a592b7d35d9ab3037f4936f5ccd09d0b625a342
+                command:
+                  - sh
+                  - '-c'
+                  - |
+                    set -e -x -o pipefail
+                    output_path="$0"
+                    select="$1"
+                    where="$2"
+                    limit="$3"
+                    format="$4"
+                    mkdir -p "$(dirname "$output_path")"
+                    curl --get 'https://data.cityofchicago.org/resource/wrvz-psew.'"${format}" \
+                        --data-urlencode '$limit='"${limit}" \
+                        --data-urlencode '$where='"${where}" \
+                        --data-urlencode '$select='"${select}" \
+                        | tr -d '"' > "$output_path"  # Removing unneeded quotes around all numbers
+                  - outputPath: Table
+                  - inputValue: Select
+                  - inputValue: Where
+                  - inputValue: Limit
+                  - inputValue: Format
+        annotations:
+          editor.position: '{"x":-240,"y":310}'
+        arguments:
+          Select: tips,trip_seconds,trip_miles,pickup_community_area,dropoff_community_area,fare,tolls,extras
+      Create tabular dataset from CSV for Google Cloud Vertex AI:
+        componentRef:
+          url: https://raw.githubusercontent.com/Ark-kun/pipeline_components/47f3621344c884666a926c8a15d77562f1cc5e0a/components/google-cloud/Vertex_AI/AutoML/Tables/Create_dataset/from_CSV/component.yaml
+          spec:
+            name: Create tabular dataset from CSV for Google Cloud Vertex AI
+            description: Creates Google Cloud Vertex AI Tabular Dataset from CSV data stored in GCS.
+            metadata:
+              annotations:
+                author: Alexey Volkov <alexey.volkov@ark-kun.com>
+                canonical_location: https://raw.githubusercontent.com/Ark-kun/pipeline_components/master/components/google-cloud/Vertex_AI/AutoML/Tables/Create_dataset/from_GCS/component.yaml
+            inputs:
+              - name: data
+                type: CSV
+                description: Data in CSV format that should be imported into the dataset.
+              - name: display_name
+                type: String
+                description: |-
+                  Display name for the AutoML Dataset.
+                  Allowed characters are ASCII Latin letters A-Z and a-z, an underscore (_), and ASCII digits 0-9.
+                optional: true
+              - name: labels
+                type: JsonObject
+                optional: true
+              - name: project
+                type: String
+                description: Google Cloud project ID. If not set, the default one will be used.
+                optional: true
+              - name: location
+                type: String
+                description: Google Cloud region. AutoML Tables only supports us-central1.
+                default: us-central1
+                optional: true
+              - name: encryption_spec_key_name
+                type: String
+                optional: true
+              - name: staging_bucket
+                type: String
+                optional: true
+            outputs:
+              - name: dataset_name
+                type: GoogleCloudVertexAiTabularDatasetName
+              - name: dataset_dict
+                type: JsonObject
+            implementation:
+              container:
+                image: python:3.9
+                command:
+                  - sh
+                  - '-c'
+                  - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'git+https://github.com/Ark-kun/python-aiplatform@8f61efb3a7903a6e0ef47d957f26ef3083581c7e#egg=google-cloud-aiplatform&subdirectory=.' 'google-api-python-client==2.29.0' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'git+https://github.com/Ark-kun/python-aiplatform@8f61efb3a7903a6e0ef47d957f26ef3083581c7e#egg=google-cloud-aiplatform&subdirectory=.' 'google-api-python-client==2.29.0' --user) && "$0" "$@"
+                  - sh
+                  - '-ec'
+                  - |
+                    program_path=$(mktemp)
+                    printf "%s" "$0" > "$program_path"
+                    python3 -u "$program_path" "$@"
+                  - |
+                    def create_tabular_dataset_from_CSV_for_Google_Cloud_Vertex_AI(
+                        data_path,  # data_type: "CSV"
+                        display_name = None,
+                        labels = None,
+                        project = None,
+                        location = 'us-central1',
+                        encryption_spec_key_name = None,
+                        staging_bucket = None,
+                    ):
+                        '''Creates Google Cloud Vertex AI Tabular Dataset from CSV data stored in GCS.
+
+                        Annotations:
+                            author: Alexey Volkov <alexey.volkov@ark-kun.com>
+
+                        Args:
+                            data_path: Data in CSV format that should be imported into the dataset.
+                            display_name: Display name for the AutoML Dataset.
+                                Allowed characters are ASCII Latin letters A-Z and a-z, an underscore (_), and ASCII digits 0-9.
+                            project: Google Cloud project ID. If not set, the default one will be used.
+                            location: Google Cloud region. AutoML Tables only supports us-central1.
+                        Returns:
+                            dataset_name: Dataset name (fully-qualified)
+                            dataset_dict: Dataset object in JSON format
+                        '''
+
+                        import datetime
+                        import json
+                        import logging
+                        import os
+                        import tempfile
+
+                        from google.cloud import aiplatform
+                        from google.cloud.aiplatform import utils as aiplatform_utils
+                        from google.protobuf import json_format
+
+                        logging.getLogger().setLevel(logging.INFO)
+
+                        if not display_name:
+                            display_name = 'Dataset_' + datetime.datetime.utcnow().strftime("%Y_%m_%d_%H_%M_%S")
+
+                        # Problem: Unlike KFP, when running on Vertex AI, google.auth.default() returns incorrect GCP project ID.
+                        # This leads to failure when trying to create any resource in the project.
+                        # google.api_core.exceptions.PermissionDenied: 403 Permission 'aiplatform.models.upload' denied on resource '//aiplatform.googleapis.com/projects/gbd40bc90c7804989-tp/locations/us-central1' (or it may not exist).
+                        # We can try and get the GCP project ID/number from the environment variables.
+                        if not project:
+                            project_number = os.environ.get("CLOUD_ML_PROJECT_ID")
+                            if project_number:
+                                print(f"Inferred project number: {project_number}")
+                                project = project_number
+                                # To improve the naming we try to convert the project number into the user project ID.
+                                try:
+                                    from googleapiclient import discovery
+
+                                    cloud_resource_manager_service = discovery.build(
+                                        "cloudresourcemanager", "v3"
+                                    )
+                                    project_id = (
+                                        cloud_resource_manager_service.projects()
+                                        .get(name=f"projects/{project_number}")
+                                        .execute()["projectId"]
+                                    )
+                                    if project_id:
+                                        print(f"Inferred project ID: {project_id}")
+                                        project = project_id
+                                except Exception as e:
+                                    print(e)
+
+                        if not location:
+                            location = os.environ.get("CLOUD_ML_REGION")
+
+                        aiplatform.init(
+                            project=project,
+                            location=location,
+                            staging_bucket=staging_bucket,
+                            encryption_spec_key_name=encryption_spec_key_name,
+                        )
+
+                        # Stage the data
+                        # The file needs to have .CSV extension, so we need to rename or link it.
+                        staging_dir = tempfile.mkdtemp()
+                        staged_data_path = os.path.join(staging_dir, "dataset.csv")
+                        # Need to use symlink to prevent OSError: [Errno 18] Invalid cross-device link.
+                        os.symlink(src=data_path, dst=staged_data_path)
+                        staged_data_uri = aiplatform_utils.stage_local_data_in_gcs(data_path=staged_data_path)
+
+                        labels = labels or {}
+                        labels["component-source"] = "github-com-ark-kun-pipeline-components"
+
+                        # Create the dataset
+                        dataset = aiplatform.TabularDataset.create(
+                            display_name=display_name,
+                            gcs_source=staged_data_uri,
+                            labels=labels,
+                        )
+                        (_, dataset_project, _, dataset_location, _, dataset_id) = dataset.resource_name.split('/')
+                        dataset_web_url = f'https://console.cloud.google.com/vertex-ai/locations/{dataset_location}/datasets/{dataset_id}/analyze?project={dataset_project}'
+                        logging.info(f'Created dataset {dataset.name}.')
+                        logging.info(f'Link: {dataset_web_url}')
+                        dataset_json = json.dumps(dataset.to_dict(), indent=2)
+                        print(dataset_json)
+                        return (dataset.resource_name, dataset_json, dataset_web_url)
+
+                    def _serialize_json(obj) -> str:
+                        if isinstance(obj, str):
+                            return obj
+                        import json
+                        def default_serializer(obj):
+                            if hasattr(obj, 'to_struct'):
+                                return obj.to_struct()
+                            else:
+                                raise TypeError("Object of type '%s' is not JSON serializable and does not have .to_struct() method." % obj.__class__.__name__)
+                        return json.dumps(obj, default=default_serializer, sort_keys=True)
+
+                    import json
+                    import argparse
+                    _parser = argparse.ArgumentParser(prog='Create tabular dataset from CSV for Google Cloud Vertex AI', description='Creates Google Cloud Vertex AI Tabular Dataset from CSV data stored in GCS.')
+                    _parser.add_argument("--data", dest="data_path", type=str, required=True, default=argparse.SUPPRESS)
+                    _parser.add_argument("--display-name", dest="display_name", type=str, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--labels", dest="labels", type=json.loads, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--project", dest="project", type=str, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--location", dest="location", type=str, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--encryption-spec-key-name", dest="encryption_spec_key_name", type=str, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--staging-bucket", dest="staging_bucket", type=str, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("----output-paths", dest="_output_paths", type=str, nargs=2)
+                    _parsed_args = vars(_parser.parse_args())
+                    _output_files = _parsed_args.pop("_output_paths", [])
+
+                    _outputs = create_tabular_dataset_from_CSV_for_Google_Cloud_Vertex_AI(**_parsed_args)
+
+                    _output_serializers = [
+                        str,
+                        _serialize_json,
+
+                    ]
+
+                    import os
+                    for idx, output_file in enumerate(_output_files):
+                        try:
+                            os.makedirs(os.path.dirname(output_file))
+                        except OSError:
+                            pass
+                        with open(output_file, 'w') as f:
+                            f.write(_output_serializers[idx](_outputs[idx]))
+                args:
+                  - '--data'
+                  - inputPath: data
+                  - if:
+                      cond:
+                        isPresent: display_name
+                      then:
+                        - '--display-name'
+                        - inputValue: display_name
+                  - if:
+                      cond:
+                        isPresent: labels
+                      then:
+                        - '--labels'
+                        - inputValue: labels
+                  - if:
+                      cond:
+                        isPresent: project
+                      then:
+                        - '--project'
+                        - inputValue: project
+                  - if:
+                      cond:
+                        isPresent: location
+                      then:
+                        - '--location'
+                        - inputValue: location
+                  - if:
+                      cond:
+                        isPresent: encryption_spec_key_name
+                      then:
+                        - '--encryption-spec-key-name'
+                        - inputValue: encryption_spec_key_name
+                  - if:
+                      cond:
+                        isPresent: staging_bucket
+                      then:
+                        - '--staging-bucket'
+                        - inputValue: staging_bucket
+                  - '----output-paths'
+                  - outputPath: dataset_name
+                  - outputPath: dataset_dict
+        annotations:
+          editor.position: '{"x":160,"y":110}'
+        arguments:
+          data:
+            taskOutput:
+              taskId: Chicago Taxi Trips dataset
+              outputName: Table
+      Train tabular model using Google Cloud Vertex AI AutoML:
+        componentRef:
+          url: https://raw.githubusercontent.com/Ark-kun/pipeline_components/47f3621344c884666a926c8a15d77562f1cc5e0a/components/google-cloud/Vertex_AI/AutoML/Tables/Train_model/component.yaml
+          spec:
+            name: Train tabular model using Google Cloud Vertex AI AutoML
+            description: Trains model using Google Cloud Vertex AI AutoML.
+            metadata:
+              annotations:
+                author: Alexey Volkov <alexey.volkov@ark-kun.com>
+                canonical_location: https://raw.githubusercontent.com/Ark-kun/pipeline_components/master/components/google-cloud/Vertex_AI/AutoML/Tables/Train_model/component.yaml
+            inputs:
+              - name: dataset_name
+                type: GoogleCloudVertexAiTabularDatasetName
+                description: |-
+                  Required. The full name of dataset  (datasets.TabularDataset) within the same Project from which data will be used to train the Model. The
+                  Dataset must use schema compatible with Model being trained,
+                  and what is compatible should be described in the used
+                  TrainingPipeline's [training_task_definition]
+                  [google.cloud.aiplatform.v1beta1.TrainingPipeline.training_task_definition].
+                  For tabular Datasets, all their data is exported to
+                  training, to pick and choose from.
+              - name: target_column
+                type: String
+                description: Required. The name of the column values of which the Model is to predict.
+              - name: optimization_prediction_type
+                type: String
+                description: |-
+                  The type of prediction the Model is to produce.
+                  "classification" - Predict one out of multiple target values is
+                  picked for each row.
+                  "regression" - Predict a value based on its relation to other values.
+                  This type is available only to columns that contain
+                  semantically numeric values, i.e. integers or floating
+                  point number, even if stored as e.g. strings.
+              - name: training_fraction_split
+                type: Float
+                description: |-
+                  Required. The fraction of the input data that is to be
+                  used to train the Model. This is ignored if Dataset is not provided.
+                default: '0.8'
+                optional: true
+              - name: validation_fraction_split
+                type: Float
+                description: |-
+                  Required. The fraction of the input data that is to be
+                  used to validate the Model. This is ignored if Dataset is not provided.
+                default: '0.1'
+                optional: true
+              - name: test_fraction_split
+                type: Float
+                description: |-
+                  Required. The fraction of the input data that is to be
+                  used to evaluate the Model. This is ignored if Dataset is not provided.
+                default: '0.1'
+                optional: true
+              - name: predefined_split_column_name
+                type: String
+                description: |-
+                  Optional. The key is a name of one of the Dataset's data
+                  columns. The value of the key (either the label's value or
+                  value in the column) must be one of {``training``,
+                  ``validation``, ``test``}, and it defines to which set the
+                  given piece of data is assigned. If for a piece of data the
+                  key is not present or has an invalid value, that piece is
+                  ignored by the pipeline.
+
+                  Supported only for tabular and time series Datasets.
+                optional: true
+              - name: weight_column
+                type: String
+                description: |-
+                  Optional. Name of the column that should be used as the weight column.
+                  Higher values in this column give more importance to the row
+                  during Model training. The column must have numeric values between 0 and
+                  10000 inclusively, and 0 value means that the row is ignored.
+                  If the weight column field is not set, then all rows are assumed to have
+                  equal weight of 1.
+                optional: true
+              - name: budget_milli_node_hours
+                type: Integer
+                description: |-
+                  Optional. The train budget of creating this Model, expressed in milli node
+                  hours i.e. 1,000 value in this field means 1 node hour.
+                  The training cost of the model will not exceed this budget. The final
+                  cost will be attempted to be close to the budget, though may end up
+                  being (even) noticeably smaller - at the backend's discretion. This
+                  especially may happen when further model training ceases to provide
+                  any improvements.
+                  If the budget is set to a value known to be insufficient to train a
+                  Model for the given training set, the training won't be attempted and
+                  will error.
+                  The minimum value is 1000 and the maximum is 72000.
+                default: '1000'
+                optional: true
+              - name: model_display_name
+                type: String
+                description: |-
+                  Optional. If the script produces a managed Vertex AI Model. The display name of
+                  the Model. The name can be up to 128 characters long and can be consist
+                  of any UTF-8 characters.
+
+                  If not provided upon creation, the job's display_name is used.
+                optional: true
+              - name: disable_early_stopping
+                type: Boolean
+                description: |-
+                  Required. If true, the entire budget is used. This disables the early stopping
+                  feature. By default, the early stopping feature is enabled, which means
+                  that training might stop before the entire training budget has been
+                  used, if further training does no longer brings significant improvement
+                  to the model.
+                default: 'False'
+                optional: true
+              - name: optimization_objective
+                type: String
+                description: |-
+                  Optional. Objective function the Model is to be optimized towards. The training
+                  task creates a Model that maximizes/minimizes the value of the objective
+                  function over the validation set.
+
+                  The supported optimization objectives depend on the prediction type, and
+                  in the case of classification also the number of distinct values in the
+                  target column (two distint values -> binary, 3 or more distinct values
+                  -> multi class).
+                  If the field is not set, the default objective function is used.
+
+                  Classification (binary):
+                  "maximize-au-roc" (default) - Maximize the area under the receiver
+                                              operating characteristic (ROC) curve.
+                  "minimize-log-loss" - Minimize log loss.
+                  "maximize-au-prc" - Maximize the area under the precision-recall curve.
+                  "maximize-precision-at-recall" - Maximize precision for a specified
+                                                  recall value.
+                  "maximize-recall-at-precision" - Maximize recall for a specified
+                                                  precision value.
+
+                  Classification (multi class):
+                  "minimize-log-loss" (default) - Minimize log loss.
+
+                  Regression:
+                  "minimize-rmse" (default) - Minimize root-mean-squared error (RMSE).
+                  "minimize-mae" - Minimize mean-absolute error (MAE).
+                  "minimize-rmsle" - Minimize root-mean-squared log error (RMSLE).
+                optional: true
+              - name: optimization_objective_recall_value
+                type: Float
+                description: |-
+                  Optional. Required when maximize-precision-at-recall optimizationObjective was
+                  picked, represents the recall value at which the optimization is done.
+
+                  The minimum value is 0 and the maximum is 1.0.
+                optional: true
+              - name: optimization_objective_precision_value
+                type: Float
+                description: |-
+                  Optional. Required when maximize-recall-at-precision optimizationObjective was
+                  picked, represents the precision value at which the optimization is
+                  done.
+
+                  The minimum value is 0 and the maximum is 1.0.
+                optional: true
+              - name: project
+                type: String
+                optional: true
+              - name: location
+                type: String
+                default: us-central1
+                optional: true
+              - name: encryption_spec_key_name
+                type: String
+                optional: true
+            outputs:
+              - name: model_name
+                type: GoogleCloudVertexAiModelName
+              - name: model_dict
+                type: JsonObject
+            implementation:
+              container:
+                image: python:3.9
+                command:
+                  - sh
+                  - '-c'
+                  - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'google-cloud-aiplatform==1.6.2' 'google-api-python-client==2.29.0' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'google-cloud-aiplatform==1.6.2' 'google-api-python-client==2.29.0' --user) && "$0" "$@"
+                  - sh
+                  - '-ec'
+                  - |
+                    program_path=$(mktemp)
+                    printf "%s" "$0" > "$program_path"
+                    python3 -u "$program_path" "$@"
+                  - |
+                    def train_tabular_model_using_Google_Cloud_Vertex_AI_AutoML(
+                        # AutoMLTabularTrainingJob.run required parameters
+                        dataset_name,
+                        target_column,
+
+                        # AutoMLTabularTrainingJob.__init__ required parameters
+                        # display_name: str,
+                        optimization_prediction_type,
+
+                        # AutoMLTabularTrainingJob.run parameters
+                        training_fraction_split = 0.8,
+                        validation_fraction_split = 0.1,
+                        test_fraction_split = 0.1,
+                        predefined_split_column_name = None,
+                        weight_column = None,
+                        budget_milli_node_hours = 1000,
+                        model_display_name = None,
+                        disable_early_stopping = False,
+
+                        # AutoMLTabularTrainingJob.__init__ parameters
+                        optimization_objective = None,
+                        #column_transformations: Union[Dict, List[Dict], NoneType] = None,
+                        optimization_objective_recall_value = None,
+                        optimization_objective_precision_value = None,
+
+                        project = None,
+                        location = 'us-central1',
+                        #training_encryption_spec_key_name: str = None,
+                        #model_encryption_spec_key_name: str = None,
+                        encryption_spec_key_name = None,
+                    ):
+                        '''Trains model using Google Cloud Vertex AI AutoML.
+
+                        Data fraction splits:
+                        Any of ``training_fraction_split``, ``validation_fraction_split`` and
+                        ``test_fraction_split`` may optionally be provided, they must sum to up to 1. If
+                        the provided ones sum to less than 1, the remainder is assigned to sets as
+                        decided by Vertex AI. If none of the fractions are set, by default roughly 80%
+                        of data will be used for training, 10% for validation, and 10% for test.
+
+                        Annotations:
+                            author: Alexey Volkov <alexey.volkov@ark-kun.com>
+
+                        Args:
+                            dataset_name:
+                                Required. The full name of dataset  (datasets.TabularDataset) within the same Project from which data will be used to train the Model. The
+                                Dataset must use schema compatible with Model being trained,
+                                and what is compatible should be described in the used
+                                TrainingPipeline's [training_task_definition]
+                                [google.cloud.aiplatform.v1beta1.TrainingPipeline.training_task_definition].
+                                For tabular Datasets, all their data is exported to
+                                training, to pick and choose from.
+                            target_column (str):
+                                Required. The name of the column values of which the Model is to predict.
+                            training_fraction_split (float):
+                                Required. The fraction of the input data that is to be
+                                used to train the Model. This is ignored if Dataset is not provided.
+                            validation_fraction_split (float):
+                                Required. The fraction of the input data that is to be
+                                used to validate the Model. This is ignored if Dataset is not provided.
+                            test_fraction_split (float):
+                                Required. The fraction of the input data that is to be
+                                used to evaluate the Model. This is ignored if Dataset is not provided.
+                            predefined_split_column_name (str):
+                                Optional. The key is a name of one of the Dataset's data
+                                columns. The value of the key (either the label's value or
+                                value in the column) must be one of {``training``,
+                                ``validation``, ``test``}, and it defines to which set the
+                                given piece of data is assigned. If for a piece of data the
+                                key is not present or has an invalid value, that piece is
+                                ignored by the pipeline.
+
+                                Supported only for tabular and time series Datasets.
+                            weight_column (str):
+                                Optional. Name of the column that should be used as the weight column.
+                                Higher values in this column give more importance to the row
+                                during Model training. The column must have numeric values between 0 and
+                                10000 inclusively, and 0 value means that the row is ignored.
+                                If the weight column field is not set, then all rows are assumed to have
+                                equal weight of 1.
+                            budget_milli_node_hours (int):
+                                Optional. The train budget of creating this Model, expressed in milli node
+                                hours i.e. 1,000 value in this field means 1 node hour.
+                                The training cost of the model will not exceed this budget. The final
+                                cost will be attempted to be close to the budget, though may end up
+                                being (even) noticeably smaller - at the backend's discretion. This
+                                especially may happen when further model training ceases to provide
+                                any improvements.
+                                If the budget is set to a value known to be insufficient to train a
+                                Model for the given training set, the training won't be attempted and
+                                will error.
+                                The minimum value is 1000 and the maximum is 72000.
+                            model_display_name (str):
+                                Optional. If the script produces a managed Vertex AI Model. The display name of
+                                the Model. The name can be up to 128 characters long and can be consist
+                                of any UTF-8 characters.
+
+                                If not provided upon creation, the job's display_name is used.
+                            disable_early_stopping (bool):
+                                Required. If true, the entire budget is used. This disables the early stopping
+                                feature. By default, the early stopping feature is enabled, which means
+                                that training might stop before the entire training budget has been
+                                used, if further training does no longer brings significant improvement
+                                to the model.
+
+                            optimization_prediction_type (str):
+                                The type of prediction the Model is to produce.
+                                "classification" - Predict one out of multiple target values is
+                                picked for each row.
+                                "regression" - Predict a value based on its relation to other values.
+                                This type is available only to columns that contain
+                                semantically numeric values, i.e. integers or floating
+                                point number, even if stored as e.g. strings.
+                            optimization_objective (str):
+                                Optional. Objective function the Model is to be optimized towards. The training
+                                task creates a Model that maximizes/minimizes the value of the objective
+                                function over the validation set.
+
+                                The supported optimization objectives depend on the prediction type, and
+                                in the case of classification also the number of distinct values in the
+                                target column (two distint values -> binary, 3 or more distinct values
+                                -> multi class).
+                                If the field is not set, the default objective function is used.
+
+                                Classification (binary):
+                                "maximize-au-roc" (default) - Maximize the area under the receiver
+                                                            operating characteristic (ROC) curve.
+                                "minimize-log-loss" - Minimize log loss.
+                                "maximize-au-prc" - Maximize the area under the precision-recall curve.
+                                "maximize-precision-at-recall" - Maximize precision for a specified
+                                                                recall value.
+                                "maximize-recall-at-precision" - Maximize recall for a specified
+                                                                precision value.
+
+                                Classification (multi class):
+                                "minimize-log-loss" (default) - Minimize log loss.
+
+                                Regression:
+                                "minimize-rmse" (default) - Minimize root-mean-squared error (RMSE).
+                                "minimize-mae" - Minimize mean-absolute error (MAE).
+                                "minimize-rmsle" - Minimize root-mean-squared log error (RMSLE).
+                            column_transformations (Optional[Union[Dict, List[Dict]]]):
+                                Optional. Transformations to apply to the input columns (i.e. columns other
+                                than the targetColumn). Each transformation may produce multiple
+                                result values from the column's value, and all are used for training.
+                                When creating transformation for BigQuery Struct column, the column
+                                should be flattened using "." as the delimiter.
+                                If an input column has no transformations on it, such a column is
+                                ignored by the training, except for the targetColumn, which should have
+                                no transformations defined on.
+                            optimization_objective_recall_value (float):
+                                Optional. Required when maximize-precision-at-recall optimizationObjective was
+                                picked, represents the recall value at which the optimization is done.
+
+                                The minimum value is 0 and the maximum is 1.0.
+                            optimization_objective_precision_value (float):
+                                Optional. Required when maximize-recall-at-precision optimizationObjective was
+                                picked, represents the precision value at which the optimization is
+                                done.
+
+                                The minimum value is 0 and the maximum is 1.0.
+
+                        Returns:
+                            model_name: Model name (fully-qualified)
+                            model_dict: Model metadata in JSON format
+                        '''
+
+                        import datetime
+                        import logging
+                        import os
+
+                        from google.cloud import aiplatform
+                        from google.protobuf import json_format
+
+                        logging.getLogger().setLevel(logging.INFO)
+
+                        if not model_display_name:
+                            model_display_name = 'TablesModel_' + datetime.datetime.utcnow().strftime("%Y_%m_%d_%H_%M_%S")
+
+                        # Problem: Unlike KFP, when running on Vertex AI, google.auth.default() returns incorrect GCP project ID.
+                        # This leads to failure when trying to create any resource in the project.
+                        # google.api_core.exceptions.PermissionDenied: 403 Permission 'aiplatform.models.upload' denied on resource '//aiplatform.googleapis.com/projects/gbd40bc90c7804989-tp/locations/us-central1' (or it may not exist).
+                        # We can try and get the GCP project ID/number from the environment variables.
+                        if not project:
+                            project_number = os.environ.get("CLOUD_ML_PROJECT_ID")
+                            if project_number:
+                                print(f"Inferred project number: {project_number}")
+                                project = project_number
+                                # To improve the naming we try to convert the project number into the user project ID.
+                                try:
+                                    from googleapiclient import discovery
+
+                                    cloud_resource_manager_service = discovery.build(
+                                        "cloudresourcemanager", "v3"
+                                    )
+                                    project_id = (
+                                        cloud_resource_manager_service.projects()
+                                        .get(name=f"projects/{project_number}")
+                                        .execute()["projectId"]
+                                    )
+                                    if project_id:
+                                        print(f"Inferred project ID: {project_id}")
+                                        project = project_id
+                                except Exception as e:
+                                    print(e)
+
+                        aiplatform.init(
+                            project=project,
+                            location=location,
+                            encryption_spec_key_name=encryption_spec_key_name,
+                        )
+
+                        model = aiplatform.AutoMLTabularTrainingJob(
+                            display_name='AutoMLTabularTrainingJob_' + datetime.datetime.utcnow().strftime("%Y_%m_%d_%H_%M_%S"),
+                            optimization_prediction_type=optimization_prediction_type,
+                            optimization_objective=optimization_objective,
+                            #column_transformations=column_transformations,
+                            optimization_objective_recall_value=optimization_objective_recall_value,
+                            optimization_objective_precision_value=optimization_objective_precision_value,
+                        ).run(
+                            dataset=aiplatform.TabularDataset(dataset_name=dataset_name),
+                            target_column=target_column,
+                            training_fraction_split=training_fraction_split,
+                            validation_fraction_split=validation_fraction_split,
+                            test_fraction_split=test_fraction_split,
+                            predefined_split_column_name=predefined_split_column_name,
+                            weight_column=weight_column,
+                            budget_milli_node_hours=budget_milli_node_hours,
+                            model_display_name=model_display_name,
+                            disable_early_stopping=disable_early_stopping,
+                        )
+
+                        (_, model_project, _, model_location, _, model_id) = model.resource_name.split('/')
+                        model_web_url = f'https://console.cloud.google.com/vertex-ai/locations/{model_location}/models/{model_id}/evaluate?project={model_project}'
+                        logging.info(f'Created model {model.name}.')
+                        logging.info(f'Link: {model_web_url}')
+                        model_json = json_format.MessageToJson(model._gca_resource._pb)
+                        print(model_json)
+                        return (model.resource_name, model_json, model_web_url)
+
+                    def _deserialize_bool(s) -> bool:
+                        from distutils.util import strtobool
+                        return strtobool(s) == 1
+
+                    def _serialize_json(obj) -> str:
+                        if isinstance(obj, str):
+                            return obj
+                        import json
+                        def default_serializer(obj):
+                            if hasattr(obj, 'to_struct'):
+                                return obj.to_struct()
+                            else:
+                                raise TypeError("Object of type '%s' is not JSON serializable and does not have .to_struct() method." % obj.__class__.__name__)
+                        return json.dumps(obj, default=default_serializer, sort_keys=True)
+
+                    import argparse
+                    _parser = argparse.ArgumentParser(prog='Train tabular model using Google Cloud Vertex AI AutoML', description='Trains model using Google Cloud Vertex AI AutoML.')
+                    _parser.add_argument("--dataset-name", dest="dataset_name", type=str, required=True, default=argparse.SUPPRESS)
+                    _parser.add_argument("--target-column", dest="target_column", type=str, required=True, default=argparse.SUPPRESS)
+                    _parser.add_argument("--optimization-prediction-type", dest="optimization_prediction_type", type=str, required=True, default=argparse.SUPPRESS)
+                    _parser.add_argument("--training-fraction-split", dest="training_fraction_split", type=float, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--validation-fraction-split", dest="validation_fraction_split", type=float, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--test-fraction-split", dest="test_fraction_split", type=float, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--predefined-split-column-name", dest="predefined_split_column_name", type=str, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--weight-column", dest="weight_column", type=str, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--budget-milli-node-hours", dest="budget_milli_node_hours", type=int, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--model-display-name", dest="model_display_name", type=str, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--disable-early-stopping", dest="disable_early_stopping", type=_deserialize_bool, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--optimization-objective", dest="optimization_objective", type=str, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--optimization-objective-recall-value", dest="optimization_objective_recall_value", type=float, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--optimization-objective-precision-value", dest="optimization_objective_precision_value", type=float, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--project", dest="project", type=str, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--location", dest="location", type=str, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--encryption-spec-key-name", dest="encryption_spec_key_name", type=str, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("----output-paths", dest="_output_paths", type=str, nargs=2)
+                    _parsed_args = vars(_parser.parse_args())
+                    _output_files = _parsed_args.pop("_output_paths", [])
+
+                    _outputs = train_tabular_model_using_Google_Cloud_Vertex_AI_AutoML(**_parsed_args)
+
+                    _output_serializers = [
+                        str,
+                        _serialize_json,
+
+                    ]
+
+                    import os
+                    for idx, output_file in enumerate(_output_files):
+                        try:
+                            os.makedirs(os.path.dirname(output_file))
+                        except OSError:
+                            pass
+                        with open(output_file, 'w') as f:
+                            f.write(_output_serializers[idx](_outputs[idx]))
+                args:
+                  - '--dataset-name'
+                  - inputValue: dataset_name
+                  - '--target-column'
+                  - inputValue: target_column
+                  - '--optimization-prediction-type'
+                  - inputValue: optimization_prediction_type
+                  - if:
+                      cond:
+                        isPresent: training_fraction_split
+                      then:
+                        - '--training-fraction-split'
+                        - inputValue: training_fraction_split
+                  - if:
+                      cond:
+                        isPresent: validation_fraction_split
+                      then:
+                        - '--validation-fraction-split'
+                        - inputValue: validation_fraction_split
+                  - if:
+                      cond:
+                        isPresent: test_fraction_split
+                      then:
+                        - '--test-fraction-split'
+                        - inputValue: test_fraction_split
+                  - if:
+                      cond:
+                        isPresent: predefined_split_column_name
+                      then:
+                        - '--predefined-split-column-name'
+                        - inputValue: predefined_split_column_name
+                  - if:
+                      cond:
+                        isPresent: weight_column
+                      then:
+                        - '--weight-column'
+                        - inputValue: weight_column
+                  - if:
+                      cond:
+                        isPresent: budget_milli_node_hours
+                      then:
+                        - '--budget-milli-node-hours'
+                        - inputValue: budget_milli_node_hours
+                  - if:
+                      cond:
+                        isPresent: model_display_name
+                      then:
+                        - '--model-display-name'
+                        - inputValue: model_display_name
+                  - if:
+                      cond:
+                        isPresent: disable_early_stopping
+                      then:
+                        - '--disable-early-stopping'
+                        - inputValue: disable_early_stopping
+                  - if:
+                      cond:
+                        isPresent: optimization_objective
+                      then:
+                        - '--optimization-objective'
+                        - inputValue: optimization_objective
+                  - if:
+                      cond:
+                        isPresent: optimization_objective_recall_value
+                      then:
+                        - '--optimization-objective-recall-value'
+                        - inputValue: optimization_objective_recall_value
+                  - if:
+                      cond:
+                        isPresent: optimization_objective_precision_value
+                      then:
+                        - '--optimization-objective-precision-value'
+                        - inputValue: optimization_objective_precision_value
+                  - if:
+                      cond:
+                        isPresent: project
+                      then:
+                        - '--project'
+                        - inputValue: project
+                  - if:
+                      cond:
+                        isPresent: location
+                      then:
+                        - '--location'
+                        - inputValue: location
+                  - if:
+                      cond:
+                        isPresent: encryption_spec_key_name
+                      then:
+                        - '--encryption-spec-key-name'
+                        - inputValue: encryption_spec_key_name
+                  - '----output-paths'
+                  - outputPath: model_name
+                  - outputPath: model_dict
+        annotations:
+          editor.position: '{"x":500,"y":250}'
+        arguments:
+          target_column: tips
+          optimization_prediction_type: regression
+          dataset_name:
+            taskOutput:
+              taskId: Create tabular dataset from CSV for Google Cloud Vertex AI
+              outputName: dataset_name
+      Deploy model to endpoint for Google Cloud Vertex AI Model:
+        componentRef:
+          url: https://raw.githubusercontent.com/Ark-kun/pipeline_components/b2cdd60fe93d609111729ef64e79a8b8a2713435/components/google-cloud/Vertex_AI/Models/Deploy_to_endpoint/component.yaml
+          spec:
+            name: Deploy model to endpoint for Google Cloud Vertex AI Model
+            description: Deploys Google Cloud Vertex AI Model to a Google Cloud Vertex AI Endpoint.
+            metadata:
+              annotations:
+                author: Alexey Volkov <alexey.volkov@ark-kun.com>
+                canonical_location: https://raw.githubusercontent.com/Ark-kun/pipeline_components/master/components/google-cloud/Vertex_AI/Models/Deploy_to_endpoint/component.yaml
+            inputs:
+              - name: model_name
+                type: GoogleCloudVertexAiModelName
+                description: Full resource name of a Google Cloud Vertex AI Model
+              - name: endpoint_name
+                type: GoogleCloudVertexAiEndpointName
+                description: |-
+                  Optional. Full name of Google Cloud Vertex Endpoint. A new
+                  endpoint is created if the name is not passed.
+                optional: true
+              - name: machine_type
+                type: String
+                description: |-
+                  The type of the machine. See the [list of machine types
+                  supported for prediction
+                  ](https://cloud.google.com/vertex-ai/docs/predictions/configure-compute#machine-types).
+                  Defaults to "n1-standard-2"
+                default: n1-standard-2
+                optional: true
+              - name: min_replica_count
+                type: Integer
+                description: |-
+                  Optional. The minimum number of machine replicas this deployed
+                  model will be always deployed on. If traffic against it increases,
+                  it may dynamically be deployed onto more replicas, and as traffic
+                  decreases, some of these extra replicas may be freed.
+                default: '1'
+                optional: true
+              - name: max_replica_count
+                type: Integer
+                description: |-
+                  Optional. The maximum number of replicas this deployed model may
+                  be deployed on when the traffic against it increases. If requested
+                  value is too large, the deployment will error, but if deployment
+                  succeeds then the ability to scale the model to that many replicas
+                  is guaranteed (barring service outages). If traffic against the
+                  deployed model increases beyond what its replicas at maximum may
+                  handle, a portion of the traffic will be dropped. If this value
+                  is not provided, the smaller value of min_replica_count or 1 will
+                  be used.
+                default: '1'
+                optional: true
+              - name: accelerator_type
+                type: String
+                description: |-
+                  Optional. Hardware accelerator type. Must also set accelerator_count if used.
+                  One of ACCELERATOR_TYPE_UNSPECIFIED, NVIDIA_TESLA_K80, NVIDIA_TESLA_P100,
+                  NVIDIA_TESLA_V100, NVIDIA_TESLA_P4, NVIDIA_TESLA_T4
+                optional: true
+              - name: accelerator_count
+                type: Integer
+                description: Optional. The number of accelerators to attach to a worker replica.
+                optional: true
+            outputs:
+              - name: endpoint_name
+                type: GoogleCloudVertexAiEndpointName
+              - name: endpoint_dict
+                type: JsonObject
+            implementation:
+              container:
+                image: python:3.9
+                command:
+                  - sh
+                  - '-c'
+                  - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'google-cloud-aiplatform==1.7.0' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'google-cloud-aiplatform==1.7.0' --user) && "$0" "$@"
+                  - sh
+                  - '-ec'
+                  - |
+                    program_path=$(mktemp)
+                    printf "%s" "$0" > "$program_path"
+                    python3 -u "$program_path" "$@"
+                  - |
+                    def deploy_model_to_endpoint_for_Google_Cloud_Vertex_AI_Model(
+                        model_name,
+                        endpoint_name = None,
+                        machine_type = "n1-standard-2",
+                        min_replica_count = 1,
+                        max_replica_count = 1,
+                        accelerator_type = None,
+                        accelerator_count = None,
+                        #
+                        # Uncomment when anyone requests these:
+                        # deployed_model_display_name: str = None,
+                        # traffic_percentage: int = 0,
+                        # traffic_split: dict = None,
+                        # service_account: str = None,
+                        # explanation_metadata: "google.cloud.aiplatform_v1.types.explanation_metadata.ExplanationMetadata" = None,
+                        # explanation_parameters: "google.cloud.aiplatform_v1.types.explanation.ExplanationParameters" = None,
+                        #
+                        # encryption_spec_key_name: str = None,
+                    ):
+                        """Deploys Google Cloud Vertex AI Model to a Google Cloud Vertex AI Endpoint.
+
+                        Args:
+                            model_name: Full resource name of a Google Cloud Vertex AI Model
+                            endpoint_name: Optional. Full name of Google Cloud Vertex Endpoint. A new
+                                endpoint is created if the name is not passed.
+                            machine_type: The type of the machine. See the [list of machine types
+                                supported for prediction
+                                ](https://cloud.google.com/vertex-ai/docs/predictions/configure-compute#machine-types).
+                                Defaults to "n1-standard-2"
+                            min_replica_count (int):
+                                Optional. The minimum number of machine replicas this deployed
+                                model will be always deployed on. If traffic against it increases,
+                                it may dynamically be deployed onto more replicas, and as traffic
+                                decreases, some of these extra replicas may be freed.
+                            max_replica_count (int):
+                                Optional. The maximum number of replicas this deployed model may
+                                be deployed on when the traffic against it increases. If requested
+                                value is too large, the deployment will error, but if deployment
+                                succeeds then the ability to scale the model to that many replicas
+                                is guaranteed (barring service outages). If traffic against the
+                                deployed model increases beyond what its replicas at maximum may
+                                handle, a portion of the traffic will be dropped. If this value
+                                is not provided, the smaller value of min_replica_count or 1 will
+                                be used.
+                            accelerator_type (str):
+                                Optional. Hardware accelerator type. Must also set accelerator_count if used.
+                                One of ACCELERATOR_TYPE_UNSPECIFIED, NVIDIA_TESLA_K80, NVIDIA_TESLA_P100,
+                                NVIDIA_TESLA_V100, NVIDIA_TESLA_P4, NVIDIA_TESLA_T4
+                            accelerator_count (int):
+                                Optional. The number of accelerators to attach to a worker replica.
+                        """
+                        import json
+                        from google.cloud import aiplatform
+
+                        model = aiplatform.Model(model_name=model_name)
+
+                        if endpoint_name:
+                            endpoint = aiplatform.Endpoint(endpoint_name=endpoint_name)
+                        else:
+                            endpoint_display_name = model.display_name[:118] + "_endpoint"
+                            endpoint = aiplatform.Endpoint.create(
+                                display_name=endpoint_display_name,
+                                project=model.project,
+                                location=model.location,
+                                # encryption_spec_key_name=encryption_spec_key_name,
+                                labels={"component-source": "github-com-ark-kun-pipeline-components"},
+                            )
+
+                        endpoint = model.deploy(
+                            endpoint=endpoint,
+                            # deployed_model_display_name=deployed_model_display_name,
+                            machine_type=machine_type,
+                            min_replica_count=min_replica_count,
+                            max_replica_count=max_replica_count,
+                            accelerator_type=accelerator_type,
+                            accelerator_count=accelerator_count,
+                            # service_account=service_account,
+                            # explanation_metadata=explanation_metadata,
+                            # explanation_parameters=explanation_parameters,
+                            # encryption_spec_key_name=encryption_spec_key_name,
+                        )
+
+                        endpoint_json = json.dumps(endpoint.to_dict(), indent=2)
+                        print(endpoint_json)
+                        return (endpoint.resource_name, endpoint_json)
+
+                    def _serialize_json(obj) -> str:
+                        if isinstance(obj, str):
+                            return obj
+                        import json
+                        def default_serializer(obj):
+                            if hasattr(obj, 'to_struct'):
+                                return obj.to_struct()
+                            else:
+                                raise TypeError("Object of type '%s' is not JSON serializable and does not have .to_struct() method." % obj.__class__.__name__)
+                        return json.dumps(obj, default=default_serializer, sort_keys=True)
+
+                    import argparse
+                    _parser = argparse.ArgumentParser(prog='Deploy model to endpoint for Google Cloud Vertex AI Model', description='Deploys Google Cloud Vertex AI Model to a Google Cloud Vertex AI Endpoint.')
+                    _parser.add_argument("--model-name", dest="model_name", type=str, required=True, default=argparse.SUPPRESS)
+                    _parser.add_argument("--endpoint-name", dest="endpoint_name", type=str, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--machine-type", dest="machine_type", type=str, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--min-replica-count", dest="min_replica_count", type=int, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--max-replica-count", dest="max_replica_count", type=int, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--accelerator-type", dest="accelerator_type", type=str, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--accelerator-count", dest="accelerator_count", type=int, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("----output-paths", dest="_output_paths", type=str, nargs=2)
+                    _parsed_args = vars(_parser.parse_args())
+                    _output_files = _parsed_args.pop("_output_paths", [])
+
+                    _outputs = deploy_model_to_endpoint_for_Google_Cloud_Vertex_AI_Model(**_parsed_args)
+
+                    _output_serializers = [
+                        str,
+                        _serialize_json,
+
+                    ]
+
+                    import os
+                    for idx, output_file in enumerate(_output_files):
+                        try:
+                            os.makedirs(os.path.dirname(output_file))
+                        except OSError:
+                            pass
+                        with open(output_file, 'w') as f:
+                            f.write(_output_serializers[idx](_outputs[idx]))
+                args:
+                  - '--model-name'
+                  - inputValue: model_name
+                  - if:
+                      cond:
+                        isPresent: endpoint_name
+                      then:
+                        - '--endpoint-name'
+                        - inputValue: endpoint_name
+                  - if:
+                      cond:
+                        isPresent: machine_type
+                      then:
+                        - '--machine-type'
+                        - inputValue: machine_type
+                  - if:
+                      cond:
+                        isPresent: min_replica_count
+                      then:
+                        - '--min-replica-count'
+                        - inputValue: min_replica_count
+                  - if:
+                      cond:
+                        isPresent: max_replica_count
+                      then:
+                        - '--max-replica-count'
+                        - inputValue: max_replica_count
+                  - if:
+                      cond:
+                        isPresent: accelerator_type
+                      then:
+                        - '--accelerator-type'
+                        - inputValue: accelerator_type
+                  - if:
+                      cond:
+                        isPresent: accelerator_count
+                      then:
+                        - '--accelerator-count'
+                        - inputValue: accelerator_count
+                  - '----output-paths'
+                  - outputPath: endpoint_name
+                  - outputPath: endpoint_dict
+        annotations:
+          editor.position: '{"x":1060,"y":510}'
+        arguments:
+          model_name:
+            taskOutput:
+              taskId: Train tabular model using Google Cloud Vertex AI AutoML
+              outputName: model_name
+      Get model tuning trials for Google Cloud Vertex AI AutoML Tables:
+        componentRef:
+          url: https://raw.githubusercontent.com/Ark-kun/pipeline_components/47f3621344c884666a926c8a15d77562f1cc5e0a/components/google-cloud/Vertex_AI/AutoML/Tables/Get_model_tuning_trials/component.yaml
+          spec:
+            name: Get model tuning trials for Google Cloud Vertex AI AutoML Tables
+            metadata:
+              annotations:
+                author: Alexey Volkov <alexey.volkov@ark-kun.com>
+                canonical_location: https://raw.githubusercontent.com/Ark-kun/pipeline_components/master/components/google-cloud/Vertex_AI/AutoML/Tables/Get_model_tuning_trials/component.yaml
+            inputs:
+              - name: model_name
+                type: GoogleCloudVertexAiModelName
+            outputs:
+              - name: tuning_trials
+                type: JsonArray
+              - name: model_structures
+                type: JsonArray
+              - name: extra_entries
+                type: JsonArray
+            implementation:
+              container:
+                image: python:3.9
+                command:
+                  - sh
+                  - '-c'
+                  - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'google-cloud-logging==2.7.0' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'google-cloud-logging==2.7.0' --user) && "$0" "$@"
+                  - sh
+                  - '-ec'
+                  - |
+                    program_path=$(mktemp)
+                    printf "%s" "$0" > "$program_path"
+                    python3 -u "$program_path" "$@"
+                  - |
+                    def get_model_tuning_trials_for_Google_Cloud_Vertex_AI_AutoML_Tables(
+                        model_name,
+                    ):
+                        import json
+                        from google.cloud import logging as cloud_logging
+
+                        (_, project, _, location, _, model_id) = model_name.split("/")
+
+                        # Need to specify project when initializing client.
+                        # Otherwise we'll get error when running on Vertex AI Pipelines:
+                        # google.api_core.exceptions.PermissionDenied: 403 The caller does not have permission
+                        cloud_logging_client = cloud_logging.Client(project=project)
+
+                        # Full filter:
+                        # resource.type="cloudml_job" resource.labels.job_id="{job_id}" resource.labels.project_id="{project_id}" labels.log_type="automl_tables" jsonPayload."@type"="type.googleapis.com/google.cloud.automl.master.TuningTrial"
+                        log_filter=f'resource.labels.job_id="{model_id}"'
+                        log_entry_list = list(cloud_logging_client.list_entries(filter_=log_filter))
+
+                        tuning_trials = []
+                        model_structures = []
+                        extra_entries = []
+                        for entry in log_entry_list:
+                            if entry.payload.get("@type") == "type.googleapis.com/google.cloud.automl.master.TuningTrial":
+                                tuning_trials.append(entry.payload)
+                            elif entry.payload.get("@type") == "type.googleapis.com/google.cloud.automl.master.TablesModelStructure":
+                                model_structures.append(entry.payload)
+                            else:
+                                extra_entries.append(entry.payload)
+
+                        # Manually serializing the results for pretty and stable output
+                        print("Tuning trials:")
+                        tuning_trials_json = json.dumps(tuning_trials, sort_keys=True, indent=2)
+                        print(tuning_trials_json)
+
+                        print("Model structures:")
+                        model_structures_json = json.dumps(model_structures, sort_keys=True, indent=2)
+                        print(model_structures_json)
+
+                        print("Extra entries:")
+                        extra_entries_json = json.dumps(extra_entries, sort_keys=True, indent=2)
+                        print(extra_entries_json)
+
+                        return (tuning_trials_json, model_structures_json, extra_entries_json)
+
+                    def _serialize_json(obj) -> str:
+                        if isinstance(obj, str):
+                            return obj
+                        import json
+                        def default_serializer(obj):
+                            if hasattr(obj, 'to_struct'):
+                                return obj.to_struct()
+                            else:
+                                raise TypeError("Object of type '%s' is not JSON serializable and does not have .to_struct() method." % obj.__class__.__name__)
+                        return json.dumps(obj, default=default_serializer, sort_keys=True)
+
+                    import argparse
+                    _parser = argparse.ArgumentParser(prog='Get model tuning trials for Google Cloud Vertex AI AutoML Tables', description='')
+                    _parser.add_argument("--model-name", dest="model_name", type=str, required=True, default=argparse.SUPPRESS)
+                    _parser.add_argument("----output-paths", dest="_output_paths", type=str, nargs=3)
+                    _parsed_args = vars(_parser.parse_args())
+                    _output_files = _parsed_args.pop("_output_paths", [])
+
+                    _outputs = get_model_tuning_trials_for_Google_Cloud_Vertex_AI_AutoML_Tables(**_parsed_args)
+
+                    _output_serializers = [
+                        _serialize_json,
+                        _serialize_json,
+                        _serialize_json,
+
+                    ]
+
+                    import os
+                    for idx, output_file in enumerate(_output_files):
+                        try:
+                            os.makedirs(os.path.dirname(output_file))
+                        except OSError:
+                            pass
+                        with open(output_file, 'w') as f:
+                            f.write(_output_serializers[idx](_outputs[idx]))
+                args:
+                  - '--model-name'
+                  - inputValue: model_name
+                  - '----output-paths'
+                  - outputPath: tuning_trials
+                  - outputPath: model_structures
+                  - outputPath: extra_entries
+        annotations:
+          editor.position: '{"x":1040,"y":290}'
+        arguments:
+          model_name:
+            taskOutput:
+              taskId: Train tabular model using Google Cloud Vertex AI AutoML
+              outputName: model_name
+    outputValues: {}

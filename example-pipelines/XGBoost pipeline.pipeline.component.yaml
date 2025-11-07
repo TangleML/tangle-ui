@@ -1,0 +1,634 @@
+name: XGBoost pipeline
+metadata:
+  annotations:
+    sdk: https://cloud-pipelines.github.io/pipeline-editor/
+implementation:
+  graph:
+    tasks:
+      dataset:
+        componentRef:
+          url: https://raw.githubusercontent.com/Ark-kun/pipelines/60a2612541ec08c6a85c237d2ec7525b12543a43/components/datasets/Chicago_Taxi_Trips/component.yaml
+          spec:
+            name: Chicago Taxi Trips dataset
+            description: |
+              City of Chicago Taxi Trips dataset: https://data.cityofchicago.org/Transportation/Taxi-Trips/wrvz-psew
+
+              The input parameters configure the SQL query to the database.
+              The dataset is pretty big, so limit the number of results using the `Limit` or `Where` parameters.
+              Read [Socrata dev](https://dev.socrata.com/docs/queries/) for the advanced query syntax
+            metadata:
+              annotations:
+                author: Alexey Volkov <alexey.volkov@ark-kun.com>
+            inputs:
+              - name: Where
+                type: String
+                default: trip_start_timestamp>="1900-01-01" AND trip_start_timestamp<"2100-01-01"
+              - name: Limit
+                type: Integer
+                default: '1000'
+                description: Number of rows to return. The rows are randomly sampled.
+              - name: Select
+                type: String
+                default: trip_id,taxi_id,trip_start_timestamp,trip_end_timestamp,trip_seconds,trip_miles,pickup_census_tract,dropoff_census_tract,pickup_community_area,dropoff_community_area,fare,tips,tolls,extras,trip_total,payment_type,company,pickup_centroid_latitude,pickup_centroid_longitude,pickup_centroid_location,dropoff_centroid_latitude,dropoff_centroid_longitude,dropoff_centroid_location
+              - name: Format
+                type: String
+                default: csv
+                description: Output data format. Suports csv,tsv,cml,rdf,json
+            outputs:
+              - name: Table
+                description: Result type depends on format. CSV and TSV have header.
+            implementation:
+              container:
+                image: byrnedo/alpine-curl@sha256:548379d0a4a0c08b9e55d9d87a592b7d35d9ab3037f4936f5ccd09d0b625a342
+                command:
+                  - sh
+                  - '-c'
+                  - |
+                    set -e -x -o pipefail
+                    output_path="$0"
+                    select="$1"
+                    where="$2"
+                    limit="$3"
+                    format="$4"
+                    mkdir -p "$(dirname "$output_path")"
+                    curl --get 'https://data.cityofchicago.org/resource/wrvz-psew.'"${format}" \
+                        --data-urlencode '$limit='"${limit}" \
+                        --data-urlencode '$where='"${where}" \
+                        --data-urlencode '$select='"${select}" \
+                        | tr -d '"' > "$output_path"  # Removing unneeded quotes around all numbers
+                  - outputPath: Table
+                  - inputValue: Select
+                  - inputValue: Where
+                  - inputValue: Limit
+                  - inputValue: Format
+        annotations:
+          editor.position: '{"x":-100,"y":150}'
+        arguments:
+          Select: tips,trip_seconds,trip_miles,pickup_community_area,dropoff_community_area,fare,tolls,extras,trip_total
+          Where: trip_start_timestamp >= "2019-01-01" AND trip_start_timestamp < "2019-02-01"
+      train:
+        componentRef:
+          url: https://raw.githubusercontent.com/Ark-kun/pipelines/567c04c51ff00a1ee525b3458425b17adbe3df61/components/XGBoost/Train/component.yaml
+          spec:
+            name: Xgboost train
+            description: |-
+              Train an XGBoost model.
+
+                  Args:
+                      training_data_path: Path for the training data in CSV format.
+                      model_path: Output path for the trained model in binary XGBoost format.
+                      model_config_path: Output path for the internal parameter configuration of Booster as a JSON string.
+                      starting_model_path: Path for the existing trained model to start from.
+                      label_column: Column containing the label data.
+                      num_boost_rounds: Number of boosting iterations.
+                      booster_params: Parameters for the booster. See https://xgboost.readthedocs.io/en/latest/parameter.html
+                      objective: The learning task and the corresponding learning objective.
+                          See https://xgboost.readthedocs.io/en/latest/parameter.html#learning-task-parameters
+                          The most common values are:
+                          "reg:squarederror" - Regression with squared loss (default).
+                          "reg:logistic" - Logistic regression.
+                          "binary:logistic" - Logistic regression for binary classification, output probability.
+                          "binary:logitraw" - Logistic regression for binary classification, output score before logistic transformation
+                          "rank:pairwise" - Use LambdaMART to perform pairwise ranking where the pairwise loss is minimized
+                          "rank:ndcg" - Use LambdaMART to perform list-wise ranking where Normalized Discounted Cumulative Gain (NDCG) is maximized
+
+                  Annotations:
+                      author: Alexey Volkov <alexey.volkov@ark-kun.com>
+            inputs:
+              - name: training_data
+                type: CSV
+              - name: starting_model
+                type: XGBoostModel
+                optional: true
+              - name: label_column
+                type: Integer
+                default: '0'
+                optional: true
+              - name: num_iterations
+                type: Integer
+                default: '10'
+                optional: true
+              - name: booster_params
+                type: JsonObject
+                optional: true
+              - name: objective
+                type: String
+                default: reg:squarederror
+                optional: true
+              - name: booster
+                type: String
+                default: gbtree
+                optional: true
+              - name: learning_rate
+                type: Float
+                default: '0.3'
+                optional: true
+              - name: min_split_loss
+                type: Float
+                default: '0'
+                optional: true
+              - name: max_depth
+                type: Integer
+                default: '6'
+                optional: true
+            outputs:
+              - name: model
+                type: XGBoostModel
+              - name: model_config
+                type: XGBoostModelConfig
+            implementation:
+              container:
+                image: python:3.7
+                command:
+                  - sh
+                  - '-c'
+                  - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'xgboost==1.1.1' 'pandas==1.0.5' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'xgboost==1.1.1' 'pandas==1.0.5' --user) && "$0" "$@"
+                  - python3
+                  - '-u'
+                  - '-c'
+                  - |
+                    def _make_parent_dirs_and_return_path(file_path: str):
+                        import os
+                        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                        return file_path
+
+                    def xgboost_train(
+                        training_data_path,  # Also supports LibSVM
+                        model_path,
+                        model_config_path,
+                        starting_model_path = None,
+
+                        label_column = 0,
+                        num_iterations = 10,
+                        booster_params = None,
+
+                        # Booster parameters
+                        objective = 'reg:squarederror',
+                        booster = 'gbtree',
+                        learning_rate = 0.3,
+                        min_split_loss = 0,
+                        max_depth = 6,
+                    ):
+                        '''Train an XGBoost model.
+
+                        Args:
+                            training_data_path: Path for the training data in CSV format.
+                            model_path: Output path for the trained model in binary XGBoost format.
+                            model_config_path: Output path for the internal parameter configuration of Booster as a JSON string.
+                            starting_model_path: Path for the existing trained model to start from.
+                            label_column: Column containing the label data.
+                            num_boost_rounds: Number of boosting iterations.
+                            booster_params: Parameters for the booster. See https://xgboost.readthedocs.io/en/latest/parameter.html
+                            objective: The learning task and the corresponding learning objective.
+                                See https://xgboost.readthedocs.io/en/latest/parameter.html#learning-task-parameters
+                                The most common values are:
+                                "reg:squarederror" - Regression with squared loss (default).
+                                "reg:logistic" - Logistic regression.
+                                "binary:logistic" - Logistic regression for binary classification, output probability.
+                                "binary:logitraw" - Logistic regression for binary classification, output score before logistic transformation
+                                "rank:pairwise" - Use LambdaMART to perform pairwise ranking where the pairwise loss is minimized
+                                "rank:ndcg" - Use LambdaMART to perform list-wise ranking where Normalized Discounted Cumulative Gain (NDCG) is maximized
+
+                        Annotations:
+                            author: Alexey Volkov <alexey.volkov@ark-kun.com>
+                        '''
+                        import pandas
+                        import xgboost
+
+                        df = pandas.read_csv(
+                            training_data_path,
+                        )
+
+                        training_data = xgboost.DMatrix(
+                            data=df.drop(columns=[df.columns[label_column]]),
+                            label=df[df.columns[label_column]],
+                        )
+
+                        booster_params = booster_params or {}
+                        booster_params.setdefault('objective', objective)
+                        booster_params.setdefault('booster', booster)
+                        booster_params.setdefault('learning_rate', learning_rate)
+                        booster_params.setdefault('min_split_loss', min_split_loss)
+                        booster_params.setdefault('max_depth', max_depth)
+
+                        starting_model = None
+                        if starting_model_path:
+                            starting_model = xgboost.Booster(model_file=starting_model_path)
+
+                        model = xgboost.train(
+                            params=booster_params,
+                            dtrain=training_data,
+                            num_boost_round=num_iterations,
+                            xgb_model=starting_model
+                        )
+
+                        # Saving the model in binary format
+                        model.save_model(model_path)
+
+                        model_config_str = model.save_config()
+                        with open(model_config_path, 'w') as model_config_file:
+                            model_config_file.write(model_config_str)
+
+                    import json
+                    import argparse
+                    _parser = argparse.ArgumentParser(prog='Xgboost train', description='Train an XGBoost model.\n\n    Args:\n        training_data_path: Path for the training data in CSV format.\n        model_path: Output path for the trained model in binary XGBoost format.\n        model_config_path: Output path for the internal parameter configuration of Booster as a JSON string.\n        starting_model_path: Path for the existing trained model to start from.\n        label_column: Column containing the label data.\n        num_boost_rounds: Number of boosting iterations.\n        booster_params: Parameters for the booster. See https://xgboost.readthedocs.io/en/latest/parameter.html\n        objective: The learning task and the corresponding learning objective.\n            See https://xgboost.readthedocs.io/en/latest/parameter.html#learning-task-parameters\n            The most common values are:\n            "reg:squarederror" - Regression with squared loss (default).\n            "reg:logistic" - Logistic regression.\n            "binary:logistic" - Logistic regression for binary classification, output probability.\n            "binary:logitraw" - Logistic regression for binary classification, output score before logistic transformation\n            "rank:pairwise" - Use LambdaMART to perform pairwise ranking where the pairwise loss is minimized\n            "rank:ndcg" - Use LambdaMART to perform list-wise ranking where Normalized Discounted Cumulative Gain (NDCG) is maximized\n\n    Annotations:\n        author: Alexey Volkov <alexey.volkov@ark-kun.com>')
+                    _parser.add_argument("--training-data", dest="training_data_path", type=str, required=True, default=argparse.SUPPRESS)
+                    _parser.add_argument("--starting-model", dest="starting_model_path", type=str, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--label-column", dest="label_column", type=int, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--num-iterations", dest="num_iterations", type=int, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--booster-params", dest="booster_params", type=json.loads, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--objective", dest="objective", type=str, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--booster", dest="booster", type=str, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--learning-rate", dest="learning_rate", type=float, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--min-split-loss", dest="min_split_loss", type=float, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--max-depth", dest="max_depth", type=int, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--model", dest="model_path", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+                    _parser.add_argument("--model-config", dest="model_config_path", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+                    _parsed_args = vars(_parser.parse_args())
+
+                    _outputs = xgboost_train(**_parsed_args)
+                args:
+                  - '--training-data'
+                  - inputPath: training_data
+                  - if:
+                      cond:
+                        isPresent: starting_model
+                      then:
+                        - '--starting-model'
+                        - inputPath: starting_model
+                  - if:
+                      cond:
+                        isPresent: label_column
+                      then:
+                        - '--label-column'
+                        - inputValue: label_column
+                  - if:
+                      cond:
+                        isPresent: num_iterations
+                      then:
+                        - '--num-iterations'
+                        - inputValue: num_iterations
+                  - if:
+                      cond:
+                        isPresent: booster_params
+                      then:
+                        - '--booster-params'
+                        - inputValue: booster_params
+                  - if:
+                      cond:
+                        isPresent: objective
+                      then:
+                        - '--objective'
+                        - inputValue: objective
+                  - if:
+                      cond:
+                        isPresent: booster
+                      then:
+                        - '--booster'
+                        - inputValue: booster
+                  - if:
+                      cond:
+                        isPresent: learning_rate
+                      then:
+                        - '--learning-rate'
+                        - inputValue: learning_rate
+                  - if:
+                      cond:
+                        isPresent: min_split_loss
+                      then:
+                        - '--min-split-loss'
+                        - inputValue: min_split_loss
+                  - if:
+                      cond:
+                        isPresent: max_depth
+                      then:
+                        - '--max-depth'
+                        - inputValue: max_depth
+                  - '--model'
+                  - outputPath: model
+                  - '--model-config'
+                  - outputPath: model_config
+        annotations:
+          editor.position: '{"x":720,"y":600}'
+        arguments:
+          training_data:
+            taskOutput:
+              taskId: Fill all missing values using Pandas on CSV data
+              outputName: transformed_table
+      predict:
+        componentRef:
+          url: https://raw.githubusercontent.com/Ark-kun/pipelines/567c04c51ff00a1ee525b3458425b17adbe3df61/components/XGBoost/Predict/component.yaml
+          spec:
+            name: Xgboost predict
+            description: |-
+              Make predictions using a trained XGBoost model.
+
+                  Args:
+                      data_path: Path for the feature data in CSV format.
+                      model_path: Path for the trained model in binary XGBoost format.
+                      predictions_path: Output path for the predictions.
+                      label_column: Column containing the label data.
+
+                  Annotations:
+                      author: Alexey Volkov <alexey.volkov@ark-kun.com>
+            inputs:
+              - name: data
+                type: CSV
+              - name: model
+                type: XGBoostModel
+              - name: label_column
+                type: Integer
+                optional: true
+            outputs:
+              - name: predictions
+                type: Text
+            implementation:
+              container:
+                image: python:3.7
+                command:
+                  - sh
+                  - '-c'
+                  - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'xgboost==1.1.1' 'pandas==1.0.5' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'xgboost==1.1.1' 'pandas==1.0.5' --user) && "$0" "$@"
+                  - python3
+                  - '-u'
+                  - '-c'
+                  - |
+                    def _make_parent_dirs_and_return_path(file_path: str):
+                        import os
+                        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                        return file_path
+
+                    def xgboost_predict(
+                        data_path,  # Also supports LibSVM
+                        model_path,
+                        predictions_path,
+                        label_column = None,
+                    ):
+                        '''Make predictions using a trained XGBoost model.
+
+                        Args:
+                            data_path: Path for the feature data in CSV format.
+                            model_path: Path for the trained model in binary XGBoost format.
+                            predictions_path: Output path for the predictions.
+                            label_column: Column containing the label data.
+
+                        Annotations:
+                            author: Alexey Volkov <alexey.volkov@ark-kun.com>
+                        '''
+                        from pathlib import Path
+
+                        import numpy
+                        import pandas
+                        import xgboost
+
+                        df = pandas.read_csv(
+                            data_path,
+                        )
+
+                        if label_column is not None:
+                            df = df.drop(columns=[df.columns[label_column]])
+
+                        testing_data = xgboost.DMatrix(
+                            data=df,
+                        )
+
+                        model = xgboost.Booster(model_file=model_path)
+
+                        predictions = model.predict(testing_data)
+
+                        Path(predictions_path).parent.mkdir(parents=True, exist_ok=True)
+                        numpy.savetxt(predictions_path, predictions)
+
+                    import argparse
+                    _parser = argparse.ArgumentParser(prog='Xgboost predict', description='Make predictions using a trained XGBoost model.\n\n    Args:\n        data_path: Path for the feature data in CSV format.\n        model_path: Path for the trained model in binary XGBoost format.\n        predictions_path: Output path for the predictions.\n        label_column: Column containing the label data.\n\n    Annotations:\n        author: Alexey Volkov <alexey.volkov@ark-kun.com>')
+                    _parser.add_argument("--data", dest="data_path", type=str, required=True, default=argparse.SUPPRESS)
+                    _parser.add_argument("--model", dest="model_path", type=str, required=True, default=argparse.SUPPRESS)
+                    _parser.add_argument("--label-column", dest="label_column", type=int, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--predictions", dest="predictions_path", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+                    _parsed_args = vars(_parser.parse_args())
+
+                    _outputs = xgboost_predict(**_parsed_args)
+                args:
+                  - '--data'
+                  - inputPath: data
+                  - '--model'
+                  - inputPath: model
+                  - if:
+                      cond:
+                        isPresent: label_column
+                      then:
+                        - '--label-column'
+                        - inputValue: label_column
+                  - '--predictions'
+                  - outputPath: predictions
+        annotations:
+          editor.position: '{"x":1060,"y":200}'
+        arguments:
+          model:
+            taskOutput:
+              taskId: train
+              outputName: model
+          label_column: '0'
+          data:
+            taskOutput:
+              taskId: Fill all missing values using Pandas on CSV data
+              outputName: transformed_table
+      Fill all missing values using Pandas on CSV data:
+        componentRef:
+          url: https://raw.githubusercontent.com/Ark-kun/pipeline_components/96a177dd71d54c98573c4101d9a05ac801f1fa54/components/pandas/Fill_all_missing_values/in_CSV_format/component.yaml
+          spec:
+            name: Fill all missing values using Pandas on CSV data
+            description: Fills the missing column items with the specified replacement value.
+            metadata:
+              annotations:
+                author: Alexey Volkov <alexey.volkov@ark-kun.com>
+                canonical_location: https://raw.githubusercontent.com/Ark-kun/pipeline_components/master/components/pandas/Fill_all_missing_values/in_CSV_format/component.yaml
+            inputs:
+              - name: table
+                type: CSV
+                description: Input data table.
+              - name: replacement_value
+                type: String
+                description: The value to use when replacing the missing items.
+                default: '0'
+                optional: true
+              - name: column_names
+                type: JsonArray
+                description: Names of the columns where to perform the replacement.
+                optional: true
+            outputs:
+              - name: transformed_table
+                type: CSV
+                description: Transformed data table where missing values are filed.
+            implementation:
+              container:
+                image: python:3.9
+                command:
+                  - sh
+                  - '-c'
+                  - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'pandas==1.4.1' 'numpy<2' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'pandas==1.4.1' 'numpy<2' --user) && "$0" "$@"
+                  - sh
+                  - '-ec'
+                  - |
+                    program_path=$(mktemp)
+                    printf "%s" "$0" > "$program_path"
+                    python3 -u "$program_path" "$@"
+                  - |
+                    def _make_parent_dirs_and_return_path(file_path: str):
+                        import os
+                        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                        return file_path
+
+                    def fill_all_missing_values_using_Pandas_on_CSV_data(
+                        table_path,
+                        transformed_table_path,
+                        replacement_value = "0",
+                        column_names = None,
+                    ):
+                        """Fills the missing column items with the specified replacement value.
+
+                        Args:
+                            table_path: Input data table.
+                            transformed_table_path: Transformed data table where missing values are filed.
+                            replacement_value: The value to use when replacing the missing items.
+                            column_names: Names of the columns where to perform the replacement.
+                        """
+                        import pandas
+
+                        df = pandas.read_csv(
+                            table_path,
+                            dtype="string",
+                        )
+
+                        for column_name in column_names or df.columns:
+                            df[column_name] = df[column_name].fillna(value=replacement_value)
+
+                        df.to_csv(
+                            transformed_table_path, index=False,
+                        )
+
+                    import json
+                    import argparse
+                    _parser = argparse.ArgumentParser(prog='Fill all missing values using Pandas on CSV data', description='Fills the missing column items with the specified replacement value.')
+                    _parser.add_argument("--table", dest="table_path", type=str, required=True, default=argparse.SUPPRESS)
+                    _parser.add_argument("--replacement-value", dest="replacement_value", type=str, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--column-names", dest="column_names", type=json.loads, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--transformed-table", dest="transformed_table_path", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+                    _parsed_args = vars(_parser.parse_args())
+
+                    _outputs = fill_all_missing_values_using_Pandas_on_CSV_data(**_parsed_args)
+                args:
+                  - '--table'
+                  - inputPath: table
+                  - if:
+                      cond:
+                        isPresent: replacement_value
+                      then:
+                        - '--replacement-value'
+                        - inputValue: replacement_value
+                  - if:
+                      cond:
+                        isPresent: column_names
+                      then:
+                        - '--column-names'
+                        - inputValue: column_names
+                  - '--transformed-table'
+                  - outputPath: transformed_table
+          digest: c873de1f3a95bb7fb17efbbc5a72c4a13a1ef581dc162054707441ddce2c06d2
+          text: |
+            name: Fill all missing values using Pandas on CSV data
+            description: Fills the missing column items with the specified replacement value.
+            metadata:
+              annotations: {author: Alexey Volkov <alexey.volkov@ark-kun.com>, canonical_location: 'https://raw.githubusercontent.com/Ark-kun/pipeline_components/master/components/pandas/Fill_all_missing_values/in_CSV_format/component.yaml'}
+            inputs:
+            - {name: table, type: CSV, description: Input data table.}
+            - {name: replacement_value, type: String, description: The value to use when replacing
+                the missing items., default: '0', optional: true}
+            - {name: column_names, type: JsonArray, description: Names of the columns where to
+                perform the replacement., optional: true}
+            outputs:
+            - {name: transformed_table, type: CSV, description: Transformed data table where missing
+                values are filed.}
+            implementation:
+              container:
+                image: python:3.9
+                command:
+                - sh
+                - -c
+                - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location
+                  'pandas==1.4.1' 'numpy<2' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet
+                  --no-warn-script-location 'pandas==1.4.1' 'numpy<2' --user) && "$0" "$@"
+                - sh
+                - -ec
+                - |
+                  program_path=$(mktemp)
+                  printf "%s" "$0" > "$program_path"
+                  python3 -u "$program_path" "$@"
+                - |
+                  def _make_parent_dirs_and_return_path(file_path: str):
+                      import os
+                      os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                      return file_path
+
+                  def fill_all_missing_values_using_Pandas_on_CSV_data(
+                      table_path,
+                      transformed_table_path,
+                      replacement_value = "0",
+                      column_names = None,
+                  ):
+                      """Fills the missing column items with the specified replacement value.
+
+                      Args:
+                          table_path: Input data table.
+                          transformed_table_path: Transformed data table where missing values are filed.
+                          replacement_value: The value to use when replacing the missing items.
+                          column_names: Names of the columns where to perform the replacement.
+                      """
+                      import pandas
+
+                      df = pandas.read_csv(
+                          table_path,
+                          dtype="string",
+                      )
+
+                      for column_name in column_names or df.columns:
+                          df[column_name] = df[column_name].fillna(value=replacement_value)
+
+                      df.to_csv(
+                          transformed_table_path, index=False,
+                      )
+
+                  import json
+                  import argparse
+                  _parser = argparse.ArgumentParser(prog='Fill all missing values using Pandas on CSV data', description='Fills the missing column items with the specified replacement value.')
+                  _parser.add_argument("--table", dest="table_path", type=str, required=True, default=argparse.SUPPRESS)
+                  _parser.add_argument("--replacement-value", dest="replacement_value", type=str, required=False, default=argparse.SUPPRESS)
+                  _parser.add_argument("--column-names", dest="column_names", type=json.loads, required=False, default=argparse.SUPPRESS)
+                  _parser.add_argument("--transformed-table", dest="transformed_table_path", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+                  _parsed_args = vars(_parser.parse_args())
+
+                  _outputs = fill_all_missing_values_using_Pandas_on_CSV_data(**_parsed_args)
+                args:
+                - --table
+                - {inputPath: table}
+                - if:
+                    cond: {isPresent: replacement_value}
+                    then:
+                    - --replacement-value
+                    - {inputValue: replacement_value}
+                - if:
+                    cond: {isPresent: column_names}
+                    then:
+                    - --column-names
+                    - {inputValue: column_names}
+                - --transformed-table
+                - {outputPath: transformed_table}
+          favorited: false
+        annotations:
+          editor.position: '{"x":350,"y":150}'
+        arguments:
+          replacement_value: '0'
+          table:
+            taskOutput:
+              taskId: dataset
+              outputName: Table
