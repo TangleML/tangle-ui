@@ -9,7 +9,8 @@ import {
   vi,
 } from "vitest";
 
-import type { OasisAuthResponse } from "../types";
+import type { OasisAuthResponse } from "@/components/shared/Authentication/types";
+
 import { useGitHubAuthPopup } from "../useGitHubAuthPopup";
 
 vi.mock("@/utils/constants", async (importOriginal) => ({

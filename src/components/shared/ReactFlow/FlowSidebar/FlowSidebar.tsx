@@ -1,5 +1,9 @@
 import { useState } from "react";
 
+import { AuthorizedUserProfile } from "@/components/shared/Authentication/AuthorizedUserProfile";
+import { isAuthorizationRequired } from "@/components/shared/Authentication/helpers";
+import { useAwaitAuthorization } from "@/components/shared/Authentication/useAwaitAuthorization";
+import { GitHubAuthButton } from "@/components/shared/GitHubAuth/GitHubAuthButton";
 import {
   Sidebar,
   SidebarContent,
@@ -7,10 +11,6 @@ import {
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
-import { AuthorizedUserProfile } from "../../GitHubAuth/AuthorizedUserProfile";
-import { GitHubAuthButton } from "../../GitHubAuth/GitHubAuthButton";
-import { isAuthorizationRequired } from "../../GitHubAuth/helpers";
-import { useAwaitAuthorization } from "../../GitHubAuth/useAwaitAuthorization";
 import FileActions from "./sections/FileActions";
 import GraphComponents from "./sections/GraphComponents";
 import RunsAndSubmission from "./sections/RunsAndSubmission";

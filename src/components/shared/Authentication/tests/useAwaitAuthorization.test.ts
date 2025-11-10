@@ -15,7 +15,7 @@ vi.mock("../useAuthLocalStorage", () => ({
   useAuthLocalStorage: vi.fn(),
 }));
 
-vi.mock("../useGitHubAuthPopup", () => ({
+vi.mock("@/components/shared/GitHubAuth/useGitHubAuthPopup", () => ({
   useGitHubAuthPopup: vi.fn(),
 }));
 
@@ -80,7 +80,8 @@ describe("useAwaitAuthorization()", () => {
     };
 
     mockUseGitHubAuthPopup = vi.mocked(
-      (await import("../useGitHubAuthPopup")).useGitHubAuthPopup,
+      (await import("@/components/shared/GitHubAuth/useGitHubAuthPopup"))
+        .useGitHubAuthPopup,
     );
     mockUseGitHubAuthPopup.mockReturnValue(mockPopupHandlers);
   });
