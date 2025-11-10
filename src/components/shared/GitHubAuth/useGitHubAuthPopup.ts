@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import type { OasisAuthResponse } from "@/components/shared/Authentication/types";
 import { APP_ROUTES } from "@/routes/router";
 import { API_URL } from "@/utils/constants";
-
-import type { OasisAuthResponse } from "./types";
 
 const POPUP_WIDTH = 600;
 const POPUP_HEIGHT = 700;

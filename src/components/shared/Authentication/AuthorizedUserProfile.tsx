@@ -1,6 +1,8 @@
 import { LogOutIcon } from "lucide-react";
 import { useCallback, useSyncExternalStore } from "react";
 
+import { Icon } from "@/components/ui/icon";
+
 import TooltipButton from "../Buttons/TooltipButton";
 import { useAuthLocalStorage } from "./useAuthLocalStorage";
 
@@ -32,15 +34,19 @@ export function AuthorizedUserProfile() {
     <div className="flex items-center justify-between">
       <div className="flex items-center space-x-3">
         <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
-          <img
-            src={profile.avatar_url}
-            alt={`${profile.login} avatar`}
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              // Fallback to a default avatar if image fails to load
-              e.currentTarget.src = `https://github.com/identicons/${profile.login}.png`;
-            }}
-          />
+          {profile.avatar_url ? (
+            <img
+              src={profile.avatar_url}
+              alt={`${profile.login} avatar`}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                // Fallback to a default avatar if image fails to load
+                e.currentTarget.src = `https://github.com/identicons/${profile.login}.png`;
+              }}
+            />
+          ) : (
+            <Icon name="User" size="fill" />
+          )}
         </div>
         <span className="text-sm font-medium text-gray-700 truncate">
           {profile.login}

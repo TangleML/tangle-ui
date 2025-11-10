@@ -1,11 +1,11 @@
 import { useCallback, useMemo, useRef, useSyncExternalStore } from "react";
 
+import { useGitHubAuthPopup } from "@/components/shared/GitHubAuth/useGitHubAuthPopup";
 import useToastNotification from "@/hooks/useToastNotification";
 
 import { convertJWTToJWTPayload, isAuthorizationRequired } from "./helpers";
 import type { OasisAuthResponse } from "./types";
 import { useAuthLocalStorage } from "./useAuthLocalStorage";
-import { useGitHubAuthPopup } from "./useGitHubAuthPopup";
 
 function createControlledPromise<TReturn>() {
   let resolve: (value: TReturn) => void = () => {};
@@ -22,6 +22,11 @@ function createControlledPromise<TReturn>() {
     reject,
   };
 }
+
+/**
+ * for future: will be used to switch between different auth providers at build time
+ */
+const useAuthorizationPopup = useGitHubAuthPopup;
 
 export function useAwaitAuthorization() {
   const notify = useToastNotification();
@@ -70,7 +75,8 @@ export function useAwaitAuthorization() {
   }, [token]);
 
   const { openPopup, isLoading, isPopupOpen, closePopup, bringPopupToFront } =
-    useGitHubAuthPopup({
+    // todo: switch based on auth provider (github, minerva, huggingface)
+    useAuthorizationPopup({
       onSuccess,
       onError,
       onClose,
@@ -78,6 +84,7 @@ export function useAwaitAuthorization() {
 
   const awaitAuthorization = useCallback(() => {
     promiseRef.current = createControlledPromise<string | undefined>();
+    // entry point for durable authentication process
     openPopup();
     return promiseRef.current.promise;
   }, [openPopup]);

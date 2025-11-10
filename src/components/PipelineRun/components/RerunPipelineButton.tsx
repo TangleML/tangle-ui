@@ -3,10 +3,10 @@ import { useNavigate } from "@tanstack/react-router";
 import { RefreshCcw } from "lucide-react";
 import { useCallback } from "react";
 
+import { isAuthorizationRequired } from "@/components/shared/Authentication/helpers";
+import { useAuthLocalStorage } from "@/components/shared/Authentication/useAuthLocalStorage";
+import { useAwaitAuthorization } from "@/components/shared/Authentication/useAwaitAuthorization";
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
-import { isAuthorizationRequired } from "@/components/shared/GitHubAuth/helpers";
-import { useAuthLocalStorage } from "@/components/shared/GitHubAuth/useAuthLocalStorage";
-import { useAwaitAuthorization } from "@/components/shared/GitHubAuth/useAwaitAuthorization";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
 import { APP_ROUTES } from "@/routes/router";
