@@ -1,8 +1,8 @@
 {
-  "name": "oasis-app",
-  "homepage": "https://cloud-pipelines.net/pipeline-editor",
+  "name": "tangleml/tangle-ui",
+  "homepage": "https://tangleml.com",
   "version": "0.1.0",
-  "description": "Oasis is a web app that allows the users to build and run Machine Learning pipelines using drag and drop without having to set up development environment.",
+  "description": "Tangle-UI is a web app that allows the users to build and run Machine Learning pipelines using drag and drop without having to set up development environment.",
   "keywords": [
     "ML",
     "AI",
@@ -13,20 +13,20 @@
     "Kubernetes",
     "MLOps"
   ],
-  "bugs": "https://github.com/Cloud-Pipelines/pipeline-studio-app/issues",
+  "bugs": "https://github.com/tangleml/tangle-ui/issues",
   "license": "Apache-2.0",
   "author": {
     "name": "Alexey Volkov",
     "email": "alexey.volkov+oss@ark-kun.com",
     "url": "http://ark-kun.com/"
   },
-  "repository": "github:Cloud-Pipelines/pipeline-studio-app",
+  "repository": "github:tangleml/tangle-ui",
   "private": true,
   "type": "module",
   "scripts": {
     "start": "vite --port 3000",
     "build": "vite build && tsc",
-    "build:ghpages": "VITE_BASE_URL=/pipeline-studio-app/ VITE_GITHUB_PAGES=true vite build --config vite.config.ghpages.js && tsc",
+    "build:ghpages": "VITE_BASE_URL=/tangle-ui/ VITE_GITHUB_PAGES=true vite build --config vite.config.ghpages.js && tsc",
     "serve": "vite preview",
     "serve:ghpages": "vite preview --config vite.config.ghpages.js",
     "test": "vitest run",
