@@ -6,6 +6,7 @@ import { Spinner } from "@/components/ui/spinner";
 
 import TooltipButton from "../Buttons/TooltipButton";
 import { GitHubAuthFlowBackdrop } from "./GitHubAuthFlowBackdrop";
+import { isGitHubAuthEnabled } from "./helpers";
 
 export function GitHubAuthButton() {
   const {
@@ -21,7 +22,7 @@ export function GitHubAuthButton() {
     await awaitAuthorization();
   }, [awaitAuthorization]);
 
-  if (isAuthorized) {
+  if (!isGitHubAuthEnabled() || isAuthorized) {
     return null;
   }
 

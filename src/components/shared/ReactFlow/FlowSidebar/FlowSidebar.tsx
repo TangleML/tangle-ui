@@ -4,6 +4,7 @@ import { AuthorizedUserProfile } from "@/components/shared/Authentication/Author
 import { isAuthorizationRequired } from "@/components/shared/Authentication/helpers";
 import { useAwaitAuthorization } from "@/components/shared/Authentication/useAwaitAuthorization";
 import { GitHubAuthButton } from "@/components/shared/GitHubAuth/GitHubAuthButton";
+import { HuggingFaceAuthButton } from "@/components/shared/HuggingFaceAuth/HuggingFaceAuthButton";
 import {
   Sidebar,
   SidebarContent,
@@ -29,6 +30,7 @@ const FlowSidebar = () => {
   const authorizationSectionMarkup = requiresAuthorization ? (
     <div className="p-4 max-w-md">
       {!isAuthorized && <GitHubAuthButton />}
+      {!isAuthorized && <HuggingFaceAuthButton />}
       {isAuthorized && <AuthorizedUserProfile />}
     </div>
   ) : null;

@@ -6,7 +6,8 @@ import {
   Outlet,
 } from "@tanstack/react-router";
 
-import { AuthorizationResultScreen } from "@/components/shared/GitHubAuth/AuthorizationResultScreen";
+import { AuthorizationResultScreen as GitHubAuthorizationResultScreen } from "@/components/shared/GitHubAuth/AuthorizationResultScreen";
+import { AuthorizationResultScreen as HuggingFaceAuthorizationResultScreen } from "@/components/shared/HuggingFaceAuth/AuthorizationResultScreen";
 import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 
 import RootLayout from "../components/layout/RootLayout";
@@ -34,6 +35,7 @@ export const APP_ROUTES = {
   RUN_DETAIL_WITH_SUBGRAPH: `${RUNS_BASE_PATH}/$id/$subgraphExecutionId`,
   RUNS: RUNS_BASE_PATH,
   GITHUB_AUTH_CALLBACK: "/authorize/github",
+  HUGGINGFACE_AUTH_CALLBACK: "/authorize/huggingface",
 };
 
 const rootRoute = createRootRoute({
@@ -73,7 +75,13 @@ const editorRoute = createRoute({
 const githubAuthCallbackRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: APP_ROUTES.GITHUB_AUTH_CALLBACK,
-  component: AuthorizationResultScreen,
+  component: GitHubAuthorizationResultScreen,
+});
+
+const huggingFaceAuthCallbackRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: APP_ROUTES.HUGGINGFACE_AUTH_CALLBACK,
+  component: HuggingFaceAuthorizationResultScreen,
 });
 
 const runDetailRoute = createRoute({
@@ -98,6 +106,7 @@ const appRouteTree = mainLayout.addChildren([
 
 const rootRouteTree = rootRoute.addChildren([
   githubAuthCallbackRoute,
+  huggingFaceAuthCallbackRoute,
   appRouteTree,
 ]);
 

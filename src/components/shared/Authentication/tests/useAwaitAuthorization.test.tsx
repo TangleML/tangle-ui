@@ -1,4 +1,6 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook } from "@testing-library/react";
+import type { PropsWithChildren } from "react";
 import {
   afterEach,
   beforeEach,
@@ -44,10 +46,24 @@ describe("useAwaitAuthorization()", () => {
     isPopupOpen: boolean;
   };
 
+  const wrapper = ({ children }: PropsWithChildren) => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+      },
+    });
+    return (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+  };
+
   beforeEach(async () => {
     vi.clearAllMocks();
 
     vi.stubEnv("VITE_REQUIRE_AUTHORIZATION", "true");
+
+    vi.stubEnv("VITE_GITHUB_CLIENT_ID", "test-client-id");
+    vi.stubEnv("VITE_HUGGING_FACE_AUTHORIZATION", undefined);
 
     // Mock notification
     mockNotify = vi.fn();
@@ -95,7 +111,7 @@ describe("useAwaitAuthorization()", () => {
       mockAuthStorage.getToken.mockReturnValue(undefined);
       mockAuthStorage.subscribe.mockReturnValue(() => {});
 
-      const { result } = renderHook(() => useAwaitAuthorization());
+      const { result } = renderHook(() => useAwaitAuthorization(), { wrapper });
 
       expect(result.current.isAuthorized).toBe(false);
       expect(result.current.isLoading).toBe(false);
@@ -106,7 +122,7 @@ describe("useAwaitAuthorization()", () => {
       mockAuthStorage.getToken.mockReturnValue("bearer token123");
       mockAuthStorage.subscribe.mockReturnValue(() => {});
 
-      const { result } = renderHook(() => useAwaitAuthorization());
+      const { result } = renderHook(() => useAwaitAuthorization(), { wrapper });
 
       expect(result.current.isAuthorized).toBe(true);
     });
@@ -117,7 +133,7 @@ describe("useAwaitAuthorization()", () => {
       mockAuthStorage.getToken.mockReturnValue(undefined);
       mockAuthStorage.subscribe.mockReturnValue(() => {});
 
-      const { result } = renderHook(() => useAwaitAuthorization());
+      const { result } = renderHook(() => useAwaitAuthorization(), { wrapper });
 
       expect(result.current.isAuthorized).toBe(true);
     });
@@ -128,7 +144,7 @@ describe("useAwaitAuthorization()", () => {
       mockAuthStorage.getToken.mockReturnValue(undefined);
       mockAuthStorage.subscribe.mockReturnValue(() => {});
 
-      const { result } = renderHook(() => useAwaitAuthorization());
+      const { result } = renderHook(() => useAwaitAuthorization(), { wrapper });
 
       const promise = result.current.awaitAuthorization();
 
@@ -140,7 +156,7 @@ describe("useAwaitAuthorization()", () => {
       mockAuthStorage.getToken.mockReturnValue(undefined);
       mockAuthStorage.subscribe.mockReturnValue(() => {});
 
-      const { result } = renderHook(() => useAwaitAuthorization());
+      const { result } = renderHook(() => useAwaitAuthorization(), { wrapper });
 
       const promise1 = result.current.awaitAuthorization();
       const promise2 = result.current.awaitAuthorization();
@@ -211,7 +227,7 @@ describe("useAwaitAuthorization()", () => {
         return mockPopupHandlers;
       });
 
-      const { result } = renderHook(() => useAwaitAuthorization());
+      const { result } = renderHook(() => useAwaitAuthorization(), { wrapper });
 
       const promise = result.current.awaitAuthorization();
 
@@ -252,7 +268,7 @@ describe("useAwaitAuthorization()", () => {
         return mockPopupHandlers;
       });
 
-      const { result } = renderHook(() => useAwaitAuthorization());
+      const { result } = renderHook(() => useAwaitAuthorization(), { wrapper });
 
       const promise = result.current.awaitAuthorization();
 
@@ -275,7 +291,7 @@ describe("useAwaitAuthorization()", () => {
         return mockPopupHandlers;
       });
 
-      const { result } = renderHook(() => useAwaitAuthorization());
+      const { result } = renderHook(() => useAwaitAuthorization(), { wrapper });
 
       const promise = result.current.awaitAuthorization();
 
@@ -303,7 +319,7 @@ describe("useAwaitAuthorization()", () => {
 
       mockPopupHandlers.isLoading = true;
 
-      const { result } = renderHook(() => useAwaitAuthorization());
+      const { result } = renderHook(() => useAwaitAuthorization(), { wrapper });
 
       expect(result.current.isLoading).toBe(true);
     });
@@ -314,7 +330,7 @@ describe("useAwaitAuthorization()", () => {
 
       mockPopupHandlers.isPopupOpen = true;
 
-      const { result } = renderHook(() => useAwaitAuthorization());
+      const { result } = renderHook(() => useAwaitAuthorization(), { wrapper });
 
       expect(result.current.isPopupOpen).toBe(true);
     });
@@ -323,7 +339,7 @@ describe("useAwaitAuthorization()", () => {
       mockAuthStorage.getToken.mockReturnValue(undefined);
       mockAuthStorage.subscribe.mockReturnValue(() => {});
 
-      const { result } = renderHook(() => useAwaitAuthorization());
+      const { result } = renderHook(() => useAwaitAuthorization(), { wrapper });
 
       result.current.closePopup();
 
@@ -334,7 +350,7 @@ describe("useAwaitAuthorization()", () => {
       mockAuthStorage.getToken.mockReturnValue(undefined);
       mockAuthStorage.subscribe.mockReturnValue(() => {});
 
-      const { result } = renderHook(() => useAwaitAuthorization());
+      const { result } = renderHook(() => useAwaitAuthorization(), { wrapper });
 
       result.current.bringPopupToFront();
 
@@ -347,7 +363,7 @@ describe("useAwaitAuthorization()", () => {
       mockAuthStorage.getToken.mockReturnValue(undefined);
       mockAuthStorage.subscribe.mockReturnValue(() => {});
 
-      renderHook(() => useAwaitAuthorization());
+      renderHook(() => useAwaitAuthorization(), { wrapper });
 
       expect(mockAuthStorage.subscribe).toHaveBeenCalled();
     });
@@ -362,7 +378,7 @@ describe("useAwaitAuthorization()", () => {
       // Initially no token
       mockAuthStorage.getToken.mockReturnValue(undefined);
 
-      const { result } = renderHook(() => useAwaitAuthorization());
+      const { result } = renderHook(() => useAwaitAuthorization(), { wrapper });
 
       expect(result.current.isAuthorized).toBe(false);
 
@@ -383,7 +399,9 @@ describe("useAwaitAuthorization()", () => {
       mockAuthStorage.getToken.mockReturnValue(undefined);
       mockAuthStorage.subscribe.mockReturnValue(() => {});
 
-      const { result, rerender } = renderHook(() => useAwaitAuthorization());
+      const { result, rerender } = renderHook(() => useAwaitAuthorization(), {
+        wrapper,
+      });
 
       const firstResult = result.current;
 
@@ -404,7 +422,7 @@ describe("useAwaitAuthorization()", () => {
       // Initially no token
       mockAuthStorage.getToken.mockReturnValue(undefined);
 
-      const { result } = renderHook(() => useAwaitAuthorization());
+      const { result } = renderHook(() => useAwaitAuthorization(), { wrapper });
 
       const firstResult = result.current;
       expect(firstResult.isAuthorized).toBe(false);
