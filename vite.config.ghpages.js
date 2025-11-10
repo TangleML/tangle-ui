@@ -12,7 +12,7 @@ export default defineConfig({
   plugins: [viteReact(), tailwindcss()],
   // Set base path for GitHub Pages deployment
   // This ensures all assets and routes are prefixed with /pipeline-studio-app/
-  base: "/pipeline-studio-app/",
+  base: "/tangle-ui/",
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -23,7 +23,7 @@ export default defineConfig({
     port: 4173,
     strictPort: false,
     host: "localhost",
-    open: "/pipeline-studio-app/", // Auto-open browser at the correct path
+    open: "/tangle-ui/", // Auto-open browser at the correct path
   },
   // Build configuration optimized for GitHub Pages
   build: {

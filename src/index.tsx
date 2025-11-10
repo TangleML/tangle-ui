@@ -15,6 +15,8 @@ scan({
   enabled: import.meta.env.VITE_ENABLE_SCAN === "true",
 });
 
+setBaseUrl();
+
 const rootElement = document.getElementById("app")!;
 if (!rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement);
@@ -25,4 +27,10 @@ if (!rootElement.innerHTML) {
       </QueryClientProvider>
     </StrictMode>,
   );
+}
+
+function setBaseUrl() {
+  const base = document.createElement("base");
+  base.setAttribute("href", import.meta.env.VITE_BASE_URL ?? "/");
+  document.head.insertBefore(base, document.head.firstChild);
 }
