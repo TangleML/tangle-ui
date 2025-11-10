@@ -7,6 +7,8 @@ import { Spinner } from "@/components/ui/spinner";
 import TooltipButton from "../Buttons/TooltipButton";
 import { GitHubAuthFlowBackdrop } from "./GitHubAuthFlowBackdrop";
 
+const GH_AUTH_ENABLED = !!import.meta.env.VITE_GITHUB_CLIENT_ID;
+
 export function GitHubAuthButton() {
   const {
     awaitAuthorization,
@@ -21,7 +23,7 @@ export function GitHubAuthButton() {
     await awaitAuthorization();
   }, [awaitAuthorization]);
 
-  if (isAuthorized) {
+  if (!GH_AUTH_ENABLED || isAuthorized) {
     return null;
   }
 

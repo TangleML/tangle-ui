@@ -1,12 +1,42 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { LogOutIcon } from "lucide-react";
-import { useCallback, useSyncExternalStore } from "react";
+import { useEffectEvent, useSyncExternalStore } from "react";
 
 import { Icon } from "@/components/ui/icon";
+import { Spinner } from "@/components/ui/spinner";
+import { useBackend } from "@/providers/BackendProvider";
 
 import TooltipButton from "../Buttons/TooltipButton";
+import { HF_AUTH_ENABLED } from "../HuggingFaceAuth/constants";
 import { useAuthLocalStorage } from "./useAuthLocalStorage";
 
+function useLogout({
+  onSuccess,
+  onError,
+}: {
+  onSuccess?: () => void;
+  onError?: (error: Error) => void;
+}) {
+  const { backendUrl } = useBackend();
+  return useMutation({
+    mutationFn: async () => {
+      if (HF_AUTH_ENABLED) {
+        await fetch(`${backendUrl}/api/oauth/huggingface/logout`, {
+          method: "GET",
+        });
+      }
+    },
+    onSuccess: () => {
+      onSuccess?.();
+    },
+    onError: (error) => {
+      onError?.(error);
+    },
+  });
+}
+
 export function AuthorizedUserProfile() {
+  const queryClient = useQueryClient();
   const localTokenStorage = useAuthLocalStorage();
 
   /**
@@ -22,9 +52,13 @@ export function AuthorizedUserProfile() {
   );
   const profile = localTokenStorage.getJWT();
 
-  const handleLogout = useCallback(() => {
+  const onLogoutSuccess = useEffectEvent(() => {
+    queryClient.invalidateQueries({ queryKey: ["user"] });
     localTokenStorage.clear();
-  }, [localTokenStorage]);
+  });
+  const { mutate: logout, isPending } = useLogout({
+    onSuccess: onLogoutSuccess,
+  });
 
   if (!token || !profile) {
     return null;
@@ -56,10 +90,11 @@ export function AuthorizedUserProfile() {
       <TooltipButton
         variant="ghost"
         size="icon"
-        onClick={handleLogout}
+        onClick={() => logout()}
         tooltip="Logout"
+        disabled={isPending}
       >
-        <LogOutIcon className="w-2 h-2" />
+        {isPending ? <Spinner /> : <LogOutIcon className="w-2 h-2" />}
       </TooltipButton>
     </div>
   );

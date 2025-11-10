@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useSyncExternalStore } from "react";
 
 import { useGitHubAuthPopup } from "@/components/shared/GitHubAuth/useGitHubAuthPopup";
+import { useHuggingFaceAuthPopup } from "@/components/shared/HuggingFaceAuth/useHuggingFaceAuthPopup";
 import useToastNotification from "@/hooks/useToastNotification";
 
 import { convertJWTToJWTPayload, isAuthorizationRequired } from "./helpers";
@@ -24,9 +25,13 @@ function createControlledPromise<TReturn>() {
 }
 
 /**
- * for future: will be used to switch between different auth providers at build time
+ * ad-hoc switch for different auth providers
+ * assuming we allow only one auth provider at a time
  */
-const useAuthorizationPopup = useGitHubAuthPopup;
+const GH_AUTH_ENABLED = !!import.meta.env.VITE_GITHUB_CLIENT_ID;
+const useAuthorizationPopup = GH_AUTH_ENABLED
+  ? useGitHubAuthPopup
+  : useHuggingFaceAuthPopup;
 
 export function useAwaitAuthorization() {
   const notify = useToastNotification();

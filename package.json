@@ -24,9 +24,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "vite --port 3000",
+    "start": "VITE_BACKEND_API_URL=http://localhost:8000 vite --port 3000",
     "build": "vite build && tsc",
     "build:ghpages": "VITE_BASE_URL=/tangle-ui/ VITE_GITHUB_PAGES=true vite build --config vite.config.ghpages.js && tsc",
+    "build:hf": "VITE_REQUIRE_AUTHORIZATION=true VITE_HUGGING_FACE_AUTHORIZATION=true VITE_BASE_URL=/ VITE_GITHUB_PAGES=true vite build && tsc",
     "serve": "vite preview",
     "serve:ghpages": "vite preview --config vite.config.ghpages.js",
     "test": "vitest run",
