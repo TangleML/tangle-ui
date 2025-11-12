@@ -24,7 +24,7 @@ const AppMenu = () => {
             <img
               src={logoAsset}
               alt="logo"
-              className="w-10 h-10 filter invert cursor-pointer"
+              className="w-10 h-10 filter cursor-pointer"
             />
           </Link>
           <span className="text-white text-sm font-bold">{title}</span>
