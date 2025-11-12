@@ -23,7 +23,7 @@ implementation:
                 optional: true
               - name: random_seed
                 type: Integer
-                default: '0'
+                default: "0"
                 optional: true
             outputs:
               - name: network
@@ -33,7 +33,7 @@ implementation:
                 image: pytorch/pytorch:1.7.1-cuda11.0-cudnn8-runtime
                 command:
                   - sh
-                  - '-ec'
+                  - "-ec"
                   - |
                     program_path=$(mktemp)
                     printf "%s" "$0" > "$program_path"
@@ -85,30 +85,31 @@ implementation:
 
                     _outputs = create_fully_connected_pytorch_network(**_parsed_args)
                 args:
-                  - '--layer-sizes'
+                  - "--layer-sizes"
                   - inputValue: layer_sizes
                   - if:
                       cond:
                         isPresent: activation_name
                       then:
-                        - '--activation-name'
+                        - "--activation-name"
                         - inputValue: activation_name
                   - if:
                       cond:
                         isPresent: random_seed
                       then:
-                        - '--random-seed'
+                        - "--random-seed"
                         - inputValue: random_seed
-                  - '--network'
+                  - "--network"
                   - outputPath: network
         annotations:
           editor.position: '{"x":680,"y":-30}'
         arguments:
-          layer_sizes: '[8,20,1]'
+          layer_sizes: "[8,20,1]"
       dataset:
         componentRef:
-          url: https://raw.githubusercontent.com/Ark-kun/pipelines/60a2612541ec08c6a85c237d2ec7525b12543a43/components/datasets/Chicago_Taxi_Trips/component.yaml
-          spec:
+          url: https://raw.githubusercontent.com/Ark-kun/pipeline_components/57f780b15922061e59833541b71f3d099e710177/components/datasets/Chicago_Taxi_Trips/quick_start_version/component.yaml
+          digest: 42030acab16b71bbc3ad018563b5aedb94d373e72f7cb2b322bc27dbbee75e1b
+          text: |
             name: Chicago Taxi Trips dataset
             description: |
               City of Chicago Taxi Trips dataset: https://data.cityofchicago.org/Transportation/Taxi-Trips/wrvz-psew
@@ -119,48 +120,39 @@ implementation:
             metadata:
               annotations:
                 author: Alexey Volkov <alexey.volkov@ark-kun.com>
+                canonical_location: 'https://raw.githubusercontent.com/Ark-kun/pipeline_components/master/components/datasets/Chicago_Taxi_Trips/quick_start_version/component.yaml'
             inputs:
-              - name: Where
-                type: String
-                default: trip_start_timestamp>="1900-01-01" AND trip_start_timestamp<"2100-01-01"
-              - name: Limit
-                type: Integer
-                default: '1000'
-                description: Number of rows to return. The rows are randomly sampled.
-              - name: Select
-                type: String
-                default: trip_id,taxi_id,trip_start_timestamp,trip_end_timestamp,trip_seconds,trip_miles,pickup_census_tract,dropoff_census_tract,pickup_community_area,dropoff_community_area,fare,tips,tolls,extras,trip_total,payment_type,company,pickup_centroid_latitude,pickup_centroid_longitude,pickup_centroid_location,dropoff_centroid_latitude,dropoff_centroid_longitude,dropoff_centroid_location
-              - name: Format
-                type: String
-                default: csv
-                description: Output data format. Suports csv,tsv,cml,rdf,json
+            - {name: Where, type: String, default: 'trip_start_timestamp>="1900-01-01" AND trip_start_timestamp<"2100-01-01"'}
+            - {name: Limit, type: Integer, default: '1000', description: 'Number of rows to return. The rows are randomly sampled.'}
+            - {name: Select, type: String, default: 'tips,trip_seconds,trip_miles,pickup_community_area,dropoff_community_area,fare,tolls,extras,trip_total'}
+            - {name: Format, type: String, default: 'csv', description: 'Output data format. Supports csv,tsv,cml,rdf,json'}
             outputs:
-              - name: Table
-                description: Result type depends on format. CSV and TSV have header.
+            - {name: Table, description: 'Result type depends on format. CSV and TSV have header.'}
             implementation:
               container:
-                image: byrnedo/alpine-curl@sha256:548379d0a4a0c08b9e55d9d87a592b7d35d9ab3037f4936f5ccd09d0b625a342
+                # image: curlimages/curl  # Sets a non-root user which cannot write to mounted volumes. See https://github.com/curl/curl-docker/issues/22
+                image: alpine/curl:8.14.1
                 command:
-                  - sh
-                  - '-c'
-                  - |
-                    set -e -x -o pipefail
-                    output_path="$0"
-                    select="$1"
-                    where="$2"
-                    limit="$3"
-                    format="$4"
-                    mkdir -p "$(dirname "$output_path")"
-                    curl --get 'https://data.cityofchicago.org/resource/wrvz-psew.'"${format}" \
-                        --data-urlencode '$limit='"${limit}" \
-                        --data-urlencode '$where='"${where}" \
-                        --data-urlencode '$select='"${select}" \
-                        | tr -d '"' > "$output_path"  # Removing unneeded quotes around all numbers
-                  - outputPath: Table
-                  - inputValue: Select
-                  - inputValue: Where
-                  - inputValue: Limit
-                  - inputValue: Format
+                - sh
+                - -c
+                - |
+                  set -e -x -o pipefail
+                  output_path="$0"
+                  select="$1"
+                  where="$2"
+                  limit="$3"
+                  format="$4"
+                  mkdir -p "$(dirname "$output_path")"
+                  curl --get 'https://data.cityofchicago.org/resource/wrvz-psew.'"${format}" \
+                      --data-urlencode '$limit='"${limit}" \
+                      --data-urlencode '$where='"${where}" \
+                      --data-urlencode '$select='"${select}" \
+                      | sed -E 's/"([^",\]*)"/\1/g' > "$output_path"  # Removing unneeded quotes around all numbers
+                - {outputPath: Table}
+                - {inputValue: Select}
+                - {inputValue: Where}
+                - {inputValue: Limit}
+                - {inputValue: Format}
         annotations:
           editor.position: '{"x":240,"y":190}'
         arguments:
@@ -201,11 +193,11 @@ implementation:
                 image: python:3.7
                 command:
                   - sh
-                  - '-c'
+                  - "-c"
                   - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'pandas==1.0.4' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'pandas==1.0.4' --user) && "$0" "$@"
                   - python3
-                  - '-u'
-                  - '-c'
+                  - "-u"
+                  - "-c"
                   - |
                     def _make_parent_dirs_and_return_path(file_path: str):
                         import os
@@ -256,11 +248,11 @@ implementation:
 
                     _outputs = Pandas_Transform_DataFrame_in_CSV_format(**_parsed_args)
                 args:
-                  - '--table'
+                  - "--table"
                   - inputPath: table
-                  - '--transform-code'
+                  - "--transform-code"
                   - inputValue: transform_code
-                  - '--transformed-table'
+                  - "--transformed-table"
                   - outputPath: transformed_table
         annotations:
           editor.position: '{"x":680,"y":230}'
@@ -292,11 +284,11 @@ implementation:
                 optional: true
               - name: number_of_epochs
                 type: Integer
-                default: '1'
+                default: "1"
                 optional: true
               - name: learning_rate
                 type: Float
-                default: '0.1'
+                default: "0.1"
                 optional: true
               - name: optimizer_name
                 type: String
@@ -307,15 +299,15 @@ implementation:
                 optional: true
               - name: batch_size
                 type: Integer
-                default: '32'
+                default: "32"
                 optional: true
               - name: batch_log_interval
                 type: Integer
-                default: '100'
+                default: "100"
                 optional: true
               - name: random_seed
                 type: Integer
-                default: '0'
+                default: "0"
                 optional: true
             outputs:
               - name: trained_model
@@ -325,10 +317,10 @@ implementation:
                 image: pytorch/pytorch:1.7.1-cuda11.0-cudnn8-runtime
                 command:
                   - sh
-                  - '-c'
+                  - "-c"
                   - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'pandas==1.1.5' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'pandas==1.1.5' --user) && "$0" "$@"
                   - sh
-                  - '-ec'
+                  - "-ec"
                   - |
                     program_path=$(mktemp)
                     printf "%s" "$0" > "$program_path"
@@ -459,61 +451,61 @@ implementation:
 
                     _outputs = train_pytorch_model_from_csv(**_parsed_args)
                 args:
-                  - '--model'
+                  - "--model"
                   - inputPath: model
-                  - '--training-data'
+                  - "--training-data"
                   - inputPath: training_data
-                  - '--label-column-name'
+                  - "--label-column-name"
                   - inputValue: label_column_name
                   - if:
                       cond:
                         isPresent: loss_function_name
                       then:
-                        - '--loss-function-name'
+                        - "--loss-function-name"
                         - inputValue: loss_function_name
                   - if:
                       cond:
                         isPresent: number_of_epochs
                       then:
-                        - '--number-of-epochs'
+                        - "--number-of-epochs"
                         - inputValue: number_of_epochs
                   - if:
                       cond:
                         isPresent: learning_rate
                       then:
-                        - '--learning-rate'
+                        - "--learning-rate"
                         - inputValue: learning_rate
                   - if:
                       cond:
                         isPresent: optimizer_name
                       then:
-                        - '--optimizer-name'
+                        - "--optimizer-name"
                         - inputValue: optimizer_name
                   - if:
                       cond:
                         isPresent: optimizer_parameters
                       then:
-                        - '--optimizer-parameters'
+                        - "--optimizer-parameters"
                         - inputValue: optimizer_parameters
                   - if:
                       cond:
                         isPresent: batch_size
                       then:
-                        - '--batch-size'
+                        - "--batch-size"
                         - inputValue: batch_size
                   - if:
                       cond:
                         isPresent: batch_log_interval
                       then:
-                        - '--batch-log-interval'
+                        - "--batch-log-interval"
                         - inputValue: batch_log_interval
                   - if:
                       cond:
                         isPresent: random_seed
                       then:
-                        - '--random-seed'
+                        - "--random-seed"
                         - inputValue: random_seed
-                  - '--trained-model'
+                  - "--trained-model"
                   - outputPath: trained_model
         annotations:
           editor.position: '{"x":1180,"y":290}'
@@ -549,7 +541,7 @@ implementation:
                 image: pytorch/pytorch:1.7.1-cuda11.0-cudnn8-runtime
                 command:
                   - sh
-                  - '-ec'
+                  - "-ec"
                   - |
                     program_path=$(mktemp)
                     printf "%s" "$0" > "$program_path"
@@ -592,11 +584,11 @@ implementation:
 
                     _outputs = convert_to_onnx_from_pytorch_script_module(**_parsed_args)
                 args:
-                  - '--model'
+                  - "--model"
                   - inputPath: model
-                  - '--list-of-input-shapes'
+                  - "--list-of-input-shapes"
                   - inputValue: list_of_input_shapes
-                  - '--converted-model'
+                  - "--converted-model"
                   - outputPath: converted_model
         annotations:
           editor.position: '{"x":1580,"y":320}'
@@ -605,4 +597,4 @@ implementation:
             taskOutput:
               taskId: Train pytorch model from csv
               outputName: trained_model
-          list_of_input_shapes: '[[8]]'
+          list_of_input_shapes: "[[8]]"
