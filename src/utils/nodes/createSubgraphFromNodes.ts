@@ -107,7 +107,13 @@ export const createSubgraphFromNodes = async (
   });
 
   // Handle selected Input & Output Nodes
-  processSelectedInputNodes(inputNodes, bounds, subgraphInputs);
+  processSelectedInputNodes(
+    inputNodes,
+    bounds,
+    subgraphInputs,
+    subgraphArguments,
+    currentComponentSpec,
+  );
 
   processSelectedOutputNodes(
     outputNodes,
@@ -195,6 +201,8 @@ const processSelectedInputNodes = (
   inputNodes: Node[],
   bounds: Bounds,
   subgraphInputs: InputSpec[],
+  subgraphArguments: Record<string, ArgumentType>,
+  currentComponentSpec: ComponentSpec,
 ): void => {
   inputNodes.forEach((node) => {
     const inputName = node.data.label as string | undefined;
@@ -219,6 +227,15 @@ const processSelectedInputNodes = (
         "editor.position": JSON.stringify(normalizedPosition),
       },
     });
+
+    // Migrate the Input Node value to the subgraph arguments
+    const originalInputSpec = currentComponentSpec.inputs?.find(
+      (input) => input.name === inputName,
+    );
+
+    if (originalInputSpec?.value) {
+      subgraphArguments[inputName] = originalInputSpec.value;
+    }
   });
 };
 
