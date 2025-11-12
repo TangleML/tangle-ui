@@ -26,7 +26,8 @@ describe("addTask", () => {
   it("should do nothing if dropped data is empty", () => {
     const result = addTask("task", null, position, mockComponentSpec);
 
-    expect(result).toStrictEqual(mockComponentSpec);
+    expect(result.spec).toStrictEqual(mockComponentSpec);
+    expect(result.taskId).toBeUndefined();
   });
 
   it("should add a task node when task type is dropped", () => {
@@ -42,7 +43,7 @@ describe("addTask", () => {
 
     const result = addTask("task", mockTaskSpec, position, mockComponentSpec);
 
-    const newComponentSpec = result as typeof mockComponentSpec & {
+    const newComponentSpec = result.spec as typeof mockComponentSpec & {
       implementation: { graph: { tasks: Record<string, any> } };
     };
 
@@ -50,7 +51,11 @@ describe("addTask", () => {
       Object.keys(newComponentSpec.implementation.graph.tasks).length,
     ).toBe(1);
 
-    const taskId = Object.keys(newComponentSpec.implementation.graph.tasks)[0];
+    const taskId = result.taskId;
+    expect(taskId).toBeDefined();
+
+    if (!taskId) return;
+
     const task = newComponentSpec.implementation.graph.tasks[taskId];
     expect(task.annotations).toHaveProperty("editor.position");
     expect(task.annotations["editor.position"]).toBe(
@@ -61,7 +66,7 @@ describe("addTask", () => {
   it("should add an input node when input type is dropped", () => {
     const result = addTask("input", null, position, mockComponentSpec);
 
-    const newComponentSpec = result as typeof mockComponentSpec & {
+    const newComponentSpec = result.spec as typeof mockComponentSpec & {
       inputs: Array<{ name: string; annotations: Record<string, any> }>;
     };
 
@@ -70,12 +75,13 @@ describe("addTask", () => {
     expect(newComponentSpec.inputs[0].annotations).toHaveProperty(
       "editor.position",
     );
+    expect(result.taskId).toBeUndefined();
   });
 
   it("should add an output node when output type is dropped", () => {
     const result = addTask("output", null, position, mockComponentSpec);
 
-    const newComponentSpec = result as typeof mockComponentSpec & {
+    const newComponentSpec = result.spec as typeof mockComponentSpec & {
       outputs: Array<{ name: string; annotations: Record<string, any> }>;
     };
 
@@ -84,6 +90,7 @@ describe("addTask", () => {
     expect(newComponentSpec.outputs[0].annotations).toHaveProperty(
       "editor.position",
     );
+    expect(result.taskId).toBeUndefined();
   });
 
   it("should create unique names for tasks when duplicates exist", () => {
@@ -115,7 +122,11 @@ describe("addTask", () => {
       newMockComponentSpec,
     );
 
-    const newComponentSpec = result;
+    const newComponentSpec = result.spec;
+    const taskId = result.taskId;
+
+    expect(taskId).toBeDefined();
+    if (!taskId) return;
 
     const taskIds =
       "graph" in newComponentSpec.implementation &&
@@ -134,7 +145,7 @@ describe("addTask", () => {
 
     const result = addTask("input", null, position, newMockComponentSpec);
 
-    const newComponentSpec = result as typeof newMockComponentSpec & {
+    const newComponentSpec = result.spec as typeof newMockComponentSpec & {
       inputs: Array<{ name: string; annotations: Record<string, any> }>;
     };
 
@@ -150,7 +161,7 @@ describe("addTask", () => {
 
     const result = addTask("output", null, position, newMockComponentSpec);
 
-    const newComponentSpec = result as typeof newMockComponentSpec & {
+    const newComponentSpec = result.spec as typeof newMockComponentSpec & {
       outputs: Array<{ name: string; annotations: Record<string, any> }>;
     };
 
