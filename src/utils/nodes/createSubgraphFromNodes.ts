@@ -37,6 +37,7 @@ const IO_NODE_SPACING_Y = IO_NODE_HEIGHT + GAP;
 export const createSubgraphFromNodes = async (
   selectedNodes: Node[],
   currentComponentSpec: ComponentSpec,
+  name?: string,
 ): Promise<TaskSpec> => {
   if (!isGraphImplementation(currentComponentSpec.implementation)) {
     throw new Error(
@@ -127,10 +128,8 @@ export const createSubgraphFromNodes = async (
   // Create the replacement task that represents the subgraph
   const subgraphPosition = calculateNodesCenter(selectedNodes);
 
-  const subgraphName = getUniqueTaskName(
-    currentGraphSpec,
-    "Generated Subgraph",
-  );
+  const subgraphName =
+    name ?? getUniqueTaskName(currentGraphSpec, "Generated Subgraph");
 
   const subgraphTask = await createSubgraphTask(
     subgraphName,
