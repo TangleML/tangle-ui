@@ -8,8 +8,9 @@ implementation:
     tasks:
       Chicago Taxi Trips dataset:
         componentRef:
-          url: https://raw.githubusercontent.com/Ark-kun/pipelines/2463ecda532517462590d75e6e14a8af6b55869a/components/datasets/Chicago_Taxi_Trips/component.yaml
-          spec:
+          url: https://raw.githubusercontent.com/Ark-kun/pipeline_components/57f780b15922061e59833541b71f3d099e710177/components/datasets/Chicago_Taxi_Trips/quick_start_version/component.yaml
+          digest: 42030acab16b71bbc3ad018563b5aedb94d373e72f7cb2b322bc27dbbee75e1b
+          text: |
             name: Chicago Taxi Trips dataset
             description: |
               City of Chicago Taxi Trips dataset: https://data.cityofchicago.org/Transportation/Taxi-Trips/wrvz-psew
@@ -20,48 +21,39 @@ implementation:
             metadata:
               annotations:
                 author: Alexey Volkov <alexey.volkov@ark-kun.com>
+                canonical_location: 'https://raw.githubusercontent.com/Ark-kun/pipeline_components/master/components/datasets/Chicago_Taxi_Trips/quick_start_version/component.yaml'
             inputs:
-              - name: Where
-                type: String
-                default: trip_start_timestamp>="1900-01-01" AND trip_start_timestamp<"2100-01-01"
-              - name: Limit
-                type: Integer
-                default: '1000'
-                description: Number of rows to return. The rows are randomly sampled.
-              - name: Select
-                type: String
-                default: tips,trip_seconds,trip_miles,pickup_community_area,dropoff_community_area,fare,tolls,extras,trip_total
-              - name: Format
-                type: String
-                default: csv
-                description: Output data format. Suports csv,tsv,cml,rdf,json
+            - {name: Where, type: String, default: 'trip_start_timestamp>="1900-01-01" AND trip_start_timestamp<"2100-01-01"'}
+            - {name: Limit, type: Integer, default: '1000', description: 'Number of rows to return. The rows are randomly sampled.'}
+            - {name: Select, type: String, default: 'tips,trip_seconds,trip_miles,pickup_community_area,dropoff_community_area,fare,tolls,extras,trip_total'}
+            - {name: Format, type: String, default: 'csv', description: 'Output data format. Supports csv,tsv,cml,rdf,json'}
             outputs:
-              - name: Table
-                description: Result type depends on format. CSV and TSV have header.
+            - {name: Table, description: 'Result type depends on format. CSV and TSV have header.'}
             implementation:
               container:
-                image: byrnedo/alpine-curl@sha256:548379d0a4a0c08b9e55d9d87a592b7d35d9ab3037f4936f5ccd09d0b625a342
+                # image: curlimages/curl  # Sets a non-root user which cannot write to mounted volumes. See https://github.com/curl/curl-docker/issues/22
+                image: alpine/curl:8.14.1
                 command:
-                  - sh
-                  - '-c'
-                  - |
-                    set -e -x -o pipefail
-                    output_path="$0"
-                    select="$1"
-                    where="$2"
-                    limit="$3"
-                    format="$4"
-                    mkdir -p "$(dirname "$output_path")"
-                    curl --get 'https://data.cityofchicago.org/resource/wrvz-psew.'"${format}" \
-                        --data-urlencode '$limit='"${limit}" \
-                        --data-urlencode '$where='"${where}" \
-                        --data-urlencode '$select='"${select}" \
-                        | tr -d '"' > "$output_path"  # Removing unneeded quotes around all numbers
-                  - outputPath: Table
-                  - inputValue: Select
-                  - inputValue: Where
-                  - inputValue: Limit
-                  - inputValue: Format
+                - sh
+                - -c
+                - |
+                  set -e -x -o pipefail
+                  output_path="$0"
+                  select="$1"
+                  where="$2"
+                  limit="$3"
+                  format="$4"
+                  mkdir -p "$(dirname "$output_path")"
+                  curl --get 'https://data.cityofchicago.org/resource/wrvz-psew.'"${format}" \
+                      --data-urlencode '$limit='"${limit}" \
+                      --data-urlencode '$where='"${where}" \
+                      --data-urlencode '$select='"${select}" \
+                      | sed -E 's/"([^",\]*)"/\1/g' > "$output_path"  # Removing unneeded quotes around all numbers
+                - {outputPath: Table}
+                - {inputValue: Select}
+                - {inputValue: Where}
+                - {inputValue: Limit}
+                - {inputValue: Format}
         annotations:
           editor.position: '{"x":-240,"y":310}'
         arguments:
@@ -114,10 +106,10 @@ implementation:
                 image: python:3.9
                 command:
                   - sh
-                  - '-c'
+                  - "-c"
                   - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'git+https://github.com/Ark-kun/python-aiplatform@8f61efb3a7903a6e0ef47d957f26ef3083581c7e#egg=google-cloud-aiplatform&subdirectory=.' 'google-api-python-client==2.29.0' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'git+https://github.com/Ark-kun/python-aiplatform@8f61efb3a7903a6e0ef47d957f26ef3083581c7e#egg=google-cloud-aiplatform&subdirectory=.' 'google-api-python-client==2.29.0' --user) && "$0" "$@"
                   - sh
-                  - '-ec'
+                  - "-ec"
                   - |
                     program_path=$(mktemp)
                     printf "%s" "$0" > "$program_path"
@@ -267,45 +259,45 @@ implementation:
                         with open(output_file, 'w') as f:
                             f.write(_output_serializers[idx](_outputs[idx]))
                 args:
-                  - '--data'
+                  - "--data"
                   - inputPath: data
                   - if:
                       cond:
                         isPresent: display_name
                       then:
-                        - '--display-name'
+                        - "--display-name"
                         - inputValue: display_name
                   - if:
                       cond:
                         isPresent: labels
                       then:
-                        - '--labels'
+                        - "--labels"
                         - inputValue: labels
                   - if:
                       cond:
                         isPresent: project
                       then:
-                        - '--project'
+                        - "--project"
                         - inputValue: project
                   - if:
                       cond:
                         isPresent: location
                       then:
-                        - '--location'
+                        - "--location"
                         - inputValue: location
                   - if:
                       cond:
                         isPresent: encryption_spec_key_name
                       then:
-                        - '--encryption-spec-key-name'
+                        - "--encryption-spec-key-name"
                         - inputValue: encryption_spec_key_name
                   - if:
                       cond:
                         isPresent: staging_bucket
                       then:
-                        - '--staging-bucket'
+                        - "--staging-bucket"
                         - inputValue: staging_bucket
-                  - '----output-paths'
+                  - "----output-paths"
                   - outputPath: dataset_name
                   - outputPath: dataset_dict
         annotations:
@@ -354,21 +346,21 @@ implementation:
                 description: |-
                   Required. The fraction of the input data that is to be
                   used to train the Model. This is ignored if Dataset is not provided.
-                default: '0.8'
+                default: "0.8"
                 optional: true
               - name: validation_fraction_split
                 type: Float
                 description: |-
                   Required. The fraction of the input data that is to be
                   used to validate the Model. This is ignored if Dataset is not provided.
-                default: '0.1'
+                default: "0.1"
                 optional: true
               - name: test_fraction_split
                 type: Float
                 description: |-
                   Required. The fraction of the input data that is to be
                   used to evaluate the Model. This is ignored if Dataset is not provided.
-                default: '0.1'
+                default: "0.1"
                 optional: true
               - name: predefined_split_column_name
                 type: String
@@ -407,7 +399,7 @@ implementation:
                   Model for the given training set, the training won't be attempted and
                   will error.
                   The minimum value is 1000 and the maximum is 72000.
-                default: '1000'
+                default: "1000"
                 optional: true
               - name: model_display_name
                 type: String
@@ -426,7 +418,7 @@ implementation:
                   that training might stop before the entire training budget has been
                   used, if further training does no longer brings significant improvement
                   to the model.
-                default: 'False'
+                default: "False"
                 optional: true
               - name: optimization_objective
                 type: String
@@ -496,10 +488,10 @@ implementation:
                 image: python:3.9
                 command:
                   - sh
-                  - '-c'
+                  - "-c"
                   - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'google-cloud-aiplatform==1.6.2' 'google-api-python-client==2.29.0' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'google-cloud-aiplatform==1.6.2' 'google-api-python-client==2.29.0' --user) && "$0" "$@"
                   - sh
-                  - '-ec'
+                  - "-ec"
                   - |
                     program_path=$(mktemp)
                     printf "%s" "$0" > "$program_path"
@@ -800,97 +792,97 @@ implementation:
                         with open(output_file, 'w') as f:
                             f.write(_output_serializers[idx](_outputs[idx]))
                 args:
-                  - '--dataset-name'
+                  - "--dataset-name"
                   - inputValue: dataset_name
-                  - '--target-column'
+                  - "--target-column"
                   - inputValue: target_column
-                  - '--optimization-prediction-type'
+                  - "--optimization-prediction-type"
                   - inputValue: optimization_prediction_type
                   - if:
                       cond:
                         isPresent: training_fraction_split
                       then:
-                        - '--training-fraction-split'
+                        - "--training-fraction-split"
                         - inputValue: training_fraction_split
                   - if:
                       cond:
                         isPresent: validation_fraction_split
                       then:
-                        - '--validation-fraction-split'
+                        - "--validation-fraction-split"
                         - inputValue: validation_fraction_split
                   - if:
                       cond:
                         isPresent: test_fraction_split
                       then:
-                        - '--test-fraction-split'
+                        - "--test-fraction-split"
                         - inputValue: test_fraction_split
                   - if:
                       cond:
                         isPresent: predefined_split_column_name
                       then:
-                        - '--predefined-split-column-name'
+                        - "--predefined-split-column-name"
                         - inputValue: predefined_split_column_name
                   - if:
                       cond:
                         isPresent: weight_column
                       then:
-                        - '--weight-column'
+                        - "--weight-column"
                         - inputValue: weight_column
                   - if:
                       cond:
                         isPresent: budget_milli_node_hours
                       then:
-                        - '--budget-milli-node-hours'
+                        - "--budget-milli-node-hours"
                         - inputValue: budget_milli_node_hours
                   - if:
                       cond:
                         isPresent: model_display_name
                       then:
-                        - '--model-display-name'
+                        - "--model-display-name"
                         - inputValue: model_display_name
                   - if:
                       cond:
                         isPresent: disable_early_stopping
                       then:
-                        - '--disable-early-stopping'
+                        - "--disable-early-stopping"
                         - inputValue: disable_early_stopping
                   - if:
                       cond:
                         isPresent: optimization_objective
                       then:
-                        - '--optimization-objective'
+                        - "--optimization-objective"
                         - inputValue: optimization_objective
                   - if:
                       cond:
                         isPresent: optimization_objective_recall_value
                       then:
-                        - '--optimization-objective-recall-value'
+                        - "--optimization-objective-recall-value"
                         - inputValue: optimization_objective_recall_value
                   - if:
                       cond:
                         isPresent: optimization_objective_precision_value
                       then:
-                        - '--optimization-objective-precision-value'
+                        - "--optimization-objective-precision-value"
                         - inputValue: optimization_objective_precision_value
                   - if:
                       cond:
                         isPresent: project
                       then:
-                        - '--project'
+                        - "--project"
                         - inputValue: project
                   - if:
                       cond:
                         isPresent: location
                       then:
-                        - '--location'
+                        - "--location"
                         - inputValue: location
                   - if:
                       cond:
                         isPresent: encryption_spec_key_name
                       then:
-                        - '--encryption-spec-key-name'
+                        - "--encryption-spec-key-name"
                         - inputValue: encryption_spec_key_name
-                  - '----output-paths'
+                  - "----output-paths"
                   - outputPath: model_name
                   - outputPath: model_dict
         annotations:
@@ -938,7 +930,7 @@ implementation:
                   model will be always deployed on. If traffic against it increases,
                   it may dynamically be deployed onto more replicas, and as traffic
                   decreases, some of these extra replicas may be freed.
-                default: '1'
+                default: "1"
                 optional: true
               - name: max_replica_count
                 type: Integer
@@ -952,7 +944,7 @@ implementation:
                   handle, a portion of the traffic will be dropped. If this value
                   is not provided, the smaller value of min_replica_count or 1 will
                   be used.
-                default: '1'
+                default: "1"
                 optional: true
               - name: accelerator_type
                 type: String
@@ -975,10 +967,10 @@ implementation:
                 image: python:3.9
                 command:
                   - sh
-                  - '-c'
+                  - "-c"
                   - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'google-cloud-aiplatform==1.7.0' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'google-cloud-aiplatform==1.7.0' --user) && "$0" "$@"
                   - sh
-                  - '-ec'
+                  - "-ec"
                   - |
                     program_path=$(mktemp)
                     printf "%s" "$0" > "$program_path"
@@ -1111,45 +1103,45 @@ implementation:
                         with open(output_file, 'w') as f:
                             f.write(_output_serializers[idx](_outputs[idx]))
                 args:
-                  - '--model-name'
+                  - "--model-name"
                   - inputValue: model_name
                   - if:
                       cond:
                         isPresent: endpoint_name
                       then:
-                        - '--endpoint-name'
+                        - "--endpoint-name"
                         - inputValue: endpoint_name
                   - if:
                       cond:
                         isPresent: machine_type
                       then:
-                        - '--machine-type'
+                        - "--machine-type"
                         - inputValue: machine_type
                   - if:
                       cond:
                         isPresent: min_replica_count
                       then:
-                        - '--min-replica-count'
+                        - "--min-replica-count"
                         - inputValue: min_replica_count
                   - if:
                       cond:
                         isPresent: max_replica_count
                       then:
-                        - '--max-replica-count'
+                        - "--max-replica-count"
                         - inputValue: max_replica_count
                   - if:
                       cond:
                         isPresent: accelerator_type
                       then:
-                        - '--accelerator-type'
+                        - "--accelerator-type"
                         - inputValue: accelerator_type
                   - if:
                       cond:
                         isPresent: accelerator_count
                       then:
-                        - '--accelerator-count'
+                        - "--accelerator-count"
                         - inputValue: accelerator_count
-                  - '----output-paths'
+                  - "----output-paths"
                   - outputPath: endpoint_name
                   - outputPath: endpoint_dict
         annotations:
@@ -1183,10 +1175,10 @@ implementation:
                 image: python:3.9
                 command:
                   - sh
-                  - '-c'
+                  - "-c"
                   - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'google-cloud-logging==2.7.0' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'google-cloud-logging==2.7.0' --user) && "$0" "$@"
                   - sh
-                  - '-ec'
+                  - "-ec"
                   - |
                     program_path=$(mktemp)
                     printf "%s" "$0" > "$program_path"
@@ -1272,9 +1264,9 @@ implementation:
                         with open(output_file, 'w') as f:
                             f.write(_output_serializers[idx](_outputs[idx]))
                 args:
-                  - '--model-name'
+                  - "--model-name"
                   - inputValue: model_name
-                  - '----output-paths'
+                  - "----output-paths"
                   - outputPath: tuning_trials
                   - outputPath: model_structures
                   - outputPath: extra_entries
