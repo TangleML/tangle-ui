@@ -510,11 +510,11 @@ export const isGraphImplementationOutput = (
   implementation.graph !== undefined;
 
 export const isTaskOutputArgument = (
-  arg: ArgumentType,
+  arg?: ArgumentType,
 ): arg is TaskOutputArgument =>
   typeof arg === "object" && arg !== null && "taskOutput" in arg;
 
 export const isGraphInputArgument = (
-  arg: ArgumentType,
+  arg?: ArgumentType,
 ): arg is GraphInputArgument =>
   typeof arg === "object" && arg !== null && "graphInput" in arg;

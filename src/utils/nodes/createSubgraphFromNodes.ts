@@ -34,11 +34,26 @@ const IO_NODE_HEIGHT = 100;
 const IO_NODE_SPACING_X = IO_NODE_WIDTH + GAP;
 const IO_NODE_SPACING_Y = IO_NODE_HEIGHT + GAP;
 
+export const PLACEHOLDER_SUBGRAPH_ID = "PLACEHOLDER_SUBGRAPH_ID";
+export const GRAPH_OUTPUT = "GRAPH_OUTPUT";
+
+export type ConnectionMapping = {
+  originalTaskId: string;
+  originalOutputName: string;
+  newTaskId: string;
+  newOutputName: string;
+  targetTaskId: string;
+  targetInputName: string;
+};
+
 export const createSubgraphFromNodes = async (
   selectedNodes: Node[],
   currentComponentSpec: ComponentSpec,
   name?: string,
-): Promise<TaskSpec> => {
+): Promise<{
+  subgraphTask: TaskSpec;
+  connectionMappings: ConnectionMapping[];
+}> => {
   if (!isGraphImplementation(currentComponentSpec.implementation)) {
     throw new Error(
       "Current component spec does not have a graph implementation",
@@ -58,6 +73,8 @@ export const createSubgraphFromNodes = async (
   const subgraphOutputValues: Record<string, TaskOutputArgument> = {};
 
   const bounds = getNodesBounds(selectedNodes);
+
+  const connectionMappings: ConnectionMapping[] = [];
 
   // Copy selected tasks to subgraph and handle external connections
   taskNodes.forEach((node) => {
@@ -93,6 +110,7 @@ export const createSubgraphFromNodes = async (
       subgraphOutputs,
       subgraphOutputValues,
       currentGraphSpec,
+      connectionMappings,
     );
 
     const newTask: TaskSpec = {
@@ -148,7 +166,7 @@ export const createSubgraphFromNodes = async (
     subgraphTask.componentRef.text = text;
   }
 
-  return subgraphTask;
+  return { subgraphTask, connectionMappings };
 };
 
 const createSubgraphTask = async (
@@ -419,6 +437,7 @@ const processTaskOutputConnections = (
   subgraphOutputs: OutputSpec[],
   subgraphOutputValues: Record<string, TaskOutputArgument>,
   currentGraphSpec: GraphSpec,
+  connectionMappings: ConnectionMapping[],
 ): void => {
   const taskOutputs = taskSpec.componentRef?.spec?.outputs || [];
   let externalOutputCount = 0;
@@ -433,6 +452,12 @@ const processTaskOutputConnections = (
     const outputName = outputSpec.name;
     const type = outputSpec.type || "string";
 
+    const externalTaskConnections: Array<{
+      taskId: string;
+      inputName: string;
+    }> = [];
+    const externalGraphConnections: string[] = [];
+
     // Mock this node as an Output Argument to compare against
     const mockOutputArg = {
       taskOutput: {
@@ -442,34 +467,40 @@ const processTaskOutputConnections = (
       },
     };
 
-    const isConsumedByExternalTasks = Object.entries(
-      currentGraphSpec.tasks,
-    ).some(([externalTaskId, externalTask]) => {
-      if (selectedTasks.some((node) => node.data.taskId === externalTaskId))
-        return false;
-      if (!externalTask.arguments) return false;
+    Object.entries(currentGraphSpec.tasks).forEach(
+      ([externalTaskId, externalTask]) => {
+        if (selectedTasks.some((node) => node.data.taskId === externalTaskId))
+          return;
+        if (!externalTask.arguments) return;
 
-      return Object.values(externalTask.arguments).some((arg: ArgumentType) =>
-        compareArguments(arg, mockOutputArg),
-      );
-    });
+        Object.entries(externalTask.arguments).forEach(([inputName, arg]) => {
+          if (compareArguments(arg, mockOutputArg)) {
+            externalTaskConnections.push({ taskId: externalTaskId, inputName });
+          }
+        });
+      },
+    );
 
-    const isConsumedByExternalOutputNodes = Object.entries(
-      currentGraphSpec.outputValues ?? [],
-    ).some(
-      ([outputNodeName, outputValue]) =>
-        compareArguments(outputValue, mockOutputArg) &&
-        !selectedOutputNodes.some((node) => node.data.label === outputNodeName),
+    Object.entries(currentGraphSpec.outputValues ?? []).forEach(
+      ([outputNodeName, outputValue]) => {
+        if (
+          selectedOutputNodes.some((node) => node.data.label === outputNodeName)
+        )
+          return;
+
+        if (compareArguments(outputValue, mockOutputArg)) {
+          externalGraphConnections.push(outputNodeName);
+        }
+      },
     );
 
     const isConsumedExternally =
-      isConsumedByExternalTasks || isConsumedByExternalOutputNodes;
+      externalTaskConnections.length > 0 || externalGraphConnections.length > 0;
 
     if (isConsumedExternally) {
       const existingOutputNames = subgraphOutputs.map((output) => output.name);
       const allReservedNames = [...existingOutputNames, ...selectedOutputNames];
       const uniqueOutputName = getUniqueName(allReservedNames, outputName);
-      const displayName = uniqueOutputName.replace(/_/g, " ");
 
       const outputPosition = {
         x: taskPosition.x + IO_NODE_SPACING_X,
@@ -477,20 +508,42 @@ const processTaskOutputConnections = (
       };
 
       subgraphOutputs.push({
-        name: displayName,
+        name: uniqueOutputName,
         type,
         annotations: {
           "editor.position": JSON.stringify(outputPosition),
         },
       });
 
-      subgraphOutputValues[displayName] = {
+      subgraphOutputValues[uniqueOutputName] = {
         taskOutput: {
           taskId,
           outputName,
           type,
         },
       };
+
+      externalTaskConnections.forEach(({ taskId: targetTaskId, inputName }) => {
+        connectionMappings.push({
+          originalTaskId: taskId,
+          originalOutputName: outputName,
+          newTaskId: PLACEHOLDER_SUBGRAPH_ID,
+          newOutputName: uniqueOutputName,
+          targetTaskId,
+          targetInputName: inputName,
+        });
+      });
+
+      externalGraphConnections.forEach((outputNodeName) => {
+        connectionMappings.push({
+          originalTaskId: taskId,
+          originalOutputName: outputName,
+          newTaskId: PLACEHOLDER_SUBGRAPH_ID,
+          newOutputName: uniqueOutputName,
+          targetTaskId: GRAPH_OUTPUT,
+          targetInputName: outputNodeName,
+        });
+      });
 
       externalOutputCount++;
     }
