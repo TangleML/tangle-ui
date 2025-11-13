@@ -14,7 +14,7 @@ Please take a look at the short video demonstrating the first version of the vis
 
 ## Demo
 
-[Demo]([https://cloud-pipelines.net/pipeline-studio-app](https://tangleml-tangle.hf.space/#/quick-start))
+[Demo](<[https://cloud-pipelines.net/pipeline-studio-app](https://tangleml-tangle.hf.space/#/quick-start)>)
 
 The experimental new version of the Tangle app is now available at <https://tangleml-tangle.hf.space/#/quick-start> . No registration is required to experiment with building pipelines. To install your own app instance, [duplicate](https://huggingface.co/spaces/TangleML/tangle?duplicate=true) the HuggingFace space or follow the [backend installation instructions](https://github.com/Cloud-Pipelines/backend?tab=readme-ov-file#installation).
 

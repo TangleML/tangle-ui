@@ -6,6 +6,11 @@
  * @copyright 2021 Alexey Volkov <alexey.volkov+oss@ark-kun.com>
  */
 
+import type {
+  ContainerImplementationOutput,
+  GraphImplementationOutput,
+} from "@/api/types.gen";
+
 export type TypeSpecType =
   | string
   | {
@@ -490,6 +495,19 @@ export const isContainerImplementation = (
 export const isGraphImplementation = (
   implementation: ImplementationType,
 ): implementation is GraphImplementation => "graph" in implementation;
+
+export const isGraphImplementationOutput = (
+  implementation:
+    | ContainerImplementationOutput
+    | GraphImplementationOutput
+    | null
+    | undefined,
+): implementation is GraphImplementationOutput =>
+  implementation !== null &&
+  implementation !== undefined &&
+  "graph" in implementation &&
+  implementation.graph !== null &&
+  implementation.graph !== undefined;
 
 export const isTaskOutputArgument = (
   arg: ArgumentType,

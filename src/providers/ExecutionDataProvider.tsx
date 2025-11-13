@@ -11,6 +11,8 @@ import {
   createRequiredContext,
   useRequiredContext,
 } from "@/hooks/useRequiredContext";
+import type { BreadcrumbSegment } from "@/hooks/useSubgraphBreadcrumbs";
+import { useSubgraphBreadcrumbs } from "@/hooks/useSubgraphBreadcrumbs";
 import { convertExecutionStatsToStatusCounts } from "@/services/executionService";
 import type { TaskStatusCounts } from "@/types/pipelineRun";
 
@@ -33,6 +35,7 @@ interface ExecutionDataContextType {
   isLoading: boolean;
   error: Error | null;
   taskStatusCountsMap: Map<string, TaskStatusCounts>;
+  segments: BreadcrumbSegment[];
 }
 
 const ExecutionDataContext = createRequiredContext<ExecutionDataContextType>(
@@ -124,10 +127,14 @@ const findExecutionIdAtPath = (
 
 export function ExecutionDataProvider({
   pipelineRunId,
+  subgraphExecutionId,
   children,
-}: PropsWithChildren<{ pipelineRunId: string }>) {
+}: PropsWithChildren<{
+  pipelineRunId: string;
+  subgraphExecutionId?: string;
+}>) {
   const queryClient = useQueryClient();
-  const { currentSubgraphPath } = useComponentSpec();
+  const { currentSubgraphPath, navigateToPath } = useComponentSpec();
 
   const executionDataCache = useRef<Map<string, CachedExecutionData>>(
     new Map(),
@@ -143,9 +150,48 @@ export function ExecutionDataProvider({
   const { details: rootDetails, state: rootState } = executionData ?? {};
   const runId = rootDetails?.pipeline_run_id;
 
+  const {
+    path: urlDerivedPath,
+    segments,
+    isLoading: isLoadingBreadcrumbs,
+  } = useSubgraphBreadcrumbs(rootExecutionId, subgraphExecutionId);
+
+  // Wait until rootDetails is loaded so the component spec is available
+  useEffect(() => {
+    // Don't try to navigate until we have the root details loaded
+    // This ensures the component spec is set before we validate paths
+    if (!rootDetails) {
+      return;
+    }
+
+    if (subgraphExecutionId && urlDerivedPath.length > 0) {
+      const pathsAreEqual =
+        currentSubgraphPath.length === urlDerivedPath.length &&
+        currentSubgraphPath.every(
+          (segment, index) => segment === urlDerivedPath[index],
+        );
+
+      if (!pathsAreEqual) {
+        navigateToPath(urlDerivedPath);
+      }
+    } else if (!subgraphExecutionId && currentSubgraphPath.length > 1) {
+      navigateToPath(["root"]);
+    }
+  }, [
+    subgraphExecutionId,
+    urlDerivedPath,
+    currentSubgraphPath,
+    navigateToPath,
+    rootDetails,
+  ]);
+
   const isAtRoot = isAtRootLevel(currentSubgraphPath);
 
   const currentExecutionId = useMemo(() => {
+    if (subgraphExecutionId) {
+      return subgraphExecutionId;
+    }
+
     if (isAtRoot) {
       return rootExecutionId;
     }
@@ -158,6 +204,7 @@ export function ExecutionDataProvider({
       queryClient,
     );
   }, [
+    subgraphExecutionId,
     currentSubgraphPath,
     rootExecutionId,
     rootDetails,
@@ -176,7 +223,13 @@ export function ExecutionDataProvider({
 
   const details = isAtRoot ? rootDetails : nestedDetails;
   const state = isAtRoot ? rootState : nestedState;
-  const isLoading = isAtRoot ? isLoadingPipelineRunData : isNestedLoading;
+
+  // If we have a subgraph execution ID in the URL, we need to wait for breadcrumbs to load
+  // before rendering to avoid flashing the root level
+  const isLoading = isAtRoot
+    ? isLoadingPipelineRunData ||
+      (!!subgraphExecutionId && isLoadingBreadcrumbs)
+    : isNestedLoading || isLoadingBreadcrumbs;
   const error = isAtRoot ? pipelineRunError : nestedError;
 
   useEffect(() => {
@@ -215,6 +268,7 @@ export function ExecutionDataProvider({
       isLoading,
       error,
       taskStatusCountsMap,
+      segments,
     }),
     [
       currentExecutionId,
@@ -227,6 +281,7 @@ export function ExecutionDataProvider({
       isLoading,
       error,
       taskStatusCountsMap,
+      segments,
     ],
   );
 
