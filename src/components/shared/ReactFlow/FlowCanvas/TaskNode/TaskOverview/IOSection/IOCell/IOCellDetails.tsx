@@ -2,7 +2,7 @@ import type { ArtifactDataResponse } from "@/api/types.gen";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Link } from "@/components/ui/link";
 import type { InputSpec, OutputSpec } from "@/utils/componentSpec";
-import { convertGcsUrlToBrowserUrl } from "@/utils/URL";
+import { convertArtifactUriToHTTPUrl } from "@/utils/URL";
 
 import type { IOCellActions } from "./IOCell";
 import IOCodeViewer from "./IOCodeViewer";
@@ -34,7 +34,7 @@ const IOCellDetails = ({ io, artifactData, actions }: IOCellDetailsProps) => {
           <span className="font-medium text-xs min-w-24 max-w-24">URI:</span>
           <Link
             external
-            href={convertGcsUrlToBrowserUrl(
+            href={convertArtifactUriToHTTPUrl(
               artifactData.uri,
               artifactData.is_dir,
             )}
