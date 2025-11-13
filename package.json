@@ -69,7 +69,7 @@
     "@tanstack/history": "^1.131.2",
     "@tanstack/react-query": "^5.90.7",
     "@tanstack/react-query-devtools": "^5.90.2",
-    "@tanstack/react-router": "^1.131.50",
+    "@tanstack/react-router": "^1.136.0",
     "@tanstack/router-devtools": "^1.134.13",
     "@types/gapi": "^0.0.47",
     "@xyflow/react": "^12.9.2",
