@@ -11,6 +11,7 @@ const SmoothEdge = ({
   targetPosition,
   style = {},
   selected,
+  data,
 }: EdgeProps) => {
   const [edgePath] = getBezierPath({
     sourceX,
@@ -21,8 +22,13 @@ const SmoothEdge = ({
     targetPosition,
   });
 
-  const edgeColor = selected ? "#38bdf8" : "#6b7280";
-  const markerIdSuffix = selected ? "selected" : "default";
+  const state = selected
+    ? "selected"
+    : data?.highlighted
+      ? "highlighted"
+      : "default";
+
+  const { edgeColor, markerIdSuffix } = getEdgeMetadata(state);
 
   return (
     <>
@@ -87,3 +93,24 @@ const SmoothEdge = ({
 };
 
 export default SmoothEdge;
+
+function getEdgeMetadata(state: "default" | "selected" | "highlighted") {
+  switch (state) {
+    case "selected":
+      return {
+        edgeColor: "#38bdf8",
+        markerIdSuffix: "selected",
+      };
+    case "highlighted":
+      return {
+        edgeColor: "#ec4899",
+        markerIdSuffix: "highlighted",
+      };
+    case "default":
+    default:
+      return {
+        edgeColor: "#6b7280",
+        markerIdSuffix: "default",
+      };
+  }
+}

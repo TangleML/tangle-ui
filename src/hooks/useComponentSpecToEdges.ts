@@ -4,7 +4,7 @@ import {
   MarkerType,
   useEdgesState,
 } from "@xyflow/react";
-import { useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type {
   ArgumentType,
@@ -14,6 +14,10 @@ import type {
   TaskOutputArgument,
   TaskSpec,
 } from "@/utils/componentSpec";
+import {
+  getSelectedHandle,
+  subscribeToEdgeHighlights,
+} from "@/utils/nodes/highlightingState";
 import {
   inputNameToNodeId,
   outputNameToNodeId,
@@ -30,13 +34,63 @@ const useComponentSpecToEdges = (
     getEdges(componentSpec),
   );
 
+  const [, forceUpdate] = useState({});
+
+  const selectedHandle = getSelectedHandle();
+
+  const triggerUpdate = useCallback(() => {
+    forceUpdate({});
+  }, []);
+
+  useEffect(() => {
+    return subscribeToEdgeHighlights(triggerUpdate);
+  }, [triggerUpdate]);
+
   useEffect(() => {
     const newEdges = getEdges(componentSpec);
     setFlowEdges(newEdges);
-  }, [componentSpec]);
+  }, [componentSpec, setFlowEdges]);
+
+  const enhancedEdges = useMemo(() => {
+    if (!selectedHandle) {
+      return flowEdges;
+    }
+
+    const highlightedEdgeIds = new Set<string>();
+
+    flowEdges.forEach((edge) => {
+      if (selectedHandle.handleType === "input") {
+        if (
+          edge.target === selectedHandle.nodeId &&
+          edge.targetHandle === selectedHandle.handleId
+        ) {
+          highlightedEdgeIds.add(edge.id);
+        }
+      } else {
+        if (
+          edge.source === selectedHandle.nodeId &&
+          edge.sourceHandle === selectedHandle.handleId
+        ) {
+          highlightedEdgeIds.add(edge.id);
+        }
+      }
+    });
+
+    if (highlightedEdgeIds.size === 0) {
+      return flowEdges;
+    }
+
+    return flowEdges.map((edge) => ({
+      ...edge,
+      data: {
+        ...edge.data,
+        highlighted: highlightedEdgeIds.has(edge.id),
+      },
+    }));
+  }, [flowEdges, selectedHandle]);
 
   return {
-    edges: flowEdges,
+    edges: enhancedEdges,
     onEdgesChange: onFlowEdgesChange,
   };
 };

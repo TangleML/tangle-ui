@@ -19,7 +19,10 @@ type InputHandleProps = {
   input: InputSpec;
   invalid: boolean;
   value?: string;
-  highlight?: boolean;
+  highlight?: {
+    searchHighlight: boolean;
+    connectionHighlight: boolean;
+  };
   onLabelClick?: (e: ReactMouseEvent<HTMLDivElement>) => void;
   onHandleSelectionChange?: (key: string, selected: boolean) => void;
 };
@@ -119,12 +122,14 @@ export const InputHandle = ({
     };
   }, [selected]);
 
+  const { searchHighlight, connectionHighlight } = highlight || {};
+
   return (
     <div
       className="relative w-full h-fit"
       key={input.name}
       data-testid={`input-connection-${input.name}`}
-      data-highlighted={highlight}
+      data-highlighted={searchHighlight || connectionHighlight}
       data-selected={selected}
       data-active={active}
     >
@@ -138,8 +143,13 @@ export const InputHandle = ({
           className={cn(
             "border-0! h-full! w-full! transform-none!",
             missing,
+            searchHighlight &&
+              !connectionHighlight &&
+              !selected &&
+              !active &&
+              "bg-green-500!",
+            connectionHighlight && !selected && !active && "bg-pink-500!",
             (selected || active) && "bg-blue-500!",
-            highlight && "bg-green-500!",
             state.readOnly && "cursor-pointer!",
           )}
           onClick={handleHandleClick}
@@ -163,9 +173,18 @@ export const InputHandle = ({
             <div
               className={cn(
                 "text-xs text-gray-800! rounded-md px-2 py-1 truncate",
-                onLabelClick && !selected && !highlight && "hover:bg-gray-300",
+                onLabelClick &&
+                  !selected &&
+                  !searchHighlight &&
+                  !connectionHighlight &&
+                  "hover:bg-gray-300",
                 selected || active ? "bg-blue-200" : "bg-gray-200",
-                highlight && "bg-green-200",
+                searchHighlight &&
+                  !connectionHighlight &&
+                  !selected &&
+                  !active &&
+                  "bg-green-200",
+                connectionHighlight && !selected && !active && "bg-pink-200",
                 !hasValue && hasDefault && "opacity-50 italic",
               )}
               onClick={handleLabelClick}
@@ -206,7 +225,10 @@ export const InputHandle = ({
 type OutputHandleProps = {
   output: OutputSpec;
   value?: string;
-  highlight?: boolean;
+  highlight?: {
+    searchHighlight: boolean;
+    connectionHighlight: boolean;
+  };
   onLabelClick?: (e: ReactMouseEvent<HTMLDivElement>) => void;
   onHandleSelectionChange?: (key: string, selected: boolean) => void;
 };
@@ -302,12 +324,14 @@ export const OutputHandle = ({
     };
   }, [selected]);
 
+  const { searchHighlight, connectionHighlight } = highlight || {};
+
   return (
     <div
       className="flex items-center justify-end w-full cursor-pointer"
       key={output.name}
       data-testid={`output-connection-${output.name}`}
-      data-highlighted={highlight}
+      data-highlighted={searchHighlight || connectionHighlight}
       data-selected={selected}
       data-active={active}
     >
@@ -321,9 +345,18 @@ export const OutputHandle = ({
           <div
             className={cn(
               "text-xs text-gray-800! rounded-md px-2 py-1 truncate",
-              onLabelClick && !selected && !highlight && "hover:bg-gray-300",
+              onLabelClick &&
+                !selected &&
+                !searchHighlight &&
+                !connectionHighlight &&
+                "hover:bg-gray-300",
               selected || active ? "bg-blue-200" : "bg-gray-200",
-              highlight && "bg-green-200",
+              searchHighlight &&
+                !connectionHighlight &&
+                !selected &&
+                !active &&
+                "bg-green-200",
+              connectionHighlight && !selected && !active && "bg-pink-200",
             )}
             onClick={handleLabelClick}
           >
@@ -344,9 +377,14 @@ export const OutputHandle = ({
         isConnectable={true}
         onClick={handleHandleClick}
         className={cn(
-          "relative! border-0! !w-[12px] !h-[12px] transform-none! translate-x-6 cursor-pointer bg-gray-500!",
+          "relative! border-0! w-3! h-3! transform-none! translate-x-6 cursor-pointer bg-gray-500!",
+          searchHighlight &&
+            !connectionHighlight &&
+            !selected &&
+            !active &&
+            "bg-green-500!",
+          connectionHighlight && !selected && !active && "bg-pink-500!",
           (selected || active) && "bg-blue-500!",
-          highlight && "bg-green-500!",
           state.readOnly && "cursor-pointer!",
         )}
         data-testid={`output-handle-${output.name}`}
@@ -355,11 +393,11 @@ export const OutputHandle = ({
   );
 };
 
-const getOutputHandleId = (outputName: string) => {
+export const getOutputHandleId = (outputName: string) => {
   return `output_${outputName}`;
 };
 
-const getInputHandleId = (inputName: string) => {
+export const getInputHandleId = (inputName: string) => {
   return `input_${inputName}`;
 };
 
