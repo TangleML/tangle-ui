@@ -1,4 +1,4 @@
-import { ChevronsUpDown } from "lucide-react";
+import { ChevronsUpDown, ExternalLink } from "lucide-react";
 
 import type { GetContainerExecutionStateResponse } from "@/api/types.gen";
 import { Button } from "@/components/ui/button";
@@ -50,6 +50,7 @@ export const ExecutionDetails = ({
   }
 
   const podName = executionPodName(containerState);
+  const executionJobLinks = getExecutionJobLinks(containerState);
 
   return (
     <div className="flex flex-col px-3 py-2">
@@ -150,6 +151,29 @@ export const ExecutionDetails = ({
                   </span>
                 </div>
               )}
+              {executionJobLinks && (
+                <>
+                  {executionJobLinks.map((linkInfo) => (
+                    <div
+                      key={linkInfo[0]}
+                      className="flex text-xs items-center gap-2"
+                    >
+                      <span className="font-medium text-foreground min-w-fit">
+                        {linkInfo[0]}:
+                      </span>
+                      <a
+                        href={linkInfo[2]}
+                        className="text-sky-500 hover:underline flex items-center gap-1"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {linkInfo[1]}
+                        <ExternalLink className="size-3 flex-shrink-0" />
+                      </a>
+                    </div>
+                  ))}
+                </>
+              )}
 
               {!isLoadingContainerState &&
                 !containerState &&
@@ -190,4 +214,29 @@ function executionPodName(
   }
 
   return null;
+}
+
+function getExecutionJobLinks(
+  containerState?: GetContainerExecutionStateResponse,
+): Array<[string, string, string]> | null {
+  if (!containerState || !("debug_info" in containerState)) {
+    return null;
+  }
+
+  const debugInfo = containerState.debug_info as Record<string, any>;
+
+  const result = Array<[string, string, string]>();
+
+  const huggingfaceJob = debugInfo.huggingface_job as Record<string, any>;
+  if (
+    huggingfaceJob &&
+    typeof huggingfaceJob === "object" &&
+    typeof huggingfaceJob.id === "string" &&
+    typeof huggingfaceJob.namespace === "string"
+  ) {
+    const url = `https://huggingface.co/jobs/${huggingfaceJob.namespace}/${huggingfaceJob.id}`;
+    result.push(["HuggingFace Job", huggingfaceJob.id, url]);
+  }
+
+  return result;
 }
