@@ -6,6 +6,7 @@ import { EDITOR_PATH } from "@/routes/router";
 import { writeComponentToFileListFromText } from "@/utils/componentStore";
 import {
   defaultPipelineYamlWithName,
+  IS_GITHUB_PAGES,
   USER_PIPELINES_LIST_NAME,
 } from "@/utils/constants";
 
@@ -23,9 +24,9 @@ const NewPipelineButton = () => {
       componentText,
     );
 
-    navigate({
+    await navigate({
       to: `${EDITOR_PATH}/${name}`,
-      reloadDocument: true,
+      reloadDocument: !IS_GITHUB_PAGES,
     });
   };
 
