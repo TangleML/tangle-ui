@@ -30,7 +30,7 @@ export const ExistingBetaFlags = {
   ["in-app-component-editor"]: {
     name: "In-app component editor",
     description:
-      "Enable the in-app component editor for creating and editing Oasis components.",
+      "Enable the in-app component editor for creating and editing pipeline components.",
     default: false,
   } as BetaFlag,
 

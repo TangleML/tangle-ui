@@ -36,7 +36,7 @@ function TooltipTrigger({
   return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />;
 }
 
-// CUSTOM PROPS FROM THE OASIS DEV TEAM
+// CUSTOM PROPS FROM THE TANGLE DEV TEAM
 interface TooltipContentProps
   extends React.ComponentProps<typeof TooltipPrimitive.Content> {
   arrowClassName?: string;

@@ -68,7 +68,7 @@ const PipelineRunContent = () => {
 
   useDocumentTitle({
     "/runs/$id": (params) =>
-      `Oasis - ${componentSpec?.name || ""} - ${params.id}`,
+      `Tangle - ${componentSpec?.name || ""} - ${params.id}`,
   });
 
   if (isLoading || !ready) {
