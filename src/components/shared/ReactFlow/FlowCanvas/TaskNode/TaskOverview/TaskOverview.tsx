@@ -15,6 +15,7 @@ import {
   TaskDetails,
   TaskImplementation,
 } from "@/components/shared/TaskDetails";
+import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Text } from "@/components/ui/typography";
@@ -61,6 +62,7 @@ const TaskOverview = ({ taskNode, actions }: TaskOverviewProps) => {
   return (
     <BlockStack className="h-full" data-context-panel="task-overview">
       <InlineStack gap="2" blockAlign="center" className="px-2 pb-2">
+        {isSubgraph && <Icon name="Workflow" />}
         <Text size="lg" weight="semibold">
           {name}
         </Text>
