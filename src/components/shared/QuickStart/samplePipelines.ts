@@ -15,6 +15,7 @@ export const samplePipelines: SamplePipeline[] = [
     previewImage: "example-pipelines/XGBoost pipeline.pipeline.component.png",
     tags: ["XGBoost", "Classification", "Tabular Data"],
   },
+/*
   {
     name: "PyTorch Network",
     description:
@@ -40,4 +41,5 @@ export const samplePipelines: SamplePipeline[] = [
     previewImage: "example-pipelines/Tfx pipeline.pipeline.component.png",
     tags: ["TensorFlow", "TFX", "Production"],
   },
+  */
 ];
