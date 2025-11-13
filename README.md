@@ -1,22 +1,24 @@
-# Cloud Pipelines Studio
+# Tangle app
 
-Cloud Pipelines Studio is a web app that allows the users to build and run Machine Learning pipelines using drag and drop without having to set up development environment.
+Tangle is a web app that allows the users to build and run Machine Learning pipelines using drag and drop without having to set up development environment.
 
-[![image](https://github.com/user-attachments/assets/0ce7ccc0-dad7-4f6a-8677-f2adcd83f558)](https://cloud-pipelines.net/pipeline-studio-app)
+[![image](https://github.com/user-attachments/assets/0ce7ccc0-dad7-4f6a-8677-f2adcd83f558)](https://tangleml-tangle.hf.space/#/quick-start)
 
+<!--
 ## Video
 
 Please take a look at the short video demonstrating the first version of the visual pipeline editor.
 
 [Cloud Pipelines Editor - Build machine learning pipelines without writing code](https://www.youtube.com/watch?v=7g22nupCDes)
+-->
 
 ## Demo
 
-[Demo](https://cloud-pipelines.net/pipeline-studio-app)
+[Demo]([https://cloud-pipelines.net/pipeline-studio-app](https://tangleml-tangle.hf.space/#/quick-start))
 
-The experimental new version of the Cloud Pipelines Studio app is now available at <https://cloud-pipelines.net/pipeline-studio-app> . No registration is required to experiment with building pipelines. To install your own app instance, follow the [backend installation instructions](https://github.com/Cloud-Pipelines/backend?tab=readme-ov-file#installation).
+The experimental new version of the Tangle app is now available at <https://tangleml-tangle.hf.space/#/quick-start> . No registration is required to experiment with building pipelines. To install your own app instance, [duplicate](https://huggingface.co/spaces/TangleML/tangle?duplicate=true) the HuggingFace space or follow the [backend installation instructions](https://github.com/Cloud-Pipelines/backend?tab=readme-ov-file#installation).
 
-Please check it out and report any bugs you find using [GitHub Issues](https://github.com/Cloud-Pipelines/pipeline-studio-app/issues).
+Please check it out and report any bugs you find using [GitHub Issues](https://github.com/TangleML/tangle/issues).
 
 The app is under active development, so expect some breakages as I work on the app and do not rely on the app for production.
 
