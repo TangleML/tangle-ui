@@ -16,7 +16,7 @@ import type {
   TypeSpecType,
 } from "@/utils/componentSpec";
 import { formatBytes } from "@/utils/string";
-import { convertGcsUrlToBrowserUrl } from "@/utils/URL";
+import { convertArtifactUriToHTTPUrl } from "@/utils/URL";
 
 import type { IOCellActions, IOCellCopyState } from "./IOCell";
 
@@ -92,7 +92,7 @@ const IOCellHeader = ({
               {artifactData.uri && (
                 <>
                   <Link
-                    href={convertGcsUrlToBrowserUrl(
+                    href={convertArtifactUriToHTTPUrl(
                       artifactData.uri || "",
                       artifactData.is_dir || false,
                     )}
