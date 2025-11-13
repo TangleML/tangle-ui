@@ -7,7 +7,7 @@ import {
   isGraphImplementation,
 } from "@/utils/componentSpec";
 import { createSubgraphFromNodes } from "@/utils/nodes/createSubgraphFromNodes";
-import { getUniqueTaskName } from "@/utils/unique";
+import { getUniqueTaskName, validateTaskName } from "@/utils/unique";
 
 import addTask from "../utils/addTask";
 import { calculateNodesCenter } from "../utils/geometry";
@@ -28,24 +28,6 @@ export const handleGroupNodes = async (
 
   const currentSubgraphGraphSpec = currentSubgraphSpec.implementation.graph;
 
-  const validateName = (name: string): string | null => {
-    const trimmedName = name.trim();
-
-    if (!trimmedName) {
-      return "Name cannot be empty";
-    }
-
-    if (new Set(Object.keys(currentSubgraphGraphSpec.tasks)).has(trimmedName)) {
-      return "A task with this name already exists";
-    }
-
-    if (!/^[a-zA-Z0-9 _-]+$/.test(trimmedName)) {
-      return "Name cannot contain special characters";
-    }
-
-    return null;
-  };
-
   try {
     const defaultName = getUniqueTaskName(
       currentSubgraphGraphSpec,
@@ -57,7 +39,8 @@ export const handleGroupNodes = async (
       description: "Enter subgraph name",
       defaultValue: defaultName,
       content: inputDialogContent,
-      validate: validateName,
+      validate: (value: string) =>
+        validateTaskName(value, currentSubgraphGraphSpec, true),
     });
 
     if (!name) return;

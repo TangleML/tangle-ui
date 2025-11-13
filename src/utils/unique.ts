@@ -46,3 +46,35 @@ export const getUniqueTaskName = (
 export const getUniqueName = (names: string[], name: string = "Untitled") => {
   return makeNameUniqueByAddingIndex(name, new Set(names));
 };
+
+export const validateTaskName = (
+  name: string,
+  graphSpec: GraphSpec,
+  checkId = false,
+): string | null => {
+  const trimmedName = name.trim();
+
+  if (!trimmedName) {
+    return "Name cannot be empty";
+  }
+
+  if (checkId && new Set(Object.keys(graphSpec.tasks)).has(trimmedName)) {
+    return "A task with this id already exists";
+  }
+
+  if (
+    new Set(
+      Object.values(graphSpec.tasks).map(
+        (task) => task.componentRef.spec?.name,
+      ),
+    ).has(trimmedName)
+  ) {
+    return "A task with this name already exists";
+  }
+
+  if (!/^[a-zA-Z0-9 _-]+$/.test(trimmedName)) {
+    return "Name cannot contain special characters";
+  }
+
+  return null;
+};

@@ -28,6 +28,7 @@ import ConfigurationSection from "./ConfigurationSection";
 import IOSection from "./IOSection/IOSection";
 import Logs, { OpenLogsInNewWindowLink } from "./logs";
 import OutputsList from "./OutputsList";
+import RenameTask from "./RenameTask";
 
 interface TaskOverviewProps {
   taskNode: TaskNodeContextType;
@@ -58,6 +59,7 @@ const TaskOverview = ({ taskNode, actions }: TaskOverviewProps) => {
 
   const isSubgraph = isGraphImplementation(componentSpec.implementation);
   const executionId = details?.child_task_execution_ids?.[taskId];
+  const canRename = !readOnly && isSubgraph;
 
   return (
     <BlockStack className="h-full" data-context-panel="task-overview">
@@ -66,6 +68,7 @@ const TaskOverview = ({ taskNode, actions }: TaskOverviewProps) => {
         <Text size="lg" weight="semibold">
           {name}
         </Text>
+        {canRename && <RenameTask taskId={taskId} />}
         <ComponentFavoriteToggle component={taskSpec.componentRef} hideDelete />
         <ComponentDetailsDialog
           displayName={name}
