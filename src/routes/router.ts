@@ -31,6 +31,7 @@ export const APP_ROUTES = {
   QUICK_START: QUICK_START_PATH,
   PIPELINE_EDITOR: `${EDITOR_PATH}/$name`,
   RUN_DETAIL: `${RUNS_BASE_PATH}/$id`,
+  RUN_DETAIL_WITH_SUBGRAPH: `${RUNS_BASE_PATH}/$id/$subgraphExecutionId`,
   RUNS: RUNS_BASE_PATH,
   GITHUB_AUTH_CALLBACK: "/authorize/github",
 };
@@ -75,13 +76,15 @@ const githubAuthCallbackRoute = createRoute({
   component: AuthorizationResultScreen,
 });
 
-export interface RunDetailParams {
-  id: string;
-}
-
-export const runDetailRoute = createRoute({
+const runDetailRoute = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.RUN_DETAIL,
+  component: PipelineRun,
+});
+
+const runDetailWithSubgraphRoute = createRoute({
+  getParentRoute: () => mainLayout,
+  path: APP_ROUTES.RUN_DETAIL_WITH_SUBGRAPH,
   component: PipelineRun,
 });
 
@@ -90,6 +93,7 @@ const appRouteTree = mainLayout.addChildren([
   quickStartRoute,
   editorRoute,
   runDetailRoute,
+  runDetailWithSubgraphRoute,
 ]);
 
 const rootRouteTree = rootRoute.addChildren([

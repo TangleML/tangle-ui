@@ -1,3 +1,4 @@
+import { useNavigate } from "@tanstack/react-router";
 import { useStore } from "@xyflow/react";
 import { CircleFadingArrowUp, CopyIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -12,9 +13,11 @@ import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { QuickTooltip } from "@/components/ui/tooltip";
 import { Text } from "@/components/ui/typography";
+import { buildExecutionUrl } from "@/hooks/useSubgraphBreadcrumbs";
 import { cn } from "@/lib/utils";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useContextPanel } from "@/providers/ContextPanelProvider";
+import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
 import { useTaskNode } from "@/providers/TaskNodeProvider";
 import { isCacheDisabled } from "@/utils/cache";
 import { getSubgraphDescription, isSubgraph } from "@/utils/subgraphUtils";
@@ -30,6 +33,7 @@ import { TaskNodeOutputs } from "./TaskNodeOutputs";
 import { UpgradeNodePopover } from "./UpgradeNodePopover";
 
 const TaskNodeCard = () => {
+  const navigate = useNavigate();
   const isRemoteComponentLibrarySearchEnabled = useBetaFlagValue(
     "remote-component-library-search",
   );
@@ -39,6 +43,9 @@ const TaskNodeCard = () => {
   const taskNode = useTaskNode();
   const { setContent, clearContent } = useContextPanel();
   const { navigateToSubgraph } = useComponentSpec();
+  const executionData = useExecutionDataOptional();
+  const rootExecutionId = executionData?.rootExecutionId;
+  const details = executionData?.details;
 
   const isDragging = useStore((state) => {
     const thisNode = state.nodes.find((node) => node.id === taskNode.nodeId);
@@ -198,8 +205,24 @@ const TaskNodeCard = () => {
   const handleDoubleClick = useCallback(() => {
     if (isSubgraphNode && taskId && isSubgraphNavigationEnabled) {
       navigateToSubgraph(taskId);
+
+      if (rootExecutionId && details?.child_task_execution_ids) {
+        const subgraphExecutionId = details.child_task_execution_ids[taskId];
+        if (subgraphExecutionId) {
+          const url = buildExecutionUrl(rootExecutionId, subgraphExecutionId);
+          navigate({ to: url });
+        }
+      }
     }
-  }, [isSubgraphNode, taskId, navigateToSubgraph, isSubgraphNavigationEnabled]);
+  }, [
+    isSubgraphNode,
+    taskId,
+    navigateToSubgraph,
+    isSubgraphNavigationEnabled,
+    rootExecutionId,
+    details,
+    navigate,
+  ]);
 
   useEffect(() => {
     if (nodeRef.current) {
