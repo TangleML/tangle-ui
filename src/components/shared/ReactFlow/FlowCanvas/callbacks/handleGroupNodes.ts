@@ -45,11 +45,8 @@ export const handleGroupNodes = async (
 
     if (!name) return;
 
-    const subgraphTaskSpec = await createSubgraphFromNodes(
-      selectedNodes,
-      currentSubgraphSpec,
-      name,
-    );
+    const { subgraphTask: subgraphTaskSpec, connectionMappings } =
+      await createSubgraphFromNodes(selectedNodes, currentSubgraphSpec, name);
 
     const position = calculateNodesCenter(selectedNodes);
     const { spec: currentSubgraphSpecWithNewTask, taskId: subgraphTaskId } =
@@ -60,14 +57,14 @@ export const handleGroupNodes = async (
       return;
     }
 
-    const selectedTaskIds = selectedNodes
-      .filter((node) => node.type === "task")
-      .map((node) => node.data.taskId as string);
+    const actualMappings = connectionMappings.map((mapping) => ({
+      ...mapping,
+      newTaskId: subgraphTaskId,
+    }));
 
     const updatedSubgraphSpec = updateDownstreamSubgraphConnections(
       currentSubgraphSpecWithNewTask,
-      selectedTaskIds,
-      subgraphTaskId,
+      actualMappings,
     );
 
     let finalSubgraphSpec = updatedSubgraphSpec;

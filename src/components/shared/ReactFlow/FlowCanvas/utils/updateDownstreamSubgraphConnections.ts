@@ -1,10 +1,14 @@
-import type { OutputSpec, TaskOutputArgument } from "@/api/types.gen";
 import {
   type ComponentSpec,
   isGraphImplementation,
   isTaskOutputArgument,
 } from "@/utils/componentSpec";
 import { deepClone } from "@/utils/deepClone";
+import {
+  type ConnectionMapping,
+  GRAPH_OUTPUT,
+  PLACEHOLDER_SUBGRAPH_ID,
+} from "@/utils/nodes/createSubgraphFromNodes";
 
 /**
  * Updates downstream connections after replacing multiple tasks with a single replacement task.
@@ -18,18 +22,16 @@ import { deepClone } from "@/utils/deepClone";
  * - If no matching output exists, the connection is removed
  *
  * @param componentSpec - The component specification containing the graph
- * @param originalTaskIds - Array of task IDs that are being replaced
- * @param replacementTaskId - The ID of the task that replaces the original tasks
+ * @param connectionMappings - Array of connection mappings for task outputs
  * @returns Updated component specification with redirected connections
  *
  */
 
 export const updateDownstreamSubgraphConnections = (
   componentSpec: ComponentSpec,
-  originalTaskIds: string[],
-  replacementTaskId: string,
+  connectionMappings: ConnectionMapping[],
 ): ComponentSpec => {
-  if (originalTaskIds.length === 0) {
+  if (connectionMappings.length === 0) {
     return componentSpec;
   }
 
@@ -41,88 +43,37 @@ export const updateDownstreamSubgraphConnections = (
 
   const updatedGraphSpec = updatedComponentSpec.implementation.graph;
 
-  const replacementTaskSpec = updatedGraphSpec.tasks[replacementTaskId];
-  const replacementOutputs =
-    replacementTaskSpec?.componentRef?.spec?.outputs || [];
+  connectionMappings.forEach((mapping) => {
+    if (mapping.newTaskId.includes(PLACEHOLDER_SUBGRAPH_ID)) {
+      throw new Error("ConnectionMapping contains placeholder newTaskId");
+    }
 
-  const originalTaskIdSet = new Set(originalTaskIds);
-
-  // Scenario 1: TaskOutput connected to TaskInput
-  Object.values(updatedGraphSpec.tasks).forEach((task) => {
-    if (!task.arguments) return;
-
-    const updatedArguments = { ...task.arguments };
-
-    Object.entries(updatedArguments).forEach(([inputName, argument]) => {
-      if (!isTaskOutputArgument(argument)) return;
-
-      if (!originalTaskIdSet.has(argument.taskOutput.taskId)) return;
-
-      const reassignedArgument = reassignTaskOutput(
-        argument,
-        replacementTaskId,
-        replacementOutputs,
-      );
-
-      if (!reassignedArgument) {
-        delete updatedArguments[inputName];
-      } else {
-        updatedArguments[inputName] = reassignedArgument;
+    if (mapping.targetTaskId === GRAPH_OUTPUT) {
+      // Update graph output
+      const graphOutput =
+        updatedGraphSpec?.outputValues?.[mapping.targetInputName];
+      if (graphOutput && isTaskOutputArgument(graphOutput)) {
+        graphOutput.taskOutput = {
+          ...graphOutput.taskOutput,
+          taskId: mapping.newTaskId,
+          outputName: mapping.newOutputName,
+        };
       }
-    });
-
-    task.arguments = updatedArguments;
+    } else {
+      // Update task argument
+      const targetTask = updatedGraphSpec.tasks[mapping.targetTaskId];
+      const targetTaskArg = targetTask?.arguments?.[mapping.targetInputName];
+      if (isTaskOutputArgument(targetTaskArg)) {
+        targetTaskArg.taskOutput = {
+          ...targetTaskArg.taskOutput,
+          taskId: mapping.newTaskId,
+          outputName: mapping.newOutputName,
+        };
+      }
+    }
   });
-
-  // Scenario 2: TaskOutput connected to GraphOutput
-  if (updatedGraphSpec.outputValues) {
-    Object.entries(updatedGraphSpec.outputValues).forEach(
-      ([outputName, outputValue]) => {
-        if (!updatedGraphSpec.outputValues) return;
-
-        if (!originalTaskIdSet.has(outputValue.taskOutput.taskId)) return;
-
-        const reassignedOutputValue = reassignTaskOutput(
-          outputValue,
-          replacementTaskId,
-          replacementOutputs,
-        );
-
-        if (!reassignedOutputValue) {
-          delete updatedGraphSpec.outputValues[outputName];
-        } else {
-          updatedGraphSpec.outputValues[outputName] = reassignedOutputValue;
-        }
-      },
-    );
-  }
 
   updatedComponentSpec.implementation.graph = updatedGraphSpec;
 
   return updatedComponentSpec;
 };
-
-function reassignTaskOutput(
-  argument: TaskOutputArgument,
-  replacementTaskId: string,
-  replacementOutputs: OutputSpec[],
-): TaskOutputArgument | undefined {
-  const outputName = argument.taskOutput.outputName;
-  const isReconfiguredOutput = replacementOutputs.some(
-    (output) => output.name === outputName.replace(/_/g, " "),
-  );
-
-  if (isReconfiguredOutput) {
-    // Update the taskOutput to point to the replacement taskId
-    return {
-      ...argument,
-      taskOutput: {
-        ...argument.taskOutput,
-        taskId: replacementTaskId,
-      },
-    };
-  } else {
-    // This output no longer exists in the replacement task (it should be removed)
-    return undefined;
-  }
-}

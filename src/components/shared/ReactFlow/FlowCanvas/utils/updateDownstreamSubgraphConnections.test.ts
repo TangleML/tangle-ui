@@ -7,6 +7,11 @@ import {
   type TaskOutputArgument,
   type TaskSpec,
 } from "@/utils/componentSpec";
+import {
+  type ConnectionMapping,
+  GRAPH_OUTPUT,
+  PLACEHOLDER_SUBGRAPH_ID,
+} from "@/utils/nodes/createSubgraphFromNodes";
 
 import { updateDownstreamSubgraphConnections } from "./updateDownstreamSubgraphConnections";
 
@@ -40,8 +45,24 @@ describe("updateDownstreamSubgraphConnections", () => {
     ...(arguments_ && { arguments: arguments_ }),
   });
 
+  const createConnectionMapping = (
+    originalTaskId: string,
+    originalOutputName: string,
+    newTaskId: string,
+    newOutputName: string,
+    targetTaskId: string,
+    targetInputName: string,
+  ): ConnectionMapping => ({
+    originalTaskId,
+    originalOutputName,
+    newTaskId,
+    newOutputName,
+    targetTaskId,
+    targetInputName,
+  });
+
   describe("Scenario 1: TaskOutput connected to TaskInput", () => {
-    it("should redirect task arguments to replacement task when output exists", () => {
+    it("should redirect task arguments to replacement task using connection mappings", () => {
       const originalTask1 = createMockTask("OriginalTask1", {}, [
         { name: "result", type: "string" },
       ]);
@@ -76,10 +97,28 @@ describe("updateDownstreamSubgraphConnections", () => {
         external1: externalTask,
       });
 
+      const connectionMappings: ConnectionMapping[] = [
+        createConnectionMapping(
+          "original1",
+          "result",
+          "replacement1",
+          "result",
+          "external1",
+          "input1",
+        ),
+        createConnectionMapping(
+          "original2",
+          "data",
+          "replacement1",
+          "data",
+          "external1",
+          "input2",
+        ),
+      ];
+
       const result = updateDownstreamSubgraphConnections(
         componentSpec,
-        ["original1", "original2"],
-        "replacement1",
+        connectionMappings,
       );
 
       if (!isGraphImplementation(result.implementation)) {
@@ -105,14 +144,18 @@ describe("updateDownstreamSubgraphConnections", () => {
       });
     });
 
-    it("should remove task arguments when replacement task lacks matching output", () => {
-      const originalTask = createMockTask("OriginalTask", {}, [
+    it("should handle output name collisions correctly", () => {
+      const originalTask1 = createMockTask("OriginalTask1", {}, [
+        { name: "result", type: "string" },
+      ]);
+      const originalTask2 = createMockTask("OriginalTask2", {}, [
         { name: "result", type: "string" },
       ]);
       const replacementTask = createMockTask("ReplacementTask", {}, [
-        { name: "different_output", type: "string" },
+        { name: "result", type: "string" },
+        { name: "result 2", type: "string" },
       ]);
-      const externalTask = createMockTask("ExternalTask", {
+      const externalTask1 = createMockTask("ExternalTask1", {
         input1: {
           taskOutput: {
             taskId: "original1",
@@ -120,29 +163,71 @@ describe("updateDownstreamSubgraphConnections", () => {
             type: "string",
           },
         },
-        keepMe: "static_value",
+      });
+      const externalTask2 = createMockTask("ExternalTask2", {
+        input1: {
+          taskOutput: {
+            taskId: "original2",
+            outputName: "result",
+            type: "string",
+          },
+        },
       });
 
       const componentSpec = createMockComponentSpec({
-        original1: originalTask,
+        original1: originalTask1,
+        original2: originalTask2,
         replacement1: replacementTask,
-        external1: externalTask,
+        external1: externalTask1,
+        external2: externalTask2,
       });
+
+      const connectionMappings: ConnectionMapping[] = [
+        createConnectionMapping(
+          "original1",
+          "result",
+          "replacement1",
+          "result",
+          "external1",
+          "input1",
+        ),
+        createConnectionMapping(
+          "original2",
+          "result",
+          "replacement1",
+          "result_2",
+          "external2",
+          "input1",
+        ),
+      ];
 
       const result = updateDownstreamSubgraphConnections(
         componentSpec,
-        ["original1"],
-        "replacement1",
+        connectionMappings,
       );
 
       if (!isGraphImplementation(result.implementation)) {
         throw new Error("Expected graph implementation");
       }
 
-      const updatedExternalTask = result.implementation.graph.tasks.external1;
+      const updatedExternalTask1 = result.implementation.graph.tasks.external1;
+      const updatedExternalTask2 = result.implementation.graph.tasks.external2;
 
-      expect(updatedExternalTask.arguments?.input1).toBeUndefined();
-      expect(updatedExternalTask.arguments?.keepMe).toBe("static_value");
+      expect(updatedExternalTask1.arguments?.input1).toEqual({
+        taskOutput: {
+          taskId: "replacement1",
+          outputName: "result",
+          type: "string",
+        },
+      });
+
+      expect(updatedExternalTask2.arguments?.input1).toEqual({
+        taskOutput: {
+          taskId: "replacement1",
+          outputName: "result_2",
+          type: "string",
+        },
+      });
     });
 
     it("should leave unrelated connections unchanged", () => {
@@ -179,10 +264,20 @@ describe("updateDownstreamSubgraphConnections", () => {
         external1: externalTask,
       });
 
+      const connectionMappings: ConnectionMapping[] = [
+        createConnectionMapping(
+          "original1",
+          "result",
+          "replacement1",
+          "result",
+          "external1",
+          "input1",
+        ),
+      ];
+
       const result = updateDownstreamSubgraphConnections(
         componentSpec,
-        ["original1"],
-        "replacement1",
+        connectionMappings,
       );
 
       if (!isGraphImplementation(result.implementation)) {
@@ -199,7 +294,6 @@ describe("updateDownstreamSubgraphConnections", () => {
         },
       });
 
-      // Unrelated connection should remain unchanged
       expect(updatedExternalTask.arguments?.input2).toEqual({
         taskOutput: {
           taskId: "unrelated1",
@@ -207,6 +301,27 @@ describe("updateDownstreamSubgraphConnections", () => {
           type: "string",
         },
       });
+    });
+
+    it("should throw error when connection mapping contains placeholder", () => {
+      const componentSpec = createMockComponentSpec({
+        task1: createMockTask("Task1"),
+      });
+
+      const connectionMappings: ConnectionMapping[] = [
+        createConnectionMapping(
+          "original1",
+          "result",
+          PLACEHOLDER_SUBGRAPH_ID,
+          "result",
+          "external1",
+          "input1",
+        ),
+      ];
+
+      expect(() => {
+        updateDownstreamSubgraphConnections(componentSpec, connectionMappings);
+      }).toThrow("ConnectionMapping contains placeholder newTaskId");
     });
   });
 
@@ -247,10 +362,28 @@ describe("updateDownstreamSubgraphConnections", () => {
         },
       );
 
+      const connectionMappings: ConnectionMapping[] = [
+        createConnectionMapping(
+          "original1",
+          "final_result",
+          "replacement1",
+          "final_result",
+          GRAPH_OUTPUT,
+          "output1",
+        ),
+        createConnectionMapping(
+          "original2",
+          "summary",
+          "replacement1",
+          "summary",
+          GRAPH_OUTPUT,
+          "output2",
+        ),
+      ];
+
       const result = updateDownstreamSubgraphConnections(
         componentSpec,
-        ["original1", "original2"],
-        "replacement1",
+        connectionMappings,
       );
 
       if (!isGraphImplementation(result.implementation)) {
@@ -274,12 +407,12 @@ describe("updateDownstreamSubgraphConnections", () => {
       });
     });
 
-    it("should remove graph output values when replacement task lacks matching output", () => {
+    it("should leave unrelated graph outputs unchanged", () => {
       const originalTask = createMockTask("OriginalTask", {}, [
         { name: "result", type: "string" },
       ]);
       const replacementTask = createMockTask("ReplacementTask", {}, [
-        { name: "different_output", type: "string" },
+        { name: "result", type: "string" },
       ]);
 
       const componentSpec = createMockComponentSpec(
@@ -305,17 +438,34 @@ describe("updateDownstreamSubgraphConnections", () => {
         },
       );
 
+      const connectionMappings: ConnectionMapping[] = [
+        createConnectionMapping(
+          "original1",
+          "result",
+          "replacement1",
+          "result",
+          GRAPH_OUTPUT,
+          "output1",
+        ),
+      ];
+
       const result = updateDownstreamSubgraphConnections(
         componentSpec,
-        ["original1"],
-        "replacement1",
+        connectionMappings,
       );
 
       if (!isGraphImplementation(result.implementation)) {
         throw new Error("Expected graph implementation");
       }
 
-      expect(result.implementation.graph.outputValues?.output1).toBeUndefined();
+      expect(result.implementation.graph.outputValues?.output1).toEqual({
+        taskOutput: {
+          taskId: "replacement1",
+          outputName: "result",
+          type: "string",
+        },
+      });
+
       expect(result.implementation.graph.outputValues?.keepOutput).toEqual({
         taskOutput: {
           taskId: "other_task",
@@ -327,52 +477,14 @@ describe("updateDownstreamSubgraphConnections", () => {
   });
 
   describe("Edge cases", () => {
-    it("should handle empty originalTaskIds array", () => {
+    it("should handle empty connection mappings array", () => {
       const componentSpec = createMockComponentSpec({
         task1: createMockTask("Task1"),
       });
 
-      const result = updateDownstreamSubgraphConnections(
-        componentSpec,
-        [],
-        "replacement1",
-      );
+      const result = updateDownstreamSubgraphConnections(componentSpec, []);
 
       expect(result).toEqual(componentSpec);
-    });
-
-    it("should handle missing replacement task", () => {
-      const originalTask = createMockTask("OriginalTask", {}, [
-        { name: "result", type: "string" },
-      ]);
-      const externalTask = createMockTask("ExternalTask", {
-        input1: {
-          taskOutput: {
-            taskId: "original1",
-            outputName: "result",
-            type: "string",
-          },
-        },
-      });
-
-      const componentSpec = createMockComponentSpec({
-        original1: originalTask,
-        external1: externalTask,
-      });
-
-      const result = updateDownstreamSubgraphConnections(
-        componentSpec,
-        ["original1"],
-        "nonexistent_replacement",
-      );
-
-      if (!isGraphImplementation(result.implementation)) {
-        throw new Error("Expected graph implementation");
-      }
-
-      // Should remove the connection since replacement task doesn't exist
-      const updatedExternalTask = result.implementation.graph.tasks.external1;
-      expect(updatedExternalTask.arguments?.input1).toBeUndefined();
     });
 
     it("should handle non-graph implementations gracefully", () => {
@@ -385,44 +497,99 @@ describe("updateDownstreamSubgraphConnections", () => {
         },
       };
 
+      const connectionMappings: ConnectionMapping[] = [
+        createConnectionMapping(
+          "original1",
+          "result",
+          "replacement1",
+          "result",
+          "external1",
+          "input1",
+        ),
+      ];
+
       const result = updateDownstreamSubgraphConnections(
         componentSpec,
-        ["task1"],
-        "replacement1",
+        connectionMappings,
       );
 
       expect(result).toEqual(componentSpec);
     });
 
-    it("should handle tasks without arguments", () => {
+    it("should handle missing target tasks gracefully", () => {
       const originalTask = createMockTask("OriginalTask", {}, [
         { name: "result", type: "string" },
       ]);
       const replacementTask = createMockTask("ReplacementTask", {}, [
         { name: "result", type: "string" },
       ]);
-      const taskWithoutArgs = createMockTask("TaskWithoutArgs");
 
       const componentSpec = createMockComponentSpec({
         original1: originalTask,
         replacement1: replacementTask,
-        no_args: taskWithoutArgs,
       });
+
+      const connectionMappings: ConnectionMapping[] = [
+        createConnectionMapping(
+          "original1",
+          "result",
+          "replacement1",
+          "result",
+          "nonexistent_task",
+          "input1",
+        ),
+      ];
 
       const result = updateDownstreamSubgraphConnections(
         componentSpec,
-        ["original1"],
-        "replacement1",
+        connectionMappings,
       );
 
       if (!isGraphImplementation(result.implementation)) {
         throw new Error("Expected graph implementation");
       }
 
-      // Should not throw and leave task unchanged
-      expect(result.implementation.graph.tasks.no_args).toEqual(
-        taskWithoutArgs,
+      expect(result.implementation.graph.tasks.original1).toEqual(originalTask);
+    });
+
+    it("should handle missing target inputs gracefully", () => {
+      const originalTask = createMockTask("OriginalTask", {}, [
+        { name: "result", type: "string" },
+      ]);
+      const replacementTask = createMockTask("ReplacementTask", {}, [
+        { name: "result", type: "string" },
+      ]);
+      const externalTask = createMockTask("ExternalTask", {
+        existing_input: "some_value",
+      });
+
+      const componentSpec = createMockComponentSpec({
+        original1: originalTask,
+        replacement1: replacementTask,
+        external1: externalTask,
+      });
+
+      const connectionMappings: ConnectionMapping[] = [
+        createConnectionMapping(
+          "original1",
+          "result",
+          "replacement1",
+          "result",
+          "external1",
+          "nonexistent_input",
+        ),
+      ];
+
+      const result = updateDownstreamSubgraphConnections(
+        componentSpec,
+        connectionMappings,
       );
+
+      if (!isGraphImplementation(result.implementation)) {
+        throw new Error("Expected graph implementation");
+      }
+
+      expect(result.implementation.graph.tasks.external1).toEqual(externalTask);
     });
 
     it("should not modify the original componentSpec", () => {
@@ -455,13 +622,19 @@ describe("updateDownstreamSubgraphConnections", () => {
       const originalTaskInput =
         componentSpec.implementation.graph.tasks.external1.arguments?.input1;
 
-      updateDownstreamSubgraphConnections(
-        componentSpec,
-        ["original1"],
-        "replacement1",
-      );
+      const connectionMappings: ConnectionMapping[] = [
+        createConnectionMapping(
+          "original1",
+          "result",
+          "replacement1",
+          "result",
+          "external1",
+          "input1",
+        ),
+      ];
 
-      // Original should be unchanged
+      updateDownstreamSubgraphConnections(componentSpec, connectionMappings);
+
       expect(
         componentSpec.implementation.graph.tasks.external1.arguments?.input1,
       ).toEqual(originalTaskInput);
