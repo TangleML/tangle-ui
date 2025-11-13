@@ -4,7 +4,7 @@ import { Link } from "@/components/ui/link";
 import { Heading, Paragraph } from "@/components/ui/typography";
 import type { InputSpec, OutputSpec } from "@/utils/componentSpec";
 import { formatBytes } from "@/utils/string";
-import { convertGcsUrlToBrowserUrl } from "@/utils/URL";
+import { convertArtifactUriToHTTPUrl } from "@/utils/URL";
 
 interface IOExtrasProps {
   inputs?: InputSpec[];
@@ -67,7 +67,7 @@ const IOExtras = ({ inputs, outputs, artifacts }: IOExtrasProps) => {
                           URI:
                         </Paragraph>
                         <Link
-                          href={convertGcsUrlToBrowserUrl(
+                          href={convertArtifactUriToHTTPUrl(
                             artifact.artifact_data.uri,
                             artifact.artifact_data.is_dir,
                           )}
@@ -137,7 +137,7 @@ const IOExtras = ({ inputs, outputs, artifacts }: IOExtrasProps) => {
                           URI:
                         </Paragraph>
                         <Link
-                          href={convertGcsUrlToBrowserUrl(
+                          href={convertArtifactUriToHTTPUrl(
                             artifact.artifact_data.uri,
                             artifact.artifact_data.is_dir,
                           )}

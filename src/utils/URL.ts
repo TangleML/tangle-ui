@@ -21,6 +21,46 @@ const convertGcsUrlToBrowserUrl = (
   return url.replace("gs://", "https://storage.cloud.google.com/");
 };
 
+const convertHfUrlToDirectoryUrl = (url: string, isDirectory: boolean) => {
+  if (!url.startsWith("hf://")) {
+    return url;
+  }
+
+  /**
+   * Common Hugging Face URL format:
+   *
+   * hf://<repo-type-plural>/<user>/<repo>/<path>
+   *
+   * e.g. `hf://datasets/Ark-kun/tangle_data/path/a/b/c`
+   */
+  const hfUrl = url.replace("hf://", "");
+
+  const urlParts = hfUrl.split("/");
+  const repoTypePlural = urlParts[0];
+  const user = urlParts[1];
+  const repo = urlParts[2];
+  const path = urlParts.slice(3).join("/");
+
+  if (isDirectory) {
+    return `https://huggingface.co/${repoTypePlural}/${user}/${repo}/tree/main/${path}`;
+  } else {
+    return `https://huggingface.co/${repoTypePlural}/${user}/${repo}/blob/main/${path}`;
+  }
+};
+
+const convertArtifactUriToHTTPUrl = (
+  artifactUrl: string,
+  isDirectory: boolean,
+) => {
+  if (artifactUrl.startsWith("gs://")) {
+    return convertGcsUrlToBrowserUrl(artifactUrl, isDirectory);
+  } else if (artifactUrl.startsWith("hf://")) {
+    return convertHfUrlToDirectoryUrl(artifactUrl, isDirectory);
+  } else {
+    return artifactUrl;
+  }
+};
+
 const convertRawUrlToDirectoryUrl = (rawUrl: string) => {
   const urlPattern =
     /^https:\/\/raw.githubusercontent.com\/([^/]+)\/([^/]+)\/([^/]+)\/(.+)$/;
@@ -130,8 +170,10 @@ const normalizeUrl = (url: string) => {
 };
 
 export {
+  convertArtifactUriToHTTPUrl,
   convertGcsUrlToBrowserUrl,
   convertGithubUrlToDirectoryUrl,
+  convertHfUrlToDirectoryUrl,
   downloadYamlFromComponentText,
   getIdOrTitleFromPath,
   isGithubUrl,

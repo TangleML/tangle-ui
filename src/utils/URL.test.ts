@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   convertGcsUrlToBrowserUrl,
   convertGithubUrlToDirectoryUrl,
+  convertHfUrlToDirectoryUrl,
   downloadYamlFromComponentText,
   getIdOrTitleFromPath,
   normalizeUrl,
@@ -190,5 +191,189 @@ describe("downloadYamlFromComponentText", () => {
     revokeObjectURLSpy.mockRestore();
     appendChildSpy.mockRestore();
     removeChildSpy.mockRestore();
+  });
+});
+
+// converHfUrlToDirectoryUrl tests
+describe("converHfUrlToDirectoryUrl", () => {
+  describe("non-hf URLs", () => {
+    it("returns unchanged for URLs that don't start with hf://", () => {
+      expect(convertHfUrlToDirectoryUrl("https://example.com", true)).toBe(
+        "https://example.com",
+      );
+      expect(convertHfUrlToDirectoryUrl("http://example.com", false)).toBe(
+        "http://example.com",
+      );
+      expect(convertHfUrlToDirectoryUrl("gs://bucket/file", true)).toBe(
+        "gs://bucket/file",
+      );
+      expect(convertHfUrlToDirectoryUrl("file:///path/to/file", false)).toBe(
+        "file:///path/to/file",
+      );
+      expect(convertHfUrlToDirectoryUrl("", true)).toBe("");
+    });
+  });
+
+  describe("directory URLs (isDirectory = true)", () => {
+    it("converts hf:// dataset URL to tree URL", () => {
+      const hfUrl = "hf://datasets/Ark-kun/tangle_data/path/to/directory";
+      const expected =
+        "https://huggingface.co/datasets/Ark-kun/tangle_data/tree/main/path/to/directory";
+      expect(convertHfUrlToDirectoryUrl(hfUrl, true)).toBe(expected);
+    });
+
+    it("converts hf:// models URL to tree URL", () => {
+      const hfUrl = "hf://models/user/bert-base-uncased/pytorch_model.bin";
+      const expected =
+        "https://huggingface.co/models/user/bert-base-uncased/tree/main/pytorch_model.bin";
+      expect(convertHfUrlToDirectoryUrl(hfUrl, true)).toBe(expected);
+    });
+
+    it("converts hf:// spaces URL to tree URL", () => {
+      const hfUrl = "hf://spaces/stabilityai/stable-diffusion/app.py";
+      const expected =
+        "https://huggingface.co/spaces/stabilityai/stable-diffusion/tree/main/app.py";
+      expect(convertHfUrlToDirectoryUrl(hfUrl, true)).toBe(expected);
+    });
+
+    it("handles URLs with no path after repo name", () => {
+      const hfUrl = "hf://datasets/user/repo";
+      const expected = "https://huggingface.co/datasets/user/repo/tree/main/";
+      expect(convertHfUrlToDirectoryUrl(hfUrl, true)).toBe(expected);
+    });
+
+    it("handles URLs with deeply nested paths", () => {
+      const hfUrl = "hf://datasets/org/repo/a/b/c/d/e/file.txt";
+      const expected =
+        "https://huggingface.co/datasets/org/repo/tree/main/a/b/c/d/e/file.txt";
+      expect(convertHfUrlToDirectoryUrl(hfUrl, true)).toBe(expected);
+    });
+
+    it("handles URLs with special characters in path", () => {
+      const hfUrl = "hf://datasets/user/repo/path with spaces/file-name.txt";
+      const expected =
+        "https://huggingface.co/datasets/user/repo/tree/main/path with spaces/file-name.txt";
+      expect(convertHfUrlToDirectoryUrl(hfUrl, true)).toBe(expected);
+    });
+
+    it("handles URLs with dots in repo name", () => {
+      const hfUrl = "hf://models/facebook/bart-large-mnli.v2/config.json";
+      const expected =
+        "https://huggingface.co/models/facebook/bart-large-mnli.v2/tree/main/config.json";
+      expect(convertHfUrlToDirectoryUrl(hfUrl, true)).toBe(expected);
+    });
+  });
+
+  describe("file URLs (isDirectory = false)", () => {
+    it("converts hf:// dataset URL to blob URL", () => {
+      const hfUrl = "hf://datasets/Ark-kun/tangle_data/data/train.csv";
+      const expected =
+        "https://huggingface.co/datasets/Ark-kun/tangle_data/blob/main/data/train.csv";
+      expect(convertHfUrlToDirectoryUrl(hfUrl, false)).toBe(expected);
+    });
+
+    it("converts hf:// models URL to blob URL", () => {
+      const hfUrl = "hf://models/user/gpt2/config.json";
+      const expected =
+        "https://huggingface.co/models/user/gpt2/blob/main/config.json";
+      expect(convertHfUrlToDirectoryUrl(hfUrl, false)).toBe(expected);
+    });
+
+    it("converts hf:// spaces URL to blob URL", () => {
+      const hfUrl = "hf://spaces/gradio/calculator/requirements.txt";
+      const expected =
+        "https://huggingface.co/spaces/gradio/calculator/blob/main/requirements.txt";
+      expect(convertHfUrlToDirectoryUrl(hfUrl, false)).toBe(expected);
+    });
+
+    it("handles URLs with no path after repo name", () => {
+      const hfUrl = "hf://datasets/user/repo";
+      const expected = "https://huggingface.co/datasets/user/repo/blob/main/";
+      expect(convertHfUrlToDirectoryUrl(hfUrl, false)).toBe(expected);
+    });
+
+    it("handles URLs with deeply nested paths", () => {
+      const hfUrl = "hf://models/org/model/tokenizer/special_tokens_map.json";
+      const expected =
+        "https://huggingface.co/models/org/model/blob/main/tokenizer/special_tokens_map.json";
+      expect(convertHfUrlToDirectoryUrl(hfUrl, false)).toBe(expected);
+    });
+
+    it("handles URLs with underscores and hyphens", () => {
+      const hfUrl =
+        "hf://datasets/my-org/test_dataset-v2/file_name-123.parquet";
+      const expected =
+        "https://huggingface.co/datasets/my-org/test_dataset-v2/blob/main/file_name-123.parquet";
+      expect(convertHfUrlToDirectoryUrl(hfUrl, false)).toBe(expected);
+    });
+  });
+
+  describe("edge cases", () => {
+    it("handles URLs with trailing slashes", () => {
+      const hfUrl = "hf://datasets/user/repo/path/";
+      const expectedTree =
+        "https://huggingface.co/datasets/user/repo/tree/main/path/";
+      const expectedBlob =
+        "https://huggingface.co/datasets/user/repo/blob/main/path/";
+      expect(convertHfUrlToDirectoryUrl(hfUrl, true)).toBe(expectedTree);
+      expect(convertHfUrlToDirectoryUrl(hfUrl, false)).toBe(expectedBlob);
+    });
+
+    it("handles URLs with multiple slashes in path", () => {
+      const hfUrl = "hf://datasets/user/repo//path///file.txt";
+      const expectedTree =
+        "https://huggingface.co/datasets/user/repo/tree/main//path///file.txt";
+      const expectedBlob =
+        "https://huggingface.co/datasets/user/repo/blob/main//path///file.txt";
+      expect(convertHfUrlToDirectoryUrl(hfUrl, true)).toBe(expectedTree);
+      expect(convertHfUrlToDirectoryUrl(hfUrl, false)).toBe(expectedBlob);
+    });
+
+    it("handles URLs with numeric usernames and repos", () => {
+      const hfUrl = "hf://models/123/456/path/file.bin";
+      const expectedTree =
+        "https://huggingface.co/models/123/456/tree/main/path/file.bin";
+      const expectedBlob =
+        "https://huggingface.co/models/123/456/blob/main/path/file.bin";
+      expect(convertHfUrlToDirectoryUrl(hfUrl, true)).toBe(expectedTree);
+      expect(convertHfUrlToDirectoryUrl(hfUrl, false)).toBe(expectedBlob);
+    });
+
+    it("handles URLs with single-character names", () => {
+      const hfUrl = "hf://datasets/a/b/c";
+      const expectedTree = "https://huggingface.co/datasets/a/b/tree/main/c";
+      const expectedBlob = "https://huggingface.co/datasets/a/b/blob/main/c";
+      expect(convertHfUrlToDirectoryUrl(hfUrl, true)).toBe(expectedTree);
+      expect(convertHfUrlToDirectoryUrl(hfUrl, false)).toBe(expectedBlob);
+    });
+
+    it("preserves URL encoding in paths", () => {
+      const hfUrl = "hf://datasets/user/repo/file%20with%20spaces.txt";
+      const expectedTree =
+        "https://huggingface.co/datasets/user/repo/tree/main/file%20with%20spaces.txt";
+      const expectedBlob =
+        "https://huggingface.co/datasets/user/repo/blob/main/file%20with%20spaces.txt";
+      expect(convertHfUrlToDirectoryUrl(hfUrl, true)).toBe(expectedTree);
+      expect(convertHfUrlToDirectoryUrl(hfUrl, false)).toBe(expectedBlob);
+    });
+
+    it("handles different repo types correctly", () => {
+      const datasetUrl = "hf://datasets/user/repo/file";
+      const modelUrl = "hf://models/user/repo/file";
+      const spaceUrl = "hf://spaces/user/repo/file";
+
+      expect(convertHfUrlToDirectoryUrl(datasetUrl, true)).toContain(
+        "/datasets/",
+      );
+      expect(convertHfUrlToDirectoryUrl(modelUrl, true)).toContain("/models/");
+      expect(convertHfUrlToDirectoryUrl(spaceUrl, true)).toContain("/spaces/");
+    });
+
+    it("handles complex organization names", () => {
+      const hfUrl = "hf://models/hugging-face.co/bert-base/config.json";
+      const expected =
+        "https://huggingface.co/models/hugging-face.co/bert-base/blob/main/config.json";
+      expect(convertHfUrlToDirectoryUrl(hfUrl, false)).toBe(expected);
+    });
   });
 });
