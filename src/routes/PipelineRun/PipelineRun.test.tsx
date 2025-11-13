@@ -16,6 +16,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
   return {
     ...(await importOriginal()),
     useNavigate: () => vi.fn(),
+    useParams: () => ({ id: "test-run-id-123" }),
     useLocation: () => ({
       pathname: "/runs/test-run-id-123",
       search: {},
@@ -30,9 +31,6 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
 });
 
 vi.mock("@/routes/router", () => ({
-  runDetailRoute: {
-    useParams: () => ({ id: "test-run-id-123" }),
-  },
   RUNS_BASE_PATH: "/runs",
 }));
 

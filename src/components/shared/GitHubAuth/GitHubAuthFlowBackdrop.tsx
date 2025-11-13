@@ -24,7 +24,7 @@ export const GitHubAuthFlowBackdrop = memo(function GitHubAuthFlowBackdrop({
       onClick={onClick}
     >
       <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg max-w-sm text-center">
-        <h3 className="text-lg font-semibold mb-2">Oasis Run Pipeline</h3>
+        <h3 className="text-lg font-semibold mb-2">Tangle - Run pipeline</h3>
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
           To run pipelines, please complete authentication in the popup window
         </p>

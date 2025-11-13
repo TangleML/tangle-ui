@@ -1,11 +1,11 @@
 import { Github } from "lucide-react";
 import { useCallback } from "react";
 
+import { useAwaitAuthorization } from "@/components/shared/Authentication/useAwaitAuthorization";
 import { Spinner } from "@/components/ui/spinner";
 
 import TooltipButton from "../Buttons/TooltipButton";
 import { GitHubAuthFlowBackdrop } from "./GitHubAuthFlowBackdrop";
-import { useAwaitAuthorization } from "./useAwaitAuthorization";
 
 export function GitHubAuthButton() {
   const {

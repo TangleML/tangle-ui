@@ -45,10 +45,10 @@ vi.mock("@/hooks/useToastNotification", () => ({
   default: () => notifyMock,
 }));
 
-vi.mock("@/components/shared/GitHubAuth/helpers", () => ({
+vi.mock("@/components/shared/Authentication/helpers", () => ({
   isAuthorizationRequired: mockIsAuthorizationRequired,
 }));
-vi.mock("@/components/shared/GitHubAuth/useAwaitAuthorization", () => ({
+vi.mock("@/components/shared/Authentication/useAwaitAuthorization", () => ({
   useAwaitAuthorization: () => ({
     awaitAuthorization: mockAwaitAuthorization,
     get isAuthorized() {
@@ -57,7 +57,7 @@ vi.mock("@/components/shared/GitHubAuth/useAwaitAuthorization", () => ({
   }),
 }));
 
-vi.mock("@/components/shared/GitHubAuth/useAuthLocalStorage", () => ({
+vi.mock("@/components/shared/Authentication/useAuthLocalStorage", () => ({
   useAuthLocalStorage: () => ({
     getToken: mockGetToken,
   }),

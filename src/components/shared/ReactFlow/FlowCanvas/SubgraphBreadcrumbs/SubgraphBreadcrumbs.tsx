@@ -1,5 +1,6 @@
+import { useNavigate } from "@tanstack/react-router";
 import { Home } from "lucide-react";
-import { Fragment } from "react";
+import { Fragment, useCallback } from "react";
 
 import {
   Breadcrumb,
@@ -11,12 +12,57 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { InlineStack } from "@/components/ui/layout";
+import { buildExecutionUrl } from "@/hooks/useSubgraphBreadcrumbs";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
+import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
 
 export const SubgraphBreadcrumbs = () => {
+  const navigate = useNavigate();
   const { currentSubgraphPath, navigateToPath } = useComponentSpec();
+  const executionData = useExecutionDataOptional();
+  const rootExecutionId = executionData?.rootExecutionId;
+  const segments = executionData?.segments || [];
 
-  // Don't show breadcrumbs if we're at root
+  const getExecutionIdForIndex = useCallback(
+    (targetIndex: number): string | undefined => {
+      if (!rootExecutionId) return undefined;
+
+      if (targetIndex === 0) {
+        return rootExecutionId;
+      }
+
+      const segmentIndex = targetIndex - 1;
+      if (segmentIndex >= 0 && segmentIndex < segments.length) {
+        return segments[segmentIndex].executionId;
+      }
+
+      return undefined;
+    },
+    [rootExecutionId, segments],
+  );
+
+  const handleBreadcrumbClick = useCallback(
+    (targetIndex: number) => {
+      const targetPath = currentSubgraphPath.slice(0, targetIndex + 1);
+
+      navigateToPath(targetPath);
+
+      if (rootExecutionId && executionData) {
+        const targetExecutionId = getExecutionIdForIndex(targetIndex);
+        const url = buildExecutionUrl(rootExecutionId, targetExecutionId);
+        navigate({ to: url });
+      }
+    },
+    [
+      currentSubgraphPath,
+      navigateToPath,
+      rootExecutionId,
+      executionData,
+      getExecutionIdForIndex,
+      navigate,
+    ],
+  );
+
   if (currentSubgraphPath.length <= 1) {
     return null;
   }
@@ -42,11 +88,7 @@ export const SubgraphBreadcrumbs = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() =>
-                          navigateToPath(
-                            currentSubgraphPath.slice(0, index + 1),
-                          )
-                        }
+                        onClick={() => handleBreadcrumbClick(index)}
                         className="h-6 px-2"
                       >
                         {isRoot ? (

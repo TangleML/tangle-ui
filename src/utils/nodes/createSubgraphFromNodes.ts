@@ -37,6 +37,7 @@ const IO_NODE_SPACING_Y = IO_NODE_HEIGHT + GAP;
 export const createSubgraphFromNodes = async (
   selectedNodes: Node[],
   currentComponentSpec: ComponentSpec,
+  name?: string,
 ): Promise<TaskSpec> => {
   if (!isGraphImplementation(currentComponentSpec.implementation)) {
     throw new Error(
@@ -107,7 +108,13 @@ export const createSubgraphFromNodes = async (
   });
 
   // Handle selected Input & Output Nodes
-  processSelectedInputNodes(inputNodes, bounds, subgraphInputs);
+  processSelectedInputNodes(
+    inputNodes,
+    bounds,
+    subgraphInputs,
+    subgraphArguments,
+    currentComponentSpec,
+  );
 
   processSelectedOutputNodes(
     outputNodes,
@@ -121,10 +128,8 @@ export const createSubgraphFromNodes = async (
   // Create the replacement task that represents the subgraph
   const subgraphPosition = calculateNodesCenter(selectedNodes);
 
-  const subgraphName = getUniqueTaskName(
-    currentGraphSpec,
-    "Generated Subgraph",
-  );
+  const subgraphName =
+    name ?? getUniqueTaskName(currentGraphSpec, "Generated Subgraph");
 
   const subgraphTask = await createSubgraphTask(
     subgraphName,
@@ -155,8 +160,15 @@ const createSubgraphTask = async (
   position: XYPosition,
   args: Record<string, ArgumentType>,
 ) => {
-  const userDetails = await getUserDetails();
-  const author = userDetails?.id;
+  let author: string = "Unknown";
+  try {
+    const userDetails = await getUserDetails();
+    if (userDetails?.id) {
+      author = userDetails.id;
+    }
+  } catch (error) {
+    console.error("Error retrieving user details:", error);
+  }
 
   const spec: ComponentSpec = {
     name,
@@ -195,6 +207,8 @@ const processSelectedInputNodes = (
   inputNodes: Node[],
   bounds: Bounds,
   subgraphInputs: InputSpec[],
+  subgraphArguments: Record<string, ArgumentType>,
+  currentComponentSpec: ComponentSpec,
 ): void => {
   inputNodes.forEach((node) => {
     const inputName = node.data.label as string | undefined;
@@ -219,6 +233,15 @@ const processSelectedInputNodes = (
         "editor.position": JSON.stringify(normalizedPosition),
       },
     });
+
+    // Migrate the Input Node value to the subgraph arguments
+    const originalInputSpec = currentComponentSpec.inputs?.find(
+      (input) => input.name === inputName,
+    );
+
+    if (originalInputSpec?.value) {
+      subgraphArguments[inputName] = originalInputSpec.value;
+    }
   });
 };
 

@@ -135,7 +135,7 @@ const BackendConfigurationDialog = ({
         </DialogHeader>
 
         <DialogDescription>
-          Attach the Oasis frontend to a custom backend.
+          Attach the Tangle frontend to a custom backend.
         </DialogDescription>
 
         <BlockStack gap="4">

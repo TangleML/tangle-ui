@@ -15,6 +15,7 @@ import {
   TaskDetails,
   TaskImplementation,
 } from "@/components/shared/TaskDetails";
+import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Text } from "@/components/ui/typography";
@@ -27,6 +28,7 @@ import ConfigurationSection from "./ConfigurationSection";
 import IOSection from "./IOSection/IOSection";
 import Logs, { OpenLogsInNewWindowLink } from "./logs";
 import OutputsList from "./OutputsList";
+import RenameTask from "./RenameTask";
 
 interface TaskOverviewProps {
   taskNode: TaskNodeContextType;
@@ -57,13 +59,16 @@ const TaskOverview = ({ taskNode, actions }: TaskOverviewProps) => {
 
   const isSubgraph = isGraphImplementation(componentSpec.implementation);
   const executionId = details?.child_task_execution_ids?.[taskId];
+  const canRename = !readOnly && isSubgraph;
 
   return (
     <BlockStack className="h-full" data-context-panel="task-overview">
       <InlineStack gap="2" blockAlign="center" className="px-2 pb-2">
+        {isSubgraph && <Icon name="Workflow" />}
         <Text size="lg" weight="semibold">
           {name}
         </Text>
+        {canRename && <RenameTask taskId={taskId} />}
         <ComponentFavoriteToggle component={taskSpec.componentRef} hideDelete />
         <ComponentDetailsDialog
           displayName={name}

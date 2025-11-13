@@ -1,4 +1,5 @@
 import { DndContext } from "@dnd-kit/core";
+import { useParams } from "@tanstack/react-router";
 import { ReactFlowProvider } from "@xyflow/react";
 import { useEffect } from "react";
 
@@ -13,7 +14,6 @@ import {
   ExecutionDataProvider,
   useExecutionData,
 } from "@/providers/ExecutionDataProvider";
-import { type RunDetailParams, runDetailRoute } from "@/routes/router";
 import {
   countTaskStatuses,
   getRunStatus,
@@ -68,7 +68,7 @@ const PipelineRunContent = () => {
 
   useDocumentTitle({
     "/runs/$id": (params) =>
-      `Oasis - ${componentSpec?.name || ""} - ${params.id}`,
+      `Tangle - ${componentSpec?.name || ""} - ${params.id}`,
   });
 
   if (isLoading || !ready) {
@@ -125,13 +125,27 @@ const PipelineRunContent = () => {
 };
 
 const PipelineRun = () => {
-  const { id } = runDetailRoute.useParams() as RunDetailParams;
+  const params = useParams({ strict: false });
+
+  if (!("id" in params) || typeof params.id !== "string") {
+    throw new Error("Missing required id parameter");
+  }
+
+  const id = params.id;
+  const subgraphExecutionId =
+    "subgraphExecutionId" in params &&
+    typeof params.subgraphExecutionId === "string"
+      ? params.subgraphExecutionId
+      : undefined;
 
   return (
     <div className="dndflow">
       <DndContext>
         <ReactFlowProvider>
-          <ExecutionDataProvider pipelineRunId={id}>
+          <ExecutionDataProvider
+            pipelineRunId={id}
+            subgraphExecutionId={subgraphExecutionId}
+          >
             <PipelineRunContent />
           </ExecutionDataProvider>
         </ReactFlowProvider>

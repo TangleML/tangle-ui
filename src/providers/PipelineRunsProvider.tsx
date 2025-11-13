@@ -7,10 +7,10 @@ import {
   useState,
 } from "react";
 
+import { isAuthorizationRequired } from "@/components/shared/Authentication/helpers";
+import { useAuthLocalStorage } from "@/components/shared/Authentication/useAuthLocalStorage";
+import { useAwaitAuthorization } from "@/components/shared/Authentication/useAwaitAuthorization";
 import { GitHubAuthFlowBackdrop } from "@/components/shared/GitHubAuth/GitHubAuthFlowBackdrop";
-import { isAuthorizationRequired } from "@/components/shared/GitHubAuth/helpers";
-import { useAuthLocalStorage } from "@/components/shared/GitHubAuth/useAuthLocalStorage";
-import { useAwaitAuthorization } from "@/components/shared/GitHubAuth/useAwaitAuthorization";
 import {
   countTaskStatuses,
   fetchExecutionDetails,

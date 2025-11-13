@@ -1,12 +1,13 @@
 import type { XYPosition } from "@xyflow/react";
 
 import type { TaskType } from "@/types/taskNode";
-import type {
-  ComponentSpec,
-  GraphSpec,
-  InputSpec,
-  OutputSpec,
-  TaskSpec,
+import {
+  type ComponentSpec,
+  type GraphSpec,
+  type InputSpec,
+  isGraphImplementation,
+  type OutputSpec,
+  type TaskSpec,
 } from "@/utils/componentSpec";
 import { deepClone } from "@/utils/deepClone";
 import {
@@ -20,12 +21,13 @@ const addTask = (
   taskSpec: TaskSpec | null,
   position: XYPosition,
   componentSpec: ComponentSpec,
-): ComponentSpec => {
+): { spec: ComponentSpec; taskId: string | undefined } => {
   const newComponentSpec = deepClone(componentSpec);
+  let taskId: string | undefined;
 
-  if (!("graph" in newComponentSpec.implementation)) {
+  if (!isGraphImplementation(newComponentSpec.implementation)) {
     console.error("Implementation does not contain a graph.");
-    return newComponentSpec;
+    return { spec: newComponentSpec, taskId };
   }
   const graphSpec = newComponentSpec.implementation.graph;
 
@@ -37,18 +39,24 @@ const addTask = (
   if (taskType === "task") {
     if (!taskSpec) {
       console.error("A taskSpec is required to create a task node.");
-      return newComponentSpec;
+      return { spec: newComponentSpec, taskId };
     }
 
-    const taskArguments = taskSpec.componentRef.spec?.inputs?.reduce(
-      (acc, input) => {
-        if (input.default) {
-          acc[input.name] = input.default;
-        }
-        return acc;
-      },
-      {} as Record<string, string>,
-    );
+    const defaultArguments =
+      taskSpec.componentRef.spec?.inputs?.reduce(
+        (acc, input) => {
+          if (input.default) {
+            acc[input.name] = input.default;
+          }
+          return acc;
+        },
+        {} as Record<string, string>,
+      ) ?? {};
+
+    const mergedArguments = {
+      ...defaultArguments,
+      ...taskSpec.arguments,
+    };
 
     const mergedAnnotations = {
       ...taskSpec.annotations,
@@ -58,10 +66,10 @@ const addTask = (
     const updatedTaskSpec: TaskSpec = {
       ...taskSpec,
       annotations: mergedAnnotations,
-      arguments: taskArguments ?? {},
+      arguments: mergedArguments,
     };
 
-    const taskId = getUniqueTaskName(
+    taskId = getUniqueTaskName(
       graphSpec,
       taskSpec.componentRef.spec?.name ?? "Task",
     );
@@ -100,7 +108,7 @@ const addTask = (
     newComponentSpec.outputs = outputs;
   }
 
-  return newComponentSpec;
+  return { spec: newComponentSpec, taskId };
 };
 
 export default addTask;
