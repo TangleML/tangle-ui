@@ -160,8 +160,15 @@ const createSubgraphTask = async (
   position: XYPosition,
   args: Record<string, ArgumentType>,
 ) => {
-  const userDetails = await getUserDetails();
-  const author = userDetails?.id;
+  let author: string = "Unknown";
+  try {
+    const userDetails = await getUserDetails();
+    if (userDetails?.id) {
+      author = userDetails.id;
+    }
+  } catch (error) {
+    console.error("Error retrieving user details:", error);
+  }
 
   const spec: ComponentSpec = {
     name,
