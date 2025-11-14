@@ -122,7 +122,7 @@ export const OutputNameEditor = ({
 
       setValidationError(null);
     },
-    [currentSubgraphSpec, output.name],
+    [componentSpec, output.name],
   );
 
   const deleteNode = useCallback(async () => {
@@ -161,7 +161,9 @@ export const OutputNameEditor = ({
   ]);
 
   useEffect(() => {
-    setOutputName(output.name);
+    queueMicrotask(() => {
+      setOutputName(output.name);
+    });
   }, [output.name]);
 
   return (

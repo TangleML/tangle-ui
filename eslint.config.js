@@ -1,5 +1,6 @@
 import pluginJs from "@eslint/js";
 import pluginReact from "eslint-plugin-react";
+import reactHooks from "eslint-plugin-react-hooks";
 import simpleImportSort from "eslint-plugin-simple-import-sort";
 import globals from "globals";
 import tseslint from "typescript-eslint";
@@ -11,8 +12,20 @@ export default [
   pluginJs.configs.recommended,
   ...tseslint.configs.recommended,
   pluginReact.configs.flat.recommended,
+  reactHooks.configs.flat.recommended,
   {
     rules: {
+      "react-hooks/exhaustive-deps": [
+        "warn",
+        // I left this commented out because it causes infinite loops in the codebase,
+        //    but may useful for mass-refactoring.
+        // {
+        //   enableDangerousAutofixThisMayCauseInfiniteLoops: true,
+        // },
+      ],
+      "react-hooks/set-state-in-effect": "warn",
+      "react-hooks/refs": "warn",
+      "react-hooks/immutability": "warn",
       "@typescript-eslint/no-explicit-any": "off",
       "react/react-in-jsx-scope": "off",
       "@typescript-eslint/no-empty-object-type": "off",

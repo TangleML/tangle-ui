@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { LogOutIcon } from "lucide-react";
-import { useEffectEvent, useSyncExternalStore } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 
 import { Icon } from "@/components/ui/icon";
 import { Spinner } from "@/components/ui/spinner";
@@ -52,10 +52,11 @@ export function AuthorizedUserProfile() {
   );
   const profile = localTokenStorage.getJWT();
 
-  const onLogoutSuccess = useEffectEvent(() => {
+  const onLogoutSuccess = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["user"] });
     localTokenStorage.clear();
-  });
+  }, [queryClient, localTokenStorage]);
+
   const { mutate: logout, isPending } = useLogout({
     onSuccess: onLogoutSuccess,
   });

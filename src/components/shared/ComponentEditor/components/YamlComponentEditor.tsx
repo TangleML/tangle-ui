@@ -39,7 +39,7 @@ export const YamlComponentEditor = withSuspenseWrapper(
         setValidationErrors([]);
         onErrorsChange([]);
       },
-      [onComponentTextChange, validateComponentSpec],
+      [onComponentTextChange, onErrorsChange, validateComponentSpec],
     );
 
     return (

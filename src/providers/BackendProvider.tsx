@@ -124,14 +124,14 @@ export const BackendProvider = ({ children }: { children: ReactNode }) => {
           return false;
         });
     },
-    [backendUrl],
+    [backendUrl, notify],
   );
 
   useEffect(() => {
     if (settingsLoaded) {
       ping({ notifyResult: false });
     }
-  }, [backendUrl, settingsLoaded]);
+  }, [backendUrl, ping, settingsLoaded]);
 
   useEffect(() => {
     const getSettings = async () => {
@@ -147,7 +147,7 @@ export const BackendProvider = ({ children }: { children: ReactNode }) => {
       setSettingsLoaded(true);
     };
     getSettings();
-  }, []);
+  }, [backendUrlFromEnv]);
 
   const contextValue = useMemo(
     () => ({

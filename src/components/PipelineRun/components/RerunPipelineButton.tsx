@@ -28,9 +28,12 @@ export const RerunPipelineButton = ({
   const { awaitAuthorization, isAuthorized } = useAwaitAuthorization();
   const { getToken } = useAuthLocalStorage();
 
-  const onSuccess = useCallback((response: PipelineRun) => {
-    navigate({ to: `${APP_ROUTES.RUNS}/${response.id}` });
-  }, []);
+  const onSuccess = useCallback(
+    (response: PipelineRun) => {
+      navigate({ to: `${APP_ROUTES.RUNS}/${response.id}` });
+    },
+    [navigate],
+  );
 
   const onError = useCallback(
     (error: Error | string) => {

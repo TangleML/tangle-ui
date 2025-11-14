@@ -141,7 +141,7 @@ export const InputValueEditor = ({
 
       setValidationError(null);
     },
-    [input.name, currentSubgraphSpec],
+    [input.name, componentSpec],
   );
 
   const hasChanges = useCallback(() => {
@@ -203,7 +203,7 @@ export const InputValueEditor = ({
       void navigator.clipboard.writeText(inputValue.trim());
       notify("Input value copied to clipboard", "success");
     }
-  }, [inputValue]);
+  }, [inputValue, notify]);
 
   const deleteNode = useCallback(async () => {
     if (!currentSubgraphSpec.inputs) return;
@@ -258,17 +258,21 @@ export const InputValueEditor = ({
   }, []);
 
   useEffect(() => {
-    setInputValue(initialInputValue);
-    setInputName(input.name);
-    setInputType(input.type?.toString() ?? "any");
-    setInputOptional(initialIsOptional);
-    setValidationError(null);
+    queueMicrotask(() => {
+      setInputValue(initialInputValue);
+      setInputName(input.name);
+      setInputType(input.type?.toString() ?? "any");
+      setInputOptional(initialIsOptional);
+      setValidationError(null);
+    });
   }, [input, initialInputValue, initialIsOptional]);
 
   useEffect(() => {
     if (triggerSave) {
-      saveChanges();
-      setTriggerSave(false);
+      queueMicrotask(() => {
+        saveChanges();
+        setTriggerSave(false);
+      });
     }
   }, [triggerSave, saveChanges]);
 

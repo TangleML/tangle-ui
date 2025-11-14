@@ -74,7 +74,7 @@ const PipelineRow = ({
     };
 
     await deletePipeline(name, deleteCallback);
-  }, [name]);
+  }, [name, onDelete]);
 
   const handleClick = useCallback((e: MouseEvent) => {
     // Prevent row click when clicking on the checkbox

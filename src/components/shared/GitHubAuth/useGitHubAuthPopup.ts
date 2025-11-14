@@ -70,6 +70,19 @@ export function useGitHubAuthPopup({
   const popupRef = useRef<Window | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  const closePopup = useCallback(() => {
+    setIsLoading(false);
+
+    if (popupRef.current) {
+      popupRef.current.close();
+    }
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+    setIsPopupOpen(false);
+    onClose?.();
+  }, [onClose]);
+
   const openPopup = useCallback(() => {
     if (popupRef.current && !popupRef.current.closed) {
       popupRef.current.focus();
@@ -137,20 +150,7 @@ export function useGitHubAuthPopup({
         // We'll continue monitoring until popup closes or returns to our domain
       }
     }, 1000);
-  }, [onError, onSuccess, onClose]);
-
-  const closePopup = useCallback(() => {
-    setIsLoading(false);
-
-    if (popupRef.current) {
-      popupRef.current.close();
-    }
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
-    setIsPopupOpen(false);
-    onClose?.();
-  }, [onClose]);
+  }, [onError, closePopup, onSuccess]);
 
   const bringPopupToFront = useCallback(() => {
     if (popupRef.current && !popupRef.current.closed) {

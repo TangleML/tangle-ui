@@ -27,20 +27,23 @@ export function useBetaFlagsReducer(betaFlags: BetaFlags) {
       .forEach((flag) => removeFlag(flag));
   }, [betaFlags, getFlags, removeFlag]);
 
-  const reducer = useCallback((state: State, action: Action) => {
-    switch (action.type) {
-      case "setFlag":
-        setFlag(action.payload.key, action.payload.enabled);
+  const reducer = useCallback(
+    (state: State, action: Action) => {
+      switch (action.type) {
+        case "setFlag":
+          setFlag(action.payload.key, action.payload.enabled);
 
-        return state.map((flag) =>
-          flag.key === action.payload.key
-            ? { ...flag, enabled: action.payload.enabled }
-            : flag,
-        );
-      default:
-        return state;
-    }
-  }, []);
+          return state.map((flag) =>
+            flag.key === action.payload.key
+              ? { ...flag, enabled: action.payload.enabled }
+              : flag,
+          );
+        default:
+          return state;
+      }
+    },
+    [setFlag],
+  );
 
   return useReducer(
     reducer,

@@ -88,7 +88,7 @@ const FileActions = ({ isOpen }: { isOpen: boolean }) => {
     return componentSpec?.name
       ? `${componentSpec.name} (Copy)`
       : `Untitled Pipeline ${new Date().toLocaleTimeString()}`;
-  }, [componentSpec?.name]);
+  }, [componentSpec]);
 
   useEffect(() => {
     const fetchLastSaved = async () => {

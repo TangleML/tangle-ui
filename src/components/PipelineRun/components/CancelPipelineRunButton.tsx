@@ -53,7 +53,7 @@ export const CancelPipelineRunButton = ({
     } catch (error) {
       notify(`Error cancelling run: ${error}`, "error");
     }
-  }, [runId, available]);
+  }, [runId, available, notify, cancelPipeline]);
 
   const onClick = useCallback(() => {
     setIsOpen(true);

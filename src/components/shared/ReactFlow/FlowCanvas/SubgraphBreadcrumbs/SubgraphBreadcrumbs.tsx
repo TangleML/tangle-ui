@@ -15,13 +15,14 @@ import { InlineStack } from "@/components/ui/layout";
 import { buildExecutionUrl } from "@/hooks/useSubgraphBreadcrumbs";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
+import { EMPTY } from "@/utils/constants";
 
 export const SubgraphBreadcrumbs = () => {
   const navigate = useNavigate();
   const { currentSubgraphPath, navigateToPath } = useComponentSpec();
   const executionData = useExecutionDataOptional();
   const rootExecutionId = executionData?.rootExecutionId;
-  const segments = executionData?.segments || [];
+  const segments = executionData?.segments || EMPTY.Array;
 
   const getExecutionIdForIndex = useCallback(
     (targetIndex: number): string | undefined => {

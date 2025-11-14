@@ -10,10 +10,12 @@ import type { RunStatus } from "@/types/pipelineRun";
 import type { TaskNodeData, TaskNodeDimensions } from "@/types/taskNode";
 import type {
   ArgumentType,
+  ComponentReference,
   InputSpec,
   OutputSpec,
   TaskSpec,
 } from "@/utils/componentSpec";
+import { EMPTY } from "@/utils/constants";
 import { getComponentName } from "@/utils/getComponentName";
 import { taskIdToNodeId } from "@/utils/nodes/nodeIdUtils";
 
@@ -77,9 +79,9 @@ export const TaskNodeProvider = ({
   const taskId = data.taskId;
   const nodeId = taskId ? taskIdToNodeId(taskId) : "";
 
-  const componentRef = taskSpec?.componentRef || {};
-  const inputs = componentRef.spec?.inputs || [];
-  const outputs = componentRef.spec?.outputs || [];
+  const componentRef: ComponentReference = taskSpec?.componentRef || EMPTY.Obj;
+  const inputs = componentRef.spec?.inputs || EMPTY.Array;
+  const outputs = componentRef.spec?.outputs || EMPTY.Array;
 
   const name = getComponentName(componentRef);
 
@@ -152,9 +154,10 @@ export const TaskNodeProvider = ({
     }),
     [
       selected,
+      data.isGhost,
       data.highlighted,
       data.readOnly,
-      data.isGhost,
+      data.connectable,
       status,
       isCustomComponent,
       dimensions,
@@ -173,6 +176,7 @@ export const TaskNodeProvider = ({
     [
       handleSetArguments,
       handleSetAnnotations,
+      handleSetCacheStaleness,
       handleDeleteTaskNode,
       handleDuplicateTaskNode,
       handleUpgradeTaskNode,
