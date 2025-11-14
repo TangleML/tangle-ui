@@ -320,9 +320,9 @@ const PipelineDetails = () => {
             title={`${errors.length} validation error${errors.length > 1 ? "s" : ""} found:`}
           >
             <ScrollArea className="max-h-80 overflow-y-auto">
-              <ul className="text-xs space-y-1">
-                {errors.map((error) => (
-                  <li key={error}>
+              <ul className="text-xs space-y-2">
+                {errors.map((error, index) => (
+                  <li key={`${error.path}-${error.message}-${index}`}>
                     <InlineStack
                       gap="2"
                       blockAlign="start"
@@ -330,7 +330,12 @@ const PipelineDetails = () => {
                       wrap="nowrap"
                     >
                       <span className="text-destructive flex-shrink-0">•</span>
-                      <span className="break-words">{error}</span>
+                      <div className="break-words">
+                        <span className="font-semibold text-destructive">
+                          {error.path}:
+                        </span>{" "}
+                        <span>{error.message}</span>
+                      </div>
                     </InlineStack>
                   </li>
                 ))}

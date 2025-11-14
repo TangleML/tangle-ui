@@ -166,6 +166,16 @@ export const createSubgraphFromNodes = async (
     subgraphTask.componentRef.text = text;
   }
 
+  console.log(`[createSubgraph] Final subgraph created:`, {
+    subgraphName,
+    inputs: subgraphInputs.map((i) => i.name),
+    outputs: subgraphOutputs.map((o) => o.name),
+    tasks: Object.keys(subgraphTasks),
+    arguments: Object.keys(subgraphArguments),
+    argumentValues: subgraphArguments,
+    connectionMappings: connectionMappings.length,
+  });
+
   return { subgraphTask, connectionMappings };
 };
 
@@ -258,7 +268,23 @@ const processSelectedInputNodes = (
     );
 
     if (originalInputSpec?.value) {
+      console.log(`[createSubgraph] Processing input "${inputName}":`, {
+        valueType: typeof originalInputSpec.value,
+        value: originalInputSpec.value,
+        isGraphInput: isGraphInputArgument(originalInputSpec.value),
+        isTaskOutput: isTaskOutputArgument(originalInputSpec.value),
+      });
+
+      // POTENTIAL ISSUE: If value is a TaskOutputArgument referencing a task
+      // that's NOT being moved into the subgraph, this reference will be invalid
+      // inside the subgraph. We should either:
+      // 1. Create a new subgraph input and pass the external value through, or
+      // 2. Validate that the referenced task is also being moved
       subgraphArguments[inputName] = originalInputSpec.value;
+
+      console.log(`[createSubgraph] Stored value in subgraphArguments["${inputName}"]`);
+    } else {
+      console.log(`[createSubgraph] Input "${inputName}" has no value to migrate`);
     }
   });
 };
@@ -323,6 +349,11 @@ const processTaskInputConnections = (
 
   const currentGraphSpec = currentComponentSpec.implementation.graph;
 
+  console.log(`[processTaskInputConnections] Processing task:`, {
+    taskName: taskSpec.name,
+    arguments: Object.keys(taskSpec.arguments),
+  });
+
   let externalInputCount = 0;
   const updatedArguments: Record<string, ArgumentType> = {};
 
@@ -358,6 +389,13 @@ const processTaskInputConnections = (
 
     // Default case: retain existing argument
     updatedArguments[argName] = argValue;
+
+    console.log(`[processTaskInputConnections] Argument "${argName}":`, {
+      isExternal,
+      argValue,
+      isTaskOutput: isTaskOutputArgument(argValue),
+      isGraphInput: isGraphInputArgument(argValue),
+    });
 
     // Convert external input nodes & connections to subgraph inputs (internal input nodes & connections are retained as-is)
     if (isExternal) {

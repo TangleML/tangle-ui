@@ -8,7 +8,10 @@ import {
   getSubgraphComponentSpec,
   updateSubgraphSpec,
 } from "@/utils/subgraphUtils";
-import { checkComponentSpecValidity } from "@/utils/validations";
+import {
+  checkComponentSpecValidityRecursive,
+  type ValidationError,
+} from "@/utils/validations";
 
 import {
   createRequiredContext,
@@ -43,7 +46,7 @@ interface ComponentSpecContextType {
   currentSubgraphSpec: ComponentSpec;
   isLoading: boolean;
   isValid: boolean;
-  errors: string[];
+  errors: ValidationError[];
   refetch: () => void;
   updateGraphSpec: (newGraphSpec: GraphSpec) => void;
   saveComponentSpec: (name: string) => Promise<void>;
@@ -87,9 +90,10 @@ export const ComponentSpecProvider = ({
     return getSubgraphComponentSpec(componentSpec, currentSubgraphPath);
   }, [componentSpec, currentSubgraphPath]);
 
+  // Use recursive validation to check the entire component tree
   const { isValid, errors } = useMemo(
-    () => checkComponentSpecValidity(currentSubgraphSpec),
-    [currentSubgraphSpec],
+    () => checkComponentSpecValidityRecursive(componentSpec),
+    [componentSpec],
   );
 
   const clearComponentSpec = useCallback(() => {

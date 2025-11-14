@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { type ComponentSpec } from "./componentSpec";
-import { checkComponentSpecValidity } from "./validations";
+import {
+  checkComponentSpecValidity,
+  checkComponentSpecValidityRecursive,
+} from "./validations";
 
 // Mock the componentSpec module
 vi.mock("./componentSpec", () => ({
@@ -516,6 +519,640 @@ describe("checkComponentSpecValidity", () => {
 
       expect(result.isValid).toBe(true);
       expect(result.errors).toHaveLength(0);
+    });
+  });
+
+  describe("Recursive Validation", () => {
+    beforeEach(() => {
+      // Use real isGraphImplementation for recursive tests
+      vi.mocked(isGraphImplementation).mockImplementation((impl: any) => {
+        return impl && impl.graph !== undefined;
+      });
+    });
+
+    it("should validate a simple pipeline without subgraphs", () => {
+      const componentSpec: ComponentSpec = {
+        name: "root-pipeline",
+        inputs: [{ name: "input1", type: "string", value: "value1" }],
+        outputs: [{ name: "output1", type: "string" }],
+        implementation: {
+          graph: {
+            tasks: {
+              task1: {
+                componentRef: {
+                  name: "child-component",
+                  spec: {
+                    name: "child-component",
+                    implementation: { container: { image: "child-image" } },
+                    inputs: [{ name: "taskInput", type: "string" }],
+                    outputs: [{ name: "taskOutput", type: "string" }],
+                  },
+                },
+                arguments: {
+                  taskInput: { graphInput: { inputName: "input1" } },
+                },
+              },
+            },
+            outputValues: {
+              output1: {
+                taskOutput: { taskId: "task1", outputName: "taskOutput" },
+              },
+            },
+          },
+        },
+      };
+
+      const result = checkComponentSpecValidityRecursive(componentSpec);
+
+      expect(result.isValid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it("should recursively validate a pipeline with one level of subgraphs", () => {
+      const subgraphSpec: ComponentSpec = {
+        name: "subgraph-component",
+        inputs: [{ name: "subInput", type: "string", optional: true }],
+        outputs: [{ name: "subOutput", type: "string" }],
+        implementation: {
+          graph: {
+            tasks: {
+              innerTask: {
+                componentRef: {
+                  name: "inner-component",
+                  spec: {
+                    name: "inner-component",
+                    implementation: { container: { image: "inner-image" } },
+                    inputs: [{ name: "innerInput", type: "string" }],
+                    outputs: [{ name: "innerOutput", type: "string" }],
+                  },
+                },
+                arguments: {
+                  innerInput: { graphInput: { inputName: "subInput" } },
+                },
+              },
+            },
+            outputValues: {
+              subOutput: {
+                taskOutput: { taskId: "innerTask", outputName: "innerOutput" },
+              },
+            },
+          },
+        },
+      };
+
+      const rootSpec: ComponentSpec = {
+        name: "root-pipeline",
+        inputs: [{ name: "rootInput", type: "string", value: "test" }],
+        outputs: [{ name: "rootOutput", type: "string" }],
+        implementation: {
+          graph: {
+            tasks: {
+              subgraphTask: {
+                name: "My Subgraph",
+                componentRef: {
+                  name: "subgraph-component",
+                  spec: subgraphSpec,
+                },
+                arguments: {
+                  subInput: { graphInput: { inputName: "rootInput" } },
+                },
+              },
+            },
+            outputValues: {
+              rootOutput: {
+                taskOutput: {
+                  taskId: "subgraphTask",
+                  outputName: "subOutput",
+                },
+              },
+            },
+          },
+        },
+      };
+
+      const result = checkComponentSpecValidityRecursive(rootSpec);
+
+      expect(result.isValid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it("should detect errors in nested subgraphs and include proper path", () => {
+      const invalidSubgraphSpec: ComponentSpec = {
+        name: "invalid-subgraph",
+        inputs: [{ name: "subInput", type: "string", optional: true }],
+        outputs: [{ name: "subOutput", type: "string" }],
+        implementation: {
+          graph: {
+            tasks: {
+              brokenTask: {
+                componentRef: {
+                  name: "inner-component",
+                  spec: {
+                    name: "inner-component",
+                    implementation: { container: { image: "inner-image" } },
+                    inputs: [
+                      {
+                        name: "requiredInput",
+                        type: "string",
+                        optional: false,
+                      },
+                    ],
+                    outputs: [{ name: "innerOutput", type: "string" }],
+                  },
+                },
+                // Missing required argument!
+                arguments: {},
+              },
+            },
+            outputValues: {
+              subOutput: {
+                taskOutput: {
+                  taskId: "brokenTask",
+                  outputName: "innerOutput",
+                },
+              },
+            },
+          },
+        },
+      };
+
+      const rootSpec: ComponentSpec = {
+        name: "root-pipeline",
+        inputs: [{ name: "rootInput", type: "string", value: "test" }],
+        outputs: [{ name: "rootOutput", type: "string" }],
+        implementation: {
+          graph: {
+            tasks: {
+              subgraphTask: {
+                name: "Broken Subgraph",
+                componentRef: {
+                  name: "invalid-subgraph",
+                  spec: invalidSubgraphSpec,
+                },
+                arguments: {
+                  subInput: { graphInput: { inputName: "rootInput" } },
+                },
+              },
+            },
+            outputValues: {
+              rootOutput: {
+                taskOutput: {
+                  taskId: "subgraphTask",
+                  outputName: "subOutput",
+                },
+              },
+            },
+          },
+        },
+      };
+
+      const result = checkComponentSpecValidityRecursive(rootSpec);
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors.length).toBeGreaterThan(0);
+
+      // Check that the error includes the path to the subgraph
+      const errorWithPath = result.errors.find(
+        (e) =>
+          e.path.includes("Broken Subgraph") &&
+          e.message.includes("missing required argument"),
+      );
+      expect(errorWithPath).toBeDefined();
+      expect(errorWithPath?.path).toBe("root-pipeline > Broken Subgraph");
+    });
+
+    it("should detect errors at multiple levels (root and nested)", () => {
+      const invalidSubgraphSpec: ComponentSpec = {
+        name: "invalid-subgraph",
+        inputs: [{ name: "subInput", type: "string", optional: true }],
+        // Missing outputs but outputValues references them
+        implementation: {
+          graph: {
+            tasks: {
+              task1: {
+                componentRef: {
+                  name: "inner-component",
+                  spec: {
+                    name: "inner-component",
+                    implementation: { container: { image: "inner-image" } },
+                    outputs: [{ name: "innerOutput", type: "string" }],
+                  },
+                },
+                arguments: {
+                  input: { graphInput: { inputName: "subInput" } },
+                },
+              },
+            },
+            outputValues: {
+              nonExistentOutput: {
+                taskOutput: { taskId: "task1", outputName: "innerOutput" },
+              },
+            },
+          },
+        },
+      };
+
+      const rootSpec: ComponentSpec = {
+        name: "root-pipeline",
+        inputs: [{ name: "rootInput", type: "string", value: "test" }],
+        outputs: [{ name: "rootOutput", type: "string" }],
+        implementation: {
+          graph: {
+            tasks: {
+              subgraphTask: {
+                name: "Nested Subgraph",
+                componentRef: {
+                  name: "invalid-subgraph",
+                  spec: invalidSubgraphSpec,
+                },
+                arguments: {
+                  subInput: { graphInput: { inputName: "rootInput" } },
+                },
+              },
+              invalidTask: {
+                componentRef: {
+                  name: "some-component",
+                  spec: {
+                    name: "some-component",
+                    implementation: { container: { image: "some-image" } },
+                    inputs: [
+                      { name: "required", type: "string", optional: false },
+                    ],
+                  },
+                },
+                // Missing required argument at root level!
+                arguments: {},
+              },
+            },
+            outputValues: {
+              rootOutput: {
+                taskOutput: {
+                  taskId: "subgraphTask",
+                  outputName: "nonExistentOutput",
+                },
+              },
+            },
+          },
+        },
+      };
+
+      const result = checkComponentSpecValidityRecursive(rootSpec);
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors.length).toBeGreaterThan(0);
+
+      // Should have errors from both root and subgraph
+      const rootErrors = result.errors.filter(
+        (e) => e.path === "root-pipeline",
+      );
+      const subgraphErrors = result.errors.filter((e) =>
+        e.path.includes("Nested Subgraph"),
+      );
+
+      expect(rootErrors.length).toBeGreaterThan(0);
+      expect(subgraphErrors.length).toBeGreaterThan(0);
+    });
+
+    it("should handle deeply nested subgraphs (3 levels)", () => {
+      // Level 3 (innermost)
+      const level3Spec: ComponentSpec = {
+        name: "level3",
+        inputs: [{ name: "input3", type: "string", optional: true }],
+        outputs: [{ name: "output3", type: "string" }],
+        implementation: {
+          graph: {
+            tasks: {
+              leaf: {
+                componentRef: {
+                  name: "leaf-component",
+                  spec: {
+                    name: "leaf-component",
+                    implementation: { container: { image: "leaf-image" } },
+                    inputs: [{ name: "leafInput", type: "string" }],
+                    outputs: [{ name: "leafOutput", type: "string" }],
+                  },
+                },
+                arguments: {
+                  leafInput: { graphInput: { inputName: "input3" } },
+                },
+              },
+            },
+            outputValues: {
+              output3: {
+                taskOutput: { taskId: "leaf", outputName: "leafOutput" },
+              },
+            },
+          },
+        },
+      };
+
+      // Level 2
+      const level2Spec: ComponentSpec = {
+        name: "level2",
+        inputs: [{ name: "input2", type: "string", optional: true }],
+        outputs: [{ name: "output2", type: "string" }],
+        implementation: {
+          graph: {
+            tasks: {
+              level3Task: {
+                name: "Level 3 Subgraph",
+                componentRef: {
+                  name: "level3",
+                  spec: level3Spec,
+                },
+                arguments: {
+                  input3: { graphInput: { inputName: "input2" } },
+                },
+              },
+            },
+            outputValues: {
+              output2: {
+                taskOutput: {
+                  taskId: "level3Task",
+                  outputName: "output3",
+                },
+              },
+            },
+          },
+        },
+      };
+
+      // Level 1 (root)
+      const level1Spec: ComponentSpec = {
+        name: "level1",
+        inputs: [{ name: "input1", type: "string", value: "test" }],
+        outputs: [{ name: "output1", type: "string" }],
+        implementation: {
+          graph: {
+            tasks: {
+              level2Task: {
+                name: "Level 2 Subgraph",
+                componentRef: {
+                  name: "level2",
+                  spec: level2Spec,
+                },
+                arguments: {
+                  input2: { graphInput: { inputName: "input1" } },
+                },
+              },
+            },
+            outputValues: {
+              output1: {
+                taskOutput: {
+                  taskId: "level2Task",
+                  outputName: "output2",
+                },
+              },
+            },
+          },
+        },
+      };
+
+      const result = checkComponentSpecValidityRecursive(level1Spec);
+
+      expect(result.isValid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it("should detect error at the deepest level with full path", () => {
+      // Level 3 with error (innermost)
+      const level3Spec: ComponentSpec = {
+        name: "level3",
+        inputs: [{ name: "input3", type: "string", optional: true }],
+        outputs: [{ name: "output3", type: "string" }],
+        implementation: {
+          graph: {
+            tasks: {
+              brokenLeaf: {
+                componentRef: {
+                  name: "leaf-component",
+                  spec: {
+                    name: "leaf-component",
+                    implementation: { container: { image: "leaf-image" } },
+                    inputs: [
+                      {
+                        name: "requiredLeafInput",
+                        type: "string",
+                        optional: false,
+                      },
+                    ],
+                  },
+                },
+                // Missing required argument!
+                arguments: {},
+              },
+            },
+            outputValues: {
+              output3: {
+                taskOutput: { taskId: "brokenLeaf", outputName: "output" },
+              },
+            },
+          },
+        },
+      };
+
+      // Level 2
+      const level2Spec: ComponentSpec = {
+        name: "level2",
+        inputs: [{ name: "input2", type: "string", optional: true }],
+        outputs: [{ name: "output2", type: "string" }],
+        implementation: {
+          graph: {
+            tasks: {
+              level3Task: {
+                name: "Deep Subgraph",
+                componentRef: {
+                  name: "level3",
+                  spec: level3Spec,
+                },
+                arguments: {
+                  input3: { graphInput: { inputName: "input2" } },
+                },
+              },
+            },
+            outputValues: {
+              output2: {
+                taskOutput: {
+                  taskId: "level3Task",
+                  outputName: "output3",
+                },
+              },
+            },
+          },
+        },
+      };
+
+      // Level 1 (root)
+      const level1Spec: ComponentSpec = {
+        name: "level1",
+        inputs: [{ name: "input1", type: "string", value: "test" }],
+        outputs: [{ name: "output1", type: "string" }],
+        implementation: {
+          graph: {
+            tasks: {
+              level2Task: {
+                name: "Mid Subgraph",
+                componentRef: {
+                  name: "level2",
+                  spec: level2Spec,
+                },
+                arguments: {
+                  input2: { graphInput: { inputName: "input1" } },
+                },
+              },
+            },
+            outputValues: {
+              output1: {
+                taskOutput: {
+                  taskId: "level2Task",
+                  outputName: "output2",
+                },
+              },
+            },
+          },
+        },
+      };
+
+      const result = checkComponentSpecValidityRecursive(level1Spec);
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors.length).toBeGreaterThan(0);
+
+      // Should have error with full path through all levels
+      const deepError = result.errors.find((e) =>
+        e.path.includes("Deep Subgraph"),
+      );
+      expect(deepError).toBeDefined();
+      expect(deepError?.path).toBe("level1 > Mid Subgraph > Deep Subgraph");
+    });
+
+    it("should handle mixed valid and invalid subgraphs", () => {
+      const validSubgraph: ComponentSpec = {
+        name: "valid-subgraph",
+        inputs: [{ name: "validInput", type: "string", optional: true }],
+        outputs: [{ name: "validOutput", type: "string" }],
+        implementation: {
+          graph: {
+            tasks: {
+              validTask: {
+                componentRef: {
+                  name: "valid-component",
+                  spec: {
+                    name: "valid-component",
+                    implementation: { container: { image: "valid-image" } },
+                    inputs: [{ name: "input", type: "string" }],
+                    outputs: [{ name: "output", type: "string" }],
+                  },
+                },
+                arguments: {
+                  input: { graphInput: { inputName: "validInput" } },
+                },
+              },
+            },
+            outputValues: {
+              validOutput: {
+                taskOutput: { taskId: "validTask", outputName: "output" },
+              },
+            },
+          },
+        },
+      };
+
+      const invalidSubgraph: ComponentSpec = {
+        name: "invalid-subgraph",
+        inputs: [{ name: "invalidInput", type: "string", optional: true }],
+        outputs: [{ name: "invalidOutput", type: "string" }],
+        implementation: {
+          graph: {
+            tasks: {
+              invalidTask: {
+                componentRef: {
+                  name: "invalid-component",
+                  spec: {
+                    name: "invalid-component",
+                    implementation: { container: { image: "invalid-image" } },
+                    inputs: [
+                      { name: "required", type: "string", optional: false },
+                    ],
+                  },
+                },
+                // Missing required!
+                arguments: {},
+              },
+            },
+            outputValues: {
+              invalidOutput: {
+                taskOutput: { taskId: "invalidTask", outputName: "output" },
+              },
+            },
+          },
+        },
+      };
+
+      const rootSpec: ComponentSpec = {
+        name: "mixed-pipeline",
+        inputs: [{ name: "rootInput", type: "string", value: "test" }],
+        outputs: [
+          { name: "output1", type: "string" },
+          { name: "output2", type: "string" },
+        ],
+        implementation: {
+          graph: {
+            tasks: {
+              validSubgraphTask: {
+                name: "Valid Subgraph",
+                componentRef: {
+                  name: "valid-subgraph",
+                  spec: validSubgraph,
+                },
+                arguments: {
+                  validInput: { graphInput: { inputName: "rootInput" } },
+                },
+              },
+              invalidSubgraphTask: {
+                name: "Invalid Subgraph",
+                componentRef: {
+                  name: "invalid-subgraph",
+                  spec: invalidSubgraph,
+                },
+                arguments: {
+                  invalidInput: { graphInput: { inputName: "rootInput" } },
+                },
+              },
+            },
+            outputValues: {
+              output1: {
+                taskOutput: {
+                  taskId: "validSubgraphTask",
+                  outputName: "validOutput",
+                },
+              },
+              output2: {
+                taskOutput: {
+                  taskId: "invalidSubgraphTask",
+                  outputName: "invalidOutput",
+                },
+              },
+            },
+          },
+        },
+      };
+
+      const result = checkComponentSpecValidityRecursive(rootSpec);
+
+      expect(result.isValid).toBe(false);
+
+      // Should only have errors from invalid subgraph
+      const invalidErrors = result.errors.filter((e) =>
+        e.path.includes("Invalid Subgraph"),
+      );
+      expect(invalidErrors.length).toBeGreaterThan(0);
+
+      // Should not have errors from valid subgraph
+      const validErrors = result.errors.filter((e) =>
+        e.path.includes("Valid Subgraph"),
+      );
+      expect(validErrors).toHaveLength(0);
     });
   });
 });
