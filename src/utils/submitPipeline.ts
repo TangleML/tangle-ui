@@ -10,6 +10,39 @@ import type { PipelineRun } from "@/types/pipelineRun";
 
 import type { ComponentReference, ComponentSpec } from "./componentSpec";
 
+/**
+ * Normalize inputs: if an input has a default but no value, set value = default.
+ * This ensures the server receives a value for all inputs.
+ * Recursively processes nested subgraphs.
+ * Returns a new ComponentSpec without mutating the original.
+ */
+const normalizeInputValues = (spec: ComponentSpec): ComponentSpec => {
+  const normalized = structuredClone(spec);
+
+  if (normalized.inputs) {
+    normalized.inputs.forEach((input) => {
+      if (!input.value && input.default) {
+        input.value = input.default;
+      }
+    });
+  }
+
+  if (normalized.implementation && "graph" in normalized.implementation) {
+    const graph = normalized.implementation.graph;
+    if (graph.tasks) {
+      Object.entries(graph.tasks).forEach(([taskId, task]) => {
+        if (task.componentRef?.spec) {
+          graph.tasks[taskId].componentRef.spec = normalizeInputValues(
+            task.componentRef.spec,
+          );
+        }
+      });
+    }
+  }
+
+  return normalized;
+};
+
 export async function submitPipelineRun(
   componentSpec: ComponentSpec,
   backendUrl: string,
@@ -31,12 +64,13 @@ export async function submitPipelineRun(
         options?.onError?.(error as Error);
       },
     );
-    const argumentsFromInputs = getArgumentsFromInputs(fullyLoadedSpec);
+    const normalizedSpec = normalizeInputValues(fullyLoadedSpec);
+    const argumentsFromInputs = getArgumentsFromInputs(normalizedSpec);
 
     const payload = {
       root_task: {
         componentRef: {
-          spec: fullyLoadedSpec,
+          spec: normalizedSpec,
         },
         ...(argumentsFromInputs ? { arguments: argumentsFromInputs } : {}),
       },

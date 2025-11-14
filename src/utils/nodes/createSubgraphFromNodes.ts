@@ -259,6 +259,8 @@ const processSelectedInputNodes = (
 
     if (originalInputSpec?.value) {
       subgraphArguments[inputName] = originalInputSpec.value;
+    } else if (originalInputSpec?.default) {
+      subgraphArguments[inputName] = originalInputSpec.default;
     }
   });
 };

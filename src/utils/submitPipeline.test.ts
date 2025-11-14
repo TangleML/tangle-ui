@@ -617,6 +617,187 @@ describe("submitPipelineRun", () => {
     });
   });
 
+  describe("input normalization", () => {
+    it("should normalize inputs by copying default to value when value is missing", async () => {
+      // Arrange
+      const componentSpec: ComponentSpec = {
+        name: "component-with-defaults",
+        inputs: [
+          {
+            name: "input1",
+            default: "default-value-1",
+          },
+          {
+            name: "input2",
+            value: "explicit-value",
+            default: "default-value-2",
+          },
+          {
+            name: "input3",
+            default: "default-value-3",
+          },
+        ],
+        implementation: { container: { image: "test:latest" } },
+      };
+
+      // Act
+      await submitPipelineRun(componentSpec, mockBackendUrl);
+
+      // Assert
+      const submittedSpec = vi.mocked(pipelineRunService.createPipelineRun).mock
+        .calls[0][0].root_task.componentRef.spec;
+      expect(submittedSpec).toBeDefined();
+      if (submittedSpec?.inputs) {
+        expect((submittedSpec.inputs[0] as any)?.value).toBe("default-value-1");
+        expect((submittedSpec.inputs[1] as any)?.value).toBe("explicit-value");
+        expect((submittedSpec.inputs[2] as any)?.value).toBe("default-value-3");
+      }
+    });
+
+    it("should recursively normalize inputs in nested subgraphs", async () => {
+      // Arrange
+      const componentSpec: ComponentSpec = {
+        name: "component-with-nested-defaults",
+        inputs: [
+          {
+            name: "root-input",
+            default: "root-default",
+          },
+        ],
+        implementation: {
+          graph: {
+            tasks: {
+              "nested-task": {
+                componentRef: {
+                  spec: {
+                    name: "nested-component",
+                    inputs: [
+                      {
+                        name: "nested-input",
+                        default: "nested-default",
+                      },
+                    ],
+                    implementation: { container: { image: "nested:latest" } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      };
+
+      // Act
+      await submitPipelineRun(componentSpec, mockBackendUrl);
+
+      // Assert
+      const submittedSpec = vi.mocked(pipelineRunService.createPipelineRun).mock
+        .calls[0][0].root_task.componentRef.spec;
+      expect(submittedSpec).toBeDefined();
+      if (submittedSpec?.inputs) {
+        expect((submittedSpec.inputs[0] as any)?.value).toBe("root-default");
+      }
+      if (
+        submittedSpec?.implementation &&
+        isGraphImplementation(submittedSpec.implementation as any)
+      ) {
+        const nestedSpec = (submittedSpec.implementation as any).graph.tasks[
+          "nested-task"
+        ].componentRef.spec;
+        if (nestedSpec?.inputs) {
+          expect((nestedSpec.inputs[0] as any)?.value).toBe("nested-default");
+        }
+      }
+    });
+
+    it("should not overwrite existing values with defaults", async () => {
+      // Arrange
+      const componentSpec: ComponentSpec = {
+        name: "component-with-existing-values",
+        inputs: [
+          {
+            name: "input1",
+            value: "existing-value",
+            default: "default-value",
+          },
+        ],
+        implementation: { container: { image: "test:latest" } },
+      };
+
+      // Act
+      await submitPipelineRun(componentSpec, mockBackendUrl);
+
+      // Assert
+      const submittedSpec = vi.mocked(pipelineRunService.createPipelineRun).mock
+        .calls[0][0].root_task.componentRef.spec;
+      expect(submittedSpec).toBeDefined();
+      if (submittedSpec?.inputs) {
+        expect((submittedSpec.inputs[0] as any)?.value).toBe("existing-value");
+      }
+    });
+
+    it("should handle inputs without defaults", async () => {
+      // Arrange
+      const componentSpec: ComponentSpec = {
+        name: "component-without-defaults",
+        inputs: [
+          {
+            name: "input1",
+          },
+          {
+            name: "input2",
+            value: "some-value",
+          },
+        ],
+        implementation: { container: { image: "test:latest" } },
+      };
+
+      // Act
+      await submitPipelineRun(componentSpec, mockBackendUrl);
+
+      // Assert
+      const submittedSpec = vi.mocked(pipelineRunService.createPipelineRun).mock
+        .calls[0][0].root_task.componentRef.spec;
+      expect(submittedSpec).toBeDefined();
+      if (submittedSpec?.inputs) {
+        expect((submittedSpec.inputs[0] as any)?.value).toBeUndefined();
+        expect((submittedSpec.inputs[1] as any)?.value).toBe("some-value");
+      }
+    });
+
+    it("should not mutate the original component spec during normalization", async () => {
+      // Arrange
+      const componentSpec: ComponentSpec = {
+        name: "immutable-test",
+        inputs: [
+          {
+            name: "input1",
+            default: "default-value",
+          },
+        ],
+        implementation: { container: { image: "test:latest" } },
+      };
+
+      const originalCopy = structuredClone(componentSpec);
+
+      // Act
+      await submitPipelineRun(componentSpec, mockBackendUrl);
+
+      // Assert - original spec should remain unchanged
+      expect(componentSpec).toEqual(originalCopy);
+      if (componentSpec.inputs) {
+        expect((componentSpec.inputs[0] as any)?.value).toBeUndefined();
+      }
+
+      // But submitted spec should have the normalized value
+      const submittedSpec = vi.mocked(pipelineRunService.createPipelineRun).mock
+        .calls[0][0].root_task.componentRef.spec;
+      expect(submittedSpec).toBeDefined();
+      if (submittedSpec?.inputs) {
+        expect((submittedSpec.inputs[0] as any)?.value).toBe("default-value");
+      }
+    });
+  });
+
   describe("edge cases", () => {
     it("should handle component spec without tasks", async () => {
       // Arrange
