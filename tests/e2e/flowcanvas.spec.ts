@@ -7,6 +7,7 @@ import {
   fitToView,
   locateFlowCanvas,
   locateFlowViewport,
+  openComponentLibFolder,
   panCanvas,
   waitForContextPanel,
   zoomIn,
@@ -45,6 +46,7 @@ test.describe("FlowCanvas Basic Functionality", () => {
   }) => {
     // Create new pipeline and wait for it to load
     await createNewPipeline(page);
+    await openComponentLibFolder(page, "Standard library");
 
     // Add a component from the Quick start library
     const node = await dropComponentFromLibraryOnCanvas(
@@ -70,6 +72,7 @@ test.describe("FlowCanvas Basic Functionality", () => {
   }) => {
     // Create new pipeline and wait for it to load
     await createNewPipeline(page);
+    await openComponentLibFolder(page, "Standard library");
 
     // Add a component from the Quick start library
     const nodeA = await dropComponentFromLibraryOnCanvas(
