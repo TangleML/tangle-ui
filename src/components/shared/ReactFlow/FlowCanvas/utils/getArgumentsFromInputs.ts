@@ -1,9 +1,10 @@
 import type { ComponentSpec } from "@/utils/componentSpec";
 
 /**
- * Generates arguments object from component spec inputs that have values
+ * Generates arguments object from component spec inputs that have values or defaults.
+ * Falls back to default if value is not provided.
  * @param componentSpec - The component specification containing inputs
- * @returns Object with input names as keys and their values as values
+ * @returns Object with input names as keys and their values/defaults as values
  */
 export const getArgumentsFromInputs = (
   componentSpec: ComponentSpec,
@@ -15,8 +16,9 @@ export const getArgumentsFromInputs = (
   }
 
   for (const input of componentSpec.inputs) {
-    if (input.value !== undefined && input.value !== null) {
-      args[input.name] = input.value;
+    const inputValue = input.value ?? input.default;
+    if (inputValue !== undefined && inputValue !== null) {
+      args[input.name] = inputValue;
     }
   }
 

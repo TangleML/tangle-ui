@@ -252,13 +252,14 @@ const processSelectedInputNodes = (
       },
     });
 
-    // Migrate the Input Node value to the subgraph arguments
+    // Migrate the Input Node value or default to the subgraph arguments
     const originalInputSpec = currentComponentSpec.inputs?.find(
       (input) => input.name === inputName,
     );
 
-    if (originalInputSpec?.value) {
-      subgraphArguments[inputName] = originalInputSpec.value;
+    const inputValue = originalInputSpec?.value ?? originalInputSpec?.default;
+    if (inputValue) {
+      subgraphArguments[inputName] = inputValue;
     }
   });
 };
