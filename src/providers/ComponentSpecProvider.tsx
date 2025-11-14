@@ -1,3 +1,4 @@
+import equal from "fast-deep-equal";
 import { type ReactNode, useCallback, useMemo, useRef, useState } from "react";
 
 import { type UndoRedo, useUndoRedo } from "@/hooks/useUndoRedo";
@@ -79,7 +80,14 @@ export const ComponentSpecProvider = ({
     "root",
   ]);
 
-  const undoRedo = useUndoRedo(componentSpec, setComponentSpec);
+  const undoRedo = useUndoRedo(componentSpec, setComponentSpec, {
+    getMetadata: () => ({ subgraphPath: currentSubgraphPath }),
+    onMetadataRestore: (metadata: { subgraphPath: string[] }) => {
+      if (!equal(metadata.subgraphPath, currentSubgraphPath)) {
+        setCurrentSubgraphPath(metadata.subgraphPath);
+      }
+    },
+  });
   const undoRedoRef = useRef(undoRedo);
   undoRedoRef.current = undoRedo;
 
