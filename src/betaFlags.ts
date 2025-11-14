@@ -40,4 +40,11 @@ export const ExistingBetaFlags = {
       "⚠️ Experimental ⚠️ feature for viewing subgraphs. Navigate into nested pipeline components by double-clicking.",
     default: false,
   } as BetaFlag,
+
+  ["partial-selection"]: {
+    name: "Partial Node Selection",
+    description:
+      "Allow nodes to be selected when partially covered by the selection box. Use Shift+drag for full selection, or Shift+Cmd+drag (Shift+Ctrl on Windows) for partial selection.",
+    default: false,
+  } as BetaFlag,
 };

@@ -8,6 +8,7 @@ import {
   ReactFlow,
   type ReactFlowInstance,
   type ReactFlowProps,
+  SelectionMode,
   useConnection,
   useNodesState,
   useStoreApi,
@@ -130,6 +131,7 @@ const FlowCanvas = ({
     useIOSelectionPersistence();
 
   const isSubgraphNavigationEnabled = useBetaFlagValue("subgraph-navigation");
+  const isPartialSelectionEnabled = useBetaFlagValue("partial-selection");
 
   const { edges, onEdgesChange } = useComponentSpecToEdges(currentSubgraphSpec);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -167,6 +169,7 @@ const FlowCanvas = ({
   const [showToolbar, setShowToolbar] = useState(false);
   const [replaceTarget, setReplaceTarget] = useState<Node | null>(null);
   const [shiftKeyPressed, setShiftKeyPressed] = useState(false);
+  const [metaKeyPressed, setMetaKeyPressed] = useState(false);
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
@@ -184,6 +187,10 @@ const FlowCanvas = ({
 
       if (event.key === "Shift") {
         setShiftKeyPressed(true);
+      }
+
+      if (event.key === "Meta" || event.key === "Control") {
+        setMetaKeyPressed(true);
       }
 
       if (event.key === "Tab") {
@@ -214,6 +221,9 @@ const FlowCanvas = ({
   const handleKeyUp = useCallback((event: KeyboardEvent) => {
     if (event.key === "Shift") {
       setShiftKeyPressed(false);
+    }
+    if (event.key === "Meta" || event.key === "Control") {
+      setMetaKeyPressed(false);
     }
   }, []);
 
@@ -979,6 +989,18 @@ const FlowCanvas = ({
     clearContent();
   };
 
+  const selectionMode = useMemo(() => {
+    if (!isPartialSelectionEnabled) {
+      return SelectionMode.Full;
+    }
+
+    if (shiftKeyPressed && metaKeyPressed) {
+      return SelectionMode.Partial;
+    }
+
+    return SelectionMode.Full;
+  }, [shiftKeyPressed, metaKeyPressed, isPartialSelectionEnabled]);
+
   return (
     <BlockStack className="h-full w-full">
       <SubgraphBreadcrumbs />
@@ -988,6 +1010,7 @@ const FlowCanvas = ({
         edges={edges}
         minZoom={0.01}
         maxZoom={3}
+        selectionMode={selectionMode}
         onNodesChange={handleOnNodesChange}
         onEdgesChange={onEdgesChange}
         nodeTypes={nodeTypes}
