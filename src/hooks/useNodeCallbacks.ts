@@ -104,7 +104,7 @@ export const useNodeCallbacks = ({
         onElementsRemove(params);
       }
     },
-    [triggerConfirmation, onElementsRemove, getNodeById],
+    [getNodeById, reactFlowInstance, triggerConfirmation, onElementsRemove],
   );
 
   const setArguments = useCallback(

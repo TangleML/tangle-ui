@@ -179,21 +179,14 @@ const SearchRequestInput = ({ value, onChange }: SearchRequestProps) => {
     [],
   );
 
-  const debouncedOnChange = useCallback(
-    debounce((searchRequest: LibraryFilterRequest) => {
-      onChange(searchRequest);
-    }, DEBOUNCE_TIME_MS),
-    [onChange],
-  );
-
   const [searchRequest, dispatch] = useReducer(searchRequestReducer, {
     searchTerm: value,
     filters: DEFAULT_ACTIVE_FILTERS,
   });
 
   useEffect(() => {
-    debouncedOnChange(searchRequest);
-  }, [searchRequest, debouncedOnChange]);
+    debounce(onChange, DEBOUNCE_TIME_MS)(searchRequest);
+  }, [onChange, searchRequest]);
 
   const onFiltersChange = useCallback((filters: string[]) => {
     dispatch({ type: "SET_FILTERS", payload: filters });

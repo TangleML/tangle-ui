@@ -122,12 +122,12 @@ export const ComponentFavoriteToggle = ({
 
   const onFavorite = useCallback(() => {
     setComponentFavorite(component, !isFavorited);
-  }, [isFavorited, setComponentFavorite]);
+  }, [component, isFavorited, setComponentFavorite]);
 
   // Delete User Components
   const handleDelete = useCallback(async () => {
     removeFromComponentLibrary(component);
-  }, [removeFromComponentLibrary]);
+  }, [component, removeFromComponentLibrary]);
 
   /* Confirmation Dialog handlers */
   const openConfirmationDialog = useCallback(() => {

@@ -201,12 +201,15 @@ const ComponentDetails = ({
     setIsEditDialogOpen(false);
   }, []);
 
-  const onOpenChange = useCallback((open: boolean) => {
-    setOpen(open);
-    if (!open) {
-      onClose?.();
-    }
-  }, []);
+  const onOpenChange = useCallback(
+    (open: boolean) => {
+      setOpen(open);
+      if (!open) {
+        onClose?.();
+      }
+    },
+    [onClose],
+  );
 
   const handleEditComponent = useCallback(() => {
     setIsEditDialogOpen(true);
@@ -227,7 +230,7 @@ const ComponentDetails = ({
     );
 
     return [...actions, EditButton];
-  }, [actions, hasEnabledInAppEditor, handleEditComponent]);
+  }, [hasEnabledInAppEditor, actions, handleEditComponent, displayName]);
 
   return (
     <>

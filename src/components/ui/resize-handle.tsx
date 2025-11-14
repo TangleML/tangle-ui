@@ -47,7 +47,6 @@ export const VerticalResizeHandle = ({
     resizingRef.current = null;
 
     document.removeEventListener("mousemove", handleMouseMove);
-    document.removeEventListener("mouseup", handleMouseUp);
   }, [handleMouseMove]);
 
   const handleMouseDown = useCallback(
@@ -63,7 +62,7 @@ export const VerticalResizeHandle = ({
       };
 
       document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
+      document.addEventListener("mouseup", handleMouseUp, { once: true });
     },
     [handleMouseMove, handleMouseUp],
   );

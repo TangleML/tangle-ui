@@ -63,10 +63,7 @@ export function useHistoryManager<T>(
     setCurrentIndex(-1);
   }, []);
 
-  const canUndo = useMemo(
-    () => currentIndex > 0,
-    [currentIndex, history.length],
-  );
+  const canUndo = useMemo(() => currentIndex > 0, [currentIndex]);
 
   const canRedo = useMemo(
     () => currentIndex < history.length - 1,

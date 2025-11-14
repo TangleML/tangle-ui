@@ -68,15 +68,19 @@ export function InputDialog({
 
   useEffect(() => {
     if (isOpen) {
-      setValue(defaultValue);
-      setError(null);
+      queueMicrotask(() => {
+        setValue(defaultValue);
+        setError(null);
+      });
     }
   }, [isOpen, defaultValue]);
 
   useEffect(() => {
     if (isOpen && defaultValue && validate) {
       const validationError = validate(defaultValue.trim());
-      setError(validationError);
+      queueMicrotask(() => {
+        setError(validationError);
+      });
     }
   }, [isOpen, defaultValue, validate]);
 

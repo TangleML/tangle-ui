@@ -37,7 +37,7 @@ const BulkActionsBar = ({
       const errorMessage = getErrorMessage(error);
       notify("Failed to delete some pipelines: " + errorMessage, "error");
     }
-  }, [selectedPipelines, onDeleteSuccess]);
+  }, [selectedPipelines, onDeleteSuccess, notify]);
 
   return (
     <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-background border border-border rounded-lg shadow-lg p-4 z-50">

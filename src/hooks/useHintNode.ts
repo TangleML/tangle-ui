@@ -73,9 +73,8 @@ export const useHintNode = ({ key, hint }: { key: string; hint: string }) => {
   }, [
     isRemoteComponentLibraryEnabled,
     shouldShowHint,
-    connectionTo?.x,
-    connectionTo?.y,
-    connectionFromHandle,
+    connectionTo,
+    connectionFromHandle?.id,
     key,
     hint,
   ]);

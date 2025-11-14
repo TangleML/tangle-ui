@@ -41,7 +41,7 @@ const RunRow = ({ run }: { run: PipelineRunResponse }) => {
       navigator.clipboard.writeText(createdBy);
       notify(`"${createdBy}" copied to clipboard`, "success");
     },
-    [createdBy],
+    [createdBy, notify],
   );
 
   const statusCounts = convertExecutionStatsToStatusCounts(

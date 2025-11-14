@@ -90,7 +90,7 @@ const useComponentFromUrl = (url?: string) => {
       text: componentText,
       url: url,
     }),
-    [componentSpec, componentDigest, componentText],
+    [componentSpec, componentDigest, componentText, url],
   );
 
   return { isLoading, error, componentRef };

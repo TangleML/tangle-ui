@@ -49,7 +49,13 @@ export function useDebouncedState<T>(
     }, debounceMs);
 
     return clearDebounce;
-  }, [currentState, debounceMs, onStateChange, shouldIgnoreChange]);
+  }, [
+    clearDebounce,
+    currentState,
+    debounceMs,
+    onStateChange,
+    shouldIgnoreChange,
+  ]);
 
   return { clearDebounce, updatePreviousState };
 }

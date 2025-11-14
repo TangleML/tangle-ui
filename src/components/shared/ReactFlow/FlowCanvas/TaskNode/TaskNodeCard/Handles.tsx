@@ -73,9 +73,13 @@ export const InputHandle = ({
       (fromHandle === handleId && fromNode === nodeId) ||
       (toHandle === handleId && toNode === nodeId)
     ) {
-      setActive(true);
+      queueMicrotask(() => {
+        setActive(true);
+      });
     } else {
-      setActive(false);
+      queueMicrotask(() => {
+        setActive(false);
+      });
     }
   }, [fromHandle, fromNode, toHandle, toNode, handleId, nodeId]);
 
@@ -256,9 +260,13 @@ export const OutputHandle = ({
       (fromHandle === handleId && fromNode === nodeId) ||
       (toHandle === handleId && toNode === nodeId)
     ) {
-      setActive(true);
+      queueMicrotask(() => {
+        setActive(true);
+      });
     } else {
-      setActive(false);
+      queueMicrotask(() => {
+        setActive(false);
+      });
     }
   }, [fromHandle, fromNode, toHandle, toNode, handleId, nodeId]);
 

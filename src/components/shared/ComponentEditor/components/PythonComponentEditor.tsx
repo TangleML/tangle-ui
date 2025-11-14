@@ -77,7 +77,12 @@ export const PythonComponentEditor = withSuspenseWrapper(
           setValidationErrors(errors);
         }
       },
-      [yamlGenerator, onComponentTextChange, yamlGeneratorOptions],
+      [
+        yamlGenerator,
+        yamlGeneratorOptions,
+        onComponentTextChange,
+        onErrorsChange,
+      ],
     );
 
     useEffect(() => {

@@ -109,14 +109,18 @@ const BackendConfigurationDialog = ({
   }, [isConfiguredFromEnv, isConfiguredFromRelativePath, setOpen]);
 
   useEffect(() => {
-    setIsEnvConfig(isConfiguredFromEnv);
-    setIsRelativePathConfig(isConfiguredFromRelativePath);
+    queueMicrotask(() => {
+      setIsEnvConfig(isConfiguredFromEnv);
+      setIsRelativePathConfig(isConfiguredFromRelativePath);
+    });
   }, [isConfiguredFromEnv, isConfiguredFromRelativePath]);
 
   useEffect(() => {
-    setInputBackendUrl(
-      isConfiguredFromEnv || isConfiguredFromRelativePath ? "" : backendUrl,
-    );
+    queueMicrotask(() => {
+      setInputBackendUrl(
+        isConfiguredFromEnv || isConfiguredFromRelativePath ? "" : backendUrl,
+      );
+    });
   }, [isConfiguredFromEnv, isConfiguredFromRelativePath, backendUrl]);
 
   const hasBackendConfigured =

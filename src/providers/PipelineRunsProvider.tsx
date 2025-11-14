@@ -166,13 +166,7 @@ export const PipelineRunsProvider = ({
         },
       });
     },
-    [
-      backendUrl,
-      refetch,
-      isAuthorized,
-      awaitAuthorization,
-      isAuthorizationRequired,
-    ],
+    [backendUrl, refetch, isAuthorized, awaitAuthorization],
   );
 
   useEffect(() => {
@@ -190,7 +184,7 @@ export const PipelineRunsProvider = ({
       submit,
       setRecentRunsCount,
     }),
-    [runs, recentRuns, isLoading, error, refetch, submit, setRecentRunsCount],
+    [runs, recentRuns, isLoading, isSubmitting, error, refetch, submit],
   );
 
   return (

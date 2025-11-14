@@ -19,7 +19,7 @@ function FullscreenElementPortal({
   fullscreen,
   defaultMountElement,
 }: FullscreenElementProps) {
-  const id = useRef(Math.random().toString(15).substring(2, 15));
+  const id = useRef(crypto.randomUUID().toString());
   const containerElementRef = useRef<HTMLElement>(
     document.createElement("div"),
   );

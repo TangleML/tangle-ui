@@ -34,7 +34,7 @@ function useSyncAuthStorageWithUserDetails() {
     } else {
       authStorage.clear();
     }
-  }, [user]);
+  }, [authStorage, user]);
 }
 
 const HuggingFaceAuthButtonComponent = withSuspenseWrapper(() => {

@@ -109,7 +109,12 @@ const ComponentMarkup = ({
         type: "highlight",
       });
     });
-  }, [digest, isHighlightTasksOnComponentHoverEnabled]);
+  }, [
+    digest,
+    getNodeIdsByDigest,
+    isHighlightTasksOnComponentHoverEnabled,
+    notifyNode,
+  ]);
 
   const onMouseLeave = useCallback(() => {
     if (!isHighlightTasksOnComponentHoverEnabled) return;
@@ -122,7 +127,12 @@ const ComponentMarkup = ({
         type: "clear",
       });
     });
-  }, [digest, isHighlightTasksOnComponentHoverEnabled]);
+  }, [
+    digest,
+    getNodeIdsByDigest,
+    isHighlightTasksOnComponentHoverEnabled,
+    notifyNode,
+  ]);
 
   const onMouseClick = useCallback(() => {
     if (!isHighlightTasksOnComponentHoverEnabled) return;
@@ -215,9 +225,9 @@ const ComponentMarkup = ({
 };
 
 const ComponentItemFromUrl = ({ url }: ComponentItemFromUrlProps) => {
-  if (!url) return null;
-
   const { isLoading, error, componentRef } = useComponentFromUrl(url);
+
+  if (!url) return null;
 
   if (!componentRef.spec) {
     componentRef.spec = EMPTY_GRAPH_COMPONENT_SPEC;

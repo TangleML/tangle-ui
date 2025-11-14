@@ -121,7 +121,7 @@ const ImportComponent = ({
     } else if (tab === TabType.File && selectedFile) {
       onImportFromFile(selectedFile as string);
     }
-  }, [tab, url, selectedFile]);
+  }, [tab, selectedFile, onImportFromUrl, url, onImportFromFile]);
 
   const handleUrlChange = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
