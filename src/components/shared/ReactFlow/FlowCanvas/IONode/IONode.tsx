@@ -12,6 +12,8 @@ import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useContextPanel } from "@/providers/ContextPanelProvider";
 import { isViewingSubgraph } from "@/utils/subgraphUtils";
 
+export const DEFAULT_IO_NODE_WIDTH = 300;
+
 interface IONodeProps {
   type: "input" | "output";
   data: {
@@ -118,7 +120,7 @@ const IONode = ({ type, data, selected = false }: IONodeProps) => {
         ? "→subgraph arguments"
         : null;
 
-  const outputValue = outputConnectedValue ?? null;
+  const outputValue = outputConnectedValue ?? data.value ?? null;
 
   const value = isInput ? inputValue : outputValue;
 
