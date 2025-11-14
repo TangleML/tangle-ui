@@ -5,9 +5,11 @@ import { deepClone } from "@/utils/deepClone";
 import { useDebouncedState } from "./useDebouncedState";
 import { useHistoryManager } from "./useHistoryManager";
 
-interface UseUndoRedoOptions {
+interface UseUndoRedoOptions<M = any> {
   maxHistorySize?: number;
   debounceMs?: number;
+  getMetadata?: () => M;
+  onMetadataRestore?: (metadata: M) => void;
 }
 
 export interface UndoRedo {
@@ -18,19 +20,42 @@ export interface UndoRedo {
   clearHistory: () => void;
 }
 
-export function useUndoRedo<T>(
+interface HistoryEntry<T, M = any> {
+  state: T;
+  metadata?: M;
+}
+
+export function useUndoRedo<T, M = any>(
   currentState: T,
   setState: (state: T) => void,
-  options: UseUndoRedoOptions = {},
+  options: UseUndoRedoOptions<M> = {},
 ): UndoRedo {
-  const { maxHistorySize = 50, debounceMs = 500 } = options;
+  const {
+    maxHistorySize = 50,
+    debounceMs = 500,
+    getMetadata,
+    onMetadataRestore,
+  } = options;
   const isUndoRedoOperationRef = useRef(false);
 
-  const historyManager = useHistoryManager<T>({ maxHistorySize });
+  const historyManager = useHistoryManager<HistoryEntry<T, M>>({
+    maxHistorySize,
+  });
+
+  const addToHistoryWithMetadata = useCallback(
+    (state: T) => {
+      const entry: HistoryEntry<T, M> = {
+        state: deepClone(state),
+        metadata: getMetadata ? getMetadata() : undefined,
+      };
+      historyManager.addToHistory(entry);
+    },
+    [historyManager, getMetadata],
+  );
 
   const { clearDebounce, updatePreviousState } = useDebouncedState(
     currentState,
-    historyManager.addToHistory,
+    addToHistoryWithMetadata,
     () => isUndoRedoOperationRef.current,
     { debounceMs },
   );
@@ -41,16 +66,26 @@ export function useUndoRedo<T>(
     if (historyManager.canUndo) {
       isUndoRedoOperationRef.current = true;
       const newIndex = historyManager.currentIndex - 1;
-      const previousState = historyManager.navigateToIndex(newIndex);
+      const previousEntry = historyManager.navigateToIndex(newIndex);
 
-      if (previousState) {
-        setState(deepClone(previousState));
-        updatePreviousState(previousState);
+      if (previousEntry) {
+        setState(deepClone(previousEntry.state));
+        updatePreviousState(previousEntry.state);
+
+        if (previousEntry.metadata && onMetadataRestore) {
+          onMetadataRestore(previousEntry.metadata);
+        }
       }
 
       isUndoRedoOperationRef.current = false;
     }
-  }, [historyManager, setState, clearDebounce, updatePreviousState]);
+  }, [
+    historyManager,
+    setState,
+    clearDebounce,
+    updatePreviousState,
+    onMetadataRestore,
+  ]);
 
   const redo = useCallback(() => {
     clearDebounce();
@@ -58,16 +93,26 @@ export function useUndoRedo<T>(
     if (historyManager.canRedo) {
       isUndoRedoOperationRef.current = true;
       const newIndex = historyManager.currentIndex + 1;
-      const nextState = historyManager.navigateToIndex(newIndex);
+      const nextEntry = historyManager.navigateToIndex(newIndex);
 
-      if (nextState) {
-        setState(deepClone(nextState));
-        updatePreviousState(nextState);
+      if (nextEntry) {
+        setState(deepClone(nextEntry.state));
+        updatePreviousState(nextEntry.state);
+
+        if (nextEntry.metadata && onMetadataRestore) {
+          onMetadataRestore(nextEntry.metadata);
+        }
       }
 
       isUndoRedoOperationRef.current = false;
     }
-  }, [historyManager, setState, clearDebounce, updatePreviousState]);
+  }, [
+    historyManager,
+    setState,
+    clearDebounce,
+    updatePreviousState,
+    onMetadataRestore,
+  ]);
 
   const clearHistory = useCallback(() => {
     clearDebounce();
