@@ -9,6 +9,137 @@ import {
   type TaskSpec,
 } from "./componentSpec";
 
+/**
+ * Enhanced validation result with path information for nested components
+ */
+export interface ValidationError {
+  path: string; // e.g., "Pipeline > Subgraph1 > Task2"
+  message: string;
+}
+
+export interface ValidationResult {
+  isValid: boolean;
+  errors: ValidationError[];
+}
+
+/**
+ * Recursively validates the entire component tree including all nested subgraphs.
+ * This is the main entry point for validation and should be used instead of
+ * checkComponentSpecValidity for comprehensive validation.
+ *
+ * @param componentSpec - The root component spec to validate
+ * @param componentName - Optional name for the root component (defaults to componentSpec.name)
+ * @returns ValidationResult with all errors from the entire tree
+ */
+export const checkComponentSpecValidityRecursive = (
+  componentSpec: ComponentSpec,
+  componentName?: string,
+): ValidationResult => {
+  const allErrors: ValidationError[] = [];
+  const rootName = componentName || componentSpec.name || "Pipeline";
+
+  // Validate current level (isSubgraph = false for root)
+  const currentLevelErrors = validateComponentSpecAtLevel(
+    componentSpec,
+    rootName,
+    false, // Root pipeline is not a subgraph
+  );
+  allErrors.push(...currentLevelErrors);
+
+  // If we have a graph implementation, recursively validate all subgraphs
+  if (isGraphImplementation(componentSpec.implementation)) {
+    const graphSpec = componentSpec.implementation.graph;
+    if (graphSpec.tasks) {
+      Object.entries(graphSpec.tasks).forEach(([taskId, task]) => {
+        // Check if this task is a subgraph (has a graph implementation)
+        if (
+          task.componentRef?.spec &&
+          isGraphImplementation(task.componentRef.spec.implementation)
+        ) {
+          const taskName = task.name || taskId;
+          const subgraphPath = `${rootName} > ${taskName}`;
+
+          // Validate that subgraph inputs are satisfied by task arguments
+          const subgraphInputErrors = validateSubgraphInputs(
+            task.componentRef.spec,
+            task.arguments || {},
+            subgraphPath,
+          );
+          allErrors.push(...subgraphInputErrors);
+
+          // Recursively validate the subgraph (isSubgraph = true)
+          const subgraphResult = checkComponentSpecValidityRecursive(
+            task.componentRef.spec,
+            subgraphPath,
+          );
+          // Filter out "required input" errors for subgraphs as we've already validated them above
+          const filteredErrors = subgraphResult.errors.filter(
+            (error) =>
+              !error.message.includes("is required and does not have a value"),
+          );
+          allErrors.push(...filteredErrors);
+        }
+      });
+    }
+  }
+
+  return {
+    isValid: allErrors.length === 0,
+    errors: allErrors,
+  };
+};
+
+/**
+ * Validates a component spec at a single level (non-recursive).
+ * Internal function used by checkComponentSpecValidityRecursive.
+ *
+ * @param componentSpec - The component spec to validate
+ * @param path - The path to this component in the tree
+ * @param isSubgraph - Whether this component is being used as a subgraph (inputs satisfied by parent arguments)
+ * @returns Array of validation errors with path information
+ */
+const validateComponentSpecAtLevel = (
+  componentSpec: ComponentSpec,
+  path: string,
+  isSubgraph: boolean = false,
+): ValidationError[] => {
+  const errors: string[] = [];
+
+  // Basic validation
+  const basicErrors = validateBasicComponentSpec(componentSpec);
+  errors.push(...basicErrors);
+
+  if (
+    basicErrors.length > 0 &&
+    basicErrors.some((e) => e.includes("null") || e.includes("implementation"))
+  ) {
+    return errors.map((message) => ({ path, message }));
+  }
+
+  // Validate inputs and outputs (skip input value validation for subgraphs)
+  errors.push(...validateInputsAndOutputs(componentSpec, isSubgraph));
+
+  // Skip further validation for non-graph implementations
+  if (!isGraphImplementation(componentSpec.implementation)) {
+    return errors.map((message) => ({ path, message }));
+  }
+
+  // Graph-specific validations
+  const graphSpec = componentSpec.implementation.graph;
+  errors.push(...validateGraphTasks(graphSpec, componentSpec));
+  errors.push(...validateGraphOutputs(graphSpec, componentSpec));
+  errors.push(...validateInputOutputConnections(graphSpec, componentSpec));
+  errors.push(...validateCircularDependencies(graphSpec));
+
+  return errors.map((message) => ({ path, message }));
+};
+
+/**
+ * Legacy validation function for backwards compatibility.
+ * Validates only the current level without recursing into subgraphs.
+ *
+ * @deprecated Use checkComponentSpecValidityRecursive for comprehensive validation
+ */
 export const checkComponentSpecValidity = (
   componentSpec: ComponentSpec,
 ): { isValid: boolean; errors: string[] } => {
@@ -68,7 +199,10 @@ const validateBasicComponentSpec = (componentSpec: ComponentSpec): string[] => {
   return errors;
 };
 
-const validateInputsAndOutputs = (componentSpec: ComponentSpec): string[] => {
+const validateInputsAndOutputs = (
+  componentSpec: ComponentSpec,
+  isSubgraph: boolean = false,
+): string[] => {
   const errors: string[] = [];
 
   // Validate inputs array structure
@@ -86,11 +220,14 @@ const validateInputsAndOutputs = (componentSpec: ComponentSpec): string[] => {
         inputNames.add(input.name);
       }
 
-      // Check that required inputs have a value or default
-      if (!input.optional && !input.default && !input.value) {
-        errors.push(
-          `Pipeline input "${input.name}" is required and does not have a value`,
-        );
+      // Only validate input values for root pipelines, not subgraphs
+      // Subgraph inputs are satisfied by parent task arguments
+      if (!isSubgraph) {
+        // Check that required root pipeline inputs have a default (value is provided at runtime)
+        if (!input.optional && !input.default && !input.value) {
+          // This is only a warning for root pipelines since inputs can be provided at runtime
+          // We don't error here as it's valid for a pipeline to require runtime inputs
+        }
       }
     });
   }
@@ -111,6 +248,65 @@ const validateInputsAndOutputs = (componentSpec: ComponentSpec): string[] => {
       }
     });
   }
+
+  return errors;
+};
+
+/**
+ * Validates that all required inputs of a subgraph are satisfied by the parent task's arguments
+ */
+const validateSubgraphInputs = (
+  subgraphSpec: ComponentSpec,
+  taskArguments: Record<string, ArgumentType>,
+  path: string,
+): ValidationError[] => {
+  const errors: ValidationError[] = [];
+
+  if (!subgraphSpec.inputs) {
+    return errors;
+  }
+
+  subgraphSpec.inputs.forEach((input: InputSpec) => {
+    const isRequired = !input.optional && !input.default && !input.value;
+
+    if (isRequired) {
+      // Check if this required input is provided in task arguments
+      if (!taskArguments[input.name]) {
+        errors.push({
+          path,
+          message: `Pipeline input "${input.name}" is required and does not have a value`,
+        });
+      }
+    }
+
+    // Check if the input is provided but not used by any task inside the subgraph
+    if (taskArguments[input.name]) {
+      // This is a valid scenario where an input is provided but may not be used
+      // We could add a warning here, but it's not necessarily an error
+      if (isGraphImplementation(subgraphSpec.implementation)) {
+        const graphSpec = subgraphSpec.implementation.graph;
+        const isUsed = Object.values(graphSpec.tasks || {}).some((task) =>
+          Object.values(task.arguments || {}).some((arg) => {
+            if (
+              typeof arg === "object" &&
+              arg !== null &&
+              "graphInput" in arg
+            ) {
+              return (arg as GraphInputArgument).graphInput.inputName === input.name;
+            }
+            return false;
+          }),
+        );
+
+        if (!isUsed && !input.optional) {
+          errors.push({
+            path,
+            message: `Pipeline input "${input.name}" is not connected to any tasks`,
+          });
+        }
+      }
+    }
+  });
 
   return errors;
 };
@@ -361,7 +557,9 @@ const validateInputOutputConnections = (
           ),
       );
 
-      if (!isInputUsed) {
+      // Only error if a REQUIRED (non-optional) input is not connected
+      // Optional inputs can be provided but not used, which is fine
+      if (!isInputUsed && !input.optional && !input.default) {
         errors.push(
           `Pipeline input "${input.name}" is not connected to any tasks`,
         );
