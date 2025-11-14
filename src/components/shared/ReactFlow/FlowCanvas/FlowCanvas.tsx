@@ -227,15 +227,26 @@ const FlowCanvas = ({
     }
   }, []);
 
+  const handleMouseDown = useCallback((event: MouseEvent) => {
+    if (event.shiftKey && event.target instanceof HTMLElement) {
+      const reactFlowWrapper = event.target.closest(".react-flow");
+      if (reactFlowWrapper) {
+        event.preventDefault();
+      }
+    }
+  }, []);
+
   useEffect(() => {
     document.addEventListener("keydown", handleKeyDown);
     document.addEventListener("keyup", handleKeyUp);
+    document.addEventListener("mousedown", handleMouseDown);
 
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("keyup", handleKeyUp);
+      document.removeEventListener("mousedown", handleMouseDown);
     };
-  }, [handleKeyDown, handleKeyUp]);
+  }, [handleKeyDown, handleKeyUp, handleMouseDown]);
 
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance>();
