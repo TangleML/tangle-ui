@@ -1,4 +1,4 @@
-type AuthProvider = "github" | "minerva";
+type AuthProvider = "github" | "minerva" | "huggingface";
 
 export interface OasisAuthResponse {
   token: string;

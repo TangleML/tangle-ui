@@ -1,8 +1,11 @@
 import { useCallback, useMemo, useRef, useSyncExternalStore } from "react";
 
 import { useGitHubAuthPopup } from "@/components/shared/GitHubAuth/useGitHubAuthPopup";
+import { useHuggingFaceAuthPopup } from "@/components/shared/HuggingFaceAuth/useHuggingFaceAuthPopup";
 import useToastNotification from "@/hooks/useToastNotification";
 
+import { isGitHubAuthEnabled } from "../GitHubAuth/helpers";
+import { isHuggingFaceAuthEnabled } from "../HuggingFaceAuth/constants";
 import { convertJWTToJWTPayload, isAuthorizationRequired } from "./helpers";
 import type { OasisAuthResponse } from "./types";
 import { useAuthLocalStorage } from "./useAuthLocalStorage";
@@ -22,11 +25,6 @@ function createControlledPromise<TReturn>() {
     reject,
   };
 }
-
-/**
- * for future: will be used to switch between different auth providers at build time
- */
-const useAuthorizationPopup = useGitHubAuthPopup;
 
 export function useAwaitAuthorization() {
   const notify = useToastNotification();
@@ -74,8 +72,9 @@ export function useAwaitAuthorization() {
     }
   }, [token]);
 
+  const useAuthorizationPopup = useMemo(() => switchAuthProvider(), []);
+
   const { openPopup, isLoading, isPopupOpen, closePopup, bringPopupToFront } =
-    // todo: switch based on auth provider (github, minerva, huggingface)
     useAuthorizationPopup({
       onSuccess,
       onError,
@@ -107,4 +106,36 @@ export function useAwaitAuthorization() {
       bringPopupToFront,
     ],
   );
+}
+
+function switchAuthProvider() {
+  switch (true) {
+    case isHuggingFaceAuthEnabled():
+      return useHuggingFaceAuthPopup;
+    case isGitHubAuthEnabled():
+      return useGitHubAuthPopup;
+
+    default:
+      return useNoopAuthPopup;
+  }
+}
+
+function useNoopAuthPopup({
+  onError,
+}: {
+  onSuccess: (response: OasisAuthResponse) => void;
+  onError: (error: string) => void;
+  onClose?: () => void;
+}) {
+  return {
+    isPopupOpen: false,
+    isLoading: false,
+    openPopup: () => {
+      onError("No auth provider found");
+    },
+    closePopup: () => {
+      onError("No auth provider found");
+    },
+    bringPopupToFront: () => {},
+  };
 }

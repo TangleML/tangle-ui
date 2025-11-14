@@ -2,6 +2,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { AlertCircle, CheckCircle, Loader2, SendHorizonal } from "lucide-react";
 import { useCallback, useState } from "react";
 
+import { useAwaitAuthorization } from "@/components/shared/Authentication/useAwaitAuthorization";
 import { useBetaFlagValue } from "@/components/shared/Settings/useBetaFlags";
 import { Button } from "@/components/ui/button";
 import { SidebarMenuButton } from "@/components/ui/sidebar";
@@ -24,6 +25,7 @@ const OasisSubmitter = ({
   componentSpec,
   onSubmitComplete,
 }: OasisSubmitterProps) => {
+  const { isAuthorized } = useAwaitAuthorization();
   const { configured, available } = useBackend();
   const { submit, isSubmitting } = usePipelineRuns();
   const isAutoRedirect = useBetaFlagValue("redirect-on-new-pipeline-run");
@@ -127,12 +129,16 @@ const OasisSubmitter = ({
     if (cooldownTime > 0) {
       return `Run submitted (${cooldownTime}s)`;
     }
+    if (!isAuthorized) {
+      return "Sign in to Submit runs";
+    }
     return "Submit Run";
   };
 
   const isButtonDisabled =
     isSubmitting ||
     !componentSpec ||
+    !isAuthorized ||
     cooldownTime > 0 ||
     ("graph" in componentSpec.implementation &&
       Object.keys(componentSpec.implementation.graph.tasks).length === 0);
