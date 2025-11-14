@@ -10,7 +10,8 @@ import { ComponentSearchFilter } from "@/utils/constants";
 import { outputNameToNodeId } from "@/utils/nodes/nodeIdUtils";
 import { checkArtifactMatchesSearchFilters } from "@/utils/searchUtils";
 
-import { OutputHandle } from "./Handles";
+import { useConnectionHighlighting } from "../../hooks/useConnectionHighlighting";
+import { getOutputHandleId, OutputHandle } from "./Handles";
 
 type TaskNodeOutputsProps = {
   condensed: boolean;
@@ -30,6 +31,9 @@ export function TaskNodeOutputs({
     currentSearchFilter,
     highlightSearchResults,
   } = useForcedSearchContext();
+
+  const { highlightConnections, clearHighlights, isHandleHighlighted } =
+    useConnectionHighlighting();
 
   const connection = useConnection();
   const edges = useEdges();
@@ -78,31 +82,54 @@ export function TaskNodeOutputs({
       if (state.readOnly) return;
 
       const output = outputs.find((o) => o.name === outputName);
-      toggleHighlightRelatedHandles(selected, output);
+
+      if (selected) {
+        // Search-based highlighting (green)
+        toggleHighlightRelatedHandles(true, output);
+
+        // Connection-based highlighting (pink)
+        const handleId = getOutputHandleId(outputName);
+        highlightConnections(nodeId, handleId, "output");
+      } else {
+        resetSearchFilter();
+        clearHighlights();
+      }
     },
-    [outputs, state.readOnly, toggleHighlightRelatedHandles],
+    [
+      outputs,
+      state.readOnly,
+      toggleHighlightRelatedHandles,
+      nodeId,
+      highlightConnections,
+      clearHighlights,
+      resetSearchFilter,
+    ],
   );
 
   const checkHighlight = useCallback(
     (output: OutputSpec) => {
-      if (
-        !highlightSearchResults ||
-        !isValidFilterRequest(currentSearchFilter, {
+      // Search-based highlighting (green)
+      const searchHighlight =
+        highlightSearchResults &&
+        isValidFilterRequest(currentSearchFilter, {
           includesFilter: ComponentSearchFilter.OUTPUTTYPE,
-        })
-      ) {
-        return false;
-      }
+        }) &&
+        checkArtifactMatchesSearchFilters(
+          currentSearchFilter.searchTerm,
+          currentSearchFilter.filters,
+          output,
+        );
 
-      const matchFound = checkArtifactMatchesSearchFilters(
-        currentSearchFilter?.searchTerm,
-        currentSearchFilter?.filters,
-        output,
-      );
+      // Connection-based highlighting (pink)
+      const handleId = getOutputHandleId(output.name);
+      const connectionHighlight = isHandleHighlighted(nodeId, handleId);
 
-      return matchFound;
+      return {
+        searchHighlight,
+        connectionHighlight,
+      };
     },
-    [highlightSearchResults, currentSearchFilter],
+    [highlightSearchResults, currentSearchFilter, isHandleHighlighted, nodeId],
   );
 
   const handleLabelClick = useCallback(
