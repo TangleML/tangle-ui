@@ -60,13 +60,15 @@ import SmoothEdge from "./Edges/SmoothEdge";
 import GhostNode from "./GhostNode/GhostNode";
 import HintNode from "./GhostNode/HintNode";
 import IONode from "./IONode/IONode";
-import { NodesList } from "./NodesList";
+import { NodesList } from "./NodeList/NodesList";
+import { OrphanedNodeList } from "./NodeList/OrphanedNodeList";
 import SelectionToolbar from "./SelectionToolbar";
 import { SubgraphBreadcrumbs } from "./SubgraphBreadcrumbs/SubgraphBreadcrumbs";
 import TaskNode from "./TaskNode/TaskNode";
 import type { NodesAndEdges } from "./types";
 import { addAndConnectNode } from "./utils/addAndConnectNode";
 import addTask from "./utils/addTask";
+import { checkForOrphanedNodes } from "./utils/checkForOrphanedNodes";
 import { duplicateNodes } from "./utils/duplicateNodes";
 import { isPositionInNode } from "./utils/geometry";
 import { getPositionFromEvent } from "./utils/getPositionFromEvent";
@@ -804,11 +806,25 @@ const FlowCanvas = ({
   const onGroupNodes = useCallback(async () => {
     if (!canGroup) return;
 
+    const orphanedNodes = checkForOrphanedNodes(
+      selectedNodes,
+      currentSubgraphSpec,
+    );
+
     const nodesList = (
       <NodesList
         nodes={selectedNodes}
         title={`Nodes being grouped (${selectedNodes.length})`}
       />
+    );
+
+    const orphanedNodesList = <OrphanedNodeList nodes={orphanedNodes} />;
+
+    const inputDialogContent = (
+      <BlockStack gap="4">
+        {nodesList}
+        {orphanedNodes.length > 0 && orphanedNodesList}
+      </BlockStack>
     );
 
     const onSuccess = (updatedComponentSpec: ComponentSpec) => {
@@ -829,7 +845,7 @@ const FlowCanvas = ({
     handleGroupNodes(
       selectedNodes,
       currentSubgraphSpec,
-      nodesList,
+      inputDialogContent,
       triggerInputDialog,
       onSuccess,
       onError,
