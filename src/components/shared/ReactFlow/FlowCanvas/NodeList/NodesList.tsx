@@ -11,22 +11,12 @@ import {
 import { Paragraph } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 
+import { getNodeTypeColor } from "./utils";
+
 interface NodesListProps {
   nodes: Node[];
   title?: string;
 }
-
-const getNodeTypeColor = (nodeType: string | undefined): string => {
-  switch (nodeType) {
-    case "input":
-      return "bg-blue-500";
-    case "output":
-      return "bg-violet-500";
-    case "task":
-    default:
-      return "bg-gray-500";
-  }
-};
 
 export function NodesList({
   nodes,
@@ -39,7 +29,7 @@ export function NodesList({
   }
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full">
       <CollapsibleTrigger asChild>
         <Button variant="ghost">
           <ChevronRight
