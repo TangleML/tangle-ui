@@ -3,13 +3,16 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { InputDialog } from "@/components/shared/Dialogs/InputDialog";
 import { useBetaFlagValue } from "@/components/shared/Settings/useBetaFlags";
+import { BlockStack } from "@/components/ui/layout";
 import {
   type ComponentSpec,
   isGraphImplementation,
 } from "@/utils/componentSpec";
 import { getUniqueTaskName, validateTaskName } from "@/utils/unique";
 
+import { checkForOrphanedNodes } from "./checkForOrphanedNodes";
 import { NodesList } from "./NodesList";
+import { OrphanedNodeList } from "./OrphanedNodeList";
 import { canGroupNodes } from "./utils";
 
 interface NewSubgraphDialogProps {
@@ -33,16 +36,34 @@ export const NewSubgraphDialog = ({
 
   const [defaultName, setDefaultName] = useState("");
 
+  const orphanedNodes = useMemo(
+    () => checkForOrphanedNodes(selectedNodes, currentSubgraphSpec),
+    [selectedNodes, currentSubgraphSpec],
+  );
+
+  const orphanedNodeIds = useMemo(
+    () => new Set(orphanedNodes.map((node) => node.id)),
+    [orphanedNodes],
+  );
+
+  const hasOrphanedNodes = orphanedNodes.length > 0;
   const canGroup = canGroupNodes(selectedNodes, isSubgraphNavigationEnabled);
 
   const dialogContent = useMemo(
     () => (
-      <NodesList
-        nodes={selectedNodes}
-        title={`Nodes being grouped (${selectedNodes.length})`}
-      />
+      <BlockStack gap="4" className="max-h-9/10">
+        <NodesList
+          nodes={selectedNodes}
+          orphanedNodeIds={orphanedNodeIds}
+          title={`Nodes being grouped (${selectedNodes.length})`}
+        />
+
+        {canGroup && hasOrphanedNodes && (
+          <OrphanedNodeList nodes={orphanedNodes} />
+        )}
+      </BlockStack>
     ),
-    [selectedNodes],
+    [selectedNodes, orphanedNodes],
   );
 
   const handleConfirm = useCallback(
@@ -84,7 +105,7 @@ export const NewSubgraphDialog = ({
     }
   }, [open, currentSubgraphSpec]);
 
-  const disabled = !canGroup;
+  const disabled = hasOrphanedNodes || !canGroup;
 
   return (
     <InputDialog
