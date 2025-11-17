@@ -14,14 +14,20 @@ import { NodeListItem } from "./NodeListItem";
 
 interface NodesListProps {
   nodes: Node[];
-  orphanedNodeIds?: Set<string>;
   title?: string;
+  excludedNodeIds?: Set<string>;
+  orphanedNodeIds?: Set<string>;
+  onExcludeNode?: (nodeId: string) => void;
+  onIncludeNode?: (nodeId: string) => void;
 }
 
 export function NodesList({
   nodes,
-  orphanedNodeIds,
   title = `View nodes (${nodes.length})`,
+  excludedNodeIds,
+  orphanedNodeIds,
+  onExcludeNode,
+  onIncludeNode,
 }: NodesListProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -49,7 +55,10 @@ export function NodesList({
               <NodeListItem
                 key={node.id}
                 node={node}
+                excludedNodeIds={excludedNodeIds}
                 isOrphaned={orphanedNodeIds?.has(node.id)}
+                onExcludeNode={onExcludeNode}
+                onIncludeNode={onIncludeNode}
               />
             ))}
           </ul>
