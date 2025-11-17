@@ -71,7 +71,7 @@
     "@tanstack/react-query": "^5.90.9",
     "@tanstack/react-query-devtools": "^5.90.2",
     "@tanstack/react-router": "^1.136.8",
-    "@tanstack/router-devtools": "^1.136.0",
+    "@tanstack/router-devtools": "^1.136.8",
     "@types/gapi": "^0.0.47",
     "@xyflow/react": "^12.9.3",
     "class-variance-authority": "^0.7.1",
