@@ -60,6 +60,8 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/components/shared/HighlightText.tsx",
   "src/components/shared/AnnouncementBanners.tsx",
 
+  "src/routes/EditorV2",
+
   // 11-20 useCallback/useMemo
   // "src/components/ui",                         // 12
   // "src/components/PipelineRun",                // 14

@@ -457,7 +457,7 @@ interface TwoLogicalOperands {
 /**
  * Optional configuration that specifies how the task should be executed. Can be used to set some platform-specific options.
  */
-type PredicateType =
+export type PredicateType =
   | {
       "==": TwoArgumentOperands;
     }
@@ -495,11 +495,11 @@ interface RetryStrategySpec {
 /**
  * Optional configuration that specifies how the task execution may be skipped if the output data exist in cache.
  */
-interface CachingStrategySpec {
+export interface CachingStrategySpec {
   maxCacheStaleness?: string;
 }
 
-interface ExecutionOptionsSpec {
+export interface ExecutionOptionsSpec {
   retryStrategy?: RetryStrategySpec;
   cachingStrategy?: CachingStrategySpec;
 }
