@@ -11,22 +11,12 @@ import {
 import { Paragraph } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 
+import { getNodeTypeColor } from "./utils";
+
 interface NodesListProps {
   nodes: Node[];
   title?: string;
 }
-
-const getNodeTypeColor = (nodeType: string | undefined): string => {
-  switch (nodeType) {
-    case "input":
-      return "bg-blue-500";
-    case "output":
-      return "bg-violet-500";
-    case "task":
-    default:
-      return "bg-gray-500";
-  }
-};
 
 export function NodesList({
   nodes,
@@ -52,7 +42,7 @@ export function NodesList({
         </Button>
       </CollapsibleTrigger>
       <CollapsibleContent className="mt-2">
-        <div className="rounded-md border p-3 bg-secondary/50">
+        <div className="rounded-md border p-3 bg-secondary/50 max-h-[50vh] overflow-auto">
           <ul className="space-y-2 text-sm">
             {nodes.map((node) => (
               <li key={node.id} className="flex items-center gap-3">
