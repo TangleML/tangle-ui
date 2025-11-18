@@ -1,24 +1,19 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 
+import { useComponentLibrary } from "@/providers/ComponentLibraryProvider/ComponentLibraryProvider";
+import type { StoredLibrary } from "@/providers/ComponentLibraryProvider/libraries/storage";
 import { hydrateComponentReference } from "@/services/componentService";
 import {
   type ComponentReference,
   type ComponentReferenceWithDigest,
   type HydratedComponentReference,
   isDiscoverableComponentReference,
-  isHydratedComponentReference,
 } from "@/utils/componentSpec";
 
+import { checkComponentUpdates } from "../../GitHubLibrary/utils/checkComponentUpdates";
 import { hasSupersededBy } from "../types";
+import { hydrateAllComponents } from "../utils/hydrateAllComponents";
 import { useAllPublishedComponents } from "./useAllPublishedComponents";
-
-async function hydrateAllComponents(
-  components: ComponentReference[],
-): Promise<HydratedComponentReference[]> {
-  return (
-    await Promise.all(components.map((c) => hydrateComponentReference(c)))
-  ).filter(isHydratedComponentReference);
-}
 
 /**
  * Hook to get the outdated components in the graph
@@ -28,6 +23,8 @@ async function hydrateAllComponents(
  */
 export function useOutdatedComponents(usedComponents: ComponentReference[]) {
   const { data: publishedComponents } = useAllPublishedComponents();
+  const { existingComponentLibraries, getComponentLibrary } =
+    useComponentLibrary();
 
   return useSuspenseQuery({
     queryKey: ["outdated-components", usedComponents],
@@ -38,6 +35,36 @@ export function useOutdatedComponents(usedComponents: ComponentReference[]) {
       );
 
       const hydratedComponents = await hydrateAllComponents(usedComponents);
+
+      // check for github components
+      // todo: generalize this to all libraries
+      const githubLibs = existingComponentLibraries?.filter(
+        (l) => l.type === "github",
+      );
+      const githubComponents =
+        githubLibs && githubLibs.length > 0
+          ? hydratedComponents
+              .map((c) => ({
+                component: c,
+                library: githubLibs.find((l) =>
+                  getComponentLibrary(l.id as any)?.hasComponent(c),
+                ),
+              }))
+              .filter((c) => c.library)
+          : [];
+
+      if (githubComponents.length > 0) {
+        for (const { component, library } of githubComponents) {
+          const updatedComponent = await checkComponentUpdates(
+            component,
+            library as StoredLibrary /** todo: fix type */,
+          );
+
+          if (updatedComponent) {
+            mostRecentComponents.set(component.digest, updatedComponent);
+          }
+        }
+      }
 
       return hydratedComponents
         .filter(

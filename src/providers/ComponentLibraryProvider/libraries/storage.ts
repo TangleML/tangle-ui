@@ -1,4 +1,5 @@
 import Dexie, { type EntityTable } from "dexie";
+import { icons } from "lucide-react";
 
 const DB_NAME = "oasis-app";
 const DEXIE_EPOCH = 0;
@@ -17,7 +18,7 @@ interface StoredLibraryFolder {
 
 export interface StoredLibrary extends StoredLibraryFolder {
   id: string;
-  icon?: string;
+  icon?: keyof typeof icons;
   /**
    * yaml - a yaml file that contains the components
    * indexdb - a local database that contains the components. filled only by the Oasis App

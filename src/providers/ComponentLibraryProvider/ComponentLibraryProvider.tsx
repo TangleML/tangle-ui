@@ -1,4 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { liveQuery } from "dexie";
+import { useLiveQuery } from "dexie-react-hooks";
 import {
   type ReactNode,
   useCallback,
@@ -8,6 +10,7 @@ import {
 } from "react";
 
 import ComponentDuplicateDialog from "@/components/shared/Dialogs/ComponentDuplicateDialog";
+import { GitHubFlatComponentLibrary } from "@/components/shared/GitHubLibrary/githubFlatComponentLibrary";
 import {
   COMPONENT_LIBRARY_URL,
   fetchAndStoreComponentLibrary,
@@ -50,12 +53,17 @@ import {
 } from "./componentLibrary";
 import { useForcedSearchContext } from "./ForcedSearchProvider";
 import { BrowserPersistedLibrary } from "./libraries/browserPersistedLibrary";
+import {
+  createLibraryObject,
+  registerLibraryFactory,
+} from "./libraries/factory";
 import { GraphSpecReadonlyLibrary } from "./libraries/graphSpecReadonlyLibrary";
 import {
   FAVORITE_COMPONENTS_LIBRARY_ID,
   migrateLegacyFavoriteFolder,
 } from "./libraries/migrateLegacyFavoriteFolder";
 import { PublishedComponentsLibrary } from "./libraries/publishedComponentsLibrary";
+import { LibraryDB, type StoredLibrary } from "./libraries/storage";
 import type { Library } from "./libraries/types";
 import { YamlFileLibrary } from "./libraries/yamlFileLibrary";
 
@@ -72,7 +80,9 @@ type ComponentLibraryContextType = {
   favoritesFolder: ComponentFolder;
   isLoading: boolean;
   error: Error | null;
-
+  existingComponentLibraries:
+    | Pick<StoredLibrary, "id" | "name" | "icon" | "type">[]
+    | undefined;
   searchResult: SearchResult | null;
 
   highlightedComponentDigest: string | null;
@@ -103,13 +113,19 @@ const ComponentLibraryContext =
     "ComponentLibraryProvider",
   );
 
-export const ComponentLibraryProvider = ({
-  children,
-}: {
-  children: ReactNode;
-}) => {
-  const { graphSpec } = useComponentSpec();
-  const { currentSearchFilter } = useForcedSearchContext();
+registerLibraryFactory(
+  "indexdb",
+  (library) =>
+    new BrowserPersistedLibrary(library.id, () => Promise.resolve(library)),
+);
+
+registerLibraryFactory(
+  "github",
+  (library) =>
+    new GitHubFlatComponentLibrary(library.configuration?.repo_name as string),
+);
+
+function useComponentLibraryRegistry() {
   const queryClient = useQueryClient();
 
   const componentLibraries = useMemo(
@@ -135,6 +151,22 @@ export const ComponentLibraryProvider = ({
     [queryClient],
   );
 
+  /**
+   * Sync the existing component libraries with the component libraries map
+   */
+  const registeredComponentLibraries = useLiveQuery(() =>
+    LibraryDB.component_libraries.toArray(),
+  );
+
+  useEffect(() => {
+    registeredComponentLibraries?.forEach((library) => {
+      componentLibraries.set(
+        library.id as AvailableComponentLibraries,
+        createLibraryObject(library),
+      );
+    });
+  }, [registeredComponentLibraries]);
+
   const getComponentLibraryObject = useCallback(
     (libraryName: AvailableComponentLibraries) => {
       if (!componentLibraries.has(libraryName)) {
@@ -146,15 +178,32 @@ export const ComponentLibraryProvider = ({
     [componentLibraries],
   );
 
+  return { getComponentLibraryObject };
+}
+
+export const ComponentLibraryProvider = ({
+  children,
+}: {
+  children: ReactNode;
+}) => {
+  const { graphSpec } = useComponentSpec();
+  const { currentSearchFilter } = useForcedSearchContext();
+
+  const { getComponentLibraryObject } = useComponentLibraryRegistry();
+
   useEffect(() => {
     // kinda hacky yet
-    const usedComponentsLibrary = componentLibraries.get("used_components");
+    const usedComponentsLibrary = getComponentLibraryObject("used_components");
     if (usedComponentsLibrary) {
       (usedComponentsLibrary as GraphSpecReadonlyLibrary).setGraphSpec(
         graphSpec,
       );
     }
   }, [graphSpec]);
+
+  const existingComponentLibraries = useLiveQuery(() =>
+    LibraryDB.component_libraries.toArray(),
+  );
 
   const [componentLibrary, setComponentLibrary] = useState<ComponentLibrary>();
   const [userComponentsFolder, setUserComponentsFolder] =
@@ -536,6 +585,7 @@ export const ComponentLibraryProvider = ({
       error,
       searchResult,
       highlightedComponentDigest,
+      existingComponentLibraries,
       searchComponentLibrary,
       getComponentLibrary,
       addToComponentLibrary,
@@ -558,6 +608,7 @@ export const ComponentLibraryProvider = ({
       error,
       searchResult,
       highlightedComponentDigest,
+      existingComponentLibraries,
       searchComponentLibrary,
       getComponentLibrary,
       addToComponentLibrary,

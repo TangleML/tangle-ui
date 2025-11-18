@@ -29,6 +29,7 @@ import {
   SearchInput,
   SearchResults,
 } from "../components";
+import AddGitHubLibraryDialog from "../components/AddGitHubLibraryDialog";
 import { IONodeSidebarItem } from "../components/ComponentItem";
 import { LibraryFolderItem } from "../components/FolderItem";
 import PublishedComponentsSearch from "../components/PublishedComponentsSearch";
@@ -40,7 +41,8 @@ const GraphComponents = ({ isOpen }: { isOpen: boolean }) => {
   );
   const componentLibraryV2Enabled = useBetaFlagValue("component-library-v2");
 
-  const { getComponentLibrary } = useComponentLibrary();
+  const { getComponentLibrary, existingComponentLibraries } =
+    useComponentLibrary();
   const favoriteComponentsLibrary = getComponentLibrary(
     FAVORITE_COMPONENTS_LIBRARY_ID,
   );
@@ -129,13 +131,17 @@ const GraphComponents = ({ isOpen }: { isOpen: boolean }) => {
               icon="Star"
             />
           )}
-          {componentLibraryV2Enabled ? (
-            <LibraryFolderItem
-              key="favorite-components-folder-v2"
-              library={favoriteComponentsLibrary}
-              icon="Star"
-            />
-          ) : null}
+          {componentLibraryV2Enabled
+            ? existingComponentLibraries?.map((library) => (
+                <LibraryFolderItem
+                  key={library.id}
+                  library={getComponentLibrary(
+                    library.id as any /** todo: fix this */,
+                  )}
+                  icon={library.icon as any /** todo: fix this */}
+                />
+              ))
+            : null}
 
           {hasUserComponents && (
             <FolderItem
@@ -197,6 +203,7 @@ const GraphComponents = ({ isOpen }: { isOpen: boolean }) => {
     favoriteComponentsLibrary,
     standardComponentsLibrary,
     usedComponentsLibrary,
+    existingComponentLibraries,
   ]);
 
   if (!isOpen) {
@@ -256,6 +263,13 @@ const GraphComponents = ({ isOpen }: { isOpen: boolean }) => {
       <SidebarGroupContent className="[&_li]:marker:hidden [&_li]:before:content-none [&_li]:list-none">
         {searchComponent}
       </SidebarGroupContent>
+      {componentLibraryV2Enabled && (
+        <SidebarGroupContent>
+          <BlockStack className="mt-8">
+            <AddGitHubLibraryDialog />
+          </BlockStack>
+        </SidebarGroupContent>
+      )}
     </SidebarGroup>
   );
 };

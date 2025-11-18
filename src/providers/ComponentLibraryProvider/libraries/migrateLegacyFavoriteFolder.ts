@@ -34,7 +34,7 @@ export async function migrateLegacyFavoriteFolder() {
   await LibraryDB.component_libraries.put({
     id: FAVORITE_COMPONENTS_LIBRARY_ID,
     name: "Favorite Components",
-    icon: "star",
+    icon: "Star",
     type: "indexdb",
     knownDigests: favoriteComponents.map((component) => component.digest),
     configuration: {
