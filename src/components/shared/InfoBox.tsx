@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 
 interface InfoBoxProps {
   title: string;
+  width?: "full" | "fit" | "auto";
   className?: string;
   children: ReactNode;
   variant?: "info" | "error" | "warning" | "success" | "ghost";
@@ -35,15 +36,24 @@ const variantStyles: Record<
   },
 };
 
+const widthStyles: Record<NonNullable<InfoBoxProps["width"]>, string> = {
+  full: "w-full",
+  auto: "w-auto",
+  fit: "w-fit",
+};
+
 export const InfoBox = ({
   title,
+  width = "fit",
   className,
   children,
   variant = "info",
 }: InfoBoxProps) => {
   const styles = variantStyles[variant];
+  const widthClass = widthStyles[width];
+
   return (
-    <div className={cn("border rounded-md p-2", styles.container)}>
+    <div className={cn("border rounded-md p-2", styles.container, widthClass)}>
       <div className={cn("text-sm font-semibold mb-1", styles.title)}>
         {title}
       </div>
