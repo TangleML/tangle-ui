@@ -11,7 +11,7 @@ export const ExistingBetaFlags = {
   ["remote-component-library-search"]: {
     name: "Published Components Library",
     description: "Enable the Published Components Library feature.",
-    default: false,
+    default: true,
   } as BetaFlag,
 
   ["redirect-on-new-pipeline-run"]: {
@@ -38,7 +38,7 @@ export const ExistingBetaFlags = {
     name: "Subgraph Navigation",
     description:
       "⚠️ Experimental ⚠️ feature for viewing subgraphs. Navigate into nested pipeline components by double-clicking.",
-    default: false,
+    default: true,
   } as BetaFlag,
 
   ["partial-selection"]: {
