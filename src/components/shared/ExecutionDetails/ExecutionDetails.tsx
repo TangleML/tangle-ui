@@ -1,4 +1,4 @@
-import { ChevronsUpDown } from "lucide-react";
+import { ChevronsUpDown, ExternalLink } from "lucide-react";
 
 import type { GetContainerExecutionStateResponse } from "@/api/types.gen";
 import { Button } from "@/components/ui/button";
@@ -50,6 +50,7 @@ export const ExecutionDetails = ({
   }
 
   const podName = executionPodName(containerState);
+  const executionJobLinks = getExecutionJobLinks(containerState);
 
   return (
     <div className="flex flex-col px-3 py-2">
@@ -150,6 +151,29 @@ export const ExecutionDetails = ({
                   </span>
                 </div>
               )}
+              {executionJobLinks && (
+                <>
+                  {executionJobLinks.map((linkInfo) => (
+                    <div
+                      key={linkInfo.name}
+                      className="flex text-xs items-center gap-2"
+                    >
+                      <span className="font-medium text-foreground min-w-fit">
+                        {linkInfo.name}:
+                      </span>
+                      <a
+                        href={linkInfo.url}
+                        className="text-sky-500 hover:underline flex items-center gap-1"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {linkInfo.value}
+                        <ExternalLink className="size-3 flex-shrink-0" />
+                      </a>
+                    </div>
+                  ))}
+                </>
+              )}
 
               {!isLoadingContainerState &&
                 !containerState &&
@@ -190,4 +214,39 @@ function executionPodName(
   }
 
   return null;
+}
+
+interface ExecutionLinkItem {
+  name: string;
+  value: string;
+  url?: string;
+}
+
+function getExecutionJobLinks(
+  containerState?: GetContainerExecutionStateResponse,
+): Array<ExecutionLinkItem> | null {
+  if (!containerState || !("debug_info" in containerState)) {
+    return null;
+  }
+
+  const debugInfo = containerState.debug_info as Record<string, any>;
+
+  const result = Array<ExecutionLinkItem>();
+
+  const huggingfaceJob = debugInfo.huggingface_job as Record<string, any>;
+  if (
+    huggingfaceJob &&
+    typeof huggingfaceJob === "object" &&
+    typeof huggingfaceJob.id === "string" &&
+    typeof huggingfaceJob.namespace === "string"
+  ) {
+    const url = `https://huggingface.co/jobs/${huggingfaceJob.namespace}/${huggingfaceJob.id}`;
+    result.push({
+      name: "HuggingFace Job",
+      value: huggingfaceJob.id,
+      url: url,
+    });
+  }
+
+  return result;
 }
