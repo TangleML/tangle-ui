@@ -87,9 +87,14 @@ export const ComponentSpecProvider = ({
     return getSubgraphComponentSpec(componentSpec, currentSubgraphPath);
   }, [componentSpec, currentSubgraphPath]);
 
+  const isRootSubgraph = currentSubgraphPath.length === 1;
+
   const { isValid, errors } = useMemo(
-    () => checkComponentSpecValidity(currentSubgraphSpec),
-    [currentSubgraphSpec],
+    () =>
+      checkComponentSpecValidity(currentSubgraphSpec, {
+        skipInputValueValidation: !isRootSubgraph,
+      }),
+    [currentSubgraphSpec, isRootSubgraph],
   );
 
   const clearComponentSpec = useCallback(() => {
