@@ -30,7 +30,8 @@ import { getOutputConnectedDetails } from "./utils/getOutputConnectedDetails";
 
 const PipelineDetails = () => {
   const { setContent } = useContextPanel();
-  const { componentSpec, graphSpec, isValid, errors } = useComponentSpec();
+  const { componentSpec, graphSpec, isValid, errors, hasAncestorErrors } =
+    useComponentSpec();
 
   const notify = useToastNotification();
 
@@ -310,11 +311,7 @@ const PipelineDetails = () => {
       {/* Validations */}
       <div>
         <h3 className="text-md font-medium mb-1">Validations</h3>
-        {isValid ? (
-          <InfoBox variant="success" title="No validation errors found">
-            Pipeline is ready for submission
-          </InfoBox>
-        ) : (
+        {!isValid ? (
           <InfoBox
             variant="error"
             title={`${errors.length} validation error${errors.length > 1 ? "s" : ""} found:`}
@@ -329,13 +326,25 @@ const PipelineDetails = () => {
                       align="start"
                       wrap="nowrap"
                     >
-                      <span className="text-destructive flex-shrink-0">•</span>
-                      <span className="break-words">{error}</span>
+                      <span className="text-destructive shrink-0">•</span>
+                      <span className="wrap-break-word">{error}</span>
                     </InlineStack>
                   </li>
                 ))}
               </ul>
             </ScrollArea>
+          </InfoBox>
+        ) : hasAncestorErrors ? (
+          <InfoBox
+            variant="warning"
+            title="Validation errors in parent pipeline"
+          >
+            Current subgraph is valid, but there are validation errors in the
+            parent pipeline. Navigate back to fix them.
+          </InfoBox>
+        ) : (
+          <InfoBox variant="success" title="No validation errors found">
+            Pipeline is ready for submission
           </InfoBox>
         )}
       </div>

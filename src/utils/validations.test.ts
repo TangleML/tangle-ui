@@ -1,12 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { type ComponentSpec } from "./componentSpec";
+import {
+  type ComponentReference,
+  type ComponentSpec,
+  type GraphImplementation,
+  type TaskSpec,
+} from "./componentSpec";
 import { checkComponentSpecValidity } from "./validations";
 
 // Mock the componentSpec module
-vi.mock("./componentSpec", () => ({
-  isGraphImplementation: vi.fn(),
-}));
+vi.mock("./componentSpec", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./componentSpec")>();
+  return {
+    ...actual,
+    isGraphImplementation: vi.fn(),
+  };
+});
 
 const { isGraphImplementation } = await import("./componentSpec");
 
@@ -175,7 +184,15 @@ describe("checkComponentSpecValidity", () => {
 
   describe("Graph Implementation Validation", () => {
     beforeEach(() => {
-      vi.mocked(isGraphImplementation).mockReturnValue(true);
+      vi.mocked(isGraphImplementation).mockImplementation(
+        (implementation): implementation is GraphImplementation => {
+          return Boolean(
+            implementation &&
+              typeof implementation === "object" &&
+              "graph" in implementation,
+          );
+        },
+      );
     });
 
     it("should return error for graph without tasks", () => {
@@ -202,7 +219,8 @@ describe("checkComponentSpecValidity", () => {
         implementation: {
           graph: {
             tasks: {
-              task1: {} as any,
+              // Task intentionally missing componentRef for test
+              task1: {} as Partial<TaskSpec> as TaskSpec,
             },
           },
         },
@@ -212,6 +230,43 @@ describe("checkComponentSpecValidity", () => {
 
       expect(result.isValid).toBe(false);
       expect(result.errors).toContain('Task "task1" must have a componentRef');
+    });
+
+    it("should bubble up subgraph validation errors to parent tasks", () => {
+      const invalidSubgraph: ComponentSpec = {
+        name: "invalid-subgraph",
+        implementation: {
+          graph: {
+            tasks: {},
+          },
+        },
+      };
+
+      const parentTaskComponentRef: ComponentReference = {
+        spec: invalidSubgraph,
+      };
+
+      const parentTask: TaskSpec = {
+        componentRef: parentTaskComponentRef,
+      };
+
+      const componentSpec: ComponentSpec = {
+        name: "root-component",
+        implementation: {
+          graph: {
+            tasks: {
+              parentTask,
+            },
+          },
+        },
+      };
+
+      const result = checkComponentSpecValidity(componentSpec);
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain(
+        'Task "parentTask" contains validation errors in its subgraph',
+      );
     });
 
     it("should validate graph input references", () => {
@@ -437,7 +492,14 @@ describe("checkComponentSpecValidity", () => {
 
   describe("Valid Component Spec", () => {
     it("should return valid for a complete valid graph component spec", () => {
-      vi.mocked(isGraphImplementation).mockReturnValue(true);
+      vi.mocked(isGraphImplementation).mockImplementation(
+        (implementation): implementation is GraphImplementation =>
+          Boolean(
+            implementation &&
+              typeof implementation === "object" &&
+              "graph" in implementation,
+          ),
+      );
 
       const componentSpec: ComponentSpec = {
         name: "valid-component",

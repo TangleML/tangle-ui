@@ -10,8 +10,6 @@
   "ignoreDependencies": [
     "@radix-ui/react-accordion",
     "@tanstack/react-query-devtools",
-    "tailwindcss",
-    "tailwindcss-animate",
     "@typescript-eslint/eslint-plugin",
     "@typescript-eslint/parser",
     "react-scripts"
