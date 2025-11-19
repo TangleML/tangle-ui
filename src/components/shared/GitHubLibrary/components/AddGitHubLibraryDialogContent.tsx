@@ -39,7 +39,7 @@ const ComponentList = ({
             <Icon name="File" className="text-gray-400" size="lg" />
 
             <BlockStack align="start" gap="0">
-              <Text className="truncate">{component.name}</Text>
+              <Text className="truncate max-w-[425px]">{component.name}</Text>
               <Text size="xs" tone="subdued" className="font-mono">
                 Ver: {trimDigest(component.digest)}
               </Text>
