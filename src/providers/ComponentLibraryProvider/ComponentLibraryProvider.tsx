@@ -10,6 +10,7 @@ import {
 
 import ComponentDuplicateDialog from "@/components/shared/Dialogs/ComponentDuplicateDialog";
 import { GitHubFlatComponentLibrary } from "@/components/shared/GitHubLibrary/githubFlatComponentLibrary";
+import { isGitHubLibraryConfiguration } from "@/components/shared/GitHubLibrary/types";
 import { fetchAndStoreComponentLibrary } from "@/services/componentService";
 import type {
   ComponentFolder,
@@ -99,11 +100,15 @@ const ComponentLibraryContext =
 /**
  * Register the GitHub library factory. This allows to have multiple instances of the same library type.
  */
-registerLibraryFactory(
-  "github",
-  (library) =>
-    new GitHubFlatComponentLibrary(library.configuration?.repo_name as string),
-);
+registerLibraryFactory("github", (library) => {
+  if (!isGitHubLibraryConfiguration(library.configuration)) {
+    throw new Error(
+      `GitHub library configuration is not valid for "${library.id}"`,
+    );
+  }
+
+  return new GitHubFlatComponentLibrary(library.configuration.repo_name);
+});
 
 function useComponentLibraryRegistry() {
   const queryClient = useQueryClient();
