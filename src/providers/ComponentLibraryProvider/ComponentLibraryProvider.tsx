@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLiveQuery } from "dexie-react-hooks";
 import {
   type ReactNode,
   useCallback,
@@ -8,6 +9,7 @@ import {
 } from "react";
 
 import ComponentDuplicateDialog from "@/components/shared/Dialogs/ComponentDuplicateDialog";
+import { GitHubFlatComponentLibrary } from "@/components/shared/GitHubLibrary/githubFlatComponentLibrary";
 import { fetchAndStoreComponentLibrary } from "@/services/componentService";
 import type {
   ComponentFolder,
@@ -46,10 +48,15 @@ import {
   populateComponentRefs,
 } from "./componentLibrary";
 import { useForcedSearchContext } from "./ForcedSearchProvider";
+import {
+  createLibraryObject,
+  registerLibraryFactory,
+} from "./libraries/factory";
 import { PublishedComponentsLibrary } from "./libraries/publishedComponentsLibrary";
+import { LibraryDB, type StoredLibrary } from "./libraries/storage";
 import type { Library } from "./libraries/types";
 
-type AvailableComponentLibraries = "published_components";
+type AvailableComponentLibraries = "published_components" | string;
 
 type ComponentLibraryContextType = {
   componentLibrary: ComponentLibrary | undefined;
@@ -58,7 +65,7 @@ type ComponentLibraryContextType = {
   favoritesFolder: ComponentFolder;
   isLoading: boolean;
   error: Error | null;
-
+  existingComponentLibraries: StoredLibrary[] | undefined;
   searchResult: SearchResult | null;
 
   highlightedComponentDigest: string | null;
@@ -89,6 +96,61 @@ const ComponentLibraryContext =
     "ComponentLibraryProvider",
   );
 
+/**
+ * Register the GitHub library factory. This allows to have multiple instances of the same library type.
+ */
+registerLibraryFactory(
+  "github",
+  (library) =>
+    new GitHubFlatComponentLibrary(library.configuration?.repo_name as string),
+);
+
+function useComponentLibraryRegistry() {
+  const queryClient = useQueryClient();
+  const [existingComponentLibraries, setExistingComponentLibraries] = useState<
+    StoredLibrary[]
+  >([]);
+
+  const componentLibraries = useMemo(
+    () =>
+      new Map<AvailableComponentLibraries, Library>([
+        ["published_components", new PublishedComponentsLibrary(queryClient)],
+        /**
+         * In future we will have other library types,  including "standard_library", "favorite_components", "used_components", etc.
+         */
+      ]),
+    [queryClient],
+  );
+
+  /**
+   * Sync the existing component libraries with the component libraries map
+   */
+  const registeredComponentLibraries = useLiveQuery(() =>
+    LibraryDB.component_libraries.toArray(),
+  );
+
+  useEffect(() => {
+    registeredComponentLibraries?.forEach((library) => {
+      componentLibraries.set(library.id, createLibraryObject(library));
+    });
+
+    setExistingComponentLibraries(registeredComponentLibraries ?? []);
+  }, [registeredComponentLibraries, componentLibraries]);
+
+  const getComponentLibraryObject = useCallback(
+    (libraryName: AvailableComponentLibraries) => {
+      if (!componentLibraries.has(libraryName)) {
+        throw new Error(`Component library "${libraryName}" is not found.`);
+      }
+
+      return componentLibraries.get(libraryName) as Library;
+    },
+    [componentLibraries],
+  );
+
+  return { getComponentLibraryObject, existingComponentLibraries };
+}
+
 export const ComponentLibraryProvider = ({
   children,
 }: {
@@ -96,26 +158,9 @@ export const ComponentLibraryProvider = ({
 }) => {
   const { graphSpec } = useComponentSpec();
   const { currentSearchFilter } = useForcedSearchContext();
-  const queryClient = useQueryClient();
 
-  const componentLibraries = useMemo(
-    () =>
-      new Map<AvailableComponentLibraries, Library>([
-        ["published_components", new PublishedComponentsLibrary(queryClient)],
-      ]),
-    [queryClient],
-  );
-
-  const getComponentLibraryObject = useCallback(
-    (libraryName: AvailableComponentLibraries) => {
-      if (!componentLibraries.has(libraryName)) {
-        throw new Error(`Component library "${libraryName}" is not supported.`);
-      }
-
-      return componentLibraries.get(libraryName) as Library;
-    },
-    [componentLibraries],
-  );
+  const { getComponentLibraryObject, existingComponentLibraries } =
+    useComponentLibraryRegistry();
 
   const [componentLibrary, setComponentLibrary] = useState<ComponentLibrary>();
   const [userComponentsFolder, setUserComponentsFolder] =
@@ -497,6 +542,7 @@ export const ComponentLibraryProvider = ({
       error,
       searchResult,
       highlightedComponentDigest,
+      existingComponentLibraries,
       searchComponentLibrary,
       getComponentLibrary,
       addToComponentLibrary,
@@ -519,6 +565,7 @@ export const ComponentLibraryProvider = ({
       error,
       searchResult,
       highlightedComponentDigest,
+      existingComponentLibraries,
       searchComponentLibrary,
       getComponentLibrary,
       addToComponentLibrary,
