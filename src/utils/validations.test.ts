@@ -106,6 +106,23 @@ describe("checkComponentSpecValidity", () => {
       );
     });
 
+    it("should skip required input value validation when option enabled", () => {
+      const componentSpec: ComponentSpec = {
+        name: "test-component",
+        implementation: { container: { image: "test-image" } },
+        inputs: [{ name: "no-value", type: "string", optional: false }],
+      };
+
+      const result = checkComponentSpecValidity(componentSpec, {
+        skipInputValueValidation: true,
+      });
+
+      expect(result.isValid).toBe(true);
+      expect(result.errors).not.toContain(
+        'Pipeline input "no-value" is required and does not have a value',
+      );
+    });
+
     it("should return error for output without name", () => {
       const componentSpec: ComponentSpec = {
         name: "test-component",

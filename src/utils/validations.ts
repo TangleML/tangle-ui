@@ -9,10 +9,16 @@ import {
   type TaskSpec,
 } from "./componentSpec";
 
+interface ValidationOptions {
+  skipInputValueValidation?: boolean;
+}
+
 export const checkComponentSpecValidity = (
   componentSpec: ComponentSpec,
+  options?: ValidationOptions,
 ): { isValid: boolean; errors: string[] } => {
   const errors: string[] = [];
+  const { skipInputValueValidation = false } = options ?? {};
 
   // Basic validation
   const basicErrors = validateBasicComponentSpec(componentSpec);
@@ -26,7 +32,9 @@ export const checkComponentSpecValidity = (
   }
 
   // Validate inputs and outputs
-  errors.push(...validateInputsAndOutputs(componentSpec));
+  errors.push(
+    ...validateInputsAndOutputs(componentSpec, skipInputValueValidation),
+  );
 
   // Skip further validation for non-graph implementations
   if (!isGraphImplementation(componentSpec.implementation)) {
@@ -68,7 +76,10 @@ const validateBasicComponentSpec = (componentSpec: ComponentSpec): string[] => {
   return errors;
 };
 
-const validateInputsAndOutputs = (componentSpec: ComponentSpec): string[] => {
+const validateInputsAndOutputs = (
+  componentSpec: ComponentSpec,
+  skipInputValueValidation: boolean,
+): string[] => {
   const errors: string[] = [];
 
   // Validate inputs array structure
@@ -87,7 +98,12 @@ const validateInputsAndOutputs = (componentSpec: ComponentSpec): string[] => {
       }
 
       // Check that required inputs have a value or default
-      if (!input.optional && !input.default && !input.value) {
+      if (
+        !skipInputValueValidation &&
+        !input.optional &&
+        !input.default &&
+        !input.value
+      ) {
         errors.push(
           `Pipeline input "${input.name}" is required and does not have a value`,
         );
