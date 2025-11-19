@@ -11,7 +11,9 @@ import {
 } from "@/utils/componentSpec";
 import { getUniqueTaskName, validateTaskName } from "@/utils/unique";
 
+import { checkExternalInputConnections } from "./checkExternalInputConnections";
 import { checkForOrphanedNodes } from "./checkForOrphanedNodes";
+import { ExternalInputConnectionsList } from "./ExternalInputConnectionsList";
 import { NodesList } from "./NodesList";
 import { OrphanedNodeList } from "./OrphanedNodeList";
 import { canGroupNodes } from "./utils";
@@ -68,6 +70,12 @@ export const NewSubgraphDialog = ({
     [activeNodes, currentSubgraphSpec],
   );
 
+  // Inputs with external connections in the current active selection (after user exclusions)
+  const inputsWithExternalConnections = useMemo(
+    () => checkExternalInputConnections(activeNodes, currentSubgraphSpec),
+    [activeNodes, currentSubgraphSpec],
+  );
+
   const hasActiveOrphans = activeOrphanedNodes.length > 0;
 
   const { canGroup, errorMessage } = canGroupNodes(
@@ -105,6 +113,15 @@ export const NewSubgraphDialog = ({
           />
         )}
 
+        {canGroup && inputsWithExternalConnections.length > 0 && (
+          <ExternalInputConnectionsList
+            nodes={inputsWithExternalConnections}
+            excludedNodeIds={excludedNodeIds}
+            onExcludeNode={excludeNode}
+            onIncludeNode={includeNode}
+          />
+        )}
+
         {!canGroup && errorMessage && (
           <InfoBox title="Cannot Create Subgraph" variant="error" width="full">
             {errorMessage}
@@ -117,6 +134,7 @@ export const NewSubgraphDialog = ({
     activeNodes,
     orphanedNodes,
     activeOrphanedNodes,
+    inputsWithExternalConnections,
     hasActiveOrphans,
     canGroup,
     errorMessage,
