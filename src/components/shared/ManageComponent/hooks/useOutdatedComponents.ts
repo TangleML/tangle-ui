@@ -6,19 +6,11 @@ import {
   type ComponentReferenceWithDigest,
   type HydratedComponentReference,
   isDiscoverableComponentReference,
-  isHydratedComponentReference,
 } from "@/utils/componentSpec";
 
 import { hasSupersededBy } from "../types";
+import { hydrateAllComponents } from "../utils/hydrateAllComponents";
 import { useAllPublishedComponents } from "./useAllPublishedComponents";
-
-async function hydrateAllComponents(
-  components: ComponentReference[],
-): Promise<HydratedComponentReference[]> {
-  return (
-    await Promise.all(components.map((c) => hydrateComponentReference(c)))
-  ).filter(isHydratedComponentReference);
-}
 
 /**
  * Hook to get the outdated components in the graph

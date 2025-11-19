@@ -1,6 +1,7 @@
 import { PackagePlus } from "lucide-react";
 import { type ChangeEvent, useCallback, useMemo } from "react";
 
+import { ManageLibrariesDialog } from "@/components/shared/GitHubLibrary/ManageLibrariesDialog";
 import { useBetaFlagValue } from "@/components/shared/Settings/useBetaFlags";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
@@ -157,12 +158,13 @@ const GraphComponents = ({ isOpen }: { isOpen: boolean }) => {
               <BlockStack gap="1" className="pl-2 py-2">
                 <InlineStack
                   className="w-full"
-                  align="start"
+                  align="space-between"
                   blockAlign="center"
                 >
                   <Text size="sm" tone="subdued">
                     Connected libraries
                   </Text>
+                  <ManageLibrariesDialog />
                 </InlineStack>
 
                 {existingComponentLibraries?.length === 0 && (
