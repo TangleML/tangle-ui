@@ -8,11 +8,9 @@ import { useBetaFlagValue } from "@/components/shared/Settings/useBetaFlags";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { Icon } from "@/components/ui/icon";
 import { SidebarMenuItem } from "@/components/ui/sidebar";
-import useComponentFromUrl from "@/hooks/useComponentFromUrl";
+import { useHydrateComponentReference } from "@/hooks/useHydrateComponentReference";
 import { cn } from "@/lib/utils";
 import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
-import { EMPTY_GRAPH_COMPONENT_SPEC } from "@/providers/ComponentSpecProvider";
-import { type ComponentItemFromUrlProps } from "@/types/componentLibrary";
 import type { ComponentReference, TaskSpec } from "@/utils/componentSpec";
 import { getComponentName } from "@/utils/getComponentName";
 
@@ -214,23 +212,15 @@ const ComponentMarkup = ({
   );
 };
 
-const ComponentItemFromUrl = ({ url }: ComponentItemFromUrlProps) => {
-  if (!url) return null;
+const ComponentItemFromUrl = withSuspenseWrapper(
+  ({ componentRef }: { componentRef: ComponentReference }) => {
+    const hydratedComponent = useHydrateComponentReference(componentRef);
 
-  const { isLoading, error, componentRef } = useComponentFromUrl(url);
+    if (!hydratedComponent) return null;
 
-  if (!componentRef.spec) {
-    componentRef.spec = EMPTY_GRAPH_COMPONENT_SPEC;
-  }
-
-  return (
-    <ComponentMarkup
-      component={componentRef}
-      isLoading={isLoading}
-      error={error}
-    />
-  );
-};
+    return <ComponentMarkup component={hydratedComponent} />;
+  },
+);
 
 interface IONodeSidebarItemProps {
   nodeType: "input" | "output";
