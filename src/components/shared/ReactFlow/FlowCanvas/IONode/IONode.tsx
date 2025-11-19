@@ -1,4 +1,4 @@
-import { Handle, Position } from "@xyflow/react";
+import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { memo, useEffect, useMemo } from "react";
 
 import { InputValueEditor } from "@/components/Editor/IOEditor/InputValueEditor";
@@ -14,20 +14,21 @@ import { isViewingSubgraph } from "@/utils/subgraphUtils";
 
 export const DEFAULT_IO_NODE_WIDTH = 300;
 
-interface IONodeProps {
-  type: "input" | "output";
-  data: {
-    label: string;
-    value?: string;
-    default?: string;
-    type?: string;
-    readOnly?: boolean;
-  };
-  selected: boolean;
-  deletable: boolean;
+interface IONodeData {
+  label: string;
+  value?: string;
+  default?: string;
+  type?: string;
+  readOnly?: boolean;
+  nodeAnchor?: string;
 }
 
-const IONode = ({ type, data, selected = false }: IONodeProps) => {
+const IONode = ({
+  id,
+  type,
+  data,
+  selected = false,
+}: NodeProps<IONodeData>) => {
   const { currentGraphSpec, currentSubgraphSpec, currentSubgraphPath } =
     useComponentSpec();
   const { setContent, clearContent } = useContextPanel();
@@ -125,7 +126,12 @@ const IONode = ({ type, data, selected = false }: IONodeProps) => {
   const value = isInput ? inputValue : outputValue;
 
   return (
-    <Card className={cn("border-2 max-w-[300px] p-0", borderColor)}>
+    <Card
+      data-node-anchor={data.nodeAnchor}
+      id={data.nodeAnchor}
+      data-node-id={id}
+      className={cn("border-2 max-w-[300px] p-0", borderColor)}
+    >
       <CardHeader className="px-2 py-2.5">
         <CardTitle className="break-words">{data.label}</CardTitle>
       </CardHeader>
