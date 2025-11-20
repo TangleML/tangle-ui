@@ -67,6 +67,7 @@ export const InputValueEditor = ({
   }, [input.name, currentSubgraphSpec]);
 
   const effectiveOptionalValue = isConnectedToRequired ? false : inputOptional;
+  const isInSubgraph = currentSubgraphPath.length > 1;
 
   const handleInputChange = useCallback(
     (
@@ -272,7 +273,9 @@ export const InputValueEditor = ({
     }
   }, [triggerSave, saveChanges]);
 
-  const placeholder = input.default ?? `Enter ${input.name}...`;
+  const placeholder = isInSubgraph
+    ? "→ from subgraph arguments"
+    : (input.default ?? `Enter ${input.name}...`);
 
   return (
     <BlockStack gap="3" className="p-4 w-full">
@@ -323,7 +326,7 @@ export const InputValueEditor = ({
         inputName={input.name}
       />
 
-      {!initialInputValue && !inputOptional && (
+      {!initialInputValue && !inputOptional && !isInSubgraph && (
         <InfoBox title="Missing value" variant="error">
           Input is not optional. Value is required.
         </InfoBox>
