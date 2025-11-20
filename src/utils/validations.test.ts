@@ -11,13 +11,32 @@ import { checkComponentSpecValidity } from "./validations";
 // Mock the componentSpec module
 vi.mock("./componentSpec", () => ({
   isGraphImplementation: vi.fn(),
+  isGraphInputArgument: vi.fn(),
+  isTaskOutputArgument: vi.fn(),
 }));
 
-const { isGraphImplementation } = await import("./componentSpec");
+const { isGraphImplementation, isGraphInputArgument, isTaskOutputArgument } =
+  await import("./componentSpec");
+
+const mockGraphImplementationCheck = (
+  implementation: ComponentSpec["implementation"],
+): implementation is GraphImplementation =>
+  typeof implementation === "object" &&
+  implementation !== null &&
+  "graph" in implementation;
 
 describe("checkComponentSpecValidity", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Set up default mocks
+    vi.mocked(isGraphInputArgument).mockImplementation(
+      (arg: any) =>
+        typeof arg === "object" && arg !== null && "graphInput" in arg,
+    );
+    vi.mocked(isTaskOutputArgument).mockImplementation(
+      (arg: any) =>
+        typeof arg === "object" && arg !== null && "taskOutput" in arg,
+    );
   });
 
   describe("Basic Component Spec Validation", () => {
@@ -181,13 +200,7 @@ describe("checkComponentSpecValidity", () => {
   describe("Graph Implementation Validation", () => {
     beforeEach(() => {
       vi.mocked(isGraphImplementation).mockImplementation(
-        (implementation): implementation is GraphImplementation => {
-          return Boolean(
-            implementation &&
-              typeof implementation === "object" &&
-              "graph" in implementation,
-          );
-        },
+        mockGraphImplementationCheck,
       );
     });
 
@@ -206,6 +219,15 @@ describe("checkComponentSpecValidity", () => {
       expect(result.isValid).toBe(false);
       expect(result.errors).toContain(
         "Pipeline must contain at least one task",
+      );
+      expect(result.nodeErrors).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            path: [],
+            anchor: "node:root",
+            reason: "Pipeline must contain at least one task",
+          }),
+        ]),
       );
     });
 
@@ -261,7 +283,160 @@ describe("checkComponentSpecValidity", () => {
 
       expect(result.isValid).toBe(false);
       expect(result.errors).toContain(
-        'Task "parentTask" contains validation errors in its subgraph',
+        'Task "parentTask" subgraph: Pipeline must contain at least one task',
+      );
+      expect(result.nodeErrors).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            path: ["parentTask"],
+            anchor: "node:parentTask",
+            reason: "Pipeline must contain at least one task",
+          }),
+        ]),
+      );
+    });
+
+    it("should detect circular subgraph references", () => {
+      const recursiveGraph: GraphImplementation = {
+        graph: {
+          tasks: {},
+        },
+      };
+
+      const recursiveSpec: ComponentSpec = {
+        name: "recursive-component",
+        implementation: recursiveGraph,
+      };
+
+      const selfTaskComponentRef: ComponentReference = {
+        spec: recursiveSpec,
+      };
+
+      const selfTask: TaskSpec = {
+        componentRef: selfTaskComponentRef,
+      };
+
+      recursiveGraph.graph.tasks.self = selfTask;
+
+      const result = checkComponentSpecValidity(recursiveSpec);
+
+      expect(result.isValid).toBe(false);
+      // The circular reference is detected when validating the nested subgraph
+      // The error should be bubbled up with the task prefix
+      expect(result.errors.length).toBeGreaterThan(0);
+      // Check that at least one error mentions the circular reference
+      const hasCircularRefError = result.errors.some(
+        (err) =>
+          err.includes("circular") && err.includes("recursive-component"),
+      );
+      expect(hasCircularRefError).toBe(true);
+      // The path is ["self", "self"] because we detect the circular reference
+      // when trying to validate the "self" task within the "self" task's subgraph
+      expect(result.nodeErrors).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            path: ["self", "self"],
+            anchor: "node:self.self",
+            reason:
+              'Component "recursive-component" contains circular subgraph references',
+          }),
+        ]),
+      );
+    });
+
+    it("should capture node metadata for task validation failures", () => {
+      const childComponent: ComponentSpec = {
+        name: "child-component",
+        implementation: { container: { image: "child-image" } },
+        inputs: [
+          {
+            name: "requiredInput",
+            type: "string",
+            optional: false,
+          },
+        ],
+      };
+
+      const componentSpec: ComponentSpec = {
+        name: "root-component",
+        implementation: {
+          graph: {
+            tasks: {
+              parentTask: {
+                componentRef: { spec: childComponent },
+                arguments: {},
+              },
+            },
+          },
+        },
+      };
+
+      const result = checkComponentSpecValidity(componentSpec);
+
+      expect(result.isValid).toBe(false);
+      expect(result.nodeErrors).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            path: ["parentTask"],
+            anchor: "node:parentTask",
+            reason:
+              'Task "parentTask" is missing required argument for input: "requiredInput"',
+          }),
+        ]),
+      );
+    });
+
+    it("should provide deep node anchors for nested subgraphs", () => {
+      const invalidGrandchild: ComponentSpec = {
+        name: "grandchild",
+        implementation: { container: { image: "grandchild-image" } },
+        inputs: [
+          {
+            name: "deep-input",
+            optional: false,
+          },
+        ],
+      };
+
+      const subgraph: ComponentSpec = {
+        name: "subgraph",
+        implementation: {
+          graph: {
+            tasks: {
+              "inner task": {
+                componentRef: { spec: invalidGrandchild },
+                arguments: {},
+              },
+            },
+          },
+        },
+      };
+
+      const componentSpec: ComponentSpec = {
+        name: "root-component",
+        implementation: {
+          graph: {
+            tasks: {
+              parentTask: {
+                componentRef: { spec: subgraph },
+              },
+            },
+          },
+        },
+      };
+
+      const result = checkComponentSpecValidity(componentSpec);
+
+      expect(result.isValid).toBe(false);
+      expect(result.nodeErrors).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            path: ["parentTask", "inner task"],
+            anchor: "node:parentTask.inner-task",
+            reason:
+              'Task "inner task" is missing required argument for input: "deep-input"',
+          }),
+        ]),
       );
     });
 
@@ -489,12 +664,7 @@ describe("checkComponentSpecValidity", () => {
   describe("Valid Component Spec", () => {
     it("should return valid for a complete valid graph component spec", () => {
       vi.mocked(isGraphImplementation).mockImplementation(
-        (implementation): implementation is GraphImplementation =>
-          Boolean(
-            implementation &&
-              typeof implementation === "object" &&
-              "graph" in implementation,
-          ),
+        mockGraphImplementationCheck,
       );
 
       const componentSpec: ComponentSpec = {

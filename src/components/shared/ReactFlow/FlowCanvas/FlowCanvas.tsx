@@ -41,6 +41,7 @@ import {
 } from "@/utils/componentSpec";
 import { loadComponentAsRefFromText } from "@/utils/componentStore";
 import { deselectAllNodes } from "@/utils/flowUtils";
+import { ROOT_NODE_ANCHOR } from "@/utils/nodeAnchors";
 import createNodesFromComponentSpec from "@/utils/nodes/createNodesFromComponentSpec";
 import {
   getSubgraphComponentSpec,
@@ -127,6 +128,8 @@ const FlowCanvas = ({
     currentSubgraphSpec,
     updateGraphSpec,
     currentSubgraphPath,
+    pendingAnchor,
+    clearPendingAnchor,
   } = useComponentSpec();
   const { preserveIOSelectionOnSpecChange, resetPrevSpec } =
     useIOSelectionPersistence();
@@ -343,13 +346,24 @@ const FlowCanvas = ({
     updateOrAddNodes,
   });
 
+  const nodePathPrefix = useMemo(
+    () => currentSubgraphPath.slice(1),
+    [currentSubgraphPath],
+  );
+
   const nodeData = useMemo(
     () => ({
       connectable: !readOnly && !!nodesConnectable,
       readOnly,
       nodeCallbacks,
+      nodePathPrefix,
     }),
-    [readOnly, nodesConnectable, nodeCallbacks],
+    [
+      readOnly,
+      nodesConnectable,
+      nodeCallbacks,
+      nodePathPrefix,
+    ],
   );
 
   const updateReactFlow = useCallback(
@@ -492,6 +506,64 @@ const FlowCanvas = ({
       window.removeEventListener("mousemove", handleMouseMove);
     };
   }, [isConnecting, reactFlowInstance]);
+
+  useEffect(() => {
+    if (!pendingAnchor) return;
+
+    let frame: number;
+    let attempts = 0;
+    const maxAttempts = 12;
+
+    const tryScroll = () => {
+      const selector = `[data-node-anchor="${pendingAnchor}"]`;
+      const target = document.querySelector(selector) as
+        | HTMLElement
+        | null;
+
+      if (target) {
+        const nodeId = target.getAttribute("data-node-id");
+        if (reactFlowInstance) {
+          if (nodeId) {
+            const targetNode = reactFlowInstance.getNode(nodeId);
+            if (targetNode) {
+              reactFlowInstance.fitView({
+                nodes: [{ id: nodeId }],
+                duration: 350,
+                padding: 0.12,
+                maxZoom: 1,
+              });
+            }
+          } else {
+            reactFlowInstance.fitView({
+              duration: 350,
+              padding: 0.12,
+              maxZoom: 1,
+            });
+          }
+        } else {
+          target.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+
+        clearPendingAnchor();
+        return;
+      }
+
+      attempts += 1;
+      if (attempts < maxAttempts) {
+        frame = window.requestAnimationFrame(tryScroll);
+      } else {
+        clearPendingAnchor();
+      }
+    };
+
+    frame = window.requestAnimationFrame(tryScroll);
+
+    return () => {
+      if (frame) {
+        window.cancelAnimationFrame(frame);
+      }
+    };
+  }, [pendingAnchor, clearPendingAnchor, reactFlowInstance]);
 
   const {
     handleDrop,
@@ -1041,6 +1113,8 @@ const FlowCanvas = ({
       <SubgraphBreadcrumbs />
       <ReactFlow
         {...rest}
+        data-node-anchor={ROOT_NODE_ANCHOR}
+        id={ROOT_NODE_ANCHOR}
         nodes={nodesForRender}
         edges={edges}
         minZoom={0.01}

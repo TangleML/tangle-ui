@@ -15,6 +15,8 @@ export interface TaskNodeData extends Record<string, unknown> {
   highlighted?: boolean;
   callbacks?: TaskNodeCallbacks;
   nodeCallbacks?: NodeCallbacks;
+  nodePathPrefix?: string[];
+  nodeAnchor?: string;
 }
 
 export type NodeAndTaskId = {

@@ -1,30 +1,30 @@
 import equal from "fast-deep-equal";
 import { type ReactNode, useCallback, useMemo, useRef, useState } from "react";
 
+import {
+  createRequiredContext,
+  useRequiredContext,
+} from "@/hooks/useRequiredContext";
 import { type UndoRedo, useUndoRedo } from "@/hooks/useUndoRedo";
 import { loadPipelineByName } from "@/services/pipelineService";
+import type { ComponentSpec, GraphSpec } from "@/utils/componentSpec";
+import { isGraphImplementation } from "@/utils/componentSpec";
+import type { ComponentReferenceWithSpec } from "@/utils/componentStore";
+import {
+  componentSpecToYaml,
+  writeComponentToFileListFromText,
+} from "@/utils/componentStore";
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 import { prepareComponentRefForEditor } from "@/utils/prepareComponentRefForEditor";
 import {
   getSubgraphComponentSpec,
   updateSubgraphSpec,
 } from "@/utils/subgraphUtils";
-import { checkComponentSpecValidity } from "@/utils/validations";
-
 import {
-  createRequiredContext,
-  useRequiredContext,
-} from "../hooks/useRequiredContext";
-import {
-  type ComponentSpec,
-  type GraphSpec,
-  isGraphImplementation,
-} from "../utils/componentSpec";
-import {
-  type ComponentReferenceWithSpec,
-  componentSpecToYaml,
-  writeComponentToFileListFromText,
-} from "../utils/componentStore";
+  checkComponentSpecValidity,
+  type ValidationErrorDetail,
+  type ValidationResult,
+} from "@/utils/validations";
 
 const EMPTY_GRAPH_SPEC: GraphSpec = {
   tasks: {},
@@ -45,6 +45,8 @@ interface ComponentSpecContextType {
   isLoading: boolean;
   isValid: boolean;
   errors: string[];
+  nodeErrors: ValidationErrorDetail[];
+  rootValidation: ValidationResult;
   refetch: () => void;
   updateGraphSpec: (newGraphSpec: GraphSpec) => void;
   saveComponentSpec: (name: string) => Promise<void>;
@@ -55,6 +57,9 @@ interface ComponentSpecContextType {
   navigateBack: () => void;
   navigateToPath: (targetPath: string[]) => void;
   canNavigateBack: boolean;
+  focusValidationDetail: (detail: ValidationErrorDetail) => void;
+  pendingAnchor: string | null;
+  clearPendingAnchor: () => void;
 }
 
 const ComponentSpecContext = createRequiredContext<ComponentSpecContextType>(
@@ -79,6 +84,7 @@ export const ComponentSpecProvider = ({
   const [currentSubgraphPath, setCurrentSubgraphPath] = useState<string[]>([
     "root",
   ]);
+  const [pendingAnchor, setPendingAnchor] = useState<string | null>(null);
 
   const undoRedo = useUndoRedo(componentSpec, setComponentSpec, {
     getMetadata: () => ({ subgraphPath: currentSubgraphPath }),
@@ -97,13 +103,23 @@ export const ComponentSpecProvider = ({
 
   const isRootSubgraph = currentSubgraphPath.length === 1;
 
-  const { isValid, errors } = useMemo(
+  const currentValidation = useMemo(
     () =>
       checkComponentSpecValidity(currentSubgraphSpec, {
         skipInputValueValidation: !isRootSubgraph,
       }),
     [currentSubgraphSpec, isRootSubgraph],
   );
+
+  const rootValidation = useMemo(
+    () =>
+      checkComponentSpecValidity(componentSpec, {
+        skipInputValueValidation: false,
+      }),
+    [componentSpec],
+  );
+
+  const { isValid, errors, nodeErrors } = currentValidation;
 
   const clearComponentSpec = useCallback(() => {
     setComponentSpec(EMPTY_GRAPH_COMPONENT_SPEC);
@@ -220,6 +236,23 @@ export const ComponentSpecProvider = ({
 
   const canNavigateBack = currentSubgraphPath.length > 1;
 
+  const clearPendingAnchor = useCallback(() => {
+    setPendingAnchor(null);
+  }, []);
+
+  const focusValidationDetail = useCallback(
+    (detail: ValidationErrorDetail) => {
+      const targetPath =
+        detail.path.length > 1
+          ? ["root", ...detail.path.slice(0, -1)]
+          : ["root"];
+
+      setCurrentSubgraphPath(targetPath);
+      setPendingAnchor(detail.anchor);
+    },
+    [],
+  );
+
   const value = useMemo(
     () => ({
       componentSpec,
@@ -229,6 +262,8 @@ export const ComponentSpecProvider = ({
       isLoading,
       isValid,
       errors,
+      nodeErrors,
+      rootValidation,
       refetch,
       setComponentSpec,
       clearComponentSpec,
@@ -241,6 +276,9 @@ export const ComponentSpecProvider = ({
       navigateBack,
       navigateToPath,
       canNavigateBack,
+      focusValidationDetail,
+      pendingAnchor,
+      clearPendingAnchor,
     }),
     [
       componentSpec,
@@ -250,6 +288,8 @@ export const ComponentSpecProvider = ({
       isLoading,
       isValid,
       errors,
+      nodeErrors,
+      rootValidation,
       refetch,
       setComponentSpec,
       clearComponentSpec,
@@ -262,6 +302,9 @@ export const ComponentSpecProvider = ({
       navigateBack,
       navigateToPath,
       canNavigateBack,
+      focusValidationDetail,
+      pendingAnchor,
+      clearPendingAnchor,
     ],
   );
 
