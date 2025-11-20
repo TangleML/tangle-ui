@@ -56,13 +56,19 @@ const typeToString = (type: unknown): string => {
 const extractInputGhostData = (
   componentRefSpec: ComponentSpec | undefined,
   handleName: string,
+  taskArguments?: Record<string, unknown>,
 ): GhostNodeDataExtraction => {
   const inputSpec = componentRefSpec?.inputs?.find(
     (input) => input.name === handleName,
   );
+
+  const taskArgValue = taskArguments?.[handleName];
+  const defaultValue =
+    typeof taskArgValue === "string" ? taskArgValue : inputSpec?.default;
+
   return {
     dataType: typeToString(inputSpec?.type),
-    defaultValue: undefined,
+    defaultValue,
   };
 };
 
@@ -131,7 +137,7 @@ export const useGhostNode = ({
       : nodeIdToOutputName(connectionFromHandle.id ?? "");
 
     const extractedData = isInputConnection
-      ? extractInputGhostData(componentRefSpec, handleName)
+      ? extractInputGhostData(componentRefSpec, handleName, taskSpec?.arguments)
       : extractOutputGhostData(componentRefSpec, handleName, taskId);
 
     return createGhostNode({

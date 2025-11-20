@@ -159,7 +159,9 @@ describe("addTask", () => {
   });
 
   it("should create an input with the specified name when ioName is provided", () => {
-    const result = addTask("input", null, position, mockComponentSpec, "value");
+    const result = addTask("input", null, position, mockComponentSpec, {
+      name: "value",
+    });
 
     const inputs = result.spec.inputs ?? [];
 
@@ -169,13 +171,9 @@ describe("addTask", () => {
   });
 
   it("should create an output with the specified name when ioName is provided", () => {
-    const result = addTask(
-      "output",
-      null,
-      position,
-      mockComponentSpec,
-      "seconds",
-    );
+    const result = addTask("output", null, position, mockComponentSpec, {
+      name: "seconds",
+    });
 
     const outputs = result.spec.outputs ?? [];
 
@@ -190,13 +188,9 @@ describe("addTask", () => {
       inputs: [{ name: "value", annotations: {} }],
     };
 
-    const result = addTask(
-      "input",
-      null,
-      position,
-      newMockComponentSpec,
-      "value",
-    );
+    const result = addTask("input", null, position, newMockComponentSpec, {
+      name: "value",
+    });
 
     const inputs = result.spec.inputs ?? [];
 
@@ -211,13 +205,9 @@ describe("addTask", () => {
       outputs: [{ name: "result", annotations: {} }],
     };
 
-    const result = addTask(
-      "output",
-      null,
-      position,
-      newMockComponentSpec,
-      "result",
-    );
+    const result = addTask("output", null, position, newMockComponentSpec, {
+      name: "result",
+    });
 
     const outputs = result.spec.outputs ?? [];
 
