@@ -3,7 +3,6 @@ import { memo, useMemo } from "react";
 
 import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
 import { TaskNodeProvider } from "@/providers/TaskNodeProvider";
-import { getRunStatus } from "@/services/executionService";
 import type { TaskNodeData } from "@/types/taskNode";
 import { isCacheDisabled } from "@/utils/cache";
 
@@ -15,16 +14,7 @@ const TaskNode = ({ data, selected }: NodeProps) => {
 
   const typedData = useMemo(() => data as TaskNodeData, [data]);
 
-  const status = useMemo(() => {
-    const taskId = typedData.taskId ?? "";
-    const statusCounts = executionData?.taskStatusCountsMap.get(taskId);
-
-    if (!statusCounts) {
-      return undefined;
-    }
-
-    return getRunStatus(statusCounts);
-  }, [executionData?.taskStatusCountsMap, typedData.taskId]);
+  const status = executionData?.status?.map?.[typedData.taskId ?? ""];
 
   const disabledCache = isCacheDisabled(typedData.taskSpec);
 
