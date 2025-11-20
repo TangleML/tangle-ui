@@ -310,7 +310,7 @@ const FlowCanvas = ({
     [selectedNodes],
   );
 
-  const canGroup = useMemo(
+  const { canGroup } = useMemo(
     () => canGroupNodes(selectedNodes, isSubgraphNavigationEnabled),
     [selectedNodes, isSubgraphNavigationEnabled],
   );

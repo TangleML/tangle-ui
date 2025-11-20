@@ -7,9 +7,17 @@ import { NodeListItem } from "./NodeListItem";
 
 interface OrphanedNodeListProps {
   nodes: Node[];
+  excludedNodeIds?: Set<string>;
+  onExcludeNode?: (nodeId: string) => void;
+  onIncludeNode?: (nodeId: string) => void;
 }
 
-export function OrphanedNodeList({ nodes }: OrphanedNodeListProps) {
+export function OrphanedNodeList({
+  nodes,
+  excludedNodeIds,
+  onExcludeNode,
+  onIncludeNode,
+}: OrphanedNodeListProps) {
   if (nodes.length === 0) {
     return null;
   }
@@ -27,7 +35,13 @@ export function OrphanedNodeList({ nodes }: OrphanedNodeListProps) {
       </Paragraph>
       <ul className="space-y-2 text-sm">
         {nodes.map((node) => (
-          <NodeListItem key={node.id} node={node} />
+          <NodeListItem
+            key={node.id}
+            node={node}
+            excludedNodeIds={excludedNodeIds}
+            onExcludeNode={onExcludeNode}
+            onIncludeNode={onIncludeNode}
+          />
         ))}
       </ul>
     </InfoBox>
