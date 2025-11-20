@@ -6,3 +6,10 @@ updates:
       interval: daily
     open-pull-requests-limit: 100
     registries: "*"
+    groups:
+      npm-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
