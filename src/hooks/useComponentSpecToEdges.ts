@@ -33,7 +33,7 @@ const useComponentSpecToEdges = (
   useEffect(() => {
     const newEdges = getEdges(componentSpec);
     setFlowEdges(newEdges);
-  }, [componentSpec]);
+  }, [componentSpec, setFlowEdges]);
 
   return {
     edges: flowEdges,

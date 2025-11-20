@@ -65,7 +65,7 @@ const IOCell = ({ io, artifactData }: IOCellProps) => {
     if (!artifactData?.value) return;
 
     handleCopy(artifactData.value, "Value");
-  }, [artifactData?.value, handleCopy]);
+  }, [artifactData, handleCopy]);
 
   useEffect(() => {
     return () => {

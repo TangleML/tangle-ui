@@ -101,8 +101,11 @@ export const useGhostNode = () => {
 
   useEffect(() => {
     if (!connectionInProgress) {
-      setTabCycleIndex(-1);
-      setHighlightedComponentDigest(null);
+      // todo: one of the suggested workarounds to fix "react-hooks/set-state-in-effect"
+      queueMicrotask(() => {
+        setTabCycleIndex(-1);
+        setHighlightedComponentDigest(null);
+      });
     }
   }, [connectionInProgress, setHighlightedComponentDigest]);
 

@@ -29,9 +29,12 @@ interface RegionInputProps {
 }
 
 export const RegionInput = ({ config, onChange }: RegionInputProps) => {
-  const handleSelectChange = useCallback((value: string) => {
-    onChange({ region: value });
-  }, []);
+  const handleSelectChange = useCallback(
+    (value: string) => {
+      onChange({ region: value });
+    },
+    [onChange],
+  );
 
   return (
     <div className="flex flex-col gap-1">

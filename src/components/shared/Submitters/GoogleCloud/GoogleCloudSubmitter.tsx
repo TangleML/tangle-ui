@@ -31,14 +31,14 @@ const GoogleCloudSubmitter = ({ componentSpec }: GoogleCloudSubmitterProps) => {
     (e: ChangeEvent<HTMLInputElement>) => {
       updateConfig({ googleCloudOAuthClientId: e.target.value });
     },
-    [],
+    [updateConfig],
   );
 
   const handleDirectoryInputChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
       updateConfig({ gcsOutputDirectory: e.target.value });
     },
-    [],
+    [updateConfig],
   );
 
   return (

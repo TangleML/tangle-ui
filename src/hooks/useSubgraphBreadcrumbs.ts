@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { useBackend } from "@/providers/BackendProvider";
 import { fetchExecutionDetails } from "@/services/executionService";
 import { isGraphImplementationOutput } from "@/utils/componentSpec";
-import { ONE_MINUTE_IN_MS } from "@/utils/constants";
+import { EMPTY, ONE_MINUTE_IN_MS } from "@/utils/constants";
 
 export interface BreadcrumbSegment {
   taskId: string;
@@ -100,7 +100,7 @@ export const useSubgraphBreadcrumbs = (
     retry: 1,
   });
 
-  const segments = data?.segments || [];
+  const segments = data?.segments || EMPTY.Array;
   const path = useMemo(() => {
     return ["root", ...segments.map((seg) => seg.taskId)];
   }, [segments]);

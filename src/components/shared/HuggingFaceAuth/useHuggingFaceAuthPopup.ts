@@ -1,12 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  useCallback,
-  useEffect,
-  useEffectEvent,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { GetUserResponse } from "@/api/types.gen";
 import type {
@@ -58,12 +51,12 @@ export function useHuggingFaceAuthPopup({
     typeof setInterval
   > | null>(null);
 
-  const cleanup = useEffectEvent(() => {
+  const cleanup = useCallback(() => {
     if (pollAuthorizationInfoIntervalRef.current) {
       clearInterval(pollAuthorizationInfoIntervalRef.current);
       pollAuthorizationInfoIntervalRef.current = null;
     }
-  });
+  }, []);
 
   const closePopup = useCallback(() => {
     setIsLoading(false);
@@ -72,14 +65,17 @@ export function useHuggingFaceAuthPopup({
 
     setIsPopupOpen(false);
     onClose?.();
-  }, [onClose]);
+  }, [cleanup, onClose]);
 
-  const onErrorStateHandler = useEffectEvent((error: string) => {
-    onError(error);
-    closePopup();
-  });
+  const onErrorStateHandler = useCallback(
+    (error: string) => {
+      onError(error);
+      closePopup();
+    },
+    [onError, closePopup],
+  );
 
-  const pollAuthorizationInfo = useEffectEvent(async () => {
+  const pollAuthorizationInfo = useCallback(async () => {
     return queryClient
       .fetchQuery({ queryKey: ["user"], queryFn: getUserDetails, staleTime: 0 })
       .then((user) => {
@@ -102,7 +98,7 @@ export function useHuggingFaceAuthPopup({
       .finally(() => {
         queryClient.invalidateQueries({ queryKey: ["user"] });
       });
-  });
+  }, [queryClient, onErrorStateHandler, onSuccess, closePopup]);
 
   /**
    * In Hugging Face auth flow, the App is embedded in an iframe, rendering it as 3rd party origin.
@@ -136,7 +132,7 @@ export function useHuggingFaceAuthPopup({
 
   useEffect(() => {
     return () => cleanup();
-  }, []);
+  }, [cleanup]);
 
   const bringPopupToFront = useCallback(() => {
     // no-op

@@ -147,14 +147,15 @@ const GraphComponents = ({ isOpen }: { isOpen: boolean }) => {
       </BlockStack>
     );
   }, [
-    componentLibrary,
-    usedComponentsFolder,
-    userComponentsFolder,
-    favoritesFolder,
     isLoading,
     error,
-    searchResult,
+    componentLibrary,
     remoteComponentLibrarySearchEnabled,
+    searchResult,
+    usedComponentsFolder,
+    favoritesFolder,
+    userComponentsFolder,
+    handleFiltersChange,
   ]);
 
   if (!isOpen) {

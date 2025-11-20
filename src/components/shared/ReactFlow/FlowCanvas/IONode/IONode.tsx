@@ -92,7 +92,17 @@ const IONode = ({ type, data, selected = false }: IONodeProps) => {
         clearContent();
       }
     };
-  }, [input, output, selected, readOnly]);
+  }, [
+    input,
+    output,
+    selected,
+    readOnly,
+    isInput,
+    isOutput,
+    setContent,
+    currentGraphSpec,
+    clearContent,
+  ]);
 
   const connectedOutput = getOutputConnectedDetails(
     currentGraphSpec,

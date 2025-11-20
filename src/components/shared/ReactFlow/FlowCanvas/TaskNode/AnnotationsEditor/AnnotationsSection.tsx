@@ -5,6 +5,7 @@ import { Separator } from "@/components/ui/separator";
 import useToastNotification from "@/hooks/useToastNotification";
 import type { Annotations } from "@/types/annotations";
 import type { TaskSpec } from "@/utils/componentSpec";
+import { EMPTY } from "@/utils/constants";
 
 import { AnnotationsEditor } from "./AnnotationsEditor";
 import { ComputeResourcesEditor } from "./ComputeResourcesEditor";
@@ -21,7 +22,7 @@ export const AnnotationsSection = ({
 }: AnnotationsSectionProps) => {
   const notify = useToastNotification();
 
-  const rawAnnotations = (taskSpec.annotations || {}) as Annotations;
+  const rawAnnotations = (taskSpec.annotations || EMPTY.Obj) as Annotations;
 
   const [annotations, setAnnotations] = useState<Annotations>({
     ...rawAnnotations,

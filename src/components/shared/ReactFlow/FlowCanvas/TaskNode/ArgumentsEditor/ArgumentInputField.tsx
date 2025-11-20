@@ -60,7 +60,7 @@ export const ArgumentInputField = ({
 
   const [isTextareaDialogOpen, setIsTextareaDialogOpen] = useState(false);
 
-  const undoValue = useMemo(() => argument, []);
+  const undoValue = useMemo(() => argument, [argument]);
   const hint = argument.inputSpec.annotations?.hint as string | undefined;
 
   const handleInputChange = (e: ChangeEvent) => {
@@ -86,7 +86,7 @@ export const ArgumentInputField = ({
       onSave(updatedArgument);
       setLastSubmittedValue(value);
     },
-    [inputValue, lastSubmittedValue, argument, onSave],
+    [lastSubmittedValue, argument, onSave],
   );
 
   const handleRemove = () => {
@@ -174,7 +174,13 @@ export const ArgumentInputField = ({
           "error",
         );
       });
-  }, [inputValue, disabled, argument]);
+  }, [
+    disabled,
+    argument.isRemoved,
+    argument.inputSpec.name,
+    inputValue,
+    notify,
+  ]);
 
   const canUndo = useMemo(
     () => !equal(argument, undoValue),
@@ -201,10 +207,12 @@ export const ArgumentInputField = ({
   useEffect(() => {
     const value = getInputValue(argument);
     if (value !== undefined && value !== inputValue) {
-      setInputValue(value);
-      setLastSubmittedValue(value);
+      queueMicrotask(() => {
+        setInputValue(value);
+        setLastSubmittedValue(value);
+      });
     }
-  }, [argument]);
+  }, [argument, inputValue]);
 
   const disabledCopy = useMemo(
     () => disabled || argument.isRemoved || inputValue === "",

@@ -69,25 +69,28 @@ export const AnnotationsInput = ({
     setIsDialogOpen(false);
   }, []);
 
-  const validateChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
+  const validateChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      const newValue = e.target.value;
 
-    setInputValue(newValue);
+      setInputValue(newValue);
 
-    if (newValue === "") {
-      setIsInvalid(false);
-      return;
-    }
-
-    if (config?.type === "json") {
-      try {
-        JSON.parse(newValue);
+      if (newValue === "") {
         setIsInvalid(false);
-      } catch {
-        setIsInvalid(true);
+        return;
       }
-    }
-  }, []);
+
+      if (config?.type === "json") {
+        try {
+          JSON.parse(newValue);
+          setIsInvalid(false);
+        } catch {
+          setIsInvalid(true);
+        }
+      }
+    },
+    [config?.type],
+  );
 
   const handleQuantityKeyInputChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {

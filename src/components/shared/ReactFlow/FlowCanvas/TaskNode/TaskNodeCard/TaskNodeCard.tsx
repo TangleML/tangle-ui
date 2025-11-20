@@ -181,14 +181,16 @@ const TaskNodeCard = () => {
 
     return <TaskOverview taskNode={taskNode} key={nodeId} actions={actions} />;
   }, [
-    nodeId,
     readOnly,
-    callbacks.onDuplicate,
-    callbacks.onUpgrade,
-    isInAppEditorEnabled,
-    isCustomComponent,
     isSubgraphNode,
     taskId,
+    isSubgraphNavigationEnabled,
+    isInAppEditorEnabled,
+    taskNode,
+    nodeId,
+    callbacks.onDuplicate,
+    callbacks.onUpgrade,
+    isCustomComponent,
     subgraphDescription,
     navigateToSubgraph,
     handleEditComponent,
@@ -231,9 +233,11 @@ const TaskNodeCard = () => {
   }, []);
 
   useEffect(() => {
-    if (contentRef.current && scrollHeight > 0 && dimensions.h) {
-      setCondensed(scrollHeight > dimensions.h);
-    }
+    queueMicrotask(() => {
+      if (contentRef.current && scrollHeight > 0 && dimensions.h) {
+        setCondensed(scrollHeight > dimensions.h);
+      }
+    });
   }, [scrollHeight, dimensions.h]);
 
   useEffect(() => {
@@ -246,7 +250,7 @@ const TaskNodeCard = () => {
         clearContent();
       }
     };
-  }, [selected, taskConfigMarkup, setContent, clearContent]);
+  }, [selected, taskConfigMarkup, setContent, clearContent, isDragging]);
 
   if (!taskSpec) {
     return null;

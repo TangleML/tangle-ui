@@ -61,7 +61,7 @@ export const ContextPanelProvider = ({
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [defaultContent]);
+  }, [clearContent, defaultContent, setNodes]);
 
   const value = useMemo(
     () => ({ content, setContent, clearContent }),
