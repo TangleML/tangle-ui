@@ -25,7 +25,6 @@ import useConfirmationDialog from "@/hooks/useConfirmationDialog";
 import { useCopyPaste } from "@/hooks/useCopyPaste";
 import { useGhostNode } from "@/hooks/useGhostNode";
 import { useHintNode } from "@/hooks/useHintNode";
-import useInputDialog from "@/hooks/useInputDialog";
 import { useIOSelectionPersistence } from "@/hooks/useIOSelectionPersistence";
 import { useNodeCallbacks } from "@/hooks/useNodeCallbacks";
 import { useSubgraphKeyboardNavigation } from "@/hooks/useSubgraphKeyboardNavigation";
@@ -42,6 +41,7 @@ import {
   type TaskSpec,
 } from "@/utils/componentSpec";
 import { loadComponentAsRefFromText } from "@/utils/componentStore";
+import { deselectAllNodes } from "@/utils/flowUtils";
 import createNodesFromComponentSpec from "@/utils/nodes/createNodesFromComponentSpec";
 import {
   getSubgraphComponentSpec,
@@ -49,10 +49,8 @@ import {
 } from "@/utils/subgraphUtils";
 
 import ComponentDuplicateDialog from "../../Dialogs/ComponentDuplicateDialog";
-import { InputDialog } from "../../Dialogs/InputDialog";
 import { useBetaFlagValue } from "../../Settings/useBetaFlags";
 import { useNodesOverlay } from "../NodesOverlay/NodesOverlayProvider";
-import { handleGroupNodes } from "./callbacks/handleGroupNodes";
 import { getBulkUpdateConfirmationDetails } from "./ConfirmationDialogs/BulkUpdateConfirmationDialog";
 import { getDeleteConfirmationDetails } from "./ConfirmationDialogs/DeleteConfirmation";
 import { getReplaceConfirmationDetails } from "./ConfirmationDialogs/ReplaceConfirmation";
@@ -60,9 +58,11 @@ import SmoothEdge from "./Edges/SmoothEdge";
 import GhostNode from "./GhostNode/GhostNode";
 import HintNode from "./GhostNode/HintNode";
 import IONode from "./IONode/IONode";
-import { NodesList } from "./NodesList";
 import SelectionToolbar from "./SelectionToolbar";
 import { SubgraphBreadcrumbs } from "./SubgraphBreadcrumbs/SubgraphBreadcrumbs";
+import { handleGroupNodes } from "./Subgraphs/handleGroupNodes";
+import { NewSubgraphDialog } from "./Subgraphs/NewSubgraphDialog";
+import { canGroupNodes } from "./Subgraphs/utils";
 import TaskNode from "./TaskNode/TaskNode";
 import type { NodesAndEdges } from "./types";
 import { addAndConnectNode } from "./utils/addAndConnectNode";
@@ -160,7 +160,7 @@ const FlowCanvas = ({
     ...confirmationProps
   } = useConfirmationDialog();
 
-  const { triggerInputDialog, ...inputDialogProps } = useInputDialog();
+  const [showNewSubgraphDialog, setShowNewSubgraphDialog] = useState(false);
 
   const notify = useToastNotification();
 
@@ -311,10 +311,7 @@ const FlowCanvas = ({
   );
 
   const canGroup = useMemo(
-    () =>
-      selectedNodes.length > 1 &&
-      selectedNodes.filter((node) => node.type === "task").length > 0 &&
-      isSubgraphNavigationEnabled,
+    () => canGroupNodes(selectedNodes, isSubgraphNavigationEnabled),
     [selectedNodes, isSubgraphNavigationEnabled],
   );
 
@@ -803,47 +800,45 @@ const FlowCanvas = ({
 
   const onGroupNodes = useCallback(async () => {
     if (!canGroup) return;
+    setShowNewSubgraphDialog(true);
+  }, [canGroup]);
 
-    const nodesList = (
-      <NodesList
-        nodes={selectedNodes}
-        title={`Nodes being grouped (${selectedNodes.length})`}
-      />
-    );
+  const handleCreateSubgraph = useCallback(
+    async (activeNodes: Node[], name: string) => {
+      const onSuccess = (updatedComponentSpec: ComponentSpec) => {
+        const updatedRootSpec = updateSubgraphSpec(
+          componentSpec,
+          currentSubgraphPath,
+          updatedComponentSpec,
+        );
 
-    const onSuccess = (updatedComponentSpec: ComponentSpec) => {
-      const updatedRootSpec = updateSubgraphSpec(
-        componentSpec,
-        currentSubgraphPath,
-        updatedComponentSpec,
+        setComponentSpec(updatedRootSpec);
+
+        setNodes((nodes) => deselectAllNodes(nodes));
+      };
+
+      const onError = (error: Error) => {
+        console.error("Failed to create subgraph:", error);
+        notify("Failed to create subgraph", "error");
+      };
+
+      await handleGroupNodes(
+        activeNodes,
+        currentSubgraphSpec,
+        name,
+        onSuccess,
+        onError,
       );
-
-      setComponentSpec(updatedRootSpec);
-    };
-
-    const onError = (error: Error) => {
-      console.error("Failed to create subgraph:", error);
-      notify("Failed to create subgraph", "error");
-    };
-
-    handleGroupNodes(
-      selectedNodes,
+    },
+    [
+      componentSpec,
       currentSubgraphSpec,
-      nodesList,
-      triggerInputDialog,
-      onSuccess,
-      onError,
-    );
-  }, [
-    selectedNodes,
-    componentSpec,
-    currentSubgraphSpec,
-    currentSubgraphPath,
-    canGroup,
-    setComponentSpec,
-    triggerInputDialog,
-    notify,
-  ]);
+      currentSubgraphPath,
+      setComponentSpec,
+      setNodes,
+      notify,
+    ],
+  );
 
   const handleSelectionChange = useCallback(() => {
     if (selectedNodes.length < 1) {
@@ -1066,7 +1061,13 @@ const FlowCanvas = ({
         onConfirm={() => confirmationHandlers?.onConfirm()}
         onCancel={() => confirmationHandlers?.onCancel()}
       />
-      <InputDialog {...inputDialogProps} />
+      <NewSubgraphDialog
+        open={showNewSubgraphDialog}
+        onClose={() => setShowNewSubgraphDialog(false)}
+        selectedNodes={selectedNodes}
+        currentSubgraphSpec={currentSubgraphSpec}
+        onCreateSubgraph={handleCreateSubgraph}
+      />
       <ComponentDuplicateDialog
         existingComponent={existingAndNewComponent?.existingComponent}
         newComponent={existingAndNewComponent?.newComponent}
