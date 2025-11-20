@@ -24,7 +24,6 @@ import useComponentUploader from "@/hooks/useComponentUploader";
 import useConfirmationDialog from "@/hooks/useConfirmationDialog";
 import { useCopyPaste } from "@/hooks/useCopyPaste";
 import { useGhostNode } from "@/hooks/useGhostNode";
-import { useHintNode } from "@/hooks/useHintNode";
 import { useIOSelectionPersistence } from "@/hooks/useIOSelectionPersistence";
 import { useNodeCallbacks } from "@/hooks/useNodeCallbacks";
 import { useSubgraphKeyboardNavigation } from "@/hooks/useSubgraphKeyboardNavigation";
@@ -34,9 +33,9 @@ import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useContextPanel } from "@/providers/ContextPanelProvider";
 import { hydrateComponentReference } from "@/services/componentService";
 import {
-  type ComponentReference,
   type ComponentSpec,
   type InputSpec,
+  isGraphImplementation,
   isNotMaterializedComponentReference,
   type TaskSpec,
 } from "@/utils/componentSpec";
@@ -56,7 +55,8 @@ import { getDeleteConfirmationDetails } from "./ConfirmationDialogs/DeleteConfir
 import { getReplaceConfirmationDetails } from "./ConfirmationDialogs/ReplaceConfirmation";
 import SmoothEdge from "./Edges/SmoothEdge";
 import GhostNode from "./GhostNode/GhostNode";
-import HintNode from "./GhostNode/HintNode";
+import type { GhostNodeData } from "./GhostNode/types";
+import { computeDropPositionFromRefs } from "./GhostNode/utils";
 import IONode from "./IONode/IONode";
 import SelectionToolbar from "./SelectionToolbar";
 import { SubgraphBreadcrumbs } from "./SubgraphBreadcrumbs/SubgraphBreadcrumbs";
@@ -65,8 +65,8 @@ import { NewSubgraphDialog } from "./Subgraphs/NewSubgraphDialog";
 import { canGroupNodes } from "./Subgraphs/utils";
 import TaskNode from "./TaskNode/TaskNode";
 import type { NodesAndEdges } from "./types";
-import { addAndConnectNode } from "./utils/addAndConnectNode";
 import addTask from "./utils/addTask";
+import { createConnectedIONode } from "./utils/createConnectedIONode";
 import { duplicateNodes } from "./utils/duplicateNodes";
 import { isPositionInNode } from "./utils/geometry";
 import { getPositionFromEvent } from "./utils/getPositionFromEvent";
@@ -79,10 +79,9 @@ import { updateNodePositions } from "./utils/updateNodePosition";
 
 const nodeTypes: Record<string, ComponentType<any>> = {
   task: TaskNode,
-  hint: HintNode,
-  ghost: GhostNode,
   input: IONode,
   output: IONode,
+  ghost: GhostNode,
 };
 
 const SELECTABLE_NODES = new Set(["task", "input", "output"]);
@@ -105,6 +104,8 @@ const useScheduleExecutionOnceWhenConditionMet = (
     }
   }, [condition, callback]);
 };
+
+const FAST_PLACE_NODE_TYPES = new Set<Node["type"]>(["task"]);
 
 const FlowCanvas = ({
   readOnly,
@@ -137,22 +138,6 @@ const FlowCanvas = ({
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
 
   const isConnecting = useConnection((connection) => connection.inProgress);
-  const { ghostNode, handleTabCycle } = useGhostNode();
-
-  const tabHintNode = useHintNode({
-    key: "TAB",
-    hint: "cycle compatible components",
-  });
-
-  const allNodes = useMemo(() => {
-    if (readOnly) return nodes;
-    if (ghostNode) {
-      return [...nodes, ghostNode];
-    } else if (tabHintNode) {
-      return [...nodes, tabHintNode];
-    }
-    return nodes;
-  }, [readOnly, nodes, ghostNode, tabHintNode]);
 
   const {
     handlers: confirmationHandlers,
@@ -165,6 +150,9 @@ const FlowCanvas = ({
   const notify = useToastNotification();
 
   const latestFlowPosRef = useRef<XYPosition>(null);
+  const ghostNodePositionRef = useRef<XYPosition | null>(null);
+  const ghostNodeTypeRef = useRef<GhostNodeData["ioType"] | null>(null);
+  const shouldCreateIONodeRef = useRef(false);
 
   const [showToolbar, setShowToolbar] = useState(false);
   const [replaceTarget, setReplaceTarget] = useState<Node | null>(null);
@@ -180,7 +168,6 @@ const FlowCanvas = ({
         target.isContentEditable ||
         target.closest('[data-slot="input"]');
 
-      // Skip canvas shortcuts if an input is focused
       if (isInputFocused) {
         return;
       }
@@ -191,14 +178,6 @@ const FlowCanvas = ({
 
       if (event.key === "Meta" || event.key === "Control") {
         setMetaKeyPressed(true);
-      }
-
-      if (event.key === "Tab") {
-        const direction = event.shiftKey ? "back" : "forward";
-        const handled = handleTabCycle(direction);
-        if (handled) {
-          event.preventDefault();
-        }
       }
 
       if (event.key === "a" && (event.metaKey || event.ctrlKey)) {
@@ -215,7 +194,7 @@ const FlowCanvas = ({
         );
       }
     },
-    [handleTabCycle, setNodes],
+    [setNodes],
   );
 
   const handleKeyUp = useCallback((event: KeyboardEvent) => {
@@ -281,6 +260,27 @@ const FlowCanvas = ({
     },
     [setNodes],
   );
+
+  const { ghostNode, shouldCreateIONode } = useGhostNode({
+    readOnly,
+    metaKeyPressed,
+    isConnecting,
+    implementation: currentSubgraphSpec.implementation,
+  });
+
+  const nodesForRender = useMemo<Node[]>(
+    () => (ghostNode ? [...nodes, ghostNode] : nodes),
+    [nodes, ghostNode],
+  );
+
+  useEffect(() => {
+    shouldCreateIONodeRef.current = shouldCreateIONode;
+  }, [shouldCreateIONode]);
+
+  useEffect(() => {
+    ghostNodePositionRef.current = ghostNode?.position ?? null;
+    ghostNodeTypeRef.current = ghostNode?.data.ioType ?? null;
+  }, [ghostNode]);
 
   const selectedNodes = useMemo(
     () =>
@@ -352,6 +352,35 @@ const FlowCanvas = ({
     [readOnly, nodesConnectable, nodeCallbacks],
   );
 
+  const updateReactFlow = useCallback(
+    (newComponentSpec: ComponentSpec) => {
+      const subgraphSpec = getSubgraphComponentSpec(
+        newComponentSpec,
+        currentSubgraphPath,
+        notify,
+      );
+      const newNodes = createNodesFromComponentSpec(subgraphSpec, nodeData);
+
+      const updatedNewNodes = newNodes.map((node) => ({
+        ...node,
+        data: {
+          ...node.data,
+          highlighted: node.id === replaceTarget?.id,
+        },
+      }));
+
+      setNodes((prevNodes) => {
+        const updatedNodes = updatedNewNodes.map((newNode) => {
+          const existingNode = prevNodes.find((node) => node.id === newNode.id);
+          return existingNode ? { ...existingNode, ...newNode } : newNode;
+        });
+
+        return updatedNodes;
+      });
+    },
+    [setNodes, nodeData, replaceTarget, currentSubgraphPath, notify],
+  );
+
   const onConnect = useCallback(
     (connection: Connection) => {
       if (connection.source === connection.target) return;
@@ -362,59 +391,88 @@ const FlowCanvas = ({
     [currentGraphSpec, handleConnection, updateGraphSpec],
   );
 
-  const onConnectEnd = useCallback(
-    (_e: MouseEvent | TouchEvent, connectionState: FinalConnectionState) => {
-      if (connectionState.isValid) {
-        // Valid connections are handled by onConnect
-        return;
+  const handleGhostDrop = useCallback(
+    (fromHandle: FinalConnectionState["fromHandle"] | null) => {
+      if (
+        !fromHandle ||
+        !fromHandle.nodeId ||
+        !fromHandle.id ||
+        !isGraphImplementation(currentSubgraphSpec.implementation)
+      ) {
+        return false;
       }
 
-      const ghostNode = reactFlowInstance
-        ?.getNodes()
-        .find((node) => node.type === "ghost");
-
-      if (!ghostNode) {
-        return;
+      const position = computeDropPositionFromRefs(
+        ghostNodePositionRef.current,
+        latestFlowPosRef.current,
+        ghostNodeTypeRef.current,
+        fromHandle.type,
+      );
+      if (!position) {
+        return false;
       }
 
-      const { componentRef } = ghostNode.data as {
-        componentRef: ComponentReference;
-      };
-
-      const position = latestFlowPosRef.current;
-      if (!position) return;
-
-      let newComponentSpec = { ...componentSpec };
-      const fromHandle = connectionState.fromHandle;
-
-      const existingInputEdge = reactFlowInstance
-        ?.getEdges()
-        .find(
-          (edge) =>
-            edge.target === fromHandle?.nodeId &&
-            edge.targetHandle === fromHandle.id,
-        );
-
-      if (existingInputEdge) {
-        newComponentSpec = removeEdge(existingInputEdge, newComponentSpec);
+      const fromNode = nodes.find((node) => node.id === fromHandle.nodeId);
+      if (
+        !fromNode ||
+        !fromNode.type ||
+        !FAST_PLACE_NODE_TYPES.has(fromNode.type)
+      ) {
+        return false;
       }
 
-      const updatedComponentSpec = addAndConnectNode({
-        componentRef,
-        fromHandle,
+      if (fromHandle.type !== "source" && fromHandle.type !== "target") {
+        return false;
+      }
+
+      const ioType: GhostNodeData["ioType"] =
+        fromHandle.type === "source" ? "output" : "input";
+      const updatedSubgraphSpec = createConnectedIONode({
+        componentSpec: currentSubgraphSpec,
+        taskNodeId: fromHandle.nodeId,
+        handleId: fromHandle.id,
         position,
-        componentSpec: newComponentSpec,
+        ioType,
       });
 
-      setComponentSpec(updatedComponentSpec);
+      const updatedRootSpec = updateSubgraphSpec(
+        componentSpec,
+        currentSubgraphPath,
+        updatedSubgraphSpec,
+      );
+      setComponentSpec(updatedRootSpec);
+      updateReactFlow(updatedRootSpec);
+      shouldCreateIONodeRef.current = false;
+
+      return true;
     },
     [
-      reactFlowInstance,
       componentSpec,
-      nodeData,
+      currentSubgraphSpec,
+      currentSubgraphPath,
+      nodes,
       setComponentSpec,
-      updateOrAddNodes,
+      updateReactFlow,
     ],
+  );
+
+  const onConnectEnd = useCallback(
+    (e: MouseEvent | TouchEvent, connectionState: FinalConnectionState) => {
+      if (connectionState.isValid) {
+        return;
+      }
+
+      if (!(e instanceof MouseEvent)) {
+        return;
+      }
+
+      if (!shouldCreateIONodeRef.current) {
+        return;
+      }
+
+      handleGhostDrop(connectionState.fromHandle ?? null);
+    },
+    [handleGhostDrop],
   );
 
   useEffect(() => {
@@ -655,9 +713,9 @@ const FlowCanvas = ({
               const node = nodes.find((n) => n.id === change.id);
               return node
                 ? {
-                    ...node,
-                    position: { x: change.position.x, y: change.position.y },
-                  }
+                  ...node,
+                  position: { x: change.position.x, y: change.position.y },
+                }
                 : null;
             }
             return null;
@@ -850,35 +908,6 @@ const FlowCanvas = ({
     setShowToolbar(true);
   }, []);
 
-  const updateReactFlow = useCallback(
-    (newComponentSpec: ComponentSpec) => {
-      const subgraphSpec = getSubgraphComponentSpec(
-        newComponentSpec,
-        currentSubgraphPath,
-        notify,
-      );
-      const newNodes = createNodesFromComponentSpec(subgraphSpec, nodeData);
-
-      const updatedNewNodes = newNodes.map((node) => ({
-        ...node,
-        data: {
-          ...node.data,
-          highlighted: node.id === replaceTarget?.id,
-        },
-      }));
-
-      setNodes((prevNodes) => {
-        const updatedNodes = updatedNewNodes.map((newNode) => {
-          const existingNode = prevNodes.find((node) => node.id === newNode.id);
-          return existingNode ? { ...existingNode, ...newNode } : newNode;
-        });
-
-        return updatedNodes;
-      });
-    },
-    [setNodes, nodeData, replaceTarget, currentSubgraphPath],
-  );
-
   useEffect(() => {
     preserveIOSelectionOnSpecChange(componentSpec);
     updateReactFlow(componentSpec);
@@ -1012,7 +1041,7 @@ const FlowCanvas = ({
       <SubgraphBreadcrumbs />
       <ReactFlow
         {...rest}
-        nodes={allNodes}
+        nodes={nodesForRender}
         edges={edges}
         minZoom={0.01}
         maxZoom={3}
@@ -1036,7 +1065,7 @@ const FlowCanvas = ({
         connectOnClick={!readOnly}
         className={cn(
           (rest.selectionOnDrag || (shiftKeyPressed && !isConnecting)) &&
-            "cursor-crosshair",
+          "cursor-crosshair",
         )}
       >
         <NodeToolbar

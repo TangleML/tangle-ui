@@ -1,117 +1,157 @@
+import type { Node } from "@xyflow/react";
 import { useConnection } from "@xyflow/react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 
-import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
+import type { GhostNodeData } from "@/components/shared/ReactFlow/FlowCanvas/GhostNode/types";
+import {
+  createGhostNode,
+  getGhostNodeLabel,
+} from "@/components/shared/ReactFlow/FlowCanvas/GhostNode/utils";
+import type { ComponentSpec } from "@/utils/componentSpec";
+import { isGraphImplementation } from "@/utils/componentSpec";
+import {
+  nodeIdToInputName,
+  nodeIdToOutputName,
+  nodeIdToTaskId,
+} from "@/utils/nodes/nodeIdUtils";
 
-export const useGhostNode = () => {
-  const connectionTo = useConnection((connection) => connection.to);
-  const connectionToHandle = useConnection((connection) => connection.toHandle);
+type UseGhostNodeParams = {
+  readOnly?: boolean;
+  metaKeyPressed: boolean;
+  isConnecting: boolean;
+  implementation: ComponentSpec["implementation"];
+};
+
+type UseGhostNodeReturn = {
+  ghostNode: Node<GhostNodeData> | null;
+  shouldCreateIONode: boolean;
+};
+
+type GhostNodeDataExtraction = {
+  dataType: string;
+  value?: string;
+  defaultValue?: string;
+  connectedTaskLabel?: string;
+  connectedOutputName?: string;
+};
+
+/**
+ * Converts TypeSpecType to a string representation for display.
+ * Handles both string types and complex object types.
+ */
+const typeToString = (type: unknown): string => {
+  if (typeof type === "string") {
+    return type;
+  }
+  if (type && typeof type === "object") {
+    return JSON.stringify(type);
+  }
+  return "Any";
+};
+
+/**
+ * Extracts ghost node data for input connections.
+ * Returns type information and default values for preview display.
+ */
+const extractInputGhostData = (
+  componentRefSpec: ComponentSpec | undefined,
+  handleName: string,
+): GhostNodeDataExtraction => {
+  const inputSpec = componentRefSpec?.inputs?.find(
+    (input) => input.name === handleName,
+  );
+  return {
+    dataType: typeToString(inputSpec?.type),
+    defaultValue: undefined,
+  };
+};
+
+/**
+ * Extracts ghost node data for output connections.
+ * Returns type information, connected task label, and output name for preview display.
+ */
+const extractOutputGhostData = (
+  componentRefSpec: ComponentSpec | undefined,
+  handleName: string,
+  taskId: string,
+): GhostNodeDataExtraction => {
+  const outputSpec = componentRefSpec?.outputs?.find(
+    (output) => output.name === handleName,
+  );
+  return {
+    dataType: typeToString(outputSpec?.type),
+    value: handleName,
+    connectedOutputName: outputSpec?.name ?? handleName,
+    connectedTaskLabel: componentRefSpec?.name ?? taskId,
+  };
+};
+
+export const useGhostNode = ({
+  readOnly,
+  metaKeyPressed,
+  isConnecting,
+  implementation,
+}: UseGhostNodeParams): UseGhostNodeReturn => {
+  const connectionPosition = useConnection((connection) => connection.to);
   const connectionFromHandle = useConnection(
     (connection) => connection.fromHandle,
   );
-  const connectionInProgress = useConnection(
-    (connection) => connection.inProgress,
-  );
+  const connectionToHandle = useConnection((connection) => connection.toHandle);
+  const connectionIsValid = useConnection((connection) => connection.isValid);
 
-  const { searchResult, setHighlightedComponentDigest } = useComponentLibrary();
-  const [tabCycleIndex, setTabCycleIndex] = useState(-1);
+  const isConnectionTemporarilyValid =
+    connectionIsValid === true && !!connectionToHandle;
 
-  const allSearchResults = useMemo(() => {
-    if (!searchResult) return [];
-    return [
-      ...searchResult.components.user,
-      ...searchResult.components.standard,
-    ];
-  }, [searchResult]);
-
-  const activeSearchResult = useMemo(() => {
-    if (tabCycleIndex >= 0 && tabCycleIndex < allSearchResults.length) {
-      return allSearchResults[tabCycleIndex];
-    }
-    return null;
-  }, [allSearchResults, tabCycleIndex]);
-
-  const baseGhostNode = useMemo(() => {
-    if (activeSearchResult) {
-      return {
-        id: "ghost-node-preview",
-        type: "ghost",
-        position: { x: 0, y: 0 },
-        data: {
-          componentRef: activeSearchResult,
-          isGhost: true,
-        },
-        draggable: false,
-        selectable: false,
-        deletable: false,
-        connectable: false,
-        zIndex: 1000,
-      };
-    }
-    return null;
-  }, [activeSearchResult]);
-
-  const ghostNode = useMemo(() => {
+  const ghostNode = useMemo<Node<GhostNodeData> | null>(() => {
     if (
-      baseGhostNode &&
-      connectionInProgress &&
-      !connectionToHandle &&
-      connectionTo
+      readOnly ||
+      !metaKeyPressed ||
+      !isConnecting ||
+      !connectionPosition ||
+      !connectionFromHandle ||
+      !connectionFromHandle.nodeId?.startsWith("task_") ||
+      !connectionFromHandle.type ||
+      !isGraphImplementation(implementation) ||
+      isConnectionTemporarilyValid
     ) {
-      const side = connectionFromHandle?.id?.includes("input")
-        ? "left"
-        : "right";
-
-      return {
-        ...baseGhostNode,
-        position: connectionTo,
-        data: {
-          ...baseGhostNode.data,
-          side,
-        },
-      };
+      return null;
     }
-    return null;
+
+    const taskId = nodeIdToTaskId(connectionFromHandle.nodeId);
+    const taskSpec = implementation.graph.tasks[taskId];
+    const componentRefSpec = taskSpec?.componentRef?.spec;
+
+    const isInputConnection = connectionFromHandle.type === "target";
+    const ioType: GhostNodeData["ioType"] = isInputConnection
+      ? "input"
+      : "output";
+
+    const handleName = isInputConnection
+      ? nodeIdToInputName(connectionFromHandle.id ?? "")
+      : nodeIdToOutputName(connectionFromHandle.id ?? "");
+
+    const extractedData = isInputConnection
+      ? extractInputGhostData(componentRefSpec, handleName)
+      : extractOutputGhostData(componentRefSpec, handleName, taskId);
+
+    return createGhostNode({
+      position: connectionPosition,
+      ioType,
+      label: getGhostNodeLabel(handleName, ioType),
+      ...extractedData,
+    });
   }, [
-    baseGhostNode,
-    connectionInProgress,
-    connectionToHandle,
-    connectionTo,
+    readOnly,
+    metaKeyPressed,
+    isConnecting,
+    connectionPosition,
     connectionFromHandle,
+    implementation,
+    isConnectionTemporarilyValid,
   ]);
-
-  const handleTabCycle = useCallback(
-    (direction: "forward" | "back" = "forward") => {
-      if (!connectionInProgress || !allSearchResults.length) return false;
-
-      setTabCycleIndex((prev) => {
-        if (direction === "forward") {
-          const nextIndex = prev + 1;
-          return nextIndex >= allSearchResults.length ? -1 : nextIndex;
-        } else {
-          const prevIndex = prev - 1;
-          return prevIndex < -1 ? allSearchResults.length - 1 : prevIndex;
-        }
-      });
-
-      return true;
-    },
-    [connectionInProgress, allSearchResults.length],
-  );
-
-  useEffect(() => {
-    if (!connectionInProgress) {
-      setTabCycleIndex(-1);
-      setHighlightedComponentDigest(null);
-    }
-  }, [connectionInProgress, setHighlightedComponentDigest]);
-
-  useEffect(() => {
-    setHighlightedComponentDigest(activeSearchResult?.digest || null);
-  }, [activeSearchResult, setHighlightedComponentDigest]);
 
   return {
     ghostNode,
-    handleTabCycle,
+    shouldCreateIONode: !!ghostNode,
   };
 };

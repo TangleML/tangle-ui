@@ -16,14 +16,22 @@ import {
   getUniqueTaskName,
 } from "@/utils/unique";
 
+interface AddTaskResult {
+  spec: ComponentSpec;
+  taskId: string | undefined;
+  ioName?: string;
+}
+
 const addTask = (
   taskType: TaskType,
   taskSpec: TaskSpec | null,
   position: XYPosition,
   componentSpec: ComponentSpec,
-): { spec: ComponentSpec; taskId: string | undefined } => {
+  ioName?: string,
+): AddTaskResult => {
   const newComponentSpec = deepClone(componentSpec);
   let taskId: string | undefined;
+  let createdIOName: string | undefined;
 
   if (!isGraphImplementation(newComponentSpec.implementation)) {
     console.error("Implementation does not contain a graph.");
@@ -43,14 +51,14 @@ const addTask = (
     }
 
     const defaultArguments =
-      taskSpec.componentRef.spec?.inputs?.reduce(
+      taskSpec.componentRef.spec?.inputs?.reduce<Record<string, string>>(
         (acc, input) => {
           if (input.default) {
             acc[input.name] = input.default;
           }
           return acc;
         },
-        {} as Record<string, string>,
+        {},
       ) ?? {};
 
     const mergedArguments = {
@@ -86,7 +94,7 @@ const addTask = (
   }
 
   if (taskType === "input") {
-    const inputId = getUniqueInputName(newComponentSpec);
+    const inputId = getUniqueInputName(newComponentSpec, ioName);
     const inputSpec: InputSpec = {
       name: inputId,
       annotations: positionAnnotations,
@@ -94,10 +102,11 @@ const addTask = (
     const inputs = (newComponentSpec.inputs ?? []).concat([inputSpec]);
 
     newComponentSpec.inputs = inputs;
+    createdIOName = inputId;
   }
 
   if (taskType === "output") {
-    const outputId = getUniqueOutputName(newComponentSpec);
+    const outputId = getUniqueOutputName(newComponentSpec, ioName);
     const outputSpec: OutputSpec = {
       name: outputId,
       annotations: positionAnnotations,
@@ -106,9 +115,10 @@ const addTask = (
     const outputs = (newComponentSpec.outputs ?? []).concat([outputSpec]);
 
     newComponentSpec.outputs = outputs;
+    createdIOName = outputId;
   }
 
-  return { spec: newComponentSpec, taskId };
+  return { spec: newComponentSpec, taskId, ioName: createdIOName };
 };
 
 export default addTask;
