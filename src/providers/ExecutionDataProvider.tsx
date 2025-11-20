@@ -5,6 +5,7 @@ import { useContext, useEffect, useMemo, useRef } from "react";
 import type {
   GetExecutionInfoResponse,
   GetGraphExecutionStateResponse,
+  PipelineRunResponse,
 } from "@/api/types.gen";
 import { usePipelineRunData } from "@/hooks/usePipelineRunData";
 import {
@@ -13,7 +14,10 @@ import {
 } from "@/hooks/useRequiredContext";
 import type { BreadcrumbSegment } from "@/hooks/useSubgraphBreadcrumbs";
 import { useSubgraphBreadcrumbs } from "@/hooks/useSubgraphBreadcrumbs";
-import { convertExecutionStatsToStatusCounts } from "@/services/executionService";
+import {
+  convertExecutionStatsToStatusCounts,
+  useFetchPipelineRunMetadata,
+} from "@/services/executionService";
 import type { TaskStatusCounts } from "@/types/pipelineRun";
 
 import { useComponentSpec } from "./ComponentSpecProvider";
@@ -32,6 +36,7 @@ interface ExecutionDataContextType {
   rootDetails: GetExecutionInfoResponse | undefined;
   rootState: GetGraphExecutionStateResponse | undefined;
   runId: string | undefined | null;
+  metadata: PipelineRunResponse | undefined;
   isLoading: boolean;
   error: Error | null;
   taskStatusCountsMap: Map<string, TaskStatusCounts>;
@@ -147,6 +152,12 @@ export function ExecutionDataProvider({
     error: pipelineRunError,
   } = usePipelineRunData(pipelineRunId);
 
+  const {
+    data: metadata,
+    isLoading: isLoadingPipelineMetadata,
+    error: pipelineMetadataError,
+  } = useFetchPipelineRunMetadata(pipelineRunId);
+
   const { details: rootDetails, state: rootState } = executionData ?? {};
   const runId = rootDetails?.pipeline_run_id;
 
@@ -228,9 +239,12 @@ export function ExecutionDataProvider({
   // before rendering to avoid flashing the root level
   const isLoading = isAtRoot
     ? isLoadingPipelineRunData ||
-      (!!subgraphExecutionId && isLoadingBreadcrumbs)
+      (!!subgraphExecutionId && isLoadingBreadcrumbs) ||
+      isLoadingPipelineMetadata
     : isNestedLoading || isLoadingBreadcrumbs;
-  const error = isAtRoot ? pipelineRunError : nestedError;
+  const error = isAtRoot
+    ? pipelineRunError || pipelineMetadataError
+    : nestedError;
 
   useEffect(() => {
     if (!nestedDetails || !nestedState || isAtRoot) {
@@ -265,6 +279,7 @@ export function ExecutionDataProvider({
       rootDetails,
       rootState,
       runId,
+      metadata,
       isLoading,
       error,
       taskStatusCountsMap,
@@ -278,6 +293,7 @@ export function ExecutionDataProvider({
       rootDetails,
       rootState,
       runId,
+      metadata,
       isLoading,
       error,
       taskStatusCountsMap,

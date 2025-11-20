@@ -188,21 +188,6 @@ export const fetchPipelineRuns = async (pipelineName: string) => {
   }
 };
 
-export const fetchPipelineRunById = async (runId: string) => {
-  try {
-    const pipelineRunsDb = localForage.createInstance({
-      name: "components",
-      storeName: "pipeline_runs",
-    });
-
-    const run = (await pipelineRunsDb.getItem(runId.toString())) as PipelineRun;
-    return run;
-  } catch (error) {
-    console.error("Error fetching pipeline run by ID:", error);
-    return null;
-  }
-};
-
 export const cancelPipelineRun = async (runId: string, backendUrl: string) => {
   await fetchWithErrorHandling(
     `${backendUrl}/api/pipeline_runs/${runId}/cancel`,
