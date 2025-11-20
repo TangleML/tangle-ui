@@ -713,9 +713,9 @@ const FlowCanvas = ({
               const node = nodes.find((n) => n.id === change.id);
               return node
                 ? {
-                  ...node,
-                  position: { x: change.position.x, y: change.position.y },
-                }
+                    ...node,
+                    position: { x: change.position.x, y: change.position.y },
+                  }
                 : null;
             }
             return null;
@@ -982,11 +982,11 @@ const FlowCanvas = ({
             y: center?.y || 0,
           };
 
-          const { newNodes, updatedComponentSpec } = duplicateNodes(
-            componentSpec,
-            nodesToPaste,
-            { position: reactFlowCenter, connection: "internal" },
-          );
+          const { newNodes, updatedComponentSpec: updatedSubgraphSpec } =
+            duplicateNodes(currentSubgraphSpec, nodesToPaste, {
+              position: reactFlowCenter,
+              connection: "internal",
+            });
 
           // Deselect all existing nodes
           const updatedNodes = nodes.map((node) => ({
@@ -999,7 +999,13 @@ const FlowCanvas = ({
             newNodes,
           });
 
-          setComponentSpec(updatedComponentSpec);
+          const updatedRootSpec = updateSubgraphSpec(
+            componentSpec,
+            currentSubgraphPath,
+            updatedSubgraphSpec,
+          );
+
+          setComponentSpec(updatedRootSpec);
         }
       } catch (err) {
         console.error("Failed to paste nodes from clipboard:", err);
@@ -1010,6 +1016,9 @@ const FlowCanvas = ({
     nodes,
     reactFlowInstance,
     store,
+    currentSubgraphSpec,
+    currentSubgraphPath,
+    setComponentSpec,
     updateOrAddNodes,
     setComponentSpec,
     readOnly,
@@ -1065,7 +1074,7 @@ const FlowCanvas = ({
         connectOnClick={!readOnly}
         className={cn(
           (rest.selectionOnDrag || (shiftKeyPressed && !isConnecting)) &&
-          "cursor-crosshair",
+            "cursor-crosshair",
         )}
       >
         <NodeToolbar
