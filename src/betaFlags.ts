@@ -14,6 +14,13 @@ export const ExistingBetaFlags = {
     default: true,
   } as BetaFlag,
 
+  ["component-library-v2"]: {
+    name: "Component Library V2",
+    description:
+      "Enable the Component Library V2. All lib folders will be based on new components",
+    default: false,
+  } as BetaFlag,
+
   ["redirect-on-new-pipeline-run"]: {
     name: "Redirect on new pipeline run",
     description: "Automatically open a new tab after starting a new execution.",
