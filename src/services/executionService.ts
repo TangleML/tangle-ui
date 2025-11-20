@@ -7,7 +7,9 @@ import type {
   GetGraphExecutionStateResponse,
   PipelineRunResponse,
 } from "@/api/types.gen";
+import { useBackend } from "@/providers/BackendProvider";
 import type { RunStatus, TaskStatusCounts } from "@/types/pipelineRun";
+import { TWENTY_FOUR_HOURS_IN_MS } from "@/utils/constants";
 import { fetchWithErrorHandling } from "@/utils/fetchWithErrorHandling";
 
 export const fetchExecutionState = async (
@@ -35,6 +37,18 @@ export const fetchPipelineRun = async (
     throw new Error(`Failed to fetch pipeline run: ${response.statusText}`);
   }
   return response.json();
+};
+
+export const useFetchPipelineRunMetadata = (runId: string | undefined) => {
+  const { backendUrl } = useBackend();
+
+  return useQuery<PipelineRunResponse>({
+    queryKey: ["pipeline-run", runId],
+    queryFn: () => fetchPipelineRun(runId!, backendUrl),
+    enabled: !!runId,
+    refetchOnWindowFocus: false,
+    staleTime: TWENTY_FOUR_HOURS_IN_MS,
+  });
 };
 
 const fetchContainerExecutionState = async (
