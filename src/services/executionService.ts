@@ -107,6 +107,7 @@ export const STATUS: Record<RunStatus, RunStatus> = {
   SUCCEEDED: "SUCCEEDED",
   WAITING: "WAITING",
   CANCELLED: "CANCELLED",
+  SKIPPED: "SKIPPED",
   UNKNOWN: "UNKNOWN",
 } as const;
 
@@ -120,10 +121,13 @@ export const getRunStatus = (statusData: TaskStatusCounts): RunStatus => {
   if (statusData.running > 0) {
     return STATUS.RUNNING;
   }
+  if (statusData.skipped > 0) {
+    return STATUS.SKIPPED;
+  }
   if (statusData.waiting > 0) {
     return STATUS.WAITING;
   }
-  if (statusData.succeeded > 0) {
+  if (statusData.total > 0 && statusData.succeeded === statusData.total) {
     return STATUS.SUCCEEDED;
   }
   return STATUS.UNKNOWN;
