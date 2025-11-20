@@ -8,18 +8,19 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Paragraph } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 
-import { getNodeTypeColor } from "./utils";
+import { NodeListItem } from "./NodeListItem";
 
 interface NodesListProps {
   nodes: Node[];
+  orphanedNodeIds?: Set<string>;
   title?: string;
 }
 
 export function NodesList({
   nodes,
+  orphanedNodeIds,
   title = `View nodes (${nodes.length})`,
 }: NodesListProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -29,7 +30,7 @@ export function NodesList({
   }
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full">
       <CollapsibleTrigger asChild>
         <Button variant="ghost">
           <ChevronRight
@@ -45,17 +46,11 @@ export function NodesList({
         <div className="rounded-md border p-3 bg-secondary/50 max-h-[50vh] overflow-auto">
           <ul className="space-y-2 text-sm">
             {nodes.map((node) => (
-              <li key={node.id} className="flex items-center gap-3">
-                <span
-                  className={cn(
-                    "w-2 h-2 rounded-full",
-                    getNodeTypeColor(node.type),
-                  )}
-                />
-                <Paragraph font="mono" size="xs">
-                  {node.id}
-                </Paragraph>
-              </li>
+              <NodeListItem
+                key={node.id}
+                node={node}
+                isOrphaned={orphanedNodeIds?.has(node.id)}
+              />
             ))}
           </ul>
         </div>

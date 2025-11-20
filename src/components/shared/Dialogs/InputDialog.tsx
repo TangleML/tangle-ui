@@ -60,11 +60,14 @@ export function InputDialog({
   };
 
   const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === "Enter" && value.trim()) {
-      handleConfirm();
-    }
     if (e.key === "Escape") {
       onCancel?.();
+    }
+
+    if (disabled) return;
+
+    if (e.key === "Enter" && value.trim()) {
+      handleConfirm();
     }
   };
 
