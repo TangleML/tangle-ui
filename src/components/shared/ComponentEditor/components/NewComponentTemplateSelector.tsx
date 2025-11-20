@@ -60,18 +60,17 @@ type Template = {
 };
 
 const SUPPORTED_TEMPLATES: Template[] = [
-  { name: "Empty", templateName: "empty" },
-  {
-    name: "Ruby",
-    icon: <SiRuby size={48} className="text-red-400 scale-300" />,
-    color: "text-red-400",
-    templateName: "ruby",
-  },
   {
     name: "Python",
     icon: <FaPython size={48} className="text-green-400 scale-300" />,
     color: "text-green-400",
     templateName: "python",
+  },
+  {
+    name: "Bash",
+    icon: <SiGnubash size={48} className="text-gray-400 scale-300" />,
+    color: "text-gray-400",
+    templateName: "bash",
   },
   {
     name: "JavaScript",
@@ -80,9 +79,10 @@ const SUPPORTED_TEMPLATES: Template[] = [
     templateName: "javascript",
   },
   {
-    name: "Bash",
-    icon: <SiGnubash size={48} className="text-gray-400 scale-300" />,
-    color: "text-gray-400",
-    templateName: "bash",
+    name: "Ruby",
+    icon: <SiRuby size={48} className="text-red-400 scale-300" />,
+    color: "text-red-400",
+    templateName: "ruby",
   },
+  { name: "Empty", templateName: "empty" },
 ];
