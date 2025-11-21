@@ -42,7 +42,7 @@ export const UpgradeNodePopover = ({
   }) => {
   const [open, setOpen] = useState(true);
   const { taskId, taskSpec } = currentNode;
-  const { graphSpec, updateGraphSpec } = useComponentSpec();
+  const { currentGraphSpec, updateGraphSpec } = useComponentSpec();
   const { notifyNode, fitNodeIntoView } = useNodesOverlay();
 
   const replaceWithComponent = useMemo(() => {
@@ -54,8 +54,8 @@ export const UpgradeNodePopover = ({
 
   const updatePreview = useMemo(() => {
     if (!taskId || !replaceWithComponent) return null;
-    return replaceTaskNode(taskId, replaceWithComponent, graphSpec);
-  }, [taskId, replaceWithComponent, graphSpec]);
+    return replaceTaskNode(taskId, replaceWithComponent, currentGraphSpec);
+  }, [taskId, replaceWithComponent, currentGraphSpec]);
 
   const markup = useMemo(() => {
     if (!taskId || !taskSpec || !replaceWithComponent || !updatePreview) {
