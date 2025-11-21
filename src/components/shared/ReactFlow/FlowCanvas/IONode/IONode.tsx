@@ -10,6 +10,9 @@ import { Paragraph } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useContextPanel } from "@/providers/ContextPanelProvider";
+import { isViewingSubgraph } from "@/utils/subgraphUtils";
+
+export const DEFAULT_IO_NODE_WIDTH = 300;
 
 interface IONodeProps {
   type: "input" | "output";
@@ -25,13 +28,16 @@ interface IONodeProps {
 }
 
 const IONode = ({ type, data, selected = false }: IONodeProps) => {
-  const { currentGraphSpec, currentSubgraphSpec } = useComponentSpec();
+  const { currentGraphSpec, currentSubgraphSpec, currentSubgraphPath } =
+    useComponentSpec();
   const { setContent, clearContent } = useContextPanel();
 
   const isInput = type === "input";
   const isOutput = type === "output";
 
   const readOnly = !!data.readOnly;
+
+  const isInSubgraph = isViewingSubgraph(currentSubgraphPath);
 
   const handleType = isInput ? "source" : "target";
   const handlePosition = isInput ? Position.Right : Position.Left;
@@ -110,9 +116,11 @@ const IONode = ({ type, data, selected = false }: IONodeProps) => {
     ? data.value
     : hasDataDefault
       ? data.default
-      : null;
+      : isInSubgraph
+        ? "→subgraph arguments"
+        : null;
 
-  const outputValue = outputConnectedValue ?? null;
+  const outputValue = outputConnectedValue ?? data.value ?? null;
 
   const value = isInput ? inputValue : outputValue;
 

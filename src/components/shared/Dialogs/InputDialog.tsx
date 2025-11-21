@@ -14,13 +14,14 @@ import { Input } from "@/components/ui/input";
 import { Paragraph } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 
-export type InputDialogProps = {
+type InputDialogProps = {
   isOpen: boolean;
   title: string;
   description: string;
   placeholder: string;
   defaultValue: string;
   content?: ReactNode;
+  disabled?: boolean;
   validate?: (value: string) => string | null;
   onConfirm?: (value: string) => void;
   onCancel?: () => void;
@@ -33,6 +34,7 @@ export function InputDialog({
   placeholder,
   defaultValue,
   content,
+  disabled,
   validate,
   onConfirm,
   onCancel,
@@ -40,7 +42,7 @@ export function InputDialog({
   const [value, setValue] = useState(defaultValue);
   const [error, setError] = useState<string | null>(null);
 
-  const canConfirm = value.trim().length > 0 && !error;
+  const canConfirm = value.trim().length > 0 && !error && !disabled;
 
   const handleValueChange = (newValue: string) => {
     setValue(newValue);
@@ -58,11 +60,14 @@ export function InputDialog({
   };
 
   const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === "Enter" && value.trim()) {
-      handleConfirm();
-    }
     if (e.key === "Escape") {
       onCancel?.();
+    }
+
+    if (disabled) return;
+
+    if (e.key === "Enter" && value.trim()) {
+      handleConfirm();
     }
   };
 

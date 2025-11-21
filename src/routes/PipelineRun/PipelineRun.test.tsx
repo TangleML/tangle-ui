@@ -49,38 +49,43 @@ vi.mock("@/providers/BackendProvider", () => ({
   }),
 }));
 
-vi.mock("@/services/executionService", () => ({
-  useFetchExecutionInfo: vi.fn(),
-  useFetchPipelineRun: () => ({
-    data: null,
-    isLoading: false,
-    error: null,
-    isFetching: false,
-    refetch: () => {},
-    enabled: false,
-  }),
-  countTaskStatuses: vi.fn(),
-  getRunStatus: vi.fn(() => "RUNNING"),
-  convertExecutionStatsToStatusCounts: vi.fn((stats) => ({
-    succeeded: stats?.SUCCEEDED || 0,
-    failed: stats?.FAILED || 0,
-    running: stats?.RUNNING || 0,
-    waiting: stats?.WAITING_FOR_UPSTREAM || stats?.WAITING || 0,
-    cancelled: stats?.CANCELLED || 0,
-    total: Object.values(stats || {}).reduce(
-      (a: number, b) => a + (b as number),
-      0,
-    ),
-  })),
-  STATUS: {
-    SUCCEEDED: "SUCCEEDED",
-    FAILED: "FAILED",
-    RUNNING: "RUNNING",
-    WAITING: "WAITING",
-    CANCELLED: "CANCELLED",
-    UNKNOWN: "UNKNOWN",
-  },
-}));
+vi.mock("@/services/executionService", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/services/executionService")>();
+  return {
+    ...actual,
+    useFetchExecutionInfo: vi.fn(),
+    useFetchPipelineRun: () => ({
+      data: null,
+      isLoading: false,
+      error: null,
+      isFetching: false,
+      refetch: () => {},
+      enabled: false,
+    }),
+    countTaskStatuses: vi.fn(),
+    getRunStatus: vi.fn(() => "RUNNING"),
+    convertExecutionStatsToStatusCounts: vi.fn((stats) => ({
+      succeeded: stats?.SUCCEEDED || 0,
+      failed: stats?.FAILED || 0,
+      running: stats?.RUNNING || 0,
+      waiting: stats?.WAITING_FOR_UPSTREAM || stats?.WAITING || 0,
+      cancelled: stats?.CANCELLED || 0,
+      total: Object.values(stats || {}).reduce(
+        (a: number, b) => a + (b as number),
+        0,
+      ),
+    })),
+    STATUS: {
+      SUCCEEDED: "SUCCEEDED",
+      FAILED: "FAILED",
+      RUNNING: "RUNNING",
+      WAITING: "WAITING",
+      CANCELLED: "CANCELLED",
+      UNKNOWN: "UNKNOWN",
+    },
+  };
+});
 
 const mockUsePipelineRunData = vi.fn();
 vi.mock("@/hooks/usePipelineRunData", () => ({

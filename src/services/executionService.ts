@@ -7,7 +7,9 @@ import type {
   GetGraphExecutionStateResponse,
   PipelineRunResponse,
 } from "@/api/types.gen";
+import { useBackend } from "@/providers/BackendProvider";
 import type { RunStatus, TaskStatusCounts } from "@/types/pipelineRun";
+import { TWENTY_FOUR_HOURS_IN_MS } from "@/utils/constants";
 import { fetchWithErrorHandling } from "@/utils/fetchWithErrorHandling";
 
 export const fetchExecutionState = async (
@@ -35,6 +37,18 @@ export const fetchPipelineRun = async (
     throw new Error(`Failed to fetch pipeline run: ${response.statusText}`);
   }
   return response.json();
+};
+
+export const useFetchPipelineRunMetadata = (runId: string | undefined) => {
+  const { backendUrl } = useBackend();
+
+  return useQuery<PipelineRunResponse>({
+    queryKey: ["pipeline-run", runId],
+    queryFn: () => fetchPipelineRun(runId!, backendUrl),
+    enabled: !!runId,
+    refetchOnWindowFocus: false,
+    staleTime: TWENTY_FOUR_HOURS_IN_MS,
+  });
 };
 
 const fetchContainerExecutionState = async (
@@ -93,6 +107,7 @@ export const STATUS: Record<RunStatus, RunStatus> = {
   SUCCEEDED: "SUCCEEDED",
   WAITING: "WAITING",
   CANCELLED: "CANCELLED",
+  SKIPPED: "SKIPPED",
   UNKNOWN: "UNKNOWN",
 } as const;
 
@@ -106,10 +121,13 @@ export const getRunStatus = (statusData: TaskStatusCounts): RunStatus => {
   if (statusData.running > 0) {
     return STATUS.RUNNING;
   }
+  if (statusData.skipped > 0) {
+    return STATUS.SKIPPED;
+  }
   if (statusData.waiting > 0) {
     return STATUS.WAITING;
   }
-  if (statusData.succeeded > 0) {
+  if (statusData.total > 0 && statusData.succeeded === statusData.total) {
     return STATUS.SUCCEEDED;
   }
   return STATUS.UNKNOWN;

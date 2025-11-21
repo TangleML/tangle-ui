@@ -1,13 +1,10 @@
 import type { Node } from "@xyflow/react";
-import type { ReactNode } from "react";
 
-import type { TriggerInputDialogProps } from "@/hooks/useInputDialog";
 import {
   type ComponentSpec,
   isGraphImplementation,
 } from "@/utils/componentSpec";
 import { createSubgraphFromNodes } from "@/utils/nodes/createSubgraphFromNodes";
-import { getUniqueTaskName, validateTaskName } from "@/utils/unique";
 
 import addTask from "../utils/addTask";
 import { calculateNodesCenter } from "../utils/geometry";
@@ -17,34 +14,13 @@ import { updateDownstreamSubgraphConnections } from "../utils/updateDownstreamSu
 export const handleGroupNodes = async (
   selectedNodes: Node[],
   currentSubgraphSpec: ComponentSpec,
-  inputDialogContent: ReactNode,
-  triggerInputDialog: (
-    props: TriggerInputDialogProps,
-  ) => Promise<string | null>,
+  name: string,
   onSuccess: (updatedComponentSpec: ComponentSpec) => void,
   onError: (error: Error) => void,
 ) => {
   if (!isGraphImplementation(currentSubgraphSpec.implementation)) return;
 
-  const currentSubgraphGraphSpec = currentSubgraphSpec.implementation.graph;
-
   try {
-    const defaultName = getUniqueTaskName(
-      currentSubgraphGraphSpec,
-      "New Subgraph",
-    );
-
-    const name = await triggerInputDialog({
-      title: "Create Subgraph",
-      description: "Enter subgraph name",
-      defaultValue: defaultName,
-      content: inputDialogContent,
-      validate: (value: string) =>
-        validateTaskName(value, currentSubgraphGraphSpec, true),
-    });
-
-    if (!name) return;
-
     const { subgraphTask: subgraphTaskSpec, connectionMappings } =
       await createSubgraphFromNodes(selectedNodes, currentSubgraphSpec, name);
 

@@ -7,6 +7,7 @@ export type RunStatus =
   | "SUCCEEDED"
   | "WAITING"
   | "CANCELLED"
+  | "SKIPPED"
   | "UNKNOWN";
 
 export interface PipelineRun {

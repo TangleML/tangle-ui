@@ -8,29 +8,26 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Paragraph } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
+
+import { NodeListItem } from "./NodeListItem";
 
 interface NodesListProps {
   nodes: Node[];
   title?: string;
+  excludedNodeIds?: Set<string>;
+  orphanedNodeIds?: Set<string>;
+  onExcludeNode?: (nodeId: string) => void;
+  onIncludeNode?: (nodeId: string) => void;
 }
-
-const getNodeTypeColor = (nodeType: string | undefined): string => {
-  switch (nodeType) {
-    case "input":
-      return "bg-blue-500";
-    case "output":
-      return "bg-violet-500";
-    case "task":
-    default:
-      return "bg-gray-500";
-  }
-};
 
 export function NodesList({
   nodes,
   title = `View nodes (${nodes.length})`,
+  excludedNodeIds,
+  orphanedNodeIds,
+  onExcludeNode,
+  onIncludeNode,
 }: NodesListProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -39,7 +36,7 @@ export function NodesList({
   }
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full">
       <CollapsibleTrigger asChild>
         <Button variant="ghost">
           <ChevronRight
@@ -52,20 +49,17 @@ export function NodesList({
         </Button>
       </CollapsibleTrigger>
       <CollapsibleContent className="mt-2">
-        <div className="rounded-md border p-3 bg-secondary/50">
+        <div className="rounded-md border p-3 bg-secondary/50 max-h-[50vh] overflow-auto">
           <ul className="space-y-2 text-sm">
             {nodes.map((node) => (
-              <li key={node.id} className="flex items-center gap-3">
-                <span
-                  className={cn(
-                    "w-2 h-2 rounded-full",
-                    getNodeTypeColor(node.type),
-                  )}
-                />
-                <Paragraph font="mono" size="xs">
-                  {node.id}
-                </Paragraph>
-              </li>
+              <NodeListItem
+                key={node.id}
+                node={node}
+                excludedNodeIds={excludedNodeIds}
+                isOrphaned={orphanedNodeIds?.has(node.id)}
+                onExcludeNode={onExcludeNode}
+                onIncludeNode={onIncludeNode}
+              />
             ))}
           </ul>
         </div>

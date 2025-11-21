@@ -43,9 +43,10 @@ describe("addTask", () => {
 
     const result = addTask("task", mockTaskSpec, position, mockComponentSpec);
 
-    const newComponentSpec = result.spec as typeof mockComponentSpec & {
-      implementation: { graph: { tasks: Record<string, any> } };
-    };
+    const newComponentSpec = result.spec;
+    if (!("graph" in newComponentSpec.implementation)) {
+      throw new Error("Expected graph implementation");
+    }
 
     expect(
       Object.keys(newComponentSpec.implementation.graph.tasks).length,
@@ -58,7 +59,7 @@ describe("addTask", () => {
 
     const task = newComponentSpec.implementation.graph.tasks[taskId];
     expect(task.annotations).toHaveProperty("editor.position");
-    expect(task.annotations["editor.position"]).toBe(
+    expect(task.annotations?.["editor.position"]).toBe(
       JSON.stringify({ x: 50, y: 100 }),
     );
   });
@@ -66,30 +67,22 @@ describe("addTask", () => {
   it("should add an input node when input type is dropped", () => {
     const result = addTask("input", null, position, mockComponentSpec);
 
-    const newComponentSpec = result.spec as typeof mockComponentSpec & {
-      inputs: Array<{ name: string; annotations: Record<string, any> }>;
-    };
+    const inputs = result.spec.inputs ?? [];
 
-    expect(newComponentSpec.inputs.length).toBe(1);
-    expect(newComponentSpec.inputs[0].name).toBe("Input");
-    expect(newComponentSpec.inputs[0].annotations).toHaveProperty(
-      "editor.position",
-    );
+    expect(inputs.length).toBe(1);
+    expect(inputs[0]?.name).toBe("Input");
+    expect(inputs[0]?.annotations).toHaveProperty("editor.position");
     expect(result.taskId).toBeUndefined();
   });
 
   it("should add an output node when output type is dropped", () => {
     const result = addTask("output", null, position, mockComponentSpec);
 
-    const newComponentSpec = result.spec as typeof mockComponentSpec & {
-      outputs: Array<{ name: string; annotations: Record<string, any> }>;
-    };
+    const outputs = result.spec.outputs ?? [];
 
-    expect(newComponentSpec.outputs.length).toBe(1);
-    expect(newComponentSpec.outputs[0].name).toBe("Output");
-    expect(newComponentSpec.outputs[0].annotations).toHaveProperty(
-      "editor.position",
-    );
+    expect(outputs.length).toBe(1);
+    expect(outputs[0]?.name).toBe("Output");
+    expect(outputs[0]?.annotations).toHaveProperty("editor.position");
     expect(result.taskId).toBeUndefined();
   });
 
@@ -145,12 +138,10 @@ describe("addTask", () => {
 
     const result = addTask("input", null, position, newMockComponentSpec);
 
-    const newComponentSpec = result.spec as typeof newMockComponentSpec & {
-      inputs: Array<{ name: string; annotations: Record<string, any> }>;
-    };
+    const inputs = result.spec.inputs ?? [];
 
-    expect(newComponentSpec.inputs.length).toBe(2);
-    expect(newComponentSpec.inputs[1].name).toBe("Input 2");
+    expect(inputs.length).toBe(2);
+    expect(inputs[1]?.name).toBe("Input 2");
   });
 
   it("should create unique names for outputs when duplicates exist", () => {
@@ -161,11 +152,67 @@ describe("addTask", () => {
 
     const result = addTask("output", null, position, newMockComponentSpec);
 
-    const newComponentSpec = result.spec as typeof newMockComponentSpec & {
-      outputs: Array<{ name: string; annotations: Record<string, any> }>;
+    const outputs = result.spec.outputs ?? [];
+
+    expect(outputs.length).toBe(2);
+    expect(outputs[1]?.name).toBe("Output 2");
+  });
+
+  it("should create an input with the specified name when ioName is provided", () => {
+    const result = addTask("input", null, position, mockComponentSpec, {
+      name: "value",
+    });
+
+    const inputs = result.spec.inputs ?? [];
+
+    expect(inputs.length).toBe(1);
+    expect(inputs[0]?.name).toBe("value");
+    expect(result.ioName).toBe("value");
+  });
+
+  it("should create an output with the specified name when ioName is provided", () => {
+    const result = addTask("output", null, position, mockComponentSpec, {
+      name: "seconds",
+    });
+
+    const outputs = result.spec.outputs ?? [];
+
+    expect(outputs.length).toBe(1);
+    expect(outputs[0]?.name).toBe("seconds");
+    expect(result.ioName).toBe("seconds");
+  });
+
+  it("should make input name unique when ioName is provided but conflicts", () => {
+    const newMockComponentSpec = {
+      ...mockComponentSpec,
+      inputs: [{ name: "value", annotations: {} }],
     };
 
-    expect(newComponentSpec.outputs.length).toBe(2);
-    expect(newComponentSpec.outputs[1].name).toBe("Output 2");
+    const result = addTask("input", null, position, newMockComponentSpec, {
+      name: "value",
+    });
+
+    const inputs = result.spec.inputs ?? [];
+
+    expect(inputs.length).toBe(2);
+    expect(inputs[1]?.name).toBe("value 2");
+    expect(result.ioName).toBe("value 2");
+  });
+
+  it("should make output name unique when ioName is provided but conflicts", () => {
+    const newMockComponentSpec = {
+      ...mockComponentSpec,
+      outputs: [{ name: "result", annotations: {} }],
+    };
+
+    const result = addTask("output", null, position, newMockComponentSpec, {
+      name: "result",
+    });
+
+    const outputs = result.spec.outputs ?? [];
+
+    expect(outputs.length).toBe(2);
+    expect(outputs[1]?.name).toBe("result 2");
+    expect(result.ioName).toBe("result 2");
   });
 });
