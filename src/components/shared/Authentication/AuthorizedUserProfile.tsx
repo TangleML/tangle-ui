@@ -1,39 +1,13 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { LogOutIcon } from "lucide-react";
 import { useEffectEvent, useSyncExternalStore } from "react";
 
-import { Icon } from "@/components/ui/icon";
 import { Spinner } from "@/components/ui/spinner";
-import { useBackend } from "@/providers/BackendProvider";
 
 import TooltipButton from "../Buttons/TooltipButton";
-import { isHuggingFaceAuthEnabled } from "../HuggingFaceAuth/constants";
+import { Avatar } from "./Avatar";
 import { useAuthLocalStorage } from "./useAuthLocalStorage";
-
-function useLogout({
-  onSuccess,
-  onError,
-}: {
-  onSuccess?: () => void;
-  onError?: (error: Error) => void;
-}) {
-  const { backendUrl } = useBackend();
-  return useMutation({
-    mutationFn: async () => {
-      if (isHuggingFaceAuthEnabled()) {
-        await fetch(`${backendUrl}/api/oauth/huggingface/logout`, {
-          method: "GET",
-        });
-      }
-    },
-    onSuccess: () => {
-      onSuccess?.();
-    },
-    onError: (error) => {
-      onError?.(error);
-    },
-  });
-}
+import { useLogout } from "./useLogout";
 
 export function AuthorizedUserProfile() {
   const queryClient = useQueryClient();
@@ -67,21 +41,7 @@ export function AuthorizedUserProfile() {
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center space-x-3">
-        <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
-          {profile.avatar_url ? (
-            <img
-              src={profile.avatar_url}
-              alt={`${profile.login} avatar`}
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                // Fallback to a default avatar if image fails to load
-                e.currentTarget.src = `https://github.com/identicons/${profile.login}.png`;
-              }}
-            />
-          ) : (
-            <Icon name="User" size="fill" />
-          )}
-        </div>
+        <Avatar profile={profile} />
         <span className="text-sm font-medium text-gray-700 truncate">
           {profile.login}
         </span>
