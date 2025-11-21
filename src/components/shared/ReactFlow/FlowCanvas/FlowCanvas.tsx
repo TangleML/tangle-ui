@@ -575,13 +575,19 @@ const FlowCanvas = ({
           isPositionInNode(node, cursorPosition),
         );
 
-        if (hoveredNode?.id === replaceTarget?.id) return;
-        if (hoveredNode?.type && !REPLACEABLE_NODES.has(hoveredNode.type)) {
+        if (!hoveredNode && replaceTarget) {
           setReplaceTarget(null);
           return;
         }
 
-        setReplaceTarget(hoveredNode || null);
+        if (!hoveredNode || hoveredNode.id === replaceTarget?.id) return;
+
+        if (hoveredNode.type && !REPLACEABLE_NODES.has(hoveredNode.type)) {
+          setReplaceTarget(null);
+          return;
+        }
+
+        setReplaceTarget(hoveredNode);
       }
     },
     [reactFlowInstance, nodes, replaceTarget, setReplaceTarget],
@@ -912,7 +918,12 @@ const FlowCanvas = ({
     preserveIOSelectionOnSpecChange(componentSpec);
     updateReactFlow(componentSpec);
     initialCanvasLoaded.current = true;
-  }, [componentSpec, currentSubgraphPath, preserveIOSelectionOnSpecChange]);
+  }, [
+    replaceTarget,
+    componentSpec,
+    currentSubgraphPath,
+    preserveIOSelectionOnSpecChange,
+  ]);
 
   useEffect(() => {
     reactFlowInstance?.fitView({
