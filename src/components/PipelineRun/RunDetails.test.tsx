@@ -136,7 +136,7 @@ describe("<RunDetails/>", () => {
       error: null,
     });
 
-    queryClient.setQueryData(["pipeline-run", "123"], mockPipelineRun);
+    queryClient.setQueryData(["pipeline-run-metadata", "123"], mockPipelineRun);
 
     vi.mocked(executionService.countTaskStatuses).mockReturnValue({
       total: 2,
@@ -278,7 +278,7 @@ describe("<RunDetails/>", () => {
       };
 
       queryClient.setQueryData(
-        ["pipeline-run", "123"],
+        ["pipeline-run-metadata", "123"],
         pipelineRunWithDifferentCreator,
       );
 
