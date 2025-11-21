@@ -19,7 +19,11 @@ import {
   type TypeSpecType,
 } from "@/utils/componentSpec";
 import { getComponentFileFromList } from "@/utils/componentStore";
-import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
+import {
+  USER_COMPONENTS_LIST_NAME,
+  USER_PIPELINES_LIST_NAME,
+} from "@/utils/constants";
+import { isViewingSubgraph } from "@/utils/subgraphUtils";
 
 import { InfoBox } from "../shared/InfoBox";
 import { TaskImplementation } from "../shared/TaskDetails";
@@ -30,12 +34,19 @@ import { getOutputConnectedDetails } from "./utils/getOutputConnectedDetails";
 
 const PipelineDetails = () => {
   const { setContent } = useContextPanel();
-  const { componentSpec, graphSpec, isValid, errors, hasAncestorErrors } =
-    useComponentSpec();
+  const {
+    currentSubgraphSpec: componentSpec,
+    currentGraphSpec: graphSpec,
+    currentSubgraphPath,
+    isValid,
+    errors,
+  } = useComponentSpec();
 
   const notify = useToastNotification();
 
   const [isYamlOpen, setIsYamlOpen] = useState(false);
+
+  const isInSubgraph = isViewingSubgraph(currentSubgraphPath);
 
   // Utility function to convert TypeSpecType to string
   const typeSpecToString = (typeSpec?: TypeSpecType): string => {
@@ -60,10 +71,10 @@ const PipelineDetails = () => {
   useEffect(() => {
     const fetchMeta = async () => {
       if (!componentSpec?.name) return;
-      const file = await getComponentFileFromList(
-        USER_PIPELINES_LIST_NAME,
-        componentSpec.name,
-      );
+      const list = isInSubgraph
+        ? USER_COMPONENTS_LIST_NAME
+        : USER_PIPELINES_LIST_NAME;
+      const file = await getComponentFileFromList(list, componentSpec.name);
       if (file) {
         setFileMeta({
           creationTime: file.creationTime,
@@ -76,7 +87,7 @@ const PipelineDetails = () => {
       }
     };
     fetchMeta();
-  }, [componentSpec?.name]);
+  }, [componentSpec?.name, isInSubgraph]);
 
   const handleInputEdit = (input: InputSpec) => {
     setContent(<InputValueEditor key={input.name} input={input} />);
@@ -123,16 +134,20 @@ const PipelineDetails = () => {
 
   return (
     <div
-      className="p-2 flex flex-col gap-6 h-full"
+      className="px-2 flex flex-col gap-6 h-full"
       data-context-panel="pipeline-details"
     >
       {/* Header */}
       <div className="flex items-center gap-2 max-w-[90%]">
-        <Network className="w-6 h-6 text-secondary-foreground rotate-270 min-w-6 min-h-6" />
+        {isInSubgraph ? (
+          <Icon name="Workflow" className="size-6 text-secondary-foreground" />
+        ) : (
+          <Network className="w-6 h-6 text-secondary-foreground rotate-270 min-w-6 min-h-6" />
+        )}
         <h2 className="text-lg font-semibold" data-testid="pipeline-name">
           {componentSpec.name ?? "Unnamed Pipeline"}
         </h2>
-        <RenamePipeline />
+        {!isInSubgraph && <RenamePipeline />}
       </div>
 
       {/* General Metadata */}
@@ -315,6 +330,7 @@ const PipelineDetails = () => {
           <InfoBox
             variant="error"
             title={`${errors.length} validation error${errors.length > 1 ? "s" : ""} found:`}
+            width="full"
           >
             <ScrollArea className="max-h-80 overflow-y-auto">
               <ul className="text-xs space-y-1">
@@ -334,17 +350,15 @@ const PipelineDetails = () => {
               </ul>
             </ScrollArea>
           </InfoBox>
-        ) : hasAncestorErrors ? (
-          <InfoBox
-            variant="warning"
-            title="Validation errors in parent pipeline"
-          >
-            Current subgraph is valid, but there are validation errors in the
-            parent pipeline. Navigate back to fix them.
-          </InfoBox>
         ) : (
-          <InfoBox variant="success" title="No validation errors found">
-            Pipeline is ready for submission
+          <InfoBox
+            variant="success"
+            title="No validation errors found"
+            width="full"
+          >
+            {isInSubgraph
+              ? "Current subgraph is valid"
+              : "Pipeline is ready for submission"}
           </InfoBox>
         )}
       </div>
@@ -362,7 +376,7 @@ const PipelineDetails = () => {
             className="font-medium text-md cursor-pointer"
           >
             <Icon name={isYamlOpen ? "ChevronDown" : "ChevronRight"} />
-            Pipeline YAML
+            {isInSubgraph ? "Subgraph YAML" : "Pipeline YAML"}
           </InlineStack>
         </CollapsibleTrigger>
         <CollapsibleContent className="mt-1 h-9/10 flex-1 min-h-0">
