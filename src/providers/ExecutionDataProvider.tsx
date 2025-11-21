@@ -152,14 +152,20 @@ export function ExecutionDataProvider({
     error: pipelineRunError,
   } = usePipelineRunData(pipelineRunId);
 
+  const { details: rootDetails, state: rootState } = executionData ?? {};
+  const runId = rootDetails?.pipeline_run_id;
+
+  const metadataQueryId =
+    runId ??
+    (rootExecutionId && pipelineRunId === rootExecutionId
+      ? undefined
+      : pipelineRunId);
+
   const {
     data: metadata,
     isLoading: isLoadingPipelineMetadata,
     error: pipelineMetadataError,
-  } = useFetchPipelineRunMetadata(pipelineRunId);
-
-  const { details: rootDetails, state: rootState } = executionData ?? {};
-  const runId = rootDetails?.pipeline_run_id;
+  } = useFetchPipelineRunMetadata(metadataQueryId);
 
   const {
     path: urlDerivedPath,
@@ -239,8 +245,8 @@ export function ExecutionDataProvider({
   // before rendering to avoid flashing the root level
   const isLoading = isAtRoot
     ? isLoadingPipelineRunData ||
-      (!!subgraphExecutionId && isLoadingBreadcrumbs) ||
-      isLoadingPipelineMetadata
+    (!!subgraphExecutionId && isLoadingBreadcrumbs) ||
+    isLoadingPipelineMetadata
     : isNestedLoading || isLoadingBreadcrumbs;
   const error = isAtRoot
     ? pipelineRunError || pipelineMetadataError

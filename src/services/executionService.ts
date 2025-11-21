@@ -43,7 +43,7 @@ export const useFetchPipelineRunMetadata = (runId: string | undefined) => {
   const { backendUrl } = useBackend();
 
   return useQuery<PipelineRunResponse>({
-    queryKey: ["pipeline-run", runId],
+    queryKey: ["pipeline-run-metadata", runId],
     queryFn: () => fetchPipelineRun(runId!, backendUrl),
     enabled: !!runId,
     refetchOnWindowFocus: false,
