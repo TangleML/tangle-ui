@@ -1,3 +1,4 @@
+import { useNavigate } from "@tanstack/react-router";
 import { type ChangeEvent, useCallback, useEffect, useState } from "react";
 
 import NewPipelineButton from "@/components/shared/NewPipelineButton";
@@ -20,6 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Paragraph, Text } from "@/components/ui/typography";
+import { QUICK_START_PATH } from "@/routes/router";
 import {
   type ComponentFileEntry,
   getAllComponentFilesFromList,
@@ -174,17 +176,27 @@ export const PipelineSection = withSuspenseWrapper(() => {
         </AlertDescription>
       </Alert>
 
-      <BlockStack className="w-full">
-        <Label className="mb-2">Search pipelines</Label>
-        <InlineStack gap="1" wrap="nowrap">
-          <Input type="text" value={searchQuery} onChange={handleSearch} />
-          {!!searchQuery && (
-            <Button variant="ghost" onClick={() => setSearchQuery("")}>
-              <Icon name="CircleX" />
-            </Button>
-          )}
-        </InlineStack>
-      </BlockStack>
+      <InlineStack
+        gap="2"
+        align="space-between"
+        blockAlign="end"
+        wrap="nowrap"
+        className="w-full"
+      >
+        <BlockStack className="w-full">
+          <Label className="mb-2">Search pipelines</Label>
+          <InlineStack gap="1" wrap="nowrap">
+            <Input type="text" value={searchQuery} onChange={handleSearch} />
+            {!!searchQuery && (
+              <Button variant="ghost" onClick={() => setSearchQuery("")}>
+                <Icon name="CircleX" />
+              </Button>
+            )}
+          </InlineStack>
+        </BlockStack>
+
+        <QuickStartButton />
+      </InlineStack>
 
       {pipelines.size > 0 && (
         <Table>
@@ -235,3 +247,18 @@ export const PipelineSection = withSuspenseWrapper(() => {
     </BlockStack>
   );
 }, PipelineSectionSkeleton);
+
+function QuickStartButton() {
+  const navigate = useNavigate();
+  return (
+    <Button
+      variant="secondary"
+      onClick={() =>
+        navigate({ to: QUICK_START_PATH as string /* todo: fix this */ })
+      }
+    >
+      <Icon name="Sparkles" />
+      Example Pipelines
+    </Button>
+  );
+}

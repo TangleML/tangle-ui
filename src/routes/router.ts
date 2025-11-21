@@ -26,7 +26,7 @@ declare module "@tanstack/react-router" {
 
 export const EDITOR_PATH = "/editor";
 export const RUNS_BASE_PATH = "/runs";
-const QUICK_START_PATH = "/quick-start";
+export const QUICK_START_PATH = "/quick-start";
 export const APP_ROUTES = {
   HOME: "/",
   QUICK_START: QUICK_START_PATH,
