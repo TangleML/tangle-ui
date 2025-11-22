@@ -14,6 +14,13 @@ export const ExistingBetaFlags = {
     default: true,
   } as BetaFlag,
 
+  ["github-component-library"]: {
+    name: "GitHub Component Library",
+    description:
+      "Enable the GitHub Component Library. All lib folders will be based on GitHub components",
+    default: false,
+  } as BetaFlag,
+
   ["redirect-on-new-pipeline-run"]: {
     name: "Redirect on new pipeline run",
     description: "Automatically open a new tab after starting a new execution.",

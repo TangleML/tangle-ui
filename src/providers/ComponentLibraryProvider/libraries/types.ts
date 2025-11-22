@@ -23,6 +23,8 @@ export interface Library {
   ): Promise<void>;
 
   getComponents(filter?: LibraryFilterRequest): Promise<ComponentFolder>;
+
+  eventEmitter?: EventTarget;
 }
 
 export class InvalidComponentReferenceError extends Error {
