@@ -44,7 +44,7 @@ const widthStyles: Record<NonNullable<InfoBoxProps["width"]>, string> = {
 
 export const InfoBox = ({
   title,
-  width = "fit",
+  width = "auto",
   className,
   children,
   variant = "info",
