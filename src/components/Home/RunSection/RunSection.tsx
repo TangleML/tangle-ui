@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useNavigate, useSearch } from "@tanstack/react-router";
 import { ChevronFirst, ChevronLeft, ChevronRight } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { ListPipelineJobsResponse } from "@/api/types.gen";
 import { InfoBox } from "@/components/shared/InfoBox";
@@ -34,12 +34,13 @@ const INCLUDE_EXECUTION_STATS_QUERY_KEY = "include_execution_stats";
 
 type RunSectionSearch = { page_token?: string; filter?: string };
 
-export const RunSection = () => {
+export const RunSection = ({ onEmptyList }: { onEmptyList?: () => void }) => {
   const { backendUrl, configured, available, ready } = useBackend();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const search = useSearch({ strict: false }) as RunSectionSearch;
   const isCreatedByMeDefault = useBetaFlagValue("created-by-me-default");
+  const dataVersion = useRef(0);
 
   // Parse filter into a dictionary
   const parseFilter = (filter?: string): Record<string, string> => {
@@ -72,7 +73,7 @@ export const RunSection = () => {
   const pageToken = search.page_token;
   const [previousPageTokens, setPreviousPageTokens] = useState<string[]>([]);
 
-  const { data, isLoading, isFetching, error } =
+  const { data, isLoading, isFetching, error, isFetched } =
     useQuery<ListPipelineJobsResponse>({
       queryKey: ["runs", backendUrl, pageToken, search.filter],
       refetchOnWindowFocus: false,
@@ -88,6 +89,8 @@ export const RunSection = () => {
         if (!available) {
           throw new Error("Backend is not available");
         }
+
+        dataVersion.current++;
 
         return fetchWithErrorHandling(u.toString());
       },
@@ -183,6 +186,19 @@ export const RunSection = () => {
     delete nextSearch.page_token;
     navigate({ to: pathname, search: nextSearch });
   };
+
+  useEffect(() => {
+    if (
+      ready &&
+      !isLoading &&
+      isFetched &&
+      !data?.pipeline_runs?.length &&
+      dataVersion.current <= 1 &&
+      searchUser.trim() === ""
+    ) {
+      onEmptyList?.();
+    }
+  }, [ready, data, isFetched, isLoading, onEmptyList, dataVersion, searchUser]);
 
   if (!available) {
     return (
