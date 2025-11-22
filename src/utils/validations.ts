@@ -5,20 +5,42 @@ import {
   type GraphSpec,
   type InputSpec,
   isGraphImplementation,
+  isGraphInputArgument,
+  isTaskOutputArgument,
+  type OutputSpec,
   type TaskOutputArgument,
   type TaskSpec,
 } from "./componentSpec";
 
+export interface ValidationResult {
+  isValid: boolean;
+  errors: string[];
+}
+
 interface ValidationOptions {
   skipInputValueValidation?: boolean;
+  memo?: WeakMap<ComponentSpec, Map<string, ValidationResult>>;
 }
 
 export const checkComponentSpecValidity = (
   componentSpec: ComponentSpec,
   options?: ValidationOptions,
-): { isValid: boolean; errors: string[] } => {
+): ValidationResult => {
   const errors: string[] = [];
   const { skipInputValueValidation = false } = options ?? {};
+  const memo =
+    options?.memo ??
+    new WeakMap<ComponentSpec, Map<string, ValidationResult>>();
+  const memoKey = skipInputValueValidation ? "skipInputs" : "default";
+  let cachedResult: ValidationResult | undefined;
+
+  if (componentSpec) {
+    const cacheForSpec = memo.get(componentSpec);
+    cachedResult = cacheForSpec?.get(memoKey);
+    if (cachedResult) {
+      return cachedResult;
+    }
+  }
 
   // Basic validation
   const basicErrors = validateBasicComponentSpec(componentSpec);
@@ -46,12 +68,28 @@ export const checkComponentSpecValidity = (
 
   // Graph-specific validations
   const graphSpec = componentSpec.implementation.graph;
-  errors.push(...validateGraphTasks(graphSpec, componentSpec));
+  errors.push(
+    ...validateGraphTasks(graphSpec, componentSpec, {
+      skipInputValueValidation,
+      memo,
+    }),
+  );
   errors.push(...validateGraphOutputs(graphSpec, componentSpec));
   errors.push(...validateInputOutputConnections(graphSpec, componentSpec));
   errors.push(...validateCircularDependencies(graphSpec));
 
-  return { isValid: errors.length === 0, errors };
+  const result = { isValid: errors.length === 0, errors };
+
+  if (componentSpec) {
+    let cacheForSpec = memo.get(componentSpec);
+    if (!cacheForSpec) {
+      cacheForSpec = new Map();
+      memo.set(componentSpec, cacheForSpec);
+    }
+    cacheForSpec.set(memoKey, result);
+  }
+
+  return result;
 };
 
 const validateBasicComponentSpec = (componentSpec: ComponentSpec): string[] => {
@@ -134,6 +172,7 @@ const validateInputsAndOutputs = (
 const validateGraphTasks = (
   graphSpec: GraphSpec,
   componentSpec: ComponentSpec,
+  options: ValidationOptions,
 ): string[] => {
   const errors: string[] = [];
 
@@ -147,7 +186,7 @@ const validateGraphTasks = (
   Object.entries(graphSpec.tasks).forEach(
     ([taskId, task]: [string, TaskSpec]) => {
       errors.push(
-        ...validateSingleTask(taskId, task, graphSpec, componentSpec),
+        ...validateSingleTask(taskId, task, graphSpec, componentSpec, options),
       );
     },
   );
@@ -160,6 +199,7 @@ const validateSingleTask = (
   task: TaskSpec,
   graphSpec: GraphSpec,
   componentSpec: ComponentSpec,
+  options: ValidationOptions,
 ): string[] => {
   const errors: string[] = [];
 
@@ -179,6 +219,24 @@ const validateSingleTask = (
   // Validate required inputs
   errors.push(...validateTaskRequiredInputs(taskId, task));
 
+  const subgraphSpec = task.componentRef?.spec;
+  const subgraphImplementation = subgraphSpec?.implementation;
+
+  if (
+    subgraphSpec &&
+    subgraphImplementation &&
+    isGraphImplementation(subgraphImplementation)
+  ) {
+    const subgraphResult = checkComponentSpecValidity(subgraphSpec, {
+      skipInputValueValidation: true,
+      memo: options.memo,
+    });
+
+    if (!subgraphResult.isValid) {
+      errors.push(formatSubgraphErrorMessage(taskId));
+    }
+  }
+
   return errors;
 };
 
@@ -194,30 +252,21 @@ const validateTaskArguments = (
 
   Object.entries(task.arguments).forEach(
     ([argName, argValue]: [string, ArgumentType]) => {
-      if (typeof argValue === "object" && argValue !== null) {
-        // Check graphInput references
-        if ("graphInput" in argValue) {
-          errors.push(
-            ...validateGraphInputReference(
-              taskId,
-              argName,
-              argValue,
-              componentSpec,
-            ),
-          );
-        }
+      if (isGraphInputArgument(argValue)) {
+        errors.push(
+          ...validateGraphInputReference(
+            taskId,
+            argName,
+            argValue,
+            componentSpec,
+          ),
+        );
+      }
 
-        // Check taskOutput references
-        if ("taskOutput" in argValue) {
-          errors.push(
-            ...validateTaskOutputReference(
-              taskId,
-              argName,
-              argValue,
-              graphSpec,
-            ),
-          );
-        }
+      if (isTaskOutputArgument(argValue)) {
+        errors.push(
+          ...validateTaskOutputReference(taskId, argName, argValue, graphSpec),
+        );
       }
     },
   );
@@ -266,7 +315,7 @@ const validateTaskOutputReference = (
     if (referencedTask.componentRef && referencedTask.componentRef.spec) {
       const referencedTaskSpec = referencedTask.componentRef.spec;
       const outputExists = referencedTaskSpec.outputs?.some(
-        (output: any) => output.name === referencedOutput,
+        (output: OutputSpec) => output.name === referencedOutput,
       );
 
       if (!outputExists) {
@@ -322,6 +371,10 @@ const validateTaskRequiredInputs = (
   return errors;
 };
 
+const formatSubgraphErrorMessage = (taskId: string): string => {
+  return `Task "${taskId}" contains validation errors in its subgraph`;
+};
+
 const validateGraphOutputs = (
   graphSpec: GraphSpec,
   componentSpec: ComponentSpec,
@@ -370,9 +423,7 @@ const validateInputOutputConnections = (
           task.arguments &&
           Object.values(task.arguments).some(
             (arg: ArgumentType) =>
-              typeof arg === "object" &&
-              arg !== null &&
-              "graphInput" in arg &&
+              isGraphInputArgument(arg) &&
               arg.graphInput.inputName === input.name,
           ),
       );
@@ -425,12 +476,8 @@ const validateCircularDependencies = (graphSpec: GraphSpec): string[] => {
     const task = graphSpec.tasks[taskId];
     if (task?.arguments) {
       for (const argValue of Object.values(task.arguments)) {
-        if (
-          typeof argValue === "object" &&
-          argValue !== null &&
-          "taskOutput" in argValue
-        ) {
-          const dependentTaskId = (argValue as any).taskOutput.taskId;
+        if (isTaskOutputArgument(argValue)) {
+          const dependentTaskId = argValue.taskOutput.taskId;
           if (hasCycle(dependentTaskId)) {
             return true;
           }

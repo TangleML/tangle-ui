@@ -9,7 +9,10 @@ import {
   getSubgraphComponentSpec,
   updateSubgraphSpec,
 } from "@/utils/subgraphUtils";
-import { checkComponentSpecValidity } from "@/utils/validations";
+import {
+  checkComponentSpecValidity,
+  type ValidationResult,
+} from "@/utils/validations";
 
 import {
   createRequiredContext,
@@ -45,6 +48,7 @@ interface ComponentSpecContextType {
   isLoading: boolean;
   isValid: boolean;
   errors: string[];
+  hasAncestorErrors: boolean;
   refetch: () => void;
   updateGraphSpec: (newGraphSpec: GraphSpec) => void;
   saveComponentSpec: (name: string) => Promise<void>;
@@ -104,6 +108,32 @@ export const ComponentSpecProvider = ({
       }),
     [currentSubgraphSpec, isRootSubgraph],
   );
+
+  const hasAncestorErrors = useMemo(() => {
+    if (isRootSubgraph) {
+      return false;
+    }
+
+    const memo = new WeakMap<ComponentSpec, Map<string, ValidationResult>>();
+
+    for (let i = 1; i < currentSubgraphPath.length; i++) {
+      const ancestorPath = currentSubgraphPath.slice(0, i);
+      const ancestorSpec = getSubgraphComponentSpec(
+        componentSpec,
+        ancestorPath,
+      );
+      const ancestorValidation = checkComponentSpecValidity(ancestorSpec, {
+        skipInputValueValidation: ancestorPath.length === 1,
+        memo,
+      });
+
+      if (!ancestorValidation.isValid) {
+        return true;
+      }
+    }
+
+    return false;
+  }, [componentSpec, currentSubgraphPath, isRootSubgraph]);
 
   const clearComponentSpec = useCallback(() => {
     setComponentSpec(EMPTY_GRAPH_COMPONENT_SPEC);
@@ -229,6 +259,7 @@ export const ComponentSpecProvider = ({
       isLoading,
       isValid,
       errors,
+      hasAncestorErrors,
       refetch,
       setComponentSpec,
       clearComponentSpec,
@@ -250,6 +281,7 @@ export const ComponentSpecProvider = ({
       isLoading,
       isValid,
       errors,
+      hasAncestorErrors,
       refetch,
       setComponentSpec,
       clearComponentSpec,
