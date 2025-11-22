@@ -6,6 +6,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Text } from "@/components/ui/typography";
 import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
 
+import { DeleteLibraryButton } from "./DeleteLibraryButton";
+
 export const LibraryList = withSuspenseWrapper(() => {
   const { existingComponentLibraries } = useComponentLibrary();
 
@@ -37,9 +39,8 @@ export const LibraryList = withSuspenseWrapper(() => {
               <Button variant="ghost" size="sm">
                 <Icon name="Check" />
               </Button>
-              <Button variant="ghost" size="sm">
-                <Icon name="X" />
-              </Button>
+
+              <DeleteLibraryButton library={library} />
             </InlineStack>
           </InlineStack>
         ))}
