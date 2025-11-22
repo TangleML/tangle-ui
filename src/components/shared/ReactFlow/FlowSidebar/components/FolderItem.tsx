@@ -6,10 +6,16 @@ import {
   useState,
 } from "react";
 
+import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { Icon } from "@/components/ui/icon";
-import { InlineStack } from "@/components/ui/layout";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
+import type { Library } from "@/providers/ComponentLibraryProvider/libraries/types";
+import { useLibraryComponents } from "@/providers/ComponentLibraryProvider/useLibraryComponents";
 import type { UIComponentFolder } from "@/types/componentLibrary";
+import { isDisplayableComponentReference } from "@/utils/componentSpec";
 
 import { ComponentItemFromUrl, ComponentMarkup } from "./ComponentItem";
 
@@ -64,10 +70,12 @@ const FolderItem = ({ folder, icon }: FolderItemProps) => {
                 }
                 const key = `${folder.name}-component-${component.digest ?? component?.spec?.name ?? component.url ?? idx}`;
                 // If the component has a spec render the component, otherwise, render using URL
-                if (component.spec) {
+                if (isDisplayableComponentReference(component)) {
                   return <ComponentMarkup key={key} component={component} />;
                 }
-                return <ComponentItemFromUrl key={key} url={component.url} />;
+                return (
+                  <ComponentItemFromUrl key={key} componentRef={component} />
+                );
               })}
             </div>
           )}
@@ -86,5 +94,48 @@ const FolderItem = ({ folder, icon }: FolderItemProps) => {
     </div>
   );
 };
+
+const FolderSkeleton = () => {
+  const chevronStyles = "h-4 w-4 text-gray-400 flex-shrink-0";
+
+  return (
+    <BlockStack className="w-full">
+      <InlineStack
+        blockAlign="center"
+        className="px-4 py-1 cursor-pointer hover:bg-gray-100 w-full"
+        align="space-between"
+        wrap="nowrap"
+      >
+        <InlineStack className="mr-2" gap="2">
+          <Spinner />
+          <Skeleton size="lg" color="dark" />
+        </InlineStack>
+
+        <InlineStack className="ml-auto flex-shrink-0">
+          <Icon name="ChevronRight" className={chevronStyles} />
+        </InlineStack>
+      </InlineStack>
+    </BlockStack>
+  );
+};
+
+export const LibraryFolderItem = withSuspenseWrapper(
+  ({
+    library,
+    ...rest
+  }: Omit<FolderItemProps, "folder"> & { library: Library }) => {
+    const folder = useLibraryComponents(library);
+
+    if (
+      (!folder.components || folder.components.length === 0) &&
+      (!folder.folders || folder.folders.length === 0)
+    ) {
+      return null;
+    }
+
+    return <FolderItem {...rest} folder={folder} />;
+  },
+  FolderSkeleton,
+);
 
 export default FolderItem;

@@ -2,11 +2,6 @@ import type { ChangeEvent, ReactElement } from "react";
 
 import type { ComponentReference } from "@/utils/componentSpec";
 
-export type ComponentItemFromUrlProps = {
-  url?: string;
-  componentRef?: ComponentReference;
-};
-
 export type ComponentLibrary = {
   annotations?: {
     [k: string]: unknown;

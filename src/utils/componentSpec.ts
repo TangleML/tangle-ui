@@ -362,6 +362,25 @@ export function isInvalidComponentReference(
   );
 }
 
+type DisplayableComponentReference = Omit<
+  ComponentReference,
+  "digest" | "name"
+> & {
+  digest: string;
+  name: string;
+};
+
+export function isDisplayableComponentReference(
+  componentReference: UnknownComponentReference,
+): componentReference is DisplayableComponentReference {
+  return Boolean(
+    componentReference &&
+      typeof componentReference === "object" &&
+      componentReference.digest !== undefined &&
+      componentReference.name !== undefined,
+  );
+}
+
 /**
  * Represents the component argument value that comes from the graph component input.
  */

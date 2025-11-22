@@ -2,7 +2,7 @@ import { PackagePlus } from "lucide-react";
 import { type ChangeEvent, useCallback, useMemo } from "react";
 
 import { useBetaFlagValue } from "@/components/shared/Settings/useBetaFlags";
-import { BlockStack } from "@/components/ui/layout";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import {
   SidebarGroup,
@@ -15,6 +15,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Text } from "@/components/ui/typography";
 import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
 import { useForcedSearchContext } from "@/providers/ComponentLibraryProvider/ForcedSearchProvider";
 import type { UIComponentFolder } from "@/types/componentLibrary";
@@ -29,6 +30,7 @@ import {
   SearchResults,
 } from "../components";
 import { IONodeSidebarItem } from "../components/ComponentItem";
+import { LibraryFolderItem } from "../components/FolderItem";
 import PublishedComponentsSearch from "../components/PublishedComponentsSearch";
 import { UpgradeAvailableAlertBox } from "../components/UpgradeAvailableAlertBox";
 
@@ -36,6 +38,12 @@ const GraphComponents = ({ isOpen }: { isOpen: boolean }) => {
   const remoteComponentLibrarySearchEnabled = useBetaFlagValue(
     "remote-component-library-search",
   );
+  const githubComponentLibraryEnabled = useBetaFlagValue(
+    "github-component-library",
+  );
+
+  const { getComponentLibrary, existingComponentLibraries } =
+    useComponentLibrary();
 
   const { updateSearchFilter, currentSearchFilter } = useForcedSearchContext();
   const {
@@ -143,6 +151,38 @@ const GraphComponents = ({ isOpen }: { isOpen: boolean }) => {
             }
             icon="Folder"
           />
+          {githubComponentLibraryEnabled && (
+            <>
+              <Separator />
+              <BlockStack gap="1" className="pl-2 py-2">
+                <InlineStack
+                  className="w-full"
+                  align="start"
+                  blockAlign="center"
+                >
+                  <Text size="sm" tone="subdued">
+                    Connected libraries
+                  </Text>
+                </InlineStack>
+
+                {existingComponentLibraries?.length === 0 && (
+                  <BlockStack gap="1" align="center">
+                    <Text size="sm" tone="subdued">
+                      No libraries connected
+                    </Text>
+                  </BlockStack>
+                )}
+              </BlockStack>
+
+              {existingComponentLibraries?.map((library) => (
+                <LibraryFolderItem
+                  key={library.id}
+                  library={getComponentLibrary(library.id)}
+                  icon={library.icon as any /** todo: fix this */}
+                />
+              ))}
+            </>
+          )}
         </BlockStack>
       </BlockStack>
     );
@@ -155,6 +195,9 @@ const GraphComponents = ({ isOpen }: { isOpen: boolean }) => {
     error,
     searchResult,
     remoteComponentLibrarySearchEnabled,
+    githubComponentLibraryEnabled,
+    existingComponentLibraries,
+    getComponentLibrary,
   ]);
 
   if (!isOpen) {
