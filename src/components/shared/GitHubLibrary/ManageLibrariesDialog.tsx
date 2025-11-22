@@ -12,9 +12,11 @@ import {
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
+import type { StoredLibrary } from "@/providers/ComponentLibraryProvider/libraries/storage";
 
 import { AddGitHubLibraryDialogContent } from "./components/AddGitHubLibraryDialogContent";
 import { LibraryList } from "./components/LibraryList";
+import { UpdateGitHubLibrary } from "./components/UpdateGitHubLibrary";
 
 export function ManageLibrariesDialog({
   defaultMode = "manage",
@@ -23,12 +25,20 @@ export function ManageLibrariesDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"add" | "manage" | "update">(defaultMode);
+  const [libraryToUpdate, setLibraryToUpdate] = useState<
+    StoredLibrary | undefined
+  >();
 
   const handleDialogOpenChange = useCallback((open: boolean) => {
     setOpen(open);
     if (!open) {
       setMode("manage");
     }
+  }, []);
+
+  const handleUpdateLibrary = useCallback((library: StoredLibrary) => {
+    setLibraryToUpdate(library);
+    setMode("update");
   }, []);
 
   const defaultTrigger = (
@@ -74,7 +84,7 @@ export function ManageLibrariesDialog({
                 Manage your connected libraries.
               </DialogDescription>
               <BlockStack gap="4">
-                <LibraryList />
+                <LibraryList onUpdateLibrary={handleUpdateLibrary} />
                 <Separator />
                 <BlockStack gap="1" align="end">
                   <Button variant="secondary" onClick={() => setMode("add")}>
@@ -84,6 +94,34 @@ export function ManageLibrariesDialog({
                     </InlineStack>
                   </Button>
                 </BlockStack>
+              </BlockStack>
+            </>
+          )}
+
+          {mode === "update" && libraryToUpdate && (
+            <>
+              <DialogHeader>
+                <DialogTitle>
+                  <InlineStack align="start" blockAlign="center" gap="1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setMode("manage")}
+                    >
+                      <Icon name="ArrowLeft" />
+                    </Button>
+                    Update Library {libraryToUpdate.name}
+                  </InlineStack>
+                </DialogTitle>
+              </DialogHeader>
+              <DialogDescription>
+                Update linked GitHub library.
+              </DialogDescription>
+              <BlockStack gap="4">
+                <UpdateGitHubLibrary
+                  library={libraryToUpdate}
+                  onSuccess={() => setMode("manage")}
+                />
               </BlockStack>
             </>
           )}
