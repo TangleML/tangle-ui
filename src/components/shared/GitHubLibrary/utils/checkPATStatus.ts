@@ -1,11 +1,5 @@
-export async function checkPATStatus(repository: string, pat: string) {
-  const response = await fetch(`https://api.github.com/repos/${repository}`, {
-    headers: {
-      Authorization: `Bearer ${pat}`,
-      Accept: "application/vnd.github.v3+json",
-      "X-GitHub-Api-Version": "2022-11-28",
-    },
-  });
+import { createGitHubApiClient } from "./githubApiClient";
 
-  return response.ok;
+export async function checkPATStatus(repository: string, pat: string) {
+  return createGitHubApiClient(pat).checkAccess(repository);
 }
