@@ -12,9 +12,9 @@ import {
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
-import { Text } from "@/components/ui/typography";
 
 import { AddGitHubLibraryDialogContent } from "./components/AddGitHubLibraryDialogContent";
+import { LibraryList } from "./components/LibraryList";
 
 export function ManageLibrariesDialog({
   defaultMode = "manage",
@@ -74,10 +74,7 @@ export function ManageLibrariesDialog({
                 Manage your connected libraries.
               </DialogDescription>
               <BlockStack gap="4">
-                <BlockStack gap="4" className="min-h-[200px]">
-                  {/* TODO: add library list */}
-                  <Text>No libraries connected</Text>
-                </BlockStack>
+                <LibraryList />
                 <Separator />
                 <BlockStack gap="1" align="end">
                   <Button variant="secondary" onClick={() => setMode("add")}>
