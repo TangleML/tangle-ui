@@ -37,45 +37,61 @@ function useSyncAuthStorageWithUserDetails() {
   }, [user]);
 }
 
-const HuggingFaceAuthButtonComponent = withSuspenseWrapper(() => {
-  const { awaitAuthorization, isLoading, isAuthorized } =
-    useAwaitAuthorization();
+const HuggingFaceAuthButtonComponent = withSuspenseWrapper(
+  ({
+    title,
+    variant,
+  }: {
+    title?: string;
+    variant?: "secondary" | "default" | "outline" | "ghost";
+  }) => {
+    const { awaitAuthorization, isLoading, isAuthorized } =
+      useAwaitAuthorization();
 
-  const signIn = useCallback(async () => {
-    await awaitAuthorization();
-  }, [awaitAuthorization]);
+    const signIn = useCallback(async () => {
+      await awaitAuthorization();
+    }, [awaitAuthorization]);
 
-  useSyncAuthStorageWithUserDetails();
+    useSyncAuthStorageWithUserDetails();
 
-  if (isAuthorized) {
-    return null;
-  }
+    if (isAuthorized) {
+      return null;
+    }
 
-  return (
-    <>
-      <TooltipButton
-        onClick={signIn}
-        disabled={isLoading}
-        className="flex items-center gap-2 w-full"
-        tooltip="Sign in with Hugging Face to submit runs"
-      >
-        {isLoading ? (
-          <>
-            <Spinner />
-            Authenticating...
-          </>
-        ) : (
-          <>Sign in with Hugging Face</>
-        )}
-      </TooltipButton>
-    </>
-  );
-}, NullSkeleton);
+    return (
+      <>
+        <TooltipButton
+          onClick={signIn}
+          disabled={isLoading}
+          className="flex items-center gap-2 w-full"
+          tooltip="Sign in with Hugging Face to submit runs"
+          variant={variant}
+        >
+          {isLoading ? (
+            <>
+              <Spinner />
+              Authenticating...
+            </>
+          ) : (
+            <>{title}</>
+          )}
+        </TooltipButton>
+      </>
+    );
+  },
+  NullSkeleton,
+);
 
-export const HuggingFaceAuthButton = () => {
+export const HuggingFaceAuthButton = ({
+  title = "Sign in",
+  variant = "secondary",
+}: {
+  title?: string;
+  variant?: "secondary" | "default" | "outline" | "ghost";
+}) => {
   // Check at runtime to support testing
   if (!isHuggingFaceAuthEnabled()) {
     return <NullSkeleton />;
   }
-  return <HuggingFaceAuthButtonComponent />;
+  return <HuggingFaceAuthButtonComponent title={title} variant={variant} />;
 };

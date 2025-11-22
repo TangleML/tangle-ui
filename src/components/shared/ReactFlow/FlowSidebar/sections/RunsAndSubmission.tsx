@@ -1,3 +1,5 @@
+import { useAwaitAuthorization } from "@/components/shared/Authentication/useAwaitAuthorization";
+import { HuggingFaceAuthButton } from "@/components/shared/HuggingFaceAuth/HuggingFaceAuthButton";
 import GoogleCloudSubmissionDialog from "@/components/shared/Submitters/GoogleCloud/GoogleCloudSubmissionDialog";
 import OasisSubmitter from "@/components/shared/Submitters/Oasis/OasisSubmitter";
 import {
@@ -13,6 +15,7 @@ import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { RecentExecutionsButton } from "../components/RecentExecutionsButton";
 
 const RunsAndSubmission = ({ isOpen }: { isOpen: boolean }) => {
+  const { isAuthorized } = useAwaitAuthorization();
   const { componentSpec } = useComponentSpec();
 
   const showGoogleSubmitter =
@@ -25,7 +28,11 @@ const RunsAndSubmission = ({ isOpen }: { isOpen: boolean }) => {
         <SidebarGroupContent className="mx-2! my-2!">
           <SidebarMenu>
             <SidebarMenuItem>
-              <OasisSubmitter componentSpec={componentSpec} />
+              {isAuthorized ? (
+                <OasisSubmitter componentSpec={componentSpec} />
+              ) : (
+                <HuggingFaceAuthButton title="Sign in to Submit Runs" />
+              )}
             </SidebarMenuItem>
             {showGoogleSubmitter && (
               <SidebarMenuItem>
@@ -52,7 +59,14 @@ const RunsAndSubmission = ({ isOpen }: { isOpen: boolean }) => {
       <SidebarGroupContent>
         <SidebarMenu>
           <SidebarMenuItem>
-            <OasisSubmitter componentSpec={componentSpec} />
+            {isAuthorized ? (
+              <OasisSubmitter componentSpec={componentSpec} />
+            ) : (
+              <HuggingFaceAuthButton
+                title="Sign in to Submit Runs"
+                variant="default"
+              />
+            )}
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarGroupContent>
