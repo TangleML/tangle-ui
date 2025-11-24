@@ -245,8 +245,8 @@ export function ExecutionDataProvider({
   // before rendering to avoid flashing the root level
   const isLoading = isAtRoot
     ? isLoadingPipelineRunData ||
-    (!!subgraphExecutionId && isLoadingBreadcrumbs) ||
-    isLoadingPipelineMetadata
+      (!!subgraphExecutionId && isLoadingBreadcrumbs) ||
+      isLoadingPipelineMetadata
     : isNestedLoading || isLoadingBreadcrumbs;
   const error = isAtRoot
     ? pipelineRunError || pipelineMetadataError
