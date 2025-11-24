@@ -6,10 +6,10 @@ import {
 } from "@/utils/componentSpec";
 import { createSubgraphFromNodes } from "@/utils/nodes/createSubgraphFromNodes";
 
-import addTask from "../utils/addTask";
-import { calculateNodesCenter } from "../utils/geometry";
-import { removeNode } from "../utils/removeNode";
-import { updateDownstreamSubgraphConnections } from "../utils/updateDownstreamSubgraphConnections";
+import addTask from "../../utils/addTask";
+import { calculateNodesCenter } from "../../utils/geometry";
+import { removeNode } from "../../utils/removeNode";
+import { updateDownstreamSubgraphConnections } from "../../utils/updateDownstreamSubgraphConnections";
 
 export const handleGroupNodes = async (
   selectedNodes: Node[],
