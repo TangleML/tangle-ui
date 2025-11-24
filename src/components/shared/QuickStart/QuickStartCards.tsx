@@ -56,7 +56,7 @@ const QuickStartCards = () => {
             )}
             onClick={() => importPipeline(pipeline.url)}
           >
-            <div className="aspect-video relative bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden relative">
+            <div className="aspect-video relative bg-linear-to-br from-gray-100 to-gray-200 overflow-hidden">
               <img
                 src={pipeline.previewImage}
                 alt={pipeline.name}

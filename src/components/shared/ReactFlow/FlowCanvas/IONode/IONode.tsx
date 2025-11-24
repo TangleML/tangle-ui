@@ -105,7 +105,7 @@ const IONode = ({ type, data, selected = false }: IONodeProps) => {
   const outputConnectedTaskId = connectedOutput.taskId;
 
   const handleDefaultClassName =
-    "!w-[12px] !h-[12px] !border-0 !transform-none !bg-gray-500";
+    "w-3! h-3! border-0! transform-none! bg-gray-500!";
 
   const handleClassName = isInput ? "translate-x-1.5" : "-translate-x-1.5";
 
@@ -127,7 +127,7 @@ const IONode = ({ type, data, selected = false }: IONodeProps) => {
   return (
     <Card className={cn("border-2 max-w-[300px] p-0", borderColor)}>
       <CardHeader className="px-2 py-2.5">
-        <CardTitle className="break-words">{data.label}</CardTitle>
+        <CardTitle className="wrap-break-word">{data.label}</CardTitle>
       </CardHeader>
       <CardContent className="p-2 max-w-[250px]">
         <BlockStack gap="2">

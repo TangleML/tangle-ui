@@ -8,7 +8,7 @@ export const PointersEventBlock = ({ children }: PropsWithChildren) => {
    */
   return (
     <BlockStack
-      className="!pointer-events-none isolate select-none relative before:absolute before:inset-0 before:content-[''] before:pointer-events-auto before:z-10"
+      className="pointer-events-none! isolate select-none relative before:absolute before:inset-0 before:content-[''] before:pointer-events-auto before:z-10"
       align="center"
       inlineAlign="center"
     >

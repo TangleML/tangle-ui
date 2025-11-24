@@ -14,7 +14,7 @@ const TaskIO = ({ componentSpec }: TaskIOProps) => {
           <div className="border rounded-md divide-y">
             {componentSpec.inputs.map((input, index) => (
               <div key={index} className="flex flex-col px-3 py-2 gap-2">
-                <div className="flex-shrink-0 font-bold text-sm text-gray-700 mb-1">
+                <div className="shrink-0 font-bold text-sm text-gray-700 mb-1">
                   {input.name.replace(/_/g, " ")}
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -50,7 +50,7 @@ const TaskIO = ({ componentSpec }: TaskIOProps) => {
           <div className="border rounded-md divide-y">
             {componentSpec.outputs.map((output) => (
               <div key={output.name} className="flex flex-col px-3 py-2 gap-2">
-                <div className="flex-shrink-0 font-bold text-sm text-gray-700 mb-1">
+                <div className="shrink-0 font-bold text-sm text-gray-700 mb-1">
                   {output.name.replace(/_/g, " ")}
                 </div>
                 {output.type && <Badge>Type: {String(output.type)}</Badge>}

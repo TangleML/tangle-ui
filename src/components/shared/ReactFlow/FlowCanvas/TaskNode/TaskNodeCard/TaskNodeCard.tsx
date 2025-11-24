@@ -264,7 +264,7 @@ const TaskNodeCard = () => {
     <>
       <Card
         className={cn(
-          "rounded-2xl border-gray-200 border-2 break-words p-0 drop-shadow-none gap-2",
+          "rounded-2xl border-gray-200 border-2 wrap-break-word p-0 drop-shadow-none gap-2",
           selected ? "border-gray-500" : "hover:border-slate-200",
           (highlighted || highlightedState) && "border-orange-500!",
           isSubgraphNode && "cursor-pointer",
@@ -293,7 +293,7 @@ const TaskNodeCard = () => {
                   <Icon name="ZapOff" size="sm" className="text-orange-400" />
                 </QuickTooltip>
               )}
-              <CardTitle className="break-words text-left text-xs text-slate-900">
+              <CardTitle className="wrap-break-word text-left text-xs text-slate-900">
                 {name}
               </CardTitle>
             </InlineStack>

@@ -59,7 +59,7 @@ const IOCellHeader = ({
         gap="2"
         className="px-3 w-full"
       >
-        <div className="flex-1 min-w-auto flex-shrink-0">
+        <div className="flex-1 min-w-auto shrink-0">
           <Tooltip
             delayDuration={300}
             open={isTooltipOpen}

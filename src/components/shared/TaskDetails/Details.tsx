@@ -146,7 +146,7 @@ const TaskDetails = ({
       <div className="border rounded-md divide-y w-full h-full">
         {taskId && (
           <div className="flex flex-col px-3 py-2">
-            <div className="flex-shrink-0 font-medium text-sm text-gray-700 mb-1">
+            <div className="shrink-0 font-medium text-sm text-gray-700 mb-1">
               Task ID
             </div>
             <div className="text-xs text-gray-600 break-words whitespace-pre-wrap">
@@ -156,7 +156,7 @@ const TaskDetails = ({
         )}
         {status && (
           <div className="flex flex-col px-3 py-2">
-            <div className="flex-shrink-0 font-medium text-sm text-gray-700 mb-1">
+            <div className="shrink-0 font-medium text-sm text-gray-700 mb-1">
               Run Status
             </div>
             <div className="text-xs text-gray-600 break-words whitespace-pre-wrap">
@@ -174,7 +174,7 @@ const TaskDetails = ({
 
         {componentSpec?.metadata?.annotations?.author && (
           <div className="flex flex-col px-3 py-2">
-            <div className="flex-shrink-0 font-medium text-sm text-gray-700 mb-1">
+            <div className="shrink-0 font-medium text-sm text-gray-700 mb-1">
               Author
             </div>
             <div className="text-xs text-gray-600 break-words whitespace-pre-wrap">
@@ -212,7 +212,7 @@ const TaskDetails = ({
 
         {componentDigest && (
           <div className="flex flex-col px-3 py-2">
-            <div className="flex-shrink-0 font-medium text-sm text-gray-700 mb-1">
+            <div className="shrink-0 font-medium text-sm text-gray-700 mb-1">
               Digest
             </div>
             <div
@@ -336,9 +336,7 @@ function LinkBlock({
 
   return (
     <div className="flex flex-col px-3 py-2">
-      <div className="flex-shrink-0 font-medium text-sm text-gray-700 mb-1">
-        URL
-      </div>
+      <div className="shrink-0 font-medium text-sm text-gray-700 mb-1">URL</div>
       {url && (
         <>
           <div className="text-sm break-all">
@@ -349,7 +347,7 @@ function LinkBlock({
               className="text-sky-500 hover:underline flex items-center gap-1"
             >
               View raw component.yaml
-              <ExternalLink className="size-3 flex-shrink-0" />
+              <ExternalLink className="size-3 shrink-0" />
             </a>
           </div>
           <div className="text-sm break-all">
@@ -362,7 +360,7 @@ function LinkBlock({
               className="text-sky-500 hover:underline flex items-center gap-1"
             >
               View directory on GitHub
-              <ExternalLink className="size-3 flex-shrink-0" />
+              <ExternalLink className="size-3 shrink-0" />
             </a>
           </div>
         </>
@@ -377,7 +375,7 @@ function LinkBlock({
               className="text-sky-500 hover:underline flex items-center gap-1"
             >
               View raw canonical URL
-              <ExternalLink className="size-3 flex-shrink-0" />
+              <ExternalLink className="size-3 shrink-0" />
             </a>
           </div>
           <div className="text-sm break-all">
@@ -388,7 +386,7 @@ function LinkBlock({
               className="text-sky-500 hover:underline flex items-center gap-1"
             >
               View canonical URL on GitHub
-              <ExternalLink className="size-3 flex-shrink-0" />
+              <ExternalLink className="size-3 shrink-0" />
             </a>
           </div>
         </>

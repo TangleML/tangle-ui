@@ -73,7 +73,7 @@ const PipelineEditor = () => {
                       <FlowCanvas {...flowConfig}>
                         <MiniMap position="bottom-left" pannable />
                         <FlowControls
-                          className="ml-[224px]! mb-[24px]!"
+                          className="ml-56! mb-6!"
                           config={flowConfig}
                           updateConfig={updateFlowConfig}
                           showInteractive={false}

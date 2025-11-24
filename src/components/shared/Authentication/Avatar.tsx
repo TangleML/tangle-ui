@@ -13,7 +13,7 @@ export function Avatar({
   return (
     <div
       className={cn(
-        "w-8 h-8 rounded-full overflow-hidden bg-gray-200 flex-shrink-0",
+        "w-8 h-8 rounded-full overflow-hidden bg-gray-200 shrink-0",
         className,
       )}
     >

@@ -42,10 +42,10 @@ const BackendStatus = () => {
             size="icon"
           >
             <div className="relative">
-              <Database className="h-4 w-4 text-white flex-shrink-0" />
+              <Database className="h-4 w-4 text-white shrink-0" />
               <span
                 className={cn(
-                  "absolute -bottom-0.25 -right-0.25 w-2 h-2 rounded-full border-1 border-slate-900",
+                  "absolute -bottom-px -right-px w-2 h-2 rounded-full border border-slate-900",
                   configured ? configuredStatusColor : notConfiguredStatusColor,
                 )}
               />

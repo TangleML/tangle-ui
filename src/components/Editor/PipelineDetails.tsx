@@ -329,8 +329,8 @@ const PipelineDetails = () => {
                       align="start"
                       wrap="nowrap"
                     >
-                      <span className="text-destructive flex-shrink-0">•</span>
-                      <span className="break-words">{error}</span>
+                      <span className="text-destructive shrink-0">•</span>
+                      <span className="wrap-break-word">{error}</span>
                     </InlineStack>
                   </li>
                 ))}
