@@ -8,8 +8,22 @@ import type {
   ComponentLibrary,
 } from "@/types/componentLibrary";
 import type { ComponentReference, ComponentSpec } from "@/utils/componentSpec";
+import type { ComponentReferenceWithSpec } from "@/utils/componentStore";
 import { USER_COMPONENTS_LIST_NAME } from "@/utils/constants";
 import type { UserComponent } from "@/utils/localforage";
+
+const componentDuplicateDialogProps: {
+  handleImportComponent?: (content: string) => Promise<void>;
+} = {};
+
+vi.mock("@/components/shared/Dialogs/ComponentDuplicateDialog", () => ({
+  __esModule: true,
+  default: (props: any) => {
+    componentDuplicateDialogProps.handleImportComponent =
+      props.handleImportComponent;
+    return null;
+  },
+}));
 
 import { ComponentSpecProvider } from "../ComponentSpecProvider";
 import { ComponentLibraryProvider, useComponentLibrary } from ".";
@@ -54,6 +68,9 @@ const mockDeleteComponentFileFromList = vi.mocked(
 );
 const mockUpdateComponentRefInList = vi.mocked(
   componentStore.updateComponentRefInList,
+);
+const mockLoadComponentAsRefFromText = vi.mocked(
+  componentStore.loadComponentAsRefFromText,
 );
 const mockGetComponentByUrl = vi.mocked(localforage.getComponentByUrl);
 const mockGetUserComponentByName = vi.mocked(
@@ -120,6 +137,7 @@ describe("ComponentLibraryProvider - Component Management", () => {
         },
       },
     });
+    componentDuplicateDialogProps.handleImportComponent = undefined;
 
     // Setup default mock implementations
     mockFetchAndStoreComponentLibrary.mockResolvedValue(mockComponentLibrary);
@@ -227,6 +245,79 @@ describe("ComponentLibraryProvider - Component Management", () => {
       );
     });
 
+    it("should import renamed component as new without mutating the original", async () => {
+      const newComponent: ComponentReference = {
+        name: "duplicate-component",
+        digest: "new-digest",
+        spec: mockComponentSpec,
+        text: "new component yaml",
+      };
+
+      const existingComponent: ComponentReference = {
+        name: "duplicate-component",
+        digest: "existing-digest",
+        spec: mockComponentSpec,
+        text: "existing component yaml",
+      };
+
+      const mockUserComponent: UserComponent = {
+        componentRef: existingComponent,
+        name: "duplicate-component",
+        data: new ArrayBuffer(0),
+        creationTime: new Date(),
+        modificationTime: new Date(),
+      };
+
+      mockFlattenFolders.mockReturnValue([existingComponent]);
+      mockGetUserComponentByName.mockResolvedValue(mockUserComponent);
+      mockImportComponent.mockResolvedValue(undefined);
+
+      const renamedSpec: ComponentSpec = {
+        ...mockComponentSpec,
+        name: "renamed-component",
+      };
+
+      const parsedComponent: ComponentReferenceWithSpec = {
+        spec: renamedSpec,
+        digest: "renamed-digest",
+        text: "component: yaml",
+      };
+
+      mockLoadComponentAsRefFromText.mockResolvedValue(parsedComponent);
+
+      const { result } = renderHook(() => useComponentLibrary(), {
+        wrapper: createWrapper,
+      });
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      await act(async () => {
+        await result.current.addToComponentLibrary(newComponent);
+      });
+
+      expect(componentDuplicateDialogProps.handleImportComponent).toBeDefined();
+
+      await act(async () => {
+        await componentDuplicateDialogProps.handleImportComponent?.(
+          "component: yaml",
+        );
+      });
+
+      expect(mockLoadComponentAsRefFromText).toHaveBeenCalledWith(
+        "component: yaml",
+      );
+      expect(mockImportComponent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: "renamed-component",
+          spec: renamedSpec,
+          text: "component: yaml",
+          url: undefined,
+        }),
+      );
+    });
+
     it("should add component when no duplicate exists", async () => {
       const newComponent: ComponentReference = {
         name: "unique-component",
@@ -290,7 +381,7 @@ describe("ComponentLibraryProvider - Component Management", () => {
 
       const consoleSpy = vi
         .spyOn(console, "error")
-        .mockImplementation(() => {});
+        .mockImplementation(() => { });
 
       const { result } = renderHook(() => useComponentLibrary(), {
         wrapper: createWrapper,
@@ -323,7 +414,7 @@ describe("ComponentLibraryProvider - Component Management", () => {
       mockDeleteComponentFileFromList.mockRejectedValue(error);
       const consoleSpy = vi
         .spyOn(console, "error")
-        .mockImplementation(() => {});
+        .mockImplementation(() => { });
 
       const { result } = renderHook(() => useComponentLibrary(), {
         wrapper: createWrapper,
