@@ -38,7 +38,7 @@ export const ExistingBetaFlags = {
     name: "In-app component editor",
     description:
       "Enable the in-app component editor for creating and editing pipeline components.",
-    default: false,
+    default: true,
   } as BetaFlag,
 
   ["subgraph-navigation"]: {
