@@ -16,13 +16,23 @@ type NotifyFunction = (
 ) => void;
 
 /**
- * Determines if a task specification represents a subgraph (contains nested graph implementation)
+ * Determines if a task or component specification represents a subgraph (contains nested graph implementation)
  */
-export const isSubgraph = (taskSpec: TaskSpec): boolean => {
-  return Boolean(
-    taskSpec.componentRef.spec &&
-      isGraphImplementation(taskSpec.componentRef.spec.implementation),
-  );
+export const isSubgraph = (
+  input: TaskSpec | ComponentSpec | undefined,
+): boolean => {
+  if (!input) {
+    return false;
+  }
+
+  if ("componentRef" in input) {
+    return Boolean(
+      input.componentRef.spec &&
+        isGraphImplementation(input.componentRef.spec.implementation),
+    );
+  }
+
+  return isGraphImplementation(input.implementation);
 };
 
 /**
