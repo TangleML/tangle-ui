@@ -35,7 +35,7 @@ const ComponentHistoryTimelineItem = ({
           name={icon}
           size="xs"
           className={cn(
-            "relative z-10 flex-shrink-0 bg-background rounded-full translate-y-0.5",
+            "relative z-10 shrink-0 bg-background rounded-full translate-y-0.5",
             iconClassName,
           )}
         />

@@ -29,9 +29,7 @@ type ComponentIconProps = {
 const ComponentIconSkeleton = ({
   ...iconProps
 }: Partial<ComponentIconProps>) => {
-  return (
-    <Icon name="File" className="flex-shrink-0 text-gray-400" {...iconProps} />
-  );
+  return <Icon name="File" className="shrink-0 text-gray-400" {...iconProps} />;
 };
 
 const ComponentIcon = withSuspenseWrapper(
@@ -169,18 +167,18 @@ const ComponentMarkup = ({
               {isRemoteComponentLibrarySearchEnabled ? (
                 <ComponentIcon
                   name={owned ? "FileBadge" : "File"}
-                  className="flex-shrink-0 text-gray-400"
+                  className="shrink-0 text-gray-400"
                   component={component}
                 />
               ) : (
                 <Icon
                   name={owned ? "FileBadge" : "File"}
-                  className="flex-shrink-0 text-gray-400"
+                  className="shrink-0 text-gray-400"
                 />
               )}
 
               <div
-                className="flex flex-col w-[144px]"
+                className="flex flex-col w-36"
                 onMouseEnter={onMouseEnter}
                 onMouseLeave={onMouseLeave}
                 onClick={onMouseClick}
@@ -254,7 +252,7 @@ export const IONodeSidebarItem = ({ nodeType }: IONodeSidebarItemProps) => {
       onDragStart={onDragStart}
     >
       <div className="flex items-center gap-2">
-        <Icon name="File" className="text-gray-400 flex-shrink-0" />
+        <Icon name="File" className="text-gray-400 shrink-0" />
         <span className="truncate text-xs text-gray-800">
           {nodeType === "input" ? "Input Node" : "Output Node"}
         </span>

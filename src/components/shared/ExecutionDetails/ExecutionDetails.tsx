@@ -168,7 +168,7 @@ export const ExecutionDetails = ({
                         rel="noopener noreferrer"
                       >
                         {linkInfo.value}
-                        <ExternalLink className="size-3 flex-shrink-0" />
+                        <ExternalLink className="size-3 shrink-0" />
                       </a>
                     </div>
                   ))}

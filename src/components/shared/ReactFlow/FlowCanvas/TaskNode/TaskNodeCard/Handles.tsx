@@ -344,7 +344,7 @@ export const OutputHandle = ({
         isConnectable={true}
         onClick={handleHandleClick}
         className={cn(
-          "relative! border-0! !w-[12px] !h-[12px] transform-none! translate-x-6 cursor-pointer bg-gray-500!",
+          "relative! border-0! w-3! h-3! transform-none! translate-x-6 cursor-pointer bg-gray-500!",
           (selected || active) && "bg-blue-500!",
           highlight && "bg-green-500!",
           state.readOnly && "cursor-pointer!",

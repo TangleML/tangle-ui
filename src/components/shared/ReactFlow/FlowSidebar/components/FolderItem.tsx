@@ -35,7 +35,7 @@ const FolderItem = ({ folder, icon }: FolderItemProps) => {
     setIsOpen(!isOpen);
   };
 
-  const chevronStyles = "h-4 w-4 text-gray-400 flex-shrink-0";
+  const chevronStyles = "h-4 w-4 text-gray-400 shrink-0";
 
   return (
     <div className="w-full" data-folder-name={folder.name}>
@@ -96,7 +96,7 @@ const FolderItem = ({ folder, icon }: FolderItemProps) => {
 };
 
 const FolderSkeleton = () => {
-  const chevronStyles = "h-4 w-4 text-gray-400 flex-shrink-0";
+  const chevronStyles = "h-4 w-4 text-gray-400 shrink-0";
 
   return (
     <BlockStack className="w-full">
@@ -111,7 +111,7 @@ const FolderSkeleton = () => {
           <Skeleton size="lg" color="dark" />
         </InlineStack>
 
-        <InlineStack className="ml-auto flex-shrink-0">
+        <InlineStack className="ml-auto shrink-0">
           <Icon name="ChevronRight" className={chevronStyles} />
         </InlineStack>
       </InlineStack>

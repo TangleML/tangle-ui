@@ -253,7 +253,7 @@ export const ArgumentInputField = ({
               <BlockStack className={cn(argument.isRemoved && "opacity-50")}>
                 <Label
                   htmlFor={argument.inputSpec.name}
-                  className="text-sm break-words"
+                  className="text-sm wrap-break-word"
                 >
                   {argument.inputSpec.name.replace(/_/g, " ")}
                 </Label>

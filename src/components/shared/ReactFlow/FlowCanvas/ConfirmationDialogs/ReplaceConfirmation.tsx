@@ -48,7 +48,7 @@ export function getReplaceConfirmationDetails(
             <div className="flex items-baseline flex-wrap">
               <span className="font-bold break-words">{input.name}</span>
               <span className="font-light break-words ml-1">{`(${input.type})`}</span>
-              <span className="flex-shrink-0">:</span>
+              <span className="shrink-0">:</span>
               <div className="break-all text-wrap overflow-hidden ml-1">
                 {argument.value}
               </div>

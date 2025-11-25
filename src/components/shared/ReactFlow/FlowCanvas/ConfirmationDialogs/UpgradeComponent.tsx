@@ -42,7 +42,7 @@ export function getUpgradeConfirmationDetails(
                   )}
                 />
               </TooltipTrigger>
-              <TooltipContent className="z-[9999]">
+              <TooltipContent className="z-9999">
                 Linked node will be disconnected
               </TooltipContent>
             </Tooltip>
@@ -69,9 +69,7 @@ export function getUpgradeConfirmationDetails(
                 {oldTaskDigest?.substring(0, 8)}
               </span>
             </TooltipTrigger>
-            <TooltipContent className="z-[9999]">
-              {oldTaskDigest}
-            </TooltipContent>
+            <TooltipContent className="z-9999">{oldTaskDigest}</TooltipContent>
           </Tooltip>{" "}
           to version{" "}
           <Tooltip>
@@ -80,7 +78,7 @@ export function getUpgradeConfirmationDetails(
                 {newComponentDigest?.substring(0, 8)}
               </span>
             </TooltipTrigger>
-            <TooltipContent className="z-[9999]">
+            <TooltipContent className="z-9999">
               {newComponentDigest}
             </TooltipContent>
           </Tooltip>
