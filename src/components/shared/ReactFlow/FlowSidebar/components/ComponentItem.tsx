@@ -7,12 +7,14 @@ import { useOutdatedComponents } from "@/components/shared/ManageComponent/hooks
 import { useBetaFlagValue } from "@/components/shared/Settings/useBetaFlags";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { Icon } from "@/components/ui/icon";
+import { InlineStack } from "@/components/ui/layout";
 import { SidebarMenuItem } from "@/components/ui/sidebar";
 import { useHydrateComponentReference } from "@/hooks/useHydrateComponentReference";
 import { cn } from "@/lib/utils";
 import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
-import type { ComponentReference, TaskSpec } from "@/utils/componentSpec";
+import { type ComponentReference, type TaskSpec } from "@/utils/componentSpec";
 import { getComponentName } from "@/utils/getComponentName";
+import { isSubgraph } from "@/utils/subgraphUtils";
 
 import { useNodesOverlay } from "../../NodesOverlay/NodesOverlayProvider";
 
@@ -69,6 +71,8 @@ const ComponentMarkup = ({
     () => name ?? getComponentName({ spec, url }),
     [spec, url, name],
   );
+
+  const isSubgraphSpec = isSubgraph(spec);
 
   const onDragStart = useCallback(
     (event: DragEvent) => {
@@ -138,6 +142,13 @@ const ComponentMarkup = ({
     isHighlightTasksOnComponentHoverEnabled,
   ]);
 
+  const iconName = isSubgraphSpec ? "Workflow" : owned ? "FileBadge" : "File";
+
+  const iconClass = cn(
+    "shrink-0",
+    isSubgraphSpec ? "text-blue-400" : "text-gray-400",
+  );
+
   return (
     <SidebarMenuItem
       className={cn(
@@ -150,7 +161,7 @@ const ComponentMarkup = ({
       draggable={!error && !isLoading}
       onDragStart={onDragStart}
     >
-      <div className="flex items-center gap-2">
+      <InlineStack blockAlign="center" gap="2">
         {isLoading ? (
           <span className="text-gray-400 truncate text-sm">Loading...</span>
         ) : error ? (
@@ -158,27 +169,24 @@ const ComponentMarkup = ({
             Error loading component
           </span>
         ) : (
-          <div
-            className="flex-1 flex"
+          <InlineStack
+            wrap="nowrap"
             data-testid="component-item"
             data-component-name={displayName}
           >
-            <div className="flex gap-2 w-full items-center">
+            <InlineStack gap="2" blockAlign="center" className="w-full">
               {isRemoteComponentLibrarySearchEnabled ? (
                 <ComponentIcon
-                  name={owned ? "FileBadge" : "File"}
-                  className="shrink-0 text-gray-400"
+                  name={iconName}
+                  className={iconClass}
                   component={component}
                 />
               ) : (
-                <Icon
-                  name={owned ? "FileBadge" : "File"}
-                  className="shrink-0 text-gray-400"
-                />
+                <Icon name={iconName} className={iconClass} />
               )}
 
               <div
-                className="flex flex-col w-36"
+                className="flex flex-col w-32"
                 onMouseEnter={onMouseEnter}
                 onMouseLeave={onMouseLeave}
                 onClick={onMouseClick}
@@ -186,26 +194,26 @@ const ComponentMarkup = ({
                 <span className="truncate text-xs text-gray-800">
                   {displayName}
                 </span>
-                {author && author.length > 0 ? (
+                {author && author.length > 0 && (
                   <span className="truncate text-[10px] text-gray-500 max-w-[100px] font-mono">
                     {author}
                   </span>
-                ) : null}
+                )}
                 <span className="truncate text-[10px] text-gray-500 max-w-[100px] font-mono">
                   Ver: {digest}
                 </span>
               </div>
-            </div>
-            <div className="flex align-items justify-end mr-[15px] h-full">
+            </InlineStack>
+            <InlineStack blockAlign="center" align="end" wrap="nowrap">
               <ComponentFavoriteToggle component={component} />
               <ComponentDetailsDialog
                 displayName={displayName}
                 component={component}
               />
-            </div>
-          </div>
+            </InlineStack>
+          </InlineStack>
         )}
-      </div>
+      </InlineStack>
     </SidebarMenuItem>
   );
 };
