@@ -22,6 +22,7 @@ import {
   type ComponentReferenceWithSpec,
   deleteComponentFileFromList,
   importComponent,
+  loadComponentAsRefFromText,
   updateComponentInListByText,
   updateComponentRefInList,
 } from "@/utils/componentStore";
@@ -263,8 +264,7 @@ export const ComponentLibraryProvider = ({
           });
         } else {
           console.warn(
-            `Component "${
-              component.name
+            `Component "${component.name
             }" does not have spec or text, cannot favorite.`,
           );
         }
@@ -415,24 +415,34 @@ export const ComponentLibraryProvider = ({
 
   const handleImportComponent = useCallback(
     async (yamlString: string) => {
-      const component = { ...newComponent, text: yamlString };
+      try {
+        const componentFromText = await loadComponentAsRefFromText(yamlString);
+        const resolvedName =
+          componentFromText.spec.name ??
+          newComponent?.name ??
+          "Imported Component";
 
-      await importComponent(component)
-        .then(async () => {
-          await refreshComponentLibrary();
-          await refreshUserComponents();
-          setNewComponent(null);
-          setExistingComponent(null);
-        })
-        .catch((error) => {
-          console.error("Error importing component:", error);
-        });
+        const componentToImport = {
+          ...(newComponent ?? {}),
+          ...componentFromText,
+          name: resolvedName,
+          url: undefined,
+        };
+
+        await importComponent(componentToImport);
+        await refreshComponentLibrary();
+        await refreshUserComponents();
+        setNewComponent(null);
+        setExistingComponent(null);
+      } catch (error) {
+        console.error("Error importing component:", error);
+      }
     },
     [
-      refreshUserComponents,
-      refreshComponentLibrary,
-      importComponent,
       newComponent,
+      refreshComponentLibrary,
+      refreshUserComponents,
+      importComponent,
     ],
   );
 
@@ -440,8 +450,8 @@ export const ComponentLibraryProvider = ({
     async (component: ComponentReference) => {
       const duplicate = userComponentsFolder
         ? flattenFolders(userComponentsFolder).find(
-            (c) => getComponentName(c) === getComponentName(component),
-          )
+          (c) => getComponentName(c) === getComponentName(component),
+        )
         : undefined;
 
       if (duplicate?.name) {
