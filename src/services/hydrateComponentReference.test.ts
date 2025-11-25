@@ -910,6 +910,22 @@ describe("hydrateComponentReference()", () => {
         expect(result?.text).toBe(yaml.dump(componentSpec)); // Text regenerated from spec
       });
 
+      it("should prefer YAML spec name over provided component name", async () => {
+        const { text: componentText, spec: componentSpec } =
+          prepareComponentContent("Filter text two", "filter:v2");
+
+        const contentfulRef = {
+          text: componentText,
+          spec: componentSpec,
+          name: "Filter text",
+        };
+
+        const result = await hydrateComponentReference(contentfulRef);
+
+        expect(result).not.toBeNull();
+        expect(result?.name).toBe("Filter text two");
+      });
+
       it("should preserve URL when provided with text and spec", async () => {
         // Arrange
         const testUrl = "https://example.com/contentful.yaml";

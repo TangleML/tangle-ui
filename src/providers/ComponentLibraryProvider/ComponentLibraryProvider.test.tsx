@@ -381,7 +381,7 @@ describe("ComponentLibraryProvider - Component Management", () => {
 
       const consoleSpy = vi
         .spyOn(console, "error")
-        .mockImplementation(() => { });
+        .mockImplementation(() => {});
 
       const { result } = renderHook(() => useComponentLibrary(), {
         wrapper: createWrapper,
@@ -414,7 +414,7 @@ describe("ComponentLibraryProvider - Component Management", () => {
       mockDeleteComponentFileFromList.mockRejectedValue(error);
       const consoleSpy = vi
         .spyOn(console, "error")
-        .mockImplementation(() => { });
+        .mockImplementation(() => {});
 
       const { result } = renderHook(() => useComponentLibrary(), {
         wrapper: createWrapper,

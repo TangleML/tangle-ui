@@ -408,7 +408,7 @@ async function hydrateFromContentfulComponentReference(
 
   const digest = await generateDigest(text);
   // we always want to have a name, so we generate a default one if it is not provided
-  const name = component.name ?? spec.name ?? `component-${digest.slice(0, 8)}`;
+  const name = spec.name ?? component.name ?? `component-${digest.slice(0, 8)}`;
 
   return {
     ...component,
