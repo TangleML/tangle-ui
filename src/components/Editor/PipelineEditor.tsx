@@ -65,25 +65,22 @@ const PipelineEditor = () => {
           <ContextPanelProvider defaultContent={<PipelineDetails />}>
             <ForcedSearchProvider>
               <ComponentLibraryProvider>
-                <FlowSidebar />
-
                 <InlineStack className="w-full h-full" align="start">
-                  <BlockStack className="flex-1 h-full">
-                    <div className="reactflow-wrapper relative">
-                      <FlowCanvas {...flowConfig}>
-                        <MiniMap position="bottom-left" pannable />
-                        <FlowControls
-                          className="ml-56! mb-6!"
-                          config={flowConfig}
-                          updateConfig={updateFlowConfig}
-                          showInteractive={false}
-                        />
-                        <Background gap={GRID_SIZE} className="bg-slate-50!" />
-                      </FlowCanvas>
+                  <FlowSidebar />
+                  <BlockStack className="flex-1 h-full relative">
+                    <FlowCanvas {...flowConfig}>
+                      <MiniMap position="bottom-left" pannable />
+                      <FlowControls
+                        className="ml-56! mb-6!"
+                        config={flowConfig}
+                        updateConfig={updateFlowConfig}
+                        showInteractive={false}
+                      />
+                      <Background gap={GRID_SIZE} className="bg-slate-50!" />
+                    </FlowCanvas>
 
-                      <div className="absolute bottom-0 right-0 p-4">
-                        <UndoRedo />
-                      </div>
+                    <div className="absolute bottom-0 right-0 p-4">
+                      <UndoRedo />
                     </div>
                   </BlockStack>
                   <CollapsibleContextPanel />
