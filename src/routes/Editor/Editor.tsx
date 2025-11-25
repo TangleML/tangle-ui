@@ -36,13 +36,11 @@ const Editor = () => {
   }
 
   return (
-    <div className="dndflow">
-      <DndContext>
-        <ReactFlowProvider>
-          <PipelineEditor />
-        </ReactFlowProvider>
-      </DndContext>
-    </div>
+    <DndContext>
+      <ReactFlowProvider>
+        <PipelineEditor />
+      </ReactFlowProvider>
+    </DndContext>
   );
 };
 

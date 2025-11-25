@@ -139,18 +139,16 @@ const PipelineRun = () => {
       : undefined;
 
   return (
-    <div className="dndflow">
-      <DndContext>
-        <ReactFlowProvider>
-          <ExecutionDataProvider
-            pipelineRunId={id}
-            subgraphExecutionId={subgraphExecutionId}
-          >
-            <PipelineRunContent />
-          </ExecutionDataProvider>
-        </ReactFlowProvider>
-      </DndContext>
-    </div>
+    <DndContext>
+      <ReactFlowProvider>
+        <ExecutionDataProvider
+          pipelineRunId={id}
+          subgraphExecutionId={subgraphExecutionId}
+        >
+          <PipelineRunContent />
+        </ExecutionDataProvider>
+      </ReactFlowProvider>
+    </DndContext>
   );
 };
 
