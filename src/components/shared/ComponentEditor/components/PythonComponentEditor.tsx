@@ -1,5 +1,5 @@
 import MonacoEditor from "@monaco-editor/react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DEFAULT_MONACO_OPTIONS } from "../constants";
 import { usePythonYamlGenerator } from "../generators/python";
 import type { YamlGeneratorOptions } from "../types";
+import { preserveComponentName } from "../utils/preserveComponentName";
 import { ComponentSpecErrorsList } from "./ComponentSpecErrorsList";
 import { PreviewTaskNodeCard } from "./PreviewTaskNodeCard";
 import { TogglePreview } from "./TogglePreview";
@@ -48,11 +49,13 @@ export const PythonComponentEditor = withSuspenseWrapper(
     options,
     onComponentTextChange,
     onErrorsChange,
+    preserveComponentName: initialComponentName,
   }: {
     text: string;
     options: YamlGeneratorOptions;
     onComponentTextChange: (yaml: string) => void;
     onErrorsChange: (errors: string[]) => void;
+    preserveComponentName?: string;
   }) => {
     const [componentText, setComponentText] = useState("");
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
@@ -60,13 +63,22 @@ export const PythonComponentEditor = withSuspenseWrapper(
     const [yamlGeneratorOptions, setYamlGeneratorOptions] = useState(options);
 
     const yamlGenerator = usePythonYamlGenerator();
+    const preservedNameRef = useRef(initialComponentName);
+
+    useEffect(() => {
+      preservedNameRef.current = initialComponentName;
+    }, [initialComponentName]);
 
     const handleFunctionTextChange = useCallback(
       async (value: string | undefined) => {
         try {
           const yaml = await yamlGenerator(value ?? "", yamlGeneratorOptions);
-          setComponentText(yaml);
-          onComponentTextChange(yaml);
+          const yamlWithPreservedName = preserveComponentName(
+            yaml,
+            preservedNameRef.current,
+          );
+          setComponentText(yamlWithPreservedName);
+          onComponentTextChange(yamlWithPreservedName);
           setValidationErrors([]);
           onErrorsChange([]);
         } catch (error) {

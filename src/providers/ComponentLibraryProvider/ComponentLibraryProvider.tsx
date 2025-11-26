@@ -264,7 +264,8 @@ export const ComponentLibraryProvider = ({
           });
         } else {
           console.warn(
-            `Component "${component.name
+            `Component "${
+              component.name
             }" does not have spec or text, cannot favorite.`,
           );
         }
@@ -450,8 +451,8 @@ export const ComponentLibraryProvider = ({
     async (component: ComponentReference) => {
       const duplicate = userComponentsFolder
         ? flattenFolders(userComponentsFolder).find(
-          (c) => getComponentName(c) === getComponentName(component),
-        )
+            (c) => getComponentName(c) === getComponentName(component),
+          )
         : undefined;
 
       if (duplicate?.name) {
@@ -463,14 +464,13 @@ export const ComponentLibraryProvider = ({
         return;
       }
 
-      await importComponent(component)
-        .then(async () => {
-          await refreshComponentLibrary();
-          await refreshUserComponents();
-        })
-        .catch((error) => {
-          console.error("Error adding component to library:", error);
-        });
+      try {
+        await importComponent(component);
+        await refreshComponentLibrary();
+        await refreshUserComponents();
+      } catch (error) {
+        console.error("Error adding component to library:", error);
+      }
     },
     [
       userComponentsFolder,

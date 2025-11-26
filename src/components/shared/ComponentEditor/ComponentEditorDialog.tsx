@@ -63,6 +63,7 @@ type PythonCodeDetection =
       isPython: true;
       pythonOriginalCode: string;
       options: YamlGeneratorOptions;
+      componentName?: string;
     }
   | { isPython: false };
 
@@ -108,6 +109,7 @@ export const ComponentEditorDialog = withSuspenseWrapper(
           return {
             isPython: true,
             pythonOriginalCode,
+            componentName: hydratedComponent.name,
             options: {
               baseImage:
                 hydratedComponent.spec.implementation.container.image ??
@@ -219,6 +221,7 @@ export const ComponentEditorDialog = withSuspenseWrapper(
               options={pythonCodeDetection.options}
               onComponentTextChange={handleComponentTextChange}
               onErrorsChange={setErrors}
+              preserveComponentName={pythonCodeDetection.componentName}
             />
           ) : (
             <YamlComponentEditor
