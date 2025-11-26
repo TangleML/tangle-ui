@@ -403,14 +403,13 @@ export const ComponentLibraryProvider = ({
         return;
       }
 
-      await importComponent(component)
-        .then(async () => {
-          await refreshComponentLibrary();
-          await refreshUserComponents();
-        })
-        .catch((error) => {
-          console.error("Error adding component to library:", error);
-        });
+      try {
+        await importComponent(component);
+        await refreshComponentLibrary();
+        await refreshUserComponents();
+      } catch (error) {
+        console.error("Error adding component to library:", error);
+      }
     },
     [
       userComponentsFolder,
