@@ -35,7 +35,6 @@ const LogDisplay = ({
           <CodeViewer
             code={logs.log_text || ""}
             language="text"
-            title="Execution Logs"
             filename="Execution Logs"
           />
         </div>
@@ -45,7 +44,6 @@ const LogDisplay = ({
           <CodeViewer
             code={logs.system_error_exception_full || ""}
             language="text"
-            title="System Error Logs"
             filename="System Error Logs"
           />
         </div>

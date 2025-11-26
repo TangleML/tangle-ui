@@ -265,10 +265,10 @@ const TaskDetails = ({
           </div>
         ))}
 
-        <div className="px-3 py-2 flex flex-row gap-2" key={0}>
+        <div className="px-3 py-2 flex flex-wrap gap-2" key={0}>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="secondary" onClick={handleDownloadYaml}>
+              <Button variant="outline" onClick={handleDownloadYaml}>
                 <DownloadIcon />
               </Button>
             </TooltipTrigger>
@@ -277,10 +277,7 @@ const TaskDetails = ({
           {pythonOriginalCode && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  variant="secondary"
-                  onClick={stringToPythonCodeDownload}
-                >
+                <Button variant="outline" onClick={stringToPythonCodeDownload}>
                   <FaPython className="mr-1" />
                 </Button>
               </TooltipTrigger>
@@ -289,7 +286,7 @@ const TaskDetails = ({
           )}
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="secondary" onClick={handleCopyYaml}>
+              <Button variant="outline" onClick={handleCopyYaml}>
                 <ClipboardIcon />
               </Button>
             </TooltipTrigger>

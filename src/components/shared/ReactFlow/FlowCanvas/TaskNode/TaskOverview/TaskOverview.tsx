@@ -61,6 +61,18 @@ const TaskOverview = ({ taskNode, actions }: TaskOverviewProps) => {
   const executionId = details?.child_task_execution_ids?.[taskId];
   const canRename = !readOnly && isSubgraph;
 
+  const detailActions = [
+    ...(actions?.map((action) => (
+      <TooltipButton {...action} key={action.tooltip?.toString()} />
+    )) ?? []),
+    <TaskImplementation
+      key="task-implementation-action"
+      displayName={name}
+      componentSpec={componentSpec}
+      showInlineContent={false}
+    />,
+  ];
+
   return (
     <BlockStack className="h-full" data-context-panel="task-overview">
       <InlineStack gap="2" blockAlign="center" className="px-2 pb-2">
@@ -118,24 +130,7 @@ const TaskOverview = ({ taskNode, actions }: TaskOverviewProps) => {
               status={status}
               hasDeletionConfirmation={false}
               readOnly={readOnly}
-              additionalSection={[
-                {
-                  title: "Component YAML",
-                  isCollapsed: true,
-                  component: (
-                    <div className="h-[512px]">
-                      <TaskImplementation
-                        key="task-implementation"
-                        displayName={name}
-                        componentSpec={componentSpec}
-                      />
-                    </div>
-                  ),
-                },
-              ]}
-              actions={actions?.map((action) => (
-                <TooltipButton {...action} key={action.tooltip?.toString()} />
-              ))}
+              actions={detailActions}
             />
           </TabsContent>
           <TabsContent value="io">

@@ -125,7 +125,12 @@ export const RunDetails = () => {
       )}
 
       <div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap items-center">
+          <TaskImplementation
+            displayName={componentSpec.name ?? "Pipeline"}
+            componentSpec={componentSpec}
+            showInlineContent={false}
+          />
           {canAccessEditorSpec && componentSpec.name && (
             <InspectPipelineButton pipelineName={componentSpec.name} />
           )}
@@ -229,20 +234,6 @@ export const RunDetails = () => {
           </div>
         </div>
       </div>
-
-      {componentSpec && (
-        <div className="flex flex-col h-full">
-          <div className="font-medium text-md flex items-center gap-1 cursor-pointer">
-            Pipeline YAML
-          </div>
-          <div className="mt-1 h-full min-h-0 flex-1">
-            <TaskImplementation
-              displayName={componentSpec.name ?? "Pipeline"}
-              componentSpec={componentSpec}
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 };
