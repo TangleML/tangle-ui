@@ -1,10 +1,11 @@
 import { Frown, Network } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { PipelineValidationList } from "@/components/Editor/components/PipelineValidationList/PipelineValidationList";
+import { useValidationIssueNavigation } from "@/components/Editor/hooks/useValidationIssueNavigation";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useContextPanel } from "@/providers/ContextPanelProvider";
@@ -16,7 +17,6 @@ import {
 import { getComponentFileFromList } from "@/utils/componentStore";
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 
-import { InfoBox } from "../shared/InfoBox";
 import { TaskImplementation } from "../shared/TaskDetails";
 import { InputValueEditor } from "./IOEditor/InputValueEditor";
 import { OutputNameEditor } from "./IOEditor/OutputNameEditor";
@@ -25,9 +25,18 @@ import { getOutputConnectedDetails } from "./utils/getOutputConnectedDetails";
 
 const PipelineDetails = () => {
   const { setContent } = useContextPanel();
-  const { componentSpec, graphSpec, isValid, errors } = useComponentSpec();
+  const {
+    componentSpec,
+    graphSpec,
+    isComponentTreeValid,
+    globalValidationIssues,
+  } = useComponentSpec();
 
   const notify = useToastNotification();
+
+  const { handleIssueClick, groupedIssues } = useValidationIssueNavigation(
+    globalValidationIssues,
+  );
 
   // Utility function to convert TypeSpecType to string
   const typeSpecToString = (typeSpec?: TypeSpecType): string => {
@@ -309,36 +318,14 @@ const PipelineDetails = () => {
       </div>
 
       {/* Validations */}
-      <div>
+      <div className="mt-2">
         <h3 className="text-md font-medium mb-1">Validations</h3>
-        {isValid ? (
-          <InfoBox variant="success" title="No validation errors found">
-            Pipeline is ready for submission
-          </InfoBox>
-        ) : (
-          <InfoBox
-            variant="error"
-            title={`${errors.length} validation error${errors.length > 1 ? "s" : ""} found:`}
-          >
-            <ScrollArea className="max-h-80 overflow-y-auto">
-              <ul className="text-xs space-y-1">
-                {errors.map((error) => (
-                  <li key={error}>
-                    <InlineStack
-                      gap="2"
-                      blockAlign="start"
-                      align="start"
-                      wrap="nowrap"
-                    >
-                      <span className="text-destructive shrink-0">•</span>
-                      <span className="wrap-break-word">{error}</span>
-                    </InlineStack>
-                  </li>
-                ))}
-              </ul>
-            </ScrollArea>
-          </InfoBox>
-        )}
+        <PipelineValidationList
+          isComponentTreeValid={isComponentTreeValid}
+          groupedIssues={groupedIssues}
+          totalIssueCount={globalValidationIssues.length}
+          onIssueSelect={handleIssueClick}
+        />
       </div>
     </div>
   );

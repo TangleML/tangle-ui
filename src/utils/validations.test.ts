@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { type ComponentSpec } from "./componentSpec";
-import { checkComponentSpecValidity } from "./validations";
+import { type ComponentSpec, type GraphSpec } from "./componentSpec";
+import {
+  checkComponentSpecValidity,
+  collectComponentValidationIssues,
+} from "./validations";
 
 // Mock the componentSpec module
 vi.mock("./componentSpec", () => ({
@@ -13,6 +16,17 @@ const { isGraphImplementation } = await import("./componentSpec");
 describe("checkComponentSpecValidity", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(isGraphImplementation).mockImplementation(
+      (
+        implementation: unknown,
+      ): implementation is { graph: GraphSpec; container?: null } => {
+        if (typeof implementation !== "object" || implementation === null) {
+          return false;
+        }
+
+        return Object.prototype.hasOwnProperty.call(implementation, "graph");
+      },
+    );
   });
 
   describe("Basic Component Spec Validation", () => {
@@ -534,5 +548,163 @@ describe("checkComponentSpecValidity", () => {
       expect(result.isValid).toBe(true);
       expect(result.errors).toHaveLength(0);
     });
+  });
+});
+
+describe("collectComponentValidationIssues", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(isGraphImplementation).mockImplementation(
+      (
+        implementation: unknown,
+      ): implementation is { graph: GraphSpec; container?: null } => {
+        if (typeof implementation !== "object" || implementation === null) {
+          return false;
+        }
+
+        return Object.prototype.hasOwnProperty.call(implementation, "graph");
+      },
+    );
+  });
+
+  it("returns empty issues array for valid non-graph specs", () => {
+    const componentSpec: ComponentSpec = {
+      name: "valid",
+      implementation: { container: { image: "image" } },
+    };
+
+    const issues = collectComponentValidationIssues(componentSpec);
+
+    expect(issues).toHaveLength(0);
+  });
+
+  it("collects nested subgraph issues with path metadata", () => {
+    const childSpec: ComponentSpec = {
+      name: "child",
+      implementation: {
+        graph: {
+          tasks: {},
+        },
+      },
+    };
+
+    const componentSpec: ComponentSpec = {
+      name: "root",
+      implementation: {
+        graph: {
+          tasks: {
+            childTask: {
+              componentRef: {
+                name: "child",
+                spec: childSpec,
+              },
+            },
+          },
+        },
+      },
+    };
+
+    const issues = collectComponentValidationIssues(componentSpec);
+    expect(issues).toHaveLength(1);
+    expect(issues[0].subgraphPath).toEqual(["root", "childTask"]);
+    expect(issues[0].message).toBe("Pipeline must contain at least one task");
+  });
+
+  it("annotates task issues with task identifiers", () => {
+    const componentSpec: ComponentSpec = {
+      name: "root",
+      implementation: {
+        graph: {
+          tasks: {
+            task1: {} as any,
+          },
+        },
+      },
+    };
+
+    const issues = collectComponentValidationIssues(componentSpec);
+    const taskIssue = issues.find((issue) => issue.type === "task");
+    expect(taskIssue?.taskId).toBe("task1");
+    expect(taskIssue?.subgraphPath).toEqual(["root"]);
+  });
+
+  it("handles circular references without infinite loops", () => {
+    // Create a spec that references itself
+    const circularSpec: ComponentSpec = {
+      name: "circular",
+      implementation: {
+        graph: {
+          tasks: {},
+        },
+      },
+    };
+
+    // Add a task that references the parent spec (creating a cycle)
+    circularSpec.implementation = {
+      graph: {
+        tasks: {
+          selfTask: {
+            componentRef: {
+              name: "circular",
+              spec: circularSpec, // Circular reference
+            },
+          },
+        },
+      },
+    };
+
+    // This should not hang or crash - the visitedSpecs Set should prevent infinite recursion
+    const issues = collectComponentValidationIssues(circularSpec);
+
+    // Should still collect issues from the first level without getting stuck in a loop
+    expect(issues).toBeDefined();
+    expect(Array.isArray(issues)).toBe(true);
+  });
+
+  it("skips duplicate component specs within the same validation run", () => {
+    // When the same ComponentSpec object is used multiple times in a tree,
+    // it should only be validated once to prevent infinite loops and redundant work
+    const sharedChildSpec: ComponentSpec = {
+      name: "shared",
+      implementation: {
+        graph: {
+          tasks: {}, // Empty tasks triggers "must contain at least one task" error
+        },
+      },
+    };
+
+    const parentSpec: ComponentSpec = {
+      name: "parent",
+      implementation: {
+        graph: {
+          tasks: {
+            task1: {
+              componentRef: {
+                name: "shared",
+                spec: sharedChildSpec,
+              },
+            },
+            task2: {
+              componentRef: {
+                name: "shared",
+                spec: sharedChildSpec, // Same spec reference - will be skipped
+              },
+            },
+          },
+        },
+      },
+    };
+
+    const issues = collectComponentValidationIssues(parentSpec);
+
+    // The shared spec is visited via task1 first, so task2's reference is skipped
+    // This is correct behavior to prevent infinite loops with circular references
+    const nestedIssues = issues.filter(
+      (issue) => issue.subgraphPath.length > 1,
+    );
+
+    // Should have exactly one set of nested issues (from task1, not task2)
+    expect(nestedIssues.length).toBe(1);
+    expect(nestedIssues[0].subgraphPath).toEqual(["root", "task1"]);
   });
 });

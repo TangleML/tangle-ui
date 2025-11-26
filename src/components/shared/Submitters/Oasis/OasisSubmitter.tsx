@@ -14,16 +14,16 @@ import { usePipelineRuns } from "@/providers/PipelineRunsProvider";
 import { APP_ROUTES } from "@/routes/router";
 import type { PipelineRun } from "@/types/pipelineRun";
 import type { ComponentSpec } from "@/utils/componentSpec";
-import { checkComponentSpecValidity } from "@/utils/validations";
-
 interface OasisSubmitterProps {
   componentSpec?: ComponentSpec;
   onSubmitComplete?: () => void;
+  isComponentTreeValid?: boolean;
 }
 
 const OasisSubmitter = ({
   componentSpec,
   onSubmitComplete,
+  isComponentTreeValid = true,
 }: OasisSubmitterProps) => {
   const { isAuthorized } = useAwaitAuthorization();
   const { configured, available } = useBackend();
@@ -112,9 +112,7 @@ const OasisSubmitter = ({
       return;
     }
 
-    const { isValid } = checkComponentSpecValidity(componentSpec);
-
-    if (!isValid) {
+    if (!isComponentTreeValid) {
       handleError(
         `Pipeline validation failed. Refer to details panel for more info.`,
       );
@@ -123,7 +121,14 @@ const OasisSubmitter = ({
 
     setSubmitSuccess(null);
     submit(componentSpec, { onSuccess, onError });
-  }, [handleError, submit, componentSpec, onSuccess, onError]);
+  }, [
+    handleError,
+    submit,
+    componentSpec,
+    isComponentTreeValid,
+    onSuccess,
+    onError,
+  ]);
 
   const getButtonText = () => {
     if (cooldownTime > 0) {
@@ -139,6 +144,7 @@ const OasisSubmitter = ({
     isSubmitting ||
     !componentSpec ||
     !isAuthorized ||
+    !isComponentTreeValid ||
     cooldownTime > 0 ||
     ("graph" in componentSpec.implementation &&
       Object.keys(componentSpec.implementation.graph.tasks).length === 0);
