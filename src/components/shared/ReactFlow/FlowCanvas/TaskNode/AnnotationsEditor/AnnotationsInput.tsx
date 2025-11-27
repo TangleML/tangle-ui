@@ -1,4 +1,3 @@
-import { AlertTriangle } from "lucide-react";
 import { type ChangeEvent, useCallback, useEffect, useState } from "react";
 
 import { MultilineTextInputDialog } from "@/components/shared/Dialogs/MultilineTextInputDialog";
@@ -222,39 +221,37 @@ export const AnnotationsInput = ({
       : inputValue;
 
     inputElement = (
-      <div className="flex items-center gap-1 grow">
-        <Select
-          value={currentValue}
-          onValueChange={
-            config?.enableQuantity
-              ? handleQuantitySelectChange
-              : handleNonQuantitySelectChange
-          }
-        >
-          <div className="relative group grow min-w-24">
-            <SelectTrigger className={cn("w-full", className)}>
-              <SelectValue placeholder={"Select " + placeholder} />
-            </SelectTrigger>
-            {!!currentValue && (
-              <Button
-                variant="ghost"
-                size="min"
-                className="absolute right-8 top-1/2 -translate-y-1/2 hidden group-hover:block"
-                onClick={handleClearSelection}
-              >
-                <Icon name="X" className="size-3 text-muted-foreground" />
-              </Button>
-            )}
-          </div>
-          <SelectContent>
-            {config.options.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <Select
+        value={currentValue}
+        onValueChange={
+          config?.enableQuantity
+            ? handleQuantitySelectChange
+            : handleNonQuantitySelectChange
+        }
+      >
+        <div className="relative group grow min-w-24">
+          <SelectTrigger className={cn("w-full", className)}>
+            <SelectValue placeholder={"Select " + placeholder} />
+          </SelectTrigger>
+          {!!currentValue && (
+            <Button
+              variant="ghost"
+              size="min"
+              className="absolute right-8 top-1/2 -translate-y-1/2 hidden group-hover:block"
+              onClick={handleClearSelection}
+            >
+              <Icon name="X" className="size-3 text-muted-foreground" />
+            </Button>
+          )}
+        </div>
+        <SelectContent>
+          {config.options.map((opt) => (
+            <SelectItem key={opt.value} value={opt.value}>
+              {opt.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     );
   } else if (inputType === "boolean") {
     inputElement = (
@@ -279,7 +276,11 @@ export const AnnotationsInput = ({
         />
 
         {config?.max !== undefined && (
-          <Paragraph size="xs" tone="subdued" className="whitespace-nowrap">
+          <Paragraph
+            size="xs"
+            tone="subdued"
+            className="whitespace-nowrap min-w-16"
+          >
             (max: {config.max})
           </Paragraph>
         )}
@@ -287,7 +288,7 @@ export const AnnotationsInput = ({
     );
   } else {
     inputElement = (
-      <div>
+      <InlineStack gap="2" blockAlign="center" wrap="nowrap" className="grow">
         <div className="flex-1 w-full relative group">
           <Input
             value={
@@ -314,11 +315,14 @@ export const AnnotationsInput = ({
           </Button>
         </div>
         {isInvalid && (
-          <div className="flex items-center gap-1 my-1 text-xs text-warning">
-            <AlertTriangle className="w-4 h-4" /> Invalid JSON
-          </div>
+          <InlineStack gap="1" blockAlign="center" className="my-1">
+            <Icon name="TriangleAlert" />
+            <Paragraph size="xs" tone="warning">
+              Invalid JSON
+            </Paragraph>
+          </InlineStack>
         )}
-      </div>
+      </InlineStack>
     );
   }
 
@@ -326,7 +330,7 @@ export const AnnotationsInput = ({
 
   return (
     <>
-      <InlineStack gap="2" blockAlign="center" wrap="nowrap" className="grow">
+      <InlineStack gap="2" blockAlign="center" wrap="nowrap" className="w-full">
         {inputElement}
         {config?.enableQuantity && (
           <QuantityInput

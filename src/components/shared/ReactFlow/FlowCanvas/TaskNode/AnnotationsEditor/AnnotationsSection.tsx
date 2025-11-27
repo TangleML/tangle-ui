@@ -1,14 +1,21 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { BlockStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import useToastNotification from "@/hooks/useToastNotification";
-import type { Annotations } from "@/types/annotations";
+import type { AnnotationConfig, Annotations } from "@/types/annotations";
 import type { TaskSpec } from "@/utils/componentSpec";
 
 import { AnnotationsEditor } from "./AnnotationsEditor";
 import { ComputeResourcesEditor } from "./ComputeResourcesEditor";
 import type { NewAnnotationRowData } from "./NewAnnotationRow";
+import {
+  getCloudProviderConfig,
+  getCommonAnnotations,
+  getProviderSchema,
+  launcherTaskAnnotationSchema,
+  parseSchemaToAnnotationConfig,
+} from "./utils";
 
 interface AnnotationsSectionProps {
   taskSpec: TaskSpec;
@@ -27,8 +34,41 @@ export const AnnotationsSection = ({
     ...rawAnnotations,
   });
 
+  const [cloudProviderConfig, setCloudProviderConfig] =
+    useState<AnnotationConfig | null>(null);
+  const [pinnedAnnotations, setPinnedAnnotations] = useState<
+    AnnotationConfig[]
+  >([]);
+  const [computeResources, setComputeResources] = useState<AnnotationConfig[]>(
+    [],
+  );
+  const [previousProvider, setPreviousProvider] = useState<string | undefined>(
+    undefined,
+  );
+
   // Track new rows separately until they have a key
   const [newRows, setNewRows] = useState<Array<NewAnnotationRowData>>([]);
+
+  const selectedProvider = cloudProviderConfig
+    ? annotations[cloudProviderConfig.annotation]
+    : undefined;
+
+  const commonAnnotations = useMemo(() => {
+    const managedAnnotationKeys = new Set([
+      ...computeResources.map((r) => r.annotation),
+      ...(cloudProviderConfig ? [cloudProviderConfig.annotation] : []),
+    ]);
+
+    return Object.entries(annotations).reduce<Annotations>(
+      (acc, [key, value]) => {
+        if (!managedAnnotationKeys.has(key)) {
+          acc[key] = value;
+        }
+        return acc;
+      },
+      {},
+    );
+  }, [annotations, computeResources, cloudProviderConfig]);
 
   const handleAddNewRow = useCallback(() => {
     const newRow = { id: Date.now().toString(), key: "", value: "" };
@@ -98,14 +138,88 @@ export const AnnotationsSection = ({
     setAnnotations(rawAnnotations);
   }, [rawAnnotations]);
 
+  useEffect(() => {
+    try {
+      const providerConfig = getCloudProviderConfig(
+        launcherTaskAnnotationSchema,
+      );
+      setCloudProviderConfig(providerConfig);
+
+      const common = getCommonAnnotations(launcherTaskAnnotationSchema);
+      setPinnedAnnotations(common);
+    } catch (error) {
+      console.error("Failed to load launcher annotation schema:", error);
+    }
+  }, []);
+
+  // Provider-specific compute resources
+  useEffect(() => {
+    if (selectedProvider !== previousProvider) {
+      try {
+        // Get previous provider's annotations to remove
+        let annotationsToRemove: string[] = [];
+        if (previousProvider) {
+          const previousProviderSchema = getProviderSchema(
+            launcherTaskAnnotationSchema,
+            previousProvider,
+          );
+          if (previousProviderSchema) {
+            const previousResources = parseSchemaToAnnotationConfig(
+              previousProviderSchema,
+            );
+            annotationsToRemove = previousResources.map((r) => r.annotation);
+          }
+        }
+
+        // Get new provider's schema
+        let newResources: AnnotationConfig[] = [];
+        if (selectedProvider) {
+          const providerSchema = getProviderSchema(
+            launcherTaskAnnotationSchema,
+            selectedProvider,
+          );
+
+          if (providerSchema) {
+            const parsedResources =
+              parseSchemaToAnnotationConfig(providerSchema);
+            newResources = parsedResources.filter((res) => !res.hidden);
+          }
+        }
+
+        setComputeResources(newResources);
+
+        // Remove old provider annotations if switching providers
+        if (annotationsToRemove.length > 0) {
+          const cleanedAnnotations = { ...annotations };
+          annotationsToRemove.forEach((key) => {
+            delete cleanedAnnotations[key];
+          });
+          setAnnotations(cleanedAnnotations);
+          onApply(cleanedAnnotations);
+        }
+
+        setPreviousProvider(selectedProvider);
+      } catch (error) {
+        console.error("Failed to load provider schema:", error);
+        setComputeResources([]);
+      }
+    }
+  }, [selectedProvider, previousProvider, annotations, onApply]);
+
   return (
-    <BlockStack gap="2" className="overflow-y-auto pr-4 py-2 overflow-visible">
-      <ComputeResourcesEditor annotations={annotations} onSave={handleSave} />
+    <BlockStack gap="2" className="overflow-y-auto pr-4 overflow-visible">
+      <ComputeResourcesEditor
+        cloudProviderConfig={cloudProviderConfig}
+        resources={computeResources}
+        annotations={annotations}
+        onSave={handleSave}
+      />
 
       <Separator className="mt-4 mb-2" />
 
       <AnnotationsEditor
-        annotations={annotations}
+        annotations={commonAnnotations}
+        pinnedAnnotations={pinnedAnnotations}
         onSave={handleSave}
         onRemove={handleRemove}
         newRows={newRows}

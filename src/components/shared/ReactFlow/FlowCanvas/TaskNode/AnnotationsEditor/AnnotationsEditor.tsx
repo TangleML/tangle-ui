@@ -1,18 +1,27 @@
 import { PlusCircleIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Heading } from "@/components/ui/typography";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { Heading, Paragraph } from "@/components/ui/typography";
 import type { AnnotationConfig, Annotations } from "@/types/annotations";
 
 import { AnnotationsInput } from "./AnnotationsInput";
-import { COMPUTE_RESOURCES } from "./ComputeResourcesEditor";
 import {
   NewAnnotationRow,
   type NewAnnotationRowData,
 } from "./NewAnnotationRow";
 
+const DEFAULT_COMMON_ANNOTATIONS: AnnotationConfig[] = [
+  {
+    annotation: "editor.position",
+    label: "Node position",
+    type: "json",
+  },
+];
+
 interface AnnotationsEditorProps {
   annotations: Annotations;
+  pinnedAnnotations?: AnnotationConfig[];
   onSave: (key: string, value: string) => void;
   onRemove: (key: string) => void;
   newRows: Array<NewAnnotationRowData>;
@@ -21,20 +30,9 @@ interface AnnotationsEditorProps {
   onAddNewRow: () => void;
 }
 
-const COMMON_ANNOTATIONS: AnnotationConfig[] = [
-  {
-    annotation: "editor.position",
-    label: "Node position",
-    type: "json",
-  },
-  {
-    annotation: "shopify.io/showback_cost_owner_ref",
-    label: "Showback cost owner",
-  },
-];
-
 export const AnnotationsEditor = ({
   annotations,
+  pinnedAnnotations = DEFAULT_COMMON_ANNOTATIONS,
   onSave,
   onRemove,
   newRows,
@@ -43,14 +41,17 @@ export const AnnotationsEditor = ({
   onAddNewRow,
 }: AnnotationsEditorProps) => {
   const remainingAnnotations = Object.entries(annotations).filter(
-    ([key]) =>
-      !COMPUTE_RESOURCES.some((resource) => resource.annotation === key) &&
-      !COMMON_ANNOTATIONS.some((common) => common.annotation === key),
+    ([key]) => !pinnedAnnotations.some((config) => config.annotation === key),
   );
 
   return (
-    <div className="h-auto flex flex-col gap-2">
-      <div className="flex justify-between items-center">
+    <BlockStack gap="2">
+      <InlineStack
+        gap="2"
+        align="space-between"
+        blockAlign="center"
+        className="w-full"
+      >
         <Heading level={1}>Annotations</Heading>
 
         <Button
@@ -62,13 +63,13 @@ export const AnnotationsEditor = ({
           <PlusCircleIcon className="h-4 w-4" />
           New
         </Button>
-      </div>
+      </InlineStack>
 
-      {COMMON_ANNOTATIONS.map((config) => (
-        <div key={config.annotation} className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground w-40 truncate">
+      {pinnedAnnotations.map((config) => (
+        <BlockStack key={config.annotation}>
+          <Paragraph size="xs" tone="subdued">
             {config.label} {config.unit && `(${config.unit})`}
-          </span>
+          </Paragraph>
 
           <AnnotationsInput
             key={config.annotation}
@@ -77,14 +78,14 @@ export const AnnotationsEditor = ({
             annotations={annotations}
             config={config}
           />
-        </div>
+        </BlockStack>
       ))}
 
       {remainingAnnotations.map(([key, value]) => (
-        <div key={key} className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground w-40 truncate">
+        <BlockStack key={key}>
+          <Paragraph size="xs" tone="subdued">
             {key}
-          </span>
+          </Paragraph>
 
           <AnnotationsInput
             key={key}
@@ -94,7 +95,7 @@ export const AnnotationsEditor = ({
             annotations={annotations}
             deletable
           />
-        </div>
+        </BlockStack>
       ))}
 
       {newRows.map((row, idx) => (
@@ -106,6 +107,6 @@ export const AnnotationsEditor = ({
           onRemove={onRemoveNewRow}
         />
       ))}
-    </div>
+    </BlockStack>
   );
 };
