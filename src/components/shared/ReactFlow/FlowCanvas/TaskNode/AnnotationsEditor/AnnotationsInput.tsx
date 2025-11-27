@@ -326,7 +326,7 @@ export const AnnotationsInput = ({
 
   return (
     <>
-      <InlineStack gap="2" blockAlign="center" wrap="nowrap" className="grow">
+      <InlineStack gap="2" blockAlign="center" wrap="nowrap">
         {inputElement}
         {config?.enableQuantity && (
           <QuantityInput

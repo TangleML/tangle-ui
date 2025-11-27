@@ -1,89 +1,38 @@
 import { useCallback } from "react";
 
+import { BlockStack } from "@/components/ui/layout";
 import { Heading } from "@/components/ui/typography";
-import type {
-  AnnotationConfig,
-  AnnotationOption,
-  Annotations,
-} from "@/types/annotations";
+import type { AnnotationConfig, Annotations } from "@/types/annotations";
 
 import { AnnotationsInput } from "./AnnotationsInput";
 
-const GPUs: AnnotationOption[] = [
-  { value: "NVIDIA-H200", name: "NVIDIA H200" },
-  // { value: "nvidia-a100-80gb", name: "NVIDIA A100 80GB" },
-  // { value: "nvidia-h100-80gb", name: "NVIDIA H100 80GB" },
-  // { value: "nvidia-h100-mega-80gb", name: "NVIDIA H100 80GB MEGA" },
-  // { value: "nvidia-l4", name: "NVIDIA L4" },
-  // { value: "nvidia-tesla-a100", name: "NVIDIA A100 40GB" },
-  // { value: "nvidia-tesla-p4", name: "NVIDIA Tesla P4" },
-  // { value: "nvidia-tesla-t4", name: "NVIDIA T4" },
-  // { value: "nvidia-tesla-v100", name: "NVIDIA V100" },
-];
-
-const CloudProviders: AnnotationOption[] = [
-  { value: "google", name: "Google Cloud" },
-  { value: "nebius", name: "Nebius Cloud" },
-];
-
-export const COMPUTE_RESOURCES: AnnotationConfig[] = [
-  {
-    annotation: "cloud-pipelines.net/launchers/generic/resources.cpu",
-    label: "CPU",
-    unit: "cores",
-    type: "number",
-    min: 0,
-  },
-  {
-    annotation: "cloud-pipelines.net/launchers/generic/resources.memory",
-    label: "Memory",
-    unit: "GiB",
-    type: "number",
-    append: "Gi",
-    min: 0,
-    max: 2880,
-  },
-  {
-    annotation: "cloud-pipelines.net/launchers/generic/resources.accelerators",
-    label: "GPU",
-    options: GPUs,
-    enableQuantity: true,
-    min: 0,
-  },
-  {
-    annotation: "cloud-pipelines.net/orchestration/cloud_provider",
-    label: "Cloud provider",
-    options: CloudProviders,
-  },
-  // Spot VMs stopped working in Shopify's GCP.
-  /*
-  {
-    annotation: "cloud-pipelines.net/launchers/kubernetes/google/use_spot_vms",
-    label: "Use spot VM",
-    type: "boolean",
-  },
-  */
-  // Experimental. Not yet supported in OSS backend
-  {
-    annotation: "cloud-pipelines.net/launchers/google/service_account",
-    label: "Custom Google Cloud Service Account",
-    type: "string",
-  },
-];
-
 interface ComputeResourcesEditorProps {
   annotations: Annotations;
+  resources: AnnotationConfig[];
+  cloudProviderConfig: AnnotationConfig | null;
   onSave: (key: string, value: string) => void;
 }
 
 export const ComputeResourcesEditor = ({
   annotations,
+  resources,
+  cloudProviderConfig,
   onSave,
 }: ComputeResourcesEditorProps) => {
   return (
-    <div className="flex flex-col gap-2">
+    <BlockStack gap="2">
       <Heading level={1}>Compute Resources</Heading>
-      {COMPUTE_RESOURCES.map((resource) => (
+
+      {cloudProviderConfig && (
+        <ComputeResourceField
+          key={cloudProviderConfig.annotation}
+          resource={cloudProviderConfig}
+          annotations={annotations}
+          onSave={onSave}
+        />
+      )}
+
+      {resources.map((resource) => (
         <ComputeResourceField
           key={resource.annotation}
           resource={resource}
@@ -91,12 +40,14 @@ export const ComputeResourcesEditor = ({
           onSave={onSave}
         />
       ))}
-    </div>
+    </BlockStack>
   );
 };
 
-interface ComputeResourceFieldProps extends ComputeResourcesEditorProps {
+interface ComputeResourceFieldProps {
   resource: AnnotationConfig;
+  annotations: Annotations;
+  onSave: (key: string, value: string) => void;
 }
 
 const ComputeResourceField = ({
@@ -123,7 +74,7 @@ const ComputeResourceField = ({
       : annotations[resource.annotation];
 
   return (
-    <div key={resource.annotation} className="flex items-center gap-2">
+    <div key={resource.annotation} className="flex items-center gap-2 w-full">
       <span className="text-xs text-muted-foreground min-w-24 truncate">
         {resource.label} {resource.unit && `(${resource.unit})`}
       </span>
@@ -133,6 +84,7 @@ const ComputeResourceField = ({
         config={resource}
         onBlur={handleValueBlur}
         annotations={annotations}
+        className="mr-8"
       />
     </div>
   );
