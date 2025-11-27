@@ -15,4 +15,5 @@ export type AnnotationConfig = {
   type?: "string" | "number" | "boolean" | "json";
   min?: number;
   max?: number;
+  hidden?: boolean;
 };
