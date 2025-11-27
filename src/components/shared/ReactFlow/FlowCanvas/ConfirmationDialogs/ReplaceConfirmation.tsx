@@ -41,13 +41,13 @@ export function getReplaceConfirmationDetails(
                   )}
                 />
               </TooltipTrigger>
-              <TooltipContent className="z-[9999]">
+              <TooltipContent className="z-9999">
                 Linked node will be disconnected
               </TooltipContent>
             </Tooltip>
             <div className="flex items-baseline flex-wrap">
-              <span className="font-bold break-words">{input.name}</span>
-              <span className="font-light break-words ml-1">{`(${input.type})`}</span>
+              <span className="font-bold wrap-break-word">{input.name}</span>
+              <span className="font-light wrap-break-word ml-1">{`(${input.type})`}</span>
               <span className="shrink-0">:</span>
               <div className="break-all text-wrap overflow-hidden ml-1">
                 {argument.value}

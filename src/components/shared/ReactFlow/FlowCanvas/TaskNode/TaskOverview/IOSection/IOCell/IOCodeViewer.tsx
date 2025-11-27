@@ -15,7 +15,7 @@ const IOCodeViewer = ({ title, value }: IOCodeViewerProps) => {
 
   if (!isValidJson) {
     return (
-      <pre className="w-full font-mono text-xs whitespace-pre-line break-words">
+      <pre className="w-full font-mono text-xs whitespace-pre-line wrap-break-word">
         {value || "No value"}
       </pre>
     );

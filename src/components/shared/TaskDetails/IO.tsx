@@ -34,7 +34,7 @@ const TaskIO = ({ componentSpec }: TaskIOProps) => {
                   )}
                 </div>
                 {input.description && (
-                  <div className="text-gray-600 break-words text-xs">
+                  <div className="text-gray-600 wrap-break-word text-xs">
                     {input.description}
                   </div>
                 )}
@@ -55,7 +55,7 @@ const TaskIO = ({ componentSpec }: TaskIOProps) => {
                 </div>
                 {output.type && <Badge>Type: {String(output.type)}</Badge>}
                 {output.description && (
-                  <div className="text-muted-foreground break-words text-xs">
+                  <div className="text-muted-foreground wrap-break-word text-xs">
                     {output.description}
                   </div>
                 )}
