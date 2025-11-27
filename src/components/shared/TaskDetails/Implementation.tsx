@@ -3,19 +3,18 @@ import { useMemo } from "react";
 
 import { CodeViewer } from "@/components/shared/CodeViewer";
 import type { ComponentSpec } from "@/utils/componentSpec";
-import { getComponentFilename } from "@/utils/getComponentFilename";
 
 interface TaskImplementationProps {
   displayName: string;
   componentSpec: ComponentSpec;
+  showInlineContent?: boolean;
 }
 
 const TaskImplementation = ({
   displayName,
   componentSpec,
+  showInlineContent = true,
 }: TaskImplementationProps) => {
-  const filename = getComponentFilename(componentSpec);
-
   const code = useMemo(
     () =>
       yaml.dump(componentSpec, {
@@ -38,8 +37,8 @@ const TaskImplementation = ({
     <CodeViewer
       code={code}
       language="yaml"
-      title={`${displayName} Implementation (read-only)`}
-      filename={filename}
+      filename={displayName}
+      showInlineContent={showInlineContent}
     />
   );
 };

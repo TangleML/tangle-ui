@@ -135,7 +135,7 @@ const TaskNodeCard = () => {
               <CopyIcon />
             </div>
           ),
-          variant: "secondary",
+          variant: "outline",
           tooltip: "Duplicate Task",
           onClick: callbacks.onDuplicate,
         },
@@ -145,7 +145,7 @@ const TaskNodeCard = () => {
               <CircleFadingArrowUp />
             </div>
           ),
-          variant: "secondary",
+          variant: "outline",
           className: cn(isCustomComponent && "hidden"),
           tooltip: "Update Task from Source URL",
           onClick: callbacks.onUpgrade,
@@ -160,7 +160,7 @@ const TaskNodeCard = () => {
             <Icon name="Workflow" size="sm" />
           </div>
         ),
-        variant: "secondary",
+        variant: "outline",
         tooltip: `Enter Subgraph: ${subgraphDescription}`,
         onClick: () => navigateToSubgraph(taskId),
       });
@@ -173,7 +173,7 @@ const TaskNodeCard = () => {
             <Icon name="FilePenLine" size="sm" />
           </div>
         ),
-        variant: "secondary",
+        variant: "outline",
         tooltip: "Edit Component Definition",
         onClick: handleEditComponent,
       });
