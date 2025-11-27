@@ -2,11 +2,6 @@ import { Frown, Network } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -33,8 +28,6 @@ const PipelineDetails = () => {
   const { componentSpec, graphSpec, isValid, errors } = useComponentSpec();
 
   const notify = useToastNotification();
-
-  const [isYamlOpen, setIsYamlOpen] = useState(false);
 
   // Utility function to convert TypeSpecType to string
   const typeSpecToString = (typeSpec?: TypeSpecType): string => {
@@ -132,6 +125,14 @@ const PipelineDetails = () => {
           {componentSpec.name ?? "Unnamed Pipeline"}
         </h2>
         <RenamePipeline />
+      </div>
+
+      <div className="flex gap-2 flex-wrap items-center">
+        <TaskImplementation
+          displayName={componentSpec.name ?? "Pipeline"}
+          componentSpec={componentSpec}
+          showInlineContent={false}
+        />
       </div>
 
       {/* General Metadata */}
@@ -339,30 +340,6 @@ const PipelineDetails = () => {
           </InfoBox>
         )}
       </div>
-
-      {/* Pipeline YAML */}
-      <Collapsible
-        open={isYamlOpen}
-        onOpenChange={setIsYamlOpen}
-        className="h-full"
-      >
-        <CollapsibleTrigger asChild>
-          <InlineStack
-            gap="1"
-            blockAlign="center"
-            className="font-medium text-md cursor-pointer"
-          >
-            <Icon name={isYamlOpen ? "ChevronDown" : "ChevronRight"} />
-            Pipeline YAML
-          </InlineStack>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="mt-1 h-9/10 flex-1 min-h-0">
-          <TaskImplementation
-            displayName={componentSpec.name ?? "Pipeline"}
-            componentSpec={componentSpec}
-          />
-        </CollapsibleContent>
-      </Collapsible>
     </div>
   );
 };
