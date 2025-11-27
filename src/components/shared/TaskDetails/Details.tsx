@@ -149,7 +149,7 @@ const TaskDetails = ({
             <div className="shrink-0 font-medium text-sm text-gray-700 mb-1">
               Task ID
             </div>
-            <div className="text-xs text-gray-600 break-words whitespace-pre-wrap">
+            <div className="text-xs text-gray-600 wrap-break-word whitespace-pre-wrap">
               {taskId}
             </div>
           </div>
@@ -159,7 +159,7 @@ const TaskDetails = ({
             <div className="shrink-0 font-medium text-sm text-gray-700 mb-1">
               Run Status
             </div>
-            <div className="text-xs text-gray-600 break-words whitespace-pre-wrap">
+            <div className="text-xs text-gray-600 wrap-break-word whitespace-pre-wrap">
               {status}
             </div>
           </div>
@@ -177,7 +177,7 @@ const TaskDetails = ({
             <div className="shrink-0 font-medium text-sm text-gray-700 mb-1">
               Author
             </div>
-            <div className="text-xs text-gray-600 break-words whitespace-pre-wrap">
+            <div className="text-xs text-gray-600 wrap-break-word whitespace-pre-wrap">
               {componentSpec.metadata.annotations?.author}
             </div>
           </div>
@@ -202,7 +202,7 @@ const TaskDetails = ({
               </div>
 
               <CollapsibleContent className="mt-1">
-                <div className="text-xs text-gray-600 break-words whitespace-pre-wrap">
+                <div className="text-xs text-gray-600 wrap-break-word whitespace-pre-wrap">
                   {componentSpec.description}
                 </div>
               </CollapsibleContent>
