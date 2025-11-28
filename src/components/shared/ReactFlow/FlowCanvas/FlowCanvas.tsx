@@ -1083,6 +1083,7 @@ const FlowCanvas = ({
         onSelectionEnd={handleSelectionEnd}
         nodesConnectable={readOnly ? false : nodesConnectable}
         connectOnClick={!readOnly}
+        proOptions={{ hideAttribution: true }}
         className={cn(
           (rest.selectionOnDrag || (shiftKeyPressed && !isConnecting)) &&
             "cursor-crosshair",

@@ -11,10 +11,6 @@ details > * {
   box-sizing: border-box;
 }
 
-.react-flow__attribution {
-  visibility: hidden;
-}
-
 .react-flow.cursor-crosshair .react-flow__pane {
   cursor: crosshair;
 }
