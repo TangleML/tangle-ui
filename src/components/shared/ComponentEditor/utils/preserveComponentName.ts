@@ -2,6 +2,7 @@ import yaml from "js-yaml";
 
 import type { ComponentSpec } from "@/utils/componentSpec";
 import { isValidComponentSpec } from "@/utils/componentSpec";
+import { componentSpecToYaml } from "@/utils/componentStore";
 
 export const preserveComponentName = (
   yamlText: string,
@@ -20,7 +21,7 @@ export const preserveComponentName = (
         name: preservedName,
       };
 
-      return yaml.dump(updatedSpec, { lineWidth: 10000 });
+      return componentSpecToYaml(updatedSpec);
     }
   } catch (error) {
     console.error("Failed to preserve component name:", error);
