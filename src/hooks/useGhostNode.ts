@@ -3,10 +3,7 @@ import { useConnection } from "@xyflow/react";
 import { useMemo } from "react";
 
 import type { GhostNodeData } from "@/components/shared/ReactFlow/FlowCanvas/GhostNode/types";
-import {
-  createGhostNode,
-  getGhostNodeLabel,
-} from "@/components/shared/ReactFlow/FlowCanvas/GhostNode/utils";
+import { createGhostNode } from "@/components/shared/ReactFlow/FlowCanvas/GhostNode/utils";
 import type { ComponentSpec } from "@/utils/componentSpec";
 import { isGraphImplementation } from "@/utils/componentSpec";
 import {
@@ -17,7 +14,7 @@ import {
 
 type UseGhostNodeParams = {
   readOnly?: boolean;
-  metaKeyPressed: boolean;
+  active: boolean;
   isConnecting: boolean;
   implementation: ComponentSpec["implementation"];
 };
@@ -94,7 +91,7 @@ const extractOutputGhostData = (
 
 export const useGhostNode = ({
   readOnly,
-  metaKeyPressed,
+  active,
   isConnecting,
   implementation,
 }: UseGhostNodeParams): UseGhostNodeReturn => {
@@ -102,6 +99,7 @@ export const useGhostNode = ({
   const connectionFromHandle = useConnection(
     (connection) => connection.fromHandle,
   );
+  const connectionFromNode = useConnection((connection) => connection.fromNode);
   const connectionToHandle = useConnection((connection) => connection.toHandle);
   const connectionIsValid = useConnection((connection) => connection.isValid);
 
@@ -111,11 +109,11 @@ export const useGhostNode = ({
   const ghostNode = useMemo<Node<GhostNodeData> | null>(() => {
     if (
       readOnly ||
-      !metaKeyPressed ||
+      !active ||
       !isConnecting ||
       !connectionPosition ||
       !connectionFromHandle ||
-      !connectionFromHandle.nodeId?.startsWith("task_") ||
+      connectionFromNode?.type !== "task" ||
       !connectionFromHandle.type ||
       !isGraphImplementation(implementation) ||
       isConnectionTemporarilyValid
@@ -143,12 +141,12 @@ export const useGhostNode = ({
     return createGhostNode({
       position: connectionPosition,
       ioType,
-      label: getGhostNodeLabel(handleName, ioType),
+      label: handleName,
       ...extractedData,
     });
   }, [
     readOnly,
-    metaKeyPressed,
+    active,
     isConnecting,
     connectionPosition,
     connectionFromHandle,

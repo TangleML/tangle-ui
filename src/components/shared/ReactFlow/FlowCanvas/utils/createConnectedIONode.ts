@@ -17,11 +17,6 @@ import addTask from "./addTask";
 import { setGraphOutputValue } from "./setGraphOutputValue";
 import { setTaskArgument } from "./setTaskArgument";
 
-const IO_NAME_SUFFIX: Record<"INPUT" | "OUTPUT", string> = {
-  INPUT: " input",
-  OUTPUT: " output",
-};
-
 type CreateConnectedIONodeParams = {
   componentSpec: ComponentSpec;
   taskNodeId: string;
@@ -66,8 +61,6 @@ export const createConnectedIONode = ({
       ? nodeIdToInputName(handleId)
       : nodeIdToOutputName(handleId);
   const taskType: TaskType = ioType;
-  const nameSuffix =
-    ioType === "input" ? IO_NAME_SUFFIX.INPUT : IO_NAME_SUFFIX.OUTPUT;
 
   const taskSpec = componentSpec.implementation.graph.tasks[taskId];
   const taskComponentSpec = taskSpec?.componentRef?.spec;
@@ -96,7 +89,7 @@ export const createConnectedIONode = ({
     position,
     componentSpec,
     {
-      name: `${argName}${nameSuffix}`,
+      name: argName,
       type: ioNodeType,
       ...(ioNodeDefault && { default: ioNodeDefault }),
     },

@@ -1,10 +1,17 @@
-import type { Node, XYPosition } from "@xyflow/react";
+import type {
+  Edge,
+  Handle,
+  Node,
+  ReactFlowState,
+  XYPosition,
+} from "@xyflow/react";
 
 import { DEFAULT_IO_NODE_WIDTH } from "@/components/shared/ReactFlow/FlowCanvas/IONode/IONode";
 
+import { EdgeColor } from "../Edges/utils";
 import type { GhostNodeData } from "./types";
 
-const GHOST_NODE_ID = "ghost-node";
+export const GHOST_NODE_ID = "ghost-node";
 
 export const GHOST_NODE_BASE_OFFSET_X = -12;
 export const GHOST_NODE_BASE_OFFSET_Y = -24;
@@ -50,20 +57,10 @@ export const createGhostNode = ({
   zIndex: 1000,
 });
 
-export const getGhostNodeLabel = (
-  handleName: string | null,
-  ioType: GhostNodeData["ioType"],
-): string => {
-  if (!handleName) {
-    return ioType === "input" ? "Input" : "Output";
-  }
-  const suffix = ioType === "input" ? "input" : "output";
-  return `${handleName} ${suffix}`;
-};
-
 const getGhostNodeDropPosition = (
   position: XYPosition | null,
   ioType: GhostNodeData["ioType"],
+  nodeWidth: number,
 ): XYPosition | null => {
   if (!position) {
     return null;
@@ -71,7 +68,7 @@ const getGhostNodeDropPosition = (
 
   if (ioType === "input") {
     return {
-      x: position.x + GHOST_NODE_BASE_OFFSET_X - DEFAULT_IO_NODE_WIDTH / 2,
+      x: position.x + GHOST_NODE_BASE_OFFSET_X - nodeWidth,
       y: position.y + GHOST_NODE_BASE_OFFSET_Y,
     };
   }
@@ -88,20 +85,64 @@ const getGhostNodeDropPosition = (
  * Adjusts position based on IO type to properly align the created node.
  */
 export const computeDropPositionFromRefs = (
-  ghostNodePosition: XYPosition | null,
+  ghostNode: Node<GhostNodeData> | null,
   latestFlowPosition: XYPosition | null,
-  ghostNodeType: GhostNodeData["ioType"] | null,
   fromHandleType: "source" | "target" | null | undefined,
+  reactFlowState: ReactFlowState,
 ): XYPosition | null => {
-  const basePosition = ghostNodePosition ?? latestFlowPosition;
+  const basePosition = ghostNode?.position ?? latestFlowPosition;
   if (!basePosition) {
     return null;
   }
 
   const dropIoType =
-    ghostNodeType ?? (fromHandleType === "target" ? "input" : "output");
+    ghostNode?.data.ioType ??
+    (fromHandleType === "target" ? "input" : "output");
+
+  let width = DEFAULT_IO_NODE_WIDTH;
+
+  if (ghostNode) {
+    // Get actual ghost node dimensions from React Flow state
+    const { nodeLookup } = reactFlowState;
+    const node = nodeLookup.get(ghostNode.id);
+
+    if (node?.measured.width && node?.measured.height) {
+      width = node.measured.width;
+    }
+  }
 
   return dropIoType
-    ? (getGhostNodeDropPosition(basePosition, dropIoType) ?? basePosition)
+    ? (getGhostNodeDropPosition(basePosition, dropIoType, width) ??
+        basePosition)
     : basePosition;
+};
+
+export const getGhostHandleId = (): string => {
+  return `${GHOST_NODE_ID}-handle`;
+};
+
+export const createGhostEdge = (connectionSourceHandle: Handle): Edge => {
+  const isFromSource = connectionSourceHandle.type === "source";
+  const ghostHandleId = getGhostHandleId();
+
+  const edgeColor = isFromSource ? EdgeColor.Output : EdgeColor.Input;
+
+  const ghostEdge = {
+    id: "ghost-edge",
+    source: isFromSource ? connectionSourceHandle.nodeId : GHOST_NODE_ID,
+    sourceHandle: isFromSource ? connectionSourceHandle.id : ghostHandleId,
+    target: isFromSource ? GHOST_NODE_ID : connectionSourceHandle.nodeId,
+    targetHandle: isFromSource ? ghostHandleId : connectionSourceHandle.id,
+    markerStart: undefined,
+    markerEnd: undefined,
+    style: {
+      stroke: edgeColor,
+      strokeWidth: 4,
+      strokeDasharray: "5,5",
+      strokeOpacity: 0.5,
+    },
+    animated: true,
+  };
+
+  return ghostEdge;
 };

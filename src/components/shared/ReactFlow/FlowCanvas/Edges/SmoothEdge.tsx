@@ -1,6 +1,8 @@
 import type { EdgeProps } from "@xyflow/react";
 import { getBezierPath } from "@xyflow/react";
 
+import { EdgeColor } from "./utils";
+
 const SmoothEdge = ({
   id,
   sourceX,
@@ -21,7 +23,7 @@ const SmoothEdge = ({
     targetPosition,
   });
 
-  const edgeColor = selected ? "#38bdf8" : "#6b7280";
+  const edgeColor = selected ? EdgeColor.Selected : EdgeColor.Neutral;
   const markerIdSuffix = selected ? "selected" : "default";
 
   return (
