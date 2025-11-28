@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 
-import logoAsset from "@/assets/logo.png";
+import logo from "/public/Tangle_white.png";
 import { isAuthorizationRequired } from "@/components/shared/Authentication/helpers";
 import { TopBarAuthentication } from "@/components/shared/Authentication/TopBarAuthentication";
 import ImportPipeline from "@/components/shared/ImportPipeline";
@@ -19,38 +19,39 @@ const AppMenu = () => {
   const title = componentSpec?.name;
   return (
     <div
-      className="w-full bg-stone-900 p-2"
+      className="w-full bg-stone-900 p-2 pt-2.5"
       style={{ height: `${TOP_NAV_HEIGHT}px` }}
     >
-      <div className="flex justify-between items-center w-full mx-auto pl-8 pr-2">
-        <div className="flex flex-row gap-2 items-center shrink-0 w-[50%]">
+      <InlineStack
+        blockAlign="center"
+        align="space-between"
+        className="pl-12 pr-2"
+      >
+        <InlineStack blockAlign="center">
           <Link to="/">
             <img
-              src={logoAsset}
+              src={logo}
               alt="logo"
-              className="w-10 h-10 filter cursor-pointer shrink-0"
+              className="h-8 filter cursor-pointer shrink-0"
             />
           </Link>
-          <span className="text-white text-sm font-bold">{title}</span>
-        </div>
-        <InlineStack
-          blockAlign="center"
-          align="space-between"
-          className="w-full"
-        >
-          <div className="flex flex-row gap-2 items-center">
+          <span className="text-white text-md font-bold ml-22">{title}</span>
+        </InlineStack>
+
+        <InlineStack blockAlign="center">
+          <InlineStack gap="4" blockAlign="center" className="mr-42">
             <CloneRunButton componentSpec={componentSpec} />
             <ImportPipeline />
             <NewPipelineButton />
-          </div>
+          </InlineStack>
 
-          <InlineStack blockAlign="center" gap="2">
+          <InlineStack gap="2" blockAlign="center">
             <BackendStatus />
             <PersonalPreferences />
             {requiresAuthorization && <TopBarAuthentication />}
           </InlineStack>
         </InlineStack>
-      </div>
+      </InlineStack>
     </div>
   );
 };
