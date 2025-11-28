@@ -1,7 +1,15 @@
 import equal from "fast-deep-equal";
-import { type ReactNode, useCallback, useMemo, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { type UndoRedo, useUndoRedo } from "@/hooks/useUndoRedo";
+import { generateDigest } from "@/services/componentService";
 import { loadPipelineByName } from "@/services/pipelineService";
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 import { prepareComponentRefForEditor } from "@/utils/prepareComponentRefForEditor";
@@ -42,6 +50,7 @@ interface ComponentSpecContextType {
   graphSpec: GraphSpec;
   currentGraphSpec: GraphSpec;
   currentSubgraphSpec: ComponentSpec;
+  digest: string;
   isLoading: boolean;
   isValid: boolean;
   errors: string[];
@@ -73,6 +82,7 @@ export const ComponentSpecProvider = ({
   const [componentSpec, setComponentSpec] = useState<ComponentSpec>(
     spec ?? EMPTY_GRAPH_COMPONENT_SPEC,
   );
+  const [digest, setDigest] = useState<string>("");
 
   const [isLoading, setIsLoading] = useState(!!spec);
 
@@ -104,6 +114,24 @@ export const ComponentSpecProvider = ({
       }),
     [currentSubgraphSpec, isRootSubgraph],
   );
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const computeDigest = async () => {
+      const text = componentSpecToYaml(componentSpec);
+      const newDigest = await generateDigest(text);
+      if (!isCancelled) {
+        setDigest(newDigest);
+      }
+    };
+
+    computeDigest();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [componentSpec]);
 
   const clearComponentSpec = useCallback(() => {
     setComponentSpec(EMPTY_GRAPH_COMPONENT_SPEC);
@@ -226,6 +254,7 @@ export const ComponentSpecProvider = ({
       graphSpec,
       currentGraphSpec,
       currentSubgraphSpec,
+      digest,
       isLoading,
       isValid,
       errors,
@@ -247,6 +276,7 @@ export const ComponentSpecProvider = ({
       graphSpec,
       currentGraphSpec,
       currentSubgraphSpec,
+      digest,
       isLoading,
       isValid,
       errors,

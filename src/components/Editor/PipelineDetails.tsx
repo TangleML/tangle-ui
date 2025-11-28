@@ -25,7 +25,8 @@ import { getOutputConnectedDetails } from "./utils/getOutputConnectedDetails";
 
 const PipelineDetails = () => {
   const { setContent } = useContextPanel();
-  const { componentSpec, graphSpec, isValid, errors } = useComponentSpec();
+  const { componentSpec, graphSpec, digest, isValid, errors } =
+    useComponentSpec();
 
   const notify = useToastNotification();
 
@@ -45,7 +46,6 @@ const PipelineDetails = () => {
     creationTime?: Date;
     modificationTime?: Date;
     createdBy?: string;
-    digest?: string;
   }>({});
 
   // Fetch file metadata on mount or when componentSpec.name changes
@@ -63,7 +63,6 @@ const PipelineDetails = () => {
           createdBy: file.componentRef.spec.metadata?.annotations?.author as
             | string
             | undefined,
-          digest: file.componentRef.digest,
         });
       }
     };
@@ -172,21 +171,19 @@ const PipelineDetails = () => {
       )}
 
       {/* Component Digest */}
-      {fileMeta.digest && (
+      {digest && (
         <div className="mb-2">
           <h3 className="text-md font-medium mb-1">Digest</h3>
           <Button
             className="bg-gray-100 border border-gray-300 rounded p-2 h-fit text-xs w-full text-left hover:bg-gray-200 active:bg-gray-300 transition cursor-pointer"
             onClick={() => {
-              if (fileMeta.digest) {
-                navigator.clipboard.writeText(fileMeta.digest);
-                notify("Digest copied to clipboard", "success");
-              }
+              navigator.clipboard.writeText(digest);
+              notify("Digest copied to clipboard", "success");
             }}
             variant="ghost"
           >
             <span className="font-mono break-all w-full text-wrap">
-              {fileMeta.digest}
+              {digest}
             </span>
           </Button>
         </div>
