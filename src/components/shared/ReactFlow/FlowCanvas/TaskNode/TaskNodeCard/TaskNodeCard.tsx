@@ -41,7 +41,11 @@ const TaskNodeCard = () => {
   const isInAppEditorEnabled = useBetaFlagValue("in-app-component-editor");
   const { registerNode } = useNodesOverlay();
   const taskNode = useTaskNode();
-  const { setContent, clearContent } = useContextPanel();
+  const {
+    setContent,
+    clearContent,
+    setOpen: setContextPanelOpen,
+  } = useContextPanel();
   const { navigateToSubgraph } = useComponentSpec();
   const executionData = useExecutionDataOptional();
   const rootExecutionId = executionData?.rootExecutionId;
@@ -239,6 +243,7 @@ const TaskNodeCard = () => {
   useEffect(() => {
     if (selected && !isDragging) {
       setContent(taskConfigMarkup);
+      setContextPanelOpen(true);
     }
 
     return () => {
@@ -246,7 +251,13 @@ const TaskNodeCard = () => {
         clearContent();
       }
     };
-  }, [selected, taskConfigMarkup, setContent, clearContent]);
+  }, [
+    selected,
+    taskConfigMarkup,
+    setContent,
+    clearContent,
+    setContextPanelOpen,
+  ]);
 
   if (!taskSpec) {
     return null;

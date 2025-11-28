@@ -16,8 +16,10 @@ import {
 
 type ContextPanelContextType = {
   content: ReactNode;
+  open: boolean;
   setContent: (content: ReactNode) => void;
   clearContent: () => void;
+  setOpen: (open: boolean) => void;
 };
 
 const ContextPanelContext = createRequiredContext<ContextPanelContextType>(
@@ -38,7 +40,9 @@ export const ContextPanelProvider = ({
   children: ReactNode;
 }) => {
   const { setNodes } = useReactFlow();
+
   const [content, setContentState] = useState<ReactNode>(defaultContent);
+  const [open, setOpen] = useState(true);
 
   const setContent = useCallback((content: ReactNode) => {
     setContentState(content);
@@ -64,8 +68,8 @@ export const ContextPanelProvider = ({
   }, [defaultContent]);
 
   const value = useMemo(
-    () => ({ content, setContent, clearContent }),
-    [content, setContent, clearContent],
+    () => ({ content, open, setContent, clearContent, setOpen }),
+    [content, open, setContent, clearContent, setOpen],
   );
 
   return (
