@@ -1,5 +1,6 @@
 import {
   type Connection,
+  type Edge,
   type FinalConnectionState,
   type Node,
   type NodeChange,
@@ -10,6 +11,7 @@ import {
   type ReactFlowProps,
   SelectionMode,
   useConnection,
+  useEdgesState,
   useNodesState,
   useStoreApi,
   type XYPosition,
@@ -35,7 +37,6 @@ import { hydrateComponentReference } from "@/services/componentService";
 import {
   type ComponentSpec,
   type InputSpec,
-  isGraphImplementation,
   isNotMaterializedComponentReference,
   type TaskSpec,
 } from "@/utils/componentSpec";
@@ -53,10 +54,14 @@ import { useNodesOverlay } from "../NodesOverlay/NodesOverlayProvider";
 import { getBulkUpdateConfirmationDetails } from "./ConfirmationDialogs/BulkUpdateConfirmationDialog";
 import { getDeleteConfirmationDetails } from "./ConfirmationDialogs/DeleteConfirmation";
 import { getReplaceConfirmationDetails } from "./ConfirmationDialogs/ReplaceConfirmation";
+import { ConnectionLine } from "./Edges/ConnectionLine";
 import SmoothEdge from "./Edges/SmoothEdge";
 import GhostNode from "./GhostNode/GhostNode";
 import type { GhostNodeData } from "./GhostNode/types";
-import { computeDropPositionFromRefs } from "./GhostNode/utils";
+import {
+  computeDropPositionFromRefs,
+  createGhostEdge,
+} from "./GhostNode/utils";
 import IONode from "./IONode/IONode";
 import SelectionToolbar from "./SelectionToolbar";
 import { handleGroupNodes } from "./Subgraphs/create/handleGroupNodes";
@@ -134,10 +139,16 @@ const FlowCanvas = ({
   const isSubgraphNavigationEnabled = useBetaFlagValue("subgraph-navigation");
   const isPartialSelectionEnabled = useBetaFlagValue("partial-selection");
 
-  const { edges, onEdgesChange } = useComponentSpecToEdges(currentSubgraphSpec);
+  const store = useStoreApi();
+  const { edges: specEdges, onEdgesChange } =
+    useComponentSpecToEdges(currentSubgraphSpec);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, setEdges] = useEdgesState<Edge>(specEdges);
 
   const isConnecting = useConnection((connection) => connection.inProgress);
+  const connectionSourceHandle = useConnection(
+    (connection) => connection.fromHandle,
+  );
 
   const {
     handlers: confirmationHandlers,
@@ -150,8 +161,7 @@ const FlowCanvas = ({
   const notify = useToastNotification();
 
   const latestFlowPosRef = useRef<XYPosition>(null);
-  const ghostNodePositionRef = useRef<XYPosition | null>(null);
-  const ghostNodeTypeRef = useRef<GhostNodeData["ioType"] | null>(null);
+  const ghostNodeRef = useRef<Node<GhostNodeData> | null>(null);
   const shouldCreateIONodeRef = useRef(false);
 
   const [showToolbar, setShowToolbar] = useState(false);
@@ -263,10 +273,21 @@ const FlowCanvas = ({
 
   const { ghostNode, shouldCreateIONode } = useGhostNode({
     readOnly,
-    metaKeyPressed,
+    active: metaKeyPressed,
     isConnecting,
     implementation: currentSubgraphSpec.implementation,
   });
+
+  useEffect(() => {
+    if (!!ghostNode && connectionSourceHandle) {
+      const ghostEdge = createGhostEdge(connectionSourceHandle);
+      setEdges([...specEdges, ghostEdge]);
+
+      return;
+    }
+
+    setEdges(specEdges);
+  }, [ghostNode, connectionSourceHandle, specEdges, setEdges]);
 
   const nodesForRender = useMemo<Node[]>(
     () => (ghostNode ? [...nodes, ghostNode] : nodes),
@@ -278,8 +299,7 @@ const FlowCanvas = ({
   }, [shouldCreateIONode]);
 
   useEffect(() => {
-    ghostNodePositionRef.current = ghostNode?.position ?? null;
-    ghostNodeTypeRef.current = ghostNode?.data.ioType ?? null;
+    ghostNodeRef.current = ghostNode;
   }, [ghostNode]);
 
   const selectedNodes = useMemo(
@@ -392,32 +412,26 @@ const FlowCanvas = ({
   );
 
   const handleGhostDrop = useCallback(
-    (fromHandle: FinalConnectionState["fromHandle"] | null) => {
-      if (
-        !fromHandle ||
-        !fromHandle.nodeId ||
-        !fromHandle.id ||
-        !isGraphImplementation(currentSubgraphSpec.implementation)
-      ) {
+    (finalConnectionState: FinalConnectionState | null) => {
+      const fromNode = finalConnectionState?.fromNode;
+      const fromHandle = finalConnectionState?.fromHandle;
+
+      if (!fromNode || !fromHandle?.id) {
+        return false;
+      }
+
+      if (!FAST_PLACE_NODE_TYPES.has(fromNode.type)) {
         return false;
       }
 
       const position = computeDropPositionFromRefs(
-        ghostNodePositionRef.current,
+        ghostNodeRef.current,
         latestFlowPosRef.current,
-        ghostNodeTypeRef.current,
         fromHandle.type,
+        store.getState(),
       );
-      if (!position) {
-        return false;
-      }
 
-      const fromNode = nodes.find((node) => node.id === fromHandle.nodeId);
-      if (
-        !fromNode ||
-        !fromNode.type ||
-        !FAST_PLACE_NODE_TYPES.has(fromNode.type)
-      ) {
+      if (!position) {
         return false;
       }
 
@@ -470,7 +484,7 @@ const FlowCanvas = ({
         return;
       }
 
-      handleGhostDrop(connectionState.fromHandle ?? null);
+      handleGhostDrop(connectionState);
     },
     [handleGhostDrop],
   );
@@ -948,8 +962,6 @@ const FlowCanvas = ({
     fitView,
   );
 
-  const store = useStoreApi();
-
   const onCopy = useCallback(() => {
     // Copy selected nodes to clipboard
     if (selectedNodes.length > 0) {
@@ -1083,6 +1095,7 @@ const FlowCanvas = ({
         onSelectionEnd={handleSelectionEnd}
         nodesConnectable={readOnly ? false : nodesConnectable}
         connectOnClick={!readOnly}
+        connectionLineComponent={ConnectionLine}
         proOptions={{ hideAttribution: true }}
         className={cn(
           (rest.selectionOnDrag || (shiftKeyPressed && !isConnecting)) &&

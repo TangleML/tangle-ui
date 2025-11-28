@@ -12,9 +12,12 @@ import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useContextPanel } from "@/providers/ContextPanelProvider";
 import { isViewingSubgraph } from "@/utils/subgraphUtils";
 
+import { getGhostHandleId, GHOST_NODE_ID } from "../GhostNode/utils";
+
 export const DEFAULT_IO_NODE_WIDTH = 300;
 
 interface IONodeProps {
+  id: string;
   type: "input" | "output";
   data: {
     label: string;
@@ -27,7 +30,7 @@ interface IONodeProps {
   deletable: boolean;
 }
 
-const IONode = ({ type, data, selected = false }: IONodeProps) => {
+const IONode = ({ id, type, data, selected = false }: IONodeProps) => {
   const { currentGraphSpec, currentSubgraphSpec, currentSubgraphPath } =
     useComponentSpec();
   const {
@@ -130,10 +133,14 @@ const IONode = ({ type, data, selected = false }: IONodeProps) => {
 
   const value = isInput ? inputValue : outputValue;
 
+  // The rest of our code doesn't support IO Handles having ids (yet).
+  // For now, only assign an id to the Handle if this is a ghost node.
+  const handleId = id === GHOST_NODE_ID ? getGhostHandleId() : undefined;
+
   return (
     <Card className={cn("border-2 max-w-[300px] p-0", borderColor)}>
       <CardHeader className="px-2 py-2.5">
-        <CardTitle className="wrap-break-word">{data.label}</CardTitle>
+        <CardTitle className="wrap-break-word text-sm">{data.label}</CardTitle>
       </CardHeader>
       <CardContent className="p-2 max-w-[250px]">
         <BlockStack gap="2">
@@ -144,7 +151,7 @@ const IONode = ({ type, data, selected = false }: IONodeProps) => {
           </Paragraph>
 
           {!!outputConnectedTaskId && (
-            <Paragraph weight="bold" className="text-slate-700">
+            <Paragraph size="xs" weight="bold" className="text-slate-700">
               {outputConnectedTaskId}
             </Paragraph>
           )}
@@ -170,6 +177,7 @@ const IONode = ({ type, data, selected = false }: IONodeProps) => {
           </InlineStack>
         </BlockStack>
         <Handle
+          id={handleId}
           type={handleType}
           position={handlePosition}
           className={cn(handleDefaultClassName, handleClassName)}
