@@ -1,5 +1,3 @@
-import { useState } from "react";
-
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -8,6 +6,7 @@ import {
 } from "@/components/ui/collapsible";
 import { Icon } from "@/components/ui/icon";
 import { VerticalResizeHandle } from "@/components/ui/resize-handle";
+import { useContextPanel } from "@/providers/ContextPanelProvider";
 
 import { ContextPanel } from "./ContextPanel";
 
@@ -15,14 +14,8 @@ const MIN_WIDTH = 200;
 const MAX_WIDTH = 600;
 const DEFAULT_WIDTH = 400;
 
-interface CollapsibleContextPanelProps {
-  defaultOpen?: boolean;
-}
-
-export function CollapsibleContextPanel({
-  defaultOpen = true,
-}: CollapsibleContextPanelProps = {}) {
-  const [open, setOpen] = useState(defaultOpen);
+export function CollapsibleContextPanel() {
+  const { open, setOpen } = useContextPanel();
 
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="h-full">

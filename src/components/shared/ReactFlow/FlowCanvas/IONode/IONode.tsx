@@ -30,7 +30,11 @@ interface IONodeProps {
 const IONode = ({ type, data, selected = false }: IONodeProps) => {
   const { currentGraphSpec, currentSubgraphSpec, currentSubgraphPath } =
     useComponentSpec();
-  const { setContent, clearContent } = useContextPanel();
+  const {
+    setContent,
+    clearContent,
+    setOpen: setContextPanelOpen,
+  } = useContextPanel();
 
   const isInput = type === "input";
   const isOutput = type === "output";
@@ -87,6 +91,8 @@ const IONode = ({ type, data, selected = false }: IONodeProps) => {
           />,
         );
       }
+
+      setContextPanelOpen(true);
     }
 
     return () => {
