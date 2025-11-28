@@ -1,4 +1,3 @@
-import yaml from "js-yaml";
 import { useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -15,7 +14,10 @@ import { Label } from "@/components/ui/label";
 import { BlockStack } from "@/components/ui/layout";
 import { generateDigest } from "@/services/componentService";
 import type { ComponentSpec } from "@/utils/componentSpec";
-import { deleteComponentFileFromList } from "@/utils/componentStore";
+import {
+  componentSpecToYaml,
+  deleteComponentFileFromList,
+} from "@/utils/componentStore";
 import { USER_COMPONENTS_LIST_NAME } from "@/utils/constants";
 import type { UserComponent } from "@/utils/localforage";
 
@@ -53,7 +55,7 @@ const ComponentDuplicateDialog = ({
 
     if (newComponent && newName) {
       const digest = await generateDigest(
-        yaml.dump({
+        componentSpecToYaml({
           ...newComponent,
           name: newName,
         }),
@@ -73,11 +75,13 @@ const ComponentDuplicateDialog = ({
 
   const handleRenameAndImport = useCallback(
     async (newName: string) => {
+      if (!newComponent) return;
+
       const newComponentWithNewName = {
         ...newComponent,
         name: newName,
       };
-      const yamlString = yaml.dump(newComponentWithNewName);
+      const yamlString = componentSpecToYaml(newComponentWithNewName);
       handleImportComponent(yamlString);
 
       setClose();
@@ -86,7 +90,9 @@ const ComponentDuplicateDialog = ({
   );
 
   const handleReplaceAndImport = useCallback(async () => {
-    const yamlString = yaml.dump(newComponent);
+    if (!newComponent) return;
+
+    const yamlString = componentSpecToYaml(newComponent);
     await deleteComponentFileFromList(
       USER_COMPONENTS_LIST_NAME,
       existingComponent?.name ?? "",
@@ -103,7 +109,7 @@ const ComponentDuplicateDialog = ({
   useEffect(() => {
     const generateNewDigest = async () => {
       if (newComponent) {
-        const digest = await generateDigest(yaml.dump(newComponent));
+        const digest = await generateDigest(componentSpecToYaml(newComponent));
         setNewDigest(digest);
       }
     };

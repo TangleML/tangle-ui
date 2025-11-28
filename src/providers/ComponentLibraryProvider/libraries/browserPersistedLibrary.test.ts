@@ -15,6 +15,12 @@ import type { ComponentReference } from "@/utils/componentSpec";
 import { BrowserPersistedLibrary } from "./browserPersistedLibrary";
 import { LibraryDB, type StoredLibrary } from "./storage";
 
+vi.mock("@/services/componentService", () => ({
+  hydrateComponentReference: vi.fn(),
+  generateDigest: vi.fn(),
+  fetchComponentTextFromUrl: vi.fn(),
+}));
+
 describe("BrowserPersistedLibrary", () => {
   const createMockComponentReference = (
     name = "test-component",
