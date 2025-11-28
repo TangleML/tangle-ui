@@ -1,9 +1,8 @@
-import { useState } from "react";
-
 import {
   Sidebar,
   SidebarContent,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
@@ -12,11 +11,11 @@ import GraphComponents from "./sections/GraphComponents";
 import RunsAndSubmission from "./sections/RunsAndSubmission";
 
 const FlowSidebar = () => {
-  const [isOpen, setIsOpen] = useState(true);
+  const { open, setOpen } = useSidebar();
 
   const sidebarTriggerClasses = cn(
     "absolute top-[65px] z-1 transition-all duration-300 bg-white mt-8 rounded-r-md shadow-md p-0.5 pr-1",
-    isOpen ? "left-[255px]" : "left-[47px]",
+    open ? "left-[255px]" : "left-[47px]",
   );
 
   return (
@@ -24,7 +23,7 @@ const FlowSidebar = () => {
       <div className={sidebarTriggerClasses}>
         <SidebarTrigger
           className="text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={() => setOpen(!open)}
         />
       </div>
       <Sidebar
@@ -33,9 +32,9 @@ const FlowSidebar = () => {
         collapsible="icon"
       >
         <SidebarContent className="gap-0! m-0! p-0!">
-          <FileActions isOpen={isOpen} />
-          <RunsAndSubmission isOpen={isOpen} />
-          <GraphComponents isOpen={isOpen} />
+          <FileActions isOpen={open} />
+          <RunsAndSubmission isOpen={open} />
+          <GraphComponents isOpen={open} />
         </SidebarContent>
       </Sidebar>
     </>
