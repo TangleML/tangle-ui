@@ -9,7 +9,11 @@ import {
   getSubgraphComponentSpec,
   updateSubgraphSpec,
 } from "@/utils/subgraphUtils";
-import { checkComponentSpecValidity } from "@/utils/validations";
+import {
+  checkComponentSpecValidity,
+  collectComponentValidationIssues,
+  type ComponentValidationIssue,
+} from "@/utils/validations";
 
 import {
   createRequiredContext,
@@ -45,6 +49,8 @@ interface ComponentSpecContextType {
   isLoading: boolean;
   isValid: boolean;
   errors: string[];
+  isComponentTreeValid: boolean;
+  globalValidationIssues: ComponentValidationIssue[];
   refetch: () => void;
   updateGraphSpec: (newGraphSpec: GraphSpec) => void;
   saveComponentSpec: (name: string) => Promise<void>;
@@ -104,6 +110,12 @@ export const ComponentSpecProvider = ({
       }),
     [currentSubgraphSpec, isRootSubgraph],
   );
+
+  const globalValidationIssues = useMemo(
+    () => collectComponentValidationIssues(componentSpec),
+    [componentSpec],
+  );
+  const isComponentTreeValid = globalValidationIssues.length === 0;
 
   const clearComponentSpec = useCallback(() => {
     setComponentSpec(EMPTY_GRAPH_COMPONENT_SPEC);
@@ -229,6 +241,8 @@ export const ComponentSpecProvider = ({
       isLoading,
       isValid,
       errors,
+      isComponentTreeValid,
+      globalValidationIssues,
       refetch,
       setComponentSpec,
       clearComponentSpec,
@@ -250,6 +264,8 @@ export const ComponentSpecProvider = ({
       isLoading,
       isValid,
       errors,
+      isComponentTreeValid,
+      globalValidationIssues,
       refetch,
       setComponentSpec,
       clearComponentSpec,

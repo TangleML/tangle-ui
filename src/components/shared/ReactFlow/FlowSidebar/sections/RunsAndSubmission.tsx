@@ -16,7 +16,7 @@ import { RecentExecutionsButton } from "../components/RecentExecutionsButton";
 
 const RunsAndSubmission = ({ isOpen }: { isOpen: boolean }) => {
   const { isAuthorized } = useAwaitAuthorization();
-  const { componentSpec } = useComponentSpec();
+  const { componentSpec, isComponentTreeValid } = useComponentSpec();
 
   const showGoogleSubmitter =
     import.meta.env.VITE_ENABLE_GOOGLE_CLOUD_SUBMITTER === "true";
@@ -29,7 +29,10 @@ const RunsAndSubmission = ({ isOpen }: { isOpen: boolean }) => {
           <SidebarMenu>
             <SidebarMenuItem>
               {isAuthorized ? (
-                <OasisSubmitter componentSpec={componentSpec} />
+                <OasisSubmitter
+                  componentSpec={componentSpec}
+                  isComponentTreeValid={isComponentTreeValid}
+                />
               ) : (
                 <HuggingFaceAuthButton title="Sign in to Submit Runs" />
               )}
@@ -60,7 +63,10 @@ const RunsAndSubmission = ({ isOpen }: { isOpen: boolean }) => {
         <SidebarMenu>
           <SidebarMenuItem>
             {isAuthorized ? (
-              <OasisSubmitter componentSpec={componentSpec} />
+              <OasisSubmitter
+                componentSpec={componentSpec}
+                isComponentTreeValid={isComponentTreeValid}
+              />
             ) : (
               <HuggingFaceAuthButton
                 title="Sign in to Submit Runs"

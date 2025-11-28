@@ -8,9 +8,22 @@ import {
   type TaskOutputArgument,
   type TaskSpec,
 } from "./componentSpec";
+import { ROOT_TASK_ID } from "./constants";
 
 interface ValidationOptions {
   skipInputValueValidation?: boolean;
+}
+
+type ValidationIssueType = "graph" | "task" | "input" | "output";
+
+export interface ComponentValidationIssue {
+  id: string;
+  message: string;
+  subgraphPath: string[];
+  type: ValidationIssueType;
+  taskId?: string;
+  inputName?: string;
+  outputName?: string;
 }
 
 export const checkComponentSpecValidity = (
@@ -453,4 +466,124 @@ const validateCircularDependencies = (graphSpec: GraphSpec): string[] => {
   }
 
   return errors;
+};
+
+export const collectComponentValidationIssues = (
+  componentSpec: ComponentSpec,
+): ComponentValidationIssue[] => {
+  return collectIssuesRecursive(componentSpec, {
+    subgraphPath: [ROOT_TASK_ID],
+    skipInputValueValidation: false,
+    visitedSpecs: new Set(),
+  });
+};
+
+interface ValidationContext {
+  subgraphPath: string[];
+  skipInputValueValidation: boolean;
+  visitedSpecs: Set<ComponentSpec>;
+}
+
+const collectIssuesRecursive = (
+  componentSpec: ComponentSpec,
+  context: ValidationContext,
+): ComponentValidationIssue[] => {
+  if (context.visitedSpecs.has(componentSpec)) {
+    return [];
+  }
+  context.visitedSpecs.add(componentSpec);
+
+  const { subgraphPath } = context;
+  const { errors } = checkComponentSpecValidity(componentSpec, {
+    skipInputValueValidation: context.skipInputValueValidation,
+  });
+
+  const issuesForCurrent = errors.map((message, index) => {
+    const metadata = inferIssueMetadata(message);
+    return {
+      id: buildIssueId(subgraphPath, metadata, index),
+      message,
+      subgraphPath,
+      ...metadata,
+    };
+  });
+
+  if (!isGraphImplementation(componentSpec.implementation)) {
+    return issuesForCurrent;
+  }
+
+  const nestedIssues = Object.entries(
+    componentSpec.implementation.graph.tasks,
+  ).flatMap(([taskId, taskSpec]) => {
+    const nestedSpec = taskSpec.componentRef?.spec;
+    if (!nestedSpec || !isGraphImplementation(nestedSpec.implementation)) {
+      return [];
+    }
+
+    return collectIssuesRecursive(nestedSpec, {
+      subgraphPath: [...subgraphPath, taskId],
+      skipInputValueValidation: true,
+      visitedSpecs: context.visitedSpecs,
+    });
+  });
+
+  return [...issuesForCurrent, ...nestedIssues];
+};
+
+const TASK_PATTERN = /Task "([^"]+)"/;
+const CIRCULAR_DEP_PATTERN =
+  /Circular dependency detected in pipeline at task: (\S+)/;
+const PIPELINE_INPUT_PATTERN = /Pipeline input "([^"]+)"/;
+const DUPLICATE_INPUT_PATTERN = /Duplicate input name found: "([^"]+)"/;
+const GRAPH_OUTPUT_PATTERN = /Graph output "([^"]+)"/;
+const PIPELINE_OUTPUT_PATTERN = /Pipeline output "([^"]+)"/;
+const DUPLICATE_OUTPUT_PATTERN = /Duplicate output name found: "([^"]+)"/;
+
+type IssueMetadata = Omit<
+  ComponentValidationIssue,
+  "id" | "message" | "subgraphPath"
+>;
+
+const inferIssueMetadata = (message: string): IssueMetadata => {
+  const taskMatch = TASK_PATTERN.exec(message);
+  if (taskMatch) return { type: "task", taskId: taskMatch[1] };
+
+  const circularMatch = CIRCULAR_DEP_PATTERN.exec(message);
+  if (circularMatch) return { type: "task", taskId: circularMatch[1] };
+
+  const pipelineInputMatch = PIPELINE_INPUT_PATTERN.exec(message);
+  if (pipelineInputMatch)
+    return { type: "input", inputName: pipelineInputMatch[1] };
+
+  const duplicateInputMatch = DUPLICATE_INPUT_PATTERN.exec(message);
+  if (duplicateInputMatch)
+    return { type: "input", inputName: duplicateInputMatch[1] };
+
+  if (message.includes("Input with value")) return { type: "input" };
+
+  const graphOutputMatch = GRAPH_OUTPUT_PATTERN.exec(message);
+  if (graphOutputMatch)
+    return { type: "output", outputName: graphOutputMatch[1] };
+
+  const pipelineOutputMatch = PIPELINE_OUTPUT_PATTERN.exec(message);
+  if (pipelineOutputMatch)
+    return { type: "output", outputName: pipelineOutputMatch[1] };
+
+  const duplicateOutputMatch = DUPLICATE_OUTPUT_PATTERN.exec(message);
+  if (duplicateOutputMatch)
+    return { type: "output", outputName: duplicateOutputMatch[1] };
+
+  if (message.includes("Output with type")) return { type: "output" };
+
+  return { type: "graph" };
+};
+
+const buildIssueId = (
+  path: string[],
+  metadata: IssueMetadata,
+  index: number,
+): string => {
+  const targetKey =
+    metadata.taskId ?? metadata.inputName ?? metadata.outputName ?? "graph";
+  return `${path.join(">")}::${metadata.type}::${targetKey}::${index}`;
 };

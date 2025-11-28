@@ -1,0 +1,198 @@
+name: validation-errors-demo
+description: Five-level subgraph stack with intentional validation errors at each level
+inputs:
+  - name: root_input
+    type: string
+    annotations:
+      editor.position: '{"x":-260,"y":0}'
+  - name: unused_root_input
+    type: string
+    annotations:
+      editor.position: '{"x":-260,"y":100}'
+  - name: required_root_input
+    type: string
+    optional: false
+    annotations:
+      editor.position: '{"x":-260,"y":200}'
+outputs:
+  - name: root_output
+    type: string
+    annotations:
+      editor.position: '{"x":430,"y":0}'
+  - name: disconnected_output
+    type: string
+    annotations:
+      editor.position: '{"x":430,"y":100}'
+implementation:
+  graph:
+    tasks:
+      level_1:
+        annotations:
+          editor.position: '{"x":30,"y":0}'
+        componentRef:
+          name: level-1
+          spec:
+            name: level-1
+            inputs:
+              - name: l1_input
+                type: string
+                annotations:
+                  editor.position: '{"x":-190,"y":0}'
+              - name: l1_unused_input
+                type: string
+                annotations:
+                  editor.position: '{"x":-190,"y":100}'
+            outputs:
+              - name: l1_output
+                type: string
+                annotations:
+                  editor.position: '{"x":620,"y":0}'
+              - name: l1_output
+                type: string
+                annotations:
+                  editor.position: '{"x":620,"y":100}'
+            implementation:
+              graph:
+                tasks:
+                  level_2:
+                    annotations:
+                      editor.position: '{"x":100,"y":0}'
+                    componentRef:
+                      name: level-2
+                      spec:
+                        name: level-2
+                        inputs:
+                          - name: l2_input
+                            type: string
+                            annotations:
+                              editor.position: '{"x":-40,"y":0}'
+                          - name: l2_required_input
+                            type: string
+                            optional: false
+                            annotations:
+                              editor.position: '{"x":-40,"y":100}'
+                        outputs:
+                          - name: l2_output
+                            type: string
+                            annotations:
+                              editor.position: '{"x":770,"y":0}'
+                        implementation:
+                          graph:
+                            tasks:
+                              level_3:
+                                annotations:
+                                  editor.position: '{"x":330,"y":0}'
+                                componentRef:
+                                  name: level-3
+                                  spec:
+                                    name: level-3
+                                    inputs:
+                                      - name: l3_input
+                                        type: string
+                                        annotations:
+                                          editor.position: '{"x":110,"y":0}'
+                                    outputs:
+                                      - name: l3_output
+                                        type: string
+                                        annotations:
+                                          editor.position: '{"x":920,"y":0}'
+                                      - name: l3_disconnected_output
+                                        type: string
+                                        annotations:
+                                          editor.position: '{"x":920,"y":100}'
+                                    implementation:
+                                      graph:
+                                        tasks:
+                                          level_4:
+                                            annotations:
+                                              editor.position: '{"x":480,"y":0}'
+                                            componentRef:
+                                              name: level-4
+                                              spec:
+                                                name: level-4
+                                                inputs:
+                                                  - name: l4_input
+                                                    type: string
+                                                    annotations:
+                                                      editor.position: '{"x":260,"y":0}'
+                                                  - name: l4_input
+                                                    type: string
+                                                    annotations:
+                                                      editor.position: '{"x":260,"y":100}'
+                                                outputs:
+                                                  - name: l4_output
+                                                    type: string
+                                                    annotations:
+                                                      editor.position: '{"x":1070,"y":0}'
+                                                implementation:
+                                                  graph:
+                                                    tasks:
+                                                      level_5:
+                                                        annotations:
+                                                          editor.position: '{"x":630,"y":0}'
+                                                        componentRef:
+                                                          name: level-5
+                                                          spec:
+                                                            name: level-5
+                                                            inputs:
+                                                              - name: l5_input
+                                                                type: string
+                                                                annotations:
+                                                                  editor.position: '{"x":410,"y":0}'
+                                                            outputs:
+                                                              - name: l5_output
+                                                                type: string
+                                                                annotations:
+                                                                  editor.position: '{"x":1220,"y":0}'
+                                                            implementation:
+                                                              graph:
+                                                                tasks: {}
+                                                        arguments:
+                                                          l5_input:
+                                                            graphInput:
+                                                              inputName: l4_input
+                                                    outputValues:
+                                                      l4_output:
+                                                        taskOutput:
+                                                          taskId: level_5
+                                                          outputName: l5_output
+                                            arguments:
+                                              l4_input:
+                                                graphInput:
+                                                  inputName: l3_input
+                                        outputValues:
+                                          l3_output:
+                                            taskOutput:
+                                              taskId: level_4
+                                              outputName: l4_output
+                                arguments:
+                                  l3_input:
+                                    graphInput:
+                                      inputName: l2_input
+                            outputValues:
+                              l2_output:
+                                taskOutput:
+                                  taskId: level_3
+                                  outputName: l3_output
+                        arguments:
+                          l2_input:
+                            graphInput:
+                              inputName: l1_input
+                          l2_required_input:
+                            graphInput:
+                              inputName: nonexistent_input
+                outputValues:
+                  l1_output:
+                    taskOutput:
+                      taskId: level_2
+                      outputName: l2_output
+        arguments:
+          l1_input:
+            graphInput:
+              inputName: root_input
+    outputValues:
+      root_output:
+        taskOutput:
+          taskId: level_1
+          outputName: l1_output
+
