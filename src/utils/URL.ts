@@ -1,8 +1,7 @@
-import yaml from "js-yaml";
-
 import { RUNS_BASE_PATH } from "@/routes/router";
 
 import type { ComponentSpec } from "./componentSpec";
+import { componentSpecToText } from "./componentStore";
 
 const convertGcsUrlToBrowserUrl = (
   url: string,
@@ -119,12 +118,8 @@ const downloadYamlFromComponentText = (
   componentSpec: ComponentSpec,
   displayName: string,
 ) => {
-  const componentText = yaml.dump(componentSpec, {
-    lineWidth: 80,
-    noRefs: true,
-    indent: 2,
-  });
-  const blob = new Blob([componentText], { type: "text/yaml" });
+  const code = componentSpecToText(componentSpec);
+  const blob = new Blob([code], { type: "text/yaml" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
