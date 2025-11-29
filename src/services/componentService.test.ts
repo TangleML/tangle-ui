@@ -3,13 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ComponentLibrary } from "@/types/componentLibrary";
 import type { ComponentReference, ComponentSpec } from "@/utils/componentSpec";
+import { generateDigest } from "@/utils/componentStore";
 import * as localforage from "@/utils/localforage";
 
 import {
   fetchAndStoreComponent,
   fetchAndStoreComponentByUrl,
   fetchAndStoreComponentLibrary,
-  generateDigest,
   getExistingAndNewUserComponent,
   inputsWithInvalidArguments,
   parseComponentData,
