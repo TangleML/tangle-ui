@@ -6,7 +6,7 @@ import {
   getNodesBounds,
   normalizeNodePosition,
 } from "@/components/shared/ReactFlow/FlowCanvas/utils/geometry";
-import { generateDigest, getComponentText } from "@/services/componentService";
+import { getComponentText } from "@/services/componentService";
 import type {
   ArgumentType,
   ComponentSpec,
@@ -23,6 +23,7 @@ import {
   isTaskOutputArgument,
 } from "@/utils/componentSpec";
 
+import { generateDigest } from "../componentStore";
 import { getUniqueName, getUniqueTaskName } from "../unique";
 import { getUserDetails } from "../user";
 import { extractPositionFromAnnotations } from "./extractPositionFromAnnotations";

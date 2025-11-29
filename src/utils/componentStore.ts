@@ -33,7 +33,7 @@ interface ComponentReferenceWithSpecPlusData {
   data: ArrayBuffer;
 }
 
-const calculateHashDigestHex = async (data: string | ArrayBuffer) => {
+export const generateDigest = async (data: string | ArrayBuffer) => {
   const dataBytes =
     typeof data === "string" ? new TextEncoder().encode(data) : data;
   const hashBuffer = await crypto.subtle.digest("SHA-256", dataBytes);
@@ -85,7 +85,7 @@ export const loadComponentAsRefFromText = async (
   }
   const componentSpec: ComponentSpec = loadedObj;
 
-  const digest = await calculateHashDigestHex(componentBytes as ArrayBuffer);
+  const digest = await generateDigest(componentBytes as ArrayBuffer);
   const componentRef: ComponentReferenceWithSpec = {
     spec: componentSpec,
     digest: digest,
@@ -700,7 +700,7 @@ const upgradeSingleComponentListDb = async (listName: string) => {
         const componentText = componentSpecToYaml(fileEntry.componentRef.spec);
         const encodedData = new TextEncoder().encode(componentText);
         data = encodedData.buffer;
-        const newDigest = await calculateHashDigestHex(data);
+        const newDigest = await generateDigest(data);
         componentRef.digest = newDigest;
         console.warn(
           `The component "${fileName}" was re-serialized. Old digest: ${fileEntry.componentRef.digest}. New digest ${newDigest}.`,

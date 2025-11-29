@@ -22,8 +22,10 @@ vi.mock("../../utils/geometry");
 vi.mock("../../utils/removeNode");
 vi.mock("../../utils/updateDownstreamSubgraphConnections");
 vi.mock("@/services/componentService", () => ({
-  generateDigest: vi.fn().mockResolvedValue("mock-digest"),
   getComponentText: vi.fn().mockResolvedValue("mock-component-text"),
+}));
+vi.mock("@/utils/componentStore", () => ({
+  generateDigest: vi.fn().mockResolvedValue("mock-digest"),
 }));
 vi.mock("@/utils/user", () => ({
   getUserDetails: vi.fn().mockResolvedValue({ id: "test-user" }),

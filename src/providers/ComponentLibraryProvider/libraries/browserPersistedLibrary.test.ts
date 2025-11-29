@@ -17,8 +17,11 @@ import { LibraryDB, type StoredLibrary } from "./storage";
 
 vi.mock("@/services/componentService", () => ({
   hydrateComponentReference: vi.fn(),
-  generateDigest: vi.fn(),
   fetchComponentTextFromUrl: vi.fn(),
+}));
+
+vi.mock("@/services/componentStore", () => ({
+  generateDigest: vi.fn(),
 }));
 
 describe("BrowserPersistedLibrary", () => {

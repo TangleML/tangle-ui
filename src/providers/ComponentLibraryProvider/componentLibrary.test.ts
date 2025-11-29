@@ -351,7 +351,7 @@ describe("componentLibrary", () => {
             implementation: { graph: { tasks: {} } },
           }) as ComponentSpec,
       );
-      mockComponentService.generateDigest.mockImplementation(
+      mockComponentStore.generateDigest.mockImplementation(
         async (text) => `digest-${text}`,
       );
     });
@@ -391,7 +391,7 @@ describe("componentLibrary", () => {
       expect(mockComponentStore.componentSpecToYaml).toHaveBeenCalledWith(
         componentRef.spec,
       );
-      expect(mockComponentService.generateDigest).toHaveBeenCalledWith(
+      expect(mockComponentStore.generateDigest).toHaveBeenCalledWith(
         "spec-as-yaml",
       );
       expect(mockComponentService.parseComponentData).not.toHaveBeenCalled();
@@ -426,7 +426,7 @@ describe("componentLibrary", () => {
       expect(mockComponentService.parseComponentData).toHaveBeenCalledWith(
         "component-yaml-text",
       );
-      expect(mockComponentService.generateDigest).toHaveBeenCalledWith(
+      expect(mockComponentStore.generateDigest).toHaveBeenCalledWith(
         "component-yaml-text",
       );
     });
