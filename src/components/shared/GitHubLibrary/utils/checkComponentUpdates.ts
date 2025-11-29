@@ -1,9 +1,7 @@
 import type { StoredLibrary } from "@/providers/ComponentLibraryProvider/libraries/storage";
-import {
-  generateDigest,
-  hydrateComponentReference,
-} from "@/services/componentService";
+import { hydrateComponentReference } from "@/services/componentService";
 import type { HydratedComponentReference } from "@/utils/componentSpec";
+import { generateDigest } from "@/utils/componentStore";
 
 import { isGitHubLibraryConfiguration } from "../types";
 import { createGitHubApiClient } from "./githubApiClient";

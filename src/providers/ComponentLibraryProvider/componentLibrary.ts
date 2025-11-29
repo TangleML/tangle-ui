@@ -1,7 +1,4 @@
-import {
-  generateDigest,
-  parseComponentData,
-} from "@/services/componentService";
+import { parseComponentData } from "@/services/componentService";
 import type {
   ComponentFolder,
   ComponentLibrary,
@@ -13,6 +10,7 @@ import type {
 } from "@/utils/componentSpec";
 import {
   componentSpecToYaml,
+  generateDigest,
   getAllComponentFilesFromList,
 } from "@/utils/componentStore";
 import { USER_COMPONENTS_LIST_NAME } from "@/utils/constants";

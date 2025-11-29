@@ -12,11 +12,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BlockStack } from "@/components/ui/layout";
-import { generateDigest } from "@/services/componentService";
 import type { ComponentSpec } from "@/utils/componentSpec";
 import {
   componentSpecToYaml,
   deleteComponentFileFromList,
+  generateDigest,
 } from "@/utils/componentStore";
 import { USER_COMPONENTS_LIST_NAME } from "@/utils/constants";
 import type { UserComponent } from "@/utils/localforage";

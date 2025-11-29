@@ -27,7 +27,7 @@ import {
   type TaskSpec,
   type UnknownComponentReference,
 } from "@/utils/componentSpec";
-import { componentSpecToYaml } from "@/utils/componentStore";
+import { componentSpecToYaml, generateDigest } from "@/utils/componentStore";
 import {
   componentExistsByUrl,
   getAllUserComponents,
@@ -43,20 +43,6 @@ export interface ExistingAndNewComponent {
 }
 
 const COMPONENT_LIBRARY_URL = getAppSettings().componentLibraryUrl;
-
-/**
- * Generate a digest for a component
- */
-export const generateDigest = async (text: string): Promise<string> => {
-  const hashBuffer = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(text),
-  );
-
-  return Array.from(new Uint8Array(hashBuffer))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-};
 
 /**
  * Fetches the component library from local storage
