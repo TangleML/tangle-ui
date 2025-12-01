@@ -15,7 +15,9 @@ const COMPONENT_LIBRARY_URL_DEFAULT_VALUE = BASE_URL + COMPONENT_LIBRARY_FILE;
 const COMPONENT_LIBRARY_URL_LOCAL_STORAGE_KEY =
   "ComponentLibrary/component_library_url";
 
-const PIPELINE_LIBRARY_URL_DEFAULT_VALUE = BASE_URL + "pipeline_library.yaml";
+const PIPELINE_LIBRARY_URL_DEFAULT_VALUE =
+  import.meta.env.VITE_PIPELINE_LIBRARY_URL_DEFAULT_VALUE ||
+  BASE_URL + "pipeline_library.yaml";
 const PIPELINE_LIBRARY_URL_LOCAL_STORAGE_KEY =
   "PipelineLibrary/pipeline_library_url";
 
