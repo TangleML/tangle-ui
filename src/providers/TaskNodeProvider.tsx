@@ -10,6 +10,7 @@ import type { RunStatus } from "@/types/pipelineRun";
 import type { TaskNodeData, TaskNodeDimensions } from "@/types/taskNode";
 import type {
   ArgumentType,
+  ComponentReference,
   InputSpec,
   OutputSpec,
   TaskSpec,
@@ -21,6 +22,10 @@ import {
   createRequiredContext,
   useRequiredContext,
 } from "../hooks/useRequiredContext";
+
+const EMPTY_COMPONENT_REF: Partial<ComponentReference> = {};
+const EMPTY_INPUTS: InputSpec[] = [];
+const EMPTY_OUTPUTS: OutputSpec[] = [];
 
 type TaskNodeState = Readonly<{
   selected: boolean;
@@ -77,9 +82,9 @@ export const TaskNodeProvider = ({
   const taskId = data.taskId;
   const nodeId = taskId ? taskIdToNodeId(taskId) : "";
 
-  const componentRef = taskSpec?.componentRef || {};
-  const inputs = componentRef.spec?.inputs || [];
-  const outputs = componentRef.spec?.outputs || [];
+  const componentRef = taskSpec?.componentRef ?? EMPTY_COMPONENT_REF;
+  const inputs = componentRef.spec?.inputs ?? EMPTY_INPUTS;
+  const outputs = componentRef.spec?.outputs ?? EMPTY_OUTPUTS;
 
   const name = getComponentName(componentRef);
 
