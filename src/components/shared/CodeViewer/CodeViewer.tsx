@@ -64,13 +64,17 @@ const CodeViewer = ({
       <div
         className={cn(
           "flex flex-col transition-shadow duration-150",
-          shouldRenderInlineCode ? "bg-slate-900 h-full rounded-md" : "bg-transparent",
+          shouldRenderInlineCode
+            ? "bg-slate-900 h-full rounded-md"
+            : "bg-transparent",
         )}
       >
         {shouldRenderInlineCode ? (
           <div className="flex items-center justify-between gap-2 bg-slate-800 sticky top-0 z-10 rounded-t-md px-3 py-2.5">
             <div className="flex items-baseline gap-2">
-              <span className="font-semibold text-base text-secondary">{filename}</span>
+              <span className="font-semibold text-base text-secondary">
+                {filename}
+              </span>
               <span className="text-sm text-secondary">(Read Only)</span>
             </div>
             <Button
@@ -82,7 +86,11 @@ const CodeViewer = ({
               title={isFullscreen ? "Exit fullscreen" : "View fullscreen"}
               aria-label={isFullscreen ? "Exit fullscreen" : "View fullscreen"}
             >
-              {isFullscreen ? <XIcon className="size-4" /> : <Maximize2 className="size-4" />}
+              {isFullscreen ? (
+                <XIcon className="size-4" />
+              ) : (
+                <Maximize2 className="size-4" />
+              )}
             </Button>
           </div>
         ) : (
