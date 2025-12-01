@@ -57,6 +57,7 @@ export const PythonComponentEditor = withSuspenseWrapper(
     onErrorsChange: (errors: string[]) => void;
     preserveComponentName?: string;
   }) => {
+    const [pythonCode, setPythonCode] = useState(text);
     const [componentText, setComponentText] = useState("");
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
     const [showPreview, setShowPreview] = useState(true);
@@ -71,8 +72,10 @@ export const PythonComponentEditor = withSuspenseWrapper(
 
     const handleFunctionTextChange = useCallback(
       async (value: string | undefined) => {
+        const code = value ?? "";
+        setPythonCode(code);
         try {
-          const yaml = await yamlGenerator(value ?? "", yamlGeneratorOptions);
+          const yaml = await yamlGenerator(code, yamlGeneratorOptions);
           const yamlWithPreservedName = preserveComponentName(
             yaml,
             preservedNameRef.current,
@@ -89,13 +92,13 @@ export const PythonComponentEditor = withSuspenseWrapper(
           setValidationErrors(errors);
         }
       },
-      [yamlGenerator, onComponentTextChange, yamlGeneratorOptions],
+      [yamlGenerator, onComponentTextChange, onErrorsChange, yamlGeneratorOptions],
     );
 
     useEffect(() => {
       // first time loading
       handleFunctionTextChange(text);
-    }, [text, handleFunctionTextChange]);
+    }, []);
 
     return (
       <InlineStack className="w-full h-full" gap="4">
@@ -115,7 +118,7 @@ export const PythonComponentEditor = withSuspenseWrapper(
                   <MonacoEditor
                     defaultLanguage="python"
                     theme="vs-dark"
-                    value={text}
+                    value={pythonCode}
                     onChange={handleFunctionTextChange}
                     options={DEFAULT_MONACO_OPTIONS}
                   />
