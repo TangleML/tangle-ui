@@ -128,7 +128,6 @@ const TaskOverview = ({ taskNode, actions }: TaskOverviewProps) => {
               url={taskSpec.componentRef.url}
               onDelete={callbacks.onDelete}
               status={status}
-              hasDeletionConfirmation={false}
               readOnly={readOnly}
               actions={detailActions}
             />
