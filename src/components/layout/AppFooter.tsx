@@ -13,10 +13,10 @@ import {
 function AppFooter() {
   return (
     <footer
-      className="footer w-full p-1 text-center bg-gray-50"
+      className="footer w-full px-4 text-center bg-gray-50"
       style={{ height: `${BOTTOM_FOOTER_HEIGHT}px` }}
     >
-      <InlineStack className="w-full px-4" align="space-between">
+      <InlineStack className="w-full" align="space-between">
         <div />
         <InlineStack gap="1" blockAlign="center">
           <Link
