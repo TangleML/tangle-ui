@@ -15,8 +15,11 @@ import {
 
 // Mock the services
 vi.mock("@/services/componentService", () => ({
-  generateDigest: vi.fn().mockResolvedValue("mock-digest"),
   getComponentText: vi.fn().mockResolvedValue("mock-component-text"),
+}));
+
+vi.mock("@/utils/componentStore", () => ({
+  generateDigest: vi.fn().mockResolvedValue("mock-digest"),
 }));
 
 vi.mock("@/utils/user", () => ({

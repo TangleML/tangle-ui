@@ -9,7 +9,10 @@ import type {
   PublishedComponentResponse,
 } from "@/api/types.gen";
 import type { ComponentReference, ComponentSpec } from "@/utils/componentSpec";
-import type { ComponentReferenceWithSpec } from "@/utils/componentStore";
+import {
+  type ComponentReferenceWithSpec,
+  generateDigest,
+} from "@/utils/componentStore";
 
 import { PublishedComponentsLibrary } from "./publishedComponentsLibrary";
 import {
@@ -22,7 +25,6 @@ vi.mock("@/api/sdk.gen");
 
 // Import mocked modules
 import * as apiSdk from "@/api/sdk.gen";
-import { generateDigest } from "@/services/componentService";
 
 // Mock fetch globally
 global.fetch = vi.fn();

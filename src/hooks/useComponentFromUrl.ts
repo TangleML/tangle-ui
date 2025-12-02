@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 
 import {
   fetchAndStoreComponentByUrl,
-  generateDigest,
   parseComponentData,
 } from "@/services/componentService";
 import type { ComponentSpec } from "@/utils/componentSpec";
+import { generateDigest } from "@/utils/componentStore";
 import { getComponentByUrl } from "@/utils/localforage";
 
 const useComponentFromUrl = (url?: string) => {
