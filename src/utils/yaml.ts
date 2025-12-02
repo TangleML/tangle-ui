@@ -2,19 +2,6 @@ import yaml from "js-yaml";
 
 import { type ComponentSpec, isValidComponentSpec } from "./componentSpec";
 
-const copyToYaml = (
-  spec: ComponentSpec,
-  onSuccess: (message: string) => void,
-  onFail: (message: string) => void,
-) => {
-  const code = componentSpecToText(spec);
-
-  navigator.clipboard.writeText(code).then(
-    () => onSuccess("YAML copied to clipboard"),
-    (err) => onFail("Failed to copy YAML: " + err),
-  );
-};
-
 class ComponentSpecParsingError extends Error {
   readonly name = "ComponentSpecParsingError";
 
@@ -60,5 +47,3 @@ export const componentSpecToText = (componentSpec: ComponentSpec) => {
     indent: 2,
   });
 };
-
-export default copyToYaml;

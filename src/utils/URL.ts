@@ -114,20 +114,28 @@ const convertGithubUrlToDirectoryUrl = (url: string) => {
   }
 };
 
+const downloadStringAsFile = (
+  content: string,
+  filename: string,
+  contentType: string,
+) => {
+  const blob = new Blob([content], { type: contentType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
 const downloadYamlFromComponentText = (
   componentSpec: ComponentSpec,
   displayName: string,
 ) => {
   const code = componentSpecToText(componentSpec);
-  const blob = new Blob([code], { type: "text/yaml" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${componentSpec?.name || displayName}.yaml`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  downloadStringAsFile(code, `${displayName}.yaml`, "text/yaml");
 };
 
 const getIdOrTitleFromPath = (
@@ -169,6 +177,7 @@ export {
   convertGcsUrlToBrowserUrl,
   convertGithubUrlToDirectoryUrl,
   convertHfUrlToDirectoryUrl,
+  downloadStringAsFile,
   downloadYamlFromComponentText,
   getIdOrTitleFromPath,
   isGithubUrl,
