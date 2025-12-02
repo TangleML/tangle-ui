@@ -619,6 +619,14 @@ export const componentSpecToYaml = (componentSpec: ComponentSpec) => {
   return yaml.dump(componentSpec, { lineWidth: 10000 });
 };
 
+export const componentSpecToText = (componentSpec: ComponentSpec) => {
+  return yaml.dump(componentSpec, {
+    lineWidth: 80,
+    noRefs: true,
+    indent: 2,
+  });
+};
+
 // TODO: Remove the upgrade code in several weeks.
 const upgradeSingleComponentListDb = async (listName: string) => {
   const componentListVersionKey = "component_list_format_version_" + listName;

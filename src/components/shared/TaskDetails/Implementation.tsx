@@ -1,8 +1,8 @@
-import yaml from "js-yaml";
 import { useMemo } from "react";
 
 import { CodeViewer } from "@/components/shared/CodeViewer";
 import type { ComponentSpec } from "@/utils/componentSpec";
+import { componentSpecToText } from "@/utils/componentStore";
 
 interface TaskImplementationProps {
   displayName: string;
@@ -16,12 +16,7 @@ const TaskImplementation = ({
   showInlineContent = true,
 }: TaskImplementationProps) => {
   const code = useMemo(
-    () =>
-      yaml.dump(componentSpec, {
-        lineWidth: 80,
-        noRefs: true,
-        indent: 2,
-      }),
+    () => componentSpecToText(componentSpec),
     [componentSpec],
   );
 

@@ -1,15 +1,12 @@
-import yaml from "js-yaml";
+import type { ComponentSpec } from "./componentSpec";
+import { componentSpecToText } from "./componentStore";
 
 const copyToYaml = (
-  text: string | object,
+  spec: ComponentSpec,
   onSuccess: (message: string) => void,
   onFail: (message: string) => void,
 ) => {
-  const code = yaml.dump(text, {
-    lineWidth: 80,
-    noRefs: true,
-    indent: 2,
-  });
+  const code = componentSpecToText(spec);
 
   navigator.clipboard.writeText(code).then(
     () => onSuccess("YAML copied to clipboard"),

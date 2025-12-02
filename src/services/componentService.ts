@@ -27,6 +27,7 @@ import {
   type TaskSpec,
   type UnknownComponentReference,
 } from "@/utils/componentSpec";
+import { componentSpecToYaml } from "@/utils/componentStore";
 import {
   componentExistsByUrl,
   getAllUserComponents,
@@ -261,7 +262,7 @@ export const getComponentText = async (
   }
 
   if (component.spec) {
-    return yaml.dump(component.spec);
+    return componentSpecToYaml(component.spec);
   }
 
   return undefined;
@@ -432,7 +433,7 @@ async function hydrateFromPartialContentfulComponentReference(
   }
   // it is ok to fail here, as we will try to fetch the text from the URL or local storage
   const text = isSpecOnlyComponentReference(component)
-    ? yaml.dump(component.spec)
+    ? componentSpecToYaml(component.spec)
     : component.text;
 
   const spec = isTextOnlyComponentReference(component)
