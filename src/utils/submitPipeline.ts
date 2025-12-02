@@ -1,5 +1,3 @@
-import yaml from "js-yaml";
-
 import type { BodyCreateApiPipelineRunsPost } from "@/api/types.gen";
 import { getArgumentsFromInputs } from "@/components/shared/ReactFlow/FlowCanvas/utils/getArgumentsFromInputs";
 import {
@@ -9,6 +7,7 @@ import {
 import type { PipelineRun } from "@/types/pipelineRun";
 
 import type { ComponentReference, ComponentSpec } from "./componentSpec";
+import { componentSpecFromYaml } from "./yaml";
 
 export async function submitPipelineRun(
   componentSpec: ComponentSpec,
@@ -159,13 +158,7 @@ const parseComponentYaml = (text: string): ComponentSpec => {
     throw new Error("Received empty component specification");
   }
 
-  const loadedSpec = yaml.load(text) as ComponentSpec;
-
-  if (!loadedSpec || typeof loadedSpec !== "object") {
-    throw new Error("Invalid component specification format");
-  }
-
-  return loadedSpec;
+  return componentSpecFromYaml(text);
 };
 
 // Fetch component with timeout to avoid hanging on unresponsive URLs
