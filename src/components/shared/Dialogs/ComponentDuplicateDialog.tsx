@@ -12,9 +12,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BlockStack } from "@/components/ui/layout";
-import type { ComponentSpec } from "@/utils/componentSpec";
+import type { HydratedComponentReference } from "@/utils/componentSpec";
 import {
-  componentSpecToYaml,
   deleteComponentFileFromList,
   generateDigest,
 } from "@/utils/componentStore";
@@ -31,7 +30,7 @@ const ComponentDuplicateDialog = ({
   handleImportComponent,
 }: {
   existingComponent?: UserComponent;
-  newComponent?: ComponentSpec;
+  newComponent?: HydratedComponentReference | null;
   newComponentDigest?: string;
   setClose: () => void;
   handleImportComponent: (content: string) => Promise<void>;
@@ -44,22 +43,17 @@ const ComponentDuplicateDialog = ({
     !newName || newName.trim() === existingComponent?.name?.trim();
 
   const generateNewDigestOnBlur = useCallback(async () => {
-    if (
-      newComponent &&
-      newComponentDigest &&
-      newName.trim() === newComponent.name?.trim()
-    ) {
+    if (!newComponent) {
+      return;
+    }
+
+    if (newComponentDigest && newName.trim() === newComponent.name?.trim()) {
       setNewDigest(newComponentDigest);
       return;
     }
 
     if (newComponent && newName) {
-      const digest = await generateDigest(
-        componentSpecToYaml({
-          ...newComponent,
-          name: newName,
-        }),
-      );
+      const { digest } = await replaceComponentName(newComponent, newName);
       setNewDigest(digest);
     }
   }, [newComponent, newName]);
@@ -75,14 +69,13 @@ const ComponentDuplicateDialog = ({
 
   const handleRenameAndImport = useCallback(
     async (newName: string) => {
-      if (!newComponent) return;
+      if (!newComponent) {
+        return;
+      }
 
-      const newComponentWithNewName = {
-        ...newComponent,
-        name: newName,
-      };
-      const yamlString = componentSpecToYaml(newComponentWithNewName);
-      handleImportComponent(yamlString);
+      const { text } = await replaceComponentName(newComponent, newName);
+
+      await handleImportComponent(text);
 
       setClose();
     },
@@ -90,9 +83,12 @@ const ComponentDuplicateDialog = ({
   );
 
   const handleReplaceAndImport = useCallback(async () => {
-    if (!newComponent) return;
+    if (!newComponent) {
+      return;
+    }
 
-    const yamlString = componentSpecToYaml(newComponent);
+    const yamlString = newComponent.text;
+
     await deleteComponentFileFromList(
       USER_COMPONENTS_LIST_NAME,
       existingComponent?.name ?? "",
@@ -109,7 +105,7 @@ const ComponentDuplicateDialog = ({
   useEffect(() => {
     const generateNewDigest = async () => {
       if (newComponent) {
-        const digest = await generateDigest(componentSpecToYaml(newComponent));
+        const { digest } = await replaceComponentName(newComponent, newName);
         setNewDigest(digest);
       }
     };
@@ -130,7 +126,9 @@ const ComponentDuplicateDialog = ({
     <Dialog open={open} onOpenChange={handleOnOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Component already exists</DialogTitle>
+          <DialogTitle data-testid="component-duplicate-dialog-title">
+            Component already exists
+          </DialogTitle>
           <DialogDescription>
             The component you are trying to import already exists. Please enter
             a new name for the component or replace the existing component.
@@ -176,8 +174,18 @@ const ComponentDuplicateDialog = ({
           >
             Import as new
           </Button>
-          <Button onClick={handleReplaceAndImport}>Replace existing</Button>
-          <Button onClick={handleCancel}>Cancel</Button>
+          <Button
+            onClick={handleReplaceAndImport}
+            data-testid="duplicate-component-replace-existing-button"
+          >
+            Replace existing
+          </Button>
+          <Button
+            onClick={handleCancel}
+            data-testid="duplicate-component-cancel-button"
+          >
+            Cancel
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -185,3 +193,24 @@ const ComponentDuplicateDialog = ({
 };
 
 export default ComponentDuplicateDialog;
+
+async function replaceComponentName(
+  component: HydratedComponentReference,
+  newName: string,
+) {
+  const escapeRegex = (str: string) =>
+    str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+  // assuming component has TEXT
+  const text = component.text.replace(
+    // todo: use a more robust regex to replace the name
+    new RegExp(`^name: ${escapeRegex(component.name)}\\s*$`, "gm"),
+    `name: ${newName} \n`,
+  );
+
+  return {
+    text,
+    digest: await generateDigest(text),
+    name: newName,
+  };
+}

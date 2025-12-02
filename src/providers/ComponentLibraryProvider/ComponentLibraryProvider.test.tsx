@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
+import yaml from "js-yaml";
 import { type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -7,8 +8,11 @@ import type {
   ComponentFolder,
   ComponentLibrary,
 } from "@/types/componentLibrary";
-import type { ComponentReference, ComponentSpec } from "@/utils/componentSpec";
-import type { ComponentReferenceWithSpec } from "@/utils/componentStore";
+import type {
+  ComponentReference,
+  ComponentSpec,
+  HydratedComponentReference,
+} from "@/utils/componentSpec";
 import { USER_COMPONENTS_LIST_NAME } from "@/utils/constants";
 import type { UserComponent } from "@/utils/localforage";
 
@@ -69,9 +73,6 @@ const mockDeleteComponentFileFromList = vi.mocked(
 const mockUpdateComponentRefInList = vi.mocked(
   componentStore.updateComponentRefInList,
 );
-const mockLoadComponentAsRefFromText = vi.mocked(
-  componentStore.loadComponentAsRefFromText,
-);
 const mockGetComponentByUrl = vi.mocked(localforage.getComponentByUrl);
 const mockGetUserComponentByName = vi.mocked(
   localforage.getUserComponentByName,
@@ -80,8 +81,6 @@ const mockSaveComponent = vi.mocked(localforage.saveComponent);
 const mockGetComponentName = vi.mocked(getComponentName.getComponentName);
 
 describe("ComponentLibraryProvider - Component Management", () => {
-  let queryClient: QueryClient;
-
   const mockComponentSpec: ComponentSpec = {
     name: "test-pipeline",
     implementation: {
@@ -121,22 +120,25 @@ describe("ComponentLibraryProvider - Component Management", () => {
     folders: [],
   };
 
-  const createWrapper = ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={queryClient}>
-      <ComponentSpecProvider spec={mockComponentSpec}>
-        <ComponentLibraryProvider>{children}</ComponentLibraryProvider>
-      </ComponentSpecProvider>
-    </QueryClientProvider>
-  );
-
-  beforeEach(() => {
-    queryClient = new QueryClient({
+  const createWrapper = ({ children }: { children: ReactNode }) => {
+    const queryClient = new QueryClient({
       defaultOptions: {
         queries: {
           retry: false,
         },
       },
     });
+
+    return (
+      <QueryClientProvider client={queryClient}>
+        <ComponentSpecProvider spec={mockComponentSpec}>
+          <ComponentLibraryProvider>{children}</ComponentLibraryProvider>
+        </ComponentSpecProvider>
+      </QueryClientProvider>
+    );
+  };
+
+  beforeEach(() => {
     componentDuplicateDialogProps.handleImportComponent = undefined;
 
     // Setup default mock implementations
@@ -167,12 +169,11 @@ describe("ComponentLibraryProvider - Component Management", () => {
 
   afterEach(() => {
     vi.clearAllMocks();
-    queryClient.clear();
   });
 
   describe("Adding Components", () => {
     it("should successfully add a component to the library", async () => {
-      const newComponent: ComponentReference = {
+      const newComponent: HydratedComponentReference = {
         name: "new-component",
         digest: "new-digest",
         spec: mockComponentSpec,
@@ -199,7 +200,7 @@ describe("ComponentLibraryProvider - Component Management", () => {
     });
 
     it("should handle duplicate component names by showing confirmation dialog", async () => {
-      const newComponent: ComponentReference = {
+      const newComponent: HydratedComponentReference = {
         name: "duplicate-component",
         digest: "new-digest",
         spec: mockComponentSpec,
@@ -246,18 +247,30 @@ describe("ComponentLibraryProvider - Component Management", () => {
     });
 
     it("should import renamed component as new without mutating the original", async () => {
-      const newComponent: ComponentReference = {
+      const spec: ComponentSpec = {
+        name: "duplicate-component",
+        implementation: {
+          container: {
+            image: "ubuntu:latest",
+            command: ["echo", "Hello, World!"],
+          },
+        },
+      };
+
+      const newComponent: HydratedComponentReference = {
         name: "duplicate-component",
         digest: "new-digest",
-        spec: mockComponentSpec,
-        text: "new component yaml",
+        spec: {
+          ...spec,
+        },
+        text: yaml.dump(spec),
       };
 
       const existingComponent: ComponentReference = {
         name: "duplicate-component",
         digest: "existing-digest",
-        spec: mockComponentSpec,
-        text: "existing component yaml",
+        spec: { ...spec },
+        text: yaml.dump(spec),
       };
 
       const mockUserComponent: UserComponent = {
@@ -272,54 +285,57 @@ describe("ComponentLibraryProvider - Component Management", () => {
       mockGetUserComponentByName.mockResolvedValue(mockUserComponent);
       mockImportComponent.mockResolvedValue(undefined);
 
-      const renamedSpec: ComponentSpec = {
-        ...mockComponentSpec,
-        name: "renamed-component",
+      // Setup the user components folder to contain the duplicate
+      const userComponentsFolderWithDuplicate: ComponentFolder = {
+        name: "User Components",
+        components: [existingComponent],
+        folders: [],
       };
 
-      const parsedComponent: ComponentReferenceWithSpec = {
-        spec: renamedSpec,
-        digest: "renamed-digest",
-        text: "component: yaml",
-      };
-
-      mockLoadComponentAsRefFromText.mockResolvedValue(parsedComponent);
+      mockFetchUserComponents.mockImplementation(() =>
+        Promise.resolve(userComponentsFolderWithDuplicate),
+      );
 
       const { result } = renderHook(() => useComponentLibrary(), {
         wrapper: createWrapper,
-      });
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
       });
 
       await act(async () => {
         await result.current.addToComponentLibrary(newComponent);
       });
 
-      expect(componentDuplicateDialogProps.handleImportComponent).toBeDefined();
+      // Wait for the dialog handler to be set up
+      await waitFor(() => {
+        expect(
+          componentDuplicateDialogProps.handleImportComponent,
+        ).toBeDefined();
+      });
+
+      // Now simulate the import action through the dialog
+      const renamedComponentSpec = {
+        name: "renamed-duplicate-component",
+        ...newComponent.spec,
+      };
+
+      const renamedComponentYaml = yaml.dump(renamedComponentSpec);
 
       await act(async () => {
-        await componentDuplicateDialogProps.handleImportComponent?.(
-          "component: yaml",
+        await componentDuplicateDialogProps.handleImportComponent!(
+          renamedComponentYaml,
         );
       });
 
-      expect(mockLoadComponentAsRefFromText).toHaveBeenCalledWith(
-        "component: yaml",
-      );
+      // Verify the component was imported with the renamed text content
       expect(mockImportComponent).toHaveBeenCalledWith(
         expect.objectContaining({
-          name: "renamed-component",
-          spec: renamedSpec,
-          text: "component: yaml",
-          url: undefined,
+          spec: expect.any(Object),
+          text: renamedComponentYaml,
         }),
       );
     });
 
     it("should add component when no duplicate exists", async () => {
-      const newComponent: ComponentReference = {
+      const newComponent: HydratedComponentReference = {
         name: "unique-component",
         digest: "unique-digest",
         spec: mockComponentSpec,

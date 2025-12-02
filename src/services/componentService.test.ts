@@ -411,10 +411,8 @@ describe("componentService", () => {
 
       const result = await getExistingAndNewUserComponent(componentData);
 
-      expect(result).toEqual({
-        existingComponent: undefined,
-        newComponent: mockComponent,
-      });
+      expect(result.existingComponent).toEqual(undefined);
+      expect(result.newComponent?.spec).toEqual(mockComponent);
     });
 
     it("should return existing component when found with different digest", async () => {
@@ -431,10 +429,24 @@ describe("componentService", () => {
 
       const result = await getExistingAndNewUserComponent(componentData);
 
-      expect(result).toEqual({
-        existingComponent,
-        newComponent: mockComponent,
-      });
+      expect(result.existingComponent).toEqual(existingComponent);
+      expect(result.newComponent?.spec).toEqual(mockComponent);
+    });
+
+    it("should handle componentData as ArrayBuffer", async () => {
+      // Arrange: Encode the YAML as an ArrayBuffer
+      const componentYaml = yaml.dump(mockComponent);
+      const encoder = new TextEncoder();
+      const arrayBuffer = encoder.encode(componentYaml).buffer;
+
+      vi.mocked(localforage.getAllUserComponents).mockResolvedValue([]);
+
+      // Act
+      const result = await getExistingAndNewUserComponent(arrayBuffer);
+
+      // Assert: result.newComponent.spec should match the original component spec
+      expect(result.existingComponent).toEqual(undefined);
+      expect(result.newComponent?.spec).toEqual(mockComponent);
     });
   });
 

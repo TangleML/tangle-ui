@@ -11,18 +11,23 @@ import {
 import ComponentDuplicateDialog from "@/components/shared/Dialogs/ComponentDuplicateDialog";
 import { GitHubFlatComponentLibrary } from "@/components/shared/GitHubLibrary/githubFlatComponentLibrary";
 import { isGitHubLibraryConfiguration } from "@/components/shared/GitHubLibrary/types";
-import { fetchAndStoreComponentLibrary } from "@/services/componentService";
+import {
+  fetchAndStoreComponentLibrary,
+  hydrateComponentReference,
+} from "@/services/componentService";
 import type {
   ComponentFolder,
   ComponentLibrary,
   SearchResult,
 } from "@/types/componentLibrary";
-import type { ComponentReference } from "@/utils/componentSpec";
+import type {
+  ComponentReference,
+  HydratedComponentReference,
+} from "@/utils/componentSpec";
 import {
   type ComponentReferenceWithSpec,
   deleteComponentFileFromList,
   importComponent,
-  loadComponentAsRefFromText,
   updateComponentInListByText,
   updateComponentRefInList,
 } from "@/utils/componentStore";
@@ -75,7 +80,7 @@ type ComponentLibraryContextType = {
     search: string,
     filters: string[],
   ) => SearchResult | null;
-  addToComponentLibrary: (component: ComponentReference) => void;
+  addToComponentLibrary: (component: HydratedComponentReference) => void;
   removeFromComponentLibrary: (component: ComponentReference) => void;
   refetchLibrary: () => void;
   refetchUserComponents: () => void;
@@ -178,9 +183,8 @@ export const ComponentLibraryProvider = ({
 
   const [existingComponent, setExistingComponent] =
     useState<UserComponent | null>(null);
-  const [newComponent, setNewComponent] = useState<ComponentReference | null>(
-    null,
-  );
+  const [newComponent, setNewComponent] =
+    useState<HydratedComponentReference | null>(null);
 
   // Fetch main component library
   const {
@@ -417,20 +421,15 @@ export const ComponentLibraryProvider = ({
   const handleImportComponent = useCallback(
     async (yamlString: string) => {
       try {
-        const componentFromText = await loadComponentAsRefFromText(yamlString);
-        const resolvedName =
-          componentFromText.spec.name ??
-          newComponent?.name ??
-          "Imported Component";
+        const hydratedComponent = await hydrateComponentReference({
+          text: yamlString,
+        });
 
-        const componentToImport = {
-          ...(newComponent ?? {}),
-          ...componentFromText,
-          name: resolvedName,
-          url: undefined,
-        };
+        if (!hydratedComponent) {
+          throw new Error("Failed to hydrate component");
+        }
 
-        await importComponent(componentToImport);
+        await importComponent(hydratedComponent);
         await refreshComponentLibrary();
         await refreshUserComponents();
         setNewComponent(null);
@@ -448,7 +447,7 @@ export const ComponentLibraryProvider = ({
   );
 
   const addToComponentLibrary = useCallback(
-    async (component: ComponentReference) => {
+    async (component: HydratedComponentReference) => {
       const duplicate = userComponentsFolder
         ? flattenFolders(userComponentsFolder).find(
             (c) => getComponentName(c) === getComponentName(component),
@@ -601,7 +600,7 @@ export const ComponentLibraryProvider = ({
       {children}
       <ComponentDuplicateDialog
         existingComponent={existingComponent ?? undefined}
-        newComponent={newComponent?.spec}
+        newComponent={newComponent}
         newComponentDigest={newComponent?.digest}
         setClose={handleCloseDuplicationDialog}
         handleImportComponent={handleImportComponent}
