@@ -754,21 +754,26 @@ const upgradeSingleComponentListDb = async (listName: string) => {
   }
 };
 
-export const importComponent = async (component: ComponentReference) => {
+export const importComponent = async (
+  component: ComponentReference,
+  filename?: string,
+) => {
+  const nonUniqueFileName = filename || component.name || "Component";
+
   if (!component.url) {
     component.favorited = true;
 
-    if (component.spec && component.name) {
+    if (component.spec) {
       return await writeComponentRefToFile(
         USER_COMPONENTS_LIST_NAME,
-        component.name,
+        nonUniqueFileName,
         component as ComponentReferenceWithSpec,
       );
     } else if (component.text) {
       return await addComponentToListByTextWithDuplicateCheck(
         USER_COMPONENTS_LIST_NAME,
         component.text,
-        component.name,
+        nonUniqueFileName,
         "Component",
         false,
         { favorited: true },
@@ -785,10 +790,8 @@ export const importComponent = async (component: ComponentReference) => {
   return await addComponentToListByUrl(
     USER_COMPONENTS_LIST_NAME,
     component.url,
-    component.name,
+    nonUniqueFileName,
     false,
-    {
-      favorited: true,
-    },
+    { favorited: true },
   );
 };

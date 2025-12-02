@@ -415,22 +415,11 @@ export const ComponentLibraryProvider = ({
   );
 
   const handleImportComponent = useCallback(
-    async (yamlString: string) => {
+    async (yamlString: string, filename?: string) => {
       try {
         const componentFromText = await loadComponentAsRefFromText(yamlString);
-        const resolvedName =
-          componentFromText.spec.name ??
-          newComponent?.name ??
-          "Imported Component";
 
-        const componentToImport = {
-          ...(newComponent ?? {}),
-          ...componentFromText,
-          name: resolvedName,
-          url: undefined,
-        };
-
-        await importComponent(componentToImport);
+        await importComponent(componentFromText, filename);
         await refreshComponentLibrary();
         await refreshUserComponents();
         setNewComponent(null);

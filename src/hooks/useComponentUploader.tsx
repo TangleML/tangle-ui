@@ -91,11 +91,11 @@ const useComponentUploader = (
     setExistingAndNewComponent(undefined);
   };
 
-  const handleImportComponent = async (content: string) => {
+  const handleImportComponent = async (content: string, filename?: string) => {
     await addComponentToListByTextWithDuplicateCheck(
       USER_COMPONENTS_LIST_NAME,
       content,
-      undefined,
+      filename,
       "Imported Component",
       true,
       { favorited: true },

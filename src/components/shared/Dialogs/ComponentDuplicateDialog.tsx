@@ -34,7 +34,7 @@ const ComponentDuplicateDialog = ({
   newComponent?: ComponentSpec;
   newComponentDigest?: string;
   setClose: () => void;
-  handleImportComponent: (content: string) => Promise<void>;
+  handleImportComponent: (content: string, filename?: string) => Promise<void>;
 }) => {
   const [newName, setNewName] = useState("");
   const [newDigest, setNewDigest] = useState("");
@@ -77,12 +77,8 @@ const ComponentDuplicateDialog = ({
     async (newName: string) => {
       if (!newComponent) return;
 
-      const newComponentWithNewName = {
-        ...newComponent,
-        name: newName,
-      };
-      const yamlString = componentSpecToYaml(newComponentWithNewName);
-      handleImportComponent(yamlString);
+      const yamlString = componentSpecToYaml(newComponent);
+      handleImportComponent(yamlString, newName);
 
       setClose();
     },
