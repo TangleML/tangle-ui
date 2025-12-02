@@ -94,6 +94,11 @@ const getStatusMetadata = (status: ContainerExecutionStatus | RunStatus) => {
         icon: <ClockIcon className="w-2 h-2 animate-spin duration-2000" />,
       };
     case "WAITING":
+      return {
+        style: "bg-slate-500",
+        text: "Waiting",
+        icon: <ClockIcon className="w-2 h-2 animate-spin duration-2000" />,
+      };
     case "UNINITIALIZED":
     case "WAITING_FOR_UPSTREAM":
       return {
