@@ -39,7 +39,7 @@ import {
 
 export interface ExistingAndNewComponent {
   existingComponent: UserComponent | undefined;
-  newComponent: ComponentSpec | undefined;
+  newComponent: HydratedComponentReference | undefined;
 }
 
 const COMPONENT_LIBRARY_URL = getAppSettings().componentLibraryUrl;
@@ -323,29 +323,51 @@ export const parseComponentData = (data: string): ComponentSpec | null => {
   }
 };
 
+/**
+ * Accepts string or ArrayBuffer and returns string.
+ *
+ * @todo: use utility in other places
+ *
+ * @param data - The data to normalize.
+ * @returns The string representation of the data.
+ */
+function getStringFromData(data: string | ArrayBuffer): string {
+  if (typeof data === "object" && "byteLength" in data) {
+    return new TextDecoder().decode(data);
+  }
+
+  return data;
+}
+
 export const getExistingAndNewUserComponent = async (
   componentData: string | ArrayBuffer,
 ): Promise<ExistingAndNewComponent> => {
   const allUserComponents = await getAllUserComponents();
 
-  const newDigest = await generateDigest(componentData as string);
-  const component = parseComponentData(componentData as string);
+  const componentStringContent = getStringFromData(componentData);
+
+  const newDigest = await generateDigest(componentStringContent);
+  const hydratedComponent = await hydrateComponentReference({
+    text: componentStringContent,
+  });
+
   const existingComponent = allUserComponents.find((userComponent) => {
     const existingDigest = userComponent.componentRef.digest;
 
     return (
-      existingDigest !== newDigest && userComponent?.name === component?.name
+      existingDigest !== newDigest &&
+      userComponent?.name === hydratedComponent?.name
     );
   });
-  if (!existingComponent || !component) {
+  if (!existingComponent || !hydratedComponent) {
     return {
       existingComponent: undefined,
-      newComponent: component ?? undefined,
+      newComponent: hydratedComponent ?? undefined,
     };
   }
   return {
     existingComponent,
-    newComponent: component,
+    newComponent: hydratedComponent,
   };
 };
 

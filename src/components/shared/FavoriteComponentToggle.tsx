@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
+import { hydrateComponentReference } from "@/services/componentService";
 import type { ComponentReference } from "@/utils/componentSpec";
 import { getComponentName } from "@/utils/getComponentName";
 
@@ -138,11 +139,20 @@ export const ComponentFavoriteToggle = ({
     setIsOpen(false);
   }, []);
 
-  const handleConfirm = useCallback(() => {
+  // todo: rewrite with useMutation
+  const handleConfirm = useCallback(async () => {
     setIsOpen(false);
 
     if (!isInLibrary) {
-      addToComponentLibrary(component);
+      const hydratedComponent = await hydrateComponentReference(component);
+
+      if (!hydratedComponent) {
+        // todo: handle error
+        console.error("Failed to hydrate component");
+        return;
+      }
+
+      addToComponentLibrary(hydratedComponent);
       return;
     }
 
