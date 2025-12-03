@@ -1,7 +1,7 @@
 import { RUNS_BASE_PATH } from "@/routes/router";
 
 import type { ComponentSpec } from "./componentSpec";
-import { componentSpecToText } from "./componentStore";
+import { componentSpecToText } from "./yaml";
 
 const convertGcsUrlToBrowserUrl = (
   url: string,

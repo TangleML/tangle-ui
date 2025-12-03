@@ -13,6 +13,7 @@ import type {
 } from "@/utils/componentSpec";
 import * as componentStore from "@/utils/componentStore";
 import * as localforage from "@/utils/localforage";
+import * as yamlUtils from "@/utils/yaml";
 
 import {
   fetchFavoriteComponents,
@@ -35,6 +36,7 @@ const mockLocalforage = vi.mocked(localforage);
 describe("componentLibrary", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(yamlUtils, "componentSpecToYaml").mockReturnValue("spec-as-yaml");
   });
 
   afterEach(() => {
@@ -373,7 +375,9 @@ describe("componentLibrary", () => {
       };
 
       // Mock componentSpecToYaml to return predictable text
-      mockComponentStore.componentSpecToYaml.mockReturnValue("spec-as-yaml");
+      vi.spyOn(yamlUtils, "componentSpecToYaml").mockReturnValue(
+        "spec-as-yaml",
+      );
 
       // Act
       const result = await populateComponentRefs(folder);
@@ -388,7 +392,7 @@ describe("componentLibrary", () => {
         },
         text: "spec-as-yaml",
       });
-      expect(mockComponentStore.componentSpecToYaml).toHaveBeenCalledWith(
+      expect(yamlUtils.componentSpecToYaml).toHaveBeenCalledWith(
         componentRef.spec,
       );
       expect(mockComponentStore.generateDigest).toHaveBeenCalledWith(

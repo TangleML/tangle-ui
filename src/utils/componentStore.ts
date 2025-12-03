@@ -1,4 +1,3 @@
-import yaml from "js-yaml";
 import localForage from "localforage";
 
 import { fetchComponentTextFromUrl } from "@/services/componentService";
@@ -8,7 +7,7 @@ import { downloadDataWithCache } from "./cache";
 import type { ComponentReference, ComponentSpec } from "./componentSpec";
 import { USER_COMPONENTS_LIST_NAME } from "./constants";
 import { getIdOrTitleFromPath } from "./URL";
-import { componentSpecFromYaml } from "./yaml";
+import { componentSpecFromYaml, componentSpecToYaml } from "./yaml";
 
 // IndexedDB: DB and table names
 const DB_NAME = "components";
@@ -604,18 +603,6 @@ export const deleteComponentFileFromList = async (
   });
 
   return componentListDb.removeItem(fileName);
-};
-
-export const componentSpecToYaml = (componentSpec: ComponentSpec) => {
-  return yaml.dump(componentSpec, { lineWidth: 10000 });
-};
-
-export const componentSpecToText = (componentSpec: ComponentSpec) => {
-  return yaml.dump(componentSpec, {
-    lineWidth: 80,
-    noRefs: true,
-    indent: 2,
-  });
 };
 
 // TODO: Remove the upgrade code in several weeks.

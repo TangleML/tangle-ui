@@ -2,7 +2,7 @@ import yaml from "js-yaml";
 
 import type { ComponentSpec } from "@/utils/componentSpec";
 import { isValidComponentSpec } from "@/utils/componentSpec";
-import { componentSpecToYaml } from "@/utils/componentStore";
+import { componentSpecToYaml } from "@/utils/yaml";
 
 export const preserveComponentName = (
   yamlText: string,

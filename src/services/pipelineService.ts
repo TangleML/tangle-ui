@@ -9,7 +9,6 @@ import {
 } from "@/utils/componentSpec";
 import {
   type ComponentFileEntry,
-  componentSpecToYaml,
   deleteComponentFileFromList,
   fullyLoadComponentRefFromUrl,
   getAllComponentFilesFromList,
@@ -17,6 +16,7 @@ import {
   writeComponentToFileListFromText,
 } from "@/utils/componentStore";
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
+import { componentSpecToYaml } from "@/utils/yaml";
 import { componentSpecFromYaml } from "@/utils/yaml";
 
 export const deletePipeline = async (name: string, onDelete?: () => void) => {

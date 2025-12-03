@@ -25,7 +25,7 @@ import {
   type TaskSpec,
   type UnknownComponentReference,
 } from "@/utils/componentSpec";
-import { componentSpecToYaml, generateDigest } from "@/utils/componentStore";
+import { generateDigest } from "@/utils/componentStore";
 import {
   componentExistsByUrl,
   getAllUserComponents,
@@ -34,6 +34,7 @@ import {
   saveComponent,
   type UserComponent,
 } from "@/utils/localforage";
+import { componentSpecToYaml } from "@/utils/yaml";
 import { componentSpecFromYaml } from "@/utils/yaml";
 
 export interface ExistingAndNewComponent {
