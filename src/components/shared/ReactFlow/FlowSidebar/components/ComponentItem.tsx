@@ -9,6 +9,8 @@ import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
 import { SidebarMenuItem } from "@/components/ui/sidebar";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { useHydrateComponentReference } from "@/hooks/useHydrateComponentReference";
 import { cn } from "@/lib/utils";
 import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
@@ -34,6 +36,16 @@ const ComponentIconSkeleton = ({
   return <Icon name="File" className="shrink-0 text-gray-400" {...iconProps} />;
 };
 
+function hasProps(props: any): props is ComponentIconProps {
+  return (
+    props !== undefined &&
+    props !== null &&
+    typeof props === "object" &&
+    "name" in props &&
+    "className" in props
+  );
+}
+
 const ComponentIcon = withSuspenseWrapper(
   ({ component, className, ...iconProps }: ComponentIconProps) => {
     const { data: outdatedComponents } = useOutdatedComponents([component]);
@@ -46,6 +58,15 @@ const ComponentIcon = withSuspenseWrapper(
     return <Icon name="BookAlert" className="text-orange-500" />;
   },
   ComponentIconSkeleton,
+  /**
+   * Error fallback to show just the icon
+   */
+  ({ originalProps }) =>
+    hasProps(originalProps) ? (
+      <Icon name={originalProps.name} className={originalProps.className} />
+    ) : (
+      <Icon name="File" className="shrink-0 text-gray-400" />
+    ),
 );
 
 const ComponentMarkup = ({
@@ -174,7 +195,12 @@ const ComponentMarkup = ({
             data-testid="component-item"
             data-component-name={displayName}
           >
-            <InlineStack gap="2" blockAlign="center" className="w-full">
+            <InlineStack
+              gap="2"
+              blockAlign="center"
+              className="w-full"
+              wrap="nowrap"
+            >
               {isRemoteComponentLibrarySearchEnabled ? (
                 <ComponentIcon
                   name={iconName}
@@ -218,6 +244,17 @@ const ComponentMarkup = ({
   );
 };
 
+const ComponentItemSkeleton = () => {
+  return (
+    <SidebarMenuItem className="pl-2 py-1.5">
+      <InlineStack blockAlign="center" gap="2">
+        <Spinner size={10} />
+        <Skeleton size="sm" color="default" />
+      </InlineStack>
+    </SidebarMenuItem>
+  );
+};
+
 const ComponentItemFromUrl = withSuspenseWrapper(
   ({ componentRef }: { componentRef: ComponentReference }) => {
     const hydratedComponent = useHydrateComponentReference(componentRef);
@@ -226,6 +263,8 @@ const ComponentItemFromUrl = withSuspenseWrapper(
 
     return <ComponentMarkup component={hydratedComponent} />;
   },
+  ComponentItemSkeleton,
+  () => null,
 );
 
 interface IONodeSidebarItemProps {
