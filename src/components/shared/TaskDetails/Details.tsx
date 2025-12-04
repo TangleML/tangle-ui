@@ -30,7 +30,7 @@ import {
 } from "@/utils/URL";
 import copyToYaml from "@/utils/yaml";
 
-import { ExecutionDetails } from "../ExecutionDetails/ExecutionDetails";
+import { ExecutionDetails } from "./ExecutionDetails";
 
 interface TaskDetailsProps {
   displayName: string;
@@ -169,6 +169,7 @@ const TaskDetails = ({
           <ExecutionDetails
             executionId={executionId}
             componentSpec={componentSpec}
+            className="px-3 py-2"
           />
         )}
 
