@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { type ComponentSpec } from "./componentSpec";
-import { checkComponentSpecValidity } from "./validations";
+import { type ComponentSpec, type GraphSpec } from "./componentSpec";
+import {
+  checkComponentSpecValidity,
+  collectComponentValidationIssues,
+} from "./validations";
 
 // Mock the componentSpec module
 vi.mock("./componentSpec", () => ({
@@ -10,9 +13,35 @@ vi.mock("./componentSpec", () => ({
 
 const { isGraphImplementation } = await import("./componentSpec");
 
+// Helper to check if errors contain a specific message
+const expectErrorWithMessage = (
+  errors: { message: string }[],
+  message: string,
+) => {
+  expect(errors.some((e) => e.message === message)).toBe(true);
+};
+
+const expectNoErrorWithMessage = (
+  errors: { message: string }[],
+  message: string,
+) => {
+  expect(errors.some((e) => e.message === message)).toBe(false);
+};
+
 describe("checkComponentSpecValidity", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(isGraphImplementation).mockImplementation(
+      (
+        implementation: unknown,
+      ): implementation is { graph: GraphSpec; container?: null } => {
+        if (typeof implementation !== "object" || implementation === null) {
+          return false;
+        }
+
+        return Object.prototype.hasOwnProperty.call(implementation, "graph");
+      },
+    );
   });
 
   describe("Basic Component Spec Validation", () => {
@@ -20,14 +49,20 @@ describe("checkComponentSpecValidity", () => {
       const result = checkComponentSpecValidity(null as any);
 
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain("Component spec is null or undefined");
+      expectErrorWithMessage(
+        result.errors,
+        "Component spec is null or undefined",
+      );
     });
 
     it("should return error for undefined component spec", () => {
       const result = checkComponentSpecValidity(undefined as any);
 
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain("Component spec is null or undefined");
+      expectErrorWithMessage(
+        result.errors,
+        "Component spec is null or undefined",
+      );
     });
 
     it("should return error for empty component name", () => {
@@ -39,7 +74,8 @@ describe("checkComponentSpecValidity", () => {
       const result = checkComponentSpecValidity(componentSpec);
 
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain(
+      expectErrorWithMessage(
+        result.errors,
         "Component name is required and cannot be empty",
       );
     });
@@ -53,7 +89,10 @@ describe("checkComponentSpecValidity", () => {
       const result = checkComponentSpecValidity(componentSpec);
 
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain("Component implementation is required");
+      expectErrorWithMessage(
+        result.errors,
+        "Component implementation is required",
+      );
     });
   });
 
@@ -68,7 +107,8 @@ describe("checkComponentSpecValidity", () => {
       const result = checkComponentSpecValidity(componentSpec);
 
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain(
+      expectErrorWithMessage(
+        result.errors,
         'Input with value "test-value" must have a valid name',
       );
     });
@@ -86,8 +126,9 @@ describe("checkComponentSpecValidity", () => {
       const result = checkComponentSpecValidity(componentSpec);
 
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain(
-        'Duplicate input name found: "duplicate"',
+      expectErrorWithMessage(
+        result.errors,
+        'Duplicate input name: "duplicate"',
       );
     });
 
@@ -101,9 +142,7 @@ describe("checkComponentSpecValidity", () => {
       const result = checkComponentSpecValidity(componentSpec);
 
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain(
-        'Pipeline input "no-value" is required and does not have a value',
-      );
+      expectErrorWithMessage(result.errors, "Required input missing value");
     });
 
     it("should skip required input value validation when option enabled", () => {
@@ -118,9 +157,7 @@ describe("checkComponentSpecValidity", () => {
       });
 
       expect(result.isValid).toBe(true);
-      expect(result.errors).not.toContain(
-        'Pipeline input "no-value" is required and does not have a value',
-      );
+      expectNoErrorWithMessage(result.errors, "Required input missing value");
     });
 
     it("should return error for output without name", () => {
@@ -133,7 +170,8 @@ describe("checkComponentSpecValidity", () => {
       const result = checkComponentSpecValidity(componentSpec);
 
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain(
+      expectErrorWithMessage(
+        result.errors,
         'Output with type "string" must have a valid name',
       );
     });
@@ -151,8 +189,9 @@ describe("checkComponentSpecValidity", () => {
       const result = checkComponentSpecValidity(componentSpec);
 
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain(
-        'Duplicate output name found: "duplicate"',
+      expectErrorWithMessage(
+        result.errors,
+        'Duplicate output name: "duplicate"',
       );
     });
   });
@@ -191,7 +230,8 @@ describe("checkComponentSpecValidity", () => {
       const result = checkComponentSpecValidity(componentSpec);
 
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain(
+      expectErrorWithMessage(
+        result.errors,
         "Pipeline must contain at least one task",
       );
     });
@@ -211,7 +251,10 @@ describe("checkComponentSpecValidity", () => {
       const result = checkComponentSpecValidity(componentSpec);
 
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain('Task "task1" must have a componentRef');
+      expectErrorWithMessage(result.errors, "Missing componentRef");
+      expect(
+        result.errors.find((e) => e.message === "Missing componentRef")?.taskId,
+      ).toBe("task1");
     });
 
     it("should validate graph input references", () => {
@@ -243,8 +286,9 @@ describe("checkComponentSpecValidity", () => {
       const result = checkComponentSpecValidity(componentSpec);
 
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain(
-        'Task "task1" argument "arg1" references non-existent graph input: "invalidInput"',
+      expectErrorWithMessage(
+        result.errors,
+        'Argument "arg1" references non-existent input: "invalidInput"',
       );
     });
 
@@ -279,8 +323,9 @@ describe("checkComponentSpecValidity", () => {
       const result = checkComponentSpecValidity(componentSpec);
 
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain(
-        'Task "task1" argument "arg1" references non-existent task: "nonExistentTask"',
+      expectErrorWithMessage(
+        result.errors,
+        'Argument "arg1" references non-existent task: "nonExistentTask"',
       );
     });
 
@@ -315,9 +360,11 @@ describe("checkComponentSpecValidity", () => {
       const result = checkComponentSpecValidity(componentSpec);
 
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain(
-        'Task "task1" is missing required argument for input: "requiredInput"',
-      );
+      expectErrorWithMessage(result.errors, 'Missing input "requiredInput"');
+      expect(
+        result.errors.find((e) => e.message === 'Missing input "requiredInput"')
+          ?.taskId,
+      ).toBe("task1");
     });
 
     it("should validate graph outputs", () => {
@@ -349,16 +396,19 @@ describe("checkComponentSpecValidity", () => {
       const result = checkComponentSpecValidity(componentSpec);
 
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain(
-        'Graph output "invalidOutput" is not defined in component outputs',
-      );
+      expectErrorWithMessage(result.errors, "Not defined in component outputs");
+      expect(
+        result.errors.find(
+          (e) => e.message === "Not defined in component outputs",
+        )?.outputName,
+      ).toBe("invalidOutput");
     });
 
     it("should validate input-output connections", () => {
       const componentSpec: ComponentSpec = {
         name: "test-component",
-        inputs: [{ name: "requiredInput", type: "string" }],
-        outputs: [{ name: "requiredOutput", type: "string" }],
+        inputs: [{ name: "unusedInput", type: "string", value: "has-value" }],
+        outputs: [{ name: "unusedOutput", type: "string" }],
         implementation: {
           graph: {
             tasks: {
@@ -379,12 +429,18 @@ describe("checkComponentSpecValidity", () => {
       const result = checkComponentSpecValidity(componentSpec);
 
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain(
-        'Pipeline input "requiredInput" is not connected to any tasks',
+      const inputError = result.errors.find(
+        (e) =>
+          e.inputName === "unusedInput" &&
+          e.message === "Not connected to any tasks",
       );
-      expect(result.errors).toContain(
-        'Pipeline output "requiredOutput" is not connected to any tasks',
+      expect(inputError).toBeDefined();
+      const outputError = result.errors.find(
+        (e) =>
+          e.outputName === "unusedOutput" &&
+          e.message === "Not connected to any tasks",
       );
+      expect(outputError).toBeDefined();
     });
 
     it("should detect circular dependencies", () => {
@@ -429,9 +485,7 @@ describe("checkComponentSpecValidity", () => {
       const result = checkComponentSpecValidity(componentSpec);
 
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain(
-        "Circular dependency detected in pipeline at task: task1",
-      );
+      expectErrorWithMessage(result.errors, "Circular dependency detected");
     });
   });
 
@@ -534,5 +588,163 @@ describe("checkComponentSpecValidity", () => {
       expect(result.isValid).toBe(true);
       expect(result.errors).toHaveLength(0);
     });
+  });
+});
+
+describe("collectComponentValidationIssues", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(isGraphImplementation).mockImplementation(
+      (
+        implementation: unknown,
+      ): implementation is { graph: GraphSpec; container?: null } => {
+        if (typeof implementation !== "object" || implementation === null) {
+          return false;
+        }
+
+        return Object.prototype.hasOwnProperty.call(implementation, "graph");
+      },
+    );
+  });
+
+  it("returns empty issues array for valid non-graph specs", () => {
+    const componentSpec: ComponentSpec = {
+      name: "valid",
+      implementation: { container: { image: "image" } },
+    };
+
+    const issues = collectComponentValidationIssues(componentSpec);
+
+    expect(issues).toHaveLength(0);
+  });
+
+  it("collects nested subgraph issues with path metadata", () => {
+    const childSpec: ComponentSpec = {
+      name: "child",
+      implementation: {
+        graph: {
+          tasks: {},
+        },
+      },
+    };
+
+    const componentSpec: ComponentSpec = {
+      name: "root",
+      implementation: {
+        graph: {
+          tasks: {
+            childTask: {
+              componentRef: {
+                name: "child",
+                spec: childSpec,
+              },
+            },
+          },
+        },
+      },
+    };
+
+    const issues = collectComponentValidationIssues(componentSpec);
+    expect(issues).toHaveLength(1);
+    expect(issues[0].subgraphPath).toEqual(["root", "childTask"]);
+    expect(issues[0].message).toBe("Pipeline must contain at least one task");
+  });
+
+  it("annotates task issues with task identifiers", () => {
+    const componentSpec: ComponentSpec = {
+      name: "root",
+      implementation: {
+        graph: {
+          tasks: {
+            task1: {} as any,
+          },
+        },
+      },
+    };
+
+    const issues = collectComponentValidationIssues(componentSpec);
+    const taskIssue = issues.find((issue) => issue.type === "task");
+    expect(taskIssue?.taskId).toBe("task1");
+    expect(taskIssue?.subgraphPath).toEqual(["root"]);
+  });
+
+  it("handles circular references without infinite loops", () => {
+    // Create a spec that references itself
+    const circularSpec: ComponentSpec = {
+      name: "circular",
+      implementation: {
+        graph: {
+          tasks: {},
+        },
+      },
+    };
+
+    // Add a task that references the parent spec (creating a cycle)
+    circularSpec.implementation = {
+      graph: {
+        tasks: {
+          selfTask: {
+            componentRef: {
+              name: "circular",
+              spec: circularSpec, // Circular reference
+            },
+          },
+        },
+      },
+    };
+
+    // This should not hang or crash - the visitedSpecs Set should prevent infinite recursion
+    const issues = collectComponentValidationIssues(circularSpec);
+
+    // Should still collect issues from the first level without getting stuck in a loop
+    expect(issues).toBeDefined();
+    expect(Array.isArray(issues)).toBe(true);
+  });
+
+  it("skips duplicate component specs within the same validation run", () => {
+    // When the same ComponentSpec object is used multiple times in a tree,
+    // it should only be validated once to prevent infinite loops and redundant work
+    const sharedChildSpec: ComponentSpec = {
+      name: "shared",
+      implementation: {
+        graph: {
+          tasks: {}, // Empty tasks triggers "must contain at least one task" error
+        },
+      },
+    };
+
+    const parentSpec: ComponentSpec = {
+      name: "parent",
+      implementation: {
+        graph: {
+          tasks: {
+            task1: {
+              componentRef: {
+                name: "shared",
+                spec: sharedChildSpec,
+              },
+            },
+            task2: {
+              componentRef: {
+                name: "shared",
+                spec: sharedChildSpec, // Same spec reference - will be skipped
+              },
+            },
+          },
+        },
+      },
+    };
+
+    const issues = collectComponentValidationIssues(parentSpec);
+
+    // The shared spec is visited via task1 first, so task2's reference is skipped
+    // This is correct behavior to prevent infinite loops with circular references
+    const nestedIssues = issues.filter(
+      (issue) => issue.subgraphPath.length > 1,
+    );
+
+    // Should have exactly one set of nested issues (from task1, not task2)
+    expect(nestedIssues.length).toBe(1);
+    expect(nestedIssues[0].subgraphPath).toEqual(["root", "task1"]);
   });
 });

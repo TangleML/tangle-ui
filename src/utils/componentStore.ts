@@ -1,4 +1,3 @@
-import yaml from "js-yaml";
 import localForage from "localforage";
 
 import { fetchComponentTextFromUrl } from "@/services/componentService";
@@ -6,9 +5,9 @@ import { fetchComponentTextFromUrl } from "@/services/componentService";
 import type { DownloadDataType } from "./cache";
 import { downloadDataWithCache } from "./cache";
 import type { ComponentReference, ComponentSpec } from "./componentSpec";
-import { isValidComponentSpec } from "./componentSpec";
 import { USER_COMPONENTS_LIST_NAME } from "./constants";
 import { getIdOrTitleFromPath } from "./URL";
+import { componentSpecFromYaml, componentSpecToYaml } from "./yaml";
 
 // IndexedDB: DB and table names
 const DB_NAME = "components";
@@ -74,16 +73,7 @@ export const loadComponentAsRefFromText = async (
       ? new TextEncoder().encode(componentText)
       : componentText;
 
-  const loadedObj = yaml.load(componentString);
-  if (typeof loadedObj !== "object" || loadedObj === null) {
-    throw Error(`componentText is not a YAML-encoded object: ${loadedObj}`);
-  }
-  if (!isValidComponentSpec(loadedObj)) {
-    throw Error(
-      `componentText does not encode a valid pipeline component: ${loadedObj}`,
-    );
-  }
-  const componentSpec: ComponentSpec = loadedObj;
+  const componentSpec = componentSpecFromYaml(componentString);
 
   const digest = await generateDigest(componentBytes as ArrayBuffer);
   const componentRef: ComponentReferenceWithSpec = {
@@ -613,18 +603,6 @@ export const deleteComponentFileFromList = async (
   });
 
   return componentListDb.removeItem(fileName);
-};
-
-export const componentSpecToYaml = (componentSpec: ComponentSpec) => {
-  return yaml.dump(componentSpec, { lineWidth: 10000 });
-};
-
-export const componentSpecToText = (componentSpec: ComponentSpec) => {
-  return yaml.dump(componentSpec, {
-    lineWidth: 80,
-    noRefs: true,
-    indent: 2,
-  });
 };
 
 // TODO: Remove the upgrade code in several weeks.

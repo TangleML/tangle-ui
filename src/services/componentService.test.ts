@@ -78,13 +78,15 @@ describe("componentService", () => {
 
   describe("parseComponentData", () => {
     it("should parse valid YAML data", () => {
-      const yamlData = "name: test-component\nversion: 1.2";
-      const result = parseComponentData(yamlData);
-
-      expect(result).toEqual({
+      const spec = {
         name: "test-component",
         version: 1.2,
-      });
+        implementation: { container: { image: "test" } },
+      };
+      const yamlData = yaml.dump(spec);
+      const result = parseComponentData(yamlData);
+
+      expect(result).toEqual(spec);
     });
 
     it("should return null for invalid YAML", () => {
@@ -411,10 +413,8 @@ describe("componentService", () => {
 
       const result = await getExistingAndNewUserComponent(componentData);
 
-      expect(result).toEqual({
-        existingComponent: undefined,
-        newComponent: mockComponent,
-      });
+      expect(result.existingComponent).toEqual(undefined);
+      expect(result.newComponent?.spec).toEqual(mockComponent);
     });
 
     it("should return existing component when found with different digest", async () => {
@@ -431,10 +431,24 @@ describe("componentService", () => {
 
       const result = await getExistingAndNewUserComponent(componentData);
 
-      expect(result).toEqual({
-        existingComponent,
-        newComponent: mockComponent,
-      });
+      expect(result.existingComponent).toEqual(existingComponent);
+      expect(result.newComponent?.spec).toEqual(mockComponent);
+    });
+
+    it("should handle componentData as ArrayBuffer", async () => {
+      // Arrange: Encode the YAML as an ArrayBuffer
+      const componentYaml = yaml.dump(mockComponent);
+      const encoder = new TextEncoder();
+      const arrayBuffer = encoder.encode(componentYaml).buffer;
+
+      vi.mocked(localforage.getAllUserComponents).mockResolvedValue([]);
+
+      // Act
+      const result = await getExistingAndNewUserComponent(arrayBuffer);
+
+      // Assert: result.newComponent.spec should match the original component spec
+      expect(result.existingComponent).toEqual(undefined);
+      expect(result.newComponent?.spec).toEqual(mockComponent);
     });
   });
 

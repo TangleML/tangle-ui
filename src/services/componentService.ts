@@ -1,5 +1,3 @@
-import yaml from "js-yaml";
-
 import { getAppSettings } from "@/appSettings";
 import {
   type ComponentFolder,
@@ -27,7 +25,7 @@ import {
   type TaskSpec,
   type UnknownComponentReference,
 } from "@/utils/componentSpec";
-import { componentSpecToYaml, generateDigest } from "@/utils/componentStore";
+import { generateDigest } from "@/utils/componentStore";
 import {
   componentExistsByUrl,
   getAllUserComponents,
@@ -36,10 +34,12 @@ import {
   saveComponent,
   type UserComponent,
 } from "@/utils/localforage";
+import { componentSpecToYaml } from "@/utils/yaml";
+import { componentSpecFromYaml } from "@/utils/yaml";
 
 export interface ExistingAndNewComponent {
   existingComponent: UserComponent | undefined;
-  newComponent: ComponentSpec | undefined;
+  newComponent: HydratedComponentReference | undefined;
 }
 
 const COMPONENT_LIBRARY_URL = getAppSettings().componentLibraryUrl;
@@ -154,7 +154,7 @@ export const fetchAndStoreComponentByUrl = async (
       const text = await fetchComponentTextFromUrl(url);
       if (text) {
         try {
-          return yaml.load(text) as ComponentSpec;
+          return componentSpecFromYaml(text);
         } catch (error) {
           console.error(`Error parsing component at ${url}:`, error);
         }
@@ -182,7 +182,7 @@ export const fetchAndStoreComponentByUrl = async (
     });
 
     try {
-      return yaml.load(text) as ComponentSpec;
+      return componentSpecFromYaml(text);
     } catch (error) {
       console.error(`Error parsing component at ${url}:`, error);
       return null;
@@ -263,7 +263,7 @@ const parseTextToSpec = async (
 ): Promise<ComponentSpec | null> => {
   if (text) {
     try {
-      return yaml.load(text) as ComponentSpec;
+      return componentSpecFromYaml(text);
     } catch (error) {
       console.error("Error parsing component text:", error);
     }
@@ -316,36 +316,58 @@ export const fetchComponentTextFromUrl = async (
  */
 export const parseComponentData = (data: string): ComponentSpec | null => {
   try {
-    return yaml.load(data) as ComponentSpec;
+    return componentSpecFromYaml(data);
   } catch (error) {
     console.error("Error parsing component data:", error);
     return null;
   }
 };
 
+/**
+ * Accepts string or ArrayBuffer and returns string.
+ *
+ * @todo: use utility in other places
+ *
+ * @param data - The data to normalize.
+ * @returns The string representation of the data.
+ */
+function getStringFromData(data: string | ArrayBuffer): string {
+  if (typeof data === "object" && "byteLength" in data) {
+    return new TextDecoder().decode(data);
+  }
+
+  return data;
+}
+
 export const getExistingAndNewUserComponent = async (
   componentData: string | ArrayBuffer,
 ): Promise<ExistingAndNewComponent> => {
   const allUserComponents = await getAllUserComponents();
 
-  const newDigest = await generateDigest(componentData as string);
-  const component = parseComponentData(componentData as string);
+  const componentStringContent = getStringFromData(componentData);
+
+  const newDigest = await generateDigest(componentStringContent);
+  const hydratedComponent = await hydrateComponentReference({
+    text: componentStringContent,
+  });
+
   const existingComponent = allUserComponents.find((userComponent) => {
     const existingDigest = userComponent.componentRef.digest;
 
     return (
-      existingDigest !== newDigest && userComponent?.name === component?.name
+      existingDigest !== newDigest &&
+      userComponent?.name === hydratedComponent?.name
     );
   });
-  if (!existingComponent || !component) {
+  if (!existingComponent || !hydratedComponent) {
     return {
       existingComponent: undefined,
-      newComponent: component ?? undefined,
+      newComponent: hydratedComponent ?? undefined,
     };
   }
   return {
     existingComponent,
-    newComponent: component,
+    newComponent: hydratedComponent,
   };
 };
 
@@ -423,7 +445,7 @@ async function hydrateFromPartialContentfulComponentReference(
     : component.text;
 
   const spec = isTextOnlyComponentReference(component)
-    ? (yaml.load(component.text) as ComponentSpec)
+    ? componentSpecFromYaml(component.text)
     : component.spec;
 
   if (!text || !spec) {

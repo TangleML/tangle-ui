@@ -9,7 +9,6 @@ import {
 } from "@/utils/componentSpec";
 import {
   type ComponentFileEntry,
-  componentSpecToYaml,
   deleteComponentFileFromList,
   fullyLoadComponentRefFromUrl,
   getAllComponentFilesFromList,
@@ -17,6 +16,8 @@ import {
   writeComponentToFileListFromText,
 } from "@/utils/componentStore";
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
+import { componentSpecToYaml } from "@/utils/yaml";
+import { componentSpecFromYaml } from "@/utils/yaml";
 
 export const deletePipeline = async (name: string, onDelete?: () => void) => {
   try {
@@ -178,19 +179,7 @@ export async function importPipelineFromYaml(
 ): Promise<ImportResult> {
   try {
     // Parse the YAML content to get the component spec
-    const componentSpec = yaml.load(yamlContent) as ComponentSpec;
-
-    if (!componentSpec || typeof componentSpec !== "object") {
-      const errorMessage =
-        "Invalid YAML content. Could not parse as a component spec.";
-      console.error(errorMessage);
-      return {
-        name: "",
-        overwritten: false,
-        successful: false,
-        errorMessage,
-      };
-    }
+    const componentSpec = componentSpecFromYaml(yamlContent);
 
     // Validate the component spec has the required structure
     if (

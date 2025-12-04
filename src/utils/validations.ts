@@ -8,16 +8,32 @@ import {
   type TaskOutputArgument,
   type TaskSpec,
 } from "./componentSpec";
+import { ROOT_TASK_ID } from "./constants";
 
 interface ValidationOptions {
   skipInputValueValidation?: boolean;
 }
 
+type ValidationIssueType = "graph" | "task" | "input" | "output";
+
+export interface ValidationError {
+  type: ValidationIssueType;
+  message: string;
+  taskId?: string;
+  inputName?: string;
+  outputName?: string;
+}
+
+export interface ComponentValidationIssue extends ValidationError {
+  id: string;
+  subgraphPath: string[];
+}
+
 export const checkComponentSpecValidity = (
   componentSpec: ComponentSpec,
   options?: ValidationOptions,
-): { isValid: boolean; errors: string[] } => {
-  const errors: string[] = [];
+): { isValid: boolean; errors: ValidationError[] } => {
+  const errors: ValidationError[] = [];
   const { skipInputValueValidation = false } = options ?? {};
 
   // Basic validation
@@ -26,7 +42,9 @@ export const checkComponentSpecValidity = (
 
   if (
     basicErrors.length > 0 &&
-    basicErrors.some((e) => e.includes("null") || e.includes("implementation"))
+    basicErrors.some(
+      (e) => e.message.includes("null") || e.message.includes("implementation"),
+    )
   ) {
     return { isValid: false, errors };
   }
@@ -54,23 +72,34 @@ export const checkComponentSpecValidity = (
   return { isValid: errors.length === 0, errors };
 };
 
-const validateBasicComponentSpec = (componentSpec: ComponentSpec): string[] => {
-  const errors: string[] = [];
+const validateBasicComponentSpec = (
+  componentSpec: ComponentSpec,
+): ValidationError[] => {
+  const errors: ValidationError[] = [];
 
   // Basic null/undefined check
   if (!componentSpec) {
-    errors.push("Component spec is null or undefined");
+    errors.push({
+      type: "graph",
+      message: "Component spec is null or undefined",
+    });
     return errors;
   }
 
   // Validate component name
   if (!componentSpec.name || componentSpec.name.trim() === "") {
-    errors.push("Component name is required and cannot be empty");
+    errors.push({
+      type: "graph",
+      message: "Component name is required and cannot be empty",
+    });
   }
 
   // Validate implementation exists
   if (!componentSpec.implementation) {
-    errors.push("Component implementation is required");
+    errors.push({
+      type: "graph",
+      message: "Component implementation is required",
+    });
   }
 
   return errors;
@@ -79,8 +108,8 @@ const validateBasicComponentSpec = (componentSpec: ComponentSpec): string[] => {
 const validateInputsAndOutputs = (
   componentSpec: ComponentSpec,
   skipInputValueValidation: boolean,
-): string[] => {
-  const errors: string[] = [];
+): ValidationError[] => {
+  const errors: ValidationError[] = [];
 
   // Validate inputs array structure
   if (componentSpec.inputs) {
@@ -88,11 +117,18 @@ const validateInputsAndOutputs = (
     componentSpec.inputs.forEach((input) => {
       // Check input name is required
       if (!input.name || input.name.trim() === "") {
-        errors.push(`Input with value "${input.value}" must have a valid name`);
+        errors.push({
+          type: "input",
+          message: `Input with value "${input.value}" must have a valid name`,
+        });
       } else {
         // Check for duplicate input names
         if (inputNames.has(input.name)) {
-          errors.push(`Duplicate input name found: "${input.name}"`);
+          errors.push({
+            type: "input",
+            message: `Duplicate input name: "${input.name}"`,
+            inputName: input.name,
+          });
         }
         inputNames.add(input.name);
       }
@@ -104,9 +140,11 @@ const validateInputsAndOutputs = (
         !input.default &&
         !input.value
       ) {
-        errors.push(
-          `Pipeline input "${input.name}" is required and does not have a value`,
-        );
+        errors.push({
+          type: "input",
+          message: `Required input missing value`,
+          inputName: input.name,
+        });
       }
     });
   }
@@ -117,11 +155,18 @@ const validateInputsAndOutputs = (
     componentSpec.outputs.forEach((output) => {
       // Check output name is required
       if (!output.name || output.name.trim() === "") {
-        errors.push(`Output with type "${output.type}" must have a valid name`);
+        errors.push({
+          type: "output",
+          message: `Output with type "${output.type}" must have a valid name`,
+        });
       } else {
         // Check for duplicate output names
         if (outputNames.has(output.name)) {
-          errors.push(`Duplicate output name found: "${output.name}"`);
+          errors.push({
+            type: "output",
+            message: `Duplicate output name: "${output.name}"`,
+            outputName: output.name,
+          });
         }
         outputNames.add(output.name);
       }
@@ -134,12 +179,15 @@ const validateInputsAndOutputs = (
 const validateGraphTasks = (
   graphSpec: GraphSpec,
   componentSpec: ComponentSpec,
-): string[] => {
-  const errors: string[] = [];
+): ValidationError[] => {
+  const errors: ValidationError[] = [];
 
   // Validate graph tasks exist
   if (!graphSpec.tasks || Object.keys(graphSpec.tasks).length === 0) {
-    errors.push("Pipeline must contain at least one task");
+    errors.push({
+      type: "graph",
+      message: "Pipeline must contain at least one task",
+    });
     return errors;
   }
 
@@ -160,17 +208,21 @@ const validateSingleTask = (
   task: TaskSpec,
   graphSpec: GraphSpec,
   componentSpec: ComponentSpec,
-): string[] => {
-  const errors: string[] = [];
+): ValidationError[] => {
+  const errors: ValidationError[] = [];
 
   // Check task ID is valid
   if (!taskId || taskId.trim() === "") {
-    errors.push("Task ID cannot be empty");
+    errors.push({ type: "task", message: "Task ID cannot be empty" });
   }
 
   // Validate task has component reference
   if (!task.componentRef) {
-    errors.push(`Task "${taskId}" must have a componentRef`);
+    errors.push({
+      type: "task",
+      message: "Missing componentRef",
+      taskId,
+    });
   }
 
   // Validate task arguments
@@ -187,8 +239,8 @@ const validateTaskArguments = (
   task: TaskSpec,
   graphSpec: GraphSpec,
   componentSpec: ComponentSpec,
-): string[] => {
-  const errors: string[] = [];
+): ValidationError[] => {
+  const errors: ValidationError[] = [];
 
   if (!task.arguments) return errors;
 
@@ -230,17 +282,19 @@ const validateGraphInputReference = (
   argName: string,
   argValue: GraphInputArgument,
   componentSpec: ComponentSpec,
-): string[] => {
-  const errors: string[] = [];
+): ValidationError[] => {
+  const errors: ValidationError[] = [];
   const inputName = argValue.graphInput.inputName;
   const componentInput = componentSpec.inputs?.find(
     (i) => i.name === inputName,
   );
 
   if (!componentInput) {
-    errors.push(
-      `Task "${taskId}" argument "${argName}" references non-existent graph input: "${inputName}"`,
-    );
+    errors.push({
+      type: "task",
+      message: `Argument "${argName}" references non-existent input: "${inputName}"`,
+      taskId,
+    });
   }
 
   return errors;
@@ -251,15 +305,17 @@ const validateTaskOutputReference = (
   argName: string,
   argValue: TaskOutputArgument,
   graphSpec: GraphSpec,
-): string[] => {
-  const errors: string[] = [];
+): ValidationError[] => {
+  const errors: ValidationError[] = [];
   const referencedTaskId = argValue.taskOutput.taskId;
   const referencedOutput = argValue.taskOutput.outputName;
 
   if (!graphSpec.tasks[referencedTaskId]) {
-    errors.push(
-      `Task "${taskId}" argument "${argName}" references non-existent task: "${referencedTaskId}"`,
-    );
+    errors.push({
+      type: "task",
+      message: `Argument "${argName}" references non-existent task: "${referencedTaskId}"`,
+      taskId,
+    });
   } else {
     // Validate that the referenced output exists in the referenced task's component
     const referencedTask = graphSpec.tasks[referencedTaskId];
@@ -270,9 +326,11 @@ const validateTaskOutputReference = (
       );
 
       if (!outputExists) {
-        errors.push(
-          `Task "${taskId}" argument "${argName}" references non-existent output "${referencedOutput}" from task "${referencedTaskId}"`,
-        );
+        errors.push({
+          type: "task",
+          message: `Argument "${argName}" references non-existent output "${referencedOutput}" from task "${referencedTaskId}"`,
+          taskId,
+        });
       }
     } else {
       console.warn(
@@ -287,8 +345,8 @@ const validateTaskOutputReference = (
 const validateTaskRequiredInputs = (
   taskId: string,
   task: TaskSpec,
-): string[] => {
-  const errors: string[] = [];
+): ValidationError[] => {
+  const errors: ValidationError[] = [];
 
   if (!task.componentRef || !task.componentRef.spec) {
     console.warn(
@@ -311,9 +369,11 @@ const validateTaskRequiredInputs = (
           Object.prototype.hasOwnProperty.call(task.arguments, input.name);
 
         if (!hasArgument) {
-          errors.push(
-            `Task "${taskId}" is missing required argument for input: "${input.name}"`,
-          );
+          errors.push({
+            type: "task",
+            message: `Missing input "${input.name}"`,
+            taskId,
+          });
         }
       }
     });
@@ -325,8 +385,8 @@ const validateTaskRequiredInputs = (
 const validateGraphOutputs = (
   graphSpec: GraphSpec,
   componentSpec: ComponentSpec,
-): string[] => {
-  const errors: string[] = [];
+): ValidationError[] => {
+  const errors: ValidationError[] = [];
 
   if (!graphSpec.outputValues) return errors;
 
@@ -337,17 +397,21 @@ const validateGraphOutputs = (
         (o) => o.name === outputName,
       );
       if (!componentOutput) {
-        errors.push(
-          `Graph output "${outputName}" is not defined in component outputs`,
-        );
+        errors.push({
+          type: "output",
+          message: `Not defined in component outputs`,
+          outputName,
+        });
       }
 
       // Check if referenced task exists
       const referencedTaskId = outputValue.taskOutput.taskId;
       if (!graphSpec.tasks[referencedTaskId]) {
-        errors.push(
-          `Graph output "${outputName}" references non-existent task: "${referencedTaskId}"`,
-        );
+        errors.push({
+          type: "output",
+          message: `References non-existent task: "${referencedTaskId}"`,
+          outputName,
+        });
       }
     },
   );
@@ -358,8 +422,8 @@ const validateGraphOutputs = (
 const validateInputOutputConnections = (
   graphSpec: GraphSpec,
   componentSpec: ComponentSpec,
-): string[] => {
-  const errors: string[] = [];
+): ValidationError[] => {
+  const errors: ValidationError[] = [];
 
   // Validate all required component inputs have corresponding graph inputs or default values
   if (componentSpec.inputs) {
@@ -378,9 +442,11 @@ const validateInputOutputConnections = (
       );
 
       if (!isInputUsed) {
-        errors.push(
-          `Pipeline input "${input.name}" is not connected to any tasks`,
-        );
+        errors.push({
+          type: "input",
+          message: "Not connected to any tasks",
+          inputName: input.name,
+        });
       }
     });
   }
@@ -396,9 +462,11 @@ const validateInputOutputConnections = (
         );
 
       if (!hasGraphOutput) {
-        errors.push(
-          `Pipeline output "${output.name}" is not connected to any tasks`,
-        );
+        errors.push({
+          type: "output",
+          message: "Not connected to any tasks",
+          outputName: output.name,
+        });
       }
     });
   }
@@ -406,8 +474,10 @@ const validateInputOutputConnections = (
   return errors;
 };
 
-const validateCircularDependencies = (graphSpec: GraphSpec): string[] => {
-  const errors: string[] = [];
+const validateCircularDependencies = (
+  graphSpec: GraphSpec,
+): ValidationError[] => {
+  const errors: ValidationError[] = [];
   const visited = new Set<string>();
   const recursionStack = new Set<string>();
 
@@ -445,12 +515,82 @@ const validateCircularDependencies = (graphSpec: GraphSpec): string[] => {
   // Check for cycles starting from each task
   for (const taskId of Object.keys(graphSpec.tasks)) {
     if (!visited.has(taskId) && hasCycle(taskId)) {
-      errors.push(
-        "Circular dependency detected in pipeline at task: " + taskId,
-      );
+      errors.push({
+        type: "task",
+        message: "Circular dependency detected",
+        taskId,
+      });
       break;
     }
   }
 
   return errors;
+};
+
+export const collectComponentValidationIssues = (
+  componentSpec: ComponentSpec,
+): ComponentValidationIssue[] => {
+  return collectIssuesRecursive(componentSpec, {
+    subgraphPath: [ROOT_TASK_ID],
+    skipInputValueValidation: false,
+    visitedSpecs: new Set(),
+  });
+};
+
+interface ValidationContext {
+  subgraphPath: string[];
+  skipInputValueValidation: boolean;
+  visitedSpecs: Set<ComponentSpec>;
+}
+
+const collectIssuesRecursive = (
+  componentSpec: ComponentSpec,
+  context: ValidationContext,
+): ComponentValidationIssue[] => {
+  if (context.visitedSpecs.has(componentSpec)) {
+    return [];
+  }
+  context.visitedSpecs.add(componentSpec);
+
+  const { subgraphPath } = context;
+  const { errors } = checkComponentSpecValidity(componentSpec, {
+    skipInputValueValidation: context.skipInputValueValidation,
+  });
+
+  const issuesForCurrent = errors.map((error, index) => ({
+    id: buildIssueId(subgraphPath, error, index),
+    subgraphPath,
+    ...error,
+  }));
+
+  if (!isGraphImplementation(componentSpec.implementation)) {
+    return issuesForCurrent;
+  }
+
+  const nestedIssues = Object.entries(
+    componentSpec.implementation.graph.tasks,
+  ).flatMap(([taskId, taskSpec]) => {
+    const nestedSpec = taskSpec.componentRef?.spec;
+    if (!nestedSpec || !isGraphImplementation(nestedSpec.implementation)) {
+      return [];
+    }
+
+    return collectIssuesRecursive(nestedSpec, {
+      subgraphPath: [...subgraphPath, taskId],
+      skipInputValueValidation: true,
+      visitedSpecs: context.visitedSpecs,
+    });
+  });
+
+  return [...issuesForCurrent, ...nestedIssues];
+};
+
+const buildIssueId = (
+  path: string[],
+  error: ValidationError,
+  index: number,
+): string => {
+  const targetKey =
+    error.taskId ?? error.inputName ?? error.outputName ?? "graph";
+  return `${path.join(">")}::${error.type}::${targetKey}::${index}`;
 };

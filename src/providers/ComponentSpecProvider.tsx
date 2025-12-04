@@ -1,5 +1,12 @@
 import equal from "fast-deep-equal";
-import { type ReactNode, useCallback, useMemo, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { type UndoRedo, useUndoRedo } from "@/hooks/useUndoRedo";
 import { loadPipelineByName } from "@/services/pipelineService";
@@ -9,7 +16,13 @@ import {
   getSubgraphComponentSpec,
   updateSubgraphSpec,
 } from "@/utils/subgraphUtils";
-import { checkComponentSpecValidity } from "@/utils/validations";
+import {
+  checkComponentSpecValidity,
+  collectComponentValidationIssues,
+  type ComponentValidationIssue,
+  type ValidationError,
+} from "@/utils/validations";
+import { componentSpecToYaml } from "@/utils/yaml";
 
 import {
   createRequiredContext,
@@ -22,7 +35,7 @@ import {
 } from "../utils/componentSpec";
 import {
   type ComponentReferenceWithSpec,
-  componentSpecToYaml,
+  generateDigest,
   writeComponentToFileListFromText,
 } from "../utils/componentStore";
 
@@ -42,9 +55,12 @@ interface ComponentSpecContextType {
   graphSpec: GraphSpec;
   currentGraphSpec: GraphSpec;
   currentSubgraphSpec: ComponentSpec;
+  digest: string;
   isLoading: boolean;
   isValid: boolean;
-  errors: string[];
+  errors: ValidationError[];
+  isComponentTreeValid: boolean;
+  globalValidationIssues: ComponentValidationIssue[];
   refetch: () => void;
   updateGraphSpec: (newGraphSpec: GraphSpec) => void;
   saveComponentSpec: (name: string) => Promise<void>;
@@ -73,6 +89,7 @@ export const ComponentSpecProvider = ({
   const [componentSpec, setComponentSpec] = useState<ComponentSpec>(
     spec ?? EMPTY_GRAPH_COMPONENT_SPEC,
   );
+  const [digest, setDigest] = useState<string>("");
 
   const [isLoading, setIsLoading] = useState(!!spec);
 
@@ -104,6 +121,30 @@ export const ComponentSpecProvider = ({
       }),
     [currentSubgraphSpec, isRootSubgraph],
   );
+
+  const globalValidationIssues = useMemo(
+    () => collectComponentValidationIssues(componentSpec),
+    [componentSpec],
+  );
+  const isComponentTreeValid = globalValidationIssues.length === 0;
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const computeDigest = async () => {
+      const text = componentSpecToYaml(componentSpec);
+      const newDigest = await generateDigest(text);
+      if (!isCancelled) {
+        setDigest(newDigest);
+      }
+    };
+
+    computeDigest();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [componentSpec]);
 
   const clearComponentSpec = useCallback(() => {
     setComponentSpec(EMPTY_GRAPH_COMPONENT_SPEC);
@@ -226,9 +267,12 @@ export const ComponentSpecProvider = ({
       graphSpec,
       currentGraphSpec,
       currentSubgraphSpec,
+      digest,
       isLoading,
       isValid,
       errors,
+      isComponentTreeValid,
+      globalValidationIssues,
       refetch,
       setComponentSpec,
       clearComponentSpec,
@@ -247,9 +291,12 @@ export const ComponentSpecProvider = ({
       graphSpec,
       currentGraphSpec,
       currentSubgraphSpec,
+      digest,
       isLoading,
       isValid,
       errors,
+      isComponentTreeValid,
+      globalValidationIssues,
       refetch,
       setComponentSpec,
       clearComponentSpec,

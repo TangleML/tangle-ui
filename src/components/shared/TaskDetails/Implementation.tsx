@@ -2,7 +2,7 @@ import { useMemo } from "react";
 
 import { CodeViewer } from "@/components/shared/CodeViewer";
 import type { ComponentSpec } from "@/utils/componentSpec";
-import { componentSpecToText } from "@/utils/componentStore";
+import { componentSpecToText } from "@/utils/yaml";
 
 interface TaskImplementationProps {
   displayName: string;

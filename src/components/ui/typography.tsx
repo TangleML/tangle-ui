@@ -30,6 +30,7 @@ const textVariants = cva("", {
       critical: "text-destructive",
       inverted: "text-inverted",
       info: "text-foreground underline decoration-dotted",
+      warning: "text-warning",
     },
     size: {
       xs: "text-xs",
