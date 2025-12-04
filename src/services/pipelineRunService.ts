@@ -9,7 +9,6 @@ import {
   isGraphImplementation,
 } from "@/utils/componentSpec";
 import {
-  componentSpecToYaml,
   getComponentFileFromList,
   writeComponentToFileListFromText,
 } from "@/utils/componentStore";
@@ -19,6 +18,7 @@ import {
   USER_PIPELINES_LIST_NAME,
 } from "@/utils/constants";
 import { fetchWithErrorHandling } from "@/utils/fetchWithErrorHandling";
+import { componentSpecToYaml } from "@/utils/yaml";
 
 export const createPipelineRun = async (
   payload: BodyCreateApiPipelineRunsPost,

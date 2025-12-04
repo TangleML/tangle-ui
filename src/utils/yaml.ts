@@ -1,7 +1,6 @@
 import yaml from "js-yaml";
 
 import { type ComponentSpec, isValidComponentSpec } from "./componentSpec";
-import { componentSpecToText } from "./componentStore";
 
 const copyToYaml = (
   spec: ComponentSpec,
@@ -49,5 +48,17 @@ export function componentSpecFromYaml(yamlText: string): ComponentSpec {
 
   return loadedSpec;
 }
+
+export const componentSpecToYaml = (componentSpec: ComponentSpec) => {
+  return yaml.dump(componentSpec, { lineWidth: 10000 });
+};
+
+export const componentSpecToText = (componentSpec: ComponentSpec) => {
+  return yaml.dump(componentSpec, {
+    lineWidth: 80,
+    noRefs: true,
+    indent: 2,
+  });
+};
 
 export default copyToYaml;

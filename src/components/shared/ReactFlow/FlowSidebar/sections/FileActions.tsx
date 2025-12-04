@@ -21,8 +21,8 @@ import { useAutoSaveStatus } from "@/providers/AutoSaveProvider";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { EDITOR_PATH } from "@/routes/router";
 import { getPipelineFile, useSavePipeline } from "@/services/pipelineService";
-import { componentSpecToYaml } from "@/utils/componentStore";
 import { formatRelativeTime } from "@/utils/date";
+import { componentSpecToYaml } from "@/utils/yaml";
 
 const FileActions = ({ isOpen }: { isOpen: boolean }) => {
   const { componentSpec } = useComponentSpec();

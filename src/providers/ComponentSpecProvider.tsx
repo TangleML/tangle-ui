@@ -22,6 +22,7 @@ import {
   type ComponentValidationIssue,
   type ValidationError,
 } from "@/utils/validations";
+import { componentSpecToYaml } from "@/utils/yaml";
 
 import {
   createRequiredContext,
@@ -34,7 +35,6 @@ import {
 } from "../utils/componentSpec";
 import {
   type ComponentReferenceWithSpec,
-  componentSpecToYaml,
   generateDigest,
   writeComponentToFileListFromText,
 } from "../utils/componentStore";
