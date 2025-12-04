@@ -1,41 +1,37 @@
+import yaml from "js-yaml";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import * as componentSpecModule from "@/utils/componentSpec";
 import * as componentStore from "@/utils/componentStore";
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 
 import { importPipelineFromYaml } from "./pipelineService";
 
-vi.mock("@/utils/componentStore", () => ({
-  componentSpecToYaml: vi.fn(),
-  getComponentFileFromList: vi.fn(),
-  writeComponentToFileListFromText: vi.fn().mockResolvedValue({}),
-}));
-
-vi.mock("@/utils/componentSpec", () => ({
-  isGraphImplementation: vi.fn(),
-}));
-
 describe("importPipelineFromYaml", () => {
-  const validYamlContent = `
-name: Test Pipeline
-metadata:
-  annotations:
-    sdk: https://cloud-pipelines.net/pipeline-editor/
-implementation:
-  graph:
-    tasks: {}
-    outputValues: {}
-`;
+  const validYamlObject = {
+    name: "Test Pipeline",
+    metadata: {
+      annotations: {
+        sdk: "https://cloud-pipelines.net/pipeline-editor/",
+      },
+    },
+    implementation: {
+      graph: {
+        tasks: [],
+        outputValues: [],
+      },
+    },
+  };
+
+  const validYamlContent = yaml.dump(validYamlObject);
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default to returning true for valid tests
-    vi.mocked(componentSpecModule.isGraphImplementation).mockReturnValue(true);
-    // Default for componentSpecToYaml
-    vi.mocked(componentStore.componentSpecToYaml).mockReturnValue(
-      "mocked-yaml",
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    vi.spyOn(componentStore, "getComponentFileFromList").mockResolvedValue(
+      null,
     );
+    vi.spyOn(componentStore, "writeComponentToFileListFromText");
   });
 
   afterEach(() => {
@@ -48,17 +44,8 @@ implementation:
 
     const result = await importPipelineFromYaml(validYamlContent);
 
-    // Expect the function to call componentSpecToYaml
-    expect(componentStore.componentSpecToYaml).toHaveBeenCalled();
-
     // Expect writeComponentToFileListFromText to be called with correct parameters
-    expect(
-      componentStore.writeComponentToFileListFromText,
-    ).toHaveBeenCalledWith(
-      USER_PIPELINES_LIST_NAME,
-      "Test Pipeline",
-      "mocked-yaml",
-    );
+    expect(componentStore.writeComponentToFileListFromText).toHaveBeenCalled();
 
     // Expect successful result
     expect(result).toEqual({
@@ -79,9 +66,6 @@ implementation:
       },
     );
 
-    // Mock the console.error to prevent test output pollution
-    vi.spyOn(console, "error").mockImplementation(() => {});
-
     const result = await importPipelineFromYaml(validYamlContent, false);
 
     // Since we're now renaming rather than erroring, expect a successful result
@@ -95,7 +79,7 @@ implementation:
     ).toHaveBeenCalledWith(
       USER_PIPELINES_LIST_NAME,
       "Test Pipeline (1)",
-      "mocked-yaml",
+      expect.stringContaining("name: Test Pipeline (1)"),
     );
   });
 
@@ -114,9 +98,6 @@ implementation:
       },
     );
 
-    // Mock the console.error
-    vi.spyOn(console, "error").mockImplementation(() => {});
-
     const result = await importPipelineFromYaml(validYamlContent, false);
 
     // Expect a successful result with the name incremented to (3)
@@ -129,14 +110,14 @@ implementation:
     ).toHaveBeenCalledWith(
       USER_PIPELINES_LIST_NAME,
       "Test Pipeline (3)",
-      "mocked-yaml",
+      yaml.dump({
+        ...validYamlObject,
+        name: "Test Pipeline (3)",
+      }),
     );
   });
 
   it("should handle invalid YAML content", async () => {
-    // Mock the console.error to prevent test output pollution
-    vi.spyOn(console, "error").mockImplementation(() => {});
-
     const result = await importPipelineFromYaml("invalid: yaml: content: -");
 
     // Expect unsuccessful result
@@ -146,19 +127,16 @@ implementation:
   });
 
   it("should handle non-graph pipelines", async () => {
-    // Mock isGraphImplementation to return false
-    vi.mocked(componentSpecModule.isGraphImplementation).mockReturnValue(false);
-
-    // Mock the console.error
-    vi.spyOn(console, "error").mockImplementation(() => {});
-
-    const containerPipeline = `
-name: Container Pipeline
-implementation:
-  container:
-    image: test-image
-    command: ["echo", "hello"]
-`;
+    const containerPipelineObj = {
+      name: "Container Pipeline",
+      implementation: {
+        container: {
+          image: "test-image",
+          command: ["echo", "hello"],
+        },
+      },
+    };
+    const containerPipeline = yaml.dump(containerPipelineObj);
 
     const result = await importPipelineFromYaml(containerPipeline);
 
@@ -173,18 +151,21 @@ implementation:
   });
 
   it("should use default name for unnamed pipelines", async () => {
-    // Mock isGraphImplementation to return true
-    vi.mocked(componentSpecModule.isGraphImplementation).mockReturnValue(true);
+    const unnamedPipelineSpec = {
+      metadata: {
+        annotations: {
+          sdk: "https://cloud-pipelines.net/pipeline-editor/",
+        },
+      },
+      implementation: {
+        graph: {
+          tasks: {},
+          outputValues: {},
+        },
+      },
+    };
 
-    const unnamedYaml = `
-metadata:
-  annotations:
-    sdk: https://cloud-pipelines.net/pipeline-editor/
-implementation:
-  graph:
-    tasks: {}
-    outputValues: {}
-`;
+    const unnamedYaml = yaml.dump(unnamedPipelineSpec);
 
     vi.mocked(componentStore.getComponentFileFromList).mockResolvedValue(null);
 
@@ -196,7 +177,7 @@ implementation:
     ).toHaveBeenCalledWith(
       USER_PIPELINES_LIST_NAME,
       "Imported Pipeline",
-      "mocked-yaml",
+      unnamedYaml,
     );
 
     expect(result.name).toBe("Imported Pipeline");

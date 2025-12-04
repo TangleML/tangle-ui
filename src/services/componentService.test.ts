@@ -78,13 +78,15 @@ describe("componentService", () => {
 
   describe("parseComponentData", () => {
     it("should parse valid YAML data", () => {
-      const yamlData = "name: test-component\nversion: 1.2";
-      const result = parseComponentData(yamlData);
-
-      expect(result).toEqual({
+      const spec = {
         name: "test-component",
         version: 1.2,
-      });
+        implementation: { container: { image: "test" } },
+      };
+      const yamlData = yaml.dump(spec);
+      const result = parseComponentData(yamlData);
+
+      expect(result).toEqual(spec);
     });
 
     it("should return null for invalid YAML", () => {

@@ -1,5 +1,3 @@
-import yaml from "js-yaml";
-
 import { getAppSettings } from "@/appSettings";
 import {
   type ComponentFolder,
@@ -36,6 +34,7 @@ import {
   saveComponent,
   type UserComponent,
 } from "@/utils/localforage";
+import { componentSpecFromYaml } from "@/utils/yaml";
 
 export interface ExistingAndNewComponent {
   existingComponent: UserComponent | undefined;
@@ -154,7 +153,7 @@ export const fetchAndStoreComponentByUrl = async (
       const text = await fetchComponentTextFromUrl(url);
       if (text) {
         try {
-          return yaml.load(text) as ComponentSpec;
+          return componentSpecFromYaml(text);
         } catch (error) {
           console.error(`Error parsing component at ${url}:`, error);
         }
@@ -182,7 +181,7 @@ export const fetchAndStoreComponentByUrl = async (
     });
 
     try {
-      return yaml.load(text) as ComponentSpec;
+      return componentSpecFromYaml(text);
     } catch (error) {
       console.error(`Error parsing component at ${url}:`, error);
       return null;
@@ -263,7 +262,7 @@ const parseTextToSpec = async (
 ): Promise<ComponentSpec | null> => {
   if (text) {
     try {
-      return yaml.load(text) as ComponentSpec;
+      return componentSpecFromYaml(text);
     } catch (error) {
       console.error("Error parsing component text:", error);
     }
@@ -316,7 +315,7 @@ export const fetchComponentTextFromUrl = async (
  */
 export const parseComponentData = (data: string): ComponentSpec | null => {
   try {
-    return yaml.load(data) as ComponentSpec;
+    return componentSpecFromYaml(data);
   } catch (error) {
     console.error("Error parsing component data:", error);
     return null;
@@ -445,7 +444,7 @@ async function hydrateFromPartialContentfulComponentReference(
     : component.text;
 
   const spec = isTextOnlyComponentReference(component)
-    ? (yaml.load(component.text) as ComponentSpec)
+    ? componentSpecFromYaml(component.text)
     : component.spec;
 
   if (!text || !spec) {
