@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { type MouseEvent, useCallback } from "react";
 
 import type { PipelineRunResponse } from "@/api/types.gen";
@@ -15,6 +15,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Paragraph } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import { APP_ROUTES } from "@/routes/router";
 import {
@@ -50,14 +51,6 @@ const RunRow = ({ run }: { run: PipelineRunResponse }) => {
 
   const clickThroughUrl = `${APP_ROUTES.RUNS}/${runId}`;
 
-  const LinkProps = {
-    to: clickThroughUrl,
-    className: "underline hover:text-blue-500 text-black",
-    onClick: (e: MouseEvent) => {
-      e.stopPropagation(); // Prevent triggering the row click handler
-    },
-  };
-
   const createdByButton = (
     <Button
       className="truncate underline"
@@ -88,7 +81,7 @@ const RunRow = ({ run }: { run: PipelineRunResponse }) => {
     >
       <TableCell className="text-sm flex items-center gap-2">
         <StatusIcon status={getRunStatus(statusCounts)} />
-        <Link {...LinkProps}>{name}</Link>
+        <Paragraph>{name}</Paragraph>
         <span>{`#${runId}`}</span>
       </TableCell>
       <TableCell>
