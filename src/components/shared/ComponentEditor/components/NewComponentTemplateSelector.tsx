@@ -21,7 +21,7 @@ export const NewComponentTemplateSelector = ({
         Create a new component using the in-app editor
       </Paragraph>
       <Heading level={3}>Select a Template</Heading>
-      <div className="grid grid-cols-3 border-1 rounded-md p-2 w-full">
+      <div className="grid grid-cols-3 border rounded-md p-2 w-full">
         {SUPPORTED_TEMPLATES.map((template) => (
           <Button
             key={template.name}

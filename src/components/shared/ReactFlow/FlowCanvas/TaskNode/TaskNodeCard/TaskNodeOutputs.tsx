@@ -167,7 +167,7 @@ export function TaskNodeOutputs({
   return (
     <div
       className={cn(
-        "flex flex-col justify-end items-center gap-3 p-2 bg-gray-100 border-1 border-gray-200 rounded-lg",
+        "flex flex-col justify-end items-center gap-3 p-2 bg-gray-100 border border-gray-200 rounded-lg",
         condensed && onBackgroundClick && "hover:bg-gray-200/70 cursor-pointer",
       )}
       onClick={handleBackgroundClick}
