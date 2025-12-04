@@ -22,7 +22,7 @@ import { ContextPanelProvider } from "@/providers/ContextPanelProvider";
 
 import { LoadingScreen } from "../shared/LoadingScreen";
 import { NodesOverlayProvider } from "../shared/ReactFlow/NodesOverlay/NodesOverlayProvider";
-import PipelineDetails from "./PipelineDetails";
+import PipelineDetails from "./Context/PipelineDetails";
 
 const GRID_SIZE = 10;
 
