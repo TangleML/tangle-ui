@@ -169,6 +169,7 @@ const TaskDetails = ({
           <ExecutionDetails
             executionId={executionId}
             componentSpec={componentSpec}
+            className="px-3 py-2"
           />
         )}
 
