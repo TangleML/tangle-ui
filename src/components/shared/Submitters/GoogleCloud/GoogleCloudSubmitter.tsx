@@ -2,6 +2,7 @@ import { type ChangeEvent, useCallback } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Link } from "@/components/ui/link";
 import { useGoogleCloudSubmitter } from "@/hooks/useGoogleCloudSubmitter";
 import type { ComponentSpec } from "@/utils/componentSpec";
 
@@ -73,14 +74,14 @@ const GoogleCloudSubmitter = ({ componentSpec }: GoogleCloudSubmitterProps) => {
           Submit pipeline job
         </Button>
         {jobWebUrl && (
-          <a
+          <Link
             href={jobWebUrl}
             target="_blank"
             rel="noreferrer"
             style={{ margin: "5px" }}
           >
             Job
-          </a>
+          </Link>
         )}
       </div>
       {jsonBlobUrl && (

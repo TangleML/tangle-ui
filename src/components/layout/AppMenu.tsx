@@ -1,10 +1,9 @@
-import { Link } from "@tanstack/react-router";
-
 import logo from "/public/Tangle_white.png";
 import { isAuthorizationRequired } from "@/components/shared/Authentication/helpers";
 import { TopBarAuthentication } from "@/components/shared/Authentication/TopBarAuthentication";
 import ImportPipeline from "@/components/shared/ImportPipeline";
 import { InlineStack } from "@/components/ui/layout";
+import { Link } from "@/components/ui/link";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { TOP_NAV_HEIGHT } from "@/utils/constants";
 
@@ -28,7 +27,7 @@ const AppMenu = () => {
         className="pl-12 pr-2"
       >
         <InlineStack blockAlign="center">
-          <Link to="/">
+          <Link href="/" aria-label="Home" variant="block">
             <img
               src={logo}
               alt="logo"

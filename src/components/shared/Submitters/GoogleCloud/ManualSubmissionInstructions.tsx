@@ -1,3 +1,5 @@
+import { Link } from "@/components/ui/link";
+
 import { InfoBox } from "../../InfoBox";
 
 interface ManualSubmissionInstructionsProps {
@@ -15,31 +17,17 @@ export const ManualSubmissionInstructions = ({
   return (
     <InfoBox title="Manual Submission" className="text-xs text-gray-700">
       Download{" "}
-      <a
-        href={downloadUrl}
-        download="vertex_pipeline_job.json"
-        className="text-blue-600 hover:underline"
-      >
+      <Link href={downloadUrl} download="vertex_pipeline_job.json">
         pipeline_job.json
-      </a>
+      </Link>
       , then go to{" "}
-      <a
-        href={VERTEX_PIPELINES_URL}
-        className="text-blue-600 hover:underline"
-        target="_blank"
-        rel="noreferrer"
-      >
+      <Link href={VERTEX_PIPELINES_URL} target="_blank" rel="noreferrer">
         Vertex Pipelines
-      </a>{" "}
+      </Link>{" "}
       and{" "}
-      <a
-        href={CREATE_RUN_DOCS_URL}
-        className="text-blue-600 hover:underline"
-        target="_blank"
-        rel="noreferrer"
-      >
+      <Link href={CREATE_RUN_DOCS_URL} target="_blank" rel="noreferrer">
         create a new run
-      </a>
+      </Link>
       .
     </InfoBox>
   );

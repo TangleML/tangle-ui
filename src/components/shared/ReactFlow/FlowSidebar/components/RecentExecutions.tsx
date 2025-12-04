@@ -2,8 +2,10 @@ import { useEffect, useMemo } from "react";
 
 import { InfoBox } from "@/components/shared/InfoBox";
 import RunOverview from "@/components/shared/RunOverview";
+import { Link } from "@/components/ui/link";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
+import { Paragraph } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { useBackend } from "@/providers/BackendProvider";
 import { usePipelineRuns } from "@/providers/PipelineRunsProvider";
@@ -15,15 +17,21 @@ const RecentExecutions = ({ pipelineName }: { pipelineName?: string }) => {
   const runOverviews = useMemo(
     () =>
       recentRuns.map((run) => (
-        <a key={run.id} href={`/runs/${run.id}`} tabIndex={0}>
+        <Link
+          key={run.id}
+          href={`/runs/${run.id}`}
+          tabIndex={0}
+          variant="block"
+          className="w-full"
+        >
           <RunOverview
             run={run}
             config={{
               showName: false,
             }}
-            className="rounded-sm hover:bg-gray-100"
+            className="rounded-sm hover:bg-gray-100 w-full"
           />
-        </a>
+        </Link>
       )),
     [recentRuns],
   );
@@ -95,12 +103,16 @@ const RecentExecutions = ({ pipelineName }: { pipelineName?: string }) => {
       {recentRuns.length === 0 ? (
         <div className="text-xs text-muted-foreground">No runs yet.</div>
       ) : (
-        <ScrollArea className="h-fit rounded">
+        <ScrollArea className="h-fit rounded w-full">
           {runOverviews}
           {remainingRuns > 0 && (
-            <div className="mt-2 text-xs text-muted-foreground w.full text-center">
+            <Paragraph
+              size="xs"
+              tone="subdued"
+              className="mt-2 w-full text-center"
+            >
               +{remainingRuns} more runs
-            </div>
+            </Paragraph>
           )}
         </ScrollArea>
       )}

@@ -207,7 +207,7 @@ export const OpenLogsInNewWindowLink = ({
     <Link
       href={logsUrl}
       external
-      variant={available ? "link" : "disabled"}
+      variant={available ? "primary" : "disabled"}
       size="sm"
       aria-label={
         available

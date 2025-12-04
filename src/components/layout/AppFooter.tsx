@@ -18,18 +18,12 @@ function AppFooter() {
     >
       <InlineStack className="w-full" align="space-between">
         <div />
-        <InlineStack gap="1" blockAlign="center">
-          <Link
-            href={ABOUT_URL}
-            className="mx-1.5 text-blue-600 hover:text-blue-800 hover:underline"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+        <InlineStack gap="4" blockAlign="center">
+          <Link href={ABOUT_URL} target="_blank" rel="noopener noreferrer">
             About
           </Link>
           <Link
             href={GIVE_FEEDBACK_URL}
-            className="mx-1.5 text-blue-600 hover:text-blue-800 hover:underline"
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -37,27 +31,26 @@ function AppFooter() {
           </Link>
           <Link
             href={PRIVACY_POLICY_URL}
-            className="mx-1.5 text-blue-600 hover:text-blue-800 hover:underline"
             target="_blank"
             rel="noopener noreferrer"
           >
             Privacy policy
           </Link>
-          Version:
-          <Link
-            href={`${GIT_REPO_URL}/commit/${GIT_COMMIT}`}
-            className="mx-1.5 text-blue-600 hover:text-blue-800 hover:underline"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            {GIT_COMMIT.substring(0, 6)}
-          </Link>
+          <InlineStack gap="1" blockAlign="center">
+            Version:
+            <Link
+              href={`${GIT_REPO_URL}/commit/${GIT_COMMIT}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {GIT_COMMIT.substring(0, 6)}
+            </Link>
+          </InlineStack>
         </InlineStack>
         <Text size="xs" font="mono" tone="subdued">
           Built with{" "}
           <Link
             href="https://reactflow.dev"
-            className="text-blue-400 hover:text-blue-600 hover:underline"
             target="_blank"
             rel="noopener noreferrer"
           >

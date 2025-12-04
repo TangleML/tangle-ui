@@ -5,6 +5,7 @@ import { PipelineNameDialog } from "@/components/shared/Dialogs";
 import ImportPipeline from "@/components/shared/ImportPipeline";
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
+import { Link } from "@/components/ui/link";
 import {
   SidebarContent,
   SidebarGroup,
@@ -166,12 +167,13 @@ const FileActions = ({ isOpen }: { isOpen: boolean }) => {
               tooltipPosition={tooltipPosition}
               asChild
             >
-              <a
+              <Link
                 href={URL.createObjectURL(componentTextBlob)}
                 download={filename}
+                variant="primary"
               >
                 <Icon name="FileDown" size="lg" className="stroke-[1.5]" />
-              </a>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
