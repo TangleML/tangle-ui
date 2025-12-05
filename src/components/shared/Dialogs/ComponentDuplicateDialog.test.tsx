@@ -19,7 +19,10 @@ vi.mock("@/utils/componentStore", async (importOriginal) => ({
 }));
 
 // Import mocked functions
-import { deleteComponentFileFromList } from "@/utils/componentStore";
+import {
+  deleteComponentFileFromList,
+  generateDigest,
+} from "@/utils/componentStore";
 
 describe("ComponentDuplicateDialog", () => {
   // Test data
@@ -69,7 +72,6 @@ implementation:
       <ComponentDuplicateDialog
         existingComponent={mockExistingComponent}
         newComponent={mockNewComponent}
-        newComponentDigest="new-digest-456"
         setClose={mockSetClose}
         handleImportComponent={mockHandleImportComponent}
       />,
@@ -100,7 +102,6 @@ implementation:
       <ComponentDuplicateDialog
         existingComponent={mockExistingComponent}
         newComponent={mockNewComponent}
-        newComponentDigest="new-digest-456"
         setClose={mockSetClose}
         handleImportComponent={mockHandleImportComponent}
       />,
@@ -142,7 +143,6 @@ implementation:
       <ComponentDuplicateDialog
         existingComponent={mockExistingComponent}
         newComponent={mockNewComponent}
-        newComponentDigest="new-digest-456"
         setClose={mockSetClose}
         handleImportComponent={mockHandleImportComponent}
       />,
@@ -183,7 +183,6 @@ implementation:
       <ComponentDuplicateDialog
         existingComponent={mockExistingComponent}
         newComponent={mockNewComponent}
-        newComponentDigest="new-digest-456"
         setClose={mockSetClose}
         handleImportComponent={mockHandleImportComponent}
       />,
@@ -231,50 +230,56 @@ implementation:
     expect(container2.querySelector("[role='dialog']")).not.toBeInTheDocument();
   });
 
-  test("should display correct component information in the dialog", () => {
+  test("should display correct component information in the dialog", async () => {
+    const digest = await generateDigest(mockNewComponent.text);
+
     render(
       <ComponentDuplicateDialog
         existingComponent={mockExistingComponent}
         newComponent={mockNewComponent}
-        newComponentDigest="new-digest-456"
         setClose={mockSetClose}
         handleImportComponent={mockHandleImportComponent}
       />,
     );
 
-    // Check dialog title and descriptions
-    expect(screen.getByText("Component already exists")).toBeInTheDocument();
-    expect(
-      screen.getByText(/The component you are trying to import already exists/),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(/Note: "Replace existing" will use the existing name/),
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      // Check dialog title and descriptions
+      expect(screen.getByText("Component already exists")).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          /The component you are trying to import already exists/,
+        ),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(/Note: "Replace existing" will use the existing name/),
+      ).toBeInTheDocument();
 
-    // Check existing component section
-    expect(screen.getByText("Existing Component")).toBeInTheDocument();
-    const textboxes = screen.getAllByRole("textbox");
+      // Check existing component section
+      expect(screen.getByText("Existing Component")).toBeInTheDocument();
+      const textboxes = screen.getAllByRole("textbox");
 
-    // Existing component name (first textbox)
-    expect(textboxes[0]).toHaveValue("ExistingComponent");
-    expect(textboxes[0]).toHaveAttribute("readonly");
-    expect(textboxes[0]).toHaveClass("border-blue-200", "bg-blue-100/50");
+      // Existing component name (first textbox)
+      expect(textboxes[0]).toHaveValue("ExistingComponent");
+      expect(textboxes[0]).toHaveAttribute("readonly");
+      expect(textboxes[0]).toHaveClass("border-blue-200", "bg-blue-100/50");
 
-    // Existing component digest (second textbox)
-    expect(textboxes[1]).toHaveValue("existing-digest-123");
-    expect(textboxes[1]).toHaveAttribute("readonly");
-    expect(textboxes[1]).toHaveClass("border-blue-200", "bg-blue-100/50");
+      // Existing component digest (second textbox)
+      expect(textboxes[1]).toHaveValue("existing-digest-123");
+      expect(textboxes[1]).toHaveAttribute("readonly");
+      expect(textboxes[1]).toHaveClass("border-blue-200", "bg-blue-100/50");
 
-    // Check new component section
-    expect(screen.getByText("New Component")).toBeInTheDocument();
+      // Check new component section
+      expect(screen.getByText("New Component")).toBeInTheDocument();
 
-    // New component name (third textbox) - should be editable
-    expect(textboxes[2]).toHaveValue("NewComponent");
-    expect(textboxes[2]).not.toHaveAttribute("readonly");
-    expect(textboxes[2]).toHaveFocus(); // Has autoFocus
+      // New component name (third textbox) - should be editable
+      expect(textboxes[2]).toHaveValue("NewComponent");
+      expect(textboxes[2]).not.toHaveAttribute("readonly");
+      expect(textboxes[2]).toHaveFocus(); // Has autoFocus
 
-    // New component digest (fourth textbox)
-    expect(textboxes[3]).toHaveValue("new-digest-456");
-    expect(textboxes[3]).toHaveAttribute("readonly");
+      // New component digest (fourth textbox)
+
+      expect(textboxes[3]).toHaveValue(digest);
+      expect(textboxes[3]).toHaveAttribute("readonly");
+    });
   });
 });
