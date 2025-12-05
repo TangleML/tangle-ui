@@ -7,6 +7,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { Link } from "@/components/ui/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useBackend } from "@/providers/BackendProvider";
 import { useFetchContainerExecutionState } from "@/services/executionService";
@@ -161,15 +162,14 @@ export const ExecutionDetails = ({
                       <span className="font-medium text-foreground min-w-fit">
                         {linkInfo.name}:
                       </span>
-                      <a
+                      <Link
                         href={linkInfo.url}
-                        className="text-sky-500 hover:underline flex items-center gap-1"
                         target="_blank"
                         rel="noopener noreferrer"
                       >
                         {linkInfo.value}
                         <ExternalLink className="size-3 shrink-0" />
-                      </a>
+                      </Link>
                     </div>
                   ))}
                 </>

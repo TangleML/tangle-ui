@@ -2,7 +2,6 @@ import {
   ChevronsUpDown,
   ClipboardIcon,
   DownloadIcon,
-  ExternalLink,
   TrashIcon,
 } from "lucide-react";
 import { type ReactNode, useCallback, useState } from "react";
@@ -14,6 +13,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { Link } from "@/components/ui/link";
 import {
   Tooltip,
   TooltipContent,
@@ -337,54 +337,54 @@ function LinkBlock({
       {url && (
         <>
           <div className="text-sm break-all">
-            <a
+            <Link
               href={url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sky-500 hover:underline flex items-center gap-1"
+              size="sm"
+              external
             >
               View raw component.yaml
-              <ExternalLink className="size-3 shrink-0" />
-            </a>
+            </Link>
           </div>
           <div className="text-sm break-all">
-            <a
+            <Link
               href={
                 isGithubUrl(url) ? convertGithubUrlToDirectoryUrl(url) : url
               }
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sky-500 hover:underline flex items-center gap-1"
+              size="sm"
+              external
             >
               View directory on GitHub
-              <ExternalLink className="size-3 shrink-0" />
-            </a>
+            </Link>
           </div>
         </>
       )}
       {canonicalUrl && (
         <>
           <div className="text-sm break-all">
-            <a
+            <Link
               href={canonicalUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sky-500 hover:underline flex items-center gap-1"
+              size="sm"
+              external
             >
               View raw canonical URL
-              <ExternalLink className="size-3 shrink-0" />
-            </a>
+            </Link>
           </div>
           <div className="text-sm break-all">
-            <a
+            <Link
               href={convertGithubUrlToDirectoryUrl(canonicalUrl)}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sky-500 hover:underline flex items-center gap-1"
+              size="sm"
+              external
             >
               View canonical URL on GitHub
-              <ExternalLink className="size-3 shrink-0" />
-            </a>
+            </Link>
           </div>
         </>
       )}

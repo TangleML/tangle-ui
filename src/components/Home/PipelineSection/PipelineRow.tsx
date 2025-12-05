@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { type MouseEvent, useCallback, useMemo } from "react";
 
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
@@ -86,15 +86,6 @@ const PipelineRow = ({
     return formatDate(modificationTime.toISOString());
   }, [modificationTime]);
 
-  const linkProps = {
-    to: `${EDITOR_PATH}/$name`,
-    params: { name: name ?? "" },
-    className: "hover:underline",
-    onClick: (e: MouseEvent) => {
-      e.stopPropagation();
-    },
-  };
-
   return (
     <>
       <TableRow
@@ -110,7 +101,7 @@ const PipelineRow = ({
           />
         </TableCell>
         <TableCell>
-          <Link {...linkProps}>{name}</Link>
+          <Paragraph>{name}</Paragraph>
         </TableCell>
         <TableCell>
           <Paragraph tone="subdued" size="xs">

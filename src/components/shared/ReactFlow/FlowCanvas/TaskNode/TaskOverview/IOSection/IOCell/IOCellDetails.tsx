@@ -38,7 +38,6 @@ const IOCellDetails = ({ io, artifactData, actions }: IOCellDetailsProps) => {
               artifactData.uri,
               artifactData.is_dir,
             )}
-            className="font-mono break-all text-xs text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
           >
             {artifactData.uri}
           </Link>
