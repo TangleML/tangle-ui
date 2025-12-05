@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +12,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BlockStack } from "@/components/ui/layout";
+import { Text } from "@/components/ui/typography";
+import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
 import type { HydratedComponentReference } from "@/utils/componentSpec";
 import {
   deleteComponentFileFromList,
@@ -21,6 +23,36 @@ import { USER_COMPONENTS_LIST_NAME } from "@/utils/constants";
 import type { UserComponent } from "@/utils/localforage";
 
 import { InfoBox } from "../InfoBox";
+
+function useNameValidation() {
+  const { userComponentsFolder } = useComponentLibrary();
+
+  const nameIndex = useMemo(() => {
+    return new Set(userComponentsFolder?.components?.map((c) => c.name) ?? []);
+  }, [userComponentsFolder]);
+
+  return useCallback(
+    (existingComponent: UserComponent | undefined, newName: string) => {
+      if (existingComponent?.name === newName) {
+        return [];
+      }
+
+      if (!newName || newName.trim() === "") {
+        return ["Name cannot be empty"];
+      }
+
+      // check name uniqueness
+      const hasDuplicate = nameIndex.has(newName);
+
+      if (hasDuplicate) {
+        return ["Name already exists"];
+      }
+
+      return [];
+    },
+    [nameIndex],
+  );
+}
 
 const ComponentDuplicateDialog = ({
   existingComponent,
@@ -33,10 +65,12 @@ const ComponentDuplicateDialog = ({
   setClose: () => void;
   handleImportComponent: (content: string) => Promise<void>;
 }) => {
+  const validateName = useNameValidation();
   const [newName, setNewName] = useState("");
   const [newDigest, setNewDigest] = useState("");
+  const [errors, setErrors] = useState<string[]>([]);
 
-  const open = !!existingComponent && !!newComponent && !!newName;
+  const open = !!existingComponent && !!newComponent;
   const disableImportAsNew =
     !newName || newName.trim() === existingComponent?.name?.trim();
 
@@ -46,12 +80,16 @@ const ComponentDuplicateDialog = ({
         setClose();
       }
     },
-    [setClose],
+    [setClose, setErrors],
   );
 
   useEffect(() => {
     if (newComponent && open) {
       generateNewDigest(newComponent, newName).then(setNewDigest);
+    }
+
+    if (!open) {
+      setErrors([]);
     }
   }, [newComponent, open, newName]);
 
@@ -96,6 +134,14 @@ const ComponentDuplicateDialog = ({
     }
   }, [existingComponent, newComponent]);
 
+  const updateName = useCallback(
+    (newName: string) => {
+      setNewName(newName);
+      setErrors(validateName(existingComponent, newName));
+    },
+    [validateName, existingComponent],
+  );
+
   return (
     <Dialog open={open} onOpenChange={handleOnOpenChange}>
       <DialogContent>
@@ -132,9 +178,15 @@ const ComponentDuplicateDialog = ({
             <Label className="text-xs font-medium">Name</Label>
             <Input
               value={newName}
-              onChange={(e) => setNewName(e.target.value)}
+              onChange={(e) => updateName(e.target.value ?? "")}
               autoFocus={true}
             />
+            {errors.length > 0 &&
+              errors.map((error) => (
+                <Text size="xs" tone="critical" key={error}>
+                  {error}
+                </Text>
+              ))}
             <Label className="text-xs font-medium">Digest</Label>
             <Input value={newDigest} readOnly className="text-xs" />
           </BlockStack>
@@ -143,13 +195,14 @@ const ComponentDuplicateDialog = ({
         <DialogFooter>
           <Button
             onClick={() => handleRenameAndImport(newName ?? "")}
-            disabled={disableImportAsNew}
+            disabled={disableImportAsNew || errors.length > 0}
           >
             Import as new
           </Button>
           <Button
             onClick={handleReplaceAndImport}
             data-testid="duplicate-component-replace-existing-button"
+            disabled={errors.length > 0}
           >
             Replace existing
           </Button>
