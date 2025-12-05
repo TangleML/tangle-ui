@@ -6,7 +6,7 @@ import { useValidationIssueNavigation } from "@/components/Editor/hooks/useValid
 import { CopyText } from "@/components/shared/CopyText/CopyText";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
-import { InlineStack } from "@/components/ui/layout";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useContextPanel } from "@/providers/ContextPanelProvider";
@@ -128,25 +128,21 @@ const PipelineDetails = () => {
   const annotations = componentSpec.metadata?.annotations || {};
 
   return (
-    <div
-      className="p-2 flex flex-col gap-6 h-full"
+    <BlockStack gap="6" className="p-2 h-full"
       data-context-panel="pipeline-details"
     >
-      {/* Header */}
-      <div className="flex items-center gap-2 max-w-[90%]">
-        <CopyText className="text-lg font-semibold" alwaysShowButton>
-          {componentSpec.name ?? "Unnamed Pipeline"}
-        </CopyText>
-        <RenamePipeline />
-      </div>
 
-      <div className="flex gap-2 flex-wrap items-center">
+      <CopyText className="text-lg font-semibold" showButton={false}>
+        {componentSpec.name ?? "Unnamed Pipeline"}
+      </CopyText>
+      <InlineStack gap="2">
+        <RenamePipeline />
         <TaskImplementation
           displayName={componentSpec.name ?? "Pipeline"}
           componentSpec={componentSpec}
           showInlineContent={false}
         />
-      </div>
+      </InlineStack>
 
       {/* General Metadata */}
       <div className="flex flex-col gap-2 text-xs text-secondary-foreground mb-2">
@@ -326,7 +322,7 @@ const PipelineDetails = () => {
           onIssueSelect={handleIssueClick}
         />
       </div>
-    </div>
+    </BlockStack>
   );
 };
 

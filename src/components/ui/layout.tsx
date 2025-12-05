@@ -32,6 +32,8 @@ const blockStackVariants = cva("flex flex-col w-full", {
       "2": "gap-2",
       "3": "gap-3",
       "4": "gap-4",
+      "5": "gap-5",
+      "6": "gap-6",
       "8": "gap-8",
     },
   },
@@ -39,7 +41,7 @@ const blockStackVariants = cva("flex flex-col w-full", {
 
 interface BlockStackProps
   extends AriaAttributes,
-    VariantProps<typeof blockStackVariants> {
+  VariantProps<typeof blockStackVariants> {
   /** HTML Element type
    * @default 'div'
    */
@@ -101,6 +103,9 @@ const inlineStackVariants = cva("flex flex-row", {
       "2": "gap-2",
       "3": "gap-3",
       "4": "gap-4",
+      "5": "gap-5",
+      "6": "gap-6",
+      "8": "gap-8",
     },
     wrap: {
       wrap: "flex-wrap",
@@ -111,7 +116,7 @@ const inlineStackVariants = cva("flex flex-row", {
 
 interface InlineStackProps
   extends AriaAttributes,
-    VariantProps<typeof inlineStackVariants> {
+  VariantProps<typeof inlineStackVariants> {
   /** HTML Element type
    * @default 'div'
    */
