@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import logo from "/public/Tangle_white.png";
 import { isAuthorizationRequired } from "@/components/shared/Authentication/helpers";
 import { TopBarAuthentication } from "@/components/shared/Authentication/TopBarAuthentication";
+import { CopyText } from "@/components/shared/CopyText/CopyText";
 import ImportPipeline from "@/components/shared/ImportPipeline";
 import { InlineStack } from "@/components/ui/layout";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
@@ -35,7 +36,12 @@ const AppMenu = () => {
               className="h-8 filter cursor-pointer shrink-0"
             />
           </Link>
-          <span className="text-white text-md font-bold ml-22">{title}</span>
+
+          {title && (
+            <CopyText className="text-white text-md font-bold truncate max-w-lg ml-22">
+              {title}
+            </CopyText>
+          )}
         </InlineStack>
 
         <InlineStack blockAlign="center">
