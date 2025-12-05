@@ -1,4 +1,4 @@
-import { Frown, Videotape } from "lucide-react";
+import { Frown } from "lucide-react";
 
 import { CopyText } from "@/components/shared/CopyText/CopyText";
 import { Spinner } from "@/components/ui/spinner";
@@ -84,7 +84,6 @@ export const RunDetails = () => {
   return (
     <div className="p-2 flex flex-col gap-6 h-full">
       <div className="flex items-center gap-2 max-w-[90%]">
-        <Videotape className="w-6 h-6 text-gray-500" />
         <CopyText className="text-lg font-semibold" alwaysShowButton>
           {componentSpec.name ?? "Unnamed Pipeline"}
         </CopyText>
