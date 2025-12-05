@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 import { pluralize } from "@/utils/string";
 import type { ComponentValidationIssue } from "@/utils/validations";
 
-import type { ValidationIssueGroup } from "../../hooks/useValidationIssueNavigation";
+import type { ValidationIssueGroup } from "../hooks/useValidationIssueNavigation";
 
 interface PipelineValidationListProps {
   isComponentTreeValid: boolean;
@@ -75,13 +75,13 @@ export const PipelineValidationList = ({
       title={`${totalIssueCount} ${pluralize(totalIssueCount, "issue")} detected`}
     >
       <Paragraph size="sm" className="mb-4">
-        {" "}
         Select an item to jump to its location in the pipeline.
       </Paragraph>
 
       <BlockStack gap="2">
         {groupedIssues.map((group) => {
           const isOpen = openGroups.has(group.pathKey);
+
           return (
             <Collapsible
               key={group.pathKey}
