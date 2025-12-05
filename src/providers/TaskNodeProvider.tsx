@@ -7,7 +7,11 @@ import { useTaskNodeDimensions } from "@/hooks/useTaskNodeDimensions";
 import useToastNotification from "@/hooks/useToastNotification";
 import type { Annotations } from "@/types/annotations";
 import type { RunStatus } from "@/types/pipelineRun";
-import type { TaskNodeData, TaskNodeDimensions } from "@/types/taskNode";
+import {
+  DEFAULT_TASK_NODE_CALLBACKS,
+  type TaskNodeData,
+  type TaskNodeDimensions,
+} from "@/types/taskNode";
 import type {
   ArgumentType,
   ComponentReference,
@@ -82,6 +86,15 @@ export const TaskNodeProvider = ({
   const taskId = data.taskId;
   const nodeId = taskId ? taskIdToNodeId(taskId) : "";
 
+  const {
+    onDelete,
+    onDuplicate,
+    onUpgrade,
+    setArguments,
+    setAnnotations,
+    setCacheStaleness,
+  } = data.callbacks ?? DEFAULT_TASK_NODE_CALLBACKS;
+
   const componentRef = taskSpec?.componentRef ?? EMPTY_COMPONENT_REF;
   const inputs = componentRef.spec?.inputs ?? EMPTY_INPUTS;
   const outputs = componentRef.spec?.outputs ?? EMPTY_OUTPUTS;
@@ -100,32 +113,32 @@ export const TaskNodeProvider = ({
 
   const handleSetArguments = useCallback(
     (args: Record<string, ArgumentType>) => {
-      data.callbacks?.setArguments(args);
+      setArguments(args);
     },
-    [data.callbacks],
+    [setArguments],
   );
 
   const handleSetAnnotations = useCallback(
     (annotations: Annotations) => {
-      data.callbacks?.setAnnotations(annotations);
+      setAnnotations(annotations);
     },
-    [data.callbacks],
+    [setAnnotations],
   );
 
   const handleSetCacheStaleness = useCallback(
     (cacheStaleness: string | undefined) => {
-      data.callbacks?.setCacheStaleness(cacheStaleness);
+      setCacheStaleness(cacheStaleness);
     },
-    [data.callbacks],
+    [setCacheStaleness, notify],
   );
 
   const handleDeleteTaskNode = useCallback(() => {
-    data.callbacks?.onDelete();
-  }, [data.callbacks]);
+    onDelete();
+  }, [onDelete]);
 
   const handleDuplicateTaskNode = useCallback(() => {
-    data.callbacks?.onDuplicate();
-  }, [data.callbacks]);
+    onDuplicate();
+  }, [onDuplicate]);
 
   const handleUpgradeTaskNode = useCallback(() => {
     if (!isOutdated) {
@@ -133,8 +146,8 @@ export const TaskNodeProvider = ({
       return;
     }
 
-    data.callbacks?.onUpgrade(mostRecentComponentRef);
-  }, [data.callbacks, isOutdated, mostRecentComponentRef, notify]);
+    onUpgrade(mostRecentComponentRef);
+  }, [onUpgrade, isOutdated, mostRecentComponentRef, notify]);
 
   const select = useCallback(() => {
     reactFlowInstance.setNodes((nodes) =>

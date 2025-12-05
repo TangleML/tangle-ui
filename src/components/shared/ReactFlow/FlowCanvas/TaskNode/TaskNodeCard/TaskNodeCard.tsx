@@ -1,5 +1,4 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useStore } from "@xyflow/react";
 import { CircleFadingArrowUp, CopyIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -50,11 +49,6 @@ const TaskNodeCard = () => {
   const executionData = useExecutionDataOptional();
   const rootExecutionId = executionData?.rootExecutionId;
   const details = executionData?.details;
-
-  const isDragging = useStore((state) => {
-    const thisNode = state.nodes.find((node) => node.id === taskNode.nodeId);
-    return thisNode?.dragging || false;
-  });
 
   const nodeRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -241,7 +235,7 @@ const TaskNodeCard = () => {
   }, [scrollHeight, dimensions.h]);
 
   useEffect(() => {
-    if (selected && !isDragging) {
+    if (selected) {
       setContent(taskConfigMarkup);
       setContextPanelOpen(true);
     }
