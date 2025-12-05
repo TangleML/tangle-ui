@@ -243,8 +243,8 @@ export const RunSection = ({ onEmptyList }: { onEmptyList?: () => void }) => {
   }
 
   const searchMarkup = (
-    <InlineStack gap="4" blockAlign="center">
-      <InlineStack gap="2" blockAlign="center">
+    <InlineStack gap="4">
+      <InlineStack gap="2">
         <Switch
           id="created-by-me"
           checked={useCreatedByMe}
@@ -252,7 +252,7 @@ export const RunSection = ({ onEmptyList }: { onEmptyList?: () => void }) => {
         />
         <Label htmlFor="created-by-me">{toggleText}</Label>
       </InlineStack>
-      <InlineStack gap="1" blockAlign="center" wrap="nowrap">
+      <InlineStack gap="1" wrap="nowrap">
         <Input
           placeholder="Search by user"
           value={searchUser}

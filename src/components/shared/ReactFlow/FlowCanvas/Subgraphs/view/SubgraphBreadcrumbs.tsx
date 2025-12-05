@@ -70,7 +70,6 @@ export const SubgraphBreadcrumbs = () => {
   return (
     <InlineStack
       align="space-between"
-      blockAlign="center"
       gap="0"
       className="px-4 py-2 bg-gray-50 border-b w-full z-1"
     >
@@ -92,11 +91,7 @@ export const SubgraphBreadcrumbs = () => {
                         className="h-6 px-2"
                       >
                         {isRoot ? (
-                          <InlineStack
-                            align="start"
-                            blockAlign="center"
-                            gap="1"
-                          >
+                          <InlineStack align="start" gap="1">
                             <Home className="w-3 h-3" />
                             Root
                           </InlineStack>
@@ -108,7 +103,7 @@ export const SubgraphBreadcrumbs = () => {
                   ) : (
                     <BreadcrumbPage>
                       {isRoot ? (
-                        <InlineStack align="start" blockAlign="center" gap="1">
+                        <InlineStack align="start" gap="1">
                           <Home className="w-3 h-3" />
                           Root
                         </InlineStack>

@@ -103,7 +103,7 @@ const PipelineRow = ({
         </TableCell>
         <TableCell>
           {!!latestRun && (
-            <InlineStack gap="2" blockAlign="center">
+            <InlineStack gap="2">
               <StatusIcon status={latestRun.status} />
               <Paragraph tone="subdued" size="xs">
                 {formatDate(
@@ -123,7 +123,7 @@ const PipelineRow = ({
                 <Icon name="List" />
               </PopoverTrigger>
               <PopoverContent className="w-[500px]">
-                <InlineStack gap="2" blockAlign="center" className="mb-4">
+                <InlineStack gap="2" className="mb-4">
                   <Heading level={2}>{pipelineRuns[0].pipeline_name}</Heading>
                   <Paragraph size="sm">- {pipelineRuns.length} runs</Paragraph>
                 </InlineStack>

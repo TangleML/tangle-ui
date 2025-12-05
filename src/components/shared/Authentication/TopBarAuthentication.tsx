@@ -32,7 +32,7 @@ export function TopBarAuthentication() {
   const profile = localTokenStorage.getJWT();
 
   return (
-    <InlineStack blockAlign="center">
+    <InlineStack>
       {profile ? <LoggedInDetails profile={profile} /> : <LoginButton />}
     </InlineStack>
   );
@@ -63,7 +63,7 @@ function LoggedInDetails({ profile }: { profile: JWTPayload }) {
 
       <PopoverContent className="p-3">
         <BlockStack gap="2">
-          <InlineStack gap="1" blockAlign="center">
+          <InlineStack gap="1">
             <Text>Logged in as</Text>
             <Text weight="semibold">{profile.login}</Text>
           </InlineStack>

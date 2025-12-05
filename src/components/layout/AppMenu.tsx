@@ -22,12 +22,8 @@ const AppMenu = () => {
       className="w-full bg-stone-900 p-2 pt-2.5"
       style={{ height: `${TOP_NAV_HEIGHT}px` }}
     >
-      <InlineStack
-        blockAlign="center"
-        align="space-between"
-        className="pl-12 pr-2"
-      >
-        <InlineStack blockAlign="center">
+      <InlineStack align="space-between" className="pl-12 pr-2">
+        <InlineStack>
           <Link href="/" aria-label="Home" variant="block">
             <img
               src={logo}
@@ -43,14 +39,14 @@ const AppMenu = () => {
           )}
         </InlineStack>
 
-        <InlineStack blockAlign="center">
-          <InlineStack gap="4" blockAlign="center" className="mr-42">
+        <InlineStack>
+          <InlineStack gap="4" className="mr-42">
             <CloneRunButton componentSpec={componentSpec} />
             <ImportPipeline />
             <NewPipelineButton />
           </InlineStack>
 
-          <InlineStack gap="2" blockAlign="center">
+          <InlineStack gap="2">
             <BackendStatus />
             <PersonalPreferences />
             {requiresAuthorization && <TopBarAuthentication />}

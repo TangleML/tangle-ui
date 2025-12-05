@@ -16,7 +16,7 @@ const ComponentSpecCheckStatement = ({
   invalidLabel: string;
 }>) => {
   return (
-    <InlineStack gap="2" align="start" blockAlign="center">
+    <InlineStack gap="2" align="start">
       {isValid ? (
         <Icon name="Check" className="text-green-500" />
       ) : (

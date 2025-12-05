@@ -117,12 +117,7 @@ const SearchFilter = ({
             <RadioGroup onValueChange={handleFilterChange} value={activeFilter}>
               {availableFilters.map(({ label, value }) => {
                 return (
-                  <InlineStack
-                    key={value}
-                    gap="2"
-                    align="start"
-                    blockAlign="center"
-                  >
+                  <InlineStack key={value} gap="2" align="start">
                     <RadioGroupItem
                       id={value}
                       value={value}
@@ -302,7 +297,7 @@ const SearchResults = ({ searchResult }: SearchResultsProps) => {
 const SearchResultsSkeleton = () => {
   return (
     <BlockStack gap="2" className="px-2">
-      <InlineStack align="start" gap="1" blockAlign="center">
+      <InlineStack align="start" gap="1">
         <Text tone="subdued">Search Results </Text>
         <Spinner />
       </InlineStack>

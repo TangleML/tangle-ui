@@ -27,7 +27,6 @@ const ComponentEditorDialogSkeleton = () => {
         <InlineStack
           className="w-full h-13"
           gap="4"
-          blockAlign="center"
           align="space-between"
           wrap="nowrap"
         >
@@ -189,10 +188,9 @@ export const ComponentEditorDialog = withSuspenseWrapper(
         <BlockStack className="h-full w-full p-2 bg-white">
           <InlineStack
             className="w-full py-3 border-b-3 border-gray-100"
-            blockAlign="center"
             align="space-between"
           >
-            <InlineStack gap="2" blockAlign="center">
+            <InlineStack gap="2">
               <Heading level={1}>{title}</Heading>
               {hasTemplate && (
                 <Paragraph size="sm" tone="subdued">
@@ -201,7 +199,7 @@ export const ComponentEditorDialog = withSuspenseWrapper(
               )}
             </InlineStack>
 
-            <InlineStack gap="2" blockAlign="center">
+            <InlineStack gap="2">
               <Button
                 variant="default"
                 onClick={handleSave}

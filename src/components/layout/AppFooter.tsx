@@ -18,7 +18,7 @@ function AppFooter() {
     >
       <InlineStack className="w-full" align="space-between">
         <div />
-        <InlineStack gap="4" blockAlign="center">
+        <InlineStack gap="4">
           <Link href={ABOUT_URL} target="_blank" rel="noopener noreferrer">
             About
           </Link>
@@ -36,7 +36,7 @@ function AppFooter() {
           >
             Privacy policy
           </Link>
-          <InlineStack gap="1" blockAlign="center">
+          <InlineStack gap="1">
             Version:
             <Link
               href={`${GIT_REPO_URL}/commit/${GIT_COMMIT}`}

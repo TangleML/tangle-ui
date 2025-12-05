@@ -127,7 +127,7 @@ export const PipelineSection = withSuspenseWrapper(() => {
 
   if (isLoading) {
     return (
-      <InlineStack gap="2" blockAlign="center" className="mt-4">
+      <InlineStack gap="2" className="mt-4">
         <Spinner /> Loading...
       </InlineStack>
     );

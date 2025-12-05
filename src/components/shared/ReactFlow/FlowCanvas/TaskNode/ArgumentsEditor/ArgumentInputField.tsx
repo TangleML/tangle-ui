@@ -220,12 +220,7 @@ export const ArgumentInputField = ({
           className="flex w-full items-center justify-between gap-2 py-1 rounded-md hover:bg-secondary/70 cursor-pointer"
           onClick={handleBackgroundClick}
         >
-          <InlineStack
-            blockAlign="center"
-            align="space-between"
-            gap="2"
-            className="w-32 pr-2"
-          >
+          <InlineStack align="space-between" gap="2" className="w-32 pr-2">
             <div className="flex items-center gap-2">
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -309,7 +304,7 @@ export const ArgumentInputField = ({
             </Button>
           </div>
 
-          <InlineStack align="end" blockAlign="center">
+          <InlineStack align="end">
             <div
               onClick={(e) => e.stopPropagation()}
               className={cn(disabledCopy && "cursor-default")}
