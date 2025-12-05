@@ -1,7 +1,7 @@
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { Edit3 } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { APP_ROUTES } from "@/routes/router";
@@ -48,9 +48,9 @@ const RenamePipeline = () => {
   return (
     <PipelineNameDialog
       trigger={
-        <Button variant="ghost">
+        <TooltipButton variant="outline" tooltip="Rename pipeline">
           <Edit3 />
-        </Button>
+        </TooltipButton>
       }
       title="Name Pipeline"
       description="Unsaved pipeline changes will be lost."
