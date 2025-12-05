@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 
 import { PipelineValidationList } from "@/components/Editor/components/PipelineValidationList/PipelineValidationList";
 import { useValidationIssueNavigation } from "@/components/Editor/hooks/useValidationIssueNavigation";
+import { ArtifactsList } from "@/components/shared/ArtifactsList/ArtifactsList";
 import { CopyText } from "@/components/shared/CopyText/CopyText";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -98,18 +99,6 @@ const PipelineDetails = () => {
     );
   };
 
-  const handleInputCopy = (input: InputSpec) => {
-    const value = input.value ?? input.default;
-
-    if (!value) {
-      notify("Copy failed: Input has no value", "error");
-      return;
-    }
-
-    void navigator.clipboard.writeText(value);
-    notify("Input value copied to clipboard", "success");
-  };
-
   const handleDigestCopy = () => {
     navigator.clipboard.writeText(digest);
     notify("Digest copied to clipboard", "success");
@@ -134,7 +123,7 @@ const PipelineDetails = () => {
       className="p-2 h-full"
       data-context-panel="pipeline-details"
     >
-      <CopyText className="text-lg font-semibold" showButton={false}>
+      <CopyText className="text-lg font-semibold">
         {componentSpec.name ?? "Unnamed Pipeline"}
       </CopyText>
       <InlineStack gap="2">
@@ -233,111 +222,46 @@ const PipelineDetails = () => {
       )}
 
       {/* Artifacts (Inputs & Outputs) */}
-      <BlockStack>
-        <Text as="h3" size="md" weight="semibold" className="mb-1">
-          Artifacts
-        </Text>
-        <BlockStack gap="4">
-          <BlockStack>
-            <Text as="h4" size="sm" weight="semibold" className="mb-1">
-              Inputs
-            </Text>
-            {componentSpec.inputs && componentSpec.inputs.length > 0 ? (
-              <div className="flex flex-col">
-                {componentSpec.inputs.map((input) => {
-                  return (
-                    <div
-                      className="flex flex-row justify-between even:bg-white odd:bg-gray-100 gap-1 px-2 py-1 rounded-xs items-center"
-                      key={input.name}
-                    >
-                      <div className="text-xs flex-1 truncate max-w-[200px]">
-                        <span className="font-semibold">{input.name}:</span>{" "}
-                        {input.value || input.default || "No value"}
-                      </div>
-
-                      <div className="text-xs flex-1 font-mono truncate max-w-[100px]">
-                        <span className="font-semibold">Type:</span>{" "}
-                        {typeSpecToString(input?.type)}
-                      </div>
-                      <InlineStack
-                        className="min-w-24"
-                        align="end"
-                        blockAlign="center"
-                      >
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="min"
-                          onClick={() => handleInputCopy(input)}
-                          className="text-muted-foreground hover:text-foreground"
-                        >
-                          <Icon name="Copy" className="size-3" />
-                        </Button>
-
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          className="text-xs text-muted-foreground cursor-pointer hover:bg-transparent"
-                          size="sm"
-                          onClick={() => handleInputEdit(input)}
-                        >
-                          Edit
-                        </Button>
-                      </InlineStack>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-xs text-muted-foreground">No inputs</div>
-            )}
-          </BlockStack>
-          <BlockStack>
-            <Text as="h4" size="sm" weight="semibold" className="mb-1">
-              Outputs
-            </Text>
-            {componentSpec.outputs && componentSpec.outputs.length > 0 ? (
-              <div className="flex flex-col">
-                {componentSpec.outputs.map((output) => (
-                  <div
-                    className="flex flex-row justify-between even:bg-white odd:bg-gray-100 gap-1 px-2 py-1 rounded-xs items-center"
-                    key={output.name}
-                  >
-                    <div className="text-xs flex-1 truncate max-w-[200px]">
-                      <span className="font-semibold">{output.name}:</span>{" "}
-                      {
-                        getOutputConnectedDetails(graphSpec, output.name)
-                          .outputName
-                      }
-                    </div>
-                    <div className="text-xs">
-                      <span className="font-semibold">Type:</span>{" "}
-                      {typeSpecToString(
-                        getOutputConnectedDetails(graphSpec, output.name)
-                          .outputType,
-                      )}
-                    </div>
-
-                    <InlineStack className="min-w-24" align={"end"}>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className="text-xs text-muted-foreground cursor-pointer hover:bg-transparent"
-                        size="sm"
-                        onClick={() => handleOutputEdit(output)}
-                      >
-                        Edit
-                      </Button>
-                    </InlineStack>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-xs text-muted-foreground">No outputs</div>
-            )}
-          </BlockStack>
-        </BlockStack>
-      </BlockStack>
+      <ArtifactsList
+        inputs={(componentSpec.inputs ?? []).map((input) => ({
+          name: input.name,
+          type: typeSpecToString(input?.type),
+          value: input.value || input.default,
+          actions: (
+            <Button
+              type="button"
+              variant="ghost"
+              size="min"
+              onClick={() => handleInputEdit(input)}
+              className="text-muted-foreground hover:text-foreground h-4 w-4"
+            >
+              <Icon name="Pencil" className="size-2.5" />
+            </Button>
+          ),
+        }))}
+        outputs={(componentSpec.outputs ?? []).map((output) => {
+          const connectedDetails = getOutputConnectedDetails(
+            graphSpec,
+            output.name,
+          );
+          return {
+            name: output.name,
+            type: typeSpecToString(connectedDetails.outputType),
+            value: connectedDetails.outputName,
+            actions: (
+              <Button
+                type="button"
+                variant="ghost"
+                size="min"
+                onClick={() => handleOutputEdit(output)}
+                className="text-muted-foreground hover:text-foreground h-4 w-4"
+              >
+                <Icon name="Pencil" className="size-2.5" />
+              </Button>
+            ),
+          };
+        })}
+      />
 
       {/* Validations */}
       <BlockStack>

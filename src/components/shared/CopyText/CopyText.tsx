@@ -10,14 +10,12 @@ import { copyToClipboard } from "@/utils/string";
 interface CopyTextProps {
   children: string;
   className?: string;
-  showButton?: boolean;
   alwaysShowButton?: boolean;
 }
 
 export const CopyText = ({
   children,
   className,
-  showButton = true,
   alwaysShowButton = false,
 }: CopyTextProps) => {
   const [isCopied, setIsCopied] = useState(false);
@@ -64,24 +62,22 @@ export const CopyText = ({
           {children}
         </Text>
 
-        {showButton && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn(
-              "h-6 w-6 shrink-0 transition-opacity duration-200",
-              alwaysShowButton || isCopied
-                ? "opacity-100"
-                : "opacity-0 group-hover:opacity-100",
-            )}
-            onClick={handleButtonClick}
-          >
-            <CopyIcon
-              isCopied={isCopied}
-              alwaysShow={alwaysShowButton || isHovered}
-            />
-          </Button>
-        )}
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn(
+            "h-6 w-6 shrink-0 transition-opacity duration-200",
+            alwaysShowButton || isCopied
+              ? "opacity-100"
+              : "opacity-0 group-hover:opacity-100",
+          )}
+          onClick={handleButtonClick}
+        >
+          <CopyIcon
+            isCopied={isCopied}
+            alwaysShow={alwaysShowButton || isHovered}
+          />
+        </Button>
       </InlineStack>
     </div>
   );

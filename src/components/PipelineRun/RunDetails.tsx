@@ -1,5 +1,6 @@
 import { Frown } from "lucide-react";
 
+import { ArtifactsList } from "@/components/shared/ArtifactsList/ArtifactsList";
 import { CopyText } from "@/components/shared/CopyText/CopyText";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
@@ -87,7 +88,7 @@ export const RunDetails = () => {
 
   return (
     <BlockStack gap="6" className="p-2 h-full">
-      <CopyText className="text-lg font-semibold" showButton={false}>
+      <CopyText className="text-lg font-semibold">
         {componentSpec.name ?? "Unnamed Pipeline"}
       </CopyText>
 
@@ -201,61 +202,17 @@ export const RunDetails = () => {
         </BlockStack>
       )}
 
-      <BlockStack className="w-full">
-        <Text as="h3" size="md" weight="semibold" className="mb-1">
-          Artifacts
-        </Text>
-        <BlockStack gap="4" className="w-full">
-          <BlockStack className="w-full">
-            <Text as="h4" size="sm" weight="semibold" className="mb-1">
-              Inputs
-            </Text>
-            {componentSpec.inputs && componentSpec.inputs.length > 0 ? (
-              <div className="flex flex-col w-full">
-                {componentSpec.inputs.map((input) => (
-                  <div
-                    className="flex flex-row justify-between even:bg-white odd:bg-gray-100 gap-1 px-2 py-1 rounded-xs items-center w-full"
-                    key={input.name}
-                  >
-                    <div className="text-xs flex-1 truncate">
-                      <span className="font-semibold">{input.name}</span>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {typeof input.type === "string" ? input.type : "object"}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-xs text-muted-foreground">No inputs</div>
-            )}
-          </BlockStack>
-          <BlockStack className="w-full">
-            <Text as="h4" size="sm" weight="semibold" className="mb-1">
-              Outputs
-            </Text>
-            {componentSpec.outputs && componentSpec.outputs.length > 0 ? (
-              <div className="flex flex-col w-full">
-                {componentSpec.outputs.map((output) => (
-                  <div
-                    className="flex flex-row justify-between even:bg-white odd:bg-gray-100 gap-1 px-2 py-1 rounded-xs items-center w-full"
-                    key={output.name}
-                  >
-                    <div className="text-xs flex-1 truncate">
-                      <span className="font-semibold">{output.name}</span>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {typeof output.type === "string" ? output.type : "object"}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-xs text-muted-foreground">No outputs</div>
-            )}
-          </BlockStack>
-        </BlockStack>
-      </BlockStack>
+      <ArtifactsList
+        inputs={(componentSpec.inputs ?? []).map((input) => ({
+          name: input.name,
+          type: typeof input.type === "string" ? input.type : "object",
+          value: input.value ?? input.default,
+        }))}
+        outputs={(componentSpec.outputs ?? []).map((output) => ({
+          name: output.name,
+          type: typeof output.type === "string" ? output.type : "object",
+        }))}
+      />
     </BlockStack>
   );
 };
