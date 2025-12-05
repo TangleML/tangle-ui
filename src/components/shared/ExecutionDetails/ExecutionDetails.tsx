@@ -1,13 +1,7 @@
-import { ChevronsUpDown, ExternalLink } from "lucide-react";
+import { useMemo } from "react";
 
 import type { GetContainerExecutionStateResponse } from "@/api/types.gen";
-import { Button } from "@/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { Link } from "@/components/ui/link";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useBackend } from "@/providers/BackendProvider";
 import { useFetchContainerExecutionState } from "@/services/executionService";
@@ -18,16 +12,23 @@ import {
 import { EXIT_CODE_OOM } from "@/utils/constants";
 import { formatDate, formatDuration } from "@/utils/date";
 
+import { ContentBlock } from "../ContextPanel/Blocks/ContentBlock";
+import {
+  ListBlock,
+  type ListBlockItemProps,
+} from "../ContextPanel/Blocks/ListBlock";
 import { InfoBox } from "../InfoBox";
 
 interface ExecutionDetailsProps {
   executionId: string;
   componentSpec?: ComponentSpec;
+  className?: string;
 }
 
 export const ExecutionDetails = ({
   executionId,
   componentSpec,
+  className,
 }: ExecutionDetailsProps) => {
   const { backendUrl } = useBackend();
 
@@ -38,155 +39,106 @@ export const ExecutionDetails = ({
     data: containerState,
     isLoading: isLoadingContainerState,
     error: containerStateError,
-  } = useFetchContainerExecutionState(executionId || "", backendUrl);
+  } = useFetchContainerExecutionState(executionId, backendUrl);
 
-  // Don't render if no execution data is available
-  const hasExecutionData =
-    executionId ||
-    containerState ||
-    isLoadingContainerState ||
-    containerStateError;
-  if (!hasExecutionData) {
-    return null;
-  }
+  const loadingMarkup = (
+    <BlockStack gap="2">
+      <InlineStack gap="2" blockAlign="center">
+        <Skeleton className="h-3 w-12" />
+        <Skeleton className="h-3 w-32" />
+      </InlineStack>
+      <InlineStack gap="2" blockAlign="center">
+        <Skeleton className="h-3 w-20" />
+        <Skeleton className="h-3 w-24" />
+        <Skeleton className="h-3 w-40" />
+      </InlineStack>
+    </BlockStack>
+  );
 
-  const podName = executionPodName(containerState);
-  const executionJobLinks = getExecutionJobLinks(containerState);
+  const executionItems = useMemo(() => {
+    const items: ListBlockItemProps[] = [
+      { name: "Execution ID", value: executionId },
+    ];
+
+    if (isSubgraph) {
+      return items;
+    }
+
+    if (containerState?.exit_code && containerState.exit_code > 0) {
+      const exitCodeValue =
+        containerState.exit_code === EXIT_CODE_OOM
+          ? `${containerState.exit_code} (Out of Memory)`
+          : `${containerState.exit_code}`;
+
+      items.push({
+        name: "Exit Code",
+        value: exitCodeValue,
+        critical: true,
+      });
+    }
+
+    if (containerState?.started_at) {
+      items.push({
+        name: "Started",
+        value: formatDate(containerState.started_at),
+      });
+    }
+
+    if (containerState?.ended_at && containerState?.started_at) {
+      items.push({
+        name: "Completed in",
+        value: `${formatDuration(
+          containerState.started_at,
+          containerState.ended_at,
+        )} (${formatDate(containerState.ended_at)})`,
+      });
+    }
+
+    const podName = executionPodName(containerState);
+    if (podName) {
+      items.push({ name: "Pod Name", value: podName });
+    }
+
+    const executionJobLinks = getExecutionJobLinks(containerState);
+    if (executionJobLinks) {
+      executionJobLinks.forEach((linkInfo) => {
+        if (!linkInfo.url) {
+          return;
+        }
+
+        items.push({
+          name: linkInfo.name,
+          value: { text: linkInfo.value, href: linkInfo.url },
+        });
+      });
+    }
+
+    return items;
+  }, [executionId, isSubgraph, containerState]);
 
   return (
-    <div className="flex flex-col px-3 py-2">
-      <Collapsible defaultOpen>
-        <div className="font-medium text-sm text-foreground flex items-center gap-1">
-          Execution Details
-          <CollapsibleTrigger asChild>
-            <Button variant="ghost" size="sm">
-              <ChevronsUpDown className="h-4 w-4" />
-              <span className="sr-only">Toggle</span>
-            </Button>
-          </CollapsibleTrigger>
-        </div>
+    <ContentBlock
+      title="Execution Details"
+      collapsible
+      defaultOpen
+      className={className}
+    >
+      <BlockStack gap="2">
+        <ListBlock items={executionItems} marker="none" />
 
-        <CollapsibleContent className="mt-2 space-y-2">
-          <div className="flex items-center gap-2">
-            <span className="font-medium text-xs text-foreground min-w-fit">
-              Execution ID:
-            </span>
-            <span className="text-xs text-muted-foreground font-mono truncate">
-              {executionId}
-            </span>
-          </div>
+        {!isSubgraph && isLoadingContainerState && loadingMarkup}
 
-          {!isSubgraph && (
-            <>
-              {isLoadingContainerState && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Skeleton className="h-3 w-12" />
-                    <Skeleton className="h-3 w-32" />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Skeleton className="h-3 w-20" />
-                    <Skeleton className="h-3 w-24" />
-                    <Skeleton className="h-3 w-40" />
-                  </div>
-                </div>
-              )}
-
-              {containerStateError && (
-                <InfoBox title="Failed to load container state" variant="error">
-                  {containerStateError.message}
-                </InfoBox>
-              )}
-
-              {!!containerState?.exit_code && (
-                <div className="flex flex-wrap items-center gap-1">
-                  <span className="font-medium text-xs text-destructive">
-                    Exit Code:
-                  </span>
-                  <span className="text-xs text-destructive">
-                    {containerState.exit_code}
-                  </span>
-                  {containerState.exit_code === EXIT_CODE_OOM && (
-                    <span className="text-xs text-destructive">
-                      (Out of Memory)
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {containerState?.started_at && (
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-xs text-foreground min-w-fit">
-                    Started:
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {formatDate(containerState.started_at)}
-                  </span>
-                </div>
-              )}
-
-              {containerState?.ended_at && containerState?.started_at && (
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-xs text-foreground min-w-fit">
-                    Completed in:
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {formatDuration(
-                      containerState.started_at,
-                      containerState.ended_at,
-                    )}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    ({formatDate(containerState.ended_at)})
-                  </span>
-                </div>
-              )}
-
-              {podName && (
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-xs text-foreground min-w-fit">
-                    Pod Name:
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {podName}
-                  </span>
-                </div>
-              )}
-              {executionJobLinks && (
-                <>
-                  {executionJobLinks.map((linkInfo) => (
-                    <div
-                      key={linkInfo.name}
-                      className="flex text-xs items-center gap-2"
-                    >
-                      <span className="font-medium text-foreground min-w-fit">
-                        {linkInfo.name}:
-                      </span>
-                      <Link
-                        href={linkInfo.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        {linkInfo.value}
-                        <ExternalLink className="size-3 shrink-0" />
-                      </Link>
-                    </div>
-                  ))}
-                </>
-              )}
-
-              {!isLoadingContainerState &&
-                !containerState &&
-                !containerStateError && (
-                  <div className="text-xs text-muted-foreground">
-                    Container state not available
-                  </div>
-                )}
-            </>
-          )}
-        </CollapsibleContent>
-      </Collapsible>
-    </div>
+        {!isSubgraph && containerStateError && (
+          <InfoBox
+            title="Failed to load container state"
+            variant="error"
+            className="wrap-anywhere"
+          >
+            {containerStateError.message}
+          </InfoBox>
+        )}
+      </BlockStack>
+    </ContentBlock>
   );
 };
 
