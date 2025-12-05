@@ -33,18 +33,17 @@ export const LibraryList = withSuspenseWrapper(
             <InlineStack
               key={library.id}
               align="space-between"
-              blockAlign="center"
               gap="1"
               className="w-full pr-3"
             >
-              <InlineStack blockAlign="center" gap="1">
+              <InlineStack gap="1">
                 <Icon
                   name={library.icon as any /** todo: fix this */}
                   className="text-gray-400"
                 />
                 <Text>{library.name}</Text>
               </InlineStack>
-              <InlineStack blockAlign="center" gap="1">
+              <InlineStack gap="1">
                 <TokenStatusButton
                   library={library}
                   onUpdateClick={onUpdateLibrary}

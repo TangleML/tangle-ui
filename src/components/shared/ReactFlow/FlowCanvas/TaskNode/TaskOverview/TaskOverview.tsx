@@ -75,7 +75,7 @@ const TaskOverview = ({ taskNode, actions }: TaskOverviewProps) => {
 
   return (
     <BlockStack className="h-full" data-context-panel="task-overview">
-      <InlineStack gap="2" blockAlign="center" className="px-2 pb-2">
+      <InlineStack gap="2" className="px-2 pb-2">
         {isSubgraph && <Icon name="Workflow" />}
         <Text size="lg" weight="semibold">
           {name}

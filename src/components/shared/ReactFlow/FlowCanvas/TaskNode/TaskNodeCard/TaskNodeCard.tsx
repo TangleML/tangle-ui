@@ -284,7 +284,7 @@ const TaskNodeCard = () => {
       >
         <CardHeader className="border-b border-slate-200 px-2 py-2.5 flex flex-row justify-between items-start">
           <BlockStack>
-            <InlineStack gap="2" blockAlign="center" wrap="nowrap">
+            <InlineStack gap="2" wrap="nowrap">
               {isSubgraphNode && isSubgraphNavigationEnabled && (
                 <QuickTooltip content={`Subgraph: ${subgraphDescription}`}>
                   <Icon name="Workflow" size="sm" className="text-blue-600" />

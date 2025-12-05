@@ -38,7 +38,6 @@ export function NodeListItem({
     <li key={node.id} className="flex justify-between items-center">
       <InlineStack
         gap="3"
-        blockAlign="center"
         className={cn({ "opacity-50": isExcluded })}
         wrap="nowrap"
       >
@@ -47,7 +46,7 @@ export function NodeListItem({
           {node.id}
         </Paragraph>
         {isOrphaned && (
-          <InlineStack gap="1" blockAlign="center" wrap="nowrap">
+          <InlineStack gap="1" wrap="nowrap">
             <Icon name="TriangleAlert" className="text-destructive" />
             <Paragraph size="xs" className="text-destructive">
               Orphaned

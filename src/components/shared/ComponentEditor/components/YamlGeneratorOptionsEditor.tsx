@@ -123,12 +123,7 @@ export const YamlGeneratorOptionsEditor = ({
             className="w-full group"
             gap="1"
           >
-            <InlineStack
-              wrap="nowrap"
-              blockAlign="center"
-              className="flex-1"
-              gap="1"
-            >
+            <InlineStack wrap="nowrap" className="flex-1" gap="1">
               <Input
                 className="w-full"
                 placeholder="Annotation key"
@@ -144,7 +139,7 @@ export const YamlGeneratorOptionsEditor = ({
               />
               <Text>:</Text>
             </InlineStack>
-            <InlineStack wrap="nowrap" blockAlign="center" className="flex-1">
+            <InlineStack wrap="nowrap" className="flex-1">
               <Input
                 className="w-full"
                 placeholder="Annotation value"

@@ -13,7 +13,7 @@ export const ComponentSpecErrorsList = ({
 
   return (
     <BlockStack className="p-4 px-8 bg-red-100 border border-t-4 border-red-300 text-destructive">
-      <InlineStack gap="2" blockAlign="center">
+      <InlineStack gap="2">
         <Icon name="OctagonAlert" size="lg" className="text-destructive" />
         <Text tone="critical" as="h2" size="lg">
           Invalid component spec

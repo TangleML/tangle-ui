@@ -156,11 +156,7 @@ const GraphComponents = ({ isOpen }: { isOpen: boolean }) => {
             <>
               <Separator />
               <BlockStack gap="1" className="pl-2 py-2">
-                <InlineStack
-                  className="w-full"
-                  align="space-between"
-                  blockAlign="center"
-                >
+                <InlineStack className="w-full" align="space-between">
                   <Text size="sm" tone="subdued">
                     Connected libraries
                   </Text>

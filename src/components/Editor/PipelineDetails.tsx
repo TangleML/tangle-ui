@@ -238,11 +238,7 @@ const PipelineDetails = () => {
                         <span className="font-semibold">Type:</span>{" "}
                         {typeSpecToString(input?.type)}
                       </div>
-                      <InlineStack
-                        className="min-w-24"
-                        align="end"
-                        blockAlign="center"
-                      >
+                      <InlineStack className="min-w-24" align="end">
                         <Button
                           type="button"
                           variant="ghost"
