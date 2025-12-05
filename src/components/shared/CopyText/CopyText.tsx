@@ -1,4 +1,4 @@
-import { type MouseEvent, useCallback, useState } from "react";
+import { type MouseEvent, useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -26,6 +26,15 @@ export const CopyText = ({
     setIsCopied(true);
   }, [children]);
 
+  useEffect(() => {
+    if (isCopied) {
+      const timer = setTimeout(() => {
+        setIsCopied(false);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [isCopied]);
+
   const handleButtonClick = useCallback(
     (e: MouseEvent) => {
       e.stopPropagation();
@@ -33,10 +42,6 @@ export const CopyText = ({
     },
     [handleCopy],
   );
-
-  const handleAnimationEnd = useCallback(() => {
-    setIsCopied(false);
-  }, []);
 
   return (
     <div
@@ -71,7 +76,6 @@ export const CopyText = ({
           <CopyIcon
             isCopied={isCopied}
             alwaysShow={alwaysShowButton || isHovered}
-            onAnimationEnd={handleAnimationEnd}
           />
         </Button>
       </InlineStack>
@@ -82,29 +86,29 @@ export const CopyText = ({
 interface CopyIconProps {
   isCopied: boolean;
   alwaysShow: boolean;
-  onAnimationEnd: () => void;
 }
-//
-const CopyIcon = ({ isCopied, alwaysShow, onAnimationEnd }: CopyIconProps) => (
-  <span className="relative h-3.5 w-3.5">
-    {isCopied ? (
-      <span
-        className="absolute inset-0 animate-revert-copied"
-        onAnimationEnd={onAnimationEnd}
-      >
-        <Icon name="Check" size="sm" className="text-emerald-400" />
-      </span>
-    ) : (
-      <Icon
-        name="Copy"
-        size="sm"
-        className={cn(
-          "absolute inset-0 text-muted-foreground transition-all duration-200",
-          alwaysShow
-            ? "rotate-0 scale-100 opacity-100"
-            : "rotate-90 scale-0 opacity-0",
-        )}
-      />
-    )}
+
+const CopyIcon = ({ isCopied, alwaysShow }: CopyIconProps) => (
+  <span className="relative h-3 w-3">
+    <Icon
+      name="Check"
+      size="sm"
+      className={cn(
+        "absolute inset-0 text-emerald-400 transition-all duration-200",
+        isCopied
+          ? "rotate-0 scale-100 opacity-100"
+          : "-rotate-90 scale-0 opacity-0",
+      )}
+    />
+    <Icon
+      name="Copy"
+      size="sm"
+      className={cn(
+        "absolute inset-0 text-muted-foreground transition-all duration-200",
+        alwaysShow && !isCopied
+          ? "rotate-0 scale-100 opacity-100"
+          : "rotate-90 scale-0 opacity-0",
+      )}
+    />
   </span>
 );

@@ -55,6 +55,30 @@ This is a React + TypeScript application for building and running Machine Learni
   - Common spacing/layout patterns → Suggest utility classes or component abstractions
   - Similar form field styling → Create form field components
 
+### UI Primitives (Prefer Over Raw HTML)
+
+**Always prefer our UI primitives over raw HTML elements:**
+
+- **Layout**: Use `BlockStack` and `InlineStack` from `@/components/ui/layout` instead of `<div className="flex ...">`
+  - `BlockStack` = vertical flex (`flex-col`)
+  - `InlineStack` = horizontal flex (`flex-row`)
+  - Both support `gap`, `align`, `blockAlign` props
+  - Use `as` prop for semantic elements: `<BlockStack as="ul">`, `<InlineStack as="li">`
+
+- **Typography**: Use `Text` from `@/components/ui/typography` instead of raw `<h1-h6>`, `<p>`, `<span>`, `<dt>`, `<dd>`
+  - `<Text as="h3" size="md" weight="semibold">` instead of `<h3 className="text-md font-semibold">`
+  - `<Text as="dt" weight="semibold">` instead of `<dt className="font-semibold">`
+  - `<Text as="p" size="sm">` instead of `<p className="text-sm">`
+  - Supports: `as`, `size`, `weight`, `tone`, `font` props
+
+- **Buttons**: Use `Button` from `@/components/ui/button`
+- **Icons**: Use `Icon` from `@/components/ui/icon`
+
+**When raw HTML is acceptable:**
+- Semantic elements not supported by primitives (e.g., `<dl>`, `<ul>`, `<ol>`, `<table>`)
+- Complex layouts where primitives don't fit
+- Performance-critical sections where abstraction overhead matters
+
 ### State Management
 
 - Use Tanstack Query for server state
@@ -202,6 +226,7 @@ export const useContext = () => {
 - Don't create side effects in render functions
 - Don't use barrel exports
 - Don't modify componentSpec structure without express permission
+- Don't use raw HTML elements when UI primitives exist (use `Text`, `BlockStack`, `InlineStack`, etc.)
 
 ## Other rules
 
