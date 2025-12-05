@@ -7,6 +7,7 @@ import { CopyText } from "@/components/shared/CopyText/CopyText";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { Text } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useContextPanel } from "@/providers/ContextPanelProvider";
@@ -128,10 +129,11 @@ const PipelineDetails = () => {
   const annotations = componentSpec.metadata?.annotations || {};
 
   return (
-    <BlockStack gap="6" className="p-2 h-full"
+    <BlockStack
+      gap="6"
+      className="p-2 h-full"
       data-context-panel="pipeline-details"
     >
-
       <CopyText className="text-lg font-semibold" showButton={false}>
         {componentSpec.name ?? "Unnamed Pipeline"}
       </CopyText>
@@ -144,85 +146,108 @@ const PipelineDetails = () => {
         />
       </InlineStack>
 
-      {/* General Metadata */}
-      <div className="flex flex-col gap-2 text-xs text-secondary-foreground mb-2">
-        <div className="flex flex-wrap gap-6">
-          {fileMeta.createdBy && (
-            <div>
-              <span className="font-semibold">Created by:</span>{" "}
-              {fileMeta.createdBy}
-            </div>
-          )}
-        </div>
-        <div className="flex flex-wrap gap-x-6">
-          {fileMeta.creationTime && (
-            <div>
-              <span className="font-semibold">Created at:</span>{" "}
-              {new Date(fileMeta.creationTime).toLocaleString()}
-            </div>
-          )}
-          {fileMeta.modificationTime && (
-            <div>
-              <span className="font-semibold">Last updated:</span>{" "}
-              {new Date(fileMeta.modificationTime).toLocaleString()}
-            </div>
-          )}
-        </div>
-      </div>
+      {(fileMeta.createdBy ||
+        fileMeta.creationTime ||
+        fileMeta.modificationTime) && (
+        <BlockStack>
+          <Text as="h3" size="md" weight="semibold" className="mb-1">
+            Pipeline Info
+          </Text>
+          <dl className="flex flex-col gap-1 text-xs text-secondary-foreground">
+            {fileMeta.createdBy && (
+              <InlineStack as="div" gap="1" blockAlign="center">
+                <Text as="dt" weight="semibold">
+                  Created by:
+                </Text>
+                <dd>{fileMeta.createdBy}</dd>
+              </InlineStack>
+            )}
+            {fileMeta.creationTime && (
+              <InlineStack as="div" gap="1" blockAlign="center">
+                <Text as="dt" weight="semibold">
+                  Created at:
+                </Text>
+                <dd>{new Date(fileMeta.creationTime).toLocaleString()}</dd>
+              </InlineStack>
+            )}
+            {fileMeta.modificationTime && (
+              <InlineStack as="div" gap="1" blockAlign="center">
+                <Text as="dt" weight="semibold">
+                  Last updated:
+                </Text>
+                <dd>{new Date(fileMeta.modificationTime).toLocaleString()}</dd>
+              </InlineStack>
+            )}
+          </dl>
+        </BlockStack>
+      )}
 
-      {/* Description */}
       {componentSpec.description && (
-        <div>
-          <h3 className="text-md font-medium mb-1">Description</h3>
-          <div className="text-sm whitespace-pre-line">
+        <BlockStack>
+          <Text as="h3" size="md" weight="semibold" className="mb-1">
+            Description
+          </Text>
+          <Text as="p" size="sm" className="whitespace-pre-line">
             {componentSpec.description}
-          </div>
-        </div>
+          </Text>
+        </BlockStack>
       )}
 
       {/* Component Digest */}
       {digest && (
-        <div className="mb-2">
-          <h3 className="text-md font-medium mb-1">Digest</h3>
+        <BlockStack>
+          <Text as="h3" size="md" weight="semibold" className="mb-1">
+            Digest
+          </Text>
           <Button
             className="bg-gray-100 border border-gray-300 rounded p-2 h-fit text-xs w-full text-left hover:bg-gray-200 active:bg-gray-300 transition cursor-pointer"
             onClick={handleDigestCopy}
             variant="ghost"
           >
-            <span className="font-mono break-all w-full text-wrap">
+            <Text as="span" font="mono" className="break-all w-full text-wrap">
               {digest}
-            </span>
+            </Text>
           </Button>
-        </div>
+        </BlockStack>
       )}
 
       {/* Annotations */}
       {Object.keys(annotations).length > 0 && (
-        <div>
-          <h3 className="text-md font-medium mb-1">Annotations</h3>
+        <BlockStack>
+          <Text as="h3" size="md" weight="semibold" className="mb-1">
+            Annotations
+          </Text>
           <ul className="text-xs text-secondary-foreground">
             {Object.entries(annotations).map(([key, value]) => (
               <li key={key}>
-                <span className="font-semibold">{key}:</span>{" "}
-                <span className="break-all">{String(value)}</span>
+                <Text as="span" weight="semibold">
+                  {key}:
+                </Text>{" "}
+                <Text as="span" className="break-all">
+                  {String(value)}
+                </Text>
               </li>
             ))}
           </ul>
-        </div>
+        </BlockStack>
       )}
 
       {/* Artifacts (Inputs & Outputs) */}
-      <div>
-        <h3 className="text-md font-medium mb-1">Artifacts</h3>
-        <div className="flex gap-4 flex-col">
-          <div className="flex-1">
-            <h4 className="text-sm font-semibold mb-1">Inputs</h4>
+      <BlockStack>
+        <Text as="h3" size="md" weight="semibold" className="mb-1">
+          Artifacts
+        </Text>
+        <BlockStack gap="4">
+          <BlockStack>
+            <Text as="h4" size="sm" weight="semibold" className="mb-1">
+              Inputs
+            </Text>
             {componentSpec.inputs && componentSpec.inputs.length > 0 ? (
               <div className="flex flex-col">
                 {componentSpec.inputs.map((input) => {
                   return (
                     <div
-                      className="flex flex-row justify-between even:bg-white odd:bg-gray-100 gap-1 px-2 py-0 rounded-xs items-center"
+                      className="flex flex-row justify-between even:bg-white odd:bg-gray-100 gap-1 px-2 py-1 rounded-xs items-center"
                       key={input.name}
                     >
                       <div className="text-xs flex-1 truncate max-w-[200px]">
@@ -266,14 +291,16 @@ const PipelineDetails = () => {
             ) : (
               <div className="text-xs text-muted-foreground">No inputs</div>
             )}
-          </div>
-          <div className="flex-1">
-            <h4 className="text-sm font-semibold mb-1">Outputs</h4>
+          </BlockStack>
+          <BlockStack>
+            <Text as="h4" size="sm" weight="semibold" className="mb-1">
+              Outputs
+            </Text>
             {componentSpec.outputs && componentSpec.outputs.length > 0 ? (
               <div className="flex flex-col">
                 {componentSpec.outputs.map((output) => (
                   <div
-                    className="flex flex-row justify-between even:bg-white odd:bg-gray-100 gap-1 px-2 py-0 rounded-xs items-center"
+                    className="flex flex-row justify-between even:bg-white odd:bg-gray-100 gap-1 px-2 py-1 rounded-xs items-center"
                     key={output.name}
                   >
                     <div className="text-xs flex-1 truncate max-w-[200px]">
@@ -308,20 +335,22 @@ const PipelineDetails = () => {
             ) : (
               <div className="text-xs text-muted-foreground">No outputs</div>
             )}
-          </div>
-        </div>
-      </div>
+          </BlockStack>
+        </BlockStack>
+      </BlockStack>
 
       {/* Validations */}
-      <div className="mt-2">
-        <h3 className="text-md font-medium mb-1">Validations</h3>
+      <BlockStack>
+        <Text as="h3" size="md" weight="semibold" className="mb-1">
+          Validations
+        </Text>
         <PipelineValidationList
           isComponentTreeValid={isComponentTreeValid}
           groupedIssues={groupedIssues}
           totalIssueCount={globalValidationIssues.length}
           onIssueSelect={handleIssueClick}
         />
-      </div>
+      </BlockStack>
     </BlockStack>
   );
 };

@@ -52,8 +52,10 @@ export const RunDetails = () => {
   if (error || !details || !state || !componentSpec) {
     return (
       <div className="flex flex-col gap-8 items-center justify-center h-full">
-        <Frown className="w-12 h-12 text-gray-500" />
-        <div className="text-gray-500">Error loading run details.</div>
+        <Frown className="w-12 h-12 text-secondary-foreground" />
+        <div className="text-secondary-foreground">
+          Error loading run details.
+        </div>
       </div>
     );
   }
@@ -62,7 +64,7 @@ export const RunDetails = () => {
     return (
       <div className="flex items-center justify-center h-full">
         <Spinner className="mr-2" />
-        <p className="text-gray-500">Loading run details...</p>
+        <p className="text-secondary-foreground">Loading run details...</p>
       </div>
     );
   }
@@ -106,75 +108,108 @@ export const RunDetails = () => {
       </InlineStack>
 
       {metadata && (
-        <div className="flex flex-col gap-2 text-xs text-secondary-foreground mb-2">
-          <div className="flex flex-wrap gap-x-6">
+        <BlockStack>
+          <Text as="h3" size="md" weight="semibold" className="mb-1">
+            Run Info
+          </Text>
+          <dl className="flex flex-col gap-1 text-xs text-secondary-foreground">
             {metadata.id && (
-              <div>
-                <span className="font-semibold">Run Id:</span> {metadata.id}
-              </div>
+              <InlineStack as="div" gap="1" blockAlign="center">
+                <Text as="dt" weight="semibold" className="shrink-0">
+                  Run Id:
+                </Text>
+                <dd>
+                  <CopyText className="font-mono truncate max-w-[180px]">
+                    {metadata.id}
+                  </CopyText>
+                </dd>
+              </InlineStack>
             )}
             {metadata.root_execution_id && (
-              <div>
-                <span className="font-semibold">Execution Id:</span>{" "}
-                {metadata.root_execution_id}
-              </div>
+              <InlineStack as="div" gap="1" blockAlign="center">
+                <Text as="dt" weight="semibold" className="shrink-0">
+                  Execution Id:
+                </Text>
+                <dd>
+                  <CopyText className="font-mono truncate max-w-[180px]">
+                    {metadata.root_execution_id}
+                  </CopyText>
+                </dd>
+              </InlineStack>
             )}
-          </div>
-          <div className="flex flex-wrap gap-6">
             {metadata.created_by && (
-              <div>
-                <span className="font-semibold">Created by:</span>{" "}
-                {metadata.created_by}
-              </div>
+              <InlineStack as="div" gap="1" blockAlign="center">
+                <Text as="dt" weight="semibold">
+                  Created by:
+                </Text>
+                <dd>{metadata.created_by}</dd>
+              </InlineStack>
             )}
-          </div>
-          <div className="flex flex-wrap gap-x-6">
             {metadata.created_at && (
-              <div>
-                <span className="font-semibold">Created at:</span>{" "}
-                {new Date(metadata.created_at).toLocaleString()}
-              </div>
+              <InlineStack as="div" gap="1" blockAlign="center">
+                <Text as="dt" weight="semibold">
+                  Created at:
+                </Text>
+                <dd>{new Date(metadata.created_at).toLocaleString()}</dd>
+              </InlineStack>
             )}
-          </div>
-        </div>
+          </dl>
+        </BlockStack>
       )}
 
       {componentSpec.description && (
-        <div>
-          <h3 className="text-md font-medium mb-1">Description</h3>
-          <div className="text-sm text-gray-700 whitespace-pre-line">
+        <BlockStack>
+          <Text as="h3" size="md" weight="semibold" className="mb-1">
+            Description
+          </Text>
+          <Text as="p" size="sm" className="whitespace-pre-line">
             {componentSpec.description}
-          </div>
-        </div>
+          </Text>
+        </BlockStack>
       )}
 
       <BlockStack>
-        <InlineStack gap="1" blockAlign="center">
-          <Text size="md" weight="semibold">Status: {runStatus}</Text>
+        <Text as="h3" size="md" weight="semibold" className="mb-1">
+          Status
+        </Text>
+        <InlineStack gap="2" blockAlign="center" className="mb-1">
+          <Text size="sm" weight="semibold">
+            {runStatus}
+          </Text>
           <StatusText statusCounts={statusCounts} />
         </InlineStack>
         <StatusBar statusCounts={statusCounts} />
       </BlockStack>
 
       {Object.keys(annotations).length > 0 && (
-        <div>
-          <h3 className="text-md font-medium mb-1">Annotations</h3>
+        <BlockStack>
+          <Text as="h3" size="md" weight="semibold" className="mb-1">
+            Annotations
+          </Text>
           <ul className="text-xs text-secondary-foreground">
             {Object.entries(annotations).map(([key, value]) => (
               <li key={key}>
-                <span className="font-semibold">{key}:</span>{" "}
-                <span className="break-all">{String(value)}</span>
+                <Text as="span" weight="semibold">
+                  {key}:
+                </Text>{" "}
+                <Text as="span" className="break-all">
+                  {String(value)}
+                </Text>
               </li>
             ))}
           </ul>
-        </div>
+        </BlockStack>
       )}
 
-      <div className="w-full">
-        <h3 className="text-md font-medium mb-1">Artifacts</h3>
-        <div className="flex gap-4 flex-col w-full">
-          <div className="w-full">
-            <h4 className="text-sm font-semibold mb-1">Inputs</h4>
+      <BlockStack className="w-full">
+        <Text as="h3" size="md" weight="semibold" className="mb-1">
+          Artifacts
+        </Text>
+        <BlockStack gap="4" className="w-full">
+          <BlockStack className="w-full">
+            <Text as="h4" size="sm" weight="semibold" className="mb-1">
+              Inputs
+            </Text>
             {componentSpec.inputs && componentSpec.inputs.length > 0 ? (
               <div className="flex flex-col w-full">
                 {componentSpec.inputs.map((input) => (
@@ -194,9 +229,11 @@ export const RunDetails = () => {
             ) : (
               <div className="text-xs text-muted-foreground">No inputs</div>
             )}
-          </div>
-          <div className="w-full">
-            <h4 className="text-sm font-semibold mb-1">Outputs</h4>
+          </BlockStack>
+          <BlockStack className="w-full">
+            <Text as="h4" size="sm" weight="semibold" className="mb-1">
+              Outputs
+            </Text>
             {componentSpec.outputs && componentSpec.outputs.length > 0 ? (
               <div className="flex flex-col w-full">
                 {componentSpec.outputs.map((output) => (
@@ -216,9 +253,9 @@ export const RunDetails = () => {
             ) : (
               <div className="text-xs text-muted-foreground">No outputs</div>
             )}
-          </div>
-        </div>
-      </div>
+          </BlockStack>
+        </BlockStack>
+      </BlockStack>
     </BlockStack>
   );
 };
