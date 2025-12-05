@@ -85,7 +85,7 @@
     "gh-pages": "^6.3.0",
     "js-yaml": "^4.1.1",
     "localforage": "^1.10.0",
-    "lucide-react": "^0.555.0",
+    "lucide-react": "^0.556.0",
     "pyodide": "^0.29.0",
     "random-words": "^2.0.1",
     "react": "^19.2.1",
