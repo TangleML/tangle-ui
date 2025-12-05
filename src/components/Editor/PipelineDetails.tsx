@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 
 import { PipelineValidationList } from "@/components/Editor/components/PipelineValidationList/PipelineValidationList";
 import { useValidationIssueNavigation } from "@/components/Editor/hooks/useValidationIssueNavigation";
+import { CopyText } from "@/components/shared/CopyText/CopyText";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
@@ -134,9 +135,9 @@ const PipelineDetails = () => {
       {/* Header */}
       <div className="flex items-center gap-2 max-w-[90%]">
         <Network className="w-6 h-6 text-secondary-foreground rotate-270 min-w-6 min-h-6" />
-        <h2 className="text-lg font-semibold" data-testid="pipeline-name">
+        <CopyText className="text-lg font-semibold" alwaysShowButton>
           {componentSpec.name ?? "Unnamed Pipeline"}
-        </h2>
+        </CopyText>
         <RenamePipeline />
       </div>
 

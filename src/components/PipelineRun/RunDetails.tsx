@@ -1,5 +1,6 @@
 import { Frown, Videotape } from "lucide-react";
 
+import { CopyText } from "@/components/shared/CopyText/CopyText";
 import { Spinner } from "@/components/ui/spinner";
 import { useCheckComponentSpecFromPath } from "@/hooks/useCheckComponentSpecFromPath";
 import { useUserDetails } from "@/hooks/useUserDetails";
@@ -84,9 +85,9 @@ export const RunDetails = () => {
     <div className="p-2 flex flex-col gap-6 h-full">
       <div className="flex items-center gap-2 max-w-[90%]">
         <Videotape className="w-6 h-6 text-gray-500" />
-        <h2 className="text-lg font-semibold">
+        <CopyText className="text-lg font-semibold" alwaysShowButton>
           {componentSpec.name ?? "Unnamed Pipeline"}
-        </h2>
+        </CopyText>
         <StatusIcon status={runStatus} tooltip />
       </div>
 
