@@ -31,10 +31,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
 import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
-import {
-  getStringFromData,
-  hydrateComponentReference,
-} from "@/services/componentService";
+import { hydrateComponentReference } from "@/services/componentService";
+import { getStringFromData } from "@/utils/string";
 
 enum TabType {
   URL = "URL",
@@ -121,33 +119,15 @@ const ImportComponent = ({
         throw new Error("Failed to hydrate component");
       }
 
-      const abortController = new AbortController();
-
-      return await Promise.all([
-        Promise.race([
-          createPromiseFromDomEvent(
-            window,
-            "tangle.library.componentAdded",
-            abortController.signal,
-          ),
-          createPromiseFromDomEvent(
-            window,
-            "tangle.library.duplicateDialogClosed",
-            abortController.signal,
-          ),
-        ]),
-        addToComponentLibrary(hydratedComponent),
-      ]).finally(() => {
-        abortController.abort();
-      });
+      return await addToComponentLibrary(hydratedComponent);
     },
-    onSuccess: async ([result, _]) => {
+    onSuccess: async (result) => {
       setIsOpen(false);
       setUrl("");
       setSelectedFile(null);
       setSelectedFileName("");
 
-      if (result instanceof CustomEvent && result.detail?.component) {
+      if (result) {
         notify("Component imported successfully", "success");
       }
     },
@@ -350,24 +330,5 @@ const ImportComponent = ({
     </>
   );
 };
-
-function createPromiseFromDomEvent(
-  eventTarget: EventTarget,
-  eventName: string,
-  abortSignal?: AbortSignal,
-) {
-  return new Promise<Event>((resolve) => {
-    const handleEvent = (event: Event) => {
-      eventTarget.removeEventListener(eventName, handleEvent);
-
-      resolve(event);
-    };
-
-    eventTarget.addEventListener(eventName, handleEvent, {
-      once: true,
-      signal: abortSignal,
-    });
-  });
-}
 
 export default ImportComponent;

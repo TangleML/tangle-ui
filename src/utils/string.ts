@@ -99,6 +99,22 @@ function safeJsonParse(value: unknown): {
   return { parsed: value, isValidJson: false };
 }
 
+/**
+ * Accepts string or ArrayBuffer and returns string.
+ *
+ * @todo: use utility in other places
+ *
+ * @param data - The data to normalize.
+ * @returns The string representation of the data.
+ */
+export function getStringFromData(data: string | ArrayBuffer): string {
+  if (typeof data === "object" && "byteLength" in data) {
+    return new TextDecoder().decode(data);
+  }
+
+  return data;
+}
+
 export {
   copyToClipboard,
   createStringList,

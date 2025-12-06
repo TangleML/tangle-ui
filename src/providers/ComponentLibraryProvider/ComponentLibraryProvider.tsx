@@ -32,6 +32,7 @@ import {
   updateComponentRefInList,
 } from "@/utils/componentStore";
 import { USER_COMPONENTS_LIST_NAME } from "@/utils/constants";
+import { createPromiseFromDomEvent } from "@/utils/dom";
 import { getComponentName } from "@/utils/getComponentName";
 import {
   getComponentByUrl,
@@ -82,7 +83,7 @@ type ComponentLibraryContextType = {
   ) => SearchResult | null;
   addToComponentLibrary: (
     component: HydratedComponentReference,
-  ) => Promise<void>;
+  ) => Promise<HydratedComponentReference | undefined>;
   removeFromComponentLibrary: (component: ComponentReference) => void;
   refetchLibrary: () => void;
   refetchUserComponents: () => void;
@@ -463,7 +464,7 @@ export const ComponentLibraryProvider = ({
     ],
   );
 
-  const addToComponentLibrary = useCallback(
+  const addToComponentLibraryWithDuplicateCheck = useCallback(
     async (component: HydratedComponentReference) => {
       const duplicate = userComponentsFolder
         ? flattenFolders(userComponentsFolder).find(
@@ -496,6 +497,34 @@ export const ComponentLibraryProvider = ({
       refreshUserComponents,
       importComponent,
     ],
+  );
+
+  const addToComponentLibrary = useCallback(
+    async (
+      hydratedComponentRef: HydratedComponentReference,
+    ): Promise<HydratedComponentReference | undefined> => {
+      const abortController = new AbortController();
+      const [result, _] = await Promise.all([
+        Promise.race([
+          createPromiseFromDomEvent(
+            window,
+            "tangle.library.componentAdded",
+            abortController.signal,
+          ),
+          createPromiseFromDomEvent(
+            window,
+            "tangle.library.duplicateDialogClosed",
+            abortController.signal,
+          ),
+        ]),
+        addToComponentLibraryWithDuplicateCheck(hydratedComponentRef),
+      ]).finally(() => {
+        abortController.abort();
+      });
+
+      return result instanceof CustomEvent ? hydratedComponentRef : undefined;
+    },
+    [addToComponentLibraryWithDuplicateCheck],
   );
 
   const removeFromComponentLibrary = useCallback(
