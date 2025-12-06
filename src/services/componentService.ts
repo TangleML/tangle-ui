@@ -331,7 +331,7 @@ export const parseComponentData = (data: string): ComponentSpec | null => {
  * @param data - The data to normalize.
  * @returns The string representation of the data.
  */
-function getStringFromData(data: string | ArrayBuffer): string {
+export function getStringFromData(data: string | ArrayBuffer): string {
   if (typeof data === "object" && "byteLength" in data) {
     return new TextDecoder().decode(data);
   }
