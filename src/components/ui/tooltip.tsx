@@ -37,8 +37,9 @@ function TooltipTrigger({
 }
 
 // CUSTOM PROPS FROM THE TANGLE DEV TEAM
-interface TooltipContentProps
-  extends React.ComponentProps<typeof TooltipPrimitive.Content> {
+interface TooltipContentProps extends React.ComponentProps<
+  typeof TooltipPrimitive.Content
+> {
   arrowClassName?: string;
 }
 

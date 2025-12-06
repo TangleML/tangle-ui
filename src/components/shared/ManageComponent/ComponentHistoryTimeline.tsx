@@ -84,8 +84,8 @@ export const ComponentHistoryTimeline = withSuspenseWrapper(
 
     const isPotentiallyOutdated = Boolean(
       history.length > 0 &&
-        history.find((c) => c.digest === currentComponent.digest) !==
-          history[history.length - 1],
+      history.find((c) => c.digest === currentComponent.digest) !==
+        history[history.length - 1],
     );
 
     const isPotentialNewRelease =

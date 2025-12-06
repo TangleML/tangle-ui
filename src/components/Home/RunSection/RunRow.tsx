@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { type MouseEvent, useCallback } from "react";
+import { type MouseEvent } from "react";
 
 import type { PipelineRunResponse } from "@/api/types.gen";
 import { StatusBar, StatusIcon, StatusText } from "@/components/shared/Status";
@@ -36,14 +36,11 @@ const RunRow = ({ run }: { run: PipelineRunResponse }) => {
   const truncatedCreatedBy = truncateMiddle(createdBy);
   const isTruncated = createdBy !== truncatedCreatedBy;
 
-  const handleCopy = useCallback(
-    (e: MouseEvent) => {
-      e.stopPropagation();
-      navigator.clipboard.writeText(createdBy);
-      notify(`"${createdBy}" copied to clipboard`, "success");
-    },
-    [createdBy],
-  );
+  const handleCopy = (e: MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(createdBy);
+    notify(`"${createdBy}" copied to clipboard`, "success");
+  };
 
   const statusCounts = convertExecutionStatsToStatusCounts(
     run.execution_status_stats,

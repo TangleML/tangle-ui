@@ -274,8 +274,7 @@ interface FileEntry {
 }
 
 interface ComponentFileEntryV3
-  extends FileEntry,
-    ComponentReferenceWithSpecPlusData {}
+  extends FileEntry, ComponentReferenceWithSpecPlusData {}
 
 export type ComponentFileEntry = ComponentFileEntryV3;
 

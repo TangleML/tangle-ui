@@ -207,9 +207,9 @@ export function isNotMaterializedComponentReference(
 ): componentReference is NotMaterializedComponentReference {
   return Boolean(
     componentReference &&
-      typeof componentReference === "object" &&
-      !componentReference.spec &&
-      !componentReference.text,
+    typeof componentReference === "object" &&
+    !componentReference.spec &&
+    !componentReference.text,
   );
 }
 
@@ -228,9 +228,9 @@ export function isDiscoverableComponentReference(
 ): componentReference is DiscoverableComponentReference {
   return Boolean(
     componentReference &&
-      typeof componentReference === "object" &&
-      componentReference.digest !== undefined &&
-      componentReference.digest.length > 0,
+    typeof componentReference === "object" &&
+    componentReference.digest !== undefined &&
+    componentReference.digest.length > 0,
   );
 }
 
@@ -243,9 +243,9 @@ export function isLoadableComponentReference(
 ): componentReference is LoadableComponentReference {
   return Boolean(
     componentReference &&
-      typeof componentReference === "object" &&
-      componentReference.url !== undefined &&
-      componentReference.url.length > 0,
+    typeof componentReference === "object" &&
+    componentReference.url !== undefined &&
+    componentReference.url.length > 0,
   );
 }
 
@@ -262,11 +262,11 @@ export function isContentfulComponentReference(
 ): componentReference is ContentfulComponentReference {
   return Boolean(
     componentReference &&
-      typeof componentReference === "object" &&
-      componentReference.spec !== undefined &&
-      componentReference.text !== undefined &&
-      isValidComponentSpec(componentReference.spec) &&
-      componentReference.text.length > 0,
+    typeof componentReference === "object" &&
+    componentReference.spec !== undefined &&
+    componentReference.text !== undefined &&
+    isValidComponentSpec(componentReference.spec) &&
+    componentReference.text.length > 0,
   );
 }
 
@@ -280,10 +280,10 @@ export function isTextOnlyComponentReference(
 ): componentReference is TextOnlyComponentReference {
   return Boolean(
     componentReference &&
-      typeof componentReference === "object" &&
-      !componentReference.spec &&
-      componentReference.text !== undefined &&
-      componentReference.text.length > 0,
+    typeof componentReference === "object" &&
+    !componentReference.spec &&
+    componentReference.text !== undefined &&
+    componentReference.text.length > 0,
   );
 }
 
@@ -297,10 +297,10 @@ export function isSpecOnlyComponentReference(
 ): componentReference is SpecOnlyComponentReference {
   return Boolean(
     componentReference &&
-      typeof componentReference === "object" &&
-      componentReference.spec !== undefined &&
-      isValidComponentSpec(componentReference.spec) &&
-      (!componentReference.text || componentReference.text.length === 0),
+    typeof componentReference === "object" &&
+    componentReference.spec !== undefined &&
+    isValidComponentSpec(componentReference.spec) &&
+    (!componentReference.text || componentReference.text.length === 0),
   );
 }
 
@@ -313,7 +313,7 @@ export function isPartialContentfulComponentReference(
 ): componentReference is PartialContentfulComponentReference {
   return Boolean(
     isTextOnlyComponentReference(componentReference) ||
-      isSpecOnlyComponentReference(componentReference),
+    isSpecOnlyComponentReference(componentReference),
   );
 }
 
@@ -322,15 +322,15 @@ export function isHydratedComponentReference(
 ): componentReference is HydratedComponentReference {
   return Boolean(
     componentReference &&
-      typeof componentReference === "object" &&
-      componentReference.spec !== undefined &&
-      componentReference.text !== undefined &&
-      isValidComponentSpec(componentReference.spec) &&
-      componentReference.text.length > 0 &&
-      componentReference.digest !== undefined &&
-      componentReference.digest.length > 0 &&
-      componentReference.name !== undefined &&
-      componentReference.name.length > 0,
+    typeof componentReference === "object" &&
+    componentReference.spec !== undefined &&
+    componentReference.text !== undefined &&
+    isValidComponentSpec(componentReference.spec) &&
+    componentReference.text.length > 0 &&
+    componentReference.digest !== undefined &&
+    componentReference.digest.length > 0 &&
+    componentReference.name !== undefined &&
+    componentReference.name.length > 0,
   );
 }
 
@@ -346,11 +346,11 @@ export function isInvalidComponentReference(
 ): componentReference is InvalidComponentReference {
   return Boolean(
     !componentReference ||
-      typeof componentReference !== "object" ||
-      (!isLoadableComponentReference(componentReference) &&
-        !isDiscoverableComponentReference(componentReference) &&
-        !componentReference.spec &&
-        !componentReference.text),
+    typeof componentReference !== "object" ||
+    (!isLoadableComponentReference(componentReference) &&
+      !isDiscoverableComponentReference(componentReference) &&
+      !componentReference.spec &&
+      !componentReference.text),
   );
 }
 
@@ -367,9 +367,9 @@ export function isDisplayableComponentReference(
 ): componentReference is DisplayableComponentReference {
   return Boolean(
     componentReference &&
-      typeof componentReference === "object" &&
-      componentReference.digest !== undefined &&
-      componentReference.name !== undefined,
+    typeof componentReference === "object" &&
+    componentReference.digest !== undefined &&
+    componentReference.name !== undefined,
   );
 }
 
