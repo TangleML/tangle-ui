@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { type ChangeEvent, useCallback, useEffect, useState } from "react";
+import { type ChangeEvent, useEffect, useState } from "react";
 
 import NewPipelineButton from "@/components/shared/NewPipelineButton";
 import QuickStartCards from "@/components/shared/QuickStart/QuickStartCards";
@@ -71,7 +71,7 @@ export const PipelineSection = withSuspenseWrapper(() => {
     return name.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
-  const fetchUserPipelines = useCallback(async () => {
+  const fetchUserPipelines = async () => {
     setIsLoading(true);
     try {
       const pipelines = await getAllComponentFilesFromList(
@@ -91,47 +91,39 @@ export const PipelineSection = withSuspenseWrapper(() => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  };
 
-  const handleSearch = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+  const handleSearch = (e: ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
-  }, []);
+  };
 
-  const handleSelectAll = useCallback(
-    (checked: boolean) => {
-      if (checked) {
-        const allPipelineNames = new Set(
-          filteredPipelines.map(([name]) => name),
-        );
-        setSelectedPipelines(allPipelineNames);
-      } else {
-        setSelectedPipelines(new Set());
-      }
-    },
-    [filteredPipelines],
-  );
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allPipelineNames = new Set(filteredPipelines.map(([name]) => name));
+      setSelectedPipelines(allPipelineNames);
+    } else {
+      setSelectedPipelines(new Set());
+    }
+  };
 
-  const handleSelectPipeline = useCallback(
-    (pipelineName: string, checked: boolean) => {
-      const newSelected = new Set(selectedPipelines);
-      if (checked) {
-        newSelected.add(pipelineName);
-      } else {
-        newSelected.delete(pipelineName);
-      }
-      setSelectedPipelines(newSelected);
-    },
-    [selectedPipelines],
-  );
+  const handleSelectPipeline = (pipelineName: string, checked: boolean) => {
+    const newSelected = new Set(selectedPipelines);
+    if (checked) {
+      newSelected.add(pipelineName);
+    } else {
+      newSelected.delete(pipelineName);
+    }
+    setSelectedPipelines(newSelected);
+  };
 
-  const handleBulkDelete = useCallback(() => {
+  const handleBulkDelete = () => {
     setSelectedPipelines(new Set());
     fetchUserPipelines();
-  }, [fetchUserPipelines]);
+  };
 
   useEffect(() => {
     fetchUserPipelines();
-  }, [fetchUserPipelines]);
+  }, []);
 
   if (isLoading) {
     return (

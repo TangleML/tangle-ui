@@ -5,6 +5,9 @@ import simpleImportSort from "eslint-plugin-simple-import-sort";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 
+// Keep in sync with REACT_COMPILER_ENABLED_DIRS in vite.config.js
+const REACT_COMPILER_ENABLED_GLOBS = ["src/components/Home/**/*.{ts,tsx}"];
+
 /** @type {import('eslint').Linter.Config[]} */
 export default [
   { files: ["**/*.{js,mjs,cjs,ts,jsx,tsx}"] },
@@ -57,6 +60,25 @@ export default [
     plugins: {
       "simple-import-sort": simpleImportSort,
       "react-compiler": reactCompiler,
+    },
+  },
+  // React Compiler enabled directories: warn about unnecessary useCallback/useMemo
+  {
+    files: REACT_COMPILER_ENABLED_GLOBS,
+    rules: {
+      "no-restricted-syntax": [
+        "warn",
+        {
+          selector: "CallExpression[callee.name='useCallback']",
+          message:
+            "useCallback is unnecessary with React Compiler. The compiler auto-memoizes functions.",
+        },
+        {
+          selector: "CallExpression[callee.name='useMemo']",
+          message:
+            "useMemo may be unnecessary with React Compiler. The compiler auto-memoizes values.",
+        },
+      ],
     },
   },
   {
