@@ -10,9 +10,14 @@ import { copyToClipboard } from "@/utils/string";
 interface CopyTextProps {
   children: string;
   className?: string;
+  alwaysShowButton?: boolean;
 }
 
-export const CopyText = ({ children, className }: CopyTextProps) => {
+export const CopyText = ({
+  children,
+  className,
+  alwaysShowButton = false,
+}: CopyTextProps) => {
   const [isCopied, setIsCopied] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -34,7 +39,6 @@ export const CopyText = ({ children, className }: CopyTextProps) => {
   }, []);
 
   return (
-
     <div
       className="group cursor-pointer"
       onClick={handleCopy}
@@ -54,40 +58,53 @@ export const CopyText = ({ children, className }: CopyTextProps) => {
         </Text>
 
         <Button
-          variant={null}
+          variant="ghost"
           size="icon"
           className={cn(
-            "h-4 w-4 shrink-0 transition-opacity duration-200",
-            isCopied ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+            "h-6 w-6 shrink-0 transition-opacity duration-200",
+            alwaysShowButton || isCopied
+              ? "opacity-100"
+              : "opacity-0 group-hover:opacity-100",
           )}
           onClick={handleButtonClick}
         >
-          <span className="relative h-3 w-3">
-            {isCopied ? (
-              <span
-                key="check"
-                className="absolute inset-0 animate-revert-copied"
-                onAnimationEnd={handleAnimationEnd}
-              >
-                <Icon name="Check" size="sm" className="text-emerald-400" />
-              </span>
-            ) : (
-              <Icon
-                key="copy"
-                name="Copy"
-                size="sm"
-                className={cn(
-                  "absolute inset-0 text-muted-foreground transition-all duration-200",
-                  isHovered
-                    ? "rotate-0 scale-100 opacity-100"
-                    : "rotate-90 scale-0 opacity-0",
-                )}
-              />
-            )}
-          </span>
+          <CopyIcon
+            isCopied={isCopied}
+            alwaysShow={alwaysShowButton || isHovered}
+            onAnimationEnd={handleAnimationEnd}
+          />
         </Button>
       </InlineStack>
     </div>
-
   );
 };
+
+interface CopyIconProps {
+  isCopied: boolean;
+  alwaysShow: boolean;
+  onAnimationEnd: () => void;
+}
+//
+const CopyIcon = ({ isCopied, alwaysShow, onAnimationEnd }: CopyIconProps) => (
+  <span className="relative h-3.5 w-3.5">
+    {isCopied ? (
+      <span
+        className="absolute inset-0 animate-revert-copied"
+        onAnimationEnd={onAnimationEnd}
+      >
+        <Icon name="Check" size="sm" className="text-emerald-400" />
+      </span>
+    ) : (
+      <Icon
+        name="Copy"
+        size="sm"
+        className={cn(
+          "absolute inset-0 text-muted-foreground transition-all duration-200",
+          alwaysShow
+            ? "rotate-0 scale-100 opacity-100"
+            : "rotate-90 scale-0 opacity-0",
+        )}
+      />
+    )}
+  </span>
+);
