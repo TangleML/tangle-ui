@@ -16,9 +16,9 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/components/shared/Status",
 
   // 2-5 useCallback/useMemo
-  // "src/components/shared/CodeViewer",          // 2
-  // "src/components/shared/FullscreenElement",   // 2
-  // "src/components/shared/CopyText",            // 3
+  "src/components/shared/CodeViewer", // 2
+  "src/components/shared/FullscreenElement", // 2
+  "src/components/shared/CopyText", // 3
   // "src/components/shared/TaskDetails",         // 4
   // "src/components/shared/GitHubAuth",          // 5
 

@@ -2,7 +2,6 @@ import {
   type PropsWithChildren,
   type RefObject,
   useEffect,
-  useMemo,
   useRef,
 } from "react";
 import { createPortal } from "react-dom";
@@ -54,9 +53,7 @@ function FullscreenElementPortal({
     };
   }, [fullscreen, defaultMountElement]);
 
-  const fragment = useMemo(() => <>{children}</>, [children]);
-
-  return createPortal(fragment, containerElementRef.current, id.current);
+  return createPortal(<>{children}</>, containerElementRef.current, id.current);
 }
 
 export function FullscreenElement({

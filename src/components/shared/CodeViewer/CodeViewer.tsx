@@ -1,5 +1,5 @@
 import { FileCode2, Maximize2, X as XIcon } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -26,9 +26,9 @@ const CodeViewer = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const shouldRenderInlineCode = showInlineContent || isFullscreen;
 
-  const handleEnterFullscreen = useCallback(() => {
+  const handleEnterFullscreen = () => {
     setIsFullscreen((prev) => !prev);
-  }, []);
+  };
 
   const compactButton = (
     <TooltipButton
