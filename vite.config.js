@@ -11,7 +11,8 @@ const __dirname = path.dirname(__filename);
 // React Compiler: Directory-based incremental adoption
 // Add directories here as they are cleaned up for compiler compatibility
 const REACT_COMPILER_ENABLED_DIRS = [
-  "src/components/Home/RunSection",
+  "src/components/Home",
+
   // Add more directories as you clean them up:
   // "src/components/shared/",
   // "src/hooks/",

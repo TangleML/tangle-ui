@@ -1,5 +1,3 @@
-import { useCallback } from "react";
-
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -21,7 +19,7 @@ const BulkActionsBar = ({
 }: BulkActionsBarProps) => {
   const notify = useToastNotification();
 
-  const handleBulkDelete = useCallback(async () => {
+  const handleBulkDelete = async () => {
     const deletePromises = selectedPipelines.map((pipelineName) =>
       deletePipeline(pipelineName),
     );
@@ -37,7 +35,7 @@ const BulkActionsBar = ({
       const errorMessage = getErrorMessage(error);
       notify("Failed to delete some pipelines: " + errorMessage, "error");
     }
-  }, [selectedPipelines, onDeleteSuccess]);
+  };
 
   return (
     <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-background border border-border rounded-lg shadow-lg p-4 z-50">
