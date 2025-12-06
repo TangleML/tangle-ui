@@ -46,12 +46,7 @@ export const AnnotationsEditor = ({
 
   return (
     <BlockStack gap="2">
-      <InlineStack
-        gap="2"
-        align="space-between"
-        blockAlign="center"
-        className="w-full"
-      >
+      <InlineStack gap="2" align="space-between" className="w-full">
         <Heading level={1}>Annotations</Heading>
 
         <Button

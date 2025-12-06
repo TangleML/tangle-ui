@@ -139,7 +139,7 @@ const BackendConfigurationDialog = ({
         </DialogDescription>
 
         <BlockStack gap="4">
-          <InlineStack gap="2" blockAlign="center">
+          <InlineStack gap="2">
             <Paragraph>Backend status: </Paragraph>
             <Tooltip>
               <TooltipTrigger className="flex items-center gap-2" tabIndex={-1}>
@@ -173,7 +173,7 @@ const BackendConfigurationDialog = ({
               <Separator />
               <BlockStack gap="2">
                 <Heading level={1}>Configure using .env</Heading>
-                <InlineStack gap="2" blockAlign="center">
+                <InlineStack gap="2">
                   <Switch
                     checked={isEnvConfig}
                     onCheckedChange={handleEnvSwitch}
@@ -191,7 +191,7 @@ const BackendConfigurationDialog = ({
               <Separator />
               <BlockStack gap="2">
                 <Heading level={1}>Use same-domain backend</Heading>
-                <InlineStack gap="2" blockAlign="center">
+                <InlineStack gap="2">
                   <Switch
                     checked={isRelativePathConfig}
                     onCheckedChange={(checked) => {
@@ -222,12 +222,7 @@ const BackendConfigurationDialog = ({
               </InfoBox>
               <BlockStack>
                 <Heading level={3}>Backend URL</Heading>
-                <InlineStack
-                  gap="2"
-                  blockAlign="center"
-                  wrap="nowrap"
-                  className="w-full"
-                >
+                <InlineStack gap="2" wrap="nowrap" className="w-full">
                   <InlineStack className="relative w-full">
                     <Input
                       value={inputBackendUrl}
@@ -263,7 +258,7 @@ const BackendConfigurationDialog = ({
                 </InlineStack>
               </BlockStack>
               {!inputBackendUrl.trim() && (
-                <InlineStack gap="2" blockAlign="center">
+                <InlineStack gap="2">
                   <Icon
                     name="CircleAlert"
                     className="inline-block text-destructive"

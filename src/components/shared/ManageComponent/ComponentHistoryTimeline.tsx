@@ -121,7 +121,7 @@ export const ComponentHistoryTimeline = withSuspenseWrapper(
 
               return (
                 <ComponentHistoryTimelineItem key={item.digest} icon={icon}>
-                  <InlineStack gap="1" blockAlign="center">
+                  <InlineStack gap="1">
                     <ComponentQuickDetailsDialogTrigger component={item} />
                     <Text size="xs">by {item.published_by}</Text>
 
@@ -169,7 +169,7 @@ export const ComponentHistoryTimeline = withSuspenseWrapper(
                         : "| you have a version of this component that is not published yet"}
                     </Text>
                   </InlineStack>
-                  <InlineStack gap="1" blockAlign="center">
+                  <InlineStack gap="1">
                     {isPotentialNewRelease ? (
                       <DeprecatePublishedComponentButton
                         predecessorComponent={lastHydratedComponent}
@@ -193,7 +193,7 @@ export const ComponentHistoryTimeline = withSuspenseWrapper(
                 icon="CircleDashed"
                 iconClassName="text-gray-500"
               >
-                <InlineStack gap="1" blockAlign="center">
+                <InlineStack gap="1">
                   <Text size="xs" tone="subdued">
                     To release a new version, drop the new component YAML file
                     on the Pipeline Editor.

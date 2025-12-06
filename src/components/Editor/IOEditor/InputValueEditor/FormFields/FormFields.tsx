@@ -30,18 +30,14 @@ const FormField = ({
   children: ReactNode;
 }) => (
   <BlockStack>
-    <InlineStack
-      align="space-between"
-      blockAlign="center"
-      className="w-full mb-1"
-    >
-      <InlineStack gap="2" blockAlign="center">
+    <InlineStack align="space-between" className="w-full mb-1">
+      <InlineStack gap="2">
         <label htmlFor={id} className="text-xs text-muted-foreground">
           {label}
         </label>
         {labelSuffix}
       </InlineStack>
-      <InlineStack blockAlign="center" gap="1">
+      <InlineStack gap="1">
         {actions?.map(
           (action) =>
             !action.hidden && (
@@ -118,7 +114,7 @@ const TextField = ({
     id={`input-value-${inputName}`}
     actions={actions}
     labelSuffix={
-      <InlineStack gap="1" blockAlign="center" className="ml-2">
+      <InlineStack gap="1" className="ml-2">
         <Icon
           name="SquareCheckBig"
           size="sm"

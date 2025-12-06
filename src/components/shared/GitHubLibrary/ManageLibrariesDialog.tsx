@@ -56,7 +56,7 @@ export function ManageLibrariesDialog({
             <>
               <DialogHeader>
                 <DialogTitle>
-                  <InlineStack align="start" blockAlign="center" gap="1">
+                  <InlineStack align="start" gap="1">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -88,7 +88,7 @@ export function ManageLibrariesDialog({
                 <Separator />
                 <BlockStack gap="1" align="end">
                   <Button variant="secondary" onClick={() => setMode("add")}>
-                    <InlineStack align="center" blockAlign="center" gap="1">
+                    <InlineStack align="center" gap="1">
                       <Icon name="Github" />
                       Link Library from GitHub
                     </InlineStack>
@@ -102,7 +102,7 @@ export function ManageLibrariesDialog({
             <>
               <DialogHeader>
                 <DialogTitle>
-                  <InlineStack align="start" blockAlign="center" gap="1">
+                  <InlineStack align="start" gap="1">
                     <Button
                       variant="ghost"
                       size="sm"

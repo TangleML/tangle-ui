@@ -263,7 +263,7 @@ export const AnnotationsInput = ({
     );
   } else if (inputType === "number") {
     inputElement = (
-      <InlineStack gap="2" blockAlign="center" wrap="nowrap" className="grow">
+      <InlineStack gap="2" wrap="nowrap" className="grow">
         <Input
           type="number"
           value={inputValue}
@@ -288,7 +288,7 @@ export const AnnotationsInput = ({
     );
   } else {
     inputElement = (
-      <InlineStack gap="2" blockAlign="center" wrap="nowrap" className="grow">
+      <InlineStack gap="2" wrap="nowrap" className="grow">
         <div className="flex-1 w-full relative group">
           <Input
             value={
@@ -315,7 +315,7 @@ export const AnnotationsInput = ({
           </Button>
         </div>
         {isInvalid && (
-          <InlineStack gap="1" blockAlign="center" className="my-1">
+          <InlineStack gap="1" className="my-1">
             <Icon name="TriangleAlert" />
             <Paragraph size="xs" tone="warning">
               Invalid JSON
@@ -330,7 +330,7 @@ export const AnnotationsInput = ({
 
   return (
     <>
-      <InlineStack gap="2" blockAlign="center" wrap="nowrap" className="w-full">
+      <InlineStack gap="2" wrap="nowrap" className="w-full">
         {inputElement}
         {config?.enableQuantity && (
           <QuantityInput
@@ -392,12 +392,7 @@ const QuantityInput = ({
   );
 
   return (
-    <InlineStack
-      gap="2"
-      blockAlign="center"
-      wrap="nowrap"
-      className="max-w-1/3"
-    >
+    <InlineStack gap="2" wrap="nowrap" className="max-w-1/3">
       <span>x</span>
       <Input
         type="number"

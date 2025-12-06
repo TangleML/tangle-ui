@@ -53,12 +53,7 @@ const IOCellHeader = ({
           : "rounded-md",
       )}
     >
-      <InlineStack
-        align="space-between"
-        blockAlign="center"
-        gap="2"
-        className="px-3 w-full"
-      >
+      <InlineStack align="space-between" gap="2" className="px-3 w-full">
         <div className="flex-1 min-w-auto shrink-0">
           <Tooltip
             delayDuration={300}
@@ -84,11 +79,7 @@ const IOCellHeader = ({
 
         {artifactData && (
           <InlineStack gap="2">
-            <InlineStack
-              blockAlign="center"
-              gap="1"
-              className="text-xs text-gray-500"
-            >
+            <InlineStack gap="1" className="text-xs text-gray-500">
               {artifactData.uri && (
                 <>
                   <Link

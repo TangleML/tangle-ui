@@ -11,7 +11,7 @@ export const TogglePreview = ({
   setShowPreview: (showPreview: boolean) => void;
 }) => {
   return (
-    <InlineStack gap="1" blockAlign="center">
+    <InlineStack gap="1">
       <Text>Preview:</Text>
       <Button
         variant="link"

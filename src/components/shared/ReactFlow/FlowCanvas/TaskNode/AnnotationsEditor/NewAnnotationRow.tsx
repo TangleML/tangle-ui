@@ -44,7 +44,7 @@ export const NewAnnotationRow = ({
 
   return (
     <div onBlur={handleRowBlur}>
-      <InlineStack blockAlign="center" gap="2" className="mt-2">
+      <InlineStack gap="2" className="mt-2">
         <Input
           placeholder="New annotation"
           value={key}

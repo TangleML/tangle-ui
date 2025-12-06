@@ -16,7 +16,7 @@ import { TrimmedDigest } from "./TrimmedDigest";
 
 const PublishedComponentDetailsSkeleton = () => {
   return (
-    <InlineStack gap="1" blockAlign="center" align="center">
+    <InlineStack gap="1" align="center">
       <Spinner size={10} />
       <Text size="xs" tone="subdued">
         Looking for updates...
@@ -77,7 +77,7 @@ export const PublishedComponentDetails = withSuspenseWrapper(
               </ComponentUsageCount>
             </InlineStack>
             {isOutdated ? (
-              <InlineStack gap="1" blockAlign="center" align="center">
+              <InlineStack gap="1" align="center">
                 <Paragraph size="xs" tone="critical">
                   There is a newer version of this component available.
                 </Paragraph>
