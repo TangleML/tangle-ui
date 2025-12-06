@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { updateInputNameOnComponentSpec } from "@/components/Editor/utils/updateInputNameOnComponentSpec";
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
@@ -59,110 +59,94 @@ export const InputValueEditor = ({
   const [validationError, setValidationError] = useState<string | null>(null);
 
   // Check if this input is connected to any required fields
-  const { isConnectedToRequired } = useMemo(() => {
-    return checkInputConnectionToRequiredFields(
-      input.name,
-      currentSubgraphSpec,
-    );
-  }, [input.name, currentSubgraphSpec]);
+  const { isConnectedToRequired } = checkInputConnectionToRequiredFields(
+    input.name,
+    currentSubgraphSpec,
+  );
 
   const effectiveOptionalValue = isConnectedToRequired ? false : inputOptional;
   const isInSubgraph = currentSubgraphPath.length > 1;
 
-  const handleInputChange = useCallback(
-    (
-      oldName: string,
-      value: string,
-      newName: string,
-      optional: boolean,
-      type: string,
-    ) => {
-      if (!currentSubgraphSpec.inputs) return;
+  const handleInputChange = (
+    oldName: string,
+    value: string,
+    newName: string,
+    optional: boolean,
+    type: string,
+  ) => {
+    if (!currentSubgraphSpec.inputs) return;
 
-      if (newName === "") {
-        setValidationError("Input name cannot be empty");
-        return;
+    if (newName === "") {
+      setValidationError("Input name cannot be empty");
+      return;
+    }
+
+    const updatedInputs = currentSubgraphSpec.inputs.map((componentInput) => {
+      if (componentInput.name === oldName) {
+        return {
+          ...componentInput,
+          value,
+          default: value,
+          name: newName,
+          optional,
+          type,
+        };
       }
+      return componentInput;
+    });
 
-      const updatedInputs = currentSubgraphSpec.inputs.map((componentInput) => {
-        if (componentInput.name === oldName) {
-          return {
-            ...componentInput,
-            value,
-            default: value,
-            name: newName,
-            optional,
-            type,
-          };
-        }
-        return componentInput;
-      });
+    const updatedComponentSpecValues = {
+      ...currentSubgraphSpec,
+      inputs: updatedInputs,
+    };
 
-      const updatedComponentSpecValues = {
-        ...currentSubgraphSpec,
-        inputs: updatedInputs,
-      };
+    const updatedComponentSpec = updateInputNameOnComponentSpec(
+      updatedComponentSpecValues,
+      oldName,
+      newName,
+    );
 
-      const updatedComponentSpec = updateInputNameOnComponentSpec(
-        updatedComponentSpecValues,
-        oldName,
-        newName,
-      );
+    transferSelection(oldName, newName);
 
-      transferSelection(oldName, newName);
+    return updatedComponentSpec;
+  };
 
-      return updatedComponentSpec;
-    },
-    [currentSubgraphSpec, transferSelection],
-  );
-
-  const handleValueChange = useCallback((value: string) => {
+  const handleValueChange = (value: string) => {
     setInputValue(value);
-  }, []);
+  };
 
-  const handleTypeChange = useCallback((value: string) => {
+  const handleTypeChange = (value: string) => {
     setInputType(value);
-  }, []);
+  };
 
-  const handleNameChange = useCallback(
-    (newName: string) => {
-      setInputName(newName);
+  const handleNameChange = (newName: string) => {
+    setInputName(newName);
 
-      if (
-        checkNameCollision(
-          newName.trim(),
-          input.name.trim(),
-          componentSpec,
-          "inputs",
-        )
-      ) {
-        setValidationError("An input with this name already exists");
-        return;
-      }
+    if (
+      checkNameCollision(
+        newName.trim(),
+        input.name.trim(),
+        componentSpec,
+        "inputs",
+      )
+    ) {
+      setValidationError("An input with this name already exists");
+      return;
+    }
 
-      setValidationError(null);
-    },
-    [input.name, currentSubgraphSpec],
-  );
+    setValidationError(null);
+  };
 
-  const hasChanges = useCallback(() => {
+  const hasChanges = () => {
     return (
       inputValue !== initialInputValue ||
       inputName.trim() !== input.name ||
       inputType !== (input.type?.toString() ?? "any") ||
       inputOptional !== initialIsOptional
     );
-  }, [
-    inputValue,
-    inputName,
-    inputType,
-    inputOptional,
-    initialInputValue,
-    initialIsOptional,
-    input,
-  ]);
+  };
 
-  const saveChanges = useCallback(() => {
+  const saveChanges = () => {
     if (!hasChanges() || validationError) return;
 
     const updatedSubgraphSpec = handleInputChange(
@@ -181,32 +165,20 @@ export const InputValueEditor = ({
       );
       setComponentSpec(updatedRootSpec);
     }
-  }, [
-    handleInputChange,
-    setComponentSpec,
-    hasChanges,
-    validationError,
-    input.name,
-    inputValue,
-    inputName,
-    effectiveOptionalValue,
-    inputType,
-    componentSpec,
-    currentSubgraphPath,
-  ]);
+  };
 
-  const handleBlur = useCallback(() => {
+  const handleBlur = () => {
     saveChanges();
-  }, [saveChanges]);
+  };
 
-  const handleCopyValue = useCallback(() => {
+  const handleCopyValue = () => {
     if (inputValue.trim()) {
       void navigator.clipboard.writeText(inputValue.trim());
       notify("Input value copied to clipboard", "success");
     }
-  }, [inputValue]);
+  };
 
-  const deleteNode = useCallback(async () => {
+  const deleteNode = async () => {
     if (!currentSubgraphSpec.inputs) return;
 
     const confirmed = await triggerConfirmation({
@@ -231,32 +203,23 @@ export const InputValueEditor = ({
     setComponentSpec(updatedRootSpec);
 
     clearContent();
-  }, [
-    currentSubgraphSpec,
-    input.name,
-    setComponentSpec,
-    clearContent,
-    triggerConfirmation,
-    inputName,
-    componentSpec,
-    currentSubgraphPath,
-  ]);
+  };
 
-  const handleExpandValueEditor = useCallback(() => {
+  const handleExpandValueEditor = () => {
     if (disabled) return;
 
     setIsValueDialogOpen(true);
-  }, [disabled]);
+  };
 
-  const handleDialogCancel = useCallback(() => {
+  const handleDialogCancel = () => {
     setIsValueDialogOpen(false);
-  }, []);
+  };
 
-  const handleDialogConfirm = useCallback((value: string) => {
+  const handleDialogConfirm = (value: string) => {
     setInputValue(value);
     setIsValueDialogOpen(false);
     setTriggerSave(true);
-  }, []);
+  };
 
   useEffect(() => {
     setInputValue(initialInputValue);

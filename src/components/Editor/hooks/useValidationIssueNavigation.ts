@@ -1,5 +1,5 @@
 import equal from "fast-deep-equal";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useNodesOverlay } from "@/components/shared/ReactFlow/NodesOverlay/NodesOverlayProvider";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
@@ -39,6 +39,33 @@ export interface ValidationIssueGroup {
   issues: ValidationIssueListItem[];
 }
 
+const groupIssuesByPath = (
+  items: ValidationIssueListItem[],
+): ValidationIssueGroup[] => {
+  const groupsMap = items.reduce((acc, item) => {
+    const pathKey = item.issue.subgraphPath.join(" > ");
+    const existing = acc.get(pathKey);
+    return acc.set(pathKey, existing ? [...existing, item] : [item]);
+  }, new Map<string, ValidationIssueListItem[]>());
+
+  return Array.from(groupsMap.entries())
+    .map(([pathKey, groupItems]) => {
+      const { subgraphPath } = groupItems[0].issue;
+      const depth = subgraphPath.length - 1;
+      const isRoot = depth === 0;
+      const taskId = subgraphPath[subgraphPath.length - 1] ?? "Subgraph";
+
+      return {
+        pathKey,
+        pathLabel: isRoot ? "Root Pipeline" : taskId,
+        fullPath: isRoot ? "Root Pipeline" : subgraphPath.slice(1).join(" → "),
+        depth,
+        issues: groupItems,
+      };
+    })
+    .sort((a, b) => a.depth - b.depth);
+};
+
 export const useValidationIssueNavigation = (
   validationIssues: ComponentValidationIssue[],
 ) => {
@@ -50,27 +77,24 @@ export const useValidationIssueNavigation = (
 
   const highlightedNodeRef = useRef<string | null>(null);
 
-  const focusIssue = useCallback(
-    async (issue: ComponentValidationIssue) => {
-      const nodeId = getIssueNodeId(issue);
-      if (!nodeId) return;
+  const focusIssue = async (issue: ComponentValidationIssue) => {
+    const nodeId = getIssueNodeId(issue);
+    if (!nodeId) return;
 
-      // Clear previous highlight
-      if (highlightedNodeRef.current && highlightedNodeRef.current !== nodeId) {
-        notifyNode(highlightedNodeRef.current, { type: "clear" });
-      }
+    // Clear previous highlight
+    if (highlightedNodeRef.current && highlightedNodeRef.current !== nodeId) {
+      notifyNode(highlightedNodeRef.current, { type: "clear" });
+    }
 
-      await fitNodeIntoView(nodeId);
+    await fitNodeIntoView(nodeId);
 
-      if (issue.type === "task") {
-        highlightedNodeRef.current = nodeId;
-        notifyNode(nodeId, { type: "highlight" });
-      } else {
-        highlightedNodeRef.current = null;
-      }
-    },
-    [fitNodeIntoView, notifyNode],
-  );
+    if (issue.type === "task") {
+      highlightedNodeRef.current = nodeId;
+      notifyNode(nodeId, { type: "highlight" });
+    } else {
+      highlightedNodeRef.current = null;
+    }
+  };
 
   useEffect(() => {
     return () => {
@@ -80,18 +104,15 @@ export const useValidationIssueNavigation = (
     };
   }, [notifyNode]);
 
-  const handleIssueClick = useCallback(
-    (issue: ComponentValidationIssue) => {
-      if (!equal(issue.subgraphPath, currentSubgraphPath)) {
-        setPendingIssue(issue);
-        navigateToPath(issue.subgraphPath);
-        return;
-      }
+  const handleIssueClick = (issue: ComponentValidationIssue) => {
+    if (!equal(issue.subgraphPath, currentSubgraphPath)) {
+      setPendingIssue(issue);
+      navigateToPath(issue.subgraphPath);
+      return;
+    }
 
-      focusIssue(issue);
-    },
-    [currentSubgraphPath, focusIssue, navigateToPath],
-  );
+    focusIssue(issue);
+  };
 
   useEffect(() => {
     if (!pendingIssue) return;
@@ -105,8 +126,8 @@ export const useValidationIssueNavigation = (
     return () => cancelAnimationFrame(frameId);
   }, [currentSubgraphPath, focusIssue, pendingIssue]);
 
-  const issueItems = useMemo<ValidationIssueListItem[]>(() => {
-    return validationIssues.map((issue) => {
+  const issueItems: ValidationIssueListItem[] = validationIssues.map(
+    (issue) => {
       const nodeLabel =
         issue.taskId ?? issue.inputName ?? issue.outputName ?? null;
       const fallbackName =
@@ -121,39 +142,10 @@ export const useValidationIssueNavigation = (
         typeLabel: ISSUE_TYPE_LABELS[issue.type],
         displayMessage: issue.message,
       };
-    });
-  }, [validationIssues]);
+    },
+  );
 
-  const groupedIssues = useMemo<ValidationIssueGroup[]>(() => {
-    const groupsMap = issueItems.reduce((acc, item) => {
-      const pathKey = item.issue.subgraphPath.join(" > ");
-      const existing = acc.get(pathKey);
-      if (existing) {
-        return acc.set(pathKey, [...existing, item]);
-      }
-      return acc.set(pathKey, [item]);
-    }, new Map<string, ValidationIssueListItem[]>());
-
-    return Array.from(groupsMap.entries())
-      .map(([pathKey, items]) => {
-        const { subgraphPath } = items[0].issue;
-        const depth = subgraphPath.length - 1;
-        const isRoot = depth === 0;
-
-        const taskId = subgraphPath[subgraphPath.length - 1] ?? "Subgraph";
-
-        return {
-          pathKey,
-          pathLabel: isRoot ? "Root Pipeline" : taskId,
-          fullPath: isRoot
-            ? "Root Pipeline"
-            : subgraphPath.slice(1).join(" → "),
-          depth,
-          issues: items,
-        };
-      })
-      .sort((a, b) => a.depth - b.depth);
-  }, [issueItems]);
+  const groupedIssues = groupIssuesByPath(issueItems);
 
   return {
     handleIssueClick,

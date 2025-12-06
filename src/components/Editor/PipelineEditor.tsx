@@ -1,7 +1,7 @@
 import "@/styles/editor.css";
 
 import { Background, MiniMap, type ReactFlowProps } from "@xyflow/react";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 
 import { CollapsibleContextPanel } from "@/components/shared/ContextPanel/CollapsibleContextPanel";
 import {
@@ -38,15 +38,12 @@ const PipelineEditor = () => {
     nodesDraggable: true,
   });
 
-  const updateFlowConfig = useCallback(
-    (updatedConfig: Partial<ReactFlowProps>) => {
-      setFlowConfig((prevConfig) => ({
-        ...prevConfig,
-        ...updatedConfig,
-      }));
-    },
-    [],
-  );
+  const updateFlowConfig = (updatedConfig: Partial<ReactFlowProps>) => {
+    setFlowConfig((prevConfig) => ({
+      ...prevConfig,
+      ...updatedConfig,
+    }));
+  };
 
   // If the pipeline is loading or the component spec is empty, show a loading spinner
   if (isLoading || componentSpec === EMPTY_GRAPH_COMPONENT_SPEC) {
