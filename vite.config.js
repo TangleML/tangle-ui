@@ -8,8 +8,35 @@ import { defineConfig } from "vite";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// React Compiler: Directory-based incremental adoption
+// Add directories here as they are cleaned up for compiler compatibility
+const REACT_COMPILER_ENABLED_DIRS = [
+  "src/components/Home/RunSection",
+  // Add more directories as you clean them up:
+  // "src/components/shared/",
+  // "src/hooks/",
+];
+
 export default defineConfig({
-  plugins: [viteReact(), tailwindcss()],
+  plugins: [
+    viteReact({
+      babel: {
+        plugins: [
+          [
+            "babel-plugin-react-compiler",
+            {
+              sources: (filename) => {
+                return REACT_COMPILER_ENABLED_DIRS.some((dir) =>
+                  filename.includes(dir),
+                );
+              },
+            },
+          ],
+        ],
+      },
+    }),
+    tailwindcss(),
+  ],
   base: "/",
   resolve: {
     alias: {

@@ -1,5 +1,6 @@
 import pluginJs from "@eslint/js";
 import pluginReact from "eslint-plugin-react";
+import reactCompiler from "eslint-plugin-react-compiler";
 import simpleImportSort from "eslint-plugin-simple-import-sort";
 import globals from "globals";
 import tseslint from "typescript-eslint";
@@ -28,6 +29,7 @@ export default [
       ],
       "simple-import-sort/imports": "warn",
       "simple-import-sort/exports": "warn",
+      "react-compiler/react-compiler": "error",
       "no-restricted-imports": [
         "error",
         {
@@ -54,6 +56,7 @@ export default [
     },
     plugins: {
       "simple-import-sort": simpleImportSort,
+      "react-compiler": reactCompiler,
     },
   },
   {

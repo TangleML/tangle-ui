@@ -716,7 +716,8 @@ const cardVariants = cva(
 );
 
 interface CardProps
-  extends React.HTMLAttributes<HTMLDivElement>,
+  extends
+    React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof cardVariants> {}
 
 export function Card({ className, padding, variant, ...props }: CardProps) {

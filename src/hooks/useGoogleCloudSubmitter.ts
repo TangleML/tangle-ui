@@ -157,11 +157,11 @@ export const useGoogleCloudSubmitter = ({
         .toLowerCase()
         .replace(/[^-a-z0-9]/g, "-")
         .replace(/^-+/, ""); // No leading dashes
-      vertexPipelineJob.displayName = displayName;
+      const pipelineJobWithDisplayName = { ...vertexPipelineJob, displayName };
       const result = await aiplatformCreatePipelineJob(
         config.projectId,
         config.region,
-        vertexPipelineJob,
+        pipelineJobWithDisplayName,
         config.googleCloudOAuthClientId,
         desiredPipelineJobId,
       );
