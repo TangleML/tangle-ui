@@ -366,7 +366,7 @@ const addComponentRefToList = async (
   return writeComponentRefToFile(listName, uniqueFileName, componentRef);
 };
 
-export const addComponentToListByUrl = async (
+const addComponentToListByUrl = async (
   listName: string,
   url: string,
   defaultFileName: string = "Component",
@@ -438,7 +438,7 @@ const findDuplicateComponent = async (
  * @param allowDuplicates - Whether to allow duplicate imports (default: false)
  * @returns Object with the file entry and a flag indicating if it was a duplicate
  */
-export const addComponentToListByTextWithDuplicateCheck = async (
+const addComponentToListByTextWithDuplicateCheck = async (
   listName: string,
   componentText: string | ArrayBuffer,
   fileName?: string,
