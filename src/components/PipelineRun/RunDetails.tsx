@@ -1,7 +1,9 @@
 import { Frown } from "lucide-react";
 
 import { CopyText } from "@/components/shared/CopyText/CopyText";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
+import { Text } from "@/components/ui/typography";
 import { useCheckComponentSpecFromPath } from "@/hooks/useCheckComponentSpecFromPath";
 import { useUserDetails } from "@/hooks/useUserDetails";
 import { useBackend } from "@/providers/BackendProvider";
@@ -15,7 +17,7 @@ import {
 } from "@/services/executionService";
 
 import { InfoBox } from "../shared/InfoBox";
-import { StatusBar, StatusIcon, StatusText } from "../shared/Status";
+import { StatusBar, StatusText } from "../shared/Status";
 import { TaskImplementation } from "../shared/TaskDetails";
 import { CancelPipelineRunButton } from "./components/CancelPipelineRunButton";
 import { ClonePipelineButton } from "./components/ClonePipelineButton";
@@ -82,13 +84,26 @@ export const RunDetails = () => {
   const annotations = componentSpec.metadata?.annotations || {};
 
   return (
-    <div className="p-2 flex flex-col gap-6 h-full">
-      <div className="flex items-center gap-2 max-w-[90%]">
-        <CopyText className="text-lg font-semibold" alwaysShowButton>
-          {componentSpec.name ?? "Unnamed Pipeline"}
-        </CopyText>
-        <StatusIcon status={runStatus} tooltip />
-      </div>
+    <BlockStack gap="6" className="p-2 h-full">
+      <CopyText className="text-lg font-semibold">
+        {componentSpec.name ?? "Unnamed Pipeline"}
+      </CopyText>
+
+      <InlineStack gap="2">
+        <TaskImplementation
+          displayName={componentSpec.name ?? "Pipeline"}
+          componentSpec={componentSpec}
+          showInlineContent={false}
+        />
+        {canAccessEditorSpec && componentSpec.name && (
+          <InspectPipelineButton pipelineName={componentSpec.name} />
+        )}
+        <ClonePipelineButton componentSpec={componentSpec} />
+        {isInProgress && isRunCreator && (
+          <CancelPipelineRunButton runId={runId} />
+        )}
+        {isComplete && <RerunPipelineButton componentSpec={componentSpec} />}
+      </InlineStack>
 
       {metadata && (
         <div className="flex flex-col gap-2 text-xs text-secondary-foreground mb-2">
@@ -124,24 +139,6 @@ export const RunDetails = () => {
         </div>
       )}
 
-      <div>
-        <div className="flex gap-2 flex-wrap items-center">
-          <TaskImplementation
-            displayName={componentSpec.name ?? "Pipeline"}
-            componentSpec={componentSpec}
-            showInlineContent={false}
-          />
-          {canAccessEditorSpec && componentSpec.name && (
-            <InspectPipelineButton pipelineName={componentSpec.name} />
-          )}
-          <ClonePipelineButton componentSpec={componentSpec} />
-          {isInProgress && isRunCreator && (
-            <CancelPipelineRunButton runId={runId} />
-          )}
-          {isComplete && <RerunPipelineButton componentSpec={componentSpec} />}
-        </div>
-      </div>
-
       {componentSpec.description && (
         <div>
           <h3 className="text-md font-medium mb-1">Description</h3>
@@ -151,15 +148,15 @@ export const RunDetails = () => {
         </div>
       )}
 
-      <div>
-        <div className="flex gap-2">
-          <h3 className="text-md font-medium">Status: {runStatus}</h3>
+      <BlockStack>
+        <InlineStack gap="1" blockAlign="center">
+          <Text size="md" weight="semibold">
+            Status: {runStatus}
+          </Text>
           <StatusText statusCounts={statusCounts} />
-        </div>
-        <div className="flex flex-col gap-2">
-          <StatusBar statusCounts={statusCounts} />
-        </div>
-      </div>
+        </InlineStack>
+        <StatusBar statusCounts={statusCounts} />
+      </BlockStack>
 
       {Object.keys(annotations).length > 0 && (
         <div>
@@ -175,65 +172,55 @@ export const RunDetails = () => {
         </div>
       )}
 
-      <div>
+      <div className="w-full">
         <h3 className="text-md font-medium mb-1">Artifacts</h3>
-        <div className="flex gap-4">
-          <div className="flex-1">
+        <div className="flex gap-4 flex-col w-full">
+          <div className="w-full">
             <h4 className="text-sm font-semibold mb-1">Inputs</h4>
             {componentSpec.inputs && componentSpec.inputs.length > 0 ? (
-              <ul className="list-disc list-inside text-sm text-secondary-foreground">
+              <div className="flex flex-col w-full">
                 {componentSpec.inputs.map((input) => (
-                  <li key={input.name}>
-                    <span className="font-semibold">{input.name}</span>
-                    {input.type && (
-                      <span className="ml-2 text-muted-foreground">
-                        (
-                        {typeof input.type === "string" ? input.type : "object"}
-                        )
-                      </span>
-                    )}
-                    {input.description && (
-                      <div className="text-xs text-secondary-foreground ml-4">
-                        {input.description}
-                      </div>
-                    )}
-                  </li>
+                  <div
+                    className="flex flex-row justify-between even:bg-white odd:bg-gray-100 gap-1 px-2 py-1 rounded-xs items-center w-full"
+                    key={input.name}
+                  >
+                    <div className="text-xs flex-1 truncate">
+                      <span className="font-semibold">{input.name}</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {typeof input.type === "string" ? input.type : "object"}
+                    </div>
+                  </div>
                 ))}
-              </ul>
+              </div>
             ) : (
               <div className="text-xs text-muted-foreground">No inputs</div>
             )}
           </div>
-          <div className="flex-1">
+          <div className="w-full">
             <h4 className="text-sm font-semibold mb-1">Outputs</h4>
             {componentSpec.outputs && componentSpec.outputs.length > 0 ? (
-              <ul className="list-disc list-inside text-sm text-secondary-foreground">
+              <div className="flex flex-col w-full">
                 {componentSpec.outputs.map((output) => (
-                  <li key={output.name}>
-                    <span className="font-semibold">{output.name}</span>
-                    {output.type && (
-                      <span className="ml-2 text-muted-foreground">
-                        (
-                        {typeof output.type === "string"
-                          ? output.type
-                          : "object"}
-                        )
-                      </span>
-                    )}
-                    {output.description && (
-                      <div className="text-xs text-secondary-foreground ml-4">
-                        {output.description}
-                      </div>
-                    )}
-                  </li>
+                  <div
+                    className="flex flex-row justify-between even:bg-white odd:bg-gray-100 gap-1 px-2 py-1 rounded-xs items-center w-full"
+                    key={output.name}
+                  >
+                    <div className="text-xs flex-1 truncate">
+                      <span className="font-semibold">{output.name}</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {typeof output.type === "string" ? output.type : "object"}
+                    </div>
+                  </div>
                 ))}
-              </ul>
+              </div>
             ) : (
               <div className="text-xs text-muted-foreground">No outputs</div>
             )}
           </div>
         </div>
       </div>
-    </div>
+    </BlockStack>
   );
 };
