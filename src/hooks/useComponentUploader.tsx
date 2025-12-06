@@ -17,6 +17,9 @@ interface useComponentUploaderProps {
   ) => void;
 }
 
+/**
+ * @deprecated - use ComponentLibraryProvider instead
+ */
 const useComponentUploader = (
   readOnly = false,
   { onImportSuccess }: useComponentUploaderProps,

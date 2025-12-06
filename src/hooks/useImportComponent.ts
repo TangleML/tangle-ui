@@ -12,6 +12,10 @@ interface ImportComponentProps {
   errorCallback?: (error: Error) => void;
 }
 
+/**
+ *
+ * @deprecated
+ */
 const useImportComponent = ({
   successCallback,
   errorCallback,
