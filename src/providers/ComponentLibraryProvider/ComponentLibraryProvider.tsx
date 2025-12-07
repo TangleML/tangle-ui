@@ -601,7 +601,6 @@ export const ComponentLibraryProvider = ({
       <ComponentDuplicateDialog
         existingComponent={existingComponent ?? undefined}
         newComponent={newComponent}
-        newComponentDigest={newComponent?.digest}
         setClose={handleCloseDuplicationDialog}
         handleImportComponent={handleImportComponent}
       />

@@ -25,13 +25,11 @@ import { InfoBox } from "../InfoBox";
 const ComponentDuplicateDialog = ({
   existingComponent,
   newComponent,
-  newComponentDigest,
   setClose,
   handleImportComponent,
 }: {
   existingComponent?: UserComponent;
   newComponent?: HydratedComponentReference | null;
-  newComponentDigest?: string;
   setClose: () => void;
   handleImportComponent: (content: string) => Promise<void>;
 }) => {
@@ -42,22 +40,6 @@ const ComponentDuplicateDialog = ({
   const disableImportAsNew =
     !newName || newName.trim() === existingComponent?.name?.trim();
 
-  const generateNewDigestOnBlur = useCallback(async () => {
-    if (!newComponent) {
-      return;
-    }
-
-    if (newComponentDigest && newName.trim() === newComponent.name?.trim()) {
-      setNewDigest(newComponentDigest);
-      return;
-    }
-
-    if (newComponent && newName) {
-      const { digest } = await replaceComponentName(newComponent, newName);
-      setNewDigest(digest);
-    }
-  }, [newComponent, newName]);
-
   const handleOnOpenChange = useCallback(
     (open: boolean) => {
       if (!open) {
@@ -66,6 +48,12 @@ const ComponentDuplicateDialog = ({
     },
     [setClose],
   );
+
+  useEffect(() => {
+    if (newComponent && open) {
+      generateNewDigest(newComponent, newName).then(setNewDigest);
+    }
+  }, [newComponent, open, newName]);
 
   const handleRenameAndImport = useCallback(
     async (newName: string) => {
@@ -103,23 +91,9 @@ const ComponentDuplicateDialog = ({
   }, [setClose]);
 
   useEffect(() => {
-    const generateNewDigest = async () => {
-      if (newComponent) {
-        const { digest } = await replaceComponentName(newComponent, newName);
-        setNewDigest(digest);
-      }
-    };
-
     if (newComponent && newComponent?.name) {
       setNewName(newComponent?.name);
     }
-
-    if (newComponentDigest) {
-      setNewDigest(newComponentDigest);
-      return;
-    }
-
-    generateNewDigest();
   }, [existingComponent, newComponent]);
 
   return (
@@ -160,7 +134,6 @@ const ComponentDuplicateDialog = ({
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               autoFocus={true}
-              onBlur={generateNewDigestOnBlur}
             />
             <Label className="text-xs font-medium">Digest</Label>
             <Input value={newDigest} readOnly className="text-xs" />
@@ -194,6 +167,18 @@ const ComponentDuplicateDialog = ({
 
 export default ComponentDuplicateDialog;
 
+async function generateNewDigest(
+  newComponent: HydratedComponentReference | null | undefined,
+  newName: string,
+) {
+  if (newComponent) {
+    const { digest } = await replaceComponentName(newComponent, newName);
+    return digest;
+  }
+
+  return "";
+}
+
 async function replaceComponentName(
   component: HydratedComponentReference,
   newName: string,
@@ -202,11 +187,14 @@ async function replaceComponentName(
     str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
   // assuming component has TEXT
-  const text = component.text.replace(
-    // todo: use a more robust regex to replace the name
-    new RegExp(`^name: ${escapeRegex(component.name)}\\s*$`, "gm"),
-    `name: ${newName} \n`,
-  );
+  const text =
+    newName && newName.trim().length > 0 && newName !== component.name
+      ? component.text.replace(
+          // todo: use a more robust regex to replace the name
+          new RegExp(`^name: ${escapeRegex(component.name)}(\\s*)$`, "gm"),
+          `name: ${newName}$1`,
+        )
+      : component.text;
 
   return {
     text,
