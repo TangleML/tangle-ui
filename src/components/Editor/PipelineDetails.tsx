@@ -18,6 +18,7 @@ import { getComponentFileFromList } from "@/utils/componentStore";
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 
 import { TaskImplementation } from "../shared/TaskDetails";
+import { TestDialogButton } from "../shared/TmpTestDialog";
 import { InputValueEditor } from "./IOEditor/InputValueEditor";
 import { OutputNameEditor } from "./IOEditor/OutputNameEditor";
 import RenamePipeline from "./RenamePipeline";
@@ -146,6 +147,8 @@ const PipelineDetails = () => {
           componentSpec={componentSpec}
           showInlineContent={false}
         />
+
+        <TestDialogButton />
       </div>
 
       {/* General Metadata */}
