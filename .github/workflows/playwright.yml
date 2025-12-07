@@ -1,0 +1,83 @@
+name: Playwright Tests
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  # Allow manual triggering for testing in any branch
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: E2E Tests
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Checkout backend
+        uses: actions/checkout@v5
+        with:
+          repository: TangleML/tangle
+          ref: stable
+          path: backend
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Setup Python
+        run: uv python install 3.12
+
+      - name: Start backend
+        working-directory: backend
+        run: |
+          # Start in background (script runs API server + orchestrator)
+          # Use bash explicitly as start_local.sh uses bash-specific syntax (set -o pipefail)
+          bash ./start_local.sh &
+
+          # Wait for backend to be ready (port 8000)
+          timeout 120 bash -c 'until curl -sf http://localhost:8000/docs > /dev/null 2>&1; do sleep 2; done'
+
+      - name: Seed component library
+        run: |
+          echo "=== Seeding component library ==="
+          curl -X POST http://localhost:8000/api/component_libraries/ \
+            -H "Content-Type: application/json" \
+            -d @tests/e2e/fixtures/pipeline_component_library.with_texts.request.json \
+            --fail --silent --show-error \
+            && echo "✓ Component library seeded successfully"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "20.x"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright tests
+        run: npm run test:e2e
+        env:
+          VITE_BACKEND_API_URL: http://localhost:8000
+
+      - name: Upload HTML report
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 1
+
+      - name: Upload test results (videos, traces, screenshots)
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-results
+          path: test-results/
+          retention-days: 3
+

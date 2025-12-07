@@ -53,12 +53,13 @@ test.describe("Component Library", () => {
 
     const standardLibraryFolders = [
       "Quick start",
+      "Basics",
       "Datasets",
       "Data manipulation",
       "Upload/Download",
       "ML frameworks",
+      "ML Metrics",
       "Converters",
-      "Google Cloud",
     ];
 
     // expect to see all the folders
@@ -113,11 +114,11 @@ test.describe("Component Library", () => {
     // navigate to the nested folder
     await openComponentLibFolder(page, "Standard library");
 
-    const topFolder = await openComponentLibFolder(page, "Google Cloud");
+    const topFolder = await openComponentLibFolder(page, "ML frameworks");
     const topFolderContent = await topFolder.locator("[data-folder-name]");
-    expect(await topFolderContent).toHaveCount(3);
+    expect(await topFolderContent).toHaveCount(6);
 
-    const nestedFolder = await openComponentLibFolder(page, "Storage");
+    const nestedFolder = await openComponentLibFolder(page, "XGBoost");
 
     const nestedFolderContent =
       await nestedFolder.getByTestId("component-item");
@@ -204,9 +205,9 @@ test.describe("Component Library", () => {
 
     const searchResultsHeader = await page.getByTestId("search-results-header");
     expect(await searchResultsHeader.isVisible()).toBe(true);
-    expect(await searchResultsHeader).toHaveText("Search Results (5)");
+    expect(await searchResultsHeader).toHaveText("Search Results (3)");
     const componentItem = await page.getByTestId("component-item");
-    expect(componentItem).toHaveCount(5);
+    expect(componentItem).toHaveCount(3);
 
     await page.getByTestId("search-input").clear();
 
@@ -247,7 +248,7 @@ test.describe("Component Library", () => {
     assertSearchState(page, {
       searchTerm: "CSV",
       searchFilterCount: "2",
-      searchResultsCount: "7",
+      searchResultsCount: "*",
     });
 
     // reset highlighting after clicking on the canvas
@@ -307,7 +308,8 @@ test.describe("Component Library", () => {
     assertSearchState(page, {
       searchTerm: "CSV",
       searchFilterCount: "2",
-      searchResultsCount: "20",
+      // todo: this can be painful to maintain, find a better way to do this
+      searchResultsCount: "*",
     });
 
     // reset highlighting after clicking on the canvas

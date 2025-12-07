@@ -23,11 +23,14 @@ test.describe("Published Component Library - Lifecycle", () => {
 
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
+
     // Create new pipeline and wait for it to load
     await createNewPipeline(page);
+    await page.waitForTimeout(200);
 
     // open personal preferences
     await page.getByTestId("personal-preferences-button").click();
+    await page.waitForTimeout(200);
 
     // close personal preferences
     const dialog = await page.getByTestId("personal-preferences-dialog");

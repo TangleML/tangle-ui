@@ -24,13 +24,7 @@ test.describe("Component Editor", () => {
     // Create new pipeline and wait for it to load
     await createNewPipeline(page);
 
-    // open personal preferences
-    await page.getByTestId("personal-preferences-button").click();
-
-    // close personal preferences
-    const dialog = await page.getByTestId("personal-preferences-dialog");
-    await dialog.getByTestId("in-app-component-editor-switch").click();
-    await dialog.getByTestId("close-button").click();
+    // in-app component editor is enabled by default
   });
 
   test.afterAll(async () => {
