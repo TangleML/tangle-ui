@@ -40,7 +40,8 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   // "src/components/shared/Dialogs",             // 31
   // "src/hooks",                                 // 53
   // "src/providers",                             // 75
-  // "src/components/shared/ReactFlow",           // 190
+  // "src/components/shared/ReactFlow", // 190
+  "src/components/shared/ReactFlow/FlowCanvas/FlowCanvas.tsx",
 ];
 
 // Convert to glob patterns for ESLint
