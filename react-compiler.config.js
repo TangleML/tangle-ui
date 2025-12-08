@@ -19,8 +19,8 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/components/shared/CodeViewer", // 2
   "src/components/shared/FullscreenElement", // 2
   "src/components/shared/CopyText", // 3
-  // "src/components/shared/TaskDetails",         // 4
-  // "src/components/shared/GitHubAuth",          // 5
+  "src/components/shared/TaskDetails", // 4
+  "src/components/shared/GitHubAuth", // 5
 
   // 6-10 useCallback/useMemo
   // "src/routes",                                // 6

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { OasisAuthResponse } from "@/components/shared/Authentication/types";
 import { APP_ROUTES } from "@/routes/router";
@@ -70,7 +70,20 @@ export function useGitHubAuthPopup({
   const popupRef = useRef<Window | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const openPopup = useCallback(() => {
+  const closePopup = () => {
+    setIsLoading(false);
+
+    if (popupRef.current) {
+      popupRef.current.close();
+    }
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+    setIsPopupOpen(false);
+    onClose?.();
+  };
+
+  const openPopup = () => {
     if (popupRef.current && !popupRef.current.closed) {
       popupRef.current.focus();
       return;
@@ -137,26 +150,13 @@ export function useGitHubAuthPopup({
         // We'll continue monitoring until popup closes or returns to our domain
       }
     }, 1000);
-  }, [onError, onSuccess, onClose]);
+  };
 
-  const closePopup = useCallback(() => {
-    setIsLoading(false);
-
-    if (popupRef.current) {
-      popupRef.current.close();
-    }
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
-    setIsPopupOpen(false);
-    onClose?.();
-  }, [onClose]);
-
-  const bringPopupToFront = useCallback(() => {
+  const bringPopupToFront = () => {
     if (popupRef.current && !popupRef.current.closed) {
       popupRef.current.focus();
     }
-  }, []);
+  };
 
   useEffect(() => {
     /**
@@ -185,14 +185,11 @@ export function useGitHubAuthPopup({
     };
   }, []);
 
-  return useMemo(
-    () => ({
-      isPopupOpen,
-      isLoading,
-      openPopup,
-      closePopup,
-      bringPopupToFront,
-    }),
-    [isPopupOpen, isLoading, openPopup, closePopup, bringPopupToFront],
-  );
+  return {
+    isPopupOpen,
+    isLoading,
+    openPopup,
+    closePopup,
+    bringPopupToFront,
+  };
 }

@@ -4,7 +4,7 @@ import {
   DownloadIcon,
   TrashIcon,
 } from "lucide-react";
-import { type ReactNode, useCallback, useState } from "react";
+import { type ReactNode, useState } from "react";
 import { FaPython } from "react-icons/fa";
 
 import { Button } from "@/components/ui/button";
@@ -129,7 +129,7 @@ const TaskDetails = ({
     );
   };
 
-  const handleDelete = useCallback(() => {
+  const handleDelete = () => {
     if (confirmDelete || !hasDeletionConfirmation) {
       try {
         onDelete?.();
@@ -139,7 +139,7 @@ const TaskDetails = ({
     } else if (hasDeletionConfirmation) {
       setConfirmDelete(true);
     }
-  }, [onDelete, confirmDelete, hasDeletionConfirmation]);
+  };
 
   return (
     <div className="h-full overflow-auto hide-scrollbar">

@@ -1,5 +1,3 @@
-import { useMemo } from "react";
-
 import { CodeViewer } from "@/components/shared/CodeViewer";
 import type { ComponentSpec } from "@/utils/componentSpec";
 import { componentSpecToText } from "@/utils/yaml";
@@ -15,10 +13,7 @@ const TaskImplementation = ({
   componentSpec,
   showInlineContent = true,
 }: TaskImplementationProps) => {
-  const code = useMemo(
-    () => componentSpecToText(componentSpec),
-    [componentSpec],
-  );
+  const code = componentSpecToText(componentSpec);
 
   if (!componentSpec?.implementation) {
     return (
