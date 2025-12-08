@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useSyncExternalStore } from "react";
+import { useRef, useSyncExternalStore } from "react";
 
 import { useGitHubAuthPopup } from "@/components/shared/GitHubAuth/useGitHubAuthPopup";
 import { useHuggingFaceAuthPopup } from "@/components/shared/HuggingFaceAuth/useHuggingFaceAuthPopup";
@@ -39,38 +39,29 @@ export function useAwaitAuthorization() {
     authStorage.getToken,
   );
 
-  const isAuthorized = useMemo(
-    () => !isAuthorizationRequired() || !!token,
-    [token],
-  );
+  const isAuthorized = !isAuthorizationRequired() || !!token;
 
-  const onSuccess = useCallback(
-    (response: OasisAuthResponse) => {
-      notify(`Authorization successful!`, "success");
+  const onSuccess = (response: OasisAuthResponse) => {
+    notify(`Authorization successful!`, "success");
 
-      const jwtPayload = convertJWTToJWTPayload(response.token);
-      authStorage.setJWT(jwtPayload);
-      promiseRef.current.resolve(response.token);
-    },
-    [authStorage, notify],
-  );
+    const jwtPayload = convertJWTToJWTPayload(response.token);
+    authStorage.setJWT(jwtPayload);
+    promiseRef.current.resolve(response.token);
+  };
 
-  const onError = useCallback(
-    (error: string) => {
-      notify(`Authorization error: ${error}`, "error");
-      authStorage.clear();
-      promiseRef.current.reject(new Error(`Authorization failed: ${error}`));
-    },
-    [authStorage, notify],
-  );
+  const onError = (error: string) => {
+    notify(`Authorization error: ${error}`, "error");
+    authStorage.clear();
+    promiseRef.current.reject(new Error(`Authorization failed: ${error}`));
+  };
 
-  const onClose = useCallback(() => {
+  const onClose = () => {
     if (token) {
       promiseRef.current.resolve(token);
     } else {
       promiseRef.current.reject(new Error("Authorization required"));
     }
-  }, [token]);
+  };
 
   const authPopupConfig = { onSuccess, onError, onClose };
 
@@ -79,38 +70,29 @@ export function useAwaitAuthorization() {
   const gitHubPopup = useGitHubAuthPopup(authPopupConfig);
   const noopPopup = useNoopAuthPopup(authPopupConfig);
 
-  const { openPopup, isLoading, isPopupOpen, closePopup, bringPopupToFront } =
-    isHuggingFaceAuthEnabled()
-      ? huggingFacePopup
-      : isGitHubAuthEnabled()
-        ? gitHubPopup
-        : noopPopup;
+  const getActivePopup = () => {
+    if (isHuggingFaceAuthEnabled()) return huggingFacePopup;
+    if (isGitHubAuthEnabled()) return gitHubPopup;
+    return noopPopup;
+  };
 
-  const awaitAuthorization = useCallback(() => {
+  const { openPopup, isLoading, isPopupOpen, closePopup, bringPopupToFront } =
+    getActivePopup();
+
+  const awaitAuthorization = () => {
     promiseRef.current = createControlledPromise<string | undefined>();
-    // entry point for durable authentication process
     openPopup();
     return promiseRef.current.promise;
-  }, [openPopup]);
+  };
 
-  return useMemo(
-    () => ({
-      isAuthorized,
-      awaitAuthorization,
-      isLoading,
-      isPopupOpen,
-      closePopup,
-      bringPopupToFront,
-    }),
-    [
-      awaitAuthorization,
-      isAuthorized,
-      isLoading,
-      isPopupOpen,
-      closePopup,
-      bringPopupToFront,
-    ],
-  );
+  return {
+    isAuthorized,
+    awaitAuthorization,
+    isLoading,
+    isPopupOpen,
+    closePopup,
+    bringPopupToFront,
+  };
 }
 
 function useNoopAuthPopup({

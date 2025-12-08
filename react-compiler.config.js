@@ -27,7 +27,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   // "src/components/shared/ComponentEditor",     // 6
   // "src/components/shared/Settings",            // 6
   // "src/components/shared/HuggingFaceAuth",     // 8
-  // "src/components/shared/Authentication",      // 9
+  "src/components/shared/Authentication", // 9
   // "src/components/shared/GitHubLibrary",       // 9
 
   // 11-20 useCallback/useMemo
