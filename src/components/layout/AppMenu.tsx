@@ -1,4 +1,4 @@
-import logo from "/public/Tangle_white.png";
+import logo from "/Tangle_white.png";
 import { isAuthorizationRequired } from "@/components/shared/Authentication/helpers";
 import { TopBarAuthentication } from "@/components/shared/Authentication/TopBarAuthentication";
 import { CopyText } from "@/components/shared/CopyText/CopyText";
