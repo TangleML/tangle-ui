@@ -75,7 +75,9 @@ const PipelineRow = ({
     e.stopPropagation();
   };
 
-  const formattedDate = modificationTime ? formatDate(modificationTime.toISOString()) : "N/A";
+  const formattedDate = modificationTime
+    ? formatDate(modificationTime.toISOString())
+    : "N/A";
 
   return (
     <>
