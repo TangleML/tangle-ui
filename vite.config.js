@@ -1,3 +1,5 @@
+import process from "node:process";
+
 import tailwindcss from "@tailwindcss/vite";
 import viteReact from "@vitejs/plugin-react";
 import path from "path";
@@ -10,22 +12,28 @@ import { REACT_COMPILER_ENABLED_DIRS } from "./react-compiler.config.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Set DISABLE_REACT_COMPILER=true to test without compiler
+// Note: use process.env here (not import.meta.env) since config runs in Node before Vite starts
+const isCompilerEnabled = process.env.DISABLE_REACT_COMPILER !== "true";
+
 export default defineConfig({
   plugins: [
     viteReact({
       babel: {
-        plugins: [
-          [
-            "babel-plugin-react-compiler",
-            {
-              sources: (filename) => {
-                return REACT_COMPILER_ENABLED_DIRS.some((dir) =>
-                  filename.includes(dir),
-                );
-              },
-            },
-          ],
-        ],
+        plugins: isCompilerEnabled
+          ? [
+              [
+                "babel-plugin-react-compiler",
+                {
+                  sources: (filename) => {
+                    return REACT_COMPILER_ENABLED_DIRS.some((dir) =>
+                      filename.includes(dir),
+                    );
+                  },
+                },
+              ],
+            ]
+          : [],
       },
     }),
     tailwindcss(),

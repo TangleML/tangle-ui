@@ -2,6 +2,7 @@ import { Outlet } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/router-devtools";
 import { ToastContainer } from "react-toastify";
 
+import { PerformanceProfiler } from "@/components/shared/PerformanceProfiler";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { BackendProvider } from "@/providers/BackendProvider";
@@ -23,7 +24,9 @@ const RootLayout = () => {
             <AppMenu />
 
             <main className="flex-1 grid">
-              <Outlet />
+              <PerformanceProfiler id="MainContent">
+                <Outlet />
+              </PerformanceProfiler>
             </main>
 
             <AppFooter />
