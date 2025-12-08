@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import ConfirmationDialog from "@/components/shared/Dialogs/ConfirmationDialog";
 import { removeGraphOutput } from "@/components/shared/ReactFlow/FlowCanvas/utils/removeNode";
@@ -47,28 +47,25 @@ export const OutputNameEditor = ({
   const [outputName, setOutputName] = useState(output.name);
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  const hasChanges = useCallback(() => {
+  const hasChanges = () => {
     return outputName.trim() !== output.name;
-  }, [outputName, output.name]);
+  };
 
-  const handleOutputNameChange = useCallback(
-    (oldName: string, newName: string) => {
-      if (!currentSubgraphSpec.outputs) return null;
+  const handleOutputNameChange = (oldName: string, newName: string) => {
+    if (!currentSubgraphSpec.outputs) return null;
 
-      const updatedComponentSpec = updateOutputNameOnComponentSpec(
-        currentSubgraphSpec,
-        oldName,
-        newName,
-      );
+    const updatedComponentSpec = updateOutputNameOnComponentSpec(
+      currentSubgraphSpec,
+      oldName,
+      newName,
+    );
 
-      transferSelection(oldName, newName);
+    transferSelection(oldName, newName);
 
-      return updatedComponentSpec;
-    },
-    [currentSubgraphSpec, transferSelection],
-  );
+    return updatedComponentSpec;
+  };
 
-  const saveChanges = useCallback(() => {
+  const saveChanges = () => {
     if (!hasChanges() || validationError) return;
 
     if (outputName.trim() === "") {
@@ -89,43 +86,31 @@ export const OutputNameEditor = ({
       );
       setComponentSpec(updatedRootSpec);
     }
-  }, [
-    hasChanges,
-    validationError,
-    handleOutputNameChange,
-    output.name,
-    outputName,
-    setComponentSpec,
-    componentSpec,
-    currentSubgraphPath,
-  ]);
+  };
 
-  const handleBlur = useCallback(() => {
+  const handleBlur = () => {
     saveChanges();
-  }, [saveChanges]);
+  };
 
-  const handleNameChange = useCallback(
-    (value: string) => {
-      setOutputName(value);
+  const handleNameChange = (value: string) => {
+    setOutputName(value);
 
-      if (
-        checkNameCollision(
-          value.trim(),
-          output.name.trim(),
-          componentSpec,
-          "outputs",
-        )
-      ) {
-        setValidationError("An output with this name already exists");
-        return;
-      }
+    if (
+      checkNameCollision(
+        value.trim(),
+        output.name.trim(),
+        componentSpec,
+        "outputs",
+      )
+    ) {
+      setValidationError("An output with this name already exists");
+      return;
+    }
 
-      setValidationError(null);
-    },
-    [currentSubgraphSpec, output.name],
-  );
+    setValidationError(null);
+  };
 
-  const deleteNode = useCallback(async () => {
+  const deleteNode = async () => {
     if (!currentSubgraphSpec.outputs) return;
 
     const confirmed = await triggerConfirmation({
@@ -150,15 +135,7 @@ export const OutputNameEditor = ({
     setComponentSpec(updatedRootSpec);
 
     clearContent();
-  }, [
-    currentSubgraphSpec,
-    output.name,
-    setComponentSpec,
-    clearContent,
-    triggerConfirmation,
-    componentSpec,
-    currentSubgraphPath,
-  ]);
+  };
 
   useEffect(() => {
     setOutputName(output.name);

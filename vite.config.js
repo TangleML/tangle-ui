@@ -4,19 +4,11 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { defineConfig } from "vite";
 
+import { REACT_COMPILER_ENABLED_DIRS } from "./react-compiler.config.js";
+
 // Create __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-// React Compiler: Directory-based incremental adoption
-// Add directories here as they are cleaned up for compiler compatibility
-const REACT_COMPILER_ENABLED_DIRS = [
-  "src/components/Home",
-
-  // Add more directories as you clean them up:
-  // "src/components/shared/",
-  // "src/hooks/",
-];
 
 export default defineConfig({
   plugins: [

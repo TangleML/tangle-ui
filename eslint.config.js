@@ -5,8 +5,7 @@ import simpleImportSort from "eslint-plugin-simple-import-sort";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 
-// Keep in sync with REACT_COMPILER_ENABLED_DIRS in vite.config.js
-const REACT_COMPILER_ENABLED_GLOBS = ["src/components/Home/**/*.{ts,tsx}"];
+import { REACT_COMPILER_ENABLED_GLOBS } from "./react-compiler.config.js";
 
 /** @type {import('eslint').Linter.Config[]} */
 export default [
