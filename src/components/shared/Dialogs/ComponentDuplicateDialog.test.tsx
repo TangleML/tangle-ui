@@ -7,6 +7,7 @@ import {
 } from "@testing-library/react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
+import type { ComponentFolder } from "@/types/componentLibrary";
 import type { HydratedComponentReference } from "@/utils/componentSpec";
 import type { UserComponent } from "@/utils/localforage";
 
@@ -19,10 +20,51 @@ vi.mock("@/utils/componentStore", async (importOriginal) => ({
 }));
 
 // Import mocked functions
+import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
 import {
   deleteComponentFileFromList,
   generateDigest,
 } from "@/utils/componentStore";
+
+// Create a reusable test wrapper for ComponentLibraryProvider
+const createMockComponentLibraryContext = (
+  userComponents: UserComponent[] = [],
+) => {
+  const userComponentsFolder: ComponentFolder = {
+    name: "User Components",
+    components: userComponents,
+    isUserFolder: true,
+  };
+
+  return {
+    componentLibrary: undefined,
+    userComponentsFolder,
+    usedComponentsFolder: { name: "Used", components: [] },
+    favoritesFolder: { name: "Favorites", components: [] },
+    isLoading: false,
+    error: null,
+    existingComponentLibraries: undefined,
+    searchResult: null,
+    highlightedComponentDigest: null,
+    searchComponentLibrary: vi.fn(),
+    addToComponentLibrary: vi.fn(),
+    removeFromComponentLibrary: vi.fn(),
+    refetchLibrary: vi.fn(),
+    refetchUserComponents: vi.fn(),
+    setHighlightedComponentDigest: vi.fn(),
+    setComponentFavorite: vi.fn(),
+    checkIfFavorited: vi.fn().mockReturnValue(false),
+    checkIfUserComponent: vi.fn().mockReturnValue(false),
+    checkLibraryContainsComponent: vi.fn().mockReturnValue(false),
+    checkIfHighlighted: vi.fn().mockReturnValue(false),
+    getComponentLibrary: vi.fn(),
+  };
+};
+
+// Mock the ComponentLibraryProvider
+vi.mock("@/providers/ComponentLibraryProvider", () => ({
+  useComponentLibrary: vi.fn(),
+}));
 
 describe("ComponentDuplicateDialog", () => {
   // Test data
@@ -65,6 +107,9 @@ implementation:
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useComponentLibrary).mockReturnValue(
+      createMockComponentLibraryContext([mockExistingComponent]),
+    );
   });
 
   test("should close dialog when Cancel button is clicked", async () => {
@@ -280,6 +325,107 @@ implementation:
 
       expect(textboxes[3]).toHaveValue(digest);
       expect(textboxes[3]).toHaveAttribute("readonly");
+    });
+  });
+
+  describe("Validation", () => {
+    test("should show validation error when new name is empty", async () => {
+      render(
+        <ComponentDuplicateDialog
+          existingComponent={mockExistingComponent}
+          newComponent={mockNewComponent}
+          setClose={mockSetClose}
+          handleImportComponent={mockHandleImportComponent}
+        />,
+      );
+
+      // Find new name textbox (third textbox)
+      const textboxes = screen.getAllByRole("textbox");
+      const newNameInput = textboxes[2];
+
+      // Clear the input
+      await act(async () => {
+        fireEvent.change(newNameInput, { target: { value: "" } });
+      });
+
+      // Should display name empty error
+      expect(screen.getByText("Name cannot be empty")).toBeInTheDocument();
+
+      // Import as new should be disabled
+      expect(
+        screen.getByRole("button", { name: /Import as new/i }),
+      ).toBeDisabled();
+    });
+
+    test("should not show validation error when new name is the same as existing component", async () => {
+      render(
+        <ComponentDuplicateDialog
+          existingComponent={mockExistingComponent}
+          newComponent={mockNewComponent}
+          setClose={mockSetClose}
+          handleImportComponent={mockHandleImportComponent}
+        />,
+      );
+
+      // Find new name textbox (third textbox)
+      const textboxes = screen.getAllByRole("textbox");
+      const newNameInput = textboxes[2];
+
+      // Set name to existing component name (should be the default already)
+      await act(async () => {
+        fireEvent.change(newNameInput, {
+          target: { value: "ExistingComponent" },
+        });
+      });
+
+      // Should not display a validation error (validation allows renaming to current)
+      expect(screen.queryByText("Name already exists")).not.toBeInTheDocument();
+
+      // Import as new should be disabled (button logic)
+      expect(
+        screen.getByRole("button", { name: /Import as new/i }),
+      ).toBeDisabled();
+    });
+
+    test("should show validation error when new name matches another user's component", async () => {
+      vi.mocked(useComponentLibrary).mockReturnValue(
+        createMockComponentLibraryContext([
+          mockExistingComponent,
+          {
+            name: "ConflictName",
+            componentRef: {
+              name: "ConflictName",
+              digest: "conflict-digest-789",
+            },
+            data: new ArrayBuffer(0),
+            creationTime: new Date(),
+            modificationTime: new Date(),
+          },
+        ]),
+      );
+
+      // Use the wrapper with multiple components
+      render(
+        <ComponentDuplicateDialog
+          existingComponent={mockExistingComponent}
+          newComponent={mockNewComponent}
+          setClose={mockSetClose}
+          handleImportComponent={mockHandleImportComponent}
+        />,
+      );
+
+      const textboxes = screen.getAllByRole("textbox");
+      const newNameInput = textboxes[2];
+
+      // Change name to conflicting name
+      await act(async () => {
+        fireEvent.change(newNameInput, { target: { value: "ConflictName" } });
+      });
+
+      expect(screen.getByText("Name already exists")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /Import as new/i }),
+      ).toBeDisabled();
     });
   });
 });
