@@ -155,12 +155,12 @@ const mapStatus = (status: string) => {
     case "UPSTREAM_FAILED":
       return "failed";
     case "UPSTREAM_FAILED_OR_SKIPPED":
-    case "CANCELLING":
     case "SKIPPED":
       return "skipped";
     case "RUNNING":
     case "STARTING":
       return "running";
+    case "CANCELLING":
     case "CANCELLED":
       return "cancelled";
     default:
@@ -169,7 +169,10 @@ const mapStatus = (status: string) => {
 };
 
 /**
- * Count task statuses from API response
+ * Count task statuses from API response.
+ *
+ * For subgraphs with multiple task statuses, determines the aggregate status
+ * using priority: CANCELLED > FAILED > RUNNING > SKIPPED > WAITING > SUCCEEDED
  */
 export const countTaskStatuses = (
   details: GetExecutionInfoResponse,
@@ -195,8 +198,10 @@ export const countTaskStatuses = (
         stateData.child_execution_status_stats[executionIdStr];
 
       if (statusStats) {
-        const status = Object.keys(statusStats)[0];
-        const mappedStatus = mapStatus(status);
+        const childStatusCounts =
+          convertExecutionStatsToStatusCounts(statusStats);
+        const aggregateStatus = getRunStatus(childStatusCounts);
+        const mappedStatus = mapStatus(aggregateStatus);
         statusCounts[mappedStatus as keyof TaskStatusCounts]++;
       } else {
         statusCounts.waiting++;

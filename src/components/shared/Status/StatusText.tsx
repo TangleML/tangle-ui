@@ -1,6 +1,19 @@
 import { cn } from "@/lib/utils";
 import type { TaskStatusCounts } from "@/types/pipelineRun";
 
+const STATUS_COLORS: Record<string, string> = {
+  succeeded: "text-green-500",
+  failed: "text-red-500",
+  running: "text-blue-500",
+  skipped: "text-gray-800",
+  waiting: "text-yellow-600",
+  cancelled: "text-gray-800",
+};
+
+const STATUS_DISPLAY_NAMES: Record<string, string> = {
+  waiting: "pending",
+};
+
 const StatusText = ({
   statusCounts,
   shorthand,
@@ -16,23 +29,14 @@ const StatusText = ({
       )}
     >
       {Object.entries(statusCounts).map(([key, count]) => {
-        if (key === "total") return;
+        if (key === "total" || count === 0) return null;
 
-        if (count === 0) return;
-
-        const statusColors: Record<string, string> = {
-          succeeded: "text-green-500",
-          failed: "text-red-500",
-          running: "text-blue-500",
-          skipped: "text-gray-800",
-          waiting: "text-gray-500",
-          cancelled: "text-gray-800",
-        };
+        const displayKey = STATUS_DISPLAY_NAMES[key] ?? key;
         const statusText = shorthand
-          ? `${key[0]}`
-          : `${key}${count > 1 ? " " : ""}`;
+          ? `${displayKey[0]}`
+          : `${displayKey}${count > 1 ? " " : ""}`;
 
-        const statusColor = statusColors[key];
+        const statusColor = STATUS_COLORS[key];
 
         if (shorthand) {
           return (

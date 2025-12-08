@@ -60,7 +60,7 @@ const TaskStatusBar = ({
       )}
       {waiting > 0 && (
         <div
-          className="bg-gray-200"
+          className="bg-yellow-500"
           style={getSegmentStyle(waitingWidth, hatched)}
         ></div>
       )}

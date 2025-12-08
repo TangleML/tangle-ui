@@ -57,10 +57,14 @@ const Icon = ({ status }: { status?: string }) => {
     case "STARTING":
       return <RefreshCw className="w-4 h-4 text-blue-500 animate-spin" />;
     case "PENDING":
+    case "QUEUED":
       return <RefreshCw className="w-4 h-4 text-yellow-500 animate-spin" />;
     case "CANCELLING":
       return <CircleX className="w-4 h-4 text-orange-500 animate-pulse" />;
     case "WAITING":
+    case "UNINITIALIZED":
+      return <CircleEllipsis className="w-4 h-4 text-yellow-500" />;
+    case "WAITING_FOR_UPSTREAM":
       return <CircleEllipsis className="w-4 h-4 text-gray-500" />;
     case "SKIPPED":
       return <CircleMinus className="w-4 h-4 text-gray-500" />;
