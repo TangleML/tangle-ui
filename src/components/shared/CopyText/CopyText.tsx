@@ -1,4 +1,4 @@
-import { type MouseEvent, useCallback, useEffect, useState } from "react";
+import { type MouseEvent, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -21,10 +21,10 @@ export const CopyText = ({
   const [isCopied, setIsCopied] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
-  const handleCopy = useCallback(() => {
+  const handleCopy = () => {
     copyToClipboard(children);
     setIsCopied(true);
-  }, [children]);
+  };
 
   useEffect(() => {
     if (isCopied) {
@@ -35,13 +35,10 @@ export const CopyText = ({
     }
   }, [isCopied]);
 
-  const handleButtonClick = useCallback(
-    (e: MouseEvent) => {
-      e.stopPropagation();
-      handleCopy();
-    },
-    [handleCopy],
-  );
+  const handleButtonClick = (e: MouseEvent) => {
+    e.stopPropagation();
+    handleCopy();
+  };
 
   return (
     <div
