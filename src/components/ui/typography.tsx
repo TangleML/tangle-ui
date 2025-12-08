@@ -50,8 +50,7 @@ const textVariants = cva("", {
 });
 
 interface TextProps
-  extends PropsWithChildren<AriaAttributes>,
-    VariantProps<typeof textVariants> {
+  extends PropsWithChildren<AriaAttributes>, VariantProps<typeof textVariants> {
   /**
    * The role of the text element.
    * @default 'text'

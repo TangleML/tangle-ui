@@ -28,7 +28,7 @@ export const isSubgraph = (
   if ("componentRef" in input) {
     return Boolean(
       input.componentRef.spec &&
-        isGraphImplementation(input.componentRef.spec.implementation),
+      isGraphImplementation(input.componentRef.spec.implementation),
     );
   }
 
