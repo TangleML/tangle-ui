@@ -1,11 +1,46 @@
 // React Compiler: Directory-based incremental adoption
 // Add directories here as they are cleaned up for compiler compatibility
+// Sorted by useCallback/useMemo count (cleanup effort) - least to most
 export const REACT_COMPILER_ENABLED_DIRS = [
+  // ✅ Enabled
   "src/components/Home",
   "src/components/Editor",
-  // Add more directories as you clean them up:
-  // "src/components/shared/",
-  // "src/hooks/",
+
+  // 0 useCallback/useMemo - ready to enable
+  "src/components/layout",
+  "src/components/shared/ArtifactsList",
+  "src/components/shared/Buttons",
+  "src/components/shared/ContextPanel",
+  "src/components/shared/ExecutionDetails",
+  "src/components/shared/QuickStart",
+  "src/components/shared/Status",
+
+  // 2-5 useCallback/useMemo
+  // "src/components/shared/CodeViewer",          // 2
+  // "src/components/shared/FullscreenElement",   // 2
+  // "src/components/shared/CopyText",            // 3
+  // "src/components/shared/TaskDetails",         // 4
+  // "src/components/shared/GitHubAuth",          // 5
+
+  // 6-10 useCallback/useMemo
+  // "src/routes",                                // 6
+  // "src/components/shared/ComponentEditor",     // 6
+  // "src/components/shared/Settings",            // 6
+  // "src/components/shared/HuggingFaceAuth",     // 8
+  // "src/components/shared/Authentication",      // 9
+  // "src/components/shared/GitHubLibrary",       // 9
+
+  // 11-20 useCallback/useMemo
+  // "src/components/ui",                         // 12
+  // "src/components/PipelineRun",                // 14
+  // "src/components/shared/ManageComponent",     // 15
+  // "src/components/shared/Submitters",          // 16
+
+  // 20+ useCallback/useMemo - significant cleanup needed
+  // "src/components/shared/Dialogs",             // 31
+  // "src/hooks",                                 // 53
+  // "src/providers",                             // 75
+  // "src/components/shared/ReactFlow",           // 190
 ];
 
 // Convert to glob patterns for ESLint
