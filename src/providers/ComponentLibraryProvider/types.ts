@@ -22,8 +22,8 @@ export function isValidFilterRequest(
 ): filter is ContentfulFilterRequest {
   return Boolean(
     isContentfulFilterRequest(filter) &&
-      filter.searchTerm.trim().length >= (options?.minLength ?? 1) &&
-      (!options.includesFilter ||
-        filter.filters.includes(options.includesFilter)),
+    filter.searchTerm.trim().length >= (options?.minLength ?? 1) &&
+    (!options.includesFilter ||
+      filter.filters.includes(options.includesFilter)),
   );
 }
