@@ -72,14 +72,19 @@ export function useAwaitAuthorization() {
     }
   }, [token]);
 
-  const useAuthorizationPopup = useMemo(() => switchAuthProvider(), []);
+  const authPopupConfig = { onSuccess, onError, onClose };
+
+  // Call all hooks unconditionally (React rules), then select the active one
+  const huggingFacePopup = useHuggingFaceAuthPopup(authPopupConfig);
+  const gitHubPopup = useGitHubAuthPopup(authPopupConfig);
+  const noopPopup = useNoopAuthPopup(authPopupConfig);
 
   const { openPopup, isLoading, isPopupOpen, closePopup, bringPopupToFront } =
-    useAuthorizationPopup({
-      onSuccess,
-      onError,
-      onClose,
-    });
+    isHuggingFaceAuthEnabled()
+      ? huggingFacePopup
+      : isGitHubAuthEnabled()
+        ? gitHubPopup
+        : noopPopup;
 
   const awaitAuthorization = useCallback(() => {
     promiseRef.current = createControlledPromise<string | undefined>();
@@ -106,18 +111,6 @@ export function useAwaitAuthorization() {
       bringPopupToFront,
     ],
   );
-}
-
-function switchAuthProvider() {
-  switch (true) {
-    case isHuggingFaceAuthEnabled():
-      return useHuggingFaceAuthPopup;
-    case isGitHubAuthEnabled():
-      return useGitHubAuthPopup;
-
-    default:
-      return useNoopAuthPopup;
-  }
 }
 
 function useNoopAuthPopup({

@@ -4,6 +4,7 @@ import {
   type PropsWithChildren,
   useCallback,
   useEffect,
+  useMemo,
   useReducer,
   useState,
 } from "react";
@@ -179,10 +180,11 @@ const SearchRequestInput = ({ value, onChange }: SearchRequestProps) => {
     [],
   );
 
-  const debouncedOnChange = useCallback(
-    debounce((searchRequest: LibraryFilterRequest) => {
-      onChange(searchRequest);
-    }, DEBOUNCE_TIME_MS),
+  const debouncedOnChange = useMemo(
+    () =>
+      debounce((searchRequest: LibraryFilterRequest) => {
+        onChange(searchRequest);
+      }, DEBOUNCE_TIME_MS),
     [onChange],
   );
 
