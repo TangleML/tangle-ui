@@ -70,12 +70,10 @@ export const PythonComponentEditor = withSuspenseWrapper(
       preservedNameRef.current = initialComponentName;
     }, [initialComponentName]);
 
-    const handleFunctionTextChange = useCallback(
-      async (value: string | undefined) => {
-        const code = value ?? "";
-        setPythonCode(code);
+    const generateYaml = useCallback(
+      async (code: string, options: YamlGeneratorOptions) => {
         try {
-          const yaml = await yamlGenerator(code, yamlGeneratorOptions);
+          const yaml = await yamlGenerator(code, options);
           const yamlWithPreservedName = preserveComponentName(
             yaml,
             preservedNameRef.current,
@@ -92,17 +90,29 @@ export const PythonComponentEditor = withSuspenseWrapper(
           setValidationErrors(errors);
         }
       },
-      [
-        yamlGenerator,
-        onComponentTextChange,
-        onErrorsChange,
-        yamlGeneratorOptions,
-      ],
+      [yamlGenerator, onComponentTextChange, onErrorsChange],
+    );
+
+    const handleFunctionTextChange = useCallback(
+      async (value: string | undefined) => {
+        const code = value ?? "";
+        setPythonCode(code);
+        generateYaml(code, yamlGeneratorOptions);
+      },
+      [generateYaml, yamlGeneratorOptions],
+    );
+
+    const handleOptionsChange = useCallback(
+      (options: YamlGeneratorOptions) => {
+        setYamlGeneratorOptions(options);
+        generateYaml(pythonCode, options);
+      },
+      [pythonCode, generateYaml],
     );
 
     useEffect(() => {
       // first time loading
-      handleFunctionTextChange(text);
+      generateYaml(text, options);
     }, []);
 
     return (
@@ -138,7 +148,7 @@ export const PythonComponentEditor = withSuspenseWrapper(
             >
               <YamlGeneratorOptionsEditor
                 initialOptions={yamlGeneratorOptions}
-                onChange={setYamlGeneratorOptions}
+                onChange={handleOptionsChange}
               />
             </TabsContent>
           </Tabs>
