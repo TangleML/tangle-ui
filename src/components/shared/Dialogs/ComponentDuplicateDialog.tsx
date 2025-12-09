@@ -119,7 +119,7 @@ const ComponentDuplicateDialog = ({
       USER_COMPONENTS_LIST_NAME,
       existingComponent?.name ?? "",
     );
-    handleImportComponent(yamlString);
+    await handleImportComponent(yamlString);
 
     setClose();
   }, [handleImportComponent, setClose]);

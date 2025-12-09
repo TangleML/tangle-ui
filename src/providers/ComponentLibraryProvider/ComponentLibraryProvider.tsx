@@ -80,7 +80,9 @@ type ComponentLibraryContextType = {
     search: string,
     filters: string[],
   ) => SearchResult | null;
-  addToComponentLibrary: (component: HydratedComponentReference) => void;
+  addToComponentLibrary: (
+    component: HydratedComponentReference,
+  ) => Promise<void>;
   removeFromComponentLibrary: (component: ComponentReference) => void;
   refetchLibrary: () => void;
   refetchUserComponents: () => void;
@@ -418,6 +420,25 @@ export const ComponentLibraryProvider = ({
     [componentLibrary, userComponentsFolder, usedComponentsFolder],
   );
 
+  const internalAddComponentToLibrary = useCallback(
+    async (hydratedComponent: HydratedComponentReference) => {
+      await importComponent(hydratedComponent);
+      await refreshComponentLibrary();
+      await refreshUserComponents();
+      setNewComponent(null);
+      setExistingComponent(null);
+
+      dispatchEvent(
+        new CustomEvent("tangle.library.componentAdded", {
+          detail: {
+            component: hydratedComponent,
+          },
+        }),
+      );
+    },
+    [refreshComponentLibrary, refreshUserComponents, importComponent],
+  );
+
   const handleImportComponent = useCallback(
     async (yamlString: string) => {
       try {
@@ -429,11 +450,7 @@ export const ComponentLibraryProvider = ({
           throw new Error("Failed to hydrate component");
         }
 
-        await importComponent(hydratedComponent);
-        await refreshComponentLibrary();
-        await refreshUserComponents();
-        setNewComponent(null);
-        setExistingComponent(null);
+        await internalAddComponentToLibrary(hydratedComponent);
       } catch (error) {
         console.error("Error importing component:", error);
       }
@@ -454,19 +471,21 @@ export const ComponentLibraryProvider = ({
           )
         : undefined;
 
-      if (duplicate?.name) {
-        const existingUserComponent = await getUserComponentByName(
-          duplicate.name,
-        );
+      const existingUserComponent = duplicate?.name
+        ? await getUserComponentByName(duplicate.name)
+        : undefined;
+
+      if (
+        existingUserComponent &&
+        existingUserComponent.componentRef.digest !== component.digest
+      ) {
         setExistingComponent(existingUserComponent);
         setNewComponent(component);
         return;
       }
 
       try {
-        await importComponent(component);
-        await refreshComponentLibrary();
-        await refreshUserComponents();
+        await internalAddComponentToLibrary(component);
       } catch (error) {
         console.error("Error adding component to library:", error);
       }
@@ -505,6 +524,8 @@ export const ComponentLibraryProvider = ({
   const handleCloseDuplicationDialog = useCallback(() => {
     setExistingComponent(null);
     setNewComponent(null);
+
+    dispatchEvent(new CustomEvent("tangle.library.duplicateDialogClosed"));
   }, []);
 
   const searchResult = useMemo(

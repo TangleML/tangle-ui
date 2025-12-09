@@ -359,6 +359,48 @@ describe("ComponentLibraryProvider - Component Management", () => {
 
       expect(mockImportComponent).toHaveBeenCalledWith(newComponent);
     });
+
+    it("should dispatch custom event 'tangle.library.componentAdded' when component is added", async () => {
+      const newComponent: HydratedComponentReference = {
+        name: "event-test-component",
+        digest: "event-digest",
+        spec: mockComponentSpec,
+        text: "event test yaml",
+      };
+
+      mockImportComponent.mockResolvedValue(undefined);
+      mockFlattenFolders.mockReturnValue([]); // No duplicate
+
+      const { result } = renderHook(() => useComponentLibrary(), {
+        wrapper: createWrapper,
+      });
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      const eventListener = vi.fn();
+      window.addEventListener("tangle.library.componentAdded", eventListener);
+
+      await act(async () => {
+        await result.current.addToComponentLibrary(newComponent);
+      });
+
+      expect(mockImportComponent).toHaveBeenCalledWith(newComponent);
+      expect(eventListener).toHaveBeenCalled();
+
+      // Optional: check event detail contents if relevant
+      const eventArg = eventListener.mock.calls[0]?.[0];
+      expect(eventArg).toBeInstanceOf(CustomEvent);
+      expect(eventArg.detail?.component).toEqual(
+        expect.objectContaining(newComponent),
+      );
+
+      window.removeEventListener(
+        "tangle.library.componentAdded",
+        eventListener,
+      );
+    });
   });
 
   describe("Removing Components", () => {

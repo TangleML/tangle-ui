@@ -1,3 +1,4 @@
+import { useMutation } from "@tanstack/react-query";
 import { PackagePlus, X } from "lucide-react";
 import { Upload } from "lucide-react";
 import {
@@ -25,10 +26,15 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import useImportComponent from "@/hooks/useImportComponent";
 import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
+import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
+import {
+  getStringFromData,
+  hydrateComponentReference,
+} from "@/services/componentService";
 
 enum TabType {
   URL = "URL",
@@ -42,13 +48,13 @@ const ImportComponent = ({
   triggerComponent?: ReactNode;
 }) => {
   const notify = useToastNotification();
+  const { addToComponentLibrary } = useComponentLibrary();
 
   const hasEnabledInAppEditor = useBetaFlagValue("in-app-component-editor");
 
   const [url, setUrl] = useState("");
   const [tab, setTab] = useState<TabType>(TabType.File);
   const [isOpen, setIsOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedFile, setSelectedFile] = useState<string | ArrayBuffer | null>(
     null,
   );
@@ -62,21 +68,6 @@ const ImportComponent = ({
     setComponentEditorTemplateSelected(undefined);
     setIsOpen(false);
   };
-
-  const { onImportFromUrl, onImportFromFile, isLoading } = useImportComponent({
-    successCallback: () => {
-      setIsOpen(false);
-      setUrl("");
-      setSelectedFile(null);
-      setSelectedFileName("");
-      setIsSubmitting(false);
-      notify("Component imported successfully", "success");
-    },
-    errorCallback: (error: Error) => {
-      notify(error.message, "error");
-      setIsSubmitting(false);
-    },
-  });
 
   const handleTabChange = useCallback((value: TabType) => {
     setTab(value);
@@ -114,14 +105,60 @@ const ImportComponent = ({
     }
   }, []);
 
+  const { mutate: importComponent, isPending } = useMutation({
+    mutationFn: async () => {
+      const componentRef = {
+        text:
+          tab === TabType.File && selectedFile
+            ? getStringFromData(selectedFile)
+            : undefined,
+        url: tab === TabType.URL ? url : undefined,
+      };
+
+      const hydratedComponent = await hydrateComponentReference(componentRef);
+
+      if (!hydratedComponent) {
+        throw new Error("Failed to hydrate component");
+      }
+
+      const abortController = new AbortController();
+
+      return await Promise.all([
+        Promise.race([
+          createPromiseFromDomEvent(
+            window,
+            "tangle.library.componentAdded",
+            abortController.signal,
+          ),
+          createPromiseFromDomEvent(
+            window,
+            "tangle.library.duplicateDialogClosed",
+            abortController.signal,
+          ),
+        ]),
+        addToComponentLibrary(hydratedComponent),
+      ]).finally(() => {
+        abortController.abort();
+      });
+    },
+    onSuccess: async ([result, _]) => {
+      setIsOpen(false);
+      setUrl("");
+      setSelectedFile(null);
+      setSelectedFileName("");
+
+      if (result instanceof CustomEvent && result.detail?.component) {
+        notify("Component imported successfully", "success");
+      }
+    },
+    onError: (error: Error) => {
+      notify(error.message, "error");
+    },
+  });
+
   const handleImport = useCallback(() => {
-    setIsSubmitting(true);
-    if (tab === TabType.URL) {
-      onImportFromUrl(url);
-    } else if (tab === TabType.File && selectedFile) {
-      onImportFromFile(selectedFile as string);
-    }
-  }, [tab, url, selectedFile]);
+    void importComponent();
+  }, [importComponent]);
 
   const handleUrlChange = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
@@ -132,22 +169,20 @@ const ImportComponent = ({
 
   const handleOpenChange = useCallback(
     (open: boolean) => {
-      if (!open && (isLoading || isSubmitting)) return;
+      if (!open && isPending) return;
 
       if (!open) {
         setUrl("");
         setSelectedFile(null);
         setSelectedFileName("");
-        setIsSubmitting(false);
       }
       setIsOpen(open);
     },
-    [isLoading, isSubmitting],
+    [isPending],
   );
 
   const isButtonDisabled =
-    isLoading ||
-    isSubmitting ||
+    isPending ||
     (tab === TabType.URL && !url) ||
     (tab === TabType.File && !selectedFile);
 
@@ -203,7 +238,7 @@ const ImportComponent = ({
                           type="file"
                           accept=".yaml"
                           onChange={handleFileChange}
-                          disabled={isLoading || isSubmitting}
+                          disabled={isPending}
                           ref={fileInputRef}
                           className={`absolute inset-0 w-full h-full opacity-0 cursor-pointer ${selectedFileName ? "hidden" : ""}`}
                         />
@@ -263,7 +298,7 @@ const ImportComponent = ({
                       placeholder="https://raw.githubusercontent.com/.../component.yaml"
                       value={url}
                       onChange={handleUrlChange}
-                      disabled={isLoading || isSubmitting}
+                      disabled={isPending}
                     />
                     <p className="text-sm text-gray-500">
                       Enter the URL of a component YAML file
@@ -293,7 +328,13 @@ const ImportComponent = ({
                 onClick={handleImport}
                 disabled={isButtonDisabled}
               >
-                Import
+                {isPending ? (
+                  <>
+                    <Spinner /> Importing...
+                  </>
+                ) : (
+                  "Import"
+                )}
               </Button>
             )}
           </DialogFooter>
@@ -309,5 +350,24 @@ const ImportComponent = ({
     </>
   );
 };
+
+function createPromiseFromDomEvent(
+  eventTarget: EventTarget,
+  eventName: string,
+  abortSignal?: AbortSignal,
+) {
+  return new Promise<Event>((resolve) => {
+    const handleEvent = (event: Event) => {
+      eventTarget.removeEventListener(eventName, handleEvent);
+
+      resolve(event);
+    };
+
+    eventTarget.addEventListener(eventName, handleEvent, {
+      once: true,
+      signal: abortSignal,
+    });
+  });
+}
 
 export default ImportComponent;
