@@ -45,6 +45,8 @@ interface BlockStackProps
    * @default 'div'
    */
   as?: StackElement;
+  /** Fill the container and center content */
+  fill?: boolean;
   /** Additional CSS classes */
   className?: string;
 }
@@ -55,9 +57,10 @@ export const BlockStack = forwardRef<
 >((props, ref) => {
   const {
     as: Element = "div",
+    fill = false,
     className = "",
-    align = "start",
-    inlineAlign = "start",
+    align = fill ? "center" : "start",
+    inlineAlign = fill ? "center" : "start",
     gap = "0",
     children,
     ...rest
@@ -66,6 +69,7 @@ export const BlockStack = forwardRef<
   return (
     <Element
       className={cn(
+        { "h-full w-full": fill },
         blockStackVariants({ align, inlineAlign, gap }),
         className.split(" "),
       )}
@@ -119,6 +123,8 @@ interface InlineStackProps
    * @default 'div'
    */
   as?: StackElement;
+  /** Fill the container and center content */
+  fill?: boolean;
   /** Additional CSS classes */
   className?: string;
 }
@@ -129,7 +135,8 @@ export const InlineStack = forwardRef<
 >((props, ref) => {
   const {
     as: Element = "div",
-    align = "start",
+    fill = false,
+    align = fill ? "center" : "start",
     blockAlign = "center",
     gap = "0",
     wrap = "wrap",
@@ -141,6 +148,7 @@ export const InlineStack = forwardRef<
   return (
     <Element
       className={cn(
+        { "h-full w-full": fill },
         inlineStackVariants({ align, blockAlign, gap, wrap }),
         className,
       )}

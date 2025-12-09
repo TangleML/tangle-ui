@@ -254,6 +254,6 @@ describe("<PipelineRun/>", () => {
     );
 
     // assert
-    expect(getByText("Loading Pipeline Run...")).toBeInTheDocument();
+    expect(getByText("Loading Pipeline Run")).toBeInTheDocument();
   });
 });

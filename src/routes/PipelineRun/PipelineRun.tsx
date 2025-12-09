@@ -5,7 +5,9 @@ import { useEffect } from "react";
 
 import PipelineRunPage from "@/components/PipelineRun";
 import { InfoBox } from "@/components/shared/InfoBox";
-import { Spinner } from "@/components/ui/spinner";
+import { LoadingScreen } from "@/components/shared/LoadingScreen";
+import { BlockStack } from "@/components/ui/layout";
+import { Paragraph } from "@/components/ui/typography";
 import { faviconManager } from "@/favicon";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { useBackend } from "@/providers/BackendProvider";
@@ -72,52 +74,48 @@ const PipelineRunContent = () => {
   });
 
   if (isLoading || !ready) {
-    return (
-      <div className="flex items-center justify-center h-full w-full gap-2">
-        <Spinner /> Loading Pipeline Run...
-      </div>
-    );
+    return <LoadingScreen message="Loading Pipeline Run" />;
   }
 
   if (!configured) {
     return (
-      <div className="flex items-center justify-center h-full w-full">
+      <BlockStack fill>
         <InfoBox title="Backend not configured" variant="warning">
           Configure a backend to view this pipeline run.
         </InfoBox>
-      </div>
+      </BlockStack>
     );
   }
 
   if (!available) {
     return (
-      <div className="flex items-center justify-center h-full w-full">
+      <BlockStack fill>
         <InfoBox title="Backend not available" variant="error">
           The configured backend is not available.
         </InfoBox>
-      </div>
+      </BlockStack>
     );
   }
 
   if (!componentSpec) {
     return (
-      <div className="flex items-center justify-center h-full w-full">
+      <BlockStack fill>
         <InfoBox title="Error loading pipeline run" variant="error">
           No pipeline data available.
         </InfoBox>
-      </div>
+      </BlockStack>
     );
   }
 
   if (error) {
     const backendStatusString = getBackendStatusString(configured, available);
     return (
-      <div className="flex items-center justify-center h-full w-full gap-2">
+      <BlockStack fill>
         <InfoBox title="Error loading pipeline run" variant="error">
-          <div className="mb-2">{error.message}</div>
-          <div className="text-black italic">{backendStatusString}</div>
+          <Paragraph className="mb-2">{error.message}</Paragraph>
+          <Paragraph className="italic">{backendStatusString}</Paragraph>
         </InfoBox>
-      </div>
+      </BlockStack>
     );
   }
 
