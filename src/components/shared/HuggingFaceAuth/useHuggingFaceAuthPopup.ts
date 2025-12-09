@@ -1,12 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  useCallback,
-  useEffect,
-  useEffectEvent,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 
 import type { GetUserResponse } from "@/api/types.gen";
 import type {
@@ -65,14 +58,14 @@ export function useHuggingFaceAuthPopup({
     }
   });
 
-  const closePopup = useCallback(() => {
+  const closePopup = () => {
     setIsLoading(false);
 
     cleanup();
 
     setIsPopupOpen(false);
     onClose?.();
-  }, [onClose]);
+  };
 
   const onErrorStateHandler = useEffectEvent((error: string) => {
     onError(error);
@@ -113,7 +106,7 @@ export function useHuggingFaceAuthPopup({
    *
    * Therefore, we need to poll the authorization info from the API instead of using "message" based communication.
    */
-  const openPopup = useCallback(() => {
+  const openPopup = () => {
     // todo: prevent opening multiple popups
     setIsLoading(true);
 
@@ -132,26 +125,23 @@ export function useHuggingFaceAuthPopup({
     // todo: timeout if popup is not closed after 10 seconds
 
     setIsPopupOpen(true);
-  }, [pollAuthorizationInfo]);
+  };
 
   useEffect(() => {
     return () => cleanup();
   }, []);
 
-  const bringPopupToFront = useCallback(() => {
+  const bringPopupToFront = () => {
     // no-op
-  }, []);
+  };
 
-  return useMemo(
-    () => ({
-      isPopupOpen,
-      isLoading,
-      openPopup,
-      closePopup,
-      bringPopupToFront,
-    }),
-    [isPopupOpen, isLoading, openPopup, closePopup, bringPopupToFront],
-  );
+  return {
+    isPopupOpen,
+    isLoading,
+    openPopup,
+    closePopup,
+    bringPopupToFront,
+  };
 }
 
 function centerPopupOnDocument() {

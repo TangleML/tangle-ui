@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useEffect } from "react";
 
 import type { JWTPayload } from "@/components/shared/Authentication/types";
 import { useAuthLocalStorage } from "@/components/shared/Authentication/useAuthLocalStorage";
@@ -48,9 +48,9 @@ const HuggingFaceAuthButtonComponent = withSuspenseWrapper(
     const { awaitAuthorization, isLoading, isAuthorized } =
       useAwaitAuthorization();
 
-    const signIn = useCallback(async () => {
+    const signIn = async () => {
       await awaitAuthorization();
-    }, [awaitAuthorization]);
+    };
 
     useSyncAuthStorageWithUserDetails();
 
