@@ -1,5 +1,5 @@
 import MonacoEditor from "@monaco-editor/react";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -23,24 +23,21 @@ export const YamlComponentEditor = withSuspenseWrapper(
     const validateComponentSpec = useComponentSpecValidator();
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
-    const handleComponentTextChange = useCallback(
-      (value: string | undefined) => {
-        const validationResult = validateComponentSpec(value ?? "");
+    const handleComponentTextChange = (value: string | undefined) => {
+      const validationResult = validateComponentSpec(value ?? "");
 
-        if (!validationResult.valid) {
-          const errors = validationResult.errors ?? ["Invalid component spec"];
-          setValidationErrors(errors);
-          onErrorsChange(errors);
-          return;
-        }
+      if (!validationResult.valid) {
+        const errors = validationResult.errors ?? ["Invalid component spec"];
+        setValidationErrors(errors);
+        onErrorsChange(errors);
+        return;
+      }
 
-        setComponentText(value ?? "");
-        onComponentTextChange(value ?? "");
-        setValidationErrors([]);
-        onErrorsChange([]);
-      },
-      [onComponentTextChange, validateComponentSpec],
-    );
+      setComponentText(value ?? "");
+      onComponentTextChange(value ?? "");
+      setValidationErrors([]);
+      onErrorsChange([]);
+    };
 
     return (
       <InlineStack className="w-full h-full" gap="4">

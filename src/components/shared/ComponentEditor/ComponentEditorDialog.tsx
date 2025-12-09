@@ -1,5 +1,5 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -147,11 +147,11 @@ export const ComponentEditorDialog = withSuspenseWrapper(
       },
     });
 
-    const handleComponentTextChange = useCallback((value: string) => {
+    const handleComponentTextChange = (value: string) => {
       setComponentText(value);
-    }, []);
+    };
 
-    const handleSave = useCallback(async () => {
+    const handleSave = async () => {
       const hydratedComponent = await hydrateComponentReference({
         text: componentText,
       });
@@ -174,11 +174,11 @@ export const ComponentEditorDialog = withSuspenseWrapper(
           "success",
         );
       }
-    }, [componentText, addToComponentLibrary, notify, onClose]);
+    };
 
-    const handleClose = useCallback(() => {
+    const handleClose = () => {
       onClose();
-    }, [onClose]);
+    };
 
     const title = text ? "Edit Component" : "New Component";
     const hasTemplate = templateName && templateName !== "empty";

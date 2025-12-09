@@ -21,9 +21,10 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/components/shared/GitHubAuth",
   "src/components/shared/Authentication",
   "src/routes",
+  "src/components/shared/ReactFlow/FlowCanvas/FlowCanvas.tsx",
+  "src/components/shared/ComponentEditor",
 
   // 6-10 useCallback/useMemo
-  // "src/components/shared/ComponentEditor",     // 6
   // "src/components/shared/Settings",            // 6
   // "src/components/shared/HuggingFaceAuth",     // 8
 
@@ -40,7 +41,6 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   // "src/hooks",                                 // 53
   // "src/providers",                             // 75
   // "src/components/shared/ReactFlow", // 190
-  "src/components/shared/ReactFlow/FlowCanvas/FlowCanvas.tsx",
 ];
 
 // Convert to glob patterns for ESLint
