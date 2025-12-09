@@ -22,7 +22,6 @@ import { useEffect, useRef, useState } from "react";
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
 import { BlockStack } from "@/components/ui/layout";
 import useComponentSpecToEdges from "@/hooks/useComponentSpecToEdges";
-import useComponentUploader from "@/hooks/useComponentUploader";
 import useConfirmationDialog from "@/hooks/useConfirmationDialog";
 import { useCopyPaste } from "@/hooks/useCopyPaste";
 import { useGhostNode } from "@/hooks/useGhostNode";
@@ -31,6 +30,7 @@ import { useNodeCallbacks } from "@/hooks/useNodeCallbacks";
 import { useSubgraphKeyboardNavigation } from "@/hooks/useSubgraphKeyboardNavigation";
 import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
+import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useContextPanel } from "@/providers/ContextPanelProvider";
 import { hydrateComponentReference } from "@/services/componentService";
@@ -40,7 +40,7 @@ import {
   isNotMaterializedComponentReference,
   type TaskSpec,
 } from "@/utils/componentSpec";
-import { loadComponentAsRefFromText } from "@/utils/componentStore";
+import { readTextFromFile } from "@/utils/dom";
 import { deselectAllNodes } from "@/utils/flowUtils";
 import createNodesFromComponentSpec from "@/utils/nodes/createNodesFromComponentSpec";
 import {
@@ -48,7 +48,6 @@ import {
   updateSubgraphSpec,
 } from "@/utils/subgraphUtils";
 
-import ComponentDuplicateDialog from "../../Dialogs/ComponentDuplicateDialog";
 import { useBetaFlagValue } from "../../Settings/useBetaFlags";
 import { useNodesOverlay } from "../NodesOverlay/NodesOverlayProvider";
 import { getBulkUpdateConfirmationDetails } from "./ConfirmationDialogs/BulkUpdateConfirmationDialog";
@@ -168,6 +167,8 @@ const FlowCanvas = ({
   const [replaceTarget, setReplaceTarget] = useState<Node | null>(null);
   const [shiftKeyPressed, setShiftKeyPressed] = useState(false);
   const [metaKeyPressed, setMetaKeyPressed] = useState(false);
+
+  const { addToComponentLibrary } = useComponentLibrary();
 
   const handleKeyDown = (event: KeyboardEvent) => {
     const target = event.target as HTMLElement;
@@ -465,67 +466,7 @@ const FlowCanvas = ({
     };
   }, [isConnecting, reactFlowInstance]);
 
-  const {
-    handleDrop,
-    existingAndNewComponent,
-    handleCancelUpload,
-    handleImportComponent,
-  } = useComponentUploader(readOnly, {
-    onImportSuccess: async (
-      content: string,
-      dropEvent?: DragEvent<HTMLDivElement>,
-    ) => {
-      if (readOnly) return;
-
-      try {
-        // Parse the imported YAML to get the component spec
-        const componentRef = await loadComponentAsRefFromText(content);
-
-        if (!componentRef.spec) {
-          console.error("Failed to parse component spec from imported content");
-          return;
-        }
-
-        let position;
-
-        if (dropEvent && reactFlowInstance) {
-          // Use the drop position if available
-          position = getPositionFromEvent(dropEvent, reactFlowInstance);
-        } else {
-          // Fallback to center of the canvas viewport
-          const { domNode } = store.getState();
-          const boundingRect = domNode?.getBoundingClientRect();
-
-          if (boundingRect && reactFlowInstance) {
-            position = reactFlowInstance.screenToFlowPosition({
-              x: boundingRect.x + boundingRect.width / 2,
-              y: boundingRect.y + boundingRect.height / 2,
-            });
-          }
-        }
-
-        if (position) {
-          const taskSpec: TaskSpec = {
-            annotations: {},
-            componentRef: { ...componentRef },
-          };
-          const { spec: newComponentSpec } = addTask(
-            "task",
-            taskSpec,
-            position,
-            componentSpec,
-          );
-
-          setComponentSpec(newComponentSpec);
-        }
-      } catch (error) {
-        console.error("Failed to add imported component to canvas:", error);
-        notify("Failed to add component to canvas", "error");
-      }
-    },
-  });
-
-  const onDragOver = (event: DragEvent<HTMLDivElement>) => {
+  const onDragOver = async (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
 
     // Check if we're dragging files
@@ -564,10 +505,48 @@ const FlowCanvas = ({
 
   const onDrop = async (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
+    if (readOnly) return;
 
     // Handle file drops
     if (event.dataTransfer.files.length > 0) {
-      handleDrop(event);
+      try {
+        // Parse the imported YAML to get the component spec
+        const content = await readTextFromFile(event.dataTransfer.files[0]);
+        const hydratedComponentRef = await hydrateComponentReference({
+          text: content,
+        });
+
+        if (!hydratedComponentRef) {
+          notify(
+            "Failed to parse component spec from imported content",
+            "error",
+          );
+          return;
+        }
+
+        const result = await addToComponentLibrary(hydratedComponentRef);
+
+        if (result && reactFlowInstance) {
+          // Use the drop position if available
+          const position = getPositionFromEvent(event, reactFlowInstance);
+          const taskSpec: TaskSpec = {
+            annotations: {},
+            componentRef: hydratedComponentRef,
+          };
+          const { spec: newComponentSpec } = addTask(
+            "task",
+            taskSpec,
+            position,
+            componentSpec,
+          );
+
+          setComponentSpec(newComponentSpec);
+        }
+      } catch (error) {
+        console.error("Failed to add imported component to canvas:", error);
+        notify("Failed to add component to canvas", "error");
+      }
+
       return;
     }
 
@@ -1029,12 +1008,6 @@ const FlowCanvas = ({
         selectedNodes={selectedNodes}
         currentSubgraphSpec={currentSubgraphSpec}
         onCreateSubgraph={handleCreateSubgraph}
-      />
-      <ComponentDuplicateDialog
-        existingComponent={existingAndNewComponent?.existingComponent}
-        newComponent={existingAndNewComponent?.newComponent}
-        setClose={handleCancelUpload}
-        handleImportComponent={handleImportComponent}
       />
     </BlockStack>
   );

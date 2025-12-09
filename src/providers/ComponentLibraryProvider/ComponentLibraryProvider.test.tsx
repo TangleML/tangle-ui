@@ -235,7 +235,7 @@ describe("ComponentLibraryProvider - Component Management", () => {
       });
 
       await act(async () => {
-        await result.current.addToComponentLibrary(newComponent);
+        void result.current.addToComponentLibrary(newComponent);
       });
 
       // Should not call importComponent directly when there's a duplicate

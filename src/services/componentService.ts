@@ -34,10 +34,11 @@ import {
   saveComponent,
   type UserComponent,
 } from "@/utils/localforage";
+import { getStringFromData } from "@/utils/string";
 import { componentSpecToYaml } from "@/utils/yaml";
 import { componentSpecFromYaml } from "@/utils/yaml";
 
-export interface ExistingAndNewComponent {
+interface ExistingAndNewComponent {
   existingComponent: UserComponent | undefined;
   newComponent: HydratedComponentReference | undefined;
 }
@@ -322,22 +323,6 @@ export const parseComponentData = (data: string): ComponentSpec | null => {
     return null;
   }
 };
-
-/**
- * Accepts string or ArrayBuffer and returns string.
- *
- * @todo: use utility in other places
- *
- * @param data - The data to normalize.
- * @returns The string representation of the data.
- */
-export function getStringFromData(data: string | ArrayBuffer): string {
-  if (typeof data === "object" && "byteLength" in data) {
-    return new TextDecoder().decode(data);
-  }
-
-  return data;
-}
 
 export const getExistingAndNewUserComponent = async (
   componentData: string | ArrayBuffer,
