@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
+import { getGraphExecutionStateApiExecutionsIdStateGet } from "@/api/sdk.gen";
 import type {
   GetArtifactsApiExecutionsIdArtifactsGetResponse,
   GetContainerExecutionStateResponse,
@@ -9,8 +10,12 @@ import type {
 } from "@/api/types.gen";
 import { useBackend } from "@/providers/BackendProvider";
 import type { RunStatus, TaskStatusCounts } from "@/types/pipelineRun";
-import { TWENTY_FOUR_HOURS_IN_MS } from "@/utils/constants";
+import {
+  DEFAULT_RATE_LIMIT_RPS,
+  TWENTY_FOUR_HOURS_IN_MS,
+} from "@/utils/constants";
 import { fetchWithErrorHandling } from "@/utils/fetchWithErrorHandling";
+import { rateLimit } from "@/utils/rateLimit";
 
 export const fetchExecutionState = async (
   executionId: string,
@@ -71,31 +76,85 @@ export const useFetchContainerExecutionState = (
   });
 };
 
-export const fetchExecutionStatus = async (
-  executionId: string,
-  backendUrl: string,
-) => {
-  try {
-    const details: GetExecutionInfoResponse = await fetchExecutionDetails(
-      executionId,
-      backendUrl,
-    );
-    const stateData: GetGraphExecutionStateResponse = await fetchExecutionState(
-      executionId,
-      backendUrl,
-    );
+/**
+ * Experimental function to fetch execution status without fetching execution details.
+ *
+ * @param executionId
+ * @returns
+ */
+export const fetchExecutionStatusLight = rateLimit(
+  async (executionId: string): Promise<RunStatus> => {
+    try {
+      const defaultResponse = { child_execution_status_stats: {} };
 
-    const taskStatuses = countTaskStatuses(details, stateData);
-    const runStatus = getRunStatus(taskStatuses);
+      const result = await getGraphExecutionStateApiExecutionsIdStateGet({
+        path: {
+          id: executionId,
+        },
+      });
 
-    return runStatus;
-  } catch (error) {
-    console.error(
-      `Error fetching task statuses for run ${executionId}:`,
-      error,
+      const stateData =
+        result.response.status === 200
+          ? (result.data ?? defaultResponse)
+          : defaultResponse;
+
+      return getRunStatus(countTaskStatusesLight(stateData));
+    } catch (error) {
+      console.error(
+        `Error fetching task statuses for run ${executionId}:`,
+        error,
+      );
+      throw error;
+    }
+  },
+  {
+    rate: DEFAULT_RATE_LIMIT_RPS - 1,
+    bucketSize: 1,
+  },
+);
+
+/**
+ * Experimental function to count task statuses without fetching execution details.
+ */
+const countTaskStatusesLight = (
+  stateData: GetGraphExecutionStateResponse,
+): TaskStatusCounts => {
+  const statusCounts = {
+    total: 0,
+    succeeded: 0,
+    failed: 0,
+    running: 0,
+    waiting: 0,
+    skipped: 0,
+    cancelled: 0,
+  };
+
+  if (stateData.child_execution_status_stats) {
+    Object.values(stateData.child_execution_status_stats).forEach(
+      (statusStats) => {
+        if (statusStats) {
+          const childStatusCounts =
+            convertExecutionStatsToStatusCounts(statusStats);
+          const aggregateStatus = getRunStatus(childStatusCounts);
+          const mappedStatus = mapStatus(aggregateStatus);
+          statusCounts[mappedStatus as keyof TaskStatusCounts]++;
+        } else {
+          // If no status stats, assume waiting, likely we may receive none at all
+          statusCounts.waiting++;
+        }
+      },
     );
-    throw error;
   }
+
+  const total =
+    statusCounts.succeeded +
+    statusCounts.failed +
+    statusCounts.running +
+    statusCounts.waiting +
+    statusCounts.skipped +
+    statusCounts.cancelled;
+
+  return { ...statusCounts, total };
 };
 
 /**

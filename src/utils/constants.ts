@@ -76,3 +76,5 @@ export const TWENTY_FOUR_HOURS_IN_MS = 24 * 60 * 60 * 1000;
 export const ROOT_TASK_ID = "root";
 
 export const ISO8601_DURATION_ZERO_DAYS = "P0D";
+
+export const DEFAULT_RATE_LIMIT_RPS = 10; // requests per second
