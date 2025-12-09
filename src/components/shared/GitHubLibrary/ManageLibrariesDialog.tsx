@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -29,17 +29,17 @@ export function ManageLibrariesDialog({
     StoredLibrary | undefined
   >();
 
-  const handleDialogOpenChange = useCallback((open: boolean) => {
+  const handleDialogOpenChange = (open: boolean) => {
     setOpen(open);
     if (!open) {
       setMode("manage");
     }
-  }, []);
+  };
 
-  const handleUpdateLibrary = useCallback((library: StoredLibrary) => {
+  const handleUpdateLibrary = (library: StoredLibrary) => {
     setLibraryToUpdate(library);
     setMode("update");
-  }, []);
+  };
 
   const defaultTrigger = (
     <Button variant="ghost" size="sm">

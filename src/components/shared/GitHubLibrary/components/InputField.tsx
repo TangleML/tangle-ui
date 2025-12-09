@@ -1,4 +1,4 @@
-import { type ChangeEvent, type ReactNode, useCallback, useState } from "react";
+import { type ChangeEvent, type ReactNode, useState } from "react";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,23 +27,20 @@ export const InputField = ({
 }: InputFieldProps) => {
   const [inputValue, setInputValue] = useState(value);
   const [error, setError] = useState<string[] | null>(null);
-  const handleChange = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) => {
-      const value = e.target.value;
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
 
-      setInputValue(value);
+    setInputValue(value);
 
-      const validationErrors = validate(value);
-      setError(validationErrors);
+    const validationErrors = validate(value);
+    setError(validationErrors);
 
-      if (validationErrors && validationErrors.length > 0) {
-        onChange(null, validationErrors);
-      } else {
-        onChange(value, null);
-      }
-    },
-    [validate, onChange],
-  );
+    if (validationErrors && validationErrors.length > 0) {
+      onChange(null, validationErrors);
+    } else {
+      onChange(value, null);
+    }
+  };
 
   return (
     <BlockStack gap="2">

@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -55,14 +55,14 @@ export const UpdateGitHubLibrary = ({
     },
   });
 
-  const handleSubmit = useCallback(async () => {
+  const handleSubmit = async () => {
     if (state.hasErrors) {
       notify("Please fill in all fields", "error");
       return;
     }
 
     await updateGitHubLibrary(state.value);
-  }, [updateGitHubLibrary, state]);
+  };
 
   return (
     <BlockStack gap="2">
