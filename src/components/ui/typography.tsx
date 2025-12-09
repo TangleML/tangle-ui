@@ -66,6 +66,9 @@ interface TextProps
    * @default ''
    */
   className?: string;
+
+  /** Native browser tooltip text */
+  title?: string;
 }
 
 /**
