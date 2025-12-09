@@ -14,20 +14,19 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/components/shared/ExecutionDetails",
   "src/components/shared/QuickStart",
   "src/components/shared/Status",
-
-  // 2-5 useCallback/useMemo
-  "src/components/shared/CodeViewer", // 2
-  "src/components/shared/FullscreenElement", // 2
-  "src/components/shared/CopyText", // 3
-  "src/components/shared/TaskDetails", // 4
-  "src/components/shared/GitHubAuth", // 5
+  "src/components/shared/CodeViewer",
+  "src/components/shared/FullscreenElement",
+  "src/components/shared/CopyText",
+  "src/components/shared/TaskDetails",
+  "src/components/shared/GitHubAuth",
+  "src/components/shared/Authentication",
+  "src/routes",
 
   // 6-10 useCallback/useMemo
-  // "src/routes",                                // 6
   // "src/components/shared/ComponentEditor",     // 6
   // "src/components/shared/Settings",            // 6
   // "src/components/shared/HuggingFaceAuth",     // 8
-  "src/components/shared/Authentication", // 9
+
   // "src/components/shared/GitHubLibrary",       // 9
 
   // 11-20 useCallback/useMemo

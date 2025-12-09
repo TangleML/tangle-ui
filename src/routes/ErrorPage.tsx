@@ -1,6 +1,4 @@
-import { useRouter } from "@tanstack/react-router";
-import { type ErrorComponentProps } from "@tanstack/react-router";
-import { useCallback } from "react";
+import { type ErrorComponentProps, useRouter } from "@tanstack/react-router";
 
 import { InfoBox } from "@/components/shared/InfoBox";
 import { Button } from "@/components/ui/button";
@@ -10,13 +8,13 @@ import { Paragraph, Text } from "@/components/ui/typography";
 export default function ErrorPage({ error }: ErrorComponentProps) {
   const router = useRouter();
 
-  const handleRefresh = useCallback(() => {
+  const handleRefresh = () => {
     window.location.reload();
-  }, []);
+  };
 
-  const handleGoHome = useCallback(() => {
+  const handleGoHome = () => {
     router.navigate({ to: "/" });
-  }, [router]);
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">

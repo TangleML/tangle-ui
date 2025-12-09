@@ -1,5 +1,4 @@
 import { useRouter } from "@tanstack/react-router";
-import { useCallback } from "react";
 
 import { Button } from "@/components/ui/button";
 import { BlockStack } from "@/components/ui/layout";
@@ -8,13 +7,13 @@ import { Paragraph, Text } from "@/components/ui/typography";
 export default function NotFoundPage() {
   const router = useRouter();
 
-  const handleGoHome = useCallback(() => {
+  const handleGoHome = () => {
     router.navigate({ to: "/" });
-  }, [router]);
+  };
 
-  const handleGoBack = useCallback(() => {
+  const handleGoBack = () => {
     router.history.back();
-  }, [router]);
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
