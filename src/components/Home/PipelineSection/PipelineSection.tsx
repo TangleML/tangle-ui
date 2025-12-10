@@ -31,6 +31,42 @@ import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 import BulkActionsBar from "./BulkActionsBar";
 import PipelineRow from "./PipelineRow";
 
+const DEFAULT_PAGE_SIZE = 10;
+
+function usePagination<T>(items: T[], pageSize = DEFAULT_PAGE_SIZE) {
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const totalPages = Math.ceil(items.length / pageSize);
+
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+
+  const paginatedItems = items.slice(startIndex, endIndex);
+
+  const goToNextPage = () => {
+    setCurrentPage((p) => Math.min(totalPages, p + 1));
+  };
+
+  const goToPreviousPage = () => {
+    setCurrentPage((p) => Math.max(1, p - 1));
+  };
+
+  const resetPage = () => {
+    setCurrentPage(1);
+  };
+
+  return {
+    paginatedItems,
+    currentPage,
+    totalPages,
+    hasNextPage: currentPage < totalPages,
+    hasPreviousPage: currentPage > 1,
+    goToNextPage,
+    goToPreviousPage,
+    resetPage,
+  };
+}
+
 type Pipelines = Map<string, ComponentFileEntry>;
 
 const PipelineSectionSkeleton = () => {
@@ -71,6 +107,17 @@ export const PipelineSection = withSuspenseWrapper(() => {
     return name.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
+  const {
+    paginatedItems: paginatedPipelines,
+    currentPage,
+    totalPages,
+    hasNextPage,
+    hasPreviousPage,
+    goToNextPage,
+    goToPreviousPage,
+    resetPage,
+  } = usePagination(filteredPipelines);
+
   const fetchUserPipelines = async () => {
     setIsLoading(true);
     try {
@@ -95,6 +142,7 @@ export const PipelineSection = withSuspenseWrapper(() => {
 
   const handleSearch = (e: ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
+    resetPage();
   };
 
   const handleSelectAll = (checked: boolean) => {
@@ -207,7 +255,7 @@ export const PipelineSection = withSuspenseWrapper(() => {
             {filteredPipelines.length === 0 && (
               <TableRow>No Pipelines found.</TableRow>
             )}
-            {filteredPipelines.map(([name, fileEntry]) => (
+            {paginatedPipelines.map(([name, fileEntry]) => (
               <PipelineRow
                 key={fileEntry.componentRef.digest}
                 name={name}
@@ -219,6 +267,44 @@ export const PipelineSection = withSuspenseWrapper(() => {
             ))}
           </TableBody>
         </Table>
+      )}
+
+      {totalPages > 1 && (
+        <InlineStack
+          gap="2"
+          align="space-between"
+          blockAlign="center"
+          className="w-full"
+        >
+          <InlineStack gap="2" blockAlign="center">
+            <Button
+              variant="outline"
+              onClick={resetPage}
+              disabled={currentPage === 1}
+            >
+              <Icon name="ChevronFirst" />
+            </Button>
+            <Button
+              variant="outline"
+              onClick={goToPreviousPage}
+              disabled={!hasPreviousPage}
+            >
+              <Icon name="ChevronLeft" />
+              Previous
+            </Button>
+          </InlineStack>
+          <Text size="sm" tone="subdued">
+            Page {currentPage} of {totalPages}
+          </Text>
+          <Button
+            variant="outline"
+            onClick={goToNextPage}
+            disabled={!hasNextPage}
+          >
+            Next
+            <Icon name="ChevronRight" />
+          </Button>
+        </InlineStack>
       )}
 
       <Button onClick={fetchUserPipelines} className="mt-6 max-w-96">
