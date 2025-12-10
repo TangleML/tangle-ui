@@ -9,7 +9,8 @@ interface TaskImplementationProps {
   displayName: string;
   componentRef?: ComponentReference;
   componentSpec?: ComponentSpec;
-  showInlineContent?: boolean;
+  fullscreen?: boolean;
+  onClose?: () => void;
 }
 
 const TaskImplementation = withSuspenseWrapper(
@@ -17,14 +18,16 @@ const TaskImplementation = withSuspenseWrapper(
     displayName,
     componentRef,
     componentSpec,
-    showInlineContent = true,
+    fullscreen,
+    onClose,
   }: TaskImplementationProps) => {
     if (componentRef) {
       return (
         <ComponentRefCodeViewer
           componentRef={componentRef}
           displayName={displayName}
-          showInlineContent={showInlineContent}
+          fullscreen={fullscreen}
+          onClose={onClose}
         />
       );
     }
@@ -34,7 +37,8 @@ const TaskImplementation = withSuspenseWrapper(
         <ComponentSpecCodeViewer
           componentSpec={componentSpec}
           displayName={displayName}
-          showInlineContent={showInlineContent}
+          fullscreen={fullscreen}
+          onClose={onClose}
         />
       );
     }
@@ -51,8 +55,9 @@ const ComponentRefCodeViewer = withSuspenseWrapper(
   ({
     componentRef,
     displayName,
-    showInlineContent = true,
-  }: Pick<TaskImplementationProps, "displayName" | "showInlineContent"> & {
+    fullscreen,
+    onClose,
+  }: Omit<TaskImplementationProps, "componentSpec"> & {
     componentRef: ComponentReference;
   }) => {
     const hydratedComponentRef = useHydrateComponentReference(componentRef);
@@ -66,7 +71,8 @@ const ComponentRefCodeViewer = withSuspenseWrapper(
         code={hydratedComponentRef.text}
         language="yaml"
         filename={displayName}
-        showInlineContent={showInlineContent}
+        fullscreen={fullscreen}
+        onClose={onClose}
       />
     );
   },
@@ -75,8 +81,9 @@ const ComponentRefCodeViewer = withSuspenseWrapper(
 const ComponentSpecCodeViewer = ({
   componentSpec,
   displayName,
-  showInlineContent = true,
-}: Pick<TaskImplementationProps, "displayName" | "showInlineContent"> & {
+  fullscreen,
+  onClose,
+}: Omit<TaskImplementationProps, "componentRef"> & {
   componentSpec: ComponentSpec;
 }) => {
   const code = componentSpecToText(componentSpec);
@@ -86,7 +93,8 @@ const ComponentSpecCodeViewer = ({
       code={code}
       language="yaml"
       filename={displayName}
-      showInlineContent={showInlineContent}
+      fullscreen={fullscreen}
+      onClose={onClose}
     />
   );
 };
