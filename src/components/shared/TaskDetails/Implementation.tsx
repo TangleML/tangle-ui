@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import { CodeViewer } from "@/components/shared/CodeViewer";
 import { useHydrateComponentReference } from "@/hooks/useHydrateComponentReference";
 import type { ComponentReference, ComponentSpec } from "@/utils/componentSpec";
@@ -9,22 +11,15 @@ interface TaskImplementationProps {
   displayName: string;
   componentRef?: ComponentReference;
   componentSpec?: ComponentSpec;
-  showInlineContent?: boolean;
 }
 
 const TaskImplementation = withSuspenseWrapper(
-  ({
-    displayName,
-    componentRef,
-    componentSpec,
-    showInlineContent = true,
-  }: TaskImplementationProps) => {
+  ({ displayName, componentRef, componentSpec }: TaskImplementationProps) => {
     if (componentRef) {
       return (
         <ComponentRefCodeViewer
           componentRef={componentRef}
           displayName={displayName}
-          showInlineContent={showInlineContent}
         />
       );
     }
@@ -34,7 +29,6 @@ const TaskImplementation = withSuspenseWrapper(
         <ComponentSpecCodeViewer
           componentSpec={componentSpec}
           displayName={displayName}
-          showInlineContent={showInlineContent}
         />
       );
     }
@@ -51,10 +45,11 @@ const ComponentRefCodeViewer = withSuspenseWrapper(
   ({
     componentRef,
     displayName,
-    showInlineContent = true,
-  }: Pick<TaskImplementationProps, "displayName" | "showInlineContent"> & {
+  }: Pick<TaskImplementationProps, "displayName"> & {
     componentRef: ComponentReference;
   }) => {
+    const [isFullscreen, setIsFullscreen] = useState(false);
+
     const hydratedComponentRef = useHydrateComponentReference(componentRef);
 
     if (!hydratedComponentRef) {
@@ -66,7 +61,9 @@ const ComponentRefCodeViewer = withSuspenseWrapper(
         code={hydratedComponentRef.text}
         language="yaml"
         filename={displayName}
-        showInlineContent={showInlineContent}
+        isFullscreen={isFullscreen}
+        onClose={() => setIsFullscreen(false)}
+        onExpand={() => setIsFullscreen(true)}
       />
     );
   },
@@ -75,10 +72,11 @@ const ComponentRefCodeViewer = withSuspenseWrapper(
 const ComponentSpecCodeViewer = ({
   componentSpec,
   displayName,
-  showInlineContent = true,
-}: Pick<TaskImplementationProps, "displayName" | "showInlineContent"> & {
+}: Pick<TaskImplementationProps, "displayName"> & {
   componentSpec: ComponentSpec;
 }) => {
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
   const code = componentSpecToText(componentSpec);
 
   return (
@@ -86,7 +84,9 @@ const ComponentSpecCodeViewer = ({
       code={code}
       language="yaml"
       filename={displayName}
-      showInlineContent={showInlineContent}
+      isFullscreen={isFullscreen}
+      onClose={() => setIsFullscreen(false)}
+      onExpand={() => setIsFullscreen(true)}
     />
   );
 };
