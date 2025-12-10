@@ -24,7 +24,6 @@ test.describe("Component Library", () => {
 
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
-    // Create new pipeline and wait for it to load
     await createNewPipeline(page);
   });
 
@@ -38,12 +37,12 @@ test.describe("Component Library", () => {
     // expect to see all the folders
     for (const folder of expectedFirstLevelFolders) {
       const folderContainer = await locateFolderByName(page, folder);
-      expect(folderContainer).toBeVisible();
+      await expect(folderContainer).toBeVisible();
     }
 
     // special folders are not rendered from the beginning
-    const countOfFoldersByDefault = await page.locator("[data-folder-name]");
-    expect(countOfFoldersByDefault).toHaveCount(
+    const countOfFoldersByDefault = page.locator("[data-folder-name]");
+    await expect(countOfFoldersByDefault).toHaveCount(
       expectedFirstLevelFolders.length,
     );
   });
@@ -65,7 +64,7 @@ test.describe("Component Library", () => {
     // expect to see all the folders
     for (const folder of standardLibraryFolders) {
       const folderContainer = await locateFolderByName(page, folder);
-      expect(folderContainer).toBeVisible();
+      await expect(folderContainer).toBeVisible();
     }
   });
 
@@ -75,39 +74,35 @@ test.describe("Component Library", () => {
       page,
       "Inputs & Outputs",
     );
-    expect(
-      await inputsOutputsFolder
+    await expect(
+      inputsOutputsFolder
         .getByRole("button")
-        .getAttribute("aria-expanded"),
-    ).toBe("false");
-    const inputsOutputsFolderContent = await inputsOutputsFolder.locator("li");
+        ,
+    ).toHaveAttribute("aria-expanded", "false");
+    const inputsOutputsFolderContent = inputsOutputsFolder.locator("li");
 
     (await inputsOutputsFolderContent.all()).forEach(async (component) => {
-      expect(await component.isVisible()).toBe(false);
+      await expect(component).toBeHidden();
     });
 
     // expand the folder
     await openComponentLibFolder(page, "Inputs & Outputs");
 
-    expect(
-      await inputsOutputsFolder
+    await expect(
+      inputsOutputsFolder
         .getByRole("button")
-        .getAttribute("aria-expanded"),
-    ).toBe("true");
+        ,
+    ).toHaveAttribute("aria-expanded", "true");
 
     // expect only two components in the folder
-    const components = await inputsOutputsFolder.locator("li");
-    expect(components).toHaveCount(2);
+    const components = inputsOutputsFolder.locator("li");
+    await expect(components).toHaveCount(2);
 
     await inputsOutputsFolder.getByRole("button").click();
 
-    await page.waitForTimeout(200);
-
-    expect(
-      await inputsOutputsFolder
-        .getByRole("button")
-        .getAttribute("aria-expanded"),
-    ).toBe("false");
+    await expect(
+      inputsOutputsFolder.getByRole("button"),
+    ).toHaveAttribute("aria-expanded", "false");
   });
 
   test("user can navigate deep into the nested folders", async () => {
@@ -115,14 +110,14 @@ test.describe("Component Library", () => {
     await openComponentLibFolder(page, "Standard library");
 
     const topFolder = await openComponentLibFolder(page, "ML frameworks");
-    const topFolderContent = await topFolder.locator("[data-folder-name]");
-    expect(await topFolderContent).toHaveCount(6);
+    const topFolderContent = topFolder.locator("[data-folder-name]");
+    await expect(await topFolderContent).toHaveCount(6);
 
     const nestedFolder = await openComponentLibFolder(page, "XGBoost");
 
     const nestedFolderContent =
-      await nestedFolder.getByTestId("component-item");
-    expect(await nestedFolderContent).toHaveCount(4);
+      nestedFolder.getByTestId("component-item");
+    await expect(await nestedFolderContent).toHaveCount(4);
   });
 
   test("components can be added and removed from favorites folder", async () => {
@@ -141,21 +136,15 @@ test.describe("Component Library", () => {
       page,
       "Favorite Components",
     );
-    expect(await favoritesFolder.locator("li")).toHaveCount(1);
+    await expect(favoritesFolder.locator("li")).toHaveCount(1);
 
     // unstar the component
     await chicagoTaxiTripsDataset.getByTestId("favorite-star").click();
 
-    // giving time for the component to be removed from the favorites folder
-    // todo: find a better way to do this
-    await page.waitForTimeout(200);
-
-    // expect the component to be removed from the favorites folder
-    expect(await favoritesFolder.locator("li")).toHaveCount(0);
+    await expect(favoritesFolder.locator("li")).toHaveCount(0);
   });
 
   test("component details can be opened as a dialog", async () => {
-    // drop component on the canvas
     await openComponentLibFolder(page, "Standard library");
     const quickStartFolder = await openComponentLibFolder(page, "Quick start");
     const chicagoTaxiTripsDataset = await locateComponentInFolder(
@@ -165,20 +154,17 @@ test.describe("Component Library", () => {
 
     await chicagoTaxiTripsDataset.getByTestId("info-icon-button").click();
 
-    await page.waitForTimeout(200);
+    const dialogHeader = page.locator('[data-slot="dialog-header"]');
+    await expect(dialogHeader).toBeVisible();
 
-    const dialogHeader = await page.locator('[data-slot="dialog-header"]');
-    expect(dialogHeader).toBeVisible();
-
-    expect(dialogHeader).toHaveText("Chicago Taxi Trips dataset");
+    await expect(dialogHeader).toHaveText("Chicago Taxi Trips dataset");
 
     await page.locator('button[data-slot="dialog-close"]').click();
 
-    await page.waitForTimeout(200);
+    await expect(dialogHeader).toBeHidden();
   });
 
   test("components can be dragged to the canvas and appear in the used in pipeline folder", async () => {
-    // drop component on the canvas
     await openComponentLibFolder(page, "Standard library");
     await dropComponentFromLibraryOnCanvas(
       page,
@@ -190,28 +176,26 @@ test.describe("Component Library", () => {
       page,
       "Used in Pipeline",
     );
-    expect(await usedOnCanvasFolder.locator("li")).toHaveCount(1);
+    await expect(usedOnCanvasFolder.locator("li")).toHaveCount(1);
 
     // remove the component from the canvas
     await removeComponentFromCanvas(page, "Chicago Taxi Trips dataset");
-    expect(await usedOnCanvasFolder.locator("li")).toHaveCount(0);
+    await expect(usedOnCanvasFolder.locator("li")).toHaveCount(0);
   });
 
   test("library can be searched", async () => {
-    // search for a component
     await page.getByTestId("search-input").fill("GCS");
 
-    await page.waitForTimeout(200);
+    const searchResultsHeader = page.getByTestId("search-results-header");
+    await expect(searchResultsHeader).toBeVisible();
+    await expect(searchResultsHeader).toHaveText("Search Results (3)");
 
-    const searchResultsHeader = await page.getByTestId("search-results-header");
-    expect(await searchResultsHeader.isVisible()).toBe(true);
-    expect(await searchResultsHeader).toHaveText("Search Results (3)");
-    const componentItem = await page.getByTestId("component-item");
-    expect(componentItem).toHaveCount(3);
+    const componentItem = page.getByTestId("component-item");
+    await expect(componentItem).toHaveCount(3);
 
     await page.getByTestId("search-input").clear();
 
-    await page.waitForTimeout(200);
+    await expect(searchResultsHeader).toBeHidden();
   });
 
   test("search results can be highlighted on input pin click", async () => {
@@ -219,31 +203,24 @@ test.describe("Component Library", () => {
     await openComponentLibFolder(page, "Data manipulation");
     await openComponentLibFolder(page, "CSV");
 
-    // drop component on the canvas
     await dropComponentFromLibraryOnCanvas(
       page,
       "CSV",
       "Select columns using Pandas on CSV data",
     );
 
-    // click on component output pin
     await page.getByTestId("input-handle-table").click();
-    await page.waitForTimeout(200);
 
-    // assert that the output handle is highlighted
-    const outputConnection = await page.getByTestId(
+    const outputConnection = page.getByTestId(
       "output-connection-transformed_table",
     );
-    const inputConnection = await page.getByTestId("input-connection-table");
+    const inputConnection = page.getByTestId("input-connection-table");
+    await expect(outputConnection).toHaveAttribute("data-highlighted", "true");
 
     // assert highlighting
-    expect(await outputConnection.getAttribute("data-highlighted")).toBe(
-      "true",
-    );
-    expect(await inputConnection.getAttribute("data-highlighted")).toBe(
-      "false",
-    );
-    expect(await inputConnection.getAttribute("data-selected")).toBe("true");
+    await expect(outputConnection).toHaveAttribute("data-highlighted", "true");
+    await expect(inputConnection).toHaveAttribute("data-highlighted", "false");
+    await expect(inputConnection).toHaveAttribute("data-selected", "true");
 
     assertSearchState(page, {
       searchTerm: "CSV",
@@ -253,15 +230,10 @@ test.describe("Component Library", () => {
 
     // reset highlighting after clicking on the canvas
     await locateFlowCanvas(page).click();
-    await page.waitForTimeout(200);
 
     // resets selection after clicking on the canvas
-    expect(await inputConnection.getAttribute("data-highlighted")).toBe(
-      "false",
-    );
-    expect(await outputConnection.getAttribute("data-highlighted")).toBe(
-      "false",
-    );
+    await expect(inputConnection).toHaveAttribute("data-highlighted", "false");
+    await expect(outputConnection).toHaveAttribute("data-highlighted", "false");
 
     // search should be reset
     assertSearchState(page, {
@@ -280,29 +252,24 @@ test.describe("Component Library", () => {
     await openComponentLibFolder(page, "Data manipulation");
     await openComponentLibFolder(page, "CSV");
 
-    // drop component on the canvas
     await dropComponentFromLibraryOnCanvas(
       page,
       "CSV",
       "Select columns using Pandas on CSV data",
     );
 
-    // click on component output pin
     await page.getByTestId("output-handle-transformed_table").click();
-    await page.waitForTimeout(200);
 
-    // assert that the output handle is selected
-    const outputConnection = await page.getByTestId(
+    const outputConnection = page.getByTestId(
       "output-connection-transformed_table",
     );
-    const inputConnection = await page.getByTestId("input-connection-table");
+    const inputConnection = page.getByTestId("input-connection-table");
+    await expect(outputConnection).toHaveAttribute("data-selected", "true");
 
     // assert highlighting
-    expect(await outputConnection.getAttribute("data-highlighted")).toBe(
-      "false",
-    );
-    expect(await outputConnection.getAttribute("data-selected")).toBe("true");
-    expect(await inputConnection.getAttribute("data-highlighted")).toBe("true");
+    await expect(outputConnection).toHaveAttribute("data-highlighted", "false");
+    await expect(outputConnection).toHaveAttribute("data-selected", "true");
+    await expect(inputConnection).toHaveAttribute("data-highlighted", "true");
 
     // assert search inputs
     assertSearchState(page, {
@@ -314,13 +281,10 @@ test.describe("Component Library", () => {
 
     // reset highlighting after clicking on the canvas
     await locateFlowCanvas(page).click();
-    await page.waitForTimeout(200);
 
     // resets selection after clicking on the canvas
-    expect(await inputConnection.getAttribute("data-highlighted")).toBe(
-      "false",
-    );
-    expect(await outputConnection.getAttribute("data-selected")).toBe("false");
+    await expect(inputConnection).toHaveAttribute("data-highlighted", "false");
+    await expect(outputConnection).toHaveAttribute("data-selected", "false");
 
     // search should be reset
     assertSearchState(page, {

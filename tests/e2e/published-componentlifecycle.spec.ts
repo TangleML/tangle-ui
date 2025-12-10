@@ -24,18 +24,25 @@ test.describe("Published Component Library - Lifecycle", () => {
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
 
-    // Create new pipeline and wait for it to load
     await createNewPipeline(page);
-    await page.waitForTimeout(200);
 
-    // open personal preferences
+    await expect(page.locator("[data-testid='search-input']")).toBeVisible();
+
     await page.getByTestId("personal-preferences-button").click();
-    await page.waitForTimeout(200);
 
-    // close personal preferences
-    const dialog = await page.getByTestId("personal-preferences-dialog");
-    await dialog.getByTestId("remote-component-library-search-switch").click();
+    const dialog = page.getByTestId("personal-preferences-dialog");
+    await expect(dialog).toBeVisible();
+
+    const switchElement = dialog.getByTestId(
+      "remote-component-library-search-switch",
+    );
+    await expect(switchElement).toBeVisible({ timeout: 10000 });
+
+    await switchElement.click();
+    await expect(switchElement).toHaveAttribute("aria-checked", "true");
+
     await dialog.getByTestId("close-button").click();
+    await expect(dialog).toBeHidden();
 
     await locateFolderByName(page, "Standard library");
   });
@@ -45,14 +52,10 @@ test.describe("Published Component Library - Lifecycle", () => {
   });
 
   test("drop new component to canvas and publish it", async () => {
-    // Read your file into a buffer.
     const buffer = readFileSync(
       "tests/e2e/fixtures/components/test-component-a.component.v1.yaml",
     );
 
-    /**
-     * This test requires component to be generated dynamically, so no backend mock is needed
-     */
     const modifiedComponentText = buffer
       .toString()
       .replace(
@@ -65,7 +68,6 @@ test.describe("Published Component Library - Lifecycle", () => {
       modifiedComponentText,
     ).toString("base64");
 
-    // Create the DataTransfer and File
     const dataTransfer = await page.evaluateHandle(
       async ({ bufferData, localFileName, localFileType }) => {
         const dt = new DataTransfer();
@@ -84,7 +86,7 @@ test.describe("Published Component Library - Lifecycle", () => {
         localFileType: "application/yaml",
       },
     );
-    // Now dispatch
+
     await page.dispatchEvent(`[data-testid="rf__wrapper"]`, "drop", {
       dataTransfer,
     });
@@ -93,35 +95,32 @@ test.describe("Published Component Library - Lifecycle", () => {
       page,
       "User Components",
     );
-    const component = await locateComponentInFolder(
+    const component = locateComponentInFolder(
       userComponentsFolder,
       `Test component ${componentName}`,
     );
-    expect(component).toBeVisible();
+    await expect(component).toBeVisible();
 
-    const infoButton = await component.getByTestId("info-icon-button");
+    const infoButton = component.getByTestId("info-icon-button");
     await infoButton.click();
 
-    await page.waitForSelector(`[data-testid="component-details-tabs"]`);
-    const dialog = await page.getByRole("dialog");
+    await expect(page.getByTestId("component-details-tabs")).toBeVisible();
+    const dialog = page.getByRole("dialog");
 
-    const dialogHeader = await dialog.locator('[data-slot="dialog-header"]');
+    const dialogHeader = dialog.locator('[data-slot="dialog-header"]');
+    await expect(dialogHeader).toHaveText(`Test component ${componentName}`);
 
-    expect(dialogHeader).toHaveText(`Test component ${componentName}`);
-
-    const publishButton = await page
-      .locator(`[role="tablist"]`)
-      .getByText("Publish");
+    const publishButton = page.locator(`[role="tablist"]`).getByText("Publish");
     await publishButton.click();
 
-    await dialog.getByTestId("component-review-container");
+    await expect(
+      dialog.getByTestId("component-review-container"),
+    ).toBeVisible();
 
-    await page.waitForSelector(`[data-testid="publish-component-button"]`);
-
-    const publishComponentButton = await dialog.getByTestId(
+    const publishComponentButton = dialog.getByTestId(
       "publish-component-button",
     );
-    expect(publishComponentButton).toBeVisible();
+    await expect(publishComponentButton).toBeVisible();
 
     await dialog.locator('[data-slot="dialog-close"]').click();
   });

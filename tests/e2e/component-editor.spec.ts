@@ -21,10 +21,7 @@ test.describe("Component Editor", () => {
 
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
-    // Create new pipeline and wait for it to load
     await createNewPipeline(page);
-
-    // in-app component editor is enabled by default
   });
 
   test.afterAll(async () => {
@@ -37,25 +34,26 @@ test.describe("Component Editor", () => {
     // expect to see all the folders
     for (const folder of expectedFirstLevelFolders) {
       const folderContainer = await locateFolderByName(page, folder);
-      expect(folderContainer).toBeVisible();
+      await expect(folderContainer).toBeVisible();
     }
 
     await page.getByTestId("import-component-button").click();
 
-    await page.waitForTimeout(200);
-
-    const dialog = await page.getByTestId("import-component-dialog");
+    const dialog = page.getByTestId("import-component-dialog");
+    await expect(dialog).toBeVisible();
     await dialog.getByRole("tab", { name: "New" }).click();
 
     await page
       .getByTestId("new-component-template-selector-option-python")
       .click();
 
-    await page.waitForSelector(`[data-testid="python-editor"]`);
+    await expect(
+      page.getByTestId("python-editor"),
+      "Python editor should load after selecting template",
+    ).toBeVisible({ timeout: 15000 });
 
     await page.getByRole("button", { name: "Save" }).click();
 
-    // drop component on the canvas
     await dropComponentFromLibraryOnCanvas(
       page,
       "User Components",
@@ -66,11 +64,11 @@ test.describe("Component Editor", () => {
       page,
       "Used in Pipeline",
     );
-    expect(await usedOnCanvasFolder.locator("li")).toHaveCount(1);
+    await expect(usedOnCanvasFolder.locator("li")).toHaveCount(1);
 
     // remove the component from the canvas
     await removeComponentFromCanvas(page, "Filter text");
-    expect(await usedOnCanvasFolder.locator("li")).toHaveCount(0);
+    await expect(usedOnCanvasFolder.locator("li")).toHaveCount(0);
 
     const userComponentsFolder = await openComponentLibFolder(
       page,

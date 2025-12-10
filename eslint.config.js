@@ -1,4 +1,5 @@
 import pluginJs from "@eslint/js";
+import pluginPlaywright from "eslint-plugin-playwright";
 import pluginReact from "eslint-plugin-react";
 import reactCompiler from "eslint-plugin-react-compiler";
 import simpleImportSort from "eslint-plugin-simple-import-sort";
@@ -82,5 +83,21 @@ export default [
   },
   {
     ignores: ["src/api/**/*"],
+  },
+  // Playwright E2E test rules
+  {
+    files: ["tests/e2e/**/*.ts"],
+    ...pluginPlaywright.configs["flat/recommended"],
+    rules: {
+      ...pluginPlaywright.configs["flat/recommended"].rules,
+      // Enforce Playwright best practices
+      "playwright/no-wait-for-timeout": "error", // Prevent page.waitForTimeout()
+      "playwright/prefer-web-first-assertions": "error", // Use await expect(element).toBeVisible()
+      "playwright/no-conditional-in-test": "warn", // Avoid if/else based on element state
+      "playwright/no-standalone-expect": "error", // Ensure expects are awaited
+      "playwright/expect-expect": "warn", // Ensure tests have assertions
+      "playwright/no-skipped-test": "warn", // Warn about test.skip()
+      "@typescript-eslint/no-non-null-assertion": "error", // Prevent non-null assertions (!)
+    },
   },
 ];
