@@ -1,31 +1,26 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { type MouseEvent } from "react";
 
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
-import RunOverview from "@/components/shared/RunOverview";
-import StatusIcon from "@/components/shared/Status/StatusIcon";
+import { PipelineRunInfoCondensed } from "@/components/shared/PipelineRunDisplay/PipelineRunInfoCondensed";
+import { PipelineRunsList } from "@/components/shared/PipelineRunDisplay/PipelineRunsList";
+import { usePipelineRuns } from "@/components/shared/PipelineRunDisplay/usePipelineRuns";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Icon } from "@/components/ui/icon";
-import { InlineStack } from "@/components/ui/layout";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TableCell, TableRow } from "@/components/ui/table";
-import { Heading, Paragraph } from "@/components/ui/typography";
+import { Paragraph } from "@/components/ui/typography";
 import { EDITOR_PATH } from "@/routes/router";
-import { fetchExecutionStatusLight } from "@/services/executionService";
-import { fetchPipelineRuns } from "@/services/pipelineRunService";
 import { deletePipeline } from "@/services/pipelineService";
-import type { PipelineRun } from "@/types/pipelineRun";
 import type { ComponentReferenceWithSpec } from "@/utils/componentStore";
-import { convertUTCToLocalTime, formatDate } from "@/utils/date";
+import { formatDate } from "@/utils/date";
 
 interface PipelineRowProps {
   url?: string;
@@ -46,19 +41,6 @@ const PipelineRow = withSuspenseWrapper(
     onSelect,
   }: PipelineRowProps) => {
     const navigate = useNavigate();
-
-    const { data: pipelineRuns } = useSuspenseQuery({
-      queryKey: ["pipelineRuns", name],
-      queryFn: async () => {
-        if (!name) return [];
-
-        const res = await fetchPipelineRuns(name);
-
-        if (!res) return [];
-
-        return res.runs;
-      },
-    });
 
     const handleRowClick = (e: MouseEvent) => {
       // Don't navigate if clicking on the popover trigger
@@ -111,15 +93,10 @@ const PipelineRow = withSuspenseWrapper(
           </Paragraph>
         </TableCell>
         <TableCell>
-          {pipelineRuns.length > 0 && <RecentRunInfo run={pipelineRuns[0]} />}
+          {name && <PipelineRecentRunInfo pipelineName={name} />}
         </TableCell>
         <TableCell>
-          {name && (
-            <PipelineRunsButton
-              pipelineRuns={pipelineRuns}
-              pipelineName={name}
-            />
-          )}
+          {name && <PipelineRunsButton pipelineName={name} />}
         </TableCell>
         <TableCell className="w-0">
           <ConfirmationDialog
@@ -170,78 +147,22 @@ const PipelineRow = withSuspenseWrapper(
   },
 );
 
-const RecentRunInfo = withSuspenseWrapper(
-  ({ run }: { run: PipelineRun }) => {
-    const { data: runStatus } = useSuspenseQuery({
-      queryKey: ["runStatus", run.root_execution_id],
-      queryFn: async () => {
-        return await fetchExecutionStatusLight(
-          run.root_execution_id.toString(),
-        );
-      },
-      refetchOnWindowFocus: false,
-      refetchOnMount: false,
-    });
+const PipelineRecentRunInfo = withSuspenseWrapper(
+  ({ pipelineName }: { pipelineName: string }) => {
+    const { data: pipelineRuns } = usePipelineRuns(pipelineName);
 
-    return (
-      <InlineStack gap="2">
-        <StatusIcon status={runStatus} />
-        <Paragraph tone="subdued" size="xs">
-          {formatDate(convertUTCToLocalTime(run.created_at).toISOString())}
-        </Paragraph>
-      </InlineStack>
-    );
-  },
-  () => {
-    return (
-      <InlineStack gap="2">
-        <Skeleton size="sm" />
-      </InlineStack>
-    );
-  },
-);
+    if (!pipelineRuns || pipelineRuns.length === 0) return null;
 
-const PipelineRunsList = withSuspenseWrapper(
-  ({
-    pipelineName,
-    pipelineRuns,
-  }: {
-    pipelineName: string;
-    pipelineRuns: PipelineRun[];
-  }) => {
-    if (pipelineRuns.length === 0) {
-      return (
-        <InlineStack gap="2" className="mb-4">
-          <Heading level={2}>{pipelineName}</Heading>
-          <Paragraph size="sm">- 0 runs</Paragraph>
-        </InlineStack>
-      );
-    }
-
-    return (
-      <>
-        <InlineStack gap="2" className="mb-4">
-          <Heading level={2}>{pipelineName}</Heading>
-          <Paragraph size="sm">- {pipelineRuns.length} runs</Paragraph>
-        </InlineStack>
-        <ScrollArea className="h-[300px]">
-          {pipelineRuns.map((run) => (
-            <RunOverview key={run.id} run={run} />
-          ))}
-        </ScrollArea>
-      </>
-    );
+    return <PipelineRunInfoCondensed run={pipelineRuns[0]} />;
   },
+  () => <Skeleton size="lg" />,
+  () => null,
 );
 
 const PipelineRunsButton = withSuspenseWrapper(
-  ({
-    pipelineName,
-    pipelineRuns,
-  }: {
-    pipelineName: string;
-    pipelineRuns: PipelineRun[] | null | undefined;
-  }) => {
+  ({ pipelineName }: { pipelineName: string }) => {
+    const { data: pipelineRuns } = usePipelineRuns(pipelineName);
+
     if (!pipelineRuns || pipelineRuns.length === 0) return null;
 
     return (
@@ -255,7 +176,10 @@ const PipelineRunsButton = withSuspenseWrapper(
         <PopoverContent className="w-[500px]">
           <PipelineRunsList
             pipelineName={pipelineName}
-            pipelineRuns={pipelineRuns}
+            showMoreButton={false}
+            overviewConfig={{
+              showName: false,
+            }}
           />
         </PopoverContent>
       </Popover>

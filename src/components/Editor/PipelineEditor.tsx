@@ -52,7 +52,7 @@ const PipelineEditor = () => {
 
   return (
     <AutoSaveProvider>
-      <PipelineRunsProvider pipelineName={componentSpec.name || ""}>
+      <PipelineRunsProvider>
         <NodesOverlayProvider>
           <ContextPanelProvider defaultContent={<PipelineDetails />}>
             <ForcedSearchProvider>

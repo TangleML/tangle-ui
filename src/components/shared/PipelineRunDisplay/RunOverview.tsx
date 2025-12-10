@@ -1,10 +1,12 @@
 import { useNavigate } from "@tanstack/react-router";
 
-import { StatusBar, StatusIcon, StatusText } from "@/components/shared/Status/";
+import { StatusBar, StatusText } from "@/components/shared/Status/";
 import { cn } from "@/lib/utils";
 import { APP_ROUTES } from "@/routes/router";
 import type { PipelineRun } from "@/types/pipelineRun";
 import { formatDate } from "@/utils/date";
+
+import { PipelineRunStatus } from "./components/PipelineRunStatus";
 
 interface RunOverviewProps {
   run: PipelineRun;
@@ -53,7 +55,7 @@ const RunOverview = ({ run, config, className = "" }: RunOverviewProps) => {
         <div className="flex items-center gap-2">
           {combinedConfig?.showName && <span>{run.pipeline_name}</span>}
           <div className="flex items-center gap-3">
-            {combinedConfig?.showStatus && <StatusIcon status={run.status} />}
+            {combinedConfig?.showStatus && <PipelineRunStatus run={run} />}
             {combinedConfig?.showExecutionId && (
               <div className="text-xs">{`#${run.id}`}</div>
             )}
