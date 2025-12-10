@@ -1,4 +1,7 @@
+import { useState } from "react";
+
 import { CopyText } from "@/components/shared/CopyText/CopyText";
+import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { useCheckComponentSpecFromPath } from "@/hooks/useCheckComponentSpecFromPath";
@@ -12,7 +15,10 @@ import {
   isStatusComplete,
   isStatusInProgress,
 } from "@/services/executionService";
+import { componentSpecToText } from "@/utils/yaml";
 
+import TooltipButton from "../shared/Buttons/TooltipButton";
+import { CodeViewer } from "../shared/CodeViewer";
 import {
   ActionBlock,
   type ActionOrReactNode,
@@ -24,7 +30,6 @@ import PipelineIO from "../shared/Execution/PipelineIO";
 import { InfoBox } from "../shared/InfoBox";
 import { LoadingScreen } from "../shared/LoadingScreen";
 import { StatusBar, StatusText } from "../shared/Status";
-import { TaskImplementation } from "../shared/TaskDetails";
 import { CancelPipelineRunButton } from "./components/CancelPipelineRunButton";
 import { ClonePipelineButton } from "./components/ClonePipelineButton";
 import { InspectPipelineButton } from "./components/InspectPipelineButton";
@@ -42,6 +47,8 @@ export const RunDetails = () => {
     error,
   } = useExecutionData();
   const { data: currentUserDetails } = useUserDetails();
+
+  const [isYamlFullscreen, setIsYamlFullscreen] = useState(false);
 
   const editorRoute = componentSpec.name
     ? `/editor/${encodeURIComponent(componentSpec.name)}`
@@ -90,11 +97,13 @@ export const RunDetails = () => {
   const actions: ActionOrReactNode[] = [];
 
   actions.push(
-    <TaskImplementation
-      displayName={componentSpec.name ?? "Pipeline"}
-      componentSpec={componentSpec}
-      showInlineContent={false}
-    />,
+    <TooltipButton
+      variant="outline"
+      tooltip="View YAML"
+      onClick={() => setIsYamlFullscreen(true)}
+    >
+      <Icon name="FileCodeCorner" />
+    </TooltipButton>,
   );
 
   if (canAccessEditorSpec && componentSpec.name) {
@@ -122,57 +131,68 @@ export const RunDetails = () => {
   }
 
   return (
-    <BlockStack gap="6" className="p-2 h-full">
-      <CopyText className="text-lg font-semibold">
-        {componentSpec.name ?? "Unnamed Pipeline"}
-      </CopyText>
+    <>
+      <BlockStack gap="6" className="p-2 h-full">
+        <CopyText className="text-lg font-semibold">
+          {componentSpec.name ?? "Unnamed Pipeline"}
+        </CopyText>
 
-      <ActionBlock actions={actions} />
+        <ActionBlock actions={actions} />
 
-      {metadata && (
-        <ListBlock
-          title="Run Info"
-          items={[
-            { label: "Run Id", value: metadata.id },
-            { label: "Execution Id", value: metadata.root_execution_id },
-            { label: "Created by", value: metadata.created_by ?? undefined },
-            {
-              label: "Created at",
-              value: metadata.created_at
-                ? new Date(metadata.created_at).toLocaleString()
-                : undefined,
-            },
-          ]}
-          marker="none"
+        {metadata && (
+          <ListBlock
+            title="Run Info"
+            items={[
+              { label: "Run Id", value: metadata.id },
+              { label: "Execution Id", value: metadata.root_execution_id },
+              { label: "Created by", value: metadata.created_by ?? undefined },
+              {
+                label: "Created at",
+                value: metadata.created_at
+                  ? new Date(metadata.created_at).toLocaleString()
+                  : undefined,
+              },
+            ]}
+            marker="none"
+          />
+        )}
+
+        {componentSpec.description && (
+          <TextBlock title="Description" text={componentSpec.description} />
+        )}
+
+        <ContentBlock title="Status">
+          <InlineStack gap="2" blockAlign="center" className="mb-1">
+            <Text size="sm" weight="semibold">
+              {runStatus}
+            </Text>
+            <StatusText statusCounts={statusCounts} />
+          </InlineStack>
+          <StatusBar statusCounts={statusCounts} />
+        </ContentBlock>
+
+        {Object.keys(annotations).length > 0 && (
+          <ListBlock
+            title="Annotations"
+            items={Object.entries(annotations).map(([key, value]) => ({
+              label: key,
+              value: String(value),
+            }))}
+            marker="none"
+          />
+        )}
+
+        <PipelineIO readOnly />
+      </BlockStack>
+      {isYamlFullscreen && (
+        <CodeViewer
+          code={componentSpecToText(componentSpec)}
+          language="yaml"
+          filename={componentSpec.name ?? "pipeline.yaml"}
+          isFullscreen={isYamlFullscreen}
+          onClose={() => setIsYamlFullscreen(false)}
         />
       )}
-
-      {componentSpec.description && (
-        <TextBlock title="Description" text={componentSpec.description} />
-      )}
-
-      <ContentBlock title="Status">
-        <InlineStack gap="2" blockAlign="center" className="mb-1">
-          <Text size="sm" weight="semibold">
-            {runStatus}
-          </Text>
-          <StatusText statusCounts={statusCounts} />
-        </InlineStack>
-        <StatusBar statusCounts={statusCounts} />
-      </ContentBlock>
-
-      {Object.keys(annotations).length > 0 && (
-        <ListBlock
-          title="Annotations"
-          items={Object.entries(annotations).map(([key, value]) => ({
-            label: key,
-            value: String(value),
-          }))}
-          marker="none"
-        />
-      )}
-
-      <PipelineIO readOnly />
-    </BlockStack>
+    </>
   );
 };

@@ -18,6 +18,9 @@ const LogDisplay = ({
     system_error_exception_full?: string;
   };
 }) => {
+  const [isLogsFullScreen, setIsLogsFullScreen] = useState(false);
+  const [isErrorsFullScreen, setIsErrorsFullScreen] = useState(false);
+
   if (!logs.log_text && !logs.system_error_exception_full) {
     return <div>No logs available</div>;
   }
@@ -36,6 +39,9 @@ const LogDisplay = ({
             code={logs.log_text || ""}
             language="text"
             filename="Execution Logs"
+            isFullscreen={isLogsFullScreen}
+            onClose={() => setIsLogsFullScreen(false)}
+            onExpand={() => setIsLogsFullScreen(true)}
           />
         </div>
       )}
@@ -45,6 +51,9 @@ const LogDisplay = ({
             code={logs.system_error_exception_full || ""}
             language="text"
             filename="System Error Logs"
+            isFullscreen={isErrorsFullScreen}
+            onClose={() => setIsErrorsFullScreen(false)}
+            onExpand={() => setIsErrorsFullScreen(true)}
           />
         </div>
       )}
