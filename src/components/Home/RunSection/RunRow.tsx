@@ -78,7 +78,9 @@ const RunRow = ({ run }: { run: PipelineRunResponse }) => {
     >
       <TableCell className="text-sm flex items-center gap-2">
         <StatusIcon status={getRunStatus(statusCounts)} />
-        <Paragraph className="truncate max-w-[400px]" title={name}>{name}</Paragraph>
+        <Paragraph className="truncate max-w-[400px]" title={name}>
+          {name}
+        </Paragraph>
         <span>{`#${runId}`}</span>
       </TableCell>
       <TableCell>

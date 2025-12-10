@@ -74,11 +74,10 @@ test.describe("Component Library", () => {
       page,
       "Inputs & Outputs",
     );
-    await expect(
-      inputsOutputsFolder
-        .getByRole("button")
-        ,
-    ).toHaveAttribute("aria-expanded", "false");
+    await expect(inputsOutputsFolder.getByRole("button")).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
     const inputsOutputsFolderContent = inputsOutputsFolder.locator("li");
 
     (await inputsOutputsFolderContent.all()).forEach(async (component) => {
@@ -88,11 +87,10 @@ test.describe("Component Library", () => {
     // expand the folder
     await openComponentLibFolder(page, "Inputs & Outputs");
 
-    await expect(
-      inputsOutputsFolder
-        .getByRole("button")
-        ,
-    ).toHaveAttribute("aria-expanded", "true");
+    await expect(inputsOutputsFolder.getByRole("button")).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
 
     // expect only two components in the folder
     const components = inputsOutputsFolder.locator("li");
@@ -100,9 +98,10 @@ test.describe("Component Library", () => {
 
     await inputsOutputsFolder.getByRole("button").click();
 
-    await expect(
-      inputsOutputsFolder.getByRole("button"),
-    ).toHaveAttribute("aria-expanded", "false");
+    await expect(inputsOutputsFolder.getByRole("button")).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
   });
 
   test("user can navigate deep into the nested folders", async () => {
@@ -115,8 +114,7 @@ test.describe("Component Library", () => {
 
     const nestedFolder = await openComponentLibFolder(page, "XGBoost");
 
-    const nestedFolderContent =
-      nestedFolder.getByTestId("component-item");
+    const nestedFolderContent = nestedFolder.getByTestId("component-item");
     await expect(await nestedFolderContent).toHaveCount(4);
   });
 
