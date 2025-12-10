@@ -30,7 +30,6 @@ const ComponentList = ({
         {components.map((component) => (
           <InlineStack
             align="start"
-            blockAlign="center"
             gap="1"
             className="w-full"
             key={component.digest}

@@ -130,7 +130,7 @@ export const InlineStack = forwardRef<
   const {
     as: Element = "div",
     align = "start",
-    blockAlign = "start",
+    blockAlign = "center",
     gap = "0",
     wrap = "wrap",
     children,

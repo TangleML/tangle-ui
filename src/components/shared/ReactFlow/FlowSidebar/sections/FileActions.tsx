@@ -112,11 +112,7 @@ const FileActions = ({ isOpen }: { isOpen: boolean }) => {
     <SidebarGroup>
       <SidebarGroupLabel>Pipeline Actions</SidebarGroupLabel>
       <SidebarContent>
-        <InlineStack
-          blockAlign="center"
-          className="ml-2 overflow-y-hidden"
-          gap="1"
-        >
+        <InlineStack className="ml-2 overflow-y-hidden" gap="1">
           {autoSaveStatus.isSaving && <Spinner size={16} />}
           <span className="text-xs text-muted-foreground">
             {getAutoSaveStatusText()}

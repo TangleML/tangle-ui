@@ -39,13 +39,13 @@ const BulkActionsBar = ({
 
   return (
     <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-background border border-border rounded-lg shadow-lg p-4 z-50">
-      <InlineStack gap="4" blockAlign="center">
+      <InlineStack gap="4">
         <span className="text-sm font-medium">
           {selectedPipelines.length}{" "}
           {pluralize(selectedPipelines.length, "pipeline")} selected
         </span>
 
-        <InlineStack gap="2" blockAlign="center">
+        <InlineStack gap="2">
           <ConfirmationDialog
             trigger={
               <Button variant="destructive" size="sm">

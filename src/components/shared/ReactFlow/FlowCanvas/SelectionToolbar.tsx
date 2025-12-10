@@ -23,7 +23,6 @@ const SelectionToolbar = ({
   return (
     <InlineStack
       gap="1"
-      blockAlign="center"
       className="bg-white border border-[#0059dc66] border-b-0 rounded-xs"
     >
       <ToolbarButton callback={onUpgrade} icon="CircleFadingArrowUp" />

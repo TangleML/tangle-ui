@@ -35,12 +35,10 @@ const ArtifactsSection = ({
             key={item.name}
             gap="2"
             align="space-between"
-            blockAlign="center"
             className="even:bg-white odd:bg-gray-100 p-2 rounded-xs w-full"
           >
             <InlineStack
               gap="1"
-              blockAlign="center"
               wrap="nowrap"
               className="flex-1 min-w-0 text-xs"
             >

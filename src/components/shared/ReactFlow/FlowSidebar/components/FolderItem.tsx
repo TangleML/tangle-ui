@@ -101,7 +101,6 @@ const FolderSkeleton = () => {
   return (
     <BlockStack className="w-full">
       <InlineStack
-        blockAlign="center"
         className="px-4 py-1 cursor-pointer hover:bg-gray-100 w-full"
         align="space-between"
         wrap="nowrap"

@@ -130,7 +130,7 @@ export const PipelineValidationList = ({
                         onClick={() => onIssueSelect(issue)}
                         className={issueButtonStyles}
                       >
-                        <InlineStack gap="1" blockAlign="center" wrap="nowrap">
+                        <InlineStack gap="1" wrap="nowrap">
                           <Text
                             size="xs"
                             weight="semibold"

@@ -53,7 +53,7 @@ function Link({
       {...props}
       className={cn(linkVariants({ variant, size }), className)}
     >
-      <InlineStack gap="1" blockAlign="center" className="w-full">
+      <InlineStack gap="1" className="w-full">
         {children}
         {external && <Icon name="ExternalLink" size={size} />}
       </InlineStack>

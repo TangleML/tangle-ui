@@ -182,7 +182,7 @@ const ComponentMarkup = ({
       draggable={!error && !isLoading}
       onDragStart={onDragStart}
     >
-      <InlineStack blockAlign="center" gap="2">
+      <InlineStack gap="2">
         {isLoading ? (
           <span className="text-gray-400 truncate text-sm">Loading...</span>
         ) : error ? (
@@ -195,12 +195,7 @@ const ComponentMarkup = ({
             data-testid="component-item"
             data-component-name={displayName}
           >
-            <InlineStack
-              gap="2"
-              blockAlign="center"
-              className="w-full"
-              wrap="nowrap"
-            >
+            <InlineStack gap="2" className="w-full" wrap="nowrap">
               {isRemoteComponentLibrarySearchEnabled ? (
                 <ComponentIcon
                   name={iconName}
@@ -230,7 +225,7 @@ const ComponentMarkup = ({
                 </span>
               </div>
             </InlineStack>
-            <InlineStack blockAlign="center" align="end" wrap="nowrap">
+            <InlineStack align="end" wrap="nowrap">
               <ComponentFavoriteToggle component={component} />
               <ComponentDetailsDialog
                 displayName={displayName}
@@ -247,7 +242,7 @@ const ComponentMarkup = ({
 const ComponentItemSkeleton = () => {
   return (
     <SidebarMenuItem className="pl-2 py-1.5">
-      <InlineStack blockAlign="center" gap="2">
+      <InlineStack gap="2">
         <Spinner size={10} />
         <Skeleton size="sm" color="default" />
       </InlineStack>
