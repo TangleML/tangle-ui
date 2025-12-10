@@ -1,6 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { type ChangeEvent, useEffect, useState } from "react";
 
+import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import NewPipelineButton from "@/components/shared/NewPipelineButton";
 import QuickStartCards from "@/components/shared/QuickStart/QuickStartCards";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
@@ -12,7 +13,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Spinner } from "@/components/ui/spinner";
 import {
   Table,
   TableBody,
@@ -126,11 +126,7 @@ export const PipelineSection = withSuspenseWrapper(() => {
   }, []);
 
   if (isLoading) {
-    return (
-      <InlineStack gap="2" className="mt-4">
-        <Spinner /> Loading...
-      </InlineStack>
-    );
+    return <LoadingScreen message="Loading Pipelines" />;
   }
 
   if (pipelines.size === 0) {

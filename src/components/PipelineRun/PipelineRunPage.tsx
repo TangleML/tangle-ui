@@ -33,8 +33,8 @@ const PipelineRunPage = () => {
   return (
     <ContextPanelProvider defaultContent={<RunDetails />}>
       <ComponentLibraryProvider>
-        <InlineStack className="w-full h-full" align="start">
-          <BlockStack className="flex-1 h-full">
+        <InlineStack fill>
+          <BlockStack fill className="flex-1">
             <FlowCanvas {...flowConfig} readOnly>
               <MiniMap position="bottom-left" pannable />
               <FlowControls

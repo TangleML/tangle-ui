@@ -947,7 +947,7 @@ const FlowCanvas = ({
   const selectionMode = getSelectionMode();
 
   return (
-    <BlockStack className="h-full w-full">
+    <BlockStack fill>
       <SubgraphBreadcrumbs />
       <ReactFlow
         {...rest}

@@ -11,7 +11,6 @@ import {
 } from "@/components/shared/ReactFlow";
 import { UndoRedo } from "@/components/shared/UndoRedo";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
-import { Spinner } from "@/components/ui/spinner";
 import { AutoSaveProvider } from "@/providers/AutoSaveProvider";
 import { ComponentLibraryProvider } from "@/providers/ComponentLibraryProvider";
 import { ForcedSearchProvider } from "@/providers/ComponentLibraryProvider/ForcedSearchProvider";
@@ -22,6 +21,7 @@ import {
 import { ContextPanelProvider } from "@/providers/ContextPanelProvider";
 import { PipelineRunsProvider } from "@/providers/PipelineRunsProvider";
 
+import { LoadingScreen } from "../shared/LoadingScreen";
 import { NodesOverlayProvider } from "../shared/ReactFlow/NodesOverlay/NodesOverlayProvider";
 import PipelineDetails from "./PipelineDetails";
 
@@ -47,12 +47,7 @@ const PipelineEditor = () => {
 
   // If the pipeline is loading or the component spec is empty, show a loading spinner
   if (isLoading || componentSpec === EMPTY_GRAPH_COMPONENT_SPEC) {
-    return (
-      <div className="w-full h-full flex flex-col items-center justify-center">
-        <Spinner className="mr-2 w-10 h-10" />
-        <p className="text-secondary-foreground">Loading pipeline...</p>
-      </div>
-    );
+    return <LoadingScreen message="Loading Pipeline" />;
   }
 
   return (
@@ -62,9 +57,9 @@ const PipelineEditor = () => {
           <ContextPanelProvider defaultContent={<PipelineDetails />}>
             <ForcedSearchProvider>
               <ComponentLibraryProvider>
-                <InlineStack className="w-full h-full" align="start">
+                <InlineStack fill>
                   <FlowSidebar />
-                  <BlockStack className="flex-1 h-full relative">
+                  <BlockStack fill className="flex-1 relative">
                     <FlowCanvas {...flowConfig}>
                       <MiniMap position="bottom-left" pannable />
                       <FlowControls
