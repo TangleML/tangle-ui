@@ -214,7 +214,7 @@ export const PipelineSection = withSuspenseWrapper(() => {
             {filteredPipelines.map(([name, fileEntry]) => (
               <PipelineRow
                 key={fileEntry.componentRef.digest}
-                name={name.replace(/_/g, " ")}
+                name={name}
                 modificationTime={fileEntry.modificationTime}
                 onDelete={fetchUserPipelines}
                 isSelected={selectedPipelines.has(name)}
