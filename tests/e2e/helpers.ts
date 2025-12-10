@@ -26,7 +26,7 @@ export function locateFlowViewport(page: Page): Locator {
 /**
  * Locates the React Flow pane (for canvas interactions)
  */
-export function locateFlowPane(page: Page): Locator {
+function locateFlowPane(page: Page): Locator {
   return page.locator(".react-flow__pane");
 }
 
@@ -167,7 +167,7 @@ export async function dragComponentToCanvas(
 /**
  * Locates a task node by its name
  */
-export function locateNodeByName(page: Page, nodeName: string): Locator {
+function locateNodeByName(page: Page, nodeName: string): Locator {
   return page.locator(`[data-testid="rf__node-task_${nodeName}"]`);
 }
 
@@ -178,14 +178,14 @@ export function locateNodeByName(page: Page, nodeName: string): Locator {
 /**
  * Locates the context panel container
  */
-export function locateContextPanelContainer(page: Page): Locator {
+function locateContextPanelContainer(page: Page): Locator {
   return page.locator('[data-testid="context-panel-container"]');
 }
 
 /**
  * Locates a specific context panel by name
  */
-export function locateContextPanel(page: Page, panelName: string): Locator {
+function locateContextPanel(page: Page, panelName: string): Locator {
   const container = locateContextPanelContainer(page);
   return container.locator(`[data-context-panel="${panelName}"]`);
 }
