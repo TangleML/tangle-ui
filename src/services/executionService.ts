@@ -234,8 +234,8 @@ const mapStatus = (status: string) => {
  * using priority: CANCELLED > FAILED > RUNNING > SKIPPED > WAITING > SUCCEEDED
  */
 export const countTaskStatuses = (
-  details: GetExecutionInfoResponse,
-  stateData: GetGraphExecutionStateResponse,
+  details: GetExecutionInfoResponse | undefined,
+  stateData: GetGraphExecutionStateResponse | undefined,
 ): TaskStatusCounts => {
   const statusCounts = {
     total: 0,
@@ -246,6 +246,10 @@ export const countTaskStatuses = (
     skipped: 0,
     cancelled: 0,
   };
+
+  if (!details || !stateData) {
+    return statusCounts;
+  }
 
   if (
     details.child_task_execution_ids &&
