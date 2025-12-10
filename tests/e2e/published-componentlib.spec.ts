@@ -25,11 +25,14 @@ test.describe("Published Component Library", () => {
 
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
+
     // Create new pipeline and wait for it to load
     await createNewPipeline(page);
+    await page.waitForTimeout(200);
 
     // open personal preferences
     await page.getByTestId("personal-preferences-button").click();
+    await page.waitForTimeout(200);
 
     // close personal preferences
     const dialog = await page.getByTestId("personal-preferences-dialog");
@@ -62,12 +65,13 @@ test.describe("Published Component Library", () => {
 
     const standardLibraryFolders = [
       "Quick start",
+      "Basics",
       "Datasets",
       "Data manipulation",
       "Upload/Download",
       "ML frameworks",
+      "ML Metrics",
       "Converters",
-      "Google Cloud",
     ];
 
     // expect to see all the folders

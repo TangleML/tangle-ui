@@ -6,7 +6,7 @@ import { expect, type Locator, type Page } from "@playwright/test";
 export async function createNewPipeline(page: Page): Promise<void> {
   await page.goto("/");
   await page.getByTestId("new-pipeline-button").click();
-  await page.waitForSelector(".reactflow-wrapper", { timeout: 10000 });
+  await locateFlowViewport(page);
 }
 
 /**
@@ -261,12 +261,15 @@ export async function assertSearchState(
   }
 
   const searchResultsHeader = await page.getByTestId("search-results-header");
-  if (searchResultsCount) {
+  if (searchResultsCount && Number(searchResultsCount) > 0) {
     expect(await searchResultsHeader).toHaveText(
       `Search Results (${searchResultsCount})`,
     );
     const componentItem = await page.getByTestId("component-item");
     expect(componentItem).toHaveCount(Number(searchResultsCount));
+  } else if (searchResultsCount && searchResultsCount === "*") {
+    expect(await searchResultsHeader).toBeVisible();
+    expect(await searchResultsHeader.textContent()).toContain("Search Results");
   } else {
     expect(await searchResultsHeader).not.toBeVisible();
   }
