@@ -75,6 +75,7 @@ This is a React + TypeScript application for building and running Machine Learni
 - **Icons**: Use `Icon` from `@/components/ui/icon`
 
 **When raw HTML is acceptable:**
+
 - Semantic elements not supported by primitives (e.g., `<dl>`, `<ul>`, `<ol>`, `<table>`)
 - Complex layouts where primitives don't fit
 - Performance-critical sections where abstraction overhead matters
@@ -120,10 +121,171 @@ This is a React + TypeScript application for building and running Machine Learni
 
 ### Testing
 
-- Write unit tests for utilities and hooks
+#### Unit & Component Tests
+
+- Write unit tests for utilities and hooks using Vitest
 - Write component tests for complex components
-- Use Playwright helpers from `tests/e2e/helpers.ts`
 - Follow existing test patterns and naming
+
+#### E2E Tests with Playwright
+
+- Use Playwright helpers from `tests/e2e/helpers.ts`
+- Follow Playwright best practices (see E2E Testing Best Practices section below)
+- Use `data-testid` attributes for stable selectors
+- Write descriptive test names that explain user behavior
+- Ensure tests are isolated and can run independently
+
+### E2E Testing Best Practices (Playwright)
+
+#### Never Use Hard-Coded Timeouts
+
+**❌ Don't:**
+
+```typescript
+await element.click();
+await page.waitForTimeout(200); // Flaky and slow
+```
+
+**✅ Do:**
+
+```typescript
+await element.click();
+await expect(otherElement).toBeVisible(); // Wait for actual state
+```
+
+#### Use Playwright's Auto-Waiting
+
+**❌ Don't:**
+
+```typescript
+if (await element.isVisible()) {
+  await element.click();
+}
+```
+
+**✅ Do:**
+
+```typescript
+await expect(element).toBeVisible();
+await element.click(); // Playwright auto-waits
+```
+
+#### Never Use Non-Null Assertions
+
+**❌ Don't:**
+
+```typescript
+const box = await element.boundingBox();
+const x = box!.x; // Crashes if null
+```
+
+**✅ Do:**
+
+```typescript
+const box = await element.boundingBox();
+if (!box) {
+  throw new Error("Unable to locate element bounding box");
+}
+const x = box.x;
+```
+
+#### Don't Await Locators (They're Lazy)
+
+**❌ Don't:**
+
+```typescript
+const button = await page.getByTestId("submit");
+const items = await page.locator(".item");
+await expect(button).toBeVisible();
+```
+
+**✅ Do:**
+
+```typescript
+const button = page.getByTestId("submit"); // No await
+const items = page.locator(".item"); // No await
+await expect(button).toBeVisible(); // Only await assertions
+```
+
+#### Use Consistent Assertion Patterns
+
+**❌ Don't:**
+
+```typescript
+expect(await element).toHaveText("text");
+expect(await element.isVisible()).toBe(true);
+```
+
+**✅ Do:**
+
+```typescript
+await expect(element).toHaveText("text");
+await expect(element).toBeVisible();
+```
+
+#### Prefer Semantic Selectors
+
+**Priority order:**
+
+1. `getByRole()` - Best for accessibility
+2. `getByTestId()` - Best for test stability (use this for our app)
+3. `getByText()` - Good for static content
+4. `locator()` with data attributes - When above don't work
+5. CSS selectors - Last resort
+
+**❌ Don't:**
+
+```typescript
+await page.locator(".button.primary.submit").click();
+```
+
+**✅ Do:**
+
+```typescript
+await page.getByTestId("submit-button").click();
+```
+
+#### Write Isolated, Independent Tests
+
+- Each test should set up its own state
+- Don't depend on test execution order (unless using serial mode intentionally)
+- Clean up after tests in `afterEach` or `afterAll`
+
+#### Use Helper Functions
+
+- Leverage existing helpers from `tests/e2e/helpers.ts`
+- Create new helpers for repeated workflows
+- Keep helpers focused and reusable
+
+#### Add Meaningful Error Context
+
+**❌ Don't:**
+
+```typescript
+await expect(element).toBeVisible();
+```
+
+**✅ Do:**
+
+```typescript
+await expect(element, "Component should appear after loading").toBeVisible();
+```
+
+#### Test User Behavior, Not Implementation
+
+**❌ Don't:**
+
+```typescript
+await expect(button).toHaveClass("bg-blue-500"); // Implementation detail
+```
+
+**✅ Do:**
+
+```typescript
+await expect(button).toBeVisible();
+await expect(button).toBeEnabled();
+await expect(button).toHaveText("Submit"); // User-visible behavior
+```
 
 ### Performance
 
@@ -214,6 +376,8 @@ export const useContext = () => {
 
 ## Don't Do
 
+### General
+
 - Don't use CSS-in-JS or styled-components
 - Don't use inline styling (`style={styles}`) except where strictly necessary
 - Don't use class components
@@ -227,6 +391,14 @@ export const useContext = () => {
 - Don't use barrel exports
 - Don't modify componentSpec structure without express permission
 - Don't use raw HTML elements when UI primitives exist (use `Text`, `BlockStack`, `InlineStack`, etc.)
+
+### E2E Testing
+
+- Don't use `page.waitForTimeout()` - use proper Playwright auto-waiting instead
+- Don't use non-null assertions (`!`) - add explicit null checks with error messages
+- Don't await locators - only await assertions and actions
+- Don't test implementation details (CSS classes, internal state) - test user-visible behavior
+- Don't write comments that just restate what the code does - explain "why" not "what"
 
 ## Other rules
 

@@ -26,18 +26,25 @@ test.describe("Published Component Library", () => {
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
 
-    // Create new pipeline and wait for it to load
     await createNewPipeline(page);
-    await page.waitForTimeout(200);
 
-    // open personal preferences
+    await expect(page.locator("[data-testid='search-input']")).toBeVisible();
+
     await page.getByTestId("personal-preferences-button").click();
-    await page.waitForTimeout(200);
 
-    // close personal preferences
-    const dialog = await page.getByTestId("personal-preferences-dialog");
-    await dialog.getByTestId("remote-component-library-search-switch").click();
+    const dialog = page.getByTestId("personal-preferences-dialog");
+    await expect(dialog).toBeVisible();
+
+    const switchElement = dialog.getByTestId(
+      "remote-component-library-search-switch",
+    );
+    await expect(switchElement).toBeVisible({ timeout: 10000 });
+
+    await switchElement.click();
+    await expect(switchElement).toHaveAttribute("aria-checked", "true");
+
     await dialog.getByTestId("close-button").click();
+    await expect(dialog).toBeHidden();
   });
 
   test.afterAll(async () => {
@@ -50,12 +57,12 @@ test.describe("Published Component Library", () => {
     // expect to see all the folders
     for (const folder of expectedFirstLevelFolders) {
       const folderContainer = await locateFolderByName(page, folder);
-      expect(folderContainer).toBeVisible();
+      await expect(folderContainer).toBeVisible();
     }
 
     // special folders are not rendered from the beginning
-    const countOfFoldersByDefault = await page.locator("[data-folder-name]");
-    expect(countOfFoldersByDefault).toHaveCount(
+    const countOfFoldersByDefault = page.locator("[data-folder-name]");
+    await expect(countOfFoldersByDefault).toHaveCount(
       expectedFirstLevelFolders.length,
     );
   });
@@ -77,7 +84,7 @@ test.describe("Published Component Library", () => {
     // expect to see all the folders
     for (const folder of standardLibraryFolders) {
       const folderContainer = await locateFolderByName(page, folder);
-      expect(folderContainer).toBeVisible();
+      await expect(folderContainer).toBeVisible();
     }
   });
 
@@ -85,11 +92,12 @@ test.describe("Published Component Library", () => {
     // search for a component
     await searchForComponent(page, "GCS");
 
-    const searchResultsHeader = await page.getByTestId("search-results-header");
-    expect(await searchResultsHeader.isVisible()).toBe(true);
-    expect(await searchResultsHeader).toHaveText("Search Results (5)");
-    const componentItem = await page.getByTestId("component-item");
-    expect(componentItem).toHaveCount(5);
+    const searchResultsHeader = page.getByTestId("search-results-header");
+    await expect(searchResultsHeader).toBeVisible();
+    await expect(searchResultsHeader).toHaveText("Search Results (5)");
+
+    const componentItem = page.getByTestId("component-item");
+    await expect(componentItem).toHaveCount(5);
 
     await clearSearch(page);
   });
@@ -112,21 +120,16 @@ test.describe("Published Component Library", () => {
       page,
       "Favorite Components",
     );
-    expect(await favoritesFolder.locator("li")).toHaveCount(1);
+    await expect(favoritesFolder.locator("li")).toHaveCount(1);
 
     // unstar the component
-    const downloadFromGCSFavorite = await locateComponentInFolder(
+    const downloadFromGCSFavorite = locateComponentInFolder(
       favoritesFolder,
       "Download from GCS",
     );
     await downloadFromGCSFavorite.getByTestId("favorite-star").click();
 
-    // giving time for the component to be removed from the favorites folder
-    // todo: find a better way to do this
-    await page.waitForTimeout(200);
-
-    // expect the component to be removed from the favorites folder
-    expect(await favoritesFolder.locator("li")).toHaveCount(0);
+    await expect(favoritesFolder.locator("li")).toHaveCount(0);
   });
 
   test("component details can be opened as a dialog", async () => {
@@ -138,16 +141,15 @@ test.describe("Published Component Library", () => {
     );
     await downloadFromGCS.getByTestId("info-icon-button").click();
 
-    await page.waitForSelector(`[data-testid="component-details-tabs"]`);
+    await expect(page.getByTestId("component-details-tabs")).toBeVisible();
 
-    const dialogHeader = await page.locator('[data-slot="dialog-header"]');
-    expect(dialogHeader).toBeVisible();
-
-    expect(dialogHeader).toHaveText("Download from GCS");
+    const dialogHeader = page.locator('[data-slot="dialog-header"]');
+    await expect(dialogHeader).toBeVisible();
+    await expect(dialogHeader).toHaveText("Download from GCS");
 
     await page.locator('button[data-slot="dialog-close"]').click();
 
-    await page.waitForTimeout(200);
+    await expect(dialogHeader).toBeHidden();
 
     await clearSearch(page);
   });
@@ -159,7 +161,6 @@ test.describe("Published Component Library", () => {
       page,
       "Download from GCS",
     );
-    // drop component on the canvas
     await dragComponentToCanvas(page, downloadFromGCS);
 
     await clearSearch(page);
@@ -168,11 +169,11 @@ test.describe("Published Component Library", () => {
       page,
       "Used in Pipeline",
     );
-    expect(await usedOnCanvasFolder.locator("li")).toHaveCount(1);
+    await expect(usedOnCanvasFolder.locator("li")).toHaveCount(1);
 
     // remove the component from the canvas
     await removeComponentFromCanvas(page, "Download from GCS");
-    expect(await usedOnCanvasFolder.locator("li")).toHaveCount(0);
+    await expect(usedOnCanvasFolder.locator("li")).toHaveCount(0);
   });
 
   test("search results can be highlighted on input pin click", async () => {
@@ -187,36 +188,25 @@ test.describe("Published Component Library", () => {
       "Select columns using Pandas on CSV data",
     );
 
-    // click on component output pin
     await page.getByTestId("input-handle-table").click();
-    await page.waitForTimeout(200);
 
-    // assert that the output handle is highlighted
-    const outputConnection = await page.getByTestId(
+    const outputConnection = page.getByTestId(
       "output-connection-transformed_table",
     );
-    const inputConnection = await page.getByTestId("input-connection-table");
+    const inputConnection = page.getByTestId("input-connection-table");
+    await expect(outputConnection).toHaveAttribute("data-highlighted", "true");
 
     // assert highlighting
-    expect(await outputConnection.getAttribute("data-highlighted")).toBe(
-      "true",
-    );
-    expect(await inputConnection.getAttribute("data-highlighted")).toBe(
-      "false",
-    );
-    expect(await inputConnection.getAttribute("data-selected")).toBe("true");
+    await expect(outputConnection).toHaveAttribute("data-highlighted", "true");
+    await expect(inputConnection).toHaveAttribute("data-highlighted", "false");
+    await expect(inputConnection).toHaveAttribute("data-selected", "true");
 
     // reset highlighting after clicking on the canvas
     await locateFlowCanvas(page).click();
-    await page.waitForTimeout(200);
 
     // resets selection after clicking on the canvas
-    expect(await inputConnection.getAttribute("data-highlighted")).toBe(
-      "false",
-    );
-    expect(await outputConnection.getAttribute("data-highlighted")).toBe(
-      "false",
-    );
+    await expect(inputConnection).toHaveAttribute("data-highlighted", "false");
+    await expect(outputConnection).toHaveAttribute("data-highlighted", "false");
 
     // search should be reset
     assertSearchState(page, {
@@ -235,39 +225,31 @@ test.describe("Published Component Library", () => {
     await openComponentLibFolder(page, "Data manipulation");
     await openComponentLibFolder(page, "CSV");
 
-    // drop component on the canvas
     await dropComponentFromLibraryOnCanvas(
       page,
       "CSV",
       "Select columns using Pandas on CSV data",
     );
 
-    // click on component output pin
     await page.getByTestId("output-handle-transformed_table").click();
-    await page.waitForTimeout(200);
 
-    // assert that the output handle is selected
-    const outputConnection = await page.getByTestId(
+    const outputConnection = page.getByTestId(
       "output-connection-transformed_table",
     );
-    const inputConnection = await page.getByTestId("input-connection-table");
+    const inputConnection = page.getByTestId("input-connection-table");
+    await expect(outputConnection).toHaveAttribute("data-selected", "true");
 
     // assert highlighting
-    expect(await outputConnection.getAttribute("data-highlighted")).toBe(
-      "false",
-    );
-    expect(await outputConnection.getAttribute("data-selected")).toBe("true");
-    expect(await inputConnection.getAttribute("data-highlighted")).toBe("true");
+    await expect(outputConnection).toHaveAttribute("data-highlighted", "false");
+    await expect(outputConnection).toHaveAttribute("data-selected", "true");
+    await expect(inputConnection).toHaveAttribute("data-highlighted", "true");
 
     // reset highlighting after clicking on the canvas
     await locateFlowCanvas(page).click();
-    await page.waitForTimeout(200);
 
     // resets selection after clicking on the canvas
-    expect(await inputConnection.getAttribute("data-highlighted")).toBe(
-      "false",
-    );
-    expect(await outputConnection.getAttribute("data-selected")).toBe("false");
+    await expect(inputConnection).toHaveAttribute("data-highlighted", "false");
+    await expect(outputConnection).toHaveAttribute("data-selected", "false");
 
     // search should be reset
     assertSearchState(page, {
@@ -284,21 +266,22 @@ test.describe("Published Component Library", () => {
 
 async function searchForComponent(page: Page, componentName: string) {
   await page.getByTestId("search-input").fill(componentName);
-  await page.waitForSelector(`[data-testid="search-results-container"]`);
+  await expect(page.getByTestId("search-results-container")).toBeVisible();
 }
 
 async function clearSearch(page: Page) {
   await page.getByTestId("search-input").clear();
 
-  await page.waitForTimeout(200);
+  const searchResultsHeader = page.getByTestId("search-results-header");
+  await expect(searchResultsHeader).toBeHidden();
 }
 
 async function findComponentFromSearchResults(
   page: Page,
   componentName: string,
 ) {
-  const container = await page.getByTestId("search-results-container");
-  const component = await container.locator(
+  const container = page.getByTestId("search-results-container");
+  const component = container.locator(
     `[data-component-name="${componentName}"]`,
   );
   return component;
