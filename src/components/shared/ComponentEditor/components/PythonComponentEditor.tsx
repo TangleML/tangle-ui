@@ -1,5 +1,5 @@
 import MonacoEditor from "@monaco-editor/react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -67,53 +67,36 @@ export const PythonComponentEditor = withSuspenseWrapper(
     const preservedNameRef = useRef(initialComponentName);
 
     useEffect(() => {
-      preservedNameRef.current = initialComponentName;
-    }, [initialComponentName]);
-
-    const generateYaml = useCallback(
-      async (code: string, options: YamlGeneratorOptions) => {
-        try {
-          const yaml = await yamlGenerator(code, options);
-          const yamlWithPreservedName = preserveComponentName(
-            yaml,
-            preservedNameRef.current,
-          );
-          setComponentText(yamlWithPreservedName);
-          onComponentTextChange(yamlWithPreservedName);
-          setValidationErrors([]);
-          onErrorsChange([]);
-        } catch (error) {
-          const errors = [
-            error instanceof Error ? error.message : String(error),
-          ];
-          onErrorsChange(errors);
-          setValidationErrors(errors);
-        }
-      },
-      [yamlGenerator, onComponentTextChange, onErrorsChange],
-    );
-
-    const handleFunctionTextChange = useCallback(
-      async (value: string | undefined) => {
-        const code = value ?? "";
-        setPythonCode(code);
-        generateYaml(code, yamlGeneratorOptions);
-      },
-      [generateYaml, yamlGeneratorOptions],
-    );
-
-    const handleOptionsChange = useCallback(
-      (options: YamlGeneratorOptions) => {
-        setYamlGeneratorOptions(options);
-        generateYaml(pythonCode, options);
-      },
-      [pythonCode, generateYaml],
-    );
-
-    useEffect(() => {
-      // first time loading
-      generateYaml(text, options);
+      handleFunctionTextChange(text);
     }, []);
+
+    // Sync ref with prop
+    preservedNameRef.current = initialComponentName;
+
+    const handleFunctionTextChange = async (value: string | undefined) => {
+      const code = value ?? "";
+      setPythonCode(code);
+      try {
+        const yaml = await yamlGenerator(code, yamlGeneratorOptions);
+        const yamlWithPreservedName = preserveComponentName(
+          yaml,
+          preservedNameRef.current,
+        );
+        setComponentText(yamlWithPreservedName);
+        onComponentTextChange(yamlWithPreservedName);
+        setValidationErrors([]);
+        onErrorsChange([]);
+      } catch (error) {
+        const errors = [error instanceof Error ? error.message : String(error)];
+        onErrorsChange(errors);
+        setValidationErrors(errors);
+      }
+    };
+
+    const handleOptionsChange = (options: YamlGeneratorOptions) => {
+      setYamlGeneratorOptions(options);
+      handleFunctionTextChange(pythonCode);
+    };
 
     return (
       <InlineStack className="w-full h-full" gap="4">
