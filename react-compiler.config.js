@@ -24,10 +24,9 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/components/shared/ReactFlow/FlowCanvas/FlowCanvas.tsx",
   "src/components/shared/ComponentEditor",
   "src/components/shared/Settings",
+  "src/components/shared/HuggingFaceAuth",
 
   // 6-10 useCallback/useMemo
-
-  // "src/components/shared/HuggingFaceAuth",     // 8
 
   // "src/components/shared/GitHubLibrary",       // 9
 
