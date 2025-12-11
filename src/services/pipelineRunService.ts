@@ -155,7 +155,11 @@ export const copyRunToPipeline = async (
   }
 };
 
-export const fetchPipelineRuns = async (pipelineName: string) => {
+export const fetchPipelineRuns = async (
+  pipelineName: string,
+): Promise<
+  { runs: PipelineRun[]; latestRun: PipelineRun | null } | undefined
+> => {
   try {
     const pipelineRunsDb = localForage.createInstance({
       name: "components",
