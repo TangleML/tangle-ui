@@ -3,6 +3,7 @@ import { type ReactNode } from "react";
 import { BlockStack } from "@/components/ui/layout";
 import type { ComponentSpec } from "@/utils/componentSpec";
 
+import type { Action } from "../ContextPanel/Blocks/ActionBlock";
 import { ContentBlock } from "../ContextPanel/Blocks/ContentBlock";
 import { TextBlock } from "../ContextPanel/Blocks/TextBlock";
 import TaskActions from "./Actions";
@@ -16,7 +17,7 @@ interface TaskDetailsProps {
   taskId?: string;
   componentDigest?: string;
   url?: string;
-  actions?: ReactNode[];
+  customActions?: Action[];
   onDelete?: () => void;
   status?: string;
   readOnly?: boolean;
@@ -36,7 +37,7 @@ const TaskDetails = ({
   taskId,
   componentDigest,
   url,
-  actions = [],
+  customActions = [],
   onDelete,
   status,
   readOnly = false,
@@ -128,7 +129,7 @@ const TaskDetails = ({
       <TaskActions
         displayName={displayName}
         componentSpec={componentSpec}
-        actions={actions}
+        customActions={customActions}
         onDelete={onDelete}
         readOnly={readOnly}
         className={BASE_BLOCK_CLASS}
