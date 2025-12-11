@@ -1,5 +1,3 @@
-import { useCallback } from "react";
-
 import { ExistingBetaFlags } from "@/betaFlags";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,12 +24,9 @@ export function PersonalPreferencesDialog({
 }: PersonalPreferencesDialogProps) {
   const [betaFlags, dispatch] = useBetaFlagsReducer(ExistingBetaFlags);
 
-  const handleSetFlag = useCallback(
-    (flag: string, enabled: boolean) => {
-      dispatch({ type: "setFlag", payload: { key: flag, enabled } });
-    },
-    [dispatch],
-  );
+  const handleSetFlag = (flag: string, enabled: boolean) => {
+    dispatch({ type: "setFlag", payload: { key: flag, enabled } });
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
