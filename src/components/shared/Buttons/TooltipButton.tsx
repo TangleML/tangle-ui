@@ -8,7 +8,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-export interface TooltipButtonProps extends ButtonProps {
+interface TooltipButtonProps extends ButtonProps {
   tooltip: React.ReactNode;
   tooltipSide?: "top" | "right" | "bottom" | "left";
   tooltipAlign?: "start" | "center" | "end";

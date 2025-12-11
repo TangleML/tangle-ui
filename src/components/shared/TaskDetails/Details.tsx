@@ -5,6 +5,7 @@ import { useGuaranteedHydrateComponentReference } from "@/hooks/useHydrateCompon
 import type { ComponentReference, TaskSpec } from "@/utils/componentSpec";
 import { getExecutionStatusLabel } from "@/utils/executionStatus";
 
+import type { Action } from "../ContextPanel/Blocks/ActionBlock";
 import { ContentBlock } from "../ContextPanel/Blocks/ContentBlock";
 import { ListBlock } from "../ContextPanel/Blocks/ListBlock";
 import { TextBlock } from "../ContextPanel/Blocks/TextBlock";
@@ -21,7 +22,7 @@ interface TaskDetailsProps {
   taskSpec?: TaskSpec;
   componentDigest?: string;
   url?: string;
-  actions?: ReactNode[];
+  customActions?: Action[];
   onDelete?: () => void;
   status?: string;
   readOnly?: boolean;
@@ -42,7 +43,7 @@ const TaskDetailsInternal = ({
   taskSpec,
   componentDigest,
   url,
-  actions = [],
+  customActions = [],
   onDelete,
   status,
   readOnly = false,
@@ -163,7 +164,7 @@ const TaskDetailsInternal = ({
       <TaskActions
         displayName={displayName}
         componentRef={hydratedComponentRef}
-        actions={actions}
+        customActions={customActions}
         onDelete={onDelete}
         readOnly={readOnly}
         className={BASE_BLOCK_CLASS}

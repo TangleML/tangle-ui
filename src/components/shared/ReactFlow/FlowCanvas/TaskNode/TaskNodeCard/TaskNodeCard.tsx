@@ -1,8 +1,8 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import type { TooltipButtonProps } from "@/components/shared/Buttons/TooltipButton";
-import { ComponentEditorDialog } from "@/components/shared/ComponentEditor/ComponentEditorDialog";
+import { CodeViewer } from "@/components/shared/CodeViewer";
+import type { Action } from "@/components/shared/ContextPanel/Blocks/ActionBlock";
 import { PublishedComponentBadge } from "@/components/shared/ManageComponent/PublishedComponentBadge";
 import { trimDigest } from "@/components/shared/ManageComponent/utils/digest";
 import { useBetaFlagValue } from "@/components/shared/Settings/useBetaFlags";
@@ -38,7 +38,6 @@ const TaskNodeCard = () => {
     "remote-component-library-search",
   );
   const isSubgraphNavigationEnabled = useBetaFlagValue("subgraph-navigation");
-  const isInAppEditorEnabled = useBetaFlagValue("in-app-component-editor");
   const { registerNode } = useNodesOverlay();
   const taskNode = useTaskNode();
   const {
@@ -55,7 +54,7 @@ const TaskNodeCard = () => {
   const nodeRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isYamlFullscreen, setIsYamlFullscreen] = useState(false);
   const [updateOverlayDialogOpen, setUpdateOverlayDialogOpen] = useState<
     UpdateOverlayMessage["data"] | undefined
   >();
@@ -128,69 +127,63 @@ const TaskNodeCard = () => {
     }
   }, []);
 
-  const handleEditComponent = useCallback(() => {
-    setIsEditDialogOpen(true);
-  }, []);
+  const handleDuplicateTask = useCallback(() => {
+    callbacks.onDuplicate?.();
+  }, [callbacks]);
 
-  const handleCloseEditDialog = useCallback(() => {
-    setIsEditDialogOpen(false);
-  }, []);
+  const handleUpgradeTask = useCallback(() => {
+    callbacks.onUpgrade?.();
+  }, [callbacks]);
 
-  const { onDuplicate, onUpgrade } = callbacks;
+  const handleEnterSubgraph = useCallback(() => {
+    if (taskId) {
+      navigateToSubgraph(taskId);
+    }
+  }, [navigateToSubgraph, taskId]);
 
   const taskConfigMarkup = useMemo(() => {
-    const actions: Array<TooltipButtonProps> = [];
+    const customActions: Action[] = [
+      {
+        label: "Duplicate Task",
+        icon: "Copy",
+        hidden: readOnly,
+        onClick: handleDuplicateTask,
+      },
+      {
+        label: "Update Task from Source URL",
+        icon: "CircleFadingArrowUp",
+        hidden: readOnly || isCustomComponent,
+        onClick: handleUpgradeTask,
+      },
+      {
+        label: `Enter Subgraph: ${subgraphDescription}`,
+        icon: "Workflow",
+        hidden: !isSubgraphNode || !isSubgraphNavigationEnabled,
+        onClick: handleEnterSubgraph,
+      },
+      {
+        label: "View YAML",
+        icon: "FileCodeCorner",
+        onClick: () => setIsYamlFullscreen(true),
+      },
+    ];
 
-    if (!readOnly) {
-      actions.push({
-        children: <Icon name="Copy" size="sm" />,
-        variant: "outline",
-        tooltip: "Duplicate Task",
-        onClick: onDuplicate,
-      });
-    }
-
-    if (!readOnly && !isCustomComponent) {
-      actions.push({
-        children: <Icon name="CircleFadingArrowUp" size="sm" />,
-        variant: "outline",
-        tooltip: "Update Task from Source URL",
-        onClick: onUpgrade,
-      });
-    }
-
-    if (isSubgraphNode && taskId && isSubgraphNavigationEnabled) {
-      actions.push({
-        children: <Icon name="Workflow" size="sm" />,
-        variant: "outline",
-        tooltip: `Enter Subgraph: ${subgraphDescription}`,
-        onClick: () => navigateToSubgraph(taskId),
-      });
-    }
-
-    if (isInAppEditorEnabled) {
-      actions.push({
-        children: <Icon name="FilePenLine" size="sm" />,
-        variant: "outline",
-        tooltip: "Edit Component Definition",
-        onClick: handleEditComponent,
-      });
-    }
-
-    return <TaskOverview taskNode={taskNode} key={nodeId} actions={actions} />;
+    return (
+      <TaskOverview
+        key={nodeId}
+        taskNode={taskNode}
+        customActions={customActions}
+      />
+    );
   }, [
     taskNode,
     nodeId,
     readOnly,
-    isInAppEditorEnabled,
     isCustomComponent,
     isSubgraphNode,
     taskId,
     subgraphDescription,
     navigateToSubgraph,
-    handleEditComponent,
-    onDuplicate,
-    onUpgrade,
     isSubgraphNavigationEnabled,
   ]);
 
@@ -271,6 +264,8 @@ const TaskNodeCard = () => {
       </div>
     </QuickTooltip>
   );
+
+  const componentText = taskSpec.componentRef?.text;
 
   return (
     <>
@@ -361,10 +356,13 @@ const TaskNodeCard = () => {
           ) : null}
         </CardContent>
       </Card>
-      {isEditDialogOpen && (
-        <ComponentEditorDialog
-          text={taskSpec.componentRef?.text}
-          onClose={handleCloseEditDialog}
+      {isYamlFullscreen && componentText && (
+        <CodeViewer
+          code={componentText}
+          language="yaml"
+          filename={name}
+          isFullscreen={isYamlFullscreen}
+          onClose={() => setIsYamlFullscreen(false)}
         />
       )}
     </>

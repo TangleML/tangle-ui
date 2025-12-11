@@ -17,8 +17,6 @@ import { useHydrateComponentReference } from "@/hooks/useHydrateComponentReferen
 import type { ComponentReference } from "@/utils/componentSpec";
 
 import InfoIconButton from "../Buttons/InfoIconButton";
-import TooltipButton from "../Buttons/TooltipButton";
-import { ComponentEditorDialog } from "../ComponentEditor/ComponentEditorDialog";
 import { ComponentFavoriteToggle } from "../FavoriteComponentToggle";
 import { InfoBox } from "../InfoBox";
 import { PublishComponent } from "../ManageComponent/PublishComponent";
@@ -32,7 +30,6 @@ interface ComponentDetailsProps {
   component: ComponentReference;
   displayName: string;
   trigger?: ReactNode;
-  actions?: ReactNode[];
   onClose?: () => void;
   onDelete?: () => void;
 }
@@ -64,12 +61,7 @@ const ComponentDetailsDialogContentSkeleton = () => {
 };
 
 const ComponentDetailsDialogContent = withSuspenseWrapper(
-  ({
-    component,
-    displayName,
-    actions = [],
-    onDelete,
-  }: ComponentDetailsProps) => {
+  ({ component, displayName, onDelete }: ComponentDetailsProps) => {
     const remoteComponentLibrarySearchEnabled = useBetaFlagValue(
       "remote-component-library-search",
     );
@@ -138,7 +130,6 @@ const ComponentDetailsDialogContent = withSuspenseWrapper(
                   componentRef={componentRef}
                   componentDigest={componentDigest}
                   url={url}
-                  actions={actions}
                   onDelete={onDelete}
                 />
               </TabsContent>
@@ -175,17 +166,11 @@ const ComponentDetails = ({
   component,
   displayName,
   trigger,
-  actions = [],
   onClose,
   onDelete,
 }: ComponentDetailsProps) => {
-  const hasEnabledInAppEditor = useBetaFlagValue("in-app-component-editor");
-
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [open, setOpen] = useState(false);
   const dialogTriggerButton = trigger || <InfoIconButton />;
-
-  const componentText = component.text;
 
   const dialogContextValue = useMemo(
     () => ({
@@ -197,10 +182,6 @@ const ComponentDetails = ({
     [],
   );
 
-  const handleCloseEditDialog = useCallback(() => {
-    setIsEditDialogOpen(false);
-  }, []);
-
   const onOpenChange = useCallback((open: boolean) => {
     setOpen(open);
     if (!open) {
@@ -208,68 +189,38 @@ const ComponentDetails = ({
     }
   }, []);
 
-  const handleEditComponent = useCallback(() => {
-    setIsEditDialogOpen(true);
-  }, []);
-
-  const actionsWithEdit = useMemo(() => {
-    if (!hasEnabledInAppEditor) return actions;
-
-    const EditButton = (
-      <TooltipButton
-        variant="secondary"
-        onClick={handleEditComponent}
-        tooltip="Edit Component Definition"
-        key={`${displayName}-edit-button`}
-      >
-        <Icon name="FilePenLine" />
-      </TooltipButton>
-    );
-
-    return [...actions, EditButton];
-  }, [actions, hasEnabledInAppEditor, handleEditComponent]);
-
   return (
-    <>
-      <Dialog modal open={open} onOpenChange={onOpenChange}>
-        <DialogTrigger asChild>{dialogTriggerButton}</DialogTrigger>
+    <Dialog modal open={open} onOpenChange={onOpenChange}>
+      <DialogTrigger asChild>{dialogTriggerButton}</DialogTrigger>
 
-        <DialogDescription
-          className="hidden"
-          aria-label={`${displayName} component details`}
-        >
-          {`${displayName} component details`}
-        </DialogDescription>
-        <DialogContent
-          className="max-w-2xl min-w-2xl overflow-hidden"
-          aria-label={`${displayName} component details`}
-        >
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 mr-5">
-              <span>{displayName}</span>
-              <ComponentFavoriteToggle component={component} />
-            </DialogTitle>
-          </DialogHeader>
+      <DialogDescription
+        className="hidden"
+        aria-label={`${displayName} component details`}
+      >
+        {`${displayName} component details`}
+      </DialogDescription>
+      <DialogContent
+        className="max-w-2xl min-w-2xl overflow-hidden"
+        aria-label={`${displayName} component details`}
+      >
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 mr-5">
+            <span>{displayName}</span>
+            <ComponentFavoriteToggle component={component} />
+          </DialogTitle>
+        </DialogHeader>
 
-          <DialogContext.Provider value={dialogContextValue}>
-            <ComponentDetailsDialogContent
-              component={component}
-              displayName={displayName}
-              trigger={dialogTriggerButton}
-              actions={actionsWithEdit}
-              onClose={onClose}
-              onDelete={onDelete}
-            />
-          </DialogContext.Provider>
-        </DialogContent>
-      </Dialog>
-      {isEditDialogOpen && (
-        <ComponentEditorDialog
-          text={componentText}
-          onClose={handleCloseEditDialog}
-        />
-      )}
-    </>
+        <DialogContext.Provider value={dialogContextValue}>
+          <ComponentDetailsDialogContent
+            component={component}
+            displayName={displayName}
+            trigger={dialogTriggerButton}
+            onClose={onClose}
+            onDelete={onDelete}
+          />
+        </DialogContext.Provider>
+      </DialogContent>
+    </Dialog>
   );
 };
 

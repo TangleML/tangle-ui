@@ -21,7 +21,7 @@ export type Action = {
 );
 
 // Temporary: ReactNode included for backward compatibility with some existing buttons. In the long-term we should strive for only Action types.
-export type ActionOrReactNode = Action | ReactNode;
+type ActionOrReactNode = Action | ReactNode;
 
 interface ActionBlockProps {
   title?: string;

@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { useState } from "react";
 import { FaPython } from "react-icons/fa";
 
 import useToastNotification from "@/hooks/useToastNotification";
@@ -8,15 +8,14 @@ import {
   downloadYamlFromComponentText,
 } from "@/utils/URL";
 
-import {
-  ActionBlock,
-  type ActionOrReactNode,
-} from "../ContextPanel/Blocks/ActionBlock";
+import { ComponentEditorDialog } from "../ComponentEditor/ComponentEditorDialog";
+import { type Action, ActionBlock } from "../ContextPanel/Blocks/ActionBlock";
+import { useBetaFlagValue } from "../Settings/useBetaFlags";
 
 interface TaskActionsProps {
   displayName: string;
   componentRef: HydratedComponentReference;
-  actions?: ReactNode[];
+  customActions?: Action[];
   onDelete?: () => void;
   readOnly?: boolean;
   className?: string;
@@ -25,12 +24,23 @@ interface TaskActionsProps {
 const TaskActions = ({
   displayName,
   componentRef,
-  actions = [],
+  customActions = [],
   onDelete,
   readOnly = false,
   className,
 }: TaskActionsProps) => {
+  const hasEnabledInAppEditor = useBetaFlagValue("in-app-component-editor");
   const notify = useToastNotification();
+
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
+  const handleEditComponent = () => {
+    setIsEditDialogOpen(true);
+  };
+
+  const handleCloseEditDialog = () => {
+    setIsEditDialogOpen(false);
+  };
 
   const pythonOriginalCode =
     componentRef.spec.metadata?.annotations?.original_python_code;
@@ -67,7 +77,7 @@ const TaskActions = ({
     }
   };
 
-  const orderedActions: ActionOrReactNode[] = [
+  const sharedActions: Action[] = [
     {
       label: "Download YAML",
       icon: "Download",
@@ -84,7 +94,12 @@ const TaskActions = ({
       icon: "Clipboard",
       onClick: handleCopyYaml,
     },
-    ...actions,
+    {
+      label: "Edit Component Definition",
+      icon: "FilePenLine",
+      hidden: !hasEnabledInAppEditor,
+      onClick: handleEditComponent,
+    },
     {
       label: "Delete Component",
       icon: "Trash",
@@ -94,7 +109,20 @@ const TaskActions = ({
     },
   ];
 
-  return <ActionBlock actions={orderedActions} className={className} />;
+  const allActions: Action[] = [...customActions, ...sharedActions];
+
+  return (
+    <>
+      <ActionBlock actions={allActions} className={className} />
+
+      {isEditDialogOpen && (
+        <ComponentEditorDialog
+          text={componentRef.text}
+          onClose={handleCloseEditDialog}
+        />
+      )}
+    </>
+  );
 };
 
 export default TaskActions;
