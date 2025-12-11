@@ -1,20 +1,19 @@
-import { type ReactNode } from "react";
+import { useState } from "react";
 import { FaPython } from "react-icons/fa";
 
 import useToastNotification from "@/hooks/useToastNotification";
 import type { ComponentSpec } from "@/utils/componentSpec";
 import { downloadYamlFromComponentText } from "@/utils/URL";
-import copyToYaml from "@/utils/yaml";
+import copyToYaml, { componentSpecToText } from "@/utils/yaml";
 
-import {
-  ActionBlock,
-  type ActionOrReactNode,
-} from "../ContextPanel/Blocks/ActionBlock";
+import { ComponentEditorDialog } from "../ComponentEditor/ComponentEditorDialog";
+import { type Action, ActionBlock } from "../ContextPanel/Blocks/ActionBlock";
+import { useBetaFlagValue } from "../Settings/useBetaFlags";
 
 interface TaskActionsProps {
   displayName: string;
   componentSpec: ComponentSpec;
-  actions?: ReactNode[];
+  customActions?: Action[];
   onDelete?: () => void;
   readOnly?: boolean;
   className?: string;
@@ -23,12 +22,23 @@ interface TaskActionsProps {
 const TaskActions = ({
   displayName,
   componentSpec,
-  actions = [],
+  customActions = [],
   onDelete,
   readOnly = false,
   className,
 }: TaskActionsProps) => {
+  const hasEnabledInAppEditor = useBetaFlagValue("in-app-component-editor");
   const notify = useToastNotification();
+
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
+  const handleEditComponent = () => {
+    setIsEditDialogOpen(true);
+  };
+
+  const handleCloseEditDialog = () => {
+    setIsEditDialogOpen(false);
+  };
 
   const pythonOriginalCode =
     componentSpec?.metadata?.annotations?.original_python_code;
@@ -67,8 +77,7 @@ const TaskActions = ({
       notify(`Error deleting component`, "error");
     }
   };
-
-  const orderedActions: ActionOrReactNode[] = [
+  const sharedActions: Action[] = [
     {
       label: "Download YAML",
       icon: "Download",
@@ -85,7 +94,12 @@ const TaskActions = ({
       icon: "Clipboard",
       onClick: handleCopyYaml,
     },
-    ...actions,
+    {
+      label: "Edit Component Definition",
+      icon: "FilePenLine",
+      hidden: !hasEnabledInAppEditor,
+      onClick: handleEditComponent,
+    },
     {
       label: "Delete Component",
       icon: "Trash",
@@ -95,7 +109,20 @@ const TaskActions = ({
     },
   ];
 
-  return <ActionBlock actions={orderedActions} className={className} />;
+  const allActions: Action[] = [...customActions, ...sharedActions];
+
+  return (
+    <>
+      <ActionBlock actions={allActions} className={className} />
+
+      {isEditDialogOpen && (
+        <ComponentEditorDialog
+          text={componentSpecToText(componentSpec)}
+          onClose={handleCloseEditDialog}
+        />
+      )}
+    </>
+  );
 };
 
 export default TaskActions;
