@@ -67,17 +67,15 @@ export const PythonComponentEditor = withSuspenseWrapper(
     const preservedNameRef = useRef(initialComponentName);
 
     useEffect(() => {
-      handleFunctionTextChange(text);
-    }, []);
+      preservedNameRef.current = initialComponentName;
+    }, [initialComponentName]);
 
-    // Sync ref with prop
-    preservedNameRef.current = initialComponentName;
-
-    const handleFunctionTextChange = async (value: string | undefined) => {
-      const code = value ?? "";
-      setPythonCode(code);
+    const generateYaml = async (
+      code: string,
+      options: YamlGeneratorOptions,
+    ) => {
       try {
-        const yaml = await yamlGenerator(code, yamlGeneratorOptions);
+        const yaml = await yamlGenerator(code, options);
         const yamlWithPreservedName = preserveComponentName(
           yaml,
           preservedNameRef.current,
@@ -93,10 +91,15 @@ export const PythonComponentEditor = withSuspenseWrapper(
       }
     };
 
-    const handleOptionsChange = (options: YamlGeneratorOptions) => {
-      setYamlGeneratorOptions(options);
-      handleFunctionTextChange(pythonCode);
+    const handleFunctionTextChange = async (value: string | undefined) => {
+      const code = value ?? "";
+      setPythonCode(code);
     };
+
+    useEffect(() => {
+      // first time loading
+      void generateYaml(pythonCode, yamlGeneratorOptions);
+    }, [pythonCode, yamlGeneratorOptions]);
 
     return (
       <InlineStack className="w-full h-full" gap="4">
@@ -131,7 +134,7 @@ export const PythonComponentEditor = withSuspenseWrapper(
             >
               <YamlGeneratorOptionsEditor
                 initialOptions={yamlGeneratorOptions}
-                onChange={handleOptionsChange}
+                onChange={setYamlGeneratorOptions}
               />
             </TabsContent>
           </Tabs>
