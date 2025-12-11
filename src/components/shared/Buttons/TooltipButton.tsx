@@ -28,7 +28,7 @@ const TooltipButton = React.forwardRef<HTMLButtonElement, TooltipButtonProps>(
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <div>
+          <div className="w-fit">
             <Button ref={ref} {...buttonProps}>
               {children}
             </Button>
