@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { useCallback, useReducer, useState } from "react";
+import { useReducer, useState } from "react";
 
 import { ensureGithubLibrary } from "@/components/shared/GitHubLibrary/utils/ensureGithubLibrary";
 import { fetchGitHubFiles } from "@/components/shared/GitHubLibrary/utils/fetchGitHubFiles";
@@ -175,7 +175,7 @@ function ConfigureImport({
     },
   });
 
-  const handleSubmit = useCallback(async () => {
+  const handleSubmit = async () => {
     if (state.hasErrors) {
       notify("Please fill in all fields", "error");
       return;
@@ -184,7 +184,7 @@ function ConfigureImport({
     setProcessError(null);
 
     await importComponentsFromGitHubLibrary(state);
-  }, [importComponentsFromGitHubLibrary, state, notify]);
+  };
 
   return (
     <BlockStack
