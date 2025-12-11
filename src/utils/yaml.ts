@@ -50,12 +50,12 @@ export function componentSpecFromYaml(yamlText: string): ComponentSpec {
 }
 
 export const componentSpecToYaml = (componentSpec: ComponentSpec) => {
-  return yaml.dump(componentSpec, { lineWidth: 10000 });
+  return yaml.dump(componentSpec, { lineWidth: -1 });
 };
 
 export const componentSpecToText = (componentSpec: ComponentSpec) => {
   return yaml.dump(componentSpec, {
-    lineWidth: 80,
+    lineWidth: -1,
     noRefs: true,
     indent: 2,
   });
