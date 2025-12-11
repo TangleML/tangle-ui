@@ -3,6 +3,7 @@ import {
   type ReactNode,
   useEffect,
   useReducer,
+  useRef,
 } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -39,8 +40,13 @@ export const YamlGeneratorOptionsEditor = ({
 }) => {
   const { state, dispatch } = useYamlGeneratorOptionsReducer(initialOptions);
 
+  const onChangeRef = useRef(onChange);
   useEffect(() => {
-    onChange({
+    onChangeRef.current = onChange;
+  });
+
+  useEffect(() => {
+    onChangeRef.current({
       baseImage: state.baseImage,
       packagesToInstall: state.packagesToInstall?.filter(Boolean) ?? [],
       annotations: Object.fromEntries(
@@ -49,7 +55,7 @@ export const YamlGeneratorOptionsEditor = ({
           .map(({ key, value }) => [key, value]),
       ),
     });
-  }, [state, onChange]);
+  }, [state]);
 
   return (
     <BlockStack className="flex-1 relative px-1" gap="4">

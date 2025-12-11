@@ -65,19 +65,14 @@ export const PythonComponentEditor = withSuspenseWrapper(
 
     const yamlGenerator = usePythonYamlGenerator();
     const preservedNameRef = useRef(initialComponentName);
-
-    useEffect(() => {
-      handleFunctionTextChange(text);
-    }, []);
-
-    // Sync ref with prop
     preservedNameRef.current = initialComponentName;
 
-    const handleFunctionTextChange = async (value: string | undefined) => {
-      const code = value ?? "";
-      setPythonCode(code);
+    const pythonCodeRef = useRef(pythonCode);
+    pythonCodeRef.current = pythonCode;
+
+    const regenerateYaml = async (code: string, opts: YamlGeneratorOptions) => {
       try {
-        const yaml = await yamlGenerator(code, yamlGeneratorOptions);
+        const yaml = await yamlGenerator(code, opts);
         const yamlWithPreservedName = preserveComponentName(
           yaml,
           preservedNameRef.current,
@@ -93,9 +88,19 @@ export const PythonComponentEditor = withSuspenseWrapper(
       }
     };
 
-    const handleOptionsChange = (options: YamlGeneratorOptions) => {
-      setYamlGeneratorOptions(options);
-      handleFunctionTextChange(pythonCode);
+    useEffect(() => {
+      regenerateYaml(text, yamlGeneratorOptions);
+    }, []);
+
+    const handleFunctionTextChange = (value: string | undefined) => {
+      const code = value ?? "";
+      setPythonCode(code);
+      regenerateYaml(code, yamlGeneratorOptions);
+    };
+
+    const handleOptionsChange = (newOptions: YamlGeneratorOptions) => {
+      setYamlGeneratorOptions(newOptions);
+      regenerateYaml(pythonCodeRef.current, newOptions);
     };
 
     return (
