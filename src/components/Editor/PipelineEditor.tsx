@@ -19,7 +19,6 @@ import {
   useComponentSpec,
 } from "@/providers/ComponentSpecProvider";
 import { ContextPanelProvider } from "@/providers/ContextPanelProvider";
-import { PipelineRunsProvider } from "@/providers/PipelineRunsProvider";
 
 import { LoadingScreen } from "../shared/LoadingScreen";
 import { NodesOverlayProvider } from "../shared/ReactFlow/NodesOverlay/NodesOverlayProvider";
@@ -52,36 +51,34 @@ const PipelineEditor = () => {
 
   return (
     <AutoSaveProvider>
-      <PipelineRunsProvider>
-        <NodesOverlayProvider>
-          <ContextPanelProvider defaultContent={<PipelineDetails />}>
-            <ForcedSearchProvider>
-              <ComponentLibraryProvider>
-                <InlineStack fill>
-                  <FlowSidebar />
-                  <BlockStack fill className="flex-1 relative">
-                    <FlowCanvas {...flowConfig}>
-                      <MiniMap position="bottom-left" pannable />
-                      <FlowControls
-                        className="ml-56! mb-6!"
-                        config={flowConfig}
-                        updateConfig={updateFlowConfig}
-                        showInteractive={false}
-                      />
-                      <Background gap={GRID_SIZE} className="bg-slate-50!" />
-                    </FlowCanvas>
+      <NodesOverlayProvider>
+        <ContextPanelProvider defaultContent={<PipelineDetails />}>
+          <ForcedSearchProvider>
+            <ComponentLibraryProvider>
+              <InlineStack fill>
+                <FlowSidebar />
+                <BlockStack fill className="flex-1 relative">
+                  <FlowCanvas {...flowConfig}>
+                    <MiniMap position="bottom-left" pannable />
+                    <FlowControls
+                      className="ml-56! mb-6!"
+                      config={flowConfig}
+                      updateConfig={updateFlowConfig}
+                      showInteractive={false}
+                    />
+                    <Background gap={GRID_SIZE} className="bg-slate-50!" />
+                  </FlowCanvas>
 
-                    <div className="absolute bottom-0 right-0 p-4">
-                      <UndoRedo />
-                    </div>
-                  </BlockStack>
-                  <CollapsibleContextPanel />
-                </InlineStack>
-              </ComponentLibraryProvider>
-            </ForcedSearchProvider>
-          </ContextPanelProvider>
-        </NodesOverlayProvider>
-      </PipelineRunsProvider>
+                  <div className="absolute bottom-0 right-0 p-4">
+                    <UndoRedo />
+                  </div>
+                </BlockStack>
+                <CollapsibleContextPanel />
+              </InlineStack>
+            </ComponentLibraryProvider>
+          </ForcedSearchProvider>
+        </ContextPanelProvider>
+      </NodesOverlayProvider>
     </AutoSaveProvider>
   );
 };

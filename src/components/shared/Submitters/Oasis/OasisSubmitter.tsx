@@ -1,6 +1,7 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { AlertCircle, CheckCircle, Loader2, SendHorizonal } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 import { useAwaitAuthorization } from "@/components/shared/Authentication/useAwaitAuthorization";
 import { useBetaFlagValue } from "@/components/shared/Settings/useBetaFlags";
@@ -10,14 +11,66 @@ import useCooldownTimer from "@/hooks/useCooldownTimer";
 import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
 import { useBackend } from "@/providers/BackendProvider";
-import { usePipelineRuns } from "@/providers/PipelineRunsProvider";
 import { APP_ROUTES } from "@/routes/router";
 import type { PipelineRun } from "@/types/pipelineRun";
 import type { ComponentSpec } from "@/utils/componentSpec";
+import { submitPipelineRun } from "@/utils/submitPipeline";
+
+import { isAuthorizationRequired } from "../../Authentication/helpers";
+import { useAuthLocalStorage } from "../../Authentication/useAuthLocalStorage";
 interface OasisSubmitterProps {
   componentSpec?: ComponentSpec;
   onSubmitComplete?: () => void;
   isComponentTreeValid?: boolean;
+}
+
+function useSubmitPipeline() {
+  const { awaitAuthorization, isAuthorized } = useAwaitAuthorization();
+  const queryClient = useQueryClient();
+  const { getToken } = useAuthLocalStorage();
+
+  const { backendUrl } = useBackend();
+
+  const authorizationToken = useRef<string | undefined>(getToken());
+
+  return useMutation({
+    mutationFn: async ({
+      componentSpec,
+      onSuccess,
+      onError,
+    }: {
+      componentSpec: ComponentSpec;
+      onSuccess: (data: PipelineRun) => void;
+      onError: (error: Error | string) => void;
+    }) => {
+      const authorizationRequired = isAuthorizationRequired();
+      if (authorizationRequired && !isAuthorized) {
+        const token = await awaitAuthorization();
+        if (token) {
+          authorizationToken.current = token;
+        }
+      }
+
+      return new Promise<PipelineRun>((resolve, reject) => {
+        submitPipelineRun(componentSpec, backendUrl, {
+          authorizationToken: authorizationToken.current,
+          onSuccess: (data) => {
+            resolve(data);
+            onSuccess(data);
+          },
+          onError: (error) => {
+            reject(error);
+            onError(error);
+          },
+        });
+      });
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["pipelineRuns"],
+      });
+    },
+  });
 }
 
 const OasisSubmitter = ({
@@ -27,7 +80,7 @@ const OasisSubmitter = ({
 }: OasisSubmitterProps) => {
   const { isAuthorized } = useAwaitAuthorization();
   const { configured, available } = useBackend();
-  const { submit, isSubmitting } = usePipelineRuns();
+  const { mutate: submit, isPending: isSubmitting } = useSubmitPipeline();
   const isAutoRedirect = useBetaFlagValue("redirect-on-new-pipeline-run");
 
   const [submitSuccess, setSubmitSuccess] = useState<boolean | null>(null);
@@ -120,7 +173,7 @@ const OasisSubmitter = ({
     }
 
     setSubmitSuccess(null);
-    submit(componentSpec, { onSuccess, onError });
+    submit({ componentSpec, onSuccess, onError });
   }, [
     handleError,
     submit,
