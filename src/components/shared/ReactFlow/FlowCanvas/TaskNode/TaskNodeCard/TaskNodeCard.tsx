@@ -179,6 +179,7 @@ const TaskNodeCard = () => {
 
     return <TaskOverview taskNode={taskNode} key={nodeId} actions={actions} />;
   }, [
+    taskNode,
     nodeId,
     readOnly,
     callbacks.onDuplicate,
