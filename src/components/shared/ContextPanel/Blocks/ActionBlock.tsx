@@ -20,12 +20,9 @@ export type Action = {
   | { content: ReactNode; icon?: never }
 );
 
-// Temporary: ReactNode included for backward compatibility with some existing buttons. In the long-term we should strive for only Action types.
-type ActionOrReactNode = Action | ReactNode;
-
 interface ActionBlockProps {
   title?: string;
-  actions: ActionOrReactNode[];
+  actions: Action[];
   className?: string;
 }
 
@@ -60,11 +57,7 @@ export const ActionBlock = ({
       <BlockStack className={className}>
         {title && <Heading level={3}>{title}</Heading>}
         <InlineStack gap="2">
-          {actions.map((action, index) => {
-            if (!action || typeof action !== "object" || !("label" in action)) {
-              return <div key={index}>{action}</div>;
-            }
-
+          {actions.map((action) => {
             if (action.hidden) {
               return null;
             }
