@@ -1,4 +1,4 @@
-import { isValidElement, type ReactNode, useState } from "react";
+import { type ReactNode, useState } from "react";
 
 import { Icon, type IconName } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -20,12 +20,9 @@ export type Action = {
   | { content: ReactNode; icon?: never }
 );
 
-// Temporary: ReactNode included for backward compatibility with some existing buttons. In the long-term we should strive for only Action types.
-type ActionOrReactNode = Action | ReactNode;
-
 interface ActionBlockProps {
   title?: string;
-  actions: ActionOrReactNode[];
+  actions: Action[];
   className?: string;
 }
 
@@ -60,15 +57,7 @@ export const ActionBlock = ({
       <BlockStack className={className}>
         {title && <Heading level={3}>{title}</Heading>}
         <InlineStack gap="2">
-          {actions.map((action, index) => {
-            if (!action || typeof action !== "object" || !("label" in action)) {
-              const key =
-                isValidElement(action) && action.key != null
-                  ? `action-node-${String(action.key)}`
-                  : `action-node-${index}`;
-              return <span key={key}>{action}</span>;
-            }
-
+          {actions.map((action) => {
             if (action.hidden) {
               return null;
             }

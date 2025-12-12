@@ -99,34 +99,6 @@ describe("<ActionBlock />", () => {
       expect(screen.getByTestId("action-Action 2")).toBeInTheDocument();
       expect(screen.getByTestId("action-Action 3")).toBeInTheDocument();
     });
-
-    test("renders ReactNode as action (backward compatibility)", () => {
-      const actions = [
-        { label: "Action 1", icon: "Copy" as const, onClick: vi.fn() },
-        <button key="custom" data-testid="custom-button">
-          Custom Button
-        </button>,
-      ];
-
-      render(<ActionBlock actions={actions} />);
-
-      expect(screen.getByTestId("action-Action 1")).toBeInTheDocument();
-      expect(screen.getByTestId("custom-button")).toBeInTheDocument();
-    });
-
-    test("handles null or undefined actions gracefully", () => {
-      const actions = [
-        { label: "Action 1", icon: "Copy" as const, onClick: vi.fn() },
-        null,
-        undefined,
-        { label: "Action 2", icon: "Download" as const, onClick: vi.fn() },
-      ];
-
-      render(<ActionBlock actions={actions} />);
-
-      expect(screen.getByTestId("action-Action 1")).toBeInTheDocument();
-      expect(screen.getByTestId("action-Action 2")).toBeInTheDocument();
-    });
   });
 
   describe("action variants", () => {

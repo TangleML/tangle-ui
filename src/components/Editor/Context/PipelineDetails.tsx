@@ -1,24 +1,30 @@
+import { useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import { useValidationIssueNavigation } from "@/components/Editor/hooks/useValidationIssueNavigation";
-import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { CodeViewer } from "@/components/shared/CodeViewer";
-import { ActionBlock } from "@/components/shared/ContextPanel/Blocks/ActionBlock";
+import {
+  type Action,
+  ActionBlock,
+} from "@/components/shared/ContextPanel/Blocks/ActionBlock";
 import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlock";
 import { ListBlock } from "@/components/shared/ContextPanel/Blocks/ListBlock";
 import { TextBlock } from "@/components/shared/ContextPanel/Blocks/TextBlock";
 import { CopyText } from "@/components/shared/CopyText/CopyText";
-import { Icon } from "@/components/ui/icon";
+import { PipelineNameDialog } from "@/components/shared/Dialogs";
 import { BlockStack } from "@/components/ui/layout";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
-import { getComponentFileFromList } from "@/utils/componentStore";
+import { APP_ROUTES } from "@/routes/router";
+import {
+  getComponentFileFromList,
+  renameComponentFileInList,
+} from "@/utils/componentStore";
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 import { componentSpecToText } from "@/utils/yaml";
 
 import PipelineIO from "../../shared/Execution/PipelineIO";
 import { PipelineValidationList } from "./PipelineValidationList";
-import RenamePipeline from "./RenamePipeline";
 
 const PipelineDetails = () => {
   const notify = useToastNotification();
@@ -27,12 +33,21 @@ const PipelineDetails = () => {
     digest,
     isComponentTreeValid,
     globalValidationIssues,
+    saveComponentSpec,
   } = useComponentSpec();
+
+  const navigate = useNavigate();
+
+  const location = useLocation();
+  const pathname = location.pathname;
+
+  const title = componentSpec?.name;
 
   const { handleIssueClick, groupedIssues } = useValidationIssueNavigation(
     globalValidationIssues,
   );
 
+  const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
   const [isYamlFullscreen, setIsYamlFullscreen] = useState(false);
 
   // State for file metadata
@@ -41,6 +56,31 @@ const PipelineDetails = () => {
     modificationTime?: Date;
     createdBy?: string;
   }>({});
+
+  const isSubmitDisabled = (name: string) => {
+    return name === title;
+  };
+
+  const handleTitleUpdate = async (name: string) => {
+    if (!componentSpec) {
+      notify("Update failed: ComponentSpec not found", "error");
+      return;
+    }
+
+    await renameComponentFileInList(
+      USER_PIPELINES_LIST_NAME,
+      title ?? "",
+      name,
+      pathname,
+    );
+
+    await saveComponentSpec(name);
+
+    const urlName = encodeURIComponent(name);
+    const url = APP_ROUTES.PIPELINE_EDITOR.replace("$name", urlName);
+
+    navigate({ to: url });
+  };
 
   // Fetch file metadata on mount or when componentSpec.name changes
   useEffect(() => {
@@ -86,16 +126,17 @@ const PipelineDetails = () => {
     componentSpec.metadata?.annotations || {},
   ).map(([key, value]) => ({ label: key, value: String(value) }));
 
-  const actions = [
-    <RenamePipeline key="rename-pipeline-action" />,
-    <TooltipButton
-      variant="outline"
-      tooltip="View YAML"
-      onClick={() => setIsYamlFullscreen(true)}
-      key="view-yaml-action"
-    >
-      <Icon name="FileCodeCorner" />
-    </TooltipButton>,
+  const actions: Action[] = [
+    {
+      label: "Rename Pipeline",
+      icon: "PencilLine",
+      onClick: () => setIsRenameDialogOpen(true),
+    },
+    {
+      label: "View YAML",
+      icon: "FileCodeCorner",
+      onClick: () => setIsYamlFullscreen(true),
+    },
   ];
 
   return (
@@ -151,6 +192,16 @@ const PipelineDetails = () => {
           onClose={() => setIsYamlFullscreen(false)}
         />
       )}
+      <PipelineNameDialog
+        open={isRenameDialogOpen}
+        onOpenChange={setIsRenameDialogOpen}
+        title="Name Pipeline"
+        description="Unsaved pipeline changes will be lost."
+        initialName={title ?? ""}
+        onSubmit={handleTitleUpdate}
+        submitButtonText="Update Title"
+        isSubmitDisabled={isSubmitDisabled}
+      />
     </>
   );
 };
