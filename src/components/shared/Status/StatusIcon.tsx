@@ -13,6 +13,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  getExecutionStatusLabel,
+  isContainerExecutionStatus,
+} from "@/utils/executionStatus";
 
 const StatusIcon = ({
   status,
@@ -23,9 +27,11 @@ const StatusIcon = ({
   tooltip?: boolean;
   label?: "run" | "task" | "pipeline";
 }) => {
+  const statusLabel = getStatusLabel(status);
+
   if (tooltip) {
     const capitalizedLabel = label.charAt(0).toUpperCase() + label.slice(1);
-    const tooltipText = `${capitalizedLabel} ${status?.toLowerCase() ?? "unknown"}`;
+    const tooltipText = `${capitalizedLabel} ${statusLabel.toLowerCase()}`;
     return (
       <Tooltip>
         <TooltipTrigger asChild>
@@ -41,6 +47,34 @@ const StatusIcon = ({
   }
 
   return <Icon status={status} />;
+};
+
+const getStatusLabel = (status: string | undefined) => {
+  if (!status) return "Unknown";
+
+  if (isContainerExecutionStatus(status)) {
+    return getExecutionStatusLabel(status);
+  }
+
+  // Aggregate / run-level statuses (derived via getRunStatus)
+  switch (status) {
+    case "SUCCEEDED":
+      return "Succeeded";
+    case "FAILED":
+      return "Failed";
+    case "RUNNING":
+      return "Running";
+    case "WAITING":
+      return "Waiting";
+    case "CANCELLED":
+      return "Cancelled";
+    case "SKIPPED":
+      return "Skipped";
+    case "UNKNOWN":
+      return "Unknown";
+    default:
+      return status;
+  }
 };
 
 const Icon = ({ status }: { status?: string }) => {

@@ -3,7 +3,7 @@ import { InlineStack } from "@/components/ui/layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Paragraph } from "@/components/ui/typography";
 import type { PipelineRun } from "@/types/pipelineRun";
-import { formatDate, convertUTCToLocalTime } from "@/utils/date";
+import { convertUTCToLocalTime, formatDate } from "@/utils/date";
 
 import { PipelineRunStatus } from "./components/PipelineRunStatus";
 
