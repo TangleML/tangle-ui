@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { FaPython } from "react-icons/fa";
 
+import { BlockStack } from "@/components/ui/layout";
 import useToastNotification from "@/hooks/useToastNotification";
 import type { ComponentSpec } from "@/utils/componentSpec";
 import { downloadYamlFromComponentText } from "@/utils/URL";
@@ -77,6 +78,7 @@ const TaskActions = ({
       notify(`Error deleting component`, "error");
     }
   };
+
   const sharedActions: Action[] = [
     {
       label: "Download YAML",
@@ -109,11 +111,14 @@ const TaskActions = ({
     },
   ];
 
-  const allActions: Action[] = [...customActions, ...sharedActions];
-
   return (
     <>
-      <ActionBlock actions={allActions} className={className} />
+      <BlockStack gap="4" className={className}>
+        <ActionBlock title="Component Actions" actions={sharedActions} />
+        {customActions.length > 0 && (
+          <ActionBlock title="Node Actions" actions={customActions} />
+        )}
+      </BlockStack>
 
       {isEditDialogOpen && (
         <ComponentEditorDialog
