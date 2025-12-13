@@ -24,6 +24,10 @@ import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
 import type { ComponentSpec } from "@/utils/componentSpec";
 import {
+  getExecutionStatusLabel,
+  isContainerExecutionStatus,
+} from "@/utils/executionStatus";
+import {
   convertGithubUrlToDirectoryUrl,
   downloadYamlFromComponentText,
   isGithubUrl,
@@ -157,10 +161,12 @@ const TaskDetails = ({
         {status && (
           <div className="flex flex-col px-3 py-2">
             <div className="shrink-0 font-medium text-sm text-gray-700 mb-1">
-              Run Status
+              Execution Status
             </div>
             <div className="text-xs text-gray-600 wrap-break-word whitespace-pre-wrap">
-              {status}
+              {isContainerExecutionStatus(status)
+                ? getExecutionStatusLabel(status)
+                : status}
             </div>
           </div>
         )}
