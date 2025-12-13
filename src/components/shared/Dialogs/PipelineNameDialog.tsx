@@ -23,8 +23,7 @@ import { Input } from "@/components/ui/input";
 import { BlockStack } from "@/components/ui/layout";
 import useLoadUserPipelines from "@/hooks/useLoadUserPipelines";
 
-interface PipelineNameDialogProps {
-  trigger: ReactNode;
+type PipelineNameDialogPropsBase = {
   title: string;
   description?: string;
   initialName: string;
@@ -32,11 +31,25 @@ interface PipelineNameDialogProps {
   submitButtonIcon?: ReactNode;
   onSubmit: (name: string) => void;
   isSubmitDisabled?: (name: string, error: string | null) => boolean;
-  onOpenChange?: (open: boolean) => void;
-}
+};
+
+type PipelineNameDialogProps = PipelineNameDialogPropsBase &
+  (
+    | {
+        trigger: ReactNode;
+        open?: never;
+        onOpenChange?: never;
+      }
+    | {
+        trigger?: never;
+        open: boolean;
+        onOpenChange: (open: boolean) => void;
+      }
+  );
 
 const PipelineNameDialog = ({
   trigger,
+  open,
   title,
   description = "Please, name your pipeline.",
   initialName,
@@ -78,14 +91,14 @@ const PipelineNameDialog = ({
   );
 
   const handleDialogOpenChange = useCallback(
-    (open: boolean) => {
-      if (!open) {
+    (newOpen: boolean) => {
+      if (!newOpen) {
         setError(null);
       } else {
         setName(initialName);
         refetchUserPipelines();
       }
-      onOpenChange?.(open);
+      onOpenChange?.(newOpen);
     },
     [initialName, onOpenChange, refetchUserPipelines],
   );
@@ -100,43 +113,57 @@ const PipelineNameDialog = ({
     !name ||
     !!isSubmitDisabled?.(name, error);
 
+  const dialogContent = (
+    <DialogContent className="sm:max-w-md">
+      <DialogHeader>
+        <DialogTitle>{title}</DialogTitle>
+        <DialogDescription>{description}</DialogDescription>
+      </DialogHeader>
+      <BlockStack gap="2">
+        <Input value={name} onChange={handleOnChange} />
+        <Activity mode={error ? "visible" : "hidden"}>
+          <Alert variant="destructive">
+            <Icon name="CircleAlert" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        </Activity>
+      </BlockStack>
+      <DialogFooter className="sm:justify-end">
+        <DialogClose asChild>
+          <Button type="button" variant="secondary">
+            Close
+          </Button>
+        </DialogClose>
+        <DialogClose asChild>
+          <Button
+            type="button"
+            size="sm"
+            className="px-3"
+            onClick={handleSubmit}
+            disabled={isDisabled}
+          >
+            {submitButtonIcon}
+            {submitButtonText}
+          </Button>
+        </DialogClose>
+      </DialogFooter>
+    </DialogContent>
+  );
+
+  // Controlled mode
+  if (open !== undefined) {
+    return (
+      <Dialog open={open} onOpenChange={handleDialogOpenChange}>
+        {dialogContent}
+      </Dialog>
+    );
+  }
+
+  // Uncontrolled mode
   return (
     <Dialog onOpenChange={handleDialogOpenChange}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
-        <BlockStack gap="2">
-          <Input value={name} onChange={handleOnChange} />
-          <Activity mode={error ? "visible" : "hidden"}>
-            <Alert variant="destructive">
-              <Icon name="CircleAlert" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          </Activity>
-        </BlockStack>
-        <DialogFooter className="sm:justify-end">
-          <DialogClose asChild>
-            <Button type="button" variant="secondary">
-              Close
-            </Button>
-          </DialogClose>
-          <DialogClose asChild>
-            <Button
-              type="button"
-              size="sm"
-              className="px-3"
-              onClick={handleSubmit}
-              disabled={isDisabled}
-            >
-              {submitButtonIcon}
-              {submitButtonText}
-            </Button>
-          </DialogClose>
-        </DialogFooter>
-      </DialogContent>
+      {dialogContent}
     </Dialog>
   );
 };
