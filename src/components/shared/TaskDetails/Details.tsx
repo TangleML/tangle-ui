@@ -1,36 +1,13 @@
-import {
-  ChevronsUpDown,
-  ClipboardIcon,
-  DownloadIcon,
-  TrashIcon,
-} from "lucide-react";
-import { type ReactNode, useState } from "react";
-import { FaPython } from "react-icons/fa";
+import { type ReactNode } from "react";
 
-import { Button } from "@/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { Link } from "@/components/ui/link";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { useCopyToClipboard } from "@/hooks/useCopyToClip";
-import useToastNotification from "@/hooks/useToastNotification";
-import { cn } from "@/lib/utils";
+import { BlockStack } from "@/components/ui/layout";
 import type { ComponentSpec } from "@/utils/componentSpec";
-import {
-  convertGithubUrlToDirectoryUrl,
-  downloadYamlFromComponentText,
-  isGithubUrl,
-} from "@/utils/URL";
-import copyToYaml from "@/utils/yaml";
 
+import { ContentBlock } from "../ContextPanel/Blocks/ContentBlock";
+import { TextBlock } from "../ContextPanel/Blocks/TextBlock";
+import TaskActions from "./Actions";
 import { ExecutionDetails } from "./ExecutionDetails";
+import { GithubDetails } from "./GithubDetails";
 
 interface TaskDetailsProps {
   displayName: string;
@@ -41,7 +18,6 @@ interface TaskDetailsProps {
   url?: string;
   actions?: ReactNode[];
   onDelete?: () => void;
-  hasDeletionConfirmation?: boolean;
   status?: string;
   readOnly?: boolean;
   additionalSection?: {
@@ -50,6 +26,8 @@ interface TaskDetailsProps {
     isCollapsed?: boolean;
   }[];
 }
+
+const BASE_BLOCK_CLASS = "px-3 py-2";
 
 const TaskDetails = ({
   displayName,
@@ -60,23 +38,11 @@ const TaskDetails = ({
   url,
   actions = [],
   onDelete,
-  hasDeletionConfirmation = true,
   status,
   readOnly = false,
   additionalSection = [],
 }: TaskDetailsProps) => {
-  const notify = useToastNotification();
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const { isCopied, isTooltipOpen, handleCopy, handleTooltipOpen } =
-    useCopyToClipboard(componentDigest);
-
   const canonicalUrl = componentSpec?.metadata?.annotations?.canonical_location;
-  const pythonOriginalCode = (componentSpec?.metadata?.annotations
-    ?.original_python_code ||
-    componentSpec?.metadata?.annotations?.python_original_code) as
-    | string
-    | undefined;
-
   let reconstructedUrl;
   if (!url) {
     // Try reconstruct the url from componentSpec.metadata.annotations
@@ -103,292 +69,72 @@ const TaskDetails = ({
     }
   }
 
-  const stringToPythonCodeDownload = () => {
-    if (!pythonOriginalCode) return;
-
-    const blob = new Blob([pythonOriginalCode], { type: "text/x-python" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${componentSpec?.name || displayName}.py`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  const handleDownloadYaml = () => {
-    downloadYamlFromComponentText(componentSpec, displayName);
-  };
-
-  const handleCopyYaml = () => {
-    copyToYaml(
-      componentSpec,
-      (message) => notify(message, "success"),
-      (message) => notify(message, "error"),
-    );
-  };
-
-  const handleDelete = () => {
-    if (confirmDelete || !hasDeletionConfirmation) {
-      try {
-        onDelete?.();
-      } catch (error) {
-        console.error("Error deleting component:", error);
-      }
-    } else if (hasDeletionConfirmation) {
-      setConfirmDelete(true);
-    }
-  };
+  const author = componentSpec?.metadata?.annotations?.author;
+  const description = componentSpec?.description;
 
   return (
-    <div className="h-full overflow-auto hide-scrollbar">
-      <div className="border rounded-md divide-y w-full h-full">
-        {taskId && (
-          <div className="flex flex-col px-3 py-2">
-            <div className="shrink-0 font-medium text-sm text-gray-700 mb-1">
-              Task ID
-            </div>
-            <div className="text-xs text-gray-600 wrap-break-word whitespace-pre-wrap">
-              {taskId}
-            </div>
-          </div>
-        )}
-        {status && (
-          <div className="flex flex-col px-3 py-2">
-            <div className="shrink-0 font-medium text-sm text-gray-700 mb-1">
-              Run Status
-            </div>
-            <div className="text-xs text-gray-600 wrap-break-word whitespace-pre-wrap">
-              {status}
-            </div>
-          </div>
-        )}
+    <BlockStack className="border rounded-md divide-y overflow-auto hide-scrollbar">
+      <TextBlock title="Task ID" text={taskId} className={BASE_BLOCK_CLASS} />
 
-        {executionId && (
-          <ExecutionDetails
-            executionId={executionId}
-            componentSpec={componentSpec}
-            className="px-3 py-2"
-          />
-        )}
+      <TextBlock
+        title="Run Status"
+        text={status}
+        className={BASE_BLOCK_CLASS}
+      />
 
-        {componentSpec?.metadata?.annotations?.author && (
-          <div className="flex flex-col px-3 py-2">
-            <div className="shrink-0 font-medium text-sm text-gray-700 mb-1">
-              Author
-            </div>
-            <div className="text-xs text-gray-600 wrap-break-word whitespace-pre-wrap">
-              {componentSpec.metadata.annotations?.author}
-            </div>
-          </div>
-        )}
-
-        <LinkBlock
-          url={url && url.length > 0 ? url : reconstructedUrl}
-          canonicalUrl={canonicalUrl}
+      {executionId && (
+        <ExecutionDetails
+          executionId={executionId}
+          componentSpec={componentSpec}
+          className={BASE_BLOCK_CLASS}
         />
+      )}
 
-        {componentSpec?.description && (
-          <div className="flex flex-col px-3 py-2">
-            <Collapsible>
-              <div className="font-medium text-sm text-gray-700 flex items-center gap-1">
-                Description
-                <CollapsibleTrigger asChild>
-                  <Button variant="ghost" size="sm">
-                    <ChevronsUpDown className="h-4 w-4" />
-                    <span className="sr-only">Toggle</span>
-                  </Button>
-                </CollapsibleTrigger>
-              </div>
+      <TextBlock title="Author" text={author} className={BASE_BLOCK_CLASS} />
 
-              <CollapsibleContent className="mt-1">
-                <div className="text-xs text-gray-600 wrap-break-word whitespace-pre-wrap">
-                  {componentSpec.description}
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          </div>
-        )}
+      <GithubDetails
+        url={url && url.length > 0 ? url : reconstructedUrl}
+        canonicalUrl={canonicalUrl}
+        className={BASE_BLOCK_CLASS}
+      />
 
-        {componentDigest && (
-          <div className="flex flex-col px-3 py-2">
-            <div className="shrink-0 font-medium text-sm text-gray-700 mb-1">
-              Digest
-            </div>
-            <div
-              className="flex items-center gap-2 cursor-pointer"
-              onClick={handleCopy}
-            >
-              <span className="font-mono text-xs truncate">
-                {componentDigest}
-              </span>
-              <Tooltip
-                delayDuration={300}
-                open={isTooltipOpen}
-                onOpenChange={handleTooltipOpen}
-              >
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                    <ClipboardIcon className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent
-                  arrowClassName={cn(
-                    isCopied && "bg-emerald-200 fill-emerald-200",
-                  )}
-                  className={cn(isCopied && "bg-emerald-200 text-emerald-800")}
-                >
-                  {isCopied ? "Copied" : "Copy Digest"}
-                </TooltipContent>
-              </Tooltip>
-            </div>
-          </div>
-        )}
-        {additionalSection.map((section) => (
-          <div className="flex flex-col px-3 py-2" key={section.title}>
-            <Collapsible defaultOpen={!section.isCollapsed}>
-              <CollapsibleTrigger asChild>
-                <div className="font-medium text-sm text-gray-700 flex items-center gap-1">
-                  {section.title}
+      <TextBlock
+        title="Description"
+        text={description}
+        collapsible
+        className={BASE_BLOCK_CLASS}
+        wrap
+      />
 
-                  <Button variant="ghost" size="sm">
-                    <ChevronsUpDown className="h-4 w-4" />
-                    <span className="sr-only">Toggle</span>
-                  </Button>
-                </div>
-              </CollapsibleTrigger>
+      <TextBlock
+        title="Digest"
+        text={componentDigest}
+        copyable
+        className={BASE_BLOCK_CLASS}
+      />
 
-              <CollapsibleContent className="mt-1 min-h-0 flex-1 h-full">
-                {section.component}
-              </CollapsibleContent>
-            </Collapsible>
-          </div>
-        ))}
+      {additionalSection.map((section) => (
+        <ContentBlock
+          key={section.title}
+          title={section.title}
+          collapsible
+          defaultOpen={!section.isCollapsed}
+          className={BASE_BLOCK_CLASS}
+        >
+          {section.component}
+        </ContentBlock>
+      ))}
 
-        <div className="px-3 py-2 flex flex-wrap gap-2" key={0}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="outline" onClick={handleDownloadYaml}>
-                <DownloadIcon />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Download YAML</TooltipContent>
-          </Tooltip>
-          {pythonOriginalCode && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="outline" onClick={stringToPythonCodeDownload}>
-                  <FaPython className="mr-1" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Download Python Code</TooltipContent>
-            </Tooltip>
-          )}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="outline" onClick={handleCopyYaml}>
-                <ClipboardIcon />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Copy YAML</TooltipContent>
-          </Tooltip>
-
-          {actions}
-
-          {onDelete && !readOnly && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="destructive" onClick={handleDelete}>
-                  <div className="flex items-center gap-2">
-                    <TrashIcon />
-                    {confirmDelete && hasDeletionConfirmation && (
-                      <span className="text-xs">Confirm Delete</span>
-                    )}
-                  </div>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                {confirmDelete || !hasDeletionConfirmation
-                  ? "Confirm Delete. This action cannot be undone."
-                  : "Delete Component"}
-              </TooltipContent>
-            </Tooltip>
-          )}
-        </div>
-      </div>
-    </div>
+      <TaskActions
+        displayName={displayName}
+        componentSpec={componentSpec}
+        actions={actions}
+        onDelete={onDelete}
+        readOnly={readOnly}
+        className={BASE_BLOCK_CLASS}
+      />
+    </BlockStack>
   );
 };
 
 export default TaskDetails;
-
-function LinkBlock({
-  url,
-  canonicalUrl,
-}: {
-  url?: string;
-  canonicalUrl?: string;
-}) {
-  if (!url && !canonicalUrl) return null;
-
-  return (
-    <div className="flex flex-col px-3 py-2">
-      <div className="shrink-0 font-medium text-sm text-gray-700 mb-1">URL</div>
-      {url && (
-        <>
-          <div className="text-sm break-all">
-            <Link
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              size="sm"
-              external
-            >
-              View raw component.yaml
-            </Link>
-          </div>
-          <div className="text-sm break-all">
-            <Link
-              href={
-                isGithubUrl(url) ? convertGithubUrlToDirectoryUrl(url) : url
-              }
-              target="_blank"
-              rel="noopener noreferrer"
-              size="sm"
-              external
-            >
-              View directory on GitHub
-            </Link>
-          </div>
-        </>
-      )}
-      {canonicalUrl && (
-        <>
-          <div className="text-sm break-all">
-            <Link
-              href={canonicalUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              size="sm"
-              external
-            >
-              View raw canonical URL
-            </Link>
-          </div>
-          <div className="text-sm break-all">
-            <Link
-              href={convertGithubUrlToDirectoryUrl(canonicalUrl)}
-              target="_blank"
-              rel="noopener noreferrer"
-              size="sm"
-              external
-            >
-              View canonical URL on GitHub
-            </Link>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
