@@ -12,7 +12,7 @@ import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { getComponentFileFromList } from "@/utils/componentStore";
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 
-import PipelineIO from "../../shared/ArtifactsList/PipelineIO";
+import PipelineIO from "../../shared/Execution/PipelineIO";
 import { PipelineValidationList } from "./PipelineValidationList";
 import RenamePipeline from "./RenamePipeline";
 
