@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { FaPython } from "react-icons/fa";
 
+import { BlockStack } from "@/components/ui/layout";
 import useToastNotification from "@/hooks/useToastNotification";
 import type { HydratedComponentReference } from "@/utils/componentSpec";
 import {
@@ -109,11 +110,14 @@ const TaskActions = ({
     },
   ];
 
-  const allActions: Action[] = [...customActions, ...sharedActions];
-
   return (
     <>
-      <ActionBlock actions={allActions} className={className} />
+      <BlockStack gap="4" className={className}>
+        <ActionBlock title="Component Actions" actions={sharedActions} />
+        {customActions.length > 0 && (
+          <ActionBlock title="Node Actions" actions={customActions} />
+        )}
+      </BlockStack>
 
       {isEditDialogOpen && (
         <ComponentEditorDialog
