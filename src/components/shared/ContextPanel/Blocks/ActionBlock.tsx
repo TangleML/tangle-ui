@@ -7,7 +7,7 @@ import { Heading } from "@/components/ui/typography";
 import TooltipButton from "../../Buttons/TooltipButton";
 import { ConfirmationDialog } from "../../Dialogs";
 
-type Action = {
+export type Action = {
   label: string;
   destructive?: boolean;
   disabled?: boolean;
