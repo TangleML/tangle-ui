@@ -82,10 +82,10 @@ describe("<SuspenseWrapper />", () => {
       );
 
       // Should show error message and retry button
-      expect(screen.getByText("There was an error!")).toBeInTheDocument();
-      expect(
-        screen.getByRole("button", { name: "Try again" }),
-      ).toBeInTheDocument();
+      const errorButton = screen.getByRole("button", {
+        name: "A UI element failed to render. Click to retry.",
+      });
+      expect(errorButton).toBeInTheDocument();
       expect(screen.queryByTestId("success-content")).not.toBeInTheDocument();
     });
 
@@ -106,8 +106,10 @@ describe("<SuspenseWrapper />", () => {
       );
 
       // Initially shows error
-      expect(screen.getByText("There was an error!")).toBeInTheDocument();
-      const retryButton = screen.getByRole("button", { name: "Try again" });
+      const retryButton = screen.getByRole("button", {
+        name: "A UI element failed to render. Click to retry.",
+      });
+      expect(retryButton).toBeInTheDocument();
 
       // Fix the error condition and click retry
       shouldError = false;
@@ -118,7 +120,11 @@ describe("<SuspenseWrapper />", () => {
         expect(screen.getByTestId("recovered-content")).toBeInTheDocument();
       });
       expect(screen.getByText("Recovered")).toBeInTheDocument();
-      expect(screen.queryByText("There was an error!")).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", {
+          name: "A UI element failed to render. Click to retry.",
+        }),
+      ).not.toBeInTheDocument();
     });
 
     test("shows custom errorFallback when provided", () => {
@@ -145,9 +151,10 @@ describe("<SuspenseWrapper />", () => {
       expect(screen.getByTestId("custom-retry")).toBeInTheDocument();
 
       // Should NOT show default error UI
-      expect(screen.queryByText("There was an error!")).not.toBeInTheDocument();
       expect(
-        screen.queryByRole("button", { name: "Try again" }),
+        screen.queryByRole("button", {
+          name: "A UI element failed to render. Click to retry.",
+        }),
       ).not.toBeInTheDocument();
     });
 
@@ -376,10 +383,10 @@ describe("withSuspenseWrapper()", () => {
       render(<WrappedComponent />);
 
       // Should show error UI
-      expect(screen.getByText("There was an error!")).toBeInTheDocument();
-      expect(
-        screen.getByRole("button", { name: "Try again" }),
-      ).toBeInTheDocument();
+      const errorButton = screen.getByRole("button", {
+        name: "A UI element failed to render. Click to retry.",
+      });
+      expect(errorButton).toBeInTheDocument();
     });
 
     test("wrapped component can recover from error", async () => {
@@ -397,11 +404,14 @@ describe("withSuspenseWrapper()", () => {
       render(<WrappedComponent />);
 
       // Initially shows error
-      expect(screen.getByText("There was an error!")).toBeInTheDocument();
+      const retryButton = screen.getByRole("button", {
+        name: "A UI element failed to render. Click to retry.",
+      });
+      expect(retryButton).toBeInTheDocument();
 
       // Fix error and retry
       shouldError = false;
-      fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+      fireEvent.click(retryButton);
 
       // Should recover
       await waitFor(() => {
