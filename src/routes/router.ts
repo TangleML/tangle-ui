@@ -124,3 +124,22 @@ export const router = createRouter({
   history,
   basepath: IS_GITHUB_PAGES ? "" : basepath, // Hash history doesn't need basepath
 });
+
+if (import.meta.env.VITE_HUGGING_FACE_AUTHORIZATION === "true") {
+  /**
+   * Sync state from the parent window to the child window in HuggingFace embedding
+   * @see https://huggingface.co/docs/hub/en/spaces-handle-url-parameters
+   * @todo: think about making this as a plugin
+   */
+  function emitLocationChange() {
+    window.parent.postMessage(
+      {
+        queryString: window.location.search,
+        hash: window.location.hash,
+      },
+      "https://huggingface.co",
+    );
+  }
+
+  router.subscribe("onRendered", emitLocationChange);
+}
