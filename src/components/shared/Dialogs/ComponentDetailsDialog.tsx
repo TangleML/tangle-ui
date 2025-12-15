@@ -150,7 +150,7 @@ const ComponentDetailsDialogContent = withSuspenseWrapper(
               <TabsContent value="implementation" className="h-full">
                 <TaskImplementation
                   displayName={displayName}
-                  componentSpec={componentSpec}
+                  componentRef={componentRef}
                 />
               </TabsContent>
 

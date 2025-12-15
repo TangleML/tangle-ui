@@ -97,7 +97,7 @@ const ComponentQuickDetailsDialog = withSuspenseWrapper(
 
             <TaskImplementation
               displayName={displayName}
-              componentSpec={hydratedComponent.spec}
+              componentRef={hydratedComponent}
             />
           </BlockStack>
           <DialogFooter>
