@@ -2,12 +2,11 @@ import { type ReactNode } from "react";
 import { FaPython } from "react-icons/fa";
 
 import useToastNotification from "@/hooks/useToastNotification";
-import type { ComponentSpec } from "@/utils/componentSpec";
+import type { HydratedComponentReference } from "@/utils/componentSpec";
 import {
   downloadStringAsFile,
   downloadYamlFromComponentText,
 } from "@/utils/URL";
-import { componentSpecToText } from "@/utils/yaml";
 
 import {
   ActionBlock,
@@ -16,7 +15,7 @@ import {
 
 interface TaskActionsProps {
   displayName: string;
-  componentSpec: ComponentSpec;
+  componentRef: HydratedComponentReference;
   actions?: ReactNode[];
   onDelete?: () => void;
   readOnly?: boolean;
@@ -25,7 +24,7 @@ interface TaskActionsProps {
 
 const TaskActions = ({
   displayName,
-  componentSpec,
+  componentRef,
   actions = [],
   onDelete,
   readOnly = false,
@@ -34,24 +33,24 @@ const TaskActions = ({
   const notify = useToastNotification();
 
   const pythonOriginalCode =
-    componentSpec?.metadata?.annotations?.original_python_code;
+    componentRef.spec.metadata?.annotations?.original_python_code;
 
   const stringToPythonCodeDownload = () => {
     if (!pythonOriginalCode) return;
 
     downloadStringAsFile(
       pythonOriginalCode,
-      `${componentSpec?.name || displayName}.py`,
+      `${componentRef.name || displayName}.py`,
       "text/x-python",
     );
   };
 
   const handleDownloadYaml = () => {
-    downloadYamlFromComponentText(componentSpec, displayName);
+    downloadYamlFromComponentText(componentRef.text, displayName);
   };
 
   const handleCopyYaml = () => {
-    const code = componentSpecToText(componentSpec);
+    const code = componentRef.text;
 
     navigator.clipboard.writeText(code).then(
       () => notify("YAML copied to clipboard", "success"),

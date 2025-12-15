@@ -1,8 +1,5 @@
 import { RUNS_BASE_PATH } from "@/routes/router";
 
-import type { ComponentSpec } from "./componentSpec";
-import { componentSpecToText } from "./yaml";
-
 const convertGcsUrlToBrowserUrl = (
   url: string,
   isDirectory: boolean,
@@ -130,12 +127,8 @@ const downloadStringAsFile = (
   URL.revokeObjectURL(url);
 };
 
-const downloadYamlFromComponentText = (
-  componentSpec: ComponentSpec,
-  displayName: string,
-) => {
-  const code = componentSpecToText(componentSpec);
-  downloadStringAsFile(code, `${displayName}.yaml`, "text/yaml");
+const downloadYamlFromComponentText = (text: string, displayName: string) => {
+  downloadStringAsFile(text, `${displayName}.yaml`, "text/yaml");
 };
 
 const getIdOrTitleFromPath = (

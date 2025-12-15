@@ -154,7 +154,7 @@ describe("downloadYamlFromComponentText", () => {
   });
 
   it("creates a downloadable yaml file with correct name", () => {
-    const mockComponentSpec = { name: "testComponent", foo: "bar" };
+    const codeText = "name: testComponent\nfoo: bar";
     const displayName = "displayName";
     const createObjectURLSpy = vi
       .spyOn(URL, "createObjectURL")
@@ -179,7 +179,7 @@ describe("downloadYamlFromComponentText", () => {
         }) as any,
     );
 
-    downloadYamlFromComponentText(mockComponentSpec as any, displayName);
+    downloadYamlFromComponentText(codeText, displayName);
 
     expect(createObjectURLSpy).toHaveBeenCalled();
     expect(revokeObjectURLSpy).toHaveBeenCalledWith("blob:url");
