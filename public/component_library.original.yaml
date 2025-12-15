@@ -1,0 +1,183 @@
+annotations: {}
+folders:
+  - name: "Quick start"
+    components:
+      # - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/f328b3f4842838b6578b701d975b22f7908aca48/components/datasets/Chicago_Taxi_Trips/component.yaml"
+      - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/57f780b15922061e59833541b71f3d099e710177/components/datasets/Chicago_Taxi_Trips/quick_start_version/component.yaml"
+      - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/96a177dd71d54c98573c4101d9a05ac801f1fa54/components/XGBoost/Train/component.yaml"
+      - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/96a177dd71d54c98573c4101d9a05ac801f1fa54/components/XGBoost/Predict/component.yaml"
+
+  - name: "Basics"
+    components:
+      - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/c36d9a4893c3caae0d166d9e783af28fcd3cdfe4/components/basics/Format_date_time/component.yaml"
+      - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/37d98d43ad3193cf3516c134899f272d9643117c/components/basics/Calculate_hash/component.yaml"
+    folders:
+      - name: File system
+        components:
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/605cefc151797369752b51530a91cc02e7f913f8/components/filesystem/create_directory/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/d8c4cf5e6403bc65bcf8d606e6baf87e2528a3dc/components/filesystem/get_file/component.yaml"
+
+  - name: "Datasets"
+    components:
+      # - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/f328b3f4842838b6578b701d975b22f7908aca48/components/datasets/Chicago_Taxi_Trips/component.yaml"
+      # Has modified default column set. TODO: Perhaps replace with a graph component.
+      - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/57f780b15922061e59833541b71f3d099e710177/components/datasets/Chicago_Taxi_Trips/quick_start_version/component.yaml"
+      # - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/d8c4cf5e6403bc65bcf8d606e6baf87e2528a3dc/components/datasets/HuggingFace/Load_dataset/component.yaml"
+
+  - name: "Data manipulation"
+    folders:
+      - name: Parquet
+        components:
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/96a177dd71d54c98573c4101d9a05ac801f1fa54/components/pandas/Select_columns/in_ApacheParquet_format/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/96a177dd71d54c98573c4101d9a05ac801f1fa54/components/pandas/Fill_all_missing_values/in_ApacheParquet_format/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/96a177dd71d54c98573c4101d9a05ac801f1fa54/components/pandas/Binarize_column/in_ApacheParquet_format/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/96a177dd71d54c98573c4101d9a05ac801f1fa54/components/pandas/Transform_DataFrame/in_ApacheParquet_format/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/96a177dd71d54c98573c4101d9a05ac801f1fa54/components/dataset_manipulation/split_data_into_folds/in_CSV/component.yaml"
+      - name: CSV
+        components:
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/96a177dd71d54c98573c4101d9a05ac801f1fa54/components/pandas/Select_columns/in_CSV_format/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/96a177dd71d54c98573c4101d9a05ac801f1fa54/components/pandas/Fill_all_missing_values/in_CSV_format/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/96a177dd71d54c98573c4101d9a05ac801f1fa54/components/pandas/Binarize_column/in_CSV_format/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/96a177dd71d54c98573c4101d9a05ac801f1fa54/components/pandas/Transform_DataFrame/in_CSV_format/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/96a177dd71d54c98573c4101d9a05ac801f1fa54/components/dataset_manipulation/split_data_into_folds/in_CSV/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/92aa941c738e5b2fe957f987925053bf70996264/components/dataset_manipulation/Split_rows_into_subsets/in_CSV/component.yaml"
+      - name: JSON lines
+        components:
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/96a177dd71d54c98573c4101d9a05ac801f1fa54/components/pandas/Transform_DataFrame/in_JsonLines_format/component.yaml"
+      - name: JSON
+        components:
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/dcf4fdde4876e8d76aa0131ad4d67c47b2b5591a/components/json/Get_element_by_index/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/dcf4fdde4876e8d76aa0131ad4d67c47b2b5591a/components/json/Get_element_by_key/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/d8c4cf5e6403bc65bcf8d606e6baf87e2528a3dc/components/json/Query/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/d8c4cf5e6403bc65bcf8d606e6baf87e2528a3dc/components/json/Build_dict/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/d8c4cf5e6403bc65bcf8d606e6baf87e2528a3dc/components/json/Build_list/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/aecac18d4023c73c561d7f21192253e9593b9932/components/json/Build_list_of_strings/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/bb9d7518b3a23e945c8cc1663942063c6b92c20f/components/json/Build_list_of_integers/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/bb9d7518b3a23e945c8cc1663942063c6b92c20f/components/json/Build_list_of_floats/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/d8c4cf5e6403bc65bcf8d606e6baf87e2528a3dc/components/json/Combine_lists/component.yaml"
+
+  - name: "Upload/Download"
+    components:
+      - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/f328b3f4842838b6578b701d975b22f7908aca48/components/web/Download/component.yaml"
+      - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/d8c4cf5e6403bc65bcf8d606e6baf87e2528a3dc/components/google-cloud/storage/download/component.yaml"
+      - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/6210648f30b2b3a8c01cc10be338da98300efb6b/components/google-cloud/storage/upload_to_unique_uri/component.yaml"
+      - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/6210648f30b2b3a8c01cc10be338da98300efb6b/components/google-cloud/storage/upload_to_explicit_uri/component.yaml"
+      - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/cca2d8569d01b527df10c629258be04d52eacc43/components/Download_and_upload/IPFS/Download/component.yaml"
+
+  - name: ML frameworks
+    folders:
+      - name: "Scikit learn"
+        components:
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/96a177dd71d54c98573c4101d9a05ac801f1fa54/components/ML_frameworks/Scikit_learn/Train_linear_regression_model/from_CSV/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/96a177dd71d54c98573c4101d9a05ac801f1fa54/components/ML_frameworks/Scikit_learn/Train_logistic_regression_model/from_CSV/component.yaml"
+
+      - name: "XGBoost"
+        components:
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/96a177dd71d54c98573c4101d9a05ac801f1fa54/components/XGBoost/Train/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/79d79efc5619692b28bcf14d37718077330ad617/components/XGBoost/Predict/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/96a177dd71d54c98573c4101d9a05ac801f1fa54/components/XGBoost/Train/from_ApacheParquet/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/79d79efc5619692b28bcf14d37718077330ad617/components/XGBoost/Predict/from_ApacheParquet/component.yaml"
+
+      - name: "PyTorch"
+        components:
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/92aa941c738e5b2fe957f987925053bf70996264/components/PyTorch/Create_fully_connected_network/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/96a177dd71d54c98573c4101d9a05ac801f1fa54/components/PyTorch/Train_PyTorch_model/from_CSV/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/7799eb6ae4c4bb817f7461e2e3ffc83cbe2d50a7/components/PyTorch/Predict/on_CSV/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/d2b5b635198ce661c9c58e3a1817c4c018e7c40b/components/PyTorch/Train_PyTorch_model/from_ApacheParquet/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/7799eb6ae4c4bb817f7461e2e3ffc83cbe2d50a7/components/PyTorch/Predict/on_ApacheParquet/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/d8c4cf5e6403bc65bcf8d606e6baf87e2528a3dc/components/PyTorch/Convert_to_OnnxModel_from_PyTorchScriptModule/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/46d51383e6554b7f3ab4fd8cf614d8c2b422fb22/components/PyTorch/Create_PyTorch_Model_Archive/with_base_handler/component.yaml"
+
+      - name: "Tensorflow"
+        components:
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/92aa941c738e5b2fe957f987925053bf70996264/components/tensorflow/Create_fully_connected_network/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/92aa941c738e5b2fe957f987925053bf70996264/components/tensorflow/Train_model_using_Keras/on_CSV/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/92aa941c738e5b2fe957f987925053bf70996264/components/tensorflow/Train_model_using_Keras/on_ApacheParquet/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/92aa941c738e5b2fe957f987925053bf70996264/components/tensorflow/Predict/on_CSV/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/92aa941c738e5b2fe957f987925053bf70996264/components/tensorflow/Predict/on_ApacheParquet/component.yaml"
+
+      - name: "CatBoost"
+        components:
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/d8c4cf5e6403bc65bcf8d606e6baf87e2528a3dc/components/CatBoost/Train_regression/from_CSV/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/d8c4cf5e6403bc65bcf8d606e6baf87e2528a3dc/components/CatBoost/Train_classifier/from_CSV/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/d8c4cf5e6403bc65bcf8d606e6baf87e2528a3dc/components/CatBoost/Predict_values/from_CSV/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/d8c4cf5e6403bc65bcf8d606e6baf87e2528a3dc/components/CatBoost/Predict_classes/from_CSV/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/d8c4cf5e6403bc65bcf8d606e6baf87e2528a3dc/components/CatBoost/Predict_class_probabilities/from_CSV/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/d8c4cf5e6403bc65bcf8d606e6baf87e2528a3dc/components/CatBoost/convert_CatBoostModel_to_ONNX/component.yaml"
+
+      - name: "Vowpal_Wabbit"
+        components:
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/96a177dd71d54c98573c4101d9a05ac801f1fa54/components/ML_frameworks/Vowpal_Wabbit/Create_JSON_dataset/from_CSV/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/a2a629e776d5fa0204ce71370cab23282d3e4278/components/ML_frameworks/Vowpal_Wabbit/Train_regression_model/from_VowpalWabbitJsonDataset/component.yaml"
+          - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/a2a629e776d5fa0204ce71370cab23282d3e4278/components/ML_frameworks/Vowpal_Wabbit/Predict/from_VowpalWabbitJsonDataset/component.yaml"
+
+      # # Hidden: Need re-testing. Also, TFX is not popular. It's best to properly wrap individual libraries (TFDV, TFMA, etc).
+      # - name: TFX
+      #   components:
+      #     - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/d8c4cf5e6403bc65bcf8d606e6baf87e2528a3dc/components/deprecated/tfx/ExampleGen/CsvExampleGen/component.yaml"
+      #     - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/d8c4cf5e6403bc65bcf8d606e6baf87e2528a3dc/components/deprecated/tfx/StatisticsGen/component.yaml"
+      #     - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/d8c4cf5e6403bc65bcf8d606e6baf87e2528a3dc/components/deprecated/tfx/SchemaGen/component.yaml"
+      #     - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/d8c4cf5e6403bc65bcf8d606e6baf87e2528a3dc/components/deprecated/tfx/ExampleValidator/component.yaml"
+      #     - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/d8c4cf5e6403bc65bcf8d606e6baf87e2528a3dc/components/deprecated/tfx/Transform/component.yaml"
+      #     - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/d8c4cf5e6403bc65bcf8d606e6baf87e2528a3dc/components/deprecated/tfx/Trainer/component.yaml"
+      #     - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/d8c4cf5e6403bc65bcf8d606e6baf87e2528a3dc/components/deprecated/tfx/Evaluator/component.yaml"
+  - name: "ML Metrics"
+    components:
+      - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/9b65c073ae0a131151454c7f9030cb1a553ca7ba/components/ml_metrics/Calculate_regression_metrics/from_CSV/component.yaml"
+      - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/89d9d83d77cdbbe521994f5d95893661e14f9172/components/ml_metrics/Calculate_regression_metrics/from_ApacheParquet/component.yaml"
+      - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/d8c4cf5e6403bc65bcf8d606e6baf87e2528a3dc/components/ml_metrics/Aggregate_regression_metrics/component.yaml"
+
+  - name: "Converters"
+    components:
+      - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/d8c4cf5e6403bc65bcf8d606e6baf87e2528a3dc/components/_converters/ApacheParquet/from_CSV/component.yaml"
+      - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/d8c4cf5e6403bc65bcf8d606e6baf87e2528a3dc/components/_converters/ApacheParquet/from_TSV/component.yaml"
+      - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/d8c4cf5e6403bc65bcf8d606e6baf87e2528a3dc/components/_converters/ApacheParquet/from_ApacheArrowFeather/component.yaml"
+      - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/96a177dd71d54c98573c4101d9a05ac801f1fa54/components/_converters/ApacheParquet/to_CSV/component.yaml"
+      - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/96a177dd71d54c98573c4101d9a05ac801f1fa54/components/_converters/ApacheParquet/to_TSV/component.yaml"
+      - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/96a177dd71d54c98573c4101d9a05ac801f1fa54/components/_converters/ApacheParquet/to_ApacheArrowFeather/component.yaml"
+      - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/4fca0aa607c00e60d5eb342630acc175e6f51fc2/components/_converters/XGBoostJsonModel/from_XGBoostModel/component.yaml"
+      - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/4fca0aa607c00e60d5eb342630acc175e6f51fc2/components/_converters/XGBoostJsonModel/to_XGBoostModel/component.yaml"
+      - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/4619f84eebc54230153ba48b0e67ac8446dc31c6/components/_converters/OnnxModel/from_XGBoostJsonModel/component.yaml"
+      - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/ae9d04e833d973d785809e7734021b06bcfea9bc/components/_converters/OnnxModel/from_XGBoostModel/component.yaml"
+      - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/d8c4cf5e6403bc65bcf8d606e6baf87e2528a3dc/components/_converters/OnnxModel/from_TensorflowSavedModel/component.yaml"
+      - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/2fc275072568cd0cdf73743ab49aa90928303f2c/components/_converters/OnnxModel/to_TensorflowSavedModel/component.yaml"
+      - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/f7f79decd10955b8408541f6f695a614538a6901/components/_converters/ScikitLearnPickleModel/to_OnnxModel/component.yaml"
+
+  # # Hidden: Due to auth, these components only work out of the box on GCP (GKE or Vertex AI). But most of our deployments (local, HuggingFace) do not have that.
+  # - name: "Google Cloud"
+  #   folders:
+  #     - name: Vertex AI
+  #       folders:
+  #         - name: AutoML
+  #           components:
+  #             - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/47f3621344c884666a926c8a15d77562f1cc5e0a/components/google-cloud/Vertex_AI/AutoML/Tables/Create_dataset/from_CSV/component.yaml"
+  #             - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/00d020c29a144cee7fd35f2d05053addb942f536/components/google-cloud/Vertex_AI/AutoML/Tables/Create_dataset/from_GCS/component.yaml"
+  #             - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/00d020c29a144cee7fd35f2d05053addb942f536/components/google-cloud/Vertex_AI/AutoML/Tables/Create_dataset/from_BigQuery/component.yaml"
+  #             - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/ab85ecc9c30d4d68a2993ca87861f5e531a4f41b/components/google-cloud/Vertex_AI/AutoML/Tables/Train_model/component.yaml"
+  #             - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/a31b7c9652646f2cd035a0b3a23e0723c632521b/components/google-cloud/Vertex_AI/AutoML/Tables/Get_model_tuning_trials/component.yaml"
+  #         - name: Models
+  #           components:
+  #             - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/2c24c0c0730c818b89f676c4dc5c9d6cb90ab01d/components/google-cloud/Vertex_AI/Models/Upload_XGBoost_model/component.yaml"
+  #             - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/25dc317e649a19a53139a08ccbe496a248693fe4/components/google-cloud/Vertex_AI/Models/Upload_Scikit-learn_pickle_model/component.yaml"
+  #             - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/719783ef44c04348ea23e247a93021d91cfe602d/components/google-cloud/Vertex_AI/Models/Upload_Tensorflow_model/component.yaml"
+  #             - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/d1e7a3ccf8f8e0324e15922d6fd90d667fc5281b/components/google-cloud/Vertex_AI/Models/Upload_PyTorch_model_archive/component.yaml"
+  #             - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/b2cdd60fe93d609111729ef64e79a8b8a2713435/components/google-cloud/Vertex_AI/Models/Deploy_to_endpoint/component.yaml"
+  #             - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/d45e011ad8b62b4fe36c12289a624e5e1573c68d/components/google-cloud/Vertex_AI/Models/Export/to_GCS/component.yaml"
+  #     - name: Storage
+  #       components:
+  #         - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/d8c4cf5e6403bc65bcf8d606e6baf87e2528a3dc/components/google-cloud/storage/download/component.yaml"
+  #         - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/6210648f30b2b3a8c01cc10be338da98300efb6b/components/google-cloud/storage/upload_to_explicit_uri/component.yaml"
+  #         - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/6210648f30b2b3a8c01cc10be338da98300efb6b/components/google-cloud/storage/upload_to_unique_uri/component.yaml"
+  #         - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/d8c4cf5e6403bc65bcf8d606e6baf87e2528a3dc/components/google-cloud/storage/list/component.yaml"
+  #     - name: AI Platform (legacy)
+  #       folders:
+  #         - name: Optimizer
+  #           components:
+  #             - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/1b87c0bdfde5d7ec039401af8561783432731402/components/google-cloud/Optimizer/Suggest_parameter_sets_based_on_measurements/component.yaml"
+  #         # # !!! Google Cloud AI Platform AutoML API cannot be called from Google Cloud Vertex AI Pipelines (~by design)
+  #         # - name: AutoML
+  #         #   components:
+  #         #     - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/3862f752bb825bb8cdcae842f0b294794028376b/components/google-cloud/AutoML/Tables/Create_dataset/from_CSV/component.yaml"
+  #         #     - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/46b2a4ef4ac530404958839ae397b9fd533cf154/components/google-cloud/AutoML/Tables/Create_dataset/from_GCS/component.yaml"
+  #         #     - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/247a0e0cf55c28b978c7f8e44fcedba356c12e93/components/google-cloud/AutoML/Tables/Create_dataset/from_BigQuery/component.yaml"
+  #         #     - url: "https://raw.githubusercontent.com/Ark-kun/pipeline_components/d8c4cf5e6403bc65bcf8d606e6baf87e2528a3dc/components/gcp/automl/create_model_for_tables/component.yaml"
