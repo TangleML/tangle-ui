@@ -8,7 +8,11 @@ import { isValidFilterRequest } from "@/providers/ComponentLibraryProvider/types
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useTaskNode } from "@/providers/TaskNodeProvider";
 import { inputsWithInvalidArguments } from "@/services/componentService";
-import type { InputSpec } from "@/utils/componentSpec";
+import {
+  type InputSpec,
+  isGraphInputArgument,
+  isTaskOutputArgument,
+} from "@/utils/componentSpec";
 import { ComponentSearchFilter } from "@/utils/constants";
 import { inputNameToNodeId } from "@/utils/nodes/nodeIdUtils";
 import { checkArtifactMatchesSearchFilters } from "@/utils/searchUtils";
@@ -45,12 +49,10 @@ export function TaskNodeInputs({
     ? inputsWithInvalidArguments(inputs, taskSpec)
     : [];
 
-  const inputsWithTaskOutput = inputs.filter(
+  const connectedInputs = inputs.filter(
     (input) =>
-      values?.[input.name] &&
-      typeof values[input.name] === "object" &&
-      values[input.name] !== null &&
-      "taskOutput" in (values[input.name] as object),
+      isGraphInputArgument(values?.[input.name]) ||
+      isTaskOutputArgument(values?.[input.name]),
   );
 
   const toggleHighlightRelatedHandles = useCallback(
@@ -168,18 +170,18 @@ export function TaskNodeInputs({
 
   if (!inputs.length) return null;
 
-  if (inputsWithTaskOutput.length === 0) {
-    inputsWithTaskOutput.push(inputs[0]);
+  if (connectedInputs.length === 0) {
+    connectedInputs.push(inputs[0]);
   }
 
-  const hiddenInputs = inputs.length - inputsWithTaskOutput.length;
+  const hiddenInputs = inputs.length - connectedInputs.length;
   if (hiddenInputs < 1) {
     condensed = false;
   }
 
   const hiddenInvalidArguments = invalidArguments.filter(
     (invalidArgument) =>
-      !inputsWithTaskOutput.some((input) => input.name === invalidArgument),
+      !connectedInputs.some((input) => input.name === invalidArgument),
   );
 
   return (
@@ -192,7 +194,7 @@ export function TaskNodeInputs({
     >
       {condensed && !expanded ? (
         <>
-          {inputsWithTaskOutput.map((input, i) => (
+          {connectedInputs.map((input, i) => (
             <InputHandle
               key={input.name}
               input={input}

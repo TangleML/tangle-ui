@@ -230,7 +230,12 @@ const TaskNodeCard = () => {
   }, []);
 
   useEffect(() => {
-    if (contentRef.current && scrollHeight > 0 && dimensions.h) {
+    if (!dimensions.h) {
+      setCondensed(false);
+      return;
+    }
+
+    if (contentRef.current && scrollHeight > 0) {
       setCondensed(scrollHeight > dimensions.h);
     }
   }, [scrollHeight, dimensions.h]);
@@ -328,6 +333,7 @@ const TaskNodeCard = () => {
                   ? `${dimensions.h}px`
                   : "100%",
             }}
+            className="min-h-fit"
             ref={contentRef}
           >
             <TaskNodeInputs
