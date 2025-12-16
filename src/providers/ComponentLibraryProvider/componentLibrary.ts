@@ -90,36 +90,6 @@ export async function isFavoriteComponent(component: ComponentReference) {
   return storedComponent?.favorited ?? false;
 }
 
-/**
- * @deprecated
- */
-export const fetchFavoriteComponents = (
-  componentLibrary: ComponentLibrary | undefined,
-): ComponentFolder => {
-  const favoritesFolder = {
-    name: "Favorite Components",
-    components: [] as ComponentReference[],
-    folders: [],
-    isUserFolder: false,
-  };
-
-  if (!componentLibrary || !componentLibrary.folders) {
-    return favoritesFolder;
-  }
-
-  const uniqueLibraryComponents = filterToUniqueByDigest(
-    flattenFolders(componentLibrary),
-  );
-
-  uniqueLibraryComponents.forEach((component) => {
-    if (component?.favorited) {
-      favoritesFolder.components.push(component);
-    }
-  });
-
-  return favoritesFolder;
-};
-
 export async function populateComponentRefs<
   T extends ComponentLibrary | ComponentFolder,
 >(libraryOrFolder: T): Promise<T> {

@@ -56,9 +56,6 @@ const mockFetchUserComponents = vi.mocked(
 const mockFetchUsedComponents = vi.mocked(
   componentLibraryUtils.fetchUsedComponents,
 );
-const mockFetchFavoriteComponents = vi.mocked(
-  componentLibraryUtils.fetchFavoriteComponents,
-);
 const mockPopulateComponentRefs = vi.mocked(
   componentLibraryUtils.populateComponentRefs,
 );
@@ -146,11 +143,6 @@ describe("ComponentLibraryProvider - Component Management", () => {
     mockFetchUserComponents.mockResolvedValue(mockUserComponentsFolder);
     mockFetchUsedComponents.mockReturnValue({
       name: "Used Components",
-      components: [],
-      folders: [],
-    });
-    mockFetchFavoriteComponents.mockReturnValue({
-      name: "Favorites",
       components: [],
       folders: [],
     });

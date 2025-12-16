@@ -16,7 +16,6 @@ import * as localforage from "@/utils/localforage";
 import * as yamlUtils from "@/utils/yaml";
 
 import {
-  fetchFavoriteComponents,
   fetchUsedComponents,
   fetchUserComponents,
   filterToUniqueByDigest,
@@ -259,89 +258,6 @@ describe("componentLibrary", () => {
 
     // todo: test with components without digest
     // todo: test with deeply nested task structures
-  });
-
-  describe("fetchFavoriteComponents", () => {
-    const mockComponentLibrary: ComponentLibrary = {
-      folders: [
-        {
-          name: "Folder 1",
-          components: [
-            {
-              name: "component-1",
-              digest: "digest1",
-              favorited: true,
-            },
-            {
-              name: "component-2",
-              digest: "digest2",
-              favorited: false,
-            },
-          ],
-          folders: [
-            {
-              name: "Subfolder",
-              components: [
-                {
-                  name: "component-3",
-                  digest: "digest3",
-                  favorited: true,
-                },
-              ],
-              folders: [],
-            },
-          ],
-        },
-      ],
-    };
-
-    it("should return favorited components from library", () => {
-      // Act
-      const result = fetchFavoriteComponents(mockComponentLibrary);
-
-      // Assert
-      expect(result).toEqual({
-        name: "Favorite Components",
-        components: [
-          {
-            name: "component-1",
-            digest: "digest1",
-            favorited: true,
-          },
-          {
-            name: "component-3",
-            digest: "digest3",
-            favorited: true,
-          },
-        ],
-        folders: [],
-        isUserFolder: false,
-      });
-    });
-
-    it("should return empty folder when no component library provided", () => {
-      // Act
-      const result = fetchFavoriteComponents(undefined);
-
-      // Assert
-      expect(result).toEqual({
-        name: "Favorite Components",
-        components: [],
-        folders: [],
-        isUserFolder: false,
-      });
-    });
-
-    it("should work without user components", () => {
-      // Act
-      const result = fetchFavoriteComponents(mockComponentLibrary);
-
-      // Assert
-      expect(result.components).toHaveLength(2);
-      expect(result.components?.every((c) => c.favorited)).toBe(true);
-    });
-
-    // todo: test deduplication of favorites with same digest across library and user components
   });
 
   describe("populateComponentRefs", () => {
