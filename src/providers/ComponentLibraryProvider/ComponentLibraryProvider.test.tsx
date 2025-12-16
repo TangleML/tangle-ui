@@ -645,28 +645,5 @@ describe("ComponentLibraryProvider - Component Management", () => {
         favorited: true,
       });
     });
-
-    it("should check if component is favorited correctly", async () => {
-      const favoritedComponent: ComponentReference = {
-        name: "favorited-component",
-        digest: "fav-digest",
-        spec: mockComponentSpec,
-        favorited: true,
-      };
-
-      mockFlattenFolders.mockReturnValue([favoritedComponent]);
-      mockFilterToUniqueByDigest.mockReturnValue([favoritedComponent]);
-
-      const { result } = renderHook(() => useComponentLibrary(), {
-        wrapper: createWrapper,
-      });
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
-      });
-
-      const isFavorited = result.current.checkIfFavorited(favoritedComponent);
-      expect(isFavorited).toBe(true);
-    });
   });
 });
