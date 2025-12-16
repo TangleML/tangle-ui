@@ -13,7 +13,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { useHydrateComponentReference } from "@/hooks/useHydrateComponentReference";
 import { cn } from "@/lib/utils";
-import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
 import { type ComponentReference, type TaskSpec } from "@/utils/componentSpec";
 import { getComponentName } from "@/utils/getComponentName";
 import { isSubgraph } from "@/utils/subgraphUtils";
@@ -83,7 +82,6 @@ const ComponentMarkup = ({
 
   // TODO: respect selected node as a starting point
   const carousel = useRef(0);
-  const { checkIfHighlighted } = useComponentLibrary();
   const { notifyNode, getNodeIdsByDigest, fitNodeIntoView } = useNodesOverlay();
 
   const { spec, digest, url, name, published_by: author, owned } = component;
@@ -177,7 +175,6 @@ const ComponentMarkup = ({
         error
           ? "cursor-not-allowed opacity-60"
           : "cursor-grab hover:bg-gray-100 active:bg-gray-200",
-        checkIfHighlighted(component) && "bg-orange-100",
       )}
       draggable={!error && !isLoading}
       onDragStart={onDragStart}
