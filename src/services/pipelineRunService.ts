@@ -75,6 +75,7 @@ export const savePipelineRun = async (
 
 export const copyRunToPipeline = async (
   componentSpec: ComponentSpec,
+  runId?: string | null,
   name?: string,
 ) => {
   if (!componentSpec) {
@@ -95,6 +96,9 @@ export const copyRunToPipeline = async (
     cleanComponentSpec.metadata.annotations ??= {};
     cleanComponentSpec.metadata.annotations["editor.flow-direction"] ??=
       "left-to-right";
+    if (runId) {
+      cleanComponentSpec.metadata.annotations["cloned_from_run_id"] = runId;
+    }
 
     // Remove caching strategy from all tasks
     if (isGraphImplementation(cleanComponentSpec.implementation)) {

@@ -101,7 +101,7 @@ export const RunDetails = () => {
         {canAccessEditorSpec && componentSpec.name && (
           <InspectPipelineButton pipelineName={componentSpec.name} />
         )}
-        <ClonePipelineButton componentSpec={componentSpec} />
+        <ClonePipelineButton componentSpec={componentSpec} runId={runId} />
         {isInProgress && isRunCreator && (
           <CancelPipelineRunButton runId={runId} />
         )}

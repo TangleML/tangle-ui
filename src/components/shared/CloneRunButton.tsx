@@ -1,4 +1,4 @@
-import { useLocation, useNavigate } from "@tanstack/react-router";
+import { useLocation, useNavigate, useParams } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -7,27 +7,39 @@ import { copyRunToPipeline } from "@/services/pipelineRunService";
 import type { ComponentSpec } from "@/utils/componentSpec";
 import { getInitialName } from "@/utils/getComponentName";
 
-const CloneRunButtonInner = ({
+const CloneRunButton = ({
   componentSpec,
 }: {
-  componentSpec: ComponentSpec;
+  componentSpec?: ComponentSpec;
 }) => {
+  const location = useLocation();
   const navigate = useNavigate();
+  const params = useParams({ strict: false });
+
+  const isRunDetailRoute = location.pathname.includes(RUNS_BASE_PATH);
+
+  const runId =
+    "id" in params && typeof params.id === "string" ? params.id : undefined;
 
   const handleClone = async () => {
-    const name = getInitialName(componentSpec);
     if (!componentSpec) {
       console.error("No component spec found");
       return;
     }
 
-    const result = await copyRunToPipeline(componentSpec, name);
+    const name = getInitialName(componentSpec);
+
+    const result = await copyRunToPipeline(componentSpec, runId, name);
     if (result?.url) {
       navigate({ to: result.url });
     } else {
       console.error("Failed to copy run to pipeline");
     }
   };
+
+  if (!isRunDetailRoute) {
+    return null;
+  }
 
   if (!componentSpec) {
     return (
@@ -42,21 +54,6 @@ const CloneRunButtonInner = ({
       Clone Pipeline
     </Button>
   );
-};
-
-const CloneRunButton = ({
-  componentSpec,
-}: {
-  componentSpec?: ComponentSpec;
-}) => {
-  const location = useLocation();
-
-  const isRunDetailRoute = location.pathname.includes(RUNS_BASE_PATH);
-
-  if (!isRunDetailRoute || !componentSpec) {
-    return null;
-  }
-  return <CloneRunButtonInner componentSpec={componentSpec} />;
 };
 
 export default CloneRunButton;
