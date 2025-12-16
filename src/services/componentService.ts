@@ -1,6 +1,5 @@
 import { getAppSettings } from "@/appSettings";
 import {
-  type ComponentFolder,
   type ComponentLibrary,
   isValidComponentLibrary,
 } from "@/types/componentLibrary";
@@ -112,35 +111,8 @@ export const fetchAndStoreComponentLibrary =
       updatedAt: Date.now(),
     });
 
-    // Also store individual components for future reference
-    await storeComponentsFromLibrary(obj);
-
     return obj;
   };
-
-/**
- * Store all components from the library in local storage
- */
-const storeComponentsFromLibrary = async (
-  library: ComponentLibrary,
-): Promise<void> => {
-  const processFolder = async (folder: ComponentFolder) => {
-    // Store each component in the folder
-    for (const component of folder.components || []) {
-      await fetchAndStoreComponent(component);
-    }
-
-    // Process subfolders recursively
-    for (const subfolder of folder.folders || []) {
-      await processFolder(subfolder);
-    }
-  };
-
-  // Process all top-level folders
-  for (const folder of library.folders) {
-    await processFolder(folder);
-  }
-};
 
 /**
  * Fetch and store a single component by URL

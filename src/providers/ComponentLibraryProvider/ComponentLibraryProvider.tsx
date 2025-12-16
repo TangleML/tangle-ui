@@ -31,7 +31,7 @@ import {
   updateComponentInListByText,
   updateComponentRefInList,
 } from "@/utils/componentStore";
-import { USER_COMPONENTS_LIST_NAME } from "@/utils/constants";
+import { MINUTES, USER_COMPONENTS_LIST_NAME } from "@/utils/constants";
 import { createPromiseFromDomEvent } from "@/utils/dom";
 import { getComponentName } from "@/utils/getComponentName";
 import {
@@ -48,11 +48,11 @@ import {
 } from "../../hooks/useRequiredContext";
 import { useComponentSpec } from "../ComponentSpecProvider";
 import {
-  fetchFavoriteComponents,
   fetchUsedComponents,
   fetchUserComponents,
   filterToUniqueByDigest,
   flattenFolders,
+  isFavoriteComponent,
   populateComponentRefs,
 } from "./componentLibrary";
 import { useForcedSearchContext } from "./ForcedSearchProvider";
@@ -70,7 +70,7 @@ type ComponentLibraryContextType = {
   componentLibrary: ComponentLibrary | undefined;
   userComponentsFolder: ComponentFolder | undefined;
   usedComponentsFolder: ComponentFolder;
-  favoritesFolder: ComponentFolder;
+  favoritesFolder: ComponentFolder | undefined;
   isLoading: boolean;
   error: Error | null;
   existingComponentLibraries: StoredLibrary[] | undefined;
@@ -93,6 +93,9 @@ type ComponentLibraryContextType = {
     component: ComponentReference,
     favorited: boolean,
   ) => void;
+  /**
+   * @deprecated
+   */
   checkIfFavorited: (component: ComponentReference) => boolean;
   checkIfUserComponent: (component: ComponentReference) => boolean;
   checkLibraryContainsComponent: (component: ComponentReference) => boolean;
@@ -220,9 +223,45 @@ export const ComponentLibraryProvider = ({
   );
 
   // Fetch "Starred" components
-  const favoritesFolder: ComponentFolder = useMemo(
-    () => fetchFavoriteComponents(componentLibrary),
-    [componentLibrary],
+  const { data: favoritesFolderData, refetch: refetchFavorites } = useQuery({
+    queryKey: ["favorites"],
+    queryFn: async () => {
+      const favoritesFolder: ComponentFolder = {
+        name: "Favorite Components",
+        components: [],
+        folders: [],
+        isUserFolder: false,
+      };
+
+      if (!componentLibrary || !componentLibrary.folders) {
+        return favoritesFolder;
+      }
+
+      const uniqueLibraryComponents = filterToUniqueByDigest(
+        flattenFolders(componentLibrary),
+      );
+
+      for (const component of uniqueLibraryComponents) {
+        if (await isFavoriteComponent(component)) {
+          favoritesFolder.components?.push(component);
+        }
+      }
+
+      return favoritesFolder;
+    },
+    enabled: Boolean(componentLibrary),
+    staleTime: 10 * MINUTES,
+  });
+
+  const favoritesFolder = useMemo(
+    () =>
+      favoritesFolderData ?? {
+        name: "Favorite Components",
+        components: [],
+        folders: [],
+        isUserFolder: false,
+      },
+    [favoritesFolderData],
   );
 
   // Methods
@@ -230,11 +269,10 @@ export const ComponentLibraryProvider = ({
     const { data: updatedLibrary } = await refetchLibrary();
 
     if (updatedLibrary) {
-      populateComponentRefs(updatedLibrary).then((result) => {
-        setComponentLibrary(result);
-      });
+      setComponentLibrary(updatedLibrary);
+      await refetchFavorites();
     }
-  }, [refetchLibrary]);
+  }, [refetchLibrary, refetchFavorites]);
 
   const refreshUserComponents = useCallback(async () => {
     const { data: updatedUserComponents } = await refetchUserComponents();
@@ -571,9 +609,7 @@ export const ComponentLibraryProvider = ({
       setComponentLibrary(undefined);
       return;
     }
-    populateComponentRefs(rawComponentLibrary).then((result) => {
-      setComponentLibrary(result);
-    });
+    setComponentLibrary(rawComponentLibrary);
   }, [rawComponentLibrary]);
 
   useEffect(() => {
