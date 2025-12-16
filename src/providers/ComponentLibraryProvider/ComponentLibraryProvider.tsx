@@ -10,7 +10,10 @@ import {
 
 import ComponentDuplicateDialog from "@/components/shared/Dialogs/ComponentDuplicateDialog";
 import { GitHubFlatComponentLibrary } from "@/components/shared/GitHubLibrary/githubFlatComponentLibrary";
-import { isGitHubLibraryConfiguration } from "@/components/shared/GitHubLibrary/types";
+import {
+  isGitHubLibraryConfiguration,
+  isYamlLibraryConfiguration,
+} from "@/components/shared/GitHubLibrary/types";
 import {
   fetchAndStoreComponentLibrary,
   hydrateComponentReference,
@@ -70,6 +73,7 @@ import {
 import { PublishedComponentsLibrary } from "./libraries/publishedComponentsLibrary";
 import { LibraryDB, type StoredLibrary } from "./libraries/storage";
 import type { Library } from "./libraries/types";
+import { YamlFileLibrary } from "./libraries/yamlFileLibrary";
 
 type AvailableComponentLibraries = "published_components" | string;
 
@@ -116,6 +120,19 @@ registerLibraryFactory("github", (library) => {
   }
 
   return new GitHubFlatComponentLibrary(library.configuration.repo_name);
+});
+
+/**
+ * Register the GitHub library factory. This allows to have multiple instances of the same library type.
+ */
+registerLibraryFactory("yaml", (library) => {
+  if (!isYamlLibraryConfiguration(library.configuration)) {
+    throw new Error(
+      `YAML library configuration is not valid for "${library.id}"`,
+    );
+  }
+
+  return new YamlFileLibrary(library.name, library.configuration.yaml_url);
 });
 
 function useComponentLibraryRegistry() {

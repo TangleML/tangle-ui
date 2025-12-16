@@ -46,3 +46,11 @@ export class DuplicateComponentError extends Error {
     );
   }
 }
+
+export class ReadOnlyLibraryError extends Error {
+  name = "ReadOnlyLibraryError";
+
+  constructor(message: string) {
+    super(message);
+  }
+}
