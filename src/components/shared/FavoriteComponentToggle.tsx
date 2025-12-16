@@ -14,9 +14,13 @@ import { Spinner } from "@/components/ui/spinner";
 import { useGuaranteedHydrateComponentReference } from "@/hooks/useHydrateComponentReference";
 import { cn } from "@/lib/utils";
 import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
-import { isFavoriteComponent } from "@/providers/ComponentLibraryProvider/componentLibrary";
+import {
+  flattenFolders,
+  isFavoriteComponent,
+} from "@/providers/ComponentLibraryProvider/componentLibrary";
 import { hydrateComponentReference } from "@/services/componentService";
-import type { ComponentReference } from "@/utils/componentSpec";
+import { type ComponentReference } from "@/utils/componentSpec";
+import { MINUTES } from "@/utils/constants";
 import { getComponentName } from "@/utils/getComponentName";
 
 import { withSuspenseWrapper } from "./SuspenseWrapper";
@@ -132,40 +136,63 @@ const FavoriteToggleButton = withSuspenseWrapper(
   ),
 );
 
-export const ComponentFavoriteToggle = ({
+const useComponentFlags = (component: ComponentReference) => {
+  const { checkIfUserComponent, componentLibrary } = useComponentLibrary();
+
+  const isUserComponent = useMemo(
+    () => checkIfUserComponent(component),
+    [checkIfUserComponent, component],
+  );
+
+  const flatComponentList = useMemo(
+    () => (componentLibrary ? flattenFolders(componentLibrary) : []),
+    [componentLibrary],
+  );
+
+  const { data: isInLibrary } = useSuspenseQuery({
+    queryKey: ["component", "flags", component.digest],
+    queryFn: async () => {
+      if (!componentLibrary) return false;
+
+      for (const c of flatComponentList) {
+        if (c.name && c.name !== component.name) {
+          // micro optimization to skip components with different names
+          continue;
+        }
+
+        const hydratedComponent = await hydrateComponentReference(c);
+        const digest = c.digest ?? hydratedComponent?.digest;
+
+        if (digest === component.digest) {
+          return true;
+        }
+      }
+
+      return false;
+    },
+    staleTime: 10 * MINUTES,
+  });
+
+  return { isInLibrary, isUserComponent };
+};
+
+const ComponentFavoriteToggleInternal = ({
   component,
   hideDelete = false,
 }: ComponentFavoriteToggleProps) => {
-  const {
-    addToComponentLibrary,
-    removeFromComponentLibrary,
-    checkIfUserComponent,
-    checkLibraryContainsComponent,
-  } = useComponentLibrary();
+  const { addToComponentLibrary, removeFromComponentLibrary } =
+    useComponentLibrary();
 
   const [isOpen, setIsOpen] = useState(false);
 
   const { spec, url } = component;
 
-  const isUserComponent = useMemo(
-    () => checkIfUserComponent(component),
-    [component, checkIfUserComponent],
-  );
-
-  const isInLibrary = useMemo(
-    () => checkLibraryContainsComponent(component),
-    [component, checkLibraryContainsComponent],
-  );
+  const { isInLibrary, isUserComponent } = useComponentFlags(component);
 
   const displayName = useMemo(
     () => getComponentName({ spec, url }),
     [spec, url],
   );
-
-  // Delete User Components
-  const handleDelete = useCallback(async () => {
-    removeFromComponentLibrary(component);
-  }, [removeFromComponentLibrary]);
 
   /* Confirmation Dialog handlers */
   const openConfirmationDialog = useCallback(() => {
@@ -180,7 +207,7 @@ export const ComponentFavoriteToggle = ({
   const handleConfirm = useCallback(async () => {
     setIsOpen(false);
 
-    if (!isInLibrary) {
+    if (!isUserComponent) {
       const hydratedComponent = await hydrateComponentReference(component);
 
       if (!hydratedComponent) {
@@ -189,22 +216,26 @@ export const ComponentFavoriteToggle = ({
         return;
       }
 
-      addToComponentLibrary(hydratedComponent);
-      return;
+      await addToComponentLibrary(hydratedComponent);
+    } else {
+      await removeFromComponentLibrary(component);
     }
+  }, [
+    component,
+    isUserComponent,
+    addToComponentLibrary,
+    removeFromComponentLibrary,
+  ]);
 
-    handleDelete();
-  }, [component, isInLibrary, addToComponentLibrary, handleDelete]);
-
-  const showDeleteButton = isInLibrary && isUserComponent && !hideDelete;
+  const showDeleteButton = !isInLibrary && isUserComponent && !hideDelete;
 
   return (
     <>
-      {!isInLibrary && <AddToLibraryButton onClick={openConfirmationDialog} />}
-
-      {isInLibrary && !isUserComponent && (
-        <FavoriteToggleButton component={component} />
+      {!isInLibrary && !isUserComponent && (
+        <AddToLibraryButton onClick={openConfirmationDialog} />
       )}
+
+      {isInLibrary && <FavoriteToggleButton component={component} />}
 
       {showDeleteButton && (
         <DeleteFromLibraryButton onClick={openConfirmationDialog} />
@@ -213,14 +244,14 @@ export const ComponentFavoriteToggle = ({
       <ConfirmationDialog
         isOpen={isOpen}
         title={
-          !isInLibrary
+          !isUserComponent
             ? "Add to Component Library?"
             : "Delete custom component?"
         }
         description={
-          !isInLibrary
+          !isUserComponent
             ? `This will add "${displayName}" to your Component Library for use in your pipelines.`
-            : `"${displayName}" is a custom user component. Unstarring it will remove it from your library. This action cannot be undone.`
+            : `"${displayName}" is a custom user component. This will remove it from your library. This action cannot be undone.`
         }
         onConfirm={handleConfirm}
         onCancel={handleCancel}
@@ -228,3 +259,13 @@ export const ComponentFavoriteToggle = ({
     </>
   );
 };
+
+export const ComponentFavoriteToggle = withSuspenseWrapper(
+  ComponentFavoriteToggleInternal,
+  () => <Spinner size={10} />,
+  () => (
+    <IconStateButton disabled>
+      <Icon name="Star" />
+    </IconStateButton>
+  ),
+);
