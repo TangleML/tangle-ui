@@ -16,7 +16,7 @@ const ArgumentsSection = ({
   disabled = false,
 }: ArgumentsSectionProps) => {
   return (
-    <ScrollArea>
+    <ScrollArea className="w-full">
       <Paragraph size="sm" tone="subdued" className="mb-4">
         Configure the arguments for this task node.
       </Paragraph>

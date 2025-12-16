@@ -1,5 +1,4 @@
 import equal from "fast-deep-equal";
-import { HelpCircle, Info, Maximize2, PlusSquare } from "lucide-react";
 import {
   type ChangeEvent,
   type MouseEvent,
@@ -10,16 +9,20 @@ import {
 } from "react";
 
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
-import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Paragraph } from "@/components/ui/typography";
 import { useCallbackOnUnmount } from "@/hooks/useCallbackOnUnmount";
 import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
@@ -45,7 +48,6 @@ export const ArgumentInputField = ({
   const notify = useToastNotification();
 
   const [inputValue, setInputValue] = useState(getInputValue(argument) ?? "");
-  const [showDescription, setShowDescription] = useState(false);
   const [lastSubmittedValue, setLastSubmittedValue] = useState<string>(
     getInputValue(argument) ?? "",
   );
@@ -114,20 +116,6 @@ export const ArgumentInputField = ({
     setInputValue(getInputValue(undoValue) ?? "");
     onSave({ ...undoValue });
   };
-
-  const handleBackgroundClick = useCallback((e: MouseEvent) => {
-    // Prevent toggling description if a child input or button is clicked
-    const target = e.target as HTMLElement;
-    if (
-      target.closest("input") ||
-      target.closest("button") ||
-      target.closest("[role=button]")
-    ) {
-      return;
-    }
-    e.stopPropagation();
-    setShowDescription((prev) => !prev);
-  }, []);
 
   const handleExpand = useCallback(() => {
     if (disabled) return;
@@ -213,160 +201,161 @@ export const ArgumentInputField = ({
 
   useCallbackOnUnmount(handleBlur);
 
+  const actionsBaseClass =
+    "hover:bg-transparent hover:text-blue-500 hidden group-hover:flex";
+
   return (
     <>
-      <BlockStack gap="2" className="relative w-full">
-        <div
-          className="flex w-full items-center justify-between gap-2 py-1 rounded-md hover:bg-secondary/70 cursor-pointer"
-          onClick={handleBackgroundClick}
-        >
-          <InlineStack align="space-between" gap="2" className="w-32 pr-2">
-            <div className="flex items-center gap-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div
-                    className={cn(
-                      "bg-success rounded-full h-2 w-2 cursor-pointer",
-                      !canUndo && "invisible",
-                      disabled && "opacity-50",
-                    )}
-                    onClick={handleUndo}
-                  />
-                </TooltipTrigger>
-                <TooltipContent className="z-9999">
-                  Recently changed
-                </TooltipContent>
-              </Tooltip>
-              <BlockStack className={cn(argument.isRemoved && "opacity-50")}>
-                <Label
-                  htmlFor={argument.inputSpec.name}
-                  className="text-sm wrap-break-word"
-                >
-                  {argument.inputSpec.name.replace(/_/g, " ")}
-                </Label>
-                <span
-                  className="text-xs text-muted-foreground truncate"
-                  title={typeSpecToString(argument.inputSpec.type)}
-                >
-                  ({typeSpecToString(argument.inputSpec.type)}
-                  {!argument.inputSpec.optional ? "*" : ""})
-                </span>
-              </BlockStack>
-            </div>
-            {!!hint && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <HelpCircle className="w-4 h-4" />
-                </TooltipTrigger>
-                <TooltipContent className="z-9999">{hint}</TooltipContent>
-              </Tooltip>
-            )}
+      <BlockStack gap="0" className="relative w-full px-2">
+        <InlineStack gap="4">
+          <InlineStack
+            gap="2"
+            className={cn(argument.isRemoved && "opacity-50")}
+          >
+            <Paragraph size="sm" className="wrap-break-word">
+              {argument.inputSpec.name.replace(/_/g, " ")}
+            </Paragraph>
+
+            <Paragraph
+              size="xs"
+              tone="subdued"
+              className="truncate"
+              title={typeSpecToString(argument.inputSpec.type)}
+            >
+              ({typeSpecToString(argument.inputSpec.type)}
+              {!argument.inputSpec.optional ? "*" : ""})
+            </Paragraph>
           </InlineStack>
 
-          <div className="relative min-w-24 grow group">
+          {argument.inputSpec.description && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <TooltipButton
+                  tooltip="Description"
+                  variant="ghost"
+                  size="icon"
+                >
+                  <Icon name="Info" />
+                </TooltipButton>
+              </PopoverTrigger>
+              <PopoverContent>
+                <Paragraph size="xs" tone="subdued" className="italic">
+                  {argument.inputSpec.description}
+                </Paragraph>
+              </PopoverContent>
+            </Popover>
+          )}
+
+          {!!hint && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Input
-                  id={argument.inputSpec.name}
-                  value={inputValue}
-                  onChange={handleInputChange}
-                  onBlur={handleBlur}
-                  placeholder={placeholder}
-                  required={!argument.inputSpec.optional}
-                  className={cn(
-                    "flex-1 group-hover:pr-8",
-                    argument.isRemoved &&
-                      !argument.inputSpec.optional &&
-                      "border-red-200",
-                    argument.isRemoved &&
-                      argument.inputSpec.optional &&
-                      "border-gray-100 text-muted-foreground",
-                    argument.isRemoved && "opacity-50 focus:opacity-100",
-                  )}
-                  disabled={disabled}
-                />
+                <Icon name="CircleQuestionMark" />
               </TooltipTrigger>
-              {placeholder && !inputValue && (
-                <TooltipContent className="z-9999">
-                  {placeholder}
-                </TooltipContent>
-              )}
+              <TooltipContent className="z-9999">{hint}</TooltipContent>
             </Tooltip>
-            <Button
-              className={cn(
-                "absolute right-0 top-1/2 -translate-y-1/2 hover:bg-transparent hover:text-blue-500 hidden group-hover:flex",
-              )}
+          )}
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                className={cn(
+                  "bg-success rounded-full h-2 w-2 cursor-pointer",
+                  !canUndo && "invisible",
+                  disabled && "opacity-50",
+                )}
+                onClick={handleUndo}
+              />
+            </TooltipTrigger>
+            <TooltipContent className="z-9999">Recently changed</TooltipContent>
+          </Tooltip>
+        </InlineStack>
+
+        <div className="relative group w-full">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Input
+                id={argument.inputSpec.name}
+                value={inputValue}
+                onChange={handleInputChange}
+                onBlur={handleBlur}
+                placeholder={placeholder}
+                required={!argument.inputSpec.optional}
+                className={cn(
+                  "flex-1 group-hover:pr-8",
+                  argument.isRemoved &&
+                    !argument.inputSpec.optional &&
+                    "border-red-200",
+                  argument.isRemoved &&
+                    argument.inputSpec.optional &&
+                    "border-gray-300 text-muted-foreground",
+                  argument.isRemoved &&
+                    "opacity-80 focus:opacity-100 border-dashed",
+                )}
+                disabled={disabled}
+              />
+            </TooltipTrigger>
+            {placeholder && !inputValue && (
+              <TooltipContent className="z-9999">{placeholder}</TooltipContent>
+            )}
+          </Tooltip>
+
+          <InlineStack className="absolute right-0 top-1/2 -translate-y-1/2 mr-1 px-1 bg-sidebar">
+            <TooltipButton
               onClick={handleExpand}
+              className={actionsBaseClass}
               disabled={disabled}
               variant="ghost"
+              size="xs"
+              tooltip="Multiline Editor"
             >
-              <Maximize2 />
-            </Button>
-          </div>
-
-          <InlineStack align="end">
-            <div
-              onClick={(e) => e.stopPropagation()}
-              className={cn(disabledCopy && "cursor-default")}
-            >
+              <Icon name="Maximize2" />
+            </TooltipButton>
+            {!disabledCopy && (
               <TooltipButton
                 onClick={handleCopy}
-                className={cn(argument.isRemoved ? "invisible" : "")}
+                className={cn(actionsBaseClass, {
+                  invisible: argument.isRemoved || disabledCopy,
+                })}
                 disabled={disabledCopy}
                 variant="ghost"
-                size="icon"
+                size="xs"
                 tooltip="Copy Value"
               >
                 <Icon name="Copy" />
               </TooltipButton>
-            </div>
-
-            <div
-              onClick={(e) => e.stopPropagation()}
-              className={cn(disabledReset && "cursor-default")}
-            >
+            )}
+            {!disabledReset && (
               <TooltipButton
                 onClick={handleReset}
-                className={cn(argument.isRemoved ? "invisible" : "")}
+                className={cn(actionsBaseClass, {
+                  invisible: argument.isRemoved,
+                })}
                 disabled={disabledReset}
                 variant="ghost"
-                size="icon"
+                size="xs"
                 tooltip="Reset to Default"
               >
                 <Icon name="ListRestart" />
               </TooltipButton>
-            </div>
-
-            <div
-              onClick={(e) => e.stopPropagation()}
-              className={cn(disabled && "cursor-default")}
+            )}
+            <TooltipButton
+              onClick={handleRemove}
+              disabled={disabled}
+              variant="ghost"
+              size="xs"
+              className={actionsBaseClass}
+              tooltip={
+                argument.isRemoved ? "Include Argument" : "Exclude Argument"
+              }
             >
-              <TooltipButton
-                onClick={handleRemove}
-                disabled={disabled}
-                variant="ghost"
-                size="icon"
-                tooltip={
-                  argument.isRemoved ? "Include Argument" : "Exclude Argument"
-                }
-              >
-                {argument.isRemoved ? (
-                  <PlusSquare className="h-4 w-4" />
-                ) : (
-                  <Icon name="Delete" />
-                )}
-              </TooltipButton>
-            </div>
+              {argument.isRemoved ? (
+                <Icon name="SquarePlus" />
+              ) : (
+                <Icon name="Delete" />
+              )}
+            </TooltipButton>
           </InlineStack>
         </div>
-        {showDescription && (
-          <div className="z-50 bg-gray-50 text-secondary-foreground p-2 rounded-md w-full mb-2">
-            <p className="text-sm">
-              <Info className="h-4 w-4 inline-block mr-2" />
-              {argument.inputSpec.description ?? "No description provided."}
-            </p>
-          </div>
-        )}
       </BlockStack>
 
       <ArgumentInputDialog
