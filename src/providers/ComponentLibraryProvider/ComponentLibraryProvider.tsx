@@ -84,9 +84,6 @@ type ComponentLibraryContextType = {
     component: HydratedComponentReference,
   ) => Promise<HydratedComponentReference | undefined>;
   removeFromComponentLibrary: (component: ComponentReference) => void;
-  refetchLibrary: () => void;
-  refetchUserComponents: () => void;
-
   setComponentFavorite: (
     component: ComponentReference,
     favorited: boolean,
@@ -593,8 +590,6 @@ export const ComponentLibraryProvider = ({
       getComponentLibrary,
       addToComponentLibrary,
       removeFromComponentLibrary,
-      refetchLibrary,
-      refetchUserComponents,
       setComponentFavorite,
       checkIfUserComponent,
       checkLibraryContainsComponent,
@@ -612,8 +607,6 @@ export const ComponentLibraryProvider = ({
       getComponentLibrary,
       addToComponentLibrary,
       removeFromComponentLibrary,
-      refetchLibrary,
-      refetchUserComponents,
       setComponentFavorite,
       checkIfUserComponent,
       checkLibraryContainsComponent,
