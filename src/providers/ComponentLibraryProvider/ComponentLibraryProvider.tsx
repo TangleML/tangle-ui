@@ -89,7 +89,6 @@ type ComponentLibraryContextType = {
     favorited: boolean,
   ) => void;
   checkIfUserComponent: (component: ComponentReference) => boolean;
-  checkLibraryContainsComponent: (component: ComponentReference) => boolean;
 
   getComponentLibrary: (libraryName: AvailableComponentLibraries) => Library;
 };
@@ -340,21 +339,6 @@ export const ComponentLibraryProvider = ({
     [userComponentsFolder],
   );
 
-  const checkLibraryContainsComponent = useCallback(
-    (component: ComponentReference) => {
-      if (!componentLibrary) return false;
-
-      if (checkIfUserComponent(component)) return true;
-
-      const uniqueComponents = filterToUniqueByDigest(
-        flattenFolders(componentLibrary),
-      );
-
-      return uniqueComponents.some((c) => c.digest === component.digest);
-    },
-    [componentLibrary, checkIfUserComponent],
-  );
-
   /**
    * Local component library search
    */
@@ -592,7 +576,6 @@ export const ComponentLibraryProvider = ({
       removeFromComponentLibrary,
       setComponentFavorite,
       checkIfUserComponent,
-      checkLibraryContainsComponent,
     }),
     [
       componentLibrary,
@@ -609,7 +592,6 @@ export const ComponentLibraryProvider = ({
       removeFromComponentLibrary,
       setComponentFavorite,
       checkIfUserComponent,
-      checkLibraryContainsComponent,
     ],
   );
 

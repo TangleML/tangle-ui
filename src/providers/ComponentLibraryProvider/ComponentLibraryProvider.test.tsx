@@ -536,29 +536,6 @@ describe("ComponentLibraryProvider - Component Management", () => {
         result.current.checkIfUserComponent(standardComponent);
       expect(isUserComponent).toBe(false);
     });
-
-    it("should correctly check if library contains component", async () => {
-      const libraryComponent: ComponentReference = {
-        name: "library-component",
-        digest: "library-digest",
-        spec: mockComponentSpec,
-      };
-
-      mockFlattenFolders.mockReturnValue([libraryComponent]);
-      mockFilterToUniqueByDigest.mockReturnValue([libraryComponent]);
-
-      const { result } = renderHook(() => useComponentLibrary(), {
-        wrapper: createWrapper,
-      });
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
-      });
-
-      const containsComponent =
-        result.current.checkLibraryContainsComponent(libraryComponent);
-      expect(containsComponent).toBe(true);
-    });
   });
 
   describe("Component Favoriting", () => {
