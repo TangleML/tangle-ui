@@ -1,10 +1,5 @@
 import { getAppSettings } from "@/appSettings";
 import {
-  type ComponentLibrary,
-  isValidComponentLibrary,
-} from "@/types/componentLibrary";
-import { loadObjectFromYamlData } from "@/utils/cache";
-import {
   type ComponentReference,
   type ComponentSpec,
   type ContentfulComponentReference,
@@ -42,77 +37,7 @@ interface ExistingAndNewComponent {
   newComponent: HydratedComponentReference | undefined;
 }
 
-const COMPONENT_LIBRARY_URL = getAppSettings().componentLibraryUrl;
-
-/**
- * Fetches the component library from local storage
- */
-const loadComponentLibraryFromLocalStorage =
-  async (): Promise<ComponentLibrary | null> => {
-    const libraryExists = await componentExistsByUrl(COMPONENT_LIBRARY_URL);
-
-    if (libraryExists) {
-      const storedLibrary = await getComponentByUrl(COMPONENT_LIBRARY_URL);
-      if (storedLibrary) {
-        try {
-          const parsedLibrary = JSON.parse(storedLibrary.data);
-          if (isValidComponentLibrary(parsedLibrary)) {
-            return parsedLibrary;
-          }
-        } catch (error) {
-          console.error("Error parsing stored component library:", error);
-        }
-      }
-    }
-
-    return null;
-  };
-
-/**
- * Fetches the component library and stores all components in local storage
- */
-export const fetchAndStoreComponentLibrary =
-  async (): Promise<ComponentLibrary> => {
-    // Try fetch from the URL
-    const response = await fetch(COMPONENT_LIBRARY_URL);
-    if (!response.ok) {
-      // Fallback to local storage
-      await loadComponentLibraryFromLocalStorage().then((library) => {
-        if (library) {
-          return library;
-        }
-      });
-
-      throw new Error(
-        `Failed to load component library: ${response.statusText}`,
-      );
-    }
-
-    const arrayBuffer = await response.arrayBuffer();
-    const obj = loadObjectFromYamlData(arrayBuffer);
-
-    if (!isValidComponentLibrary(obj)) {
-      // Fallback to local storage
-      await loadComponentLibraryFromLocalStorage().then((library) => {
-        if (library) {
-          return library;
-        }
-      });
-
-      throw new Error("Invalid component library structure");
-    }
-
-    // Store the fetched library in local storage
-    await saveComponent({
-      id: `library-${Date.now()}`,
-      url: COMPONENT_LIBRARY_URL,
-      data: JSON.stringify(obj),
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    });
-
-    return obj;
-  };
+export const COMPONENT_LIBRARY_URL = getAppSettings().componentLibraryUrl;
 
 /**
  * Fetch and store a single component by URL

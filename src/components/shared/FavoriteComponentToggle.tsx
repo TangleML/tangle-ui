@@ -14,7 +14,6 @@ import { Spinner } from "@/components/ui/spinner";
 import { useGuaranteedHydrateComponentReference } from "@/hooks/useHydrateComponentReference";
 import { cn } from "@/lib/utils";
 import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
-import { flattenFolders } from "@/providers/ComponentLibraryProvider/componentLibrary";
 import { hydrateComponentReference } from "@/services/componentService";
 import { type ComponentReference } from "@/utils/componentSpec";
 import { MINUTES } from "@/utils/constants";
@@ -143,16 +142,12 @@ const FavoriteToggleButton = withSuspenseWrapper(
 );
 
 const useComponentFlags = (component: ComponentReference) => {
-  const { checkIfUserComponent, componentLibrary } = useComponentLibrary();
+  const { checkIfUserComponent, getComponentLibrary } = useComponentLibrary();
+  const componentLibrary = getComponentLibrary("standard_components");
 
   const isUserComponent = useMemo(
     () => checkIfUserComponent(component),
-    [checkIfUserComponent, component],
-  );
-
-  const flatComponentList = useMemo(
-    () => (componentLibrary ? flattenFolders(componentLibrary) : []),
-    [componentLibrary],
+    [checkIfUserComponent],
   );
 
   const { data: isInLibrary } = useSuspenseQuery({
@@ -160,21 +155,7 @@ const useComponentFlags = (component: ComponentReference) => {
     queryFn: async () => {
       if (!componentLibrary) return false;
 
-      for (const c of flatComponentList) {
-        if (c.name && c.name !== component.name) {
-          // micro optimization to skip components with different names
-          continue;
-        }
-
-        const hydratedComponent = await hydrateComponentReference(c);
-        const digest = c.digest ?? hydratedComponent?.digest;
-
-        if (digest === component.digest) {
-          return true;
-        }
-      }
-
-      return false;
+      return componentLibrary.hasComponent(component);
     },
     staleTime: 10 * MINUTES,
   });
