@@ -40,7 +40,6 @@ const createMockComponentLibraryContext = (
     componentLibrary: undefined,
     userComponentsFolder,
     usedComponentsFolder: { name: "Used", components: [] },
-    favoritesFolder: { name: "Favorites", components: [] },
     isLoading: false,
     error: null,
     existingComponentLibraries: undefined,
@@ -48,7 +47,6 @@ const createMockComponentLibraryContext = (
     searchComponentLibrary: vi.fn(),
     addToComponentLibrary: vi.fn(),
     removeFromComponentLibrary: vi.fn(),
-    setComponentFavorite: vi.fn(),
     checkIfUserComponent: vi.fn().mockReturnValue(false),
     getComponentLibrary: vi.fn(),
   };

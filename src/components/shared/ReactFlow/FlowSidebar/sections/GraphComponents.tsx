@@ -39,7 +39,6 @@ const GraphComponents = ({ isOpen }: { isOpen: boolean }) => {
   const remoteComponentLibrarySearchEnabled = useFlagValue(
     "remote-component-library-search",
   );
-
   const { updateSearchFilter, currentSearchFilter } = useForcedSearchContext();
 
   const handleSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -129,12 +128,13 @@ function ComponentLibrarySection() {
   const { getComponentLibrary, existingComponentLibraries } =
     useComponentLibrary();
 
+  const favoriteComponentsLibrary = getComponentLibrary("favorite_components");
+
   const { updateSearchFilter } = useForcedSearchContext();
   const {
     componentLibrary,
     usedComponentsFolder,
     userComponentsFolder,
-    favoritesFolder,
     isLoading,
     error,
     searchResult,
@@ -165,9 +165,6 @@ function ComponentLibrarySection() {
     usedComponentsFolder?.components &&
     usedComponentsFolder.components.length > 0;
 
-  const hasFavouriteComponents =
-    favoritesFolder?.components && favoritesFolder.components.length > 0;
-
   const hasUserComponents =
     userComponentsFolder?.components &&
     userComponentsFolder.components.length > 0;
@@ -184,13 +181,13 @@ function ComponentLibrarySection() {
             icon="LayoutGrid"
           />
         )}
-        {hasFavouriteComponents && (
-          <FolderItem
-            key="favorite-components-folder"
-            folder={favoritesFolder}
-            icon="Star"
-          />
-        )}
+
+        <LibraryFolderItem
+          key="favorite-components-folder-v2"
+          library={favoriteComponentsLibrary}
+          icon="Star"
+        />
+
         {hasUserComponents && (
           <FolderItem
             key="my-components-folder"

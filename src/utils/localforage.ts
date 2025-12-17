@@ -76,6 +76,16 @@ export async function getComponentById(id: string): Promise<Component | null> {
   return componentStore.getItem<Component>(id);
 }
 
+export async function iterateOverAllComponents(
+  visitorFn: (component: Component) => Promise<void>,
+): Promise<void> {
+  const promises: Promise<void>[] = [];
+  await componentStore.iterate<Component, void>((component) => {
+    promises.push(visitorFn(component));
+  });
+  await Promise.all(promises);
+}
+
 // Function to get a component by URL
 export async function getComponentByUrl(
   url: string,

@@ -14,10 +14,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useGuaranteedHydrateComponentReference } from "@/hooks/useHydrateComponentReference";
 import { cn } from "@/lib/utils";
 import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
-import {
-  flattenFolders,
-  isFavoriteComponent,
-} from "@/providers/ComponentLibraryProvider/componentLibrary";
+import { flattenFolders } from "@/providers/ComponentLibraryProvider/componentLibrary";
 import { hydrateComponentReference } from "@/services/componentService";
 import { type ComponentReference } from "@/utils/componentSpec";
 import { MINUTES } from "@/utils/constants";
@@ -108,17 +105,26 @@ const FavoriteToggleButton = withSuspenseWrapper(
   ({ component }: { component: ComponentReference }) => {
     const queryClient = useQueryClient();
 
-    const { setComponentFavorite } = useComponentLibrary();
+    const { getComponentLibrary } = useComponentLibrary();
+    const favoriteComponentsLibrary = getComponentLibrary(
+      "favorite_components",
+    );
     const hydratedComponent = useGuaranteedHydrateComponentReference(component);
 
     const { data: isFavorited } = useSuspenseQuery({
       queryKey: favoriteComponentKey(hydratedComponent),
-      queryFn: async () => isFavoriteComponent(hydratedComponent),
+      queryFn: async () =>
+        favoriteComponentsLibrary.hasComponent(hydratedComponent),
     });
 
     const { mutate: setFavorite } = useMutation({
-      mutationFn: async () =>
-        setComponentFavorite(hydratedComponent, !isFavorited),
+      mutationFn: async () => {
+        if (isFavorited) {
+          await favoriteComponentsLibrary.removeComponent(hydratedComponent);
+        } else {
+          await favoriteComponentsLibrary.addComponent(hydratedComponent);
+        }
+      },
       onSuccess: () => {
         queryClient.invalidateQueries({
           queryKey: favoriteComponentKey(hydratedComponent),
