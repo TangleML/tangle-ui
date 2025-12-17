@@ -41,15 +41,12 @@ vi.mock("./componentLibrary");
 
 // Import mocked modules
 import * as componentLibraryUtils from "@/providers/ComponentLibraryProvider/componentLibrary";
-import * as componentService from "@/services/componentService";
 import * as componentStore from "@/utils/componentStore";
 import * as getComponentName from "@/utils/getComponentName";
 import * as localforage from "@/utils/localforage";
 
 // Mock implementations
-const mockFetchAndStoreComponentLibrary = vi.mocked(
-  componentService.fetchAndStoreComponentLibrary,
-);
+
 const mockFetchUserComponents = vi.mocked(
   componentLibraryUtils.fetchUserComponents,
 );
@@ -134,7 +131,6 @@ describe("ComponentLibraryProvider - Component Management", () => {
     componentDuplicateDialogProps.handleImportComponent = undefined;
 
     // Setup default mock implementations
-    mockFetchAndStoreComponentLibrary.mockResolvedValue(mockComponentLibrary);
     mockFetchUserComponents.mockResolvedValue(mockUserComponentsFolder);
     mockFetchUsedComponents.mockReturnValue({
       name: "Used Components",
