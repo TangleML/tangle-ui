@@ -8,6 +8,7 @@ import { useBackend } from "@/providers/BackendProvider";
 import { getExecutionArtifacts } from "@/services/executionService";
 import { getBackendStatusString } from "@/utils/backend";
 import type { TaskSpec } from "@/utils/componentSpec";
+import { BACKEND_QUERY_KEY } from "@/utils/constants";
 
 import IOExtras from "./IOExtras";
 import IOInputs from "./IOInputs";
@@ -28,9 +29,9 @@ const IOSection = ({ taskSpec, executionId, readOnly }: IOSectionProps) => {
     isFetching,
     error,
   } = useQuery({
-    queryKey: ["artifacts", executionId],
+    queryKey: [BACKEND_QUERY_KEY, "artifacts", executionId],
     queryFn: () => getExecutionArtifacts(String(executionId), backendUrl),
-    enabled: !!executionId,
+    enabled: !!executionId && configured,
   });
 
   if (!configured) {

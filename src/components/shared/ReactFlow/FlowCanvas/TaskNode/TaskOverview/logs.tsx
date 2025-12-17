@@ -7,6 +7,7 @@ import { Link } from "@/components/ui/link";
 import { Spinner } from "@/components/ui/spinner";
 import { useBackend } from "@/providers/BackendProvider";
 import { getBackendStatusString } from "@/utils/backend";
+import { BACKEND_QUERY_KEY } from "@/utils/constants";
 
 const LogDisplay = ({
   logs,
@@ -108,10 +109,10 @@ const Logs = ({
     log_text?: string;
     system_error_exception_full?: string;
   }>();
-  const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["logs", executionId],
+  const { data, isLoading, error } = useQuery({
+    queryKey: [BACKEND_QUERY_KEY, "logs", executionId],
     queryFn: () => getLogs(String(executionId), backendUrl),
-    enabled: isLogging,
+    enabled: isLogging && configured,
     refetchInterval: 5000,
     refetchIntervalInBackground: false,
   });
@@ -135,10 +136,6 @@ const Logs = ({
       setLogs({ log_text: "No logs available" });
     }
   }, [data, error]);
-
-  useEffect(() => {
-    refetch();
-  }, [backendUrl, refetch]);
 
   if (!configured) {
     return (

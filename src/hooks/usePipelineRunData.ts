@@ -7,15 +7,16 @@ import {
   fetchExecutionState,
   fetchPipelineRun,
 } from "@/services/executionService";
+import { BACKEND_QUERY_KEY } from "@/utils/constants";
 import {
   flattenExecutionStatusStats,
   isExecutionComplete,
 } from "@/utils/executionStatus";
 
 const useRootExecutionId = (id: string) => {
-  const { backendUrl } = useBackend();
+  const { backendUrl, configured } = useBackend();
   const { data: rootExecutionId } = useQuery({
-    queryKey: ["pipeline-run-execution-id", id],
+    queryKey: [BACKEND_QUERY_KEY, "pipeline-run-execution-id", id],
     queryFn: async () => {
       const rootExecutionId = await fetchPipelineRun(id, backendUrl)
         .then((res) => res.root_execution_id)
@@ -28,7 +29,7 @@ const useRootExecutionId = (id: string) => {
       // assuming id is root_execution_id
       return id;
     },
-    enabled: !!id && id.length > 0,
+    enabled: !!id && id.length > 0 && configured,
     staleTime: Infinity,
   });
 
@@ -37,13 +38,13 @@ const useRootExecutionId = (id: string) => {
 
 /* Accepts root_execution_id or run_id and returns execution details and state */
 export const usePipelineRunData = (id: string) => {
-  const { backendUrl } = useBackend();
+  const { backendUrl, configured } = useBackend();
 
   const rootExecutionId = useRootExecutionId(id);
 
   const { data: executionDetails } = useQuery({
-    enabled: !!rootExecutionId,
-    queryKey: ["execution-details", rootExecutionId],
+    enabled: !!rootExecutionId && configured,
+    queryKey: [BACKEND_QUERY_KEY, "execution-details", rootExecutionId],
     queryFn: async () => {
       if (!rootExecutionId) {
         throw new Error("No root execution id found");
@@ -59,8 +60,8 @@ export const usePipelineRunData = (id: string) => {
     error,
     isLoading,
   } = useQuery({
-    enabled: !!rootExecutionId && !!executionDetails,
-    queryKey: ["pipeline-run", rootExecutionId],
+    enabled: !!rootExecutionId && !!executionDetails && configured,
+    queryKey: [BACKEND_QUERY_KEY, "pipeline-run", rootExecutionId],
     queryFn: async () => {
       if (!rootExecutionId) {
         throw new Error("No root execution id found");

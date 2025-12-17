@@ -16,6 +16,7 @@ import { ComponentSpecProvider } from "@/providers/ComponentSpecProvider";
 import { ContextPanelProvider } from "@/providers/ContextPanelProvider";
 import { ExecutionDataProvider } from "@/providers/ExecutionDataProvider";
 import type { ComponentSpec } from "@/utils/componentSpec";
+import { BACKEND_QUERY_KEY } from "@/utils/constants";
 
 import { RunDetails } from "./RunDetails";
 
@@ -61,6 +62,8 @@ describe("<RunDetails/>", () => {
       mutations: { retry: false },
     },
   });
+
+  const MOCK_BACKEND_URL = "http://localhost:8000";
 
   const mockExecutionDetails: GetExecutionInfoResponse = {
     id: "test-execution-id",
@@ -133,13 +136,16 @@ describe("<RunDetails/>", () => {
       error: null,
     });
 
-    queryClient.setQueryData(["pipeline-run-metadata", "123"], mockPipelineRun);
+    queryClient.setQueryData(
+      [BACKEND_QUERY_KEY, "pipeline-run-metadata", "123"],
+      mockPipelineRun,
+    );
 
     vi.mocked(useBackend).mockReturnValue({
       configured: true,
       available: true,
       ready: true,
-      backendUrl: "http://localhost:8000",
+      backendUrl: MOCK_BACKEND_URL,
       isConfiguredFromEnv: false,
       isConfiguredFromRelativePath: false,
       setEnvConfig: vi.fn(),
@@ -171,6 +177,50 @@ describe("<RunDetails/>", () => {
       ),
     });
   };
+
+  describe("Backend Configuration", () => {
+    test("should render run details when backend is configured", async () => {
+      // The default mock has configured: true and backendUrl: MOCK_BACKEND_URL
+      // act
+      renderWithProviders(<RunDetails />);
+
+      // assert
+      await waitFor(() => {
+        expect(screen.getByText("Test Pipeline")).toBeInTheDocument();
+        expect(screen.getByText("Run Id:")).toBeInTheDocument();
+        expect(screen.getByText("123")).toBeInTheDocument();
+      });
+    });
+
+    test("should render run details when backendUrl is empty string", async () => {
+      // arrange - simulate custom backend toggle disabled (empty backendUrl)
+      vi.mocked(useBackend).mockReturnValue({
+        configured: true,
+        available: true,
+        ready: true,
+        backendUrl: "",
+        isConfiguredFromEnv: false,
+        isConfiguredFromRelativePath: true,
+        setEnvConfig: vi.fn(),
+        setRelativePathConfig: vi.fn(),
+        setBackendUrl: vi.fn(),
+        ping: vi.fn(),
+      });
+
+      // Query key no longer includes backendUrl - cache is shared regardless of URL
+      // and invalidated when backend URL changes
+
+      // act
+      renderWithProviders(<RunDetails />);
+
+      // assert
+      await waitFor(() => {
+        expect(screen.getByText("Test Pipeline")).toBeInTheDocument();
+        expect(screen.getByText("Run Id:")).toBeInTheDocument();
+        expect(screen.getByText("123")).toBeInTheDocument();
+      });
+    });
+  });
 
   describe("Inspect Pipeline Button", () => {
     test("should render inspect button when pipeline exists", async () => {
@@ -262,7 +312,7 @@ describe("<RunDetails/>", () => {
       };
 
       queryClient.setQueryData(
-        ["pipeline-run-metadata", "123"],
+        [BACKEND_QUERY_KEY, "pipeline-run-metadata", "123"],
         pipelineRunWithDifferentCreator,
       );
 

@@ -9,6 +9,7 @@ import type {
 } from "@/api/types.gen";
 import { useBackend } from "@/providers/BackendProvider";
 import {
+  BACKEND_QUERY_KEY,
   DEFAULT_RATE_LIMIT_RPS,
   TWENTY_FOUR_HOURS_IN_MS,
 } from "@/utils/constants";
@@ -47,12 +48,12 @@ export const fetchPipelineRun = async (
 };
 
 export const useFetchPipelineRunMetadata = (runId: string | undefined) => {
-  const { backendUrl } = useBackend();
+  const { backendUrl, configured } = useBackend();
 
   return useQuery<PipelineRunResponse>({
-    queryKey: ["pipeline-run-metadata", runId],
+    queryKey: [BACKEND_QUERY_KEY, "pipeline-run-metadata", runId],
     queryFn: () => fetchPipelineRun(runId!, backendUrl),
-    enabled: !!runId,
+    enabled: !!runId && configured,
     refetchOnWindowFocus: false,
     staleTime: TWENTY_FOUR_HOURS_IN_MS,
   });
@@ -70,10 +71,12 @@ export const useFetchContainerExecutionState = (
   executionId: string | undefined,
   backendUrl: string,
 ) => {
+  const { configured } = useBackend();
+
   return useQuery<GetContainerExecutionStateResponse>({
-    queryKey: ["container-execution-state", executionId],
+    queryKey: [BACKEND_QUERY_KEY, "container-execution-state", executionId],
     queryFn: () => fetchContainerExecutionState(executionId!, backendUrl),
-    enabled: !!executionId,
+    enabled: !!executionId && configured,
     refetchOnWindowFocus: false,
   });
 };
