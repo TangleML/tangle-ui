@@ -1,7 +1,6 @@
 import yaml from "js-yaml";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { ComponentLibrary } from "@/types/componentLibrary";
 import type { ComponentReference, ComponentSpec } from "@/utils/componentSpec";
 import { generateDigest } from "@/utils/componentStore";
 import * as localforage from "@/utils/localforage";
@@ -9,7 +8,6 @@ import * as localforage from "@/utils/localforage";
 import {
   fetchAndStoreComponent,
   fetchAndStoreComponentByUrl,
-  fetchAndStoreComponentLibrary,
   getExistingAndNewUserComponent,
   inputsWithInvalidArguments,
   parseComponentData,
@@ -487,70 +485,6 @@ describe("componentService", () => {
       const result = inputsWithInvalidArguments(inputs as any, taskSpec as any);
 
       expect(result).toEqual(["required-missing"]);
-    });
-  });
-
-  describe("fetchAndStoreComponentLibrary", () => {
-    const mockLibrary: ComponentLibrary = {
-      folders: [
-        {
-          name: "test-folder",
-          components: [
-            { name: "component1", url: "https://example.com/comp1.yaml" },
-          ],
-          folders: [],
-        },
-      ],
-    };
-
-    it("should fetch and store component library successfully", async () => {
-      const { loadObjectFromYamlData } = await import("@/utils/cache");
-      const componentYaml = yaml.dump({
-        name: "component1",
-        implementation: { container: { image: "test" } },
-      });
-
-      // First mock for fetching the library
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        headers: new Headers(),
-        arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
-      } as Response);
-
-      // Mock for fetching individual component from library
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        headers: new Headers(),
-        text: () => Promise.resolve(componentYaml),
-      } as Response);
-
-      vi.mocked(loadObjectFromYamlData).mockReturnValue(mockLibrary);
-      vi.mocked(localforage.getComponentByUrl).mockResolvedValue(null);
-
-      const result = await fetchAndStoreComponentLibrary();
-
-      expect(result).toEqual(mockLibrary);
-      expect(localforage.saveComponent).toHaveBeenCalledWith({
-        id: expect.stringMatching(/^library-\d+$/),
-        url: "/component-library.yaml",
-        data: JSON.stringify(mockLibrary),
-        createdAt: expect.any(Number),
-        updatedAt: expect.any(Number),
-      });
-    });
-
-    it("should handle fetch errors and fallback to local storage", async () => {
-      mockFetch.mockResolvedValue({
-        ok: false,
-        headers: new Headers(),
-        statusText: "Not Found",
-      } as Response);
-
-      vi.mocked(localforage.componentExistsByUrl).mockResolvedValue(false);
-
-      await expect(fetchAndStoreComponentLibrary()).rejects.toThrow(
-        "Failed to load component library: Not Found",
-      );
     });
   });
 });

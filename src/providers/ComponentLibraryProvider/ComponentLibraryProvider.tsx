@@ -15,14 +15,10 @@ import {
   isYamlLibraryConfiguration,
 } from "@/components/shared/GitHubLibrary/types";
 import {
-  fetchAndStoreComponentLibrary,
+  COMPONENT_LIBRARY_URL,
   hydrateComponentReference,
 } from "@/services/componentService";
-import type {
-  ComponentFolder,
-  ComponentLibrary,
-  SearchResult,
-} from "@/types/componentLibrary";
+import type { ComponentFolder, SearchResult } from "@/types/componentLibrary";
 import type {
   ComponentReference,
   HydratedComponentReference,
@@ -75,7 +71,6 @@ type AvailableComponentLibraries =
   | string;
 
 type ComponentLibraryContextType = {
-  componentLibrary: ComponentLibrary | undefined;
   userComponentsFolder: ComponentFolder | undefined;
   usedComponentsFolder: ComponentFolder;
   isLoading: boolean;
@@ -142,6 +137,10 @@ function useComponentLibraryRegistry() {
         /**
          * In future we will have other library types,  including "standard_library", "favorite_components", "used_components", etc.
          */
+        [
+          "standard_components",
+          new YamlFileLibrary("Standard library", COMPONENT_LIBRARY_URL),
+        ],
       ]),
     [queryClient],
   );
@@ -193,7 +192,6 @@ export const ComponentLibraryProvider = ({
   const { getComponentLibraryObject, existingComponentLibraries } =
     useComponentLibraryRegistry();
 
-  const [componentLibrary, setComponentLibrary] = useState<ComponentLibrary>();
   const [userComponentsFolder, setUserComponentsFolder] =
     useState<ComponentFolder>();
 
@@ -201,17 +199,6 @@ export const ComponentLibraryProvider = ({
     useState<UserComponent | null>(null);
   const [newComponent, setNewComponent] =
     useState<HydratedComponentReference | null>(null);
-
-  // Fetch main component library
-  const {
-    data: rawComponentLibrary,
-    isLoading: isLibraryLoading,
-    error: libraryError,
-    refetch: refetchLibrary,
-  } = useQuery({
-    queryKey: ["componentLibrary"],
-    queryFn: fetchAndStoreComponentLibrary,
-  });
 
   // Fetch user components
   const {
@@ -233,14 +220,6 @@ export const ComponentLibraryProvider = ({
   );
 
   // Methods
-  const refreshComponentLibrary = useCallback(async () => {
-    const { data: updatedLibrary } = await refetchLibrary();
-
-    if (updatedLibrary) {
-      setComponentLibrary(updatedLibrary);
-    }
-  }, [refetchLibrary]);
-
   const refreshUserComponents = useCallback(async () => {
     const { data: updatedUserComponents } = await refetchUserComponents();
 
@@ -300,30 +279,7 @@ export const ComponentLibraryProvider = ({
         },
       };
 
-      if (componentLibrary) {
-        const uniqueComponents = filterToUniqueByDigest(
-          flattenFolders(componentLibrary),
-        );
-
-        if (!hasNameFilter && filtersSet.size > 1) {
-          // we need specs
-          const hydratedComponents = await Promise.all(
-            uniqueComponents.map(async (c) => {
-              if (!c.spec) {
-                return await hydrateComponentReference(c);
-              }
-              return c;
-            }),
-          );
-
-          result.components.standard = hydratedComponents
-            .filter((c) => c !== null)
-            .filter(componentMatches);
-        } else {
-          result.components.standard =
-            uniqueComponents.filter(componentMatches);
-        }
-      }
+      // classic search is not supported for now
 
       if (userComponentsFolder) {
         const uniqueComponents = filterToUniqueByDigest(
@@ -341,13 +297,13 @@ export const ComponentLibraryProvider = ({
 
       return result;
     },
-    [componentLibrary, userComponentsFolder, usedComponentsFolder],
+    [userComponentsFolder, usedComponentsFolder],
   );
 
   const internalAddComponentToLibrary = useCallback(
     async (hydratedComponent: HydratedComponentReference) => {
       await importComponent(hydratedComponent);
-      await refreshComponentLibrary();
+
       await refreshUserComponents();
       setNewComponent(null);
       setExistingComponent(null);
@@ -360,7 +316,7 @@ export const ComponentLibraryProvider = ({
         }),
       );
     },
-    [refreshComponentLibrary, refreshUserComponents, importComponent],
+    [refreshUserComponents, importComponent],
   );
 
   const handleImportComponent = useCallback(
@@ -379,12 +335,7 @@ export const ComponentLibraryProvider = ({
         console.error("Error importing component:", error);
       }
     },
-    [
-      newComponent,
-      refreshComponentLibrary,
-      refreshUserComponents,
-      importComponent,
-    ],
+    [newComponent, refreshUserComponents, importComponent],
   );
 
   const addToComponentLibraryWithDuplicateCheck = useCallback(
@@ -414,12 +365,7 @@ export const ComponentLibraryProvider = ({
         console.error("Error adding component to library:", error);
       }
     },
-    [
-      userComponentsFolder,
-      refreshComponentLibrary,
-      refreshUserComponents,
-      importComponent,
-    ],
+    [userComponentsFolder, refreshUserComponents, importComponent],
   );
 
   const addToComponentLibrary = useCallback(
@@ -458,7 +404,6 @@ export const ComponentLibraryProvider = ({
             USER_COMPONENTS_LIST_NAME,
             component.name,
           ).then(async () => {
-            await refreshComponentLibrary();
             await refreshUserComponents();
           });
         } else {
@@ -470,7 +415,7 @@ export const ComponentLibraryProvider = ({
         console.error("Error deleting component:", error);
       }
     },
-    [refreshComponentLibrary, refreshUserComponents],
+    [refreshUserComponents],
   );
 
   const handleCloseDuplicationDialog = useCallback(() => {
@@ -498,14 +443,6 @@ export const ComponentLibraryProvider = ({
   }, [currentSearchFilter, searchComponentLibrary]);
 
   useEffect(() => {
-    if (!rawComponentLibrary) {
-      setComponentLibrary(undefined);
-      return;
-    }
-    setComponentLibrary(rawComponentLibrary);
-  }, [rawComponentLibrary]);
-
-  useEffect(() => {
     if (!rawUserComponentsFolder) {
       setUserComponentsFolder(undefined);
       return;
@@ -522,12 +459,11 @@ export const ComponentLibraryProvider = ({
     [],
   );
 
-  const isLoading = isLibraryLoading || isUserComponentsLoading;
-  const error = libraryError || userComponentsError;
+  const isLoading = isUserComponentsLoading;
+  const error = userComponentsError;
 
   const value = useMemo(
     () => ({
-      componentLibrary,
       userComponentsFolder,
       usedComponentsFolder,
       isLoading,
@@ -541,7 +477,6 @@ export const ComponentLibraryProvider = ({
       checkIfUserComponent,
     }),
     [
-      componentLibrary,
       userComponentsFolder,
       usedComponentsFolder,
       isLoading,
