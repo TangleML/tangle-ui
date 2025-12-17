@@ -11,10 +11,12 @@ import { getInitialName } from "@/utils/getComponentName";
 
 type ClonePipelineButtonProps = {
   componentSpec: ComponentSpec;
+  runId?: string | null;
 };
 
 export const ClonePipelineButton = ({
   componentSpec,
+  runId,
 }: ClonePipelineButtonProps) => {
   const navigate = useNavigate();
   const notify = useToastNotification();
@@ -22,7 +24,7 @@ export const ClonePipelineButton = ({
   const { isPending, mutate: clonePipeline } = useMutation({
     mutationFn: async () => {
       const name = getInitialName(componentSpec);
-      return copyRunToPipeline(componentSpec, name);
+      return copyRunToPipeline(componentSpec, runId, name);
     },
     onSuccess: (result) => {
       if (result?.url) {
