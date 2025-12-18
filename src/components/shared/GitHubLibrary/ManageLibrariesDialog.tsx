@@ -15,16 +15,19 @@ import { Separator } from "@/components/ui/separator";
 import type { StoredLibrary } from "@/providers/ComponentLibraryProvider/libraries/storage";
 
 import { AddGitHubLibraryDialogContent } from "./components/AddGitHubLibraryDialogContent";
+import { AddYamlLibraryDialogContent } from "./components/AddYamlLibraryDialogContent";
 import { LibraryList } from "./components/LibraryList";
 import { UpdateGitHubLibrary } from "./components/UpdateGitHubLibrary";
 
 export function ManageLibrariesDialog({
   defaultMode = "manage",
 }: {
-  defaultMode?: "add" | "manage" | "update";
+  defaultMode?: "add" | "addYaml" | "manage" | "update";
 }) {
   const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState<"add" | "manage" | "update">(defaultMode);
+  const [mode, setMode] = useState<"add" | "addYaml" | "manage" | "update">(
+    defaultMode,
+  );
   const [libraryToUpdate, setLibraryToUpdate] = useState<
     StoredLibrary | undefined
   >();
@@ -75,6 +78,29 @@ export function ManageLibrariesDialog({
             </>
           )}
 
+          {mode === "addYaml" && (
+            <>
+              <DialogHeader>
+                <DialogTitle>
+                  <InlineStack align="start" gap="1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setMode("manage")}
+                    >
+                      <Icon name="ArrowLeft" />
+                    </Button>
+                    Add Library
+                  </InlineStack>
+                </DialogTitle>
+              </DialogHeader>
+
+              <AddYamlLibraryDialogContent
+                onOkClick={() => setMode("manage")}
+              />
+            </>
+          )}
+
           {mode === "manage" && (
             <>
               <DialogHeader>
@@ -91,6 +117,15 @@ export function ManageLibrariesDialog({
                     <InlineStack align="center" gap="1">
                       <Icon name="Github" />
                       Link Library from GitHub
+                    </InlineStack>
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setMode("addYaml")}
+                  >
+                    <InlineStack align="center" gap="1">
+                      <Icon name="FolderGit" />
+                      Link Library from Yaml
                     </InlineStack>
                   </Button>
                 </BlockStack>
