@@ -93,10 +93,6 @@ type ComponentLibraryContextType = {
     component: ComponentReference,
     favorited: boolean,
   ) => void;
-  /**
-   * @deprecated
-   */
-  checkIfFavorited: (component: ComponentReference) => boolean;
   checkIfUserComponent: (component: ComponentReference) => boolean;
   checkLibraryContainsComponent: (component: ComponentReference) => boolean;
   checkIfHighlighted: (component: ComponentReference) => boolean;
@@ -339,41 +335,6 @@ export const ComponentLibraryProvider = ({
       }
     },
     [refreshComponentLibrary, refreshUserComponents],
-  );
-
-  const checkIfFavorited = useCallback(
-    (component: ComponentReference) => {
-      if (componentLibrary) {
-        const uniqueLibraryComponents = filterToUniqueByDigest(
-          flattenFolders(componentLibrary),
-        );
-
-        const isFavourited = uniqueLibraryComponents.some(
-          (c) => c.digest === component.digest && c.favorited,
-        );
-
-        if (isFavourited) {
-          return true;
-        }
-      }
-
-      if (userComponentsFolder) {
-        const uniqueUserComponents = filterToUniqueByDigest(
-          flattenFolders(userComponentsFolder),
-        );
-
-        const isFavourited = uniqueUserComponents.some(
-          (c) => c.digest === component.digest && c.favorited,
-        );
-
-        if (isFavourited) {
-          return true;
-        }
-      }
-
-      return false;
-    },
-    [componentLibrary, userComponentsFolder],
   );
 
   const checkIfUserComponent = useCallback(
@@ -651,7 +612,6 @@ export const ComponentLibraryProvider = ({
       refetchUserComponents,
       setHighlightedComponentDigest,
       setComponentFavorite,
-      checkIfFavorited,
       checkIfUserComponent,
       checkLibraryContainsComponent,
       checkIfHighlighted,
@@ -674,7 +634,6 @@ export const ComponentLibraryProvider = ({
       refetchUserComponents,
       setHighlightedComponentDigest,
       setComponentFavorite,
-      checkIfFavorited,
       checkIfUserComponent,
       checkLibraryContainsComponent,
       checkIfHighlighted,

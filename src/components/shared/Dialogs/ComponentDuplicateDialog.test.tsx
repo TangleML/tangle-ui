@@ -53,7 +53,6 @@ const createMockComponentLibraryContext = (
     refetchUserComponents: vi.fn(),
     setHighlightedComponentDigest: vi.fn(),
     setComponentFavorite: vi.fn(),
-    checkIfFavorited: vi.fn().mockReturnValue(false),
     checkIfUserComponent: vi.fn().mockReturnValue(false),
     checkLibraryContainsComponent: vi.fn().mockReturnValue(false),
     checkIfHighlighted: vi.fn().mockReturnValue(false),
