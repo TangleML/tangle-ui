@@ -1,9 +1,5 @@
-import { Frown } from "lucide-react";
-
-import { ArtifactsList } from "@/components/shared/ArtifactsList/ArtifactsList";
 import { CopyText } from "@/components/shared/CopyText/CopyText";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
-import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
 import { useCheckComponentSpecFromPath } from "@/hooks/useCheckComponentSpecFromPath";
 import { useUserDetails } from "@/hooks/useUserDetails";
@@ -17,7 +13,16 @@ import {
   isStatusInProgress,
 } from "@/services/executionService";
 
+import {
+  ActionBlock,
+  type ActionOrReactNode,
+} from "../shared/ContextPanel/Blocks/ActionBlock";
+import { ContentBlock } from "../shared/ContextPanel/Blocks/ContentBlock";
+import { ListBlock } from "../shared/ContextPanel/Blocks/ListBlock";
+import { TextBlock } from "../shared/ContextPanel/Blocks/TextBlock";
+import PipelineIO from "../shared/Execution/PipelineIO";
 import { InfoBox } from "../shared/InfoBox";
+import { LoadingScreen } from "../shared/LoadingScreen";
 import { StatusBar, StatusText } from "../shared/Status";
 import { TaskImplementation } from "../shared/TaskDetails";
 import { CancelPipelineRunButton } from "./components/CancelPipelineRunButton";
@@ -52,29 +57,25 @@ export const RunDetails = () => {
 
   if (error || !details || !state || !componentSpec) {
     return (
-      <div className="flex flex-col gap-8 items-center justify-center h-full">
-        <Frown className="w-12 h-12 text-secondary-foreground" />
-        <div className="text-secondary-foreground">
-          Error loading run details.
-        </div>
-      </div>
+      <BlockStack fill>
+        <InfoBox title="Error" variant="error">
+          Pipeline Run could not be loaded.
+        </InfoBox>
+      </BlockStack>
     );
   }
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <Spinner className="mr-2" />
-        <p className="text-secondary-foreground">Loading run details...</p>
-      </div>
-    );
+    return <LoadingScreen message="Loading run details..." />;
   }
 
   if (!configured) {
     return (
-      <InfoBox title="Backend not configured" variant="warning">
-        Configure a backend to view execution artifacts.
-      </InfoBox>
+      <BlockStack fill>
+        <InfoBox title="Backend not configured" variant="warning">
+          Configure a backend to view execution artifacts.
+        </InfoBox>
+      </BlockStack>
     );
   }
 
@@ -86,93 +87,71 @@ export const RunDetails = () => {
 
   const annotations = componentSpec.metadata?.annotations || {};
 
+  const actions: ActionOrReactNode[] = [];
+
+  actions.push(
+    <TaskImplementation
+      displayName={componentSpec.name ?? "Pipeline"}
+      componentSpec={componentSpec}
+      showInlineContent={false}
+    />,
+  );
+
+  if (canAccessEditorSpec && componentSpec.name) {
+    actions.push(
+      <InspectPipelineButton key="inspect" pipelineName={componentSpec.name} />,
+    );
+  }
+
+  actions.push(
+    <ClonePipelineButton
+      key="clone"
+      componentSpec={componentSpec}
+      runId={runId}
+    />,
+  );
+
+  if (isInProgress && isRunCreator) {
+    actions.push(<CancelPipelineRunButton key="cancel" runId={runId} />);
+  }
+
+  if (isComplete) {
+    actions.push(
+      <RerunPipelineButton key="rerun" componentSpec={componentSpec} />,
+    );
+  }
+
   return (
     <BlockStack gap="6" className="p-2 h-full">
       <CopyText className="text-lg font-semibold">
         {componentSpec.name ?? "Unnamed Pipeline"}
       </CopyText>
 
-      <InlineStack gap="2">
-        <TaskImplementation
-          displayName={componentSpec.name ?? "Pipeline"}
-          componentSpec={componentSpec}
-          showInlineContent={false}
-        />
-        {canAccessEditorSpec && componentSpec.name && (
-          <InspectPipelineButton pipelineName={componentSpec.name} />
-        )}
-        <ClonePipelineButton componentSpec={componentSpec} runId={runId} />
-        {isInProgress && isRunCreator && (
-          <CancelPipelineRunButton runId={runId} />
-        )}
-        {isComplete && <RerunPipelineButton componentSpec={componentSpec} />}
-      </InlineStack>
+      <ActionBlock actions={actions} />
 
       {metadata && (
-        <BlockStack>
-          <Text as="h3" size="md" weight="semibold" className="mb-1">
-            Run Info
-          </Text>
-          <dl className="flex flex-col gap-1 text-xs text-secondary-foreground">
-            {metadata.id && (
-              <InlineStack as="div" gap="1" blockAlign="center">
-                <Text as="dt" weight="semibold" className="shrink-0">
-                  Run Id:
-                </Text>
-                <dd>
-                  <CopyText className="font-mono truncate max-w-[180px]">
-                    {metadata.id}
-                  </CopyText>
-                </dd>
-              </InlineStack>
-            )}
-            {metadata.root_execution_id && (
-              <InlineStack as="div" gap="1" blockAlign="center">
-                <Text as="dt" weight="semibold" className="shrink-0">
-                  Execution Id:
-                </Text>
-                <dd>
-                  <CopyText className="font-mono truncate max-w-[180px]">
-                    {metadata.root_execution_id}
-                  </CopyText>
-                </dd>
-              </InlineStack>
-            )}
-            {metadata.created_by && (
-              <InlineStack as="div" gap="1" blockAlign="center">
-                <Text as="dt" weight="semibold">
-                  Created by:
-                </Text>
-                <dd>{metadata.created_by}</dd>
-              </InlineStack>
-            )}
-            {metadata.created_at && (
-              <InlineStack as="div" gap="1" blockAlign="center">
-                <Text as="dt" weight="semibold">
-                  Created at:
-                </Text>
-                <dd>{new Date(metadata.created_at).toLocaleString()}</dd>
-              </InlineStack>
-            )}
-          </dl>
-        </BlockStack>
+        <ListBlock
+          title="Run Info"
+          items={[
+            { label: "Run Id", value: metadata.id },
+            { label: "Execution Id", value: metadata.root_execution_id },
+            { label: "Created by", value: metadata.created_by ?? undefined },
+            {
+              label: "Created at",
+              value: metadata.created_at
+                ? new Date(metadata.created_at).toLocaleString()
+                : undefined,
+            },
+          ]}
+          marker="none"
+        />
       )}
 
       {componentSpec.description && (
-        <BlockStack>
-          <Text as="h3" size="md" weight="semibold" className="mb-1">
-            Description
-          </Text>
-          <Text as="p" size="sm" className="whitespace-pre-line">
-            {componentSpec.description}
-          </Text>
-        </BlockStack>
+        <TextBlock title="Description" text={componentSpec.description} />
       )}
 
-      <BlockStack>
-        <Text as="h3" size="md" weight="semibold" className="mb-1">
-          Status
-        </Text>
+      <ContentBlock title="Status">
         <InlineStack gap="2" blockAlign="center" className="mb-1">
           <Text size="sm" weight="semibold">
             {runStatus}
@@ -180,39 +159,20 @@ export const RunDetails = () => {
           <StatusText statusCounts={statusCounts} />
         </InlineStack>
         <StatusBar statusCounts={statusCounts} />
-      </BlockStack>
+      </ContentBlock>
 
       {Object.keys(annotations).length > 0 && (
-        <BlockStack>
-          <Text as="h3" size="md" weight="semibold" className="mb-1">
-            Annotations
-          </Text>
-          <ul className="text-xs text-secondary-foreground">
-            {Object.entries(annotations).map(([key, value]) => (
-              <li key={key}>
-                <Text as="span" weight="semibold">
-                  {key}:
-                </Text>{" "}
-                <Text as="span" className="break-all">
-                  {String(value)}
-                </Text>
-              </li>
-            ))}
-          </ul>
-        </BlockStack>
+        <ListBlock
+          title="Annotations"
+          items={Object.entries(annotations).map(([key, value]) => ({
+            label: key,
+            value: String(value),
+          }))}
+          marker="none"
+        />
       )}
 
-      <ArtifactsList
-        inputs={(componentSpec.inputs ?? []).map((input) => ({
-          name: input.name,
-          type: typeof input.type === "string" ? input.type : "object",
-          value: input.value ?? input.default,
-        }))}
-        outputs={(componentSpec.outputs ?? []).map((output) => ({
-          name: output.name,
-          type: typeof output.type === "string" ? output.type : "object",
-        }))}
-      />
+      <PipelineIO readOnly />
     </BlockStack>
   );
 };

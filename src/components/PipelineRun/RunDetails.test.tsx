@@ -17,6 +17,8 @@ import * as executionService from "@/services/executionService";
 import type { ComponentSpec } from "@/utils/componentSpec";
 
 import { RunDetails } from "./RunDetails";
+import { ContextPanelProvider } from "@/providers/ContextPanelProvider";
+import { ReactFlowProvider } from "@xyflow/react";
 
 // Mock the hooks and services
 vi.mock("@tanstack/react-router", async (importOriginal) => {
@@ -181,7 +183,9 @@ describe("<RunDetails/>", () => {
         <ComponentSpecProvider spec={mockComponentSpec}>
           <QueryClientProvider client={queryClient}>
             <ExecutionDataProvider pipelineRunId="123">
-              {children}
+              <ReactFlowProvider>
+                <ContextPanelProvider>{children}</ContextPanelProvider>
+              </ReactFlowProvider>
             </ExecutionDataProvider>
           </QueryClientProvider>
         </ComponentSpecProvider>
