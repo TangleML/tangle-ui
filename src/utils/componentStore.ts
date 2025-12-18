@@ -274,7 +274,8 @@ interface FileEntry {
 }
 
 interface ComponentFileEntryV3
-  extends FileEntry, ComponentReferenceWithSpecPlusData {}
+  extends FileEntry,
+    ComponentReferenceWithSpecPlusData {}
 
 export type ComponentFileEntry = ComponentFileEntryV3;
 
@@ -476,22 +477,6 @@ const addComponentToListByTextWithDuplicateCheck = async (
   );
 
   return fileEntry;
-};
-
-export const updateComponentInListByText = async (
-  listName: string,
-  componentText: string | ArrayBuffer,
-  fileName: string,
-  additionalData?: {
-    [K: string]: any;
-  },
-) => {
-  const componentRef = await storeComponentText(componentText);
-  if (additionalData) {
-    // Merge additional data into the component reference
-    Object.assign(componentRef, additionalData);
-  }
-  return updateComponentRefInList(listName, componentRef, fileName);
 };
 
 export const writeComponentToFileListFromText = async (
