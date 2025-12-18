@@ -2,13 +2,8 @@ import { useNavigate } from "@tanstack/react-router";
 import { type MouseEvent } from "react";
 
 import type { PipelineRunResponse } from "@/api/types.gen";
-import { StatusBar, StatusIcon, StatusText } from "@/components/shared/Status";
+import { StatusBar, StatusIcon } from "@/components/shared/Status";
 import { Button } from "@/components/ui/button";
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "@/components/ui/hover-card";
 import { TableCell, TableRow } from "@/components/ui/table";
 import {
   Tooltip,
@@ -18,11 +13,8 @@ import {
 import { Paragraph } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import { APP_ROUTES } from "@/routes/router";
-import {
-  convertExecutionStatsToStatusCounts,
-  getRunStatus,
-} from "@/services/executionService";
 import { convertUTCToLocalTime, formatDate } from "@/utils/date";
+import { getOverallExecutionStatusFromStats } from "@/utils/executionStatus";
 
 const RunRow = ({ run }: { run: PipelineRunResponse }) => {
   const navigate = useNavigate();
@@ -42,8 +34,8 @@ const RunRow = ({ run }: { run: PipelineRunResponse }) => {
     notify(`"${createdBy}" copied to clipboard`, "success");
   };
 
-  const statusCounts = convertExecutionStatsToStatusCounts(
-    run.execution_status_stats,
+  const overallStatus = getOverallExecutionStatusFromStats(
+    run.execution_status_stats ?? undefined,
   );
 
   const clickThroughUrl = `${APP_ROUTES.RUNS}/${runId}`;
@@ -77,26 +69,16 @@ const RunRow = ({ run }: { run: PipelineRunResponse }) => {
       className="cursor-pointer text-gray-500 text-xs"
     >
       <TableCell className="text-sm flex items-center gap-2">
-        <StatusIcon status={getRunStatus(statusCounts)} />
+        <StatusIcon status={overallStatus} />
         <Paragraph className="truncate max-w-[400px]" title={name}>
           {name}
         </Paragraph>
         <span>{`#${runId}`}</span>
       </TableCell>
       <TableCell>
-        <HoverCard openDelay={100}>
-          <HoverCardTrigger>
-            <div className="w-2/3">
-              <StatusBar statusCounts={statusCounts} />
-            </div>
-          </HoverCardTrigger>
-          <HoverCardContent>
-            <div className="flex flex-col gap-2">
-              <div className="text-sm font-bold">Status</div>
-              <StatusText statusCounts={statusCounts} />
-            </div>
-          </HoverCardContent>
-        </HoverCard>
+        <div className="w-2/3">
+          <StatusBar executionStatusStats={run.execution_status_stats} />
+        </div>
       </TableCell>
       <TableCell>
         {run.created_at
