@@ -4,10 +4,7 @@ import yaml from "js-yaml";
 import { type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type {
-  ComponentFolder,
-  ComponentLibrary,
-} from "@/types/componentLibrary";
+import type { ComponentFolder } from "@/types/componentLibrary";
 import type {
   ComponentReference,
   ComponentSpec,
@@ -43,30 +40,20 @@ vi.mock("./componentLibrary");
 import * as componentLibraryUtils from "@/providers/ComponentLibraryProvider/componentLibrary";
 import * as componentStore from "@/utils/componentStore";
 import * as getComponentName from "@/utils/getComponentName";
-import * as localforage from "@/utils/localforage";
 
 // Mock implementations
 
-const mockFetchUserComponents = vi.mocked(
-  componentLibraryUtils.fetchUserComponents,
-);
 const mockFetchUsedComponents = vi.mocked(
   componentLibraryUtils.fetchUsedComponents,
-);
-const mockPopulateComponentRefs = vi.mocked(
-  componentLibraryUtils.populateComponentRefs,
 );
 const mockFlattenFolders = vi.mocked(componentLibraryUtils.flattenFolders);
 const mockFilterToUniqueByDigest = vi.mocked(
   componentLibraryUtils.filterToUniqueByDigest,
 );
-const mockImportComponent = vi.mocked(componentStore.importComponent);
 const mockDeleteComponentFileFromList = vi.mocked(
   componentStore.deleteComponentFileFromList,
 );
-const mockGetUserComponentByName = vi.mocked(
-  localforage.getUserComponentByName,
-);
+
 const mockGetComponentName = vi.mocked(getComponentName.getComponentName);
 
 describe("ComponentLibraryProvider - Component Management", () => {
@@ -77,36 +64,6 @@ describe("ComponentLibraryProvider - Component Management", () => {
         tasks: {},
       },
     },
-  };
-
-  const mockComponentLibrary: ComponentLibrary = {
-    folders: [
-      {
-        name: "Test Folder",
-        components: [
-          {
-            name: "test-component",
-            digest: "test-digest-1",
-            url: "https://example.com/component1.yaml",
-            spec: mockComponentSpec,
-          },
-        ],
-        folders: [],
-      },
-    ],
-  };
-
-  const mockUserComponentsFolder: ComponentFolder = {
-    name: "User Components",
-    components: [
-      {
-        name: "user-component",
-        digest: "user-digest-1",
-        spec: mockComponentSpec,
-        text: "test yaml content",
-      },
-    ],
-    folders: [],
   };
 
   const createWrapper = ({ children }: { children: ReactNode }) => {
@@ -131,13 +88,12 @@ describe("ComponentLibraryProvider - Component Management", () => {
     componentDuplicateDialogProps.handleImportComponent = undefined;
 
     // Setup default mock implementations
-    mockFetchUserComponents.mockResolvedValue(mockUserComponentsFolder);
     mockFetchUsedComponents.mockReturnValue({
       name: "Used Components",
       components: [],
       folders: [],
     });
-    mockPopulateComponentRefs.mockImplementation((lib) => Promise.resolve(lib));
+
     mockFlattenFolders.mockImplementation((folder) => {
       if ("folders" in folder) {
         return folder.folders?.flatMap((f) => f.components || []) || [];
@@ -207,14 +163,9 @@ describe("ComponentLibraryProvider - Component Management", () => {
 
       // Mock that there's an existing component with the same name
       mockFlattenFolders.mockReturnValue([existingComponent]);
-      mockGetUserComponentByName.mockResolvedValue(mockUserComponent);
 
       const { result } = renderHook(() => useComponentLibrary(), {
         wrapper: createWrapper,
-      });
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
       });
 
       await act(async () => {
@@ -479,53 +430,6 @@ describe("ComponentLibraryProvider - Component Management", () => {
       );
 
       consoleSpy.mockRestore();
-    });
-  });
-
-  describe("Component Checks", () => {
-    it("should correctly identify user components", async () => {
-      const userComponent: ComponentReference = {
-        name: "user-component",
-        digest: "user-digest-1",
-        spec: mockComponentSpec,
-      };
-
-      mockFlattenFolders.mockReturnValue([userComponent]);
-      mockFilterToUniqueByDigest.mockReturnValue([userComponent]);
-
-      const { result } = renderHook(() => useComponentLibrary(), {
-        wrapper: createWrapper,
-      });
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
-      });
-
-      const isUserComponent =
-        result.current.checkIfUserComponent(userComponent);
-      expect(isUserComponent).toBe(true);
-    });
-
-    it("should correctly identify non-user components", async () => {
-      const standardComponent: ComponentReference = {
-        name: "standard-component",
-        digest: "standard-digest",
-        spec: mockComponentSpec,
-      };
-
-      mockFlattenFolders.mockReturnValue([]); // No user components
-
-      const { result } = renderHook(() => useComponentLibrary(), {
-        wrapper: createWrapper,
-      });
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
-      });
-
-      const isUserComponent =
-        result.current.checkIfUserComponent(standardComponent);
-      expect(isUserComponent).toBe(false);
     });
   });
 });
