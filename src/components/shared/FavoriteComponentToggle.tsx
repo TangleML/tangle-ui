@@ -142,25 +142,28 @@ const FavoriteToggleButton = withSuspenseWrapper(
 );
 
 const useComponentFlags = (component: ComponentReference) => {
-  const { checkIfUserComponent, getComponentLibrary } = useComponentLibrary();
+  const { getComponentLibrary } = useComponentLibrary();
   const componentLibrary = getComponentLibrary("standard_components");
+  const userComponentsLibrary = getComponentLibrary("user_components");
 
-  const isUserComponent = useMemo(
-    () => checkIfUserComponent(component),
-    [checkIfUserComponent],
-  );
-
-  const { data: isInLibrary } = useSuspenseQuery({
+  const { data } = useSuspenseQuery({
     queryKey: ["component", "flags", component.digest],
     queryFn: async () => {
-      if (!componentLibrary) return false;
+      if (!componentLibrary)
+        return { isInLibrary: false, isUserComponent: false };
 
-      return componentLibrary.hasComponent(component);
+      const isUserComponent =
+        await userComponentsLibrary.hasComponent(component);
+
+      return {
+        isInLibrary: await componentLibrary.hasComponent(component),
+        isUserComponent,
+      };
     },
     staleTime: 10 * MINUTES,
   });
 
-  return { isInLibrary, isUserComponent };
+  return data;
 };
 
 const ComponentFavoriteToggleInternal = ({
