@@ -45,7 +45,8 @@
     "validate": "npm run format && npm run lint:fix && npm run typecheck && npm run knip",
     "validate:test": "npm run validate && npm run test",
     "generate-api": "openapi-ts",
-    "knip": "knip"
+    "knip": "knip",
+    "hydrate-component-library": "tsx scripts/hydrate-component-library.ts public/component_library.original.yaml public/component_library.yaml"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -131,6 +132,7 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.50.0",
     "vite": "^7.3.0",
-    "vitest": "^3.0.5"
+    "vitest": "^3.0.5",
+    "tsx": "^4.21.0"
   }
 }
