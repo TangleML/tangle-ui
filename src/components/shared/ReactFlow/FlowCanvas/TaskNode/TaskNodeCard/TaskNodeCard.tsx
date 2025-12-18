@@ -1,5 +1,4 @@
 import { useNavigate } from "@tanstack/react-router";
-import { CircleFadingArrowUp, CopyIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { TooltipButtonProps } from "@/components/shared/Buttons/TooltipButton";
@@ -122,42 +121,32 @@ const TaskNodeCard = () => {
     setIsEditDialogOpen(false);
   }, []);
 
+  const { onDuplicate, onUpgrade } = callbacks;
+
   const taskConfigMarkup = useMemo(() => {
     const actions: Array<TooltipButtonProps> = [];
 
     if (!readOnly) {
-      actions.push(
-        {
-          children: (
-            <div className="flex items-center gap-2">
-              <CopyIcon />
-            </div>
-          ),
-          variant: "outline",
-          tooltip: "Duplicate Task",
-          onClick: callbacks.onDuplicate,
-        },
-        {
-          children: (
-            <div className="flex items-center gap-2">
-              <CircleFadingArrowUp />
-            </div>
-          ),
-          variant: "outline",
-          className: cn(isCustomComponent && "hidden"),
-          tooltip: "Update Task from Source URL",
-          onClick: callbacks.onUpgrade,
-        },
-      );
+      actions.push({
+        children: <Icon name="Copy" size="sm" />,
+        variant: "outline",
+        tooltip: "Duplicate Task",
+        onClick: onDuplicate,
+      });
+    }
+
+    if (!readOnly && !isCustomComponent) {
+      actions.push({
+        children: <Icon name="CircleFadingArrowUp" size="sm" />,
+        variant: "outline",
+        tooltip: "Update Task from Source URL",
+        onClick: onUpgrade,
+      });
     }
 
     if (isSubgraphNode && taskId && isSubgraphNavigationEnabled) {
       actions.push({
-        children: (
-          <div className="flex items-center gap-2">
-            <Icon name="Workflow" size="sm" />
-          </div>
-        ),
+        children: <Icon name="Workflow" size="sm" />,
         variant: "outline",
         tooltip: `Enter Subgraph: ${subgraphDescription}`,
         onClick: () => navigateToSubgraph(taskId),
@@ -166,11 +155,7 @@ const TaskNodeCard = () => {
 
     if (isInAppEditorEnabled) {
       actions.push({
-        children: (
-          <div className="flex items-center gap-2">
-            <Icon name="FilePenLine" size="sm" />
-          </div>
-        ),
+        children: <Icon name="FilePenLine" size="sm" />,
         variant: "outline",
         tooltip: "Edit Component Definition",
         onClick: handleEditComponent,
@@ -182,8 +167,6 @@ const TaskNodeCard = () => {
     taskNode,
     nodeId,
     readOnly,
-    callbacks.onDuplicate,
-    callbacks.onUpgrade,
     isInAppEditorEnabled,
     isCustomComponent,
     isSubgraphNode,
@@ -191,6 +174,8 @@ const TaskNodeCard = () => {
     subgraphDescription,
     navigateToSubgraph,
     handleEditComponent,
+    onDuplicate,
+    onUpgrade,
   ]);
 
   const handleInputSectionClick = useCallback(() => {
