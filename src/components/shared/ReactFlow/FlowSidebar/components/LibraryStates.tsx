@@ -12,7 +12,3 @@ export const LoadingState = () => (
 export const ErrorState = ({ message }: { message: string }) => (
   <SidebarMenuItem className="text-red-500">Error: {message}</SidebarMenuItem>
 );
-
-export const EmptyState = () => (
-  <SidebarMenuItem>No components found</SidebarMenuItem>
-);
