@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
   type ReactNode,
@@ -23,17 +23,8 @@ import type {
   ComponentReference,
   HydratedComponentReference,
 } from "@/utils/componentSpec";
-import {
-  deleteComponentFileFromList,
-  importComponent,
-} from "@/utils/componentStore";
-import { USER_COMPONENTS_LIST_NAME } from "@/utils/constants";
 import { createPromiseFromDomEvent } from "@/utils/dom";
-import { getComponentName } from "@/utils/getComponentName";
-import {
-  getUserComponentByName,
-  type UserComponent,
-} from "@/utils/localforage";
+import { type UserComponent } from "@/utils/localforage";
 import { componentMatchesSearch } from "@/utils/searchUtils";
 
 import {
@@ -43,10 +34,8 @@ import {
 import { useComponentSpec } from "../ComponentSpecProvider";
 import {
   fetchUsedComponents,
-  fetchUserComponents,
   filterToUniqueByDigest,
   flattenFolders,
-  populateComponentRefs,
 } from "./componentLibrary";
 import { useForcedSearchContext } from "./ForcedSearchProvider";
 import {
@@ -57,6 +46,7 @@ import { FavoriteLibrary } from "./libraries/favoriteLibrary";
 import { PublishedComponentsLibrary } from "./libraries/publishedComponentsLibrary";
 import { LibraryDB, type StoredLibrary } from "./libraries/storage";
 import type { Library } from "./libraries/types";
+import { UserComponentsLibrary } from "./libraries/userComponentLibrary";
 import { YamlFileLibrary } from "./libraries/yamlFileLibrary";
 
 type AvailableComponentLibraries =
@@ -65,10 +55,8 @@ type AvailableComponentLibraries =
   | string;
 
 type ComponentLibraryContextType = {
-  userComponentsFolder: ComponentFolder | undefined;
   usedComponentsFolder: ComponentFolder;
-  isLoading: boolean;
-  error: Error | null;
+
   existingComponentLibraries: StoredLibrary[] | undefined;
   searchResult: SearchResult | null;
 
@@ -76,12 +64,11 @@ type ComponentLibraryContextType = {
     search: string,
     filters: string[],
   ) => SearchResult | null;
+
   addToComponentLibrary: (
     component: HydratedComponentReference,
   ) => Promise<HydratedComponentReference | undefined>;
   removeFromComponentLibrary: (component: ComponentReference) => void;
-
-  checkIfUserComponent: (component: ComponentReference) => boolean;
 
   getComponentLibrary: (libraryName: AvailableComponentLibraries) => Library;
 };
@@ -128,6 +115,7 @@ function useComponentLibraryRegistry() {
       new Map<AvailableComponentLibraries, Library>([
         ["published_components", new PublishedComponentsLibrary(queryClient)],
         ["favorite_components", new FavoriteLibrary()],
+        ["user_components", new UserComponentsLibrary()],
         /**
          * In future we will have other library types,  including "standard_library", "favorite_components", "used_components", etc.
          */
@@ -186,55 +174,15 @@ export const ComponentLibraryProvider = ({
   const { getComponentLibraryObject, existingComponentLibraries } =
     useComponentLibraryRegistry();
 
-  const [userComponentsFolder, setUserComponentsFolder] =
-    useState<ComponentFolder>();
-
   const [existingComponent, setExistingComponent] =
     useState<UserComponent | null>(null);
   const [newComponent, setNewComponent] =
     useState<HydratedComponentReference | null>(null);
 
-  // Fetch user components
-  const {
-    data: rawUserComponentsFolder,
-    isLoading: isUserComponentsLoading,
-    error: userComponentsError,
-    refetch: refetchUserComponents,
-  } = useQuery({
-    queryKey: ["userComponents"],
-    queryFn: fetchUserComponents,
-    staleTime: 0,
-    refetchOnMount: "always",
-  });
-
   // Fetch "Used in Pipeline" components
   const usedComponentsFolder: ComponentFolder = useMemo(
     () => fetchUsedComponents(graphSpec),
     [graphSpec],
-  );
-
-  // Methods
-  const refreshUserComponents = useCallback(async () => {
-    const { data: updatedUserComponents } = await refetchUserComponents();
-
-    if (updatedUserComponents) {
-      populateComponentRefs(updatedUserComponents).then((result) => {
-        setUserComponentsFolder(result);
-      });
-    }
-  }, [refetchUserComponents]);
-
-  const checkIfUserComponent = useCallback(
-    (component: ComponentReference) => {
-      if (!userComponentsFolder) return false;
-
-      const uniqueUserComponents = filterToUniqueByDigest(
-        flattenFolders(userComponentsFolder),
-      );
-
-      return uniqueUserComponents.some((c) => c.digest === component.digest);
-    },
-    [userComponentsFolder],
   );
 
   /**
@@ -252,16 +200,9 @@ export const ComponentLibraryProvider = ({
         },
       };
 
-      // classic search is not supported for now
+      // todo: add standard components search
 
-      if (userComponentsFolder) {
-        const uniqueComponents = filterToUniqueByDigest(
-          flattenFolders(userComponentsFolder),
-        );
-        result.components.user = uniqueComponents.filter(
-          (c) => c.spec && componentMatchesSearch(c.spec, search, filters),
-        );
-      }
+      // todo: add user components search
 
       if (usedComponentsFolder) {
         const uniqueComponents = filterToUniqueByDigest(
@@ -274,14 +215,15 @@ export const ComponentLibraryProvider = ({
 
       return result;
     },
-    [userComponentsFolder, usedComponentsFolder],
+    [usedComponentsFolder],
   );
 
   const internalAddComponentToLibrary = useCallback(
     async (hydratedComponent: HydratedComponentReference) => {
-      await importComponent(hydratedComponent);
+      await getComponentLibraryObject("user_components").addComponent(
+        hydratedComponent,
+      );
 
-      await refreshUserComponents();
       setNewComponent(null);
       setExistingComponent(null);
 
@@ -293,7 +235,7 @@ export const ComponentLibraryProvider = ({
         }),
       );
     },
-    [refreshUserComponents, importComponent],
+    [],
   );
 
   const handleImportComponent = useCallback(
@@ -312,26 +254,35 @@ export const ComponentLibraryProvider = ({
         console.error("Error importing component:", error);
       }
     },
-    [newComponent, refreshUserComponents, importComponent],
+    [newComponent],
   );
 
   const addToComponentLibraryWithDuplicateCheck = useCallback(
     async (component: HydratedComponentReference) => {
-      const duplicate = userComponentsFolder
-        ? flattenFolders(userComponentsFolder).find(
-            (c) => getComponentName(c) === getComponentName(component),
-          )
-        : undefined;
+      const duplicate = await getComponentLibraryObject(
+        "user_components",
+      ).getComponents({
+        searchTerm: component.name,
+        filters: ["name"],
+      });
 
-      const existingUserComponent = duplicate?.name
-        ? await getUserComponentByName(duplicate.name)
-        : undefined;
+      const existingUserComponent = (duplicate?.components ?? []).find(
+        (c) => c.digest === component.digest,
+      );
 
       if (
         existingUserComponent &&
-        existingUserComponent.componentRef.digest !== component.digest
+        existingUserComponent.digest !== component.digest
       ) {
-        setExistingComponent(existingUserComponent);
+        setExistingComponent({
+          componentRef: existingUserComponent,
+          // todo: get name from component
+          name: existingUserComponent.name ?? "",
+          // todo: get data from component
+          data: new ArrayBuffer(0),
+          creationTime: new Date(),
+          modificationTime: new Date(),
+        });
         setNewComponent(component);
         return;
       }
@@ -342,7 +293,7 @@ export const ComponentLibraryProvider = ({
         console.error("Error adding component to library:", error);
       }
     },
-    [userComponentsFolder, refreshUserComponents, importComponent],
+    [],
   );
 
   const addToComponentLibrary = useCallback(
@@ -376,23 +327,14 @@ export const ComponentLibraryProvider = ({
   const removeFromComponentLibrary = useCallback(
     async (component: ComponentReference) => {
       try {
-        if (component.name) {
-          await deleteComponentFileFromList(
-            USER_COMPONENTS_LIST_NAME,
-            component.name,
-          ).then(async () => {
-            await refreshUserComponents();
-          });
-        } else {
-          console.error(
-            `Error deleting component: Component ${component.digest} does not have a name.`,
-          );
-        }
+        await getComponentLibraryObject("user_components").removeComponent(
+          component,
+        );
       } catch (error) {
         console.error("Error deleting component:", error);
       }
     },
-    [refreshUserComponents],
+    [],
   );
 
   const handleCloseDuplicationDialog = useCallback(() => {
@@ -411,16 +353,6 @@ export const ComponentLibraryProvider = ({
     [currentSearchFilter, searchComponentLibrary],
   );
 
-  useEffect(() => {
-    if (!rawUserComponentsFolder) {
-      setUserComponentsFolder(undefined);
-      return;
-    }
-    populateComponentRefs(rawUserComponentsFolder).then((result) => {
-      setUserComponentsFolder(result);
-    });
-  }, [rawUserComponentsFolder]);
-
   const getComponentLibrary = useCallback(
     (libraryName: AvailableComponentLibraries) => {
       return getComponentLibraryObject(libraryName);
@@ -428,35 +360,24 @@ export const ComponentLibraryProvider = ({
     [],
   );
 
-  const isLoading = isUserComponentsLoading;
-  const error = userComponentsError;
-
   const value = useMemo(
     () => ({
-      userComponentsFolder,
       usedComponentsFolder,
-      isLoading,
-      error,
       searchResult,
       existingComponentLibraries,
       searchComponentLibrary,
       getComponentLibrary,
       addToComponentLibrary,
       removeFromComponentLibrary,
-      checkIfUserComponent,
     }),
     [
-      userComponentsFolder,
       usedComponentsFolder,
-      isLoading,
-      error,
       searchResult,
       existingComponentLibraries,
       searchComponentLibrary,
       getComponentLibrary,
       addToComponentLibrary,
       removeFromComponentLibrary,
-      checkIfUserComponent,
     ],
   );
 
