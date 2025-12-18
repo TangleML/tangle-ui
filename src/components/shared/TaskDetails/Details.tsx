@@ -1,17 +1,19 @@
 import { type ReactNode } from "react";
 
 import { BlockStack } from "@/components/ui/layout";
-import type { ComponentSpec } from "@/utils/componentSpec";
+import { useGuaranteedHydrateComponentReference } from "@/hooks/useHydrateComponentReference";
+import type { ComponentReference } from "@/utils/componentSpec";
 
 import { ContentBlock } from "../ContextPanel/Blocks/ContentBlock";
 import { TextBlock } from "../ContextPanel/Blocks/TextBlock";
+import { withSuspenseWrapper } from "../SuspenseWrapper";
 import TaskActions from "./Actions";
 import { ExecutionDetails } from "./ExecutionDetails";
 import { GithubDetails } from "./GithubDetails";
 
 interface TaskDetailsProps {
   displayName: string;
-  componentSpec: ComponentSpec;
+  componentRef: ComponentReference;
   executionId?: string;
   taskId?: string;
   componentDigest?: string;
@@ -29,9 +31,9 @@ interface TaskDetailsProps {
 
 const BASE_BLOCK_CLASS = "px-3 py-2";
 
-const TaskDetails = ({
+const TaskDetailsInternal = ({
   displayName,
-  componentSpec,
+  componentRef,
   executionId,
   taskId,
   componentDigest,
@@ -42,11 +44,15 @@ const TaskDetails = ({
   readOnly = false,
   additionalSection = [],
 }: TaskDetailsProps) => {
-  const canonicalUrl = componentSpec?.metadata?.annotations?.canonical_location;
+  const hydratedComponentRef =
+    useGuaranteedHydrateComponentReference(componentRef);
+
+  const canonicalUrl =
+    hydratedComponentRef.spec.metadata?.annotations?.canonical_location;
   let reconstructedUrl;
   if (!url) {
     // Try reconstruct the url from componentSpec.metadata.annotations
-    const annotations = componentSpec?.metadata?.annotations || {};
+    const annotations = hydratedComponentRef.spec.metadata?.annotations || {};
     const {
       git_remote_url,
       git_remote_branch,
@@ -69,8 +75,8 @@ const TaskDetails = ({
     }
   }
 
-  const author = componentSpec?.metadata?.annotations?.author;
-  const description = componentSpec?.description;
+  const author = hydratedComponentRef.spec.metadata?.annotations?.author;
+  const description = hydratedComponentRef.spec.description;
 
   return (
     <BlockStack className="border rounded-md divide-y overflow-auto hide-scrollbar">
@@ -85,7 +91,7 @@ const TaskDetails = ({
       {executionId && (
         <ExecutionDetails
           executionId={executionId}
-          componentSpec={componentSpec}
+          componentSpec={hydratedComponentRef.spec}
           className={BASE_BLOCK_CLASS}
         />
       )}
@@ -127,7 +133,7 @@ const TaskDetails = ({
 
       <TaskActions
         displayName={displayName}
-        componentSpec={componentSpec}
+        componentRef={hydratedComponentRef}
         actions={actions}
         onDelete={onDelete}
         readOnly={readOnly}
@@ -136,5 +142,7 @@ const TaskDetails = ({
     </BlockStack>
   );
 };
+
+const TaskDetails = withSuspenseWrapper(TaskDetailsInternal);
 
 export default TaskDetails;

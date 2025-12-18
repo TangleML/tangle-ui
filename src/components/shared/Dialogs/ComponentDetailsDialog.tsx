@@ -135,7 +135,7 @@ const ComponentDetailsDialogContent = withSuspenseWrapper(
 
                 <TaskDetails
                   displayName={displayName}
-                  componentSpec={componentSpec}
+                  componentRef={componentRef}
                   componentDigest={componentDigest}
                   url={url}
                   actions={actions}
