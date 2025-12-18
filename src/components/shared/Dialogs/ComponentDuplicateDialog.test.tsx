@@ -45,17 +45,14 @@ const createMockComponentLibraryContext = (
     error: null,
     existingComponentLibraries: undefined,
     searchResult: null,
-    highlightedComponentDigest: null,
     searchComponentLibrary: vi.fn(),
     addToComponentLibrary: vi.fn(),
     removeFromComponentLibrary: vi.fn(),
     refetchLibrary: vi.fn(),
     refetchUserComponents: vi.fn(),
-    setHighlightedComponentDigest: vi.fn(),
     setComponentFavorite: vi.fn(),
     checkIfUserComponent: vi.fn().mockReturnValue(false),
     checkLibraryContainsComponent: vi.fn().mockReturnValue(false),
-    checkIfHighlighted: vi.fn().mockReturnValue(false),
     getComponentLibrary: vi.fn(),
   };
 };

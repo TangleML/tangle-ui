@@ -76,7 +76,6 @@ type ComponentLibraryContextType = {
   existingComponentLibraries: StoredLibrary[] | undefined;
   searchResult: SearchResult | null;
 
-  highlightedComponentDigest: string | null;
   searchComponentLibrary: (
     search: string,
     filters: string[],
@@ -88,14 +87,12 @@ type ComponentLibraryContextType = {
   refetchLibrary: () => void;
   refetchUserComponents: () => void;
 
-  setHighlightedComponentDigest: (digest: string | null) => void;
   setComponentFavorite: (
     component: ComponentReference,
     favorited: boolean,
   ) => void;
   checkIfUserComponent: (component: ComponentReference) => boolean;
   checkLibraryContainsComponent: (component: ComponentReference) => boolean;
-  checkIfHighlighted: (component: ComponentReference) => boolean;
 
   getComponentLibrary: (libraryName: AvailableComponentLibraries) => Library;
 };
@@ -178,10 +175,6 @@ export const ComponentLibraryProvider = ({
   const [componentLibrary, setComponentLibrary] = useState<ComponentLibrary>();
   const [userComponentsFolder, setUserComponentsFolder] =
     useState<ComponentFolder>();
-
-  const [highlightedComponentDigest, setHighlightedComponentDigest] = useState<
-    string | null
-  >(null);
 
   const [existingComponent, setExistingComponent] =
     useState<UserComponent | null>(null);
@@ -363,13 +356,6 @@ export const ComponentLibraryProvider = ({
       return uniqueComponents.some((c) => c.digest === component.digest);
     },
     [componentLibrary, checkIfUserComponent],
-  );
-
-  const checkIfHighlighted = useCallback(
-    (component: ComponentReference) => {
-      return component.digest === highlightedComponentDigest;
-    },
-    [highlightedComponentDigest],
   );
 
   /**
@@ -602,7 +588,6 @@ export const ComponentLibraryProvider = ({
       isLoading,
       error,
       searchResult,
-      highlightedComponentDigest,
       existingComponentLibraries,
       searchComponentLibrary,
       getComponentLibrary,
@@ -610,11 +595,9 @@ export const ComponentLibraryProvider = ({
       removeFromComponentLibrary,
       refetchLibrary,
       refetchUserComponents,
-      setHighlightedComponentDigest,
       setComponentFavorite,
       checkIfUserComponent,
       checkLibraryContainsComponent,
-      checkIfHighlighted,
     }),
     [
       componentLibrary,
@@ -624,7 +607,6 @@ export const ComponentLibraryProvider = ({
       isLoading,
       error,
       searchResult,
-      highlightedComponentDigest,
       existingComponentLibraries,
       searchComponentLibrary,
       getComponentLibrary,
@@ -632,11 +614,9 @@ export const ComponentLibraryProvider = ({
       removeFromComponentLibrary,
       refetchLibrary,
       refetchUserComponents,
-      setHighlightedComponentDigest,
       setComponentFavorite,
       checkIfUserComponent,
       checkLibraryContainsComponent,
-      checkIfHighlighted,
     ],
   );
 
