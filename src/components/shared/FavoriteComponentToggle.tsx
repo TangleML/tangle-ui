@@ -1,22 +1,32 @@
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
 import { PackagePlus, Star } from "lucide-react";
-import type { MouseEvent, PropsWithChildren } from "react";
+import type { ComponentProps, MouseEvent, PropsWithChildren } from "react";
 import { useCallback, useMemo, useState } from "react";
 
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
+import { Spinner } from "@/components/ui/spinner";
+import { useGuaranteedHydrateComponentReference } from "@/hooks/useHydrateComponentReference";
 import { cn } from "@/lib/utils";
 import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
+import { isFavoriteComponent } from "@/providers/ComponentLibraryProvider/componentLibrary";
 import { hydrateComponentReference } from "@/services/componentService";
 import type { ComponentReference } from "@/utils/componentSpec";
 import { getComponentName } from "@/utils/getComponentName";
+
+import { withSuspenseWrapper } from "./SuspenseWrapper";
 
 interface ComponentFavoriteToggleProps {
   component: ComponentReference;
   hideDelete?: boolean;
 }
 
-interface StateButtonProps {
+interface StateButtonProps extends ComponentProps<typeof Button> {
   active?: boolean;
   isDanger?: boolean;
   onClick?: () => void;
@@ -27,6 +37,7 @@ const IconStateButton = ({
   isDanger = false,
   onClick,
   children,
+  ...props
 }: PropsWithChildren<StateButtonProps>) => {
   const handleFavorite = useCallback(
     (e: MouseEvent) => {
@@ -51,6 +62,7 @@ const IconStateButton = ({
       )}
       variant="ghost"
       size="icon"
+      {...props}
     >
       {children}
     </Button>
@@ -84,6 +96,42 @@ const DeleteFromLibraryButton = ({ active, onClick }: StateButtonProps) => {
   );
 };
 
+const favoriteComponentKey = (component: ComponentReference) => {
+  return ["component", "is-favorite", component.digest];
+};
+
+const FavoriteToggleButton = withSuspenseWrapper(
+  ({ component }: { component: ComponentReference }) => {
+    const queryClient = useQueryClient();
+
+    const { setComponentFavorite } = useComponentLibrary();
+    const hydratedComponent = useGuaranteedHydrateComponentReference(component);
+
+    const { data: isFavorited } = useSuspenseQuery({
+      queryKey: favoriteComponentKey(hydratedComponent),
+      queryFn: async () => isFavoriteComponent(hydratedComponent),
+    });
+
+    const { mutate: setFavorite } = useMutation({
+      mutationFn: async () =>
+        setComponentFavorite(hydratedComponent, !isFavorited),
+      onSuccess: () => {
+        queryClient.invalidateQueries({
+          queryKey: favoriteComponentKey(hydratedComponent),
+        });
+      },
+    });
+
+    return <FavoriteStarButton active={isFavorited} onClick={setFavorite} />;
+  },
+  () => <Spinner size={10} />,
+  () => (
+    <IconStateButton disabled>
+      <Icon name="Star" />
+    </IconStateButton>
+  ),
+);
+
 export const ComponentFavoriteToggle = ({
   component,
   hideDelete = false,
@@ -91,20 +139,13 @@ export const ComponentFavoriteToggle = ({
   const {
     addToComponentLibrary,
     removeFromComponentLibrary,
-    checkIfFavorited,
     checkIfUserComponent,
     checkLibraryContainsComponent,
-    setComponentFavorite,
   } = useComponentLibrary();
 
   const [isOpen, setIsOpen] = useState(false);
 
   const { spec, url } = component;
-
-  const isFavorited = useMemo(
-    () => checkIfFavorited(component),
-    [component, checkIfFavorited],
-  );
 
   const isUserComponent = useMemo(
     () => checkIfUserComponent(component),
@@ -120,10 +161,6 @@ export const ComponentFavoriteToggle = ({
     () => getComponentName({ spec, url }),
     [spec, url],
   );
-
-  const onFavorite = useCallback(() => {
-    setComponentFavorite(component, !isFavorited);
-  }, [isFavorited, setComponentFavorite]);
 
   // Delete User Components
   const handleDelete = useCallback(async () => {
@@ -166,7 +203,7 @@ export const ComponentFavoriteToggle = ({
       {!isInLibrary && <AddToLibraryButton onClick={openConfirmationDialog} />}
 
       {isInLibrary && !isUserComponent && (
-        <FavoriteStarButton active={isFavorited} onClick={onFavorite} />
+        <FavoriteToggleButton component={component} />
       )}
 
       {showDeleteButton && (
