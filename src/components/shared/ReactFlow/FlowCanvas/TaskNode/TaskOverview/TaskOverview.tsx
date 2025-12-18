@@ -69,7 +69,7 @@ const TaskOverview = ({ taskNode, actions }: TaskOverviewProps) => {
     <TaskImplementation
       key="task-implementation-action"
       displayName={name}
-      componentSpec={componentSpec}
+      componentRef={taskSpec.componentRef}
       showInlineContent={false}
     />,
   ];
