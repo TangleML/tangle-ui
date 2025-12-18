@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { screen, waitFor } from "@testing-library/dom";
 import { cleanup, render } from "@testing-library/react";
+import { ReactFlowProvider } from "@xyflow/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type {
@@ -12,13 +13,11 @@ import { useCheckComponentSpecFromPath } from "@/hooks/useCheckComponentSpecFrom
 import { usePipelineRunData } from "@/hooks/usePipelineRunData";
 import { useBackend } from "@/providers/BackendProvider";
 import { ComponentSpecProvider } from "@/providers/ComponentSpecProvider";
+import { ContextPanelProvider } from "@/providers/ContextPanelProvider";
 import { ExecutionDataProvider } from "@/providers/ExecutionDataProvider";
-import * as executionService from "@/services/executionService";
 import type { ComponentSpec } from "@/utils/componentSpec";
 
 import { RunDetails } from "./RunDetails";
-import { ContextPanelProvider } from "@/providers/ContextPanelProvider";
-import { ReactFlowProvider } from "@xyflow/react";
 
 // Mock the hooks and services
 vi.mock("@tanstack/react-router", async (importOriginal) => {
@@ -41,10 +40,6 @@ vi.mock("@/services/executionService", async (importOriginal) => {
     await importOriginal<typeof import("@/services/executionService")>();
   return {
     ...actual,
-    countTaskStatuses: vi.fn(),
-    getRunStatus: vi.fn(),
-    isStatusInProgress: vi.fn(),
-    isStatusComplete: vi.fn(),
   };
 });
 vi.mock("@/providers/BackendProvider");
@@ -140,22 +135,6 @@ describe("<RunDetails/>", () => {
 
     queryClient.setQueryData(["pipeline-run-metadata", "123"], mockPipelineRun);
 
-    vi.mocked(executionService.countTaskStatuses).mockReturnValue({
-      total: 2,
-      succeeded: 1,
-      failed: 0,
-      running: 1,
-      waiting: 0,
-      skipped: 0,
-      cancelled: 0,
-    });
-
-    vi.mocked(executionService.getRunStatus).mockReturnValue("RUNNING");
-
-    vi.mocked(executionService.isStatusInProgress).mockReturnValue(true);
-
-    vi.mocked(executionService.isStatusComplete).mockReturnValue(false);
-
     vi.mocked(useBackend).mockReturnValue({
       configured: true,
       available: true,
@@ -249,20 +228,21 @@ describe("<RunDetails/>", () => {
     });
 
     test("should NOT render cancel button when status is not RUNNING", async () => {
-      // arrange
-      vi.mocked(executionService.countTaskStatuses).mockReturnValue({
-        total: 2,
-        succeeded: 1,
-        failed: 0,
-        running: 0,
-        waiting: 0,
-        skipped: 0,
-        cancelled: 1,
+      // arrange - mock a cancelled execution state (no in-progress statuses)
+      vi.mocked(usePipelineRunData).mockReturnValue({
+        executionData: {
+          details: mockExecutionDetails,
+          state: {
+            child_execution_status_stats: {
+              execution1: { SUCCEEDED: 1 },
+              execution2: { CANCELLED: 1 },
+            },
+          },
+        },
+        rootExecutionId: "456",
+        isLoading: false,
+        error: null,
       });
-
-      vi.mocked(executionService.getRunStatus).mockReturnValue("CANCELLED");
-      vi.mocked(executionService.isStatusInProgress).mockReturnValue(false);
-      vi.mocked(executionService.isStatusComplete).mockReturnValue(true);
 
       // act
       renderWithProviders(<RunDetails />);
@@ -299,20 +279,21 @@ describe("<RunDetails/>", () => {
 
   describe("Rerun Pipeline Run Button", () => {
     test("should render rerun button when status is CANCELLED", async () => {
-      // arrange
-      vi.mocked(executionService.countTaskStatuses).mockReturnValue({
-        total: 2,
-        succeeded: 1,
-        failed: 0,
-        running: 0,
-        waiting: 0,
-        skipped: 0,
-        cancelled: 1,
+      // arrange - mock a completed execution state (no in-progress statuses)
+      vi.mocked(usePipelineRunData).mockReturnValue({
+        executionData: {
+          details: mockExecutionDetails,
+          state: {
+            child_execution_status_stats: {
+              execution1: { SUCCEEDED: 1 },
+              execution2: { CANCELLED: 1 },
+            },
+          },
+        },
+        rootExecutionId: "456",
+        isLoading: false,
+        error: null,
       });
-
-      vi.mocked(executionService.getRunStatus).mockReturnValue("CANCELLED");
-      vi.mocked(executionService.isStatusInProgress).mockReturnValue(false);
-      vi.mocked(executionService.isStatusComplete).mockReturnValue(true);
 
       // act
       renderWithProviders(<RunDetails />);

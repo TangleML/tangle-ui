@@ -3,13 +3,14 @@ import { Query, useQuery } from "@tanstack/react-query";
 import { HOURS } from "@/components/shared/ComponentEditor/constants";
 import { useBackend } from "@/providers/BackendProvider";
 import {
-  countTaskStatuses,
   fetchExecutionDetails,
   fetchExecutionState,
   fetchPipelineRun,
-  getRunStatus,
-  isStatusComplete,
 } from "@/services/executionService";
+import {
+  flattenExecutionStatusStats,
+  isExecutionComplete,
+} from "@/utils/executionStatus";
 
 const useRootExecutionId = (id: string) => {
   const { backendUrl } = useBackend();
@@ -74,14 +75,14 @@ export const usePipelineRunData = (id: string) => {
     },
     refetchInterval: (data) => {
       if (data instanceof Query) {
-        const { details, state } = data.state.data || {};
-        if (!details || !state) {
+        const { state } = data.state.data || {};
+        if (!state) {
           return false;
         }
-        const statusCounts = countTaskStatuses(details, state);
-        const status = getRunStatus(statusCounts);
-
-        return isStatusComplete(status) ? false : 5000;
+        const stats = flattenExecutionStatusStats(
+          state.child_execution_status_stats,
+        );
+        return isExecutionComplete(stats) ? false : 5000;
       }
       return false;
     },
