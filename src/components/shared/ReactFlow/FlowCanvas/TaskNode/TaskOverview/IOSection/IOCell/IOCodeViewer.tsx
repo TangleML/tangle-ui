@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import { CodeViewer } from "@/components/shared/CodeViewer";
 import { safeJsonParse } from "@/utils/string";
 
@@ -11,6 +13,8 @@ interface IOCodeViewerProps {
 }
 
 const IOCodeViewer = ({ title, value }: IOCodeViewerProps) => {
+  const [isFullScreen, setIsFullScreen] = useState(false);
+
   const { parsed, isValidJson } = safeJsonParse(value);
 
   if (!isValidJson) {
@@ -29,7 +33,14 @@ const IOCodeViewer = ({ title, value }: IOCodeViewerProps) => {
 
   return (
     <div style={{ height: lineHeight }}>
-      <CodeViewer code={codeString} language="json" filename={title} />
+      <CodeViewer
+        code={codeString}
+        language="json"
+        filename={title}
+        isFullscreen={isFullScreen}
+        onClose={() => setIsFullScreen(false)}
+        onExpand={() => setIsFullScreen(true)}
+      />
     </div>
   );
 };

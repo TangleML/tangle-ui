@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import { CodeViewer } from "@/components/shared/CodeViewer";
 import type { ComponentSpec } from "@/utils/componentSpec";
 import { componentSpecToText } from "@/utils/yaml";
@@ -5,14 +7,14 @@ import { componentSpecToText } from "@/utils/yaml";
 interface TaskImplementationProps {
   displayName: string;
   componentSpec: ComponentSpec;
-  showInlineContent?: boolean;
 }
 
 const TaskImplementation = ({
   displayName,
   componentSpec,
-  showInlineContent = true,
 }: TaskImplementationProps) => {
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
   const code = componentSpecToText(componentSpec);
 
   if (!componentSpec?.implementation) {
@@ -28,7 +30,9 @@ const TaskImplementation = ({
       code={code}
       language="yaml"
       filename={displayName}
-      showInlineContent={showInlineContent}
+      isFullscreen={isFullscreen}
+      onClose={() => setIsFullscreen(false)}
+      onExpand={() => setIsFullscreen(true)}
     />
   );
 };
