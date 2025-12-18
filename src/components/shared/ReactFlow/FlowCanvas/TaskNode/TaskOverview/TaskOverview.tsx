@@ -17,6 +17,7 @@ import {
 } from "@/components/shared/TaskDetails";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Text } from "@/components/ui/typography";
 import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
@@ -135,15 +136,15 @@ const TaskOverview = ({ taskNode, actions }: TaskOverviewProps) => {
           </TabsContent>
           <TabsContent value="io">
             {!readOnly && (
-              <>
+              <BlockStack gap="4">
                 <ArgumentsSection
                   taskSpec={taskSpec}
                   setArguments={callbacks.setArguments}
                   disabled={disabled}
                 />
-                <hr />
+                <Separator />
                 <OutputsList taskSpec={taskSpec} />
-              </>
+              </BlockStack>
             )}
             {readOnly && (
               <IOSection
