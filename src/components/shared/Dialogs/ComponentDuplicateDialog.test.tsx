@@ -47,7 +47,6 @@ const createMockComponentLibraryContext = (
     searchComponentLibrary: vi.fn(),
     addToComponentLibrary: vi.fn(),
     removeFromComponentLibrary: vi.fn(),
-    checkIfUserComponent: vi.fn().mockReturnValue(false),
     getComponentLibrary: vi.fn(),
   };
 };

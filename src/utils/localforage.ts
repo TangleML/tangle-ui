@@ -107,12 +107,6 @@ export async function getAllUserComponents(): Promise<UserComponent[]> {
   return userComponents;
 }
 
-export async function getUserComponentByName(
-  name: string,
-): Promise<UserComponent | null> {
-  return await userComponentStore.getItem<UserComponent>(name);
-}
-
 // App Settings
 export const getUserBackendUrl = async () => {
   return (await settingsStore.getItem<string>("userBackendUrl")) ?? "";
