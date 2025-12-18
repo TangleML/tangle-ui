@@ -6,14 +6,16 @@ import {
   XCircleIcon,
 } from "lucide-react";
 
-import type { ContainerExecutionStatus } from "@/api/types.gen";
 import { Icon } from "@/components/ui/icon";
 import { QuickTooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import type { RunStatus } from "@/types/pipelineRun";
+import {
+  EXECUTION_STATUS_BG_COLORS,
+  getExecutionStatusLabel,
+} from "@/utils/executionStatus";
 
 type StatusIndicatorProps = {
-  status: ContainerExecutionStatus | RunStatus;
+  status: string;
   disabledCache?: boolean;
 };
 
@@ -46,71 +48,35 @@ export const StatusIndicator = ({
   );
 };
 
-const getStatusMetadata = (status: ContainerExecutionStatus | RunStatus) => {
+const getStatusIcon = (status: string) => {
   switch (status) {
     case "SUCCEEDED":
-      return {
-        style: "bg-emerald-500",
-        text: "Succeeded",
-        icon: <CheckCircleIcon className="w-2 h-2" />,
-      };
+      return <CheckCircleIcon className="w-2 h-2" />;
     case "FAILED":
     case "SYSTEM_ERROR":
     case "INVALID":
-      return {
-        style: "bg-red-700",
-        text: "Failed",
-        icon: <XCircleIcon className="w-2 h-2" />,
-      };
+      return <XCircleIcon className="w-2 h-2" />;
     case "RUNNING":
-      return {
-        style: "bg-sky-500",
-        text: "Running",
-        icon: <Loader2Icon className="w-2 h-2 animate-spin" />,
-      };
+      return <Loader2Icon className="w-2 h-2 animate-spin" />;
     case "PENDING":
-      return {
-        style: "bg-yellow-500",
-        text: "Pending",
-        icon: <ClockIcon className="w-2 h-2 animate-spin duration-2000" />,
-      };
-    case "CANCELLING":
-    case "CANCELLED":
-      return {
-        style: "bg-gray-800",
-        text: status === "CANCELLING" ? "Cancelling" : "Cancelled",
-        icon: <XCircleIcon className="w-2 h-2" />,
-      };
-    case "SKIPPED":
-      return {
-        style: "bg-slate-400",
-        text: "Skipped",
-        icon: <XCircleIcon className="w-2 h-2" />,
-      };
     case "QUEUED":
-      return {
-        style: "bg-yellow-500",
-        text: "Queued",
-        icon: <ClockIcon className="w-2 h-2 animate-spin duration-2000" />,
-      };
-    case "WAITING_FOR_UPSTREAM":
-      return {
-        style: "bg-slate-500",
-        text: "Waiting for upstream",
-        icon: <ClockIcon className="w-2 h-2 animate-spin duration-2000" />,
-      };
     case "WAITING":
     case "UNINITIALIZED":
-      return {
-        style: "bg-yellow-500",
-        text: "Pending",
-        icon: <ClockIcon className="w-2 h-2 animate-spin duration-2000" />,
-      };
+    case "WAITING_FOR_UPSTREAM":
+      return <ClockIcon className="w-2 h-2 animate-spin duration-2000" />;
+    case "CANCELLING":
+    case "CANCELLED":
+    case "SKIPPED":
+      return <XCircleIcon className="w-2 h-2" />;
     default:
-      return {
-        style: "bg-slate-300",
-        text: "Unknown",
-        icon: <CircleDashedIcon className="w-2 h-2" />,
-      };
+      return <CircleDashedIcon className="w-2 h-2" />;
   }
+};
+
+const getStatusMetadata = (status: string) => {
+  return {
+    style: EXECUTION_STATUS_BG_COLORS[status] ?? "bg-slate-300",
+    text: getExecutionStatusLabel(status),
+    icon: getStatusIcon(status),
+  };
 };

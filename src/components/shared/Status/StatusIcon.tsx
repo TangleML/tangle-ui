@@ -13,6 +13,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { getExecutionStatusLabel } from "@/utils/executionStatus";
 
 const StatusIcon = ({
   status,
@@ -25,7 +26,8 @@ const StatusIcon = ({
 }) => {
   if (tooltip) {
     const capitalizedLabel = label.charAt(0).toUpperCase() + label.slice(1);
-    const tooltipText = `${capitalizedLabel} ${status?.toLowerCase() ?? "unknown"}`;
+    const displayStatus = getExecutionStatusLabel(status);
+    const tooltipText = `${capitalizedLabel} ${displayStatus}`;
     return (
       <Tooltip>
         <TooltipTrigger asChild>

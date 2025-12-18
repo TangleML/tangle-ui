@@ -124,6 +124,7 @@ const countTaskStatusesLight = (
     succeeded: 0,
     failed: 0,
     running: 0,
+    pending: 0,
     waiting: 0,
     skipped: 0,
     cancelled: 0,
@@ -150,6 +151,7 @@ const countTaskStatusesLight = (
     statusCounts.succeeded +
     statusCounts.failed +
     statusCounts.running +
+    statusCounts.pending +
     statusCounts.waiting +
     statusCounts.skipped +
     statusCounts.cancelled;
@@ -183,7 +185,9 @@ export const getRunStatus = (statusData: TaskStatusCounts): RunStatus => {
   if (statusData.skipped > 0) {
     return STATUS.SKIPPED;
   }
-  if (statusData.waiting > 0) {
+  // "Pending" is a specific state in the execution system, but for overall run
+  // aggregation it is still considered waiting/in-progress.
+  if (statusData.waiting > 0 || statusData.pending > 0) {
     return STATUS.WAITING;
   }
   if (statusData.total > 0 && statusData.succeeded === statusData.total) {
@@ -219,6 +223,8 @@ const mapStatus = (status: string) => {
     case "RUNNING":
     case "STARTING":
       return "running";
+    case "PENDING":
+      return "pending";
     case "CANCELLING":
     case "CANCELLED":
       return "cancelled";
@@ -242,6 +248,7 @@ export const countTaskStatuses = (
     succeeded: 0,
     failed: 0,
     running: 0,
+    pending: 0,
     waiting: 0,
     skipped: 0,
     cancelled: 0,
@@ -272,6 +279,7 @@ export const countTaskStatuses = (
     statusCounts.succeeded +
     statusCounts.failed +
     statusCounts.running +
+    statusCounts.pending +
     statusCounts.waiting +
     statusCounts.skipped +
     statusCounts.cancelled;
@@ -302,6 +310,7 @@ export const convertExecutionStatsToStatusCounts = (
     succeeded: 0,
     failed: 0,
     running: 0,
+    pending: 0,
     waiting: 0,
     skipped: 0,
     cancelled: 0,
@@ -320,6 +329,7 @@ export const convertExecutionStatsToStatusCounts = (
     statusCounts.succeeded +
     statusCounts.failed +
     statusCounts.running +
+    statusCounts.pending +
     statusCounts.waiting +
     statusCounts.skipped +
     statusCounts.cancelled;

@@ -5,13 +5,10 @@ const STATUS_COLORS: Record<string, string> = {
   succeeded: "text-green-500",
   failed: "text-red-500",
   running: "text-blue-500",
+  pending: "text-yellow-600",
+  waiting: "text-slate-600",
   skipped: "text-gray-800",
-  waiting: "text-yellow-600",
   cancelled: "text-gray-800",
-};
-
-const STATUS_DISPLAY_NAMES: Record<string, string> = {
-  waiting: "pending",
 };
 
 const StatusText = ({
@@ -31,10 +28,9 @@ const StatusText = ({
       {Object.entries(statusCounts).map(([key, count]) => {
         if (key === "total" || count === 0) return null;
 
-        const displayKey = STATUS_DISPLAY_NAMES[key] ?? key;
         const statusText = shorthand
-          ? `${displayKey[0]}`
-          : `${displayKey}${count > 1 ? " " : ""}`;
+          ? `${key[0]}`
+          : `${key}${count > 1 ? " " : ""}`;
 
         const statusColor = STATUS_COLORS[key];
 

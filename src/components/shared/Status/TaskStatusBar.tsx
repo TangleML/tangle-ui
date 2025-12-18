@@ -1,82 +1,119 @@
-import type { TaskStatusCounts } from "@/types/pipelineRun";
+import { InlineStack } from "@/components/ui/layout";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+import {
+  EXECUTION_STATUS_BG_COLORS,
+  type ExecutionStatusStats,
+  getExecutionStatusLabel,
+} from "@/utils/executionStatus";
 
-const getSegmentStyle = (width: string, hatched: boolean = false) =>
-  hatched
-    ? {
-        width,
-        height: "100%",
-        backgroundImage:
-          "repeating-linear-gradient(135deg, transparent, transparent 6px, rgba(0,0,0,0.5) 6px, rgba(0,0,0,0.5) 12px)",
-        backgroundBlendMode: "multiply",
-        backgroundRepeat: "repeat",
-        backgroundSize: "512px 24px",
-        backgroundPosition: "left top",
-      }
-    : { width, height: "100%" };
+/**
+ * Display order for status segments in the bar.
+ * Ordered from success → in-progress → waiting → errors.
+ */
+const STATUS_DISPLAY_ORDER = [
+  "SUCCEEDED",
+  "SKIPPED",
+  "RUNNING",
+  "PENDING",
+  "UNINITIALIZED",
+  "QUEUED",
+  "WAITING",
+  "WAITING_FOR_UPSTREAM",
+  "CANCELLING",
+  "CANCELLED",
+  "FAILED",
+  "INVALID",
+  "SYSTEM_ERROR",
+] as const;
 
-const TaskStatusBar = ({
-  statusCounts,
+const HATCHED_SEGMENT_CLASS =
+  "bg-[repeating-linear-gradient(135deg,transparent,transparent_6px,rgba(0,0,0,0.5)_6px,rgba(0,0,0,0.5)_12px)] bg-blend-multiply bg-repeat bg-[length:512px_24px] bg-[position:left_top]";
+
+const BAR_CLASS = "h-2 w-full rounded overflow-hidden bg-gray-200";
+
+const StatusSegment = ({
+  status,
+  count,
+  total,
+  hatched,
 }: {
-  statusCounts?: TaskStatusCounts;
+  status: string;
+  count: number;
+  total: number;
+  hatched: boolean;
 }) => {
-  if (!statusCounts || statusCounts.total === 0) {
-    return (
-      <div className="flex h-2 w-full rounded overflow-hidden bg-gray-200"></div>
-    );
-  }
-
-  const { total, succeeded, failed, running, waiting, skipped, cancelled } =
-    statusCounts;
-
-  // Calculate percentages for each segment
-  const successWidth = `${(succeeded / total) * 100}%`;
-  const failedWidth = `${(failed / total) * 100}%`;
-  const runningWidth = `${(running / total) * 100}%`;
-  const waitingWidth = `${(waiting / total) * 100}%`;
-  const skippedWidth = `${(skipped / total) * 100}%`;
-  const cancelledWidth = `${(cancelled / total) * 100}%`;
-
-  const hatched = cancelled > 0;
+  const label = getExecutionStatusLabel(status);
+  const colorClass = EXECUTION_STATUS_BG_COLORS[status] ?? "bg-slate-300";
+  const width = `${(count / total) * 100}%`;
 
   return (
-    <div className="flex h-2 w-full rounded overflow-hidden bg-gray-200">
-      {succeeded > 0 && (
+    <Tooltip>
+      <TooltipTrigger asChild>
         <div
-          className="bg-green-500"
-          style={getSegmentStyle(successWidth, hatched)}
-        ></div>
-      )}
-      {failed > 0 && (
-        <div
-          className="bg-red-500"
-          style={getSegmentStyle(failedWidth, hatched)}
-        ></div>
-      )}
-      {running > 0 && (
-        <div
-          className="bg-blue-500"
-          style={getSegmentStyle(runningWidth, hatched)}
-        ></div>
-      )}
-      {waiting > 0 && (
-        <div
-          className="bg-yellow-500"
-          style={getSegmentStyle(waitingWidth, hatched)}
-        ></div>
-      )}
-      {skipped > 0 && (
-        <div
-          className="bg-gray-800"
-          style={getSegmentStyle(skippedWidth, hatched)}
-        ></div>
-      )}
-      {cancelled > 0 && (
-        <div
-          className="bg-gray-500"
-          style={getSegmentStyle(cancelledWidth, hatched)}
-        ></div>
-      )}
-    </div>
+          className={cn(colorClass, "h-full", hatched && HATCHED_SEGMENT_CLASS)}
+          style={{ width }}
+          aria-label={`${count} ${label}`}
+        />
+      </TooltipTrigger>
+      <TooltipContent side="top" sideOffset={6}>
+        <span>
+          {count} {label}
+        </span>
+      </TooltipContent>
+    </Tooltip>
+  );
+};
+
+const TaskStatusBar = ({
+  executionStatusStats,
+}: {
+  executionStatusStats?: ExecutionStatusStats | null;
+}) => {
+  if (!executionStatusStats) {
+    return <InlineStack wrap="nowrap" gap="0" className={BAR_CLASS} />;
+  }
+
+  const entries = Object.entries(executionStatusStats).filter(
+    ([, count]) => (count ?? 0) > 0,
+  );
+
+  if (entries.length === 0) {
+    return <InlineStack wrap="nowrap" gap="0" className={BAR_CLASS} />;
+  }
+
+  const total = entries.reduce((sum, [, count]) => sum + (count ?? 0), 0);
+
+  const hasCancelled =
+    (executionStatusStats.CANCELLED ?? 0) > 0 ||
+    (executionStatusStats.CANCELLING ?? 0) > 0;
+
+  // Sort entries by display order
+  const orderMap = new Map<string, number>(
+    STATUS_DISPLAY_ORDER.map((s, i) => [s, i]),
+  );
+  const sortedEntries = entries.sort(([a], [b]) => {
+    const aOrder = orderMap.get(a) ?? STATUS_DISPLAY_ORDER.length;
+    const bOrder = orderMap.get(b) ?? STATUS_DISPLAY_ORDER.length;
+    return aOrder - bOrder;
+  });
+
+  return (
+    <InlineStack wrap="nowrap" gap="0" className={BAR_CLASS}>
+      {sortedEntries.map(([status, count]) => (
+        <StatusSegment
+          key={status}
+          status={status}
+          count={count ?? 0}
+          total={total}
+          hatched={hasCancelled}
+        />
+      ))}
+    </InlineStack>
   );
 };
 

@@ -69,7 +69,9 @@ vi.mock("@/services/executionService", async (importOriginal) => {
       succeeded: stats?.SUCCEEDED || 0,
       failed: stats?.FAILED || 0,
       running: stats?.RUNNING || 0,
-      waiting: stats?.WAITING_FOR_UPSTREAM || stats?.WAITING || 0,
+      pending: stats?.PENDING || 0,
+      waiting:
+        stats?.WAITING_FOR_UPSTREAM || stats?.WAITING || stats?.QUEUED || 0,
       cancelled: stats?.CANCELLED || 0,
       total: Object.values(stats || {}).reduce(
         (a: number, b) => a + (b as number),
