@@ -136,9 +136,13 @@ const countTaskStatusesLight = (
         if (statusStats) {
           const childStatusCounts =
             convertExecutionStatsToStatusCounts(statusStats);
-          const aggregateStatus = getRunStatus(childStatusCounts);
-          const mappedStatus = mapStatus(aggregateStatus);
-          statusCounts[mappedStatus as keyof TaskStatusCounts]++;
+          statusCounts.succeeded += childStatusCounts.succeeded;
+          statusCounts.failed += childStatusCounts.failed;
+          statusCounts.running += childStatusCounts.running;
+          statusCounts.pending += childStatusCounts.pending;
+          statusCounts.waiting += childStatusCounts.waiting;
+          statusCounts.skipped += childStatusCounts.skipped;
+          statusCounts.cancelled += childStatusCounts.cancelled;
         } else {
           // If no status stats, assume waiting, likely we may receive none at all
           statusCounts.waiting++;
@@ -266,10 +270,15 @@ export const countTaskStatuses = (
       if (statusStats) {
         const childStatusCounts =
           convertExecutionStatsToStatusCounts(statusStats);
-        const aggregateStatus = getRunStatus(childStatusCounts);
-        const mappedStatus = mapStatus(aggregateStatus);
-        statusCounts[mappedStatus as keyof TaskStatusCounts]++;
+        statusCounts.succeeded += childStatusCounts.succeeded;
+        statusCounts.failed += childStatusCounts.failed;
+        statusCounts.running += childStatusCounts.running;
+        statusCounts.pending += childStatusCounts.pending;
+        statusCounts.waiting += childStatusCounts.waiting;
+        statusCounts.skipped += childStatusCounts.skipped;
+        statusCounts.cancelled += childStatusCounts.cancelled;
       } else {
+        // No stats at all: count as a single waiting unit (we can't infer nested size).
         statusCounts.waiting++;
       }
     });
@@ -285,6 +294,30 @@ export const countTaskStatuses = (
     statusCounts.cancelled;
 
   return { ...statusCounts, total };
+};
+
+export const sumExecutionStatusStatsFromChildStats = (
+  details: GetExecutionInfoResponse,
+  stateData: GetGraphExecutionStateResponse,
+): Record<string, number> => {
+  const totals: Record<string, number> = {};
+
+  if (!details.child_task_execution_ids || !stateData.child_execution_status_stats) {
+    return totals;
+  }
+
+  Object.values(details.child_task_execution_ids).forEach((executionId) => {
+    const executionIdStr = String(executionId);
+    const statusStats = stateData.child_execution_status_stats[executionIdStr];
+    if (!statusStats) return;
+
+    Object.entries(statusStats).forEach(([status, count]) => {
+      if (!count) return;
+      totals[status] = (totals[status] ?? 0) + count;
+    });
+  });
+
+  return totals;
 };
 
 export const getExecutionArtifacts = async (
