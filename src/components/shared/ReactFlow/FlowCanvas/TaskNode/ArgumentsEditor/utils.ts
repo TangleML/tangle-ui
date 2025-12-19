@@ -4,6 +4,7 @@ import type {
   TaskSpec,
   TypeSpecType,
 } from "@/utils/componentSpec";
+import { isScalar } from "@/utils/types";
 
 export const getArgumentInputs = (taskSpec: TaskSpec) => {
   const componentSpec = taskSpec.componentRef.spec;
@@ -51,7 +52,7 @@ export const typeSpecToString = (typeSpec?: TypeSpecType): string => {
 };
 
 export const getPlaceholder = (argument: ArgumentType) => {
-  if (typeof argument === "string" || !argument) {
+  if (isScalar(argument) || !argument) {
     return null;
   }
 
@@ -71,10 +72,17 @@ export const getInputValue = (argumentInput: ArgumentInput) => {
     return argumentInput.inputSpec.default;
   }
 
-  if (typeof argument === "string") {
+  if (isScalar(argument)) {
     return argument;
   }
 
+  return "";
+};
+
+export const getInputValueAsString = (value: string) => {
+  if (isScalar(value)) {
+    return value.toString().trim();
+  }
   return "";
 };
 
