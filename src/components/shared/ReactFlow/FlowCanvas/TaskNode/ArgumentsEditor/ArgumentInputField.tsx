@@ -32,6 +32,7 @@ import { ArgumentInputDialog } from "./ArgumentInputDialog";
 import {
   getDefaultValue,
   getInputValue,
+  getInputValueAsString,
   getPlaceholder,
   typeSpecToString,
 } from "./utils";
@@ -63,7 +64,7 @@ export const ArgumentInputField = ({
   };
 
   const handleBlur = () => {
-    const value = inputValue.trim();
+    const value = getInputValueAsString(inputValue);
     handleSubmit(value);
   };
 
@@ -86,7 +87,7 @@ export const ArgumentInputField = ({
   const handleRemove = () => {
     const updatedArgument = {
       ...argument,
-      value: inputValue.trim(),
+      value: getInputValueAsString(inputValue),
       isRemoved: !argument.isRemoved,
     };
 

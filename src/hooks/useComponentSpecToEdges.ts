@@ -19,6 +19,7 @@ import {
   outputNameToNodeId,
   taskIdToNodeId,
 } from "@/utils/nodes/nodeIdUtils";
+import { isScalar } from "@/utils/types";
 
 const useComponentSpecToEdges = (
   componentSpec: ComponentSpec,
@@ -71,7 +72,7 @@ const createEdgeForArgument = (
   inputName: string,
   argument: ArgumentType,
 ): Edge[] => {
-  if (typeof argument === "string") {
+  if (isScalar(argument)) {
     return [];
   }
 
