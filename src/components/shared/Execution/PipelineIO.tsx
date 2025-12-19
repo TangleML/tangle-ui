@@ -1,7 +1,7 @@
 import { type ReactNode } from "react";
 
-import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlock";
 import { Attribute } from "@/components/shared/ContextPanel/Blocks/Attribute";
+import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlock";
 import { typeSpecToString } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/ArgumentsEditor/utils";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";

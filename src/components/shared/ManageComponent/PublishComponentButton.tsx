@@ -49,7 +49,7 @@ export const PublishComponentButton = ({
     onSuccess: () => {
       notify("Component published successfully", "success");
       queryClient.invalidateQueries({
-        queryKey: ["component-library", "published", "has", component.digest],
+        queryKey: ["has-component", component.digest],
       });
       queryClient.invalidateQueries({
         queryKey: ["componentLibrary", "publishedComponents"],
