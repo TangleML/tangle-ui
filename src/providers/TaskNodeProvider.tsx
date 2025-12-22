@@ -1,12 +1,10 @@
 import { useReactFlow } from "@xyflow/react";
 import { type ReactNode, useCallback, useMemo } from "react";
 
-import type { ContainerExecutionStatus } from "@/api/types.gen";
 import useComponentFromUrl from "@/hooks/useComponentFromUrl";
 import { useTaskNodeDimensions } from "@/hooks/useTaskNodeDimensions";
 import useToastNotification from "@/hooks/useToastNotification";
 import type { Annotations } from "@/types/annotations";
-import type { RunStatus } from "@/types/pipelineRun";
 import {
   DEFAULT_TASK_NODE_CALLBACKS,
   type TaskNodeData,
@@ -37,7 +35,7 @@ type TaskNodeState = Readonly<{
   readOnly: boolean;
   disabled: boolean;
   connectable: boolean;
-  status?: ContainerExecutionStatus | RunStatus;
+  status?: string;
   isCustomComponent: boolean;
   dimensions: TaskNodeDimensions;
 }>;
@@ -55,7 +53,7 @@ type TaskNodeProviderProps = {
   children: ReactNode;
   data: TaskNodeData;
   selected: boolean;
-  status?: ContainerExecutionStatus | RunStatus;
+  status?: string;
 };
 
 export type TaskNodeContextType = {

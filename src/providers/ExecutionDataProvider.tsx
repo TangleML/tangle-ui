@@ -19,6 +19,7 @@ import {
   useFetchPipelineRunMetadata,
 } from "@/services/executionService";
 import type { TaskStatusCounts } from "@/types/pipelineRun";
+import { getOverallExecutionStatusFromStats } from "@/utils/executionStatus";
 
 import { useComponentSpec } from "./ComponentSpecProvider";
 
@@ -40,6 +41,7 @@ interface ExecutionDataContextType {
   isLoading: boolean;
   error: Error | null;
   taskStatusCountsMap: Map<string, TaskStatusCounts>;
+  taskExecutionStatusMap: Map<string, string>;
   segments: BreadcrumbSegment[];
 }
 
@@ -76,6 +78,30 @@ const buildTaskStatusCountsMap = (
   );
 
   return taskStatusCountsMap;
+};
+
+const buildTaskExecutionStatusMap = (
+  details?: GetExecutionInfoResponse,
+  state?: GetGraphExecutionStateResponse,
+): Map<string, string> => {
+  const taskExecutionStatusMap = new Map<string, string>();
+
+  if (!details?.child_task_execution_ids) {
+    return taskExecutionStatusMap;
+  }
+
+  Object.entries(details.child_task_execution_ids).forEach(
+    ([taskId, executionId]) => {
+      const statusStats = state?.child_execution_status_stats?.[executionId];
+      const aggregated = getOverallExecutionStatusFromStats(statusStats);
+
+      if (aggregated) {
+        taskExecutionStatusMap.set(taskId, aggregated);
+      }
+    },
+  );
+
+  return taskExecutionStatusMap;
 };
 
 const findExecutionIdAtPath = (
@@ -276,6 +302,11 @@ export function ExecutionDataProvider({
     [details, state],
   );
 
+  const taskExecutionStatusMap = useMemo(
+    () => buildTaskExecutionStatusMap(details, state),
+    [details, state],
+  );
+
   const value = useMemo(
     () => ({
       currentExecutionId,
@@ -289,6 +320,7 @@ export function ExecutionDataProvider({
       isLoading,
       error,
       taskStatusCountsMap,
+      taskExecutionStatusMap,
       segments,
     }),
     [
@@ -303,6 +335,7 @@ export function ExecutionDataProvider({
       isLoading,
       error,
       taskStatusCountsMap,
+      taskExecutionStatusMap,
       segments,
     ],
   );

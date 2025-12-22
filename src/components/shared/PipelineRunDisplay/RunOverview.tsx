@@ -3,10 +3,31 @@ import { useNavigate } from "@tanstack/react-router";
 import { StatusBar, StatusText } from "@/components/shared/Status/";
 import { cn } from "@/lib/utils";
 import { APP_ROUTES } from "@/routes/router";
-import type { PipelineRun } from "@/types/pipelineRun";
+import type { PipelineRun, TaskStatusCounts } from "@/types/pipelineRun";
 import { formatDate } from "@/utils/date";
+import type { ExecutionStatusStats } from "@/utils/executionStatus";
 
 import { PipelineRunStatus } from "./components/PipelineRunStatus";
+
+/**
+ * Convert TaskStatusCounts (lowercase keys) to ExecutionStatusStats (uppercase keys)
+ * for use with the simplified StatusBar component.
+ */
+const statusCountsToExecutionStats = (
+  counts: TaskStatusCounts | undefined,
+): ExecutionStatusStats | undefined => {
+  if (!counts) return undefined;
+
+  const stats: ExecutionStatusStats = {};
+  if (counts.succeeded > 0) stats.SUCCEEDED = counts.succeeded;
+  if (counts.failed > 0) stats.FAILED = counts.failed;
+  if (counts.running > 0) stats.RUNNING = counts.running;
+  if (counts.pending > 0) stats.PENDING = counts.pending;
+  if (counts.waiting > 0) stats.WAITING_FOR_UPSTREAM = counts.waiting;
+  if (counts.skipped > 0) stats.SKIPPED = counts.skipped;
+  if (counts.cancelled > 0) stats.CANCELLED = counts.cancelled;
+  return stats;
+};
 
 interface RunOverviewProps {
   run: PipelineRun;
@@ -90,7 +111,9 @@ const RunOverview = ({ run, config, className = "" }: RunOverviewProps) => {
       </div>
 
       {combinedConfig?.showTaskStatusBar && (
-        <StatusBar statusCounts={run.statusCounts} />
+        <StatusBar
+          executionStatusStats={statusCountsToExecutionStats(run.statusCounts)}
+        />
       )}
     </div>
   );
