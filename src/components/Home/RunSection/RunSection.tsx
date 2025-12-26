@@ -75,7 +75,7 @@ export const RunSection = ({ onEmptyList }: { onEmptyList?: () => void }) => {
 
   const { data, isLoading, isFetching, error, isFetched } =
     useQuery<ListPipelineJobsResponse>({
-      queryKey: ["runs", backendUrl, pageToken, search.filter],
+      queryKey: ["runs", pageToken, search.filter],
       refetchOnWindowFocus: false,
       enabled: configured && available,
       queryFn: async () => {
