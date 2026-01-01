@@ -125,7 +125,7 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-compiler": "^19.1.0-rc.2",
     "fake-indexeddb": "^6.2.5",
-    "globals": "^16.5.0",
+    "globals": "^17.0.0",
     "jsdom": "^27.4.0",
     "knip": "^5.78.0",
     "prettier": "^3.7.4",
