@@ -80,3 +80,7 @@ export const ISO8601_DURATION_ZERO_DAYS = "P0D";
 export const DEFAULT_RATE_LIMIT_RPS = 10; // requests per second
 
 export const MINUTES = 60 * 1000;
+
+// Query key prefix for backend-dependent queries
+// All queries with this prefix are invalidated when the backend URL changes
+export const BACKEND_QUERY_KEY = "backend";

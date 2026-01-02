@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { useBackend } from "@/providers/BackendProvider";
 import { fetchExecutionDetails } from "@/services/executionService";
 import { isGraphImplementationOutput } from "@/utils/componentSpec";
-import { ONE_MINUTE_IN_MS } from "@/utils/constants";
+import { BACKEND_QUERY_KEY, ONE_MINUTE_IN_MS } from "@/utils/constants";
 
 export interface BreadcrumbSegment {
   taskId: string;
@@ -27,11 +27,16 @@ export const useSubgraphBreadcrumbs = (
   rootExecutionId: string | undefined,
   subgraphExecutionId: string | undefined,
 ): SubgraphBreadcrumbsResult => {
-  const { backendUrl } = useBackend();
+  const { backendUrl, configured } = useBackend();
   const queryClient = useQueryClient();
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["subgraph-breadcrumbs", rootExecutionId, subgraphExecutionId],
+    queryKey: [
+      BACKEND_QUERY_KEY,
+      "subgraph-breadcrumbs",
+      rootExecutionId,
+      subgraphExecutionId,
+    ],
     queryFn: async () => {
       if (!rootExecutionId || !subgraphExecutionId) {
         return { segments: [] };
@@ -44,7 +49,7 @@ export const useSubgraphBreadcrumbs = (
       const segmentsInReverseOrder: BreadcrumbSegment[] = [];
       let currentExecutionId = subgraphExecutionId;
       let currentDetails = await queryClient.ensureQueryData({
-        queryKey: ["execution-details", currentExecutionId],
+        queryKey: [BACKEND_QUERY_KEY, "execution-details", currentExecutionId],
         queryFn: () => fetchExecutionDetails(currentExecutionId, backendUrl),
         staleTime: ONE_MINUTE_IN_MS,
       });
@@ -57,7 +62,7 @@ export const useSubgraphBreadcrumbs = (
         }
 
         const parentDetails = await queryClient.ensureQueryData({
-          queryKey: ["execution-details", parentExecutionId],
+          queryKey: [BACKEND_QUERY_KEY, "execution-details", parentExecutionId],
           queryFn: () => fetchExecutionDetails(parentExecutionId, backendUrl),
           staleTime: ONE_MINUTE_IN_MS,
         });
@@ -95,7 +100,8 @@ export const useSubgraphBreadcrumbs = (
     enabled:
       !!rootExecutionId &&
       !!subgraphExecutionId &&
-      rootExecutionId !== subgraphExecutionId,
+      rootExecutionId !== subgraphExecutionId &&
+      configured,
     staleTime: ONE_MINUTE_IN_MS,
     retry: 1,
   });

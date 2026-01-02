@@ -1,13 +1,15 @@
+import { useQueryClient } from "@tanstack/react-query";
 import {
   type ReactNode,
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
 import useToastNotification from "@/hooks/useToastNotification";
-import { API_URL } from "@/utils/constants";
+import { API_URL, BACKEND_QUERY_KEY } from "@/utils/constants";
 import {
   getUseEnv,
   getUserBackendUrl,
@@ -45,6 +47,7 @@ const BackendContext =
 
 export const BackendProvider = ({ children }: { children: ReactNode }) => {
   const notify = useToastNotification();
+  const queryClient = useQueryClient();
 
   const backendUrlFromEnv = API_URL;
 
@@ -54,6 +57,9 @@ export const BackendProvider = ({ children }: { children: ReactNode }) => {
   const [available, setAvailable] = useState(false);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [ready, setReady] = useState(false);
+
+  // Track the previous backend URL to detect changes
+  const previousBackendUrlRef = useRef<string | null>(null);
 
   let backendUrl = "";
   if (useEnv && backendUrlFromEnv) {
@@ -132,6 +138,17 @@ export const BackendProvider = ({ children }: { children: ReactNode }) => {
       ping({ notifyResult: false });
     }
   }, [backendUrl, settingsLoaded]);
+
+  // Invalidate only backend-dependent queries when the backend URL changes
+  useEffect(() => {
+    if (
+      previousBackendUrlRef.current !== null &&
+      previousBackendUrlRef.current !== backendUrl
+    ) {
+      queryClient.invalidateQueries({ queryKey: [BACKEND_QUERY_KEY] });
+    }
+    previousBackendUrlRef.current = backendUrl;
+  }, [backendUrl, queryClient]);
 
   useEffect(() => {
     const getSettings = async () => {
