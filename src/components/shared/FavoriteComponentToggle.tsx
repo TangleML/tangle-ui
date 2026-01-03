@@ -14,9 +14,13 @@ import { Spinner } from "@/components/ui/spinner";
 import { useGuaranteedHydrateComponentReference } from "@/hooks/useHydrateComponentReference";
 import { cn } from "@/lib/utils";
 import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
-import { isFavoriteComponent } from "@/providers/ComponentLibraryProvider/componentLibrary";
+import {
+  flattenFolders,
+  isFavoriteComponent,
+} from "@/providers/ComponentLibraryProvider/componentLibrary";
 import { hydrateComponentReference } from "@/services/componentService";
-import type { ComponentReference } from "@/utils/componentSpec";
+import { type ComponentReference } from "@/utils/componentSpec";
+import { MINUTES } from "@/utils/constants";
 import { getComponentName } from "@/utils/getComponentName";
 
 import { withSuspenseWrapper } from "./SuspenseWrapper";
@@ -132,30 +136,63 @@ const FavoriteToggleButton = withSuspenseWrapper(
   ),
 );
 
-export const ComponentFavoriteToggle = ({
-  component,
-  hideDelete = false,
-}: ComponentFavoriteToggleProps) => {
-  const {
-    addToComponentLibrary,
-    removeFromComponentLibrary,
-    checkIfUserComponent,
-    checkLibraryContainsComponent,
-  } = useComponentLibrary();
-
-  const [isOpen, setIsOpen] = useState(false);
-
-  const { spec, url } = component;
+const useComponentFlags = (component: ComponentReference) => {
+  const { checkIfUserComponent, componentLibrary } = useComponentLibrary();
 
   const isUserComponent = useMemo(
     () => checkIfUserComponent(component),
     [component, checkIfUserComponent],
   );
 
-  const isInLibrary = useMemo(
-    () => checkLibraryContainsComponent(component),
-    [component, checkLibraryContainsComponent],
+  const flatComponentList = useMemo(
+    () => (componentLibrary ? flattenFolders(componentLibrary) : []),
+    [componentLibrary],
   );
+
+  const { data: isInLibrary } = useSuspenseQuery({
+    queryKey: ["component", "flags", component.digest],
+    queryFn: async () => {
+      if (!componentLibrary) return false;
+
+      if (isUserComponent) return true;
+
+      for (const c of flatComponentList) {
+        if (component.name === "Chicago Taxi Trips dataset") {
+          console.log(c.name, c.digest, component.digest);
+        }
+
+        if (c.name && c.name !== component.name) {
+          // micro optimization to skip components with different names
+          continue;
+        }
+
+        const digest = c.digest ?? (await hydrateComponentReference(c))?.digest;
+
+        if (digest === component.digest) {
+          return true;
+        }
+      }
+
+      return false;
+    },
+    staleTime: 10 * MINUTES,
+  });
+
+  return { isInLibrary, isUserComponent };
+};
+
+const ComponentFavoriteToggleInternal = ({
+  component,
+  hideDelete = false,
+}: ComponentFavoriteToggleProps) => {
+  const { addToComponentLibrary, removeFromComponentLibrary } =
+    useComponentLibrary();
+
+  const [isOpen, setIsOpen] = useState(false);
+
+  const { spec, url } = component;
+
+  const { isInLibrary, isUserComponent } = useComponentFlags(component);
 
   const displayName = useMemo(
     () => getComponentName({ spec, url }),
@@ -228,3 +265,13 @@ export const ComponentFavoriteToggle = ({
     </>
   );
 };
+
+export const ComponentFavoriteToggle = withSuspenseWrapper(
+  ComponentFavoriteToggleInternal,
+  () => <Spinner size={10} />,
+  () => (
+    <IconStateButton disabled>
+      <Icon name="Star" />
+    </IconStateButton>
+  ),
+);
