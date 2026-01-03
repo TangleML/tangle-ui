@@ -16,13 +16,12 @@ import {
   ExecutionDataProvider,
   useExecutionData,
 } from "@/providers/ExecutionDataProvider";
-import {
-  countTaskStatuses,
-  getRunStatus,
-  STATUS,
-} from "@/services/executionService";
 import { getBackendStatusString } from "@/utils/backend";
 import type { ComponentSpec } from "@/utils/componentSpec";
+import {
+  flattenExecutionStatusStats,
+  getOverallExecutionStatusFromStats,
+} from "@/utils/executionStatus";
 
 const PipelineRunContent = () => {
   const { setComponentSpec, clearComponentSpec, componentSpec } =
@@ -46,9 +45,12 @@ const PipelineRunContent = () => {
       return;
     }
 
-    const statusCounts = countTaskStatuses(details, state);
-    const pipelineStatus = getRunStatus(statusCounts);
-    const iconStatus = mapRunStatusToFavicon(pipelineStatus);
+    const executionStatusStats = flattenExecutionStatusStats(
+      state.child_execution_status_stats,
+    );
+    const overallStatus =
+      getOverallExecutionStatusFromStats(executionStatusStats);
+    const iconStatus = mapExecutionStatusToFavicon(overallStatus);
     faviconManager.updateFavicon(iconStatus);
 
     return () => {
@@ -152,21 +154,26 @@ const PipelineRun = () => {
 
 export default PipelineRun;
 
-const mapRunStatusToFavicon = (
-  runStatus: string,
+const mapExecutionStatusToFavicon = (
+  status: string | undefined,
 ): "success" | "failed" | "loading" | "paused" | "default" => {
-  switch (runStatus) {
-    case STATUS.SUCCEEDED:
+  switch (status) {
+    case "SUCCEEDED":
       return "success";
-    case STATUS.FAILED:
+    case "FAILED":
+    case "SYSTEM_ERROR":
+    case "INVALID":
       return "failed";
-    case STATUS.RUNNING:
+    case "RUNNING":
+    case "PENDING":
+    case "QUEUED":
+    case "WAITING_FOR_UPSTREAM":
+    case "CANCELLING":
+    case "UNINITIALIZED":
       return "loading";
-    case STATUS.WAITING:
+    case "CANCELLED":
+    case "SKIPPED":
       return "paused";
-    case STATUS.CANCELLED:
-      return "paused";
-    case STATUS.UNKNOWN:
     default:
       return "default";
   }

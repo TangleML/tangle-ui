@@ -1,175 +1,173 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, test } from "vitest";
 
-import type { TaskStatusCounts } from "@/types/pipelineRun";
+import { convertExecutionStatsToStatusCounts } from "./executionService";
 
-import { getRunStatus, STATUS } from "./executionService";
+describe("convertExecutionStatsToStatusCounts()", () => {
+  test("returns empty counts when stats is null", () => {
+    const result = convertExecutionStatsToStatusCounts(null);
 
-describe("getRunStatus()", () => {
-  it("should return CANCELLED when there are cancelled tasks", () => {
-    const statusData: TaskStatusCounts = {
-      total: 5,
-      succeeded: 2,
-      failed: 1,
-      running: 1,
-      waiting: 0,
-      skipped: 0,
-      cancelled: 1,
-    };
-
-    expect(getRunStatus(statusData)).toBe(STATUS.CANCELLED);
-  });
-
-  it("should return FAILED when there are failed tasks but no cancelled tasks", () => {
-    const statusData: TaskStatusCounts = {
-      total: 4,
-      succeeded: 1,
-      failed: 2,
-      running: 1,
-      waiting: 0,
-      skipped: 0,
-      cancelled: 0,
-    };
-
-    expect(getRunStatus(statusData)).toBe(STATUS.FAILED);
-  });
-
-  it("should return RUNNING when there are running tasks but no cancelled or failed tasks", () => {
-    const statusData: TaskStatusCounts = {
-      total: 4,
-      succeeded: 1,
-      failed: 0,
-      running: 2,
-      waiting: 1,
-      skipped: 0,
-      cancelled: 0,
-    };
-
-    expect(getRunStatus(statusData)).toBe(STATUS.RUNNING);
-  });
-
-  it("should return WAITING when there are waiting tasks but no cancelled, failed, or running tasks", () => {
-    const statusData: TaskStatusCounts = {
-      total: 3,
-      succeeded: 1,
-      failed: 0,
-      running: 0,
-      waiting: 2,
-      skipped: 0,
-      cancelled: 0,
-    };
-
-    expect(getRunStatus(statusData)).toBe(STATUS.WAITING);
-  });
-
-  it("should return SUCCEEDED when there are succeeded tasks but no other active/problematic tasks", () => {
-    const statusData: TaskStatusCounts = {
-      total: 3,
-      succeeded: 3,
-      failed: 0,
-      running: 0,
-      waiting: 0,
-      skipped: 0,
-      cancelled: 0,
-    };
-
-    expect(getRunStatus(statusData)).toBe(STATUS.SUCCEEDED);
-  });
-
-  it("should return UNKNOWN when all task counts are zero", () => {
-    const statusData: TaskStatusCounts = {
+    expect(result).toEqual({
       total: 0,
       succeeded: 0,
       failed: 0,
       running: 0,
+      pending: 0,
       waiting: 0,
       skipped: 0,
       cancelled: 0,
-    };
-
-    expect(getRunStatus(statusData)).toBe(STATUS.UNKNOWN);
+    });
   });
 
-  it("should return SKIPPED when only skipped tasks exist", () => {
-    const statusData: TaskStatusCounts = {
-      total: 2,
+  test("returns empty counts when stats is undefined", () => {
+    const result = convertExecutionStatsToStatusCounts(undefined);
+
+    expect(result).toEqual({
+      total: 0,
       succeeded: 0,
       failed: 0,
       running: 0,
+      pending: 0,
       waiting: 0,
-      skipped: 2,
-      cancelled: 0,
-    };
-
-    expect(getRunStatus(statusData)).toBe(STATUS.SKIPPED);
-  });
-
-  it("should prioritize CANCELLED over all other statuses", () => {
-    const statusData: TaskStatusCounts = {
-      total: 6,
-      succeeded: 1,
-      failed: 1,
-      running: 1,
-      waiting: 1,
-      skipped: 1,
-      cancelled: 1,
-    };
-
-    expect(getRunStatus(statusData)).toBe(STATUS.CANCELLED);
-  });
-
-  it("should prioritize FAILED over RUNNING, WAITING, and SUCCEEDED", () => {
-    const statusData: TaskStatusCounts = {
-      total: 5,
-      succeeded: 1,
-      failed: 1,
-      running: 1,
-      waiting: 1,
-      skipped: 1,
-      cancelled: 0,
-    };
-
-    expect(getRunStatus(statusData)).toBe(STATUS.FAILED);
-  });
-
-  it("should prioritize RUNNING over SKIPPED, WAITING, and SUCCEEDED", () => {
-    const statusData: TaskStatusCounts = {
-      total: 4,
-      succeeded: 1,
-      failed: 0,
-      running: 1,
-      waiting: 1,
-      skipped: 1,
-      cancelled: 0,
-    };
-
-    expect(getRunStatus(statusData)).toBe(STATUS.RUNNING);
-  });
-
-  it("should prioritize SKIPPED over WAITING and SUCCEEDED", () => {
-    const statusData: TaskStatusCounts = {
-      total: 3,
-      succeeded: 1,
-      failed: 0,
-      running: 0,
-      waiting: 1,
-      skipped: 1,
-      cancelled: 0,
-    };
-
-    expect(getRunStatus(statusData)).toBe(STATUS.SKIPPED);
-  });
-
-  it("should prioritize WAITING over SUCCEEDED when nothing else is active", () => {
-    const statusData: TaskStatusCounts = {
-      total: 3,
-      succeeded: 1,
-      failed: 0,
-      running: 0,
-      waiting: 1,
       skipped: 0,
       cancelled: 0,
-    };
+    });
+  });
 
-    expect(getRunStatus(statusData)).toBe(STATUS.WAITING);
+  test("maps SUCCEEDED to succeeded", () => {
+    const result = convertExecutionStatsToStatusCounts({ SUCCEEDED: 5 });
+
+    expect(result.succeeded).toBe(5);
+    expect(result.total).toBe(5);
+  });
+
+  test("maps FAILED to failed", () => {
+    const result = convertExecutionStatsToStatusCounts({ FAILED: 3 });
+
+    expect(result.failed).toBe(3);
+    expect(result.total).toBe(3);
+  });
+
+  test("maps SYSTEM_ERROR to failed", () => {
+    const result = convertExecutionStatsToStatusCounts({ SYSTEM_ERROR: 2 });
+
+    expect(result.failed).toBe(2);
+    expect(result.total).toBe(2);
+  });
+
+  test("maps INVALID to failed", () => {
+    const result = convertExecutionStatsToStatusCounts({ INVALID: 1 });
+
+    expect(result.failed).toBe(1);
+    expect(result.total).toBe(1);
+  });
+
+  test("maps RUNNING to running", () => {
+    const result = convertExecutionStatsToStatusCounts({ RUNNING: 4 });
+
+    expect(result.running).toBe(4);
+    expect(result.total).toBe(4);
+  });
+
+  test("maps STARTING to running", () => {
+    const result = convertExecutionStatsToStatusCounts({ STARTING: 2 });
+
+    expect(result.running).toBe(2);
+    expect(result.total).toBe(2);
+  });
+
+  test("maps PENDING to pending", () => {
+    const result = convertExecutionStatsToStatusCounts({ PENDING: 3 });
+
+    expect(result.pending).toBe(3);
+    expect(result.total).toBe(3);
+  });
+
+  test("maps SKIPPED to skipped", () => {
+    const result = convertExecutionStatsToStatusCounts({ SKIPPED: 2 });
+
+    expect(result.skipped).toBe(2);
+    expect(result.total).toBe(2);
+  });
+
+  test("maps UPSTREAM_FAILED_OR_SKIPPED to skipped", () => {
+    const result = convertExecutionStatsToStatusCounts({
+      UPSTREAM_FAILED_OR_SKIPPED: 1,
+    });
+
+    expect(result.skipped).toBe(1);
+    expect(result.total).toBe(1);
+  });
+
+  test("maps CANCELLED to cancelled", () => {
+    const result = convertExecutionStatsToStatusCounts({ CANCELLED: 2 });
+
+    expect(result.cancelled).toBe(2);
+    expect(result.total).toBe(2);
+  });
+
+  test("maps CANCELLING to cancelled", () => {
+    const result = convertExecutionStatsToStatusCounts({ CANCELLING: 1 });
+
+    expect(result.cancelled).toBe(1);
+    expect(result.total).toBe(1);
+  });
+
+  test("maps unknown statuses to waiting", () => {
+    const result = convertExecutionStatsToStatusCounts({
+      WAITING_FOR_UPSTREAM: 3,
+      QUEUED: 2,
+      UNINITIALIZED: 1,
+    });
+
+    expect(result.waiting).toBe(6);
+    expect(result.total).toBe(6);
+  });
+
+  test("aggregates multiple error statuses into failed", () => {
+    const result = convertExecutionStatsToStatusCounts({
+      FAILED: 2,
+      SYSTEM_ERROR: 1,
+      INVALID: 1,
+      UPSTREAM_FAILED: 1,
+    });
+
+    expect(result.failed).toBe(5);
+    expect(result.total).toBe(5);
+  });
+
+  test("correctly totals all status types", () => {
+    const result = convertExecutionStatsToStatusCounts({
+      SUCCEEDED: 10,
+      FAILED: 2,
+      RUNNING: 3,
+      PENDING: 1,
+      WAITING_FOR_UPSTREAM: 4,
+      SKIPPED: 1,
+      CANCELLED: 1,
+    });
+
+    expect(result.succeeded).toBe(10);
+    expect(result.failed).toBe(2);
+    expect(result.running).toBe(3);
+    expect(result.pending).toBe(1);
+    expect(result.waiting).toBe(4);
+    expect(result.skipped).toBe(1);
+    expect(result.cancelled).toBe(1);
+    expect(result.total).toBe(22);
+  });
+
+  test("handles empty stats object", () => {
+    const result = convertExecutionStatsToStatusCounts({});
+
+    expect(result).toEqual({
+      total: 0,
+      succeeded: 0,
+      failed: 0,
+      running: 0,
+      pending: 0,
+      waiting: 0,
+      skipped: 0,
+      cancelled: 0,
+    });
   });
 });
