@@ -247,6 +247,7 @@ export async function removeComponentFromCanvas(
 
   // Wait for the node to be removed from the DOM
   await expect(node).toBeHidden();
+  await expect(confirmDialog).toBeHidden();
 }
 
 /**
