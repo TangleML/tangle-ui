@@ -31,7 +31,11 @@ import {
   updateComponentInListByText,
   updateComponentRefInList,
 } from "@/utils/componentStore";
-import { MINUTES, USER_COMPONENTS_LIST_NAME } from "@/utils/constants";
+import {
+  ComponentSearchFilter,
+  MINUTES,
+  USER_COMPONENTS_LIST_NAME,
+} from "@/utils/constants";
 import { createPromiseFromDomEvent } from "@/utils/dom";
 import { getComponentName } from "@/utils/getComponentName";
 import {
@@ -40,7 +44,10 @@ import {
   saveComponent,
   type UserComponent,
 } from "@/utils/localforage";
-import { componentMatchesSearch } from "@/utils/searchUtils";
+import {
+  componentMatchesSearch,
+  containsSearchTerm,
+} from "@/utils/searchUtils";
 
 import {
   createRequiredContext,
@@ -362,6 +369,25 @@ export const ComponentLibraryProvider = ({
     (search: string, filters: string[]) => {
       if (!search.trim()) return null;
 
+      const exactMatch = filters.includes(ComponentSearchFilter.EXACTMATCH);
+      const hasNameFilter = filters.includes(ComponentSearchFilter.NAME);
+
+      // Helper to check if a component matches the search criteria
+      const componentMatches = (c: ComponentReference): boolean => {
+        // If spec is available, use the full search
+        if (c.spec && componentMatchesSearch(c.spec, search, filters)) {
+          return true;
+        }
+
+        // Fallback: if searching by NAME and component has a name but no spec,
+        // match against the component reference's name directly
+        if (hasNameFilter && c.name && !c.spec) {
+          return containsSearchTerm(c.name, search, exactMatch);
+        }
+
+        return false;
+      };
+
       const result: SearchResult = {
         components: {
           standard: [],
@@ -375,27 +401,21 @@ export const ComponentLibraryProvider = ({
           flattenFolders(componentLibrary),
         );
 
-        result.components.standard = uniqueComponents.filter(
-          (c) => c.spec && componentMatchesSearch(c.spec, search, filters),
-        );
+        result.components.standard = uniqueComponents.filter(componentMatches);
       }
 
       if (userComponentsFolder) {
         const uniqueComponents = filterToUniqueByDigest(
           flattenFolders(userComponentsFolder),
         );
-        result.components.user = uniqueComponents.filter(
-          (c) => c.spec && componentMatchesSearch(c.spec, search, filters),
-        );
+        result.components.user = uniqueComponents.filter(componentMatches);
       }
 
       if (usedComponentsFolder) {
         const uniqueComponents = filterToUniqueByDigest(
           flattenFolders(usedComponentsFolder),
         );
-        result.components.used = uniqueComponents.filter(
-          (c) => c.spec && componentMatchesSearch(c.spec, search, filters),
-        );
+        result.components.used = uniqueComponents.filter(componentMatches);
       }
 
       return result;
