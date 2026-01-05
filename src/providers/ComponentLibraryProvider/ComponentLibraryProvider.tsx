@@ -86,7 +86,7 @@ type ComponentLibraryContextType = {
   searchComponentLibrary: (
     search: string,
     filters: string[],
-  ) => SearchResult | null;
+  ) => Promise<SearchResult | null>;
   addToComponentLibrary: (
     component: HydratedComponentReference,
   ) => Promise<HydratedComponentReference | undefined>;
@@ -366,11 +366,13 @@ export const ComponentLibraryProvider = ({
    * Local component library search
    */
   const searchComponentLibrary = useCallback(
-    (search: string, filters: string[]) => {
+    async (search: string, filters: string[]) => {
       if (!search.trim()) return null;
 
-      const exactMatch = filters.includes(ComponentSearchFilter.EXACTMATCH);
-      const hasNameFilter = filters.includes(ComponentSearchFilter.NAME);
+      const filtersSet = new Set(filters);
+
+      const exactMatch = filtersSet.has(ComponentSearchFilter.EXACTMATCH);
+      const hasNameFilter = filtersSet.has(ComponentSearchFilter.NAME);
 
       // Helper to check if a component matches the search criteria
       const componentMatches = (c: ComponentReference): boolean => {
@@ -401,7 +403,24 @@ export const ComponentLibraryProvider = ({
           flattenFolders(componentLibrary),
         );
 
-        result.components.standard = uniqueComponents.filter(componentMatches);
+        if (!hasNameFilter && filtersSet.size > 1) {
+          // we need specs
+          const hydratedComponents = await Promise.all(
+            uniqueComponents.map(async (c) => {
+              if (!c.spec) {
+                return await hydrateComponentReference(c);
+              }
+              return c;
+            }),
+          );
+
+          result.components.standard = hydratedComponents
+            .filter((c) => c !== null)
+            .filter(componentMatches);
+        } else {
+          result.components.standard =
+            uniqueComponents.filter(componentMatches);
+        }
       }
 
       if (userComponentsFolder) {
@@ -559,14 +578,22 @@ export const ComponentLibraryProvider = ({
     dispatchEvent(new CustomEvent("tangle.library.duplicateDialogClosed"));
   }, []);
 
-  const searchResult = useMemo(
-    () =>
-      searchComponentLibrary(
-        currentSearchFilter.searchTerm,
-        currentSearchFilter.filters,
-      ),
-    [currentSearchFilter, searchComponentLibrary],
-  );
+  const [searchResult, setSearchResult] = useState<SearchResult | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    searchComponentLibrary(
+      currentSearchFilter.searchTerm,
+      currentSearchFilter.filters,
+    ).then((result) => {
+      if (!cancelled) {
+        setSearchResult(result);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentSearchFilter, searchComponentLibrary]);
 
   useEffect(() => {
     if (!rawComponentLibrary) {

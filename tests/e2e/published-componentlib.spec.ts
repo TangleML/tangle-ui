@@ -209,7 +209,7 @@ test.describe("Published Component Library", () => {
     await expect(outputConnection).toHaveAttribute("data-highlighted", "false");
 
     // search should be reset
-    assertSearchState(page, {
+    await assertSearchState(page, {
       searchTerm: "",
     });
 
@@ -252,7 +252,7 @@ test.describe("Published Component Library", () => {
     await expect(outputConnection).toHaveAttribute("data-selected", "false");
 
     // search should be reset
-    assertSearchState(page, {
+    await assertSearchState(page, {
       searchTerm: "",
     });
 

@@ -332,7 +332,7 @@ const Search = withSuspenseWrapper(
         const staticSearchResult = isValidFilterRequest(searchRequest, {
           includesFilter: "name",
         })
-          ? searchComponentLibrary(searchRequest.searchTerm, [
+          ? await searchComponentLibrary(searchRequest.searchTerm, [
               ComponentSearchFilter.NAME,
             ])
           : null;

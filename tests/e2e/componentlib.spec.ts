@@ -220,7 +220,7 @@ test.describe("Component Library", () => {
     await expect(inputConnection).toHaveAttribute("data-highlighted", "false");
     await expect(inputConnection).toHaveAttribute("data-selected", "true");
 
-    assertSearchState(page, {
+    await assertSearchState(page, {
       searchTerm: "CSV",
       searchFilterCount: "2",
       searchResultsCount: "*",
@@ -234,7 +234,7 @@ test.describe("Component Library", () => {
     await expect(outputConnection).toHaveAttribute("data-highlighted", "false");
 
     // search should be reset
-    assertSearchState(page, {
+    await assertSearchState(page, {
       searchTerm: "",
     });
 
@@ -270,7 +270,7 @@ test.describe("Component Library", () => {
     await expect(inputConnection).toHaveAttribute("data-highlighted", "true");
 
     // assert search inputs
-    assertSearchState(page, {
+    await assertSearchState(page, {
       searchTerm: "CSV",
       searchFilterCount: "2",
       // todo: this can be painful to maintain, find a better way to do this
@@ -285,7 +285,7 @@ test.describe("Component Library", () => {
     await expect(outputConnection).toHaveAttribute("data-selected", "false");
 
     // search should be reset
-    assertSearchState(page, {
+    await assertSearchState(page, {
       searchTerm: "",
     });
 
