@@ -13,6 +13,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { getExecutionStatusLabel } from "@/utils/executionStatus";
 
 const StatusIcon = ({
   status,
@@ -25,7 +26,8 @@ const StatusIcon = ({
 }) => {
   if (tooltip) {
     const capitalizedLabel = label.charAt(0).toUpperCase() + label.slice(1);
-    const tooltipText = `${capitalizedLabel} ${status?.toLowerCase() ?? "unknown"}`;
+    const displayStatus = getExecutionStatusLabel(status);
+    const tooltipText = `${capitalizedLabel} ${displayStatus}`;
     return (
       <Tooltip>
         <TooltipTrigger asChild>
@@ -61,7 +63,6 @@ const Icon = ({ status }: { status?: string }) => {
       return <RefreshCw className="w-4 h-4 text-yellow-500 animate-spin" />;
     case "CANCELLING":
       return <CircleX className="w-4 h-4 text-orange-500 animate-pulse" />;
-    case "WAITING":
     case "UNINITIALIZED":
       return <CircleEllipsis className="w-4 h-4 text-yellow-500" />;
     case "WAITING_FOR_UPSTREAM":

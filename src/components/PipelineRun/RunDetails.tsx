@@ -1,4 +1,16 @@
+import {
+  ActionBlock,
+  type ActionOrReactNode,
+} from "@/components/shared/ContextPanel/Blocks/ActionBlock";
+import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlock";
+import { ListBlock } from "@/components/shared/ContextPanel/Blocks/ListBlock";
+import { TextBlock } from "@/components/shared/ContextPanel/Blocks/TextBlock";
 import { CopyText } from "@/components/shared/CopyText/CopyText";
+import PipelineIO from "@/components/shared/Execution/PipelineIO";
+import { InfoBox } from "@/components/shared/InfoBox";
+import { LoadingScreen } from "@/components/shared/LoadingScreen";
+import { StatusBar } from "@/components/shared/Status";
+import { TaskImplementation } from "@/components/shared/TaskDetails";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { useCheckComponentSpecFromPath } from "@/hooks/useCheckComponentSpecFromPath";
@@ -7,24 +19,13 @@ import { useBackend } from "@/providers/BackendProvider";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
 import {
-  countTaskStatuses,
-  getRunStatus,
-  isStatusComplete,
-  isStatusInProgress,
-} from "@/services/executionService";
+  countInProgressFromStats,
+  flattenExecutionStatusStats,
+  getExecutionStatusLabel,
+  getOverallExecutionStatusFromStats,
+  isExecutionComplete,
+} from "@/utils/executionStatus";
 
-import {
-  ActionBlock,
-  type ActionOrReactNode,
-} from "../shared/ContextPanel/Blocks/ActionBlock";
-import { ContentBlock } from "../shared/ContextPanel/Blocks/ContentBlock";
-import { ListBlock } from "../shared/ContextPanel/Blocks/ListBlock";
-import { TextBlock } from "../shared/ContextPanel/Blocks/TextBlock";
-import PipelineIO from "../shared/Execution/PipelineIO";
-import { InfoBox } from "../shared/InfoBox";
-import { LoadingScreen } from "../shared/LoadingScreen";
-import { StatusBar, StatusText } from "../shared/Status";
-import { TaskImplementation } from "../shared/TaskDetails";
 import { CancelPipelineRunButton } from "./components/CancelPipelineRunButton";
 import { ClonePipelineButton } from "./components/ClonePipelineButton";
 import { InspectPipelineButton } from "./components/InspectPipelineButton";
@@ -79,11 +80,16 @@ export const RunDetails = () => {
     );
   }
 
-  const statusCounts = countTaskStatuses(details, state);
-  const runStatus = getRunStatus(statusCounts);
-  const hasRunningTasks = statusCounts.running > 0;
-  const isInProgress = isStatusInProgress(runStatus) || hasRunningTasks;
-  const isComplete = isStatusComplete(runStatus);
+  const executionStatusStats =
+    metadata?.execution_status_stats ??
+    flattenExecutionStatusStats(state.child_execution_status_stats);
+
+  const overallStatus =
+    getOverallExecutionStatusFromStats(executionStatusStats);
+  const statusLabel = getExecutionStatusLabel(overallStatus);
+
+  const isInProgress = countInProgressFromStats(executionStatusStats) > 0;
+  const isComplete = isExecutionComplete(executionStatusStats);
 
   const annotations = componentSpec.metadata?.annotations || {};
 
@@ -154,11 +160,10 @@ export const RunDetails = () => {
       <ContentBlock title="Status">
         <InlineStack gap="2" blockAlign="center" className="mb-1">
           <Text size="sm" weight="semibold">
-            {runStatus}
+            {statusLabel}
           </Text>
-          <StatusText statusCounts={statusCounts} />
         </InlineStack>
-        <StatusBar statusCounts={statusCounts} />
+        <StatusBar executionStatusStats={executionStatusStats} />
       </ContentBlock>
 
       {Object.keys(annotations).length > 0 && (

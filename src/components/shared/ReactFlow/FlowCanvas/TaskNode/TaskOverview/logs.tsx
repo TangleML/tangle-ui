@@ -1,13 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
-import type { ContainerExecutionStatus } from "@/api/types.gen";
 import { CodeViewer } from "@/components/shared/CodeViewer";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { Link } from "@/components/ui/link";
 import { Spinner } from "@/components/ui/spinner";
 import { useBackend } from "@/providers/BackendProvider";
-import type { RunStatus } from "@/types/pipelineRun";
 import { getBackendStatusString } from "@/utils/backend";
 
 const LogDisplay = ({
@@ -52,9 +50,7 @@ const LogDisplay = ({
   );
 };
 
-const isStatusActivelyLogging = (
-  status?: ContainerExecutionStatus | RunStatus,
-): boolean => {
+const isStatusActivelyLogging = (status?: string): boolean => {
   if (!status) {
     return false;
   }
@@ -70,9 +66,7 @@ const isStatusActivelyLogging = (
   }
 };
 
-const shouldStatusHaveLogs = (
-  status?: ContainerExecutionStatus | RunStatus,
-): boolean => {
+const shouldStatusHaveLogs = (status?: string): boolean => {
   if (!status) {
     return false;
   }
@@ -104,7 +98,7 @@ const Logs = ({
   status,
 }: {
   executionId?: string | number;
-  status?: ContainerExecutionStatus | RunStatus;
+  status?: string;
 }) => {
   const { backendUrl, configured, available } = useBackend();
 
@@ -194,7 +188,7 @@ export const OpenLogsInNewWindowLink = ({
   status,
 }: {
   executionId: string;
-  status?: ContainerExecutionStatus | RunStatus;
+  status?: string;
 }) => {
   const { backendUrl, available } = useBackend();
   const logsUrl = `${backendUrl}/api/executions/${executionId}/stream_container_log`;
