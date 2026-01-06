@@ -1,4 +1,4 @@
-import { InlineStack } from "@/components/ui/layout";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
 import {
   Tooltip,
   TooltipContent,
@@ -39,12 +39,10 @@ const StatusSegment = ({
   status,
   count,
   total,
-  hatched,
 }: {
   status: string;
   count: number;
   total: number;
-  hatched: boolean;
 }) => {
   const label = getExecutionStatusLabel(status);
   const colorClass = EXECUTION_STATUS_BG_COLORS[status] ?? "bg-slate-300";
@@ -54,7 +52,7 @@ const StatusSegment = ({
     <Tooltip>
       <TooltipTrigger asChild>
         <div
-          className={cn(colorClass, "h-full", hatched && HATCHED_SEGMENT_CLASS)}
+          className={cn(colorClass, "h-full")}
           style={{ width }}
           aria-label={`${count} ${label}`}
         />
@@ -102,17 +100,26 @@ const TaskStatusBar = ({
   });
 
   return (
-    <InlineStack wrap="nowrap" gap="0" className={BAR_CLASS}>
-      {sortedEntries.map(([status, count]) => (
-        <StatusSegment
-          key={status}
-          status={status}
-          count={count ?? 0}
-          total={total}
-          hatched={hasCancelled}
+    <BlockStack className="relative">
+      <InlineStack wrap="nowrap" gap="0" className={BAR_CLASS}>
+        {sortedEntries.map(([status, count]) => (
+          <StatusSegment
+            key={status}
+            status={status}
+            count={count ?? 0}
+            total={total}
+          />
+        ))}
+      </InlineStack>
+      {hasCancelled && (
+        <div
+          className={cn(
+            "pointer-events-none absolute inset-0 rounded",
+            HATCHED_SEGMENT_CLASS,
+          )}
         />
-      ))}
-    </InlineStack>
+      )}
+    </BlockStack>
   );
 };
 
