@@ -6,6 +6,7 @@ import { ComponentEditorDialog } from "@/components/shared/ComponentEditor/Compo
 import { PublishedComponentBadge } from "@/components/shared/ManageComponent/PublishedComponentBadge";
 import { trimDigest } from "@/components/shared/ManageComponent/utils/digest";
 import { useBetaFlagValue } from "@/components/shared/Settings/useBetaFlags";
+import TaskStatusBar from "@/components/shared/Status/TaskStatusBar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -18,6 +19,7 @@ import { useContextPanel } from "@/providers/ContextPanelProvider";
 import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
 import { useTaskNode } from "@/providers/TaskNodeProvider";
 import { isCacheDisabled } from "@/utils/cache";
+import type { ExecutionStatusStats } from "@/utils/executionStatus";
 import { getSubgraphDescription, isSubgraph } from "@/utils/subgraphUtils";
 
 import {
@@ -48,6 +50,7 @@ const TaskNodeCard = () => {
   const executionData = useExecutionDataOptional();
   const rootExecutionId = executionData?.rootExecutionId;
   const details = executionData?.details;
+  const executionState = executionData?.state;
 
   const nodeRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -71,6 +74,18 @@ const TaskNodeCard = () => {
     if (!taskSpec) return false;
     return isSubgraph(taskSpec);
   }, [taskSpec]);
+
+  const subgraphExecutionStats = useMemo((): ExecutionStatusStats | null => {
+    if (!isSubgraphNode || !taskId) return null;
+
+    const executionId = details?.child_task_execution_ids?.[taskId];
+    if (!executionId) return null;
+
+    const stats = executionState?.child_execution_status_stats?.[executionId];
+    if (!stats) return null;
+
+    return stats;
+  }, [isSubgraphNode, taskId, details, executionState]);
 
   const subgraphDescription = useMemo(() => {
     if (!taskSpec) return "";
@@ -176,6 +191,7 @@ const TaskNodeCard = () => {
     handleEditComponent,
     onDuplicate,
     onUpgrade,
+    isSubgraphNavigationEnabled,
   ]);
 
   const handleInputSectionClick = useCallback(() => {
@@ -311,6 +327,9 @@ const TaskNodeCard = () => {
           )}
         </CardHeader>
         <CardContent className="p-2 flex flex-col gap-2">
+          {isSubgraphNode && subgraphExecutionStats && (
+            <TaskStatusBar executionStatusStats={subgraphExecutionStats} />
+          )}
           <div
             style={{
               maxHeight:
