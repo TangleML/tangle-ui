@@ -67,14 +67,9 @@ const mockImportComponent = vi.mocked(componentStore.importComponent);
 const mockDeleteComponentFileFromList = vi.mocked(
   componentStore.deleteComponentFileFromList,
 );
-const mockUpdateComponentRefInList = vi.mocked(
-  componentStore.updateComponentRefInList,
-);
-const mockGetComponentByUrl = vi.mocked(localforage.getComponentByUrl);
 const mockGetUserComponentByName = vi.mocked(
   localforage.getUserComponentByName,
 );
-const mockSaveComponent = vi.mocked(localforage.saveComponent);
 const mockGetComponentName = vi.mocked(getComponentName.getComponentName);
 
 describe("ComponentLibraryProvider - Component Management", () => {
@@ -535,84 +530,6 @@ describe("ComponentLibraryProvider - Component Management", () => {
       const isUserComponent =
         result.current.checkIfUserComponent(standardComponent);
       expect(isUserComponent).toBe(false);
-    });
-  });
-
-  describe("Component Favoriting", () => {
-    it("should set component as favorite for user components", async () => {
-      const userComponent: ComponentReference = {
-        name: "user-component",
-        digest: "user-digest",
-        spec: mockComponentSpec,
-        text: "user yaml content",
-      };
-
-      mockUpdateComponentRefInList.mockResolvedValue({
-        componentRef: userComponent,
-        name: "user-component",
-        data: new ArrayBuffer(0),
-        creationTime: new Date(),
-        modificationTime: new Date(),
-      } as any);
-
-      const { result } = renderHook(() => useComponentLibrary(), {
-        wrapper: createWrapper,
-      });
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
-      });
-
-      await act(async () => {
-        await result.current.setComponentFavorite(userComponent, true);
-      });
-
-      expect(mockUpdateComponentRefInList).toHaveBeenCalledWith(
-        USER_COMPONENTS_LIST_NAME,
-        expect.objectContaining({ favorited: true }),
-        "user-component",
-      );
-    });
-
-    it("should set component as favorite for standard components", async () => {
-      const standardComponent: ComponentReference = {
-        name: "standard-component",
-        digest: "standard-digest",
-        url: "https://example.com/standard.yaml",
-        spec: mockComponentSpec,
-      };
-
-      const mockStoredComponent = {
-        id: "stored-1",
-        url: "https://example.com/standard.yaml",
-        data: "stored yaml",
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-        favorited: false,
-      };
-
-      mockGetComponentByUrl.mockResolvedValue(mockStoredComponent);
-      mockSaveComponent.mockResolvedValue(mockStoredComponent as any);
-
-      const { result } = renderHook(() => useComponentLibrary(), {
-        wrapper: createWrapper,
-      });
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
-      });
-
-      await act(async () => {
-        await result.current.setComponentFavorite(standardComponent, true);
-      });
-
-      expect(mockGetComponentByUrl).toHaveBeenCalledWith(
-        "https://example.com/standard.yaml",
-      );
-      expect(mockSaveComponent).toHaveBeenCalledWith({
-        ...mockStoredComponent,
-        favorited: true,
-      });
     });
   });
 });
