@@ -17,14 +17,15 @@ const AppMenu = () => {
   const requiresAuthorization = isAuthorizationRequired();
   const { componentSpec } = useComponentSpec();
   const title = componentSpec?.name;
+
   return (
     <div
-      className="w-full bg-stone-900 p-2 pt-2.5"
+      className="w-full bg-stone-900 px-3 py-2.5 md:px-4"
       style={{ height: `${TOP_NAV_HEIGHT}px` }}
     >
-      <InlineStack align="space-between" className="pl-12 pr-2">
-        <InlineStack>
-          <Link href="/" aria-label="Home" variant="block">
+      <InlineStack align="space-between" wrap="nowrap">
+        <InlineStack gap="3" wrap="nowrap" className="min-w-0 flex-1">
+          <Link href="/" aria-label="Home" variant="block" className="shrink-0">
             <img
               src={logo}
               alt="logo"
@@ -33,20 +34,20 @@ const AppMenu = () => {
           </Link>
 
           {title && (
-            <CopyText className="text-white text-md font-bold truncate max-w-lg ml-22">
+            <CopyText className="text-white text-md font-bold truncate max-w-32 sm:max-w-48 md:max-w-64 lg:max-w-md">
               {title}
             </CopyText>
           )}
         </InlineStack>
 
-        <InlineStack>
-          <InlineStack gap="4" className="mr-42">
+        <InlineStack gap="2" wrap="nowrap" className="shrink-0">
+          <InlineStack gap="2" className="md:flex" wrap="nowrap">
             <CloneRunButton componentSpec={componentSpec} />
             <ImportPipeline />
             <NewPipelineButton />
           </InlineStack>
 
-          <InlineStack gap="2">
+          <InlineStack gap="2" wrap="nowrap">
             <BackendStatus />
             <PersonalPreferences />
             {requiresAuthorization && <TopBarAuthentication />}
