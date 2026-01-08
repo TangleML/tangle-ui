@@ -75,11 +75,9 @@
           "description": "GPU type and quantity",
           "x-enable-quantity": true,
           "exclusiveMinimum": 0,
-          "enum": ["NVIDIA-H200", "NVIDIA-H100", "NVIDIA-A100"],
+          "enum": ["NVIDIA-H200"],
           "x-enum-labels": {
-            "NVIDIA-H200": "NVIDIA H200",
-            "NVIDIA-H100": "NVIDIA H100",
-            "NVIDIA-A100": "NVIDIA A100"
+            "NVIDIA-H200": "NVIDIA H200"
           }
         }
       }
