@@ -1,4 +1,4 @@
-import { useNavigate } from "@tanstack/react-router";
+import { useLocation, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { TooltipButtonProps } from "@/components/shared/Buttons/TooltipButton";
@@ -13,6 +13,7 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { QuickTooltip } from "@/components/ui/tooltip";
 import { Text } from "@/components/ui/typography";
 import { useEdgeSelectionHighlight } from "@/hooks/useEdgeSelectionHighlight";
+import { getFocusParam } from "@/hooks/useNodeFocus";
 import { buildExecutionUrl } from "@/hooks/useSubgraphBreadcrumbs";
 import { cn } from "@/lib/utils";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
@@ -35,6 +36,8 @@ import { UpgradeNodePopover } from "./UpgradeNodePopover";
 
 const TaskNodeCard = () => {
   const navigate = useNavigate();
+  const { search } = useLocation();
+  const focusParam = getFocusParam(search);
   const isRemoteComponentLibrarySearchEnabled = useBetaFlagValue(
     "remote-component-library-search",
   );
@@ -42,6 +45,7 @@ const TaskNodeCard = () => {
   const isInAppEditorEnabled = useBetaFlagValue("in-app-component-editor");
   const { registerNode } = useNodesOverlay();
   const taskNode = useTaskNode();
+  const isFocusedByUrl = focusParam === taskNode.nodeId;
   const {
     setContent,
     clearContent,
@@ -281,7 +285,8 @@ const TaskNodeCard = () => {
         className={cn(
           "rounded-2xl border-gray-200 border-2 wrap-break-word p-0 drop-shadow-none gap-2",
           selected ? "border-gray-500" : "hover:border-slate-200",
-          (highlighted || highlightedState) && "border-orange-500!",
+          (highlighted || highlightedState || isFocusedByUrl) &&
+            "border-orange-500!",
           isConnectedToSelectedEdge &&
             "border-edge-selected! ring-2 ring-edge-selected/30",
           isSubgraphNode && "cursor-pointer",

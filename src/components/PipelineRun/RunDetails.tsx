@@ -1,3 +1,5 @@
+import { useQuery } from "@tanstack/react-query";
+
 import {
   ActionBlock,
   type ActionOrReactNode,
@@ -18,6 +20,7 @@ import { useUserDetails } from "@/hooks/useUserDetails";
 import { useBackend } from "@/providers/BackendProvider";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
+import { collectAllTaskStatuses } from "@/utils/collectTaskStatuses";
 import {
   countInProgressFromStats,
   flattenExecutionStatusStats,
@@ -32,11 +35,12 @@ import { InspectPipelineButton } from "./components/InspectPipelineButton";
 import { RerunPipelineButton } from "./components/RerunPipelineButton";
 
 export const RunDetails = () => {
-  const { configured } = useBackend();
+  const { configured, backendUrl } = useBackend();
   const { componentSpec } = useComponentSpec();
   const {
     rootDetails: details,
     rootState: state,
+    rootExecutionId,
     runId,
     metadata,
     isLoading,
@@ -52,6 +56,30 @@ export const RunDetails = () => {
     editorRoute,
     !componentSpec.name,
   );
+
+  const { data: taskStatuses } = useQuery({
+    queryKey: [
+      "task-statuses",
+      componentSpec?.name,
+      details?.child_task_execution_ids,
+      rootExecutionId,
+    ],
+    queryFn: async () => {
+      if (!componentSpec || !state || !details || !backendUrl) {
+        return [];
+      }
+      return collectAllTaskStatuses(
+        componentSpec,
+        state,
+        details,
+        backendUrl,
+        rootExecutionId,
+      );
+    },
+    enabled:
+      !!componentSpec && !!state && !!details && !!backendUrl && configured,
+    staleTime: 30000,
+  });
 
   const isRunCreator =
     currentUserDetails?.id && metadata?.created_by === currentUserDetails.id;
@@ -163,7 +191,11 @@ export const RunDetails = () => {
             {statusLabel}
           </Text>
         </InlineStack>
-        <StatusBar executionStatusStats={executionStatusStats} />
+        <StatusBar
+          executionStatusStats={executionStatusStats}
+          taskStatuses={taskStatuses}
+          rootExecutionId={rootExecutionId}
+        />
       </ContentBlock>
 
       {Object.keys(annotations).length > 0 && (

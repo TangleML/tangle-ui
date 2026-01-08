@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import PipelineRunPage from "@/components/PipelineRun";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
+import { NodesOverlayProvider } from "@/components/shared/ReactFlow/NodesOverlay/NodesOverlayProvider";
 import { BlockStack } from "@/components/ui/layout";
 import { Paragraph } from "@/components/ui/typography";
 import { faviconManager } from "@/favicon";
@@ -17,7 +18,7 @@ import {
   useExecutionData,
 } from "@/providers/ExecutionDataProvider";
 import { getBackendStatusString } from "@/utils/backend";
-import type { ComponentSpec } from "@/utils/componentSpec";
+import { isValidComponentSpec } from "@/utils/componentSpec";
 import {
   flattenExecutionStatusStats,
   getOverallExecutionStatusFromStats,
@@ -59,10 +60,9 @@ const PipelineRunContent = () => {
   }, [details, state]);
 
   useEffect(() => {
-    if (rootDetails?.task_spec.componentRef.spec) {
-      setComponentSpec(
-        rootDetails.task_spec.componentRef.spec as ComponentSpec,
-      );
+    const spec = rootDetails?.task_spec.componentRef.spec;
+    if (spec && isValidComponentSpec(spec)) {
+      setComponentSpec(spec);
     }
 
     return () => {
@@ -141,12 +141,14 @@ const PipelineRun = () => {
   return (
     <DndContext>
       <ReactFlowProvider>
-        <ExecutionDataProvider
-          pipelineRunId={id}
-          subgraphExecutionId={subgraphExecutionId}
-        >
-          <PipelineRunContent />
-        </ExecutionDataProvider>
+        <NodesOverlayProvider>
+          <ExecutionDataProvider
+            pipelineRunId={id}
+            subgraphExecutionId={subgraphExecutionId}
+          >
+            <PipelineRunContent />
+          </ExecutionDataProvider>
+        </NodesOverlayProvider>
       </ReactFlowProvider>
     </DndContext>
   );
