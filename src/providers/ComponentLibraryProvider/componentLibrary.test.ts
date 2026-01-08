@@ -17,7 +17,6 @@ import * as yamlUtils from "@/utils/yaml";
 
 import {
   fetchUsedComponents,
-  fetchUserComponents,
   filterToUniqueByDigest,
   flattenFolders,
   populateComponentRefs,
@@ -40,128 +39,6 @@ describe("componentLibrary", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
-  });
-
-  describe("fetchUserComponents", () => {
-    it("should return user components folder with components from store", async () => {
-      // Arrange
-      const mockComponentFiles = new Map([
-        [
-          "component1",
-          {
-            name: "Test Component 1",
-            creationTime: new Date(),
-            modificationTime: new Date(),
-            data: new ArrayBuffer(0),
-            componentRef: {
-              name: "test-component-1",
-              digest: "digest1",
-              url: "https://example.com/component1.yaml",
-              spec: {} as ComponentSpec,
-              text: "test-yaml",
-            },
-          },
-        ],
-        [
-          "component2",
-          {
-            name: "Test Component 2",
-            creationTime: new Date(),
-            modificationTime: new Date(),
-            data: new ArrayBuffer(0),
-            componentRef: {
-              name: "test-component-2",
-              digest: "digest2",
-              url: "https://example.com/component2.yaml",
-              spec: {} as ComponentSpec,
-              text: "test-yaml",
-            },
-          },
-        ],
-      ]);
-
-      mockComponentStore.getAllComponentFilesFromList.mockResolvedValue(
-        mockComponentFiles,
-      );
-
-      // Act
-      const result = await fetchUserComponents();
-
-      // Assert
-      expect(result).toEqual({
-        name: "User Components",
-        components: [
-          {
-            name: "Test Component 1",
-            digest: "digest1",
-            url: "https://example.com/component1.yaml",
-            spec: {},
-            text: "test-yaml",
-            owned: true,
-          },
-          {
-            name: "Test Component 2",
-            digest: "digest2",
-            url: "https://example.com/component2.yaml",
-            spec: {},
-            text: "test-yaml",
-            owned: true,
-          },
-        ],
-        folders: [],
-        isUserFolder: true,
-      });
-      expect(
-        mockComponentStore.getAllComponentFilesFromList,
-      ).toHaveBeenCalledWith("user_components");
-    });
-
-    it("should return empty user components folder when no components exist", async () => {
-      // Arrange
-      mockComponentStore.getAllComponentFilesFromList.mockResolvedValue(
-        new Map(),
-      );
-
-      // Act
-      const result = await fetchUserComponents();
-
-      // Assert
-      expect(result).toEqual({
-        name: "User Components",
-        components: [],
-        folders: [],
-        isUserFolder: true,
-      });
-    });
-
-    it("should return empty folder on error", async () => {
-      // Arrange
-      mockComponentStore.getAllComponentFilesFromList.mockRejectedValue(
-        new Error("Storage error"),
-      );
-      const consoleSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
-
-      // Act
-      const result = await fetchUserComponents();
-
-      // Assert
-      expect(result).toEqual({
-        name: "User Components",
-        components: [],
-        folders: [],
-        isUserFolder: true,
-      });
-      expect(consoleSpy).toHaveBeenCalledWith(
-        "Error fetching user components:",
-        expect.any(Error),
-      );
-
-      consoleSpy.mockRestore();
-    });
-
-    // todo: test edge cases with malformed component files
   });
 
   describe("fetchUsedComponents", () => {

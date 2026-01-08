@@ -1,11 +1,8 @@
 import localForage from "localforage";
 
-import { fetchComponentTextFromUrl } from "@/services/componentService";
-
 import type { DownloadDataType } from "./cache";
 import { downloadDataWithCache } from "./cache";
 import type { ComponentReference, ComponentSpec } from "./componentSpec";
-import { USER_COMPONENTS_LIST_NAME } from "./constants";
 import { getIdOrTitleFromPath } from "./URL";
 import { componentSpecFromYaml, componentSpecToYaml } from "./yaml";
 
@@ -14,8 +11,7 @@ const DB_NAME = "components";
 const DIGEST_TO_DATA_DB_TABLE_NAME = "digest_to_component_data";
 const DIGEST_TO_COMPONENT_SPEC_DB_TABLE_NAME = "digest_to_component_spec";
 const DIGEST_TO_COMPONENT_NAME_DB_TABLE_NAME = "digest_to_component_name";
-const URL_TO_DIGEST_DB_TABLE_NAME = "url_to_digest";
-const DIGEST_TO_CANONICAL_URL_DB_TABLE_NAME = "digest_to_canonical_url";
+
 const COMPONENT_REF_LISTS_DB_TABLE_NAME = "component_ref_lists";
 const COMPONENT_STORE_SETTINGS_DB_TABLE_NAME = "component_store_settings";
 const FILE_STORE_DB_TABLE_NAME_PREFIX = "file_store_";
@@ -180,88 +176,6 @@ const storeComponentText = async (componentText: string | ArrayBuffer) => {
   return componentRef;
 };
 
-const storeComponentFromUrl = async (
-  url: string,
-  setUrlAsCanonical = false,
-): Promise<ComponentReferenceWithSpec> => {
-  const urlToDigestDb = localForage.createInstance({
-    name: DB_NAME,
-    storeName: URL_TO_DIGEST_DB_TABLE_NAME,
-  });
-  const digestToComponentSpecDb = localForage.createInstance({
-    name: DB_NAME,
-    storeName: DIGEST_TO_COMPONENT_SPEC_DB_TABLE_NAME,
-  });
-  const digestToDataDb = localForage.createInstance({
-    name: DB_NAME,
-    storeName: DIGEST_TO_DATA_DB_TABLE_NAME,
-  });
-
-  const existingDigest = await urlToDigestDb.getItem<string>(url);
-  if (existingDigest !== null) {
-    const componentSpec =
-      await digestToComponentSpecDb.getItem<ComponentSpec>(existingDigest);
-    const componentData =
-      await digestToDataDb.getItem<ArrayBuffer>(existingDigest);
-    if (componentSpec !== null && componentData !== null) {
-      const componentRef: ComponentReferenceWithSpec = {
-        url: url,
-        digest: existingDigest,
-        spec: componentSpec,
-        text: new TextDecoder().decode(componentData),
-      };
-      return componentRef;
-    } else {
-      console.error(
-        `Component db is corrupted: Component with url ${url} was added before with digest ${existingDigest} but now has no content in the DB.`,
-      );
-    }
-  }
-
-  // TODO: Think about whether to directly use fetch here.
-  const componentData = await fetchComponentTextFromUrl(url);
-  if (!componentData) {
-    throw new Error(`Failed to fetch component text: ${url}`);
-  }
-  const componentRef = await storeComponentText(componentData);
-  componentRef.url = url;
-  const digest = componentRef.digest;
-  if (digest === undefined) {
-    console.error(
-      `Cannot happen: storeComponentText has returned componentReference with digest === undefined.`,
-    );
-    return componentRef;
-  }
-  if (existingDigest !== null && digest !== existingDigest) {
-    console.error(
-      `Component db is corrupted: Component with url ${url} previously had digest ${existingDigest} but now has digest ${digest}.`,
-    );
-  }
-  const digestToCanonicalUrlDb = localForage.createInstance({
-    name: DB_NAME,
-    storeName: DIGEST_TO_CANONICAL_URL_DB_TABLE_NAME,
-  });
-  const existingCanonicalUrl =
-    await digestToCanonicalUrlDb.getItem<string>(digest);
-  if (existingCanonicalUrl === null) {
-    await digestToCanonicalUrlDb.setItem(digest, url);
-  } else {
-    if (url !== existingCanonicalUrl) {
-      console.debug(
-        `The component with digest "${digest}" is being loaded from "${url}", but was previously loaded from "${existingCanonicalUrl}".` +
-          (setUrlAsCanonical ? " Changing the canonical url." : ""),
-      );
-      if (setUrlAsCanonical) {
-        await digestToCanonicalUrlDb.setItem(digest, url);
-      }
-    }
-  }
-  // Updating the urlToDigestDb last, because it's used to check for cached entries.
-  // So we need to be sure that everything has been updated correctly.
-  await urlToDigestDb.setItem(url, digest);
-  return componentRef;
-};
-
 interface ComponentFileEntryV2 {
   componentRef: ComponentReferenceWithSpec;
 }
@@ -274,8 +188,7 @@ interface FileEntry {
 }
 
 interface ComponentFileEntryV3
-  extends FileEntry,
-    ComponentReferenceWithSpecPlusData {}
+  extends FileEntry, ComponentReferenceWithSpecPlusData {}
 
 export type ComponentFileEntry = ComponentFileEntryV3;
 
@@ -348,135 +261,6 @@ export const updateComponentRefInList = async (
     );
   }
   return writeComponentRefToFile(listName, fileName, componentRef);
-};
-
-const addComponentRefToList = async (
-  listName: string,
-  componentRef: ComponentReferenceWithSpec,
-  fileName: string = "Component",
-) => {
-  await upgradeSingleComponentListDb(listName);
-  const tableName = FILE_STORE_DB_TABLE_NAME_PREFIX + listName;
-  const componentListDb = localForage.createInstance({
-    name: DB_NAME,
-    storeName: tableName,
-  });
-  const existingNames = new Set<string>(await componentListDb.keys());
-  const uniqueFileName = makeNameUniqueByAddingIndex(fileName, existingNames);
-  return writeComponentRefToFile(listName, uniqueFileName, componentRef);
-};
-
-const addComponentToListByUrl = async (
-  listName: string,
-  url: string,
-  defaultFileName: string = "Component",
-  allowDuplicates: boolean = false,
-  additionalData?: {
-    [K: string]: any;
-  },
-) => {
-  const componentRef = await storeComponentFromUrl(url);
-
-  if (additionalData) {
-    // Merge additional data into the component reference
-    Object.assign(componentRef, additionalData);
-  }
-
-  if (allowDuplicates) {
-    return addComponentRefToList(
-      listName,
-      componentRef,
-      componentRef.spec.name ?? defaultFileName,
-    );
-  }
-
-  return writeComponentRefToFile(
-    listName,
-    componentRef.spec.name ?? defaultFileName,
-    componentRef,
-  );
-};
-
-const findDuplicateComponent = async (
-  listName: string,
-  componentRef: ComponentReferenceWithSpec,
-): Promise<ComponentFileEntry | null> => {
-  try {
-    const componentFiles = await getAllComponentFilesFromList(listName);
-    const targetComponentName = componentRef.spec.name;
-
-    if (!targetComponentName) {
-      return null; // Can't check for duplicates without a name
-    }
-
-    // Look for components with the same name
-    for (const [, fileEntry] of componentFiles) {
-      const existingComponentName = fileEntry.componentRef.spec.name;
-
-      if (existingComponentName === targetComponentName) {
-        // TODO: This check causing some behavior divergence with ComponentService.
-        // Found a component with the same name, now check if content is identical
-        if (fileEntry.componentRef.text === componentRef.text) {
-          return fileEntry; // Exact duplicate found
-        }
-      }
-    }
-
-    return null; // No duplicate found
-  } catch (error) {
-    console.error("Error checking for duplicate component:", error);
-    return null;
-  }
-};
-
-/**
- * Enhanced version of addComponentToListByText that checks for duplicates
- * @param listName - The component list name
- * @param componentText - The component YAML text
- * @param fileName - Optional specific file name
- * @param defaultFileName - Default file name if none provided
- * @param allowDuplicates - Whether to allow duplicate imports (default: false)
- * @returns Object with the file entry and a flag indicating if it was a duplicate
- */
-const addComponentToListByTextWithDuplicateCheck = async (
-  listName: string,
-  componentText: string | ArrayBuffer,
-  fileName?: string,
-  defaultFileName: string = "Component",
-  allowDuplicates: boolean = false,
-  additionalData?: {
-    [K: string]: any;
-  },
-): Promise<ComponentFileEntry> => {
-  const componentRef = await storeComponentText(componentText);
-
-  if (additionalData) {
-    // Merge additional data into the component reference
-    Object.assign(componentRef, additionalData);
-  }
-
-  if (!allowDuplicates) {
-    const existingComponent = await findDuplicateComponent(
-      listName,
-      componentRef,
-    );
-    if (existingComponent) {
-      return updateComponentRefInList(
-        listName,
-        componentRef,
-        existingComponent.name,
-      );
-    }
-  }
-
-  // No duplicate found or duplicates are allowed, proceed with normal addition
-  const fileEntry = await addComponentRefToList(
-    listName,
-    componentRef,
-    fileName ?? componentRef.spec.name ?? defaultFileName,
-  );
-
-  return fileEntry;
 };
 
 export const writeComponentToFileListFromText = async (
@@ -714,43 +498,4 @@ const upgradeSingleComponentListDb = async (listName: string) => {
       `componentStore: Upgraded the component list DB ${listName} to version ${listFormatVersion}`,
     );
   }
-};
-
-export const importComponent = async (component: ComponentReference) => {
-  if (!component.url) {
-    component.favorited = true;
-
-    if (component.spec && component.name) {
-      return await writeComponentRefToFile(
-        USER_COMPONENTS_LIST_NAME,
-        component.name,
-        component as ComponentReferenceWithSpec,
-      );
-    } else if (component.text) {
-      return await addComponentToListByTextWithDuplicateCheck(
-        USER_COMPONENTS_LIST_NAME,
-        component.text,
-        component.name,
-        "Component",
-        false,
-        { favorited: true },
-      );
-    } else {
-      console.warn(
-        `Component "${component.name}" does not have spec or text, cannot favorite.`,
-      );
-    }
-
-    return;
-  }
-
-  return await addComponentToListByUrl(
-    USER_COMPONENTS_LIST_NAME,
-    component.url,
-    component.name,
-    false,
-    {
-      favorited: true,
-    },
-  );
 };
