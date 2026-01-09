@@ -26,6 +26,8 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/components/shared/Settings",
   "src/components/shared/HuggingFaceAuth",
   "src/components/shared/GitHubLibrary",
+  "src/hooks/useHandleEdgeSelection.ts",
+  "src/hooks/useEdgeSelectionHighlight.ts",
 
   "src/components/shared/Submitters/Oasis/components",
 
