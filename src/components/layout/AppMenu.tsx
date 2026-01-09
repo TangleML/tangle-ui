@@ -1,7 +1,9 @@
+import { useLocation } from "@tanstack/react-router";
 import { Menu } from "lucide-react";
 import { useState } from "react";
 
 import logo from "/Tangle_white.png";
+import { PipelineRunBreadcrumbs } from "@/components/PipelineRun/components/PipelineRunBreadcrumbs";
 import { isAuthorizationRequired } from "@/components/shared/Authentication/helpers";
 import { TopBarAuthentication } from "@/components/shared/Authentication/TopBarAuthentication";
 import { CopyText } from "@/components/shared/CopyText/CopyText";
@@ -17,6 +19,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
+import { RUNS_BASE_PATH } from "@/routes/router";
 import { TOP_NAV_HEIGHT } from "@/utils/constants";
 
 import BackendStatus from "../shared/BackendStatus";
@@ -27,8 +30,12 @@ import { PersonalPreferences } from "../shared/Settings/PersonalPreferences";
 const AppMenu = () => {
   const requiresAuthorization = isAuthorizationRequired();
   const { componentSpec } = useComponentSpec();
+  const location = useLocation();
   const title = componentSpec?.name;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Check if we're on a run page
+  const isRunPage = location.pathname.includes(RUNS_BASE_PATH);
 
   return (
     <div
@@ -45,10 +52,15 @@ const AppMenu = () => {
             />
           </Link>
 
-          {title && (
-            <CopyText className="text-white text-md font-bold truncate max-w-32 sm:max-w-48 md:max-w-64 lg:max-w-md">
-              {title}
-            </CopyText>
+          {/* Show breadcrumbs on run pages, otherwise show simple title */}
+          {isRunPage ? (
+            <PipelineRunBreadcrumbs variant="topbar" />
+          ) : (
+            title && (
+              <CopyText className="text-white text-md font-bold truncate max-w-32 sm:max-w-48 md:max-w-64 lg:max-w-md">
+                {title}
+              </CopyText>
+            )
           )}
         </InlineStack>
 
