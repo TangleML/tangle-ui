@@ -11,6 +11,7 @@ import { Paragraph } from "@/components/ui/typography";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useContextPanel } from "@/providers/ContextPanelProvider";
 import { type InputSpec, type OutputSpec } from "@/utils/componentSpec";
+import { getArgumentValue } from "@/utils/nodes/taskArguments";
 
 import { InputValueEditor } from "../../Editor/IOEditor/InputValueEditor";
 import { OutputNameEditor } from "../../Editor/IOEditor/OutputNameEditor";
@@ -173,15 +174,4 @@ function IORow({ spec, value, type, actions }: IORowProps) {
       </InlineStack>
     </InlineStack>
   );
-}
-
-function getArgumentValue(
-  taskArguments: TaskSpecOutput["arguments"] | undefined,
-  inputName: string,
-) {
-  const argument = taskArguments?.[inputName];
-  if (typeof argument === "string") {
-    return argument;
-  }
-  return undefined;
 }

@@ -25,10 +25,12 @@ import { InputValueDialog } from "./InputValueDialog";
 interface InputValueEditorProps {
   input: InputSpec;
   disabled?: boolean;
+  argumentValue?: string;
 }
 
 export const InputValueEditor = ({
   input,
+  argumentValue,
   disabled = false,
 }: InputValueEditorProps) => {
   const notify = useToastNotification();
@@ -49,7 +51,8 @@ export const InputValueEditor = ({
   const [isValueDialogOpen, setIsValueDialogOpen] = useState(false);
   const [triggerSave, setTriggerSave] = useState(false);
 
-  const initialInputValue = input.value ?? input.default ?? "";
+  const defaultInputValue = input.value ?? input.default ?? "";
+  const initialInputValue = argumentValue ?? defaultInputValue;
   const initialIsOptional = false; // When optional inputs are permitted again change to: input.optional ?? true
 
   const [inputValue, setInputValue] = useState(initialInputValue);
@@ -266,6 +269,7 @@ export const InputValueEditor = ({
         placeholder={placeholder}
         disabled={disabled}
         inputName={input.name}
+        isDefault={!argumentValue || argumentValue === defaultInputValue}
         actions={[
           {
             icon: "Maximize2",

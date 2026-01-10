@@ -10,6 +10,8 @@ import { Paragraph } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useContextPanel } from "@/providers/ContextPanelProvider";
+import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
+import { getArgumentValue } from "@/utils/nodes/taskArguments";
 import { isViewingSubgraph } from "@/utils/subgraphUtils";
 
 import { getGhostHandleId, GHOST_NODE_ID } from "../GhostNode/utils";
@@ -33,6 +35,10 @@ interface IONodeProps {
 const IONode = ({ id, type, data, selected = false }: IONodeProps) => {
   const { currentGraphSpec, currentSubgraphSpec, currentSubgraphPath } =
     useComponentSpec();
+
+  const executionData = useExecutionDataOptional();
+  const taskArguments = executionData?.rootDetails?.task_spec.arguments;
+
   const {
     setContent,
     clearContent,
@@ -62,6 +68,8 @@ const IONode = ({ id, type, data, selected = false }: IONodeProps) => {
     [currentSubgraphSpec.inputs, data.label],
   );
 
+  const inputTaskArgument = getArgumentValue(taskArguments, input?.name);
+
   const output = useMemo(
     () =>
       currentSubgraphSpec.outputs?.find((output) => output.name === data.label),
@@ -76,6 +84,7 @@ const IONode = ({ id, type, data, selected = false }: IONodeProps) => {
             input={input}
             key={input.name}
             disabled={readOnly}
+            argumentValue={inputTaskArgument}
           />,
         );
       }
@@ -118,11 +127,11 @@ const IONode = ({ id, type, data, selected = false }: IONodeProps) => {
 
   const handleClassName = isInput ? "translate-x-1.5" : "-translate-x-1.5";
 
-  const hasDataValue = !!data.value;
+  const hasDataValue = !!data.value || !!inputTaskArgument;
   const hasDataDefault = !!data.default;
 
   const inputValue = hasDataValue
-    ? data.value
+    ? (inputTaskArgument ?? data.value)
     : hasDataDefault
       ? data.default
       : isInSubgraph
