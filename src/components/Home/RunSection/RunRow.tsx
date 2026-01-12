@@ -40,6 +40,15 @@ const RunRow = ({ run }: { run: PipelineRunResponse }) => {
 
   const clickThroughUrl = `${APP_ROUTES.RUNS}/${runId}`;
 
+  const handleRowClick = (e: MouseEvent) => {
+    e.stopPropagation();
+    if (e.metaKey || e.ctrlKey) {
+      window.open(clickThroughUrl, "_blank");
+    } else {
+      navigate({ to: clickThroughUrl });
+    }
+  };
+
   const createdByButton = (
     <Button
       className="truncate underline"
@@ -62,18 +71,19 @@ const RunRow = ({ run }: { run: PipelineRunResponse }) => {
 
   return (
     <TableRow
-      onClick={(e) => {
-        e.stopPropagation();
-        navigate({ to: clickThroughUrl });
-      }}
+      onClick={(e) => handleRowClick(e)}
       className="cursor-pointer text-gray-500 text-xs"
     >
-      <TableCell className="text-sm flex items-center gap-2">
-        <StatusIcon status={overallStatus} />
-        <Paragraph className="truncate max-w-[400px]" title={name}>
-          {name}
-        </Paragraph>
-        <span>{`#${runId}`}</span>
+      <TableCell>
+        <div className="flex items-center gap-2">
+          <StatusIcon status={overallStatus} />
+          <Paragraph className="truncate max-w-[400px] text-sm" title={name}>
+            {name}
+          </Paragraph>
+          <Paragraph tone="subdued" className="text-sm" title={runId}>
+            #{runId}
+          </Paragraph>
+        </div>
       </TableCell>
       <TableCell>
         <div className="w-2/3">
