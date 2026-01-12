@@ -1,4 +1,7 @@
-import type { BodyCreateApiPipelineRunsPost } from "@/api/types.gen";
+import type {
+  BodyCreateApiPipelineRunsPost,
+  TaskSpecOutput,
+} from "@/api/types.gen";
 import { getArgumentsFromInputs } from "@/components/shared/ReactFlow/FlowCanvas/utils/getArgumentsFromInputs";
 import {
   createPipelineRun,
@@ -7,12 +10,14 @@ import {
 import type { PipelineRun } from "@/types/pipelineRun";
 
 import type { ComponentReference, ComponentSpec } from "./componentSpec";
+import { getArgumentValue } from "./nodes/taskArguments";
 import { componentSpecFromYaml } from "./yaml";
 
 export async function submitPipelineRun(
   componentSpec: ComponentSpec,
   backendUrl: string,
   options?: {
+    taskArguments?: TaskSpecOutput["arguments"];
     authorizationToken?: string;
     onSuccess?: (data: PipelineRun) => void;
     onError?: (error: Error) => void;
@@ -31,13 +36,25 @@ export async function submitPipelineRun(
       },
     );
     const argumentsFromInputs = getArgumentsFromInputs(fullyLoadedSpec);
+    const normalizedTaskArguments = options?.taskArguments
+      ? Object.fromEntries(
+          Object.entries(options.taskArguments).map(([key, _]) => [
+            key,
+            getArgumentValue(options.taskArguments, key),
+          ]),
+        )
+      : {};
+    const payloadArguments = {
+      ...argumentsFromInputs,
+      ...normalizedTaskArguments,
+    };
 
     const payload = {
       root_task: {
         componentRef: {
           spec: fullyLoadedSpec,
         },
-        ...(argumentsFromInputs ? { arguments: argumentsFromInputs } : {}),
+        ...(payloadArguments ? { arguments: payloadArguments } : {}),
       },
     };
 

@@ -1,7 +1,6 @@
 import yaml from "js-yaml";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import * as getArgumentsFromInputs from "@/components/shared/ReactFlow/FlowCanvas/utils/getArgumentsFromInputs";
 import * as pipelineRunService from "@/services/pipelineRunService";
 import type { PipelineRun } from "@/types/pipelineRun";
 
@@ -13,13 +12,6 @@ vi.mock("@/services/pipelineRunService", () => ({
   createPipelineRun: vi.fn(),
   savePipelineRun: vi.fn(),
 }));
-
-vi.mock(
-  "@/components/shared/ReactFlow/FlowCanvas/utils/getArgumentsFromInputs",
-  () => ({
-    getArgumentsFromInputs: vi.fn(),
-  }),
-);
 
 describe("submitPipelineRun", () => {
   const mockBackendUrl = "https://api.example.com";
@@ -44,9 +36,6 @@ describe("submitPipelineRun", () => {
     global.fetch = mockFetch;
 
     // Setup default mocks
-    vi.mocked(getArgumentsFromInputs.getArgumentsFromInputs).mockReturnValue(
-      {},
-    );
     vi.mocked(pipelineRunService.createPipelineRun).mockResolvedValue(
       mockPipelineRun,
     );
@@ -103,17 +92,16 @@ describe("submitPipelineRun", () => {
       expect(mockOnError).not.toHaveBeenCalled();
     });
 
-    it("should include arguments when getArgumentsFromInputs returns data", async () => {
+    it("should include arguments when componentSpec has inputs with values", async () => {
       // Arrange
       const componentSpec: ComponentSpec = {
         name: "component-with-args",
+        inputs: [
+          { name: "param1", value: "value1" },
+          { name: "param2", value: "value2" },
+        ],
         implementation: { container: { image: "test:latest" } },
       };
-
-      const mockArguments = { param1: "value1", param2: "value2" };
-      vi.mocked(getArgumentsFromInputs.getArgumentsFromInputs).mockReturnValue(
-        mockArguments,
-      );
 
       // Act
       await submitPipelineRun(componentSpec, mockBackendUrl);
@@ -125,7 +113,7 @@ describe("submitPipelineRun", () => {
             componentRef: {
               spec: componentSpec,
             },
-            arguments: mockArguments,
+            arguments: { param1: "value1", param2: "value2" },
           },
         },
         mockBackendUrl,
@@ -165,6 +153,211 @@ describe("submitPipelineRun", () => {
         "Pipeline",
         undefined,
       );
+    });
+  });
+
+  describe("taskArguments handling", () => {
+    it("should include taskArguments in payload when provided", async () => {
+      // Arrange
+      const componentSpec: ComponentSpec = {
+        name: "component-with-task-args",
+        implementation: { container: { image: "test:latest" } },
+      };
+
+      const mockTaskArguments = {
+        inputA: "valueA",
+        inputB: "valueB",
+      };
+
+      // Act
+      await submitPipelineRun(componentSpec, mockBackendUrl, {
+        taskArguments: mockTaskArguments,
+      });
+
+      // Assert
+      expect(pipelineRunService.createPipelineRun).toHaveBeenCalledWith(
+        {
+          root_task: {
+            componentRef: {
+              spec: componentSpec,
+            },
+            arguments: {
+              inputA: "valueA",
+              inputB: "valueB",
+            },
+          },
+        },
+        mockBackendUrl,
+        undefined,
+      );
+    });
+
+    it("should merge taskArguments with argumentsFromInputs", async () => {
+      // Arrange
+      const componentSpec: ComponentSpec = {
+        name: "merged-args-component",
+        inputs: [
+          { name: "fromInput1", value: "inputValue1" },
+          { name: "fromInput2", value: "inputValue2" },
+        ],
+        implementation: { container: { image: "test:latest" } },
+      };
+
+      const mockTaskArguments = {
+        taskArg1: "taskValue1",
+        taskArg2: "taskValue2",
+      };
+
+      // Act
+      await submitPipelineRun(componentSpec, mockBackendUrl, {
+        taskArguments: mockTaskArguments,
+      });
+
+      // Assert
+      expect(pipelineRunService.createPipelineRun).toHaveBeenCalledWith(
+        {
+          root_task: {
+            componentRef: {
+              spec: componentSpec,
+            },
+            arguments: {
+              fromInput1: "inputValue1",
+              fromInput2: "inputValue2",
+              taskArg1: "taskValue1",
+              taskArg2: "taskValue2",
+            },
+          },
+        },
+        mockBackendUrl,
+        undefined,
+      );
+    });
+
+    it("should override argumentsFromInputs with taskArguments when keys conflict", async () => {
+      // Arrange
+      const componentSpec: ComponentSpec = {
+        name: "override-args-component",
+        inputs: [
+          { name: "sharedKey", value: "fromInputValue" },
+          { name: "uniqueInputKey", value: "inputOnlyValue" },
+        ],
+        implementation: { container: { image: "test:latest" } },
+      };
+
+      const mockTaskArguments = {
+        sharedKey: "fromTaskValue",
+        uniqueTaskKey: "taskOnlyValue",
+      };
+
+      // Act
+      await submitPipelineRun(componentSpec, mockBackendUrl, {
+        taskArguments: mockTaskArguments,
+      });
+
+      // Assert - taskArguments should override argumentsFromInputs
+      expect(pipelineRunService.createPipelineRun).toHaveBeenCalledWith(
+        {
+          root_task: {
+            componentRef: {
+              spec: componentSpec,
+            },
+            arguments: {
+              sharedKey: "fromTaskValue",
+              uniqueInputKey: "inputOnlyValue",
+              uniqueTaskKey: "taskOnlyValue",
+            },
+          },
+        },
+        mockBackendUrl,
+        undefined,
+      );
+    });
+
+    it("should filter out non-string taskArguments values", async () => {
+      // Arrange
+      const componentSpec: ComponentSpec = {
+        name: "filter-args-component",
+        implementation: { container: { image: "test:latest" } },
+      };
+
+      const mockTaskArguments = {
+        stringArg: "validString",
+        objectArg: { nested: "value" },
+        numberArg: 123,
+      };
+
+      // Act
+      await submitPipelineRun(componentSpec, mockBackendUrl, {
+        taskArguments: mockTaskArguments as any,
+      });
+
+      // Assert - only string values should be included
+      expect(pipelineRunService.createPipelineRun).toHaveBeenCalledWith(
+        {
+          root_task: {
+            componentRef: {
+              spec: componentSpec,
+            },
+            arguments: {
+              stringArg: "validString",
+              objectArg: undefined,
+              numberArg: undefined,
+            },
+          },
+        },
+        mockBackendUrl,
+        undefined,
+      );
+    });
+
+    it("should work with empty taskArguments object", async () => {
+      // Arrange
+      const componentSpec: ComponentSpec = {
+        name: "empty-task-args-component",
+        inputs: [{ name: "inputArg", value: "inputValue" }],
+        implementation: { container: { image: "test:latest" } },
+      };
+
+      // Act
+      await submitPipelineRun(componentSpec, mockBackendUrl, {
+        taskArguments: {},
+      });
+
+      // Assert - should only contain argumentsFromInputs
+      expect(pipelineRunService.createPipelineRun).toHaveBeenCalledWith(
+        {
+          root_task: {
+            componentRef: {
+              spec: componentSpec,
+            },
+            arguments: {
+              inputArg: "inputValue",
+            },
+          },
+        },
+        mockBackendUrl,
+        undefined,
+      );
+    });
+
+    it("should call onSuccess callback with taskArguments submission", async () => {
+      // Arrange
+      const componentSpec: ComponentSpec = {
+        name: "success-callback-component",
+        implementation: { container: { image: "test:latest" } },
+      };
+
+      const mockOnSuccess = vi.fn();
+      const mockTaskArguments = { arg1: "value1" };
+
+      // Act
+      await submitPipelineRun(componentSpec, mockBackendUrl, {
+        taskArguments: mockTaskArguments,
+        onSuccess: mockOnSuccess,
+      });
+
+      // Assert
+      expect(mockOnSuccess).toHaveBeenCalledWith(mockPipelineRun);
     });
   });
 

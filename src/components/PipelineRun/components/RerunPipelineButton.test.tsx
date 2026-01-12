@@ -22,6 +22,7 @@ const {
   mockIsAuthorized,
   mockGetToken,
   mockFetch,
+  mockUseExecutionDataOptional,
 } = vi.hoisted(() => ({
   navigateMock: vi.fn(),
   notifyMock: vi.fn(),
@@ -31,6 +32,7 @@ const {
   mockIsAuthorized: vi.fn(),
   mockGetToken: vi.fn(),
   mockFetch: vi.fn(),
+  mockUseExecutionDataOptional: vi.fn(),
 }));
 
 // Set up mocks
@@ -65,6 +67,10 @@ vi.mock("@/components/shared/Authentication/useAuthLocalStorage", () => ({
 
 vi.mock("@/utils/submitPipeline", () => ({
   submitPipelineRun: mockSubmitPipelineRun,
+}));
+
+vi.mock("@/providers/ExecutionDataProvider", () => ({
+  useExecutionDataOptional: mockUseExecutionDataOptional,
 }));
 
 const testOrigin = import.meta.env.VITE_BASE_URL || "http://localhost:3000";
@@ -108,6 +114,7 @@ describe("<RerunPipelineButton/>", () => {
     mockIsAuthorized.mockReturnValue(true);
     mockGetToken.mockReturnValue("mock-token");
     mockAwaitAuthorization.mockClear();
+    mockUseExecutionDataOptional.mockReturnValue(undefined);
   });
 
   afterEach(async () => {
@@ -331,6 +338,83 @@ describe("<RerunPipelineButton/>", () => {
       expect(notifyMock).toHaveBeenCalledWith(
         "Failed to submit pipeline. String error message",
         "error",
+      );
+    });
+  });
+
+  test("passes taskArguments from execution data to submitPipelineRun", async () => {
+    const mockTaskArguments = {
+      input_param: "test_value",
+      another_param: "another_value",
+    };
+
+    mockUseExecutionDataOptional.mockReturnValue({
+      rootDetails: {
+        task_spec: {
+          arguments: mockTaskArguments,
+        },
+      },
+    });
+
+    mockSubmitPipelineRun.mockImplementation(async (_, __, { onSuccess }) => {
+      onSuccess({ id: 456 });
+    });
+
+    await act(async () => {
+      renderWithProviders(
+        <RerunPipelineButton componentSpec={componentSpec} />,
+      );
+    });
+
+    const rerunButton = screen.getByTestId("rerun-pipeline-button");
+
+    await act(async () => {
+      fireEvent.click(rerunButton);
+    });
+
+    await waitFor(() => {
+      expect(mockSubmitPipelineRun).toHaveBeenCalledWith(
+        componentSpec,
+        expect.any(String),
+        expect.objectContaining({
+          taskArguments: mockTaskArguments,
+          authorizationToken: "mock-token",
+          onSuccess: expect.any(Function),
+          onError: expect.any(Function),
+        }),
+      );
+    });
+  });
+
+  test("passes undefined taskArguments when execution data is not available", async () => {
+    mockUseExecutionDataOptional.mockReturnValue(undefined);
+
+    mockSubmitPipelineRun.mockImplementation(async (_, __, { onSuccess }) => {
+      onSuccess({ id: 789 });
+    });
+
+    await act(async () => {
+      renderWithProviders(
+        <RerunPipelineButton componentSpec={componentSpec} />,
+      );
+    });
+
+    const rerunButton = screen.getByTestId("rerun-pipeline-button");
+
+    await act(async () => {
+      fireEvent.click(rerunButton);
+    });
+
+    await waitFor(() => {
+      expect(mockSubmitPipelineRun).toHaveBeenCalledWith(
+        componentSpec,
+        expect.any(String),
+        expect.objectContaining({
+          taskArguments: undefined,
+          authorizationToken: "mock-token",
+          onSuccess: expect.any(Function),
+          onError: expect.any(Function),
+        }),
       );
     });
   });
