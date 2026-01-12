@@ -124,6 +124,7 @@ const TaskOverview = ({ taskNode, actions }: TaskOverviewProps) => {
               displayName={name}
               executionId={executionId}
               componentRef={taskSpec.componentRef}
+              taskSpec={taskSpec}
               taskId={taskId}
               componentDigest={taskSpec.componentRef.digest}
               url={taskSpec.componentRef.url}

@@ -2,10 +2,11 @@ import { type ReactNode } from "react";
 
 import { BlockStack } from "@/components/ui/layout";
 import { useGuaranteedHydrateComponentReference } from "@/hooks/useHydrateComponentReference";
-import type { ComponentReference } from "@/utils/componentSpec";
+import type { ComponentReference, TaskSpec } from "@/utils/componentSpec";
 import { getExecutionStatusLabel } from "@/utils/executionStatus";
 
 import { ContentBlock } from "../ContextPanel/Blocks/ContentBlock";
+import { ListBlock } from "../ContextPanel/Blocks/ListBlock";
 import { TextBlock } from "../ContextPanel/Blocks/TextBlock";
 import { withSuspenseWrapper } from "../SuspenseWrapper";
 import TaskActions from "./Actions";
@@ -17,6 +18,7 @@ interface TaskDetailsProps {
   componentRef: ComponentReference;
   executionId?: string;
   taskId?: string;
+  taskSpec?: TaskSpec;
   componentDigest?: string;
   url?: string;
   actions?: ReactNode[];
@@ -37,6 +39,7 @@ const TaskDetailsInternal = ({
   componentRef,
   executionId,
   taskId,
+  taskSpec,
   componentDigest,
   url,
   actions = [],
@@ -135,6 +138,27 @@ const TaskDetailsInternal = ({
           {section.component}
         </ContentBlock>
       ))}
+
+      {Object.keys(taskSpec?.annotations || {}).length > 0 && (
+        <ContentBlock
+          key="annotations"
+          title="Task Annotations"
+          collapsible
+          defaultOpen={false}
+          className={BASE_BLOCK_CLASS}
+        >
+          <ListBlock
+            items={Object.entries(taskSpec?.annotations || {}).map(
+              ([key, value]) => ({
+                label: key,
+                value: String(value),
+                copyable: true,
+              }),
+            )}
+            marker="none"
+          />
+        </ContentBlock>
+      )}
 
       <TaskActions
         displayName={displayName}
