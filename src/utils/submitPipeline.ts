@@ -10,7 +10,7 @@ import {
 import type { PipelineRun } from "@/types/pipelineRun";
 
 import type { ComponentReference, ComponentSpec } from "./componentSpec";
-import { getArgumentValue } from "./nodes/taskArguments";
+import { extractTaskArguments } from "./nodes/taskArguments";
 import { componentSpecFromYaml } from "./yaml";
 
 export async function submitPipelineRun(
@@ -37,12 +37,7 @@ export async function submitPipelineRun(
     );
     const argumentsFromInputs = getArgumentsFromInputs(fullyLoadedSpec);
     const normalizedTaskArguments = options?.taskArguments
-      ? Object.fromEntries(
-          Object.entries(options.taskArguments).map(([key, _]) => [
-            key,
-            getArgumentValue(options.taskArguments, key),
-          ]),
-        )
+      ? extractTaskArguments(options.taskArguments)
       : {};
     const payloadArguments = {
       ...argumentsFromInputs,

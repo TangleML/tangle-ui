@@ -4,6 +4,7 @@ import { act, fireEvent, render } from "@testing-library/react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import useToastNotification from "@/hooks/useToastNotification";
+import * as ExecutionDataProvider from "@/providers/ExecutionDataProvider";
 import * as pipelineRunService from "@/services/pipelineRunService";
 
 import { ClonePipelineButton } from "./ClonePipelineButton";
@@ -21,6 +22,7 @@ describe("<ClonePipelineButton/>", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.restoreAllMocks();
     vi.mocked(useToastNotification).mockReturnValue(mockNotify);
     vi.mocked(pipelineRunService.copyRunToPipeline).mockResolvedValue({
       url: "/editor/cloned-pipeline",
@@ -44,13 +46,36 @@ describe("<ClonePipelineButton/>", () => {
     ).toBeInTheDocument();
   });
 
-  test("calls copyRunToPipeline and navigate on click", async () => {
+  test("calls copyRunToPipeline with task arguments and navigate on click", async () => {
+    const mockTaskArguments = {
+      input_param: "input_value",
+      another_param: "another_value",
+    };
+
+    vi.spyOn(ExecutionDataProvider, "useExecutionDataOptional").mockReturnValue(
+      {
+        rootDetails: {
+          task_spec: {
+            arguments: mockTaskArguments,
+          },
+        },
+      } as unknown as ReturnType<
+        typeof ExecutionDataProvider.useExecutionDataOptional
+      >,
+    );
+
     renderWithClient(<ClonePipelineButton componentSpec={componentSpec} />);
+
     const cloneButton = screen.getByTestId("clone-pipeline-run-button");
     act(() => fireEvent.click(cloneButton));
 
     await waitFor(() => {
-      expect(pipelineRunService.copyRunToPipeline).toHaveBeenCalled();
+      expect(pipelineRunService.copyRunToPipeline).toHaveBeenCalledWith(
+        componentSpec,
+        undefined,
+        expect.stringContaining("Test Pipeline"),
+        mockTaskArguments,
+      );
     });
 
     expect(mockNotify).toHaveBeenCalledWith(
