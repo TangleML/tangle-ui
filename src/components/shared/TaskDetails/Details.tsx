@@ -53,29 +53,47 @@ const TaskDetailsInternal = ({
 
   const canonicalUrl =
     hydratedComponentRef.spec.metadata?.annotations?.canonical_location;
-  let reconstructedUrl;
-  if (!url) {
-    // Try reconstruct the url from componentSpec.metadata.annotations
-    const annotations = hydratedComponentRef.spec.metadata?.annotations || {};
-    const {
-      git_remote_url,
-      git_remote_branch,
-      git_relative_dir,
-      component_yaml_path,
-    } = annotations;
 
-    if (
-      typeof git_remote_url === "string" &&
-      typeof git_remote_branch === "string" &&
-      typeof git_relative_dir === "string" &&
-      typeof component_yaml_path === "string"
-    ) {
-      reconstructedUrl = `https://github.com/${git_remote_url
-        .replace(/^https:\/\/github\.com\//, "")
-        .replace(
-          /\.git$/,
-          "",
-        )}/blob/${git_remote_branch}/${git_relative_dir}/${component_yaml_path}`;
+  // Try reconstruct URLs from componentSpec.metadata.annotations
+  const annotations = hydratedComponentRef.spec.metadata?.annotations || {};
+  const {
+    git_remote_url,
+    git_remote_branch,
+    git_relative_dir,
+    component_yaml_path,
+    documentation_path,
+  } = annotations;
+
+  let reconstructedUrl;
+  let documentationUrl;
+
+  if (
+    typeof git_remote_url === "string" &&
+    typeof git_remote_branch === "string" &&
+    typeof git_relative_dir === "string"
+  ) {
+    const repoPath = git_remote_url
+      .replace(/^https:\/\/github\.com\//, "")
+      .replace(/\.git$/, "");
+
+    const buildGitHubUrl = (filePath: string) => {
+      const url = new URL(`https://github.com`);
+      url.pathname = [
+        repoPath,
+        "blob",
+        git_remote_branch,
+        git_relative_dir,
+        filePath,
+      ].join("/");
+      return url.toString();
+    };
+
+    if (!url && typeof component_yaml_path === "string") {
+      reconstructedUrl = buildGitHubUrl(component_yaml_path);
+    }
+
+    if (typeof documentation_path === "string") {
+      documentationUrl = buildGitHubUrl(documentation_path);
     }
   }
 
@@ -109,6 +127,7 @@ const TaskDetailsInternal = ({
       <GithubDetails
         url={url && url.length > 0 ? url : reconstructedUrl}
         canonicalUrl={canonicalUrl}
+        documentationUrl={documentationUrl}
         className={BASE_BLOCK_CLASS}
       />
 
