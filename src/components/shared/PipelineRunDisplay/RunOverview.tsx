@@ -1,4 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
+import type { MouseEvent } from "react";
 
 import { StatusBar, StatusText } from "@/components/shared/Status/";
 import { cn } from "@/lib/utils";
@@ -41,6 +42,7 @@ interface RunOverviewProps {
     showAuthor?: boolean;
   };
   className?: string;
+  onClick?: (run: PipelineRun) => void;
 }
 
 const defaultConfig = {
@@ -53,7 +55,12 @@ const defaultConfig = {
   showAuthor: false,
 };
 
-const RunOverview = ({ run, config, className = "" }: RunOverviewProps) => {
+const RunOverview = ({
+  run,
+  config,
+  className = "",
+  onClick,
+}: RunOverviewProps) => {
   const navigate = useNavigate();
 
   const combinedConfig = {
@@ -61,12 +68,18 @@ const RunOverview = ({ run, config, className = "" }: RunOverviewProps) => {
     ...config,
   };
 
+  const handleClick = (e: MouseEvent) => {
+    e.stopPropagation();
+    if (onClick) {
+      onClick(run);
+    } else {
+      navigate({ to: `${APP_ROUTES.RUNS}/${run.id}` });
+    }
+  };
+
   return (
     <div
-      onClick={(e) => {
-        e.stopPropagation();
-        navigate({ to: `${APP_ROUTES.RUNS}/${run.id}` });
-      }}
+      onClick={handleClick}
       className={cn(
         "flex flex-col p-2 text-sm hover:bg-gray-50 cursor-pointer",
         className,

@@ -147,6 +147,7 @@ code {
 
   /* Custom animations */
   --animate-revert-copied: revert-copied 0.5s ease-in-out forwards;
+  --animate-highlight-fade: highlight-fade 2s ease-out forwards;
 
   @keyframes revert-copied {
     0%,
@@ -157,6 +158,21 @@ code {
     100% {
       opacity: 0;
       transform: rotate(-90deg) scale(0);
+    }
+  }
+
+  @keyframes highlight-fade {
+    0% {
+      background-color: oklch(0.765 0.177 163 / 0.2);
+      box-shadow: 0 0 0 2px oklch(0.765 0.177 163 / 0.5);
+    }
+    70% {
+      background-color: oklch(0.765 0.177 163 / 0.15);
+      box-shadow: 0 0 0 2px oklch(0.765 0.177 163 / 0.3);
+    }
+    100% {
+      background-color: transparent;
+      box-shadow: none;
     }
   }
 }
