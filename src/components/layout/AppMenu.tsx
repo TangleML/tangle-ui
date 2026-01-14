@@ -20,7 +20,6 @@ import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { TOP_NAV_HEIGHT } from "@/utils/constants";
 
 import BackendStatus from "../shared/BackendStatus";
-import CloneRunButton from "../shared/CloneRunButton";
 import NewPipelineButton from "../shared/NewPipelineButton";
 import { PersonalPreferences } from "../shared/Settings/PersonalPreferences";
 
@@ -55,7 +54,6 @@ const AppMenu = () => {
         <InlineStack gap="2" wrap="nowrap" className="shrink-0">
           {/* Desktop action buttons - hidden on mobile */}
           <InlineStack gap="2" className="hidden md:flex" wrap="nowrap">
-            <CloneRunButton componentSpec={componentSpec} />
             <ImportPipeline />
             <NewPipelineButton />
           </InlineStack>
@@ -87,7 +85,6 @@ const AppMenu = () => {
                 <SheetTitle className="text-white">Actions</SheetTitle>
               </SheetHeader>
               <BlockStack gap="3" className="mt-6">
-                <CloneRunButton componentSpec={componentSpec} />
                 <ImportPipeline />
                 <NewPipelineButton />
               </BlockStack>
