@@ -1,5 +1,4 @@
 import { useMutation } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
 import { RefreshCcw } from "lucide-react";
 import { useCallback } from "react";
 
@@ -7,6 +6,7 @@ import { isAuthorizationRequired } from "@/components/shared/Authentication/help
 import { useAuthLocalStorage } from "@/components/shared/Authentication/useAuthLocalStorage";
 import { useAwaitAuthorization } from "@/components/shared/Authentication/useAwaitAuthorization";
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
+import { useNavigate } from "@/hooks/useNavigate";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
 import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";

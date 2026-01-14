@@ -1,7 +1,7 @@
-import { useNavigate } from "@tanstack/react-router";
 import type { MouseEvent } from "react";
 
 import { StatusBar, StatusText } from "@/components/shared/Status/";
+import { useNavigate } from "@/hooks/useNavigate";
 import { cn } from "@/lib/utils";
 import { APP_ROUTES } from "@/routes/router";
 import type { PipelineRun, TaskStatusCounts } from "@/types/pipelineRun";

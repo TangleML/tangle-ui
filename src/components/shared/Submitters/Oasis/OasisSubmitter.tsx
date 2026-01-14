@@ -1,5 +1,4 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
 import { AlertCircle, CheckCircle, Loader2, SendHorizonal } from "lucide-react";
 import { useCallback, useMemo, useRef, useState } from "react";
 
@@ -10,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
 import useCooldownTimer from "@/hooks/useCooldownTimer";
+import { useNavigate } from "@/hooks/useNavigate";
 import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
 import { useBackend } from "@/providers/BackendProvider";
@@ -106,12 +106,8 @@ const OasisSubmitter = ({
 
   const handleViewRun = useCallback(
     (runId: number, newTab = false) => {
-      const href = `${APP_ROUTES.RUNS}/${runId}`;
-      if (newTab) {
-        window.open(href, "_blank");
-      } else {
-        navigate({ to: href });
-      }
+      const to = `${APP_ROUTES.RUNS}/${runId}`;
+      navigate({ to, newTab });
     },
     [navigate],
   );

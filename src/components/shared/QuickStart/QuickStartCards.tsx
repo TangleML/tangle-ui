@@ -1,5 +1,4 @@
 import { useMutation } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
 
 import { InfoBox } from "@/components/shared/InfoBox";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +12,7 @@ import {
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
 import { Paragraph } from "@/components/ui/typography";
+import { useNavigate } from "@/hooks/useNavigate";
 import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
 import { EDITOR_PATH } from "@/routes/router";

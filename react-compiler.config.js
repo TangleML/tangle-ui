@@ -28,6 +28,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/components/shared/GitHubLibrary",
   "src/hooks/useHandleEdgeSelection.ts",
   "src/hooks/useEdgeSelectionHighlight.ts",
+  "src/hooks/useNavigate.ts",
 
   "src/components/shared/Submitters/Oasis/components",
 

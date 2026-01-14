@@ -1,4 +1,3 @@
-import { useNavigate } from "@tanstack/react-router";
 import { type MouseEvent } from "react";
 
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
@@ -17,6 +16,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Paragraph } from "@/components/ui/typography";
+import { useNavigate } from "@/hooks/useNavigate";
 import { EDITOR_PATH } from "@/routes/router";
 import { deletePipeline } from "@/services/pipelineService";
 import type { ComponentReferenceWithSpec } from "@/utils/componentStore";

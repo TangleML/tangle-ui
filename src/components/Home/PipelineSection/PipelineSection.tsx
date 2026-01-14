@@ -1,4 +1,3 @@
-import { useNavigate } from "@tanstack/react-router";
 import { type ChangeEvent, useEffect, useState } from "react";
 
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
@@ -21,6 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Paragraph, Text } from "@/components/ui/typography";
+import { useNavigate } from "@/hooks/useNavigate";
 import { QUICK_START_PATH } from "@/routes/router";
 import {
   type ComponentFileEntry,
@@ -327,9 +327,7 @@ function QuickStartButton() {
   return (
     <Button
       variant="secondary"
-      onClick={() =>
-        navigate({ to: QUICK_START_PATH as string /* todo: fix this */ })
-      }
+      onClick={() => navigate({ to: QUICK_START_PATH })}
     >
       <Icon name="Sparkles" />
       Example Pipelines

@@ -1,7 +1,7 @@
-import { useNavigate } from "@tanstack/react-router";
 import { generate } from "random-words";
 
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "@/hooks/useNavigate";
 import { EDITOR_PATH } from "@/routes/router";
 import { writeComponentToFileListFromText } from "@/utils/componentStore";
 import {

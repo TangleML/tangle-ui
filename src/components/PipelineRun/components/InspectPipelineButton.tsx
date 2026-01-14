@@ -1,8 +1,8 @@
-import { useNavigate } from "@tanstack/react-router";
 import { useCallback } from "react";
 
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { Icon } from "@/components/ui/icon";
+import { useNavigate } from "@/hooks/useNavigate";
 
 type InspectPipelineButtonProps = {
   pipelineName: string;

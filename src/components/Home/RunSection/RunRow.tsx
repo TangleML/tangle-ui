@@ -1,4 +1,3 @@
-import { useNavigate } from "@tanstack/react-router";
 import { type MouseEvent } from "react";
 
 import type { PipelineRunResponse } from "@/api/types.gen";
@@ -11,6 +10,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Paragraph } from "@/components/ui/typography";
+import { useNavigate } from "@/hooks/useNavigate";
 import useToastNotification from "@/hooks/useToastNotification";
 import { APP_ROUTES } from "@/routes/router";
 import { convertUTCToLocalTime, formatDate } from "@/utils/date";
