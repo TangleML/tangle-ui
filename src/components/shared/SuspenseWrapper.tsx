@@ -8,10 +8,10 @@ import {
 } from "react";
 import { ErrorBoundary, type FallbackProps } from "react-error-boundary";
 
-import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { Spinner } from "@/components/ui/spinner";
 
-import { InfoBox } from "./InfoBox";
+import TooltipButton from "./Buttons/TooltipButton";
 
 type ErrorFallbackProps<T extends ComponentType<any>> = FallbackProps & {
   originalProps?: Partial<ComponentProps<T>>;
@@ -25,12 +25,18 @@ interface SuspenseWrapperProps {
 const ErrorFallback = <T extends ComponentType<any>>({
   resetErrorBoundary,
 }: ErrorFallbackProps<T>) => {
+  const tooltipText = "A UI element failed to render. Click to retry.";
+
   return (
-    <InfoBox title="There was an error!" variant="error">
-      <Button onClick={() => resetErrorBoundary()} variant={"ghost"} size="xs">
-        Try again
-      </Button>
-    </InfoBox>
+    <TooltipButton
+      tooltip={tooltipText}
+      aria-label={tooltipText}
+      onClick={() => resetErrorBoundary()}
+      variant="ghost"
+      size="min"
+    >
+      <Icon name="MonitorX" className="text-destructive" />
+    </TooltipButton>
   );
 };
 
