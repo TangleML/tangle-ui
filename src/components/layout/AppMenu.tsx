@@ -36,7 +36,7 @@ const AppMenu = () => {
       style={{ height: `${TOP_NAV_HEIGHT}px` }}
     >
       <InlineStack align="space-between" wrap="nowrap">
-        <InlineStack gap="3" wrap="nowrap" className="min-w-0 flex-1">
+        <InlineStack gap="8" wrap="nowrap" className="min-w-0 flex-1">
           <Link href="/" aria-label="Home" variant="block" className="shrink-0">
             <img
               src={logo}
