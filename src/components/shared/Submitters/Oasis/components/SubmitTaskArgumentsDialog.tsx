@@ -266,6 +266,7 @@ const CopyFromRunPopover = ({
               showMoreButton={true}
               overviewConfig={{
                 showName: false,
+                showDescription: true,
                 showTaskStatusBar: false,
               }}
               disabled={isCopyingFromRun}
