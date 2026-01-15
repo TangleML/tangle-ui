@@ -4,11 +4,11 @@ import {
 } from "@/components/shared/ContextPanel/Blocks/ActionBlock";
 import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlock";
 import { ListBlock } from "@/components/shared/ContextPanel/Blocks/ListBlock";
-import { TextBlock } from "@/components/shared/ContextPanel/Blocks/TextBlock";
 import { CopyText } from "@/components/shared/CopyText/CopyText";
 import PipelineIO from "@/components/shared/Execution/PipelineIO";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
+import { PipelineDescription } from "@/components/shared/PipelineDescription/PipelineDescription";
 import { StatusBar } from "@/components/shared/Status";
 import { TaskImplementation } from "@/components/shared/TaskDetails";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -154,7 +154,9 @@ export const RunDetails = () => {
       )}
 
       {componentSpec.description && (
-        <TextBlock title="Description" text={componentSpec.description} />
+        <ContentBlock>
+          <PipelineDescription componentSpec={componentSpec} readOnly />
+        </ContentBlock>
       )}
 
       <ContentBlock title="Status">
