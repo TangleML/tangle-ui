@@ -2,6 +2,7 @@ import type {
   BodyCreateApiPipelineRunsPost,
   TaskSpecOutput,
 } from "@/api/types.gen";
+import { processDescriptionPlaceholders } from "@/components/shared/PipelineDescription/useProcessedDescription";
 import { getArgumentsFromInputs } from "@/components/shared/ReactFlow/FlowCanvas/utils/getArgumentsFromInputs";
 import {
   createPipelineRun,
@@ -9,6 +10,7 @@ import {
 } from "@/services/pipelineRunService";
 import type { PipelineRun } from "@/types/pipelineRun";
 
+import { setCanonicalName } from "./canonicalPipelineName";
 import type { ComponentReference, ComponentSpec } from "./componentSpec";
 import { extractTaskArguments } from "./nodes/taskArguments";
 import { componentSpecFromYaml } from "./yaml";
@@ -44,10 +46,23 @@ export async function submitPipelineRun(
       ...normalizedTaskArguments,
     };
 
+    const description = fullyLoadedSpec.description
+      ? processDescriptionPlaceholders(
+          // todo: should we use annotations instead?
+          fullyLoadedSpec.description,
+          fullyLoadedSpec,
+          payloadArguments,
+        )
+      : undefined;
+
+    if (description) {
+      setCanonicalName(fullyLoadedSpec, pipelineName);
+    }
+
     const payload = {
       root_task: {
         componentRef: {
-          spec: fullyLoadedSpec,
+          spec: { ...fullyLoadedSpec, name: description ?? pipelineName },
         },
         ...(payloadArguments ? { arguments: payloadArguments } : {}),
       },
@@ -64,6 +79,7 @@ export async function submitPipelineRun(
         responseData,
         pipelineName,
         componentSpec.metadata?.annotations?.digest as string | undefined,
+        description,
       );
     }
     options?.onSuccess?.(responseData);

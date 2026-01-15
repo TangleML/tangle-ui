@@ -18,6 +18,7 @@ import { useUserDetails } from "@/hooks/useUserDetails";
 import { useBackend } from "@/providers/BackendProvider";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
+import { extractCanonicalName } from "@/utils/canonicalPipelineName";
 import {
   countInProgressFromStats,
   flattenExecutionStatusStats,
@@ -50,8 +51,11 @@ export const RunDetails = () => {
 
   const canAccessEditorSpec = useCheckComponentSpecFromPath(
     editorRoute,
-    !componentSpec.name,
+    componentSpec,
   );
+
+  const pipelineName =
+    extractCanonicalName(componentSpec) ?? componentSpec.name;
 
   const isRunCreator =
     currentUserDetails?.id && metadata?.created_by === currentUserDetails.id;
@@ -103,9 +107,9 @@ export const RunDetails = () => {
     />,
   );
 
-  if (canAccessEditorSpec && componentSpec.name) {
+  if (canAccessEditorSpec && pipelineName) {
     actions.push(
-      <InspectPipelineButton key="inspect" pipelineName={componentSpec.name} />,
+      <InspectPipelineButton key="inspect" pipelineName={pipelineName} />,
     );
   }
 

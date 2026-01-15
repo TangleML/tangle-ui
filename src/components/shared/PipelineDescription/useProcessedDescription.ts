@@ -132,7 +132,7 @@ function resolvePlaceholderValue(
  * @param taskArguments - Optional task arguments from execution data (takes priority)
  * @returns The description with resolved placeholders
  */
-function processDescriptionPlaceholders(
+export function processDescriptionPlaceholders(
   description: string,
   componentSpec: ComponentSpec,
   taskArguments?: TaskSpecOutput["arguments"],
