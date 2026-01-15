@@ -1,6 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
-import { type ChangeEvent, useState } from "react";
+import { type ChangeEvent, type KeyboardEvent, useState } from "react";
 
+import type { TaskSpecOutput } from "@/api/types.gen";
 import { PipelineRunsList } from "@/components/shared/PipelineRunDisplay/PipelineRunsList";
 import { typeSpecToString } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/ArgumentsEditor/utils";
 import { getArgumentsFromInputs } from "@/components/shared/ReactFlow/FlowCanvas/utils/getArgumentsFromInputs";
@@ -22,14 +23,20 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Spinner } from "@/components/ui/spinner";
 import { Paragraph } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
 import { useBackend } from "@/providers/BackendProvider";
-import { fetchExecutionDetails } from "@/services/executionService";
+import {
+  fetchExecutionDetails,
+  fetchPipelineRun,
+} from "@/services/executionService";
 import type { PipelineRun } from "@/types/pipelineRun";
 import type { ComponentSpec, InputSpec } from "@/utils/componentSpec";
 import { getArgumentValue } from "@/utils/nodes/taskArguments";
+
+type TaskArguments = TaskSpecOutput["arguments"];
 
 interface SubmitTaskArgumentsDialogProps {
   open: boolean;
@@ -161,34 +168,69 @@ const CopyFromRunPopover = ({
   const pipelineName = componentSpec.name;
 
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const [customRunId, setCustomRunId] = useState("");
 
-  const { mutate: copyFromRunMutation, isPending: isCopyingFromRun } =
-    useMutation({
-      mutationFn: async (run: PipelineRun) => {
-        const executionDetails = await fetchExecutionDetails(
-          String(run.root_execution_id),
-          backendUrl,
+  const {
+    mutate: copyFromRunMutation,
+    isPending: isCopyingFromRun,
+    isError,
+  } = useMutation({
+    /**
+     * @param run - The run to copy arguments from. Can be a run ID or a run object.
+     * @returns
+     */
+    mutationFn: async (run: PipelineRun | string) => {
+      const executionId =
+        typeof run === "string"
+          ? (await fetchPipelineRun(run, backendUrl)).root_execution_id
+          : String(run.root_execution_id);
+
+      const executionDetails = await fetchExecutionDetails(
+        executionId,
+        backendUrl,
+      );
+      return executionDetails.task_spec.arguments;
+    },
+    onSuccess: (runArguments: TaskArguments) => {
+      if (runArguments) {
+        const componentSpecInputs = new Set(
+          componentSpec.inputs?.map((input) => input.name) ?? [],
         );
-        return executionDetails.task_spec.arguments;
-      },
-      onSuccess: (runArguments) => {
-        if (runArguments) {
-          const newArgs = Object.fromEntries(
-            Object.entries(runArguments)
-              .map(([name, _]) => [name, getArgumentValue(runArguments, name)])
-              .filter(
-                (entry): entry is [string, string] => entry[1] !== undefined,
-              ),
-          );
-          onCopy(newArgs);
-        }
-        setPopoverOpen(false);
-      },
-      onError: (error) => {
-        console.error("Failed to fetch run arguments:", error);
-        setPopoverOpen(false);
-      },
-    });
+
+        const newArgs = Object.fromEntries(
+          Object.entries(runArguments)
+            .map(
+              ([name, _]) =>
+                [name, getArgumentValue(runArguments, name)] as const,
+            )
+            .filter(
+              (entry): entry is [string, string] =>
+                entry[1] !== undefined && componentSpecInputs.has(entry[0]),
+            ),
+        );
+
+        onCopy(newArgs);
+      }
+      setPopoverOpen(false);
+      setCustomRunId("");
+    },
+    onError: (error) => {
+      console.error("Failed to fetch run arguments:", error);
+    },
+  });
+
+  const handleCustomRunIdSubmit = () => {
+    const trimmedId = customRunId.trim();
+    if (trimmedId) {
+      copyFromRunMutation(trimmedId);
+    }
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleCustomRunIdSubmit();
+    }
+  };
 
   return (
     <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
@@ -199,17 +241,52 @@ const CopyFromRunPopover = ({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-100" align="end">
-        <PipelineRunsList
-          pipelineName={pipelineName}
-          onRunClick={copyFromRunMutation}
-          showTitle={false}
-          showMoreButton={true}
-          overviewConfig={{
-            showName: false,
-            showTaskStatusBar: false,
-          }}
-          disabled={isCopyingFromRun}
-        />
+        <BlockStack gap="4">
+          <BlockStack gap="2">
+            <Paragraph size="sm" weight="semibold">
+              Enter run ID
+            </Paragraph>
+            <InlineStack gap="2" fill>
+              <Input
+                placeholder="Run ID"
+                value={customRunId}
+                onChange={(e) => setCustomRunId(e.target.value)}
+                onKeyDown={handleKeyDown}
+                disabled={isCopyingFromRun}
+                className={cn(isError && "border-red-300", "flex-1")}
+              />
+              <Button
+                size="sm"
+                onClick={handleCustomRunIdSubmit}
+                disabled={isCopyingFromRun || !customRunId.trim()}
+              >
+                {isCopyingFromRun ? <Spinner /> : <Icon name="ArrowRight" />}
+              </Button>
+            </InlineStack>
+            {isError && (
+              <Paragraph size="xs" tone="critical">
+                Failed to fetch run. Please check the run ID.
+              </Paragraph>
+            )}
+          </BlockStack>
+
+          <BlockStack gap="2">
+            <Paragraph size="sm" weight="semibold">
+              Or select from recent runs
+            </Paragraph>
+            <PipelineRunsList
+              pipelineName={pipelineName}
+              onRunClick={copyFromRunMutation}
+              showTitle={false}
+              showMoreButton={true}
+              overviewConfig={{
+                showName: false,
+                showTaskStatusBar: false,
+              }}
+              disabled={isCopyingFromRun}
+            />
+          </BlockStack>
+        </BlockStack>
       </PopoverContent>
     </Popover>
   );
