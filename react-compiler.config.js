@@ -28,6 +28,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/components/shared/GitHubLibrary",
 
   "src/components/shared/Submitters/Oasis/components",
+  "src/components/shared/PipelineDescription",
 
   // 11-20 useCallback/useMemo
   // "src/components/ui",                         // 12
