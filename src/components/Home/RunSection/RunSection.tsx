@@ -20,6 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useBackend } from "@/providers/BackendProvider";
+import type { HomeSearchParams } from "@/routes/router";
 import { getBackendStatusString } from "@/utils/backend";
 import { fetchWithErrorHandling } from "@/utils/fetchWithErrorHandling";
 
@@ -32,13 +33,11 @@ const CREATED_BY_ME_FILTER = "created_by:me";
 const INCLUDE_PIPELINE_NAME_QUERY_KEY = "include_pipeline_names";
 const INCLUDE_EXECUTION_STATS_QUERY_KEY = "include_execution_stats";
 
-type RunSectionSearch = { page_token?: string; filter?: string };
-
 export const RunSection = ({ onEmptyList }: { onEmptyList?: () => void }) => {
   const { backendUrl, configured, available, ready } = useBackend();
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const search = useSearch({ strict: false }) as RunSectionSearch;
+  const search = useSearch({ strict: false }) as HomeSearchParams;
   const isCreatedByMeDefault = useBetaFlagValue("created-by-me-default");
   const dataVersion = useRef(0);
 
@@ -103,7 +102,7 @@ export const RunSection = ({ onEmptyList }: { onEmptyList?: () => void }) => {
   }, [isCreatedByMeDefault]);
 
   const handleFilterChange = (value: boolean) => {
-    const nextSearch: RunSectionSearch = { ...search };
+    const nextSearch: HomeSearchParams = { ...search };
     delete nextSearch.page_token;
 
     if (value) {
@@ -140,7 +139,7 @@ export const RunSection = ({ onEmptyList }: { onEmptyList?: () => void }) => {
   const handleUserSearch = () => {
     if (!searchUser.trim()) return;
 
-    const nextSearch: RunSectionSearch = { ...search };
+    const nextSearch: HomeSearchParams = { ...search };
     delete nextSearch.page_token;
 
     // Create or update the created_by filter
@@ -171,7 +170,7 @@ export const RunSection = ({ onEmptyList }: { onEmptyList?: () => void }) => {
   const handlePreviousPage = () => {
     const previousToken = previousPageTokens[previousPageTokens.length - 1];
     setPreviousPageTokens(previousPageTokens.slice(0, -1));
-    const nextSearch: RunSectionSearch = { ...search };
+    const nextSearch: HomeSearchParams = { ...search };
     if (previousToken) {
       nextSearch.page_token = previousToken;
     } else {
@@ -182,7 +181,7 @@ export const RunSection = ({ onEmptyList }: { onEmptyList?: () => void }) => {
 
   const handleFirstPage = () => {
     setPreviousPageTokens([]);
-    const nextSearch: RunSectionSearch = { ...search };
+    const nextSearch: HomeSearchParams = { ...search };
     delete nextSearch.page_token;
     navigate({ to: pathname, search: nextSearch });
   };
