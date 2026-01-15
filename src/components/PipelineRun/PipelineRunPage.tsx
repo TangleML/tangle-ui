@@ -3,6 +3,7 @@ import { useCallback, useState } from "react";
 
 import { FlowCanvas, FlowControls } from "@/components/shared/ReactFlow";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { useNodeFocus } from "@/hooks/useNodeFocus";
 import { ComponentLibraryProvider } from "@/providers/ComponentLibraryProvider";
 import { ContextPanelProvider } from "@/providers/ContextPanelProvider";
 
@@ -12,6 +13,8 @@ import { RunDetails } from "./RunDetails";
 const GRID_SIZE = 10;
 
 const PipelineRunPage = () => {
+  useNodeFocus();
+
   const [flowConfig, setFlowConfig] = useState<ReactFlowProps>({
     snapGrid: [GRID_SIZE, GRID_SIZE],
     snapToGrid: true,

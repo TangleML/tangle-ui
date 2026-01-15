@@ -50,10 +50,24 @@ const mainLayout = createRoute({
   component: RootLayout,
 });
 
+type HomeSearchParams = {
+  page_token?: string;
+  filter?: string;
+};
+
+const validateHomeSearch = (
+  search: Record<string, unknown>,
+): HomeSearchParams => ({
+  page_token:
+    typeof search.page_token === "string" ? search.page_token : undefined,
+  filter: typeof search.filter === "string" ? search.filter : undefined,
+});
+
 const indexRoute = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.HOME,
   component: Home,
+  validateSearch: validateHomeSearch,
 });
 
 const quickStartRoute = createRoute({
@@ -84,16 +98,28 @@ const huggingFaceAuthCallbackRoute = createRoute({
   component: HuggingFaceAuthorizationResultScreen,
 });
 
+type RunSearchParams = {
+  focus?: string;
+};
+
+const validateRunSearch = (
+  search: Record<string, unknown>,
+): RunSearchParams => ({
+  focus: typeof search.focus === "string" ? search.focus : undefined,
+});
+
 const runDetailRoute = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.RUN_DETAIL,
   component: PipelineRun,
+  validateSearch: validateRunSearch,
 });
 
 const runDetailWithSubgraphRoute = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.RUN_DETAIL_WITH_SUBGRAPH,
   component: PipelineRun,
+  validateSearch: validateRunSearch,
 });
 
 const appRouteTree = mainLayout.addChildren([
