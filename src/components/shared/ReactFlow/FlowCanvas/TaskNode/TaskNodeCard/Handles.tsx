@@ -11,6 +11,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useHandleEdgeSelection } from "@/hooks/useHandleEdgeSelection";
 import { cn } from "@/lib/utils";
 import { useTaskNode } from "@/providers/TaskNodeProvider";
 import type { InputSpec, OutputSpec } from "@/utils/componentSpec";
@@ -33,6 +34,8 @@ export const InputHandle = ({
   onHandleSelectionChange,
 }: InputHandleProps) => {
   const { nodeId, state } = useTaskNode();
+  const { selectEdgesForHandle, clearEdgeSelection } =
+    useHandleEdgeSelection(nodeId);
 
   const fromHandle = useConnection((connection) => connection.fromHandle?.id);
   const toHandle = useConnection((connection) => connection.toHandle?.id);
@@ -53,9 +56,15 @@ export const InputHandle = ({
   const handleHandleClick = useCallback(
     (e: ReactMouseEvent<HTMLDivElement>) => {
       e.stopPropagation();
-      setSelected(!selected);
+      const newSelected = !selected;
+      setSelected(newSelected);
+      if (newSelected) {
+        selectEdgesForHandle(handleId, "target");
+      } else {
+        clearEdgeSelection();
+      }
     },
-    [selected],
+    [selected, selectEdgesForHandle, clearEdgeSelection, handleId],
   );
 
   const handleLabelClick = useCallback(
@@ -219,6 +228,8 @@ export const OutputHandle = ({
   onHandleSelectionChange,
 }: OutputHandleProps) => {
   const { nodeId, state } = useTaskNode();
+  const { selectEdgesForHandle, clearEdgeSelection } =
+    useHandleEdgeSelection(nodeId);
 
   const fromHandle = useConnection((connection) => connection.fromHandle?.id);
   const toHandle = useConnection((connection) => connection.toHandle?.id);
@@ -236,9 +247,15 @@ export const OutputHandle = ({
   const handleHandleClick = useCallback(
     (e: ReactMouseEvent<HTMLDivElement>) => {
       e.stopPropagation();
-      setSelected(!selected);
+      const newSelected = !selected;
+      setSelected(newSelected);
+      if (newSelected) {
+        selectEdgesForHandle(handleId, "source");
+      } else {
+        clearEdgeSelection();
+      }
     },
-    [selected],
+    [selected, selectEdgesForHandle, clearEdgeSelection, handleId],
   );
 
   const handleLabelClick = useCallback(

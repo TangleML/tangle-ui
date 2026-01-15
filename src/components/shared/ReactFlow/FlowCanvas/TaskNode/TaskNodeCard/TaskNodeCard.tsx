@@ -12,6 +12,7 @@ import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { QuickTooltip } from "@/components/ui/tooltip";
 import { Text } from "@/components/ui/typography";
+import { useEdgeSelectionHighlight } from "@/hooks/useEdgeSelectionHighlight";
 import { buildExecutionUrl } from "@/hooks/useSubgraphBreadcrumbs";
 import { cn } from "@/lib/utils";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
@@ -69,6 +70,8 @@ const TaskNodeCard = () => {
   const { name, state, callbacks, nodeId, taskSpec, taskId } = taskNode;
   const { dimensions, selected, highlighted, isCustomComponent, readOnly } =
     state;
+
+  const isConnectedToSelectedEdge = useEdgeSelectionHighlight(nodeId);
 
   const isSubgraphNode = useMemo(() => {
     if (!taskSpec) return false;
@@ -279,6 +282,8 @@ const TaskNodeCard = () => {
           "rounded-2xl border-gray-200 border-2 wrap-break-word p-0 drop-shadow-none gap-2",
           selected ? "border-gray-500" : "hover:border-slate-200",
           (highlighted || highlightedState) && "border-orange-500!",
+          isConnectedToSelectedEdge &&
+            "border-edge-selected! ring-2 ring-edge-selected/30",
           isSubgraphNode && "cursor-pointer",
         )}
         style={{

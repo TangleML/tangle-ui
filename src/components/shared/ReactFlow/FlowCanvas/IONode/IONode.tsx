@@ -1,5 +1,6 @@
-import { Handle, Position } from "@xyflow/react";
-import { memo, useEffect, useMemo } from "react";
+import { Handle, Position, useEdges, useReactFlow } from "@xyflow/react";
+import type { MouseEvent } from "react";
+import { memo, useCallback, useEffect, useMemo } from "react";
 
 import { InputValueEditor } from "@/components/Editor/IOEditor/InputValueEditor";
 import { OutputNameEditor } from "@/components/Editor/IOEditor/OutputNameEditor";
@@ -7,6 +8,7 @@ import { getOutputConnectedDetails } from "@/components/Editor/utils/getOutputCo
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Paragraph } from "@/components/ui/typography";
+import { useEdgeSelectionHighlight } from "@/hooks/useEdgeSelectionHighlight";
 import { cn } from "@/lib/utils";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useContextPanel } from "@/providers/ContextPanelProvider";
@@ -45,8 +47,34 @@ const IONode = ({ id, type, data, selected = false }: IONodeProps) => {
     setOpen: setContextPanelOpen,
   } = useContextPanel();
 
+  const edges = useEdges();
+  const { setEdges } = useReactFlow();
+  const isConnectedToSelectedEdge = useEdgeSelectionHighlight(id);
+
   const isInput = type === "input";
   const isOutput = type === "output";
+
+  const handleHandleClick = useCallback(
+    (e: MouseEvent) => {
+      e.stopPropagation();
+
+      const connectedEdgeIds = new Set(
+        edges
+          .filter((edge) => (isInput ? edge.source === id : edge.target === id))
+          .map((edge) => edge.id),
+      );
+
+      if (connectedEdgeIds.size === 0) return;
+
+      setEdges((eds) =>
+        eds.map((edge) => ({
+          ...edge,
+          selected: connectedEdgeIds.has(edge.id),
+        })),
+      );
+    },
+    [edges, id, isInput, setEdges],
+  );
 
   const readOnly = !!data.readOnly;
 
@@ -54,13 +82,20 @@ const IONode = ({ id, type, data, selected = false }: IONodeProps) => {
 
   const handleType = isInput ? "source" : "target";
   const handlePosition = isInput ? Position.Right : Position.Left;
-  const selectedColor = isInput
-    ? "border-blue-500 bg-blue-100"
-    : "border-violet-500 bg-violet-100";
-  const defaultColor = isInput
-    ? "border-blue-300 bg-blue-100"
-    : "border-violet-300 bg-violet-100";
-  const borderColor = selected ? selectedColor : defaultColor;
+  const bgColor = isInput ? "bg-blue-100" : "bg-violet-100";
+  const selectedBorderColor = isInput ? "border-blue-500" : "border-violet-500";
+  const defaultBorderColor = isInput ? "border-blue-300" : "border-violet-300";
+  const edgeHighlightClasses =
+    "border-edge-selected! ring-2 ring-edge-selected/30";
+
+  const borderColor = cn(
+    bgColor,
+    isConnectedToSelectedEdge
+      ? edgeHighlightClasses
+      : selected
+        ? selectedBorderColor
+        : defaultBorderColor,
+  );
 
   const input = useMemo(
     () =>
@@ -185,12 +220,14 @@ const IONode = ({ id, type, data, selected = false }: IONodeProps) => {
             </Paragraph>
           </InlineStack>
         </BlockStack>
-        <Handle
-          id={handleId}
-          type={handleType}
-          position={handlePosition}
-          className={cn(handleDefaultClassName, handleClassName)}
-        />
+        <div onClick={handleHandleClick} className="cursor-pointer">
+          <Handle
+            id={handleId}
+            type={handleType}
+            position={handlePosition}
+            className={cn(handleDefaultClassName, handleClassName)}
+          />
+        </div>
       </CardContent>
     </Card>
   );
