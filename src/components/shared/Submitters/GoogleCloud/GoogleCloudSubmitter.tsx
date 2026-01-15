@@ -1,4 +1,4 @@
-import { type ChangeEvent, useCallback } from "react";
+import type { ChangeEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,19 +28,13 @@ const GoogleCloudSubmitter = ({ componentSpec }: GoogleCloudSubmitterProps) => {
     componentSpec,
   });
 
-  const handleOAuthClientIdChange = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) => {
-      updateConfig({ googleCloudOAuthClientId: e.target.value });
-    },
-    [],
-  );
+  const handleOAuthClientIdChange = (e: ChangeEvent<HTMLInputElement>) => {
+    updateConfig({ googleCloudOAuthClientId: e.target.value });
+  };
 
-  const handleDirectoryInputChange = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) => {
-      updateConfig({ gcsOutputDirectory: e.target.value });
-    },
-    [],
-  );
+  const handleDirectoryInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+    updateConfig({ gcsOutputDirectory: e.target.value });
+  };
 
   return (
     <div className="flex flex-col gap-4">
