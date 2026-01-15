@@ -100,6 +100,7 @@ const TextField = ({
   disabled,
   inputName,
   actions,
+  isDefault = true,
 }: {
   inputValue: string;
   onInputChange: (value: string) => void;
@@ -108,22 +109,26 @@ const TextField = ({
   disabled: boolean;
   inputName: string;
   actions?: FormFieldAction[];
+  isDefault?: boolean;
 }) => (
   <FormField
     label="Value"
     id={`input-value-${inputName}`}
     actions={actions}
     labelSuffix={
-      <InlineStack gap="1" className="ml-2">
-        <Icon
-          name="SquareCheckBig"
-          size="sm"
-          className="text-muted-foreground"
-        />
-        <Paragraph tone="subdued" size="xs">
-          Use as default
-        </Paragraph>
-      </InlineStack>
+      isDefault ? (
+        <InlineStack gap="1" className="ml-2">
+          <Icon
+            name="SquareCheckBig"
+            size="sm"
+            className="text-muted-foreground"
+          />
+
+          <Paragraph tone="subdued" size="xs">
+            Use as default
+          </Paragraph>
+        </InlineStack>
+      ) : null
     }
   >
     <Textarea
