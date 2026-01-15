@@ -34,7 +34,7 @@ import {
 } from "@/services/executionService";
 import type { PipelineRun } from "@/types/pipelineRun";
 import type { ComponentSpec, InputSpec } from "@/utils/componentSpec";
-import { getArgumentValue } from "@/utils/nodes/taskArguments";
+import { extractTaskArguments } from "@/utils/nodes/taskArguments";
 
 type TaskArguments = TaskSpecOutput["arguments"];
 
@@ -193,22 +193,7 @@ const CopyFromRunPopover = ({
     },
     onSuccess: (runArguments: TaskArguments) => {
       if (runArguments) {
-        const componentSpecInputs = new Set(
-          componentSpec.inputs?.map((input) => input.name) ?? [],
-        );
-
-        const newArgs = Object.fromEntries(
-          Object.entries(runArguments)
-            .map(
-              ([name, _]) =>
-                [name, getArgumentValue(runArguments, name)] as const,
-            )
-            .filter(
-              (entry): entry is [string, string] =>
-                entry[1] !== undefined && componentSpecInputs.has(entry[0]),
-            ),
-        );
-
+        const newArgs = extractTaskArguments(runArguments, componentSpec);
         onCopy(newArgs);
       }
       setPopoverOpen(false);
