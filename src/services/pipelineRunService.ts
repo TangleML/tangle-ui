@@ -77,6 +77,7 @@ export const copyRunToPipeline = async (
   componentSpec: ComponentSpec,
   runId?: string | null,
   name?: string,
+  taskArguments?: Record<string, string>,
 ) => {
   if (!componentSpec) {
     console.error("No component spec found to copy");
@@ -98,6 +99,15 @@ export const copyRunToPipeline = async (
       "left-to-right";
     if (runId) {
       cleanComponentSpec.metadata.annotations["cloned_from_run_id"] = runId;
+    }
+
+    if (taskArguments) {
+      // update all  values of inputs with the task arguments
+      cleanComponentSpec.inputs?.forEach((input) => {
+        if (taskArguments[input.name]) {
+          input.value = taskArguments[input.name];
+        }
+      });
     }
 
     // Remove caching strategy from all tasks
