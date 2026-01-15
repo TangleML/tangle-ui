@@ -54,6 +54,7 @@ export const savePipelineRun = async (
   },
   pipelineName: string,
   pipelineDigest?: string,
+  pipelineDescription?: string,
 ): Promise<PipelineRun> => {
   const pipelineRunsDb = localForage.createInstance({
     name: DB_NAME,
@@ -67,6 +68,7 @@ export const savePipelineRun = async (
     created_by: responseData.created_by,
     pipeline_name: pipelineName || "Untitled Pipeline",
     pipeline_digest: pipelineDigest,
+    pipeline_description: pipelineDescription,
   };
 
   await pipelineRunsDb.setItem(String(responseData.id), pipelineRun);

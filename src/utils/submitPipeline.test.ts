@@ -87,6 +87,7 @@ describe("submitPipelineRun", () => {
         mockPipelineRun,
         "simple-component",
         undefined,
+        undefined,
       );
       expect(mockOnSuccess).toHaveBeenCalledWith(mockPipelineRun);
       expect(mockOnError).not.toHaveBeenCalled();
@@ -151,6 +152,7 @@ describe("submitPipelineRun", () => {
       expect(pipelineRunService.savePipelineRun).toHaveBeenCalledWith(
         mockPipelineRun,
         "Pipeline",
+        undefined,
         undefined,
       );
     });
@@ -921,6 +923,7 @@ describe("submitPipelineRun", () => {
         expect.any(Object),
         "digest-component",
         testDigest,
+        undefined,
       );
     });
 

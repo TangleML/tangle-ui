@@ -9,9 +9,12 @@ export const getComponentName = (component: ComponentReference): string => {
   );
 };
 
-export function getInitialName(componentSpec: ComponentSpec): string {
+export function getInitialName(
+  componentSpec: ComponentSpec,
+  canonicalName?: string,
+): string {
   const dateTime = new Date().toISOString();
-  const baseName = componentSpec?.name || "Pipeline";
+  const baseName = canonicalName ?? componentSpec.name ?? "Pipeline";
 
   return `${removeTrailingDateFromTitle(baseName)} (${dateTime})`;
 }

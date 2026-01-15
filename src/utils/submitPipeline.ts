@@ -1,7 +1,10 @@
 import type {
   BodyCreateApiPipelineRunsPost,
+  ComponentSpecInput,
   TaskSpecOutput,
 } from "@/api/types.gen";
+import { processTemplate } from "@/components/shared/PipelineRunNameTemplate/processTemplate";
+import { getRunNameTemplate } from "@/components/shared/PipelineRunNameTemplate/utils";
 import { getArgumentsFromInputs } from "@/components/shared/ReactFlow/FlowCanvas/utils/getArgumentsFromInputs";
 import {
   createPipelineRun,
@@ -9,6 +12,7 @@ import {
 } from "@/services/pipelineRunService";
 import type { PipelineRun } from "@/types/pipelineRun";
 
+import { buildAnnotationsWithCanonicalName } from "./canonicalPipelineName";
 import type { ComponentReference, ComponentSpec } from "./componentSpec";
 import { extractTaskArguments } from "./nodes/taskArguments";
 import { componentSpecFromYaml } from "./yaml";
@@ -19,6 +23,7 @@ export async function submitPipelineRun(
   options?: {
     taskArguments?: TaskSpecOutput["arguments"];
     authorizationToken?: string;
+    runNameOverride?: boolean;
     onSuccess?: (data: PipelineRun) => void;
     onError?: (error: Error) => void;
   },
@@ -44,14 +49,34 @@ export async function submitPipelineRun(
       ...normalizedTaskArguments,
     };
 
-    const payload = {
+    const runNameOverride = options?.runNameOverride
+      ? processTemplate(getRunNameTemplate(fullyLoadedSpec) ?? "", {
+          componentRef: {
+            spec: fullyLoadedSpec,
+          },
+          arguments: payloadArguments,
+        }) || undefined
+      : undefined;
+
+    const taskAnnotations = runNameOverride
+      ? buildAnnotationsWithCanonicalName(pipelineName)
+      : undefined;
+
+    const payload: BodyCreateApiPipelineRunsPost = {
       root_task: {
         componentRef: {
-          spec: fullyLoadedSpec,
+          spec: {
+            ...fullyLoadedSpec,
+            name: runNameOverride ?? pipelineName,
+          } as ComponentSpecInput,
         },
         ...(payloadArguments ? { arguments: payloadArguments } : {}),
       },
     };
+
+    if (taskAnnotations) {
+      payload.root_task.annotations = taskAnnotations;
+    }
 
     const responseData = await createPipelineRun(
       payload as BodyCreateApiPipelineRunsPost,
@@ -64,6 +89,7 @@ export async function submitPipelineRun(
         responseData,
         pipelineName,
         componentSpec.metadata?.annotations?.digest as string | undefined,
+        runNameOverride,
       );
     }
     options?.onSuccess?.(responseData);

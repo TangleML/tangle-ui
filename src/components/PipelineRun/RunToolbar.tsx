@@ -4,6 +4,7 @@ import { useUserDetails } from "@/hooks/useUserDetails";
 import { cn } from "@/lib/utils";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
+import { extractCanonicalName } from "@/utils/canonicalPipelineName";
 import {
   countInProgressFromStats,
   flattenExecutionStatusStats,
@@ -11,6 +12,7 @@ import {
 } from "@/utils/executionStatus";
 
 import { ViewYamlButton } from "../shared/Buttons/ViewYamlButton";
+import { buildTakSpecShape } from "../shared/PipelineRunNameTemplate/types";
 import { CancelPipelineRunButton } from "./components/CancelPipelineRunButton";
 import { ClonePipelineButton } from "./components/ClonePipelineButton";
 import { InspectPipelineButton } from "./components/InspectPipelineButton";
@@ -18,7 +20,12 @@ import { RerunPipelineButton } from "./components/RerunPipelineButton";
 
 export const RunToolbar = () => {
   const { componentSpec, currentSubgraphPath } = useComponentSpec();
-  const { rootState: state, runId, metadata } = useExecutionData();
+  const {
+    rootState: state,
+    runId,
+    metadata,
+    rootDetails: details,
+  } = useExecutionData();
   const { data: currentUserDetails } = useUserDetails();
 
   const editorRoute = componentSpec.name
@@ -27,7 +34,7 @@ export const RunToolbar = () => {
 
   const canAccessEditorSpec = useCheckComponentSpecFromPath(
     editorRoute,
-    !componentSpec.name,
+    componentSpec,
   );
 
   const isRunCreator =
@@ -46,6 +53,11 @@ export const RunToolbar = () => {
 
   const isViewingSubgraph = currentSubgraphPath.length > 1;
 
+  const pipelineName =
+    extractCanonicalName(
+      buildTakSpecShape(details?.task_spec, componentSpec),
+    ) ?? componentSpec.name;
+
   return (
     <InlineStack
       gap="2"
@@ -56,8 +68,8 @@ export const RunToolbar = () => {
     >
       <ViewYamlButton componentSpec={componentSpec} displayLabel="View" />
 
-      {canAccessEditorSpec && componentSpec.name && (
-        <InspectPipelineButton pipelineName={componentSpec.name} showLabel />
+      {canAccessEditorSpec && pipelineName && (
+        <InspectPipelineButton pipelineName={pipelineName} showLabel />
       )}
 
       <ClonePipelineButton
