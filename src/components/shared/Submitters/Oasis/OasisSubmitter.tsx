@@ -1,12 +1,14 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { AlertCircle, CheckCircle, Loader2, SendHorizonal } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
+import type { TaskSpecOutput } from "@/api/types.gen";
 import { useAwaitAuthorization } from "@/components/shared/Authentication/useAwaitAuthorization";
 import { useBetaFlagValue } from "@/components/shared/Settings/useBetaFlags";
 import { Button } from "@/components/ui/button";
-import { SidebarMenuButton } from "@/components/ui/sidebar";
+import { Icon } from "@/components/ui/icon";
+import { InlineStack } from "@/components/ui/layout";
 import useCooldownTimer from "@/hooks/useCooldownTimer";
 import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
@@ -18,6 +20,9 @@ import { submitPipelineRun } from "@/utils/submitPipeline";
 
 import { isAuthorizationRequired } from "../../Authentication/helpers";
 import { useAuthLocalStorage } from "../../Authentication/useAuthLocalStorage";
+import TooltipButton from "../../Buttons/TooltipButton";
+import { SubmitTaskArgumentsDialog } from "./components/SubmitTaskArgumentsDialog";
+
 interface OasisSubmitterProps {
   componentSpec?: ComponentSpec;
   onSubmitComplete?: () => void;
@@ -36,10 +41,12 @@ function useSubmitPipeline() {
   return useMutation({
     mutationFn: async ({
       componentSpec,
+      taskArguments,
       onSuccess,
       onError,
     }: {
       componentSpec: ComponentSpec;
+      taskArguments?: TaskSpecOutput["arguments"];
       onSuccess: (data: PipelineRun) => void;
       onError: (error: Error | string) => void;
     }) => {
@@ -54,6 +61,7 @@ function useSubmitPipeline() {
       return new Promise<PipelineRun>((resolve, reject) => {
         submitPipelineRun(componentSpec, backendUrl, {
           authorizationToken: authorizationToken.current,
+          taskArguments,
           onSuccess: (data) => {
             resolve(data);
             onSuccess(data);
@@ -84,6 +92,7 @@ const OasisSubmitter = ({
   const isAutoRedirect = useBetaFlagValue("redirect-on-new-pipeline-run");
 
   const [submitSuccess, setSubmitSuccess] = useState<boolean | null>(null);
+  const [isArgumentsDialogOpen, setIsArgumentsDialogOpen] = useState(false);
   const { cooldownTime, setCooldownTime } = useCooldownTimer(0);
   const notify = useToastNotification();
   const navigate = useNavigate();
@@ -159,29 +168,50 @@ const OasisSubmitter = ({
     [handleError, setCooldownTime],
   );
 
-  const handleSubmit = useCallback(async () => {
-    if (!componentSpec) {
-      handleError("No pipeline to submit");
-      return;
-    }
+  const handleSubmit = useCallback(
+    async (taskArguments?: Record<string, string>) => {
+      if (!componentSpec) {
+        handleError("No pipeline to submit");
+        return;
+      }
 
-    if (!isComponentTreeValid) {
-      handleError(
-        `Pipeline validation failed. Refer to details panel for more info.`,
-      );
-      return;
-    }
+      if (!isComponentTreeValid) {
+        handleError(
+          `Pipeline validation failed. Refer to details panel for more info.`,
+        );
+        return;
+      }
 
-    setSubmitSuccess(null);
-    submit({ componentSpec, onSuccess, onError });
-  }, [
-    handleError,
-    submit,
-    componentSpec,
-    isComponentTreeValid,
-    onSuccess,
-    onError,
-  ]);
+      setSubmitSuccess(null);
+      submit({
+        componentSpec,
+        taskArguments,
+        onSuccess,
+        onError,
+      });
+    },
+    [
+      handleError,
+      submit,
+      componentSpec,
+      isComponentTreeValid,
+      onSuccess,
+      onError,
+    ],
+  );
+
+  const handleSubmitWithArguments = useCallback(
+    (args: Record<string, string>) => {
+      setIsArgumentsDialogOpen(false);
+      handleSubmit(args);
+    },
+    [handleSubmit],
+  );
+
+  const hasConfigurableInputs = useMemo(
+    () => (componentSpec?.inputs?.length ?? 0) > 0,
+    [componentSpec?.inputs],
+  );
 
   const getButtonText = () => {
     if (cooldownTime > 0) {
@@ -203,6 +233,8 @@ const OasisSubmitter = ({
     ("graph" in componentSpec.implementation &&
       Object.keys(componentSpec.implementation.graph.tasks).length === 0);
 
+  const isArgumentsButtonVisible = hasConfigurableInputs && !isButtonDisabled;
+
   const getButtonIcon = () => {
     if (isSubmitting) {
       return <Loader2 className="animate-spin" />;
@@ -217,42 +249,60 @@ const OasisSubmitter = ({
   };
 
   return (
-    <SidebarMenuButton
-      asChild
-      tooltip="Submit Run"
-      forceTooltip
-      tooltipPosition="right"
-    >
-      <Button
-        onClick={handleSubmit}
-        className="w-full justify-start"
-        variant="ghost"
-        disabled={isButtonDisabled || !available}
-      >
-        {getButtonIcon()}
-        <span className="font-normal text-xs">{getButtonText()}</span>
-        {!isComponentTreeValid && (
-          <div
-            className={cn(
-              "text-xs font-light -ml-1",
-              configured ? "text-red-700" : "text-yellow-700",
-            )}
+    <>
+      <InlineStack align="space-between" className="pr-2.5">
+        <Button
+          onClick={() => handleSubmit()}
+          className="flex-1 justify-start"
+          variant="ghost"
+          disabled={isButtonDisabled || !available}
+        >
+          {getButtonIcon()}
+          <span className="font-normal text-xs">{getButtonText()}</span>
+          {!isComponentTreeValid && (
+            <div
+              className={cn(
+                "text-xs font-light -ml-1",
+                configured ? "text-red-700" : "text-yellow-700",
+              )}
+            >
+              (has validation issues)
+            </div>
+          )}
+          {!available && (
+            <div
+              className={cn(
+                "text-xs font-light -ml-1",
+                configured ? "text-red-700" : "text-yellow-700",
+              )}
+            >
+              {`(backend ${configured ? "unavailable" : "unconfigured"})`}
+            </div>
+          )}
+        </Button>
+        {isArgumentsButtonVisible && (
+          <TooltipButton
+            tooltip="Submit run with arguments"
+            variant="ghost"
+            size="icon"
+            data-testid="run-with-arguments-button"
+            onClick={() => setIsArgumentsDialogOpen(true)}
+            disabled={!available}
           >
-            (has validation issues)
-          </div>
+            <Icon name="Split" className="rotate-90" />
+          </TooltipButton>
         )}
-        {!available && (
-          <div
-            className={cn(
-              "text-xs font-light -ml-1",
-              configured ? "text-red-700" : "text-yellow-700",
-            )}
-          >
-            {`(backend ${configured ? "unavailable" : "unconfigured"})`}
-          </div>
-        )}
-      </Button>
-    </SidebarMenuButton>
+      </InlineStack>
+
+      {componentSpec && (
+        <SubmitTaskArgumentsDialog
+          open={isArgumentsDialogOpen}
+          onCancel={() => setIsArgumentsDialogOpen(false)}
+          onConfirm={handleSubmitWithArguments}
+          componentSpec={componentSpec}
+        />
+      )}
+    </>
   );
 };
 
