@@ -141,7 +141,7 @@ export interface MetadataSpec {
     [k: string]: unknown;
     canonical_location?: string;
     author?: string;
-    original_python_code?: string;
+    python_original_code?: string;
   };
 }
 /**

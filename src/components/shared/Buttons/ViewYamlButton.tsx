@@ -1,6 +1,5 @@
 import { useState } from "react";
 
-import { Icon } from "@/components/ui/icon";
 import type {
   ComponentSpec,
   HydratedComponentReference,
@@ -8,7 +7,7 @@ import type {
 import { getComponentName } from "@/utils/getComponentName";
 
 import TaskImplementation from "../TaskDetails/Implementation";
-import TooltipButton from "./TooltipButton";
+import { ActionButton } from "./ActionButton";
 
 type ViewYamlButtonProps =
   | { componentRef: HydratedComponentReference; componentSpec?: never }
@@ -34,13 +33,11 @@ export const ViewYamlButton = ({
 
   return (
     <>
-      <TooltipButton
-        variant="outline"
-        tooltip="View YAML"
+      <ActionButton
+        label="View YAML"
+        icon="FileCodeCorner"
         onClick={handleClick}
-      >
-        <Icon name="FileCodeCorner" />
-      </TooltipButton>
+      />
 
       {showCodeViewer && (
         <TaskImplementation

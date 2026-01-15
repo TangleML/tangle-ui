@@ -2,7 +2,8 @@ import { type ReactNode } from "react";
 
 import { BlockStack } from "@/components/ui/layout";
 import { useGuaranteedHydrateComponentReference } from "@/hooks/useHydrateComponentReference";
-import type { ComponentReference, TaskSpec } from "@/utils/componentSpec";
+import type { TaskNodeContextType } from "@/providers/TaskNodeProvider";
+import type { ComponentReference } from "@/utils/componentSpec";
 import { getExecutionStatusLabel } from "@/utils/executionStatus";
 
 import { ContentBlock } from "../ContextPanel/Blocks/ContentBlock";
@@ -14,15 +15,9 @@ import { ExecutionDetails } from "./ExecutionDetails";
 import { GithubDetails } from "./GithubDetails";
 
 interface TaskDetailsProps {
-  displayName: string;
+  taskNode?: TaskNodeContextType;
   componentRef: ComponentReference;
   executionId?: string;
-  taskId?: string;
-  taskSpec?: TaskSpec;
-  componentDigest?: string;
-  url?: string;
-  actions?: ReactNode[];
-  onDelete?: () => void;
   status?: string;
   readOnly?: boolean;
   additionalSection?: {
@@ -35,21 +30,19 @@ interface TaskDetailsProps {
 const BASE_BLOCK_CLASS = "px-3 py-2";
 
 const TaskDetailsInternal = ({
-  displayName,
+  taskNode,
   componentRef,
   executionId,
-  taskId,
-  taskSpec,
-  componentDigest,
-  url,
-  actions = [],
-  onDelete,
   status,
   readOnly = false,
   additionalSection = [],
 }: TaskDetailsProps) => {
   const hydratedComponentRef =
     useGuaranteedHydrateComponentReference(componentRef);
+
+  const { url, digest } = hydratedComponentRef;
+
+  const { taskSpec, taskId } = taskNode || {};
 
   const canonicalUrl =
     hydratedComponentRef.spec.metadata?.annotations?.canonical_location;
@@ -141,7 +134,7 @@ const TaskDetailsInternal = ({
 
       <TextBlock
         title="Digest"
-        text={componentDigest}
+        text={digest}
         copyable
         className={BASE_BLOCK_CLASS}
       />
@@ -180,10 +173,8 @@ const TaskDetailsInternal = ({
       )}
 
       <TaskActions
-        displayName={displayName}
         componentRef={hydratedComponentRef}
-        actions={actions}
-        onDelete={onDelete}
+        taskNode={taskNode}
         readOnly={readOnly}
         className={BASE_BLOCK_CLASS}
       />
