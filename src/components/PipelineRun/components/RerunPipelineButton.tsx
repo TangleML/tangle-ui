@@ -9,6 +9,7 @@ import { useAwaitAuthorization } from "@/components/shared/Authentication/useAwa
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
+import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
 import { APP_ROUTES } from "@/routes/router";
 import type { PipelineRun } from "@/types/pipelineRun";
 import type { ComponentSpec } from "@/utils/componentSpec";
@@ -24,6 +25,7 @@ export const RerunPipelineButton = ({
   const { backendUrl } = useBackend();
   const navigate = useNavigate();
   const notify = useToastNotification();
+  const executionData = useExecutionDataOptional();
 
   const { awaitAuthorization, isAuthorized } = useAwaitAuthorization();
   const { getToken } = useAuthLocalStorage();
@@ -59,6 +61,7 @@ export const RerunPipelineButton = ({
 
       return new Promise<PipelineRun>((resolve, reject) => {
         submitPipelineRun(componentSpec, backendUrl, {
+          taskArguments: executionData?.rootDetails?.task_spec.arguments,
           authorizationToken,
           onSuccess: resolve,
           onError: reject,
