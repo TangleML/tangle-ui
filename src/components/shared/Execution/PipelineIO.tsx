@@ -1,5 +1,6 @@
 import { type ReactNode } from "react";
 
+import type { TaskSpecOutput } from "@/api/types.gen";
 import { Attribute } from "@/components/shared/ContextPanel/Blocks/Attribute";
 import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlock";
 import { typeSpecToString } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/ArgumentsEditor/utils";
@@ -15,9 +16,15 @@ import { InputValueEditor } from "../../Editor/IOEditor/InputValueEditor";
 import { OutputNameEditor } from "../../Editor/IOEditor/OutputNameEditor";
 import { getOutputConnectedDetails } from "../../Editor/utils/getOutputConnectedDetails";
 
-const PipelineIO = ({ readOnly }: { readOnly?: boolean }) => {
+const PipelineIO = ({
+  taskArguments,
+}: {
+  taskArguments?: TaskSpecOutput["arguments"] | null;
+}) => {
   const { setContent } = useContextPanel();
   const { componentSpec, graphSpec } = useComponentSpec();
+
+  const readOnly = !!taskArguments;
 
   const handleInputEdit = (input: InputSpec) => {
     setContent(<InputValueEditor key={input.name} input={input} />);
@@ -57,13 +64,18 @@ const PipelineIO = ({ readOnly }: { readOnly?: boolean }) => {
 
   return (
     <BlockStack gap="4">
-      <ContentBlock title="Inputs">
+      <ContentBlock title={taskArguments ? "Arguments" : "Inputs"}>
         {componentSpec.inputs && componentSpec.inputs.length > 0 ? (
           <BlockStack>
             {componentSpec.inputs.map((input) => (
               <IORow
                 key={input.name}
-                value={input.value || input.default || "—"}
+                value={
+                  getArgumentValue(taskArguments, input.name) ||
+                  input.value ||
+                  input.default ||
+                  "—"
+                }
                 type={typeSpecToString(input?.type)}
                 spec={input}
                 actions={inputActions}
@@ -161,4 +173,15 @@ function IORow({ spec, value, type, actions }: IORowProps) {
       </InlineStack>
     </InlineStack>
   );
+}
+
+function getArgumentValue(
+  taskArguments: TaskSpecOutput["arguments"] | undefined,
+  inputName: string,
+) {
+  const argument = taskArguments?.[inputName];
+  if (typeof argument === "string") {
+    return argument;
+  }
+  return undefined;
 }

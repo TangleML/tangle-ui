@@ -177,7 +177,7 @@ export const RunDetails = () => {
         />
       )}
 
-      <PipelineIO readOnly />
+      <PipelineIO taskArguments={details.task_spec.arguments} />
     </BlockStack>
   );
 };
