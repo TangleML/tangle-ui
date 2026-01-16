@@ -118,7 +118,7 @@ const ComponentDetailsDialogContent = withSuspenseWrapper(
               ) : null}
             </TabsList>
 
-            <div className="overflow-hidden h-[40vh]">
+            <div className="overflow-auto h-[40vh]">
               <TabsContent value="details" className="h-full">
                 {remoteComponentLibrarySearchEnabled ? (
                   <PublishedComponentDetails component={componentRef} />
