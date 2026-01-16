@@ -93,6 +93,14 @@ export const RunDetails = () => {
   const actions = [];
 
   actions.push(
+    <ClonePipelineButton
+      key="clone"
+      componentSpec={componentSpec}
+      runId={runId}
+    />,
+  );
+
+  actions.push(
     <ViewYamlButton key="view-pipeline-yaml" componentSpec={componentSpec} />,
   );
 
@@ -101,14 +109,6 @@ export const RunDetails = () => {
       <InspectPipelineButton key="inspect" pipelineName={componentSpec.name} />,
     );
   }
-
-  actions.push(
-    <ClonePipelineButton
-      key="clone"
-      componentSpec={componentSpec}
-      runId={runId}
-    />,
-  );
 
   if (isInProgress && isRunCreator) {
     actions.push(<CancelPipelineRunButton key="cancel" runId={runId} />);

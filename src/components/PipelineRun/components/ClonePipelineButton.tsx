@@ -62,6 +62,7 @@ export const ClonePipelineButton = ({
       data-testid="clone-pipeline-run-button"
     >
       <Icon name="CopyPlus" />
+      Clone Pipeline
     </TooltipButton>
   );
 };
