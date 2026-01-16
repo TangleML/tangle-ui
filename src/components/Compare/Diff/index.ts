@@ -1,0 +1,2 @@
+export { ComparisonView } from "./ComparisonView";
+
