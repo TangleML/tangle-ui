@@ -36,7 +36,6 @@ const TaskNodeCard = () => {
   const isRemoteComponentLibrarySearchEnabled = useBetaFlagValue(
     "remote-component-library-search",
   );
-  const isSubgraphNavigationEnabled = useBetaFlagValue("subgraph-navigation");
 
   const { registerNode } = useNodesOverlay();
   const taskNode = useTaskNode();
@@ -141,7 +140,7 @@ const TaskNodeCard = () => {
   }, []);
 
   const handleDoubleClick = useCallback(() => {
-    if (isSubgraphNode && taskId && isSubgraphNavigationEnabled) {
+    if (isSubgraphNode && taskId) {
       navigateToSubgraph(taskId);
 
       if (rootExecutionId && details?.child_task_execution_ids) {
@@ -156,7 +155,6 @@ const TaskNodeCard = () => {
     isSubgraphNode,
     taskId,
     navigateToSubgraph,
-    isSubgraphNavigationEnabled,
     rootExecutionId,
     details,
     navigate,
@@ -231,7 +229,7 @@ const TaskNodeCard = () => {
       <CardHeader className="border-b border-slate-200 px-2 py-2.5 flex flex-row justify-between items-start">
         <BlockStack>
           <InlineStack gap="2" wrap="nowrap">
-            {isSubgraphNode && isSubgraphNavigationEnabled && (
+            {isSubgraphNode && (
               <QuickTooltip content={`Subgraph: ${subgraphDescription}`}>
                 <Icon name="Workflow" size="sm" className="text-blue-600" />
               </QuickTooltip>

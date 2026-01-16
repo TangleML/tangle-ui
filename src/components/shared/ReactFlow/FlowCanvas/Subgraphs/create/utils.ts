@@ -5,17 +5,7 @@ interface GroupingValidation {
   errorMessage?: string;
 }
 
-export const canGroupNodes = (
-  nodes: Node[],
-  isSubgraphNavigationEnabled: boolean = true,
-): GroupingValidation => {
-  if (!isSubgraphNavigationEnabled) {
-    return {
-      canGroup: false,
-      errorMessage: "Subgraph navigation is disabled.",
-    };
-  }
-
+export const canGroupNodes = (nodes: Node[]): GroupingValidation => {
   if (nodes.length <= 1) {
     return {
       canGroup: false,
