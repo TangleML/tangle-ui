@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { AlertCircle, CheckCircle, Loader2, SendHorizonal } from "lucide-react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { type MouseEvent, useCallback, useMemo, useRef, useState } from "react";
 
 import type { TaskSpecOutput } from "@/api/types.gen";
 import { useAwaitAuthorization } from "@/components/shared/Authentication/useAwaitAuthorization";
@@ -105,9 +105,9 @@ const OasisSubmitter = ({
   );
 
   const handleViewRun = useCallback(
-    (runId: number, newTab = false) => {
+    (runId: number, e: MouseEvent) => {
       const href = `${APP_ROUTES.RUNS}/${runId}`;
-      if (newTab) {
+      if (e.ctrlKey || e.metaKey) {
         window.open(href, "_blank");
       } else {
         navigate({ to: href });
@@ -125,7 +125,10 @@ const OasisSubmitter = ({
               Pipeline successfully submitted
             </span>
           </div>
-          <Button onClick={() => handleViewRun(runId)} className="w-full">
+          <Button
+            onClick={(e: MouseEvent) => handleViewRun(runId, e)}
+            className="w-full"
+          >
             View Run
           </Button>
         </div>
@@ -143,7 +146,8 @@ const OasisSubmitter = ({
       showSuccessNotification(response.id);
 
       if (isAutoRedirect) {
-        handleViewRun(response.id, true);
+        const href = `${APP_ROUTES.RUNS}/${response.id}`;
+        window.open(href, "_blank");
       }
     },
     [
@@ -151,7 +155,6 @@ const OasisSubmitter = ({
       onSubmitComplete,
       showSuccessNotification,
       isAutoRedirect,
-      handleViewRun,
     ],
   );
 

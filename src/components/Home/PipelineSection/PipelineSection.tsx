@@ -1,4 +1,4 @@
-import { useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { type ChangeEvent, useEffect, useState } from "react";
 
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
@@ -323,16 +323,12 @@ export const PipelineSection = withSuspenseWrapper(() => {
 }, PipelineSectionSkeleton);
 
 function QuickStartButton() {
-  const navigate = useNavigate();
   return (
-    <Button
-      variant="secondary"
-      onClick={() =>
-        navigate({ to: QUICK_START_PATH as string /* todo: fix this */ })
-      }
-    >
-      <Icon name="Sparkles" />
-      Example Pipelines
+    <Button variant="secondary" asChild>
+      <Link to={QUICK_START_PATH as string}>
+        <Icon name="Sparkles" />
+        Example Pipelines
+      </Link>
     </Button>
   );
 }
