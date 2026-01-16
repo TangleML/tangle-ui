@@ -1,5 +1,5 @@
 import type { EdgeProps } from "@xyflow/react";
-import { getBezierPath, useEdges } from "@xyflow/react";
+import { getBezierPath, useEdges, useNodes } from "@xyflow/react";
 
 import { EdgeColor } from "./utils";
 
@@ -15,7 +15,15 @@ const SmoothEdge = ({
   selected,
 }: EdgeProps) => {
   const edges = useEdges();
-  const hasAnySelectedEdge = edges.some((edge) => edge.selected);
+  const nodes = useNodes();
+
+  const selectedNodes = nodes.filter((node) => node.selected);
+  const isMultiSelect = selectedNodes.length > 1;
+
+  // Don't highlight edges during multi-select to avoid visual clutter
+  const effectiveSelected = selected && !isMultiSelect;
+  const hasAnySelectedEdge =
+    !isMultiSelect && edges.some((edge) => edge.selected);
 
   const [edgePath] = getBezierPath({
     sourceX,
@@ -27,13 +35,13 @@ const SmoothEdge = ({
   });
 
   const getEdgeColor = () => {
-    if (selected) return EdgeColor.Selected;
+    if (effectiveSelected) return EdgeColor.Selected;
     if (hasAnySelectedEdge) return EdgeColor.Muted;
     return EdgeColor.Neutral;
   };
 
   const edgeColor = getEdgeColor();
-  const markerIdSuffix = selected
+  const markerIdSuffix = effectiveSelected
     ? "selected"
     : hasAnySelectedEdge
       ? "muted"
