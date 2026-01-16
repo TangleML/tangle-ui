@@ -37,14 +37,17 @@ import { hydrateComponentReference } from "@/services/componentService";
 import {
   type ComponentSpec,
   type InputSpec,
+  isGraphImplementation,
   isNotMaterializedComponentReference,
   type TaskSpec,
 } from "@/utils/componentSpec";
 import { readTextFromFile } from "@/utils/dom";
 import { deselectAllNodes } from "@/utils/flowUtils";
 import createNodesFromComponentSpec from "@/utils/nodes/createNodesFromComponentSpec";
+import { extractPositionFromAnnotations } from "@/utils/nodes/extractPositionFromAnnotations";
 import {
   getSubgraphComponentSpec,
+  isSubgraph,
   updateSubgraphSpec,
 } from "@/utils/subgraphUtils";
 
@@ -573,6 +576,90 @@ const FlowCanvas = ({
         );
         return;
       }
+    }
+
+    // Drop a subgraph onto an empty canvas
+    if (
+      nodes.length === 0 &&
+      taskType === "task" &&
+      droppedTask &&
+      isSubgraph(droppedTask) &&
+      droppedTask.componentRef.spec &&
+      isGraphImplementation(droppedTask.componentRef.spec.implementation)
+    ) {
+      const dialogDetails = {
+        title: "Import Subgraph as Pipeline",
+        description: `Dropping the subgraph "${droppedTask.componentRef.spec.name}" onto an empty canvas will unpack its internal components. Do you want to proceed?`,
+      };
+
+      const confirmed = await triggerConfirmation(dialogDetails);
+
+      if (!confirmed) {
+        return;
+      }
+
+      // Todo: copy over IO values
+      // Todo: output node connections
+      // Todo: Move logic into a utility
+      console.log("Unpacking subgraph onto empty canvas");
+      console.log("Dropped Task:", droppedTask);
+
+      const graphSpec = droppedTask.componentRef.spec?.implementation.graph;
+
+      let updatedSubgraphSpec = { ...currentSubgraphSpec };
+
+      Object.entries(graphSpec.tasks).forEach(([_, task]) => {
+        const { spec } = addTask(
+          "task",
+          task,
+          extractPositionFromAnnotations(task.annotations),
+          updatedSubgraphSpec,
+        );
+
+        updatedSubgraphSpec = spec;
+      });
+
+      droppedTask.componentRef.spec.inputs?.forEach((input) => {
+        const { spec } = addTask(
+          "input",
+          null,
+          extractPositionFromAnnotations(input.annotations),
+          updatedSubgraphSpec,
+          {
+            name: input.name,
+            type: input.type,
+            description: input.description,
+          },
+        );
+
+        updatedSubgraphSpec = spec;
+      });
+
+      droppedTask.componentRef.spec.outputs?.forEach((output) => {
+        const { spec } = addTask(
+          "output",
+          null,
+          extractPositionFromAnnotations(output.annotations),
+          updatedSubgraphSpec,
+          {
+            name: output.name,
+            type: output.type,
+            description: output.description,
+          },
+        );
+
+        updatedSubgraphSpec = spec;
+      });
+
+      const newRootSpec = updateSubgraphSpec(
+        componentSpec,
+        currentSubgraphPath,
+        updatedSubgraphSpec,
+      );
+
+      setComponentSpec(newRootSpec);
+
+      return;
     }
 
     // Replacing an existing node
