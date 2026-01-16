@@ -1,5 +1,3 @@
-import { useMemo } from "react";
-
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 
 /**
@@ -11,11 +9,7 @@ import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 export function useComponentCanvasTasks(digest: string) {
   const { graphSpec } = useComponentSpec();
 
-  return useMemo(
-    () =>
-      Object.values(graphSpec?.tasks).filter(
-        (task) => task.componentRef.digest === digest,
-      ),
-    [graphSpec, digest],
+  return Object.values(graphSpec?.tasks).filter(
+    (task) => task.componentRef.digest === digest,
   );
 }
