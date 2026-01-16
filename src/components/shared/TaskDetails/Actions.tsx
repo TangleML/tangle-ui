@@ -1,100 +1,83 @@
-import { type ReactNode } from "react";
-import { FaPython } from "react-icons/fa";
-
-import useToastNotification from "@/hooks/useToastNotification";
+import { type TaskNodeContextType } from "@/providers/TaskNodeProvider";
 import type { HydratedComponentReference } from "@/utils/componentSpec";
-import {
-  downloadStringAsFile,
-  downloadYamlFromComponentText,
-} from "@/utils/URL";
+import { isSubgraph } from "@/utils/subgraphUtils";
 
-import {
-  ActionBlock,
-  type ActionOrReactNode,
-} from "../ContextPanel/Blocks/ActionBlock";
+import { ViewYamlButton } from "../Buttons/ViewYamlButton";
+import { ActionBlock } from "../ContextPanel/Blocks/ActionBlock";
+import { useBetaFlagValue } from "../Settings/useBetaFlags";
+import { CopyYamlButton } from "./Actions/CopyYamlButton";
+import { DeleteComponentButton } from "./Actions/DeleteComponentButton";
+import { DownloadPythonButton } from "./Actions/DownloadPythonButton";
+import { DownloadYamlButton } from "./Actions/DownloadYamlButton";
+import { DuplicateTaskButton } from "./Actions/DuplicateTaskButton";
+import { EditComponentButton } from "./Actions/EditComponentButton";
+import { NavigateToSubgraphButton } from "./Actions/NavigateToSubgraphButton";
+import { UpgradeTaskButton } from "./Actions/UpgradeTaskButton";
 
 interface TaskActionsProps {
-  displayName: string;
   componentRef: HydratedComponentReference;
-  actions?: ReactNode[];
-  onDelete?: () => void;
+  taskNode?: TaskNodeContextType;
   readOnly?: boolean;
   className?: string;
 }
 
 const TaskActions = ({
-  displayName,
   componentRef,
-  actions = [],
-  onDelete,
+  taskNode,
   readOnly = false,
   className,
 }: TaskActionsProps) => {
-  const notify = useToastNotification();
+  const isSubgraphNavigationEnabled = useBetaFlagValue("subgraph-navigation");
+  const isInAppEditorEnabled = useBetaFlagValue("in-app-component-editor");
+
+  const { taskId, taskSpec, state, callbacks } = taskNode || {};
+  const { onDuplicate, onUpgrade, onDelete } = callbacks || {};
+  const isCustomComponent = state?.isCustomComponent;
+
+  const isSubgraphNode = taskSpec ? isSubgraph(taskSpec) : false;
 
   const pythonOriginalCode =
-    componentRef.spec.metadata?.annotations?.original_python_code;
+    componentRef.spec.metadata?.annotations?.python_original_code;
 
-  const stringToPythonCodeDownload = () => {
-    if (!pythonOriginalCode) return;
+  // Task Actions
+  const downloadYaml = <DownloadYamlButton componentRef={componentRef} />;
+  const downloadPython = pythonOriginalCode && (
+    <DownloadPythonButton componentRef={componentRef} />
+  );
+  const copyYaml = <CopyYamlButton componentRef={componentRef} />;
+  const viewYaml = <ViewYamlButton componentRef={componentRef} />;
+  const editComponent = isInAppEditorEnabled && !readOnly && (
+    <EditComponentButton componentRef={componentRef} />
+  );
 
-    downloadStringAsFile(
-      pythonOriginalCode,
-      `${componentRef.name || displayName}.py`,
-      "text/x-python",
-    );
-  };
+  // Canvas Actions
+  const duplicateTask = onDuplicate && !readOnly && (
+    <DuplicateTaskButton onDuplicate={onDuplicate} />
+  );
+  const upgradeTask = onUpgrade && !isCustomComponent && !readOnly && (
+    <UpgradeTaskButton onUpgrade={onUpgrade} />
+  );
+  const navigateToSubgraph = isSubgraphNavigationEnabled &&
+    isSubgraphNode &&
+    taskId &&
+    !readOnly && <NavigateToSubgraphButton taskId={taskId} />;
+  const deleteComponent = onDelete && !readOnly && (
+    <DeleteComponentButton onDelete={onDelete} />
+  );
 
-  const handleDownloadYaml = () => {
-    downloadYamlFromComponentText(componentRef.text, displayName);
-  };
+  const actions = [
+    downloadYaml,
+    downloadPython,
+    copyYaml,
+    viewYaml,
+    editComponent,
+    duplicateTask,
+    upgradeTask,
+    navigateToSubgraph,
+    deleteComponent,
+  ].filter(Boolean);
 
-  const handleCopyYaml = () => {
-    const code = componentRef.text;
-
-    navigator.clipboard.writeText(code).then(
-      () => notify("YAML copied to clipboard", "success"),
-      (err) => notify("Failed to copy YAML: " + err, "error"),
-    );
-  };
-
-  const handleDelete = () => {
-    try {
-      onDelete?.();
-    } catch (error) {
-      console.error("Error deleting component:", error);
-      notify(`Error deleting component`, "error");
-    }
-  };
-
-  const orderedActions: ActionOrReactNode[] = [
-    {
-      label: "Download YAML",
-      icon: "Download",
-      onClick: handleDownloadYaml,
-    },
-    {
-      label: "Download Python Code",
-      content: <FaPython />,
-      hidden: !pythonOriginalCode,
-      onClick: stringToPythonCodeDownload,
-    },
-    {
-      label: "Copy YAML",
-      icon: "Clipboard",
-      onClick: handleCopyYaml,
-    },
-    ...actions,
-    {
-      label: "Delete Component",
-      icon: "Trash",
-      destructive: true,
-      hidden: !onDelete || readOnly,
-      onClick: handleDelete,
-    },
-  ];
-
-  return <ActionBlock actions={orderedActions} className={className} />;
+  return <ActionBlock actions={actions} className={className} />;
 };
 
 export default TaskActions;

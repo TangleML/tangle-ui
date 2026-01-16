@@ -6,9 +6,6 @@ import {
   Parentheses,
 } from "lucide-react";
 
-import type { TooltipButtonProps } from "@/components/shared/Buttons/TooltipButton";
-import TooltipButton from "@/components/shared/Buttons/TooltipButton";
-import { ViewYamlButton } from "@/components/shared/Buttons/ViewYamlButton";
 import { ComponentDetailsDialog } from "@/components/shared/Dialogs";
 import { ComponentFavoriteToggle } from "@/components/shared/FavoriteComponentToggle";
 import { StatusIcon } from "@/components/shared/Status";
@@ -31,10 +28,9 @@ import RenameTask from "./RenameTask";
 
 interface TaskOverviewProps {
   taskNode: TaskNodeContextType;
-  actions?: TooltipButtonProps[];
 }
 
-const TaskOverview = ({ taskNode, actions }: TaskOverviewProps) => {
+const TaskOverview = ({ taskNode }: TaskOverviewProps) => {
   const { name, taskSpec, taskId, state, callbacks } = taskNode;
 
   const executionData = useExecutionDataOptional();
@@ -59,13 +55,6 @@ const TaskOverview = ({ taskNode, actions }: TaskOverviewProps) => {
   const isSubgraph = isGraphImplementation(componentSpec.implementation);
   const executionId = details?.child_task_execution_ids?.[taskId];
   const canRename = !readOnly && isSubgraph;
-
-  const detailActions = [
-    ...(actions?.map((action) => (
-      <TooltipButton {...action} key={action.tooltip?.toString()} />
-    )) ?? []),
-    <ViewYamlButton key="view-task-yaml" componentSpec={componentSpec} />,
-  ];
 
   return (
     <BlockStack className="h-full" data-context-panel="task-overview">
@@ -114,17 +103,11 @@ const TaskOverview = ({ taskNode, actions }: TaskOverviewProps) => {
           </TabsList>
           <TabsContent value="details">
             <TaskDetails
-              displayName={name}
-              executionId={executionId}
+              taskNode={taskNode}
               componentRef={taskSpec.componentRef}
-              taskSpec={taskSpec}
-              taskId={taskId}
-              componentDigest={taskSpec.componentRef.digest}
-              url={taskSpec.componentRef.url}
-              onDelete={callbacks.onDelete}
+              executionId={executionId}
               status={status}
               readOnly={readOnly}
-              actions={detailActions}
             />
           </TabsContent>
           <TabsContent value="io">
