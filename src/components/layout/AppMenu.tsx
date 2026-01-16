@@ -2,6 +2,7 @@ import { Menu } from "lucide-react";
 import { useState } from "react";
 
 import logo from "/Tangle_white.png";
+import { TopNavActionsRenderer } from "@/components/layout/TopNavActionsProvider";
 import { isAuthorizationRequired } from "@/components/shared/Authentication/helpers";
 import { TopBarAuthentication } from "@/components/shared/Authentication/TopBarAuthentication";
 import { CopyText } from "@/components/shared/CopyText/CopyText";
@@ -54,6 +55,7 @@ const AppMenu = () => {
         <InlineStack gap="2" wrap="nowrap" className="shrink-0">
           {/* Desktop action buttons - hidden on mobile */}
           <InlineStack gap="2" className="hidden md:flex" wrap="nowrap">
+            <TopNavActionsRenderer />
             <ImportPipeline />
             <NewPipelineButton />
           </InlineStack>
@@ -85,6 +87,7 @@ const AppMenu = () => {
                 <SheetTitle className="text-white">Actions</SheetTitle>
               </SheetHeader>
               <BlockStack gap="3" className="mt-6">
+                <TopNavActionsRenderer />
                 <ImportPipeline />
                 <NewPipelineButton />
               </BlockStack>

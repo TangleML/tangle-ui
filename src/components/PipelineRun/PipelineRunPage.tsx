@@ -7,6 +7,7 @@ import { ComponentLibraryProvider } from "@/providers/ComponentLibraryProvider";
 import { ContextPanelProvider } from "@/providers/ContextPanelProvider";
 
 import { CollapsibleContextPanel } from "../shared/ContextPanel/CollapsibleContextPanel";
+import { ClonePipelineButtonTopNav } from "./components/ClonePipelineButton";
 import { RunDetails } from "./RunDetails";
 
 const GRID_SIZE = 10;
@@ -33,6 +34,7 @@ const PipelineRunPage = () => {
   return (
     <ContextPanelProvider defaultContent={<RunDetails />}>
       <ComponentLibraryProvider>
+        <ClonePipelineButtonTopNav />
         <InlineStack fill>
           <BlockStack fill className="flex-1">
             <FlowCanvas {...flowConfig} readOnly>

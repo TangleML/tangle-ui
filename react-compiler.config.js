@@ -29,6 +29,9 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/hooks/useHandleEdgeSelection.ts",
   "src/hooks/useEdgeSelectionHighlight.ts",
 
+  "src/providers/TopNavActionsProvider.tsx",
+  "src/components/PipelineRun/components/ClonePipelineButton.tsx",
+
   "src/components/shared/Submitters/Oasis/components",
 
   // 11-20 useCallback/useMemo

@@ -1,35 +1,36 @@
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { useCallback } from "react";
 
+import { useRegisterTopNavAction } from "@/components/layout/TopNavActionsProvider";
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
+import { Spinner } from "@/components/ui/spinner";
 import useToastNotification from "@/hooks/useToastNotification";
-import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
+import { useComponentSpec } from "@/providers/ComponentSpecProvider";
+import { useExecutionData } from "@/providers/ExecutionDataProvider";
 import { copyRunToPipeline } from "@/services/pipelineRunService";
 import type { ComponentSpec } from "@/utils/componentSpec";
 import { getInitialName } from "@/utils/getComponentName";
 import { extractTaskArguments } from "@/utils/nodes/taskArguments";
 
-type ClonePipelineButtonProps = {
+type ClonePipelineProps = {
   componentSpec: ComponentSpec;
   runId?: string | null;
+  showIcon?: boolean;
+  title?: string;
 };
 
-export const ClonePipelineButton = ({
-  componentSpec,
-  runId,
-}: ClonePipelineButtonProps) => {
+function useClonePipeline({ componentSpec, runId }: ClonePipelineProps) {
   const navigate = useNavigate();
   const notify = useToastNotification();
-  const runDetails = useExecutionDataOptional();
+  const runDetails = useExecutionData();
 
-  const { isPending, mutate: clonePipeline } = useMutation({
-    mutationFn: async ({
-      taskArguments,
-    }: {
-      taskArguments?: Record<string, string>;
-    }) => {
+  return useMutation({
+    mutationFn: async () => {
+      const taskArguments = extractTaskArguments(
+        runDetails?.rootDetails?.task_spec.arguments,
+      );
       const name = getInitialName(componentSpec);
 
       return copyRunToPipeline(componentSpec, runId, name, taskArguments);
@@ -44,24 +45,50 @@ export const ClonePipelineButton = ({
       notify(`Error cloning pipeline: ${error}`, "error");
     },
   });
+}
 
-  const handleClone = useCallback(() => {
-    const taskArguments = extractTaskArguments(
-      runDetails?.rootDetails?.task_spec.arguments,
-    );
-
-    clonePipeline({ taskArguments });
-  }, [clonePipeline, runDetails]);
+export const ClonePipelineButton = ({
+  componentSpec,
+  runId,
+}: ClonePipelineProps) => {
+  const { mutate: clonePipeline, isPending } = useClonePipeline({
+    componentSpec,
+    runId,
+  });
 
   return (
     <TooltipButton
       variant="outline"
-      onClick={handleClone}
-      tooltip="Clone pipeline"
+      onClick={() => clonePipeline()}
       disabled={isPending}
       data-testid="clone-pipeline-run-button"
+      tooltip="Clone pipeline"
     >
       <Icon name="CopyPlus" />
     </TooltipButton>
   );
+};
+
+export const ClonePipelineButtonTopNav = () => {
+  const { componentSpec } = useComponentSpec();
+  const { runId } = useExecutionData();
+  const { mutate: clonePipeline, isPending } = useClonePipeline({
+    componentSpec,
+    runId,
+  });
+
+  useRegisterTopNavAction(
+    <Button
+      variant="outline"
+      onClick={() => clonePipeline()}
+      disabled={isPending}
+      data-testid="global-clone-pipeline-run-button"
+      aria-label="Clone pipeline"
+    >
+      {isPending && <Spinner />}
+      Clone Pipeline
+    </Button>,
+  );
+
+  return null;
 };
