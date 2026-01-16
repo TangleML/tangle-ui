@@ -1,5 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { generate } from "random-words";
+import type { MouseEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 import { EDITOR_PATH } from "@/routes/router";
@@ -15,7 +16,7 @@ const randomName = () => (generate(4) as string[]).join(" ");
 const NewPipelineButton = () => {
   const navigate = useNavigate();
 
-  const handleCreate = async () => {
+  const handleCreate = async (e: MouseEvent<HTMLButtonElement>) => {
     const name = randomName();
     const componentText = defaultPipelineYamlWithName(name);
     await writeComponentToFileListFromText(
@@ -24,8 +25,15 @@ const NewPipelineButton = () => {
       componentText,
     );
 
-    await navigate({
-      to: `${EDITOR_PATH}/${name}`,
+    const clickThroughUrl = `${EDITOR_PATH}/${encodeURIComponent(name)}`;
+
+    if (e.ctrlKey || e.metaKey) {
+      window.open(clickThroughUrl, "_blank");
+      return;
+    }
+
+    navigate({
+      to: clickThroughUrl,
       reloadDocument: !IS_GITHUB_PAGES,
     });
   };
