@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { type ChangeEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import NewPipelineButton from "@/components/shared/NewPipelineButton";
@@ -9,13 +9,12 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Icon } from "@/components/ui/icon";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
+  TableCell,
   TableHead,
   TableHeader,
   TableRow,
@@ -23,18 +22,33 @@ import {
 import { Paragraph, Text } from "@/components/ui/typography";
 import { QUICK_START_PATH } from "@/routes/router";
 import {
+  fetchAllPipelineRunSummaries,
+  type PipelineRunSummary,
+} from "@/services/pipelineRunService";
+import {
   type ComponentFileEntry,
   getAllComponentFilesFromList,
 } from "@/utils/componentStore";
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 
 import BulkActionsBar from "./BulkActionsBar";
+import { PipelineFiltersBar } from "./PipelineFiltersBar";
 import PipelineRow from "./PipelineRow";
+import { usePipelineFilters } from "./usePipelineFilters";
 
 const DEFAULT_PAGE_SIZE = 10;
 
-function usePagination<T>(items: T[], pageSize = DEFAULT_PAGE_SIZE) {
+function usePagination<T>(
+  items: T[],
+  pageSize = DEFAULT_PAGE_SIZE,
+  resetKey?: string,
+) {
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset to page 1 when resetKey changes (e.g., when filters change)
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [resetKey]);
 
   const totalPages = Math.ceil(items.length / pageSize);
 
@@ -51,7 +65,7 @@ function usePagination<T>(items: T[], pageSize = DEFAULT_PAGE_SIZE) {
     setCurrentPage((p) => Math.max(1, p - 1));
   };
 
-  const resetPage = () => {
+  const goToFirstPage = () => {
     setCurrentPage(1);
   };
 
@@ -63,7 +77,7 @@ function usePagination<T>(items: T[], pageSize = DEFAULT_PAGE_SIZE) {
     hasPreviousPage: currentPage > 1,
     goToNextPage,
     goToPreviousPage,
-    resetPage,
+    goToFirstPage,
   };
 }
 
@@ -97,15 +111,23 @@ const PipelineSectionSkeleton = () => {
 
 export const PipelineSection = withSuspenseWrapper(() => {
   const [pipelines, setPipelines] = useState<Pipelines>(new Map());
+  const [runSummaries, setRunSummaries] = useState<
+    Map<string, PipelineRunSummary>
+  >(new Map());
   const [isLoading, setIsLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const [selectedPipelines, setSelectedPipelines] = useState<Set<string>>(
     new Set(),
   );
 
-  const filteredPipelines = Array.from(pipelines.entries()).filter(([name]) => {
-    return name.toLowerCase().includes(searchQuery.toLowerCase());
-  });
+  const {
+    filters,
+    filterKey,
+    filteredAndSortedPipelines,
+    hasActiveFilters,
+    activeFilterCount,
+    clearFilters,
+    updateFilter,
+  } = usePipelineFilters(pipelines, runSummaries);
 
   const {
     paginatedItems: paginatedPipelines,
@@ -115,24 +137,18 @@ export const PipelineSection = withSuspenseWrapper(() => {
     hasPreviousPage,
     goToNextPage,
     goToPreviousPage,
-    resetPage,
-  } = usePagination(filteredPipelines);
+    goToFirstPage,
+  } = usePagination(filteredAndSortedPipelines, DEFAULT_PAGE_SIZE, filterKey);
 
   const fetchUserPipelines = async () => {
     setIsLoading(true);
     try {
-      const pipelines = await getAllComponentFilesFromList(
-        USER_PIPELINES_LIST_NAME,
-      );
-      const sortedPipelines = new Map(
-        [...pipelines.entries()].sort((a, b) => {
-          return (
-            new Date(b[1].modificationTime).getTime() -
-            new Date(a[1].modificationTime).getTime()
-          );
-        }),
-      );
-      setPipelines(sortedPipelines);
+      const [pipelinesData, summariesData] = await Promise.all([
+        getAllComponentFilesFromList(USER_PIPELINES_LIST_NAME),
+        fetchAllPipelineRunSummaries(),
+      ]);
+      setPipelines(pipelinesData);
+      setRunSummaries(summariesData);
     } catch (error) {
       console.error("Failed to load user pipelines:", error);
     } finally {
@@ -140,14 +156,11 @@ export const PipelineSection = withSuspenseWrapper(() => {
     }
   };
 
-  const handleSearch = (e: ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
-    resetPage();
-  };
-
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      const allPipelineNames = new Set(filteredPipelines.map(([name]) => name));
+      const allPipelineNames = new Set(
+        filteredAndSortedPipelines.map((p) => p.name),
+      );
       setSelectedPipelines(allPipelineNames);
     } else {
       setSelectedPipelines(new Set());
@@ -197,8 +210,8 @@ export const PipelineSection = withSuspenseWrapper(() => {
   }
 
   const isAllSelected =
-    filteredPipelines.length > 0 &&
-    filteredPipelines.every(([name]) => selectedPipelines.has(name));
+    filteredAndSortedPipelines.length > 0 &&
+    filteredAndSortedPipelines.every((p) => selectedPipelines.has(p.name));
 
   return (
     <BlockStack gap="4" className="w-full">
@@ -212,25 +225,15 @@ export const PipelineSection = withSuspenseWrapper(() => {
         </AlertDescription>
       </Alert>
 
-      <InlineStack
-        gap="2"
-        align="space-between"
-        blockAlign="end"
-        wrap="nowrap"
-        className="w-full"
-      >
-        <BlockStack className="w-full">
-          <Label className="mb-2">Search pipelines</Label>
-          <InlineStack gap="1" wrap="nowrap">
-            <Input type="text" value={searchQuery} onChange={handleSearch} />
-            {!!searchQuery && (
-              <Button variant="ghost" onClick={() => setSearchQuery("")}>
-                <Icon name="CircleX" />
-              </Button>
-            )}
-          </InlineStack>
-        </BlockStack>
-
+      <InlineStack gap="2" blockAlign="center" wrap="nowrap" className="w-full">
+        <PipelineFiltersBar
+          filters={filters}
+          hasActiveFilters={hasActiveFilters}
+          activeFilterCount={activeFilterCount}
+          onUpdateFilter={updateFilter}
+          onClearFilters={clearFilters}
+        />
+        <div className="flex-1" />
         <QuickStartButton />
       </InlineStack>
 
@@ -252,17 +255,25 @@ export const PipelineSection = withSuspenseWrapper(() => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredPipelines.length === 0 && (
-              <TableRow>No Pipelines found.</TableRow>
+            {filteredAndSortedPipelines.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8">
+                  <Text tone="subdued">
+                    No pipelines found matching your filters.
+                  </Text>
+                </TableCell>
+              </TableRow>
             )}
-            {paginatedPipelines.map(([name, fileEntry]) => (
+            {paginatedPipelines.map((pipeline) => (
               <PipelineRow
-                key={fileEntry.componentRef.digest}
-                name={name}
-                modificationTime={fileEntry.modificationTime}
+                key={pipeline.fileEntry.componentRef.digest}
+                name={pipeline.name}
+                modificationTime={pipeline.fileEntry.modificationTime}
                 onDelete={fetchUserPipelines}
-                isSelected={selectedPipelines.has(name)}
-                onSelect={(checked) => handleSelectPipeline(name, checked)}
+                isSelected={selectedPipelines.has(pipeline.name)}
+                onSelect={(checked) =>
+                  handleSelectPipeline(pipeline.name, checked)
+                }
               />
             ))}
           </TableBody>
@@ -279,7 +290,7 @@ export const PipelineSection = withSuspenseWrapper(() => {
           <InlineStack gap="2" blockAlign="center">
             <Button
               variant="outline"
-              onClick={resetPage}
+              onClick={goToFirstPage}
               disabled={currentPage === 1}
             >
               <Icon name="ChevronFirst" />
