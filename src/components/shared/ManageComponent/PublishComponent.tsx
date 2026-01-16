@@ -1,5 +1,4 @@
 import { Separator } from "@radix-ui/react-separator";
-import { useCallback } from "react";
 
 import { BlockStack } from "@/components/ui/layout";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -49,9 +48,9 @@ export const PublishComponent = withSuspenseWrapper(
     const { data: history, refetch: refetchHistory } =
       usePublishedComponentHistory(component, currentUserDetails?.id ?? "");
 
-    const onChange = useCallback(() => {
+    const onChange = () => {
       refetchHistory();
-    }, [refetchHistory]);
+    };
 
     return (
       <ScrollArea className="h-full">
