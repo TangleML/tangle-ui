@@ -1,5 +1,4 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useMemo } from "react";
 
 import { Button } from "@/components/ui/button";
 import { BlockStack } from "@/components/ui/layout";
@@ -46,9 +45,8 @@ export const DeprecatePublishedComponentButton = ({
 
   // strings and content for the confirmation dialog
   const { title, description, content, successMessage, buttonLabel } =
-    useMemo(() => {
-      if (successorComponent) {
-        return {
+    successorComponent
+      ? {
           buttonLabel: "Release new version",
           title: predecessorComponent.name,
           description:
@@ -66,23 +64,20 @@ export const DeprecatePublishedComponentButton = ({
               <ComponentQualityCard component={successorComponent} />
             </BlockStack>
           ),
+        }
+      : {
+          buttonLabel: "Deprecate component",
+          title: predecessorComponent.name,
+          description: "Are you sure you want to deprecate this component?",
+          successMessage: "Component deprecated successfully",
+          content: (
+            <Text as="p" size="sm">
+              This will deprecate the component and it will no longer be
+              available in search results. The component will still be available
+              in the component library for users who have already used it.
+            </Text>
+          ),
         };
-      }
-
-      return {
-        buttonLabel: "Deprecate component",
-        title: predecessorComponent.name,
-        description: "Are you sure you want to deprecate this component?",
-        successMessage: "Component deprecated successfully",
-        content: (
-          <Text as="p" size="sm">
-            This will deprecate the component and it will no longer be available
-            in search results. The component will still be available in the
-            component library for users who have already used it.
-          </Text>
-        ),
-      };
-    }, [successorComponent, predecessorComponent]);
 
   const {
     mutate: deletePublishedComponent,
@@ -114,7 +109,7 @@ export const DeprecatePublishedComponentButton = ({
     },
   });
 
-  const confirmProcess = useCallback(async () => {
+  const confirmProcess = async () => {
     const confirmed = await triggerConfirmation({
       title,
       description,
@@ -124,13 +119,7 @@ export const DeprecatePublishedComponentButton = ({
     if (confirmed) {
       deletePublishedComponent();
     }
-  }, [
-    title,
-    description,
-    content,
-    triggerConfirmation,
-    deletePublishedComponent,
-  ]);
+  };
 
   return (
     <>
