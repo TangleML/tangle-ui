@@ -1,5 +1,4 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useMemo } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -61,12 +60,9 @@ export const PublishComponentButton = ({
     },
   });
 
-  const confirmationContent = useMemo(
-    () => <ComponentQualityCard component={component} />,
-    [component],
-  );
+  const confirmationContent = <ComponentQualityCard component={component} />;
 
-  const confirmProcess = useCallback(async () => {
+  const confirmProcess = async () => {
     const confirmed = await triggerConfirmation({
       title: "Publish component",
       description: "",
@@ -76,7 +72,7 @@ export const PublishComponentButton = ({
     if (confirmed) {
       publishComponent();
     }
-  }, [triggerConfirmation, publishComponent, confirmationContent]);
+  };
 
   return (
     <>

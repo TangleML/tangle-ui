@@ -37,6 +37,9 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/components/shared/Submitters/Oasis/OasisSubmitter.tsx",
   "src/components/shared/PipelineDescription",
   "src/components/shared/InlineEditor",
+  "src/components/shared/ManageComponent/PublishComponentButton.tsx",
+  "src/components/shared/ManageComponent/DeprecatePublishedComponentButton.tsx",
+
   // 11-20 useCallback/useMemo
   // "src/components/ui",                         // 12
   // "src/components/PipelineRun",                // 14
