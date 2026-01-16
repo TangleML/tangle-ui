@@ -209,7 +209,10 @@ const ComponentMarkup = ({
                 onMouseLeave={onMouseLeave}
                 onClick={onMouseClick}
               >
-                <span className="truncate text-xs text-gray-800">
+                <span
+                  className="truncate text-xs text-gray-800"
+                  title={displayName}
+                >
                   {displayName}
                 </span>
                 {author && author.length > 0 && (
