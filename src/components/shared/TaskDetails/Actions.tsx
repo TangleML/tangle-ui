@@ -27,7 +27,6 @@ const TaskActions = ({
   readOnly = false,
   className,
 }: TaskActionsProps) => {
-  const isSubgraphNavigationEnabled = useBetaFlagValue("subgraph-navigation");
   const isInAppEditorEnabled = useBetaFlagValue("in-app-component-editor");
 
   const { taskId, taskSpec, state, callbacks } = taskNode || {};
@@ -57,10 +56,9 @@ const TaskActions = ({
   const upgradeTask = onUpgrade && !isCustomComponent && !readOnly && (
     <UpgradeTaskButton onUpgrade={onUpgrade} />
   );
-  const navigateToSubgraph = isSubgraphNavigationEnabled &&
-    isSubgraphNode &&
-    taskId &&
-    !readOnly && <NavigateToSubgraphButton taskId={taskId} />;
+  const navigateToSubgraph = isSubgraphNode && taskId && !readOnly && (
+    <NavigateToSubgraphButton taskId={taskId} />
+  );
   const deleteComponent = onDelete && !readOnly && (
     <DeleteComponentButton onDelete={onDelete} />
   );

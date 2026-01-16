@@ -44,13 +44,6 @@ export const ExistingBetaFlags = {
     default: true,
   } as BetaFlag,
 
-  ["subgraph-navigation"]: {
-    name: "Subgraph Navigation",
-    description:
-      "⚠️ Experimental ⚠️ feature for viewing subgraphs. Navigate into nested pipeline components by double-clicking.",
-    default: true,
-  } as BetaFlag,
-
   ["partial-selection"]: {
     name: "Partial Node Selection",
     description:

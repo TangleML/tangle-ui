@@ -135,7 +135,6 @@ const FlowCanvas = ({
   const { preserveIOSelectionOnSpecChange, resetPrevSpec } =
     useIOSelectionPersistence();
 
-  const isSubgraphNavigationEnabled = useBetaFlagValue("subgraph-navigation");
   const isPartialSelectionEnabled = useBetaFlagValue("partial-selection");
 
   const store = useStoreApi();
@@ -309,10 +308,7 @@ const FlowCanvas = ({
     (node) => node.type && UPGRADEABLE_NODES.has(node.type),
   );
 
-  const { canGroup } = canGroupNodes(
-    selectedNodes,
-    isSubgraphNavigationEnabled,
-  );
+  const { canGroup } = canGroupNodes(selectedNodes);
 
   const onElementsRemove = (params: NodesAndEdges) => {
     let updatedSubgraphSpec = { ...currentSubgraphSpec };

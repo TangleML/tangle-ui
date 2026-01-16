@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { InputDialog } from "@/components/shared/Dialogs/InputDialog";
 import { InfoBox } from "@/components/shared/InfoBox";
-import { useBetaFlagValue } from "@/components/shared/Settings/useBetaFlags";
 import { BlockStack } from "@/components/ui/layout";
 import {
   type ComponentSpec,
@@ -35,8 +34,6 @@ export const NewSubgraphDialog = ({
   onClose,
   onCreateSubgraph,
 }: NewSubgraphDialogProps) => {
-  const isSubgraphNavigationEnabled = useBetaFlagValue("subgraph-navigation");
-
   const [excludedNodeIds, setExcludedNodeIds] = useState<Set<string>>(
     new Set(),
   );
@@ -78,10 +75,7 @@ export const NewSubgraphDialog = ({
 
   const hasActiveOrphans = activeOrphanedNodes.length > 0;
 
-  const { canGroup, errorMessage } = canGroupNodes(
-    activeNodes,
-    isSubgraphNavigationEnabled,
-  );
+  const { canGroup, errorMessage } = canGroupNodes(activeNodes);
 
   const dialogContent = useMemo(() => {
     const allOrphans = orphanedNodes
