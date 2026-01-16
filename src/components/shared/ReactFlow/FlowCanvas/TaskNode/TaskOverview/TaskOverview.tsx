@@ -8,13 +8,11 @@ import {
 
 import type { TooltipButtonProps } from "@/components/shared/Buttons/TooltipButton";
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
+import { ViewYamlButton } from "@/components/shared/Buttons/ViewYamlButton";
 import { ComponentDetailsDialog } from "@/components/shared/Dialogs";
 import { ComponentFavoriteToggle } from "@/components/shared/FavoriteComponentToggle";
 import { StatusIcon } from "@/components/shared/Status";
-import {
-  TaskDetails,
-  TaskImplementation,
-} from "@/components/shared/TaskDetails";
+import { TaskDetails } from "@/components/shared/TaskDetails";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
@@ -66,12 +64,7 @@ const TaskOverview = ({ taskNode, actions }: TaskOverviewProps) => {
     ...(actions?.map((action) => (
       <TooltipButton {...action} key={action.tooltip?.toString()} />
     )) ?? []),
-    <TaskImplementation
-      key="task-implementation-action"
-      displayName={name}
-      componentRef={taskSpec.componentRef}
-      showInlineContent={false}
-    />,
+    <ViewYamlButton key="view-task-yaml" componentSpec={componentSpec} />,
   ];
 
   return (

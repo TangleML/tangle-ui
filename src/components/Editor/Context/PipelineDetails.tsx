@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 
 import { useValidationIssueNavigation } from "@/components/Editor/hooks/useValidationIssueNavigation";
+import { ViewYamlButton } from "@/components/shared/Buttons/ViewYamlButton";
 import { ActionBlock } from "@/components/shared/ContextPanel/Blocks/ActionBlock";
 import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlock";
 import { ListBlock } from "@/components/shared/ContextPanel/Blocks/ListBlock";
 import { TextBlock } from "@/components/shared/ContextPanel/Blocks/TextBlock";
 import { CopyText } from "@/components/shared/CopyText/CopyText";
-import { TaskImplementation } from "@/components/shared/TaskDetails";
 import { BlockStack } from "@/components/ui/layout";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
@@ -83,12 +83,7 @@ const PipelineDetails = () => {
 
   const actions = [
     <RenamePipeline key="rename-pipeline-action" />,
-    <TaskImplementation
-      key="pipeline-implementation-action"
-      displayName={componentSpec.name ?? "Pipeline"}
-      componentSpec={componentSpec}
-      showInlineContent={false}
-    />,
+    <ViewYamlButton key="view-pipeline-yaml" componentSpec={componentSpec} />,
   ];
 
   return (

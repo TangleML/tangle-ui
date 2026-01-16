@@ -1,7 +1,4 @@
-import {
-  ActionBlock,
-  type ActionOrReactNode,
-} from "@/components/shared/ContextPanel/Blocks/ActionBlock";
+import { ActionBlock } from "@/components/shared/ContextPanel/Blocks/ActionBlock";
 import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlock";
 import { ListBlock } from "@/components/shared/ContextPanel/Blocks/ListBlock";
 import { TextBlock } from "@/components/shared/ContextPanel/Blocks/TextBlock";
@@ -10,7 +7,6 @@ import PipelineIO from "@/components/shared/Execution/PipelineIO";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { StatusBar } from "@/components/shared/Status";
-import { TaskImplementation } from "@/components/shared/TaskDetails";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { useCheckComponentSpecFromPath } from "@/hooks/useCheckComponentSpecFromPath";
@@ -26,6 +22,7 @@ import {
   isExecutionComplete,
 } from "@/utils/executionStatus";
 
+import { ViewYamlButton } from "../shared/Buttons/ViewYamlButton";
 import { CancelPipelineRunButton } from "./components/CancelPipelineRunButton";
 import { ClonePipelineButton } from "./components/ClonePipelineButton";
 import { InspectPipelineButton } from "./components/InspectPipelineButton";
@@ -93,14 +90,10 @@ export const RunDetails = () => {
 
   const annotations = componentSpec.metadata?.annotations || {};
 
-  const actions: ActionOrReactNode[] = [];
+  const actions = [];
 
   actions.push(
-    <TaskImplementation
-      displayName={componentSpec.name ?? "Pipeline"}
-      componentSpec={componentSpec}
-      showInlineContent={false}
-    />,
+    <ViewYamlButton key="view-pipeline-yaml" componentSpec={componentSpec} />,
   );
 
   if (canAccessEditorSpec && componentSpec.name) {
