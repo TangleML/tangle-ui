@@ -39,6 +39,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/components/shared/InlineEditor",
   "src/components/shared/ManageComponent/PublishComponentButton.tsx",
   "src/components/shared/ManageComponent/DeprecatePublishedComponentButton.tsx",
+  "src/components/shared/ManageComponent/PublishComponent.tsx",
 
   // 11-20 useCallback/useMemo
   // "src/components/ui",                         // 12
