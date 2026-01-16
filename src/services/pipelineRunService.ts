@@ -214,3 +214,44 @@ export const cancelPipelineRun = async (runId: string, backendUrl: string) => {
     },
   );
 };
+
+export interface PipelineRunSummary {
+  pipelineName: string;
+  runCount: number;
+  latestRunDate: Date | null;
+}
+
+/**
+ * Fetches run summary for all pipelines from local storage.
+ * Returns a map of pipeline name to run summary (count and latest run date).
+ */
+export const fetchAllPipelineRunSummaries = async (): Promise<
+  Map<string, PipelineRunSummary>
+> => {
+  const pipelineRunsDb = localForage.createInstance({
+    name: DB_NAME,
+    storeName: PIPELINE_RUNS_STORE_NAME,
+  });
+
+  const summaries = new Map<string, PipelineRunSummary>();
+
+  await pipelineRunsDb.iterate<PipelineRun, void>((run) => {
+    const existing = summaries.get(run.pipeline_name);
+    const runDate = new Date(run.created_at);
+
+    if (existing) {
+      existing.runCount++;
+      if (!existing.latestRunDate || runDate > existing.latestRunDate) {
+        existing.latestRunDate = runDate;
+      }
+    } else {
+      summaries.set(run.pipeline_name, {
+        pipelineName: run.pipeline_name,
+        runCount: 1,
+        latestRunDate: runDate,
+      });
+    }
+  });
+
+  return summaries;
+};
