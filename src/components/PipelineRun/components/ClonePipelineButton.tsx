@@ -14,11 +14,13 @@ import { extractTaskArguments } from "@/utils/nodes/taskArguments";
 type ClonePipelineButtonProps = {
   componentSpec: ComponentSpec;
   runId?: string | null;
+  showLabel?: boolean;
 };
 
 export const ClonePipelineButton = ({
   componentSpec,
   runId,
+  showLabel,
 }: ClonePipelineButtonProps) => {
   const navigate = useNavigate();
   const notify = useToastNotification();
@@ -62,6 +64,7 @@ export const ClonePipelineButton = ({
       data-testid="clone-pipeline-run-button"
     >
       <Icon name="CopyPlus" />
+      {showLabel && "Clone"}
     </TooltipButton>
   );
 };
