@@ -1,11 +1,5 @@
 import { RefreshCcw } from "lucide-react";
-import {
-  type KeyboardEvent,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 
 import {
   Command,
@@ -35,26 +29,20 @@ export const ConfigInput = ({
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const handleInputChange = useCallback(
-    (value: string) => {
-      onChange({ projectId: value });
-    },
-    [onChange],
-  );
+  const handleInputChange = (value: string) => {
+    onChange({ projectId: value });
+  };
 
-  const handleSelect = useCallback(
-    (projectId: string) => {
-      onChange({ projectId });
-      setOpen(false);
-    },
-    [onChange],
-  );
+  const handleSelect = (projectId: string) => {
+    onChange({ projectId });
+    setOpen(false);
+  };
 
-  const handleKeyDown = useCallback((e: KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Tab") {
       setOpen(false);
     }
-  }, []);
+  };
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
