@@ -9,13 +9,17 @@ import { getComponentName } from "@/utils/getComponentName";
 import TaskImplementation from "../TaskDetails/Implementation";
 import { ActionButton } from "./ActionButton";
 
-type ViewYamlButtonProps =
+type ViewYamlButtonProps = {
+  displayLabel?: string;
+} & (
   | { componentRef: HydratedComponentReference; componentSpec?: never }
-  | { componentSpec: ComponentSpec; componentRef?: never };
+  | { componentSpec: ComponentSpec; componentRef?: never }
+);
 
 export const ViewYamlButton = ({
   componentRef,
   componentSpec,
+  displayLabel,
 }: ViewYamlButtonProps) => {
   const [showCodeViewer, setShowCodeViewer] = useState(false);
 
@@ -37,6 +41,7 @@ export const ViewYamlButton = ({
         label="View YAML"
         icon="FileCodeCorner"
         onClick={handleClick}
+        displayLabel={displayLabel}
       />
 
       {showCodeViewer && (
