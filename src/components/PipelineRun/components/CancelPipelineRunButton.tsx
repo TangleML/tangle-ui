@@ -1,9 +1,9 @@
 import { useMutation } from "@tanstack/react-query";
-import { CircleSlash, CircleX } from "lucide-react";
 import { useCallback, useState } from "react";
 
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import ConfirmationDialog from "@/components/shared/Dialogs/ConfirmationDialog";
+import { Icon } from "@/components/ui/icon";
 import { Spinner } from "@/components/ui/spinner";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
@@ -11,10 +11,12 @@ import { cancelPipelineRun } from "@/services/pipelineRunService";
 
 interface CancelPipelineRunButtonProps {
   runId: string | null | undefined;
+  showLabel?: boolean;
 }
 
 export const CancelPipelineRunButton = ({
   runId,
+  showLabel,
 }: CancelPipelineRunButtonProps) => {
   const { backendUrl, available } = useBackend();
   const notify = useToastNotification();
@@ -66,7 +68,8 @@ export const CancelPipelineRunButton = ({
   if (isSuccess) {
     return (
       <TooltipButton disabled tooltip="Run cancelled">
-        <CircleSlash className="w-4 h-4" />
+        <Icon name="CircleSlash" />
+        {showLabel && "Cancelled"}
       </TooltipButton>
     );
   }
@@ -84,9 +87,10 @@ export const CancelPipelineRunButton = ({
           <Spinner className="mr-2" />
         ) : (
           <div className="flex items-center gap-2">
-            <CircleX className="w-4 h-4" />
+            <Icon name="CircleX" />
           </div>
         )}
+        {showLabel && "Cancel"}
       </TooltipButton>
 
       <ConfirmationDialog
