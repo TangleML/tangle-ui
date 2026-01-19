@@ -8,6 +8,7 @@ import { ContextPanelProvider } from "@/providers/ContextPanelProvider";
 
 import { CollapsibleContextPanel } from "../shared/ContextPanel/CollapsibleContextPanel";
 import { RunDetails } from "./RunDetails";
+import { RunToolbar } from "./RunToolbar";
 
 const GRID_SIZE = 10;
 
@@ -37,6 +38,7 @@ const PipelineRunPage = () => {
           <BlockStack fill className="flex-1">
             <FlowCanvas {...flowConfig} readOnly>
               <MiniMap position="bottom-left" pannable />
+              <RunToolbar />
               <FlowControls
                 className="ml-56! mb-6!"
                 config={flowConfig}

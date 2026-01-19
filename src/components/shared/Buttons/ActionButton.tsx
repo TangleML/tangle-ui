@@ -1,24 +1,31 @@
 import { type ReactNode } from "react";
 
 import { Icon, type IconName } from "@/components/ui/icon";
+import { Paragraph } from "@/components/ui/typography";
 
 import TooltipButton from "./TooltipButton";
 
+type IconOrChildren =
+  | { icon: IconName; children?: never }
+  | { children: ReactNode; icon?: never };
+
+type AlwaysTooltipOrLabel =
+  | { tooltip: string; label?: string }
+  | { tooltip?: string; label: string };
+
 type ActionButtonProps = {
-  label: string;
   destructive?: boolean;
   disabled?: boolean;
   onClick: () => void;
   className?: string;
-} & (
-  | { icon: IconName; children?: never }
-  | { children: ReactNode; icon?: never }
-);
+} & IconOrChildren &
+  AlwaysTooltipOrLabel;
 
 export const ActionButton = ({
-  label,
+  tooltip,
   destructive,
   disabled,
+  label,
   onClick,
   className,
   icon,
@@ -26,14 +33,15 @@ export const ActionButton = ({
 }: ActionButtonProps) => {
   return (
     <TooltipButton
-      data-testid={`action-${label}`}
+      data-testid={`action-${label ?? tooltip}`}
       variant={destructive ? "destructive" : "outline"}
-      tooltip={label}
+      tooltip={tooltip}
       onClick={onClick}
       disabled={disabled}
       className={className}
     >
       {children === undefined && icon ? <Icon name={icon} /> : children}
+      {label && <Paragraph>{label}</Paragraph>}
     </TooltipButton>
   );
 };
