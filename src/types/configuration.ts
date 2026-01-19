@@ -5,3 +5,8 @@ export interface BetaFlag {
 }
 
 export type BetaFlags = Record<string, BetaFlag>;
+
+export type Flag = BetaFlag & {
+  key: string;
+  enabled: boolean;
+};

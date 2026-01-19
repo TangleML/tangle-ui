@@ -1,4 +1,4 @@
-import type { BetaFlag } from "@/types/betaFlags";
+import type { BetaFlag } from "@/types/configuration";
 
 const isRemoteComponentLibraryEnabled =
   import.meta.env.VITE_DEFAULT_REMOTE_COMPONENT_LIBRARY_BETA === "true";
