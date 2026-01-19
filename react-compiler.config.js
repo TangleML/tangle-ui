@@ -32,6 +32,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/components/shared/Submitters/Oasis/components",
   "src/components/shared/Submitters/GoogleCloud/ConfigInput.tsx",
   "src/components/shared/Submitters/GoogleCloud/GoogleCloudSubmitter.tsx",
+  "src/components/shared/Submitters/GoogleCloud/RegionInput.tsx",
 
   // 11-20 useCallback/useMemo
   // "src/components/ui",                         // 12

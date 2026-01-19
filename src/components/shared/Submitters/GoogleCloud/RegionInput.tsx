@@ -1,5 +1,3 @@
-import { useCallback } from "react";
-
 import {
   Select,
   SelectContent,
@@ -29,9 +27,9 @@ interface RegionInputProps {
 }
 
 export const RegionInput = ({ config, onChange }: RegionInputProps) => {
-  const handleSelectChange = useCallback((value: string) => {
+  const handleSelectChange = (value: string) => {
     onChange({ region: value });
-  }, []);
+  };
 
   return (
     <div className="flex flex-col gap-1">
