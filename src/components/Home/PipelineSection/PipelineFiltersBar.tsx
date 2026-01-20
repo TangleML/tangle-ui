@@ -1,6 +1,7 @@
-import type { ChangeEvent } from "react";
+import type { ChangeEvent, ReactNode } from "react";
 import type { DateRange } from "react-day-picker";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DatePickerWithRange } from "@/components/ui/date-picker";
 import { Icon } from "@/components/ui/icon";
@@ -14,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Text } from "@/components/ui/typography";
 
@@ -28,6 +30,9 @@ interface PipelineFiltersBarProps {
     value: PipelineFilters[K],
   ) => void;
   onClearFilters: () => void;
+  totalCount?: number;
+  filteredCount?: number;
+  actions?: ReactNode;
 }
 
 const SORT_OPTIONS: { value: SortField; label: string }[] = [
@@ -42,6 +47,9 @@ export function PipelineFiltersBar({
   activeFilterCount,
   onUpdateFilter,
   onClearFilters,
+  totalCount,
+  filteredCount,
+  actions,
 }: PipelineFiltersBarProps) {
   const handleSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
     onUpdateFilter("searchQuery", e.target.value);
@@ -69,30 +77,54 @@ export function PipelineFiltersBar({
   const sortDirectionIcon: "ArrowUp" | "ArrowDown" =
     filters.sortDirection === "asc" ? "ArrowUp" : "ArrowDown";
 
+  const showResultsCount =
+    totalCount !== undefined &&
+    filteredCount !== undefined &&
+    filteredCount < totalCount;
+
   return (
-    <InlineStack gap="2" blockAlign="center" wrap="nowrap">
+    <InlineStack
+      gap="3"
+      blockAlign="center"
+      wrap="wrap"
+      className="rounded-lg p-3"
+    >
+      {/* Search */}
       <InlineStack gap="1" wrap="nowrap">
-        <Input
-          type="text"
-          placeholder="Search..."
-          value={filters.searchQuery}
-          onChange={handleSearchChange}
-          className="w-40"
-        />
+        <div className="relative">
+          <Icon
+            name="Search"
+            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4"
+          />
+          <Input
+            type="text"
+            placeholder="Search pipelines..."
+            value={filters.searchQuery}
+            onChange={handleSearchChange}
+            className="w-48 pl-8"
+          />
+        </div>
         {filters.searchQuery && (
           <Button
             variant="ghost"
             size="icon"
             onClick={() => onUpdateFilter("searchQuery", "")}
+            className="h-9 w-9"
           >
-            <Icon name="CircleX" />
+            <Icon name="X" className="w-4 h-4" />
           </Button>
         )}
       </InlineStack>
 
+      <Separator orientation="vertical" className="h-6" />
+
+      {/* Sort */}
       <InlineStack gap="1" wrap="nowrap" blockAlign="center">
+        <Text as="span" size="xs" tone="subdued" className="whitespace-nowrap">
+          Sort by
+        </Text>
         <Select value={filters.sortField} onValueChange={handleSortChange}>
-          <SelectTrigger className="w-32">
+          <SelectTrigger className="w-28 h-9">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -104,44 +136,64 @@ export function PipelineFiltersBar({
           </SelectContent>
         </Select>
         <Button
-          variant="outline"
+          variant="ghost"
           size="icon"
           onClick={handleSortDirectionToggle}
           title={filters.sortDirection === "asc" ? "Ascending" : "Descending"}
+          className="h-9 w-9"
         >
-          <Icon name={sortDirectionIcon} />
+          <Icon name={sortDirectionIcon} className="w-4 h-4" />
         </Button>
       </InlineStack>
 
-      <DatePickerWithRange
-        value={filters.dateRange}
-        onChange={handleDateRangeChange}
-        placeholder="All time"
-      />
+      <Separator orientation="vertical" className="h-6" />
 
-      <InlineStack gap="2" blockAlign="center">
-        <Switch
-          id="has-runs"
-          checked={filters.hasRunsOnly}
-          onCheckedChange={handleHasRunsToggle}
+      {/* Filters */}
+      <InlineStack gap="3" blockAlign="center">
+        <DatePickerWithRange
+          value={filters.dateRange}
+          onChange={handleDateRangeChange}
+          placeholder="All time"
         />
-        <Label htmlFor="has-runs" className="whitespace-nowrap">
-          Has runs
-        </Label>
+
+        <InlineStack gap="2" blockAlign="center">
+          <Switch
+            id="has-runs"
+            checked={filters.hasRunsOnly}
+            onCheckedChange={handleHasRunsToggle}
+          />
+          <Label htmlFor="has-runs" className="whitespace-nowrap text-sm">
+            Has runs
+          </Label>
+        </InlineStack>
       </InlineStack>
 
-      {hasActiveFilters && (
-        <Button variant="ghost" size="sm" onClick={onClearFilters}>
-          <Icon name="X" />
-          <Text
-            as="span"
-            size="xs"
-            className="bg-muted px-1.5 py-0.5 rounded-full"
-          >
-            {activeFilterCount}
-          </Text>
-        </Button>
+      {/* Results count & clear */}
+      {(hasActiveFilters || showResultsCount) && (
+        <InlineStack gap="2" blockAlign="center">
+          {showResultsCount && (
+            <Text as="span" size="xs" tone="subdued">
+              {filteredCount} of {totalCount}
+            </Text>
+          )}
+          {hasActiveFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClearFilters}
+              className="h-8 gap-1"
+            >
+              Clear
+              <Badge variant="secondary" size="xs">
+                {activeFilterCount}
+              </Badge>
+            </Button>
+          )}
+        </InlineStack>
       )}
+
+      {/* Actions (pushed to right) */}
+      {actions && <div className="ml-auto">{actions}</div>}
     </InlineStack>
   );
 }
