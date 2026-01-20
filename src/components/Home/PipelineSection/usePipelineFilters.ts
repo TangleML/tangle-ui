@@ -1,10 +1,8 @@
-import { useState } from "react";
-
 import type { PipelineRunSummary } from "@/services/pipelineRunService";
 import type { ComponentFileEntry } from "@/utils/componentStore";
 
 export type SortField = "name" | "modified" | "lastRun";
-type SortDirection = "asc" | "desc";
+export type SortDirection = "asc" | "desc";
 
 export interface DateRange {
   from: Date | undefined;
@@ -25,13 +23,18 @@ interface PipelineWithRunInfo {
   runSummary: PipelineRunSummary | null;
 }
 
-const DEFAULT_FILTERS: PipelineFilters = {
+export const DEFAULT_FILTERS: PipelineFilters = {
   searchQuery: "",
   sortField: "modified",
   sortDirection: "desc",
   dateRange: undefined,
   hasRunsOnly: false,
 };
+
+interface UsePipelineFiltersOptions {
+  filters: PipelineFilters;
+  onFiltersChange: (filters: PipelineFilters) => void;
+}
 
 function isWithinDateRange(date: Date, range: DateRange | undefined): boolean {
   if (!range || !range.from) return true;
@@ -90,8 +93,9 @@ function comparePipelines(
 export function usePipelineFilters(
   pipelines: Map<string, ComponentFileEntry>,
   runSummaries: Map<string, PipelineRunSummary>,
+  options: UsePipelineFiltersOptions,
 ) {
-  const [filters, setFilters] = useState<PipelineFilters>(DEFAULT_FILTERS);
+  const { filters, onFiltersChange } = options;
 
   const pipelinesWithRunInfo: PipelineWithRunInfo[] = Array.from(
     pipelines.entries(),
@@ -143,14 +147,14 @@ export function usePipelineFilters(
   const filterKey = `${filters.searchQuery}-${filters.sortField}-${filters.sortDirection}-${filters.dateRange?.from?.toISOString()}-${filters.dateRange?.to?.toISOString()}-${filters.hasRunsOnly}`;
 
   const clearFilters = () => {
-    setFilters(DEFAULT_FILTERS);
+    onFiltersChange(DEFAULT_FILTERS);
   };
 
   const updateFilter = <K extends keyof PipelineFilters>(
     key: K,
     value: PipelineFilters[K],
   ) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
+    onFiltersChange({ ...filters, [key]: value });
   };
 
   return {

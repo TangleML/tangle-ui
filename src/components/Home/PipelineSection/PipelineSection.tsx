@@ -1,4 +1,4 @@
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
@@ -20,7 +20,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Paragraph, Text } from "@/components/ui/typography";
-import { QUICK_START_PATH } from "@/routes/router";
+import {
+  type HomeSearchParams,
+  indexRoute,
+  QUICK_START_PATH,
+} from "@/routes/router";
 import {
   fetchAllPipelineRunSummaries,
   type PipelineRunSummary,
@@ -34,7 +38,11 @@ import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 import BulkActionsBar from "./BulkActionsBar";
 import { PipelineFiltersBar } from "./PipelineFiltersBar";
 import PipelineRow from "./PipelineRow";
-import { usePipelineFilters } from "./usePipelineFilters";
+import {
+  DEFAULT_FILTERS,
+  type PipelineFilters,
+  usePipelineFilters,
+} from "./usePipelineFilters";
 
 const DEFAULT_PAGE_SIZE = 10;
 
@@ -110,6 +118,51 @@ const PipelineSectionSkeleton = () => {
 };
 
 export const PipelineSection = withSuspenseWrapper(() => {
+  const navigate = useNavigate({ from: indexRoute.fullPath });
+  const search = useSearch({ strict: false }) as Partial<HomeSearchParams>;
+
+  // Convert URL search params to PipelineFilters
+  const dateRange =
+    search.from || search.to
+      ? {
+        from: search.from ? new Date(search.from) : undefined,
+        to: search.to ? new Date(search.to) : undefined,
+      }
+      : undefined;
+
+  const filtersFromUrl: PipelineFilters = {
+    searchQuery: search.q ?? DEFAULT_FILTERS.searchQuery,
+    sortField: search.sort ?? DEFAULT_FILTERS.sortField,
+    sortDirection: search.dir ?? DEFAULT_FILTERS.sortDirection,
+    dateRange,
+    hasRunsOnly: search.hasRuns ?? DEFAULT_FILTERS.hasRunsOnly,
+  };
+
+  // Update URL when filters change
+  const handleFiltersChange = (newFilters: PipelineFilters) => {
+    navigate({
+      search: (prev) => ({
+        ...prev,
+        q: newFilters.searchQuery || undefined,
+        sort:
+          newFilters.sortField !== DEFAULT_FILTERS.sortField
+            ? newFilters.sortField
+            : undefined,
+        dir:
+          newFilters.sortDirection !== DEFAULT_FILTERS.sortDirection
+            ? newFilters.sortDirection
+            : undefined,
+        from: newFilters.dateRange?.from
+          ? newFilters.dateRange.from.toISOString().split("T")[0]
+          : undefined,
+        to: newFilters.dateRange?.to
+          ? newFilters.dateRange.to.toISOString().split("T")[0]
+          : undefined,
+        hasRuns: newFilters.hasRunsOnly || undefined,
+      }),
+    });
+  };
+
   const [pipelines, setPipelines] = useState<Pipelines>(new Map());
   const [runSummaries, setRunSummaries] = useState<
     Map<string, PipelineRunSummary>
@@ -127,7 +180,10 @@ export const PipelineSection = withSuspenseWrapper(() => {
     activeFilterCount,
     clearFilters,
     updateFilter,
-  } = usePipelineFilters(pipelines, runSummaries);
+  } = usePipelineFilters(pipelines, runSummaries, {
+    filters: filtersFromUrl,
+    onFiltersChange: handleFiltersChange,
+  });
 
   const {
     paginatedItems: paginatedPipelines,

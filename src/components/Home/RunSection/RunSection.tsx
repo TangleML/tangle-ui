@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useLocation, useNavigate, useSearch } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { ChevronFirst, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
@@ -20,6 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useBackend } from "@/providers/BackendProvider";
+import { type HomeSearchParams, indexRoute } from "@/routes/router";
 import { getBackendStatusString } from "@/utils/backend";
 import { fetchWithErrorHandling } from "@/utils/fetchWithErrorHandling";
 
@@ -32,13 +33,10 @@ const CREATED_BY_ME_FILTER = "created_by:me";
 const INCLUDE_PIPELINE_NAME_QUERY_KEY = "include_pipeline_names";
 const INCLUDE_EXECUTION_STATS_QUERY_KEY = "include_execution_stats";
 
-type RunSectionSearch = { page_token?: string; filter?: string };
-
 export const RunSection = ({ onEmptyList }: { onEmptyList?: () => void }) => {
   const { backendUrl, configured, available, ready } = useBackend();
-  const navigate = useNavigate();
-  const { pathname } = useLocation();
-  const search = useSearch({ strict: false }) as RunSectionSearch;
+  const navigate = useNavigate({ from: indexRoute.fullPath });
+  const search = useSearch({ strict: false }) as Partial<HomeSearchParams>;
   const isCreatedByMeDefault = useBetaFlagValue("created-by-me-default");
   const dataVersion = useRef(0);
 
@@ -103,14 +101,15 @@ export const RunSection = ({ onEmptyList }: { onEmptyList?: () => void }) => {
   }, [isCreatedByMeDefault]);
 
   const handleFilterChange = (value: boolean) => {
-    const nextSearch: RunSectionSearch = { ...search };
-    delete nextSearch.page_token;
+    let newFilter: string | undefined;
 
     if (value) {
       // If there's already a created_by filter, keep it; otherwise use "created_by:me"
       if (!filterDict.created_by) {
-        nextSearch.filter = CREATED_BY_ME_FILTER;
+        newFilter = CREATED_BY_ME_FILTER;
         setSearchUser("");
+      } else {
+        newFilter = search.filter;
       }
     } else {
       // Remove created_by from filter, but keep other filters
@@ -123,25 +122,26 @@ export const RunSection = ({ onEmptyList }: { onEmptyList?: () => void }) => {
         .join(",");
 
       if (remainingFilters) {
-        nextSearch.filter = remainingFilters;
+        newFilter = remainingFilters;
+      } else if (isCreatedByMeDefault) {
+        newFilter = "";
       } else {
-        if (isCreatedByMeDefault) {
-          nextSearch.filter = "";
-        } else {
-          delete nextSearch.filter;
-        }
+        newFilter = undefined;
       }
     }
 
     setPreviousPageTokens([]);
-    navigate({ to: pathname, search: nextSearch });
+    navigate({
+      search: (prev) => ({
+        ...prev,
+        page_token: undefined,
+        filter: newFilter,
+      }),
+    });
   };
 
   const handleUserSearch = () => {
     if (!searchUser.trim()) return;
-
-    const nextSearch: RunSectionSearch = { ...search };
-    delete nextSearch.page_token;
 
     // Create or update the created_by filter
     const updatedFilterDict = { ...filterDict };
@@ -152,18 +152,24 @@ export const RunSection = ({ onEmptyList }: { onEmptyList?: () => void }) => {
       .map(([key, value]) => `${key}:${value}`)
       .join(",");
 
-    nextSearch.filter = newFilter;
-
     setPreviousPageTokens([]);
-    navigate({ to: pathname, search: nextSearch });
+    navigate({
+      search: (prev) => ({
+        ...prev,
+        page_token: undefined,
+        filter: newFilter,
+      }),
+    });
   };
 
   const handleNextPage = () => {
     if (data?.next_page_token) {
       setPreviousPageTokens([...previousPageTokens, pageToken || ""]);
       navigate({
-        to: pathname,
-        search: { ...search, page_token: data.next_page_token },
+        search: (prev) => ({
+          ...prev,
+          page_token: data.next_page_token,
+        }),
       });
     }
   };
@@ -171,20 +177,22 @@ export const RunSection = ({ onEmptyList }: { onEmptyList?: () => void }) => {
   const handlePreviousPage = () => {
     const previousToken = previousPageTokens[previousPageTokens.length - 1];
     setPreviousPageTokens(previousPageTokens.slice(0, -1));
-    const nextSearch: RunSectionSearch = { ...search };
-    if (previousToken) {
-      nextSearch.page_token = previousToken;
-    } else {
-      delete nextSearch.page_token;
-    }
-    navigate({ to: pathname, search: nextSearch });
+    navigate({
+      search: (prev) => ({
+        ...prev,
+        page_token: previousToken || undefined,
+      }),
+    });
   };
 
   const handleFirstPage = () => {
     setPreviousPageTokens([]);
-    const nextSearch: RunSectionSearch = { ...search };
-    delete nextSearch.page_token;
-    navigate({ to: pathname, search: nextSearch });
+    navigate({
+      search: (prev) => ({
+        ...prev,
+        page_token: undefined,
+      }),
+    });
   };
 
   useEffect(() => {
