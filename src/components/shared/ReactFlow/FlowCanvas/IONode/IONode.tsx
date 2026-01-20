@@ -49,7 +49,10 @@ const IONode = ({ id, type, data, selected = false }: IONodeProps) => {
 
   const edges = useEdges();
   const { setEdges } = useReactFlow();
-  const isConnectedToSelectedEdge = useEdgeSelectionHighlight(id);
+  const { isConnectedToSelectedEdge, hasAnySelectedEdge } =
+    useEdgeSelectionHighlight(id);
+
+  const isDimmed = hasAnySelectedEdge && !isConnectedToSelectedEdge;
 
   const isInput = type === "input";
   const isOutput = type === "output";
@@ -182,7 +185,13 @@ const IONode = ({ id, type, data, selected = false }: IONodeProps) => {
   const handleId = id === GHOST_NODE_ID ? getGhostHandleId() : undefined;
 
   return (
-    <Card className={cn("border-2 max-w-[300px] p-0", borderColor)}>
+    <Card
+      className={cn(
+        "border-2 max-w-[300px] p-0 transition-opacity duration-200",
+        borderColor,
+        isDimmed && "opacity-40",
+      )}
+    >
       <CardHeader className="px-2 py-2.5">
         <CardTitle className="wrap-break-word text-sm">{data.label}</CardTitle>
       </CardHeader>
