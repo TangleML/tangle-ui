@@ -43,10 +43,12 @@ const Home = () => {
     }
   };
 
+  const pageTitle = activeTab === "runs" ? "Pipeline Runs" : "My Pipelines";
+
   return (
     <div className="container mx-auto w-3/4 p-4 flex flex-col gap-4">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Pipelines</h1>
+        <h1 className="text-2xl font-bold">{pageTitle}</h1>
       </div>
       <Tabs
         className="w-full"

@@ -5,7 +5,7 @@ import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import NewPipelineButton from "@/components/shared/NewPipelineButton";
 import QuickStartCards from "@/components/shared/QuickStart/QuickStartCards";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Icon } from "@/components/ui/icon";
@@ -271,27 +271,22 @@ export const PipelineSection = withSuspenseWrapper(() => {
 
   return (
     <BlockStack gap="4" className="w-full">
-      <Alert variant="destructive">
-        <Icon name="Terminal" />
-        <AlertTitle>Heads up!</AlertTitle>
-        <AlertDescription>
-          Your pipelines are stored in your browser&apos;s local storage.
-          Clearing your browser data or cookies will delete all saved pipelines.
-          Consider exporting important pipelines to files for backup.
+      <PipelineFiltersBar
+        filters={filters}
+        hasActiveFilters={hasActiveFilters}
+        activeFilterCount={activeFilterCount}
+        onUpdateFilter={updateFilter}
+        onClearFilters={clearFilters}
+        totalCount={pipelines.size}
+        filteredCount={filteredAndSortedPipelines.length}
+      />
+
+      <Alert variant="default" className="border-amber-200 bg-amber-50 dark:bg-amber-950/20">
+        <Icon name="Info" className="text-amber-600" />
+        <AlertDescription className="text-amber-800 dark:text-amber-200">
+          Pipelines are stored in your browser. Export important ones for backup.
         </AlertDescription>
       </Alert>
-
-      <InlineStack gap="2" blockAlign="center" wrap="nowrap" className="w-full">
-        <PipelineFiltersBar
-          filters={filters}
-          hasActiveFilters={hasActiveFilters}
-          activeFilterCount={activeFilterCount}
-          onUpdateFilter={updateFilter}
-          onClearFilters={clearFilters}
-        />
-        <div className="flex-1" />
-        <QuickStartButton />
-      </InlineStack>
 
       {pipelines.size > 0 && (
         <Table>
@@ -313,10 +308,17 @@ export const PipelineSection = withSuspenseWrapper(() => {
           <TableBody>
             {filteredAndSortedPipelines.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
-                  <Text tone="subdued">
-                    No pipelines found matching your filters.
-                  </Text>
+                <TableCell colSpan={6} className="text-center py-12">
+                  <BlockStack gap="3" align="center">
+                    <Icon
+                      name="Search"
+                      className="w-8 h-8 text-muted-foreground"
+                    />
+                    <Text tone="subdued">
+                      No pipelines found matching your filters.
+                    </Text>
+                    <QuickStartButton />
+                  </BlockStack>
                 </TableCell>
               </TableRow>
             )}
