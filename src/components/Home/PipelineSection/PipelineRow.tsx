@@ -84,8 +84,10 @@ const PipelineRow = withSuspenseWrapper(
             onClick={handleClick}
           />
         </TableCell>
-        <TableCell>
-          <Paragraph>{name}</Paragraph>
+        <TableCell className="max-w-xs">
+          <Paragraph className="truncate" title={name}>
+            {name}
+          </Paragraph>
         </TableCell>
         <TableCell>
           <Paragraph tone="subdued" size="xs">
@@ -125,8 +127,10 @@ const PipelineRow = withSuspenseWrapper(
         <TableCell onClick={(e) => e.stopPropagation()}>
           <Skeleton size="sm" />
         </TableCell>
-        <TableCell>
-          <Paragraph>{props.name}</Paragraph>
+        <TableCell className="max-w-xs">
+          <Paragraph className="truncate" title={props.name}>
+            {props.name}
+          </Paragraph>
         </TableCell>
         <TableCell>
           <Paragraph tone="subdued" size="xs">
