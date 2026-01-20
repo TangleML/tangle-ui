@@ -27,6 +27,52 @@ declare module "@tanstack/react-router" {
 export const EDITOR_PATH = "/editor";
 export const RUNS_BASE_PATH = "/runs";
 export const QUICK_START_PATH = "/quick-start";
+
+// Home page search params types
+export type HomeTab = "runs" | "pipelines";
+export type SortField = "name" | "modified" | "lastRun";
+export type SortDirection = "asc" | "desc";
+
+export interface HomeSearchParams {
+  tab: HomeTab;
+  // Pipeline filters
+  q?: string;
+  sort?: SortField;
+  dir?: SortDirection;
+  from?: string;
+  to?: string;
+  hasRuns?: boolean;
+  // Run section params
+  page_token?: string;
+  filter?: string;
+}
+
+function validateHomeSearch(search: Record<string, unknown>): HomeSearchParams {
+  const tab = search.tab === "pipelines" ? "pipelines" : "runs";
+  const q = typeof search.q === "string" && search.q ? search.q : undefined;
+  const sort =
+    search.sort === "name" ||
+    search.sort === "modified" ||
+    search.sort === "lastRun"
+      ? search.sort
+      : undefined;
+  const dir =
+    search.dir === "asc" || search.dir === "desc" ? search.dir : undefined;
+  const from =
+    typeof search.from === "string" && search.from ? search.from : undefined;
+  const to = typeof search.to === "string" && search.to ? search.to : undefined;
+  const hasRuns =
+    search.hasRuns === "true" || search.hasRuns === true ? true : undefined;
+  // Run section params
+  const page_token =
+    typeof search.page_token === "string" && search.page_token
+      ? search.page_token
+      : undefined;
+  const filter = typeof search.filter === "string" ? search.filter : undefined;
+
+  return { tab, q, sort, dir, from, to, hasRuns, page_token, filter };
+}
+
 export const APP_ROUTES = {
   HOME: "/",
   QUICK_START: QUICK_START_PATH,
@@ -50,10 +96,11 @@ const mainLayout = createRoute({
   component: RootLayout,
 });
 
-const indexRoute = createRoute({
+export const indexRoute = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.HOME,
   component: Home,
+  validateSearch: validateHomeSearch,
 });
 
 const quickStartRoute = createRoute({

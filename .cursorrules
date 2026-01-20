@@ -22,11 +22,22 @@ This is a React + TypeScript application for building and running Machine Learni
 ### React Patterns
 
 - Use functional components with hooks exclusively
-- Use proper dependency arrays in useEffect and useMemo
+- Use proper dependency arrays in useEffect
 - Follow the existing component structure
 - Do not use barrel exports
 - Use React 19 features and patterns
 - **Import modules from React**: `import module from react`. Do not use inline `React.[module]`
+
+### React Compiler
+
+This project uses **React Compiler** for automatic memoization. Follow these rules:
+
+- **DO NOT use `useMemo`, `useCallback`, or `React.memo`** in new components - React Compiler handles memoization automatically
+- **When creating a new component file**, add its directory or file path to `react-compiler.config.js` in the `REACT_COMPILER_ENABLED_DIRS` array
+- For new files in directories already in the allow list (e.g., `src/components/Home`, `src/routes`), no action needed
+- If adding a file in a new directory, add the directory path to the config
+- Existing components with `useMemo`/`useCallback` should NOT be refactored unless explicitly requested
+
 
 ### File Structure & Imports
 

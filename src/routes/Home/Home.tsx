@@ -1,18 +1,44 @@
-import { useRef, useState } from "react";
+import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useRef } from "react";
 
 import { PipelineSection, RunSection } from "@/components/Home";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  type HomeSearchParams,
+  type HomeTab,
+  indexRoute,
+} from "@/routes/router";
 
 const Home = () => {
-  const [activeTab, setActiveTab] = useState("runs");
+  const navigate = useNavigate({ from: indexRoute.fullPath });
+  const search = useSearch({ strict: false }) as Partial<HomeSearchParams>;
+  const activeTab = search.tab ?? "runs";
+
   const handleTabSelect = (value: string) => {
-    setActiveTab(value);
+    const newTab = value as HomeTab;
+    navigate({
+      search: (prev) => ({
+        ...prev,
+        tab: newTab,
+        // Clear pipeline filters when switching to runs tab
+        ...(newTab === "runs" && {
+          q: undefined,
+          sort: undefined,
+          dir: undefined,
+          from: undefined,
+          to: undefined,
+          hasRuns: undefined,
+        }),
+      }),
+    });
   };
 
   const handledPipelineRunsEmpty = useRef(false);
   const handlePipelineRunsEmpty = () => {
     if (!handledPipelineRunsEmpty.current) {
-      setActiveTab("pipelines");
+      navigate({
+        search: (prev) => ({ ...prev, tab: "pipelines" }),
+      });
       handledPipelineRunsEmpty.current = true;
     }
   };
@@ -23,7 +49,6 @@ const Home = () => {
         <h1 className="text-2xl font-bold">Pipelines</h1>
       </div>
       <Tabs
-        defaultValue="runs"
         className="w-full"
         value={activeTab}
         onValueChange={handleTabSelect}
