@@ -9,10 +9,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { BlockStack } from "@/components/ui/layout";
-import { Paragraph } from "@/components/ui/typography";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { Setting } from "./Setting";
+import { BetaFeatures } from "./BetaFeatures";
+import { Settings } from "./Settings";
 import { useBetaFlagsReducer } from "./useBetaFlagReducer";
 
 interface PersonalPreferencesDialogProps {
@@ -24,11 +24,18 @@ export function PersonalPreferencesDialog({
   open,
   setOpen,
 }: PersonalPreferencesDialogProps) {
-  const [betaFlags, dispatch] = useBetaFlagsReducer(ExistingBetaFlags);
+  const [allFlags, dispatch] = useBetaFlagsReducer(ExistingBetaFlags);
 
   const handleSetFlag = (flag: string, enabled: boolean) => {
     dispatch({ type: "setFlag", payload: { key: flag, enabled } });
   };
+
+  const betaFlags = Object.values(allFlags).filter(
+    (flag) => flag.category === "beta",
+  );
+  const settings = Object.values(allFlags).filter(
+    (flag) => flag.category === "setting",
+  );
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -45,16 +52,19 @@ export function PersonalPreferencesDialog({
           Configure your personal preferences.
         </DialogDescription>
 
-        <BlockStack gap="4">
-          <Paragraph weight="semibold">Beta Features</Paragraph>
-          {betaFlags.map((flag) => (
-            <Setting
-              key={flag.key}
-              setting={flag}
-              onChange={(enabled) => handleSetFlag(flag.key, enabled)}
-            />
-          ))}
-        </BlockStack>
+        <Tabs defaultValue="settings" className="w-full gap-4">
+          <TabsList>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
+            <TabsTrigger value="betas">Beta Features</TabsTrigger>
+          </TabsList>
+          <TabsContent value="settings">
+            <Settings settings={settings} onChange={handleSetFlag} />
+          </TabsContent>
+          <TabsContent value="betas">
+            <BetaFeatures betaFlags={betaFlags} onChange={handleSetFlag} />
+          </TabsContent>
+        </Tabs>
+
         <DialogFooter>
           <DialogClose asChild>
             <Button

@@ -35,6 +35,8 @@ test.describe("Published Component Library", () => {
     const dialog = page.getByTestId("personal-preferences-dialog");
     await expect(dialog).toBeVisible();
 
+    await dialog.getByRole("tab", { name: "Beta Features" }).click();
+
     const switchElement = dialog.getByTestId(
       "remote-component-library-search-switch",
     );

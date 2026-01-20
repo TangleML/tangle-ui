@@ -1,5 +1,8 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import type { Flag } from "@/types/configuration";
 
 import { PersonalPreferencesDialog } from "../PersonalPreferencesDialog";
 import { useBetaFlagsReducer } from "../useBetaFlagReducer";
@@ -11,13 +14,14 @@ describe("PersonalPreferencesDialog", () => {
   const mockDispatch = vi.fn();
   const mockSetOpen = vi.fn();
 
-  const mockBetaFlags = [
+  const mockBetaFlags: Flag[] = [
     {
       key: "codeViewer",
       name: "Code Viewer virtualization",
       description: "Enable the code viewer virtualization.",
       enabled: false,
       default: false,
+      category: "beta",
     },
     {
       key: "testFeature",
@@ -25,6 +29,7 @@ describe("PersonalPreferencesDialog", () => {
       description: "A test feature for testing purposes.",
       enabled: true,
       default: false,
+      category: "setting",
     },
   ];
 
@@ -32,7 +37,6 @@ describe("PersonalPreferencesDialog", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // Set default mock implementation
     mockUseBetaFlagsReducer.mockReturnValue([mockBetaFlags, mockDispatch]);
   });
 
@@ -60,65 +64,112 @@ describe("PersonalPreferencesDialog", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("should render beta features section", () => {
+  it("should render both tabs", () => {
     render(<PersonalPreferencesDialog open={true} setOpen={mockSetOpen} />);
 
-    expect(screen.getByText("Beta Features")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Settings" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("tab", { name: "Beta Features" }),
+    ).toBeInTheDocument();
   });
 
-  it("should render all beta flags with correct information", () => {
+  it("should render settings tab content by default", () => {
     render(<PersonalPreferencesDialog open={true} setOpen={mockSetOpen} />);
 
-    // Check first beta flag
-    expect(screen.getByText("Code Viewer virtualization")).toBeInTheDocument();
-    expect(
-      screen.getByText("Enable the code viewer virtualization."),
-    ).toBeInTheDocument();
-
-    // Check second beta flag
     expect(screen.getByText("Test Feature")).toBeInTheDocument();
     expect(
       screen.getByText("A test feature for testing purposes."),
     ).toBeInTheDocument();
   });
 
-  it("should render switches with correct initial states", () => {
+  it("should render beta features tab content when clicked", async () => {
+    const user = userEvent.setup();
     render(<PersonalPreferencesDialog open={true} setOpen={mockSetOpen} />);
 
-    const switches = screen.getAllByRole("switch");
-    expect(switches).toHaveLength(2);
+    const betaTab = screen.getByRole("tab", { name: "Beta Features" });
+    await user.click(betaTab);
 
-    // First switch should be unchecked (enabled: false)
-    expect(switches[0]).not.toBeChecked();
-
-    // Second switch should be checked (enabled: true)
-    expect(switches[1]).toBeChecked();
+    expect(
+      await screen.findByText("Code Viewer virtualization"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Enable the code viewer virtualization."),
+    ).toBeInTheDocument();
   });
 
-  it("should dispatch setFlag action when switch is toggled", () => {
+  it("should render all flags with correct information in their respective tabs", async () => {
+    const user = userEvent.setup();
     render(<PersonalPreferencesDialog open={true} setOpen={mockSetOpen} />);
 
-    const switches = screen.getAllByRole("switch");
+    expect(screen.getByText("Test Feature")).toBeInTheDocument();
+    expect(
+      screen.getByText("A test feature for testing purposes."),
+    ).toBeInTheDocument();
 
-    // Toggle first switch (currently false, should become true)
-    fireEvent.click(switches[0]);
+    const betaTab = screen.getByRole("tab", { name: "Beta Features" });
+    await user.click(betaTab);
 
-    expect(mockDispatch).toHaveBeenCalledWith({
-      type: "setFlag",
-      payload: {
-        key: "codeViewer",
-        enabled: true,
-      },
-    });
+    expect(
+      await screen.findByText("Code Viewer virtualization"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Enable the code viewer virtualization."),
+    ).toBeInTheDocument();
+  });
 
-    // Toggle second switch (currently true, should become false)
-    fireEvent.click(switches[1]);
+  it("should render switches with correct initial states in settings tab", () => {
+    render(<PersonalPreferencesDialog open={true} setOpen={mockSetOpen} />);
+
+    const settingsSwitches = screen.getAllByRole("switch");
+
+    expect(settingsSwitches).toHaveLength(1);
+    expect(settingsSwitches[0]).toBeChecked();
+  });
+
+  it("should render switches with correct initial states in beta features tab", async () => {
+    const user = userEvent.setup();
+    render(<PersonalPreferencesDialog open={true} setOpen={mockSetOpen} />);
+
+    const betaTab = screen.getByRole("tab", { name: "Beta Features" });
+    await user.click(betaTab);
+
+    const betaSwitches = await screen.findAllByRole("switch");
+
+    expect(betaSwitches).toHaveLength(1);
+    expect(betaSwitches[0]).not.toBeChecked();
+  });
+
+  it("should dispatch setFlag action when settings switch is toggled", async () => {
+    const user = userEvent.setup();
+    render(<PersonalPreferencesDialog open={true} setOpen={mockSetOpen} />);
+
+    const settingsSwitch = screen.getByTestId("testFeature-switch");
+    await user.click(settingsSwitch);
 
     expect(mockDispatch).toHaveBeenCalledWith({
       type: "setFlag",
       payload: {
         key: "testFeature",
         enabled: false,
+      },
+    });
+  });
+
+  it("should dispatch setFlag action when beta switch is toggled", async () => {
+    const user = userEvent.setup();
+    render(<PersonalPreferencesDialog open={true} setOpen={mockSetOpen} />);
+
+    const betaTab = screen.getByRole("tab", { name: "Beta Features" });
+    await user.click(betaTab);
+
+    const betaSwitch = await screen.findByTestId("codeViewer-switch");
+    await user.click(betaSwitch);
+
+    expect(mockDispatch).toHaveBeenCalledWith({
+      type: "setFlag",
+      payload: {
+        key: "codeViewer",
+        enabled: true,
       },
     });
   });
@@ -130,21 +181,21 @@ describe("PersonalPreferencesDialog", () => {
     expect(closeButton).toBeInTheDocument();
   });
 
-  it("should call setOpen(false) when OK button is clicked", () => {
+  it("should call setOpen(false) when Close button is clicked", async () => {
+    const user = userEvent.setup();
     render(<PersonalPreferencesDialog open={true} setOpen={mockSetOpen} />);
 
     const closeButton = screen.getByTestId("close-button");
-    fireEvent.click(closeButton);
+    await user.click(closeButton);
 
     expect(mockSetOpen).toHaveBeenCalledWith(false);
   });
 
-  it("should call setOpen when dialog is closed via onOpenChange", () => {
+  it("should call setOpen when dialog is closed via onOpenChange", async () => {
+    const user = userEvent.setup();
     render(<PersonalPreferencesDialog open={true} setOpen={mockSetOpen} />);
 
-    // Simulate closing the dialog via ESC key or backdrop click
-    // This would trigger the onOpenChange callback
-    fireEvent.keyDown(document, { key: "Escape" });
+    await user.keyboard("{Escape}");
 
     expect(mockSetOpen).toHaveBeenCalled();
   });
@@ -155,32 +206,42 @@ describe("PersonalPreferencesDialog", () => {
     const dialog = screen.getByRole("dialog", { name: "Personal Preferences" });
     expect(dialog).toHaveAttribute("aria-label", "Personal Preferences");
 
-    // Check that the dialog description exists (the aria-label is on the parent DialogDescription component)
     expect(
       screen.getByText("Configure your personal preferences."),
     ).toBeInTheDocument();
   });
 
-  it("should handle empty beta flags array", () => {
-    // Mock empty beta flags
+  it("should handle empty flags arrays", async () => {
+    const user = userEvent.setup();
     mockUseBetaFlagsReducer.mockReturnValue([[], mockDispatch]);
 
     render(<PersonalPreferencesDialog open={true} setOpen={mockSetOpen} />);
 
-    expect(screen.getByText("Beta Features")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Settings" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("tab", { name: "Beta Features" }),
+    ).toBeInTheDocument();
+
+    expect(screen.queryAllByRole("switch")).toHaveLength(0);
+
+    const betaTab = screen.getByRole("tab", { name: "Beta Features" });
+    await user.click(betaTab);
+
     expect(screen.queryAllByRole("switch")).toHaveLength(0);
   });
 
   it("should maintain consistent dialog structure", () => {
     render(<PersonalPreferencesDialog open={true} setOpen={mockSetOpen} />);
 
-    // Check dialog structure
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByText("Personal Preferences")).toBeInTheDocument();
     expect(
       screen.getByText("Configure your personal preferences."),
     ).toBeInTheDocument();
-    expect(screen.getByText("Beta Features")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Settings" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("tab", { name: "Beta Features" }),
+    ).toBeInTheDocument();
     expect(screen.getByTestId("close-button")).toBeInTheDocument();
   });
 });

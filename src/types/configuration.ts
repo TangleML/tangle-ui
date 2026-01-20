@@ -2,6 +2,7 @@ export interface BetaFlag {
   name: string;
   description: string;
   default: boolean;
+  category: "beta" | "setting";
 }
 
 export type BetaFlags = Record<string, BetaFlag>;
