@@ -24,7 +24,9 @@ import { type HomeSearchParams, indexRoute } from "@/routes/router";
 import { getBackendStatusString } from "@/utils/backend";
 import { fetchWithErrorHandling } from "@/utils/fetchWithErrorHandling";
 
+import { RunFiltersBar } from "./RunFiltersBar";
 import RunRow from "./RunRow";
+import { useRunFilters } from "./useRunFilters";
 
 const PIPELINE_RUNS_QUERY_URL = "/api/pipeline_runs/";
 const PAGE_TOKEN_QUERY_KEY = "page_token";
@@ -38,6 +40,7 @@ export const RunSection = ({ onEmptyList }: { onEmptyList?: () => void }) => {
   const navigate = useNavigate({ from: indexRoute.fullPath });
   const search = useSearch({ strict: false }) as Partial<HomeSearchParams>;
   const isCreatedByMeDefault = useBetaFlagValue("created-by-me-default");
+  const isEnhancedFilteringEnabled = useBetaFlagValue("enhanced-run-filtering");
   const dataVersion = useRef(0);
 
   // Parse filter into a dictionary
@@ -250,7 +253,8 @@ export const RunSection = ({ onEmptyList }: { onEmptyList?: () => void }) => {
     );
   }
 
-  const searchMarkup = (
+  // Legacy search markup (used when enhanced filtering is disabled)
+  const legacySearchMarkup = (
     <InlineStack gap="4">
       <InlineStack gap="2">
         <Switch
@@ -280,7 +284,7 @@ export const RunSection = ({ onEmptyList }: { onEmptyList?: () => void }) => {
   if (!data?.pipeline_runs || data?.pipeline_runs?.length === 0) {
     return (
       <div className="flex flex-col gap-2">
-        {searchMarkup}
+        {legacySearchMarkup}
         {createdByValue ? (
           <div>
             No runs found for user: <strong>{createdByValue}</strong>.
@@ -292,9 +296,30 @@ export const RunSection = ({ onEmptyList }: { onEmptyList?: () => void }) => {
     );
   }
 
+  if (isEnhancedFilteringEnabled) {
+    return (
+      <EnhancedRunSection
+        runs={data.pipeline_runs}
+        nextPageToken={data.next_page_token ?? null}
+        previousPageTokens={previousPageTokens}
+        pageToken={pageToken}
+        onFirstPage={handleFirstPage}
+        onPreviousPage={handlePreviousPage}
+        onNextPage={handleNextPage}
+        createdByValue={createdByValue}
+        onCreatedByToggle={handleFilterChange}
+        useCreatedByMe={useCreatedByMe}
+        toggleText={toggleText}
+        searchUser={searchUser}
+        onSearchUserChange={setSearchUser}
+        onUserSearch={handleUserSearch}
+      />
+    );
+  }
+
   return (
     <div>
-      {searchMarkup}
+      {legacySearchMarkup}
       <Table>
         <TableHeader>
           <TableRow className="text-xs">
@@ -343,3 +368,144 @@ export const RunSection = ({ onEmptyList }: { onEmptyList?: () => void }) => {
     </div>
   );
 };
+
+interface EnhancedRunSectionProps {
+  runs: NonNullable<ListPipelineJobsResponse["pipeline_runs"]>;
+  nextPageToken: string | null;
+  previousPageTokens: string[];
+  pageToken: string | undefined;
+  onFirstPage: () => void;
+  onPreviousPage: () => void;
+  onNextPage: () => void;
+  createdByValue: string | undefined;
+  onCreatedByToggle: (value: boolean) => void;
+  useCreatedByMe: boolean;
+  toggleText: string;
+  searchUser: string;
+  onSearchUserChange: (value: string) => void;
+  onUserSearch: () => void;
+}
+
+function EnhancedRunSection({
+  runs,
+  nextPageToken,
+  previousPageTokens,
+  pageToken,
+  onFirstPage,
+  onPreviousPage,
+  onNextPage,
+  createdByValue,
+  onCreatedByToggle,
+  useCreatedByMe,
+  toggleText,
+  searchUser,
+  onSearchUserChange,
+  onUserSearch,
+}: EnhancedRunSectionProps) {
+  const {
+    filters,
+    filteredAndSortedRuns,
+    hasActiveFilters,
+    activeFilterCount,
+    clearFilters,
+    updateFilter,
+  } = useRunFilters(runs);
+
+  return (
+    <div>
+      <InlineStack gap="4" className="mb-4" blockAlign="center">
+        <InlineStack gap="2" blockAlign="center">
+          <Switch
+            id="created-by-me-enhanced"
+            checked={useCreatedByMe}
+            onCheckedChange={onCreatedByToggle}
+          />
+          <Label htmlFor="created-by-me-enhanced">{toggleText}</Label>
+        </InlineStack>
+        <InlineStack gap="1" wrap="nowrap" blockAlign="center">
+          <Input
+            placeholder="Search by user"
+            value={searchUser}
+            onChange={(e) => onSearchUserChange(e.target.value)}
+            className="w-36"
+          />
+          <Button
+            variant="outline"
+            onClick={onUserSearch}
+            disabled={!searchUser.trim()}
+          >
+            Search
+          </Button>
+        </InlineStack>
+      </InlineStack>
+
+      <RunFiltersBar
+        filters={filters}
+        hasActiveFilters={hasActiveFilters}
+        activeFilterCount={activeFilterCount}
+        onUpdateFilter={updateFilter}
+        onClearFilters={clearFilters}
+        totalCount={runs.length}
+        filteredCount={filteredAndSortedRuns.length}
+      />
+
+      {filteredAndSortedRuns.length === 0 ? (
+        <div className="py-8 text-center text-muted-foreground">
+          {createdByValue ? (
+            <div>
+              No runs match the current filters for user: <strong>{createdByValue}</strong>.
+            </div>
+          ) : (
+            <div>No runs match the current filters.</div>
+          )}
+        </div>
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow className="text-xs">
+              <TableHead className="w-1/3">Name</TableHead>
+              <TableHead className="w-1/3">Status</TableHead>
+              <TableHead className="w-1/6">Date</TableHead>
+              <TableHead className="w-1/6">Initiated By</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredAndSortedRuns.map((run) => (
+              <RunRow key={run.id} run={run} />
+            ))}
+          </TableBody>
+        </Table>
+      )}
+
+      {(nextPageToken || previousPageTokens.length > 0) && (
+        <div className="flex justify-between items-center mt-4">
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={onFirstPage}
+              disabled={!pageToken}
+            >
+              <ChevronFirst className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              onClick={onPreviousPage}
+              disabled={previousPageTokens.length === 0}
+            >
+              <ChevronLeft className="h-4 w-4 mr-2" />
+              Previous
+            </Button>
+          </div>
+          <Button
+            variant="outline"
+            onClick={onNextPage}
+            disabled={!nextPageToken}
+          >
+            Next
+            <ChevronRight className="h-4 w-4 ml-2" />
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}

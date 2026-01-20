@@ -50,4 +50,11 @@ export const ExistingBetaFlags = {
       "Allow nodes to be selected when partially covered by the selection box. Use Shift+drag for full selection, or Shift+Cmd+drag (Shift+Ctrl on Windows) for partial selection.",
     default: false,
   } as BetaFlag,
+
+  ["enhanced-run-filtering"]: {
+    name: "Enhanced Run Filtering",
+    description:
+      "Enable advanced filtering and sorting for pipeline runs. Some filters are placeholders pending backend support.",
+    default: false,
+  } as BetaFlag,
 };
