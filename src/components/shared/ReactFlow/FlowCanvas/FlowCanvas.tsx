@@ -48,7 +48,7 @@ import {
   updateSubgraphSpec,
 } from "@/utils/subgraphUtils";
 
-import { useBetaFlagValue } from "../../Settings/useBetaFlags";
+import { useFlagValue } from "../../Settings/useFlags";
 import { useNodesOverlay } from "../NodesOverlay/NodesOverlayProvider";
 import { getBulkUpdateConfirmationDetails } from "./ConfirmationDialogs/BulkUpdateConfirmationDialog";
 import { getDeleteConfirmationDetails } from "./ConfirmationDialogs/DeleteConfirmation";
@@ -135,7 +135,7 @@ const FlowCanvas = ({
   const { preserveIOSelectionOnSpecChange, resetPrevSpec } =
     useIOSelectionPersistence();
 
-  const isPartialSelectionEnabled = useBetaFlagValue("partial-selection");
+  const isPartialSelectionEnabled = useFlagValue("partial-selection");
 
   const store = useStoreApi();
   const { edges: specEdges, onEdgesChange } =

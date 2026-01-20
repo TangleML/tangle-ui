@@ -1,11 +1,11 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import type { BetaFlags } from "@/types/configuration";
+import type { ConfigFlags } from "@/types/configuration";
 
-import { useBetaFlagsReducer } from "../useBetaFlagReducer";
+import { useFlagsReducer } from "../useFlagsReducer";
 
-describe("useBetaFlagsReducer", () => {
+describe("useFlagsReducer", () => {
   beforeEach(() => {
     // Clear localStorage before each test
     localStorage.clear();
@@ -15,7 +15,7 @@ describe("useBetaFlagsReducer", () => {
     localStorage.clear();
   });
 
-  const mockBetaFlags: BetaFlags = {
+  const mockFlags: ConfigFlags = {
     feature1: {
       name: "Feature 1",
       description: "First feature flag",
@@ -37,7 +37,7 @@ describe("useBetaFlagsReducer", () => {
   };
 
   it("should initialize state with default values when no flags are stored", () => {
-    const { result } = renderHook(() => useBetaFlagsReducer(mockBetaFlags));
+    const { result } = renderHook(() => useFlagsReducer(mockFlags));
     const [state] = result.current;
 
     expect(state).toHaveLength(3);
@@ -78,7 +78,7 @@ describe("useBetaFlagsReducer", () => {
       }),
     );
 
-    const { result } = renderHook(() => useBetaFlagsReducer(mockBetaFlags));
+    const { result } = renderHook(() => useFlagsReducer(mockFlags));
     const [state] = result.current;
 
     expect(state).toHaveLength(3);
@@ -88,7 +88,7 @@ describe("useBetaFlagsReducer", () => {
   });
 
   it("should handle setFlag action correctly", () => {
-    const { result } = renderHook(() => useBetaFlagsReducer(mockBetaFlags));
+    const { result } = renderHook(() => useFlagsReducer(mockFlags));
     const [initialState, dispatch] = result.current;
 
     expect(initialState.find((f: any) => f.key === "feature1")?.enabled).toBe(
@@ -114,7 +114,7 @@ describe("useBetaFlagsReducer", () => {
   });
 
   it("should persist flag changes to localStorage", () => {
-    const { result } = renderHook(() => useBetaFlagsReducer(mockBetaFlags));
+    const { result } = renderHook(() => useFlagsReducer(mockFlags));
     const [, dispatch] = result.current;
 
     act(() => {
@@ -132,7 +132,7 @@ describe("useBetaFlagsReducer", () => {
   });
 
   it("should handle multiple flag updates correctly", () => {
-    const { result } = renderHook(() => useBetaFlagsReducer(mockBetaFlags));
+    const { result } = renderHook(() => useFlagsReducer(mockFlags));
     const [, dispatch] = result.current;
 
     act(() => {
@@ -190,7 +190,7 @@ describe("useBetaFlagsReducer", () => {
       }),
     );
 
-    renderHook(() => useBetaFlagsReducer(mockBetaFlags));
+    renderHook(() => useFlagsReducer(mockFlags));
 
     // Check that obsolete flags are removed
     const storedFlags = JSON.parse(localStorage.getItem("betaFlags") || "{}");
@@ -202,8 +202,8 @@ describe("useBetaFlagsReducer", () => {
     expect(storedFlags.anotherObsoleteFlag).toBeUndefined();
   });
 
-  it("should handle empty betaFlags object", () => {
-    const { result } = renderHook(() => useBetaFlagsReducer({}));
+  it("should handle empty ConfigFlags object", () => {
+    const { result } = renderHook(() => useFlagsReducer({}));
     const [state] = result.current;
 
     expect(state).toHaveLength(0);
@@ -220,7 +220,7 @@ describe("useBetaFlagsReducer", () => {
       }),
     );
 
-    const { result } = renderHook(() => useBetaFlagsReducer(mockBetaFlags));
+    const { result } = renderHook(() => useFlagsReducer(mockFlags));
     const [, dispatch] = result.current;
 
     act(() => {

@@ -1,13 +1,13 @@
-export interface BetaFlag {
+interface ConfigFlag {
   name: string;
   description: string;
   default: boolean;
   category: "beta" | "setting";
 }
 
-export type BetaFlags = Record<string, BetaFlag>;
+export type ConfigFlags = Record<string, ConfigFlag>;
 
-export type Flag = BetaFlag & {
+export type Flag = ConfigFlag & {
   key: string;
   enabled: boolean;
 };

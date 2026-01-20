@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 
 import type { ListPipelineJobsResponse } from "@/api/types.gen";
 import { InfoBox } from "@/components/shared/InfoBox";
-import { useBetaFlagValue } from "@/components/shared/Settings/useBetaFlags";
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,7 +39,7 @@ export const RunSection = ({ onEmptyList }: { onEmptyList?: () => void }) => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const search = useSearch({ strict: false }) as RunSectionSearch;
-  const isCreatedByMeDefault = useBetaFlagValue("created-by-me-default");
+  const isCreatedByMeDefault = useFlagValue("created-by-me-default");
   const dataVersion = useRef(0);
 
   // Parse filter into a dictionary

@@ -4,7 +4,7 @@ import { useCallback, useMemo, useRef } from "react";
 import { ComponentDetailsDialog } from "@/components/shared/Dialogs";
 import { ComponentFavoriteToggle } from "@/components/shared/FavoriteComponentToggle";
 import { useOutdatedComponents } from "@/components/shared/ManageComponent/hooks/useOutdatedComponents";
-import { useBetaFlagValue } from "@/components/shared/Settings/useBetaFlags";
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
@@ -73,10 +73,10 @@ const ComponentMarkup = ({
   isLoading,
   error,
 }: ComponentMarkupProps) => {
-  const isHighlightTasksOnComponentHoverEnabled = useBetaFlagValue(
+  const isHighlightTasksOnComponentHoverEnabled = useFlagValue(
     "highlight-node-on-component-hover",
   );
-  const isRemoteComponentLibrarySearchEnabled = useBetaFlagValue(
+  const isRemoteComponentLibrarySearchEnabled = useFlagValue(
     "remote-component-library-search",
   );
 

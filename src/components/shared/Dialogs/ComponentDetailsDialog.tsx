@@ -21,7 +21,7 @@ import { ComponentFavoriteToggle } from "../FavoriteComponentToggle";
 import { InfoBox } from "../InfoBox";
 import { PublishComponent } from "../ManageComponent/PublishComponent";
 import { PublishedComponentDetails } from "../ManageComponent/PublishedComponentDetails";
-import { useBetaFlagValue } from "../Settings/useBetaFlags";
+import { useFlagValue } from "../Settings/useFlags";
 import { withSuspenseWrapper } from "../SuspenseWrapper";
 import { TaskDetails, TaskImplementation, TaskIO } from "../TaskDetails";
 import { DialogContext } from "./dialog.context";
@@ -61,7 +61,7 @@ const ComponentDetailsDialogContentSkeleton = () => {
 
 const ComponentDetailsDialogContent = withSuspenseWrapper(
   ({ component, displayName }: ComponentDetailsProps) => {
-    const remoteComponentLibrarySearchEnabled = useBetaFlagValue(
+    const remoteComponentLibrarySearchEnabled = useFlagValue(
       "remote-component-library-search",
     );
 

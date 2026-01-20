@@ -5,7 +5,7 @@ import { type MouseEvent, useRef, useState } from "react";
 
 import type { TaskSpecOutput } from "@/api/types.gen";
 import { useAwaitAuthorization } from "@/components/shared/Authentication/useAwaitAuthorization";
-import { useBetaFlagValue } from "@/components/shared/Settings/useBetaFlags";
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
@@ -89,7 +89,7 @@ const OasisSubmitter = ({
   const { isAuthorized } = useAwaitAuthorization();
   const { configured, available } = useBackend();
   const { mutate: submit, isPending: isSubmitting } = useSubmitPipeline();
-  const isAutoRedirect = useBetaFlagValue("redirect-on-new-pipeline-run");
+  const isAutoRedirect = useFlagValue("redirect-on-new-pipeline-run");
 
   const [submitSuccess, setSubmitSuccess] = useState<boolean | null>(null);
   const [isArgumentsDialogOpen, setIsArgumentsDialogOpen] = useState(false);

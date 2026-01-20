@@ -2,7 +2,7 @@ import { PackagePlus } from "lucide-react";
 import { type ChangeEvent, useCallback, useMemo } from "react";
 
 import { ManageLibrariesDialog } from "@/components/shared/GitHubLibrary/ManageLibrariesDialog";
-import { useBetaFlagValue } from "@/components/shared/Settings/useBetaFlags";
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -36,10 +36,10 @@ import PublishedComponentsSearch from "../components/PublishedComponentsSearch";
 import { UpgradeAvailableAlertBox } from "../components/UpgradeAvailableAlertBox";
 
 const GraphComponents = ({ isOpen }: { isOpen: boolean }) => {
-  const remoteComponentLibrarySearchEnabled = useBetaFlagValue(
+  const remoteComponentLibrarySearchEnabled = useFlagValue(
     "remote-component-library-search",
   );
-  const githubComponentLibraryEnabled = useBetaFlagValue(
+  const githubComponentLibraryEnabled = useFlagValue(
     "github-component-library",
   );
 

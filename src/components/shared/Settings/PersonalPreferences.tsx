@@ -1,17 +1,11 @@
 import { Settings } from "lucide-react";
 import { useState } from "react";
 
-import { ExistingBetaFlags } from "@/betaFlags";
-
 import TooltipButton from "../Buttons/TooltipButton";
 import { PersonalPreferencesDialog } from "./PersonalPreferencesDialog";
 
 export function PersonalPreferences() {
   const [open, setOpen] = useState(false);
-
-  if (Object.keys(ExistingBetaFlags).length === 0) {
-    return null;
-  }
 
   return (
     <>

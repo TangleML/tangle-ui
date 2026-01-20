@@ -1,4 +1,3 @@
-import { ExistingBetaFlags } from "@/betaFlags";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,10 +9,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ExistingFlags } from "@/flags";
 
 import { BetaFeatures } from "./BetaFeatures";
 import { Settings } from "./Settings";
-import { useBetaFlagsReducer } from "./useBetaFlagReducer";
+import { useFlagsReducer } from "./useFlagsReducer";
 
 interface PersonalPreferencesDialogProps {
   open: boolean;
@@ -24,16 +24,16 @@ export function PersonalPreferencesDialog({
   open,
   setOpen,
 }: PersonalPreferencesDialogProps) {
-  const [allFlags, dispatch] = useBetaFlagsReducer(ExistingBetaFlags);
+  const [flags, dispatch] = useFlagsReducer(ExistingFlags);
 
   const handleSetFlag = (flag: string, enabled: boolean) => {
     dispatch({ type: "setFlag", payload: { key: flag, enabled } });
   };
 
-  const betaFlags = Object.values(allFlags).filter(
+  const betaFlags = Object.values(flags).filter(
     (flag) => flag.category === "beta",
   );
-  const settings = Object.values(allFlags).filter(
+  const settings = Object.values(flags).filter(
     (flag) => flag.category === "setting",
   );
 

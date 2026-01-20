@@ -1,8 +1,8 @@
 import { useEffect, useReducer } from "react";
 
-import type { BetaFlags, Flag } from "@/types/configuration";
+import type { ConfigFlags, Flag } from "@/types/configuration";
 
-import { useBetaFlags } from "./useBetaFlags";
+import { useFlags } from "./useFlags";
 
 interface SetFlagAction {
   type: "setFlag";
@@ -15,17 +15,17 @@ interface SetFlagAction {
 type Action = SetFlagAction;
 type State = Flag[];
 
-export function useBetaFlagsReducer(betaFlags: BetaFlags) {
-  const { getFlag, setFlag, getFlags, removeFlag } = useBetaFlags();
+export function useFlagsReducer(flags: ConfigFlags) {
+  const { getFlag, setFlag, getFlags, removeFlag } = useFlags();
 
   useEffect(() => {
     // clean up unexisting flags
-    const existingFlags = new Set(Object.keys(betaFlags));
+    const existingFlags = new Set(Object.keys(flags));
 
     Object.keys(getFlags() ?? {})
       .filter((flag) => !existingFlags.has(flag))
       .forEach((flag) => removeFlag(flag));
-  }, [betaFlags, getFlags, removeFlag]);
+  }, [flags, getFlags, removeFlag]);
 
   const reducer = (state: State, action: Action) => {
     switch (action.type) {
@@ -44,7 +44,7 @@ export function useBetaFlagsReducer(betaFlags: BetaFlags) {
 
   return useReducer(
     reducer,
-    Object.entries(betaFlags).map(([key, flag]) => ({
+    Object.entries(flags).map(([key, flag]) => ({
       ...flag,
       key,
       enabled: getFlag(key, flag.default),
