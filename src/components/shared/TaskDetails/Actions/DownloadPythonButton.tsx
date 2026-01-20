@@ -28,7 +28,7 @@ export const DownloadPythonButton = ({
   };
 
   return (
-    <ActionButton label="Download Python Code" onClick={handleClick}>
+    <ActionButton tooltip="Download Python Code" onClick={handleClick}>
       <FaPython />
     </ActionButton>
   );

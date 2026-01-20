@@ -25,7 +25,7 @@ export const EditComponentButton = ({
   return (
     <>
       <ActionButton
-        label="Edit Component Definition"
+        tooltip="Edit Component Definition"
         icon="FilePenLine"
         onClick={handleClick}
       />

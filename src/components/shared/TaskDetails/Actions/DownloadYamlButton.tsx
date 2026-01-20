@@ -17,6 +17,10 @@ export const DownloadYamlButton = ({
   };
 
   return (
-    <ActionButton label="Download YAML" icon="Download" onClick={handleClick} />
+    <ActionButton
+      tooltip="Download YAML"
+      icon="Download"
+      onClick={handleClick}
+    />
   );
 };
