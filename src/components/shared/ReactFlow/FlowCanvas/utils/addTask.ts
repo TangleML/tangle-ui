@@ -26,7 +26,9 @@ interface AddTaskResult {
  * Options for creating input/output nodes.
  * Omits position-related fields (annotations) which are automatically set.
  */
-type IONodeOptions = Omit<Partial<InputSpec>, "annotations">;
+type IONodeOptions =
+  | Omit<Partial<InputSpec>, "annotations">
+  | Omit<Partial<OutputSpec>, "annotations">;
 
 /**
  * Creates a task, input, or output node and adds it to the component specification.
