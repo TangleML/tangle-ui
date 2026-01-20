@@ -73,7 +73,14 @@ const RunOverview = ({
     if (onClick) {
       onClick(run);
     } else {
-      navigate({ to: `${APP_ROUTES.RUNS}/${run.id}` });
+      const clickThroughUrl = `${APP_ROUTES.RUNS}/${run.id}`;
+
+      if (e.ctrlKey || e.metaKey) {
+        window.open(clickThroughUrl, "_blank");
+        return;
+      }
+
+      navigate({ to: clickThroughUrl });
     }
   };
 

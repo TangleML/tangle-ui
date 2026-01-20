@@ -47,6 +47,11 @@ const PipelineRow = withSuspenseWrapper(
       if ((e.target as HTMLElement).closest("[data-popover-trigger]")) {
         return;
       }
+
+      if (e.ctrlKey || e.metaKey) {
+        window.open(`${EDITOR_PATH}/${name}`, "_blank");
+        return;
+      }
       navigate({ to: `${EDITOR_PATH}/${name}` });
     };
 
