@@ -22,7 +22,7 @@ export const NavigateToSubgraphButton = ({
 
   return (
     <ActionButton
-      label={`Enter Subgraph: ${subgraphDescription}`}
+      tooltip={`Enter Subgraph: ${subgraphDescription}`}
       icon="Workflow"
       onClick={handleClick}
     />

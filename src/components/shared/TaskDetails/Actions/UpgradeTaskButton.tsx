@@ -7,7 +7,7 @@ interface UpgradeTaskButtonProps {
 export const UpgradeTaskButton = ({ onUpgrade }: UpgradeTaskButtonProps) => {
   return (
     <ActionButton
-      label="Update Task from Source URL"
+      tooltip="Update Task from Source URL"
       icon="CircleFadingArrowUp"
       onClick={onUpgrade}
     />
