@@ -5,6 +5,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
+import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 
 import FileActions from "./sections/FileActions";
 import GraphComponents from "./sections/GraphComponents";
@@ -12,10 +13,14 @@ import RunsAndSubmission from "./sections/RunsAndSubmission";
 
 const FlowSidebar = () => {
   const { open, setOpen } = useSidebar();
+  const { currentSubgraphPath } = useComponentSpec();
+
+  const isViewingSubgraph = currentSubgraphPath.length > 1;
 
   const sidebarTriggerClasses = cn(
-    "absolute top-[65px] z-1 transition-all duration-300 bg-white mt-8 rounded-r-md shadow-md p-0.5 pr-1",
+    "absolute z-1 transition-all duration-300 bg-white mt-8 rounded-r-md shadow-md p-0.5 pr-1",
     open ? "left-[255px]" : "left-[47px]",
+    isViewingSubgraph ? "top-[65px]" : "top-6",
   );
 
   return (

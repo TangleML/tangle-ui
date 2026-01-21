@@ -6,6 +6,8 @@ import {
 } from "@/components/ui/collapsible";
 import { Icon } from "@/components/ui/icon";
 import { VerticalResizeHandle } from "@/components/ui/resize-handle";
+import { cn } from "@/lib/utils";
+import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useContextPanel } from "@/providers/ContextPanelProvider";
 
 import { ContextPanel } from "./ContextPanel";
@@ -17,13 +19,20 @@ const DEFAULT_WIDTH = 400;
 export function CollapsibleContextPanel() {
   const { open, setOpen } = useContextPanel();
 
+  const { currentSubgraphPath } = useComponentSpec();
+
+  const isViewingSubgraph = currentSubgraphPath.length > 1;
+
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="h-full">
       <CollapsibleTrigger asChild>
         <Button
           variant="ghost"
           size="icon"
-          className="absolute top-[95px] z-0 transition-all duration-300 bg-white rounded-r-none shadow-md -translate-x-9"
+          className={cn(
+            "absolute z-0 transition-all duration-300 bg-white rounded-r-none shadow-md -translate-x-9",
+            isViewingSubgraph ? "top-23.75" : "top-14",
+          )}
           aria-label={open ? "Collapse context panel" : "Expand context panel"}
         >
           <Icon name={open ? "PanelRightClose" : "PanelRightOpen"} />
