@@ -1,5 +1,11 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  type MouseEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 import { PipelineNameDialog } from "@/components/shared/Dialogs";
 import ImportPipeline from "@/components/shared/ImportPipeline";
@@ -22,6 +28,8 @@ import { useAutoSaveStatus } from "@/providers/AutoSaveProvider";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { EDITOR_PATH } from "@/routes/router";
 import { getPipelineFile, useSavePipeline } from "@/services/pipelineService";
+import { IS_GITHUB_PAGES } from "@/utils/constants";
+import { createNewPipeline } from "@/utils/createNewPipeline";
 import { formatRelativeTime } from "@/utils/date";
 import { componentSpecToYaml } from "@/utils/yaml";
 
@@ -49,6 +57,20 @@ const FileActions = ({ isOpen }: { isOpen: boolean }) => {
     },
     [notify],
   );
+
+  const handleNewPipeline = async (e: MouseEvent<HTMLButtonElement>) => {
+    const clickThroughUrl = await createNewPipeline();
+
+    if (e.ctrlKey || e.metaKey) {
+      window.open(clickThroughUrl, "_blank");
+      return;
+    }
+
+    navigate({
+      to: clickThroughUrl,
+      reloadDocument: !IS_GITHUB_PAGES,
+    });
+  };
 
   const handleSavePipeline = useCallback(async () => {
     await savePipeline();
@@ -127,6 +149,16 @@ const FileActions = ({ isOpen }: { isOpen: boolean }) => {
             "flex-col": !isOpen,
           })}
         >
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              tooltip="New Pipeline"
+              forceTooltip
+              tooltipPosition={tooltipPosition}
+              onClick={handleNewPipeline}
+            >
+              <Icon name="FilePlusCorner" size="lg" className="stroke-[1.5]" />
+            </SidebarMenuButton>
+          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
               tooltip="Save Pipeline"

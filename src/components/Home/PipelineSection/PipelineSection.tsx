@@ -1,8 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import { type ChangeEvent, useEffect, useState } from "react";
 
+import NewPipelineButton from "@/components/shared/Buttons/NewPipelineButton";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
-import NewPipelineButton from "@/components/shared/NewPipelineButton";
 import QuickStartCards from "@/components/shared/QuickStart/QuickStartCards";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -231,7 +231,10 @@ export const PipelineSection = withSuspenseWrapper(() => {
           </InlineStack>
         </BlockStack>
 
-        <QuickStartButton />
+        <InlineStack gap="2" wrap="nowrap">
+          <NewPipelineButton />
+          <QuickStartButton />
+        </InlineStack>
       </InlineStack>
 
       {pipelines.size > 0 && (
@@ -324,7 +327,7 @@ export const PipelineSection = withSuspenseWrapper(() => {
 
 function QuickStartButton() {
   return (
-    <Button variant="secondary" asChild>
+    <Button variant="outline" asChild>
       <Link to={QUICK_START_PATH as string}>
         <Icon name="Sparkles" />
         Example Pipelines
