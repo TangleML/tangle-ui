@@ -5,10 +5,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Flag } from "@/types/configuration";
 
 import { PersonalPreferencesDialog } from "../PersonalPreferencesDialog";
-import { useBetaFlagsReducer } from "../useBetaFlagReducer";
+import { useFlagsReducer } from "../useFlagsReducer";
 
-// Mock the useBetaFlagsReducer hook
-vi.mock("../useBetaFlagReducer");
+// Mock the useFlagsReducer hook
+vi.mock("../useFlagsReducer");
 
 describe("PersonalPreferencesDialog", () => {
   const mockDispatch = vi.fn();
@@ -33,11 +33,11 @@ describe("PersonalPreferencesDialog", () => {
     },
   ];
 
-  const mockUseBetaFlagsReducer = vi.mocked(useBetaFlagsReducer);
+  const mockuseFlagsReducer = vi.mocked(useFlagsReducer);
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseBetaFlagsReducer.mockReturnValue([mockBetaFlags, mockDispatch]);
+    mockuseFlagsReducer.mockReturnValue([mockBetaFlags, mockDispatch]);
   });
 
   afterEach(() => {
@@ -213,7 +213,7 @@ describe("PersonalPreferencesDialog", () => {
 
   it("should handle empty flags arrays", async () => {
     const user = userEvent.setup();
-    mockUseBetaFlagsReducer.mockReturnValue([[], mockDispatch]);
+    mockuseFlagsReducer.mockReturnValue([[], mockDispatch]);
 
     render(<PersonalPreferencesDialog open={true} setOpen={mockSetOpen} />);
 

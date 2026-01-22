@@ -12,7 +12,7 @@ import {
 import { ComponentEditorDialog } from "@/components/shared/ComponentEditor/ComponentEditorDialog";
 import { NewComponentTemplateSelector } from "@/components/shared/ComponentEditor/components/NewComponentTemplateSelector";
 import type { SupportedTemplate } from "@/components/shared/ComponentEditor/types";
-import { useBetaFlagValue } from "@/components/shared/Settings/useBetaFlags";
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -48,7 +48,7 @@ const ImportComponent = ({
   const notify = useToastNotification();
   const { addToComponentLibrary } = useComponentLibrary();
 
-  const hasEnabledInAppEditor = useBetaFlagValue("in-app-component-editor");
+  const hasEnabledInAppEditor = useFlagValue("in-app-component-editor");
 
   const [url, setUrl] = useState("");
   const [tab, setTab] = useState<TabType>(TabType.File);

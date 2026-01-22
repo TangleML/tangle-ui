@@ -1,13 +1,13 @@
 import { useSyncExternalStore } from "react";
 
-import { ExistingBetaFlags } from "@/betaFlags";
+import { ExistingFlags } from "@/flags";
 import { getStorage } from "@/utils/typedStorage";
 
 import type { BetaFlagsStorage } from "./types";
 
 const storage = getStorage<keyof BetaFlagsStorage, BetaFlagsStorage>();
 
-export function useBetaFlags() {
+export function useFlags() {
   return {
     getFlags: () => storage.getItem("betaFlags"),
 
@@ -49,10 +49,10 @@ export function useBetaFlags() {
   };
 }
 
-export function useBetaFlagValue(betaFlagName: keyof typeof ExistingBetaFlags) {
-  const { getFlag, subscribe } = useBetaFlags();
+export function useFlagValue(flagName: keyof typeof ExistingFlags) {
+  const { getFlag, subscribe } = useFlags();
 
   return useSyncExternalStore(subscribe, () =>
-    getFlag(betaFlagName, ExistingBetaFlags[betaFlagName]?.default ?? false),
+    getFlag(flagName, ExistingFlags[flagName]?.default ?? false),
   );
 }

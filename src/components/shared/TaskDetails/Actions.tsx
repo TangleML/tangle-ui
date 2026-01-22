@@ -4,7 +4,7 @@ import { isSubgraph } from "@/utils/subgraphUtils";
 
 import { ViewYamlButton } from "../Buttons/ViewYamlButton";
 import { ActionBlock } from "../ContextPanel/Blocks/ActionBlock";
-import { useBetaFlagValue } from "../Settings/useBetaFlags";
+import { useFlagValue } from "../Settings/useFlags";
 import { CopyYamlButton } from "./Actions/CopyYamlButton";
 import { DeleteComponentButton } from "./Actions/DeleteComponentButton";
 import { DownloadPythonButton } from "./Actions/DownloadPythonButton";
@@ -27,7 +27,7 @@ const TaskActions = ({
   readOnly = false,
   className,
 }: TaskActionsProps) => {
-  const isInAppEditorEnabled = useBetaFlagValue("in-app-component-editor");
+  const isInAppEditorEnabled = useFlagValue("in-app-component-editor");
 
   const { taskId, taskSpec, state, callbacks } = taskNode || {};
   const { onDuplicate, onUpgrade, onDelete } = callbacks || {};

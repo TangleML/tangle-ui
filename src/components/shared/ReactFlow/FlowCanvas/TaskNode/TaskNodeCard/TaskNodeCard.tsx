@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { PublishedComponentBadge } from "@/components/shared/ManageComponent/PublishedComponentBadge";
 import { trimDigest } from "@/components/shared/ManageComponent/utils/digest";
-import { useBetaFlagValue } from "@/components/shared/Settings/useBetaFlags";
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import TaskStatusBar from "@/components/shared/Status/TaskStatusBar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
@@ -33,7 +33,7 @@ import { UpgradeNodePopover } from "./UpgradeNodePopover";
 
 const TaskNodeCard = () => {
   const navigate = useNavigate();
-  const isRemoteComponentLibrarySearchEnabled = useBetaFlagValue(
+  const isRemoteComponentLibrarySearchEnabled = useFlagValue(
     "remote-component-library-search",
   );
 
