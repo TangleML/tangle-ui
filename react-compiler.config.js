@@ -35,7 +35,8 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/components/shared/Submitters/GoogleCloud/RegionInput.tsx",
   "src/components/shared/Submitters/Oasis/components/SubmitTaskArgumentsDialog.tsx",
   "src/components/shared/Submitters/Oasis/OasisSubmitter.tsx",
-
+  "src/components/shared/PipelineDescription",
+  "src/components/shared/InlineEditor",
   // 11-20 useCallback/useMemo
   // "src/components/ui",                         // 12
   // "src/components/PipelineRun",                // 14
