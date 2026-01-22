@@ -11,6 +11,7 @@ import { AuthorizationResultScreen as HuggingFaceAuthorizationResultScreen } fro
 import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 
 import RootLayout from "../components/layout/RootLayout";
+import Compare from "./Compare";
 import Editor from "./Editor";
 import ErrorPage from "./ErrorPage";
 import Home from "./Home";
@@ -27,6 +28,7 @@ declare module "@tanstack/react-router" {
 export const EDITOR_PATH = "/editor";
 export const RUNS_BASE_PATH = "/runs";
 export const QUICK_START_PATH = "/quick-start";
+export const COMPARE_PATH = "/compare";
 export const APP_ROUTES = {
   HOME: "/",
   QUICK_START: QUICK_START_PATH,
@@ -34,6 +36,7 @@ export const APP_ROUTES = {
   RUN_DETAIL: `${RUNS_BASE_PATH}/$id`,
   RUN_DETAIL_WITH_SUBGRAPH: `${RUNS_BASE_PATH}/$id/$subgraphExecutionId`,
   RUNS: RUNS_BASE_PATH,
+  COMPARE: COMPARE_PATH,
   GITHUB_AUTH_CALLBACK: "/authorize/github",
   HUGGINGFACE_AUTH_CALLBACK: "/authorize/huggingface",
 };
@@ -50,10 +53,25 @@ const mainLayout = createRoute({
   component: RootLayout,
 });
 
+/**
+ * Search params for the home/index route.
+ * - page_token: Pagination token for runs list
+ * - filter: Filter string for runs (e.g., "created_by:me")
+ */
+export type HomeSearchParams = {
+  page_token?: string;
+  filter?: string;
+};
+
 const indexRoute = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.HOME,
   component: Home,
+  validateSearch: (search: Record<string, unknown>): HomeSearchParams => ({
+    page_token:
+      typeof search.page_token === "string" ? search.page_token : undefined,
+    filter: typeof search.filter === "string" ? search.filter : undefined,
+  }),
 });
 
 const quickStartRoute = createRoute({
@@ -96,12 +114,33 @@ const runDetailWithSubgraphRoute = createRoute({
   component: PipelineRun,
 });
 
+/**
+ * Search params for the compare route.
+ * - runs: Comma-separated list of run IDs to compare
+ * - pipeline: Optional pipeline name to pre-select in the selector
+ */
+export type CompareSearchParams = {
+  runs?: string;
+  pipeline?: string;
+};
+
+const compareRoute = createRoute({
+  getParentRoute: () => mainLayout,
+  path: APP_ROUTES.COMPARE,
+  component: Compare,
+  validateSearch: (search: Record<string, unknown>): CompareSearchParams => ({
+    runs: typeof search.runs === "string" ? search.runs : undefined,
+    pipeline: typeof search.pipeline === "string" ? search.pipeline : undefined,
+  }),
+});
+
 const appRouteTree = mainLayout.addChildren([
   indexRoute,
   quickStartRoute,
   editorRoute,
   runDetailRoute,
   runDetailWithSubgraphRoute,
+  compareRoute,
 ]);
 
 const rootRouteTree = rootRoute.addChildren([
