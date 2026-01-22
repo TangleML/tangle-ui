@@ -13,37 +13,19 @@ import { useCheckComponentSpecFromPath } from "@/hooks/useCheckComponentSpecFrom
 import { usePipelineRunData } from "@/hooks/usePipelineRunData";
 import { useBackend } from "@/providers/BackendProvider";
 import { ComponentSpecProvider } from "@/providers/ComponentSpecProvider";
-import { ContextPanelProvider } from "@/providers/ContextPanelProvider";
 import { ExecutionDataProvider } from "@/providers/ExecutionDataProvider";
 import type { ComponentSpec } from "@/utils/componentSpec";
 
-import { RunDetails } from "./RunDetails";
+import { RunToolbar } from "./RunToolbar";
 
-// Mock the hooks and services
-vi.mock("@tanstack/react-router", async (importOriginal) => {
-  return {
-    ...(await importOriginal()),
-    useNavigate: () => vi.fn(),
-    useLocation: () => ({
-      pathname: "/runs/test-run-id-123",
-      search: {},
-      hash: "",
-      href: "/runs/test-run-id-123",
-      state: {},
-    }),
-  };
-});
+vi.mock("@tanstack/react-router", async (importOriginal) => ({
+  ...(await importOriginal()),
+  useNavigate: () => vi.fn(),
+}));
 
 vi.mock("@/hooks/useCheckComponentSpecFromPath");
-vi.mock("@/services/executionService", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("@/services/executionService")>();
-  return {
-    ...actual,
-  };
-});
-vi.mock("@/providers/BackendProvider");
 vi.mock("@/hooks/usePipelineRunData");
+vi.mock("@/providers/BackendProvider");
 
 vi.mock("@/hooks/useUserDetails", () => ({
   useUserDetails: vi.fn(() => ({
@@ -54,7 +36,7 @@ vi.mock("@/hooks/useUserDetails", () => ({
   })),
 }));
 
-describe("<RunDetails/>", () => {
+describe("<RunToolbar/>", () => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -120,7 +102,6 @@ describe("<RunDetails/>", () => {
   };
 
   beforeEach(() => {
-    // Reset all mocks
     vi.clearAllMocks();
 
     vi.mocked(usePipelineRunData).mockReturnValue({
@@ -162,9 +143,7 @@ describe("<RunDetails/>", () => {
         <ComponentSpecProvider spec={mockComponentSpec}>
           <QueryClientProvider client={queryClient}>
             <ExecutionDataProvider pipelineRunId="123">
-              <ReactFlowProvider>
-                <ContextPanelProvider>{children}</ContextPanelProvider>
-              </ReactFlowProvider>
+              <ReactFlowProvider>{children}</ReactFlowProvider>
             </ExecutionDataProvider>
           </QueryClientProvider>
         </ComponentSpecProvider>
@@ -172,114 +151,137 @@ describe("<RunDetails/>", () => {
     });
   };
 
-  describe("Run Details Content", () => {
-    test("should render pipeline name", async () => {
-      renderWithProviders(<RunDetails />);
+  describe("Inspect Pipeline Button", () => {
+    test("should render inspect button when pipeline exists", async () => {
+      vi.mocked(useCheckComponentSpecFromPath).mockReturnValue(true);
+
+      renderWithProviders(<RunToolbar />);
 
       await waitFor(() => {
-        expect(screen.getByText("Test Pipeline")).toBeInTheDocument();
+        const inspect = screen.getByTestId("inspect-pipeline-button");
+        expect(inspect).toBeInTheDocument();
       });
     });
 
-    test("should render run metadata", async () => {
-      renderWithProviders(<RunDetails />);
+    test("should NOT render inspect button when pipeline does not exist", async () => {
+      vi.mocked(useCheckComponentSpecFromPath).mockReturnValue(false);
+
+      renderWithProviders(<RunToolbar />);
 
       await waitFor(() => {
-        expect(screen.getByText("Run Info")).toBeInTheDocument();
-        expect(screen.getByText("123")).toBeInTheDocument();
-        expect(screen.getByText("456")).toBeInTheDocument();
-        expect(screen.getByText("test-user")).toBeInTheDocument();
-      });
-    });
-
-    test("should render description", async () => {
-      renderWithProviders(<RunDetails />);
-
-      await waitFor(() => {
-        expect(
-          screen.getByText("Test pipeline description"),
-        ).toBeInTheDocument();
-      });
-    });
-
-    test("should render status", async () => {
-      renderWithProviders(<RunDetails />);
-
-      await waitFor(() => {
-        expect(screen.getByText("Status")).toBeInTheDocument();
-      });
-    });
-
-    test("should render annotations", async () => {
-      renderWithProviders(<RunDetails />);
-
-      await waitFor(() => {
-        expect(screen.getByText("Annotations")).toBeInTheDocument();
-        expect(screen.getByText("test-annotation:")).toBeInTheDocument();
-        expect(screen.getByText("test-value")).toBeInTheDocument();
+        const inspect = screen.queryByTestId("inspect-pipeline-button");
+        expect(inspect).not.toBeInTheDocument();
       });
     });
   });
 
-  describe("Error States", () => {
-    test("should show error message when execution details fail to load", async () => {
-      vi.mocked(usePipelineRunData).mockReturnValue({
-        executionData: {
-          details: undefined,
-          state: mockExecutionState,
-        },
-        rootExecutionId: "456",
-        isLoading: false,
-        error: new Error("Failed to load"),
-      });
-
-      renderWithProviders(<RunDetails />);
+  describe("Clone Pipeline Button", () => {
+    test("should render clone button", async () => {
+      renderWithProviders(<RunToolbar />);
 
       await waitFor(() => {
-        expect(
-          screen.getByText("Pipeline Run could not be loaded."),
-        ).toBeInTheDocument();
+        const cloneButton = screen.getByTestId("clone-pipeline-run-button");
+        expect(cloneButton).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe("Cancel Pipeline Run Button", () => {
+    test("should render cancel button when status is RUNNING and user is the creator of the run", async () => {
+      renderWithProviders(<RunToolbar />);
+
+      await waitFor(() => {
+        const cancelButton = screen.getByTestId("cancel-pipeline-run-button");
+        expect(cancelButton).toBeInTheDocument();
       });
     });
 
-    test("should show loading screen when data is loading", async () => {
+    test("should NOT render cancel button when status is not RUNNING", async () => {
       vi.mocked(usePipelineRunData).mockReturnValue({
         executionData: {
           details: mockExecutionDetails,
-          state: mockExecutionState,
+          state: {
+            child_execution_status_stats: {
+              execution1: { SUCCEEDED: 1 },
+              execution2: { CANCELLED: 1 },
+            },
+          },
         },
         rootExecutionId: "456",
-        isLoading: true,
+        isLoading: false,
         error: null,
       });
 
-      renderWithProviders(<RunDetails />);
+      renderWithProviders(<RunToolbar />);
 
       await waitFor(() => {
-        expect(screen.getByText("Loading run details...")).toBeInTheDocument();
+        const cancelButton = screen.queryByTestId("cancel-pipeline-run-button");
+        expect(cancelButton).not.toBeInTheDocument();
       });
     });
 
-    test("should show backend not configured message when backend is not configured", async () => {
-      vi.mocked(useBackend).mockReturnValue({
-        configured: false,
-        available: false,
-        ready: false,
-        backendUrl: "",
-        isConfiguredFromEnv: false,
-        isConfiguredFromRelativePath: false,
-        setEnvConfig: vi.fn(),
-        setRelativePathConfig: vi.fn(),
-        setBackendUrl: vi.fn(),
-        ping: vi.fn(),
-      });
+    test("should NOT render cancel button when the user is not the creator of the run", async () => {
+      const pipelineRunWithDifferentCreator = {
+        ...mockPipelineRun,
+        created_by: "different-user",
+      };
 
-      renderWithProviders(<RunDetails />);
+      queryClient.setQueryData(
+        ["pipeline-run-metadata", "123"],
+        pipelineRunWithDifferentCreator,
+      );
+
+      renderWithProviders(<RunToolbar />);
 
       await waitFor(() => {
-        expect(
-          screen.getByText("Configure a backend to view execution artifacts."),
-        ).toBeInTheDocument();
+        const cancelButton = screen.queryByTestId("cancel-pipeline-run-button");
+        expect(cancelButton).not.toBeInTheDocument();
+      });
+    });
+  });
+
+  describe("Rerun Pipeline Run Button", () => {
+    test("should render rerun button when status is CANCELLED", async () => {
+      vi.mocked(usePipelineRunData).mockReturnValue({
+        executionData: {
+          details: mockExecutionDetails,
+          state: {
+            child_execution_status_stats: {
+              execution1: { SUCCEEDED: 1 },
+              execution2: { CANCELLED: 1 },
+            },
+          },
+        },
+        rootExecutionId: "456",
+        isLoading: false,
+        error: null,
+      });
+
+      renderWithProviders(<RunToolbar />);
+
+      await waitFor(() => {
+        const rerunButton = screen.getByTestId("rerun-pipeline-button");
+        expect(rerunButton).toBeInTheDocument();
+      });
+    });
+
+    test("should NOT render rerun button when status is RUNNING", async () => {
+      renderWithProviders(<RunToolbar />);
+
+      await waitFor(() => {
+        const rerunButton = screen.queryByTestId("rerun-pipeline-button");
+        expect(rerunButton).not.toBeInTheDocument();
+      });
+    });
+  });
+
+  describe("View YAML Button", () => {
+    test("should always render view yaml button", async () => {
+      renderWithProviders(<RunToolbar />);
+
+      await waitFor(() => {
+        const viewYamlButton = screen.getByTestId("action-View");
+        expect(viewYamlButton).toBeInTheDocument();
       });
     });
   });
