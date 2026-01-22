@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { Loader2 } from "lucide-react";
+import { Loader2, Upload } from "lucide-react";
 import type { ChangeEvent, ReactElement } from "react";
 import { useRef, useState } from "react";
 
@@ -24,6 +24,8 @@ import {
   importPipelineFromYaml,
   type ImportResult,
 } from "@/services/pipelineService";
+
+import TooltipButton from "./Buttons/TooltipButton";
 
 interface ImportPipelineProps {
   triggerComponent?: ReactElement<{ onClick?: () => void }>;
@@ -120,10 +122,16 @@ const ImportPipeline = ({ triggerComponent }: ImportPipelineProps) => {
     setYamlContent("");
   };
 
-  const ButtonComponent = triggerComponent ? (
-    triggerComponent
-  ) : (
-    <Button variant="secondary">Import Pipeline</Button>
+  const ButtonComponent = triggerComponent ?? (
+    <TooltipButton
+      variant="ghost"
+      size="icon"
+      className="text-white hover:bg-white/10"
+      tooltip="Import Pipeline"
+      data-testid="import-pipeline-button"
+    >
+      <Upload className="h-4 w-4" />
+    </TooltipButton>
   );
 
   return (

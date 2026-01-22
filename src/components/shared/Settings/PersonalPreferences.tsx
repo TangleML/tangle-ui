@@ -16,6 +16,9 @@ export function PersonalPreferences() {
   return (
     <>
       <TooltipButton
+        variant="ghost"
+        size="icon"
+        className="text-white hover:bg-white/10"
         tooltip="Personal Preferences"
         onClick={() => setOpen(true)}
         data-testid="personal-preferences-button"
