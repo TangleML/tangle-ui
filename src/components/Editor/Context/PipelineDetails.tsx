@@ -7,6 +7,7 @@ import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlo
 import { ListBlock } from "@/components/shared/ContextPanel/Blocks/ListBlock";
 import { TextBlock } from "@/components/shared/ContextPanel/Blocks/TextBlock";
 import { CopyText } from "@/components/shared/CopyText/CopyText";
+import { PipelineDescription } from "@/components/shared/PipelineDescription/PipelineDescription";
 import { BlockStack } from "@/components/ui/layout";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
@@ -100,9 +101,7 @@ const PipelineDetails = () => {
 
       <ListBlock items={metadata} marker="none" />
 
-      {componentSpec.description && (
-        <TextBlock title="Description" text={componentSpec.description} />
-      )}
+      <PipelineDescription componentSpec={componentSpec} />
 
       {digest && (
         <TextBlock
