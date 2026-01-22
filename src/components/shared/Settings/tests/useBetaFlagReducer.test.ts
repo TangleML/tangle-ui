@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import type { BetaFlags } from "@/types/betaFlags";
+import type { BetaFlags } from "@/types/configuration";
 
 import { useBetaFlagsReducer } from "../useBetaFlagReducer";
 

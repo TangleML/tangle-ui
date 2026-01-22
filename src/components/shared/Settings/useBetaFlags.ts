@@ -40,7 +40,7 @@ export function useBetaFlags() {
     subscribe: (listener: () => void) => {
       function handleStorageChange(event: StorageEvent) {
         if (event.key === "betaFlags") {
-          listener();
+          queueMicrotask(listener);
         }
       }
       window.addEventListener("storage", handleStorageChange);

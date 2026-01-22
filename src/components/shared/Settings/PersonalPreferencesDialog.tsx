@@ -9,8 +9,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Switch } from "@/components/ui/switch";
+import { BlockStack } from "@/components/ui/layout";
+import { Paragraph } from "@/components/ui/typography";
 
+import { Setting } from "./Setting";
 import { useBetaFlagsReducer } from "./useBetaFlagReducer";
 
 interface PersonalPreferencesDialogProps {
@@ -43,24 +45,16 @@ export function PersonalPreferencesDialog({
           Configure your personal preferences.
         </DialogDescription>
 
-        <div className="flex flex-col gap-4">
-          <p className="font-semibold">Beta Features</p>
+        <BlockStack gap="4">
+          <Paragraph weight="semibold">Beta Features</Paragraph>
           {betaFlags.map((flag) => (
-            <div key={flag.name} className="flex items-center gap-2">
-              <Switch
-                checked={flag.enabled}
-                onCheckedChange={(checked) => handleSetFlag(flag.key, checked)}
-                data-testid={`${flag.key}-switch`}
-              />
-              <div className="flex flex-col items-start">
-                <span>{flag.name}</span>
-                <p className="text-sm text-muted-foreground">
-                  {flag.description}
-                </p>
-              </div>
-            </div>
+            <Setting
+              key={flag.key}
+              setting={flag}
+              onChange={(enabled) => handleSetFlag(flag.key, enabled)}
+            />
           ))}
-        </div>
+        </BlockStack>
         <DialogFooter>
           <DialogClose asChild>
             <Button

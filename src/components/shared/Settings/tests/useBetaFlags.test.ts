@@ -60,12 +60,12 @@ describe("useBetaFlagValue", () => {
     expect(result.current).toBe(false);
   });
 
-  it("should react to localStorage changes and update the returned value", () => {
+  it("should react to localStorage changes and update the returned value", async () => {
     const { result } = renderHook(() => useBetaFlagValue("codeViewer" as any));
 
     expect(result.current).toBe(false);
 
-    act(() => {
+    await act(async () => {
       localStorage.setItem("betaFlags", JSON.stringify({ codeViewer: true }));
       // Manually dispatch storage event to simulate the behavior from getStorage
       window.dispatchEvent(
@@ -80,7 +80,7 @@ describe("useBetaFlagValue", () => {
     expect(result.current).toBe(true);
   });
 
-  it("should react to localStorage changes and update from true to false", () => {
+  it("should react to localStorage changes and update from true to false", async () => {
     // Start with flag set to true
     localStorage.setItem("betaFlags", JSON.stringify({ codeViewer: true }));
 
@@ -88,7 +88,7 @@ describe("useBetaFlagValue", () => {
 
     expect(result.current).toBe(true);
 
-    act(() => {
+    await act(async () => {
       localStorage.setItem("betaFlags", JSON.stringify({ codeViewer: false }));
       // Manually dispatch storage event
       window.dispatchEvent(
