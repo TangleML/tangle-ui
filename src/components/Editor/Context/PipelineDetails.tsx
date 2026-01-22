@@ -8,6 +8,8 @@ import { ListBlock } from "@/components/shared/ContextPanel/Blocks/ListBlock";
 import { TextBlock } from "@/components/shared/ContextPanel/Blocks/TextBlock";
 import { CopyText } from "@/components/shared/CopyText/CopyText";
 import { PipelineDescription } from "@/components/shared/PipelineDescription/PipelineDescription";
+import { PipelineRunNameTemplateEditor } from "@/components/shared/PipelineRunNameTemplate/PipelineRunNameTemplateEditor";
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { BlockStack } from "@/components/ui/layout";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
@@ -26,6 +28,10 @@ const PipelineDetails = () => {
     isComponentTreeValid,
     globalValidationIssues,
   } = useComponentSpec();
+
+  const templatizedRunNameEnabled = useFlagValue(
+    "templatized-pipeline-run-name",
+  );
 
   const { handleIssueClick, groupedIssues } = useValidationIssueNavigation(
     globalValidationIssues,
@@ -102,6 +108,12 @@ const PipelineDetails = () => {
       <ListBlock items={metadata} marker="none" />
 
       <PipelineDescription componentSpec={componentSpec} />
+
+      {templatizedRunNameEnabled && (
+        <ContentBlock title="Run Name Template">
+          <PipelineRunNameTemplateEditor />
+        </ContentBlock>
+      )}
 
       {digest && (
         <TextBlock

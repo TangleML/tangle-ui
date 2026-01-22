@@ -1,6 +1,5 @@
 import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlock";
 import { ListBlock } from "@/components/shared/ContextPanel/Blocks/ListBlock";
-import { TextBlock } from "@/components/shared/ContextPanel/Blocks/TextBlock";
 import { CopyText } from "@/components/shared/CopyText/CopyText";
 import PipelineIO from "@/components/shared/Execution/PipelineIO";
 import { InfoBox } from "@/components/shared/InfoBox";
@@ -16,6 +15,8 @@ import {
   getExecutionStatusLabel,
   getOverallExecutionStatusFromStats,
 } from "@/utils/executionStatus";
+
+import { TextBlock } from "../shared/ContextPanel/Blocks/TextBlock";
 
 export const RunDetails = () => {
   const { configured } = useBackend();
