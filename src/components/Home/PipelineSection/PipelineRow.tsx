@@ -184,6 +184,7 @@ const PipelineRunsButton = withSuspenseWrapper(
             showMoreButton={false}
             overviewConfig={{
               showName: false,
+              showDescription: true,
             }}
           />
         </PopoverContent>

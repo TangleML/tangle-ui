@@ -6,6 +6,7 @@ import { isAuthorizationRequired } from "@/components/shared/Authentication/help
 import { useAuthLocalStorage } from "@/components/shared/Authentication/useAuthLocalStorage";
 import { useAwaitAuthorization } from "@/components/shared/Authentication/useAwaitAuthorization";
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Icon } from "@/components/ui/icon";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
@@ -24,6 +25,7 @@ export const RerunPipelineButton = ({
   componentSpec,
   showLabel,
 }: RerunPipelineButtonProps) => {
+  const runNameOverride = useFlagValue("templatized-pipeline-run-name");
   const { backendUrl } = useBackend();
   const navigate = useNavigate();
   const notify = useToastNotification();
@@ -65,6 +67,7 @@ export const RerunPipelineButton = ({
         submitPipelineRun(componentSpec, backendUrl, {
           taskArguments: executionData?.rootDetails?.task_spec.arguments,
           authorizationToken,
+          runNameOverride,
           onSuccess: resolve,
           onError: reject,
         });

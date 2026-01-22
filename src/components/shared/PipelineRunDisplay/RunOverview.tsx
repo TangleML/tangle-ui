@@ -2,6 +2,7 @@ import { useNavigate } from "@tanstack/react-router";
 import type { MouseEvent } from "react";
 
 import { StatusBar, StatusText } from "@/components/shared/Status/";
+import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { APP_ROUTES } from "@/routes/router";
 import type { PipelineRun, TaskStatusCounts } from "@/types/pipelineRun";
@@ -9,7 +10,6 @@ import { formatDate } from "@/utils/date";
 import type { ExecutionStatusStats } from "@/utils/executionStatus";
 
 import { PipelineRunStatus } from "./components/PipelineRunStatus";
-
 /**
  * Convert TaskStatusCounts (lowercase keys) to ExecutionStatusStats (uppercase keys)
  * for use with the simplified StatusBar component.
@@ -35,6 +35,7 @@ interface RunOverviewProps {
   config?: {
     showStatus?: boolean;
     showName?: boolean;
+    showDescription?: boolean;
     showExecutionId?: boolean;
     showCreatedAt?: boolean;
     showTaskStatusBar?: boolean;
@@ -49,6 +50,7 @@ const defaultConfig = {
   showStatus: true,
   showName: true,
   showExecutionId: true,
+  showDescription: false,
   showCreatedAt: true,
   showTaskStatusBar: true,
   showStatusCounts: undefined,
@@ -95,11 +97,25 @@ const RunOverview = ({
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2">
           {combinedConfig?.showName && <span>{run.pipeline_name}</span>}
+
           <div className="flex items-center gap-3">
             {combinedConfig?.showStatus && <PipelineRunStatus run={run} />}
-            {combinedConfig?.showExecutionId && (
-              <div className="text-xs">{`#${run.id}`}</div>
-            )}
+            {combinedConfig?.showExecutionId &&
+              !combinedConfig?.showDescription && (
+                <div className="text-xs">{`#${run.id}`}</div>
+              )}
+            {combinedConfig?.showDescription &&
+              !combinedConfig?.showExecutionId && (
+                <Text size="xs">{run.pipeline_description}</Text>
+              )}
+            {combinedConfig?.showDescription &&
+              combinedConfig?.showExecutionId && (
+                <div className="flex items-center gap-2">
+                  <Text size="xs">
+                    {run.pipeline_description ?? `#${run.id}`}
+                  </Text>
+                </div>
+              )}
           </div>
           {combinedConfig?.showCreatedAt && run.created_at && (
             <div className="flex items-center gap-2">

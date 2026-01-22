@@ -4,6 +4,7 @@ export interface PipelineRun {
   created_at: string;
   created_by: string;
   pipeline_name: string;
+  pipeline_description?: string;
   pipeline_digest?: string;
   status?: string;
   statusCounts?: TaskStatusCounts;
