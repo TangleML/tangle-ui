@@ -66,7 +66,7 @@ const TaskNodeCard = () => {
   const { name, state, nodeId, taskSpec, taskId } = taskNode;
   const { dimensions, selected, highlighted, readOnly } = state;
 
-  const isConnectedToSelectedEdge = useEdgeSelectionHighlight(nodeId);
+  const { isConnectedToSelectedEdge } = useEdgeSelectionHighlight(nodeId);
 
   const isSubgraphNode = useMemo(() => {
     if (!taskSpec) return false;

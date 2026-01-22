@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { AlertCircle, CheckCircle, Loader2, SendHorizonal } from "lucide-react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { type MouseEvent, useRef, useState } from "react";
 
 import type { TaskSpecOutput } from "@/api/types.gen";
 import { useAwaitAuthorization } from "@/components/shared/Authentication/useAwaitAuthorization";
@@ -97,121 +97,86 @@ const OasisSubmitter = ({
   const notify = useToastNotification();
   const navigate = useNavigate();
 
-  const handleError = useCallback(
-    (message: string) => {
-      notify(message, "error");
-    },
-    [notify],
-  );
+  const handleError = (message: string) => {
+    notify(message, "error");
+  };
 
-  const handleViewRun = useCallback(
-    (runId: number, newTab = false) => {
-      const href = `${APP_ROUTES.RUNS}/${runId}`;
-      if (newTab) {
-        window.open(href, "_blank");
-      } else {
-        navigate({ to: href });
-      }
-    },
-    [navigate],
-  );
+  const handleViewRun = (runId: number, e: MouseEvent) => {
+    const href = `${APP_ROUTES.RUNS}/${runId}`;
+    if (e.ctrlKey || e.metaKey) {
+      window.open(href, "_blank");
+    } else {
+      navigate({ to: href });
+    }
+  };
 
-  const showSuccessNotification = useCallback(
-    (runId: number) => {
-      const SuccessComponent = () => (
-        <div className="flex flex-col gap-3 py-2">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold">
-              Pipeline successfully submitted
-            </span>
-          </div>
-          <Button onClick={() => handleViewRun(runId)} className="w-full">
-            View Run
-          </Button>
+  const showSuccessNotification = (runId: number) => {
+    const SuccessComponent = () => (
+      <div className="flex flex-col gap-3 py-2">
+        <div className="flex items-center gap-2">
+          <span className="font-semibold">Pipeline successfully submitted</span>
         </div>
+        <Button
+          onClick={(e: MouseEvent) => handleViewRun(runId, e)}
+          className="w-full"
+        >
+          View Run
+        </Button>
+      </div>
+    );
+    notify(<SuccessComponent />, "success");
+  };
+
+  const onSuccess = (response: PipelineRun) => {
+    setSubmitSuccess(true);
+    setCooldownTime(3);
+    onSubmitComplete?.();
+    showSuccessNotification(response.id);
+
+    if (isAutoRedirect) {
+      const href = `${APP_ROUTES.RUNS}/${response.id}`;
+      window.open(href, "_blank");
+    }
+  };
+
+  const onError = (error: Error | string) => {
+    if (error instanceof Error) {
+      handleError(`Failed to submit pipeline. ${error.message}`);
+    } else {
+      handleError(`Failed to submit pipeline. ${String(error)}`);
+    }
+    setSubmitSuccess(false);
+    setCooldownTime(3);
+  };
+
+  const handleSubmit = async (taskArguments?: Record<string, string>) => {
+    if (!componentSpec) {
+      handleError("No pipeline to submit");
+      return;
+    }
+
+    if (!isComponentTreeValid) {
+      handleError(
+        `Pipeline validation failed. Refer to details panel for more info.`,
       );
-      notify(<SuccessComponent />, "success");
-    },
-    [notify, handleViewRun],
-  );
+      return;
+    }
 
-  const onSuccess = useCallback(
-    (response: PipelineRun) => {
-      setSubmitSuccess(true);
-      setCooldownTime(3);
-      onSubmitComplete?.();
-      showSuccessNotification(response.id);
-
-      if (isAutoRedirect) {
-        handleViewRun(response.id, true);
-      }
-    },
-    [
-      setCooldownTime,
-      onSubmitComplete,
-      showSuccessNotification,
-      isAutoRedirect,
-      handleViewRun,
-    ],
-  );
-
-  const onError = useCallback(
-    (error: Error | string) => {
-      if (error instanceof Error) {
-        handleError(`Failed to submit pipeline. ${error.message}`);
-      } else {
-        handleError(`Failed to submit pipeline. ${String(error)}`);
-      }
-      setSubmitSuccess(false);
-      setCooldownTime(3);
-    },
-    [handleError, setCooldownTime],
-  );
-
-  const handleSubmit = useCallback(
-    async (taskArguments?: Record<string, string>) => {
-      if (!componentSpec) {
-        handleError("No pipeline to submit");
-        return;
-      }
-
-      if (!isComponentTreeValid) {
-        handleError(
-          `Pipeline validation failed. Refer to details panel for more info.`,
-        );
-        return;
-      }
-
-      setSubmitSuccess(null);
-      submit({
-        componentSpec,
-        taskArguments,
-        onSuccess,
-        onError,
-      });
-    },
-    [
-      handleError,
-      submit,
+    setSubmitSuccess(null);
+    submit({
       componentSpec,
-      isComponentTreeValid,
+      taskArguments,
       onSuccess,
       onError,
-    ],
-  );
+    });
+  };
 
-  const handleSubmitWithArguments = useCallback(
-    (args: Record<string, string>) => {
-      setIsArgumentsDialogOpen(false);
-      handleSubmit(args);
-    },
-    [handleSubmit],
-  );
+  const handleSubmitWithArguments = (args: Record<string, string>) => {
+    setIsArgumentsDialogOpen(false);
+    handleSubmit(args);
+  };
 
-  const hasConfigurableInputs = useMemo(
-    () => (componentSpec?.inputs?.length ?? 0) > 0,
-    [componentSpec?.inputs],
-  );
+  const hasConfigurableInputs = (componentSpec?.inputs?.length ?? 0) > 0;
 
   const getButtonText = () => {
     if (cooldownTime > 0) {

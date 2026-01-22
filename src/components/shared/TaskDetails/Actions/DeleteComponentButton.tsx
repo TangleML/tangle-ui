@@ -22,7 +22,7 @@ export const DeleteComponentButton = ({
 
   return (
     <ActionButton
-      label="Delete Component"
+      tooltip="Delete Component"
       icon="Trash"
       onClick={handleClick}
       destructive

@@ -20,6 +20,6 @@ export const CopyYamlButton = ({ componentRef }: CopyYamlButtonProps) => {
   };
 
   return (
-    <ActionButton label="Copy YAML" icon="Clipboard" onClick={handleClick} />
+    <ActionButton tooltip="Copy YAML" icon="Clipboard" onClick={handleClick} />
   );
 };

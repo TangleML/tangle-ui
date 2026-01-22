@@ -8,6 +8,6 @@ export const DuplicateTaskButton = ({
   onDuplicate,
 }: DuplicateTaskButtonProps) => {
   return (
-    <ActionButton label="Duplicate Task" icon="Copy" onClick={onDuplicate} />
+    <ActionButton tooltip="Duplicate Task" icon="Copy" onClick={onDuplicate} />
   );
 };

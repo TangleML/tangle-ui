@@ -41,6 +41,19 @@ const RunRow = ({ run }: { run: PipelineRunResponse }) => {
 
   const clickThroughUrl = `${APP_ROUTES.RUNS}/${runId}`;
 
+  const handleRowClick = (e: MouseEvent<HTMLElement>) => {
+    if (e.target instanceof HTMLElement && e.target.closest("button")) {
+      return;
+    }
+
+    if (e.ctrlKey || e.metaKey) {
+      window.open(clickThroughUrl, "_blank");
+      return;
+    }
+
+    navigate({ to: clickThroughUrl });
+  };
+
   const createdByButton = (
     <Button
       className="truncate underline"
@@ -63,10 +76,7 @@ const RunRow = ({ run }: { run: PipelineRunResponse }) => {
 
   return (
     <TableRow
-      onClick={(e) => {
-        e.stopPropagation();
-        navigate({ to: clickThroughUrl });
-      }}
+      onClick={handleRowClick}
       className="cursor-pointer text-gray-500 text-xs"
     >
       <TableCell>

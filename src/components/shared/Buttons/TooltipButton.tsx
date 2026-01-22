@@ -34,9 +34,11 @@ const TooltipButton = React.forwardRef<HTMLButtonElement, TooltipButtonProps>(
             </Button>
           </div>
         </TooltipTrigger>
-        <TooltipContent side={tooltipSide} align={tooltipAlign}>
-          {tooltip}
-        </TooltipContent>
+        {!!tooltip && (
+          <TooltipContent side={tooltipSide} align={tooltipAlign}>
+            {tooltip}
+          </TooltipContent>
+        )}
       </Tooltip>
     </TooltipProvider>
   ),

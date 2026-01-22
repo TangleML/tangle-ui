@@ -30,6 +30,11 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/hooks/useEdgeSelectionHighlight.ts",
 
   "src/components/shared/Submitters/Oasis/components",
+  "src/components/shared/Submitters/GoogleCloud/ConfigInput.tsx",
+  "src/components/shared/Submitters/GoogleCloud/GoogleCloudSubmitter.tsx",
+  "src/components/shared/Submitters/GoogleCloud/RegionInput.tsx",
+  "src/components/shared/Submitters/Oasis/components/SubmitTaskArgumentsDialog.tsx",
+  "src/components/shared/Submitters/Oasis/OasisSubmitter.tsx",
 
   // 11-20 useCallback/useMemo
   // "src/components/ui",                         // 12
