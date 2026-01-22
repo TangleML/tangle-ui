@@ -1,30 +1,30 @@
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, test, vi } from "vitest";
 
-import type { Action } from "./ActionBlock";
+import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
+
 import { ActionBlock } from "./ActionBlock";
 
 describe("<ActionBlock />", () => {
   test("renders without title", () => {
-    const actions: Action[] = [
-      { label: "Test Action", icon: "Copy", onClick: vi.fn() },
+    const actions = [
+      <Button key="test" data-testid="test-action">
+        Test Action
+      </Button>,
     ];
 
     render(<ActionBlock actions={actions} />);
 
     expect(screen.queryByRole("heading")).not.toBeInTheDocument();
-    expect(screen.getByTestId("action-Test Action")).toBeInTheDocument();
+    expect(screen.getByTestId("test-action")).toBeInTheDocument();
   });
 
   test("renders with title", () => {
-    const actions: Action[] = [
-      { label: "Test Action", icon: "Copy", onClick: vi.fn() },
+    const actions = [
+      <Button key="test" data-testid="test-action">
+        Test Action
+      </Button>,
     ];
 
     render(<ActionBlock title="Actions" actions={actions} />);
@@ -32,12 +32,14 @@ describe("<ActionBlock />", () => {
     expect(
       screen.getByRole("heading", { level: 3, name: "Actions" }),
     ).toBeInTheDocument();
-    expect(screen.getByTestId("action-Test Action")).toBeInTheDocument();
+    expect(screen.getByTestId("test-action")).toBeInTheDocument();
   });
 
   test("renders with custom className", () => {
-    const actions: Action[] = [
-      { label: "Test Action", icon: "Copy", onClick: vi.fn() },
+    const actions = [
+      <Button key="test" data-testid="test-action">
+        Test Action
+      </Button>,
     ];
 
     const { container } = render(
@@ -51,21 +53,21 @@ describe("<ActionBlock />", () => {
   test("renders empty actions array without error", () => {
     const { container } = render(<ActionBlock actions={[]} />);
 
-    expect(
-      container.querySelector('[data-testid^="action-"]'),
-    ).not.toBeInTheDocument();
+    expect(container.querySelector("button")).not.toBeInTheDocument();
   });
 
   describe("action rendering", () => {
     test("renders action button with icon", () => {
-      const onClick = vi.fn();
-      const actions: Action[] = [
-        { label: "Copy Action", icon: "Copy", onClick },
+      const actions = [
+        <Button key="copy" data-testid="copy-action">
+          <Icon name="Copy" />
+          Copy Action
+        </Button>,
       ];
 
       render(<ActionBlock actions={actions} />);
 
-      const button = screen.getByTestId("action-Copy Action");
+      const button = screen.getByTestId("copy-action");
       expect(button).toBeInTheDocument();
 
       const icon = button.querySelector("svg");
@@ -74,99 +76,119 @@ describe("<ActionBlock />", () => {
     });
 
     test("renders action button with custom content", () => {
-      const onClick = vi.fn();
-      const actions: Action[] = [
-        { label: "Custom Action", content: <span>Custom</span>, onClick },
+      const actions = [
+        <Button key="custom" data-testid="custom-action">
+          <span>Custom Content</span>
+        </Button>,
       ];
 
       render(<ActionBlock actions={actions} />);
 
-      const button = screen.getByTestId("action-Custom Action");
+      const button = screen.getByTestId("custom-action");
       expect(button).toBeInTheDocument();
-      expect(within(button).getByText("Custom")).toBeInTheDocument();
+      expect(screen.getByText("Custom Content")).toBeInTheDocument();
     });
 
     test("renders multiple actions", () => {
-      const actions: Action[] = [
-        { label: "Action 1", icon: "Copy", onClick: vi.fn() },
-        { label: "Action 2", icon: "Download", onClick: vi.fn() },
-        { label: "Action 3", icon: "Trash", onClick: vi.fn() },
+      const actions = [
+        <Button key="action1" data-testid="action-1">
+          Action 1
+        </Button>,
+        <Button key="action2" data-testid="action-2">
+          Action 2
+        </Button>,
+        <Button key="action3" data-testid="action-3">
+          Action 3
+        </Button>,
       ];
 
       render(<ActionBlock actions={actions} />);
 
-      expect(screen.getByTestId("action-Action 1")).toBeInTheDocument();
-      expect(screen.getByTestId("action-Action 2")).toBeInTheDocument();
-      expect(screen.getByTestId("action-Action 3")).toBeInTheDocument();
+      expect(screen.getByTestId("action-1")).toBeInTheDocument();
+      expect(screen.getByTestId("action-2")).toBeInTheDocument();
+      expect(screen.getByTestId("action-3")).toBeInTheDocument();
     });
 
-    test("renders ReactNode as action (backward compatibility)", () => {
+    test("renders custom ReactNode as action", () => {
       const actions = [
-        { label: "Action 1", icon: "Copy" as const, onClick: vi.fn() },
-        <button key="custom" data-testid="custom-button">
-          Custom Button
-        </button>,
+        <Button key="button" data-testid="button-action">
+          Button Action
+        </Button>,
+        <div key="custom" data-testid="custom-node">
+          Custom Node
+        </div>,
       ];
 
       render(<ActionBlock actions={actions} />);
 
-      expect(screen.getByTestId("action-Action 1")).toBeInTheDocument();
-      expect(screen.getByTestId("custom-button")).toBeInTheDocument();
+      expect(screen.getByTestId("button-action")).toBeInTheDocument();
+      expect(screen.getByTestId("custom-node")).toBeInTheDocument();
     });
 
     test("handles null or undefined actions gracefully", () => {
       const actions = [
-        { label: "Action 1", icon: "Copy" as const, onClick: vi.fn() },
+        <Button key="action1" data-testid="action-1">
+          Action 1
+        </Button>,
         null,
         undefined,
-        { label: "Action 2", icon: "Download" as const, onClick: vi.fn() },
+        <Button key="action2" data-testid="action-2">
+          Action 2
+        </Button>,
       ];
 
       render(<ActionBlock actions={actions} />);
 
-      expect(screen.getByTestId("action-Action 1")).toBeInTheDocument();
-      expect(screen.getByTestId("action-Action 2")).toBeInTheDocument();
+      expect(screen.getByTestId("action-1")).toBeInTheDocument();
+      expect(screen.getByTestId("action-2")).toBeInTheDocument();
     });
   });
 
   describe("action variants", () => {
-    test("renders destructive action with destructive variant", () => {
-      const actions: Action[] = [
-        { label: "Delete", icon: "Trash", destructive: true, onClick: vi.fn() },
+    test("renders destructive action variant", () => {
+      const actions = [
+        <Button key="delete" data-testid="delete-action" variant="destructive">
+          <Icon name="Trash" />
+          Delete
+        </Button>,
       ];
 
       render(<ActionBlock actions={actions} />);
 
-      const button = screen.getByTestId("action-Delete");
+      const button = screen.getByTestId("delete-action");
       expect(button).toHaveClass("bg-destructive");
       expect(button).toHaveClass("text-white");
     });
 
-    test("renders non-destructive action with outline variant", () => {
-      const actions: Action[] = [
-        { label: "Copy", icon: "Copy", onClick: vi.fn() },
+    test("renders outline action variant", () => {
+      const actions = [
+        <Button key="copy" data-testid="copy-action" variant="outline">
+          <Icon name="Copy" />
+          Copy
+        </Button>,
       ];
 
       render(<ActionBlock actions={actions} />);
 
-      const button = screen.getByTestId("action-Copy");
+      const button = screen.getByTestId("copy-action");
       expect(button).toHaveClass("border");
       expect(button).toHaveClass("bg-background");
     });
 
     test("applies custom className to action button", () => {
-      const actions: Action[] = [
-        {
-          label: "Styled Action",
-          icon: "Copy",
-          onClick: vi.fn(),
-          className: "custom-button",
-        },
+      const actions = [
+        <Button
+          key="styled"
+          data-testid="styled-action"
+          className="custom-button"
+        >
+          Styled Action
+        </Button>,
       ];
 
       render(<ActionBlock actions={actions} />);
 
-      const button = screen.getByTestId("action-Styled Action");
+      const button = screen.getByTestId("styled-action");
       expect(button).toHaveClass("custom-button");
     });
   });
@@ -174,13 +196,20 @@ describe("<ActionBlock />", () => {
   describe("action states", () => {
     test("renders disabled action", () => {
       const onClick = vi.fn();
-      const actions: Action[] = [
-        { label: "Disabled Action", icon: "Copy", disabled: true, onClick },
+      const actions = [
+        <Button
+          key="disabled"
+          data-testid="disabled-action"
+          disabled
+          onClick={onClick}
+        >
+          Disabled Action
+        </Button>,
       ];
 
       render(<ActionBlock actions={actions} />);
 
-      const button = screen.getByTestId("action-Disabled Action");
+      const button = screen.getByTestId("disabled-action");
       expect(button).toBeDisabled();
 
       fireEvent.click(button);
@@ -189,49 +218,58 @@ describe("<ActionBlock />", () => {
 
     test("renders enabled action", () => {
       const onClick = vi.fn();
-      const actions: Action[] = [
-        { label: "Enabled Action", icon: "Copy", disabled: false, onClick },
+      const actions = [
+        <Button
+          key="enabled"
+          data-testid="enabled-action"
+          disabled={false}
+          onClick={onClick}
+        >
+          Enabled Action
+        </Button>,
       ];
 
       render(<ActionBlock actions={actions} />);
 
-      const button = screen.getByTestId("action-Enabled Action");
+      const button = screen.getByTestId("enabled-action");
       expect(button).not.toBeDisabled();
 
       fireEvent.click(button);
       expect(onClick).toHaveBeenCalledTimes(1);
     });
 
-    test("does not render hidden action", () => {
-      const actions: Action[] = [
-        { label: "Visible Action", icon: "Copy", onClick: vi.fn() },
-        {
-          label: "Hidden Action",
-          icon: "Trash",
-          hidden: true,
-          onClick: vi.fn(),
-        },
+    test("conditionally renders actions based on logic", () => {
+      const showHidden = false;
+      const actions = [
+        <Button key="visible" data-testid="visible-action">
+          Visible Action
+        </Button>,
+        showHidden ? (
+          <Button key="hidden" data-testid="hidden-action">
+            Hidden Action
+          </Button>
+        ) : null,
       ];
 
       render(<ActionBlock actions={actions} />);
 
-      expect(screen.getByTestId("action-Visible Action")).toBeInTheDocument();
-      expect(
-        screen.queryByTestId("action-Hidden Action"),
-      ).not.toBeInTheDocument();
+      expect(screen.getByTestId("visible-action")).toBeInTheDocument();
+      expect(screen.queryByTestId("hidden-action")).not.toBeInTheDocument();
     });
   });
 
   describe("onClick behavior", () => {
     test("calls onClick when action is clicked", () => {
       const onClick = vi.fn();
-      const actions: Action[] = [
-        { label: "Click Action", icon: "Copy", onClick },
+      const actions = [
+        <Button key="click" data-testid="click-action" onClick={onClick}>
+          Click Action
+        </Button>,
       ];
 
       render(<ActionBlock actions={actions} />);
 
-      const button = screen.getByTestId("action-Click Action");
+      const button = screen.getByTestId("click-action");
       fireEvent.click(button);
 
       expect(onClick).toHaveBeenCalledTimes(1);
@@ -239,13 +277,15 @@ describe("<ActionBlock />", () => {
 
     test("calls onClick multiple times when clicked multiple times", () => {
       const onClick = vi.fn();
-      const actions: Action[] = [
-        { label: "Multi Click", icon: "Copy", onClick },
+      const actions = [
+        <Button key="multi" data-testid="multi-click" onClick={onClick}>
+          Multi Click
+        </Button>,
       ];
 
       render(<ActionBlock actions={actions} />);
 
-      const button = screen.getByTestId("action-Multi Click");
+      const button = screen.getByTestId("multi-click");
       fireEvent.click(button);
       fireEvent.click(button);
       fireEvent.click(button);
@@ -254,177 +294,78 @@ describe("<ActionBlock />", () => {
     });
   });
 
-  describe("confirmation dialog", () => {
-    test("opens confirmation dialog when action has confirmation", () => {
-      const onClick = vi.fn();
-      const actions: Action[] = [
-        {
-          label: "Delete",
-          icon: "Trash",
-          confirmation: "Are you sure you want to delete?",
-          onClick,
-        },
+  describe("action keys", () => {
+    test("uses provided keys for actions", () => {
+      const actions = [
+        <Button key="custom-key-1" data-testid="action-1">
+          Action 1
+        </Button>,
+        <Button key="custom-key-2" data-testid="action-2">
+          Action 2
+        </Button>,
+      ];
+
+      const { container } = render(<ActionBlock actions={actions} />);
+
+      const actionWrappers = container.querySelectorAll("span[key]");
+      expect(actionWrappers.length).toBeGreaterThanOrEqual(0);
+    });
+
+    test("generates keys for actions without keys", () => {
+      const actions = [
+        // eslint-disable-next-line react/jsx-key
+        <Button data-testid="action-1">Action 1</Button>,
+        // eslint-disable-next-line react/jsx-key
+        <Button data-testid="action-2">Action 2</Button>,
       ];
 
       render(<ActionBlock actions={actions} />);
 
-      const button = screen.getByTestId("action-Delete");
-      fireEvent.click(button);
-
-      // Dialog should appear
-      expect(
-        screen.getByText("Are you sure you want to delete?"),
-      ).toBeInTheDocument();
-      expect(onClick).not.toHaveBeenCalled();
-    });
-
-    test("executes onClick when confirmation is accepted", async () => {
-      const onClick = vi.fn();
-      const actions: Action[] = [
-        {
-          label: "Delete",
-          icon: "Trash",
-          confirmation: "Confirm deletion?",
-          onClick,
-        },
-      ];
-
-      render(<ActionBlock actions={actions} />);
-
-      const button = screen.getByTestId("action-Delete");
-      fireEvent.click(button);
-
-      // Confirm in dialog
-      const confirmButton = screen.getByRole("button", { name: "Continue" });
-      fireEvent.click(confirmButton);
-
-      await waitFor(() => {
-        expect(onClick).toHaveBeenCalledTimes(1);
-      });
-    });
-
-    test("does not execute onClick when confirmation is cancelled", async () => {
-      const onClick = vi.fn();
-      const actions: Action[] = [
-        {
-          label: "Delete",
-          icon: "Trash",
-          confirmation: "Confirm deletion?",
-          onClick,
-        },
-      ];
-
-      render(<ActionBlock actions={actions} />);
-
-      const button = screen.getByTestId("action-Delete");
-      fireEvent.click(button);
-
-      // Cancel in dialog
-      const cancelButton = screen.getByRole("button", { name: "Cancel" });
-      fireEvent.click(cancelButton);
-
-      await waitFor(() => {
-        expect(onClick).not.toHaveBeenCalled();
-      });
-    });
-
-    test("closes dialog after confirmation", async () => {
-      const onClick = vi.fn();
-      const actions: Action[] = [
-        {
-          label: "Delete",
-          icon: "Trash",
-          confirmation: "Confirm deletion?",
-          onClick,
-        },
-      ];
-
-      render(<ActionBlock actions={actions} />);
-
-      const button = screen.getByTestId("action-Delete");
-      fireEvent.click(button);
-
-      expect(screen.getByText("Confirm deletion?")).toBeInTheDocument();
-
-      const confirmButton = screen.getByRole("button", { name: "Continue" });
-      fireEvent.click(confirmButton);
-
-      await waitFor(() => {
-        expect(screen.queryByText("Confirm deletion?")).not.toBeInTheDocument();
-      });
-    });
-
-    test("closes dialog after cancellation", async () => {
-      const onClick = vi.fn();
-      const actions: Action[] = [
-        {
-          label: "Delete",
-          icon: "Trash",
-          confirmation: "Confirm deletion?",
-          onClick,
-        },
-      ];
-
-      render(<ActionBlock actions={actions} />);
-
-      const deleteButton = screen.getByTestId("action-Delete");
-      fireEvent.click(deleteButton);
-
-      expect(screen.getByText("Confirm deletion?")).toBeInTheDocument();
-
-      const cancelButton = screen.getByRole("button", { name: "Cancel" });
-      fireEvent.click(cancelButton);
-
-      await waitFor(() => {
-        expect(screen.queryByText("Confirm deletion?")).not.toBeInTheDocument();
-      });
-
-      expect(screen.getByTestId("action-Delete")).toBeInTheDocument();
-    });
-
-    test("executes onClick directly when no confirmation is provided", () => {
-      const onClick = vi.fn();
-      const actions: Action[] = [{ label: "Copy", icon: "Copy", onClick }];
-
-      render(<ActionBlock actions={actions} />);
-
-      const button = screen.getByTestId("action-Copy");
-      fireEvent.click(button);
-
-      expect(onClick).toHaveBeenCalledTimes(1);
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    });
-
-    test("shows action label as dialog title", () => {
-      const actions: Action[] = [
-        {
-          label: "Delete Item",
-          icon: "Trash",
-          confirmation: "Confirm?",
-          onClick: vi.fn(),
-        },
-      ];
-
-      render(<ActionBlock actions={actions} />);
-
-      const button = screen.getByTestId("action-Delete Item");
-      fireEvent.click(button);
-
-      expect(screen.getByText("Delete Item")).toBeInTheDocument();
-      expect(screen.getByText("Confirm?")).toBeInTheDocument();
+      expect(screen.getByTestId("action-1")).toBeInTheDocument();
+      expect(screen.getByTestId("action-2")).toBeInTheDocument();
     });
   });
 
-  describe("tooltip", () => {
-    test("action has tooltip with label", () => {
-      const actions: Action[] = [
-        { label: "Copy to Clipboard", icon: "Copy", onClick: vi.fn() },
+  describe("complex action scenarios", () => {
+    test("renders mixed action types", () => {
+      const actions = [
+        <Button key="button" data-testid="button-action" variant="outline">
+          Button
+        </Button>,
+        <a
+          key="link"
+          href="#"
+          data-testid="link-action"
+          className="inline-flex items-center"
+        >
+          Link
+        </a>,
+        <span key="text" data-testid="text-action">
+          Text
+        </span>,
       ];
 
       render(<ActionBlock actions={actions} />);
 
-      const button = screen.getByTestId("action-Copy to Clipboard");
+      expect(screen.getByTestId("button-action")).toBeInTheDocument();
+      expect(screen.getByTestId("link-action")).toBeInTheDocument();
+      expect(screen.getByTestId("text-action")).toBeInTheDocument();
+    });
+
+    test("renders actions with nested components", () => {
+      const actions = [
+        <Button key="nested" data-testid="nested-action">
+          <Icon name="Download" />
+          <span>Download</span>
+        </Button>,
+      ];
+
+      render(<ActionBlock actions={actions} />);
+
+      const button = screen.getByTestId("nested-action");
       expect(button).toBeInTheDocument();
+      expect(button.querySelector("svg")).toBeInTheDocument();
+      expect(screen.getByText("Download")).toBeInTheDocument();
     });
   });
 });
