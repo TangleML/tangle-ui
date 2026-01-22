@@ -20,16 +20,19 @@ describe("useBetaFlagsReducer", () => {
       name: "Feature 1",
       description: "First feature flag",
       default: false,
+      category: "beta",
     },
     feature2: {
       name: "Feature 2",
       description: "Second feature flag",
       default: true,
+      category: "beta",
     },
     feature3: {
       name: "Feature 3",
       description: "Third feature flag",
       default: false,
+      category: "setting",
     },
   };
 
@@ -44,6 +47,7 @@ describe("useBetaFlagsReducer", () => {
       description: "First feature flag",
       enabled: false,
       default: false,
+      category: "beta",
     });
     expect(state[1]).toEqual({
       key: "feature2",
@@ -51,6 +55,7 @@ describe("useBetaFlagsReducer", () => {
       description: "Second feature flag",
       enabled: true, // Should use default value
       default: true,
+      category: "beta",
     });
     expect(state[2]).toEqual({
       key: "feature3",
@@ -58,6 +63,7 @@ describe("useBetaFlagsReducer", () => {
       description: "Third feature flag",
       enabled: false,
       default: false,
+      category: "setting",
     });
   });
 
