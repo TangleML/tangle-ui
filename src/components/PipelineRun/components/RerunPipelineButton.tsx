@@ -6,6 +6,7 @@ import { isAuthorizationRequired } from "@/components/shared/Authentication/help
 import { useAuthLocalStorage } from "@/components/shared/Authentication/useAuthLocalStorage";
 import { useAwaitAuthorization } from "@/components/shared/Authentication/useAwaitAuthorization";
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
+import { buildTakSpecShape } from "@/components/shared/PipelineRunNameTemplate/types";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Icon } from "@/components/ui/icon";
 import useToastNotification from "@/hooks/useToastNotification";
@@ -13,6 +14,7 @@ import { useBackend } from "@/providers/BackendProvider";
 import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
 import { APP_ROUTES } from "@/routes/router";
 import type { PipelineRun } from "@/types/pipelineRun";
+import { extractCanonicalName } from "@/utils/canonicalPipelineName";
 import type { ComponentSpec } from "@/utils/componentSpec";
 import { submitPipelineRun } from "@/utils/submitPipeline";
 
@@ -65,6 +67,12 @@ export const RerunPipelineButton = ({
 
       return new Promise<PipelineRun>((resolve, reject) => {
         submitPipelineRun(componentSpec, backendUrl, {
+          canonicalName: extractCanonicalName(
+            buildTakSpecShape(
+              executionData?.rootDetails?.task_spec,
+              componentSpec,
+            ),
+          ),
           taskArguments: executionData?.rootDetails?.task_spec.arguments,
           authorizationToken,
           runNameOverride,

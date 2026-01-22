@@ -24,11 +24,13 @@ export async function submitPipelineRun(
     taskArguments?: TaskSpecOutput["arguments"];
     authorizationToken?: string;
     runNameOverride?: boolean;
+    canonicalName?: string;
     onSuccess?: (data: PipelineRun) => void;
     onError?: (error: Error) => void;
   },
 ) {
-  const pipelineName = componentSpec.name ?? "Pipeline";
+  const pipelineName =
+    options?.canonicalName ?? componentSpec.name ?? "Pipeline";
 
   try {
     const specCopy = structuredClone(componentSpec);
