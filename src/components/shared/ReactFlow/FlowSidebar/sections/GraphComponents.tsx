@@ -1,5 +1,5 @@
 import { PackagePlus } from "lucide-react";
-import { type ChangeEvent, useCallback, useMemo } from "react";
+import { type ChangeEvent } from "react";
 
 import { ManageLibrariesDialog } from "@/components/shared/GitHubLibrary/ManageLibrariesDialog";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
@@ -39,23 +39,8 @@ const GraphComponents = ({ isOpen }: { isOpen: boolean }) => {
   const remoteComponentLibrarySearchEnabled = useFlagValue(
     "remote-component-library-search",
   );
-  const githubComponentLibraryEnabled = useFlagValue(
-    "github-component-library",
-  );
-
-  const { getComponentLibrary, existingComponentLibraries } =
-    useComponentLibrary();
 
   const { updateSearchFilter, currentSearchFilter } = useForcedSearchContext();
-  const {
-    componentLibrary,
-    usedComponentsFolder,
-    userComponentsFolder,
-    favoritesFolder,
-    isLoading,
-    error,
-    searchResult,
-  } = useComponentLibrary();
 
   const handleSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
     updateSearchFilter({
@@ -63,140 +48,11 @@ const GraphComponents = ({ isOpen }: { isOpen: boolean }) => {
     });
   };
 
-  const handleFiltersChange = useCallback(
-    (filters: string[]) => {
-      updateSearchFilter({
-        filters,
-      });
-    },
-    [updateSearchFilter],
-  );
-
-  const memoizedContent = useMemo(() => {
-    if (isLoading) return <LoadingState />;
-    if (error) return <ErrorState message={(error as Error).message} />;
-    if (!componentLibrary) return <EmptyState />;
-
-    if (!remoteComponentLibrarySearchEnabled && searchResult) {
-      // If there's a search result, use the SearchResults component
-      return (
-        <SearchResults
-          searchResult={searchResult}
-          onFiltersChange={handleFiltersChange}
-        />
-      );
-    }
-
-    // Otherwise show the regular folder structure
-    const hasUsedComponents =
-      usedComponentsFolder?.components &&
-      usedComponentsFolder.components.length > 0;
-
-    const hasFavouriteComponents =
-      favoritesFolder?.components && favoritesFolder.components.length > 0;
-
-    const hasUserComponents =
-      userComponentsFolder?.components &&
-      userComponentsFolder.components.length > 0;
-
-    return (
-      <BlockStack gap="2">
-        {remoteComponentLibrarySearchEnabled && <UpgradeAvailableAlertBox />}
-
-        <BlockStack>
-          {hasUsedComponents && (
-            <FolderItem
-              key="used-components-folder"
-              folder={usedComponentsFolder}
-              icon="LayoutGrid"
-            />
-          )}
-          {hasFavouriteComponents && (
-            <FolderItem
-              key="favorite-components-folder"
-              folder={favoritesFolder}
-              icon="Star"
-            />
-          )}
-          {hasUserComponents && (
-            <FolderItem
-              key="my-components-folder"
-              folder={userComponentsFolder}
-              icon="Puzzle"
-            />
-          )}
-          <Separator />
-          <FolderItem
-            key="graph-inputs-outputs-folder"
-            folder={
-              {
-                name: "Inputs & Outputs",
-                components: [
-                  <IONodeSidebarItem key="input" nodeType="input" />,
-                  <IONodeSidebarItem key="output" nodeType="output" />,
-                ],
-                folders: [],
-              } as UIComponentFolder
-            }
-            icon="Cable"
-          />
-          <Separator />
-          <FolderItem
-            key="standard-library-folder"
-            folder={
-              {
-                name: "Standard library",
-                components: [],
-                folders: componentLibrary.folders,
-              } as UIComponentFolder
-            }
-            icon="Folder"
-          />
-          {githubComponentLibraryEnabled && (
-            <>
-              <Separator />
-              <BlockStack gap="1" className="pl-2 py-2">
-                <InlineStack className="w-full" align="space-between">
-                  <Text size="sm" tone="subdued">
-                    Connected libraries
-                  </Text>
-                  <ManageLibrariesDialog />
-                </InlineStack>
-
-                {existingComponentLibraries?.length === 0 && (
-                  <BlockStack gap="1" align="center">
-                    <Text size="sm" tone="subdued">
-                      No libraries connected
-                    </Text>
-                  </BlockStack>
-                )}
-              </BlockStack>
-
-              {existingComponentLibraries?.map((library) => (
-                <LibraryFolderItem
-                  key={library.id}
-                  library={getComponentLibrary(library.id)}
-                  icon={library.icon as any /** todo: fix this */}
-                />
-              ))}
-            </>
-          )}
-        </BlockStack>
-      </BlockStack>
-    );
-  }, [
-    componentLibrary,
-    usedComponentsFolder,
-    userComponentsFolder,
-    favoritesFolder,
-    isLoading,
-    error,
-    searchResult,
-    remoteComponentLibrarySearchEnabled,
-    githubComponentLibraryEnabled,
-    existingComponentLibraries,
-    getComponentLibrary,
-  ]);
+  const handleFiltersChange = (filters: string[]) => {
+    updateSearchFilter({
+      filters,
+    });
+  };
 
   if (!isOpen) {
     return (
@@ -223,7 +79,9 @@ const GraphComponents = ({ isOpen }: { isOpen: boolean }) => {
   }
 
   const searchComponent = remoteComponentLibrarySearchEnabled ? (
-    <PublishedComponentsSearch>{memoizedContent}</PublishedComponentsSearch>
+    <PublishedComponentsSearch>
+      <ComponentLibrarySection />
+    </PublishedComponentsSearch>
   ) : (
     <>
       <SearchInput
@@ -233,7 +91,7 @@ const GraphComponents = ({ isOpen }: { isOpen: boolean }) => {
         onFiltersChange={handleFiltersChange}
       />
 
-      {memoizedContent}
+      <ComponentLibrarySection />
     </>
   );
 
@@ -258,5 +116,147 @@ const GraphComponents = ({ isOpen }: { isOpen: boolean }) => {
     </SidebarGroup>
   );
 };
+
+function ComponentLibrarySection() {
+  const remoteComponentLibrarySearchEnabled = useFlagValue(
+    "remote-component-library-search",
+  );
+
+  const githubComponentLibraryEnabled = useFlagValue(
+    "github-component-library",
+  );
+
+  const { getComponentLibrary, existingComponentLibraries } =
+    useComponentLibrary();
+
+  const { updateSearchFilter } = useForcedSearchContext();
+  const {
+    componentLibrary,
+    usedComponentsFolder,
+    userComponentsFolder,
+    favoritesFolder,
+    isLoading,
+    error,
+    searchResult,
+  } = useComponentLibrary();
+
+  const handleFiltersChange = (filters: string[]) => {
+    updateSearchFilter({
+      filters,
+    });
+  };
+
+  if (isLoading) return <LoadingState />;
+  if (error) return <ErrorState message={(error as Error).message} />;
+  if (!componentLibrary) return <EmptyState />;
+
+  if (!remoteComponentLibrarySearchEnabled && searchResult) {
+    // If there's a search result, use the SearchResults component
+    return (
+      <SearchResults
+        searchResult={searchResult}
+        onFiltersChange={handleFiltersChange}
+      />
+    );
+  }
+
+  // Otherwise show the regular folder structure
+  const hasUsedComponents =
+    usedComponentsFolder?.components &&
+    usedComponentsFolder.components.length > 0;
+
+  const hasFavouriteComponents =
+    favoritesFolder?.components && favoritesFolder.components.length > 0;
+
+  const hasUserComponents =
+    userComponentsFolder?.components &&
+    userComponentsFolder.components.length > 0;
+
+  return (
+    <BlockStack gap="2">
+      {remoteComponentLibrarySearchEnabled && <UpgradeAvailableAlertBox />}
+
+      <BlockStack>
+        {hasUsedComponents && (
+          <FolderItem
+            key="used-components-folder"
+            folder={usedComponentsFolder}
+            icon="LayoutGrid"
+          />
+        )}
+        {hasFavouriteComponents && (
+          <FolderItem
+            key="favorite-components-folder"
+            folder={favoritesFolder}
+            icon="Star"
+          />
+        )}
+        {hasUserComponents && (
+          <FolderItem
+            key="my-components-folder"
+            folder={userComponentsFolder}
+            icon="Puzzle"
+          />
+        )}
+        <Separator />
+        <FolderItem
+          key="graph-inputs-outputs-folder"
+          folder={
+            {
+              name: "Inputs & Outputs",
+              components: [
+                <IONodeSidebarItem key="input" nodeType="input" />,
+                <IONodeSidebarItem key="output" nodeType="output" />,
+              ],
+              folders: [],
+            } as UIComponentFolder
+          }
+          icon="Cable"
+        />
+        <Separator />
+        <FolderItem
+          key="standard-library-folder"
+          folder={
+            {
+              name: "Standard library",
+              components: [],
+              folders: componentLibrary.folders,
+            } as UIComponentFolder
+          }
+          icon="Folder"
+        />
+        {githubComponentLibraryEnabled && (
+          <>
+            <Separator />
+            <BlockStack gap="1" className="pl-2 py-2">
+              <InlineStack className="w-full" align="space-between">
+                <Text size="sm" tone="subdued">
+                  Connected libraries
+                </Text>
+                <ManageLibrariesDialog />
+              </InlineStack>
+
+              {existingComponentLibraries?.length === 0 && (
+                <BlockStack gap="1" align="center">
+                  <Text size="sm" tone="subdued">
+                    No libraries connected
+                  </Text>
+                </BlockStack>
+              )}
+            </BlockStack>
+
+            {existingComponentLibraries?.map((library) => (
+              <LibraryFolderItem
+                key={library.id}
+                library={getComponentLibrary(library.id)}
+                icon={library.icon as any /** todo: fix this */}
+              />
+            ))}
+          </>
+        )}
+      </BlockStack>
+    </BlockStack>
+  );
+}
 
 export default GraphComponents;
