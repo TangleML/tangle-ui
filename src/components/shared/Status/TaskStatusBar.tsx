@@ -52,7 +52,7 @@ const StatusSegment = ({
     <Tooltip>
       <TooltipTrigger asChild>
         <div
-          className={cn(colorClass, "h-full")}
+          className={cn(colorClass, "h-full min-w-1/20")}
           style={{ width }}
           aria-label={`${count} ${label}`}
         />
