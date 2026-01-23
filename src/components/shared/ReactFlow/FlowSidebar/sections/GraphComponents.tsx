@@ -22,7 +22,6 @@ import { useForcedSearchContext } from "@/providers/ComponentLibraryProvider/For
 import type { UIComponentFolder } from "@/types/componentLibrary";
 
 import {
-  EmptyState,
   ErrorState,
   FolderItem,
   ImportComponent,
@@ -132,13 +131,14 @@ function ComponentLibrarySection() {
 
   const { updateSearchFilter } = useForcedSearchContext();
   const {
-    componentLibrary,
     usedComponentsFolder,
     userComponentsFolder,
     isLoading,
     error,
     searchResult,
   } = useComponentLibrary();
+
+  const standardComponentsLibrary = getComponentLibrary("standard_components");
 
   const handleFiltersChange = (filters: string[]) => {
     updateSearchFilter({
@@ -148,7 +148,6 @@ function ComponentLibrarySection() {
 
   if (isLoading) return <LoadingState />;
   if (error) return <ErrorState message={(error as Error).message} />;
-  if (!componentLibrary) return <EmptyState />;
 
   if (!remoteComponentLibrarySearchEnabled && searchResult) {
     // If there's a search result, use the SearchResults component
@@ -211,15 +210,9 @@ function ComponentLibrarySection() {
           icon="Cable"
         />
         <Separator />
-        <FolderItem
-          key="standard-library-folder"
-          folder={
-            {
-              name: "Standard library",
-              components: [],
-              folders: componentLibrary.folders,
-            } as UIComponentFolder
-          }
+        <LibraryFolderItem
+          key="standard-library-folder-v2"
+          library={standardComponentsLibrary}
           icon="Folder"
         />
         {githubComponentLibraryEnabled && (
