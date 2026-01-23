@@ -10,6 +10,9 @@ export const PRIVACY_POLICY_URL =
   import.meta.env.VITE_PRIVACY_POLICY_URL ||
   "https://tangleml.com/docs/privacy_policy/";
 
+export const DOCUMENTATION_URL =
+  import.meta.env.VITE_DOCUMENTATION_URL || "https://tangleml.com/docs/";
+
 export const API_URL = import.meta.env.VITE_BACKEND_API_URL || "";
 export const BASE_URL = import.meta.env.VITE_BASE_URL || "/";
 export const IS_GITHUB_PAGES = import.meta.env.VITE_GITHUB_PAGES === "true";

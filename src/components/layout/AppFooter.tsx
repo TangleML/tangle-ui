@@ -4,6 +4,7 @@ import { Text } from "@/components/ui/typography";
 import {
   ABOUT_URL,
   BOTTOM_FOOTER_HEIGHT,
+  DOCUMENTATION_URL,
   GIT_COMMIT,
   GIT_REPO_URL,
   GIVE_FEEDBACK_URL,
@@ -35,6 +36,13 @@ function AppFooter() {
             rel="noopener noreferrer"
           >
             Privacy policy
+          </Link>
+          <Link
+            href={DOCUMENTATION_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Documentation
           </Link>
           <InlineStack gap="1">
             Version:
