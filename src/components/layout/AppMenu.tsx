@@ -1,21 +1,13 @@
-import { Menu } from "lucide-react";
-import { useState } from "react";
+import { useParams } from "@tanstack/react-router";
 
 import logo from "/Tangle_white.png";
+import { ClonePipelineButton } from "@/components/PipelineRun/components/ClonePipelineButton";
 import { isAuthorizationRequired } from "@/components/shared/Authentication/helpers";
 import { TopBarAuthentication } from "@/components/shared/Authentication/TopBarAuthentication";
 import { CopyText } from "@/components/shared/CopyText/CopyText";
 import ImportPipeline from "@/components/shared/ImportPipeline";
-import { Button } from "@/components/ui/button";
-import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { InlineStack } from "@/components/ui/layout";
 import { Link } from "@/components/ui/link";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { TOP_NAV_HEIGHT } from "@/utils/constants";
 
@@ -27,7 +19,11 @@ const AppMenu = () => {
   const requiresAuthorization = isAuthorizationRequired();
   const { componentSpec } = useComponentSpec();
   const title = componentSpec?.name;
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const params = useParams({ strict: false });
+
+  const runId =
+    "id" in params && typeof params.id === "string" ? params.id : null;
+  const isRunPage = runId !== null;
 
   return (
     <div
@@ -52,44 +48,14 @@ const AppMenu = () => {
         </InlineStack>
 
         <InlineStack gap="2" wrap="nowrap" className="shrink-0">
-          {/* Desktop action buttons - hidden on mobile */}
-          <InlineStack gap="2" className="hidden md:flex" wrap="nowrap">
-            <ImportPipeline />
-            <NewPipelineButton />
-          </InlineStack>
-
-          {/* Always visible settings */}
-          <InlineStack gap="2" wrap="nowrap">
-            <BackendStatus />
-            <PersonalPreferences />
-            {requiresAuthorization && <TopBarAuthentication />}
-          </InlineStack>
-
-          {/* Mobile hamburger menu - visible only on mobile */}
-          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-            <SheetTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="md:hidden text-white hover:bg-stone-800"
-                aria-label="Open menu"
-              >
-                <Menu className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent
-              side="right"
-              className="w-fit bg-stone-900 border-stone-700 px-4"
-            >
-              <SheetHeader>
-                <SheetTitle className="text-white">Actions</SheetTitle>
-              </SheetHeader>
-              <BlockStack gap="3" className="mt-6">
-                <ImportPipeline />
-                <NewPipelineButton />
-              </BlockStack>
-            </SheetContent>
-          </Sheet>
+          {isRunPage && componentSpec && (
+            <ClonePipelineButton componentSpec={componentSpec} runId={runId} />
+          )}
+          <ImportPipeline />
+          <NewPipelineButton />
+          <BackendStatus />
+          <PersonalPreferences />
+          {requiresAuthorization && <TopBarAuthentication />}
         </InlineStack>
       </InlineStack>
     </div>

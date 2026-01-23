@@ -1,8 +1,8 @@
 import { useNavigate } from "@tanstack/react-router";
+import { Plus } from "lucide-react";
 import { generate } from "random-words";
 import type { MouseEvent } from "react";
 
-import { Button } from "@/components/ui/button";
 import { EDITOR_PATH } from "@/routes/router";
 import { writeComponentToFileListFromText } from "@/utils/componentStore";
 import {
@@ -10,6 +10,8 @@ import {
   IS_GITHUB_PAGES,
   USER_PIPELINES_LIST_NAME,
 } from "@/utils/constants";
+
+import TooltipButton from "./Buttons/TooltipButton";
 
 const randomName = () => (generate(4) as string[]).join(" ");
 
@@ -39,13 +41,16 @@ const NewPipelineButton = () => {
   };
 
   return (
-    <Button
-      variant="outline"
+    <TooltipButton
+      variant="ghost"
+      size="icon"
+      className="text-white hover:bg-white/10"
+      tooltip="New Pipeline"
       onClick={handleCreate}
       data-testid="new-pipeline-button"
     >
-      New Pipeline
-    </Button>
+      <Plus className="h-4 w-4" />
+    </TooltipButton>
   );
 };
 

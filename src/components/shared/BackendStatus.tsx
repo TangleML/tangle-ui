@@ -1,15 +1,10 @@
 import { Database } from "lucide-react";
 import { useCallback, useState } from "react";
 
-import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useBackend } from "@/providers/BackendProvider";
 
+import TooltipButton from "./Buttons/TooltipButton";
 import BackendConfigurationDialog from "./Dialogs/BackendConfigurationDialog";
 
 const BackendStatus = () => {
@@ -32,30 +27,30 @@ const BackendStatus = () => {
   const configuredStatusColor = available ? "bg-green-500" : "bg-red-500";
   const notConfiguredStatusColor = "bg-yellow-500";
 
+  const tooltipText = available
+    ? backendAvailableString
+    : backendNotAvailableString;
+
   return (
     <>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            onClick={handleOpen}
-            className="bg-none hover:opacity-80"
-            size="icon"
-          >
-            <div className="relative">
-              <Database className="h-4 w-4 text-white shrink-0" />
-              <span
-                className={cn(
-                  "absolute -bottom-px -right-px w-2 h-2 rounded-full border border-slate-900",
-                  configured ? configuredStatusColor : notConfiguredStatusColor,
-                )}
-              />
-            </div>
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          {available ? backendAvailableString : backendNotAvailableString}
-        </TooltipContent>
-      </Tooltip>
+      <TooltipButton
+        variant="ghost"
+        size="icon"
+        className="text-white hover:bg-white/10"
+        tooltip={tooltipText}
+        onClick={handleOpen}
+        data-testid="backend-status-button"
+      >
+        <div className="relative">
+          <Database className="h-4 w-4 shrink-0" />
+          <span
+            className={cn(
+              "absolute -bottom-px -right-px w-2 h-2 rounded-full border border-slate-900",
+              configured ? configuredStatusColor : notConfiguredStatusColor,
+            )}
+          />
+        </div>
+      </TooltipButton>
 
       <BackendConfigurationDialog open={open} setOpen={setOpen} />
     </>

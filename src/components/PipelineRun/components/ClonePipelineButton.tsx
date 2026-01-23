@@ -62,7 +62,9 @@ export const ClonePipelineButton = ({
 
   return (
     <TooltipButton
-      variant="outline"
+      variant={showLabel ? "outline" : "ghost"}
+      size={showLabel ? "default" : "icon"}
+      className={showLabel ? undefined : "text-white hover:bg-white/10"}
       onClick={handleClone}
       tooltip="Clone pipeline"
       disabled={isPending}
