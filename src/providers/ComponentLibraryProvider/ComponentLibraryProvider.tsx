@@ -28,23 +28,17 @@ import type {
   HydratedComponentReference,
 } from "@/utils/componentSpec";
 import {
-  type ComponentReferenceWithSpec,
   deleteComponentFileFromList,
   importComponent,
-  updateComponentInListByText,
-  updateComponentRefInList,
 } from "@/utils/componentStore";
 import {
   ComponentSearchFilter,
-  MINUTES,
   USER_COMPONENTS_LIST_NAME,
 } from "@/utils/constants";
 import { createPromiseFromDomEvent } from "@/utils/dom";
 import { getComponentName } from "@/utils/getComponentName";
 import {
-  getComponentByUrl,
   getUserComponentByName,
-  saveComponent,
   type UserComponent,
 } from "@/utils/localforage";
 import {
@@ -62,7 +56,6 @@ import {
   fetchUserComponents,
   filterToUniqueByDigest,
   flattenFolders,
-  isFavoriteComponent,
   populateComponentRefs,
 } from "./componentLibrary";
 import { useForcedSearchContext } from "./ForcedSearchProvider";
@@ -70,18 +63,21 @@ import {
   createLibraryObject,
   registerLibraryFactory,
 } from "./libraries/factory";
+import { FavoriteLibrary } from "./libraries/favoriteLibrary";
 import { PublishedComponentsLibrary } from "./libraries/publishedComponentsLibrary";
 import { LibraryDB, type StoredLibrary } from "./libraries/storage";
 import type { Library } from "./libraries/types";
 import { YamlFileLibrary } from "./libraries/yamlFileLibrary";
 
-type AvailableComponentLibraries = "published_components" | string;
+type AvailableComponentLibraries =
+  | "published_components"
+  | "favorite_components"
+  | string;
 
 type ComponentLibraryContextType = {
   componentLibrary: ComponentLibrary | undefined;
   userComponentsFolder: ComponentFolder | undefined;
   usedComponentsFolder: ComponentFolder;
-  favoritesFolder: ComponentFolder | undefined;
   isLoading: boolean;
   error: Error | null;
   existingComponentLibraries: StoredLibrary[] | undefined;
@@ -95,10 +91,7 @@ type ComponentLibraryContextType = {
     component: HydratedComponentReference,
   ) => Promise<HydratedComponentReference | undefined>;
   removeFromComponentLibrary: (component: ComponentReference) => void;
-  setComponentFavorite: (
-    component: ComponentReference,
-    favorited: boolean,
-  ) => void;
+
   checkIfUserComponent: (component: ComponentReference) => boolean;
 
   getComponentLibrary: (libraryName: AvailableComponentLibraries) => Library;
@@ -145,6 +138,7 @@ function useComponentLibraryRegistry() {
     () =>
       new Map<AvailableComponentLibraries, Library>([
         ["published_components", new PublishedComponentsLibrary(queryClient)],
+        ["favorite_components", new FavoriteLibrary()],
         /**
          * In future we will have other library types,  including "standard_library", "favorite_components", "used_components", etc.
          */
@@ -160,11 +154,18 @@ function useComponentLibraryRegistry() {
   );
 
   useEffect(() => {
-    registeredComponentLibraries?.forEach((library) => {
-      componentLibraries.set(library.id, createLibraryObject(library));
-    });
+    const customLibraries =
+      registeredComponentLibraries?.filter(
+        (library) => library.type !== "indexdb",
+      ) ?? [];
 
-    setExistingComponentLibraries(registeredComponentLibraries ?? []);
+    customLibraries
+      .filter((library) => !componentLibraries.has(library.id))
+      .forEach((library) => {
+        componentLibraries.set(library.id, createLibraryObject(library));
+      });
+
+    setExistingComponentLibraries(customLibraries);
   }, [registeredComponentLibraries, componentLibraries]);
 
   const getComponentLibraryObject = useCallback(
@@ -231,57 +232,14 @@ export const ComponentLibraryProvider = ({
     [graphSpec],
   );
 
-  // Fetch "Starred" components
-  const { data: favoritesFolderData, refetch: refetchFavorites } = useQuery({
-    queryKey: ["favorites"],
-    queryFn: async () => {
-      const favoritesFolder: ComponentFolder = {
-        name: "Favorite Components",
-        components: [],
-        folders: [],
-        isUserFolder: false,
-      };
-
-      if (!componentLibrary || !componentLibrary.folders) {
-        return favoritesFolder;
-      }
-
-      const uniqueLibraryComponents = filterToUniqueByDigest(
-        flattenFolders(componentLibrary),
-      );
-
-      for (const component of uniqueLibraryComponents) {
-        if (await isFavoriteComponent(component)) {
-          favoritesFolder.components?.push(component);
-        }
-      }
-
-      return favoritesFolder;
-    },
-    enabled: Boolean(componentLibrary),
-    staleTime: 10 * MINUTES,
-  });
-
-  const favoritesFolder = useMemo(
-    () =>
-      favoritesFolderData ?? {
-        name: "Favorite Components",
-        components: [],
-        folders: [],
-        isUserFolder: false,
-      },
-    [favoritesFolderData],
-  );
-
   // Methods
   const refreshComponentLibrary = useCallback(async () => {
     const { data: updatedLibrary } = await refetchLibrary();
 
     if (updatedLibrary) {
       setComponentLibrary(updatedLibrary);
-      await refetchFavorites();
     }
-  }, [refetchLibrary, refetchFavorites]);
+  }, [refetchLibrary]);
 
   const refreshUserComponents = useCallback(async () => {
     const { data: updatedUserComponents } = await refetchUserComponents();
@@ -292,63 +250,6 @@ export const ComponentLibraryProvider = ({
       });
     }
   }, [refetchUserComponents]);
-
-  const setComponentFavorite = useCallback(
-    async (component: ComponentReference, favorited: boolean) => {
-      // Update via filename (User Components)
-      if (!component.url && component.name) {
-        component.favorited = favorited;
-
-        if (component.spec) {
-          await updateComponentRefInList(
-            USER_COMPONENTS_LIST_NAME,
-            component as ComponentReferenceWithSpec,
-            component.name,
-          ).then(async () => {
-            await refreshUserComponents();
-          });
-        } else if (component.text) {
-          await updateComponentInListByText(
-            USER_COMPONENTS_LIST_NAME,
-            component.text,
-            component.name,
-            { favorited },
-          ).then(async () => {
-            await refreshUserComponents();
-          });
-        } else {
-          console.warn(
-            `Component "${
-              component.name
-            }" does not have spec or text, cannot favorite.`,
-          );
-        }
-
-        return;
-      }
-
-      if (!component.url) {
-        console.warn(
-          `Component "${component.name}" does not have a url, cannot favorite.`,
-        );
-        return;
-      }
-
-      // Update via url (Standard Components)
-      const storedComponent = await getComponentByUrl(component.url);
-
-      if (storedComponent) {
-        await saveComponent({
-          ...storedComponent,
-          favorited,
-        }).then(async () => {
-          await refreshComponentLibrary();
-          await refreshUserComponents();
-        });
-      }
-    },
-    [refreshComponentLibrary, refreshUserComponents],
-  );
 
   const checkIfUserComponent = useCallback(
     (component: ComponentReference) => {
@@ -629,7 +530,6 @@ export const ComponentLibraryProvider = ({
       componentLibrary,
       userComponentsFolder,
       usedComponentsFolder,
-      favoritesFolder,
       isLoading,
       error,
       searchResult,
@@ -638,14 +538,12 @@ export const ComponentLibraryProvider = ({
       getComponentLibrary,
       addToComponentLibrary,
       removeFromComponentLibrary,
-      setComponentFavorite,
       checkIfUserComponent,
     }),
     [
       componentLibrary,
       userComponentsFolder,
       usedComponentsFolder,
-      favoritesFolder,
       isLoading,
       error,
       searchResult,
@@ -654,7 +552,6 @@ export const ComponentLibraryProvider = ({
       getComponentLibrary,
       addToComponentLibrary,
       removeFromComponentLibrary,
-      setComponentFavorite,
       checkIfUserComponent,
     ],
   );

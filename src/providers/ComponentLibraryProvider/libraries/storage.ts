@@ -4,7 +4,7 @@ import { icons } from "lucide-react";
 const DB_NAME = "oasis-app";
 const DEXIE_EPOCH = 0;
 
-interface StoredLibraryItem {
+export interface StoredLibraryItem {
   digest: string;
   name: string;
   url?: string;

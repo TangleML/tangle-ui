@@ -13,7 +13,7 @@ import {
   getAllComponentFilesFromList,
 } from "@/utils/componentStore";
 import { USER_COMPONENTS_LIST_NAME } from "@/utils/constants";
-import { getComponentById, getComponentByUrl } from "@/utils/localforage";
+import { getComponentByUrl } from "@/utils/localforage";
 import { componentSpecToYaml } from "@/utils/yaml";
 
 export const fetchUserComponents = async (): Promise<ComponentFolder> => {
@@ -79,16 +79,6 @@ export const fetchUsedComponents = (graphSpec: GraphSpec): ComponentFolder => {
     isUserFolder: false,
   };
 };
-
-export async function isFavoriteComponent(component: ComponentReference) {
-  if (!component.digest) return false;
-
-  const storedComponent = await getComponentById(
-    `component-${component.digest}`,
-  );
-
-  return storedComponent?.favorited ?? false;
-}
 
 export async function populateComponentRefs<
   T extends ComponentLibrary | ComponentFolder,
