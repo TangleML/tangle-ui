@@ -1,27 +1,43 @@
+/**
+ * Fetch wrapper that provides better error messages.
+ * Errors are caught and reported by React Query's onError handler and error boundaries.
+ */
 export const fetchWithErrorHandling = async (
-  url: string,
+  input: RequestInfo | URL,
   options?: RequestInit,
-): Promise<any> => {
+): Promise<Response> => {
+  // Extract the URL string for error messages
+  const urlString =
+    typeof input === "string"
+      ? input
+      : input instanceof URL
+        ? input.toString()
+        : input.url;
+
   let response: Response;
 
   try {
-    response = await fetch(url, options);
+    response = await fetch(input, options);
   } catch (fetchError) {
     const message =
       fetchError instanceof Error ? fetchError.message : String(fetchError);
-    throw new Error(`Network error: ${message} (URL: ${url})`);
+    throw new Error(`Network error: ${message} (URL: ${urlString})`);
   }
 
   if (!response.ok) {
-    let message = "No error details";
+    let message = response.statusText || "No error details";
     try {
+      // Clone the response so we can read the body for error message
+      const clonedResponse = response.clone();
       let errorBody: any;
-      if (response.headers.get("content-type")?.includes("application/json")) {
-        errorBody = await response.json();
+      if (
+        clonedResponse.headers.get("content-type")?.includes("application/json")
+      ) {
+        errorBody = await clonedResponse.json();
       } else {
-        errorBody = await response.text();
+        errorBody = await clonedResponse.text();
       }
-      message = errorBody.message;
+      message = errorBody.message || errorBody || message;
     } catch {
       // Ignore if we can't read the error body
     }
@@ -31,25 +47,8 @@ export const fetchWithErrorHandling = async (
     }
 
     throw new Error(
-      `HTTP ${response.status} ${response.statusText}: ${message} (URL: ${url})`,
+      `HTTP ${response.status} ${response.statusText}: ${message} (URL: ${urlString})`,
     );
-  }
-
-  const contentType = response.headers.get("content-type");
-  const contentLength = response.headers.get("content-length");
-
-  if (!contentType || contentLength === "0") {
-    return response;
-  }
-
-  if (contentType?.includes("application/json")) {
-    try {
-      return await response.json();
-    } catch (parseError) {
-      const message =
-        parseError instanceof Error ? parseError.message : String(parseError);
-      throw new Error(`Invalid JSON response: ${message} (URL: ${url})`);
-    }
   }
 
   return response;

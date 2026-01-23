@@ -92,7 +92,8 @@ export const RunSection = ({ onEmptyList }: { onEmptyList?: () => void }) => {
 
         dataVersion.current++;
 
-        return fetchWithErrorHandling(u.toString());
+        const response = await fetchWithErrorHandling(u.toString());
+        return response.json();
       },
     });
 

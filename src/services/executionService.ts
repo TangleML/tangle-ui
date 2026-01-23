@@ -24,7 +24,8 @@ export const fetchExecutionState = async (
   backendUrl: string,
 ) => {
   const url = `${backendUrl}/api/executions/${executionId}/state`;
-  return fetchWithErrorHandling(url);
+  const response = await fetchWithErrorHandling(url);
+  return response.json();
 };
 
 export const fetchExecutionDetails = async (
@@ -32,7 +33,8 @@ export const fetchExecutionDetails = async (
   backendUrl: string,
 ): Promise<GetExecutionInfoResponse> => {
   const url = `${backendUrl}/api/executions/${executionId}/details`;
-  return fetchWithErrorHandling(url);
+  const response = await fetchWithErrorHandling(url);
+  return response.json();
 };
 
 export const fetchPipelineRun = async (
@@ -63,7 +65,8 @@ const fetchContainerExecutionState = async (
   backendUrl: string,
 ): Promise<GetContainerExecutionStateResponse> => {
   const url = `${backendUrl}/api/executions/${executionId}/container_state`;
-  return fetchWithErrorHandling(url);
+  const response = await fetchWithErrorHandling(url);
+  return response.json();
 };
 
 export const useFetchContainerExecutionState = (

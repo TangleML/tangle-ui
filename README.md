@@ -54,6 +54,16 @@ If you find you are blocked by CORS, you will, for now, need to use the manual s
 
 If you complete these steps the app will launch on `127.0.0.1:8000` with the latest build you've created on the frontend.
 
+### Reporting errors to Bugsnag (Optional)
+
+To enable error reporting, add the following variable to your `.env` file:
+
+```bash
+VITE_BUGSNAG_API_KEY=your-api-key
+```
+
+Errors are automatically captured from React components, router navigation, and network requests.
+
 ## App features:
 
 - Build and edit pipelines using drag and drop visual editor

@@ -26,7 +26,13 @@ test.describe("Published Component Library - Lifecycle", () => {
 
     await createNewPipeline(page);
 
-    await expect(page.locator("[data-testid='search-input']")).toBeVisible();
+    // Wait for the component library sidebar to be visible first
+    await expect(page.getByText("Components")).toBeVisible();
+
+    // Then wait for the search input within the component library
+    await expect(page.locator("[data-testid='search-input']")).toBeVisible({
+      timeout: 10000, // Give it more time in CI
+    });
 
     await page.getByTestId("personal-preferences-button").click();
 
