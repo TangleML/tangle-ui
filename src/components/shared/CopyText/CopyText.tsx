@@ -11,12 +11,14 @@ interface CopyTextProps {
   children: string;
   className?: string;
   alwaysShowButton?: boolean;
+  compact?: boolean;
 }
 
 export const CopyText = ({
   children,
   className,
   alwaysShowButton = false,
+  compact = false,
 }: CopyTextProps) => {
   const [isCopied, setIsCopied] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -63,7 +65,8 @@ export const CopyText = ({
           variant="ghost"
           size="icon"
           className={cn(
-            "h-6 w-6 shrink-0 transition-opacity duration-200",
+            compact ? "h-2 w-2" : "h-6 w-6",
+            "shrink-0 transition-opacity duration-200",
             alwaysShowButton || isCopied
               ? "opacity-100"
               : "opacity-0 group-hover:opacity-100",
@@ -73,6 +76,7 @@ export const CopyText = ({
           <CopyIcon
             isCopied={isCopied}
             alwaysShow={alwaysShowButton || isHovered}
+            compact={compact}
           />
         </Button>
       </InlineStack>
@@ -83,13 +87,14 @@ export const CopyText = ({
 interface CopyIconProps {
   isCopied: boolean;
   alwaysShow: boolean;
+  compact?: boolean;
 }
 
-const CopyIcon = ({ isCopied, alwaysShow }: CopyIconProps) => (
-  <span className="relative h-3 w-3">
+const CopyIcon = ({ isCopied, alwaysShow, compact = false }: CopyIconProps) => (
+  <span className={cn("relative h-3 w-3")}>
     <Icon
       name="Check"
-      size="sm"
+      size={compact ? "xs" : "sm"}
       className={cn(
         "absolute inset-0 text-emerald-400 transition-all duration-200",
         isCopied
@@ -99,7 +104,7 @@ const CopyIcon = ({ isCopied, alwaysShow }: CopyIconProps) => (
     />
     <Icon
       name="Copy"
-      size="sm"
+      size={compact ? "xs" : "sm"}
       className={cn(
         "absolute inset-0 text-muted-foreground transition-all duration-200",
         alwaysShow && !isCopied

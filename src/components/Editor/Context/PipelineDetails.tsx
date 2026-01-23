@@ -4,7 +4,7 @@ import { useValidationIssueNavigation } from "@/components/Editor/hooks/useValid
 import { ViewYamlButton } from "@/components/shared/Buttons/ViewYamlButton";
 import { ActionBlock } from "@/components/shared/ContextPanel/Blocks/ActionBlock";
 import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlock";
-import { ListBlock } from "@/components/shared/ContextPanel/Blocks/ListBlock";
+import { KeyValueList } from "@/components/shared/ContextPanel/Blocks/KeyValueList";
 import { TextBlock } from "@/components/shared/ContextPanel/Blocks/TextBlock";
 import { CopyText } from "@/components/shared/CopyText/CopyText";
 import { PipelineDescription } from "@/components/shared/PipelineDescription/PipelineDescription";
@@ -86,7 +86,10 @@ const PipelineDetails = () => {
 
   const annotations = Object.entries(
     componentSpec.metadata?.annotations || {},
-  ).map(([key, value]) => ({ label: key, value: String(value) }));
+  ).map(([key, value]) => ({
+    label: key,
+    value: String(value),
+  }));
 
   const actions = [
     <RenamePipeline key="rename-pipeline-action" />,
@@ -105,7 +108,7 @@ const PipelineDetails = () => {
 
       <ActionBlock actions={actions} />
 
-      <ListBlock items={metadata} marker="none" />
+      <KeyValueList title="Metadata" items={metadata} />
 
       <PipelineDescription componentSpec={componentSpec} />
 
@@ -126,7 +129,7 @@ const PipelineDetails = () => {
       )}
 
       {annotations.length > 0 && (
-        <ListBlock title="Annotations" items={annotations} marker="none" />
+        <KeyValueList title="Annotations" items={annotations} />
       )}
 
       <PipelineIO />

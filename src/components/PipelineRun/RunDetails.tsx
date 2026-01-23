@@ -1,5 +1,6 @@
 import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlock";
-import { ListBlock } from "@/components/shared/ContextPanel/Blocks/ListBlock";
+import { KeyValueList } from "@/components/shared/ContextPanel/Blocks/KeyValueList";
+import { TextBlock } from "@/components/shared/ContextPanel/Blocks/TextBlock";
 import { CopyText } from "@/components/shared/CopyText/CopyText";
 import PipelineIO from "@/components/shared/Execution/PipelineIO";
 import { InfoBox } from "@/components/shared/InfoBox";
@@ -15,8 +16,6 @@ import {
   getExecutionStatusLabel,
   getOverallExecutionStatusFromStats,
 } from "@/utils/executionStatus";
-
-import { TextBlock } from "../shared/ContextPanel/Blocks/TextBlock";
 
 export const RunDetails = () => {
   const { configured } = useBackend();
@@ -70,7 +69,7 @@ export const RunDetails = () => {
       </CopyText>
 
       {metadata && (
-        <ListBlock
+        <KeyValueList
           title="Run Info"
           items={[
             { label: "Run Id", value: metadata.id },
@@ -83,7 +82,6 @@ export const RunDetails = () => {
                 : undefined,
             },
           ]}
-          marker="none"
         />
       )}
 
@@ -101,13 +99,12 @@ export const RunDetails = () => {
       </ContentBlock>
 
       {Object.keys(annotations).length > 0 && (
-        <ListBlock
+        <KeyValueList
           title="Annotations"
           items={Object.entries(annotations).map(([key, value]) => ({
             label: key,
             value: String(value),
           }))}
-          marker="none"
         />
       )}
 

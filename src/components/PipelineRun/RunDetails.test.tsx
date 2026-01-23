@@ -215,7 +215,7 @@ describe("<RunDetails/>", () => {
 
       await waitFor(() => {
         expect(screen.getByText("Annotations")).toBeInTheDocument();
-        expect(screen.getByText("test-annotation:")).toBeInTheDocument();
+        expect(screen.getByText("test-annotation")).toBeInTheDocument();
         expect(screen.getByText("test-value")).toBeInTheDocument();
       });
     });
