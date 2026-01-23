@@ -1,5 +1,3 @@
-import { useCallback, useMemo } from "react";
-
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -35,18 +33,17 @@ function PublishedComponentDetailsContent({
   const { data: isPublished } = useHasPublishedComponent(component);
   const { data: outdatedComponents } = useOutdatedComponents([component]);
 
-  const outdatedComponentIndex = useMemo(
-    () => new Map(outdatedComponents.map(([c, m]) => [c.digest, m])),
-    [outdatedComponents],
+  const outdatedComponentIndex = new Map(
+    outdatedComponents.map(([c, m]) => [c.digest, m]),
   );
 
   const onForceUpdate = useForceUpdateTasks(
     outdatedComponentIndex.get(component.digest) ?? null,
   );
 
-  const onUpdateTasks = useCallback(() => {
+  const onUpdateTasks = () => {
     onForceUpdate(component.digest);
-  }, [onForceUpdate, component.digest]);
+  };
 
   if (!isPublished) {
     return null;
