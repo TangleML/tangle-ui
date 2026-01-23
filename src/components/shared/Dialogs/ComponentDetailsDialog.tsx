@@ -1,3 +1,4 @@
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { Code, InfoIcon, ListFilter } from "lucide-react";
 import { type ReactNode, useCallback, useMemo, useState } from "react";
 
@@ -13,7 +14,8 @@ import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useHydrateComponentReference } from "@/hooks/useHydrateComponentReference";
+import { useGuaranteedHydrateComponentReference } from "@/hooks/useHydrateComponentReference";
+import { useComponentLibrary } from "@/providers/ComponentLibraryProvider/ComponentLibraryProvider";
 import type { ComponentReference } from "@/utils/componentSpec";
 
 import InfoIconButton from "../Buttons/InfoIconButton";
@@ -65,7 +67,14 @@ const ComponentDetailsDialogContent = withSuspenseWrapper(
       "remote-component-library-search",
     );
 
-    const componentRef = useHydrateComponentReference(component);
+    const componentRef = useGuaranteedHydrateComponentReference(component);
+    const { getComponentLibrary } = useComponentLibrary();
+    const userComponentsLibrary = getComponentLibrary("user_components");
+
+    const { data: isUserComponent } = useSuspenseQuery({
+      queryKey: ["is-user-component", componentRef.digest],
+      queryFn: () => userComponentsLibrary.hasComponent(componentRef),
+    });
 
     if (!componentRef) {
       return (
@@ -78,7 +87,7 @@ const ComponentDetailsDialogContent = withSuspenseWrapper(
     const componentSpec = componentRef.spec;
 
     const hasPublishSection =
-      remoteComponentLibrarySearchEnabled && component.owned;
+      remoteComponentLibrarySearchEnabled && isUserComponent;
 
     return (
       <>

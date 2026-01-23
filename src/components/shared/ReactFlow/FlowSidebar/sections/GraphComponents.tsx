@@ -128,15 +128,11 @@ function ComponentLibrarySection() {
     useComponentLibrary();
 
   const favoriteComponentsLibrary = getComponentLibrary("favorite_components");
+  const userComponentsLibrary = getComponentLibrary("user_components");
 
   const { updateSearchFilter } = useForcedSearchContext();
-  const {
-    usedComponentsFolder,
-    userComponentsFolder,
-    isLoading,
-    error,
-    searchResult,
-  } = useComponentLibrary();
+  const { usedComponentsFolder, isLoading, error, searchResult } =
+    useComponentLibrary();
 
   const standardComponentsLibrary = getComponentLibrary("standard_components");
 
@@ -164,10 +160,6 @@ function ComponentLibrarySection() {
     usedComponentsFolder?.components &&
     usedComponentsFolder.components.length > 0;
 
-  const hasUserComponents =
-    userComponentsFolder?.components &&
-    userComponentsFolder.components.length > 0;
-
   return (
     <BlockStack gap="2">
       {remoteComponentLibrarySearchEnabled && <UpgradeAvailableAlertBox />}
@@ -187,13 +179,11 @@ function ComponentLibrarySection() {
           icon="Star"
         />
 
-        {hasUserComponents && (
-          <FolderItem
-            key="my-components-folder"
-            folder={userComponentsFolder}
-            icon="Puzzle"
-          />
-        )}
+        <LibraryFolderItem
+          key="my-components-library-folder"
+          library={userComponentsLibrary}
+          icon="Puzzle"
+        />
         <Separator />
         <FolderItem
           key="graph-inputs-outputs-folder"
