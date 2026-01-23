@@ -7,6 +7,7 @@ import { TopBarAuthentication } from "@/components/shared/Authentication/TopBarA
 import { CopyText } from "@/components/shared/CopyText/CopyText";
 import ImportPipeline from "@/components/shared/ImportPipeline";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Link } from "@/components/ui/link";
 import {
@@ -17,9 +18,10 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
-import { TOP_NAV_HEIGHT } from "@/utils/constants";
+import { DOCUMENTATION_URL, TOP_NAV_HEIGHT } from "@/utils/constants";
 
 import BackendStatus from "../shared/BackendStatus";
+import TooltipButton from "../shared/Buttons/TooltipButton";
 import NewPipelineButton from "../shared/NewPipelineButton";
 import { PersonalPreferences } from "../shared/Settings/PersonalPreferences";
 
@@ -28,6 +30,14 @@ const AppMenu = () => {
   const { componentSpec } = useComponentSpec();
   const title = componentSpec?.name;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const documentationButton = (
+    <Link href={DOCUMENTATION_URL} target="_blank" rel="noopener noreferrer">
+      <TooltipButton tooltip="Documentation">
+        <Icon name="CircleQuestionMark" />
+      </TooltipButton>
+    </Link>
+  );
 
   return (
     <div
@@ -51,7 +61,7 @@ const AppMenu = () => {
           )}
         </InlineStack>
 
-        <InlineStack gap="2" wrap="nowrap" className="shrink-0">
+        <InlineStack gap="8" wrap="nowrap" className="shrink-0">
           {/* Desktop action buttons - hidden on mobile */}
           <InlineStack gap="2" className="hidden md:flex" wrap="nowrap">
             <ImportPipeline />
@@ -62,6 +72,7 @@ const AppMenu = () => {
           <InlineStack gap="2" wrap="nowrap">
             <BackendStatus />
             <PersonalPreferences />
+            {documentationButton}
             {requiresAuthorization && <TopBarAuthentication />}
           </InlineStack>
 
@@ -87,6 +98,7 @@ const AppMenu = () => {
               <BlockStack gap="3" className="mt-6">
                 <ImportPipeline />
                 <NewPipelineButton />
+                {documentationButton}
               </BlockStack>
             </SheetContent>
           </Sheet>
