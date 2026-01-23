@@ -13,7 +13,7 @@ import { Spinner } from "@/components/ui/spinner";
 
 import TooltipButton from "./Buttons/TooltipButton";
 
-type ErrorFallbackProps<T extends ComponentType<any>> = FallbackProps & {
+type ComponentErrorProps<T extends ComponentType<any>> = FallbackProps & {
   originalProps?: Partial<ComponentProps<T>>;
 };
 
@@ -22,9 +22,9 @@ interface SuspenseWrapperProps {
   errorFallback?: (props: FallbackProps) => ReactNode;
 }
 
-const ErrorFallback = <T extends ComponentType<any>>({
+const ComponentError = <T extends ComponentType<any>>({
   resetErrorBoundary,
-}: ErrorFallbackProps<T>) => {
+}: ComponentErrorProps<T>) => {
   const tooltipText = "A UI element failed to render. Click to retry.";
 
   return (
@@ -43,7 +43,7 @@ const ErrorFallback = <T extends ComponentType<any>>({
 export const SuspenseWrapper = ({
   children,
   fallback,
-  errorFallback = ErrorFallback,
+  errorFallback = ComponentError,
 }: PropsWithChildren<SuspenseWrapperProps>) => {
   const fallbackMarkup = fallback ?? <Spinner />;
 
@@ -69,14 +69,14 @@ SuspenseWrapper.displayName = "SuspenseWrapper";
 export function withSuspenseWrapper<T extends ComponentType<any>>(
   Component: T,
   Skeleton?: ComponentType<Partial<ComponentProps<T>>>,
-  errorFallback?: (props: ErrorFallbackProps<T>) => ReactNode,
+  errorFallback?: (props: ComponentErrorProps<T>) => ReactNode,
 ) {
-  const ErrorFallbackComponent = errorFallback ?? ErrorFallback<T>;
+  const ComponentErrorComponent = errorFallback ?? ComponentError<T>;
   const ComponentWithSuspense = (props: ComponentProps<T>) => (
     <SuspenseWrapper
       fallback={Skeleton ? <Skeleton {...props} /> : undefined}
       errorFallback={(errorProps) => (
-        <ErrorFallbackComponent {...errorProps} originalProps={props} />
+        <ComponentErrorComponent {...errorProps} originalProps={props} />
       )}
     >
       <Component {...props} />

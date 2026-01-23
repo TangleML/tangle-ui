@@ -1,20 +1,25 @@
-import { type ErrorComponentProps, useRouter } from "@tanstack/react-router";
-
 import { InfoBox } from "@/components/shared/InfoBox";
 import { Button } from "@/components/ui/button";
 import { BlockStack } from "@/components/ui/layout";
 import { Paragraph, Text } from "@/components/ui/typography";
 
-export default function ErrorPage({ error }: ErrorComponentProps) {
-  const router = useRouter();
+interface ErrorDisplayProps {
+  error: unknown;
+  onRefresh: () => void;
+  onGoHome: () => void;
+}
 
-  const handleRefresh = () => {
-    window.location.reload();
-  };
-
-  const handleGoHome = () => {
-    router.navigate({ to: "/" });
-  };
+/**
+ * Shared error display component used by both ComponentError and FullPageError.
+ * Shows a user-friendly error message with options to refresh or go home.
+ */
+export const ErrorDisplay = ({
+  error,
+  onRefresh,
+  onGoHome,
+}: ErrorDisplayProps) => {
+  const errorMessage =
+    error instanceof Error ? error.message : "An unexpected error occurred";
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -31,20 +36,16 @@ export default function ErrorPage({ error }: ErrorComponentProps) {
 
           <InfoBox title="Error Details" variant="error">
             <Paragraph font="mono" size="xs">
-              {error?.message || "An unexpected error occurred"}
+              {errorMessage}
             </Paragraph>
           </InfoBox>
 
           <BlockStack gap="3">
-            <Button onClick={handleRefresh} className="w-full">
+            <Button onClick={onRefresh} className="w-full">
               Try Again
             </Button>
 
-            <Button
-              onClick={handleGoHome}
-              variant="secondary"
-              className="w-full"
-            >
+            <Button onClick={onGoHome} variant="secondary" className="w-full">
               Go Home
             </Button>
           </BlockStack>
@@ -52,4 +53,4 @@ export default function ErrorPage({ error }: ErrorComponentProps) {
       </div>
     </div>
   );
-}
+};
