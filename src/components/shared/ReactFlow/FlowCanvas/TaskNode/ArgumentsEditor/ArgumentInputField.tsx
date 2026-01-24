@@ -26,7 +26,9 @@ import { Paragraph } from "@/components/ui/typography";
 import { useCallbackOnUnmount } from "@/hooks/useCallbackOnUnmount";
 import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
+import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import type { ArgumentInput } from "@/types/arguments";
+import { isGraphImplementation } from "@/utils/componentSpec";
 
 import { ArgumentInputDialog } from "./ArgumentInputDialog";
 import {
@@ -47,6 +49,7 @@ export const ArgumentInputField = ({
   onSave: (argument: ArgumentInput) => void;
 }) => {
   const notify = useToastNotification();
+  const { currentSubgraphSpec } = useComponentSpec();
 
   const [inputValue, setInputValue] = useState(getInputValue(argument) ?? "");
   const [lastSubmittedValue, setLastSubmittedValue] = useState<string>(
@@ -163,7 +166,11 @@ export const ArgumentInputField = ({
   );
 
   const placeholder = useMemo(() => {
-    const inputPlaceholder = getPlaceholder(argument.value);
+    const graphSpec = isGraphImplementation(currentSubgraphSpec.implementation)
+      ? currentSubgraphSpec.implementation.graph
+      : undefined;
+    const inputPlaceholder = getPlaceholder(argument.value, graphSpec);
+
     if (inputPlaceholder) {
       return inputPlaceholder;
     }
@@ -177,7 +184,7 @@ export const ArgumentInputField = ({
     }
 
     return "";
-  }, [argument]);
+  }, [argument, currentSubgraphSpec]);
 
   useEffect(() => {
     const value = getInputValue(argument);

@@ -17,6 +17,12 @@ const DEFAULT_COMMON_ANNOTATIONS: AnnotationConfig[] = [
     label: "Node position",
     type: "json",
   },
+  {
+    annotation: "display_name",
+    label: "Display Name",
+    type: "string",
+    max: 100,
+  },
 ];
 
 interface AnnotationsEditorProps {

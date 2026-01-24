@@ -96,6 +96,12 @@
         "type": "string",
         "title": "Node position",
         "x-type": "json"
+      },
+      "display_name": {
+        "type": "string",
+        "title": "Display Name",
+        "x-type": "string",
+        "exclusiveMaximum": 100
       }
     }
   }

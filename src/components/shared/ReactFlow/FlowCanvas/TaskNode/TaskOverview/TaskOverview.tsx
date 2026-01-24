@@ -31,7 +31,7 @@ interface TaskOverviewProps {
 }
 
 const TaskOverview = ({ taskNode }: TaskOverviewProps) => {
-  const { name, taskSpec, taskId, state, callbacks } = taskNode;
+  const { displayName, taskSpec, taskId, state, callbacks } = taskNode;
 
   const executionData = useExecutionDataOptional();
   const details = executionData?.details;
@@ -60,13 +60,13 @@ const TaskOverview = ({ taskNode }: TaskOverviewProps) => {
     <BlockStack className="h-full" data-context-panel="task-overview">
       <InlineStack gap="2" className="px-2 pb-2">
         {isSubgraph && <Icon name="Workflow" />}
-        <Text size="lg" weight="semibold">
-          {name}
+        <Text size="lg" weight="semibold" className="wrap-anywhere">
+          {displayName}
         </Text>
         {canRename && <RenameTask taskId={taskId} />}
         <ComponentFavoriteToggle component={taskSpec.componentRef} hideDelete />
         <ComponentDetailsDialog
-          displayName={name}
+          displayName={displayName}
           component={taskSpec.componentRef}
         />
         {readOnly && <StatusIcon status={status} tooltip label="task" />}

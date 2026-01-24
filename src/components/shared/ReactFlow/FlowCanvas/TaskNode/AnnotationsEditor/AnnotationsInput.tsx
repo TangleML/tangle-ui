@@ -304,6 +304,7 @@ export const AnnotationsInput = ({
             onBlur={handleBlur}
             autoFocus={autoFocus}
             className={cn("min-w-16", className)}
+            maxLength={config?.max}
           />
           <Button
             className="absolute right-0 top-1/2 -translate-y-1/2 hover:bg-transparent hover:text-blue-500 hidden group-hover:flex h-8 w-8 p-0"
@@ -352,17 +353,20 @@ export const AnnotationsInput = ({
         )}
       </InlineStack>
 
-      {inputType === "string" && !config?.options && (
-        <MultilineTextInputDialog
-          title={dialogTitle}
-          description="Enter a value for this annotation."
-          placeholder={placeholder}
-          initialValue={inputValue}
-          open={isDialogOpen}
-          onCancel={handleDialogCancel}
-          onConfirm={handleDialogConfirm}
-        />
-      )}
+      {inputType !== "boolean" &&
+        inputType !== "number" &&
+        !config?.options && (
+          <MultilineTextInputDialog
+            title={dialogTitle}
+            description="Enter a value for this annotation."
+            placeholder={placeholder}
+            initialValue={inputValue}
+            open={isDialogOpen}
+            onCancel={handleDialogCancel}
+            onConfirm={handleDialogConfirm}
+            maxLength={config?.max}
+          />
+        )}
     </>
   );
 };

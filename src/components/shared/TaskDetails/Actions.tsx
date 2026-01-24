@@ -12,6 +12,7 @@ import { DownloadYamlButton } from "./Actions/DownloadYamlButton";
 import { DuplicateTaskButton } from "./Actions/DuplicateTaskButton";
 import { EditComponentButton } from "./Actions/EditComponentButton";
 import { NavigateToSubgraphButton } from "./Actions/NavigateToSubgraphButton";
+import { RenameTaskButton } from "./Actions/RenameTaskButton";
 import { UpgradeTaskButton } from "./Actions/UpgradeTaskButton";
 
 interface TaskActionsProps {
@@ -59,6 +60,9 @@ const TaskActions = ({
   const navigateToSubgraph = isSubgraphNode && taskId && !readOnly && (
     <NavigateToSubgraphButton taskId={taskId} />
   );
+  const renameTask = taskId && !readOnly && !isSubgraphNode && (
+    <RenameTaskButton taskId={taskId} />
+  );
   const deleteComponent = onDelete && !readOnly && (
     <DeleteComponentButton onDelete={onDelete} />
   );
@@ -72,6 +76,7 @@ const TaskActions = ({
     duplicateTask,
     upgradeTask,
     navigateToSubgraph,
+    renameTask,
     deleteComponent,
   ].filter(Boolean);
 

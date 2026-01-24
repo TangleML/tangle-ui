@@ -17,7 +17,7 @@ import type {
   OutputSpec,
   TaskSpec,
 } from "@/utils/componentSpec";
-import { getComponentName } from "@/utils/getComponentName";
+import { getComponentName, getTaskDisplayName } from "@/utils/getComponentName";
 import { taskIdToNodeId } from "@/utils/nodes/nodeIdUtils";
 
 import {
@@ -63,6 +63,7 @@ export type TaskNodeContextType = {
   inputs: InputSpec[];
   outputs: OutputSpec[];
   name: string;
+  displayName: string;
   state: TaskNodeState;
   callbacks: TaskNodeCallbacks;
   select: () => void;
@@ -98,6 +99,7 @@ export const TaskNodeProvider = ({
   const outputs = componentRef.spec?.outputs ?? EMPTY_OUTPUTS;
 
   const name = getComponentName(componentRef);
+  const displayName = getTaskDisplayName(taskId ?? "Task", taskSpec);
 
   const isCustomComponent = !componentRef.url; // Custom components don't have a source url
 
@@ -203,11 +205,23 @@ export const TaskNodeProvider = ({
       inputs,
       outputs,
       name,
+      displayName,
       state,
       callbacks,
       select,
     }),
-    [taskSpec, taskId, nodeId, inputs, outputs, name, state, callbacks, select],
+    [
+      taskSpec,
+      taskId,
+      nodeId,
+      inputs,
+      outputs,
+      name,
+      displayName,
+      state,
+      callbacks,
+      select,
+    ],
   );
 
   return (
