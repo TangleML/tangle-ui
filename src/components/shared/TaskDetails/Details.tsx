@@ -9,8 +9,10 @@ import { getExecutionStatusLabel } from "@/utils/executionStatus";
 import { ContentBlock } from "../ContextPanel/Blocks/ContentBlock";
 import { KeyValueList } from "../ContextPanel/Blocks/KeyValueList";
 import { TextBlock } from "../ContextPanel/Blocks/TextBlock";
+import { InlineEditor } from "../InlineEditor/InlineEditor";
 import { withSuspenseWrapper } from "../SuspenseWrapper";
 import TaskActions from "./Actions";
+import { DisplayNameEditor } from "./DisplayNameEditor";
 import { ExecutionDetails } from "./ExecutionDetails";
 import { GithubDetails } from "./GithubDetails";
 
@@ -42,7 +44,7 @@ const TaskDetailsInternal = ({
 
   const { url, digest } = hydratedComponentRef;
 
-  const { taskSpec, taskId } = taskNode || {};
+  const { displayName, taskSpec, taskId } = taskNode || {};
 
   const canonicalUrl =
     hydratedComponentRef.spec.metadata?.annotations?.canonical_location;
@@ -97,6 +99,15 @@ const TaskDetailsInternal = ({
     <BlockStack className="border rounded-md divide-y overflow-auto hide-scrollbar">
       {taskId && (
         <TextBlock title="Task ID" text={taskId} className={BASE_BLOCK_CLASS} />
+      )}
+
+      {!readOnly && taskId && (
+        <ContentBlock title="Display Name" className={BASE_BLOCK_CLASS}>
+          <InlineEditor
+            value={displayName}
+            editor={<DisplayNameEditor taskId={taskId} />}
+          />
+        </ContentBlock>
       )}
 
       {status && (

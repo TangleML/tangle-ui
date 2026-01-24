@@ -63,7 +63,7 @@ const TaskNodeCard = () => {
   const [expandedInputs, setExpandedInputs] = useState(false);
   const [expandedOutputs, setExpandedOutputs] = useState(false);
 
-  const { name, state, nodeId, taskSpec, taskId } = taskNode;
+  const { name, displayName, state, nodeId, taskSpec, taskId } = taskNode;
   const { dimensions, selected, highlighted, readOnly } = state;
 
   const { isConnectedToSelectedEdge } = useEdgeSelectionHighlight(nodeId);
@@ -242,11 +242,17 @@ const TaskNodeCard = () => {
                 <Icon name="ZapOff" size="sm" className="text-orange-400" />
               </QuickTooltip>
             )}
-            <CardTitle className="wrap-break-word text-left text-xs text-slate-900">
-              {name}
+            <CardTitle className="wrap-anywhere max-w-full text-left text-xs text-slate-900">
+              {displayName}
             </CardTitle>
           </InlineStack>
-          {taskId &&
+          {displayName !== name && (
+            <Text size="xs" tone="subdued" className="font-light">
+              {name}
+            </Text>
+          )}
+          {displayName === name &&
+            taskId &&
             taskId !== name &&
             !taskId.match(new RegExp(`^${name}\\s*\\d+$`)) && (
               <Text size="xs" tone="subdued" className="font-light">

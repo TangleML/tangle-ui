@@ -1,10 +1,13 @@
 import type { ArgumentInput } from "@/types/arguments";
-import type {
-  ArgumentType,
-  TaskSpec,
-  TypeSpecType,
+import {
+  type ArgumentType,
+  type GraphSpec,
+  type TaskSpec,
+  type TypeSpecType,
 } from "@/utils/componentSpec";
 import { isScalar } from "@/utils/types";
+
+import { getDisplayValue } from "../TaskNodeCard/handleUtils";
 
 export const getArgumentInputs = (taskSpec: TaskSpec) => {
   const componentSpec = taskSpec.componentRef.spec;
@@ -51,18 +54,15 @@ export const typeSpecToString = (typeSpec?: TypeSpecType): string => {
   return JSON.stringify(typeSpec);
 };
 
-export const getPlaceholder = (argument: ArgumentType) => {
+export const getPlaceholder = (
+  argument: ArgumentType,
+  graphSpec?: GraphSpec,
+) => {
   if (isScalar(argument) || !argument) {
     return null;
   }
 
-  if (argument && "taskOutput" in argument) {
-    return `<from task: ${argument.taskOutput.taskId} / ${argument.taskOutput.outputName}>`;
-  }
-  if (argument && "graphInput" in argument) {
-    return `<from graph input: ${argument.graphInput.inputName}>`;
-  }
-  return "<reference>";
+  return getDisplayValue(argument, graphSpec);
 };
 
 export const getInputValue = (argumentInput: ArgumentInput) => {

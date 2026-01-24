@@ -4,6 +4,10 @@ import { Button } from "@/components/ui/button";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Heading, Paragraph } from "@/components/ui/typography";
 import type { AnnotationConfig, Annotations } from "@/types/annotations";
+import {
+  DISPLAY_NAME_MAX_LENGTH,
+  TASK_DISPLAY_NAME_ANNOTATION,
+} from "@/utils/annotations";
 
 import { AnnotationsInput } from "./AnnotationsInput";
 import {
@@ -16,6 +20,12 @@ const DEFAULT_COMMON_ANNOTATIONS: AnnotationConfig[] = [
     annotation: "editor.position",
     label: "Node position",
     type: "json",
+  },
+  {
+    annotation: TASK_DISPLAY_NAME_ANNOTATION,
+    label: "Display Name",
+    type: "string",
+    max: DISPLAY_NAME_MAX_LENGTH,
   },
 ];
 

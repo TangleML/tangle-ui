@@ -8,7 +8,9 @@ import {
   DialogFooter,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { InlineStack } from "@/components/ui/layout";
 import { Textarea } from "@/components/ui/textarea";
+import { Paragraph } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 
 interface MultilineTextInputDialogProps {
@@ -17,6 +19,7 @@ interface MultilineTextInputDialogProps {
   placeholder?: string;
   initialValue?: string;
   open: boolean;
+  maxLength?: number;
   onCancel: () => void;
   onConfirm: (value: string) => void;
 }
@@ -27,6 +30,7 @@ export const MultilineTextInputDialog = ({
   placeholder,
   initialValue = "",
   open,
+  maxLength,
   onCancel,
   onConfirm,
 }: MultilineTextInputDialogProps) => {
@@ -68,12 +72,26 @@ export const MultilineTextInputDialog = ({
           onChange={(e) => setValue(e.target.value)}
           placeholder={placeholder}
           className="min-h-32 max-h-[80vh]"
+          maxLength={maxLength}
         />
         <DialogFooter>
-          <Button variant="outline" onClick={handleCancel}>
-            Cancel
-          </Button>
-          <Button onClick={handleConfirm}>Confirm</Button>
+          <InlineStack gap="2" align="space-between" className="w-full">
+            {maxLength && value.length >= maxLength && (
+              <Paragraph tone="warning" size="xs">
+                Maximum length {maxLength} characters
+              </Paragraph>
+            )}
+            <InlineStack
+              gap="2"
+              align="end"
+              className={cn(!maxLength && "w-full")}
+            >
+              <Button variant="outline" onClick={handleCancel}>
+                Cancel
+              </Button>
+              <Button onClick={handleConfirm}>Confirm</Button>
+            </InlineStack>
+          </InlineStack>
         </DialogFooter>
       </DialogContent>
     </Dialog>
