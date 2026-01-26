@@ -14,7 +14,7 @@ const BUGSNAG_CUSTOM_GROUPING_KEY = import.meta.env
 
 const GENERIC_ERROR_CLASS = "Error";
 
-export const isBugsnagEnabled = (): boolean => Boolean(BUGSNAG_API_KEY);
+export const IS_BUGSNAG_ENABLED = Boolean(BUGSNAG_API_KEY);
 
 const getBugsnagConfig = (): BrowserConfig => {
   return {
