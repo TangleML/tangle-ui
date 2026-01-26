@@ -1,8 +1,9 @@
 import { useLocation, useNavigate } from "@tanstack/react-router";
-import { Edit3 } from "lucide-react";
 
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
-import { PipelineNameDialog } from "@/components/shared/Dialogs";
+import { RenameDialog } from "@/components/shared/Dialogs/RenameDialog";
+import { Icon } from "@/components/ui/icon";
+import useLoadUserPipelines from "@/hooks/useLoadUserPipelines";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { APP_ROUTES } from "@/routes/router";
@@ -13,6 +14,8 @@ const RenamePipeline = () => {
   const { componentSpec, saveComponentSpec } = useComponentSpec();
   const notify = useToastNotification();
   const navigate = useNavigate();
+  const { userPipelines, refetch: refetchUserPipelines } =
+    useLoadUserPipelines();
 
   const location = useLocation();
   const pathname = location.pathname;
@@ -44,11 +47,36 @@ const RenamePipeline = () => {
     navigate({ to: url });
   };
 
+  const handleValidation = (value: string) => {
+    const warnings: string[] = [];
+    const errors: string[] = [];
+
+    const existingPipelineNames = new Set(
+      Array.from(userPipelines.keys()).map((name) => name.toLowerCase()),
+    );
+
+    const normalizedValue = value.trim().toLowerCase();
+
+    if (normalizedValue === "") {
+      errors.push("Name cannot be empty");
+    } else if (existingPipelineNames.has(normalizedValue)) {
+      errors.push("Name already exists");
+    }
+
+    return { warnings, errors };
+  };
+
+  const handleOpenChange = (open: boolean) => {
+    if (open) {
+      refetchUserPipelines();
+    }
+  };
+
   return (
-    <PipelineNameDialog
+    <RenameDialog
       trigger={
         <TooltipButton variant="outline" tooltip="Rename pipeline">
-          <Edit3 />
+          <Icon name="PencilLine" />
         </TooltipButton>
       }
       title="Name Pipeline"
@@ -57,6 +85,8 @@ const RenamePipeline = () => {
       onSubmit={handleTitleUpdate}
       submitButtonText="Update Title"
       isSubmitDisabled={isSubmitDisabled}
+      validate={handleValidation}
+      onOpenChange={handleOpenChange}
     />
   );
 };

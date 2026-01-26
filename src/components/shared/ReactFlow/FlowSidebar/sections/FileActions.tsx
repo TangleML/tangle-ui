@@ -1,7 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { PipelineNameDialog } from "@/components/shared/Dialogs";
+import { RenameDialog } from "@/components/shared/Dialogs/RenameDialog";
 import ImportPipeline from "@/components/shared/ImportPipeline";
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
@@ -16,6 +16,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Spinner } from "@/components/ui/spinner";
+import useLoadUserPipelines from "@/hooks/useLoadUserPipelines";
 import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
 import { useAutoSaveStatus } from "@/providers/AutoSaveProvider";
@@ -31,6 +32,8 @@ const FileActions = ({ isOpen }: { isOpen: boolean }) => {
   const { savePipeline } = useSavePipeline(componentSpec);
   const notify = useToastNotification();
   const navigate = useNavigate();
+  const { userPipelines, refetch: refetchUserPipelines } =
+    useLoadUserPipelines();
 
   const [onLoadLastSavedAt, setOnLoadLastSavedAt] = useState<Date | null>(null);
 
@@ -91,6 +94,31 @@ const FileActions = ({ isOpen }: { isOpen: boolean }) => {
       : `Untitled Pipeline ${new Date().toLocaleTimeString()}`;
   }, [componentSpec?.name]);
 
+  const handleValidation = (value: string) => {
+    const warnings: string[] = [];
+    const errors: string[] = [];
+
+    const existingPipelineNames = new Set(
+      Array.from(userPipelines.keys()).map((name) => name.toLowerCase()),
+    );
+
+    const normalizedValue = value.trim().toLowerCase();
+
+    if (normalizedValue === "") {
+      errors.push("Name cannot be empty");
+    } else if (existingPipelineNames.has(normalizedValue)) {
+      errors.push("Name already exists");
+    }
+
+    return { warnings, errors };
+  };
+
+  const handleOpenChange = (open: boolean) => {
+    if (open) {
+      refetchUserPipelines();
+    }
+  };
+
   useEffect(() => {
     const fetchLastSaved = async () => {
       if (componentSpec?.name) {
@@ -138,7 +166,7 @@ const FileActions = ({ isOpen }: { isOpen: boolean }) => {
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <PipelineNameDialog
+            <RenameDialog
               trigger={
                 <SidebarMenuButton
                   tooltip="Save Pipeline As"
@@ -153,7 +181,9 @@ const FileActions = ({ isOpen }: { isOpen: boolean }) => {
               initialName={getDuplicatePipelineName()}
               onSubmit={handleSavePipelineAs}
               submitButtonText="Save"
-              submitButtonIcon={<Icon name="SaveAll" className="mr-2" />}
+              submitButtonIcon={<Icon name="SaveAll" />}
+              validate={handleValidation}
+              onOpenChange={handleOpenChange}
             />
           </SidebarMenuItem>
           <SidebarMenuItem>
