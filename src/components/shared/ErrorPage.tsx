@@ -1,5 +1,5 @@
 import Bugsnag from "@bugsnag/js";
-import { type ErrorComponentProps, useRouter } from "@tanstack/react-router";
+import { useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
 
 import { InfoBox } from "@/components/shared/InfoBox";
@@ -8,30 +8,51 @@ import { BlockStack } from "@/components/ui/layout";
 import { Paragraph, Text } from "@/components/ui/typography";
 import { getBugsnagConfig } from "@/services/errorManagement/bugsnag";
 
-export const ErrorPage = ({ error, reset }: ErrorComponentProps) => {
+/**
+ * Unified props for ErrorPage component.
+ * Supports both router error props (reset) and react-error-boundary props (resetErrorBoundary).
+ */
+interface ErrorPageProps {
+  error: unknown;
+  reset?: () => void;
+  resetErrorBoundary?: () => void;
+}
+
+export const ErrorPage = ({
+  error,
+  reset,
+  resetErrorBoundary,
+}: ErrorPageProps) => {
   const router = useRouter();
 
-  useEffect(() => {
-    const config = getBugsnagConfig();
+  // Use whichever reset function is provided
+  const resetFn = resetErrorBoundary ?? reset;
 
-    if (config.enabled && error instanceof Error) {
-      Bugsnag.notify(error, (event) => {
-        event.addMetadata("error_handler", {
-          pathname: window.location.pathname,
+  // Report error to Bugsnag when used from router (ErrorBoundary component handles its own reporting)
+  useEffect(() => {
+    // Only report if this is a router error (has 'reset' instead of 'resetErrorBoundary')
+    if (reset) {
+      const config = getBugsnagConfig();
+
+      if (config.enabled && error instanceof Error) {
+        Bugsnag.notify(error, (event) => {
+          event.addMetadata("error_handler", {
+            pathname: window.location.pathname,
+          });
         });
-      });
+      }
     }
-  }, [error]);
+  }, [error, reset]);
 
   const handleRefresh = () => {
-    // Reset error boundary if available (some callers provide this function)
-    reset?.();
+    // Reset error boundary if available
+    resetFn?.();
     window.location.reload();
   };
 
   const handleGoHome = () => {
-    // Reset error boundary if available (some callers provide this function)
-    reset?.();
+    // Reset error boundary if available
+    resetFn?.();
     router.navigate({ to: "/" });
   };
 
