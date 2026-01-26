@@ -12,7 +12,7 @@ import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 
 import RootLayout from "../components/layout/RootLayout";
 import Editor from "./Editor";
-import ErrorPage from "./ErrorPage";
+import FullPageError from "./FullPageError";
 import Home from "./Home";
 import NotFoundPage from "./NotFoundPage";
 import PipelineRun from "./PipelineRun";
@@ -40,7 +40,7 @@ export const APP_ROUTES = {
 
 const rootRoute = createRootRoute({
   component: Outlet,
-  errorComponent: ErrorPage,
+  errorComponent: FullPageError,
   notFoundComponent: NotFoundPage,
 });
 
