@@ -7,6 +7,7 @@ import { OutputNameEditor } from "@/components/Editor/IOEditor/OutputNameEditor"
 import { getOutputConnectedDetails } from "@/components/Editor/utils/getOutputConnectedDetails";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { QuickTooltip } from "@/components/ui/tooltip";
 import { Paragraph } from "@/components/ui/typography";
 import { useEdgeSelectionHighlight } from "@/hooks/useEdgeSelectionHighlight";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,7 @@ interface IONodeProps {
     default?: string;
     type?: string;
     readOnly?: boolean;
+    description?: string;
   };
   selected: boolean;
   deletable: boolean;
@@ -187,15 +189,22 @@ const IONode = ({ id, type, data, selected = false }: IONodeProps) => {
   return (
     <Card
       className={cn(
-        "border-2 max-w-[300px] p-0 transition-opacity duration-200",
+        "border-2 max-w-60 p-0 transition-opacity duration-200",
         borderColor,
         isDimmed && "opacity-40",
       )}
     >
-      <CardHeader className="px-2 py-2.5">
+      <CardHeader className="p-2">
         <CardTitle className="wrap-break-word text-sm">{data.label}</CardTitle>
+        {!!data.description && (
+          <QuickTooltip content={data.description} className="w-full">
+            <Paragraph tone="subdued" className="italic truncate">
+              {data.description}
+            </Paragraph>
+          </QuickTooltip>
+        )}
       </CardHeader>
-      <CardContent className="p-2 max-w-[250px]">
+      <CardContent className="p-2 max-w-60">
         <BlockStack gap="2">
           {/* type */}
           <Paragraph size="xs" font="mono" className="truncate text-slate-700">
