@@ -15,7 +15,7 @@ const DEFAULT_NOTIFY_ENDPOINT = "https://notify.bugsnag.com";
 const DEFAULT_SESSIONS_ENDPOINT = "https://sessions.bugsnag.com";
 const GENERIC_ERROR_CLASS = "Error";
 
-const getBugsnagConfig = (): BugsnagConfig => {
+export const getBugsnagConfig = (): BugsnagConfig => {
   const apiKey = import.meta.env.VITE_BUGSNAG_API_KEY || "";
   const enabled = Boolean(apiKey);
 
