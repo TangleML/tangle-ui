@@ -8,6 +8,10 @@ import ReactDOM from "react-dom/client";
 import { scan } from "react-scan";
 
 import { router } from "./routes/router";
+import { initializeBugsnag } from "./services/errorManagement/bugsnag";
+
+// Initialize error reporting early
+initializeBugsnag();
 
 const queryClient = new QueryClient();
 
