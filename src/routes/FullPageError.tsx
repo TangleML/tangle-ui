@@ -1,6 +1,6 @@
 import { type ErrorComponentProps, useRouter } from "@tanstack/react-router";
 
-import { ErrorDisplay } from "@/components/shared/ErrorDisplay";
+import { ErrorHandler } from "@/components/shared/ErrorHandler";
 
 export default function FullPageError({ error }: ErrorComponentProps) {
   const router = useRouter();
@@ -9,14 +9,10 @@ export default function FullPageError({ error }: ErrorComponentProps) {
     router.navigate({ to: "/" });
   };
 
-  const handleRefresh = () => {
-    window.location.reload();
-  };
-
   return (
-    <ErrorDisplay
+    <ErrorHandler
       error={error}
-      onRefresh={handleRefresh}
+      errorType="router_error"
       onGoHome={handleGoHome}
     />
   );
