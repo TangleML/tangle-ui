@@ -83,13 +83,13 @@ export function PipelineRunFiltersBar({
   const dateRange: DateRange | undefined =
     filters.created_after || filters.created_before
       ? {
-          from: filters.created_after
-            ? new Date(filters.created_after)
-            : undefined,
-          to: filters.created_before
-            ? new Date(filters.created_before)
-            : undefined,
-        }
+        from: filters.created_after
+          ? new Date(filters.created_after)
+          : undefined,
+        to: filters.created_before
+          ? new Date(filters.created_before)
+          : undefined,
+      }
       : undefined;
 
   const handleDateRangeChange = (range: DateRange | undefined) => {
