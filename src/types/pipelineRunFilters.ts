@@ -20,4 +20,8 @@ export interface PipelineRunFilters {
   created_before?: string; // ISO datetime
   pipeline_name?: string;
   annotations?: AnnotationFilter[];
+  sort_field?: "created_at" | "pipeline_name";
+  sort_direction?: "asc" | "desc";
 }
+
+export type SortField = NonNullable<PipelineRunFilters["sort_field"]>;
