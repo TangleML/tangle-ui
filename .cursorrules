@@ -1,4 +1,4 @@
-# Cursor AI Rules for Pipeline Studio App
+# Cursor AI Rules for Pipeline Studio App.
 
 ## Project Overview
 
@@ -303,21 +303,23 @@ This project uses the React Compiler for automatic memoization. Files/directorie
 **For new files**, ensure they follow React Compiler rules from the start:
 
 1. **Don't mutate values during render**
+
    ```typescript
    // ❌ Bad - mutating during render
    const items = props.items;
    items.push(newItem);
-   
+
    // ✅ Good - create new reference
    const items = [...props.items, newItem];
    ```
 
 2. **Don't read/write refs during render**
+
    ```typescript
    // ❌ Bad - reading ref during render
    const value = myRef.current;
    return <div>{value}</div>;
-   
+
    // ✅ Good - read refs in effects or callbacks
    useEffect(() => {
      const value = myRef.current;
@@ -337,6 +339,7 @@ This project uses the React Compiler for automatic memoization. Files/directorie
 #### Adding Files to React Compiler
 
 When a file is added to `react-compiler.config.js`:
+
 - Remove unnecessary `useCallback` and `useMemo` (compiler handles this)
 - Verify no compiler violations with `npm run validate`
 - Test the component still works correctly
@@ -344,8 +347,9 @@ When a file is added to `react-compiler.config.js`:
 #### React Compiler Config Structure
 
 Files are organized by cleanup effort in `react-compiler.config.js`:
+
 - Top section: Already enabled directories/files
-- Middle: Ready to enable (0 useCallback/useMemo)  
+- Middle: Ready to enable (0 useCallback/useMemo)
 - Bottom (commented): Need cleanup before enabling
 
 ## Component Architecture
@@ -508,6 +512,7 @@ Present findings in a clear, actionable format:
 ## Issues Found
 
 ### 1. **[Issue Title]** - [File:Line]
+
 [Code snippet showing the problem]
 **Why**: [Brief explanation]
 **Fix**: [Suggested solution]
@@ -515,15 +520,17 @@ Present findings in a clear, actionable format:
 ---
 
 ## What's Good
+
 - [Positive observations about the code]
 - Note if file was added to `react-compiler.config.js` (React Compiler enabled)
 
 ---
 
 ## Summary Table
-| Issue | Severity | Location |
-|-------|----------|----------|
-| ... | High/Medium/Low | file:line |
+
+| Issue | Severity        | Location  |
+| ----- | --------------- | --------- |
+| ...   | High/Medium/Low | file:line |
 ```
 
 ### Review Principles
@@ -553,12 +560,14 @@ After completing a code generation task, scan the surrounding area for small, lo
 4. **Clear benefit**: Improves readability, removes dead code, or fixes obvious issues
 
 **Examples of good "while we're here" suggestions:**
+
 - Removing an unused import in the file you just edited
 - Fixing a typo in a comment nearby
 - Removing an unused variable in the same function
 - Updating a deprecated pattern you noticed (e.g., `lucide-react` → `Icon` component)
 
 **Do NOT suggest cleanup for:**
+
 - Complex refactors (> 30 lines)
 - Logic changes
 - Files you didn't touch
@@ -566,6 +575,7 @@ After completing a code generation task, scan the surrounding area for small, lo
 - Anything that could break functionality
 
 **How to offer:**
+
 ```
 ---
 While we're here, I noticed a small cleanup opportunity:
@@ -585,6 +595,7 @@ When asked to create planning documents, architecture decisions, or investigatio
 - These files persist locally but won't be committed to the repo
 
 **Example use cases:**
+
 - Feature planning and design docs
 - Bug investigation notes
 - Architecture decision records (local drafts)
@@ -592,6 +603,7 @@ When asked to create planning documents, architecture decisions, or investigatio
 - Research and exploration notes
 
 **File naming convention:**
+
 ```
 .local/[feature-or-task]-[type].md
 

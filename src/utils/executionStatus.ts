@@ -84,6 +84,12 @@ export function getExecutionStatusLabel(status: string | undefined): string {
   return EXECUTION_STATUS_LABELS[status] ?? status;
 }
 
+export function isValidExecutionStatus(
+  value: string,
+): value is ContainerExecutionStatus {
+  return value in EXECUTION_STATUS_LABELS;
+}
+
 /**
  * Flatten nested child_execution_status_stats into a single aggregated stats object.
  */
