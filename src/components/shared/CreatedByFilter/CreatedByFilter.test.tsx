@@ -12,7 +12,9 @@ describe("CreatedByFilter", () => {
       expect(screen.getByRole("switch")).toBeInTheDocument();
       expect(screen.getByLabelText("Created by me")).toBeInTheDocument();
       expect(screen.getByPlaceholderText("Search by user")).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Search" })).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Search" }),
+      ).toBeInTheDocument();
     });
 
     it("should show 'Created by me' when no value", () => {
@@ -94,7 +96,10 @@ describe("CreatedByFilter", () => {
       const onChange = vi.fn();
       render(<CreatedByFilter value={undefined} onChange={onChange} />);
 
-      await user.type(screen.getByPlaceholderText("Search by user"), "jane.doe");
+      await user.type(
+        screen.getByPlaceholderText("Search by user"),
+        "jane.doe",
+      );
       await user.click(screen.getByRole("button", { name: "Search" }));
 
       expect(onChange).toHaveBeenCalledWith("jane.doe");
@@ -116,7 +121,10 @@ describe("CreatedByFilter", () => {
       const onChange = vi.fn();
       render(<CreatedByFilter value={undefined} onChange={onChange} />);
 
-      await user.type(screen.getByPlaceholderText("Search by user"), "  jane  ");
+      await user.type(
+        screen.getByPlaceholderText("Search by user"),
+        "  jane  ",
+      );
       await user.click(screen.getByRole("button", { name: "Search" }));
 
       expect(onChange).toHaveBeenCalledWith("jane");
