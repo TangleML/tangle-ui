@@ -9,7 +9,7 @@ import type {
  * Note: The mapping is intentionally aligned to the status table from:
  * https://github.com/TangleML/tangle-ui/issues/1540
  */
-const EXECUTION_STATUS_LABELS: Record<string, string> = {
+export const EXECUTION_STATUS_LABELS: Record<string, string> = {
   CANCELLED: "Cancelled",
   CANCELLING: "Cancelling",
   FAILED: "Failed",
