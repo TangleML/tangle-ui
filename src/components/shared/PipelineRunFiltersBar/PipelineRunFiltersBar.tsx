@@ -1,12 +1,14 @@
 import { useState } from "react";
 import type { DateRange } from "react-day-picker";
 
+import { AnnotationFilterInput } from "@/components/shared/AnnotationFilterInput/AnnotationFilterInput";
 import { Button } from "@/components/ui/button";
 import { DatePickerWithRange } from "@/components/ui/date-picker";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { useRunSearchParams } from "@/hooks/useRunSearchParams";
+import type { AnnotationFilter } from "@/types/pipelineRunFilters";
 
 export function PipelineRunFiltersBar() {
   const { filters, setFilter, setFilters, setFilterDebounced } =
@@ -31,6 +33,10 @@ export function PipelineRunFiltersBar() {
       created_after: range?.from?.toISOString(),
       created_before: range?.to?.toISOString(),
     });
+  };
+
+  const handleAnnotationsChange = (annotations: AnnotationFilter[]) => {
+    setFilter("annotations", annotations.length > 0 ? annotations : undefined);
   };
 
   return (
@@ -74,6 +80,11 @@ export function PipelineRunFiltersBar() {
           />
         </div>
       </InlineStack>
+
+      <AnnotationFilterInput
+        filters={filters.annotations ?? []}
+        onChange={handleAnnotationsChange}
+      />
     </BlockStack>
   );
 }
