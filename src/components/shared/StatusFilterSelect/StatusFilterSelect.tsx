@@ -13,9 +13,9 @@ import {
   isValidExecutionStatus,
 } from "@/utils/executionStatus";
 
-const STATUS_OPTIONS = (
-  Object.keys(EXECUTION_STATUS_LABELS) as string[]
-).filter((s): s is ContainerExecutionStatus => isValidExecutionStatus(s));
+const STATUS_OPTIONS = Object.keys(EXECUTION_STATUS_LABELS).filter(
+  (s): s is ContainerExecutionStatus => isValidExecutionStatus(s),
+);
 
 interface StatusFilterSelectProps {
   value: ContainerExecutionStatus | undefined;
