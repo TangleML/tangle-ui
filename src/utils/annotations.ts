@@ -53,3 +53,5 @@ function hasAnnotation(
 export const DISPLAY_NAME_MAX_LENGTH = 100;
 export const TASK_DISPLAY_NAME_ANNOTATION = "display_name";
 export const PIPELINE_NOTES_ANNOTATION = "notes";
+export const PIPELINE_RUN_NOTES_ANNOTATION = "notes";
+export const PIPELINE_CANONICAL_NAME_ANNOTATION = "canonical-pipeline-name";

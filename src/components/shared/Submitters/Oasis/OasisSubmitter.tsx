@@ -14,6 +14,7 @@ import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
 import { useBackend } from "@/providers/BackendProvider";
 import { APP_ROUTES } from "@/routes/router";
+import { updateRunNotes } from "@/services/pipelineRunService";
 import type { PipelineRun } from "@/types/pipelineRun";
 import {
   type ComponentSpec,
@@ -95,7 +96,7 @@ const OasisSubmitter = ({
   onlyFixableIssues = false,
 }: OasisSubmitterProps) => {
   const { isAuthorized } = useAwaitAuthorization();
-  const { configured, available } = useBackend();
+  const { backendUrl, configured, available } = useBackend();
   const { mutate: submit, isPending: isSubmitting } = useSubmitPipeline();
   const isAutoRedirect = useFlagValue("redirect-on-new-pipeline-run");
 
@@ -104,6 +105,13 @@ const OasisSubmitter = ({
   const { cooldownTime, setCooldownTime } = useCooldownTimer(0);
   const notify = useToastNotification();
   const navigate = useNavigate();
+
+  const runNotes = useRef<string>("");
+
+  const { mutate: saveNotes } = useMutation({
+    mutationFn: (runId: string) =>
+      updateRunNotes(runId, backendUrl, runNotes.current),
+  });
 
   const handleError = (message: string) => {
     notify(message, "error");
@@ -136,6 +144,9 @@ const OasisSubmitter = ({
   };
 
   const onSuccess = (response: PipelineRun) => {
+    if (runNotes.current.trim() !== "") {
+      saveNotes(response.id.toString());
+    }
     setSubmitSuccess(true);
     setCooldownTime(3);
     onSubmitComplete?.();
@@ -187,7 +198,11 @@ const OasisSubmitter = ({
     });
   };
 
-  const handleSubmitWithArguments = (args: Record<string, string>) => {
+  const handleSubmitWithArguments = (
+    args: Record<string, string>,
+    notes: string,
+  ) => {
+    runNotes.current = notes;
     setIsArgumentsDialogOpen(false);
     handleSubmit(args);
   };
@@ -249,7 +264,7 @@ const OasisSubmitter = ({
             <div
               className={cn(
                 "text-xs font-light -ml-1",
-                configured ? "text-red-700" : "text-yellow-700",
+                configured ? "text-destructive" : "text-warning",
               )}
             >
               (has validation issues)
@@ -259,7 +274,7 @@ const OasisSubmitter = ({
             <div
               className={cn(
                 "text-xs font-light -ml-1",
-                configured ? "text-red-700" : "text-yellow-700",
+                configured ? "text-destructive" : "text-warning",
               )}
             >
               {`(backend ${configured ? "unavailable" : "unconfigured"})`}
