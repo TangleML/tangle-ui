@@ -7,7 +7,9 @@
     "openapi-ts.config.ts",
     "vite.config.ghpages.js",
     "src/types/pipelineRunFilters.ts",
-    "src/components/shared/PipelineRunFiltersBar/PipelineRunFiltersBar.tsx"
+    "src/components/shared/PipelineRunFiltersBar/PipelineRunFiltersBar.tsx",
+    "src/hooks/useRunSearchParams.ts",
+    "src/components/shared/PipelineRunFiltersBar/**"
   ],
   "ignoreDependencies": [
     "@radix-ui/react-accordion",
