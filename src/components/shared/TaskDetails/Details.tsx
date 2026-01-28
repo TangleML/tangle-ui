@@ -7,7 +7,7 @@ import type { ComponentReference } from "@/utils/componentSpec";
 import { getExecutionStatusLabel } from "@/utils/executionStatus";
 
 import { ContentBlock } from "../ContextPanel/Blocks/ContentBlock";
-import { ListBlock } from "../ContextPanel/Blocks/ListBlock";
+import { KeyValueList } from "../ContextPanel/Blocks/KeyValueList";
 import { TextBlock } from "../ContextPanel/Blocks/TextBlock";
 import { withSuspenseWrapper } from "../SuspenseWrapper";
 import TaskActions from "./Actions";
@@ -159,15 +159,13 @@ const TaskDetailsInternal = ({
           defaultOpen={false}
           className={BASE_BLOCK_CLASS}
         >
-          <ListBlock
+          <KeyValueList
             items={Object.entries(taskSpec?.annotations || {}).map(
               ([key, value]) => ({
                 label: key,
                 value: String(value),
-                copyable: true,
               }),
             )}
-            marker="none"
           />
         </ContentBlock>
       )}

@@ -22,18 +22,25 @@ export const Attribute = ({
     return null;
   }
 
+  const labelContent =
+    copyable && label ? (
+      <CopyText className="text-xs truncate" compact>
+        {label}
+      </CopyText>
+    ) : (
+      <Paragraph
+        size="xs"
+        tone={critical ? "critical" : "inherit"}
+        className="truncate"
+        title={label}
+      >
+        {label}
+      </Paragraph>
+    );
+
   return (
     <InlineStack gap="2" blockAlign="center" wrap="nowrap">
-      {label && (
-        <Paragraph
-          size="xs"
-          tone={critical ? "critical" : "inherit"}
-          className="truncate"
-          title={label}
-        >
-          {label}:
-        </Paragraph>
-      )}
+      {label && labelContent}
 
       <div className="min-w-16 flex-1 overflow-hidden">
         {isLink(value) ? (
@@ -53,6 +60,7 @@ export const Attribute = ({
               "text-xs truncate",
               critical ? "text-destructive" : "text-muted-foreground",
             )}
+            compact
           >
             {value}
           </CopyText>

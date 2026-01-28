@@ -12,7 +12,7 @@ import { formatDate, formatDuration } from "@/utils/date";
 
 import type { AttributeProps } from "../ContextPanel/Blocks/Attribute";
 import { ContentBlock } from "../ContextPanel/Blocks/ContentBlock";
-import { ListBlock } from "../ContextPanel/Blocks/ListBlock";
+import { KeyValueList } from "../ContextPanel/Blocks/KeyValueList";
 import { InfoBox } from "../InfoBox";
 
 interface ExecutionDetailsProps {
@@ -108,7 +108,7 @@ export const ExecutionDetails = ({
       className={className}
     >
       <BlockStack gap="2">
-        <ListBlock items={executionItems} marker="none" />
+        <KeyValueList items={executionItems} />
 
         {!isSubgraph && isLoadingContainerState && (
           <BlockStack gap="2">
