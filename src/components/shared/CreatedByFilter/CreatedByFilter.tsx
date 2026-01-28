@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,16 @@ interface CreatedByFilterProps {
  */
 export function CreatedByFilter({ value, onChange }: CreatedByFilterProps) {
   const [searchUser, setSearchUser] = useState(value ?? "");
+
+  // Sync internal state when value prop changes externally (e.g., URL navigation, badge removal)
+  useEffect(() => {
+    // Only sync if value is different and not "me" (don't populate input with "me")
+    if (value !== undefined && value !== "me") {
+      setSearchUser(value);
+    } else if (value === undefined) {
+      setSearchUser("");
+    }
+  }, [value]);
 
   const isFilterActive = value !== undefined;
   const toggleText = value ? `Created by ${value}` : "Created by me";

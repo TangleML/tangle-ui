@@ -2,6 +2,7 @@ import { useLocation, useNavigate, useSearch } from "@tanstack/react-router";
 import { useRef } from "react";
 
 import type { PipelineRunFilters } from "@/types/pipelineRunFilters";
+import { parseFilterParam } from "@/utils/pipelineRunFilterUtils";
 
 const DEBOUNCE_MS = 300;
 
@@ -11,26 +12,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function getStringOrUndefined(value: unknown): string | undefined {
   return typeof value === "string" ? value : undefined;
-}
-
-/**
- * Parse the filter query param from URL into PipelineRunFilters object.
- */
-function parseFiltersFromUrl(
-  filterParam: string | undefined,
-): PipelineRunFilters {
-  if (!filterParam) return {};
-
-  try {
-    const parsed: unknown = JSON.parse(filterParam);
-    if (isRecord(parsed)) {
-      return parsed as PipelineRunFilters;
-    }
-  } catch {
-    // Invalid JSON
-  }
-
-  return {};
 }
 
 /**
@@ -95,7 +76,8 @@ export function useRunSearchParams(): UseRunSearchParamsReturn {
   const filterParam = isRecord(search)
     ? getStringOrUndefined(search.filter)
     : undefined;
-  const filters = parseFiltersFromUrl(filterParam);
+  // Use shared parser that handles both JSON (new) and key:value (legacy) formats
+  const filters = parseFilterParam(filterParam);
 
   const updateUrl = (newFilters: PipelineRunFilters) => {
     const serialized = serializeFiltersToUrl(newFilters);
