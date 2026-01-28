@@ -18,7 +18,12 @@ import { checkInputConnectionToRequiredFields } from "@/utils/inputConnectionUti
 import { inputNameToNodeId } from "@/utils/nodes/nodeIdUtils";
 import { updateSubgraphSpec } from "@/utils/subgraphUtils";
 
-import { NameField, TextField, TypeField } from "./FormFields/FormFields";
+import {
+  DescriptionField,
+  NameField,
+  TextField,
+  TypeField,
+} from "./FormFields/FormFields";
 import { checkNameCollision } from "./FormFields/utils";
 import { InputValueDialog } from "./InputValueDialog";
 
@@ -57,6 +62,9 @@ export const InputValueEditor = ({
 
   const [inputValue, setInputValue] = useState(initialInputValue);
   const [inputName, setInputName] = useState(input.name);
+  const [inputDescription, setInputDescription] = useState(
+    input.description ?? "",
+  );
   const [inputType, setInputType] = useState(input.type?.toString() ?? "any");
   const [inputOptional, setInputOptional] = useState(initialIsOptional);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -74,6 +82,7 @@ export const InputValueEditor = ({
     oldName: string,
     value: string,
     newName: string,
+    description: string,
     optional: boolean,
     type: string,
   ) => {
@@ -91,6 +100,7 @@ export const InputValueEditor = ({
           value,
           default: value,
           name: newName,
+          description,
           optional,
           type,
         };
@@ -140,10 +150,15 @@ export const InputValueEditor = ({
     setValidationError(null);
   };
 
+  const handleDescriptionChange = (value: string) => {
+    setInputDescription(value);
+  };
+
   const hasChanges = () => {
     return (
       inputValue !== initialInputValue ||
       inputName.trim() !== input.name ||
+      inputDescription !== (input.description ?? "") ||
       inputType !== (input.type?.toString() ?? "any") ||
       inputOptional !== initialIsOptional
     );
@@ -156,6 +171,7 @@ export const InputValueEditor = ({
       input.name,
       inputValue.trim(),
       inputName.trim(),
+      inputDescription.trim(),
       effectiveOptionalValue,
       inputType as string,
     );
@@ -227,6 +243,7 @@ export const InputValueEditor = ({
   useEffect(() => {
     setInputValue(initialInputValue);
     setInputName(input.name);
+    setInputDescription(input.description ?? "");
     setInputType(input.type?.toString() ?? "any");
     setInputOptional(initialIsOptional);
     setValidationError(null);
@@ -245,14 +262,7 @@ export const InputValueEditor = ({
 
   return (
     <BlockStack gap="3" className="p-4 w-full">
-      <BlockStack gap="3">
-        <Heading level={1}>{input.name}</Heading>
-        {!!input.description && (
-          <Paragraph size="sm" tone="subdued">
-            {input.description}
-          </Paragraph>
-        )}
-      </BlockStack>
+      <Heading level={1}>{input.name}</Heading>
       <NameField
         inputName={inputName}
         onNameChange={handleNameChange}
@@ -260,6 +270,14 @@ export const InputValueEditor = ({
         error={validationError}
         disabled={disabled}
         autoFocus={!disabled}
+      />
+
+      <DescriptionField
+        inputName={input.name}
+        inputDescription={inputDescription}
+        onChange={handleDescriptionChange}
+        onBlur={handleBlur}
+        disabled={disabled}
       />
 
       <TextField

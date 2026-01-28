@@ -92,6 +92,31 @@ const NameField = ({
   </FormField>
 );
 
+const DescriptionField = ({
+  inputName,
+  inputDescription,
+  onChange,
+  onBlur,
+  disabled,
+}: {
+  inputName: string;
+  inputDescription: string;
+  onChange: (value: string) => void;
+  onBlur?: () => void;
+  disabled?: boolean;
+}) => (
+  <FormField label="Description" id={`input-description-${inputName}`}>
+    <Textarea
+      id={`input-description-${inputName}`}
+      disabled={disabled}
+      value={inputDescription}
+      onChange={(e) => onChange(e.target.value)}
+      onBlur={onBlur}
+      className="text-sm"
+    />
+  </FormField>
+);
+
 const TextField = ({
   inputValue,
   onInputChange,
@@ -171,4 +196,4 @@ const TypeField = ({
   </FormField>
 );
 
-export { NameField, TextField, TypeField };
+export { DescriptionField, NameField, TextField, TypeField };

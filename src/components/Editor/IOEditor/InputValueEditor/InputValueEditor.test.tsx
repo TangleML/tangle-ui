@@ -95,12 +95,13 @@ describe("InputValueEditor", () => {
     vi.clearAllMocks();
   });
 
-  it("displays input description", () => {
+  it("displays input description in field", () => {
     render(<InputValueEditor input={mockInput} />);
 
-    const descriptionElements = screen.getAllByText("A test input");
-    expect(descriptionElements.length).toBeGreaterThan(0);
-    expect(descriptionElements[0]).toBeInTheDocument();
+    const descriptionInput = screen.getByLabelText(
+      "Description",
+    ) as HTMLTextAreaElement;
+    expect(descriptionInput.value).toBe("A test input");
   });
 
   it("calls onChange when input value changes", () => {
@@ -116,7 +117,7 @@ describe("InputValueEditor", () => {
 
   it("calls onNameChange when input name changes", () => {
     render(<InputValueEditor input={mockInput} />);
-    const nameInput = screen.getAllByRole("textbox")[0] as HTMLInputElement;
+    const nameInput = screen.getByLabelText("Name") as HTMLInputElement;
     fireEvent.change(nameInput, { target: { value: "NewName" } });
     fireEvent.blur(nameInput);
 
@@ -128,7 +129,7 @@ describe("InputValueEditor", () => {
   it("shows validation error when renaming to existing input name", () => {
     render(<InputValueEditor input={mockInput} />);
 
-    const nameInput = screen.getAllByRole("textbox")[0] as HTMLInputElement;
+    const nameInput = screen.getByLabelText("Name") as HTMLInputElement;
     fireEvent.change(nameInput, { target: { value: "ExistingInput" } });
 
     // Should show error message
@@ -143,7 +144,7 @@ describe("InputValueEditor", () => {
   it("clears validation error when renaming to unique name", () => {
     render(<InputValueEditor input={mockInput} />);
 
-    const nameInput = screen.getAllByRole("textbox")[0] as HTMLInputElement;
+    const nameInput = screen.getByLabelText("Name") as HTMLInputElement;
 
     // First, create a collision
     fireEvent.change(nameInput, { target: { value: "ExistingInput" } });
@@ -167,7 +168,7 @@ describe("InputValueEditor", () => {
 
     render(<InputValueEditor input={inputWithoutDefault} />);
 
-    const valueInput = screen.getAllByRole("textbox")[1] as HTMLInputElement;
+    const valueInput = screen.getByLabelText("Value") as HTMLInputElement;
     expect(valueInput.getAttribute("placeholder")).toBe(
       "Enter NoDefaultInput...",
     );
@@ -176,7 +177,7 @@ describe("InputValueEditor", () => {
   it("shows default value as placeholder when available", () => {
     render(<InputValueEditor input={mockInput} />);
 
-    const valueInput = screen.getAllByRole("textbox")[1] as HTMLInputElement;
+    const valueInput = screen.getByLabelText("Value") as HTMLInputElement;
     expect(valueInput.getAttribute("placeholder")).toBe("default value");
   });
 });
