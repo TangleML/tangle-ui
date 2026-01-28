@@ -1,4 +1,5 @@
-import type { GraphSpec } from "@/utils/componentSpec";
+import { type GraphSpec, isTaskOutputArgument } from "@/utils/componentSpec";
+import { getTaskDisplayName } from "@/utils/getComponentName";
 
 /**
  * Returns the connected output value (outputName) for a given output name from a graphSpec's outputValues.
@@ -8,6 +9,7 @@ export interface OutputConnectedDetails {
   outputName?: string;
   outputType?: string;
   taskId?: string;
+  taskName?: string;
 }
 
 export function getOutputConnectedDetails(
@@ -16,22 +18,21 @@ export function getOutputConnectedDetails(
 ): OutputConnectedDetails {
   if (graphSpec?.outputValues) {
     const outputValue = graphSpec.outputValues[outputName];
-    if (
-      outputValue &&
-      typeof outputValue === "object" &&
-      "taskOutput" in outputValue
-    ) {
+    if (isTaskOutputArgument(outputValue)) {
+      const taskId = outputValue.taskOutput.taskId;
+      const taskSpec = graphSpec.tasks[taskId];
       const type =
-        graphSpec.tasks[
-          outputValue.taskOutput.taskId
-        ]?.componentRef?.spec?.outputs?.find(
+        taskSpec?.componentRef?.spec?.outputs?.find(
           (output) => output.name === outputValue.taskOutput.outputName,
         )?.type || "Any";
+
+      const name = getTaskDisplayName(taskId, taskSpec);
 
       return {
         outputName: outputValue.taskOutput.outputName,
         outputType: type as string,
-        taskId: outputValue.taskOutput.taskId,
+        taskId: taskId,
+        taskName: name,
       };
     }
   }

@@ -39,7 +39,7 @@ export const InlineEditor = ({
 
   return (
     <div
-      className="w-full cursor-pointer whitespace-pre-wrap rounded-md border border-transparent px-3 py-2 text-sm hover:border-input hover:bg-muted/50"
+      className="w-full cursor-pointer whitespace-pre-wrap rounded-md border border-transparent px-3 py-2 text-sm hover:border-input hover:bg-muted/50 wrap-anywhere"
       onClick={() => setIsEditing(true)}
       onKeyDown={onKeyDown}
       role="button"

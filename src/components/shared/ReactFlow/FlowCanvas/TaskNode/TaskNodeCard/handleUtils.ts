@@ -1,4 +1,10 @@
-import type { ArgumentType, GraphSpec } from "@/utils/componentSpec";
+import {
+  type ArgumentType,
+  type GraphSpec,
+  isGraphInputArgument,
+  isTaskOutputArgument,
+} from "@/utils/componentSpec";
+import { getTaskDisplayName } from "@/utils/getComponentName";
 import { getValue } from "@/utils/string";
 
 /**
@@ -9,26 +15,21 @@ export const getDisplayValue = (
   value: string | ArgumentType | undefined,
   graphSpec?: GraphSpec,
 ) => {
-  if (
-    value &&
-    typeof value === "object" &&
-    value !== null &&
-    "taskOutput" in value
-  ) {
-    const taskOutput = value.taskOutput as any;
+  if (isTaskOutputArgument(value)) {
+    const taskOutput = value.taskOutput;
     const taskId = taskOutput?.taskId;
     const outputName = taskOutput?.outputName;
 
     if (taskId && graphSpec?.tasks?.[taskId]) {
       const taskSpec = graphSpec.tasks[taskId];
-      const componentName = taskSpec.componentRef?.spec?.name || taskId;
+      const componentName = getTaskDisplayName(taskId, taskSpec);
       return `→ ${componentName}${outputName ? `.${outputName}` : ""}`;
     }
 
     return `→ ${taskId}${outputName ? `.${outputName}` : ""}`;
   }
 
-  if (value && typeof value === "object" && "graphInput" in value) {
+  if (isGraphInputArgument(value)) {
     const inputName = value.graphInput?.inputName;
 
     return `→ ${inputName}`;

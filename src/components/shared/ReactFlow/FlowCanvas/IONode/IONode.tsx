@@ -160,7 +160,7 @@ const IONode = ({ id, type, data, selected = false }: IONodeProps) => {
   );
   const outputConnectedValue = connectedOutput.outputName;
   const outputConnectedType = connectedOutput.outputType;
-  const outputConnectedTaskId = connectedOutput.taskId;
+  const outputConnectedTaskName = connectedOutput.taskName;
 
   const handleDefaultClassName =
     "w-3! h-3! border-0! transform-none! bg-gray-500!";
@@ -212,9 +212,9 @@ const IONode = ({ id, type, data, selected = false }: IONodeProps) => {
             {outputConnectedType ?? data.type ?? "Any"}
           </Paragraph>
 
-          {!!outputConnectedTaskId && (
+          {!!outputConnectedTaskName && (
             <Paragraph size="xs" weight="bold" className="text-slate-700">
-              {outputConnectedTaskId}
+              {outputConnectedTaskName}
             </Paragraph>
           )}
 

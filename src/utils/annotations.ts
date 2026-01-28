@@ -49,3 +49,6 @@ function hasAnnotation(
 
   return Object.prototype.hasOwnProperty.call(annotations, key);
 }
+
+export const DISPLAY_NAME_MAX_LENGTH = 100;
+export const TASK_DISPLAY_NAME_ANNOTATION = "display_name";
