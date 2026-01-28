@@ -79,6 +79,11 @@
           "x-enum-labels": {
             "NVIDIA-H200": "NVIDIA H200"
           }
+        },
+        "cloud-pipelines.net/launchers/google/service_account": {
+          "type": "string",
+          "title": "Custom Service Account",
+          "description": "Google Cloud Service Account email"
         }
       }
     }
