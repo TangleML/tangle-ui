@@ -6,13 +6,13 @@ import {
   Outlet,
 } from "@tanstack/react-router";
 
+import { ErrorPage } from "@/components/shared/ErrorPage";
 import { AuthorizationResultScreen as GitHubAuthorizationResultScreen } from "@/components/shared/GitHubAuth/AuthorizationResultScreen";
 import { AuthorizationResultScreen as HuggingFaceAuthorizationResultScreen } from "@/components/shared/HuggingFaceAuth/AuthorizationResultScreen";
 import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 
 import RootLayout from "../components/layout/RootLayout";
 import Editor from "./Editor";
-import ErrorPage from "./ErrorPage";
 import Home from "./Home";
 import NotFoundPage from "./NotFoundPage";
 import PipelineRun from "./PipelineRun";
