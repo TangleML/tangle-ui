@@ -28,3 +28,7 @@ dist
 dist-ssr
 test-results
 playwright-report
+
+#local files
+.local/
+.planning/

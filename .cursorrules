@@ -294,6 +294,60 @@ await expect(button).toHaveText("Submit"); // User-visible behavior
 - Lazy load heavy components when possible
 - Follow existing patterns for optimization
 
+### React Compiler
+
+This project uses the React Compiler for automatic memoization. Files/directories are incrementally adopted in `react-compiler.config.js`.
+
+#### Writing React Compiler Compatible Code
+
+**For new files**, ensure they follow React Compiler rules from the start:
+
+1. **Don't mutate values during render**
+   ```typescript
+   // ❌ Bad - mutating during render
+   const items = props.items;
+   items.push(newItem);
+   
+   // ✅ Good - create new reference
+   const items = [...props.items, newItem];
+   ```
+
+2. **Don't read/write refs during render**
+   ```typescript
+   // ❌ Bad - reading ref during render
+   const value = myRef.current;
+   return <div>{value}</div>;
+   
+   // ✅ Good - read refs in effects or callbacks
+   useEffect(() => {
+     const value = myRef.current;
+   }, []);
+   ```
+
+3. **Follow Rules of Hooks strictly**
+   - No conditional hooks
+   - No hooks in loops
+   - Proper dependency arrays
+
+4. **Avoid patterns the compiler can't optimize**
+   - Don't spread props with `{...props}` unnecessarily
+   - Avoid dynamic property access on objects when possible
+   - Keep component logic predictable
+
+#### Adding Files to React Compiler
+
+When a file is added to `react-compiler.config.js`:
+- Remove unnecessary `useCallback` and `useMemo` (compiler handles this)
+- Verify no compiler violations with `npm run validate`
+- Test the component still works correctly
+
+#### React Compiler Config Structure
+
+Files are organized by cleanup effort in `react-compiler.config.js`:
+- Top section: Already enabled directories/files
+- Middle: Ready to enable (0 useCallback/useMemo)  
+- Bottom (commented): Need cleanup before enabling
+
 ## Component Architecture
 
 ### Component Structure
@@ -399,6 +453,153 @@ export const useContext = () => {
 - Don't await locators - only await assertions and actions
 - Don't test implementation details (CSS classes, internal state) - test user-visible behavior
 - Don't write comments that just restate what the code does - explain "why" not "what"
+
+## Code Review Guidelines
+
+When `@.cursorrules` is referenced alone or without the word "review" (ex: @.cursorrules or @.cursorrules reivew or @.cursorrules sometext some text review), automatically perform a code review of the current PR/commit changes against these rules.
+
+### Validation & Testing
+
+Use these npm scripts for validation and testing:
+
+- **`npm run validate`** - Runs format, lint:fix, typecheck, and knip (use before committing)
+- **`npm run validate:test`** - Runs validate + unit tests (full validation)
+- **`npm run test:e2e`** - Runs Playwright E2E tests
+
+### Local Development Ports
+
+- **Frontend**: `localhost:3000` (default for `npm start`)
+- **Backend API**: `localhost:8000`
+- **API Docs**: `localhost:8000/docs`
+
+### Review Process
+
+1. **Scope**: Only review code that has been changed. Do not flag pre-existing issues unless they directly cause problems with the new changes.
+2. **Source of truth**: Use the git diff provided in context (if available). If reviewing "the last commit", use `git show HEAD --stat` to see changed files, then read those files. Do NOT use `git diff main...HEAD` as this shows all commits on the branch, not just the last one.
+3. **Read files**: Always read the full files being reviewed to understand context, not just the diff.
+
+### What to Check
+
+Review changed code for violations of these `.cursorrules`, prioritizing:
+
+1. **High Priority**
+   - Unsafe type casting (`as`) - suggest type guards instead
+   - Potential runtime errors (undefined access, null checks)
+   - Missing error handling
+   - Security concerns
+   - Incorrect use of React hooks (missing deps, unnecessary async)
+   - React Compiler violations (mutating during render, reading refs during render)
+
+2. **Medium Priority**
+   - Not using UI primitives (`BlockStack`, `InlineStack`, `Text`, `Icon`)
+   - Import order violations
+   - Duplicated logic that should be extracted
+
+3. **Low Priority**
+   - Redundant code (unnecessary null coalescing, etc.)
+   - Minor style inconsistencies
+   - Unused props or parameters
+
+### Review Output Format
+
+Present findings in a clear, actionable format:
+
+```markdown
+## Issues Found
+
+### 1. **[Issue Title]** - [File:Line]
+[Code snippet showing the problem]
+**Why**: [Brief explanation]
+**Fix**: [Suggested solution]
+
+---
+
+## What's Good
+- [Positive observations about the code]
+- Note if file was added to `react-compiler.config.js` (React Compiler enabled)
+
+---
+
+## Summary Table
+| Issue | Severity | Location |
+|-------|----------|----------|
+| ... | High/Medium/Low | file:line |
+```
+
+### Review Principles
+
+- **Be specific**: Include file paths and line numbers
+- **Be actionable**: Provide concrete fixes, not vague suggestions
+- **Be proportional**: Don't over-engineer simple code
+- **Acknowledge good patterns**: Note when code follows best practices
+- **Don't nitpick**: Focus on meaningful improvements
+- **Offer to fix**: After review, ask "Want me to fix these?"
+
+### What NOT to Do
+
+- Don't review unchanged code (unless it causes issues with new code)
+- Don't suggest rewrites of working code just for style preferences
+- Don't flag issues that are already present in the codebase (pre-existing)
+- Don't recommend adding complexity without clear benefit
+- Don't suggest patterns that conflict with existing codebase conventions
+
+### Optional "While We're Here" Cleanup
+
+After completing a code generation task, scan the surrounding area for small, low-risk improvements. **Only offer** if ALL of these conditions are met:
+
+1. **Small scope**: Affects < 30 lines of code
+2. **Low risk**: Purely cosmetic or minor refactoring (not logic changes)
+3. **Same file**: In a file you already modified
+4. **Clear benefit**: Improves readability, removes dead code, or fixes obvious issues
+
+**Examples of good "while we're here" suggestions:**
+- Removing an unused import in the file you just edited
+- Fixing a typo in a comment nearby
+- Removing an unused variable in the same function
+- Updating a deprecated pattern you noticed (e.g., `lucide-react` → `Icon` component)
+
+**Do NOT suggest cleanup for:**
+- Complex refactors (> 30 lines)
+- Logic changes
+- Files you didn't touch
+- Changes that require testing
+- Anything that could break functionality
+
+**How to offer:**
+```
+---
+While we're here, I noticed a small cleanup opportunity:
+- [Brief description of the cleanup]
+
+This is optional and low-risk. Want me to fix it?
+```
+
+**Don't be naggy**: Only offer once per task, and only if genuinely worthwhile. If in doubt, skip it.
+
+## Planning & Documentation
+
+When asked to create planning documents, architecture decisions, or investigation notes:
+
+- **Always save to `.local/`** - This directory is gitignored for local-only files
+- Use descriptive filenames: `.local/feature-name-planning.md`, `.local/bug-investigation.md`
+- These files persist locally but won't be committed to the repo
+
+**Example use cases:**
+- Feature planning and design docs
+- Bug investigation notes
+- Architecture decision records (local drafts)
+- Task breakdowns and checklists
+- Research and exploration notes
+
+**File naming convention:**
+```
+.local/[feature-or-task]-[type].md
+
+Examples:
+.local/pipeline-search-planning.md
+.local/auth-refactor-investigation.md
+.local/api-migration-checklist.md
+```
 
 ## Other rules
 
