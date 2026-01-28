@@ -43,6 +43,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/components/shared/ManageComponent/PublishComponent.tsx",
   "src/components/shared/ManageComponent/hooks/useComponentCanvasTasks.ts",
   "src/components/shared/TaskDetails/DisplayNameEditor.tsx",
+  "src/components/shared/TaskDetails/Actions/UnpackSubgraphButton.tsx",
 
   // 11-20 useCallback/useMemo
   // "src/components/ui",                         // 12

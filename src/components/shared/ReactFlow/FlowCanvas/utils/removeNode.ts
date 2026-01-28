@@ -82,7 +82,10 @@ export const removeGraphOutput = (
   return componentSpec;
 };
 
-const removeTask = (taskIdToRemove: string, componentSpec: ComponentSpec) => {
+export const removeTask = (
+  taskIdToRemove: string,
+  componentSpec: ComponentSpec,
+) => {
   if (isGraphImplementation(componentSpec.implementation)) {
     const graphSpec = componentSpec.implementation.graph;
 
