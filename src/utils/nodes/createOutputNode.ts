@@ -2,8 +2,8 @@ import { type Node } from "@xyflow/react";
 
 import type { TaskNodeData } from "@/types/taskNode";
 
+import { extractPositionFromAnnotations } from "../annotations";
 import type { OutputSpec } from "../componentSpec";
-import { extractPositionFromAnnotations } from "./extractPositionFromAnnotations";
 import { outputNameToNodeId } from "./nodeIdUtils";
 
 export const createOutputNode = (

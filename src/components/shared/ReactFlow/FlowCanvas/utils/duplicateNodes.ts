@@ -1,6 +1,7 @@
 import { type Node, type XYPosition } from "@xyflow/react";
 
 import type { TaskNodeData } from "@/types/taskNode";
+import { setPositionInAnnotations } from "@/utils/annotations";
 import {
   type ComponentSpec,
   type GraphInputArgument,
@@ -21,7 +22,6 @@ import {
   outputNameToNodeId,
   taskIdToNodeId,
 } from "@/utils/nodes/nodeIdUtils";
-import { setPositionInAnnotations } from "@/utils/nodes/setPositionInAnnotations";
 import {
   getUniqueInputName,
   getUniqueOutputName,

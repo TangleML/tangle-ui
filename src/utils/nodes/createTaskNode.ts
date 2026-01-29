@@ -2,8 +2,8 @@ import { type Node } from "@xyflow/react";
 
 import type { TaskNodeData } from "@/types/taskNode";
 
+import { extractPositionFromAnnotations } from "../annotations";
 import type { TaskSpec } from "../componentSpec";
-import { extractPositionFromAnnotations } from "./extractPositionFromAnnotations";
 import { generateDynamicNodeCallbacks } from "./generateDynamicNodeCallbacks";
 import { taskIdToNodeId } from "./nodeIdUtils";
 

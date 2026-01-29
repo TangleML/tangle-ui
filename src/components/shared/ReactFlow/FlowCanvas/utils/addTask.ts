@@ -1,6 +1,7 @@
 import type { XYPosition } from "@xyflow/react";
 
 import type { TaskType } from "@/types/taskNode";
+import { EDITOR_POSITION_ANNOTATION } from "@/utils/annotations";
 import {
   type ComponentSpec,
   type GraphSpec,
@@ -73,7 +74,7 @@ const addTask = (
 
   const nodePosition = { x: position.x, y: position.y };
   const positionAnnotations = {
-    "editor.position": JSON.stringify(nodePosition),
+    [EDITOR_POSITION_ANNOTATION]: JSON.stringify(nodePosition),
   };
 
   if (taskType === "task") {
