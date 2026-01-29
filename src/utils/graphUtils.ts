@@ -1,5 +1,6 @@
 import type { XYPosition } from "@xyflow/react";
 
+import { extractPositionFromAnnotations } from "./annotations";
 import {
   type ArgumentType,
   type ComponentSpec,
@@ -9,7 +10,6 @@ import {
   isTaskOutputArgument,
   type TaskOutputArgument,
 } from "./componentSpec";
-import { extractPositionFromAnnotations } from "./nodes/extractPositionFromAnnotations";
 
 export const calculateSpecCenter = (
   componentSpec: ComponentSpec,

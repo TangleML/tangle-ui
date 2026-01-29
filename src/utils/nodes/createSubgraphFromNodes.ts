@@ -23,10 +23,11 @@ import {
   isTaskOutputArgument,
 } from "@/utils/componentSpec";
 
+import { EDITOR_POSITION_ANNOTATION } from "../annotations";
+import { extractPositionFromAnnotations } from "../annotations";
 import { generateDigest } from "../componentStore";
 import { getUniqueName, getUniqueTaskName } from "../unique";
 import { getUserDetails } from "../user";
-import { extractPositionFromAnnotations } from "./extractPositionFromAnnotations";
 
 // Arbitrary spacing parameters for layout of generated nodes
 const GAP = 60;
@@ -119,7 +120,7 @@ export const createSubgraphFromNodes = async (
       arguments: updatedTaskArguments,
       annotations: {
         ...originalTask.annotations,
-        "editor.position": JSON.stringify(normalizedPosition),
+        [EDITOR_POSITION_ANNOTATION]: JSON.stringify(normalizedPosition),
       },
     };
 
@@ -214,7 +215,7 @@ const createSubgraphTask = async (
       name,
     },
     annotations: {
-      "editor.position": JSON.stringify(position),
+      [EDITOR_POSITION_ANNOTATION]: JSON.stringify(position),
     },
     arguments: args,
   };
@@ -249,7 +250,7 @@ const processSelectedInputNodes = (
       type: inputType,
       optional: inputOptional,
       annotations: {
-        "editor.position": JSON.stringify(normalizedPosition),
+        [EDITOR_POSITION_ANNOTATION]: JSON.stringify(normalizedPosition),
       },
     });
 
@@ -291,7 +292,7 @@ const processSelectedOutputNodes = (
       name: outputName,
       type: outputType,
       annotations: {
-        "editor.position": JSON.stringify(normalizedPosition),
+        [EDITOR_POSITION_ANNOTATION]: JSON.stringify(normalizedPosition),
       },
     });
 
@@ -386,7 +387,7 @@ const processTaskInputConnections = (
 
         existingInput.annotations = {
           ...existingInput.annotations,
-          "editor.position": JSON.stringify({ x, y }),
+          [EDITOR_POSITION_ANNOTATION]: JSON.stringify({ x, y }),
         };
 
         updatedArguments[argName] = {
@@ -410,7 +411,7 @@ const processTaskInputConnections = (
           type,
           optional: false,
           annotations: {
-            "editor.position": JSON.stringify(inputPosition),
+            [EDITOR_POSITION_ANNOTATION]: JSON.stringify(inputPosition),
           },
         });
 
@@ -513,7 +514,7 @@ const processTaskOutputConnections = (
         name: uniqueOutputName,
         type,
         annotations: {
-          "editor.position": JSON.stringify(outputPosition),
+          [EDITOR_POSITION_ANNOTATION]: JSON.stringify(outputPosition),
         },
       });
 

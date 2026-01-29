@@ -1,6 +1,6 @@
+import { extractPositionFromAnnotations } from "@/utils/annotations";
 import type { ComponentSpec } from "@/utils/componentSpec";
 import { isGraphImplementation } from "@/utils/componentSpec";
-import { extractPositionFromAnnotations } from "@/utils/nodes/extractPositionFromAnnotations";
 
 import {
   getDownstreamTaskNodesConnectedToTask,

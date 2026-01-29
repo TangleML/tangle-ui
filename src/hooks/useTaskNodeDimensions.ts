@@ -1,6 +1,10 @@
 import { useMemo } from "react";
 
 import type { TaskNodeDimensions } from "@/types/taskNode";
+import {
+  EDITOR_POSITION_ANNOTATION,
+  getAnnotationValue,
+} from "@/utils/annotations";
 import type { TaskSpec } from "@/utils/componentSpec";
 import { DEFAULT_NODE_DIMENSIONS } from "@/utils/constants";
 
@@ -25,7 +29,11 @@ export function useTaskNodeDimensions(taskSpec?: TaskSpec): TaskNodeDimensions {
     let annotatedDimensions;
     try {
       const parsed = JSON.parse(
-        taskSpec.annotations?.["editor.position"] as string,
+        getAnnotationValue(
+          taskSpec.annotations,
+          EDITOR_POSITION_ANNOTATION,
+          '{"x":0,"y":0,"width":150,"height":100}',
+        ),
       ) as EditorPosition | undefined;
 
       if (parsed) {

@@ -6,6 +6,7 @@ import { Heading, Paragraph } from "@/components/ui/typography";
 import type { AnnotationConfig, Annotations } from "@/types/annotations";
 import {
   DISPLAY_NAME_MAX_LENGTH,
+  EDITOR_POSITION_ANNOTATION,
   TASK_DISPLAY_NAME_ANNOTATION,
 } from "@/utils/annotations";
 
@@ -17,7 +18,7 @@ import {
 
 const DEFAULT_COMMON_ANNOTATIONS: AnnotationConfig[] = [
   {
-    annotation: "editor.position",
+    annotation: EDITOR_POSITION_ANNOTATION,
     label: "Node position",
     type: "json",
   },
