@@ -7,15 +7,21 @@ import { InfoBox } from "@/components/shared/InfoBox";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { StatusBar } from "@/components/shared/Status";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
-import { Text } from "@/components/ui/typography";
+import { Paragraph, Text } from "@/components/ui/typography";
 import { useBackend } from "@/providers/BackendProvider";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
+import {
+  getAnnotationValue,
+  PIPELINE_NOTES_ANNOTATION,
+} from "@/utils/annotations";
 import {
   flattenExecutionStatusStats,
   getExecutionStatusLabel,
   getOverallExecutionStatusFromStats,
 } from "@/utils/executionStatus";
+
+const EXCLUDED_ANNOTATIONS = [PIPELINE_NOTES_ANNOTATION];
 
 export const RunDetails = () => {
   const { configured } = useBackend();
@@ -60,7 +66,15 @@ export const RunDetails = () => {
     getOverallExecutionStatusFromStats(executionStatusStats);
   const statusLabel = getExecutionStatusLabel(overallStatus);
 
-  const annotations = componentSpec.metadata?.annotations || {};
+  const pipelineAnnotations = componentSpec.metadata?.annotations || {};
+  const pipelineNotes = getAnnotationValue(
+    pipelineAnnotations,
+    PIPELINE_NOTES_ANNOTATION,
+  );
+
+  const displayedAnnotations = Object.entries(pipelineAnnotations)
+    .filter(([key]) => !EXCLUDED_ANNOTATIONS.includes(key))
+    .map(([key, value]) => ({ label: key, value: String(value) }));
 
   return (
     <BlockStack gap="6" className="p-2 h-full">
@@ -98,17 +112,20 @@ export const RunDetails = () => {
         <StatusBar executionStatusStats={executionStatusStats} />
       </ContentBlock>
 
-      {Object.keys(annotations).length > 0 && (
-        <KeyValueList
-          title="Annotations"
-          items={Object.entries(annotations).map(([key, value]) => ({
-            label: key,
-            value: String(value),
-          }))}
-        />
+      {displayedAnnotations.length > 0 && (
+        <KeyValueList title="Annotations" items={displayedAnnotations} />
       )}
 
       <PipelineIO taskArguments={details.task_spec.arguments} />
+
+      <ContentBlock title="Notes">
+        <BlockStack>
+          <Paragraph size="xs">Pipeline Notes</Paragraph>
+          <Paragraph size="xs" tone="subdued">
+            {pipelineNotes || "No notes available for this pipeline."}
+          </Paragraph>
+        </BlockStack>
+      </ContentBlock>
     </BlockStack>
   );
 };
