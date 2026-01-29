@@ -65,6 +65,7 @@ export const AUTOSAVE_DEBOUNCE_TIME_MS = 2000;
 export const KEYBOARD_SHORTCUTS = {
   UNDO: "z",
   REDO: "y",
+  COMMENT: "m",
   MAC_META: "⌘",
   WINDOWS_META: "Ctrl",
 } as const;

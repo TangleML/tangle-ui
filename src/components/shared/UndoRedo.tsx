@@ -55,7 +55,7 @@ export const UndoRedo = () => {
         onClick={undo}
         disabled={!canUndo}
         className="h-8 w-8 p-0"
-        tooltip={`Undo (${metaKey}+Z)`}
+        tooltip={`Undo (${metaKey}+${KEYBOARD_SHORTCUTS.UNDO.toUpperCase()})`}
       >
         <Undo2 className="h-4 w-4" />
       </TooltipButton>
@@ -65,7 +65,7 @@ export const UndoRedo = () => {
         onClick={redo}
         disabled={!canRedo}
         className="h-8 w-8 p-0"
-        tooltip={`Redo (${metaKey}+Y)`}
+        tooltip={`Redo (${metaKey}+${KEYBOARD_SHORTCUTS.REDO.toUpperCase()})`}
       >
         <Redo2 className="h-4 w-4" />
       </TooltipButton>
