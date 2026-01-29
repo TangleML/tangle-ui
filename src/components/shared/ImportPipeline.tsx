@@ -130,7 +130,7 @@ const ImportPipeline = ({ triggerComponent }: ImportPipelineProps) => {
     <>
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
         <DialogTrigger asChild>{ButtonComponent}</DialogTrigger>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-150">
           <DialogHeader>
             <DialogTitle>Import Pipeline</DialogTitle>
             <DialogDescription>
@@ -180,7 +180,7 @@ const ImportPipeline = ({ triggerComponent }: ImportPipelineProps) => {
                     onChange={(e) => setYamlContent(e.target.value)}
                     rows={25}
                     disabled={isLoading}
-                    className="font-mono text-sm resize-none max-h-[300px]"
+                    className="font-mono text-sm resize-none max-h-75"
                   />
                   <Button
                     onClick={handlePasteImport}

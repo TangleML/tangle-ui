@@ -28,7 +28,7 @@ export const StatusIndicator = ({
   return (
     <div className="absolute -z-1 -top-5 left-0 flex items-start">
       <div
-        className={cn("h-[35px] rounded-t-md px-2.5 py-1 text-[10px]", style, {
+        className={cn("h-8.75 rounded-t-md px-2.5 py-1 text-[10px]", style, {
           "rounded-tr-none": disabledCache,
         })}
       >
@@ -38,7 +38,7 @@ export const StatusIndicator = ({
         </div>
       </div>
       {disabledCache && (
-        <div className="h-[22px] bg-orange-400 rounded-tr-md flex items-center px-1.5">
+        <div className="h-5.5 bg-orange-400 rounded-tr-md flex items-center px-1.5">
           <QuickTooltip content="Cache Disabled" className="whitespace-nowrap">
             <Icon name="ZapOff" size="xs" className="text-white" />
           </QuickTooltip>
