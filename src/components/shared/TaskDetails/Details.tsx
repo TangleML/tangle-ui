@@ -112,7 +112,7 @@ const TaskDetailsInternal = ({
 
       {status && (
         <TextBlock
-          title="Run Status"
+          title="Execution Status"
           text={getExecutionStatusLabel(status)}
           className={BASE_BLOCK_CLASS}
         />
