@@ -18,7 +18,7 @@
           "title": "CPU",
           "description": "Number of CPU cores",
           "exclusiveMinimum": 0,
-          "exclusiveMaximum": 96,
+          "exclusiveMaximum": 360,
           "x-unit": "cores"
         },
         "cloud-pipelines.net/launchers/generic/resources.memory": {
@@ -28,7 +28,7 @@
           "x-unit": "GiB",
           "x-append": "Gi",
           "exclusiveMinimum": 0,
-          "exclusiveMaximum": 624
+          "exclusiveMaximum": 2880
         },
         "cloud-pipelines.net/launchers/google/service_account": {
           "type": "string",
@@ -67,7 +67,7 @@
           "x-unit": "GiB",
           "x-append": "Gi",
           "exclusiveMinimum": 0,
-          "exclusiveMaximum": 2880
+          "exclusiveMaximum": 1600
         },
         "cloud-pipelines.net/launchers/generic/resources.accelerators": {
           "type": "string",
