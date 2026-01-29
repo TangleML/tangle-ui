@@ -8,6 +8,7 @@ import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { StatusBar } from "@/components/shared/Status";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Paragraph, Text } from "@/components/ui/typography";
+import { useUserDetails } from "@/hooks/useUserDetails";
 import { useBackend } from "@/providers/BackendProvider";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
@@ -21,11 +22,14 @@ import {
   getOverallExecutionStatusFromStats,
 } from "@/utils/executionStatus";
 
+import { RunNotesEditor } from "./RunNotesEditor";
+
 const EXCLUDED_ANNOTATIONS = [PIPELINE_NOTES_ANNOTATION];
 
 export const RunDetails = () => {
   const { configured } = useBackend();
   const { componentSpec } = useComponentSpec();
+  const { data: currentUserDetails } = useUserDetails();
   const {
     rootDetails: details,
     rootState: state,
@@ -76,6 +80,9 @@ export const RunDetails = () => {
     .filter(([key]) => !EXCLUDED_ANNOTATIONS.includes(key))
     .map(([key, value]) => ({ label: key, value: String(value) }));
 
+  const isRunCreator =
+    !!currentUserDetails?.id && metadata?.created_by === currentUserDetails.id;
+
   return (
     <BlockStack gap="6" className="p-2 h-full">
       <CopyText className="text-lg font-semibold">
@@ -119,11 +126,19 @@ export const RunDetails = () => {
       <PipelineIO taskArguments={details.task_spec.arguments} />
 
       <ContentBlock title="Notes">
-        <BlockStack>
-          <Paragraph size="xs">Pipeline Notes</Paragraph>
-          <Paragraph size="xs" tone="subdued">
-            {pipelineNotes || "No notes available for this pipeline."}
-          </Paragraph>
+        <BlockStack gap="2">
+          <BlockStack>
+            <Paragraph size="xs">Pipeline Notes</Paragraph>
+            <Paragraph size="xs" tone="subdued">
+              {pipelineNotes || "No notes available for this pipeline."}
+            </Paragraph>
+          </BlockStack>
+          {!!metadata?.id && (
+            <BlockStack>
+              <Paragraph size="xs">Run Notes</Paragraph>
+              <RunNotesEditor runId={metadata.id} readOnly={!isRunCreator} />
+            </BlockStack>
+          )}
         </BlockStack>
       </ContentBlock>
     </BlockStack>

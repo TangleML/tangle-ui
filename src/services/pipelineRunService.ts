@@ -1,8 +1,12 @@
 import localForage from "localforage";
 
-import type { BodyCreateApiPipelineRunsPost } from "@/api/types.gen";
+import type {
+  BodyCreateApiPipelineRunsPost,
+  ListAnnotationsApiPipelineRunsIdAnnotationsGetResponse,
+} from "@/api/types.gen";
 import { APP_ROUTES } from "@/routes/router";
 import type { PipelineRun } from "@/types/pipelineRun";
+import { PIPELINE_RUN_NOTES_ANNOTATION } from "@/utils/annotations";
 import { removeCachingStrategyFromSpec } from "@/utils/cache";
 import {
   type ComponentSpec,
@@ -213,6 +217,29 @@ export const cancelPipelineRun = async (runId: string, backendUrl: string) => {
     `${backendUrl}/api/pipeline_runs/${runId}/cancel`,
     {
       method: "POST",
+    },
+  );
+};
+
+export const fetchRunAnnotations = async (
+  runId: string,
+  backendUrl: string,
+): Promise<ListAnnotationsApiPipelineRunsIdAnnotationsGetResponse> => {
+  const url = `${backendUrl}/api/pipeline_runs/${runId}/annotations`;
+  return fetchWithErrorHandling(url);
+};
+
+export const updateRunNotes = async (
+  runId: string,
+  backendUrl: string,
+  notes: string,
+) => {
+  await fetchWithErrorHandling(
+    `${backendUrl}/api/pipeline_runs/${runId}/annotations/${PIPELINE_RUN_NOTES_ANNOTATION}?value=${encodeURIComponent(
+      notes,
+    )}`,
+    {
+      method: "PUT",
     },
   );
 };
