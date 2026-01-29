@@ -2,8 +2,12 @@ import { useState } from "react";
 
 import { Textarea } from "@/components/ui/textarea";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
+import {
+  RUN_NAME_TEMPLATE_ANNOTATION,
+  setComponentSpecAnnotation,
+} from "@/utils/annotations";
 
-import { getRunNameTemplate, setRunNameTemplate } from "./utils";
+import { getRunNameTemplate } from "./utils";
 
 interface PipelineRunNameTemplateEditorProps {
   autoFocus?: boolean;
@@ -22,7 +26,13 @@ export const PipelineRunNameTemplateEditor = ({
       return;
     }
 
-    setComponentSpec(setRunNameTemplate(componentSpec, runNameTemplate));
+    setComponentSpec(
+      setComponentSpecAnnotation(
+        componentSpec,
+        RUN_NAME_TEMPLATE_ANNOTATION,
+        runNameTemplate,
+      ),
+    );
   };
 
   return (
