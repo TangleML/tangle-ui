@@ -19,10 +19,7 @@ export const LibraryList = withSuspenseWrapper(
 
     return (
       <BlockStack gap="1">
-        <ScrollArea
-          className="w-full min-h-[100px] max-h-[500px]"
-          type="always"
-        >
+        <ScrollArea className="w-full min-h-25 max-h-125" type="always">
           {existingComponentLibraries?.length === 0 && (
             <InlineStack className="w-full">
               <Text>No libraries connected</Text>

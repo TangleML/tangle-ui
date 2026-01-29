@@ -89,7 +89,7 @@ const ComponentQuickDetailsDialog = withSuspenseWrapper(
             </Text>
           </DialogTitle>
 
-          <BlockStack gap="1" className="h-[400px]" align="stretch">
+          <BlockStack gap="1" className="h-100" align="stretch">
             <ComponentSpecProperty
               label="Digest"
               value={hydratedComponent.digest}
