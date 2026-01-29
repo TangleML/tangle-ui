@@ -1,5 +1,6 @@
 import type { Node } from "@xyflow/react";
 
+import { setPositionInAnnotations } from "@/utils/annotations";
 import {
   type ComponentSpec,
   isGraphImplementation,
@@ -9,7 +10,6 @@ import {
   nodeIdToOutputName,
   nodeIdToTaskId,
 } from "@/utils/nodes/nodeIdUtils";
-import { setPositionInAnnotations } from "@/utils/nodes/setPositionInAnnotations";
 
 export const updateNodePositions = (
   updatedNodes: Node[],
