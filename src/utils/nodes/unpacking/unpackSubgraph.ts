@@ -3,7 +3,14 @@ import { isGraphImplementation } from "@/utils/componentSpec";
 import { extractPositionFromAnnotations } from "@/utils/nodes/extractPositionFromAnnotations";
 
 import {
+  getDownstreamTaskNodesConnectedToTask,
+  getOutputNodesConnectedToTask,
+} from "../../graphUtils";
+import {
   copyOutputValues,
+  reconnectDownstreamOutputs,
+  reconnectDownstreamTasks,
+  reconnectUpstreamInputsAndTasks,
   unpackInputs,
   unpackOutputs,
   unpackTasks,
@@ -20,12 +27,22 @@ export const unpackSubgraph = (
   const graphSpec = componentSpec.implementation.graph;
   const taskSpec = graphSpec.tasks[subgraphTaskId];
   const subgraphSpec = taskSpec.componentRef.spec;
+  const subgraphArguments = taskSpec.arguments || {};
 
-  if (!subgraphSpec) {
+  if (!subgraphSpec || !isGraphImplementation(subgraphSpec.implementation)) {
     return componentSpec;
   }
 
+  const subgraphGraphSpec = subgraphSpec.implementation.graph;
+
   const subgraphPosition = extractPositionFromAnnotations(taskSpec.annotations);
+
+  const outputNodesConnectedToSubgraph = getOutputNodesConnectedToTask(
+    subgraphTaskId,
+    graphSpec,
+  );
+  const tasksConnectedDownstreamFromSubgraph =
+    getDownstreamTaskNodesConnectedToTask(subgraphTaskId, graphSpec);
 
   let updatedComponentSpec = componentSpec;
 
@@ -33,6 +50,7 @@ export const unpackSubgraph = (
   const { spec: specAfterInputs, inputNameMap } = unpackInputs(
     subgraphSpec,
     subgraphPosition,
+    subgraphArguments,
     updatedComponentSpec,
   );
   updatedComponentSpec = specAfterInputs;
@@ -42,6 +60,8 @@ export const unpackSubgraph = (
     subgraphSpec,
     subgraphPosition,
     updatedComponentSpec,
+    outputNodesConnectedToSubgraph,
+    tasksConnectedDownstreamFromSubgraph,
   );
   updatedComponentSpec = specAfterOutputs;
 
@@ -59,6 +79,35 @@ export const unpackSubgraph = (
     subgraphSpec,
     updatedComponentSpec,
     outputNameMap,
+    taskIdMap,
+    outputNodesConnectedToSubgraph,
+    tasksConnectedDownstreamFromSubgraph,
+  );
+
+  // Reconnect external nodes - Upstream Inputs and Tasks
+  updatedComponentSpec = reconnectUpstreamInputsAndTasks(
+    subgraphGraphSpec,
+    subgraphTaskId,
+    graphSpec,
+    updatedComponentSpec,
+    taskIdMap,
+  );
+
+  // Reconnect to external nodes - Downstream Outputs
+  updatedComponentSpec = reconnectDownstreamOutputs(
+    subgraphGraphSpec,
+    subgraphTaskId,
+    graphSpec,
+    updatedComponentSpec,
+    taskIdMap,
+  );
+
+  // Reconnect to external nodes - Downstream Tasks
+  updatedComponentSpec = reconnectDownstreamTasks(
+    subgraphGraphSpec,
+    subgraphTaskId,
+    graphSpec,
+    updatedComponentSpec,
     taskIdMap,
   );
 

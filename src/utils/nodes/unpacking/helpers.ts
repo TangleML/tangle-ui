@@ -2,17 +2,23 @@ import type { XYPosition } from "@xyflow/react";
 
 import addTask from "@/components/shared/ReactFlow/FlowCanvas/utils/addTask";
 import { setGraphOutputValue } from "@/components/shared/ReactFlow/FlowCanvas/utils/setGraphOutputValue";
+import { setTaskArgument } from "@/components/shared/ReactFlow/FlowCanvas/utils/setTaskArgument";
 import {
   type ArgumentType,
   type ComponentSpec,
+  type GraphSpec,
   isGraphImplementation,
   isGraphInputArgument,
   isTaskOutputArgument,
   type MetadataSpec,
   type TaskOutputArgument,
 } from "@/utils/componentSpec";
+import { deepClone } from "@/utils/deepClone";
 import {
   calculateSpecCenter,
+  getArgumentsWithUpstreamConnections,
+  getDownstreamTaskNodesConnectedToTask,
+  getOutputNodesConnectedToTask,
   normalizeNodePositionInGroup,
 } from "@/utils/graphUtils";
 
@@ -21,6 +27,7 @@ import { extractPositionFromAnnotations } from "../extractPositionFromAnnotation
 export const unpackInputs = (
   containerSpec: ComponentSpec,
   containerPosition: XYPosition,
+  containerArguments: Record<string, ArgumentType>,
   componentSpec: ComponentSpec,
 ): {
   spec: ComponentSpec;
@@ -34,18 +41,30 @@ export const unpackInputs = (
   const inputs = containerSpec.inputs;
 
   inputs?.forEach((input) => {
+    const argumentValue = containerArguments[input.name];
+
+    const hasExternalConnection =
+      isTaskOutputArgument(argumentValue) ||
+      isGraphInputArgument(argumentValue);
+
+    if (hasExternalConnection) {
+      return;
+    }
+
     const position = calculateUnpackedPosition(
       input.annotations,
       containerPosition,
       containerCenter,
     );
 
+    const inputWithValue = { ...input, value: argumentValue };
+
     const { spec, ioName } = addTask(
       "input",
       null,
       position,
       updatedSpec,
-      input,
+      inputWithValue,
     );
 
     if (ioName && ioName !== input.name) {
@@ -62,6 +81,11 @@ export const unpackOutputs = (
   containerSpec: ComponentSpec,
   containerPosition: XYPosition,
   componentSpec: ComponentSpec,
+  outputNodesConnectedToContainer: Record<string, TaskOutputArgument>,
+  tasksConnectedDownstreamFromContainer: Record<
+    string,
+    Record<string, TaskOutputArgument>
+  >,
 ): {
   spec: ComponentSpec;
   outputNameMap: Map<string, string>;
@@ -74,6 +98,16 @@ export const unpackOutputs = (
   const outputs = containerSpec.outputs;
 
   outputs?.forEach((output) => {
+    const hasExternalConnection = isOutputConnectedExternally(
+      output.name,
+      outputNodesConnectedToContainer,
+      tasksConnectedDownstreamFromContainer,
+    );
+
+    if (hasExternalConnection) {
+      return;
+    }
+
     const position = calculateUnpackedPosition(
       output.annotations,
       containerPosition,
@@ -186,6 +220,11 @@ export const copyOutputValues = (
   componentSpec: ComponentSpec,
   outputNameMap: Map<string, string>,
   taskIdMap: Map<string, string>,
+  outputNodesConnectedToContainer: Record<string, TaskOutputArgument>,
+  tasksConnectedDownstreamFromContainer: Record<
+    string,
+    Record<string, TaskOutputArgument>
+  >,
 ): ComponentSpec => {
   let updatedSpec = componentSpec;
 
@@ -197,6 +236,16 @@ export const copyOutputValues = (
 
   Object.entries(outputValues).forEach(([outputName, outputValue]) => {
     if (isGraphImplementation(updatedSpec.implementation)) {
+      const hasExternalConnection = isOutputConnectedExternally(
+        outputName,
+        outputNodesConnectedToContainer,
+        tasksConnectedDownstreamFromContainer,
+      );
+
+      if (hasExternalConnection) {
+        return;
+      }
+
       const newOutputName = outputNameMap.get(outputName) || outputName;
       const remappedTaskOutputArg = remapTaskOutputArgument(
         outputValue,
@@ -287,4 +336,209 @@ const calculateUnpackedPosition = (
     containerPosition,
     containerCenter,
   );
+};
+
+export const reconnectUpstreamInputsAndTasks = (
+  graphSpec: GraphSpec,
+  taskId: string,
+  originalGraphSpec: GraphSpec,
+  componentSpec: ComponentSpec,
+  taskIdMap: Map<string, string>,
+): ComponentSpec => {
+  let updatedSpec = deepClone(componentSpec);
+
+  const argumentsWithConnections = getArgumentsWithUpstreamConnections(
+    taskId,
+    originalGraphSpec,
+  );
+
+  Object.entries(argumentsWithConnections).forEach(([inputName, argValue]) => {
+    Object.entries(graphSpec.tasks).forEach(
+      ([internalTaskId, internalTask]) => {
+        if (!isGraphImplementation(updatedSpec.implementation)) {
+          return;
+        }
+
+        if (!internalTask.arguments) {
+          return;
+        }
+
+        const taskUsesThisInput = Object.entries(internalTask.arguments).some(
+          ([_, argVal]) =>
+            isGraphInputArgument(argVal) &&
+            argVal.graphInput.inputName === inputName,
+        );
+
+        if (!taskUsesThisInput) {
+          return;
+        }
+
+        Object.entries(internalTask.arguments).forEach(
+          ([paramName, argVal]) => {
+            if (
+              !isGraphInputArgument(argVal) ||
+              argVal.graphInput.inputName !== inputName ||
+              !isGraphImplementation(updatedSpec.implementation)
+            ) {
+              return;
+            }
+
+            const remappedTaskId =
+              taskIdMap.get(internalTaskId) || internalTaskId;
+
+            const updatedGraphSpec = setTaskArgument(
+              updatedSpec.implementation.graph,
+              remappedTaskId,
+              paramName,
+              argValue,
+            );
+
+            updatedSpec = {
+              ...updatedSpec,
+              implementation: {
+                ...updatedSpec.implementation,
+                graph: updatedGraphSpec,
+              },
+            };
+          },
+        );
+      },
+    );
+  });
+
+  return updatedSpec;
+};
+
+export const reconnectDownstreamOutputs = (
+  graphSpec: GraphSpec,
+  taskId: string,
+  originalGraphSpec: GraphSpec,
+  componentSpec: ComponentSpec,
+  taskIdMap: Map<string, string>,
+): ComponentSpec => {
+  let updatedSpec = componentSpec;
+
+  const outputNodesConnectedToSubgraph = getOutputNodesConnectedToTask(
+    taskId,
+    originalGraphSpec,
+  );
+
+  const outputValues = graphSpec.outputValues || {};
+
+  Object.entries(outputNodesConnectedToSubgraph).forEach(
+    ([outputName, oldOutputValue]) => {
+      Object.entries(outputValues).forEach(
+        ([internalOutputName, internalOutputValue]) => {
+          if (internalOutputName !== oldOutputValue.taskOutput.outputName) {
+            return;
+          }
+
+          if (!isGraphImplementation(updatedSpec.implementation)) {
+            return;
+          }
+
+          const remappedOutputValue = remapTaskOutputArgument(
+            internalOutputValue,
+            taskIdMap,
+          );
+
+          const updatedGraphSpec = setGraphOutputValue(
+            updatedSpec.implementation.graph,
+            outputName,
+            remappedOutputValue,
+          );
+
+          updatedSpec = {
+            ...updatedSpec,
+            implementation: {
+              ...updatedSpec.implementation,
+              graph: updatedGraphSpec,
+            },
+          };
+        },
+      );
+    },
+  );
+
+  return updatedSpec;
+};
+
+export const reconnectDownstreamTasks = (
+  graphSpec: GraphSpec,
+  taskId: string,
+  originalGraphSpec: GraphSpec,
+  componentSpec: ComponentSpec,
+  taskIdMap: Map<string, string>,
+): ComponentSpec => {
+  let updatedSpec = componentSpec;
+
+  const tasksConnectedDownstream = getDownstreamTaskNodesConnectedToTask(
+    taskId,
+    originalGraphSpec,
+  );
+
+  const outputValues = graphSpec.outputValues || {};
+
+  Object.entries(tasksConnectedDownstream).forEach(
+    ([downstreamTaskId, connectedArgs]) => {
+      Object.entries(connectedArgs).forEach(([argName, oldArgValue]) => {
+        if (!isGraphImplementation(updatedSpec.implementation)) {
+          return;
+        }
+
+        const newArgValue = Object.entries(outputValues).find(
+          ([outputName]) => outputName === oldArgValue.taskOutput.outputName,
+        )?.[1];
+
+        if (!newArgValue) {
+          return;
+        }
+
+        const remappedArgValue = remapTaskOutputArgument(
+          newArgValue,
+          taskIdMap,
+        );
+
+        const updatedGraphSpec = setTaskArgument(
+          updatedSpec.implementation.graph,
+          downstreamTaskId,
+          argName,
+          remappedArgValue,
+        );
+
+        updatedSpec = {
+          ...updatedSpec,
+          implementation: {
+            ...updatedSpec.implementation,
+            graph: updatedGraphSpec,
+          },
+        };
+      });
+    },
+  );
+
+  return updatedSpec;
+};
+
+const isOutputConnectedExternally = (
+  outputName: string,
+  outputNodesConnectedToContainer: Record<string, TaskOutputArgument>,
+  tasksConnectedDownstreamFromContainer: Record<
+    string,
+    Record<string, TaskOutputArgument>
+  >,
+): boolean => {
+  const connectedToGraphOutput = Object.values(
+    outputNodesConnectedToContainer,
+  ).some((out) => out.taskOutput.outputName === outputName);
+
+  const connectedToDownstreamTask = Object.values(
+    tasksConnectedDownstreamFromContainer,
+  ).some((connectedArgs) =>
+    Object.values(connectedArgs).some(
+      (arg) => arg.taskOutput.outputName === outputName,
+    ),
+  );
+
+  return connectedToGraphOutput || connectedToDownstreamTask;
 };

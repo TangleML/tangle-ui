@@ -1,9 +1,13 @@
 import type { XYPosition } from "@xyflow/react";
 
 import {
+  type ArgumentType,
   type ComponentSpec,
   type GraphSpec,
   isGraphImplementation,
+  isGraphInputArgument,
+  isTaskOutputArgument,
+  type TaskOutputArgument,
 } from "./componentSpec";
 import { extractPositionFromAnnotations } from "./nodes/extractPositionFromAnnotations";
 
@@ -63,3 +67,74 @@ export const normalizeNodePositionInGroup = (
   x: (groupPosition?.x || 0) + (nodePosition?.x || 0) - groupCenter.x,
   y: (groupPosition?.y || 0) + (nodePosition?.y || 0) - groupCenter.y,
 });
+
+export const getArgumentsWithUpstreamConnections = (
+  taskId: string,
+  graphSpec: GraphSpec,
+) => {
+  const taskSpec = graphSpec.tasks[taskId];
+  if (!taskSpec) {
+    return {};
+  }
+
+  const taskArguments = taskSpec.arguments || {};
+
+  return Object.entries(taskArguments).reduce<Record<string, ArgumentType>>(
+    (acc, [inputName, argValue]) => {
+      if (isTaskOutputArgument(argValue)) {
+        const taskId = argValue.taskOutput.taskId;
+        if (graphSpec.tasks[taskId]) {
+          acc[inputName] = argValue;
+        }
+      } else if (isGraphInputArgument(argValue)) {
+        acc[inputName] = argValue;
+      }
+      return acc;
+    },
+    {},
+  );
+};
+
+export const getOutputNodesConnectedToTask = (
+  taskId: string,
+  graphSpec: GraphSpec,
+) => {
+  return Object.entries(graphSpec.outputValues || {}).reduce<
+    Record<string, TaskOutputArgument>
+  >((acc, [outputName, outputValue]) => {
+    if (
+      isTaskOutputArgument(outputValue) &&
+      outputValue.taskOutput.taskId === taskId
+    ) {
+      acc[outputName] = outputValue;
+    }
+    return acc;
+  }, {});
+};
+
+export const getDownstreamTaskNodesConnectedToTask = (
+  taskId: string,
+  graphSpec: GraphSpec,
+) => {
+  return Object.entries(graphSpec.tasks).reduce<
+    Record<string, Record<string, TaskOutputArgument>>
+  >((acc, [graphTaskId, taskSpec]) => {
+    const taskArguments = taskSpec.arguments || {};
+    const connectedArgs: Record<string, TaskOutputArgument> = {};
+
+    Object.entries(taskArguments).forEach(([argName, argValue]) => {
+      if (
+        isTaskOutputArgument(argValue) &&
+        argValue.taskOutput.taskId === taskId
+      ) {
+        connectedArgs[argName] = argValue;
+      }
+    });
+
+    if (Object.keys(connectedArgs).length > 0) {
+      acc[graphTaskId] = connectedArgs;
+    }
+
+    return acc;
+  }, {});
+};
