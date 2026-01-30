@@ -5,17 +5,23 @@ import {
   type ComponentSpec,
   isGraphImplementation,
 } from "@/utils/componentSpec";
+import { deepClone } from "@/utils/deepClone";
 import {
   nodeIdToInputName,
   nodeIdToOutputName,
   nodeIdToTaskId,
 } from "@/utils/nodes/nodeIdUtils";
 
+import {
+  getFlexNode,
+  updateFlexNodeInAnnotations,
+} from "../FlexNode/interface";
+
 export const updateNodePositions = (
   updatedNodes: Node[],
   componentSpec: ComponentSpec,
 ) => {
-  const newComponentSpec = { ...componentSpec };
+  const newComponentSpec = deepClone(componentSpec);
 
   if (!isGraphImplementation(newComponentSpec.implementation)) {
     throw new Error("Component spec is not a graph");
@@ -32,6 +38,8 @@ export const updateNodePositions = (
     };
 
     if (node.type === "task") {
+      if (!isGraphImplementation(newComponentSpec.implementation)) continue;
+
       const taskId = nodeIdToTaskId(node.id);
       if (updatedGraphSpec.tasks[taskId]) {
         const taskSpec = { ...updatedGraphSpec.tasks[taskId] };
@@ -94,6 +102,29 @@ export const updateNodePositions = (
 
         newComponentSpec.outputs = outputs;
       }
+    } else if (node.type === "flex") {
+      const flexNode = getFlexNode(node.id, newComponentSpec);
+
+      if (!flexNode) continue;
+
+      const updatedFlexNode = {
+        ...flexNode,
+        position: newPosition,
+      };
+
+      if (!newComponentSpec.metadata) {
+        newComponentSpec.metadata = {};
+      }
+
+      const newAnnotations = updateFlexNodeInAnnotations(
+        newComponentSpec.metadata.annotations,
+        updatedFlexNode,
+      );
+
+      newComponentSpec.metadata.annotations = {
+        ...newComponentSpec.metadata.annotations,
+        ...newAnnotations,
+      };
     }
   }
 

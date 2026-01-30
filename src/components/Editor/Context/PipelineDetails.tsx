@@ -13,7 +13,10 @@ import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { BlockStack } from "@/components/ui/layout";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
-import { PIPELINE_NOTES_ANNOTATION } from "@/utils/annotations";
+import {
+  FLEX_NODES_ANNOTATION,
+  PIPELINE_NOTES_ANNOTATION,
+} from "@/utils/annotations";
 import { getComponentFileFromList } from "@/utils/componentStore";
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 
@@ -22,7 +25,7 @@ import { PipelineNotesEditor } from "./PipelineNotesEditor";
 import { PipelineValidationList } from "./PipelineValidationList";
 import RenamePipeline from "./RenamePipeline";
 
-const EXCLUDED_ANNOTATIONS = [PIPELINE_NOTES_ANNOTATION];
+const EXCLUDED_ANNOTATIONS = [PIPELINE_NOTES_ANNOTATION, FLEX_NODES_ANNOTATION];
 
 const PipelineDetails = () => {
   const notify = useToastNotification();
