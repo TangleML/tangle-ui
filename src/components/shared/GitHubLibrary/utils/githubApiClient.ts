@@ -81,7 +81,7 @@ interface GitHubApiConfig {
 /**
  * GitHub API Client class
  */
-export class GitHubApiClient {
+class GitHubApiClient {
   private readonly accessToken: string;
   private readonly apiBase: string;
   private readonly apiVersion: string;
