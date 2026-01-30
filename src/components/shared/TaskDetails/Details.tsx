@@ -11,7 +11,6 @@ import { KeyValueList } from "../ContextPanel/Blocks/KeyValueList";
 import { TextBlock } from "../ContextPanel/Blocks/TextBlock";
 import { InlineEditor } from "../InlineEditor/InlineEditor";
 import { withSuspenseWrapper } from "../SuspenseWrapper";
-import TaskActions from "./Actions";
 import { DisplayNameEditor } from "./DisplayNameEditor";
 import { ExecutionDetails } from "./ExecutionDetails";
 import { GithubDetails } from "./GithubDetails";
@@ -180,13 +179,6 @@ const TaskDetailsInternal = ({
           />
         </ContentBlock>
       )}
-
-      <TaskActions
-        componentRef={hydratedComponentRef}
-        taskNode={taskNode}
-        readOnly={readOnly}
-        className={BASE_BLOCK_CLASS}
-      />
     </BlockStack>
   );
 };

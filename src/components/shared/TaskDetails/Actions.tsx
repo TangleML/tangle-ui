@@ -80,7 +80,13 @@ const TaskActions = ({
     deleteComponent,
   ].filter(Boolean);
 
-  return <ActionBlock actions={actions} className={className} />;
+  return (
+    <ActionBlock
+      actions={actions}
+      className={className}
+      data-testid="task-actions"
+    />
+  );
 };
 
 export default TaskActions;
