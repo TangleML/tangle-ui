@@ -103,13 +103,16 @@ export const updateNodePositions = (
       const flexNodeId = node.id;
       const flexNodes = getFlexNodeAnnotations(componentSpec);
       const flexNode = flexNodes.find((node) => node.id === flexNodeId);
+
       if (flexNode) {
         const updatedFlexNode = {
           ...flexNode,
           position: newPosition,
         };
+
         const newComponentSpecWithUpdatedFlexNode =
           updateFlexNodeInComponentSpec(newComponentSpec, updatedFlexNode);
+
         Object.assign(newComponentSpec, newComponentSpecWithUpdatedFlexNode);
       }
     }

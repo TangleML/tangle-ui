@@ -13,6 +13,7 @@ import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { BlockStack } from "@/components/ui/layout";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
+import { FLEX_NODES_ANNOTATION } from "@/utils/annotations";
 import { getComponentFileFromList } from "@/utils/componentStore";
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 
@@ -79,12 +80,12 @@ const PipelineDetails = () => {
     },
   ];
 
-  const annotations = Object.entries(
-    componentSpec.metadata?.annotations || {},
-  ).map(([key, value]) => ({
-    label: key,
-    value: String(value),
-  }));
+  const annotations = Object.entries(componentSpec.metadata?.annotations || {})
+    .filter(([key]) => key !== FLEX_NODES_ANNOTATION)
+    .map(([key, value]) => ({
+      label: key,
+      value: String(value),
+    }));
 
   const actions = [
     <RenamePipeline key="rename-pipeline-action" />,

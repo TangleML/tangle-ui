@@ -70,6 +70,7 @@ import {
   type NodesAndEdges,
   nodeTypes,
 } from "./types";
+import addFlexNode from "./utils/addFlexNode";
 import addTask from "./utils/addTask";
 import { createConnectedIONode } from "./utils/createConnectedIONode";
 import { duplicateNodes } from "./utils/duplicateNodes";
@@ -82,7 +83,7 @@ import { removeNode } from "./utils/removeNode";
 import { replaceTaskNode } from "./utils/replaceTaskNode";
 import { updateNodePositions } from "./utils/updateNodePosition";
 
-const SELECTABLE_NODES = new Set(["task", "input", "output"]);
+const SELECTABLE_NODES = new Set(["task", "input", "output", "flex"]);
 const UPGRADEABLE_NODES = new Set(["task"]);
 const REPLACEABLE_NODES = new Set(["task"]);
 const FAST_PLACE_NODE_TYPES = new Set<Node["type"]>(["task"]);
@@ -542,7 +543,25 @@ const FlowCanvas = ({
     const { spec: droppedTask, nodeType } = getNodeFromEvent(event);
 
     if (!nodeType) {
-      console.error("Dropped task type not identified.");
+      console.error("Dropped node type not identified.");
+      return;
+    }
+
+    if (nodeType === "flex" && reactFlowInstance) {
+      const position = getPositionFromEvent(event, reactFlowInstance);
+
+      const { spec: updatedSubgraphSpec } = addFlexNode(
+        position,
+        currentSubgraphSpec,
+      );
+
+      const newRootSpec = updateSubgraphSpec(
+        componentSpec,
+        currentSubgraphPath,
+        updatedSubgraphSpec,
+      );
+
+      setComponentSpec(newRootSpec);
       return;
     }
 
