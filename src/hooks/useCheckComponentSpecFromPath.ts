@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
-import { buildTakSpecShape } from "@/components/shared/PipelineRunNameTemplate/types";
+import { buildTaskSpecShape } from "@/components/shared/PipelineRunNameTemplate/types";
 import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
 import { RUNS_BASE_PATH } from "@/routes/router";
 import { loadPipelineByName } from "@/services/pipelineService";
@@ -22,7 +22,7 @@ export const useCheckComponentSpecFromPath = (
 
   const pipelineName =
     extractCanonicalName(
-      buildTakSpecShape(details?.rootDetails?.task_spec, componentSpec),
+      buildTaskSpecShape(details?.rootDetails?.task_spec, componentSpec),
     ) ?? title;
 
   const disabled = !componentSpec.name;

@@ -4,31 +4,13 @@ import { Button } from "@/components/ui/button";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Heading, Paragraph } from "@/components/ui/typography";
 import type { AnnotationConfig, Annotations } from "@/types/annotations";
-import {
-  DISPLAY_NAME_MAX_LENGTH,
-  EDITOR_POSITION_ANNOTATION,
-  TASK_DISPLAY_NAME_ANNOTATION,
-} from "@/utils/annotations";
+import { DEFAULT_COMMON_ANNOTATIONS } from "@/utils/annotations";
 
 import { AnnotationsInput } from "./AnnotationsInput";
 import {
   NewAnnotationRow,
   type NewAnnotationRowData,
 } from "./NewAnnotationRow";
-
-const DEFAULT_COMMON_ANNOTATIONS: AnnotationConfig[] = [
-  {
-    annotation: EDITOR_POSITION_ANNOTATION,
-    label: "Node position",
-    type: "json",
-  },
-  {
-    annotation: TASK_DISPLAY_NAME_ANNOTATION,
-    label: "Display Name",
-    type: "string",
-    max: DISPLAY_NAME_MAX_LENGTH,
-  },
-];
 
 interface AnnotationsEditorProps {
   annotations: Annotations;
