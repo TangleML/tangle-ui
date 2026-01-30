@@ -30,6 +30,7 @@ import { useIOSelectionPersistence } from "@/hooks/useIOSelectionPersistence";
 import { useNodeCallbacks } from "@/hooks/useNodeCallbacks";
 import { useSubgraphKeyboardNavigation } from "@/hooks/useSubgraphKeyboardNavigation";
 import useToastNotification from "@/hooks/useToastNotification";
+import { useUserDetails } from "@/hooks/useUserDetails";
 import { cn } from "@/lib/utils";
 import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
@@ -71,6 +72,7 @@ import {
   type NodesAndEdges,
   nodeTypes,
 } from "./types";
+import addFlexNode from "./utils/addFlexNode";
 import addTask from "./utils/addTask";
 import { createConnectedIONode } from "./utils/createConnectedIONode";
 import { duplicateNodes } from "./utils/duplicateNodes";
@@ -110,6 +112,7 @@ const FlowCanvas = ({
   const initialCanvasLoaded = useRef(false);
 
   const { clearContent } = useContextPanel();
+  const { data: currentUserDetails } = useUserDetails();
 
   useSubgraphKeyboardNavigation();
   const { setReactFlowInstance: setReactFlowInstanceForOverlay } =
@@ -558,6 +561,25 @@ const FlowCanvas = ({
 
     if (!nodeType) {
       console.error("Dropped node type not identified.");
+      return;
+    }
+
+    if (nodeType === "flex" && reactFlowInstance) {
+      const position = getPositionFromEvent(event, reactFlowInstance);
+
+      const { spec: updatedSubgraphSpec } = addFlexNode(
+        position,
+        currentUserDetails?.id || "unknown",
+        currentSubgraphSpec,
+      );
+
+      const newRootSpec = updateSubgraphSpec(
+        componentSpec,
+        currentSubgraphPath,
+        updatedSubgraphSpec,
+      );
+
+      setComponentSpec(newRootSpec);
       return;
     }
 
