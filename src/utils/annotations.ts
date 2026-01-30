@@ -11,6 +11,7 @@ export const PIPELINE_RUN_NOTES_ANNOTATION = "notes";
 export const PIPELINE_CANONICAL_NAME_ANNOTATION = "canonical-pipeline-name";
 export const RUN_NAME_TEMPLATE_ANNOTATION = "run-name-template";
 export const EDITOR_POSITION_ANNOTATION = "editor.position";
+export const FLEX_NODES_ANNOTATION = "flex-nodes";
 
 export const DEFAULT_COMMON_ANNOTATIONS: AnnotationConfig[] = [
   {
@@ -187,3 +188,24 @@ export const extractPositionFromAnnotations = (
     return defaultPosition;
   }
 };
+
+/*
+ * Ensures that the componentSpec has metadata and annotations objects.
+ * @param componentSpec - The component specification
+ * @returns The component specification with ensured metadata and annotations
+ */
+export function ensureAnnotations(
+  componentSpec: ComponentSpec,
+): ComponentSpec & {
+  metadata: { annotations: Record<string, unknown> };
+} {
+  return {
+    ...componentSpec,
+    metadata: {
+      ...componentSpec.metadata,
+      annotations: {
+        ...(componentSpec.metadata?.annotations ?? {}),
+      },
+    },
+  };
+}

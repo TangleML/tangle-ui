@@ -11,6 +11,11 @@ import {
   nodeIdToTaskId,
 } from "@/utils/nodes/nodeIdUtils";
 
+import {
+  getFlexNode,
+  updateFlexNodeInComponentSpec,
+} from "../FlexNode/interface";
+
 export const updateNodePositions = (
   updatedNodes: Node[],
   componentSpec: ComponentSpec,
@@ -93,6 +98,20 @@ export const updateNodePositions = (
         };
 
         newComponentSpec.outputs = outputs;
+      }
+    } else if (node.type === "flex") {
+      const flexNode = getFlexNode(node.id, componentSpec);
+
+      if (flexNode) {
+        const updatedFlexNode = {
+          ...flexNode,
+          position: newPosition,
+        };
+
+        const newComponentSpecWithUpdatedFlexNode =
+          updateFlexNodeInComponentSpec(newComponentSpec, updatedFlexNode);
+
+        Object.assign(newComponentSpec, newComponentSpecWithUpdatedFlexNode);
       }
     }
   }
