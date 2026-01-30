@@ -8,8 +8,10 @@ import type { FlexNodeData } from "./types";
 type FlexNodeProps = NodeProps<Node<FlexNodeData>>;
 
 const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
-  const color = data.color || "yellow-200";
-  const border = data.border || "yellow-400";
+  const { properties } = data;
+
+  const color = properties.color || "yellow-200";
+  const border = properties.border || "yellow-400";
 
   return (
     <div
@@ -22,9 +24,9 @@ const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
     >
       <div className="rounded-sm bg-white/40 p-1 h-full w-full">
         <Paragraph size="sm" weight="semibold" className="mb-1">
-          {data.title}
+          {properties.title}
         </Paragraph>
-        {data.content}
+        {properties.content}
       </div>
     </div>
   );
