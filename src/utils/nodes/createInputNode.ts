@@ -6,7 +6,11 @@ import type { InputSpec } from "../componentSpec";
 import { extractPositionFromAnnotations } from "./extractPositionFromAnnotations";
 import { inputNameToNodeId } from "./nodeIdUtils";
 
-export const createInputNode = (input: InputSpec, nodeData: TaskNodeData) => {
+export const createInputNode = (
+  input: InputSpec,
+  nodeData: TaskNodeData,
+  readOnly: boolean,
+) => {
   const { name, annotations, ...rest } = input;
 
   const position = extractPositionFromAnnotations(annotations);
@@ -18,6 +22,7 @@ export const createInputNode = (input: InputSpec, nodeData: TaskNodeData) => {
       ...rest,
       ...nodeData,
       label: name,
+      readOnly,
     },
     position: position,
     type: "input",
