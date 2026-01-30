@@ -3,6 +3,8 @@ import type {
   GraphImplementationOutput,
 } from "@/api/types.gen";
 
+import type { FLEX_NODES_ANNOTATION } from "./annotations";
+
 export type TypeSpecType =
   | string
   | {
@@ -142,6 +144,7 @@ export interface MetadataSpec {
     canonical_location?: string;
     author?: string;
     python_original_code?: string;
+    [FLEX_NODES_ANNOTATION]?: string;
   };
 }
 /**
