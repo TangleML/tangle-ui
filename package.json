@@ -49,6 +49,8 @@
     "hydrate-component-library": "tsx scripts/hydrate-component-library.ts public/component_library.original.yaml public/component_library.yaml"
   },
   "dependencies": {
+    "@bugsnag/js": "^8.8.1",
+    "@bugsnag/plugin-react": "^8.8.0",
     "@dnd-kit/core": "^6.3.1",
     "@hey-api/client-fetch": "^0.13.1",
     "@hyperjump/browser": "^1.3.1",
