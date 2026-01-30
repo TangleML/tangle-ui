@@ -11,6 +11,7 @@ import { Text } from "@/components/ui/typography";
 import { useBackend } from "@/providers/BackendProvider";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
+import { FLEX_NODES_ANNOTATION } from "@/utils/annotations";
 import {
   flattenExecutionStatusStats,
   getExecutionStatusLabel,
@@ -101,10 +102,12 @@ export const RunDetails = () => {
       {Object.keys(annotations).length > 0 && (
         <KeyValueList
           title="Annotations"
-          items={Object.entries(annotations).map(([key, value]) => ({
-            label: key,
-            value: String(value),
-          }))}
+          items={Object.entries(annotations)
+            .filter(([key]) => key !== FLEX_NODES_ANNOTATION)
+            .map(([key, value]) => ({
+              label: key,
+              value: String(value),
+            }))}
         />
       )}
 
