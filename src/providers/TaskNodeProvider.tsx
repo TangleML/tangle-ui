@@ -2,6 +2,7 @@ import { useReactFlow } from "@xyflow/react";
 import { type ReactNode, useCallback, useMemo } from "react";
 
 import useComponentFromUrl from "@/hooks/useComponentFromUrl";
+import { useHydrateComponentReference } from "@/hooks/useHydrateComponentReference";
 import { useTaskNodeDimensions } from "@/hooks/useTaskNodeDimensions";
 import useToastNotification from "@/hooks/useToastNotification";
 import type { Annotations } from "@/types/annotations";
@@ -13,6 +14,7 @@ import {
 import type {
   ArgumentType,
   ComponentReference,
+  HydratedComponentReference,
   InputSpec,
   OutputSpec,
   TaskSpec,
@@ -57,6 +59,7 @@ type TaskNodeProviderProps = {
 };
 
 export type TaskNodeContextType = {
+  componentRef?: HydratedComponentReference;
   taskSpec?: TaskSpec;
   taskId?: string;
   nodeId: string;
@@ -94,20 +97,24 @@ export const TaskNodeProvider = ({
     setCacheStaleness,
   } = data.callbacks ?? DEFAULT_TASK_NODE_CALLBACKS;
 
-  const componentRef = taskSpec?.componentRef ?? EMPTY_COMPONENT_REF;
-  const inputs = componentRef.spec?.inputs ?? EMPTY_INPUTS;
-  const outputs = componentRef.spec?.outputs ?? EMPTY_OUTPUTS;
+  const componentRef =
+    useHydrateComponentReference(
+      taskSpec?.componentRef ?? EMPTY_COMPONENT_REF,
+    ) || undefined;
 
-  const name = getComponentName(componentRef);
+  const inputs = componentRef?.spec?.inputs ?? EMPTY_INPUTS;
+  const outputs = componentRef?.spec?.outputs ?? EMPTY_OUTPUTS;
+
+  const name = getComponentName(componentRef ?? EMPTY_COMPONENT_REF);
   const displayName = getTaskDisplayName(taskId ?? "Task", taskSpec);
 
-  const isCustomComponent = !componentRef.url; // Custom components don't have a source url
+  const isCustomComponent = !componentRef?.url; // Custom components don't have a source url
 
   const { componentRef: mostRecentComponentRef } = useComponentFromUrl(
-    componentRef.url,
+    componentRef?.url,
   );
 
-  const isOutdated = componentRef.digest !== mostRecentComponentRef.digest;
+  const isOutdated = componentRef?.digest !== mostRecentComponentRef.digest;
 
   const dimensions = useTaskNodeDimensions(taskSpec);
 
@@ -199,6 +206,7 @@ export const TaskNodeProvider = ({
 
   const value = useMemo(
     () => ({
+      componentRef,
       taskSpec,
       taskId,
       nodeId,
@@ -211,6 +219,7 @@ export const TaskNodeProvider = ({
       select,
     }),
     [
+      componentRef,
       taskSpec,
       taskId,
       nodeId,

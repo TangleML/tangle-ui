@@ -10,6 +10,7 @@ import { ComponentDetailsDialog } from "@/components/shared/Dialogs";
 import { ComponentFavoriteToggle } from "@/components/shared/FavoriteComponentToggle";
 import { StatusIcon } from "@/components/shared/Status";
 import { TaskDetails } from "@/components/shared/TaskDetails";
+import TaskActions from "@/components/shared/TaskDetails/Actions";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
@@ -31,7 +32,8 @@ interface TaskOverviewProps {
 }
 
 const TaskOverview = ({ taskNode }: TaskOverviewProps) => {
-  const { displayName, taskSpec, taskId, state, callbacks } = taskNode;
+  const { componentRef, displayName, taskSpec, taskId, state, callbacks } =
+    taskNode;
 
   const executionData = useExecutionDataOptional();
   const details = executionData?.details;
@@ -57,8 +59,12 @@ const TaskOverview = ({ taskNode }: TaskOverviewProps) => {
   const canRename = !readOnly && isSubgraph;
 
   return (
-    <BlockStack className="h-full" data-context-panel="task-overview">
-      <InlineStack gap="2" className="px-2 pb-2">
+    <BlockStack
+      gap="4"
+      className="h-full px-2"
+      data-context-panel="task-overview"
+    >
+      <InlineStack gap="2">
         {isSubgraph && <Icon name="Workflow" />}
         <Text size="lg" weight="semibold" className="wrap-anywhere">
           {displayName}
@@ -72,7 +78,15 @@ const TaskOverview = ({ taskNode }: TaskOverviewProps) => {
         {readOnly && <StatusIcon status={status} tooltip label="task" />}
       </InlineStack>
 
-      <div className="px-4 overflow-y-auto pb-4 h-full w-full">
+      {!!componentRef && (
+        <TaskActions
+          componentRef={componentRef}
+          taskNode={taskNode}
+          readOnly={readOnly}
+        />
+      )}
+
+      <div className="overflow-y-auto pb-4 h-full w-full">
         <Tabs defaultValue="io" className="h-full">
           <TabsList className="mb-2">
             <TabsTrigger value="io" className="flex-1">

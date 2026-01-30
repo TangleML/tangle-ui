@@ -24,6 +24,7 @@ import { PublishedComponentDetails } from "../ManageComponent/PublishedComponent
 import { useFlagValue } from "../Settings/useFlags";
 import { withSuspenseWrapper } from "../SuspenseWrapper";
 import { TaskDetails, TaskImplementation, TaskIO } from "../TaskDetails";
+import TaskActions from "../TaskDetails/Actions";
 import { DialogContext } from "./dialog.context";
 
 interface ComponentDetailsProps {
@@ -120,11 +121,12 @@ const ComponentDetailsDialogContent = withSuspenseWrapper(
 
             <div className="overflow-auto h-[40vh]">
               <TabsContent value="details" className="h-full">
-                {remoteComponentLibrarySearchEnabled ? (
+                {remoteComponentLibrarySearchEnabled && (
                   <PublishedComponentDetails component={componentRef} />
-                ) : null}
+                )}
 
                 <TaskDetails componentRef={componentRef} />
+                <TaskActions componentRef={componentRef} className="mt-2" />
               </TabsContent>
 
               <TabsContent value="io" className="h-full">
