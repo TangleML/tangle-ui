@@ -91,6 +91,7 @@
     "js-yaml": "^4.1.1",
     "localforage": "^1.10.0",
     "lucide-react": "^0.574.0",
+    "nanoid": "^5.1.6",
     "pyodide": "^0.29.3",
     "random-words": "^2.0.1",
     "react": "^19.2.4",

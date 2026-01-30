@@ -20,7 +20,10 @@ import {
   SearchInput,
   SearchResults,
 } from "../components";
-import { IONodeSidebarItem } from "../components/ComponentItem";
+import {
+  IONodeSidebarItem,
+  StickyNoteSidebarItem,
+} from "../components/ComponentItem";
 import { LibraryFolderItem } from "../components/FolderItem";
 import PublishedComponentsSearch from "../components/PublishedComponentsSearch";
 import { SidebarSection } from "../components/SidebarSection";
@@ -95,6 +98,18 @@ const GraphComponents = () => {
         {remoteComponentLibrarySearchEnabled && <UpgradeAvailableAlertBox />}
 
         <BlockStack>
+          <FolderItem
+            key="canvas-tools-folder"
+            folder={
+              {
+                name: "Canvas Tools",
+                components: [<StickyNoteSidebarItem key="sticky-note" />],
+                folders: [],
+              } as UIComponentFolder
+            }
+            icon="ToolCase"
+          />
+          <Separator />
           {hasUsedComponents && (
             <FolderItem
               key="used-components-folder"

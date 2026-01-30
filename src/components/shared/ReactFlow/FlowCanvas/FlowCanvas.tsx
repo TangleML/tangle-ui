@@ -30,6 +30,7 @@ import { useIOSelectionPersistence } from "@/hooks/useIOSelectionPersistence";
 import { useNodeCallbacks } from "@/hooks/useNodeCallbacks";
 import { useSubgraphKeyboardNavigation } from "@/hooks/useSubgraphKeyboardNavigation";
 import useToastNotification from "@/hooks/useToastNotification";
+import { useUserDetails } from "@/hooks/useUserDetails";
 import { cn } from "@/lib/utils";
 import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
@@ -50,6 +51,7 @@ import {
 } from "@/utils/subgraphUtils";
 
 import { useFlagValue } from "../../Settings/useFlags";
+import { SuspenseWrapper } from "../../SuspenseWrapper";
 import { useNodesOverlay } from "../NodesOverlay/NodesOverlayProvider";
 import { getBulkUpdateConfirmationDetails } from "./ConfirmationDialogs/BulkUpdateConfirmationDialog";
 import { getDeleteConfirmationDetails } from "./ConfirmationDialogs/DeleteConfirmation";
@@ -71,6 +73,7 @@ import {
   type NodesAndEdges,
   nodeTypes,
 } from "./types";
+import addFlexNode from "./utils/addFlexNode";
 import addTask from "./utils/addTask";
 import { createConnectedIONode } from "./utils/createConnectedIONode";
 import { duplicateNodes } from "./utils/duplicateNodes";
@@ -101,7 +104,15 @@ const useScheduleExecutionOnceWhenConditionMet = (
   }, [condition, callback]);
 };
 
-const FlowCanvas = ({
+const FlowCanvas = (props: ReactFlowProps & { readOnly?: boolean }) => {
+  return (
+    <SuspenseWrapper>
+      <FlowCanvasContent {...props} />
+    </SuspenseWrapper>
+  );
+};
+
+const FlowCanvasContent = ({
   readOnly,
   nodesConnectable,
   children,
@@ -110,6 +121,7 @@ const FlowCanvas = ({
   const initialCanvasLoaded = useRef(false);
 
   const { clearContent } = useContextPanel();
+  const { data: currentUserDetails } = useUserDetails();
 
   useSubgraphKeyboardNavigation();
   const { setReactFlowInstance: setReactFlowInstanceForOverlay } =
@@ -558,6 +570,25 @@ const FlowCanvas = ({
 
     if (!nodeType) {
       console.error("Dropped node type not identified.");
+      return;
+    }
+
+    if (nodeType === "flex" && reactFlowInstance) {
+      const position = getPositionFromEvent(event, reactFlowInstance);
+
+      const { spec: updatedSubgraphSpec } = addFlexNode(
+        position,
+        currentUserDetails?.id || "unknown",
+        currentSubgraphSpec,
+      );
+
+      const newRootSpec = updateSubgraphSpec(
+        componentSpec,
+        currentSubgraphPath,
+        updatedSubgraphSpec,
+      );
+
+      setComponentSpec(newRootSpec);
       return;
     }
 

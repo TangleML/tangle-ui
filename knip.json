@@ -11,7 +11,7 @@
     "src/components/shared/ReactFlow/FlowCanvas/utils/zIndex.ts",
     "src/components/shared/ReactFlow/FlowControls/StackingControls.tsx",
     "src/components/shared/ReactFlow/FlowCanvas/types.ts",
-    "src/components/shared/ReactFlow/FlowCanvas/FlexNode/**"
+    "src/components/shared/ReactFlow/FlowCanvas/FlexNode/interface.ts"
   ],
   "ignoreDependencies": [
     "@radix-ui/react-accordion",

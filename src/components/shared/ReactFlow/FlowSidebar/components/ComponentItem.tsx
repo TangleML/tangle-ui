@@ -10,6 +10,7 @@ import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { Text } from "@/components/ui/typography";
 import { useHydrateComponentReference } from "@/hooks/useHydrateComponentReference";
 import { cn } from "@/lib/utils";
 import { type ComponentReference, type TaskSpec } from "@/utils/componentSpec";
@@ -318,6 +319,38 @@ export const IONodeSidebarItem = ({ nodeType }: IONodeSidebarItemProps) => {
           {nodeType === "input" ? "Input Node" : "Output Node"}
         </span>
       </div>
+    </li>
+  );
+};
+
+export const StickyNoteSidebarItem = () => {
+  const onDragStart = useCallback((event: DragEvent) => {
+    event.dataTransfer.setData(
+      "application/reactflow",
+      JSON.stringify({ ["flex"]: null }),
+    );
+    event.dataTransfer.setData(
+      "DragStart.offset",
+      JSON.stringify({
+        offsetX: event.nativeEvent.offsetX,
+        offsetY: event.nativeEvent.offsetY,
+      }),
+    );
+    event.dataTransfer.effectAllowed = "move";
+  }, []);
+
+  return (
+    <li
+      className="pl-2 py-1.5 cursor-grab hover:bg-gray-100 active:bg-gray-200"
+      draggable
+      onDragStart={onDragStart}
+    >
+      <InlineStack blockAlign="center" gap="2">
+        <Icon name="StickyNote" className="text-gray-400 shrink-0" />
+        <Text size="sm" className="truncate">
+          Sticky Note
+        </Text>
+      </InlineStack>
     </li>
   );
 };
