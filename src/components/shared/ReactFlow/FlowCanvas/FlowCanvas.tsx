@@ -55,6 +55,7 @@ import { getDeleteConfirmationDetails } from "./ConfirmationDialogs/DeleteConfir
 import { getReplaceConfirmationDetails } from "./ConfirmationDialogs/ReplaceConfirmation";
 import { ConnectionLine } from "./Edges/ConnectionLine";
 import SmoothEdge from "./Edges/SmoothEdge";
+import FlexNode from "./FlexNode/FlexNode";
 import GhostNode from "./GhostNode/GhostNode";
 import type { GhostNodeData } from "./GhostNode/types";
 import {
@@ -86,6 +87,7 @@ const nodeTypes: Record<string, ComponentType<any>> = {
   input: IONode,
   output: IONode,
   ghost: GhostNode,
+  flex: FlexNode,
 };
 
 const SELECTABLE_NODES = new Set(["task", "input", "output"]);
