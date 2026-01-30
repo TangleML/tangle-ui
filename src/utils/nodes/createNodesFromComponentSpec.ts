@@ -1,5 +1,7 @@
 import { type Node } from "@xyflow/react";
 
+import { getFlexNodeAnnotations } from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/interface";
+import { createFlexNode } from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/utils";
 import type { TaskNodeData } from "@/types/taskNode";
 import {
   type ComponentSpec,
@@ -24,8 +26,9 @@ const createNodesFromComponentSpec = (
   const taskNodes = createTaskNodes(graphSpec, nodeData, readOnly);
   const inputNodes = createInputNodes(componentSpec, nodeData, readOnly);
   const outputNodes = createOutputNodes(componentSpec, nodeData, readOnly);
+  const flexNodes = createFlexNodes(componentSpec, readOnly);
 
-  return [...taskNodes, ...inputNodes, ...outputNodes];
+  return [...taskNodes, ...inputNodes, ...outputNodes, ...flexNodes];
 };
 
 const createTaskNodes = (
@@ -55,6 +58,13 @@ const createOutputNodes = (
 ) => {
   return (componentSpec.outputs ?? []).map((outputSpec) =>
     createOutputNode(outputSpec, nodeData, readOnly),
+  );
+};
+
+const createFlexNodes = (componentSpec: ComponentSpec, readOnly: boolean) => {
+  const flexNodeAnnotations = getFlexNodeAnnotations(componentSpec);
+  return flexNodeAnnotations.map((flexNode) =>
+    createFlexNode(flexNode, readOnly),
   );
 };
 

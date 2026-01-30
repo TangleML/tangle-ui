@@ -4,6 +4,7 @@ import type { ComponentType } from "react";
 import type { TaskType } from "@/types/taskNode";
 
 import SmoothEdge from "./Edges/SmoothEdge";
+import FlexNode from "./FlexNode/FlexNode";
 import GhostNode from "./GhostNode/GhostNode";
 import IONode from "./IONode/IONode";
 import TaskNode from "./TaskNode/TaskNode";
@@ -18,6 +19,7 @@ export const nodeTypes: Record<string, ComponentType<any>> = {
   input: IONode,
   output: IONode,
   ghost: GhostNode,
+  flex: FlexNode,
 };
 
 export type NodeType = keyof typeof nodeTypes;
