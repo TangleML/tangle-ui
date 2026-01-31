@@ -52,3 +52,4 @@ function hasAnnotation(
 
 export const DISPLAY_NAME_MAX_LENGTH = 100;
 export const TASK_DISPLAY_NAME_ANNOTATION = "display_name";
+export const FLEX_NODES_ANNOTATION = "flex-nodes";

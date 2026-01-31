@@ -1,5 +1,6 @@
 import { type Node } from "@xyflow/react";
 
+import { FLEX_NODES_ANNOTATION } from "@/utils/annotations";
 import {
   type ComponentSpec,
   isGraphImplementation,
@@ -27,6 +28,10 @@ export const removeNode = (node: Node, componentSpec: ComponentSpec) => {
   if (node.type === "output") {
     const outputName = nodeIdToOutputName(node.id);
     return removeGraphOutput(outputName, componentSpec);
+  }
+
+  if (node.type === "flex") {
+    return removeFlexNode(node.id, componentSpec);
   }
 
   return componentSpec;
@@ -145,4 +150,23 @@ export const removeTask = (
   }
 
   return componentSpec;
+};
+
+const removeFlexNode = (
+  nodeIdToRemove: string,
+  componentSpec: ComponentSpec,
+) => {
+  const newAnnotations = { ...componentSpec.metadata?.annotations };
+  if (newAnnotations && newAnnotations[FLEX_NODES_ANNOTATION]) {
+    const newStickyNotes = { ...newAnnotations[FLEX_NODES_ANNOTATION] };
+    delete newStickyNotes[nodeIdToRemove];
+    newAnnotations[FLEX_NODES_ANNOTATION] = newStickyNotes;
+  }
+  return {
+    ...componentSpec,
+    metadata: {
+      ...componentSpec.metadata,
+      annotations: newAnnotations,
+    },
+  };
 };

@@ -1,5 +1,6 @@
 import type { Node } from "@xyflow/react";
 
+import { FLEX_NODES_ANNOTATION } from "@/utils/annotations";
 import {
   type ComponentSpec,
   isGraphImplementation,
@@ -94,6 +95,26 @@ export const updateNodePositions = (
 
         newComponentSpec.outputs = outputs;
       }
+    } else if (node.type === "flex") {
+      const flexNodeId = node.id;
+      const annotations =
+        newComponentSpec.metadata?.annotations?.[FLEX_NODES_ANNOTATION] || {};
+      const flexNodeSpec = annotations[flexNodeId];
+
+      flexNodeSpec.position = JSON.stringify(newPosition);
+
+      const newStickyNotesAnnotations = {
+        ...annotations,
+        [flexNodeId]: flexNodeSpec,
+      };
+
+      newComponentSpec.metadata = {
+        ...newComponentSpec.metadata,
+        annotations: {
+          ...newComponentSpec.metadata?.annotations,
+          [FLEX_NODES_ANNOTATION]: newStickyNotesAnnotations,
+        },
+      };
     }
   }
 
