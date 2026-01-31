@@ -19,3 +19,24 @@ export function isGitHubLibraryConfiguration(
     "auto_update" in configuration
   );
 }
+
+interface YamlLibraryConfiguration {
+  created_at: string;
+  last_updated_at: string;
+  yaml_url: string;
+  access_token: string | undefined;
+  auto_update: boolean;
+}
+
+export function isYamlLibraryConfiguration(
+  configuration: any,
+): configuration is YamlLibraryConfiguration {
+  return (
+    typeof configuration === "object" &&
+    configuration !== null &&
+    "created_at" in configuration &&
+    "last_updated_at" in configuration &&
+    "yaml_url" in configuration &&
+    "auto_update" in configuration
+  );
+}
