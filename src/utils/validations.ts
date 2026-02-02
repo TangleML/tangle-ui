@@ -14,7 +14,7 @@ interface ValidationOptions {
   skipInputValueValidation?: boolean;
 }
 
-type ValidationIssueType = "graph" | "task" | "input" | "output";
+type ValidationIssueType = "graph" | "task" | "input" | "argument" | "output";
 
 export interface ValidationError {
   type: ValidationIssueType;
@@ -22,6 +22,24 @@ export interface ValidationError {
   taskId?: string;
   inputName?: string;
   outputName?: string;
+}
+
+export function isFixableIssue(issue: ComponentValidationIssue): boolean {
+  return issue.type === "argument";
+}
+
+export function validateArguments(
+  inputs: InputSpec[],
+  taskArguments: Record<string, string>,
+): boolean {
+  const normalizedValues = inputs
+    .filter((input) => !input.optional)
+    .map((input) =>
+      String(
+        taskArguments[input.name] || input.value || input.default || "",
+      ).trim(),
+    );
+  return normalizedValues.every(Boolean);
 }
 
 export interface ComponentValidationIssue extends ValidationError {
@@ -141,7 +159,7 @@ const validateInputsAndOutputs = (
         !input.value
       ) {
         errors.push({
-          type: "input",
+          type: "argument",
           message: `Required input missing value`,
           inputName: input.name,
         });

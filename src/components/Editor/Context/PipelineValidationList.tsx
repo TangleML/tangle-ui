@@ -18,14 +18,16 @@ import {
 import { Paragraph, Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { pluralize } from "@/utils/string";
-import type { ComponentValidationIssue } from "@/utils/validations";
+import {
+  type ComponentValidationIssue,
+  isFixableIssue,
+} from "@/utils/validations";
 
 import type { ValidationIssueGroup } from "../hooks/useValidationIssueNavigation";
 
 interface PipelineValidationListProps {
-  isComponentTreeValid: boolean;
   groupedIssues: ValidationIssueGroup[];
-  totalIssueCount: number;
+  globalValidationIssues: ComponentValidationIssue[];
   onIssueSelect: (issue: ComponentValidationIssue) => void;
 }
 
@@ -42,11 +44,17 @@ const issueButtonStyles = cn(
 );
 
 export const PipelineValidationList = ({
-  isComponentTreeValid,
+  globalValidationIssues,
   groupedIssues,
-  totalIssueCount,
   onIssueSelect,
 }: PipelineValidationListProps) => {
+  const totalIssueCount = globalValidationIssues.length;
+  const fixableIssueCount =
+    globalValidationIssues.filter(isFixableIssue).length;
+  const nonFixableIssueCount = totalIssueCount - fixableIssueCount;
+
+  const isValid = nonFixableIssueCount === 0;
+
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
 
   const toggleGroup = (pathKey: string) => {
@@ -61,7 +69,7 @@ export const PipelineValidationList = ({
     });
   };
 
-  if (isComponentTreeValid) {
+  if (isValid) {
     return (
       <InfoBox variant="success" title="No validation issues found">
         Pipeline is ready for submission
@@ -72,7 +80,7 @@ export const PipelineValidationList = ({
   return (
     <InfoBox
       variant="error"
-      title={`${totalIssueCount} ${pluralize(totalIssueCount, "issue")} detected`}
+      title={`${nonFixableIssueCount} ${pluralize(nonFixableIssueCount, "issue")} detected`}
     >
       <Paragraph size="sm" className="mb-4">
         Select an item to jump to its location in the pipeline.

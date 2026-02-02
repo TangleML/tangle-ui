@@ -22,12 +22,7 @@ import RenamePipeline from "./RenamePipeline";
 
 const PipelineDetails = () => {
   const notify = useToastNotification();
-  const {
-    componentSpec,
-    digest,
-    isComponentTreeValid,
-    globalValidationIssues,
-  } = useComponentSpec();
+  const { componentSpec, digest, globalValidationIssues } = useComponentSpec();
 
   const templatizedRunNameEnabled = useFlagValue(
     "templatized-pipeline-run-name",
@@ -136,9 +131,8 @@ const PipelineDetails = () => {
 
       <ContentBlock title="Validations">
         <PipelineValidationList
-          isComponentTreeValid={isComponentTreeValid}
           groupedIssues={groupedIssues}
-          totalIssueCount={globalValidationIssues.length}
+          globalValidationIssues={globalValidationIssues}
           onIssueSelect={handleIssueClick}
         />
       </ContentBlock>

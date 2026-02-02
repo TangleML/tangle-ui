@@ -15,8 +15,12 @@ import { cn } from "@/lib/utils";
 import { useBackend } from "@/providers/BackendProvider";
 import { APP_ROUTES } from "@/routes/router";
 import type { PipelineRun } from "@/types/pipelineRun";
-import type { ComponentSpec } from "@/utils/componentSpec";
+import {
+  type ComponentSpec,
+  isGraphImplementation,
+} from "@/utils/componentSpec";
 import { submitPipelineRun } from "@/utils/submitPipeline";
+import { validateArguments } from "@/utils/validations";
 
 import { isAuthorizationRequired } from "../../Authentication/helpers";
 import { useAuthLocalStorage } from "../../Authentication/useAuthLocalStorage";
@@ -27,6 +31,7 @@ interface OasisSubmitterProps {
   componentSpec?: ComponentSpec;
   onSubmitComplete?: () => void;
   isComponentTreeValid?: boolean;
+  onlyFixableIssues?: boolean;
 }
 
 function useSubmitPipeline() {
@@ -87,6 +92,7 @@ const OasisSubmitter = ({
   componentSpec,
   onSubmitComplete,
   isComponentTreeValid = true,
+  onlyFixableIssues = false,
 }: OasisSubmitterProps) => {
   const { isAuthorized } = useAwaitAuthorization();
   const { configured, available } = useBackend();
@@ -157,10 +163,18 @@ const OasisSubmitter = ({
       return;
     }
 
-    if (!isComponentTreeValid) {
+    if (!isComponentTreeValid && !onlyFixableIssues) {
       handleError(
         `Pipeline validation failed. Refer to details panel for more info.`,
       );
+      return;
+    }
+
+    if (
+      onlyFixableIssues &&
+      !validateArguments(componentSpec?.inputs ?? [], taskArguments ?? {})
+    ) {
+      setIsArgumentsDialogOpen(true);
       return;
     }
 
@@ -191,16 +205,18 @@ const OasisSubmitter = ({
     return "Submit Run";
   };
 
-  const isButtonDisabled =
-    isSubmitting ||
-    !componentSpec ||
-    !isAuthorized ||
-    !isComponentTreeValid ||
-    cooldownTime > 0 ||
-    ("graph" in componentSpec.implementation &&
-      Object.keys(componentSpec.implementation.graph.tasks).length === 0);
+  const isSubmittable =
+    componentSpec &&
+    isAuthorized &&
+    (isComponentTreeValid || onlyFixableIssues) &&
+    cooldownTime === 0 &&
+    isGraphImplementation(componentSpec.implementation) &&
+    Object.keys(componentSpec.implementation.graph.tasks).length > 0;
 
-  const isArgumentsButtonVisible = hasConfigurableInputs && !isButtonDisabled;
+  const isButtonDisabled = isSubmitting || !isSubmittable;
+
+  const isArgumentsButtonVisible =
+    hasConfigurableInputs && !isButtonDisabled && isComponentTreeValid;
 
   const getButtonIcon = () => {
     if (isSubmitting) {
@@ -211,6 +227,9 @@ const OasisSubmitter = ({
     }
     if (submitSuccess === true && cooldownTime > 0) {
       return <CheckCircle />;
+    }
+    if (!isComponentTreeValid && onlyFixableIssues) {
+      return <Icon name="Split" className="rotate-90" />;
     }
     return <SendHorizonal />;
   };
@@ -226,7 +245,7 @@ const OasisSubmitter = ({
         >
           {getButtonIcon()}
           <span className="font-normal text-xs">{getButtonText()}</span>
-          {!isComponentTreeValid && (
+          {!isComponentTreeValid && !onlyFixableIssues && (
             <div
               className={cn(
                 "text-xs font-light -ml-1",
