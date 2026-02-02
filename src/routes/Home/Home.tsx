@@ -46,7 +46,10 @@ const Home = () => {
               <PipelineRunFiltersBar />
             </BetaFeatureWrapper>
           )}
-          <RunSection onEmptyList={handlePipelineRunsEmpty} />
+          <RunSection
+            onEmptyList={handlePipelineRunsEmpty}
+            hideFilters={isFiltersBarEnabled}
+          />
         </TabsContent>
       </Tabs>
     </div>

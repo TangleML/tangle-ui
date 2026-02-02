@@ -1,93 +1,64 @@
-import type { KeyboardEvent } from "react";
 import { useEffect, useState } from "react";
 
-import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { InlineStack } from "@/components/ui/layout";
-import { Switch } from "@/components/ui/switch";
 
 interface CreatedByFilterProps {
-  /** Current filter value. undefined means no filter, "me" means current user. */
+  /** Current filter value from URL. undefined means no filter. */
   value: string | undefined;
-  /** Called when the filter value changes. undefined clears the filter. */
+  /** Called when input value changes (parent handles debouncing). */
   onChange: (value: string | undefined) => void;
+  /** Called when user clicks the clear button (for immediate clearing). */
+  onClear: () => void;
 }
 
 /**
- * Filter component for filtering by creator/initiator.
- * Provides a toggle for "Created by me" and an input for searching by specific user.
+ * Text input filter for filtering pipeline runs by creator/initiator.
  */
-export function CreatedByFilter({ value, onChange }: CreatedByFilterProps) {
-  const [searchUser, setSearchUser] = useState(value ?? "");
+export function CreatedByFilter({
+  value,
+  onChange,
+  onClear,
+}: CreatedByFilterProps) {
+  const [inputValue, setInputValue] = useState(value ?? "");
 
-  // Sync internal state when value prop changes externally (e.g., URL navigation, badge removal)
+  // Sync internal state when value changes externally (e.g., URL navigation, badge removal)
   useEffect(() => {
-    // Only sync if value is different and not "me" (don't populate input with "me")
-    if (value !== undefined && value !== "me") {
-      setSearchUser(value);
-    } else if (value === undefined) {
-      setSearchUser("");
-    }
+    setInputValue(value ?? "");
   }, [value]);
 
-  const isFilterActive = value !== undefined;
-  const toggleText = value ? `Created by ${value}` : "Created by me";
-
-  const handleToggleChange = (checked: boolean) => {
-    if (checked) {
-      // Enable filter - if no specific user set, default to "me"
-      if (!value) {
-        onChange("me");
-        setSearchUser("");
-      }
-    } else {
-      // Disable filter
-      onChange(undefined);
-    }
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setInputValue(newValue);
+    onChange(newValue || undefined);
   };
 
-  const handleUserSearch = () => {
-    const trimmedUser = searchUser.trim();
-    if (trimmedUser) {
-      onChange(trimmedUser);
-    }
-  };
-
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && searchUser.trim()) {
-      e.preventDefault();
-      handleUserSearch();
-    }
+  const handleClear = () => {
+    setInputValue("");
+    onClear();
   };
 
   return (
-    <InlineStack gap="4" blockAlign="center">
-      <InlineStack gap="2" blockAlign="center">
-        <Switch
-          id="created-by-filter"
-          checked={isFilterActive}
-          onCheckedChange={handleToggleChange}
-        />
-        <Label htmlFor="created-by-filter">{toggleText}</Label>
-      </InlineStack>
-      <InlineStack gap="1" blockAlign="center" wrap="nowrap">
-        <Input
-          placeholder="Search by user"
-          value={searchUser}
-          onChange={(e) => setSearchUser(e.target.value)}
-          onKeyDown={handleKeyDown}
-          className="w-40"
-        />
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleUserSearch}
-          disabled={!searchUser.trim()}
+    <div className="relative">
+      <Icon
+        name="User"
+        className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+      />
+      <Input
+        placeholder="Search by user..."
+        value={inputValue}
+        onChange={handleChange}
+        className="pl-9 pr-8 w-44"
+      />
+      {inputValue && (
+        <button
+          onClick={handleClear}
+          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          aria-label="Clear user filter"
         >
-          Search
-        </Button>
-      </InlineStack>
-    </InlineStack>
+          <Icon name="X" />
+        </button>
+      )}
+    </div>
   );
 }
