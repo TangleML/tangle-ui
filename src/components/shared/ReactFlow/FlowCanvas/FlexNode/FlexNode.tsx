@@ -1,15 +1,50 @@
 import { type Node, type NodeProps } from "@xyflow/react";
+import { useEffect } from "react";
 
+import { InfoBox } from "@/components/shared/InfoBox";
 import { Paragraph } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
+import { useContextPanel } from "@/providers/ContextPanelProvider";
 
+import { StickyNoteEditor } from "./StickyNoteEditor";
 import type { FlexNodeData } from "./types";
 
 type FlexNodeProps = NodeProps<Node<FlexNodeData>>;
 
 const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
-  const { properties } = data;
+  const { properties, readOnly, type } = data;
   const { color, zIndex } = properties;
+
+  const {
+    setContent,
+    clearContent,
+    setOpen: setContextPanelOpen,
+  } = useContextPanel();
+
+  useEffect(() => {
+    if (selected) {
+      switch (type) {
+        case "sticky-note":
+          setContent(
+            <StickyNoteEditor stickyNote={data} readOnly={readOnly} />,
+          );
+          break;
+        default:
+          setContent(
+            <InfoBox title="Context Panel Error" variant="error">
+              Unknown node type: <span className="font-mono">{type}</span>
+            </InfoBox>,
+          );
+      }
+      setContextPanelOpen(true);
+    }
+
+    return () => {
+      if (selected) {
+        clearContent();
+      }
+    };
+  }, [selected]);
 
   return (
     <div
