@@ -1,16 +1,38 @@
 import { type Node, type NodeProps } from "@xyflow/react";
+import { useEffect } from "react";
 
 import { BlockStack } from "@/components/ui/layout";
 import { Paragraph } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
+import { useContextPanel } from "@/providers/ContextPanelProvider";
 
+import { FlexNodeEditor } from "./FlexNodeEditor";
 import type { FlexNodeData } from "./types";
 
 type FlexNodeProps = NodeProps<Node<FlexNodeData>>;
 
 const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
-  const { properties } = data;
+  const { properties, readOnly } = data;
   const { title, content, color } = properties;
+
+  const {
+    setContent,
+    clearContent,
+    setOpen: setContextPanelOpen,
+  } = useContextPanel();
+
+  useEffect(() => {
+    if (selected) {
+      setContent(<FlexNodeEditor flexNode={data} readOnly={readOnly} />);
+      setContextPanelOpen(true);
+    }
+
+    return () => {
+      if (selected) {
+        clearContent();
+      }
+    };
+  }, [data, readOnly, selected]);
 
   const isTransparent = color === "transparent";
 
@@ -34,7 +56,9 @@ const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
           <Paragraph size="sm" weight="semibold">
             {title}
           </Paragraph>
-          <Paragraph size="xs">{content}</Paragraph>
+          <Paragraph size="xs" className="whitespace-pre-wrap">
+            {content}
+          </Paragraph>
         </BlockStack>
       </div>
     </div>
