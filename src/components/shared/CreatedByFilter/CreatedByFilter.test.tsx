@@ -2,160 +2,183 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import { DEFAULT_CREATED_BY_ME_FILTER_VALUE } from "@/utils/constants";
-
 import { CreatedByFilter } from "./CreatedByFilter";
 
 describe("CreatedByFilter", () => {
   describe("rendering", () => {
-    it("should render toggle and search input", () => {
-      render(<CreatedByFilter value={undefined} onChange={vi.fn()} />);
+    it("should render search input with placeholder", () => {
+      render(
+        <CreatedByFilter
+          value={undefined}
+          onChange={vi.fn()}
+          onClear={vi.fn()}
+        />,
+      );
 
-      expect(screen.getByRole("switch")).toBeInTheDocument();
-      expect(screen.getByLabelText("Created by me")).toBeInTheDocument();
-      expect(screen.getByPlaceholderText("Search by user")).toBeInTheDocument();
       expect(
-        screen.getByRole("button", { name: "Search" }),
+        screen.getByPlaceholderText("Search by user..."),
       ).toBeInTheDocument();
     });
 
-    it("should show 'Created by me' when no value", () => {
-      render(<CreatedByFilter value={undefined} onChange={vi.fn()} />);
+    it("should not show clear button when empty", () => {
+      render(
+        <CreatedByFilter
+          value={undefined}
+          onChange={vi.fn()}
+          onClear={vi.fn()}
+        />,
+      );
 
-      expect(screen.getByLabelText("Created by me")).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Clear user filter" }),
+      ).not.toBeInTheDocument();
     });
 
-    it("should show 'Created by {user}' when value is set", () => {
-      render(<CreatedByFilter value="john.doe" onChange={vi.fn()} />);
+    it("should show clear button when value is set", () => {
+      render(
+        <CreatedByFilter
+          value="john.doe"
+          onChange={vi.fn()}
+          onClear={vi.fn()}
+        />,
+      );
 
-      expect(screen.getByLabelText("Created by john.doe")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Clear user filter" }),
+      ).toBeInTheDocument();
     });
 
-    it("should have switch unchecked when no value", () => {
-      render(<CreatedByFilter value={undefined} onChange={vi.fn()} />);
+    it("should populate input with current value", () => {
+      render(
+        <CreatedByFilter
+          value="existing-user"
+          onChange={vi.fn()}
+          onClear={vi.fn()}
+        />,
+      );
 
-      expect(screen.getByRole("switch")).not.toBeChecked();
-    });
-
-    it("should show 'Created by {user}' and checked switch when value is set", () => {
-      render(<CreatedByFilter value="john.doe" onChange={vi.fn()} />);
-
-      expect(screen.getByRole("switch")).toBeChecked();
-      expect(screen.getByLabelText("Created by john.doe")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Search by user...")).toHaveValue(
+        "existing-user",
+      );
     });
   });
 
-  describe("toggle behavior", () => {
-    it("should call onChange with 'me' when toggle is turned on", async () => {
-      const user = userEvent.setup();
-      const onChange = vi.fn();
-      render(<CreatedByFilter value={undefined} onChange={onChange} />);
-
-      await user.click(screen.getByRole("switch"));
-
-      expect(onChange).toHaveBeenCalledWith(DEFAULT_CREATED_BY_ME_FILTER_VALUE);
-    });
-
-    it("should call onChange with undefined when toggle is turned off", async () => {
+  describe("typing behavior", () => {
+    it("should call onChange when typing", async () => {
       const user = userEvent.setup();
       const onChange = vi.fn();
       render(
         <CreatedByFilter
-          value={DEFAULT_CREATED_BY_ME_FILTER_VALUE}
+          value={undefined}
           onChange={onChange}
+          onClear={vi.fn()}
         />,
       );
 
-      await user.click(screen.getByRole("switch"));
+      await user.type(screen.getByPlaceholderText("Search by user..."), "jane");
 
-      expect(onChange).toHaveBeenCalledWith(undefined);
+      // Called for each character typed
+      expect(onChange).toHaveBeenCalledTimes(4);
+      expect(onChange).toHaveBeenLastCalledWith("jane");
     });
 
-    it("should clear filter when toggling off with existing value", async () => {
+    it("should call onChange with undefined when input is cleared by typing", async () => {
       const user = userEvent.setup();
       const onChange = vi.fn();
-      render(<CreatedByFilter value="john.doe" onChange={onChange} />);
+      render(
+        <CreatedByFilter value="j" onChange={onChange} onClear={vi.fn()} />,
+      );
 
-      await user.click(screen.getByRole("switch"));
+      await user.clear(screen.getByPlaceholderText("Search by user..."));
 
-      expect(onChange).toHaveBeenCalledWith(undefined);
+      expect(onChange).toHaveBeenLastCalledWith(undefined);
     });
   });
 
-  describe("search behavior", () => {
-    it("should have search button disabled when input is empty", () => {
-      render(<CreatedByFilter value={undefined} onChange={vi.fn()} />);
-
-      expect(screen.getByRole("button", { name: "Search" })).toBeDisabled();
-    });
-
-    it("should enable search button when input has text", async () => {
+  describe("clear button behavior", () => {
+    it("should call onClear and clear input when clear button is clicked", async () => {
       const user = userEvent.setup();
-      render(<CreatedByFilter value={undefined} onChange={vi.fn()} />);
-
-      await user.type(screen.getByPlaceholderText("Search by user"), "jane");
-
-      expect(screen.getByRole("button", { name: "Search" })).toBeEnabled();
-    });
-
-    it("should call onChange with typed user when search clicked", async () => {
-      const user = userEvent.setup();
-      const onChange = vi.fn();
-      render(<CreatedByFilter value={undefined} onChange={onChange} />);
-
-      await user.type(
-        screen.getByPlaceholderText("Search by user"),
-        "jane.doe",
+      const onClear = vi.fn();
+      render(
+        <CreatedByFilter
+          value="john.doe"
+          onChange={vi.fn()}
+          onClear={onClear}
+        />,
       );
-      await user.click(screen.getByRole("button", { name: "Search" }));
 
-      expect(onChange).toHaveBeenCalledWith("jane.doe");
-    });
-
-    it("should call onChange when Enter is pressed in input", async () => {
-      const user = userEvent.setup();
-      const onChange = vi.fn();
-      render(<CreatedByFilter value={undefined} onChange={onChange} />);
-
-      const input = screen.getByPlaceholderText("Search by user");
-      await user.type(input, "jane.doe{Enter}");
-
-      expect(onChange).toHaveBeenCalledWith("jane.doe");
-    });
-
-    it("should trim whitespace from search input", async () => {
-      const user = userEvent.setup();
-      const onChange = vi.fn();
-      render(<CreatedByFilter value={undefined} onChange={onChange} />);
-
-      await user.type(
-        screen.getByPlaceholderText("Search by user"),
-        "  jane  ",
+      await user.click(
+        screen.getByRole("button", { name: "Clear user filter" }),
       );
-      await user.click(screen.getByRole("button", { name: "Search" }));
 
-      expect(onChange).toHaveBeenCalledWith("jane");
+      expect(onClear).toHaveBeenCalled();
     });
 
-    it("should not call onChange when searching with only whitespace", async () => {
+    it("should hide clear button after clearing", async () => {
       const user = userEvent.setup();
-      const onChange = vi.fn();
-      render(<CreatedByFilter value={undefined} onChange={onChange} />);
+      render(
+        <CreatedByFilter
+          value="john.doe"
+          onChange={vi.fn()}
+          onClear={vi.fn()}
+        />,
+      );
 
-      await user.type(screen.getByPlaceholderText("Search by user"), "   ");
+      await user.click(
+        screen.getByRole("button", { name: "Clear user filter" }),
+      );
 
-      // Button should still be disabled
-      expect(screen.getByRole("button", { name: "Search" })).toBeDisabled();
+      expect(
+        screen.queryByRole("button", { name: "Clear user filter" }),
+      ).not.toBeInTheDocument();
     });
   });
 
-  describe("initial state", () => {
-    it("should populate search input with current value", () => {
-      render(<CreatedByFilter value="existing-user" onChange={vi.fn()} />);
-
-      expect(screen.getByPlaceholderText("Search by user")).toHaveValue(
-        "existing-user",
+  describe("external value sync", () => {
+    it("should sync input when value prop changes", () => {
+      const { rerender } = render(
+        <CreatedByFilter
+          value="initial"
+          onChange={vi.fn()}
+          onClear={vi.fn()}
+        />,
       );
+
+      expect(screen.getByPlaceholderText("Search by user...")).toHaveValue(
+        "initial",
+      );
+
+      rerender(
+        <CreatedByFilter
+          value="updated"
+          onChange={vi.fn()}
+          onClear={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByPlaceholderText("Search by user...")).toHaveValue(
+        "updated",
+      );
+    });
+
+    it("should clear input when value prop becomes undefined", () => {
+      const { rerender } = render(
+        <CreatedByFilter
+          value="some-user"
+          onChange={vi.fn()}
+          onClear={vi.fn()}
+        />,
+      );
+
+      rerender(
+        <CreatedByFilter
+          value={undefined}
+          onChange={vi.fn()}
+          onClear={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByPlaceholderText("Search by user...")).toHaveValue("");
     });
   });
 });
