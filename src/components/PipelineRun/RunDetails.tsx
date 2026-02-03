@@ -13,6 +13,7 @@ import { useBackend } from "@/providers/BackendProvider";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
 import {
+  FLEX_NODES_ANNOTATION,
   getAnnotationValue,
   PIPELINE_NOTES_ANNOTATION,
 } from "@/utils/annotations";
@@ -24,7 +25,7 @@ import {
 
 import { RunNotesEditor } from "./RunNotesEditor";
 
-const EXCLUDED_ANNOTATIONS = [PIPELINE_NOTES_ANNOTATION];
+const EXCLUDED_ANNOTATIONS = [PIPELINE_NOTES_ANNOTATION, FLEX_NODES_ANNOTATION];
 
 export const RunDetails = () => {
   const { configured } = useBackend();
