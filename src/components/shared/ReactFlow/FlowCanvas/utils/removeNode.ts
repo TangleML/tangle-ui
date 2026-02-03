@@ -1,5 +1,6 @@
 import { type Node } from "@xyflow/react";
 
+import { FLEX_NODES_ANNOTATION } from "@/utils/annotations";
 import {
   type ComponentSpec,
   isGraphImplementation,
@@ -10,6 +11,7 @@ import {
   nodeIdToTaskId,
 } from "@/utils/nodes/nodeIdUtils";
 
+import { removeFlexNodeFromComponentSpec } from "../FlexNode/interface";
 import { setGraphOutputValue } from "./setGraphOutputValue";
 import { setTaskArgument } from "./setTaskArgument";
 
@@ -27,6 +29,10 @@ export const removeNode = (node: Node, componentSpec: ComponentSpec) => {
   if (node.type === "output") {
     const outputName = nodeIdToOutputName(node.id);
     return removeGraphOutput(outputName, componentSpec);
+  }
+
+  if (node.type === "flex") {
+    return removeFlexNode(node.id, componentSpec);
   }
 
   return componentSpec;
@@ -142,6 +148,19 @@ export const removeTask = (
         },
       }),
     };
+  }
+
+  return componentSpec;
+};
+
+const removeFlexNode = (
+  nodeIdToRemove: string,
+  componentSpec: ComponentSpec,
+) => {
+  const annotations = componentSpec.metadata?.annotations;
+
+  if (annotations && annotations[FLEX_NODES_ANNOTATION]) {
+    return removeFlexNodeFromComponentSpec(componentSpec, nodeIdToRemove);
   }
 
   return componentSpec;
