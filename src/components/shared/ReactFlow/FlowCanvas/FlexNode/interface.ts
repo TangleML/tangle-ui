@@ -76,3 +76,24 @@ export const updateFlexNodeInComponentSpec = (
 
   return newComponentSpec;
 };
+
+export const removeFlexNodeFromComponentSpec = (
+  componentSpec: ComponentSpec,
+  flexNodeId: string,
+): ComponentSpec => {
+  const clonedComponentSpec = deepClone(componentSpec);
+  const newComponentSpec = ensureAnnotations(clonedComponentSpec);
+
+  const flexNodesAnnotations = getFlexNodeAnnotations(newComponentSpec);
+
+  const updatedFlexNodes = flexNodesAnnotations.filter(
+    (node) => node.id !== flexNodeId,
+  );
+
+  newComponentSpec.metadata.annotations = {
+    ...newComponentSpec.metadata.annotations,
+    [FLEX_NODES_ANNOTATION]: serializeFlexNodes(updatedFlexNodes),
+  };
+
+  return newComponentSpec;
+};
