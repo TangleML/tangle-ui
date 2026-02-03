@@ -1,5 +1,10 @@
 import { useMutation } from "@tanstack/react-query";
-import { type ChangeEvent, type KeyboardEvent, useState } from "react";
+import {
+  type ChangeEvent,
+  type KeyboardEvent,
+  useEffect,
+  useState,
+} from "react";
 
 import type { TaskSpecOutput } from "@/api/types.gen";
 import { PipelineRunsList } from "@/components/shared/PipelineRunDisplay/PipelineRunsList";
@@ -35,6 +40,7 @@ import {
 import type { PipelineRun } from "@/types/pipelineRun";
 import type { ComponentSpec, InputSpec } from "@/utils/componentSpec";
 import { extractTaskArguments } from "@/utils/nodes/taskArguments";
+import { validateArguments } from "@/utils/validations";
 
 type TaskArguments = TaskSpecOutput["arguments"];
 
@@ -64,6 +70,10 @@ export const SubmitTaskArgumentsDialog = ({
 
   const inputs = componentSpec.inputs ?? [];
 
+  const [isValidToSubmit, setIsValidToSubmit] = useState(
+    validateArguments(inputs, taskArguments),
+  );
+
   const handleCopyFromRun = (args: Record<string, string>) => {
     const diff = Object.entries(args).filter(
       ([key, value]) => taskArguments[key] !== value,
@@ -86,6 +96,10 @@ export const SubmitTaskArgumentsDialog = ({
       [name]: value,
     }));
   };
+
+  useEffect(() => {
+    setIsValidToSubmit(validateArguments(inputs, taskArguments));
+  }, [inputs, taskArguments]);
 
   const handleConfirm = () => onConfirm(taskArguments);
 
@@ -150,7 +164,9 @@ export const SubmitTaskArgumentsDialog = ({
           <Button variant="outline" onClick={handleCancel}>
             Cancel
           </Button>
-          <Button onClick={handleConfirm}>Submit Run</Button>
+          <Button onClick={handleConfirm} disabled={!isValidToSubmit}>
+            Submit Run
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

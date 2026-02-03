@@ -8,12 +8,16 @@ import {
   outputNameToNodeId,
   taskIdToNodeId,
 } from "@/utils/nodes/nodeIdUtils";
-import type { ComponentValidationIssue } from "@/utils/validations";
+import {
+  type ComponentValidationIssue,
+  isFixableIssue,
+} from "@/utils/validations";
 
 const ISSUE_TYPE_LABELS: Record<ComponentValidationIssue["type"], string> = {
   graph: "Graph",
   task: "Task",
   input: "Input",
+  argument: "Argument",
   output: "Output",
 };
 
@@ -126,8 +130,9 @@ export const useValidationIssueNavigation = (
     return () => cancelAnimationFrame(frameId);
   }, [currentSubgraphPath, focusIssue, pendingIssue]);
 
-  const issueItems: ValidationIssueListItem[] = validationIssues.map(
-    (issue) => {
+  const issueItems: ValidationIssueListItem[] = validationIssues
+    .filter((issue) => !isFixableIssue(issue))
+    .map((issue) => {
       const nodeLabel =
         issue.taskId ?? issue.inputName ?? issue.outputName ?? null;
       const fallbackName =
@@ -142,8 +147,7 @@ export const useValidationIssueNavigation = (
         typeLabel: ISSUE_TYPE_LABELS[issue.type],
         displayMessage: issue.message,
       };
-    },
-  );
+    });
 
   const groupedIssues = groupIssuesByPath(issueItems);
 

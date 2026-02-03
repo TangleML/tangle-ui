@@ -312,8 +312,9 @@ export const InputValueEditor = ({
       />
 
       {!initialInputValue && !inputOptional && !isInSubgraph && (
-        <InfoBox title="Missing value" variant="error">
-          Input is not optional. Value is required.
+        <InfoBox title="Missing value" variant="warning">
+          Input is not optional. Value is required to submit the run. You may
+          provide a value while submitting the run.
         </InfoBox>
       )}
 

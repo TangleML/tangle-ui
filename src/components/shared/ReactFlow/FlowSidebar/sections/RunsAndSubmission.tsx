@@ -11,12 +11,18 @@ import {
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
+import { isFixableIssue } from "@/utils/validations";
 
 import { RecentExecutionsButton } from "../components/RecentExecutionsButton";
 
 const RunsAndSubmission = ({ isOpen }: { isOpen: boolean }) => {
   const { isAuthorized } = useAwaitAuthorization();
-  const { componentSpec, isComponentTreeValid } = useComponentSpec();
+  const { componentSpec, isComponentTreeValid, globalValidationIssues } =
+    useComponentSpec();
+
+  const onlyFixableIssues =
+    globalValidationIssues.filter(isFixableIssue).length ===
+    globalValidationIssues.length;
 
   const showGoogleSubmitter =
     import.meta.env.VITE_ENABLE_GOOGLE_CLOUD_SUBMITTER === "true";
@@ -32,6 +38,7 @@ const RunsAndSubmission = ({ isOpen }: { isOpen: boolean }) => {
                 <OasisSubmitter
                   componentSpec={componentSpec}
                   isComponentTreeValid={isComponentTreeValid}
+                  onlyFixableIssues={onlyFixableIssues}
                 />
               ) : (
                 <HuggingFaceAuthButton title="Sign in to Submit Runs" />
@@ -66,6 +73,7 @@ const RunsAndSubmission = ({ isOpen }: { isOpen: boolean }) => {
               <OasisSubmitter
                 componentSpec={componentSpec}
                 isComponentTreeValid={isComponentTreeValid}
+                onlyFixableIssues={onlyFixableIssues}
               />
             ) : (
               <HuggingFaceAuthButton
