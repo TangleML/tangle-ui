@@ -1,15 +1,26 @@
-import { type Node, type NodeProps } from "@xyflow/react";
+import {
+  type Node,
+  type NodeProps,
+  NodeResizer,
+  type ResizeDragEvent,
+  type ResizeParams,
+} from "@xyflow/react";
 import { useEffect } from "react";
 
 import { BlockStack } from "@/components/ui/layout";
 import { Paragraph } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
+import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useContextPanel } from "@/providers/ContextPanelProvider";
+import { updateSubgraphSpec } from "@/utils/subgraphUtils";
 
 import { FlexNodeEditor } from "./FlexNodeEditor";
+import { updateFlexNodeInComponentSpec } from "./interface";
 import type { FlexNodeData } from "./types";
 
 type FlexNodeProps = NodeProps<Node<FlexNodeData>>;
+
+const MIN_SIZE = { width: 50, height: 50 };
 
 const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
   const { properties, readOnly } = data;
@@ -20,6 +31,35 @@ const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
     clearContent,
     setOpen: setContextPanelOpen,
   } = useContextPanel();
+
+  const {
+    currentSubgraphSpec,
+    currentSubgraphPath,
+    componentSpec,
+    setComponentSpec,
+  } = useComponentSpec();
+
+  const handleResizeEnd = (_: ResizeDragEvent, params: ResizeParams) => {
+    const width = Math.max(params.width, MIN_SIZE.width);
+    const height = Math.max(params.height, MIN_SIZE.height);
+
+    const updatedSubgraphSpec = updateFlexNodeInComponentSpec(
+      currentSubgraphSpec,
+      {
+        ...data,
+        size: { width, height },
+        position: { x: params.x, y: params.y },
+      },
+    );
+
+    const newRootSpec = updateSubgraphSpec(
+      componentSpec,
+      currentSubgraphPath,
+      updatedSubgraphSpec,
+    );
+
+    setComponentSpec(newRootSpec);
+  };
 
   useEffect(() => {
     if (selected) {
@@ -37,31 +77,45 @@ const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
   const isTransparent = color === "transparent";
 
   return (
-    <div
-      key={id}
-      className={cn(
-        "p-1 rounded-lg border-2 border-transparent h-full w-full",
-        isTransparent && !title && !content && "border-dashed border-warning",
-        selected && "border-gray-500 border-solid",
+    <>
+      {!readOnly && (
+        <NodeResizer
+          color="var(--edge-selected)"
+          isVisible={selected}
+          minWidth={50}
+          minHeight={50}
+          onResizeEnd={handleResizeEnd}
+        />
       )}
-      style={{ backgroundColor: color }}
-    >
       <div
+        key={id}
         className={cn(
-          "rounded-sm p-1 h-full w-full overflow-hidden",
-          isTransparent ? "bg-transparent" : "bg-white/40",
+          "p-1 rounded-lg h-full w-full",
+          readOnly && selected && "ring-2 ring-ring",
+          isTransparent &&
+            !title &&
+            !content &&
+            "border-2 border-dashed border-warning",
         )}
+        style={{ backgroundColor: color }}
       >
-        <BlockStack gap="1">
-          <Paragraph size="sm" weight="semibold">
-            {title}
-          </Paragraph>
-          <Paragraph size="xs" className="whitespace-pre-wrap">
-            {content}
-          </Paragraph>
-        </BlockStack>
+        <div
+          className={cn(
+            "rounded-sm p-1 h-full w-full overflow-hidden",
+            isTransparent ? "bg-transparent" : "bg-white/40",
+          )}
+        >
+          <BlockStack gap="1">
+            <Paragraph size="sm" weight="semibold">
+              {title}
+            </Paragraph>
+            <Paragraph size="xs" className="whitespace-pre-wrap">
+              {content}
+            </Paragraph>
+          </BlockStack>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
