@@ -1,3 +1,5 @@
+import { type ChangeEvent, useEffect, useState } from "react";
+
 import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlock";
 import { KeyValueList } from "@/components/shared/ContextPanel/Blocks/KeyValueList";
 import { CopyText } from "@/components/shared/CopyText/CopyText";
@@ -6,7 +8,10 @@ import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Textarea } from "@/components/ui/textarea";
 import { Paragraph, Text } from "@/components/ui/typography";
+import { useComponentSpec } from "@/providers/ComponentSpecProvider";
+import { updateSubgraphSpec } from "@/utils/subgraphUtils";
 
+import { updateFlexNodeInComponentSpec } from "./interface";
 import type { FlexNodeData } from "./types";
 
 interface FlexNodeEditorProps {
@@ -82,7 +87,52 @@ const ContentEditor = ({
   flexNode: FlexNodeData;
   readOnly: boolean;
 }) => {
+  const {
+    componentSpec,
+    currentSubgraphSpec,
+    currentSubgraphPath,
+    setComponentSpec,
+  } = useComponentSpec();
+
   const { properties } = flexNode;
+
+  const [title, setTitle] = useState(properties.title);
+  const [content, setContent] = useState(properties.content);
+
+  const handleTitleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setTitle(e.target.value);
+  };
+
+  const handleContentChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
+    setContent(e.target.value);
+  };
+
+  const saveChanges = () => {
+    const updatedSubgraphSpec = updateFlexNodeInComponentSpec(
+      currentSubgraphSpec,
+      {
+        ...flexNode,
+        properties: {
+          ...properties,
+          title,
+          content,
+        },
+      },
+    );
+
+    const newRootSpec = updateSubgraphSpec(
+      componentSpec,
+      currentSubgraphPath,
+      updatedSubgraphSpec,
+    );
+
+    setComponentSpec(newRootSpec);
+  };
+
+  useEffect(() => {
+    setTitle(properties.title);
+    setContent(properties.content);
+  }, [properties]);
 
   if (readOnly) {
     return (
@@ -95,6 +145,7 @@ const ContentEditor = ({
             copyable: true,
           },
           {
+            label: "Note",
             value: properties.content,
             copyable: true,
           },
@@ -115,9 +166,10 @@ const ContentEditor = ({
           </Label>
           <Input
             id="flex-node-title"
-            value={properties.title}
+            value={title}
+            onChange={handleTitleChange}
+            onBlur={saveChanges}
             className="text-sm"
-            readOnly
           />
         </BlockStack>
         <BlockStack>
@@ -129,9 +181,10 @@ const ContentEditor = ({
           </Label>
           <Textarea
             id="flex-node-content"
-            value={properties.content}
+            value={content}
+            onChange={handleContentChange}
+            onBlur={saveChanges}
             className="text-xs"
-            readOnly
           />
         </BlockStack>
       </BlockStack>
