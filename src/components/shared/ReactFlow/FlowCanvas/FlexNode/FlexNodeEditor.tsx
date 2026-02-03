@@ -189,19 +189,13 @@ const ColorEditor = ({
   const { properties } = flexNode;
 
   const [backgroundColor, setBackgroundColor] = useState(properties.color);
-  const [borderColor, setBorderColor] = useState(properties.border);
 
   const handleBackgroundColorChange = (newColor: string) => {
     setBackgroundColor(newColor);
-    saveColors(newColor, borderColor);
+    saveColors(newColor);
   };
 
-  const handleBorderColorChange = (newColor: string) => {
-    setBorderColor(newColor);
-    saveColors(backgroundColor, newColor);
-  };
-
-  const saveColors = (newBackgroundColor: string, newBorderColor: string) => {
+  const saveColors = (newBackgroundColor: string) => {
     const updatedSubgraphSpec = updateFlexNodeInComponentSpec(
       currentSubgraphSpec,
       {
@@ -209,7 +203,6 @@ const ColorEditor = ({
         properties: {
           ...properties,
           color: newBackgroundColor,
-          border: newBorderColor,
         },
       },
     );
@@ -225,7 +218,6 @@ const ColorEditor = ({
 
   useEffect(() => {
     setBackgroundColor(properties.color);
-    setBorderColor(properties.border);
   }, [properties]);
 
   if (readOnly) {
@@ -236,11 +228,6 @@ const ColorEditor = ({
           {
             label: "Backgroud",
             value: properties.color,
-            copyable: true,
-          },
-          {
-            label: "Border",
-            value: properties.border,
             copyable: true,
           },
         ]}
@@ -259,15 +246,6 @@ const ColorEditor = ({
             setColor={handleBackgroundColorChange}
           />
           <CopyText className="text-xs font-mono">{properties.color}</CopyText>
-        </InlineStack>
-        <InlineStack gap="4" blockAlign="center">
-          <Paragraph size="xs">Border</Paragraph>
-          <ColorPicker
-            title="Border Color"
-            color={borderColor}
-            setColor={handleBorderColorChange}
-          />
-          <CopyText className="text-xs font-mono">{properties.border}</CopyText>
         </InlineStack>
       </BlockStack>
     </ContentBlock>

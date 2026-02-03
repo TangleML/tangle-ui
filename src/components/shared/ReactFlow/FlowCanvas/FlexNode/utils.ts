@@ -6,7 +6,6 @@ export const DEFAULT_STICKY_NOTE = {
   title: "Sticky Note",
   content: "",
   color: "#FFF9C4",
-  border: "#F0F0F0",
   zIndex: 1,
 };
 
