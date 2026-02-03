@@ -1,6 +1,7 @@
 import { type Node, type NodeProps } from "@xyflow/react";
 import { useEffect } from "react";
 
+import { BlockStack } from "@/components/ui/layout";
 import { Paragraph } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { useContextPanel } from "@/providers/ContextPanelProvider";
@@ -43,10 +44,12 @@ const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
       style={{ backgroundColor: color, zIndex }}
     >
       <div className="rounded-sm bg-white/40 p-1 h-full w-full">
-        <Paragraph size="sm" weight="semibold" className="mb-1">
-          {properties.title}
-        </Paragraph>
-        <Paragraph size="xs">{properties.content}</Paragraph>
+        <BlockStack gap="1">
+          <Paragraph size="sm" weight="semibold">
+            {properties.title}
+          </Paragraph>
+          <Paragraph size="xs">{properties.content}</Paragraph>
+        </BlockStack>
       </div>
     </div>
   );
