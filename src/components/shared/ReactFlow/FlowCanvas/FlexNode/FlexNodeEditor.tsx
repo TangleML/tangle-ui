@@ -3,6 +3,7 @@ import { type ChangeEvent, useEffect, useState } from "react";
 import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlock";
 import { KeyValueList } from "@/components/shared/ContextPanel/Blocks/KeyValueList";
 import { CopyText } from "@/components/shared/CopyText/CopyText";
+import { ColorPicker } from "@/components/ui/color";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -33,7 +34,7 @@ export const FlexNodeEditor = ({
 
       <ContentEditor flexNode={flexNode} readOnly={readOnly} />
 
-      <ColorEditor properties={properties} readOnly={readOnly} />
+      <ColorEditor flexNode={flexNode} readOnly={readOnly} />
 
       <KeyValueList
         title="Layout"
@@ -172,12 +173,61 @@ const ContentEditor = ({
 };
 
 const ColorEditor = ({
-  properties,
+  flexNode,
   readOnly,
 }: {
-  properties: FlexNodeData["properties"];
+  flexNode: FlexNodeData;
   readOnly: boolean;
 }) => {
+  const {
+    componentSpec,
+    currentSubgraphSpec,
+    currentSubgraphPath,
+    setComponentSpec,
+  } = useComponentSpec();
+
+  const { properties } = flexNode;
+
+  const [backgroundColor, setBackgroundColor] = useState(properties.color);
+  const [borderColor, setBorderColor] = useState(properties.border);
+
+  const handleBackgroundColorChange = (newColor: string) => {
+    setBackgroundColor(newColor);
+    saveColors(newColor, borderColor);
+  };
+
+  const handleBorderColorChange = (newColor: string) => {
+    setBorderColor(newColor);
+    saveColors(backgroundColor, newColor);
+  };
+
+  const saveColors = (newBackgroundColor: string, newBorderColor: string) => {
+    const updatedSubgraphSpec = updateFlexNodeInComponentSpec(
+      currentSubgraphSpec,
+      {
+        ...flexNode,
+        properties: {
+          ...properties,
+          color: newBackgroundColor,
+          border: newBorderColor,
+        },
+      },
+    );
+
+    const newRootSpec = updateSubgraphSpec(
+      componentSpec,
+      currentSubgraphPath,
+      updatedSubgraphSpec,
+    );
+
+    setComponentSpec(newRootSpec);
+  };
+
+  useEffect(() => {
+    setBackgroundColor(properties.color);
+    setBorderColor(properties.border);
+  }, [properties]);
+
   if (readOnly) {
     return (
       <KeyValueList
@@ -203,17 +253,19 @@ const ColorEditor = ({
       <BlockStack gap="1">
         <InlineStack gap="4" blockAlign="center">
           <Paragraph size="xs">Background</Paragraph>
-          <div
-            className="aspect-square h-4 rounded-full border border-muted-foreground"
-            style={{ backgroundColor: properties.color }}
+          <ColorPicker
+            title="Background Color"
+            color={backgroundColor}
+            setColor={handleBackgroundColorChange}
           />
           <CopyText className="text-xs font-mono">{properties.color}</CopyText>
         </InlineStack>
         <InlineStack gap="4" blockAlign="center">
           <Paragraph size="xs">Border</Paragraph>
-          <div
-            className="aspect-square h-4 rounded-full border border-muted-foreground"
-            style={{ backgroundColor: properties.border }}
+          <ColorPicker
+            title="Border Color"
+            color={borderColor}
+            setColor={handleBorderColorChange}
           />
           <CopyText className="text-xs font-mono">{properties.border}</CopyText>
         </InlineStack>
