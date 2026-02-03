@@ -9,16 +9,16 @@ import { Paragraph, Text } from "@/components/ui/typography";
 
 import type { FlexNodeData } from "./types";
 
-interface StickyNoteEditorProps {
-  stickyNote: FlexNodeData;
+interface FlexNodeEditorProps {
+  flexNode: FlexNodeData;
   readOnly?: boolean;
 }
 
-export const StickyNoteEditor = ({
-  stickyNote,
+export const FlexNodeEditor = ({
+  flexNode,
   readOnly = false,
-}: StickyNoteEditorProps) => {
-  const { properties, size, position } = stickyNote;
+}: FlexNodeEditorProps) => {
+  const { properties, size, position } = flexNode;
 
   return (
     <BlockStack gap="4" className="h-full px-2">
