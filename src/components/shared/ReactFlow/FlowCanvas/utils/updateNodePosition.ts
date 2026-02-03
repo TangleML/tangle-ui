@@ -1,6 +1,5 @@
 import type { Node } from "@xyflow/react";
 
-import { FLEX_NODES_ANNOTATION } from "@/utils/annotations";
 import {
   type ComponentSpec,
   isGraphImplementation,
@@ -11,6 +10,11 @@ import {
   nodeIdToTaskId,
 } from "@/utils/nodes/nodeIdUtils";
 import { setPositionInAnnotations } from "@/utils/nodes/setPositionInAnnotations";
+
+import {
+  getFlexNodeAnnotations,
+  updateFlexNodeInComponentSpec,
+} from "../FlexNode/interface";
 
 export const updateNodePositions = (
   updatedNodes: Node[],
@@ -97,24 +101,20 @@ export const updateNodePositions = (
       }
     } else if (node.type === "flex") {
       const flexNodeId = node.id;
-      const annotations =
-        newComponentSpec.metadata?.annotations?.[FLEX_NODES_ANNOTATION] || {};
-      const flexNodeSpec = annotations[flexNodeId];
+      const flexNodes = getFlexNodeAnnotations(componentSpec);
+      const flexNode = flexNodes.find((node) => node.id === flexNodeId);
 
-      flexNodeSpec.position = JSON.stringify(newPosition);
+      if (flexNode) {
+        const updatedFlexNode = {
+          ...flexNode,
+          position: newPosition,
+        };
 
-      const newStickyNotesAnnotations = {
-        ...annotations,
-        [flexNodeId]: flexNodeSpec,
-      };
+        const newComponentSpecWithUpdatedFlexNode =
+          updateFlexNodeInComponentSpec(newComponentSpec, updatedFlexNode);
 
-      newComponentSpec.metadata = {
-        ...newComponentSpec.metadata,
-        annotations: {
-          ...newComponentSpec.metadata?.annotations,
-          [FLEX_NODES_ANNOTATION]: newStickyNotesAnnotations,
-        },
-      };
+        Object.assign(newComponentSpec, newComponentSpecWithUpdatedFlexNode);
+      }
     }
   }
 

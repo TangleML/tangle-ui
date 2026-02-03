@@ -1,11 +1,10 @@
 import type { XYPosition } from "@xyflow/react";
 import { nanoid } from "nanoid";
 
-import { FLEX_NODES_ANNOTATION } from "@/utils/annotations";
 import { type ComponentSpec } from "@/utils/componentSpec";
-import { deepClone } from "@/utils/deepClone";
 
-import type { FlexNodeSpec } from "../FlexNode/types";
+import { updateFlexNodeInComponentSpec } from "../FlexNode/interface";
+import type { FlexNodeData } from "../FlexNode/types";
 import { DEFAULT_FLEX_NODE_SIZE, DEFAULT_STICKY_NOTE } from "../FlexNode/utils";
 
 interface AddFlexNodeResult {
@@ -31,32 +30,19 @@ const addFlexNode = (
   position: XYPosition,
   componentSpec: ComponentSpec,
 ): AddFlexNodeResult => {
-  const newComponentSpec = deepClone(componentSpec);
-
-  if (!newComponentSpec.metadata?.annotations) {
-    newComponentSpec.metadata = {};
-  }
-
-  if (!newComponentSpec.metadata.annotations) {
-    newComponentSpec.metadata.annotations = {};
-  }
-
   const nodeId = nanoid();
 
-  const flexNodeSpec: FlexNodeSpec = {
-    type: "sticky-note",
+  const flexNode: FlexNodeData = {
+    id: nodeId,
     properties: DEFAULT_STICKY_NOTE,
-    size: JSON.stringify(DEFAULT_FLEX_NODE_SIZE),
-    position: JSON.stringify(position),
+    size: DEFAULT_FLEX_NODE_SIZE,
+    position: position,
   };
 
-  newComponentSpec.metadata.annotations = {
-    ...newComponentSpec.metadata.annotations,
-    [FLEX_NODES_ANNOTATION]: {
-      ...(newComponentSpec.metadata.annotations[FLEX_NODES_ANNOTATION] || {}),
-      [nodeId]: flexNodeSpec,
-    },
-  };
+  const newComponentSpec = updateFlexNodeInComponentSpec(
+    componentSpec,
+    flexNode,
+  );
 
   return { spec: newComponentSpec, nodeId };
 };

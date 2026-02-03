@@ -2,7 +2,6 @@ import type {
   ContainerImplementationOutput,
   GraphImplementationOutput,
 } from "@/api/types.gen";
-import type { FlexNodeSpec } from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/types";
 
 import type { FLEX_NODES_ANNOTATION } from "./annotations";
 
@@ -145,9 +144,7 @@ export interface MetadataSpec {
     canonical_location?: string;
     author?: string;
     python_original_code?: string;
-    [FLEX_NODES_ANNOTATION]?: {
-      [k: string]: FlexNodeSpec;
-    };
+    [FLEX_NODES_ANNOTATION]?: string;
   };
 }
 /**

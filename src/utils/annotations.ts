@@ -1,3 +1,5 @@
+import type { ComponentSpec } from "./componentSpec";
+
 /**
  * Gets the value of an annotation.
  * @param annotations - The annotations object
@@ -48,6 +50,27 @@ function hasAnnotation(
   }
 
   return Object.prototype.hasOwnProperty.call(annotations, key);
+}
+
+/**
+ * Ensures that the componentSpec has metadata and annotations objects.
+ * @param componentSpec - The component specification
+ * @returns The component specification with ensured metadata and annotations
+ */
+export function ensureAnnotations(
+  componentSpec: ComponentSpec,
+): ComponentSpec & {
+  metadata: { annotations: Record<string, unknown> };
+} {
+  return {
+    ...componentSpec,
+    metadata: {
+      ...componentSpec.metadata,
+      annotations: {
+        ...(componentSpec.metadata?.annotations ?? {}),
+      },
+    },
+  };
 }
 
 export const DISPLAY_NAME_MAX_LENGTH = 100;

@@ -1,6 +1,6 @@
 import { type Node } from "@xyflow/react";
 
-import { type FlexNodeSpec, parseFlexNodeSpec } from "./types";
+import { type FlexNodeData } from "./types";
 
 export const DEFAULT_STICKY_NOTE = {
   title: "Sticky Note",
@@ -12,19 +12,12 @@ export const DEFAULT_STICKY_NOTE = {
 
 export const DEFAULT_FLEX_NODE_SIZE = { width: 150, height: 100 };
 
-export const createFlexNode = (
-  flexNode: [string, FlexNodeSpec],
-  readOnly: boolean,
-) => {
-  const [nodeId, flexSpec] = flexNode;
-
-  const flexNodeData = parseFlexNodeSpec(flexSpec);
-
-  const { position, size } = flexNodeData;
+export const createFlexNode = (flexNode: FlexNodeData, readOnly: boolean) => {
+  const { id, position, size } = flexNode;
 
   return {
-    id: nodeId,
-    data: { ...flexNodeData, readOnly },
+    id,
+    data: { ...flexNode, readOnly },
     ...size,
     position,
     type: "flex",

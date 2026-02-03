@@ -1,5 +1,6 @@
 import { type Node } from "@xyflow/react";
 
+import { getFlexNodeAnnotations } from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/interface";
 import { createFlexNode } from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/utils";
 import type { TaskNodeData } from "@/types/taskNode";
 import {
@@ -8,7 +9,6 @@ import {
   isGraphImplementation,
 } from "@/utils/componentSpec";
 
-import { FLEX_NODES_ANNOTATION } from "../annotations";
 import { createInputNode } from "./createInputNode";
 import { createOutputNode } from "./createOutputNode";
 import { createTaskNode } from "./createTaskNode";
@@ -62,9 +62,10 @@ const createOutputNodes = (
 };
 
 const createFlexNodes = (componentSpec: ComponentSpec, readOnly: boolean) => {
-  return Object.entries(
-    componentSpec.metadata?.annotations?.[FLEX_NODES_ANNOTATION] ?? [],
-  ).map((flexNode) => createFlexNode(flexNode, readOnly));
+  const flexNodeAnnotations = getFlexNodeAnnotations(componentSpec);
+  return flexNodeAnnotations.map((flexNode) =>
+    createFlexNode(flexNode, readOnly),
+  );
 };
 
 export default createNodesFromComponentSpec;

@@ -11,6 +11,7 @@ import {
   nodeIdToTaskId,
 } from "@/utils/nodes/nodeIdUtils";
 
+import { removeFlexNodeFromComponentSpec } from "../FlexNode/interface";
 import { setGraphOutputValue } from "./setGraphOutputValue";
 import { setTaskArgument } from "./setTaskArgument";
 
@@ -156,17 +157,10 @@ const removeFlexNode = (
   nodeIdToRemove: string,
   componentSpec: ComponentSpec,
 ) => {
-  const newAnnotations = { ...componentSpec.metadata?.annotations };
-  if (newAnnotations && newAnnotations[FLEX_NODES_ANNOTATION]) {
-    const newStickyNotes = { ...newAnnotations[FLEX_NODES_ANNOTATION] };
-    delete newStickyNotes[nodeIdToRemove];
-    newAnnotations[FLEX_NODES_ANNOTATION] = newStickyNotes;
+  const annotations = componentSpec.metadata?.annotations;
+  if (annotations && annotations[FLEX_NODES_ANNOTATION]) {
+    return removeFlexNodeFromComponentSpec(componentSpec, nodeIdToRemove);
   }
-  return {
-    ...componentSpec,
-    metadata: {
-      ...componentSpec.metadata,
-      annotations: newAnnotations,
-    },
-  };
+
+  return componentSpec;
 };
