@@ -5,6 +5,7 @@ import type { TaskType } from "@/types/taskNode";
 
 import SmoothEdge from "./Edges/SmoothEdge";
 import FlexNode from "./FlexNode/FlexNode";
+import type { FlexNodeData } from "./FlexNode/types";
 import GhostNode from "./GhostNode/GhostNode";
 import IONode from "./IONode/IONode";
 import TaskNode from "./TaskNode/TaskNode";
@@ -34,4 +35,8 @@ export function isDefinedNode(node: Node): node is Node & { type: NodeType } {
 
 export function isTaskNodeType(type: string): type is TaskType {
   return type === "task" || type === "input" || type === "output";
+}
+
+export function isFlexNode(node: Node): node is Node<FlexNodeData> {
+  return node.type === "flex";
 }
