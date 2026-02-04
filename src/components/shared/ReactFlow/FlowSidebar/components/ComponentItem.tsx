@@ -17,6 +17,10 @@ import { getComponentName } from "@/utils/getComponentName";
 import { isSubgraph } from "@/utils/subgraphUtils";
 
 import { useNodesOverlay } from "../../NodesOverlay/NodesOverlayProvider";
+import {
+  ComponentHoverPopover,
+  type ComponentHoverPopoverHandle,
+} from "./ComponentHoverPopover";
 
 interface ComponentMarkupProps {
   component: ComponentReference;
@@ -78,6 +82,8 @@ const ComponentMarkup = ({
   const isRemoteComponentLibrarySearchEnabled = useFlagValue(
     "remote-component-library-search",
   );
+
+  const popoverRef = useRef<ComponentHoverPopoverHandle>(null);
 
   // TODO: respect selected node as a starting point
   const carousel = useRef(0);
@@ -160,6 +166,12 @@ const ComponentMarkup = ({
     isHighlightTasksOnComponentHoverEnabled,
   ]);
 
+  const onComponentDetailsDialogOpenChange = useCallback((open: boolean) => {
+    if (open) {
+      popoverRef.current?.close();
+    }
+  }, []);
+
   const iconName = isSubgraphSpec ? "Workflow" : owned ? "FileBadge" : "File";
 
   const iconClass = cn(
@@ -225,12 +237,19 @@ const ComponentMarkup = ({
                 </span>
               </div>
             </InlineStack>
+
             <InlineStack align="end" wrap="nowrap">
               <ComponentFavoriteToggle component={component} />
-              <ComponentDetailsDialog
-                displayName={displayName}
-                component={component}
-              />
+
+              <ComponentHoverPopover ref={popoverRef} component={component}>
+                <InlineStack>
+                  <ComponentDetailsDialog
+                    displayName={displayName}
+                    component={component}
+                    onOpenChange={onComponentDetailsDialogOpenChange}
+                  />
+                </InlineStack>
+              </ComponentHoverPopover>
             </InlineStack>
           </InlineStack>
         )}
