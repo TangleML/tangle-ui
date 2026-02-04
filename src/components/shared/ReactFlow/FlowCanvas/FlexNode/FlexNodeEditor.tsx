@@ -12,6 +12,7 @@ import { Paragraph, Text } from "@/components/ui/typography";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { updateSubgraphSpec } from "@/utils/subgraphUtils";
 
+import { StackingControls } from "../../FlowControls/StackingControls";
 import { updateFlexNodeInComponentSpec } from "./interface";
 import type { FlexNodeData } from "./types";
 
@@ -77,6 +78,8 @@ export const FlexNodeEditor = ({
           },
         ]}
       />
+
+      {!readOnly && <ZIndexEditor flexNode={flexNode} />}
     </BlockStack>
   );
 };
@@ -269,6 +272,42 @@ const ColorEditor = ({
           <CopyText className="text-xs font-mono">{properties.color}</CopyText>
         </InlineStack>
       </BlockStack>
+    </ContentBlock>
+  );
+};
+
+const ZIndexEditor = ({ flexNode }: { flexNode: FlexNodeData }) => {
+  const {
+    componentSpec,
+    currentSubgraphSpec,
+    currentSubgraphPath,
+    setComponentSpec,
+  } = useComponentSpec();
+
+  const handleStackingControlChange = (newZIndex: number) => {
+    const updatedSubgraphSpec = updateFlexNodeInComponentSpec(
+      currentSubgraphSpec,
+      {
+        ...flexNode,
+        zIndex: newZIndex,
+      },
+    );
+
+    const newRootSpec = updateSubgraphSpec(
+      componentSpec,
+      currentSubgraphPath,
+      updatedSubgraphSpec,
+    );
+
+    setComponentSpec(newRootSpec);
+  };
+
+  return (
+    <ContentBlock title="Stacking">
+      <StackingControls
+        nodeId={flexNode.id}
+        onChange={handleStackingControlChange}
+      />
     </ContentBlock>
   );
 };
