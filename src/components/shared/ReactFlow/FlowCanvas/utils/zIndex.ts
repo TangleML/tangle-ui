@@ -29,6 +29,11 @@ export const Z_INDEX_RANGES: Record<NodeType, ZIndexDefinition> = {
     max: 100,
     default: 100,
   },
+  flex: {
+    min: -100,
+    max: 100,
+    default: 0,
+  },
 };
 
 const getNodeZIndexProp = (
