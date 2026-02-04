@@ -18,6 +18,7 @@ import { getComponentName } from "@/utils/getComponentName";
 import { isSubgraph } from "@/utils/subgraphUtils";
 
 import { useNodesOverlay } from "../../NodesOverlay/NodesOverlayProvider";
+import { ComponentHoverPopover } from "./ComponentHoverPopover";
 
 interface ComponentMarkupProps {
   component: ComponentReference;
@@ -192,39 +193,41 @@ const ComponentMarkup = ({
             data-testid="component-item"
             data-component-name={displayName}
           >
-            <InlineStack gap="2" className="w-full" wrap="nowrap">
-              {isRemoteComponentLibrarySearchEnabled ? (
-                <ComponentIcon
-                  name={iconName}
-                  className={iconClass}
-                  component={component}
-                />
-              ) : (
-                <Icon name={iconName} className={iconClass} />
-              )}
-
-              <div
-                className="flex flex-col w-32"
-                onMouseEnter={onMouseEnter}
-                onMouseLeave={onMouseLeave}
-                onClick={onMouseClick}
-              >
-                <span
-                  className="truncate text-xs text-gray-800"
-                  title={displayName}
-                >
-                  {displayName}
-                </span>
-                {author && author.length > 0 && (
-                  <span className="truncate text-[10px] text-gray-500 max-w-[100px] font-mono">
-                    {author}
-                  </span>
+            <ComponentHoverPopover component={component}>
+              <InlineStack gap="2" className="w-full" wrap="nowrap">
+                {isRemoteComponentLibrarySearchEnabled ? (
+                  <ComponentIcon
+                    name={iconName}
+                    className={iconClass}
+                    component={component}
+                  />
+                ) : (
+                  <Icon name={iconName} className={iconClass} />
                 )}
-                <span className="truncate text-[10px] text-gray-500 max-w-[100px] font-mono">
-                  Ver: {digest}
-                </span>
-              </div>
-            </InlineStack>
+
+                <div
+                  className="flex flex-col w-32"
+                  onMouseEnter={onMouseEnter}
+                  onMouseLeave={onMouseLeave}
+                  onClick={onMouseClick}
+                >
+                  <span
+                    className="truncate text-xs text-gray-800"
+                    title={displayName}
+                  >
+                    {displayName}
+                  </span>
+                  {author && author.length > 0 && (
+                    <span className="truncate text-[10px] text-gray-500 max-w-[100px] font-mono">
+                      {author}
+                    </span>
+                  )}
+                  <span className="truncate text-[10px] text-gray-500 max-w-[100px] font-mono">
+                    Ver: {digest}
+                  </span>
+                </div>
+              </InlineStack>
+            </ComponentHoverPopover>
             <InlineStack align="end" wrap="nowrap">
               <ComponentFavoriteToggle component={component} />
               <ComponentDetailsDialog

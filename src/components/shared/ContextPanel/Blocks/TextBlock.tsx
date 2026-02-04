@@ -16,6 +16,7 @@ interface TextBlockProps {
   text?: string;
   copyable?: boolean;
   collapsible?: boolean;
+  defaultCollapsed?: boolean;
   mono?: boolean;
   wrap?: boolean;
   className?: string;
@@ -26,6 +27,7 @@ export const TextBlock = ({
   text,
   copyable,
   collapsible,
+  defaultCollapsed = true,
   mono,
   wrap = false,
   className,
@@ -55,7 +57,7 @@ export const TextBlock = ({
 
   return (
     <BlockStack className={className}>
-      <Collapsible className="w-full">
+      <Collapsible className="w-full" defaultOpen={!defaultCollapsed}>
         <InlineStack blockAlign="center" gap="1">
           {title && <Heading level={3}>{title}</Heading>}
           {collapsible && (
