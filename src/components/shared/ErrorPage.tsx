@@ -1,20 +1,40 @@
+import Bugsnag, { type Event } from "@bugsnag/js";
 import { type ErrorComponentProps, useRouter } from "@tanstack/react-router";
+import { useEffect } from "react";
 
 import { InfoBox } from "@/components/shared/InfoBox";
 import { Button } from "@/components/ui/button";
 import { BlockStack } from "@/components/ui/layout";
 import { Paragraph, Text } from "@/components/ui/typography";
+import { isBugsnagEnabled } from "@/services/errorManagement/bugsnag";
 
-export default function ErrorPage({ error }: ErrorComponentProps) {
+const ERROR_HANDLER_METADATA_KEY = "error_handler";
+
+export const ErrorPage = ({ error, reset = () => {} }: ErrorComponentProps) => {
   const router = useRouter();
 
+  useEffect(() => {
+    if (isBugsnagEnabled() && error instanceof Error) {
+      Bugsnag.notify(error, (event: Event) => {
+        event.addMetadata(ERROR_HANDLER_METADATA_KEY, {
+          pathname: window.location.pathname,
+        });
+      });
+    }
+  }, [error]);
+
   const handleRefresh = () => {
+    reset();
     window.location.reload();
   };
 
   const handleGoHome = () => {
+    reset();
     router.navigate({ to: "/" });
   };
+
+  const errorMessage =
+    error instanceof Error ? error.message : "An unexpected error occurred";
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -31,7 +51,7 @@ export default function ErrorPage({ error }: ErrorComponentProps) {
 
           <InfoBox title="Error Details" variant="error">
             <Paragraph font="mono" size="xs">
-              {error?.message || "An unexpected error occurred"}
+              {errorMessage}
             </Paragraph>
           </InfoBox>
 
@@ -52,4 +72,4 @@ export default function ErrorPage({ error }: ErrorComponentProps) {
       </div>
     </div>
   );
-}
+};
