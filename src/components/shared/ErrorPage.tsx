@@ -1,20 +1,25 @@
 import Bugsnag, { type Event } from "@bugsnag/js";
-import { type ErrorComponentProps, useRouter } from "@tanstack/react-router";
+import { useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
 
 import { InfoBox } from "@/components/shared/InfoBox";
 import { Button } from "@/components/ui/button";
 import { BlockStack } from "@/components/ui/layout";
 import { Paragraph, Text } from "@/components/ui/typography";
-import { isBugsnagEnabled } from "@/services/errorManagement/bugsnag";
+import { IS_BUGSNAG_ENABLED } from "@/services/errorManagement/bugsnag";
 
 const ERROR_HANDLER_METADATA_KEY = "error_handler";
 
-export const ErrorPage = ({ error, reset = () => {} }: ErrorComponentProps) => {
+interface ErrorPageProps {
+  error: unknown;
+  reset?: () => void;
+}
+
+export const ErrorPage = ({ error, reset = () => {} }: ErrorPageProps) => {
   const router = useRouter();
 
   useEffect(() => {
-    if (isBugsnagEnabled() && error instanceof Error) {
+    if (IS_BUGSNAG_ENABLED && error instanceof Error) {
       Bugsnag.notify(error, (event: Event) => {
         event.addMetadata(ERROR_HANDLER_METADATA_KEY, {
           pathname: window.location.pathname,
