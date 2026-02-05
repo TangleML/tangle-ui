@@ -91,12 +91,16 @@ describe("createNodesFromComponentSpec", () => {
 
     const result = createNodesFromComponentSpec(componentSpec, mockNodeData);
 
-    expect(result).toContainEqual({
-      id: "input_input1",
-      data: expect.objectContaining({ label: "input1" }),
-      position: { x: 50, y: 100 },
-      type: "input",
-    });
+    expect(result).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "input_input1",
+          data: expect.objectContaining({ label: "input1" }),
+          position: { x: 50, y: 100 },
+          type: "input",
+        }),
+      ]),
+    );
   });
 
   it("creates output nodes correctly", () => {
@@ -116,12 +120,16 @@ describe("createNodesFromComponentSpec", () => {
 
     const result = createNodesFromComponentSpec(componentSpec, mockNodeData);
 
-    expect(result).toContainEqual({
-      id: "output_output1",
-      data: expect.objectContaining({ label: "output1" }),
-      position: { x: 300, y: 150 },
-      type: "output",
-    });
+    expect(result).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "output_output1",
+          data: expect.objectContaining({ label: "output1" }),
+          position: { x: 300, y: 150 },
+          type: "output",
+        }),
+      ]),
+    );
   });
 
   it("handles missing position annotations by using default position", () => {

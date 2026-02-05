@@ -2,7 +2,10 @@ import { type Node } from "@xyflow/react";
 
 import type { TaskNodeData } from "@/types/taskNode";
 
-import { extractPositionFromAnnotations } from "../annotations";
+import {
+  extractPositionFromAnnotations,
+  extractZIndexFromAnnotations,
+} from "../annotations";
 import type { InputSpec } from "../componentSpec";
 import { inputNameToNodeId } from "./nodeIdUtils";
 
@@ -11,9 +14,13 @@ export const createInputNode = (
   nodeData: TaskNodeData,
   readOnly: boolean = false,
 ) => {
+  const nodeType = "input";
+
   const { name, annotations, ...rest } = input;
 
   const position = extractPositionFromAnnotations(annotations);
+  const zIndex = extractZIndexFromAnnotations(input.annotations, nodeType);
+
   const nodeId = inputNameToNodeId(name);
 
   return {
@@ -25,6 +32,7 @@ export const createInputNode = (
       readOnly,
     },
     position: position,
-    type: "input",
+    type: nodeType,
+    zIndex,
   } as Node;
 };
