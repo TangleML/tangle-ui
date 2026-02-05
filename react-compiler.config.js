@@ -47,6 +47,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/components/shared/TaskDetails/DisplayNameEditor.tsx",
   "src/components/shared/TaskDetails/Actions/UnpackSubgraphButton.tsx",
   "src/components/shared/ReactFlow/FlowCanvas/TaskNode/TaskOverview/ZIndexEditor.tsx",
+  "src/components/Editor/IOEditor/IOZIndexEditor.tsx",
 
   // 11-20 useCallback/useMemo
   // "src/components/ui",                         // 12

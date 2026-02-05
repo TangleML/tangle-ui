@@ -4,7 +4,7 @@ import ConfirmationDialog from "@/components/shared/Dialogs/ConfirmationDialog";
 import { removeGraphOutput } from "@/components/shared/ReactFlow/FlowCanvas/utils/removeNode";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
-import { BlockStack } from "@/components/ui/layout";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Heading, Paragraph } from "@/components/ui/typography";
 import useConfirmationDialog from "@/hooks/useConfirmationDialog";
 import { useNodeSelectionTransfer } from "@/hooks/useNodeSelectionTransfer";
@@ -22,6 +22,7 @@ import {
   TypeField,
 } from "../InputValueEditor/FormFields";
 import { checkNameCollision } from "../InputValueEditor/FormFields/utils";
+import { IOZIndexEditor } from "../IOZIndexEditor";
 
 interface OutputNameEditorProps {
   output: OutputSpec;
@@ -206,11 +207,15 @@ export const OutputNameEditor = ({
         />
       </div>
 
-      {!disabled && (
-        <Button onClick={deleteNode} variant="destructive" size="icon">
-          <Icon name="Trash2" />
-        </Button>
-      )}
+      <InlineStack gap="4">
+        {!disabled && (
+          <Button onClick={deleteNode} variant="destructive" size="icon">
+            <Icon name="Trash2" />
+          </Button>
+        )}
+
+        <IOZIndexEditor ioSpec={output} ioType="output" />
+      </InlineStack>
 
       <ConfirmationDialog
         {...confirmationProps}
