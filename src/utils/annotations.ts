@@ -1,5 +1,6 @@
 import type { XYPosition } from "@xyflow/react";
 
+import { getNodeTypeZIndexDefault } from "@/components/shared/ReactFlow/FlowCanvas/utils/zIndex";
 import type { AnnotationConfig } from "@/types/annotations";
 
 import type { ComponentSpec } from "./componentSpec";
@@ -12,6 +13,7 @@ export const PIPELINE_CANONICAL_NAME_ANNOTATION = "canonical-pipeline-name";
 export const RUN_NAME_TEMPLATE_ANNOTATION = "run-name-template";
 export const EDITOR_POSITION_ANNOTATION = "editor.position";
 export const FLEX_NODES_ANNOTATION = "flex-nodes";
+export const ZINDEX_ANNOTATION = "zIndex";
 
 export const DEFAULT_COMMON_ANNOTATIONS: AnnotationConfig[] = [
   {
@@ -207,3 +209,32 @@ export function ensureAnnotations(
     },
   };
 }
+
+/**
+ * Gets the z-index from annotations.
+ * @param annotations - The annotations object
+ * @returns z-index number
+ */
+export const extractZIndexFromAnnotations = (
+  annotations: Annotations,
+  nodeType: string,
+): number => {
+  const defaultZIndex = getNodeTypeZIndexDefault(nodeType);
+
+  if (!annotations) return defaultZIndex;
+
+  const zIndex = annotations[ZINDEX_ANNOTATION];
+
+  if (typeof zIndex === "number") {
+    return Math.round(zIndex);
+  }
+
+  if (typeof zIndex === "string") {
+    const parsedZIndex = parseInt(zIndex, 10);
+    if (!isNaN(parsedZIndex)) {
+      return Math.round(parsedZIndex);
+    }
+  }
+
+  return defaultZIndex;
+};
