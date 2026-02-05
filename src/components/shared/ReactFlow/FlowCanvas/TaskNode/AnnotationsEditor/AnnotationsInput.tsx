@@ -1,4 +1,10 @@
-import { type ChangeEvent, useCallback, useEffect, useState } from "react";
+import {
+  type ChangeEvent,
+  type KeyboardEvent,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 
 import { MultilineTextInputDialog } from "@/components/shared/Dialogs/MultilineTextInputDialog";
 import { Button } from "@/components/ui/button";
@@ -48,6 +54,8 @@ export const AnnotationsInput = ({
   const inputType = config?.type ?? "string";
   const placeholder = config?.label ?? "";
 
+  const isNumericType = inputType === "number" || inputType === "integer";
+
   const handleExpand = useCallback(() => {
     setIsDialogOpen(true);
   }, []);
@@ -87,6 +95,36 @@ export const AnnotationsInput = ({
       }
     }
   }, []);
+
+  const handleNumericInputChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      let newValue = e.target.value;
+
+      if (inputType === "integer") {
+        newValue = newValue.replace(/[.,]/g, "");
+      }
+
+      if (newValue === "") {
+        setInputValue(newValue);
+        return;
+      }
+
+      const numericValue = Number(newValue);
+      if (!isNaN(numericValue)) {
+        setInputValue(newValue);
+      }
+    },
+    [],
+  );
+
+  const handleNumericInputKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLInputElement>) => {
+      if (inputType === "integer" && (e.key === "." || e.key === ",")) {
+        e.preventDefault();
+      }
+    },
+    [inputType],
+  );
 
   const handleQuantityKeyInputChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
@@ -186,12 +224,12 @@ export const AnnotationsInput = ({
 
     if (onBlur && lastSavedValue !== inputValue && !isInvalid) {
       let value = inputValue;
-      if (
-        config?.type === "number" &&
-        !isNaN(Number(inputValue)) &&
-        inputValue !== ""
-      ) {
-        value = clamp(Number(inputValue), config.min, config.max).toString();
+      if (isNumericType && !isNaN(Number(inputValue)) && inputValue !== "") {
+        value = clamp(Number(inputValue), config?.min, config?.max).toString();
+
+        if (inputType === "integer") {
+          value = Math.floor(Number(value)).toString();
+        }
       }
 
       onBlur(value);
@@ -201,6 +239,8 @@ export const AnnotationsInput = ({
     onBlur,
     shouldSaveQuantityField,
     isInvalid,
+    isNumericType,
+    inputType,
     lastSavedValue,
     inputValue,
     config,
@@ -261,7 +301,7 @@ export const AnnotationsInput = ({
         className={className}
       />
     );
-  } else if (inputType === "number") {
+  } else if (isNumericType) {
     inputElement = (
       <InlineStack gap="2" wrap="nowrap" className="grow">
         <Input
@@ -269,7 +309,8 @@ export const AnnotationsInput = ({
           value={inputValue}
           min={config?.min}
           max={config?.max}
-          onChange={(e) => setInputValue(e.target.value)}
+          onChange={handleNumericInputChange}
+          onKeyDown={handleNumericInputKeyDown}
           onBlur={handleBlur}
           autoFocus={autoFocus}
           className={className}
@@ -353,20 +394,18 @@ export const AnnotationsInput = ({
         )}
       </InlineStack>
 
-      {inputType !== "boolean" &&
-        inputType !== "number" &&
-        !config?.options && (
-          <MultilineTextInputDialog
-            title={dialogTitle}
-            description="Enter a value for this annotation."
-            placeholder={placeholder}
-            initialValue={inputValue}
-            open={isDialogOpen}
-            onCancel={handleDialogCancel}
-            onConfirm={handleDialogConfirm}
-            maxLength={config?.max}
-          />
-        )}
+      {inputType !== "boolean" && !isNumericType && !config?.options && (
+        <MultilineTextInputDialog
+          title={dialogTitle}
+          description="Enter a value for this annotation."
+          placeholder={placeholder}
+          initialValue={inputValue}
+          open={isDialogOpen}
+          onCancel={handleDialogCancel}
+          onConfirm={handleDialogConfirm}
+          maxLength={config?.max}
+        />
+      )}
     </>
   );
 };
