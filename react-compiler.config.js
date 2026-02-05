@@ -50,6 +50,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/components/shared/ReactFlow/FlowSidebar/components/ComponentHoverPopover.tsx",
   "src/components/shared/ReactFlow/FlowControls/StackingControls.tsx",
   "src/components/shared/ReactFlow/FlowCanvas/FlexNode",
+  "src/components/shared/ReactFlow/FlowCanvas/TaskNode/TaskOverview/ZIndexEditor.tsx",
   "src/components/shared/ReactFlow/FlowCanvas/TaskNode/ArgumentsEditor/DynamicDataDropdown.tsx",
   "src/components/shared/HighlightText.tsx",
 
