@@ -13,12 +13,16 @@ import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { BlockStack } from "@/components/ui/layout";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
+import { PIPELINE_NOTES_ANNOTATION } from "@/utils/annotations";
 import { getComponentFileFromList } from "@/utils/componentStore";
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 
 import PipelineIO from "../../shared/Execution/PipelineIO";
+import { PipelineNotesEditor } from "./PipelineNotesEditor";
 import { PipelineValidationList } from "./PipelineValidationList";
 import RenamePipeline from "./RenamePipeline";
+
+const EXCLUDED_ANNOTATIONS = [PIPELINE_NOTES_ANNOTATION];
 
 const PipelineDetails = () => {
   const notify = useToastNotification();
@@ -79,12 +83,12 @@ const PipelineDetails = () => {
     },
   ];
 
-  const annotations = Object.entries(
-    componentSpec.metadata?.annotations || {},
-  ).map(([key, value]) => ({
-    label: key,
-    value: String(value),
-  }));
+  const annotations = Object.entries(componentSpec.metadata?.annotations || {})
+    .filter(([key]) => !EXCLUDED_ANNOTATIONS.includes(key))
+    .map(([key, value]) => ({
+      label: key,
+      value: String(value),
+    }));
 
   const actions = [
     <RenamePipeline key="rename-pipeline-action" />,
@@ -135,6 +139,10 @@ const PipelineDetails = () => {
           globalValidationIssues={globalValidationIssues}
           onIssueSelect={handleIssueClick}
         />
+      </ContentBlock>
+
+      <ContentBlock title="Notes">
+        <PipelineNotesEditor />
       </ContentBlock>
     </BlockStack>
   );
