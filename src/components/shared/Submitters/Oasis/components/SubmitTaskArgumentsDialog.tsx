@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
+import { Textarea } from "@/components/ui/textarea";
 import { Paragraph } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
@@ -47,7 +48,7 @@ type TaskArguments = TaskSpecOutput["arguments"];
 interface SubmitTaskArgumentsDialogProps {
   open: boolean;
   onCancel: () => void;
-  onConfirm: (args: Record<string, string>) => void;
+  onConfirm: (args: Record<string, string>, notes: string) => void;
   componentSpec: ComponentSpec;
 }
 
@@ -60,6 +61,7 @@ export const SubmitTaskArgumentsDialog = ({
   const notify = useToastNotification();
   const initialArgs = getArgumentsFromInputs(componentSpec);
 
+  const [runNotes, setRunNotes] = useState<string>("");
   const [taskArguments, setTaskArguments] =
     useState<Record<string, string>>(initialArgs);
 
@@ -101,10 +103,15 @@ export const SubmitTaskArgumentsDialog = ({
     setIsValidToSubmit(validateArguments(inputs, taskArguments));
   }, [inputs, taskArguments]);
 
-  const handleConfirm = () => onConfirm(taskArguments);
+  const handleRunNotesChange = (value: string) => {
+    setRunNotes(value);
+  };
+
+  const handleConfirm = () => onConfirm(taskArguments, runNotes);
 
   const handleCancel = () => {
     setTaskArguments(initialArgs);
+    setRunNotes("");
     setHighlightedArgs(new Map());
     onCancel();
   };
@@ -159,6 +166,18 @@ export const SubmitTaskArgumentsDialog = ({
             </BlockStack>
           </ScrollArea>
         )}
+
+        <BlockStack gap="2">
+          <Paragraph tone="subdued" size="sm">
+            Run Notes
+          </Paragraph>
+          <Textarea
+            value={runNotes}
+            onChange={(e) => handleRunNotesChange(e.target.value)}
+            placeholder="Share context about this pipeline run..."
+            className="text-xs!"
+          />
+        </BlockStack>
 
         <DialogFooter>
           <Button variant="outline" onClick={handleCancel}>

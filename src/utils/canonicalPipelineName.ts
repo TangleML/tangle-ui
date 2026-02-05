@@ -1,6 +1,9 @@
 import type { TaskSpecShape } from "@/components/shared/PipelineRunNameTemplate/types";
 
-import { getAnnotationValue } from "./annotations";
+import {
+  getAnnotationValue,
+  PIPELINE_CANONICAL_NAME_ANNOTATION,
+} from "./annotations";
 
 /**
  * Extracts the canonical name from the task spec
@@ -11,7 +14,10 @@ export function extractCanonicalName(
   taskSpec: TaskSpecShape | undefined,
 ): string | undefined {
   return taskSpec
-    ? getAnnotationValue(taskSpec.annotations, CANONICAL_NAME_ANNOTATION)
+    ? getAnnotationValue(
+        taskSpec.annotations,
+        PIPELINE_CANONICAL_NAME_ANNOTATION,
+      )
     : undefined;
 }
 
@@ -28,8 +34,6 @@ export function buildAnnotationsWithCanonicalName(
   }
 
   return {
-    [CANONICAL_NAME_ANNOTATION]: canonicalName,
+    [PIPELINE_CANONICAL_NAME_ANNOTATION]: canonicalName,
   };
 }
-
-const CANONICAL_NAME_ANNOTATION = "canonical-pipeline-name";
