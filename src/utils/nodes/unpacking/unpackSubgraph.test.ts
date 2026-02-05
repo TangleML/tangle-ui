@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { extractPositionFromAnnotations } from "@/utils/annotations";
 import type {
   ComponentSpec,
   TaskOutputArgument,
@@ -9,7 +10,6 @@ import {
   getDownstreamTaskNodesConnectedToTask,
   getOutputNodesConnectedToTask,
 } from "@/utils/graphUtils";
-import { extractPositionFromAnnotations } from "@/utils/nodes/extractPositionFromAnnotations";
 
 import {
   copyOutputValues,
@@ -23,7 +23,7 @@ import {
 import { unpackSubgraph } from "./unpackSubgraph";
 
 // Mock dependencies
-vi.mock("@/utils/nodes/extractPositionFromAnnotations");
+vi.mock("@/utils/annotations");
 vi.mock("@/utils/graphUtils");
 vi.mock("./helpers");
 

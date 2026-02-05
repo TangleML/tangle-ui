@@ -3,6 +3,7 @@ import type { XYPosition } from "@xyflow/react";
 import addTask from "@/components/shared/ReactFlow/FlowCanvas/utils/addTask";
 import { setGraphOutputValue } from "@/components/shared/ReactFlow/FlowCanvas/utils/setGraphOutputValue";
 import { setTaskArgument } from "@/components/shared/ReactFlow/FlowCanvas/utils/setTaskArgument";
+import { extractPositionFromAnnotations } from "@/utils/annotations";
 import {
   type ArgumentType,
   type ComponentSpec,
@@ -21,8 +22,6 @@ import {
   getOutputNodesConnectedToTask,
   normalizeNodePositionInGroup,
 } from "@/utils/graphUtils";
-
-import { extractPositionFromAnnotations } from "../extractPositionFromAnnotations";
 
 export const unpackInputs = (
   containerSpec: ComponentSpec,
