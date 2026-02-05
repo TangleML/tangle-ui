@@ -17,6 +17,13 @@
         "title": "Display Name",
         "x-type": "string",
         "exclusiveMaximum": 100
+      },
+      "zIndex": {
+        "type": "integer",
+        "title": "Z-Index",
+        "x-type": "string",
+        "exclusiveMinimum": -100,
+        "exclusiveMaximum": 100
       }
     }
   }
