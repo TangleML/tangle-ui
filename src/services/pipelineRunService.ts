@@ -225,7 +225,7 @@ export const fetchRunAnnotations = async (
   runId: string,
   backendUrl: string,
 ): Promise<ListAnnotationsApiPipelineRunsIdAnnotationsGetResponse> => {
-  const url = `${backendUrl}/api/pipeline_runs/${runId}/annotations`;
+  const url = `${backendUrl}/api/pipeline_runs/${runId}/annotations/`;
   return fetchWithErrorHandling(url);
 };
 
