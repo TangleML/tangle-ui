@@ -31,6 +31,10 @@ export const Z_INDEX_RANGES: Record<NodeType, zIndexDefinition> = {
   },
 };
 
+export const getNodeTypeZIndexDefault = (nodeType: NodeType): number => {
+  return Z_INDEX_RANGES[nodeType].default;
+};
+
 const getNodeZIndexDefault = (node: Node): number => {
   if (!isDefinedNode(node)) {
     return 0;
