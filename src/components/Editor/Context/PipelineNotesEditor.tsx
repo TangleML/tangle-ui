@@ -5,6 +5,7 @@ import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import {
   getAnnotationValue,
   PIPELINE_NOTES_ANNOTATION,
+  setComponentSpecAnnotation,
 } from "@/utils/annotations";
 
 export const PipelineNotesEditor = () => {
@@ -21,16 +22,13 @@ export const PipelineNotesEditor = () => {
   };
 
   const onBlur = () => {
-    setComponentSpec({
-      ...componentSpec,
-      metadata: {
-        ...componentSpec.metadata,
-        annotations: {
-          ...annotations,
-          [PIPELINE_NOTES_ANNOTATION]: value,
-        },
-      },
-    });
+    setComponentSpec(
+      setComponentSpecAnnotation(
+        componentSpec,
+        PIPELINE_NOTES_ANNOTATION,
+        value,
+      ),
+    );
   };
 
   return (
