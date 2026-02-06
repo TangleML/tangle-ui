@@ -84,6 +84,8 @@ export function parseSchemaToAnnotationConfig(
       config.type = "json";
     } else if (property.type === "number") {
       config.type = "number";
+    } else if (property.type === "integer") {
+      config.type = "integer";
     } else if (property.type === "boolean") {
       config.type = "boolean";
     } else if (property.type === "string") {
