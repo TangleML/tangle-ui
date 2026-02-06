@@ -15,7 +15,7 @@ import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
 import { APP_ROUTES } from "@/routes/router";
 import type { PipelineRun } from "@/types/pipelineRun";
 import { extractCanonicalName } from "@/utils/canonicalPipelineName";
-import type { ComponentSpec } from "@/utils/componentSpec";
+import type { ArgumentType, ComponentSpec } from "@/utils/componentSpec";
 import { submitPipelineRun } from "@/utils/submitPipeline";
 
 type RerunPipelineButtonProps = {
@@ -73,7 +73,9 @@ export const RerunPipelineButton = ({
               componentSpec,
             ),
           ),
-          taskArguments: executionData?.rootDetails?.task_spec.arguments,
+          // The generated API types don't include SecretArgument but the backend supports it
+          taskArguments: (executionData?.rootDetails?.task_spec.arguments ??
+            undefined) as Record<string, ArgumentType> | undefined,
           authorizationToken,
           runNameOverride,
           onSuccess: resolve,

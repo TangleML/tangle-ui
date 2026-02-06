@@ -3,7 +3,6 @@ import { useNavigate } from "@tanstack/react-router";
 import { AlertCircle, CheckCircle, Loader2, SendHorizonal } from "lucide-react";
 import { type MouseEvent, useRef, useState } from "react";
 
-import type { TaskSpecOutput } from "@/api/types.gen";
 import { useAwaitAuthorization } from "@/components/shared/Authentication/useAwaitAuthorization";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Button } from "@/components/ui/button";
@@ -17,6 +16,7 @@ import { APP_ROUTES } from "@/routes/router";
 import { updateRunNotes } from "@/services/pipelineRunService";
 import type { PipelineRun } from "@/types/pipelineRun";
 import {
+  type ArgumentType,
   type ComponentSpec,
   isGraphImplementation,
 } from "@/utils/componentSpec";
@@ -53,7 +53,7 @@ function useSubmitPipeline() {
       onError,
     }: {
       componentSpec: ComponentSpec;
-      taskArguments?: TaskSpecOutput["arguments"];
+      taskArguments?: Record<string, ArgumentType>;
       onSuccess: (data: PipelineRun) => void;
       onError: (error: Error | string) => void;
     }) => {
@@ -168,7 +168,7 @@ const OasisSubmitter = ({
     setCooldownTime(3);
   };
 
-  const handleSubmit = async (taskArguments?: Record<string, string>) => {
+  const handleSubmit = async (taskArguments?: Record<string, ArgumentType>) => {
     if (!componentSpec) {
       handleError("No pipeline to submit");
       return;
@@ -183,7 +183,7 @@ const OasisSubmitter = ({
 
     if (
       onlyFixableIssues &&
-      !validateArguments(componentSpec?.inputs ?? [], taskArguments ?? {})
+      !validateArguments(componentSpec.inputs ?? [], taskArguments ?? {})
     ) {
       setIsArgumentsDialogOpen(true);
       return;
@@ -199,7 +199,7 @@ const OasisSubmitter = ({
   };
 
   const handleSubmitWithArguments = (
-    args: Record<string, string>,
+    args: Record<string, ArgumentType>,
     notes: string,
   ) => {
     runNotes.current = notes;
