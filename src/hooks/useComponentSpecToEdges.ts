@@ -6,13 +6,14 @@ import {
 } from "@xyflow/react";
 import { useEffect } from "react";
 
-import type {
-  ArgumentType,
-  ComponentSpec,
-  GraphInputArgument,
-  GraphSpec,
-  TaskOutputArgument,
-  TaskSpec,
+import {
+  type ArgumentType,
+  type ComponentSpec,
+  type GraphInputArgument,
+  type GraphSpec,
+  isSecretArgument,
+  type TaskOutputArgument,
+  type TaskSpec,
 } from "@/utils/componentSpec";
 import {
   inputNameToNodeId,
@@ -82,6 +83,10 @@ const createEdgeForArgument = (
 
   if ("graphInput" in argument) {
     return [createGraphInputEdge(taskId, inputName, argument.graphInput)];
+  }
+
+  if (isSecretArgument(argument)) {
+    return [];
   }
 
   console.error("Impossible task input argument kind: ", argument);

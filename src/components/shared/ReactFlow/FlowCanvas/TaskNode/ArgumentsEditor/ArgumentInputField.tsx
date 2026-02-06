@@ -9,6 +9,12 @@ import {
 } from "react";
 
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
+import { SelectSecretDialog } from "@/components/shared/SecretsManagement/SelectSecretDialog";
+import {
+  createSecretArgument,
+  extractSecretName,
+} from "@/components/shared/SecretsManagement/types";
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -28,7 +34,7 @@ import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import type { ArgumentInput } from "@/types/arguments";
-import { isGraphImplementation } from "@/utils/componentSpec";
+import { isGraphImplementation, isSecretArgument } from "@/utils/componentSpec";
 
 import { ArgumentInputDialog } from "./ArgumentInputDialog";
 import {
@@ -38,6 +44,180 @@ import {
   getPlaceholder,
   typeSpecToString,
 } from "./utils";
+
+interface SecretArgumentInputProps {
+  secretName: string | null;
+  isRemoved: boolean;
+  disabled: boolean;
+  onClear: () => void;
+}
+
+interface PlainArgumentInputProps {
+  argument: ArgumentInput;
+  inputValue: string;
+  placeholder: string;
+  disabled: boolean;
+  disabledCopy: boolean;
+  disabledReset: boolean;
+  isSecretUIEnabled: boolean;
+  onInputChange: (e: ChangeEvent) => void;
+  onBlur: () => void;
+  onExpand: () => void;
+  onCopy: () => void;
+  onReset: () => void;
+  onRemove: () => void;
+  onOpenSecretDialog: () => void;
+}
+
+const ACTIONS_BASE_CLASS =
+  "hover:bg-transparent hover:text-blue-500 hidden group-hover:flex";
+
+const SecretArgumentInput = ({
+  secretName,
+  isRemoved,
+  disabled,
+  onClear,
+}: SecretArgumentInputProps) => {
+  return (
+    <InlineStack
+      gap="2"
+      blockAlign="center"
+      className={cn(
+        "w-full px-3 py-1 rounded-md border ",
+        isRemoved && "opacity-50",
+      )}
+    >
+      <Icon name="Lock" size="sm" className="text-amber-600 shrink-0" />
+      <Paragraph size="sm" className="truncate flex-1 text-amber-600">
+        {secretName}
+      </Paragraph>
+      {!disabled && (
+        <TooltipButton
+          onClick={onClear}
+          variant="ghost"
+          size="xs"
+          tooltip="Clear Secret"
+          className="shrink-0"
+        >
+          <Icon name="X" size="sm" />
+        </TooltipButton>
+      )}
+    </InlineStack>
+  );
+};
+
+const PlainArgumentInput = ({
+  argument,
+  inputValue,
+  placeholder,
+  disabled,
+  disabledCopy,
+  disabledReset,
+  isSecretUIEnabled,
+  onInputChange,
+  onBlur,
+  onExpand,
+  onCopy,
+  onReset,
+  onRemove,
+  onOpenSecretDialog,
+}: PlainArgumentInputProps) => (
+  <>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Input
+          id={argument.inputSpec.name}
+          value={inputValue}
+          onChange={onInputChange}
+          onBlur={onBlur}
+          placeholder={placeholder}
+          required={!argument.inputSpec.optional}
+          className={cn(
+            "flex-1 group-hover:pr-8",
+            argument.isRemoved &&
+              !argument.inputSpec.optional &&
+              "border-red-200",
+            argument.isRemoved &&
+              argument.inputSpec.optional &&
+              "border-gray-300 text-muted-foreground",
+            argument.isRemoved && "opacity-80 focus:opacity-100 border-dashed",
+          )}
+          disabled={disabled}
+        />
+      </TooltipTrigger>
+      {placeholder && !inputValue && (
+        <TooltipContent className="z-9999">{placeholder}</TooltipContent>
+      )}
+    </Tooltip>
+
+    <InlineStack className="absolute right-0 top-1/2 -translate-y-1/2 mr-1 px-1 bg-sidebar">
+      {isSecretUIEnabled && (
+        <TooltipButton
+          onClick={onOpenSecretDialog}
+          className={ACTIONS_BASE_CLASS}
+          disabled={disabled}
+          variant="ghost"
+          size="xs"
+          tooltip="Use Secret"
+        >
+          <Icon name="Lock" />
+        </TooltipButton>
+      )}
+      <TooltipButton
+        onClick={onExpand}
+        className={ACTIONS_BASE_CLASS}
+        disabled={disabled}
+        variant="ghost"
+        size="xs"
+        tooltip="Multiline Editor"
+      >
+        <Icon name="Maximize2" />
+      </TooltipButton>
+      {!disabledCopy && (
+        <TooltipButton
+          onClick={onCopy}
+          className={cn(ACTIONS_BASE_CLASS, {
+            invisible: argument.isRemoved || disabledCopy,
+          })}
+          disabled={disabledCopy}
+          variant="ghost"
+          size="xs"
+          tooltip="Copy Value"
+        >
+          <Icon name="Copy" />
+        </TooltipButton>
+      )}
+      {!disabledReset && (
+        <TooltipButton
+          onClick={onReset}
+          className={cn(ACTIONS_BASE_CLASS, {
+            invisible: argument.isRemoved,
+          })}
+          disabled={disabledReset}
+          variant="ghost"
+          size="xs"
+          tooltip="Reset to Default"
+        >
+          <Icon name="ListRestart" />
+        </TooltipButton>
+      )}
+      <TooltipButton
+        onClick={onRemove}
+        disabled={disabled}
+        variant="ghost"
+        size="xs"
+        className={ACTIONS_BASE_CLASS}
+        tooltip={argument.isRemoved ? "Include Argument" : "Exclude Argument"}
+      >
+        {argument.isRemoved ? (
+          <Icon name="SquarePlus" />
+        ) : (
+          <Icon name="Delete" />
+        )}
+      </TooltipButton>
+    </InlineStack>
+  </>
+);
 
 export const ArgumentInputField = ({
   argument,
@@ -57,8 +237,23 @@ export const ArgumentInputField = ({
   );
 
   const [isTextareaDialogOpen, setIsTextareaDialogOpen] = useState(false);
+  const [isSelectSecretDialogOpen, setIsSelectSecretDialogOpen] =
+    useState(false);
 
   const undoValue = useMemo(() => argument, []);
+
+  const isSecretUIEnabled = useFlagValue("secrets");
+  const isValueSecret = useMemo(
+    () => isSecretUIEnabled && isSecretArgument(argument.value),
+    [argument.value, isSecretUIEnabled],
+  );
+  const secretName = useMemo(
+    () =>
+      isSecretArgument(argument.value)
+        ? extractSecretName(argument.value)
+        : null,
+    [argument.value],
+  );
   const hint = argument.inputSpec.annotations?.hint as string | undefined;
 
   const handleInputChange = (e: ChangeEvent) => {
@@ -141,6 +336,27 @@ export const ArgumentInputField = ({
     setIsTextareaDialogOpen(false);
   }, []);
 
+  const handleOpenSecretDialog = useCallback(() => {
+    if (disabled) return;
+    setIsSelectSecretDialogOpen(true);
+  }, [disabled]);
+
+  const handleSecretSelect = useCallback(
+    (selectedSecretName: string) => {
+      const secretArg = createSecretArgument(selectedSecretName);
+      setInputValue("");
+      setIsSelectSecretDialogOpen(false);
+      onSave({ ...argument, value: secretArg, isRemoved: false });
+    },
+    [argument, onSave],
+  );
+
+  const handleClearSecret = useCallback(() => {
+    if (disabled) return;
+    setInputValue("");
+    onSave({ ...argument, value: "", isRemoved: false });
+  }, [disabled, argument, onSave]);
+
   const handleCopy = useCallback(() => {
     if (disabled || argument.isRemoved) return;
 
@@ -209,9 +425,6 @@ export const ArgumentInputField = ({
 
   useCallbackOnUnmount(handleBlur);
 
-  const actionsBaseClass =
-    "hover:bg-transparent hover:text-blue-500 hidden group-hover:flex";
-
   return (
     <>
       <BlockStack gap="0" className="relative w-full px-2">
@@ -279,90 +492,31 @@ export const ArgumentInputField = ({
         </InlineStack>
 
         <div className="relative group w-full">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Input
-                id={argument.inputSpec.name}
-                value={inputValue}
-                onChange={handleInputChange}
-                onBlur={handleBlur}
-                placeholder={placeholder}
-                required={!argument.inputSpec.optional}
-                className={cn(
-                  "flex-1 group-hover:pr-8",
-                  argument.isRemoved &&
-                    !argument.inputSpec.optional &&
-                    "border-red-200",
-                  argument.isRemoved &&
-                    argument.inputSpec.optional &&
-                    "border-gray-300 text-muted-foreground",
-                  argument.isRemoved &&
-                    "opacity-80 focus:opacity-100 border-dashed",
-                )}
-                disabled={disabled}
-              />
-            </TooltipTrigger>
-            {placeholder && !inputValue && (
-              <TooltipContent className="z-9999">{placeholder}</TooltipContent>
-            )}
-          </Tooltip>
-
-          <InlineStack className="absolute right-0 top-1/2 -translate-y-1/2 mr-1 px-1 bg-sidebar">
-            <TooltipButton
-              onClick={handleExpand}
-              className={actionsBaseClass}
+          {isValueSecret ? (
+            <SecretArgumentInput
+              secretName={secretName}
+              isRemoved={argument.isRemoved ?? false}
               disabled={disabled}
-              variant="ghost"
-              size="xs"
-              tooltip="Multiline Editor"
-            >
-              <Icon name="Maximize2" />
-            </TooltipButton>
-            {!disabledCopy && (
-              <TooltipButton
-                onClick={handleCopy}
-                className={cn(actionsBaseClass, {
-                  invisible: argument.isRemoved || disabledCopy,
-                })}
-                disabled={disabledCopy}
-                variant="ghost"
-                size="xs"
-                tooltip="Copy Value"
-              >
-                <Icon name="Copy" />
-              </TooltipButton>
-            )}
-            {!disabledReset && (
-              <TooltipButton
-                onClick={handleReset}
-                className={cn(actionsBaseClass, {
-                  invisible: argument.isRemoved,
-                })}
-                disabled={disabledReset}
-                variant="ghost"
-                size="xs"
-                tooltip="Reset to Default"
-              >
-                <Icon name="ListRestart" />
-              </TooltipButton>
-            )}
-            <TooltipButton
-              onClick={handleRemove}
+              onClear={handleClearSecret}
+            />
+          ) : (
+            <PlainArgumentInput
+              argument={argument}
+              inputValue={inputValue}
+              placeholder={placeholder}
               disabled={disabled}
-              variant="ghost"
-              size="xs"
-              className={actionsBaseClass}
-              tooltip={
-                argument.isRemoved ? "Include Argument" : "Exclude Argument"
-              }
-            >
-              {argument.isRemoved ? (
-                <Icon name="SquarePlus" />
-              ) : (
-                <Icon name="Delete" />
-              )}
-            </TooltipButton>
-          </InlineStack>
+              disabledCopy={disabledCopy}
+              disabledReset={disabledReset}
+              isSecretUIEnabled={isSecretUIEnabled}
+              onInputChange={handleInputChange}
+              onBlur={handleBlur}
+              onExpand={handleExpand}
+              onCopy={handleCopy}
+              onReset={handleReset}
+              onRemove={handleRemove}
+              onOpenSecretDialog={handleOpenSecretDialog}
+            />
+          )}
         </div>
       </BlockStack>
 
@@ -373,6 +527,12 @@ export const ArgumentInputField = ({
         open={isTextareaDialogOpen}
         onCancel={handleDialogCancel}
         onConfirm={handleDialogConfirm}
+      />
+
+      <SelectSecretDialog
+        open={isSelectSecretDialogOpen}
+        onOpenChange={setIsSelectSecretDialogOpen}
+        onSelect={handleSecretSelect}
       />
     </>
   );

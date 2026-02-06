@@ -2,6 +2,7 @@ import type { ArgumentInput } from "@/types/arguments";
 import {
   type ArgumentType,
   type GraphSpec,
+  isSecretArgument,
   type TaskSpec,
   type TypeSpecType,
 } from "@/utils/componentSpec";
@@ -70,6 +71,10 @@ export const getInputValue = (argumentInput: ArgumentInput) => {
 
   if (argument === undefined) {
     return argumentInput.inputSpec.default;
+  }
+
+  if (isSecretArgument(argument)) {
+    return "";
   }
 
   if (isScalar(argument)) {
