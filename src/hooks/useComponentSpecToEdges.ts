@@ -84,6 +84,10 @@ const createEdgeForArgument = (
     return [createGraphInputEdge(taskId, inputName, argument.graphInput)];
   }
 
+  if ("secret" in argument) {
+    return [];
+  }
+
   console.error("Impossible task input argument kind: ", argument);
   return [];
 };

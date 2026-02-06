@@ -204,6 +204,7 @@ export function TaskNodeInputs({
                   ? `+${hiddenInputs} more input${hiddenInputs > 1 ? "s" : ""}`
                   : " "
               }
+              rawValue={values?.[input.name]}
               onHandleSelectionChange={handleSelectionChange}
               highlight={checkHighlight(input)}
               onLabelClick={handleLabelClick}
@@ -224,6 +225,7 @@ export function TaskNodeInputs({
               input={input}
               invalid={invalidArguments.includes(input.name)}
               value={getDisplayValue(values?.[input.name], graphSpec)}
+              rawValue={values?.[input.name]}
               onHandleSelectionChange={handleSelectionChange}
               highlight={checkHighlight(input)}
               onLabelClick={handleLabelClick}
