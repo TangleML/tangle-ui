@@ -6,7 +6,7 @@ import { InfoBox } from "@/components/shared/InfoBox";
 import { removeGraphInput } from "@/components/shared/ReactFlow/FlowCanvas/utils/removeNode";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
-import { BlockStack } from "@/components/ui/layout";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Heading, Paragraph } from "@/components/ui/typography";
 import useConfirmationDialog from "@/hooks/useConfirmationDialog";
 import { useNodeSelectionTransfer } from "@/hooks/useNodeSelectionTransfer";
@@ -18,6 +18,7 @@ import { checkInputConnectionToRequiredFields } from "@/utils/inputConnectionUti
 import { inputNameToNodeId } from "@/utils/nodes/nodeIdUtils";
 import { updateSubgraphSpec } from "@/utils/subgraphUtils";
 
+import { IOZIndexEditor } from "../IOZIndexEditor";
 import {
   DescriptionField,
   NameField,
@@ -318,11 +319,15 @@ export const InputValueEditor = ({
         </InfoBox>
       )}
 
-      {!disabled && (
-        <Button onClick={deleteNode} variant="destructive" size="icon">
-          <Icon name="Trash2" />
-        </Button>
-      )}
+      <InlineStack gap="4">
+        {!disabled && (
+          <Button onClick={deleteNode} variant="destructive" size="icon">
+            <Icon name="Trash2" />
+          </Button>
+        )}
+
+        <IOZIndexEditor ioSpec={input} ioType="input" />
+      </InlineStack>
 
       <ConfirmationDialog
         {...confirmationProps}
