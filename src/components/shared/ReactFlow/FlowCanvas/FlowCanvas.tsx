@@ -86,7 +86,7 @@ import { removeNode } from "./utils/removeNode";
 import { replaceTaskNode } from "./utils/replaceTaskNode";
 import { updateNodePositions } from "./utils/updateNodePosition";
 
-const SELECTABLE_NODES = new Set(["task", "input", "output"]);
+const SELECTABLE_NODES = new Set(["task", "input", "output", "flex"]);
 const UPGRADEABLE_NODES = new Set(["task"]);
 const REPLACEABLE_NODES = new Set(["task"]);
 const FAST_PLACE_NODE_TYPES = new Set<Node["type"]>(["task"]);
@@ -746,7 +746,10 @@ const FlowCanvasContent = ({
       updatedComponentSpec: updatedSubgraphSpec,
       newNodes,
       updatedNodes,
-    } = duplicateNodes(currentSubgraphSpec, selectedNodes, { selected: true });
+    } = duplicateNodes(currentSubgraphSpec, selectedNodes, {
+      selected: true,
+      author: currentUserDetails?.id,
+    });
 
     const updatedRootSpec = updateSubgraphSpec(
       componentSpec,
@@ -941,6 +944,7 @@ const FlowCanvasContent = ({
             duplicateNodes(currentSubgraphSpec, nodesToPaste, {
               position: reactFlowCenter,
               connection: "internal",
+              author: currentUserDetails?.id,
             });
 
           // Deselect all existing nodes
@@ -1032,6 +1036,7 @@ const FlowCanvasContent = ({
           isVisible={showToolbar}
           offset={0}
           align="end"
+          className="z-9999!"
         >
           <SelectionToolbar
             onDelete={!readOnly ? onRemoveNodes : undefined}
