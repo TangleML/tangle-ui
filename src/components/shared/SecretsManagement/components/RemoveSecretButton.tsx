@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import useToastNotification from "@/hooks/useToastNotification";
 
-import { removeSecret, SecretsQueryKeys } from "../secretsStorage";
+import { removeSecret } from "../secretsStorage";
 import type { Secret } from "../types";
+import { SecretsQueryKeys } from "../types";
 
 interface RemoveSecretButtonProps {
   secret: Pick<Secret, "id">;

@@ -19,8 +19,8 @@ import useToastNotification from "@/hooks/useToastNotification";
 
 import { AddSecretForm } from "./components/AddSecretForm";
 import { SecretsList } from "./components/SecretsList";
-import { getSecrets, SecretsQueryKeys } from "./secretsStorage";
-import type { Secret } from "./types";
+import { fetchSecretsList } from "./secretsStorage";
+import { type Secret, SecretsQueryKeys } from "./types";
 
 type DialogMode = "list" | "add" | "replace";
 
@@ -48,7 +48,7 @@ function ManageSecretsDialogContentInternal({
 
   const { data: secrets } = useSuspenseQuery({
     queryKey: SecretsQueryKeys.All(),
-    queryFn: getSecrets,
+    queryFn: fetchSecretsList,
   });
 
   const [mode, setMode] = useState<DialogMode>(defaultMode);
