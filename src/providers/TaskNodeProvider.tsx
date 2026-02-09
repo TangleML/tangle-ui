@@ -11,13 +11,13 @@ import {
   type TaskNodeData,
   type TaskNodeDimensions,
 } from "@/types/taskNode";
-import type {
-  ArgumentType,
-  ComponentReference,
-  HydratedComponentReference,
-  InputSpec,
-  OutputSpec,
-  TaskSpec,
+import {
+  type ArgumentType,
+  type ComponentReference,
+  type HydratedComponentReference,
+  type InputSpec,
+  type OutputSpec,
+  type TaskSpec,
 } from "@/utils/componentSpec";
 import { getComponentName, getTaskDisplayName } from "@/utils/getComponentName";
 import { taskIdToNodeId } from "@/utils/nodes/nodeIdUtils";

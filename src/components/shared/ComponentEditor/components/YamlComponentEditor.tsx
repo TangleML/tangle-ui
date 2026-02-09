@@ -45,7 +45,7 @@ export const YamlComponentEditor = withSuspenseWrapper(
           <BlockStack className="flex-1 relative">
             <div className="absolute inset-0">
               <MonacoEditor
-                defaultLanguage={"yaml"}
+                defaultLanguage="yaml"
                 theme="vs-dark"
                 value={componentText}
                 onChange={handleComponentTextChange}
