@@ -5,6 +5,7 @@ import {
   type GraphSpec,
   type InputSpec,
   isGraphImplementation,
+  isSecretArgument,
   type TaskOutputArgument,
   type TaskSpec,
 } from "./componentSpec";
@@ -30,15 +31,16 @@ export function isFixableIssue(issue: ComponentValidationIssue): boolean {
 
 export function validateArguments(
   inputs: InputSpec[],
-  taskArguments: Record<string, string>,
+  taskArguments: Record<string, ArgumentType>,
 ): boolean {
   const normalizedValues = inputs
     .filter((input) => !input.optional)
-    .map((input) =>
-      String(
-        taskArguments[input.name] || input.value || input.default || "",
-      ).trim(),
-    );
+    .map((input) => {
+      const value = taskArguments[input.name];
+      // SecretArgument is always considered valid
+      if (isSecretArgument(value)) return true;
+      return String(value || input.value || input.default || "").trim();
+    });
   return normalizedValues.every(Boolean);
 }
 
