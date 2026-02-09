@@ -401,7 +401,7 @@ export interface TaskOutputArgument {
 /**
  * Reference to a secret by name.
  */
-interface SecretReference {
+export interface SecretReference {
   name: string;
 }
 /**
@@ -548,3 +548,6 @@ export const isGraphInputArgument = (
   arg?: ArgumentType,
 ): arg is GraphInputArgument =>
   typeof arg === "object" && arg !== null && "graphInput" in arg;
+
+export const isSecretArgument = (arg?: ArgumentType): arg is SecretArgument =>
+  typeof arg === "object" && arg !== null && "secret" in arg;

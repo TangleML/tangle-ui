@@ -2,6 +2,7 @@ import {
   type ArgumentType,
   type GraphSpec,
   isGraphInputArgument,
+  isSecretArgument,
   isTaskOutputArgument,
 } from "@/utils/componentSpec";
 import { getTaskDisplayName } from "@/utils/getComponentName";
@@ -10,6 +11,7 @@ import { getValue } from "@/utils/string";
 /**
  * Formats display values for TaskNode input handles.
  * Shows connected nodes as "→ ComponentName.outputName" and regular values as formatted strings.
+ * For secret arguments, returns the secret name.
  */
 export const getDisplayValue = (
   value: string | ArgumentType | undefined,
@@ -33,6 +35,10 @@ export const getDisplayValue = (
     const inputName = value.graphInput?.inputName;
 
     return `→ ${inputName}`;
+  }
+
+  if (isSecretArgument(value)) {
+    return value.secret.name;
   }
 
   // For non-connected values, use the original logic
