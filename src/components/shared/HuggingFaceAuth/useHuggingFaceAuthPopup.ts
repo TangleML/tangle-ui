@@ -162,6 +162,13 @@ function base64UrlEncode(obj: object): string {
   return base64.replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
 }
 
+class HuggingFaceAuthError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "HuggingFaceAuthError";
+  }
+}
+
 /**
  * To keep compatibility with other auth providers, we need to create a JWT token for Hugging Face manually,
  *  since API does not support JWT tokens for Hugging Face.
@@ -169,6 +176,10 @@ function base64UrlEncode(obj: object): string {
  * @returns
  */
 function createJWTToken(user: GetUserResponse) {
+  if (!user.id) {
+    throw new HuggingFaceAuthError("User ID is required");
+  }
+
   const payload: JWTPayload = {
     ...HUGGING_FACE_DEFAULT_JWT,
     user_id: user.id,
