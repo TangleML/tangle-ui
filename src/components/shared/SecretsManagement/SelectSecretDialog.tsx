@@ -18,8 +18,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
 
 import { AddSecretForm } from "./components/AddSecretForm";
-import { getSecrets, SecretsQueryKeys } from "./secretsStorage";
-import type { Secret } from "./types";
+import { fetchSecretsList } from "./secretsStorage";
+import { type Secret, SecretsQueryKeys } from "./types";
 
 type DialogMode = "select" | "add";
 
@@ -99,7 +99,7 @@ function SelectSecretDialogContentInternal({
 }: SelectSecretDialogContentProps) {
   const { data: secrets } = useSuspenseQuery({
     queryKey: SecretsQueryKeys.All(),
-    queryFn: getSecrets,
+    queryFn: fetchSecretsList,
   });
 
   const [mode, setMode] = useState<DialogMode>("select");

@@ -6,7 +6,7 @@ import type { SecretArgument } from "@/utils/componentSpec";
 export interface Secret {
   id: string;
   name: string;
-  value: string;
+  value?: string;
   createdAt: Date;
 }
 
@@ -41,3 +41,11 @@ export function createSecretArgument(secretName: string): SecretArgument {
 export function extractSecretName(arg: SecretArgument): string {
   return arg.secret.name;
 }
+
+/**
+ * Query keys for React Query.
+ */
+export const SecretsQueryKeys = {
+  All: () => ["secrets"] as const,
+  Id: (id: string) => ["secrets", id] as const,
+} as const;
