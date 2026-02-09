@@ -7,6 +7,7 @@ import { InlineStack } from "@/components/ui/layout";
 import { Paragraph } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 
+import { isFlexNode } from "../../types";
 import { getNodeTypeColor } from "./utils";
 
 interface NodeListItemProps {
@@ -34,6 +35,12 @@ export function NodeListItem({
     }
   };
 
+  const isFlexType = isFlexNode(node);
+
+  const displayValue = isFlexType
+    ? `Sticky Note: ${node.data.properties.title.length > 0 ? node.data.properties.title : node.id}`
+    : node.id;
+
   return (
     <li key={node.id} className="flex justify-between items-center">
       <InlineStack
@@ -41,9 +48,18 @@ export function NodeListItem({
         className={cn({ "opacity-50": isExcluded })}
         wrap="nowrap"
       >
-        <Badge variant="dot" className={cn(getNodeTypeColor(node.type))} />
+        <Badge
+          variant="dot"
+          className={cn(getNodeTypeColor(node.type))}
+          style={{
+            backgroundColor: isFlexType
+              ? node.data.properties.color
+              : undefined,
+            filter: isFlexType ? "brightness(0.8)" : undefined,
+          }}
+        />
         <Paragraph font="mono" size="xs">
-          {node.id}
+          {displayValue}
         </Paragraph>
         {isOrphaned && (
           <InlineStack gap="1" wrap="nowrap">

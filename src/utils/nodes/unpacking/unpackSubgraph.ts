@@ -11,6 +11,7 @@ import {
   reconnectDownstreamOutputs,
   reconnectDownstreamTasks,
   reconnectUpstreamInputsAndTasks,
+  unpackFlexNodes,
   unpackInputs,
   unpackOutputs,
   unpackTasks,
@@ -45,6 +46,14 @@ export const unpackSubgraph = (
     getDownstreamTaskNodesConnectedToTask(subgraphTaskId, graphSpec);
 
   let updatedComponentSpec = componentSpec;
+
+  // Unpack flex Nodes
+  const specAfterFlexNodes = unpackFlexNodes(
+    subgraphSpec,
+    subgraphPosition,
+    updatedComponentSpec,
+  );
+  updatedComponentSpec = specAfterFlexNodes;
 
   // Unpack inputs
   const { spec: specAfterInputs, inputNameMap } = unpackInputs(

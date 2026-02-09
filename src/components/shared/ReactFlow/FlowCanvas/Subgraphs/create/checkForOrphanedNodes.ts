@@ -98,7 +98,7 @@ export const checkForOrphanedNodes = (
     });
 
   const orphanedNodes = selectedNodes.filter(
-    (node) => !connectedNodeIds.has(node.id),
+    (node) => !connectedNodeIds.has(node.id) && node.type !== "flex",
   );
 
   return orphanedNodes;
