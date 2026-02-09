@@ -27,6 +27,8 @@ export const canGroupNodes = (nodes: Node[]): GroupingValidation => {
 
 export const getNodeTypeColor = (nodeType: string | undefined): string => {
   switch (nodeType) {
+    case "flex":
+      return "bg-yellow-300";
     case "input":
       return "bg-blue-500";
     case "output":

@@ -1,6 +1,11 @@
 import type { Node, XYPosition } from "@xyflow/react";
 
 import {
+  getFlexNodeAnnotations,
+  serializeFlexNodes,
+} from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/interface";
+import type { FlexNodeData } from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/types";
+import {
   type Bounds,
   calculateNodesCenter,
   getNodesBounds,
@@ -23,7 +28,10 @@ import {
   isTaskOutputArgument,
 } from "@/utils/componentSpec";
 
-import { EDITOR_POSITION_ANNOTATION } from "../annotations";
+import {
+  EDITOR_POSITION_ANNOTATION,
+  FLEX_NODES_ANNOTATION,
+} from "../annotations";
 import { extractPositionFromAnnotations } from "../annotations";
 import { generateDigest } from "../componentStore";
 import { getUniqueName, getUniqueTaskName } from "../unique";
@@ -67,12 +75,14 @@ export const createSubgraphFromNodes = async (
   const taskNodes = selectedNodes.filter((node) => node.type === "task");
   const inputNodes = selectedNodes.filter((node) => node.type === "input");
   const outputNodes = selectedNodes.filter((node) => node.type === "output");
+  const flexNodes = selectedNodes.filter((node) => node.type === "flex");
 
   const subgraphTasks: Record<string, TaskSpec> = {};
   const subgraphInputs: InputSpec[] = [];
   const subgraphArguments: Record<string, ArgumentType> = {};
   const subgraphOutputs: OutputSpec[] = [];
   const subgraphOutputValues: Record<string, TaskOutputArgument> = {};
+  const subgraphAnnotations: Record<string, string> = {};
 
   const bounds = getNodesBounds(selectedNodes);
 
@@ -145,6 +155,13 @@ export const createSubgraphFromNodes = async (
     currentGraphSpec,
   );
 
+  processSelectedFlexNodes(
+    flexNodes,
+    bounds,
+    subgraphAnnotations,
+    currentComponentSpec,
+  );
+
   // Create the replacement task that represents the subgraph
   const subgraphPosition = calculateNodesCenter(selectedNodes);
 
@@ -159,6 +176,7 @@ export const createSubgraphFromNodes = async (
     subgraphOutputValues,
     subgraphPosition,
     subgraphArguments,
+    subgraphAnnotations,
   );
 
   const text = await getComponentText(subgraphTask.componentRef);
@@ -179,6 +197,7 @@ const createSubgraphTask = async (
   outputValues: Record<string, TaskOutputArgument>,
   position: XYPosition,
   args: Record<string, ArgumentType>,
+  annotations: Record<string, string> = {},
 ) => {
   let author: string = "Unknown";
   try {
@@ -205,6 +224,7 @@ const createSubgraphTask = async (
         sdk: "https://cloud-pipelines.net/pipeline-editor/",
         "editor.flow-direction": "left-to-right",
         author,
+        ...annotations,
       },
     },
   };
@@ -307,6 +327,38 @@ const processSelectedOutputNodes = (
       subgraphOutputValues[outputName] = outputValue;
     }
   });
+};
+
+const processSelectedFlexNodes = (
+  flexNodes: Node[],
+  bounds: Bounds,
+  annotations: Record<string, string>,
+  currentComponentSpec: ComponentSpec,
+): void => {
+  const existingFlexNodes = getFlexNodeAnnotations(currentComponentSpec);
+  const newFlexNodes: FlexNodeData[] = [];
+
+  flexNodes.forEach((node) => {
+    const flexNodeId = node.id;
+
+    const existingFlexNode = existingFlexNodes.find(
+      (flex) => flex.id === flexNodeId,
+    );
+
+    if (existingFlexNode) {
+      const newFlexNode = { ...existingFlexNode };
+      const normalizedPosition = normalizeNodePosition(node, bounds);
+      newFlexNode.position = normalizedPosition;
+
+      newFlexNodes.push(newFlexNode);
+    }
+  });
+
+  if (newFlexNodes.length === 0) {
+    return;
+  }
+
+  annotations[FLEX_NODES_ANNOTATION] = serializeFlexNodes(newFlexNodes);
 };
 
 const processTaskInputConnections = (
