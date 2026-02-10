@@ -9,6 +9,7 @@ export const DEFAULT_STICKY_NOTE = {
 };
 
 export const DEFAULT_FLEX_NODE_SIZE = { width: 150, height: 100 };
+export const DEFAULT_BORDER_COLOR = "#BCBCBC";
 
 export const createFlexNode = (
   flexNode: FlexNodeData,
