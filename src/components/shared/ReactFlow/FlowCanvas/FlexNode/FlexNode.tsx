@@ -5,7 +5,7 @@ import {
   type ResizeDragEvent,
   type ResizeParams,
 } from "@xyflow/react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { BlockStack } from "@/components/ui/layout";
 import { Paragraph } from "@/components/ui/typography";
@@ -15,6 +15,7 @@ import { useContextPanel } from "@/providers/ContextPanelProvider";
 import { updateSubgraphSpec } from "@/utils/subgraphUtils";
 
 import { FlexNodeEditor } from "./FlexNodeEditor";
+import { InlineTextEditor } from "./InlineTextEditor";
 import { updateFlexNodeInComponentSpec } from "./interface";
 import type { FlexNodeData } from "./types";
 
@@ -25,6 +26,8 @@ const MIN_SIZE = { width: 50, height: 50 };
 const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
   const { properties, readOnly } = data;
   const { title, content, color } = properties;
+
+  const [isInlineEditing, setIsInlineEditing] = useState(false);
 
   const {
     setContent,
@@ -59,6 +62,28 @@ const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
     );
 
     setComponentSpec(newRootSpec);
+  };
+
+  const handleSaveContent = (newContent: string) => {
+    const updatedSubgraphSpec = updateFlexNodeInComponentSpec(
+      currentSubgraphSpec,
+      {
+        ...data,
+        properties: {
+          ...properties,
+          content: newContent,
+        },
+      },
+    );
+
+    const newRootSpec = updateSubgraphSpec(
+      componentSpec,
+      currentSubgraphPath,
+      updatedSubgraphSpec,
+    );
+
+    setComponentSpec(newRootSpec);
+    setIsInlineEditing(false);
   };
 
   useEffect(() => {
@@ -98,6 +123,7 @@ const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
             "border-2 border-dashed border-warning",
         )}
         style={{ backgroundColor: color }}
+        onDoubleClick={() => setIsInlineEditing(true)}
       >
         <div
           className={cn(
@@ -109,9 +135,18 @@ const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
             <Paragraph size="sm" weight="semibold">
               {title}
             </Paragraph>
-            <Paragraph size="xs" className="whitespace-pre-wrap">
-              {content}
-            </Paragraph>
+            {isInlineEditing ? (
+              <InlineTextEditor
+                value={content}
+                placeholder="Enter text..."
+                onSave={handleSaveContent}
+                onCancel={() => setIsInlineEditing(false)}
+              />
+            ) : (
+              <Paragraph size="xs" className="whitespace-pre-wrap">
+                {content}
+              </Paragraph>
+            )}
           </BlockStack>
         </div>
       </div>
