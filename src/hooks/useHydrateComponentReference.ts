@@ -2,8 +2,33 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 
 import { hydrateComponentReference } from "@/services/componentService";
 import type { ComponentReference } from "@/utils/componentSpec";
+import { componentSpecToText } from "@/utils/yaml";
 
-const wildcardReference = Symbol("wildcardReference");
+/**
+ * Generate a unique query key for a component reference.
+ * For components with digest or URL, use those directly.
+ * For inline specs, use a JSON stringification as a stable key.
+ */
+function getComponentQueryKey(component: ComponentReference): string {
+  if (component.digest) {
+    return `digest:${component.digest}`;
+  }
+
+  if (component.url) {
+    return `url:${component.url}`;
+  }
+
+  if (component.text) {
+    return `text:${component.text}`;
+  }
+
+  if (component.spec) {
+    const specYaml = componentSpecToText(component.spec);
+    return `spec:${specYaml}`;
+  }
+
+  return `empty:${JSON.stringify(component)}`;
+}
 
 /**
  * Hydrate a component reference by fetching the text and spec from the URL or local storage
@@ -17,14 +42,13 @@ export function useHydrateComponentReference(component: ComponentReference) {
    * If the component has a digest or url, we can assume that the component is not going to change frequently
    * Otherwise we dont cache result.
    */
-  const staleTime = component.digest || component.url ? 1000 * 60 * 60 * 1 : 0;
+
+  const componentQueryKey = getComponentQueryKey(component);
+
+  const staleTime = componentQueryKey ? 1000 * 60 * 60 * 1 : 0;
 
   const { data: componentRef } = useSuspenseQuery({
-    queryKey: [
-      "component",
-      "hydrate",
-      component.digest ?? component.url ?? wildcardReference,
-    ],
+    queryKey: ["component", "hydrate", componentQueryKey],
     staleTime,
     retryOnMount: true,
     queryFn: () => hydrateComponentReference(component),
