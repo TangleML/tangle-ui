@@ -1,8 +1,19 @@
-import type { PipelineRunFilters } from "@/types/pipelineRunFilters";
+import type {
+  AnnotationFilter,
+  PipelineRunFilters,
+} from "@/types/pipelineRunFilters";
 import { isValidExecutionStatus } from "@/utils/executionStatus";
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isValidAnnotationFilter(value: unknown): value is AnnotationFilter {
+  return (
+    isRecord(value) &&
+    typeof value.key === "string" &&
+    (value.value === undefined || typeof value.value === "string")
+  );
 }
 
 /**
@@ -32,6 +43,12 @@ export function validateFilters(parsed: unknown): PipelineRunFilters {
   if (typeof parsed.pipeline_name === "string") {
     filters.pipeline_name = parsed.pipeline_name;
   }
+  if (Array.isArray(parsed.annotations)) {
+    const validAnnotations = parsed.annotations.filter(isValidAnnotationFilter);
+    if (validAnnotations.length > 0) {
+      filters.annotations = validAnnotations;
+    }
+  }
 
   return filters;
 }
@@ -56,16 +73,37 @@ export function serializeFiltersToUrl(
     : undefined;
 }
 
+/** Keys that receive special counting logic and are excluded from the generic scalar count. */
+const SPECIAL_FILTER_KEYS = new Set([
+  "annotations",
+  "created_after",
+  "created_before",
+]);
+
 /**
  * Count the number of active filters.
+ * Derives from {@link serializeFiltersToUrl} so new scalar filter fields
+ * are automatically counted without needing an update here.
  */
 export function countActiveFilters(filters: PipelineRunFilters): number {
+  const active = serializeFiltersToUrl(filters);
+  if (!active) return 0;
+
   let count = 0;
 
-  if (filters.status) count++;
-  if (filters.created_by) count++;
-  if (filters.created_after || filters.created_before) count++;
-  if (filters.pipeline_name) count++;
+  if (active.annotations) {
+    count += active.annotations.length;
+  }
+
+  if (active.created_after || active.created_before) {
+    count++;
+  }
+
+  for (const key of Object.keys(active)) {
+    if (!SPECIAL_FILTER_KEYS.has(key)) {
+      count++;
+    }
+  }
 
   return count;
 }
