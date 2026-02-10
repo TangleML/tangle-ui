@@ -23,7 +23,9 @@ import { DOCUMENTATION_URL, TOP_NAV_HEIGHT } from "@/utils/constants";
 import BackendStatus from "../shared/BackendStatus";
 import TooltipButton from "../shared/Buttons/TooltipButton";
 import NewPipelineButton from "../shared/NewPipelineButton";
+import { ManageSecretsDialog } from "../shared/SecretsManagement/ManageSecretsDialog";
 import { PersonalPreferences } from "../shared/Settings/PersonalPreferences";
+import { useFlagValue } from "../shared/Settings/useFlags";
 
 const AppMenu = () => {
   const requiresAuthorization = isAuthorizationRequired();
@@ -72,6 +74,7 @@ const AppMenu = () => {
           <InlineStack gap="2" wrap="nowrap">
             <BackendStatus />
             <PersonalPreferences />
+            <ManageSecretsButton />
             {documentationButton}
             {requiresAuthorization && <TopBarAuthentication />}
           </InlineStack>
@@ -107,5 +110,23 @@ const AppMenu = () => {
     </div>
   );
 };
+
+function ManageSecretsButton() {
+  const isSecretsEnabled = useFlagValue("secrets");
+
+  if (!isSecretsEnabled) {
+    return null;
+  }
+
+  return (
+    <ManageSecretsDialog
+      trigger={
+        <TooltipButton tooltip="Manage Secrets">
+          <Icon name="Lock" />
+        </TooltipButton>
+      }
+    />
+  );
+}
 
 export default AppMenu;

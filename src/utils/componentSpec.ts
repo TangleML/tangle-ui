@@ -398,7 +398,26 @@ export interface TaskOutputArgument {
     type?: TypeSpecType;
   };
 }
-export type ArgumentType = string | GraphInputArgument | TaskOutputArgument;
+/**
+ * Reference to a secret by name.
+ */
+interface SecretReference {
+  name: string;
+}
+/**
+ * Represents the component argument value that comes from a secret.
+ */
+export interface SecretArgument {
+  /**
+   * References a secret by name.
+   */
+  secret: SecretReference;
+}
+export type ArgumentType =
+  | string
+  | GraphInputArgument
+  | TaskOutputArgument
+  | SecretArgument;
 
 /**
  * Pair of operands for a binary operation.

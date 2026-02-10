@@ -65,4 +65,12 @@ export const ExistingFlags: ConfigFlags = {
     default: false,
     category: "beta",
   },
+
+  ["secrets"]: {
+    name: "Secrets",
+    description:
+      "Enable the Secrets feature. This will allow you to store secrets, tokens, api keys and other sensitive information in secured way.",
+    default: false,
+    category: "beta",
+  },
 };
