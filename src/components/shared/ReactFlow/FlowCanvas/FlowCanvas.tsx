@@ -1,6 +1,7 @@
 import {
   type Connection,
   type Edge,
+  type EdgeChange,
   type FinalConnectionState,
   type Node,
   type NodeChange,
@@ -142,6 +143,20 @@ const FlowCanvas = ({
     useComponentSpecToEdges(currentSubgraphSpec);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges] = useEdgesState<Edge>(specEdges);
+
+  const isBoxSelecting = useRef(false);
+
+  const handleEdgesChange = (changes: EdgeChange[]) => {
+    if (!isBoxSelecting.current) {
+      onEdgesChange(changes);
+      return;
+    }
+
+    const filtered = changes.filter((change) => change.type !== "select");
+    if (filtered.length > 0) {
+      onEdgesChange(filtered);
+    }
+  };
 
   const isConnecting = useConnection((connection) => connection.inProgress);
   const connectionSourceHandle = useConnection(
@@ -807,7 +822,12 @@ const FlowCanvas = ({
     }
   };
 
+  const handleSelectionStart = () => {
+    isBoxSelecting.current = true;
+  };
+
   const handleSelectionEnd = () => {
+    isBoxSelecting.current = false;
     setShowToolbar(true);
   };
 
@@ -953,7 +973,7 @@ const FlowCanvas = ({
         maxZoom={3}
         selectionMode={selectionMode}
         onNodesChange={handleOnNodesChange}
-        onEdgesChange={onEdgesChange}
+        onEdgesChange={handleEdgesChange}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onConnect={onConnect}
@@ -966,6 +986,7 @@ const FlowCanvas = ({
         onInit={onInit}
         deleteKeyCode={["Delete", "Backspace"]}
         onSelectionChange={handleSelectionChange}
+        onSelectionStart={handleSelectionStart}
         onSelectionEnd={handleSelectionEnd}
         nodesConnectable={readOnly ? false : nodesConnectable}
         connectOnClick={!readOnly}
