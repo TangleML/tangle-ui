@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 
 import { PipelineSection, RunSection } from "@/components/Home";
+import { BetaFeatureWrapper } from "@/components/shared/BetaFeatureWrapper/BetaFeatureWrapper";
 import { PipelineRunFiltersBar } from "@/components/shared/PipelineRunFiltersBar/PipelineRunFiltersBar";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -40,7 +41,11 @@ const Home = () => {
           <PipelineSection />
         </TabsContent>
         <TabsContent value="runs" className="flex flex-col gap-4">
-          {isFiltersBarEnabled && <PipelineRunFiltersBar />}
+          {isFiltersBarEnabled && (
+            <BetaFeatureWrapper flagKey="pipeline-run-filters-bar">
+              <PipelineRunFiltersBar />
+            </BetaFeatureWrapper>
+          )}
           <RunSection onEmptyList={handlePipelineRunsEmpty} />
         </TabsContent>
       </Tabs>
