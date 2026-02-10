@@ -14,8 +14,10 @@ import {
 } from "@/hooks/useRequiredContext";
 import type { BreadcrumbSegment } from "@/hooks/useSubgraphBreadcrumbs";
 import { useSubgraphBreadcrumbs } from "@/hooks/useSubgraphBreadcrumbs";
+import { APP_ROUTES } from "@/routes/router";
 import { useFetchPipelineRunMetadata } from "@/services/executionService";
 import { getOverallExecutionStatusFromStats } from "@/utils/executionStatus";
+import { recordRecentRun } from "@/utils/recentRuns";
 
 import { useComponentSpec } from "./ComponentSpecProvider";
 
@@ -266,6 +268,24 @@ export function ExecutionDataProvider({
     currentExecutionId,
     currentSubgraphPath,
     isAtRoot,
+  ]);
+
+  // Track recently viewed runs for the dashboard
+  useEffect(() => {
+    const recentRunTitle =
+      metadata?.pipeline_name ||
+      rootDetails?.task_spec?.componentRef?.name ||
+      "";
+    const recentRunId = runId || pipelineRunId;
+
+    if (recentRunTitle && recentRunId) {
+      recordRecentRun(recentRunTitle, `${APP_ROUTES.RUNS}/${recentRunId}`);
+    }
+  }, [
+    runId,
+    pipelineRunId,
+    metadata?.pipeline_name,
+    rootDetails?.task_spec?.componentRef?.name,
   ]);
 
   const taskExecutionStatusMap = useMemo(

@@ -3,12 +3,25 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useBackend } from "@/providers/BackendProvider";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
-import { RUNS_BASE_PATH } from "@/routes/router";
+import { EDITOR_PATH, RUNS_BASE_PATH } from "@/routes/router";
 import { fetchExecutionDetails } from "@/services/executionService";
 import { loadPipelineByName } from "@/services/pipelineService";
 import type { ComponentReferenceWithSpec } from "@/utils/componentStore";
 import { prepareComponentRefForEditor } from "@/utils/prepareComponentRefForEditor";
+import { recordRecentPipeline } from "@/utils/recentPipelines";
+import { isRecord } from "@/utils/typeGuards";
 import { getIdOrTitleFromPath } from "@/utils/URL";
+
+function isComponentReferenceWithSpec(
+  value: unknown,
+): value is ComponentReferenceWithSpec {
+  return (
+    isRecord(value) &&
+    isRecord(value.spec) &&
+    typeof value.digest === "string" &&
+    typeof value.text === "string"
+  );
+}
 
 export const useLoadComponentSpecFromPath = () => {
   const location = useLocation();
@@ -43,9 +56,9 @@ export const useLoadComponentSpecFromPath = () => {
         if (id && isRunPath) {
           const result = await fetchExecutionDetails(String(id), backendUrl);
 
-          if (result.task_spec?.componentRef?.spec) {
+          if (isComponentReferenceWithSpec(result.task_spec?.componentRef)) {
             const preparedComponentRef = await prepareComponentRefForEditor(
-              result.task_spec.componentRef as ComponentReferenceWithSpec,
+              result.task_spec.componentRef,
             );
             if (preparedComponentRef) {
               setComponentSpec(preparedComponentRef);
@@ -58,11 +71,15 @@ export const useLoadComponentSpecFromPath = () => {
         if (title && !isRunPath) {
           const result = await loadPipelineByName(title);
 
-          if (result.experiment?.componentRef?.spec) {
+          if (isComponentReferenceWithSpec(result.experiment?.componentRef)) {
             const preparedComponentRef = await prepareComponentRefForEditor(
-              result.experiment.componentRef as ComponentReferenceWithSpec,
+              result.experiment.componentRef,
             );
             if (preparedComponentRef) {
+              recordRecentPipeline(
+                title,
+                `${EDITOR_PATH}/${encodeURIComponent(title)}`,
+              );
               setComponentSpec(preparedComponentRef);
               return;
             }

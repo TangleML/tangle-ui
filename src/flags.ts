@@ -42,6 +42,20 @@ export const ExistingFlags: ConfigFlags = {
     category: "setting",
   },
 
+  ["dashboard-show-recently-opened"]: {
+    name: "Show recently opened section",
+    description: "Show recently opened runs and pipelines on the dashboard.",
+    default: false,
+    category: "setting",
+  },
+
+  ["dashboard-show-pinned"]: {
+    name: "Show pinned section",
+    description: "Show pinned runs and pipelines on the dashboard.",
+    default: false,
+    category: "setting",
+  },
+
   ["in-app-component-editor"]: {
     name: "In-app component editor",
     description:
@@ -70,6 +84,14 @@ export const ExistingFlags: ConfigFlags = {
     name: "Pipeline run filters bar (UI only)",
     description:
       "Non-functional UI preview. This filter bar is not connected to the API and is for testing/development purposes only.",
+    default: false,
+    category: "beta",
+  },
+
+  ["command-center-dashboard"]: {
+    name: "Command Center Dashboard",
+    description:
+      "Replace the default homepage with a unified command center dashboard showing runs, pipelines, components, and quick actions at a glance.",
     default: false,
     category: "beta",
   },

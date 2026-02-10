@@ -1,3 +1,5 @@
+import { ReactFlowProvider } from "@xyflow/react";
+
 import { Skeleton } from "@/components/ui/skeleton";
 import { TaskNodeProvider } from "@/providers/TaskNodeProvider";
 
@@ -18,9 +20,11 @@ export const PreviewTaskNodeCard = ({
 
   return (
     <PointersEventBlock>
-      <TaskNodeProvider data={previewNodeData} selected={false}>
-        <TaskNodeCard />
-      </TaskNodeProvider>
+      <ReactFlowProvider>
+        <TaskNodeProvider data={previewNodeData} selected={false}>
+          <TaskNodeCard />
+        </TaskNodeProvider>
+      </ReactFlowProvider>
     </PointersEventBlock>
   );
 };

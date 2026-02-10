@@ -33,9 +33,20 @@ export function PersonalPreferencesDialog({
   const betaFlags = Object.values(flags).filter(
     (flag) => flag.category === "beta",
   );
-  const settings = Object.values(flags).filter(
-    (flag) => flag.category === "setting",
-  );
+  const isCommandCenterDashboardEnabled =
+    flags.find((flag) => flag.key === "command-center-dashboard")?.enabled ??
+    false;
+  const settings = Object.values(flags).filter((flag) => {
+    if (flag.category !== "setting") return false;
+    if (
+      !isCommandCenterDashboardEnabled &&
+      (flag.key === "dashboard-show-recently-opened" ||
+        flag.key === "dashboard-show-pinned")
+    ) {
+      return false;
+    }
+    return true;
+  });
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
