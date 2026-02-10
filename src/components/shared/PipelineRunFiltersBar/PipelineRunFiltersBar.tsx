@@ -76,13 +76,13 @@ export function PipelineRunFiltersBar({
   const dateRange: DateRange | undefined =
     filters.created_after || filters.created_before
       ? {
-          from: filters.created_after
-            ? new Date(filters.created_after)
-            : undefined,
-          to: filters.created_before
-            ? new Date(filters.created_before)
-            : undefined,
-        }
+        from: filters.created_after
+          ? new Date(filters.created_after)
+          : undefined,
+        to: filters.created_before
+          ? new Date(filters.created_before)
+          : undefined,
+      }
       : undefined;
 
   const handleDateRangeChange = (range: DateRange | undefined) => {
@@ -223,12 +223,11 @@ export function PipelineRunFiltersBar({
           </div>
 
           {/* Created By Filter */}
-          <div className="shrink-0">
-            <CreatedByFilter
-              value={filters.created_by}
-              onChange={(value) => setFilter("created_by", value)}
-            />
-          </div>
+          <CreatedByFilter
+            value={filters.created_by}
+            onChange={(value) => setFilterDebounced("created_by", value)}
+            onClear={() => setFilter("created_by", undefined)}
+          />
 
           {/* Status Filter */}
           <Select
