@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { DateRange } from "react-day-picker";
 
 import { AnnotationFilterInput } from "@/components/shared/AnnotationFilterInput/AnnotationFilterInput";
+import { StatusFilterSelect } from "@/components/shared/StatusFilterSelect/StatusFilterSelect";
 import { Button } from "@/components/ui/button";
 import { DatePickerWithRange } from "@/components/ui/date-picker";
 import { Icon } from "@/components/ui/icon";
@@ -70,6 +71,13 @@ export function PipelineRunFiltersBar() {
               <Icon name="X" size="sm" />
             </Button>
           )}
+        </div>
+
+        <div className="shrink-0">
+          <StatusFilterSelect
+            value={filters.status}
+            onChange={(value) => setFilter("status", value)}
+          />
         </div>
 
         <div className="shrink-0">
