@@ -50,6 +50,13 @@ function isValidSortField(value: string): value is SortField {
 
 const MAX_VISIBLE_BADGES = 4;
 
+type FilterBadgeKey =
+  | "status"
+  | "pipeline_name"
+  | "created_by"
+  | "date_range"
+  | `annotation-${number}`;
+
 interface PipelineRunFiltersBarProps {
   totalCount?: number;
   filteredCount?: number;
@@ -76,13 +83,13 @@ export function PipelineRunFiltersBar({
   const dateRange: DateRange | undefined =
     filters.created_after || filters.created_before
       ? {
-        from: filters.created_after
-          ? new Date(filters.created_after)
-          : undefined,
-        to: filters.created_before
-          ? new Date(filters.created_before)
-          : undefined,
-      }
+          from: filters.created_after
+            ? new Date(filters.created_after)
+            : undefined,
+          to: filters.created_before
+            ? new Date(filters.created_before)
+            : undefined,
+        }
       : undefined;
 
   const handleDateRangeChange = (range: DateRange | undefined) => {
@@ -111,7 +118,7 @@ export function PipelineRunFiltersBar({
 
   // Build list of all active filter badges
   const allBadges: Array<{
-    key: string;
+    key: FilterBadgeKey;
     label: string;
     onRemove: () => void;
   }> = [];
@@ -126,7 +133,7 @@ export function PipelineRunFiltersBar({
 
   if (filters.pipeline_name) {
     allBadges.push({
-      key: "name",
+      key: "pipeline_name",
       label: `Name: ${filters.pipeline_name}`,
       onRemove: () => {
         setFilter("pipeline_name", undefined);
@@ -153,7 +160,7 @@ export function PipelineRunFiltersBar({
     const separator = fromStr && toStr ? " – " : "";
 
     allBadges.push({
-      key: "date",
+      key: "date_range",
       label: `${fromStr}${separator}${toStr}`,
       onRemove: () =>
         setFilters({ created_after: undefined, created_before: undefined }),
