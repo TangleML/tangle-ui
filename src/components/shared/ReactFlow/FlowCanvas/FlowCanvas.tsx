@@ -990,6 +990,7 @@ const FlowCanvas = ({
         connectOnClick={!readOnly}
         connectionLineComponent={ConnectionLine}
         proOptions={{ hideAttribution: true }}
+        zIndexMode="manual"
         className={cn(
           (rest.selectionOnDrag || (shiftKeyPressed && !isConnecting)) &&
             "cursor-crosshair",
