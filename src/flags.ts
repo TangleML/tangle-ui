@@ -65,4 +65,12 @@ export const ExistingFlags: ConfigFlags = {
     default: false,
     category: "beta",
   },
+
+  ["pipeline-run-filters-bar"]: {
+    name: "Pipeline run filters bar (UI only)",
+    description:
+      "Non-functional UI preview. This filter bar is not connected to the API and is for testing/development purposes only.",
+    default: false,
+    category: "beta",
+  },
 };

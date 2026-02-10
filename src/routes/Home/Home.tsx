@@ -1,10 +1,14 @@
 import { useRef, useState } from "react";
 
 import { PipelineSection, RunSection } from "@/components/Home";
+import { PipelineRunFiltersBar } from "@/components/shared/PipelineRunFiltersBar/PipelineRunFiltersBar";
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Home = () => {
   const [activeTab, setActiveTab] = useState("runs");
+  const isFiltersBarEnabled = useFlagValue("pipeline-run-filters-bar");
+
   const handleTabSelect = (value: string) => {
     setActiveTab(value);
   };
@@ -35,7 +39,8 @@ const Home = () => {
         <TabsContent value="pipelines">
           <PipelineSection />
         </TabsContent>
-        <TabsContent value="runs" className="flex flex-col gap-1">
+        <TabsContent value="runs" className="flex flex-col gap-4">
+          {isFiltersBarEnabled && <PipelineRunFiltersBar />}
           <RunSection onEmptyList={handlePipelineRunsEmpty} />
         </TabsContent>
       </Tabs>
