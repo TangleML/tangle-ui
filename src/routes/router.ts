@@ -12,6 +12,7 @@ import { AuthorizationResultScreen as HuggingFaceAuthorizationResultScreen } fro
 import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 
 import RootLayout from "../components/layout/RootLayout";
+import Dashboard from "./Dashboard/Dashboard";
 import Editor from "./Editor";
 import Home from "./Home";
 import NotFoundPage from "./NotFoundPage";
@@ -27,8 +28,10 @@ declare module "@tanstack/react-router" {
 export const EDITOR_PATH = "/editor";
 export const RUNS_BASE_PATH = "/runs";
 export const QUICK_START_PATH = "/quick-start";
+export const DASHBOARD_PATH = "/dashboard";
 export const APP_ROUTES = {
   HOME: "/",
+  DASHBOARD: DASHBOARD_PATH,
   QUICK_START: QUICK_START_PATH,
   PIPELINE_EDITOR: `${EDITOR_PATH}/$name`,
   RUN_DETAIL: `${RUNS_BASE_PATH}/$id`,
@@ -84,6 +87,12 @@ const huggingFaceAuthCallbackRoute = createRoute({
   component: HuggingFaceAuthorizationResultScreen,
 });
 
+const dashboardRoute = createRoute({
+  getParentRoute: () => mainLayout,
+  path: APP_ROUTES.DASHBOARD,
+  component: Dashboard,
+});
+
 const runDetailRoute = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.RUN_DETAIL,
@@ -98,6 +107,7 @@ const runDetailWithSubgraphRoute = createRoute({
 
 const appRouteTree = mainLayout.addChildren([
   indexRoute,
+  dashboardRoute,
   quickStartRoute,
   editorRoute,
   runDetailRoute,
