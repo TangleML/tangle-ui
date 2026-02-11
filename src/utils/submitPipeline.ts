@@ -12,6 +12,7 @@ import {
 } from "@/services/pipelineRunService";
 import type { PipelineRun } from "@/types/pipelineRun";
 
+import { transformAggregatorComponentSpec } from "./aggregatorTransform";
 import { buildAnnotationsWithCanonicalName } from "./canonicalPipelineName";
 import type { ComponentReference, ComponentSpec } from "./componentSpec";
 import { extractTaskArguments } from "./nodes/taskArguments";
@@ -42,7 +43,8 @@ export async function submitPipelineRun(
         options?.onError?.(error as Error);
       },
     );
-    const argumentsFromInputs = getArgumentsFromInputs(fullyLoadedSpec);
+    const transformedSpec = transformAggregatorComponentSpec(fullyLoadedSpec);
+    const argumentsFromInputs = getArgumentsFromInputs(transformedSpec);
     const normalizedTaskArguments = options?.taskArguments
       ? extractTaskArguments(options.taskArguments)
       : {};
@@ -52,9 +54,9 @@ export async function submitPipelineRun(
     };
 
     const runNameOverride = options?.runNameOverride
-      ? processTemplate(getRunNameTemplate(fullyLoadedSpec) ?? "", {
+      ? processTemplate(getRunNameTemplate(transformedSpec) ?? "", {
           componentRef: {
-            spec: fullyLoadedSpec,
+            spec: transformedSpec,
           },
           arguments: payloadArguments,
         }) || undefined
@@ -68,7 +70,7 @@ export async function submitPipelineRun(
       root_task: {
         componentRef: {
           spec: {
-            ...fullyLoadedSpec,
+            ...transformedSpec,
             name: runNameOverride ?? pipelineName,
           } as ComponentSpecInput,
         },
