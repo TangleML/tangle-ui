@@ -14,6 +14,7 @@ type FlexNodeProperties = {
   title: string;
   content: string;
   color: string;
+  borderColor?: string;
 };
 
 type FlexNodeMetadata = {
