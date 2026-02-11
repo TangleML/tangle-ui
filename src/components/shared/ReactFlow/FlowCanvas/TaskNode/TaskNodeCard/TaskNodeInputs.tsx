@@ -35,7 +35,7 @@ export function TaskNodeInputs({
   onBackgroundClick,
 }: TaskNodeInputsProps) {
   const taskNode = useTaskNode();
-  const { inputs, taskSpec, state, select, callbacks } = taskNode;
+  const { inputs, taskSpec, state, callbacks } = taskNode;
   const { onSelect } = callbacks;
   const { graphSpec } = useComponentSpec();
   const isPipelineAggregatorEnabled = useFlagValue("pipeline-aggregator");

@@ -47,9 +47,6 @@ export async function submitPipelineRun(
     );
     const transformedSpec = transformAggregatorComponentSpec(fullyLoadedSpec);
     const argumentsFromInputs = getArgumentsFromInputs(transformedSpec);
-    const normalizedTaskArguments = options?.taskArguments
-      ? extractTaskArguments(options.taskArguments)
-      : {};
     // Merge default arguments with provided task arguments
     // Task arguments (including SecretArguments) are preserved as-is
     const payloadArguments: Record<string, ArgumentType> = {

@@ -81,7 +81,6 @@ import { duplicateNodes } from "./utils/duplicateNodes";
 import { isPositionInNode } from "./utils/geometry";
 import { getNodeFromEvent } from "./utils/getNodeFromEvent";
 import { getPositionFromEvent } from "./utils/getPositionFromEvent";
-import { getTaskFromEvent } from "./utils/getTaskFromEvent";
 import { handleAggregatorConnection } from "./utils/handleAggregatorConnection";
 import { removeEdge } from "./utils/removeEdge";
 import { removeNode } from "./utils/removeNode";
