@@ -2,12 +2,15 @@ import { useConnection } from "@xyflow/react";
 import { AlertCircle } from "lucide-react";
 import { type MouseEvent, useCallback, useEffect, useState } from "react";
 
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { cn } from "@/lib/utils";
 import { useForcedSearchContext } from "@/providers/ComponentLibraryProvider/ForcedSearchProvider";
 import { isValidFilterRequest } from "@/providers/ComponentLibraryProvider/types";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useTaskNode } from "@/providers/TaskNodeProvider";
 import { inputsWithInvalidArguments } from "@/services/componentService";
+import { AGGREGATOR_ADD_INPUT_HANDLE_ID } from "@/utils/aggregatorInputs";
+import { isPipelineAggregator } from "@/utils/annotations";
 import {
   type InputSpec,
   isGraphInputArgument,
@@ -31,8 +34,10 @@ export function TaskNodeInputs({
   expanded,
   onBackgroundClick,
 }: TaskNodeInputsProps) {
-  const { inputs, taskSpec, state, select } = useTaskNode();
+  const taskNode = useTaskNode();
+  const { inputs, taskSpec, state, select } = taskNode;
   const { graphSpec } = useComponentSpec();
+  const isPipelineAggregatorEnabled = useFlagValue("pipeline-aggregator");
   const {
     highlightSearchFilter,
     resetSearchFilter,
@@ -43,6 +48,10 @@ export function TaskNodeInputs({
   const connection = useConnection();
 
   const [isDragging, setIsDragging] = useState(false);
+
+  const isAggregator =
+    isPipelineAggregatorEnabled &&
+    isPipelineAggregator(taskSpec?.componentRef?.spec?.metadata?.annotations);
 
   const values = taskSpec?.arguments;
   const invalidArguments = taskSpec
@@ -192,6 +201,22 @@ export function TaskNodeInputs({
       )}
       onClick={handleBackgroundClick}
     >
+      {isAggregator && !state.readOnly && (
+        <InputHandle
+          key={AGGREGATOR_ADD_INPUT_HANDLE_ID}
+          input={
+            {
+              name: AGGREGATOR_ADD_INPUT_HANDLE_ID,
+              type: "any",
+            } as InputSpec
+          }
+          invalid={false}
+          value="Add Input"
+          onHandleSelectionChange={() => {}}
+          highlight={false}
+          onLabelClick={() => {}}
+        />
+      )}
       {condensed && !expanded ? (
         <>
           {connectedInputs.map((input, i) => (
