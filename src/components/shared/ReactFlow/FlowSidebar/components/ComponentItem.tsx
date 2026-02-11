@@ -303,4 +303,34 @@ export const IONodeSidebarItem = ({ nodeType }: IONodeSidebarItemProps) => {
   );
 };
 
+export const StickyNoteSidebarItem = () => {
+  const onDragStart = useCallback((event: DragEvent) => {
+    event.dataTransfer.setData(
+      "application/reactflow",
+      JSON.stringify({ ["flex"]: null }),
+    );
+    event.dataTransfer.setData(
+      "DragStart.offset",
+      JSON.stringify({
+        offsetX: event.nativeEvent.offsetX,
+        offsetY: event.nativeEvent.offsetY,
+      }),
+    );
+    event.dataTransfer.effectAllowed = "move";
+  }, []);
+
+  return (
+    <SidebarMenuItem
+      className="pl-2 py-1.5 cursor-grab hover:bg-gray-100 active:bg-gray-200"
+      draggable
+      onDragStart={onDragStart}
+    >
+      <div className="flex items-center gap-2">
+        <Icon name="StickyNote" className="text-gray-400 shrink-0" />
+        <span className="truncate text-xs text-gray-800">Sticky Note</span>
+      </div>
+    </SidebarMenuItem>
+  );
+};
+
 export { ComponentItemFromUrl, ComponentMarkup };
