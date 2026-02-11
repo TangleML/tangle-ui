@@ -1,0 +1,217 @@
+name: Aggregate Inputs
+description: |
+  Aggregates multiple inputs into a single output.
+  Supports dictionary, array, and CSV output formats.
+  Connect upstream components to the input slots and choose an output format.
+metadata:
+  annotations:
+    author: Hargun Singh, Morgan Wowk
+    # --- Aggregator-specific annotations (read by frontend) ---
+    aggregator: "true"
+    aggregator_min_inputs: "2"
+    aggregator_default_output_type: "dict"
+    aggregator_supported_output_types: "dict,array,csv"
+    aggregator_visible_inputs: "2"
+inputs:
+- {name: input_1, type: String, description: "First input to aggregate.", optional: true}
+- {name: input_2, type: String, description: "Second input to aggregate.", optional: true}
+- {name: input_3, type: String, description: "Third input to aggregate.", optional: true}
+- {name: input_4, type: String, description: "Fourth input to aggregate.", optional: true}
+- {name: input_5, type: String, description: "Fifth input to aggregate.", optional: true}
+- {name: input_6, type: String, description: "Sixth input to aggregate.", optional: true}
+- {name: input_7, type: String, description: "Seventh input to aggregate.", optional: true}
+- {name: input_8, type: String, description: "Eighth input to aggregate.", optional: true}
+- {name: input_9, type: String, description: "Ninth input to aggregate.", optional: true}
+- {name: input_10, type: String, description: "Tenth input to aggregate.", optional: true}
+- name: output_type
+  type: String
+  description: "Output format: dict (JSON object keyed by input name), array (JSON array of values), or csv (union of CSV inputs with matching columns)."
+  default: "dict"
+  optional: true
+outputs:
+- name: aggregated_output
+  type: String
+  description: "The aggregated result in the chosen format."
+implementation:
+  container:
+    image: python:3.12-slim
+    command:
+    - sh
+    - -ec
+    - |
+      program_path=$(mktemp)
+      printf "%s" "$0" > "$program_path"
+      python3 -u "$program_path" "$@"
+    - |
+      import argparse
+      import csv
+      import io
+      import json
+      import os
+
+
+      def _make_parent_dirs_and_return_path(file_path: str) -> str:
+          os.makedirs(os.path.dirname(file_path), exist_ok=True)
+          return file_path
+
+
+      def aggregate(
+          aggregated_output_path: str,
+          output_type: str = "dict",
+          **input_paths: str,
+      ) -> None:
+          # Collect all provided inputs
+          inputs = {}
+          for key, path in sorted(input_paths.items()):
+              if path and os.path.exists(path):
+                  with open(path, "r") as f:
+                      inputs[key] = f.read()
+
+          if not inputs:
+              raise ValueError("No inputs provided. At least one input must be connected.")
+
+          if output_type == "dict":
+              result = json.dumps(inputs, indent=2)
+
+          elif output_type == "array":
+              result = json.dumps(list(inputs.values()), indent=2)
+
+          elif output_type == "csv":
+              all_rows = []
+              header = None
+
+              for _name, csv_text in inputs.items():
+                  text = csv_text.strip()
+                  if not text:
+                      continue
+                  reader = csv.reader(io.StringIO(text))
+                  rows = list(reader)
+                  if not rows or rows == [['']]:
+                      continue
+                  if header is None:
+                      header = rows[0]
+                      all_rows.append(header)
+                      all_rows.extend(rows[1:])
+                  elif rows[0] == header:
+                      all_rows.extend(rows[1:])
+                  else:
+                      raise ValueError(
+                          f"CSV column mismatch. Expected {header}, got {rows[0]}. "
+                          "All CSV inputs must have the same columns."
+                      )
+
+              if not all_rows:
+                  raise ValueError("No valid CSV data found in any input.")
+
+              output = io.StringIO()
+              writer = csv.writer(output)
+              writer.writerows(all_rows)
+              result = output.getvalue()
+
+          else:
+              raise ValueError(
+                  f"Unknown output_type: '{output_type}'. Must be 'dict', 'array', or 'csv'."
+              )
+
+          os.makedirs(os.path.dirname(aggregated_output_path), exist_ok=True)
+          with open(aggregated_output_path, "w") as f:
+              f.write(result)
+
+
+      _parser = argparse.ArgumentParser(
+          prog="Aggregate Inputs",
+          description="Aggregates multiple inputs into a single output.",
+      )
+      for i in range(1, 11):
+          _parser.add_argument(
+              f"--input-{i}",
+              dest=f"input_{i}_path",
+              type=str,
+              required=False,
+              default=None,
+          )
+      _parser.add_argument(
+          "--output-type",
+          dest="output_type",
+          type=str,
+          required=False,
+          default="dict",
+      )
+      _parser.add_argument(
+          "--aggregated-output",
+          dest="aggregated_output_path",
+          type=_make_parent_dirs_and_return_path,
+          required=True,
+      )
+      _parsed_args = vars(_parser.parse_args())
+
+      # Separate output args from input paths
+      _output_path = _parsed_args.pop("aggregated_output_path")
+      _output_type = _parsed_args.pop("output_type")
+
+      # Filter to only provided input paths
+      _input_paths = {k.replace("_path", ""): v for k, v in _parsed_args.items() if v is not None}
+
+      aggregate(
+          aggregated_output_path=_output_path,
+          output_type=_output_type,
+          **_input_paths,
+      )
+    args:
+    - if:
+        cond: {isPresent: input_1}
+        then:
+        - --input-1
+        - {inputPath: input_1}
+    - if:
+        cond: {isPresent: input_2}
+        then:
+        - --input-2
+        - {inputPath: input_2}
+    - if:
+        cond: {isPresent: input_3}
+        then:
+        - --input-3
+        - {inputPath: input_3}
+    - if:
+        cond: {isPresent: input_4}
+        then:
+        - --input-4
+        - {inputPath: input_4}
+    - if:
+        cond: {isPresent: input_5}
+        then:
+        - --input-5
+        - {inputPath: input_5}
+    - if:
+        cond: {isPresent: input_6}
+        then:
+        - --input-6
+        - {inputPath: input_6}
+    - if:
+        cond: {isPresent: input_7}
+        then:
+        - --input-7
+        - {inputPath: input_7}
+    - if:
+        cond: {isPresent: input_8}
+        then:
+        - --input-8
+        - {inputPath: input_8}
+    - if:
+        cond: {isPresent: input_9}
+        then:
+        - --input-9
+        - {inputPath: input_9}
+    - if:
+        cond: {isPresent: input_10}
+        then:
+        - --input-10
+        - {inputPath: input_10}
+    - if:
+        cond: {isPresent: output_type}
+        then:
+        - --output-type
+        - {inputValue: output_type}
+    - --aggregated-output
+    - {outputPath: aggregated_output}
