@@ -1,0 +1,180 @@
+import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlock";
+import { KeyValueList } from "@/components/shared/ContextPanel/Blocks/KeyValueList";
+import { CopyText } from "@/components/shared/CopyText/CopyText";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { Textarea } from "@/components/ui/textarea";
+import { Paragraph, Text } from "@/components/ui/typography";
+
+import type { FlexNodeData } from "./types";
+
+interface FlexNodeEditorProps {
+  flexNode: FlexNodeData;
+  readOnly?: boolean;
+}
+
+export const FlexNodeEditor = ({
+  flexNode,
+  readOnly = false,
+}: FlexNodeEditorProps) => {
+  const { metadata, zIndex, size, position } = flexNode;
+
+  return (
+    <BlockStack gap="4" className="h-full px-2">
+      <Text size="lg" weight="semibold" className="wrap-anywhere">
+        Sticky Note
+      </Text>
+
+      <ContentEditor flexNode={flexNode} readOnly={readOnly} />
+
+      <ColorEditor flexNode={flexNode} readOnly={readOnly} />
+
+      <KeyValueList
+        title="Layout"
+        items={[
+          {
+            label: "Size",
+            value: `${size.width} x ${size.height}`,
+            copyable: true,
+          },
+          {
+            label: "Position",
+            value: `${position.x}, ${position.y}`,
+            copyable: true,
+          },
+          {
+            label: "Z-Index",
+            value: `${zIndex}`,
+            copyable: true,
+          },
+        ]}
+      />
+
+      <KeyValueList
+        title="Metadata"
+        items={[
+          {
+            label: "Id",
+            value: flexNode.id,
+            copyable: true,
+          },
+          {
+            label: "Created",
+            value: new Date(metadata.createdAt).toLocaleString(),
+            copyable: true,
+          },
+          {
+            label: "Author",
+            value: metadata.createdBy,
+            copyable: true,
+          },
+        ]}
+      />
+    </BlockStack>
+  );
+};
+
+const ContentEditor = ({
+  flexNode,
+  readOnly,
+}: {
+  flexNode: FlexNodeData;
+  readOnly: boolean;
+}) => {
+  const { properties } = flexNode;
+
+  if (readOnly) {
+    return (
+      <KeyValueList
+        title="Content"
+        items={[
+          {
+            label: "Title",
+            value: properties.title,
+            copyable: true,
+          },
+          {
+            value: properties.content,
+            copyable: true,
+          },
+        ]}
+      />
+    );
+  }
+
+  return (
+    <ContentBlock title="Content">
+      <BlockStack gap="2">
+        <BlockStack>
+          <Label
+            htmlFor="flex-node-title"
+            className="text-muted-foreground text-xs"
+          >
+            Title
+          </Label>
+          <Input
+            id="flex-node-title"
+            value={properties.title}
+            className="text-sm"
+            readOnly
+          />
+        </BlockStack>
+        <BlockStack>
+          <Label
+            htmlFor="flex-node-content"
+            className="text-muted-foreground text-xs"
+          >
+            Note
+          </Label>
+          <Textarea
+            id="flex-node-content"
+            value={properties.content}
+            className="text-xs"
+            readOnly
+          />
+        </BlockStack>
+      </BlockStack>
+    </ContentBlock>
+  );
+};
+
+const ColorEditor = ({
+  flexNode,
+  readOnly,
+}: {
+  flexNode: FlexNodeData;
+  readOnly: boolean;
+}) => {
+  const { properties } = flexNode;
+
+  if (readOnly) {
+    return (
+      <KeyValueList
+        title="Color"
+        items={[
+          {
+            label: "Backgroud",
+            value: properties.color,
+            copyable: true,
+          },
+        ]}
+      />
+    );
+  }
+
+  return (
+    <ContentBlock title="Color">
+      <BlockStack gap="1">
+        <InlineStack gap="4" blockAlign="center">
+          <Paragraph size="xs">Background</Paragraph>
+          <div
+            className="aspect-square h-4 rounded-full border border-muted-foreground"
+            style={{ backgroundColor: properties.color }}
+          />
+          <CopyText className="text-xs font-mono">{properties.color}</CopyText>
+        </InlineStack>
+      </BlockStack>
+    </ContentBlock>
+  );
+};
