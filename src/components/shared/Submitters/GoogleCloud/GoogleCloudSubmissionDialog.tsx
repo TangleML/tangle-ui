@@ -8,7 +8,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { SidebarMenuButton } from "@/components/ui/sidebar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { ComponentSpec } from "@/utils/componentSpec";
 
 import GoogleCloudSubmitter from "./GoogleCloudSubmitter";
@@ -21,28 +26,28 @@ const GoogleCloudSubmissionDialog = ({
   componentSpec,
 }: GoogleCloudSubmissionDialogProps) => {
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <SidebarMenuButton
-          asChild
-          tooltip="Submit to Google Cloud"
-          forceTooltip
-          tooltipPosition="right"
-        >
-          <Button className="w-full justify-start" variant="ghost">
-            <CloudUpload className="w-4 h-4" />
-            <span className="font-normal text-xs">Google Cloud</span>
-          </Button>
-        </SidebarMenuButton>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogTitle>Submit to Google Cloud</DialogTitle>
-        <DialogDescription>
-          Run pipeline using Google&#39;s VertexAI
-        </DialogDescription>
-        <GoogleCloudSubmitter componentSpec={componentSpec} />
-      </DialogContent>
-    </Dialog>
+    <TooltipProvider>
+      <Dialog>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DialogTrigger asChild>
+              <Button className="w-full justify-start" variant="ghost">
+                <CloudUpload className="w-4 h-4" />
+                <span className="font-normal text-xs">Google Cloud</span>
+              </Button>
+            </DialogTrigger>
+          </TooltipTrigger>
+          <TooltipContent side="right">Submit to Google Cloud</TooltipContent>
+        </Tooltip>
+        <DialogContent>
+          <DialogTitle>Submit to Google Cloud</DialogTitle>
+          <DialogDescription>
+            Run pipeline using Google&#39;s VertexAI
+          </DialogDescription>
+          <GoogleCloudSubmitter componentSpec={componentSpec} />
+        </DialogContent>
+      </Dialog>
+    </TooltipProvider>
   );
 };
 

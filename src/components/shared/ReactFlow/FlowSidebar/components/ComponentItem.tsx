@@ -8,7 +8,6 @@ import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
-import { SidebarMenuItem } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { useHydrateComponentReference } from "@/hooks/useHydrateComponentReference";
@@ -169,7 +168,7 @@ const ComponentMarkup = ({
   );
 
   return (
-    <SidebarMenuItem
+    <li
       className={cn(
         "pl-2 py-1.5 w-full",
         error
@@ -236,18 +235,18 @@ const ComponentMarkup = ({
           </InlineStack>
         )}
       </InlineStack>
-    </SidebarMenuItem>
+    </li>
   );
 };
 
 const ComponentItemSkeleton = () => {
   return (
-    <SidebarMenuItem className="pl-2 py-1.5">
+    <li className="pl-2 py-1.5">
       <InlineStack gap="2">
         <Spinner size={10} />
         <Skeleton size="sm" color="default" />
       </InlineStack>
-    </SidebarMenuItem>
+    </li>
   );
 };
 
@@ -287,7 +286,7 @@ export const IONodeSidebarItem = ({ nodeType }: IONodeSidebarItemProps) => {
   );
 
   return (
-    <SidebarMenuItem
+    <li
       className={cn(
         "pl-2 py-1.5 cursor-grab hover:bg-gray-100 active:bg-gray-200",
       )}
@@ -300,7 +299,7 @@ export const IONodeSidebarItem = ({ nodeType }: IONodeSidebarItemProps) => {
           {nodeType === "input" ? "Input Node" : "Output Node"}
         </span>
       </div>
-    </SidebarMenuItem>
+    </li>
   );
 };
 

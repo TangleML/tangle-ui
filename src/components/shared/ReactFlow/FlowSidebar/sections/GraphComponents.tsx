@@ -1,21 +1,11 @@
-import { PackagePlus } from "lucide-react";
 import { type ChangeEvent, useCallback, useMemo } from "react";
 
+import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { ManageLibrariesDialog } from "@/components/shared/GitHubLibrary/ManageLibrariesDialog";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
+import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
-import {
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenuButton,
-} from "@/components/ui/sidebar";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { Text } from "@/components/ui/typography";
 import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
 import { useForcedSearchContext } from "@/providers/ComponentLibraryProvider/ForcedSearchProvider";
@@ -33,9 +23,10 @@ import {
 import { IONodeSidebarItem } from "../components/ComponentItem";
 import { LibraryFolderItem } from "../components/FolderItem";
 import PublishedComponentsSearch from "../components/PublishedComponentsSearch";
+import { SidebarSection } from "../components/SidebarSection";
 import { UpgradeAvailableAlertBox } from "../components/UpgradeAvailableAlertBox";
 
-const GraphComponents = ({ isOpen }: { isOpen: boolean }) => {
+const GraphComponents = () => {
   const remoteComponentLibrarySearchEnabled = useFlagValue(
     "remote-component-library-search",
   );
@@ -198,30 +189,6 @@ const GraphComponents = ({ isOpen }: { isOpen: boolean }) => {
     getComponentLibrary,
   ]);
 
-  if (!isOpen) {
-    return (
-      <>
-        <hr />
-        <SidebarGroup className="my-2! pt-0">
-          <SidebarGroupContent>
-            <SidebarMenuButton
-              tooltip="Add Component"
-              forceTooltip
-              tooltipPosition={isOpen ? "top" : "right"}
-              className="cursor-pointer"
-            >
-              <ImportComponent
-                triggerComponent={
-                  <PackagePlus className="w-4 h-4" strokeWidth={1.5} />
-                }
-              />
-            </SidebarMenuButton>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </>
-    );
-  }
-
   const searchComponent = remoteComponentLibrarySearchEnabled ? (
     <PublishedComponentsSearch>{memoizedContent}</PublishedComponentsSearch>
   ) : (
@@ -237,25 +204,26 @@ const GraphComponents = ({ isOpen }: { isOpen: boolean }) => {
     </>
   );
 
+  const importComponentAction = (
+    <ImportComponent
+      triggerComponent={
+        <TooltipButton variant="ghost" tooltip="Add component">
+          <Icon name="PackagePlus" />
+        </TooltipButton>
+      }
+    />
+  );
+
   return (
-    <SidebarGroup>
-      <SidebarGroupLabel>
-        <div className="flex items-center justify-between gap-2 w-full">
-          <div>Components</div>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span>
-                <ImportComponent />
-              </span>
-            </TooltipTrigger>
-            <TooltipContent side="top">Add component</TooltipContent>
-          </Tooltip>
-        </div>
-      </SidebarGroupLabel>
-      <SidebarGroupContent className="[&_li]:marker:hidden [&_li]:before:content-none [&_li]:list-none">
+    <SidebarSection
+      title="Components"
+      headerAction={importComponentAction}
+      className="flex-1 overflow-hidden"
+    >
+      <BlockStack className="overflow-y-auto flex-1 [&_li]:marker:hidden [&_li]:before:content-none [&_li]:list-none">
         {searchComponent}
-      </SidebarGroupContent>
-    </SidebarGroup>
+      </BlockStack>
+    </SidebarSection>
   );
 };
 
