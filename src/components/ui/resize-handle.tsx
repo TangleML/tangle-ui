@@ -7,12 +7,15 @@ interface ResizeHandleProps {
   minWidth?: number;
   maxWidth?: number;
   side?: "left" | "right";
+  /** Optional callback for controlled resize. When provided, the component won't modify parent's style directly. */
+  onResize?: (width: number) => void;
 }
 
 export const VerticalResizeHandle = ({
   minWidth = 200,
   maxWidth = 600,
   side = "left",
+  onResize,
 }: ResizeHandleProps) => {
   const parentElementRef = useRef<HTMLElement | null>(null);
   const resizingRef = useRef<{ startX: number; startWidth: number } | null>(
@@ -38,9 +41,13 @@ export const VerticalResizeHandle = ({
 
       const constrainedWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
 
-      parentElementRef.current.style.width = `${constrainedWidth}px`;
+      if (onResize) {
+        onResize(constrainedWidth);
+      } else {
+        parentElementRef.current.style.width = `${constrainedWidth}px`;
+      }
     },
-    [minWidth, maxWidth, side],
+    [minWidth, maxWidth, side, onResize],
   );
 
   const handleMouseUp = useCallback(() => {
@@ -61,7 +68,6 @@ export const VerticalResizeHandle = ({
         startX: e.clientX,
         startWidth: parentElementRef.current.offsetWidth,
       };
-
       document.addEventListener("mousemove", handleMouseMove);
       document.addEventListener("mouseup", handleMouseUp);
     },
