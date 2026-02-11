@@ -22,7 +22,11 @@ export const PublishedComponentBadge = withSuspenseWrapper(
   ({
     children,
     componentRef,
-  }: PropsWithChildren<{ componentRef: ComponentReference }>) => {
+    readOnly,
+  }: PropsWithChildren<{
+    componentRef: ComponentReference;
+    readOnly?: boolean;
+  }>) => {
     const { data: outdatedComponents } = useOutdatedComponents([componentRef]);
     const { data: isPublished } = useHasPublishedComponent(componentRef);
 
@@ -33,6 +37,7 @@ export const PublishedComponentBadge = withSuspenseWrapper(
         <ComponentDetailsDialog
           displayName={componentRef.name ?? "Details"}
           component={componentRef}
+          readOnly={readOnly}
           trigger={
             <Button
               variant="ghost"

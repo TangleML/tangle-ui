@@ -30,6 +30,7 @@ import { DialogContext } from "./dialog.context";
 interface ComponentDetailsProps {
   component: ComponentReference;
   displayName: string;
+  readOnly?: boolean;
   trigger?: ReactNode;
   onClose?: () => void;
 }
@@ -61,7 +62,7 @@ const ComponentDetailsDialogContentSkeleton = () => {
 };
 
 const ComponentDetailsDialogContent = withSuspenseWrapper(
-  ({ component, displayName }: ComponentDetailsProps) => {
+  ({ component, displayName, readOnly }: ComponentDetailsProps) => {
     const remoteComponentLibrarySearchEnabled = useFlagValue(
       "remote-component-library-search",
     );
@@ -111,43 +112,50 @@ const ComponentDetailsDialogContent = withSuspenseWrapper(
                 Implementation
               </TabsTrigger>
 
-              {hasPublishSection ? (
+              {hasPublishSection && (
                 <TabsTrigger value="publish" className="flex-1">
                   <Icon name="LibraryBig" />
                   Publish
                 </TabsTrigger>
-              ) : null}
+              )}
             </TabsList>
 
             <div className="overflow-auto h-[40vh]">
-              <TabsContent value="details" className="h-full">
+              <TabsContent value="details">
                 {remoteComponentLibrarySearchEnabled && (
-                  <PublishedComponentDetails component={componentRef} />
+                  <PublishedComponentDetails
+                    component={componentRef}
+                    readOnly={readOnly}
+                  />
                 )}
 
                 <TaskDetails componentRef={componentRef} />
-                <TaskActions componentRef={componentRef} className="mt-2" />
+                <TaskActions
+                  componentRef={componentRef}
+                  readOnly={readOnly}
+                  className="mt-2"
+                />
               </TabsContent>
 
-              <TabsContent value="io" className="h-full">
+              <TabsContent value="io">
                 <TaskIO componentSpec={componentSpec} />
               </TabsContent>
 
-              <TabsContent value="implementation" className="h-full">
+              <TabsContent value="implementation">
                 <TaskImplementation
                   displayName={displayName}
                   componentRef={componentRef}
                 />
               </TabsContent>
 
-              {hasPublishSection ? (
-                <TabsContent value="publish" className="h-full">
+              {hasPublishSection && (
+                <TabsContent value="publish">
                   <PublishComponent
                     component={componentRef}
                     displayName={displayName}
                   />
                 </TabsContent>
-              ) : null}
+              )}
             </div>
           </Tabs>
         )}
@@ -161,6 +169,7 @@ const ComponentDetails = ({
   component,
   displayName,
   trigger,
+  readOnly,
   onClose,
 }: ComponentDetailsProps) => {
   const [open, setOpen] = useState(false);
@@ -208,6 +217,7 @@ const ComponentDetails = ({
           <ComponentDetailsDialogContent
             component={component}
             displayName={displayName}
+            readOnly={readOnly}
           />
         </DialogContext.Provider>
       </DialogContent>

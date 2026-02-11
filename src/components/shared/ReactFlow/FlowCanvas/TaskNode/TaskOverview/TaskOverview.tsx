@@ -74,6 +74,7 @@ const TaskOverview = ({ taskNode }: TaskOverviewProps) => {
         <ComponentDetailsDialog
           displayName={displayName}
           component={taskSpec.componentRef}
+          readOnly={readOnly}
         />
         {readOnly && <StatusIcon status={status} tooltip label="task" />}
       </InlineStack>
