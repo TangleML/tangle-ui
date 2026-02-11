@@ -5,6 +5,7 @@ import {
 } from "@tanstack/react-router";
 import { useState } from "react";
 
+import factoryLogo from "/Tangle_Factory.png";
 import logo from "/Tangle_white.png";
 import { isAuthorizationRequired } from "@/components/shared/Authentication/helpers";
 import { TopBarAuthentication } from "@/components/shared/Authentication/TopBarAuthentication";
@@ -41,6 +42,7 @@ const AppMenu = () => {
   const { componentSpec } = useComponentSpec();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  const isOnFactoryGameRoute = location.pathname.startsWith("/factory");
   const title = componentSpec?.name;
 
   const handleGoBack = () => {
@@ -48,6 +50,14 @@ const AppMenu = () => {
   };
 
   const isOnSettingsRoute = location.pathname.startsWith("/settings");
+
+  const gameButton = (
+    <Link href="/factory" target="_blank" rel="noopener noreferrer">
+      <TooltipButton tooltip="Factory Game">
+        <Icon name="Gamepad2" />
+      </TooltipButton>
+    </Link>
+  );
 
   return (
     <div
@@ -58,7 +68,7 @@ const AppMenu = () => {
         <InlineStack gap="8" wrap="nowrap" className="min-w-0 flex-1">
           <Link href="/" aria-label="Home" variant="block" className="shrink-0">
             <img
-              src={logo}
+              src={isOnFactoryGameRoute ? factoryLogo : logo}
               alt="logo"
               className="h-8 filter cursor-pointer shrink-0"
             />
@@ -73,26 +83,30 @@ const AppMenu = () => {
 
         <InlineStack gap="2" wrap="nowrap" className="shrink-0">
           {/* Pipeline actions - desktop only */}
-          <div className="hidden md:flex items-center gap-2">
-            <ImportPipeline
-              triggerComponent={
-                <TooltipButton tooltip="Import Pipeline">
-                  <Icon name="Upload" />
-                </TooltipButton>
-              }
-            />
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <NewPipelineButton>
-                    <Icon name="Plus" />
-                  </NewPipelineButton>
-                </TooltipTrigger>
-                <TooltipContent>New Pipeline</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <div className="w-px h-5 bg-stone-700" />
-          </div>
+          {!isOnFactoryGameRoute && (
+            <div className="hidden md:flex items-center gap-2">
+              <ImportPipeline
+                triggerComponent={
+                  <TooltipButton tooltip="Import Pipeline">
+                    <Icon name="Upload" />
+                  </TooltipButton>
+                }
+              />
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <NewPipelineButton>
+                      <Icon name="Plus" />
+                    </NewPipelineButton>
+                  </TooltipTrigger>
+                  <TooltipContent>New Pipeline</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <div className="w-px h-5 bg-stone-700" />
+            </div>
+          )}
+
+          {gameButton}
 
           {/* Settings & status */}
           {isOnSettingsRoute ? (
