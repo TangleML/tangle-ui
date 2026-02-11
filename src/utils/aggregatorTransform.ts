@@ -1,12 +1,11 @@
-import { AGGREGATOR_INPUT_PREFIX } from "./aggregatorInputs";
 import { isPipelineAggregator } from "./annotations";
 import type { ComponentSpec, TaskSpec } from "./componentSpec";
 import { isGraphImplementation } from "./componentSpec";
 
-export const transformAggregatorTaskSpec = (
-  taskSpec: TaskSpec,
-): TaskSpec => {
-  if (!isPipelineAggregator(taskSpec.componentRef?.spec?.metadata?.annotations)) {
+export const transformAggregatorTaskSpec = (taskSpec: TaskSpec): TaskSpec => {
+  if (
+    !isPipelineAggregator(taskSpec.componentRef?.spec?.metadata?.annotations)
+  ) {
     return taskSpec;
   }
 
@@ -14,9 +13,7 @@ export const transformAggregatorTaskSpec = (
   if (!spec) return taskSpec;
 
   const inputs = spec.inputs || [];
-  const aggregatorInputs = inputs.filter((input) =>
-    input.name.startsWith(AGGREGATOR_INPUT_PREFIX),
-  );
+  const aggregatorInputs = inputs.filter((input) => input.name.match(/^\d+$/));
 
   if (aggregatorInputs.length === 0) {
     return taskSpec;

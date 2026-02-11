@@ -167,8 +167,8 @@ export const extractPositionFromAnnotations = (
   }
 };
 
-export const isPipelineAggregator = (
-  annotations?: Annotations,
-): boolean => {
-  return getAnnotationValue(annotations, PIPELINE_AGGREGATOR_ANNOTATION) === "true";
+export const isPipelineAggregator = (annotations?: Annotations): boolean => {
+  return (
+    getAnnotationValue(annotations, PIPELINE_AGGREGATOR_ANNOTATION) === "true"
+  );
 };
