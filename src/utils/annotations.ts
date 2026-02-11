@@ -9,6 +9,7 @@ export const PIPELINE_RUN_NOTES_ANNOTATION = "notes";
 export const PIPELINE_CANONICAL_NAME_ANNOTATION = "canonical-pipeline-name";
 export const RUN_NAME_TEMPLATE_ANNOTATION = "run-name-template";
 export const EDITOR_POSITION_ANNOTATION = "editor.position";
+export const PIPELINE_AGGREGATOR_ANNOTATION = "pipeline.aggregator";
 
 type Annotations = {
   [k: string]: unknown;
@@ -164,4 +165,10 @@ export const extractPositionFromAnnotations = (
   } catch {
     return defaultPosition;
   }
+};
+
+export const isPipelineAggregator = (
+  annotations?: Annotations,
+): boolean => {
+  return getAnnotationValue(annotations, PIPELINE_AGGREGATOR_ANNOTATION) === "true";
 };
