@@ -1,5 +1,5 @@
 import type { ComponentProps, DragEvent } from "react";
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ComponentDetailsDialog } from "@/components/shared/Dialogs";
 import { ComponentFavoriteToggle } from "@/components/shared/FavoriteComponentToggle";
@@ -7,7 +7,7 @@ import { useOutdatedComponents } from "@/components/shared/ManageComponent/hooks
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { Icon } from "@/components/ui/icon";
-import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { InlineStack } from "@/components/ui/layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import {
@@ -15,7 +15,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Text } from "@/components/ui/typography";
 import { useHydrateComponentReference } from "@/hooks/useHydrateComponentReference";
 import { cn } from "@/lib/utils";
 import { type ComponentReference, type TaskSpec } from "@/utils/componentSpec";
@@ -87,6 +86,8 @@ const ComponentMarkup = ({
 
   // TODO: respect selected node as a starting point
   const carousel = useRef(0);
+  const titleRef = useRef<HTMLSpanElement>(null);
+  const [isTruncated, setIsTruncated] = useState(false);
   const { notifyNode, getNodeIdsByDigest, fitNodeIntoView } = useNodesOverlay();
 
   const { spec, digest, url, name, published_by: author, owned } = component;
@@ -95,6 +96,25 @@ const ComponentMarkup = ({
     () => name ?? getComponentName({ spec, url }),
     [spec, url, name],
   );
+
+  useEffect(() => {
+    const checkTruncation = () => {
+      if (titleRef.current) {
+        setIsTruncated(
+          titleRef.current.scrollWidth > titleRef.current.clientWidth,
+        );
+      }
+    };
+
+    checkTruncation();
+
+    const resizeObserver = new ResizeObserver(checkTruncation);
+    if (titleRef.current) {
+      resizeObserver.observe(titleRef.current);
+    }
+
+    return () => resizeObserver.disconnect();
+  }, [displayName]);
 
   const isSubgraphSpec = isSubgraph(spec);
 
@@ -217,7 +237,10 @@ const ComponentMarkup = ({
                     onMouseLeave={onMouseLeave}
                     onClick={onMouseClick}
                   >
-                    <span className="truncate text-xs text-gray-800">
+                    <span
+                      ref={titleRef}
+                      className="truncate text-xs text-gray-800"
+                    >
                       {displayName}
                     </span>
                     {author && author.length > 0 && (
@@ -242,9 +265,11 @@ const ComponentMarkup = ({
           </InlineStack>
         </li>
       </TooltipTrigger>
-      <TooltipContent side="right" sideOffset={8}>
-      {displayName}
-      </TooltipContent>
+      {isTruncated && (
+        <TooltipContent side="right" sideOffset={8}>
+          {displayName}
+        </TooltipContent>
+      )}
     </Tooltip>
   );
 };
