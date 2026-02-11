@@ -16,6 +16,7 @@ export const EDITOR_POSITION_ANNOTATION = "editor.position";
 export const EDITOR_COLLAPSED_ANNOTATION = "editor.collapsed";
 export const FLEX_NODES_ANNOTATION = "flex-nodes";
 export const ZINDEX_ANNOTATION = "zIndex";
+const PIPELINE_AGGREGATOR_ANNOTATION = "pipeline.aggregator";
 
 export const DEFAULT_COMMON_ANNOTATIONS: AnnotationConfig[] = [
   {
@@ -300,3 +301,10 @@ export function getPipelineTagsFromAnnotations(
 
   return tags;
 }
+
+/** @public */
+export const isPipelineAggregator = (annotations?: Annotations): boolean => {
+  return (
+    getAnnotationValue(annotations, PIPELINE_AGGREGATOR_ANNOTATION) === "true"
+  );
+};
