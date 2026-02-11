@@ -76,7 +76,7 @@ import { duplicateNodes } from "./utils/duplicateNodes";
 import { isPositionInNode } from "./utils/geometry";
 import { getPositionFromEvent } from "./utils/getPositionFromEvent";
 import { getTaskFromEvent } from "./utils/getTaskFromEvent";
-import { handleConnection } from "./utils/handleConnection";
+import { handleAggregatorConnection } from "./utils/handleAggregatorConnection";
 import { removeEdge } from "./utils/removeEdge";
 import { removeNode } from "./utils/removeNode";
 import { replaceTaskNode } from "./utils/replaceTaskNode";
@@ -385,7 +385,10 @@ const FlowCanvas = ({
   const onConnect = (connection: Connection) => {
     if (connection.source === connection.target) return;
 
-    const updatedGraphSpec = handleConnection(currentGraphSpec, connection);
+    const updatedGraphSpec = handleAggregatorConnection(
+      currentGraphSpec,
+      connection,
+    );
     updateGraphSpec(updatedGraphSpec);
   };
 
