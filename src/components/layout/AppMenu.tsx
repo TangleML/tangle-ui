@@ -29,8 +29,19 @@ import { PersonalPreferences } from "../shared/Settings/PersonalPreferences";
 const AppMenu = () => {
   const requiresAuthorization = isAuthorizationRequired();
   const { componentSpec } = useComponentSpec();
-  const title = componentSpec?.name;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const isFactoryGame = window.location.pathname === "/factory";
+
+  const title = isFactoryGame ? "FACTORY" : componentSpec?.name;
+
+  const gameButton = (
+    <Link href="/factory" target="_blank" rel="noopener noreferrer">
+      <TooltipButton tooltip="Factory Game">
+        <Icon name="Gamepad2" />
+      </TooltipButton>
+    </Link>
+  );
 
   const documentationButton = (
     <Link href={DOCUMENTATION_URL} target="_blank" rel="noopener noreferrer">
@@ -71,6 +82,7 @@ const AppMenu = () => {
 
           {/* Always visible settings */}
           <InlineStack gap="2" wrap="nowrap">
+            {gameButton}
             <BackendStatus />
             <PersonalPreferences />
             <ManageSecretsButton />
