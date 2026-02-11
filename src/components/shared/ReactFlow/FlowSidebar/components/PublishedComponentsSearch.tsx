@@ -21,8 +21,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radiogroup";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { SidebarMenu } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import {
@@ -265,31 +265,33 @@ const SearchResults = ({ searchResult }: SearchResultsProps) => {
         data-testid="search-results-header"
       >{`Search Results (${totalResults})`}</Text>
       <Separator />
-      <ScrollArea className="h-[calc(100vh-400px)]" type="always">
-        {totalResults > 0 ? (
-          searchResult.map((folder) => (
-            <BlockStack key={folder.name}>
-              {folder.components && folder.components.length > 0 ? (
-                <>
-                  {searchResult.length > 1 ? (
-                    <Text tone="subdued" size="xs">
-                      {folder.name}
-                    </Text>
-                  ) : null}
-                  {folder.components.map((component) => (
-                    <ComponentMarkup
-                      key={`${folder.name}-${component.digest}-${component.name}`}
-                      component={component}
-                    />
-                  ))}
-                </>
-              ) : null}
-            </BlockStack>
-          ))
-        ) : (
-          <Text tone="subdued">No results found</Text>
-        )}
-      </ScrollArea>
+      <div className="h-[calc(100vh-400px)] w-full overflow-y-auto overflow-x-hidden scrollbar-thin">
+        <SidebarMenu>
+          {totalResults > 0 ? (
+            searchResult.map((folder) => (
+              <BlockStack key={folder.name}>
+                {folder.components && folder.components.length > 0 ? (
+                  <>
+                    {searchResult.length > 1 ? (
+                      <Text tone="subdued" size="xs">
+                        {folder.name}
+                      </Text>
+                    ) : null}
+                    {folder.components.map((component) => (
+                      <ComponentMarkup
+                        key={`${folder.name}-${component.digest}-${component.name}`}
+                        component={component}
+                      />
+                    ))}
+                  </>
+                ) : null}
+              </BlockStack>
+            ))
+          ) : (
+            <Text tone="subdued">No results found</Text>
+          )}
+        </SidebarMenu>
+      </div>
     </BlockStack>
   );
 };

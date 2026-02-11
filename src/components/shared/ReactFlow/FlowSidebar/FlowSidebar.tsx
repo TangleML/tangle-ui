@@ -1,3 +1,6 @@
+import { useState } from "react";
+
+import { VerticalResizeHandle } from "@/components/ui/resize-handle";
 import {
   Sidebar,
   SidebarContent,
@@ -11,37 +14,61 @@ import FileActions from "./sections/FileActions";
 import GraphComponents from "./sections/GraphComponents";
 import RunsAndSubmission from "./sections/RunsAndSubmission";
 
+const MIN_WIDTH = 200;
+const MAX_WIDTH = 400;
+const DEFAULT_WIDTH = 256;
+const COLLAPSED_WIDTH = 48;
+
 const FlowSidebar = () => {
   const { open, setOpen } = useSidebar();
   const { currentSubgraphPath } = useComponentSpec();
+  const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_WIDTH);
 
   const isViewingSubgraph = currentSubgraphPath.length > 1;
 
+  const triggerLeft = open ? sidebarWidth - 1 : COLLAPSED_WIDTH - 1;
+
   const sidebarTriggerClasses = cn(
-    "absolute z-1 transition-all duration-300 bg-white mt-8 rounded-r-md shadow-md p-0.5 pr-1",
-    open ? "left-[255px]" : "left-[47px]",
+    "absolute z-1 bg-white mt-8 rounded-r-md shadow-md p-0.5 pr-1",
     isViewingSubgraph ? "top-[65px]" : "top-6",
   );
 
   return (
     <>
-      <div className={sidebarTriggerClasses}>
+      <div
+        className={sidebarTriggerClasses}
+        style={{ left: `${triggerLeft}px` }}
+      >
         <SidebarTrigger
           className="text-gray-600 hover:bg-gray-50 hover:text-gray-900"
           onClick={() => setOpen(!open)}
         />
       </div>
-      <Sidebar
-        side="left"
-        className="mt-14 h-[calc(100vh-56px)]"
-        collapsible="icon"
+      <div
+        style={
+          { "--sidebar-width": `${sidebarWidth}px` } as React.CSSProperties
+        }
       >
-        <SidebarContent className="gap-0! m-0! p-0!">
-          <FileActions isOpen={open} />
-          <RunsAndSubmission isOpen={open} />
-          <GraphComponents isOpen={open} />
-        </SidebarContent>
-      </Sidebar>
+        <Sidebar
+          side="left"
+          className="mt-14 h-[calc(100vh-56px)]"
+          collapsible="icon"
+        >
+          <SidebarContent className="gap-0! m-0! p-0!">
+            <FileActions isOpen={open} />
+            <RunsAndSubmission isOpen={open} />
+            <GraphComponents isOpen={open} />
+          </SidebarContent>
+          {open && (
+            <VerticalResizeHandle
+              side="right"
+              minWidth={MIN_WIDTH}
+              maxWidth={MAX_WIDTH}
+              onResize={setSidebarWidth}
+            />
+          )}
+        </Sidebar>
+      </div>
     </>
   );
 };

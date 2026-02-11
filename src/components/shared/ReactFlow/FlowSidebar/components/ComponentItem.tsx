@@ -171,7 +171,7 @@ const ComponentMarkup = ({
   return (
     <SidebarMenuItem
       className={cn(
-        "pl-2 py-1.5",
+        "pl-2 py-1.5 w-full",
         error
           ? "cursor-not-allowed opacity-60"
           : "cursor-grab hover:bg-gray-100 active:bg-gray-200",
@@ -179,7 +179,7 @@ const ComponentMarkup = ({
       draggable={!error && !isLoading}
       onDragStart={onDragStart}
     >
-      <InlineStack gap="2">
+      <InlineStack gap="2" wrap="nowrap" className="w-full min-w-0">
         {isLoading ? (
           <span className="text-gray-400 truncate text-sm">Loading...</span>
         ) : error ? (
@@ -189,10 +189,11 @@ const ComponentMarkup = ({
         ) : (
           <InlineStack
             wrap="nowrap"
+            className="w-full"
             data-testid="component-item"
             data-component-name={displayName}
           >
-            <InlineStack gap="2" className="w-full" wrap="nowrap">
+            <InlineStack gap="2" className="flex-1 min-w-0" wrap="nowrap">
               {isRemoteComponentLibrarySearchEnabled ? (
                 <ComponentIcon
                   name={iconName}
@@ -204,7 +205,7 @@ const ComponentMarkup = ({
               )}
 
               <div
-                className="flex flex-col w-32"
+                className="flex flex-col flex-1 min-w-0"
                 onMouseEnter={onMouseEnter}
                 onMouseLeave={onMouseLeave}
                 onClick={onMouseClick}
@@ -216,11 +217,11 @@ const ComponentMarkup = ({
                   {displayName}
                 </span>
                 {author && author.length > 0 && (
-                  <span className="truncate text-[10px] text-gray-500 max-w-25 font-mono">
+                  <span className="truncate text-[10px] text-gray-500 font-mono">
                     {author}
                   </span>
                 )}
-                <span className="truncate text-[10px] text-gray-500 max-w-25 font-mono">
+                <span className="truncate text-[10px] text-gray-500 font-mono">
                   Ver: {digest}
                 </span>
               </div>
