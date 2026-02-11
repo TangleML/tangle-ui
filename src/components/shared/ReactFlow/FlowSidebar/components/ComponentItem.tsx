@@ -216,11 +216,11 @@ const ComponentMarkup = ({
                   {displayName}
                 </span>
                 {author && author.length > 0 && (
-                  <span className="truncate text-[10px] text-gray-500 max-w-[100px] font-mono">
+                  <span className="truncate text-[10px] text-gray-500 max-w-25 font-mono">
                     {author}
                   </span>
                 )}
-                <span className="truncate text-[10px] text-gray-500 max-w-[100px] font-mono">
+                <span className="truncate text-[10px] text-gray-500 max-w-25 font-mono">
                   Ver: {digest}
                 </span>
               </div>

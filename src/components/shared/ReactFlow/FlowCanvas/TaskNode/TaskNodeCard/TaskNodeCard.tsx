@@ -262,7 +262,10 @@ const TaskNodeCard = () => {
         </BlockStack>
 
         {isRemoteComponentLibrarySearchEnabled ? (
-          <PublishedComponentBadge componentRef={taskSpec.componentRef}>
+          <PublishedComponentBadge
+            componentRef={taskSpec.componentRef}
+            readOnly={readOnly}
+          >
             {digestMarkup}
           </PublishedComponentBadge>
         ) : (

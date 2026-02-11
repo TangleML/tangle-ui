@@ -14,6 +14,7 @@ import { TrimmedDigest } from "./TrimmedDigest";
 
 interface PublishedComponentDetailsProps {
   component: HydratedComponentReference;
+  readOnly?: boolean;
 }
 
 function PublishedComponentDetailsSkeleton() {
@@ -29,6 +30,7 @@ function PublishedComponentDetailsSkeleton() {
 
 function PublishedComponentDetailsContent({
   component,
+  readOnly,
 }: PublishedComponentDetailsProps) {
   const { data: isPublished } = useHasPublishedComponent(component);
   const { data: outdatedComponents } = useOutdatedComponents([component]);
@@ -79,9 +81,11 @@ function PublishedComponentDetailsContent({
               <Paragraph size="xs" tone="critical">
                 There is a newer version of this component available.
               </Paragraph>
-              <Button variant="secondary" size="xs" onClick={onUpdateTasks}>
-                Review tasks
-              </Button>
+              {!readOnly && (
+                <Button variant="secondary" size="xs" onClick={onUpdateTasks}>
+                  Review tasks
+                </Button>
+              )}
             </InlineStack>
           )}
         </BlockStack>
