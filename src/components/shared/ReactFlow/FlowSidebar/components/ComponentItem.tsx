@@ -7,9 +7,15 @@ import { useOutdatedComponents } from "@/components/shared/ManageComponent/hooks
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { Icon } from "@/components/ui/icon";
-import { InlineStack } from "@/components/ui/layout";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Text } from "@/components/ui/typography";
 import { useHydrateComponentReference } from "@/hooks/useHydrateComponentReference";
 import { cn } from "@/lib/utils";
 import { type ComponentReference, type TaskSpec } from "@/utils/componentSpec";
@@ -168,74 +174,78 @@ const ComponentMarkup = ({
   );
 
   return (
-    <li
-      className={cn(
-        "pl-2 py-1.5 w-full",
-        error
-          ? "cursor-not-allowed opacity-60"
-          : "cursor-grab hover:bg-gray-100 active:bg-gray-200",
-      )}
-      draggable={!error && !isLoading}
-      onDragStart={onDragStart}
-    >
-      <InlineStack gap="2" wrap="nowrap" className="w-full min-w-0">
-        {isLoading ? (
-          <span className="text-gray-400 truncate text-sm">Loading...</span>
-        ) : error ? (
-          <span className="truncate text-xs text-red-500">
-            Error loading component
-          </span>
-        ) : (
-          <InlineStack
-            wrap="nowrap"
-            className="w-full"
-            data-testid="component-item"
-            data-component-name={displayName}
-          >
-            <InlineStack gap="2" className="flex-1 min-w-0" wrap="nowrap">
-              {isRemoteComponentLibrarySearchEnabled ? (
-                <ComponentIcon
-                  name={iconName}
-                  className={iconClass}
-                  component={component}
-                />
-              ) : (
-                <Icon name={iconName} className={iconClass} />
-              )}
-
-              <div
-                className="flex flex-col flex-1 min-w-0"
-                onMouseEnter={onMouseEnter}
-                onMouseLeave={onMouseLeave}
-                onClick={onMouseClick}
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <li
+          className={cn(
+            "pl-2 py-1.5 w-full",
+            error
+              ? "cursor-not-allowed opacity-60"
+              : "cursor-grab hover:bg-gray-100 active:bg-gray-200",
+          )}
+          draggable={!error && !isLoading}
+          onDragStart={onDragStart}
+        >
+          <InlineStack gap="2" wrap="nowrap" className="w-full min-w-0">
+            {isLoading ? (
+              <span className="text-gray-400 truncate text-sm">Loading...</span>
+            ) : error ? (
+              <span className="truncate text-xs text-red-500">
+                Error loading component
+              </span>
+            ) : (
+              <InlineStack
+                wrap="nowrap"
+                className="w-full"
+                data-testid="component-item"
+                data-component-name={displayName}
               >
-                <span
-                  className="truncate text-xs text-gray-800"
-                  title={displayName}
-                >
-                  {displayName}
-                </span>
-                {author && author.length > 0 && (
-                  <span className="truncate text-[10px] text-gray-500 font-mono">
-                    {author}
-                  </span>
-                )}
-                <span className="truncate text-[10px] text-gray-500 font-mono">
-                  Ver: {digest}
-                </span>
-              </div>
-            </InlineStack>
-            <InlineStack align="end" wrap="nowrap">
-              <ComponentFavoriteToggle component={component} />
-              <ComponentDetailsDialog
-                displayName={displayName}
-                component={component}
-              />
-            </InlineStack>
+                <InlineStack gap="2" className="flex-1 min-w-0" wrap="nowrap">
+                  {isRemoteComponentLibrarySearchEnabled ? (
+                    <ComponentIcon
+                      name={iconName}
+                      className={iconClass}
+                      component={component}
+                    />
+                  ) : (
+                    <Icon name={iconName} className={iconClass} />
+                  )}
+
+                  <div
+                    className="flex flex-col flex-1 min-w-0"
+                    onMouseEnter={onMouseEnter}
+                    onMouseLeave={onMouseLeave}
+                    onClick={onMouseClick}
+                  >
+                    <span className="truncate text-xs text-gray-800">
+                      {displayName}
+                    </span>
+                    {author && author.length > 0 && (
+                      <span className="truncate text-[10px] text-gray-500 font-mono">
+                        {author}
+                      </span>
+                    )}
+                    <span className="truncate text-[10px] text-gray-500 font-mono">
+                      Ver: {digest}
+                    </span>
+                  </div>
+                </InlineStack>
+                <InlineStack align="end" wrap="nowrap">
+                  <ComponentFavoriteToggle component={component} />
+                  <ComponentDetailsDialog
+                    displayName={displayName}
+                    component={component}
+                  />
+                </InlineStack>
+              </InlineStack>
+            )}
           </InlineStack>
-        )}
-      </InlineStack>
-    </li>
+        </li>
+      </TooltipTrigger>
+      <TooltipContent side="right" sideOffset={8}>
+      {displayName}
+      </TooltipContent>
+    </Tooltip>
   );
 };
 
