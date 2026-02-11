@@ -22,7 +22,6 @@ import {
 } from "@/components/ui/popover";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radiogroup";
 import { Separator } from "@/components/ui/separator";
-import { SidebarMenu } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import {
@@ -266,7 +265,7 @@ const SearchResults = ({ searchResult }: SearchResultsProps) => {
       >{`Search Results (${totalResults})`}</Text>
       <Separator />
       <div className="h-[calc(100vh-400px)] w-full overflow-y-auto overflow-x-hidden scrollbar-thin">
-        <SidebarMenu>
+        <ul>
           {totalResults > 0 ? (
             searchResult.map((folder) => (
               <BlockStack key={folder.name}>
@@ -290,7 +289,7 @@ const SearchResults = ({ searchResult }: SearchResultsProps) => {
           ) : (
             <Text tone="subdued">No results found</Text>
           )}
-        </SidebarMenu>
+        </ul>
       </div>
     </BlockStack>
   );
