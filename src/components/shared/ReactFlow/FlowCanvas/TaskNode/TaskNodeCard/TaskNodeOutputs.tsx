@@ -1,10 +1,17 @@
 import { useConnection, useEdges } from "@xyflow/react";
 import { type MouseEvent, useCallback, useEffect, useState } from "react";
 
+import { OutputTypeSelector } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/OutputTypeSelector/OutputTypeSelector";
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { cn } from "@/lib/utils";
 import { useForcedSearchContext } from "@/providers/ComponentLibraryProvider/ForcedSearchProvider";
 import { isValidFilterRequest } from "@/providers/ComponentLibraryProvider/types";
 import { useTaskNode } from "@/providers/TaskNodeProvider";
+import {
+  AGGREGATOR_OUTPUT_TYPE_ANNOTATION,
+  AggregatorOutputType,
+} from "@/types/aggregator";
+import { isPipelineAggregator } from "@/utils/annotations";
 import type { OutputSpec } from "@/utils/componentSpec";
 import { ComponentSearchFilter } from "@/utils/constants";
 import { outputNameToNodeId } from "@/utils/nodes/nodeIdUtils";
@@ -23,8 +30,9 @@ export function TaskNodeOutputs({
   expanded,
   onBackgroundClick,
 }: TaskNodeOutputsProps) {
-  const { nodeId, outputs, state, callbacks } = useTaskNode();
+  const { nodeId, outputs, state, taskSpec, callbacks } = useTaskNode();
   const { onSelect } = callbacks;
+  const isPipelineAggregatorEnabled = useFlagValue("pipeline-aggregator");
   const {
     highlightSearchFilter,
     resetSearchFilter,
@@ -36,6 +44,15 @@ export function TaskNodeOutputs({
   const edges = useEdges();
 
   const [isDragging, setIsDragging] = useState(false);
+
+  const isAggregator =
+    isPipelineAggregatorEnabled &&
+    isPipelineAggregator(taskSpec?.componentRef?.spec?.metadata?.annotations);
+
+  const currentOutputType =
+    (taskSpec?.annotations?.[
+      AGGREGATOR_OUTPUT_TYPE_ANNOTATION
+    ] as AggregatorOutputType) || AggregatorOutputType.Array;
 
   const outputsWithTaskInput = outputs.filter((output) =>
     edges.some(
@@ -173,6 +190,19 @@ export function TaskNodeOutputs({
       )}
       onClick={handleBackgroundClick}
     >
+      {isAggregator && !state.readOnly && (
+        <div className="w-full mb-1">
+          <OutputTypeSelector
+            value={currentOutputType}
+            onChange={(value) => {
+              callbacks.setAnnotations({
+                ...taskSpec?.annotations,
+                [AGGREGATOR_OUTPUT_TYPE_ANNOTATION]: value,
+              });
+            }}
+          />
+        </div>
+      )}
       {collapsed && !expanded ? (
         outputsWithTaskInput.map((output, i) => (
           <OutputHandle
