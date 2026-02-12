@@ -5,7 +5,7 @@ import { InlineStack } from "@/components/ui/layout";
 import { SidebarMenuItem } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
-import type { Building } from "../data/types";
+import type { Building } from "../types/buildings";
 
 interface BuildingItemProps {
   building: Building;

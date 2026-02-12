@@ -2,7 +2,9 @@ import type { NodeProps } from "@xyflow/react";
 
 import { cn } from "@/lib/utils";
 
-import { isBuildingData } from "../../data/types";
+import { isBuildingData } from "../../types/buildings";
+import BuildingInput from "../Handles/BuildingInput";
+import BuildingOutput from "../Handles/BuildingOutput";
 
 const Building = ({ data, selected }: NodeProps) => {
   if (!isBuildingData(data)) {
@@ -14,12 +16,21 @@ const Building = ({ data, selected }: NodeProps) => {
     );
   }
 
-  const { icon, name, description, color } = data;
+  const { icon, name, description, color, inputs = [], outputs = [] } = data;
 
   return (
     <div
-      className={cn("bg-white rounded-lg", selected && "ring-2 ring-blue-500")}
+      className={cn("bg-white rounded-lg", selected && "ring-2 ring-selected")}
     >
+      {inputs.map((input, index) => (
+        <BuildingInput
+          key={index}
+          building={data}
+          input={input}
+          selected={selected}
+        />
+      ))}
+
       <div
         className="px-6 py-4 shadow-lg rounded-lg border-4"
         style={{ borderColor: color, backgroundColor: `${color}20` }}
@@ -27,10 +38,19 @@ const Building = ({ data, selected }: NodeProps) => {
         <div className="font-bold text-lg" style={{ color }}>
           {icon} {name}
         </div>
-        <div className="text-sm mt-1" style={{ color }}>
+        <div className="text-sm mt-1 text-center" style={{ color }}>
           {description}
         </div>
       </div>
+
+      {outputs.map((output, index) => (
+        <BuildingOutput
+          key={index}
+          building={data}
+          output={output}
+          selected={selected}
+        />
+      ))}
     </div>
   );
 };

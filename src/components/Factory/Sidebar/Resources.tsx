@@ -1,5 +1,11 @@
+import { SidebarGroup, SidebarGroupLabel } from "@/components/ui/sidebar";
+
 const Resources = () => {
-  return <p>💰 0</p>;
+  return (
+    <SidebarGroup>
+      <SidebarGroupLabel>💰 0</SidebarGroupLabel>
+    </SidebarGroup>
+  );
 };
 
 export default Resources;

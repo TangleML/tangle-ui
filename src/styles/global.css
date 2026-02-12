@@ -59,6 +59,7 @@ code {
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
   --edge-selected: #5b2ef4;
+  --selected: #55ccff;
 }
 
 .dark {
@@ -101,6 +102,7 @@ code {
   --sidebar-border: oklch(0.269 0 0);
   --sidebar-ring: oklch(0.439 0 0);
   --edge-selected: #5b2ef4;
+  --selected: #55ccff;
 }
 
 @theme inline {
@@ -147,6 +149,7 @@ code {
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-edge-selected: var(--edge-selected);
+  --color-selected: var(--selected);
 
   /* Custom animations */
   --animate-revert-copied: revert-copied 0.5s ease-in-out forwards;
