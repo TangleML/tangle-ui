@@ -16,13 +16,13 @@ import {
   removeAnnotation,
   setAnnotation,
 } from "@/utils/annotations";
-import {
-  type ArgumentType,
-  type ComponentReference,
-  type HydratedComponentReference,
-  type InputSpec,
-  type OutputSpec,
-  type TaskSpec,
+import type {
+  ArgumentType,
+  ComponentReference,
+  HydratedComponentReference,
+  InputSpec,
+  OutputSpec,
+  TaskSpec,
 } from "@/utils/componentSpec";
 import { getComponentName, getTaskDisplayName } from "@/utils/getComponentName";
 import { taskIdToNodeId } from "@/utils/nodes/nodeIdUtils";

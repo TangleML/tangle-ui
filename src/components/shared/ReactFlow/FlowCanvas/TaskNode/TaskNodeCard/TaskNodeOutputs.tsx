@@ -7,10 +7,7 @@ import { cn } from "@/lib/utils";
 import { useForcedSearchContext } from "@/providers/ComponentLibraryProvider/ForcedSearchProvider";
 import { isValidFilterRequest } from "@/providers/ComponentLibraryProvider/types";
 import { useTaskNode } from "@/providers/TaskNodeProvider";
-import {
-  AGGREGATOR_OUTPUT_TYPE_ANNOTATION,
-  AggregatorOutputType,
-} from "@/types/aggregator";
+import { AggregatorOutputType } from "@/types/aggregator";
 import { isPipelineAggregator } from "@/utils/annotations";
 import type { OutputSpec } from "@/utils/componentSpec";
 import { ComponentSearchFilter } from "@/utils/constants";
@@ -32,7 +29,7 @@ export function TaskNodeOutputs({
 }: TaskNodeOutputsProps) {
   const { nodeId, outputs, state, taskSpec, callbacks } = useTaskNode();
   const { onSelect } = callbacks;
-  const isPipelineAggregatorEnabled = useFlagValue("pipeline-aggregator");
+  const isPipelineAggregatorEnabled = useFlagValue("input-aggregator");
   const {
     highlightSearchFilter,
     resetSearchFilter,
@@ -49,10 +46,20 @@ export function TaskNodeOutputs({
     isPipelineAggregatorEnabled &&
     isPipelineAggregator(taskSpec?.componentRef?.spec?.metadata?.annotations);
 
-  const currentOutputType =
-    (taskSpec?.annotations?.[
-      AGGREGATOR_OUTPUT_TYPE_ANNOTATION
-    ] as AggregatorOutputType) || AggregatorOutputType.Array;
+  // For aggregators, get the current output type from the output_type input argument
+  const currentOutputType = isAggregator
+    ? (taskSpec?.arguments?.["output_type"] as AggregatorOutputType) ||
+      AggregatorOutputType.JsonArray
+    : AggregatorOutputType.JsonArray;
+
+  // Local state to immediately reflect dropdown changes
+  const [selectedOutputType, setSelectedOutputType] =
+    useState(currentOutputType);
+
+  // Sync local state with props when taskSpec changes
+  useEffect(() => {
+    setSelectedOutputType(currentOutputType);
+  }, [currentOutputType]);
 
   const outputsWithTaskInput = outputs.filter((output) =>
     edges.some(
@@ -193,11 +200,15 @@ export function TaskNodeOutputs({
       {isAggregator && !state.readOnly && (
         <div className="w-full mb-1">
           <OutputTypeSelector
-            value={currentOutputType}
+            value={selectedOutputType}
             onChange={(value) => {
-              callbacks.setAnnotations({
-                ...taskSpec?.annotations,
-                [AGGREGATOR_OUTPUT_TYPE_ANNOTATION]: value,
+              // Update local state immediately for UI responsiveness
+              setSelectedOutputType(value);
+
+              // Update the output_type input argument
+              callbacks.setArguments({
+                ...taskSpec?.arguments,
+                output_type: value,
               });
             }}
           />
