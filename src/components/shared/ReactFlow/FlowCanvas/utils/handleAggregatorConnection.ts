@@ -8,9 +8,11 @@ import {
 import { isPipelineAggregator } from "@/utils/annotations";
 import type {
   ComponentReference,
+  ComponentSpec,
   GraphSpec,
   TaskSpec,
 } from "@/utils/componentSpec";
+import { deepClone } from "@/utils/deepClone";
 import { nodeIdToTaskId } from "@/utils/nodes/nodeIdUtils";
 
 import { handleConnection } from "./handleConnection";
@@ -18,18 +20,18 @@ import { handleConnection } from "./handleConnection";
 export const handleAggregatorConnection = (
   graphSpec: GraphSpec,
   connection: Connection,
-): GraphSpec => {
+): { graphSpec: GraphSpec } => {
   const targetHandleId = connection.targetHandle;
 
   if (targetHandleId !== AGGREGATOR_ADD_INPUT_HANDLE_ID) {
-    return handleConnection(graphSpec, connection);
+    return { graphSpec: handleConnection(graphSpec, connection) };
   }
 
   const targetTaskId = nodeIdToTaskId(connection.target);
   const targetTask = graphSpec.tasks[targetTaskId];
 
   if (!targetTask?.componentRef?.spec) {
-    return graphSpec;
+    return { graphSpec };
   }
 
   const isAggregator = isPipelineAggregator(
@@ -37,19 +39,20 @@ export const handleAggregatorConnection = (
   );
 
   if (!isAggregator) {
-    return graphSpec;
+    return { graphSpec };
   }
 
   const currentInputs = targetTask.componentRef.spec.inputs || [];
   const newInputName = getNextAggregatorInputName(currentInputs);
   const newInput = createAggregatorInput(newInputName);
 
+  // Deep clone the spec to ensure this aggregator has an independent copy
+  const clonedSpec: ComponentSpec = deepClone(targetTask.componentRef.spec);
+  clonedSpec.inputs = [...(clonedSpec.inputs || []), newInput];
+
   const updatedComponentRef: ComponentReference = {
     ...targetTask.componentRef,
-    spec: {
-      ...targetTask.componentRef.spec,
-      inputs: [...currentInputs, newInput],
-    },
+    spec: clonedSpec,
   };
 
   const updatedTask: TaskSpec = {
@@ -65,10 +68,11 @@ export const handleAggregatorConnection = (
     },
   };
 
+  // Create the connection immediately - React Flow will handle the timing
   const redirectedConnection: Connection = {
     ...connection,
     targetHandle: `input_${newInputName}`,
   };
 
-  return handleConnection(graphSpecWithNewInput, redirectedConnection);
+  return { graphSpec: handleConnection(graphSpecWithNewInput, redirectedConnection) };
 };

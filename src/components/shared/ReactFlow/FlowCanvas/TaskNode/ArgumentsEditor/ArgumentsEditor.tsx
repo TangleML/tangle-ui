@@ -41,14 +41,19 @@ export const ArgumentsEditor = ({
     <BlockStack>
       <Heading level={1}>Inputs</Heading>
       <BlockStack gap="2" className="h-auto max-h-[60vh] overflow-y-auto pb-2">
-        {argumentInputs.map((argument) => (
-          <ArgumentInputField
-            key={argument.key}
-            argument={argument}
-            onSave={handleArgumentSave}
-            disabled={disabled}
-          />
-        ))}
+        {argumentInputs.map((argument) => {
+          // Aggregator inputs (agg_*) are read-only - they're set by connections
+          const isAggregatorInput = argument.key.startsWith('agg_');
+          
+          return (
+            <ArgumentInputField
+              key={argument.key}
+              argument={argument}
+              onSave={handleArgumentSave}
+              disabled={disabled || isAggregatorInput}
+            />
+          );
+        })}
       </BlockStack>
     </BlockStack>
   );
