@@ -18,6 +18,7 @@ import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useContextPanel } from "@/providers/ContextPanelProvider";
 import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
 import { useTaskNode } from "@/providers/TaskNodeProvider";
+import { isPipelineAggregator } from "@/utils/annotations";
 import { isCacheDisabled } from "@/utils/cache";
 import type { ExecutionStatusStats } from "@/utils/executionStatus";
 import { getSubgraphDescription, isSubgraph } from "@/utils/subgraphUtils";
@@ -37,6 +38,7 @@ const TaskNodeCard = () => {
   const isRemoteComponentLibrarySearchEnabled = useFlagValue(
     "remote-component-library-search",
   );
+  const inputAggregatorEnabled = useFlagValue("input-aggregator");
 
   const { registerNode } = useNodesOverlay();
   const taskNode = useTaskNode();
@@ -91,6 +93,10 @@ const TaskNodeCard = () => {
   }, [taskSpec]);
 
   const disabledCache = isCacheDisabled(taskSpec);
+
+  const showBetaPill =
+    !inputAggregatorEnabled &&
+    isPipelineAggregator(taskSpec?.componentRef?.spec?.metadata?.annotations);
 
   const onNotify = useCallback((message: NotifyMessage) => {
     switch (message.type) {
@@ -222,6 +228,21 @@ const TaskNodeCard = () => {
             <CardTitle className="wrap-anywhere max-w-full text-left text-xs text-slate-900">
               {displayName}
             </CardTitle>
+            {showBetaPill && (
+              <QuickTooltip
+                content='Enable the "Input Aggregator Component" beta flag in Settings to unlock full functionality.'
+                side="bottom"
+                cursor="question"
+                className="w-48"
+              >
+                <Text
+                  as="span"
+                  className="inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20 whitespace-nowrap cursor-help"
+                >
+                  Beta
+                </Text>
+              </QuickTooltip>
+            )}
           </InlineStack>
           {displayName !== name && (
             <Text size="xs" tone="subdued" className="font-light">
