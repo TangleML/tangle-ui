@@ -1,39 +1,102 @@
 import type {
+  ArgumentType,
   ComponentReference,
   ExecutionOptionsSpec,
+  GraphImplementation as GraphImplementationType,
+  GraphInputArgument,
   PredicateType,
+  TaskOutputArgument,
   TaskSpec,
 } from "@/utils/componentSpec";
 
 import { BaseCollection, type Context, type NestedContext } from "./context";
 import { InputEntity } from "./inputs";
-import type { OutputEntity } from "./outputs";
+import { OutputEntity } from "./outputs";
 import type {
   BaseEntity,
   RequiredProperties,
-  ScalarType,
   SerializableEntity,
 } from "./types";
 
+interface OutputValueBinding {
+  outputName: string;
+  taskId: string;
+  taskOutputName: string;
+}
+
 export class GraphImplementation implements SerializableEntity {
   readonly tasks: TasksCollection;
+
+  /**
+   * Maps graph output names to task output sources.
+   * Used to expose task outputs as graph-level outputs.
+   */
+  private readonly _outputValues: Map<string, OutputValueBinding> = new Map();
 
   constructor(private readonly context: Context) {
     this.tasks = new TasksCollection(this.context);
   }
 
-  toJson() {
-    return {
+  /**
+   * Sets a graph output value to reference a task output.
+   * @param graphOutputName - The name of the graph output
+   * @param taskId - The task ID that produces the output
+   * @param taskOutputName - The name of the task's output
+   */
+  setOutputValue(
+    graphOutputName: string,
+    taskId: string,
+    taskOutputName: string,
+  ): void {
+    this._outputValues.set(graphOutputName, {
+      outputName: graphOutputName,
+      taskId,
+      taskOutputName,
+    });
+  }
+
+  /**
+   * Removes a graph output value binding.
+   */
+  removeOutputValue(graphOutputName: string): void {
+    this._outputValues.delete(graphOutputName);
+  }
+
+  /**
+   * Gets all output value bindings.
+   */
+  getOutputValues(): OutputValueBinding[] {
+    return Array.from(this._outputValues.values());
+  }
+
+  toJson(): GraphImplementationType {
+    const json: GraphImplementationType = {
       graph: {
         tasks: this.tasks.toJson(),
       },
     };
+
+    if (this._outputValues.size > 0) {
+      const outputValues: Record<string, TaskOutputArgument> = {};
+      for (const binding of this._outputValues.values()) {
+        outputValues[binding.outputName] = {
+          taskOutput: {
+            taskId: binding.taskId,
+            outputName: binding.taskOutputName,
+          },
+        };
+      }
+      json.graph.outputValues = outputValues;
+    }
+
+    return json;
   }
 }
 
 type TaskScalarInterface = Pick<TaskSpec, "isEnabled" | "executionOptions"> & {
   name: string;
   componentRef: ComponentReference;
+  annotations?: Record<string, unknown>;
 };
 
 export class TaskEntity
@@ -46,6 +109,7 @@ export class TaskEntity
 
   isEnabled?: PredicateType;
   executionOptions?: ExecutionOptionsSpec;
+  annotations?: Record<string, unknown>;
 
   readonly arguments: ArgumentsCollection;
 
@@ -65,18 +129,61 @@ export class TaskEntity
     this.isEnabled = scalar.isEnabled;
     this.executionOptions = scalar.executionOptions;
     this.componentRef = scalar.componentRef;
+    this.annotations = scalar.annotations;
 
     return this;
   }
 
-  toJson() {
-    return {
-      taskId: this.name,
-      componentRef: this.componentRef,
-      isEnabled: this.isEnabled,
-      executionOptions: this.executionOptions,
-      arguments: this.arguments.toJson(),
+  /**
+   * Serializes the task to schema-compliant TaskSpec format.
+   * Note: The task name is NOT included here - it's used as the key in the tasks map.
+   */
+  toJson(): TaskSpec {
+    const json: TaskSpec = {
+      componentRef: this.serializeComponentRef(),
     };
+
+    const argsJson = this.arguments.toJson();
+    if (Object.keys(argsJson).length > 0) {
+      json.arguments = argsJson;
+    }
+
+    if (this.isEnabled !== undefined) {
+      json.isEnabled = this.isEnabled;
+    }
+
+    if (this.executionOptions !== undefined) {
+      json.executionOptions = this.executionOptions;
+    }
+
+    if (this.annotations !== undefined && Object.keys(this.annotations).length > 0) {
+      json.annotations = this.annotations;
+    }
+
+    return json;
+  }
+
+  /**
+   * Serializes the componentRef, excluding internal fields not in the schema.
+   */
+  private serializeComponentRef(): ComponentReference {
+    const ref: ComponentReference = {};
+
+    if (this.componentRef.name) {
+      ref.name = this.componentRef.name;
+    }
+    if (this.componentRef.digest) {
+      ref.digest = this.componentRef.digest;
+    }
+    if (this.componentRef.tag) {
+      ref.tag = this.componentRef.tag;
+    }
+    if (this.componentRef.url) {
+      ref.url = this.componentRef.url;
+    }
+    // Note: spec and text are typically not serialized back to avoid duplication
+
+    return ref;
   }
 }
 
@@ -92,19 +199,18 @@ export class TasksCollection
     return new TaskEntity(this.generateId(), this, spec).populate(spec);
   }
 
-  toJson() {
+  toJson(): Record<string, TaskSpec> {
     return this.getAll().reduce(
       (acc, task) => {
         acc[task.name] = task.toJson();
         return acc;
       },
-      {} as Record<string, object>,
+      {} as Record<string, TaskSpec>,
     );
   }
 }
 
 interface ArgumentScalarInterface {
-  // type: "graphInput" | "taskOutput" | "literal";
   name: string;
 }
 
@@ -119,6 +225,7 @@ export class ArgumentEntity
 
   private _type: "graphInput" | "taskOutput" | "literal" = "literal";
   private _source: InputEntity | OutputEntity | undefined;
+  private _sourceTaskId?: string; // For taskOutput: the task ID that owns the output
 
   private _value: ScalarValue | undefined;
 
@@ -135,13 +242,23 @@ export class ArgumentEntity
     return this;
   }
 
-  connectTo(output: OutputEntity): void;
+  /**
+   * Connect this argument to a graph input.
+   */
   connectTo(input: InputEntity): void;
+  /**
+   * Connect this argument to a task output.
+   * The taskId is inferred from the output's parent component spec.
+   */
+  connectTo(output: OutputEntity): void;
   connectTo(source: InputEntity | OutputEntity): void {
     if (source instanceof InputEntity) {
       this._type = "graphInput";
+      this._sourceTaskId = undefined;
     } else {
       this._type = "taskOutput";
+      // Extract task ID from the output's parent component name
+      this._sourceTaskId = source.parentComponentName;
     }
     this._source = source;
     this._value = undefined;
@@ -151,30 +268,61 @@ export class ArgumentEntity
     if (this._type === "literal") {
       return this._value;
     }
-
-    // todo: return the value of the source?
-    // return this._source?.value;
     return undefined;
   }
 
   set value(value: ScalarValue) {
     this._type = "literal";
     this._value = value;
+    this._source = undefined;
+    this._sourceTaskId = undefined;
   }
 
   get type(): "graphInput" | "taskOutput" | "literal" {
     return this._type;
   }
 
-  toJson() {
-    // todo: fix to return according to Spec
-    return {
-      __argument: {
-        name: this.name,
-        type: this.type,
-        value: this.value,
-      },
-    };
+  /**
+   * Returns the argument in the schema-compliant ArgumentType format:
+   * - Literal: returns the string/number/boolean value directly
+   * - GraphInput: returns { graphInput: { inputName: string } }
+   * - TaskOutput: returns { taskOutput: { taskId: string, outputName: string } }
+   */
+  toJson(): ArgumentType {
+    switch (this._type) {
+      case "literal":
+        // Return the literal value directly (must be string per schema)
+        return String(this._value ?? "");
+
+      case "graphInput": {
+        if (!this._source) {
+          throw new Error(
+            `ArgumentEntity ${this.name}: graphInput source is not set`,
+          );
+        }
+        const graphInputArg: GraphInputArgument = {
+          graphInput: {
+            inputName: this._source.name,
+          },
+        };
+        return graphInputArg;
+      }
+
+      case "taskOutput": {
+        if (!this._source || !this._sourceTaskId) {
+          throw new Error(
+            `ArgumentEntity ${this.name}: taskOutput source or taskId is not set`,
+          );
+        }
+        const taskOutputArg: TaskOutputArgument = {
+          taskOutput: {
+            taskId: this._sourceTaskId,
+            outputName: this._source.name,
+          },
+        };
+        return taskOutputArg;
+      }
+    }
   }
 }
 
@@ -190,13 +338,13 @@ export class ArgumentsCollection
     return new ArgumentEntity(this.generateId(), spec).populate(spec);
   }
 
-  toJson() {
+  toJson(): Record<string, ArgumentType> {
     return this.getAll().reduce(
       (acc, argument) => {
         acc[argument.name] = argument.toJson();
         return acc;
       },
-      {} as Record<string, object>,
+      {} as Record<string, ArgumentType>,
     );
   }
 }

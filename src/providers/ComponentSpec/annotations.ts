@@ -35,8 +35,11 @@ export class AnnotationEntity
     return this;
   }
 
-  toJson() {
-    return JSON.stringify(this.value);
+  /**
+   * Returns the annotation value directly (not stringified).
+   */
+  toJson(): object | string | number | boolean | null | undefined {
+    return this.value as object | string | number | boolean | null | undefined;
   }
 }
 
@@ -49,18 +52,19 @@ export class AnnotationsCollection
   }
 
   createEntity(spec: AnnotationScalarInterface): AnnotationEntity {
-    return new AnnotationEntity(this.generateId(), spec);
+    return new AnnotationEntity(this.generateId(), spec).populate(spec);
   }
 
-  toJson(): string {
-    return JSON.stringify(
-      this.getAll().reduce(
-        (acc, annotation) => {
-          acc[annotation.key] = annotation.toJson();
-          return acc;
-        },
-        {} as Record<string, unknown>,
-      ),
+  /**
+   * Returns annotations as a plain object (not stringified).
+   */
+  toJson(): Record<string, unknown> {
+    return this.getAll().reduce(
+      (acc, annotation) => {
+        acc[annotation.key] = annotation.toJson();
+        return acc;
+      },
+      {} as Record<string, unknown>,
     );
   }
 }
