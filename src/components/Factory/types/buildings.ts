@@ -12,6 +12,29 @@ export type BuildingOutput = {
   position: Position;
 };
 
+export type ProductionMethod = {
+  name: string;
+  inputs: Array<{
+    resource: ResourceType;
+    amount: number;
+  }>;
+  outputs: Array<{
+    resource: ResourceType;
+    amount: number;
+  }>;
+  globalOutputs?: Array<{
+    resource: ResourceType;
+    amount: number;
+  }>;
+  days: number;
+};
+
+export type Stockpile = {
+  resource: ResourceType;
+  amount: number;
+  maxAmount: number;
+};
+
 export type BuildingType =
   | "woodcutter"
   | "quarry"
@@ -28,6 +51,8 @@ export interface Building {
   color: string;
   inputs?: BuildingInput[];
   outputs?: BuildingOutput[];
+  productionMethod?: ProductionMethod;
+  stockpile?: Stockpile[];
 }
 
 export function isBuildingData(data: any): data is Building {

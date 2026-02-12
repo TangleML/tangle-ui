@@ -1,9 +1,26 @@
-export type ResourceType = "wood" | "stone" | "wheat" | "planks" | "any";
+export type ResourceType =
+  | "wood"
+  | "stone"
+  | "wheat"
+  | "planks"
+  | "paper"
+  | "books"
+  | "livestock"
+  | "leather"
+  | "meat"
+  | "knowledge"
+  | "coins"
+  | "coal"
+  | "flour"
+  | "bread"
+  | "any";
 
 export interface Resource {
-  type: ResourceType;
-  quantity?: number;
+  name: string;
+  description: string;
   color: string;
+  icon: string;
+  quantity?: number;
 }
 
 const RESOURCE_TYPES = [
@@ -11,6 +28,16 @@ const RESOURCE_TYPES = [
   "stone",
   "wheat",
   "planks",
+  "paper",
+  "books",
+  "livestock",
+  "leather",
+  "meat",
+  "knowledge",
+  "coins",
+  "coal",
+  "flour",
+  "bread",
   "any",
 ] as const satisfies readonly ResourceType[];
 
@@ -22,7 +49,9 @@ export function isResourceData(data: any): data is Resource {
   return (
     typeof data === "object" &&
     data !== null &&
-    typeof data.type === "string" &&
-    typeof data.color === "string"
+    typeof data.color === "string" &&
+    typeof data.name === "string" &&
+    typeof data.description === "string" &&
+    typeof data.icon === "string"
   );
 }

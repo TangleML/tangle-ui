@@ -36,7 +36,6 @@ export const createOnConnect = (
     };
 
     setEdges((eds) => {
-      // Remove any existing edges from the same source handle OR to the same target handle
       const filteredEdges = eds.filter(
         (edge) =>
           !(
