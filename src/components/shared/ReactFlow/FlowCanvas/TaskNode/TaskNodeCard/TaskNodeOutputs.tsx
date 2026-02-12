@@ -8,8 +8,8 @@ import { useForcedSearchContext } from "@/providers/ComponentLibraryProvider/For
 import { isValidFilterRequest } from "@/providers/ComponentLibraryProvider/types";
 import { useTaskNode } from "@/providers/TaskNodeProvider";
 import {
-  AggregatorOutputType,
   AGGREGATOR_OUTPUT_TYPE_ANNOTATION,
+  AggregatorOutputType,
 } from "@/types/aggregator";
 import { isPipelineAggregator } from "@/utils/annotations";
 import type { OutputSpec } from "@/utils/componentSpec";
