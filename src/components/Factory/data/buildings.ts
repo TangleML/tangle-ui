@@ -44,4 +44,17 @@ export const BUILDINGS: Building[] = [
     color: "#228B22",
     outputs: [{ resource: "wheat", position: Position.Right }],
   },
+  {
+    id: "sawmill",
+    name: "Sawmill",
+    icon: "🏭",
+    description: "Turns wood into planks",
+    cost: 0,
+    color: "#D2691E",
+    inputs: [
+      { resource: "wood", position: Position.Left },
+      { resource: "wood", position: Position.Left },
+    ],
+    outputs: [{ resource: "planks", position: Position.Right }],
+  },
 ];
