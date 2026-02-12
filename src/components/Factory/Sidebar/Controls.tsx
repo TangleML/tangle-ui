@@ -1,5 +1,9 @@
 const Controls = () => {
-  return <p>Next Turn</p>;
+  return (
+    <div>
+      <p>Next Day</p>
+    </div>
+  );
 };
 
 export default Controls;

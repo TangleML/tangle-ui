@@ -1,5 +1,9 @@
 const Resources = () => {
-  return <p>💰 0</p>;
+  return (
+    <div>
+      <p>💰 0</p>
+    </div>
+  );
 };
 
 export default Resources;
