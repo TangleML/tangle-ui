@@ -22,8 +22,8 @@ export const OutputTypeSelector = ({
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value={AggregatorOutputType.Array}>Array</SelectItem>
-        <SelectItem value={AggregatorOutputType.Object}>Object</SelectItem>
+        <SelectItem value={AggregatorOutputType.JsonArray}>JSON Array</SelectItem>
+        <SelectItem value={AggregatorOutputType.JsonObject}>JSON Object</SelectItem>
         <SelectItem value={AggregatorOutputType.CSV}>CSV Data</SelectItem>
       </SelectContent>
     </Select>

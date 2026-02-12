@@ -1,14 +1,13 @@
 name: Pipeline Aggregator
 description: |
   Aggregates multiple pipeline outputs into a single output.
-  Supports Array, Object, and CSV aggregation modes.
+  Supports JsonArray, JsonObject, and CSV aggregation modes.
 metadata:
   annotations:
     pipeline.aggregator: "true"
     author: Pipeline Team
 inputs:
-- {name: aggregated_inputs, type: String}
-- {name: output_type, type: String, default: "Array"}
+- {name: output_type, type: String, default: "JsonArray", optional: false, description: "Aggregation output format (JsonArray, JsonObject, or CSV)"}
 outputs:
 - {name: Output, type: String}
 implementation:
@@ -16,58 +15,74 @@ implementation:
     image: python:3.11-slim
     command:
     - sh
-    - -ec
+    - -exc
     - |
       program_path=$(mktemp)
       printf "%s" "$0" > "$program_path"
       python3 -u "$program_path" "$@"
     - |
-      def aggregate_pipeline_outputs(aggregated_inputs: str, output_type: str = "Array") -> str:
-          """Pipeline Aggregator (NOOP placeholder implementation)
+      import argparse
+      import sys
+      import json
+      
+      def aggregate_pipeline_outputs(output_type: str = "JsonArray", **inputs) -> str:
+          """Pipeline Aggregator - aggregates multiple inputs into a single output.
           
           Args:
-              aggregated_inputs: Serialized input data from multiple sources
-              output_type: Type of aggregation (Array, Object, or CSV)
+              output_type: Type of aggregation (JsonArray, JsonObject, or CSV)
+              **inputs: Variable number of inputs to aggregate (agg_1, agg_2, etc.)
           
           Returns:
-              Placeholder aggregated output
+              Aggregated output in the specified format
           """
-          return f"[Placeholder] Aggregated output (type: {output_type})"
+          # Filter out only the agg_* inputs
+          agg_inputs = {k: v for k, v in inputs.items() if k.startswith('agg_')}
+          
+          if output_type == "JsonArray":
+              # Return as JSON array
+              return json.dumps(list(agg_inputs.values()))
+          elif output_type == "JsonObject":
+              # Return as JSON object with keys
+              return json.dumps(agg_inputs)
+          elif output_type == "CSV":
+              # Return as CSV
+              values = list(agg_inputs.values())
+              return ','.join(str(v) for v in values)
+          else:
+              # Default to JSON array
+              return json.dumps(list(agg_inputs.values()))
 
-      def _serialize_str(str_value: str) -> str:
-          if not isinstance(str_value, str):
-              raise TypeError('Value "{}" has type "{}" instead of str.'.format(str(str_value), str(type(str_value))))
-          return str_value
-
-      import argparse
-      _parser = argparse.ArgumentParser(prog='Pipeline Aggregator', description='')
-      _parser.add_argument("--aggregated-inputs", dest="aggregated_inputs", type=str, required=True)
-      _parser.add_argument("--output-type", dest="output_type", type=str, required=False, default="Array")
-      _parser.add_argument("----output-paths", dest="_output_paths", type=str, nargs=1)
-      _parsed_args = vars(_parser.parse_args())
-      _output_files = _parsed_args.pop("_output_paths", [])
-
-      _outputs = aggregate_pipeline_outputs(**_parsed_args)
-
-      _outputs = [_outputs]
-
-      _output_serializers = [_serialize_str]
-
+      # Parse all arguments dynamically
+      parser = argparse.ArgumentParser(prog='Pipeline Aggregator', description='')
+      parser.add_argument("--output-type", dest="output_type", type=str, required=False, default="JsonArray")
+      parser.add_argument("----output-paths", dest="_output_paths", type=str, nargs=1)
+      
+      # Parse known args and capture unknown args as aggregator inputs
+      parsed_args, unknown_args = parser.parse_known_args()
+      
+      # Parse unknown args as key-value pairs for aggregator inputs
+      agg_inputs = {}
+      i = 0
+      while i < len(unknown_args):
+          if unknown_args[i].startswith('--'):
+              key = unknown_args[i].lstrip('-').replace('-', '_')
+              if i + 1 < len(unknown_args) and not unknown_args[i + 1].startswith('--'):
+                  agg_inputs[key] = unknown_args[i + 1]
+                  i += 2
+              else:
+                  i += 1
+          else:
+              i += 1
+      
+      # Generate output
+      output = aggregate_pipeline_outputs(output_type=parsed_args.output_type, **agg_inputs)
+      
+      # Write output to file
       import os
-      for idx, output_file in enumerate(_output_files):
-          try:
-              os.makedirs(os.path.dirname(output_file))
-          except OSError:
-              pass
-          with open(output_file, "w") as f:
-              f.write(_output_serializers[idx](_outputs[idx]))
-    args:
-    - --aggregated-inputs
-    - {inputValue: aggregated_inputs}
-    - if:
-        cond: {isPresent: output_type}
-        then:
-        - --output-type
-        - {inputValue: output_type}
+      output_file = parsed_args._output_paths[0]
+      os.makedirs(os.path.dirname(output_file), exist_ok=True)
+      with open(output_file, "w") as f:
+          f.write(output)
+    - {inputValue: output_type}
     - '----output-paths'
     - {outputPath: Output}

@@ -132,7 +132,7 @@ interface ContainerSpec {
 /**
  * Represents the container component implementation.
  */
-interface ContainerImplementation {
+export interface ContainerImplementation {
   container: ContainerSpec;
 }
 type ImplementationType = ContainerImplementation | GraphImplementation;

@@ -1,5 +1,5 @@
 import { isPipelineAggregator } from "./annotations";
-import type { ComponentSpec, TaskSpec } from "./componentSpec";
+import type { ComponentSpec, TaskSpec, ContainerImplementation } from "./componentSpec";
 import { isGraphImplementation } from "./componentSpec";
 
 export const transformAggregatorTaskSpec = (taskSpec: TaskSpec): TaskSpec => {
@@ -13,30 +13,55 @@ export const transformAggregatorTaskSpec = (taskSpec: TaskSpec): TaskSpec => {
   if (!spec) return taskSpec;
 
   const inputs = spec.inputs || [];
-  const aggregatorInputs = inputs.filter((input) => input.name.match(/^\d+$/));
+  const aggregatorInputs = inputs.filter((input) =>
+    input.name.startsWith("agg_"),
+  );
 
   if (aggregatorInputs.length === 0) {
     return taskSpec;
   }
 
-  const aggregatedData = aggregatorInputs
-    .map((input) => {
-      const value = taskSpec.arguments?.[input.name];
-      return value ? JSON.stringify(value) : null;
-    })
-    .filter((v) => v !== null);
+  // Get output_type from the output_type input argument
+  const outputType = (taskSpec.arguments?.["output_type"] as string) || 'JsonArray';
 
-  const mergedInput = `[${aggregatedData.join(",")}]`;
+  // Create a new implementation with dynamic args for each agg_* input
+  const containerImpl = spec.implementation as ContainerImplementation;
+  if (!containerImpl?.container) {
+    return taskSpec;
+  }
 
-  const newArguments = { ...taskSpec.arguments };
+  // Build args array with individual input references
+  const args: any[] = [];
+  
+  // Add output-type argument
+  args.push('--output-type', outputType);
+  
+  // Add each aggregator input
   aggregatorInputs.forEach((input) => {
-    delete newArguments[input.name];
+    const argName = `--${input.name.replace(/_/g, '-')}`;
+    args.push(argName, { inputValue: input.name });
   });
-  newArguments.aggregated_inputs = mergedInput;
+  
+  // Add output path
+  args.push('----output-paths', { outputPath: 'Output' });
+
+  const updatedSpec: ComponentSpec = {
+    ...spec,
+    implementation: {
+      ...containerImpl,
+      container: {
+        ...containerImpl.container,
+        args,
+      },
+    },
+  };
 
   return {
     ...taskSpec,
-    arguments: newArguments,
+    componentRef: {
+      ...taskSpec.componentRef,
+      spec: updatedSpec,
+    },
   };
 };
 

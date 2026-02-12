@@ -23,8 +23,18 @@ function getComponentQueryKey(component: ComponentReference): string {
   }
 
   if (component.spec) {
-    const specYaml = componentSpecToText(component.spec);
-    return `spec:${specYaml}`;
+    // For inline specs, create a unique key based on the actual spec content
+    // Use JSON.stringify to ensure any change to the spec creates a new key
+    try {
+      const specString = JSON.stringify(component.spec);
+      return `spec:${specString}`;
+    } catch (e) {
+      // Fallback if stringification fails
+      const inputNames = component.spec.inputs?.map(i => i.name).sort().join(',') ?? '';
+      const inputCount = component.spec.inputs?.length ?? 0;
+      const specName = component.spec.name ?? 'unnamed';
+      return `spec:${specName}:${inputCount}:${inputNames}:${Date.now()}`;
+    }
   }
 
   return `empty:${JSON.stringify(component)}`;
@@ -39,13 +49,20 @@ function getComponentQueryKey(component: ComponentReference): string {
  */
 export function useHydrateComponentReference(component: ComponentReference) {
   /**
-   * If the component has a digest or url, we can assume that the component is not going to change frequently
-   * Otherwise we dont cache result.
+   * If there's an inline spec, ALWAYS use it directly, even if there's also a url/digest.
+   * This is critical for aggregator nodes where we dynamically modify the spec while
+   * preserving the original url/digest for reference.
    */
+  if (component.spec) {
+    // Return inline spec directly without React Query caching
+    return component as any;
+  }
 
+  /**
+   * For components with digest or url, we can cache them since they don't change frequently
+   */
   const componentQueryKey = getComponentQueryKey(component);
-
-  const staleTime = componentQueryKey ? 1000 * 60 * 60 * 1 : 0;
+  const staleTime = 1000 * 60 * 60 * 1; // 1 hour cache for URL/digest components
 
   const { data: componentRef } = useSuspenseQuery({
     queryKey: ["component", "hydrate", componentQueryKey],

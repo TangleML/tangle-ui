@@ -1,6 +1,6 @@
 export const AggregatorOutputType = {
-  Array: "Array",
-  Object: "Object",
+  JsonArray: "JsonArray",
+  JsonObject: "JsonObject",
   CSV: "CSV",
 } as const;
 
