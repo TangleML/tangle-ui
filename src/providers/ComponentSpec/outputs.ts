@@ -98,6 +98,14 @@ export class OutputsCollection implements SerializableEntity {
   private readonly parentComponentName: string;
   private readonly context: { $name: string; generateId(): string };
 
+  /**
+   * Direct access to entities for valtio reactivity.
+   * Access this property to ensure valtio tracks entity changes.
+   */
+  get entities() {
+    return this.index.entities;
+  }
+
   constructor(parent: Context) {
     this.parentComponentName = parent.$name.split(".").pop() || "";
     const $name = `${parent.$name}.outputs`;

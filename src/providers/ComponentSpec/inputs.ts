@@ -100,6 +100,14 @@ export class InputsCollection implements SerializableEntity {
   private readonly index = new EntityIndex<InputEntity>();
   private readonly context: { $name: string; generateId(): string };
 
+  /**
+   * Direct access to entities for valtio reactivity.
+   * Access this property to ensure valtio tracks entity changes.
+   */
+  get entities() {
+    return this.index.entities;
+  }
+
   constructor(parent: Context) {
     const $name = `${parent.$name}.inputs`;
     let counter = 0;

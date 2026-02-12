@@ -9,6 +9,7 @@ import type {
   TaskSpec,
 } from "@/utils/componentSpec";
 
+import { AnnotationsCollection } from "./annotations";
 import { BaseCollection, type Context, type NestedContext } from "./context";
 import { InputEntity } from "./inputs";
 import { OutputEntity } from "./outputs";
@@ -96,6 +97,13 @@ export class GraphImplementation implements SerializableEntity {
 type TaskScalarInterface = Pick<TaskSpec, "isEnabled" | "executionOptions"> & {
   name: string;
   componentRef: ComponentReference;
+};
+
+/**
+ * Input type for populating a TaskEntity from raw spec data.
+ * Extends the scalar interface with annotations in their raw format.
+ */
+type TaskPopulateInput = TaskScalarInterface & {
   annotations?: Record<string, unknown>;
 };
 
@@ -109,8 +117,8 @@ export class TaskEntity
 
   isEnabled?: PredicateType;
   executionOptions?: ExecutionOptionsSpec;
-  annotations?: Record<string, unknown>;
 
+  readonly annotations: AnnotationsCollection;
   readonly arguments: ArgumentsCollection;
 
   constructor(
@@ -121,15 +129,22 @@ export class TaskEntity
     this.name = required.name;
     this.componentRef = required.componentRef;
 
+    this.annotations = new AnnotationsCollection(this.context);
     this.arguments = new ArgumentsCollection(this.context);
   }
 
-  populate(scalar: TaskScalarInterface) {
-    this.name = scalar.name;
-    this.isEnabled = scalar.isEnabled;
-    this.executionOptions = scalar.executionOptions;
-    this.componentRef = scalar.componentRef;
-    this.annotations = scalar.annotations;
+  populate(input: TaskPopulateInput) {
+    this.name = input.name;
+    this.isEnabled = input.isEnabled;
+    this.executionOptions = input.executionOptions;
+    this.componentRef = input.componentRef;
+
+    // Populate annotations collection from input Record
+    if (input.annotations) {
+      for (const [key, value] of Object.entries(input.annotations)) {
+        this.annotations.add({ key, value });
+      }
+    }
 
     return this;
   }
@@ -156,8 +171,9 @@ export class TaskEntity
       json.executionOptions = this.executionOptions;
     }
 
-    if (this.annotations !== undefined && Object.keys(this.annotations).length > 0) {
-      json.annotations = this.annotations;
+    const annotationsJson = this.annotations.toJson();
+    if (Object.keys(annotationsJson).length > 0) {
+      json.annotations = annotationsJson;
     }
 
     return json;
@@ -195,8 +211,19 @@ export class TasksCollection
     super("tasks", parent);
   }
 
+  /**
+   * Override add to accept TaskPopulateInput which includes annotations.
+   * Uses type assertion since parent expects TaskScalarInterface but we accept extended type.
+   */
+  add(spec: TaskPopulateInput): TaskEntity {
+    return super.add(spec as TaskScalarInterface);
+  }
+
   createEntity(spec: TaskScalarInterface): TaskEntity {
-    return new TaskEntity(this.generateId(), this, spec).populate(spec);
+    // Cast back to TaskPopulateInput since we know it may include annotations
+    return new TaskEntity(this.generateId(), this, spec).populate(
+      spec as TaskPopulateInput,
+    );
   }
 
   toJson(): Record<string, TaskSpec> {
