@@ -15,15 +15,22 @@ import {
   type BuildingInput as BuildingInputConfig,
 } from "../../types/buildings";
 import { isLightColor } from "../../utils/color";
+import { layoutHandleAtPosition } from "./utils";
 
 const BuildingInput = ({
   building,
   input,
   selected,
+  index,
+  groupIndex,
+  totalInGroup,
 }: {
   building: Building;
   input: BuildingInputConfig;
   selected?: boolean;
+  index: number;
+  groupIndex: number;
+  totalInGroup: number;
 }) => {
   const { resource, position } = input;
 
@@ -31,7 +38,7 @@ const BuildingInput = ({
     <Handle
       type="target"
       position={position}
-      id={`input-${building.id}-${position}-${resource}`}
+      id={`input-building:${building.id}-resource:${resource}-${index}`}
       className={cn(selected && "border-selected!")}
       style={{
         background: RESOURCE_COLORS[resource],
@@ -41,6 +48,11 @@ const BuildingInput = ({
         alignItems: "center",
         justifyContent: "center",
         display: "flex",
+        ...layoutHandleAtPosition({
+          position,
+          groupIndex,
+          totalInGroup,
+        }),
       }}
     >
       <TooltipProvider>
