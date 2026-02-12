@@ -8,25 +8,22 @@ metadata:
     author: Hargun Singh, Morgan Wowk
     # --- Aggregator-specific annotations (read by frontend) ---
     aggregator: "true"
-    aggregator_min_inputs: "2"
-    aggregator_default_output_type: "dict"
-    aggregator_supported_output_types: "dict,array,csv"
-    aggregator_visible_inputs: "2"
+    aggregator_default_output_type: "object"
+    aggregator_supported_output_types: "object,array,csv"
+    # --- Dynamic input mask ---
+    # The frontend reads this pattern and generates input_1, input_2, ... input_N
+    # as the user adds inputs. No hardcoded limit.
+    input_mask: "input_{n}"
+    input_mask_type: "String"
+    input_mask_description: "Input {n} to aggregate."
+    input_mask_optional: "true"
+    input_mask_min: "2"
+    input_mask_start: "1"
 inputs:
-- {name: input_1, type: String, description: "First input to aggregate.", optional: true}
-- {name: input_2, type: String, description: "Second input to aggregate.", optional: true}
-- {name: input_3, type: String, description: "Third input to aggregate.", optional: true}
-- {name: input_4, type: String, description: "Fourth input to aggregate.", optional: true}
-- {name: input_5, type: String, description: "Fifth input to aggregate.", optional: true}
-- {name: input_6, type: String, description: "Sixth input to aggregate.", optional: true}
-- {name: input_7, type: String, description: "Seventh input to aggregate.", optional: true}
-- {name: input_8, type: String, description: "Eighth input to aggregate.", optional: true}
-- {name: input_9, type: String, description: "Ninth input to aggregate.", optional: true}
-- {name: input_10, type: String, description: "Tenth input to aggregate.", optional: true}
 - name: output_type
   type: String
-  description: "Output format: dict (JSON object keyed by input name), array (JSON array of values), or csv (union of CSV inputs with matching columns)."
-  default: "dict"
+  description: "Output format: object (JSON object keyed by input name), array (JSON array of values), or csv (union of CSV inputs with matching columns)."
+  default: "object"
   optional: true
 outputs:
 - name: aggregated_output
@@ -43,11 +40,12 @@ implementation:
       printf "%s" "$0" > "$program_path"
       python3 -u "$program_path" "$@"
     - |
-      import argparse
       import csv
       import io
       import json
       import os
+      import re
+      import sys
 
 
       def _make_parent_dirs_and_return_path(file_path: str) -> str:
@@ -57,7 +55,7 @@ implementation:
 
       def aggregate(
           aggregated_output_path: str,
-          output_type: str = "dict",
+          output_type: str = "object",
           **input_paths: str,
       ) -> None:
           # Collect all provided inputs
@@ -70,7 +68,7 @@ implementation:
           if not inputs:
               raise ValueError("No inputs provided. At least one input must be connected.")
 
-          if output_type == "dict":
+          if output_type == "object":
               result = json.dumps(inputs, indent=2)
 
           elif output_type == "array":
@@ -110,7 +108,7 @@ implementation:
 
           else:
               raise ValueError(
-                  f"Unknown output_type: '{output_type}'. Must be 'dict', 'array', or 'csv'."
+                  f"Unknown output_type: '{output_type}'. Must be 'object', 'array', or 'csv'."
               )
 
           os.makedirs(os.path.dirname(aggregated_output_path), exist_ok=True)
@@ -118,100 +116,40 @@ implementation:
               f.write(result)
 
 
-      _parser = argparse.ArgumentParser(
-          prog="Aggregate Inputs",
-          description="Aggregates multiple inputs into a single output.",
-      )
-      for i in range(1, 11):
-          _parser.add_argument(
-              f"--input-{i}",
-              dest=f"input_{i}_path",
-              type=str,
-              required=False,
-              default=None,
-          )
-      _parser.add_argument(
-          "--output-type",
-          dest="output_type",
-          type=str,
-          required=False,
-          default="dict",
-      )
-      _parser.add_argument(
-          "--aggregated-output",
-          dest="aggregated_output_path",
-          type=_make_parent_dirs_and_return_path,
-          required=True,
-      )
-      _parsed_args = vars(_parser.parse_args())
+      # --- Dynamic arg parsing ---
+      # Accepts any number of --input-N flags (no hardcoded limit).
+      # The frontend generates these based on the input_mask annotation.
 
-      # Separate output args from input paths
-      _output_path = _parsed_args.pop("aggregated_output_path")
-      _output_type = _parsed_args.pop("output_type")
+      _args = sys.argv[1:]
+      _output_path = None
+      _output_type = "object"
+      _input_paths = {}
 
-      # Filter to only provided input paths
-      _input_paths = {k.replace("_path", ""): v for k, v in _parsed_args.items() if v is not None}
+      _i = 0
+      while _i < len(_args):
+          _arg = _args[_i]
+
+          if _arg == "--aggregated-output" and _i + 1 < len(_args):
+              _output_path = _make_parent_dirs_and_return_path(_args[_i + 1])
+              _i += 2
+          elif _arg == "--output-type" and _i + 1 < len(_args):
+              _output_type = _args[_i + 1]
+              _i += 2
+          else:
+              # Match any --input-N pattern dynamically
+              _match = re.match(r"^--input-(\d+)$", _arg)
+              if _match and _i + 1 < len(_args):
+                  _n = _match.group(1)
+                  _input_paths[f"input_{_n}"] = _args[_i + 1]
+                  _i += 2
+              else:
+                  _i += 1
+
+      if not _output_path:
+          raise ValueError("--aggregated-output is required.")
 
       aggregate(
           aggregated_output_path=_output_path,
           output_type=_output_type,
           **_input_paths,
       )
-    args:
-    - if:
-        cond: {isPresent: input_1}
-        then:
-        - --input-1
-        - {inputPath: input_1}
-    - if:
-        cond: {isPresent: input_2}
-        then:
-        - --input-2
-        - {inputPath: input_2}
-    - if:
-        cond: {isPresent: input_3}
-        then:
-        - --input-3
-        - {inputPath: input_3}
-    - if:
-        cond: {isPresent: input_4}
-        then:
-        - --input-4
-        - {inputPath: input_4}
-    - if:
-        cond: {isPresent: input_5}
-        then:
-        - --input-5
-        - {inputPath: input_5}
-    - if:
-        cond: {isPresent: input_6}
-        then:
-        - --input-6
-        - {inputPath: input_6}
-    - if:
-        cond: {isPresent: input_7}
-        then:
-        - --input-7
-        - {inputPath: input_7}
-    - if:
-        cond: {isPresent: input_8}
-        then:
-        - --input-8
-        - {inputPath: input_8}
-    - if:
-        cond: {isPresent: input_9}
-        then:
-        - --input-9
-        - {inputPath: input_9}
-    - if:
-        cond: {isPresent: input_10}
-        then:
-        - --input-10
-        - {inputPath: input_10}
-    - if:
-        cond: {isPresent: output_type}
-        then:
-        - --output-type
-        - {inputValue: output_type}
-    - --aggregated-output
-    - {outputPath: aggregated_output}
