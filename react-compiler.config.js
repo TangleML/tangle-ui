@@ -48,6 +48,8 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/components/shared/TaskDetails/DisplayNameEditor.tsx",
   "src/components/shared/TaskDetails/Actions/UnpackSubgraphButton.tsx",
 
+  "src/components/Factory",
+
   // 11-20 useCallback/useMemo
   // "src/components/ui",                         // 12
   // "src/components/PipelineRun",                // 14
