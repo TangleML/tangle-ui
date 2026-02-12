@@ -7,18 +7,18 @@ metadata:
   annotations:
     author: Hargun Singh, Morgan Wowk
     # --- Aggregator-specific annotations (read by frontend) ---
-    aggregator: "true"
-    aggregator_default_output_type: "JsonObject"
-    aggregator_supported_output_types: "JsonObject,JsonArray,CSV"
+    tangleml.com/aggregator_components/enabled: "true"
+    tangleml.com/aggregator_components/default_output_type: "JsonObject"
+    tangleml.com/aggregator_components/supported_output_types: "JsonObject,JsonArray,CSV"
     # --- Dynamic input mask ---
     # The frontend reads this pattern and generates input_1, input_2, ... input_N
     # as the user adds inputs. No hardcoded limit.
-    input_mask: "input_{n}"
-    input_mask_type: "String"
-    input_mask_description: "Input {n} to aggregate."
-    input_mask_optional: "true"
-    input_mask_min: "2"
-    input_mask_start: "1"
+    tangleml.com/aggregator_components/input_mask: "input_{n}"
+    tangleml.com/aggregator_components/input_mask_type: "String"
+    tangleml.com/aggregator_components/input_mask_description: "Input {n} to aggregate."
+    tangleml.com/aggregator_components/input_mask_optional: "true"
+    tangleml.com/aggregator_components/input_mask_min: "2"
+    tangleml.com/aggregator_components/input_mask_start: "1"
 inputs:
 - name: output_type
   type: String
