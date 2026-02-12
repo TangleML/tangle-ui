@@ -34,6 +34,9 @@ export function TaskNode({ id, data, selected }: TaskNodeProps) {
   const snapshot = useSnapshot(editorStore);
   const spec = snapshot.spec;
 
+  // Access version to subscribe to spec mutations
+  void snapshot.version;
+
   // Find the task entity by its stable $id
   const task =
     spec && hasGraphImplementation(spec)

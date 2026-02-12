@@ -1,8 +1,12 @@
 import type { InputSpec, TypeSpecType } from "@/utils/componentSpec";
 
 import { AnnotationsCollection } from "./annotations";
-import { type Context, EntityIndex } from "./context";
-import type { SerializableEntity } from "./types";
+import { BaseCollection, type Context } from "./context";
+import type {
+  BaseEntity,
+  RequiredProperties,
+  SerializableEntity,
+} from "./types";
 
 /**
  * Scalar interface for InputEntity - represents the data used to populate an input.
@@ -25,11 +29,12 @@ export interface InputScalarWithAnnotations extends InputScalarInterface {
   annotations?: Record<string, unknown>;
 }
 
-export class InputEntity implements SerializableEntity {
-  readonly $id: string;
+export class InputEntity
+  implements BaseEntity<InputScalarInterface>, SerializableEntity
+{
   readonly $indexed = ["name" as const];
 
-  name: string = "";
+  name: string;
 
   type?: TypeSpecType;
   description?: string;
@@ -43,9 +48,13 @@ export class InputEntity implements SerializableEntity {
 
   readonly annotations: AnnotationsCollection;
 
-  constructor($id: string, parent: Context) {
-    this.$id = $id;
-    this.annotations = new AnnotationsCollection(parent);
+  constructor(
+    readonly $id: string,
+    private readonly context: Context,
+    required: RequiredProperties<InputScalarInterface>,
+  ) {
+    this.name = required.name;
+    this.annotations = new AnnotationsCollection(this.context);
   }
 
   populate(spec: InputScalarWithAnnotations) {
@@ -96,45 +105,33 @@ export class InputEntity implements SerializableEntity {
   }
 }
 
-export class InputsCollection implements SerializableEntity {
-  private readonly index = new EntityIndex<InputEntity>();
-  private readonly context: { $name: string; generateId(): string };
+/**
+ * Input type for populating an InputEntity from raw spec data.
+ * Extends the scalar interface with annotations in their raw format.
+ */
+type InputPopulateInput = InputScalarInterface & {
+  annotations?: Record<string, unknown>;
+};
+
+export class InputsCollection
+  extends BaseCollection<InputScalarInterface, InputEntity>
+  implements SerializableEntity
+{
+  constructor(parent: Context) {
+    super("inputs", parent);
+  }
 
   /**
-   * Direct access to entities for valtio reactivity.
-   * Access this property to ensure valtio tracks entity changes.
+   * Override add to accept InputScalarWithAnnotations which includes annotations.
    */
-  get entities() {
-    return this.index.entities;
-  }
-
-  constructor(parent: Context) {
-    const $name = `${parent.$name}.inputs`;
-    let counter = 0;
-    this.context = {
-      $name,
-      generateId: () => `${$name}_${++counter}`,
-    };
-  }
-
   add(spec: InputScalarWithAnnotations): InputEntity {
-    const entity = new InputEntity(
-      this.context.generateId(),
-      this.context as Context,
-    ).populate(spec);
-    this.index.add(entity);
-    return entity;
+    return super.add(spec as InputScalarInterface);
   }
 
-  getAll(): InputEntity[] {
-    return this.index.getAll();
-  }
-
-  findByIndex<K extends keyof InputEntity>(
-    indexKey: K,
-    value: InputEntity[K],
-  ): InputEntity[] {
-    return this.index.findByIndex(indexKey, value);
+  createEntity(spec: InputScalarInterface): InputEntity {
+    return new InputEntity(this.generateId(), this, spec).populate(
+      spec as InputPopulateInput,
+    );
   }
 
   toJson(): InputSpec[] {

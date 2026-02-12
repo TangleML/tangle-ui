@@ -55,7 +55,9 @@ describe("ComponentSpec Object Model toJson()", () => {
 
   describe("InputEntity.toJson()", () => {
     it("should serialize input without value field", () => {
-      const input = new InputEntity("test-input-1", rootContext);
+      const input = new InputEntity("test-input-1", rootContext, {
+        name: "test_input",
+      });
       input.populate({
         name: "test_input",
         type: "String",
@@ -78,7 +80,9 @@ describe("ComponentSpec Object Model toJson()", () => {
     });
 
     it("should include annotations when present", () => {
-      const input = new InputEntity("test-input-2", rootContext);
+      const input = new InputEntity("test-input-2", rootContext, {
+        name: "annotated_input",
+      });
       input.populate({
         name: "annotated_input",
         type: "String",
@@ -94,7 +98,9 @@ describe("ComponentSpec Object Model toJson()", () => {
     });
 
     it("should omit undefined optional fields", () => {
-      const input = new InputEntity("test-input-3", rootContext);
+      const input = new InputEntity("test-input-3", rootContext, {
+        name: "minimal_input",
+      });
       input.populate({
         name: "minimal_input",
       });
@@ -112,7 +118,9 @@ describe("ComponentSpec Object Model toJson()", () => {
 
   describe("OutputEntity.toJson()", () => {
     it("should serialize output correctly", () => {
-      const output = new OutputEntity("test-output-1", rootContext);
+      const output = new OutputEntity("test-output-1", rootContext, {
+        name: "test_output",
+      });
       output.populate({
         name: "test_output",
         type: "String",
@@ -129,7 +137,9 @@ describe("ComponentSpec Object Model toJson()", () => {
     });
 
     it("should include annotations when present", () => {
-      const output = new OutputEntity("test-output-2", rootContext);
+      const output = new OutputEntity("test-output-2", rootContext, {
+        name: "annotated_output",
+      });
       output.populate({
         name: "annotated_output",
         type: "String",

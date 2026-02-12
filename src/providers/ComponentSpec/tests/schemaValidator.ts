@@ -17,7 +17,6 @@ export interface ValidationResult {
   errors?: string[];
 }
 
- 
 type JsonCompatible =
   | Record<string, any>
   | any[]

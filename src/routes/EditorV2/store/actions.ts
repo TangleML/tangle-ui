@@ -7,7 +7,7 @@ import type { OutputEntity } from "@/providers/ComponentSpec/outputs";
 import { EDITOR_POSITION_ANNOTATION } from "@/utils/annotations";
 import type { ComponentReference } from "@/utils/componentSpec";
 
-import { editorStore } from "./editorStore";
+import { editorStore, notifySpecChanged } from "./editorStore";
 
 /**
  * Check if the spec has a graph implementation.
@@ -40,6 +40,7 @@ export function updateNodePosition(entityId: string, position: XYPosition) {
         value: JSON.stringify(position),
       });
     }
+    notifySpecChanged();
     return;
   }
 
@@ -50,6 +51,7 @@ export function updateNodePosition(entityId: string, position: XYPosition) {
       key: EDITOR_POSITION_ANNOTATION,
       value: JSON.stringify(position),
     });
+    notifySpecChanged();
     return;
   }
 
@@ -60,6 +62,7 @@ export function updateNodePosition(entityId: string, position: XYPosition) {
       key: EDITOR_POSITION_ANNOTATION,
       value: JSON.stringify(position),
     });
+    notifySpecChanged();
   }
 }
 
@@ -166,6 +169,7 @@ export function addTask(
     }
   }
 
+  notifySpecChanged();
   return taskEntity;
 }
 
@@ -192,6 +196,7 @@ export function addInput(position: XYPosition, name?: string) {
     },
   });
 
+  notifySpecChanged();
   return inputEntity;
 }
 
@@ -218,6 +223,7 @@ export function addOutput(position: XYPosition, name?: string) {
     },
   });
 
+  notifySpecChanged();
   return outputEntity;
 }
 
@@ -232,12 +238,26 @@ interface ConnectionInfo {
 }
 
 /**
+ * Helper to determine node type from entity $id.
+ * Entity IDs follow the pattern: root.{specName}.{collection}_{number}
+ * e.g., "root.MyPipeline.inputs_1", "root.MyPipeline.outputs_2", "root.MyPipeline.tasks_3"
+ */
+function getNodeTypeFromId(nodeId: string): "input" | "output" | "task" | null {
+  if (nodeId.includes(".inputs_")) return "input";
+  if (nodeId.includes(".outputs_")) return "output";
+  if (nodeId.includes(".tasks_")) return "task";
+  return null;
+}
+
+/**
  * Connect two nodes by creating an argument binding.
  *
  * Handles these connection types:
  * - Task output → Task input (taskOutput argument)
  * - Graph input → Task input (graphInput argument)
  * - Task output → Graph output (outputValues binding)
+ *
+ * Node IDs are entity $ids in the format: root.{specName}.{collection}_{number}
  */
 export function connectNodes(connection: ConnectionInfo) {
   const { spec } = editorStore;
@@ -255,10 +275,12 @@ export function connectNodes(connection: ConnectionInfo) {
   const sourceOutputName = sourceHandleId.replace(/^output_/, "");
   const targetInputName = targetHandleId.replace(/^input_/, "");
 
-  // Check if source is a graph input
-  const isSourceGraphInput = sourceNodeId.startsWith("input_");
-  // Check if target is a graph output
-  const isTargetGraphOutput = targetNodeId.startsWith("output_");
+  // Determine node types from entity $id format
+  const sourceType = getNodeTypeFromId(sourceNodeId);
+  const targetType = getNodeTypeFromId(targetNodeId);
+
+  const isSourceGraphInput = sourceType === "input";
+  const isTargetGraphOutput = targetType === "output";
 
   if (isSourceGraphInput && isTargetGraphOutput) {
     // Cannot directly connect graph input to graph output
@@ -268,26 +290,34 @@ export function connectNodes(connection: ConnectionInfo) {
 
   if (isTargetGraphOutput) {
     // Task output → Graph output
-    const sourceTaskName = sourceNodeId.replace(/^task_/, "");
-    const graphOutputName = targetNodeId.replace(/^output_/, "");
+    // Look up source task by $id to get its name
+    const sourceTask = spec.implementation.tasks.findById(sourceNodeId);
+    if (!sourceTask) {
+      console.error(`Source task not found: ${sourceNodeId}`);
+      return false;
+    }
+
+    // Look up target output by $id to get its name
+    const targetOutput = spec.outputs.findById(targetNodeId);
+    if (!targetOutput) {
+      console.error(`Target output not found: ${targetNodeId}`);
+      return false;
+    }
 
     spec.implementation.setOutputValue(
-      graphOutputName,
-      sourceTaskName,
+      targetOutput.name,
+      sourceTask.name,
       sourceOutputName,
     );
+    notifySpecChanged();
     return true;
   }
 
-  // Target is a task
-  const targetTaskName = targetNodeId.replace(/^task_/, "");
-  const targetTask = spec.implementation.tasks.findByIndex(
-    "name",
-    targetTaskName,
-  )[0];
+  // Target is a task - look up by $id
+  const targetTask = spec.implementation.tasks.findById(targetNodeId);
 
   if (!targetTask) {
-    console.error(`Target task not found: ${targetTaskName}`);
+    console.error(`Target task not found: ${targetNodeId}`);
     return false;
   }
 
@@ -299,35 +329,33 @@ export function connectNodes(connection: ConnectionInfo) {
 
   if (isSourceGraphInput) {
     // Graph input → Task input
-    const graphInputName = sourceNodeId.replace(/^input_/, "");
-    const graphInput = spec.inputs.findByIndex("name", graphInputName)[0];
+    // Look up graph input by $id
+    const graphInput = spec.inputs.findById(sourceNodeId);
 
     if (!graphInput) {
-      console.error(`Graph input not found: ${graphInputName}`);
+      console.error(`Graph input not found: ${sourceNodeId}`);
       return false;
     }
 
     argument.connectTo(graphInput);
+    notifySpecChanged();
     return true;
   }
 
   // Task output → Task input
-  const sourceTaskName = sourceNodeId.replace(/^task_/, "");
-  const sourceTask = spec.implementation.tasks.findByIndex(
-    "name",
-    sourceTaskName,
-  )[0];
+  // Look up source task by $id
+  const sourceTask = spec.implementation.tasks.findById(sourceNodeId);
 
   if (!sourceTask) {
-    console.error(`Source task not found: ${sourceTaskName}`);
+    console.error(`Source task not found: ${sourceNodeId}`);
     return false;
   }
 
   // Find the output entity in the source task's component spec
-  const sourceComponentSpec = spec.findComponentSpecEntity(sourceTaskName);
+  const sourceComponentSpec = spec.findComponentSpecEntity(sourceTask.name);
   if (!sourceComponentSpec) {
     console.error(
-      `Source component spec not found for task: ${sourceTaskName}`,
+      `Source component spec not found for task: ${sourceTask.name}`,
     );
     return false;
   }
@@ -343,6 +371,7 @@ export function connectNodes(connection: ConnectionInfo) {
   }
 
   argument.connectTo(sourceOutput);
+  notifySpecChanged();
   return true;
 }
 
@@ -373,6 +402,7 @@ export function removeConnection(taskName: string, argumentName: string) {
 
   // Reset to empty literal value
   argument.value = "";
+  notifySpecChanged();
   return true;
 }
 
@@ -388,6 +418,7 @@ export function removeOutputConnection(graphOutputName: string) {
   }
 
   spec.implementation.removeOutputValue(graphOutputName);
+  notifySpecChanged();
   return true;
 }
 
@@ -403,7 +434,7 @@ export function renameTask(entityId: string, newName: string) {
   }
 
   // Get task directly by $id
-  const task = spec.implementation.tasks.entities[entityId];
+  const task = spec.implementation.tasks.findById(entityId);
 
   if (!task) {
     console.error(`Task not found: ${entityId}`);
@@ -422,6 +453,7 @@ export function renameTask(entityId: string, newName: string) {
   }
 
   task.name = newName;
+  notifySpecChanged();
   return true;
 }
 
@@ -453,6 +485,7 @@ export function renameInput(entityId: string, newName: string) {
   }
 
   input.name = newName;
+  notifySpecChanged();
   return true;
 }
 
@@ -484,6 +517,7 @@ export function renameOutput(entityId: string, newName: string) {
   }
 
   output.name = newName;
+  notifySpecChanged();
   return true;
 }
 

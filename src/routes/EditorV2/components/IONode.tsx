@@ -31,6 +31,9 @@ export function IONode({ id, data, selected }: IONodeProps) {
   const snapshot = useSnapshot(editorStore);
   const spec = snapshot.spec;
 
+  // Access version to subscribe to spec mutations
+  void snapshot.version;
+
   const isInput = ioType === "input";
 
   // Find the entity by its stable $id

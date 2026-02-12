@@ -21,15 +21,16 @@ export function ContextPanel() {
   const snapshot = useSnapshot(editorStore);
   const { selectedNodeId, selectedNodeType, spec } = snapshot;
 
+  // Access version to subscribe to spec mutations
+  void snapshot.version;
+
   if (!selectedNodeId || !selectedNodeType || !spec) {
     return <EmptyState />;
   }
 
   return (
     <BlockStack className="h-full w-[280px] border-l border-slate-200 bg-white overflow-y-auto">
-      {selectedNodeType === "task" && (
-        <TaskDetails entityId={selectedNodeId} />
-      )}
+      {selectedNodeType === "task" && <TaskDetails entityId={selectedNodeId} />}
       {selectedNodeType === "input" && (
         <InputDetails entityId={selectedNodeId} />
       )}
@@ -42,9 +43,7 @@ export function ContextPanel() {
 
 function EmptyState() {
   return (
-    <BlockStack
-      className="h-full w-[280px] border-l border-slate-200 bg-slate-50 items-center justify-center"
-    >
+    <BlockStack className="h-full w-[280px] border-l border-slate-200 bg-slate-50 items-center justify-center">
       <Icon name="MousePointerClick" size="lg" className="text-slate-300" />
       <Text size="sm" tone="subdued" className="text-center mt-2">
         Select a node to view details
@@ -60,6 +59,7 @@ interface TaskDetailsProps {
 function TaskDetails({ entityId }: TaskDetailsProps) {
   const snapshot = useSnapshot(editorStore);
   const spec = snapshot.spec;
+  void snapshot.version;
 
   if (
     !spec?.implementation ||
@@ -80,6 +80,7 @@ function TaskDetails({ entityId }: TaskDetailsProps) {
     const newName = event.target.value;
     if (newName && newName !== task.name) {
       renameTask(entityId, newName);
+      console.log("task renamed 1", newName);
     }
   };
 
@@ -178,6 +179,7 @@ interface InputDetailsProps {
 function InputDetails({ entityId }: InputDetailsProps) {
   const snapshot = useSnapshot(editorStore);
   const spec = snapshot.spec;
+  void snapshot.version;
   if (!spec) return null;
 
   // Get input directly from entities using $id
@@ -258,6 +260,7 @@ interface OutputDetailsProps {
 function OutputDetails({ entityId }: OutputDetailsProps) {
   const snapshot = useSnapshot(editorStore);
   const spec = snapshot.spec;
+  void snapshot.version;
   if (!spec) return null;
 
   // Get output directly from entities using $id
