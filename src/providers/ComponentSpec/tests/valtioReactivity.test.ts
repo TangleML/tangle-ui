@@ -83,10 +83,10 @@ describe("Valtio Reactivity for ComponentSpec Object Model", () => {
         { name: "Test" },
       );
 
-      // The entities object inside the collection is what we need to track
-      const proxiedEntities = proxy(componentSpec.inputs.entities);
+      // Collections are already wrapped with proxy() in the constructor,
+      // so we subscribe directly to the collection
       const callback = vi.fn();
-      const unsubscribe = subscribe(proxiedEntities, callback);
+      const unsubscribe = subscribe(componentSpec.inputs, callback);
 
       // Add an entity
       componentSpec.inputs.add({
@@ -97,7 +97,7 @@ describe("Valtio Reactivity for ComponentSpec Object Model", () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(callback).toHaveBeenCalled();
-      expect(Object.keys(proxiedEntities).length).toBe(1);
+      expect(Object.keys(componentSpec.inputs.entities).length).toBe(1);
 
       unsubscribe();
     });
@@ -111,9 +111,10 @@ describe("Valtio Reactivity for ComponentSpec Object Model", () => {
       const graphImpl = new GraphImplementation(componentSpec);
       componentSpec.implementation = graphImpl;
 
-      const proxiedEntities = proxy(graphImpl.tasks.entities);
+      // Collections are already wrapped with proxy() in the constructor,
+      // so we subscribe directly to the collection
       const callback = vi.fn();
-      const unsubscribe = subscribe(proxiedEntities, callback);
+      const unsubscribe = subscribe(graphImpl.tasks, callback);
 
       // Add a task
       graphImpl.tasks.add({
@@ -124,7 +125,7 @@ describe("Valtio Reactivity for ComponentSpec Object Model", () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(callback).toHaveBeenCalled();
-      expect(Object.keys(proxiedEntities).length).toBe(1);
+      expect(Object.keys(graphImpl.tasks.entities).length).toBe(1);
 
       unsubscribe();
     });
@@ -330,4 +331,3 @@ describe("Valtio Reactivity for ComponentSpec Object Model", () => {
     });
   });
 });
-

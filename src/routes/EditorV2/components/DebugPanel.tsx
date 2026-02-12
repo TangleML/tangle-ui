@@ -15,8 +15,7 @@ import { editorStore } from "../store/editorStore";
 // Computed value that automatically updates when spec changes
 const derivedState = computed({
   specJson: () => {
-    // Access version to track spec mutations
-    void editorStore.version;
+    // Valtio tracks mutations automatically since entities are wrapped with proxy()
     const spec = editorStore.spec;
     if (!spec) return "null";
     try {
@@ -68,10 +67,16 @@ interface StatGroupProps {
 function StatGroup({ title, children }: StatGroupProps) {
   return (
     <BlockStack gap="1">
-      <Text size="xs" weight="semibold" className="uppercase tracking-wider text-amber-400">
+      <Text
+        size="xs"
+        weight="semibold"
+        className="uppercase tracking-wider text-amber-400"
+      >
         {title}
       </Text>
-      <BlockStack className="pl-2 border-l-2 border-slate-600">{children}</BlockStack>
+      <BlockStack className="pl-2 border-l-2 border-slate-600">
+        {children}
+      </BlockStack>
     </BlockStack>
   );
 }
@@ -80,12 +85,12 @@ export function DebugPanel() {
   const snap = useSnapshot(editorStore);
   const derivedJson = useSnapshot(derivedState);
 
-  // Access version to subscribe to spec changes
-  void snap.version;
-
   const [isMinimized, setIsMinimized] = useState(false);
   const [position, setPosition] = useState<Position>({ x: 16, y: 16 });
-  const [size, setSize] = useState<Size>({ width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT });
+  const [size, setSize] = useState<Size>({
+    width: DEFAULT_WIDTH,
+    height: DEFAULT_HEIGHT,
+  });
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const dragOffset = useRef<Position>({ x: 0, y: 0 });
@@ -129,7 +134,10 @@ export function DebugPanel() {
 
     const handleMouseMove = (e: MouseEvent) => {
       const newWidth = Math.max(MIN_WIDTH, startWidth + (e.clientX - startX));
-      const newHeight = Math.max(MIN_HEIGHT, startHeight + (e.clientY - startY));
+      const newHeight = Math.max(
+        MIN_HEIGHT,
+        startHeight + (e.clientY - startY),
+      );
       setSize({ width: newWidth, height: newHeight });
     };
 
@@ -154,19 +162,20 @@ export function DebugPanel() {
     inputs: spec?.inputs.getAll().length ?? 0,
     outputs: spec?.outputs.getAll().length ?? 0,
     tasks: spec?.implementation?.tasks.getAll().length ?? 0,
-    arguments: spec?.implementation?.tasks
-      .getAll()
-      .reduce((acc, task) => acc + task.arguments.getAll().length, 0) ?? 0,
-    annotations: spec?.implementation?.tasks
-      .getAll()
-      .reduce((acc, task) => acc + task.annotations.getAll().length, 0) ?? 0,
+    arguments:
+      spec?.implementation?.tasks
+        .getAll()
+        .reduce((acc, task) => acc + task.arguments.getAll().length, 0) ?? 0,
+    annotations:
+      spec?.implementation?.tasks
+        .getAll()
+        .reduce((acc, task) => acc + task.annotations.getAll().length, 0) ?? 0,
     outputValues: spec?.implementation?.getOutputValues().length ?? 0,
   };
 
   const selectedInfo = snap.selectedNodeId
     ? `${snap.selectedNodeType}: ${snap.selectedNodeId}`
     : "None";
-
 
   return (
     <div
@@ -220,7 +229,10 @@ export function DebugPanel() {
           </TabsList>
 
           <TabsContent value="stats" className="flex-1 min-h-0">
-            <div className="overflow-y-auto" style={{ maxHeight: contentHeight - 48 }}>
+            <div
+              className="overflow-y-auto"
+              style={{ maxHeight: contentHeight - 48 }}
+            >
               <BlockStack gap="4" className="p-3">
                 {/* Spec Info */}
                 <StatGroup title="Spec">
@@ -243,13 +255,19 @@ export function DebugPanel() {
                 <StatGroup title="Internal State">
                   <StatItem label="Arguments" value={stats.arguments} />
                   <StatItem label="Annotations" value={stats.annotations} />
-                  <StatItem label="Output Bindings" value={stats.outputValues} />
+                  <StatItem
+                    label="Output Bindings"
+                    value={stats.outputValues}
+                  />
                 </StatGroup>
 
                 {/* Memory/Debug Info */}
                 <StatGroup title="Store State">
                   <StatItem label="Has Spec" value={spec ? "Yes" : "No"} />
-                  <StatItem label="Has Implementation" value={spec?.implementation ? "Yes" : "No"} />
+                  <StatItem
+                    label="Has Implementation"
+                    value={spec?.implementation ? "Yes" : "No"}
+                  />
                 </StatGroup>
               </BlockStack>
             </div>
@@ -260,7 +278,10 @@ export function DebugPanel() {
               className="m-2 rounded-md overflow-hidden bg-slate-900"
               style={{ height: contentHeight - 48 }}
             >
-              <CodeSyntaxHighlighter code={derivedJson.specJson} language="json" />
+              <CodeSyntaxHighlighter
+                code={derivedJson.specJson}
+                language="json"
+              />
             </div>
           </TabsContent>
         </Tabs>
@@ -287,4 +308,3 @@ export function DebugPanel() {
     </div>
   );
 }
-

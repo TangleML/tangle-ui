@@ -53,7 +53,11 @@ const PipelineEditor = withSuspenseWrapper(() => {
       // Subscribe to the proxied spec AFTER initializeStore has wrapped it
       // editorStore.spec is now the proxied version
       const unsubscribe = subscribe(editorStore.spec!, (ops) => {
-        console.log(`%c Spec changed`, "color: orange; font-weight: bold;", ops);
+        console.log(
+          `%c Spec changed`,
+          "color: orange; font-weight: bold;",
+          ops,
+        );
       });
 
       return () => {
@@ -65,7 +69,6 @@ const PipelineEditor = withSuspenseWrapper(() => {
       };
     }
   }, [spec]);
-
 
   return (
     <>

@@ -21,9 +21,6 @@ export function ContextPanel() {
   const snapshot = useSnapshot(editorStore);
   const { selectedNodeId, selectedNodeType, spec } = snapshot;
 
-  // Access version to subscribe to spec mutations
-  void snapshot.version;
-
   if (!selectedNodeId || !selectedNodeType || !spec) {
     return <EmptyState />;
   }
@@ -59,7 +56,6 @@ interface TaskDetailsProps {
 function TaskDetails({ entityId }: TaskDetailsProps) {
   const snapshot = useSnapshot(editorStore);
   const spec = snapshot.spec;
-  void snapshot.version;
 
   if (
     !spec?.implementation ||
@@ -179,7 +175,6 @@ interface InputDetailsProps {
 function InputDetails({ entityId }: InputDetailsProps) {
   const snapshot = useSnapshot(editorStore);
   const spec = snapshot.spec;
-  void snapshot.version;
   if (!spec) return null;
 
   // Get input directly from entities using $id
@@ -260,7 +255,6 @@ interface OutputDetailsProps {
 function OutputDetails({ entityId }: OutputDetailsProps) {
   const snapshot = useSnapshot(editorStore);
   const spec = snapshot.spec;
-  void snapshot.version;
   if (!spec) return null;
 
   // Get output directly from entities using $id

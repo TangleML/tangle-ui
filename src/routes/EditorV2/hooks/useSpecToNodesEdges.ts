@@ -73,11 +73,6 @@ export function useSpecToNodesEdges() {
   const snapshot = useSnapshot(editorStore);
   const spec = snapshot.spec;
 
-  // Access version to subscribe to spec changes.
-  // Class methods bypass Valtio's proxy, so we use a version counter
-  // that gets incremented after mutations to force re-renders.
-  void snapshot.version;
-
   const nodes: Node[] = [];
   const edges: Edge[] = [];
 

@@ -26,13 +26,9 @@ export function IONode({ id, data, selected }: IONodeProps) {
   const { entityId, ioType } = data;
 
   // Access the store directly to get the entity
-  // This ensures valtio reactivity works - when entity properties change,
-  // this component re-renders
+  // Valtio tracks mutations automatically since entities are wrapped with proxy()
   const snapshot = useSnapshot(editorStore);
   const spec = snapshot.spec;
-
-  // Access version to subscribe to spec mutations
-  void snapshot.version;
 
   const isInput = ioType === "input";
 

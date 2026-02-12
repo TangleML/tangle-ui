@@ -1,3 +1,5 @@
+import { proxy } from "valtio";
+
 import type { BaseEntity } from "./types";
 
 export type EntityId = string;
@@ -90,11 +92,7 @@ class IndexByKey {
 export class EntityIndex<TEntity extends BaseEntity<any>> {
   /**
    * Plain object for entity storage.
-   *
-   * IMPORTANT: Do NOT wrap this in proxy() - Valtio handles wrapping
-   * automatically when this object is accessed through the store's proxy chain.
-   * Pre-creating proxies breaks Valtio's subscription system because nested
-   * proxies are separate from the parent proxy.
+   * Entities are wrapped with proxy() when added to ensure Valtio reactivity.
    */
   readonly entities: Record<EntityId, TEntity> = {};
   private readonly indexByKey = new IndexByKey();
@@ -108,10 +106,10 @@ export class EntityIndex<TEntity extends BaseEntity<any>> {
   }
 
   add(entity: TEntity) {
-    // Store entity directly - Valtio will wrap it when accessed through the store
-    // Do NOT pre-wrap with proxy() as it breaks the subscription chain
-    this.entities[entity.$id] = entity;
-    this.indexByKey.add(entity);
+    // Wrap entity in proxy before storing to ensure Valtio tracks mutations
+    const proxiedEntity = proxy(entity) as TEntity;
+    this.entities[proxiedEntity.$id] = proxiedEntity;
+    this.indexByKey.add(proxiedEntity);
   }
 
   remove(entity: TEntity) {

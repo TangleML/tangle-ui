@@ -1,3 +1,5 @@
+import { proxy } from "valtio";
+
 import type { ComponentSpec, MetadataSpec } from "@/utils/componentSpec";
 
 import { BaseNestedContext, type Context } from "./context";
@@ -42,8 +44,9 @@ export class ComponentSpecEntity
 
     this.name = required.name;
 
-    this.inputs = new InputsCollection(this);
-    this.outputs = new OutputsCollection(this);
+    // Wrap collections with proxy() to ensure Valtio tracks mutations
+    this.inputs = proxy(new InputsCollection(this));
+    this.outputs = proxy(new OutputsCollection(this));
   }
 
   findComponentSpecEntity(name: string): ComponentSpecEntity | undefined {

@@ -7,7 +7,7 @@ import type { OutputEntity } from "@/providers/ComponentSpec/outputs";
 import { EDITOR_POSITION_ANNOTATION } from "@/utils/annotations";
 import type { ComponentReference } from "@/utils/componentSpec";
 
-import { editorStore, notifySpecChanged } from "./editorStore";
+import { editorStore } from "./editorStore";
 
 /**
  * Check if the spec has a graph implementation.
@@ -40,7 +40,6 @@ export function updateNodePosition(entityId: string, position: XYPosition) {
         value: JSON.stringify(position),
       });
     }
-    notifySpecChanged();
     return;
   }
 
@@ -51,7 +50,6 @@ export function updateNodePosition(entityId: string, position: XYPosition) {
       key: EDITOR_POSITION_ANNOTATION,
       value: JSON.stringify(position),
     });
-    notifySpecChanged();
     return;
   }
 
@@ -62,7 +60,6 @@ export function updateNodePosition(entityId: string, position: XYPosition) {
       key: EDITOR_POSITION_ANNOTATION,
       value: JSON.stringify(position),
     });
-    notifySpecChanged();
   }
 }
 
@@ -169,7 +166,6 @@ export function addTask(
     }
   }
 
-  notifySpecChanged();
   return taskEntity;
 }
 
@@ -196,7 +192,6 @@ export function addInput(position: XYPosition, name?: string) {
     },
   });
 
-  notifySpecChanged();
   return inputEntity;
 }
 
@@ -223,7 +218,6 @@ export function addOutput(position: XYPosition, name?: string) {
     },
   });
 
-  notifySpecChanged();
   return outputEntity;
 }
 
@@ -309,7 +303,6 @@ export function connectNodes(connection: ConnectionInfo) {
       sourceTask.name,
       sourceOutputName,
     );
-    notifySpecChanged();
     return true;
   }
 
@@ -338,7 +331,6 @@ export function connectNodes(connection: ConnectionInfo) {
     }
 
     argument.connectTo(graphInput);
-    notifySpecChanged();
     return true;
   }
 
@@ -371,7 +363,6 @@ export function connectNodes(connection: ConnectionInfo) {
   }
 
   argument.connectTo(sourceOutput);
-  notifySpecChanged();
   return true;
 }
 
@@ -402,7 +393,6 @@ export function removeConnection(taskName: string, argumentName: string) {
 
   // Reset to empty literal value
   argument.value = "";
-  notifySpecChanged();
   return true;
 }
 
@@ -418,7 +408,6 @@ export function removeOutputConnection(graphOutputName: string) {
   }
 
   spec.implementation.removeOutputValue(graphOutputName);
-  notifySpecChanged();
   return true;
 }
 
@@ -453,7 +442,6 @@ export function renameTask(entityId: string, newName: string) {
   }
 
   task.name = newName;
-  notifySpecChanged();
   return true;
 }
 
@@ -485,7 +473,6 @@ export function renameInput(entityId: string, newName: string) {
   }
 
   input.name = newName;
-  notifySpecChanged();
   return true;
 }
 
@@ -517,7 +504,6 @@ export function renameOutput(entityId: string, newName: string) {
   }
 
   output.name = newName;
-  notifySpecChanged();
   return true;
 }
 

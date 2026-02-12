@@ -1,3 +1,5 @@
+import { proxy } from "valtio";
+
 import {
   hydrateComponentReference,
   parseComponentData,
@@ -39,10 +41,11 @@ export class YamlLoader {
     name: string,
     parentContext: Context,
   ): Promise<ComponentSpecEntity> {
-    const rootSpecEntity = new ComponentSpecEntity(
-      parentContext.generateId(),
-      parentContext,
-      { name },
+    // Wrap root entity with proxy() to ensure Valtio tracks mutations
+    const rootSpecEntity = proxy(
+      new ComponentSpecEntity(parentContext.generateId(), parentContext, {
+        name,
+      }),
     ).populate({
       name,
       description: loadedSpec.description,
@@ -73,8 +76,10 @@ export class YamlLoader {
         taskSpec: TaskSpec;
       }[] = [];
 
-      // todo: use context
-      const graphImplementation = new GraphImplementation(rootSpecEntity);
+      // Wrap GraphImplementation with proxy() to ensure Valtio tracks mutations
+      const graphImplementation = proxy(
+        new GraphImplementation(rootSpecEntity),
+      );
       rootSpecEntity.implementation = graphImplementation;
 
       for (const [taskId, task] of Object.entries(
