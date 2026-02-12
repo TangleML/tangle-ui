@@ -1,4 +1,4 @@
-import type { ComponentSpec } from "@/utils/componentSpec";
+import type { ComponentSpec, MetadataSpec } from "@/utils/componentSpec";
 
 import { BaseNestedContext, type Context } from "./context";
 import type { GraphImplementation } from "./graphImplementation";
@@ -13,7 +13,10 @@ import type {
 export type ComponentSpecScalarInterface = Pick<
   ComponentSpec,
   "description"
-> & { name: string };
+> & {
+  name: string;
+  metadata?: MetadataSpec;
+};
 
 export class ComponentSpecEntity
   extends BaseNestedContext
@@ -23,6 +26,7 @@ export class ComponentSpecEntity
 
   name: string;
   description?: string;
+  metadata?: MetadataSpec;
 
   implementation?: GraphImplementation;
 
@@ -51,17 +55,44 @@ export class ComponentSpecEntity
   populate(scalar: ComponentSpecScalarInterface) {
     this.name = scalar.name;
     this.description = scalar.description;
+    this.metadata = scalar.metadata;
 
     return this;
   }
 
-  toJson() {
-    return {
-      name: this.name,
-      description: this.description,
-      implementation: this.implementation?.toJson(),
-      inputs: this.inputs.toJson(),
-      outputs: this.outputs.toJson(),
+  /**
+   * Serializes to schema-compliant ComponentSpec format.
+   * Only includes defined properties to avoid undefined values in JSON.
+   */
+  toJson(): ComponentSpec {
+    const json: ComponentSpec = {
+      implementation: this.implementation?.toJson() ?? {
+        graph: { tasks: {} },
+      },
     };
+
+    if (this.name) {
+      json.name = this.name;
+    }
+
+    if (this.description !== undefined) {
+      json.description = this.description;
+    }
+
+    if (this.metadata !== undefined) {
+      json.metadata = this.metadata;
+    }
+
+    const inputsJson = this.inputs.toJson();
+    if (inputsJson.length > 0) {
+      json.inputs = inputsJson;
+    }
+
+    const outputsJson = this.outputs.toJson();
+    if (outputsJson.length > 0) {
+      json.outputs = outputsJson;
+    }
+
+    return json;
   }
 }
