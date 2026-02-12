@@ -1,6 +1,7 @@
+import { Handle, Position } from "@xyflow/react";
 import { useConnection } from "@xyflow/react";
 import { AlertCircle } from "lucide-react";
-import { type MouseEvent, useCallback, useEffect, useState } from "react";
+import { type MouseEvent, useCallback, useEffect, useState, useMemo } from "react";
 
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { cn } from "@/lib/utils";
@@ -30,7 +31,7 @@ interface TaskNodeInputsProps {
 }
 
 export function TaskNodeInputs({
-  condensed,
+  condensed: condensedProp,
   expanded,
   onBackgroundClick,
 }: TaskNodeInputsProps) {
@@ -53,15 +54,35 @@ export function TaskNodeInputs({
     isPipelineAggregatorEnabled &&
     isPipelineAggregator(taskSpec?.componentRef?.spec?.metadata?.annotations);
 
+  const internalInputs = useMemo(
+    () => [AGGREGATOR_ADD_INPUT_HANDLE_ID],
+    [],
+  );
+
+  const visibleInputs = useMemo(
+    () => {
+      const filtered = isAggregator
+        ? inputs.filter((input) => !internalInputs.includes(input.name))
+        : inputs;
+      
+      return filtered;
+    },
+    [isAggregator, inputs, internalInputs],
+  );
+
   const values = taskSpec?.arguments;
   const invalidArguments = taskSpec
-    ? inputsWithInvalidArguments(inputs, taskSpec)
+    ? inputsWithInvalidArguments(visibleInputs, taskSpec)
     : [];
 
-  const connectedInputs = inputs.filter(
-    (input) =>
-      isGraphInputArgument(values?.[input.name]) ||
-      isTaskOutputArgument(values?.[input.name]),
+  const connectedInputs = useMemo(
+    () =>
+      visibleInputs.filter(
+        (input) =>
+          isGraphInputArgument(values?.[input.name]) ||
+          isTaskOutputArgument(values?.[input.name]),
+      ),
+    [visibleInputs, values],
   );
 
   const toggleHighlightRelatedHandles = useCallback(
@@ -85,22 +106,22 @@ export function TaskNodeInputs({
 
   const handleBackgroundClick = useCallback(
     (e: MouseEvent) => {
-      if (condensed && onBackgroundClick) {
+      if (onBackgroundClick) {
         e.stopPropagation();
         onBackgroundClick();
       }
     },
-    [condensed, onBackgroundClick],
+    [onBackgroundClick],
   );
 
   const handleSelectionChange = useCallback(
     (inputName: string, selected: boolean) => {
       if (state.readOnly) return;
 
-      const input = inputs.find((i) => i.name === inputName);
+      const input = visibleInputs.find((i) => i.name === inputName);
       toggleHighlightRelatedHandles(selected, input);
     },
-    [inputs, state.readOnly, toggleHighlightRelatedHandles],
+    [visibleInputs, state.readOnly, toggleHighlightRelatedHandles],
   );
 
   const checkHighlight = useCallback(
@@ -157,7 +178,7 @@ export function TaskNodeInputs({
       return;
     }
 
-    const input = inputs.find(
+    const input = visibleInputs.find(
       (i) => inputNameToNodeId(i.name) === fromHandle?.id,
     );
 
@@ -167,7 +188,7 @@ export function TaskNodeInputs({
     setIsDragging(true);
   }, [
     connection,
-    inputs,
+    visibleInputs,
     isDragging,
     resetSearchFilter,
     toggleHighlightRelatedHandles,
@@ -177,20 +198,30 @@ export function TaskNodeInputs({
     return null;
   }
 
-  if (!inputs.length) return null;
+  if (!visibleInputs.length && !isAggregator) return null;
 
-  if (connectedInputs.length === 0) {
-    connectedInputs.push(inputs[0]);
-  }
+  const displayInputs = useMemo(
+    () => {
+      // For aggregators, always show all visible inputs (not just connected ones)
+      // This ensures handles exist for incoming connections
+      if (isAggregator) {
+        return visibleInputs;
+      }
+      
+      // For regular components, show only connected inputs or the first input
+      return connectedInputs.length === 0 && visibleInputs.length > 0
+        ? [visibleInputs[0]]
+        : connectedInputs;
+    },
+    [isAggregator, visibleInputs, connectedInputs],
+  );
 
-  const hiddenInputs = inputs.length - connectedInputs.length;
-  if (hiddenInputs < 1) {
-    condensed = false;
-  }
+  const hiddenInputs = visibleInputs.length - displayInputs.length;
+  const condensed = condensedProp && hiddenInputs >= 1;
 
   const hiddenInvalidArguments = invalidArguments.filter(
     (invalidArgument) =>
-      !connectedInputs.some((input) => input.name === invalidArgument),
+      !displayInputs.some((input) => input.name === invalidArgument),
   );
 
   return (
@@ -202,24 +233,26 @@ export function TaskNodeInputs({
       onClick={handleBackgroundClick}
     >
       {isAggregator && !state.readOnly && (
-        <InputHandle
-          key={AGGREGATOR_ADD_INPUT_HANDLE_ID}
-          input={
-            {
-              name: AGGREGATOR_ADD_INPUT_HANDLE_ID,
-              type: "any",
-            } as InputSpec
-          }
-          invalid={false}
-          value="Add Input"
-          onHandleSelectionChange={() => {}}
-          highlight={false}
-          onLabelClick={() => {}}
-        />
+        <div className="relative w-full h-fit mb-1" key="add-input-handle">
+          <div className="absolute -translate-x-6 flex items-center h-3 w-3">
+            <Handle
+              type="target"
+              id={AGGREGATOR_ADD_INPUT_HANDLE_ID}
+              position={Position.Left}
+              isConnectable={true}
+              className="border-0! h-full! w-full! transform-none! bg-blue-400!"
+            />
+          </div>
+          <div className="flex flex-row items-center rounded-md relative">
+            <div className="text-xs text-blue-600! rounded-md px-2 py-1 bg-blue-50 border border-blue-200 border-dashed">
+              + Add Input
+            </div>
+          </div>
+        </div>
       )}
       {condensed && !expanded ? (
         <>
-          {connectedInputs.map((input, i) => (
+          {displayInputs.map((input, i) => (
             <InputHandle
               key={input.name}
               input={input}
@@ -243,7 +276,7 @@ export function TaskNodeInputs({
         </>
       ) : (
         <>
-          {inputs.map((input) => (
+          {visibleInputs.map((input) => (
             <InputHandle
               key={input.name}
               input={input}

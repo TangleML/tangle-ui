@@ -53,6 +53,14 @@ export function TaskNodeOutputs({
       AGGREGATOR_OUTPUT_TYPE_ANNOTATION
     ] as AggregatorOutputType) || AggregatorOutputType.Array;
 
+  // Local state to immediately reflect dropdown changes
+  const [selectedOutputType, setSelectedOutputType] = useState(currentOutputType);
+
+  // Sync local state with props when taskSpec changes
+  useEffect(() => {
+    setSelectedOutputType(currentOutputType);
+  }, [currentOutputType]);
+
   const outputsWithTaskInput = outputs.filter((output) =>
     edges.some(
       (edge) =>
@@ -192,8 +200,12 @@ export function TaskNodeOutputs({
       {isAggregator && !state.readOnly && (
         <div className="w-full mb-1">
           <OutputTypeSelector
-            value={currentOutputType}
+            value={selectedOutputType}
             onChange={(value) => {
+              // Update local state immediately for UI responsiveness
+              setSelectedOutputType(value);
+              
+              // Update the annotation (output_type is metadata, not an actual execution argument)
               callbacks.setAnnotations({
                 ...taskSpec?.annotations,
                 [AGGREGATOR_OUTPUT_TYPE_ANNOTATION]: value,

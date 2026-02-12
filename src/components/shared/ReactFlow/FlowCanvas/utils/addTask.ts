@@ -11,6 +11,7 @@ import {
   type TaskSpec,
 } from "@/utils/componentSpec";
 import { deepClone } from "@/utils/deepClone";
+import { instanceComponentSpec, shouldInstanceSpec } from "@/utils/instanceComponentSpec";
 import {
   getUniqueInputName,
   getUniqueOutputName,
@@ -85,8 +86,14 @@ const addTask = (
       return { spec: newComponentSpec, taskId };
     }
 
+    // Instance the spec if this component needs per-task isolation (e.g., aggregators)
+    let componentRefSpec = taskSpec.componentRef.spec;
+    if (componentRefSpec && shouldInstanceSpec(componentRefSpec)) {
+      componentRefSpec = instanceComponentSpec(componentRefSpec);
+    }
+
     const defaultArguments =
-      taskSpec.componentRef.spec?.inputs?.reduce<Record<string, string>>(
+      componentRefSpec?.inputs?.reduce<Record<string, string>>(
         (acc, input) => {
           if (input.default) {
             acc[input.name] = input.default;
@@ -108,13 +115,17 @@ const addTask = (
 
     const updatedTaskSpec: TaskSpec = {
       ...taskSpec,
+      componentRef: {
+        ...taskSpec.componentRef,
+        spec: componentRefSpec,
+      },
       annotations: mergedAnnotations,
       arguments: mergedArguments,
     };
 
     taskId = getUniqueTaskName(
       graphSpec,
-      taskSpec.componentRef.spec?.name ?? "Task",
+      componentRefSpec?.name ?? "Task",
     );
 
     const newGraphSpec: GraphSpec = {
