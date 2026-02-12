@@ -73,4 +73,12 @@ export const ExistingFlags: ConfigFlags = {
     default: false,
     category: "beta",
   },
+
+  ["command-center-dashboard"]: {
+    name: "Command Center Dashboard",
+    description:
+      "Replace the default homepage with a unified command center dashboard showing runs, pipelines, components, and quick actions at a glance.",
+    default: false,
+    category: "beta",
+  },
 };
