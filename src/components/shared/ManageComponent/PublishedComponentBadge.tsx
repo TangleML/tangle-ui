@@ -33,7 +33,7 @@ export const PublishedComponentBadge = withSuspenseWrapper(
     const isOutdated = outdatedComponents.length > 0;
 
     return (
-      <InlineStack className="relative min-w-20" blockAlign="start">
+      <InlineStack className="relative min-w-20" blockAlign="start" align="end">
         <ComponentDetailsDialog
           displayName={componentRef.name ?? "Details"}
           component={componentRef}
@@ -50,10 +50,9 @@ export const PublishedComponentBadge = withSuspenseWrapper(
               )}
             >
               <InlineStack gap="1">
-                <Icon
-                  name={isOutdated ? "BookAlert" : "BookCheck"}
-                  className={cn(!isPublished && "invisible")}
-                />
+                {isPublished && (
+                  <Icon name={isOutdated ? "BookAlert" : "BookCheck"} />
+                )}
                 {children}
               </InlineStack>
             </Button>

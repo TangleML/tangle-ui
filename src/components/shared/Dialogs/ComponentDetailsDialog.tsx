@@ -1,4 +1,3 @@
-import { Code, InfoIcon, ListFilter } from "lucide-react";
 import { type ReactNode, useCallback, useMemo, useState } from "react";
 
 import {
@@ -6,6 +5,7 @@ import {
   DialogContent,
   DialogDescription,
   DialogHeader,
+  DialogPortal,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
@@ -100,15 +100,15 @@ const ComponentDetailsDialogContent = withSuspenseWrapper(
           >
             <TabsList className="w-full mb-4">
               <TabsTrigger value="details" className="flex-1">
-                <InfoIcon className="h-4 w-4" />
+                <Icon name="Info" />
                 Details
               </TabsTrigger>
               <TabsTrigger value="io" className="flex-1">
-                <ListFilter className="h-4 w-4" />
+                <Icon name="ListFilter" />
                 Inputs/Outputs
               </TabsTrigger>
               <TabsTrigger value="implementation" className="flex-1">
-                <Code className="h-4 w-4" />
+                <Icon name="Code" />
                 Implementation
               </TabsTrigger>
 
@@ -193,34 +193,47 @@ const ComponentDetails = ({
   }, []);
 
   return (
-    <Dialog modal open={open} onOpenChange={onOpenChange}>
+    <Dialog modal={false} open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>{dialogTriggerButton}</DialogTrigger>
 
-      <DialogDescription
-        className="hidden"
-        aria-label={`${displayName} component details`}
-      >
-        {`${displayName} component details`}
-      </DialogDescription>
-      <DialogContent
-        className="max-w-2xl min-w-2xl overflow-hidden"
-        aria-label={`${displayName} component details`}
-      >
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 mr-5">
-            <span>{displayName}</span>
-            <ComponentFavoriteToggle component={component} />
-          </DialogTitle>
-        </DialogHeader>
-
-        <DialogContext.Provider value={dialogContextValue}>
-          <ComponentDetailsDialogContent
-            component={component}
-            displayName={displayName}
-            readOnly={readOnly}
+      <DialogPortal>
+        {open && (
+          <div
+            className="fixed inset-0 z-50 bg-black/50"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                onOpenChange(false);
+              }
+            }}
           />
-        </DialogContext.Provider>
-      </DialogContent>
+        )}
+
+        <DialogDescription
+          className="hidden"
+          aria-label={`${displayName} component details`}
+        >
+          {`${displayName} component details`}
+        </DialogDescription>
+        <DialogContent
+          className="max-w-2xl min-w-2xl overflow-hidden"
+          aria-label={`${displayName} component details`}
+        >
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 mr-5">
+              <span>{displayName}</span>
+              <ComponentFavoriteToggle component={component} />
+            </DialogTitle>
+          </DialogHeader>
+
+          <DialogContext.Provider value={dialogContextValue}>
+            <ComponentDetailsDialogContent
+              component={component}
+              displayName={displayName}
+              readOnly={readOnly}
+            />
+          </DialogContext.Provider>
+        </DialogContent>
+      </DialogPortal>
     </Dialog>
   );
 };
