@@ -31,8 +31,10 @@ export class GraphImplementation implements SerializableEntity {
   /**
    * Maps graph output names to task output sources.
    * Used to expose task outputs as graph-level outputs.
+   *
+   * Plain object - Valtio wraps it when accessed through the store's proxy.
    */
-  private readonly _outputValues: Map<string, OutputValueBinding> = new Map();
+  private readonly _outputValues: Record<string, OutputValueBinding> = {};
 
   constructor(private readonly context: Context) {
     this.tasks = new TasksCollection(this.context);
@@ -49,25 +51,25 @@ export class GraphImplementation implements SerializableEntity {
     taskId: string,
     taskOutputName: string,
   ): void {
-    this._outputValues.set(graphOutputName, {
+    this._outputValues[graphOutputName] = {
       outputName: graphOutputName,
       taskId,
       taskOutputName,
-    });
+    };
   }
 
   /**
    * Removes a graph output value binding.
    */
   removeOutputValue(graphOutputName: string): void {
-    this._outputValues.delete(graphOutputName);
+    delete this._outputValues[graphOutputName];
   }
 
   /**
    * Gets all output value bindings.
    */
   getOutputValues(): OutputValueBinding[] {
-    return Array.from(this._outputValues.values());
+    return Object.values(this._outputValues);
   }
 
   toJson(): GraphImplementationType {
@@ -77,9 +79,10 @@ export class GraphImplementation implements SerializableEntity {
       },
     };
 
-    if (this._outputValues.size > 0) {
+    const outputValueKeys = Object.keys(this._outputValues);
+    if (outputValueKeys.length > 0) {
       const outputValues: Record<string, TaskOutputArgument> = {};
-      for (const binding of this._outputValues.values()) {
+      for (const binding of Object.values(this._outputValues)) {
         outputValues[binding.outputName] = {
           taskOutput: {
             taskId: binding.taskId,

@@ -1,8 +1,12 @@
 import type { OutputSpec, TypeSpecType } from "@/utils/componentSpec";
 
 import { AnnotationsCollection } from "./annotations";
-import { type Context, EntityIndex } from "./context";
-import type { SerializableEntity } from "./types";
+import { BaseCollection, type Context } from "./context";
+import type {
+  BaseEntity,
+  RequiredProperties,
+  SerializableEntity,
+} from "./types";
 
 /**
  * Scalar interface for OutputEntity - represents the data used to populate an output.
@@ -20,11 +24,12 @@ export interface OutputScalarWithAnnotations extends OutputScalarInterface {
   annotations?: Record<string, unknown>;
 }
 
-export class OutputEntity implements SerializableEntity {
-  readonly $id: string;
+export class OutputEntity
+  implements BaseEntity<OutputScalarInterface>, SerializableEntity
+{
   readonly $indexed = ["name" as const];
 
-  name: string = "";
+  name: string;
 
   type?: TypeSpecType;
   description?: string;
@@ -37,9 +42,13 @@ export class OutputEntity implements SerializableEntity {
    */
   private _parentComponentName?: string;
 
-  constructor($id: string, parent: Context) {
-    this.$id = $id;
-    this.annotations = new AnnotationsCollection(parent);
+  constructor(
+    readonly $id: string,
+    private readonly context: Context,
+    required: RequiredProperties<OutputScalarInterface>,
+  ) {
+    this.name = required.name;
+    this.annotations = new AnnotationsCollection(this.context);
   }
 
   /**
@@ -93,48 +102,39 @@ export class OutputEntity implements SerializableEntity {
   }
 }
 
-export class OutputsCollection implements SerializableEntity {
-  private readonly index = new EntityIndex<OutputEntity>();
-  private readonly parentComponentName: string;
-  private readonly context: { $name: string; generateId(): string };
+/**
+ * Input type for populating an OutputEntity from raw spec data.
+ * Extends the scalar interface with annotations in their raw format.
+ */
+type OutputPopulateInput = OutputScalarInterface & {
+  annotations?: Record<string, unknown>;
+};
 
-  /**
-   * Direct access to entities for valtio reactivity.
-   * Access this property to ensure valtio tracks entity changes.
-   */
-  get entities() {
-    return this.index.entities;
-  }
+export class OutputsCollection
+  extends BaseCollection<OutputScalarInterface, OutputEntity>
+  implements SerializableEntity
+{
+  private readonly parentComponentName: string;
 
   constructor(parent: Context) {
+    super("outputs", parent);
     this.parentComponentName = parent.$name.split(".").pop() || "";
-    const $name = `${parent.$name}.outputs`;
-    let counter = 0;
-    this.context = {
-      $name,
-      generateId: () => `${$name}_${++counter}`,
-    };
   }
 
+  /**
+   * Override add to accept OutputScalarWithAnnotations and set parent component name.
+   */
   add(spec: OutputScalarWithAnnotations): OutputEntity {
-    const entity = new OutputEntity(
-      this.context.generateId(),
-      this.context as Context,
-    ).populate(spec);
+    const entity = super.add(spec as OutputScalarInterface);
+    // Set parent component name on the proxied entity returned from super.add()
     entity.setParentComponentName(this.parentComponentName);
-    this.index.add(entity);
     return entity;
   }
 
-  getAll(): OutputEntity[] {
-    return this.index.getAll();
-  }
-
-  findByIndex<K extends keyof OutputEntity>(
-    indexKey: K,
-    value: OutputEntity[K],
-  ): OutputEntity[] {
-    return this.index.findByIndex(indexKey, value);
+  createEntity(spec: OutputScalarInterface): OutputEntity {
+    return new OutputEntity(this.generateId(), this, spec).populate(
+      spec as OutputPopulateInput,
+    );
   }
 
   toJson(): OutputSpec[] {

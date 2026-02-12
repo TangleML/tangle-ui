@@ -3,12 +3,14 @@ import "@xyflow/react/dist/style.css";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { ReactFlowProvider } from "@xyflow/react";
 import { useEffect, useState } from "react";
+import { subscribe } from "valtio";
 
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { InlineStack } from "@/components/ui/layout";
 import { YamlLoader } from "@/providers/ComponentSpec/yamlLoader";
 
 import { ContextPanel } from "./components/ContextPanel";
+import { DebugPanel } from "./components/DebugPanel";
 import { FlowCanvas } from "./components/FlowCanvas";
 import { Sidebar } from "./components/Sidebar";
 import { editorStore, initializeStore } from "./store/editorStore";
@@ -43,26 +45,37 @@ const PipelineEditor = withSuspenseWrapper(() => {
   const spec = useLoadSpec();
 
   // Initialize the valtio store with the loaded spec
-  // Entities are already proxied when added to collections, no need to wrap again
+  // The spec is wrapped in proxy() inside initializeStore for deep reactivity
   useEffect(() => {
     if (spec) {
       initializeStore(spec);
-    }
 
-    return () => {
-      // Clear store on unmount
-      editorStore.spec = null;
-      editorStore.selectedNodeId = null;
-      editorStore.selectedNodeType = null;
-    };
+      // Subscribe to the proxied spec AFTER initializeStore has wrapped it
+      // editorStore.spec is now the proxied version
+      const unsubscribe = subscribe(editorStore.spec!, (ops) => {
+        console.log(`%c Spec changed`, "color: orange; font-weight: bold;", ops);
+      });
+
+      return () => {
+        unsubscribe();
+        // Clear store on unmount
+        editorStore.spec = null;
+        editorStore.selectedNodeId = null;
+        editorStore.selectedNodeType = null;
+      };
+    }
   }, [spec]);
 
+
   return (
-    <InlineStack fill className="h-full">
-      <Sidebar />
-      <FlowCanvas className="flex-1" />
-      <ContextPanel />
-    </InlineStack>
+    <>
+      <DebugPanel />
+      <InlineStack fill className="h-full">
+        <Sidebar />
+        <FlowCanvas className="flex-1" />
+        <ContextPanel />
+      </InlineStack>
+    </>
   );
 });
 
