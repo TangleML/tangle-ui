@@ -52,6 +52,8 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/components/shared/ReactFlow/FlowCanvas/FlexNode",
   "src/components/shared/ReactFlow/FlowCanvas/TaskNode/ArgumentsEditor/DynamicDataDropdown.tsx",
 
+  "src/components/Factory",
+
   // 11-20 useCallback/useMemo
   // "src/components/ui",                         // 12
   // "src/components/PipelineRun",                // 14
