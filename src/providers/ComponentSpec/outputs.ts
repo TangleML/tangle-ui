@@ -1,3 +1,5 @@
+import { proxy } from "valtio";
+
 import type { OutputSpec, TypeSpecType } from "@/utils/componentSpec";
 
 import { AnnotationsCollection } from "./annotations";
@@ -48,7 +50,8 @@ export class OutputEntity
     required: RequiredProperties<OutputScalarInterface>,
   ) {
     this.name = required.name;
-    this.annotations = new AnnotationsCollection(this.context);
+    // Wrap collection with proxy() to ensure Valtio tracks mutations
+    this.annotations = proxy(new AnnotationsCollection(this.context));
   }
 
   /**

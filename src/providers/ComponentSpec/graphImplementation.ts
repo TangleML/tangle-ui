@@ -1,3 +1,5 @@
+import { proxy } from "valtio";
+
 import type {
   ArgumentType,
   ComponentReference,
@@ -37,7 +39,8 @@ export class GraphImplementation implements SerializableEntity {
   private readonly _outputValues: Record<string, OutputValueBinding> = {};
 
   constructor(private readonly context: Context) {
-    this.tasks = new TasksCollection(this.context);
+    // Wrap collection with proxy() to ensure Valtio tracks mutations
+    this.tasks = proxy(new TasksCollection(this.context));
   }
 
   /**
@@ -132,8 +135,9 @@ export class TaskEntity
     this.name = required.name;
     this.componentRef = required.componentRef;
 
-    this.annotations = new AnnotationsCollection(this.context);
-    this.arguments = new ArgumentsCollection(this.context);
+    // Wrap collections with proxy() to ensure Valtio tracks mutations
+    this.annotations = proxy(new AnnotationsCollection(this.context));
+    this.arguments = proxy(new ArgumentsCollection(this.context));
   }
 
   populate(input: TaskPopulateInput) {

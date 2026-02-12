@@ -29,13 +29,9 @@ export function TaskNode({ id, data, selected }: TaskNodeProps) {
   const { entityId } = data;
 
   // Access the store directly to get the task entity
-  // This ensures valtio reactivity works - when task properties change,
-  // this component re-renders
+  // Valtio tracks mutations automatically since entities are wrapped with proxy()
   const snapshot = useSnapshot(editorStore);
   const spec = snapshot.spec;
-
-  // Access version to subscribe to spec mutations
-  void snapshot.version;
 
   // Find the task entity by its stable $id
   const task =

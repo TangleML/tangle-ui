@@ -1,3 +1,5 @@
+import { proxy } from "valtio";
+
 import type { InputSpec, TypeSpecType } from "@/utils/componentSpec";
 
 import { AnnotationsCollection } from "./annotations";
@@ -54,7 +56,8 @@ export class InputEntity
     required: RequiredProperties<InputScalarInterface>,
   ) {
     this.name = required.name;
-    this.annotations = new AnnotationsCollection(this.context);
+    // Wrap collection with proxy() to ensure Valtio tracks mutations
+    this.annotations = proxy(new AnnotationsCollection(this.context));
   }
 
   populate(spec: InputScalarWithAnnotations) {
