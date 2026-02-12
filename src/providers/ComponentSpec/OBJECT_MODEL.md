@@ -21,9 +21,9 @@ Every domain object is an **Entity** implementing `BaseEntity<TScalar>`:
 
 ```typescript
 type BaseEntity<TScalar> = {
-  readonly $id: string;           // Unique identifier
-  readonly $indexed: (keyof TScalar)[];  // Fields to index for fast lookup
-  populate(scalar: TScalar): this;       // Hydrate with data
+  readonly $id: string; // Unique identifier
+  readonly $indexed: (keyof TScalar)[]; // Fields to index for fast lookup
+  populate(scalar: TScalar): this; // Hydrate with data
 };
 ```
 
@@ -41,6 +41,7 @@ interface SerializableEntity {
 - **Entity**: Class instance with identity, behavior, and relationships (e.g., `InputEntity`)
 
 This separation enables:
+
 1. Loading YAML → scalars → entities via `populate()`
 2. Saving entities → JSON via `toJson()` → YAML
 
@@ -50,8 +51,8 @@ Every entity type has a corresponding **Collection** class extending `BaseCollec
 
 ```typescript
 abstract class BaseCollection<TScalar, TEntity> {
-  add(spec: TScalar): TEntity;              // Create and register entity
-  abstract createEntity(spec: TScalar): TEntity;  // Factory method
+  add(spec: TScalar): TEntity; // Create and register entity
+  abstract createEntity(spec: TScalar): TEntity; // Factory method
   getAll(): TEntity[];
   findById(id: EntityId): TEntity | undefined;
   findByIndex<K>(index: K, value: TEntity[K]): TEntity[];
@@ -102,17 +103,17 @@ RootContext
 
 ## Key Classes
 
-| Class | Purpose | Location |
-|-------|---------|----------|
-| `RootContext` | Top-level context for ID generation | `context.ts` |
-| `ComponentSpecEntity` | Main component representation | `componentSpec.ts` |
-| `InputEntity` / `InputsCollection` | Component inputs | `inputs.ts` |
-| `OutputEntity` / `OutputsCollection` | Component outputs | `outputs.ts` |
-| `GraphImplementation` | Graph-based implementation | `graphImplementation.ts` |
-| `TaskEntity` / `TasksCollection` | Tasks within a graph | `graphImplementation.ts` |
-| `ArgumentEntity` / `ArgumentsCollection` | Task argument bindings | `graphImplementation.ts` |
-| `AnnotationEntity` / `AnnotationsCollection` | Key-value annotations | `annotations.ts` |
-| `YamlLoader` | Loads YAML into object model | `yamlLoader.ts` |
+| Class                                        | Purpose                             | Location                 |
+| -------------------------------------------- | ----------------------------------- | ------------------------ |
+| `RootContext`                                | Top-level context for ID generation | `context.ts`             |
+| `ComponentSpecEntity`                        | Main component representation       | `componentSpec.ts`       |
+| `InputEntity` / `InputsCollection`           | Component inputs                    | `inputs.ts`              |
+| `OutputEntity` / `OutputsCollection`         | Component outputs                   | `outputs.ts`             |
+| `GraphImplementation`                        | Graph-based implementation          | `graphImplementation.ts` |
+| `TaskEntity` / `TasksCollection`             | Tasks within a graph                | `graphImplementation.ts` |
+| `ArgumentEntity` / `ArgumentsCollection`     | Task argument bindings              | `graphImplementation.ts` |
+| `AnnotationEntity` / `AnnotationsCollection` | Key-value annotations               | `annotations.ts`         |
+| `YamlLoader`                                 | Loads YAML into object model        | `yamlLoader.ts`          |
 
 ---
 
@@ -123,19 +124,20 @@ RootContext
 ```typescript
 class ArgumentEntity {
   name: string;
-  
+
   // Connection type
   private _type: "graphInput" | "taskOutput" | "literal";
-  
+
   // Connect to a source
   connectTo(source: InputEntity | OutputEntity): void;
-  
+
   // Or set a literal value
   set value(value: ScalarValue);
 }
 ```
 
 **Types:**
+
 - `graphInput`: Argument bound to a graph-level input
 - `taskOutput`: Argument bound to another task's output
 - `literal`: Static value
@@ -169,6 +171,7 @@ The `IndexByKey` class maintains a `Map<fieldName, Map<fieldValue, Set<entityId>
 To add a new entity type:
 
 1. **Define the scalar interface:**
+
 ```typescript
 interface MyScalarInterface {
   name: string;
@@ -177,6 +180,7 @@ interface MyScalarInterface {
 ```
 
 2. **Create the entity class:**
+
 ```typescript
 class MyEntity implements BaseEntity<MyScalarInterface>, SerializableEntity {
   readonly $indexed = ["name" as const];
@@ -196,6 +200,7 @@ class MyEntity implements BaseEntity<MyScalarInterface>, SerializableEntity {
 ```
 
 3. **Create the collection class:**
+
 ```typescript
 class MyCollection extends BaseCollection<MyScalarInterface, MyEntity> {
   constructor(parent: Context) {
@@ -220,6 +225,7 @@ const componentSpec = await loader.loadFromText(yamlString);
 ```
 
 Key loading steps:
+
 1. Parse YAML to raw spec object
 2. Create `ComponentSpecEntity` with `RootContext`
 3. Populate inputs and outputs
@@ -247,11 +253,14 @@ const json = componentSpec.toJson();
 ## Important Notes
 
 ### Mutation Model
+
 Entities are **mutable**. After creation, fields can be modified directly. However:
+
 - Index updates are NOT automatic — if you change an indexed field after creation, the index may become stale
 - For React integration, trigger re-renders manually after mutations
 
 ### Nested Components
+
 When a graph task references a component, `YamlLoader` recursively creates a nested `ComponentSpecEntity`:
 
 ```typescript
@@ -261,7 +270,8 @@ await this.load(hydratedComponentRef.spec, taskId, rootSpecEntity);
 This creates the full component tree in memory.
 
 ### ID Format
+
 IDs follow the pattern: `{contextPath}_{counter}`
+
 - Example: `root.MyPipeline.tasks_1`
 - Useful for debugging and tracing entity origins
-

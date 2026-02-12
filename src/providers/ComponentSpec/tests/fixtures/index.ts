@@ -306,4 +306,3 @@ export const expectedFullPipeline: ComponentSpec = {
     },
   } as GraphImplementation,
 };
-

@@ -17,10 +17,17 @@ export interface ValidationResult {
   errors?: string[];
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type JsonCompatible = Record<string, any> | any[] | string | number | boolean | null;
+ 
+type JsonCompatible =
+  | Record<string, any>
+  | any[]
+  | string
+  | number
+  | boolean
+  | null;
 
-let cachedValidator: ((value: JsonCompatible) => ValidationResult) | null = null;
+let cachedValidator: ((value: JsonCompatible) => ValidationResult) | null =
+  null;
 
 /**
  * Validates a ComponentSpec JSON object against the official schema.
@@ -100,4 +107,3 @@ function extractKeyword(keywordUrl: string): string {
   const parts = keywordUrl.split("/");
   return parts[parts.length - 1] || "unknown";
 }
-

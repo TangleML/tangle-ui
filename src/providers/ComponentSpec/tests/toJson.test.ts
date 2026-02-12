@@ -784,4 +784,3 @@ describe("ComponentSpec Object Model toJson()", () => {
     });
   });
 });
-

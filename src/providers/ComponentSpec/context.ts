@@ -1,3 +1,5 @@
+import { proxy } from "valtio";
+
 import type { BaseEntity } from "./types";
 
 export type EntityId = string;
@@ -28,44 +30,45 @@ export class AutoincrementIdGenerator implements IdGenerator {
 }
 
 class IndexByKey {
-  private readonly fieldValueToEntityId: Map<
+  /**
+   * Index structure using plain objects for valtio compatibility.
+   * Structure: { [fieldName]: { [fieldValue]: { [entityId]: true } } }
+   */
+  private readonly fieldValueToEntityId: Record<
     string | number | symbol,
-    Map<unknown, Set<EntityId>>
-  > = new Map();
+    Record<string, Record<EntityId, boolean>>
+  > = {};
 
   add<TEntity extends BaseEntity<any>>(entity: TEntity) {
     for (const index of entity.$indexed) {
-      const fieldValue = entity[index];
-      if (!this.fieldValueToEntityId.has(index)) {
-        this.fieldValueToEntityId.set(
-          index,
-          new Map([[fieldValue, new Set([entity.$id])]]),
-        );
-        continue;
+      const fieldValue = String(entity[index]);
+
+      if (!this.fieldValueToEntityId[index]) {
+        this.fieldValueToEntityId[index] = {};
       }
 
-      const valueToEntityId = this.fieldValueToEntityId.get(index)!;
+      const valueToEntityId = this.fieldValueToEntityId[index];
 
-      if (!valueToEntityId.has(fieldValue)) {
-        valueToEntityId.set(fieldValue, new Set([entity.$id]));
-        continue;
+      if (!valueToEntityId[fieldValue]) {
+        valueToEntityId[fieldValue] = {};
       }
 
-      valueToEntityId.get(fieldValue)!.add(entity.$id);
+      valueToEntityId[fieldValue][entity.$id] = true;
     }
   }
 
   remove<TEntity extends BaseEntity<any>>(entity: TEntity) {
     for (const index of entity.$indexed) {
-      const valueToEntityId = this.fieldValueToEntityId.get(index);
+      const valueToEntityId = this.fieldValueToEntityId[index];
       if (!valueToEntityId) {
         continue;
       }
-      const entityIds = valueToEntityId.get(entity[index]);
+      const fieldValue = String(entity[index]);
+      const entityIds = valueToEntityId[fieldValue];
       if (!entityIds) {
         continue;
       }
-      entityIds.delete(entity.$id);
+      delete entityIds[entity.$id];
     }
   }
 
@@ -73,34 +76,40 @@ class IndexByKey {
     searchTerm: TKey,
     value: TEntity[TKey],
   ): EntityId[] {
-    const valueToEntityId = this.fieldValueToEntityId.get(searchTerm);
+    const valueToEntityId = this.fieldValueToEntityId[searchTerm as string];
     if (!valueToEntityId) {
       return [];
     }
 
-    const entityIds = valueToEntityId.get(value);
+    const entityIds = valueToEntityId[String(value)];
     if (!entityIds) {
       return [];
     }
-    return Array.from(entityIds);
+    return Object.keys(entityIds);
   }
 }
 
 export class EntityIndex<TEntity extends BaseEntity<any>> {
-  private readonly entities: Map<EntityId, TEntity> = new Map();
+  /**
+   * Plain object for entity storage - valtio tracks property access natively.
+   * Keys are entity IDs, values are entities.
+   */
+  readonly entities: Record<EntityId, TEntity> = {};
   private readonly indexByKey = new IndexByKey();
 
   getAll(): TEntity[] {
-    return Array.from(this.entities.values());
+    return Object.values(this.entities);
   }
 
   has(id: EntityId): boolean {
-    return this.entities.has(id);
+    return id in this.entities;
   }
 
   add(entity: TEntity) {
-    this.entities.set(entity.$id, entity);
-    this.indexByKey.add(entity);
+    // Wrap entity in valtio proxy to make mutations reactive
+    const proxiedEntity = proxy(entity) as TEntity;
+    this.entities[proxiedEntity.$id] = proxiedEntity;
+    this.indexByKey.add(proxiedEntity);
   }
 
   remove(entity: TEntity) {
@@ -108,19 +117,19 @@ export class EntityIndex<TEntity extends BaseEntity<any>> {
   }
 
   removeById(id: EntityId) {
-    const entity = this.entities.get(id);
+    const entity = this.entities[id];
     if (!entity) {
       return false;
     }
 
     this.indexByKey.remove(entity);
-    this.entities.delete(id);
+    delete this.entities[id];
 
     return true;
   }
 
   findById(id: EntityId): TEntity | undefined {
-    return this.entities.get(id);
+    return this.entities[id];
   }
 
   findByIndex<TKey extends keyof TEntity>(
@@ -128,14 +137,14 @@ export class EntityIndex<TEntity extends BaseEntity<any>> {
     value: TEntity[TKey],
   ): TEntity[] {
     const ids = this.indexByKey.findByIndex(index, value);
-    return ids.map((id) => this.entities.get(id)!);
+    return ids.map((id) => this.entities[id]).filter(Boolean) as TEntity[];
   }
 }
 
 export abstract class BaseCollection<
-    TScalar,
-    TEntity extends BaseEntity<TScalar>,
-  >
+  TScalar,
+  TEntity extends BaseEntity<TScalar>,
+>
   extends EntityIndex<TEntity>
   implements NestedContext
 {
@@ -152,7 +161,8 @@ export abstract class BaseCollection<
 
     super.add(entity);
 
-    return entity;
+    // Return the proxied entity from the store
+    return this.findById(entity.$id)!;
   }
 
   abstract createEntity(spec: TScalar): TEntity;
