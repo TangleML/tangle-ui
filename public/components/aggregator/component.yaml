@@ -1,15 +1,15 @@
 name: Aggregate Inputs
 description: |
   Aggregates multiple inputs into a single output.
-  Supports dictionary, array, and CSV output formats.
+  Supports JsonObject, JsonArray, and CSV output formats.
   Connect upstream components to the input slots and choose an output format.
 metadata:
   annotations:
     author: Hargun Singh, Morgan Wowk
     # --- Aggregator-specific annotations (read by frontend) ---
     aggregator: "true"
-    aggregator_default_output_type: "object"
-    aggregator_supported_output_types: "object,array,csv"
+    aggregator_default_output_type: "JsonObject"
+    aggregator_supported_output_types: "JsonObject,JsonArray,CSV"
     # --- Dynamic input mask ---
     # The frontend reads this pattern and generates input_1, input_2, ... input_N
     # as the user adds inputs. No hardcoded limit.
@@ -22,8 +22,8 @@ metadata:
 inputs:
 - name: output_type
   type: String
-  description: "Output format: object (JSON object keyed by input name), array (JSON array of values), or csv (union of CSV inputs with matching columns)."
-  default: "object"
+  description: "Output format: JsonObject (JSON object keyed by input name), JsonArray (JSON array of values), or CSV (union of CSV inputs with matching columns)."
+  default: "JsonObject"
   optional: true
 outputs:
 - name: aggregated_output
@@ -55,7 +55,7 @@ implementation:
 
       def aggregate(
           aggregated_output_path: str,
-          output_type: str = "object",
+          output_type: str = "JsonObject",
           **input_paths: str,
       ) -> None:
           # Collect all provided inputs
@@ -68,13 +68,13 @@ implementation:
           if not inputs:
               raise ValueError("No inputs provided. At least one input must be connected.")
 
-          if output_type == "object":
+          if output_type == "JsonObject":
               result = json.dumps(inputs, indent=2)
 
-          elif output_type == "array":
+          elif output_type == "JsonArray":
               result = json.dumps(list(inputs.values()), indent=2)
 
-          elif output_type == "csv":
+          elif output_type == "CSV":
               all_rows = []
               header = None
 
@@ -108,7 +108,7 @@ implementation:
 
           else:
               raise ValueError(
-                  f"Unknown output_type: '{output_type}'. Must be 'object', 'array', or 'csv'."
+                  f"Unknown output_type: '{output_type}'. Must be 'JsonObject', 'JsonArray', or 'CSV'."
               )
 
           os.makedirs(os.path.dirname(aggregated_output_path), exist_ok=True)
@@ -122,7 +122,7 @@ implementation:
 
       _args = sys.argv[1:]
       _output_path = None
-      _output_type = "object"
+      _output_type = "JsonObject"
       _input_paths = {}
 
       _i = 0
