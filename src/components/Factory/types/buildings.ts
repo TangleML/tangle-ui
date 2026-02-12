@@ -1,3 +1,17 @@
+import type { Position } from "@xyflow/react";
+
+import type { ResourceType } from "./resources";
+
+export type BuildingInput = {
+  resource: ResourceType;
+  position: Position;
+};
+
+export type BuildingOutput = {
+  resource: ResourceType;
+  position: Position;
+};
+
 export type BuildingType =
   | "woodcutter"
   | "quarry"
@@ -12,6 +26,8 @@ export interface Building {
   description: string;
   cost?: number;
   color: string;
+  inputs?: BuildingInput[];
+  outputs?: BuildingOutput[];
 }
 
 export function isBuildingData(data: any): data is Building {
