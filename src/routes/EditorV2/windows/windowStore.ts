@@ -124,6 +124,7 @@ export function maximizeWindow(id: string): void {
   window.previousPosition = { ...window.position };
   window.previousSize = { ...window.size };
   window.state = "maximized";
+  bringToFront(id);
 }
 
 /** Hide a window (move to task panel) */
