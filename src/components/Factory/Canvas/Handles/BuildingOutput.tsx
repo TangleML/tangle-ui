@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 
 import { RESOURCE_COLORS } from "../../data/resources";
 import {
-  type Building,
+  type BuildingInstance,
   type BuildingOutput as BuildingOutputConfig,
 } from "../../types/buildings";
 import { isLightColor } from "../../utils/color";
@@ -25,7 +25,7 @@ const BuildingOutput = ({
   groupIndex,
   totalInGroup,
 }: {
-  building: Building;
+  building: BuildingInstance;
   output: BuildingOutputConfig;
   selected?: boolean;
   index: number;
@@ -33,6 +33,10 @@ const BuildingOutput = ({
   totalInGroup: number;
 }) => {
   const { resource, position } = output;
+
+  if (!position) {
+    return null;
+  }
 
   return (
     <Handle

@@ -1,15 +1,16 @@
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 
-import { RESOURCES } from "../../data/resources";
+import { isGlobalResource, RESOURCES } from "../../data/resources";
 import { useStatistics } from "../../providers/StatisticProvider";
-import type { Building, Stockpile } from "../../types/buildings";
+import type { BuildingInstance, Stockpile } from "../../types/buildings";
+import type { ResourceType } from "../../types/resources";
 import type { StockpileChange } from "../../types/statistics";
 
 interface StockpileSectionProps {
   nodeId: string;
   stockpile: Stockpile[];
-  building: Building;
+  building: BuildingInstance;
 }
 
 export const StockpileSection = ({
@@ -20,8 +21,8 @@ export const StockpileSection = ({
   const { lastDayStats } = useStatistics();
   const statistics = lastDayStats?.buildings.get(nodeId);
 
-  const hasGlobalOutputs = building.productionMethod?.outputs.some(
-    (output) => RESOURCES[output.resource]?.global,
+  const hasGlobalOutputs = building.productionMethod?.outputs.some((output) =>
+    isGlobalResource(output.resource),
   );
 
   if (stockpile.length === 0) {
@@ -87,7 +88,10 @@ export const StockpileSection = ({
                     Total: {stock.amount} / {stock.maxAmount}
                   </Text>
                   <Text size="xs" tone="subdued">
-                    • Expected Value: {RESOURCES.money.icon} {totalValue}
+                    •
+                  </Text>
+                  <Text size="xs" tone="subdued">
+                    Expected Value: {RESOURCES.money.icon} {totalValue}
                   </Text>
                 </InlineStack>
               </BlockStack>
@@ -122,8 +126,9 @@ export const StockpileSection = ({
       {hasGlobalOutputs && statistics?.produced && (
         <BlockStack gap="1">
           {Object.entries(statistics.produced).map(([resource, amount]) => (
-            <Text key={resource} size="sm" className="text-green-600">
-              Last Day: +{amount} {RESOURCES[resource]?.icon}
+            <Text key={resource} size="xs" className="text-green-600">
+              Previous Day: +{amount}{" "}
+              {RESOURCES[resource as ResourceType]?.icon}
             </Text>
           ))}
         </BlockStack>
