@@ -179,7 +179,7 @@ const ComponentMarkup = ({
   return (
     <li
       className={cn(
-        "pl-2 py-1.5 w-full",
+        "w-full pl-2 py-1.5",
         error
           ? "cursor-not-allowed opacity-60"
           : "cursor-grab hover:bg-gray-100 active:bg-gray-200",
