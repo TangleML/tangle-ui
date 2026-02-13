@@ -15,7 +15,9 @@ import { useEffect, useRef, useState } from "react";
 
 import { BlockStack } from "@/components/ui/layout";
 
+import type { GlobalResources } from "../data/resources";
 import { setup } from "../data/setup";
+import { createBuildingNode } from "../objects/buildings/createBuildingNode";
 import { useGlobalResources } from "../providers/GlobalResourcesProvider";
 import { processDay } from "../simulation/processDay";
 import type { DayStatistics } from "../types/statistics";
@@ -36,7 +38,7 @@ const edgeTypes: Record<string, ComponentType<any>> = {
 
 interface GameCanvasProps extends ReactFlowProps {
   onDayAdvance?: (
-    globalOutputs: Record<string, number>,
+    globalResources: GlobalResources,
     statistics: DayStatistics,
   ) => void;
   triggerAdvance?: number;
@@ -59,7 +61,13 @@ const GameCanvas = ({
   const prevTriggerRef = useRef(0);
 
   useEffect(() => {
-    setNodes(setup.buildings);
+    const newNodes = setup.buildings?.map((building) =>
+      createBuildingNode(building.type, building.position),
+    );
+
+    if (newNodes) {
+      setNodes(newNodes);
+    }
   }, [setNodes]);
 
   // Process day advancement
@@ -69,7 +77,7 @@ const GameCanvas = ({
 
     prevTriggerRef.current = triggerAdvance;
 
-    const { updatedNodes, globalOutputs, statistics } = processDay(
+    const { updatedNodes, statistics } = processDay(
       nodes,
       edges,
       currentDay,
@@ -77,8 +85,8 @@ const GameCanvas = ({
     );
 
     setNodes(updatedNodes);
-    updateResources(globalOutputs);
-    onDayAdvance?.(statistics);
+    updateResources(statistics.global.earned);
+    onDayAdvance?.(statistics.global.resources, statistics);
   }, [
     triggerAdvance,
     currentDay,

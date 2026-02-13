@@ -1,7 +1,7 @@
 import type { Edge, Node } from "@xyflow/react";
 import { useState } from "react";
 
-import { isBuildingData, type Stockpile } from "../types/buildings";
+import { isBuildingInstance, type Stockpile } from "../types/buildings";
 import type { GameState } from "../types/game";
 
 export const useGameState = (initialNodes: Node[], initialEdges: Edge[]) => {
@@ -27,7 +27,7 @@ export const useGameState = (initialNodes: Node[], initialEdges: Edge[]) => {
       const nodes = prev.nodes.map((node) => {
         if (node.id !== nodeId) return node;
 
-        if (!isBuildingData(node.data)) {
+        if (!isBuildingInstance(node.data)) {
           console.error("Node data is not a valid building:", node.data);
           return node;
         }
