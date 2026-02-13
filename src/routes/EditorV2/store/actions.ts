@@ -477,6 +477,36 @@ export function renameInput(entityId: string, newName: string) {
 }
 
 /**
+ * Rename the pipeline.
+ */
+export function renamePipeline(newName: string) {
+  const { spec } = editorStore;
+
+  if (!spec) {
+    console.error("Cannot rename: no spec loaded");
+    return false;
+  }
+
+  spec.name = newName;
+  return true;
+}
+
+/**
+ * Update the pipeline description.
+ */
+export function updatePipelineDescription(description: string | undefined) {
+  const { spec } = editorStore;
+
+  if (!spec) {
+    console.error("Cannot update description: no spec loaded");
+    return false;
+  }
+
+  spec.description = description;
+  return true;
+}
+
+/**
  * Rename an output by its entity $id.
  */
 export function renameOutput(entityId: string, newName: string) {

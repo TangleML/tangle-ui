@@ -95,11 +95,7 @@ function TaskDetails({ entityId }: TaskDetailsProps) {
 
   return (
     <BlockStack>
-      <PanelHeader
-        icon="Workflow"
-        iconClassName="text-blue-500"
-        title="Task Node"
-      />
+     
 
       <BlockStack gap="4" className="p-3">
         <BlockStack gap="2">
