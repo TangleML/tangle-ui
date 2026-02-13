@@ -52,7 +52,7 @@ const BuildingItem = ({ building }: BuildingItemProps) => {
             {building.description}
           </span>
           <span className="text-[10px] text-amber-600 font-semibold">
-            {RESOURCES.coins.icon} {building.cost}
+            {RESOURCES.money.icon} {building.cost}
           </span>
         </div>
       </InlineStack>

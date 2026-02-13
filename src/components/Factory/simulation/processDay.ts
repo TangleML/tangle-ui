@@ -1,26 +1,40 @@
 import type { Edge, Node } from "@xyflow/react";
 
+import { RESOURCES } from "../data/resources";
 import { getBuildingData } from "../types/buildings";
+import type {
+  BuildingStatistics,
+  DayStatistics,
+  EdgeStatistics,
+} from "../types/statistics";
 import { advanceProduction } from "./helpers/advanceProduction";
 import { processGlobalOutputBuilding } from "./helpers/processGlobalOutputBuilding";
 import { transferResources } from "./helpers/transferResources";
 
 interface ProcessDayResult {
   updatedNodes: Node[];
-  globalOutputs: {
-    coins: number;
-    knowledge: number;
-  };
+  globalOutputs: Record<string, number>;
+  statistics: DayStatistics;
 }
 
-// Breadth-first processing of the graph, starting from sink nodes (global output buildings) and moving upstream
-// Consider switching to Topological Sort
-export const processDay = (nodes: Node[], edges: Edge[]): ProcessDayResult => {
+// Removed currentMoney and currentKnowledge parameters - now dynamic
+export const processDay = (
+  nodes: Node[],
+  edges: Edge[],
+  currentDay: number,
+  currentResources: Record<string, number>,
+): ProcessDayResult => {
   const updatedNodes = nodes.map((node) => ({
     ...node,
     data: { ...node.data },
   }));
-  const globalOutputs = { coins: 0, knowledge: 0 };
+
+  // Initialize global outputs dynamically
+  const globalOutputs: Record<string, number> = {};
+
+  // Initialize statistics tracking
+  const buildingStats = new Map<string, BuildingStatistics>();
+  const edgeStats = new Map<string, EdgeStatistics>();
 
   // Build adjacency maps
   const upstreamMap = new Map<string, string[]>();
@@ -40,10 +54,12 @@ export const processDay = (nodes: Node[], edges: Edge[]): ProcessDayResult => {
     downstreamMap.get(edge.source)!.push(edge.target);
   });
 
-  // Find sink nodes (global output buildings)
+  // Find sink nodes (buildings that produce global outputs)
   const sinkNodes = updatedNodes.filter((node) => {
     const building = getBuildingData(node);
-    return building?.productionMethod?.globalOutputs !== undefined;
+    return building?.productionMethod?.outputs.some(
+      (output) => RESOURCES[output.resource]?.global,
+    );
   });
 
   // Track visited nodes for BFS
@@ -51,7 +67,7 @@ export const processDay = (nodes: Node[], edges: Edge[]): ProcessDayResult => {
 
   // STEP 1: Process global output buildings (sinks)
   sinkNodes.forEach((node) => {
-    processGlobalOutputBuilding(node, globalOutputs);
+    processGlobalOutputBuilding(node, globalOutputs, buildingStats);
     visited.add(node.id);
   });
 
@@ -76,7 +92,14 @@ export const processDay = (nodes: Node[], edges: Edge[]): ProcessDayResult => {
   processingOrder.forEach((nodeId) => {
     const downstreamNodes = downstreamMap.get(nodeId) || [];
     downstreamNodes.forEach((downstreamId) => {
-      transferResources(nodeId, downstreamId, updatedNodes, edges);
+      transferResources(
+        nodeId,
+        downstreamId,
+        updatedNodes,
+        edges,
+        buildingStats,
+        edgeStats,
+      );
     });
   });
 
@@ -84,7 +107,7 @@ export const processDay = (nodes: Node[], edges: Edge[]): ProcessDayResult => {
   processingOrder.forEach((nodeId) => {
     const node = updatedNodes.find((n) => n.id === nodeId);
     if (node) {
-      advanceProduction(node);
+      advanceProduction(node, buildingStats);
     }
   });
 
@@ -94,14 +117,41 @@ export const processDay = (nodes: Node[], edges: Edge[]): ProcessDayResult => {
       // Transfer to any downstream connections
       const downstreamNodes = downstreamMap.get(node.id) || [];
       downstreamNodes.forEach((downstreamId) => {
-        transferResources(node.id, downstreamId, updatedNodes, edges);
+        transferResources(
+          node.id,
+          downstreamId,
+          updatedNodes,
+          edges,
+          buildingStats,
+          edgeStats,
+        );
       });
 
       // Advance production
-      advanceProduction(node);
+      advanceProduction(node, buildingStats);
       visited.add(node.id);
     }
   });
 
-  return { updatedNodes, globalOutputs };
+  // Build final statistics object with dynamic resources
+  const updatedResources: Record<string, number> = { ...currentResources };
+  const earned: Record<string, number> = {};
+
+  // Update all global resources that were produced
+  Object.entries(globalOutputs).forEach(([resource, amount]) => {
+    updatedResources[resource] = (updatedResources[resource] || 0) + amount;
+    earned[resource] = amount;
+  });
+
+  const statistics: DayStatistics = {
+    global: {
+      day: currentDay,
+      resources: updatedResources,
+      earned,
+    },
+    buildings: buildingStats,
+    edges: edgeStats,
+  };
+
+  return { updatedNodes, globalOutputs, statistics };
 };

@@ -22,10 +22,6 @@ export type ProductionMethod = {
     resource: ResourceType;
     amount: number;
   }>;
-  globalOutputs?: Array<{
-    resource: ResourceType;
-    amount: number;
-  }>;
   days: number;
 };
 
