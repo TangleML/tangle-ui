@@ -3,12 +3,13 @@ import {
   useReactFlow,
   useUpdateNodeInternals,
 } from "@xyflow/react";
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 
 import { cn } from "@/lib/utils";
 import { useContextPanel } from "@/providers/ContextPanelProvider";
 
 import BuildingContext from "../../Context/BuildingContext";
+import { RESOURCES } from "../../data/resources";
 import { isBuildingData } from "../../types/buildings";
 import { rotateBuilding } from "../../utils/rotation";
 import BuildingInput from "../Handles/BuildingInput";
@@ -50,7 +51,7 @@ const Building = ({ id, data, selected }: NodeProps) => {
 
       if (!isBuildingData(currentData)) return;
 
-      setContent(<BuildingContext building={currentData} />);
+      setContent(<BuildingContext building={currentData} nodeId={id} />);
       setContextPanelOpen(true);
     }
 
@@ -81,21 +82,8 @@ const Building = ({ id, data, selected }: NodeProps) => {
   const { icon, name, description, color, inputs = [], outputs = [] } = data;
 
   // Calculate position counts
-  const inputCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    inputs.forEach((input) => {
-      counts[input.position] = (counts[input.position] || 0) + 1;
-    });
-    return counts;
-  }, [inputs]);
-
-  const outputCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    outputs.forEach((output) => {
-      counts[output.position] = (counts[output.position] || 0) + 1;
-    });
-    return counts;
-  }, [outputs]);
+  const inputCounts = countBuildingIO(inputs);
+  const outputCounts = countBuildingIO(outputs);
 
   // Track index at each position
   const inputIndexAtPosition: Record<string, number> = {};
@@ -106,6 +94,11 @@ const Building = ({ id, data, selected }: NodeProps) => {
       className={cn("bg-white rounded-lg", selected && "ring-2 ring-selected")}
     >
       {inputs.map((input, globalIndex) => {
+        if (!input.position) return null;
+
+        const isGlobal = RESOURCES[input.resource]?.global;
+        if (isGlobal) return;
+
         const posIndex = inputIndexAtPosition[input.position] || 0;
         inputIndexAtPosition[input.position] = posIndex + 1;
 
@@ -135,6 +128,11 @@ const Building = ({ id, data, selected }: NodeProps) => {
       </div>
 
       {outputs.map((output, globalIndex) => {
+        if (!output.position) return null;
+
+        const isGlobal = RESOURCES[output.resource]?.global;
+        if (isGlobal) return;
+
         const posIndex = outputIndexAtPosition[output.position] || 0;
         outputIndexAtPosition[output.position] = posIndex + 1;
 
@@ -155,3 +153,13 @@ const Building = ({ id, data, selected }: NodeProps) => {
 };
 
 export default Building;
+
+function countBuildingIO(ios: (BuildingInput | BuildingOutput)[]) {
+  const counts: Record<string, number> = {};
+  ios.forEach((io) => {
+    if (!io.position) return;
+
+    counts[io.position] = (counts[io.position] || 0) + 1;
+  });
+  return counts;
+}
