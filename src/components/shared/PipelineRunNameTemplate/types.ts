@@ -10,7 +10,7 @@ export interface TaskSpecShape {
   annotations?: Record<string, unknown> | null;
 }
 
-export function buildTakSpecShape(
+export function buildTaskSpecShape(
   taskSpecOutput: TaskSpecOutput | undefined,
   componentSpec: ComponentSpec,
 ): TaskSpecShape | undefined {

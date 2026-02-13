@@ -1,5 +1,7 @@
 import type { XYPosition } from "@xyflow/react";
 
+import type { AnnotationConfig } from "@/types/annotations";
+
 import type { ComponentSpec } from "./componentSpec";
 
 export const DISPLAY_NAME_MAX_LENGTH = 100;
@@ -10,9 +12,25 @@ export const PIPELINE_CANONICAL_NAME_ANNOTATION = "canonical-pipeline-name";
 export const RUN_NAME_TEMPLATE_ANNOTATION = "run-name-template";
 export const EDITOR_POSITION_ANNOTATION = "editor.position";
 
-type Annotations = {
-  [k: string]: unknown;
-};
+export const DEFAULT_COMMON_ANNOTATIONS: AnnotationConfig[] = [
+  {
+    annotation: EDITOR_POSITION_ANNOTATION,
+    label: "Node position",
+    type: "json",
+  },
+  {
+    annotation: TASK_DISPLAY_NAME_ANNOTATION,
+    label: "Display Name",
+    type: "string",
+    max: DISPLAY_NAME_MAX_LENGTH,
+  },
+];
+
+type Annotations =
+  | {
+      [k: string]: unknown;
+    }
+  | undefined;
 
 /**
  * Gets the value of an annotation.
@@ -22,22 +40,26 @@ type Annotations = {
  * @returns
  */
 export function getAnnotationValue(
-  annotations: Annotations | undefined | null,
+  annotations: Annotations | null,
   key: string,
   defaultValue: string,
 ): string;
 export function getAnnotationValue(
-  annotations: Annotations | undefined | null,
+  annotations: Annotations | null,
   key: string,
   defaultValue?: undefined,
 ): string | undefined;
 export function getAnnotationValue(
-  annotations: Annotations | undefined | null,
+  annotations: Annotations | null,
   key: string,
   defaultValue?: string,
 ) {
+  if (!annotations) {
+    return defaultValue;
+  }
+
   return hasAnnotation(annotations, key)
-    ? String(annotations[key])
+    ? String(annotations?.[key])
     : defaultValue;
 }
 
@@ -49,7 +71,7 @@ export function getAnnotationValue(
  * @returns
  */
 function setAnnotation(
-  annotations: Annotations | undefined | null,
+  annotations: Annotations,
   key: string,
   value: string | undefined,
 ) {
@@ -66,7 +88,7 @@ function setAnnotation(
  * @returns boolean
  */
 function hasAnnotation(
-  annotations: Annotations | undefined | null,
+  annotations: Annotations,
   key: string,
 ): annotations is Annotations {
   if (!annotations) {

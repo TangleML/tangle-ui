@@ -17,7 +17,7 @@ import {
   useStoreApi,
   type XYPosition,
 } from "@xyflow/react";
-import type { ComponentType, DragEvent } from "react";
+import type { DragEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
@@ -55,47 +55,38 @@ import { getBulkUpdateConfirmationDetails } from "./ConfirmationDialogs/BulkUpda
 import { getDeleteConfirmationDetails } from "./ConfirmationDialogs/DeleteConfirmation";
 import { getReplaceConfirmationDetails } from "./ConfirmationDialogs/ReplaceConfirmation";
 import { ConnectionLine } from "./Edges/ConnectionLine";
-import SmoothEdge from "./Edges/SmoothEdge";
-import GhostNode from "./GhostNode/GhostNode";
 import type { GhostNodeData } from "./GhostNode/types";
 import {
   computeDropPositionFromRefs,
   createGhostEdge,
 } from "./GhostNode/utils";
-import IONode from "./IONode/IONode";
 import SelectionToolbar from "./SelectionToolbar";
 import { handleGroupNodes } from "./Subgraphs/create/handleGroupNodes";
 import { NewSubgraphDialog } from "./Subgraphs/create/NewSubgraphDialog";
 import { canGroupNodes } from "./Subgraphs/create/utils";
 import { SubgraphBreadcrumbs } from "./Subgraphs/view/SubgraphBreadcrumbs";
-import TaskNode from "./TaskNode/TaskNode";
-import type { NodesAndEdges } from "./types";
+import {
+  edgeTypes,
+  isTaskNodeType,
+  type NodesAndEdges,
+  nodeTypes,
+} from "./types";
 import addTask from "./utils/addTask";
 import { createConnectedIONode } from "./utils/createConnectedIONode";
 import { duplicateNodes } from "./utils/duplicateNodes";
 import { isPositionInNode } from "./utils/geometry";
+import { getNodeFromEvent } from "./utils/getNodeFromEvent";
 import { getPositionFromEvent } from "./utils/getPositionFromEvent";
-import { getTaskFromEvent } from "./utils/getTaskFromEvent";
 import { handleConnection } from "./utils/handleConnection";
 import { removeEdge } from "./utils/removeEdge";
 import { removeNode } from "./utils/removeNode";
 import { replaceTaskNode } from "./utils/replaceTaskNode";
 import { updateNodePositions } from "./utils/updateNodePosition";
 
-const nodeTypes: Record<string, ComponentType<any>> = {
-  task: TaskNode,
-  input: IONode,
-  output: IONode,
-  ghost: GhostNode,
-};
-
 const SELECTABLE_NODES = new Set(["task", "input", "output"]);
 const UPGRADEABLE_NODES = new Set(["task"]);
 const REPLACEABLE_NODES = new Set(["task"]);
-
-const edgeTypes: Record<string, ComponentType<any>> = {
-  customEdge: SmoothEdge,
-};
+const FAST_PLACE_NODE_TYPES = new Set<Node["type"]>(["task"]);
 
 const useScheduleExecutionOnceWhenConditionMet = (
   condition: boolean,
@@ -109,8 +100,6 @@ const useScheduleExecutionOnceWhenConditionMet = (
     }
   }, [condition, callback]);
 };
-
-const FAST_PLACE_NODE_TYPES = new Set<Node["type"]>(["task"]);
 
 const FlowCanvas = ({
   readOnly,
@@ -362,7 +351,11 @@ const FlowCanvas = ({
       currentSubgraphPath,
       notify,
     );
-    const newNodes = createNodesFromComponentSpec(subgraphSpec, nodeData);
+    const newNodes = createNodesFromComponentSpec(
+      subgraphSpec,
+      nodeData,
+      readOnly,
+    );
 
     const updatedNewNodes = newNodes.map((node) => ({
       ...node,
@@ -561,14 +554,19 @@ const FlowCanvas = ({
       return;
     }
 
-    const { taskSpec: droppedTask, taskType } = getTaskFromEvent(event);
+    const { spec: droppedTask, nodeType } = getNodeFromEvent(event);
 
-    if (!taskType) {
-      console.error("Dropped task type not identified.");
+    if (!nodeType) {
+      console.error("Dropped node type not identified.");
       return;
     }
 
-    if (!droppedTask && taskType === "task") {
+    if (!isTaskNodeType(nodeType)) {
+      console.error("Dropped node type is not supported:", nodeType);
+      return;
+    }
+
+    if (!droppedTask && nodeType === "task") {
       console.error("Unable to find dropped task.");
       return;
     }
@@ -626,7 +624,7 @@ const FlowCanvas = ({
       const position = getPositionFromEvent(event, reactFlowInstance);
 
       const { spec: newSubgraphSpec } = addTask(
-        taskType,
+        nodeType,
         droppedTask,
         position,
         currentSubgraphSpec,
