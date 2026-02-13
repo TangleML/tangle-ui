@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
+import { TOP_NAV_HEIGHT } from "@/utils/constants";
 
 import { closeWindow, restoreWindow, windowStore } from "./windowStore";
 
 /**
- * Fixed bottom panel that displays hidden windows.
+ * Fixed top panel that displays hidden windows (below the AppMenu).
  * Only renders when there are hidden windows.
  * Click on a window title restores it, click X closes it.
  */
@@ -26,7 +27,10 @@ export function TaskPanel() {
   }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 bg-gray-100 border-t border-gray-300 shadow-sm">
+    <div
+      className="fixed left-0 right-0 z-40 bg-gray-100 border-b border-gray-300 shadow-sm"
+      style={{ top: TOP_NAV_HEIGHT }}
+    >
       <InlineStack gap="1" className="px-2 py-1.5 overflow-x-auto">
         {hiddenWindows.map((window) => {
           const canClose = !window.disabledActions?.includes("close");
@@ -39,7 +43,7 @@ export function TaskPanel() {
             >
               <button
                 onClick={() => restoreWindow(window.id)}
-                className="flex items-center gap-1.5 min-w-0"
+                className="flex items-center gap-1.5 min-w-0 h-5"
               >
                 <Icon name="AppWindow" size="sm" className="text-gray-500 shrink-0" />
                 <Text
