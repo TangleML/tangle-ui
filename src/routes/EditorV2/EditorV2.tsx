@@ -139,6 +139,7 @@ const PipelineEditor = withSuspenseWrapper(() => {
         selectedNodeType,
         lastSelectionWasShiftClick,
         lastShiftClickEntityId,
+        multiSelection,
       } = editorStore;
 
       // Handle shift-click: create a pinned window for the task
@@ -157,7 +158,29 @@ const PipelineEditor = withSuspenseWrapper(() => {
         return;
       }
 
-      // Handle regular selection
+      // Handle multi-selection
+      if (multiSelection.length > 1) {
+        const existingWindow = getWindowById(CONTEXT_PANEL_WINDOW_ID);
+
+        if (existingWindow) {
+          // If window exists but is hidden, restore it
+          if (existingWindow.state === "hidden") {
+            restoreWindow(CONTEXT_PANEL_WINDOW_ID);
+          }
+          // Window exists and is visible - ContextPanelContent reads from store
+        } else {
+          // Open new properties window for multi-selection
+          openWindow(<ContextPanelContent />, {
+            id: CONTEXT_PANEL_WINDOW_ID,
+            title: "Properties",
+            position: { x: window.innerWidth - 340, y: 80 },
+            size: { width: 300, height: 400 },
+          });
+        }
+        return;
+      }
+
+      // Handle regular single selection
       if (selectedNodeId && selectedNodeType) {
         const existingWindow = getWindowById(CONTEXT_PANEL_WINDOW_ID);
 

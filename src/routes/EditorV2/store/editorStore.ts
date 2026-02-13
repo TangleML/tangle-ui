@@ -2,6 +2,13 @@ import { proxy } from "valtio";
 
 import type { ComponentSpecEntity } from "@/providers/ComponentSpec/componentSpec";
 
+/** Represents a selected node in multi-selection */
+export interface SelectedNode {
+  id: string;
+  type: "task" | "input" | "output";
+  position: { x: number; y: number };
+}
+
 export interface EditorStore {
   spec: ComponentSpecEntity | null;
   selectedNodeId: string | null;
@@ -10,6 +17,8 @@ export interface EditorStore {
   lastSelectionWasShiftClick: boolean;
   /** Entity ID from the last shift-click (for creating pinned window) */
   lastShiftClickEntityId: string | null;
+  /** Array of selected nodes for multi-selection */
+  multiSelection: SelectedNode[];
 }
 
 export const editorStore = proxy<EditorStore>({
@@ -18,6 +27,7 @@ export const editorStore = proxy<EditorStore>({
   selectedNodeType: null,
   lastSelectionWasShiftClick: false,
   lastShiftClickEntityId: null,
+  multiSelection: [],
 });
 
 /**
@@ -32,6 +42,7 @@ export function initializeStore(spec: ComponentSpecEntity) {
   editorStore.selectedNodeType = null;
   editorStore.lastSelectionWasShiftClick = false;
   editorStore.lastShiftClickEntityId = null;
+  editorStore.multiSelection = [];
 }
 
 /**
@@ -71,4 +82,25 @@ export function clearSelection() {
   editorStore.selectedNodeType = null;
   editorStore.lastSelectionWasShiftClick = false;
   editorStore.lastShiftClickEntityId = null;
+  editorStore.multiSelection = [];
+}
+
+/**
+ * Set multi-selection state.
+ * @param nodes - Array of selected nodes
+ */
+export function setMultiSelection(nodes: SelectedNode[]) {
+  editorStore.multiSelection = nodes;
+  // Clear single selection when multi-selecting
+  if (nodes.length > 1) {
+    editorStore.selectedNodeId = null;
+    editorStore.selectedNodeType = null;
+  }
+}
+
+/**
+ * Clear multi-selection state.
+ */
+export function clearMultiSelection() {
+  editorStore.multiSelection = [];
 }
