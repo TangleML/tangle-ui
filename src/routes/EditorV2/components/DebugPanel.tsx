@@ -1,11 +1,11 @@
 import { useEffect } from "react";
 import { useSnapshot } from "valtio";
-import { computed } from "valtio-reactive";
 
 import CodeSyntaxHighlighter from "@/components/shared/CodeViewer/CodeSyntaxHighlighter";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Text } from "@/components/ui/typography";
+import { componentSpecToText } from "@/utils/yaml";
 
 import { editorStore } from "../store/editorStore";
 import {
@@ -16,20 +16,6 @@ import {
 } from "../windows/windowStore";
 
 export const DEBUG_PANEL_WINDOW_ID = "debug-panel";
-
-// Computed value that automatically updates when spec changes
-const derivedState = computed({
-  specJson: () => {
-    // Valtio tracks mutations automatically since entities are wrapped with proxy()
-    const spec = editorStore.spec;
-    if (!spec) return "null";
-    try {
-      return JSON.stringify(spec.toJson(), null, 2);
-    } catch {
-      return "Error serializing spec";
-    }
-  },
-});
 
 interface StatItemProps {
   label: string;
@@ -77,10 +63,19 @@ function StatGroup({ title, children }: StatGroupProps) {
  */
 export function DebugPanelContent() {
   const snap = useSnapshot(editorStore);
-  const derivedJson = useSnapshot(derivedState);
 
   // Collect stats from the spec
   const spec = snap.spec;
+
+  // Derive JSON from the snapshot - React Compiler handles memoization
+  const specYaml = (() => {
+    if (!spec) return "null";
+    try {
+      return componentSpecToText(spec.toJson());
+    } catch {
+      return "Error serializing spec";
+    }
+  })();
 
   const stats = {
     name: spec?.name ?? "—",
@@ -106,7 +101,7 @@ export function DebugPanelContent() {
     <Tabs defaultValue="stats" className="h-full flex flex-col">
       <TabsList className="mx-3 mt-2 shrink-0">
         <TabsTrigger value="stats">Stats</TabsTrigger>
-        <TabsTrigger value="json">JSON</TabsTrigger>
+        <TabsTrigger value="yaml">YAML</TabsTrigger>
       </TabsList>
 
       <TabsContent value="stats" className="flex-1 min-h-0 overflow-y-auto">
@@ -146,9 +141,9 @@ export function DebugPanelContent() {
         </BlockStack>
       </TabsContent>
 
-      <TabsContent value="json" className="flex-1 min-h-0">
+      <TabsContent value="yaml" className="flex-1 min-h-0">
         <div className="m-2 h-full rounded-md overflow-hidden bg-gray-50 border border-gray-200">
-          <CodeSyntaxHighlighter code={derivedJson.specJson} language="json" />
+          <CodeSyntaxHighlighter code={specYaml} language="yaml" />
         </div>
       </TabsContent>
     </Tabs>
