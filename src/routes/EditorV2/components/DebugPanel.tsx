@@ -156,26 +156,9 @@ export function DebugPanelContent() {
 }
 
 /**
- * Toggle the debug panel window visibility.
- */
-export function toggleDebugPanel() {
-  const existingWindow = getWindowById(DEBUG_PANEL_WINDOW_ID);
-  if (existingWindow) {
-    closeWindow(DEBUG_PANEL_WINDOW_ID);
-  } else {
-    openWindow(<DebugPanelContent />, {
-      id: DEBUG_PANEL_WINDOW_ID,
-      title: "Debug Panel",
-      position: { x: 16, y: 16 },
-      size: { width: 320, height: 420 },
-    });
-  }
-}
-
-/**
  * DebugPanel component that manages the debug panel window lifecycle.
  * The window is created but hidden by default - it appears in the TaskPanel
- * and can be restored from there or toggled with toggleDebugPanel().
+ * and can be restored from there.
  */
 export function DebugPanel() {
   useEffect(() => {
@@ -187,6 +170,7 @@ export function DebugPanel() {
         title: "Debug Panel",
         position: { x: 16, y: 16 },
         size: { width: 320, height: 420 },
+        disabledActions: ["close"],
       });
       // Hide it immediately so it starts in the TaskPanel
       hideWindow(DEBUG_PANEL_WINDOW_ID);

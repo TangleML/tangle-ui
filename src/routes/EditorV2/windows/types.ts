@@ -1,6 +1,9 @@
 /** Window display state */
 export type WindowState = "normal" | "maximized" | "minimized" | "hidden";
 
+/** Actions that can be performed on a window */
+export type WindowAction = "close" | "minimize" | "maximize" | "hide";
+
 /** Position coordinates */
 export interface Position {
   x: number;
@@ -27,6 +30,8 @@ export interface WindowConfig {
   previousState?: WindowState;
   /** Optional entity ID this window is linked to (for auto-close on entity deletion) */
   linkedEntityId?: string;
+  /** Actions that are disabled for this window */
+  disabledActions?: WindowAction[];
 }
 
 /** Reference returned from open() for controlling a window */
@@ -53,6 +58,8 @@ export interface WindowOptions {
   minSize?: Size;
   /** Optional entity ID to link this window to (for auto-close on entity deletion) */
   linkedEntityId?: string;
+  /** Actions to disable for this window (e.g., ["close"] for non-closable windows) */
+  disabledActions?: WindowAction[];
 }
 
 /** Default window dimensions */
