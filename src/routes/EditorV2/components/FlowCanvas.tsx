@@ -3,7 +3,6 @@ import {
   type Connection,
   Controls,
   MiniMap,
-  type Node,
   type NodeChange,
   type OnConnect,
   type OnSelectionChangeParams,
@@ -32,9 +31,13 @@ import {
   connectNodes,
   updateNodePosition,
 } from "../store/actions";
-import { clearSelection } from "../store/editorStore";
+import {
+  clearMultiSelection,
+  clearSelection,
+  type SelectedNode,
+  setMultiSelection,
+} from "../store/editorStore";
 import { IONode } from "./IONode";
-import { SelectionToolbar } from "./SelectionToolbar";
 import { TaskNode } from "./TaskNode";
 
 const GRID_SIZE = 10;
@@ -51,7 +54,6 @@ interface FlowCanvasProps {
 export function FlowCanvas({ className }: FlowCanvasProps) {
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance | null>(null);
-  const [selectedNodes, setSelectedNodes] = useState<Node[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Get nodes and edges from the spec via valtio
@@ -70,12 +72,30 @@ export function FlowCanvas({ className }: FlowCanvasProps) {
   const handleSelectionChange = ({
     nodes: selected,
   }: OnSelectionChangeParams) => {
-    setSelectedNodes(selected);
-  };
-
-  const handleSubgraphCreated = () => {
-    // Clear selection after creating subgraph
-    setSelectedNodes([]);
+    if (selected.length > 1) {
+      // Multi-selection: sync to store
+      const multiSelection: SelectedNode[] = selected
+        .filter((node) => node.type === "task" || node.type === "io")
+        .map((node) => {
+          // Determine node type: task nodes have type "task", io nodes need data.ioType
+          let nodeType: SelectedNode["type"];
+          if (node.type === "task") {
+            nodeType = "task";
+          } else {
+            // io node - check data.ioType
+            nodeType = node.data?.ioType === "input" ? "input" : "output";
+          }
+          return {
+            id: node.id,
+            type: nodeType,
+            position: node.position,
+          };
+        });
+      setMultiSelection(multiSelection);
+    } else {
+      // Single or no selection - clear multi-selection
+      clearMultiSelection();
+    }
   };
 
   const handleNodesChange = (changes: NodeChange[]) => {
@@ -193,10 +213,6 @@ export function FlowCanvas({ className }: FlowCanvasProps) {
         selectionMode={SelectionMode.Partial}
         panOnDrag={[1, 2]}
       >
-        <SelectionToolbar
-          selectedNodes={selectedNodes}
-          onSubgraphCreated={handleSubgraphCreated}
-        />
         <Background gap={GRID_SIZE} className="!bg-slate-50" />
         <Controls position="bottom-right" />
         <MiniMap position="bottom-left" pannable zoomable />

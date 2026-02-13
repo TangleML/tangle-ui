@@ -12,6 +12,7 @@ import { GraphImplementation } from "@/providers/ComponentSpec/graphImplementati
 
 import { renameInput, renameOutput, renameTask } from "../store/actions";
 import { editorStore } from "../store/editorStore";
+import { MultiSelectionDetails } from "./MultiSelectionDetails";
 import { TaskAnnotationsEditor } from "./TaskAnnotationsEditor";
 
 /**
@@ -21,7 +22,12 @@ import { TaskAnnotationsEditor } from "./TaskAnnotationsEditor";
  */
 export function ContextPanelContent() {
   const snapshot = useSnapshot(editorStore);
-  const { selectedNodeId, selectedNodeType, spec } = snapshot;
+  const { selectedNodeId, selectedNodeType, spec, multiSelection } = snapshot;
+
+  // Multi-selection takes priority
+  if (multiSelection.length > 1) {
+    return <MultiSelectionDetails />;
+  }
 
   if (!selectedNodeId || !selectedNodeType || !spec) {
     return <EmptyState />;
