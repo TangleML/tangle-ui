@@ -9,11 +9,18 @@ import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { InlineStack } from "@/components/ui/layout";
 import { YamlLoader } from "@/providers/ComponentSpec/yamlLoader";
 
-import { ContextPanel } from "./components/ContextPanel";
+import { ContextPanelContent } from "./components/ContextPanel";
 import { DebugPanel } from "./components/DebugPanel";
 import { FlowCanvas } from "./components/FlowCanvas";
 import { Sidebar } from "./components/Sidebar";
 import { editorStore, initializeStore } from "./store/editorStore";
+import { TaskPanel } from "./windows/TaskPanel";
+import { WindowContainer } from "./windows/WindowContainer";
+import {
+  getWindowById,
+  openWindow,
+  updateWindowContent,
+} from "./windows/windowStore";
 
 const availableTemplates = import.meta.glob<string>("./assets/*.yaml", {
   query: "?raw",
@@ -40,6 +47,8 @@ function useLoadSpec() {
 
   return testSpec;
 }
+
+const CONTEXT_PANEL_WINDOW_ID = "context-panel";
 
 const PipelineEditor = withSuspenseWrapper(() => {
   const spec = useLoadSpec();
@@ -70,14 +79,42 @@ const PipelineEditor = withSuspenseWrapper(() => {
     }
   }, [spec]);
 
+  // Open/close context panel window based on node selection
+  useEffect(() => {
+    const unsubscribe = subscribe(editorStore, () => {
+      const { selectedNodeId, selectedNodeType } = editorStore;
+
+      if (selectedNodeId && selectedNodeType) {
+        const existingWindow = getWindowById(CONTEXT_PANEL_WINDOW_ID);
+        const content = <ContextPanelContent />;
+
+        if (existingWindow) {
+          // Update content if window exists
+          updateWindowContent(CONTEXT_PANEL_WINDOW_ID, content);
+        } else {
+          // Open new window
+          openWindow(content, {
+            id: CONTEXT_PANEL_WINDOW_ID,
+            title: "Properties",
+            position: { x: window.innerWidth - 340, y: 80 },
+            size: { width: 300, height: 400 },
+          });
+        }
+      }
+    });
+
+    return unsubscribe;
+  }, []);
+
   return (
     <>
       <DebugPanel />
       <InlineStack fill className="h-full">
         <Sidebar />
         <FlowCanvas className="flex-1" />
-        <ContextPanel />
       </InlineStack>
+      <WindowContainer />
+      <TaskPanel />
     </>
   );
 });
