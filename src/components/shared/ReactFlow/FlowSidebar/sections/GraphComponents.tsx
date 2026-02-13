@@ -20,11 +20,13 @@ import {
   SearchInput,
   SearchResults,
 } from "../components";
+import { ComponentDetailsPreview } from "../components/ComponentDetailsPreview";
 import {
   ComponentItemFromUrl,
   IONodeSidebarItem,
   StickyNoteSidebarItem,
 } from "../components/ComponentItem";
+import { ComponentPreviewProvider } from "../components/ComponentPreviewProvider";
 import { LibraryFolderItem } from "../components/FolderItem";
 import PublishedComponentsSearch from "../components/PublishedComponentsSearch";
 import { SidebarSection } from "../components/SidebarSection";
@@ -76,7 +78,6 @@ const GraphComponents = () => {
     if (!componentLibrary) return <EmptyState />;
 
     if (!remoteComponentLibrarySearchEnabled && searchResult) {
-      // If there's a search result, use the SearchResults component
       return (
         <SearchResults
           searchResult={searchResult}
@@ -85,7 +86,6 @@ const GraphComponents = () => {
       );
     }
 
-    // Otherwise show the regular folder structure
     const hasUsedComponents =
       usedComponentsFolder?.components &&
       usedComponentsFolder.components.length > 0;
@@ -184,25 +184,42 @@ const GraphComponents = () => {
                   <ManageLibrariesDialog />
                 </InlineStack>
 
-                {existingComponentLibraries?.length === 0 && (
-                  <BlockStack gap="1" align="center">
-                    <Text size="sm" tone="subdued">
-                      No libraries connected
-                    </Text>
-                  </BlockStack>
-                )}
-              </BlockStack>
+              {existingComponentLibraries?.length === 0 && (
+                <BlockStack gap="1" align="center">
+                  <Text size="sm" tone="subdued">
+                    No libraries connected
+                  </Text>
+                </BlockStack>
+              )}
+            </BlockStack>
 
-              {existingComponentLibraries?.map((library) => (
-                <LibraryFolderItem
-                  key={library.id}
-                  library={getComponentLibrary(library.id)}
-                  icon={library.icon as any /** todo: fix this */}
-                />
-              ))}
-            </>
-          )}
-        </BlockStack>
+            {existingComponentLibraries?.map((library) => (
+              <LibraryFolderItem
+                key={library.id}
+                library={getComponentLibrary(library.id)}
+                icon={library.icon as any /** todo: fix this */}
+              />
+            ))}
+          </>
+        )}
+      </BlockStack>
+    );
+
+    return (
+      <BlockStack
+        data-testid="component-library-content"
+        className="@container"
+        fill
+      >
+        {remoteComponentLibrarySearchEnabled && <UpgradeAvailableAlertBox />}
+
+        <InlineStack
+          className="flex-col @[600px]:grid @[600px]:grid-cols-[40%_60%]"
+          fill
+        >
+          {componentList}
+          <ComponentDetailsPreview />
+        </InlineStack>
       </BlockStack>
     );
   }, [
@@ -221,9 +238,11 @@ const GraphComponents = () => {
   ]);
 
   const searchComponent = remoteComponentLibrarySearchEnabled ? (
-    <PublishedComponentsSearch>{memoizedContent}</PublishedComponentsSearch>
+    <ComponentPreviewProvider>
+      <PublishedComponentsSearch>{memoizedContent}</PublishedComponentsSearch>
+    </ComponentPreviewProvider>
   ) : (
-    <>
+    <ComponentPreviewProvider>
       <SearchInput
         value={currentSearchFilter.searchTerm}
         activeFilters={currentSearchFilter.filters}
@@ -232,7 +251,7 @@ const GraphComponents = () => {
       />
 
       {memoizedContent}
-    </>
+    </ComponentPreviewProvider>
   );
 
   const importComponentAction = (
