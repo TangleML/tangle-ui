@@ -6,15 +6,16 @@ import { useEffect, useRef, useState } from "react";
 import { subscribe } from "valtio";
 
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
-import { InlineStack } from "@/components/ui/layout";
+import { ComponentLibraryProvider } from "@/providers/ComponentLibraryProvider";
+import { ForcedSearchProvider } from "@/providers/ComponentLibraryProvider/ForcedSearchProvider";
 import { GraphImplementation } from "@/providers/ComponentSpec/graphImplementation";
 import { YamlLoader } from "@/providers/ComponentSpec/yamlLoader";
 
+import { ComponentLibraryContent } from "./components/ComponentLibraryContent";
 import { ContextPanelContent } from "./components/ContextPanel";
 import { DebugPanel } from "./components/DebugPanel";
 import { FlowCanvas } from "./components/FlowCanvas";
 import { PinnedTaskContent } from "./components/PinnedTaskContent";
-import { Sidebar } from "./components/Sidebar";
 import { editorStore, initializeStore } from "./store/editorStore";
 import { TaskPanel } from "./windows/TaskPanel";
 import { WindowContainer } from "./windows/WindowContainer";
@@ -54,6 +55,7 @@ function useLoadSpec() {
 }
 
 const CONTEXT_PANEL_WINDOW_ID = "context-panel";
+const COMPONENT_LIBRARY_WINDOW_ID = "component-library";
 
 /** Generate a unique ID for pinned windows */
 function generatePinnedWindowId(): string {
@@ -200,13 +202,23 @@ const PipelineEditor = withSuspenseWrapper(() => {
     };
   }, []);
 
+  // Open component library window on mount
+  useEffect(() => {
+    const existingWindow = getWindowById(COMPONENT_LIBRARY_WINDOW_ID);
+    if (!existingWindow) {
+      openWindow(<ComponentLibraryContent />, {
+        id: COMPONENT_LIBRARY_WINDOW_ID,
+        title: "Components",
+        position: { x: 20, y: 80 },
+        size: { width: 280, height: 500 },
+      });
+    }
+  }, []);
+
   return (
     <>
       <DebugPanel />
-      <InlineStack fill className="h-full">
-        <Sidebar />
-        <FlowCanvas className="flex-1" />
-      </InlineStack>
+      <FlowCanvas className="h-full" />
       <WindowContainer />
       <TaskPanel />
     </>
@@ -217,7 +229,11 @@ export function EditorV2() {
   return (
     <div className="h-screen w-screen flex flex-col bg-slate-100">
       <ReactFlowProvider>
-        <PipelineEditor />
+        <ForcedSearchProvider>
+          <ComponentLibraryProvider>
+            <PipelineEditor />
+          </ComponentLibraryProvider>
+        </ForcedSearchProvider>
       </ReactFlowProvider>
     </div>
   );
