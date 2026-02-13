@@ -8,7 +8,7 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { ContextPanelProvider } from "@/providers/ContextPanelProvider";
 
 import GameCanvas from "./Canvas/GameCanvas";
-import GameControls from "./Canvas/GameControls";
+import GameControls from "./Controls/GameControls";
 import GameSidebar from "./Sidebar/GameSidebar";
 
 const GRID_SIZE = 10;
@@ -22,6 +22,11 @@ const FactoryGame = () => {
     nodesDraggable: true,
   });
 
+  const [day, setDay] = useState(0);
+  const [coins, setCoins] = useState(0);
+  const [knowledge, setKnowledge] = useState(0);
+  const [advanceTrigger, setAdvanceTrigger] = useState(0);
+
   const updateFlowConfig = (updatedConfig: Partial<ReactFlowProps>) => {
     setFlowConfig((prevConfig) => ({
       ...prevConfig,
@@ -29,12 +34,34 @@ const FactoryGame = () => {
     }));
   };
 
+  const handleAdvanceDay = () => {
+    setDay((prev) => prev + 1);
+    setAdvanceTrigger((prev) => prev + 1);
+  };
+
+  const handleDayAdvance = (globalOutputs: {
+    coins: number;
+    knowledge: number;
+  }) => {
+    setCoins((prev) => prev + globalOutputs.coins);
+    setKnowledge((prev) => prev + globalOutputs.knowledge);
+  };
+
   return (
     <ContextPanelProvider defaultContent={<p>Factory Game</p>}>
       <InlineStack fill>
-        <GameSidebar />
+        <GameSidebar
+          day={day}
+          coins={coins}
+          knowledge={knowledge}
+          onAdvanceDay={handleAdvanceDay}
+        />
         <BlockStack fill className="flex-1 relative">
-          <GameCanvas {...flowConfig}>
+          <GameCanvas
+            {...flowConfig}
+            onDayAdvance={handleDayAdvance}
+            triggerAdvance={advanceTrigger}
+          >
             <MiniMap position="bottom-left" pannable />
             <GameControls
               className="ml-56! mb-6!"
