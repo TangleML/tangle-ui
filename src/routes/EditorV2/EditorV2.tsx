@@ -209,7 +209,7 @@ const PipelineEditor = withSuspenseWrapper(() => {
       openWindow(<ComponentLibraryContent />, {
         id: COMPONENT_LIBRARY_WINDOW_ID,
         title: "Components",
-        position: { x: 0, y: 60 },
+        position: { x: 0, y: 100 },
         size: { width: 280, height: 500 },
         disabledActions: ["close"],
       });
