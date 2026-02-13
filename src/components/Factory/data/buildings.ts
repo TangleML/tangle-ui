@@ -88,7 +88,7 @@ export const BUILDINGS: Building[] = [
     productionMethod: {
       name: "Sandpaper and Hand Saw",
       inputs: [{ resource: "wood", amount: 40 }],
-      outputs: [{ resource: "planks", amount: 10 }],
+      outputs: [{ resource: "planks", amount: 20 }],
       days: 2,
     },
     stockpile: [
@@ -111,12 +111,12 @@ export const BUILDINGS: Building[] = [
     productionMethod: {
       name: "Pulp and Press",
       inputs: [{ resource: "wood", amount: 20 }],
-      outputs: [{ resource: "paper", amount: 40 }],
-      days: 2,
+      outputs: [{ resource: "paper", amount: 50 }],
+      days: 3,
     },
     stockpile: [
       { resource: "wood", amount: 0, maxAmount: 200 },
-      { resource: "paper", amount: 0, maxAmount: 400 },
+      { resource: "paper", amount: 0, maxAmount: 500 },
     ],
   },
   {
@@ -132,7 +132,7 @@ export const BUILDINGS: Building[] = [
       name: "Free Range Grazing",
       inputs: [{ resource: "wheat", amount: 25 }],
       outputs: [{ resource: "livestock", amount: 1 }],
-      days: 5,
+      days: 10,
     },
     stockpile: [
       { resource: "wheat", amount: 0, maxAmount: 250 },
@@ -155,14 +155,14 @@ export const BUILDINGS: Building[] = [
       name: "Carving Knives",
       inputs: [{ resource: "livestock", amount: 1 }],
       outputs: [
-        { resource: "meat", amount: 5 },
+        { resource: "meat", amount: 6 },
         { resource: "leather", amount: 2 },
       ],
       days: 3,
     },
     stockpile: [
       { resource: "livestock", amount: 0, maxAmount: 10 },
-      { resource: "meat", amount: 0, maxAmount: 50 },
+      { resource: "meat", amount: 0, maxAmount: 60 },
       { resource: "leather", amount: 0, maxAmount: 20 },
     ],
   },
@@ -234,12 +234,12 @@ export const BUILDINGS: Building[] = [
     productionMethod: {
       name: "Grinding Stones",
       inputs: [{ resource: "wheat", amount: 40 }],
-      outputs: [{ resource: "flour", amount: 50 }],
-      days: 2,
+      outputs: [{ resource: "flour", amount: 20 }],
+      days: 4,
     },
     stockpile: [
       { resource: "wheat", amount: 0, maxAmount: 400 },
-      { resource: "flour", amount: 0, maxAmount: 500 },
+      { resource: "flour", amount: 0, maxAmount: 200 },
     ],
   },
   {
@@ -249,8 +249,14 @@ export const BUILDINGS: Building[] = [
     description: "Burns wood into coal",
     cost: 0,
     color: "#36454F",
-    inputs: [{ resource: "wood", position: Position.Left }],
-    outputs: [{ resource: "coal", position: Position.Right }],
+    inputs: [
+      { resource: "wood", position: Position.Left },
+      { resource: "wood", position: Position.Left },
+    ],
+    outputs: [
+      { resource: "coal", position: Position.Right },
+      { resource: "coal", position: Position.Right },
+    ],
     productionMethod: {
       name: "Charcoal Burning",
       inputs: [{ resource: "wood", amount: 50 }],
@@ -277,15 +283,15 @@ export const BUILDINGS: Building[] = [
     productionMethod: {
       name: "Oven Baking",
       inputs: [
-        { resource: "flour", amount: 20 },
+        { resource: "flour", amount: 10 },
         { resource: "coal", amount: 10 },
       ],
-      outputs: [{ resource: "bread", amount: 5 }],
-      days: 1,
+      outputs: [{ resource: "bread", amount: 10 }],
+      days: 2,
     },
     stockpile: [
-      { resource: "flour", amount: 0, maxAmount: 200 },
-      { resource: "bread", amount: 0, maxAmount: 50 },
+      { resource: "flour", amount: 0, maxAmount: 100 },
+      { resource: "bread", amount: 0, maxAmount: 100 },
       { resource: "coal", amount: 0, maxAmount: 100 },
     ],
   },

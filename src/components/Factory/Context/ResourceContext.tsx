@@ -15,7 +15,7 @@ const ResourceContext = ({
   sourceNodeId,
   targetNodeId,
 }: ResourceContextProps) => {
-  const { name, description, color, icon } = resource;
+  const { name, description, color, icon, value } = resource;
 
   return (
     <BlockStack
@@ -37,6 +37,15 @@ const ResourceContext = ({
       <Text size="sm" tone="subdued">
         {description}
       </Text>
+
+      <InlineStack gap="2" align="center">
+        <Text size="sm" weight="semibold">
+          Value:
+        </Text>
+        <Text size="sm">
+          💰 {value} {value === 1 ? "coin" : "coins"}
+        </Text>
+      </InlineStack>
 
       <Separator />
 
