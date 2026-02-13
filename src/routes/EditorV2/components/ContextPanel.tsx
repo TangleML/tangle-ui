@@ -14,10 +14,11 @@ import { renameInput, renameOutput, renameTask } from "../store/actions";
 import { editorStore } from "../store/editorStore";
 
 /**
- * Panel that displays details about the selected node
- * and allows editing of node properties via direct mutation.
+ * Content for the Context Panel window.
+ * Displays details about the selected node and allows editing via direct mutation.
+ * Used within the Windows system.
  */
-export function ContextPanel() {
+export function ContextPanelContent() {
   const snapshot = useSnapshot(editorStore);
   const { selectedNodeId, selectedNodeType, spec } = snapshot;
 
@@ -26,7 +27,7 @@ export function ContextPanel() {
   }
 
   return (
-    <BlockStack className="h-full w-[280px] border-l border-slate-200 bg-white overflow-y-auto">
+    <BlockStack className="h-full bg-white overflow-y-auto">
       {selectedNodeType === "task" && <TaskDetails entityId={selectedNodeId} />}
       {selectedNodeType === "input" && (
         <InputDetails entityId={selectedNodeId} />
@@ -38,10 +39,22 @@ export function ContextPanel() {
   );
 }
 
+/**
+ * @deprecated Use ContextPanelContent within the Windows system instead.
+ * Kept for backwards compatibility.
+ */
+export function ContextPanel() {
+  return (
+    <BlockStack className="h-full w-[280px] border-l border-gray-200 bg-white overflow-y-auto">
+      <ContextPanelContent />
+    </BlockStack>
+  );
+}
+
 function EmptyState() {
   return (
-    <BlockStack className="h-full w-[280px] border-l border-slate-200 bg-slate-50 items-center justify-center">
-      <Icon name="MousePointerClick" size="lg" className="text-slate-300" />
+    <BlockStack className="h-full items-center justify-center p-4">
+      <Icon name="MousePointerClick" size="lg" className="text-gray-300" />
       <Text size="sm" tone="subdued" className="text-center mt-2">
         Select a node to view details
       </Text>
@@ -88,9 +101,11 @@ function TaskDetails({ entityId }: TaskDetailsProps) {
         title="Task Node"
       />
 
-      <BlockStack gap="4" className="p-4">
+      <BlockStack gap="4" className="p-3">
         <BlockStack gap="2">
-          <Label htmlFor="task-name">Name</Label>
+          <Label htmlFor="task-name" className="text-gray-600">
+            Name
+          </Label>
           <Input
             key={entityId}
             id="task-name"
@@ -102,8 +117,8 @@ function TaskDetails({ entityId }: TaskDetailsProps) {
 
         {componentSpec?.description && (
           <BlockStack gap="2">
-            <Label>Description</Label>
-            <Text size="sm" tone="subdued">
+            <Label className="text-gray-600">Description</Label>
+            <Text size="sm" className="text-gray-500">
               {componentSpec.description}
             </Text>
           </BlockStack>
@@ -113,24 +128,24 @@ function TaskDetails({ entityId }: TaskDetailsProps) {
 
         {componentSpec?.inputs && componentSpec.inputs.length > 0 && (
           <BlockStack gap="2">
-            <Label>Inputs</Label>
+            <Label className="text-gray-600">Inputs</Label>
             <BlockStack gap="1">
               {componentSpec.inputs.map((input) => (
                 <InlineStack
                   key={input.name}
                   gap="2"
-                  className="text-xs py-1 px-2 bg-slate-50 rounded"
+                  className="text-xs py-1 px-2 bg-gray-50 rounded border border-gray-100"
                 >
-                  <Text size="xs" weight="semibold" className="text-slate-700">
+                  <Text size="xs" weight="semibold" className="text-gray-700">
                     {input.name}
                   </Text>
                   {input.type && (
-                    <Text size="xs" tone="subdued">
+                    <Text size="xs" className="text-gray-500">
                       : {String(input.type)}
                     </Text>
                   )}
                   {input.optional && (
-                    <Text size="xs" tone="subdued" className="italic">
+                    <Text size="xs" className="text-gray-400 italic">
                       (optional)
                     </Text>
                   )}
@@ -142,19 +157,19 @@ function TaskDetails({ entityId }: TaskDetailsProps) {
 
         {componentSpec?.outputs && componentSpec.outputs.length > 0 && (
           <BlockStack gap="2">
-            <Label>Outputs</Label>
+            <Label className="text-gray-600">Outputs</Label>
             <BlockStack gap="1">
               {componentSpec.outputs.map((output) => (
                 <InlineStack
                   key={output.name}
                   gap="2"
-                  className="text-xs py-1 px-2 bg-slate-50 rounded"
+                  className="text-xs py-1 px-2 bg-gray-50 rounded border border-gray-100"
                 >
-                  <Text size="xs" weight="semibold" className="text-slate-700">
+                  <Text size="xs" weight="semibold" className="text-gray-700">
                     {output.name}
                   </Text>
                   {output.type && (
-                    <Text size="xs" tone="subdued">
+                    <Text size="xs" className="text-gray-500">
                       : {String(output.type)}
                     </Text>
                   )}
@@ -196,9 +211,11 @@ function InputDetails({ entityId }: InputDetailsProps) {
         title="Graph Input"
       />
 
-      <BlockStack gap="4" className="p-4">
+      <BlockStack gap="4" className="p-3">
         <BlockStack gap="2">
-          <Label htmlFor="input-name">Name</Label>
+          <Label htmlFor="input-name" className="text-gray-600">
+            Name
+          </Label>
           <Input
             key={entityId}
             id="input-name"
@@ -210,8 +227,8 @@ function InputDetails({ entityId }: InputDetailsProps) {
 
         {input.type && (
           <BlockStack gap="2">
-            <Label>Type</Label>
-            <Text size="sm" className="font-mono text-slate-600">
+            <Label className="text-gray-600">Type</Label>
+            <Text size="sm" className="font-mono text-gray-500">
               {String(input.type)}
             </Text>
           </BlockStack>
@@ -219,8 +236,8 @@ function InputDetails({ entityId }: InputDetailsProps) {
 
         {input.description && (
           <BlockStack gap="2">
-            <Label>Description</Label>
-            <Text size="sm" tone="subdued">
+            <Label className="text-gray-600">Description</Label>
+            <Text size="sm" className="text-gray-500">
               {input.description}
             </Text>
           </BlockStack>
@@ -228,18 +245,18 @@ function InputDetails({ entityId }: InputDetailsProps) {
 
         {input.default !== undefined && (
           <BlockStack gap="2">
-            <Label>Default Value</Label>
-            <Text size="sm" className="font-mono text-slate-600">
+            <Label className="text-gray-600">Default Value</Label>
+            <Text size="sm" className="font-mono text-gray-500">
               {input.default}
             </Text>
           </BlockStack>
         )}
 
         <InlineStack gap="2">
-          <Text size="xs" tone="subdued">
+          <Text size="xs" className="text-gray-400">
             Optional:
           </Text>
-          <Text size="xs" weight="semibold">
+          <Text size="xs" weight="semibold" className="text-gray-600">
             {input.optional ? "Yes" : "No"}
           </Text>
         </InlineStack>
@@ -276,9 +293,11 @@ function OutputDetails({ entityId }: OutputDetailsProps) {
         title="Graph Output"
       />
 
-      <BlockStack gap="4" className="p-4">
+      <BlockStack gap="4" className="p-3">
         <BlockStack gap="2">
-          <Label htmlFor="output-name">Name</Label>
+          <Label htmlFor="output-name" className="text-gray-600">
+            Name
+          </Label>
           <Input
             key={entityId}
             id="output-name"
@@ -290,8 +309,8 @@ function OutputDetails({ entityId }: OutputDetailsProps) {
 
         {output.type && (
           <BlockStack gap="2">
-            <Label>Type</Label>
-            <Text size="sm" className="font-mono text-slate-600">
+            <Label className="text-gray-600">Type</Label>
+            <Text size="sm" className="font-mono text-gray-500">
               {String(output.type)}
             </Text>
           </BlockStack>
@@ -299,8 +318,8 @@ function OutputDetails({ entityId }: OutputDetailsProps) {
 
         {output.description && (
           <BlockStack gap="2">
-            <Label>Description</Label>
-            <Text size="sm" tone="subdued">
+            <Label className="text-gray-600">Description</Label>
+            <Text size="sm" className="text-gray-500">
               {output.description}
             </Text>
           </BlockStack>
@@ -321,14 +340,14 @@ function PanelHeader({ icon, iconClassName, title }: PanelHeaderProps) {
     <InlineStack
       gap="2"
       blockAlign="center"
-      className="p-4 border-b border-slate-200 bg-slate-50"
+      className="p-3 border-b border-gray-200 bg-gray-50"
     >
       <Icon
         name={icon as any}
         size="sm"
         className={cn("shrink-0", iconClassName)}
       />
-      <Text size="sm" weight="semibold" className="text-slate-700">
+      <Text size="sm" weight="semibold" className="text-gray-700">
         {title}
       </Text>
     </InlineStack>
