@@ -10,7 +10,7 @@ const MARKETPLACE_NODE: Node = {
   data: {
     ...BUILDINGS.find((b) => b.id === "marketplace"),
   },
-  draggable: false,
+  draggable: true,
   deletable: false,
   selectable: true,
 };
