@@ -248,7 +248,7 @@ const SearchResults = ({ searchResult }: SearchResultsProps) => {
   const resultsList = (
     <BlockStack
       gap="2"
-      className="px-2 flex-1 min-h-0 overflow-y-auto @[600px]:border-r @[600px]:border-border"
+      className="px-2 min-h-0 @[600px]:border-r @[600px]:border-border"
       data-testid="search-results-container"
     >
       <Text
@@ -256,7 +256,10 @@ const SearchResults = ({ searchResult }: SearchResultsProps) => {
         data-testid="search-results-header"
       >{`Search Results (${totalResults})`}</Text>
       <Separator />
-      <div className="h-[calc(100vh-400px)] w-full overflow-y-auto overflow-x-hidden scrollbar-thin">
+      <div
+        className="h-[calc(100vh-400px)] w-full overflow-y-auto overflow-x-hidden scrollbar-thin"
+        data-testid="search-results-list"
+      >
         <ul>
           {totalResults > 0 ? (
             searchResult.map((folder) => (
