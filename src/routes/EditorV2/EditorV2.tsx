@@ -228,7 +228,7 @@ const PipelineEditor = withSuspenseWrapper(() => {
 
 export function EditorV2() {
   return (
-    <div className="h-screen w-screen flex flex-col bg-slate-100">
+    <div className="h-full w-full flex flex-col bg-slate-100">
       <ReactFlowProvider>
         <ForcedSearchProvider>
           <ComponentLibraryProvider>
