@@ -3,11 +3,20 @@ import { Text } from "@/components/ui/typography";
 
 import { RESOURCES } from "../data/resources";
 
-const Resources = () => {
+interface ResourcesProps {
+  coins: number;
+  knowledge: number;
+}
+
+const Resources = ({ coins, knowledge }: ResourcesProps) => {
   return (
     <BlockStack gap="1">
-      <Text>{RESOURCES.coins.icon} 0</Text>
-      <Text>{RESOURCES.knowledge.icon} 0</Text>
+      <Text>
+        {RESOURCES.coins.icon} {coins}
+      </Text>
+      <Text>
+        {RESOURCES.knowledge.icon} {knowledge}
+      </Text>
     </BlockStack>
   );
 };

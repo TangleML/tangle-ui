@@ -3,7 +3,7 @@ import {
   useReactFlow,
   useUpdateNodeInternals,
 } from "@xyflow/react";
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 
 import { cn } from "@/lib/utils";
 import { useContextPanel } from "@/providers/ContextPanelProvider";
@@ -15,7 +15,7 @@ import BuildingInput from "../Handles/BuildingInput";
 import BuildingOutput from "../Handles/BuildingOutput";
 
 const Building = ({ id, data, selected }: NodeProps) => {
-  const { updateNodeData } = useReactFlow();
+  const { updateNodeData, getNode } = useReactFlow();
   const updateNodeInternals = useUpdateNodeInternals();
   const {
     setContent,
@@ -41,9 +41,16 @@ const Building = ({ id, data, selected }: NodeProps) => {
     return () => window.removeEventListener("keydown", handleKeyPress);
   }, [selected, id, data, updateNodeData, updateNodeInternals]);
 
+  // Handle context panel - update on data changes
   useEffect(() => {
-    if (selected && isBuildingData(data)) {
-      setContent(<BuildingContext building={data} />);
+    if (selected) {
+      // Get the latest node data from React Flow
+      const currentNode = getNode(id);
+      const currentData = currentNode?.data || data;
+
+      if (!isBuildingData(currentData)) return;
+
+      setContent(<BuildingContext building={currentData} />);
       setContextPanelOpen(true);
     }
 
@@ -52,7 +59,15 @@ const Building = ({ id, data, selected }: NodeProps) => {
         clearContent();
       }
     };
-  }, [selected, data, setContent, clearContent, setContextPanelOpen]);
+  }, [
+    selected,
+    data,
+    id,
+    getNode,
+    setContent,
+    clearContent,
+    setContextPanelOpen,
+  ]);
 
   if (!isBuildingData(data)) {
     return (
@@ -66,21 +81,15 @@ const Building = ({ id, data, selected }: NodeProps) => {
   const { icon, name, description, color, inputs = [], outputs = [] } = data;
 
   // Calculate position counts
-  const inputCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    inputs.forEach((input) => {
-      counts[input.position] = (counts[input.position] || 0) + 1;
-    });
-    return counts;
-  }, [inputs]);
+  const inputCounts: Record<string, number> = {};
+  inputs.forEach((input) => {
+    inputCounts[input.position] = (inputCounts[input.position] || 0) + 1;
+  });
 
-  const outputCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    outputs.forEach((output) => {
-      counts[output.position] = (counts[output.position] || 0) + 1;
-    });
-    return counts;
-  }, [outputs]);
+  const outputCounts: Record<string, number> = {};
+  outputs.forEach((output) => {
+    outputCounts[output.position] = (outputCounts[output.position] || 0) + 1;
+  });
 
   // Track index at each position
   const inputIndexAtPosition: Record<string, number> = {};

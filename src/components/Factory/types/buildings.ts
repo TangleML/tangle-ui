@@ -1,4 +1,4 @@
-import type { Position } from "@xyflow/react";
+import type { Node, Position } from "@xyflow/react";
 
 import type { ResourceType } from "./resources";
 
@@ -33,6 +33,14 @@ export type Stockpile = {
   resource: ResourceType;
   amount: number;
   maxAmount: number;
+  breakdown?: Map<ResourceType, number>;
+};
+
+export type ProductionStatus = "idle" | "active" | "paused" | "complete";
+
+export type ProductionState = {
+  progress: number;
+  status: ProductionStatus;
 };
 
 export interface Building {
@@ -46,6 +54,7 @@ export interface Building {
   outputs?: BuildingOutput[];
   productionMethod?: ProductionMethod;
   stockpile?: Stockpile[];
+  productionState?: ProductionState;
 }
 
 export function isBuildingData(data: any): data is Building {
@@ -58,4 +67,11 @@ export function isBuildingData(data: any): data is Building {
     typeof data.description === "string" &&
     typeof data.color === "string"
   );
+}
+
+export function getBuildingData(node: Node): Building | null {
+  if (isBuildingData(node.data)) {
+    return node.data;
+  }
+  return null;
 }
