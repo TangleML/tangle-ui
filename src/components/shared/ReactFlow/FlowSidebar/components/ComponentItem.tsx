@@ -1,5 +1,5 @@
 import type { ComponentProps, DragEvent } from "react";
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useContext, useMemo, useRef } from "react";
 
 import { ComponentDetailsDialog } from "@/components/shared/Dialogs";
 import { ComponentFavoriteToggle } from "@/components/shared/FavoriteComponentToggle";
@@ -18,6 +18,7 @@ import { getComponentName } from "@/utils/getComponentName";
 import { isSubgraph } from "@/utils/subgraphUtils";
 
 import { useNodesOverlay } from "../../NodesOverlay/NodesOverlayProvider";
+import { ComponentPreviewContext } from "./ComponentPreviewProvider";
 import {
   ComponentHoverPopover,
   type ComponentHoverPopoverHandle,
@@ -81,6 +82,9 @@ const ComponentMarkup = ({
     "remote-component-library-search",
   );
 
+  // Optional context for component preview - may not be available in all contexts
+  const previewContext = useContext(ComponentPreviewContext);
+
   const popoverRef = useRef<ComponentHoverPopoverHandle>(null);
 
   // TODO: respect selected node as a starting point
@@ -121,6 +125,9 @@ const ComponentMarkup = ({
   );
 
   const onMouseEnter = useCallback(() => {
+    // Update preview context if available
+    previewContext?.setHoveredComponent(component);
+
     if (!digest) return;
 
     const nodeIds = getNodeIdsByDigest(digest);
@@ -129,9 +136,12 @@ const ComponentMarkup = ({
         type: "highlight",
       });
     });
-  }, [digest]);
+  }, [digest, previewContext, component]);
 
   const onMouseLeave = useCallback(() => {
+    // Clear preview context if available
+    previewContext?.setHoveredComponent(null);
+
     if (!digest) return;
 
     const nodeIds = getNodeIdsByDigest(digest);
@@ -140,7 +150,7 @@ const ComponentMarkup = ({
         type: "clear",
       });
     });
-  }, [digest]);
+  }, [digest, previewContext]);
 
   const onMouseClick = useCallback(() => {
     if (!digest) return;
@@ -185,11 +195,12 @@ const ComponentMarkup = ({
             Error loading component
           </span>
         ) : (
-          <InlineStack
-            wrap="nowrap"
-            className="w-full"
+          <div
+            className="flex flex-row flex-nowrap w-full items-center"
             data-testid="component-item"
             data-component-name={displayName}
+            onMouseEnter={onMouseEnter}
+            onMouseLeave={onMouseLeave}
           >
             <InlineStack gap="2" className="flex-1 min-w-0" wrap="nowrap">
               {isRemoteComponentLibrarySearchEnabled ? (
@@ -224,8 +235,7 @@ const ComponentMarkup = ({
                 </span>
               </div>
             </InlineStack>
-
-            <InlineStack align="end" wrap="nowrap">
+            <InlineStack align="end" wrap="nowrap" className="shrink-0">
               <ComponentFavoriteToggle component={component} />
 
               <ComponentHoverPopover ref={popoverRef} component={component}>
@@ -238,7 +248,7 @@ const ComponentMarkup = ({
                 </InlineStack>
               </ComponentHoverPopover>
             </InlineStack>
-          </InlineStack>
+          </div>
         )}
       </InlineStack>
     </li>
