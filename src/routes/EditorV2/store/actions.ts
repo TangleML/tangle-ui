@@ -1,11 +1,12 @@
 import type { XYPosition } from "@xyflow/react";
+import { proxy } from "valtio";
 
-import type { ComponentSpecEntity } from "@/providers/ComponentSpec/componentSpec";
+import { ComponentSpecEntity } from "@/providers/ComponentSpec/componentSpec";
 import { GraphImplementation } from "@/providers/ComponentSpec/graphImplementation";
 import type { InputEntity } from "@/providers/ComponentSpec/inputs";
 import type { OutputEntity } from "@/providers/ComponentSpec/outputs";
 import { EDITOR_POSITION_ANNOTATION } from "@/utils/annotations";
-import type { ComponentReference } from "@/utils/componentSpec";
+import type { ComponentReference, ComponentSpec } from "@/utils/componentSpec";
 
 import { editorStore } from "./editorStore";
 
@@ -90,6 +91,51 @@ function generateUniqueTaskName(
 }
 
 /**
+ * Register a ComponentSpecEntity for a task's component spec.
+ *
+ * This is necessary so that findComponentSpecEntity(taskName) can find the
+ * task's component spec when creating connections between nodes.
+ * The YamlLoader does this automatically when loading from YAML, but we need
+ * to do it manually when adding tasks via drag-and-drop.
+ */
+function registerTaskComponentSpec(
+  parentSpec: ComponentSpecEntity,
+  taskName: string,
+  componentSpec: ComponentSpec,
+): void {
+  // Create a ComponentSpecEntity for this task's component spec
+  const taskComponentSpecEntity = proxy(
+    new ComponentSpecEntity(parentSpec.generateId(), parentSpec, {
+      name: taskName,
+    }),
+  ).populate({
+    name: taskName,
+    description: componentSpec.description,
+  });
+
+  // Register it so findComponentSpecEntity can find it by task name
+  parentSpec.registerEntity(taskComponentSpecEntity);
+
+  // Add inputs to the component spec entity
+  for (const input of componentSpec.inputs ?? []) {
+    taskComponentSpecEntity.inputs.add({
+      name: input.name,
+      type: input.type,
+      description: input.description,
+    });
+  }
+
+  // Add outputs to the component spec entity
+  for (const output of componentSpec.outputs ?? []) {
+    taskComponentSpecEntity.outputs.add({
+      name: output.name,
+      type: output.type,
+      description: output.description,
+    });
+  }
+}
+
+/**
  * Generate a unique input name.
  */
 function generateUniqueInputName(
@@ -156,6 +202,12 @@ export function addTask(
       }),
     },
   });
+
+  // Register the task's component spec so findComponentSpecEntity can find it
+  // This is necessary for creating connections between task outputs and inputs
+  if (componentRef.spec) {
+    registerTaskComponentSpec(spec, taskName, componentRef.spec);
+  }
 
   // Add default argument values from component spec inputs
   const inputs = componentRef.spec?.inputs ?? [];
@@ -441,7 +493,15 @@ export function renameTask(entityId: string, newName: string) {
     return false;
   }
 
+  // Store old name for index update
+  const oldName = task.name;
+
+  // Update the name
   task.name = newName;
+
+  // Re-index the entity with the new name
+  spec.implementation.tasks.reindex(task, { name: oldName });
+
   return true;
 }
 
@@ -472,7 +532,15 @@ export function renameInput(entityId: string, newName: string) {
     return false;
   }
 
+  // Store old name for index update
+  const oldName = input.name;
+
+  // Update the name
   input.name = newName;
+
+  // Re-index the entity with the new name
+  spec.inputs.reindex(input, { name: oldName });
+
   return true;
 }
 
@@ -533,7 +601,15 @@ export function renameOutput(entityId: string, newName: string) {
     return false;
   }
 
+  // Store old name for index update
+  const oldName = output.name;
+
+  // Update the name
   output.name = newName;
+
+  // Re-index the entity with the new name
+  spec.outputs.reindex(output, { name: oldName });
+
   return true;
 }
 

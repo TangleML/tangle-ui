@@ -139,6 +139,33 @@ export class EntityIndex<TEntity extends BaseEntity<any>> {
     const ids = this.indexByKey.findByIndex(index, value);
     return ids.map((id) => this.entities[id]).filter(Boolean) as TEntity[];
   }
+
+  /**
+   * Re-index an entity after updating its indexed fields.
+   * Call this AFTER modifying the field value, passing the OLD value so it can be removed.
+   *
+   * @param entity The entity to re-index (with NEW values already set)
+   * @param oldValues The OLD values of indexed fields (to remove from index)
+   */
+  reindex(entity: TEntity, oldValues: Partial<Record<string, unknown>>): void {
+    // Remove old index entries for the fields that changed
+    for (const index of entity.$indexed) {
+      const oldValue = oldValues[index as string];
+      if (oldValue !== undefined) {
+        const valueToEntityId = (this.indexByKey as any).fieldValueToEntityId[
+          index
+        ];
+        if (valueToEntityId) {
+          const entityIds = valueToEntityId[String(oldValue)];
+          if (entityIds) {
+            delete entityIds[entity.$id];
+          }
+        }
+      }
+    }
+    // Add new index entries with current (new) values
+    this.indexByKey.add(entity);
+  }
 }
 
 export abstract class BaseCollection<
