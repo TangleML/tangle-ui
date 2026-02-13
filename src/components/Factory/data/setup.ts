@@ -1,22 +1,19 @@
-import { type Node } from "@xyflow/react";
+import type { XYPosition } from "@xyflow/react";
 
-import { BUILDINGS } from "./buildings";
+import type { BuildingType } from "../types/buildings";
 
-// Initial marketplace node at the center
-const MARKETPLACE_NODE: Node = {
-  id: "starting-marketplace",
-  type: "building",
-  position: { x: 0, y: 0 },
-  data: {
-    ...BUILDINGS.find((b) => b.id === "marketplace"),
-  },
-  draggable: true,
-  deletable: false,
-  selectable: true,
+type BuildingSetup = {
+  type: BuildingType;
+  position: XYPosition;
 };
+interface setup {
+  buildings?: BuildingSetup[];
+}
 
-const buildings = [MARKETPLACE_NODE];
+const buildings: BuildingSetup[] = [
+  { type: "marketplace", position: { x: 0, y: 0 } },
+];
 
-export const setup = {
+export const setup: setup = {
   buildings,
 };

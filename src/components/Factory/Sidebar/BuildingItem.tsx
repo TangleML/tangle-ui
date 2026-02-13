@@ -5,17 +5,19 @@ import { SidebarMenuItem } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
 import { RESOURCES } from "../data/resources";
-import type { Building } from "../types/buildings";
+import { type BuildingType, getBuildingType } from "../types/buildings";
 
 interface BuildingItemProps {
-  building: Building;
+  buildingType: BuildingType;
 }
 
-const BuildingItem = ({ building }: BuildingItemProps) => {
+const BuildingItem = ({ buildingType }: BuildingItemProps) => {
+  const building = getBuildingType(buildingType);
+
   const onDragStart = (event: DragEvent) => {
     event.dataTransfer.setData(
       "application/reactflow",
-      JSON.stringify({ building }),
+      JSON.stringify({ buildingType }),
     );
 
     event.dataTransfer.setData(
@@ -37,8 +39,6 @@ const BuildingItem = ({ building }: BuildingItemProps) => {
       )}
       draggable
       onDragStart={onDragStart}
-      data-testid="building-item"
-      data-building-id={building.id}
     >
       <InlineStack wrap="nowrap" gap="2" className="w-full">
         <span className="text-xl shrink-0">{building.icon}</span>

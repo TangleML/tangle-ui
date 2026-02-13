@@ -38,7 +38,7 @@ export const RESOURCE_VALUES: Record<ResourceType, number> = {
   any: 1,
 };
 
-export const RESOURCES: Record<ResourceType, Resource> = {
+export const RESOURCES = {
   money: {
     name: "Money",
     description: "You need money to pay for things!",
@@ -82,7 +82,6 @@ export const RESOURCES: Record<ResourceType, Resource> = {
     color: RESOURCE_COLORS.wheat,
     icon: "🌾",
     value: RESOURCE_VALUES.wheat,
-    global: true,
   },
   planks: {
     name: "Planks",
@@ -155,4 +154,33 @@ export const RESOURCES: Record<ResourceType, Resource> = {
     icon: "❓",
     value: RESOURCE_VALUES.any,
   },
-};
+} as const satisfies Record<ResourceType, Resource>;
+
+// Extract global resource types dynamically
+export type GlobalResourceType = {
+  [K in keyof typeof RESOURCES]: (typeof RESOURCES)[K] extends { global: true }
+    ? K
+    : never;
+}[keyof typeof RESOURCES];
+
+export type GlobalResources = Record<GlobalResourceType, number>;
+
+// Helper to check if a resource is global at runtime
+export function isGlobalResource(
+  resourceType: ResourceType,
+): resourceType is GlobalResourceType {
+  const resource = RESOURCES[resourceType];
+  return (
+    resource !== undefined && "global" in resource && resource.global === true
+  );
+}
+
+// Get all global resource keys
+export const GLOBAL_RESOURCE_KEYS = (
+  Object.keys(RESOURCES) as ResourceType[]
+).filter((key): key is GlobalResourceType => {
+  const resource = RESOURCES[key];
+  return (
+    resource !== undefined && "global" in resource && resource.global === true
+  );
+});

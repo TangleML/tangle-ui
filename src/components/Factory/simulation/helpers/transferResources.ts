@@ -1,6 +1,6 @@
 import type { Edge, Node } from "@xyflow/react";
 
-import { getBuildingData } from "../../types/buildings";
+import { getBuildingInstance } from "../../types/buildings";
 import type {
   BuildingStatistics,
   EdgeStatistics,
@@ -20,8 +20,8 @@ export const transferResources = (
 
   if (!sourceNode || !targetNode) return;
 
-  const sourceBuilding = getBuildingData(sourceNode);
-  const targetBuilding = getBuildingData(targetNode);
+  const sourceBuilding = getBuildingInstance(sourceNode);
+  const targetBuilding = getBuildingInstance(targetNode);
 
   if (!sourceBuilding || !targetBuilding) return;
 
@@ -104,8 +104,8 @@ export const transferResources = (
         });
       }
 
-      // Update source stockpile
-      sourceNode.data = {
+      // Update source stockpile - preserve buildingInstance structure
+      const updatedSourceBuilding = {
         ...sourceBuilding,
         stockpile: sourceBuilding.stockpile?.map((s) =>
           s.resource === resource
@@ -114,34 +114,48 @@ export const transferResources = (
         ),
       };
 
-      // Update target stockpile
+      sourceNode.data = {
+        ...sourceNode.data,
+        buildingInstance: updatedSourceBuilding,
+      };
+
+      // Update target stockpile - preserve buildingInstance structure
       if (targetStock.resource === "any") {
-        // For "any" stockpiles, track the specific resource in breakdown
-        const breakdown = targetStock.breakdown || new Map();
+        const breakdown = new Map(targetStock.breakdown || new Map());
         const currentAmount = breakdown.get(resource) || 0;
         breakdown.set(resource, currentAmount + transferAmount);
 
-        targetNode.data = {
+        const updatedTargetBuilding = {
           ...targetBuilding,
           stockpile: targetBuilding.stockpile?.map((s) =>
             s.resource === "any"
               ? {
                   ...s,
                   amount: s.amount + transferAmount,
-                  breakdown: new Map(breakdown),
+                  breakdown,
                 }
               : s,
           ),
         };
+
+        targetNode.data = {
+          ...targetNode.data,
+          buildingInstance: updatedTargetBuilding,
+        };
       } else {
         // Regular stockpile transfer
-        targetNode.data = {
+        const updatedTargetBuilding = {
           ...targetBuilding,
           stockpile: targetBuilding.stockpile?.map((s) =>
             s.resource === resource
               ? { ...s, amount: s.amount + transferAmount }
               : s,
           ),
+        };
+
+        targetNode.data = {
+          ...targetNode.data,
+          buildingInstance: updatedTargetBuilding,
         };
       }
     }
