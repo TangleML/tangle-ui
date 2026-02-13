@@ -134,8 +134,8 @@ export function Window({ windowId }: WindowProps) {
     <div
       ref={panelRef}
       className={cn(
-        "fixed rounded-lg shadow-lg border border-gray-300 overflow-hidden",
-        "bg-white text-gray-900 flex flex-col",
+        "fixed rounded-lg shadow-xl border border-gray-400 overflow-hidden",
+        "bg-gray-100 text-gray-900 flex flex-col",
         (isDragging || isResizing) && "select-none",
         isDragging && "cursor-grabbing",
         isMaximized && "rounded-none",
@@ -146,8 +146,8 @@ export function Window({ windowId }: WindowProps) {
       {/* Header - Draggable area */}
       <div
         className={cn(
-          "flex items-center justify-between px-3 py-2 bg-gray-100",
-          "cursor-grab border-b border-gray-200 shrink-0",
+          "flex items-center justify-between px-3 py-2 bg-gray-200",
+          "cursor-grab border-b border-gray-300 shrink-0",
           isDragging && "cursor-grabbing",
           isMaximized && "cursor-default",
         )}
@@ -170,7 +170,7 @@ export function Window({ windowId }: WindowProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 text-gray-500 hover:text-gray-700 hover:bg-gray-200"
+              className="h-6 w-6 text-gray-500 hover:text-gray-700 hover:bg-gray-300"
               onClick={() => toggleMinimize(windowId)}
               title={isMinimized ? "Expand" : "Minimize"}
             >
@@ -183,7 +183,7 @@ export function Window({ windowId }: WindowProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 text-gray-500 hover:text-gray-700 hover:bg-gray-200"
+              className="h-6 w-6 text-gray-500 hover:text-gray-700 hover:bg-gray-300"
               onClick={() => toggleMaximize(windowId)}
               title={isMaximized ? "Restore" : "Maximize"}
             >
@@ -196,7 +196,7 @@ export function Window({ windowId }: WindowProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 text-gray-500 hover:text-gray-700 hover:bg-gray-200"
+              className="h-6 w-6 text-gray-500 hover:text-gray-700 hover:bg-gray-300"
               onClick={() => hideWindow(windowId)}
               title="Hide to task panel"
             >
@@ -209,7 +209,7 @@ export function Window({ windowId }: WindowProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 text-gray-500 hover:text-red-500 hover:bg-gray-200"
+              className="h-6 w-6 text-gray-500 hover:text-red-500 hover:bg-gray-300"
               onClick={() => closeWindow(windowId)}
               title="Close"
             >
@@ -222,7 +222,7 @@ export function Window({ windowId }: WindowProps) {
       {/* Content */}
       {!isMinimized && (
         <div
-          className="flex-1 min-h-0 overflow-auto bg-white"
+          className="flex-1 min-h-0 overflow-auto bg-gray-50"
           style={{ height: isMaximized ? "calc(100vh - 44px)" : contentHeight }}
         >
           {content}
@@ -234,12 +234,12 @@ export function Window({ windowId }: WindowProps) {
         <div
           className={cn(
             "absolute bottom-0 right-0 w-4 h-4 cursor-se-resize",
-            "hover:bg-gray-200 rounded-tl-sm transition-colors",
+            "hover:bg-gray-300 rounded-tl-sm transition-colors",
           )}
           onMouseDown={handleResizeMouseDown}
         >
           <svg
-            className="w-full h-full text-gray-400"
+            className="w-full h-full text-gray-500"
             viewBox="0 0 16 16"
             fill="currentColor"
           >
