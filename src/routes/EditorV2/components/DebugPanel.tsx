@@ -11,10 +11,11 @@ import { editorStore } from "../store/editorStore";
 import {
   closeWindow,
   getWindowById,
+  hideWindow,
   openWindow,
 } from "../windows/windowStore";
 
-const DEBUG_PANEL_WINDOW_ID = "debug-panel";
+export const DEBUG_PANEL_WINDOW_ID = "debug-panel";
 
 // Computed value that automatically updates when spec changes
 const derivedState = computed({
@@ -155,12 +156,30 @@ export function DebugPanelContent() {
 }
 
 /**
- * DebugPanel component that opens the debug panel as a window on mount.
- * This component manages the window lifecycle.
+ * Toggle the debug panel window visibility.
+ */
+export function toggleDebugPanel() {
+  const existingWindow = getWindowById(DEBUG_PANEL_WINDOW_ID);
+  if (existingWindow) {
+    closeWindow(DEBUG_PANEL_WINDOW_ID);
+  } else {
+    openWindow(<DebugPanelContent />, {
+      id: DEBUG_PANEL_WINDOW_ID,
+      title: "Debug Panel",
+      position: { x: 16, y: 16 },
+      size: { width: 320, height: 420 },
+    });
+  }
+}
+
+/**
+ * DebugPanel component that manages the debug panel window lifecycle.
+ * The window is created but hidden by default - it appears in the TaskPanel
+ * and can be restored from there or toggled with toggleDebugPanel().
  */
 export function DebugPanel() {
   useEffect(() => {
-    // Open the debug panel window if it doesn't exist
+    // Create the window but immediately hide it so it appears in TaskPanel
     const existingWindow = getWindowById(DEBUG_PANEL_WINDOW_ID);
     if (!existingWindow) {
       openWindow(<DebugPanelContent />, {
@@ -169,6 +188,8 @@ export function DebugPanel() {
         position: { x: 16, y: 16 },
         size: { width: 320, height: 420 },
       });
+      // Hide it immediately so it starts in the TaskPanel
+      hideWindow(DEBUG_PANEL_WINDOW_ID);
     }
 
     // Cleanup: close window on unmount
@@ -177,6 +198,6 @@ export function DebugPanel() {
     };
   }, []);
 
-  // This component doesn't render anything - it just manages the window
+  // This component doesn't render anything - it just manages the window lifecycle
   return null;
 }
