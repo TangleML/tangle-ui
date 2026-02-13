@@ -74,7 +74,7 @@ export function TaskNode({ id, data, selected }: TaskNodeProps) {
     >
       <CardHeader className="border-b border-slate-200 px-3 py-2">
         <InlineStack gap="2" wrap="nowrap" blockAlign="center">
-          <Icon name="Workflow" size="sm" className="text-blue-600 shrink-0" />
+          <Icon name="Circle" size="sm" className="text-blue-600 shrink-0" />
           <CardTitle className="truncate text-sm font-medium text-slate-900">
             {task.name}
           </CardTitle>
@@ -162,6 +162,15 @@ export function TaskNode({ id, data, selected }: TaskNodeProps) {
             )}
           </BlockStack>
         </InlineStack>
+
+        {/* Debug: Annotation keys */}
+        {task.annotations.getAll().length > 0 && (
+          <BlockStack className="border-t rounded-b-md border-slate-100 px-3 py-1.5 bg-slate-50 overflow-hidden">
+            <Text size="xs" tone="subdued" className="font-mono truncate">
+              annotations: [{task.annotations.getAll().map((a) => a.key).join(", ")}]
+            </Text>
+          </BlockStack>
+        )}
       </CardContent>
     </Card>
   );

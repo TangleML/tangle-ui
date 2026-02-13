@@ -12,6 +12,7 @@ import { GraphImplementation } from "@/providers/ComponentSpec/graphImplementati
 
 import { renameInput, renameOutput, renameTask } from "../store/actions";
 import { editorStore } from "../store/editorStore";
+import { TaskAnnotationsEditor } from "./TaskAnnotationsEditor";
 
 /**
  * Content for the Context Panel window.
@@ -174,6 +175,8 @@ function TaskDetails({ entityId }: TaskDetailsProps) {
             </BlockStack>
           </BlockStack>
         )}
+
+        <TaskAnnotationsEditor entityId={entityId} />
       </BlockStack>
     </BlockStack>
   );
