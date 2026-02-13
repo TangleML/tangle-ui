@@ -39,8 +39,11 @@ export function TaskNode({ id, data, selected }: TaskNodeProps) {
       ? spec.implementation.tasks.findById(entityId)
       : null;
 
-  const handleClick = () => {
-    selectNode(id, "task");
+  const handleClick = (event: React.MouseEvent) => {
+    selectNode(id, "task", {
+      shiftKey: event.shiftKey,
+      entityId,
+    });
   };
 
   if (!task) {

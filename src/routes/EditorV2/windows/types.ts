@@ -25,6 +25,8 @@ export interface WindowConfig {
   previousPosition?: Position;
   previousSize?: Size;
   previousState?: WindowState;
+  /** Optional entity ID this window is linked to (for auto-close on entity deletion) */
+  linkedEntityId?: string;
 }
 
 /** Reference returned from open() for controlling a window */
@@ -49,6 +51,8 @@ export interface WindowOptions {
   size?: Size;
   /** Minimum size for resizing - defaults to 280x200 */
   minSize?: Size;
+  /** Optional entity ID to link this window to (for auto-close on entity deletion) */
+  linkedEntityId?: string;
 }
 
 /** Default window dimensions */

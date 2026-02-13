@@ -84,6 +84,7 @@ export function openWindow(
     position: options.position ?? calculateNewPosition(),
     size: options.size ?? { ...DEFAULT_WINDOW_SIZE },
     minSize: options.minSize ?? { ...DEFAULT_MIN_SIZE },
+    linkedEntityId: options.linkedEntityId,
   };
 
   windowStore.windows[id] = config;
@@ -200,6 +201,16 @@ export function getAllWindows(): WindowConfig[] {
 /** Get hidden windows only */
 export function getHiddenWindows(): WindowConfig[] {
   return getAllWindows().filter((w) => w.state === "hidden");
+}
+
+/** Close all windows linked to a specific entity */
+export function closeWindowsByLinkedEntity(entityId: string): void {
+  const windowsToClose = windowStore.windowOrder.filter(
+    (id) => windowStore.windows[id]?.linkedEntityId === entityId,
+  );
+  for (const id of windowsToClose) {
+    closeWindow(id);
+  }
 }
 
 /** Create a WindowRef object for external control */
