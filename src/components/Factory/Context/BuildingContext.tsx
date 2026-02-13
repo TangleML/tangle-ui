@@ -1,7 +1,7 @@
 import { BlockStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 
-import type { Building } from "../types/buildings";
+import type { BuildingInstance } from "../types/buildings";
 import { BuildingDescription } from "./Building/BuildingDescription";
 import { ConnectionsSection } from "./Building/ConnectionsSection";
 import { ProductionMethodSection } from "./Building/ProductionMethodSection";
@@ -9,7 +9,7 @@ import { StockpileSection } from "./Building/StockpileSection";
 import { ContextHeader } from "./shared/ContextHeader";
 
 interface BuildingContextProps {
-  building: Building;
+  building: BuildingInstance;
   nodeId: string;
 }
 

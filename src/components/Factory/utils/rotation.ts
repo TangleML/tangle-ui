@@ -1,8 +1,8 @@
 import { Position } from "@xyflow/react";
 
 import type {
-  Building,
   BuildingInput,
+  BuildingInstance,
   BuildingOutput,
 } from "../types/buildings";
 
@@ -22,7 +22,9 @@ const rotatePosition = (position: Position): Position => {
   }
 };
 
-export const rotateBuilding = (building: Building): Building => {
+export const rotateBuilding = (
+  building: BuildingInstance,
+): BuildingInstance => {
   const rotatedInputs = building.inputs?.map((input: BuildingInput) => ({
     ...input,
     position: rotatePosition(input.position),

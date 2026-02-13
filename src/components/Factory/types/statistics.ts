@@ -1,9 +1,10 @@
+import type { GlobalResources } from "../data/resources";
 import type { ResourceType } from "./resources";
 
 export interface GlobalStatistics {
   day: number;
-  resources: Partial<Record<ResourceType, number>>;
-  earned: Partial<Record<ResourceType, number>>;
+  resources: GlobalResources;
+  earned: GlobalResources;
 }
 
 export interface StockpileChange {

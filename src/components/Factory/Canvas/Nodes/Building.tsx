@@ -9,12 +9,12 @@ import { cn } from "@/lib/utils";
 import { useContextPanel } from "@/providers/ContextPanelProvider";
 
 import BuildingContext from "../../Context/BuildingContext";
-import { RESOURCES } from "../../data/resources";
-import {
-  type BuildingInput as BuildingInputConfig,
-  type BuildingOutput as BuildingOutputConfig,
-  isBuildingData,
+import { isGlobalResource } from "../../data/resources";
+import type {
+  BuildingInput as BuildingInputType,
+  BuildingOutput as BuildingOutputType,
 } from "../../types/buildings";
+import { getBuildingInstance, isBuildingInstance } from "../../types/buildings";
 import { rotateBuilding } from "../../utils/rotation";
 import BuildingInput from "../Handles/BuildingInput";
 import BuildingOutput from "../Handles/BuildingOutput";
@@ -32,7 +32,7 @@ const Building = ({ id, data, selected }: NodeProps) => {
     if (!selected) return;
 
     const handleKeyPress = (event: KeyboardEvent) => {
-      if (!isBuildingData(data)) return;
+      if (!isBuildingInstance(data)) return;
 
       if (event.key === "r" || event.key === "R") {
         event.preventDefault();
@@ -46,16 +46,17 @@ const Building = ({ id, data, selected }: NodeProps) => {
     return () => window.removeEventListener("keydown", handleKeyPress);
   }, [selected, id, data, updateNodeData, updateNodeInternals]);
 
-  // Handle context panel - update on data changes
   useEffect(() => {
     if (selected) {
-      // Get the latest node data from React Flow
-      const currentNode = getNode(id);
-      const currentData = currentNode?.data || data;
+      const buildingInstance = getBuildingInstance(data);
 
-      if (!isBuildingData(currentData)) return;
+      if (!buildingInstance) {
+        setContent(<InvalidBuildingNode />);
+        setContextPanelOpen(true);
+        return;
+      }
 
-      setContent(<BuildingContext building={currentData} nodeId={id} />);
+      setContent(<BuildingContext building={buildingInstance} nodeId={id} />);
       setContextPanelOpen(true);
     }
 
@@ -64,26 +65,22 @@ const Building = ({ id, data, selected }: NodeProps) => {
         clearContent();
       }
     };
-  }, [
-    selected,
-    data,
-    id,
-    getNode,
-    setContent,
-    clearContent,
-    setContextPanelOpen,
-  ]);
+  }, [selected, data, getNode, setContent, clearContent, setContextPanelOpen]);
 
-  if (!isBuildingData(data)) {
-    return (
-      <div className="px-6 py-4 shadow-lg rounded-lg bg-red-50 border-4 border-red-500">
-        <div className="font-bold text-lg text-red-900">Invalid Building</div>
-        <div className="text-sm text-red-700 mt-1">Data is not valid</div>
-      </div>
-    );
+  const instance = getBuildingInstance(data);
+
+  if (!instance) {
+    return <InvalidBuildingNode />;
   }
 
-  const { icon, name, description, color, inputs = [], outputs = [] } = data;
+  const {
+    icon,
+    name,
+    description,
+    color,
+    inputs = [],
+    outputs = [],
+  } = instance;
 
   // Calculate position counts
   const inputCounts = countBuildingIO(inputs);
@@ -98,7 +95,9 @@ const Building = ({ id, data, selected }: NodeProps) => {
       className={cn("bg-white rounded-lg", selected && "ring-2 ring-selected")}
     >
       {inputs.map((input, globalIndex) => {
-        const isGlobal = RESOURCES[input.resource]?.global;
+        if (!input.position) return null;
+
+        const isGlobal = isGlobalResource(input.resource);
         if (isGlobal) return;
 
         const posIndex = inputIndexAtPosition[input.position] || 0;
@@ -107,7 +106,7 @@ const Building = ({ id, data, selected }: NodeProps) => {
         return (
           <BuildingInput
             key={globalIndex}
-            building={data}
+            building={instance}
             input={input}
             selected={selected}
             index={globalIndex}
@@ -130,7 +129,9 @@ const Building = ({ id, data, selected }: NodeProps) => {
       </div>
 
       {outputs.map((output, globalIndex) => {
-        const isGlobal = RESOURCES[output.resource]?.global;
+        if (!output.position) return null;
+
+        const isGlobal = isGlobalResource(output.resource);
         if (isGlobal) return;
 
         const posIndex = outputIndexAtPosition[output.position] || 0;
@@ -139,7 +140,7 @@ const Building = ({ id, data, selected }: NodeProps) => {
         return (
           <BuildingOutput
             key={globalIndex}
-            building={data}
+            building={instance}
             output={output}
             selected={selected}
             index={globalIndex}
@@ -154,10 +155,17 @@ const Building = ({ id, data, selected }: NodeProps) => {
 
 export default Building;
 
-function countBuildingIO(ios: (BuildingInputConfig | BuildingOutputConfig)[]) {
+function countBuildingIO(ios: (BuildingInputType | BuildingOutputType)[]) {
   const counts: Record<string, number> = {};
   ios.forEach((io) => {
     counts[io.position] = (counts[io.position] || 0) + 1;
   });
   return counts;
 }
+
+const InvalidBuildingNode = () => (
+  <div className="px-6 py-4 shadow-lg rounded-lg bg-red-50 border-4 border-red-500">
+    <div className="font-bold text-lg text-red-900">Invalid Building</div>
+    <div className="text-sm text-red-700 mt-1">Data is not valid</div>
+  </div>
+);
