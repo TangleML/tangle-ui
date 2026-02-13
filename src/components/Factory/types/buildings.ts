@@ -4,12 +4,12 @@ import type { ResourceType } from "./resources";
 
 export type BuildingInput = {
   resource: ResourceType;
-  position: Position;
+  position?: Position;
 };
 
 export type BuildingOutput = {
   resource: ResourceType;
-  position: Position;
+  position?: Position;
 };
 
 export type ProductionMethod = {
@@ -19,10 +19,6 @@ export type ProductionMethod = {
     amount: number;
   }>;
   outputs: Array<{
-    resource: ResourceType;
-    amount: number;
-  }>;
-  globalOutputs?: Array<{
     resource: ResourceType;
     amount: number;
   }>;
