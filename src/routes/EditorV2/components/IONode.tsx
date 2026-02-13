@@ -37,8 +37,11 @@ export function IONode({ id, data, selected }: IONodeProps) {
     ? spec?.inputs.entities[entityId]
     : spec?.outputs.entities[entityId];
 
-  const handleClick = () => {
-    selectNode(id, ioType);
+  const handleClick = (event: React.MouseEvent) => {
+    selectNode(id, ioType, {
+      shiftKey: event.shiftKey,
+      entityId,
+    });
   };
 
   if (!entity) {
