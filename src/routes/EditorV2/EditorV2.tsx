@@ -16,6 +16,7 @@ import { ContextPanelContent } from "./components/ContextPanel";
 import { DebugPanel } from "./components/DebugPanel";
 import { FlowCanvas } from "./components/FlowCanvas";
 import { PinnedTaskContent } from "./components/PinnedTaskContent";
+import { PipelineDetailsContent } from "./components/PipelineDetailsContent";
 import { editorStore, initializeStore } from "./store/editorStore";
 import { TaskPanel } from "./windows/TaskPanel";
 import { WindowContainer } from "./windows/WindowContainer";
@@ -56,6 +57,7 @@ function useLoadSpec() {
 
 const CONTEXT_PANEL_WINDOW_ID = "context-panel";
 const COMPONENT_LIBRARY_WINDOW_ID = "component-library";
+const PIPELINE_DETAILS_WINDOW_ID = "pipeline-details";
 
 /** Generate a unique ID for pinned windows */
 function generatePinnedWindowId(): string {
@@ -210,7 +212,21 @@ const PipelineEditor = withSuspenseWrapper(() => {
         id: COMPONENT_LIBRARY_WINDOW_ID,
         title: "Components",
         position: { x: 0, y: 100 },
-        size: { width: 280, height: 500 },
+        size: { width: 280, height: 350 },
+        disabledActions: ["close"],
+      });
+    }
+  }, []);
+
+  // Open pipeline details window on mount
+  useEffect(() => {
+    const existingWindow = getWindowById(PIPELINE_DETAILS_WINDOW_ID);
+    if (!existingWindow) {
+      openWindow(<PipelineDetailsContent />, {
+        id: PIPELINE_DETAILS_WINDOW_ID,
+        title: "Pipeline Details",
+        position: { x: 0, y: 460 },
+        size: { width: 280, height: 350 },
         disabledActions: ["close"],
       });
     }
