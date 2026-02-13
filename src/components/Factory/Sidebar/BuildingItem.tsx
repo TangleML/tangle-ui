@@ -1,5 +1,4 @@
 import type { DragEvent } from "react";
-import { useCallback } from "react";
 
 import { InlineStack } from "@/components/ui/layout";
 import { SidebarMenuItem } from "@/components/ui/sidebar";
@@ -13,25 +12,22 @@ interface BuildingItemProps {
 }
 
 const BuildingItem = ({ building }: BuildingItemProps) => {
-  const onDragStart = useCallback(
-    (event: DragEvent) => {
-      event.dataTransfer.setData(
-        "application/reactflow",
-        JSON.stringify({ building }),
-      );
+  const onDragStart = (event: DragEvent) => {
+    event.dataTransfer.setData(
+      "application/reactflow",
+      JSON.stringify({ building }),
+    );
 
-      event.dataTransfer.setData(
-        "DragStart.offset",
-        JSON.stringify({
-          offsetX: event.nativeEvent.offsetX,
-          offsetY: event.nativeEvent.offsetY,
-        }),
-      );
+    event.dataTransfer.setData(
+      "DragStart.offset",
+      JSON.stringify({
+        offsetX: event.nativeEvent.offsetX,
+        offsetY: event.nativeEvent.offsetY,
+      }),
+    );
 
-      event.dataTransfer.effectAllowed = "move";
-    },
-    [building],
-  );
+    event.dataTransfer.effectAllowed = "move";
+  };
 
   return (
     <SidebarMenuItem
@@ -57,7 +53,7 @@ const BuildingItem = ({ building }: BuildingItemProps) => {
             {building.description}
           </span>
           <span className="text-[10px] text-amber-600 font-semibold">
-            {RESOURCES.coins.icon} {building.cost}
+            {RESOURCES.money.icon} {building.cost}
           </span>
         </div>
       </InlineStack>
