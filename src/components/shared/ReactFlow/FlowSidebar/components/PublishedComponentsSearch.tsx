@@ -41,6 +41,7 @@ import type { ComponentFolder } from "@/types/componentLibrary";
 import { ComponentSearchFilter } from "@/utils/constants";
 import { debounce } from "@/utils/debounce";
 
+import { ComponentDetailsPreview } from "./ComponentDetailsPreview";
 import { ComponentMarkup } from "./ComponentItem";
 
 /**
@@ -244,8 +245,12 @@ const SearchResults = ({ searchResult }: SearchResultsProps) => {
     0,
   );
 
-  return (
-    <BlockStack gap="2" className="px-2" data-testid="search-results-container">
+  const resultsList = (
+    <BlockStack
+      gap="2"
+      className="px-2 flex-1 min-h-0 overflow-y-auto @[600px]:border-r @[600px]:border-border"
+      data-testid="search-results-container"
+    >
       <Text
         tone="subdued"
         data-testid="search-results-header"
@@ -278,6 +283,18 @@ const SearchResults = ({ searchResult }: SearchResultsProps) => {
           )}
         </ul>
       </div>
+    </BlockStack>
+  );
+
+  return (
+    <BlockStack className="@container" fill>
+      <InlineStack
+        className="flex-col @[600px]:grid @[600px]:grid-cols-[40%_60%]"
+        fill
+      >
+        {resultsList}
+        <ComponentDetailsPreview />
+      </InlineStack>
     </BlockStack>
   );
 };
