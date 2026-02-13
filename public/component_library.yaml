@@ -1,5 +1,10 @@
 annotations: {}
 folders:
+  - name: Aggregation
+    components:
+      - url: /components/aggregator/component.yaml
+        name: Aggregate Inputs
+        author: Hargun Singh, Morgan Wowk
   - name: Quick start
     components:
       - url: https://raw.githubusercontent.com/Ark-kun/pipeline_components/57f780b15922061e59833541b71f3d099e710177/components/datasets/Chicago_Taxi_Trips/quick_start_version/component.yaml
