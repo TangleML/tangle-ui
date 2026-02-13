@@ -159,7 +159,12 @@ export function Window({ windowId }: WindowProps) {
           </Text>
         </InlineStack>
 
-        <InlineStack gap="1" blockAlign="center" className="shrink-0">
+        <InlineStack
+          gap="1"
+          blockAlign="center"
+          className="shrink-0"
+          onMouseDown={(e) => e.stopPropagation()}
+        >
           {/* Minimize button (collapse to header) */}
           {!isActionDisabled("minimize") && (
             <Button
