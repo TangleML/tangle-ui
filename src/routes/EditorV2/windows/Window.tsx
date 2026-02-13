@@ -7,7 +7,7 @@ import { InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 
-import type { Position, WindowConfig } from "./types";
+import type { Position, WindowAction, WindowConfig } from "./types";
 import {
   bringToFront,
   closeWindow,
@@ -38,11 +38,14 @@ export function Window({ windowId }: WindowProps) {
     return null;
   }
 
-  const { title, state, position, size, minSize } = windowConfig;
+  const { title, state, position, size, minSize, disabledActions } = windowConfig;
   // Get content from separate map (not stored in proxy to avoid React Compiler issues)
   const content = getWindowContent(windowId);
   const isMinimized = state === "minimized";
   const isMaximized = state === "maximized";
+
+  const isActionDisabled = (action: WindowAction) =>
+    disabledActions?.includes(action) ?? false;
 
   const handleMouseDown = () => {
     bringToFront(windowId);
@@ -158,48 +161,56 @@ export function Window({ windowId }: WindowProps) {
 
         <InlineStack gap="1" blockAlign="center" className="shrink-0">
           {/* Minimize button (collapse to header) */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 text-gray-500 hover:text-gray-700 hover:bg-gray-200"
-            onClick={() => toggleMinimize(windowId)}
-            title={isMinimized ? "Expand" : "Minimize"}
-          >
-            <Icon name={isMinimized ? "ChevronDown" : "Minus"} size="sm" />
-          </Button>
+          {!isActionDisabled("minimize") && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-gray-500 hover:text-gray-700 hover:bg-gray-200"
+              onClick={() => toggleMinimize(windowId)}
+              title={isMinimized ? "Expand" : "Minimize"}
+            >
+              <Icon name={isMinimized ? "ChevronDown" : "Minus"} size="sm" />
+            </Button>
+          )}
 
           {/* Maximize button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 text-gray-500 hover:text-gray-700 hover:bg-gray-200"
-            onClick={() => toggleMaximize(windowId)}
-            title={isMaximized ? "Restore" : "Maximize"}
-          >
-            <Icon name={isMaximized ? "Minimize2" : "Maximize2"} size="sm" />
-          </Button>
+          {!isActionDisabled("maximize") && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-gray-500 hover:text-gray-700 hover:bg-gray-200"
+              onClick={() => toggleMaximize(windowId)}
+              title={isMaximized ? "Restore" : "Maximize"}
+            >
+              <Icon name={isMaximized ? "Minimize2" : "Maximize2"} size="sm" />
+            </Button>
+          )}
 
           {/* Hide button (to task panel) */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 text-gray-500 hover:text-gray-700 hover:bg-gray-200"
-            onClick={() => hideWindow(windowId)}
-            title="Hide to task panel"
-          >
-            <Icon name="PanelBottomClose" size="sm" />
-          </Button>
+          {!isActionDisabled("hide") && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-gray-500 hover:text-gray-700 hover:bg-gray-200"
+              onClick={() => hideWindow(windowId)}
+              title="Hide to task panel"
+            >
+              <Icon name="PanelBottomClose" size="sm" />
+            </Button>
+          )}
 
           {/* Close button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 text-gray-500 hover:text-red-500 hover:bg-gray-200"
-            onClick={() => closeWindow(windowId)}
-            title="Close"
-          >
-            <Icon name="X" size="sm" />
-          </Button>
+          {!isActionDisabled("close") && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-gray-500 hover:text-red-500 hover:bg-gray-200"
+              onClick={() => closeWindow(windowId)}
+              title="Close"
+            >
+              <Icon name="X" size="sm" />
+            </Button>
+          )}
         </InlineStack>
       </div>
 

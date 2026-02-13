@@ -85,6 +85,7 @@ export function openWindow(
     size: options.size ?? { ...DEFAULT_WINDOW_SIZE },
     minSize: options.minSize ?? { ...DEFAULT_MIN_SIZE },
     linkedEntityId: options.linkedEntityId,
+    disabledActions: options.disabledActions,
   };
 
   windowStore.windows[id] = config;
