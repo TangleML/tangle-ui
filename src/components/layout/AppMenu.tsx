@@ -32,7 +32,7 @@ const AppMenu = () => {
 
   const isFactoryGame = window.location.pathname === "/factory";
 
-  const title = isFactoryGame ? "FACTORY" : componentSpec?.name;
+  const title = isFactoryGame ? "FACTORY GAME" : componentSpec?.name;
 
   const gameButton = (
     <Link href="/factory" target="_blank" rel="noopener noreferrer">
@@ -74,10 +74,12 @@ const AppMenu = () => {
 
         <InlineStack gap="8" wrap="nowrap" className="shrink-0">
           {/* Desktop action buttons - hidden on mobile */}
-          <InlineStack gap="2" className="hidden md:flex" wrap="nowrap">
-            <ImportPipeline />
-            <NewPipelineButton />
-          </InlineStack>
+          {!isFactoryGame && (
+            <InlineStack gap="2" className="hidden md:flex" wrap="nowrap">
+              <ImportPipeline />
+              <NewPipelineButton />
+            </InlineStack>
+          )}
 
           {/* Always visible settings */}
           <InlineStack gap="2" wrap="nowrap">
