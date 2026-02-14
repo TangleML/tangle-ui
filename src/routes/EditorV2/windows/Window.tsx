@@ -47,15 +47,29 @@ export function Window({ windowId }: WindowProps) {
   const isActionDisabled = (action: WindowAction) =>
     disabledActions?.includes(action) ?? false;
 
+  const isAtFront = zIndex === snap.windowOrder.length - 1;
+
   const handleMouseDown = () => {
-    bringToFront(windowId);
+    // Only bring to front if not already at front to avoid unnecessary re-renders
+    if (!isAtFront) {
+      // Defer the store update to avoid re-rendering during focus transitions
+      // This prevents Monaco editor crashes caused by re-renders while handling focus
+      requestAnimationFrame(() => {
+        bringToFront(windowId);
+      });
+    }
   };
 
   const handleHeaderMouseDown = (e: React.MouseEvent) => {
     // Don't drag if clicking on buttons
     if ((e.target as HTMLElement).closest("button")) return;
 
-    bringToFront(windowId);
+    if (!isAtFront) {
+      // Defer to avoid re-rendering during focus transitions
+      requestAnimationFrame(() => {
+        bringToFront(windowId);
+      });
+    }
     setIsDragging(true);
     dragOffset.current = {
       x: e.clientX - position.x,
