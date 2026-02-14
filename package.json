@@ -96,6 +96,7 @@
     "js-yaml": "^4.1.1",
     "localforage": "^1.10.0",
     "lucide-react": "^0.577.0",
+    "prism-react-renderer": "^2.4.1",
     "nanoid": "^5.1.9",
     "papaparse": "^5.5.3",
     "pyodide": "^0.29.3",
