@@ -330,4 +330,175 @@ describe("Valtio Reactivity for ComponentSpec Object Model", () => {
       expect(Object.keys(proxiedEntities).length).toBe(2);
     });
   });
+
+  describe("Auto-reindexing on indexed field changes", () => {
+    it("should automatically update index when input name changes", async () => {
+      const componentSpec = new ComponentSpecEntity(
+        rootContext.generateId(),
+        rootContext,
+        { name: "Test" },
+      );
+
+      const input = componentSpec.inputs.add({
+        name: "original_name",
+        type: "String",
+      });
+
+      // Verify initial index state
+      expect(
+        componentSpec.inputs.findByIndex("name", "original_name"),
+      ).toHaveLength(1);
+      expect(componentSpec.inputs.findByIndex("name", "new_name")).toHaveLength(
+        0,
+      );
+
+      // Change the indexed field
+      input.name = "new_name";
+
+      // Wait for async subscription to trigger
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      // Index should be updated automatically
+      expect(
+        componentSpec.inputs.findByIndex("name", "original_name"),
+      ).toHaveLength(0);
+      expect(componentSpec.inputs.findByIndex("name", "new_name")).toHaveLength(
+        1,
+      );
+      expect(componentSpec.inputs.findByIndex("name", "new_name")[0]).toBe(
+        input,
+      );
+    });
+
+    it("should automatically update index when task name changes", async () => {
+      const componentSpec = new ComponentSpecEntity(
+        rootContext.generateId(),
+        rootContext,
+        { name: "Test" },
+      );
+      const graphImpl = new GraphImplementation(componentSpec);
+      componentSpec.implementation = graphImpl;
+
+      const task = graphImpl.tasks.add({
+        name: "original_task",
+        componentRef: simpleContainerComponentRef,
+      });
+
+      // Verify initial index state
+      expect(graphImpl.tasks.findByIndex("name", "original_task")).toHaveLength(
+        1,
+      );
+      expect(graphImpl.tasks.findByIndex("name", "renamed_task")).toHaveLength(
+        0,
+      );
+
+      // Change the indexed field
+      task.name = "renamed_task";
+
+      // Wait for async subscription to trigger
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      // Index should be updated automatically
+      expect(graphImpl.tasks.findByIndex("name", "original_task")).toHaveLength(
+        0,
+      );
+      expect(graphImpl.tasks.findByIndex("name", "renamed_task")).toHaveLength(
+        1,
+      );
+      expect(graphImpl.tasks.findByIndex("name", "renamed_task")[0]).toBe(task);
+    });
+
+    it("should handle multiple indexed field changes correctly", async () => {
+      const componentSpec = new ComponentSpecEntity(
+        rootContext.generateId(),
+        rootContext,
+        { name: "Test" },
+      );
+      const graphImpl = new GraphImplementation(componentSpec);
+      componentSpec.implementation = graphImpl;
+
+      const task = graphImpl.tasks.add({
+        name: "task_v1",
+        componentRef: simpleContainerComponentRef,
+      });
+
+      // First rename
+      task.name = "task_v2";
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(graphImpl.tasks.findByIndex("name", "task_v1")).toHaveLength(0);
+      expect(graphImpl.tasks.findByIndex("name", "task_v2")).toHaveLength(1);
+
+      // Second rename
+      task.name = "task_v3";
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(graphImpl.tasks.findByIndex("name", "task_v2")).toHaveLength(0);
+      expect(graphImpl.tasks.findByIndex("name", "task_v3")).toHaveLength(1);
+    });
+
+    it("should cleanup subscriptions when entity is removed", async () => {
+      const componentSpec = new ComponentSpecEntity(
+        rootContext.generateId(),
+        rootContext,
+        { name: "Test" },
+      );
+
+      const input = componentSpec.inputs.add({
+        name: "to_remove",
+        type: "String",
+      });
+
+      const inputId = input.$id;
+
+      // Verify initial state
+      expect(
+        componentSpec.inputs.findByIndex("name", "to_remove"),
+      ).toHaveLength(1);
+      expect(componentSpec.inputs.has(inputId)).toBe(true);
+
+      // Remove the entity
+      componentSpec.inputs.removeById(inputId);
+
+      // Verify cleanup
+      expect(
+        componentSpec.inputs.findByIndex("name", "to_remove"),
+      ).toHaveLength(0);
+      expect(componentSpec.inputs.has(inputId)).toBe(false);
+    });
+
+    it("should handle multiple entities with different indexed values", async () => {
+      const componentSpec = new ComponentSpecEntity(
+        rootContext.generateId(),
+        rootContext,
+        { name: "Test" },
+      );
+      const graphImpl = new GraphImplementation(componentSpec);
+      componentSpec.implementation = graphImpl;
+
+      const task1 = graphImpl.tasks.add({
+        name: "task_a",
+        componentRef: simpleContainerComponentRef,
+      });
+
+      const task2 = graphImpl.tasks.add({
+        name: "task_b",
+        componentRef: simpleContainerComponentRef,
+      });
+
+      // Rename task1
+      task1.name = "task_a_renamed";
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      // task1 should be findable by new name, not old
+      expect(graphImpl.tasks.findByIndex("name", "task_a")).toHaveLength(0);
+      expect(
+        graphImpl.tasks.findByIndex("name", "task_a_renamed"),
+      ).toHaveLength(1);
+
+      // task2 should be unaffected
+      expect(graphImpl.tasks.findByIndex("name", "task_b")).toHaveLength(1);
+      expect(graphImpl.tasks.findByIndex("name", "task_b")[0]).toBe(task2);
+    });
+  });
 });

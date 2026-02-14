@@ -1,4 +1,4 @@
-import { proxy } from "valtio";
+import { proxy, subscribe } from "valtio";
 
 import type { BaseEntity } from "./types";
 
@@ -87,6 +87,35 @@ class IndexByKey {
     }
     return Object.keys(entityIds);
   }
+
+  /**
+   * Update the index for a single field when its value changes.
+   * Removes the entity from the old value index and adds it to the new value index.
+   */
+  updateIndex<TEntity extends BaseEntity<any>>(
+    entity: TEntity,
+    field: string,
+    oldValue: unknown,
+    newValue: unknown,
+  ) {
+    // Remove from old value index
+    const valueToEntityId = this.fieldValueToEntityId[field];
+    if (valueToEntityId) {
+      const entityIds = valueToEntityId[String(oldValue)];
+      if (entityIds) {
+        delete entityIds[entity.$id];
+      }
+    }
+
+    // Add to new value index
+    if (!this.fieldValueToEntityId[field]) {
+      this.fieldValueToEntityId[field] = {};
+    }
+    if (!this.fieldValueToEntityId[field][String(newValue)]) {
+      this.fieldValueToEntityId[field][String(newValue)] = {};
+    }
+    this.fieldValueToEntityId[field][String(newValue)][entity.$id] = true;
+  }
 }
 
 export class EntityIndex<TEntity extends BaseEntity<any>> {
@@ -96,6 +125,21 @@ export class EntityIndex<TEntity extends BaseEntity<any>> {
    */
   readonly entities: Record<EntityId, TEntity> = {};
   private readonly indexByKey = new IndexByKey();
+
+  /**
+   * Track subscriptions for each entity to enable auto-reindexing.
+   * Maps entity $id to unsubscribe function.
+   */
+  private readonly subscriptions = new Map<EntityId, () => void>();
+
+  /**
+   * Track current values of indexed fields for each entity.
+   * Used to detect changes and update indexes automatically.
+   */
+  private readonly indexedFieldValues = new Map<
+    EntityId,
+    Record<string, unknown>
+  >();
 
   getAll(): TEntity[] {
     return Object.values(this.entities);
@@ -110,6 +154,9 @@ export class EntityIndex<TEntity extends BaseEntity<any>> {
     const proxiedEntity = proxy(entity) as TEntity;
     this.entities[proxiedEntity.$id] = proxiedEntity;
     this.indexByKey.add(proxiedEntity);
+
+    // Set up auto-reindexing via subscription
+    this.trackIndexedFields(proxiedEntity);
   }
 
   remove(entity: TEntity) {
@@ -121,6 +168,14 @@ export class EntityIndex<TEntity extends BaseEntity<any>> {
     if (!entity) {
       return false;
     }
+
+    // Clean up subscription
+    const unsubscribe = this.subscriptions.get(id);
+    if (unsubscribe) {
+      unsubscribe();
+      this.subscriptions.delete(id);
+    }
+    this.indexedFieldValues.delete(id);
 
     this.indexByKey.remove(entity);
     delete this.entities[id];
@@ -141,30 +196,44 @@ export class EntityIndex<TEntity extends BaseEntity<any>> {
   }
 
   /**
-   * Re-index an entity after updating its indexed fields.
-   * Call this AFTER modifying the field value, passing the OLD value so it can be removed.
-   *
-   * @param entity The entity to re-index (with NEW values already set)
-   * @param oldValues The OLD values of indexed fields (to remove from index)
+   * Store initial indexed field values and subscribe to entity changes
+   * for automatic reindexing.
    */
-  reindex(entity: TEntity, oldValues: Partial<Record<string, unknown>>): void {
-    // Remove old index entries for the fields that changed
-    for (const index of entity.$indexed) {
-      const oldValue = oldValues[index as string];
-      if (oldValue !== undefined) {
-        const valueToEntityId = (this.indexByKey as any).fieldValueToEntityId[
-          index
-        ];
-        if (valueToEntityId) {
-          const entityIds = valueToEntityId[String(oldValue)];
-          if (entityIds) {
-            delete entityIds[entity.$id];
-          }
-        }
+  private trackIndexedFields(entity: TEntity) {
+    // Store current values of indexed fields
+    const values: Record<string, unknown> = {};
+    for (const field of entity.$indexed) {
+      values[field as string] = entity[field];
+    }
+    this.indexedFieldValues.set(entity.$id, values);
+
+    // Subscribe to entity changes for auto-reindexing
+    const unsubscribe = subscribe(entity, () => {
+      this.handleEntityChange(entity);
+    });
+    this.subscriptions.set(entity.$id, unsubscribe);
+  }
+
+  /**
+   * Handle entity changes by checking indexed fields and updating the index
+   * if any of them changed.
+   */
+  private handleEntityChange(entity: TEntity) {
+    const oldValues = this.indexedFieldValues.get(entity.$id);
+    if (!oldValues) return;
+
+    for (const field of entity.$indexed) {
+      const fieldKey = field as string;
+      const oldValue = oldValues[fieldKey];
+      const newValue = entity[field];
+
+      if (oldValue !== newValue) {
+        // Update index: remove old, add new
+        this.indexByKey.updateIndex(entity, fieldKey, oldValue, newValue);
+        // Update stored value
+        oldValues[fieldKey] = newValue;
       }
     }
-    // Add new index entries with current (new) values
-    this.indexByKey.add(entity);
   }
 }
 
