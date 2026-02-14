@@ -493,14 +493,8 @@ export function renameTask(entityId: string, newName: string) {
     return false;
   }
 
-  // Store old name for index update
-  const oldName = task.name;
-
-  // Update the name
+  // Update the name - auto-reindexing happens via Valtio subscription
   task.name = newName;
-
-  // Re-index the entity with the new name
-  spec.implementation.tasks.reindex(task, { name: oldName });
 
   return true;
 }
@@ -532,14 +526,8 @@ export function renameInput(entityId: string, newName: string) {
     return false;
   }
 
-  // Store old name for index update
-  const oldName = input.name;
-
-  // Update the name
+  // Update the name - auto-reindexing happens via Valtio subscription
   input.name = newName;
-
-  // Re-index the entity with the new name
-  spec.inputs.reindex(input, { name: oldName });
 
   return true;
 }
@@ -601,14 +589,8 @@ export function renameOutput(entityId: string, newName: string) {
     return false;
   }
 
-  // Store old name for index update
-  const oldName = output.name;
-
-  // Update the name
+  // Update the name - auto-reindexing happens via Valtio subscription
   output.name = newName;
-
-  // Re-index the entity with the new name
-  spec.outputs.reindex(output, { name: oldName });
 
   return true;
 }
