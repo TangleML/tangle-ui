@@ -11,7 +11,7 @@ const GameSidebar = () => {
       className="mt-14 h-[calc(100vh-56px)]"
       collapsible="icon"
     >
-      <SidebarContent className="p-4">
+      <SidebarContent>
         <Controls />
         <Resources />
         <Buildings />
