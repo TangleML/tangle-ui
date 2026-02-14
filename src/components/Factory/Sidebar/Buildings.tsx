@@ -5,7 +5,7 @@ import {
   SidebarGroupLabel,
 } from "@/components/ui/sidebar";
 
-import { BUILDINGS } from "../data/buildings";
+import { BUILDING_TYPES } from "../types/buildings";
 import BuildingItem from "./BuildingItem";
 
 const Buildings = () => {
@@ -14,8 +14,8 @@ const Buildings = () => {
       <SidebarGroupLabel>Buildings</SidebarGroupLabel>
       <SidebarGroupContent className="[&_li]:marker:hidden [&_li]:before:content-none [&_li]:list-none">
         <BlockStack gap="1">
-          {BUILDINGS.map((building) => (
-            <BuildingItem key={building.id} building={building} />
+          {BUILDING_TYPES.map((buildingType) => (
+            <BuildingItem key={buildingType} buildingType={buildingType} />
           ))}
         </BlockStack>
       </SidebarGroupContent>
