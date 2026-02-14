@@ -2,6 +2,7 @@ import {
   Background,
   type Connection,
   Controls,
+  type EdgeChange,
   MiniMap,
   type NodeChange,
   type OnConnect,
@@ -29,6 +30,10 @@ import {
   addOutput,
   addTask,
   connectNodes,
+  deleteEdge,
+  deleteInput,
+  deleteOutput,
+  deleteTask,
   updateNodePosition,
 } from "../store/actions";
 import {
@@ -110,7 +115,35 @@ export function FlowCanvas({ className }: FlowCanvasProps) {
       }
     }
 
+    // Handle node removal to update the spec
+    const removeChanges = changes.filter((change) => change.type === "remove");
+    for (const change of removeChanges) {
+      if ("id" in change) {
+        const nodeId = change.id;
+        // Determine node type from entity $id format
+        if (nodeId.includes(".tasks_")) {
+          deleteTask(nodeId);
+        } else if (nodeId.includes(".inputs_")) {
+          deleteInput(nodeId);
+        } else if (nodeId.includes(".outputs_")) {
+          deleteOutput(nodeId);
+        }
+      }
+    }
+
     onNodesChange(changes);
+  };
+
+  const handleEdgesChange = (changes: EdgeChange[]) => {
+    // Handle edge removal to update the spec
+    const removeChanges = changes.filter((change) => change.type === "remove");
+    for (const change of removeChanges) {
+      if ("id" in change) {
+        deleteEdge(change.id);
+      }
+    }
+
+    onEdgesChange(changes);
   };
 
   const handleConnect: OnConnect = (connection: Connection) => {
@@ -193,7 +226,7 @@ export function FlowCanvas({ className }: FlowCanvasProps) {
         nodes={nodes}
         edges={edges}
         onNodesChange={handleNodesChange}
-        onEdgesChange={onEdgesChange}
+        onEdgesChange={handleEdgesChange}
         onConnect={handleConnect}
         onDragOver={handleDragOver}
         onDrop={handleDrop}

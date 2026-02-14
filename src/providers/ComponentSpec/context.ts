@@ -1,4 +1,4 @@
-import { proxy, subscribe } from "valtio";
+import { getVersion, proxy, subscribe } from "valtio";
 
 import type { BaseEntity } from "./types";
 
@@ -12,6 +12,7 @@ export interface Context {
   $name: string;
   generateId(): EntityId;
   registerEntity<TEntity extends BaseEntity<any>>(entity: TEntity): void;
+  removeEntity<TEntity extends BaseEntity<any>>(entity: TEntity): void;
 }
 
 export interface NestedContext extends Context {
@@ -150,8 +151,12 @@ export class EntityIndex<TEntity extends BaseEntity<any>> {
   }
 
   add(entity: TEntity) {
+    if (this.has(entity.$id)) {
+      return;
+    }
+
     // Wrap entity in proxy before storing to ensure Valtio tracks mutations
-    const proxiedEntity = proxy(entity) as TEntity;
+    const proxiedEntity = getVersion(entity) !== undefined ? entity : proxy(entity) as TEntity;
     this.entities[proxiedEntity.$id] = proxiedEntity;
     this.indexByKey.add(proxiedEntity);
 
@@ -261,6 +266,34 @@ export abstract class BaseCollection<
     return this.findById(entity.$id)!;
   }
 
+  /**
+   * Attach an existing entity to this collection.
+   * Unlike `add`, this doesn't create a new entity via factory -
+   * it takes an existing entity and makes it part of the collection,
+   * respecting indexes and context.
+   */
+  attach(entity: TEntity): TEntity {
+    this.context.registerEntity(entity);
+    super.add(entity);
+
+    // Return the proxied entity from the store
+    return this.findById(entity.$id)!;
+  }
+
+  /**
+   * Detach an entity from this collection.
+   * Removes the entity from the collection, updates context and indexes,
+   * and returns the detached entity.
+   */
+  detach(entity: TEntity): TEntity{
+    // Remove from EntityIndex (handles subscription cleanup, index removal, etc.)
+    super.remove(entity);
+    // Remove from context
+    this.context.removeEntity(entity);
+
+    return entity;
+  }
+
   abstract createEntity(spec: TScalar): TEntity;
 
   get $name(): string {
@@ -277,6 +310,10 @@ export abstract class BaseCollection<
 
   registerEntity<TEntity extends BaseEntity<any>>(entity: TEntity): void {
     this.context.registerEntity(entity);
+  }
+
+  removeEntity<TEntity extends BaseEntity<any>>(entity: TEntity): void {
+    this.context.removeEntity(entity);
   }
 }
 
@@ -302,6 +339,10 @@ export class BaseNestedContext implements NestedContext {
 
   registerEntity<TEntity extends BaseEntity<any>>(entity: TEntity): void {
     this.entities.add(entity);
+  }
+
+  removeEntity<TEntity extends BaseEntity<any>>(entity: TEntity): void {
+    this.entities.remove(entity);
   }
 }
 

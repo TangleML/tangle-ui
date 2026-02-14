@@ -12,67 +12,64 @@ import type {
 } from "@/utils/componentSpec";
 
 import { AnnotationsCollection } from "./annotations";
+import { BindingsCollection, type BindingsContext } from "./bindings";
 import { BaseCollection, type Context, type NestedContext } from "./context";
-import { InputEntity } from "./inputs";
-import { OutputEntity } from "./outputs";
+import type { InputsCollection } from "./inputs";
+import type { OutputsCollection } from "./outputs";
 import type {
   BaseEntity,
   RequiredProperties,
   SerializableEntity,
 } from "./types";
 
-interface OutputValueBinding {
-  outputName: string;
-  taskId: string;
-  taskOutputName: string;
+/**
+ * Context interface for GraphImplementation.
+ * Requires access to inputs and outputs collections for binding watches.
+ */
+interface GraphImplementationContext extends Context {
+  inputs: InputsCollection;
+  outputs: OutputsCollection;
+}
+
+/**
+ * Context interface for TaskEntity.
+ * Provides access to collections needed for serialization.
+ */
+export interface TaskEntityContext extends Context {
+  bindings: BindingsCollection;
+  tasks: TasksCollection;
+  inputs: InputsCollection;
 }
 
 export class GraphImplementation implements SerializableEntity {
   readonly tasks: TasksCollection;
+  readonly bindings: BindingsCollection;
 
-  /**
-   * Maps graph output names to task output sources.
-   * Used to expose task outputs as graph-level outputs.
-   *
-   * Plain object - Valtio wraps it when accessed through the store's proxy.
-   */
-  private readonly _outputValues: Record<string, OutputValueBinding> = {};
+  constructor(private readonly context: GraphImplementationContext) {
+    // Create context getter for TaskEntity - provides access to all collections needed for serialization
+    // Uses arrow function to capture `this` and defer resolution until after all collections are initialized
+    const getTaskContext = (): TaskEntityContext => ({
+      ...this.context,
+      bindings: this.bindings,
+      tasks: this.tasks,
+      inputs: this.context.inputs,
+    });
 
-  constructor(private readonly context: Context) {
-    // Wrap collection with proxy() to ensure Valtio tracks mutations
-    this.tasks = proxy(new TasksCollection(this.context));
-  }
+    // Create context getter for BindingsCollection - provides access to collections for entity resolution
+    const getBindingsContext = (): BindingsContext => ({
+      ...this.context,
+      tasks: this.tasks,
+    });
 
-  /**
-   * Sets a graph output value to reference a task output.
-   * @param graphOutputName - The name of the graph output
-   * @param taskId - The task ID that produces the output
-   * @param taskOutputName - The name of the task's output
-   */
-  setOutputValue(
-    graphOutputName: string,
-    taskId: string,
-    taskOutputName: string,
-  ): void {
-    this._outputValues[graphOutputName] = {
-      outputName: graphOutputName,
-      taskId,
-      taskOutputName,
-    };
-  }
+    // Wrap collections with proxy() to ensure Valtio tracks mutations
+    this.tasks = proxy(new TasksCollection(this.context, getTaskContext));
+    this.bindings = proxy(new BindingsCollection(this.context, getBindingsContext));
 
-  /**
-   * Removes a graph output value binding.
-   */
-  removeOutputValue(graphOutputName: string): void {
-    delete this._outputValues[graphOutputName];
-  }
-
-  /**
-   * Gets all output value bindings.
-   */
-  getOutputValues(): OutputValueBinding[] {
-    return Object.values(this._outputValues);
+    // Wire up reactive cleanup for bindings
+    // When entities are deleted, bindings referencing them are auto-removed
+    this.bindings.watchCollection(context.inputs, "source");
+    this.bindings.watchCollection(context.outputs, "target");
+    this.bindings.watchCollection(this.tasks, "both");
   }
 
   toJson(): GraphImplementationType {
@@ -82,18 +79,36 @@ export class GraphImplementation implements SerializableEntity {
       },
     };
 
-    const outputValueKeys = Object.keys(this._outputValues);
-    if (outputValueKeys.length > 0) {
+    // Build outputValues from bindings where target is a graph output
+    const outputValueBindings = this.bindings
+      .getAll()
+      .filter((b) => b.bindingType === "outputValue");
+
+    if (outputValueBindings.length > 0) {
       const outputValues: Record<string, TaskOutputArgument> = {};
-      for (const binding of Object.values(this._outputValues)) {
-        outputValues[binding.outputName] = {
-          taskOutput: {
-            taskId: binding.taskId,
-            outputName: binding.taskOutputName,
-          },
-        };
+
+      for (const binding of outputValueBindings) {
+        // Find the source task name by $id
+        const sourceTask = this.tasks.findById(binding.sourceEntityId);
+        // Look up the actual output entity to get its current name (in case it was renamed)
+        const targetOutput = this.context.outputs.findById(
+          binding.targetEntityId,
+        );
+
+        if (sourceTask && targetOutput) {
+          // Use targetOutput.name (current name) instead of binding.targetPortName (name at bind-time)
+          outputValues[targetOutput.name] = {
+            taskOutput: {
+              taskId: sourceTask.name,
+              outputName: binding.sourcePortName,
+            },
+          };
+        }
       }
-      json.graph.outputValues = outputValues;
+
+      if (Object.keys(outputValues).length > 0) {
+        json.graph.outputValues = outputValues;
+      }
     }
 
     return json;
@@ -129,15 +144,16 @@ export class TaskEntity
 
   constructor(
     readonly $id: string,
-    private readonly context: Context,
+    private readonly getContext: () => TaskEntityContext,
     required: RequiredProperties<TaskScalarInterface>,
   ) {
     this.name = required.name;
     this.componentRef = required.componentRef;
 
     // Wrap collections with proxy() to ensure Valtio tracks mutations
-    this.annotations = proxy(new AnnotationsCollection(this.context));
-    this.arguments = proxy(new ArgumentsCollection(this.context));
+    // Use getter for context since collections may not be fully initialized at construction time
+    this.annotations = proxy(new AnnotationsCollection(this.getContext()));
+    this.arguments = proxy(new ArgumentsCollection(this.getContext()));
   }
 
   populate(input: TaskPopulateInput) {
@@ -165,7 +181,8 @@ export class TaskEntity
       componentRef: this.serializeComponentRef(),
     };
 
-    const argsJson = this.arguments.toJson();
+    // Build arguments from both literal values and bindings
+    const argsJson = this.serializeArguments();
     if (Object.keys(argsJson).length > 0) {
       json.arguments = argsJson;
     }
@@ -184,6 +201,61 @@ export class TaskEntity
     }
 
     return json;
+  }
+
+  /**
+   * Serializes arguments by combining literal values with binding information.
+   */
+  private serializeArguments(): Record<string, ArgumentType> {
+    const result: Record<string, ArgumentType> = {};
+    const { bindings, tasks, inputs } = this.getContext();
+
+    // Get all bindings targeting this task
+    const taskBindings = bindings.findByTarget(this.$id);
+
+    // Build a map of portName -> binding for quick lookup
+    const bindingsByPort = new Map(
+      taskBindings.map((b) => [b.targetPortName, b]),
+    );
+
+    // Serialize each argument
+    for (const arg of this.arguments.getAll()) {
+      const binding = bindingsByPort.get(arg.name);
+
+      if (binding) {
+        // This argument is bound - serialize based on binding type
+        if (binding.bindingType === "graphInput") {
+          // Look up the actual input entity to get its current name (in case it was renamed)
+          const sourceInput = inputs.findById(binding.sourceEntityId);
+          if (sourceInput) {
+            const graphInputArg: GraphInputArgument = {
+              graphInput: {
+                // Use sourceInput.name (current name) instead of binding.sourcePortName (name at bind-time)
+                inputName: sourceInput.name,
+              },
+            };
+            result[arg.name] = graphInputArg;
+          }
+        } else if (binding.bindingType === "taskOutput") {
+          // Find the source task name
+          const sourceTask = tasks.findById(binding.sourceEntityId);
+          if (sourceTask) {
+            const taskOutputArg: TaskOutputArgument = {
+              taskOutput: {
+                taskId: sourceTask.name,
+                outputName: binding.sourcePortName,
+              },
+            };
+            result[arg.name] = taskOutputArg;
+          }
+        }
+      } else {
+        // No binding - serialize as literal value
+        result[arg.name] = String(arg.value ?? "");
+      }
+    }
+
+    return result;
   }
 
   /**
@@ -214,7 +286,10 @@ export class TasksCollection
   extends BaseCollection<TaskScalarInterface, TaskEntity>
   implements SerializableEntity, NestedContext
 {
-  constructor(parent: Context) {
+  constructor(
+    parent: Context,
+    private readonly getTaskContext: () => TaskEntityContext,
+  ) {
     super("tasks", parent);
   }
 
@@ -228,9 +303,12 @@ export class TasksCollection
 
   createEntity(spec: TaskScalarInterface): TaskEntity {
     // Cast back to TaskPopulateInput since we know it may include annotations
-    return new TaskEntity(this.generateId(), this, spec).populate(
-      spec as TaskPopulateInput,
-    );
+    // Pass context getter to enable serialization with access to bindings, tasks, and inputs
+    return new TaskEntity(
+      this.generateId(),
+      this.getTaskContext,
+      spec,
+    ).populate(spec as TaskPopulateInput);
   }
 
   toJson(): Record<string, TaskSpec> {
@@ -250,17 +328,18 @@ interface ArgumentScalarInterface {
 
 type ScalarValue = string | number | boolean | null | undefined;
 
-export class ArgumentEntity
-  implements BaseEntity<ArgumentScalarInterface>, SerializableEntity
-{
+/**
+ * ArgumentEntity represents a task input argument.
+ *
+ * For literal values, the value is stored directly on this entity.
+ * For connections (graphInput, taskOutput), use BindingsCollection.bind() instead.
+ * The TaskEntity.serializeArguments() method combines literal values with
+ * binding information during serialization.
+ */
+export class ArgumentEntity implements BaseEntity<ArgumentScalarInterface> {
   readonly $indexed = ["name" as const];
 
   name: string;
-
-  private _type: "graphInput" | "taskOutput" | "literal" = "literal";
-  private _source: InputEntity | OutputEntity | undefined;
-  private _sourceTaskId?: string; // For taskOutput: the task ID that owns the output
-
   private _value: ScalarValue | undefined;
 
   constructor(
@@ -272,113 +351,27 @@ export class ArgumentEntity
 
   populate(scalar: ArgumentScalarInterface) {
     this.name = scalar.name;
-
     return this;
   }
 
-  /**
-   * Connect this argument to a graph input.
-   */
-  connectTo(input: InputEntity): void;
-  /**
-   * Connect this argument to a task output.
-   * The taskId is inferred from the output's parent component spec.
-   */
-  connectTo(output: OutputEntity): void;
-  connectTo(source: InputEntity | OutputEntity): void {
-    if (source instanceof InputEntity) {
-      this._type = "graphInput";
-      this._sourceTaskId = undefined;
-    } else {
-      this._type = "taskOutput";
-      // Extract task ID from the output's parent component name
-      this._sourceTaskId = source.parentComponentName;
-    }
-    this._source = source;
-    this._value = undefined;
-  }
-
   get value(): ScalarValue {
-    if (this._type === "literal") {
-      return this._value;
-    }
-    return undefined;
+    return this._value;
   }
 
   set value(value: ScalarValue) {
-    this._type = "literal";
     this._value = value;
-    this._source = undefined;
-    this._sourceTaskId = undefined;
-  }
-
-  get type(): "graphInput" | "taskOutput" | "literal" {
-    return this._type;
-  }
-
-  /**
-   * Returns the argument in the schema-compliant ArgumentType format:
-   * - Literal: returns the string/number/boolean value directly
-   * - GraphInput: returns { graphInput: { inputName: string } }
-   * - TaskOutput: returns { taskOutput: { taskId: string, outputName: string } }
-   */
-  toJson(): ArgumentType {
-    switch (this._type) {
-      case "literal":
-        // Return the literal value directly (must be string per schema)
-        return String(this._value ?? "");
-
-      case "graphInput": {
-        if (!this._source) {
-          throw new Error(
-            `ArgumentEntity ${this.name}: graphInput source is not set`,
-          );
-        }
-        const graphInputArg: GraphInputArgument = {
-          graphInput: {
-            inputName: this._source.name,
-          },
-        };
-        return graphInputArg;
-      }
-
-      case "taskOutput": {
-        if (!this._source || !this._sourceTaskId) {
-          throw new Error(
-            `ArgumentEntity ${this.name}: taskOutput source or taskId is not set`,
-          );
-        }
-        const taskOutputArg: TaskOutputArgument = {
-          taskOutput: {
-            taskId: this._sourceTaskId,
-            outputName: this._source.name,
-          },
-        };
-        return taskOutputArg;
-      }
-    }
   }
 }
 
-export class ArgumentsCollection
-  extends BaseCollection<ArgumentScalarInterface, ArgumentEntity>
-  implements SerializableEntity
-{
+export class ArgumentsCollection extends BaseCollection<
+  ArgumentScalarInterface,
+  ArgumentEntity
+> {
   constructor(parent: Context) {
     super("arguments", parent);
   }
 
   createEntity(spec: ArgumentScalarInterface): ArgumentEntity {
     return new ArgumentEntity(this.generateId(), spec).populate(spec);
-  }
-
-  toJson(): Record<string, ArgumentType> {
-    return this.getAll().reduce(
-      (acc, argument) => {
-        acc[argument.name] = argument.toJson();
-        return acc;
-      },
-      {} as Record<string, ArgumentType>,
-    );
   }
 }

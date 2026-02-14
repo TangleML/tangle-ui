@@ -131,66 +131,8 @@ describe("Valtio Reactivity for ComponentSpec Object Model", () => {
     });
   });
 
-  describe("GraphImplementation output values use Record (not Map)", () => {
-    it("should track setOutputValue changes via Record", async () => {
-      const componentSpec = new ComponentSpecEntity(
-        rootContext.generateId(),
-        rootContext,
-        { name: "Test" },
-      );
-      const graphImpl = new GraphImplementation(componentSpec);
-
-      // Wrap the graph implementation in a proxy
-      const proxiedGraphImpl = proxy(graphImpl);
-      const callback = vi.fn();
-      const unsubscribe = subscribe(proxiedGraphImpl, callback);
-
-      // Set an output value
-      proxiedGraphImpl.setOutputValue("output1", "task1", "result");
-
-      await new Promise((resolve) => setTimeout(resolve, 0));
-
-      expect(callback).toHaveBeenCalled();
-
-      // Verify the value was set
-      const outputValues = proxiedGraphImpl.getOutputValues();
-      expect(outputValues).toHaveLength(1);
-      expect(outputValues[0]).toEqual({
-        outputName: "output1",
-        taskId: "task1",
-        taskOutputName: "result",
-      });
-
-      unsubscribe();
-    });
-
-    it("should track removeOutputValue changes", async () => {
-      const componentSpec = new ComponentSpecEntity(
-        rootContext.generateId(),
-        rootContext,
-        { name: "Test" },
-      );
-      const graphImpl = new GraphImplementation(componentSpec);
-
-      // Add an output value first
-      graphImpl.setOutputValue("output1", "task1", "result");
-
-      const proxiedGraphImpl = proxy(graphImpl);
-      const callback = vi.fn();
-      const unsubscribe = subscribe(proxiedGraphImpl, callback);
-
-      // Remove the output value
-      proxiedGraphImpl.removeOutputValue("output1");
-
-      await new Promise((resolve) => setTimeout(resolve, 0));
-
-      expect(callback).toHaveBeenCalled();
-      expect(proxiedGraphImpl.getOutputValues()).toHaveLength(0);
-
-      unsubscribe();
-    });
-
-    it("should serialize output values correctly to JSON", () => {
+  describe("GraphImplementation bindings track reactive changes", () => {
+    it("should track binding changes via BindingsCollection", async () => {
       const componentSpec = new ComponentSpecEntity(
         rootContext.generateId(),
         rootContext,
@@ -199,13 +141,109 @@ describe("Valtio Reactivity for ComponentSpec Object Model", () => {
       const graphImpl = new GraphImplementation(componentSpec);
       componentSpec.implementation = graphImpl;
 
-      graphImpl.tasks.add({
+      // Add an output to bind to
+      const output = componentSpec.outputs.add({
+        name: "output1",
+        type: "String",
+      });
+
+      // Add a task
+      const task = graphImpl.tasks.add({
         name: "task1",
         componentRef: simpleContainerComponentRef,
       });
 
-      // Set output value binding
-      graphImpl.setOutputValue("final_output", "task1", "task_result");
+      // Wrap the bindings in a proxy
+      const proxiedBindings = proxy(graphImpl.bindings);
+      const callback = vi.fn();
+      const unsubscribe = subscribe(proxiedBindings, callback);
+
+      // Create an output value binding
+      proxiedBindings.bind(
+        { entityId: task.$id, portName: "result" },
+        { entityId: output.$id, portName: "output1" },
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(callback).toHaveBeenCalled();
+
+      // Verify the binding was created
+      const bindings = proxiedBindings.getAll();
+      expect(bindings).toHaveLength(1);
+      expect(bindings[0].bindingType).toBe("outputValue");
+
+      unsubscribe();
+    });
+
+    it("should track binding removal changes", async () => {
+      const componentSpec = new ComponentSpecEntity(
+        rootContext.generateId(),
+        rootContext,
+        { name: "Test" },
+      );
+      const graphImpl = new GraphImplementation(componentSpec);
+      componentSpec.implementation = graphImpl;
+
+      // Add an output to bind to
+      const output = componentSpec.outputs.add({
+        name: "output1",
+        type: "String",
+      });
+
+      // Add a task
+      const task = graphImpl.tasks.add({
+        name: "task1",
+        componentRef: simpleContainerComponentRef,
+      });
+
+      // Create a binding first
+      graphImpl.bindings.bind(
+        { entityId: task.$id, portName: "result" },
+        { entityId: output.$id, portName: "output1" },
+      );
+
+      const proxiedBindings = proxy(graphImpl.bindings);
+      const callback = vi.fn();
+      const unsubscribe = subscribe(proxiedBindings, callback);
+
+      // Remove the binding
+      const binding = proxiedBindings.getAll()[0];
+      proxiedBindings.unbind(binding.$id);
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(callback).toHaveBeenCalled();
+      expect(proxiedBindings.getAll()).toHaveLength(0);
+
+      unsubscribe();
+    });
+
+    it("should serialize output values correctly to JSON via bindings", () => {
+      const componentSpec = new ComponentSpecEntity(
+        rootContext.generateId(),
+        rootContext,
+        { name: "Test" },
+      );
+      const graphImpl = new GraphImplementation(componentSpec);
+      componentSpec.implementation = graphImpl;
+
+      // Add an output to bind to
+      const output = componentSpec.outputs.add({
+        name: "final_output",
+        type: "String",
+      });
+
+      const task = graphImpl.tasks.add({
+        name: "task1",
+        componentRef: simpleContainerComponentRef,
+      });
+
+      // Set output value binding via bindings
+      graphImpl.bindings.bind(
+        { entityId: task.$id, portName: "task_result" },
+        { entityId: output.$id, portName: "final_output" },
+      );
 
       const json = graphImpl.toJson();
 

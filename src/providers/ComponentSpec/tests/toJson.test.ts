@@ -155,7 +155,7 @@ describe("ComponentSpec Object Model toJson()", () => {
     });
   });
 
-  describe("ArgumentEntity.toJson()", () => {
+  describe("Task argument serialization via bindings", () => {
     it("should serialize literal argument as string value", () => {
       const context = new RootContext();
       const componentSpec = new ComponentSpecEntity(
@@ -164,6 +164,8 @@ describe("ComponentSpec Object Model toJson()", () => {
         { name: "Test" },
       );
       const graphImpl = new GraphImplementation(componentSpec);
+      componentSpec.implementation = graphImpl;
+
       const task = graphImpl.tasks.add({
         name: "test_task",
         componentRef: simpleContainerComponentRef,
@@ -172,13 +174,13 @@ describe("ComponentSpec Object Model toJson()", () => {
       const argument = task.arguments.add({ name: "input_data" });
       argument.value = "literal value";
 
-      const json = argument.toJson();
+      const json = task.toJson();
 
       // Should return just the string value for literal arguments
-      expect(json).toBe("literal value");
+      expect(json.arguments?.["input_data"]).toBe("literal value");
     });
 
-    it("should serialize graphInput argument correctly", () => {
+    it("should serialize graphInput argument correctly via binding", () => {
       const context = new RootContext();
       const componentSpec = new ComponentSpecEntity(
         context.generateId(),
@@ -200,20 +202,24 @@ describe("ComponentSpec Object Model toJson()", () => {
         componentRef: simpleContainerComponentRef,
       });
 
-      const argument = task.arguments.add({ name: "input_data" });
-      argument.connectTo(graphInput);
+      // Add argument and create binding
+      task.arguments.add({ name: "input_data" });
+      graphImpl.bindings.bind(
+        { entityId: graphInput.$id, portName: graphInput.name },
+        { entityId: task.$id, portName: "input_data" },
+      );
 
-      const json = argument.toJson();
+      const json = task.toJson();
 
       // Should return GraphInputArgument format
-      expect(json).toEqual({
+      expect(json.arguments?.["input_data"]).toEqual({
         graphInput: {
           inputName: "pipeline_input",
         },
       });
     });
 
-    it("should serialize taskOutput argument correctly", () => {
+    it("should serialize taskOutput argument correctly via binding", () => {
       const context = new RootContext();
       const componentSpec = new ComponentSpecEntity(
         context.generateId(),
@@ -225,22 +231,9 @@ describe("ComponentSpec Object Model toJson()", () => {
       componentSpec.implementation = graphImpl;
 
       // Create first task with an output
-      graphImpl.tasks.add({
+      const firstTask = graphImpl.tasks.add({
         name: "first_task",
         componentRef: simpleContainerComponentRef,
-      });
-
-      // We need to create a nested component spec to get the output
-      const nestedComponentSpec = new ComponentSpecEntity(
-        componentSpec.generateId(),
-        componentSpec,
-        { name: "first_task" },
-      );
-      componentSpec.registerEntity(nestedComponentSpec);
-
-      const taskOutput = nestedComponentSpec.outputs.add({
-        name: "output_data",
-        type: "String",
       });
 
       // Create second task that uses first task's output
@@ -249,13 +242,17 @@ describe("ComponentSpec Object Model toJson()", () => {
         componentRef: simpleContainerComponentRef,
       });
 
-      const argument = secondTask.arguments.add({ name: "input_data" });
-      argument.connectTo(taskOutput);
+      // Add argument and create binding
+      secondTask.arguments.add({ name: "input_data" });
+      graphImpl.bindings.bind(
+        { entityId: firstTask.$id, portName: "output_data" },
+        { entityId: secondTask.$id, portName: "input_data" },
+      );
 
-      const json = argument.toJson();
+      const json = secondTask.toJson();
 
       // Should return TaskOutputArgument format
-      expect(json).toEqual({
+      expect(json.arguments?.["input_data"]).toEqual({
         taskOutput: {
           taskId: "first_task",
           outputName: "output_data",
@@ -486,8 +483,12 @@ describe("ComponentSpec Object Model toJson()", () => {
         },
       });
 
-      const argument = task.arguments.add({ name: "input_data" });
-      argument.connectTo(graphInput);
+      // Add argument and create binding
+      task.arguments.add({ name: "input_data" });
+      graphImpl.bindings.bind(
+        { entityId: graphInput.$id, portName: graphInput.name },
+        { entityId: task.$id, portName: "input_data" },
+      );
 
       const json = componentSpec.toJson();
 
@@ -535,18 +536,6 @@ describe("ComponentSpec Object Model toJson()", () => {
       });
       firstTask.arguments.add({ name: "input_data" }).value = "initial data";
 
-      // Create nested component spec for first task to get its output
-      const firstTaskComponentSpec = new ComponentSpecEntity(
-        componentSpec.generateId(),
-        componentSpec,
-        { name: "first_task" },
-      );
-      componentSpec.registerEntity(firstTaskComponentSpec);
-      const firstTaskOutput = firstTaskComponentSpec.outputs.add({
-        name: "output_data",
-        type: "String",
-      });
-
       // Second task uses first task's output
       const secondTask = graphImpl.tasks.add({
         name: "second_task",
@@ -556,8 +545,12 @@ describe("ComponentSpec Object Model toJson()", () => {
         },
       });
 
-      const secondTaskArg = secondTask.arguments.add({ name: "input_data" });
-      secondTaskArg.connectTo(firstTaskOutput);
+      // Add argument and create binding
+      secondTask.arguments.add({ name: "input_data" });
+      graphImpl.bindings.bind(
+        { entityId: firstTask.$id, portName: "output_data" },
+        { entityId: secondTask.$id, portName: "input_data" },
+      );
 
       const json = componentSpec.toJson();
 
@@ -711,20 +704,12 @@ describe("ComponentSpec Object Model toJson()", () => {
         },
       });
 
-      const firstTaskArg = firstTask.arguments.add({ name: "input_data" });
-      firstTaskArg.connectTo(requiredInput);
-
-      // Create nested component spec for first task
-      const firstTaskComponentSpec = new ComponentSpecEntity(
-        componentSpec.generateId(),
-        componentSpec,
-        { name: "first_task" },
+      // Add argument and create binding
+      firstTask.arguments.add({ name: "input_data" });
+      graphImpl.bindings.bind(
+        { entityId: requiredInput.$id, portName: requiredInput.name },
+        { entityId: firstTask.$id, portName: "input_data" },
       );
-      componentSpec.registerEntity(firstTaskComponentSpec);
-      const firstTaskOutput = firstTaskComponentSpec.outputs.add({
-        name: "output_data",
-        type: "String",
-      });
 
       // Second task with retry strategy
       const secondTask = graphImpl.tasks.add({
@@ -745,8 +730,12 @@ describe("ComponentSpec Object Model toJson()", () => {
         },
       });
 
-      const secondTaskArg = secondTask.arguments.add({ name: "input_data" });
-      secondTaskArg.connectTo(firstTaskOutput);
+      // Add argument and create binding
+      secondTask.arguments.add({ name: "input_data" });
+      graphImpl.bindings.bind(
+        { entityId: firstTask.$id, portName: "output_data" },
+        { entityId: secondTask.$id, portName: "input_data" },
+      );
 
       const json = componentSpec.toJson();
 

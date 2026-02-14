@@ -118,11 +118,14 @@ export class YamlLoader {
         for (const [argumentName, argumentValue] of Object.entries(
           taskSpec.arguments ?? {},
         )) {
+          // Create argument entity for all arguments (including connected ones)
+          // This ensures the argument exists for serialization
           const argumentEntity = taskEntity.arguments.add({
             name: argumentName,
           });
 
           if (isGraphInputArgument(argumentValue)) {
+            // GraphInput argument - create binding
             const inputResult = rootSpecEntity.inputs.findByIndex(
               "name",
               argumentValue.graphInput.inputName,
@@ -132,8 +135,19 @@ export class YamlLoader {
                 `Multiple inputs found for ${argumentValue.graphInput.inputName}`,
               );
             }
-            argumentEntity.connectTo(inputResult[0]);
+
+            graphImplementation.bindings.bind(
+              {
+                entityId: inputResult[0].$id,
+                portName: inputResult[0].name,
+              },
+              {
+                entityId: taskEntity.$id,
+                portName: argumentName,
+              },
+            );
           } else if (isTaskOutputArgument(argumentValue)) {
+            // TaskOutput argument - create binding
             const taskResult = graphImplementation.tasks.findByIndex(
               "name",
               argumentValue.taskOutput.taskId,
@@ -144,29 +158,49 @@ export class YamlLoader {
               );
             }
 
-            const sourceComponentSpec = rootSpecEntity.findComponentSpecEntity(
-              argumentValue.taskOutput.taskId,
+            graphImplementation.bindings.bind(
+              {
+                entityId: taskResult[0].$id,
+                portName: argumentValue.taskOutput.outputName,
+              },
+              {
+                entityId: taskEntity.$id,
+                portName: argumentName,
+              },
             );
-            if (!sourceComponentSpec) {
-              throw new Error(
-                `Source component spec entity not found for ${argumentValue.taskOutput.taskId}`,
-              );
-            }
-
-            const outputResult = sourceComponentSpec.outputs.findByIndex(
-              "name",
-              argumentValue.taskOutput.outputName,
-            );
-
-            if (outputResult.length !== 1) {
-              throw new Error(
-                `Multiple outputs found for ${argumentValue.taskOutput.outputName}`,
-              );
-            }
-
-            argumentEntity.connectTo(outputResult[0]);
           } else {
+            // Literal value
             argumentEntity.value = argumentValue;
+          }
+        }
+      }
+
+      // Load outputValues (task output → graph output bindings)
+      const outputValues = loadedSpec.implementation.graph.outputValues ?? {};
+      for (const [graphOutputName, outputValue] of Object.entries(
+        outputValues,
+      )) {
+        if (isTaskOutputArgument(outputValue)) {
+          const sourceTask = graphImplementation.tasks.findByIndex(
+            "name",
+            outputValue.taskOutput.taskId,
+          )[0];
+          const targetOutput = rootSpecEntity.outputs.findByIndex(
+            "name",
+            graphOutputName,
+          )[0];
+
+          if (sourceTask && targetOutput) {
+            graphImplementation.bindings.bind(
+              {
+                entityId: sourceTask.$id,
+                portName: outputValue.taskOutput.outputName,
+              },
+              {
+                entityId: targetOutput.$id,
+                portName: graphOutputName,
+              },
+            );
           }
         }
       }

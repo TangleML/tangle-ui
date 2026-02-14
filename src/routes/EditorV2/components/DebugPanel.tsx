@@ -90,7 +90,7 @@ export function DebugPanelContent() {
       spec?.implementation?.tasks
         .getAll()
         .reduce((acc, task) => acc + task.annotations.getAll().length, 0) ?? 0,
-    outputValues: spec?.implementation?.getOutputValues().length ?? 0,
+    bindings: spec?.implementation?.bindings.getAll().length ?? 0,
   };
 
   const selectedInfo = snap.selectedNodeId
@@ -127,7 +127,7 @@ export function DebugPanelContent() {
           <StatGroup title="Internal State">
             <StatItem label="Arguments" value={stats.arguments} />
             <StatItem label="Annotations" value={stats.annotations} />
-            <StatItem label="Output Bindings" value={stats.outputValues} />
+            <StatItem label="Bindings" value={stats.bindings} />
           </StatGroup>
 
           {/* Memory/Debug Info */}
