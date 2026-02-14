@@ -102,8 +102,6 @@ function TaskDetails({ entityId }: TaskDetailsProps) {
 
   return (
     <BlockStack>
-     
-
       <BlockStack gap="4" className="p-3">
         <BlockStack gap="2">
           <Label htmlFor="task-name" className="text-gray-600">

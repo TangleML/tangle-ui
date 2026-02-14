@@ -67,7 +67,10 @@ function generatePinnedWindowId(): string {
 /** Get task name from entity ID */
 function getTaskNameByEntityId(entityId: string): string | null {
   const spec = editorStore.spec;
-  if (!spec?.implementation || !(spec.implementation instanceof GraphImplementation)) {
+  if (
+    !spec?.implementation ||
+    !(spec.implementation instanceof GraphImplementation)
+  ) {
     return null;
   }
   const task = spec.implementation.tasks.entities[entityId];

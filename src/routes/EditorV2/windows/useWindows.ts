@@ -120,4 +120,3 @@ export function useWindows(): UseWindowsReturn {
     updateContent,
   };
 }
-

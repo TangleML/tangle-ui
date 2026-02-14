@@ -62,7 +62,9 @@ export function selectNode(
 
   // Track shift-click for pinned window creation
   editorStore.lastSelectionWasShiftClick = isShiftClick;
-  editorStore.lastShiftClickEntityId = isShiftClick ? (options?.entityId ?? null) : null;
+  editorStore.lastShiftClickEntityId = isShiftClick
+    ? (options?.entityId ?? null)
+    : null;
 
   // If it's a shift-click, don't change the current selection
   // The window system will handle creating a pinned window

@@ -9,10 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Text } from "@/components/ui/typography";
 
-import {
-  renamePipeline,
-  updatePipelineDescription,
-} from "../store/actions";
+import { renamePipeline, updatePipelineDescription } from "../store/actions";
 import { editorStore } from "../store/editorStore";
 
 /**
@@ -35,9 +32,7 @@ export function PipelineDetailsContent() {
     }
   };
 
-  const handleDescriptionChange = (
-    event: ChangeEvent<HTMLTextAreaElement>,
-  ) => {
+  const handleDescriptionChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
     const newDescription = event.target.value;
     updatePipelineDescription(newDescription || undefined);
   };
@@ -208,4 +203,3 @@ function PanelHeader({ icon, iconClassName, title }: PanelHeaderProps) {
     </InlineStack>
   );
 }
-

@@ -45,8 +45,17 @@ export const ComponentDetailsPreview = () => {
     });
 
   return (
-    <BlockStack gap="2" className={`h-full overflow-auto p-3 ${previewClasses}`}>
-      <Text as="h2" size="sm" weight="semibold" className="truncate" title={displayName}>
+    <BlockStack
+      gap="2"
+      className={`h-full overflow-auto p-3 ${previewClasses}`}
+    >
+      <Text
+        as="h2"
+        size="sm"
+        weight="semibold"
+        className="truncate"
+        title={displayName}
+      >
         {displayName}
       </Text>
       <TaskDetails
@@ -57,4 +66,3 @@ export const ComponentDetailsPreview = () => {
     </BlockStack>
   );
 };
-
