@@ -2,7 +2,7 @@ import { Sidebar, SidebarContent } from "@/components/ui/sidebar";
 
 import Buildings from "./Buildings";
 import GlobalResources from "./GlobalResources";
-import Time from "./Time";
+import { Time } from "./Time";
 
 interface GameSidebarProps {
   day: number;
