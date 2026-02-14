@@ -143,81 +143,43 @@ export function useSpecToNodesEdges() {
           entityId: task.$id,
         } satisfies TaskNodeData,
       });
-
-      // Create edges from task arguments
-      const args = task.arguments.getAll();
-      for (const arg of args) {
-        const argType = arg.type;
-
-        if (argType === "graphInput") {
-          // Edge from graph input to task
-          const argJson = arg.toJson();
-          if (typeof argJson === "object" && "graphInput" in argJson) {
-            const sourceInputName = argJson.graphInput.inputName;
-            // Find input entity by name to get its $id
-            const sourceInput = spec.inputs.findByIndex(
-              "name",
-              sourceInputName,
-            )[0];
-            if (sourceInput) {
-              edges.push({
-                id: `edge_${sourceInput.$id}_to_${task.$id}_${arg.name}`,
-                source: sourceInput.$id,
-                sourceHandle: `output_${sourceInputName}`,
-                target: task.$id,
-                targetHandle: `input_${arg.name}`,
-                type: "default",
-              });
-            }
-          }
-        } else if (argType === "taskOutput") {
-          // Edge from another task's output
-          const argJson = arg.toJson();
-          if (typeof argJson === "object" && "taskOutput" in argJson) {
-            const { taskId: sourceTaskName, outputName } = argJson.taskOutput;
-            // Find source task by name to get its $id
-            const sourceTask = spec.implementation.tasks.findByIndex(
-              "name",
-              sourceTaskName,
-            )[0];
-            if (sourceTask) {
-              edges.push({
-                id: `edge_${sourceTask.$id}_${outputName}_to_${task.$id}_${arg.name}`,
-                source: sourceTask.$id,
-                sourceHandle: `output_${outputName}`,
-                target: task.$id,
-                targetHandle: `input_${arg.name}`,
-                type: "default",
-              });
-            }
-          }
-        }
-        // Literal values don't create edges
-      }
     });
 
-    // Create edges for graph output values
-    const outputValues = spec.implementation.getOutputValues();
-    for (const binding of outputValues) {
-      // Find task and output entities by name to get their $ids
-      const sourceTask = spec.implementation.tasks.findByIndex(
-        "name",
-        binding.taskId,
-      )[0];
-      const targetOutput = spec.outputs.findByIndex(
-        "name",
-        binding.outputName,
-      )[0];
-      if (sourceTask && targetOutput) {
-        edges.push({
-          id: `edge_${sourceTask.$id}_${binding.taskOutputName}_to_${targetOutput.$id}`,
-          source: sourceTask.$id,
-          sourceHandle: `output_${binding.taskOutputName}`,
-          target: targetOutput.$id,
-          targetHandle: `input_${binding.outputName}`,
-          type: "default",
-        });
+    // Create edges from bindings - unified approach
+    // Bindings represent all connection types:
+    // - graphInput: ComponentSpec Input → Task Input
+    // - taskOutput: Task Output → Task Input
+    // - outputValue: Task Output → ComponentSpec Output
+    const bindings = spec.implementation.bindings.getAll();
+
+    for (const binding of bindings) {
+      // For IO entity port names, look up the current entity name (in case it was renamed)
+      // Task port names are defined by the component spec and are stable
+      let sourcePortName = binding.sourcePortName;
+      let targetPortName = binding.targetPortName;
+
+      if (binding.bindingType === "graphInput") {
+        // Source is an InputEntity - get its current name
+        const inputEntity = spec.inputs.findById(binding.sourceEntityId);
+        if (inputEntity) {
+          sourcePortName = inputEntity.name;
+        }
+      } else if (binding.bindingType === "outputValue") {
+        // Target is an OutputEntity - get its current name
+        const outputEntity = spec.outputs.findById(binding.targetEntityId);
+        if (outputEntity) {
+          targetPortName = outputEntity.name;
+        }
       }
+
+      edges.push({
+        id: `edge_${binding.$id}`,
+        source: binding.sourceEntityId,
+        sourceHandle: `output_${sourcePortName}`,
+        target: binding.targetEntityId,
+        targetHandle: `input_${targetPortName}`,
+        type: "default",
+      });
     }
   }
 
