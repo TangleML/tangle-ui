@@ -14,6 +14,7 @@ export const transferResources = (
   edges: Edge[],
   buildingStats: Map<string, BuildingStatistics>,
   edgeStats: Map<string, EdgeStatistics>,
+  transferAmount?: number,
 ) => {
   const sourceNode = updatedNodes.find((n) => n.id === sourceNodeId);
   const targetNode = updatedNodes.find((n) => n.id === targetNodeId);
@@ -57,19 +58,31 @@ export const transferResources = (
 
     if (!sourceStock || !targetStock) return;
 
-    // Calculate transfer amount - limited by both source amount AND target space
-    const availableFromSource = sourceStock.amount;
-    const availableSpaceInTarget = targetStock.maxAmount - targetStock.amount;
-    const transferAmount = Math.min(
-      availableFromSource,
-      availableSpaceInTarget,
-    );
+    // Calculate transfer amount
+    let actualTransferAmount: number;
 
-    if (transferAmount > 0) {
+    if (transferAmount !== undefined) {
+      const availableSpaceInTarget = targetStock.maxAmount - targetStock.amount;
+      actualTransferAmount = Math.min(
+        transferAmount,
+        sourceStock.amount,
+        availableSpaceInTarget,
+      );
+    } else {
+      // Original behavior: transfer all available
+      const availableFromSource = sourceStock.amount;
+      const availableSpaceInTarget = targetStock.maxAmount - targetStock.amount;
+      actualTransferAmount = Math.min(
+        availableFromSource,
+        availableSpaceInTarget,
+      );
+    }
+
+    if (actualTransferAmount > 0) {
       // Track edge statistics
       edgeStats.set(edge.id, {
-        transferred: transferAmount,
-        resource: resource as any,
+        transferred: actualTransferAmount,
+        resource: resource,
       });
 
       // Track source stockpile change (removed)
@@ -77,14 +90,14 @@ export const transferResources = (
         (c) => c.resource === resource,
       );
       if (sourceChange) {
-        sourceChange.removed += transferAmount;
+        sourceChange.removed += actualTransferAmount;
         sourceChange.net = sourceChange.added - sourceChange.removed;
       } else {
         sourceStats.stockpileChanges.push({
-          resource: resource as any,
-          removed: transferAmount,
+          resource: resource,
+          removed: actualTransferAmount,
           added: 0,
-          net: -transferAmount,
+          net: -actualTransferAmount,
         });
       }
 
@@ -93,14 +106,14 @@ export const transferResources = (
         (c) => c.resource === resource,
       );
       if (targetChange) {
-        targetChange.added += transferAmount;
+        targetChange.added += actualTransferAmount;
         targetChange.net = targetChange.added - targetChange.removed;
       } else {
         targetStats.stockpileChanges.push({
-          resource: resource as any,
+          resource: resource,
           removed: 0,
-          added: transferAmount,
-          net: transferAmount,
+          added: actualTransferAmount,
+          net: actualTransferAmount,
         });
       }
 
@@ -109,7 +122,7 @@ export const transferResources = (
         ...sourceBuilding,
         stockpile: sourceBuilding.stockpile?.map((s) =>
           s.resource === resource
-            ? { ...s, amount: s.amount - transferAmount }
+            ? { ...s, amount: s.amount - actualTransferAmount }
             : s,
         ),
       };
@@ -123,7 +136,7 @@ export const transferResources = (
       if (targetStock.resource === "any") {
         const breakdown = new Map(targetStock.breakdown || new Map());
         const currentAmount = breakdown.get(resource) || 0;
-        breakdown.set(resource, currentAmount + transferAmount);
+        breakdown.set(resource, currentAmount + actualTransferAmount);
 
         const updatedTargetBuilding = {
           ...targetBuilding,
@@ -131,7 +144,7 @@ export const transferResources = (
             s.resource === "any"
               ? {
                   ...s,
-                  amount: s.amount + transferAmount,
+                  amount: s.amount + actualTransferAmount,
                   breakdown,
                 }
               : s,
@@ -148,7 +161,7 @@ export const transferResources = (
           ...targetBuilding,
           stockpile: targetBuilding.stockpile?.map((s) =>
             s.resource === resource
-              ? { ...s, amount: s.amount + transferAmount }
+              ? { ...s, amount: s.amount + actualTransferAmount }
               : s,
           ),
         };

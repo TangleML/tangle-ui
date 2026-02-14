@@ -10,7 +10,7 @@ import type {
 } from "../types/statistics";
 import { advanceProduction } from "./helpers/advanceProduction";
 import { processSpecialBuilding } from "./helpers/processSpecialBuilding";
-import { transferResources } from "./helpers/transferResources";
+import { transferResourcesEvenlyDownstream } from "./helpers/transferResourcesEvenlyDownstream";
 
 const SPECIAL_BUILDINGS = ["marketplace"];
 
@@ -72,16 +72,14 @@ export const processDay = (
 
     // ✅ STEP 2.1: If there is downstream, transfer resources downstream
     const downstreamNodes = downstream.get(currentNodeId) || [];
-    downstreamNodes.forEach((neighborId) => {
-      transferResources(
-        currentNodeId,
-        neighborId,
-        updatedNodes,
-        edges,
-        buildingStats,
-        edgeStats,
-      );
-    });
+    transferResourcesEvenlyDownstream(
+      currentNodeId,
+      downstreamNodes,
+      updatedNodes,
+      edges,
+      buildingStats,
+      edgeStats,
+    );
 
     // ✅ STEP 2.2: If special node, process special, otherwise advance production
     if (SPECIAL_BUILDINGS.includes(building.type)) {
