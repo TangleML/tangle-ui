@@ -15,7 +15,7 @@ import BuildingInput from "../Handles/BuildingInput";
 import BuildingOutput from "../Handles/BuildingOutput";
 
 const Building = ({ id, data, selected }: NodeProps) => {
-  const { updateNodeData } = useReactFlow();
+  const { updateNodeData, getNode } = useReactFlow();
   const updateNodeInternals = useUpdateNodeInternals();
   const {
     setContent,
@@ -41,9 +41,16 @@ const Building = ({ id, data, selected }: NodeProps) => {
     return () => window.removeEventListener("keydown", handleKeyPress);
   }, [selected, id, data, updateNodeData, updateNodeInternals]);
 
+  // Handle context panel - update on data changes
   useEffect(() => {
-    if (selected && isBuildingData(data)) {
-      setContent(<BuildingContext building={data} />);
+    if (selected) {
+      // Get the latest node data from React Flow
+      const currentNode = getNode(id);
+      const currentData = currentNode?.data || data;
+
+      if (!isBuildingData(currentData)) return;
+
+      setContent(<BuildingContext building={currentData} />);
       setContextPanelOpen(true);
     }
 
@@ -52,7 +59,15 @@ const Building = ({ id, data, selected }: NodeProps) => {
         clearContent();
       }
     };
-  }, [selected, data, setContent, clearContent, setContextPanelOpen]);
+  }, [
+    selected,
+    data,
+    id,
+    getNode,
+    setContent,
+    clearContent,
+    setContextPanelOpen,
+  ]);
 
   if (!isBuildingData(data)) {
     return (
