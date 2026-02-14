@@ -6,7 +6,9 @@ import {
 import { useEffect, useMemo } from "react";
 
 import { cn } from "@/lib/utils";
+import { useContextPanel } from "@/providers/ContextPanelProvider";
 
+import BuildingContext from "../../Context/BuildingContext";
 import { isBuildingData } from "../../types/buildings";
 import { rotateBuilding } from "../../utils/rotation";
 import BuildingInput from "../Handles/BuildingInput";
@@ -15,6 +17,11 @@ import BuildingOutput from "../Handles/BuildingOutput";
 const Building = ({ id, data, selected }: NodeProps) => {
   const { updateNodeData } = useReactFlow();
   const updateNodeInternals = useUpdateNodeInternals();
+  const {
+    setContent,
+    clearContent,
+    setOpen: setContextPanelOpen,
+  } = useContextPanel();
 
   useEffect(() => {
     if (!selected) return;
@@ -33,6 +40,19 @@ const Building = ({ id, data, selected }: NodeProps) => {
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
   }, [selected, id, data, updateNodeData, updateNodeInternals]);
+
+  useEffect(() => {
+    if (selected && isBuildingData(data)) {
+      setContent(<BuildingContext building={data} />);
+      setContextPanelOpen(true);
+    }
+
+    return () => {
+      if (selected) {
+        clearContent();
+      }
+    };
+  }, [selected, data, setContent, clearContent, setContextPanelOpen]);
 
   if (!isBuildingData(data)) {
     return (
