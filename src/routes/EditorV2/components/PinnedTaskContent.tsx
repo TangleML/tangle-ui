@@ -1,6 +1,6 @@
 import { useSnapshot } from "valtio";
 
-import CodeSyntaxHighlighter from "@/components/shared/CodeViewer/CodeSyntaxHighlighter";
+import { CodeBlock } from "@/components/shared/CodeViewer/CodeBlock";
 import { TaskDetails, TaskIO } from "@/components/shared/TaskDetails";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
@@ -79,7 +79,7 @@ export function PinnedTaskContent({ entityId }: PinnedTaskContentProps) {
 
           <TabsContent value="implementation" className="mt-0 min-w-0 h-full flex-1">
             {code ? (
-              <CodeSyntaxHighlighter code={code} language="yaml" />
+              <CodeBlock code={code} language="yaml" showLineNumbers={false} />
             ) : (
               <EmptyState message="No implementation code available" />
             )}

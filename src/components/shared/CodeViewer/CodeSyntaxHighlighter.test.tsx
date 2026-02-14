@@ -3,8 +3,8 @@ import { describe, expect, test, vi } from "vitest";
 
 // Mock Monaco to render plain text so we can assert on content
 vi.mock("@monaco-editor/react", () => ({
-  default: ({ defaultValue }: { defaultValue: string }) => (
-    <pre data-testid="monaco-mock">{defaultValue}</pre>
+  default: ({ value }: { value: string }) => (
+    <pre data-testid="monaco-mock">{value}</pre>
   ),
 }));
 
