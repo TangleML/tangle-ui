@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { useContextPanel } from "@/providers/ContextPanelProvider";
 
 import { ProductionFeedback } from "../../components/ProductionFeedback";
-import BuildingContext from "../../Context/BuildingContext";
+import BuildingContext from "../../Context/Building/BuildingContext";
 import { isGlobalResource } from "../../data/resources";
 import { useStatistics } from "../../providers/StatisticProvider";
 import type {
