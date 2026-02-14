@@ -1,13 +1,15 @@
 import { Position } from "@xyflow/react";
 
 import type {
-  Building,
   BuildingInput,
+  BuildingInstance,
   BuildingOutput,
 } from "../types/buildings";
 
 // Rotate position clockwise
-const rotatePosition = (position: Position): Position => {
+const rotatePosition = (position?: Position): Position | undefined => {
+  if (!position) return undefined;
+
   switch (position) {
     case Position.Top:
       return Position.Right;
@@ -22,7 +24,9 @@ const rotatePosition = (position: Position): Position => {
   }
 };
 
-export const rotateBuilding = (building: Building): Building => {
+export const rotateBuilding = (
+  building: BuildingInstance,
+): BuildingInstance => {
   const rotatedInputs = building.inputs?.map((input: BuildingInput) => ({
     ...input,
     position: rotatePosition(input.position),

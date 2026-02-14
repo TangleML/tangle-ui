@@ -17,7 +17,7 @@ interface GameSidebarProps {
 const GameSidebar = ({ day, onAdvanceDay }: GameSidebarProps) => {
   return (
     <div
-      className="relative h-full bg-sidebar text-sidebar-foreground overflow-x-hidden overflow-y-auto"
+      className="relative h-full bg-sidebar text-sidebar-foreground overflow-x-hidden overflow-y-auto z-100"
       data-testid="flow-sidebar-container"
       style={{
         width: `${DEFAULT_WIDTH}px`,

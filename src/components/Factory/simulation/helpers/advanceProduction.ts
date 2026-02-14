@@ -100,7 +100,7 @@ export const advanceProduction = (
 
   // Helper: Add output resources to stockpile or global outputs
   const addOutputs = () => {
-    const produced: Partial<GlobalResources> = {};
+    const produced: Partial<Record<ResourceType, number>> = {};
 
     method.outputs?.forEach((output) => {
       const { resource } = output;
@@ -109,7 +109,6 @@ export const advanceProduction = (
         // Add to global outputs
         earnedGlobalResources[resource] =
           (earnedGlobalResources[resource] || 0) + output.amount;
-        produced[resource] = output.amount;
       } else {
         // Add to stockpile
         stockpile = stockpile?.map((stock) => {
@@ -123,9 +122,11 @@ export const advanceProduction = (
           return stock;
         });
       }
+
+      produced[resource] = output.amount;
     });
 
-    // Track global resource production in stats
+    // Track production in stats
     if (Object.keys(produced).length > 0) {
       stats.produced = produced;
     }
