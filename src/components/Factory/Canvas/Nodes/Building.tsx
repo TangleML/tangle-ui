@@ -3,23 +3,27 @@ import {
   useReactFlow,
   useUpdateNodeInternals,
 } from "@xyflow/react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 import { cn } from "@/lib/utils";
 import { useContextPanel } from "@/providers/ContextPanelProvider";
 
+import { ProductionFeedback } from "../../components/ProductionFeedback";
 import BuildingContext from "../../Context/BuildingContext";
 import { isGlobalResource } from "../../data/resources";
+import { useStatistics } from "../../providers/StatisticProvider";
 import type {
   BuildingInput as BuildingInputType,
   BuildingOutput as BuildingOutputType,
 } from "../../types/buildings";
-import { getBuildingInstance, isBuildingInstance } from "../../types/buildings";
+import { getBuildingInstance } from "../../types/buildings";
 import { rotateBuilding } from "../../utils/rotation";
 import BuildingInput from "../Handles/BuildingInput";
 import BuildingOutput from "../Handles/BuildingOutput";
 
 const Building = ({ id, data, selected }: NodeProps) => {
+  const buildingRef = useRef<HTMLDivElement>(null);
+
   const { updateNodeData, getNode } = useReactFlow();
   const updateNodeInternals = useUpdateNodeInternals();
   const {
@@ -28,23 +32,27 @@ const Building = ({ id, data, selected }: NodeProps) => {
     setOpen: setContextPanelOpen,
   } = useContextPanel();
 
+  const { currentDay, getLatestBuildingStats } = useStatistics();
+  const buildingStats = getLatestBuildingStats(id);
+  const instance = getBuildingInstance(data);
+
   useEffect(() => {
     if (!selected) return;
 
     const handleKeyPress = (event: KeyboardEvent) => {
-      if (!isBuildingInstance(data)) return;
+      if (!instance) return;
 
       if (event.key === "r" || event.key === "R") {
         event.preventDefault();
-        const rotatedData = rotateBuilding(data);
-        updateNodeData(id, { ...rotatedData });
+        const rotatedData = rotateBuilding(instance);
+        updateNodeData(id, { buildingInstance: rotatedData });
         updateNodeInternals(id);
       }
     };
 
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [selected, id, data, updateNodeData, updateNodeInternals]);
+  }, [selected, id, instance, updateNodeData, updateNodeInternals]);
 
   useEffect(() => {
     if (selected) {
@@ -66,8 +74,6 @@ const Building = ({ id, data, selected }: NodeProps) => {
       }
     };
   }, [selected, data, getNode, setContent, clearContent, setContextPanelOpen]);
-
-  const instance = getBuildingInstance(data);
 
   if (!instance) {
     return <InvalidBuildingNode />;
@@ -93,7 +99,14 @@ const Building = ({ id, data, selected }: NodeProps) => {
   return (
     <div
       className={cn("bg-white rounded-lg", selected && "ring-2 ring-selected")}
+      ref={buildingRef}
     >
+      <ProductionFeedback
+        buildingRef={buildingRef}
+        statistics={buildingStats}
+        day={currentDay}
+      />
+
       {inputs.map((input, globalIndex) => {
         if (!input.position) return null;
 

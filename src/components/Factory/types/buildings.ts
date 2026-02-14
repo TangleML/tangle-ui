@@ -57,24 +57,7 @@ export function getBuildingType(buildingType: string): BuildingClass {
   return building;
 }
 
-export function isBuildingInstance(node: Node): node is Node;
-export function isBuildingInstance(data: any): data is BuildingInstance;
-
-// Implementation
-export function isBuildingInstance(nodeOrData: any): boolean {
-  if (
-    nodeOrData !== null &&
-    typeof nodeOrData === "object" &&
-    "data" in nodeOrData
-  ) {
-    const data = nodeOrData.data;
-    return isBuildingInstanceData(data);
-  }
-
-  return isBuildingInstanceData(nodeOrData);
-}
-
-function isBuildingInstanceData(data: any): data is BuildingInstance {
+function isBuildingInstance(data: any): data is BuildingInstance {
   return (
     data !== null &&
     typeof data === "object" &&
