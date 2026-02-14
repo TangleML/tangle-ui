@@ -40,11 +40,16 @@ export function PinnedTaskContent({ entityId }: PinnedTaskContentProps) {
 
   const componentRef = task.componentRef;
   const componentSpec = componentRef.spec;
-  const code = componentRef.text ?? (componentSpec ? componentSpecToText(componentSpec) : "");
+  const code =
+    componentRef.text ??
+    (componentSpec ? componentSpecToText(componentSpec) : "");
 
   return (
     <BlockStack className="h-full w-full bg-white overflow-hidden">
-      <Tabs defaultValue="details" className="flex flex-col flex-1 min-h-0 min-w-0 w-full">
+      <Tabs
+        defaultValue="details"
+        className="flex flex-col flex-1 min-h-0 min-w-0 w-full"
+      >
         <TabsList className="mx-3 mt-3 shrink-0 w-auto">
           <TabsTrigger value="details" className="flex-1 gap-1 min-w-0">
             <Icon name="Info" size="sm" className="shrink-0" />
@@ -77,7 +82,10 @@ export function PinnedTaskContent({ entityId }: PinnedTaskContentProps) {
             )}
           </TabsContent>
 
-          <TabsContent value="implementation" className="mt-0 min-w-0 h-full flex-1">
+          <TabsContent
+            value="implementation"
+            className="mt-0 min-w-0 h-full flex-1"
+          >
             {code ? (
               <CodeBlock code={code} language="yaml" showLineNumbers={false} />
             ) : (

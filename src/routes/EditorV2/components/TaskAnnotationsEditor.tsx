@@ -19,7 +19,9 @@ interface TaskAnnotationsEditorProps {
  * Follows the visual pattern from YamlGeneratorOptionsEditor.
  * Uses direct Valtio mutations on the annotations collection.
  */
-export function TaskAnnotationsEditor({ entityId }: TaskAnnotationsEditorProps) {
+export function TaskAnnotationsEditor({
+  entityId,
+}: TaskAnnotationsEditorProps) {
   const snapshot = useSnapshot(editorStore);
   const spec = snapshot.spec;
 
@@ -140,4 +142,3 @@ export function TaskAnnotationsEditor({ entityId }: TaskAnnotationsEditorProps) 
     </BlockStack>
   );
 }
-

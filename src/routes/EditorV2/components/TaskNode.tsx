@@ -167,7 +167,12 @@ export function TaskNode({ id, data, selected }: TaskNodeProps) {
         {task.annotations.getAll().length > 0 && (
           <BlockStack className="border-t rounded-b-md border-slate-100 px-3 py-1.5 bg-slate-50 overflow-hidden">
             <Text size="xs" tone="subdued" className="font-mono truncate">
-              annotations: [{task.annotations.getAll().map((a) => a.key).join(", ")}]
+              annotations: [
+              {task.annotations
+                .getAll()
+                .map((a) => a.key)
+                .join(", ")}
+              ]
             </Text>
           </BlockStack>
         )}

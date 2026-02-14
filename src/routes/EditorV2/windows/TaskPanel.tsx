@@ -45,7 +45,11 @@ export function TaskPanel() {
                 onClick={() => restoreWindow(window.id)}
                 className="flex items-center gap-1.5 min-w-0 h-5"
               >
-                <Icon name="AppWindow" size="sm" className="text-gray-500 shrink-0" />
+                <Icon
+                  name="AppWindow"
+                  size="sm"
+                  className="text-gray-500 shrink-0"
+                />
                 <Text
                   size="xs"
                   weight="semibold"
@@ -75,4 +79,3 @@ export function TaskPanel() {
     </div>
   );
 }
-

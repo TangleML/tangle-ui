@@ -40,8 +40,18 @@ const CodeBlock = memo(function CodeBlock({
   const prismLanguage = languageMap[language.toLowerCase()] ?? language;
 
   return (
-    <Highlight theme={themes.vsDark} code={code.trim()} language={prismLanguage}>
-      {({ className: prismClassName, style, tokens, getLineProps, getTokenProps }) => (
+    <Highlight
+      theme={themes.vsDark}
+      code={code.trim()}
+      language={prismLanguage}
+    >
+      {({
+        className: prismClassName,
+        style,
+        tokens,
+        getLineProps,
+        getTokenProps,
+      }) => (
         <pre
           className={cn(
             prismClassName,
@@ -78,4 +88,3 @@ const CodeBlock = memo(function CodeBlock({
 });
 
 export { CodeBlock };
-

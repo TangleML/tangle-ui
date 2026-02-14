@@ -38,4 +38,3 @@ export const useComponentPreview = () => {
   }
   return context;
 };
-

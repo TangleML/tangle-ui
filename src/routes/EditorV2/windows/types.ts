@@ -75,4 +75,3 @@ export const DEFAULT_MIN_SIZE: Size = {
 
 /** Cascade offset for new windows */
 export const CASCADE_OFFSET = 24;
-

@@ -38,7 +38,8 @@ export function Window({ windowId }: WindowProps) {
     return null;
   }
 
-  const { title, state, position, size, minSize, disabledActions } = windowConfig;
+  const { title, state, position, size, minSize, disabledActions } =
+    windowConfig;
   // Get content from separate map (not stored in proxy to avoid React Compiler issues)
   const content = getWindowContent(windowId);
   const isMinimized = state === "minimized";
@@ -104,7 +105,10 @@ export function Window({ windowId }: WindowProps) {
     const startHeight = size.height;
 
     const handleMouseMove = (e: MouseEvent) => {
-      const newWidth = Math.max(minSize.width, startWidth + (e.clientX - startX));
+      const newWidth = Math.max(
+        minSize.width,
+        startWidth + (e.clientX - startX),
+      );
       const newHeight = Math.max(
         minSize.height,
         startHeight + (e.clientY - startY),
@@ -264,4 +268,3 @@ export function Window({ windowId }: WindowProps) {
     </div>
   );
 }
-
