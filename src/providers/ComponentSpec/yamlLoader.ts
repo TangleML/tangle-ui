@@ -14,7 +14,8 @@ import {
 
 import { ComponentSpecEntity } from "./componentSpec";
 import { type Context, RootContext } from "./context";
-import { GraphImplementation, TaskEntity } from "./graphImplementation";
+import { GraphImplementation } from "./graphImplementation";
+import type { TaskEntity } from "./tasks";
 
 export class YamlLoader {
   private readonly rootContext: Context;

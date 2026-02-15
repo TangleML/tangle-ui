@@ -13,6 +13,24 @@ The Component Spec Object Model is a **hierarchical, entity-based system** for r
 
 ---
 
+## File Structure
+
+```
+src/providers/ComponentSpec/
+├── types.ts              # ALL types and interfaces (including GraphContext)
+├── context.ts            # Base context classes (foundation)
+├── annotations.ts        # AnnotationEntity, AnnotationsCollection
+├── inputs.ts             # InputEntity, InputsCollection
+├── outputs.ts            # OutputEntity, OutputsCollection
+├── tasks.ts              # TaskEntity, TasksCollection, ArgumentEntity, ArgumentsCollection
+├── bindings.ts           # BindingEntity, BindingsCollection
+├── componentSpec.ts      # ComponentSpecEntity
+├── graphImplementation.ts # GraphImplementation (orchestrator only)
+└── yamlLoader.ts         # YamlLoader
+```
+
+---
+
 ## Core Concepts
 
 ### Entities
@@ -76,6 +94,48 @@ RootContext ($name: "root")
 
 ---
 
+## Unified GraphContext
+
+The `GraphContext` is a single unified context shared by all entities in a graph implementation:
+
+```typescript
+interface GraphContext extends Context {
+  inputs: InputsCollectionInterface;
+  outputs: OutputsCollectionInterface;
+  tasks: TasksCollectionInterface;
+  bindings: BindingsCollectionInterface;
+}
+```
+
+`GraphImplementation` creates this context with **lazy getters** to handle initialization order:
+
+```typescript
+const graphContext: GraphContext = {
+  ...parentContext,
+  get inputs() {
+    return parentContext.inputs;
+  },
+  get outputs() {
+    return parentContext.outputs;
+  },
+  get tasks() {
+    return self.tasks;
+  },
+  get bindings() {
+    return self.bindings;
+  },
+};
+```
+
+**Benefits:**
+
+- **Single context type**: One `GraphContext` instead of multiple overlapping interfaces
+- **No circular dependencies**: Clear import hierarchy with types.ts at the top
+- **Strong typing**: `BindingSourceEntity = InputEntity | TaskEntity` (no object literals)
+- **Lazy evaluation**: Getters defer property access until collections are initialized
+
+---
+
 ## Object Hierarchy
 
 ```
@@ -115,8 +175,8 @@ RootContext
 | `InputEntity` / `InputsCollection`           | Component inputs                     | `inputs.ts`              |
 | `OutputEntity` / `OutputsCollection`         | Component outputs                    | `outputs.ts`             |
 | `GraphImplementation`                        | Graph-based implementation           | `graphImplementation.ts` |
-| `TaskEntity` / `TasksCollection`             | Tasks within a graph                 | `graphImplementation.ts` |
-| `ArgumentEntity` / `ArgumentsCollection`     | Task argument values (literals only) | `graphImplementation.ts` |
+| `TaskEntity` / `TasksCollection`             | Tasks within a graph                 | `tasks.ts`               |
+| `ArgumentEntity` / `ArgumentsCollection`     | Task argument values (literals only) | `tasks.ts`               |
 | `BindingEntity` / `BindingsCollection`       | Data flow connections                | `bindings.ts`            |
 | `AnnotationEntity` / `AnnotationsCollection` | Key-value annotations                | `annotations.ts`         |
 | `YamlLoader`                                 | Loads YAML into object model         | `yamlLoader.ts`          |
@@ -143,7 +203,7 @@ class BindingEntity {
   targetPortName: string;
 
   // Resolved entity getters (for user-land code)
-  get source(): InputEntity | TaskEntity;  // Resolves from context
+  get source(): InputEntity | TaskEntity; // Resolves from context
   get target(): TaskEntity | OutputEntity; // Resolves from context
 
   // Type-safe binding type (determined from context, not string patterns)
@@ -155,7 +215,7 @@ class BindingEntity {
 
 - **Serialization**: IDs stay for `toJson()` without transformation
 - **User ergonomics**: `binding.source.name` works directly
-- **Type safety**: `bindingType` uses `instanceof` checks, not string matching
+- **Type safety**: `bindingType` uses collection lookups, not string matching
 
 **Binding Types:**
 
@@ -171,13 +231,13 @@ The `bind()` method accepts either entity objects (preferred) or ID references:
 // Preferred: Using entity objects directly
 const binding = implementation.bindings.bind(
   { entity: input, portName: input.name },
-  { entity: task, portName: "inputArg" }
+  { entity: task, portName: "inputArg" },
 );
 
 // Legacy: Using entity IDs
 const binding = implementation.bindings.bind(
   { entityId: input.$id, portName: input.name },
-  { entityId: task.$id, portName: "inputArg" }
+  { entityId: task.$id, portName: "inputArg" },
 );
 ```
 
@@ -185,8 +245,8 @@ const binding = implementation.bindings.bind(
 
 ```typescript
 // Get resolved entities directly from the binding
-const sourceEntity = binding.source;  // InputEntity or TaskEntity
-const targetEntity = binding.target;  // TaskEntity or OutputEntity
+const sourceEntity = binding.source; // InputEntity or TaskEntity
+const targetEntity = binding.target; // TaskEntity or OutputEntity
 
 // Access properties without manual lookups
 console.log(sourceEntity.name);
@@ -208,7 +268,10 @@ Bindings are automatically removed when their source or target entities are dele
 ```typescript
 class BindingsCollection {
   // Watch collections for entity deletions
-  watchCollection(collection: EntityIndex, role: "source" | "target" | "both"): void;
+  watchCollection(
+    collection: WatchableCollection,
+    role: "source" | "target" | "both",
+  ): void;
 }
 
 // In GraphImplementation constructor:
@@ -256,7 +319,7 @@ The `IndexByKey` class maintains a `Map<fieldName, Map<fieldValue, Set<entityId>
 
 To add a new entity type:
 
-1. **Define the scalar interface:**
+1. **Define the scalar interface in `types.ts`:**
 
 ```typescript
 interface MyScalarInterface {
@@ -370,8 +433,45 @@ IDs follow the pattern: `{contextPath}_{counter}`
 
 ### Binding Type Inference
 
-The binding type is inferred from entity ID patterns:
+The binding type is determined by checking entity membership in collections:
 
-- Source contains `.inputs_` → `graphInput`
-- Target contains `.outputs_` → `outputValue`
+- Source in `inputs` collection → `graphInput`
+- Target in `outputs` collection → `outputValue`
 - Otherwise → `taskOutput`
+
+This is more robust than string pattern matching on entity IDs.
+
+---
+
+## Import Graph (No Cycles)
+
+```mermaid
+flowchart TB
+    types[types.ts]
+    context[context.ts]
+    annotations[annotations.ts]
+    inputs[inputs.ts]
+    outputs[outputs.ts]
+    tasks[tasks.ts]
+    bindings[bindings.ts]
+    componentSpec[componentSpec.ts]
+    graphImpl[graphImplementation.ts]
+
+    context --> types
+    annotations --> context
+    inputs --> context
+    inputs --> annotations
+    outputs --> context
+    outputs --> annotations
+    tasks --> types
+    tasks --> context
+    tasks --> annotations
+    bindings --> types
+    bindings --> context
+    componentSpec --> context
+    componentSpec --> inputs
+    componentSpec --> outputs
+    graphImpl --> types
+    graphImpl --> tasks
+    graphImpl --> bindings
+```

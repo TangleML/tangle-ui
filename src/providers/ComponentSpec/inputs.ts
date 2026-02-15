@@ -1,36 +1,28 @@
+/**
+ * Input entities for component specifications.
+ *
+ * InputEntity represents an input parameter of a component.
+ * InputsCollection manages all inputs for a component.
+ */
+
 import { proxy } from "valtio";
 
-import type { InputSpec, TypeSpecType } from "@/utils/componentSpec";
+import type { InputSpec } from "@/utils/componentSpec";
 
 import { AnnotationsCollection } from "./annotations";
 import { BaseCollection, type Context } from "./context";
 import type {
   BaseEntity,
+  InputScalarInterface,
+  InputScalarWithAnnotations,
   RequiredProperties,
   SerializableEntity,
+  TypeSpecType,
 } from "./types";
 
 /**
- * Scalar interface for InputEntity - represents the data used to populate an input.
- * Note: `annotations` is handled separately by AnnotationsCollection on the entity.
+ * InputEntity represents an input parameter of a component.
  */
-export type InputScalarInterface = Pick<
-  InputSpec,
-  "name" | "type" | "description" | "default" | "optional"
-> & {
-  /**
-   * Internal value for runtime use. NOT part of the ComponentSpec schema.
-   */
-  value?: string;
-};
-
-/**
- * Interface for creating an InputEntity with annotations.
- */
-export interface InputScalarWithAnnotations extends InputScalarInterface {
-  annotations?: Record<string, unknown>;
-}
-
 export class InputEntity
   implements BaseEntity<InputScalarInterface>, SerializableEntity
 {
@@ -109,13 +101,8 @@ export class InputEntity
 }
 
 /**
- * Input type for populating an InputEntity from raw spec data.
- * Extends the scalar interface with annotations in their raw format.
+ * Collection of inputs for a component.
  */
-type InputPopulateInput = InputScalarInterface & {
-  annotations?: Record<string, unknown>;
-};
-
 export class InputsCollection
   extends BaseCollection<InputScalarInterface, InputEntity>
   implements SerializableEntity
@@ -133,7 +120,7 @@ export class InputsCollection
 
   createEntity(spec: InputScalarInterface): InputEntity {
     return new InputEntity(this.generateId(), this, spec).populate(
-      spec as InputPopulateInput,
+      spec as InputScalarWithAnnotations,
     );
   }
 

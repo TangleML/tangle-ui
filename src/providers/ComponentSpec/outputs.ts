@@ -1,31 +1,28 @@
+/**
+ * Output entities for component specifications.
+ *
+ * OutputEntity represents an output of a component.
+ * OutputsCollection manages all outputs for a component.
+ */
+
 import { proxy } from "valtio";
 
-import type { OutputSpec, TypeSpecType } from "@/utils/componentSpec";
+import type { OutputSpec } from "@/utils/componentSpec";
 
 import { AnnotationsCollection } from "./annotations";
 import { BaseCollection, type Context } from "./context";
 import type {
   BaseEntity,
+  OutputScalarInterface,
+  OutputScalarWithAnnotations,
   RequiredProperties,
   SerializableEntity,
+  TypeSpecType,
 } from "./types";
 
 /**
- * Scalar interface for OutputEntity - represents the data used to populate an output.
- * Note: `annotations` is handled separately by AnnotationsCollection on the entity.
+ * OutputEntity represents an output of a component.
  */
-export type OutputScalarInterface = Pick<
-  OutputSpec,
-  "name" | "type" | "description"
->;
-
-/**
- * Interface for creating an OutputEntity with annotations.
- */
-export interface OutputScalarWithAnnotations extends OutputScalarInterface {
-  annotations?: Record<string, unknown>;
-}
-
 export class OutputEntity
   implements BaseEntity<OutputScalarInterface>, SerializableEntity
 {
@@ -106,13 +103,8 @@ export class OutputEntity
 }
 
 /**
- * Input type for populating an OutputEntity from raw spec data.
- * Extends the scalar interface with annotations in their raw format.
+ * Collection of outputs for a component.
  */
-type OutputPopulateInput = OutputScalarInterface & {
-  annotations?: Record<string, unknown>;
-};
-
 export class OutputsCollection
   extends BaseCollection<OutputScalarInterface, OutputEntity>
   implements SerializableEntity
@@ -136,7 +128,7 @@ export class OutputsCollection
 
   createEntity(spec: OutputScalarInterface): OutputEntity {
     return new OutputEntity(this.generateId(), this, spec).populate(
-      spec as OutputPopulateInput,
+      spec as OutputScalarWithAnnotations,
     );
   }
 
