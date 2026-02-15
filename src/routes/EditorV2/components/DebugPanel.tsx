@@ -15,7 +15,7 @@ import {
   openWindow,
 } from "../windows/windowStore";
 
-export const DEBUG_PANEL_WINDOW_ID = "debug-panel";
+const DEBUG_PANEL_WINDOW_ID = "debug-panel";
 
 interface StatItemProps {
   label: string;
@@ -61,7 +61,7 @@ function StatGroup({ title, children }: StatGroupProps) {
  * Debug panel content - displays stats and JSON representation of the spec.
  * Used within the Windows system.
  */
-export function DebugPanelContent() {
+function DebugPanelContent() {
   const snap = useSnapshot(editorStore);
 
   // Collect stats from the spec

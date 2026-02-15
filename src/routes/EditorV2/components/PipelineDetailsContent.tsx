@@ -178,28 +178,3 @@ function EmptyState() {
     </BlockStack>
   );
 }
-
-interface PanelHeaderProps {
-  icon: string;
-  iconClassName?: string;
-  title: string;
-}
-
-function PanelHeader({ icon, iconClassName, title }: PanelHeaderProps) {
-  return (
-    <InlineStack
-      gap="2"
-      blockAlign="center"
-      className="p-3 border-b border-gray-200 bg-gray-50"
-    >
-      <Icon
-        name={icon as Parameters<typeof Icon>[0]["name"]}
-        size="sm"
-        className={iconClassName}
-      />
-      <Text size="sm" weight="semibold" className="text-gray-700">
-        {title}
-      </Text>
-    </InlineStack>
-  );
-}

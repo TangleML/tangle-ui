@@ -9,7 +9,7 @@ export interface SelectedNode {
   position: { x: number; y: number };
 }
 
-export interface EditorStore {
+interface EditorStore {
   spec: ComponentSpecEntity | null;
   selectedNodeId: string | null;
   selectedNodeType: "task" | "input" | "output" | null;

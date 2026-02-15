@@ -16,7 +16,7 @@ import type {
 /**
  * AnnotationEntity represents a key-value annotation on an entity.
  */
-export class AnnotationEntity
+class AnnotationEntity
   implements SerializableEntity, BaseEntity<AnnotationScalarInterface>
 {
   $indexed: never[];
