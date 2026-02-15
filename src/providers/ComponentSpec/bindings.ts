@@ -316,6 +316,20 @@ export class BindingsCollection
   }
 
   /**
+   * Find all bindings where the given entity is the source.
+   */
+  findBySource(entityId: string): BindingEntity[] {
+    return this.findByIndex("sourceEntityId", entityId);
+  }
+
+  /**
+   * Find all bindings where the given entity is the target.
+   */
+  findByTarget(entityId: string): BindingEntity[] {
+    return this.findByIndex("targetEntityId", entityId);
+  }
+
+  /**
    * Watch a collection for entity deletions.
    * When an entity is deleted, automatically remove all bindings referencing it.
    *
@@ -363,6 +377,16 @@ export class BindingsCollection
     for (const bindingId of new Set(toRemove)) {
       this.removeById(bindingId);
     }
+  }
+
+  /**
+   * Cleanup watch subscriptions when the collection is disposed.
+   */
+  dispose(): void {
+    for (const unsub of this._watchSubscriptions) {
+      unsub();
+    }
+    this._watchSubscriptions = [];
   }
 
   toJson(): BindingScalar[] {
