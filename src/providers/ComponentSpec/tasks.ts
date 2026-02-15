@@ -239,7 +239,7 @@ export class TasksCollection
  * The TaskEntity.serializeArguments() method combines literal values with
  * binding information during serialization.
  */
-export class ArgumentEntity implements BaseEntity<ArgumentScalarInterface> {
+class ArgumentEntity implements BaseEntity<ArgumentScalarInterface> {
   readonly $indexed = ["name" as const];
 
   name: string;
@@ -269,7 +269,7 @@ export class ArgumentEntity implements BaseEntity<ArgumentScalarInterface> {
 /**
  * Collection of arguments for a task.
  */
-export class ArgumentsCollection extends BaseCollection<
+class ArgumentsCollection extends BaseCollection<
   ArgumentScalarInterface,
   ArgumentEntity
 > {

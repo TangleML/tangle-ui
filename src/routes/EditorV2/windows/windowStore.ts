@@ -12,7 +12,7 @@ import {
   type WindowRef,
 } from "./types";
 
-export interface WindowStore {
+interface WindowStore {
   /** Map of window ID to window configuration */
   windows: Record<string, WindowConfig>;
   /** Ordered list of window IDs for z-index stacking (last = top) */
@@ -105,7 +105,7 @@ export function closeWindow(id: string): void {
 }
 
 /** Minimize a window (collapse to header only) */
-export function minimizeWindow(id: string): void {
+function minimizeWindow(id: string): void {
   const window = windowStore.windows[id];
   if (!window || window.state === "minimized") return;
 
@@ -116,7 +116,7 @@ export function minimizeWindow(id: string): void {
 }
 
 /** Maximize a window (full screen) */
-export function maximizeWindow(id: string): void {
+function maximizeWindow(id: string): void {
   const window = windowStore.windows[id];
   if (!window || window.state === "maximized") return;
 
@@ -200,11 +200,6 @@ export function getAllWindows(): WindowConfig[] {
   return windowStore.windowOrder.map((id) => windowStore.windows[id]);
 }
 
-/** Get hidden windows only */
-export function getHiddenWindows(): WindowConfig[] {
-  return getAllWindows().filter((w) => w.state === "hidden");
-}
-
 /** Close all windows linked to a specific entity */
 export function closeWindowsByLinkedEntity(entityId: string): void {
   const windowsToClose = windowStore.windowOrder.filter(
@@ -225,11 +220,6 @@ function createWindowRef(id: string): WindowRef {
     hide: () => hideWindow(id),
     restore: () => restoreWindow(id),
   };
-}
-
-/** Update window content */
-export function updateWindowContent(id: string, content: ReactNode): void {
-  windowContentMap.set(id, content);
 }
 
 /** Toggle window state - useful for minimize/maximize buttons */

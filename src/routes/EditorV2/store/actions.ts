@@ -248,80 +248,6 @@ function getNodeTypeFromId(nodeId: string): "input" | "output" | "task" | null {
 // UNIFIED BINDING API
 // =============================================================================
 
-/**
- * Create a binding between two ports.
- *
- * This is the unified API for creating all types of bindings:
- * - Graph input → Task input
- * - Task output → Task input
- * - Task output → Graph output
- *
- * @param sourceEntityId - The $id of the source entity (input or task)
- * @param sourcePort - The name of the output port on the source
- * @param targetEntityId - The $id of the target entity (task or output)
- * @param targetPort - The name of the input port on the target
- */
-export function createBinding(
-  sourceEntityId: string,
-  sourcePort: string,
-  targetEntityId: string,
-  targetPort: string,
-): boolean {
-  const { spec } = editorStore;
-
-  if (!hasGraphImplementation(spec)) {
-    console.error("Cannot create binding: spec has no graph implementation");
-    return false;
-  }
-
-  // Use rebind to replace any existing connection to the target port
-  spec.implementation.bindings.rebind(
-    { entityId: sourceEntityId, portName: sourcePort },
-    { entityId: targetEntityId, portName: targetPort },
-  );
-
-  return true;
-}
-
-/**
- * Remove a binding to a specific target port.
- *
- * @param targetEntityId - The $id of the target entity
- * @param targetPort - The name of the input port on the target
- */
-export function removeBindingToPort(
-  targetEntityId: string,
-  targetPort: string,
-): boolean {
-  const { spec } = editorStore;
-
-  if (!hasGraphImplementation(spec)) {
-    console.error("Cannot remove binding: spec has no graph implementation");
-    return false;
-  }
-
-  return spec.implementation.bindings.unbindByTargetPort(
-    targetEntityId,
-    targetPort,
-  );
-}
-
-/**
- * Remove all bindings associated with an entity.
- *
- * @param entityId - The $id of the entity
- */
-export function removeBindingsByEntity(entityId: string): number {
-  const { spec } = editorStore;
-
-  if (!hasGraphImplementation(spec)) {
-    console.error("Cannot remove bindings: spec has no graph implementation");
-    return 0;
-  }
-
-  return spec.implementation.bindings.unbindByEntity(entityId);
-}
-
 // =============================================================================
 // CONNECTION API
 // =============================================================================
@@ -424,36 +350,6 @@ export function connectNodes(connection: ConnectionInfo) {
     { entityId: targetNodeId, portName: targetInputName },
   );
 
-  return true;
-}
-
-/**
- * Remove a connection by resetting the argument to a literal value.
- */
-export function removeConnection(taskName: string, argumentName: string) {
-  const { spec } = editorStore;
-
-  if (!hasGraphImplementation(spec)) {
-    console.error("Cannot remove connection: spec has no graph implementation");
-    return false;
-  }
-
-  const task = spec.implementation.tasks.findByIndex("name", taskName)[0];
-
-  if (!task) {
-    console.error(`Task not found: ${taskName}`);
-    return false;
-  }
-
-  const argument = task.arguments.findByIndex("name", argumentName)[0];
-
-  if (!argument) {
-    console.error(`Argument not found: ${argumentName}`);
-    return false;
-  }
-
-  // Reset to empty literal value
-  argument.value = "";
   return true;
 }
 

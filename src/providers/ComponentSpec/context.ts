@@ -18,12 +18,12 @@ import type {
 } from "./types";
 
 // Re-export types for backwards compatibility
-export type { Context, EntityId, IdGenerator, NestedContext };
+export type { Context };
 
 /**
  * Auto-incrementing ID generator with a prefix.
  */
-export class AutoincrementIdGenerator implements IdGenerator {
+class AutoincrementIdGenerator implements IdGenerator {
   private counter = 0;
 
   constructor(private readonly prefix: string) {}
@@ -129,7 +129,7 @@ class IndexByKey {
  * Index for storing and querying entities.
  * Provides fast lookups by ID and indexed fields.
  */
-export class EntityIndex<TEntity extends BaseEntity<any>> {
+class EntityIndex<TEntity extends BaseEntity<any>> {
   /**
    * Plain object for entity storage.
    * Entities are wrapped with proxy() when added to ensure Valtio reactivity.

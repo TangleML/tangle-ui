@@ -12,7 +12,7 @@ addMediaTypePlugin("text/plain", {
   fileMatcher: async (path) => path.endsWith(".json_schema.json"),
 });
 
-export interface ValidationResult {
+interface ValidationResult {
   valid: boolean;
   errors?: string[];
 }

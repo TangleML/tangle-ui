@@ -1,4 +1,4 @@
-import { createContext, type ReactNode, useContext, useState } from "react";
+import { createContext, type ReactNode, useState } from "react";
 
 import type { ComponentReference } from "@/utils/componentSpec";
 
@@ -27,14 +27,4 @@ export const ComponentPreviewProvider = ({
       {children}
     </ComponentPreviewContext.Provider>
   );
-};
-
-export const useComponentPreview = () => {
-  const context = useContext(ComponentPreviewContext);
-  if (!context) {
-    throw new Error(
-      "useComponentPreview must be used within ComponentPreviewProvider",
-    );
-  }
-  return context;
 };

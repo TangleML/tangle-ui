@@ -50,20 +50,6 @@ export interface SerializableEntity {
 }
 
 /**
- * Type guard to check if an object is a SerializableEntity.
- */
-export function isSerializableEntity(
-  entity: unknown,
-): entity is SerializableEntity {
-  return (
-    !!entity &&
-    typeof entity === "object" &&
-    "toJson" in entity &&
-    typeof entity.toJson === "function"
-  );
-}
-
-/**
  * Extracts the required keys from a type.
  */
 export type RequiredKeys<T> = {

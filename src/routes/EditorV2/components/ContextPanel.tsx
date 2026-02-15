@@ -46,18 +46,6 @@ export function ContextPanelContent() {
   );
 }
 
-/**
- * @deprecated Use ContextPanelContent within the Windows system instead.
- * Kept for backwards compatibility.
- */
-export function ContextPanel() {
-  return (
-    <BlockStack className="h-full w-[280px] border-l border-gray-200 bg-white overflow-y-auto">
-      <ContextPanelContent />
-    </BlockStack>
-  );
-}
-
 function EmptyState() {
   return (
     <BlockStack className="h-full items-center justify-center p-4">
