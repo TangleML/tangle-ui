@@ -1,25 +1,28 @@
+/**
+ * Base context classes for entity management.
+ *
+ * Contexts form a tree structure providing:
+ * - ID Generation: Hierarchical prefixes (e.g., root.component.inputs_1)
+ * - Entity Registration: Entities register in their parent context
+ * - Scoping: Nested components have isolated namespaces
+ */
+
 import { getVersion, proxy, subscribe } from "valtio";
 
-import type { BaseEntity } from "./types";
+import type {
+  BaseEntity,
+  Context,
+  EntityId,
+  IdGenerator,
+  NestedContext,
+} from "./types";
 
-export type EntityId = string;
+// Re-export types for backwards compatibility
+export type { Context, EntityId, IdGenerator, NestedContext };
 
-export interface IdGenerator {
-  generateId(): EntityId;
-}
-
-export interface Context {
-  $name: string;
-  generateId(): EntityId;
-  registerEntity<TEntity extends BaseEntity<any>>(entity: TEntity): void;
-  removeEntity<TEntity extends BaseEntity<any>>(entity: TEntity): void;
-}
-
-export interface NestedContext extends Context {
-  // todo: parent relationship is not yet implemented
-  readonly $parent: Context;
-}
-
+/**
+ * Auto-incrementing ID generator with a prefix.
+ */
 export class AutoincrementIdGenerator implements IdGenerator {
   private counter = 0;
 
@@ -30,6 +33,9 @@ export class AutoincrementIdGenerator implements IdGenerator {
   }
 }
 
+/**
+ * Internal index structure for fast entity lookups by field values.
+ */
 class IndexByKey {
   /**
    * Index structure using plain objects for valtio compatibility.
@@ -119,6 +125,10 @@ class IndexByKey {
   }
 }
 
+/**
+ * Index for storing and querying entities.
+ * Provides fast lookups by ID and indexed fields.
+ */
 export class EntityIndex<TEntity extends BaseEntity<any>> {
   /**
    * Plain object for entity storage.
@@ -156,7 +166,8 @@ export class EntityIndex<TEntity extends BaseEntity<any>> {
     }
 
     // Wrap entity in proxy before storing to ensure Valtio tracks mutations
-    const proxiedEntity = getVersion(entity) !== undefined ? entity : proxy(entity) as TEntity;
+    const proxiedEntity =
+      getVersion(entity) !== undefined ? entity : (proxy(entity) as TEntity);
     this.entities[proxiedEntity.$id] = proxiedEntity;
     this.indexByKey.add(proxiedEntity);
 
@@ -242,6 +253,10 @@ export class EntityIndex<TEntity extends BaseEntity<any>> {
   }
 }
 
+/**
+ * Abstract base class for entity collections.
+ * Combines EntityIndex with context management.
+ */
 export abstract class BaseCollection<
   TScalar,
   TEntity extends BaseEntity<TScalar>,
@@ -285,7 +300,7 @@ export abstract class BaseCollection<
    * Removes the entity from the collection, updates context and indexes,
    * and returns the detached entity.
    */
-  detach(entity: TEntity): TEntity{
+  detach(entity: TEntity): TEntity {
     // Remove from EntityIndex (handles subscription cleanup, index removal, etc.)
     super.remove(entity);
     // Remove from context
@@ -317,6 +332,9 @@ export abstract class BaseCollection<
   }
 }
 
+/**
+ * Base implementation of a nested context.
+ */
 export class BaseNestedContext implements NestedContext {
   private readonly idGenerator: IdGenerator;
 
@@ -346,6 +364,9 @@ export class BaseNestedContext implements NestedContext {
   }
 }
 
+/**
+ * Root context - the top-level context for ID generation.
+ */
 export class RootContext implements Context {
   readonly $name = "root";
   private readonly entities: EntityIndex<BaseEntity<any>> = new EntityIndex();
@@ -366,11 +387,3 @@ export class RootContext implements Context {
     this.entities.remove(entity);
   }
 }
-
-/**
- *
- * const rootContext = new RootContext();
- *
- *
- *
- */

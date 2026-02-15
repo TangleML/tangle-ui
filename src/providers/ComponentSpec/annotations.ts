@@ -1,15 +1,21 @@
+/**
+ * Annotation entities for key-value metadata.
+ *
+ * AnnotationEntity represents a single key-value annotation.
+ * AnnotationsCollection manages annotations on entities (inputs, outputs, tasks).
+ */
+
 import { BaseCollection, type Context } from "./context";
 import type {
+  AnnotationScalarInterface,
   BaseEntity,
   RequiredProperties,
   SerializableEntity,
 } from "./types";
 
-interface AnnotationScalarInterface {
-  key: string;
-  value?: unknown;
-}
-
+/**
+ * AnnotationEntity represents a key-value annotation on an entity.
+ */
 export class AnnotationEntity
   implements SerializableEntity, BaseEntity<AnnotationScalarInterface>
 {
@@ -43,6 +49,9 @@ export class AnnotationEntity
   }
 }
 
+/**
+ * Collection of annotations for an entity.
+ */
 export class AnnotationsCollection
   extends BaseCollection<AnnotationScalarInterface, AnnotationEntity>
   implements SerializableEntity

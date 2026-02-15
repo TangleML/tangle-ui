@@ -1,82 +1,26 @@
+/**
+ * Binding entities for graph implementations.
+ *
+ * BindingEntity represents a data flow connection between two ports.
+ * BindingsCollection manages all bindings with indexed lookups and reactive cleanup.
+ */
+
 import { subscribe } from "valtio";
 
 import { BaseCollection, type Context } from "./context";
-import type { InputEntity, InputsCollection } from "./inputs";
-import type { OutputEntity, OutputsCollection } from "./outputs";
-import type {
-  BaseEntity,
-  RequiredProperties,
-  SerializableEntity,
+import {
+  type BaseEntity,
+  type BindingScalar,
+  type BindingSourceEntity,
+  type BindingTargetEntity,
+  type EntityPortReference,
+  type GraphContext,
+  isEntityPortReference,
+  type PortReference,
+  type RequiredProperties,
+  type SerializableEntity,
+  type WatchableCollection,
 } from "./types";
-
-/**
- * Source entity type for bindings.
- * Can be InputEntity (graph input) or TaskEntity (task output).
- * Note: TaskEntity is imported dynamically to avoid circular dependency.
- */
-export type BindingSourceEntity = InputEntity | { $id: string; name: string };
-
-/**
- * Target entity type for bindings.
- * Can be TaskEntity (task input) or OutputEntity (graph output).
- * Note: TaskEntity is imported dynamically to avoid circular dependency.
- */
-export type BindingTargetEntity = OutputEntity | { $id: string; name: string };
-
-/**
- * Context interface for BindingsCollection.
- * Provides access to collections needed for entity resolution.
- */
-export interface BindingsContext extends Context {
-  inputs: InputsCollection;
-  outputs: OutputsCollection;
-  tasks: { findById(id: string): { $id: string; name: string } | undefined };
-}
-
-/**
- * Minimal interface for collections that can be watched.
- * Only requires the entities record that Valtio can subscribe to.
- */
-interface WatchableCollection {
-  entities: Record<string, BaseEntity<any>>;
-}
-
-/**
- * PortReference identifies a binding endpoint by ID.
- * Used when creating bindings to specify source and target.
- */
-export interface PortReference {
-  entityId: string;
-  portName: string;
-}
-
-/**
- * EntityPortReference identifies a binding endpoint using an entity object.
- * The entity must have an $id property.
- */
-export interface EntityPortReference {
-  entity: { $id: string };
-  portName: string;
-}
-
-/**
- * Type guard to check if a port reference uses an entity object.
- */
-function isEntityPortReference(
-  ref: PortReference | EntityPortReference,
-): ref is EntityPortReference {
-  return "entity" in ref;
-}
-
-/**
- * Scalar interface for BindingEntity - represents the raw data shape.
- */
-export interface BindingScalar {
-  sourceEntityId: string;
-  sourcePortName: string;
-  targetEntityId: string;
-  targetPortName: string;
-}
 
 /**
  * BindingEntity represents a data flow connection between two ports.
@@ -101,7 +45,7 @@ export class BindingEntity
 
   constructor(
     readonly $id: string,
-    private readonly getContext: () => BindingsContext,
+    private readonly context: GraphContext,
     required: RequiredProperties<BindingScalar>,
   ) {
     this.sourceEntityId = required.sourceEntityId;
@@ -125,14 +69,12 @@ export class BindingEntity
    * @throws Error if the source entity cannot be found (indicates data corruption)
    */
   get source(): BindingSourceEntity {
-    const context = this.getContext();
-
     // Try inputs first (for graphInput bindings)
-    const input = context.inputs.findById(this.sourceEntityId);
+    const input = this.context.inputs.findById(this.sourceEntityId);
     if (input) return input;
 
     // Try tasks (for taskOutput and outputValue bindings)
-    const task = context.tasks.findById(this.sourceEntityId);
+    const task = this.context.tasks.findById(this.sourceEntityId);
     if (task) return task;
 
     throw new Error(
@@ -147,14 +89,12 @@ export class BindingEntity
    * @throws Error if the target entity cannot be found (indicates data corruption)
    */
   get target(): BindingTargetEntity {
-    const context = this.getContext();
-
     // Try outputs first (for outputValue bindings)
-    const output = context.outputs.findById(this.targetEntityId);
+    const output = this.context.outputs.findById(this.targetEntityId);
     if (output) return output;
 
     // Try tasks (for graphInput and taskOutput bindings)
-    const task = context.tasks.findById(this.targetEntityId);
+    const task = this.context.tasks.findById(this.targetEntityId);
     if (task) return task;
 
     throw new Error(
@@ -169,14 +109,12 @@ export class BindingEntity
    * robust than string pattern matching on entity IDs.
    */
   get bindingType(): "graphInput" | "taskOutput" | "outputValue" {
-    const context = this.getContext();
-
     // Check if source is a graph input
-    const sourceIsInput = context.inputs.has(this.sourceEntityId);
+    const sourceIsInput = this.context.inputs.has(this.sourceEntityId);
     if (sourceIsInput) return "graphInput";
 
     // Check if target is a graph output
-    const targetIsOutput = context.outputs.has(this.targetEntityId);
+    const targetIsOutput = this.context.outputs.has(this.targetEntityId);
     if (targetIsOutput) return "outputValue";
 
     // Otherwise it's a task-to-task connection
@@ -211,15 +149,17 @@ export class BindingsCollection
 
   constructor(
     parent: Context,
-    private readonly getContext: () => BindingsContext,
+    private readonly graphContext: GraphContext,
   ) {
     super("bindings", parent);
   }
 
   createEntity(spec: BindingScalar): BindingEntity {
-    return new BindingEntity(this.generateId(), this.getContext, spec).populate(
+    return new BindingEntity(
+      this.generateId(),
+      this.graphContext,
       spec,
-    );
+    ).populate(spec);
   }
 
   /**
@@ -253,7 +193,7 @@ export class BindingsCollection
       ? target.entity.$id
       : target.entityId;
 
-    // Check if binding already exists
+    // Check if binding already exists (exact match)
     const existing = this.findBySourceAndTarget(
       sourceEntityId,
       source.portName,
@@ -262,6 +202,23 @@ export class BindingsCollection
     );
     if (existing) {
       return existing;
+    }
+
+    // Check if target port already has an incoming binding from a different source
+    // A target port can only have ONE incoming binding
+    const existingTargetBindings = this.findByIndex(
+      "targetEntityId",
+      targetEntityId,
+    ).filter((b) => b.targetPortName === target.portName);
+
+    if (existingTargetBindings.length > 0) {
+      const existingBinding = existingTargetBindings[0];
+      throw new Error(
+        `Target port "${target.portName}" on entity "${targetEntityId}" already has an incoming binding ` +
+          `from "${existingBinding.sourceEntityId}.${existingBinding.sourcePortName}". ` +
+          `A target port can only have one incoming connection. ` +
+          `Use unbindByTargetPort() first if you want to replace the existing binding.`,
+      );
     }
 
     return this.add({
@@ -277,6 +234,28 @@ export class BindingsCollection
    */
   unbind(bindingId: string): boolean {
     return this.removeById(bindingId);
+  }
+
+  /**
+   * Replace or create a binding to a target port.
+   *
+   * If the target port already has an incoming binding, it will be removed first.
+   * This is a convenience method for cases where you explicitly want to replace
+   * an existing connection.
+   */
+  rebind(
+    source: PortReference | EntityPortReference,
+    target: PortReference | EntityPortReference,
+  ): BindingEntity {
+    const targetEntityId = isEntityPortReference(target)
+      ? target.entity.$id
+      : target.entityId;
+
+    // Remove any existing binding to this target port
+    this.unbindByTargetPort(targetEntityId, target.portName);
+
+    // Create the new binding
+    return this.bind(source, target);
   }
 
   /**
@@ -414,4 +393,3 @@ export class BindingsCollection
     return this.getAll().map((binding) => binding.toJson());
   }
 }
-

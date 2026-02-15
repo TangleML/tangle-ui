@@ -1,3 +1,10 @@
+/**
+ * ComponentSpecEntity - the main representation of a component specification.
+ *
+ * This is the root entity that contains inputs, outputs, and an optional
+ * graph implementation with tasks and bindings.
+ */
+
 import { proxy } from "valtio";
 
 import type { ComponentSpec, MetadataSpec } from "@/utils/componentSpec";
@@ -8,18 +15,28 @@ import { InputsCollection } from "./inputs";
 import { OutputsCollection } from "./outputs";
 import type {
   BaseEntity,
+  ComponentSpecScalarInterface,
   RequiredProperties,
   SerializableEntity,
 } from "./types";
 
-export type ComponentSpecScalarInterface = Pick<
-  ComponentSpec,
-  "description"
-> & {
-  name: string;
-  metadata?: MetadataSpec;
-};
-
+/**
+ * ComponentSpecEntity represents a complete component specification.
+ *
+ * Structure:
+ * - inputs: Input parameters for the component
+ * - outputs: Output values from the component
+ * - implementation: Optional GraphImplementation with tasks and bindings
+ *
+ * Collections (inputs, outputs) use lazy initialization to ensure Valtio
+ * properly tracks them in the reactive subscription tree. This is necessary
+ * because collections created in the constructor before proxy() wrapping
+ * would not be linked to the parent's subscription.
+ *
+ * NOTE: We use manual getters instead of decorators because the assignment
+ * must happen on `this` (the proxied object) for Valtio to track it.
+ * A decorator with WeakMap storage bypasses Valtio's reactivity.
+ */
 export class ComponentSpecEntity
   extends BaseNestedContext
   implements BaseEntity<ComponentSpecScalarInterface>, SerializableEntity
@@ -32,8 +49,22 @@ export class ComponentSpecEntity
 
   implementation?: GraphImplementation;
 
-  readonly inputs: InputsCollection;
-  readonly outputs: OutputsCollection;
+  private _inputs?: InputsCollection;
+  private _outputs?: OutputsCollection;
+
+  get inputs(): InputsCollection {
+    if (!this._inputs) {
+      this._inputs = proxy(new InputsCollection(this));
+    }
+    return this._inputs;
+  }
+
+  get outputs(): OutputsCollection {
+    if (!this._outputs) {
+      this._outputs = proxy(new OutputsCollection(this));
+    }
+    return this._outputs;
+  }
 
   constructor(
     public readonly $id: string,
@@ -43,10 +74,6 @@ export class ComponentSpecEntity
     super(required.name, parent);
 
     this.name = required.name;
-
-    // Wrap collections with proxy() to ensure Valtio tracks mutations
-    this.inputs = proxy(new InputsCollection(this));
-    this.outputs = proxy(new OutputsCollection(this));
   }
 
   findComponentSpecEntity(name: string): ComponentSpecEntity | undefined {
