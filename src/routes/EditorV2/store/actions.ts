@@ -1,7 +1,6 @@
 import type { XYPosition } from "@xyflow/react";
 import { proxy } from "valtio";
 
-import type { BindingEntity } from "@/providers/ComponentSpec/bindings";
 import { ComponentSpecEntity } from "@/providers/ComponentSpec/componentSpec";
 import { GraphImplementation } from "@/providers/ComponentSpec/graphImplementation";
 import type { InputEntity } from "@/providers/ComponentSpec/inputs";
@@ -92,51 +91,6 @@ function generateUniqueTaskName(
 }
 
 /**
- * Register a ComponentSpecEntity for a task's component spec.
- *
- * This is necessary so that findComponentSpecEntity(taskName) can find the
- * task's component spec when creating connections between nodes.
- * The YamlLoader does this automatically when loading from YAML, but we need
- * to do it manually when adding tasks via drag-and-drop.
- */
-function registerTaskComponentSpec(
-  parentSpec: ComponentSpecEntity,
-  taskName: string,
-  componentSpec: ComponentSpec,
-): void {
-  // Create a ComponentSpecEntity for this task's component spec
-  const taskComponentSpecEntity = proxy(
-    new ComponentSpecEntity(parentSpec.generateId(), parentSpec, {
-      name: taskName,
-    }),
-  ).populate({
-    name: taskName,
-    description: componentSpec.description,
-  });
-
-  // Register it so findComponentSpecEntity can find it by task name
-  parentSpec.registerEntity(taskComponentSpecEntity);
-
-  // Add inputs to the component spec entity
-  for (const input of componentSpec.inputs ?? []) {
-    taskComponentSpecEntity.inputs.add({
-      name: input.name,
-      type: input.type,
-      description: input.description,
-    });
-  }
-
-  // Add outputs to the component spec entity
-  for (const output of componentSpec.outputs ?? []) {
-    taskComponentSpecEntity.outputs.add({
-      name: output.name,
-      type: output.type,
-      description: output.description,
-    });
-  }
-}
-
-/**
  * Generate a unique input name.
  */
 function generateUniqueInputName(
@@ -203,12 +157,6 @@ export function addTask(
       }),
     },
   });
-
-  // Register the task's component spec so findComponentSpecEntity can find it
-  // This is necessary for creating connections between task outputs and inputs
-  if (componentRef.spec) {
-    registerTaskComponentSpec(spec, taskName, componentRef.spec);
-  }
 
   // Add default argument values from component spec inputs
   const inputs = componentRef.spec?.inputs ?? [];
@@ -326,7 +274,8 @@ export function createBinding(
     return false;
   }
 
-  spec.implementation.bindings.bind(
+  // Use rebind to replace any existing connection to the target port
+  spec.implementation.bindings.rebind(
     { entityId: sourceEntityId, portName: sourcePort },
     { entityId: targetEntityId, portName: targetPort },
   );
@@ -424,7 +373,8 @@ export function connectNodes(connection: ConnectionInfo) {
       return false;
     }
 
-    spec.implementation.bindings.bind(
+    // Use rebind to replace any existing connection to the output
+    spec.implementation.bindings.rebind(
       { entityId: sourceNodeId, portName: sourceOutputName },
       { entityId: targetNodeId, portName: targetOutput.name },
     );
@@ -441,7 +391,10 @@ export function connectNodes(connection: ConnectionInfo) {
   }
 
   // Find or create the argument (for serialization purposes)
-  const existingArg = targetTask.arguments.findByIndex("name", targetInputName)[0];
+  const existingArg = targetTask.arguments.findByIndex(
+    "name",
+    targetInputName,
+  )[0];
   if (!existingArg) {
     targetTask.arguments.add({ name: targetInputName });
   }
@@ -455,7 +408,8 @@ export function connectNodes(connection: ConnectionInfo) {
       return false;
     }
 
-    spec.implementation.bindings.bind(
+    // Use rebind to replace any existing connection to the task input
+    spec.implementation.bindings.rebind(
       { entityId: sourceNodeId, portName: graphInput.name },
       { entityId: targetNodeId, portName: targetInputName },
     );
@@ -464,7 +418,8 @@ export function connectNodes(connection: ConnectionInfo) {
   }
 
   // Task output → Task input
-  spec.implementation.bindings.bind(
+  // Use rebind to replace any existing connection to the task input
+  spec.implementation.bindings.rebind(
     { entityId: sourceNodeId, portName: sourceOutputName },
     { entityId: targetNodeId, portName: targetInputName },
   );
@@ -743,27 +698,13 @@ export function renameOutput(entityId: string, newName: string) {
 }
 
 /**
- * Helper to get binding type for a task argument.
- */
-function getArgumentBindingType(
-  bindings: BindingEntity[],
-  argName: string,
-): { type: "graphInput" | "taskOutput" | "literal"; binding?: BindingEntity } {
-  const binding = bindings.find((b) => b.targetPortName === argName);
-  if (!binding) {
-    return { type: "literal" };
-  }
-  return { type: binding.bindingType as "graphInput" | "taskOutput", binding };
-}
-
-/**
  * Create a subgraph from selected task names.
  *
  * This is an advanced feature that:
  * 1. Creates a new ComponentSpec containing the selected tasks
  * 2. Creates a new task that references this subgraph spec
  * 3. Remaps external connections to/from the subgraph
- * 4. Removes the original tasks
+ * 4. Moves the original tasks (using detach/attach)
  *
  * @param taskNames - Array of task names to include in the subgraph
  * @param subgraphName - Name for the new subgraph
@@ -801,19 +742,260 @@ export function createSubgraph(
   // Build set of selected task entity IDs for easy lookup
   const selectedTaskIds = new Set(selectedTasks.map((t) => t.$id));
 
-  // create ComponentSpecEntity for the subgraph
+  // Analyze bindings to find external connections
+  const allBindings = spec.implementation.bindings.getAll();
 
-  // find all sources of bindings to the selected tasks, that does not belong to the selected tasks
-  // add inputs to the subgraph spec - one input per unique source port name
+  // Find incoming bindings: bindings targeting selected tasks from outside the selection
+  // These become subgraph inputs
+  const incomingBindings = allBindings.filter(
+    (b) =>
+      selectedTaskIds.has(b.targetEntityId) &&
+      !selectedTaskIds.has(b.sourceEntityId),
+  );
 
-  // find all targets of bindings from the selected tasks, that does not belong to the selected tasks
-  // add outputs to the subgraph spec - one output per unique target port name
+  // Find outgoing bindings: bindings from selected tasks to outside the selection
+  // These become subgraph outputs
+  const outgoingBindings = allBindings.filter(
+    (b) =>
+      selectedTaskIds.has(b.sourceEntityId) &&
+      !selectedTaskIds.has(b.targetEntityId),
+  );
 
-  // move the selected tasks to the subgraph spec graph implementation
+  // Find internal bindings: bindings between selected tasks
+  const internalBindings = allBindings.filter(
+    (b) =>
+      selectedTaskIds.has(b.sourceEntityId) &&
+      selectedTaskIds.has(b.targetEntityId),
+  );
 
-  // add subgraph spec as a task to the parent spec
-  // restore connections from the subgraph to the parent spec
+  // Create unique subgraph inputs from incoming bindings
+  // Key: "sourceEntityId:sourcePortName" to dedupe when same source connects to multiple inputs
+  const subgraphInputsMap = new Map<
+    string,
+    { sourceEntityId: string; sourcePortName: string; inputName: string }
+  >();
 
+  for (const binding of incomingBindings) {
+    const key = `${binding.sourceEntityId}:${binding.sourcePortName}`;
+    if (!subgraphInputsMap.has(key)) {
+      // Generate a unique input name based on the source
+      // For graph inputs, use the input name; for task outputs, use "taskName_outputName"
+      let inputName: string;
+      if (binding.bindingType === "graphInput") {
+        const sourceInput = binding.source;
+        inputName = sourceInput?.name ?? binding.sourcePortName;
+      } else {
+        const sourceTask = spec.implementation.tasks.findById(
+          binding.sourceEntityId,
+        );
+        inputName = sourceTask
+          ? `${sourceTask.name}_${binding.sourcePortName}`
+          : binding.sourcePortName;
+      }
+      subgraphInputsMap.set(key, {
+        sourceEntityId: binding.sourceEntityId,
+        sourcePortName: binding.sourcePortName,
+        inputName,
+      });
+    }
+  }
+
+  // Create unique subgraph outputs from outgoing bindings
+  // Key: "sourceEntityId:sourcePortName" to dedupe when same output connects to multiple targets
+  const subgraphOutputsMap = new Map<
+    string,
+    { sourceEntityId: string; sourcePortName: string; outputName: string }
+  >();
+
+  for (const binding of outgoingBindings) {
+    const key = `${binding.sourceEntityId}:${binding.sourcePortName}`;
+    if (!subgraphOutputsMap.has(key)) {
+      const sourceTask = spec.implementation.tasks.findById(
+        binding.sourceEntityId,
+      );
+      const outputName = sourceTask
+        ? `${sourceTask.name}_${binding.sourcePortName}`
+        : binding.sourcePortName;
+      subgraphOutputsMap.set(key, {
+        sourceEntityId: binding.sourceEntityId,
+        sourcePortName: binding.sourcePortName,
+        outputName,
+      });
+    }
+  }
+
+  // Create the subgraph ComponentSpec
+  const subgraphSpecEntity = proxy(
+    new ComponentSpecEntity(spec.generateId(), spec, {
+      name: uniqueSubgraphName,
+    }),
+  ).populate({
+    name: uniqueSubgraphName,
+    description: `Subgraph containing: ${taskNames.join(", ")}`,
+  });
+
+  // Register the subgraph spec entity
+  spec.registerEntity(subgraphSpecEntity);
+
+  // Add inputs to the subgraph spec
+  const subgraphInputsByKey = new Map<string, InputEntity>();
+  for (const [key, inputInfo] of subgraphInputsMap) {
+    const inputEntity = subgraphSpecEntity.inputs.add({
+      name: inputInfo.inputName,
+    });
+    subgraphInputsByKey.set(key, inputEntity);
+  }
+
+  // Add outputs to the subgraph spec
+  const subgraphOutputsByKey = new Map<string, OutputEntity>();
+  for (const [key, outputInfo] of subgraphOutputsMap) {
+    const outputEntity = subgraphSpecEntity.outputs.add({
+      name: outputInfo.outputName,
+    });
+    subgraphOutputsByKey.set(key, outputEntity);
+  }
+
+  // Create GraphImplementation for the subgraph
+  subgraphSpecEntity.implementation = proxy(
+    new GraphImplementation(subgraphSpecEntity),
+  );
+
+  // Remove boundary bindings from parent BEFORE detaching tasks
+  // (otherwise the binding watch would auto-cleanup when tasks are detached)
+  for (const binding of incomingBindings) {
+    spec.implementation.bindings.unbind(binding.$id);
+  }
+  for (const binding of outgoingBindings) {
+    spec.implementation.bindings.unbind(binding.$id);
+  }
+
+  // Detach internal bindings from parent and attach to subgraph
+  // (tasks still have the same $ids, so bindings reference them correctly)
+  for (const binding of internalBindings) {
+    const detached = spec.implementation.bindings.detach(binding);
+    subgraphSpecEntity.implementation.bindings.attach(detached);
+  }
+
+  // Detach tasks from parent and attach to subgraph
+  // The attach method updates the task's context automatically
+  for (const task of selectedTasks) {
+    // Remove position annotation (subgraph tasks will need new positions)
+    const positionAnnotation = task.annotations
+      .getAll()
+      .find((a) => a.key === EDITOR_POSITION_ANNOTATION);
+    if (positionAnnotation) {
+      task.annotations.removeById(positionAnnotation.$id);
+    }
+
+    const detached = spec.implementation.tasks.detach(task);
+    subgraphSpecEntity.implementation.tasks.attach(detached);
+  }
+
+  // Create bindings from subgraph inputs to moved tasks
+  for (const binding of incomingBindings) {
+    const key = `${binding.sourceEntityId}:${binding.sourcePortName}`;
+    const subgraphInput = subgraphInputsByKey.get(key);
+
+    if (subgraphInput) {
+      subgraphSpecEntity.implementation.bindings.rebind(
+        { entityId: subgraphInput.$id, portName: subgraphInput.name },
+        { entityId: binding.targetEntityId, portName: binding.targetPortName },
+      );
+    }
+  }
+
+  // Create bindings from moved tasks to subgraph outputs (outputValues)
+  for (const binding of outgoingBindings) {
+    const key = `${binding.sourceEntityId}:${binding.sourcePortName}`;
+    const subgraphOutput = subgraphOutputsByKey.get(key);
+
+    if (subgraphOutput) {
+      subgraphSpecEntity.implementation.bindings.rebind(
+        { entityId: binding.sourceEntityId, portName: binding.sourcePortName },
+        { entityId: subgraphOutput.$id, portName: subgraphOutput.name },
+      );
+    }
+  }
+
+  // Build the ComponentSpec for the subgraph task's componentRef
+  const subgraphComponentSpec: ComponentSpec = subgraphSpecEntity.toJson();
+
+  // Add subgraph as a task in the parent spec
+  const subgraphTask = spec.implementation.tasks.add({
+    name: uniqueSubgraphName,
+    componentRef: { spec: subgraphComponentSpec },
+    annotations: {
+      [EDITOR_POSITION_ANNOTATION]: JSON.stringify(position),
+    },
+  });
+
+  // Restore connections from the parent to the subgraph task
+
+  // Connect external sources to subgraph task inputs
+  for (const binding of incomingBindings) {
+    const key = `${binding.sourceEntityId}:${binding.sourcePortName}`;
+    const subgraphInput = subgraphInputsByKey.get(key);
+
+    if (subgraphInput) {
+      // Create argument for the subgraph task
+      const existingArg = subgraphTask.arguments.findByIndex(
+        "name",
+        subgraphInput.name,
+      )[0];
+      if (!existingArg) {
+        subgraphTask.arguments.add({ name: subgraphInput.name });
+      }
+
+      // Create binding from external source to subgraph task input
+      spec.implementation.bindings.rebind(
+        { entityId: binding.sourceEntityId, portName: binding.sourcePortName },
+        { entityId: subgraphTask.$id, portName: subgraphInput.name },
+      );
+    }
+  }
+
+  // Connect subgraph task outputs to external targets
+  for (const binding of outgoingBindings) {
+    const key = `${binding.sourceEntityId}:${binding.sourcePortName}`;
+    const subgraphOutput = subgraphOutputsByKey.get(key);
+
+    if (subgraphOutput) {
+      // If target is a graph output, create outputValue binding
+      // Otherwise, create task argument binding
+      if (binding.bindingType === "outputValue") {
+        spec.implementation.bindings.rebind(
+          { entityId: subgraphTask.$id, portName: subgraphOutput.name },
+          {
+            entityId: binding.targetEntityId,
+            portName: binding.targetPortName,
+          },
+        );
+      } else {
+        // Target is another task - create binding to its input
+        const targetTask = spec.implementation.tasks.findById(
+          binding.targetEntityId,
+        );
+        if (targetTask) {
+          // Ensure target task has the argument
+          const existingArg = targetTask.arguments.findByIndex(
+            "name",
+            binding.targetPortName,
+          )[0];
+          if (!existingArg) {
+            targetTask.arguments.add({ name: binding.targetPortName });
+          }
+
+          spec.implementation.bindings.rebind(
+            { entityId: subgraphTask.$id, portName: subgraphOutput.name },
+            {
+              entityId: binding.targetEntityId,
+              portName: binding.targetPortName,
+            },
+          );
+        }
+      }
+    }
+  }
 
   return subgraphTask;
 }
