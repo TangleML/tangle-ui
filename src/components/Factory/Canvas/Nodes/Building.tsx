@@ -11,7 +11,7 @@ import { useContextPanel } from "@/providers/ContextPanelProvider";
 import { ProductionFeedback } from "../../components/ProductionFeedback";
 import BuildingContext from "../../Context/Building/BuildingContext";
 import { isGlobalResource } from "../../data/resources";
-import { useStatistics } from "../../providers/StatisticProvider";
+import { useStatistics } from "../../providers/StatisticsProvider";
 import type {
   BuildingInput as BuildingInputType,
   BuildingOutput as BuildingOutputType,

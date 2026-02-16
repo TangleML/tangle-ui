@@ -9,12 +9,8 @@ import { Time } from "./Time";
 const MIN_WIDTH = 220;
 const MAX_WIDTH = 400;
 const DEFAULT_WIDTH = 256;
-interface GameSidebarProps {
-  day: number;
-  onAdvanceDay: () => void;
-}
 
-const GameSidebar = ({ day, onAdvanceDay }: GameSidebarProps) => {
+const GameSidebar = () => {
   return (
     <div
       className="relative h-full bg-sidebar text-sidebar-foreground overflow-x-hidden overflow-y-auto z-100"
@@ -27,7 +23,7 @@ const GameSidebar = ({ day, onAdvanceDay }: GameSidebarProps) => {
       }}
     >
       <BlockStack fill gap="2" inlineAlign="start" className="p-4">
-        <Time day={day} onAdvanceDay={onAdvanceDay} />
+        <Time />
         <GlobalResources />
         <Buildings />
       </BlockStack>

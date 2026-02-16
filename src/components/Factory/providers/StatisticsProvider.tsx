@@ -11,6 +11,8 @@ interface StatisticsContextType {
   ) => DayStatistics["buildings"] extends Map<string, infer T>
     ? T | undefined
     : never;
+  getLatestDayStats: () => DayStatistics | undefined;
+  resetStatistics: () => void;
 }
 
 const StatisticsContext = createContext<StatisticsContextType | undefined>(
@@ -35,6 +37,15 @@ export const StatisticsProvider: React.FC<{ children: React.ReactNode }> = ({
     return latestDay.buildings.get(nodeId);
   };
 
+  const getLatestDayStats = () => {
+    if (history.length === 0) return undefined;
+    return history[history.length - 1];
+  };
+
+  const resetStatistics = () => {
+    setHistory([]);
+  };
+
   return (
     <StatisticsContext.Provider
       value={{
@@ -42,6 +53,8 @@ export const StatisticsProvider: React.FC<{ children: React.ReactNode }> = ({
         addDayStatistics,
         currentDay,
         getLatestBuildingStats,
+        getLatestDayStats,
+        resetStatistics,
       }}
     >
       {children}
