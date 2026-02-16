@@ -1,11 +1,12 @@
-import type { Connection, Edge } from "@xyflow/react";
+import type { Connection, Edge, ReactFlowInstance } from "@xyflow/react";
 
-import { RESOURCES } from "../../data/resources";
+import { createResourceEdge } from "../../objects/resources/createResourceEdge";
 import type { ResourceType } from "../../types/resources";
 import { extractResource } from "../../utils/string";
 
 export const createOnConnect = (
   setEdges: (update: Edge[] | ((edges: Edge[]) => Edge[])) => void,
+  reactFlowInstance: ReactFlowInstance,
 ) => {
   return (connection: Connection) => {
     if (connection.source === connection.target) return;
@@ -36,13 +37,14 @@ export const createOnConnect = (
       return;
     }
 
-    const newEdge: Edge = {
-      ...connection,
-      id: `${connection.source}-${connection.sourceHandle}-${connection.target}-${connection.targetHandle}`,
-      type: "resourceEdge",
-      data: { ...RESOURCES[edgeResource], type: edgeResource },
-      animated: true,
-    };
+    const newEdge = createResourceEdge(
+      connection.source,
+      connection.target,
+      edgeResource,
+      reactFlowInstance,
+    );
+
+    if (!newEdge) return;
 
     setEdges((eds) => {
       const filteredEdges = eds.filter(
