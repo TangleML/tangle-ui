@@ -11,7 +11,7 @@ interface setup {
 }
 
 const buildings: BuildingSetup[] = [
-  { type: "marketplace", position: { x: 0, y: 0 } },
+  { type: "firepit", position: { x: 0, y: 0 } },
 ];
 
 export const setup: setup = {

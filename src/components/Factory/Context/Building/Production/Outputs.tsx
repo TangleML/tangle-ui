@@ -1,7 +1,11 @@
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 
-import { isGlobalResource, RESOURCES } from "../../../data/resources";
+import {
+  getResourceTypeFoodValue,
+  isGlobalResource,
+  RESOURCES,
+} from "../../../data/resources";
 import type { ProductionMethod } from "../../../types/production";
 
 interface ProductionOutputsProps {
@@ -36,7 +40,10 @@ export const ProductionOutputs = ({
             </Text>
             <Text size="xs" tone="subdued">
               ({RESOURCES.money.icon}{" "}
-              {output.amount * RESOURCES[output.resource].value})
+              {output.amount * RESOURCES[output.resource].value}{" "}
+              {getResourceTypeFoodValue(output.resource) > 0 &&
+                `/ ${RESOURCES.food.icon} ${getResourceTypeFoodValue(output.resource) * output.amount}`}
+              )
             </Text>
           </InlineStack>
         );
