@@ -1,21 +1,32 @@
 import { useEffect, useRef, useState } from "react";
 
-import { InlineStack } from "@/components/ui/layout";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { SidebarGroup, SidebarGroupLabel } from "@/components/ui/sidebar";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 
 import { isGlobalResource, RESOURCES } from "../data/resources";
 import { useGlobalResources } from "../providers/GlobalResourcesProvider";
+import { useStatistics } from "../providers/StatisticsProvider";
+import { calculateFoodRequirement } from "../simulation/helpers/calculateFoodRequirement";
 import type { ResourceType } from "../types/resources";
 
 interface ChangeIndicator {
   amount: number;
-  key: number; // Used to force re-render/animation
+  key: number;
 }
 
 const GlobalResources = () => {
   const { resources } = useGlobalResources();
+  const { currentDay, getLatestDayStats } = useStatistics();
+
+  const currentDayRef = useRef(currentDay);
+  const latestStats = getLatestDayStats();
+
+  useEffect(() => {
+    currentDayRef.current = currentDay;
+  }, [currentDay]);
+
   const [changes, setChanges] = useState<Map<string, ChangeIndicator>>(
     new Map(),
   );
@@ -23,6 +34,8 @@ const GlobalResources = () => {
   const timers = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   useEffect(() => {
+    if (currentDayRef.current === 0) return;
+
     // Detect changes
     Object.entries(resources).forEach(([key, currentAmount]) => {
       const resourceType = key as ResourceType;
@@ -44,7 +57,7 @@ const GlobalResources = () => {
           const updated = new Map(prev);
           updated.set(resourceType, {
             amount: change,
-            key: Date.now(), // New key forces animation restart
+            key: Date.now(),
           });
           return updated;
         });
@@ -65,12 +78,11 @@ const GlobalResources = () => {
 
     previousResources.current = resources;
 
-    // Cleanup all timers on unmount
     return () => {
       timers.current.forEach((timer) => clearTimeout(timer));
       timers.current.clear();
     };
-  }, [resources]);
+  }, [resources, currentDayRef]);
 
   return (
     <SidebarGroup className="space-y-3">
@@ -83,32 +95,52 @@ const GlobalResources = () => {
 
         return (
           <SidebarGroupLabel key={resourceType}>
-            <InlineStack blockAlign="center" gap="2">
-              <InlineStack gap="2" blockAlign="center">
-                <Text size="lg">{resource.icon}</Text>
-                <Text size="lg" tone="subdued">
-                  {amount}
-                </Text>
-              </InlineStack>
+            <BlockStack gap="1">
+              <InlineStack
+                align="space-between"
+                blockAlign="center"
+                gap="2"
+                className="w-full"
+              >
+                <InlineStack gap="2" blockAlign="center">
+                  <InlineStack gap="2" blockAlign="center">
+                    <Text size="lg">{resource.icon}</Text>
+                    <Text size="lg" tone="subdued">
+                      {amount}
+                    </Text>
+                  </InlineStack>
 
-              {change && (
-                <div
-                  key={change.key}
-                  className={cn(
-                    "text-sm font-semibold",
-                    "animate-out fade-out",
-                    change.amount > 0 ? "text-green-600" : "text-red-600",
+                  {change && (
+                    <div
+                      key={change.key}
+                      className={cn(
+                        "text-sm font-semibold",
+                        "animate-out fade-out",
+                        change.amount > 0 ? "text-green-600" : "text-red-600",
+                      )}
+                      style={{
+                        animationDuration: "2000ms",
+                        animationFillMode: "forwards",
+                      }}
+                    >
+                      {change.amount > 0 ? "+" : ""}
+                      {change.amount}
+                    </div>
                   )}
-                  style={{
-                    animationDuration: "2000ms",
-                    animationFillMode: "forwards",
-                  }}
-                >
-                  {change.amount > 0 ? "+" : ""}
-                  {change.amount}
-                </div>
-              )}
-            </InlineStack>
+                </InlineStack>
+
+                {resourceType === "food" && (
+                  <Text size="xs" tone="subdued">
+                    (Required:{" "}
+                    {calculateFoodRequirement(
+                      currentDay,
+                      latestStats?.global.foodRequired,
+                    )}
+                    )
+                  </Text>
+                )}
+              </InlineStack>
+            </BlockStack>
           </SidebarGroupLabel>
         );
       })}

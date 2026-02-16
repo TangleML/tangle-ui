@@ -3,7 +3,7 @@ import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/typography";
 
 import { RESOURCES } from "../data/resources";
-import { useStatistics } from "../providers/StatisticProvider";
+import { useStatistics } from "../providers/StatisticsProvider";
 import type { Resource } from "../types/resources";
 
 interface ResourceContextProps {

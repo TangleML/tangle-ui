@@ -4,12 +4,7 @@ import Buildings from "./Buildings";
 import GlobalResources from "./GlobalResources";
 import { Time } from "./Time";
 
-interface GameSidebarProps {
-  day: number;
-  onAdvanceDay: () => void;
-}
-
-const GameSidebar = ({ day, onAdvanceDay }: GameSidebarProps) => {
+const GameSidebar = () => {
   return (
     <Sidebar
       side="left"
@@ -17,7 +12,7 @@ const GameSidebar = ({ day, onAdvanceDay }: GameSidebarProps) => {
       collapsible="icon"
     >
       <SidebarContent>
-        <Time day={day} onAdvanceDay={onAdvanceDay} />
+        <Time />
         <GlobalResources />
         <Buildings />
       </SidebarContent>
