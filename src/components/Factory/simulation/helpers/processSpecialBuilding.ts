@@ -198,4 +198,51 @@ export const processSpecialBuilding = (
       buildingInstance: updatedBuilding,
     };
   }
+
+  // Storage Pit:
+  // Production Method "Fill" - it only stockpiles input resources
+  // Production Method "Empty" - it only outputs resources from its stockpile
+  // Actual transfer of resources is done prior to this step, so here we just manage the production state
+  if (building.type === "storagepit") {
+    const storingMethod = building.productionMethod.name === "Fill";
+    const retrievingMethod = building.productionMethod.name === "Empty";
+
+    const storagePitStats = buildingStats.get(node.id)!;
+
+    if (!building.stockpile || building.stockpile.length === 0) {
+      node.data = {
+        ...node.data,
+        buildingInstance: {
+          ...building,
+          productionState: { progress: 0, status: "idle" },
+        },
+      };
+      return;
+    }
+
+    if (storingMethod) {
+      node.data = {
+        ...node.data,
+        buildingInstance: {
+          ...building,
+          productionState: { progress: 0, status: "idle" },
+        },
+      };
+    } else if (retrievingMethod) {
+      const hasTransferredResources = storagePitStats.stockpileChanges.some(
+        (c) => c.removed > 0,
+      );
+
+      node.data = {
+        ...node.data,
+        buildingInstance: {
+          ...building,
+          productionState: {
+            progress: hasTransferredResources ? 1 : 0,
+            status: hasTransferredResources ? "complete" : "idle",
+          },
+        },
+      };
+    }
+  }
 };
