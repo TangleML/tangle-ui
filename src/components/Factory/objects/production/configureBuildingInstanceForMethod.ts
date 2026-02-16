@@ -59,8 +59,29 @@ export const configureBuildingInstanceForMethod = (
     (input) => !isGlobalResource(input.resource),
   );
 
+  // Count total non-global inputs and outputs
+  const totalInputNodes = productionMethod.inputs.reduce(
+    (sum, input) =>
+      isGlobalResource(input.resource) ? sum : sum + (input.nodes ?? 1),
+    0,
+  );
+
+  const totalOutputNodes = productionMethod.outputs.reduce(
+    (sum, output) =>
+      isGlobalResource(output.resource) ? sum : sum + (output.nodes ?? 1),
+    0,
+  );
+
+  // Determine if we should spread handles across all sides
+  const shouldSpreadInputs = !hasNonGlobalOutputs && totalInputNodes > 1;
+  const shouldSpreadOutputs = !hasNonGlobalInputs && totalOutputNodes > 1;
+
   // Generate inputs from production method
   const inputs: BuildingInput[] = [];
+  let inputPositionIndex = 0;
+  const inputPositions = shouldSpreadInputs
+    ? distributeHandlesAcrossSides(totalInputNodes)
+    : [];
 
   productionMethod.inputs.forEach((input) => {
     // Skip global resources - they don't need physical inputs
@@ -80,20 +101,19 @@ export const configureBuildingInstanceForMethod = (
           resource: input.resource,
           position: existingInput.position,
         });
+        if (shouldSpreadInputs) inputPositionIndex++;
       });
 
       // If we need more inputs than we had before, create new ones
       const remaining = nodeCount - existingInputsForResource.length;
       if (remaining > 0) {
-        const shouldSpread = !hasNonGlobalOutputs;
-        if (shouldSpread) {
-          const positions = distributeHandlesAcrossSides(remaining);
-          positions.forEach((position) => {
+        if (shouldSpreadInputs) {
+          for (let i = 0; i < remaining; i++) {
             inputs.push({
               resource: input.resource,
-              position,
+              position: inputPositions[inputPositionIndex++],
             });
-          });
+          }
         } else {
           for (let i = 0; i < remaining; i++) {
             inputs.push({
@@ -105,16 +125,13 @@ export const configureBuildingInstanceForMethod = (
       }
     } else {
       // No existing inputs, create new ones
-      const shouldSpread = !hasNonGlobalOutputs;
-
-      if (shouldSpread && nodeCount > 1) {
-        const positions = distributeHandlesAcrossSides(nodeCount);
-        positions.forEach((position) => {
+      if (shouldSpreadInputs) {
+        for (let i = 0; i < nodeCount; i++) {
           inputs.push({
             resource: input.resource,
-            position,
+            position: inputPositions[inputPositionIndex++],
           });
-        });
+        }
       } else {
         for (let i = 0; i < nodeCount; i++) {
           inputs.push({
@@ -128,6 +145,10 @@ export const configureBuildingInstanceForMethod = (
 
   // Generate outputs from production method
   const outputs: BuildingOutput[] = [];
+  let outputPositionIndex = 0;
+  const outputPositions = shouldSpreadOutputs
+    ? distributeHandlesAcrossSides(totalOutputNodes)
+    : [];
 
   productionMethod.outputs.forEach((output) => {
     // Skip global resources - they don't need physical outputs
@@ -150,20 +171,19 @@ export const configureBuildingInstanceForMethod = (
             resource: output.resource,
             position: existingOutput.position,
           });
+          if (shouldSpreadOutputs) outputPositionIndex++;
         });
 
       // If we need more outputs than we had before, create new ones
       const remaining = nodeCount - existingOutputsForResource.length;
       if (remaining > 0) {
-        const shouldSpread = !hasNonGlobalInputs;
-        if (shouldSpread) {
-          const positions = distributeHandlesAcrossSides(remaining);
-          positions.forEach((position) => {
+        if (shouldSpreadOutputs) {
+          for (let i = 0; i < remaining; i++) {
             outputs.push({
               resource: output.resource,
-              position,
+              position: outputPositions[outputPositionIndex++],
             });
-          });
+          }
         } else {
           for (let i = 0; i < remaining; i++) {
             outputs.push({
@@ -175,16 +195,13 @@ export const configureBuildingInstanceForMethod = (
       }
     } else {
       // No existing outputs, create new ones
-      const shouldSpread = !hasNonGlobalInputs;
-
-      if (shouldSpread && nodeCount > 1) {
-        const positions = distributeHandlesAcrossSides(nodeCount);
-        positions.forEach((position) => {
+      if (shouldSpreadOutputs) {
+        for (let i = 0; i < nodeCount; i++) {
           outputs.push({
             resource: output.resource,
-            position,
+            position: outputPositions[outputPositionIndex++],
           });
-        });
+        }
       } else {
         for (let i = 0; i < nodeCount; i++) {
           outputs.push({

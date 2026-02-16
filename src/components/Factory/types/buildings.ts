@@ -21,6 +21,13 @@ export type Stockpile = {
   breakdown?: Map<ResourceType, number>;
 };
 
+export type BuildingCategory =
+  | "special"
+  | "production"
+  | "refining"
+  | "utility"
+  | "storage";
+
 export interface BuildingClass {
   name: string;
   icon: string;
@@ -28,6 +35,7 @@ export interface BuildingClass {
   cost: number;
   color: string;
   productionMethods: ProductionMethod[];
+  category: BuildingCategory;
 }
 
 export interface BuildingInstance extends Omit<

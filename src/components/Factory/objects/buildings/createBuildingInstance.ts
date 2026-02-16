@@ -36,6 +36,7 @@ export function createBuildingInstance(
     description: building.description,
     cost: building.cost,
     color: building.color,
+    category: building.category,
     ...configuration,
   };
 }
