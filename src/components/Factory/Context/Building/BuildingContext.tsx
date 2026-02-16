@@ -67,6 +67,7 @@ const BuildingContext = ({ building, nodeId }: BuildingContextProps) => {
       <Separator />
 
       <ProductionMethodSection
+        buildingType={building.type}
         productionMethod={productionMethod}
         productionState={productionState}
         availableMethods={availableMethods}
