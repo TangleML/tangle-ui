@@ -11,7 +11,7 @@ import { useContextPanel } from "@/providers/ContextPanelProvider";
 
 import { TransportationFeedback } from "../../components/TransportationFeedback";
 import ResourceContext from "../../Context/ResourceContext";
-import { useStatistics } from "../../providers/StatisticProvider";
+import { useStatistics } from "../../providers/StatisticsProvider";
 import { isResourceData } from "../../types/resources";
 import { getBezierMidpointAngle } from "../../utils/bezier";
 
@@ -116,7 +116,7 @@ const ResourceEdge = ({
           <div
             style={{
               position: "absolute",
-              transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px) rotate(${labelRotation}deg)`,
+              transform: `translate(${labelX}px,${labelY}px) rotate(${labelRotation}deg)`,
               pointerEvents: "all",
             }}
             className="nodrag nopan"

@@ -12,6 +12,7 @@ interface GlobalResourcesContextType {
   setResource: (resourceType: GlobalResourceType, amount: number) => void;
   addResource: (resourceType: GlobalResourceType, amount: number) => void;
   getResource: (resourceType: GlobalResourceType) => number;
+  resetResources: () => void;
 }
 
 const GlobalResourcesContext = createContext<
@@ -22,16 +23,16 @@ interface GlobalResourcesProviderProps {
   children: ReactNode;
 }
 
+const INITIAL_RESOURCES: GlobalResources = Object.fromEntries(
+  GLOBAL_RESOURCE_KEYS.map((key) => [key, 0]),
+) as GlobalResources;
+
 export const GlobalResourcesProvider = ({
   children,
 }: GlobalResourcesProviderProps) => {
   // Initialize all global resources to 0
-  const [resources, setResources] = useState<GlobalResources>(
-    Object.fromEntries(GLOBAL_RESOURCE_KEYS.map((type) => [type, 0])) as Record<
-      GlobalResourceType,
-      number
-    >,
-  );
+  const [resources, setResources] =
+    useState<GlobalResources>(INITIAL_RESOURCES);
 
   const updateResources = (updates: Partial<GlobalResources>) => {
     setResources((prev) => {
@@ -66,6 +67,10 @@ export const GlobalResourcesProvider = ({
     return resources[resourceType] || 0;
   };
 
+  const resetResources = () => {
+    setResources(INITIAL_RESOURCES);
+  };
+
   return (
     <GlobalResourcesContext.Provider
       value={{
@@ -74,6 +79,7 @@ export const GlobalResourcesProvider = ({
         setResource,
         addResource,
         getResource,
+        resetResources,
       }}
     >
       {children}
