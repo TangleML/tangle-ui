@@ -1,11 +1,19 @@
 import type { EdgeProps } from "@xyflow/react";
-import { BaseEdge, getBezierPath, useEdges } from "@xyflow/react";
+import {
+  BaseEdge,
+  EdgeLabelRenderer,
+  getBezierPath,
+  useEdges,
+} from "@xyflow/react";
 import { useEffect } from "react";
 
 import { useContextPanel } from "@/providers/ContextPanelProvider";
 
+import { TransportationFeedback } from "../../components/TransportationFeedback";
 import ResourceContext from "../../Context/ResourceContext";
+import { useStatistics } from "../../providers/StatisticProvider";
 import { isResourceData } from "../../types/resources";
+import { getBezierMidpointAngle } from "../../utils/bezier";
 
 const ResourceEdge = ({
   id,
@@ -29,8 +37,14 @@ const ResourceEdge = ({
     clearContent,
     setOpen: setContextPanelOpen,
   } = useContextPanel();
+  const { getLatestBuildingStats } = useStatistics();
 
-  const [edgePath] = getBezierPath({
+  const sourceStats = getLatestBuildingStats(source);
+  const resourcesTransferred = sourceStats?.stockpileChanges.filter(
+    (c) => c.removed > 0,
+  );
+
+  const [edgePath, labelX, labelY] = getBezierPath({
     sourceX,
     sourceY,
     sourcePosition,
@@ -74,19 +88,48 @@ const ResourceEdge = ({
     setContextPanelOpen,
   ]);
 
+  const labelRotation = getBezierMidpointAngle(
+    sourceX,
+    sourceY,
+    targetX,
+    targetY,
+    sourcePosition,
+    targetPosition,
+  );
+
   return (
-    <BaseEdge
-      id={id}
-      path={edgePath}
-      markerEnd={markerEnd}
-      style={{
-        stroke: edgeColor,
-        strokeWidth: 3,
-        filter: "drop-shadow(0 0 1px black)",
-        ...style,
-      }}
-      interactionWidth={20}
-    />
+    <>
+      <BaseEdge
+        id={id}
+        path={edgePath}
+        markerEnd={markerEnd}
+        style={{
+          stroke: edgeColor,
+          strokeWidth: 3,
+          filter: "drop-shadow(0 0 1px black)",
+          ...style,
+        }}
+        interactionWidth={20}
+      />
+      {resourcesTransferred && (
+        <EdgeLabelRenderer>
+          <div
+            style={{
+              position: "absolute",
+              transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px) rotate(${labelRotation}deg)`,
+              pointerEvents: "all",
+            }}
+            className="nodrag nopan"
+          >
+            <div className="absolute bottom-1">
+              <TransportationFeedback
+                resourcesTransferred={resourcesTransferred}
+              />
+            </div>
+          </div>
+        </EdgeLabelRenderer>
+      )}
+    </>
   );
 };
 
