@@ -116,16 +116,14 @@ const ResourceEdge = ({
           <div
             style={{
               position: "absolute",
-              transform: `translate(${labelX}px,${labelY}px) rotate(${labelRotation}deg)`,
+              transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px) rotate(${labelRotation}deg) translate(0, -10px)`,
               pointerEvents: "all",
             }}
             className="nodrag nopan"
           >
-            <div className="absolute bottom-1">
-              <TransportationFeedback
-                resourcesTransferred={resourcesTransferred}
-              />
-            </div>
+            <TransportationFeedback
+              resourcesTransferred={resourcesTransferred}
+            />
           </div>
         </EdgeLabelRenderer>
       )}
