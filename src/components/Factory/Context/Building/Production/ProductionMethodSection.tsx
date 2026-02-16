@@ -13,6 +13,7 @@ import { ProductionMethodSwitcher } from "./ProductionMethodSwitcher";
 import { ProductionProgress } from "./Progress";
 
 interface ProductionMethodSectionProps {
+  buildingType: string;
   productionMethod?: ProductionMethod;
   productionState?: ProductionState;
   availableMethods?: ProductionMethod[];
@@ -20,6 +21,7 @@ interface ProductionMethodSectionProps {
 }
 
 export const ProductionMethodSection = ({
+  buildingType,
   productionMethod,
   productionState,
   availableMethods = [],
@@ -59,7 +61,10 @@ export const ProductionMethodSection = ({
       </InlineStack>
 
       <BlockStack gap="2">
-        <ProductionInputs productionMethod={productionMethod} />
+        <ProductionInputs
+          productionMethod={productionMethod}
+          buildingType={buildingType}
+        />
         <ProductionOutputs productionMethod={productionMethod} />
         <ProductionDuration productionMethod={productionMethod} />
         <ProductionProgress
