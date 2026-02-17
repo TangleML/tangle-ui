@@ -15,10 +15,16 @@ import { ComponentLibraryContent } from "./components/ComponentLibraryContent";
 import { ContextPanelContent } from "./components/ContextPanel";
 import { DebugPanel } from "./components/DebugPanel";
 import { FlowCanvas } from "./components/FlowCanvas";
+import { HistoryContent } from "./components/HistoryContent";
 import { PinnedTaskContent } from "./components/PinnedTaskContent";
 import { PipelineDetailsContent } from "./components/PipelineDetailsContent";
 import { PipelineTreeContent } from "./components/PipelineTreeContent";
 import { editorStore, initializeStore } from "./store/editorStore";
+import {
+  addHistoryEntry,
+  captureInitialState,
+  clearHistory,
+} from "./store/historyStore";
 import {
   clearNavigation,
   getCurrentSpec,
@@ -69,6 +75,7 @@ const CONTEXT_PANEL_WINDOW_ID = "context-panel";
 const COMPONENT_LIBRARY_WINDOW_ID = "component-library";
 const PIPELINE_DETAILS_WINDOW_ID = "pipeline-details";
 const PIPELINE_TREE_WINDOW_ID = "pipeline-tree";
+const HISTORY_WINDOW_ID = "history";
 
 /** Generate a unique ID for pinned windows */
 function generatePinnedWindowId(): string {
@@ -103,6 +110,9 @@ const PipelineEditor = withSuspenseWrapper(() => {
       initializeStore(spec);
       initNavigation(spec);
 
+      // Capture initial state for history
+      captureInitialState();
+
       // Subscribe to the proxied spec AFTER initializeStore has wrapped it
       // editorStore.spec is now the proxied version
       const unsubscribe = subscribe(editorStore.spec!, (ops) => {
@@ -111,6 +121,9 @@ const PipelineEditor = withSuspenseWrapper(() => {
           "color: orange; font-weight: bold;",
           ops,
         );
+
+        // Add history entry for this change
+        addHistoryEntry(ops);
 
         // Check for deleted tasks and close their windows
         const currentSpec = editorStore.spec;
@@ -146,6 +159,7 @@ const PipelineEditor = withSuspenseWrapper(() => {
         editorStore.selectedNodeId = null;
         editorStore.selectedNodeType = null;
         clearNavigation();
+        clearHistory();
       };
     }
   }, [spec]);
@@ -287,6 +301,22 @@ const PipelineEditor = withSuspenseWrapper(() => {
       });
       // Hide it immediately so it starts in the TaskPanel
       hideWindow(PIPELINE_TREE_WINDOW_ID);
+    }
+  }, []);
+
+  // Open history window on mount (hidden by default)
+  useEffect(() => {
+    const existingWindow = getWindowById(HISTORY_WINDOW_ID);
+    if (!existingWindow) {
+      openWindow(<HistoryContent />, {
+        id: HISTORY_WINDOW_ID,
+        title: "History",
+        position: { x: window.innerWidth - 620, y: 80 },
+        size: { width: 260, height: 350 },
+        disabledActions: ["close"],
+      });
+      // Hide it immediately so it starts in the TaskPanel
+      hideWindow(HISTORY_WINDOW_ID);
     }
   }, []);
 
