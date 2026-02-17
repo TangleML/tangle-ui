@@ -58,10 +58,10 @@ interface TaskLeafNodeProps {
  */
 function TaskLeafNode({ task }: TaskLeafNodeProps) {
   return (
-    <div className="flex items-center gap-1 py-1 px-2 text-slate-600">
+    <div className="flex items-start gap-1 py-1 px-2 text-slate-600">
       <div className="w-5 shrink-0" />
-      <Icon name="Circle" size="xs" className="shrink-0 text-slate-400" />
-      <Text size="sm" className="truncate">
+      <Icon name="Circle" size="xs" className="shrink-0 text-slate-400 mt-0.5" />
+      <Text size="sm" className="break-words min-w-0">
         {task.name}
       </Text>
     </div>
@@ -132,7 +132,7 @@ function SubgraphNode({
         onClick={handleClick}
         onKeyDown={(e) => e.key === "Enter" && handleClick()}
         className={cn(
-          "flex items-center gap-1 py-1.5 px-2 rounded-md cursor-pointer transition-colors",
+          "flex items-start gap-1 py-1.5 px-2 rounded-md cursor-pointer transition-colors",
           isCurrentGraph
             ? "bg-blue-100 text-blue-900"
             : isInCurrentPath
@@ -163,7 +163,7 @@ function SubgraphNode({
           name="Layers"
           size="sm"
           className={cn(
-            "shrink-0",
+            "shrink-0 mt-0.5",
             isCurrentGraph
               ? "text-blue-600"
               : isInCurrentPath
@@ -176,7 +176,10 @@ function SubgraphNode({
         <Text
           size="sm"
           weight={isCurrentGraph ? "semibold" : "regular"}
-          className={cn("truncate flex-1", isCurrentGraph && "text-blue-900")}
+          className={cn(
+            "break-words min-w-0 flex-1",
+            isCurrentGraph && "text-blue-900",
+          )}
         >
           {task.name}
         </Text>
@@ -186,7 +189,7 @@ function SubgraphNode({
           <Icon
             name="Eye"
             size="xs"
-            className="text-blue-600 shrink-0 ml-auto"
+            className="text-blue-600 shrink-0 mt-0.5"
           />
         )}
       </div>
@@ -276,7 +279,7 @@ function RootNode({
         onClick={handleClick}
         onKeyDown={(e) => e.key === "Enter" && handleClick()}
         className={cn(
-          "flex items-center gap-1 py-1.5 px-2 rounded-md cursor-pointer transition-colors",
+          "flex items-start gap-1 py-1.5 px-2 rounded-md cursor-pointer transition-colors",
           isCurrentGraph ? "bg-blue-100 text-blue-900" : "hover:bg-slate-100",
         )}
       >
@@ -302,14 +305,20 @@ function RootNode({
         <Icon
           name="Workflow"
           size="sm"
-          className={cn("shrink-0", isCurrentGraph ? "text-blue-600" : "text-slate-500")}
+          className={cn(
+            "shrink-0 mt-0.5",
+            isCurrentGraph ? "text-blue-600" : "text-slate-500",
+          )}
         />
 
         {/* Name */}
         <Text
           size="sm"
           weight={isCurrentGraph ? "semibold" : "regular"}
-          className={cn("truncate flex-1", isCurrentGraph && "text-blue-900")}
+          className={cn(
+            "break-words min-w-0 flex-1",
+            isCurrentGraph && "text-blue-900",
+          )}
         >
           {spec.name}
         </Text>
@@ -319,7 +328,7 @@ function RootNode({
           <Icon
             name="Eye"
             size="xs"
-            className="text-blue-600 shrink-0 ml-auto"
+            className="text-blue-600 shrink-0 mt-0.5"
           />
         )}
       </div>
