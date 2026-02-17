@@ -1,4 +1,4 @@
-import type { ChangeEvent } from "react";
+import { type ChangeEvent, useEffect, useState } from "react";
 import { useSnapshot } from "valtio";
 
 import { Icon } from "@/components/ui/icon";
@@ -25,6 +25,14 @@ export function PipelineDetailsContent() {
   const snapshot = useSnapshot(editorStore);
   const { spec } = snapshot;
 
+  // Local state for controlled textarea - syncs with store for undo/redo support
+  const [description, setDescription] = useState(spec?.description ?? "");
+
+  // Sync local state when store changes (e.g., undo/redo)
+  useEffect(() => {
+    setDescription(spec?.description ?? "");
+  }, [spec?.description]);
+
   if (!spec) {
     return <EmptyState />;
   }
@@ -36,9 +44,17 @@ export function PipelineDetailsContent() {
     }
   };
 
-  const handleDescriptionChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
-    const newDescription = event.target.value;
-    executeCommand(new UpdateDescriptionCommand(newDescription || undefined));
+  const handleDescriptionInputChange = (
+    event: ChangeEvent<HTMLTextAreaElement>,
+  ) => {
+    setDescription(event.target.value);
+  };
+
+  const handleDescriptionBlur = () => {
+    const newDescription = description || undefined;
+    if (newDescription !== spec.description) {
+      executeCommand(new UpdateDescriptionCommand(newDescription));
+    }
   };
 
   const inputs = Object.values(spec.inputs.entities);
@@ -71,8 +87,9 @@ export function PipelineDetailsContent() {
           </Label>
           <Textarea
             id="pipeline-description"
-            defaultValue={spec.description ?? ""}
-            onBlur={handleDescriptionChange}
+            value={description}
+            onChange={handleDescriptionInputChange}
+            onBlur={handleDescriptionBlur}
             placeholder="Add a pipeline description..."
             className="min-h-16 resize-y text-sm"
             data-testid="pipeline-description-input"

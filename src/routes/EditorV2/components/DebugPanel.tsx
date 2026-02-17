@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { useSnapshot } from "valtio";
+import { useEffect, useState } from "react";
+import { subscribe, useSnapshot } from "valtio";
 
 import CodeSyntaxHighlighter from "@/components/shared/CodeViewer/CodeSyntaxHighlighter";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -8,6 +8,7 @@ import { Text } from "@/components/ui/typography";
 import { componentSpecToText } from "@/utils/yaml";
 
 import { editorStore } from "../store/editorStore";
+import { navigationStore } from "../store/navigationStore";
 import {
   closeWindow,
   getWindowById,
@@ -58,24 +59,53 @@ function StatGroup({ title, children }: StatGroupProps) {
 }
 
 /**
+ * Helper to generate YAML from spec
+ */
+function getSpecYaml(spec: typeof editorStore.spec): string {
+  if (!spec) return "null";
+  try {
+    return componentSpecToText(spec.toJson());
+  } catch {
+    return "Error serializing spec";
+  }
+}
+
+/**
  * Debug panel content - displays stats and JSON representation of the spec.
  * Used within the Windows system.
  */
 function DebugPanelContent() {
   const snap = useSnapshot(editorStore);
+  const navSnap = useSnapshot(navigationStore);
 
-  // Collect stats from the spec
-  const spec = snap.spec;
+  // Store YAML in state and update it via subscription.
+  // This guarantees reactivity since state changes always trigger re-renders.
+  const [specYaml, setSpecYaml] = useState(() =>
+    getSpecYaml(navigationStore.rootSpec),
+  );
 
-  // Derive JSON from the snapshot - React Compiler handles memoization
-  const specYaml = (() => {
-    if (!spec) return "null";
-    try {
-      return componentSpecToText(spec.toJson());
-    } catch {
-      return "Error serializing spec";
+  useEffect(() => {
+    // Use navigationStore.rootSpec - this is the EXACT object that commands mutate
+    const spec = navigationStore.rootSpec;
+    if (!spec) {
+      setSpecYaml("null");
+      return;
     }
-  })();
+
+    // Set initial YAML
+    setSpecYaml(getSpecYaml(spec));
+
+    // Subscribe to the spec that commands mutate (navigationStore.rootSpec)
+    const unsubscribe = subscribe(spec, () => {
+      // Always read fresh from navigationStore
+      setSpecYaml(getSpecYaml(navigationStore.rootSpec));
+    });
+
+    return unsubscribe;
+  }, [navSnap.rootSpec !== null]);
+
+  // Use editorStore.spec for display (same object, just for consistency with other components)
+  const spec = editorStore.spec;
 
   const stats = {
     name: spec?.name ?? "—",

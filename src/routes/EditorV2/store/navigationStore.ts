@@ -5,7 +5,7 @@
  * enabling breadcrumb navigation and unlimited nesting depth.
  */
 
-import { proxy, ref } from "valtio";
+import { proxy } from "valtio";
 
 import type { ComponentSpecEntity } from "@/providers/ComponentSpec/componentSpec";
 import { GraphImplementation } from "@/providers/ComponentSpec/graphImplementation";
@@ -38,9 +38,10 @@ export const navigationStore = proxy<NavigationStore>({
  * Resets navigation path to start at the root.
  */
 export function initNavigation(rootSpec: ComponentSpecEntity) {
-  // Use ref() for the rootSpec to prevent Valtio from re-proxying it
-  // (it's already a proxied object from YamlLoader)
-  navigationStore.rootSpec = ref(rootSpec);
+  // The spec is already proxied from YamlLoader. Modern valtio (v1.6+)
+  // automatically detects and handles already-proxied objects without
+  // double-wrapping. We store directly without ref() to preserve reactivity.
+  navigationStore.rootSpec = rootSpec;
   navigationStore.navigationPath = [
     {
       specId: rootSpec.$id,
