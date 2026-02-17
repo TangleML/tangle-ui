@@ -29,17 +29,19 @@ import type {
 
 import type { TaskNodeData } from "../hooks/useSpecToNodesEdges";
 import { useSpecToNodesEdges } from "../hooks/useSpecToNodesEdges";
+import { executeCommand } from "../store/commandManager";
 import {
-  addInput,
-  addOutput,
-  addTask,
-  connectNodes,
-  deleteEdge,
-  deleteInput,
-  deleteOutput,
-  deleteTask,
-  updateNodePosition,
-} from "../store/actions";
+  AddInputCommand,
+  AddOutputCommand,
+  AddTaskCommand,
+  CompositeCommand,
+  ConnectNodesCommand,
+  DeleteEdgeCommand,
+  DeleteInputCommand,
+  DeleteOutputCommand,
+  DeleteTaskCommand,
+  UpdateNodePositionCommand,
+} from "../store/commands";
 import {
   clearMultiSelection,
   clearSelection,
@@ -125,26 +127,53 @@ export function FlowCanvas({
       (change) => change.type === "position" && change.dragging === false,
     );
 
+    // Batch position changes into a single composite command for multi-select moves
+    const positionCommands: UpdateNodePositionCommand[] = [];
     for (const change of positionChanges) {
       if ("id" in change && "position" in change && change.position) {
-        updateNodePosition(change.id, change.position);
+        positionCommands.push(
+          new UpdateNodePositionCommand(change.id, change.position),
+        );
       }
+    }
+
+    if (positionCommands.length === 1) {
+      executeCommand(positionCommands[0]);
+    } else if (positionCommands.length > 1) {
+      executeCommand(
+        new CompositeCommand(positionCommands, "Move nodes"),
+      );
     }
 
     // Handle node removal to update the spec
     const removeChanges = changes.filter((change) => change.type === "remove");
+
+    // Batch delete changes into a single composite command for multi-select deletes
+    const deleteCommands: (
+      | DeleteTaskCommand
+      | DeleteInputCommand
+      | DeleteOutputCommand
+    )[] = [];
     for (const change of removeChanges) {
       if ("id" in change) {
         const nodeId = change.id;
         // Determine node type from entity $id format
         if (nodeId.includes(".tasks_")) {
-          deleteTask(nodeId);
+          deleteCommands.push(new DeleteTaskCommand(nodeId));
         } else if (nodeId.includes(".inputs_")) {
-          deleteInput(nodeId);
+          deleteCommands.push(new DeleteInputCommand(nodeId));
         } else if (nodeId.includes(".outputs_")) {
-          deleteOutput(nodeId);
+          deleteCommands.push(new DeleteOutputCommand(nodeId));
         }
       }
+    }
+
+    if (deleteCommands.length === 1) {
+      executeCommand(deleteCommands[0]);
+    } else if (deleteCommands.length > 1) {
+      executeCommand(
+        new CompositeCommand(deleteCommands, "Delete nodes"),
+      );
     }
 
     onNodesChange(changes);
@@ -153,10 +182,21 @@ export function FlowCanvas({
   const handleEdgesChange = (changes: EdgeChange[]) => {
     // Handle edge removal to update the spec
     const removeChanges = changes.filter((change) => change.type === "remove");
+
+    // Batch edge deletes into a single composite command for multi-select deletes
+    const deleteCommands: DeleteEdgeCommand[] = [];
     for (const change of removeChanges) {
       if ("id" in change) {
-        deleteEdge(change.id);
+        deleteCommands.push(new DeleteEdgeCommand(change.id));
       }
+    }
+
+    if (deleteCommands.length === 1) {
+      executeCommand(deleteCommands[0]);
+    } else if (deleteCommands.length > 1) {
+      executeCommand(
+        new CompositeCommand(deleteCommands, "Delete connections"),
+      );
     }
 
     onEdgesChange(changes);
@@ -177,12 +217,14 @@ export function FlowCanvas({
       return;
     }
 
-    connectNodes({
-      sourceNodeId: connection.source,
-      sourceHandleId: connection.sourceHandle,
-      targetNodeId: connection.target,
-      targetHandleId: connection.targetHandle,
-    });
+    executeCommand(
+      new ConnectNodesCommand({
+        sourceNodeId: connection.source,
+        sourceHandleId: connection.sourceHandle,
+        targetNodeId: connection.target,
+        targetHandleId: connection.targetHandle,
+      }),
+    );
   };
 
   const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
@@ -212,20 +254,20 @@ export function FlowCanvas({
       const parsedData = JSON.parse(droppedData);
 
       if (parsedData.task) {
-        // Dropped a task
+        // Dropped a task - async hydration happens BEFORE command creation
         const taskSpec = parsedData.task as TaskSpec;
         const componentRef: HydratedComponentReference | null =
           await hydrateComponentReference(taskSpec.componentRef);
 
         if (componentRef) {
-          addTask(componentRef, position);
+          executeCommand(new AddTaskCommand(componentRef, position));
         }
       } else if (parsedData.input !== undefined) {
         // Dropped an input node
-        addInput(position);
+        executeCommand(new AddInputCommand(position));
       } else if (parsedData.output !== undefined) {
         // Dropped an output node
-        addOutput(position);
+        executeCommand(new AddOutputCommand(position));
       }
     } catch (err) {
       console.error("Failed to parse dropped data:", err);

@@ -47,20 +47,34 @@ export function updateNodePosition(entityId: string, position: XYPosition) {
   // Try to find as input
   const input = spec.inputs.entities[entityId];
   if (input) {
-    input.annotations.add({
-      key: EDITOR_POSITION_ANNOTATION,
-      value: JSON.stringify(position),
-    });
+    const existing = input.annotations
+      .getAll()
+      .find((a) => a.key === EDITOR_POSITION_ANNOTATION);
+    if (existing) {
+      existing.value = JSON.stringify(position);
+    } else {
+      input.annotations.add({
+        key: EDITOR_POSITION_ANNOTATION,
+        value: JSON.stringify(position),
+      });
+    }
     return;
   }
 
   // Try to find as output
   const output = spec.outputs.entities[entityId];
   if (output) {
-    output.annotations.add({
-      key: EDITOR_POSITION_ANNOTATION,
-      value: JSON.stringify(position),
-    });
+    const existing = output.annotations
+      .getAll()
+      .find((a) => a.key === EDITOR_POSITION_ANNOTATION);
+    if (existing) {
+      existing.value = JSON.stringify(position);
+    } else {
+      output.annotations.add({
+        key: EDITOR_POSITION_ANNOTATION,
+        value: JSON.stringify(position),
+      });
+    }
   }
 }
 
