@@ -4,6 +4,9 @@ export type WindowState = "normal" | "maximized" | "minimized" | "hidden";
 /** Actions that can be performed on a window */
 export type WindowAction = "close" | "minimize" | "maximize" | "hide";
 
+/** Docking state for edge snapping */
+export type DockState = "left" | "right" | "none";
+
 /** Position coordinates */
 export interface Position {
   x: number;
@@ -15,6 +18,27 @@ export interface Size {
   width: number;
   height: number;
 }
+
+/** Information about window attachment to another window */
+export interface AttachmentInfo {
+  /** ID of the parent window this is attached to */
+  parentId: string;
+  /** X offset from parent's left edge (for alignment preservation) */
+  offsetX: number;
+}
+
+/** Viewport bounds accounting for navigation */
+export interface ViewportBounds {
+  top: number;
+  left: number;
+  right: number;
+  bottom: number;
+}
+
+/** Snap preview types for visual feedback during drag */
+export type SnapPreviewType =
+  | { type: "edge"; side: "left" | "right" }
+  | { type: "attach"; parentId: string; parentBottom: number; parentLeft: number }
 
 /** Window configuration stored in the registry (no React elements) */
 export interface WindowConfig {
@@ -32,6 +56,10 @@ export interface WindowConfig {
   linkedEntityId?: string;
   /** Actions that are disabled for this window */
   disabledActions?: WindowAction[];
+  /** Docking state for edge snapping */
+  dockState: DockState;
+  /** Attachment info if this window is attached to another window's bottom */
+  attachedTo?: AttachmentInfo;
 }
 
 /** Reference returned from open() for controlling a window */
@@ -60,6 +88,8 @@ export interface WindowOptions {
   linkedEntityId?: string;
   /** Actions to disable for this window (e.g., ["close"] for non-closable windows) */
   disabledActions?: WindowAction[];
+  /** ID of a window to attach this window below (for vertical stacking) */
+  attachTo?: string;
 }
 
 /** Default window dimensions */
@@ -75,3 +105,12 @@ export const DEFAULT_MIN_SIZE: Size = {
 
 /** Cascade offset for new windows */
 export const CASCADE_OFFSET = 24;
+
+/** Distance from viewport edge to trigger dock preview (px) */
+export const EDGE_SNAP_THRESHOLD = 2;
+
+/** Distance from another window's bottom to trigger magnetic attachment (px) */
+export const MAGNETIC_SNAP_THRESHOLD = 5;
+
+/** Distance to drag before detaching from parent window (px) */
+export const DETACH_THRESHOLD = 10;
