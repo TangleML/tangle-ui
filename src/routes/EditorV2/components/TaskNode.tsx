@@ -1,4 +1,6 @@
 import { Handle, type Node, type NodeProps, Position } from "@xyflow/react";
+import { useRef } from "react";
+import { useSnapshot } from "valtio";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -46,11 +48,41 @@ export function TaskNode({ id, data, selected }: TaskNodeProps) {
   // This ensures we look up tasks from the correct spec when navigating subgraphs
   const spec = useCurrentSpec();
 
+  // Create a stable dummy object for when spec is null
+  // This allows useSnapshot to be called unconditionally
+  const dummySpec = useRef({ name: "" });
+
+  // Subscribe to spec changes to trigger re-renders when task annotations change
+  const specSnapshot = useSnapshot(spec ?? dummySpec.current);
+
   // Find the task entity by its stable $id for additional properties
   const task =
     spec && specHasGraphImplementation(spec)
       ? spec.implementation.tasks.findById(entityId)
       : null;
+
+  // Access task annotations through snapshot to establish Valtio subscription
+  // This ensures re-renders when annotations change
+  const taskSnapshot = (
+    specSnapshot as {
+      implementation?: {
+        tasks?: {
+          entities: Record<
+            string,
+            { annotations: { entities: Record<string, { key: string }> } }
+          >;
+        };
+      };
+    }
+  ).implementation?.tasks?.entities[entityId];
+
+  // Read annotation key VALUES from snapshot to establish subscription
+  // Reading just Object.keys() only subscribes to entity count, not value changes
+  const annotationEntities = taskSnapshot?.annotations?.entities ?? {};
+  const annotationKeysFingerprint = Object.values(annotationEntities)
+    .map((a) => a.key)
+    .join(",");
+  void annotationKeysFingerprint;
 
   const handleClick = (event: React.MouseEvent) => {
     selectNode(id, "task", {

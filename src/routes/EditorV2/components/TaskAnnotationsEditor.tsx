@@ -1,4 +1,4 @@
-import type { ChangeEvent } from "react";
+import { type ChangeEvent, useRef } from "react";
 import { useSnapshot } from "valtio";
 
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,14 @@ export function TaskAnnotationsEditor({
   // Get the current spec from navigation state
   const spec = getCurrentSpec();
 
+  // Create a stable dummy object for when spec is null
+  // This allows useSnapshot to be called unconditionally
+  const dummySpec = useRef({ name: "" });
+
+  // Subscribe to spec changes to trigger re-renders when annotations change
+  // The rootSpec is wrapped in ref() in navigationStore, so we need direct subscription
+  const specSnapshot = useSnapshot(spec ?? dummySpec.current);
+
   if (
     !spec?.implementation ||
     !(spec.implementation instanceof GraphImplementation)
@@ -41,31 +49,44 @@ export function TaskAnnotationsEditor({
     return null;
   }
 
+  // Access annotations through snapshot to establish Valtio subscription
+  // Cast snapshot to access nested task annotations (readonly view)
+  const taskSnapshot = (
+    specSnapshot as {
+      implementation?: {
+        tasks?: {
+          entities: Record<
+            string,
+            { annotations: { entities: Record<string, { key: string; value: unknown }> } }
+          >;
+        };
+      };
+    }
+  ).implementation?.tasks?.entities[entityId];
+
+  // Read annotation key and value from snapshot to establish subscription
+  // Reading just Object.keys() only subscribes to entity count, not value changes
+  const annotationEntities = taskSnapshot?.annotations?.entities ?? {};
+  const annotationFingerprint = Object.values(annotationEntities)
+    .map((a) => `${a.key}:${a.value}`)
+    .join(",");
+  void annotationFingerprint;
+
   // Filter out internal annotations (editor.*)
   const userAnnotations = task.annotations
     .getAll()
     .filter((a) => !a.key.startsWith("editor."));
 
+  // Handlers mutate the task proxy directly - no need to re-traverse navigation
   const handleAddAnnotation = () => {
-    // Get mutable task from current spec (not snapshot)
-    const mutableSpec = getCurrentSpec();
-    const mutableTask =
-      mutableSpec?.implementation?.tasks?.entities[entityId];
-    if (mutableTask) {
-      mutableTask.annotations.add({ key: "", value: "" });
-    }
+    task.annotations.add({ key: "", value: "" });
   };
 
   const handleUpdateKey = (
     annotationId: string,
     event: ChangeEvent<HTMLInputElement>,
   ) => {
-    const mutableSpec = getCurrentSpec();
-    const mutableTask =
-      mutableSpec?.implementation?.tasks?.entities[entityId];
-    if (!mutableTask) return;
-
-    const annotation = mutableTask.annotations.findById(annotationId);
+    const annotation = task.annotations.findById(annotationId);
     if (annotation) {
       annotation.key = event.target.value;
     }
@@ -75,24 +96,14 @@ export function TaskAnnotationsEditor({
     annotationId: string,
     event: ChangeEvent<HTMLInputElement>,
   ) => {
-    const mutableSpec = getCurrentSpec();
-    const mutableTask =
-      mutableSpec?.implementation?.tasks?.entities[entityId];
-    if (!mutableTask) return;
-
-    const annotation = mutableTask.annotations.findById(annotationId);
+    const annotation = task.annotations.findById(annotationId);
     if (annotation) {
       annotation.value = event.target.value;
     }
   };
 
   const handleRemoveAnnotation = (annotationId: string) => {
-    const mutableSpec = getCurrentSpec();
-    const mutableTask =
-      mutableSpec?.implementation?.tasks?.entities[entityId];
-    if (mutableTask) {
-      mutableTask.annotations.removeById(annotationId);
-    }
+    task.annotations.removeById(annotationId);
   };
 
   return (
