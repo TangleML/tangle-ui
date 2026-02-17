@@ -76,14 +76,6 @@ export const StockpileSection = ({
                           {resource}: {amount}
                         </Text>
                         <StockpileChangeIndicator change={change} />
-                        <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-blue-500 transition-all"
-                            style={{
-                              width: `${(stock.amount / stock.maxAmount) * 100}%`,
-                            }}
-                          />
-                        </div>
                       </InlineStack>
                     );
                   },

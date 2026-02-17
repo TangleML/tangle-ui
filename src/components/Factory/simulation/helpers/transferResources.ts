@@ -1,10 +1,14 @@
 import type { Edge, Node } from "@xyflow/react";
 
-import { getBuildingInstance } from "../../types/buildings";
+import {
+  type BuildingInstance,
+  getBuildingInstance,
+} from "../../types/buildings";
 import { isResourceData, type ResourceType } from "../../types/resources";
 import type {
   BuildingStatistics,
   EdgeStatistics,
+  StockpileChange,
 } from "../../types/statistics";
 
 export const transferResources = (
@@ -21,6 +25,7 @@ export const transferResources = (
 
   if (!sourceNode || !targetNode) return;
 
+  // ✅ Get FRESH building instances each time (after mutations)
   const sourceBuilding = getBuildingInstance(sourceNode);
   const targetBuilding = getBuildingInstance(targetNode);
 
@@ -44,192 +49,284 @@ export const transferResources = (
 
   relevantEdges.forEach((edge) => {
     if (!isResourceData(edge.data)) return;
-    const resource = edge.data.type;
+    const edgeResource = edge.data.type;
 
-    if (!resource) return;
+    if (!edgeResource) return;
 
-    // ✅ Find source stockpile - check both direct match and "any" with breakdown
-    let sourceStock = sourceBuilding.stockpile?.find(
-      (s) => s.resource === resource,
-    );
+    // ✅ Get FRESH building data for each edge (important for multiple edges between same nodes)
+    const currentSourceBuilding = getBuildingInstance(sourceNode);
+    const currentTargetBuilding = getBuildingInstance(targetNode);
 
-    let sourceIsAny = false;
-    const sourceAnyStock = sourceBuilding.stockpile?.find(
-      (s) => s.resource === "any",
-    );
+    if (!currentSourceBuilding || !currentTargetBuilding) return;
 
-    // If no direct match, check if source has "any" stockpile with this resource in breakdown
-    if (sourceAnyStock?.breakdown?.has(resource)) {
-      sourceStock = sourceAnyStock;
-      sourceIsAny = true;
-    }
+    // ✅ Determine which resources to transfer based on edge type
+    const resourcesToTransfer: ResourceType[] = [];
 
-    // ✅ Find target stockpile
-    const targetStock = targetBuilding.stockpile?.find(
-      (s) => s.resource === resource || s.resource === "any",
-    );
-
-    if (!sourceStock || !targetStock) return;
-
-    // ✅ Calculate available amount from source
-    let availableFromSource: number;
-    if (sourceIsAny && sourceStock.breakdown) {
-      // Source is "any" - get amount from breakdown
-      availableFromSource = sourceStock.breakdown.get(resource) || 0;
+    if (edgeResource === "any") {
+      // For "any" edge, transfer all resources in the "any" stockpile breakdown
+      const sourceAnyStock = currentSourceBuilding.stockpile?.find(
+        (s) => s.resource === "any",
+      );
+      if (sourceAnyStock?.breakdown) {
+        resourcesToTransfer.push(...sourceAnyStock.breakdown.keys());
+      }
     } else {
-      // Source is specific resource
-      availableFromSource = sourceStock.amount;
+      // For specific resource edge, transfer just that resource
+      resourcesToTransfer.push(edgeResource);
     }
 
-    if (availableFromSource === 0) return;
-
-    // Calculate transfer amount
-    let actualTransferAmount: number;
-
-    if (transferAmount !== undefined) {
-      const availableSpaceInTarget = targetStock.maxAmount - targetStock.amount;
-      actualTransferAmount = Math.min(
-        transferAmount,
-        availableFromSource,
-        availableSpaceInTarget,
-      );
-    } else {
-      // Original behavior: transfer all available
-      const availableSpaceInTarget = targetStock.maxAmount - targetStock.amount;
-      actualTransferAmount = Math.min(
-        availableFromSource,
-        availableSpaceInTarget,
-      );
-    }
-
-    if (actualTransferAmount > 0) {
-      // Track edge statistics
-      edgeStats.set(edge.id, {
-        transferred: actualTransferAmount,
-        resource: resource,
-      });
-
-      // Track source stockpile change (removed)
-      const sourceChange = sourceStats.stockpileChanges.find(
-        (c) => c.resource === resource,
-      );
-      if (sourceChange) {
-        sourceChange.removed += actualTransferAmount;
-        sourceChange.net = sourceChange.added - sourceChange.removed;
-      } else {
-        sourceStats.stockpileChanges.push({
-          resource: resource,
-          removed: actualTransferAmount,
-          added: 0,
-          net: -actualTransferAmount,
-        });
-      }
-
-      // Track target stockpile change (added)
-      const targetChange = targetStats.stockpileChanges.find(
-        (c) => c.resource === resource,
-      );
-      if (targetChange) {
-        targetChange.added += actualTransferAmount;
-        targetChange.net = targetChange.added - targetChange.removed;
-      } else {
-        targetStats.stockpileChanges.push({
-          resource: resource,
-          removed: 0,
-          added: actualTransferAmount,
-          net: actualTransferAmount,
-        });
-      }
-
-      // ✅ Update source stockpile
-      if (sourceIsAny && sourceStock.breakdown) {
-        // Source is "any" - update breakdown
-        const breakdown = new Map(sourceStock.breakdown);
-        const currentAmount = breakdown.get(resource as ResourceType) || 0;
-        const newAmount = currentAmount - actualTransferAmount;
-
-        if (newAmount <= 0) {
-          breakdown.delete(resource as ResourceType);
-        } else {
-          breakdown.set(resource as ResourceType, newAmount);
-        }
-
-        const updatedSourceBuilding = {
-          ...sourceBuilding,
-          stockpile: sourceBuilding.stockpile?.map((s) =>
-            s.resource === "any"
-              ? {
-                  ...s,
-                  amount: s.amount - actualTransferAmount,
-                  breakdown,
-                }
-              : s,
-          ),
-        };
-
-        sourceNode.data = {
-          ...sourceNode.data,
-          buildingInstance: updatedSourceBuilding,
-        };
-      } else {
-        // Source is specific resource
-        const updatedSourceBuilding = {
-          ...sourceBuilding,
-          stockpile: sourceBuilding.stockpile?.map((s) =>
-            s.resource === resource
-              ? { ...s, amount: s.amount - actualTransferAmount }
-              : s,
-          ),
-        };
-
-        sourceNode.data = {
-          ...sourceNode.data,
-          buildingInstance: updatedSourceBuilding,
-        };
-      }
-
-      // ✅ Update target stockpile
-      if (targetStock.resource === "any") {
-        const breakdown = new Map(targetStock.breakdown || new Map());
-        const currentAmount = breakdown.get(resource as ResourceType) || 0;
-        breakdown.set(
-          resource as ResourceType,
-          currentAmount + actualTransferAmount,
+    // ✅ For "any" edges, transfer ALL of each resource (no limit per resource)
+    // For specific edges, respect the transferAmount
+    if (edgeResource === "any") {
+      // Transfer unlimited for each resource in breakdown
+      resourcesToTransfer.forEach((resource) => {
+        const result = transferSingleResource(
+          sourceNode,
+          targetNode,
+          resource,
+          undefined, // No limit - transfer everything available
         );
 
-        const updatedTargetBuilding = {
-          ...targetBuilding,
-          stockpile: targetBuilding.stockpile?.map((s) =>
-            s.resource === "any"
-              ? {
-                  ...s,
-                  amount: s.amount + actualTransferAmount,
-                  breakdown,
-                }
-              : s,
-          ),
-        };
+        if (result) {
+          // Track edge statistics
+          const edgeStatKey = `${edge.id}-${resource}`;
+          edgeStats.set(edgeStatKey, {
+            transferred: result.amount,
+            resource: resource,
+          });
 
-        targetNode.data = {
-          ...targetNode.data,
-          buildingInstance: updatedTargetBuilding,
-        };
-      } else {
-        // Regular stockpile transfer
-        const updatedTargetBuilding = {
-          ...targetBuilding,
-          stockpile: targetBuilding.stockpile?.map((s) =>
-            s.resource === resource
-              ? { ...s, amount: s.amount + actualTransferAmount }
-              : s,
-          ),
-        };
+          // Track statistics
+          trackStockpileChange(sourceStats.stockpileChanges, resource, {
+            removed: result.amount,
+            added: 0,
+          });
+          trackStockpileChange(targetStats.stockpileChanges, resource, {
+            removed: 0,
+            added: result.amount,
+          });
+        }
+      });
+    } else {
+      // For specific resource edges, respect transfer amount
+      resourcesToTransfer.forEach((resource) => {
+        const result = transferSingleResource(
+          sourceNode,
+          targetNode,
+          resource,
+          transferAmount,
+        );
 
-        targetNode.data = {
-          ...targetNode.data,
-          buildingInstance: updatedTargetBuilding,
-        };
-      }
+        if (result) {
+          // Track edge statistics
+          edgeStats.set(edge.id, {
+            transferred: result.amount,
+            resource: resource,
+          });
+
+          // Track statistics
+          trackStockpileChange(sourceStats.stockpileChanges, resource, {
+            removed: result.amount,
+            added: 0,
+          });
+          trackStockpileChange(targetStats.stockpileChanges, resource, {
+            removed: 0,
+            added: result.amount,
+          });
+        }
+      });
     }
   });
 };
+
+/**
+ * Helper to find available amount for a resource in stockpile.
+ * Checks both direct stockpile and "any" stockpile breakdown.
+ */
+function findAvailableAmount(
+  building: BuildingInstance,
+  resource: ResourceType,
+): { amount: number; isAny: boolean } {
+  // Check direct stockpile first
+  const directStock = building.stockpile?.find((s) => s.resource === resource);
+  if (directStock && directStock.amount > 0) {
+    return { amount: directStock.amount, isAny: false };
+  }
+
+  // Check "any" stockpile breakdown
+  const anyStock = building.stockpile?.find((s) => s.resource === "any");
+  if (anyStock?.breakdown?.has(resource)) {
+    const amount = anyStock.breakdown.get(resource) || 0;
+    return { amount, isAny: true };
+  }
+
+  return { amount: 0, isAny: false };
+}
+
+/**
+ * Helper to find available space for a resource in stockpile.
+ * Checks both direct stockpile and "any" stockpile.
+ */
+function findAvailableSpace(
+  building: BuildingInstance,
+  resource: ResourceType,
+): { space: number; isAny: boolean } {
+  // Check direct stockpile first
+  const directStock = building.stockpile?.find((s) => s.resource === resource);
+  if (directStock) {
+    return {
+      space: directStock.maxAmount - directStock.amount,
+      isAny: false,
+    };
+  }
+
+  // Check "any" stockpile
+  const anyStock = building.stockpile?.find((s) => s.resource === "any");
+  if (anyStock) {
+    return {
+      space: anyStock.maxAmount - anyStock.amount,
+      isAny: true,
+    };
+  }
+
+  return { space: 0, isAny: false };
+}
+
+/**
+ * Transfer a single resource from source to target.
+ * Returns the amount transferred or null if no transfer occurred.
+ */
+function transferSingleResource(
+  sourceNode: Node,
+  targetNode: Node,
+  resource: ResourceType,
+  maxTransferAmount?: number,
+): { amount: number } | null {
+  // ✅ Get fresh building data for accurate amounts
+  const sourceBuilding = getBuildingInstance(sourceNode);
+  const targetBuilding = getBuildingInstance(targetNode);
+
+  if (!sourceBuilding || !targetBuilding) return null;
+
+  const sourceInfo = findAvailableAmount(sourceBuilding, resource);
+  const targetInfo = findAvailableSpace(targetBuilding, resource);
+
+  if (sourceInfo.amount === 0 || targetInfo.space === 0) {
+    return null;
+  }
+
+  const actualTransferAmount = Math.min(
+    maxTransferAmount ?? sourceInfo.amount,
+    sourceInfo.amount,
+    targetInfo.space,
+  );
+
+  if (actualTransferAmount <= 0) {
+    return null;
+  }
+
+  // Update source stockpile
+  updateStockpile(
+    sourceNode,
+    sourceBuilding,
+    resource,
+    -actualTransferAmount,
+    sourceInfo.isAny,
+  );
+
+  // Update target stockpile (get fresh target building after source update)
+  const freshTargetBuilding = getBuildingInstance(targetNode);
+  if (!freshTargetBuilding) return null;
+
+  updateStockpile(
+    targetNode,
+    freshTargetBuilding,
+    resource,
+    actualTransferAmount,
+    targetInfo.isAny,
+  );
+
+  return { amount: actualTransferAmount };
+}
+
+/**
+ * Update a stockpile by adding/removing an amount.
+ * Handles both direct stockpile and "any" stockpile breakdown.
+ */
+function updateStockpile(
+  node: Node,
+  building: BuildingInstance,
+  resource: ResourceType,
+  delta: number,
+  isAny: boolean,
+) {
+  if (isAny) {
+    // Update "any" stockpile breakdown
+    const anyStock = building.stockpile?.find((s) => s.resource === "any");
+    if (!anyStock) return;
+
+    const breakdown = new Map(anyStock.breakdown || new Map());
+    const currentAmount = breakdown.get(resource) || 0;
+    const newAmount = currentAmount + delta;
+
+    if (newAmount <= 0) {
+      breakdown.delete(resource);
+    } else {
+      breakdown.set(resource, newAmount);
+    }
+
+    const updatedBuilding = {
+      ...building,
+      stockpile: building.stockpile?.map((s) =>
+        s.resource === "any"
+          ? {
+              ...s,
+              amount: s.amount + delta,
+              breakdown,
+            }
+          : s,
+      ),
+    };
+
+    node.data = {
+      ...node.data,
+      buildingInstance: updatedBuilding,
+    };
+  } else {
+    // Update direct stockpile
+    const updatedBuilding = {
+      ...building,
+      stockpile: building.stockpile?.map((s) =>
+        s.resource === resource ? { ...s, amount: s.amount + delta } : s,
+      ),
+    };
+
+    node.data = {
+      ...node.data,
+      buildingInstance: updatedBuilding,
+    };
+  }
+}
+
+/**
+ * Track stockpile changes in statistics
+ */
+function trackStockpileChange(
+  changes: StockpileChange[],
+  resource: ResourceType,
+  amounts: { removed: number; added: number },
+) {
+  const existing = changes.find((c) => c.resource === resource);
+
+  if (existing) {
+    existing.removed += amounts.removed;
+    existing.added += amounts.added;
+    existing.net = existing.added - existing.removed;
+  } else {
+    changes.push({
+      resource,
+      removed: amounts.removed,
+      added: amounts.added,
+      net: amounts.added - amounts.removed,
+    });
+  }
+}

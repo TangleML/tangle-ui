@@ -9,25 +9,38 @@ export const createResourceEdge = (
   targetNodeId: string,
   resource: ResourceType,
   reactFlowInstance: ReactFlowInstance,
+  sourceHandleId?: string | null,
+  targetHandleId?: string | null,
 ) => {
   const { getInternalNode } = reactFlowInstance;
 
   const sourceInternalNode = getInternalNode(sourceNodeId);
   const targetInternalNode = getInternalNode(targetNodeId);
 
-  const sourceHandle = sourceInternalNode?.internals.handleBounds?.source?.find(
-    (handle) =>
-      extractResource(handle.id) === resource ||
-      extractResource(handle.id) === "any",
-  );
-  const targetHandle = targetInternalNode?.internals.handleBounds?.target?.find(
-    (handle) =>
-      extractResource(handle.id) === resource ||
-      extractResource(handle.id) === "any",
-  );
+  if (!sourceHandleId) {
+    const sourceHandle =
+      sourceInternalNode?.internals.handleBounds?.source?.find(
+        (handle) =>
+          extractResource(handle.id) === resource ||
+          extractResource(handle.id) === "any",
+      );
+    if (sourceHandle?.id) {
+      sourceHandleId = sourceHandle.id;
+    }
+  }
 
-  const sourceHandleId = sourceHandle?.id;
-  const targetHandleId = targetHandle?.id;
+  if (!targetHandleId) {
+    const targetHandle =
+      targetInternalNode?.internals.handleBounds?.target?.find(
+        (handle) =>
+          extractResource(handle.id) === resource ||
+          extractResource(handle.id) === "any",
+      );
+
+    if (targetHandle?.id) {
+      targetHandleId = targetHandle.id;
+    }
+  }
 
   if (!sourceHandleId || !targetHandleId) {
     console.error(

@@ -23,6 +23,14 @@ export const ProductionOutputs = ({
         Outputs:
       </Text>
       {productionMethod.outputs.map((output, idx) => {
+        if (output.resource === "any") {
+          return (
+            <InlineStack key={idx} gap="2">
+              <Text size="sm">• any</Text>
+            </InlineStack>
+          );
+        }
+
         if (isGlobalResource(output.resource)) {
           return (
             <InlineStack key={idx} gap="2">
