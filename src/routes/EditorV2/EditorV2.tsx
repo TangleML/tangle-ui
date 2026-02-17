@@ -302,6 +302,9 @@ const PipelineEditor = withSuspenseWrapper(() => {
         // Clear selection when navigating into a subgraph
         editorStore.selectedNodeId = null;
         editorStore.selectedNodeType = null;
+
+        // Show the Pipeline Structure window to help with navigation
+        restoreWindow(PIPELINE_TREE_WINDOW_ID);
       }
     }
   };
