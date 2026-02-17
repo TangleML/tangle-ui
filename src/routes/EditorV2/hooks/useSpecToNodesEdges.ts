@@ -1,10 +1,10 @@
 import type { Edge, Node } from "@xyflow/react";
+import { useRef } from "react";
 import { useSnapshot } from "valtio";
 
+import type { ComponentSpecEntity } from "@/providers/ComponentSpec/componentSpec";
 import { GraphImplementation } from "@/providers/ComponentSpec/graphImplementation";
 import { EDITOR_POSITION_ANNOTATION } from "@/utils/annotations";
-
-import { editorStore } from "../store/editorStore";
 
 interface NodePosition {
   x: number;
@@ -62,23 +62,63 @@ export interface IONodeData extends Record<string, unknown> {
   ioType: "input" | "output";
 }
 
-/**
- * Hook to convert ComponentSpec to ReactFlow nodes and edges.
- *
- * Node data only contains stable entity $id references.
- * Node components fetch actual data from the store using these ids,
- * which ensures valtio reactivity works correctly.
- */
-export function useSpecToNodesEdges() {
-  const snapshot = useSnapshot(editorStore);
-  const spec = snapshot.spec;
+/** Empty result for when spec is null */
+const EMPTY_RESULT: { nodes: Node[]; edges: Edge[] } = { nodes: [], edges: [] };
 
+/**
+ * Create a fingerprint of the spec's structure for change detection.
+ * This includes counts and IDs of inputs, outputs, tasks, and bindings.
+ *
+ * IMPORTANT: This function must access data through the snapshot to establish
+ * Valtio subscriptions. The snapshot is a readonly view, so we access the
+ * entities record directly which is tracked by Valtio.
+ */
+function createSpecFingerprint(
+  spec: ComponentSpecEntity,
+  snapshot: unknown,
+): string {
+  // Cast snapshot to access its properties (readonly view of spec)
+  const snap = snapshot as {
+    $id: string;
+    inputs: { entities: Record<string, { $id: string }> };
+    outputs: { entities: Record<string, { $id: string }> };
+    implementation?: {
+      tasks: { entities: Record<string, { $id: string }> };
+      bindings: { entities: Record<string, { $id: string }> };
+    };
+  };
+
+  const parts: string[] = [snap.$id];
+
+  // Input IDs - access through snapshot to establish subscription
+  const inputIds = Object.keys(snap.inputs.entities).sort();
+  parts.push(`i:${inputIds.join(",")}`);
+
+  // Output IDs - access through snapshot to establish subscription
+  const outputIds = Object.keys(snap.outputs.entities).sort();
+  parts.push(`o:${outputIds.join(",")}`);
+
+  // Task IDs and bindings (if graph implementation)
+  if (hasGraphImplementation(spec) && snap.implementation) {
+    const taskIds = Object.keys(snap.implementation.tasks.entities).sort();
+    parts.push(`t:${taskIds.join(",")}`);
+
+    const bindingIds = Object.keys(snap.implementation.bindings.entities).sort();
+    parts.push(`b:${bindingIds.join(",")}`);
+  }
+
+  return parts.join("|");
+}
+
+/**
+ * Build nodes and edges from a spec.
+ */
+function buildNodesAndEdges(spec: ComponentSpecEntity): {
+  nodes: Node[];
+  edges: Edge[];
+} {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
-
-  if (!spec) {
-    return { nodes, edges };
-  }
 
   // Create nodes for graph inputs - use $id for stable node IDs
   const inputs = spec.inputs.getAll();
@@ -184,4 +224,51 @@ export function useSpecToNodesEdges() {
   }
 
   return { nodes, edges };
+}
+
+/**
+ * Convert a ComponentSpecEntity to ReactFlow nodes and edges.
+ *
+ * Node data only contains stable entity $id references.
+ * Node components fetch actual data from the store using these ids,
+ * which ensures valtio reactivity works correctly.
+ *
+ * Uses caching with fingerprint-based change detection to avoid
+ * creating new references on every render (which would cause infinite loops).
+ *
+ * @param spec - The ComponentSpecEntity to convert (must be a valtio proxy)
+ * @returns Object containing nodes and edges arrays for ReactFlow
+ */
+export function useSpecToNodesEdges(spec: ComponentSpecEntity | null) {
+  // Cache the result to avoid infinite loops
+  const cacheRef = useRef<{
+    fingerprint: string;
+    result: { nodes: Node[]; edges: Edge[] };
+  }>({ fingerprint: "", result: EMPTY_RESULT });
+
+  // Create a stable dummy object for when spec is null
+  // This allows useSnapshot to be called unconditionally
+  const dummySpec = useRef({ name: "" });
+
+  // Use valtio snapshot to subscribe to spec changes
+  // The snapshot triggers re-renders when the spec is mutated
+  const snapshot = useSnapshot(spec ?? dummySpec.current);
+
+  // Create a fingerprint of the current spec structure
+  // IMPORTANT: Pass snapshot to createSpecFingerprint so Valtio tracks the accessed properties
+  const currentFingerprint = spec ? createSpecFingerprint(spec, snapshot) : "";
+
+  // Only recalculate if the fingerprint changed
+  if (currentFingerprint !== cacheRef.current.fingerprint) {
+    if (!spec) {
+      cacheRef.current = { fingerprint: "", result: EMPTY_RESULT };
+    } else {
+      cacheRef.current = {
+        fingerprint: currentFingerprint,
+        result: buildNodesAndEdges(spec),
+      };
+    }
+  }
+
+  return cacheRef.current.result;
 }

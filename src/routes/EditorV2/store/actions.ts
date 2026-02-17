@@ -8,7 +8,7 @@ import type { OutputEntity } from "@/providers/ComponentSpec/outputs";
 import { EDITOR_POSITION_ANNOTATION } from "@/utils/annotations";
 import type { ComponentReference, ComponentSpec } from "@/utils/componentSpec";
 
-import { editorStore } from "./editorStore";
+import { getCurrentSpec } from "./navigationStore";
 
 /**
  * Check if the spec has a graph implementation.
@@ -21,9 +21,10 @@ function hasGraphImplementation(
 
 /**
  * Update the position of an entity (task, input, or output) by its $id.
+ * Uses the current spec from navigation state.
  */
 export function updateNodePosition(entityId: string, position: XYPosition) {
-  const { spec } = editorStore;
+  const spec = getCurrentSpec();
   if (!spec) return;
 
   // Try to find as task
@@ -132,12 +133,13 @@ function generateUniqueOutputName(
 
 /**
  * Add a new task to the graph.
+ * Uses the current spec from navigation state.
  */
 export function addTask(
   componentRef: ComponentReference,
   position: XYPosition,
 ) {
-  const { spec } = editorStore;
+  const spec = getCurrentSpec();
 
   if (!hasGraphImplementation(spec)) {
     console.error("Cannot add task: spec has no graph implementation");
@@ -172,9 +174,10 @@ export function addTask(
 
 /**
  * Add a new input node to the graph.
+ * Uses the current spec from navigation state.
  */
 export function addInput(position: XYPosition, name?: string) {
-  const { spec } = editorStore;
+  const spec = getCurrentSpec();
 
   if (!spec) {
     console.error("Cannot add input: no spec loaded");
@@ -198,9 +201,10 @@ export function addInput(position: XYPosition, name?: string) {
 
 /**
  * Add a new output node to the graph.
+ * Uses the current spec from navigation state.
  */
 export function addOutput(position: XYPosition, name?: string) {
-  const { spec } = editorStore;
+  const spec = getCurrentSpec();
 
   if (!spec) {
     console.error("Cannot add output: no spec loaded");
@@ -254,6 +258,7 @@ function getNodeTypeFromId(nodeId: string): "input" | "output" | "task" | null {
 
 /**
  * Connect two nodes by creating a binding.
+ * Uses the current spec from navigation state.
  *
  * Handles these connection types:
  * - Task output → Task input (taskOutput binding)
@@ -263,7 +268,7 @@ function getNodeTypeFromId(nodeId: string): "input" | "output" | "task" | null {
  * Node IDs are entity $ids in the format: root.{specName}.{collection}_{number}
  */
 export function connectNodes(connection: ConnectionInfo) {
-  const { spec } = editorStore;
+  const spec = getCurrentSpec();
 
   if (!hasGraphImplementation(spec)) {
     console.error("Cannot connect: spec has no graph implementation");
@@ -355,11 +360,12 @@ export function connectNodes(connection: ConnectionInfo) {
 
 /**
  * Delete a task by its entity $id.
+ * Uses the current spec from navigation state.
  *
  * Bindings referencing this task are automatically cleaned up via reactive subscriptions.
  */
 export function deleteTask(entityId: string) {
-  const { spec } = editorStore;
+  const spec = getCurrentSpec();
 
   if (!hasGraphImplementation(spec)) {
     console.error("Cannot delete task: spec has no graph implementation");
@@ -379,11 +385,12 @@ export function deleteTask(entityId: string) {
 
 /**
  * Delete an input by its entity $id.
+ * Uses the current spec from navigation state.
  *
  * Bindings referencing this input are automatically cleaned up via reactive subscriptions.
  */
 export function deleteInput(entityId: string) {
-  const { spec } = editorStore;
+  const spec = getCurrentSpec();
 
   if (!spec) {
     console.error("Cannot delete input: no spec loaded");
@@ -403,11 +410,12 @@ export function deleteInput(entityId: string) {
 
 /**
  * Delete an output by its entity $id.
+ * Uses the current spec from navigation state.
  *
  * Bindings referencing this output are automatically cleaned up via reactive subscriptions.
  */
 export function deleteOutput(entityId: string) {
-  const { spec } = editorStore;
+  const spec = getCurrentSpec();
 
   if (!spec) {
     console.error("Cannot delete output: no spec loaded");
@@ -427,11 +435,12 @@ export function deleteOutput(entityId: string) {
 
 /**
  * Delete an edge by its binding $id.
+ * Uses the current spec from navigation state.
  *
  * Edge format: `edge_{binding.$id}`
  */
 export function deleteEdge(edgeId: string) {
-  const { spec } = editorStore;
+  const spec = getCurrentSpec();
 
   if (!hasGraphImplementation(spec)) {
     console.error("Cannot delete edge: spec has no graph implementation");
@@ -459,9 +468,10 @@ export function deleteEdge(edgeId: string) {
 
 /**
  * Rename a task by its entity $id.
+ * Uses the current spec from navigation state.
  */
 export function renameTask(entityId: string, newName: string) {
-  const { spec } = editorStore;
+  const spec = getCurrentSpec();
 
   if (!hasGraphImplementation(spec)) {
     console.error("Cannot rename: spec has no graph implementation");
@@ -495,9 +505,10 @@ export function renameTask(entityId: string, newName: string) {
 
 /**
  * Rename an input by its entity $id.
+ * Uses the current spec from navigation state.
  */
 export function renameInput(entityId: string, newName: string) {
-  const { spec } = editorStore;
+  const spec = getCurrentSpec();
 
   if (!spec) {
     console.error("Cannot rename: no spec loaded");
@@ -527,10 +538,11 @@ export function renameInput(entityId: string, newName: string) {
 }
 
 /**
- * Rename the pipeline.
+ * Rename the current spec (pipeline or subgraph).
+ * Uses the current spec from navigation state.
  */
 export function renamePipeline(newName: string) {
-  const { spec } = editorStore;
+  const spec = getCurrentSpec();
 
   if (!spec) {
     console.error("Cannot rename: no spec loaded");
@@ -542,10 +554,11 @@ export function renamePipeline(newName: string) {
 }
 
 /**
- * Update the pipeline description.
+ * Update the current spec description.
+ * Uses the current spec from navigation state.
  */
 export function updatePipelineDescription(description: string | undefined) {
-  const { spec } = editorStore;
+  const spec = getCurrentSpec();
 
   if (!spec) {
     console.error("Cannot update description: no spec loaded");
@@ -558,12 +571,13 @@ export function updatePipelineDescription(description: string | undefined) {
 
 /**
  * Rename an output by its entity $id.
+ * Uses the current spec from navigation state.
  *
  * Bindings use $id references, so renaming doesn't affect bindings.
  * The binding's targetPortName is updated during serialization.
  */
 export function renameOutput(entityId: string, newName: string) {
-  const { spec } = editorStore;
+  const spec = getCurrentSpec();
 
   if (!spec) {
     console.error("Cannot rename: no spec loaded");
@@ -595,6 +609,7 @@ export function renameOutput(entityId: string, newName: string) {
 
 /**
  * Create a subgraph from selected task names.
+ * Uses the current spec from navigation state.
  *
  * This is an advanced feature that:
  * 1. Creates a new ComponentSpec containing the selected tasks
@@ -611,7 +626,7 @@ export function createSubgraph(
   subgraphName: string,
   position: XYPosition,
 ) {
-  const { spec } = editorStore;
+  const spec = getCurrentSpec();
 
   if (!hasGraphImplementation(spec)) {
     console.error("Cannot create subgraph: spec has no graph implementation");
@@ -775,14 +790,7 @@ export function createSubgraph(
   // Detach tasks from parent and attach to subgraph
   // The attach method updates the task's context automatically
   for (const task of selectedTasks) {
-    // Remove position annotation (subgraph tasks will need new positions)
-    const positionAnnotation = task.annotations
-      .getAll()
-      .find((a) => a.key === EDITOR_POSITION_ANNOTATION);
-    if (positionAnnotation) {
-      task.annotations.removeById(positionAnnotation.$id);
-    }
-
+   
     const detached = spec.implementation.tasks.detach(task);
     subgraphSpecEntity.implementation.tasks.attach(detached);
   }

@@ -12,6 +12,7 @@ import { GraphImplementation } from "@/providers/ComponentSpec/graphImplementati
 
 import { renameInput, renameOutput, renameTask } from "../store/actions";
 import { editorStore } from "../store/editorStore";
+import { getCurrentSpec, navigationStore } from "../store/navigationStore";
 import { MultiSelectionDetails } from "./MultiSelectionDetails";
 import { TaskAnnotationsEditor } from "./TaskAnnotationsEditor";
 
@@ -22,7 +23,14 @@ import { TaskAnnotationsEditor } from "./TaskAnnotationsEditor";
  */
 export function ContextPanelContent() {
   const snapshot = useSnapshot(editorStore);
-  const { selectedNodeId, selectedNodeType, spec, multiSelection } = snapshot;
+  const { selectedNodeId, selectedNodeType, multiSelection } = snapshot;
+
+  // Subscribe to navigation changes to trigger re-renders
+  const navSnapshot = useSnapshot(navigationStore);
+  void navSnapshot.navigationPath.length;
+
+  // Get the current spec from navigation state
+  const spec = getCurrentSpec();
 
   // Multi-selection takes priority
   if (multiSelection.length > 1) {
@@ -62,8 +70,8 @@ interface TaskDetailsProps {
 }
 
 function TaskDetails({ entityId }: TaskDetailsProps) {
-  const snapshot = useSnapshot(editorStore);
-  const spec = snapshot.spec;
+  // Use getCurrentSpec() to get the correct spec based on navigation state
+  const spec = getCurrentSpec();
 
   if (
     !spec?.implementation ||
@@ -179,8 +187,8 @@ interface InputDetailsProps {
 }
 
 function InputDetails({ entityId }: InputDetailsProps) {
-  const snapshot = useSnapshot(editorStore);
-  const spec = snapshot.spec;
+  // Use getCurrentSpec() to get the correct spec based on navigation state
+  const spec = getCurrentSpec();
   if (!spec) return null;
 
   // Get input directly from entities using $id
@@ -261,8 +269,8 @@ interface OutputDetailsProps {
 }
 
 function OutputDetails({ entityId }: OutputDetailsProps) {
-  const snapshot = useSnapshot(editorStore);
-  const spec = snapshot.spec;
+  // Use getCurrentSpec() to get the correct spec based on navigation state
+  const spec = getCurrentSpec();
   if (!spec) return null;
 
   // Get output directly from entities using $id

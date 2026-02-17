@@ -1,5 +1,4 @@
 import { Handle, type Node, type NodeProps, Position } from "@xyflow/react";
-import { useSnapshot } from "valtio";
 
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
@@ -7,8 +6,9 @@ import { InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 
+import { useCurrentSpec } from "../hooks/useCurrentSpec";
 import type { IONodeData } from "../hooks/useSpecToNodesEdges";
-import { editorStore, selectNode } from "../store/editorStore";
+import { selectNode } from "../store/editorStore";
 
 type IONodeType = Node<IONodeData, "io">;
 type IONodeProps = NodeProps<IONodeType>;
@@ -25,17 +25,16 @@ function typeToString(type: unknown): string | undefined {
 export function IONode({ id, data, selected }: IONodeProps) {
   const { entityId, ioType } = data;
 
-  // Access the store directly to get the entity
-  // Valtio tracks mutations automatically since entities are wrapped with proxy()
-  const snapshot = useSnapshot(editorStore);
-  const spec = snapshot.spec;
+  // Get the current spec from navigation state
+  // This ensures we look up inputs/outputs from the correct spec when navigating subgraphs
+  const spec = useCurrentSpec();
 
   const isInput = ioType === "input";
 
   // Find the entity by its stable $id
   const entity = isInput
-    ? spec?.inputs.entities[entityId]
-    : spec?.outputs.entities[entityId];
+    ? spec?.inputs.findById(entityId)
+    : spec?.outputs.findById(entityId);
 
   const handleClick = (event: React.MouseEvent) => {
     selectNode(id, ioType, {

@@ -3,7 +3,7 @@ import "@xyflow/react/dist/style.css";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { ReactFlowProvider } from "@xyflow/react";
 import { useEffect, useRef, useState } from "react";
-import { subscribe } from "valtio";
+import { subscribe, useSnapshot } from "valtio";
 
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { ComponentLibraryProvider } from "@/providers/ComponentLibraryProvider";
@@ -17,7 +17,16 @@ import { DebugPanel } from "./components/DebugPanel";
 import { FlowCanvas } from "./components/FlowCanvas";
 import { PinnedTaskContent } from "./components/PinnedTaskContent";
 import { PipelineDetailsContent } from "./components/PipelineDetailsContent";
+import { PipelineTreeContent } from "./components/PipelineTreeContent";
 import { editorStore, initializeStore } from "./store/editorStore";
+import {
+  clearNavigation,
+  getCurrentSpec,
+  initNavigation,
+  isTaskSubgraph,
+  navigateToSubgraph,
+  navigationStore,
+} from "./store/navigationStore";
 import { TaskPanel } from "./windows/TaskPanel";
 import { WindowContainer } from "./windows/WindowContainer";
 import {
@@ -25,6 +34,7 @@ import {
   closeWindowsByLinkedEntity,
   getAllWindows,
   getWindowById,
+  hideWindow,
   openWindow,
   restoreWindow,
 } from "./windows/windowStore";
@@ -58,6 +68,7 @@ function useLoadSpec() {
 const CONTEXT_PANEL_WINDOW_ID = "context-panel";
 const COMPONENT_LIBRARY_WINDOW_ID = "component-library";
 const PIPELINE_DETAILS_WINDOW_ID = "pipeline-details";
+const PIPELINE_TREE_WINDOW_ID = "pipeline-tree";
 
 /** Generate a unique ID for pinned windows */
 function generatePinnedWindowId(): string {
@@ -82,11 +93,15 @@ const PipelineEditor = withSuspenseWrapper(() => {
   // Track previous task entity IDs to detect deletions
   const prevTaskEntityIdsRef = useRef<Set<string>>(new Set());
 
-  // Initialize the valtio store with the loaded spec
-  // The spec is wrapped in proxy() inside initializeStore for deep reactivity
+  // Subscribe to navigation store for re-renders when current spec changes
+  const navSnapshot = useSnapshot(navigationStore);
+  const currentSpec = getCurrentSpec();
+
+  // Initialize the valtio store and navigation with the loaded spec
   useEffect(() => {
     if (spec) {
       initializeStore(spec);
+      initNavigation(spec);
 
       // Subscribe to the proxied spec AFTER initializeStore has wrapped it
       // editorStore.spec is now the proxied version
@@ -126,10 +141,11 @@ const PipelineEditor = withSuspenseWrapper(() => {
 
       return () => {
         unsubscribe();
-        // Clear store on unmount
+        // Clear stores on unmount
         editorStore.spec = null;
         editorStore.selectedNodeId = null;
         editorStore.selectedNodeType = null;
+        clearNavigation();
       };
     }
   }, [spec]);
@@ -258,10 +274,53 @@ const PipelineEditor = withSuspenseWrapper(() => {
     }
   }, []);
 
+  // Open pipeline tree window on mount (hidden by default)
+  useEffect(() => {
+    const existingWindow = getWindowById(PIPELINE_TREE_WINDOW_ID);
+    if (!existingWindow) {
+      openWindow(<PipelineTreeContent />, {
+        id: PIPELINE_TREE_WINDOW_ID,
+        title: "Pipeline Structure",
+        position: { x: 300, y: 100 },
+        size: { width: 280, height: 400 },
+        disabledActions: ["close"],
+      });
+      // Hide it immediately so it starts in the TaskPanel
+      hideWindow(PIPELINE_TREE_WINDOW_ID);
+    }
+  }, []);
+
+  /**
+   * Handle double-click on task nodes for subgraph navigation.
+   * If the task is a subgraph, navigate into it.
+   */
+  const handleTaskDoubleClick = (taskEntityId: string) => {
+    // Check if the task is a subgraph
+    if (isTaskSubgraph(taskEntityId)) {
+      const success = navigateToSubgraph(taskEntityId);
+      if (success) {
+        // Clear selection when navigating into a subgraph
+        editorStore.selectedNodeId = null;
+        editorStore.selectedNodeType = null;
+      }
+    }
+  };
+
+  // Access navSnapshot.navigationPath to trigger re-renders when navigation changes
+  // This ensures currentSpec updates when navigating into/out of subgraphs
+  if (navSnapshot.navigationPath.length === 0) {
+    return null;
+  }
+
   return (
     <>
       <DebugPanel />
-      <FlowCanvas className="h-full" />
+      <FlowCanvas
+        key={currentSpec?.$id ?? "root"}
+        spec={currentSpec}
+        onTaskDoubleClick={handleTaskDoubleClick}
+        className="h-full"
+      />
       <WindowContainer />
       <TaskPanel />
     </>

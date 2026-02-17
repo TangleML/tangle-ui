@@ -4,7 +4,9 @@ import {
   Controls,
   type EdgeChange,
   MiniMap,
+  type Node,
   type NodeChange,
+  type NodeMouseHandler,
   type OnConnect,
   type OnSelectionChangeParams,
   ReactFlow,
@@ -18,12 +20,14 @@ import { useEffect, useRef, useState } from "react";
 
 import { BlockStack } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
+import type { ComponentSpecEntity } from "@/providers/ComponentSpec/componentSpec";
 import { hydrateComponentReference } from "@/services/componentService";
 import type {
   HydratedComponentReference,
   TaskSpec,
 } from "@/utils/componentSpec";
 
+import type { TaskNodeData } from "../hooks/useSpecToNodesEdges";
 import { useSpecToNodesEdges } from "../hooks/useSpecToNodesEdges";
 import {
   addInput,
@@ -53,22 +57,34 @@ const nodeTypes: Record<string, ComponentType<any>> = {
 };
 
 interface FlowCanvasProps {
+  /** The ComponentSpecEntity to render */
+  spec: ComponentSpecEntity | null;
+  /** Callback when a task node is double-clicked (for subgraph navigation) */
+  onTaskDoubleClick?: (taskEntityId: string) => void;
   className?: string;
 }
 
-export function FlowCanvas({ className }: FlowCanvasProps) {
+export function FlowCanvas({
+  spec,
+  onTaskDoubleClick,
+  className,
+}: FlowCanvasProps) {
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Get nodes and edges from the spec via valtio
-  const { nodes: specNodes, edges: specEdges } = useSpecToNodesEdges();
+  // Get nodes and edges from the spec
+  // useSpecToNodesEdges uses fingerprint-based caching to return stable references
+  const { nodes: specNodes, edges: specEdges } = useSpecToNodesEdges(spec);
 
   // Use ReactFlow's state management for nodes and edges
   const [nodes, setNodes, onNodesChange] = useNodesState(specNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(specEdges);
 
   // Sync spec changes to ReactFlow state
+  // This runs when spec is mutated (e.g., adding tasks, creating connections)
+  // The fingerprint-based caching in useSpecToNodesEdges ensures stable references,
+  // so this effect only runs when actual changes occur (not on every render)
   useEffect(() => {
     setNodes(specNodes);
     setEdges(specEdges);
@@ -220,6 +236,26 @@ export function FlowCanvas({ className }: FlowCanvasProps) {
     clearSelection();
   };
 
+  /**
+   * Handle double-click on nodes.
+   * For task nodes, triggers navigation into subgraphs if available.
+   */
+  const handleNodeDoubleClick: NodeMouseHandler = (
+    _event: React.MouseEvent,
+    node: Node,
+  ) => {
+    // Only handle task nodes
+    if (node.type !== "task") {
+      return;
+    }
+
+    const taskData = node.data as TaskNodeData;
+    const taskEntityId = taskData.entityId;
+
+    // Notify parent about the double-click (parent handles navigation)
+    onTaskDoubleClick?.(taskEntityId);
+  };
+
   return (
     <BlockStack ref={containerRef} fill className={cn("relative", className)}>
       <ReactFlow
@@ -233,6 +269,7 @@ export function FlowCanvas({ className }: FlowCanvasProps) {
         onPaneClick={handlePaneClick}
         onInit={setReactFlowInstance}
         onSelectionChange={handleSelectionChange}
+        onNodeDoubleClick={handleNodeDoubleClick}
         nodeTypes={nodeTypes}
         snapToGrid
         snapGrid={[GRID_SIZE, GRID_SIZE]}

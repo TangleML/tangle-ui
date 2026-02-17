@@ -8,7 +8,7 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { GraphImplementation } from "@/providers/ComponentSpec/graphImplementation";
 
-import { editorStore } from "../store/editorStore";
+import { getCurrentSpec, navigationStore } from "../store/navigationStore";
 
 interface TaskAnnotationsEditorProps {
   entityId: string;
@@ -22,8 +22,12 @@ interface TaskAnnotationsEditorProps {
 export function TaskAnnotationsEditor({
   entityId,
 }: TaskAnnotationsEditorProps) {
-  const snapshot = useSnapshot(editorStore);
-  const spec = snapshot.spec;
+  // Subscribe to navigation changes to trigger re-renders
+  const navSnapshot = useSnapshot(navigationStore);
+  void navSnapshot.navigationPath.length;
+
+  // Get the current spec from navigation state
+  const spec = getCurrentSpec();
 
   if (
     !spec?.implementation ||
@@ -43,9 +47,10 @@ export function TaskAnnotationsEditor({
     .filter((a) => !a.key.startsWith("editor."));
 
   const handleAddAnnotation = () => {
-    // Get mutable task from store (not snapshot)
+    // Get mutable task from current spec (not snapshot)
+    const mutableSpec = getCurrentSpec();
     const mutableTask =
-      editorStore.spec?.implementation?.tasks?.entities[entityId];
+      mutableSpec?.implementation?.tasks?.entities[entityId];
     if (mutableTask) {
       mutableTask.annotations.add({ key: "", value: "" });
     }
@@ -55,8 +60,9 @@ export function TaskAnnotationsEditor({
     annotationId: string,
     event: ChangeEvent<HTMLInputElement>,
   ) => {
+    const mutableSpec = getCurrentSpec();
     const mutableTask =
-      editorStore.spec?.implementation?.tasks?.entities[entityId];
+      mutableSpec?.implementation?.tasks?.entities[entityId];
     if (!mutableTask) return;
 
     const annotation = mutableTask.annotations.findById(annotationId);
@@ -69,8 +75,9 @@ export function TaskAnnotationsEditor({
     annotationId: string,
     event: ChangeEvent<HTMLInputElement>,
   ) => {
+    const mutableSpec = getCurrentSpec();
     const mutableTask =
-      editorStore.spec?.implementation?.tasks?.entities[entityId];
+      mutableSpec?.implementation?.tasks?.entities[entityId];
     if (!mutableTask) return;
 
     const annotation = mutableTask.annotations.findById(annotationId);
@@ -80,8 +87,9 @@ export function TaskAnnotationsEditor({
   };
 
   const handleRemoveAnnotation = (annotationId: string) => {
+    const mutableSpec = getCurrentSpec();
     const mutableTask =
-      editorStore.spec?.implementation?.tasks?.entities[entityId];
+      mutableSpec?.implementation?.tasks?.entities[entityId];
     if (mutableTask) {
       mutableTask.annotations.removeById(annotationId);
     }

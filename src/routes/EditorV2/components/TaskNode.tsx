@@ -1,23 +1,25 @@
 import { Handle, type Node, type NodeProps, Position } from "@xyflow/react";
-import { useSnapshot } from "valtio";
 
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { GraphImplementation } from "@/providers/ComponentSpec/graphImplementation";
 
+import { useCurrentSpec } from "../hooks/useCurrentSpec";
 import type { TaskNodeData } from "../hooks/useSpecToNodesEdges";
-import { editorStore, selectNode } from "../store/editorStore";
+import { selectNode } from "../store/editorStore";
 
 type TaskNodeType = Node<TaskNodeData, "task">;
 type TaskNodeProps = NodeProps<TaskNodeType>;
 
 /**
- * Check if spec has a graph implementation.
+ * Check if the editor store's spec has a graph implementation.
  */
-function hasGraphImplementation(
+function specHasGraphImplementation(
   spec: unknown,
 ): spec is { implementation: GraphImplementation } {
   if (!spec || typeof spec !== "object") return false;
@@ -25,17 +27,28 @@ function hasGraphImplementation(
   return s.implementation instanceof GraphImplementation;
 }
 
+/**
+ * Check if a task is a subgraph (its component has a graph implementation).
+ */
+function isTaskSubgraph(componentSpec: { implementation?: unknown } | undefined): boolean {
+  const implementation = componentSpec?.implementation;
+  if (!implementation || typeof implementation !== "object") {
+    return false;
+  }
+  // Check for graph property which indicates a graph implementation
+  return "graph" in implementation;
+}
+
 export function TaskNode({ id, data, selected }: TaskNodeProps) {
   const { entityId } = data;
 
-  // Access the store directly to get the task entity
-  // Valtio tracks mutations automatically since entities are wrapped with proxy()
-  const snapshot = useSnapshot(editorStore);
-  const spec = snapshot.spec;
+  // Get the current spec from navigation state
+  // This ensures we look up tasks from the correct spec when navigating subgraphs
+  const spec = useCurrentSpec();
 
   // Find the task entity by its stable $id
   const task =
-    spec && hasGraphImplementation(spec)
+    spec && specHasGraphImplementation(spec)
       ? spec.implementation.tasks.findById(entityId)
       : null;
 
@@ -62,22 +75,50 @@ export function TaskNode({ id, data, selected }: TaskNodeProps) {
   const outputs = componentSpec?.outputs ?? [];
   const description = componentSpec?.description ?? "";
 
+  // Check if this task is a subgraph (can be navigated into)
+  const isSubgraph = isTaskSubgraph(componentSpec);
+
   return (
     <Card
       className={cn(
         "min-w-[180px] max-w-[280px] rounded-xl border-2 p-0 drop-shadow-sm cursor-pointer transition-all",
         selected
           ? "border-blue-500 ring-2 ring-blue-200"
-          : "border-gray-200 hover:border-gray-300",
+          : isSubgraph
+            ? "border-purple-300 hover:border-purple-400"
+            : "border-gray-200 hover:border-gray-300",
       )}
       onClick={handleClick}
     >
       <CardHeader className="border-b border-slate-200 px-3 py-2">
         <InlineStack gap="2" wrap="nowrap" blockAlign="center">
-          <Icon name="Circle" size="sm" className="text-blue-600 shrink-0" />
-          <CardTitle className="truncate text-sm font-medium text-slate-900">
+          <Icon
+            name={isSubgraph ? "Layers" : "Circle"}
+            size="sm"
+            className={cn(
+              "shrink-0",
+              isSubgraph ? "text-purple-600" : "text-blue-600",
+            )}
+          />
+          <CardTitle className="truncate text-sm font-medium text-slate-900 flex-1">
             {task.name}
           </CardTitle>
+          {isSubgraph && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge
+                  variant="secondary"
+                  className="shrink-0 bg-purple-100 text-purple-700 text-[10px] px-1.5 py-0"
+                >
+                  <Icon name="FolderOpen" size="xs" className="mr-0.5" />
+                  Subgraph
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <Text size="xs">Double-click to navigate into this subgraph</Text>
+              </TooltipContent>
+            </Tooltip>
+          )}
         </InlineStack>
         {description && (
           <Text
