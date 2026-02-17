@@ -11,7 +11,8 @@ import { Text } from "@/components/ui/typography";
 import { GraphImplementation } from "@/providers/ComponentSpec/graphImplementation";
 
 import { useCurrentSpec } from "../hooks/useCurrentSpec";
-import { createSubgraph } from "../store/actions";
+import { executeCommand } from "../store/commandManager";
+import { CreateSubgraphCommand } from "../store/commands";
 import {
   clearMultiSelection,
   editorStore,
@@ -119,12 +120,14 @@ export function MultiSelectionDetails() {
       selectedTasks.reduce((sum, node) => sum + node.position.y, 0) /
       selectedTasks.length;
 
-    const result = createSubgraph(taskNames, subgraphName.trim(), {
-      x: centerX,
-      y: centerY,
-    });
+    const success = executeCommand(
+      new CreateSubgraphCommand(taskNames, subgraphName.trim(), {
+        x: centerX,
+        y: centerY,
+      }),
+    );
 
-    if (result) {
+    if (success) {
       setSubgraphName("");
       clearMultiSelection();
     }

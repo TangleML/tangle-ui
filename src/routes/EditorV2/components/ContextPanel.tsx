@@ -10,7 +10,12 @@ import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { GraphImplementation } from "@/providers/ComponentSpec/graphImplementation";
 
-import { renameInput, renameOutput, renameTask } from "../store/actions";
+import { executeCommand } from "../store/commandManager";
+import {
+  RenameInputCommand,
+  RenameOutputCommand,
+  RenameTaskCommand,
+} from "../store/commands";
 import { editorStore } from "../store/editorStore";
 import { getCurrentSpec, navigationStore } from "../store/navigationStore";
 import { MultiSelectionDetails } from "./MultiSelectionDetails";
@@ -91,8 +96,7 @@ function TaskDetails({ entityId }: TaskDetailsProps) {
   const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
     const newName = event.target.value;
     if (newName && newName !== task.name) {
-      renameTask(entityId, newName);
-      console.log("task renamed 1", newName);
+      executeCommand(new RenameTaskCommand(entityId, newName));
     }
   };
 
@@ -198,7 +202,7 @@ function InputDetails({ entityId }: InputDetailsProps) {
   const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
     const newName = event.target.value;
     if (newName && newName !== input.name) {
-      renameInput(entityId, newName);
+      executeCommand(new RenameInputCommand(entityId, newName));
     }
   };
 
@@ -280,7 +284,7 @@ function OutputDetails({ entityId }: OutputDetailsProps) {
   const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
     const newName = event.target.value;
     if (newName && newName !== output.name) {
-      renameOutput(entityId, newName);
+      executeCommand(new RenameOutputCommand(entityId, newName));
     }
   };
 

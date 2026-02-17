@@ -9,7 +9,11 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Text } from "@/components/ui/typography";
 
-import { renamePipeline, updatePipelineDescription } from "../store/actions";
+import { executeCommand } from "../store/commandManager";
+import {
+  RenamePipelineCommand,
+  UpdateDescriptionCommand,
+} from "../store/commands";
 import { editorStore } from "../store/editorStore";
 
 /**
@@ -28,13 +32,13 @@ export function PipelineDetailsContent() {
   const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
     const newName = event.target.value;
     if (newName && newName !== spec.name) {
-      renamePipeline(newName);
+      executeCommand(new RenamePipelineCommand(newName));
     }
   };
 
   const handleDescriptionChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
     const newDescription = event.target.value;
-    updatePipelineDescription(newDescription || undefined);
+    executeCommand(new UpdateDescriptionCommand(newDescription || undefined));
   };
 
   const inputs = Object.values(spec.inputs.entities);

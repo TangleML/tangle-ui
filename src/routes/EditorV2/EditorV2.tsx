@@ -19,6 +19,7 @@ import { HistoryContent } from "./components/HistoryContent";
 import { PinnedTaskContent } from "./components/PinnedTaskContent";
 import { PipelineDetailsContent } from "./components/PipelineDetailsContent";
 import { PipelineTreeContent } from "./components/PipelineTreeContent";
+import { clearCommandHistory, redo, undo } from "./store/commandManager";
 import { editorStore, initializeStore } from "./store/editorStore";
 import {
   addHistoryEntry,
@@ -160,6 +161,7 @@ const PipelineEditor = withSuspenseWrapper(() => {
         editorStore.selectedNodeType = null;
         clearNavigation();
         clearHistory();
+        clearCommandHistory();
       };
     }
   }, [spec]);
@@ -318,6 +320,52 @@ const PipelineEditor = withSuspenseWrapper(() => {
       // Hide it immediately so it starts in the TaskPanel
       hideWindow(HISTORY_WINDOW_ID);
     }
+  }, []);
+
+  // Keyboard shortcuts for undo/redo
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Check for Cmd/Ctrl+Z (undo) or Cmd/Ctrl+Shift+Z (redo)
+      if ((event.metaKey || event.ctrlKey) && event.key === "z") {
+        // Don't intercept if user is typing in an input field
+        const target = event.target as HTMLElement;
+        if (
+          target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable
+        ) {
+          return;
+        }
+
+        event.preventDefault();
+
+        if (event.shiftKey) {
+          redo();
+        } else {
+          undo();
+        }
+      }
+
+      // Also support Cmd/Ctrl+Y for redo (Windows convention)
+      if ((event.metaKey || event.ctrlKey) && event.key === "y") {
+        const target = event.target as HTMLElement;
+        if (
+          target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable
+        ) {
+          return;
+        }
+
+        event.preventDefault();
+        redo();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
   }, []);
 
   /**

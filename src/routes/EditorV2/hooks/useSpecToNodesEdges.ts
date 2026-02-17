@@ -79,6 +79,19 @@ const EMPTY_RESULT: { nodes: Node[]; edges: Edge[] } = { nodes: [], edges: [] };
  * Valtio subscriptions. The snapshot is a readonly view, so we access the
  * entities record directly which is tracked by Valtio.
  */
+/**
+ * Extract position string from annotations snapshot for fingerprinting.
+ */
+function getPositionFingerprint(
+  annotations: Record<string, { key: string; value: unknown }> | undefined,
+): string {
+  if (!annotations) return "";
+  const posAnnotation = Object.values(annotations).find(
+    (a) => a.key === EDITOR_POSITION_ANNOTATION,
+  );
+  return posAnnotation ? String(posAnnotation.value) : "";
+}
+
 function createSpecFingerprint(
   spec: ComponentSpecEntity,
   snapshot: unknown,
@@ -86,36 +99,72 @@ function createSpecFingerprint(
   // Cast snapshot to access its properties (readonly view of spec)
   const snap = snapshot as {
     $id: string;
-    inputs: { entities: Record<string, { $id: string; name: string }> };
-    outputs: { entities: Record<string, { $id: string; name: string }> };
+    inputs: {
+      entities: Record<
+        string,
+        {
+          $id: string;
+          name: string;
+          annotations?: { entities: Record<string, { key: string; value: unknown }> };
+        }
+      >;
+    };
+    outputs: {
+      entities: Record<
+        string,
+        {
+          $id: string;
+          name: string;
+          annotations?: { entities: Record<string, { key: string; value: unknown }> };
+        }
+      >;
+    };
     implementation?: {
-      tasks: { entities: Record<string, { $id: string; name: string }> };
+      tasks: {
+        entities: Record<
+          string,
+          {
+            $id: string;
+            name: string;
+            annotations: { entities: Record<string, { key: string; value: unknown }> };
+          }
+        >;
+      };
       bindings: { entities: Record<string, { $id: string }> };
     };
   };
 
   const parts: string[] = [snap.$id];
 
-  // Input IDs and names - access through snapshot to establish subscription
-  // Include names so fingerprint changes when inputs are renamed
+  // Input IDs, names, and positions - access through snapshot to establish subscription
+  // Include positions so fingerprint changes when inputs are moved (for undo support)
   const inputEntries = Object.entries(snap.inputs.entities)
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([id, entity]) => `${id}:${entity.name}`);
+    .map(
+      ([id, entity]) =>
+        `${id}:${entity.name}:${getPositionFingerprint(entity.annotations?.entities)}`,
+    );
   parts.push(`i:${inputEntries.join(",")}`);
 
-  // Output IDs and names - access through snapshot to establish subscription
-  // Include names so fingerprint changes when outputs are renamed
+  // Output IDs, names, and positions - access through snapshot to establish subscription
+  // Include positions so fingerprint changes when outputs are moved (for undo support)
   const outputEntries = Object.entries(snap.outputs.entities)
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([id, entity]) => `${id}:${entity.name}`);
+    .map(
+      ([id, entity]) =>
+        `${id}:${entity.name}:${getPositionFingerprint(entity.annotations?.entities)}`,
+    );
   parts.push(`o:${outputEntries.join(",")}`);
 
-  // Task IDs, names, and bindings (if graph implementation)
+  // Task IDs, names, positions, and bindings (if graph implementation)
   if (hasGraphImplementation(spec) && snap.implementation) {
-    // Include task names so fingerprint changes when tasks are renamed
+    // Include task positions so fingerprint changes when tasks are moved (for undo support)
     const taskEntries = Object.entries(snap.implementation.tasks.entities)
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([id, entity]) => `${id}:${entity.name}`);
+      .map(
+        ([id, entity]) =>
+          `${id}:${entity.name}:${getPositionFingerprint(entity.annotations.entities)}`,
+      );
     parts.push(`t:${taskEntries.join(",")}`);
 
     const bindingIds = Object.keys(snap.implementation.bindings.entities).sort();
