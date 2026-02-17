@@ -1,18 +1,13 @@
 import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 
-import { BUILDINGS } from "../data/buildings";
-import type { BuildingCategory, BuildingType } from "../types/buildings";
-import { BUILDING_TYPES } from "../types/buildings";
+import { BUILDING_TYPES, BUILDINGS } from "../data/buildings";
+import {
+  BUILDING_CATEGORIES,
+  type BuildingCategory,
+  type BuildingType,
+} from "../types/buildings";
 import BuildingFolder from "./BuildingFolder";
-
-const CATEGORY_ORDER: BuildingCategory[] = [
-  "special",
-  "production",
-  "refining",
-  "utility",
-  "storage",
-];
 
 const Buildings = () => {
   // Group buildings by category
@@ -22,15 +17,15 @@ const Buildings = () => {
     <BlockStack gap="2">
       <Text>Buildings</Text>
       <BlockStack gap="2">
-        {CATEGORY_ORDER.map((category) => {
-          const buildings = buildingsByCategory.get(category) || [];
+        {BUILDING_CATEGORIES.map((category) => {
+          const buildings = buildingsByCategory.get(category.type) || [];
 
           if (buildings.length === 0) return null;
 
           return (
             <BuildingFolder
-              key={category}
-              category={category}
+              key={category.type}
+              category={category.type}
               buildings={buildings}
             />
           );
@@ -45,8 +40,8 @@ export default Buildings;
 function getBuildingsByCategory() {
   const grouped = new Map<BuildingCategory, BuildingType[]>();
 
-  CATEGORY_ORDER.forEach((category) => {
-    grouped.set(category, []);
+  BUILDING_CATEGORIES.forEach((category) => {
+    grouped.set(category.type, []);
   });
 
   BUILDING_TYPES.forEach((buildingType) => {

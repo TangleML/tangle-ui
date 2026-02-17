@@ -3,8 +3,9 @@ import { useReactFlow, useUpdateNodeInternals } from "@xyflow/react";
 import { BlockStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 
+import { getBuildingDefinition } from "../../data/buildings";
 import { configureBuildingInstanceForMethod } from "../../objects/production/configureBuildingInstanceForMethod";
-import { type BuildingInstance, getBuildingType } from "../../types/buildings";
+import { type BuildingInstance } from "../../types/buildings";
 import type { ProductionMethod } from "../../types/production";
 import { ContextHeader } from "../shared/ContextHeader";
 import { BuildingDescription } from "./BuildingDescription";
@@ -21,7 +22,7 @@ const BuildingContext = ({ building, nodeId }: BuildingContextProps) => {
   const { updateNodeData, getEdges, setEdges } = useReactFlow();
   const updateNodeInternals = useUpdateNodeInternals();
 
-  const buildingClass = getBuildingType(building.type);
+  const buildingClass = getBuildingDefinition(building.type);
   const availableMethods = buildingClass.productionMethods;
 
   const {

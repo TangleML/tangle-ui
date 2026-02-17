@@ -14,6 +14,7 @@ export const RESOURCE_COLORS: Record<ResourceType, string> = {
   paper: "#FFFFE0",
   books: "#FFD700",
   livestock: "#A52A2A",
+  horses: "#D2B48C",
   leather: "#DEB887",
   meat: "#FF6347",
   coal: "#36454F",
@@ -43,6 +44,7 @@ export const RESOURCE_VALUES: Record<ResourceType, number> = {
   paper: 1,
   books: 65,
   livestock: 50,
+  horses: 100,
   leather: 10,
   meat: 8,
   coal: 2,
@@ -155,6 +157,14 @@ export const RESOURCES = {
     value: RESOURCE_VALUES.livestock,
     icon: "🐄",
   },
+  horses: {
+    name: "Horses",
+    description:
+      "Horses are valuable animals used for transportation and labor.",
+    color: RESOURCE_COLORS.horses,
+    value: RESOURCE_VALUES.horses,
+    icon: "🐎",
+  },
   leather: {
     name: "Leather",
     description: "Leather is a durable material made from animal hides.",
@@ -167,7 +177,7 @@ export const RESOURCES = {
     description: "Meat is a source of food and nutrition.",
     color: RESOURCE_COLORS.meat,
     value: RESOURCE_VALUES.meat,
-    foodValue: 5,
+    foodValue: 12,
     icon: "🍖",
   },
   coal: {
@@ -206,7 +216,7 @@ export const RESOURCES = {
     description: "Fish are aquatic animals that can be caught for food.",
     color: RESOURCE_COLORS.fish,
     value: RESOURCE_VALUES.fish,
-    foodValue: 2,
+    foodValue: 4,
     icon: "🐟",
   },
   tools: {

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState } from "react";
 
-import type { DayStatistics } from "../types/statistics";
+import type { DayStatistics, EdgeStatistics } from "../types/statistics";
 
 interface StatisticsContextType {
   history: DayStatistics[];
@@ -12,6 +12,10 @@ interface StatisticsContextType {
     ? T | undefined
     : never;
   getLatestDayStats: () => DayStatistics | undefined;
+  getLatestEdgeStats: (
+    edgeId: string,
+    includeBreakdown?: boolean,
+  ) => EdgeStatistics[];
   resetStatistics: () => void;
 }
 
@@ -42,6 +46,34 @@ export const StatisticsProvider: React.FC<{ children: React.ReactNode }> = ({
     return history[history.length - 1];
   };
 
+  /**
+   * Get edge-specific transfer statistics
+   * @param edgeId - The edge ID to get stats for
+   * @param includeBreakdown - If true, also includes stats for "any" edge breakdown (e.g., "edge-123-berries")
+   */
+  const getLatestEdgeStats = (
+    edgeId: string,
+    includeBreakdown = false,
+  ): EdgeStatistics[] => {
+    if (history.length === 0) return [];
+    const latestDay = history[history.length - 1];
+
+    if (!includeBreakdown) {
+      const stat = latestDay.edges.get(edgeId);
+      return stat ? [stat] : [];
+    }
+
+    // For "any" edges, collect all stats that start with this edge ID
+    const results: EdgeStatistics[] = [];
+    latestDay.edges.forEach((stat, key) => {
+      if (key === edgeId || key.startsWith(`${edgeId}-`)) {
+        results.push(stat);
+      }
+    });
+
+    return results;
+  };
+
   const resetStatistics = () => {
     setHistory([]);
   };
@@ -54,6 +86,7 @@ export const StatisticsProvider: React.FC<{ children: React.ReactNode }> = ({
         currentDay,
         getLatestBuildingStats,
         getLatestDayStats,
+        getLatestEdgeStats,
         resetStatistics,
       }}
     >
