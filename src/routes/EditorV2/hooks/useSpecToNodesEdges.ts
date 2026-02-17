@@ -50,16 +50,22 @@ function hasGraphImplementation(
 }
 
 /**
- * Node data contains only stable entity $id.
- * Node components fetch actual data from the store using this id.
+ * Node data for task nodes.
+ * Contains entity $id and name for display/reactivity.
  */
 export interface TaskNodeData extends Record<string, unknown> {
   entityId: string;
+  name: string;
 }
 
+/**
+ * Node data for IO nodes (inputs/outputs).
+ * Contains entity $id, type, and name for display/handle IDs.
+ */
 export interface IONodeData extends Record<string, unknown> {
   entityId: string;
   ioType: "input" | "output";
+  name: string;
 }
 
 /** Empty result for when spec is null */
@@ -67,7 +73,7 @@ const EMPTY_RESULT: { nodes: Node[]; edges: Edge[] } = { nodes: [], edges: [] };
 
 /**
  * Create a fingerprint of the spec's structure for change detection.
- * This includes counts and IDs of inputs, outputs, tasks, and bindings.
+ * This includes IDs and names of inputs, outputs, tasks, and bindings.
  *
  * IMPORTANT: This function must access data through the snapshot to establish
  * Valtio subscriptions. The snapshot is a readonly view, so we access the
@@ -80,28 +86,37 @@ function createSpecFingerprint(
   // Cast snapshot to access its properties (readonly view of spec)
   const snap = snapshot as {
     $id: string;
-    inputs: { entities: Record<string, { $id: string }> };
-    outputs: { entities: Record<string, { $id: string }> };
+    inputs: { entities: Record<string, { $id: string; name: string }> };
+    outputs: { entities: Record<string, { $id: string; name: string }> };
     implementation?: {
-      tasks: { entities: Record<string, { $id: string }> };
+      tasks: { entities: Record<string, { $id: string; name: string }> };
       bindings: { entities: Record<string, { $id: string }> };
     };
   };
 
   const parts: string[] = [snap.$id];
 
-  // Input IDs - access through snapshot to establish subscription
-  const inputIds = Object.keys(snap.inputs.entities).sort();
-  parts.push(`i:${inputIds.join(",")}`);
+  // Input IDs and names - access through snapshot to establish subscription
+  // Include names so fingerprint changes when inputs are renamed
+  const inputEntries = Object.entries(snap.inputs.entities)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([id, entity]) => `${id}:${entity.name}`);
+  parts.push(`i:${inputEntries.join(",")}`);
 
-  // Output IDs - access through snapshot to establish subscription
-  const outputIds = Object.keys(snap.outputs.entities).sort();
-  parts.push(`o:${outputIds.join(",")}`);
+  // Output IDs and names - access through snapshot to establish subscription
+  // Include names so fingerprint changes when outputs are renamed
+  const outputEntries = Object.entries(snap.outputs.entities)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([id, entity]) => `${id}:${entity.name}`);
+  parts.push(`o:${outputEntries.join(",")}`);
 
-  // Task IDs and bindings (if graph implementation)
+  // Task IDs, names, and bindings (if graph implementation)
   if (hasGraphImplementation(spec) && snap.implementation) {
-    const taskIds = Object.keys(snap.implementation.tasks.entities).sort();
-    parts.push(`t:${taskIds.join(",")}`);
+    // Include task names so fingerprint changes when tasks are renamed
+    const taskEntries = Object.entries(snap.implementation.tasks.entities)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([id, entity]) => `${id}:${entity.name}`);
+    parts.push(`t:${taskEntries.join(",")}`);
 
     const bindingIds = Object.keys(snap.implementation.bindings.entities).sort();
     parts.push(`b:${bindingIds.join(",")}`);
@@ -137,6 +152,7 @@ function buildNodesAndEdges(spec: ComponentSpecEntity): {
       data: {
         entityId: input.$id,
         ioType: "input",
+        name: input.name,
       } satisfies IONodeData,
     });
   });
@@ -158,6 +174,7 @@ function buildNodesAndEdges(spec: ComponentSpecEntity): {
       data: {
         entityId: output.$id,
         ioType: "output",
+        name: output.name,
       } satisfies IONodeData,
     });
   });
@@ -181,6 +198,7 @@ function buildNodesAndEdges(spec: ComponentSpecEntity): {
             : position,
         data: {
           entityId: task.$id,
+          name: task.name,
         } satisfies TaskNodeData,
       });
     });

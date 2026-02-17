@@ -23,7 +23,7 @@ function typeToString(type: unknown): string | undefined {
 }
 
 export function IONode({ id, data, selected }: IONodeProps) {
-  const { entityId, ioType } = data;
+  const { entityId, ioType, name } = data;
 
   // Get the current spec from navigation state
   // This ensures we look up inputs/outputs from the correct spec when navigating subgraphs
@@ -31,7 +31,7 @@ export function IONode({ id, data, selected }: IONodeProps) {
 
   const isInput = ioType === "input";
 
-  // Find the entity by its stable $id
+  // Find the entity by its stable $id for additional properties (type, description)
   const entity = isInput
     ? spec?.inputs.findById(entityId)
     : spec?.outputs.findById(entityId);
@@ -43,19 +43,10 @@ export function IONode({ id, data, selected }: IONodeProps) {
     });
   };
 
-  if (!entity) {
-    return (
-      <Card className="min-w-[120px] max-w-[180px] rounded-xl border-2 border-red-300 p-4">
-        <Text size="sm" tone="subdued">
-          {isInput ? "Input" : "Output"} not found: {entityId}
-        </Text>
-      </Card>
-    );
-  }
-
-  const name = entity.name;
-  const type = typeToString(entity.type);
-  const description = entity.description;
+  // Use name from data (which is rebuilt when fingerprint changes)
+  // and entity for additional properties like type/description
+  const type = typeToString(entity?.type);
+  const description = entity?.description;
 
   return (
     <Card

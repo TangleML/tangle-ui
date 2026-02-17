@@ -40,13 +40,13 @@ function isTaskSubgraph(componentSpec: { implementation?: unknown } | undefined)
 }
 
 export function TaskNode({ id, data, selected }: TaskNodeProps) {
-  const { entityId } = data;
+  const { entityId, name } = data;
 
   // Get the current spec from navigation state
   // This ensures we look up tasks from the correct spec when navigating subgraphs
   const spec = useCurrentSpec();
 
-  // Find the task entity by its stable $id
+  // Find the task entity by its stable $id for additional properties
   const task =
     spec && specHasGraphImplementation(spec)
       ? spec.implementation.tasks.findById(entityId)
@@ -78,6 +78,9 @@ export function TaskNode({ id, data, selected }: TaskNodeProps) {
   // Check if this task is a subgraph (can be navigated into)
   const isSubgraph = isTaskSubgraph(componentSpec);
 
+  // Use name from data (which is rebuilt when fingerprint changes)
+  const taskName = name;
+
   return (
     <Card
       className={cn(
@@ -101,7 +104,7 @@ export function TaskNode({ id, data, selected }: TaskNodeProps) {
             )}
           />
           <CardTitle className="truncate text-sm font-medium text-slate-900 flex-1">
-            {task.name}
+            {taskName}
           </CardTitle>
           {isSubgraph && (
             <Tooltip>
