@@ -37,12 +37,14 @@ const ResourceEdge = ({
     clearContent,
     setOpen: setContextPanelOpen,
   } = useContextPanel();
-  const { getLatestBuildingStats } = useStatistics();
 
-  const sourceStats = getLatestBuildingStats(source);
-  const resourcesTransferred = sourceStats?.stockpileChanges.filter(
-    (c) => c.removed > 0,
-  );
+  const { getLatestEdgeStats } = useStatistics();
+
+  const edgeResource = isResourceData(data) ? data.type : undefined;
+  const edgeTransfers =
+    edgeResource === "any"
+      ? getLatestEdgeStats(id, true) // todo: saved stats appear to be incorrect after merging and splitting again (especially if it's a sushi belt) - note the correct amounts are transferred downstream to the building. it's just the value saved int he stats & shown onscreen that is wrong.
+      : getLatestEdgeStats(id);
 
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX,
@@ -68,6 +70,7 @@ const ResourceEdge = ({
           resource={data}
           sourceNodeId={source}
           targetNodeId={target}
+          edgeId={id}
         />,
       );
       setContextPanelOpen(true);
@@ -83,6 +86,7 @@ const ResourceEdge = ({
     data,
     source,
     target,
+    id,
     setContent,
     clearContent,
     setContextPanelOpen,
@@ -111,19 +115,17 @@ const ResourceEdge = ({
         }}
         interactionWidth={20}
       />
-      {resourcesTransferred && (
+      {edgeTransfers && edgeTransfers.length > 0 && (
         <EdgeLabelRenderer>
           <div
             style={{
               position: "absolute",
-              transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px) rotate(${labelRotation}deg) translate(0, -10px)`,
+              transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px) rotate(${labelRotation}deg) translateY(-8px)`,
               pointerEvents: "all",
             }}
             className="nodrag nopan"
           >
-            <TransportationFeedback
-              resourcesTransferred={resourcesTransferred}
-            />
+            <TransportationFeedback transfers={edgeTransfers} />
           </div>
         </EdgeLabelRenderer>
       )}

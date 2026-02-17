@@ -11,19 +11,126 @@ import type { ProductionMethod } from "../../types/production";
 import type { ResourceType } from "../../types/resources";
 
 const STOCKPILE_MULTIPLIER = 10;
+const MAX_HANDLES_PER_SIDE = 3;
 
 /**
- * Distributes handles evenly across all four sides
+ * Distributes handles in round-robin fashion across available sides
  */
-function distributeHandlesAcrossSides(count: number): Position[] {
+function distributeHandlesRoundRobin(
+  count: number,
+  excludeSide?: Position,
+): Position[] {
+  const availableSides = [
+    Position.Left,
+    Position.Right,
+    Position.Bottom,
+    Position.Top,
+  ].filter((side) => side !== excludeSide);
+
   const positions: Position[] = [];
-  const sides = [Position.Left, Position.Right, Position.Bottom, Position.Top];
 
   for (let i = 0; i < count; i++) {
-    positions.push(sides[i % 4]);
+    positions.push(availableSides[i % availableSides.length]);
   }
 
   return positions;
+}
+
+/**
+ * Groups resources by type
+ */
+function groupResourcesByType<T extends { resource: ResourceType }>(
+  items: T[],
+): Map<ResourceType, T[]> {
+  const groups = new Map<ResourceType, T[]>();
+
+  items.forEach((item) => {
+    const existing = groups.get(item.resource) || [];
+    existing.push(item);
+    groups.set(item.resource, existing);
+  });
+
+  return groups;
+}
+
+/**
+ * Assigns positions to handles with proper spreading logic.
+ *
+ * Logic:
+ * - If multiple different resource types: each type gets its own side
+ * - If all same type but multiple handles: round-robin distribution
+ * - Respects MAX_HANDLES_PER_SIDE constraint
+ */
+function assignHandlePositions(
+  items: Array<{ resource: ResourceType }>,
+  excludeSide?: Position,
+): Position[] {
+  if (items.length === 0) return [];
+
+  if (items.length === 1) {
+    // Single handle goes on default side (not excluded)
+    const defaultSide =
+      excludeSide === Position.Right ? Position.Left : Position.Right;
+    return [defaultSide];
+  }
+
+  const groups = groupResourcesByType(items);
+
+  // Strategy 1: Multiple different types - assign each type to a different side
+  if (groups.size > 1) {
+    const positions: Position[] = [];
+    const availableSides = [
+      Position.Left,
+      Position.Right,
+      Position.Bottom,
+      Position.Top,
+    ].filter((side) => side !== excludeSide);
+
+    let sideIndex = 0;
+
+    // Sort groups by size (larger groups first) for better distribution
+    const sortedGroups = Array.from(groups.entries()).sort(
+      (a, b) => b[1].length - a[1].length,
+    );
+
+    sortedGroups.forEach(([_, groupItems]) => {
+      // Check if this group exceeds MAX_HANDLES_PER_SIDE
+      if (groupItems.length > MAX_HANDLES_PER_SIDE) {
+        // Split large groups across multiple sides
+        let itemsPlaced = 0;
+
+        while (itemsPlaced < groupItems.length) {
+          const side = availableSides[sideIndex % availableSides.length];
+          const itemsForThisSide = Math.min(
+            MAX_HANDLES_PER_SIDE,
+            groupItems.length - itemsPlaced,
+          );
+
+          for (let i = 0; i < itemsForThisSide; i++) {
+            positions.push(side);
+          }
+
+          itemsPlaced += itemsForThisSide;
+          sideIndex++;
+        }
+      } else {
+        // Small group fits on one side
+        const side = availableSides[sideIndex % availableSides.length];
+
+        for (let i = 0; i < groupItems.length; i++) {
+          positions.push(side);
+        }
+
+        sideIndex++;
+      }
+    });
+
+    return positions;
+  }
+
+  // Strategy 2: All same type - distribute round-robin across all available sides
+  // This respects MAX_HANDLES_PER_SIDE automatically since we cycle through sides
+  return distributeHandlesRoundRobin(items.length, excludeSide);
 }
 
 interface ConfiguredBuildingData {
@@ -39,177 +146,88 @@ interface ConfiguredBuildingData {
 
 /**
  * Configures a building instance for a specific production method.
- * Can be used both for creating new buildings and updating existing ones.
- *
- * @param productionMethod - The production method to configure for
- * @param existingBuilding - Optional existing building to preserve values from
- * @returns Configuration object that can be merged into a building instance
  */
 export const configureBuildingInstanceForMethod = (
   productionMethod: ProductionMethod,
   existingBuilding?: BuildingInstance,
 ): ConfiguredBuildingData => {
-  // Check if we have any non-global outputs
-  const hasNonGlobalOutputs = productionMethod.outputs.some(
-    (output) => !isGlobalResource(output.resource),
-  );
-
-  // Check if we have any non-global inputs
-  const hasNonGlobalInputs = productionMethod.inputs.some(
+  // Collect non-global inputs and outputs
+  const nonGlobalInputs = productionMethod.inputs.filter(
     (input) => !isGlobalResource(input.resource),
   );
 
-  // Count total non-global inputs and outputs
-  const totalInputNodes = productionMethod.inputs.reduce(
-    (sum, input) =>
-      isGlobalResource(input.resource) ? sum : sum + (input.nodes ?? 1),
-    0,
+  const nonGlobalOutputs = productionMethod.outputs.filter(
+    (output) => !isGlobalResource(output.resource),
   );
 
-  const totalOutputNodes = productionMethod.outputs.reduce(
-    (sum, output) =>
-      isGlobalResource(output.resource) ? sum : sum + (output.nodes ?? 1),
-    0,
+  // Expand inputs/outputs based on nodes count
+  const expandedInputs = nonGlobalInputs.flatMap((input) =>
+    Array(input.nodes ?? 1).fill({ resource: input.resource }),
   );
 
-  // Determine if we should spread handles across all sides
-  const shouldSpreadInputs = !hasNonGlobalOutputs && totalInputNodes > 1;
-  const shouldSpreadOutputs = !hasNonGlobalInputs && totalOutputNodes > 1;
+  const expandedOutputs = nonGlobalOutputs.flatMap((output) =>
+    Array(output.nodes ?? 1).fill({ resource: output.resource }),
+  );
 
-  // Generate inputs from production method
+  const totalInputHandles = expandedInputs.length;
+  const totalOutputHandles = expandedOutputs.length;
+
+  // Determine layout strategy
+  let inputPositions: Position[];
+  let outputPositions: Position[];
+
+  if (totalInputHandles === 0 && totalOutputHandles > 0) {
+    // No inputs, spread outputs across all sides (initially skipping the Left side)
+    outputPositions = distributeHandlesRoundRobin(
+      totalOutputHandles,
+      totalOutputHandles < 4 ? Position.Left : undefined,
+    );
+    inputPositions = [];
+  } else if (totalOutputHandles === 0 && totalInputHandles > 0) {
+    // No outputs, spread inputs across all sides
+    inputPositions = distributeHandlesRoundRobin(totalInputHandles);
+    outputPositions = [];
+  } else if (totalInputHandles > totalOutputHandles) {
+    // More inputs than outputs: outputs on right, spread inputs
+    outputPositions = expandedOutputs.map(() => Position.Right);
+    inputPositions = assignHandlePositions(expandedInputs, Position.Right);
+  } else if (totalOutputHandles > totalInputHandles) {
+    // More outputs than inputs: inputs on left, spread outputs
+    inputPositions = expandedInputs.map(() => Position.Left);
+    outputPositions = assignHandlePositions(expandedOutputs, Position.Left);
+  } else {
+    // Equal counts: inputs on left, outputs on right
+    inputPositions = expandedInputs.map(() => Position.Left);
+    outputPositions = expandedOutputs.map(() => Position.Right);
+  }
+
+  // Generate inputs with assigned positions
   const inputs: BuildingInput[] = [];
   let inputPositionIndex = 0;
-  const inputPositions = shouldSpreadInputs
-    ? distributeHandlesAcrossSides(totalInputNodes)
-    : [];
 
-  productionMethod.inputs.forEach((input) => {
-    // Skip global resources - they don't need physical inputs
-    if (isGlobalResource(input.resource)) return;
-
+  nonGlobalInputs.forEach((input) => {
     const nodeCount = input.nodes ?? 1;
 
-    // If building exists, try to find existing inputs with this resource to preserve positions
-    const existingInputsForResource =
-      existingBuilding?.inputs?.filter((i) => i.resource === input.resource) ||
-      [];
-
-    // If we have existing inputs for this resource, preserve their positions
-    if (existingInputsForResource.length > 0) {
-      existingInputsForResource.slice(0, nodeCount).forEach((existingInput) => {
-        inputs.push({
-          resource: input.resource,
-          position: existingInput.position,
-        });
-        if (shouldSpreadInputs) inputPositionIndex++;
+    for (let i = 0; i < nodeCount; i++) {
+      inputs.push({
+        resource: input.resource,
+        position: inputPositions[inputPositionIndex++],
       });
-
-      // If we need more inputs than we had before, create new ones
-      const remaining = nodeCount - existingInputsForResource.length;
-      if (remaining > 0) {
-        if (shouldSpreadInputs) {
-          for (let i = 0; i < remaining; i++) {
-            inputs.push({
-              resource: input.resource,
-              position: inputPositions[inputPositionIndex++],
-            });
-          }
-        } else {
-          for (let i = 0; i < remaining; i++) {
-            inputs.push({
-              resource: input.resource,
-              position: Position.Left,
-            });
-          }
-        }
-      }
-    } else {
-      // No existing inputs, create new ones
-      if (shouldSpreadInputs) {
-        for (let i = 0; i < nodeCount; i++) {
-          inputs.push({
-            resource: input.resource,
-            position: inputPositions[inputPositionIndex++],
-          });
-        }
-      } else {
-        for (let i = 0; i < nodeCount; i++) {
-          inputs.push({
-            resource: input.resource,
-            position: Position.Left,
-          });
-        }
-      }
     }
   });
 
-  // Generate outputs from production method
+  // Generate outputs with assigned positions
   const outputs: BuildingOutput[] = [];
   let outputPositionIndex = 0;
-  const outputPositions = shouldSpreadOutputs
-    ? distributeHandlesAcrossSides(totalOutputNodes)
-    : [];
 
-  productionMethod.outputs.forEach((output) => {
-    // Skip global resources - they don't need physical outputs
-    if (isGlobalResource(output.resource)) return;
-
+  nonGlobalOutputs.forEach((output) => {
     const nodeCount = output.nodes ?? 1;
 
-    // If building exists, try to find existing outputs with this resource to preserve positions
-    const existingOutputsForResource =
-      existingBuilding?.outputs?.filter(
-        (o) => o.resource === output.resource,
-      ) || [];
-
-    // If we have existing outputs for this resource, preserve their positions
-    if (existingOutputsForResource.length > 0) {
-      existingOutputsForResource
-        .slice(0, nodeCount)
-        .forEach((existingOutput) => {
-          outputs.push({
-            resource: output.resource,
-            position: existingOutput.position,
-          });
-          if (shouldSpreadOutputs) outputPositionIndex++;
-        });
-
-      // If we need more outputs than we had before, create new ones
-      const remaining = nodeCount - existingOutputsForResource.length;
-      if (remaining > 0) {
-        if (shouldSpreadOutputs) {
-          for (let i = 0; i < remaining; i++) {
-            outputs.push({
-              resource: output.resource,
-              position: outputPositions[outputPositionIndex++],
-            });
-          }
-        } else {
-          for (let i = 0; i < remaining; i++) {
-            outputs.push({
-              resource: output.resource,
-              position: Position.Right,
-            });
-          }
-        }
-      }
-    } else {
-      // No existing outputs, create new ones
-      if (shouldSpreadOutputs) {
-        for (let i = 0; i < nodeCount; i++) {
-          outputs.push({
-            resource: output.resource,
-            position: outputPositions[outputPositionIndex++],
-          });
-        }
-      } else {
-        for (let i = 0; i < nodeCount; i++) {
-          outputs.push({
-            resource: output.resource,
-            position: Position.Right,
-          });
-        }
-      }
+    for (let i = 0; i < nodeCount; i++) {
+      outputs.push({
+        resource: output.resource,
+        position: outputPositions[outputPositionIndex++],
+      });
     }
   });
 

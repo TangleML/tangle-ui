@@ -3,15 +3,17 @@ import type { DragEvent } from "react";
 import { InlineStack } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
 
+import BuildingIcon from "../components/BuildingIcon";
+import { getBuildingDefinition } from "../data/buildings";
 import { RESOURCES } from "../data/resources";
-import { type BuildingType, getBuildingType } from "../types/buildings";
+import type { BuildingType } from "../types/buildings";
 
 interface BuildingItemProps {
   buildingType: BuildingType;
 }
 
 const BuildingItem = ({ buildingType }: BuildingItemProps) => {
-  const building = getBuildingType(buildingType);
+  const building = getBuildingDefinition(buildingType);
 
   const onDragStart = (event: DragEvent) => {
     event.dataTransfer.setData(
@@ -40,7 +42,7 @@ const BuildingItem = ({ buildingType }: BuildingItemProps) => {
       onDragStart={onDragStart}
     >
       <InlineStack wrap="nowrap" gap="2" className="w-full">
-        <span className="text-xl shrink-0">{building.icon}</span>
+        <BuildingIcon icon={building.icon} />
         <div className="flex flex-col flex-1 min-w-0">
           <span
             className="truncate text-xs text-gray-800 font-medium"

@@ -42,6 +42,8 @@ export const createOnConnect = (
       connection.target,
       edgeResource,
       reactFlowInstance,
+      connection.sourceHandle,
+      connection.targetHandle,
     );
 
     if (!newEdge) return;

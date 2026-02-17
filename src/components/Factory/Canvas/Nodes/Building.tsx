@@ -5,9 +5,11 @@ import {
 } from "@xyflow/react";
 import { useEffect, useRef } from "react";
 
+import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
 import { useContextPanel } from "@/providers/ContextPanelProvider";
 
+import BuildingIcon from "../../components/BuildingIcon";
 import { ProductionFeedback } from "../../components/ProductionFeedback";
 import BuildingContext from "../../Context/Building/BuildingContext";
 import { isGlobalResource } from "../../data/resources";
@@ -80,6 +82,7 @@ const Building = ({ id, data, selected }: NodeProps) => {
   }
 
   const {
+    type,
     icon,
     name,
     description,
@@ -95,6 +98,8 @@ const Building = ({ id, data, selected }: NodeProps) => {
   // Track index at each position
   const inputIndexAtPosition: Record<string, number> = {};
   const outputIndexAtPosition: Record<string, number> = {};
+
+  const isSplitterOrMerger = type === "splitter" || type === "merger";
 
   return (
     <div
@@ -130,15 +135,29 @@ const Building = ({ id, data, selected }: NodeProps) => {
       })}
 
       <div
-        className="px-6 py-4 shadow-lg rounded-lg border-4"
+        className="p-4 shadow-lg rounded-lg border-4"
         style={{ borderColor: color, backgroundColor: `${color}20` }}
       >
-        <div className="font-bold text-lg" style={{ color }}>
-          {icon} {name}
-        </div>
-        <div className="text-sm mt-1 text-center" style={{ color }}>
-          {description}
-        </div>
+        {isSplitterOrMerger ? (
+          <div
+            className="font-bold text-xl w-4 h-4 flex justify-center items-center"
+            style={{ color }}
+          >
+            <BuildingIcon icon={icon} />
+          </div>
+        ) : (
+          <BlockStack gap="1" align="center">
+            <InlineStack gap="1" align="center" blockAlign="center">
+              <BuildingIcon icon={icon} />
+              <p className="font-bold text-lg" style={{ color }}>
+                {name}
+              </p>
+            </InlineStack>
+            <div className="text-sm mt-1 text-center" style={{ color }}>
+              {description}
+            </div>
+          </BlockStack>
+        )}
       </div>
 
       {outputs.map((output, globalIndex) => {
