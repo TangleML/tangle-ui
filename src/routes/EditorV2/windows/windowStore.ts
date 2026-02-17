@@ -2,9 +2,17 @@ import type { ReactNode } from "react";
 import { proxy } from "valtio";
 
 import {
+  calculateAttachPosition,
+  calculateDockedDimensions,
+  getAttachmentChain,
+  getWindowBottom,
+} from "./snapUtils";
+import {
+  type AttachmentInfo,
   CASCADE_OFFSET,
   DEFAULT_MIN_SIZE,
   DEFAULT_WINDOW_SIZE,
+  type DockState,
   type Position,
   type Size,
   type WindowConfig,
@@ -77,15 +85,34 @@ export function openWindow(
   // Store content separately (not in proxy)
   windowContentMap.set(id, content);
 
+  // Calculate initial position and attachment
+  let initialPosition = options.position ?? calculateNewPosition();
+  let attachedTo: AttachmentInfo | undefined;
+
+  // Handle attachment to parent window
+  if (options.attachTo) {
+    const parentWindow = windowStore.windows[options.attachTo];
+    if (parentWindow && parentWindow.state !== "hidden") {
+      const windowSize = options.size ?? DEFAULT_WINDOW_SIZE;
+      initialPosition = calculateAttachPosition(parentWindow, windowSize.width);
+      attachedTo = {
+        parentId: options.attachTo,
+        offsetX: 0, // Aligned to parent's left edge
+      };
+    }
+  }
+
   const config: WindowConfig = {
     id,
     title: options.title,
     state: "normal",
-    position: options.position ?? calculateNewPosition(),
+    position: initialPosition,
     size: options.size ?? { ...DEFAULT_WINDOW_SIZE },
     minSize: options.minSize ?? { ...DEFAULT_MIN_SIZE },
     linkedEntityId: options.linkedEntityId,
     disabledActions: options.disabledActions,
+    dockState: "none",
+    attachedTo,
   };
 
   windowStore.windows[id] = config;
@@ -136,12 +163,17 @@ export function hideWindow(id: string): void {
   window.previousPosition = { ...window.position };
   window.previousSize = { ...window.size };
   window.state = "hidden";
+
+  // Cascade attached windows up to take the hidden window's place
+  cascadeOnHide(id);
 }
 
 /** Restore a window to its previous state */
 export function restoreWindow(id: string): void {
   const window = windowStore.windows[id];
   if (!window) return;
+
+  const wasHidden = window.state === "hidden";
 
   // Restore to normal if no previous state or if coming from hidden/minimized
   const targetState = window.previousState ?? "normal";
@@ -163,6 +195,11 @@ export function restoreWindow(id: string): void {
   window.previousSize = undefined;
 
   bringToFront(id);
+
+  // Push attached windows down when restoring from hidden
+  if (wasHidden) {
+    cascadeOnRestore(id);
+  }
 }
 
 /** Bring a window to the front (top of z-order) */
@@ -186,7 +223,13 @@ export function updateWindowPosition(id: string, position: Position): void {
 export function updateWindowSize(id: string, size: Size): void {
   const window = windowStore.windows[id];
   if (window) {
+    const heightChanged = window.size.height !== size.height;
     window.size = size;
+
+    // If height changed, update attached windows positions
+    if (heightChanged) {
+      updateAttachedWindowPositions(id);
+    }
   }
 }
 
@@ -243,4 +286,252 @@ export function toggleMaximize(id: string): void {
   } else {
     maximizeWindow(id);
   }
+}
+
+// ============================================================================
+// Docking Functions
+// ============================================================================
+
+/** Dock a window to the left or right edge of the viewport */
+export function dockWindow(id: string, side: DockState): void {
+  console.log("[windowStore] dockWindow called:", { id, side });
+  const window = windowStore.windows[id];
+  if (!window || side === "none") {
+    console.log("[windowStore] dockWindow early return - window:", !!window, "side:", side);
+    return;
+  }
+
+  // Store previous state for undocking
+  window.previousPosition = { ...window.position };
+  window.previousSize = { ...window.size };
+
+  // Calculate docked dimensions
+  const { position, height } = calculateDockedDimensions(
+    side,
+    window.size.width,
+  );
+  console.log("[windowStore] dockWindow calculated:", { position, height });
+
+  window.position = position;
+  window.size = { ...window.size, height };
+  window.dockState = side;
+
+  // Detach from any parent when docking
+  if (window.attachedTo) {
+    detachWindow(id);
+  }
+
+  // Update attached children positions
+  updateAttachedWindowPositions(id);
+  console.log("[windowStore] dockWindow complete - new state:", { position: window.position, size: window.size, dockState: window.dockState });
+}
+
+/** Undock a window from edge, restoring previous dimensions */
+export function undockWindow(id: string): void {
+  const window = windowStore.windows[id];
+  if (!window || window.dockState === "none") return;
+
+  // Restore previous dimensions
+  if (window.previousPosition) {
+    window.position = { ...window.previousPosition };
+  }
+  if (window.previousSize) {
+    window.size = { ...window.previousSize };
+  }
+
+  window.dockState = "none";
+  window.previousPosition = undefined;
+  window.previousSize = undefined;
+
+  // Update attached children positions
+  updateAttachedWindowPositions(id);
+}
+
+/** Check if a window is docked */
+export function isWindowDocked(id: string): boolean {
+  const window = windowStore.windows[id];
+  return window?.dockState !== "none" && window?.dockState !== undefined;
+}
+
+// ============================================================================
+// Attachment Functions
+// ============================================================================
+
+/** Attach a window below another window */
+export function attachWindow(childId: string, parentId: string): void {
+  console.log("[windowStore] attachWindow called:", { childId, parentId });
+  const childWindow = windowStore.windows[childId];
+  const parentWindow = windowStore.windows[parentId];
+
+  if (!childWindow || !parentWindow) {
+    console.log("[windowStore] attachWindow early return - childWindow:", !!childWindow, "parentWindow:", !!parentWindow);
+    return;
+  }
+  if (childId === parentId) {
+    console.log("[windowStore] attachWindow early return - same window");
+    return;
+  }
+
+  // Don't attach if parent is hidden or minimized
+  if (parentWindow.state === "hidden" || parentWindow.state === "minimized") {
+    console.log("[windowStore] attachWindow early return - parent state:", parentWindow.state);
+    return;
+  }
+
+  // Calculate attached position - align left edges and place at parent's bottom
+  const attachPosition = {
+    x: parentWindow.position.x, // Align left edges
+    y: getWindowBottom(parentWindow), // Place at parent's bottom
+  };
+  console.log("[windowStore] attachWindow calculated position:", attachPosition);
+
+  childWindow.attachedTo = {
+    parentId,
+    offsetX: 0, // Always align left edges
+  };
+
+  // Align to parent
+  childWindow.position = attachPosition;
+
+  // Undock if docked when attaching
+  if (childWindow.dockState !== "none") {
+    childWindow.dockState = "none";
+  }
+  
+  console.log("[windowStore] attachWindow complete - child state:", { 
+    position: childWindow.position, 
+    attachedTo: childWindow.attachedTo 
+  });
+}
+
+/** Detach a window from its parent */
+export function detachWindow(id: string): void {
+  const window = windowStore.windows[id];
+  if (!window?.attachedTo) return;
+
+  window.attachedTo = undefined;
+}
+
+/** Get all windows attached to a parent (direct children only) */
+export function getDirectlyAttachedWindows(parentId: string): WindowConfig[] {
+  return Object.values(windowStore.windows).filter(
+    (w) => w.attachedTo?.parentId === parentId,
+  );
+}
+
+/** Get the full attachment chain starting from a window */
+export function getWindowAttachmentChain(parentId: string): WindowConfig[] {
+  return getAttachmentChain(parentId, Object.values(windowStore.windows));
+}
+
+/**
+ * Find the root window of an attachment chain (the topmost visible parent).
+ * Walks up the chain until finding a window with no parent or a hidden parent.
+ */
+function findChainRoot(windowId: string): string {
+  let currentId = windowId;
+  let current = windowStore.windows[currentId];
+  
+  while (current?.attachedTo?.parentId) {
+    const parent = windowStore.windows[current.attachedTo.parentId];
+    if (!parent) break;
+    currentId = parent.id;
+    current = parent;
+  }
+  
+  return currentId;
+}
+
+/**
+ * Find the nearest visible ancestor of a window (skipping hidden windows).
+ * Returns null if no visible ancestor exists (window is at root level).
+ */
+function findVisibleAncestor(windowId: string): WindowConfig | null {
+  const win = windowStore.windows[windowId];
+  if (!win?.attachedTo?.parentId) return null;
+  
+  let currentParentId: string | undefined = win.attachedTo.parentId;
+  
+  while (currentParentId) {
+    const parentWin: WindowConfig | undefined = windowStore.windows[currentParentId];
+    if (!parentWin) return null;
+    
+    // If this parent is visible (not hidden), return it
+    if (parentWin.state !== "hidden") {
+      return parentWin;
+    }
+    
+    // Otherwise, continue up the chain
+    currentParentId = parentWin.attachedTo?.parentId;
+  }
+  
+  return null;
+}
+
+/**
+ * Update positions of all windows in an attachment chain.
+ * Skips hidden windows when calculating Y positions - visible windows snap to nearest visible ancestor.
+ * Attachment chain is preserved (not broken when windows are hidden).
+ */
+function updateAttachedWindowPositions(rootId: string): void {
+  const rootWindow = windowStore.windows[rootId];
+  if (!rootWindow) return;
+
+  // Get all windows in the chain
+  const chain = getWindowAttachmentChain(rootId);
+  
+  // Root X position - all windows align to this (use previous position if root is hidden)
+  const rootX = rootWindow.state === "hidden" 
+    ? (rootWindow.previousPosition?.x ?? rootWindow.position.x)
+    : rootWindow.position.x;
+
+  for (const child of chain) {
+    // Skip hidden windows - they don't need position updates
+    if (child.state === "hidden") continue;
+    
+    // Find the nearest visible ancestor
+    const visibleAncestor = findVisibleAncestor(child.id);
+    
+    if (visibleAncestor) {
+      // Position below the visible ancestor
+      child.position = {
+        x: rootX,
+        y: getWindowBottom(visibleAncestor),
+      };
+    } else if (rootWindow.state !== "hidden") {
+      // No visible ancestor but root is visible - position below root
+      child.position = {
+        x: rootX,
+        y: getWindowBottom(rootWindow),
+      };
+    } else {
+      // Root is hidden and no visible ancestor - take root's previous position
+      // This is the first visible window in the chain, it takes the hidden root's place
+      const rootY = rootWindow.previousPosition?.y ?? rootWindow.position.y;
+      child.position = {
+        x: rootX,
+        y: rootY,
+      };
+    }
+  }
+}
+
+/**
+ * Recalculate positions for entire chain when a window is hidden.
+ * The attachment chain stays intact - we just skip hidden windows when positioning.
+ */
+function cascadeOnHide(hiddenWindowId: string): void {
+  // Find the root of the chain and update all positions
+  const rootId = findChainRoot(hiddenWindowId);
+  updateAttachedWindowPositions(rootId);
+}
+
+/**
+ * Recalculate positions for entire chain when a window is restored.
+ * The attachment chain stays intact - restored window takes its place and pushes others down.
+ */
+function cascadeOnRestore(restoredWindowId: string): void {
+  // Find the root of the chain and update all positions
+  const rootId = findChainRoot(restoredWindowId);
+  updateAttachedWindowPositions(rootId);
 }
