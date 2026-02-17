@@ -1,6 +1,7 @@
 import { SPECIAL_BUILDINGS } from "@/components/Factory/data/buildings";
 import {
   getResourceTypeFoodValue,
+  isGlobalResource,
   RESOURCES,
 } from "@/components/Factory/data/resources";
 import type { BuildingType } from "@/components/Factory/types/buildings";
@@ -23,12 +24,8 @@ export const ProductionInputs = ({
 
   // Determine which global resource this special building outputs
   const globalOutput = isSpecialBuilding
-    ? productionMethod.outputs.find(
-        (o) =>
-          o.resource === "money" ||
-          o.resource === "food" ||
-          o.resource === "knowledge",
-      )?.resource
+    ? productionMethod.outputs.find((o) => isGlobalResource(o.resource))
+        ?.resource
     : null;
 
   return (

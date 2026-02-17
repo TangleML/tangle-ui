@@ -22,6 +22,7 @@ const RESOURCE_TYPES = [
   "paper",
   "books",
   "livestock",
+  "horses",
   "leather",
   "meat",
   "coins",
