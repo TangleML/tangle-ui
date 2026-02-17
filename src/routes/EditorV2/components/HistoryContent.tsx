@@ -320,6 +320,7 @@ export function HistoryContent() {
             <Text size="xs" tone="subdued" className="px-3 pt-2 pb-1">
               Future (undone)
             </Text>
+            <div className="flex flex-col gap-1 flex-reverse">
             {redoEntries.map((command, displayIndex) => {
               // displayIndex is 0 for most future, redoEntries.length-1 for closest to current
               // Original redoStack index is (redoStackLength - 1 - displayIndex)
@@ -335,6 +336,7 @@ export function HistoryContent() {
                 />
               );
             })}
+            </div>
             <div className="border-t border-dashed border-slate-300 my-2 mx-3" />
           </>
         )}
