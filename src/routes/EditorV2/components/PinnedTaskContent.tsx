@@ -9,7 +9,7 @@ import { Text } from "@/components/ui/typography";
 import { GraphImplementation } from "@/providers/ComponentSpec/graphImplementation";
 import { componentSpecToText } from "@/utils/yaml";
 
-import { editorStore } from "../store/editorStore";
+import { getCurrentSpec, navigationStore } from "../store/navigationStore";
 
 interface PinnedTaskContentProps {
   /** The entity ID of the task to display */
@@ -22,8 +22,12 @@ interface PinnedTaskContentProps {
  * Used for shift-click "pinned" windows.
  */
 export function PinnedTaskContent({ entityId }: PinnedTaskContentProps) {
-  const snapshot = useSnapshot(editorStore);
-  const spec = snapshot.spec;
+  // Subscribe to navigation changes to trigger re-renders
+  const navSnapshot = useSnapshot(navigationStore);
+  void navSnapshot.navigationPath.length;
+
+  // Get the current spec from navigation state
+  const spec = getCurrentSpec();
 
   if (
     !spec?.implementation ||

@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/typography";
 import { GraphImplementation } from "@/providers/ComponentSpec/graphImplementation";
 
+import { useCurrentSpec } from "../hooks/useCurrentSpec";
 import { createSubgraph } from "../store/actions";
 import {
   clearMultiSelection,
@@ -19,10 +20,11 @@ import {
 
 /**
  * Get the display name for a node based on its type and ID.
+ * Uses the current spec from navigation (supports subgraphs).
  */
 function getNodeDisplayName(
   node: SelectedNode,
-  spec: ReturnType<typeof useSnapshot<typeof editorStore>>["spec"],
+  spec: import("@/providers/ComponentSpec/componentSpec").ComponentSpecEntity | null,
 ): string {
   if (!spec) return node.id;
 
@@ -32,17 +34,17 @@ function getNodeDisplayName(
         spec.implementation &&
         spec.implementation instanceof GraphImplementation
       ) {
-        const task = spec.implementation.tasks.entities[node.id];
+        const task = spec.implementation.tasks.findById(node.id);
         return task?.name ?? node.id;
       }
       return node.id;
     }
     case "input": {
-      const input = spec.inputs.entities[node.id];
+      const input = spec.inputs.findById(node.id);
       return input?.name ?? node.id;
     }
     case "output": {
-      const output = spec.outputs.entities[node.id];
+      const output = spec.outputs.findById(node.id);
       return output?.name ?? node.id;
     }
     default:
@@ -84,7 +86,9 @@ function getNodeIconColor(type: SelectedNode["type"]): string {
  */
 export function MultiSelectionDetails() {
   const snapshot = useSnapshot(editorStore);
-  const { multiSelection, spec } = snapshot;
+  const { multiSelection } = snapshot;
+  // Use current spec from navigation (supports subgraphs)
+  const currentSpec = useCurrentSpec();
 
   const [subgraphName, setSubgraphName] = useState("");
 
@@ -104,7 +108,7 @@ export function MultiSelectionDetails() {
 
     // Get task names from entity IDs
     const taskNames = selectedTasks.map((node) =>
-      getNodeDisplayName(node, spec),
+      getNodeDisplayName(node, currentSpec),
     );
 
     // Calculate center position of selected task nodes
@@ -158,7 +162,7 @@ export function MultiSelectionDetails() {
                   className={`shrink-0 ${getNodeIconColor(node.type)}`}
                 />
                 <Text size="xs" className="text-slate-700 truncate flex-1">
-                  {getNodeDisplayName(node, spec)}
+                  {getNodeDisplayName(node, currentSpec)}
                 </Text>
                 <Text size="xs" className="text-slate-400 capitalize">
                   {node.type}
