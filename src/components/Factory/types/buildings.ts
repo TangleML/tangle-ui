@@ -62,7 +62,7 @@ export const BUILDING_CATEGORIES: BuildingCategoryDefinition[] = [
   { type: "special", label: "Special", icon: "Star" },
   { type: "logistics", label: "Logistics", icon: "Truck" },
   { type: "production", label: "Production", icon: "Hammer" },
-  { type: "refining", label: "Refining", icon: "Factory" },
+  { type: "manufacturing", label: "Manufacturing", icon: "Factory" },
   { type: "services", label: "Services", icon: "Store" },
   { type: "storage", label: "Storage", icon: "Package" },
 ];
