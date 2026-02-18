@@ -9,8 +9,10 @@ import { ContextPanelProvider } from "@/providers/ContextPanelProvider";
 
 import GameCanvas from "./Canvas/GameCanvas";
 import { AnchoredToastContainer } from "./components/AnchoredToast";
+import { FactoryContext } from "./Context/FactoryContext";
 import GameControls from "./Controls/GameControls";
 import { AnchoredToastProvider } from "./providers/AnchoredToastProvider";
+import { GameActionsProvider } from "./providers/GameActionsProvider";
 import { TimeProvider } from "./providers/TimeProvider";
 import GameSidebar from "./Sidebar/GameSidebar";
 
@@ -33,30 +35,32 @@ const FactoryGameApp = () => {
   };
 
   return (
-    <TimeProvider>
-      <AnchoredToastProvider>
-        <AnchoredToastContainer />
+    <GameActionsProvider>
+      <TimeProvider>
+        <AnchoredToastProvider>
+          <AnchoredToastContainer />
 
-        <ContextPanelProvider defaultContent={<p>Factory Game</p>}>
-          <InlineStack fill>
-            <GameSidebar />
-            <BlockStack fill className="flex-1 relative">
-              <GameCanvas {...flowConfig}>
-                <MiniMap position="bottom-left" pannable />
-                <GameControls
-                  className="ml-56! mb-6!"
-                  config={flowConfig}
-                  updateConfig={updateFlowConfig}
-                  showInteractive={false}
-                />
-                <Background gap={GRID_SIZE} className="bg-slate-50!" />
-              </GameCanvas>
-            </BlockStack>
-            <CollapsibleContextPanel />
-          </InlineStack>
-        </ContextPanelProvider>
-      </AnchoredToastProvider>
-    </TimeProvider>
+          <ContextPanelProvider defaultContent={<FactoryContext />}>
+            <InlineStack fill>
+              <GameSidebar />
+              <BlockStack fill className="flex-1 relative">
+                <GameCanvas {...flowConfig}>
+                  <MiniMap position="bottom-left" pannable />
+                  <GameControls
+                    className="ml-56! mb-6!"
+                    config={flowConfig}
+                    updateConfig={updateFlowConfig}
+                    showInteractive={false}
+                  />
+                  <Background gap={GRID_SIZE} className="bg-slate-50!" />
+                </GameCanvas>
+              </BlockStack>
+              <CollapsibleContextPanel />
+            </InlineStack>
+          </ContextPanelProvider>
+        </AnchoredToastProvider>
+      </TimeProvider>
+    </GameActionsProvider>
   );
 };
 

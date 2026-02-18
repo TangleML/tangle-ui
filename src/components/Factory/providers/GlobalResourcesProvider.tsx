@@ -13,6 +13,7 @@ interface GlobalResourcesContextType {
   addResource: (resourceType: GlobalResourceType, amount: number) => void;
   getResource: (resourceType: GlobalResourceType) => number;
   resetResources: () => void;
+  setAllResources: (resources: GlobalResources) => void;
 }
 
 const GlobalResourcesContext = createContext<
@@ -30,11 +31,13 @@ const INITIAL_RESOURCES: GlobalResources = Object.fromEntries(
 export const GlobalResourcesProvider = ({
   children,
 }: GlobalResourcesProviderProps) => {
-  // Initialize all global resources to 0
+  // Initialize all global resources
   const [resources, setResources] =
     useState<GlobalResources>(INITIAL_RESOURCES);
 
   const updateResources = (updates: Partial<GlobalResources>) => {
+    let updatedResources: GlobalResources = INITIAL_RESOURCES;
+
     setResources((prev) => {
       const updated = { ...prev };
 
@@ -45,8 +48,11 @@ export const GlobalResourcesProvider = ({
         }
       });
 
+      updatedResources = updated;
       return updated;
     });
+
+    return updatedResources;
   };
 
   const setResource = (resourceType: GlobalResourceType, amount: number) => {
@@ -71,6 +77,10 @@ export const GlobalResourcesProvider = ({
     setResources(INITIAL_RESOURCES);
   };
 
+  const setAllResources = (newResources: GlobalResources) => {
+    setResources(newResources);
+  };
+
   return (
     <GlobalResourcesContext.Provider
       value={{
@@ -80,6 +90,7 @@ export const GlobalResourcesProvider = ({
         addResource,
         getResource,
         resetResources,
+        setAllResources,
       }}
     >
       {children}
