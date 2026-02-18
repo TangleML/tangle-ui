@@ -1,6 +1,8 @@
 import { type NodeProps } from "@xyflow/react";
 import { memo, useMemo } from "react";
 
+import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useEdgeSelectionHighlight } from "@/hooks/useEdgeSelectionHighlight";
 import { cn } from "@/lib/utils";
 import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
@@ -11,7 +13,13 @@ import { isCacheDisabled } from "@/utils/cache";
 import { StatusIndicator } from "./StatusIndicator";
 import { TaskNodeCard } from "./TaskNodeCard";
 
-const TaskNode = ({ data, selected, id }: NodeProps) => {
+const TaskNodeSkeleton = () => (
+  <div className="w-60 h-30 rounded-lg border border-border bg-background">
+    <Skeleton className="w-full h-full" />
+  </div>
+);
+
+const TaskNodeInternal = ({ data, selected, id }: NodeProps) => {
   const executionData = useExecutionDataOptional();
 
   const typedData = useMemo(() => data as TaskNodeData, [data]);
@@ -42,5 +50,7 @@ const TaskNode = ({ data, selected, id }: NodeProps) => {
     </TaskNodeProvider>
   );
 };
+
+const TaskNode = withSuspenseWrapper(TaskNodeInternal, TaskNodeSkeleton);
 
 export default memo(TaskNode);
