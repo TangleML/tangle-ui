@@ -38,7 +38,13 @@ const INCLUDE_EXECUTION_STATS_QUERY_KEY = "include_execution_stats";
 
 type RunSectionSearch = { page_token?: string; filter?: string };
 
-export const RunSection = ({ onEmptyList }: { onEmptyList?: () => void }) => {
+interface RunSectionProps {
+  onEmptyList?: () => void;
+  /** When true, hides the built-in filter UI (used when new filter bar is enabled) */
+  hideFilters?: boolean;
+}
+
+export const RunSection = ({ onEmptyList, hideFilters }: RunSectionProps) => {
   const { backendUrl, configured, available, ready } = useBackend();
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -224,7 +230,7 @@ export const RunSection = ({ onEmptyList }: { onEmptyList?: () => void }) => {
     );
   }
 
-  const searchMarkup = (
+  const searchMarkup = hideFilters ? null : (
     <InlineStack gap="4">
       <InlineStack gap="2">
         <Switch
