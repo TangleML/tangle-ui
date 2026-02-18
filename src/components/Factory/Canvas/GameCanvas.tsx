@@ -9,18 +9,20 @@ import {
   type ReactFlowProps,
   useEdgesState,
   useNodesState,
+  useReactFlow,
 } from "@xyflow/react";
 import type { ComponentType, DragEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 
-import { BlockStack } from "@/components/ui/layout";
+import { useContextPanel } from "@/providers/ContextPanelProvider";
 
-import type { GlobalResources } from "../data/resources";
+import { GameOverDialog } from "../components/GameOverDialog";
 import { setup } from "../data/setup";
 import { createBuildingNode } from "../objects/buildings/createBuildingNode";
 import { useGlobalResources } from "../providers/GlobalResourcesProvider";
+import { useStatistics } from "../providers/StatisticsProvider";
+import { useTime } from "../providers/TimeProvider";
 import { processDay } from "../simulation/processDay";
-import type { DayStatistics } from "../types/statistics";
 import { createIsValidConnection } from "./callbacks/isValidConnection";
 import { createOnConnect } from "./callbacks/onConnect";
 import { createOnDrop } from "./callbacks/onDrop";
@@ -36,64 +38,63 @@ const edgeTypes: Record<string, ComponentType<any>> = {
   resourceEdge: ResourceEdge,
 };
 
-interface GameCanvasProps extends ReactFlowProps {
-  onDayAdvance?: (
-    globalResources: GlobalResources,
-    statistics: DayStatistics,
-  ) => void;
-  triggerAdvance?: number;
-  currentDay: number;
-}
+interface GameCanvasProps extends ReactFlowProps {}
 
-const GameCanvas = ({
-  children,
-  onDayAdvance,
-  triggerAdvance,
-  currentDay,
-  ...rest
-}: GameCanvasProps) => {
+const GameCanvas = ({ children, ...rest }: GameCanvasProps) => {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance>();
 
-  const { resources, updateResources } = useGlobalResources();
+  const { addDayStatistics, getLatestDayStats, resetStatistics, currentDay } =
+    useStatistics();
+  const { resources, updateResources, resetResources, setResource } =
+    useGlobalResources();
+  const { pause, dayAdvanceTrigger } = useTime();
+
+  const { fitView } = useReactFlow();
+  const { clearContent } = useContextPanel();
+  const [gameOverOpen, setGameOverOpen] = useState(false);
+
+  const hasContinuedGame = useRef(false);
   const prevTriggerRef = useRef(0);
-
-  useEffect(() => {
-    const newNodes = setup.buildings?.map((building) =>
-      createBuildingNode(building.type, building.position),
-    );
-
-    if (newNodes) {
-      setNodes(newNodes);
-    }
-  }, [setNodes]);
 
   // Process day advancement
   useEffect(() => {
-    if (triggerAdvance === undefined || triggerAdvance === 0) return;
-    if (triggerAdvance === prevTriggerRef.current) return;
+    if (dayAdvanceTrigger === undefined || dayAdvanceTrigger === 0) return;
+    if (dayAdvanceTrigger === prevTriggerRef.current) return;
 
-    prevTriggerRef.current = triggerAdvance;
+    prevTriggerRef.current = dayAdvanceTrigger;
+
+    const nextDay = currentDay + 1;
 
     const { updatedNodes, statistics } = processDay(
       nodes,
       edges,
-      currentDay,
+      nextDay,
       resources,
+      getLatestDayStats(),
     );
 
     setNodes(updatedNodes);
     updateResources(statistics.global.earned);
-    onDayAdvance?.(statistics.global.resources, statistics);
+    addDayStatistics(statistics);
+
+    if (statistics.global.foodDeficit > 0) {
+      if (!hasContinuedGame.current) {
+        setGameOverOpen(true);
+        pause();
+      }
+    }
   }, [
-    triggerAdvance,
+    dayAdvanceTrigger,
     currentDay,
     resources,
-    onDayAdvance,
+    hasContinuedGame,
     setNodes,
     updateResources,
+    getLatestDayStats,
+    addDayStatistics,
   ]);
 
   const onInit: OnInit = (instance) => {
@@ -110,8 +111,45 @@ const GameCanvas = ({
     event.dataTransfer.dropEffect = "move";
   };
 
+  const runSetup = () => {
+    setNodes([]);
+    setEdges([]);
+    resetResources();
+    resetStatistics();
+    clearContent();
+
+    const newNodes = setup.buildings?.map((building) =>
+      createBuildingNode(building.type, building.position),
+    );
+
+    setup.resources?.forEach((resource) => {
+      setResource(resource.type, resource.amount);
+    });
+
+    if (newNodes) {
+      setNodes(newNodes);
+    }
+
+    fitView({ maxZoom: 1, padding: 0.2 });
+  };
+
+  const handleContinuePlaying = () => {
+    setGameOverOpen(false);
+    hasContinuedGame.current = true;
+  };
+
+  const handleRestart = () => {
+    setGameOverOpen(false);
+    hasContinuedGame.current = false;
+    runSetup();
+  };
+
+  useEffect(() => {
+    runSetup();
+  }, [runSetup]);
+
   return (
-    <BlockStack fill className="relative">
+    <>
       <ReactFlow
         {...rest}
         nodes={nodes}
@@ -135,7 +173,14 @@ const GameCanvas = ({
         <Background variant={BackgroundVariant.Lines} />
         {children}
       </ReactFlow>
-    </BlockStack>
+
+      <GameOverDialog
+        open={gameOverOpen}
+        day={currentDay}
+        onContinue={handleContinuePlaying}
+        onRestart={handleRestart}
+      />
+    </>
   );
 };
 

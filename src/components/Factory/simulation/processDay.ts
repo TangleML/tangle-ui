@@ -10,6 +10,7 @@ import type {
   GlobalStatistics,
 } from "../types/statistics";
 import { advanceProduction } from "./helpers/advanceProduction";
+import { calculateFoodRequirement } from "./helpers/calculateFoodRequirement";
 import { processSpecialBuilding } from "./helpers/processSpecialBuilding";
 import { transferResourcesEvenlyDownstream } from "./helpers/transferResourcesEvenlyDownstream";
 
@@ -18,6 +19,7 @@ export const processDay = (
   edges: Edge[],
   day: number,
   currentResources: GlobalResources,
+  previousDayStats?: DayStatistics,
 ): {
   updatedNodes: Node[];
   statistics: DayStatistics;
@@ -104,6 +106,19 @@ export const processDay = (
     });
   }
 
+  // ✅ STEP 3: Calculate food requirement and deduct
+  const previousRequirement = previousDayStats?.global.foodRequired;
+  const foodRequired = calculateFoodRequirement(day, previousRequirement);
+
+  const foodConsumed = Math.min(
+    foodRequired,
+    currentResources.food + earnedGlobalResources.food,
+  );
+  const foodDeficit = Math.max(0, foodRequired - foodConsumed);
+
+  // Deduct consumed food from earned resources first, then current resources
+  earnedGlobalResources.food -= foodConsumed;
+
   const finalResources = { ...currentResources };
 
   GLOBAL_RESOURCE_KEYS.forEach((key) => {
@@ -115,6 +130,9 @@ export const processDay = (
     day,
     earned: earnedGlobalResources,
     resources: finalResources,
+    foodRequired,
+    foodConsumed,
+    foodDeficit,
   };
 
   return {

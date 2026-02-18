@@ -2,7 +2,7 @@ import { ReactFlowProvider } from "@xyflow/react";
 
 import FactoryGameApp from "./FactoryGameApp";
 import { GlobalResourcesProvider } from "./providers/GlobalResourcesProvider";
-import { StatisticsProvider } from "./providers/StatisticProvider";
+import { StatisticsProvider } from "./providers/StatisticsProvider";
 
 /**
  * FactoryGame - Top-level component that provides all necessary contexts
