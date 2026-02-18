@@ -16,10 +16,11 @@ import { useEffect, useState } from "react";
 
 import { BlockStack } from "@/components/ui/layout";
 
-import { RESOURCES } from "../data/resources";
 import { setup } from "../data/setup";
-import type { Building } from "../types/buildings";
-import { isResourceType } from "../types/resources";
+import { extractResource } from "../utils/string";
+import { createOnConnect } from "./callbacks/onConnect";
+import { createOnDrop } from "./callbacks/onDrop";
+import { ConnectionLine } from "./Edges/ConnectionLine";
 import ResourceEdge from "./Edges/ResourceEdge";
 import BuildingNode from "./Nodes/Building";
 
@@ -30,8 +31,6 @@ const nodeTypes: Record<string, ComponentType<any>> = {
 const edgeTypes: Record<string, ComponentType<any>> = {
   resourceEdge: ResourceEdge,
 };
-
-let nodeIdCounter = 0;
 
 const GameCanvas = ({ children, ...rest }: ReactFlowProps) => {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -48,34 +47,32 @@ const GameCanvas = ({ children, ...rest }: ReactFlowProps) => {
     instance.fitView({ maxZoom: 1, padding: 0.2 });
   };
 
-  const onConnect = (connection: Connection) => {
-    if (connection.source === connection.target) return;
+  const onConnect = createOnConnect(setEdges);
+  const onDrop = createOnDrop(reactFlowInstance, setNodes);
 
-    const sourceResource = connection.sourceHandle?.split("-").pop();
-    const targetResource = connection.targetHandle?.split("-").pop();
+  const isValidConnection = (connection: Connection | Edge) => {
+    if (connection.source === connection.target) return false;
 
-    const resourceName = sourceResource ?? targetResource;
+    const sourceResource = extractResource(connection.sourceHandle);
+    const targetResource = extractResource(connection.targetHandle);
 
-    if (!isResourceType(resourceName)) {
-      console.error("Invalid resource type:", resourceName);
-      return;
+    if (
+      sourceResource !== "any" &&
+      targetResource !== "any" &&
+      sourceResource !== targetResource
+    ) {
+      return false;
     }
 
-    const newEdge: Edge = {
-      ...connection,
-      id: `${connection.source}-${connection.sourceHandle}-${connection.target}-${connection.targetHandle}`,
-      type: "resourceEdge",
-      data: { ...RESOURCES[resourceName] },
-      animated: true,
-    };
+    const hasExistingConnection = edges.some(
+      (edge) =>
+        (edge.source === connection.source &&
+          edge.sourceHandle === connection.sourceHandle) ||
+        (edge.target === connection.target &&
+          edge.targetHandle === connection.targetHandle),
+    );
 
-    setEdges((eds) => [
-      ...eds,
-      {
-        ...connection,
-        ...newEdge,
-      } as Edge,
-    ]);
+    return !hasExistingConnection;
   };
 
   const onNodesDelete = (deleted: Node[]) => {
@@ -89,48 +86,6 @@ const GameCanvas = ({ children, ...rest }: ReactFlowProps) => {
   const onDragOver = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
-  };
-
-  const onDrop = (event: DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-
-    if (!reactFlowInstance) return;
-
-    const buildingData = event.dataTransfer.getData("application/reactflow");
-    if (!buildingData) return;
-
-    try {
-      const { building } = JSON.parse(buildingData) as { building: Building };
-
-      const position = reactFlowInstance.screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
-      });
-
-      const offsetData = event.dataTransfer.getData("DragStart.offset");
-      if (offsetData) {
-        const { offsetX, offsetY } = JSON.parse(offsetData);
-        position.x -= offsetX;
-        position.y -= offsetY;
-      }
-
-      const newNode: Node = {
-        id: `${building.id}-${nodeIdCounter++}`,
-        type: "building",
-        position,
-        data: {
-          ...building,
-          label: building.name,
-        },
-        draggable: true,
-        deletable: true,
-        selectable: true,
-      };
-
-      setNodes((nds) => [...nds, newNode]);
-    } catch (error) {
-      console.error("Failed to drop building:", error);
-    }
   };
 
   return (
@@ -151,6 +106,8 @@ const GameCanvas = ({ children, ...rest }: ReactFlowProps) => {
         edgeTypes={edgeTypes}
         minZoom={0.1}
         maxZoom={2}
+        connectionLineComponent={ConnectionLine}
+        isValidConnection={isValidConnection}
         deleteKeyCode={["Delete", "Backspace"]}
         proOptions={{ hideAttribution: true }}
         fitView
