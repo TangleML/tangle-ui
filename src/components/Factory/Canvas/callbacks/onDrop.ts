@@ -1,9 +1,7 @@
 import type { Node, ReactFlowInstance } from "@xyflow/react";
 import type { DragEvent } from "react";
 
-import type { Building } from "../../types/buildings";
-
-let nodeIdCounter = 0;
+import { createBuildingNode } from "../../objects/buildings/createBuildingNode";
 
 export const createOnDrop = (
   reactFlowInstance: ReactFlowInstance | undefined,
@@ -14,11 +12,12 @@ export const createOnDrop = (
 
     if (!reactFlowInstance) return;
 
-    const buildingData = event.dataTransfer.getData("application/reactflow");
-    if (!buildingData) return;
+    const droppedBuildingData = event.dataTransfer.getData(
+      "application/reactflow",
+    );
 
     try {
-      const { building } = JSON.parse(buildingData) as { building: Building };
+      const { buildingType } = JSON.parse(droppedBuildingData);
 
       const position = reactFlowInstance.screenToFlowPosition({
         x: event.clientX,
@@ -32,18 +31,7 @@ export const createOnDrop = (
         position.y -= offsetY;
       }
 
-      const newNode: Node = {
-        id: `${building.id}-${nodeIdCounter++}`,
-        type: "building",
-        position,
-        data: {
-          ...building,
-          label: building.name,
-        },
-        draggable: true,
-        deletable: true,
-        selectable: true,
-      };
+      const newNode = createBuildingNode(buildingType, position);
 
       setNodes((nds) => [...nds, newNode]);
     } catch (error) {

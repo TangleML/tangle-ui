@@ -9,6 +9,7 @@ import { ContextPanelProvider } from "@/providers/ContextPanelProvider";
 
 import GameCanvas from "./Canvas/GameCanvas";
 import GameControls from "./Controls/GameControls";
+import type { GlobalResources } from "./data/resources";
 import { GlobalResourcesProvider } from "./providers/GlobalResourcesProvider";
 import { StatisticsProvider } from "./providers/StatisticProvider";
 import GameSidebar from "./Sidebar/GameSidebar";
@@ -45,7 +46,10 @@ const FactoryGame = () => {
     setAdvanceTrigger((prev) => prev + 1);
   };
 
-  const handleDayAdvance = (statistics: DayStatistics) => {
+  const handleDayAdvance = (
+    _globalResources: GlobalResources,
+    statistics: DayStatistics,
+  ) => {
     setLastDayStats(statistics);
     setStatsHistory((prev) => [...prev, statistics]);
   };

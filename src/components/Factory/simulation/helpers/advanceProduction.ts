@@ -1,30 +1,24 @@
 import type { Node } from "@xyflow/react";
 
-import { RESOURCES } from "../../data/resources";
-import { getBuildingData } from "../../types/buildings";
+import { type GlobalResources, isGlobalResource } from "../../data/resources";
+import { getBuildingInstance } from "../../types/buildings";
+import type { ResourceType } from "../../types/resources";
 import type { BuildingStatistics } from "../../types/statistics";
 
 export const advanceProduction = (
   node: Node,
+  earnedGlobalResources: GlobalResources,
   buildingStats: Map<string, BuildingStatistics>,
 ) => {
-  const building = getBuildingData(node);
+  const building = getBuildingInstance(node);
   if (!building) return;
 
   const method = building.productionMethod;
-
-  // Skip global output buildings - check dynamically if any output is global
   if (!method) return;
-
-  const hasGlobalOutputs = method.outputs?.some(
-    (output) => RESOURCES[output.resource]?.global,
-  );
-
-  if (hasGlobalOutputs) return; // Handled by processGlobalOutputBuilding
 
   // Initialize statistics for this building if needed
   if (!buildingStats.has(node.id)) {
-    buildingStats.set(node.id, { stockpileChanges: [] });
+    buildingStats.set(node.id, { stockpileChanges: [], produced: {} });
   }
   const stats = buildingStats.get(node.id)!;
 
@@ -34,10 +28,14 @@ export const advanceProduction = (
     status: "idle" as const,
   };
 
-  let stockpile = building.stockpile;
+  let stockpile = building.stockpile || [];
 
   // Helper to track stockpile changes
-  const trackChange = (resource: string, added: number, removed: number) => {
+  const trackChange = (
+    resource: ResourceType,
+    added: number,
+    removed: number,
+  ) => {
     const existing = stats.stockpileChanges.find(
       (c) => c.resource === resource,
     );
@@ -47,7 +45,7 @@ export const advanceProduction = (
       existing.net = existing.added - existing.removed;
     } else {
       stats.stockpileChanges.push({
-        resource: resource as any,
+        resource,
         added,
         removed,
         net: added - removed,
@@ -57,6 +55,8 @@ export const advanceProduction = (
 
   // Helper: Check if building has enough inputs
   const hasEnoughInputs = (): boolean => {
+    if (method.inputs.length === 0) return true; // No inputs needed
+
     return method.inputs.every((input) => {
       const stock = stockpile?.find(
         (s) => s.resource === input.resource || s.resource === "any",
@@ -65,18 +65,25 @@ export const advanceProduction = (
     });
   };
 
-  // Helper: Check if there's room in output stockpile
+  // Helper: Check if there's room in output stockpile (only for non-global outputs)
   const hasOutputSpace = (): boolean => {
     if (!method.outputs || method.outputs.length === 0) return true;
 
     return method.outputs.every((output) => {
+      // Global outputs don't need stockpile space
+      if (isGlobalResource(output.resource)) return true;
+
       const stock = stockpile?.find((s) => s.resource === output.resource);
-      return stock && stock.amount + output.amount <= stock.maxAmount;
+      // If no stockpile exists for this output, we can't produce it
+      if (!stock) return false;
+      return stock.amount + output.amount <= stock.maxAmount;
     });
   };
 
   // Helper: Consume input resources from stockpile
   const consumeInputs = () => {
+    if (method.inputs.length === 0) return; // No inputs to consume
+
     stockpile = stockpile?.map((stock) => {
       const input = method.inputs.find(
         (i) =>
@@ -91,19 +98,37 @@ export const advanceProduction = (
     });
   };
 
-  // Helper: Add output resources to stockpile
+  // Helper: Add output resources to stockpile or global outputs
   const addOutputs = () => {
-    stockpile = stockpile?.map((stock) => {
-      const output = method.outputs?.find((o) => o.resource === stock.resource);
-      if (output) {
-        trackChange(stock.resource, output.amount, 0);
-        return {
-          ...stock,
-          amount: Math.min(stock.maxAmount, stock.amount + output.amount),
-        };
+    const produced: Partial<GlobalResources> = {};
+
+    method.outputs?.forEach((output) => {
+      const { resource } = output;
+
+      if (isGlobalResource(resource)) {
+        // Add to global outputs
+        earnedGlobalResources[resource] =
+          (earnedGlobalResources[resource] || 0) + output.amount;
+        produced[resource] = output.amount;
+      } else {
+        // Add to stockpile
+        stockpile = stockpile?.map((stock) => {
+          if (stock.resource === output.resource) {
+            trackChange(stock.resource, output.amount, 0);
+            return {
+              ...stock,
+              amount: Math.min(stock.maxAmount, stock.amount + output.amount),
+            };
+          }
+          return stock;
+        });
       }
-      return stock;
     });
+
+    // Track global resource production in stats
+    if (Object.keys(produced).length > 0) {
+      stats.produced = produced;
+    }
   };
 
   // Step 1: If complete, reset & transition to idle
@@ -165,7 +190,7 @@ export const advanceProduction = (
   }
 
   // Update node with final state
-  node.data = {
+  node.data.buildingInstance = {
     ...building,
     stockpile,
     productionState,

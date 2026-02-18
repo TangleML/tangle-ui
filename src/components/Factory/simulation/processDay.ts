@@ -1,157 +1,131 @@
 import type { Edge, Node } from "@xyflow/react";
 
-import { RESOURCES } from "../data/resources";
-import { getBuildingData } from "../types/buildings";
+import { GLOBAL_RESOURCE_KEYS, type GlobalResources } from "../data/resources";
+import { getBuildingInstance } from "../types/buildings";
 import type {
   BuildingStatistics,
   DayStatistics,
   EdgeStatistics,
+  GlobalStatistics,
 } from "../types/statistics";
 import { advanceProduction } from "./helpers/advanceProduction";
-import { processGlobalOutputBuilding } from "./helpers/processGlobalOutputBuilding";
+import { processSpecialBuilding } from "./helpers/processSpecialBuilding";
 import { transferResources } from "./helpers/transferResources";
 
-interface ProcessDayResult {
-  updatedNodes: Node[];
-  globalOutputs: Record<string, number>;
-  statistics: DayStatistics;
-}
+const SPECIAL_BUILDINGS = ["marketplace"];
 
-// Removed currentMoney and currentKnowledge parameters - now dynamic
 export const processDay = (
   nodes: Node[],
   edges: Edge[],
-  currentDay: number,
-  currentResources: Record<string, number>,
-): ProcessDayResult => {
-  const updatedNodes = nodes.map((node) => ({
-    ...node,
-    data: { ...node.data },
-  }));
+  day: number,
+  currentResources: GlobalResources,
+): {
+  updatedNodes: Node[];
+  statistics: DayStatistics;
+} => {
+  const updatedNodes = structuredClone(nodes);
+  const earnedGlobalResources = Object.fromEntries(
+    GLOBAL_RESOURCE_KEYS.map((key) => [key, 0]),
+  ) as GlobalResources;
 
-  // Initialize global outputs dynamically
-  const globalOutputs: Record<string, number> = {};
-
-  // Initialize statistics tracking
+  // Initialize statistics
   const buildingStats = new Map<string, BuildingStatistics>();
   const edgeStats = new Map<string, EdgeStatistics>();
 
-  // Build adjacency maps
-  const upstreamMap = new Map<string, string[]>();
-  const downstreamMap = new Map<string, string[]>();
+  // Build adjacency lists (both forward and reverse)
+  const downstream = new Map<string, string[]>(); // node -> nodes it outputs to
+  const upstream = new Map<string, string[]>(); // node -> nodes that output to it
+  const outDegree = new Map<string, number>(); // how many downstream nodes
+
+  updatedNodes.forEach((node) => {
+    downstream.set(node.id, []);
+    upstream.set(node.id, []);
+    outDegree.set(node.id, 0);
+  });
 
   edges.forEach((edge) => {
-    // Upstream map: target -> sources
-    if (!upstreamMap.has(edge.target)) {
-      upstreamMap.set(edge.target, []);
+    downstream.get(edge.source)?.push(edge.target);
+    upstream.get(edge.target)?.push(edge.source);
+    outDegree.set(edge.source, (outDegree.get(edge.source) || 0) + 1);
+  });
+
+  // ✅ STEP 1: Find all sink nodes (nodes with no downstream connections)
+  const queue: string[] = [];
+  updatedNodes.forEach((node) => {
+    if (outDegree.get(node.id) === 0) {
+      queue.push(node.id);
     }
-    upstreamMap.get(edge.target)!.push(edge.source);
-
-    // Downstream map: source -> targets
-    if (!downstreamMap.has(edge.source)) {
-      downstreamMap.set(edge.source, []);
-    }
-    downstreamMap.get(edge.source)!.push(edge.target);
   });
 
-  // Find sink nodes (buildings that produce global outputs)
-  const sinkNodes = updatedNodes.filter((node) => {
-    const building = getBuildingData(node);
-    return building?.productionMethod?.outputs.some(
-      (output) => RESOURCES[output.resource]?.global,
-    );
-  });
+  const processed = new Set<string>();
 
-  // Track visited nodes for BFS
-  const visited = new Set<string>();
-
-  // STEP 1: Process global output buildings (sinks)
-  sinkNodes.forEach((node) => {
-    processGlobalOutputBuilding(node, globalOutputs, buildingStats);
-    visited.add(node.id);
-  });
-
-  // Build processing order via BFS from sinks
-  const processingOrder: string[] = [];
-  const queue: string[] = [...sinkNodes.map((n) => n.id)];
-
+  // ✅ STEP 2: Process nodes from sinks upstream
   while (queue.length > 0) {
-    const nodeId = queue.shift()!;
+    const currentNodeId = queue.shift()!;
+    if (processed.has(currentNodeId)) continue;
 
-    const upstreamNodes = upstreamMap.get(nodeId) || [];
-    upstreamNodes.forEach((upstreamId) => {
-      if (!visited.has(upstreamId)) {
-        visited.add(upstreamId);
-        processingOrder.push(upstreamId);
-        queue.push(upstreamId);
-      }
-    });
-  }
+    const currentNode = updatedNodes.find((n) => n.id === currentNodeId);
+    if (!currentNode) continue;
 
-  // STEP 2: Transfer resources (in reverse order - from upstream to downstream)
-  processingOrder.forEach((nodeId) => {
-    const downstreamNodes = downstreamMap.get(nodeId) || [];
-    downstreamNodes.forEach((downstreamId) => {
+    const building = getBuildingInstance(currentNode);
+    if (!building) continue;
+
+    // ✅ STEP 2.1: If there is downstream, transfer resources downstream
+    const downstreamNodes = downstream.get(currentNodeId) || [];
+    downstreamNodes.forEach((neighborId) => {
       transferResources(
-        nodeId,
-        downstreamId,
+        currentNodeId,
+        neighborId,
         updatedNodes,
         edges,
         buildingStats,
         edgeStats,
       );
     });
-  });
 
-  // STEP 3: Advance production for all non-sink nodes
-  processingOrder.forEach((nodeId) => {
-    const node = updatedNodes.find((n) => n.id === nodeId);
-    if (node) {
-      advanceProduction(node, buildingStats);
+    // ✅ STEP 2.2: If special node, process special, otherwise advance production
+    if (SPECIAL_BUILDINGS.includes(building.type)) {
+      processSpecialBuilding(currentNode, earnedGlobalResources, buildingStats);
+    } else {
+      advanceProduction(currentNode, earnedGlobalResources, buildingStats);
     }
+
+    // Mark as processed
+    processed.add(currentNodeId);
+
+    // ✅ STEP 2.3: Move upstream - add upstream nodes if all their downstream nodes are processed
+    const upstreamNodes = upstream.get(currentNodeId) || [];
+    upstreamNodes.forEach((upstreamNodeId) => {
+      const upstreamDownstreamNodes = downstream.get(upstreamNodeId) || [];
+      const allDownstreamProcessed = upstreamDownstreamNodes.every((id) =>
+        processed.has(id),
+      );
+
+      if (allDownstreamProcessed && !processed.has(upstreamNodeId)) {
+        queue.push(upstreamNodeId);
+      }
+    });
+  }
+
+  const finalResources = { ...currentResources };
+
+  GLOBAL_RESOURCE_KEYS.forEach((key) => {
+    finalResources[key] += earnedGlobalResources[key];
   });
 
-  // Handle disconnected nodes (not connected to any sink)
-  updatedNodes.forEach((node) => {
-    if (!visited.has(node.id)) {
-      // Transfer to any downstream connections
-      const downstreamNodes = downstreamMap.get(node.id) || [];
-      downstreamNodes.forEach((downstreamId) => {
-        transferResources(
-          node.id,
-          downstreamId,
-          updatedNodes,
-          edges,
-          buildingStats,
-          edgeStats,
-        );
-      });
-
-      // Advance production
-      advanceProduction(node, buildingStats);
-      visited.add(node.id);
-    }
-  });
-
-  // Build final statistics object with dynamic resources
-  const updatedResources: Record<string, number> = { ...currentResources };
-  const earned: Record<string, number> = {};
-
-  // Update all global resources that were produced
-  Object.entries(globalOutputs).forEach(([resource, amount]) => {
-    updatedResources[resource] = (updatedResources[resource] || 0) + amount;
-    earned[resource] = amount;
-  });
-
-  const statistics: DayStatistics = {
-    global: {
-      day: currentDay,
-      resources: updatedResources,
-      earned,
-    },
-    buildings: buildingStats,
-    edges: edgeStats,
+  // Build global statistics
+  const globalStats: GlobalStatistics = {
+    day,
+    earned: earnedGlobalResources,
+    resources: finalResources,
   };
 
-  return { updatedNodes, globalOutputs, statistics };
+  return {
+    updatedNodes,
+    statistics: {
+      global: globalStats,
+      buildings: buildingStats,
+      edges: edgeStats,
+    },
+  };
 };
