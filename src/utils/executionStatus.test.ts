@@ -2,11 +2,9 @@ import { describe, expect, test } from "vitest";
 
 import type { GetGraphExecutionStateResponse } from "@/api/types.gen";
 import {
-  countInProgressFromStats,
   flattenExecutionStatusStats,
   getExecutionStatusLabel,
   getOverallExecutionStatusFromStats,
-  isExecutionComplete,
 } from "@/utils/executionStatus";
 
 type ChildExecutionStatusStats =
@@ -140,73 +138,5 @@ describe("getOverallExecutionStatusFromStats()", () => {
         SUCCEEDED: 5,
       }),
     ).toBe("UNINITIALIZED");
-  });
-});
-
-describe("countInProgressFromStats()", () => {
-  test("counts all in-progress statuses", () => {
-    expect(
-      countInProgressFromStats({
-        RUNNING: 2,
-        PENDING: 1,
-        QUEUED: 3,
-        SUCCEEDED: 10,
-      }),
-    ).toBe(6);
-  });
-
-  test("returns 0 when no in-progress statuses", () => {
-    expect(
-      countInProgressFromStats({
-        SUCCEEDED: 5,
-        FAILED: 2,
-      }),
-    ).toBe(0);
-  });
-
-  test("counts all in-progress status types", () => {
-    expect(
-      countInProgressFromStats({
-        RUNNING: 1,
-        PENDING: 1,
-        QUEUED: 1,
-        WAITING_FOR_UPSTREAM: 1,
-        CANCELLING: 1,
-        UNINITIALIZED: 1,
-      }),
-    ).toBe(6);
-  });
-});
-
-describe("isExecutionComplete()", () => {
-  test("returns true when all tasks are in terminal states", () => {
-    expect(
-      isExecutionComplete({
-        SUCCEEDED: 5,
-        FAILED: 2,
-      }),
-    ).toBe(true);
-  });
-
-  test("returns false when any tasks are in progress", () => {
-    expect(
-      isExecutionComplete({
-        SUCCEEDED: 5,
-        RUNNING: 1,
-      }),
-    ).toBe(false);
-  });
-
-  test("returns false for empty stats", () => {
-    expect(isExecutionComplete({})).toBe(false);
-  });
-
-  test("returns true for cancelled/skipped executions", () => {
-    expect(
-      isExecutionComplete({
-        CANCELLED: 3,
-        SKIPPED: 2,
-      }),
-    ).toBe(true);
   });
 });

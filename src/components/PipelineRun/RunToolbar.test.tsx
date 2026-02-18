@@ -73,6 +73,7 @@ describe("<RunToolbar/>", () => {
       execution1: { SUCCEEDED: 1 },
       execution2: { RUNNING: 1 },
     },
+    summary: { total_nodes: 2, ended_nodes: 1, has_ended: false },
   };
 
   const mockComponentSpec: ComponentSpec = {
@@ -205,6 +206,7 @@ describe("<RunToolbar/>", () => {
               execution1: { SUCCEEDED: 1 },
               execution2: { CANCELLED: 1 },
             },
+            summary: { total_nodes: 2, ended_nodes: 2, has_ended: true },
           },
         },
         rootExecutionId: "456",
@@ -250,6 +252,7 @@ describe("<RunToolbar/>", () => {
               execution1: { SUCCEEDED: 1 },
               execution2: { CANCELLED: 1 },
             },
+            summary: { total_nodes: 2, ended_nodes: 2, has_ended: true },
           },
         },
         rootExecutionId: "456",
