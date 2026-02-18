@@ -16,6 +16,7 @@ import { useEffect, useState } from "react";
 import { BlockStack } from "@/components/ui/layout";
 
 import { setup } from "../data/setup";
+import { processDay } from "../simulation/processDay";
 import { createIsValidConnection } from "./callbacks/isValidConnection";
 import { createOnConnect } from "./callbacks/onConnect";
 import { createOnDrop } from "./callbacks/onDrop";
@@ -31,7 +32,17 @@ const edgeTypes: Record<string, ComponentType<any>> = {
   resourceEdge: ResourceEdge,
 };
 
-const GameCanvas = ({ children, ...rest }: ReactFlowProps) => {
+interface GameCanvasProps extends ReactFlowProps {
+  onDayAdvance?: (globalOutputs: { coins: number; knowledge: number }) => void;
+  triggerAdvance?: number;
+}
+
+const GameCanvas = ({
+  children,
+  onDayAdvance,
+  triggerAdvance,
+  ...rest
+}: GameCanvasProps) => {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [reactFlowInstance, setReactFlowInstance] =
@@ -40,6 +51,15 @@ const GameCanvas = ({ children, ...rest }: ReactFlowProps) => {
   useEffect(() => {
     setNodes(setup.buildings);
   }, [setNodes]);
+
+  // Process day advancement
+  useEffect(() => {
+    if (triggerAdvance === undefined || triggerAdvance === 0) return;
+
+    const { updatedNodes, globalOutputs } = processDay(nodes, edges);
+    setNodes(updatedNodes);
+    onDayAdvance?.(globalOutputs);
+  }, [triggerAdvance]);
 
   const onInit: OnInit = (instance) => {
     setReactFlowInstance(instance);

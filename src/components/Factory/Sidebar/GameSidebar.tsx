@@ -1,10 +1,22 @@
 import { Sidebar, SidebarContent } from "@/components/ui/sidebar";
 
 import Buildings from "./Buildings";
-import Controls from "./Controls";
 import Resources from "./Resources";
+import Time from "./Time";
 
-const GameSidebar = () => {
+interface GameSidebarProps {
+  day: number;
+  coins: number;
+  knowledge: number;
+  onAdvanceDay: () => void;
+}
+
+const GameSidebar = ({
+  day,
+  coins,
+  knowledge,
+  onAdvanceDay,
+}: GameSidebarProps) => {
   return (
     <Sidebar
       side="left"
@@ -12,8 +24,8 @@ const GameSidebar = () => {
       collapsible="icon"
     >
       <SidebarContent>
-        <Controls />
-        <Resources />
+        <Time day={day} onAdvanceDay={onAdvanceDay} />
+        <Resources coins={coins} knowledge={knowledge} />
         <Buildings />
       </SidebarContent>
     </Sidebar>
