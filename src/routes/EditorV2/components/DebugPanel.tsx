@@ -12,7 +12,6 @@ import { navigationStore } from "../store/navigationStore";
 import {
   closeWindow,
   getWindowById,
-  hideWindow,
   openWindow,
 } from "../windows/windowStore";
 
@@ -182,12 +181,11 @@ function DebugPanelContent() {
 
 /**
  * DebugPanel component that manages the debug panel window lifecycle.
- * The window is created but hidden by default - it appears in the TaskPanel
- * and can be restored from there.
+ * If persisted as hidden, windowStore will auto-hide it.
+ * Otherwise it starts visible (first-time default).
  */
 export function DebugPanel() {
   useEffect(() => {
-    // Create the window but immediately hide it so it appears in TaskPanel
     const existingWindow = getWindowById(DEBUG_PANEL_WINDOW_ID);
     if (!existingWindow) {
       openWindow(<DebugPanelContent />, {
@@ -197,8 +195,6 @@ export function DebugPanel() {
         size: { width: 320, height: 420 },
         disabledActions: ["close"],
       });
-      // Hide it immediately so it starts in the TaskPanel
-      hideWindow(DEBUG_PANEL_WINDOW_ID);
     }
 
     // Cleanup: close window on unmount

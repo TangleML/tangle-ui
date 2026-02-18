@@ -19,6 +19,10 @@ import {
   type WindowOptions,
   type WindowRef,
 } from "./types";
+import {
+  getPersistedWindowState,
+  STATIC_WINDOW_IDS,
+} from "./windowPersistence";
 
 interface WindowStore {
   /** Map of window ID to window configuration */
@@ -85,12 +89,19 @@ export function openWindow(
   // Store content separately (not in proxy)
   windowContentMap.set(id, content);
 
-  // Calculate initial position and attachment
-  let initialPosition = options.position ?? calculateNewPosition();
-  let attachedTo: AttachmentInfo | undefined;
+  // Check for persisted state (only for static windows)
+  const persistedState = STATIC_WINDOW_IDS.has(id)
+    ? getPersistedWindowState(id)
+    : null;
 
-  // Handle attachment to parent window
-  if (options.attachTo) {
+  // Calculate initial position and attachment
+  let initialPosition = persistedState?.position ?? options.position ?? calculateNewPosition();
+  let attachedTo: AttachmentInfo | undefined = persistedState?.attachedTo;
+  const initialDockState: DockState = persistedState?.dockState ?? "none";
+  const initialSize = persistedState?.size ?? options.size ?? { ...DEFAULT_WINDOW_SIZE };
+
+  // Handle attachment to parent window (only if no persisted attachment)
+  if (!attachedTo && options.attachTo) {
     const parentWindow = windowStore.windows[options.attachTo];
     if (parentWindow && parentWindow.state !== "hidden") {
       const windowSize = options.size ?? DEFAULT_WINDOW_SIZE;
@@ -107,16 +118,22 @@ export function openWindow(
     title: options.title,
     state: "normal",
     position: initialPosition,
-    size: options.size ?? { ...DEFAULT_WINDOW_SIZE },
+    size: initialSize,
     minSize: options.minSize ?? { ...DEFAULT_MIN_SIZE },
     linkedEntityId: options.linkedEntityId,
     disabledActions: options.disabledActions,
-    dockState: "none",
+    dockState: initialDockState,
     attachedTo,
   };
 
   windowStore.windows[id] = config;
   windowStore.windowOrder.push(id);
+
+  // Apply hidden state after window creation if persisted as hidden
+  if (persistedState?.isHidden) {
+    // Use setTimeout to allow the window to be created first
+    setTimeout(() => hideWindow(id), 0);
+  }
 
   return createWindowRef(id);
 }

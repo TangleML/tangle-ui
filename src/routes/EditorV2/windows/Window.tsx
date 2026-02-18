@@ -251,7 +251,7 @@ export function Window({ windowId }: WindowProps) {
           // Visual indicator for docked windows
           isDocked ? "border-blue-400 border-2" : "border-gray-400",
           // Visual indicator for attached windows
-          isAttached && "border-green-400 border-2",
+          // isAttached && "border-green-400 border-2",
         )}
         style={windowStyle}
         onMouseDown={handleMouseDown}
@@ -264,7 +264,7 @@ export function Window({ windowId }: WindowProps) {
             isDragging && "cursor-grabbing",
             isMaximized && "cursor-default",
             isDocked ? "bg-blue-100 border-blue-200" : "bg-gray-200 border-gray-300",
-            isAttached && "bg-green-100 border-green-200",
+            // isAttached && "bg-green-100 border-green-200",
           )}
           onMouseDown={isMaximized ? undefined : handleHeaderMouseDown}
         >

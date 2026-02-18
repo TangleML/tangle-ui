@@ -36,12 +36,12 @@ import {
 } from "./store/navigationStore";
 import { TaskPanel } from "./windows/TaskPanel";
 import { WindowContainer } from "./windows/WindowContainer";
+import { initPersistence } from "./windows/windowPersistence";
 import {
   closeWindow,
   closeWindowsByLinkedEntity,
   getAllWindows,
   getWindowById,
-  hideWindow,
   openWindow,
   restoreWindow,
 } from "./windows/windowStore";
@@ -104,6 +104,12 @@ const PipelineEditor = withSuspenseWrapper(() => {
   // Subscribe to navigation store for re-renders when current spec changes
   const navSnapshot = useSnapshot(navigationStore);
   const currentSpec = getCurrentSpec();
+
+  // Initialize window persistence (subscribe to store changes for auto-save)
+  useEffect(() => {
+    const cleanup = initPersistence();
+    return cleanup;
+  }, []);
 
   // Initialize the valtio store and navigation with the loaded spec
   useEffect(() => {
@@ -290,7 +296,9 @@ const PipelineEditor = withSuspenseWrapper(() => {
     }
   }, []);
 
-  // Open pipeline tree window on mount (hidden by default)
+  // Open pipeline tree window on mount
+  // Note: If persisted as hidden, windowStore will auto-hide it.
+  // Otherwise it starts visible (first-time default).
   useEffect(() => {
     const existingWindow = getWindowById(PIPELINE_TREE_WINDOW_ID);
     if (!existingWindow) {
@@ -301,12 +309,12 @@ const PipelineEditor = withSuspenseWrapper(() => {
         size: { width: 280, height: 400 },
         disabledActions: ["close"],
       });
-      // Hide it immediately so it starts in the TaskPanel
-      hideWindow(PIPELINE_TREE_WINDOW_ID);
     }
   }, []);
 
-  // Open history window on mount (hidden by default)
+  // Open history window on mount
+  // Note: If persisted as hidden, windowStore will auto-hide it.
+  // Otherwise it starts visible (first-time default).
   useEffect(() => {
     const existingWindow = getWindowById(HISTORY_WINDOW_ID);
     if (!existingWindow) {
@@ -317,8 +325,6 @@ const PipelineEditor = withSuspenseWrapper(() => {
         size: { width: 260, height: 350 },
         disabledActions: ["close"],
       });
-      // Hide it immediately so it starts in the TaskPanel
-      hideWindow(HISTORY_WINDOW_ID);
     }
   }, []);
 
