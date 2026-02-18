@@ -1,7 +1,6 @@
 import {
   Background,
   BackgroundVariant,
-  type Connection,
   type Edge,
   type Node,
   type OnInit,
@@ -17,7 +16,7 @@ import { useEffect, useState } from "react";
 import { BlockStack } from "@/components/ui/layout";
 
 import { setup } from "../data/setup";
-import { extractResource } from "../utils/string";
+import { createIsValidConnection } from "./callbacks/isValidConnection";
 import { createOnConnect } from "./callbacks/onConnect";
 import { createOnDrop } from "./callbacks/onDrop";
 import { ConnectionLine } from "./Edges/ConnectionLine";
@@ -49,31 +48,7 @@ const GameCanvas = ({ children, ...rest }: ReactFlowProps) => {
 
   const onConnect = createOnConnect(setEdges);
   const onDrop = createOnDrop(reactFlowInstance, setNodes);
-
-  const isValidConnection = (connection: Connection | Edge) => {
-    if (connection.source === connection.target) return false;
-
-    const sourceResource = extractResource(connection.sourceHandle);
-    const targetResource = extractResource(connection.targetHandle);
-
-    if (
-      sourceResource !== "any" &&
-      targetResource !== "any" &&
-      sourceResource !== targetResource
-    ) {
-      return false;
-    }
-
-    const hasExistingConnection = edges.some(
-      (edge) =>
-        (edge.source === connection.source &&
-          edge.sourceHandle === connection.sourceHandle) ||
-        (edge.target === connection.target &&
-          edge.targetHandle === connection.targetHandle),
-    );
-
-    return !hasExistingConnection;
-  };
+  const isValidConnection = createIsValidConnection(edges);
 
   const onNodesDelete = (deleted: Node[]) => {
     console.log("Nodes deleted:", deleted);
