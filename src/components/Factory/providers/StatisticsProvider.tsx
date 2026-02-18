@@ -17,6 +17,7 @@ interface StatisticsContextType {
     includeBreakdown?: boolean,
   ) => EdgeStatistics[];
   resetStatistics: () => void;
+  setStatisticsHistory: (history: DayStatistics[]) => void;
 }
 
 const StatisticsContext = createContext<StatisticsContextType | undefined>(
@@ -78,6 +79,10 @@ export const StatisticsProvider: React.FC<{ children: React.ReactNode }> = ({
     setHistory([]);
   };
 
+  const setStatisticsHistory = (newHistory: DayStatistics[]) => {
+    setHistory(newHistory);
+  };
+
   return (
     <StatisticsContext.Provider
       value={{
@@ -88,6 +93,7 @@ export const StatisticsProvider: React.FC<{ children: React.ReactNode }> = ({
         getLatestDayStats,
         getLatestEdgeStats,
         resetStatistics,
+        setStatisticsHistory,
       }}
     >
       {children}
