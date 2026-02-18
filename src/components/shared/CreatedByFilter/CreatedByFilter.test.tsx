@@ -8,15 +8,33 @@ import { CreatedByFilter } from "./CreatedByFilter";
 
 describe("CreatedByFilter", () => {
   describe("rendering", () => {
-    it("should render with toggle unchecked and search input when no value", () => {
+    it("should render toggle and search input", () => {
       render(<CreatedByFilter value={undefined} onChange={vi.fn()} />);
 
-      expect(screen.getByRole("switch")).not.toBeChecked();
+      expect(screen.getByRole("switch")).toBeInTheDocument();
       expect(screen.getByLabelText("Created by me")).toBeInTheDocument();
       expect(screen.getByPlaceholderText("Search by user")).toBeInTheDocument();
       expect(
         screen.getByRole("button", { name: "Search" }),
       ).toBeInTheDocument();
+    });
+
+    it("should show 'Created by me' when no value", () => {
+      render(<CreatedByFilter value={undefined} onChange={vi.fn()} />);
+
+      expect(screen.getByLabelText("Created by me")).toBeInTheDocument();
+    });
+
+    it("should show 'Created by {user}' when value is set", () => {
+      render(<CreatedByFilter value="john.doe" onChange={vi.fn()} />);
+
+      expect(screen.getByLabelText("Created by john.doe")).toBeInTheDocument();
+    });
+
+    it("should have switch unchecked when no value", () => {
+      render(<CreatedByFilter value={undefined} onChange={vi.fn()} />);
+
+      expect(screen.getByRole("switch")).not.toBeChecked();
     });
 
     it("should show 'Created by {user}' and checked switch when value is set", () => {
