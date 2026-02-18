@@ -4,12 +4,16 @@ export interface Resource {
   color: string;
   icon: string;
   value: number;
+  foodValue?: number;
   global?: boolean;
 }
 
 const RESOURCE_TYPES = [
+  "any",
   "money",
   "knowledge",
+  "food",
+  "water",
   "wood",
   "stone",
   "wheat",
@@ -23,7 +27,14 @@ const RESOURCE_TYPES = [
   "coal",
   "flour",
   "bread",
-  "any",
+  "berries",
+  "fish",
+  "tools",
+  "copper",
+  "tin",
+  "bronze",
+  "iron",
+  "steel",
 ] as const;
 
 export type ResourceType = (typeof RESOURCE_TYPES)[number];

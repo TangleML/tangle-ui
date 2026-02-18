@@ -1,5 +1,6 @@
 import type { Edge, Node } from "@xyflow/react";
 
+import { SPECIAL_BUILDINGS } from "../data/buildings";
 import { GLOBAL_RESOURCE_KEYS, type GlobalResources } from "../data/resources";
 import { getBuildingInstance } from "../types/buildings";
 import type {
@@ -11,8 +12,6 @@ import type {
 import { advanceProduction } from "./helpers/advanceProduction";
 import { processSpecialBuilding } from "./helpers/processSpecialBuilding";
 import { transferResourcesEvenlyDownstream } from "./helpers/transferResourcesEvenlyDownstream";
-
-const SPECIAL_BUILDINGS = ["marketplace"];
 
 export const processDay = (
   nodes: Node[],
