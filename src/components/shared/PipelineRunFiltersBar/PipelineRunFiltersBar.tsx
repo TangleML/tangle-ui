@@ -1,15 +1,37 @@
 import { useState } from "react";
+import type { DateRange } from "react-day-picker";
 
 import { Button } from "@/components/ui/button";
+import { DatePickerWithRange } from "@/components/ui/date-picker";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { useRunSearchParams } from "@/hooks/useRunSearchParams";
 
 export function PipelineRunFiltersBar() {
-  const { filters, setFilter, setFilterDebounced } = useRunSearchParams();
+  const { filters, setFilter, setFilters, setFilterDebounced } =
+    useRunSearchParams();
 
   const [nameInput, setNameInput] = useState(filters.pipeline_name ?? "");
+
+  const createdAfter = filters.created_after
+    ? new Date(filters.created_after)
+    : undefined;
+  const createdBefore = filters.created_before
+    ? new Date(filters.created_before)
+    : undefined;
+
+  const dateRange: DateRange | undefined =
+    createdAfter || createdBefore
+      ? { from: createdAfter, to: createdBefore }
+      : undefined;
+
+  const handleDateRangeChange = (range: DateRange | undefined) => {
+    setFilters({
+      created_after: range?.from?.toISOString(),
+      created_before: range?.to?.toISOString(),
+    });
+  };
 
   return (
     <BlockStack gap="3">
@@ -42,6 +64,14 @@ export function PipelineRunFiltersBar() {
               <Icon name="X" size="sm" />
             </Button>
           )}
+        </div>
+
+        <div className="shrink-0">
+          <DatePickerWithRange
+            value={dateRange}
+            onChange={handleDateRangeChange}
+            placeholder="Date range"
+          />
         </div>
       </InlineStack>
     </BlockStack>
