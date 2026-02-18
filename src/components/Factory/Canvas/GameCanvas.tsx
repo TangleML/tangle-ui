@@ -1,4 +1,6 @@
 import {
+  Background,
+  BackgroundVariant,
   type Connection,
   type Edge,
   type Node,
@@ -14,8 +16,11 @@ import { useEffect, useState } from "react";
 
 import { BlockStack } from "@/components/ui/layout";
 
+import { RESOURCES } from "../data/resources";
 import { setup } from "../data/setup";
-import type { Building } from "../data/types";
+import type { Building } from "../types/buildings";
+import { isResourceType } from "../types/resources";
+import ResourceEdge from "./Edges/ResourceEdge";
 import BuildingNode from "./Nodes/Building";
 
 const nodeTypes: Record<string, ComponentType<any>> = {
@@ -23,7 +28,7 @@ const nodeTypes: Record<string, ComponentType<any>> = {
 };
 
 const edgeTypes: Record<string, ComponentType<any>> = {
-  resourceEdge: () => null, // Will use default edge for now
+  resourceEdge: ResourceEdge,
 };
 
 let nodeIdCounter = 0;
@@ -46,12 +51,29 @@ const GameCanvas = ({ children, ...rest }: ReactFlowProps) => {
   const onConnect = (connection: Connection) => {
     if (connection.source === connection.target) return;
 
+    const sourceResource = connection.sourceHandle?.split("-").pop();
+    const targetResource = connection.targetHandle?.split("-").pop();
+
+    const resourceName = sourceResource ?? targetResource;
+
+    if (!isResourceType(resourceName)) {
+      console.error("Invalid resource type:", resourceName);
+      return;
+    }
+
+    const newEdge: Edge = {
+      ...connection,
+      id: `${connection.source}-${connection.sourceHandle}-${connection.target}-${connection.targetHandle}`,
+      type: "resourceEdge",
+      data: { ...RESOURCES[resourceName] },
+      animated: true,
+    };
+
     setEdges((eds) => [
       ...eds,
       {
         ...connection,
-        id: `${connection.source}-${connection.target}`,
-        type: "resourceEdge",
+        ...newEdge,
       } as Edge,
     ]);
   };
@@ -133,6 +155,7 @@ const GameCanvas = ({ children, ...rest }: ReactFlowProps) => {
         proOptions={{ hideAttribution: true }}
         fitView
       >
+        <Background variant={BackgroundVariant.Lines} />
         {children}
       </ReactFlow>
     </BlockStack>
