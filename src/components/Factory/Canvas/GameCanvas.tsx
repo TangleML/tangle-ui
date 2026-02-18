@@ -19,6 +19,7 @@ import { useContextPanel } from "@/providers/ContextPanelProvider";
 import { GameOverDialog } from "../components/GameOverDialog";
 import { setup } from "../data/setup";
 import { createBuildingNode } from "../objects/buildings/createBuildingNode";
+import { setupConnections } from "../objects/resources/setupConnections";
 import { useGlobalResources } from "../providers/GlobalResourcesProvider";
 import { useStatistics } from "../providers/StatisticsProvider";
 import { useTime } from "../providers/TimeProvider";
@@ -102,7 +103,9 @@ const GameCanvas = ({ children, ...rest }: GameCanvasProps) => {
     instance.fitView({ maxZoom: 1, padding: 0.2 });
   };
 
-  const onConnect = createOnConnect(setEdges);
+  const onConnect = reactFlowInstance
+    ? createOnConnect(setEdges, reactFlowInstance)
+    : undefined;
   const onDrop = createOnDrop(reactFlowInstance, setNodes);
   const isValidConnection = createIsValidConnection(edges);
 
@@ -129,6 +132,29 @@ const GameCanvas = ({ children, ...rest }: GameCanvasProps) => {
     if (newNodes) {
       setNodes(newNodes);
     }
+
+    // Double RAF is needed to ensure nodes are rendered before we try to create edges between them
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (
+          setup.connections &&
+          setup.buildings &&
+          newNodes &&
+          reactFlowInstance
+        ) {
+          const newEdges = setupConnections(
+            setup.connections,
+            setup.buildings,
+            newNodes,
+            reactFlowInstance,
+          );
+
+          if (newEdges) {
+            setEdges(newEdges.filter((edge): edge is Edge => edge !== null));
+          }
+        }
+      });
+    });
 
     fitView({ maxZoom: 1, padding: 0.2 });
   };

@@ -27,8 +27,8 @@ export const processSpecialBuilding = (
   }
   const stats = buildingStats.get(node.id)!;
 
-  // Marketplace: Sells any resources for money based on their value
-  if (building.type === "marketplace") {
+  // Marketplace / Trading Post: Sells any resources for money based on their value
+  if (building.type === "marketplace" || building.type === "tradingpost") {
     const anyStock = building.stockpile?.find((s) => s.resource === "any");
 
     // If no stockpile or empty, set to idle
@@ -56,7 +56,7 @@ export const processSpecialBuilding = (
         // Get the base value of the resource
         const resourceValue = RESOURCE_VALUES[resourceType] || 1;
 
-        // The marketplace production method has a money multiplier on the output
+        // The marketplace / trading post production method has a money multiplier on the output
         // Get the money multiplier from the production method
         const moneyOutput = building.productionMethod.outputs?.find(
           (o) => o.resource === "money",
@@ -84,6 +84,8 @@ export const processSpecialBuilding = (
         }
       }
     });
+
+    totalMoney = Math.round(totalMoney);
 
     // Add money to global outputs
     if (totalMoney > 0) {
@@ -176,7 +178,7 @@ export const processSpecialBuilding = (
       }
       stats.produced.food = (stats.produced.food || 0) + totalFood;
 
-      // Also produce 1 knowledge when food is produced
+      // Also produce 1 knowledge when food is produced -- todo: change this so the passive knowledge effect only applies if the global food stockpile increases
       if (building.type === "firepit") {
         earnedGlobalResources.knowledge =
           (earnedGlobalResources.knowledge || 0) + 1;

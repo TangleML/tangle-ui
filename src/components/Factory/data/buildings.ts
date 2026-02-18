@@ -2,6 +2,7 @@ import type { BuildingClass } from "../types/buildings";
 
 export const SPECIAL_BUILDINGS = [
   "firepit",
+  "tradingpost",
   "marketplace",
   "storagepit",
   "granary",
@@ -13,7 +14,7 @@ export const BUILDINGS: Record<string, BuildingClass> = {
     icon: "🔥",
     description: "The centre of civilization",
     cost: 0,
-    color: "#FF4500",
+    color: "#0F0F0F",
     category: "special",
     productionMethods: [
       {
@@ -27,6 +28,22 @@ export const BUILDINGS: Record<string, BuildingClass> = {
           { resource: "food", amount: 1 },
           { resource: "knowledge", amount: 1 },
         ],
+        days: 1,
+      },
+    ],
+  },
+  tradingpost: {
+    name: "Trading Post",
+    icon: "🛖",
+    description: "Trade with other settlements",
+    cost: 0,
+    color: "#F4C464",
+    category: "special",
+    productionMethods: [
+      {
+        name: "Bartering",
+        inputs: [{ resource: "any", amount: 10 }],
+        outputs: [{ resource: "money", amount: 0.5 }],
         days: 1,
       },
     ],
@@ -376,13 +393,13 @@ export const BUILDINGS: Record<string, BuildingClass> = {
     category: "production",
     productionMethods: [
       {
-        name: "Handing Nets",
+        name: "Hand Nets",
         inputs: [],
         outputs: [{ resource: "fish", amount: 5 }],
         days: 1,
       },
       {
-        name: "Spearing Fish",
+        name: "Spear Fishing",
         inputs: [{ resource: "tools", amount: 2 }],
         outputs: [{ resource: "fish", amount: 20, nodes: 2 }],
         days: 1,
