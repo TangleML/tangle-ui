@@ -210,7 +210,7 @@ export const BUILDINGS: Record<BuildingType, BuildingClass> = {
     description: "Turns wood into planks",
     cost: 0,
     color: "#D2691E",
-    category: "refining",
+    category: "manufacturing",
     productionMethods: [
       {
         name: "Sandpaper and Saw",
@@ -229,7 +229,7 @@ export const BUILDINGS: Record<BuildingType, BuildingClass> = {
     description: "Turns wood into paper",
     cost: 0,
     color: "#6A5ACD",
-    category: "refining",
+    category: "manufacturing",
     productionMethods: [
       {
         name: "Pulp and Press",
@@ -273,7 +273,7 @@ export const BUILDINGS: Record<BuildingType, BuildingClass> = {
     description: "Processes livestock",
     cost: 0,
     color: "#8B0000",
-    category: "refining",
+    category: "manufacturing",
     productionMethods: [
       {
         name: "Carving Knives",
@@ -292,7 +292,7 @@ export const BUILDINGS: Record<BuildingType, BuildingClass> = {
     description: "Produces books",
     cost: 0,
     color: "#4B0082",
-    category: "refining",
+    category: "manufacturing",
     productionMethods: [
       {
         name: "Bookbinding",
@@ -311,7 +311,7 @@ export const BUILDINGS: Record<BuildingType, BuildingClass> = {
     description: "Grind wheat into flour",
     cost: 0,
     color: "#DAA520",
-    category: "refining",
+    category: "manufacturing",
     productionMethods: [
       {
         name: "Grinding Stones",
@@ -327,7 +327,7 @@ export const BUILDINGS: Record<BuildingType, BuildingClass> = {
     description: "Burns wood into coal",
     cost: 0,
     color: "#36454F",
-    category: "refining",
+    category: "manufacturing",
     productionMethods: [
       {
         name: "Charcoal Burning",
@@ -343,7 +343,7 @@ export const BUILDINGS: Record<BuildingType, BuildingClass> = {
     description: "Bakes bread and other treats!",
     cost: 0,
     color: "#F5CEB3",
-    category: "refining",
+    category: "manufacturing",
     productionMethods: [
       {
         name: "Oven Baking",
@@ -461,7 +461,7 @@ export const BUILDINGS: Record<BuildingType, BuildingClass> = {
     description: "Smelts ores into metal",
     cost: 0,
     color: "#B22222",
-    category: "refining",
+    category: "manufacturing",
     productionMethods: [
       {
         name: "Bronze",
@@ -489,7 +489,7 @@ export const BUILDINGS: Record<BuildingType, BuildingClass> = {
     description: "Crafts tools for various purposes",
     cost: 0,
     color: "#8B4513",
-    category: "refining",
+    category: "manufacturing",
     productionMethods: [
       {
         name: "Stone Tools",
@@ -569,7 +569,7 @@ export const BUILDINGS: Record<BuildingType, BuildingClass> = {
     description: "Produces coins from metal",
     cost: 0,
     color: "#FFD700",
-    category: "refining",
+    category: "manufacturing",
     productionMethods: [
       {
         name: "Copper Coins",
