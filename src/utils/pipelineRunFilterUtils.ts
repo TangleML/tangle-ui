@@ -1,8 +1,13 @@
 import type {
   AnnotationFilter,
   PipelineRunFilters,
+  SortDirection,
+  SortField,
 } from "@/types/pipelineRunFilters";
 import { isValidExecutionStatus } from "@/utils/executionStatus";
+
+const VALID_SORT_FIELDS = new Set<string>(["created_at", "pipeline_name"]);
+const VALID_SORT_DIRECTIONS = new Set<string>(["asc", "desc"]);
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -14,6 +19,14 @@ function isValidAnnotationFilter(value: unknown): value is AnnotationFilter {
     typeof value.key === "string" &&
     (value.value === undefined || typeof value.value === "string")
   );
+}
+
+function isValidSortField(value: string): value is SortField {
+  return VALID_SORT_FIELDS.has(value);
+}
+
+function isValidSortDirection(value: string): value is SortDirection {
+  return VALID_SORT_DIRECTIONS.has(value);
 }
 
 /**
@@ -49,6 +62,18 @@ export function validateFilters(parsed: unknown): PipelineRunFilters {
       filters.annotations = validAnnotations;
     }
   }
+  if (
+    typeof parsed.sort_field === "string" &&
+    isValidSortField(parsed.sort_field)
+  ) {
+    filters.sort_field = parsed.sort_field;
+  }
+  if (
+    typeof parsed.sort_direction === "string" &&
+    isValidSortDirection(parsed.sort_direction)
+  ) {
+    filters.sort_direction = parsed.sort_direction;
+  }
 
   return filters;
 }
@@ -78,6 +103,8 @@ const SPECIAL_FILTER_KEYS = new Set([
   "annotations",
   "created_after",
   "created_before",
+  "sort_field",
+  "sort_direction",
 ]);
 
 /**
