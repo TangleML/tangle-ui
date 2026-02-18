@@ -13,6 +13,7 @@ import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 
 import RootLayout from "../components/layout/RootLayout";
 import Editor from "./Editor";
+import FilterTest from "./FilterTest/FilterTest";
 import Home from "./Home";
 import NotFoundPage from "./NotFoundPage";
 import PipelineRun from "./PipelineRun";
@@ -27,6 +28,7 @@ declare module "@tanstack/react-router" {
 export const EDITOR_PATH = "/editor";
 export const RUNS_BASE_PATH = "/runs";
 export const QUICK_START_PATH = "/quick-start";
+export const FILTER_TEST_PATH = "/filter-test";
 export const APP_ROUTES = {
   HOME: "/",
   QUICK_START: QUICK_START_PATH,
@@ -34,6 +36,7 @@ export const APP_ROUTES = {
   RUN_DETAIL: `${RUNS_BASE_PATH}/$id`,
   RUN_DETAIL_WITH_SUBGRAPH: `${RUNS_BASE_PATH}/$id/$subgraphExecutionId`,
   RUNS: RUNS_BASE_PATH,
+  FILTER_TEST: FILTER_TEST_PATH,
   GITHUB_AUTH_CALLBACK: "/authorize/github",
   HUGGINGFACE_AUTH_CALLBACK: "/authorize/huggingface",
 };
@@ -96,12 +99,19 @@ const runDetailWithSubgraphRoute = createRoute({
   component: PipelineRun,
 });
 
+const filterTestRoute = createRoute({
+  getParentRoute: () => mainLayout,
+  path: APP_ROUTES.FILTER_TEST,
+  component: FilterTest,
+});
+
 const appRouteTree = mainLayout.addChildren([
   indexRoute,
   quickStartRoute,
   editorRoute,
   runDetailRoute,
   runDetailWithSubgraphRoute,
+  filterTestRoute,
 ]);
 
 const rootRouteTree = rootRoute.addChildren([
