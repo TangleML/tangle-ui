@@ -1,11 +1,11 @@
 import type { Edge, Node } from "@xyflow/react";
 
 import { getBuildingInstance } from "../../types/buildings";
+import { isResourceData, type ResourceType } from "../../types/resources";
 import type {
   BuildingStatistics,
   EdgeStatistics,
 } from "../../types/statistics";
-import { extractResource } from "../../utils/string";
 
 export const transferResources = (
   sourceNodeId: string,
@@ -43,20 +43,45 @@ export const transferResources = (
   );
 
   relevantEdges.forEach((edge) => {
-    // Extract resource from edge handle
-    const resource =
-      extractResource(edge.sourceHandle) || extractResource(edge.targetHandle);
+    if (!isResourceData(edge.data)) return;
+    const resource = edge.data.type;
+
     if (!resource) return;
 
-    // Find stockpiles
-    const sourceStock = sourceBuilding.stockpile?.find(
+    // ✅ Find source stockpile - check both direct match and "any" with breakdown
+    let sourceStock = sourceBuilding.stockpile?.find(
       (s) => s.resource === resource,
     );
+
+    let sourceIsAny = false;
+    const sourceAnyStock = sourceBuilding.stockpile?.find(
+      (s) => s.resource === "any",
+    );
+
+    // If no direct match, check if source has "any" stockpile with this resource in breakdown
+    if (sourceAnyStock?.breakdown?.has(resource)) {
+      sourceStock = sourceAnyStock;
+      sourceIsAny = true;
+    }
+
+    // ✅ Find target stockpile
     const targetStock = targetBuilding.stockpile?.find(
       (s) => s.resource === resource || s.resource === "any",
     );
 
     if (!sourceStock || !targetStock) return;
+
+    // ✅ Calculate available amount from source
+    let availableFromSource: number;
+    if (sourceIsAny && sourceStock.breakdown) {
+      // Source is "any" - get amount from breakdown
+      availableFromSource = sourceStock.breakdown.get(resource) || 0;
+    } else {
+      // Source is specific resource
+      availableFromSource = sourceStock.amount;
+    }
+
+    if (availableFromSource === 0) return;
 
     // Calculate transfer amount
     let actualTransferAmount: number;
@@ -65,12 +90,11 @@ export const transferResources = (
       const availableSpaceInTarget = targetStock.maxAmount - targetStock.amount;
       actualTransferAmount = Math.min(
         transferAmount,
-        sourceStock.amount,
+        availableFromSource,
         availableSpaceInTarget,
       );
     } else {
       // Original behavior: transfer all available
-      const availableFromSource = sourceStock.amount;
       const availableSpaceInTarget = targetStock.maxAmount - targetStock.amount;
       actualTransferAmount = Math.min(
         availableFromSource,
@@ -117,26 +141,61 @@ export const transferResources = (
         });
       }
 
-      // Update source stockpile - preserve buildingInstance structure
-      const updatedSourceBuilding = {
-        ...sourceBuilding,
-        stockpile: sourceBuilding.stockpile?.map((s) =>
-          s.resource === resource
-            ? { ...s, amount: s.amount - actualTransferAmount }
-            : s,
-        ),
-      };
+      // ✅ Update source stockpile
+      if (sourceIsAny && sourceStock.breakdown) {
+        // Source is "any" - update breakdown
+        const breakdown = new Map(sourceStock.breakdown);
+        const currentAmount = breakdown.get(resource as ResourceType) || 0;
+        const newAmount = currentAmount - actualTransferAmount;
 
-      sourceNode.data = {
-        ...sourceNode.data,
-        buildingInstance: updatedSourceBuilding,
-      };
+        if (newAmount <= 0) {
+          breakdown.delete(resource as ResourceType);
+        } else {
+          breakdown.set(resource as ResourceType, newAmount);
+        }
 
-      // Update target stockpile - preserve buildingInstance structure
+        const updatedSourceBuilding = {
+          ...sourceBuilding,
+          stockpile: sourceBuilding.stockpile?.map((s) =>
+            s.resource === "any"
+              ? {
+                  ...s,
+                  amount: s.amount - actualTransferAmount,
+                  breakdown,
+                }
+              : s,
+          ),
+        };
+
+        sourceNode.data = {
+          ...sourceNode.data,
+          buildingInstance: updatedSourceBuilding,
+        };
+      } else {
+        // Source is specific resource
+        const updatedSourceBuilding = {
+          ...sourceBuilding,
+          stockpile: sourceBuilding.stockpile?.map((s) =>
+            s.resource === resource
+              ? { ...s, amount: s.amount - actualTransferAmount }
+              : s,
+          ),
+        };
+
+        sourceNode.data = {
+          ...sourceNode.data,
+          buildingInstance: updatedSourceBuilding,
+        };
+      }
+
+      // ✅ Update target stockpile
       if (targetStock.resource === "any") {
         const breakdown = new Map(targetStock.breakdown || new Map());
-        const currentAmount = breakdown.get(resource) || 0;
-        breakdown.set(resource, currentAmount + actualTransferAmount);
+        const currentAmount = breakdown.get(resource as ResourceType) || 0;
+        breakdown.set(
+          resource as ResourceType,
+          currentAmount + actualTransferAmount,
+        );
 
         const updatedTargetBuilding = {
           ...targetBuilding,

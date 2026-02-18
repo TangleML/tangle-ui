@@ -1,18 +1,18 @@
 import type { Edge, Node } from "@xyflow/react";
 
 import { getBuildingInstance } from "../../types/buildings";
-import type { ResourceType } from "../../types/resources";
+import { isResourceData, type ResourceType } from "../../types/resources";
 import type {
   BuildingStatistics,
   EdgeStatistics,
 } from "../../types/statistics";
-import { extractResource } from "../../utils/string";
 import { transferResources } from "./transferResources";
 
 /**
  * Transfers resources from a node to all its downstream neighbors,
  * splitting evenly when multiple targets want the same resource.
  * Handles remainders by distributing them round-robin.
+ * Supports "any" stockpiles by checking breakdown for available resources.
  */
 export const transferResourcesEvenlyDownstream = (
   sourceNodeId: string,
@@ -30,7 +30,7 @@ export const transferResourcesEvenlyDownstream = (
   const building = getBuildingInstance(sourceNode);
   if (!building) return;
 
-  // ✅ Map: resource -> array of target node IDs
+  // ✅ Map: resource -> array of target node IDs that want this resource
   const resourceTargets = new Map<ResourceType, string[]>();
 
   downstreamNodes.forEach((neighborId) => {
@@ -39,9 +39,10 @@ export const transferResourcesEvenlyDownstream = (
     );
 
     relevantEdges.forEach((edge) => {
-      const resource =
-        extractResource(edge.sourceHandle) ||
-        extractResource(edge.targetHandle);
+      if (!isResourceData(edge.data)) return;
+
+      const resource = edge.data.type;
+
       if (!resource) return;
 
       if (!resourceTargets.has(resource)) {
@@ -52,18 +53,28 @@ export const transferResourcesEvenlyDownstream = (
     });
   });
 
-  // ✅ For each resource, calculate splits and handle remainders
+  // ✅ For each resource type requested by downstream nodes
   resourceTargets.forEach((targets, resource) => {
-    const sourceStock = building.stockpile?.find(
+    // Check if source has this resource (either directly or in "any" breakdown)
+    const directStock = building.stockpile?.find(
       (s) => s.resource === resource,
     );
-    if (!sourceStock || sourceStock.amount === 0) return;
+
+    const anyStock = building.stockpile?.find((s) => s.resource === "any");
+    const amountInBreakdown = anyStock?.breakdown?.get(resource) || 0;
+
+    const availableAmount = directStock
+      ? directStock.amount
+      : amountInBreakdown;
+
+    // Skip if no resources available
+    if (availableAmount === 0) return;
 
     const splitCount = targets.length;
-    const baseAmount = Math.floor(sourceStock.amount / splitCount);
-    const remainder = sourceStock.amount % splitCount;
+    const baseAmount = Math.floor(availableAmount / splitCount);
+    const remainder = availableAmount % splitCount;
 
-    // ✅ Calculate capacity for each target
+    // ✅ Calculate capacity for each target (only if they can accept this resource type)
     const targetCapacities = new Map<string, number>();
 
     targets.forEach((targetId) => {
@@ -73,6 +84,7 @@ export const transferResourcesEvenlyDownstream = (
       const targetBuilding = getBuildingInstance(targetNode);
       if (!targetBuilding) return;
 
+      // ✅ Find a stockpile that can accept this specific resource
       const targetStock = targetBuilding.stockpile?.find(
         (s) => s.resource === resource || s.resource === "any",
       );
@@ -80,6 +92,9 @@ export const transferResourcesEvenlyDownstream = (
       if (targetStock) {
         const availableSpace = targetStock.maxAmount - targetStock.amount;
         targetCapacities.set(targetId, availableSpace);
+      } else {
+        // Target cannot accept this resource type - capacity is 0
+        targetCapacities.set(targetId, 0);
       }
     });
 
@@ -99,7 +114,7 @@ export const transferResourcesEvenlyDownstream = (
     });
 
     // ✅ Second pass: redistribute leftovers if some targets couldn't take their full share
-    const leftover = sourceStock.amount - totalAllocated;
+    const leftover = availableAmount - totalAllocated;
 
     if (leftover > 0) {
       // Try to give leftovers to targets that still have capacity
