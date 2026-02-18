@@ -18,8 +18,8 @@ export const StockpileSection = ({
   stockpile,
   building,
 }: StockpileSectionProps) => {
-  const { lastDayStats } = useStatistics();
-  const statistics = lastDayStats?.buildings.get(nodeId);
+  const { getLatestBuildingStats } = useStatistics();
+  const statistics = getLatestBuildingStats(nodeId);
 
   const hasGlobalOutputs = building.productionMethod?.outputs.some((output) =>
     isGlobalResource(output.resource),
