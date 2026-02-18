@@ -11,12 +11,14 @@ import {
   useNodesState,
 } from "@xyflow/react";
 import type { ComponentType, DragEvent } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { BlockStack } from "@/components/ui/layout";
 
 import { setup } from "../data/setup";
+import { useGlobalResources } from "../providers/GlobalResourcesProvider";
 import { processDay } from "../simulation/processDay";
+import type { DayStatistics } from "../types/statistics";
 import { createIsValidConnection } from "./callbacks/isValidConnection";
 import { createOnConnect } from "./callbacks/onConnect";
 import { createOnDrop } from "./callbacks/onDrop";
@@ -33,20 +35,28 @@ const edgeTypes: Record<string, ComponentType<any>> = {
 };
 
 interface GameCanvasProps extends ReactFlowProps {
-  onDayAdvance?: (globalOutputs: { coins: number; knowledge: number }) => void;
+  onDayAdvance?: (
+    globalOutputs: Record<string, number>,
+    statistics: DayStatistics,
+  ) => void;
   triggerAdvance?: number;
+  currentDay: number;
 }
 
 const GameCanvas = ({
   children,
   onDayAdvance,
   triggerAdvance,
+  currentDay,
   ...rest
 }: GameCanvasProps) => {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance>();
+
+  const { resources, updateResources } = useGlobalResources();
+  const prevTriggerRef = useRef(0);
 
   useEffect(() => {
     setNodes(setup.buildings);
@@ -55,11 +65,28 @@ const GameCanvas = ({
   // Process day advancement
   useEffect(() => {
     if (triggerAdvance === undefined || triggerAdvance === 0) return;
+    if (triggerAdvance === prevTriggerRef.current) return;
 
-    const { updatedNodes, globalOutputs } = processDay(nodes, edges);
+    prevTriggerRef.current = triggerAdvance;
+
+    const { updatedNodes, globalOutputs, statistics } = processDay(
+      nodes,
+      edges,
+      currentDay,
+      resources,
+    );
+
     setNodes(updatedNodes);
-    onDayAdvance?.(globalOutputs);
-  }, [triggerAdvance]);
+    updateResources(globalOutputs);
+    onDayAdvance?.(statistics);
+  }, [
+    triggerAdvance,
+    currentDay,
+    resources,
+    onDayAdvance,
+    setNodes,
+    updateResources,
+  ]);
 
   const onInit: OnInit = (instance) => {
     setReactFlowInstance(instance);
@@ -69,14 +96,6 @@ const GameCanvas = ({
   const onConnect = createOnConnect(setEdges);
   const onDrop = createOnDrop(reactFlowInstance, setNodes);
   const isValidConnection = createIsValidConnection(edges);
-
-  const onNodesDelete = (deleted: Node[]) => {
-    console.log("Nodes deleted:", deleted);
-  };
-
-  const onEdgesDelete = (deleted: Edge[]) => {
-    console.log("Edges deleted:", deleted);
-  };
 
   const onDragOver = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -92,8 +111,6 @@ const GameCanvas = ({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
-        onNodesDelete={onNodesDelete}
-        onEdgesDelete={onEdgesDelete}
         onInit={onInit}
         onDragOver={onDragOver}
         onDrop={onDrop}

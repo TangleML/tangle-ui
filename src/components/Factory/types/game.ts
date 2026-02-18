@@ -2,10 +2,6 @@ import type { Edge, Node } from "@xyflow/react";
 
 export interface GameState {
   day: number;
-  globalResources: {
-    coins: number;
-    knowledge: number;
-  };
   nodes: Node[];
   edges: Edge[];
 }

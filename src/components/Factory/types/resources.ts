@@ -4,9 +4,12 @@ export interface Resource {
   color: string;
   icon: string;
   value: number;
+  global?: boolean;
 }
 
 const RESOURCE_TYPES = [
+  "money",
+  "knowledge",
   "wood",
   "stone",
   "wheat",
@@ -16,7 +19,6 @@ const RESOURCE_TYPES = [
   "livestock",
   "leather",
   "meat",
-  "knowledge",
   "coins",
   "coal",
   "flour",
@@ -38,6 +40,7 @@ export function isResourceData(data: any): data is Resource {
     typeof data.name === "string" &&
     typeof data.description === "string" &&
     typeof data.icon === "string" &&
-    typeof data.value === "number"
+    typeof data.value === "number" &&
+    (data.global === undefined || typeof data.global === "boolean")
   );
 }

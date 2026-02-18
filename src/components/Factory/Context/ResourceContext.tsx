@@ -42,9 +42,7 @@ const ResourceContext = ({
         <Text size="sm" weight="semibold">
           Value:
         </Text>
-        <Text size="sm">
-          💰 {value} {value === 1 ? "coin" : "coins"}
-        </Text>
+        <Text size="sm">💰 {value}</Text>
       </InlineStack>
 
       <Separator />

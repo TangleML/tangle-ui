@@ -1,13 +1,32 @@
 import type { Node } from "@xyflow/react";
 
+import { RESOURCES } from "../../data/resources";
 import { getBuildingData } from "../../types/buildings";
+import type { BuildingStatistics } from "../../types/statistics";
 
-export const advanceProduction = (node: Node) => {
+export const advanceProduction = (
+  node: Node,
+  buildingStats: Map<string, BuildingStatistics>,
+) => {
   const building = getBuildingData(node);
   if (!building) return;
 
   const method = building.productionMethod;
-  if (!method || method.globalOutputs) return; // Skip global output buildings
+
+  // Skip global output buildings - check dynamically if any output is global
+  if (!method) return;
+
+  const hasGlobalOutputs = method.outputs?.some(
+    (output) => RESOURCES[output.resource]?.global,
+  );
+
+  if (hasGlobalOutputs) return; // Handled by processGlobalOutputBuilding
+
+  // Initialize statistics for this building if needed
+  if (!buildingStats.has(node.id)) {
+    buildingStats.set(node.id, { stockpileChanges: [] });
+  }
+  const stats = buildingStats.get(node.id)!;
 
   // Initialize production state if not present (default to idle)
   let productionState = building.productionState || {
@@ -16,6 +35,25 @@ export const advanceProduction = (node: Node) => {
   };
 
   let stockpile = building.stockpile;
+
+  // Helper to track stockpile changes
+  const trackChange = (resource: string, added: number, removed: number) => {
+    const existing = stats.stockpileChanges.find(
+      (c) => c.resource === resource,
+    );
+    if (existing) {
+      existing.added += added;
+      existing.removed += removed;
+      existing.net = existing.added - existing.removed;
+    } else {
+      stats.stockpileChanges.push({
+        resource: resource as any,
+        added,
+        removed,
+        net: added - removed,
+      });
+    }
+  };
 
   // Helper: Check if building has enough inputs
   const hasEnoughInputs = (): boolean => {
@@ -46,6 +84,7 @@ export const advanceProduction = (node: Node) => {
           (stock.resource === "any" && i.resource === "any"),
       );
       if (input) {
+        trackChange(stock.resource, 0, input.amount);
         return { ...stock, amount: stock.amount - input.amount };
       }
       return stock;
@@ -57,6 +96,7 @@ export const advanceProduction = (node: Node) => {
     stockpile = stockpile?.map((stock) => {
       const output = method.outputs?.find((o) => o.resource === stock.resource);
       if (output) {
+        trackChange(stock.resource, output.amount, 0);
         return {
           ...stock,
           amount: Math.min(stock.maxAmount, stock.amount + output.amount),
