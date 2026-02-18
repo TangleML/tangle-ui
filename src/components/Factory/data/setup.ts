@@ -44,7 +44,7 @@ const buildings: BuildingSetup[] = [
 
 const resources: ResourceSetup[] = [
   { type: "money", amount: 1000 },
-  { type: "food", amount: 200 },
+  { type: "food", amount: 100 },
 ];
 
 const connections: ConnectionSetup[] = [
