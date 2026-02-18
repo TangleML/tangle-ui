@@ -1,16 +1,18 @@
-import type { BuildingClass } from "../types/buildings";
+import type { BuildingClass, BuildingType } from "../types/buildings";
 
-export const SPECIAL_BUILDINGS = [
+export const SPECIAL_BUILDINGS: BuildingType[] = [
   "firepit",
+  "splitter",
+  "merger",
   "tradingpost",
   "marketplace",
   "storagepit",
   "granary",
 ]; // Buildings with special processing logic that doesn't fit the standard production model
 
-export const BUILDINGS: Record<string, BuildingClass> = {
+export const BUILDINGS: Record<BuildingType, BuildingClass> = {
   firepit: {
-    name: "Firepit",
+    name: "Fire Pit",
     icon: "🔥",
     description: "The centre of civilization",
     cost: 0,
@@ -192,10 +194,10 @@ export const BUILDINGS: Record<string, BuildingClass> = {
         name: "Orchard",
         inputs: [],
         outputs: [{ resource: "berries", amount: 100, nodes: 4 }],
-        days: 2,
+        days: 4,
       },
       {
-        name: "Irrigation",
+        name: "Irrigated Wheat",
         inputs: [{ resource: "water", amount: 60, nodes: 3 }],
         outputs: [{ resource: "wheat", amount: 200, nodes: 4 }],
         days: 3,
@@ -240,25 +242,28 @@ export const BUILDINGS: Record<string, BuildingClass> = {
   pasture: {
     name: "Pasture",
     icon: "🐄",
-    description: "Raises livestock",
+    description: "Raises animals",
     cost: 0,
     color: "#A52A2A",
     category: "production",
     productionMethods: [
       {
-        name: "Grazing",
-        inputs: [{ resource: "wheat", amount: 25 }],
-        outputs: [{ resource: "livestock", amount: 1 }],
-        days: 10,
-      },
-      {
-        name: "Feeding",
+        name: "Livestock",
         inputs: [
-          { resource: "wheat", amount: 10 },
+          { resource: "wheat", amount: 25 },
           { resource: "water", amount: 20 },
         ],
         outputs: [{ resource: "livestock", amount: 1 }],
         days: 10,
+      },
+      {
+        name: "Horses",
+        inputs: [
+          { resource: "wheat", amount: 50, nodes: 2 },
+          { resource: "water", amount: 50, nodes: 2 },
+        ],
+        outputs: [{ resource: "horses", amount: 1 }],
+        days: 15,
       },
     ],
   },
@@ -303,7 +308,7 @@ export const BUILDINGS: Record<string, BuildingClass> = {
   mill: {
     name: "Mill",
     icon: "🏭",
-    description: "Grinds wheat into flour",
+    description: "Grind wheat into flour",
     cost: 0,
     color: "#DAA520",
     category: "refining",
@@ -335,9 +340,9 @@ export const BUILDINGS: Record<string, BuildingClass> = {
   bakery: {
     name: "Bakery",
     icon: "🍞",
-    description: "Bakes flour into bread",
+    description: "Bakes bread and other treats!",
     cost: 0,
-    color: "#F5DEB3",
+    color: "#F5CEB3",
     category: "refining",
     productionMethods: [
       {
@@ -358,7 +363,7 @@ export const BUILDINGS: Record<string, BuildingClass> = {
     description: "Too big to fail",
     cost: 100,
     color: "#FFD700",
-    category: "utility",
+    category: "services",
     productionMethods: [
       {
         name: "Deposit Coins",
@@ -387,7 +392,7 @@ export const BUILDINGS: Record<string, BuildingClass> = {
   fishing: {
     name: "Fishing Dock",
     icon: "🎣",
-    description: "Catches fish from the water",
+    description: "Catches fish",
     cost: 0,
     color: "#1E90FF",
     category: "production",
@@ -407,17 +412,23 @@ export const BUILDINGS: Record<string, BuildingClass> = {
     ],
   },
   hunting: {
-    name: "Hunting Lodge",
+    name: "Hunting Grounds",
     icon: "🏹",
-    description: "Hunts wild animals for resources",
+    description: "Hunts wild animals",
     cost: 0,
     color: "#8B4513",
     category: "production",
     productionMethods: [
       {
-        name: "Hunting",
-        inputs: [{ resource: "tools", amount: 2 }],
+        name: "Bows",
+        inputs: [{ resource: "tools", amount: 1 }],
         outputs: [{ resource: "meat", amount: 5 }],
+        days: 1,
+      },
+      {
+        name: "Horseback",
+        inputs: [{ resource: "horses", amount: 1 }],
+        outputs: [{ resource: "meat", amount: 20, nodes: 2 }],
         days: 1,
       },
     ],
@@ -425,7 +436,7 @@ export const BUILDINGS: Record<string, BuildingClass> = {
   granary: {
     name: "Granary",
     icon: "🫙",
-    description: "Stores food for future use",
+    description: "Food storage",
     cost: 0,
     color: "#FFD700",
     category: "storage",
@@ -568,4 +579,74 @@ export const BUILDINGS: Record<string, BuildingClass> = {
       },
     ],
   },
-} as const satisfies Record<string, BuildingClass>;
+  splitter: {
+    name: "Splitter",
+    icon: "Split",
+    description: "Splits an input into multiple outputs",
+    cost: 0,
+    color: "#808080",
+    category: "logistics",
+    productionMethods: [
+      {
+        name: "Ancient",
+        inputs: [{ resource: "any", amount: 12 }],
+        outputs: [{ resource: "any", amount: 12, nodes: 3 }],
+        days: 1,
+      },
+      {
+        name: "Medieval",
+        inputs: [{ resource: "any", amount: 48 }],
+        outputs: [{ resource: "any", amount: 48, nodes: 6 }],
+        days: 1,
+      },
+      {
+        name: "Modern",
+        inputs: [{ resource: "any", amount: 108 }],
+        outputs: [{ resource: "any", amount: 108, nodes: 9 }],
+        days: 1,
+      },
+    ],
+  },
+  merger: {
+    name: "Merger",
+    icon: "Merge",
+    description: "Merges multiple inputs into one output",
+    cost: 0,
+    color: "#808080",
+    category: "logistics",
+    productionMethods: [
+      {
+        name: "Ancient",
+        inputs: [{ resource: "any", amount: 12, nodes: 3 }],
+        outputs: [{ resource: "any", amount: 12 }],
+        days: 1,
+      },
+      {
+        name: "Medieval",
+        inputs: [{ resource: "any", amount: 48, nodes: 6 }],
+        outputs: [{ resource: "any", amount: 48 }],
+        days: 1,
+      },
+      {
+        name: "Modern",
+        inputs: [{ resource: "any", amount: 108, nodes: 9 }],
+        outputs: [{ resource: "any", amount: 108 }],
+        days: 1,
+      },
+    ],
+  },
+} as const satisfies Record<BuildingType, BuildingClass>;
+
+export function getBuildingDefinition(
+  buildingType: BuildingType,
+): BuildingClass {
+  const building = BUILDINGS[buildingType];
+
+  if (!building) {
+    throw new Error(`Building type ${buildingType} not found`);
+  }
+
+  return building;
+}
+
+export const BUILDING_TYPES = Object.keys(BUILDINGS) as BuildingType[];

@@ -1,8 +1,39 @@
 import type { Node, Position } from "@xyflow/react";
 
-import { BUILDINGS } from "../data/buildings";
+import type { IconName } from "@/components/ui/icon";
+
 import type { ProductionMethod, ProductionState } from "./production";
 import type { ResourceType } from "./resources";
+
+export type BuildingType =
+  | "firepit"
+  | "tradingpost"
+  | "marketplace"
+  | "library"
+  | "storagepit"
+  | "well"
+  | "woodcutter"
+  | "quarry"
+  | "farm"
+  | "sawmill"
+  | "papermill"
+  | "pasture"
+  | "butchery"
+  | "bookbinder"
+  | "mill"
+  | "kiln"
+  | "bakery"
+  | "bank"
+  | "foraging"
+  | "fishing"
+  | "hunting"
+  | "granary"
+  | "smelter"
+  | "toolsmith"
+  | "mine"
+  | "mint"
+  | "splitter"
+  | "merger";
 
 export type BuildingInput = {
   resource: ResourceType;
@@ -21,12 +52,22 @@ export type Stockpile = {
   breakdown?: Map<ResourceType, number>;
 };
 
-export type BuildingCategory =
-  | "special"
-  | "production"
-  | "refining"
-  | "utility"
-  | "storage";
+export type BuildingCategoryDefinition = {
+  type: string;
+  label: string;
+  icon: IconName;
+};
+
+export const BUILDING_CATEGORIES: BuildingCategoryDefinition[] = [
+  { type: "special", label: "Special", icon: "Star" },
+  { type: "logistics", label: "Logistics", icon: "Truck" },
+  { type: "production", label: "Production", icon: "Hammer" },
+  { type: "refining", label: "Refining", icon: "Factory" },
+  { type: "services", label: "Services", icon: "Store" },
+  { type: "storage", label: "Storage", icon: "Package" },
+];
+
+export type BuildingCategory = (typeof BUILDING_CATEGORIES)[number]["type"];
 
 export interface BuildingClass {
   name: string;
@@ -54,16 +95,6 @@ export interface BuildingInstance extends Omit<
 export type BuildingNodeData = Record<string, unknown> & {
   buildingInstance: BuildingInstance;
 };
-
-export function getBuildingType(buildingType: string): BuildingClass {
-  const building = BUILDINGS[buildingType];
-
-  if (!building) {
-    throw new Error(`Building type ${buildingType} not found`);
-  }
-
-  return building;
-}
 
 function isBuildingInstance(data: any): data is BuildingInstance {
   return (
@@ -114,6 +145,3 @@ export function getBuildingInstance(
 
   return null;
 }
-
-export type BuildingType = keyof typeof BUILDINGS;
-export const BUILDING_TYPES = Object.keys(BUILDINGS) as BuildingType[];

@@ -5,18 +5,13 @@ import {
   SidebarGroupLabel,
 } from "@/components/ui/sidebar";
 
-import { BUILDINGS } from "../data/buildings";
-import type { BuildingCategory, BuildingType } from "../types/buildings";
-import { BUILDING_TYPES } from "../types/buildings";
+import { BUILDING_TYPES, BUILDINGS } from "../data/buildings";
+import {
+  BUILDING_CATEGORIES,
+  type BuildingCategory,
+  type BuildingType,
+} from "../types/buildings";
 import BuildingFolder from "./BuildingFolder";
-
-const CATEGORY_ORDER: BuildingCategory[] = [
-  "special",
-  "production",
-  "refining",
-  "utility",
-  "storage",
-];
 
 const Buildings = () => {
   // Group buildings by category
@@ -27,15 +22,15 @@ const Buildings = () => {
       <SidebarGroupLabel>Buildings</SidebarGroupLabel>
       <SidebarGroupContent className="[&_li]:marker:hidden [&_li]:before:content-none [&_li]:list-none">
         <BlockStack gap="2">
-          {CATEGORY_ORDER.map((category) => {
-            const buildings = buildingsByCategory.get(category) || [];
+          {BUILDING_CATEGORIES.map((category) => {
+            const buildings = buildingsByCategory.get(category.type) || [];
 
             if (buildings.length === 0) return null;
 
             return (
               <BuildingFolder
-                key={category}
-                category={category}
+                key={category.type}
+                category={category.type}
                 buildings={buildings}
               />
             );
@@ -51,8 +46,8 @@ export default Buildings;
 function getBuildingsByCategory() {
   const grouped = new Map<BuildingCategory, BuildingType[]>();
 
-  CATEGORY_ORDER.forEach((category) => {
-    grouped.set(category, []);
+  BUILDING_CATEGORIES.forEach((category) => {
+    grouped.set(category.type, []);
   });
 
   BUILDING_TYPES.forEach((buildingType) => {

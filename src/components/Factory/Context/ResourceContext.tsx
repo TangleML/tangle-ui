@@ -10,22 +10,22 @@ interface ResourceContextProps {
   resource: Resource;
   sourceNodeId?: string;
   targetNodeId?: string;
+  edgeId?: string;
 }
 
 const ResourceContext = ({
   resource,
   sourceNodeId,
   targetNodeId,
+  edgeId,
 }: ResourceContextProps) => {
   const { name, description, color, icon, value, foodValue } = resource;
 
-  const { getLatestBuildingStats } = useStatistics();
-  const sourceStats = sourceNodeId
-    ? getLatestBuildingStats(sourceNodeId)
-    : undefined;
-  const resourcesTransferred = sourceStats?.stockpileChanges.filter(
-    (c) => c.removed > 0,
-  );
+  const { getLatestEdgeStats } = useStatistics();
+
+  const edgeTransfers = edgeId
+    ? getLatestEdgeStats(edgeId, resource.type === "any")
+    : [];
 
   return (
     <BlockStack
@@ -77,10 +77,11 @@ const ResourceContext = ({
         <Text size="xs" weight="light">
           Transported Yesterday:
         </Text>
-        {resourcesTransferred && resourcesTransferred.length > 0 ? (
-          resourcesTransferred.map((c, index) => (
+        {edgeTransfers.length > 0 ? (
+          edgeTransfers.map((transfer, index) => (
             <Text key={index} size="xs" tone="subdued">
-              {RESOURCES[c.resource].icon} {c.removed} {name}
+              {RESOURCES[transfer.resource].icon} {transfer.transferred}{" "}
+              {RESOURCES[transfer.resource].name}
             </Text>
           ))
         ) : (

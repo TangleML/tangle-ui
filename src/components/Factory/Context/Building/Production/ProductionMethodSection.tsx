@@ -1,3 +1,4 @@
+import type { BuildingType } from "@/components/Factory/types/buildings";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
@@ -13,7 +14,7 @@ import { ProductionMethodSwitcher } from "./ProductionMethodSwitcher";
 import { ProductionProgress } from "./Progress";
 
 interface ProductionMethodSectionProps {
-  buildingType: string;
+  buildingType: BuildingType;
   productionMethod?: ProductionMethod;
   productionState?: ProductionState;
   availableMethods?: ProductionMethod[];

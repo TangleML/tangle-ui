@@ -5,28 +5,16 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Icon, type IconName } from "@/components/ui/icon";
+import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
 
-import type { BuildingCategory, BuildingType } from "../types/buildings";
+import {
+  BUILDING_CATEGORIES,
+  type BuildingCategory,
+  type BuildingType,
+} from "../types/buildings";
 import BuildingItem from "./BuildingItem";
-
-const CATEGORY_LABELS: Record<BuildingCategory, string> = {
-  special: "Special",
-  production: "Production",
-  refining: "Refining",
-  utility: "Utility",
-  storage: "Storage",
-};
-
-const CATEGORY_ICONS: Record<BuildingCategory, IconName> = {
-  special: "Star",
-  production: "Hammer",
-  refining: "Factory",
-  utility: "Wrench",
-  storage: "Package",
-};
 
 type BuildingFolderProps = {
   category: BuildingCategory;
@@ -36,8 +24,14 @@ type BuildingFolderProps = {
 const BuildingFolder = ({ category, buildings }: BuildingFolderProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
+  const buildingCategory = BUILDING_CATEGORIES.find(
+    (cat) => cat.type === category,
+  );
+
+  if (!buildingCategory) return null;
+
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-9/10">
       <CollapsibleTrigger
         className={cn(
           "flex items-center justify-between w-full px-2 py-1.5 rounded-sm",
@@ -46,12 +40,12 @@ const BuildingFolder = ({ category, buildings }: BuildingFolderProps) => {
       >
         <InlineStack gap="2" align="center">
           <Icon
-            name={CATEGORY_ICONS[category]}
+            name={buildingCategory.icon}
             size="sm"
             className="text-gray-600"
           />
           <span className="text-sm font-semibold text-gray-700">
-            {CATEGORY_LABELS[category]}
+            {buildingCategory.label}
           </span>
           <span className="text-xs text-gray-500">({buildings.length})</span>
         </InlineStack>
@@ -65,8 +59,8 @@ const BuildingFolder = ({ category, buildings }: BuildingFolderProps) => {
         />
       </CollapsibleTrigger>
 
-      <CollapsibleContent>
-        <BlockStack gap="1" className="mt-1 ml-2">
+      <CollapsibleContent className="w-full">
+        <BlockStack gap="1" className="mt-1 ml-2 w-full">
           {buildings.map((buildingType) => (
             <BuildingItem key={buildingType} buildingType={buildingType} />
           ))}

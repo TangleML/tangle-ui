@@ -1,7 +1,7 @@
+import { getBuildingDefinition } from "../../data/buildings";
 import {
   type BuildingInstance,
   type BuildingType,
-  getBuildingType,
 } from "../../types/buildings";
 import { configureBuildingInstanceForMethod } from "../production/configureBuildingInstanceForMethod";
 
@@ -14,7 +14,7 @@ export function createBuildingInstance(
   buildingType: BuildingType,
   productionMethodIndex: number = 0,
 ): BuildingInstance {
-  const building = getBuildingType(buildingType);
+  const building = getBuildingDefinition(buildingType);
 
   const productionMethod = building.productionMethods[productionMethodIndex];
 

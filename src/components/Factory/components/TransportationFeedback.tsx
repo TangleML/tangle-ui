@@ -1,27 +1,27 @@
 import { InlineStack } from "@/components/ui/layout";
 
 import { RESOURCES } from "../data/resources";
-import type { StockpileChange } from "../types/statistics";
+import type { EdgeStatistics } from "../types/statistics";
 
 interface TransportationFeedbackProps {
-  resourcesTransferred?: StockpileChange[];
+  transfers: EdgeStatistics[];
 }
 
 export const TransportationFeedback = ({
-  resourcesTransferred,
+  transfers,
 }: TransportationFeedbackProps) => {
-  if (!resourcesTransferred || resourcesTransferred.length === 0) {
+  if (!transfers || transfers.length === 0) {
     return null;
   }
 
   return (
     <InlineStack wrap="nowrap" gap="1">
-      {resourcesTransferred.map((c, index) => (
+      {transfers.map((transfer, index) => (
         <p
           key={index}
           className="text-[8px] font-light whitespace-nowrap opacity-60"
-          style={{ color: RESOURCES[c.resource].color }}
-        >{`${RESOURCES[c.resource].icon} ${c.removed}`}</p>
+          style={{ color: RESOURCES[transfer.resource].color }}
+        >{`${RESOURCES[transfer.resource].icon} ${transfer.transferred}`}</p>
       ))}
     </InlineStack>
   );
