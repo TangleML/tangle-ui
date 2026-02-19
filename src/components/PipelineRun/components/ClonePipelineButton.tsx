@@ -3,7 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useCallback } from "react";
 
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
-import { buildTakSpecShape } from "@/components/shared/PipelineRunNameTemplate/types";
+import { buildTaskSpecShape } from "@/components/shared/PipelineRunNameTemplate/types";
 import { Icon } from "@/components/ui/icon";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
@@ -39,7 +39,7 @@ export const ClonePipelineButton = ({
       taskArguments?: Record<string, string>;
     }) => {
       const canonicalName = extractCanonicalName(
-        buildTakSpecShape(runDetails?.rootDetails?.task_spec, componentSpec),
+        buildTaskSpecShape(runDetails?.rootDetails?.task_spec, componentSpec),
       );
 
       const name = getInitialName(componentSpec, canonicalName);

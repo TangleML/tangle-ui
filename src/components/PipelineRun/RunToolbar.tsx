@@ -12,7 +12,7 @@ import {
 } from "@/utils/executionStatus";
 
 import { ViewYamlButton } from "../shared/Buttons/ViewYamlButton";
-import { buildTakSpecShape } from "../shared/PipelineRunNameTemplate/types";
+import { buildTaskSpecShape } from "../shared/PipelineRunNameTemplate/types";
 import { CancelPipelineRunButton } from "./components/CancelPipelineRunButton";
 import { ClonePipelineButton } from "./components/ClonePipelineButton";
 import { InspectPipelineButton } from "./components/InspectPipelineButton";
@@ -55,7 +55,7 @@ export const RunToolbar = () => {
 
   const pipelineName =
     extractCanonicalName(
-      buildTakSpecShape(details?.task_spec, componentSpec),
+      buildTaskSpecShape(details?.task_spec, componentSpec),
     ) ?? componentSpec.name;
 
   return (

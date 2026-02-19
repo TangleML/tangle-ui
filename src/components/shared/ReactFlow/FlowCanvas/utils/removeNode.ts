@@ -3,6 +3,8 @@ import { type Node } from "@xyflow/react";
 import {
   type ComponentSpec,
   isGraphImplementation,
+  isGraphInputArgument,
+  isTaskOutputArgument,
 } from "@/utils/componentSpec";
 import {
   nodeIdToInputName,
@@ -42,7 +44,7 @@ export const removeGraphInput = (
       for (const [inputName, argument] of Object.entries(
         taskSpec.arguments ?? {},
       )) {
-        if (typeof argument !== "string" && "graphInput" in argument) {
+        if (isGraphInputArgument(argument)) {
           if (argument.graphInput.inputName === inputNameToRemove) {
             const newGraphSpec = setTaskArgument(
               componentSpec.implementation.graph,
@@ -97,8 +99,7 @@ export const removeTask = (
       for (const [inputName, argument] of Object.entries(taskSpec.arguments)) {
         // Check if this argument references the task we're removing
         const isReferencingRemovedTask =
-          typeof argument !== "string" &&
-          "taskOutput" in argument &&
+          isTaskOutputArgument(argument) &&
           argument.taskOutput.taskId === taskIdToRemove;
 
         if (isReferencingRemovedTask) {
