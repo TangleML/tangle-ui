@@ -7,8 +7,7 @@
     "src/components/ui/**",
     "src/components/shared/StatusFilterSelect/**",
     "openapi-ts.config.ts",
-    "vite.config.ghpages.js",
-    "src/components/shared/ReactFlow/FlowCanvas/FlexNode/interface.ts"
+    "vite.config.ghpages.js"
   ],
   "ignoreDependencies": [
     "@radix-ui/react-accordion",

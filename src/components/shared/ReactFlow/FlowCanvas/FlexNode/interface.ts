@@ -8,7 +8,7 @@ export function serializeFlexNodes(data: FlexNodeData[]): string {
   return JSON.stringify(data);
 }
 
-export function deserializeFlexNodes(
+function deserializeFlexNodes(
   serializedData: string | undefined,
 ): FlexNodeData[] {
   if (!serializedData) {

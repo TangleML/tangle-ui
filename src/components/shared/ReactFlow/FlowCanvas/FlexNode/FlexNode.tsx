@@ -25,7 +25,7 @@ const MIN_SIZE = { width: 50, height: 50 };
 
 const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
   const { properties, readOnly } = data;
-  const { title, content, color } = properties;
+  const { title, content, color, borderColor } = properties;
 
   const [isInlineEditing, setIsInlineEditing] = useState(false);
 
@@ -100,6 +100,7 @@ const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
   }, [data, readOnly, selected]);
 
   const isTransparent = color === "transparent";
+  const isBorderTransparent = borderColor === "transparent";
 
   return (
     <>
@@ -117,12 +118,17 @@ const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
         className={cn(
           "p-1 rounded-lg h-full w-full",
           readOnly && selected && "ring-2 ring-ring",
+          isTransparent && "border-2 border-solid",
           isTransparent &&
             !title &&
             !content &&
-            "border-2 border-dashed border-warning",
+            isBorderTransparent &&
+            "border-2 border-dashed border-warning!",
         )}
-        style={{ backgroundColor: color }}
+        style={{
+          backgroundColor: color,
+          borderColor: isTransparent ? borderColor : undefined,
+        }}
         onDoubleClick={() => setIsInlineEditing(true)}
       >
         <div

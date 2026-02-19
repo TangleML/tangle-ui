@@ -3,6 +3,7 @@ import { type ChangeEvent, useEffect, useState } from "react";
 import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlock";
 import { KeyValueList } from "@/components/shared/ContextPanel/Blocks/KeyValueList";
 import { CopyText } from "@/components/shared/CopyText/CopyText";
+import { InfoBox } from "@/components/shared/InfoBox";
 import { ColorPicker } from "@/components/ui/color";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +16,7 @@ import { updateSubgraphSpec } from "@/utils/subgraphUtils";
 import { StackingControls } from "../../FlowControls/StackingControls";
 import { updateFlexNodeInComponentSpec } from "./interface";
 import type { FlexNodeData } from "./types";
+import { DEFAULT_BORDER_COLOR } from "./utils";
 
 interface FlexNodeEditorProps {
   flexNode: FlexNodeData;
@@ -212,14 +214,29 @@ const ColorEditor = ({
 
   const { properties } = flexNode;
 
+  const currentBorderColor = properties.borderColor ?? DEFAULT_BORDER_COLOR;
+
   const [backgroundColor, setBackgroundColor] = useState(properties.color);
+  const [borderColor, setBorderColor] = useState(currentBorderColor);
+
+  const isTransparent = backgroundColor === "transparent";
+  const isBorderTransparent = borderColor === "transparent";
+  const hasTextContent = properties.title || properties.content;
 
   const handleBackgroundColorChange = (newColor: string) => {
     setBackgroundColor(newColor);
-    saveColors(newColor);
+    saveColors(newColor, borderColor);
   };
 
-  const saveColors = (newBackgroundColor: string) => {
+  const handleBorderColorChange = (newColor: string) => {
+    setBorderColor(newColor);
+    saveColors(backgroundColor, newColor);
+  };
+
+  const saveColors = (
+    newBackgroundColor: string,
+    newBorderColor: string | undefined,
+  ) => {
     const updatedSubgraphSpec = updateFlexNodeInComponentSpec(
       currentSubgraphSpec,
       {
@@ -227,6 +244,7 @@ const ColorEditor = ({
         properties: {
           ...properties,
           color: newBackgroundColor,
+          borderColor: newBorderColor,
         },
       },
     );
@@ -242,6 +260,7 @@ const ColorEditor = ({
 
   useEffect(() => {
     setBackgroundColor(properties.color);
+    setBorderColor(currentBorderColor);
   }, [properties]);
 
   if (readOnly) {
@@ -254,6 +273,15 @@ const ColorEditor = ({
             value: properties.color,
             copyable: true,
           },
+          ...(isTransparent
+            ? [
+                {
+                  label: "Border",
+                  value: properties.borderColor,
+                  copyable: true,
+                },
+              ]
+            : []),
         ]}
       />
     );
@@ -271,6 +299,27 @@ const ColorEditor = ({
           />
           <CopyText className="text-xs font-mono">{properties.color}</CopyText>
         </InlineStack>
+
+        {isTransparent && (
+          <InlineStack gap="4" blockAlign="center">
+            <Paragraph size="xs">Border</Paragraph>
+            <ColorPicker
+              title="Border Color"
+              color={borderColor}
+              setColor={handleBorderColorChange}
+            />
+            <CopyText className="text-xs font-mono">
+              {currentBorderColor}
+            </CopyText>
+          </InlineStack>
+        )}
+
+        {isTransparent && isBorderTransparent && !hasTextContent && (
+          <InfoBox title="Invisible Node" variant="warning">
+            This sticky note has no visual context. Consider adding a border,
+            background or text.
+          </InfoBox>
+        )}
       </BlockStack>
     </ContentBlock>
   );
