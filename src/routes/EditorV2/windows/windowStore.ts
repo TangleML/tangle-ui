@@ -124,13 +124,21 @@ export function openWindow(
     disabledActions: options.disabledActions,
     dockState: initialDockState,
     attachedTo,
+    // Restore pre-docked dimensions from persisted state (needed for undock)
+    preDockedPosition: persistedState?.preDockedPosition
+      ? { ...persistedState.preDockedPosition }
+      : undefined,
+    preDockedSize: persistedState?.preDockedSize
+      ? { ...persistedState.preDockedSize }
+      : undefined,
   };
 
   windowStore.windows[id] = config;
   windowStore.windowOrder.push(id);
 
   // Apply hidden state after window creation if persisted as hidden
-  if (persistedState?.isHidden) {
+  // Skip if startVisible is true (for selection-driven windows like context-panel)
+  if (persistedState?.isHidden && !options.startVisible) {
     // Use setTimeout to allow the window to be created first
     setTimeout(() => hideWindow(id), 0);
   }
@@ -318,9 +326,9 @@ export function dockWindow(id: string, side: DockState): void {
     return;
   }
 
-  // Store previous state for undocking
-  window.previousPosition = { ...window.position };
-  window.previousSize = { ...window.size };
+  // Store pre-docked state for undocking (separate from hide/restore cycle)
+  window.preDockedPosition = { ...window.position };
+  window.preDockedSize = { ...window.size };
 
   // Calculate docked dimensions
   const { position, height } = calculateDockedDimensions(
@@ -343,22 +351,22 @@ export function dockWindow(id: string, side: DockState): void {
   console.log("[windowStore] dockWindow complete - new state:", { position: window.position, size: window.size, dockState: window.dockState });
 }
 
-/** Undock a window from edge, restoring previous dimensions */
+/** Undock a window from edge, restoring pre-docked dimensions */
 export function undockWindow(id: string): void {
   const window = windowStore.windows[id];
   if (!window || window.dockState === "none") return;
 
-  // Restore previous dimensions
-  if (window.previousPosition) {
-    window.position = { ...window.previousPosition };
+  // Restore pre-docked dimensions
+  if (window.preDockedPosition) {
+    window.position = { ...window.preDockedPosition };
   }
-  if (window.previousSize) {
-    window.size = { ...window.previousSize };
+  if (window.preDockedSize) {
+    window.size = { ...window.preDockedSize };
   }
 
   window.dockState = "none";
-  window.previousPosition = undefined;
-  window.previousSize = undefined;
+  window.preDockedPosition = undefined;
+  window.preDockedSize = undefined;
 
   // Update attached children positions
   updateAttachedWindowPositions(id);

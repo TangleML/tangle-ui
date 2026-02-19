@@ -35,6 +35,10 @@ export interface PersistedWindowState {
   dockState: DockState;
   attachedTo?: AttachmentInfo;
   isHidden: boolean;
+  /** Pre-docked position - needed for undock restore (separate from hide/restore cycle) */
+  preDockedPosition?: Position;
+  /** Pre-docked size - needed for undock restore (separate from hide/restore cycle) */
+  preDockedSize?: Size;
 }
 
 /**
@@ -72,18 +76,23 @@ function debounce<T extends (...args: unknown[]) => void>(
 /**
  * Save current window layout to localStorage.
  * Only persists windows with static IDs.
+ * Preserves state for closed windows (merges with existing persisted state).
  */
 function saveWindowLayoutImmediate(): void {
+  // Load existing persisted state to preserve closed windows' layout
+  const existingLayout = loadWindowLayout();
+
   const layout: PersistedWindowLayout = {
-    windows: {},
+    windows: existingLayout?.windows ?? {},
     windowOrder: [],
     version: CURRENT_VERSION,
   };
 
-  // Only persist static windows
+  // Update state for currently open static windows
   for (const id of STATIC_WINDOW_IDS) {
     const window = windowStore.windows[id];
     if (window) {
+      // Window is open - save its current state
       layout.windows[id] = {
         position: { ...window.position },
         size: { ...window.size },
@@ -92,8 +101,16 @@ function saveWindowLayoutImmediate(): void {
           ? { ...window.attachedTo }
           : undefined,
         isHidden: window.state === "hidden",
+        // Persist pre-docked dimensions for undock operations
+        preDockedPosition: window.preDockedPosition
+          ? { ...window.preDockedPosition }
+          : undefined,
+        preDockedSize: window.preDockedSize
+          ? { ...window.preDockedSize }
+          : undefined,
       };
     }
+    // If window is closed (not in store), keep existing persisted state (already in layout.windows)
   }
 
   // Preserve order only for static windows
