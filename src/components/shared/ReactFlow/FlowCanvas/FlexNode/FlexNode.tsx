@@ -5,8 +5,10 @@ import {
   type ResizeDragEvent,
   type ResizeParams,
 } from "@xyflow/react";
-import { useEffect, useState } from "react";
+import { type MouseEvent, useEffect, useState } from "react";
 
+import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
 import { Paragraph } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
@@ -24,7 +26,7 @@ type FlexNodeProps = NodeProps<Node<FlexNodeData>>;
 const MIN_SIZE = { width: 50, height: 50 };
 
 const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
-  const { properties, readOnly } = data;
+  const { properties, readOnly, locked } = data;
   const { title, content, color, borderColor } = properties;
 
   const [isInlineEditing, setIsInlineEditing] = useState(false);
@@ -41,6 +43,39 @@ const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
     componentSpec,
     setComponentSpec,
   } = useComponentSpec();
+
+  const toggleLock = () => {
+    const updatedSubgraphSpec = updateFlexNodeInComponentSpec(
+      currentSubgraphSpec,
+      {
+        ...data,
+        locked: !locked,
+      },
+    );
+
+    const newRootSpec = updateSubgraphSpec(
+      componentSpec,
+      currentSubgraphPath,
+      updatedSubgraphSpec,
+    );
+
+    setComponentSpec(newRootSpec);
+  };
+
+  const handleLockToggle = (e: MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    toggleLock();
+  };
+
+  const handleDoubleClick = () => {
+    if (locked) {
+      toggleLock();
+      return;
+    }
+    if (!readOnly) {
+      setIsInlineEditing(true);
+    }
+  };
 
   const handleResizeEnd = (_: ResizeDragEvent, params: ResizeParams) => {
     const width = Math.max(params.width, MIN_SIZE.width);
@@ -116,7 +151,7 @@ const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
       <div
         key={id}
         className={cn(
-          "p-1 rounded-lg h-full w-full",
+          "p-1 rounded-lg h-full w-full group",
           readOnly && selected && "ring-2 ring-ring",
           isTransparent && "border-2 border-solid",
           isTransparent &&
@@ -129,7 +164,7 @@ const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
           backgroundColor: color,
           borderColor: isTransparent ? borderColor : undefined,
         }}
-        onDoubleClick={() => setIsInlineEditing(true)}
+        onDoubleClick={handleDoubleClick}
       >
         <div
           className={cn(
@@ -137,10 +172,25 @@ const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
             isTransparent ? "bg-transparent" : "bg-white/40",
           )}
         >
-          <BlockStack gap="1">
-            <Paragraph size="sm" weight="semibold">
-              {title}
-            </Paragraph>
+          <BlockStack gap="1" className="w-full">
+            <Button
+              variant="ghost"
+              size="min"
+              onClick={handleLockToggle}
+              className={cn(
+                "absolute top-1 right-1 opacity-50 hover:bg-transparent hover:opacity-100",
+                !locked && "hidden group-hover:block",
+              )}
+            >
+              <Icon name={locked ? "Lock" : "LockOpen"} className="w-2! h-2!" />
+            </Button>
+
+            {title && (
+              <Paragraph size="sm" weight="semibold">
+                {title}
+              </Paragraph>
+            )}
+
             {isInlineEditing ? (
               <InlineTextEditor
                 value={content}
