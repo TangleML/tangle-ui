@@ -49,6 +49,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/components/shared/TaskDetails/Actions/UnpackSubgraphButton.tsx",
   "src/components/shared/ReactFlow/FlowSidebar/components/ComponentHoverPopover.tsx",
   "src/components/shared/ReactFlow/FlowControls/StackingControls.tsx",
+  "src/components/shared/ReactFlow/FlowCanvas/FlexNode",
 
   // 11-20 useCallback/useMemo
   // "src/components/ui",                         // 12
