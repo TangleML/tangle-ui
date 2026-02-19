@@ -33,6 +33,7 @@ interface ComponentDetailsProps {
   readOnly?: boolean;
   trigger?: ReactNode;
   onClose?: () => void;
+  onOpenChange?: (open: boolean) => void;
 }
 
 const ComponentDetailsDialogContentSkeleton = () => {
@@ -171,6 +172,7 @@ const ComponentDetails = ({
   trigger,
   readOnly,
   onClose,
+  onOpenChange: onOpenChangeProp,
 }: ComponentDetailsProps) => {
   const [open, setOpen] = useState(false);
   const dialogTriggerButton = trigger || <InfoIconButton />;
@@ -185,12 +187,16 @@ const ComponentDetails = ({
     [],
   );
 
-  const onOpenChange = useCallback((open: boolean) => {
-    setOpen(open);
-    if (!open) {
-      onClose?.();
-    }
-  }, []);
+  const onOpenChange = useCallback(
+    (open: boolean) => {
+      setOpen(open);
+      onOpenChangeProp?.(open);
+      if (!open) {
+        onClose?.();
+      }
+    },
+    [onOpenChangeProp, onClose],
+  );
 
   return (
     <Dialog modal={false} open={open} onOpenChange={onOpenChange}>

@@ -39,6 +39,7 @@ import {
 } from "@/providers/ComponentLibraryProvider/types";
 import type { ComponentFolder } from "@/types/componentLibrary";
 import { ComponentSearchFilter } from "@/utils/constants";
+import { debounce } from "@/utils/debounce";
 
 import { ComponentMarkup } from "./ComponentItem";
 
@@ -137,20 +138,6 @@ const SearchFilter = ({
       </PopoverContent>
     </Popover>
   );
-};
-
-const debounce = <F extends (...args: Parameters<F>) => ReturnType<F>>(
-  func: F,
-  waitFor: number,
-) => {
-  let timeout: ReturnType<typeof setTimeout>;
-
-  const debounced = (...args: Parameters<F>) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), waitFor);
-  };
-
-  return debounced;
 };
 
 const SearchRequestInput = ({ value, onChange }: SearchRequestProps) => {

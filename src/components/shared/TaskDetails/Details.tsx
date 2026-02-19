@@ -21,6 +21,9 @@ interface TaskDetailsProps {
   executionId?: string;
   status?: string;
   readOnly?: boolean;
+  options?: {
+    descriptionExpanded?: boolean;
+  };
   additionalSection?: {
     title: string;
     component: ReactNode;
@@ -36,6 +39,7 @@ const TaskDetailsInternal = ({
   executionId,
   status,
   readOnly = false,
+  options,
   additionalSection = [],
 }: TaskDetailsProps) => {
   const hydratedComponentRef =
@@ -138,6 +142,7 @@ const TaskDetailsInternal = ({
         title="Description"
         text={description}
         collapsible
+        defaultCollapsed={!options?.descriptionExpanded}
         className={BASE_BLOCK_CLASS}
         wrap
       />
