@@ -216,6 +216,7 @@ const PipelineEditor = withSuspenseWrapper(() => {
             title: "Properties",
             position: { x: window.innerWidth - 340, y: 80 },
             size: { width: 300, height: 400 },
+            startVisible: true,
           });
         }
         return;
@@ -239,10 +240,11 @@ const PipelineEditor = withSuspenseWrapper(() => {
             title: "Properties",
             position: { x: window.innerWidth - 340, y: 80 },
             size: { width: 300, height: 400 },
+            startVisible: true,
           });
         }
       } else {
-        // No selection - close the properties window (not pinned windows)
+        // No selection - close the properties window (state is preserved in persistence)
         const existingWindow = getWindowById(CONTEXT_PANEL_WINDOW_ID);
         if (existingWindow) {
           closeWindow(CONTEXT_PANEL_WINDOW_ID);

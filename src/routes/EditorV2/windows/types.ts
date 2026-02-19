@@ -48,10 +48,13 @@ export interface WindowConfig {
   position: Position;
   size: Size;
   minSize: Size;
-  /** Stored for restore operations */
+  /** Stored for restore operations (hide/minimize/maximize) */
   previousPosition?: Position;
   previousSize?: Size;
   previousState?: WindowState;
+  /** Stored specifically for undocking - separate from hide/restore cycle */
+  preDockedPosition?: Position;
+  preDockedSize?: Size;
   /** Optional entity ID this window is linked to (for auto-close on entity deletion) */
   linkedEntityId?: string;
   /** Actions that are disabled for this window */
@@ -90,6 +93,8 @@ export interface WindowOptions {
   disabledActions?: WindowAction[];
   /** ID of a window to attach this window below (for vertical stacking) */
   attachTo?: string;
+  /** If true, window starts visible even if persisted state was hidden. Use for selection-driven windows. */
+  startVisible?: boolean;
 }
 
 /** Default window dimensions */
