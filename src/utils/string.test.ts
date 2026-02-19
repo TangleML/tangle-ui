@@ -7,6 +7,7 @@ import {
   formatJsonValue,
   getValue,
   removeTrailingDateFromTitle,
+  truncate,
 } from "./string";
 
 describe("formatBytes", () => {
@@ -173,5 +174,69 @@ describe("createStringList", () => {
     expect(createStringList(fruits, 10, label)).toBe(
       '"apple", "banana", "cherry", "mango" & "strawberry"',
     );
+  });
+});
+
+describe("truncate", () => {
+  it("returns original string if shorter than maxLength", () => {
+    expect(truncate("hello", 10)).toBe("hello");
+  });
+
+  it("returns original string if equal to maxLength", () => {
+    expect(truncate("hello", 5)).toBe("hello");
+  });
+
+  it("truncates string with ellipsis when longer than maxLength", () => {
+    expect(truncate("hello world", 8)).toBe("hello wo...");
+  });
+
+  it("breaks words by default", () => {
+    expect(truncate("hello world", 8, { breakWords: true })).toBe(
+      "hello wo...",
+    );
+  });
+
+  it("does not break words when breakWords is false", () => {
+    expect(truncate("hello world", 8, { breakWords: false })).toBe("hello...");
+  });
+
+  it("breaks at last space when breakWords is false", () => {
+    expect(truncate("the quick brown fox", 12, { breakWords: false })).toBe(
+      "the quick...",
+    );
+  });
+
+  it("breaks at last newline when breakWords is false", () => {
+    expect(truncate("hello\nworld\ntest", 12, { breakWords: false })).toBe(
+      "hello\nworld...",
+    );
+  });
+
+  it("prefers newline over space when both present", () => {
+    expect(truncate("hello world\ntest", 14, { breakWords: false })).toBe(
+      "hello world...",
+    );
+  });
+
+  it("breaks words if no space or newline found when breakWords is false", () => {
+    expect(truncate("helloworld", 5, { breakWords: false })).toBe("hello...");
+  });
+
+  it("trims whitespace before adding ellipsis", () => {
+    expect(truncate("hello   ", 5)).toBe("hello...");
+    expect(truncate("hello world   ", 10)).toBe("hello worl...");
+  });
+
+  it("handles empty string", () => {
+    expect(truncate("", 5)).toBe("");
+  });
+
+  it("handles single character", () => {
+    expect(truncate("a", 0)).toBe("...");
+  });
+
+  it("handles multiline text with breakWords false", () => {
+    const text = "Line one\nLine two\nLine three";
+    expect(truncate(text, 15, { breakWords: false })).toBe("Line one\nLine...");
   });
 });

@@ -1,6 +1,10 @@
-import { createStringList } from "@/utils/string";
+import { type Node } from "@xyflow/react";
 
-import type { NodesAndEdges } from "../types";
+import { BlockStack } from "@/components/ui/layout";
+import { Text } from "@/components/ui/typography";
+import { createStringList, truncate } from "@/utils/string";
+
+import { isFlexNode, type NodesAndEdges } from "../types";
 import { thisCannotBeUndone } from "./shared";
 
 export function getDeleteConfirmationDetails(deletedElements: NodesAndEdges) {
@@ -11,17 +15,34 @@ export function getDeleteConfirmationDetails(deletedElements: NodesAndEdges) {
     const isDeletingMultipleNodes = deletedNodes.length > 1;
 
     if (!isDeletingMultipleNodes) {
+      const node = deletedNodes[0];
+
+      if (isFlexNode(node)) {
+        const singleDeleteTitle = `Delete Sticky Note?`;
+        const singleDeleteDesc = node.data.properties.title
+          ? `Title: '${node.data.properties.title}'`
+          : node.data.properties.content
+            ? `Content: '${truncate(node.data.properties.content, 12, { breakWords: false })}'`
+            : "This sticky note has no text content";
+
+        return {
+          title: singleDeleteTitle,
+          description: singleDeleteDesc,
+        };
+      }
+
       const singleDeleteTitle =
         "Delete Node" +
         (deletedNodes.length > 0 ? ` '${deletedNodes[0].id}'` : "") +
         "?";
 
       const singleDeleteDesc = (
-        <div className="text-sm">
-          <p>This will also delete all connections to and from the Node.</p>
-          <br />
+        <BlockStack>
+          <Text size="sm">
+            This will also delete all connections to and from the Node.
+          </Text>
           {thisCannotBeUndone}
-        </div>
+        </BlockStack>
       );
 
       return {
@@ -31,20 +52,38 @@ export function getDeleteConfirmationDetails(deletedElements: NodesAndEdges) {
       };
     }
 
+    const sortedDeletedNodes = sortFlexNodesLast(deletedNodes);
+
     const multiDeleteTitle = `Delete Nodes?`;
 
     const deletedNodeList = createStringList(
-      deletedNodes.map((node) => node.id),
+      getNodeIdsForDisplay(sortedDeletedNodes),
       2,
       "node",
     );
 
+    if (sortedDeletedNodes.every(isFlexNode)) {
+      const multiDeleteDesc = (
+        <BlockStack>
+          <Text size="sm">{`This will delete ${deletedNodeList}.`}</Text>
+          <br />
+          {thisCannotBeUndone}
+        </BlockStack>
+      );
+
+      return {
+        title: multiDeleteTitle,
+        content: multiDeleteDesc,
+        description: "",
+      };
+    }
+
     const multiDeleteDesc = (
-      <div className="text-sm">
-        <p>{`Deleting ${deletedNodeList} will also remove all connections to and from these nodes.`}</p>
+      <BlockStack>
+        <Text size="sm">{`Deleting ${deletedNodeList} will also remove all connections to and from these nodes.`}</Text>
         <br />
         {thisCannotBeUndone}
-      </div>
+      </BlockStack>
     );
 
     return {
@@ -62,18 +101,20 @@ export function getDeleteConfirmationDetails(deletedElements: NodesAndEdges) {
       : "Delete Connection?";
 
     const edgeDeleteDesc = (
-      <div className="text-sm">
-        <p>This will remove the follow connections between task nodes:</p>
-        <p>
+      <BlockStack>
+        <Text size="sm">
+          This will remove the follow connections between task nodes:
+        </Text>
+        <Text size="sm">
           {deletedEdges
             .map((edge) => {
               return `'${edge.id}'`;
             })
             .join(", ")}
-        </p>
+        </Text>
         <br />
         {thisCannotBeUndone}
-      </div>
+      </BlockStack>
     );
 
     return {
@@ -85,4 +126,30 @@ export function getDeleteConfirmationDetails(deletedElements: NodesAndEdges) {
 
   // Fallback to default
   return {};
+}
+
+function getNodeIdsForDisplay(nodes: Node[]) {
+  return nodes.map((node) => {
+    if (isFlexNode(node)) {
+      const textContent =
+        node.data.properties.title ||
+        truncate(node.data.properties.content, 12, { breakWords: false });
+
+      return `'${textContent.length ? textContent : "untitled"}' (Sticky Note)`;
+    }
+
+    return node.id;
+  });
+}
+
+function sortFlexNodesLast(nodes: Node[]) {
+  return [...nodes].sort((a, b) => {
+    const aIsFlex = isFlexNode(a);
+    const bIsFlex = isFlexNode(b);
+
+    if (aIsFlex && !bIsFlex) return 1;
+    if (!aIsFlex && bIsFlex) return -1;
+
+    return 0;
+  });
 }

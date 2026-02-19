@@ -115,6 +115,29 @@ export function getStringFromData(data: string | ArrayBuffer): string {
   return data;
 }
 
+export const truncate = (
+  str: string,
+  maxLength: number,
+  options: { breakWords?: boolean } = { breakWords: true },
+): string => {
+  if (str.length <= maxLength) {
+    return str;
+  }
+
+  if (!options.breakWords) {
+    const truncated = str.slice(0, maxLength);
+    const lastSpaceIndex = truncated.lastIndexOf(" ");
+    const lastNewlineIndex = truncated.lastIndexOf("\n");
+    const lastBreakIndex = Math.max(lastSpaceIndex, lastNewlineIndex);
+
+    if (lastBreakIndex > 0) {
+      return truncated.slice(0, lastBreakIndex).trim() + "...";
+    }
+  }
+
+  return `${str.slice(0, maxLength).trim()}...`;
+};
+
 export {
   copyToClipboard,
   createStringList,
