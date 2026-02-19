@@ -3,6 +3,7 @@ import { type ChangeEvent, useEffect, useState } from "react";
 import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlock";
 import { KeyValueList } from "@/components/shared/ContextPanel/Blocks/KeyValueList";
 import { CopyText } from "@/components/shared/CopyText/CopyText";
+import { ColorPicker } from "@/components/ui/color";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -199,7 +200,46 @@ const ColorEditor = ({
   flexNode: FlexNodeData;
   readOnly: boolean;
 }) => {
+  const {
+    componentSpec,
+    currentSubgraphSpec,
+    currentSubgraphPath,
+    setComponentSpec,
+  } = useComponentSpec();
+
   const { properties } = flexNode;
+
+  const [backgroundColor, setBackgroundColor] = useState(properties.color);
+
+  const handleBackgroundColorChange = (newColor: string) => {
+    setBackgroundColor(newColor);
+    saveColors(newColor);
+  };
+
+  const saveColors = (newBackgroundColor: string) => {
+    const updatedSubgraphSpec = updateFlexNodeInComponentSpec(
+      currentSubgraphSpec,
+      {
+        ...flexNode,
+        properties: {
+          ...properties,
+          color: newBackgroundColor,
+        },
+      },
+    );
+
+    const newRootSpec = updateSubgraphSpec(
+      componentSpec,
+      currentSubgraphPath,
+      updatedSubgraphSpec,
+    );
+
+    setComponentSpec(newRootSpec);
+  };
+
+  useEffect(() => {
+    setBackgroundColor(properties.color);
+  }, [properties]);
 
   if (readOnly) {
     return (
@@ -221,9 +261,10 @@ const ColorEditor = ({
       <BlockStack gap="1">
         <InlineStack gap="4" blockAlign="center">
           <Paragraph size="xs">Background</Paragraph>
-          <div
-            className="aspect-square h-4 rounded-full border border-muted-foreground"
-            style={{ backgroundColor: properties.color }}
+          <ColorPicker
+            title="Background Color"
+            color={backgroundColor}
+            setColor={handleBackgroundColorChange}
           />
           <CopyText className="text-xs font-mono">{properties.color}</CopyText>
         </InlineStack>
