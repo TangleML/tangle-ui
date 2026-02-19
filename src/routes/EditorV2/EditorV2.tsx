@@ -397,6 +397,12 @@ const PipelineEditor = withSuspenseWrapper(() => {
 
   // Access navSnapshot.navigationPath to trigger re-renders when navigation changes
   // This ensures currentSpec updates when navigating into/out of subgraphs
+  console.log("[EditorV2] Rendering with:", {
+    navPath: navSnapshot.navigationPath.map(e => e.displayName),
+    currentSpecName: currentSpec?.name,
+    currentSpecId: currentSpec?.$id,
+  });
+
   if (navSnapshot.navigationPath.length === 0) {
     return null;
   }
