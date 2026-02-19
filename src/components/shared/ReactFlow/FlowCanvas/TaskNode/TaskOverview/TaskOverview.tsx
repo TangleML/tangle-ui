@@ -26,6 +26,7 @@ import IOSection from "./IOSection/IOSection";
 import Logs, { OpenLogsInNewWindowLink } from "./logs";
 import OutputsList from "./OutputsList";
 import RenameTask from "./RenameTask";
+import { ZIndexEditor } from "./ZIndexEditor";
 
 interface TaskOverviewProps {
   taskNode: TaskNodeContextType;
@@ -165,6 +166,8 @@ const TaskOverview = ({ taskNode }: TaskOverviewProps) => {
           )}
         </Tabs>
       </div>
+
+      <ZIndexEditor taskNode={taskNode} />
     </BlockStack>
   );
 };

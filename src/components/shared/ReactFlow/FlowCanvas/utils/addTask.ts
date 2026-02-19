@@ -1,7 +1,10 @@
 import type { XYPosition } from "@xyflow/react";
 
 import type { TaskType } from "@/types/taskNode";
-import { EDITOR_POSITION_ANNOTATION } from "@/utils/annotations";
+import {
+  EDITOR_POSITION_ANNOTATION,
+  ZINDEX_ANNOTATION,
+} from "@/utils/annotations";
 import {
   type ComponentSpec,
   type GraphSpec,
@@ -16,6 +19,8 @@ import {
   getUniqueOutputName,
   getUniqueTaskName,
 } from "@/utils/unique";
+
+import { getNodeTypeZIndexDefault } from "./zIndex";
 
 interface AddTaskResult {
   spec: ComponentSpec;
@@ -75,8 +80,9 @@ const addTask = (
   const graphSpec = newComponentSpec.implementation.graph;
 
   const nodePosition = { x: position.x, y: position.y };
-  const positionAnnotations = {
+  const annotations = {
     [EDITOR_POSITION_ANNOTATION]: JSON.stringify(nodePosition),
+    [ZINDEX_ANNOTATION]: getNodeTypeZIndexDefault(taskType),
   };
 
   if (taskType === "task") {
@@ -103,7 +109,7 @@ const addTask = (
 
     const mergedAnnotations = {
       ...taskSpec.annotations,
-      ...positionAnnotations,
+      ...annotations,
     };
 
     const updatedTaskSpec: TaskSpec = {
@@ -133,7 +139,7 @@ const addTask = (
     const inputSpec: InputSpec = {
       ...options,
       name: inputId,
-      annotations: positionAnnotations,
+      annotations,
     };
 
     const inputs = (newComponentSpec.inputs ?? []).concat([inputSpec]);
@@ -146,7 +152,7 @@ const addTask = (
     const outputSpec: OutputSpec = {
       ...options,
       name: outputId,
-      annotations: positionAnnotations,
+      annotations,
     };
 
     const outputs = (newComponentSpec.outputs ?? []).concat([outputSpec]);
