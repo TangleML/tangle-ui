@@ -32,6 +32,7 @@ const addFlexNode = (
   position: XYPosition,
   author: string,
   componentSpec: ComponentSpec,
+  data?: Partial<FlexNodeData>,
 ): AddFlexNodeResult => {
   const nodeId = nanoid();
 
@@ -40,13 +41,15 @@ const addFlexNode = (
     createdBy: author,
   };
 
+  const { properties, size, zIndex } = data || {};
+
   const flexNode: FlexNodeData = {
     id: nodeId,
-    properties: DEFAULT_STICKY_NOTE,
+    properties: properties ?? DEFAULT_STICKY_NOTE,
     metadata,
-    size: DEFAULT_FLEX_NODE_SIZE,
+    size: size ?? DEFAULT_FLEX_NODE_SIZE,
     position: position,
-    zIndex: Z_INDEX_RANGES.flex.default,
+    zIndex: zIndex ?? Z_INDEX_RANGES.flex.default,
   };
 
   const newComponentSpec = updateFlexNodeInComponentSpec(

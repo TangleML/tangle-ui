@@ -7,6 +7,8 @@ import {
   type GraphInputArgument,
   type InputSpec,
   isGraphImplementation,
+  isGraphInputArgument,
+  isTaskOutputArgument,
   type OutputSpec,
   type TaskOutputArgument,
   type TaskSpec,
@@ -28,6 +30,14 @@ import {
   getUniqueTaskName,
 } from "@/utils/unique";
 
+import {
+  getFlexNode,
+  updateFlexNodeInComponentSpec,
+} from "../FlexNode/interface";
+import type { FlexNodeData } from "../FlexNode/types";
+import { createFlexNode } from "../FlexNode/utils";
+import { isFlexNode } from "../types";
+import addFlexNode from "./addFlexNode";
 import { getNodesBounds } from "./geometry";
 
 const OFFSET = 10;
@@ -49,6 +59,7 @@ export const duplicateNodes = (
     position?: XYPosition;
     connection?: ConnectionMode;
     status?: boolean;
+    author?: string;
   },
 ) => {
   if (!isGraphImplementation(componentSpec.implementation)) {
@@ -62,10 +73,12 @@ export const duplicateNodes = (
   const newTasks: Record<string, TaskSpec> = {};
   const newInputs: Record<string, InputSpec> = {};
   const newOutputs: Record<string, OutputSpec> = {};
+  const newFlexNodes: Record<string, FlexNodeData> = {};
 
   // Default Config
   const selected = config?.selected ?? true;
   const connection = config?.connection ?? "all";
+  const author = config?.author ?? "system";
 
   /* Create new Nodes and map old Task IDs to new Task IDs */
   nodesToDuplicate.forEach((node) => {
@@ -141,6 +154,27 @@ export const duplicateNodes = (
       };
 
       newOutputs[newOutputId] = newOutputSpec;
+    } else if (isFlexNode(node)) {
+      const flexNode = getFlexNode(node.id, componentSpec);
+      const { spec: updatedComponentSpec, nodeId: newNodeId } = addFlexNode(
+        {
+          x: node.position.x + OFFSET,
+          y: node.position.y + OFFSET,
+        },
+        author,
+        componentSpec,
+        flexNode ? { ...flexNode, id: undefined } : undefined,
+      );
+
+      const newNodeData = getFlexNode(newNodeId, updatedComponentSpec);
+      if (!newNodeData) {
+        throw new Error("Failed to retrieve newly created Flex Node data.");
+      }
+
+      newFlexNodes[newNodeId] = newNodeData;
+      nodeIdMap[oldNodeId] = newNodeId;
+    } else {
+      throw new Error(`Unsupported node type: ${node.type}`);
     }
   });
 
@@ -153,11 +187,7 @@ export const duplicateNodes = (
         const newTaskSpec = newTasks[taskId];
 
         // Check if the Argument is a connection to another Task or Input Node (i.e. TaskOutput or GraphInput) or a static value
-        if (
-          typeof argument === "object" &&
-          argument !== null &&
-          ("taskOutput" in argument || "graphInput" in argument)
-        ) {
+        if (isTaskOutputArgument(argument) || isGraphInputArgument(argument)) {
           newTasks[taskId] = reconfigureConnections(
             newTaskSpec,
             argKey,
@@ -217,7 +247,7 @@ export const duplicateNodes = (
         updatedOutputValue !== null &&
         connection !== "external"
       ) {
-        if ("taskOutput" in updatedOutputValue) {
+        if (isTaskOutputArgument(updatedOutputValue)) {
           const oldTaskId = updatedOutputValue.taskOutput.taskId;
           const oldTaskNodeId = taskIdToNodeId(oldTaskId);
           if (oldTaskNodeId in nodeIdMap) {
@@ -349,6 +379,28 @@ export const duplicateNodes = (
         updatedNodes.push(originalNode);
 
         return newNode;
+      } else if (isFlexNode(originalNode)) {
+        const newNodeData = newFlexNodes[newNodeId];
+
+        if (!newNodeData) {
+          return null;
+        }
+
+        const newNode = createFlexNode(newNodeData);
+
+        newNode.id = newNodeId;
+
+        // Move selection to new node by default
+        if (selected) {
+          originalNode.selected = false;
+          newNode.selected = true;
+        }
+
+        newNode.measured = originalNode.measured;
+
+        updatedNodes.push(originalNode);
+
+        return newNode;
       }
     })
     .filter(Boolean) as Node[];
@@ -447,13 +499,24 @@ export const duplicateNodes = (
         if (updatedOutputIndex !== -1) {
           updatedOutputs[updatedOutputIndex] = newOutputSpec;
         }
+      } else if (isFlexNode(node)) {
+        const newFlexNodeData = newFlexNodes[node.id];
+
+        if (!newFlexNodeData) {
+          return;
+        }
+
+        newFlexNodes[node.id] = {
+          ...newFlexNodeData,
+          position: newPosition,
+        };
       }
 
       node.position = newPosition;
     });
   }
 
-  const updatedComponentSpec = {
+  const updatedComponentSpec: ComponentSpec = {
     ...componentSpec,
     inputs: updatedInputs,
     outputs: updatedOutputs,
@@ -463,7 +526,13 @@ export const duplicateNodes = (
     updatedComponentSpec.implementation.graph = updatedGraphSpec;
   }
 
-  return { updatedComponentSpec, nodeIdMap, newNodes, updatedNodes };
+  /* Handle Flex Nodes */
+  let spec = updatedComponentSpec;
+  Object.values(newFlexNodes).forEach((newNodeData) => {
+    spec = updateFlexNodeInComponentSpec(spec, newNodeData);
+  });
+
+  return { updatedComponentSpec: spec, nodeIdMap, newNodes, updatedNodes };
 };
 
 function reconfigureConnections(
@@ -479,7 +548,7 @@ function reconfigureConnections(
   let newArgId = undefined;
   let isExternal = false;
 
-  if ("taskOutput" in argument) {
+  if (isTaskOutputArgument(argument)) {
     const oldTaskId = argument.taskOutput.taskId;
     oldNodeId = taskIdToNodeId(oldTaskId);
 
@@ -499,7 +568,7 @@ function reconfigureConnections(
     const newTaskId = nodeIdToTaskId(newNodeId);
 
     newArgId = newTaskId;
-  } else if ("graphInput" in argument) {
+  } else if (isGraphInputArgument(argument)) {
     const oldInputId = argument.graphInput.inputName;
     oldNodeId = inputNameToNodeId(oldInputId);
 
@@ -596,7 +665,7 @@ function updateTaskArgumentConnection(
   argument: TaskOutputArgument | GraphInputArgument,
   newArgId: string,
 ): TaskSpec {
-  if ("taskOutput" in argument) {
+  if (isTaskOutputArgument(argument)) {
     return {
       ...taskSpec,
       arguments: {
@@ -610,7 +679,7 @@ function updateTaskArgumentConnection(
         },
       },
     };
-  } else if ("graphInput" in argument) {
+  } else if (isGraphInputArgument(argument)) {
     return {
       ...taskSpec,
       arguments: {
