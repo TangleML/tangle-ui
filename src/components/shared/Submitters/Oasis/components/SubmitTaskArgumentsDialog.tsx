@@ -7,9 +7,17 @@ import {
 } from "react";
 
 import type { TaskSpecOutput } from "@/api/types.gen";
+import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { PipelineRunsList } from "@/components/shared/PipelineRunDisplay/PipelineRunsList";
+import { SecretArgumentInput } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/ArgumentsEditor/SecretArgumentInput";
 import { typeSpecToString } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/ArgumentsEditor/utils";
 import { getArgumentsFromInputs } from "@/components/shared/ReactFlow/FlowCanvas/utils/getArgumentsFromInputs";
+import { SelectSecretDialog } from "@/components/shared/SecretsManagement/SelectSecretDialog";
+import {
+  createSecretArgument,
+  extractSecretName,
+} from "@/components/shared/SecretsManagement/types";
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -39,7 +47,12 @@ import {
   fetchPipelineRun,
 } from "@/services/executionService";
 import type { PipelineRun } from "@/types/pipelineRun";
-import type { ComponentSpec, InputSpec } from "@/utils/componentSpec";
+import {
+  type ArgumentType,
+  type ComponentSpec,
+  type InputSpec,
+  isSecretArgument,
+} from "@/utils/componentSpec";
 import { extractTaskArguments } from "@/utils/nodes/taskArguments";
 import { validateArguments } from "@/utils/validations";
 
@@ -48,7 +61,7 @@ type TaskArguments = TaskSpecOutput["arguments"];
 interface SubmitTaskArgumentsDialogProps {
   open: boolean;
   onCancel: () => void;
-  onConfirm: (args: Record<string, string>, notes: string) => void;
+  onConfirm: (args: Record<string, ArgumentType>, notes: string) => void;
   componentSpec: ComponentSpec;
 }
 
@@ -63,7 +76,7 @@ export const SubmitTaskArgumentsDialog = ({
 
   const [runNotes, setRunNotes] = useState<string>("");
   const [taskArguments, setTaskArguments] =
-    useState<Record<string, string>>(initialArgs);
+    useState<Record<string, ArgumentType>>(initialArgs);
 
   // Track highlighted args with a version key to re-trigger CSS animation
   const [highlightedArgs, setHighlightedArgs] = useState<Map<string, number>>(
@@ -92,7 +105,7 @@ export const SubmitTaskArgumentsDialog = ({
     notify(`Copied ${diff.length} arguments`, "success");
   };
 
-  const handleValueChange = (name: string, value: string) => {
+  const handleValueChange = (name: string, value: ArgumentType) => {
     setTaskArguments((prev) => ({
       ...prev,
       [name]: value,
@@ -157,7 +170,7 @@ export const SubmitTaskArgumentsDialog = ({
                   <ArgumentField
                     key={`${input.name}-${highlightVersion ?? "static"}`}
                     input={input}
-                    value={taskArguments[input.name] ?? ""}
+                    value={taskArguments[input.name]}
                     onChange={handleValueChange}
                     isHighlighted={highlightVersion !== undefined}
                   />
@@ -315,8 +328,8 @@ const CopyFromRunPopover = ({
 
 interface ArgumentFieldProps {
   input: InputSpec;
-  value: string;
-  onChange: (name: string, value: string) => void;
+  value: ArgumentType | undefined;
+  onChange: (name: string, value: ArgumentType) => void;
   isHighlighted?: boolean;
 }
 
@@ -326,49 +339,101 @@ const ArgumentField = ({
   onChange,
   isHighlighted,
 }: ArgumentFieldProps) => {
+  const isSecretUIEnabled = useFlagValue("secrets");
+  const [isSelectSecretDialogOpen, setIsSelectSecretDialogOpen] =
+    useState(false);
+
+  const isValueSecret = isSecretArgument(value);
+  const secretName = isValueSecret ? extractSecretName(value) : null;
+  // For the submit dialog, we only expect string values or SecretArguments
+  const stringValue = typeof value === "string" ? value : "";
+
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     onChange(input.name, e.target.value);
+  };
+
+  const handleSecretSelect = (selectedSecretName: string) => {
+    onChange(input.name, createSecretArgument(selectedSecretName));
+    setIsSelectSecretDialogOpen(false);
+  };
+
+  const handleClearSecret = () => {
+    onChange(input.name, "");
   };
 
   const typeLabel = typeSpecToString(input.type);
   const isRequired = !input.optional;
   const placeholder = input.default ?? "";
+  const hasValidValue =
+    isValueSecret || Boolean(stringValue) || Boolean(placeholder);
 
   return (
-    <BlockStack
-      gap="1"
-      className={cn(
-        "rounded-md px-1 py-1",
-        isHighlighted && "animate-highlight-fade",
-      )}
-    >
-      <InlineStack gap="2" align="start">
-        <Paragraph size="sm" className="wrap-break-word">
-          {input.name}
-        </Paragraph>
-        <Paragraph size="xs" tone="subdued" className="truncate">
-          ({typeLabel}
-          {isRequired ? "*" : ""})
-        </Paragraph>
-      </InlineStack>
-
-      {input.description && (
-        <Paragraph size="xs" tone="subdued" className="italic">
-          {input.description}
-        </Paragraph>
-      )}
-
-      <Input
-        id={input.name}
-        value={value}
-        onChange={handleChange}
-        placeholder={placeholder}
+    <>
+      <BlockStack
+        gap="1"
         className={cn(
-          isRequired && !value && !placeholder && "border-red-300",
-          // todo: remove this once we have a proper style in Input component
-          "bg-white!",
+          "rounded-md px-1 py-1",
+          isHighlighted && "animate-highlight-fade",
         )}
+      >
+        <InlineStack gap="2" align="start">
+          <Paragraph size="sm" className="wrap-break-word">
+            {input.name}
+          </Paragraph>
+          <Paragraph size="xs" tone="subdued" className="truncate">
+            ({typeLabel}
+            {isRequired ? "*" : ""})
+          </Paragraph>
+        </InlineStack>
+
+        {input.description && (
+          <Paragraph size="xs" tone="subdued" className="italic">
+            {input.description}
+          </Paragraph>
+        )}
+
+        <div className="relative group w-full">
+          {isValueSecret && secretName ? (
+            <SecretArgumentInput
+              secretName={secretName}
+              onClear={handleClearSecret}
+            />
+          ) : (
+            <>
+              <Input
+                id={input.name}
+                value={stringValue}
+                onChange={handleChange}
+                placeholder={placeholder}
+                className={cn(
+                  isRequired && !hasValidValue && "border-red-300",
+                  isSecretUIEnabled && "group-hover:pr-8",
+                  "bg-white!",
+                )}
+              />
+              {isSecretUIEnabled && (
+                <InlineStack className="absolute right-0 top-1/2 -translate-y-1/2 mr-1 px-1 bg-white">
+                  <TooltipButton
+                    onClick={() => setIsSelectSecretDialogOpen(true)}
+                    className="hover:bg-transparent hover:text-blue-500 hidden group-hover:flex"
+                    variant="ghost"
+                    size="xs"
+                    tooltip="Use Secret"
+                  >
+                    <Icon name="Lock" />
+                  </TooltipButton>
+                </InlineStack>
+              )}
+            </>
+          )}
+        </div>
+      </BlockStack>
+
+      <SelectSecretDialog
+        open={isSelectSecretDialogOpen}
+        onOpenChange={setIsSelectSecretDialogOpen}
+        onSelect={handleSecretSelect}
       />
-    </BlockStack>
+    </>
   );
 };

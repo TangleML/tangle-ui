@@ -37,6 +37,7 @@ import type { ArgumentInput } from "@/types/arguments";
 import { isGraphImplementation, isSecretArgument } from "@/utils/componentSpec";
 
 import { ArgumentInputDialog } from "./ArgumentInputDialog";
+import { SecretArgumentInput } from "./SecretArgumentInput";
 import {
   getDefaultValue,
   getInputValue,
@@ -44,14 +45,6 @@ import {
   getPlaceholder,
   typeSpecToString,
 } from "./utils";
-
-interface SecretArgumentInputProps {
-  secretName: string | null;
-  isRemoved: boolean;
-  disabled: boolean;
-  onClear: () => void;
-}
-
 interface PlainArgumentInputProps {
   argument: ArgumentInput;
   inputValue: string;
@@ -71,40 +64,6 @@ interface PlainArgumentInputProps {
 
 const ACTIONS_BASE_CLASS =
   "hover:bg-transparent hover:text-blue-500 hidden group-hover:flex";
-
-const SecretArgumentInput = ({
-  secretName,
-  isRemoved,
-  disabled,
-  onClear,
-}: SecretArgumentInputProps) => {
-  return (
-    <InlineStack
-      gap="2"
-      blockAlign="center"
-      className={cn(
-        "w-full px-3 py-1 rounded-md border ",
-        isRemoved && "opacity-50",
-      )}
-    >
-      <Icon name="Lock" size="sm" className="text-amber-600 shrink-0" />
-      <Paragraph size="sm" className="truncate flex-1 text-amber-600">
-        {secretName}
-      </Paragraph>
-      {!disabled && (
-        <TooltipButton
-          onClick={onClear}
-          variant="ghost"
-          size="xs"
-          tooltip="Clear Secret"
-          className="shrink-0"
-        >
-          <Icon name="X" size="sm" />
-        </TooltipButton>
-      )}
-    </InlineStack>
-  );
-};
 
 const PlainArgumentInput = ({
   argument,

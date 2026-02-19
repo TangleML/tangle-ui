@@ -1,7 +1,6 @@
 import type {
   BodyCreateApiPipelineRunsPost,
   ComponentSpecInput,
-  TaskSpecOutput,
 } from "@/api/types.gen";
 import { processTemplate } from "@/components/shared/PipelineRunNameTemplate/processTemplate";
 import { getRunNameTemplate } from "@/components/shared/PipelineRunNameTemplate/utils";
@@ -13,15 +12,18 @@ import {
 import type { PipelineRun } from "@/types/pipelineRun";
 
 import { buildAnnotationsWithCanonicalName } from "./canonicalPipelineName";
-import type { ComponentReference, ComponentSpec } from "./componentSpec";
-import { extractTaskArguments } from "./nodes/taskArguments";
+import type {
+  ArgumentType,
+  ComponentReference,
+  ComponentSpec,
+} from "./componentSpec";
 import { componentSpecFromYaml } from "./yaml";
 
 export async function submitPipelineRun(
   componentSpec: ComponentSpec,
   backendUrl: string,
   options?: {
-    taskArguments?: TaskSpecOutput["arguments"];
+    taskArguments?: Record<string, ArgumentType>;
     authorizationToken?: string;
     runNameOverride?: boolean;
     canonicalName?: string;
@@ -43,20 +45,27 @@ export async function submitPipelineRun(
       },
     );
     const argumentsFromInputs = getArgumentsFromInputs(fullyLoadedSpec);
-    const normalizedTaskArguments = options?.taskArguments
-      ? extractTaskArguments(options.taskArguments)
-      : {};
-    const payloadArguments = {
+    // Merge default arguments with provided task arguments
+    // Task arguments (including SecretArguments) are preserved as-is
+    const payloadArguments: Record<string, ArgumentType> = {
       ...argumentsFromInputs,
-      ...normalizedTaskArguments,
+      ...(options?.taskArguments ?? {}),
     };
+
+    // Convert arguments to strings for template processing
+    // (secrets and other complex types are not supported in templates)
+    const stringArguments: Record<string, string> = Object.fromEntries(
+      Object.entries(payloadArguments)
+        .filter(([, v]) => typeof v === "string")
+        .map(([k, v]) => [k, v as string]),
+    );
 
     const runNameOverride = options?.runNameOverride
       ? processTemplate(getRunNameTemplate(fullyLoadedSpec) ?? "", {
           componentRef: {
             spec: fullyLoadedSpec,
           },
-          arguments: payloadArguments,
+          arguments: stringArguments,
         }) || undefined
       : undefined;
 
@@ -64,7 +73,7 @@ export async function submitPipelineRun(
       ? buildAnnotationsWithCanonicalName(pipelineName)
       : undefined;
 
-    const payload: BodyCreateApiPipelineRunsPost = {
+    const payload = {
       root_task: {
         componentRef: {
           spec: {
@@ -73,6 +82,7 @@ export async function submitPipelineRun(
           } as ComponentSpecInput,
         },
         ...(payloadArguments ? { arguments: payloadArguments } : {}),
+        annotations: {},
       },
     };
 

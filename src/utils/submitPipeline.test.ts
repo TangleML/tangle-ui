@@ -78,6 +78,7 @@ describe("submitPipelineRun", () => {
               spec: componentSpec,
             },
             arguments: {},
+            annotations: {},
           },
         },
         mockBackendUrl,
@@ -115,6 +116,7 @@ describe("submitPipelineRun", () => {
               spec: componentSpec,
             },
             arguments: { param1: "value1", param2: "value2" },
+            annotations: {},
           },
         },
         mockBackendUrl,
@@ -187,6 +189,7 @@ describe("submitPipelineRun", () => {
               inputA: "valueA",
               inputB: "valueB",
             },
+            annotations: {},
           },
         },
         mockBackendUrl,
@@ -228,6 +231,7 @@ describe("submitPipelineRun", () => {
               taskArg1: "taskValue1",
               taskArg2: "taskValue2",
             },
+            annotations: {},
           },
         },
         mockBackendUrl,
@@ -268,6 +272,7 @@ describe("submitPipelineRun", () => {
               uniqueInputKey: "inputOnlyValue",
               uniqueTaskKey: "taskOnlyValue",
             },
+            annotations: {},
           },
         },
         mockBackendUrl,
@@ -275,10 +280,10 @@ describe("submitPipelineRun", () => {
       );
     });
 
-    it("should filter out non-string taskArguments values", async () => {
+    it("should preserve non-string taskArguments values (e.g., SecretArguments)", async () => {
       // Arrange
       const componentSpec: ComponentSpec = {
-        name: "filter-args-component",
+        name: "preserve-args-component",
         implementation: { container: { image: "test:latest" } },
       };
 
@@ -293,7 +298,7 @@ describe("submitPipelineRun", () => {
         taskArguments: mockTaskArguments as any,
       });
 
-      // Assert - only string values should be included
+      // Assert - all argument values should be preserved (non-strings like SecretArguments are valid)
       expect(pipelineRunService.createPipelineRun).toHaveBeenCalledWith(
         {
           root_task: {
@@ -302,9 +307,10 @@ describe("submitPipelineRun", () => {
             },
             arguments: {
               stringArg: "validString",
-              objectArg: undefined,
-              numberArg: undefined,
+              objectArg: { nested: "value" },
+              numberArg: 123,
             },
+            annotations: {},
           },
         },
         mockBackendUrl,
@@ -335,6 +341,7 @@ describe("submitPipelineRun", () => {
             arguments: {
               inputArg: "inputValue",
             },
+            annotations: {},
           },
         },
         mockBackendUrl,
@@ -426,6 +433,7 @@ describe("submitPipelineRun", () => {
               },
             },
             arguments: {},
+            annotations: {},
           },
         },
         mockBackendUrl,
@@ -589,6 +597,7 @@ describe("submitPipelineRun", () => {
               spec: componentSpec,
             },
             arguments: {},
+            annotations: {},
           },
         }),
         mockBackendUrl,
@@ -835,6 +844,7 @@ describe("submitPipelineRun", () => {
               spec: componentSpec,
             },
             arguments: {},
+            annotations: {},
           },
         }),
         mockBackendUrl,
@@ -869,6 +879,7 @@ describe("submitPipelineRun", () => {
               spec: componentSpec,
             },
             arguments: {},
+            annotations: {},
           },
         }),
         mockBackendUrl,
