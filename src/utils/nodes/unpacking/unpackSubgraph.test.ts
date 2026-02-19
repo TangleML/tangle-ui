@@ -16,6 +16,7 @@ import {
   reconnectDownstreamOutputs,
   reconnectDownstreamTasks,
   reconnectUpstreamInputsAndTasks,
+  unpackFlexNodes,
   unpackInputs,
   unpackOutputs,
   unpackTasks,
@@ -77,6 +78,7 @@ describe("unpackSubgraph", () => {
     vi.mocked(extractPositionFromAnnotations).mockReturnValue(mockPosition);
     vi.mocked(getOutputNodesConnectedToTask).mockReturnValue({});
     vi.mocked(getDownstreamTaskNodesConnectedToTask).mockReturnValue({});
+    vi.mocked(unpackFlexNodes).mockImplementation((_, __, spec) => spec);
   });
 
   it("should return unchanged spec if implementation is not a graph", () => {

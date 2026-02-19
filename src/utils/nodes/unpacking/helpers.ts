@@ -1,9 +1,16 @@
 import type { XYPosition } from "@xyflow/react";
 
+import {
+  getFlexNodeAnnotations,
+  serializeFlexNodes,
+} from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/interface";
 import addTask from "@/components/shared/ReactFlow/FlowCanvas/utils/addTask";
 import { setGraphOutputValue } from "@/components/shared/ReactFlow/FlowCanvas/utils/setGraphOutputValue";
 import { setTaskArgument } from "@/components/shared/ReactFlow/FlowCanvas/utils/setTaskArgument";
-import { extractPositionFromAnnotations } from "@/utils/annotations";
+import {
+  extractPositionFromAnnotations,
+  FLEX_NODES_ANNOTATION,
+} from "@/utils/annotations";
 import {
   type ArgumentType,
   type ComponentSpec,
@@ -22,6 +29,51 @@ import {
   getOutputNodesConnectedToTask,
   normalizeNodePositionInGroup,
 } from "@/utils/graphUtils";
+
+export const unpackFlexNodes = (
+  containerSpec: ComponentSpec,
+  containerPosition: XYPosition,
+  componentSpec: ComponentSpec,
+): ComponentSpec => {
+  const updatedSpec = componentSpec;
+
+  const flexNodes = getFlexNodeAnnotations(containerSpec);
+
+  const containerCenter = calculateSpecCenter(containerSpec);
+
+  const newFlexNodes = flexNodes.map((flexNode) => {
+    const position = normalizeNodePositionInGroup(
+      {
+        x: flexNode.position.x,
+        y: flexNode.position.y,
+      },
+      containerPosition,
+      containerCenter,
+    );
+
+    return {
+      ...flexNode,
+      position,
+    };
+  });
+
+  if (!updatedSpec.metadata) {
+    updatedSpec.metadata = {};
+  }
+
+  if (!updatedSpec.metadata.annotations) {
+    updatedSpec.metadata.annotations = {};
+  }
+
+  const existingFlexNodes = getFlexNodeAnnotations(updatedSpec);
+
+  const mergedFlexNodes = [...existingFlexNodes, ...newFlexNodes];
+
+  updatedSpec.metadata.annotations[FLEX_NODES_ANNOTATION] =
+    serializeFlexNodes(mergedFlexNodes);
+
+  return updatedSpec;
+};
 
 export const unpackInputs = (
   containerSpec: ComponentSpec,
