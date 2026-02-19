@@ -26,6 +26,10 @@ export const edgeTypes: Record<string, ComponentType<any>> = {
   customEdge: SmoothEdge,
 };
 
+export function isDefinedNode(node: Node): node is Node & { type: NodeType } {
+  return !!node.type && node.type in nodeTypes;
+}
+
 export function isTaskNodeType(type: string): type is TaskType {
   return type === "task" || type === "input" || type === "output";
 }

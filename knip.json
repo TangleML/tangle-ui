@@ -7,7 +7,10 @@
     "src/components/ui/**",
     "src/components/shared/StatusFilterSelect/**",
     "openapi-ts.config.ts",
-    "vite.config.ghpages.js"
+    "vite.config.ghpages.js",
+    "src/components/shared/ReactFlow/FlowCanvas/utils/zIndex.ts",
+    "src/components/shared/ReactFlow/FlowControls/StackingControls.tsx",
+    "src/components/shared/ReactFlow/FlowCanvas/types.ts"
   ],
   "ignoreDependencies": [
     "@radix-ui/react-accordion",
