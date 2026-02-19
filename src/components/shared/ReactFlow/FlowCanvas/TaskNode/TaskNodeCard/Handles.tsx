@@ -2,10 +2,12 @@ import { Handle, Position, useConnection } from "@xyflow/react";
 import {
   type MouseEvent as ReactMouseEvent,
   useCallback,
+  useMemo,
   useState,
 } from "react";
 import { useEffect, useRef } from "react";
 
+import { Icon } from "@/components/ui/icon";
 import {
   Tooltip,
   TooltipContent,
@@ -14,12 +16,18 @@ import {
 import { useHandleEdgeSelection } from "@/hooks/useHandleEdgeSelection";
 import { cn } from "@/lib/utils";
 import { useTaskNode } from "@/providers/TaskNodeProvider";
-import type { InputSpec, OutputSpec } from "@/utils/componentSpec";
+import {
+  type ArgumentType,
+  type InputSpec,
+  isSecretArgument,
+  type OutputSpec,
+} from "@/utils/componentSpec";
 
 type InputHandleProps = {
   input: InputSpec;
   invalid: boolean;
   value?: string;
+  rawValue?: ArgumentType;
   highlight?: boolean;
   onLabelClick?: (e: ReactMouseEvent<HTMLDivElement>) => void;
   onHandleSelectionChange?: (key: string, selected: boolean) => void;
@@ -29,6 +37,7 @@ export const InputHandle = ({
   input,
   invalid,
   value,
+  rawValue,
   highlight,
   onLabelClick,
   onHandleSelectionChange,
@@ -52,6 +61,8 @@ export const InputHandle = ({
   const missing = invalid ? "bg-red-700!" : "bg-gray-500!";
   const hasValue = value !== undefined && value !== null;
   const hasDefault = input.default !== undefined && input.default !== "";
+
+  const isSecret = useMemo(() => isSecretArgument(rawValue), [rawValue]);
 
   const handleHandleClick = useCallback(
     (e: ReactMouseEvent<HTMLDivElement>) => {
@@ -184,15 +195,23 @@ export const InputHandle = ({
           </div>
           {(hasValue || hasDefault) && (
             <div
-              className="flex w-fit max-w-1/2 min-w-0"
+              className="flex w-fit max-w-1/2 min-w-0 items-center gap-1"
               data-testid={`input-handle-value-${input.name}`}
             >
+              {isSecret && (
+                <Icon
+                  name="Lock"
+                  size="xs"
+                  className="text-amber-600 shrink-0"
+                />
+              )}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div
                     className={cn(
                       "text-xs text-gray-800! truncate inline-block text-right pr-2",
                       !hasValue && "text-gray-400! italic",
+                      isSecret && "text-amber-700!",
                     )}
                   >
                     {hasValue ? value : input.default}
@@ -200,6 +219,7 @@ export const InputHandle = ({
                 </TooltipTrigger>
                 <TooltipContent side="top">
                   <div className="text-xs">
+                    {isSecret && "Secret: "}
                     {hasValue ? value : input.default}
                   </div>
                 </TooltipContent>
