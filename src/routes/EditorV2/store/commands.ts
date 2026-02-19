@@ -21,6 +21,7 @@ import {
   deleteInput,
   deleteOutput,
   deleteTask,
+  getNodeTypeFromId,
   renameInput,
   renameOutput,
   renamePipeline,
@@ -887,17 +888,130 @@ export interface ConnectionInfo {
 }
 
 /**
+ * Find an entity by ID, with fallback lookup by name if the ID is not found.
+ * This handles cases where entities were recreated with new IDs during undo/redo.
+ *
+ * @returns The entity and its current ID, or null if not found
+ */
+function findEntityWithFallback(
+  spec: ReturnType<typeof getCurrentSpec>,
+  entityId: string,
+  entityName: string | undefined,
+  nodeType: "input" | "output" | "task" | null,
+): { entity: unknown; currentId: string } | null {
+  if (!spec) return null;
+
+  // Try direct ID lookup first
+  if (nodeType === "input") {
+    const input = spec.inputs.findById(entityId);
+    if (input) return { entity: input, currentId: entityId };
+
+    // Fallback: look up by name if ID not found
+    if (entityName) {
+      const byName = spec.inputs.findByIndex("name", entityName)[0];
+      if (byName) return { entity: byName, currentId: byName.$id };
+    }
+  } else if (nodeType === "output") {
+    const output = spec.outputs.findById(entityId);
+    if (output) return { entity: output, currentId: entityId };
+
+    if (entityName) {
+      const byName = spec.outputs.findByIndex("name", entityName)[0];
+      if (byName) return { entity: byName, currentId: byName.$id };
+    }
+  } else if (nodeType === "task" && spec.implementation?.tasks) {
+    const task = spec.implementation.tasks.findById(entityId);
+    if (task) return { entity: task, currentId: entityId };
+
+    if (entityName) {
+      const byName = spec.implementation.tasks.findByIndex("name", entityName)[0];
+      if (byName) return { entity: byName, currentId: byName.$id };
+    }
+  }
+
+  return null;
+}
+
+/**
  * Command to connect two nodes.
+ *
+ * Stores entity names alongside IDs to handle cases where entities are
+ * recreated with new IDs during undo/redo cycles.
  */
 export class ConnectNodesCommand implements Command {
   readonly description = "Connect nodes";
   private bindingSnapshot: BindingSnapshot | null = null;
+  /** Source entity name for fallback lookup during redo */
+  private sourceEntityName: string | undefined;
+  /** Target entity name for fallback lookup during redo */
+  private targetEntityName: string | undefined;
 
-  constructor(private readonly connection: ConnectionInfo) {}
+  constructor(private connection: ConnectionInfo) {}
 
   execute(): boolean {
     const spec = getCurrentSpec();
     if (!spec?.implementation?.bindings) return false;
+
+    const sourceType = getNodeTypeFromId(this.connection.sourceNodeId);
+    const targetType = getNodeTypeFromId(this.connection.targetNodeId);
+
+    // Try to find source entity, with fallback by name
+    const sourceResult = findEntityWithFallback(
+      spec,
+      this.connection.sourceNodeId,
+      this.sourceEntityName,
+      sourceType,
+    );
+
+    // Try to find target entity, with fallback by name
+    const targetResult = findEntityWithFallback(
+      spec,
+      this.connection.targetNodeId,
+      this.targetEntityName,
+      targetType,
+    );
+
+    // If either entity was found by fallback (different ID), update the connection
+    if (sourceResult && sourceResult.currentId !== this.connection.sourceNodeId) {
+      this.connection = {
+        ...this.connection,
+        sourceNodeId: sourceResult.currentId,
+      };
+    }
+    if (targetResult && targetResult.currentId !== this.connection.targetNodeId) {
+      this.connection = {
+        ...this.connection,
+        targetNodeId: targetResult.currentId,
+      };
+    }
+
+    // Validate entities exist (with helpful error for debugging)
+    if (!sourceResult) {
+      console.error(
+        `ConnectNodesCommand: Source entity not found.`,
+        `ID: ${this.connection.sourceNodeId}`,
+        `Name: ${this.sourceEntityName ?? "(not captured)"}`,
+        `Type: ${sourceType}`,
+      );
+      return false;
+    }
+    if (!targetResult) {
+      console.error(
+        `ConnectNodesCommand: Target entity not found.`,
+        `ID: ${this.connection.targetNodeId}`,
+        `Name: ${this.targetEntityName ?? "(not captured)"}`,
+        `Type: ${targetType}`,
+      );
+      return false;
+    }
+
+    // Store entity names on first execution for fallback during redo
+    if (!this.sourceEntityName) {
+      this.sourceEntityName = this.getEntityName(spec, sourceType, sourceResult.currentId);
+    }
+    if (!this.targetEntityName) {
+      this.targetEntityName = this.getEntityName(spec, targetType, targetResult.currentId);
+    }
 
     const success = connectNodes(this.connection);
     if (!success) return false;
@@ -924,6 +1038,21 @@ export class ConnectNodesCommand implements Command {
     }
 
     return true;
+  }
+
+  private getEntityName(
+    spec: NonNullable<ReturnType<typeof getCurrentSpec>>,
+    nodeType: "input" | "output" | "task" | null,
+    entityId: string,
+  ): string | undefined {
+    if (nodeType === "input") {
+      return spec.inputs.findById(entityId)?.name;
+    } else if (nodeType === "output") {
+      return spec.outputs.findById(entityId)?.name;
+    } else if (nodeType === "task") {
+      return spec.implementation?.tasks?.findById(entityId)?.name;
+    }
+    return undefined;
   }
 
   undo(): boolean {

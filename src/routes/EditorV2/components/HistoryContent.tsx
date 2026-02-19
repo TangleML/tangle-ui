@@ -9,7 +9,7 @@ import { useSnapshot } from "valtio";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
-import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { BlockStack } from "@/components/ui/layout";
 import {
   Tooltip,
   TooltipContent,
@@ -20,8 +20,6 @@ import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 
 import {
-  canRedo,
-  canUndo,
   clearCommandHistory,
   commandManagerState,
   redo,
@@ -53,59 +51,45 @@ function HistoryEntryItem({
       type="button"
       onClick={onClick}
       className={cn(
-        "flex items-start gap-2 px-3 py-2 rounded-md w-full text-left transition-colors",
-        "hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-inset",
+        "flex items-start gap-1.5 px-2 py-1 rounded w-full text-left transition-colors",
+        "hover:bg-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-400 focus:ring-inset",
         isCurrent && "bg-blue-50 border border-blue-200 hover:bg-blue-100",
         isInFuture && "opacity-50",
         !isCurrent && !isInFuture && "border border-transparent",
       )}
     >
       {/* Timeline indicator */}
-      <div className="flex flex-col items-center pt-1 shrink-0">
-        <div
-          className={cn(
-            "w-2 h-2 rounded-full",
-            isCurrent
-              ? "bg-blue-500"
-              : isInFuture
-                ? "bg-slate-300"
-                : "bg-green-500",
-          )}
-        />
-      </div>
+      <div
+        className={cn(
+          "w-1.5 h-1.5 rounded-full shrink-0 mt-1",
+          isCurrent
+            ? "bg-blue-500"
+            : isInFuture
+              ? "bg-slate-300"
+              : "bg-green-500",
+        )}
+      />
 
       {/* Content */}
-      <BlockStack gap="0" className="min-w-0 flex-1">
-        <Text
-          size="sm"
-          weight={isCurrent ? "semibold" : "regular"}
-          className={cn(
-            "break-words",
-            isCurrent
-              ? "text-blue-700"
-              : isInFuture
-                ? "text-slate-400"
-                : "text-slate-700",
-          )}
-        >
-          {command.description}
-          {isCurrent && (
-            <Text as="span" size="xs" className="text-blue-500 ml-2">
-              (Current)
-            </Text>
-          )}
-        </Text>
-        {!isCurrent && !isInFuture && (
-          <Text size="xs" tone="subdued">
-            Click to revert
+      <Text
+        size="xs"
+        weight={isCurrent ? "semibold" : "regular"}
+        className={cn(
+          "min-w-0 flex-1 break-words",
+          isCurrent
+            ? "text-blue-700"
+            : isInFuture
+              ? "text-slate-400"
+              : "text-slate-700",
+        )}
+      >
+        {command.description}
+        {isCurrent && (
+          <Text as="span" size="xs" className="text-blue-500 ml-1">
+            ●
           </Text>
         )}
-        {isInFuture && (
-          <Text size="xs" tone="subdued">
-            Click to redo
-          </Text>
-        )}
-      </BlockStack>
+      </Text>
 
       {/* Arrow indicator */}
       {!isCurrent && (
@@ -113,7 +97,7 @@ function HistoryEntryItem({
           name={isInFuture ? "Redo2" : "Undo2"}
           size="xs"
           className={cn(
-            "shrink-0 mt-1",
+            "shrink-0 mt-0.5",
             isInFuture ? "text-slate-400" : "text-green-600",
           )}
         />
@@ -138,41 +122,35 @@ function InitialStateMarker({
       onClick={onClick}
       disabled={isCurrent}
       className={cn(
-        "flex items-start gap-2 px-3 py-2 rounded-md w-full text-left transition-colors",
-        "hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-inset",
+        "flex items-start gap-1.5 px-2 py-1 rounded w-full text-left transition-colors",
+        "hover:bg-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-400 focus:ring-inset",
         isCurrent && "bg-green-50 border border-green-200 hover:bg-green-50",
         !isCurrent && "border border-transparent",
       )}
     >
-      <div className="flex flex-col items-center pt-1 shrink-0">
-        <div
-          className={cn(
-            "w-2 h-2 rounded-full",
-            isCurrent ? "bg-green-500" : "bg-slate-300",
-          )}
-        />
-      </div>
-      <BlockStack gap="0" className="min-w-0 flex-1">
-        <Text
-          size="sm"
-          weight={isCurrent ? "semibold" : "regular"}
-          className={cn(isCurrent ? "text-green-700" : "text-slate-500")}
-        >
-          Initial state
-          {isCurrent && (
-            <Text as="span" size="xs" className="text-green-500 ml-2">
-              (Current)
-            </Text>
-          )}
-        </Text>
-        {!isCurrent && (
-          <Text size="xs" tone="subdued">
-            Click to revert all
+      <div
+        className={cn(
+          "w-1.5 h-1.5 rounded-full shrink-0 mt-1",
+          isCurrent ? "bg-green-500" : "bg-slate-300",
+        )}
+      />
+      <Text
+        size="xs"
+        weight={isCurrent ? "semibold" : "regular"}
+        className={cn(
+          "min-w-0 flex-1 break-words",
+          isCurrent ? "text-green-700" : "text-slate-500",
+        )}
+      >
+        Initial state
+        {isCurrent && (
+          <Text as="span" size="xs" className="text-green-500 ml-1">
+            ●
           </Text>
         )}
-      </BlockStack>
+      </Text>
       {!isCurrent && (
-        <Icon name="RotateCcw" size="xs" className="shrink-0 mt-1 text-slate-400" />
+        <Icon name="RotateCcw" size="xs" className="shrink-0 mt-0.5 text-slate-400" />
       )}
     </button>
   );
@@ -184,6 +162,10 @@ export function HistoryContent() {
   const undoStackLength = snap.undoStack.length;
   const redoStackLength = snap.redoStack.length;
   const totalCommands = undoStackLength + redoStackLength;
+
+  // Compute from snapshot for reactivity (not from functions that read proxy directly)
+  const canUndoValue = undoStackLength > 0;
+  const canRedoValue = redoStackLength > 0;
 
   const handleClear = () => {
     clearCommandHistory();
@@ -206,7 +188,7 @@ export function HistoryContent() {
 
   // Handle clicking on a redo stack entry
   const handleRedoEntryClick = (redoIndex: number) => {
-    // redoIndex is position in redo stack (0 = oldest redo, redoStackLength-1 = most recent redo)
+    // redoIndex is position in redo stack (0 = most recent action, redoStackLength-1 = closest to current)
     // We want to redo (redoStackLength - redoIndex) times to reach that state
     const stepsForward = redoStackLength - redoIndex;
     redoMultiple(stepsForward);
@@ -220,45 +202,41 @@ export function HistoryContent() {
   if (totalCommands === 0) {
     return (
       <BlockStack
-        gap="4"
-        className="p-4 h-full items-center justify-center"
+        gap="2"
+        className="p-3 h-full items-center justify-center"
         align="center"
       >
-        <Icon name="History" size="lg" className="text-slate-300" />
-        <Text size="sm" tone="subdued" className="text-center">
-          No history yet.
-          <br />
-          Changes will appear here.
+        <Icon name="History" size="md" className="text-slate-300" />
+        <Text size="xs" tone="subdued" className="text-center">
+          No history yet
         </Text>
       </BlockStack>
     );
   }
 
-  // Build the unified timeline (redo stack reversed + undo stack reversed)
-  // Display order: future (redo) at top, past (undo) at bottom, newest first within each
-  const redoEntries = [...snap.redoStack].reverse();
+  // Build the unified timeline
+  // Display order: future (redo) at top, past (undo) at bottom
+  // Redo: most recent action historically at top, oldest at bottom
+  // Undo: most recent action at top (current), oldest at bottom
+  const redoEntries = [...snap.redoStack];
   const undoEntries = [...snap.undoStack].reverse();
 
   return (
-    <BlockStack gap="2" className="h-full">
+    <div className="h-full w-full flex flex-col">
       {/* Header with undo/redo buttons */}
-      <InlineStack
-        gap="2"
-        blockAlign="center"
-        className="px-3 py-2 border-b border-slate-200 justify-between"
-      >
-        <InlineStack gap="1">
+      <div className="flex items-center gap-1 px-2 py-1 border-b border-slate-200 justify-between w-full shrink-0">
+        <div className="flex items-center gap-1">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-7 w-7 p-0"
+                  className="h-6 w-6 p-0"
                   onClick={handleUndo}
-                  disabled={!canUndo()}
+                  disabled={!canUndoValue}
                 >
-                  <Icon name="Undo2" size="sm" />
+                  <Icon name="Undo2" size="xs" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="bottom">
@@ -273,11 +251,11 @@ export function HistoryContent() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-7 w-7 p-0"
+                  className="h-6 w-6 p-0"
                   onClick={handleRedo}
-                  disabled={!canRedo()}
+                  disabled={!canRedoValue}
                 >
-                  <Icon name="Redo2" size="sm" />
+                  <Icon name="Redo2" size="xs" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="bottom">
@@ -285,11 +263,10 @@ export function HistoryContent() {
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-        </InlineStack>
+        </div>
 
         <Text size="xs" tone="subdued">
-          {undoStackLength} action{undoStackLength !== 1 ? "s" : ""}
-          {redoStackLength > 0 && ` • ${redoStackLength} undone`}
+          {`${undoStackLength}/${totalCommands}`}
         </Text>
 
         <TooltipProvider>
@@ -298,7 +275,7 @@ export function HistoryContent() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 px-2 text-slate-500 hover:text-red-500"
+                className="h-5 w-5 p-0 text-slate-500 hover:text-red-500"
                 onClick={handleClear}
                 title="Clear history"
               >
@@ -310,79 +287,70 @@ export function HistoryContent() {
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
-      </InlineStack>
+      </div>
 
       {/* History entries */}
-      <BlockStack gap="1" className="flex-1 overflow-y-auto px-2 pb-2">
+      <div className="flex-1 overflow-y-auto px-1.5 py-1 flex flex-col gap-1 w-full">
         {/* Future (redo stack) - shown at top, grayed out */}
         {redoEntries.length > 0 && (
           <>
-            <Text size="xs" tone="subdued" className="px-3 pt-2 pb-1">
-              Future (undone)
+            <Text size="xs" tone="subdued" className="px-2 py-0.5">
+              Future
             </Text>
-            <div className="flex flex-col gap-1 flex-reverse">
-            {redoEntries.map((command, displayIndex) => {
-              // displayIndex is 0 for most future, redoEntries.length-1 for closest to current
-              // Original redoStack index is (redoStackLength - 1 - displayIndex)
-              const originalIndex = redoStackLength - 1 - displayIndex;
-              return (
-                <HistoryEntryItem
-                  key={`redo-${originalIndex}`}
-                  command={command as Command}
-                  index={originalIndex}
-                  isCurrent={false}
-                  isInFuture={true}
-                  onClick={() => handleRedoEntryClick(originalIndex)}
-                />
-              );
-            })}
+            <div className="flex flex-col gap-0.5 w-full">
+              {redoEntries.map((command, displayIndex) => {
+                const originalIndex = displayIndex;
+                return (
+                  <HistoryEntryItem
+                    key={`redo-${originalIndex}`}
+                    command={command as Command}
+                    index={originalIndex}
+                    isCurrent={false}
+                    isInFuture={true}
+                    onClick={() => handleRedoEntryClick(originalIndex)}
+                  />
+                );
+              })}
             </div>
-            <div className="border-t border-dashed border-slate-300 my-2 mx-3" />
+            <div className="border-t border-dashed border-slate-300 my-1 mx-2" />
           </>
         )}
 
         {/* Current position indicator */}
         {undoStackLength > 0 && (
-          <Text size="xs" tone="subdued" className="px-3 pt-2 pb-1">
+          <Text size="xs" tone="subdued" className="px-2 py-0.5">
             Past
           </Text>
         )}
 
         {/* Past (undo stack) - shown below, most recent first */}
-        {undoEntries.map((command, displayIndex) => {
-          // displayIndex is 0 for most recent, undoEntries.length-1 for oldest
-          // Original undoStack index is (undoStackLength - 1 - displayIndex)
-          const originalIndex = undoStackLength - 1 - displayIndex;
-          const isCurrent = displayIndex === 0;
-          return (
-            <HistoryEntryItem
-              key={`undo-${originalIndex}`}
-              command={command as Command}
-              index={originalIndex}
-              isCurrent={isCurrent}
-              isInFuture={false}
-              onClick={() => {
-                if (!isCurrent) {
-                  handleUndoEntryClick(originalIndex);
-                }
-              }}
-            />
-          );
-        })}
+        <div className="flex flex-col gap-0.5 w-full">
+          {undoEntries.map((command, displayIndex) => {
+            const originalIndex = undoStackLength - 1 - displayIndex;
+            const isCurrent = displayIndex === 0;
+            return (
+              <HistoryEntryItem
+                key={`undo-${originalIndex}`}
+                command={command as Command}
+                index={originalIndex}
+                isCurrent={isCurrent}
+                isInFuture={false}
+                onClick={() => {
+                  if (!isCurrent) {
+                    handleUndoEntryClick(originalIndex);
+                  }
+                }}
+              />
+            );
+          })}
+        </div>
 
         {/* Initial state marker */}
         <InitialStateMarker
           isCurrent={undoStackLength === 0}
           onClick={handleInitialClick}
         />
-      </BlockStack>
-
-      {/* Footer hint */}
-      <div className="px-3 py-2 border-t border-slate-200">
-        <Text size="xs" tone="subdued" className="text-center">
-          Click any entry to revert
-        </Text>
       </div>
-    </BlockStack>
+    </div>
   );
 }
