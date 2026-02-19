@@ -254,7 +254,7 @@ interface ConnectionInfo {
  * Entity IDs follow the pattern: root.{specName}.{collection}_{number}
  * e.g., "root.MyPipeline.inputs_1", "root.MyPipeline.outputs_2", "root.MyPipeline.tasks_3"
  */
-function getNodeTypeFromId(nodeId: string): "input" | "output" | "task" | null {
+export function getNodeTypeFromId(nodeId: string): "input" | "output" | "task" | null {
   if (nodeId.includes(".inputs_")) return "input";
   if (nodeId.includes(".outputs_")) return "output";
   if (nodeId.includes(".tasks_")) return "task";
