@@ -66,6 +66,14 @@ export const ExistingFlags: ConfigFlags = {
     category: "beta",
   },
 
+  ["secrets"]: {
+    name: "Secrets",
+    description:
+      "Enable the Secrets feature. This will allow you to store secrets, tokens, api keys and other sensitive information in secured way.",
+    default: false,
+    category: "beta",
+  },
+
   ["pipeline-run-filters-bar"]: {
     name: "Pipeline run filters bar (UI only)",
     description:

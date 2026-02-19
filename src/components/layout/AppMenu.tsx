@@ -23,6 +23,7 @@ import { DOCUMENTATION_URL, TOP_NAV_HEIGHT } from "@/utils/constants";
 import BackendStatus from "../shared/BackendStatus";
 import TooltipButton from "../shared/Buttons/TooltipButton";
 import NewPipelineButton from "../shared/NewPipelineButton";
+import { ManageSecretsButton } from "../shared/SecretsManagement/ManageSecretsButton";
 import { PersonalPreferences } from "../shared/Settings/PersonalPreferences";
 
 const AppMenu = () => {
@@ -72,6 +73,7 @@ const AppMenu = () => {
           <InlineStack gap="2" wrap="nowrap">
             <BackendStatus />
             <PersonalPreferences />
+            <ManageSecretsButton />
             {documentationButton}
             {requiresAuthorization && <TopBarAuthentication />}
           </InlineStack>
