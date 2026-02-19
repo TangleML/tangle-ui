@@ -115,8 +115,24 @@ function SubgraphNode({
   const hasChildren = tasks.length > 0;
 
   const handleClick = () => {
-    // Navigate directly to this subgraph using the full path
-    navigateToPath(navigationPath);
+    console.log("[PipelineTree] Click on subgraph:", {
+      taskName: task.name,
+      taskId: task.$id,
+      navigationPath,
+      currentNavPath,
+    });
+
+    // Try navigateToPath first
+    console.log("[PipelineTree] Trying navigateToPath with:", navigationPath);
+    const pathResult = navigateToPath(navigationPath);
+    console.log("[PipelineTree] navigateToPath result:", pathResult);
+
+    if (!pathResult) {
+      // Fallback: navigate to parent level first, then try to find the task
+      console.log("[PipelineTree] navigateToPath failed, trying fallback...");
+      const parentLevel = navigationPath.length - 2;
+      navigateToLevel(parentLevel);
+    }
   };
 
   const handleToggle = (e: React.MouseEvent) => {
@@ -393,6 +409,8 @@ export function PipelineTreeContent() {
   // Build the current navigation path as array of display names
   const currentNavPath = buildNavPathArray(navigationPath);
 
+  console.log("[PipelineTreeContent] Rendering with currentNavPath:", currentNavPath);
+
   // Auto-expand nodes along the current navigation path
   useEffect(() => {
     const pathsToExpand = buildExpandedPaths(currentNavPath);
@@ -430,7 +448,7 @@ export function PipelineTreeContent() {
   return (
     <BlockStack gap="2" className="p-2 h-full overflow-y-auto">
       <RootNode
-        spec={navigationStore.rootSpec!}
+        spec={rootSpec}
         currentNavPath={currentNavPath}
         expandedNodes={expandedNodes}
         onToggleExpand={handleToggleExpand}

@@ -134,18 +134,32 @@ export function isTaskSubgraph(taskEntityId: string): boolean {
 export function navigateToSubgraph(taskEntityId: string): boolean {
   const { rootSpec, navigationPath } = navigationStore;
 
+  console.log("[navigateToSubgraph] Starting with taskEntityId:", taskEntityId);
+  console.log("[navigateToSubgraph] Current navigationPath:", navigationPath);
+
   if (!rootSpec) {
+    console.log("[navigateToSubgraph] FAILED: no rootSpec");
     return false;
   }
 
   const currentSpec = getCurrentSpec();
+  console.log("[navigateToSubgraph] currentSpec:", currentSpec?.name);
+
   if (!currentSpec || !hasGraphImplementation(currentSpec)) {
+    console.log("[navigateToSubgraph] FAILED: no currentSpec or no graph impl");
     return false;
   }
 
   // Find the task entity
   const task = currentSpec.implementation.tasks.findById(taskEntityId);
+  console.log("[navigateToSubgraph] Found task:", task?.name, "for ID:", taskEntityId);
+
+  // Debug: list all task IDs in current spec
+  const allTasks = currentSpec.implementation.tasks.getAll();
+  console.log("[navigateToSubgraph] All tasks in currentSpec:", allTasks.map(t => ({ name: t.name, id: t.$id })));
+
   if (!task) {
+    console.log("[navigateToSubgraph] FAILED: task not found by ID");
     return false;
   }
 
@@ -154,6 +168,7 @@ export function navigateToSubgraph(taskEntityId: string): boolean {
     !task.componentRef.spec ||
     !isGraphImplementation(task.componentRef.spec.implementation)
   ) {
+    console.log("[navigateToSubgraph] FAILED: task is not a subgraph");
     return false;
   }
 
@@ -176,6 +191,7 @@ export function navigateToSubgraph(taskEntityId: string): boolean {
     },
   ];
 
+  console.log("[navigateToSubgraph] SUCCESS: navigated to", task.name);
   return true;
 }
 
@@ -240,12 +256,19 @@ export function canNavigateBack(): boolean {
 export function navigateToPath(pathNames: string[]): boolean {
   const { rootSpec } = navigationStore;
 
+  console.log("[navigateToPath] Starting with pathNames:", pathNames);
+  console.log("[navigateToPath] rootSpec.name:", rootSpec?.name);
+
   if (!rootSpec || pathNames.length === 0) {
+    console.log("[navigateToPath] FAILED: no rootSpec or empty path");
     return false;
   }
 
   // First name should match the root spec
   if (pathNames[0] !== rootSpec.name) {
+    console.log("[navigateToPath] FAILED: path[0] doesn't match rootSpec.name");
+    console.log("[navigateToPath] pathNames[0]:", JSON.stringify(pathNames[0]));
+    console.log("[navigateToPath] rootSpec.name:", JSON.stringify(rootSpec.name));
     return false;
   }
 
@@ -262,10 +285,14 @@ export function navigateToPath(pathNames: string[]): boolean {
   // Navigate through each subsequent name in the path
   for (let i = 1; i < pathNames.length; i++) {
     const taskName = pathNames[i];
+    console.log("[navigateToPath] Looking for nested spec:", taskName, "in", currentSpec.name);
     const nestedSpec = currentSpec.findComponentSpecEntity(taskName);
 
     if (!nestedSpec) {
-      console.warn(`Could not find nested spec for: ${taskName}`);
+      console.warn(`[navigateToPath] Could not find nested spec for: ${taskName}`);
+      // List available nested specs
+      const available = currentSpec.findAllComponentSpecEntities?.() ?? [];
+      console.log("[navigateToPath] Available nested specs:", available.map((s: ComponentSpecEntity) => s.name));
       return false;
     }
 
@@ -277,6 +304,7 @@ export function navigateToPath(pathNames: string[]): boolean {
     currentSpec = nestedSpec;
   }
 
+  console.log("[navigateToPath] SUCCESS: setting path to", newPath.map(e => e.displayName));
   navigationStore.navigationPath = newPath;
   return true;
 }
