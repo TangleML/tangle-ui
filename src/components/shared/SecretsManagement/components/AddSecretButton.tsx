@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import useToastNotification from "@/hooks/useToastNotification";
 
-import { addSecret, SecretsQueryKeys } from "../secretsStorage";
+import { addSecret } from "../secretsStorage";
 import type { Secret } from "../types";
+import { SecretsQueryKeys } from "../types";
 
 interface AddSecretButtonProps {
   secret: Pick<Secret, "name" | "value">;
@@ -22,7 +23,7 @@ export function AddSecretButton({
   const queryClient = useQueryClient();
 
   const { mutate: saveSecret, isPending } = useMutation({
-    mutationFn: () => addSecret(secret.name, secret.value),
+    mutationFn: () => addSecret(secret),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: SecretsQueryKeys.All() });
       onSuccess();

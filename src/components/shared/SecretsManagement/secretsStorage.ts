@@ -1,120 +1,110 @@
+import {
+  createSecretApiSecretsPost,
+  deleteSecretApiSecretsSecretNameDelete,
+  listSecretsApiSecretsGet,
+  updateSecretApiSecretsSecretNamePut,
+} from "@/api/sdk.gen";
+
 import type { Secret } from "./types";
 
 /**
- * In-memory mocked storage for secrets.
- * This will be replaced with an async API storage layer later.
+ * Parses a date string, assuming UTC if no timezone is specified.
+ * Handles cases where the server may or may not include timezone info.
  */
-
-// In-memory storage
-const secretsStore = new Map<string, Secret>();
-
-// Subscribers for reactive updates
-type Subscriber = () => void;
-const subscribers = new Set<Subscriber>();
-
-function notifySubscribers() {
-  subscribers.forEach((callback) => callback());
-}
-
-/**
- * Generates a unique ID for a new secret.
- */
-function generateId(): string {
-  return `secret_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-}
-
-/**
- * Gets all secrets from the store.
- * Returns a promise to simulate async API behavior.
- */
-export async function getSecrets(): Promise<Secret[]> {
-  // Simulate network delay
-  await new Promise((resolve) => setTimeout(resolve, 50));
-  return Array.from(secretsStore.values()).sort(
-    (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
-  );
-}
-
-/**
- * Adds a new secret to the store.
- */
-export async function addSecret(name: string, value: string): Promise<Secret> {
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // Check for duplicate names
-  const existing = Array.from(secretsStore.values()).find(
-    (s) => s.name === name,
-  );
-  if (existing) {
-    throw new Error(`A secret with name "${name}" already exists`);
+function parseAsUtc(dateString: string): Date {
+  // Already has UTC indicator
+  if (dateString.endsWith("Z")) {
+    return new Date(dateString);
   }
 
-  const secret: Secret = {
-    id: generateId(),
-    name,
-    value,
-    createdAt: new Date(),
-  };
+  // Has positive timezone offset (e.g., +05:00)
+  if (dateString.includes("+")) {
+    return new Date(dateString);
+  }
 
-  secretsStore.set(secret.id, secret);
-  notifySubscribers();
+  // Check for negative timezone offset by looking for - after the date portion
+  // ISO date format: YYYY-MM-DD (positions 0-9), so any - after index 9 is timezone
+  if (dateString.lastIndexOf("-") > 9) {
+    return new Date(dateString);
+  }
 
-  return secret;
+  // No timezone info detected, assume UTC
+  return new Date(dateString + "Z");
 }
 
-/**
- * Updates an existing secret.
- */
+export async function fetchSecretsList() {
+  const response = await listSecretsApiSecretsGet();
+
+  if (response.response.status !== 200) {
+    throw new Error(`Failed to fetch secrets: ${response.response.body}`);
+  }
+
+  return (
+    response.data?.secrets.map(
+      (secret) =>
+        ({
+          id: secret.secret_name,
+          name: secret.secret_name,
+          createdAt: parseAsUtc(secret.created_at),
+          updatedAt: parseAsUtc(secret.updated_at),
+          expiresAt: secret.expires_at
+            ? parseAsUtc(secret.expires_at)
+            : undefined,
+          description: secret.description ?? undefined,
+        }) satisfies Secret,
+    ) ?? []
+  );
+}
+
 export async function updateSecret(
-  id: string,
-  updates: Partial<Pick<Secret, "name" | "value">>,
-): Promise<Secret> {
-  await new Promise((resolve) => setTimeout(resolve, 100));
+  secretId: string,
+  secret: Partial<Secret> & Pick<Secret, "value">,
+) {
+  const response = await updateSecretApiSecretsSecretNamePut({
+    path: {
+      secret_name: secretId,
+    },
+    body: {
+      secret_value: secret.value ?? "",
+    },
+  });
 
-  const existing = secretsStore.get(id);
-  if (!existing) {
-    throw new Error(`Secret with id "${id}" not found`);
+  if (response.response.status !== 200) {
+    throw new Error(`Failed to update secret: ${response.response.body}`);
   }
 
-  // Check for name conflicts if name is being updated
-  if (updates.name && updates.name !== existing.name) {
-    const nameConflict = Array.from(secretsStore.values()).find(
-      (s) => s.name === updates.name && s.id !== id,
-    );
-    if (nameConflict) {
-      throw new Error(`A secret with name "${updates.name}" already exists`);
-    }
-  }
-
-  const updated: Secret = {
-    ...existing,
-    ...updates,
-  };
-
-  secretsStore.set(id, updated);
-  notifySubscribers();
-
-  return updated;
+  return true;
 }
 
-/**
- * Removes a secret from the store.
- */
-export async function removeSecret(id: string): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, 100));
+export async function addSecret(
+  secret: Partial<Secret> & Pick<Secret, "name" | "value">,
+) {
+  const response = await createSecretApiSecretsPost({
+    query: {
+      secret_name: secret.name ?? "",
+    },
+    body: {
+      secret_value: secret.value ?? "",
+    },
+  });
 
-  if (!secretsStore.has(id)) {
-    throw new Error(`Secret with id "${id}" not found`);
+  if (response.response.status !== 200) {
+    throw new Error(`Failed to add secret: ${response.response.body}`);
   }
 
-  secretsStore.delete(id);
-  notifySubscribers();
+  return true;
 }
 
-/**
- * Query keys for React Query.
- */
-export const SecretsQueryKeys = {
-  All: () => ["secrets"] as const,
-  Id: (id: string) => ["secrets", id] as const,
-} as const;
+export async function removeSecret(secretId: string) {
+  const response = await deleteSecretApiSecretsSecretNameDelete({
+    path: {
+      secret_name: secretId,
+    },
+  });
+
+  if (response.response.status !== 200) {
+    throw new Error(`Failed to remove secret: ${response.response.body}`);
+  }
+
+  return true;
+}

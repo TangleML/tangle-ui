@@ -6,8 +6,11 @@ import type { DynamicDataArgument } from "@/utils/componentSpec";
 export interface Secret {
   id: string;
   name: string;
-  value: string;
+  value?: string;
   createdAt: Date;
+  updatedAt: Date;
+  expiresAt?: Date;
+  description?: string;
 }
 
 /**
@@ -41,3 +44,11 @@ export function createSecretArgument(secretName: string): DynamicDataArgument {
 export function extractSecretName(arg: DynamicDataArgument): string {
   return arg.dynamicData.secret.name;
 }
+
+/**
+ * Query keys for React Query.
+ */
+export const SecretsQueryKeys = {
+  All: () => ["secrets"] as const,
+  Id: (id: string) => ["secrets", id] as const,
+} as const;

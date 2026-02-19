@@ -73,9 +73,9 @@ export const RerunPipelineButton = ({
               componentSpec,
             ),
           ),
-          // The generated API types don't include SecretArgument but the backend supports it
-          taskArguments: (executionData?.rootDetails?.task_spec.arguments ??
-            undefined) as Record<string, ArgumentType> | undefined,
+          // Generated API definitions slightly differs from the componentSpec
+          taskArguments: executionData?.rootDetails?.task_spec
+            .arguments as Record<string, ArgumentType>,
           authorizationToken,
           runNameOverride,
           onSuccess: resolve,

@@ -9,8 +9,8 @@ import { Text } from "@/components/ui/typography";
 import { formatRelativeTime } from "@/utils/date";
 
 import { withSuspenseWrapper } from "../../SuspenseWrapper";
-import { getSecrets, SecretsQueryKeys } from "../secretsStorage";
-import type { Secret } from "../types";
+import { fetchSecretsList } from "../secretsStorage";
+import { type Secret, SecretsQueryKeys } from "../types";
 import { RemoveSecretButton } from "./RemoveSecretButton";
 
 interface SecretsListProps {
@@ -21,7 +21,7 @@ interface SecretsListProps {
 function SecretsListInternal({ onReplace, onRemoveSuccess }: SecretsListProps) {
   const { data: secrets } = useSuspenseQuery({
     queryKey: SecretsQueryKeys.All(),
-    queryFn: getSecrets,
+    queryFn: fetchSecretsList,
   });
 
   if (secrets.length === 0) {
