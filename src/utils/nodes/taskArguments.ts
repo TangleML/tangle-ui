@@ -1,6 +1,10 @@
 import type { TaskSpecOutput } from "@/api/types.gen";
 
-import type { ComponentSpec } from "../componentSpec";
+import {
+  type ArgumentType,
+  type ComponentSpec,
+  isSecretArgument,
+} from "../componentSpec";
 
 /**
  * Gets the string value of a task argument.
@@ -17,9 +21,14 @@ export function getArgumentValue(
     return undefined;
   }
 
-  const argument = taskArguments?.[inputName];
+  const argument = taskArguments?.[inputName] as ArgumentType;
+
   if (typeof argument === "string") {
     return argument;
+  }
+
+  if (isSecretArgument(argument)) {
+    return `🔒 ${argument.dynamicData.secret.name}`;
   }
 
   return undefined;

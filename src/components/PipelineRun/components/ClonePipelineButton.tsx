@@ -9,7 +9,11 @@ import useToastNotification from "@/hooks/useToastNotification";
 import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
 import { copyRunToPipeline } from "@/services/pipelineRunService";
 import { extractCanonicalName } from "@/utils/canonicalPipelineName";
-import type { ComponentSpec } from "@/utils/componentSpec";
+import {
+  type ArgumentType,
+  type ComponentSpec,
+  isSecretArgument,
+} from "@/utils/componentSpec";
 import { getInitialName } from "@/utils/getComponentName";
 import { extractTaskArguments } from "@/utils/nodes/taskArguments";
 
@@ -53,11 +57,26 @@ export const ClonePipelineButton = ({
   });
 
   const handleClone = useCallback(() => {
-    const taskArguments = extractTaskArguments(
-      runDetails?.rootDetails?.task_spec.arguments,
+    /**
+     * We cannnot convert SecretArguments into strings compatible with inputs,
+     * so we need to override them with undefined.
+     */
+    const secretArgumentsOverrides = Object.fromEntries(
+      Object.entries(runDetails?.rootDetails?.task_spec.arguments ?? {})
+        .filter(([_, value]) => isSecretArgument(value as ArgumentType))
+        .map(([key, _]) => [key, undefined] as const),
     );
 
-    clonePipeline({ taskArguments });
+    const plainTaskArguments = extractTaskArguments(
+      runDetails?.rootDetails?.task_spec.arguments ?? {},
+    );
+
+    const taskArguments = {
+      ...plainTaskArguments,
+      ...secretArgumentsOverrides,
+    };
+
+    clonePipeline({ taskArguments: taskArguments as Record<string, string> });
   }, [clonePipeline, runDetails]);
 
   return (
