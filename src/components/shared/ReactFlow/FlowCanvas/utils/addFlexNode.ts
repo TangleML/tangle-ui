@@ -6,6 +6,7 @@ import { type ComponentSpec } from "@/utils/componentSpec";
 import { updateFlexNodeInComponentSpec } from "../FlexNode/interface";
 import type { FlexNodeData } from "../FlexNode/types";
 import { DEFAULT_FLEX_NODE_SIZE, DEFAULT_STICKY_NOTE } from "../FlexNode/utils";
+import { Z_INDEX_RANGES } from "./zIndex";
 
 interface AddFlexNodeResult {
   spec: ComponentSpec;
@@ -45,7 +46,7 @@ const addFlexNode = (
     metadata,
     size: DEFAULT_FLEX_NODE_SIZE,
     position: position,
-    zIndex: 0,
+    zIndex: Z_INDEX_RANGES.flex.default,
   };
 
   const newComponentSpec = updateFlexNodeInComponentSpec(
