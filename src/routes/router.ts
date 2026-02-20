@@ -9,6 +9,7 @@ import {
 import { ErrorPage } from "@/components/shared/ErrorPage";
 import { AuthorizationResultScreen as GitHubAuthorizationResultScreen } from "@/components/shared/GitHubAuth/AuthorizationResultScreen";
 import { AuthorizationResultScreen as HuggingFaceAuthorizationResultScreen } from "@/components/shared/HuggingFaceAuth/AuthorizationResultScreen";
+import { env } from "@/schemas/env";
 import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 
 import RootLayout from "../components/layout/RootLayout";
@@ -125,7 +126,7 @@ export const router = createRouter({
   basepath: IS_GITHUB_PAGES ? "" : basepath, // Hash history doesn't need basepath
 });
 
-if (import.meta.env.VITE_HUGGING_FACE_AUTHORIZATION === "true") {
+if (env.VITE_HUGGING_FACE_AUTHORIZATION) {
   /**
    * Sync state from the parent window to the child window in HuggingFace embedding
    * @see https://huggingface.co/docs/hub/en/spaces-handle-url-parameters

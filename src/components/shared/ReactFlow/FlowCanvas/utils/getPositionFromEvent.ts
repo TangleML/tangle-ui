@@ -1,6 +1,8 @@
 import type { ReactFlowInstance } from "@xyflow/react";
 import type { DragEvent } from "react";
 
+import { DragStartOffsetSchema } from "@/schemas/storage";
+
 export const getPositionFromEvent = (
   event: DragEvent,
   reactFlowInstance: ReactFlowInstance,
@@ -9,9 +11,13 @@ export const getPositionFromEvent = (
   let dragOffsetY = 0;
   const dragStartOffsetData = event.dataTransfer.getData("DragStart.offset");
   if (dragStartOffsetData !== "") {
-    const dragStartOffset = JSON.parse(dragStartOffsetData);
-    dragOffsetX = dragStartOffset.offsetX ?? 0;
-    dragOffsetY = dragStartOffset.offsetY ?? 0;
+    const result = DragStartOffsetSchema.safeParse(
+      JSON.parse(dragStartOffsetData),
+    );
+    if (result.success) {
+      dragOffsetX = result.data.offsetX;
+      dragOffsetY = result.data.offsetY;
+    }
   }
 
   // Node position. Offsets should be included in projection, so that they snap to the grid.

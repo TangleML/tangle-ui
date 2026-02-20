@@ -1,3 +1,5 @@
+import type { z } from "zod";
+
 interface TypedStorage<
   TKeys extends string,
   TMapping extends Record<TKeys, unknown>,
@@ -14,22 +16,31 @@ type EncoderDecoder<
   decode: <TKey extends TKeys>(value: string) => TMapping[TKey];
 };
 
+interface StorageOptions<
+  TKeys extends string,
+  TMapping extends Record<TKeys, unknown>,
+> extends EncoderDecoder<TKeys, TMapping> {
+  /** Zod schemas keyed by storage key for runtime validation on read */
+  schemas?: Partial<{ [K in TKeys]: z.ZodType<TMapping[K]> }>;
+}
+
 export function getStorage<
   TKeys extends string,
   TMapping extends Record<TKeys, unknown>,
 >(
-  encoderDecoder: EncoderDecoder<TKeys, TMapping> = {
-    encode: JSON.stringify,
-    decode: JSON.parse,
-  },
+  options?: Partial<StorageOptions<TKeys, TMapping>>,
 ): TypedStorage<TKeys, TMapping> {
+  const encode = options?.encode ?? JSON.stringify;
+  const decode = options?.decode ?? JSON.parse;
+  const schemas = options?.schemas;
+
   return {
     setItem(key, value) {
       try {
         if (value === null) {
           localStorage.removeItem(key);
         } else {
-          localStorage.setItem(key, encoderDecoder.encode(value));
+          localStorage.setItem(key, encode(value));
         }
 
         /**
@@ -39,7 +50,7 @@ export function getStorage<
         window.dispatchEvent(
           new StorageEvent("storage", {
             key,
-            newValue: encoderDecoder.encode(value),
+            newValue: encode(value),
           }),
         );
       } catch {
@@ -50,7 +61,9 @@ export function getStorage<
       try {
         const storedValue = localStorage.getItem(key);
         if (storedValue) {
-          return encoderDecoder.decode(storedValue);
+          const decoded = decode(storedValue);
+          const schema = schemas?.[key];
+          return schema ? schema.parse(decoded) : decoded;
         }
       } catch {
         // Ignore if storage restriction or parsing error

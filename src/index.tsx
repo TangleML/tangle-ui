@@ -8,6 +8,7 @@ import ReactDOM from "react-dom/client";
 import { scan } from "react-scan";
 
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
+import { env } from "@/schemas/env";
 
 import { router } from "./routes/router";
 import { initializeBugsnag } from "./services/errorManagement/bugsnag";
@@ -17,7 +18,7 @@ initializeBugsnag();
 const queryClient = new QueryClient();
 
 scan({
-  enabled: import.meta.env.VITE_ENABLE_SCAN === "true",
+  enabled: env.VITE_ENABLE_SCAN,
 });
 
 setBaseUrl();
@@ -38,6 +39,6 @@ if (!rootElement.innerHTML) {
 
 function setBaseUrl() {
   const base = document.createElement("base");
-  base.setAttribute("href", import.meta.env.VITE_BASE_URL ?? "/");
+  base.setAttribute("href", env.VITE_BASE_URL);
   document.head.insertBefore(base, document.head.firstChild);
 }

@@ -195,8 +195,7 @@ describe("useAwaitAuthorization()", () => {
         exp: 1752474180,
         login: "maxy-shpfy",
         original_token: mockResponse.token,
-        token_type: "bearer",
-        user_id: 103229049,
+        user_id: "103229049",
       };
 
       // Mock the popup hook to capture the onSuccess callback

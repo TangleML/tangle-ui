@@ -432,6 +432,73 @@ export const useContext = () => {
 - Follow the existing component library structure
 - **Do not modify componentSpec structure** without express permission beforehand
 
+## Zod Schema Validation
+
+This project uses **Zod v4** for runtime validation of all external data boundaries.
+
+### When to Use Zod
+
+Always use Zod schemas to validate:
+- **API responses** (any `response.json()` or `fetchWithErrorHandling` call returning external data)
+- **JSON.parse()** results (clipboard data, annotation positions, drag-and-drop data, etc.)
+- **Storage reads** (localStorage, localforage, IndexedDB data)
+- **Environment variables** (validated once at startup via `src/schemas/env.ts`)
+- **URL parameters** and search params from the router
+- **Form input** validation logic
+
+### When NOT to Use Zod
+
+Do not create Zod schemas for:
+- Internal-only React component props or callback types
+- Types from `src/utils/componentSpec.ts` (do not modify componentSpec structure)
+- Auto-generated API types in `src/api/types.gen.ts` (validate at the call site instead)
+- Simple internal type narrowing that TypeScript already handles
+
+### Schema File Structure
+
+- **Domain schemas** live in `src/schemas/` and mirror `src/types/` naming (e.g., `src/schemas/pipelineRun.ts`)
+- **Form-specific schemas** live alongside their form components
+- **Environment schema** lives at `src/schemas/env.ts` and is the single source for all `VITE_*` variables
+- Access validated env vars via `import { env } from "@/schemas/env"` — never use `import.meta.env.VITE_*` directly
+
+### Type Inference Pattern
+
+Schemas are the source of truth for types that represent external data. Types are inferred with `z.infer<>`:
+
+```typescript
+// src/schemas/pipelineRun.ts
+import { z } from "zod";
+
+export const PipelineRunSchema = z.object({
+  id: z.number(),
+  pipeline_name: z.string(),
+  status: z.string().optional(),
+});
+
+export type PipelineRun = z.infer<typeof PipelineRunSchema>;
+```
+
+The corresponding `src/types/` file re-exports the inferred type to preserve import paths:
+
+```typescript
+// src/types/pipelineRun.ts
+export type { PipelineRun } from "@/schemas/pipelineRun";
+```
+
+### Parsing Guidelines
+
+- Use `.parse()` when failure should throw (API responses, critical data)
+- Use `.safeParse()` when you need graceful error handling (user input, optional data, fallbacks)
+- Use `fetchWithErrorHandling(url, options, schema)` to validate API JSON responses inline
+- Never use `as` type assertions for external data — use a Zod schema instead
+
+### Zod v4 Specifics
+
+- `z.record()` requires two arguments: `z.record(z.string(), z.string())` (not single-arg)
+- Use `z.looseObject()` instead of `.passthrough()` for objects with extra keys
+- Use `z.enum(MyEnum)` instead of `z.nativeEnum()` for TypeScript enums
+- String format validators are top-level: `z.email()`, `z.uuid()`, `z.url()`
+
 ## Don't Do
 
 ### General
@@ -449,6 +516,9 @@ export const useContext = () => {
 - Don't use barrel exports
 - Don't modify componentSpec structure without express permission
 - Don't use raw HTML elements when UI primitives exist (use `Text`, `BlockStack`, `InlineStack`, etc.)
+- Don't use `import.meta.env.VITE_*` directly — use `import { env } from "@/schemas/env"` instead
+- Don't use `as` type assertions on API responses, `JSON.parse()` results, or storage reads — use a Zod schema
+- Don't define types manually for external data shapes — use `z.infer<typeof Schema>` from `src/schemas/`
 
 ### E2E Testing
 

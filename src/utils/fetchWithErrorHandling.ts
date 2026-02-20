@@ -1,7 +1,20 @@
-export const fetchWithErrorHandling = async (
+import type { z } from "zod";
+
+export async function fetchWithErrorHandling<T>(
+  url: string,
+  options: RequestInit | undefined,
+  schema: z.ZodType<T>,
+): Promise<T>;
+
+export async function fetchWithErrorHandling(
   url: string,
   options?: RequestInit,
-): Promise<any> => {
+): Promise<any>;
+export async function fetchWithErrorHandling(
+  url: string,
+  options?: RequestInit,
+  schema?: z.ZodType,
+): Promise<unknown> {
   let response: Response;
 
   try {
@@ -15,13 +28,19 @@ export const fetchWithErrorHandling = async (
   if (!response.ok) {
     let message = "No error details";
     try {
-      let errorBody: any;
+      let errorBody: unknown;
       if (response.headers.get("content-type")?.includes("application/json")) {
         errorBody = await response.json();
       } else {
         errorBody = await response.text();
       }
-      message = errorBody.message;
+      if (
+        typeof errorBody === "object" &&
+        errorBody !== null &&
+        "message" in errorBody
+      ) {
+        message = String((errorBody as { message: unknown }).message);
+      }
     } catch {
       // Ignore if we can't read the error body
     }
@@ -44,7 +63,8 @@ export const fetchWithErrorHandling = async (
 
   if (contentType?.includes("application/json")) {
     try {
-      return await response.json();
+      const json: unknown = await response.json();
+      return schema ? schema.parse(json) : json;
     } catch (parseError) {
       const message =
         parseError instanceof Error ? parseError.message : String(parseError);
@@ -53,4 +73,4 @@ export const fetchWithErrorHandling = async (
   }
 
   return response;
-};
+}

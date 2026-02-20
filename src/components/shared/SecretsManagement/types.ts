@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 import type { DynamicDataArgument } from "@/utils/componentSpec";
 
 /**
@@ -13,18 +15,15 @@ export interface Secret {
   description?: string;
 }
 
-/**
- * Checks if a secret name is valid.
- */
+const SecretNameSchema = z.string().trim().min(1);
+const SecretValueSchema = z.string().min(1);
+
 export function isValidSecretName(name: string): boolean {
-  return name.trim().length > 0;
+  return SecretNameSchema.safeParse(name).success;
 }
 
-/**
- * Checks if a secret value is valid.
- */
 export function isValidSecretValue(value: string): boolean {
-  return value.length > 0;
+  return SecretValueSchema.safeParse(value).success;
 }
 
 /**

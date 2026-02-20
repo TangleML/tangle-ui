@@ -1,10 +1,13 @@
+import { JWTPayloadSchema } from "@/schemas/api";
+import { env } from "@/schemas/env";
+
 import type { JWTPayload } from "./types";
 
 export function isAuthorizationRequired() {
-  return import.meta.env.VITE_REQUIRE_AUTHORIZATION === "true";
+  return env.VITE_REQUIRE_AUTHORIZATION;
 }
 
-export function readJWT(token: string) {
+export function readJWT(token: string): Omit<JWTPayload, "original_token"> {
   const base64Url = token.split(".")[1];
   const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
   const jsonPayload = decodeURIComponent(
@@ -16,11 +19,11 @@ export function readJWT(token: string) {
       .join(""),
   );
 
-  return JSON.parse(jsonPayload);
+  return JWTPayloadSchema.parse(JSON.parse(jsonPayload));
 }
 
-export function convertJWTToJWTPayload(token: string) {
-  const payload = readJWT(token) as Omit<JWTPayload, "original_token">;
+export function convertJWTToJWTPayload(token: string): JWTPayload {
+  const payload = readJWT(token);
 
   return {
     original_token: token,

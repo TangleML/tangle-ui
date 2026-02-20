@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { useReducer, useState } from "react";
+import { z } from "zod";
 
 import { ensureGithubLibrary } from "@/components/shared/GitHubLibrary/utils/ensureGithubLibrary";
 import { fetchGitHubFiles } from "@/components/shared/GitHubLibrary/utils/fetchGitHubFiles";
@@ -18,6 +19,13 @@ import { pluralize } from "@/utils/string";
 
 import { validatePAT } from "../utils/validatePAT";
 import { InputField } from "./InputField";
+
+const GitHubRepoNameSchema = z
+  .string()
+  .regex(
+    /^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_.-]+$/,
+    "Invalid repository name. Must be in the format of owner/repository",
+  );
 
 const ComponentList = ({
   components,
@@ -247,9 +255,7 @@ function isStateValid(state: GitHubLibraryProcessState): boolean {
 }
 
 function validateRepoName(name: string): string[] | null {
-  // GitHub repo name format: owner/repository
-  const repoRegex = /^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_.-]+$/;
-  return repoRegex.test(name)
-    ? null
-    : ["Invalid repository name. Must be in the format of owner/repository"];
+  const result = GitHubRepoNameSchema.safeParse(name);
+  if (result.success) return null;
+  return result.error.issues.map((i) => i.message);
 }

@@ -1,10 +1,12 @@
+import { env } from "@/schemas/env";
+
 import { BASE_URL } from "./utils/constants";
 
 // Settings: Default values and local storage configuration keys
 const COMPONENT_LIBRARY_FILE = "component_library.yaml";
 
 const COMPONENT_LIBRARY_URL_DEFAULT_VALUE =
-  import.meta.env.VITE_COMPONENT_LIBRARY_URL_DEFAULT_VALUE ||
+  env.VITE_COMPONENT_LIBRARY_URL_DEFAULT_VALUE ||
   BASE_URL + COMPONENT_LIBRARY_FILE;
 const COMPONENT_LIBRARY_URL_LOCAL_STORAGE_KEY =
   "ComponentLibrary/component_library_url";
@@ -116,7 +118,11 @@ class StringArraySettingBackedByLocalStorage extends SettingBackedByLocalStorage
     return JSON.stringify(value);
   }
   deserialize(stringValue: string): string[] {
-    return JSON.parse(stringValue);
+    const parsed: unknown = JSON.parse(stringValue);
+    if (!Array.isArray(parsed) || !parsed.every((v) => typeof v === "string")) {
+      throw new Error("Expected string array in localStorage");
+    }
+    return parsed;
   }
 }
 

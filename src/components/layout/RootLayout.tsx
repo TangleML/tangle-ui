@@ -5,6 +5,7 @@ import { ToastContainer } from "react-toastify";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { BackendProvider } from "@/providers/BackendProvider";
 import { ComponentSpecProvider } from "@/providers/ComponentSpecProvider";
+import { env } from "@/schemas/env";
 
 import AppFooter from "./AppFooter";
 import AppMenu from "./AppMenu";
@@ -26,9 +27,7 @@ const RootLayout = () => {
 
           <AppFooter />
 
-          {import.meta.env.VITE_ENABLE_ROUTER_DEVTOOLS === "true" && (
-            <TanStackRouterDevtools />
-          )}
+          {env.VITE_ENABLE_ROUTER_DEVTOOLS && <TanStackRouterDevtools />}
         </div>
       </ComponentSpecProvider>
     </BackendProvider>

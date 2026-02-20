@@ -1,56 +1,22 @@
-import type {
-  AnnotationFilter,
-  PipelineRunFilters,
-} from "@/types/pipelineRunFilters";
-import { isValidExecutionStatus } from "@/utils/executionStatus";
+import { PipelineRunFiltersSchema } from "@/schemas/pipelineRunFilters";
+import type { PipelineRunFilters } from "@/types/pipelineRunFilters";
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function isValidAnnotationFilter(value: unknown): value is AnnotationFilter {
-  return (
-    isRecord(value) &&
-    typeof value.key === "string" &&
-    (value.value === undefined || typeof value.value === "string")
-  );
-}
-
 /**
  * Validates and extracts filter fields from an unknown object.
- * Used for both parsed JSON and router-provided objects.
+ * Uses Zod schema for parsing; invalid fields are silently stripped.
  */
 export function validateFilters(parsed: unknown): PipelineRunFilters {
+  const result = PipelineRunFiltersSchema.safeParse(parsed);
+  if (result.success) return result.data;
+
+  // Graceful fallback: try to salvage individual valid fields
   if (!isRecord(parsed)) return {};
-
-  const filters: PipelineRunFilters = {};
-
-  if (
-    typeof parsed.status === "string" &&
-    isValidExecutionStatus(parsed.status)
-  ) {
-    filters.status = parsed.status;
-  }
-  if (typeof parsed.created_by === "string") {
-    filters.created_by = parsed.created_by;
-  }
-  if (typeof parsed.created_after === "string") {
-    filters.created_after = parsed.created_after;
-  }
-  if (typeof parsed.created_before === "string") {
-    filters.created_before = parsed.created_before;
-  }
-  if (typeof parsed.pipeline_name === "string") {
-    filters.pipeline_name = parsed.pipeline_name;
-  }
-  if (Array.isArray(parsed.annotations)) {
-    const validAnnotations = parsed.annotations.filter(isValidAnnotationFilter);
-    if (validAnnotations.length > 0) {
-      filters.annotations = validAnnotations;
-    }
-  }
-
-  return filters;
+  const partial = PipelineRunFiltersSchema.partial().safeParse(parsed);
+  return partial.success ? partial.data : {};
 }
 
 /**

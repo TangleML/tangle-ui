@@ -1,26 +1,15 @@
+import { env } from "@/schemas/env";
+
 /* Environment Config */
-export const ABOUT_URL =
-  import.meta.env.VITE_ABOUT_URL || "https://tangleml.com/";
-
-export const GIVE_FEEDBACK_URL =
-  import.meta.env.VITE_GIVE_FEEDBACK_URL ||
-  "https://github.com/TangleML/tangle/issues";
-
-export const PRIVACY_POLICY_URL =
-  import.meta.env.VITE_PRIVACY_POLICY_URL ||
-  "https://tangleml.com/docs/privacy_policy/";
-
-export const DOCUMENTATION_URL =
-  import.meta.env.VITE_DOCUMENTATION_URL || "https://tangleml.com/docs/";
-
-export const API_URL = import.meta.env.VITE_BACKEND_API_URL || "";
-export const BASE_URL = import.meta.env.VITE_BASE_URL || "/";
-export const IS_GITHUB_PAGES = import.meta.env.VITE_GITHUB_PAGES === "true";
-
-export const GIT_REPO_URL =
-  import.meta.env.VITE_GIT_REPO_URL || "https://github.com/TangleML/tangle-ui";
-
-export const GIT_COMMIT = import.meta.env.VITE_GIT_COMMIT || "master";
+export const ABOUT_URL = env.VITE_ABOUT_URL;
+export const GIVE_FEEDBACK_URL = env.VITE_GIVE_FEEDBACK_URL;
+export const PRIVACY_POLICY_URL = env.VITE_PRIVACY_POLICY_URL;
+export const DOCUMENTATION_URL = env.VITE_DOCUMENTATION_URL;
+export const API_URL = env.VITE_BACKEND_API_URL;
+export const BASE_URL = env.VITE_BASE_URL;
+export const IS_GITHUB_PAGES = env.VITE_GITHUB_PAGES;
+export const GIT_REPO_URL = env.VITE_GIT_REPO_URL;
+export const GIT_COMMIT = env.VITE_GIT_COMMIT;
 
 export const USER_PIPELINES_LIST_NAME = "user_pipelines";
 

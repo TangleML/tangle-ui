@@ -1,6 +1,5 @@
+import { env } from "@/schemas/env";
+
 export function isGitHubAuthEnabled() {
-  return (
-    !!import.meta.env.VITE_GITHUB_CLIENT_ID &&
-    import.meta.env.VITE_GITHUB_CLIENT_ID !== ""
-  );
+  return env.VITE_GITHUB_CLIENT_ID !== "";
 }

@@ -1,7 +1,8 @@
+import { env } from "@/schemas/env";
 import type { ConfigFlags } from "@/types/configuration";
 
 const isRemoteComponentLibraryEnabled =
-  import.meta.env.VITE_DEFAULT_REMOTE_COMPONENT_LIBRARY_BETA === "true";
+  env.VITE_DEFAULT_REMOTE_COMPONENT_LIBRARY_BETA;
 
 export const ExistingFlags: ConfigFlags = {
   ["highlight-node-on-component-hover"]: {

@@ -43,7 +43,7 @@ export const fetchPipelineRun = async (
   if (!response.ok) {
     throw new Error(`Failed to fetch pipeline run: ${response.statusText}`);
   }
-  return response.json();
+  return (await response.json()) as PipelineRunResponse;
 };
 
 export const useFetchPipelineRunMetadata = (runId: string | undefined) => {

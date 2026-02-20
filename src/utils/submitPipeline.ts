@@ -97,14 +97,14 @@ export async function submitPipelineRun(
     );
 
     if (responseData.id) {
-      await savePipelineRun(
+      const savedRun = await savePipelineRun(
         responseData,
         pipelineName,
         componentSpec.metadata?.annotations?.digest as string | undefined,
         runNameOverride,
       );
+      options?.onSuccess?.(savedRun);
     }
-    options?.onSuccess?.(responseData);
   } catch (e) {
     options?.onError?.(e as Error);
   }
