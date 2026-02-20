@@ -3,7 +3,7 @@ import { InlineStack } from "@/components/ui/layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Paragraph } from "@/components/ui/typography";
 import type { PipelineRun } from "@/types/pipelineRun";
-import { convertUTCToLocalTime, formatDate } from "@/utils/date";
+import { formatDate } from "@/utils/date";
 
 import { PipelineRunStatus } from "./components/PipelineRunStatus";
 
@@ -13,7 +13,7 @@ export const PipelineRunInfoCondensed = withSuspenseWrapper(
       <InlineStack gap="2">
         <PipelineRunStatus run={run} />
         <Paragraph tone="subdued" size="xs">
-          {formatDate(convertUTCToLocalTime(run.created_at).toISOString())}
+          {formatDate(run.created_at)}
         </Paragraph>
       </InlineStack>
     );

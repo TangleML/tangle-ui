@@ -14,7 +14,7 @@ import {
 import { Paragraph } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import { APP_ROUTES } from "@/routes/router";
-import { convertUTCToLocalTime, formatDate } from "@/utils/date";
+import { formatDate } from "@/utils/date";
 import { getOverallExecutionStatusFromStats } from "@/utils/executionStatus";
 
 const RunRow = ({ run }: { run: PipelineRunResponse }) => {
@@ -82,7 +82,7 @@ const RunRow = ({ run }: { run: PipelineRunResponse }) => {
       <TableCell>
         <InlineStack gap="2" blockAlign="center" wrap="nowrap">
           <StatusIcon status={overallStatus} />
-          <Paragraph className="truncate max-w-[400px] text-sm" title={name}>
+          <Paragraph className="truncate max-w-100 text-sm" title={name}>
             {name}
           </Paragraph>
           <Paragraph tone="subdued" className="text-sm" title={runId}>
@@ -96,9 +96,7 @@ const RunRow = ({ run }: { run: PipelineRunResponse }) => {
         </div>
       </TableCell>
       <TableCell>
-        {run.created_at
-          ? `${formatDate(convertUTCToLocalTime(run.created_at).toISOString())}`
-          : "Data not found..."}
+        {run.created_at ? formatDate(run.created_at) : "Data not found..."}
       </TableCell>
       <TableCell>
         {isTruncated ? createdByButtonWithTooltip : createdByButton}
