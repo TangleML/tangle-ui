@@ -38,6 +38,7 @@ export function RemoveSecretButton({
       onClick={() => removeSecretMutation()}
       disabled={isPending}
       className="text-destructive hover:text-destructive"
+      data-testid="secret-remove-button"
     >
       <Icon name="Trash2" size="sm" />
     </Button>

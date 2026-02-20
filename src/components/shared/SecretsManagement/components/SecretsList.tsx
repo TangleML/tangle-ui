@@ -26,7 +26,11 @@ function SecretsListInternal({ onReplace, onRemoveSuccess }: SecretsListProps) {
 
   if (secrets.length === 0) {
     return (
-      <BlockStack align="center" className="py-8">
+      <BlockStack
+        align="center"
+        className="py-8"
+        data-testid="secrets-empty-state"
+      >
         <Icon name="Lock" size="lg" className="text-subdued" />
         <Text tone="subdued">No secrets configured</Text>
         <Text size="xs" tone="subdued">
@@ -37,7 +41,11 @@ function SecretsListInternal({ onReplace, onRemoveSuccess }: SecretsListProps) {
   }
 
   return (
-    <ScrollArea className="w-full min-h-[100px] max-h-[300px]" type="always">
+    <ScrollArea
+      className="w-full min-h-[100px] max-h-[300px]"
+      type="always"
+      data-testid="secrets-list"
+    >
       <BlockStack gap="2">
         {secrets.map((secret) => (
           <InlineStack
@@ -45,6 +53,8 @@ function SecretsListInternal({ onReplace, onRemoveSuccess }: SecretsListProps) {
             align="space-between"
             gap="2"
             className="w-full pr-3 py-1.5 hover:bg-gray-50 rounded-md pl-1"
+            data-testid="secret-item"
+            data-secret-name={secret.name}
           >
             <InlineStack gap="2" blockAlign="center" wrap="nowrap">
               <Icon name="Lock" size="lg" className="shrink-0" />
@@ -63,6 +73,7 @@ function SecretsListInternal({ onReplace, onRemoveSuccess }: SecretsListProps) {
                 variant="ghost"
                 size="xs"
                 onClick={() => onReplace(secret)}
+                data-testid="secret-edit-button"
               >
                 <Icon name="Pencil" size="sm" />
               </Button>

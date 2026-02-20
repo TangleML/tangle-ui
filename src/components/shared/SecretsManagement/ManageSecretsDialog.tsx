@@ -135,7 +135,11 @@ function ManageSecretsDialogContentInternal({
             />
             <Separator />
             <BlockStack gap="1" align="end">
-              <Button variant="secondary" onClick={() => setMode("add")}>
+              <Button
+                variant="secondary"
+                onClick={() => setMode("add")}
+                data-testid="add-secret-button"
+              >
                 <InlineStack align="center" gap="1">
                   <Icon name="Plus" />
                   Add Secret
