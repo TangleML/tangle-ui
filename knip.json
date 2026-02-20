@@ -3,11 +3,8 @@
   "ignore": [
     ".git/**",
     "src/api/**",
-    "node_modules/**",
     "src/components/ui/**",
-    "src/components/shared/StatusFilterSelect/**",
-    "openapi-ts.config.ts",
-    "vite.config.ghpages.js"
+    "openapi-ts.config.ts"
   ],
   "ignoreDependencies": [
     "@radix-ui/react-accordion",

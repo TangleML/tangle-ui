@@ -2,13 +2,15 @@ import { useEffect, useRef, useState } from "react";
 
 import type { OasisAuthResponse } from "@/components/shared/Authentication/types";
 import { APP_ROUTES } from "@/routes/router";
+import { OasisAuthResponseSchema } from "@/schemas/api";
+import { env } from "@/schemas/env";
 import { API_URL } from "@/utils/constants";
 
 const POPUP_WIDTH = 600;
 const POPUP_HEIGHT = 700;
 
 function buildAuthUrl() {
-  const client_id = import.meta.env.VITE_GITHUB_CLIENT_ID;
+  const client_id = env.VITE_GITHUB_CLIENT_ID;
   const redirect_uri = new URL("/authorize/github", window.location.origin);
 
   const authUrl = new URL("https://github.com/login/oauth/authorize");
@@ -50,7 +52,8 @@ async function exchangeCodeForToken(code: string) {
     throw new Error("Failed to exchange code for token");
   }
 
-  return (await response.json()) as OasisAuthResponse;
+  const json: unknown = await response.json();
+  return OasisAuthResponseSchema.parse(json) as OasisAuthResponse;
 }
 
 interface GithubAuthFlowPopupOptions {

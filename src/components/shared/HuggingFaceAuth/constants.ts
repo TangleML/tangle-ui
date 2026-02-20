@@ -1,8 +1,10 @@
+import { env } from "@/schemas/env";
+
 import type { JWTPayload } from "../Authentication/types";
 
 // resolved at runtime to support testing
 export const isHuggingFaceAuthEnabled = () =>
-  import.meta.env.VITE_HUGGING_FACE_AUTHORIZATION === "true";
+  env.VITE_HUGGING_FACE_AUTHORIZATION;
 
 export const HUGGING_FACE_DEFAULT_JWT: Pick<
   JWTPayload,

@@ -5,6 +5,7 @@ import {
   useCallback,
   useState,
 } from "react";
+import { z } from "zod";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,8 @@ import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { BlockStack } from "@/components/ui/layout";
 import useLoadUserPipelines from "@/hooks/useLoadUserPipelines";
+
+const PipelineNameSchema = z.string().trim().min(1, "Name cannot be empty");
 
 interface PipelineNameDialogProps {
   trigger: ReactNode;
@@ -62,11 +65,10 @@ const PipelineNameDialog = ({
         Array.from(userPipelines.keys()).map((name) => name.toLowerCase()),
       );
 
-      const normalizedNewName = newName.trim().toLowerCase();
-
-      if (normalizedNewName === "") {
-        setError("Name cannot be empty");
-      } else if (existingPipelineNames.has(normalizedNewName)) {
+      const nameResult = PipelineNameSchema.safeParse(newName);
+      if (!nameResult.success) {
+        setError(nameResult.error.issues[0].message);
+      } else if (existingPipelineNames.has(nameResult.data.toLowerCase())) {
         setError("Name already exists");
       } else {
         setError(null);

@@ -1,8 +1,11 @@
 import type { XYPosition } from "@xyflow/react";
+import { z } from "zod";
 
 import type { AnnotationConfig } from "@/types/annotations";
 
 import type { ComponentSpec } from "./componentSpec";
+
+const PositionSchema = z.record(z.string(), z.number());
 
 export const DISPLAY_NAME_MAX_LENGTH = 100;
 export const TASK_DISPLAY_NAME_ANNOTATION = "display_name";
@@ -142,7 +145,8 @@ export const setPositionInAnnotations = (
 
   if (editorPosition) {
     try {
-      existingPosition = JSON.parse(editorPosition);
+      const result = PositionSchema.safeParse(JSON.parse(editorPosition));
+      existingPosition = result.success ? result.data : {};
     } catch {
       existingPosition = {};
     }
@@ -177,10 +181,11 @@ export const extractPositionFromAnnotations = (
     );
     if (!layoutAnnotation) return defaultPosition;
 
-    const decodedPosition = JSON.parse(layoutAnnotation);
+    const result = PositionSchema.safeParse(JSON.parse(layoutAnnotation));
+    if (!result.success) return defaultPosition;
     return {
-      x: decodedPosition["x"] || 0,
-      y: decodedPosition["y"] || 0,
+      x: result.data["x"] || 0,
+      y: result.data["y"] || 0,
     };
   } catch {
     return defaultPosition;

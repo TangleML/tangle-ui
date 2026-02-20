@@ -4,6 +4,7 @@ import GoogleCloudSubmissionDialog from "@/components/shared/Submitters/GoogleCl
 import OasisSubmitter from "@/components/shared/Submitters/Oasis/OasisSubmitter";
 import { BlockStack } from "@/components/ui/layout";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
+import { env } from "@/schemas/env";
 import { isFixableIssue } from "@/utils/validations";
 
 import { RecentExecutionsButton } from "../components/RecentExecutionsButton";
@@ -18,8 +19,7 @@ const RunsAndSubmission = () => {
     globalValidationIssues.filter(isFixableIssue).length ===
     globalValidationIssues.length;
 
-  const showGoogleSubmitter =
-    import.meta.env.VITE_ENABLE_GOOGLE_CLOUD_SUBMITTER === "true";
+  const showGoogleSubmitter = env.VITE_ENABLE_GOOGLE_CLOUD_SUBMITTER;
 
   return (
     <SidebarSection

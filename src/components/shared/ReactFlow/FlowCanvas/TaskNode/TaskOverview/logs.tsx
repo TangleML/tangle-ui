@@ -6,6 +6,7 @@ import { InfoBox } from "@/components/shared/InfoBox";
 import { Link } from "@/components/ui/link";
 import { Spinner } from "@/components/ui/spinner";
 import { useBackend } from "@/providers/BackendProvider";
+import { ContainerLogResponseSchema } from "@/schemas/api";
 import { getBackendStatusString } from "@/utils/backend";
 
 const LogDisplay = ({
@@ -90,7 +91,8 @@ const getLogs = async (executionId: string, backendUrl: string) => {
   const response = await fetch(
     `${backendUrl}/api/executions/${executionId}/container_log`,
   );
-  return response.json();
+  const json: unknown = await response.json();
+  return ContainerLogResponseSchema.parse(json);
 };
 
 const Logs = ({
