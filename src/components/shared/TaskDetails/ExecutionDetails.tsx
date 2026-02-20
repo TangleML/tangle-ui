@@ -9,6 +9,7 @@ import {
 } from "@/utils/componentSpec";
 import { EXIT_CODE_OOM } from "@/utils/constants";
 import { formatDate, formatDuration } from "@/utils/date";
+import { executionPodName, isRecord } from "@/utils/executionDetailsUtil";
 
 import type { AttributeProps } from "../ContextPanel/Blocks/Attribute";
 import { ContentBlock } from "../ContextPanel/Blocks/ContentBlock";
@@ -137,37 +138,6 @@ export const ExecutionDetails = ({
     </ContentBlock>
   );
 };
-
-function executionPodName(
-  containerState?: GetContainerExecutionStateResponse,
-): string | null {
-  if (!containerState || !("debug_info" in containerState)) {
-    return null;
-  }
-
-  const debugInfo = containerState.debug_info;
-
-  if (!isRecord(debugInfo)) {
-    return null;
-  }
-
-  if (typeof debugInfo.pod_name === "string") {
-    return debugInfo.pod_name;
-  }
-
-  if (
-    isRecord(debugInfo.kubernetes) &&
-    typeof debugInfo.kubernetes.pod_name === "string"
-  ) {
-    return debugInfo.kubernetes.pod_name;
-  }
-
-  return null;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
 
 interface ExecutionLinkItem {
   name: string;
