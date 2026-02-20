@@ -14,7 +14,10 @@ export function ManageSecretsButton() {
   return (
     <ManageSecretsDialog
       trigger={
-        <TooltipButton tooltip="Manage Secrets">
+        <TooltipButton
+          tooltip="Manage Secrets"
+          data-testid="manage-secrets-button"
+        >
           <Icon name="Lock" />
         </TooltipButton>
       }

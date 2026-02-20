@@ -18,7 +18,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           repository: TangleML/tangle
-          ref: stable
+          ref: master
           path: backend
 
       - name: Install uv

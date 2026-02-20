@@ -48,7 +48,11 @@ function SelectableSecretsList({
 }: SelectableSecretsListProps) {
   if (secrets.length === 0) {
     return (
-      <BlockStack align="center" className="py-8">
+      <BlockStack
+        align="center"
+        className="py-8"
+        data-testid="select-secret-empty-state"
+      >
         <Icon name="Lock" size="lg" className="text-gray-300" />
         <Text tone="subdued">No secrets configured</Text>
         <Text size="xs" tone="subdued">
@@ -59,7 +63,11 @@ function SelectableSecretsList({
   }
 
   return (
-    <ScrollArea className="w-full min-h-[100px] max-h-[300px]" type="always">
+    <ScrollArea
+      className="w-full min-h-[100px] max-h-[300px]"
+      type="always"
+      data-testid="select-secret-list"
+    >
       <BlockStack gap="2">
         {secrets.map((secret) => (
           <button
@@ -67,6 +75,8 @@ function SelectableSecretsList({
             type="button"
             className="w-full text-left"
             onClick={() => onSelect(secret)}
+            data-testid="selectable-secret-item"
+            data-secret-name={secret.name}
           >
             <InlineStack
               align="space-between"
@@ -153,7 +163,11 @@ function SelectSecretDialogContentInternal({
         />
         <Separator />
         <InlineStack align="end" fill gap="2">
-          <Button variant="secondary" onClick={() => setMode("add")}>
+          <Button
+            variant="secondary"
+            onClick={() => setMode("add")}
+            data-testid="select-secret-add-button"
+          >
             <InlineStack align="center" gap="1">
               <Icon name="Plus" />
               Add Secret
