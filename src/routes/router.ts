@@ -14,6 +14,7 @@ import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 import RootLayout from "../components/layout/RootLayout";
 import Editor from "./Editor";
 import Home from "./Home";
+import { ImportPage } from "./Import";
 import NotFoundPage from "./NotFoundPage";
 import PipelineRun from "./PipelineRun";
 import { QuickStartPage } from "./QuickStart";
@@ -27,9 +28,11 @@ declare module "@tanstack/react-router" {
 export const EDITOR_PATH = "/editor";
 export const RUNS_BASE_PATH = "/runs";
 export const QUICK_START_PATH = "/quick-start";
+const IMPORT_PATH = "/import";
 export const APP_ROUTES = {
   HOME: "/",
   QUICK_START: QUICK_START_PATH,
+  IMPORT: IMPORT_PATH,
   PIPELINE_EDITOR: `${EDITOR_PATH}/$name`,
   RUN_DETAIL: `${RUNS_BASE_PATH}/$id`,
   RUN_DETAIL_WITH_SUBGRAPH: `${RUNS_BASE_PATH}/$id/$subgraphExecutionId`,
@@ -60,6 +63,12 @@ const quickStartRoute = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.QUICK_START,
   component: QuickStartPage,
+});
+
+const importRoute = createRoute({
+  getParentRoute: () => mainLayout,
+  path: APP_ROUTES.IMPORT,
+  component: ImportPage,
 });
 
 const editorRoute = createRoute({
@@ -99,6 +108,7 @@ const runDetailWithSubgraphRoute = createRoute({
 const appRouteTree = mainLayout.addChildren([
   indexRoute,
   quickStartRoute,
+  importRoute,
   editorRoute,
   runDetailRoute,
   runDetailWithSubgraphRoute,
