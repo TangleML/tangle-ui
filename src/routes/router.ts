@@ -18,6 +18,7 @@ import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 import RootLayout from "../components/layout/RootLayout";
 import Editor from "./Editor";
 import Home from "./Home";
+import { ImportPage } from "./Import";
 import NotFoundPage from "./NotFoundPage";
 import PipelineRun from "./PipelineRun";
 import { QuickStartPage } from "./QuickStart";
@@ -37,9 +38,11 @@ export const EDITOR_PATH = "/editor";
 export const RUNS_BASE_PATH = "/runs";
 export const QUICK_START_PATH = "/quick-start";
 const SETTINGS_PATH = "/settings";
+const IMPORT_PATH = "/app/editor/import-pipeline";
 export const APP_ROUTES = {
   HOME: "/",
   QUICK_START: QUICK_START_PATH,
+  IMPORT: IMPORT_PATH,
   PIPELINE_EDITOR: `${EDITOR_PATH}/$name`,
   RUN_DETAIL: `${RUNS_BASE_PATH}/$id`,
   RUN_DETAIL_WITH_SUBGRAPH: `${RUNS_BASE_PATH}/$id/$subgraphExecutionId`,
@@ -135,6 +138,12 @@ const secretsReplaceRoute = createRoute({
   component: ReplaceSecretView,
 });
 
+const importRoute = createRoute({
+  getParentRoute: () => mainLayout,
+  path: APP_ROUTES.IMPORT,
+  component: ImportPage,
+});
+
 const editorRoute = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.PIPELINE_EDITOR,
@@ -187,6 +196,7 @@ const appRouteTree = mainLayout.addChildren([
   indexRoute,
   quickStartRoute,
   settingsRouteTree,
+  importRoute,
   editorRoute,
   runDetailRoute,
   runDetailWithSubgraphRoute,
