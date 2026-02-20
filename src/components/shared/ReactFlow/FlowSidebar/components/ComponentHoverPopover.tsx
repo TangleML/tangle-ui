@@ -32,12 +32,18 @@ export const ComponentHoverPopover = forwardRef<
   ComponentHoverPopoverProps
 >(({ component, children }, ref) => {
   const [isOpen, setIsOpen] = useState(false);
+
   const delaySetIsOpen = debounce(
     (value: boolean) => setIsOpen(value),
     HOVER_DELAY_MS,
   );
 
-  useImperativeHandle(ref, () => ({ close: () => setIsOpen(false) }), []);
+  const close = () => {
+    delaySetIsOpen.cancel();
+    setIsOpen(false);
+  };
+
+  useImperativeHandle(ref, () => ({ close }), [close]);
 
   const handleMouseEnter = () => delaySetIsOpen(true);
   const handleMouseLeave = () => delaySetIsOpen(false);
@@ -48,8 +54,13 @@ export const ComponentHoverPopover = forwardRef<
      * This prevents the popover from opening when a dialog is closed.
      */
     if (!open) {
-      setIsOpen(false);
+      close();
     }
+  };
+
+  const handleClick = () => {
+    // Cancel any pending hover open when clicking (e.g., to open a dialog)
+    delaySetIsOpen.cancel();
   };
 
   return (
@@ -58,6 +69,7 @@ export const ComponentHoverPopover = forwardRef<
         asChild
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
+        onClick={handleClick}
       >
         {children}
       </PopoverTrigger>

@@ -1,12 +1,24 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 
 /**
- * Creates a new pipeline by navigating to home and clicking the new pipeline button
+ * Creates a new pipeline by navigating to home and clicking the new pipeline button.
+ * Waits for the React Flow canvas to be fully loaded (past Suspense loading state).
  */
 export async function createNewPipeline(page: Page): Promise<void> {
   await page.goto("/");
   await page.getByTestId("new-pipeline-button").click();
-  await locateFlowViewport(page);
+  await waitForFlowCanvas(page);
+}
+
+/**
+ * Waits for the React Flow canvas to be visible.
+ * Uses extended timeout to account for Suspense loading states and slower CI environments.
+ */
+async function waitForFlowCanvas(page: Page): Promise<void> {
+  await expect(
+    locateFlowCanvas(page),
+    "React Flow canvas should be visible after Suspense resolves",
+  ).toBeVisible({ timeout: 30_000 });
 }
 
 /**

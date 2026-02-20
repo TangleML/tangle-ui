@@ -14,6 +14,11 @@ export default defineConfig({
   retries: 0,
   workers: 1,
   reporter: "html",
+  timeout: 60_000,
+  expect: {
+    /* Default assertion timeout - individual waits can override for specific slow operations */
+    timeout: 10_000,
+  },
   use: {
     baseURL: "http://localhost:3001",
     trace: "retain-on-failure",

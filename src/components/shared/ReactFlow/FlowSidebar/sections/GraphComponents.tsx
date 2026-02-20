@@ -222,7 +222,11 @@ const GraphComponents = () => {
   const importComponentAction = (
     <ImportComponent
       triggerComponent={
-        <TooltipButton variant="ghost" tooltip="Add component">
+        <TooltipButton
+          variant="ghost"
+          tooltip="Add component"
+          data-testid="import-component-button"
+        >
           <Icon name="PackagePlus" />
         </TooltipButton>
       }
