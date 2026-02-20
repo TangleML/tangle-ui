@@ -13,6 +13,7 @@ import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 
 import RootLayout from "../components/layout/RootLayout";
 import Editor from "./Editor";
+import FactoryGame from "./Factory/FactoryGame";
 import Home from "./Home";
 import NotFoundPage from "./NotFoundPage";
 import PipelineRun from "./PipelineRun";
@@ -36,6 +37,7 @@ export const APP_ROUTES = {
   RUNS: RUNS_BASE_PATH,
   GITHUB_AUTH_CALLBACK: "/authorize/github",
   HUGGINGFACE_AUTH_CALLBACK: "/authorize/huggingface",
+  FACTORY_GAME: "/factory",
 };
 
 const rootRoute = createRootRoute({
@@ -96,12 +98,19 @@ const runDetailWithSubgraphRoute = createRoute({
   component: PipelineRun,
 });
 
+const factoryGameRoute = createRoute({
+  getParentRoute: () => mainLayout,
+  path: APP_ROUTES.FACTORY_GAME,
+  component: FactoryGame,
+});
+
 const appRouteTree = mainLayout.addChildren([
   indexRoute,
   quickStartRoute,
   editorRoute,
   runDetailRoute,
   runDetailWithSubgraphRoute,
+  factoryGameRoute,
 ]);
 
 const rootRouteTree = rootRoute.addChildren([
