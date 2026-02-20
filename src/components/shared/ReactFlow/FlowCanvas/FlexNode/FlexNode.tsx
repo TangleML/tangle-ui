@@ -8,7 +8,6 @@ import {
 import { type MouseEvent, useEffect, useState } from "react";
 
 import { BlockStack } from "@/components/ui/layout";
-import { Paragraph } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useContextPanel } from "@/providers/ContextPanelProvider";
@@ -26,7 +25,14 @@ const MIN_SIZE = { width: 50, height: 50 };
 
 const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
   const { properties, readOnly, locked = false } = data;
-  const { title, content, color, borderColor } = properties;
+  const {
+    title,
+    content,
+    color,
+    borderColor,
+    titleFontSize = 12,
+    contentFontSize = 10,
+  } = properties;
 
   const [isInlineEditing, setIsInlineEditing] = useState(false);
   const [isContextPanelFocus, setIsContextPanelFocus] = useState(false);
@@ -221,22 +227,29 @@ const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
             />
 
             {title && (
-              <Paragraph size="sm" weight="semibold">
+              <p
+                style={{ fontSize: titleFontSize }}
+                className="font-bold whitespace-pre-wrap"
+              >
                 {title}
-              </Paragraph>
+              </p>
             )}
 
             {isInlineEditing ? (
               <InlineTextEditor
                 value={content}
                 placeholder="Enter text..."
+                textSize={contentFontSize}
                 onSave={handleSaveContent}
                 onCancel={() => setIsInlineEditing(false)}
               />
             ) : (
-              <Paragraph size="xs" className="whitespace-pre-wrap">
+              <p
+                style={{ fontSize: contentFontSize }}
+                className="whitespace-pre-wrap"
+              >
                 {content}
-              </Paragraph>
+              </p>
             )}
           </BlockStack>
         </div>
