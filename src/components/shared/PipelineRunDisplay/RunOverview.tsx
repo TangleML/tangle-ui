@@ -120,7 +120,9 @@ const RunOverview = ({
           {combinedConfig?.showCreatedAt && run.created_at && (
             <div className="flex items-center gap-2">
               <span>•</span>
-              <span className="text-gray-500 text-xs">{`${formatDate(run.created_at || "")}`}</span>
+              <span className="text-gray-500 text-xs">
+                {formatDate(run.created_at)}
+              </span>
             </div>
           )}
           {combinedConfig?.showAuthor && run.created_by && (
