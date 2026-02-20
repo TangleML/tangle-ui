@@ -43,7 +43,7 @@ test.describe("Published Component Library - Lifecycle", () => {
     await switchElement.click();
     await expect(switchElement).toHaveAttribute("aria-checked", "true");
 
-    await dialog.getByTestId("close-button").click();
+    await dialog.press("Escape");
     await expect(dialog).toBeHidden();
 
     await locateFolderByName(page, "Standard library");
@@ -106,13 +106,15 @@ test.describe("Published Component Library - Lifecycle", () => {
     const infoButton = component.getByTestId("info-icon-button");
     await infoButton.click();
 
-    await expect(page.getByTestId("component-details-tabs")).toBeVisible();
-    const dialog = page.getByRole("dialog");
+    const dialog = page.getByTestId("component-details-dialog");
+    await expect(dialog.getByTestId("component-details-tabs")).toBeVisible();
 
     const dialogHeader = dialog.locator('[data-slot="dialog-header"]');
     await expect(dialogHeader).toHaveText(`Test component ${componentName}`);
 
-    const publishButton = page.locator(`[role="tablist"]`).getByText("Publish");
+    const publishButton = dialog
+      .locator(`[role="tablist"]`)
+      .getByText("Publish");
     await publishButton.click();
 
     await expect(

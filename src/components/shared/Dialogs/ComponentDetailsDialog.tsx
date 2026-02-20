@@ -223,6 +223,7 @@ const ComponentDetails = ({
         <DialogContent
           className="max-w-2xl min-w-2xl overflow-hidden"
           aria-label={`${displayName} component details`}
+          data-testid="component-details-dialog"
         >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 mr-5">

@@ -29,7 +29,11 @@ test.describe("Component Editor", () => {
   });
 
   test("create new component from template", async () => {
-    const expectedFirstLevelFolders = ["Inputs & Outputs", "Standard library"];
+    const expectedFirstLevelFolders = [
+      "Canvas Tools",
+      "Inputs & Outputs",
+      "Standard library",
+    ];
 
     // expect to see all the folders
     for (const folder of expectedFirstLevelFolders) {

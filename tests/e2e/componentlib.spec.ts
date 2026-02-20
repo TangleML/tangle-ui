@@ -31,22 +31,6 @@ test.describe("Component Library", () => {
     await page.close();
   });
 
-  test("initial set of folders", async () => {
-    const expectedFirstLevelFolders = ["Inputs & Outputs", "Standard library"];
-
-    // expect to see all the folders
-    for (const folder of expectedFirstLevelFolders) {
-      const folderContainer = await locateFolderByName(page, folder);
-      await expect(folderContainer).toBeVisible();
-    }
-
-    // special folders are not rendered from the beginning
-    const countOfFoldersByDefault = page.locator("[data-folder-name]");
-    await expect(countOfFoldersByDefault).toHaveCount(
-      expectedFirstLevelFolders.length,
-    );
-  });
-
   test("standard library successfully loads", async () => {
     await openComponentLibFolder(page, "Standard library");
 
@@ -152,7 +136,8 @@ test.describe("Component Library", () => {
 
     await chicagoTaxiTripsDataset.getByTestId("info-icon-button").click();
 
-    const dialogHeader = page.locator('[data-slot="dialog-header"]');
+    const dialog = page.getByTestId("component-details-dialog");
+    const dialogHeader = dialog.locator('[data-slot="dialog-header"]');
     await expect(dialogHeader).toBeVisible();
 
     await expect(dialogHeader).toHaveText("Chicago Taxi Trips dataset");

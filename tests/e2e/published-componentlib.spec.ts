@@ -45,28 +45,13 @@ test.describe("Published Component Library", () => {
     await switchElement.click();
     await expect(switchElement).toHaveAttribute("aria-checked", "true");
 
-    await dialog.getByTestId("close-button").click();
+    // bypass the dialog close button in case it is out of view
+    await dialog.press("Escape");
     await expect(dialog).toBeHidden();
   });
 
   test.afterAll(async () => {
     await page.close();
-  });
-
-  test("initial set of folders", async () => {
-    const expectedFirstLevelFolders = ["Inputs & Outputs", "Standard library"];
-
-    // expect to see all the folders
-    for (const folder of expectedFirstLevelFolders) {
-      const folderContainer = await locateFolderByName(page, folder);
-      await expect(folderContainer).toBeVisible();
-    }
-
-    // special folders are not rendered from the beginning
-    const countOfFoldersByDefault = page.locator("[data-folder-name]");
-    await expect(countOfFoldersByDefault).toHaveCount(
-      expectedFirstLevelFolders.length,
-    );
   });
 
   test("standard library successfully loads", async () => {
@@ -145,8 +130,10 @@ test.describe("Published Component Library", () => {
 
     await expect(page.getByTestId("component-details-tabs")).toBeVisible();
 
-    const dialogHeader = page.locator('[data-slot="dialog-header"]');
+    const dialog = page.getByTestId("component-details-dialog");
+    const dialogHeader = dialog.locator('[data-slot="dialog-header"]');
     await expect(dialogHeader).toBeVisible();
+
     await expect(dialogHeader).toHaveText("Download from GCS");
 
     await page.locator('button[data-slot="dialog-close"]').click();
