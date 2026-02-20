@@ -34,7 +34,11 @@ export function AddSecretButton({
   });
 
   return (
-    <Button onClick={() => saveSecret()} disabled={disabled || isPending}>
+    <Button
+      onClick={() => saveSecret()}
+      disabled={disabled || isPending}
+      data-testid="add-secret-submit-button"
+    >
       Add Secret
       {isPending && <Spinner />}
     </Button>
