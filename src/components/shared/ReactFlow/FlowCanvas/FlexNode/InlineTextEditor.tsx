@@ -7,11 +7,13 @@ import {
 } from "react";
 
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 interface InlineTextEditorProps {
   value: string;
   placeholder?: string;
   textSize?: number;
+  className?: string;
   onSave: (value: string) => void;
   onCancel: () => void;
 }
@@ -20,6 +22,7 @@ export const InlineTextEditor = ({
   value,
   placeholder = "Enter text...",
   textSize,
+  className,
   onSave,
   onCancel,
 }: InlineTextEditorProps) => {
@@ -66,7 +69,10 @@ export const InlineTextEditor = ({
       onChange={handleChange}
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
-      className="min-h-10 resize-none nodrag nopan focus-visible:ring-0 focus-visible:border-0 focus-visible:text-xs text-xs shadow-none p-0 rounded-none"
+      className={cn(
+        "min-h-10 resize-none nodrag nopan focus-visible:ring-0 focus-visible:border-0 focus-visible:text-xs text-xs shadow-none p-0 rounded-none",
+        className,
+      )}
       style={{ fontSize: textSize }}
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
