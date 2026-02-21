@@ -75,10 +75,11 @@ export const ColorPicker = ({
       <PopoverTrigger>
         <div
           className="aspect-square h-4 rounded-full border border-muted-foreground cursor-pointer"
+          data-testid={`color-picker-trigger-${title?.toLowerCase().replace(/\s+/g, "-") ?? "default"}`}
           style={{ backgroundColor: color }}
         />
       </PopoverTrigger>
-      <PopoverContent className="w-fit">
+      <PopoverContent className="w-fit" data-testid="color-picker-popover">
         <BlockStack gap="4" align="center">
           <Heading level={3}>{title ?? "Pick a color"}</Heading>
           <InlineStack gap="2" className="grid grid-cols-6 px-2">
@@ -93,6 +94,7 @@ export const ColorPicker = ({
                 )}
                 style={{ backgroundColor: preset }}
                 onClick={() => handlePresetClick(preset)}
+                data-testid={`color-preset-${preset === "transparent" ? "transparent" : preset.replace("#", "").toLowerCase()}`}
               >
                 {preset === "transparent" && (
                   <div className="absolute inset-0 flex items-center justify-center">

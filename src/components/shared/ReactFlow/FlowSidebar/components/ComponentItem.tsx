@@ -328,6 +328,7 @@ export const StickyNoteSidebarItem = () => {
   return (
     <li
       className="pl-2 py-1.5 cursor-grab hover:bg-gray-100 active:bg-gray-200"
+      data-testid="sticky-note-sidebar-item"
       draggable
       onDragStart={onDragStart}
     >
