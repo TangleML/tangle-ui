@@ -9,15 +9,13 @@ import { type MouseEvent, useEffect, useState } from "react";
 
 import { BlockStack } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
-import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useContextPanel } from "@/providers/ContextPanelProvider";
-import { updateSubgraphSpec } from "@/utils/subgraphUtils";
 
 import { FlexNodeEditor } from "./FlexNodeEditor";
 import { InlineTextEditor } from "./InlineTextEditor";
-import { updateFlexNodeInComponentSpec } from "./interface";
 import LockToggle from "./LockToggle";
 import type { FlexNodeData } from "./types";
+import { useFlexNodeUpdate } from "./useFlexNodeUpdate";
 
 type FlexNodeProps = NodeProps<Node<FlexNodeData>>;
 
@@ -43,29 +41,10 @@ const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
     setOpen: setContextPanelOpen,
   } = useContextPanel();
 
-  const {
-    currentSubgraphSpec,
-    currentSubgraphPath,
-    componentSpec,
-    setComponentSpec,
-  } = useComponentSpec();
+  const { updateFlexNode, updateProperties } = useFlexNodeUpdate(data);
 
   const toggleLock = () => {
-    const updatedSubgraphSpec = updateFlexNodeInComponentSpec(
-      currentSubgraphSpec,
-      {
-        ...data,
-        locked: !locked,
-      },
-    );
-
-    const newRootSpec = updateSubgraphSpec(
-      componentSpec,
-      currentSubgraphPath,
-      updatedSubgraphSpec,
-    );
-
-    setComponentSpec(newRootSpec);
+    updateFlexNode({ locked: !locked });
   };
 
   const handleClick = (e: MouseEvent) => {
@@ -101,44 +80,16 @@ const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
     const width = Math.max(params.width, MIN_SIZE.width);
     const height = Math.max(params.height, MIN_SIZE.height);
 
-    const updatedSubgraphSpec = updateFlexNodeInComponentSpec(
-      currentSubgraphSpec,
-      {
-        ...data,
-        size: { width, height },
-        position: { x: params.x, y: params.y },
-      },
-    );
-
-    const newRootSpec = updateSubgraphSpec(
-      componentSpec,
-      currentSubgraphPath,
-      updatedSubgraphSpec,
-    );
-
-    setComponentSpec(newRootSpec);
+    updateFlexNode({
+      size: { width, height },
+      position: { x: params.x, y: params.y },
+    });
   };
 
   const handleSaveContent = (newContent: string) => {
-    const updatedSubgraphSpec = updateFlexNodeInComponentSpec(
-      currentSubgraphSpec,
-      {
-        ...data,
-        properties: {
-          ...properties,
-          content: newContent,
-        },
-      },
-    );
-
-    const newRootSpec = updateSubgraphSpec(
-      componentSpec,
-      currentSubgraphPath,
-      updatedSubgraphSpec,
-    );
-
-    setComponentSpec(newRootSpec);
-    setIsInlineEditing(false);
+    updateProperties({
+      content: newContent,
+    });
   };
 
   useEffect(() => {
