@@ -188,6 +188,7 @@ const IONode = ({ id, type, data, selected = false }: IONodeProps) => {
 
   return (
     <Card
+      data-testid={`io-node-${type}-${data.label}`}
       className={cn(
         "border-2 max-w-60 p-0 transition-opacity duration-200",
         borderColor,
