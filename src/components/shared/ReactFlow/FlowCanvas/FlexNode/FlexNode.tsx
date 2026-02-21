@@ -32,8 +32,9 @@ const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
     contentFontSize = 10,
   } = properties;
 
-  const [isInlineEditing, setIsInlineEditing] = useState(false);
   const [isContextPanelFocus, setIsContextPanelFocus] = useState(false);
+  const [isInlineEditingContent, setIsInlineEditingContent] = useState(false);
+  const [isInlineEditingTitle, setIsInlineEditingTitle] = useState(false);
 
   const {
     setContent,
@@ -72,7 +73,20 @@ const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
     }
 
     if (!readOnly) {
-      setIsInlineEditing(true);
+      setIsInlineEditingTitle(false);
+      setIsInlineEditingContent(true);
+    }
+  };
+
+  const handleDoubleClickTitle = (e: MouseEvent<HTMLParagraphElement>) => {
+    e.stopPropagation();
+    if (locked) {
+      toggleLock();
+      return;
+    }
+    if (!readOnly) {
+      setIsInlineEditingContent(false);
+      setIsInlineEditingTitle(true);
     }
   };
 
@@ -90,6 +104,19 @@ const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
     updateProperties({
       content: newContent,
     });
+    setIsInlineEditingContent(false);
+  };
+
+  const handleSaveTitle = (newTitle: string) => {
+    updateProperties({
+      title: newTitle,
+    });
+    setIsInlineEditingTitle(false);
+  };
+
+  const switchEditor = () => {
+    setIsInlineEditingTitle((prev) => !prev);
+    setIsInlineEditingContent((prev) => !prev);
   };
 
   useEffect(() => {
@@ -177,22 +204,35 @@ const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
               className="absolute top-1 right-1"
             />
 
-            {title && (
-              <p
-                style={{ fontSize: titleFontSize }}
-                className="font-bold whitespace-pre-wrap"
-              >
-                {title}
-              </p>
-            )}
+            {title &&
+              (isInlineEditingTitle ? (
+                <InlineTextEditor
+                  value={title}
+                  placeholder="Enter title..."
+                  textSize={titleFontSize}
+                  onSave={handleSaveTitle}
+                  onCancel={() => setIsInlineEditingTitle(false)}
+                  onTab={switchEditor}
+                  className="font-bold"
+                />
+              ) : (
+                <p
+                  style={{ fontSize: titleFontSize }}
+                  className="font-bold whitespace-pre-wrap w-full"
+                  onDoubleClick={handleDoubleClickTitle}
+                >
+                  {title}
+                </p>
+              ))}
 
-            {isInlineEditing ? (
+            {isInlineEditingContent ? (
               <InlineTextEditor
                 value={content}
                 placeholder="Enter text..."
                 textSize={contentFontSize}
                 onSave={handleSaveContent}
-                onCancel={() => setIsInlineEditing(false)}
+                onCancel={() => setIsInlineEditingContent(false)}
+                onTab={switchEditor}
               />
             ) : (
               <p

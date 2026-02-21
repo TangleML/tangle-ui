@@ -7,21 +7,26 @@ import {
 } from "react";
 
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 interface InlineTextEditorProps {
   value: string;
   placeholder?: string;
   textSize?: number;
+  className?: string;
   onSave: (value: string) => void;
   onCancel: () => void;
+  onTab?: () => void;
 }
 
 export const InlineTextEditor = ({
   value,
   placeholder = "Enter text...",
   textSize,
+  className,
   onSave,
   onCancel,
+  onTab,
 }: InlineTextEditorProps) => {
   const [text, setText] = useState(value);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -55,6 +60,11 @@ export const InlineTextEditor = ({
       e.preventDefault();
       e.stopPropagation();
       onSave(text);
+    } else if (e.key === "Tab") {
+      e.preventDefault();
+      e.stopPropagation();
+      onSave(text);
+      onTab?.();
     }
   };
 
@@ -66,8 +76,14 @@ export const InlineTextEditor = ({
       onChange={handleChange}
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
-      className="min-h-10 resize-none nodrag nopan focus-visible:ring-0 focus-visible:border-0 focus-visible:text-xs text-xs shadow-none p-0 rounded-none"
-      style={{ fontSize: textSize }}
+      className={cn(
+        "min-h-10 resize-none nodrag nopan ring-0! border-0! text-xs shadow-none p-0 rounded-none",
+        className,
+      )}
+      style={{
+        fontSize: textSize,
+        minHeight: textSize ? textSize * 1.5 : undefined,
+      }}
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     />
