@@ -25,28 +25,38 @@ const SelectionToolbar = ({
     <InlineStack
       gap="1"
       className="bg-white border border-[#0059dc66] border-b-0 rounded-xs"
+      data-testid="selection-toolbar"
     >
       <ToolbarButton
         name="Update Tasks"
         callback={onUpgrade}
         icon="CircleFadingArrowUp"
+        testId="selection-update-tasks"
       />
       <ToolbarButton
         name="Create Subgraph"
         callback={onGroup}
         icon="Workflow"
+        testId="selection-create-subgraph"
       />
       <ToolbarButton
         name="Duplicate Nodes"
         callback={onDuplicate}
         icon="Copy"
+        testId="selection-duplicate-nodes"
       />
-      <ToolbarButton name="Copy Yaml" callback={onCopy} icon="ClipboardPlus" />
+      <ToolbarButton
+        name="Copy Yaml"
+        callback={onCopy}
+        icon="ClipboardPlus"
+        testId="selection-copy-yaml"
+      />
       <ToolbarButton
         name="Delete All"
         callback={onDelete}
         icon="Trash"
         dangerous
+        testId="selection-delete-all"
       />
     </InlineStack>
   );
@@ -59,11 +69,13 @@ const ToolbarButton = ({
   icon,
   dangerous,
   callback,
+  testId,
 }: {
   name: string;
   icon: keyof typeof icons;
   dangerous?: boolean;
   callback?: () => void;
+  testId?: string;
 }) => {
   if (!callback) {
     return null;
@@ -80,6 +92,7 @@ const ToolbarButton = ({
       variant="ghost"
       onClick={callback}
       size="icon"
+      data-testid={testId}
     >
       <Icon name={icon} className="p-0.5" />
     </TooltipButton>
