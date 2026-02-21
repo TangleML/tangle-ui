@@ -16,6 +16,8 @@ type FlexNodeProperties = {
   content: string;
   color: string;
   borderColor?: string;
+  titleFontSize?: number;
+  contentFontSize?: number;
 };
 
 type FlexNodeMetadata = {

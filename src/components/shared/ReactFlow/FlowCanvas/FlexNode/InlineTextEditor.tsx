@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 interface InlineTextEditorProps {
   value: string;
   placeholder?: string;
+  textSize?: number;
   onSave: (value: string) => void;
   onCancel: () => void;
 }
@@ -18,6 +19,7 @@ interface InlineTextEditorProps {
 export const InlineTextEditor = ({
   value,
   placeholder = "Enter text...",
+  textSize,
   onSave,
   onCancel,
 }: InlineTextEditorProps) => {
@@ -65,6 +67,7 @@ export const InlineTextEditor = ({
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
       className="min-h-10 resize-none nodrag nopan focus-visible:ring-0 focus-visible:border-0 focus-visible:text-xs text-xs shadow-none p-0 rounded-none"
+      style={{ fontSize: textSize }}
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     />

@@ -15,6 +15,7 @@ import { updateSubgraphSpec } from "@/utils/subgraphUtils";
 
 import { StackingControls } from "../../FlowControls/StackingControls";
 import { updateFlexNodeInComponentSpec } from "./interface";
+import { TextSizeSelector } from "./TextSizeSelector";
 import type { FlexNodeData } from "./types";
 import { DEFAULT_BORDER_COLOR } from "./utils";
 
@@ -113,6 +114,48 @@ const ContentEditor = ({
     setContent(e.target.value);
   };
 
+  const handleTitleFontSizeChange = (newSize: number) => {
+    const updatedSubgraphSpec = updateFlexNodeInComponentSpec(
+      currentSubgraphSpec,
+      {
+        ...flexNode,
+        properties: {
+          ...properties,
+          titleFontSize: newSize,
+        },
+      },
+    );
+
+    const newRootSpec = updateSubgraphSpec(
+      componentSpec,
+      currentSubgraphPath,
+      updatedSubgraphSpec,
+    );
+
+    setComponentSpec(newRootSpec);
+  };
+
+  const handleContentFontSizeChange = (newSize: number) => {
+    const updatedSubgraphSpec = updateFlexNodeInComponentSpec(
+      currentSubgraphSpec,
+      {
+        ...flexNode,
+        properties: {
+          ...properties,
+          contentFontSize: newSize,
+        },
+      },
+    );
+
+    const newRootSpec = updateSubgraphSpec(
+      componentSpec,
+      currentSubgraphPath,
+      updatedSubgraphSpec,
+    );
+
+    setComponentSpec(newRootSpec);
+  };
+
   const saveChanges = () => {
     const updatedSubgraphSpec = updateFlexNodeInComponentSpec(
       currentSubgraphSpec,
@@ -164,12 +207,25 @@ const ContentEditor = ({
     <ContentBlock title="Content">
       <BlockStack gap="2">
         <BlockStack>
-          <Label
-            htmlFor="flex-node-title"
-            className="text-muted-foreground text-xs"
+          <InlineStack
+            gap="4"
+            align="space-between"
+            blockAlign="end"
+            wrap="nowrap"
+            fill
           >
-            Title
-          </Label>
+            <Label
+              htmlFor="flex-node-title"
+              className="text-muted-foreground text-xs"
+            >
+              Title
+            </Label>
+            <TextSizeSelector
+              value={properties.titleFontSize ?? 12}
+              onChange={handleTitleFontSizeChange}
+              className="mb-1"
+            />
+          </InlineStack>
           <Input
             id="flex-node-title"
             value={title}
@@ -179,12 +235,25 @@ const ContentEditor = ({
           />
         </BlockStack>
         <BlockStack>
-          <Label
-            htmlFor="flex-node-content"
-            className="text-muted-foreground text-xs"
+          <InlineStack
+            gap="4"
+            align="space-between"
+            blockAlign="end"
+            wrap="nowrap"
+            fill
           >
-            Note
-          </Label>
+            <Label
+              htmlFor="flex-node-title"
+              className="text-muted-foreground text-xs"
+            >
+              Note
+            </Label>
+            <TextSizeSelector
+              value={properties.contentFontSize ?? 10}
+              onChange={handleContentFontSizeChange}
+              className="mb-1"
+            />
+          </InlineStack>
           <Textarea
             id="flex-node-content"
             value={content}
