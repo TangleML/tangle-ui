@@ -8,6 +8,7 @@ export interface FlexNodeData extends Record<string, unknown> {
   position: XYPosition;
   zIndex: number;
   readOnly?: boolean;
+  locked?: boolean;
 }
 
 type FlexNodeProperties = {
