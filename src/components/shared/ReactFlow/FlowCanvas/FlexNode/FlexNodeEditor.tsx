@@ -10,13 +10,11 @@ import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Textarea } from "@/components/ui/textarea";
 import { Paragraph, Text } from "@/components/ui/typography";
-import { useComponentSpec } from "@/providers/ComponentSpecProvider";
-import { updateSubgraphSpec } from "@/utils/subgraphUtils";
 
 import { StackingControls } from "../../FlowControls/StackingControls";
-import { updateFlexNodeInComponentSpec } from "./interface";
 import { TextSizeSelector } from "./TextSizeSelector";
 import type { FlexNodeData } from "./types";
+import { useFlexNodeUpdate } from "./useFlexNodeUpdate";
 import { DEFAULT_BORDER_COLOR } from "./utils";
 
 interface FlexNodeEditorProps {
@@ -94,12 +92,7 @@ const ContentEditor = ({
   flexNode: FlexNodeData;
   readOnly: boolean;
 }) => {
-  const {
-    componentSpec,
-    currentSubgraphSpec,
-    currentSubgraphPath,
-    setComponentSpec,
-  } = useComponentSpec();
+  const { updateProperties } = useFlexNodeUpdate(flexNode);
 
   const { properties } = flexNode;
 
@@ -115,67 +108,15 @@ const ContentEditor = ({
   };
 
   const handleTitleFontSizeChange = (newSize: number) => {
-    const updatedSubgraphSpec = updateFlexNodeInComponentSpec(
-      currentSubgraphSpec,
-      {
-        ...flexNode,
-        properties: {
-          ...properties,
-          titleFontSize: newSize,
-        },
-      },
-    );
-
-    const newRootSpec = updateSubgraphSpec(
-      componentSpec,
-      currentSubgraphPath,
-      updatedSubgraphSpec,
-    );
-
-    setComponentSpec(newRootSpec);
+    updateProperties({ titleFontSize: newSize });
   };
 
   const handleContentFontSizeChange = (newSize: number) => {
-    const updatedSubgraphSpec = updateFlexNodeInComponentSpec(
-      currentSubgraphSpec,
-      {
-        ...flexNode,
-        properties: {
-          ...properties,
-          contentFontSize: newSize,
-        },
-      },
-    );
-
-    const newRootSpec = updateSubgraphSpec(
-      componentSpec,
-      currentSubgraphPath,
-      updatedSubgraphSpec,
-    );
-
-    setComponentSpec(newRootSpec);
+    updateProperties({ contentFontSize: newSize });
   };
 
   const saveChanges = () => {
-    const updatedSubgraphSpec = updateFlexNodeInComponentSpec(
-      currentSubgraphSpec,
-      {
-        ...flexNode,
-        properties: {
-          ...properties,
-          title,
-          content,
-        },
-      },
-    );
-
-    const newRootSpec = updateSubgraphSpec(
-      componentSpec,
-      currentSubgraphPath,
-      updatedSubgraphSpec,
-    );
-
-    setComponentSpec(newRootSpec);
+    updateProperties({ title, content });
   };
 
   useEffect(() => {
@@ -274,12 +215,7 @@ const ColorEditor = ({
   flexNode: FlexNodeData;
   readOnly: boolean;
 }) => {
-  const {
-    componentSpec,
-    currentSubgraphSpec,
-    currentSubgraphPath,
-    setComponentSpec,
-  } = useComponentSpec();
+  const { updateProperties } = useFlexNodeUpdate(flexNode);
 
   const { properties } = flexNode;
 
@@ -306,25 +242,10 @@ const ColorEditor = ({
     newBackgroundColor: string,
     newBorderColor: string | undefined,
   ) => {
-    const updatedSubgraphSpec = updateFlexNodeInComponentSpec(
-      currentSubgraphSpec,
-      {
-        ...flexNode,
-        properties: {
-          ...properties,
-          color: newBackgroundColor,
-          borderColor: newBorderColor,
-        },
-      },
-    );
-
-    const newRootSpec = updateSubgraphSpec(
-      componentSpec,
-      currentSubgraphPath,
-      updatedSubgraphSpec,
-    );
-
-    setComponentSpec(newRootSpec);
+    updateProperties({
+      color: newBackgroundColor,
+      borderColor: newBorderColor,
+    });
   };
 
   useEffect(() => {
@@ -395,29 +316,10 @@ const ColorEditor = ({
 };
 
 const ZIndexEditor = ({ flexNode }: { flexNode: FlexNodeData }) => {
-  const {
-    componentSpec,
-    currentSubgraphSpec,
-    currentSubgraphPath,
-    setComponentSpec,
-  } = useComponentSpec();
+  const { updateFlexNode } = useFlexNodeUpdate(flexNode);
 
   const handleStackingControlChange = (newZIndex: number) => {
-    const updatedSubgraphSpec = updateFlexNodeInComponentSpec(
-      currentSubgraphSpec,
-      {
-        ...flexNode,
-        zIndex: newZIndex,
-      },
-    );
-
-    const newRootSpec = updateSubgraphSpec(
-      componentSpec,
-      currentSubgraphPath,
-      updatedSubgraphSpec,
-    );
-
-    setComponentSpec(newRootSpec);
+    updateFlexNode({ zIndex: newZIndex });
   };
 
   return (
