@@ -47,8 +47,9 @@ export const StackingControls = ({
   };
 
   return (
-    <InlineStack gap="2">
+    <InlineStack gap="2" data-testid="stacking-controls">
       <TooltipButton
+        data-testid="stacking-move-forward"
         size="sm"
         variant="outline"
         onClick={() => updateZIndex("forward")}
@@ -57,6 +58,7 @@ export const StackingControls = ({
         <Icon name="ArrowUpFromLine" />
       </TooltipButton>
       <TooltipButton
+        data-testid="stacking-move-backward"
         size="sm"
         variant="outline"
         onClick={() => updateZIndex("backward")}
@@ -65,6 +67,7 @@ export const StackingControls = ({
         <Icon name="ArrowDownFromLine" />
       </TooltipButton>
       <TooltipButton
+        data-testid="stacking-bring-to-front"
         size="sm"
         variant="outline"
         onClick={() => updateZIndex("front")}
@@ -73,6 +76,7 @@ export const StackingControls = ({
         <Icon name="ListStart" />
       </TooltipButton>
       <TooltipButton
+        data-testid="stacking-send-to-back"
         size="sm"
         variant="outline"
         onClick={() => updateZIndex("back")}
