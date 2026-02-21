@@ -118,6 +118,7 @@ const PlainArgumentInput = ({
           variant="ghost"
           size="xs"
           tooltip="Use Secret"
+          data-testid="use-secret-button"
         >
           <Icon name="Lock" />
         </TooltipButton>
@@ -386,7 +387,12 @@ export const ArgumentInputField = ({
 
   return (
     <>
-      <BlockStack gap="0" className="relative w-full px-2">
+      <BlockStack
+        gap="0"
+        className="relative w-full px-2"
+        data-testid="argument-input-field"
+        data-argument-name={argument.inputSpec.name}
+      >
         <InlineStack gap="4">
           <InlineStack
             gap="2"
