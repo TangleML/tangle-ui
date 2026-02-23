@@ -178,7 +178,7 @@ const PipelineRunsButton = withSuspenseWrapper(
         >
           <Icon name="List" />
         </PopoverTrigger>
-        <PopoverContent className="w-[500px]">
+        <PopoverContent className="w-125">
           <PipelineRunsList
             pipelineName={pipelineName}
             showMoreButton={false}
@@ -194,7 +194,7 @@ const PipelineRunsButton = withSuspenseWrapper(
 );
 
 function formatModificationTime(modificationTime: Date | undefined) {
-  return modificationTime ? formatDate(modificationTime.toISOString()) : "N/A";
+  return modificationTime ? formatDate(modificationTime) : "N/A";
 }
 
 export default PipelineRow;
