@@ -13,7 +13,10 @@ import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
 import { useBackend } from "@/providers/BackendProvider";
 import { APP_ROUTES } from "@/routes/router";
-import { updateRunNotes } from "@/services/pipelineRunService";
+import {
+  copyRunTagsFromPipeline,
+  updateRunNotes,
+} from "@/services/pipelineRunService";
 import type { PipelineRun } from "@/types/pipelineRun";
 import {
   type ArgumentType,
@@ -113,6 +116,16 @@ const OasisSubmitter = ({
       updateRunNotes(runId, backendUrl, runNotes.current),
   });
 
+  const { mutate: saveTags } = useMutation({
+    mutationFn: (runId: string) => {
+      if (componentSpec) {
+        return copyRunTagsFromPipeline(runId, backendUrl, componentSpec);
+      }
+
+      return Promise.resolve();
+    },
+  });
+
   const handleError = (message: string) => {
     notify(message, "error");
   };
@@ -147,6 +160,9 @@ const OasisSubmitter = ({
     if (runNotes.current.trim() !== "") {
       saveNotes(response.id.toString());
     }
+
+    saveTags(response.id.toString());
+
     setSubmitSuccess(true);
     setCooldownTime(3);
     onSubmitComplete?.();
