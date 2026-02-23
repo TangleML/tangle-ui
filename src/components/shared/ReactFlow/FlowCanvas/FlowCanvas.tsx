@@ -50,7 +50,6 @@ import {
   updateSubgraphSpec,
 } from "@/utils/subgraphUtils";
 
-import { useFlagValue } from "../../Settings/useFlags";
 import { SuspenseWrapper } from "../../SuspenseWrapper";
 import { useNodesOverlay } from "../NodesOverlay/NodesOverlayProvider";
 import { getBulkUpdateConfirmationDetails } from "./ConfirmationDialogs/BulkUpdateConfirmationDialog";
@@ -136,8 +135,6 @@ const FlowCanvasContent = ({
   } = useComponentSpec();
   const { preserveIOSelectionOnSpecChange, resetPrevSpec } =
     useIOSelectionPersistence();
-
-  const isPartialSelectionEnabled = useFlagValue("partial-selection");
 
   const store = useStoreApi();
   const { edges: specEdges, onEdgesChange } =
@@ -982,10 +979,6 @@ const FlowCanvasContent = ({
   };
 
   const getSelectionMode = () => {
-    if (!isPartialSelectionEnabled) {
-      return SelectionMode.Full;
-    }
-
     if (shiftKeyPressed && metaKeyPressed) {
       return SelectionMode.Partial;
     }
