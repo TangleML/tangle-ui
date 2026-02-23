@@ -12,7 +12,6 @@ import {
 import { ComponentEditorDialog } from "@/components/shared/ComponentEditor/ComponentEditorDialog";
 import { NewComponentTemplateSelector } from "@/components/shared/ComponentEditor/components/NewComponentTemplateSelector";
 import type { SupportedTemplate } from "@/components/shared/ComponentEditor/types";
-import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -29,7 +28,6 @@ import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import useToastNotification from "@/hooks/useToastNotification";
-import { cn } from "@/lib/utils";
 import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
 import { hydrateComponentReference } from "@/services/componentService";
 import { getStringFromData } from "@/utils/string";
@@ -47,8 +45,6 @@ const ImportComponent = ({
 }) => {
   const notify = useToastNotification();
   const { addToComponentLibrary } = useComponentLibrary();
-
-  const hasEnabledInAppEditor = useFlagValue("in-app-component-editor");
 
   const [url, setUrl] = useState("");
   const [tab, setTab] = useState<TabType>(TabType.File);
@@ -178,10 +174,6 @@ const ImportComponent = ({
     </Button>
   );
 
-  const dialogDescription = hasEnabledInAppEditor
-    ? "Create a new component, or import from a file or a URL."
-    : "Import a new component from a file or a URL.";
-
   return (
     <>
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
@@ -189,23 +181,18 @@ const ImportComponent = ({
         <DialogContent data-testid="import-component-dialog">
           <DialogHeader>
             <DialogTitle>Add Component</DialogTitle>
-            <DialogDescription>{dialogDescription}</DialogDescription>
+            <DialogDescription>
+              Create a new component, or import from a file or a URL.
+            </DialogDescription>
             <Tabs
               value={tab}
               className="w-full"
               onValueChange={(value) => handleTabChange(value as TabType)}
             >
-              <TabsList
-                className={cn(
-                  "grid w-full",
-                  hasEnabledInAppEditor ? "grid-cols-3" : "grid-cols-2",
-                )}
-              >
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value={TabType.File}>File</TabsTrigger>
                 <TabsTrigger value={TabType.URL}>URL</TabsTrigger>
-                {hasEnabledInAppEditor && (
-                  <TabsTrigger value={TabType.New}>New</TabsTrigger>
-                )}
+                <TabsTrigger value={TabType.New}>New</TabsTrigger>
               </TabsList>
               <TabsContent value={TabType.File}>
                 <div className="grid w-full items-center gap-4 py-4">
@@ -235,7 +222,7 @@ const ImportComponent = ({
                         )}
                         {selectedFileName && (
                           <div className="flex flex-1 items-center border rounded-md px-3 py-2 text-sm">
-                            <span className="flex-1 truncate max-w-[325px]">
+                            <span className="flex-1 truncate max-w-81.25">
                               {selectedFileName}
                             </span>
                             <Button
@@ -286,13 +273,11 @@ const ImportComponent = ({
                   </div>
                 </div>
               </TabsContent>
-              {hasEnabledInAppEditor && (
-                <TabsContent value={TabType.New}>
-                  <NewComponentTemplateSelector
-                    onTemplateSelected={setComponentEditorTemplateSelected}
-                  />
-                </TabsContent>
-              )}
+              <TabsContent value={TabType.New}>
+                <NewComponentTemplateSelector
+                  onTemplateSelected={setComponentEditorTemplateSelected}
+                />
+              </TabsContent>
             </Tabs>
           </DialogHeader>
 
