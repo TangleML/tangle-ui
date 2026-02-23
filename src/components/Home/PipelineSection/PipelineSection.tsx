@@ -180,7 +180,7 @@ export const PipelineSection = withSuspenseWrapper(() => {
         actions={<QuickStartButton />}
       />
 
-      <Table className="table-fixed">
+      <Table>
         <TableHeader>
           <TableRow className="text-xs">
             <TableHead className="w-10">
@@ -190,16 +190,17 @@ export const PipelineSection = withSuspenseWrapper(() => {
               />
             </TableHead>
             <TableHead>Title</TableHead>
-            <TableHead className="w-40">Modified at</TableHead>
-            <TableHead className="w-44">Last run</TableHead>
-            <TableHead className="w-16">Runs</TableHead>
-            <TableHead className="w-12" />
+            <TableHead>Modified at</TableHead>
+            <TableHead>Tags</TableHead>
+            <TableHead>Last run</TableHead>
+            <TableHead>Runs</TableHead>
+            <TableHead />
           </TableRow>
         </TableHeader>
         <TableBody>
           {filteredPipelines.length === 0 && (
             <TableRow>
-              <TableCell colSpan={6} className="text-center">
+              <TableCell colSpan={7} className="text-center">
                 No pipelines found.
               </TableCell>
             </TableRow>
@@ -208,6 +209,7 @@ export const PipelineSection = withSuspenseWrapper(() => {
             <PipelineRow
               key={fileEntry.componentRef.digest}
               name={name}
+              componentRef={fileEntry.componentRef}
               modificationTime={fileEntry.modificationTime}
               onDelete={fetchUserPipelines}
               isSelected={selectedPipelines.has(name)}

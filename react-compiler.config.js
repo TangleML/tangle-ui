@@ -30,6 +30,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/hooks/useEdgeSelectionHighlight.ts",
   "src/hooks/useRunSearchParams.ts",
 
+  "src/components/shared/Tags",
   "src/components/shared/Submitters/Oasis/components",
   "src/components/shared/Submitters/GoogleCloud/ConfigInput.tsx",
   "src/components/shared/Submitters/GoogleCloud/GoogleCloudSubmitter.tsx",
