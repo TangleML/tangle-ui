@@ -246,6 +246,7 @@ export const PipelineSection = withSuspenseWrapper(() => {
               </TableHead>
               <TableHead>Title</TableHead>
               <TableHead>Modified at</TableHead>
+              <TableHead>Tags</TableHead>
               <TableHead>Last run</TableHead>
               <TableHead>Runs</TableHead>
               <TableHead></TableHead>
@@ -259,6 +260,7 @@ export const PipelineSection = withSuspenseWrapper(() => {
               <PipelineRow
                 key={fileEntry.componentRef.digest}
                 name={name}
+                componentRef={fileEntry.componentRef}
                 modificationTime={fileEntry.modificationTime}
                 onDelete={fetchUserPipelines}
                 isSelected={selectedPipelines.has(name)}

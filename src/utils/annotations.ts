@@ -8,6 +8,7 @@ export const DISPLAY_NAME_MAX_LENGTH = 100;
 export const TASK_DISPLAY_NAME_ANNOTATION = "display_name";
 export const PIPELINE_NOTES_ANNOTATION = "notes";
 export const PIPELINE_RUN_NOTES_ANNOTATION = "notes";
+export const PIPELINE_TAGS_ANNOTATION = "tags";
 export const PIPELINE_CANONICAL_NAME_ANNOTATION = "canonical-pipeline-name";
 export const RUN_NAME_TEMPLATE_ANNOTATION = "run-name-template";
 export const EDITOR_POSITION_ANNOTATION = "editor.position";
@@ -206,4 +207,30 @@ export function ensureAnnotations(
       },
     },
   };
+}
+
+/*
+ * Extract the pipeline tags from a ComponentSpec's annotations.
+ * @param componentSpec - The component specification
+ * @returns The pipeline tags as an array of strings
+ */
+export function getPipelineTagsFromSpec(
+  componentSpec?: ComponentSpec,
+): string[] {
+  if (!componentSpec) {
+    return [];
+  }
+
+  const annotations = componentSpec.metadata?.annotations;
+  const tagsString =
+    getAnnotationValue(annotations, PIPELINE_TAGS_ANNOTATION) ?? "";
+
+  const tags = tagsString
+    ? tagsString
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean)
+    : [];
+
+  return tags;
 }
