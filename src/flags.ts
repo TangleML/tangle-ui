@@ -4,14 +4,6 @@ const isRemoteComponentLibraryEnabled =
   import.meta.env.VITE_DEFAULT_REMOTE_COMPONENT_LIBRARY_BETA === "true";
 
 export const ExistingFlags: ConfigFlags = {
-  ["highlight-node-on-component-hover"]: {
-    name: "Highlight tasks on component hover",
-    description:
-      "Highlight the tasks on the Pipeline canvas when the component is hovered over in the component library.",
-    default: false,
-    category: "beta",
-  },
-
   ["remote-component-library-search"]: {
     name: "Published Components Library",
     description: "Enable the Published Components Library feature.",
