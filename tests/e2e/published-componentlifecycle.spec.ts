@@ -6,6 +6,7 @@ import {
   locateComponentInFolder,
   locateFolderByName,
   openComponentLibFolder,
+  setBetaFlag,
 } from "./helpers";
 
 /**
@@ -24,30 +25,11 @@ test.describe("Published Component Library - Lifecycle", () => {
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
 
+    await setBetaFlag(page, "remote-component-library-search", true);
+
     await createNewPipeline(page);
 
     await expect(page.locator("[data-testid='search-input']")).toBeVisible();
-
-    await page.getByTestId("personal-preferences-button").click();
-
-    const dialog = page.getByTestId("personal-preferences-dialog");
-    await expect(dialog).toBeVisible();
-
-    await dialog.getByRole("tab", { name: "Beta Features" }).click();
-
-    const switchElement = dialog.getByTestId(
-      "remote-component-library-search-switch",
-    );
-    await expect(switchElement).toBeVisible({ timeout: 10000 });
-
-    // Enable secrets if not already enabled
-    if ((await switchElement.getAttribute("aria-checked")) !== "true") {
-      await switchElement.click();
-      await expect(switchElement).toHaveAttribute("aria-checked", "true");
-    }
-
-    await dialog.press("Escape");
-    await expect(dialog).toBeHidden();
 
     await locateFolderByName(page, "Standard library");
   });

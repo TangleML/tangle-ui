@@ -274,6 +274,124 @@ export async function removeComponentFromCanvas(
  * @param options.searchFilterCount - Expected filter count badge text (optional)
  * @param options.searchResultsCount - Expected result count or "*" for any (optional)
  */
+/**
+ * Settings Helpers
+ */
+
+type SettingsSection = "backend" | "preferences" | "beta-features" | "secrets";
+
+/**
+ * Navigates to a settings section by URL.
+ * @param page - Playwright page object
+ * @param section - The settings section to navigate to
+ */
+async function navigateToSettings(
+  page: Page,
+  section: SettingsSection,
+): Promise<void> {
+  await page.goto(`/settings/${section}`);
+  const nav = page.getByTestId(`settings-nav-${section}`);
+  await expect(
+    nav,
+    `Settings nav item for "${section}" should be visible`,
+  ).toBeVisible();
+}
+
+/**
+ * Toggles a beta feature flag via the settings UI.
+ * @param page - Playwright page object
+ * @param flagKey - The flag key as defined in flags.ts (e.g. "remote-component-library-search")
+ * @param enabled - Whether the flag should be enabled or disabled
+ */
+export async function setBetaFlag(
+  page: Page,
+  flagKey: string,
+  enabled: boolean,
+): Promise<void> {
+  await navigateToSettings(page, "beta-features");
+
+  const flagSwitch = page.getByTestId(`${flagKey}-switch`);
+  await expect(
+    flagSwitch,
+    `Beta flag switch "${flagKey}" should be visible`,
+  ).toBeVisible();
+
+  const isChecked = await flagSwitch.isChecked();
+  if (isChecked !== enabled) {
+    await flagSwitch.click();
+  }
+}
+
+/**
+ * Secrets Management Helpers
+ */
+
+/**
+ * Navigates to the secrets list view in settings.
+ * @param page - Playwright page object
+ */
+export async function navigateToSecretsList(page: Page): Promise<void> {
+  await navigateToSettings(page, "secrets");
+  await expect(
+    page.getByRole("heading", { name: "Secrets Management" }),
+    "Secrets Management heading should be visible",
+  ).toBeVisible();
+}
+
+/**
+ * Adds a new secret via the settings secrets UI.
+ * Assumes the page is already on the secrets list view.
+ * @param page - Playwright page object
+ * @param name - The secret name
+ * @param value - The secret value
+ */
+export async function addSecret(
+  page: Page,
+  name: string,
+  value: string,
+): Promise<void> {
+  await page.getByTestId("add-secret-link").click();
+  await expect(
+    page.getByTestId("secret-name-input"),
+    "Secret name input should be visible on Add Secret view",
+  ).toBeVisible();
+
+  await page.getByTestId("secret-name-input").fill(name);
+  await page.getByTestId("secret-value-input").fill(value);
+  await page.getByTestId("add-secret-submit-button").click();
+
+  await expect(
+    page.getByRole("heading", { name: "Secrets Management" }),
+    "Should navigate back to secrets list after adding",
+  ).toBeVisible();
+}
+
+/**
+ * Removes a secret from the secrets list view.
+ * Assumes the page is already on the secrets list view.
+ * @param page - Playwright page object
+ * @param secretName - The name of the secret to remove
+ */
+export async function removeSecret(
+  page: Page,
+  secretName: string,
+): Promise<void> {
+  const secretItem = page.locator(
+    `[data-testid="secret-item"][data-secret-name="${secretName}"]`,
+  );
+  await expect(
+    secretItem,
+    `Secret "${secretName}" should be visible for removal`,
+  ).toBeVisible();
+
+  await secretItem.getByTestId("secret-remove-button").click();
+
+  await expect(
+    secretItem,
+    `Secret "${secretName}" should be removed from list`,
+  ).toBeHidden();
+}
+
 export async function assertSearchState(
   page: Page,
   options: {

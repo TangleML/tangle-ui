@@ -4,11 +4,15 @@ import {
   createRoute,
   createRouter,
   Outlet,
+  redirect,
 } from "@tanstack/react-router";
 
 import { ErrorPage } from "@/components/shared/ErrorPage";
 import { AuthorizationResultScreen as GitHubAuthorizationResultScreen } from "@/components/shared/GitHubAuth/AuthorizationResultScreen";
 import { AuthorizationResultScreen as HuggingFaceAuthorizationResultScreen } from "@/components/shared/HuggingFaceAuth/AuthorizationResultScreen";
+import { AddSecretView } from "@/components/shared/SecretsManagement/components/AddSecretView";
+import { ReplaceSecretView } from "@/components/shared/SecretsManagement/components/ReplaceSecretView";
+import { SecretsListView } from "@/components/shared/SecretsManagement/components/SecretsListView";
 import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 
 import RootLayout from "../components/layout/RootLayout";
@@ -17,6 +21,11 @@ import Home from "./Home";
 import NotFoundPage from "./NotFoundPage";
 import PipelineRun from "./PipelineRun";
 import { QuickStartPage } from "./QuickStart";
+import { BackendSettings } from "./Settings/sections/BackendSettings";
+import { BetaFeaturesSettings } from "./Settings/sections/BetaFeaturesSettings";
+import { PreferencesSettings } from "./Settings/sections/PreferencesSettings";
+import { SecretsSettings } from "./Settings/sections/SecretsSettings";
+import { SettingsLayout } from "./Settings/SettingsLayout";
 
 declare module "@tanstack/react-router" {
   interface Register {
@@ -27,6 +36,7 @@ declare module "@tanstack/react-router" {
 export const EDITOR_PATH = "/editor";
 export const RUNS_BASE_PATH = "/runs";
 export const QUICK_START_PATH = "/quick-start";
+const SETTINGS_PATH = "/settings";
 export const APP_ROUTES = {
   HOME: "/",
   QUICK_START: QUICK_START_PATH,
@@ -34,9 +44,16 @@ export const APP_ROUTES = {
   RUN_DETAIL: `${RUNS_BASE_PATH}/$id`,
   RUN_DETAIL_WITH_SUBGRAPH: `${RUNS_BASE_PATH}/$id/$subgraphExecutionId`,
   RUNS: RUNS_BASE_PATH,
+  SETTINGS: SETTINGS_PATH,
+  SETTINGS_BACKEND: `${SETTINGS_PATH}/backend`,
+  SETTINGS_PREFERENCES: `${SETTINGS_PATH}/preferences`,
+  SETTINGS_BETA_FEATURES: `${SETTINGS_PATH}/beta-features`,
+  SETTINGS_SECRETS: `${SETTINGS_PATH}/secrets`,
+  SETTINGS_SECRETS_ADD: `${SETTINGS_PATH}/secrets/add`,
+  SETTINGS_SECRETS_REPLACE: `${SETTINGS_PATH}/secrets/$secretId/replace`,
   GITHUB_AUTH_CALLBACK: "/authorize/github",
   HUGGINGFACE_AUTH_CALLBACK: "/authorize/huggingface",
-};
+} as const;
 
 const rootRoute = createRootRoute({
   component: Outlet,
@@ -60,6 +77,62 @@ const quickStartRoute = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.QUICK_START,
   component: QuickStartPage,
+});
+
+const settingsLayoutRoute = createRoute({
+  getParentRoute: () => mainLayout,
+  path: SETTINGS_PATH,
+  component: SettingsLayout,
+});
+
+const settingsIndexRoute = createRoute({
+  getParentRoute: () => settingsLayoutRoute,
+  path: "/",
+  beforeLoad: () => {
+    throw redirect({ to: APP_ROUTES.SETTINGS_BACKEND });
+  },
+});
+
+const settingsBackendRoute = createRoute({
+  getParentRoute: () => settingsLayoutRoute,
+  path: "/backend",
+  component: BackendSettings,
+});
+
+const settingsPreferencesRoute = createRoute({
+  getParentRoute: () => settingsLayoutRoute,
+  path: "/preferences",
+  component: PreferencesSettings,
+});
+
+const settingsBetaFeaturesRoute = createRoute({
+  getParentRoute: () => settingsLayoutRoute,
+  path: "/beta-features",
+  component: BetaFeaturesSettings,
+});
+
+const settingsSecretsRoute = createRoute({
+  getParentRoute: () => settingsLayoutRoute,
+  path: "/secrets",
+  component: SecretsSettings,
+});
+
+const secretsIndexRoute = createRoute({
+  getParentRoute: () => settingsSecretsRoute,
+  path: "/",
+  component: SecretsListView,
+});
+
+const secretsAddRoute = createRoute({
+  getParentRoute: () => settingsSecretsRoute,
+  path: "/add",
+  component: AddSecretView,
+});
+
+const secretsReplaceRoute = createRoute({
+  getParentRoute: () => settingsSecretsRoute,
+  path: "/$secretId/replace",
+  component: ReplaceSecretView,
 });
 
 const editorRoute = createRoute({
@@ -96,9 +169,24 @@ const runDetailWithSubgraphRoute = createRoute({
   component: PipelineRun,
 });
 
+const secretsRouteTree = settingsSecretsRoute.addChildren([
+  secretsIndexRoute,
+  secretsAddRoute,
+  secretsReplaceRoute,
+]);
+
+const settingsRouteTree = settingsLayoutRoute.addChildren([
+  settingsIndexRoute,
+  settingsBackendRoute,
+  settingsPreferencesRoute,
+  settingsBetaFeaturesRoute,
+  secretsRouteTree,
+]);
+
 const appRouteTree = mainLayout.addChildren([
   indexRoute,
   quickStartRoute,
+  settingsRouteTree,
   editorRoute,
   runDetailRoute,
   runDetailWithSubgraphRoute,

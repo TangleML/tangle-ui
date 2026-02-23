@@ -2,20 +2,24 @@ import { expect, type Page, test } from "@playwright/test";
 import { readFileSync } from "fs";
 
 import {
+  addSecret,
   createNewPipeline,
   locateFlowCanvas,
+  navigateToSecretsList,
+  removeSecret,
   waitForContextPanel,
 } from "./helpers";
 
 /**
  * Tests for using secrets in component arguments.
- * Verifies the flow: enable secrets flag → create secret → drop component →
+ * Verifies the flow: create secret → drop component →
  * assign secret to argument → fill other fields → submit run.
  */
 test.describe.configure({ mode: "serial" });
 
 test.describe("Secrets in Component Arguments", () => {
   let page: Page;
+  let editorUrl: string;
 
   const testSecretName = "TEST_GITHUB_PAT";
   const testSecretValue = "ghp_test_token_12345";
@@ -24,6 +28,7 @@ test.describe("Secrets in Component Arguments", () => {
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
     await createNewPipeline(page);
+    editorUrl = page.url();
   });
 
   test.afterAll(async () => {
@@ -32,20 +37,10 @@ test.describe("Secrets in Component Arguments", () => {
   });
 
   test("create a secret for use in component arguments", async () => {
-    const dialog = await openManageSecretsDialog(page);
+    await navigateToSecretsList(page);
+    await addSecret(page, testSecretName, testSecretValue);
 
-    await dialog.getByTestId("add-secret-button").click();
-
-    await expect(
-      dialog.getByRole("heading"),
-      "Dialog should show Add Secret form title",
-    ).toContainText("Add Secret");
-
-    await dialog.getByTestId("secret-name-input").fill(testSecretName);
-    await dialog.getByTestId("secret-value-input").fill(testSecretValue);
-    await dialog.getByTestId("add-secret-submit-button").click();
-
-    const secretItem = dialog.locator(
+    const secretItem = page.locator(
       `[data-testid="secret-item"][data-secret-name="${testSecretName}"]`,
     );
     await expect(
@@ -53,7 +48,11 @@ test.describe("Secrets in Component Arguments", () => {
       "Newly added secret should appear in the list",
     ).toBeVisible();
 
-    await closeDialog(page);
+    await page.goto(editorUrl);
+    await expect(
+      locateFlowCanvas(page),
+      "Editor canvas should be visible after navigating back",
+    ).toBeVisible({ timeout: 30_000 });
   });
 
   test("drop component with secret argument onto canvas", async () => {
@@ -92,8 +91,6 @@ test.describe("Secrets in Component Arguments", () => {
 
     await githubPatField.hover();
 
-    // When only secrets are available (no task annotations), the component renders
-    // a direct button that opens the secret dialog immediately
     const directSecretButton = githubPatField.getByTestId(
       "open-secret-dialog-button",
     );
@@ -174,55 +171,15 @@ test.describe("Secrets in Component Arguments", () => {
 });
 
 /**
- * Opens the Manage Secrets dialog via the top bar button
- * @returns The dialog locator for further interactions
- */
-async function openManageSecretsDialog(page: Page) {
-  const manageSecretsButton = page.getByTestId("manage-secrets-button");
-  await expect(
-    manageSecretsButton,
-    "Manage Secrets button should be visible",
-  ).toBeVisible();
-  await manageSecretsButton.click();
-
-  const dialog = page.getByTestId("manage-secrets-dialog");
-  await expect(dialog, "Manage Secrets dialog should open").toBeVisible();
-
-  return dialog;
-}
-
-/**
- * Closes the currently open dialog using Escape key
- */
-async function closeDialog(page: Page): Promise<void> {
-  await page.keyboard.press("Escape");
-
-  const manageSecretsDialog = page.getByTestId("manage-secrets-dialog");
-  await expect(manageSecretsDialog).toBeHidden();
-}
-
-/**
- * Cleans up a test secret.
+ * Cleans up a test secret via the settings secrets UI.
  * Runs in afterAll hook to ensure cleanup happens regardless of test failures.
  */
 async function cleanupTestSecret(
   page: Page,
   secretName: string,
 ): Promise<void> {
-  const dialog = await openManageSecretsDialog(page);
-
-  const secretItem = dialog.locator(
-    `[data-testid="secret-item"][data-secret-name="${secretName}"]`,
-  );
-
-  await expect(
-    secretItem,
-    "Test secret should exist for cleanup",
-  ).toBeVisible();
-  await secretItem.getByTestId("secret-remove-button").click();
-  await expect(secretItem, "Test secret should be removed").toBeHidden();
-
-  await closeDialog(page);
+  await navigateToSecretsList(page);
+  await removeSecret(page, secretName);
 }
 
 /**

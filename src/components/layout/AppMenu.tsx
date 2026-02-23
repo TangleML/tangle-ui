@@ -1,3 +1,4 @@
+import { Link as RouterLink } from "@tanstack/react-router";
 import { Menu, Plus, Upload } from "lucide-react";
 import { useState } from "react";
 
@@ -26,11 +27,8 @@ import {
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { DOCUMENTATION_URL, TOP_NAV_HEIGHT } from "@/utils/constants";
 
-import BackendStatus from "../shared/BackendStatus";
 import TooltipButton from "../shared/Buttons/TooltipButton";
 import NewPipelineButton from "../shared/NewPipelineButton";
-import { ManageSecretsButton } from "../shared/SecretsManagement/ManageSecretsButton";
-import { PersonalPreferences } from "../shared/Settings/PersonalPreferences";
 
 const AppMenu = () => {
   const requiresAuthorization = isAuthorizationRequired();
@@ -84,9 +82,11 @@ const AppMenu = () => {
           </div>
 
           {/* Settings & status */}
-          <BackendStatus />
-          <PersonalPreferences />
-          <ManageSecretsButton />
+          <RouterLink to="/settings/backend">
+            <TooltipButton tooltip="Settings">
+              <Icon name="Settings" />
+            </TooltipButton>
+          </RouterLink>
           <Link
             href={DOCUMENTATION_URL}
             target="_blank"
