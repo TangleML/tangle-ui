@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { InlineStack } from "@/components/ui/layout";
+import { Paragraph } from "@/components/ui/typography";
 
 interface TagListProps {
   tags: string[];
@@ -14,6 +15,14 @@ export const TagList = ({ tags }: TagListProps) => {
 
   const hasMoreTags = tags.length > MAX_VISIBLE_TAGS;
   const visibleTags = showAllTags ? tags : tags.slice(0, MAX_VISIBLE_TAGS);
+
+  if (visibleTags.length === 0) {
+    return (
+      <Paragraph size="xs" tone="subdued">
+        None
+      </Paragraph>
+    );
+  }
 
   return (
     <InlineStack gap="2" wrap="wrap">
