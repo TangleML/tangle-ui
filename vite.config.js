@@ -31,6 +31,9 @@ export default defineConfig({
     tailwindcss(),
   ],
   base: "/",
+  build: {
+    manifest: "assets-registry.json",
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
