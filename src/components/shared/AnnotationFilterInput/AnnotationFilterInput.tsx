@@ -1,4 +1,3 @@
-import type { KeyboardEvent } from "react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -48,16 +47,10 @@ export function AnnotationFilterInput({
     onChange(newFilters);
   };
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && keyInput.trim()) {
-      e.preventDefault();
-      handleAdd();
-    }
-    if (e.key === "Escape") {
-      setIsExpanded(false);
-      setKeyInput("");
-      setValueInput("");
-    }
+  const handleCancel = () => {
+    setIsExpanded(false);
+    setKeyInput("");
+    setValueInput("");
   };
 
   return (
@@ -77,7 +70,8 @@ export function AnnotationFilterInput({
             placeholder="Key"
             value={keyInput}
             onChange={(e) => setKeyInput(e.target.value)}
-            onKeyDown={handleKeyDown}
+            onEnter={handleAdd}
+            onEscape={handleCancel}
             className="w-28 h-8 text-sm"
             autoFocus
           />
@@ -85,7 +79,8 @@ export function AnnotationFilterInput({
             placeholder="Value (optional)"
             value={valueInput}
             onChange={(e) => setValueInput(e.target.value)}
-            onKeyDown={handleKeyDown}
+            onEnter={handleAdd}
+            onEscape={handleCancel}
             className="w-36 h-8 text-sm"
           />
           <Button
@@ -99,11 +94,7 @@ export function AnnotationFilterInput({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => {
-              setIsExpanded(false);
-              setKeyInput("");
-              setValueInput("");
-            }}
+            onClick={handleCancel}
             aria-label="Cancel"
           >
             <Icon name="X" size="xs" />

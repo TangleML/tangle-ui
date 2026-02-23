@@ -1,4 +1,4 @@
-import { type KeyboardEvent, type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 import {
   AlertDialog,
@@ -56,19 +56,13 @@ export function InputDialog({
   };
 
   const handleConfirm = () => {
-    onConfirm?.(value.trim());
-  };
+    const trimmedValue = value.trim();
 
-  const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === "Escape") {
-      onCancel?.();
+    if (trimmedValue.length === 0 || disabled) {
+      return;
     }
 
-    if (disabled) return;
-
-    if (e.key === "Enter" && value.trim()) {
-      handleConfirm();
-    }
+    onConfirm?.(trimmedValue);
   };
 
   useEffect(() => {
@@ -96,7 +90,8 @@ export function InputDialog({
           value={value}
           onChange={(e) => handleValueChange(e.target.value)}
           placeholder={placeholder}
-          onKeyDown={handleKeyDown}
+          onEnter={handleConfirm}
+          onEscape={onCancel}
           autoFocus
           className={cn(!!error && "border-destructive")}
         />

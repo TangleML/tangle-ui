@@ -1,10 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import {
-  type ChangeEvent,
-  type KeyboardEvent,
-  useEffect,
-  useState,
-} from "react";
+import { type ChangeEvent, useEffect, useState } from "react";
 
 import type { TaskSpecOutput } from "@/api/types.gen";
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
@@ -259,12 +254,6 @@ const CopyFromRunPopover = ({
     }
   };
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      handleCustomRunIdSubmit();
-    }
-  };
-
   return (
     <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
       <PopoverTrigger asChild>
@@ -284,7 +273,7 @@ const CopyFromRunPopover = ({
                 placeholder="Run ID"
                 value={customRunId}
                 onChange={(e) => setCustomRunId(e.target.value)}
-                onKeyDown={handleKeyDown}
+                onEnter={handleCustomRunIdSubmit}
                 disabled={isCopyingFromRun}
                 className={cn(isError && "border-red-300", "flex-1")}
               />
