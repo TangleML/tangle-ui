@@ -42,14 +42,6 @@ export const ExistingFlags: ConfigFlags = {
     category: "setting",
   },
 
-  ["in-app-component-editor"]: {
-    name: "In-app component editor",
-    description:
-      "Enable the in-app component editor for creating and editing pipeline components.",
-    default: true,
-    category: "beta",
-  },
-
   ["partial-selection"]: {
     name: "Partial Node Selection",
     description:

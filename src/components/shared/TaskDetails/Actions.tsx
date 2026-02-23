@@ -4,7 +4,6 @@ import { isSubgraph } from "@/utils/subgraphUtils";
 
 import { ViewYamlButton } from "../Buttons/ViewYamlButton";
 import { ActionBlock } from "../ContextPanel/Blocks/ActionBlock";
-import { useFlagValue } from "../Settings/useFlags";
 import { CopyYamlButton } from "./Actions/CopyYamlButton";
 import { DeleteComponentButton } from "./Actions/DeleteComponentButton";
 import { DownloadPythonButton } from "./Actions/DownloadPythonButton";
@@ -28,8 +27,6 @@ const TaskActions = ({
   readOnly = false,
   className,
 }: TaskActionsProps) => {
-  const isInAppEditorEnabled = useFlagValue("in-app-component-editor");
-
   const { taskId, taskSpec, state, callbacks } = taskNode || {};
   const { onDuplicate, onUpgrade, onDelete } = callbacks || {};
   const isCustomComponent = state?.isCustomComponent;
@@ -46,7 +43,7 @@ const TaskActions = ({
   );
   const copyYaml = <CopyYamlButton componentRef={componentRef} />;
   const viewYaml = <ViewYamlButton componentRef={componentRef} />;
-  const editComponent = isInAppEditorEnabled && !readOnly && (
+  const editComponent = !readOnly && (
     <EditComponentButton componentRef={componentRef} />
   );
 
