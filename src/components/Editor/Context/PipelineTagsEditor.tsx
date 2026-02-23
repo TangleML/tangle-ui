@@ -101,13 +101,10 @@ export const PipelineTagsEditor = () => {
             value={newTagValue}
             onChange={handleInputChange}
             onBlur={handleAddTag}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                handleAddTag();
-              } else if (e.key === "Escape") {
-                setNewTagValue("");
-                setIsAdding(false);
-              }
+            onEnter={handleAddTag}
+            onEscape={() => {
+              setNewTagValue("");
+              setIsAdding(false);
             }}
             placeholder="Enter tag name..."
             className="h-7 text-xs w-36"
@@ -143,13 +140,8 @@ export const PipelineTagsEditor = () => {
                   value={editValue}
                   onChange={handleEditChange}
                   onBlur={handleSaveEdit}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      handleSaveEdit();
-                    } else if (e.key === "Escape") {
-                      handleCancelEdit();
-                    }
-                  }}
+                  onEnter={handleSaveEdit}
+                  onEscape={handleCancelEdit}
                   className="h-7 text-xs w-36"
                 />
                 <Text

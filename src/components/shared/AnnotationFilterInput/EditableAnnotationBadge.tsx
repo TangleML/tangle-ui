@@ -1,4 +1,4 @@
-import type { KeyboardEvent, MouseEvent } from "react";
+import type { MouseEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -54,17 +54,6 @@ export function EditableAnnotationBadge({
     setIsEditing(false);
   };
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleSave();
-    }
-    if (e.key === "Escape") {
-      e.preventDefault();
-      handleCancel();
-    }
-  };
-
   const handleDoubleClick = (e: MouseEvent<HTMLElement>) => {
     e.preventDefault();
     setIsEditing(true);
@@ -81,14 +70,16 @@ export function EditableAnnotationBadge({
           ref={keyInputRef}
           value={editKey}
           onChange={(e) => setEditKey(e.target.value)}
-          onKeyDown={handleKeyDown}
+          onEnter={handleSave}
+          onEscape={handleCancel}
           className="h-6 w-20 px-1.5 text-xs"
           placeholder="Key"
         />
         <Input
           value={editValue}
           onChange={(e) => setEditValue(e.target.value)}
-          onKeyDown={handleKeyDown}
+          onEnter={handleSave}
+          onEscape={handleCancel}
           className="h-6 w-24 px-1.5 text-xs"
           placeholder="Value"
         />

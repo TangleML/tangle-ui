@@ -24,8 +24,14 @@ function Input({
   type,
   readOnly,
   variant = readOnly ? "readOnly" : "default",
+  onEnter,
+  onEscape,
   ...props
-}: React.ComponentProps<"input"> & VariantProps<typeof inputVariants>) {
+}: React.ComponentProps<"input"> &
+  VariantProps<typeof inputVariants> & {
+    onEnter?: () => void;
+    onEscape?: () => void;
+  }) {
   return (
     <input
       type={type}
@@ -36,6 +42,17 @@ function Input({
         className,
       )}
       readOnly={readOnly}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" && onEnter) {
+          e.preventDefault();
+          e.stopPropagation();
+          onEnter();
+        } else if (e.key === "Escape" && onEscape) {
+          e.preventDefault();
+          e.stopPropagation();
+          onEscape();
+        }
+      }}
       {...props}
     />
   );
