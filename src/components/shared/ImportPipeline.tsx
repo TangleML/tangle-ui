@@ -123,7 +123,12 @@ const ImportPipeline = ({ triggerComponent }: ImportPipelineProps) => {
   const ButtonComponent = triggerComponent ? (
     triggerComponent
   ) : (
-    <Button variant="secondary">Import Pipeline</Button>
+    <Button
+      variant="secondary"
+      className="border border-header-foreground/30 bg-transparent text-header-foreground hover:bg-header-foreground/10"
+    >
+      Import Pipeline
+    </Button>
   );
 
   return (

@@ -42,7 +42,7 @@ const AppMenu = () => {
 
   return (
     <div
-      className="w-full bg-stone-900 px-3 py-2.5 md:px-4"
+      className="w-full bg-header text-header-foreground px-3 py-2.5 md:px-4"
       style={{ height: `${TOP_NAV_HEIGHT}px` }}
     >
       <InlineStack align="space-between" wrap="nowrap">
@@ -56,7 +56,7 @@ const AppMenu = () => {
           </Link>
 
           {title && (
-            <CopyText className="text-white text-md font-bold truncate max-w-32 sm:max-w-48 md:max-w-64 lg:max-w-md">
+            <CopyText className="text-header-foreground text-md font-bold truncate max-w-32 sm:max-w-48 md:max-w-64 lg:max-w-md">
               {title}
             </CopyText>
           )}
@@ -84,7 +84,7 @@ const AppMenu = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="md:hidden text-white hover:bg-stone-800"
+                className="md:hidden text-header-foreground hover:bg-header/80"
                 aria-label="Open menu"
               >
                 <Menu className="h-5 w-5" />
@@ -92,10 +92,12 @@ const AppMenu = () => {
             </SheetTrigger>
             <SheetContent
               side="right"
-              className="w-fit bg-stone-900 border-stone-700 px-4"
+              className="w-fit bg-header border-header/50 px-4"
             >
               <SheetHeader>
-                <SheetTitle className="text-white">Actions</SheetTitle>
+                <SheetTitle className="text-header-foreground">
+                  Actions
+                </SheetTitle>
               </SheetHeader>
               <BlockStack gap="3" className="mt-6">
                 <ImportPipeline />

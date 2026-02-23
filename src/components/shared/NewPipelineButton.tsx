@@ -43,6 +43,7 @@ const NewPipelineButton = () => {
       variant="outline"
       onClick={handleCreate}
       data-testid="new-pipeline-button"
+      className="border-header-foreground/30 bg-transparent text-header-foreground hover:bg-header-foreground/10 hover:text-header-foreground"
     >
       New Pipeline
     </Button>

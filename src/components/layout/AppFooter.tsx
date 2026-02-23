@@ -14,7 +14,7 @@ import {
 function AppFooter() {
   return (
     <footer
-      className="footer w-full px-4 text-center bg-gray-50"
+      className="footer w-full px-4 text-center bg-footer text-footer-foreground"
       style={{ height: `${BOTTOM_FOOTER_HEIGHT}px` }}
     >
       <InlineStack className="w-full" align="space-between">
