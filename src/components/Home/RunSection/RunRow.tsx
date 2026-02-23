@@ -1,8 +1,10 @@
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { type MouseEvent } from "react";
 
 import type { PipelineRunResponse } from "@/api/types.gen";
 import { StatusBar, StatusIcon } from "@/components/shared/Status";
+import { TagList } from "@/components/shared/Tags/TagList";
 import { Button } from "@/components/ui/button";
 import { InlineStack } from "@/components/ui/layout";
 import { TableCell, TableRow } from "@/components/ui/table";
@@ -13,17 +15,36 @@ import {
 } from "@/components/ui/tooltip";
 import { Paragraph } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
+import { useBackend } from "@/providers/BackendProvider";
 import { APP_ROUTES } from "@/routes/router";
+import { fetchRunAnnotations } from "@/services/pipelineRunService";
+import { PIPELINE_TAGS_ANNOTATION } from "@/utils/annotations";
+import { TWENTY_FOUR_HOURS_IN_MS } from "@/utils/constants";
 import { formatDate } from "@/utils/date";
 import { getOverallExecutionStatusFromStats } from "@/utils/executionStatus";
 
 const RunRow = ({ run }: { run: PipelineRunResponse }) => {
   const navigate = useNavigate();
   const notify = useToastNotification();
+  const { backendUrl } = useBackend();
 
   const runId = `${run.id}`;
 
+  const { data: annotations } = useQuery({
+    queryKey: ["pipeline-run-annotations", runId],
+    queryFn: () => fetchRunAnnotations(runId, backendUrl),
+    enabled: !!runId,
+    refetchOnWindowFocus: false,
+    staleTime: TWENTY_FOUR_HOURS_IN_MS,
+  });
+
   const name = run.pipeline_name ?? "Unknown pipeline";
+
+  const tagsString = annotations?.[PIPELINE_TAGS_ANNOTATION] ?? "";
+  const tags = tagsString
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean);
 
   const createdBy = run.created_by ?? "Unknown user";
   const truncatedCreatedBy = truncateMiddle(createdBy);
@@ -100,6 +121,9 @@ const RunRow = ({ run }: { run: PipelineRunResponse }) => {
       </TableCell>
       <TableCell>
         {isTruncated ? createdByButtonWithTooltip : createdByButton}
+      </TableCell>
+      <TableCell className="max-w-64">
+        {tags && tags.length > 0 && <TagList tags={tags} />}
       </TableCell>
     </TableRow>
   );

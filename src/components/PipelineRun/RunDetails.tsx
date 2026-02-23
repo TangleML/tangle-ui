@@ -6,6 +6,7 @@ import PipelineIO from "@/components/shared/Execution/PipelineIO";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { StatusBar } from "@/components/shared/Status";
+import { Badge } from "@/components/ui/badge";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Paragraph, Text } from "@/components/ui/typography";
 import { useUserDetails } from "@/hooks/useUserDetails";
@@ -15,7 +16,9 @@ import { useExecutionData } from "@/providers/ExecutionDataProvider";
 import {
   FLEX_NODES_ANNOTATION,
   getAnnotationValue,
+  getPipelineTagsFromSpec,
   PIPELINE_NOTES_ANNOTATION,
+  PIPELINE_TAGS_ANNOTATION,
 } from "@/utils/annotations";
 import {
   flattenExecutionStatusStats,
@@ -25,7 +28,11 @@ import {
 
 import { RunNotesEditor } from "./RunNotesEditor";
 
-const EXCLUDED_ANNOTATIONS = [PIPELINE_NOTES_ANNOTATION, FLEX_NODES_ANNOTATION];
+const EXCLUDED_ANNOTATIONS = [
+  PIPELINE_NOTES_ANNOTATION,
+  FLEX_NODES_ANNOTATION,
+  PIPELINE_TAGS_ANNOTATION,
+];
 
 export const RunDetails = () => {
   const { configured } = useBackend();
@@ -76,6 +83,7 @@ export const RunDetails = () => {
     pipelineAnnotations,
     PIPELINE_NOTES_ANNOTATION,
   );
+  const tags = getPipelineTagsFromSpec(componentSpec);
 
   const displayedAnnotations = Object.entries(pipelineAnnotations)
     .filter(([key]) => !EXCLUDED_ANNOTATIONS.includes(key))
@@ -141,6 +149,18 @@ export const RunDetails = () => {
             </BlockStack>
           )}
         </BlockStack>
+      </ContentBlock>
+
+      <ContentBlock title="Tags">
+        {tags.length > 0 && (
+          <InlineStack gap="2" wrap="wrap">
+            {tags.map((tag) => (
+              <Badge key={tag} size="sm" shape="rounded" variant="outline">
+                {tag}
+              </Badge>
+            ))}
+          </InlineStack>
+        )}
       </ContentBlock>
     </BlockStack>
   );

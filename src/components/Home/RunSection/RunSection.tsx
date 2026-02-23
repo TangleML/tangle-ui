@@ -1,15 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useNavigate, useSearch } from "@tanstack/react-router";
-import { ChevronFirst, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import type { ListPipelineJobsResponse } from "@/api/types.gen";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { InlineStack } from "@/components/ui/layout";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -19,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Text } from "@/components/ui/typography";
 import { useBackend } from "@/providers/BackendProvider";
 import { getBackendStatusString } from "@/utils/backend";
 import { fetchWithErrorHandling } from "@/utils/fetchWithErrorHandling";
@@ -210,9 +211,9 @@ export const RunSection = ({ onEmptyList }: { onEmptyList?: () => void }) => {
 
   if (isLoading || isFetching || !ready) {
     return (
-      <div className="flex gap-2 items-center">
+      <InlineStack gap="2">
         <Spinner /> Loading...
-      </div>
+      </InlineStack>
     );
   }
 
@@ -271,29 +272,30 @@ export const RunSection = ({ onEmptyList }: { onEmptyList?: () => void }) => {
 
   if (!data?.pipeline_runs || data?.pipeline_runs?.length === 0) {
     return (
-      <div className="flex flex-col gap-2">
+      <BlockStack gap="4">
         {searchMarkup}
         {createdByValue ? (
-          <div>
+          <Text>
             No runs found for user: <strong>{createdByValue}</strong>.
-          </div>
+          </Text>
         ) : (
-          <div>No runs found. Run a pipeline to see it here.</div>
+          <Text>No runs found. Run a pipeline to see it here.</Text>
         )}
-      </div>
+      </BlockStack>
     );
   }
 
   return (
-    <div>
+    <BlockStack gap="4">
       {searchMarkup}
       <Table>
         <TableHeader>
           <TableRow className="text-xs">
-            <TableHead className="w-1/3">Name</TableHead>
-            <TableHead className="w-1/3">Status</TableHead>
-            <TableHead className="w-1/6">Date</TableHead>
-            <TableHead className="w-1/6">Initiated By</TableHead>
+            <TableHead className="w-1/4">Name</TableHead>
+            <TableHead className="w-1/4">Status</TableHead>
+            <TableHead className="w-3/20">Date</TableHead>
+            <TableHead className="w-3/20">Initiated By</TableHead>
+            <TableHead className="w-1/5">Tags</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -304,34 +306,38 @@ export const RunSection = ({ onEmptyList }: { onEmptyList?: () => void }) => {
       </Table>
 
       {(data.next_page_token || previousPageTokens.length > 0) && (
-        <div className="flex justify-between items-center mt-4">
-          <div className="flex gap-2">
+        <InlineStack
+          align="space-between"
+          blockAlign="center"
+          className="w-full"
+        >
+          <InlineStack gap="2">
             <Button
               variant="outline"
               onClick={handleFirstPage}
               disabled={!pageToken}
             >
-              <ChevronFirst className="h-4 w-4" />
+              <Icon name="ChevronFirst" />
             </Button>
             <Button
               variant="outline"
               onClick={handlePreviousPage}
               disabled={previousPageTokens.length === 0}
             >
-              <ChevronLeft className="h-4 w-4 mr-2" />
+              <Icon name="ChevronLeft" />
               Previous
             </Button>
-          </div>
+          </InlineStack>
           <Button
             variant="outline"
             onClick={handleNextPage}
             disabled={!data.next_page_token}
           >
             Next
-            <ChevronRight className="h-4 w-4 ml-2" />
+            <Icon name="ChevronRight" />
           </Button>
-        </div>
+        </InlineStack>
       )}
-    </div>
+    </BlockStack>
   );
 };

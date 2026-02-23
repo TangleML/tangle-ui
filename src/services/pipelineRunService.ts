@@ -6,7 +6,10 @@ import type {
 } from "@/api/types.gen";
 import { APP_ROUTES } from "@/routes/router";
 import type { PipelineRun } from "@/types/pipelineRun";
-import { PIPELINE_RUN_NOTES_ANNOTATION } from "@/utils/annotations";
+import {
+  PIPELINE_RUN_NOTES_ANNOTATION,
+  PIPELINE_TAGS_ANNOTATION,
+} from "@/utils/annotations";
 import { removeCachingStrategyFromSpec } from "@/utils/cache";
 import {
   type ComponentSpec,
@@ -242,4 +245,22 @@ export const updateRunNotes = async (
       method: "PUT",
     },
   );
+};
+
+export const copyRunTagsFromPipeline = async (
+  runId: string,
+  backendUrl: string,
+  componentSpec: ComponentSpec,
+) => {
+  const tags = componentSpec.metadata?.annotations?.[PIPELINE_TAGS_ANNOTATION];
+  if (typeof tags === "string") {
+    await fetchWithErrorHandling(
+      `${backendUrl}/api/pipeline_runs/${runId}/annotations/${PIPELINE_TAGS_ANNOTATION}?value=${encodeURIComponent(
+        tags,
+      )}`,
+      {
+        method: "PUT",
+      },
+    );
+  }
 };
