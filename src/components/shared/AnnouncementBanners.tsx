@@ -1,8 +1,9 @@
+import "@/config/announcements";
+
 import { useState } from "react";
 
 import { InfoBox } from "@/components/shared/InfoBox";
 import { BlockStack } from "@/components/ui/layout";
-import "@/config/announcements";
 import { getStorage } from "@/utils/typedStorage";
 
 interface DismissedAnnouncementsStorage {

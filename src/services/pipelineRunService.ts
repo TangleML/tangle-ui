@@ -6,7 +6,6 @@ import type {
 } from "@/api/types.gen";
 import { APP_ROUTES } from "@/routes/router";
 import type { PipelineRun } from "@/types/pipelineRun";
-import { PIPELINE_RUN_NOTES_ANNOTATION } from "@/utils/annotations";
 import { removeCachingStrategyFromSpec } from "@/utils/cache";
 import {
   type ComponentSpec,
@@ -229,17 +228,20 @@ export const fetchRunAnnotations = async (
   return fetchWithErrorHandling(url);
 };
 
-export const updateRunNotes = async (
+export const updateRunAnnotation = async (
   runId: string,
   backendUrl: string,
-  notes: string,
+  annotation: {
+    key: string;
+    value: string;
+  },
 ) => {
-  await fetchWithErrorHandling(
-    `${backendUrl}/api/pipeline_runs/${runId}/annotations/${PIPELINE_RUN_NOTES_ANNOTATION}?value=${encodeURIComponent(
-      notes,
-    )}`,
-    {
-      method: "PUT",
-    },
+  const url = new URL(
+    `${backendUrl}/api/pipeline_runs/${runId}/annotations/${annotation.key}`,
   );
+  url.searchParams.append("value", annotation.value);
+
+  await fetchWithErrorHandling(url.toString(), {
+    method: "PUT",
+  });
 };

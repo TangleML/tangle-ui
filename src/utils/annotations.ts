@@ -276,6 +276,22 @@ export function getPipelineTagsFromSpec(
   }
 
   const annotations = componentSpec.metadata?.annotations;
+
+  return getPipelineTagsFromAnnotations(annotations);
+}
+
+/**
+ * Extract the pipeline tags from annotations.
+ * @param annotations - The annotations object
+ * @returns The pipeline tags as an array of strings
+ */
+export function getPipelineTagsFromAnnotations(
+  annotations?: Annotations,
+): string[] {
+  if (!annotations) {
+    return [];
+  }
+
   const tagsString =
     getAnnotationValue(annotations, PIPELINE_TAGS_ANNOTATION) ?? "";
 

@@ -13,8 +13,13 @@ import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
 import { useBackend } from "@/providers/BackendProvider";
 import { APP_ROUTES } from "@/routes/router";
-import { updateRunNotes } from "@/services/pipelineRunService";
+import { updateRunAnnotation } from "@/services/pipelineRunService";
 import type { PipelineRun } from "@/types/pipelineRun";
+import {
+  getPipelineTagsFromSpec,
+  PIPELINE_RUN_NOTES_ANNOTATION,
+  PIPELINE_TAGS_ANNOTATION,
+} from "@/utils/annotations";
 import {
   type ArgumentType,
   type ComponentSpec,
@@ -110,7 +115,18 @@ const OasisSubmitter = ({
 
   const { mutate: saveNotes } = useMutation({
     mutationFn: (runId: string) =>
-      updateRunNotes(runId, backendUrl, runNotes.current),
+      updateRunAnnotation(runId, backendUrl, {
+        key: PIPELINE_RUN_NOTES_ANNOTATION,
+        value: runNotes.current,
+      }),
+  });
+
+  const { mutate: saveTags } = useMutation({
+    mutationFn: (runId: string) =>
+      updateRunAnnotation(runId, backendUrl, {
+        key: PIPELINE_TAGS_ANNOTATION,
+        value: getPipelineTagsFromSpec(componentSpec).join(","),
+      }),
   });
 
   const handleError = (message: string) => {
@@ -147,6 +163,12 @@ const OasisSubmitter = ({
     if (runNotes.current.trim() !== "") {
       saveNotes(response.id.toString());
     }
+
+    const tags = getPipelineTagsFromSpec(componentSpec);
+    if (tags.length > 0) {
+      saveTags(response.id.toString());
+    }
+
     setSubmitSuccess(true);
     setCooldownTime(3);
     onSubmitComplete?.();

@@ -15,7 +15,9 @@ import { useExecutionData } from "@/providers/ExecutionDataProvider";
 import {
   FLEX_NODES_ANNOTATION,
   getAnnotationValue,
+  getPipelineTagsFromSpec,
   PIPELINE_NOTES_ANNOTATION,
+  PIPELINE_TAGS_ANNOTATION,
 } from "@/utils/annotations";
 import {
   flattenExecutionStatusStats,
@@ -23,9 +25,14 @@ import {
   getOverallExecutionStatusFromStats,
 } from "@/utils/executionStatus";
 
+import { TagList } from "../shared/Tags/TagList";
 import { RunNotesEditor } from "./RunNotesEditor";
 
-const EXCLUDED_ANNOTATIONS = [PIPELINE_NOTES_ANNOTATION, FLEX_NODES_ANNOTATION];
+const EXCLUDED_ANNOTATIONS = [
+  PIPELINE_NOTES_ANNOTATION,
+  FLEX_NODES_ANNOTATION,
+  PIPELINE_TAGS_ANNOTATION,
+];
 
 export const RunDetails = () => {
   const { configured } = useBackend();
@@ -76,6 +83,7 @@ export const RunDetails = () => {
     pipelineAnnotations,
     PIPELINE_NOTES_ANNOTATION,
   );
+  const tags = getPipelineTagsFromSpec(componentSpec);
 
   const displayedAnnotations = Object.entries(pipelineAnnotations)
     .filter(([key]) => !EXCLUDED_ANNOTATIONS.includes(key))
@@ -141,6 +149,10 @@ export const RunDetails = () => {
             </BlockStack>
           )}
         </BlockStack>
+      </ContentBlock>
+
+      <ContentBlock title="Tags">
+        <TagList tags={tags} />
       </ContentBlock>
     </BlockStack>
   );
