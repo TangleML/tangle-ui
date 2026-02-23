@@ -77,9 +77,6 @@ const ComponentMarkup = ({
   isLoading,
   error,
 }: ComponentMarkupProps) => {
-  const isHighlightTasksOnComponentHoverEnabled = useFlagValue(
-    "highlight-node-on-component-hover",
-  );
   const isRemoteComponentLibrarySearchEnabled = useFlagValue(
     "remote-component-library-search",
   );
@@ -124,8 +121,6 @@ const ComponentMarkup = ({
   );
 
   const onMouseEnter = useCallback(() => {
-    if (!isHighlightTasksOnComponentHoverEnabled) return;
-
     if (!digest) return;
 
     const nodeIds = getNodeIdsByDigest(digest);
@@ -134,11 +129,9 @@ const ComponentMarkup = ({
         type: "highlight",
       });
     });
-  }, [digest, isHighlightTasksOnComponentHoverEnabled]);
+  }, [digest]);
 
   const onMouseLeave = useCallback(() => {
-    if (!isHighlightTasksOnComponentHoverEnabled) return;
-
     if (!digest) return;
 
     const nodeIds = getNodeIdsByDigest(digest);
@@ -147,11 +140,9 @@ const ComponentMarkup = ({
         type: "clear",
       });
     });
-  }, [digest, isHighlightTasksOnComponentHoverEnabled]);
+  }, [digest]);
 
   const onMouseClick = useCallback(() => {
-    if (!isHighlightTasksOnComponentHoverEnabled) return;
-
     if (!digest) return;
 
     const nodeIds = getNodeIdsByDigest(digest);
@@ -160,12 +151,7 @@ const ComponentMarkup = ({
     carousel.current = carousel.current + 1;
 
     fitNodeIntoView(nodeIds[idx]);
-  }, [
-    digest,
-    getNodeIdsByDigest,
-    fitNodeIntoView,
-    isHighlightTasksOnComponentHoverEnabled,
-  ]);
+  }, [digest, getNodeIdsByDigest, fitNodeIntoView]);
 
   const onComponentDetailsDialogOpenChange = useCallback((open: boolean) => {
     if (open) {
