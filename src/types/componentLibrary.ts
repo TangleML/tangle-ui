@@ -46,5 +46,7 @@ export type SearchResult = {
   };
 };
 
+import { ComponentLibrarySchema } from "@/schemas/componentLibrary";
+
 export const isValidComponentLibrary = (obj: object): obj is ComponentLibrary =>
-  "folders" in obj;
+  ComponentLibrarySchema.safeParse(obj).success;

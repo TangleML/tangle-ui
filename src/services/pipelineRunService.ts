@@ -5,6 +5,7 @@ import type {
   ListAnnotationsApiPipelineRunsIdAnnotationsGetResponse,
 } from "@/api/types.gen";
 import { APP_ROUTES } from "@/routes/router";
+import { CreatePipelineRunResponseSchema } from "@/schemas/api";
 import type { PipelineRun } from "@/types/pipelineRun";
 import { PIPELINE_RUN_NOTES_ANNOTATION } from "@/utils/annotations";
 import { removeCachingStrategyFromSpec } from "@/utils/cache";
@@ -46,7 +47,8 @@ export const createPipelineRun = async (
     throw new Error("Failed to create pipeline run");
   }
 
-  return response.json();
+  const json: unknown = await response.json();
+  return CreatePipelineRunResponseSchema.parse(json);
 };
 
 export const savePipelineRun = async (

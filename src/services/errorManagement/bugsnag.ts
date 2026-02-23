@@ -1,16 +1,14 @@
 import Bugsnag, { type BrowserConfig, type Event } from "@bugsnag/js";
 import BugsnagPluginReact from "@bugsnag/plugin-react";
 
+import { env } from "@/schemas/env";
+
 import { normalizeErrorMessage } from "./normalizeErrorMessage";
 
-const BUGSNAG_API_KEY = import.meta.env.VITE_BUGSNAG_API_KEY || "";
-const BUGSNAG_NOTIFY_ENDPOINT =
-  import.meta.env.VITE_BUGSNAG_NOTIFY_ENDPOINT || "https://notify.bugsnag.com";
-const BUGSNAG_SESSIONS_ENDPOINT =
-  import.meta.env.VITE_BUGSNAG_SESSIONS_ENDPOINT ||
-  "https://sessions.bugsnag.com";
-const BUGSNAG_CUSTOM_GROUPING_KEY = import.meta.env
-  .VITE_BUGSNAG_CUSTOM_GROUPING_KEY;
+const BUGSNAG_API_KEY = env.VITE_BUGSNAG_API_KEY;
+const BUGSNAG_NOTIFY_ENDPOINT = env.VITE_BUGSNAG_NOTIFY_ENDPOINT;
+const BUGSNAG_SESSIONS_ENDPOINT = env.VITE_BUGSNAG_SESSIONS_ENDPOINT;
+const BUGSNAG_CUSTOM_GROUPING_KEY = env.VITE_BUGSNAG_CUSTOM_GROUPING_KEY;
 
 const GENERIC_ERROR_CLASS = "Error";
 
