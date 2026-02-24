@@ -1,13 +1,10 @@
 import type { ConfigFlags } from "@/types/configuration";
 
-const isRemoteComponentLibraryEnabled =
-  import.meta.env.VITE_DEFAULT_REMOTE_COMPONENT_LIBRARY_BETA === "true";
-
 export const ExistingFlags: ConfigFlags = {
   ["remote-component-library-search"]: {
     name: "Published Components Library",
     description: "Enable the Published Components Library feature.",
-    default: isRemoteComponentLibraryEnabled,
+    default: true,
     category: "beta",
   },
 
