@@ -42,8 +42,11 @@ test.describe("Published Component Library", () => {
     );
     await expect(switchElement).toBeVisible({ timeout: 10000 });
 
-    await switchElement.click();
-    await expect(switchElement).toHaveAttribute("aria-checked", "true");
+    // Enable secrets if not already enabled
+    if ((await switchElement.getAttribute("aria-checked")) !== "true") {
+      await switchElement.click();
+      await expect(switchElement).toHaveAttribute("aria-checked", "true");
+    }
 
     // bypass the dialog close button in case it is out of view
     await dialog.press("Escape");
