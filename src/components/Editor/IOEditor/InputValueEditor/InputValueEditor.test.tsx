@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -13,6 +14,18 @@ const mockClearContent = vi.fn();
 
 vi.mock("@/components/Editor/IOEditor/IOZIndexEditor", () => ({
   IOZIndexEditor: () => null,
+}));
+
+vi.mock("@/services/componentService", () => ({
+  hydrateComponentReference: vi.fn((ref) =>
+    Promise.resolve({
+      ...ref,
+      spec: ref.spec || { inputs: [], outputs: [] },
+      text: ref.text || "",
+      digest: ref.digest || "mock-digest",
+      name: ref.name || "mock-component",
+    }),
+  ),
 }));
 
 vi.mock("@/providers/ComponentSpecProvider", () => ({
@@ -42,6 +55,9 @@ vi.mock("@/providers/ComponentSpecProvider", () => ({
     currentSubgraphPath: ["root"],
     setComponentSpec: mockSetComponentSpec,
   }),
+  ComponentSpecProvider: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
 }));
 
 vi.mock("@/providers/ContextPanelProvider", () => ({
@@ -95,12 +111,28 @@ describe("InputValueEditor", () => {
     default: "default value",
   };
 
+  let queryClient: QueryClient;
+
   beforeEach(() => {
     vi.clearAllMocks();
+
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+      },
+    });
   });
 
+  const renderWithQueryClient = (ui: React.ReactElement) => {
+    return render(
+      <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
+    );
+  };
+
   it("displays input description in field", () => {
-    render(<InputValueEditor input={mockInput} />);
+    renderWithQueryClient(<InputValueEditor input={mockInput} />);
 
     const descriptionInput = screen.getByLabelText(
       "Description",
@@ -109,7 +141,7 @@ describe("InputValueEditor", () => {
   });
 
   it("calls onChange when input value changes", () => {
-    render(<InputValueEditor input={mockInput} />);
+    renderWithQueryClient(<InputValueEditor input={mockInput} />);
 
     const valueInput = screen.getByLabelText("Value") as HTMLTextAreaElement;
     fireEvent.change(valueInput, { target: { value: "new value" } });
@@ -120,7 +152,7 @@ describe("InputValueEditor", () => {
   });
 
   it("calls onNameChange when input name changes", () => {
-    render(<InputValueEditor input={mockInput} />);
+    renderWithQueryClient(<InputValueEditor input={mockInput} />);
     const nameInput = screen.getByLabelText("Name") as HTMLInputElement;
     fireEvent.change(nameInput, { target: { value: "NewName" } });
     fireEvent.blur(nameInput);
@@ -131,7 +163,7 @@ describe("InputValueEditor", () => {
   });
 
   it("shows validation error when renaming to existing input name", () => {
-    render(<InputValueEditor input={mockInput} />);
+    renderWithQueryClient(<InputValueEditor input={mockInput} />);
 
     const nameInput = screen.getByLabelText("Name") as HTMLInputElement;
     fireEvent.change(nameInput, { target: { value: "ExistingInput" } });
@@ -146,7 +178,7 @@ describe("InputValueEditor", () => {
   });
 
   it("clears validation error when renaming to unique name", () => {
-    render(<InputValueEditor input={mockInput} />);
+    renderWithQueryClient(<InputValueEditor input={mockInput} />);
 
     const nameInput = screen.getByLabelText("Name") as HTMLInputElement;
 
@@ -170,7 +202,7 @@ describe("InputValueEditor", () => {
       type: "String",
     };
 
-    render(<InputValueEditor input={inputWithoutDefault} />);
+    renderWithQueryClient(<InputValueEditor input={inputWithoutDefault} />);
 
     const valueInput = screen.getByLabelText("Value") as HTMLInputElement;
     expect(valueInput.getAttribute("placeholder")).toBe(
@@ -179,7 +211,7 @@ describe("InputValueEditor", () => {
   });
 
   it("shows default value as placeholder when available", () => {
-    render(<InputValueEditor input={mockInput} />);
+    renderWithQueryClient(<InputValueEditor input={mockInput} />);
 
     const valueInput = screen.getByLabelText("Value") as HTMLInputElement;
     expect(valueInput.getAttribute("placeholder")).toBe("default value");

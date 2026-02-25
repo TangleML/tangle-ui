@@ -8,6 +8,8 @@ import {
   useState,
 } from "react";
 
+import { SuspenseWrapper } from "@/components/shared/SuspenseWrapper";
+import { usePreHydrateComponentRefs } from "@/hooks/useHydrateComponentReference";
 import { type UndoRedo, useUndoRedo } from "@/hooks/useUndoRedo";
 import { loadPipelineByName } from "@/services/pipelineService";
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
@@ -77,7 +79,7 @@ const ComponentSpecContext = createRequiredContext<ComponentSpecContextType>(
   "ComponentSpecProvider",
 );
 
-export const ComponentSpecProvider = ({
+const ComponentSpecProviderInternal = ({
   spec,
   readOnly = false,
   children,
@@ -89,6 +91,9 @@ export const ComponentSpecProvider = ({
   const [componentSpec, setComponentSpec] = useState<ComponentSpec>(
     spec ?? EMPTY_GRAPH_COMPONENT_SPEC,
   );
+
+  usePreHydrateComponentRefs(componentSpec);
+
   const [digest, setDigest] = useState<string>("");
 
   const [isLoading, setIsLoading] = useState(!!spec);
@@ -316,6 +321,18 @@ export const ComponentSpecProvider = ({
     <ComponentSpecContext.Provider value={value}>
       {children}
     </ComponentSpecContext.Provider>
+  );
+};
+
+export const ComponentSpecProvider = (props: {
+  spec?: ComponentSpec;
+  readOnly?: boolean;
+  children: ReactNode;
+}) => {
+  return (
+    <SuspenseWrapper>
+      <ComponentSpecProviderInternal {...props} />
+    </SuspenseWrapper>
   );
 };
 
