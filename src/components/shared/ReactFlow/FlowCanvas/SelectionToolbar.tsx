@@ -12,6 +12,7 @@ interface SelectionToolbarProps {
   onDelete?: () => void;
   onUpgrade?: () => void;
   onGroup?: () => void;
+  onAutoLayout?: () => void;
 }
 
 const SelectionToolbar = ({
@@ -20,6 +21,7 @@ const SelectionToolbar = ({
   onDelete,
   onUpgrade,
   onGroup,
+  onAutoLayout,
 }: SelectionToolbarProps) => {
   return (
     <InlineStack
@@ -50,6 +52,11 @@ const SelectionToolbar = ({
         callback={onCopy}
         icon="ClipboardPlus"
         testId="selection-copy-yaml"
+      />
+      <ToolbarButton
+        name="Auto Layout"
+        callback={onAutoLayout}
+        icon="LayoutGrid"
       />
       <ToolbarButton
         name="Delete All"
