@@ -42,6 +42,7 @@ import { DynamicDataDropdown } from "./DynamicDataDropdown";
 import {
   createSystemDataArgument,
   getDynamicDataDisplayInfo,
+  type TaskAnnotations,
 } from "./dynamicDataUtils";
 import {
   getDefaultValue,
@@ -50,6 +51,7 @@ import {
   getPlaceholder,
   typeSpecToString,
 } from "./utils";
+
 interface PlainArgumentInputProps {
   argument: ArgumentInput;
   inputValue: string;
@@ -59,6 +61,7 @@ interface PlainArgumentInputProps {
   disabledReset: boolean;
   isDynamicDataEnabled: boolean;
   isTaskLevel: boolean;
+  taskAnnotations?: TaskAnnotations;
   onInputChange: (e: ChangeEvent) => void;
   onBlur: () => void;
   onExpand: () => void;
@@ -81,6 +84,7 @@ const PlainArgumentInput = ({
   disabledReset,
   isDynamicDataEnabled,
   isTaskLevel,
+  taskAnnotations,
   onInputChange,
   onBlur,
   onExpand,
@@ -133,6 +137,7 @@ const PlainArgumentInput = ({
           <DynamicDataDropdown
             disabled={disabled}
             isTaskLevel={isTaskLevel}
+            taskAnnotations={taskAnnotations}
             triggerClassName={ACTIONS_BASE_CLASS}
             onOpenSecretDialog={onOpenSecretDialog}
             onSelectSystemData={onSelectSystemData}
@@ -200,10 +205,12 @@ const PlainArgumentInput = ({
 export const ArgumentInputField = ({
   argument,
   disabled = false,
+  taskAnnotations,
   onSave,
 }: {
   argument: ArgumentInput;
   disabled?: boolean;
+  taskAnnotations?: TaskAnnotations;
   onSave: (argument: ArgumentInput) => void;
 }) => {
   const notify = useToastNotification();
@@ -505,6 +512,7 @@ export const ArgumentInputField = ({
               disabledReset={disabledReset}
               isDynamicDataEnabled={isSecretUIEnabled}
               isTaskLevel={isTaskLevel}
+              taskAnnotations={taskAnnotations}
               onInputChange={handleInputChange}
               onBlur={handleBlur}
               onExpand={handleExpand}

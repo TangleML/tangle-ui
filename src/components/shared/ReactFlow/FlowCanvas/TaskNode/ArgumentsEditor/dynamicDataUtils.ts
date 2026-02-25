@@ -11,6 +11,11 @@ interface DynamicDataPropertySchema {
   description?: string;
 }
 
+interface TaskAnnotationRequirement {
+  key: string;
+  value?: string;
+}
+
 interface DynamicDataGroupSchema {
   title: string;
   icon: string;
@@ -18,6 +23,7 @@ interface DynamicDataGroupSchema {
   description?: string;
   "x-requires-dialog"?: boolean;
   "x-task-level-only"?: boolean;
+  "x-requires-task-annotation"?: TaskAnnotationRequirement;
   properties?: Record<string, DynamicDataPropertySchema>;
 }
 
@@ -34,6 +40,8 @@ interface DynamicDataOption {
   description?: string;
 }
 
+export type TaskAnnotations = Record<string, unknown>;
+
 interface DynamicDataGroup {
   id: string;
   title: string;
@@ -42,6 +50,7 @@ interface DynamicDataGroup {
   description?: string;
   requiresDialog: boolean;
   taskLevelOnly: boolean;
+  requiresTaskAnnotation: TaskAnnotationRequirement | null;
   options: DynamicDataOption[];
 }
 
@@ -85,6 +94,7 @@ function parseDynamicDataSchema(): DynamicDataGroup[] {
       description: groupSchema.description,
       requiresDialog: groupSchema["x-requires-dialog"] ?? false,
       taskLevelOnly: groupSchema["x-task-level-only"] ?? false,
+      requiresTaskAnnotation: groupSchema["x-requires-task-annotation"] ?? null,
       options,
     });
   }
@@ -93,16 +103,52 @@ function parseDynamicDataSchema(): DynamicDataGroup[] {
 }
 
 /**
+ * Checks if a task has the required annotation with the expected value.
+ */
+function hasRequiredTaskAnnotation(
+  taskAnnotations: TaskAnnotations | undefined,
+  requirement: TaskAnnotationRequirement,
+): boolean {
+  if (!taskAnnotations) return false;
+
+  const annotationValue = taskAnnotations[requirement.key];
+  if (annotationValue === undefined) return false;
+
+  if (requirement.value === undefined) {
+    // just key is required
+    return true;
+  }
+
+  if (typeof annotationValue === "string") {
+    return annotationValue === requirement.value;
+  }
+
+  return String(annotationValue) === requirement.value;
+}
+
+/**
  * Gets available dynamic data groups based on context.
  * @param isTaskLevel - Whether we're at task level (inside a subgraph) vs pipeline level (root)
+ * @param taskAnnotations - Task annotations to check requirements against
  */
-export function getDynamicDataGroups(isTaskLevel: boolean): DynamicDataGroup[] {
+export function getDynamicDataGroups(
+  isTaskLevel: boolean,
+  taskAnnotations?: TaskAnnotations,
+): DynamicDataGroup[] {
   const allGroups = parseDynamicDataSchema();
 
   return allGroups.filter((group) => {
     if (group.taskLevelOnly && !isTaskLevel) {
       return false;
     }
+
+    if (
+      group.requiresTaskAnnotation &&
+      !hasRequiredTaskAnnotation(taskAnnotations, group.requiresTaskAnnotation)
+    ) {
+      return false;
+    }
+
     return true;
   });
 }

@@ -14,11 +14,12 @@ import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
 
-import { getDynamicDataGroups } from "./dynamicDataUtils";
+import { getDynamicDataGroups, type TaskAnnotations } from "./dynamicDataUtils";
 
 interface DynamicDataDropdownProps {
   disabled: boolean;
   isTaskLevel: boolean;
+  taskAnnotations?: TaskAnnotations;
   triggerClassName?: string;
   onOpenSecretDialog: () => void;
   onSelectSystemData: (key: string) => void;
@@ -28,6 +29,7 @@ interface DynamicDataDropdownProps {
 export const DynamicDataDropdown = ({
   disabled,
   isTaskLevel,
+  taskAnnotations,
   triggerClassName,
   onOpenSecretDialog,
   onSelectSystemData,
@@ -35,7 +37,7 @@ export const DynamicDataDropdown = ({
 }: DynamicDataDropdownProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
-  const dynamicDataGroups = getDynamicDataGroups(isTaskLevel);
+  const dynamicDataGroups = getDynamicDataGroups(isTaskLevel, taskAnnotations);
 
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
