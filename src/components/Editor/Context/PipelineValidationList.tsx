@@ -134,12 +134,14 @@ export const PipelineValidationList = ({
               open={isOpen}
               onOpenChange={() => toggleGroup(group.pathKey)}
               className="w-full"
+              data-testid="validation-group"
             >
               <Tooltip>
                 <TooltipTrigger asChild className="w-full">
                   <CollapsibleTrigger asChild>
                     <Button
                       variant="ghost"
+                      data-testid="validation-group-trigger"
                       className={
                         isWarningOnly
                           ? groupTriggerWarningStyles
@@ -188,6 +190,8 @@ export const PipelineValidationList = ({
                         key={issue.id}
                         variant="outline"
                         onClick={() => onIssueSelect(issue)}
+                        data-testid="validation-issue"
+                        data-issue-level={level}
                         className={
                           level === "error"
                             ? errorButtonStyles

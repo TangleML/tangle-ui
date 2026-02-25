@@ -53,8 +53,14 @@ export const InfoBox = ({
   const widthClass = widthStyles[width];
 
   return (
-    <div className={cn("border rounded-md p-2", styles.container, widthClass)}>
-      <div className={cn("text-sm font-semibold mb-1", styles.title)}>
+    <div
+      data-testid={`info-box-${variant}`}
+      className={cn("border rounded-md p-2", styles.container, widthClass)}
+    >
+      <div
+        data-testid="info-box-title"
+        className={cn("text-sm font-semibold mb-1", styles.title)}
+      >
         {title}
       </div>
       <div className={cn("text-sm", className)}>{children}</div>

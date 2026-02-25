@@ -158,6 +158,7 @@ const TextField = ({
   >
     <Textarea
       id={`input-value-${inputName}`}
+      data-testid="input-value-field"
       value={inputValue}
       onChange={(e) => onInputChange(e.target.value)}
       onBlur={onBlur}
