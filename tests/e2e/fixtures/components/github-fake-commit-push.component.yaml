@@ -1,0 +1,32 @@
+name: Github - Fake Commit Push
+inputs:
+- {name: GITHUB_PAT}
+- {name: Repository}
+- {name: Path}
+- {name: Content}
+outputs:
+- {name: Result}
+metadata:
+  annotations:
+    author: Your Name <email@address.com>
+implementation:
+  container:
+    image: alpine
+    command:
+    - sh
+    - -ec
+    - |
+      result_path=$4
+      github_pat=$0
+
+      github_pat_value=$(cat "$github_pat")
+      echo "github_pat_value: $github_pat_value"
+
+      mkdir -p "$(dirname "$result_path")"
+
+      echo "github_pat_value: $github_pat_value" > "$result_path"
+    - {inputPath: GITHUB_PAT}
+    - {inputValue: Repository}
+    - {inputValue: Path}
+    - {inputValue: Content}
+    - {outputPath: Result}

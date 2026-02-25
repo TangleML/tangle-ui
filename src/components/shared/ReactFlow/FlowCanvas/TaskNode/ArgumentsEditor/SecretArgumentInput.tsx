@@ -25,6 +25,8 @@ export const SecretArgumentInput = ({
         "w-full px-3 py-1 rounded-md border ",
         isRemoved && "opacity-50",
       )}
+      data-testid="secret-argument-input"
+      data-secret-name={secretName}
     >
       <Icon name="Lock" size="sm" className="text-amber-600 shrink-0" />
       <Paragraph size="sm" className="truncate flex-1 text-amber-600">
