@@ -40,8 +40,11 @@ test.describe("Published Component Library - Lifecycle", () => {
     );
     await expect(switchElement).toBeVisible({ timeout: 10000 });
 
-    await switchElement.click();
-    await expect(switchElement).toHaveAttribute("aria-checked", "true");
+    // Enable secrets if not already enabled
+    if ((await switchElement.getAttribute("aria-checked")) !== "true") {
+      await switchElement.click();
+      await expect(switchElement).toHaveAttribute("aria-checked", "true");
+    }
 
     await dialog.press("Escape");
     await expect(dialog).toBeHidden();
