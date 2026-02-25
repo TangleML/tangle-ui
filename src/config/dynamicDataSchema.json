@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Dynamic Data Configuration",
+  "type": "object",
+  "groups": {
+    "secrets": {
+      "title": "Secrets",
+      "icon": "Lock",
+      "x-text-color": "text-amber-600!",
+      "x-requires-dialog": true,
+      "description": "Reference secrets stored in the secrets manager"
+    },
+    "multi_node": {
+      "title": "Multi-Node Data",
+      "icon": "Network",
+      "x-text-color": "text-cyan-600!",
+      "x-task-level-only": true,
+      "description": "Data available in multi-node execution context",
+      "properties": {
+        "system/multi_node/node_index": {
+          "title": "Node Index",
+          "description": "Index of the current node in multi-node execution (0-based)"
+        },
+        "system/multi_node/number_of_nodes": {
+          "title": "Number of Nodes",
+          "description": "Total number of nodes in multi-node execution"
+        },
+        "system/multi_node/node_0_address": {
+          "title": "Node 0 Address",
+          "description": "Network address of node 0 (master node) in multi-node execution"
+        },
+        "system/multi_node/all_node_addresses": {
+          "title": "All Node Addresses",
+          "description": "List of network addresses for all nodes in multi-node execution"
+        }
+      }
+    }
+  }
+}

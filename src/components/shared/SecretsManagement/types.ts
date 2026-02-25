@@ -1,4 +1,7 @@
-import type { DynamicDataArgument } from "@/utils/componentSpec";
+import type {
+  DynamicDataArgument,
+  SecretArgument,
+} from "@/utils/componentSpec";
 
 /**
  * Represents a secret stored in the secrets management system.
@@ -28,6 +31,15 @@ export function isValidSecretValue(value: string): boolean {
 }
 
 /**
+ * Type guard to check if dynamicData contains a secret.
+ */
+function isSecretDynamicData(
+  dynamicData: DynamicDataArgument["dynamicData"],
+): dynamicData is SecretArgument {
+  return "secret" in dynamicData;
+}
+
+/**
  * Creates a SecretArgument from a secret name.
  * @param secretName - The name of the secret
  * @returns A SecretArgument object
@@ -37,12 +49,15 @@ export function createSecretArgument(secretName: string): DynamicDataArgument {
 }
 
 /**
- * Extracts the secret name from a SecretArgument.
- * @param arg - The SecretArgument
- * @returns The secret name
+ * Extracts the secret name from a DynamicDataArgument that contains a secret.
+ * @param arg - The DynamicDataArgument containing a secret
+ * @returns The secret name, or null if not a secret argument
  */
-export function extractSecretName(arg: DynamicDataArgument): string {
-  return arg.dynamicData.secret.name;
+export function extractSecretName(arg: DynamicDataArgument): string | null {
+  if (isSecretDynamicData(arg.dynamicData)) {
+    return arg.dynamicData.secret.name;
+  }
+  return null;
 }
 
 /**

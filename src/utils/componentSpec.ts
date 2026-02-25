@@ -410,15 +410,28 @@ interface SecretReference {
 /**
  * Represents the component argument value that comes from a secret.
  */
-interface SecretArgument {
+export interface SecretArgument {
   /**
    * References a secret by name.
    */
   secret: SecretReference;
 }
 
+/**
+ * Represents dynamic data from system sources (e.g., multi-node execution context).
+ * The key is the data identifier (e.g., "system/multi_node/node_index").
+ */
+export type SystemDataArgument = {
+  [key: string]: Record<string, unknown>;
+};
+
+/**
+ * Union type for all dynamic data sources.
+ */
+export type DynamicDataValue = SecretArgument | SystemDataArgument;
+
 export interface DynamicDataArgument {
-  dynamicData: SecretArgument;
+  dynamicData: DynamicDataValue;
 }
 
 export type ArgumentType =
@@ -557,10 +570,21 @@ export const isGraphInputArgument = (
 ): arg is GraphInputArgument =>
   typeof arg === "object" && arg !== null && "graphInput" in arg;
 
+/**
+ * Checks if an argument is any type of dynamic data argument.
+ */
+export const isDynamicDataArgument = (
+  arg?: ArgumentType,
+): arg is DynamicDataArgument =>
+  typeof arg === "object" && arg !== null && "dynamicData" in arg;
+
+/**
+ * Checks if an argument is a secret-based dynamic data argument.
+ */
 export const isSecretArgument = (
   arg?: ArgumentType,
 ): arg is DynamicDataArgument =>
-  typeof arg === "object" &&
-  arg !== null &&
-  "dynamicData" in arg &&
+  isDynamicDataArgument(arg) &&
+  typeof arg.dynamicData === "object" &&
+  arg.dynamicData !== null &&
   "secret" in arg.dynamicData;
