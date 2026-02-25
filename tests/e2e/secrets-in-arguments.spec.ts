@@ -92,17 +92,14 @@ test.describe("Secrets in Component Arguments", () => {
     ).toBeVisible();
 
     await githubPatField.hover();
-    const dynamicDataDropdown = githubPatField.getByTestId(
-      "dynamic-data-dropdown-trigger",
-    );
-    await expect(dynamicDataDropdown).toBeVisible();
-    await dynamicDataDropdown.click();
 
-    const selectSecretOption = page.getByRole("menuitem", {
-      name: "Select Secret...",
-    });
-    await expect(selectSecretOption).toBeVisible();
-    await selectSecretOption.click();
+    // When only secrets are available (no task annotations), the component renders
+    // a direct button that opens the secret dialog immediately
+    const directSecretButton = githubPatField.getByTestId(
+      "open-secret-dialog-button",
+    );
+    await expect(directSecretButton).toBeVisible();
+    await directSecretButton.click();
 
     const selectSecretDialog = page.getByTestId("select-secret-dialog");
     await expect(

@@ -39,6 +39,9 @@ export const DynamicDataDropdown = ({
 
   const dynamicDataGroups = getDynamicDataGroups(isTaskLevel, taskAnnotations);
 
+  const isSecretsOnly =
+    dynamicDataGroups.length === 1 && dynamicDataGroups[0].requiresDialog;
+
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
     onOpenChange?.(open);
@@ -49,6 +52,22 @@ export const DynamicDataDropdown = ({
     onOpenChange?.(false);
     onOpenSecretDialog();
   };
+
+  if (isSecretsOnly) {
+    return (
+      <Button
+        className={triggerClassName}
+        disabled={disabled}
+        variant="ghost"
+        size="xs"
+        title="Use Dynamic Data"
+        data-testid="open-secret-dialog-button"
+        onClick={handleSecretDialogOpen}
+      >
+        <Icon name="Lock" />
+      </Button>
+    );
+  }
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
