@@ -36,6 +36,7 @@ export function UpdateSecretButton({
     <Button
       onClick={() => updateSecretMutation()}
       disabled={disabled || isPending}
+      data-testid="update-secret-submit-button"
     >
       Update Secret
       {isPending && <Spinner />}

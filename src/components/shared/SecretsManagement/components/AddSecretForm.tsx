@@ -103,6 +103,7 @@ export function AddSecretForm({
           disabled={isReplace}
           aria-invalid={!!state.nameError}
           className={cn(state.nameError && "border-destructive")}
+          data-testid="secret-name-input"
         />
         {state.nameError && (
           <Text size="xs" tone="critical">
@@ -123,6 +124,7 @@ export function AddSecretForm({
           onChange={handleValueChange}
           aria-invalid={!!state.valueError}
           className={cn(state.valueError && "border-destructive")}
+          data-testid="secret-value-input"
         />
         {state.valueError && (
           <Text size="xs" tone="critical">
@@ -135,7 +137,11 @@ export function AddSecretForm({
       </BlockStack>
 
       <InlineStack gap="2" align="end" fill>
-        <Button variant="outline" onClick={onCancel}>
+        <Button
+          variant="outline"
+          onClick={onCancel}
+          data-testid="secret-form-cancel-button"
+        >
           Cancel
         </Button>
         {existingSecret ? (
