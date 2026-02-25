@@ -1,3 +1,4 @@
+import { Link as RouterLink } from "@tanstack/react-router";
 import { Menu } from "lucide-react";
 import { useState } from "react";
 
@@ -18,13 +19,11 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
+import { SETTINGS_PATH } from "@/routes/router";
 import { DOCUMENTATION_URL, TOP_NAV_HEIGHT } from "@/utils/constants";
 
-import BackendStatus from "../shared/BackendStatus";
 import TooltipButton from "../shared/Buttons/TooltipButton";
 import NewPipelineButton from "../shared/NewPipelineButton";
-import { ManageSecretsButton } from "../shared/SecretsManagement/ManageSecretsButton";
-import { PersonalPreferences } from "../shared/Settings/PersonalPreferences";
 
 const AppMenu = () => {
   const requiresAuthorization = isAuthorizationRequired();
@@ -71,9 +70,11 @@ const AppMenu = () => {
 
           {/* Always visible settings */}
           <InlineStack gap="2" wrap="nowrap">
-            <BackendStatus />
-            <PersonalPreferences />
-            <ManageSecretsButton />
+            <RouterLink to={`${SETTINGS_PATH}/backend` as string}>
+              <TooltipButton tooltip="Settings">
+                <Icon name="Settings" />
+              </TooltipButton>
+            </RouterLink>
             {documentationButton}
             {requiresAuthorization && <TopBarAuthentication />}
           </InlineStack>
