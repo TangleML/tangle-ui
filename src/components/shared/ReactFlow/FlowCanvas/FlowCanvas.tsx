@@ -17,8 +17,8 @@ import {
   useStoreApi,
   type XYPosition,
 } from "@xyflow/react";
-import type { DragEvent } from "react";
-import { useEffect, useRef, useState } from "react";
+import type { DragEvent, Ref } from "react";
+import { useEffect, useImperativeHandle, useRef, useState } from "react";
 
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
 import { BlockStack } from "@/components/ui/layout";
@@ -74,6 +74,7 @@ import {
 } from "./types";
 import addFlexNode from "./utils/addFlexNode";
 import addTask from "./utils/addTask";
+import { autoLayoutNodes, type LayoutAlgorithm } from "./utils/autolayout";
 import { createConnectedIONode } from "./utils/createConnectedIONode";
 import { duplicateNodes } from "./utils/duplicateNodes";
 import { isPositionInNode } from "./utils/geometry";
@@ -103,10 +104,19 @@ const useScheduleExecutionOnceWhenConditionMet = (
   }, [condition, callback]);
 };
 
-const FlowCanvas = (props: ReactFlowProps & { readOnly?: boolean }) => {
+export interface FlowCanvasRef {
+  autoLayout: (algorithm: LayoutAlgorithm) => Promise<void>;
+}
+
+interface FlowCanvasProps extends ReactFlowProps {
+  readOnly?: boolean;
+  ref?: Ref<FlowCanvasRef>;
+}
+
+const FlowCanvas = ({ ref, ...props }: FlowCanvasProps) => {
   return (
     <SuspenseWrapper>
-      <FlowCanvasContent {...props} />
+      <FlowCanvasContent {...props} ref={ref} />
     </SuspenseWrapper>
   );
 };
@@ -114,9 +124,10 @@ const FlowCanvas = (props: ReactFlowProps & { readOnly?: boolean }) => {
 const FlowCanvasContent = ({
   readOnly,
   nodesConnectable,
+  ref,
   children,
   ...rest
-}: ReactFlowProps & { readOnly?: boolean }) => {
+}: FlowCanvasProps) => {
   const initialCanvasLoaded = useRef(false);
 
   const { clearContent } = useContextPanel();
@@ -988,6 +999,38 @@ const FlowCanvasContent = ({
 
   const selectionMode = getSelectionMode();
 
+  const handleAutoLayout = async (algorithm: LayoutAlgorithm) => {
+    const layoutedNodes = autoLayoutNodes(nodes, edges, algorithm);
+
+    const updatedSubgraphSpec = updateNodePositions(
+      layoutedNodes,
+      currentSubgraphSpec,
+    );
+
+    const updatedRootSpec = updateSubgraphSpec(
+      componentSpec,
+      currentSubgraphPath,
+      updatedSubgraphSpec,
+    );
+
+    setComponentSpec(updatedRootSpec);
+
+    requestAnimationFrame(() => {
+      reactFlowInstance?.fitView({
+        maxZoom: 1,
+        duration: 300,
+      });
+    });
+  };
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      autoLayout: handleAutoLayout,
+    }),
+    [handleAutoLayout],
+  );
+
   return (
     <BlockStack fill>
       <SubgraphBreadcrumbs />
@@ -1057,5 +1100,7 @@ const FlowCanvasContent = ({
     </BlockStack>
   );
 };
+
+FlowCanvas.displayName = "FlowCanvas";
 
 export default FlowCanvas;
