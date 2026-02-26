@@ -15,7 +15,7 @@ export const createFlexNode = (
   flexNode: FlexNodeData,
   readOnly: boolean = false,
 ) => {
-  const { id, position, size, zIndex } = flexNode;
+  const { id, position, size, zIndex, locked } = flexNode;
 
   return {
     id,
@@ -25,5 +25,8 @@ export const createFlexNode = (
     type: "flex",
     connectable: false,
     zIndex,
+    selectable: !locked,
+    draggable: !locked,
+    className: locked ? "pointer-events-auto!" : undefined,
   } as Node;
 };

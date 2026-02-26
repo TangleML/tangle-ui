@@ -10,34 +10,47 @@ import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Textarea } from "@/components/ui/textarea";
 import { Paragraph, Text } from "@/components/ui/typography";
+import { cn } from "@/lib/utils";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { updateSubgraphSpec } from "@/utils/subgraphUtils";
 
 import { StackingControls } from "../../FlowControls/StackingControls";
 import { updateFlexNodeInComponentSpec } from "./interface";
+import LockToggle from "./LockToggle";
 import type { FlexNodeData } from "./types";
 import { DEFAULT_BORDER_COLOR } from "./utils";
 
 interface FlexNodeEditorProps {
   flexNode: FlexNodeData;
   readOnly?: boolean;
+  toggleLock?: () => void;
 }
 
 export const FlexNodeEditor = ({
   flexNode,
   readOnly = false,
+  toggleLock,
 }: FlexNodeEditorProps) => {
-  const { metadata, zIndex, size, position } = flexNode;
+  const { metadata, zIndex, size, position, locked = false } = flexNode;
 
   return (
     <BlockStack gap="4" className="h-full px-2">
-      <Text size="lg" weight="semibold" className="wrap-anywhere">
-        Sticky Note
-      </Text>
+      <InlineStack gap="2" blockAlign="center">
+        <Text size="lg" weight="semibold" className="wrap-anywhere">
+          Sticky Note
+        </Text>
+        {toggleLock && (
+          <LockToggle
+            locked={locked}
+            onToggleLock={toggleLock}
+            className={cn(locked && "text-red-500 hover:text-red-500")}
+          />
+        )}
+      </InlineStack>
 
-      <ContentEditor flexNode={flexNode} readOnly={readOnly} />
+      <ContentEditor flexNode={flexNode} readOnly={readOnly || locked} />
 
-      <ColorEditor flexNode={flexNode} readOnly={readOnly} />
+      <ColorEditor flexNode={flexNode} readOnly={readOnly || locked} />
 
       <KeyValueList
         title="Layout"
@@ -81,7 +94,7 @@ export const FlexNodeEditor = ({
         ]}
       />
 
-      {!readOnly && <ZIndexEditor flexNode={flexNode} />}
+      {!readOnly && !locked && <ZIndexEditor flexNode={flexNode} />}
     </BlockStack>
   );
 };

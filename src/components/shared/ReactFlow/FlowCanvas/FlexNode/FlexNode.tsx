@@ -5,7 +5,7 @@ import {
   type ResizeDragEvent,
   type ResizeParams,
 } from "@xyflow/react";
-import { useEffect, useState } from "react";
+import { type MouseEvent, useEffect, useState } from "react";
 
 import { BlockStack } from "@/components/ui/layout";
 import { Paragraph } from "@/components/ui/typography";
@@ -17,6 +17,7 @@ import { updateSubgraphSpec } from "@/utils/subgraphUtils";
 import { FlexNodeEditor } from "./FlexNodeEditor";
 import { InlineTextEditor } from "./InlineTextEditor";
 import { updateFlexNodeInComponentSpec } from "./interface";
+import LockToggle from "./LockToggle";
 import type { FlexNodeData } from "./types";
 
 type FlexNodeProps = NodeProps<Node<FlexNodeData>>;
@@ -24,10 +25,11 @@ type FlexNodeProps = NodeProps<Node<FlexNodeData>>;
 const MIN_SIZE = { width: 50, height: 50 };
 
 const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
-  const { properties, readOnly } = data;
+  const { properties, readOnly, locked = false } = data;
   const { title, content, color, borderColor } = properties;
 
   const [isInlineEditing, setIsInlineEditing] = useState(false);
+  const [isContextPanelFocus, setIsContextPanelFocus] = useState(false);
 
   const {
     setContent,
@@ -41,6 +43,53 @@ const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
     componentSpec,
     setComponentSpec,
   } = useComponentSpec();
+
+  const toggleLock = () => {
+    const updatedSubgraphSpec = updateFlexNodeInComponentSpec(
+      currentSubgraphSpec,
+      {
+        ...data,
+        locked: !locked,
+      },
+    );
+
+    const newRootSpec = updateSubgraphSpec(
+      componentSpec,
+      currentSubgraphPath,
+      updatedSubgraphSpec,
+    );
+
+    setComponentSpec(newRootSpec);
+  };
+
+  const handleClick = (e: MouseEvent) => {
+    if (locked) {
+      e.stopPropagation();
+      setIsContextPanelFocus(true);
+      setContent(
+        <FlexNodeEditor
+          key={`${id}-${locked}`}
+          flexNode={data}
+          readOnly={readOnly}
+          toggleLock={toggleLock}
+        />,
+      );
+      setContextPanelOpen(true);
+    }
+  };
+
+  const handleDoubleClick = (e: MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+
+    if (locked) {
+      return;
+    }
+
+    if (!readOnly) {
+      setIsInlineEditing(true);
+    }
+  };
 
   const handleResizeEnd = (_: ResizeDragEvent, params: ResizeParams) => {
     const width = Math.max(params.width, MIN_SIZE.width);
@@ -88,8 +137,18 @@ const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
 
   useEffect(() => {
     if (selected) {
-      setContent(<FlexNodeEditor flexNode={data} readOnly={readOnly} />);
+      setIsContextPanelFocus(true);
+      setContent(
+        <FlexNodeEditor
+          key={`${id}-${locked}`}
+          flexNode={data}
+          readOnly={readOnly}
+          toggleLock={toggleLock}
+        />,
+      );
       setContextPanelOpen(true);
+    } else {
+      setIsContextPanelFocus(false);
     }
 
     return () => {
@@ -97,7 +156,20 @@ const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
         clearContent();
       }
     };
-  }, [data, readOnly, selected]);
+  }, [selected]);
+
+  useEffect(() => {
+    if (isContextPanelFocus) {
+      setContent(
+        <FlexNodeEditor
+          key={`${id}-${locked}`}
+          flexNode={data}
+          readOnly={readOnly}
+          toggleLock={toggleLock}
+        />,
+      );
+    }
+  }, [data, locked, isContextPanelFocus, id, readOnly]);
 
   const isTransparent = color === "transparent";
   const isBorderTransparent = borderColor === "transparent";
@@ -116,7 +188,7 @@ const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
       <div
         key={id}
         className={cn(
-          "p-1 rounded-lg h-full w-full",
+          "p-1 rounded-lg h-full w-full group",
           readOnly && selected && "ring-2 ring-ring",
           isTransparent && "border-2 border-solid",
           isTransparent &&
@@ -124,12 +196,14 @@ const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
             !content &&
             isBorderTransparent &&
             "border-2 border-dashed border-warning!",
+          locked && "cursor-grab",
         )}
         style={{
           backgroundColor: color,
           borderColor: isTransparent ? borderColor : undefined,
         }}
-        onDoubleClick={() => setIsInlineEditing(true)}
+        onClick={handleClick}
+        onDoubleClick={handleDoubleClick}
       >
         <div
           className={cn(
@@ -137,10 +211,21 @@ const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
             isTransparent ? "bg-transparent" : "bg-white/40",
           )}
         >
-          <BlockStack gap="1">
-            <Paragraph size="sm" weight="semibold">
-              {title}
-            </Paragraph>
+          <BlockStack gap="1" className="w-full">
+            <LockToggle
+              size="xs"
+              locked={locked}
+              onToggleLock={toggleLock}
+              showOnlyOnHover
+              className="absolute top-1 right-1"
+            />
+
+            {title && (
+              <Paragraph size="sm" weight="semibold">
+                {title}
+              </Paragraph>
+            )}
+
             {isInlineEditing ? (
               <InlineTextEditor
                 value={content}
