@@ -2,12 +2,15 @@ import { extractSecretName } from "@/components/shared/SecretsManagement/types";
 import {
   type ArgumentType,
   type GraphSpec,
+  isDynamicDataArgument,
   isGraphInputArgument,
   isSecretArgument,
   isTaskOutputArgument,
 } from "@/utils/componentSpec";
 import { getTaskDisplayName } from "@/utils/getComponentName";
 import { getValue } from "@/utils/string";
+
+import { getDynamicDataDisplayInfo } from "../ArgumentsEditor/dynamicDataUtils";
 
 /**
  * Formats display values for TaskNode input handles.
@@ -39,7 +42,11 @@ export const getDisplayValue = (
   }
 
   if (isSecretArgument(value)) {
-    return extractSecretName(value);
+    return extractSecretName(value) ?? undefined;
+  }
+
+  if (isDynamicDataArgument(value)) {
+    return getDynamicDataDisplayInfo(value.dynamicData).displayValue;
   }
 
   // For non-connected values, use the original logic

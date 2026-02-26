@@ -9,7 +9,7 @@ import {
 import type { TaskSpecOutput } from "@/api/types.gen";
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { PipelineRunsList } from "@/components/shared/PipelineRunDisplay/PipelineRunsList";
-import { SecretArgumentInput } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/ArgumentsEditor/SecretArgumentInput";
+import { DynamicDataArgumentInput } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/ArgumentsEditor/DynamicDataArgumentInput";
 import { typeSpecToString } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/ArgumentsEditor/utils";
 import { getArgumentsFromInputs } from "@/components/shared/ReactFlow/FlowCanvas/utils/getArgumentsFromInputs";
 import { SelectSecretDialog } from "@/components/shared/SecretsManagement/SelectSecretDialog";
@@ -394,8 +394,9 @@ const ArgumentField = ({
 
         <div className="relative group w-full">
           {isValueSecret && secretName ? (
-            <SecretArgumentInput
-              secretName={secretName}
+            <DynamicDataArgumentInput
+              displayValue={secretName}
+              icon="Lock"
               onClear={handleClearSecret}
             />
           ) : (

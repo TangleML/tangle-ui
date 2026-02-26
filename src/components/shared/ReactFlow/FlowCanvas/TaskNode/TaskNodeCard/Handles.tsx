@@ -7,6 +7,7 @@ import {
 } from "react";
 import { useEffect, useRef } from "react";
 
+import { getDynamicDataDisplayInfo } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/ArgumentsEditor/dynamicDataUtils";
 import { Icon } from "@/components/ui/icon";
 import {
   Tooltip,
@@ -19,7 +20,7 @@ import { useTaskNode } from "@/providers/TaskNodeProvider";
 import {
   type ArgumentType,
   type InputSpec,
-  isSecretArgument,
+  isDynamicDataArgument,
   type OutputSpec,
 } from "@/utils/componentSpec";
 
@@ -62,7 +63,10 @@ export const InputHandle = ({
   const hasValue = value !== undefined && value !== null;
   const hasDefault = input.default !== undefined && input.default !== "";
 
-  const isSecret = useMemo(() => isSecretArgument(rawValue), [rawValue]);
+  const dynamicDataInfo = useMemo(() => {
+    if (!isDynamicDataArgument(rawValue)) return null;
+    return getDynamicDataDisplayInfo(rawValue.dynamicData);
+  }, [rawValue]);
 
   const handleHandleClick = useCallback(
     (e: ReactMouseEvent<HTMLDivElement>) => {
@@ -198,11 +202,11 @@ export const InputHandle = ({
               className="flex w-fit max-w-1/2 min-w-0 items-center gap-1"
               data-testid={`input-handle-value-${input.name}`}
             >
-              {isSecret && (
+              {dynamicDataInfo && (
                 <Icon
-                  name="Lock"
+                  name={dynamicDataInfo.icon}
                   size="xs"
-                  className="text-amber-600 shrink-0"
+                  className={cn("shrink-0", dynamicDataInfo.textColor)}
                 />
               )}
               <Tooltip>
@@ -211,7 +215,7 @@ export const InputHandle = ({
                     className={cn(
                       "text-xs text-gray-800! truncate inline-block text-right pr-2",
                       !hasValue && "text-gray-400! italic",
-                      isSecret && "text-amber-700!",
+                      dynamicDataInfo?.textColor,
                     )}
                   >
                     {hasValue ? value : input.default}
@@ -219,7 +223,7 @@ export const InputHandle = ({
                 </TooltipTrigger>
                 <TooltipContent side="top">
                   <div className="text-xs">
-                    {isSecret && "Secret: "}
+                    {dynamicDataInfo && `${dynamicDataInfo.groupTitle}: `}
                     {hasValue ? value : input.default}
                   </div>
                 </TooltipContent>

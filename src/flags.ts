@@ -40,9 +40,9 @@ export const ExistingFlags: ConfigFlags = {
   },
 
   ["secrets"]: {
-    name: "Secrets",
+    name: "Secrets and Dynamic Data",
     description:
-      "Enable the Secrets feature. This will allow you to store secrets, tokens, api keys and other sensitive information in secured way.",
+      "Enable the Dynamic Data and Secrets feature. This will allow you to store secrets, tokens, api keys and other sensitive information in secured way.",
     default: false,
     category: "beta",
   },

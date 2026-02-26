@@ -10,10 +10,7 @@ import {
 
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { SelectSecretDialog } from "@/components/shared/SecretsManagement/SelectSecretDialog";
-import {
-  createSecretArgument,
-  extractSecretName,
-} from "@/components/shared/SecretsManagement/types";
+import { createSecretArgument } from "@/components/shared/SecretsManagement/types";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
@@ -34,10 +31,18 @@ import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import type { ArgumentInput } from "@/types/arguments";
-import { isGraphImplementation, isSecretArgument } from "@/utils/componentSpec";
+import {
+  isDynamicDataArgument,
+  isGraphImplementation,
+} from "@/utils/componentSpec";
 
 import { ArgumentInputDialog } from "./ArgumentInputDialog";
-import { SecretArgumentInput } from "./SecretArgumentInput";
+import { DynamicDataArgumentInput } from "./DynamicDataArgumentInput";
+import { DynamicDataDropdown } from "./DynamicDataDropdown";
+import {
+  createSystemDataArgument,
+  getDynamicDataDisplayInfo,
+} from "./dynamicDataUtils";
 import {
   getDefaultValue,
   getInputValue,
@@ -52,7 +57,8 @@ interface PlainArgumentInputProps {
   disabled: boolean;
   disabledCopy: boolean;
   disabledReset: boolean;
-  isSecretUIEnabled: boolean;
+  isDynamicDataEnabled: boolean;
+  isTaskLevel: boolean;
   onInputChange: (e: ChangeEvent) => void;
   onBlur: () => void;
   onExpand: () => void;
@@ -60,6 +66,7 @@ interface PlainArgumentInputProps {
   onReset: () => void;
   onRemove: () => void;
   onOpenSecretDialog: () => void;
+  onSelectSystemData: (key: string) => void;
 }
 
 const ACTIONS_BASE_CLASS =
@@ -72,7 +79,8 @@ const PlainArgumentInput = ({
   disabled,
   disabledCopy,
   disabledReset,
-  isSecretUIEnabled,
+  isDynamicDataEnabled,
+  isTaskLevel,
   onInputChange,
   onBlur,
   onExpand,
@@ -80,104 +88,114 @@ const PlainArgumentInput = ({
   onReset,
   onRemove,
   onOpenSecretDialog,
-}: PlainArgumentInputProps) => (
-  <>
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Input
-          id={argument.inputSpec.name}
-          value={inputValue}
-          onChange={onInputChange}
-          onBlur={onBlur}
-          placeholder={placeholder}
-          required={!argument.inputSpec.optional}
-          className={cn(
-            "flex-1 group-hover:pr-8",
-            argument.isRemoved &&
-              !argument.inputSpec.optional &&
-              "border-red-200",
-            argument.isRemoved &&
-              argument.inputSpec.optional &&
-              "border-gray-300 text-muted-foreground",
-            argument.isRemoved && "opacity-80 focus:opacity-100 border-dashed",
-          )}
-          disabled={disabled}
-        />
-      </TooltipTrigger>
-      {placeholder && !inputValue && (
-        <TooltipContent className="z-9999">{placeholder}</TooltipContent>
-      )}
-    </Tooltip>
+  onSelectSystemData,
+}: PlainArgumentInputProps) => {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-    <InlineStack className="absolute right-0 top-1/2 -translate-y-1/2 mr-1 px-1 bg-sidebar">
-      {isSecretUIEnabled && (
+  return (
+    <>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Input
+            id={argument.inputSpec.name}
+            value={inputValue}
+            onChange={onInputChange}
+            onBlur={onBlur}
+            placeholder={placeholder}
+            required={!argument.inputSpec.optional}
+            className={cn(
+              "flex-1 group-hover:pr-8",
+              argument.isRemoved &&
+                !argument.inputSpec.optional &&
+                "border-red-200",
+              argument.isRemoved &&
+                argument.inputSpec.optional &&
+                "border-gray-300 text-muted-foreground",
+              argument.isRemoved &&
+                "opacity-80 focus:opacity-100 border-dashed",
+            )}
+            disabled={disabled}
+          />
+        </TooltipTrigger>
+        {placeholder && !inputValue && (
+          <TooltipContent className="z-9999">{placeholder}</TooltipContent>
+        )}
+      </Tooltip>
+
+      <InlineStack
+        className={cn(
+          "absolute right-0 top-1/2 -translate-y-1/2 mr-1 px-1 bg-sidebar",
+          isDropdownOpen && "flex",
+        )}
+        data-testid="dynamic-data-dropdown"
+      >
+        {isDynamicDataEnabled && (
+          <DynamicDataDropdown
+            disabled={disabled}
+            isTaskLevel={isTaskLevel}
+            triggerClassName={ACTIONS_BASE_CLASS}
+            onOpenSecretDialog={onOpenSecretDialog}
+            onSelectSystemData={onSelectSystemData}
+            onOpenChange={setIsDropdownOpen}
+          />
+        )}
         <TooltipButton
-          onClick={onOpenSecretDialog}
+          onClick={onExpand}
           className={ACTIONS_BASE_CLASS}
           disabled={disabled}
           variant="ghost"
           size="xs"
-          tooltip="Use Secret"
-          data-testid="use-secret-button"
+          tooltip="Multiline Editor"
+          data-testid="multiline-editor-button"
         >
-          <Icon name="Lock" />
+          <Icon name="Maximize2" />
         </TooltipButton>
-      )}
-      <TooltipButton
-        onClick={onExpand}
-        className={ACTIONS_BASE_CLASS}
-        disabled={disabled}
-        variant="ghost"
-        size="xs"
-        tooltip="Multiline Editor"
-      >
-        <Icon name="Maximize2" />
-      </TooltipButton>
-      {!disabledCopy && (
-        <TooltipButton
-          onClick={onCopy}
-          className={cn(ACTIONS_BASE_CLASS, {
-            invisible: argument.isRemoved || disabledCopy,
-          })}
-          disabled={disabledCopy}
-          variant="ghost"
-          size="xs"
-          tooltip="Copy Value"
-        >
-          <Icon name="Copy" />
-        </TooltipButton>
-      )}
-      {!disabledReset && (
-        <TooltipButton
-          onClick={onReset}
-          className={cn(ACTIONS_BASE_CLASS, {
-            invisible: argument.isRemoved,
-          })}
-          disabled={disabledReset}
-          variant="ghost"
-          size="xs"
-          tooltip="Reset to Default"
-        >
-          <Icon name="ListRestart" />
-        </TooltipButton>
-      )}
-      <TooltipButton
-        onClick={onRemove}
-        disabled={disabled}
-        variant="ghost"
-        size="xs"
-        className={ACTIONS_BASE_CLASS}
-        tooltip={argument.isRemoved ? "Include Argument" : "Exclude Argument"}
-      >
-        {argument.isRemoved ? (
-          <Icon name="SquarePlus" />
-        ) : (
-          <Icon name="Delete" />
+        {!disabledCopy && (
+          <TooltipButton
+            onClick={onCopy}
+            className={cn(ACTIONS_BASE_CLASS, {
+              invisible: argument.isRemoved || disabledCopy,
+            })}
+            disabled={disabledCopy}
+            variant="ghost"
+            size="xs"
+            tooltip="Copy Value"
+          >
+            <Icon name="Copy" />
+          </TooltipButton>
         )}
-      </TooltipButton>
-    </InlineStack>
-  </>
-);
+        {!disabledReset && (
+          <TooltipButton
+            onClick={onReset}
+            className={cn(ACTIONS_BASE_CLASS, {
+              invisible: argument.isRemoved,
+            })}
+            disabled={disabledReset}
+            variant="ghost"
+            size="xs"
+            tooltip="Reset to Default"
+          >
+            <Icon name="ListRestart" />
+          </TooltipButton>
+        )}
+        <TooltipButton
+          onClick={onRemove}
+          disabled={disabled}
+          variant="ghost"
+          size="xs"
+          className={ACTIONS_BASE_CLASS}
+          tooltip={argument.isRemoved ? "Include Argument" : "Exclude Argument"}
+        >
+          {argument.isRemoved ? (
+            <Icon name="SquarePlus" />
+          ) : (
+            <Icon name="Delete" />
+          )}
+        </TooltipButton>
+      </InlineStack>
+    </>
+  );
+};
 
 export const ArgumentInputField = ({
   argument,
@@ -203,17 +221,20 @@ export const ArgumentInputField = ({
   const undoValue = useMemo(() => argument, []);
 
   const isSecretUIEnabled = useFlagValue("secrets");
-  const isValueSecret = useMemo(
-    () => isSecretUIEnabled && isSecretArgument(argument.value),
+  // Multi-node data is available when editing task arguments (always true in TaskNode context)
+  // The "pipeline level" restriction only applies to pipeline input values, not task arguments
+  const isTaskLevel = true;
+
+  const isDynamicData = useMemo(
+    () => isSecretUIEnabled && isDynamicDataArgument(argument.value),
     [argument.value, isSecretUIEnabled],
   );
-  const secretName = useMemo(
-    () =>
-      isSecretArgument(argument.value)
-        ? extractSecretName(argument.value)
-        : null,
-    [argument.value],
-  );
+
+  const dynamicDataDisplayInfo = useMemo(() => {
+    if (!isDynamicDataArgument(argument.value)) return null;
+    return getDynamicDataDisplayInfo(argument.value.dynamicData);
+  }, [argument.value]);
+
   const hint = argument.inputSpec.annotations?.hint as string | undefined;
 
   const handleInputChange = (e: ChangeEvent) => {
@@ -311,7 +332,16 @@ export const ArgumentInputField = ({
     [argument, onSave],
   );
 
-  const handleClearSecret = useCallback(() => {
+  const handleSelectSystemData = useCallback(
+    (key: string) => {
+      const systemDataArg = createSystemDataArgument(key);
+      setInputValue("");
+      onSave({ ...argument, value: systemDataArg, isRemoved: false });
+    },
+    [argument, onSave],
+  );
+
+  const handleClearDynamicData = useCallback(() => {
     if (disabled) return;
     setInputValue("");
     onSave({ ...argument, value: "", isRemoved: false });
@@ -457,12 +487,13 @@ export const ArgumentInputField = ({
         </InlineStack>
 
         <div className="relative group w-full">
-          {isValueSecret ? (
-            <SecretArgumentInput
-              secretName={secretName}
+          {isDynamicData && dynamicDataDisplayInfo ? (
+            <DynamicDataArgumentInput
+              displayValue={dynamicDataDisplayInfo.displayValue}
+              icon={dynamicDataDisplayInfo.icon}
               isRemoved={argument.isRemoved ?? false}
               disabled={disabled}
-              onClear={handleClearSecret}
+              onClear={handleClearDynamicData}
             />
           ) : (
             <PlainArgumentInput
@@ -472,7 +503,8 @@ export const ArgumentInputField = ({
               disabled={disabled}
               disabledCopy={disabledCopy}
               disabledReset={disabledReset}
-              isSecretUIEnabled={isSecretUIEnabled}
+              isDynamicDataEnabled={isSecretUIEnabled}
+              isTaskLevel={isTaskLevel}
               onInputChange={handleInputChange}
               onBlur={handleBlur}
               onExpand={handleExpand}
@@ -480,6 +512,7 @@ export const ArgumentInputField = ({
               onReset={handleReset}
               onRemove={handleRemove}
               onOpenSecretDialog={handleOpenSecretDialog}
+              onSelectSystemData={handleSelectSystemData}
             />
           )}
         </div>

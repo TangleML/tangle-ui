@@ -92,9 +92,17 @@ test.describe("Secrets in Component Arguments", () => {
     ).toBeVisible();
 
     await githubPatField.hover();
-    const useSecretButton = githubPatField.getByTestId("use-secret-button");
-    await expect(useSecretButton).toBeVisible();
-    await useSecretButton.click();
+    const dynamicDataDropdown = githubPatField.getByTestId(
+      "dynamic-data-dropdown-trigger",
+    );
+    await expect(dynamicDataDropdown).toBeVisible();
+    await dynamicDataDropdown.click();
+
+    const selectSecretOption = page.getByRole("menuitem", {
+      name: "Select Secret...",
+    });
+    await expect(selectSecretOption).toBeVisible();
+    await selectSecretOption.click();
 
     const selectSecretDialog = page.getByTestId("select-secret-dialog");
     await expect(
@@ -116,7 +124,9 @@ test.describe("Secrets in Component Arguments", () => {
       "Dialog should close after selection",
     ).toBeHidden();
 
-    const secretInput = githubPatField.getByTestId("secret-argument-input");
+    const secretInput = githubPatField.getByTestId(
+      "dynamic-data-argument-input",
+    );
     await expect(
       secretInput,
       "Secret input should be visible after selection",
