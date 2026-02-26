@@ -33,6 +33,11 @@ export default defineConfig({
   base: "/",
   build: {
     manifest: "assets-registry.json",
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, "src/index.tsx"),
+      },
+    },
   },
   resolve: {
     alias: {
