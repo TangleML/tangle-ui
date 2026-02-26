@@ -25,3 +25,4 @@ export interface PipelineRunFilters {
 }
 
 export type SortField = NonNullable<PipelineRunFilters["sort_field"]>;
+export type SortDirection = NonNullable<PipelineRunFilters["sort_direction"]>;
