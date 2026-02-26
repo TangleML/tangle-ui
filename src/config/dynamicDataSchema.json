@@ -15,6 +15,9 @@
       "icon": "Network",
       "x-text-color": "text-cyan-600!",
       "x-task-level-only": true,
+      "x-requires-task-annotation": {
+        "key": "tangleml.com/launchers/kubernetes/multi_node/number_of_nodes"
+      },
       "description": "Data available in multi-node execution context",
       "properties": {
         "system/multi_node/node_index": {
