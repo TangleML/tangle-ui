@@ -47,6 +47,9 @@ export const BOTTOM_FOOTER_HEIGHT = 30; // px
 
 export const DEFAULT_NODE_DIMENSIONS = { w: 300, h: undefined };
 
+export const FONT_SIZE_MD = 12;
+export const FONT_SIZE_SM = 10;
+
 export enum ComponentSearchFilter {
   NAME = "Name",
   INPUTNAME = "Input Name",
