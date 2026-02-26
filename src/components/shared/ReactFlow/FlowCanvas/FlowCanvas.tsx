@@ -999,8 +999,16 @@ const FlowCanvasContent = ({
 
   const selectionMode = getSelectionMode();
 
-  const handleAutoLayout = async (algorithm: LayoutAlgorithm) => {
-    const layoutedNodes = autoLayoutNodes(nodes, edges, algorithm);
+  const applyAutoLayout = (
+    nodesToLayout: Node[],
+    edgesToConsider: Edge[],
+    algorithm: LayoutAlgorithm = "sugiyama",
+  ) => {
+    const layoutedNodes = autoLayoutNodes(
+      nodesToLayout,
+      edgesToConsider,
+      algorithm,
+    );
 
     const updatedSubgraphSpec = updateNodePositions(
       layoutedNodes,
@@ -1014,6 +1022,10 @@ const FlowCanvasContent = ({
     );
 
     setComponentSpec(updatedRootSpec);
+  };
+
+  const handleAutoLayout = async (algorithm: LayoutAlgorithm) => {
+    applyAutoLayout(nodes, edges, algorithm);
 
     requestAnimationFrame(() => {
       reactFlowInstance?.fitView({
@@ -1021,6 +1033,16 @@ const FlowCanvasContent = ({
         duration: 300,
       });
     });
+  };
+
+  const onAutoLayout = () => {
+    const connectedEdges = edges.filter(
+      (edge) =>
+        selectedNodes.some((node) => node.id === edge.source) ||
+        selectedNodes.some((node) => node.id === edge.target),
+    );
+
+    applyAutoLayout(selectedNodes, connectedEdges);
   };
 
   useImperativeHandle(
@@ -1080,6 +1102,7 @@ const FlowCanvasContent = ({
             onCopy={!readOnly ? undefined : onCopy}
             onUpgrade={!readOnly && canUpgrade ? onUpgradeNodes : undefined}
             onGroup={!readOnly && canGroup ? onGroupNodes : undefined}
+            onAutoLayout={onAutoLayout}
           />
         </NodeToolbar>
         {children}
