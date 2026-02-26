@@ -22,6 +22,10 @@ import {
 import { useBackend } from "@/providers/BackendProvider";
 import { getBackendStatusString } from "@/utils/backend";
 import { fetchWithErrorHandling } from "@/utils/fetchWithErrorHandling";
+import {
+  filtersToApiString,
+  parseFilterParam,
+} from "@/utils/pipelineRunFilterUtils";
 
 import RunRow from "./RunRow";
 
@@ -42,29 +46,14 @@ export const RunSection = ({ onEmptyList }: { onEmptyList?: () => void }) => {
   const isCreatedByMeDefault = useFlagValue("created-by-me-default");
   const dataVersion = useRef(0);
 
-  // Parse filter into a dictionary
-  const parseFilter = (filter?: string): Record<string, string> => {
-    if (!filter) return {};
+  // Supports both JSON (new) and key:value (legacy) URL formats
+  const filters = parseFilterParam(search.filter);
+  const createdByValue = filters.created_by;
 
-    const filterDict: Record<string, string> = {};
-    const parts = filter.split(",");
-
-    for (const part of parts) {
-      const [key, value] = part.split(":");
-      if (key && value) {
-        filterDict[key.trim()] = value.trim();
-      }
-    }
-
-    return filterDict;
-  };
-
-  const filterDict = parseFilter(search.filter);
-  const createdByValue = filterDict.created_by;
+  const apiFilterString = filtersToApiString(filters);
 
   const [searchUser, setSearchUser] = useState(createdByValue ?? "");
 
-  // Determine if toggle should be on and what text to show
   const useCreatedByMe = createdByValue !== undefined;
   const toggleText = createdByValue
     ? `Created by ${createdByValue}`
@@ -75,13 +64,14 @@ export const RunSection = ({ onEmptyList }: { onEmptyList?: () => void }) => {
 
   const { data, isLoading, isFetching, error, isFetched } =
     useQuery<ListPipelineJobsResponse>({
-      queryKey: ["runs", backendUrl, pageToken, search.filter],
+      queryKey: ["runs", backendUrl, pageToken, apiFilterString],
       refetchOnWindowFocus: false,
       enabled: configured && available,
       queryFn: async () => {
         const u = new URL(PIPELINE_RUNS_QUERY_URL, backendUrl);
         if (pageToken) u.searchParams.set(PAGE_TOKEN_QUERY_KEY, pageToken);
-        if (search.filter) u.searchParams.set(FILTER_QUERY_KEY, search.filter);
+        if (apiFilterString)
+          u.searchParams.set(FILTER_QUERY_KEY, apiFilterString);
 
         u.searchParams.set(INCLUDE_PIPELINE_NAME_QUERY_KEY, "true");
         u.searchParams.set(INCLUDE_EXECUTION_STATS_QUERY_KEY, "true");
@@ -108,22 +98,22 @@ export const RunSection = ({ onEmptyList }: { onEmptyList?: () => void }) => {
 
     if (value) {
       // If there's already a created_by filter, keep it; otherwise use "created_by:me"
-      if (!filterDict.created_by) {
+      if (!filters.created_by) {
         nextSearch.filter = CREATED_BY_ME_FILTER;
         setSearchUser("");
       }
     } else {
-      // Remove created_by from filter, but keep other filters
-      const updatedFilterDict = { ...filterDict };
-      delete updatedFilterDict.created_by;
+      const updatedFilters = { ...filters };
+      delete updatedFilters.created_by;
 
-      // Convert back to string format
-      const remainingFilters = Object.entries(updatedFilterDict)
-        .map(([key, value]) => `${key}:${value}`)
-        .join(",");
+      const hasRemainingFilters = Object.values(updatedFilters).some((val) => {
+        if (val == null || val === "") return false;
+        if (Array.isArray(val) && val.length === 0) return false;
+        return true;
+      });
 
-      if (remainingFilters) {
-        nextSearch.filter = remainingFilters;
+      if (hasRemainingFilters) {
+        nextSearch.filter = JSON.stringify(updatedFilters);
       } else {
         if (isCreatedByMeDefault) {
           nextSearch.filter = "";
@@ -143,16 +133,8 @@ export const RunSection = ({ onEmptyList }: { onEmptyList?: () => void }) => {
     const nextSearch: RunSectionSearch = { ...search };
     delete nextSearch.page_token;
 
-    // Create or update the created_by filter
-    const updatedFilterDict = { ...filterDict };
-    updatedFilterDict.created_by = searchUser.trim();
-
-    // Convert back to string format
-    const newFilter = Object.entries(updatedFilterDict)
-      .map(([key, value]) => `${key}:${value}`)
-      .join(",");
-
-    nextSearch.filter = newFilter;
+    const updatedFilters = { ...filters, created_by: searchUser.trim() };
+    nextSearch.filter = JSON.stringify(updatedFilters);
 
     setPreviousPageTokens([]);
     navigate({ to: pathname, search: nextSearch });
