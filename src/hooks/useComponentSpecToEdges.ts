@@ -11,6 +11,7 @@ import {
   type ComponentSpec,
   type GraphInputArgument,
   type GraphSpec,
+  isDynamicDataArgument,
   isSecretArgument,
   type TaskOutputArgument,
   type TaskSpec,
@@ -85,7 +86,7 @@ const createEdgeForArgument = (
     return [createGraphInputEdge(taskId, inputName, argument.graphInput)];
   }
 
-  if (isSecretArgument(argument)) {
+  if (isSecretArgument(argument) || isDynamicDataArgument(argument)) {
     return [];
   }
 
