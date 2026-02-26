@@ -225,12 +225,11 @@ export function PipelineRunFiltersBar({
           </div>
 
           {/* Created By Filter */}
-          <div className="shrink-0">
-            <CreatedByFilter
-              value={filters.created_by}
-              onChange={(value) => setFilter("created_by", value)}
-            />
-          </div>
+          <CreatedByFilter
+            value={filters.created_by}
+            onChange={(value) => setFilterDebounced("created_by", value)}
+            onClear={() => setFilter("created_by", undefined)}
+          />
 
           {/* Status Filter */}
           <Select
