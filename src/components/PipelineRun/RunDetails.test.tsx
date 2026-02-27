@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { screen, waitFor } from "@testing-library/dom";
 import { cleanup, render } from "@testing-library/react";
 import { ReactFlowProvider } from "@xyflow/react";
+import { Suspense } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type {
@@ -18,6 +19,22 @@ import { ExecutionDataProvider } from "@/providers/ExecutionDataProvider";
 import type { ComponentSpec } from "@/utils/componentSpec";
 
 import { RunDetails } from "./RunDetails";
+
+// Use vi.hoisted to create mocks that can be referenced in vi.mock
+const { mockHydrateComponentReference } = vi.hoisted(() => ({
+  mockHydrateComponentReference: vi.fn(),
+}));
+
+vi.mock("@/services/componentService", () => ({
+  hydrateComponentReference: mockHydrateComponentReference,
+  fetchAndStoreComponentLibrary: vi.fn(),
+  fetchAndStoreComponent: vi.fn(),
+  fetchAndStoreComponentByUrl: vi.fn(),
+  getComponentText: vi.fn(),
+  fetchComponentTextFromUrl: vi.fn(),
+  parseComponentData: vi.fn(),
+  getExistingAndNewUserComponent: vi.fn(),
+}));
 
 // Mock the hooks and services
 vi.mock("@tanstack/react-router", async (importOriginal) => {
@@ -77,6 +94,11 @@ describe("<RunDetails/>", () => {
           },
           inputs: [],
           outputs: [],
+          implementation: {
+            graph: {
+              tasks: {},
+            },
+          },
         },
       },
     },
@@ -104,10 +126,8 @@ describe("<RunDetails/>", () => {
     inputs: [],
     outputs: [],
     implementation: {
-      container: {
-        image: "test-image",
-        command: ["test-command"],
-        args: ["test-arg"],
+      graph: {
+        tasks: {},
       },
     },
   };
@@ -122,6 +142,14 @@ describe("<RunDetails/>", () => {
   beforeEach(() => {
     // Reset all mocks
     vi.clearAllMocks();
+
+    // Mock hydrateComponentReference to return the spec immediately
+    mockHydrateComponentReference.mockResolvedValue({
+      spec: mockComponentSpec,
+      name: mockComponentSpec.name,
+      digest: "test-digest",
+      text: "name: Test Pipeline",
+    });
 
     vi.mocked(usePipelineRunData).mockReturnValue({
       executionData: {
@@ -159,15 +187,17 @@ describe("<RunDetails/>", () => {
   const renderWithProviders = (component: React.ReactElement) => {
     return render(component, {
       wrapper: ({ children }) => (
-        <ComponentSpecProvider spec={mockComponentSpec}>
-          <QueryClientProvider client={queryClient}>
-            <ExecutionDataProvider pipelineRunId="123">
-              <ReactFlowProvider>
-                <ContextPanelProvider>{children}</ContextPanelProvider>
-              </ReactFlowProvider>
-            </ExecutionDataProvider>
-          </QueryClientProvider>
-        </ComponentSpecProvider>
+        <QueryClientProvider client={queryClient}>
+          <Suspense fallback={<div>Loading...</div>}>
+            <ComponentSpecProvider spec={mockComponentSpec}>
+              <ExecutionDataProvider pipelineRunId="123">
+                <ReactFlowProvider>
+                  <ContextPanelProvider>{children}</ContextPanelProvider>
+                </ReactFlowProvider>
+              </ExecutionDataProvider>
+            </ComponentSpecProvider>
+          </Suspense>
+        </QueryClientProvider>
       ),
     });
   };
@@ -176,48 +206,63 @@ describe("<RunDetails/>", () => {
     test("should render pipeline name", async () => {
       renderWithProviders(<RunDetails />);
 
-      await waitFor(() => {
-        expect(screen.getByText("Test Pipeline")).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText("Test Pipeline")).toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
     });
 
     test("should render run metadata", async () => {
       renderWithProviders(<RunDetails />);
 
-      await waitFor(() => {
-        expect(screen.getByText("Run Info")).toBeInTheDocument();
-        expect(screen.getByText("123")).toBeInTheDocument();
-        expect(screen.getByText("456")).toBeInTheDocument();
-        expect(screen.getByText("test-user")).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText("Run Info")).toBeInTheDocument();
+          expect(screen.getByText("123")).toBeInTheDocument();
+          expect(screen.getByText("456")).toBeInTheDocument();
+          expect(screen.getByText("test-user")).toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
     });
 
     test("should render description", async () => {
       renderWithProviders(<RunDetails />);
 
-      await waitFor(() => {
-        expect(
-          screen.getByText("Test pipeline description"),
-        ).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(
+            screen.getByText("Test pipeline description"),
+          ).toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
     });
 
     test("should render status", async () => {
       renderWithProviders(<RunDetails />);
 
-      await waitFor(() => {
-        expect(screen.getByText("Status")).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText("Status")).toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
     });
 
     test("should render annotations", async () => {
       renderWithProviders(<RunDetails />);
 
-      await waitFor(() => {
-        expect(screen.getByText("Annotations")).toBeInTheDocument();
-        expect(screen.getByText("test-annotation")).toBeInTheDocument();
-        expect(screen.getByText("test-value")).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText("Annotations")).toBeInTheDocument();
+          expect(screen.getByText("test-annotation")).toBeInTheDocument();
+          expect(screen.getByText("test-value")).toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
     });
   });
 
@@ -235,11 +280,14 @@ describe("<RunDetails/>", () => {
 
       renderWithProviders(<RunDetails />);
 
-      await waitFor(() => {
-        expect(
-          screen.getByText("Pipeline Run could not be loaded."),
-        ).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(
+            screen.getByText("Pipeline Run could not be loaded."),
+          ).toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
     });
 
     test("should show loading screen when data is loading", async () => {
@@ -255,9 +303,14 @@ describe("<RunDetails/>", () => {
 
       renderWithProviders(<RunDetails />);
 
-      await waitFor(() => {
-        expect(screen.getByText("Loading run details...")).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(
+            screen.getByText("Loading run details..."),
+          ).toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
     });
 
     test("should show backend not configured message when backend is not configured", async () => {
@@ -276,11 +329,16 @@ describe("<RunDetails/>", () => {
 
       renderWithProviders(<RunDetails />);
 
-      await waitFor(() => {
-        expect(
-          screen.getByText("Configure a backend to view execution artifacts."),
-        ).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(
+            screen.getByText(
+              "Configure a backend to view execution artifacts.",
+            ),
+          ).toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
     });
   });
 });

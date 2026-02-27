@@ -251,7 +251,9 @@ async function cleanupTestSecret(
 
 /**
  * Drops the Github - Fake Commit Push component onto the canvas
- * by reading the fixture file and using drag-and-drop
+ * by reading the fixture file and using drag-and-drop.
+ *
+ * Waits for component hydration to complete before returning.
  */
 async function dropGithubFakeCommitPushComponent(page: Page) {
   const buffer = readFileSync(
@@ -284,8 +286,9 @@ async function dropGithubFakeCommitPushComponent(page: Page) {
 
   const componentName = "Github - Fake Commit Push";
   const node = page.locator(`[data-testid="rf__node-task_${componentName}"]`);
+
   await expect(node, "Component node should appear on canvas").toBeVisible({
-    timeout: 10000,
+    timeout: 30000,
   });
 
   return node;

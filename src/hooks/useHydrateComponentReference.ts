@@ -1,7 +1,12 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseQueries, useSuspenseQuery } from "@tanstack/react-query";
 
 import { hydrateComponentReference } from "@/services/componentService";
-import type { ComponentReference } from "@/utils/componentSpec";
+import type { ComponentReference, ComponentSpec } from "@/utils/componentSpec";
+import {
+  isGraphImplementation,
+  isNotMaterializedComponentReference,
+} from "@/utils/componentSpec";
+import { TWENTY_FOUR_HOURS_IN_MS } from "@/utils/constants";
 import { componentSpecToText } from "@/utils/yaml";
 
 /**
@@ -30,6 +35,10 @@ function getComponentQueryKey(component: ComponentReference): string {
   return `empty:${JSON.stringify(component)}`;
 }
 
+const generateHydrationQueryKey = (component: ComponentReference) => {
+  return ["component", "hydrate", getComponentQueryKey(component)];
+};
+
 /**
  * Hydrate a component reference by fetching the text and spec from the URL or local storage
  * This is experimental function, that potentially can replace all other methods of getting ComponentRef.
@@ -43,12 +52,12 @@ export function useHydrateComponentReference(component: ComponentReference) {
    * Otherwise we dont cache result.
    */
 
-  const componentQueryKey = getComponentQueryKey(component);
+  const componentQueryKey = generateHydrationQueryKey(component);
 
-  const staleTime = componentQueryKey ? 1000 * 60 * 60 * 1 : 0;
+  const staleTime = componentQueryKey[2] ? 1000 * 60 * 60 * 1 : 0;
 
   const { data: componentRef } = useSuspenseQuery({
-    queryKey: ["component", "hydrate", componentQueryKey],
+    queryKey: componentQueryKey,
     staleTime,
     retryOnMount: true,
     queryFn: () => hydrateComponentReference(component),
@@ -76,4 +85,23 @@ export function useGuaranteedHydrateComponentReference(
   }
 
   return hydratedComponentRef;
+}
+
+export function usePreHydrateComponentRefs(componentSpec: ComponentSpec) {
+  const tasks = isGraphImplementation(componentSpec.implementation)
+    ? componentSpec.implementation.graph?.tasks
+    : {};
+  const componentRefs = Object.values(tasks)
+    .map((task) => task.componentRef)
+    .filter((ref) => ref && !isNotMaterializedComponentReference(ref));
+
+  const results = useSuspenseQueries({
+    queries: componentRefs.map((ref) => ({
+      queryKey: generateHydrationQueryKey(ref),
+      queryFn: () => hydrateComponentReference(ref),
+      staleTime: TWENTY_FOUR_HOURS_IN_MS,
+    })),
+  });
+
+  return results.map((result) => result.data);
 }
