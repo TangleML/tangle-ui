@@ -6,3 +6,7 @@
 export function getGitHubLibraryId(repoName: string) {
   return `github__${repoName.toLowerCase().replace(/ /g, "_")}`;
 }
+
+export function getYamlLibraryId(yamlUrl: string) {
+  return `yaml__${yamlUrl.toLowerCase().replace(/ /g, "_")}`;
+}
