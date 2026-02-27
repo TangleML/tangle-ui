@@ -76,6 +76,11 @@ export const ExecutionDetails = ({
       });
     }
 
+    const jobName = executionJobName(containerState);
+    if (jobName) {
+      items.push({ label: "Job name", value: jobName });
+    }
+
     const podName = executionPodName(containerState);
     if (podName) {
       items.push({ label: "Pod Name", value: podName });
@@ -137,6 +142,29 @@ export const ExecutionDetails = ({
     </ContentBlock>
   );
 };
+
+function executionJobName(
+  containerState?: GetContainerExecutionStateResponse,
+): string | null {
+  if (!containerState || !("debug_info" in containerState)) {
+    return null;
+  }
+
+  const debugInfo = containerState.debug_info;
+
+  if (!isRecord(debugInfo)) {
+    return null;
+  }
+
+  if (
+    isRecord(debugInfo.kubernetes_job) &&
+    typeof debugInfo.kubernetes_job.job_name === "string"
+  ) {
+    return debugInfo.kubernetes_job.job_name;
+  }
+
+  return null;
+}
 
 function executionPodName(
   containerState?: GetContainerExecutionStateResponse,
