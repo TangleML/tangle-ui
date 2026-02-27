@@ -11,10 +11,11 @@ const BUGSNAG_SESSIONS_ENDPOINT =
   "https://sessions.bugsnag.com";
 const BUGSNAG_CUSTOM_GROUPING_KEY = import.meta.env
   .VITE_BUGSNAG_CUSTOM_GROUPING_KEY;
+const TANGLE_ENV = import.meta.env.VITE_TANGLE_ENV;
 
 const GENERIC_ERROR_CLASS = "Error";
 
-export const IS_BUGSNAG_ENABLED = Boolean(BUGSNAG_API_KEY);
+export const IS_BUGSNAG_ENABLED = Boolean(BUGSNAG_API_KEY && TANGLE_ENV);
 
 const getBugsnagConfig = (): BrowserConfig => {
   return {
@@ -23,6 +24,7 @@ const getBugsnagConfig = (): BrowserConfig => {
       notify: BUGSNAG_NOTIFY_ENDPOINT,
       sessions: BUGSNAG_SESSIONS_ENDPOINT,
     },
+    releaseStage: TANGLE_ENV,
     plugins: [new BugsnagPluginReact()],
     onError: handleBugsnagError,
   };
@@ -55,7 +57,7 @@ export const handleBugsnagError = (event: Event): void => {
 };
 
 export const initializeBugsnag = (): void => {
-  if (!BUGSNAG_API_KEY) {
+  if (!BUGSNAG_API_KEY || !TANGLE_ENV) {
     return;
   }
 
