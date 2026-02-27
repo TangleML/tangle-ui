@@ -16,16 +16,22 @@ import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import {
   FLEX_NODES_ANNOTATION,
   PIPELINE_NOTES_ANNOTATION,
+  PIPELINE_TAGS_ANNOTATION,
 } from "@/utils/annotations";
 import { getComponentFileFromList } from "@/utils/componentStore";
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 
 import PipelineIO from "../../shared/Execution/PipelineIO";
 import { PipelineNotesEditor } from "./PipelineNotesEditor";
+import { PipelineTagsEditor } from "./PipelineTagsEditor";
 import { PipelineValidationList } from "./PipelineValidationList";
 import RenamePipeline from "./RenamePipeline";
 
-const EXCLUDED_ANNOTATIONS = [PIPELINE_NOTES_ANNOTATION, FLEX_NODES_ANNOTATION];
+const EXCLUDED_ANNOTATIONS = [
+  PIPELINE_NOTES_ANNOTATION,
+  FLEX_NODES_ANNOTATION,
+  PIPELINE_TAGS_ANNOTATION,
+];
 
 const PipelineDetails = () => {
   const notify = useToastNotification();
@@ -146,6 +152,10 @@ const PipelineDetails = () => {
 
       <ContentBlock title="Notes">
         <PipelineNotesEditor />
+      </ContentBlock>
+
+      <ContentBlock title="Tags">
+        <PipelineTagsEditor />
       </ContentBlock>
     </BlockStack>
   );

@@ -6,6 +6,7 @@ import { PipelineRunInfoCondensed } from "@/components/shared/PipelineRunDisplay
 import { PipelineRunsList } from "@/components/shared/PipelineRunDisplay/PipelineRunsList";
 import { usePipelineRuns } from "@/components/shared/PipelineRunDisplay/usePipelineRuns";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
+import { TagList } from "@/components/shared/Tags/TagList";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Icon } from "@/components/ui/icon";
@@ -19,6 +20,7 @@ import { TableCell, TableRow } from "@/components/ui/table";
 import { Paragraph } from "@/components/ui/typography";
 import { EDITOR_PATH } from "@/routes/router";
 import { deletePipeline } from "@/services/pipelineService";
+import { getPipelineTagsFromSpec } from "@/utils/annotations";
 import type { ComponentReferenceWithSpec } from "@/utils/componentStore";
 import { formatDate } from "@/utils/date";
 
@@ -35,12 +37,17 @@ interface PipelineRowProps {
 const PipelineRow = withSuspenseWrapper(
   ({
     name,
+    componentRef,
     modificationTime,
     onDelete,
     isSelected = false,
     onSelect,
   }: PipelineRowProps) => {
     const navigate = useNavigate();
+
+    const componentSpec = componentRef?.spec;
+
+    const tags = getPipelineTagsFromSpec(componentSpec);
 
     const handleRowClick = (e: MouseEvent) => {
       // Don't navigate if clicking on the popover trigger
@@ -96,6 +103,9 @@ const PipelineRow = withSuspenseWrapper(
           <Paragraph tone="subdued" size="xs">
             {formattedDate}
           </Paragraph>
+        </TableCell>
+        <TableCell className="max-w-64">
+          {tags && tags.length > 0 && <TagList tags={tags} />}
         </TableCell>
         <TableCell>
           {name && <PipelineRecentRunInfo pipelineName={name} />}
