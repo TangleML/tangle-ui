@@ -35,6 +35,7 @@ export default defineConfig({
     manifest: "assets-registry.json",
     rollupOptions: {
       input: {
+        index: path.resolve(__dirname, "index.html"),
         main: path.resolve(__dirname, "src/index.tsx"),
       },
     },
