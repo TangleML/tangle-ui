@@ -114,7 +114,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
-    "@hey-api/openapi-ts": "^0.93.0",
+    "@hey-api/openapi-ts": "^0.93.1",
     "@playwright/test": "^1.58.2",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
@@ -130,7 +130,7 @@
     "@vitest/coverage-v8": "^3.2.4",
     "babel-plugin-react-compiler": "^1.0.0",
     "eslint": "^9.39.2",
-    "eslint-plugin-playwright": "^2.7.1",
+    "eslint-plugin-playwright": "^2.8.0",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-compiler": "^19.1.0-rc.2",
     "fake-indexeddb": "^6.2.5",
