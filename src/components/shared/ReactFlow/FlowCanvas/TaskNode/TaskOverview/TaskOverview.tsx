@@ -24,6 +24,7 @@ import ArgumentsSection from "../ArgumentsEditor/ArgumentsSection";
 import ConfigurationSection from "./ConfigurationSection";
 import IOSection from "./IOSection/IOSection";
 import Logs, { OpenLogsInNewWindowLink } from "./logs";
+import { LogsTabExtension } from "./LogsTabExtension";
 import OutputsList from "./OutputsList";
 import RenameTask from "./RenameTask";
 
@@ -147,6 +148,7 @@ const TaskOverview = ({ taskNode }: TaskOverviewProps) => {
           </TabsContent>
           {readOnly && !isSubgraph && (
             <TabsContent value="logs">
+              <LogsTabExtension executionId={executionId} status={status} />
               {!!executionId && (
                 <div className="flex w-full justify-end pr-4">
                   <OpenLogsInNewWindowLink
