@@ -81,6 +81,9 @@ export const ExecutionDetails = ({
       items.push({ label: "Job name", value: jobName });
     }
 
+    const jobStatusItems = getKubernetesJobStatusItems(containerState);
+    items.push(...jobStatusItems);
+
     const podName = executionPodName(containerState);
     if (podName) {
       items.push({ label: "Pod Name", value: podName });
@@ -233,4 +236,90 @@ function getExecutionJobLinks(
   }
 
   return result;
+}
+
+function getPath(obj: unknown, path: string): unknown {
+  const parts = path.split(".");
+  let current: unknown = obj;
+
+  for (const part of parts) {
+    if (!isRecord(current)) {
+      return undefined;
+    }
+    current = current[part];
+  }
+
+  return current;
+}
+
+function getString(obj: unknown, path: string): string | undefined {
+  const value = getPath(obj, path);
+  return typeof value === "string" ? value : undefined;
+}
+
+function getNumber(obj: unknown, path: string): number | undefined {
+  const value = getPath(obj, path);
+  return typeof value === "number" ? value : undefined;
+}
+
+function getKubernetesJobStatusItems(
+  containerState?: GetContainerExecutionStateResponse,
+): AttributeProps[] {
+  const items: AttributeProps[] = [];
+
+  const debugInfo = containerState?.debug_info;
+  if (!isRecord(debugInfo)) {
+    return items;
+  }
+
+  const jobSpec = getPath(debugInfo, "kubernetes_job.debug_job.spec");
+  const jobStatus = getPath(debugInfo, "kubernetes_job.debug_job.status");
+
+  const startTime = getString(jobStatus, "startTime");
+  const completionTime = getString(jobStatus, "completionTime");
+
+  if (startTime && completionTime) {
+    items.push({
+      label: "Job completed in",
+      value: formatDuration(startTime, completionTime),
+    });
+  }
+
+  const parallelism = getNumber(jobSpec, "parallelism");
+  if (parallelism !== undefined) {
+    items.push({
+      label: "Job parallelism",
+      value: parallelism.toString(),
+    });
+  }
+
+  const succeeded = getNumber(jobStatus, "succeeded");
+  const failed = getNumber(jobStatus, "failed");
+  const completedIndexes = getString(jobStatus, "completedIndexes");
+
+  if (succeeded !== undefined && succeeded > 0) {
+    const succeededIndexes = getString(jobStatus, "succeededIndexes");
+    items.push({
+      label: "Job succeeded",
+      value: `${succeeded} succeeded ${succeededIndexes ? `on indexes: ${succeededIndexes}` : ""}`,
+    });
+  }
+
+  if (failed !== undefined && failed > 0) {
+    const failedIndexes = getString(jobStatus, "failedIndexes");
+    items.push({
+      label: "Job failed",
+      value: `${failed} failed ${failedIndexes ? `on indexes: ${failedIndexes}` : ""}`,
+      critical: true,
+    });
+  }
+
+  if (completedIndexes) {
+    items.push({
+      label: "Job completed on indexes",
+      value: completedIndexes,
+    });
+  }
+
+  return items;
 }
