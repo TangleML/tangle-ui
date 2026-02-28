@@ -43,18 +43,6 @@ export const EXECUTION_STATUS_BG_COLORS: Record<string, string> = {
 };
 
 /**
- * Statuses considered "in progress" (not terminal).
- */
-const IN_PROGRESS_STATUSES = new Set([
-  "RUNNING",
-  "PENDING",
-  "QUEUED",
-  "WAITING_FOR_UPSTREAM",
-  "CANCELLING",
-  "UNINITIALIZED",
-]);
-
-/**
  * Priority order for determining overall/aggregate execution status.
  * Higher priority statuses appear first — if any task has SYSTEM_ERROR,
  * the overall status should reflect that before checking for FAILED, etc.
@@ -133,23 +121,4 @@ export function getOverallExecutionStatusFromStats(
   // Fallback: return any status with a non-zero count
   const firstNonZero = Object.entries(stats).find(([, c]) => (c ?? 0) > 0);
   return firstNonZero?.[0];
-}
-
-/**
- * Count the number of in-progress tasks from execution stats.
- */
-export function countInProgressFromStats(stats: ExecutionStatusStats): number {
-  let count = 0;
-  for (const status of IN_PROGRESS_STATUSES) {
-    count += stats[status] ?? 0;
-  }
-  return count;
-}
-
-/**
- * Check if execution is complete based on stats (no in-progress tasks and at least one task).
- */
-export function isExecutionComplete(stats: ExecutionStatusStats): boolean {
-  const total = Object.values(stats).reduce((sum, c) => sum + (c ?? 0), 0);
-  return total > 0 && countInProgressFromStats(stats) === 0;
 }

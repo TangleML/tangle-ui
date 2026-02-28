@@ -618,6 +618,19 @@ export type GetGraphExecutionStateResponse = {
             [key: string]: number;
         };
     };
+    /**
+     * Summary
+     */
+    summary: ExecutionStatusSummary;
+};
+
+/**
+ * ExecutionStatusSummary
+ */
+export type ExecutionStatusSummary = {
+    total_nodes: number;
+    ended_nodes: number;
+    has_ended: boolean;
 };
 
 /**
