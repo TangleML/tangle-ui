@@ -32,3 +32,4 @@ playwright-report
 #local files
 .local/
 .planning/
+**/__pycache__
