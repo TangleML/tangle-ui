@@ -6,7 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { GraphImplementation } from "@/providers/ComponentSpec/graphImplementation";
@@ -32,7 +36,9 @@ function specHasGraphImplementation(
 /**
  * Check if a task is a subgraph (its component has a graph implementation).
  */
-function isTaskSubgraph(componentSpec: { implementation?: unknown } | undefined): boolean {
+function isTaskSubgraph(
+  componentSpec: { implementation?: unknown } | undefined,
+): boolean {
   const implementation = componentSpec?.implementation;
   if (!implementation || typeof implementation !== "object") {
     return false;
@@ -150,7 +156,9 @@ export function TaskNode({ id, data, selected }: TaskNodeProps) {
                 </Badge>
               </TooltipTrigger>
               <TooltipContent side="top">
-                <Text size="xs">Double-click to navigate into this subgraph</Text>
+                <Text size="xs">
+                  Double-click to navigate into this subgraph
+                </Text>
               </TooltipContent>
             </Tooltip>
           )}

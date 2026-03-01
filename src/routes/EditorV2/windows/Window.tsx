@@ -263,7 +263,9 @@ export function Window({ windowId }: WindowProps) {
             "cursor-grab border-b shrink-0",
             isDragging && "cursor-grabbing",
             isMaximized && "cursor-default",
-            isDocked ? "bg-blue-100 border-blue-200" : "bg-gray-200 border-gray-300",
+            isDocked
+              ? "bg-blue-100 border-blue-200"
+              : "bg-gray-200 border-gray-300",
             // isAttached && "bg-green-100 border-green-200",
           )}
           onMouseDown={isMaximized ? undefined : handleHeaderMouseDown}
@@ -279,13 +281,13 @@ export function Window({ windowId }: WindowProps) {
             )}
             {/* Attach indicator */}
             {isAttached && (
-              <Icon
-                name="Link"
-                size="xs"
-                className="text-green-600 shrink-0"
-              />
+              <Icon name="Link" size="xs" className="text-green-600 shrink-0" />
             )}
-            <Text size="sm" weight="semibold" className="text-gray-700 truncate">
+            <Text
+              size="sm"
+              weight="semibold"
+              className="text-gray-700 truncate"
+            >
               {title}
             </Text>
           </InlineStack>
@@ -316,7 +318,10 @@ export function Window({ windowId }: WindowProps) {
                 onClick={() => toggleMaximize(windowId)}
                 title={isMaximized ? "Restore" : "Maximize"}
               >
-                <Icon name={isMaximized ? "Minimize2" : "Maximize2"} size="sm" />
+                <Icon
+                  name={isMaximized ? "Minimize2" : "Maximize2"}
+                  size="sm"
+                />
               </Button>
             )}
 
@@ -352,7 +357,9 @@ export function Window({ windowId }: WindowProps) {
         {!isMinimized && (
           <div
             className="flex-1 min-h-0 overflow-auto bg-gray-50"
-            style={{ height: isMaximized ? "calc(100vh - 44px)" : contentHeight }}
+            style={{
+              height: isMaximized ? "calc(100vh - 44px)" : contentHeight,
+            }}
           >
             {content}
           </div>

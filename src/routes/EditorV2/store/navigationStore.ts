@@ -152,11 +152,19 @@ export function navigateToSubgraph(taskEntityId: string): boolean {
 
   // Find the task entity
   const task = currentSpec.implementation.tasks.findById(taskEntityId);
-  console.log("[navigateToSubgraph] Found task:", task?.name, "for ID:", taskEntityId);
+  console.log(
+    "[navigateToSubgraph] Found task:",
+    task?.name,
+    "for ID:",
+    taskEntityId,
+  );
 
   // Debug: list all task IDs in current spec
   const allTasks = currentSpec.implementation.tasks.getAll();
-  console.log("[navigateToSubgraph] All tasks in currentSpec:", allTasks.map(t => ({ name: t.name, id: t.$id })));
+  console.log(
+    "[navigateToSubgraph] All tasks in currentSpec:",
+    allTasks.map((t) => ({ name: t.name, id: t.$id })),
+  );
 
   if (!task) {
     console.log("[navigateToSubgraph] FAILED: task not found by ID");
@@ -268,7 +276,10 @@ export function navigateToPath(pathNames: string[]): boolean {
   if (pathNames[0] !== rootSpec.name) {
     console.log("[navigateToPath] FAILED: path[0] doesn't match rootSpec.name");
     console.log("[navigateToPath] pathNames[0]:", JSON.stringify(pathNames[0]));
-    console.log("[navigateToPath] rootSpec.name:", JSON.stringify(rootSpec.name));
+    console.log(
+      "[navigateToPath] rootSpec.name:",
+      JSON.stringify(rootSpec.name),
+    );
     return false;
   }
 
@@ -285,14 +296,24 @@ export function navigateToPath(pathNames: string[]): boolean {
   // Navigate through each subsequent name in the path
   for (let i = 1; i < pathNames.length; i++) {
     const taskName = pathNames[i];
-    console.log("[navigateToPath] Looking for nested spec:", taskName, "in", currentSpec.name);
+    console.log(
+      "[navigateToPath] Looking for nested spec:",
+      taskName,
+      "in",
+      currentSpec.name,
+    );
     const nestedSpec = currentSpec.findComponentSpecEntity(taskName);
 
     if (!nestedSpec) {
-      console.warn(`[navigateToPath] Could not find nested spec for: ${taskName}`);
+      console.warn(
+        `[navigateToPath] Could not find nested spec for: ${taskName}`,
+      );
       // List available nested specs
       const available = currentSpec.findAllComponentSpecEntities?.() ?? [];
-      console.log("[navigateToPath] Available nested specs:", available.map((s: ComponentSpecEntity) => s.name));
+      console.log(
+        "[navigateToPath] Available nested specs:",
+        available.map((s: ComponentSpecEntity) => s.name),
+      );
       return false;
     }
 
@@ -304,8 +325,10 @@ export function navigateToPath(pathNames: string[]): boolean {
     currentSpec = nestedSpec;
   }
 
-  console.log("[navigateToPath] SUCCESS: setting path to", newPath.map(e => e.displayName));
+  console.log(
+    "[navigateToPath] SUCCESS: setting path to",
+    newPath.map((e) => e.displayName),
+  );
   navigationStore.navigationPath = newPath;
   return true;
 }
-

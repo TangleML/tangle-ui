@@ -140,9 +140,7 @@ export function FlowCanvas({
     if (positionCommands.length === 1) {
       executeCommand(positionCommands[0]);
     } else if (positionCommands.length > 1) {
-      executeCommand(
-        new CompositeCommand(positionCommands, "Move nodes"),
-      );
+      executeCommand(new CompositeCommand(positionCommands, "Move nodes"));
     }
 
     // Handle node removal to update the spec
@@ -171,9 +169,7 @@ export function FlowCanvas({
     if (deleteCommands.length === 1) {
       executeCommand(deleteCommands[0]);
     } else if (deleteCommands.length > 1) {
-      executeCommand(
-        new CompositeCommand(deleteCommands, "Delete nodes"),
-      );
+      executeCommand(new CompositeCommand(deleteCommands, "Delete nodes"));
     }
 
     onNodesChange(changes);

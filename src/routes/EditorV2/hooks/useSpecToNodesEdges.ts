@@ -105,7 +105,9 @@ function createSpecFingerprint(
         {
           $id: string;
           name: string;
-          annotations?: { entities: Record<string, { key: string; value: unknown }> };
+          annotations?: {
+            entities: Record<string, { key: string; value: unknown }>;
+          };
         }
       >;
     };
@@ -115,7 +117,9 @@ function createSpecFingerprint(
         {
           $id: string;
           name: string;
-          annotations?: { entities: Record<string, { key: string; value: unknown }> };
+          annotations?: {
+            entities: Record<string, { key: string; value: unknown }>;
+          };
         }
       >;
     };
@@ -126,7 +130,9 @@ function createSpecFingerprint(
           {
             $id: string;
             name: string;
-            annotations: { entities: Record<string, { key: string; value: unknown }> };
+            annotations: {
+              entities: Record<string, { key: string; value: unknown }>;
+            };
           }
         >;
       };
@@ -167,7 +173,9 @@ function createSpecFingerprint(
       );
     parts.push(`t:${taskEntries.join(",")}`);
 
-    const bindingIds = Object.keys(snap.implementation.bindings.entities).sort();
+    const bindingIds = Object.keys(
+      snap.implementation.bindings.entities,
+    ).sort();
     parts.push(`b:${bindingIds.join(",")}`);
   }
 

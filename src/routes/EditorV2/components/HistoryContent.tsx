@@ -150,7 +150,11 @@ function InitialStateMarker({
         )}
       </Text>
       {!isCurrent && (
-        <Icon name="RotateCcw" size="xs" className="shrink-0 mt-0.5 text-slate-400" />
+        <Icon
+          name="RotateCcw"
+          size="xs"
+          className="shrink-0 mt-0.5 text-slate-400"
+        />
       )}
     </button>
   );

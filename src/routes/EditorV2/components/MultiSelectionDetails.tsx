@@ -25,7 +25,9 @@ import {
  */
 function getNodeDisplayName(
   node: SelectedNode,
-  spec: import("@/providers/ComponentSpec/componentSpec").ComponentSpecEntity | null,
+  spec:
+    | import("@/providers/ComponentSpec/componentSpec").ComponentSpecEntity
+    | null,
 ): string {
   if (!spec) return node.id;
 

@@ -61,9 +61,8 @@ export function executeCommand(command: Command): boolean {
 
     // Trim undo stack if it exceeds max size
     if (commandManagerState.undoStack.length > MAX_UNDO_STACK_SIZE) {
-      commandManagerState.undoStack = commandManagerState.undoStack.slice(
-        -MAX_UNDO_STACK_SIZE,
-      );
+      commandManagerState.undoStack =
+        commandManagerState.undoStack.slice(-MAX_UNDO_STACK_SIZE);
     }
 
     // Clear redo stack (we're branching from history)
@@ -204,4 +203,3 @@ export function redoMultiple(stepsForward: number): boolean {
   }
   return true;
 }
-

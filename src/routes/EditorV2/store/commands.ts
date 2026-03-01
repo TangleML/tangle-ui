@@ -271,9 +271,7 @@ export function captureOutputSnapshot(entityId: string): OutputSnapshot | null {
 /**
  * Capture a binding snapshot for undo operations.
  */
-export function captureBindingSnapshot(
-  edgeId: string,
-): BindingSnapshot | null {
+export function captureBindingSnapshot(edgeId: string): BindingSnapshot | null {
   const spec = getCurrentSpec();
   if (!spec?.implementation?.bindings) return null;
 
@@ -631,7 +629,10 @@ export class DeleteTaskCommand implements Command {
     if (!spec?.implementation) return false;
 
     // Re-add the task
-    const taskEntity = addTask(this.snapshot.componentRef, this.snapshot.position);
+    const taskEntity = addTask(
+      this.snapshot.componentRef,
+      this.snapshot.position,
+    );
     if (!taskEntity) return false;
 
     // Restore the original name if different
@@ -924,7 +925,10 @@ function findEntityWithFallback(
     if (task) return { entity: task, currentId: entityId };
 
     if (entityName) {
-      const byName = spec.implementation.tasks.findByIndex("name", entityName)[0];
+      const byName = spec.implementation.tasks.findByIndex(
+        "name",
+        entityName,
+      )[0];
       if (byName) return { entity: byName, currentId: byName.$id };
     }
   }
@@ -972,13 +976,19 @@ export class ConnectNodesCommand implements Command {
     );
 
     // If either entity was found by fallback (different ID), update the connection
-    if (sourceResult && sourceResult.currentId !== this.connection.sourceNodeId) {
+    if (
+      sourceResult &&
+      sourceResult.currentId !== this.connection.sourceNodeId
+    ) {
       this.connection = {
         ...this.connection,
         sourceNodeId: sourceResult.currentId,
       };
     }
-    if (targetResult && targetResult.currentId !== this.connection.targetNodeId) {
+    if (
+      targetResult &&
+      targetResult.currentId !== this.connection.targetNodeId
+    ) {
       this.connection = {
         ...this.connection,
         targetNodeId: targetResult.currentId,
@@ -1007,10 +1017,18 @@ export class ConnectNodesCommand implements Command {
 
     // Store entity names on first execution for fallback during redo
     if (!this.sourceEntityName) {
-      this.sourceEntityName = this.getEntityName(spec, sourceType, sourceResult.currentId);
+      this.sourceEntityName = this.getEntityName(
+        spec,
+        sourceType,
+        sourceResult.currentId,
+      );
     }
     if (!this.targetEntityName) {
-      this.targetEntityName = this.getEntityName(spec, targetType, targetResult.currentId);
+      this.targetEntityName = this.getEntityName(
+        spec,
+        targetType,
+        targetResult.currentId,
+      );
     }
 
     const success = connectNodes(this.connection);
@@ -1098,7 +1116,8 @@ export class CreateSubgraphCommand implements Command {
 
   execute(): boolean {
     const spec = getCurrentSpec();
-    if (!spec?.implementation?.bindings || !spec.implementation.tasks) return false;
+    if (!spec?.implementation?.bindings || !spec.implementation.tasks)
+      return false;
 
     const { tasks, bindings } = spec.implementation;
 
@@ -1163,7 +1182,9 @@ export class CreateSubgraphCommand implements Command {
     if (!spec?.implementation) return false;
 
     // Find the subgraph task
-    const subgraphTask = spec.implementation.tasks.findById(this.subgraphTaskId);
+    const subgraphTask = spec.implementation.tasks.findById(
+      this.subgraphTaskId,
+    );
     if (!subgraphTask) return false;
 
     // Get the subgraph spec from the componentRef name
@@ -1205,9 +1226,13 @@ export class CreateSubgraphCommand implements Command {
     // Incoming bindings: from external sources to the restored tasks
     for (const binding of this.incomingBindings) {
       // Ensure the target task has the argument
-      const targetTask = spec.implementation.tasks.findById(binding.targetEntityId);
+      const targetTask = spec.implementation.tasks.findById(
+        binding.targetEntityId,
+      );
       if (targetTask) {
-        if (!targetTask.arguments.findByIndex("name", binding.targetPortName)[0]) {
+        if (
+          !targetTask.arguments.findByIndex("name", binding.targetPortName)[0]
+        ) {
           targetTask.arguments.add({ name: binding.targetPortName });
         }
       }
@@ -1223,9 +1248,13 @@ export class CreateSubgraphCommand implements Command {
     // Outgoing bindings: from restored tasks to external targets
     for (const binding of this.outgoingBindings) {
       // If target is a task, ensure it has the argument
-      const targetTask = spec.implementation.tasks.findById(binding.targetEntityId);
+      const targetTask = spec.implementation.tasks.findById(
+        binding.targetEntityId,
+      );
       if (targetTask) {
-        if (!targetTask.arguments.findByIndex("name", binding.targetPortName)[0]) {
+        if (
+          !targetTask.arguments.findByIndex("name", binding.targetPortName)[0]
+        ) {
           targetTask.arguments.add({ name: binding.targetPortName });
         }
       }
@@ -1257,8 +1286,7 @@ export class CompositeCommand implements Command {
     private readonly commands: Command[],
     description?: string,
   ) {
-    this.description =
-      description ?? `${commands.length} operations`;
+    this.description = description ?? `${commands.length} operations`;
   }
 
   execute(): boolean {
@@ -1285,4 +1313,3 @@ export class CompositeCommand implements Command {
     return reversed.every((cmd) => cmd.undo());
   }
 }
-

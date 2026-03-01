@@ -11,10 +11,7 @@ import { subscribe, useSnapshot } from "valtio";
 
 import type { ComponentSpecEntity } from "@/providers/ComponentSpec/componentSpec";
 
-import {
-  getCurrentSpec,
-  navigationStore,
-} from "../store/navigationStore";
+import { getCurrentSpec, navigationStore } from "../store/navigationStore";
 
 /**
  * Hook to get the current ComponentSpecEntity based on navigation state.

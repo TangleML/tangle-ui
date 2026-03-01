@@ -254,7 +254,9 @@ interface ConnectionInfo {
  * Entity IDs follow the pattern: root.{specName}.{collection}_{number}
  * e.g., "root.MyPipeline.inputs_1", "root.MyPipeline.outputs_2", "root.MyPipeline.tasks_3"
  */
-export function getNodeTypeFromId(nodeId: string): "input" | "output" | "task" | null {
+export function getNodeTypeFromId(
+  nodeId: string,
+): "input" | "output" | "task" | null {
   if (nodeId.includes(".inputs_")) return "input";
   if (nodeId.includes(".outputs_")) return "output";
   if (nodeId.includes(".tasks_")) return "task";
@@ -818,13 +820,18 @@ export function createSubgraph(
     for (const binding of bindings) {
       // If target is a graph output, create outputValue binding
       // Otherwise, create task argument binding
-        
+
       if (binding.target instanceof TaskEntity) {
         // Target is another task - create binding to its input
-          // Ensure target task has the argument
-          if (!binding.target.arguments.findByIndex("name", binding.targetPortName)[0]) {
-            binding.target.arguments.add({ name: binding.targetPortName });
-          }
+        // Ensure target task has the argument
+        if (
+          !binding.target.arguments.findByIndex(
+            "name",
+            binding.targetPortName,
+          )[0]
+        ) {
+          binding.target.arguments.add({ name: binding.targetPortName });
+        }
       }
 
       spec.implementation.bindings.rebind(
