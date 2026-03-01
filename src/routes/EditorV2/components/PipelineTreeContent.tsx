@@ -60,7 +60,11 @@ function TaskLeafNode({ task }: TaskLeafNodeProps) {
   return (
     <div className="flex items-start gap-1 py-1 px-2 text-slate-600">
       <div className="w-5 shrink-0" />
-      <Icon name="Circle" size="xs" className="shrink-0 text-slate-400 mt-0.5" />
+      <Icon
+        name="Circle"
+        size="xs"
+        className="shrink-0 text-slate-400 mt-0.5"
+      />
       <Text size="sm" className="break-words min-w-0">
         {task.name}
       </Text>
@@ -409,7 +413,10 @@ export function PipelineTreeContent() {
   // Build the current navigation path as array of display names
   const currentNavPath = buildNavPathArray(navigationPath);
 
-  console.log("[PipelineTreeContent] Rendering with currentNavPath:", currentNavPath);
+  console.log(
+    "[PipelineTreeContent] Rendering with currentNavPath:",
+    currentNavPath,
+  );
 
   // Auto-expand nodes along the current navigation path
   useEffect(() => {

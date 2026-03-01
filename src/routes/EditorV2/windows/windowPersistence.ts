@@ -97,9 +97,7 @@ function saveWindowLayoutImmediate(): void {
         position: { ...window.position },
         size: { ...window.size },
         dockState: window.dockState,
-        attachedTo: window.attachedTo
-          ? { ...window.attachedTo }
-          : undefined,
+        attachedTo: window.attachedTo ? { ...window.attachedTo } : undefined,
         isHidden: window.state === "hidden",
         // Persist pre-docked dimensions for undock operations
         preDockedPosition: window.preDockedPosition
@@ -223,4 +221,3 @@ export function clearPersistedLayout(): void {
     // Ignore
   }
 }
-

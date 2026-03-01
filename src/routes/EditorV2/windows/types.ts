@@ -38,7 +38,12 @@ export interface ViewportBounds {
 /** Snap preview types for visual feedback during drag */
 export type SnapPreviewType =
   | { type: "edge"; side: "left" | "right" }
-  | { type: "attach"; parentId: string; parentBottom: number; parentLeft: number }
+  | {
+      type: "attach";
+      parentId: string;
+      parentBottom: number;
+      parentLeft: number;
+    };
 
 /** Window configuration stored in the registry (no React elements) */
 export interface WindowConfig {

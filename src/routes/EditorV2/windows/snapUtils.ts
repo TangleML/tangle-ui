@@ -240,4 +240,3 @@ export function calculateStackHeight(
 
   return totalHeight;
 }
-

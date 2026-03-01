@@ -9,11 +9,7 @@ import { componentSpecToText } from "@/utils/yaml";
 
 import { editorStore } from "../store/editorStore";
 import { navigationStore } from "../store/navigationStore";
-import {
-  closeWindow,
-  getWindowById,
-  openWindow,
-} from "../windows/windowStore";
+import { closeWindow, getWindowById, openWindow } from "../windows/windowStore";
 
 const DEBUG_PANEL_WINDOW_ID = "debug-panel";
 

@@ -57,7 +57,11 @@ export function TaskAnnotationsEditor({
         tasks?: {
           entities: Record<
             string,
-            { annotations: { entities: Record<string, { key: string; value: unknown }> } }
+            {
+              annotations: {
+                entities: Record<string, { key: string; value: unknown }>;
+              };
+            }
           >;
         };
       };
