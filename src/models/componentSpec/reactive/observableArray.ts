@@ -110,6 +110,7 @@ export class ObservableArray<T> extends ObservableNode {
   }
 
   private connectChild(item: T): void {
+    console.log("connectChild", (item as any)["$id"]);
     if (!this.parent || !isObservableNode(item)) return;
     item.attachToParent(this.parent);
   }

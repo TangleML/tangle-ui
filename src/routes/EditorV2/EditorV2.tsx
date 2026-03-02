@@ -2,14 +2,19 @@ import "@xyflow/react/dist/style.css";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { ReactFlowProvider } from "@xyflow/react";
+import yaml from "js-yaml";
 import { useEffect, useRef, useState } from "react";
 import { subscribe, useSnapshot } from "valtio";
 
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
+import type { ComponentSpec } from "@/models/componentSpec";
+import {
+  IncrementingIdGenerator,
+  resetIndexManager,
+  YamlDeserializer,
+} from "@/models/componentSpec";
 import { ComponentLibraryProvider } from "@/providers/ComponentLibraryProvider";
 import { ForcedSearchProvider } from "@/providers/ComponentLibraryProvider/ForcedSearchProvider";
-import { GraphImplementation } from "@/providers/ComponentSpec/graphImplementation";
-import { YamlLoader } from "@/providers/ComponentSpec/yamlLoader";
 
 import { ComponentLibraryContent } from "./components/ComponentLibraryContent";
 import { ContextPanelContent } from "./components/ContextPanel";
@@ -19,16 +24,12 @@ import { HistoryContent } from "./components/HistoryContent";
 import { PinnedTaskContent } from "./components/PinnedTaskContent";
 import { PipelineDetailsContent } from "./components/PipelineDetailsContent";
 import { PipelineTreeContent } from "./components/PipelineTreeContent";
+import { SpecProvider } from "./providers/SpecContext";
 import { clearCommandHistory, redo, undo } from "./store/commandManager";
-import { editorStore, initializeStore } from "./store/editorStore";
-import {
-  addHistoryEntry,
-  captureInitialState,
-  clearHistory,
-} from "./store/historyStore";
+import { clearSpec, editorStore, initializeStore } from "./store/editorStore";
+import { captureInitialState, clearHistory } from "./store/historyStore";
 import {
   clearNavigation,
-  getCurrentSpec,
   initNavigation,
   isTaskSubgraph,
   navigateToSubgraph,
@@ -56,14 +57,22 @@ async function getSpecByName(name: "test-spec") {
 }
 
 function useLoadSpec() {
-  const [yamlLoader] = useState(() => new YamlLoader());
-
-  // Parse the YAML into a ComponentSpecEntity
+  // Parse the YAML into a ComponentSpec using the new model
   const { data: testSpec } = useSuspenseQuery({
-    queryKey: ["test-spec-entity-v2"],
+    queryKey: ["test-spec-entity-v2-new-model"],
     queryFn: async () => {
       const testSpecText = await getSpecByName("test-spec");
-      return yamlLoader.loadFromText(testSpecText);
+
+      // Reset the index manager to start fresh
+      resetIndexManager();
+
+      // Create ID generator and deserializer
+      const idGen = new IncrementingIdGenerator();
+      const deserializer = new YamlDeserializer(idGen);
+
+      // Parse YAML and deserialize into ComponentSpec
+      const yamlData = yaml.load(testSpecText);
+      return deserializer.deserialize(yamlData);
     },
     staleTime: Infinity,
     retry: false,
@@ -86,24 +95,23 @@ function generatePinnedWindowId(): string {
 /** Get task name from entity ID */
 function getTaskNameByEntityId(entityId: string): string | null {
   const spec = editorStore.spec;
-  if (
-    !spec?.implementation ||
-    !(spec.implementation instanceof GraphImplementation)
-  ) {
+  if (!spec) {
     return null;
   }
-  const task = spec.implementation.tasks.entities[entityId];
+  const task = spec.tasks.find((t) => t.$id === entityId);
   return task?.name ?? null;
 }
 
 const PipelineEditor = withSuspenseWrapper(() => {
-  const spec = useLoadSpec();
+  const rootSpec = useLoadSpec();
   // Track previous task entity IDs to detect deletions
   const prevTaskEntityIdsRef = useRef<Set<string>>(new Set());
 
-  // Subscribe to navigation store for re-renders when current spec changes
+  // Subscribe to navigation store for re-renders when navigation path changes
   const navSnapshot = useSnapshot(navigationStore);
-  const currentSpec = getCurrentSpec();
+
+  // Manage the active (current) spec as local state
+  const [activeSpec, setActiveSpec] = useState<ComponentSpec | null>(null);
 
   // Initialize window persistence (subscribe to store changes for auto-save)
   useEffect(() => {
@@ -113,56 +121,45 @@ const PipelineEditor = withSuspenseWrapper(() => {
 
   // Initialize the valtio store and navigation with the loaded spec
   useEffect(() => {
-    if (spec) {
-      initializeStore(spec);
-      initNavigation(spec);
+    if (rootSpec) {
+      initializeStore(rootSpec);
+      initNavigation(rootSpec);
+      setActiveSpec(rootSpec);
 
       // Capture initial state for history
       captureInitialState();
 
-      // Subscribe to the proxied spec AFTER initializeStore has wrapped it
-      // editorStore.spec is now the proxied version
-      const unsubscribe = subscribe(editorStore.spec!, (ops) => {
-        console.log(
-          `%c Spec changed`,
-          "color: orange; font-weight: bold;",
-          ops,
-        );
-
-        // Add history entry for this change
-        addHistoryEntry(ops);
+      // Subscribe to spec.tasks changes using the new model's ObservableArray
+      const handleTasksChange = () => {
+        console.log(`%c Tasks changed`, "color: orange; font-weight: bold;");
 
         // Check for deleted tasks and close their windows
-        const currentSpec = editorStore.spec;
-        if (currentSpec?.implementation instanceof GraphImplementation) {
-          const currentTaskIds = new Set(
-            Object.keys(currentSpec.implementation.tasks.entities),
-          );
+        const currentTaskIds = new Set(rootSpec.tasks.all.map((t) => t.$id));
 
-          // Find deleted tasks (were in prev, not in current)
-          for (const prevId of prevTaskEntityIdsRef.current) {
-            if (!currentTaskIds.has(prevId)) {
-              // Task was deleted - close any windows linked to it
-              closeWindowsByLinkedEntity(prevId);
-            }
+        // Find deleted tasks (were in prev, not in current)
+        for (const prevId of prevTaskEntityIdsRef.current) {
+          if (!currentTaskIds.has(prevId)) {
+            // Task was deleted - close any windows linked to it
+            closeWindowsByLinkedEntity(prevId);
           }
-
-          // Update the ref with current task IDs
-          prevTaskEntityIdsRef.current = currentTaskIds;
         }
-      });
+
+        // Update the ref with current task IDs
+        prevTaskEntityIdsRef.current = currentTaskIds;
+      };
+
+      // Subscribe to task changes
+      const unsubscribeTasks = rootSpec.tasks.subscribe(handleTasksChange);
 
       // Initialize the task entity IDs ref
-      if (spec.implementation instanceof GraphImplementation) {
-        prevTaskEntityIdsRef.current = new Set(
-          Object.keys(spec.implementation.tasks.entities),
-        );
-      }
+      prevTaskEntityIdsRef.current = new Set(
+        rootSpec.tasks.all.map((t) => t.$id),
+      );
 
       return () => {
-        unsubscribe();
+        unsubscribeTasks();
         // Clear stores on unmount
-        editorStore.spec = null;
+        clearSpec();
         editorStore.selectedNodeId = null;
         editorStore.selectedNodeType = null;
         clearNavigation();
@@ -170,7 +167,7 @@ const PipelineEditor = withSuspenseWrapper(() => {
         clearCommandHistory();
       };
     }
-  }, [spec]);
+  }, [rootSpec]);
 
   // Handle node selection changes and window management
   useEffect(() => {
@@ -381,10 +378,15 @@ const PipelineEditor = withSuspenseWrapper(() => {
    * If the task is a subgraph, navigate into it.
    */
   const handleTaskDoubleClick = (taskEntityId: string) => {
+    if (!activeSpec) return;
+
     // Check if the task is a subgraph
-    if (isTaskSubgraph(taskEntityId)) {
-      const success = navigateToSubgraph(taskEntityId);
-      if (success) {
+    if (isTaskSubgraph(activeSpec, taskEntityId)) {
+      const newSpec = navigateToSubgraph(activeSpec, taskEntityId);
+      if (newSpec) {
+        // Update the active spec to the subgraph
+        setActiveSpec(newSpec);
+
         // Clear selection when navigating into a subgraph
         editorStore.selectedNodeId = null;
         editorStore.selectedNodeType = null;
@@ -396,11 +398,11 @@ const PipelineEditor = withSuspenseWrapper(() => {
   };
 
   // Access navSnapshot.navigationPath to trigger re-renders when navigation changes
-  // This ensures currentSpec updates when navigating into/out of subgraphs
+  // This ensures the UI updates when navigating into/out of subgraphs
   console.log("[EditorV2] Rendering with:", {
     navPath: navSnapshot.navigationPath.map((e) => e.displayName),
-    currentSpecName: currentSpec?.name,
-    currentSpecId: currentSpec?.$id,
+    activeSpecName: activeSpec?.name,
+    activeSpecId: activeSpec?.$id,
   });
 
   if (navSnapshot.navigationPath.length === 0) {
@@ -408,17 +410,17 @@ const PipelineEditor = withSuspenseWrapper(() => {
   }
 
   return (
-    <>
+    <SpecProvider spec={activeSpec}>
       <DebugPanel />
       <FlowCanvas
-        key={currentSpec?.$id ?? "root"}
-        spec={currentSpec}
+        key={activeSpec?.$id ?? "root"}
+        spec={activeSpec}
         onTaskDoubleClick={handleTaskDoubleClick}
         className="h-full"
       />
       <WindowContainer />
       <TaskPanel />
-    </>
+    </SpecProvider>
   );
 });
 

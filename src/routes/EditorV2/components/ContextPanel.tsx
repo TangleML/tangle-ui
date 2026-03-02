@@ -1,4 +1,4 @@
-import type { ChangeEvent } from "react";
+import { type ChangeEvent, useEffect, useState } from "react";
 import { useSnapshot } from "valtio";
 
 import { Icon } from "@/components/ui/icon";
@@ -8,8 +8,9 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
-import { GraphImplementation } from "@/providers/ComponentSpec/graphImplementation";
+import type { ComponentSpecJson } from "@/models/componentSpec";
 
+import { useSpec } from "../providers/SpecContext";
 import { executeCommand } from "../store/commandManager";
 import {
   RenameInputCommand,
@@ -17,7 +18,6 @@ import {
   RenameTaskCommand,
 } from "../store/commands";
 import { editorStore } from "../store/editorStore";
-import { getCurrentSpec, navigationStore } from "../store/navigationStore";
 import { MultiSelectionDetails } from "./MultiSelectionDetails";
 import { TaskAnnotationsEditor } from "./TaskAnnotationsEditor";
 
@@ -30,12 +30,8 @@ export function ContextPanelContent() {
   const snapshot = useSnapshot(editorStore);
   const { selectedNodeId, selectedNodeType, multiSelection } = snapshot;
 
-  // Subscribe to navigation changes to trigger re-renders
-  const navSnapshot = useSnapshot(navigationStore);
-  void navSnapshot.navigationPath.length;
-
-  // Get the current spec from navigation state
-  const spec = getCurrentSpec();
+  // Get the current spec from SpecContext
+  const spec = useSpec();
 
   // Multi-selection takes priority
   if (multiSelection.length > 1) {
@@ -75,28 +71,34 @@ interface TaskDetailsProps {
 }
 
 function TaskDetails({ entityId }: TaskDetailsProps) {
-  // Use getCurrentSpec() to get the correct spec based on navigation state
-  const spec = getCurrentSpec();
+  // Version counter to force re-renders when task properties change
+  const [version, setVersion] = useState(0);
 
-  if (
-    !spec?.implementation ||
-    !(spec.implementation instanceof GraphImplementation)
-  ) {
+  // Get the current spec from SpecContext
+  const spec = useSpec();
+
+  // Find task by $id
+  const task = spec?.tasks.find((t) => t.$id === entityId);
+
+  // Subscribe to task property changes (e.g., name changes)
+  useEffect(() => {
+    if (!task) return;
+    const unsub = task.subscribe(() => {
+      setVersion((v) => v + 1);
+    });
+    return unsub;
+  }, [task]);
+
+  if (!spec || !task) {
     return null;
   }
 
-  // Get task directly from entities using $id
-  const task = spec.implementation.tasks.entities[entityId];
-  if (!task) {
-    return null;
-  }
-
-  const componentSpec = task.componentRef.spec;
+  const componentSpec = task.componentRef.spec as ComponentSpecJson | undefined;
 
   const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
     const newName = event.target.value;
     if (newName && newName !== task.name) {
-      executeCommand(new RenameTaskCommand(entityId, newName));
+      executeCommand(new RenameTaskCommand(spec, entityId, newName));
     }
   };
 
@@ -108,7 +110,7 @@ function TaskDetails({ entityId }: TaskDetailsProps) {
             Name
           </Label>
           <Input
-            key={entityId}
+            key={`${entityId}-${version}`}
             id="task-name"
             defaultValue={task.name}
             onBlur={handleNameChange}
@@ -191,18 +193,30 @@ interface InputDetailsProps {
 }
 
 function InputDetails({ entityId }: InputDetailsProps) {
-  // Use getCurrentSpec() to get the correct spec based on navigation state
-  const spec = getCurrentSpec();
-  if (!spec) return null;
+  // Version counter to force re-renders when input properties change
+  const [version, setVersion] = useState(0);
 
-  // Get input directly from entities using $id
-  const input = spec.inputs.entities[entityId];
-  if (!input) return null;
+  // Get the current spec from SpecContext
+  const spec = useSpec();
+
+  // Find input by $id
+  const input = spec?.inputs.find((i) => i.$id === entityId);
+
+  // Subscribe to input property changes
+  useEffect(() => {
+    if (!input) return;
+    const unsub = input.subscribe(() => {
+      setVersion((v) => v + 1);
+    });
+    return unsub;
+  }, [input]);
+
+  if (!spec || !input) return null;
 
   const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
     const newName = event.target.value;
     if (newName && newName !== input.name) {
-      executeCommand(new RenameInputCommand(entityId, newName));
+      executeCommand(new RenameInputCommand(spec, entityId, newName));
     }
   };
 
@@ -220,7 +234,7 @@ function InputDetails({ entityId }: InputDetailsProps) {
             Name
           </Label>
           <Input
-            key={entityId}
+            key={`${entityId}-${version}`}
             id="input-name"
             defaultValue={input.name}
             onBlur={handleNameChange}
@@ -246,11 +260,11 @@ function InputDetails({ entityId }: InputDetailsProps) {
           </BlockStack>
         )}
 
-        {input.default !== undefined && (
+        {input.defaultValue !== undefined && (
           <BlockStack gap="2">
             <Label className="text-gray-600">Default Value</Label>
             <Text size="sm" className="font-mono text-gray-500">
-              {input.default}
+              {input.defaultValue}
             </Text>
           </BlockStack>
         )}
@@ -273,18 +287,30 @@ interface OutputDetailsProps {
 }
 
 function OutputDetails({ entityId }: OutputDetailsProps) {
-  // Use getCurrentSpec() to get the correct spec based on navigation state
-  const spec = getCurrentSpec();
-  if (!spec) return null;
+  // Version counter to force re-renders when output properties change
+  const [version, setVersion] = useState(0);
 
-  // Get output directly from entities using $id
-  const output = spec.outputs.entities[entityId];
-  if (!output) return null;
+  // Get the current spec from SpecContext
+  const spec = useSpec();
+
+  // Find output by $id
+  const output = spec?.outputs.find((o) => o.$id === entityId);
+
+  // Subscribe to output property changes
+  useEffect(() => {
+    if (!output) return;
+    const unsub = output.subscribe(() => {
+      setVersion((v) => v + 1);
+    });
+    return unsub;
+  }, [output]);
+
+  if (!spec || !output) return null;
 
   const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
     const newName = event.target.value;
     if (newName && newName !== output.name) {
-      executeCommand(new RenameOutputCommand(entityId, newName));
+      executeCommand(new RenameOutputCommand(spec, entityId, newName));
     }
   };
 
@@ -302,7 +328,7 @@ function OutputDetails({ entityId }: OutputDetailsProps) {
             Name
           </Label>
           <Input
-            key={entityId}
+            key={`${entityId}-${version}`}
             id="output-name"
             defaultValue={output.name}
             onBlur={handleNameChange}

@@ -1,4 +1,4 @@
-import { useSnapshot } from "valtio";
+import { useEffect, useReducer } from "react";
 
 import { CodeBlock } from "@/components/shared/CodeViewer/CodeBlock";
 import { TaskDetails, TaskIO } from "@/components/shared/TaskDetails";
@@ -6,10 +6,9 @@ import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Text } from "@/components/ui/typography";
-import { GraphImplementation } from "@/providers/ComponentSpec/graphImplementation";
 import { componentSpecToText } from "@/utils/yaml";
 
-import { getCurrentSpec, navigationStore } from "../store/navigationStore";
+import { useSpec } from "../providers/SpecContext";
 
 interface PinnedTaskContentProps {
   /** The entity ID of the task to display */
@@ -22,31 +21,38 @@ interface PinnedTaskContentProps {
  * Used for shift-click "pinned" windows.
  */
 export function PinnedTaskContent({ entityId }: PinnedTaskContentProps) {
-  // Subscribe to navigation changes to trigger re-renders
-  const navSnapshot = useSnapshot(navigationStore);
-  void navSnapshot.navigationPath.length;
+  const [, forceUpdate] = useReducer((x: number) => x + 1, 0);
 
-  // Get the current spec from navigation state
-  const spec = getCurrentSpec();
+  // Get the current spec from SpecContext
+  const spec = useSpec();
 
-  if (
-    !spec?.implementation ||
-    !(spec.implementation instanceof GraphImplementation)
-  ) {
+  // Subscribe to spec changes for reactivity
+  useEffect(() => {
+    if (!spec) return;
+    const unsub = spec.tasks.subscribe(forceUpdate);
+    return () => unsub();
+  }, [spec]);
+
+  if (!spec) {
     return <NotFoundState entityId={entityId} />;
   }
 
-  // Get task directly from entities using $id
-  const task = spec.implementation.tasks.entities[entityId];
+  // Find task by $id
+  const task = spec.tasks.find((t) => t.$id === entityId);
   if (!task) {
     return <NotFoundState entityId={entityId} />;
   }
 
   const componentRef = task.componentRef;
   const componentSpec = componentRef.spec;
+  // Cast to parameters expected by shared components using old types
   const code =
     componentRef.text ??
-    (componentSpec ? componentSpecToText(componentSpec) : "");
+    (componentSpec
+      ? componentSpecToText(
+          componentSpec as Parameters<typeof componentSpecToText>[0],
+        )
+      : "");
 
   return (
     <BlockStack className="h-full w-full bg-white overflow-hidden">
@@ -72,7 +78,11 @@ export function PinnedTaskContent({ entityId }: PinnedTaskContentProps) {
         <div className="flex-1 min-h-0 min-w-0 flex flex-col p-3">
           <TabsContent value="details" className="mt-0 min-w-0 overflow-auto">
             <TaskDetails
-              componentRef={componentRef}
+              componentRef={
+                componentRef as Parameters<
+                  typeof TaskDetails
+                >[0]["componentRef"]
+              }
               readOnly
               options={{ descriptionExpanded: true }}
             />
@@ -80,7 +90,11 @@ export function PinnedTaskContent({ entityId }: PinnedTaskContentProps) {
 
           <TabsContent value="io" className="mt-0 min-w-0 overflow-auto">
             {componentSpec ? (
-              <TaskIO componentSpec={componentSpec} />
+              <TaskIO
+                componentSpec={
+                  componentSpec as Parameters<typeof TaskIO>[0]["componentSpec"]
+                }
+              />
             ) : (
               <EmptyState message="No inputs or outputs defined" />
             )}
