@@ -1,3 +1,5 @@
+import { runInAction } from "mobx";
+import { observer } from "mobx-react-lite";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -14,27 +16,19 @@ import { Input } from "@/components/ui/input";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { IncrementingIdGenerator } from "@/models/componentSpec/factories/idGenerator";
-import { useEntity } from "@/models/componentSpec/hooks/useEntity";
-import { useObservableArray } from "@/models/componentSpec/hooks/useObservableArray";
-import { ObservableArray } from "@/models/componentSpec/reactive/observableArray";
 
-import { ShoppingItem, ShoppingList } from "./entities";
+import { SuspenseDemo } from "./components/SuspenseDemo";
+import { PlaygroundStore, ShoppingItem, ShoppingList } from "./entities";
 
 const idGenerator = new IncrementingIdGenerator();
 
-function ShoppingItemRow({
-  item: originalItem,
+const ShoppingItemRow = observer(function ShoppingItemRow({
+  item,
   onRemove,
 }: {
   item: ShoppingItem;
   onRemove: () => void;
 }) {
-  const item = useEntity(originalItem);
-
-  console.log("ShoppingItemRow render", { originalItem, item });
-
-  if (!item) return null;
-
   return (
     <InlineStack
       gap="3"
@@ -44,8 +38,9 @@ function ShoppingItemRow({
       <Checkbox
         checked={item.done}
         onCheckedChange={(checked) => {
-          // eslint-disable-next-line react-compiler/react-compiler -- Intentional mutation for reactive model
-          originalItem.done = checked === true;
+          runInAction(() => {
+            item.done = checked === true;
+          });
         }}
       />
       <BlockStack gap="0" className="flex-1 min-w-0">
@@ -72,7 +67,7 @@ function ShoppingItemRow({
       </Button>
     </InlineStack>
   );
-}
+});
 
 function AddItemForm({ onAdd }: { onAdd: (item: ShoppingItem) => void }) {
   const [name, setName] = useState("");
@@ -141,39 +136,31 @@ function AddItemForm({ onAdd }: { onAdd: (item: ShoppingItem) => void }) {
   );
 }
 
-function ShoppingListCard({
-  list: originalList,
+const ShoppingListCard = observer(function ShoppingListCard({
+  list,
   onRemove,
 }: {
   list: ShoppingList;
   onRemove: () => void;
 }) {
-  // Subscribe to list changes AND child (item) changes via event bubbling
-  const list = useEntity(originalList, { subscribeToChildren: true });
-  const items = useObservableArray(originalList.items, {
-    subscribeToChildren: true,
-  });
-
-  console.log("ShoppingListCard render", { originalList, list, items });
-
-  if (!list) return null;
-
-  const isDone = items.length > 0 && items.every((item) => item.done);
-
-  const totalPrice = items.reduce((sum, item) => sum + item.price, 0);
-  const completedCount = items.filter((item) => item.done).length;
+  const totalPrice = list.items.reduce((sum, item) => sum + item.price, 0);
+  const completedCount = list.items.filter((item) => item.done).length;
 
   return (
     <Card
       className={
-        isDone ? "border-green-500 bg-green-50/50 dark:bg-green-950/20" : ""
+        list.isDone
+          ? "border-green-500 bg-green-50/50 dark:bg-green-950/20"
+          : ""
       }
     >
       <CardHeader>
         <InlineStack align="space-between" blockAlign="start">
           <BlockStack gap="1">
             <InlineStack gap="2" blockAlign="center">
-              {isDone && <Icon name="CircleCheck" className="text-green-600" />}
+              {list.isDone && (
+                <Icon name="CircleCheck" className="text-green-600" />
+              )}
               <CardTitle>
                 {list.name} #{list.$id}
               </CardTitle>
@@ -183,7 +170,7 @@ function ShoppingListCard({
                 ? `Due: ${list.dueDate.toLocaleDateString()}`
                 : "No due date"}
               {" • "}
-              {completedCount}/{items.length} items done
+              {completedCount}/{list.items.length} items done
               {totalPrice > 0 && ` • Total: $${totalPrice.toFixed(2)}`}
             </CardDescription>
           </BlockStack>
@@ -194,27 +181,27 @@ function ShoppingListCard({
       </CardHeader>
       <CardContent>
         <BlockStack gap="3">
-          {items.length === 0 ? (
+          {list.items.length === 0 ? (
             <Text tone="subdued" size="sm" className="text-center py-4">
               No items yet. Add some items below.
             </Text>
           ) : (
             <BlockStack gap="2">
-              {items.map((item, index) => (
+              {list.items.map((item, index) => (
                 <ShoppingItemRow
                   key={item.$id}
                   item={item}
-                  onRemove={() => originalList.items.remove(index)}
+                  onRemove={() => list.removeItem(index)}
                 />
               ))}
             </BlockStack>
           )}
-          <AddItemForm onAdd={(item) => originalList.items.add(item)} />
+          <AddItemForm onAdd={(item) => list.addItem(item)} />
         </BlockStack>
       </CardContent>
     </Card>
   );
-}
+});
 
 function AddListForm({ onAdd }: { onAdd: (list: ShoppingList) => void }) {
   const [name, setName] = useState("");
@@ -274,18 +261,8 @@ function AddListForm({ onAdd }: { onAdd: (list: ShoppingList) => void }) {
   );
 }
 
-export function Playground() {
-  const [allLists] = useState(() => new ObservableArray<ShoppingList>());
-  // Subscribe to both array changes AND child changes of all lists
-  const lists = useObservableArray(allLists, { subscribeToChildren: true });
-
-  const totalLists = lists.length;
-  const completedLists = lists.filter((l) => l.isDone()).length;
-  const totalItems = lists.reduce((sum, l) => sum + l.items.length, 0);
-  const totalValue = lists.reduce(
-    (sum, l) => sum + l.items.all.reduce((s, i) => s + i.price, 0),
-    0,
-  );
+export const Playground = observer(function Playground() {
+  const [store] = useState(() => new PlaygroundStore());
 
   return (
     <div className="container mx-auto max-w-4xl p-6">
@@ -302,7 +279,7 @@ export function Playground() {
         <InlineStack gap="4" className="p-4 bg-muted rounded-lg">
           <BlockStack gap="0" align="center">
             <Text size="2xl" weight="bold">
-              {totalLists}
+              {store.totalLists}
             </Text>
             <Text size="xs" tone="subdued">
               Lists
@@ -310,7 +287,7 @@ export function Playground() {
           </BlockStack>
           <BlockStack gap="0" align="center">
             <Text size="2xl" weight="bold">
-              {completedLists}
+              {store.completedLists}
             </Text>
             <Text size="xs" tone="subdued">
               Completed
@@ -318,7 +295,7 @@ export function Playground() {
           </BlockStack>
           <BlockStack gap="0" align="center">
             <Text size="2xl" weight="bold">
-              {totalItems}
+              {store.totalItems}
             </Text>
             <Text size="xs" tone="subdued">
               Items
@@ -326,7 +303,7 @@ export function Playground() {
           </BlockStack>
           <BlockStack gap="0" align="center">
             <Text size="2xl" weight="bold" font="mono">
-              ${totalValue.toFixed(2)}
+              ${store.totalValue.toFixed(2)}
             </Text>
             <Text size="xs" tone="subdued">
               Total Value
@@ -334,9 +311,9 @@ export function Playground() {
           </BlockStack>
         </InlineStack>
 
-        <AddListForm onAdd={(list) => allLists.add(list)} />
+        <AddListForm onAdd={(list) => store.addList(list)} />
 
-        {lists.length === 0 ? (
+        {store.lists.length === 0 ? (
           <Card>
             <CardContent className="py-12">
               <BlockStack gap="2" align="center">
@@ -353,16 +330,33 @@ export function Playground() {
           </Card>
         ) : (
           <BlockStack gap="4">
-            {lists.map((list, index) => (
+            {store.lists.map((list, index) => (
               <ShoppingListCard
                 key={list.$id}
                 list={list}
-                onRemove={() => allLists.remove(index)}
+                onRemove={() => store.removeList(index)}
               />
             ))}
           </BlockStack>
         )}
+
+        <hr className="border-border" />
+
+        <BlockStack gap="2">
+          <Text as="h2" size="xl" weight="bold">
+            Suspense Demo
+          </Text>
+          <Text tone="subdued">
+            Components wrapped with <Text as="span" font="mono" size="sm">withSuspenseWrapper</Text> +{" "}
+            <Text as="span" font="mono" size="sm">observer</Text>. Each widget
+            loads after a 2.5s delay via <Text as="span" font="mono" size="sm">useSuspenseQuery</Text>.
+            Toggle the controls to verify MobX reactivity works inside
+            suspense-wrapped components.
+          </Text>
+        </BlockStack>
+
+        <SuspenseDemo />
       </BlockStack>
     </div>
   );
-}
+});

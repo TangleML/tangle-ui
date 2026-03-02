@@ -332,10 +332,9 @@ describe("EntityContext", () => {
   });
 });
 
-describe("Playground Scenario", () => {
-  beforeEach(() => resetIndexManager());
-
-  it("ShoppingList receives changed.child when ShoppingItem.done changes", async () => {
+describe("Playground Scenario (MobX)", () => {
+  it("ShoppingList.isDone reacts to ShoppingItem.done changes", async () => {
+    const { autorun } = await import("mobx");
     const { ShoppingList } =
       await import("@/routes/Playground/entities/ShoppingList");
     const { ShoppingItem } =
@@ -344,29 +343,20 @@ describe("Playground Scenario", () => {
     const list = new ShoppingList("list_1", { name: "Groceries" });
     const item = new ShoppingItem("item_1", { name: "Milk", done: false });
 
-    list.items.add(item);
+    list.addItem(item);
 
-    expect(item.$ctx).not.toBeNull();
-    expect(item.$ctx?.parent).toBe(list);
-    expect(item.parent).toBe(list);
+    expect(list.items).toHaveLength(1);
+    expect(list.isDone).toBe(false);
 
-    const childChangeListener = vi.fn();
-    list.subscribe("changed.child", childChangeListener);
+    const observed: boolean[] = [];
+    autorun(() => {
+      observed.push(list.isDone);
+    });
 
     item.done = true;
 
-    expect(childChangeListener).toHaveBeenCalledTimes(1);
-    expect(childChangeListener).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: "changed.child",
-        source: item,
-        field: "done",
-        oldValue: false,
-        value: true,
-      }),
-    );
-
-    expect(list.isDone()).toBe(true);
+    expect(list.isDone).toBe(true);
+    expect(observed).toEqual([false, true]);
   });
 });
 

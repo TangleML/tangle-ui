@@ -43,7 +43,6 @@ export function observable<This extends BaseEntity, Value>(
     },
     set(this: This, newValue: Value): void {
       const oldValue = target.get.call(this);
-      console.log("@observable set", fieldName, oldValue, "->", newValue);
       if (oldValue !== newValue) {
         target.set.call(this, newValue);
         (

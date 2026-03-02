@@ -1,4 +1,4 @@
-import { useCallback, useRef, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 
 import type { ObservableArray } from "../reactive/observableArray";
 import type { ChangeDetail } from "../reactive/observableNode";
@@ -13,30 +13,51 @@ export function useObservableArray<T>(
   array: ObservableArray<T> | null | undefined,
   options?: UseObservableArrayOptions,
 ): readonly T[] {
-  const snapshotRef = useRef<readonly T[]>(EMPTY_ARRAY);
   const subscribeToChildren = options?.subscribeToChildren ?? false;
-
-  const subscribe = useCallback(
-    (onStoreChange: () => void) => {
-      if (!array) return () => {};
-
-      const updateSnapshot = (_event: ChangeDetail) => {
-        console.log("useObservableArray updateSnapshot", array.all);
-        snapshotRef.current = [...array.all];
-        onStoreChange();
-      };
-
-      snapshotRef.current = [...array.all];
-
-      const pattern = subscribeToChildren ? "changed.*" : "changed.self.*";
-      const unsub = array.subscribe(pattern, updateSnapshot);
-
-      return () => unsub();
-    },
-    [array, subscribeToChildren],
+  const [snapshot, setSnapshot] = useState<readonly T[]>(() =>
+    array ? [...array.all] : EMPTY_ARRAY,
   );
 
-  const getSnapshot = useCallback(() => snapshotRef.current, []);
+  useEffect(() => {
+    if (!array) {
+      setSnapshot(EMPTY_ARRAY);
+      return;
+    }
 
-  return useSyncExternalStore(subscribe, getSnapshot);
+    const updateSnapshot = () => {
+      setSnapshot([...array.all]);
+    };
+
+    // Initial snapshot for this array instance.
+    updateSnapshot();
+
+    // Always react to direct collection changes (add/remove/set/clear).
+    const unsubs: Array<() => void> = [
+      array.subscribe("changed.self.*", updateSnapshot),
+    ];
+
+    if (subscribeToChildren) {
+      // In this model children are attached to the parent entity (not to the array itself),
+      // so child updates bubble through array.parent. Subscribe there as well.
+      const parent = array.parent;
+      if (parent) {
+        unsubs.push(
+          parent.subscribe("changed.*", (detail: ChangeDetail) => {
+            const source = detail.source;
+            if (source === array || array.all.includes(source as T)) {
+              updateSnapshot();
+            }
+          }),
+        );
+      }
+    }
+
+    return () => {
+      for (const unsub of unsubs) {
+        unsub();
+      }
+    };
+  }, [array, subscribeToChildren]);
+
+  return snapshot;
 }
