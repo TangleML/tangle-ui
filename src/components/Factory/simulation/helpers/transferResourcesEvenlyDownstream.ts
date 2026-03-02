@@ -11,8 +11,7 @@ import { transferResources } from "./transferResources";
 /**
  * Transfers resources from a node to all its downstream neighbors,
  * splitting evenly when multiple targets want the same resource.
- * Handles remainders by distributing them round-robin.
- * Supports "any" stockpiles by checking breakdown for available resources.
+ * Handles "any" type edges and stockpiles correctly.
  */
 export const transferResourcesEvenlyDownstream = (
   sourceNodeId: string,
@@ -30,36 +29,58 @@ export const transferResourcesEvenlyDownstream = (
   const building = getBuildingInstance(sourceNode);
   if (!building) return;
 
-  // ✅ Map: resource -> array of target node IDs that want this resource
-  const resourceTargets = new Map<ResourceType, string[]>();
+  // ✅ Step 1: Determine ALL resources available at source
+  const availableResources = new Set<ResourceType>();
 
-  downstreamNodes.forEach((neighborId) => {
-    const relevantEdges = edges.filter(
-      (e) => e.source === sourceNodeId && e.target === neighborId,
-    );
-
-    relevantEdges.forEach((edge) => {
-      if (!isResourceData(edge.data)) return;
-
-      const resource = edge.data.type;
-
-      if (!resource) return;
-
-      if (!resourceTargets.has(resource)) {
-        resourceTargets.set(resource, []);
-      }
-
-      resourceTargets.get(resource)!.push(neighborId);
-    });
+  building.stockpile?.forEach((stock) => {
+    if (stock.resource === "any" && stock.breakdown) {
+      // Add all resources in breakdown
+      stock.breakdown.forEach((amount, resource) => {
+        if (amount > 0) {
+          availableResources.add(resource);
+        }
+      });
+    } else if (stock.amount > 0) {
+      // Add direct stockpile resource
+      availableResources.add(stock.resource);
+    }
   });
 
-  // ✅ For each resource type requested by downstream nodes
+  // ✅ Step 2: For each available resource, determine which downstream nodes want it
+  const resourceTargets = new Map<ResourceType, string[]>();
+
+  availableResources.forEach((resource) => {
+    const targets: string[] = [];
+
+    downstreamNodes.forEach((neighborId) => {
+      const relevantEdges = edges.filter(
+        (e) => e.source === sourceNodeId && e.target === neighborId,
+      );
+
+      // Check if any edge can carry this resource
+      const hasEdgeForResource = relevantEdges.some((edge) => {
+        if (!isResourceData(edge.data)) return false;
+        const edgeResource = edge.data.type;
+        // Edge can carry if it's the specific resource OR if it's "any"
+        return edgeResource === resource || edgeResource === "any";
+      });
+
+      if (hasEdgeForResource) {
+        targets.push(neighborId);
+      }
+    });
+
+    if (targets.length > 0) {
+      resourceTargets.set(resource, targets);
+    }
+  });
+
+  // ✅ Step 3: For each resource, calculate fair split among targets
   resourceTargets.forEach((targets, resource) => {
-    // Check if source has this resource (either directly or in "any" breakdown)
+    // Get available amount (from direct stockpile or "any" breakdown)
     const directStock = building.stockpile?.find(
       (s) => s.resource === resource,
     );
-
     const anyStock = building.stockpile?.find((s) => s.resource === "any");
     const amountInBreakdown = anyStock?.breakdown?.get(resource) || 0;
 
@@ -67,14 +88,13 @@ export const transferResourcesEvenlyDownstream = (
       ? directStock.amount
       : amountInBreakdown;
 
-    // Skip if no resources available
     if (availableAmount === 0) return;
 
     const splitCount = targets.length;
     const baseAmount = Math.floor(availableAmount / splitCount);
     const remainder = availableAmount % splitCount;
 
-    // ✅ Calculate capacity for each target (only if they can accept this resource type)
+    // ✅ Calculate capacity for each target
     const targetCapacities = new Map<string, number>();
 
     targets.forEach((targetId) => {
@@ -84,7 +104,7 @@ export const transferResourcesEvenlyDownstream = (
       const targetBuilding = getBuildingInstance(targetNode);
       if (!targetBuilding) return;
 
-      // ✅ Find a stockpile that can accept this specific resource
+      // Find a stockpile that can accept this specific resource
       const targetStock = targetBuilding.stockpile?.find(
         (s) => s.resource === resource || s.resource === "any",
       );
@@ -93,19 +113,16 @@ export const transferResourcesEvenlyDownstream = (
         const availableSpace = targetStock.maxAmount - targetStock.amount;
         targetCapacities.set(targetId, availableSpace);
       } else {
-        // Target cannot accept this resource type - capacity is 0
         targetCapacities.set(targetId, 0);
       }
     });
 
-    // ✅ First pass: allocate base amounts (respecting capacity)
+    // ✅ Allocate base amounts + remainder (round-robin)
     const allocations = new Map<string, number>();
     let totalAllocated = 0;
 
     targets.forEach((targetId, index) => {
       const capacity = targetCapacities.get(targetId) || 0;
-
-      // Base amount + 1 extra for first 'remainder' targets (round-robin)
       let allocation = baseAmount + (index < remainder ? 1 : 0);
       allocation = Math.min(allocation, capacity);
 
@@ -113,11 +130,10 @@ export const transferResourcesEvenlyDownstream = (
       totalAllocated += allocation;
     });
 
-    // ✅ Second pass: redistribute leftovers if some targets couldn't take their full share
+    // ✅ Redistribute leftovers if some targets hit capacity
     const leftover = availableAmount - totalAllocated;
 
     if (leftover > 0) {
-      // Try to give leftovers to targets that still have capacity
       let remainingLeftover = leftover;
 
       for (const [targetId, currentAllocation] of allocations) {
@@ -134,7 +150,7 @@ export const transferResourcesEvenlyDownstream = (
       }
     }
 
-    // ✅ Perform transfers with calculated allocations
+    // ✅ Step 4: Perform transfers with calculated allocations
     allocations.forEach((amount, targetId) => {
       if (amount > 0) {
         transferResources(
