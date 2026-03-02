@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
-import { subscribe, useSnapshot } from "valtio";
+import { useEffect, useReducer, useState } from "react";
 
 import CodeSyntaxHighlighter from "@/components/shared/CodeViewer/CodeSyntaxHighlighter";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Text } from "@/components/ui/typography";
+import type { ComponentSpec } from "@/models/componentSpec";
+import { JsonSerializer } from "@/models/componentSpec";
 import { componentSpecToText } from "@/utils/yaml";
 
 import { editorStore } from "../store/editorStore";
@@ -56,10 +57,14 @@ function StatGroup({ title, children }: StatGroupProps) {
 /**
  * Helper to generate YAML from spec
  */
-function getSpecYaml(spec: typeof editorStore.spec): string {
+function getSpecYaml(spec: ComponentSpec | null): string {
   if (!spec) return "null";
   try {
-    return componentSpecToText(spec.toJson());
+    const serializer = new JsonSerializer();
+    // ComponentSpecJson from new model is structurally compatible with ComponentSpec from utils
+    return componentSpecToText(
+      serializer.serialize(spec) as Parameters<typeof componentSpecToText>[0],
+    );
   } catch {
     return "Error serializing spec";
   }
@@ -70,8 +75,7 @@ function getSpecYaml(spec: typeof editorStore.spec): string {
  * Used within the Windows system.
  */
 function DebugPanelContent() {
-  const snap = useSnapshot(editorStore);
-  const navSnap = useSnapshot(navigationStore);
+  const [, forceUpdate] = useReducer((x: number) => x + 1, 0);
 
   // Store YAML in state and update it via subscription.
   // This guarantees reactivity since state changes always trigger re-renders.
@@ -90,36 +94,44 @@ function DebugPanelContent() {
     // Set initial YAML
     setSpecYaml(getSpecYaml(spec));
 
-    // Subscribe to the spec that commands mutate (navigationStore.rootSpec)
-    const unsubscribe = subscribe(spec, () => {
-      // Always read fresh from navigationStore
-      setSpecYaml(getSpecYaml(navigationStore.rootSpec));
-    });
+    // Subscribe to the spec changes via the new model's subscriptions
+    const unsubscribes: (() => void)[] = [];
 
-    return unsubscribe;
-  }, [navSnap.rootSpec !== null]);
+    const updateYaml = () => {
+      setSpecYaml(getSpecYaml(navigationStore.rootSpec));
+      forceUpdate();
+    };
+
+    unsubscribes.push(spec.subscribe(updateYaml));
+    unsubscribes.push(spec.tasks.subscribe(updateYaml));
+    unsubscribes.push(spec.inputs.subscribe(updateYaml));
+    unsubscribes.push(spec.outputs.subscribe(updateYaml));
+    unsubscribes.push(spec.bindings.subscribe(updateYaml));
+
+    return () => {
+      unsubscribes.forEach((unsub) => unsub());
+    };
+  }, [navigationStore.rootSpec]);
 
   // Use editorStore.spec for display (same object, just for consistency with other components)
   const spec = editorStore.spec;
 
   const stats = {
     name: spec?.name ?? "—",
-    inputs: spec?.inputs.getAll().length ?? 0,
-    outputs: spec?.outputs.getAll().length ?? 0,
-    tasks: spec?.implementation?.tasks.getAll().length ?? 0,
+    inputs: spec?.inputs.length ?? 0,
+    outputs: spec?.outputs.length ?? 0,
+    tasks: spec?.tasks.length ?? 0,
     arguments:
-      spec?.implementation?.tasks
-        .getAll()
-        .reduce((acc, task) => acc + task.arguments.getAll().length, 0) ?? 0,
+      spec?.tasks.all.reduce((acc, task) => acc + task.arguments.length, 0) ??
+      0,
     annotations:
-      spec?.implementation?.tasks
-        .getAll()
-        .reduce((acc, task) => acc + task.annotations.getAll().length, 0) ?? 0,
-    bindings: spec?.implementation?.bindings.getAll().length ?? 0,
+      spec?.tasks.all.reduce((acc, task) => acc + task.annotations.length, 0) ??
+      0,
+    bindings: spec?.bindings.length ?? 0,
   };
 
-  const selectedInfo = snap.selectedNodeId
-    ? `${snap.selectedNodeType}: ${snap.selectedNodeId}`
+  const selectedInfo = editorStore.selectedNodeId
+    ? `${editorStore.selectedNodeType}: ${editorStore.selectedNodeId}`
     : "None";
 
   return (
@@ -159,8 +171,8 @@ function DebugPanelContent() {
           <StatGroup title="Store State">
             <StatItem label="Has Spec" value={spec ? "Yes" : "No"} />
             <StatItem
-              label="Has Implementation"
-              value={spec?.implementation ? "Yes" : "No"}
+              label="Has Tasks"
+              value={spec?.tasks && spec.tasks.length > 0 ? "Yes" : "No"}
             />
           </StatGroup>
         </BlockStack>

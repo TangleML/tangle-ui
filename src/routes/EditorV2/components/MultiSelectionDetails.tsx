@@ -8,9 +8,9 @@ import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/typography";
-import { GraphImplementation } from "@/providers/ComponentSpec/graphImplementation";
+import type { ComponentSpec } from "@/models/componentSpec";
 
-import { useCurrentSpec } from "../hooks/useCurrentSpec";
+import { useSpec } from "../providers/SpecContext";
 import { executeCommand } from "../store/commandManager";
 import { CreateSubgraphCommand } from "../store/commands";
 import {
@@ -21,33 +21,24 @@ import {
 
 /**
  * Get the display name for a node based on its type and ID.
- * Uses the current spec from navigation (supports subgraphs).
  */
 function getNodeDisplayName(
   node: SelectedNode,
-  spec:
-    | import("@/providers/ComponentSpec/componentSpec").ComponentSpecEntity
-    | null,
+  spec: ComponentSpec | null,
 ): string {
   if (!spec) return node.id;
 
   switch (node.type) {
     case "task": {
-      if (
-        spec.implementation &&
-        spec.implementation instanceof GraphImplementation
-      ) {
-        const task = spec.implementation.tasks.findById(node.id);
-        return task?.name ?? node.id;
-      }
-      return node.id;
+      const task = spec.tasks.find((t) => t.$id === node.id);
+      return task?.name ?? node.id;
     }
     case "input": {
-      const input = spec.inputs.findById(node.id);
+      const input = spec.inputs.find((i) => i.$id === node.id);
       return input?.name ?? node.id;
     }
     case "output": {
-      const output = spec.outputs.findById(node.id);
+      const output = spec.outputs.find((o) => o.$id === node.id);
       return output?.name ?? node.id;
     }
     default:
@@ -90,8 +81,8 @@ function getNodeIconColor(type: SelectedNode["type"]): string {
 export function MultiSelectionDetails() {
   const snapshot = useSnapshot(editorStore);
   const { multiSelection } = snapshot;
-  // Use current spec from navigation (supports subgraphs)
-  const currentSpec = useCurrentSpec();
+  // Use current spec from SpecContext
+  const spec = useSpec();
 
   const [subgraphName, setSubgraphName] = useState("");
 
@@ -107,11 +98,11 @@ export function MultiSelectionDetails() {
   }, [canCreateSubgraph, selectedTasks.length]);
 
   const handleCreateSubgraph = () => {
-    if (!subgraphName.trim() || !canCreateSubgraph) return;
+    if (!subgraphName.trim() || !canCreateSubgraph || !spec) return;
 
     // Get task names from entity IDs
     const taskNames = selectedTasks.map((node) =>
-      getNodeDisplayName(node, currentSpec),
+      getNodeDisplayName(node, spec),
     );
 
     // Calculate center position of selected task nodes
@@ -123,7 +114,7 @@ export function MultiSelectionDetails() {
       selectedTasks.length;
 
     const success = executeCommand(
-      new CreateSubgraphCommand(taskNames, subgraphName.trim(), {
+      new CreateSubgraphCommand(spec, taskNames, subgraphName.trim(), {
         x: centerX,
         y: centerY,
       }),
@@ -167,7 +158,7 @@ export function MultiSelectionDetails() {
                   className={`shrink-0 ${getNodeIconColor(node.type)}`}
                 />
                 <Text size="xs" className="text-slate-700 truncate flex-1">
-                  {getNodeDisplayName(node, currentSpec)}
+                  {getNodeDisplayName(node, spec)}
                 </Text>
                 <Text size="xs" className="text-slate-400 capitalize">
                   {node.type}

@@ -1,5 +1,4 @@
-import { type ChangeEvent, useEffect, useState } from "react";
-import { useSnapshot } from "valtio";
+import { type ChangeEvent, useEffect, useReducer, useState } from "react";
 
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
@@ -9,12 +8,12 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Text } from "@/components/ui/typography";
 
+import { useSpec } from "../providers/SpecContext";
 import { executeCommand } from "../store/commandManager";
 import {
   RenamePipelineCommand,
   UpdateDescriptionCommand,
 } from "../store/commands";
-import { editorStore } from "../store/editorStore";
 
 /**
  * Content for the Pipeline Details window.
@@ -22,11 +21,26 @@ import { editorStore } from "../store/editorStore";
  * Used within the Windows system.
  */
 export function PipelineDetailsContent() {
-  const snapshot = useSnapshot(editorStore);
-  const { spec } = snapshot;
+  const [, forceUpdate] = useReducer((x: number) => x + 1, 0);
+  const spec = useSpec();
 
   // Local state for controlled textarea - syncs with store for undo/redo support
   const [description, setDescription] = useState(spec?.description ?? "");
+
+  // Subscribe to spec changes for reactivity
+  useEffect(() => {
+    if (!spec) return;
+    const unsubscribes: (() => void)[] = [];
+
+    unsubscribes.push(spec.subscribe(forceUpdate));
+    unsubscribes.push(spec.inputs.subscribe(forceUpdate));
+    unsubscribes.push(spec.outputs.subscribe(forceUpdate));
+    unsubscribes.push(spec.annotations.subscribe(forceUpdate));
+
+    return () => {
+      unsubscribes.forEach((unsub) => unsub());
+    };
+  }, [spec]);
 
   // Sync local state when store changes (e.g., undo/redo)
   useEffect(() => {
@@ -40,7 +54,7 @@ export function PipelineDetailsContent() {
   const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
     const newName = event.target.value;
     if (newName && newName !== spec.name) {
-      executeCommand(new RenamePipelineCommand(newName));
+      executeCommand(new RenamePipelineCommand(spec, newName));
     }
   };
 
@@ -53,15 +67,18 @@ export function PipelineDetailsContent() {
   const handleDescriptionBlur = () => {
     const newDescription = description || undefined;
     if (newDescription !== spec.description) {
-      executeCommand(new UpdateDescriptionCommand(newDescription));
+      executeCommand(new UpdateDescriptionCommand(spec, newDescription));
     }
   };
 
-  const inputs = Object.values(spec.inputs.entities);
-  const outputs = Object.values(spec.outputs.entities);
-  const annotations = spec.metadata?.annotations
-    ? Object.entries(spec.metadata.annotations)
-    : [];
+  const inputs = spec.inputs.all;
+  const outputs = spec.outputs.all;
+  // Get annotations that start with "metadata." to display as metadata
+  const annotations = spec.annotations.all
+    .filter((a) => a.key.startsWith("metadata."))
+    .map(
+      (a) => [a.key.slice("metadata.".length), a.value] as [string, unknown],
+    );
 
   return (
     <BlockStack className="h-full bg-white overflow-y-auto">
@@ -169,7 +186,7 @@ export function PipelineDetailsContent() {
                 {annotations.map(([key, value]) => (
                   <BlockStack
                     key={key}
-                    gap="0.5"
+                    gap="1"
                     className="text-xs py-1 px-2 bg-gray-50 rounded border border-gray-100"
                   >
                     <Text size="xs" weight="semibold" className="text-gray-600">
@@ -192,7 +209,7 @@ export function PipelineDetailsContent() {
 function EmptyState() {
   return (
     <BlockStack className="h-full items-center justify-center p-4">
-      <Icon name="FileQuestion" size="lg" className="text-gray-300" />
+      <Icon name="FileQuestionMark" size="lg" className="text-gray-300" />
       <Text size="sm" tone="subdued" className="text-center mt-2">
         No pipeline loaded
       </Text>

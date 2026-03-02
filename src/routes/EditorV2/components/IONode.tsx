@@ -5,9 +5,10 @@ import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
+import { useEntity } from "@/models/componentSpec/hooks/useEntity";
 
-import { useCurrentSpec } from "../hooks/useCurrentSpec";
 import type { IONodeData } from "../hooks/useSpecToNodesEdges";
+import { useSpec } from "../providers/SpecContext";
 import { selectNode } from "../store/editorStore";
 
 type IONodeType = Node<IONodeData, "io">;
@@ -23,18 +24,19 @@ function typeToString(type: unknown): string | undefined {
 }
 
 export function IONode({ id, data, selected }: IONodeProps) {
-  const { entityId, ioType, name } = data;
+  const { entityId, ioType } = data;
 
-  // Get the current spec from navigation state
-  // This ensures we look up inputs/outputs from the correct spec when navigating subgraphs
-  const spec = useCurrentSpec();
+  // Get the current spec from SpecContext
+  const spec = useSpec();
 
   const isInput = ioType === "input";
 
-  // Find the entity by its stable $id for additional properties (type, description)
-  const entity = isInput
-    ? spec?.inputs.findById(entityId)
-    : spec?.outputs.findById(entityId);
+  // Find the entity by its stable $id and subscribe to its changes
+  const entity = useEntity(
+    isInput
+      ? spec?.inputs.find((i) => i.$id === entityId)
+      : spec?.outputs.find((o) => o.$id === entityId),
+  );
 
   const handleClick = (event: React.MouseEvent) => {
     selectNode(id, ioType, {
@@ -43,8 +45,8 @@ export function IONode({ id, data, selected }: IONodeProps) {
     });
   };
 
-  // Use name from data (which is rebuilt when fingerprint changes)
-  // and entity for additional properties like type/description
+  // Get name and properties from reactive entity
+  const name = entity?.name ?? entityId;
   const type = typeToString(entity?.type);
   const description = entity?.description;
 
@@ -87,21 +89,23 @@ export function IONode({ id, data, selected }: IONodeProps) {
       </CardHeader>
 
       {/* Input nodes have an output handle (they provide data) */}
+      {/* Handle ID uses entityId for stability - names can change */}
       {isInput && (
         <Handle
           type="source"
           position={Position.Right}
-          id={`output_${name}`}
+          id={`output_${entityId}`}
           className="!w-3 !h-3 !bg-blue-400 !border-2 !border-white"
         />
       )}
 
       {/* Output nodes have an input handle (they receive data) */}
+      {/* Handle ID uses entityId for stability - names can change */}
       {!isInput && (
         <Handle
           type="target"
           position={Position.Left}
-          id={`input_${name}`}
+          id={`input_${entityId}`}
           className="!w-3 !h-3 !bg-green-400 !border-2 !border-white"
         />
       )}

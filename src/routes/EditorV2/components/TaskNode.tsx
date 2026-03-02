@@ -1,6 +1,4 @@
 import { Handle, type Node, type NodeProps, Position } from "@xyflow/react";
-import { useRef } from "react";
-import { useSnapshot } from "valtio";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,82 +11,35 @@ import {
 } from "@/components/ui/tooltip";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
-import { GraphImplementation } from "@/providers/ComponentSpec/graphImplementation";
+import type { ComponentSpecJson } from "@/models/componentSpec";
+import { useEntity } from "@/models/componentSpec/hooks/useEntity";
 
-import { useCurrentSpec } from "../hooks/useCurrentSpec";
 import type { TaskNodeData } from "../hooks/useSpecToNodesEdges";
+import { useSpec } from "../providers/SpecContext";
 import { selectNode } from "../store/editorStore";
 
 type TaskNodeType = Node<TaskNodeData, "task">;
 type TaskNodeProps = NodeProps<TaskNodeType>;
 
 /**
- * Check if the editor store's spec has a graph implementation.
- */
-function specHasGraphImplementation(
-  spec: unknown,
-): spec is { implementation: GraphImplementation } {
-  if (!spec || typeof spec !== "object") return false;
-  const s = spec as { implementation?: unknown };
-  return s.implementation instanceof GraphImplementation;
-}
-
-/**
  * Check if a task is a subgraph (its component has a graph implementation).
  */
-function isTaskSubgraph(
-  componentSpec: { implementation?: unknown } | undefined,
-): boolean {
+function isTaskSubgraph(componentSpec: ComponentSpecJson | undefined): boolean {
   const implementation = componentSpec?.implementation;
   if (!implementation || typeof implementation !== "object") {
     return false;
   }
-  // Check for graph property which indicates a graph implementation
   return "graph" in implementation;
 }
 
 export function TaskNode({ id, data, selected }: TaskNodeProps) {
-  const { entityId, name } = data;
+  const { entityId } = data;
 
-  // Get the current spec from navigation state
-  // This ensures we look up tasks from the correct spec when navigating subgraphs
-  const spec = useCurrentSpec();
+  // Get the current spec from SpecContext
+  const spec = useSpec();
 
-  // Create a stable dummy object for when spec is null
-  // This allows useSnapshot to be called unconditionally
-  const dummySpec = useRef({ name: "" });
-
-  // Subscribe to spec changes to trigger re-renders when task annotations change
-  const specSnapshot = useSnapshot(spec ?? dummySpec.current);
-
-  // Find the task entity by its stable $id for additional properties
-  const task =
-    spec && specHasGraphImplementation(spec)
-      ? spec.implementation.tasks.findById(entityId)
-      : null;
-
-  // Access task annotations through snapshot to establish Valtio subscription
-  // This ensures re-renders when annotations change
-  const taskSnapshot = (
-    specSnapshot as {
-      implementation?: {
-        tasks?: {
-          entities: Record<
-            string,
-            { annotations: { entities: Record<string, { key: string }> } }
-          >;
-        };
-      };
-    }
-  ).implementation?.tasks?.entities[entityId];
-
-  // Read annotation key VALUES from snapshot to establish subscription
-  // Reading just Object.keys() only subscribes to entity count, not value changes
-  const annotationEntities = taskSnapshot?.annotations?.entities ?? {};
-  const annotationKeysFingerprint = Object.values(annotationEntities)
-    .map((a) => a.key)
-    .join(",");
-  void annotationKeysFingerprint;
+  // Find the task entity by its stable $id and subscribe to its changes
+  const task = useEntity(spec?.tasks.find((t) => t.$id === entityId));
 
   const handleClick = (event: React.MouseEvent) => {
     selectNode(id, "task", {
@@ -108,7 +59,7 @@ export function TaskNode({ id, data, selected }: TaskNodeProps) {
   }
 
   // Get inputs and outputs from the component spec
-  const componentSpec = task.componentRef.spec;
+  const componentSpec = task.componentRef.spec as ComponentSpecJson | undefined;
   const inputs = componentSpec?.inputs ?? [];
   const outputs = componentSpec?.outputs ?? [];
   const description = componentSpec?.description ?? "";
@@ -116,8 +67,8 @@ export function TaskNode({ id, data, selected }: TaskNodeProps) {
   // Check if this task is a subgraph (can be navigated into)
   const isSubgraph = isTaskSubgraph(componentSpec);
 
-  // Use name from data (which is rebuilt when fingerprint changes)
-  const taskName = name;
+  // Get name directly from reactive task entity
+  const taskName = task.name;
 
   return (
     <Card
@@ -248,15 +199,11 @@ export function TaskNode({ id, data, selected }: TaskNodeProps) {
         </InlineStack>
 
         {/* Debug: Annotation keys */}
-        {task.annotations.getAll().length > 0 && (
+        {task.$source.annotations.all.length > 0 && (
           <BlockStack className="border-t rounded-b-md border-slate-100 px-3 py-1.5 bg-slate-50 overflow-hidden">
             <Text size="xs" tone="subdued" className="font-mono truncate">
               annotations: [
-              {task.annotations
-                .getAll()
-                .map((a) => a.key)
-                .join(", ")}
-              ]
+              {task.$source.annotations.all.map((a) => a.key).join(", ")}]
             </Text>
           </BlockStack>
         )}

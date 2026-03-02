@@ -1,97 +1,88 @@
 import type { XYPosition } from "@xyflow/react";
-import { proxy } from "valtio";
 
-import { ComponentSpecEntity } from "@/providers/ComponentSpec/componentSpec";
-import { GraphImplementation } from "@/providers/ComponentSpec/graphImplementation";
-import { TaskEntity } from "@/providers/ComponentSpec/tasks";
+import type { Annotation } from "@/models/componentSpec";
+import {
+  Binding,
+  type ComponentReference,
+  type ComponentSpec,
+  createSubgraph as modelCreateSubgraph,
+  createTaskFromComponentRef,
+  IncrementingIdGenerator,
+  indexManager,
+  Input,
+  Output,
+  type Task,
+} from "@/models/componentSpec";
 import { EDITOR_POSITION_ANNOTATION } from "@/utils/annotations";
-import type { ComponentReference, ComponentSpec } from "@/utils/componentSpec";
 
-import { getCurrentSpec } from "./navigationStore";
-
-/**
- * Check if the spec has a graph implementation.
- */
-function hasGraphImplementation(
-  spec: ComponentSpecEntity | null,
-): spec is ComponentSpecEntity & { implementation: GraphImplementation } {
-  return spec?.implementation instanceof GraphImplementation;
-}
+/** ID generator for creating new entities */
+const idGen = new IncrementingIdGenerator();
 
 /**
  * Update the position of an entity (task, input, or output) by its $id.
- * Uses the current spec from navigation state.
  */
-export function updateNodePosition(entityId: string, position: XYPosition) {
-  const spec = getCurrentSpec();
-  if (!spec) return;
+export function updateNodePosition(
+  spec: ComponentSpec,
+  entityId: string,
+  position: XYPosition,
+) {
+  // Helper to update position annotation
+  const updatePositionAnnotation = (annotations: {
+    find: (
+      predicate: (item: Annotation, index: number) => boolean,
+    ) => Annotation | undefined;
+    findIndex: (
+      predicate: (item: Annotation, index: number) => boolean,
+    ) => number;
+    update: (index: number, updates: Partial<Annotation>) => void;
+    add: (item: Annotation) => void;
+  }) => {
+    const existingIdx = annotations.findIndex(
+      (a: Annotation) => a.key === EDITOR_POSITION_ANNOTATION,
+    );
+    if (existingIdx >= 0) {
+      annotations.update(existingIdx, {
+        key: EDITOR_POSITION_ANNOTATION,
+        value: JSON.stringify(position),
+      });
+    } else {
+      annotations.add({
+        key: EDITOR_POSITION_ANNOTATION,
+        value: JSON.stringify(position),
+      });
+    }
+  };
 
-  // Try to find as task
-  const task = spec.implementation?.tasks?.entities?.[entityId];
+  // Find entity by ID using IndexManager
+  const task = indexManager.findOne("task", "$id", entityId) as
+    | Task
+    | undefined;
   if (task) {
-    // Find and remove existing position annotation, then add the new one
-    const existing = task.annotations
-      .getAll()
-      .find((a) => a.key === EDITOR_POSITION_ANNOTATION);
-    if (existing) {
-      existing.value = JSON.stringify(position);
-    } else {
-      task.annotations.add({
-        key: EDITOR_POSITION_ANNOTATION,
-        value: JSON.stringify(position),
-      });
-    }
+    updatePositionAnnotation(task.annotations);
     return;
   }
 
-  // Try to find as input
-  const input = spec.inputs.entities[entityId];
+  const input = indexManager.findOne("input", "$id", entityId) as
+    | Input
+    | undefined;
   if (input) {
-    const existing = input.annotations
-      .getAll()
-      .find((a) => a.key === EDITOR_POSITION_ANNOTATION);
-    if (existing) {
-      existing.value = JSON.stringify(position);
-    } else {
-      input.annotations.add({
-        key: EDITOR_POSITION_ANNOTATION,
-        value: JSON.stringify(position),
-      });
-    }
+    updatePositionAnnotation(input.annotations);
     return;
   }
 
-  // Try to find as output
-  const output = spec.outputs.entities[entityId];
+  const output = indexManager.findOne("output", "$id", entityId) as
+    | Output
+    | undefined;
   if (output) {
-    const existing = output.annotations
-      .getAll()
-      .find((a) => a.key === EDITOR_POSITION_ANNOTATION);
-    if (existing) {
-      existing.value = JSON.stringify(position);
-    } else {
-      output.annotations.add({
-        key: EDITOR_POSITION_ANNOTATION,
-        value: JSON.stringify(position),
-      });
-    }
+    updatePositionAnnotation(output.annotations);
   }
 }
 
 /**
  * Generate a unique task name based on the component name.
  */
-function generateUniqueTaskName(
-  spec: ComponentSpecEntity,
-  baseName: string,
-): string {
-  if (!hasGraphImplementation(spec)) {
-    return baseName;
-  }
-
-  const existingNames = new Set(
-    spec.implementation.tasks.getAll().map((t) => t.name),
-  );
+function generateUniqueTaskName(spec: ComponentSpec, baseName: string): string {
+  const existingNames = new Set(spec.tasks.all.map((t) => t.name));
 
   if (!existingNames.has(baseName)) {
     return baseName;
@@ -108,10 +99,10 @@ function generateUniqueTaskName(
  * Generate a unique input name.
  */
 function generateUniqueInputName(
-  spec: ComponentSpecEntity,
+  spec: ComponentSpec,
   baseName: string = "Input",
 ): string {
-  const existingNames = new Set(spec.inputs.getAll().map((i) => i.name));
+  const existingNames = new Set(spec.inputs.all.map((i) => i.name));
 
   if (!existingNames.has(baseName)) {
     return baseName;
@@ -128,10 +119,10 @@ function generateUniqueInputName(
  * Generate a unique output name.
  */
 function generateUniqueOutputName(
-  spec: ComponentSpecEntity,
+  spec: ComponentSpec,
   baseName: string = "Output",
 ): string {
-  const existingNames = new Set(spec.outputs.getAll().map((o) => o.name));
+  const existingNames = new Set(spec.outputs.all.map((o) => o.name));
 
   if (!existingNames.has(baseName)) {
     return baseName;
@@ -146,103 +137,78 @@ function generateUniqueOutputName(
 
 /**
  * Add a new task to the graph.
- * Uses the current spec from navigation state.
  */
 export function addTask(
+  spec: ComponentSpec,
   componentRef: ComponentReference,
   position: XYPosition,
-) {
-  const spec = getCurrentSpec();
-
-  if (!hasGraphImplementation(spec)) {
-    console.error("Cannot add task: spec has no graph implementation");
-    return null;
-  }
-
+): Task {
   const componentName = componentRef.spec?.name ?? componentRef.name ?? "Task";
   const taskName = generateUniqueTaskName(spec, componentName);
 
-  const taskEntity = spec.implementation.tasks.add({
-    name: taskName,
-    componentRef,
-    annotations: {
-      [EDITOR_POSITION_ANNOTATION]: JSON.stringify({
-        x: position.x,
-        y: position.y,
-      }),
-    },
+  const task = createTaskFromComponentRef(idGen, componentRef, taskName);
+
+  // Add position annotation
+  task.annotations.add({
+    key: EDITOR_POSITION_ANNOTATION,
+    value: JSON.stringify({ x: position.x, y: position.y }),
   });
 
-  // Add default argument values from component spec inputs
-  const inputs = componentRef.spec?.inputs ?? [];
-  for (const input of inputs) {
-    if (input.default !== undefined) {
-      const arg = taskEntity.arguments.add({ name: input.name });
-      arg.value = input.default;
-    }
-  }
+  spec.tasks.add(task);
 
-  return taskEntity;
+  return task;
 }
 
 /**
  * Add a new input node to the graph.
- * Uses the current spec from navigation state.
  */
-export function addInput(position: XYPosition, name?: string) {
-  const spec = getCurrentSpec();
-
-  if (!spec) {
-    console.error("Cannot add input: no spec loaded");
-    return null;
-  }
-
+export function addInput(
+  spec: ComponentSpec,
+  position: XYPosition,
+  name?: string,
+): Input {
   const inputName = generateUniqueInputName(spec, name);
 
-  const inputEntity = spec.inputs.add({
-    name: inputName,
-    annotations: {
-      [EDITOR_POSITION_ANNOTATION]: JSON.stringify({
-        x: position.x,
-        y: position.y,
-      }),
-    },
+  const input = new Input(idGen.next("input"), { name: inputName });
+
+  // Add position annotation
+  input.annotations.add({
+    key: EDITOR_POSITION_ANNOTATION,
+    value: JSON.stringify({ x: position.x, y: position.y }),
   });
 
-  return inputEntity;
+  spec.inputs.add(input);
+
+  return input;
 }
 
 /**
  * Add a new output node to the graph.
- * Uses the current spec from navigation state.
  */
-export function addOutput(position: XYPosition, name?: string) {
-  const spec = getCurrentSpec();
-
-  if (!spec) {
-    console.error("Cannot add output: no spec loaded");
-    return null;
-  }
-
+export function addOutput(
+  spec: ComponentSpec,
+  position: XYPosition,
+  name?: string,
+): Output {
   const outputName = generateUniqueOutputName(spec, name);
 
-  const outputEntity = spec.outputs.add({
-    name: outputName,
-    annotations: {
-      [EDITOR_POSITION_ANNOTATION]: JSON.stringify({
-        x: position.x,
-        y: position.y,
-      }),
-    },
+  const output = new Output(idGen.next("output"), { name: outputName });
+
+  // Add position annotation
+  output.annotations.add({
+    key: EDITOR_POSITION_ANNOTATION,
+    value: JSON.stringify({ x: position.x, y: position.y }),
   });
 
-  return outputEntity;
+  spec.outputs.add(output);
+
+  return output;
 }
 
 /**
  * Connection info parsed from ReactFlow handles.
  */
-interface ConnectionInfo {
+export interface ConnectionInfo {
   sourceNodeId: string;
   sourceHandleId: string;
   targetNodeId: string;
@@ -251,45 +217,24 @@ interface ConnectionInfo {
 
 /**
  * Helper to determine node type from entity $id.
- * Entity IDs follow the pattern: root.{specName}.{collection}_{number}
- * e.g., "root.MyPipeline.inputs_1", "root.MyPipeline.outputs_2", "root.MyPipeline.tasks_3"
+ * Entity IDs follow patterns like "task_1", "input_2", "output_3"
  */
 export function getNodeTypeFromId(
   nodeId: string,
 ): "input" | "output" | "task" | null {
-  if (nodeId.includes(".inputs_")) return "input";
-  if (nodeId.includes(".outputs_")) return "output";
-  if (nodeId.includes(".tasks_")) return "task";
+  if (nodeId.startsWith("input_")) return "input";
+  if (nodeId.startsWith("output_")) return "output";
+  if (nodeId.startsWith("task_")) return "task";
   return null;
 }
 
-// =============================================================================
-// UNIFIED BINDING API
-// =============================================================================
-
-// =============================================================================
-// CONNECTION API
-// =============================================================================
-
 /**
  * Connect two nodes by creating a binding.
- * Uses the current spec from navigation state.
- *
- * Handles these connection types:
- * - Task output → Task input (taskOutput binding)
- * - Graph input → Task input (graphInput binding)
- * - Task output → Graph output (outputValue binding)
- *
- * Node IDs are entity $ids in the format: root.{specName}.{collection}_{number}
  */
-export function connectNodes(connection: ConnectionInfo) {
-  const spec = getCurrentSpec();
-
-  if (!hasGraphImplementation(spec)) {
-    console.error("Cannot connect: spec has no graph implementation");
-    return false;
-  }
-
+export function connectNodes(
+  spec: ComponentSpec,
+  connection: ConnectionInfo,
+): boolean {
   const { sourceNodeId, sourceHandleId, targetNodeId, targetHandleId } =
     connection;
 
@@ -298,7 +243,7 @@ export function connectNodes(connection: ConnectionInfo) {
   const sourceOutputName = sourceHandleId.replace(/^output_/, "");
   const targetInputName = targetHandleId.replace(/^input_/, "");
 
-  // Determine node types from entity $id format
+  // Determine node types
   const sourceType = getNodeTypeFromId(sourceNodeId);
   const targetType = getNodeTypeFromId(targetNodeId);
 
@@ -306,162 +251,105 @@ export function connectNodes(connection: ConnectionInfo) {
   const isTargetGraphOutput = targetType === "output";
 
   if (isSourceGraphInput && isTargetGraphOutput) {
-    // Cannot directly connect graph input to graph output
     console.error("Cannot connect graph input directly to graph output");
     return false;
   }
 
-  if (isTargetGraphOutput) {
-    // Task output → Graph output
-    const targetOutput = spec.outputs.findById(targetNodeId);
-    if (!targetOutput) {
-      console.error(`Target output not found: ${targetNodeId}`);
-      return false;
-    }
-
-    // Use rebind to replace any existing connection to the output
-    spec.implementation.bindings.rebind(
-      { entityId: sourceNodeId, portName: sourceOutputName },
-      { entityId: targetNodeId, portName: targetOutput.name },
-    );
-
-    return true;
-  }
-
-  // Target is a task - look up by $id
-  const targetTask = spec.implementation.tasks.findById(targetNodeId);
-
-  if (!targetTask) {
-    console.error(`Target task not found: ${targetNodeId}`);
-    return false;
-  }
-
-  // Find or create the argument (for serialization purposes)
-  const existingArg = targetTask.arguments.findByIndex(
-    "name",
-    targetInputName,
-  )[0];
-  if (!existingArg) {
-    targetTask.arguments.add({ name: targetInputName });
-  }
-
-  if (isSourceGraphInput) {
-    // Graph input → Task input
-    const graphInput = spec.inputs.findById(sourceNodeId);
-
-    if (!graphInput) {
-      console.error(`Graph input not found: ${sourceNodeId}`);
-      return false;
-    }
-
-    // Use rebind to replace any existing connection to the task input
-    spec.implementation.bindings.rebind(
-      { entityId: sourceNodeId, portName: graphInput.name },
-      { entityId: targetNodeId, portName: targetInputName },
-    );
-
-    return true;
-  }
-
-  // Task output → Task input
-  // Use rebind to replace any existing connection to the task input
-  spec.implementation.bindings.rebind(
-    { entityId: sourceNodeId, portName: sourceOutputName },
-    { entityId: targetNodeId, portName: targetInputName },
+  // Remove any existing binding to the same target port
+  spec.bindings.removeBy(
+    (b) =>
+      b.targetEntityId === targetNodeId && b.targetPortName === targetInputName,
   );
+
+  // Create the new binding
+  const binding = new Binding(idGen.next("binding"), {
+    source: { entityId: sourceNodeId, portName: sourceOutputName },
+    target: { entityId: targetNodeId, portName: targetInputName },
+  });
+
+  spec.bindings.add(binding);
+
+  // If target is a task, ensure the argument exists
+  if (targetType === "task") {
+    const task = spec.tasks.find((t) => t.$id === targetNodeId);
+    if (task) {
+      const existingArg = task.arguments.find(
+        (a) => a.name === targetInputName,
+      );
+      if (!existingArg) {
+        task.arguments.add({ name: targetInputName });
+      }
+    }
+  }
 
   return true;
 }
 
 /**
  * Delete a task by its entity $id.
- * Uses the current spec from navigation state.
- *
- * Bindings referencing this task are automatically cleaned up via reactive subscriptions.
  */
-export function deleteTask(entityId: string) {
-  const spec = getCurrentSpec();
-
-  if (!hasGraphImplementation(spec)) {
-    console.error("Cannot delete task: spec has no graph implementation");
-    return false;
-  }
-
-  const task = spec.implementation.tasks.findById(entityId);
-  if (!task) {
+export function deleteTask(spec: ComponentSpec, entityId: string): boolean {
+  const taskIndex = spec.tasks.findIndex((t) => t.$id === entityId);
+  if (taskIndex < 0) {
     console.error(`Task not found: ${entityId}`);
     return false;
   }
 
-  // Remove the task from the collection
-  // Bindings are automatically cleaned up via Valtio subscriptions
-  return spec.implementation.tasks.removeById(entityId);
+  // Remove all bindings that reference this task
+  spec.bindings.removeBy(
+    (b) => b.sourceEntityId === entityId || b.targetEntityId === entityId,
+  );
+
+  // Remove the task
+  spec.tasks.remove(taskIndex);
+
+  return true;
 }
 
 /**
  * Delete an input by its entity $id.
- * Uses the current spec from navigation state.
- *
- * Bindings referencing this input are automatically cleaned up via reactive subscriptions.
  */
-export function deleteInput(entityId: string) {
-  const spec = getCurrentSpec();
-
-  if (!spec) {
-    console.error("Cannot delete input: no spec loaded");
-    return false;
-  }
-
-  const input = spec.inputs.findById(entityId);
-  if (!input) {
+export function deleteInput(spec: ComponentSpec, entityId: string): boolean {
+  const inputIndex = spec.inputs.findIndex((i) => i.$id === entityId);
+  if (inputIndex < 0) {
     console.error(`Input not found: ${entityId}`);
     return false;
   }
 
-  // Remove the input from the collection
-  // Bindings are automatically cleaned up via Valtio subscriptions
-  return spec.inputs.removeById(entityId);
+  // Remove all bindings that reference this input
+  spec.bindings.removeBy((b) => b.sourceEntityId === entityId);
+
+  // Remove the input
+  spec.inputs.remove(inputIndex);
+
+  return true;
 }
 
 /**
  * Delete an output by its entity $id.
- * Uses the current spec from navigation state.
- *
- * Bindings referencing this output are automatically cleaned up via reactive subscriptions.
  */
-export function deleteOutput(entityId: string) {
-  const spec = getCurrentSpec();
-
-  if (!spec) {
-    console.error("Cannot delete output: no spec loaded");
-    return false;
-  }
-
-  const output = spec.outputs.findById(entityId);
-  if (!output) {
+export function deleteOutput(spec: ComponentSpec, entityId: string): boolean {
+  const outputIndex = spec.outputs.findIndex((o) => o.$id === entityId);
+  if (outputIndex < 0) {
     console.error(`Output not found: ${entityId}`);
     return false;
   }
 
-  // Remove the output from the collection
-  // Bindings are automatically cleaned up via Valtio subscriptions
-  return spec.outputs.removeById(entityId);
+  // Remove all bindings that reference this output
+  spec.bindings.removeBy((b) => b.targetEntityId === entityId);
+
+  // Remove the output
+  spec.outputs.remove(outputIndex);
+
+  return true;
 }
 
 /**
  * Delete an edge by its binding $id.
- * Uses the current spec from navigation state.
  *
  * Edge format: `edge_{binding.$id}`
  */
-export function deleteEdge(edgeId: string) {
-  const spec = getCurrentSpec();
-
-  if (!hasGraphImplementation(spec)) {
-    console.error("Cannot delete edge: spec has no graph implementation");
-    return false;
-  }
-
+export function deleteEdge(spec: ComponentSpec, edgeId: string): boolean {
   // Extract binding ID from edge ID format: edge_{binding.$id}
   const bindingIdMatch = edgeId.match(/^edge_(.+)$/);
   if (!bindingIdMatch) {
@@ -470,49 +358,41 @@ export function deleteEdge(edgeId: string) {
   }
 
   const bindingId = bindingIdMatch[1];
-  const binding = spec.implementation.bindings.findById(bindingId);
+  const bindingIndex = spec.bindings.findIndex((b) => b.$id === bindingId);
 
-  if (!binding) {
+  if (bindingIndex < 0) {
     console.error(`Binding not found: ${bindingId}`);
     return false;
   }
 
-  // Remove the binding
-  return spec.implementation.bindings.unbind(binding.$id);
+  spec.bindings.remove(bindingIndex);
+
+  return true;
 }
 
 /**
  * Rename a task by its entity $id.
- * Uses the current spec from navigation state.
  */
-export function renameTask(entityId: string, newName: string) {
-  const spec = getCurrentSpec();
-
-  if (!hasGraphImplementation(spec)) {
-    console.error("Cannot rename: spec has no graph implementation");
-    return false;
-  }
-
-  // Get task directly by $id
-  const task = spec.implementation.tasks.findById(entityId);
-
+export function renameTask(
+  spec: ComponentSpec,
+  entityId: string,
+  newName: string,
+): boolean {
+  const task = spec.tasks.find((t) => t.$id === entityId);
   if (!task) {
     console.error(`Task not found: ${entityId}`);
     return false;
   }
 
   // Check if new name is unique
-  const existingTask = spec.implementation.tasks.findByIndex(
-    "name",
-    newName,
-  )[0];
-
-  if (existingTask && existingTask.$id !== entityId) {
+  const existingTask = spec.tasks.find(
+    (t) => t.name === newName && t.$id !== entityId,
+  );
+  if (existingTask) {
     console.error(`Task name already exists: ${newName}`);
     return false;
   }
 
-  // Update the name - auto-reindexing happens via Valtio subscription
   task.name = newName;
 
   return true;
@@ -520,329 +400,117 @@ export function renameTask(entityId: string, newName: string) {
 
 /**
  * Rename an input by its entity $id.
- * Uses the current spec from navigation state.
  */
-export function renameInput(entityId: string, newName: string) {
-  const spec = getCurrentSpec();
-
-  if (!spec) {
-    console.error("Cannot rename: no spec loaded");
-    return false;
-  }
-
-  // Get input directly by $id
-  const input = spec.inputs.entities[entityId];
-
+export function renameInput(
+  spec: ComponentSpec,
+  entityId: string,
+  newName: string,
+): boolean {
+  const input = spec.inputs.find((i) => i.$id === entityId);
   if (!input) {
     console.error(`Input not found: ${entityId}`);
     return false;
   }
 
   // Check if new name is unique
-  const existingInput = spec.inputs.findByIndex("name", newName)[0];
-
-  if (existingInput && existingInput.$id !== entityId) {
+  const existingInput = spec.inputs.find(
+    (i) => i.name === newName && i.$id !== entityId,
+  );
+  if (existingInput) {
     console.error(`Input name already exists: ${newName}`);
     return false;
   }
 
-  // Update the name - auto-reindexing happens via Valtio subscription
   input.name = newName;
 
   return true;
 }
 
 /**
- * Rename the current spec (pipeline or subgraph).
- * Uses the current spec from navigation state.
+ * Rename the spec (pipeline or subgraph).
  */
-export function renamePipeline(newName: string) {
-  const spec = getCurrentSpec();
-
-  if (!spec) {
-    console.error("Cannot rename: no spec loaded");
-    return false;
-  }
-
+export function renamePipeline(spec: ComponentSpec, newName: string): boolean {
   spec.name = newName;
   return true;
 }
 
 /**
- * Update the current spec description.
- * Uses the current spec from navigation state.
+ * Update the spec description.
  */
-export function updatePipelineDescription(description: string | undefined) {
-  const spec = getCurrentSpec();
-
-  if (!spec) {
-    console.error("Cannot update description: no spec loaded");
-    return false;
-  }
-
+export function updatePipelineDescription(
+  spec: ComponentSpec,
+  description: string | undefined,
+): boolean {
   spec.description = description;
   return true;
 }
 
 /**
  * Rename an output by its entity $id.
- * Uses the current spec from navigation state.
- *
- * Bindings use $id references, so renaming doesn't affect bindings.
- * The binding's targetPortName is updated during serialization.
  */
-export function renameOutput(entityId: string, newName: string) {
-  const spec = getCurrentSpec();
-
-  if (!spec) {
-    console.error("Cannot rename: no spec loaded");
-    return false;
-  }
-
-  // Get output directly by $id
-  const output = spec.outputs.findById(entityId);
-
+export function renameOutput(
+  spec: ComponentSpec,
+  entityId: string,
+  newName: string,
+): boolean {
+  const output = spec.outputs.find((o) => o.$id === entityId);
   if (!output) {
     console.error(`Output not found: ${entityId}`);
     return false;
   }
 
   // Check if new name is unique
-  const existingOutput = spec.outputs.findByIndex("name", newName)[0];
-
-  if (existingOutput && existingOutput.$id !== entityId) {
+  const existingOutput = spec.outputs.find(
+    (o) => o.name === newName && o.$id !== entityId,
+  );
+  if (existingOutput) {
     console.error(`Output name already exists: ${newName}`);
     return false;
   }
 
-  // Update the name - auto-reindexing happens via Valtio subscription
-  // Note: Bindings use $id references, so no binding updates needed
   output.name = newName;
 
   return true;
 }
 
 /**
- * Create a subgraph from selected task names.
- * Uses the current spec from navigation state.
- *
- * This is an advanced feature that:
- * 1. Creates a new ComponentSpec containing the selected tasks
- * 2. Creates a new task that references this subgraph spec
- * 3. Remaps external connections to/from the subgraph
- * 4. Moves the original tasks (using detach/attach)
- *
- * @param taskNames - Array of task names to include in the subgraph
- * @param subgraphName - Name for the new subgraph
- * @param position - Position for the new subgraph task node
+ * Create a subgraph from selected task IDs.
  */
 export function createSubgraph(
-  taskNames: string[],
+  spec: ComponentSpec,
+  taskIds: string[],
   subgraphName: string,
   position: XYPosition,
-) {
-  const spec = getCurrentSpec();
-
-  if (!hasGraphImplementation(spec)) {
-    console.error("Cannot create subgraph: spec has no graph implementation");
-    return null;
-  }
-
-  if (taskNames.length === 0) {
+): Task | null {
+  if (taskIds.length === 0) {
     console.error("Cannot create subgraph: no tasks selected");
     return null;
   }
 
   const uniqueSubgraphName = generateUniqueTaskName(spec, subgraphName);
 
-  // Collect selected tasks
-  const selectedTasks = taskNames
-    .map((name) => spec.implementation.tasks.findByIndex("name", name)[0])
-    .filter(Boolean);
+  try {
+    const result = modelCreateSubgraph({
+      spec,
+      selectedTaskIds: taskIds,
+      subgraphName: uniqueSubgraphName,
+      idGen,
+    });
 
-  if (selectedTasks.length === 0) {
-    console.error("Cannot create subgraph: no valid tasks found");
+    if (!result) {
+      console.error("Failed to create subgraph: no result returned");
+      return null;
+    }
+
+    // Add position annotation to the replacement task
+    result.replacementTask.annotations.add({
+      key: EDITOR_POSITION_ANNOTATION,
+      value: JSON.stringify(position),
+    });
+
+    return result.replacementTask;
+  } catch (error) {
+    console.error("Failed to create subgraph:", error);
     return null;
   }
-
-  // Build set of selected task entity IDs for easy lookup
-  const selectedTaskIds = new Set(selectedTasks.map((t) => t.$id));
-
-  // Analyze bindings to find external connections
-  const allBindings = spec.implementation.bindings.getAll();
-
-  // Find incoming bindings: bindings targeting selected tasks from outside the selection
-  // These become subgraph inputs
-  const incomingBindings = allBindings.filter(
-    (b) =>
-      selectedTaskIds.has(b.targetEntityId) &&
-      !selectedTaskIds.has(b.sourceEntityId),
-  );
-
-  // Find outgoing bindings: bindings from selected tasks to outside the selection
-  // These become subgraph outputs
-  const outgoingBindings = allBindings.filter(
-    (b) =>
-      selectedTaskIds.has(b.sourceEntityId) &&
-      !selectedTaskIds.has(b.targetEntityId),
-  );
-
-  // Find internal bindings: bindings between selected tasks
-  const internalBindings = allBindings.filter(
-    (b) =>
-      selectedTaskIds.has(b.sourceEntityId) &&
-      selectedTaskIds.has(b.targetEntityId),
-  );
-
-  // Create the subgraph ComponentSpec
-  const subgraphSpecEntity = proxy(
-    new ComponentSpecEntity(spec.generateId(), spec, {
-      name: uniqueSubgraphName,
-    }),
-  ).populate({
-    name: uniqueSubgraphName,
-    description: `Subgraph containing: ${taskNames.join(", ")}`,
-  });
-
-  // Register the subgraph spec entity
-  spec.registerEntity(subgraphSpecEntity);
-
-  // Group incoming bindings by source - each group becomes one subgraph input
-  const incomingBySource = Object.groupBy(
-    incomingBindings,
-    (b) => `${b.sourceEntityId}:${b.sourcePortName}`,
-  );
-
-  // Create subgraph inputs from grouped bindings
-  const subgraphInputGroups = Object.values(incomingBySource)
-    .filter((bindings): bindings is NonNullable<typeof bindings> => !!bindings)
-    .map((bindings) => {
-      const first = bindings[0];
-      // For graph inputs, use the input name; for task outputs, use "taskName_outputName"
-      const inputName = first.sourcePortName;
-
-      const inputEntity = subgraphSpecEntity.inputs.add({ name: inputName });
-      return { inputEntity, bindings };
-    });
-
-  // Group outgoing bindings by source - each group becomes one subgraph output
-  const outgoingBySource = Object.groupBy(
-    outgoingBindings,
-    (b) => `${b.sourceEntityId}:${b.sourcePortName}`,
-  );
-
-  // Create subgraph outputs from grouped bindings
-  const subgraphOutputGroups = Object.values(outgoingBySource)
-    .filter((bindings): bindings is NonNullable<typeof bindings> => !!bindings)
-    .map((bindings) => {
-      const first = bindings[0];
-      const outputName = first.sourcePortName;
-
-      const outputEntity = subgraphSpecEntity.outputs.add({ name: outputName });
-      return { outputEntity, bindings };
-    });
-
-  // Create GraphImplementation for the subgraph
-  subgraphSpecEntity.implementation = proxy(
-    new GraphImplementation(subgraphSpecEntity),
-  );
-
-  // Remove boundary bindings from parent BEFORE detaching tasks
-  // (otherwise the binding watch would auto-cleanup when tasks are detached)
-  for (const binding of incomingBindings) {
-    spec.implementation.bindings.unbind(binding.$id);
-  }
-  for (const binding of outgoingBindings) {
-    spec.implementation.bindings.unbind(binding.$id);
-  }
-
-  // Detach internal bindings from parent and attach to subgraph
-  // (tasks still have the same $ids, so bindings reference them correctly)
-  for (const binding of internalBindings) {
-    const detached = spec.implementation.bindings.detach(binding);
-    subgraphSpecEntity.implementation.bindings.attach(detached);
-  }
-
-  // Detach tasks from parent and attach to subgraph
-  // The attach method updates the task's context automatically
-  for (const task of selectedTasks) {
-    const detached = spec.implementation.tasks.detach(task);
-    subgraphSpecEntity.implementation.tasks.attach(detached);
-  }
-
-  // Create bindings from subgraph inputs to moved tasks
-  for (const { inputEntity, bindings } of subgraphInputGroups) {
-    for (const binding of bindings) {
-      subgraphSpecEntity.implementation.bindings.rebind(
-        { entityId: inputEntity.$id, portName: inputEntity.name },
-        { entityId: binding.targetEntityId, portName: binding.targetPortName },
-      );
-    }
-  }
-
-  // Create bindings from moved tasks to subgraph outputs (outputValues)
-  // All bindings in a group share the same source, so use the first one
-  for (const { outputEntity, bindings } of subgraphOutputGroups) {
-    const first = bindings[0];
-    subgraphSpecEntity.implementation.bindings.rebind(
-      { entityId: first.sourceEntityId, portName: first.sourcePortName },
-      { entityId: outputEntity.$id, portName: outputEntity.name },
-    );
-  }
-
-  // Build the ComponentSpec for the subgraph task's componentRef
-  const subgraphComponentSpec: ComponentSpec = subgraphSpecEntity.toJson();
-
-  // Add subgraph as a task in the parent spec
-  const subgraphTask = spec.implementation.tasks.add({
-    name: uniqueSubgraphName,
-    componentRef: { spec: subgraphComponentSpec },
-    annotations: {
-      [EDITOR_POSITION_ANNOTATION]: JSON.stringify(position),
-    },
-  });
-
-  // Restore connections from the parent to the subgraph task
-
-  // Connect external sources to subgraph task inputs
-  // All bindings in a group share the same source, so one binding per group
-  for (const { inputEntity, bindings } of subgraphInputGroups) {
-    subgraphTask.arguments.add({ name: inputEntity.name });
-    const first = bindings[0];
-    spec.implementation.bindings.rebind(
-      { entityId: first.sourceEntityId, portName: first.sourcePortName },
-      { entityId: subgraphTask.$id, portName: inputEntity.name },
-    );
-  }
-
-  // Connect subgraph task outputs to external targets
-  for (const { outputEntity, bindings } of subgraphOutputGroups) {
-    for (const binding of bindings) {
-      // If target is a graph output, create outputValue binding
-      // Otherwise, create task argument binding
-
-      if (binding.target instanceof TaskEntity) {
-        // Target is another task - create binding to its input
-        // Ensure target task has the argument
-        if (
-          !binding.target.arguments.findByIndex(
-            "name",
-            binding.targetPortName,
-          )[0]
-        ) {
-          binding.target.arguments.add({ name: binding.targetPortName });
-        }
-      }
-
-      spec.implementation.bindings.rebind(
-        { entityId: subgraphTask.$id, portName: outputEntity.name },
-        {
-          entityId: binding.targetEntityId,
-          portName: binding.targetPortName,
-        },
-      );
-    }
-  }
-
-  return subgraphTask;
 }

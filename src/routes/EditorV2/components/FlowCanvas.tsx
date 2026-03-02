@@ -20,12 +20,9 @@ import { useEffect, useRef, useState } from "react";
 
 import { BlockStack } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
-import type { ComponentSpecEntity } from "@/providers/ComponentSpec/componentSpec";
+import type { ComponentReference, ComponentSpec } from "@/models/componentSpec";
 import { hydrateComponentReference } from "@/services/componentService";
-import type {
-  HydratedComponentReference,
-  TaskSpec,
-} from "@/utils/componentSpec";
+import type { TaskSpec } from "@/utils/componentSpec";
 
 import type { TaskNodeData } from "../hooks/useSpecToNodesEdges";
 import { useSpecToNodesEdges } from "../hooks/useSpecToNodesEdges";
@@ -59,8 +56,8 @@ const nodeTypes: Record<string, ComponentType<any>> = {
 };
 
 interface FlowCanvasProps {
-  /** The ComponentSpecEntity to render */
-  spec: ComponentSpecEntity | null;
+  /** The ComponentSpec to render */
+  spec: ComponentSpec | null;
   /** Callback when a task node is double-clicked (for subgraph navigation) */
   onTaskDoubleClick?: (taskEntityId: string) => void;
   className?: string;
@@ -122,6 +119,11 @@ export function FlowCanvas({
   };
 
   const handleNodesChange = (changes: NodeChange[]) => {
+    if (!spec) {
+      onNodesChange(changes);
+      return;
+    }
+
     // Handle position changes to update the spec
     const positionChanges = changes.filter(
       (change) => change.type === "position" && change.dragging === false,
@@ -132,7 +134,7 @@ export function FlowCanvas({
     for (const change of positionChanges) {
       if ("id" in change && "position" in change && change.position) {
         positionCommands.push(
-          new UpdateNodePositionCommand(change.id, change.position),
+          new UpdateNodePositionCommand(spec, change.id, change.position),
         );
       }
     }
@@ -157,11 +159,11 @@ export function FlowCanvas({
         const nodeId = change.id;
         // Determine node type from entity $id format
         if (nodeId.includes(".tasks_")) {
-          deleteCommands.push(new DeleteTaskCommand(nodeId));
+          deleteCommands.push(new DeleteTaskCommand(spec, nodeId));
         } else if (nodeId.includes(".inputs_")) {
-          deleteCommands.push(new DeleteInputCommand(nodeId));
+          deleteCommands.push(new DeleteInputCommand(spec, nodeId));
         } else if (nodeId.includes(".outputs_")) {
-          deleteCommands.push(new DeleteOutputCommand(nodeId));
+          deleteCommands.push(new DeleteOutputCommand(spec, nodeId));
         }
       }
     }
@@ -176,6 +178,11 @@ export function FlowCanvas({
   };
 
   const handleEdgesChange = (changes: EdgeChange[]) => {
+    if (!spec) {
+      onEdgesChange(changes);
+      return;
+    }
+
     // Handle edge removal to update the spec
     const removeChanges = changes.filter((change) => change.type === "remove");
 
@@ -183,7 +190,7 @@ export function FlowCanvas({
     const deleteCommands: DeleteEdgeCommand[] = [];
     for (const change of removeChanges) {
       if ("id" in change) {
-        deleteCommands.push(new DeleteEdgeCommand(change.id));
+        deleteCommands.push(new DeleteEdgeCommand(spec, change.id));
       }
     }
 
@@ -199,6 +206,8 @@ export function FlowCanvas({
   };
 
   const handleConnect: OnConnect = (connection: Connection) => {
+    if (!spec) return;
+
     if (
       !connection.source ||
       !connection.target ||
@@ -214,7 +223,7 @@ export function FlowCanvas({
     }
 
     executeCommand(
-      new ConnectNodesCommand({
+      new ConnectNodesCommand(spec, {
         sourceNodeId: connection.source,
         sourceHandleId: connection.sourceHandle,
         targetNodeId: connection.target,
@@ -231,7 +240,7 @@ export function FlowCanvas({
   const handleDrop = async (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
 
-    if (!reactFlowInstance) {
+    if (!spec || !reactFlowInstance) {
       return;
     }
 
@@ -252,18 +261,26 @@ export function FlowCanvas({
       if (parsedData.task) {
         // Dropped a task - async hydration happens BEFORE command creation
         const taskSpec = parsedData.task as TaskSpec;
-        const componentRef: HydratedComponentReference | null =
-          await hydrateComponentReference(taskSpec.componentRef);
+        const componentRef = await hydrateComponentReference(
+          taskSpec.componentRef,
+        );
 
         if (componentRef) {
-          executeCommand(new AddTaskCommand(componentRef, position));
+          // HydratedComponentReference from utils is structurally compatible with ComponentReference
+          executeCommand(
+            new AddTaskCommand(
+              spec,
+              componentRef as ComponentReference,
+              position,
+            ),
+          );
         }
       } else if (parsedData.input !== undefined) {
         // Dropped an input node
-        executeCommand(new AddInputCommand(position));
+        executeCommand(new AddInputCommand(spec, position));
       } else if (parsedData.output !== undefined) {
         // Dropped an output node
-        executeCommand(new AddOutputCommand(position));
+        executeCommand(new AddOutputCommand(spec, position));
       }
     } catch (err) {
       console.error("Failed to parse dropped data:", err);

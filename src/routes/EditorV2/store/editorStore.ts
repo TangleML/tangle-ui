@@ -1,6 +1,6 @@
 import { proxy } from "valtio";
 
-import type { ComponentSpecEntity } from "@/providers/ComponentSpec/componentSpec";
+import type { ComponentSpec } from "@/models/componentSpec";
 
 /** Represents a selected node in multi-selection */
 export interface SelectedNode {
@@ -9,8 +9,15 @@ export interface SelectedNode {
   position: { x: number; y: number };
 }
 
+/**
+ * Store ComponentSpec entity OUTSIDE of Valtio proxy.
+ * Valtio's proxy/snapshot mechanism breaks accessor decorators that use private fields.
+ */
+let _spec: ComponentSpec | null = null;
+
 interface EditorStore {
-  spec: ComponentSpecEntity | null;
+  /** Trigger for spec changes (increment to notify) */
+  specVersion: number;
   selectedNodeId: string | null;
   selectedNodeType: "task" | "input" | "output" | null;
   /** Tracks if shift key was held during last selection (for pinned windows) */
@@ -19,25 +26,40 @@ interface EditorStore {
   lastShiftClickEntityId: string | null;
   /** Array of selected nodes for multi-selection */
   multiSelection: SelectedNode[];
+  /** The ComponentSpec (stored outside proxy, accessed via getter) */
+  readonly spec: ComponentSpec | null;
 }
 
+// Cast through unknown because spec/rootSpec/nestedSpecs are added via Object.defineProperty
 export const editorStore = proxy<EditorStore>({
-  spec: null,
+  specVersion: 0,
   selectedNodeId: null,
   selectedNodeType: null,
   lastSelectionWasShiftClick: false,
   lastShiftClickEntityId: null,
   multiSelection: [],
+} as unknown as EditorStore);
+
+/** Getter for the actual spec object (outside of Valtio) */
+export function getSpec(): ComponentSpec | null {
+  return _spec;
+}
+
+/** For backward compatibility - access spec directly */
+Object.defineProperty(editorStore, "spec", {
+  get: () => _spec,
+  enumerable: false,
 });
 
 /**
  * Initialize the editor store with a ComponentSpec.
  *
- * The spec is already proxied from YamlLoader, and all nested collections
- * and entities are wrapped with proxy() for native Valtio reactivity.
+ * The new model uses EventTarget-based reactivity via BaseEntity and ObservableArray.
+ * Valtio is still used for the editor store itself (selection state, etc.)
  */
-export function initializeStore(spec: ComponentSpecEntity) {
-  editorStore.spec = spec;
+export function initializeStore(spec: ComponentSpec) {
+  _spec = spec;
+  editorStore.specVersion++;
   editorStore.selectedNodeId = null;
   editorStore.selectedNodeType = null;
   editorStore.lastSelectionWasShiftClick = false;
@@ -74,6 +96,14 @@ export function selectNode(
 
   editorStore.selectedNodeId = nodeId;
   editorStore.selectedNodeType = nodeType;
+}
+
+/**
+ * Clear the spec from the store.
+ */
+export function clearSpec() {
+  _spec = null;
+  editorStore.specVersion++;
 }
 
 /**

@@ -1,14 +1,13 @@
-import { type ChangeEvent, useRef } from "react";
-import { useSnapshot } from "valtio";
+import { type ChangeEvent, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
-import { GraphImplementation } from "@/providers/ComponentSpec/graphImplementation";
+import type { Annotation } from "@/models/componentSpec";
 
-import { getCurrentSpec, navigationStore } from "../store/navigationStore";
+import { useSpec } from "../providers/SpecContext";
 
 interface TaskAnnotationsEditorProps {
   entityId: string;
@@ -17,97 +16,61 @@ interface TaskAnnotationsEditorProps {
 /**
  * Editor for task annotations, displayed in the ContextPanel.
  * Follows the visual pattern from YamlGeneratorOptionsEditor.
- * Uses direct Valtio mutations on the annotations collection.
+ * Uses the new model's ObservableArray for annotations.
  */
 export function TaskAnnotationsEditor({
   entityId,
 }: TaskAnnotationsEditorProps) {
-  // Subscribe to navigation changes to trigger re-renders
-  const navSnapshot = useSnapshot(navigationStore);
-  void navSnapshot.navigationPath.length;
+  // Version counter to force re-renders when annotations change
+  const [version, setVersion] = useState(0);
 
-  // Get the current spec from navigation state
-  const spec = getCurrentSpec();
+  // Get the current spec from SpecContext
+  const spec = useSpec();
 
-  // Create a stable dummy object for when spec is null
-  // This allows useSnapshot to be called unconditionally
-  const dummySpec = useRef({ name: "" });
+  const task = spec?.tasks.find((t) => t.$id === entityId);
 
-  // Subscribe to spec changes to trigger re-renders when annotations change
-  // The rootSpec is wrapped in ref() in navigationStore, so we need direct subscription
-  const specSnapshot = useSnapshot(spec ?? dummySpec.current);
+  // Subscribe to annotation changes using version counter
+  useEffect(() => {
+    if (!task) return;
+    const unsub = task.annotations.subscribe(() => {
+      setVersion((v) => v + 1);
+    });
+    return unsub;
+  }, [task]);
 
-  if (
-    !spec?.implementation ||
-    !(spec.implementation instanceof GraphImplementation)
-  ) {
+  if (!spec || !task) {
     return null;
   }
 
-  const task = spec.implementation.tasks.findById(entityId);
-  if (!task) {
-    return null;
-  }
-
-  // Access annotations through snapshot to establish Valtio subscription
-  // Cast snapshot to access nested task annotations (readonly view)
-  const taskSnapshot = (
-    specSnapshot as {
-      implementation?: {
-        tasks?: {
-          entities: Record<
-            string,
-            {
-              annotations: {
-                entities: Record<string, { key: string; value: unknown }>;
-              };
-            }
-          >;
-        };
-      };
-    }
-  ).implementation?.tasks?.entities[entityId];
-
-  // Read annotation key and value from snapshot to establish subscription
-  // Reading just Object.keys() only subscribes to entity count, not value changes
-  const annotationEntities = taskSnapshot?.annotations?.entities ?? {};
-  const annotationFingerprint = Object.values(annotationEntities)
-    .map((a) => `${a.key}:${a.value}`)
-    .join(",");
-  void annotationFingerprint;
+  // Access version to ensure React tracks it as a dependency
+  void version;
 
   // Filter out internal annotations (editor.*)
-  const userAnnotations = task.annotations
-    .getAll()
-    .filter((a) => !a.key.startsWith("editor."));
+  const userAnnotations = task.annotations.all.filter(
+    (a) => !a.key.startsWith("editor."),
+  );
 
-  // Handlers mutate the task proxy directly - no need to re-traverse navigation
+  // Handlers mutate the task annotations directly
   const handleAddAnnotation = () => {
     task.annotations.add({ key: "", value: "" });
   };
 
   const handleUpdateKey = (
-    annotationId: string,
+    index: number,
     event: ChangeEvent<HTMLInputElement>,
   ) => {
-    const annotation = task.annotations.findById(annotationId);
-    if (annotation) {
-      annotation.key = event.target.value;
-    }
+    task.annotations.update(index, { key: event.target.value });
   };
 
   const handleUpdateValue = (
-    annotationId: string,
+    index: number,
     event: ChangeEvent<HTMLInputElement>,
   ) => {
-    const annotation = task.annotations.findById(annotationId);
-    if (annotation) {
-      annotation.value = event.target.value;
-    }
+    task.annotations.update(index, { value: event.target.value });
   };
 
-  const handleRemoveAnnotation = (annotationId: string) => {
-    task.annotations.removeById(annotationId);
+  const handleRemoveAnnotation = (index: number) => {
+    task.annotations.remove(index);
   };
 
   return (
@@ -127,41 +90,63 @@ export function TaskAnnotationsEditor({
       </BlockStack>
 
       <BlockStack gap="1">
-        {userAnnotations.map((annotation) => (
-          <InlineStack
-            key={annotation.$id}
-            align="space-between"
-            className="w-full group"
-            gap="1"
-          >
-            <InlineStack wrap="nowrap" className="flex-1" gap="1">
-              <Input
-                className="w-full font-mono text-sm"
-                placeholder="Key"
-                defaultValue={annotation.key}
-                onBlur={(e) => handleUpdateKey(annotation.$id, e)}
-              />
-              <Text className="text-gray-400">:</Text>
-            </InlineStack>
-            <InlineStack wrap="nowrap" className="flex-1">
-              <Input
-                className="w-full font-mono text-sm"
-                placeholder="Value"
-                defaultValue={String(annotation.value ?? "")}
-                onBlur={(e) => handleUpdateValue(annotation.$id, e)}
-              />
-              <Button
-                variant="ghost"
-                size="xs"
-                className="group-hover:visible group-focus-within:visible invisible"
-                onClick={() => handleRemoveAnnotation(annotation.$id)}
-              >
-                <Icon name="Trash" className="text-destructive" />
-              </Button>
-            </InlineStack>
-          </InlineStack>
+        {userAnnotations.map((annotation, idx) => (
+          <AnnotationRow
+            key={`annotation-${idx}-${version}`}
+            annotation={annotation}
+            index={task.annotations.all.findIndex((a) => a === annotation)}
+            onUpdateKey={handleUpdateKey}
+            onUpdateValue={handleUpdateValue}
+            onRemove={handleRemoveAnnotation}
+          />
         ))}
       </BlockStack>
     </BlockStack>
+  );
+}
+
+interface AnnotationRowProps {
+  annotation: Annotation;
+  index: number;
+  onUpdateKey: (index: number, event: ChangeEvent<HTMLInputElement>) => void;
+  onUpdateValue: (index: number, event: ChangeEvent<HTMLInputElement>) => void;
+  onRemove: (index: number) => void;
+}
+
+function AnnotationRow({
+  annotation,
+  index,
+  onUpdateKey,
+  onUpdateValue,
+  onRemove,
+}: AnnotationRowProps) {
+  return (
+    <InlineStack align="space-between" className="w-full group" gap="1">
+      <InlineStack wrap="nowrap" className="flex-1" gap="1">
+        <Input
+          className="w-full font-mono text-sm"
+          placeholder="Key"
+          defaultValue={annotation.key}
+          onBlur={(e) => onUpdateKey(index, e)}
+        />
+        <Text className="text-gray-400">:</Text>
+      </InlineStack>
+      <InlineStack wrap="nowrap" className="flex-1">
+        <Input
+          className="w-full font-mono text-sm"
+          placeholder="Value"
+          defaultValue={String(annotation.value ?? "")}
+          onBlur={(e) => onUpdateValue(index, e)}
+        />
+        <Button
+          variant="ghost"
+          size="xs"
+          className="group-hover:visible group-focus-within:visible invisible"
+          onClick={() => onRemove(index)}
+        >
+          <Icon name="Trash" className="text-destructive" />
+        </Button>
+      </InlineStack>
+    </InlineStack>
   );
 }

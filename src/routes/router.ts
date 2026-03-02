@@ -22,6 +22,7 @@ import Home from "./Home";
 import { ImportPage } from "./Import";
 import NotFoundPage from "./NotFoundPage";
 import PipelineRun from "./PipelineRun";
+import { Playground } from "./Playground";
 import { QuickStartPage } from "./QuickStart";
 import { BackendSettings } from "./Settings/sections/BackendSettings";
 import { BetaFeaturesSettings } from "./Settings/sections/BetaFeaturesSettings";
@@ -58,6 +59,7 @@ export const APP_ROUTES = {
   GITHUB_AUTH_CALLBACK: "/authorize/github",
   HUGGINGFACE_AUTH_CALLBACK: "/authorize/huggingface",
   EDITOR_V2: "/editor-v2",
+  PLAYGROUND: "/playground",
 } as const;
 
 const rootRoute = createRootRoute({
@@ -200,6 +202,12 @@ const editorV2Route = createRoute({
   component: EditorV2,
 });
 
+const playgroundRoute = createRoute({
+  getParentRoute: () => mainLayout,
+  path: APP_ROUTES.PLAYGROUND,
+  component: Playground,
+});
+
 const appRouteTree = mainLayout.addChildren([
   indexRoute,
   quickStartRoute,
@@ -209,6 +217,7 @@ const appRouteTree = mainLayout.addChildren([
   runDetailRoute,
   runDetailWithSubgraphRoute,
   editorV2Route,
+  playgroundRoute,
 ]);
 
 const rootRouteTree = rootRoute.addChildren([

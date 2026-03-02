@@ -7,7 +7,7 @@
  * Highlights the currently displayed graph in the tree.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useReducer, useState } from "react";
 import { useSnapshot } from "valtio";
 
 import { Button } from "@/components/ui/button";
@@ -15,9 +15,11 @@ import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
-import type { ComponentSpecEntity } from "@/providers/ComponentSpec/componentSpec";
-import { GraphImplementation } from "@/providers/ComponentSpec/graphImplementation";
-import type { TaskEntity } from "@/providers/ComponentSpec/tasks";
+import type {
+  ComponentSpec,
+  ComponentSpecJson,
+  Task,
+} from "@/models/componentSpec";
 
 import {
   navigateToLevel,
@@ -28,28 +30,17 @@ import {
 /**
  * Check if a task is a subgraph (has graph implementation).
  */
-function isSubgraphTask(task: TaskEntity): boolean {
-  const componentSpec = task.componentRef.spec;
+function isSubgraphTask(task: Task): boolean {
+  const componentSpec = task.componentRef.spec as ComponentSpecJson | undefined;
   if (!componentSpec?.implementation) {
     return false;
   }
-  // Check for graph property which indicates a graph implementation
   return "graph" in componentSpec.implementation;
-}
-
-/**
- * Get the nested ComponentSpecEntity for a task if it's a subgraph.
- */
-function getNestedSpec(
-  parentSpec: ComponentSpecEntity,
-  taskName: string,
-): ComponentSpecEntity | undefined {
-  return parentSpec.findComponentSpecEntity(taskName);
 }
 
 interface TaskLeafNodeProps {
   /** The task to display */
-  task: TaskEntity;
+  task: Task;
 }
 
 /**
@@ -73,10 +64,10 @@ function TaskLeafNode({ task }: TaskLeafNodeProps) {
 }
 
 interface SubgraphNodeProps {
-  /** The ComponentSpecEntity of the subgraph */
-  spec: ComponentSpecEntity;
+  /** The ComponentSpec of the subgraph */
+  spec: ComponentSpec;
   /** The task entity that represents this subgraph */
-  task: TaskEntity;
+  task: Task;
   /** The navigation path to this node (array of display names) */
   navigationPath: string[];
   /** The current navigation path from the store (for highlighting) */
@@ -111,10 +102,7 @@ function SubgraphNode({
   const isCurrentGraph = currentNavPath.join("/") === nodePath;
 
   // Get all tasks from this subgraph
-  const tasks =
-    spec.implementation instanceof GraphImplementation
-      ? spec.implementation.tasks.getAll()
-      : [];
+  const tasks = spec.tasks.all;
 
   const hasChildren = tasks.length > 0;
 
@@ -221,9 +209,18 @@ function SubgraphNode({
             const isChildSubgraph = isSubgraphTask(childTask);
 
             if (isChildSubgraph) {
-              const nestedSpec = getNestedSpec(spec, childTask.name);
+              // Get the nested spec from the nestedSpecs cache
+              const childPathKey =
+                navigationPath.slice(1).join("/") + "/" + childTask.name;
+              const nestedSpec = navigationStore.nestedSpecs.get(
+                childPathKey.startsWith("/")
+                  ? childPathKey.slice(1)
+                  : childPathKey,
+              );
+
               if (!nestedSpec) {
-                return null;
+                // Nested spec not yet loaded, show as leaf
+                return <TaskLeafNode key={childTask.$id} task={childTask} />;
               }
 
               return (
@@ -248,8 +245,8 @@ function SubgraphNode({
 }
 
 interface RootNodeProps {
-  /** The root ComponentSpecEntity */
-  spec: ComponentSpecEntity;
+  /** The root ComponentSpec */
+  spec: ComponentSpec;
   /** The current navigation path from the store (for highlighting) */
   currentNavPath: string[];
   /** Set of expanded node paths */
@@ -275,10 +272,7 @@ function RootNode({
   const isCurrentGraph = currentNavPath.join("/") === nodePath;
 
   // Get all tasks from the root spec
-  const tasks =
-    spec.implementation instanceof GraphImplementation
-      ? spec.implementation.tasks.getAll()
-      : [];
+  const tasks = spec.tasks.all;
 
   const hasChildren = tasks.length > 0;
 
@@ -360,9 +354,12 @@ function RootNode({
             const isTaskASubgraph = isSubgraphTask(task);
 
             if (isTaskASubgraph) {
-              const nestedSpec = getNestedSpec(spec, task.name);
+              // Get nested spec from cache
+              const nestedSpec = navigationStore.nestedSpecs.get(task.name);
+
               if (!nestedSpec) {
-                return null;
+                // Nested spec not yet loaded, show as leaf
+                return <TaskLeafNode key={task.$id} task={task} />;
               }
 
               return (
@@ -407,8 +404,30 @@ function buildExpandedPaths(navPath: string[]): Set<string> {
 }
 
 export function PipelineTreeContent() {
-  const { rootSpec, navigationPath } = useSnapshot(navigationStore);
+  const [, forceUpdate] = useReducer((x: number) => x + 1, 0);
+  // Use snapshot for navigation path reactivity
+  const { navigationPath } = useSnapshot(navigationStore);
+  // Access rootSpec directly to avoid snapshot stripping methods
+  const rootSpec = navigationStore.rootSpec;
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+
+  // Subscribe to spec changes for reactivity
+  useEffect(() => {
+    if (!rootSpec) return;
+    const unsubscribes: (() => void)[] = [];
+
+    // Subscribe to tasks array changes (add/remove)
+    unsubscribes.push(rootSpec.tasks.subscribe(forceUpdate));
+
+    // Subscribe to each task's property changes (name, etc.)
+    for (const task of rootSpec.tasks) {
+      unsubscribes.push(task.subscribe(() => forceUpdate()));
+    }
+
+    return () => {
+      unsubscribes.forEach((unsub) => unsub());
+    };
+  }, [rootSpec, rootSpec?.tasks.length]);
 
   // Build the current navigation path as array of display names
   const currentNavPath = buildNavPathArray(navigationPath);
