@@ -7,7 +7,19 @@ import type { ComponentFileEntry } from "@/utils/componentStore";
 export type PipelineSortField = "modified_at" | "name";
 export type PipelineSortDirection = "asc" | "desc";
 
-type PipelineEntry = [string, ComponentFileEntry];
+export interface MatchedField {
+  label: string;
+  value: string;
+}
+
+interface PipelineMatchMetadata {
+  searchQuery: string;
+  matchedFields: MatchedField[];
+  componentQuery: string;
+  matchedComponentNames: string[];
+}
+
+type PipelineEntry = [string, ComponentFileEntry, PipelineMatchMetadata];
 
 export interface FilterBarProps {
   searchQuery: string;
@@ -64,6 +76,55 @@ function matchesSearch(
   );
 }
 
+function getMatchMetadata(
+  fileEntry: ComponentFileEntry,
+  searchQuery: string,
+  componentQuery: string,
+): PipelineMatchMetadata {
+  const matchedFields: MatchedField[] = [];
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    const spec = fileEntry.componentRef.spec;
+    const desc = spec.description ?? "";
+    if (desc.toLowerCase().includes(q)) {
+      matchedFields.push({ label: "Description", value: desc });
+    }
+    const author = spec.metadata?.annotations?.author ?? "";
+    if (author.toLowerCase().includes(q)) {
+      matchedFields.push({ label: "Author", value: author });
+    }
+    const rawNotes = spec.metadata?.annotations?.["notes"];
+    const notes = typeof rawNotes === "string" ? rawNotes : "";
+    if (notes.toLowerCase().includes(q)) {
+      matchedFields.push({ label: "Note", value: notes });
+    }
+  }
+
+  const matchedComponentNames: string[] = [];
+  const impl = fileEntry.componentRef.spec.implementation;
+  if (componentQuery && isGraphImplementation(impl)) {
+    const normalizedQuery = componentQuery.toLowerCase();
+    const seen = new Set<string>();
+    for (const task of Object.values(impl.graph.tasks)) {
+      const refName = task.componentRef.name ?? "";
+      const specName = task.componentRef.spec?.name ?? "";
+      for (const name of [refName, specName]) {
+        if (!name || seen.has(name)) continue;
+        if (!name.toLowerCase().includes(normalizedQuery)) continue;
+        seen.add(name);
+        matchedComponentNames.push(name);
+      }
+    }
+  }
+
+  return {
+    searchQuery,
+    matchedFields,
+    componentQuery,
+    matchedComponentNames,
+  };
+}
+
 function matchesDateRange(
   fileEntry: ComponentFileEntry,
   dateRange: DateRange | undefined,
@@ -117,7 +178,14 @@ export function usePipelineFilters(pipelines: Map<string, ComponentFileEntry>) {
         (new Date(entryA.modificationTime).getTime() -
           new Date(entryB.modificationTime).getTime())
       );
-    });
+    })
+    .map(
+      ([name, fileEntry]): PipelineEntry => [
+        name,
+        fileEntry,
+        getMatchMetadata(fileEntry, searchQuery, componentQuery),
+      ],
+    );
 
   const filterKey = [
     searchQuery,

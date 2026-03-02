@@ -204,7 +204,7 @@ export const PipelineSection = withSuspenseWrapper(() => {
               </TableCell>
             </TableRow>
           )}
-          {paginatedPipelines.map(([name, fileEntry]) => (
+          {paginatedPipelines.map(([name, fileEntry, matchMetadata]) => (
             <PipelineRow
               key={fileEntry.componentRef.digest}
               name={name}
@@ -212,6 +212,10 @@ export const PipelineSection = withSuspenseWrapper(() => {
               onDelete={fetchUserPipelines}
               isSelected={selectedPipelines.has(name)}
               onSelect={(checked) => handleSelectPipeline(name, checked)}
+              searchQuery={matchMetadata.searchQuery}
+              matchedFields={matchMetadata.matchedFields}
+              componentQuery={matchMetadata.componentQuery}
+              matchedComponentNames={matchMetadata.matchedComponentNames}
             />
           ))}
         </TableBody>
