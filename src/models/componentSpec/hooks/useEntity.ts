@@ -100,12 +100,10 @@ export function useEntity<T extends BaseEntity>(
     setSnapshot(createEntitySnapshot(entity));
 
     const handleChange = () => {
-      console.log("useEntity handleChange", entity.$id);
       setSnapshot(createEntitySnapshot(entity));
     };
 
     const pattern = subscribeToChildren ? "changed.*" : "changed.self.*";
-    console.log("useEntity subscribe", entity.$id, pattern);
     const unsub = entity.subscribe(pattern, handleChange);
 
     return unsub;

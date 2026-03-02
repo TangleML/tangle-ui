@@ -1,3 +1,4 @@
+export { PlaygroundStore } from "./PlaygroundStore";
 export type { ShoppingItemInit } from "./ShoppingItem";
 export { ShoppingItem } from "./ShoppingItem";
 export type { ShoppingListInit } from "./ShoppingList";

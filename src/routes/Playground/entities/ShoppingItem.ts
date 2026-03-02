@@ -1,8 +1,4 @@
-import { BaseEntity } from "@/models/componentSpec/reactive/baseEntity";
-import {
-  indexed,
-  observable,
-} from "@/models/componentSpec/reactive/decorators";
+import { observable } from "mobx";
 
 export interface ShoppingItemInit {
   name: string;
@@ -11,15 +7,14 @@ export interface ShoppingItemInit {
   done?: boolean;
 }
 
-export class ShoppingItem extends BaseEntity {
-  @indexed accessor $id: string;
+export class ShoppingItem {
+  readonly $id: string;
   @observable accessor name: string;
   @observable accessor brand: string;
   @observable accessor price: number;
   @observable accessor done: boolean;
 
   constructor($id: string, init: ShoppingItemInit) {
-    super();
     this.$id = $id;
     this.name = init.name;
     this.brand = init.brand ?? "";
