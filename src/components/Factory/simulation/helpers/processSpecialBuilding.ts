@@ -1,6 +1,11 @@
 import type { Node } from "@xyflow/react";
 
-import { type GlobalResources, RESOURCE_VALUES } from "../../data/resources";
+import {
+  getResourceTypeFoodValue,
+  type GlobalResources,
+  isFoodProducingResourceType,
+  RESOURCE_VALUES,
+} from "../../data/resources";
 import { getBuildingInstance } from "../../types/buildings";
 import type { BuildingStatistics } from "../../types/statistics";
 
@@ -113,5 +118,84 @@ export const processSpecialBuilding = (
     };
   }
 
-  // Add more special buildings here as needed
+  // Firepit & Granary: Converts resources with food value into food (and for fire pit, also knowledge)
+  if (building.type === "firepit" || building.type === "granary") {
+    if (!building.stockpile || building.stockpile.length === 0) {
+      node.data = {
+        ...node.data,
+        buildingInstance: {
+          ...building,
+          productionState: { progress: 0, status: "idle" },
+        },
+      };
+      return;
+    }
+
+    let totalFood = 0;
+    const updatedStockpile = building.stockpile.map((stock) => {
+      // Only process food-producing resources
+      if (isFoodProducingResourceType(stock.resource) && stock.amount > 0) {
+        const foodValue = getResourceTypeFoodValue(stock.resource);
+        const foodForThisResource = stock.amount * foodValue;
+        totalFood += foodForThisResource;
+
+        // Track that these resources were consumed
+        const change = stats.stockpileChanges.find(
+          (c) => c.resource === stock.resource,
+        );
+        if (change) {
+          change.removed += stock.amount;
+          change.net = change.added - change.removed;
+        } else {
+          stats.stockpileChanges.push({
+            resource: stock.resource,
+            removed: stock.amount,
+            added: 0,
+            net: -stock.amount,
+          });
+        }
+
+        // Clear this stockpile
+        return {
+          ...stock,
+          amount: 0,
+        };
+      }
+
+      return stock;
+    });
+
+    // Add food and knowledge to global outputs
+    if (totalFood > 0) {
+      earnedGlobalResources.food =
+        (earnedGlobalResources.food || 0) + totalFood;
+
+      // Track produced food in statistics
+      if (!stats.produced) {
+        stats.produced = {};
+      }
+      stats.produced.food = (stats.produced.food || 0) + totalFood;
+
+      // Also produce 1 knowledge when food is produced
+      if (building.type === "firepit") {
+        earnedGlobalResources.knowledge =
+          (earnedGlobalResources.knowledge || 0) + 1;
+        stats.produced.knowledge = (stats.produced.knowledge || 0) + 1;
+      }
+    }
+
+    const updatedBuilding = {
+      ...building,
+      stockpile: updatedStockpile,
+      productionState: {
+        progress: totalFood > 0 ? 1 : 0,
+        status: totalFood > 0 ? ("complete" as const) : ("idle" as const),
+      },
+    };
+
+    node.data = {
+      ...node.data,
+      buildingInstance: updatedBuilding,
+    };
+  }
 };
