@@ -4,8 +4,8 @@ import { Progress } from "@/components/ui/progress";
 import { Text } from "@/components/ui/typography";
 import { pluralize } from "@/utils/string";
 
-import { RESOURCES } from "../../data/resources";
-import type { ProductionMethod, ProductionState } from "../../types/buildings";
+import { isGlobalResource, RESOURCES } from "../../data/resources";
+import type { ProductionMethod, ProductionState } from "../../types/production";
 
 interface ProductionMethodSectionProps {
   productionMethod?: ProductionMethod;
@@ -80,7 +80,7 @@ export const ProductionMethodSection = ({
               Outputs:
             </Text>
             {productionMethod.outputs.map((output, idx) => {
-              if (RESOURCES[output.resource].global) {
+              if (isGlobalResource(output.resource)) {
                 return (
                   <InlineStack key={idx} gap="2">
                     <Text size="sm">
