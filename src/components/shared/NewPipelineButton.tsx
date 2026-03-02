@@ -1,8 +1,8 @@
 import { useNavigate } from "@tanstack/react-router";
 import { generate } from "random-words";
-import type { MouseEvent } from "react";
+import type { MouseEvent, ReactNode } from "react";
 
-import { Button } from "@/components/ui/button";
+import { Button, type ButtonProps } from "@/components/ui/button";
 import { EDITOR_PATH } from "@/routes/router";
 import { writeComponentToFileListFromText } from "@/utils/componentStore";
 import {
@@ -13,7 +13,14 @@ import {
 
 const randomName = () => (generate(4) as string[]).join(" ");
 
-const NewPipelineButton = () => {
+interface NewPipelineButtonProps extends Omit<ButtonProps, "onClick"> {
+  children?: ReactNode;
+}
+
+const NewPipelineButton = ({
+  children,
+  ...buttonProps
+}: NewPipelineButtonProps) => {
   const navigate = useNavigate();
 
   const handleCreate = async (e: MouseEvent<HTMLButtonElement>) => {
@@ -40,11 +47,11 @@ const NewPipelineButton = () => {
 
   return (
     <Button
-      variant="outline"
-      onClick={handleCreate}
       data-testid="new-pipeline-button"
+      {...buttonProps}
+      onClick={handleCreate}
     >
-      New Pipeline
+      {children ?? "New Pipeline"}
     </Button>
   );
 };

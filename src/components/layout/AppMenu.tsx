@@ -1,4 +1,4 @@
-import { Menu } from "lucide-react";
+import { Menu, Plus, Upload } from "lucide-react";
 import { useState } from "react";
 
 import logo from "/Tangle_white.png";
@@ -17,6 +17,12 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { DOCUMENTATION_URL, TOP_NAV_HEIGHT } from "@/utils/constants";
 
@@ -31,14 +37,6 @@ const AppMenu = () => {
   const { componentSpec } = useComponentSpec();
   const title = componentSpec?.name;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  const documentationButton = (
-    <Link href={DOCUMENTATION_URL} target="_blank" rel="noopener noreferrer">
-      <TooltipButton tooltip="Documentation">
-        <Icon name="CircleQuestionMark" />
-      </TooltipButton>
-    </Link>
-  );
 
   return (
     <div
@@ -62,23 +60,45 @@ const AppMenu = () => {
           )}
         </InlineStack>
 
-        <InlineStack gap="8" wrap="nowrap" className="shrink-0">
-          {/* Desktop action buttons - hidden on mobile */}
-          <InlineStack gap="2" className="hidden md:flex" wrap="nowrap">
-            <ImportPipeline />
-            <NewPipelineButton />
-          </InlineStack>
+        <InlineStack gap="2" wrap="nowrap" className="shrink-0">
+          {/* Pipeline actions - desktop only */}
+          <div className="hidden md:flex items-center gap-2">
+            <ImportPipeline
+              triggerComponent={
+                <TooltipButton tooltip="Import Pipeline">
+                  <Upload className="h-4 w-4" />
+                </TooltipButton>
+              }
+            />
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <NewPipelineButton>
+                    <Plus className="h-4 w-4" />
+                  </NewPipelineButton>
+                </TooltipTrigger>
+                <TooltipContent>New Pipeline</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <div className="w-px h-5 bg-stone-700" />
+          </div>
 
-          {/* Always visible settings */}
-          <InlineStack gap="2" wrap="nowrap">
-            <BackendStatus />
-            <PersonalPreferences />
-            <ManageSecretsButton />
-            {documentationButton}
-            {requiresAuthorization && <TopBarAuthentication />}
-          </InlineStack>
+          {/* Settings & status */}
+          <BackendStatus />
+          <PersonalPreferences />
+          <ManageSecretsButton />
+          <Link
+            href={DOCUMENTATION_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <TooltipButton tooltip="Documentation">
+              <Icon name="CircleQuestionMark" />
+            </TooltipButton>
+          </Link>
+          {requiresAuthorization && <TopBarAuthentication />}
 
-          {/* Mobile hamburger menu - visible only on mobile */}
+          {/* Mobile hamburger menu */}
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild>
               <Button
@@ -99,8 +119,14 @@ const AppMenu = () => {
               </SheetHeader>
               <BlockStack gap="3" className="mt-6">
                 <ImportPipeline />
-                <NewPipelineButton />
-                {documentationButton}
+                <NewPipelineButton variant="outline" />
+                <Link
+                  href={DOCUMENTATION_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Button variant="ghost">Documentation</Button>
+                </Link>
               </BlockStack>
             </SheetContent>
           </Sheet>
