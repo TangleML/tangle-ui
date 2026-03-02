@@ -25,7 +25,7 @@ interface TimeContextType {
   isPaused: boolean;
   gameSpeed: GameSpeed;
   isTransitioning: boolean;
-  dayAdvanceTrigger: number; // ✅ Expose trigger counter
+  dayAdvanceTrigger: number;
   togglePause: () => void;
   pause: () => void;
   resume: () => void;
