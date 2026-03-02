@@ -6,6 +6,7 @@ export interface Resource {
   value: number;
   foodValue?: number;
   global?: boolean;
+  type?: ResourceType;
 }
 
 const RESOURCE_TYPES = [
@@ -52,6 +53,7 @@ export function isResourceData(data: any): data is Resource {
     typeof data.description === "string" &&
     typeof data.icon === "string" &&
     typeof data.value === "number" &&
-    (data.global === undefined || typeof data.global === "boolean")
+    (data.global === undefined || typeof data.global === "boolean") &&
+    (data.type === undefined || isResourceType(data.type))
   );
 }

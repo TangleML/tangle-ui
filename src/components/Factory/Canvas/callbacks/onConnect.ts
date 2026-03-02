@@ -1,6 +1,7 @@
 import type { Connection, Edge } from "@xyflow/react";
 
 import { RESOURCES } from "../../data/resources";
+import type { ResourceType } from "../../types/resources";
 import { extractResource } from "../../utils/string";
 
 export const createOnConnect = (
@@ -20,7 +21,15 @@ export const createOnConnect = (
       return;
     }
 
-    const edgeResource = sourceResource ?? targetResource;
+    let edgeResource: ResourceType | null = null;
+
+    if (sourceResource === "any" && targetResource !== "any") {
+      edgeResource = targetResource;
+    } else if (targetResource === "any" && sourceResource !== "any") {
+      edgeResource = sourceResource;
+    } else if (sourceResource === targetResource) {
+      edgeResource = sourceResource;
+    }
 
     if (!edgeResource) {
       console.error("Invalid resource type:", edgeResource);
@@ -31,7 +40,7 @@ export const createOnConnect = (
       ...connection,
       id: `${connection.source}-${connection.sourceHandle}-${connection.target}-${connection.targetHandle}`,
       type: "resourceEdge",
-      data: { ...RESOURCES[edgeResource] },
+      data: { ...RESOURCES[edgeResource], type: edgeResource },
       animated: true,
     };
 
