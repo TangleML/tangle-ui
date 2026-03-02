@@ -34,6 +34,7 @@ const LogDisplay = ({
             code={logs.log_text || ""}
             language="text"
             filename="Execution Logs"
+            scrollToBottom
           />
         </div>
       )}
@@ -43,6 +44,7 @@ const LogDisplay = ({
             code={logs.system_error_exception_full || ""}
             language="text"
             filename="System Error Logs"
+            scrollToBottom
           />
         </div>
       )}
