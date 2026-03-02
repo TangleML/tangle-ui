@@ -3,7 +3,7 @@ import { VerticalResizeHandle } from "@/components/ui/resize-handle";
 import { BOTTOM_FOOTER_HEIGHT, TOP_NAV_HEIGHT } from "@/utils/constants";
 
 import Buildings from "./Buildings";
-import Resources from "./Resources";
+import GlobalResources from "./GlobalResources";
 import Time from "./Time";
 
 const MIN_WIDTH = 220;
@@ -11,17 +11,10 @@ const MAX_WIDTH = 400;
 const DEFAULT_WIDTH = 256;
 interface GameSidebarProps {
   day: number;
-  coins: number;
-  knowledge: number;
   onAdvanceDay: () => void;
 }
 
-const GameSidebar = ({
-  day,
-  coins,
-  knowledge,
-  onAdvanceDay,
-}: GameSidebarProps) => {
+const GameSidebar = ({ day, onAdvanceDay }: GameSidebarProps) => {
   return (
     <div
       className="relative h-full bg-sidebar text-sidebar-foreground overflow-x-hidden overflow-y-auto"
@@ -35,7 +28,7 @@ const GameSidebar = ({
     >
       <BlockStack fill gap="2" inlineAlign="start" className="p-4">
         <Time day={day} onAdvanceDay={onAdvanceDay} />
-        <Resources coins={coins} knowledge={knowledge} />
+        <GlobalResources />
         <Buildings />
       </BlockStack>
 

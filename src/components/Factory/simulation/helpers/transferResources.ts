@@ -1,6 +1,10 @@
 import type { Edge, Node } from "@xyflow/react";
 
 import { getBuildingData } from "../../types/buildings";
+import type {
+  BuildingStatistics,
+  EdgeStatistics,
+} from "../../types/statistics";
 import { extractResource } from "../../utils/string";
 
 export const transferResources = (
@@ -8,6 +12,8 @@ export const transferResources = (
   targetNodeId: string,
   updatedNodes: Node[],
   edges: Edge[],
+  buildingStats: Map<string, BuildingStatistics>,
+  edgeStats: Map<string, EdgeStatistics>,
 ) => {
   const sourceNode = updatedNodes.find((n) => n.id === sourceNodeId);
   const targetNode = updatedNodes.find((n) => n.id === targetNodeId);
@@ -18,6 +24,17 @@ export const transferResources = (
   const targetBuilding = getBuildingData(targetNode);
 
   if (!sourceBuilding || !targetBuilding) return;
+
+  // Initialize stats for both buildings if needed
+  if (!buildingStats.has(sourceNodeId)) {
+    buildingStats.set(sourceNodeId, { stockpileChanges: [] });
+  }
+  if (!buildingStats.has(targetNodeId)) {
+    buildingStats.set(targetNodeId, { stockpileChanges: [] });
+  }
+
+  const sourceStats = buildingStats.get(sourceNodeId)!;
+  const targetStats = buildingStats.get(targetNodeId)!;
 
   // Find edges between these nodes
   const relevantEdges = edges.filter(
@@ -49,6 +66,44 @@ export const transferResources = (
     );
 
     if (transferAmount > 0) {
+      // Track edge statistics
+      edgeStats.set(edge.id, {
+        transferred: transferAmount,
+        resource: resource as any,
+      });
+
+      // Track source stockpile change (removed)
+      const sourceChange = sourceStats.stockpileChanges.find(
+        (c) => c.resource === resource,
+      );
+      if (sourceChange) {
+        sourceChange.removed += transferAmount;
+        sourceChange.net = sourceChange.added - sourceChange.removed;
+      } else {
+        sourceStats.stockpileChanges.push({
+          resource: resource as any,
+          removed: transferAmount,
+          added: 0,
+          net: -transferAmount,
+        });
+      }
+
+      // Track target stockpile change (added)
+      const targetChange = targetStats.stockpileChanges.find(
+        (c) => c.resource === resource,
+      );
+      if (targetChange) {
+        targetChange.added += transferAmount;
+        targetChange.net = targetChange.added - targetChange.removed;
+      } else {
+        targetStats.stockpileChanges.push({
+          resource: resource as any,
+          removed: 0,
+          added: transferAmount,
+          net: transferAmount,
+        });
+      }
+
       // Update source stockpile
       sourceNode.data = {
         ...sourceBuilding,
