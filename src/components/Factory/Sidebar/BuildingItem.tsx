@@ -4,6 +4,7 @@ import { useCallback } from "react";
 import { InlineStack } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
 
+import { RESOURCES } from "../data/resources";
 import type { Building } from "../types/buildings";
 
 interface BuildingItemProps {
@@ -55,7 +56,7 @@ const BuildingItem = ({ building }: BuildingItemProps) => {
             {building.description}
           </span>
           <span className="text-[10px] text-amber-600 font-semibold">
-            💰 {building.cost}
+            {RESOURCES.coins.icon} {building.cost}
           </span>
         </div>
       </InlineStack>
