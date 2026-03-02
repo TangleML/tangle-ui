@@ -2,7 +2,7 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 
 import { isGlobalResource, RESOURCES } from "../../data/resources";
-import { useStatistics } from "../../providers/StatisticProvider";
+import { useStatistics } from "../../providers/StatisticsProvider";
 import type { BuildingInstance, Stockpile } from "../../types/buildings";
 import type { ResourceType } from "../../types/resources";
 import type { StockpileChange } from "../../types/statistics";
