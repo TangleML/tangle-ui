@@ -11,6 +11,7 @@ interface CodeViewerProps {
   language?: string;
   filename?: string;
   fullscreen?: boolean;
+  scrollToBottom?: boolean;
   onClose?: () => void;
 }
 
@@ -21,6 +22,7 @@ const CodeViewer = ({
   language = "yaml",
   filename = "",
   fullscreen = false,
+  scrollToBottom = false,
   onClose,
 }: CodeViewerProps) => {
   const [isFullscreen, setIsFullscreen] = useState(fullscreen);
@@ -79,7 +81,11 @@ const CodeViewer = ({
               minHeight: DEFAULT_CODE_VIEWER_HEIGHT,
             }}
           >
-            <CodeSyntaxHighlighter code={code} language={language} />
+            <CodeSyntaxHighlighter
+              code={code}
+              language={language}
+              scrollToBottom={scrollToBottom}
+            />
           </div>
         </div>
       </div>
