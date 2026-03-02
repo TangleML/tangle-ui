@@ -1,13 +1,23 @@
-import { SidebarGroup, SidebarGroupLabel } from "@/components/ui/sidebar";
+import { BlockStack } from "@/components/ui/layout";
+import { Text } from "@/components/ui/typography";
 
 import { RESOURCES } from "../data/resources";
 
-const Resources = () => {
+interface ResourcesProps {
+  coins: number;
+  knowledge: number;
+}
+
+const Resources = ({ coins, knowledge }: ResourcesProps) => {
   return (
-    <SidebarGroup>
-      <SidebarGroupLabel>{RESOURCES.coins.icon} 0</SidebarGroupLabel>
-      <SidebarGroupLabel>{RESOURCES.knowledge.icon} 0</SidebarGroupLabel>
-    </SidebarGroup>
+    <BlockStack gap="1">
+      <Text>
+        {RESOURCES.coins.icon} {coins}
+      </Text>
+      <Text>
+        {RESOURCES.knowledge.icon} {knowledge}
+      </Text>
+    </BlockStack>
   );
 };
 
