@@ -15,6 +15,7 @@ export default defineConfig({
     viteReact({
       babel: {
         plugins: [
+          ["@babel/plugin-proposal-decorators", { version: "2023-11" }],
           [
             "babel-plugin-react-compiler",
             {
