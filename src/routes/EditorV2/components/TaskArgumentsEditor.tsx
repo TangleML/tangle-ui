@@ -42,7 +42,7 @@ export const TaskArgumentsEditor = observer(function TaskArgumentsEditor({
   );
 
   return (
-    <BlockStack gap="1">
+    <BlockStack gap="1" className="min-w-0 overflow-hidden">
       {inputs.map((inputSpec) => {
         const arg = task.arguments.find((a) => a.name === inputSpec.name);
         const binding = taskBindings.find(
@@ -171,7 +171,7 @@ const ArgumentRow = observer(function ArgumentRow({
     <div
       ref={rowRef}
       className={cn(
-        "group rounded px-2 py-1 cursor-pointer transition-colors w-full",
+        "group rounded px-2 py-1 cursor-pointer transition-colors w-full overflow-hidden",
         editing ? "bg-blue-50 ring-1 ring-blue-200" : "hover:bg-gray-50",
         !isSet && !isBound && "opacity-60",
       )}
