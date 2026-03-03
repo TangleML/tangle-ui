@@ -1,4 +1,5 @@
-import { runInAction } from "mobx";
+import type { UndoManager } from "mobx-keystone";
+import { getSnapshot, registerRootStore, undoMiddleware } from "mobx-keystone";
 import { observer } from "mobx-react-lite";
 import { useState } from "react";
 
@@ -15,12 +16,9 @@ import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
-import { IncrementingIdGenerator } from "@/models/componentSpec/factories/idGenerator";
 
 import { SuspenseDemo } from "./components/SuspenseDemo";
 import { PlaygroundStore, ShoppingItem, ShoppingList } from "./entities";
-
-const idGenerator = new IncrementingIdGenerator();
 
 const ShoppingItemRow = observer(function ShoppingItemRow({
   item,
@@ -38,9 +36,7 @@ const ShoppingItemRow = observer(function ShoppingItemRow({
       <Checkbox
         checked={item.done}
         onCheckedChange={(checked) => {
-          runInAction(() => {
-            item.done = checked === true;
-          });
+          item.setDone(checked === true);
         }}
       />
       <BlockStack gap="0" className="flex-1 min-w-0">
@@ -78,7 +74,7 @@ function AddItemForm({ onAdd }: { onAdd: (item: ShoppingItem) => void }) {
     e.preventDefault();
     if (!name.trim()) return;
 
-    const item = new ShoppingItem(idGenerator.next("item"), {
+    const item = new ShoppingItem({
       name: name.trim(),
       brand: brand.trim() || undefined,
       price: price ? parseFloat(price) : undefined,
@@ -162,12 +158,12 @@ const ShoppingListCard = observer(function ShoppingListCard({
                 <Icon name="CircleCheck" className="text-green-600" />
               )}
               <CardTitle>
-                {list.name} #{list.$id}
+                {list.name} #{list.id}
               </CardTitle>
             </InlineStack>
             <CardDescription>
               {list.dueDate
-                ? `Due: ${list.dueDate.toLocaleDateString()}`
+                ? `Due: ${new Date(list.dueDate).toLocaleDateString()}`
                 : "No due date"}
               {" • "}
               {completedCount}/{list.items.length} items done
@@ -189,7 +185,7 @@ const ShoppingListCard = observer(function ShoppingListCard({
             <BlockStack gap="2">
               {list.items.map((item, index) => (
                 <ShoppingItemRow
-                  key={item.$id}
+                  key={item.id}
                   item={item}
                   onRemove={() => list.removeItem(index)}
                 />
@@ -211,9 +207,9 @@ function AddListForm({ onAdd }: { onAdd: (list: ShoppingList) => void }) {
     e.preventDefault();
     if (!name.trim()) return;
 
-    const list = new ShoppingList(idGenerator.next("list"), {
+    const list = new ShoppingList({
       name: name.trim(),
-      dueDate: dueDate ? new Date(dueDate) : undefined,
+      dueDate: dueDate || null,
     });
 
     onAdd(list);
@@ -261,8 +257,83 @@ function AddListForm({ onAdd }: { onAdd: (list: ShoppingList) => void }) {
   );
 }
 
+function usePlaygroundStore() {
+  const [store] = useState(() => {
+    const s = new PlaygroundStore({});
+    registerRootStore(s);
+    return s;
+  });
+  const [undo] = useState<UndoManager>(() => undoMiddleware(store));
+  return { store, undo };
+}
+
+const UndoRedoBar = observer(function UndoRedoBar({
+  undo,
+}: {
+  undo: UndoManager;
+}) {
+  return (
+    <InlineStack gap="2" blockAlign="center">
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={!undo.canUndo}
+        onClick={() => undo.undo()}
+      >
+        <Icon name="Undo2" size="sm" />
+        Undo ({undo.undoLevels})
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={!undo.canRedo}
+        onClick={() => undo.redo()}
+      >
+        <Icon name="Redo2" size="sm" />
+        Redo ({undo.redoLevels})
+      </Button>
+    </InlineStack>
+  );
+});
+
+const SnapshotViewer = observer(function SnapshotViewer({
+  store,
+}: {
+  store: PlaygroundStore;
+}) {
+  const [open, setOpen] = useState(false);
+  const snapshot = getSnapshot(store);
+
+  return (
+    <Card>
+      <CardHeader>
+        <InlineStack align="space-between" blockAlign="center">
+          <CardTitle>Snapshot</CardTitle>
+          <Button variant="outline" size="sm" onClick={() => setOpen(!open)}>
+            <Icon name={open ? "ChevronUp" : "ChevronDown"} size="sm" />
+            {open ? "Hide" : "Show"}
+          </Button>
+        </InlineStack>
+        <CardDescription>
+          Live JSON snapshot from{" "}
+          <Text as="span" font="mono" size="sm">
+            getSnapshot(store)
+          </Text>
+        </CardDescription>
+      </CardHeader>
+      {open && (
+        <CardContent>
+          <pre className="text-xs bg-muted p-3 rounded-md overflow-auto max-h-96">
+            {JSON.stringify(snapshot, null, 2)}
+          </pre>
+        </CardContent>
+      )}
+    </Card>
+  );
+});
+
 export const Playground = observer(function Playground() {
-  const [store] = useState(() => new PlaygroundStore());
+  const { store, undo } = usePlaygroundStore();
 
   return (
     <div className="container mx-auto max-w-4xl p-6">
@@ -272,11 +343,15 @@ export const Playground = observer(function Playground() {
             Reactive Playground
           </Text>
           <Text tone="subdued">
-            Testing the reactive object model with a shopping list application.
+            Testing mobx-keystone models with snapshots and undo/redo.
           </Text>
         </BlockStack>
 
-        <InlineStack gap="4" className="p-4 bg-muted rounded-lg">
+        <InlineStack
+          gap="4"
+          className="p-4 bg-muted rounded-lg"
+          blockAlign="center"
+        >
           <BlockStack gap="0" align="center">
             <Text size="2xl" weight="bold">
               {store.totalLists}
@@ -309,6 +384,9 @@ export const Playground = observer(function Playground() {
               Total Value
             </Text>
           </BlockStack>
+          <div className="ml-auto">
+            <UndoRedoBar undo={undo} />
+          </div>
         </InlineStack>
 
         <AddListForm onAdd={(list) => store.addList(list)} />
@@ -332,13 +410,15 @@ export const Playground = observer(function Playground() {
           <BlockStack gap="4">
             {store.lists.map((list, index) => (
               <ShoppingListCard
-                key={list.$id}
+                key={list.id}
                 list={list}
                 onRemove={() => store.removeList(index)}
               />
             ))}
           </BlockStack>
         )}
+
+        <SnapshotViewer store={store} />
 
         <hr className="border-border" />
 
@@ -347,10 +427,19 @@ export const Playground = observer(function Playground() {
             Suspense Demo
           </Text>
           <Text tone="subdued">
-            Components wrapped with <Text as="span" font="mono" size="sm">withSuspenseWrapper</Text> +{" "}
-            <Text as="span" font="mono" size="sm">observer</Text>. Each widget
-            loads after a 2.5s delay via <Text as="span" font="mono" size="sm">useSuspenseQuery</Text>.
-            Toggle the controls to verify MobX reactivity works inside
+            Components wrapped with{" "}
+            <Text as="span" font="mono" size="sm">
+              withSuspenseWrapper
+            </Text>{" "}
+            +{" "}
+            <Text as="span" font="mono" size="sm">
+              observer
+            </Text>
+            . Each widget loads after a 2.5s delay via{" "}
+            <Text as="span" font="mono" size="sm">
+              useSuspenseQuery
+            </Text>
+            . Toggle the controls to verify MobX reactivity works inside
             suspense-wrapped components.
           </Text>
         </BlockStack>
