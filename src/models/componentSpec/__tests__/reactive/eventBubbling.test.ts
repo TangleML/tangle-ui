@@ -332,7 +332,7 @@ describe("EntityContext", () => {
   });
 });
 
-describe("Playground Scenario (MobX)", () => {
+describe("Playground Scenario (mobx-keystone)", () => {
   it("ShoppingList.isDone reacts to ShoppingItem.done changes", async () => {
     const { autorun } = await import("mobx");
     const { ShoppingList } =
@@ -340,8 +340,8 @@ describe("Playground Scenario (MobX)", () => {
     const { ShoppingItem } =
       await import("@/routes/Playground/entities/ShoppingItem");
 
-    const list = new ShoppingList("list_1", { name: "Groceries" });
-    const item = new ShoppingItem("item_1", { name: "Milk", done: false });
+    const list = new ShoppingList({ name: "Groceries" });
+    const item = new ShoppingItem({ name: "Milk", done: false });
 
     list.addItem(item);
 
@@ -353,7 +353,7 @@ describe("Playground Scenario (MobX)", () => {
       observed.push(list.isDone);
     });
 
-    item.done = true;
+    item.setDone(true);
 
     expect(list.isDone).toBe(true);
     expect(observed).toEqual([false, true]);

@@ -1,31 +1,39 @@
-import { action, computed, observable } from "mobx";
+import { computed } from "mobx";
+import { Model, model, modelAction, prop } from "mobx-keystone";
 
-import type { ShoppingList } from "./ShoppingList";
+import { ShoppingList } from "./ShoppingList";
 
-export class PlaygroundStore {
-  @observable.shallow accessor lists: ShoppingList[] = [];
-
-  @action addList(list: ShoppingList): void {
+@model("playground/PlaygroundStore")
+export class PlaygroundStore extends Model({
+  lists: prop<ShoppingList[]>(() => []),
+}) {
+  @modelAction
+  addList(list: ShoppingList): void {
     this.lists.push(list);
   }
 
-  @action removeList(index: number): void {
+  @modelAction
+  removeList(index: number): void {
     this.lists.splice(index, 1);
   }
 
-  @computed get totalLists(): number {
+  @computed
+  get totalLists(): number {
     return this.lists.length;
   }
 
-  @computed get completedLists(): number {
+  @computed
+  get completedLists(): number {
     return this.lists.filter((l) => l.isDone).length;
   }
 
-  @computed get totalItems(): number {
+  @computed
+  get totalItems(): number {
     return this.lists.reduce((sum, l) => sum + l.items.length, 0);
   }
 
-  @computed get totalValue(): number {
+  @computed
+  get totalValue(): number {
     return this.lists.reduce(
       (sum, l) => sum + l.items.reduce((s, i) => s + i.price, 0),
       0,

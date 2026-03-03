@@ -1,5 +1,5 @@
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { action, observable } from "mobx";
+import { Model, model, modelAction, prop } from "mobx-keystone";
 import { observer } from "mobx-react-lite";
 import { useState } from "react";
 
@@ -25,20 +25,24 @@ const waitFor = (ms: number) =>
 // MobX store for demonstrating reactivity inside suspense-wrapped components
 // ---------------------------------------------------------------------------
 
-class SuspenseDemoStore {
-  @observable accessor useFahrenheit = true;
-  @observable accessor showAuthor = true;
-  @observable accessor compactStats = false;
-
-  @action toggleUnit() {
+@model("playground/SuspenseDemoStore")
+class SuspenseDemoStore extends Model({
+  useFahrenheit: prop(true),
+  showAuthor: prop(true),
+  compactStats: prop(false),
+}) {
+  @modelAction
+  toggleUnit() {
     this.useFahrenheit = !this.useFahrenheit;
   }
 
-  @action toggleAuthor() {
+  @modelAction
+  toggleAuthor() {
     this.showAuthor = !this.showAuthor;
   }
 
-  @action toggleCompact() {
+  @modelAction
+  toggleCompact() {
     this.compactStats = !this.compactStats;
   }
 }
@@ -329,7 +333,7 @@ const DemoControls = observer(function DemoControls({
 });
 
 export function SuspenseDemo() {
-  const [store] = useState(() => new SuspenseDemoStore());
+  const [store] = useState(() => new SuspenseDemoStore({}));
   const queryClient = useQueryClient();
 
   const handleReload = () => {
