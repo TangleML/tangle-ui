@@ -216,6 +216,7 @@ const GraphComponents = () => {
         <InlineStack
           className="flex-col @[600px]:grid @[600px]:grid-cols-[40%_60%]"
           fill
+          data-testid="component-library-content-container"
         >
           {componentList}
           <ComponentDetailsPreview />

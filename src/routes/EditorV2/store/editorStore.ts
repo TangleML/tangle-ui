@@ -1,6 +1,6 @@
 import { action, makeObservable, observable } from "mobx";
 
-import type { ComponentSpec } from "@/models/componentSpec";
+import type { ComponentSpec, ValidationIssue } from "@/models/componentSpec";
 
 export interface SelectedNode {
   id: string;
@@ -18,6 +18,7 @@ class EditorStore {
   focusedArgumentName: string | null = null;
   hoveredEntityId: string | null = null;
   pendingFocusNodeId: string | null = null;
+  selectedValidationIssue: ValidationIssue | null = null;
 
   constructor() {
     makeObservable(this, {
@@ -30,6 +31,7 @@ class EditorStore {
       focusedArgumentName: observable,
       hoveredEntityId: observable,
       pendingFocusNodeId: observable,
+      selectedValidationIssue: observable.ref,
       initializeStore: action,
       selectNode: action,
       clearSpec: action,
@@ -39,6 +41,7 @@ class EditorStore {
       setFocusedArgument: action,
       setHoveredEntity: action,
       setPendingFocusNode: action,
+      setSelectedValidationIssue: action,
     });
   }
 
@@ -52,6 +55,7 @@ class EditorStore {
     this.focusedArgumentName = null;
     this.hoveredEntityId = null;
     this.pendingFocusNodeId = null;
+    this.selectedValidationIssue = null;
   }
 
   selectNode(
@@ -88,6 +92,7 @@ class EditorStore {
     this.lastShiftClickEntityId = null;
     this.multiSelection = [];
     this.focusedArgumentName = null;
+    this.selectedValidationIssue = null;
   }
 
   setMultiSelection(nodes: SelectedNode[]) {
@@ -108,6 +113,10 @@ class EditorStore {
 
   setPendingFocusNode(nodeId: string | null) {
     this.pendingFocusNodeId = nodeId;
+  }
+
+  setSelectedValidationIssue(issue: ValidationIssue | null) {
+    this.selectedValidationIssue = issue;
   }
 }
 
@@ -155,4 +164,8 @@ export function setHoveredEntity(id: string | null) {
 
 export function setPendingFocusNode(nodeId: string | null) {
   editorStore.setPendingFocusNode(nodeId);
+}
+
+export function setSelectedValidationIssue(issue: ValidationIssue | null) {
+  editorStore.setSelectedValidationIssue(issue);
 }
