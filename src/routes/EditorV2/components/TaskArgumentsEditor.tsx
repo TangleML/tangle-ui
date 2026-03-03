@@ -1,22 +1,25 @@
 import { observer } from "mobx-react-lite";
 import { type ChangeEvent, useEffect, useRef, useState } from "react";
 
-import { Button } from "@/components/ui/button";
+import { getDynamicDataDisplayInfo } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/ArgumentsEditor/dynamicDataUtils";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import type {
+  ArgumentType,
   Binding,
   ComponentSpec,
   ComponentSpecJson,
   InputSpecJson,
   Task,
 } from "@/models/componentSpec";
+import type { DynamicDataArgument } from "@/utils/componentSpec";
 
 import { useSpec } from "../providers/SpecContext";
 import { editorStore, setFocusedArgument } from "../store/editorStore";
+import { ThunderMenu } from "./ThunderMenu";
 
 interface TaskArgumentsEditorProps {
   task: Task;
@@ -91,6 +94,25 @@ const ArgumentRow = observer(function ArgumentRow({
   const isFocused = editorStore.focusedArgumentName === inputSpec.name;
   const isBound = binding !== undefined;
 
+  const isDynamic =
+    typeof currentValue === "object" &&
+    currentValue !== null &&
+    "dynamicData" in currentValue;
+  const dynamicDisplayInfo = isDynamic
+    ? getDynamicDataDisplayInfo(
+        (currentValue as DynamicDataArgument).dynamicData,
+      )
+    : null;
+
+  const taskAnnotations = Object.fromEntries(
+    task.annotations.map((a) => [a.key, a.value]),
+  );
+
+  const canReset =
+    inputSpec.default !== undefined &&
+    (typeof currentValue !== "string" || currentValue !== inputSpec.default);
+  const canUnset = isSet || isBound;
+
   useEffect(() => {
     if (isFocused) {
       setEditing(true);
@@ -113,6 +135,7 @@ const ArgumentRow = observer(function ArgumentRow({
   }, [currentValue]);
 
   const handleClick = () => {
+    if (isDynamic) return;
     setEditing(true);
   };
 
@@ -149,16 +172,41 @@ const ArgumentRow = observer(function ArgumentRow({
     }
   };
 
-  const handleToggleRemove = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (isSet || isBound) {
-      task.removeArgumentByName(inputSpec.name);
-      setInputValue("");
-    } else {
-      const defaultVal = inputSpec.default ?? "";
-      spec.setTaskArgument(task.$id, inputSpec.name, defaultVal);
-      setInputValue(defaultVal);
-    }
+  const handleResetToDefault = () => {
+    const defaultVal = inputSpec.default ?? "";
+    spec.setTaskArgument(task.$id, inputSpec.name, defaultVal);
+    setInputValue(defaultVal);
+  };
+
+  const handleUnset = () => {
+    task.removeArgumentByName(inputSpec.name);
+    spec.removeAllBindingsBy(
+      (b) =>
+        b.targetEntityId === task.$id &&
+        b.targetPortName === inputSpec.name,
+    );
+    setInputValue("");
+  };
+
+  const handleSelectDynamicData = (value: DynamicDataArgument) => {
+    // Model ArgumentType doesn't include DynamicDataArgument, but it's stored correctly at runtime
+    spec.setTaskArgument(
+      task.$id,
+      inputSpec.name,
+      value as unknown as ArgumentType,
+    );
+    setInputValue("");
+  };
+
+  const handleQuickConnect = (
+    sourceEntityId: string,
+    sourcePortName: string,
+  ) => {
+    spec.connectNodes(
+      { entityId: sourceEntityId, portName: sourcePortName },
+      { entityId: task.$id, portName: inputSpec.name },
+    );
+    setInputValue("");
   };
 
   const bindingLabel = isBound ? formatBindingSource(binding, spec) : undefined;
@@ -201,18 +249,18 @@ const ArgumentRow = observer(function ArgumentRow({
           )}
         </InlineStack>
 
-        <Button
-          variant="ghost"
-          size="xs"
-          className="invisible group-hover:visible h-5 w-5 p-0 shrink-0"
-          onClick={handleToggleRemove}
-        >
-          <Icon
-            name={isSet || isBound ? "X" : "Plus"}
-            size="xs"
-            className={isSet || isBound ? "text-gray-400" : "text-blue-500"}
-          />
-        </Button>
+        <ThunderMenu
+          inputName={inputSpec.name}
+          inputType={inputSpec.type}
+          canReset={canReset}
+          canUnset={canUnset}
+          excludeEntityIds={[task.$id]}
+          taskAnnotations={taskAnnotations}
+          onResetToDefault={handleResetToDefault}
+          onUnset={handleUnset}
+          onSelectDynamicData={handleSelectDynamicData}
+          onQuickConnect={handleQuickConnect}
+        />
       </InlineStack>
 
       {editing ? (
@@ -229,6 +277,21 @@ const ArgumentRow = observer(function ArgumentRow({
           }
           className="h-7 text-xs font-mono mt-1"
         />
+      ) : isDynamic && dynamicDisplayInfo ? (
+        <InlineStack gap="1" blockAlign="center" className="mt-0.5">
+          <Icon
+            name={dynamicDisplayInfo.icon}
+            size="xs"
+            className={dynamicDisplayInfo.textColor}
+          />
+          <Text
+            size="xs"
+            font="mono"
+            className={cn("truncate", dynamicDisplayInfo.textColor)}
+          >
+            {dynamicDisplayInfo.displayValue}
+          </Text>
+        </InlineStack>
       ) : (
         displayValue && (
           <Text
