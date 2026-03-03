@@ -42,7 +42,7 @@ export const ContextPanelContent = observer(function ContextPanelContent() {
   }
 
   return (
-    <BlockStack className="h-full bg-white overflow-y-auto">
+    <BlockStack className="h-full bg-white overflow-y-auto overflow-x-hidden">
       {selectedNodeType === "task" && <TaskDetails entityId={selectedNodeId} />}
       {selectedNodeType === "input" && (
         <InputDetails entityId={selectedNodeId} />
@@ -107,6 +107,7 @@ const TaskDetails = observer(function TaskDetails({
       type="multiple"
       value={openSections}
       onValueChange={setOpenSections}
+      className="w-full overflow-hidden"
     >
       <AccordionItem value="task">
         <AccordionTrigger className="py-1.5 px-3 text-xs hover:no-underline">
