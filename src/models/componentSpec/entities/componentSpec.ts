@@ -1,6 +1,8 @@
 import { computed } from "mobx";
 import { idProp, Model, model, modelAction, prop } from "mobx-keystone";
 
+import type { ValidationIssue } from "../validation/types";
+import { validateSpec } from "../validation/validateSpec";
 import { Binding } from "./binding";
 import type { Input } from "./input";
 import type { Output } from "./output";
@@ -319,5 +321,37 @@ export class ComponentSpec extends Model({
   @computed
   get bindingCount(): number {
     return this.bindings.length;
+  }
+
+  // --- Validation ---
+
+  @computed
+  get validationIssues(): ValidationIssue[] {
+    return validateSpec(this);
+  }
+
+  @computed
+  get isValid(): boolean {
+    return this.validationIssues.length === 0;
+  }
+
+  @computed
+  get issuesByEntityId(): Map<string, ValidationIssue[]> {
+    const map = new Map<string, ValidationIssue[]>();
+    for (const issue of this.validationIssues) {
+      if (!issue.entityId) continue;
+      const existing = map.get(issue.entityId);
+      if (existing) {
+        existing.push(issue);
+      } else {
+        map.set(issue.entityId, [issue]);
+      }
+    }
+    return map;
+  }
+
+  @computed
+  get graphLevelIssues(): ValidationIssue[] {
+    return this.validationIssues.filter((i) => !i.entityId);
   }
 }
