@@ -26,6 +26,7 @@ import type {
 
 import {
   editorStore,
+  selectNode,
   setHoveredEntity,
   setPendingFocusNode,
   setSelectedValidationIssue,
@@ -116,6 +117,7 @@ const TaskLeafNode = observer(function TaskLeafNode({
   const handleClick = () => {
     navigateToPath(parentNavigationPath);
     setPendingFocusNode(task.$id);
+    selectNode(task.$id, "task");
     if (issues.length > 0) {
       setSelectedValidationIssue(issues[0]);
     }
