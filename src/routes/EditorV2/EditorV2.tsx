@@ -5,10 +5,8 @@ import { ReactFlowProvider } from "@xyflow/react";
 import yaml from "js-yaml";
 import { registerRootStore } from "mobx-keystone";
 import { observer } from "mobx-react-lite";
-import { useState } from "react";
 
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
-import type { ComponentSpec } from "@/models/componentSpec";
 import {
   IncrementingIdGenerator,
   YamlDeserializer,
@@ -21,7 +19,6 @@ import { FlowCanvas } from "./components/FlowCanvas";
 import { useComponentLibraryWindow } from "./hooks/useComponentLibraryWindow";
 import { useHistoryWindow } from "./hooks/useHistoryWindow";
 import { useLinkedWindowCleanup } from "./hooks/useLinkedWindowCleanup";
-import { useNavigationSync } from "./hooks/useNavigationSync";
 import { usePipelineDetailsWindow } from "./hooks/usePipelineDetailsWindow";
 import {
   PIPELINE_TREE_WINDOW_ID,
@@ -72,10 +69,9 @@ function useLoadSpec() {
 const PipelineEditor = withSuspenseWrapper(
   observer(() => {
     const rootSpec = useLoadSpec();
-    const [activeSpec, setActiveSpec] = useState<ComponentSpec | null>(null);
 
     useWindowPersistence();
-    useSpecLifecycle(rootSpec, setActiveSpec);
+    useSpecLifecycle(rootSpec);
     useSelectionWindowSync();
     useLinkedWindowCleanup();
     useComponentLibraryWindow();
@@ -83,7 +79,8 @@ const PipelineEditor = withSuspenseWrapper(
     usePipelineTreeWindow();
     useHistoryWindow();
     useUndoRedoKeyboard();
-    useNavigationSync(setActiveSpec);
+
+    const activeSpec = navigationStore.activeSpec;
 
     const handleTaskDoubleClick = (taskEntityId: string) => {
       if (!activeSpec) return;
@@ -95,8 +92,7 @@ const PipelineEditor = withSuspenseWrapper(
       }
     };
 
-    const navPath = navigationStore.navigationPath;
-    if (navPath.length === 0) return null;
+    if (!activeSpec) return null;
 
     return (
       <SpecProvider spec={activeSpec}>

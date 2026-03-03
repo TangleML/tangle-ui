@@ -9,10 +9,7 @@ import { clearNavigation, initNavigation } from "../store/navigationStore";
 import { undoStore } from "../store/undoStore";
 import { closeWindowsByLinkedEntity } from "../windows/windowStore";
 
-export function useSpecLifecycle(
-  rootSpec: ComponentSpec,
-  setActiveSpec: (spec: ComponentSpec) => void,
-) {
+export function useSpecLifecycle(rootSpec: ComponentSpec) {
   const prevTaskEntityIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -20,7 +17,6 @@ export function useSpecLifecycle(
       initializeStore(rootSpec);
       initNavigation(rootSpec);
       undoStore.init(rootSpec);
-      setActiveSpec(rootSpec);
 
       prevTaskEntityIdsRef.current = new Set(
         rootSpec.tasks.map((t) => t.$id),

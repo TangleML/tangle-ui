@@ -1,10 +1,12 @@
-import { action, makeObservable, observable } from "mobx";
+import { action, computed, makeObservable, observable } from "mobx";
 
 import type { ComponentSpec, ComponentSpecJson } from "@/models/componentSpec";
 import {
   IncrementingIdGenerator,
   YamlDeserializer,
 } from "@/models/componentSpec";
+
+import { editorStore } from "./editorStore";
 
 export interface NavigationEntry {
   specId: string;
@@ -33,6 +35,7 @@ class NavigationStore {
       navigateBack: action,
       navigateToLevel: action,
       navigateToPath: action,
+      activeSpec: computed,
     });
   }
 
@@ -99,6 +102,7 @@ class NavigationStore {
       { specId: nestedSpec.$id, displayName: task.name },
     ];
 
+    editorStore.clearSelection();
     return nestedSpec;
   }
 
@@ -106,6 +110,7 @@ class NavigationStore {
     if (!this.rootSpec || this.navigationPath.length <= 1) return null;
 
     this.navigationPath = this.navigationPath.slice(0, -1);
+    editorStore.clearSelection();
 
     const newDepth = this.navigationPath.length - 1;
     return this.getSpecAtDepth(newDepth) ?? null;
@@ -117,6 +122,7 @@ class NavigationStore {
     }
 
     this.navigationPath = this.navigationPath.slice(0, index + 1);
+    editorStore.clearSelection();
     return this.getSpecAtDepth(index) ?? null;
   }
 
@@ -151,7 +157,13 @@ class NavigationStore {
     }
 
     this.navigationPath = newPath;
+    editorStore.clearSelection();
     return currentSpec;
+  }
+
+  get activeSpec(): ComponentSpec | null {
+    if (this.navigationPath.length === 0) return null;
+    return this.getSpecAtDepth(this.navigationPath.length - 1) ?? null;
   }
 
   get navigationDepth(): number {
@@ -231,4 +243,8 @@ export function getNavigationDepth(): number {
 
 export function canNavigateBack(): boolean {
   return navigationStore.canNavigateBack;
+}
+
+export function getActiveSpec(): ComponentSpec | null {
+  return navigationStore.activeSpec;
 }
