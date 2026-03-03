@@ -46,3 +46,12 @@ export {
 
 // Actions
 export { createSubgraph } from "./actions";
+
+// Validation
+export type {
+  ComponentValidationIssue,
+  ValidationIssue,
+  ValidationIssueType,
+  ValidationSeverity,
+} from "./validation";
+export { collectValidationIssues, validateSpec } from "./validation";
