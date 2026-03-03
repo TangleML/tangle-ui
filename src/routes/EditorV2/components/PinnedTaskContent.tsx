@@ -1,4 +1,4 @@
-import { useEffect, useReducer } from "react";
+import { observer } from "mobx-react-lite";
 
 import { CodeBlock } from "@/components/shared/CodeViewer/CodeBlock";
 import { TaskDetails, TaskIO } from "@/components/shared/TaskDetails";
@@ -20,24 +20,15 @@ interface PinnedTaskContentProps {
  * Shows details for a specific task, independent of the current selection.
  * Used for shift-click "pinned" windows.
  */
-export function PinnedTaskContent({ entityId }: PinnedTaskContentProps) {
-  const [, forceUpdate] = useReducer((x: number) => x + 1, 0);
-
-  // Get the current spec from SpecContext
+export const PinnedTaskContent = observer(function PinnedTaskContent({
+  entityId,
+}: PinnedTaskContentProps) {
   const spec = useSpec();
-
-  // Subscribe to spec changes for reactivity
-  useEffect(() => {
-    if (!spec) return;
-    const unsub = spec.tasks.subscribe(forceUpdate);
-    return () => unsub();
-  }, [spec]);
 
   if (!spec) {
     return <NotFoundState entityId={entityId} />;
   }
 
-  // Find task by $id
   const task = spec.tasks.find((t) => t.$id === entityId);
   if (!task) {
     return <NotFoundState entityId={entityId} />;
@@ -45,7 +36,6 @@ export function PinnedTaskContent({ entityId }: PinnedTaskContentProps) {
 
   const componentRef = task.componentRef;
   const componentSpec = componentRef.spec;
-  // Cast to parameters expected by shared components using old types
   const code =
     componentRef.text ??
     (componentSpec
@@ -114,7 +104,7 @@ export function PinnedTaskContent({ entityId }: PinnedTaskContentProps) {
       </Tabs>
     </BlockStack>
   );
-}
+});
 
 interface NotFoundStateProps {
   entityId: string;

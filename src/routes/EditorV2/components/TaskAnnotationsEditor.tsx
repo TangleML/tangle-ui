@@ -1,4 +1,5 @@
-import { type ChangeEvent, useEffect, useState } from "react";
+import { observer } from "mobx-react-lite";
+import { type ChangeEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -16,61 +17,42 @@ interface TaskAnnotationsEditorProps {
 /**
  * Editor for task annotations, displayed in the ContextPanel.
  * Follows the visual pattern from YamlGeneratorOptionsEditor.
- * Uses the new model's ObservableArray for annotations.
+ * Uses mobx-keystone model actions for annotations.
  */
-export function TaskAnnotationsEditor({
+export const TaskAnnotationsEditor = observer(function TaskAnnotationsEditor({
   entityId,
 }: TaskAnnotationsEditorProps) {
-  // Version counter to force re-renders when annotations change
-  const [version, setVersion] = useState(0);
-
-  // Get the current spec from SpecContext
   const spec = useSpec();
-
   const task = spec?.tasks.find((t) => t.$id === entityId);
-
-  // Subscribe to annotation changes using version counter
-  useEffect(() => {
-    if (!task) return;
-    const unsub = task.annotations.subscribe(() => {
-      setVersion((v) => v + 1);
-    });
-    return unsub;
-  }, [task]);
 
   if (!spec || !task) {
     return null;
   }
 
-  // Access version to ensure React tracks it as a dependency
-  void version;
-
-  // Filter out internal annotations (editor.*)
-  const userAnnotations = task.annotations.all.filter(
+  const userAnnotations = task.annotations.filter(
     (a) => !a.key.startsWith("editor."),
   );
 
-  // Handlers mutate the task annotations directly
   const handleAddAnnotation = () => {
-    task.annotations.add({ key: "", value: "" });
+    task.addAnnotation({ key: "", value: "" });
   };
 
   const handleUpdateKey = (
     index: number,
     event: ChangeEvent<HTMLInputElement>,
   ) => {
-    task.annotations.update(index, { key: event.target.value });
+    task.updateAnnotation(index, { key: event.target.value });
   };
 
   const handleUpdateValue = (
     index: number,
     event: ChangeEvent<HTMLInputElement>,
   ) => {
-    task.annotations.update(index, { value: event.target.value });
+    task.updateAnnotation(index, { value: event.target.value });
   };
 
   const handleRemoveAnnotation = (index: number) => {
-    task.annotations.remove(index);
+    task.removeAnnotation(index);
   };
 
   return (
@@ -92,9 +74,9 @@ export function TaskAnnotationsEditor({
       <BlockStack gap="1">
         {userAnnotations.map((annotation, idx) => (
           <AnnotationRow
-            key={`annotation-${idx}-${version}`}
+            key={`annotation-${idx}`}
             annotation={annotation}
-            index={task.annotations.all.findIndex((a) => a === annotation)}
+            index={task.annotations.findIndex((a) => a === annotation)}
             onUpdateKey={handleUpdateKey}
             onUpdateValue={handleUpdateValue}
             onRemove={handleRemoveAnnotation}
@@ -103,7 +85,7 @@ export function TaskAnnotationsEditor({
       </BlockStack>
     </BlockStack>
   );
-}
+});
 
 interface AnnotationRowProps {
   annotation: Annotation;

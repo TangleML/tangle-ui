@@ -1,5 +1,5 @@
 import { Task } from "../entities/task";
-import type { ComponentReference } from "../entities/types";
+import type { Argument, ComponentReference } from "../entities/types";
 import type { IdGenerator } from "./idGenerator";
 
 export function createTaskFromComponentRef(
@@ -7,19 +7,18 @@ export function createTaskFromComponentRef(
   componentRef: ComponentReference,
   taskName: string,
 ): Task {
-  const task = new Task(idGen.next("task"), {
-    name: taskName,
-    componentRef,
-  });
+  const args: Argument[] = [];
 
   if (componentRef.spec?.inputs) {
     for (const input of componentRef.spec.inputs) {
-      task.arguments.add({
-        name: input.name,
-        value: input.default,
-      });
+      args.push({ name: input.name, value: input.default });
     }
   }
 
-  return task;
+  return new Task({
+    $id: idGen.next("task"),
+    name: taskName,
+    componentRef,
+    arguments: args,
+  });
 }

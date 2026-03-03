@@ -1,11 +1,11 @@
 import { Handle, type Node, type NodeProps, Position } from "@xyflow/react";
+import { observer } from "mobx-react-lite";
 
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
-import { useEntity } from "@/models/componentSpec/hooks/useEntity";
 
 import type { IONodeData } from "../hooks/useSpecToNodesEdges";
 import { useSpec } from "../providers/SpecContext";
@@ -23,20 +23,19 @@ function typeToString(type: unknown): string | undefined {
   return JSON.stringify(type);
 }
 
-export function IONode({ id, data, selected }: IONodeProps) {
+export const IONode = observer(function IONode({
+  id,
+  data,
+  selected,
+}: IONodeProps) {
   const { entityId, ioType } = data;
 
-  // Get the current spec from SpecContext
   const spec = useSpec();
-
   const isInput = ioType === "input";
 
-  // Find the entity by its stable $id and subscribe to its changes
-  const entity = useEntity(
-    isInput
-      ? spec?.inputs.find((i) => i.$id === entityId)
-      : spec?.outputs.find((o) => o.$id === entityId),
-  );
+  const entity = isInput
+    ? spec?.inputs.find((i) => i.$id === entityId)
+    : spec?.outputs.find((o) => o.$id === entityId);
 
   const handleClick = (event: React.MouseEvent) => {
     selectNode(id, ioType, {
@@ -45,7 +44,6 @@ export function IONode({ id, data, selected }: IONodeProps) {
     });
   };
 
-  // Get name and properties from reactive entity
   const name = entity?.name ?? entityId;
   const type = typeToString(entity?.type);
   const description = entity?.description;
@@ -88,8 +86,6 @@ export function IONode({ id, data, selected }: IONodeProps) {
         )}
       </CardHeader>
 
-      {/* Input nodes have an output handle (they provide data) */}
-      {/* Handle ID uses entityId for stability - names can change */}
       {isInput && (
         <Handle
           type="source"
@@ -99,8 +95,6 @@ export function IONode({ id, data, selected }: IONodeProps) {
         />
       )}
 
-      {/* Output nodes have an input handle (they receive data) */}
-      {/* Handle ID uses entityId for stability - names can change */}
       {!isInput && (
         <Handle
           type="target"
@@ -111,4 +105,4 @@ export function IONode({ id, data, selected }: IONodeProps) {
       )}
     </Card>
   );
-}
+});

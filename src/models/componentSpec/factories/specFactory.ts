@@ -6,9 +6,9 @@ export function createComponentSpec(
   name: string,
   description?: string,
 ): ComponentSpec {
-  const spec = new ComponentSpec(idGen.next("spec"), name);
-  if (description) {
-    spec.description = description;
-  }
-  return spec;
+  return new ComponentSpec({
+    $id: idGen.next("spec"),
+    name,
+    description,
+  });
 }

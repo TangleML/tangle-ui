@@ -1,4 +1,5 @@
-import { useEffect, useReducer, useState } from "react";
+import { observer } from "mobx-react-lite";
+import { useEffect } from "react";
 
 import CodeSyntaxHighlighter from "@/components/shared/CodeViewer/CodeSyntaxHighlighter";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -61,7 +62,6 @@ function getSpecYaml(spec: ComponentSpec | null): string {
   if (!spec) return "null";
   try {
     const serializer = new JsonSerializer();
-    // ComponentSpecJson from new model is structurally compatible with ComponentSpec from utils
     return componentSpecToText(
       serializer.serialize(spec) as Parameters<typeof componentSpecToText>[0],
     );
@@ -74,47 +74,9 @@ function getSpecYaml(spec: ComponentSpec | null): string {
  * Debug panel content - displays stats and JSON representation of the spec.
  * Used within the Windows system.
  */
-function DebugPanelContent() {
-  const [, forceUpdate] = useReducer((x: number) => x + 1, 0);
-
-  // Store YAML in state and update it via subscription.
-  // This guarantees reactivity since state changes always trigger re-renders.
-  const [specYaml, setSpecYaml] = useState(() =>
-    getSpecYaml(navigationStore.rootSpec),
-  );
-
-  useEffect(() => {
-    // Use navigationStore.rootSpec - this is the EXACT object that commands mutate
-    const spec = navigationStore.rootSpec;
-    if (!spec) {
-      setSpecYaml("null");
-      return;
-    }
-
-    // Set initial YAML
-    setSpecYaml(getSpecYaml(spec));
-
-    // Subscribe to the spec changes via the new model's subscriptions
-    const unsubscribes: (() => void)[] = [];
-
-    const updateYaml = () => {
-      setSpecYaml(getSpecYaml(navigationStore.rootSpec));
-      forceUpdate();
-    };
-
-    unsubscribes.push(spec.subscribe(updateYaml));
-    unsubscribes.push(spec.tasks.subscribe(updateYaml));
-    unsubscribes.push(spec.inputs.subscribe(updateYaml));
-    unsubscribes.push(spec.outputs.subscribe(updateYaml));
-    unsubscribes.push(spec.bindings.subscribe(updateYaml));
-
-    return () => {
-      unsubscribes.forEach((unsub) => unsub());
-    };
-  }, [navigationStore.rootSpec]);
-
-  // Use editorStore.spec for display (same object, just for consistency with other components)
+const DebugPanelContent = observer(function DebugPanelContent() {
   const spec = editorStore.spec;
+  const specYaml = getSpecYaml(navigationStore.rootSpec);
 
   const stats = {
     name: spec?.name ?? "—",
@@ -122,11 +84,9 @@ function DebugPanelContent() {
     outputs: spec?.outputs.length ?? 0,
     tasks: spec?.tasks.length ?? 0,
     arguments:
-      spec?.tasks.all.reduce((acc, task) => acc + task.arguments.length, 0) ??
-      0,
+      spec?.tasks.reduce((acc, task) => acc + task.arguments.length, 0) ?? 0,
     annotations:
-      spec?.tasks.all.reduce((acc, task) => acc + task.annotations.length, 0) ??
-      0,
+      spec?.tasks.reduce((acc, task) => acc + task.annotations.length, 0) ?? 0,
     bindings: spec?.bindings.length ?? 0,
   };
 
@@ -185,7 +145,7 @@ function DebugPanelContent() {
       </TabsContent>
     </Tabs>
   );
-}
+});
 
 /**
  * DebugPanel component that manages the debug panel window lifecycle.
@@ -205,12 +165,10 @@ export function DebugPanel() {
       });
     }
 
-    // Cleanup: close window on unmount
     return () => {
       closeWindow(DEBUG_PANEL_WINDOW_ID);
     };
   }, []);
 
-  // This component doesn't render anything - it just manages the window lifecycle
   return null;
 }

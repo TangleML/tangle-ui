@@ -1,21 +1,3 @@
-// Reactive core
-export type {
-  ChangeEvent,
-  ChangeEventDetail,
-  ChildChangeEvent,
-  ChildChangeEventDetail,
-  EntityContextInit,
-} from "./reactive";
-export {
-  BaseEntity,
-  createIndexedProperty,
-  createObservableProperty,
-  defineIndexed,
-  defineObservable,
-  EntityContext,
-  ObservableArray,
-} from "./reactive";
-
 // Entities
 export type {
   Annotation,
@@ -25,21 +7,31 @@ export type {
   BindingInit,
   ComponentReference,
   ComponentSpecJson,
+  ContainerImplementation,
+  GraphImplementation,
+  GraphSpec,
+  ImplementationType,
   InputInit,
+  InputSpecJson,
+  MetadataSpec,
   OutputInit,
+  OutputSpecJson,
   PredicateType,
   TaskInit,
+  TaskOutputArgument,
+  TaskSpecJson,
   TypeSpecType,
 } from "./entities";
-export { Binding, ComponentSpec, Input, Output, Task } from "./entities";
-
-// Indexes
 export {
-  IndexManager,
-  indexManager,
-  resetIndexManager,
-  setIndexManager,
-} from "./indexes";
+  Binding,
+  ComponentSpec,
+  Input,
+  isGraphImplementation,
+  isGraphInputArgument,
+  isTaskOutputArgument,
+  Output,
+  Task,
+} from "./entities";
 
 // Serialization
 export { JsonSerializer, YamlDeserializer } from "./serialization";
@@ -54,7 +46,3 @@ export {
 
 // Actions
 export { createSubgraph } from "./actions";
-
-// Hooks
-export type { UseEntityOptions } from "./hooks";
-export { useEntity, useObservableArray } from "./hooks";

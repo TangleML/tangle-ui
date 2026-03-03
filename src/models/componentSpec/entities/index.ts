@@ -14,16 +14,20 @@ export type {
   BindingEndpoint,
   ComponentReference,
   ComponentSpecJson,
+  ContainerImplementation,
   GraphImplementation,
   GraphSpec,
+  ImplementationType,
   InputSpecJson,
-  isGraphImplementation,
-  isGraphInputArgument,
-  isTaskOutputArgument,
   MetadataSpec,
   OutputSpecJson,
   PredicateType,
   TaskOutputArgument,
   TaskSpecJson,
   TypeSpecType,
+} from "./types";
+export {
+  isGraphImplementation,
+  isGraphInputArgument,
+  isTaskOutputArgument,
 } from "./types";

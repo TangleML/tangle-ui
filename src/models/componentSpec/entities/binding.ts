@@ -1,5 +1,5 @@
-import { BaseEntity } from "../reactive/baseEntity";
-import { indexed, observable } from "../reactive/decorators";
+import { idProp, Model, model, modelAction, prop } from "mobx-keystone";
+
 import type { BindingEndpoint } from "./types";
 
 export interface BindingInit {
@@ -7,27 +7,39 @@ export interface BindingInit {
   target: BindingEndpoint;
 }
 
-export class Binding extends BaseEntity {
-  @indexed accessor $id: string;
-  @indexed accessor sourceEntityId: string;
-  @indexed accessor targetEntityId: string;
-  @observable accessor sourcePortName: string;
-  @observable accessor targetPortName: string;
-
-  constructor($id: string, init: BindingInit) {
-    super();
-    this.$id = $id;
-    this.sourceEntityId = init.source.entityId;
-    this.targetEntityId = init.target.entityId;
-    this.sourcePortName = init.source.portName;
-    this.targetPortName = init.target.portName;
-  }
-
+@model("spec/Binding")
+export class Binding extends Model({
+  $id: idProp,
+  sourceEntityId: prop<string>(),
+  targetEntityId: prop<string>(),
+  sourcePortName: prop<string>(),
+  targetPortName: prop<string>(),
+}) {
   get source(): BindingEndpoint {
     return { entityId: this.sourceEntityId, portName: this.sourcePortName };
   }
 
   get target(): BindingEndpoint {
     return { entityId: this.targetEntityId, portName: this.targetPortName };
+  }
+
+  @modelAction
+  setSourceEntityId(id: string) {
+    this.sourceEntityId = id;
+  }
+
+  @modelAction
+  setTargetEntityId(id: string) {
+    this.targetEntityId = id;
+  }
+
+  @modelAction
+  setSourcePortName(name: string) {
+    this.sourcePortName = name;
+  }
+
+  @modelAction
+  setTargetPortName(name: string) {
+    this.targetPortName = name;
   }
 }

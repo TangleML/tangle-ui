@@ -5,7 +5,6 @@ import type {
   GraphImplementation,
 } from "../../entities/types";
 import { IncrementingIdGenerator } from "../../factories/idGenerator";
-import { resetIndexManager } from "../../indexes/indexManager";
 import { JsonSerializer } from "../../serialization/jsonSerializer";
 import { YamlDeserializer } from "../../serialization/yamlDeserializer";
 
@@ -21,7 +20,6 @@ describe("Serialization Roundtrip", () => {
   let deserializer: YamlDeserializer;
 
   beforeEach(() => {
-    resetIndexManager();
     const idGen = new IncrementingIdGenerator();
     serializer = new JsonSerializer();
     deserializer = new YamlDeserializer(idGen);

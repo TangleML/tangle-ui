@@ -15,6 +15,7 @@ import {
   useEdgesState,
   useNodesState,
 } from "@xyflow/react";
+import { observer } from "mobx-react-lite";
 import type { ComponentType, DragEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 
@@ -26,25 +27,25 @@ import type { TaskSpec } from "@/utils/componentSpec";
 
 import type { TaskNodeData } from "../hooks/useSpecToNodesEdges";
 import { useSpecToNodesEdges } from "../hooks/useSpecToNodesEdges";
-import { executeCommand } from "../store/commandManager";
 import {
-  AddInputCommand,
-  AddOutputCommand,
-  AddTaskCommand,
-  CompositeCommand,
-  ConnectNodesCommand,
-  DeleteEdgeCommand,
-  DeleteInputCommand,
-  DeleteOutputCommand,
-  DeleteTaskCommand,
-  UpdateNodePositionCommand,
-} from "../store/commands";
+  addInput,
+  addOutput,
+  addTask,
+  connectNodes,
+  deleteEdge,
+  deleteInput,
+  deleteOutput,
+  deleteTask,
+  getNodeTypeFromId,
+  updateNodePosition,
+} from "../store/actions";
 import {
   clearMultiSelection,
   clearSelection,
   type SelectedNode,
   setMultiSelection,
 } from "../store/editorStore";
+import { undoStore } from "../store/undoStore";
 import { IONode } from "./IONode";
 import { TaskNode } from "./TaskNode";
 
@@ -56,14 +57,12 @@ const nodeTypes: Record<string, ComponentType<any>> = {
 };
 
 interface FlowCanvasProps {
-  /** The ComponentSpec to render */
   spec: ComponentSpec | null;
-  /** Callback when a task node is double-clicked (for subgraph navigation) */
   onTaskDoubleClick?: (taskEntityId: string) => void;
   className?: string;
 }
 
-export function FlowCanvas({
+export const FlowCanvas = observer(function FlowCanvas({
   spec,
   onTaskDoubleClick,
   className,
@@ -72,18 +71,11 @@ export function FlowCanvas({
     useState<ReactFlowInstance | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Get nodes and edges from the spec
-  // useSpecToNodesEdges uses fingerprint-based caching to return stable references
   const { nodes: specNodes, edges: specEdges } = useSpecToNodesEdges(spec);
 
-  // Use ReactFlow's state management for nodes and edges
   const [nodes, setNodes, onNodesChange] = useNodesState(specNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(specEdges);
 
-  // Sync spec changes to ReactFlow state
-  // This runs when spec is mutated (e.g., adding tasks, creating connections)
-  // The fingerprint-based caching in useSpecToNodesEdges ensures stable references,
-  // so this effect only runs when actual changes occur (not on every render)
   useEffect(() => {
     setNodes(specNodes);
     setEdges(specEdges);
@@ -93,16 +85,13 @@ export function FlowCanvas({
     nodes: selected,
   }: OnSelectionChangeParams) => {
     if (selected.length > 1) {
-      // Multi-selection: sync to store
       const multiSelection: SelectedNode[] = selected
         .filter((node) => node.type === "task" || node.type === "io")
         .map((node) => {
-          // Determine node type: task nodes have type "task", io nodes need data.ioType
           let nodeType: SelectedNode["type"];
           if (node.type === "task") {
             nodeType = "task";
           } else {
-            // io node - check data.ioType
             nodeType = node.data?.ioType === "input" ? "input" : "output";
           }
           return {
@@ -113,7 +102,6 @@ export function FlowCanvas({
         });
       setMultiSelection(multiSelection);
     } else {
-      // Single or no selection - clear multi-selection
       clearMultiSelection();
     }
   };
@@ -124,54 +112,29 @@ export function FlowCanvas({
       return;
     }
 
-    // Handle position changes to update the spec
     const positionChanges = changes.filter(
       (change) => change.type === "position" && change.dragging === false,
     );
 
-    // Batch position changes into a single composite command for multi-select moves
-    const positionCommands: UpdateNodePositionCommand[] = [];
-    for (const change of positionChanges) {
-      if ("id" in change && "position" in change && change.position) {
-        positionCommands.push(
-          new UpdateNodePositionCommand(spec, change.id, change.position),
-        );
-      }
+    if (positionChanges.length > 0) {
+      undoStore.undoManager?.withGroup("Move nodes", () => {
+        for (const change of positionChanges) {
+          if ("id" in change && "position" in change && change.position) {
+            updateNodePosition(spec, change.id, change.position);
+          }
+        }
+      });
     }
 
-    if (positionCommands.length === 1) {
-      executeCommand(positionCommands[0]);
-    } else if (positionCommands.length > 1) {
-      executeCommand(new CompositeCommand(positionCommands, "Move nodes"));
-    }
-
-    // Handle node removal to update the spec
     const removeChanges = changes.filter((change) => change.type === "remove");
-
-    // Batch delete changes into a single composite command for multi-select deletes
-    const deleteCommands: (
-      | DeleteTaskCommand
-      | DeleteInputCommand
-      | DeleteOutputCommand
-    )[] = [];
     for (const change of removeChanges) {
       if ("id" in change) {
         const nodeId = change.id;
-        // Determine node type from entity $id format
-        if (nodeId.includes(".tasks_")) {
-          deleteCommands.push(new DeleteTaskCommand(spec, nodeId));
-        } else if (nodeId.includes(".inputs_")) {
-          deleteCommands.push(new DeleteInputCommand(spec, nodeId));
-        } else if (nodeId.includes(".outputs_")) {
-          deleteCommands.push(new DeleteOutputCommand(spec, nodeId));
-        }
+        const nodeType = getNodeTypeFromId(nodeId);
+        if (nodeType === "task") deleteTask(spec, nodeId);
+        else if (nodeType === "input") deleteInput(spec, nodeId);
+        else if (nodeType === "output") deleteOutput(spec, nodeId);
       }
-    }
-
-    if (deleteCommands.length === 1) {
-      executeCommand(deleteCommands[0]);
-    } else if (deleteCommands.length > 1) {
-      executeCommand(new CompositeCommand(deleteCommands, "Delete nodes"));
     }
 
     onNodesChange(changes);
@@ -183,23 +146,11 @@ export function FlowCanvas({
       return;
     }
 
-    // Handle edge removal to update the spec
     const removeChanges = changes.filter((change) => change.type === "remove");
-
-    // Batch edge deletes into a single composite command for multi-select deletes
-    const deleteCommands: DeleteEdgeCommand[] = [];
     for (const change of removeChanges) {
       if ("id" in change) {
-        deleteCommands.push(new DeleteEdgeCommand(spec, change.id));
+        deleteEdge(spec, change.id);
       }
-    }
-
-    if (deleteCommands.length === 1) {
-      executeCommand(deleteCommands[0]);
-    } else if (deleteCommands.length > 1) {
-      executeCommand(
-        new CompositeCommand(deleteCommands, "Delete connections"),
-      );
     }
 
     onEdgesChange(changes);
@@ -207,29 +158,21 @@ export function FlowCanvas({
 
   const handleConnect: OnConnect = (connection: Connection) => {
     if (!spec) return;
-
     if (
       !connection.source ||
       !connection.target ||
       !connection.sourceHandle ||
       !connection.targetHandle
-    ) {
+    )
       return;
-    }
+    if (connection.source === connection.target) return;
 
-    // Don't allow self-connections
-    if (connection.source === connection.target) {
-      return;
-    }
-
-    executeCommand(
-      new ConnectNodesCommand(spec, {
-        sourceNodeId: connection.source,
-        sourceHandleId: connection.sourceHandle,
-        targetNodeId: connection.target,
-        targetHandleId: connection.targetHandle,
-      }),
-    );
+    connectNodes(spec, {
+      sourceNodeId: connection.source,
+      sourceHandleId: connection.sourceHandle,
+      targetNodeId: connection.target,
+      targetHandleId: connection.targetHandle,
+    });
   };
 
   const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
@@ -239,17 +182,11 @@ export function FlowCanvas({
 
   const handleDrop = async (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
-
-    if (!spec || !reactFlowInstance) {
-      return;
-    }
+    if (!spec || !reactFlowInstance) return;
 
     const droppedData = event.dataTransfer.getData("application/reactflow");
-    if (!droppedData) {
-      return;
-    }
+    if (!droppedData) return;
 
-    // Calculate drop position
     const position = reactFlowInstance.screenToFlowPosition({
       x: event.clientX,
       y: event.clientY,
@@ -259,28 +196,17 @@ export function FlowCanvas({
       const parsedData = JSON.parse(droppedData);
 
       if (parsedData.task) {
-        // Dropped a task - async hydration happens BEFORE command creation
         const taskSpec = parsedData.task as TaskSpec;
         const componentRef = await hydrateComponentReference(
           taskSpec.componentRef,
         );
-
         if (componentRef) {
-          // HydratedComponentReference from utils is structurally compatible with ComponentReference
-          executeCommand(
-            new AddTaskCommand(
-              spec,
-              componentRef as ComponentReference,
-              position,
-            ),
-          );
+          addTask(spec, componentRef as ComponentReference, position);
         }
       } else if (parsedData.input !== undefined) {
-        // Dropped an input node
-        executeCommand(new AddInputCommand(spec, position));
+        addInput(spec, position);
       } else if (parsedData.output !== undefined) {
-        // Dropped an output node
-        executeCommand(new AddOutputCommand(spec, position));
+        addOutput(spec, position);
       }
     } catch (err) {
       console.error("Failed to parse dropped data:", err);
@@ -291,24 +217,13 @@ export function FlowCanvas({
     clearSelection();
   };
 
-  /**
-   * Handle double-click on nodes.
-   * For task nodes, triggers navigation into subgraphs if available.
-   */
   const handleNodeDoubleClick: NodeMouseHandler = (
     _event: React.MouseEvent,
     node: Node,
   ) => {
-    // Only handle task nodes
-    if (node.type !== "task") {
-      return;
-    }
-
+    if (node.type !== "task") return;
     const taskData = node.data as TaskNodeData;
-    const taskEntityId = taskData.entityId;
-
-    // Notify parent about the double-click (parent handles navigation)
-    onTaskDoubleClick?.(taskEntityId);
+    onTaskDoubleClick?.(taskData.entityId);
   };
 
   return (
@@ -344,4 +259,4 @@ export function FlowCanvas({
       </ReactFlow>
     </BlockStack>
   );
-}
+});

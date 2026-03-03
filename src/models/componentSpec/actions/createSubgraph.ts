@@ -3,6 +3,12 @@ import { ComponentSpec } from "../entities/componentSpec";
 import { Input } from "../entities/input";
 import { Output } from "../entities/output";
 import { Task } from "../entities/task";
+import type {
+  Annotation,
+  Argument,
+  ComponentReference,
+  PredicateType,
+} from "../entities/types";
 import type { IdGenerator } from "../factories/idGenerator";
 import { JsonSerializer } from "../serialization/jsonSerializer";
 
@@ -18,6 +24,46 @@ interface CreateSubgraphResult {
   replacementTask: Task;
 }
 
+const deepClone = <T>(obj: T): T => JSON.parse(JSON.stringify(obj));
+
+interface TaskSnapshot {
+  $id: string;
+  name: string;
+  componentRef: ComponentReference;
+  isEnabled?: PredicateType;
+  annotations: Annotation[];
+  arguments: Argument[];
+}
+
+interface BindingSnapshot {
+  $id: string;
+  sourceEntityId: string;
+  targetEntityId: string;
+  sourcePortName: string;
+  targetPortName: string;
+}
+
+function snapshotTask(t: Task): TaskSnapshot {
+  return {
+    $id: t.$id,
+    name: t.name,
+    componentRef: deepClone(t.componentRef),
+    isEnabled: t.isEnabled ? deepClone(t.isEnabled) : undefined,
+    annotations: t.annotations.map((a) => deepClone(a)),
+    arguments: t.arguments.map((a) => deepClone(a)),
+  };
+}
+
+function snapshotBinding(b: Binding): BindingSnapshot {
+  return {
+    $id: b.$id,
+    sourceEntityId: b.sourceEntityId,
+    targetEntityId: b.targetEntityId,
+    sourcePortName: b.sourcePortName,
+    targetPortName: b.targetPortName,
+  };
+}
+
 export function createSubgraph({
   spec,
   selectedTaskIds,
@@ -25,157 +71,190 @@ export function createSubgraph({
   idGen,
 }: CreateSubgraphParams): CreateSubgraphResult | null {
   const selectedTaskIdSet = new Set(selectedTaskIds);
-
-  // Collect selected tasks from the spec
   const selectedTasks = spec.tasks.filter((t) => selectedTaskIdSet.has(t.$id));
 
   if (selectedTasks.length === 0) {
     return null;
   }
 
-  // Analyze bindings to find boundary connections
-  const allBindings = spec.bindings.all;
+  const allBindings = spec.bindings.map(snapshotBinding);
+  const taskSnapshots = selectedTasks.map(snapshotTask);
 
-  // Incoming: bindings targeting selected tasks from outside the selection
   const incomingBindings = allBindings.filter(
     (b) =>
       selectedTaskIdSet.has(b.targetEntityId) &&
       !selectedTaskIdSet.has(b.sourceEntityId),
   );
 
-  // Outgoing: bindings from selected tasks to outside the selection
   const outgoingBindings = allBindings.filter(
     (b) =>
       selectedTaskIdSet.has(b.sourceEntityId) &&
       !selectedTaskIdSet.has(b.targetEntityId),
   );
 
-  // Internal: bindings between selected tasks
   const internalBindings = allBindings.filter(
     (b) =>
       selectedTaskIdSet.has(b.sourceEntityId) &&
       selectedTaskIdSet.has(b.targetEntityId),
   );
 
-  // Create the subgraph ComponentSpec
-  const subgraphSpec = new ComponentSpec(idGen.next("spec"), subgraphName);
+  const affectedBindingIds = new Set(
+    [...incomingBindings, ...outgoingBindings, ...internalBindings].map(
+      (b) => b.$id,
+    ),
+  );
 
-  // Group incoming bindings by source - each unique source becomes one subgraph input
+  // Remove affected bindings and tasks from parent spec BEFORE creating subgraph
+  for (const bindingId of affectedBindingIds) {
+    spec.removeBindingBy((b) => b.$id === bindingId);
+  }
+  for (const task of selectedTasks) {
+    spec.removeTaskBy((t) => t.$id === task.$id);
+  }
+
+  // Now build subgraph entities from snapshots (original models are detached)
   const incomingBySource = groupBy(
     incomingBindings,
     (b) => `${b.sourceEntityId}:${b.sourcePortName}`,
   );
 
-  // Create subgraph inputs and track mapping
-  // Use targetPortName as the input name (preserves the argument name used by tasks)
-  const inputGroups: Array<{ input: Input; bindings: Binding[] }> = [];
+  const subgraphInputs: Input[] = [];
+  const inputGroups: Array<{ input: Input; bindings: BindingSnapshot[] }> = [];
   for (const [, bindings] of Object.entries(incomingBySource)) {
     const first = bindings[0];
     const inputName = first.targetPortName;
-    const input = new Input(idGen.next("input"), { name: inputName });
-    subgraphSpec.inputs.add(input);
+    const input = new Input({
+      $id: idGen.next("input"),
+      name: inputName,
+    });
+    subgraphInputs.push(input);
     inputGroups.push({ input, bindings });
   }
 
-  // Group outgoing bindings by source - each unique source becomes one subgraph output
   const outgoingBySource = groupBy(
     outgoingBindings,
     (b) => `${b.sourceEntityId}:${b.sourcePortName}`,
   );
 
-  // Create subgraph outputs and track mapping
-  const outputGroups: Array<{ output: Output; bindings: Binding[] }> = [];
+  const subgraphOutputs: Output[] = [];
+  const outputGroups: Array<{ output: Output; bindings: BindingSnapshot[] }> =
+    [];
   for (const [, bindings] of Object.entries(outgoingBySource)) {
     const first = bindings[0];
     const outputName = first.sourcePortName;
-    const output = new Output(idGen.next("output"), { name: outputName });
-    subgraphSpec.outputs.add(output);
+    const output = new Output({
+      $id: idGen.next("output"),
+      name: outputName,
+    });
+    subgraphOutputs.push(output);
     outputGroups.push({ output, bindings });
   }
 
-  // Remove boundary bindings from parent spec
-  for (const binding of incomingBindings) {
-    spec.bindings.removeBy((b) => b.$id === binding.$id);
-  }
-  for (const binding of outgoingBindings) {
-    spec.bindings.removeBy((b) => b.$id === binding.$id);
-  }
+  const subgraphInternalBindings: Binding[] = internalBindings.map(
+    (b) =>
+      new Binding({
+        $id: idGen.next("binding"),
+        sourceEntityId: b.sourceEntityId,
+        targetEntityId: b.targetEntityId,
+        sourcePortName: b.sourcePortName,
+        targetPortName: b.targetPortName,
+      }),
+  );
 
-  // Move internal bindings from parent to subgraph
-  for (const binding of internalBindings) {
-    spec.bindings.removeBy((b) => b.$id === binding.$id);
-    subgraphSpec.bindings.add(binding);
-  }
+  const subgraphTasks: Task[] = taskSnapshots.map(
+    (t) =>
+      new Task({
+        $id: t.$id,
+        name: t.name,
+        componentRef: t.componentRef,
+        isEnabled: t.isEnabled,
+        annotations: t.annotations,
+        arguments: t.arguments,
+      }),
+  );
 
-  // Move selected tasks from parent to subgraph
-  for (const task of selectedTasks) {
-    spec.tasks.removeBy((t) => t.$id === task.$id);
-    subgraphSpec.tasks.add(task);
-  }
-
-  // Create bindings from subgraph inputs to the moved tasks
+  const subgraphInputBindings: Binding[] = [];
   for (const { input, bindings } of inputGroups) {
     for (const binding of bindings) {
-      const newBinding = new Binding(idGen.next("binding"), {
-        source: { entityId: input.$id, portName: input.name },
-        target: {
-          entityId: binding.targetEntityId,
-          portName: binding.targetPortName,
-        },
-      });
-      subgraphSpec.bindings.add(newBinding);
+      subgraphInputBindings.push(
+        new Binding({
+          $id: idGen.next("binding"),
+          sourceEntityId: input.$id,
+          sourcePortName: input.name,
+          targetEntityId: binding.targetEntityId,
+          targetPortName: binding.targetPortName,
+        }),
+      );
     }
   }
 
-  // Create bindings from moved tasks to subgraph outputs
+  const subgraphOutputBindings: Binding[] = [];
   for (const { output, bindings } of outputGroups) {
     const first = bindings[0];
-    const newBinding = new Binding(idGen.next("binding"), {
-      source: {
-        entityId: first.sourceEntityId,
-        portName: first.sourcePortName,
-      },
-      target: { entityId: output.$id, portName: output.name },
-    });
-    subgraphSpec.bindings.add(newBinding);
+    subgraphOutputBindings.push(
+      new Binding({
+        $id: idGen.next("binding"),
+        sourceEntityId: first.sourceEntityId,
+        sourcePortName: first.sourcePortName,
+        targetEntityId: output.$id,
+        targetPortName: output.name,
+      }),
+    );
   }
 
-  // Serialize subgraph spec to JSON for the componentRef
-  const serializer = new JsonSerializer();
-  const subgraphSpecJson = serializer.serialize(subgraphSpec);
+  const subgraphSpec = new ComponentSpec({
+    $id: idGen.next("spec"),
+    name: subgraphName,
+    inputs: subgraphInputs,
+    outputs: subgraphOutputs,
+    tasks: subgraphTasks,
+    bindings: [
+      ...subgraphInternalBindings,
+      ...subgraphInputBindings,
+      ...subgraphOutputBindings,
+    ],
+  });
 
-  // Create the replacement task in parent spec
-  const replacementTask = new Task(idGen.next("task"), {
+  const serializer = new JsonSerializer();
+  const subgraphSpecJson = deepClone(serializer.serialize(subgraphSpec));
+
+  const replacementTaskArgs: Argument[] = inputGroups.map(({ input }) => ({
+    name: input.name,
+  }));
+
+  const replacementTask = new Task({
+    $id: idGen.next("task"),
     name: subgraphName,
     componentRef: { name: subgraphName, spec: subgraphSpecJson },
+    arguments: replacementTaskArgs,
   });
-  spec.tasks.add(replacementTask);
 
-  // Create bindings from external sources to replacement task inputs
+  spec.addTask(replacementTask);
+
   for (const { input, bindings } of inputGroups) {
     const first = bindings[0];
-    replacementTask.arguments.add({ name: input.name });
-    const newBinding = new Binding(idGen.next("binding"), {
-      source: {
-        entityId: first.sourceEntityId,
-        portName: first.sourcePortName,
-      },
-      target: { entityId: replacementTask.$id, portName: input.name },
-    });
-    spec.bindings.add(newBinding);
+    spec.addBinding(
+      new Binding({
+        $id: idGen.next("binding"),
+        sourceEntityId: first.sourceEntityId,
+        sourcePortName: first.sourcePortName,
+        targetEntityId: replacementTask.$id,
+        targetPortName: input.name,
+      }),
+    );
   }
 
-  // Create bindings from replacement task outputs to external targets
   for (const { output, bindings } of outputGroups) {
     for (const binding of bindings) {
-      const newBinding = new Binding(idGen.next("binding"), {
-        source: { entityId: replacementTask.$id, portName: output.name },
-        target: {
-          entityId: binding.targetEntityId,
-          portName: binding.targetPortName,
-        },
-      });
-      spec.bindings.add(newBinding);
+      spec.addBinding(
+        new Binding({
+          $id: idGen.next("binding"),
+          sourceEntityId: replacementTask.$id,
+          sourcePortName: output.name,
+          targetEntityId: binding.targetEntityId,
+          targetPortName: binding.targetPortName,
+        }),
+      );
     }
   }
 

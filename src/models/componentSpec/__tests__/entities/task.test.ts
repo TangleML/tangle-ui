@@ -1,13 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { Task } from "../../entities/task";
-import { resetIndexManager } from "../../indexes/indexManager";
 
 describe("Task", () => {
-  beforeEach(() => resetIndexManager());
-
   it("creates with required properties", () => {
-    const task = new Task("task_1", {
+    const task = new Task({
+      $id: "task_1",
       name: "ProcessData",
       componentRef: { name: "DataProcessor" },
     });
@@ -18,39 +16,45 @@ describe("Task", () => {
   });
 
   it("has empty annotations and arguments by default", () => {
-    const task = new Task("task_1", { name: "T", componentRef: {} });
+    const task = new Task({
+      $id: "task_1",
+      name: "T",
+      componentRef: {},
+    });
 
     expect(task.annotations.length).toBe(0);
     expect(task.arguments.length).toBe(0);
   });
 
-  it("annotations are reactive", () => {
-    const task = new Task("task_1", { name: "T", componentRef: {} });
-    const listener = vi.fn();
-    task.annotations.subscribe("changed.self.*", listener);
+  it("addAnnotation adds to annotations", () => {
+    const task = new Task({
+      $id: "task_1",
+      name: "T",
+      componentRef: {},
+    });
 
-    task.annotations.add({ key: "foo", value: "bar" });
+    task.addAnnotation({ key: "foo", value: "bar" });
 
-    expect(listener).toHaveBeenCalledTimes(1);
+    expect(task.annotations.length).toBe(1);
+    expect(task.annotations[0]).toEqual({ key: "foo", value: "bar" });
   });
 
-  it("arguments are reactive", () => {
-    const task = new Task("task_1", { name: "T", componentRef: {} });
-    const listener = vi.fn();
-    task.arguments.subscribe("changed.self.*", listener);
+  it("addArgument adds to arguments", () => {
+    const task = new Task({
+      $id: "task_1",
+      name: "T",
+      componentRef: {},
+    });
 
-    task.arguments.add({ name: "input", value: "test" });
+    task.addArgument({ name: "input", value: "test" });
 
-    expect(listener).toHaveBeenCalledTimes(1);
-  });
-
-  it('$namespace is "task"', () => {
-    const task = new Task("task_1", { name: "T", componentRef: {} });
-    expect(task.$namespace).toBe("task");
+    expect(task.arguments.length).toBe(1);
+    expect(task.arguments[0]).toEqual({ name: "input", value: "test" });
   });
 
   it("can set isEnabled predicate", () => {
-    const task = new Task("task_1", {
+    const task = new Task({
+      $id: "task_1",
       name: "T",
       componentRef: {},
       isEnabled: { "==": { op1: "a", op2: "b" } },
@@ -59,35 +63,27 @@ describe("Task", () => {
     expect(task.isEnabled).toEqual({ "==": { op1: "a", op2: "b" } });
   });
 
-  it("emits change when name changes", () => {
-    const task = new Task("task_1", { name: "OldName", componentRef: {} });
-    const listener = vi.fn();
-    task.subscribe("changed.self.*", listener);
+  it("setName updates name", () => {
+    const task = new Task({
+      $id: "task_1",
+      name: "OldName",
+      componentRef: {},
+    });
 
-    task.name = "NewName";
+    task.setName("NewName");
 
-    expect(listener).toHaveBeenCalledWith(
-      expect.objectContaining({
-        field: "name",
-        value: "NewName",
-        oldValue: "OldName",
-      }),
-    );
+    expect(task.name).toBe("NewName");
   });
 
-  it("emits change when componentRef changes", () => {
-    const task = new Task("task_1", { name: "T", componentRef: { name: "A" } });
-    const listener = vi.fn();
-    task.subscribe("changed.self.*", listener);
+  it("setComponentRef updates componentRef", () => {
+    const task = new Task({
+      $id: "task_1",
+      name: "T",
+      componentRef: { name: "A" },
+    });
 
-    task.componentRef = { name: "B" };
+    task.setComponentRef({ name: "B" });
 
-    expect(listener).toHaveBeenCalledWith(
-      expect.objectContaining({
-        field: "componentRef",
-        value: { name: "B" },
-        oldValue: { name: "A" },
-      }),
-    );
+    expect(task.componentRef).toEqual({ name: "B" });
   });
 });

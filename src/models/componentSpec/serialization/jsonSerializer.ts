@@ -15,7 +15,6 @@ import type {
   TaskOutputArgument,
   TaskSpecJson,
 } from "../entities/types";
-import { indexManager } from "../indexes/indexManager";
 
 export class JsonSerializer {
   serialize(spec: ComponentSpec): ComponentSpecJson {
@@ -38,7 +37,7 @@ export class JsonSerializer {
       result.outputs = spec.outputs.map((o) => this.serializeOutput(o));
     }
 
-    const metadata = this.extractMetadata(spec.annotations.all);
+    const metadata = this.extractMetadata(spec.annotations);
     if (Object.keys(metadata).length > 0) {
       result.metadata = metadata;
     }
@@ -51,7 +50,7 @@ export class JsonSerializer {
     const outputValues: Record<string, TaskOutputArgument> = {};
 
     for (const task of spec.tasks) {
-      tasks[task.name] = this.serializeTask(task, spec.bindings.all);
+      tasks[task.name] = this.serializeTask(task, spec);
     }
 
     for (const output of spec.outputs) {
@@ -59,10 +58,8 @@ export class JsonSerializer {
         (b) => b.targetEntityId === output.$id,
       );
       if (binding) {
-        const sourceTask = indexManager.findOne<Task>(
-          "task",
-          "$id",
-          binding.sourceEntityId,
+        const sourceTask = spec.tasks.find(
+          (t) => t.$id === binding.sourceEntityId,
         );
         if (sourceTask) {
           outputValues[output.name] = {
@@ -81,12 +78,11 @@ export class JsonSerializer {
     };
   }
 
-  private serializeTask(
-    task: Task,
-    bindings: readonly Binding[],
-  ): TaskSpecJson {
-    const taskBindings = bindings.filter((b) => b.targetEntityId === task.$id);
-    const args = this.serializeArguments(task.arguments.all, taskBindings);
+  private serializeTask(task: Task, spec: ComponentSpec): TaskSpecJson {
+    const taskBindings = spec.bindings.filter(
+      (b) => b.targetEntityId === task.$id,
+    );
+    const args = this.serializeArguments(task.arguments, taskBindings, spec);
 
     const result: TaskSpecJson = {
       componentRef: task.componentRef,
@@ -100,7 +96,7 @@ export class JsonSerializer {
       result.isEnabled = task.isEnabled;
     }
 
-    const annotations = this.serializeAnnotations(task.annotations.all);
+    const annotations = this.serializeAnnotations(task.annotations);
     if (Object.keys(annotations).length > 0) {
       result.annotations = annotations;
     }
@@ -109,21 +105,18 @@ export class JsonSerializer {
   }
 
   private serializeArguments(
-    args: readonly Argument[],
-    bindings: readonly Binding[],
+    args: Argument[],
+    bindings: Binding[],
+    spec: ComponentSpec,
   ): Record<string, ArgumentType> {
     const result: Record<string, ArgumentType> = {};
 
     for (const binding of bindings) {
-      const sourceTask = indexManager.findOne<Task>(
-        "task",
-        "$id",
-        binding.sourceEntityId,
+      const sourceTask = spec.tasks.find(
+        (t) => t.$id === binding.sourceEntityId,
       );
-      const sourceInput = indexManager.findOne<Input>(
-        "input",
-        "$id",
-        binding.sourceEntityId,
+      const sourceInput = spec.inputs.find(
+        (i) => i.$id === binding.sourceEntityId,
       );
 
       if (sourceTask) {
@@ -161,7 +154,7 @@ export class JsonSerializer {
     if (input.defaultValue) result.default = input.defaultValue;
     if (input.optional !== undefined) result.optional = input.optional;
 
-    const annotations = this.serializeAnnotations(input.annotations.all);
+    const annotations = this.serializeAnnotations(input.annotations);
     if (Object.keys(annotations).length > 0) {
       result.annotations = annotations;
     }
@@ -177,7 +170,7 @@ export class JsonSerializer {
     if (output.type) result.type = output.type;
     if (output.description) result.description = output.description;
 
-    const annotations = this.serializeAnnotations(output.annotations.all);
+    const annotations = this.serializeAnnotations(output.annotations);
     if (Object.keys(annotations).length > 0) {
       result.annotations = annotations;
     }
@@ -186,7 +179,7 @@ export class JsonSerializer {
   }
 
   private serializeAnnotations(
-    annotations: readonly Annotation[],
+    annotations: Annotation[],
   ): Record<string, unknown> {
     const result: Record<string, unknown> = {};
     for (const annotation of annotations) {
@@ -197,7 +190,7 @@ export class JsonSerializer {
     return result;
   }
 
-  private extractMetadata(annotations: readonly Annotation[]): MetadataSpec {
+  private extractMetadata(annotations: Annotation[]): MetadataSpec {
     const metadata: MetadataSpec = {};
     for (const annotation of annotations) {
       if (annotation.key.startsWith("metadata.")) {

@@ -1,15 +1,12 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { Task } from "../../entities/task";
 import { IncrementingIdGenerator } from "../../factories/idGenerator";
-import { indexManager, resetIndexManager } from "../../indexes/indexManager";
 import { YamlDeserializer } from "../../serialization/yamlDeserializer";
 
 describe("YamlDeserializer", () => {
   let deserializer: YamlDeserializer;
 
   beforeEach(() => {
-    resetIndexManager();
     deserializer = new YamlDeserializer(new IncrementingIdGenerator());
   });
 
@@ -272,25 +269,6 @@ describe("YamlDeserializer", () => {
 
     expect(spec.getMetadata("author")).toBe("Jane");
     expect(spec.getMetadata("version")).toBe("2.0");
-  });
-
-  it("indexes all entities on deserialize", () => {
-    const yaml = {
-      name: "IndexedSpec",
-      implementation: {
-        graph: {
-          tasks: {
-            Task1: { componentRef: {} },
-            Task2: { componentRef: {} },
-          },
-        },
-      },
-    };
-
-    deserializer.deserialize(yaml);
-
-    expect(indexManager.findOne<Task>("task", "name", "Task1")).toBeDefined();
-    expect(indexManager.findOne<Task>("task", "name", "Task2")).toBeDefined();
   });
 
   it("handles spec without implementation", () => {

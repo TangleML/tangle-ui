@@ -10,7 +10,6 @@ import type {
   GraphImplementation,
 } from "../../entities/types";
 import { IncrementingIdGenerator } from "../../factories/idGenerator";
-import { resetIndexManager } from "../../indexes/indexManager";
 import { JsonSerializer } from "../../serialization/jsonSerializer";
 
 function getGraph(json: ComponentSpecJson): GraphImplementation["graph"] {
@@ -25,13 +24,15 @@ describe("JsonSerializer", () => {
   let idGen: IncrementingIdGenerator;
 
   beforeEach(() => {
-    resetIndexManager();
     serializer = new JsonSerializer();
     idGen = new IncrementingIdGenerator();
   });
 
   it("serializes empty spec", () => {
-    const spec = new ComponentSpec(idGen.next("spec"), "EmptyPipeline");
+    const spec = new ComponentSpec({
+      $id: idGen.next("spec"),
+      name: "EmptyPipeline",
+    });
 
     const json = serializer.serialize(spec);
 
@@ -40,8 +41,11 @@ describe("JsonSerializer", () => {
   });
 
   it("serializes spec with description", () => {
-    const spec = new ComponentSpec(idGen.next("spec"), "Pipeline");
-    spec.description = "A test pipeline";
+    const spec = new ComponentSpec({
+      $id: idGen.next("spec"),
+      name: "Pipeline",
+    });
+    spec.setDescription("A test pipeline");
 
     const json = serializer.serialize(spec);
 
@@ -49,12 +53,16 @@ describe("JsonSerializer", () => {
   });
 
   it("serializes spec with tasks", () => {
-    const spec = new ComponentSpec(idGen.next("spec"), "Pipeline");
-    const task = new Task(idGen.next("task"), {
+    const spec = new ComponentSpec({
+      $id: idGen.next("spec"),
+      name: "Pipeline",
+    });
+    const task = new Task({
+      $id: idGen.next("task"),
       name: "Process",
       componentRef: { name: "Processor" },
     });
-    spec.tasks.add(task);
+    spec.addTask(task);
 
     const json = serializer.serialize(spec);
     const graph = getGraph(json);
@@ -66,13 +74,17 @@ describe("JsonSerializer", () => {
   });
 
   it("serializes task with isEnabled", () => {
-    const spec = new ComponentSpec(idGen.next("spec"), "Pipeline");
-    const task = new Task(idGen.next("task"), {
+    const spec = new ComponentSpec({
+      $id: idGen.next("spec"),
+      name: "Pipeline",
+    });
+    const task = new Task({
+      $id: idGen.next("task"),
       name: "Process",
       componentRef: {},
       isEnabled: { "==": { op1: "a", op2: "b" } },
     });
-    spec.tasks.add(task);
+    spec.addTask(task);
 
     const json = serializer.serialize(spec);
 
@@ -82,7 +94,10 @@ describe("JsonSerializer", () => {
   });
 
   it("serializes metadata from annotations", () => {
-    const spec = new ComponentSpec(idGen.next("spec"), "Pipeline");
+    const spec = new ComponentSpec({
+      $id: idGen.next("spec"),
+      name: "Pipeline",
+    });
     spec.setMetadata("author", "John");
     spec.setMetadata("version", "1.0");
 
@@ -92,8 +107,11 @@ describe("JsonSerializer", () => {
   });
 
   it("does not include metadata in output when no metadata annotations", () => {
-    const spec = new ComponentSpec(idGen.next("spec"), "Pipeline");
-    spec.annotations.add({ key: "regular", value: "annotation" });
+    const spec = new ComponentSpec({
+      $id: idGen.next("spec"),
+      name: "Pipeline",
+    });
+    spec.addAnnotation({ key: "regular", value: "annotation" });
 
     const json = serializer.serialize(spec);
 
@@ -101,15 +119,19 @@ describe("JsonSerializer", () => {
   });
 
   it("serializes inputs", () => {
-    const spec = new ComponentSpec(idGen.next("spec"), "Pipeline");
-    const input = new Input(idGen.next("input"), {
+    const spec = new ComponentSpec({
+      $id: idGen.next("spec"),
+      name: "Pipeline",
+    });
+    const input = new Input({
+      $id: idGen.next("input"),
       name: "data",
       type: "string",
       description: "Input data",
       defaultValue: "default",
       optional: true,
     });
-    spec.inputs.add(input);
+    spec.addInput(input);
 
     const json = serializer.serialize(spec);
 
@@ -124,13 +146,17 @@ describe("JsonSerializer", () => {
   });
 
   it("serializes outputs", () => {
-    const spec = new ComponentSpec(idGen.next("spec"), "Pipeline");
-    const output = new Output(idGen.next("output"), {
+    const spec = new ComponentSpec({
+      $id: idGen.next("spec"),
+      name: "Pipeline",
+    });
+    const output = new Output({
+      $id: idGen.next("output"),
       name: "result",
       type: "object",
       description: "Output result",
     });
-    spec.outputs.add(output);
+    spec.addOutput(output);
 
     const json = serializer.serialize(spec);
 
@@ -143,19 +169,29 @@ describe("JsonSerializer", () => {
   });
 
   it("serializes bindings as task arguments (graph input)", () => {
-    const spec = new ComponentSpec(idGen.next("spec"), "Pipeline");
-    const input = new Input(idGen.next("input"), "data");
-    const task = new Task(idGen.next("task"), {
+    const spec = new ComponentSpec({
+      $id: idGen.next("spec"),
+      name: "Pipeline",
+    });
+    const input = new Input({
+      $id: idGen.next("input"),
+      name: "data",
+    });
+    const task = new Task({
+      $id: idGen.next("task"),
       name: "Process",
       componentRef: {},
     });
-    const binding = new Binding(idGen.next("binding"), {
-      source: { entityId: input.$id, portName: "data" },
-      target: { entityId: task.$id, portName: "input" },
+    const binding = new Binding({
+      $id: idGen.next("binding"),
+      sourceEntityId: input.$id,
+      sourcePortName: "data",
+      targetEntityId: task.$id,
+      targetPortName: "input",
     });
-    spec.inputs.add(input);
-    spec.tasks.add(task);
-    spec.bindings.add(binding);
+    spec.addInput(input);
+    spec.addTask(task);
+    spec.addBinding(binding);
 
     const json = serializer.serialize(spec);
 
@@ -165,22 +201,30 @@ describe("JsonSerializer", () => {
   });
 
   it("serializes bindings as task arguments (task output)", () => {
-    const spec = new ComponentSpec(idGen.next("spec"), "Pipeline");
-    const task1 = new Task(idGen.next("task"), {
+    const spec = new ComponentSpec({
+      $id: idGen.next("spec"),
+      name: "Pipeline",
+    });
+    const task1 = new Task({
+      $id: idGen.next("task"),
       name: "Task1",
       componentRef: {},
     });
-    const task2 = new Task(idGen.next("task"), {
+    const task2 = new Task({
+      $id: idGen.next("task"),
       name: "Task2",
       componentRef: {},
     });
-    const binding = new Binding(idGen.next("binding"), {
-      source: { entityId: task1.$id, portName: "output" },
-      target: { entityId: task2.$id, portName: "input" },
+    const binding = new Binding({
+      $id: idGen.next("binding"),
+      sourceEntityId: task1.$id,
+      sourcePortName: "output",
+      targetEntityId: task2.$id,
+      targetPortName: "input",
     });
-    spec.tasks.add(task1);
-    spec.tasks.add(task2);
-    spec.bindings.add(binding);
+    spec.addTask(task1);
+    spec.addTask(task2);
+    spec.addBinding(binding);
 
     const json = serializer.serialize(spec);
 
@@ -190,19 +234,29 @@ describe("JsonSerializer", () => {
   });
 
   it("serializes output values", () => {
-    const spec = new ComponentSpec(idGen.next("spec"), "Pipeline");
-    const task = new Task(idGen.next("task"), {
+    const spec = new ComponentSpec({
+      $id: idGen.next("spec"),
+      name: "Pipeline",
+    });
+    const task = new Task({
+      $id: idGen.next("task"),
       name: "Process",
       componentRef: {},
     });
-    const output = new Output(idGen.next("output"), "result");
-    const binding = new Binding(idGen.next("binding"), {
-      source: { entityId: task.$id, portName: "processed" },
-      target: { entityId: output.$id, portName: "result" },
+    const output = new Output({
+      $id: idGen.next("output"),
+      name: "result",
     });
-    spec.tasks.add(task);
-    spec.outputs.add(output);
-    spec.bindings.add(binding);
+    const binding = new Binding({
+      $id: idGen.next("binding"),
+      sourceEntityId: task.$id,
+      sourcePortName: "processed",
+      targetEntityId: output.$id,
+      targetPortName: "result",
+    });
+    spec.addTask(task);
+    spec.addOutput(output);
+    spec.addBinding(binding);
 
     const json = serializer.serialize(spec);
 
@@ -212,13 +266,17 @@ describe("JsonSerializer", () => {
   });
 
   it("serializes task annotations", () => {
-    const spec = new ComponentSpec(idGen.next("spec"), "Pipeline");
-    const task = new Task(idGen.next("task"), {
+    const spec = new ComponentSpec({
+      $id: idGen.next("spec"),
+      name: "Pipeline",
+    });
+    const task = new Task({
+      $id: idGen.next("task"),
       name: "Process",
       componentRef: {},
     });
-    task.annotations.add({ key: "note", value: "important" });
-    spec.tasks.add(task);
+    task.addAnnotation({ key: "note", value: "important" });
+    spec.addTask(task);
 
     const json = serializer.serialize(spec);
 
@@ -228,10 +286,16 @@ describe("JsonSerializer", () => {
   });
 
   it("serializes input annotations", () => {
-    const spec = new ComponentSpec(idGen.next("spec"), "Pipeline");
-    const input = new Input(idGen.next("input"), "data");
-    input.annotations.add({ key: "format", value: "json" });
-    spec.inputs.add(input);
+    const spec = new ComponentSpec({
+      $id: idGen.next("spec"),
+      name: "Pipeline",
+    });
+    const input = new Input({
+      $id: idGen.next("input"),
+      name: "data",
+    });
+    input.addAnnotation({ key: "format", value: "json" });
+    spec.addInput(input);
 
     const json = serializer.serialize(spec);
 
@@ -239,13 +303,17 @@ describe("JsonSerializer", () => {
   });
 
   it("serializes literal argument values from task", () => {
-    const spec = new ComponentSpec(idGen.next("spec"), "Pipeline");
-    const task = new Task(idGen.next("task"), {
+    const spec = new ComponentSpec({
+      $id: idGen.next("spec"),
+      name: "Pipeline",
+    });
+    const task = new Task({
+      $id: idGen.next("task"),
       name: "Process",
       componentRef: {},
     });
-    task.arguments.add({ name: "param", value: "literal_value" });
-    spec.tasks.add(task);
+    task.addArgument({ name: "param", value: "literal_value" });
+    spec.addTask(task);
 
     const json = serializer.serialize(spec);
 

@@ -15,22 +15,28 @@ describe("createSubgraph", () => {
   });
 
   it("extracts selected tasks into subgraph", () => {
-    const spec = new ComponentSpec(idGen.next("spec"), "Main");
-    const task1 = new Task(idGen.next("task"), {
+    const spec = new ComponentSpec({
+      $id: idGen.next("spec"),
+      name: "Main",
+    });
+    const task1 = new Task({
+      $id: idGen.next("task"),
       name: "Task1",
       componentRef: {},
     });
-    const task2 = new Task(idGen.next("task"), {
+    const task2 = new Task({
+      $id: idGen.next("task"),
       name: "Task2",
       componentRef: {},
     });
-    const task3 = new Task(idGen.next("task"), {
+    const task3 = new Task({
+      $id: idGen.next("task"),
       name: "Task3",
       componentRef: {},
     });
-    spec.tasks.add(task1);
-    spec.tasks.add(task2);
-    spec.tasks.add(task3);
+    spec.addTask(task1);
+    spec.addTask(task2);
+    spec.addTask(task3);
 
     const result = createSubgraph({
       spec,
@@ -46,19 +52,29 @@ describe("createSubgraph", () => {
   });
 
   it("creates subgraph inputs for external connections", () => {
-    const spec = new ComponentSpec(idGen.next("spec"), "Main");
-    const input = new Input(idGen.next("input"), "external_data");
-    const task = new Task(idGen.next("task"), {
+    const spec = new ComponentSpec({
+      $id: idGen.next("spec"),
+      name: "Main",
+    });
+    const input = new Input({
+      $id: idGen.next("input"),
+      name: "external_data",
+    });
+    const task = new Task({
+      $id: idGen.next("task"),
       name: "InnerTask",
       componentRef: {},
     });
-    const binding = new Binding(idGen.next("binding"), {
-      source: { entityId: input.$id, portName: "external_data" },
-      target: { entityId: task.$id, portName: "data" },
+    const binding = new Binding({
+      $id: idGen.next("binding"),
+      sourceEntityId: input.$id,
+      sourcePortName: "external_data",
+      targetEntityId: task.$id,
+      targetPortName: "data",
     });
-    spec.inputs.add(input);
-    spec.tasks.add(task);
-    spec.bindings.add(binding);
+    spec.addInput(input);
+    spec.addTask(task);
+    spec.addBinding(binding);
 
     const result = createSubgraph({
       spec,
@@ -73,22 +89,30 @@ describe("createSubgraph", () => {
   });
 
   it("moves internal bindings to subgraph", () => {
-    const spec = new ComponentSpec(idGen.next("spec"), "Main");
-    const task1 = new Task(idGen.next("task"), {
+    const spec = new ComponentSpec({
+      $id: idGen.next("spec"),
+      name: "Main",
+    });
+    const task1 = new Task({
+      $id: idGen.next("task"),
       name: "T1",
       componentRef: {},
     });
-    const task2 = new Task(idGen.next("task"), {
+    const task2 = new Task({
+      $id: idGen.next("task"),
       name: "T2",
       componentRef: {},
     });
-    const binding = new Binding(idGen.next("binding"), {
-      source: { entityId: task1.$id, portName: "out" },
-      target: { entityId: task2.$id, portName: "in" },
+    const binding = new Binding({
+      $id: idGen.next("binding"),
+      sourceEntityId: task1.$id,
+      sourcePortName: "out",
+      targetEntityId: task2.$id,
+      targetPortName: "in",
     });
-    spec.tasks.add(task1);
-    spec.tasks.add(task2);
-    spec.bindings.add(binding);
+    spec.addTask(task1);
+    spec.addTask(task2);
+    spec.addBinding(binding);
 
     const result = createSubgraph({
       spec,
@@ -103,12 +127,16 @@ describe("createSubgraph", () => {
   });
 
   it("creates replacement task with correct componentRef", () => {
-    const spec = new ComponentSpec(idGen.next("spec"), "Main");
-    const task = new Task(idGen.next("task"), {
+    const spec = new ComponentSpec({
+      $id: idGen.next("spec"),
+      name: "Main",
+    });
+    const task = new Task({
+      $id: idGen.next("task"),
       name: "T1",
       componentRef: {},
     });
-    spec.tasks.add(task);
+    spec.addTask(task);
 
     const result = createSubgraph({
       spec,
@@ -123,17 +151,22 @@ describe("createSubgraph", () => {
   });
 
   it("handles single task selection", () => {
-    const spec = new ComponentSpec(idGen.next("spec"), "Main");
-    const task1 = new Task(idGen.next("task"), {
+    const spec = new ComponentSpec({
+      $id: idGen.next("spec"),
+      name: "Main",
+    });
+    const task1 = new Task({
+      $id: idGen.next("task"),
       name: "T1",
       componentRef: {},
     });
-    const task2 = new Task(idGen.next("task"), {
+    const task2 = new Task({
+      $id: idGen.next("task"),
       name: "T2",
       componentRef: {},
     });
-    spec.tasks.add(task1);
-    spec.tasks.add(task2);
+    spec.addTask(task1);
+    spec.addTask(task2);
 
     const result = createSubgraph({
       spec,
@@ -148,14 +181,18 @@ describe("createSubgraph", () => {
   });
 
   it("preserves task properties in subgraph", () => {
-    const spec = new ComponentSpec(idGen.next("spec"), "Main");
-    const task = new Task(idGen.next("task"), {
+    const spec = new ComponentSpec({
+      $id: idGen.next("spec"),
+      name: "Main",
+    });
+    const task = new Task({
+      $id: idGen.next("task"),
       name: "ConfiguredTask",
       componentRef: { name: "MyComponent" },
       isEnabled: { "==": { op1: "a", op2: "b" } },
     });
-    task.annotations.add({ key: "note", value: "test" });
-    spec.tasks.add(task);
+    task.addAnnotation({ key: "note", value: "test" });
+    spec.addTask(task);
 
     const result = createSubgraph({
       spec,
@@ -173,12 +210,16 @@ describe("createSubgraph", () => {
   });
 
   it("returns null for empty selection", () => {
-    const spec = new ComponentSpec(idGen.next("spec"), "Main");
-    const task = new Task(idGen.next("task"), {
+    const spec = new ComponentSpec({
+      $id: idGen.next("spec"),
+      name: "Main",
+    });
+    const task = new Task({
+      $id: idGen.next("task"),
       name: "T1",
       componentRef: {},
     });
-    spec.tasks.add(task);
+    spec.addTask(task);
 
     const result = createSubgraph({
       spec,
@@ -192,12 +233,16 @@ describe("createSubgraph", () => {
   });
 
   it("subgraph spec has correct name", () => {
-    const spec = new ComponentSpec(idGen.next("spec"), "Main");
-    const task = new Task(idGen.next("task"), {
+    const spec = new ComponentSpec({
+      $id: idGen.next("spec"),
+      name: "Main",
+    });
+    const task = new Task({
+      $id: idGen.next("task"),
       name: "T1",
       componentRef: {},
     });
-    spec.tasks.add(task);
+    spec.addTask(task);
 
     const result = createSubgraph({
       spec,
