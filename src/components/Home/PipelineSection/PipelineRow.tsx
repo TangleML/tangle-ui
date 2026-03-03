@@ -19,6 +19,12 @@ import {
 } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TableCell, TableRow } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Paragraph } from "@/components/ui/typography";
 import { EDITOR_PATH } from "@/routes/router";
 import { deletePipeline } from "@/services/pipelineService";
@@ -26,6 +32,8 @@ import type { ComponentReferenceWithSpec } from "@/utils/componentStore";
 import { formatDate } from "@/utils/date";
 
 import type { MatchedField } from "./usePipelineFilters";
+
+const MAX_TITLE_LENGTH = 80;
 
 interface PipelineRowProps {
   url?: string;
@@ -104,9 +112,25 @@ const PipelineRow = withSuspenseWrapper(
         </TableCell>
         <TableCell>
           <BlockStack gap="0">
-            <Paragraph>
-              <HighlightText text={name ?? ""} query={searchQuery} />
-            </Paragraph>
+            {name && name.length > MAX_TITLE_LENGTH ? (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Paragraph>
+                      <HighlightText
+                        text={name.slice(0, MAX_TITLE_LENGTH) + "..."}
+                        query={searchQuery}
+                      />
+                    </Paragraph>
+                  </TooltipTrigger>
+                  <TooltipContent>{name}</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : (
+              <Paragraph>
+                <HighlightText text={name ?? ""} query={searchQuery} />
+              </Paragraph>
+            )}
             <MatchBadges
               matchedFields={matchedFields}
               matchedComponentNames={matchedComponentNames}

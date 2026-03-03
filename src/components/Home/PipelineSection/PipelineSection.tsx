@@ -180,20 +180,20 @@ export const PipelineSection = withSuspenseWrapper(() => {
         actions={<QuickStartButton />}
       />
 
-      <Table>
+      <Table className="table-fixed">
         <TableHeader>
           <TableRow className="text-xs">
-            <TableHead>
+            <TableHead className="w-10">
               <Checkbox
                 checked={isAllSelected}
                 onCheckedChange={handleSelectAll}
               />
             </TableHead>
             <TableHead>Title</TableHead>
-            <TableHead>Modified at</TableHead>
-            <TableHead>Last run</TableHead>
-            <TableHead>Runs</TableHead>
-            <TableHead />
+            <TableHead className="w-40">Modified at</TableHead>
+            <TableHead className="w-44">Last run</TableHead>
+            <TableHead className="w-16">Runs</TableHead>
+            <TableHead className="w-12" />
           </TableRow>
         </TableHeader>
         <TableBody>
