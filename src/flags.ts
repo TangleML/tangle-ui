@@ -39,14 +39,6 @@ export const ExistingFlags: ConfigFlags = {
     category: "beta",
   },
 
-  ["secrets"]: {
-    name: "Secrets and Dynamic Data",
-    description:
-      "Enable the Dynamic Data and Secrets feature. This will allow you to store secrets, tokens, api keys and other sensitive information in secured way.",
-    default: false,
-    category: "beta",
-  },
-
   ["pipeline-run-filters-bar"]: {
     name: "Pipeline run filters bar (Experimental)",
     description:

@@ -17,27 +17,6 @@ test.describe("Secrets Management", () => {
     page = await browser.newPage();
 
     await createNewPipeline(page);
-
-    // Enable the secrets beta flag
-    await page.getByTestId("personal-preferences-button").click();
-
-    const dialog = page.getByTestId("personal-preferences-dialog");
-    await expect(dialog).toBeVisible();
-
-    await dialog.getByRole("tab", { name: "Beta Features" }).click();
-
-    const secretsSwitch = dialog.getByTestId("secrets-switch");
-    await expect(secretsSwitch).toBeVisible({ timeout: 10000 });
-
-    // Enable secrets if not already enabled
-    if ((await secretsSwitch.getAttribute("aria-checked")) !== "true") {
-      await secretsSwitch.click();
-      await expect(secretsSwitch).toHaveAttribute("aria-checked", "true");
-    }
-
-    // Close dialog
-    await dialog.press("Escape");
-    await expect(dialog).toBeHidden();
   });
 
   test.afterAll(async () => {

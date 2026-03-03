@@ -17,7 +17,6 @@ import {
   createSecretArgument,
   extractSecretName,
 } from "@/components/shared/SecretsManagement/types";
-import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -339,7 +338,6 @@ const ArgumentField = ({
   onChange,
   isHighlighted,
 }: ArgumentFieldProps) => {
-  const isSecretUIEnabled = useFlagValue("secrets");
   const [isSelectSecretDialogOpen, setIsSelectSecretDialogOpen] =
     useState(false);
 
@@ -408,23 +406,21 @@ const ArgumentField = ({
                 placeholder={placeholder}
                 className={cn(
                   isRequired && !hasValidValue && "border-red-300",
-                  isSecretUIEnabled && "group-hover:pr-8",
+                  "group-hover:pr-8",
                   "bg-white!",
                 )}
               />
-              {isSecretUIEnabled && (
-                <InlineStack className="absolute right-0 top-1/2 -translate-y-1/2 mr-1 px-1 bg-white">
-                  <TooltipButton
-                    onClick={() => setIsSelectSecretDialogOpen(true)}
-                    className="hover:bg-transparent hover:text-blue-500 hidden group-hover:flex"
-                    variant="ghost"
-                    size="xs"
-                    tooltip="Use Secret"
-                  >
-                    <Icon name="Lock" />
-                  </TooltipButton>
-                </InlineStack>
-              )}
+              <InlineStack className="absolute right-0 top-1/2 -translate-y-1/2 mr-1 px-1 bg-white">
+                <TooltipButton
+                  onClick={() => setIsSelectSecretDialogOpen(true)}
+                  className="hover:bg-transparent hover:text-blue-500 hidden group-hover:flex"
+                  variant="ghost"
+                  size="xs"
+                  tooltip="Use Secret"
+                >
+                  <Icon name="Lock" />
+                </TooltipButton>
+              </InlineStack>
             </>
           )}
         </div>

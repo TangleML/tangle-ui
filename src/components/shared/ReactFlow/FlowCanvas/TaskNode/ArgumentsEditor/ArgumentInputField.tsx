@@ -11,7 +11,6 @@ import {
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { SelectSecretDialog } from "@/components/shared/SecretsManagement/SelectSecretDialog";
 import { createSecretArgument } from "@/components/shared/SecretsManagement/types";
-import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -227,14 +226,13 @@ export const ArgumentInputField = ({
 
   const undoValue = useMemo(() => argument, []);
 
-  const isSecretUIEnabled = useFlagValue("secrets");
   // Multi-node data is available when editing task arguments (always true in TaskNode context)
   // The "pipeline level" restriction only applies to pipeline input values, not task arguments
   const isTaskLevel = true;
 
   const isDynamicData = useMemo(
-    () => isSecretUIEnabled && isDynamicDataArgument(argument.value),
-    [argument.value, isSecretUIEnabled],
+    () => isDynamicDataArgument(argument.value),
+    [argument.value],
   );
 
   const dynamicDataDisplayInfo = useMemo(() => {
@@ -510,7 +508,7 @@ export const ArgumentInputField = ({
               disabled={disabled}
               disabledCopy={disabledCopy}
               disabledReset={disabledReset}
-              isDynamicDataEnabled={isSecretUIEnabled}
+              isDynamicDataEnabled
               isTaskLevel={isTaskLevel}
               taskAnnotations={taskAnnotations}
               onInputChange={handleInputChange}
