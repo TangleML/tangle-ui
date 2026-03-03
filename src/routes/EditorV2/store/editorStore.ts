@@ -16,6 +16,8 @@ class EditorStore {
   lastShiftClickEntityId: string | null = null;
   multiSelection: SelectedNode[] = [];
   focusedArgumentName: string | null = null;
+  hoveredEntityId: string | null = null;
+  pendingFocusNodeId: string | null = null;
 
   constructor() {
     makeObservable(this, {
@@ -26,6 +28,8 @@ class EditorStore {
       lastShiftClickEntityId: observable,
       multiSelection: observable.shallow,
       focusedArgumentName: observable,
+      hoveredEntityId: observable,
+      pendingFocusNodeId: observable,
       initializeStore: action,
       selectNode: action,
       clearSpec: action,
@@ -33,6 +37,8 @@ class EditorStore {
       setMultiSelection: action,
       clearMultiSelection: action,
       setFocusedArgument: action,
+      setHoveredEntity: action,
+      setPendingFocusNode: action,
     });
   }
 
@@ -44,6 +50,8 @@ class EditorStore {
     this.lastShiftClickEntityId = null;
     this.multiSelection = [];
     this.focusedArgumentName = null;
+    this.hoveredEntityId = null;
+    this.pendingFocusNodeId = null;
   }
 
   selectNode(
@@ -93,6 +101,14 @@ class EditorStore {
   clearMultiSelection() {
     this.multiSelection = [];
   }
+
+  setHoveredEntity(id: string | null) {
+    this.hoveredEntityId = id;
+  }
+
+  setPendingFocusNode(nodeId: string | null) {
+    this.pendingFocusNodeId = nodeId;
+  }
 }
 
 export const editorStore = new EditorStore();
@@ -131,4 +147,12 @@ export function clearMultiSelection() {
 
 export function setFocusedArgument(name: string | null) {
   editorStore.setFocusedArgument(name);
+}
+
+export function setHoveredEntity(id: string | null) {
+  editorStore.setHoveredEntity(id);
+}
+
+export function setPendingFocusNode(nodeId: string | null) {
+  editorStore.setPendingFocusNode(nodeId);
 }

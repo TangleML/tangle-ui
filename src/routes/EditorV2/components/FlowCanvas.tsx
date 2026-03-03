@@ -42,8 +42,10 @@ import {
 import {
   clearMultiSelection,
   clearSelection,
+  editorStore,
   type SelectedNode,
   setMultiSelection,
+  setPendingFocusNode,
 } from "../store/editorStore";
 import { undoStore } from "../store/undoStore";
 import { IONode } from "./IONode";
@@ -80,6 +82,23 @@ export const FlowCanvas = observer(function FlowCanvas({
     setNodes(specNodes);
     setEdges(specEdges);
   }, [specNodes, specEdges, setNodes, setEdges]);
+
+  const pendingFocusNodeId = editorStore.pendingFocusNodeId;
+
+  useEffect(() => {
+    if (!pendingFocusNodeId || !reactFlowInstance) return;
+
+    const timer = setTimeout(async () => {
+      await reactFlowInstance.fitView({
+        nodes: [{ id: pendingFocusNodeId }],
+        maxZoom: 1,
+        duration: 300,
+      });
+      setPendingFocusNode(null);
+    }, 50);
+
+    return () => clearTimeout(timer);
+  }, [pendingFocusNodeId, reactFlowInstance]);
 
   const handleSelectionChange = ({
     nodes: selected,
