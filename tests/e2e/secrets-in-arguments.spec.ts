@@ -24,7 +24,6 @@ test.describe("Secrets in Component Arguments", () => {
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
     await createNewPipeline(page);
-    await enableSecretsFlag(page);
   });
 
   test.afterAll(async () => {
@@ -173,29 +172,6 @@ test.describe("Secrets in Component Arguments", () => {
     ).toBeVisible();
   });
 });
-
-/**
- * Enables the secrets beta flag via the personal preferences dialog
- */
-async function enableSecretsFlag(page: Page): Promise<void> {
-  await page.getByTestId("personal-preferences-button").click();
-
-  const dialog = page.getByTestId("personal-preferences-dialog");
-  await expect(dialog).toBeVisible();
-
-  await dialog.getByRole("tab", { name: "Beta Features" }).click();
-
-  const secretsSwitch = dialog.getByTestId("secrets-switch");
-  await expect(secretsSwitch).toBeVisible({ timeout: 10000 });
-
-  if ((await secretsSwitch.getAttribute("aria-checked")) !== "true") {
-    await secretsSwitch.click();
-    await expect(secretsSwitch).toHaveAttribute("aria-checked", "true");
-  }
-
-  await dialog.press("Escape");
-  await expect(dialog).toBeHidden();
-}
 
 /**
  * Opens the Manage Secrets dialog via the top bar button
