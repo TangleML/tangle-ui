@@ -15,6 +15,7 @@ class EditorStore {
   lastSelectionWasShiftClick = false;
   lastShiftClickEntityId: string | null = null;
   multiSelection: SelectedNode[] = [];
+  focusedArgumentName: string | null = null;
 
   constructor() {
     makeObservable(this, {
@@ -24,12 +25,14 @@ class EditorStore {
       lastSelectionWasShiftClick: observable,
       lastShiftClickEntityId: observable,
       multiSelection: observable.shallow,
+      focusedArgumentName: observable,
       initializeStore: action,
       selectNode: action,
       clearSpec: action,
       clearSelection: action,
       setMultiSelection: action,
       clearMultiSelection: action,
+      setFocusedArgument: action,
     });
   }
 
@@ -40,6 +43,7 @@ class EditorStore {
     this.lastSelectionWasShiftClick = false;
     this.lastShiftClickEntityId = null;
     this.multiSelection = [];
+    this.focusedArgumentName = null;
   }
 
   selectNode(
@@ -58,6 +62,11 @@ class EditorStore {
 
     this.selectedNodeId = nodeId;
     this.selectedNodeType = nodeType;
+    this.focusedArgumentName = null;
+  }
+
+  setFocusedArgument(name: string | null) {
+    this.focusedArgumentName = name;
   }
 
   clearSpec() {
@@ -70,6 +79,7 @@ class EditorStore {
     this.lastSelectionWasShiftClick = false;
     this.lastShiftClickEntityId = null;
     this.multiSelection = [];
+    this.focusedArgumentName = null;
   }
 
   setMultiSelection(nodes: SelectedNode[]) {
@@ -117,4 +127,8 @@ export function setMultiSelection(nodes: SelectedNode[]) {
 
 export function clearMultiSelection() {
   editorStore.clearMultiSelection();
+}
+
+export function setFocusedArgument(name: string | null) {
+  editorStore.setFocusedArgument(name);
 }

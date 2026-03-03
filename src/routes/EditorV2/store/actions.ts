@@ -1,7 +1,6 @@
 import type { XYPosition } from "@xyflow/react";
 
 import {
-  Binding,
   type ComponentReference,
   type ComponentSpec,
   createSubgraph as modelCreateSubgraph,
@@ -134,26 +133,10 @@ export function connectNodes(
 
   if (sourceType === "input" && targetType === "output") return false;
 
-  spec.removeAllBindingsBy(
-    (b) =>
-      b.targetEntityId === targetNodeId && b.targetPortName === targetInputName,
+  spec.connectNodes(
+    { entityId: sourceNodeId, portName: sourceOutputName },
+    { entityId: targetNodeId, portName: targetInputName },
   );
-
-  spec.addBinding(
-    new Binding({
-      sourceEntityId: sourceNodeId,
-      sourcePortName: sourceOutputName,
-      targetEntityId: targetNodeId,
-      targetPortName: targetInputName,
-    }),
-  );
-
-  if (targetType === "task") {
-    const task = spec.tasks.find((t) => t.$id === targetNodeId);
-    if (task && !task.arguments.some((a) => a.name === targetInputName)) {
-      task.addArgument({ name: targetInputName });
-    }
-  }
 
   return true;
 }
