@@ -51,6 +51,7 @@ export { createSubgraph } from "./actions";
 export type {
   ComponentValidationIssue,
   ValidationIssue,
+  ValidationIssueCode,
   ValidationIssueType,
   ValidationSeverity,
 } from "./validation";

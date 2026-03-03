@@ -34,6 +34,7 @@ function validateGraphLevel(spec: ComponentSpec): ValidationIssue[] {
       type: "graph",
       message: "Component name is required and cannot be empty",
       severity: "error",
+      issueCode: "EMPTY_COMPONENT_NAME",
     });
   }
 
@@ -42,6 +43,7 @@ function validateGraphLevel(spec: ComponentSpec): ValidationIssue[] {
       type: "graph",
       message: "Pipeline must contain at least one task",
       severity: "error",
+      issueCode: "NO_TASKS",
     });
   }
 
@@ -73,6 +75,7 @@ function validateSingleInput(
       message: "Input must have a valid name",
       entityId: input.$id,
       severity: "error",
+      issueCode: "EMPTY_INPUT_NAME",
     });
   } else {
     if (seenNames.has(input.name)) {
@@ -81,6 +84,8 @@ function validateSingleInput(
         message: `Duplicate input name: "${input.name}"`,
         entityId: input.$id,
         severity: "error",
+        issueCode: "DUPLICATE_INPUT_NAME",
+        referencedName: input.name,
       });
     }
     seenNames.add(input.name);
@@ -114,6 +119,7 @@ function validateSingleOutput(
       message: "Output must have a valid name",
       entityId: output.$id,
       severity: "error",
+      issueCode: "EMPTY_OUTPUT_NAME",
     });
   } else {
     if (seenNames.has(output.name)) {
@@ -122,6 +128,8 @@ function validateSingleOutput(
         message: `Duplicate output name: "${output.name}"`,
         entityId: output.$id,
         severity: "error",
+        issueCode: "DUPLICATE_OUTPUT_NAME",
+        referencedName: output.name,
       });
     }
     seenNames.add(output.name);
@@ -148,6 +156,7 @@ function validateSingleTask(
       message: "Task name cannot be empty",
       entityId: task.$id,
       severity: "error",
+      issueCode: "EMPTY_TASK_NAME",
     });
   }
 
@@ -157,6 +166,7 @@ function validateSingleTask(
       message: "Missing component reference",
       entityId: task.$id,
       severity: "error",
+      issueCode: "MISSING_COMPONENT_REF",
     });
   }
 
@@ -188,6 +198,9 @@ function validateTaskArguments(
           message: `Argument "${arg.name}" references non-existent input: "${inputName}"`,
           entityId: task.$id,
           severity: "error",
+          issueCode: "BAD_INPUT_REFERENCE",
+          argumentName: arg.name,
+          referencedName: inputName,
         });
       }
     }
@@ -203,6 +216,9 @@ function validateTaskArguments(
           message: `Argument "${arg.name}" references non-existent task: "${refTaskName}"`,
           entityId: task.$id,
           severity: "error",
+          issueCode: "BAD_TASK_REFERENCE",
+          argumentName: arg.name,
+          referencedName: refTaskName,
         });
       } else if (refTask.componentRef.spec) {
         const refSpec = refTask.componentRef.spec as ComponentSpecJson;
@@ -215,6 +231,9 @@ function validateTaskArguments(
             message: `Argument "${arg.name}" references non-existent output "${refOutputName}" from task "${refTaskName}"`,
             entityId: task.$id,
             severity: "error",
+            issueCode: "BAD_OUTPUT_REFERENCE",
+            argumentName: arg.name,
+            referencedName: refOutputName,
           });
         }
       }
@@ -256,6 +275,8 @@ function validateTaskRequiredInputs(
           message: `Missing required input "${inputSpec.name}"`,
           entityId: task.$id,
           severity: "error",
+          issueCode: "MISSING_REQUIRED_INPUT",
+          argumentName: inputSpec.name,
         });
       }
     }
@@ -296,6 +317,9 @@ function validateSingleBinding(
       type: "graph",
       message: `Binding references non-existent source entity: "${binding.sourceEntityId}"`,
       severity: "error",
+      issueCode: "ORPHANED_BINDING_SOURCE",
+      referencedName: binding.sourceEntityId,
+      entityId: binding.$id,
     });
   }
 
@@ -304,6 +328,9 @@ function validateSingleBinding(
       type: "graph",
       message: `Binding references non-existent target entity: "${binding.targetEntityId}"`,
       severity: "error",
+      issueCode: "ORPHANED_BINDING_TARGET",
+      referencedName: binding.targetEntityId,
+      entityId: binding.$id,
     });
   }
 
@@ -336,6 +363,7 @@ function validateInputConnections(spec: ComponentSpec): ValidationIssue[] {
         message: "Not connected to any tasks",
         entityId: input.$id,
         severity: "warning",
+        issueCode: "UNCONNECTED_INPUT",
       });
     }
   }
@@ -360,6 +388,7 @@ function validateOutputConnections(spec: ComponentSpec): ValidationIssue[] {
         message: "Not connected to any tasks",
         entityId: output.$id,
         severity: "warning",
+        issueCode: "UNCONNECTED_OUTPUT",
       });
     }
   }
@@ -437,6 +466,7 @@ function validateCircularDependencies(spec: ComponentSpec): ValidationIssue[] {
         message: "Circular dependency detected",
         entityId: task.$id,
         severity: "error",
+        issueCode: "CIRCULAR_DEPENDENCY",
       });
       break;
     }

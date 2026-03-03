@@ -14,7 +14,7 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
-import { BlockStack } from "@/components/ui/layout";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import type {
@@ -24,12 +24,18 @@ import type {
   ValidationIssue,
 } from "@/models/componentSpec";
 
-import { setHoveredEntity, setPendingFocusNode } from "../store/editorStore";
+import {
+  editorStore,
+  setHoveredEntity,
+  setPendingFocusNode,
+  setSelectedValidationIssue,
+} from "../store/editorStore";
 import {
   navigateToLevel,
   navigateToPath,
   navigationStore,
 } from "../store/navigationStore";
+import { ValidationIssueResolutionCard } from "./ValidationIssueResolutionCard";
 
 /**
  * Check if a task is a subgraph (has graph implementation).
@@ -110,6 +116,9 @@ const TaskLeafNode = observer(function TaskLeafNode({
   const handleClick = () => {
     navigateToPath(parentNavigationPath);
     setPendingFocusNode(task.$id);
+    if (issues.length > 0) {
+      setSelectedValidationIssue(issues[0]);
+    }
   };
 
   const handleMouseEnter = () => {
@@ -567,11 +576,14 @@ const ValidationSummary = observer(function ValidationSummary({
       {isExpanded && (
         <BlockStack gap="1" className="pl-2">
           {issues.map((issue, index) => {
+            const isSelected = editorStore.selectedValidationIssue === issue;
+
             const handleIssueClick = () => {
               navigateToLevel(0);
               if (issue.entityId) {
                 setPendingFocusNode(issue.entityId);
               }
+              setSelectedValidationIssue(issue);
             };
 
             return (
@@ -583,6 +595,9 @@ const ValidationSummary = observer(function ValidationSummary({
                 onKeyDown={(e) => e.key === "Enter" && handleIssueClick()}
                 className={cn(
                   "flex items-baseline gap-1 py-1 px-2 rounded text-xs cursor-pointer transition-colors",
+                  isSelected
+                    ? "ring-1 ring-blue-400"
+                    : "",
                   issue.severity === "error"
                     ? "bg-red-50 text-red-800 hover:bg-red-100"
                     : "bg-amber-50 text-amber-800 hover:bg-amber-100",
@@ -649,6 +664,25 @@ export const PipelineTreeContent = observer(function PipelineTreeContent() {
     });
   };
 
+  const selectedIssue = editorStore.selectedValidationIssue;
+
+  const issueStillExists =
+    selectedIssue &&
+    rootSpec?.validationIssues.some(
+      (i) =>
+        i.issueCode === selectedIssue.issueCode &&
+        i.entityId === selectedIssue.entityId &&
+        i.argumentName === selectedIssue.argumentName,
+    );
+
+  useEffect(() => {
+    if (selectedIssue && !issueStillExists) {
+      setSelectedValidationIssue(null);
+    }
+  }, [issueStillExists, selectedIssue]);
+
+  const activeIssue = issueStillExists ? selectedIssue : null;
+
   if (!rootSpec) {
     return (
       <BlockStack className="p-4">
@@ -660,14 +694,47 @@ export const PipelineTreeContent = observer(function PipelineTreeContent() {
   }
 
   return (
-    <BlockStack gap="2" className="p-2 h-full overflow-y-auto">
-      <RootNode
-        spec={rootSpec}
-        currentNavPath={currentNavPath}
-        expandedNodes={expandedNodes}
-        onToggleExpand={handleToggleExpand}
-      />
-      <ValidationSummary spec={rootSpec} />
+    <BlockStack
+      className="@container h-full"
+      data-testid="pipeline-tree-content"
+    >
+      <InlineStack
+        className="flex-col @[600px]:grid @[600px]:grid-cols-[40%_60%] @[600px]:items-start h-full"
+        fill
+        data-testid="pipeline-tree-content-container"
+      >
+        <BlockStack
+          gap="2"
+          className="p-2 overflow-y-auto flex-1 min-h-0 @[600px]:border-r @[600px]:border-border"
+        >
+          <RootNode
+            spec={rootSpec}
+            currentNavPath={currentNavPath}
+            expandedNodes={expandedNodes}
+            onToggleExpand={handleToggleExpand}
+          />
+          <ValidationSummary spec={rootSpec} />
+        </BlockStack>
+        <BlockStack
+          className="hidden @[600px]:flex overflow-y-auto min-h-0 max-w-md"
+        >
+          {activeIssue ? (
+            <ValidationIssueResolutionCard issue={activeIssue} />
+          ) : (
+            <BlockStack
+              gap="2"
+              align="center"
+              inlineAlign="center"
+              className="h-full p-4"
+            >
+              <Icon name="MousePointerClick" size="lg" className="text-slate-300" />
+              <Text size="xs" tone="subdued" className="text-center">
+                Click a validation issue to see resolution options
+              </Text>
+            </BlockStack>
+          )}
+        </BlockStack>
+      </InlineStack>
     </BlockStack>
   );
 });
