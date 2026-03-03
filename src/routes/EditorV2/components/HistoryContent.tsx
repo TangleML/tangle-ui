@@ -1,11 +1,12 @@
 /**
- * HistoryContent - displays command history with interactive undo/redo.
+ * HistoryContent - displays undo/redo history with interactive controls.
  *
- * Shows a timeline of commands performed on the spec.
- * Users can click on any entry to revert to that state.
+ * Shows a timeline of undo/redo entries from the mobx-keystone UndoManager.
+ * Users can undo/redo and clear history.
  */
 
-import { useSnapshot } from "valtio";
+import type { UndoEvent } from "mobx-keystone";
+import { observer } from "mobx-react-lite";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -19,18 +20,15 @@ import {
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 
-import {
-  clearCommandHistory,
-  commandManagerState,
-  redo,
-  redoMultiple,
-  undo,
-  undoToIndex,
-} from "../store/commandManager";
-import type { Command } from "../store/commands";
+import { undoStore } from "../store/undoStore";
+
+function getUndoEventName(event: UndoEvent): string {
+  if (event.type === "group") return event.groupName ?? "Group action";
+  return event.actionName ?? "Action";
+}
 
 interface HistoryEntryItemProps {
-  command: Command;
+  actionName: string;
   index: number;
   isCurrent: boolean;
   isInFuture: boolean;
@@ -38,10 +36,10 @@ interface HistoryEntryItemProps {
 }
 
 /**
- * Individual history entry item (clickable to revert).
+ * Individual history entry item.
  */
 function HistoryEntryItem({
-  command,
+  actionName,
   isCurrent,
   isInFuture,
   onClick,
@@ -83,7 +81,7 @@ function HistoryEntryItem({
               : "text-slate-700",
         )}
       >
-        {command.description}
+        {actionName}
         {isCurrent && (
           <Text as="span" size="xs" className="text-blue-500 ml-1">
             ●
@@ -160,47 +158,29 @@ function InitialStateMarker({
   );
 }
 
-export function HistoryContent() {
-  const snap = useSnapshot(commandManagerState);
+export const HistoryContent = observer(function HistoryContent() {
+  const { canUndo, canRedo, undoLevels, redoLevels } = undoStore;
+  const undoManager = undoStore.undoManager;
 
-  const undoStackLength = snap.undoStack.length;
-  const redoStackLength = snap.redoStack.length;
-  const totalCommands = undoStackLength + redoStackLength;
-
-  // Compute from snapshot for reactivity (not from functions that read proxy directly)
-  const canUndoValue = undoStackLength > 0;
-  const canRedoValue = redoStackLength > 0;
+  const totalCommands = undoLevels + redoLevels;
 
   const handleClear = () => {
-    clearCommandHistory();
+    undoStore.clearHistory();
   };
 
   const handleUndo = () => {
-    undo();
+    undoStore.undo();
   };
 
   const handleRedo = () => {
-    redo();
+    undoStore.redo();
   };
 
-  // Handle clicking on an undo stack entry
-  const handleUndoEntryClick = (index: number) => {
-    // index is the position in the undo stack (0 = oldest, undoStackLength-1 = current)
-    // We want to undo to get to index position
-    undoToIndex(index);
-  };
-
-  // Handle clicking on a redo stack entry
-  const handleRedoEntryClick = (redoIndex: number) => {
-    // redoIndex is position in redo stack (0 = most recent action, redoStackLength-1 = closest to current)
-    // We want to redo (redoStackLength - redoIndex) times to reach that state
-    const stepsForward = redoStackLength - redoIndex;
-    redoMultiple(stepsForward);
-  };
-
-  // Handle clicking initial state
+  // Undo back to initial state
   const handleInitialClick = () => {
-    undoToIndex(-1);
+    while (undoStore.canUndo) {
+      undoStore.undo();
+    }
   };
 
   if (totalCommands === 0) {
@@ -218,12 +198,13 @@ export function HistoryContent() {
     );
   }
 
-  // Build the unified timeline
-  // Display order: future (redo) at top, past (undo) at bottom
-  // Redo: most recent action historically at top, oldest at bottom
-  // Undo: most recent action at top (current), oldest at bottom
-  const redoEntries = [...snap.redoStack];
-  const undoEntries = [...snap.undoStack].reverse();
+  const undoQueue = undoManager?.undoQueue ?? [];
+  const redoQueue = undoManager?.redoQueue ?? [];
+
+  // Redo entries: show from oldest (first to redo) at top to newest (closest to current) at bottom
+  const redoEntries = [...redoQueue].reverse();
+  // Undo entries: most recent at top (current), oldest at bottom
+  const undoEntries = [...undoQueue].reverse();
 
   return (
     <div className="h-full w-full flex flex-col">
@@ -238,7 +219,7 @@ export function HistoryContent() {
                   size="sm"
                   className="h-6 w-6 p-0"
                   onClick={handleUndo}
-                  disabled={!canUndoValue}
+                  disabled={!canUndo}
                 >
                   <Icon name="Undo2" size="xs" />
                 </Button>
@@ -257,7 +238,7 @@ export function HistoryContent() {
                   size="sm"
                   className="h-6 w-6 p-0"
                   onClick={handleRedo}
-                  disabled={!canRedoValue}
+                  disabled={!canRedo}
                 >
                   <Icon name="Redo2" size="xs" />
                 </Button>
@@ -270,7 +251,7 @@ export function HistoryContent() {
         </div>
 
         <Text size="xs" tone="subdued">
-          {`${undoStackLength}/${totalCommands}`}
+          {`${undoLevels}/${totalCommands}`}
         </Text>
 
         <TooltipProvider>
@@ -295,53 +276,58 @@ export function HistoryContent() {
 
       {/* History entries */}
       <div className="flex-1 overflow-y-auto px-1.5 py-1 flex flex-col gap-1 w-full">
-        {/* Future (redo stack) - shown at top, grayed out */}
+        {/* Future (redo queue) - shown at top, grayed out */}
         {redoEntries.length > 0 && (
           <>
             <Text size="xs" tone="subdued" className="px-2 py-0.5">
               Future
             </Text>
             <div className="flex flex-col gap-0.5 w-full">
-              {redoEntries.map((command, displayIndex) => {
-                const originalIndex = displayIndex;
-                return (
-                  <HistoryEntryItem
-                    key={`redo-${originalIndex}`}
-                    command={command as Command}
-                    index={originalIndex}
-                    isCurrent={false}
-                    isInFuture={true}
-                    onClick={() => handleRedoEntryClick(originalIndex)}
-                  />
-                );
-              })}
+              {redoEntries.map((entry, displayIndex) => (
+                <HistoryEntryItem
+                  key={`redo-${displayIndex}`}
+                  actionName={getUndoEventName(entry)}
+                  index={displayIndex}
+                  isCurrent={false}
+                  isInFuture={true}
+                  onClick={() => {
+                    // Redo forward to this entry
+                    const stepsForward = displayIndex + 1;
+                    for (let i = 0; i < stepsForward; i++) {
+                      undoStore.redo();
+                    }
+                  }}
+                />
+              ))}
             </div>
             <div className="border-t border-dashed border-slate-300 my-1 mx-2" />
           </>
         )}
 
         {/* Current position indicator */}
-        {undoStackLength > 0 && (
+        {undoLevels > 0 && (
           <Text size="xs" tone="subdued" className="px-2 py-0.5">
             Past
           </Text>
         )}
 
-        {/* Past (undo stack) - shown below, most recent first */}
+        {/* Past (undo queue) - shown below, most recent first */}
         <div className="flex flex-col gap-0.5 w-full">
-          {undoEntries.map((command, displayIndex) => {
-            const originalIndex = undoStackLength - 1 - displayIndex;
+          {undoEntries.map((entry, displayIndex) => {
             const isCurrent = displayIndex === 0;
             return (
               <HistoryEntryItem
-                key={`undo-${originalIndex}`}
-                command={command as Command}
-                index={originalIndex}
+                key={`undo-${displayIndex}`}
+                actionName={getUndoEventName(entry)}
+                index={displayIndex}
                 isCurrent={isCurrent}
                 isInFuture={false}
                 onClick={() => {
                   if (!isCurrent) {
-                    handleUndoEntryClick(originalIndex);
+                    // Undo back to this position
+                    for (let i = 0; i < displayIndex; i++) {
+                      undoStore.undo();
+                    }
                   }
                 }}
               />
@@ -351,10 +337,10 @@ export function HistoryContent() {
 
         {/* Initial state marker */}
         <InitialStateMarker
-          isCurrent={undoStackLength === 0}
+          isCurrent={undoLevels === 0}
           onClick={handleInitialClick}
         />
       </div>
     </div>
   );
-}
+});

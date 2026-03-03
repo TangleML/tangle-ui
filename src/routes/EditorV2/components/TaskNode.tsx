@@ -1,4 +1,5 @@
 import { Handle, type Node, type NodeProps, Position } from "@xyflow/react";
+import { observer } from "mobx-react-lite";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +13,6 @@ import {
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import type { ComponentSpecJson } from "@/models/componentSpec";
-import { useEntity } from "@/models/componentSpec/hooks/useEntity";
 
 import type { TaskNodeData } from "../hooks/useSpecToNodesEdges";
 import { useSpec } from "../providers/SpecContext";
@@ -32,14 +32,15 @@ function isTaskSubgraph(componentSpec: ComponentSpecJson | undefined): boolean {
   return "graph" in implementation;
 }
 
-export function TaskNode({ id, data, selected }: TaskNodeProps) {
+export const TaskNode = observer(function TaskNode({
+  id,
+  data,
+  selected,
+}: TaskNodeProps) {
   const { entityId } = data;
 
-  // Get the current spec from SpecContext
   const spec = useSpec();
-
-  // Find the task entity by its stable $id and subscribe to its changes
-  const task = useEntity(spec?.tasks.find((t) => t.$id === entityId));
+  const task = spec?.tasks.find((t) => t.$id === entityId);
 
   const handleClick = (event: React.MouseEvent) => {
     selectNode(id, "task", {
@@ -58,16 +59,12 @@ export function TaskNode({ id, data, selected }: TaskNodeProps) {
     );
   }
 
-  // Get inputs and outputs from the component spec
   const componentSpec = task.componentRef.spec as ComponentSpecJson | undefined;
   const inputs = componentSpec?.inputs ?? [];
   const outputs = componentSpec?.outputs ?? [];
   const description = componentSpec?.description ?? "";
 
-  // Check if this task is a subgraph (can be navigated into)
   const isSubgraph = isTaskSubgraph(componentSpec);
-
-  // Get name directly from reactive task entity
   const taskName = task.name;
 
   return (
@@ -198,16 +195,14 @@ export function TaskNode({ id, data, selected }: TaskNodeProps) {
           </BlockStack>
         </InlineStack>
 
-        {/* Debug: Annotation keys */}
-        {task.$source.annotations.all.length > 0 && (
+        {task.annotations.length > 0 && (
           <BlockStack className="border-t rounded-b-md border-slate-100 px-3 py-1.5 bg-slate-50 overflow-hidden">
             <Text size="xs" tone="subdued" className="font-mono truncate">
-              annotations: [
-              {task.$source.annotations.all.map((a) => a.key).join(", ")}]
+              annotations: [{task.annotations.map((a) => a.key).join(", ")}]
             </Text>
           </BlockStack>
         )}
       </CardContent>
     </Card>
   );
-}
+});

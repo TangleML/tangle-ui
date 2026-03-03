@@ -7,8 +7,8 @@
  * Highlights the currently displayed graph in the tree.
  */
 
-import { useEffect, useReducer, useState } from "react";
-import { useSnapshot } from "valtio";
+import { observer } from "mobx-react-lite";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -47,7 +47,9 @@ interface TaskLeafNodeProps {
  * Leaf node for regular (non-subgraph) tasks.
  * These are displayed but not clickable.
  */
-function TaskLeafNode({ task }: TaskLeafNodeProps) {
+const TaskLeafNode = observer(function TaskLeafNode({
+  task,
+}: TaskLeafNodeProps) {
   return (
     <div className="flex items-start gap-1 py-1 px-2 text-slate-600">
       <div className="w-5 shrink-0" />
@@ -61,7 +63,7 @@ function TaskLeafNode({ task }: TaskLeafNodeProps) {
       </Text>
     </div>
   );
-}
+});
 
 interface SubgraphNodeProps {
   /** The ComponentSpec of the subgraph */
@@ -81,7 +83,7 @@ interface SubgraphNodeProps {
 /**
  * Node for subgraph tasks - clickable and expandable.
  */
-function SubgraphNode({
+const SubgraphNode = observer(function SubgraphNode({
   spec,
   task,
   navigationPath,
@@ -93,17 +95,13 @@ function SubgraphNode({
   const isExpanded = expandedNodes.has(nodePath);
   const depth = navigationPath.length - 1;
 
-  // Check if this node is in the current navigation path
   const isInCurrentPath =
     currentNavPath.length > depth &&
     currentNavPath.slice(0, depth + 1).join("/") === nodePath;
 
-  // Check if this is the currently displayed graph
   const isCurrentGraph = currentNavPath.join("/") === nodePath;
 
-  // Get all tasks from this subgraph
-  const tasks = spec.tasks.all;
-
+  const tasks = spec.tasks;
   const hasChildren = tasks.length > 0;
 
   const handleClick = () => {
@@ -114,13 +112,11 @@ function SubgraphNode({
       currentNavPath,
     });
 
-    // Try navigateToPath first
     console.log("[PipelineTree] Trying navigateToPath with:", navigationPath);
     const pathResult = navigateToPath(navigationPath);
     console.log("[PipelineTree] navigateToPath result:", pathResult);
 
     if (!pathResult) {
-      // Fallback: navigate to parent level first, then try to find the task
       console.log("[PipelineTree] navigateToPath failed, trying fallback...");
       const parentLevel = navigationPath.length - 2;
       navigateToLevel(parentLevel);
@@ -209,7 +205,6 @@ function SubgraphNode({
             const isChildSubgraph = isSubgraphTask(childTask);
 
             if (isChildSubgraph) {
-              // Get the nested spec from the nestedSpecs cache
               const childPathKey =
                 navigationPath.slice(1).join("/") + "/" + childTask.name;
               const nestedSpec = navigationStore.nestedSpecs.get(
@@ -219,7 +214,6 @@ function SubgraphNode({
               );
 
               if (!nestedSpec) {
-                // Nested spec not yet loaded, show as leaf
                 return <TaskLeafNode key={childTask.$id} task={childTask} />;
               }
 
@@ -242,7 +236,7 @@ function SubgraphNode({
       )}
     </BlockStack>
   );
-}
+});
 
 interface RootNodeProps {
   /** The root ComponentSpec */
@@ -258,7 +252,7 @@ interface RootNodeProps {
 /**
  * Root node for the pipeline - always shown at depth 0.
  */
-function RootNode({
+const RootNode = observer(function RootNode({
   spec,
   currentNavPath,
   expandedNodes,
@@ -268,12 +262,9 @@ function RootNode({
   const nodePath = navigationPath.join("/");
   const isExpanded = expandedNodes.has(nodePath);
 
-  // Check if root is the currently displayed graph
   const isCurrentGraph = currentNavPath.join("/") === nodePath;
 
-  // Get all tasks from the root spec
-  const tasks = spec.tasks.all;
-
+  const tasks = spec.tasks;
   const hasChildren = tasks.length > 0;
 
   const handleClick = () => {
@@ -354,11 +345,9 @@ function RootNode({
             const isTaskASubgraph = isSubgraphTask(task);
 
             if (isTaskASubgraph) {
-              // Get nested spec from cache
               const nestedSpec = navigationStore.nestedSpecs.get(task.name);
 
               if (!nestedSpec) {
-                // Nested spec not yet loaded, show as leaf
                 return <TaskLeafNode key={task.$id} task={task} />;
               }
 
@@ -381,7 +370,7 @@ function RootNode({
       )}
     </BlockStack>
   );
-}
+});
 
 /**
  * Build the current navigation path as an array of display names.
@@ -403,33 +392,11 @@ function buildExpandedPaths(navPath: string[]): Set<string> {
   return paths;
 }
 
-export function PipelineTreeContent() {
-  const [, forceUpdate] = useReducer((x: number) => x + 1, 0);
-  // Use snapshot for navigation path reactivity
-  const { navigationPath } = useSnapshot(navigationStore);
-  // Access rootSpec directly to avoid snapshot stripping methods
+export const PipelineTreeContent = observer(function PipelineTreeContent() {
   const rootSpec = navigationStore.rootSpec;
+  const { navigationPath } = navigationStore;
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
 
-  // Subscribe to spec changes for reactivity
-  useEffect(() => {
-    if (!rootSpec) return;
-    const unsubscribes: (() => void)[] = [];
-
-    // Subscribe to tasks array changes (add/remove)
-    unsubscribes.push(rootSpec.tasks.subscribe(forceUpdate));
-
-    // Subscribe to each task's property changes (name, etc.)
-    for (const task of rootSpec.tasks) {
-      unsubscribes.push(task.subscribe(() => forceUpdate()));
-    }
-
-    return () => {
-      unsubscribes.forEach((unsub) => unsub());
-    };
-  }, [rootSpec, rootSpec?.tasks.length]);
-
-  // Build the current navigation path as array of display names
   const currentNavPath = buildNavPathArray(navigationPath);
 
   console.log(
@@ -481,4 +448,4 @@ export function PipelineTreeContent() {
       />
     </BlockStack>
   );
-}
+});

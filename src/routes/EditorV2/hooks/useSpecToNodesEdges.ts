@@ -1,4 +1,5 @@
 import type { Edge, Node } from "@xyflow/react";
+import { useRef } from "react";
 
 import type {
   Binding,
@@ -7,7 +8,6 @@ import type {
   Output,
   Task,
 } from "@/models/componentSpec";
-import { useObservableArray } from "@/models/componentSpec/hooks/useObservableArray";
 import { EDITOR_POSITION_ANNOTATION } from "@/utils/annotations";
 
 interface NodePosition {
@@ -19,11 +19,8 @@ const DEFAULT_POSITION: NodePosition = { x: 0, y: 0 };
 const TASK_OFFSET = 200;
 const IO_OFFSET = 150;
 
-/**
- * Parse position from annotations array.
- */
 function getPositionFromAnnotations(
-  annotations: readonly { key: string; value: unknown }[],
+  annotations: { key: string; value: unknown }[],
 ): NodePosition {
   const posAnnotation = annotations.find(
     (a) => a.key === EDITOR_POSITION_ANNOTATION,
@@ -44,36 +41,61 @@ function getPositionFromAnnotations(
   return DEFAULT_POSITION;
 }
 
-/**
- * Node data for task nodes.
- * Contains entity $id and name for display/reactivity.
- */
 export interface TaskNodeData extends Record<string, unknown> {
   entityId: string;
   name: string;
 }
 
-/**
- * Node data for IO nodes (inputs/outputs).
- * Contains entity $id, type, and name for display/handle IDs.
- */
 export interface IONodeData extends Record<string, unknown> {
   entityId: string;
   ioType: "input" | "output";
   name: string;
 }
 
-/** Empty result for when spec is null */
 const EMPTY_RESULT: { nodes: Node[]; edges: Edge[] } = { nodes: [], edges: [] };
 
 /**
- * Build nodes and edges from a spec.
+ * Build a fingerprint string that changes only when the meaningful data changes.
+ * This prevents creating new node/edge array references on every render.
  */
+function buildFingerprint(spec: ComponentSpec): string {
+  const parts: string[] = [];
+
+  for (const input of spec.inputs) {
+    const pos = input.annotations.find(
+      (a) => a.key === EDITOR_POSITION_ANNOTATION,
+    )?.value;
+    parts.push(`i:${input.$id}:${input.name}:${pos ?? ""}`);
+  }
+
+  for (const output of spec.outputs) {
+    const pos = output.annotations.find(
+      (a) => a.key === EDITOR_POSITION_ANNOTATION,
+    )?.value;
+    parts.push(`o:${output.$id}:${output.name}:${pos ?? ""}`);
+  }
+
+  for (const task of spec.tasks) {
+    const pos = task.annotations.find(
+      (a) => a.key === EDITOR_POSITION_ANNOTATION,
+    )?.value;
+    parts.push(`t:${task.$id}:${task.name}:${pos ?? ""}`);
+  }
+
+  for (const binding of spec.bindings) {
+    parts.push(
+      `b:${binding.$id}:${binding.sourceEntityId}:${binding.sourcePortName}:${binding.targetEntityId}:${binding.targetPortName}`,
+    );
+  }
+
+  return parts.join("|");
+}
+
 function buildNodesAndEdges(
-  inputs: readonly Input[],
-  outputs: readonly Output[],
-  tasks: readonly Task[],
-  bindings: readonly Binding[],
+  inputs: Input[],
+  outputs: Output[],
+  tasks: Task[],
+  bindings: Binding[],
 ): {
   nodes: Node[];
   edges: Edge[];
@@ -81,9 +103,8 @@ function buildNodesAndEdges(
   const nodes: Node[] = [];
   const edges: Edge[] = [];
 
-  // Create nodes for graph inputs - use $id for stable node IDs
   inputs.forEach((input, index) => {
-    const position = getPositionFromAnnotations(input.annotations.all);
+    const position = getPositionFromAnnotations(input.annotations);
 
     nodes.push({
       id: input.$id,
@@ -100,9 +121,8 @@ function buildNodesAndEdges(
     });
   });
 
-  // Create nodes for graph outputs - use $id for stable node IDs
   outputs.forEach((output, index) => {
-    const position = getPositionFromAnnotations(output.annotations.all);
+    const position = getPositionFromAnnotations(output.annotations);
 
     nodes.push({
       id: output.$id,
@@ -119,9 +139,8 @@ function buildNodesAndEdges(
     });
   });
 
-  // Create nodes for tasks - use $id for stable node IDs
   tasks.forEach((task, index) => {
-    const position = getPositionFromAnnotations(task.annotations.all);
+    const position = getPositionFromAnnotations(task.annotations);
 
     nodes.push({
       id: task.$id,
@@ -140,11 +159,7 @@ function buildNodesAndEdges(
     });
   });
 
-  // Create edges from bindings
-
   for (const binding of bindings) {
-    // IO nodes use entityId for handle IDs (stable across renames)
-    // Task nodes use port names (defined by component spec, stable)
     const isSourceIO = inputs.some((i) => i.$id === binding.sourceEntityId);
     const isTargetIO = outputs.some((o) => o.$id === binding.targetEntityId);
 
@@ -170,21 +185,33 @@ function buildNodesAndEdges(
 }
 
 /**
- * Convert a ComponentSpec to ReactFlow nodes and edges.
+ * Derive ReactFlow nodes and edges from a ComponentSpec.
  *
- * Uses reactive hooks to subscribe to collection changes.
- * Node data contains stable entity $id references - individual nodes
- * use useEntity to subscribe to their own property changes.
- *
- * @param spec - The ComponentSpec to convert
- * @returns Object containing nodes and edges arrays for ReactFlow
+ * Uses fingerprint-based caching to return stable references when the
+ * underlying data hasn't changed, preventing infinite re-render loops
+ * with React Flow's controlled state.
  */
 export function useSpecToNodesEdges(spec: ComponentSpec | null) {
-  const inputs = useObservableArray(spec?.inputs);
-  const outputs = useObservableArray(spec?.outputs);
-  const tasks = useObservableArray(spec?.tasks);
-  const bindings = useObservableArray(spec?.bindings);
+  const cacheRef = useRef<{
+    fingerprint: string;
+    result: { nodes: Node[]; edges: Edge[] };
+  } | null>(null);
 
   if (!spec) return EMPTY_RESULT;
-  return buildNodesAndEdges(inputs, outputs, tasks, bindings);
+
+  const fingerprint = buildFingerprint(spec);
+
+  if (cacheRef.current && cacheRef.current.fingerprint === fingerprint) {
+    return cacheRef.current.result;
+  }
+
+  const result = buildNodesAndEdges(
+    [...spec.inputs],
+    [...spec.outputs],
+    [...spec.tasks],
+    [...spec.bindings],
+  );
+
+  cacheRef.current = { fingerprint, result };
+  return result;
 }

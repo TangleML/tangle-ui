@@ -1,20 +1,18 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { Input } from "../../entities/input";
-import { indexManager, resetIndexManager } from "../../indexes/indexManager";
 
 describe("Input", () => {
-  beforeEach(() => resetIndexManager());
-
-  it("creates with name string", () => {
-    const input = new Input("input_1", "myInput");
+  it("creates with name", () => {
+    const input = new Input({ $id: "input_1", name: "myInput" });
 
     expect(input.$id).toBe("input_1");
     expect(input.name).toBe("myInput");
   });
 
   it("creates with full init object", () => {
-    const input = new Input("input_1", {
+    const input = new Input({
+      $id: "input_1",
       name: "data",
       type: "string",
       description: "Input data",
@@ -31,70 +29,36 @@ describe("Input", () => {
   });
 
   it("has empty annotations by default", () => {
-    const input = new Input("input_1", "test");
+    const input = new Input({ $id: "input_1", name: "test" });
     expect(input.annotations.length).toBe(0);
   });
 
-  it("annotations are reactive", () => {
-    const input = new Input("input_1", "test");
-    const listener = vi.fn();
-    input.annotations.subscribe("changed.self.*", listener);
+  it("addAnnotation adds to annotations", () => {
+    const input = new Input({ $id: "input_1", name: "test" });
 
-    input.annotations.add({ key: "note", value: "important" });
+    input.addAnnotation({ key: "note", value: "important" });
 
-    expect(listener).toHaveBeenCalledTimes(1);
+    expect(input.annotations.length).toBe(1);
+    expect(input.annotations[0]).toEqual({ key: "note", value: "important" });
   });
 
-  it('$namespace is "input"', () => {
-    const input = new Input("input_1", "test");
-    expect(input.$namespace).toBe("input");
+  it("setName updates name", () => {
+    const input = new Input({ $id: "input_1", name: "old" });
+
+    input.setName("new");
+
+    expect(input.name).toBe("new");
   });
 
-  it("is indexed by $id and name", () => {
-    const input = new Input("input_1", "myInput");
+  it("setType updates type", () => {
+    const input = new Input({
+      $id: "input_1",
+      name: "test",
+      type: "string",
+    });
 
-    expect(indexManager.findOne<Input>("input", "$id", "input_1")).toBe(input);
-    expect(indexManager.findOne<Input>("input", "name", "myInput")).toBe(input);
-  });
+    input.setType("number");
 
-  it("emits change when name changes", () => {
-    const input = new Input("input_1", "old");
-    const listener = vi.fn();
-    input.subscribe("changed.self.*", listener);
-
-    input.name = "new";
-
-    expect(listener).toHaveBeenCalledWith(
-      expect.objectContaining({
-        field: "name",
-        value: "new",
-        oldValue: "old",
-      }),
-    );
-  });
-
-  it("emits change when type changes", () => {
-    const input = new Input("input_1", { name: "test", type: "string" });
-    const listener = vi.fn();
-    input.subscribe("changed.self.*", listener);
-
-    input.type = "number";
-
-    expect(listener).toHaveBeenCalledWith(
-      expect.objectContaining({
-        field: "type",
-        value: "number",
-        oldValue: "string",
-      }),
-    );
-  });
-
-  it("reindexes when name changes", () => {
-    const input = new Input("input_1", "old");
-
-    input.name = "new";
-
-    expect(indexManager.findOne<Input>("input", "name", "old")).toBeUndefined();
-    expect(indexManager.findOne<Input>("input", "name", "new")).toBe(input);
+    expect(input.type).toBe("number");
   });
 });

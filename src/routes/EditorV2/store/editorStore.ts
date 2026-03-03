@@ -1,138 +1,120 @@
-import { proxy } from "valtio";
+import { action, makeObservable, observable } from "mobx";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 
-/** Represents a selected node in multi-selection */
 export interface SelectedNode {
   id: string;
   type: "task" | "input" | "output";
   position: { x: number; y: number };
 }
 
-/**
- * Store ComponentSpec entity OUTSIDE of Valtio proxy.
- * Valtio's proxy/snapshot mechanism breaks accessor decorators that use private fields.
- */
-let _spec: ComponentSpec | null = null;
+class EditorStore {
+  spec: ComponentSpec | null = null;
+  selectedNodeId: string | null = null;
+  selectedNodeType: "task" | "input" | "output" | null = null;
+  lastSelectionWasShiftClick = false;
+  lastShiftClickEntityId: string | null = null;
+  multiSelection: SelectedNode[] = [];
 
-interface EditorStore {
-  /** Trigger for spec changes (increment to notify) */
-  specVersion: number;
-  selectedNodeId: string | null;
-  selectedNodeType: "task" | "input" | "output" | null;
-  /** Tracks if shift key was held during last selection (for pinned windows) */
-  lastSelectionWasShiftClick: boolean;
-  /** Entity ID from the last shift-click (for creating pinned window) */
-  lastShiftClickEntityId: string | null;
-  /** Array of selected nodes for multi-selection */
-  multiSelection: SelectedNode[];
-  /** The ComponentSpec (stored outside proxy, accessed via getter) */
-  readonly spec: ComponentSpec | null;
+  constructor() {
+    makeObservable(this, {
+      spec: observable.ref,
+      selectedNodeId: observable,
+      selectedNodeType: observable,
+      lastSelectionWasShiftClick: observable,
+      lastShiftClickEntityId: observable,
+      multiSelection: observable.shallow,
+      initializeStore: action,
+      selectNode: action,
+      clearSpec: action,
+      clearSelection: action,
+      setMultiSelection: action,
+      clearMultiSelection: action,
+    });
+  }
+
+  initializeStore(spec: ComponentSpec) {
+    this.spec = spec;
+    this.selectedNodeId = null;
+    this.selectedNodeType = null;
+    this.lastSelectionWasShiftClick = false;
+    this.lastShiftClickEntityId = null;
+    this.multiSelection = [];
+  }
+
+  selectNode(
+    nodeId: string | null,
+    nodeType: "task" | "input" | "output" | null = null,
+    options?: { shiftKey?: boolean; entityId?: string },
+  ) {
+    const isShiftClick = options?.shiftKey ?? false;
+
+    this.lastSelectionWasShiftClick = isShiftClick;
+    this.lastShiftClickEntityId = isShiftClick
+      ? (options?.entityId ?? null)
+      : null;
+
+    if (isShiftClick) return;
+
+    this.selectedNodeId = nodeId;
+    this.selectedNodeType = nodeType;
+  }
+
+  clearSpec() {
+    this.spec = null;
+  }
+
+  clearSelection() {
+    this.selectedNodeId = null;
+    this.selectedNodeType = null;
+    this.lastSelectionWasShiftClick = false;
+    this.lastShiftClickEntityId = null;
+    this.multiSelection = [];
+  }
+
+  setMultiSelection(nodes: SelectedNode[]) {
+    this.multiSelection = nodes;
+    if (nodes.length > 1) {
+      this.selectedNodeId = null;
+      this.selectedNodeType = null;
+    }
+  }
+
+  clearMultiSelection() {
+    this.multiSelection = [];
+  }
 }
 
-// Cast through unknown because spec/rootSpec/nestedSpecs are added via Object.defineProperty
-export const editorStore = proxy<EditorStore>({
-  specVersion: 0,
-  selectedNodeId: null,
-  selectedNodeType: null,
-  lastSelectionWasShiftClick: false,
-  lastShiftClickEntityId: null,
-  multiSelection: [],
-} as unknown as EditorStore);
+export const editorStore = new EditorStore();
 
-/** Getter for the actual spec object (outside of Valtio) */
-export function getSpec(): ComponentSpec | null {
-  return _spec;
-}
-
-/** For backward compatibility - access spec directly */
-Object.defineProperty(editorStore, "spec", {
-  get: () => _spec,
-  enumerable: false,
-});
-
-/**
- * Initialize the editor store with a ComponentSpec.
- *
- * The new model uses EventTarget-based reactivity via BaseEntity and ObservableArray.
- * Valtio is still used for the editor store itself (selection state, etc.)
- */
 export function initializeStore(spec: ComponentSpec) {
-  _spec = spec;
-  editorStore.specVersion++;
-  editorStore.selectedNodeId = null;
-  editorStore.selectedNodeType = null;
-  editorStore.lastSelectionWasShiftClick = false;
-  editorStore.lastShiftClickEntityId = null;
-  editorStore.multiSelection = [];
+  editorStore.initializeStore(spec);
 }
 
-/**
- * Select a node by its ID and type.
- * @param nodeId - The flow node ID
- * @param nodeType - The type of node (task, input, output)
- * @param options - Additional options
- * @param options.shiftKey - If true, indicates this should create a pinned window
- * @param options.entityId - The entity ID (different from nodeId for tasks)
- */
 export function selectNode(
   nodeId: string | null,
-  nodeType: EditorStore["selectedNodeType"] = null,
+  nodeType: "task" | "input" | "output" | null = null,
   options?: { shiftKey?: boolean; entityId?: string },
 ) {
-  const isShiftClick = options?.shiftKey ?? false;
-
-  // Track shift-click for pinned window creation
-  editorStore.lastSelectionWasShiftClick = isShiftClick;
-  editorStore.lastShiftClickEntityId = isShiftClick
-    ? (options?.entityId ?? null)
-    : null;
-
-  // If it's a shift-click, don't change the current selection
-  // The window system will handle creating a pinned window
-  if (isShiftClick) {
-    return;
-  }
-
-  editorStore.selectedNodeId = nodeId;
-  editorStore.selectedNodeType = nodeType;
+  editorStore.selectNode(nodeId, nodeType, options);
 }
 
-/**
- * Clear the spec from the store.
- */
+export function getSpec(): ComponentSpec | null {
+  return editorStore.spec;
+}
+
 export function clearSpec() {
-  _spec = null;
-  editorStore.specVersion++;
+  editorStore.clearSpec();
 }
 
-/**
- * Clear the current selection.
- */
 export function clearSelection() {
-  editorStore.selectedNodeId = null;
-  editorStore.selectedNodeType = null;
-  editorStore.lastSelectionWasShiftClick = false;
-  editorStore.lastShiftClickEntityId = null;
-  editorStore.multiSelection = [];
+  editorStore.clearSelection();
 }
 
-/**
- * Set multi-selection state.
- * @param nodes - Array of selected nodes
- */
 export function setMultiSelection(nodes: SelectedNode[]) {
-  editorStore.multiSelection = nodes;
-  // Clear single selection when multi-selecting
-  if (nodes.length > 1) {
-    editorStore.selectedNodeId = null;
-    editorStore.selectedNodeType = null;
-  }
+  editorStore.setMultiSelection(nodes);
 }
 
-/**
- * Clear multi-selection state.
- */
 export function clearMultiSelection() {
-  editorStore.multiSelection = [];
+  editorStore.clearMultiSelection();
 }

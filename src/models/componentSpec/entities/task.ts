@@ -1,10 +1,9 @@
-import { BaseEntity } from "../reactive/baseEntity";
-import { indexed, observable } from "../reactive/decorators";
-import type { EntityContext } from "../reactive/entityContext";
-import { ObservableArray } from "../reactive/observableArray";
+import { idProp, Model, model, modelAction, prop } from "mobx-keystone";
+
 import type {
   Annotation,
   Argument,
+  ArgumentType,
   ComponentReference,
   PredicateType,
 } from "./types";
@@ -15,26 +14,80 @@ export interface TaskInit {
   isEnabled?: PredicateType;
 }
 
-export class Task extends BaseEntity {
-  @indexed accessor $id: string;
-  @indexed accessor name: string;
-  @observable accessor componentRef: ComponentReference;
-  @observable accessor isEnabled: PredicateType | undefined;
+@model("spec/Task")
+export class Task extends Model({
+  $id: idProp,
+  name: prop<string>(),
+  componentRef: prop<ComponentReference>(),
+  isEnabled: prop<PredicateType | undefined>(undefined),
+  annotations: prop<Annotation[]>(() => []),
+  arguments: prop<Argument[]>(() => []),
+}) {
+  @modelAction
+  setName(name: string) {
+    this.name = name;
+  }
 
-  readonly annotations: ObservableArray<Annotation>;
-  readonly arguments: ObservableArray<Argument>;
+  @modelAction
+  setComponentRef(ref: ComponentReference) {
+    this.componentRef = ref;
+  }
 
-  constructor($id: string, init: TaskInit, ctx?: EntityContext) {
-    super();
-    this.$ctx = ctx ?? null;
+  @modelAction
+  setIsEnabled(predicate: PredicateType | undefined) {
+    this.isEnabled = predicate;
+  }
 
-    // Create collections with this entity as owner
-    this.annotations = new ObservableArray<Annotation>(this);
-    this.arguments = new ObservableArray<Argument>(this);
+  @modelAction
+  addAnnotation(annotation: Annotation) {
+    this.annotations.push(annotation);
+  }
 
-    this.$id = $id;
-    this.name = init.name;
-    this.componentRef = init.componentRef;
-    this.isEnabled = init.isEnabled;
+  @modelAction
+  updateAnnotation(index: number, updates: Partial<Annotation>) {
+    const ann = this.annotations[index];
+    if (ann) Object.assign(ann, updates);
+  }
+
+  @modelAction
+  removeAnnotation(index: number) {
+    this.annotations.splice(index, 1);
+  }
+
+  @modelAction
+  removeAnnotationByKey(key: string) {
+    const idx = this.annotations.findIndex((a) => a.key === key);
+    if (idx >= 0) this.annotations.splice(idx, 1);
+  }
+
+  @modelAction
+  addArgument(arg: Argument) {
+    this.arguments.push(arg);
+  }
+
+  @modelAction
+  setArgument(name: string, value: ArgumentType | undefined) {
+    const idx = this.arguments.findIndex((a) => a.name === name);
+    if (idx >= 0) {
+      this.arguments[idx] = { name, value };
+    } else {
+      this.arguments.push({ name, value });
+    }
+  }
+
+  @modelAction
+  removeArgument(index: number) {
+    this.arguments.splice(index, 1);
+  }
+
+  @modelAction
+  removeArgumentByName(name: string) {
+    const idx = this.arguments.findIndex((a) => a.name === name);
+    if (idx >= 0) this.arguments.splice(idx, 1);
+  }
+
+  @modelAction
+  clearArguments() {
+    this.arguments.splice(0, this.arguments.length);
   }
 }

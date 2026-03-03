@@ -1,5 +1,5 @@
+import { observer } from "mobx-react-lite";
 import { useEffect, useState } from "react";
-import { useSnapshot } from "valtio";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -11,8 +11,7 @@ import { Text } from "@/components/ui/typography";
 import type { ComponentSpec } from "@/models/componentSpec";
 
 import { useSpec } from "../providers/SpecContext";
-import { executeCommand } from "../store/commandManager";
-import { CreateSubgraphCommand } from "../store/commands";
+import { createSubgraph } from "../store/actions";
 import {
   clearMultiSelection,
   editorStore,
@@ -78,19 +77,15 @@ function getNodeIconColor(type: SelectedNode["type"]): string {
  * Content for multi-selection in the Properties window.
  * Shows list of selected nodes and Create Subgraph section when 2+ tasks selected.
  */
-export function MultiSelectionDetails() {
-  const snapshot = useSnapshot(editorStore);
-  const { multiSelection } = snapshot;
-  // Use current spec from SpecContext
+export const MultiSelectionDetails = observer(function MultiSelectionDetails() {
+  const { multiSelection } = editorStore;
   const spec = useSpec();
 
   const [subgraphName, setSubgraphName] = useState("");
 
-  // Filter to only task nodes
   const selectedTasks = multiSelection.filter((node) => node.type === "task");
   const canCreateSubgraph = selectedTasks.length >= 2;
 
-  // Update default subgraph name when selection changes
   useEffect(() => {
     if (canCreateSubgraph) {
       setSubgraphName(`Subgraph (${selectedTasks.length} tasks)`);
@@ -100,12 +95,8 @@ export function MultiSelectionDetails() {
   const handleCreateSubgraph = () => {
     if (!subgraphName.trim() || !canCreateSubgraph || !spec) return;
 
-    // Get task names from entity IDs
-    const taskNames = selectedTasks.map((node) =>
-      getNodeDisplayName(node, spec),
-    );
+    const taskIds = selectedTasks.map((node) => node.id);
 
-    // Calculate center position of selected task nodes
     const centerX =
       selectedTasks.reduce((sum, node) => sum + node.position.x, 0) /
       selectedTasks.length;
@@ -113,14 +104,12 @@ export function MultiSelectionDetails() {
       selectedTasks.reduce((sum, node) => sum + node.position.y, 0) /
       selectedTasks.length;
 
-    const success = executeCommand(
-      new CreateSubgraphCommand(spec, taskNames, subgraphName.trim(), {
-        x: centerX,
-        y: centerY,
-      }),
-    );
+    const result = createSubgraph(spec, taskIds, subgraphName.trim(), {
+      x: centerX,
+      y: centerY,
+    });
 
-    if (success) {
+    if (result) {
       setSubgraphName("");
       clearMultiSelection();
     }
@@ -203,4 +192,4 @@ export function MultiSelectionDetails() {
       </BlockStack>
     </BlockStack>
   );
-}
+});

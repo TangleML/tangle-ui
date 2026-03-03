@@ -1,5 +1,5 @@
-import { type ChangeEvent, useEffect, useState } from "react";
-import { useSnapshot } from "valtio";
+import { observer } from "mobx-react-lite";
+import { type ChangeEvent } from "react";
 
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
@@ -11,12 +11,7 @@ import { cn } from "@/lib/utils";
 import type { ComponentSpecJson } from "@/models/componentSpec";
 
 import { useSpec } from "../providers/SpecContext";
-import { executeCommand } from "../store/commandManager";
-import {
-  RenameInputCommand,
-  RenameOutputCommand,
-  RenameTaskCommand,
-} from "../store/commands";
+import { renameInput, renameOutput, renameTask } from "../store/actions";
 import { editorStore } from "../store/editorStore";
 import { MultiSelectionDetails } from "./MultiSelectionDetails";
 import { TaskAnnotationsEditor } from "./TaskAnnotationsEditor";
@@ -26,14 +21,11 @@ import { TaskAnnotationsEditor } from "./TaskAnnotationsEditor";
  * Displays details about the selected node and allows editing via direct mutation.
  * Used within the Windows system.
  */
-export function ContextPanelContent() {
-  const snapshot = useSnapshot(editorStore);
-  const { selectedNodeId, selectedNodeType, multiSelection } = snapshot;
+export const ContextPanelContent = observer(function ContextPanelContent() {
+  const { selectedNodeId, selectedNodeType, multiSelection } = editorStore;
 
-  // Get the current spec from SpecContext
   const spec = useSpec();
 
-  // Multi-selection takes priority
   if (multiSelection.length > 1) {
     return <MultiSelectionDetails />;
   }
@@ -53,7 +45,7 @@ export function ContextPanelContent() {
       )}
     </BlockStack>
   );
-}
+});
 
 function EmptyState() {
   return (
@@ -70,24 +62,11 @@ interface TaskDetailsProps {
   entityId: string;
 }
 
-function TaskDetails({ entityId }: TaskDetailsProps) {
-  // Version counter to force re-renders when task properties change
-  const [version, setVersion] = useState(0);
-
-  // Get the current spec from SpecContext
+const TaskDetails = observer(function TaskDetails({
+  entityId,
+}: TaskDetailsProps) {
   const spec = useSpec();
-
-  // Find task by $id
   const task = spec?.tasks.find((t) => t.$id === entityId);
-
-  // Subscribe to task property changes (e.g., name changes)
-  useEffect(() => {
-    if (!task) return;
-    const unsub = task.subscribe(() => {
-      setVersion((v) => v + 1);
-    });
-    return unsub;
-  }, [task]);
 
   if (!spec || !task) {
     return null;
@@ -98,7 +77,7 @@ function TaskDetails({ entityId }: TaskDetailsProps) {
   const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
     const newName = event.target.value;
     if (newName && newName !== task.name) {
-      executeCommand(new RenameTaskCommand(spec, entityId, newName));
+      renameTask(spec, entityId, newName);
     }
   };
 
@@ -110,7 +89,7 @@ function TaskDetails({ entityId }: TaskDetailsProps) {
             Name
           </Label>
           <Input
-            key={`${entityId}-${version}`}
+            key={`${entityId}-${task.name}`}
             id="task-name"
             defaultValue={task.name}
             onBlur={handleNameChange}
@@ -186,37 +165,24 @@ function TaskDetails({ entityId }: TaskDetailsProps) {
       </BlockStack>
     </BlockStack>
   );
-}
+});
 
 interface InputDetailsProps {
   entityId: string;
 }
 
-function InputDetails({ entityId }: InputDetailsProps) {
-  // Version counter to force re-renders when input properties change
-  const [version, setVersion] = useState(0);
-
-  // Get the current spec from SpecContext
+const InputDetails = observer(function InputDetails({
+  entityId,
+}: InputDetailsProps) {
   const spec = useSpec();
-
-  // Find input by $id
   const input = spec?.inputs.find((i) => i.$id === entityId);
-
-  // Subscribe to input property changes
-  useEffect(() => {
-    if (!input) return;
-    const unsub = input.subscribe(() => {
-      setVersion((v) => v + 1);
-    });
-    return unsub;
-  }, [input]);
 
   if (!spec || !input) return null;
 
   const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
     const newName = event.target.value;
     if (newName && newName !== input.name) {
-      executeCommand(new RenameInputCommand(spec, entityId, newName));
+      renameInput(spec, entityId, newName);
     }
   };
 
@@ -234,7 +200,7 @@ function InputDetails({ entityId }: InputDetailsProps) {
             Name
           </Label>
           <Input
-            key={`${entityId}-${version}`}
+            key={`${entityId}-${input.name}`}
             id="input-name"
             defaultValue={input.name}
             onBlur={handleNameChange}
@@ -280,37 +246,24 @@ function InputDetails({ entityId }: InputDetailsProps) {
       </BlockStack>
     </BlockStack>
   );
-}
+});
 
 interface OutputDetailsProps {
   entityId: string;
 }
 
-function OutputDetails({ entityId }: OutputDetailsProps) {
-  // Version counter to force re-renders when output properties change
-  const [version, setVersion] = useState(0);
-
-  // Get the current spec from SpecContext
+const OutputDetails = observer(function OutputDetails({
+  entityId,
+}: OutputDetailsProps) {
   const spec = useSpec();
-
-  // Find output by $id
   const output = spec?.outputs.find((o) => o.$id === entityId);
-
-  // Subscribe to output property changes
-  useEffect(() => {
-    if (!output) return;
-    const unsub = output.subscribe(() => {
-      setVersion((v) => v + 1);
-    });
-    return unsub;
-  }, [output]);
 
   if (!spec || !output) return null;
 
   const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
     const newName = event.target.value;
     if (newName && newName !== output.name) {
-      executeCommand(new RenameOutputCommand(spec, entityId, newName));
+      renameOutput(spec, entityId, newName);
     }
   };
 
@@ -328,7 +281,7 @@ function OutputDetails({ entityId }: OutputDetailsProps) {
             Name
           </Label>
           <Input
-            key={`${entityId}-${version}`}
+            key={`${entityId}-${output.name}`}
             id="output-name"
             defaultValue={output.name}
             onBlur={handleNameChange}
@@ -356,7 +309,7 @@ function OutputDetails({ entityId }: OutputDetailsProps) {
       </BlockStack>
     </BlockStack>
   );
-}
+});
 
 interface PanelHeaderProps {
   icon: string;

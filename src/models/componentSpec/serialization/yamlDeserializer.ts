@@ -4,6 +4,8 @@ import { Input } from "../entities/input";
 import { Output } from "../entities/output";
 import { Task } from "../entities/task";
 import type {
+  Annotation,
+  Argument,
   ArgumentType,
   ComponentSpecJson,
   GraphSpec,
@@ -30,89 +32,82 @@ export class YamlDeserializer {
 
   deserialize(data: unknown): ComponentSpec {
     const json = data as ComponentSpecJson;
-    const spec = new ComponentSpec(
-      this.idGen.next("spec"),
-      json.name ?? "Untitled",
-    );
-
-    if (json.description) {
-      spec.description = json.description;
-    }
-
     const graph = getGraph(json.implementation);
-    this.populateInputs(spec, json.inputs);
-    this.populateOutputs(spec, json.outputs);
-    this.populateTasks(spec, graph?.tasks);
-    this.populateBindings(spec, graph);
-    this.populateMetadata(spec, json.metadata);
 
-    return spec;
+    const inputs = this.buildInputs(json.inputs);
+    const outputs = this.buildOutputs(json.outputs);
+    const tasks = this.buildTasks(graph?.tasks);
+    const bindings = this.buildBindings(graph, inputs, outputs, tasks);
+    const annotations = this.buildMetadataAnnotations(json.metadata);
+
+    return new ComponentSpec({
+      $id: this.idGen.next("spec"),
+      name: json.name ?? "Untitled",
+      description: json.description,
+      inputs,
+      outputs,
+      tasks,
+      bindings,
+      annotations,
+    });
   }
 
-  private populateInputs(spec: ComponentSpec, inputs?: InputSpecJson[]): void {
-    if (!inputs) return;
+  private buildInputs(inputsJson?: InputSpecJson[]): Input[] {
+    if (!inputsJson) return [];
 
-    for (const inputJson of inputs) {
-      const input = new Input(this.idGen.next("input"), {
+    return inputsJson.map((inputJson) => {
+      const annotations: Annotation[] = [];
+      if (inputJson.annotations) {
+        for (const [key, value] of Object.entries(inputJson.annotations)) {
+          annotations.push({ key, value });
+        }
+      }
+
+      return new Input({
+        $id: this.idGen.next("input"),
         name: inputJson.name,
         type: inputJson.type,
         description: inputJson.description,
         defaultValue: inputJson.default,
         optional: inputJson.optional,
+        annotations,
       });
+    });
+  }
 
-      if (inputJson.annotations) {
-        for (const [key, value] of Object.entries(inputJson.annotations)) {
-          input.annotations.add({ key, value });
+  private buildOutputs(outputsJson?: OutputSpecJson[]): Output[] {
+    if (!outputsJson) return [];
+
+    return outputsJson.map((outputJson) => {
+      const annotations: Annotation[] = [];
+      if (outputJson.annotations) {
+        for (const [key, value] of Object.entries(outputJson.annotations)) {
+          annotations.push({ key, value });
         }
       }
 
-      spec.inputs.add(input);
-    }
-  }
-
-  private populateOutputs(
-    spec: ComponentSpec,
-    outputs?: OutputSpecJson[],
-  ): void {
-    if (!outputs) return;
-
-    for (const outputJson of outputs) {
-      const output = new Output(this.idGen.next("output"), {
+      return new Output({
+        $id: this.idGen.next("output"),
         name: outputJson.name,
         type: outputJson.type,
         description: outputJson.description,
+        annotations,
       });
-
-      if (outputJson.annotations) {
-        for (const [key, value] of Object.entries(outputJson.annotations)) {
-          output.annotations.add({ key, value });
-        }
-      }
-
-      spec.outputs.add(output);
-    }
+    });
   }
 
-  private populateTasks(
-    spec: ComponentSpec,
-    tasks?: Record<string, TaskSpecJson>,
-  ): void {
-    if (!tasks) return;
+  private buildTasks(tasksJson?: Record<string, TaskSpecJson>): Task[] {
+    if (!tasksJson) return [];
 
-    for (const [taskName, taskJson] of Object.entries(tasks)) {
-      const task = new Task(this.idGen.next("task"), {
-        name: taskName,
-        componentRef: taskJson.componentRef,
-        isEnabled: taskJson.isEnabled,
-      });
-
+    return Object.entries(tasksJson).map(([taskName, taskJson]) => {
+      const annotations: Annotation[] = [];
       if (taskJson.annotations) {
         for (const [key, value] of Object.entries(taskJson.annotations)) {
-          task.annotations.add({ key, value });
+          annotations.push({ key, value });
         }
       }
 
+      const args: Argument[] = [];
       if (taskJson.arguments) {
         for (const [argName, argValue] of Object.entries(taskJson.arguments)) {
           if (typeof argValue === "string") {
@@ -120,27 +115,47 @@ export class YamlDeserializer {
               !this.isGraphInputReference(argValue) &&
               !this.isTaskOutputReference(argValue)
             ) {
-              task.arguments.add({ name: argName, value: argValue });
+              args.push({ name: argName, value: argValue });
             }
           } else if (!this.isBindingArgument(argValue)) {
-            task.arguments.add({ name: argName, value: argValue });
+            args.push({ name: argName, value: argValue });
           }
         }
       }
 
-      spec.tasks.add(task);
-    }
+      return new Task({
+        $id: this.idGen.next("task"),
+        name: taskName,
+        componentRef: taskJson.componentRef,
+        isEnabled: taskJson.isEnabled,
+        annotations,
+        arguments: args,
+      });
+    });
   }
 
-  private populateBindings(spec: ComponentSpec, graph?: GraphSpec): void {
-    if (!graph?.tasks) return;
+  private buildBindings(
+    graph: GraphSpec | undefined,
+    inputs: Input[],
+    outputs: Output[],
+    tasks: Task[],
+  ): Binding[] {
+    const bindings: Binding[] = [];
+    if (!graph?.tasks) return bindings;
 
     for (const [taskName, taskJson] of Object.entries(graph.tasks)) {
-      const targetTask = spec.tasks.find((t) => t.name === taskName);
+      const targetTask = tasks.find((t) => t.name === taskName);
       if (!targetTask || !taskJson.arguments) continue;
 
       for (const [argName, argValue] of Object.entries(taskJson.arguments)) {
-        this.createBindingFromArgument(spec, targetTask.$id, argName, argValue);
+        const binding = this.createBindingFromArgument(
+          inputs,
+          tasks,
+          targetTask.$id,
+          argName,
+          argValue,
+        );
+        if (binding) bindings.push(binding);
       }
     }
 
@@ -148,7 +163,7 @@ export class YamlDeserializer {
       for (const [outputName, outputValue] of Object.entries(
         graph.outputValues,
       )) {
-        const output = spec.outputs.find((o) => o.name === outputName);
+        const output = outputs.find((o) => o.name === outputName);
         if (!output) continue;
 
         if (
@@ -161,103 +176,101 @@ export class YamlDeserializer {
               taskOutput: { taskId: string; outputName: string };
             }
           ).taskOutput;
-          const sourceTask = spec.tasks.find(
-            (t) => t.name === taskOutput.taskId,
-          );
+          const sourceTask = tasks.find((t) => t.name === taskOutput.taskId);
           if (sourceTask) {
-            spec.bindings.add(
-              new Binding(this.idGen.next("binding"), {
-                source: {
-                  entityId: sourceTask.$id,
-                  portName: taskOutput.outputName,
-                },
-                target: { entityId: output.$id, portName: outputName },
+            bindings.push(
+              new Binding({
+                sourceEntityId: sourceTask.$id,
+                sourcePortName: taskOutput.outputName,
+                targetEntityId: output.$id,
+                targetPortName: outputName,
               }),
             );
           }
         }
       }
     }
+
+    return bindings;
   }
 
   private createBindingFromArgument(
-    spec: ComponentSpec,
+    inputs: Input[],
+    tasks: Task[],
     targetEntityId: string,
     targetPortName: string,
     argValue: ArgumentType,
-  ): void {
+  ): Binding | null {
     if (typeof argValue === "string") {
       const graphInputMatch = argValue.match(GRAPH_INPUT_REGEX);
       if (graphInputMatch) {
         const inputName = graphInputMatch[1];
-        const input = spec.inputs.find((i) => i.name === inputName);
+        const input = inputs.find((i) => i.name === inputName);
         if (input) {
-          spec.bindings.add(
-            new Binding(this.idGen.next("binding"), {
-              source: { entityId: input.$id, portName: inputName },
-              target: { entityId: targetEntityId, portName: targetPortName },
-            }),
-          );
+          return new Binding({
+            sourceEntityId: input.$id,
+            sourcePortName: inputName,
+            targetEntityId,
+            targetPortName,
+          });
         }
-        return;
+        return null;
       }
 
       const taskOutputMatch = argValue.match(TASK_OUTPUT_REGEX);
       if (taskOutputMatch) {
         const taskId = taskOutputMatch[1];
         const outputName = taskOutputMatch[2];
-        const sourceTask = spec.tasks.find((t) => t.name === taskId);
+        const sourceTask = tasks.find((t) => t.name === taskId);
         if (sourceTask) {
-          spec.bindings.add(
-            new Binding(this.idGen.next("binding"), {
-              source: { entityId: sourceTask.$id, portName: outputName },
-              target: { entityId: targetEntityId, portName: targetPortName },
-            }),
-          );
+          return new Binding({
+            sourceEntityId: sourceTask.$id,
+            sourcePortName: outputName,
+            targetEntityId,
+            targetPortName,
+          });
         }
-        return;
+        return null;
       }
     }
 
     if (typeof argValue === "object" && argValue !== null) {
       if ("graphInput" in argValue) {
         const graphInput = argValue.graphInput;
-        const input = spec.inputs.find((i) => i.name === graphInput.inputName);
+        const input = inputs.find((i) => i.name === graphInput.inputName);
         if (input) {
-          spec.bindings.add(
-            new Binding(this.idGen.next("binding"), {
-              source: { entityId: input.$id, portName: graphInput.inputName },
-              target: { entityId: targetEntityId, portName: targetPortName },
-            }),
-          );
+          return new Binding({
+            sourceEntityId: input.$id,
+            sourcePortName: graphInput.inputName,
+            targetEntityId,
+            targetPortName,
+          });
         }
       } else if ("taskOutput" in argValue) {
         const taskOutput = argValue.taskOutput;
-        const sourceTask = spec.tasks.find((t) => t.name === taskOutput.taskId);
+        const sourceTask = tasks.find((t) => t.name === taskOutput.taskId);
         if (sourceTask) {
-          spec.bindings.add(
-            new Binding(this.idGen.next("binding"), {
-              source: {
-                entityId: sourceTask.$id,
-                portName: taskOutput.outputName,
-              },
-              target: { entityId: targetEntityId, portName: targetPortName },
-            }),
-          );
+          return new Binding({
+            sourceEntityId: sourceTask.$id,
+            sourcePortName: taskOutput.outputName,
+            targetEntityId,
+            targetPortName,
+          });
         }
       }
     }
+
+    return null;
   }
 
-  private populateMetadata(
-    spec: ComponentSpec,
+  private buildMetadataAnnotations(
     metadata?: Record<string, unknown>,
-  ): void {
-    if (!metadata) return;
-
-    for (const [key, value] of Object.entries(metadata)) {
-      spec.annotations.add({ key: `metadata.${key}`, value });
-    }
+  ): Annotation[] {
+    if (!metadata) return [];
+    return Object.entries(metadata).map(([key, value]) => ({
+      key: `metadata.${key}`,
+      value,
+    }));
   }
 
   private isGraphInputReference(value: string): boolean {
