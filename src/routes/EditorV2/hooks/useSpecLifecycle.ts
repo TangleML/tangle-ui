@@ -18,9 +18,7 @@ export function useSpecLifecycle(rootSpec: ComponentSpec) {
       initNavigation(rootSpec);
       undoStore.init(rootSpec);
 
-      prevTaskEntityIdsRef.current = new Set(
-        rootSpec.tasks.map((t) => t.$id),
-      );
+      prevTaskEntityIdsRef.current = new Set(rootSpec.tasks.map((t) => t.$id));
 
       const disposeTaskWatcher = autorun(() => {
         const currentTaskIds = new Set(rootSpec.tasks.map((t) => t.$id));
