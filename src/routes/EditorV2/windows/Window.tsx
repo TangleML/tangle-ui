@@ -80,27 +80,28 @@ export function Window({ windowId }: WindowProps) {
 
   const isAtFront = zIndex === snap.windowOrder.length - 1;
 
+  // Visually bring window to front on mousedown (imperative DOM update only, no re-render).
+  // Store sync happens later in onClick to avoid disrupting the click event chain.
+  const raiseZIndex = () => {
+    if (!isAtFront && panelRef.current) {
+      panelRef.current.style.zIndex = String(50 + snap.windowOrder.length);
+    }
+  };
+
   const handleMouseDown = () => {
-    // Only bring to front if not already at front to avoid unnecessary re-renders
+    raiseZIndex();
+  };
+
+  const handleClick = () => {
     if (!isAtFront) {
-      // Defer the store update to avoid re-rendering during focus transitions
-      // This prevents Monaco editor crashes caused by re-renders while handling focus
-      requestAnimationFrame(() => {
-        bringToFront(windowId);
-      });
+      bringToFront(windowId);
     }
   };
 
   const handleHeaderMouseDown = (e: React.MouseEvent) => {
-    // Don't drag if clicking on buttons
     if ((e.target as HTMLElement).closest("button")) return;
 
-    if (!isAtFront) {
-      // Defer to avoid re-rendering during focus transitions
-      requestAnimationFrame(() => {
-        bringToFront(windowId);
-      });
-    }
+    raiseZIndex();
 
     setIsDragging(true);
     dragOffset.current = {
@@ -165,6 +166,9 @@ export function Window({ windowId }: WindowProps) {
         }
       }
 
+      if (!isAtFront) {
+        bringToFront(windowId);
+      }
       setIsDragging(false);
       setSnapPreview(null);
       snapPreviewRef.current = null;
@@ -255,6 +259,7 @@ export function Window({ windowId }: WindowProps) {
         )}
         style={windowStyle}
         onMouseDown={handleMouseDown}
+        onClick={handleClick}
       >
         {/* Header - Draggable area */}
         <div
