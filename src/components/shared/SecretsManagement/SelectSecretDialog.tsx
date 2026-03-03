@@ -84,7 +84,7 @@ function SelectableSecretsList({
               className="w-full pr-3 py-2 hover:bg-gray-100 rounded-md cursor-pointer transition-colors"
             >
               <InlineStack gap="2" blockAlign="center" wrap="nowrap">
-                <Icon name="Lock" size="lg" />
+                <Icon name="Lock" size="lg" className="shrink-0" />
                 <BlockStack gap="0">
                   <Text size="sm" weight="semibold">
                     {secret.name}
@@ -162,7 +162,7 @@ function SelectSecretDialogContentInternal({
           onSelect={handleSecretSelect}
         />
         <Separator />
-        <InlineStack align="end" fill gap="2">
+        <InlineStack align="end" gap="2" className="w-full">
           <Button
             variant="secondary"
             onClick={() => setMode("add")}
