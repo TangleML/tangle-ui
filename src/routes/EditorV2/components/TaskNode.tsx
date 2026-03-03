@@ -16,7 +16,7 @@ import type { ComponentSpecJson } from "@/models/componentSpec";
 
 import type { TaskNodeData } from "../hooks/useSpecToNodesEdges";
 import { useSpec } from "../providers/SpecContext";
-import { selectNode } from "../store/editorStore";
+import { selectNode, setFocusedArgument } from "../store/editorStore";
 
 type TaskNodeType = Node<TaskNodeData, "task">;
 type TaskNodeProps = NodeProps<TaskNodeType>;
@@ -131,7 +131,12 @@ export const TaskNode = observer(function TaskNode({
               inputs.map((input) => (
                 <div
                   key={input.name}
-                  className="relative flex items-center py-0.5 px-2"
+                  className="relative flex items-center py-0.5 px-2 hover:bg-blue-50 rounded cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    selectNode(id, "task", { entityId });
+                    setFocusedArgument(input.name);
+                  }}
                 >
                   <Handle
                     type="target"

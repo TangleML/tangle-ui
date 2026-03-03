@@ -5,7 +5,7 @@ import { Binding } from "./binding";
 import type { Input } from "./input";
 import type { Output } from "./output";
 import type { Task } from "./task";
-import type { Annotation, BindingEndpoint } from "./types";
+import type { Annotation, ArgumentType, BindingEndpoint } from "./types";
 
 @model("spec/ComponentSpec")
 export class ComponentSpec extends Model({
@@ -139,6 +139,12 @@ export class ComponentSpec extends Model({
       targetPortName: target.portName,
     });
     this.bindings.push(binding);
+
+    const task = this.tasks.find((t) => t.$id === target.entityId);
+    if (task) {
+      task.removeArgumentByName(target.portName);
+    }
+
     return binding;
   }
 
@@ -219,6 +225,18 @@ export class ComponentSpec extends Model({
     if (idx < 0) return false;
     this.bindings.splice(idx, 1);
     return true;
+  }
+
+  @modelAction
+  setTaskArgument(taskId: string, portName: string, value: ArgumentType): void {
+    const task = this.tasks.find((t) => t.$id === taskId);
+    if (!task) return;
+
+    this.removeAllBindingsBy(
+      (b) => b.targetEntityId === taskId && b.targetPortName === portName,
+    );
+
+    task.setArgument(portName, value);
   }
 
   @modelAction
