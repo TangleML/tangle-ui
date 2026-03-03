@@ -11,11 +11,13 @@ import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import type {
+  ArgumentType,
   ComponentSpec,
   ComponentSpecJson,
   Task,
   TypeSpecType,
 } from "@/models/componentSpec";
+import type { DynamicDataArgument } from "@/utils/componentSpec";
 
 import { useSpec } from "../providers/SpecContext";
 import { createSubgraph } from "../store/actions";
@@ -25,6 +27,7 @@ import {
   type SelectedNode,
 } from "../store/editorStore";
 import { undoStore } from "../store/undoStore";
+import { ThunderMenu } from "./ThunderMenu";
 
 interface BatchArgumentRowProps {
   aggArg: AggregatedArgument;
@@ -38,6 +41,10 @@ const BatchArgumentRow = observer(function BatchArgumentRow({
   const [editing, setEditing] = useState(false);
   const [inputValue, setInputValue] = useState(aggArg.value);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const hasValue = aggArg.value !== "" || aggArg.isMixed;
+  const canReset = aggArg.defaultValue !== undefined;
+  const canUnset = hasValue;
 
   useEffect(() => {
     setInputValue(aggArg.value);
@@ -90,7 +97,55 @@ const BatchArgumentRow = observer(function BatchArgumentRow({
     });
   };
 
-  const hasValue = aggArg.value !== "" || aggArg.isMixed;
+  const handleResetToDefault = () => {
+    const defaultVal = aggArg.defaultValue ?? "";
+    undoStore.undoManager?.withGroup("Batch reset to default", () => {
+      for (const taskId of aggArg.taskIds) {
+        spec.setTaskArgument(taskId, aggArg.name, defaultVal);
+      }
+    });
+    setInputValue(defaultVal);
+  };
+
+  const handleUnset = () => {
+    undoStore.undoManager?.withGroup("Batch unset argument", () => {
+      for (const taskId of aggArg.taskIds) {
+        const task = spec.tasks.find((t) => t.$id === taskId);
+        task?.removeArgumentByName(aggArg.name);
+        spec.removeAllBindingsBy(
+          (b) =>
+            b.targetEntityId === taskId && b.targetPortName === aggArg.name,
+        );
+      }
+    });
+    setInputValue("");
+  };
+
+  const handleSelectDynamicData = (value: DynamicDataArgument) => {
+    // Model ArgumentType doesn't include DynamicDataArgument, but it's stored correctly at runtime
+    const argValue = value as unknown as ArgumentType;
+    undoStore.undoManager?.withGroup("Batch set dynamic data", () => {
+      for (const taskId of aggArg.taskIds) {
+        spec.setTaskArgument(taskId, aggArg.name, argValue);
+      }
+    });
+    setInputValue("");
+  };
+
+  const handleQuickConnect = (
+    sourceEntityId: string,
+    sourcePortName: string,
+  ) => {
+    undoStore.undoManager?.withGroup("Batch quick connect", () => {
+      for (const taskId of aggArg.taskIds) {
+        spec.connectNodes(
+          { entityId: sourceEntityId, portName: sourcePortName },
+          { entityId: taskId, portName: aggArg.name },
+        );
+      }
+    });
+    setInputValue("");
+  };
 
   return (
     <div
@@ -117,9 +172,20 @@ const BatchArgumentRow = observer(function BatchArgumentRow({
             </Text>
           )}
         </InlineStack>
-        <Text size="xs" className="text-gray-400 shrink-0">
+        <Text size="xs" className="text-gray-400 shrink-0 mr-1">
           {aggArg.taskIds.length} tasks
         </Text>
+        <ThunderMenu
+          inputName={aggArg.name}
+          inputType={aggArg.type}
+          canReset={canReset}
+          canUnset={canUnset}
+          excludeEntityIds={aggArg.taskIds}
+          onResetToDefault={handleResetToDefault}
+          onUnset={handleUnset}
+          onSelectDynamicData={handleSelectDynamicData}
+          onQuickConnect={handleQuickConnect}
+        />
       </InlineStack>
 
       {editing ? (
