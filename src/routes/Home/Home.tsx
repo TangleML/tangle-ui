@@ -22,6 +22,11 @@ const Home = () => {
     }
   };
 
+  console.log("env variables");
+  console.log(import.meta.env.PROD);
+  console.log(import.meta.env.DEV);
+  console.log(import.meta.env);
+
   return (
     <div className="container mx-auto w-3/4 p-4 flex flex-col gap-4">
       <div className="flex justify-between items-center">
