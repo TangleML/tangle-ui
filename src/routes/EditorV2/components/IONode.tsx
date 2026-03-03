@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 
 import type { IONodeData } from "../hooks/useSpecToNodesEdges";
 import { useSpec } from "../providers/SpecContext";
-import { selectNode } from "../store/editorStore";
+import { editorStore, selectNode } from "../store/editorStore";
 
 type IONodeType = Node<IONodeData, "io">;
 type IONodeProps = NodeProps<IONodeType>;
@@ -47,6 +47,7 @@ export const IONode = observer(function IONode({
   const name = entity?.name ?? entityId;
   const type = typeToString(entity?.type);
   const description = entity?.description;
+  const isHovered = editorStore.hoveredEntityId === entityId;
 
   return (
     <Card
@@ -54,7 +55,9 @@ export const IONode = observer(function IONode({
         "min-w-[120px] max-w-[180px] rounded-xl border-2 p-0 drop-shadow-sm cursor-pointer transition-all",
         selected
           ? "border-blue-500 ring-2 ring-blue-200"
-          : "border-gray-200 hover:border-gray-300",
+          : isHovered
+            ? "ring-2 ring-amber-300 border-amber-400"
+            : "border-gray-200 hover:border-gray-300",
         isInput ? "bg-blue-50" : "bg-green-50",
       )}
       onClick={handleClick}

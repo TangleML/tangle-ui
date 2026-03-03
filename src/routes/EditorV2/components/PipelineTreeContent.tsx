@@ -14,7 +14,7 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
-import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import type {
@@ -24,6 +24,7 @@ import type {
   ValidationIssue,
 } from "@/models/componentSpec";
 
+import { setHoveredEntity, setPendingFocusNode } from "../store/editorStore";
 import {
   navigateToLevel,
   navigateToPath,
@@ -94,19 +95,41 @@ function IssueBadge({ issues }: IssueBadgeProps) {
 interface TaskLeafNodeProps {
   task: Task;
   parentSpec: ComponentSpec;
+  parentNavigationPath: string[];
 }
 
 const TaskLeafNode = observer(function TaskLeafNode({
   task,
   parentSpec,
+  parentNavigationPath,
 }: TaskLeafNodeProps) {
   const issues = getEntityIssues(parentSpec, task.$id);
   const hasErrors = countErrors(issues) > 0;
+  const isOnActiveCanvas = parentSpec === navigationStore.activeSpec;
+
+  const handleClick = () => {
+    navigateToPath(parentNavigationPath);
+    setPendingFocusNode(task.$id);
+  };
+
+  const handleMouseEnter = () => {
+    if (isOnActiveCanvas) setHoveredEntity(task.$id);
+  };
+
+  const handleMouseLeave = () => {
+    setHoveredEntity(null);
+  };
 
   return (
     <div
+      role="button"
+      tabIndex={0}
+      onClick={handleClick}
+      onKeyDown={(e) => e.key === "Enter" && handleClick()}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       className={cn(
-        "flex items-start gap-1 py-1 px-2 text-slate-600",
+        "flex items-start gap-1 py-1 px-2 text-slate-600 rounded-md cursor-pointer transition-colors hover:bg-slate-50",
         hasErrors && "text-red-700",
       )}
     >
@@ -165,6 +188,8 @@ const SubgraphNode = observer(function SubgraphNode({
   const allIssues = [...taskIssues, ...specIssues];
   const hasErrors = countErrors(allIssues) > 0;
 
+  const isParentOnActiveCanvas = parentSpec === navigationStore.activeSpec;
+
   const handleClick = () => {
     const pathResult = navigateToPath(navigationPath);
     if (!pathResult) {
@@ -178,6 +203,14 @@ const SubgraphNode = observer(function SubgraphNode({
     onToggleExpand(nodePath);
   };
 
+  const handleMouseEnter = () => {
+    if (isParentOnActiveCanvas) setHoveredEntity(task.$id);
+  };
+
+  const handleMouseLeave = () => {
+    setHoveredEntity(null);
+  };
+
   return (
     <BlockStack gap="0">
       <div
@@ -185,6 +218,8 @@ const SubgraphNode = observer(function SubgraphNode({
         tabIndex={0}
         onClick={handleClick}
         onKeyDown={(e) => e.key === "Enter" && handleClick()}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
         className={cn(
           "flex items-start gap-1 py-1.5 px-2 rounded-md cursor-pointer transition-colors",
           isCurrentGraph
@@ -270,6 +305,7 @@ const SubgraphNode = observer(function SubgraphNode({
                     key={childTask.$id}
                     task={childTask}
                     parentSpec={spec}
+                    parentNavigationPath={navigationPath}
                   />
                 );
               }
@@ -293,6 +329,7 @@ const SubgraphNode = observer(function SubgraphNode({
                 key={childTask.$id}
                 task={childTask}
                 parentSpec={spec}
+                parentNavigationPath={navigationPath}
               />
             );
           })}
@@ -415,7 +452,12 @@ const RootNode = observer(function RootNode({
 
               if (!nestedSpec) {
                 return (
-                  <TaskLeafNode key={task.$id} task={task} parentSpec={spec} />
+                  <TaskLeafNode
+                    key={task.$id}
+                    task={task}
+                    parentSpec={spec}
+                    parentNavigationPath={navigationPath}
+                  />
                 );
               }
 
@@ -434,7 +476,12 @@ const RootNode = observer(function RootNode({
             }
 
             return (
-              <TaskLeafNode key={task.$id} task={task} parentSpec={spec} />
+              <TaskLeafNode
+                key={task.$id}
+                task={task}
+                parentSpec={spec}
+                parentNavigationPath={navigationPath}
+              />
             );
           })}
         </BlockStack>
@@ -519,40 +566,53 @@ const ValidationSummary = observer(function ValidationSummary({
 
       {isExpanded && (
         <BlockStack gap="1" className="pl-2">
-          {issues.map((issue, index) => (
-            <InlineStack
-              key={`${issue.type}-${issue.entityId ?? "graph"}-${index}`}
-              gap="1"
-              blockAlign="baseline"
-              className={cn(
-                "py-1 px-2 rounded text-xs",
-                issue.severity === "error"
-                  ? "bg-red-50 text-red-800"
-                  : "bg-amber-50 text-amber-800",
-              )}
-            >
-              <Text
-                size="xs"
-                weight="semibold"
+          {issues.map((issue, index) => {
+            const handleIssueClick = () => {
+              navigateToLevel(0);
+              if (issue.entityId) {
+                setPendingFocusNode(issue.entityId);
+              }
+            };
+
+            return (
+              <div
+                key={`${issue.type}-${issue.entityId ?? "graph"}-${index}`}
+                role="button"
+                tabIndex={0}
+                onClick={handleIssueClick}
+                onKeyDown={(e) => e.key === "Enter" && handleIssueClick()}
                 className={cn(
-                  "shrink-0 uppercase tracking-wide",
+                  "flex items-baseline gap-1 py-1 px-2 rounded text-xs cursor-pointer transition-colors",
                   issue.severity === "error"
-                    ? "text-red-600"
-                    : "text-amber-600",
+                    ? "bg-red-50 text-red-800 hover:bg-red-100"
+                    : "bg-amber-50 text-amber-800 hover:bg-amber-100",
                 )}
               >
-                {issueTypeLabel(issue.type)}
-              </Text>
-              <Text
-                size="xs"
-                className={
-                  issue.severity === "error" ? "text-red-700" : "text-amber-700"
-                }
-              >
-                {issue.message}
-              </Text>
-            </InlineStack>
-          ))}
+                <Text
+                  size="xs"
+                  weight="semibold"
+                  className={cn(
+                    "shrink-0 uppercase tracking-wide",
+                    issue.severity === "error"
+                      ? "text-red-600"
+                      : "text-amber-600",
+                  )}
+                >
+                  {issueTypeLabel(issue.type)}
+                </Text>
+                <Text
+                  size="xs"
+                  className={
+                    issue.severity === "error"
+                      ? "text-red-700"
+                      : "text-amber-700"
+                  }
+                >
+                  {issue.message}
+                </Text>
+              </div>
+            );
+          })}
         </BlockStack>
       )}
     </BlockStack>

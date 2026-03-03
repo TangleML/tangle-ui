@@ -16,7 +16,11 @@ import type { ComponentSpecJson } from "@/models/componentSpec";
 
 import type { TaskNodeData } from "../hooks/useSpecToNodesEdges";
 import { useSpec } from "../providers/SpecContext";
-import { selectNode, setFocusedArgument } from "../store/editorStore";
+import {
+  editorStore,
+  selectNode,
+  setFocusedArgument,
+} from "../store/editorStore";
 
 type TaskNodeType = Node<TaskNodeData, "task">;
 type TaskNodeProps = NodeProps<TaskNodeType>;
@@ -66,6 +70,7 @@ export const TaskNode = observer(function TaskNode({
 
   const isSubgraph = isTaskSubgraph(componentSpec);
   const taskName = task.name;
+  const isHovered = editorStore.hoveredEntityId === entityId;
 
   return (
     <Card
@@ -73,9 +78,11 @@ export const TaskNode = observer(function TaskNode({
         "min-w-[180px] max-w-[280px] rounded-xl border-2 p-0 drop-shadow-sm cursor-pointer transition-all",
         selected
           ? "border-blue-500 ring-2 ring-blue-200"
-          : isSubgraph
-            ? "border-purple-300 hover:border-purple-400"
-            : "border-gray-200 hover:border-gray-300",
+          : isHovered
+            ? "ring-2 ring-amber-300 border-amber-400"
+            : isSubgraph
+              ? "border-purple-300 hover:border-purple-400"
+              : "border-gray-200 hover:border-gray-300",
       )}
       onClick={handleClick}
     >
