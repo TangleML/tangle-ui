@@ -87,18 +87,20 @@ describe("OpenLogsInNewWindowLink", () => {
     const statusesThatShouldHaveLogs: ContainerExecutionStatus[] = [
       "RUNNING",
       "PENDING",
-      "QUEUED",
-      "WAITING_FOR_UPSTREAM",
       "CANCELLING",
       "FAILED",
       "SYSTEM_ERROR",
       "SUCCEEDED",
+      // CANCELLED may have logs when the task was cancelled mid-run; the
+      // backend uploads logs before termination in that path.
       "CANCELLED",
     ];
 
     const statusesThatShouldNotHaveLogs: ContainerExecutionStatus[] = [
       "INVALID",
       "UNINITIALIZED",
+      "QUEUED",
+      "WAITING_FOR_UPSTREAM",
       "SKIPPED",
     ];
 
