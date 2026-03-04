@@ -21,6 +21,7 @@ import {
   type ComponentSpec,
   isGraphImplementation,
 } from "@/utils/componentSpec";
+import { getFileExtension } from "@/utils/csvBulkArgumentImport";
 import { submitPipelineRun } from "@/utils/submitPipeline";
 import { validateArguments } from "@/utils/validations";
 
@@ -339,15 +340,11 @@ const OasisSubmitter = ({
     const file = e.dataTransfer.files[0];
     if (!file) return;
 
-    const extension = file.name.includes(".")
-      ? `.${file.name.split(".").pop()?.toLowerCase()}`
-      : "";
-
     const reader = new FileReader();
     reader.onload = (event) => {
       const text = event.target?.result;
       if (typeof text === "string") {
-        setPendingImportFile({ text, extension });
+        setPendingImportFile({ text, extension: getFileExtension(file.name) });
         setIsArgumentsDialogOpen(true);
       }
     };

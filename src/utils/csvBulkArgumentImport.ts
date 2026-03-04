@@ -69,7 +69,16 @@ export function parseCsv(text: string): string[][] {
   return rows;
 }
 
-interface CsvImportResult {
+/**
+ * Extracts the file extension (e.g. ".csv", ".json") from a filename.
+ * Returns empty string if no extension is found.
+ */
+export function getFileExtension(filename: string): string {
+  const dotIdx = filename.lastIndexOf(".");
+  return dotIdx >= 0 ? `.${filename.slice(dotIdx + 1).toLowerCase()}` : "";
+}
+
+export interface FileImportResult {
   values: Record<string, string>;
   changedInputNames: string[];
   enableBulk: boolean;
@@ -88,10 +97,10 @@ export function mapCsvToArguments(
   csvText: string,
   inputs: InputSpec[],
   currentArgs: Record<string, ArgumentType>,
-): CsvImportResult {
+): FileImportResult {
   const rows = parseCsv(csvText);
 
-  const empty: CsvImportResult = {
+  const empty: FileImportResult = {
     values: {},
     changedInputNames: [],
     enableBulk: false,
