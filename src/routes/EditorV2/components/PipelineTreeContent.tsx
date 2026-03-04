@@ -597,9 +597,7 @@ const ValidationSummary = observer(function ValidationSummary({
                 onKeyDown={(e) => e.key === "Enter" && handleIssueClick()}
                 className={cn(
                   "flex items-baseline gap-1 py-1 px-2 rounded text-xs cursor-pointer transition-colors",
-                  isSelected
-                    ? "ring-1 ring-blue-400"
-                    : "",
+                  isSelected ? "ring-1 ring-blue-400" : "",
                   issue.severity === "error"
                     ? "bg-red-50 text-red-800 hover:bg-red-100"
                     : "bg-amber-50 text-amber-800 hover:bg-amber-100",
@@ -717,9 +715,7 @@ export const PipelineTreeContent = observer(function PipelineTreeContent() {
           />
           <ValidationSummary spec={rootSpec} />
         </BlockStack>
-        <BlockStack
-          className="hidden @[600px]:flex overflow-y-auto min-h-0 max-w-md"
-        >
+        <BlockStack className="hidden @[600px]:flex overflow-y-auto min-h-0 max-w-md">
           {activeIssue ? (
             <ValidationIssueResolutionCard issue={activeIssue} />
           ) : (
@@ -729,7 +725,11 @@ export const PipelineTreeContent = observer(function PipelineTreeContent() {
               inlineAlign="center"
               className="h-full p-4"
             >
-              <Icon name="MousePointerClick" size="lg" className="text-slate-300" />
+              <Icon
+                name="MousePointerClick"
+                size="lg"
+                className="text-slate-300"
+              />
               <Text size="xs" tone="subdued" className="text-center">
                 Click a validation issue to see resolution options
               </Text>

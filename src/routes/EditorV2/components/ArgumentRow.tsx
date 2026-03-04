@@ -134,8 +134,7 @@ export const ArgumentRow = observer(function ArgumentRow({
     task.removeArgumentByName(inputSpec.name);
     spec.removeAllBindingsBy(
       (b) =>
-        b.targetEntityId === task.$id &&
-        b.targetPortName === inputSpec.name,
+        b.targetEntityId === task.$id && b.targetPortName === inputSpec.name,
     );
     setInputValue("");
   };
