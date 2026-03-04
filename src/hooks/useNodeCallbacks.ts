@@ -5,10 +5,9 @@ import { getDeleteConfirmationDetails } from "@/components/shared/ReactFlow/Flow
 import { getUpgradeConfirmationDetails } from "@/components/shared/ReactFlow/FlowCanvas/ConfirmationDialogs/UpgradeComponent";
 import type { NodesAndEdges } from "@/components/shared/ReactFlow/FlowCanvas/types";
 import { duplicateNodes } from "@/components/shared/ReactFlow/FlowCanvas/utils/duplicateNodes";
-import replaceTaskAnnotationsInGraphSpec from "@/components/shared/ReactFlow/FlowCanvas/utils/replaceTaskAnnotationsInGraphSpec";
-import replaceTaskArgumentsInGraphSpec from "@/components/shared/ReactFlow/FlowCanvas/utils/replaceTaskArgumentsInGraphSpec";
 import { replaceTaskNode } from "@/components/shared/ReactFlow/FlowCanvas/utils/replaceTaskNode";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
+import { useComponentSpecStore } from "@/stores/componentSpecStore";
 import type { Annotations } from "@/types/annotations";
 import type { NodeAndTaskId } from "@/types/taskNode";
 import type { ComponentReference, TaskSpec } from "@/utils/componentSpec";
@@ -110,27 +109,47 @@ export const useNodeCallbacks = ({
   const setArguments = useCallback(
     (ids: NodeAndTaskId, args: Record<string, ArgumentType>) => {
       const taskId = ids.taskId;
-      const newGraphSpec = replaceTaskArgumentsInGraphSpec(
-        taskId,
-        currentGraphSpec,
-        args,
-      );
+      // Direct store mutation — granular update, no deep clone
+      useComponentSpecStore
+        .getState()
+        .setTaskArguments(currentSubgraphPath, taskId, args);
+      // Also update context for remaining consumers (shallow spread)
+      const newGraphSpec = {
+        ...currentGraphSpec,
+        tasks: {
+          ...currentGraphSpec.tasks,
+          [taskId]: {
+            ...currentGraphSpec.tasks[taskId],
+            arguments: args,
+          },
+        },
+      };
       updateGraphSpec(newGraphSpec);
     },
-    [currentGraphSpec, updateGraphSpec],
+    [currentGraphSpec, currentSubgraphPath, updateGraphSpec],
   );
 
   const setAnnotations = useCallback(
     (ids: NodeAndTaskId, annotations: Annotations) => {
       const taskId = ids.taskId;
-      const newGraphSpec = replaceTaskAnnotationsInGraphSpec(
-        taskId,
-        currentGraphSpec,
-        annotations,
-      );
+      // Direct store mutation — granular update
+      useComponentSpecStore
+        .getState()
+        .setTaskAnnotations(currentSubgraphPath, taskId, annotations);
+      // Also update context for remaining consumers (shallow spread)
+      const newGraphSpec = {
+        ...currentGraphSpec,
+        tasks: {
+          ...currentGraphSpec.tasks,
+          [taskId]: {
+            ...currentGraphSpec.tasks[taskId],
+            annotations,
+          },
+        },
+      };
       updateGraphSpec(newGraphSpec);
     },
-    [currentGraphSpec, updateGraphSpec],
+    [currentGraphSpec, currentSubgraphPath, updateGraphSpec],
   );
 
   const setCacheStaleness = useCallback(
@@ -147,12 +166,24 @@ export const useNodeCallbacks = ({
         ? { maxCacheStaleness: cacheStaleness }
         : undefined;
 
+      const updatedExecutionOptions = {
+        ...task.executionOptions,
+        cachingStrategy,
+      };
+
+      // Direct store mutation — granular update
+      useComponentSpecStore
+        .getState()
+        .setTaskExecutionOptions(
+          currentSubgraphPath,
+          taskId,
+          updatedExecutionOptions,
+        );
+
+      // Also update context for remaining consumers
       const updatedTask: TaskSpec = {
         ...task,
-        executionOptions: {
-          ...task.executionOptions,
-          cachingStrategy,
-        },
+        executionOptions: updatedExecutionOptions,
       };
 
       const newGraphSpec = {
@@ -165,7 +196,7 @@ export const useNodeCallbacks = ({
 
       updateGraphSpec(newGraphSpec);
     },
-    [currentGraphSpec, updateGraphSpec],
+    [currentGraphSpec, currentSubgraphPath, updateGraphSpec],
   );
 
   const onDuplicate = useCallback(
@@ -228,9 +259,10 @@ export const useNodeCallbacks = ({
         return;
       }
 
+      const taskId = node.data.taskId as string;
       const dialogData = getUpgradeConfirmationDetails(
-        node.data.taskId as string,
-        node.data.taskSpec as TaskSpec | undefined,
+        taskId,
+        currentGraphSpec.tasks[taskId],
         newComponentRef.digest,
         lostInputs,
       );

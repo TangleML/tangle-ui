@@ -7,8 +7,8 @@ import {
 import { Icon } from "@/components/ui/icon";
 import { VerticalResizeHandle } from "@/components/ui/resize-handle";
 import { cn } from "@/lib/utils";
-import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useContextPanel } from "@/providers/ContextPanelProvider";
+import { useComponentSpecStore } from "@/stores/componentSpecStore";
 
 import { ContextPanel } from "./ContextPanel";
 
@@ -19,7 +19,9 @@ const DEFAULT_WIDTH = 400;
 export function CollapsibleContextPanel() {
   const { open, setOpen } = useContextPanel();
 
-  const { currentSubgraphPath } = useComponentSpec();
+  const currentSubgraphPath = useComponentSpecStore(
+    (s) => s.currentSubgraphPath,
+  );
 
   const isViewingSubgraph = currentSubgraphPath.length > 1;
 

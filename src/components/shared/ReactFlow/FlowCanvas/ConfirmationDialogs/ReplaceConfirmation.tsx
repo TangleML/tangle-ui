@@ -15,9 +15,9 @@ export function getReplaceConfirmationDetails(
   replacedNode: Node,
   newTaskId: string,
   lostInputs: InputSpec[],
+  oldTaskSpec?: TaskSpec,
 ) {
   const oldTaskId = replacedNode.data.taskId as string;
-  const oldTaskSpec = replacedNode.data.taskSpec as TaskSpec | undefined;
   const oldTaskInputs = oldTaskSpec?.componentRef.spec?.inputs;
   const oldTaskArguments = oldTaskSpec?.arguments;
 

@@ -8,8 +8,9 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Heading } from "@/components/ui/typography";
-import { useComponentSpec } from "@/providers/ComponentSpecProvider";
+import { componentSpecActions } from "@/providers/ComponentSpecProvider";
 import type { TaskNodeContextType } from "@/providers/TaskNodeProvider";
+import { useCurrentGraphSpec } from "@/stores/selectors";
 import type { HydratedComponentReference } from "@/utils/componentSpec";
 
 import {
@@ -42,7 +43,7 @@ export const UpgradeNodePopover = ({
   }) => {
   const [open, setOpen] = useState(true);
   const { taskId, taskSpec } = currentNode;
-  const { currentGraphSpec, updateGraphSpec } = useComponentSpec();
+  const currentGraphSpec = useCurrentGraphSpec();
   const { notifyNode, fitNodeIntoView } = useNodesOverlay();
 
   const replaceWithComponent = useMemo(() => {
@@ -102,10 +103,10 @@ export const UpgradeNodePopover = ({
 
   const handleApplyAndNext = useCallback(async () => {
     if (!updatePreview) return;
-    updateGraphSpec(updatePreview.updatedGraphSpec);
+    componentSpecActions.updateGraphSpec?.(updatePreview.updatedGraphSpec);
 
     void handleNext();
-  }, [handleNext, updatePreview, updateGraphSpec]);
+  }, [handleNext, updatePreview]);
 
   if (!taskSpec || !taskId || !replaceWithComponent || !updatePreview) {
     return null;

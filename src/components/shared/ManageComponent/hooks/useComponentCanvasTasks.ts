@@ -1,4 +1,4 @@
-import { useComponentSpec } from "@/providers/ComponentSpecProvider";
+import { useRootGraphSpec } from "@/stores/selectors";
 
 /**
  * Returns the tasks on the canvas that use the component with the given digest.
@@ -7,7 +7,7 @@ import { useComponentSpec } from "@/providers/ComponentSpecProvider";
  * @returns The tasks on the canvas that use the component with the given digest.
  */
 export function useComponentCanvasTasks(digest: string) {
-  const { graphSpec } = useComponentSpec();
+  const graphSpec = useRootGraphSpec();
 
   return Object.values(graphSpec?.tasks).filter(
     (task) => task.componentRef.digest === digest,

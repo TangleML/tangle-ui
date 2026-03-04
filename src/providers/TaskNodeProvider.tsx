@@ -5,6 +5,8 @@ import useComponentFromUrl from "@/hooks/useComponentFromUrl";
 import { useHydrateComponentReference } from "@/hooks/useHydrateComponentReference";
 import { useTaskNodeDimensions } from "@/hooks/useTaskNodeDimensions";
 import useToastNotification from "@/hooks/useToastNotification";
+import { useComponentSpecStore } from "@/stores/componentSpecStore";
+import { serializePath } from "@/stores/types";
 import type { Annotations } from "@/types/annotations";
 import {
   DEFAULT_TASK_NODE_CALLBACKS,
@@ -84,9 +86,23 @@ export const TaskNodeProvider = ({
   const notify = useToastNotification();
   const reactFlowInstance = useReactFlow();
 
-  const taskSpec = data.taskSpec;
   const taskId = data.taskId;
   const nodeId = taskId ? taskIdToNodeId(taskId) : "";
+
+  // Read taskSpec from Zustand store — this reference is stable per-task,
+  // so this provider only re-renders when THIS task's data changes.
+  const storeTaskSpec = useComponentSpecStore(
+    useCallback(
+      (state) => {
+        if (!taskId) return undefined;
+        const pathKey = serializePath(state.currentSubgraphPath);
+        return state.graphs[pathKey]?.tasks[taskId];
+      },
+      [taskId],
+    ),
+  );
+  // Fall back to data.taskSpec for backward compatibility (e.g. ghost nodes)
+  const taskSpec = storeTaskSpec ?? data.taskSpec;
 
   const {
     onDelete,

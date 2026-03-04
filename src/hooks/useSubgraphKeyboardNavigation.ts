@@ -1,13 +1,16 @@
 import { useEffect } from "react";
 
-import { useComponentSpec } from "@/providers/ComponentSpecProvider";
+import { useComponentSpecStore } from "@/stores/componentSpecStore";
 
 /**
  * Hook to handle keyboard navigation for subgraphs
  * - Escape: Navigate back to parent subgraph
  */
 export const useSubgraphKeyboardNavigation = () => {
-  const { canNavigateBack, navigateBack } = useComponentSpec();
+  const canNavigateBack = useComponentSpecStore(
+    (s) => s.currentSubgraphPath.length > 1,
+  );
+  const navigateBack = useComponentSpecStore((s) => s.navigateBack);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {

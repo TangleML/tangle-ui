@@ -1,5 +1,5 @@
 import { type NodeProps } from "@xyflow/react";
-import { memo, useMemo } from "react";
+import { memo, useCallback, useMemo } from "react";
 
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -7,6 +7,8 @@ import { useEdgeSelectionHighlight } from "@/hooks/useEdgeSelectionHighlight";
 import { cn } from "@/lib/utils";
 import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
 import { TaskNodeProvider } from "@/providers/TaskNodeProvider";
+import { useComponentSpecStore } from "@/stores/componentSpecStore";
+import { serializePath } from "@/stores/types";
 import type { TaskNodeData } from "@/types/taskNode";
 import { isCacheDisabled } from "@/utils/cache";
 
@@ -23,13 +25,25 @@ const TaskNodeInternal = ({ data, selected, id }: NodeProps) => {
   const executionData = useExecutionDataOptional();
 
   const typedData = useMemo(() => data as TaskNodeData, [data]);
+  const taskId = typedData.taskId ?? "";
 
   const status = useMemo(() => {
-    const taskId = typedData.taskId ?? "";
     return executionData?.taskExecutionStatusMap.get(taskId);
-  }, [executionData?.taskExecutionStatusMap, typedData.taskId]);
+  }, [executionData?.taskExecutionStatusMap, taskId]);
 
-  const disabledCache = isCacheDisabled(typedData.taskSpec);
+  // Read taskSpec from store for cache status (stable per-task reference)
+  const taskSpec = useComponentSpecStore(
+    useCallback(
+      (state) => {
+        if (!taskId) return undefined;
+        const pathKey = serializePath(state.currentSubgraphPath);
+        return state.graphs[pathKey]?.tasks[taskId];
+      },
+      [taskId],
+    ),
+  );
+
+  const disabledCache = isCacheDisabled(taskSpec);
 
   const { isConnectedToSelectedEdge, hasAnySelectedEdge } =
     useEdgeSelectionHighlight(id);

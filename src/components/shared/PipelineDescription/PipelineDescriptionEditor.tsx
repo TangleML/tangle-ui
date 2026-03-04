@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 
 import { Textarea } from "@/components/ui/textarea";
-import { useComponentSpec } from "@/providers/ComponentSpecProvider";
+import { useComponentSpecStore } from "@/stores/componentSpecStore";
+import { useRootDescription } from "@/stores/selectors";
 
 interface PipelineDescriptionEditorProps {
   autoFocus?: boolean;
@@ -10,20 +11,20 @@ interface PipelineDescriptionEditorProps {
 export const PipelineDescriptionEditor = ({
   autoFocus,
 }: PipelineDescriptionEditorProps) => {
-  const { componentSpec, setComponentSpec } = useComponentSpec();
-  const [localValue, setLocalValue] = useState(componentSpec.description ?? "");
+  const rootDescription = useRootDescription();
+  const setGraphDescription = useComponentSpecStore(
+    (s) => s.setGraphDescription,
+  );
+  const [localValue, setLocalValue] = useState(rootDescription ?? "");
 
   const setDescription = (description: string) => {
-    setComponentSpec({
-      ...componentSpec,
-      description: description || undefined,
-    });
+    setGraphDescription(["root"], description || undefined);
   };
 
-  // Sync local value when componentSpec.description changes externally
+  // Sync local value when description changes externally
   useEffect(() => {
-    setLocalValue(componentSpec.description ?? "");
-  }, [componentSpec.description]);
+    setLocalValue(rootDescription ?? "");
+  }, [rootDescription]);
 
   return (
     <Textarea

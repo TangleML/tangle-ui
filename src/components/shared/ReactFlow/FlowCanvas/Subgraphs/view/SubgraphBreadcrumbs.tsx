@@ -13,12 +13,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { InlineStack } from "@/components/ui/layout";
 import { buildExecutionUrl } from "@/hooks/useSubgraphBreadcrumbs";
-import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
+import { useComponentSpecStore } from "@/stores/componentSpecStore";
 
 export const SubgraphBreadcrumbs = () => {
   const navigate = useNavigate();
-  const { currentSubgraphPath, navigateToPath } = useComponentSpec();
+  const currentSubgraphPath = useComponentSpecStore(
+    (s) => s.currentSubgraphPath,
+  );
+  const navigateToPath = useComponentSpecStore((s) => s.navigateToPath);
   const executionData = useExecutionDataOptional();
   const rootExecutionId = executionData?.rootExecutionId;
   const segments = executionData?.segments || [];

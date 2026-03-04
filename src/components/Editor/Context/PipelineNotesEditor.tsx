@@ -1,19 +1,20 @@
 import { useState } from "react";
 
 import { Textarea } from "@/components/ui/textarea";
-import { useComponentSpec } from "@/providers/ComponentSpecProvider";
+import { useComponentSpecStore } from "@/stores/componentSpecStore";
+import { useRootMetadata } from "@/stores/selectors";
 import {
   getAnnotationValue,
   PIPELINE_NOTES_ANNOTATION,
-  setComponentSpecAnnotation,
 } from "@/utils/annotations";
 
 export const PipelineNotesEditor = () => {
-  const { componentSpec, setComponentSpec } = useComponentSpec();
+  const rootMetadata = useRootMetadata();
+  const setGraphAnnotation = useComponentSpecStore((s) => s.setGraphAnnotation);
 
-  const annotations = componentSpec.metadata?.annotations;
   const notes =
-    getAnnotationValue(annotations, PIPELINE_NOTES_ANNOTATION) ?? "";
+    getAnnotationValue(rootMetadata?.annotations, PIPELINE_NOTES_ANNOTATION) ??
+    "";
 
   const [value, setValue] = useState(notes);
 
@@ -22,13 +23,7 @@ export const PipelineNotesEditor = () => {
   };
 
   const onBlur = () => {
-    setComponentSpec(
-      setComponentSpecAnnotation(
-        componentSpec,
-        PIPELINE_NOTES_ANNOTATION,
-        value,
-      ),
-    );
+    setGraphAnnotation(["root"], PIPELINE_NOTES_ANNOTATION, value);
   };
 
   return (

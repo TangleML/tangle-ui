@@ -63,24 +63,6 @@ export function getAnnotationValue(
 }
 
 /**
- * Sets the value of an annotation.
- * @param annotations - The annotations object
- * @param key - The key of the annotation
- * @param value - The value to set
- * @returns
- */
-function setAnnotation(
-  annotations: Annotations,
-  key: string,
-  value: string | undefined,
-) {
-  return {
-    ...(annotations ?? {}),
-    [key]: value,
-  };
-}
-
-/**
  * Checks if an annotation exists.
  * @param annotations - The annotations object
  * @param key - The key of the annotation
@@ -96,31 +78,6 @@ function hasAnnotation(
 
   return Object.prototype.hasOwnProperty.call(annotations, key);
 }
-
-/**
- * Sets an annotation on a ComponentSpec.
- * @param componentSpec - The ComponentSpec object
- * @param annotationKey - The key of the annotation
- * @param annotationValue - The value of the annotation
- * @returns componentSpec with updated annotation
- */
-export const setComponentSpecAnnotation = (
-  componentSpec: ComponentSpec,
-  annotationKey: string,
-  annotationValue: string | undefined,
-) => {
-  return {
-    ...componentSpec,
-    metadata: {
-      ...componentSpec.metadata,
-      annotations: setAnnotation(
-        componentSpec.metadata?.annotations,
-        annotationKey,
-        annotationValue,
-      ),
-    },
-  };
-};
 
 /**
  * Sets an annotation on a ComponentSpec.

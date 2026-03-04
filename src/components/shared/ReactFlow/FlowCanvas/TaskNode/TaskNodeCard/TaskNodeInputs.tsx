@@ -5,9 +5,9 @@ import { type MouseEvent, useCallback, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useForcedSearchContext } from "@/providers/ComponentLibraryProvider/ForcedSearchProvider";
 import { isValidFilterRequest } from "@/providers/ComponentLibraryProvider/types";
-import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useTaskNode } from "@/providers/TaskNodeProvider";
 import { inputsWithInvalidArguments } from "@/services/componentService";
+import { useRootGraphSpec } from "@/stores/selectors";
 import {
   type InputSpec,
   isGraphInputArgument,
@@ -32,7 +32,7 @@ export function TaskNodeInputs({
   onBackgroundClick,
 }: TaskNodeInputsProps) {
   const { inputs, taskSpec, state, select } = useTaskNode();
-  const { graphSpec } = useComponentSpec();
+  const graphSpec = useRootGraphSpec();
   const {
     highlightSearchFilter,
     resetSearchFilter,

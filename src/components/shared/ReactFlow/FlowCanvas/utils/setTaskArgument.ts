@@ -1,7 +1,5 @@
 import type { ArgumentType, GraphSpec } from "@/utils/componentSpec";
 
-import replaceTaskArgumentsInGraphSpec from "./replaceTaskArgumentsInGraphSpec";
-
 export const setTaskArgument = (
   graphSpec: GraphSpec,
   taskId: string,
@@ -19,11 +17,14 @@ export const setTaskArgument = (
     ...nonNullArgumentObject,
   };
 
-  const newGraphSpec = replaceTaskArgumentsInGraphSpec(
-    taskId,
-    graphSpec,
-    newTaskSpecArguments,
-  );
-
-  return newGraphSpec;
+  return {
+    ...graphSpec,
+    tasks: {
+      ...graphSpec.tasks,
+      [taskId]: {
+        ...graphSpec.tasks[taskId],
+        arguments: newTaskSpecArguments,
+      },
+    },
+  };
 };
