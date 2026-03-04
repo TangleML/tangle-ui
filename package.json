@@ -112,8 +112,7 @@
     "tailwind-merge": "^3.5.0",
     "tailwindcss": "^4.1.16",
     "tailwindcss-animate": "^1.0.7",
-    "valtio": "^2.2.0",
-    "valtio-reactive": "^0.2.0"
+    "valtio": "^2.2.0"
   },
   "peerDependencies": {
     "monaco-editor": "^0.54.0"

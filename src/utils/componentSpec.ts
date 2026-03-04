@@ -495,7 +495,7 @@ interface RetryStrategySpec {
 /**
  * Optional configuration that specifies how the task execution may be skipped if the output data exist in cache.
  */
-export interface CachingStrategySpec {
+interface CachingStrategySpec {
   maxCacheStaleness?: string;
 }
 

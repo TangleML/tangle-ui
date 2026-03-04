@@ -3,12 +3,6 @@ import { idProp, Model, model, modelAction, prop } from "mobx-keystone";
 import { Annotations } from "../annotations";
 import type { TypeSpecType } from "./types";
 
-export interface OutputInit {
-  name: string;
-  type?: TypeSpecType;
-  description?: string;
-}
-
 @model("spec/Output")
 export class Output extends Model({
   $id: idProp,

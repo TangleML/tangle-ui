@@ -1,6 +1,6 @@
 import { action, makeObservable, observable } from "mobx";
 
-export interface HistoryEntry {
+interface HistoryEntry {
   id: number;
   timestamp: Date;
   description: string;

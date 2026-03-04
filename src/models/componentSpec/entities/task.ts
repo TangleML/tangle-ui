@@ -8,12 +8,6 @@ import type {
   PredicateType,
 } from "./types";
 
-export interface TaskInit {
-  name: string;
-  componentRef: ComponentReference;
-  isEnabled?: PredicateType;
-}
-
 @model("spec/Task")
 export class Task extends Model({
   $id: idProp,

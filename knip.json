@@ -1,7 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "ignore": [
-    ".git/**",
     "src/api/**",
     "src/components/ui/**",
     "openapi-ts.config.ts",
@@ -9,7 +8,6 @@
     "src/components/shared/BetaFeatureWrapper/BetaFeatureWrapper.tsx"
   ],
   "ignoreDependencies": [
-    "@radix-ui/react-accordion",
     "@tanstack/react-query-devtools",
     "@typescript-eslint/eslint-plugin",
     "@typescript-eslint/parser",

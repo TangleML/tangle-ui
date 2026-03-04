@@ -29,7 +29,7 @@ export const STATIC_WINDOW_IDS = new Set([
 /**
  * Persisted state for a single window (subset of WindowConfig).
  */
-export interface PersistedWindowState {
+interface PersistedWindowState {
   position: Position;
   size: Size;
   dockState: DockState;
@@ -126,12 +126,12 @@ function saveWindowLayoutImmediate(): void {
 /**
  * Debounced save function (500ms delay) to avoid excessive writes during drag/resize.
  */
-export const saveWindowLayout = debounce(saveWindowLayoutImmediate, 500);
+const saveWindowLayout = debounce(saveWindowLayoutImmediate, 500);
 
 /**
  * Load persisted window layout from localStorage.
  */
-export function loadWindowLayout(): PersistedWindowLayout | null {
+function loadWindowLayout(): PersistedWindowLayout | null {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) {
@@ -172,17 +172,6 @@ export function getPersistedWindowState(
 }
 
 /**
- * Get persisted window order for static windows.
- */
-export function getPersistedWindowOrder(): string[] {
-  const layout = loadWindowLayout();
-  if (!layout) {
-    return [];
-  }
-  return layout.windowOrder;
-}
-
-/**
  * Initialize persistence by subscribing to windowStore changes.
  * Call this once when EditorV2 mounts.
  * Returns a cleanup function to unsubscribe.
@@ -211,13 +200,3 @@ export function initPersistence(): () => void {
   };
 }
 
-/**
- * Clear persisted window layout (for testing/debugging).
- */
-export function clearPersistedLayout(): void {
-  try {
-    localStorage.removeItem(STORAGE_KEY);
-  } catch {
-    // Ignore
-  }
-}
