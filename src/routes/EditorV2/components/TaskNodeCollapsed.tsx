@@ -10,7 +10,7 @@ import { ZOOM_THRESHOLD } from "./TaskNode";
 const zoomValueSelector = (s: { transform: [number, number, number] }) =>
   s.transform[2];
 
-const MAX_SCALE = 3;
+const MAX_SCALE = 7;
 
 export function TaskNodeCollapsed({
   taskName,
@@ -33,7 +33,7 @@ export function TaskNodeCollapsed({
   return (
     <Card
       className={cn(
-        "min-w-[180px] max-w-[280px] flex flex-col justify-center rounded-xl border-2 p-0 drop-shadow-sm cursor-pointer transition-[border-color,box-shadow]",
+        "flex flex-col justify-center rounded-xl border-2 p-0 drop-shadow-sm cursor-pointer transition-[border-color,box-shadow]",
         selected
           ? "border-blue-500 ring-2 ring-blue-200"
           : isHovered
@@ -42,7 +42,11 @@ export function TaskNodeCollapsed({
               ? "border-purple-300 hover:border-purple-400"
               : "border-gray-200 hover:border-gray-300",
       )}
-      style={{ minHeight: 100 * scale }}
+      style={{
+        minWidth: 180 * scale,
+        maxWidth: 280 * scale,
+        minHeight: 100 * scale,
+      }}
       onClick={onNodeClick}
     >
       {inputs.map((input) => (
