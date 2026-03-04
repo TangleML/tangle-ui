@@ -261,10 +261,7 @@ export const ArgumentRow = observer(function ArgumentRow({
   );
 });
 
-function formatBindingSource(
-  binding: Binding,
-  spec: ComponentSpec,
-): string {
+function formatBindingSource(binding: Binding, spec: ComponentSpec): string {
   const sourceInput = spec.inputs.find((i) => i.$id === binding.sourceEntityId);
   if (sourceInput) {
     return `graphInput: ${sourceInput.name}`;
