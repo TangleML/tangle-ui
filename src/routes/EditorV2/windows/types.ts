@@ -27,13 +27,6 @@ export interface AttachmentInfo {
   offsetX: number;
 }
 
-/** Viewport bounds accounting for navigation */
-export interface ViewportBounds {
-  top: number;
-  left: number;
-  right: number;
-  bottom: number;
-}
 
 /** Snap preview types for visual feedback during drag */
 export type SnapPreviewType =

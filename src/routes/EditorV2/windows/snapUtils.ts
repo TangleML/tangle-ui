@@ -4,7 +4,6 @@ import type {
   Position,
   Size,
   SnapPreviewType,
-  ViewportBounds,
   WindowConfig,
 } from "./types";
 import {
@@ -14,35 +13,23 @@ import {
 } from "./types";
 
 /**
- * Get viewport bounds accounting for top navigation
- */
-export function getViewportBounds(): ViewportBounds {
-  return {
-    top: TOP_NAV_HEIGHT,
-    left: 0,
-    right: window.innerWidth,
-    bottom: window.innerHeight,
-  };
-}
-
-/**
  * Get the visible height of the viewport (excluding top nav)
  */
-export function getViewportHeight(): number {
+function getViewportHeight(): number {
   return window.innerHeight - TOP_NAV_HEIGHT;
 }
 
 /**
  * Check if a window position is near the left edge of the viewport
  */
-export function isNearLeftEdge(x: number): boolean {
+function isNearLeftEdge(x: number): boolean {
   return x <= EDGE_SNAP_THRESHOLD;
 }
 
 /**
  * Check if a window position is near the right edge of the viewport
  */
-export function isNearRightEdge(x: number, windowWidth: number): boolean {
+function isNearRightEdge(x: number, windowWidth: number): boolean {
   const rightEdge = x + windowWidth;
   return rightEdge >= window.innerWidth - EDGE_SNAP_THRESHOLD;
 }
@@ -50,7 +37,7 @@ export function isNearRightEdge(x: number, windowWidth: number): boolean {
 /**
  * Detect if a window should show edge dock preview
  */
-export function detectEdgeSnap(
+function detectEdgeSnap(
   position: Position,
   size: Size,
 ): { side: "left" | "right" } | null {
@@ -71,21 +58,10 @@ export function getWindowBottom(window: WindowConfig): number {
 }
 
 /**
- * Check if window top is within magnetic snap range of another window's bottom
- */
-export function isWithinMagneticRange(
-  windowTopY: number,
-  otherWindowBottom: number,
-): boolean {
-  const distance = Math.abs(windowTopY - otherWindowBottom);
-  return distance <= MAGNETIC_SNAP_THRESHOLD;
-}
-
-/**
  * Find a potential parent window for magnetic attachment.
  * Returns the window whose bottom edge is closest to the dragged window's top.
  */
-export function findMagneticAttachTarget(
+function findMagneticAttachTarget(
   draggedWindowId: string,
   draggedPosition: Position,
   allWindows: WindowConfig[],
@@ -221,22 +197,3 @@ export function getAttachmentChain(
   return chain;
 }
 
-/**
- * Calculate the total height of a window and all its attached children
- */
-export function calculateStackHeight(
-  windowId: string,
-  allWindows: WindowConfig[],
-): number {
-  const window = allWindows.find((w) => w.id === windowId);
-  if (!window) return 0;
-
-  let totalHeight = window.size.height;
-  const chain = getAttachmentChain(windowId, allWindows);
-
-  for (const child of chain) {
-    totalHeight += child.size.height;
-  }
-
-  return totalHeight;
-}

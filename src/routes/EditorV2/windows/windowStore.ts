@@ -459,18 +459,6 @@ export function detachWindow(id: string): void {
   window.attachedTo = undefined;
 }
 
-/** Get all windows attached to a parent (direct children only) */
-export function getDirectlyAttachedWindows(parentId: string): WindowConfig[] {
-  return Object.values(windowStore.windows).filter(
-    (w) => w.attachedTo?.parentId === parentId,
-  );
-}
-
-/** Get the full attachment chain starting from a window */
-export function getWindowAttachmentChain(parentId: string): WindowConfig[] {
-  return getAttachmentChain(parentId, Object.values(windowStore.windows));
-}
-
 /**
  * Find the root window of an attachment chain (the topmost visible parent).
  * Walks up the chain until finding a window with no parent or a hidden parent.
@@ -526,7 +514,7 @@ function updateAttachedWindowPositions(rootId: string): void {
   if (!rootWindow) return;
 
   // Get all windows in the chain
-  const chain = getWindowAttachmentChain(rootId);
+  const chain = getAttachmentChain(rootId, Object.values(windowStore.windows));
 
   // Root X position - all windows align to this (use previous position if root is hidden)
   const rootX =

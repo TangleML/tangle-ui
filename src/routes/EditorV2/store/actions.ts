@@ -97,7 +97,7 @@ export function addOutput(
   return output;
 }
 
-export interface ConnectionInfo {
+interface ConnectionInfo {
   sourceNodeId: string;
   sourceHandleId: string;
   targetNodeId: string;

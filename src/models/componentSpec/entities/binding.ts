@@ -2,11 +2,6 @@ import { idProp, Model, model, modelAction, prop } from "mobx-keystone";
 
 import type { BindingEndpoint } from "./types";
 
-export interface BindingInit {
-  source: BindingEndpoint;
-  target: BindingEndpoint;
-}
-
 @model("spec/Binding")
 export class Binding extends Model({
   $id: idProp,

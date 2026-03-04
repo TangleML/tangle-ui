@@ -19,7 +19,7 @@ import type { DynamicDataArgument } from "@/utils/componentSpec";
 import { editorStore, setFocusedArgument } from "../store/editorStore";
 import { ThunderMenu } from "./ThunderMenu";
 
-export interface ArgumentRowProps {
+interface ArgumentRowProps {
   inputSpec: InputSpecJson;
   currentValue: unknown;
   isSet: boolean;
@@ -261,7 +261,7 @@ export const ArgumentRow = observer(function ArgumentRow({
   );
 });
 
-export function formatBindingSource(
+function formatBindingSource(
   binding: Binding,
   spec: ComponentSpec,
 ): string {
@@ -278,7 +278,7 @@ export function formatBindingSource(
   return `${binding.sourceEntityId}.${binding.sourcePortName}`;
 }
 
-export function getDisplayValue(
+function getDisplayValue(
   value: unknown,
   isSet: boolean,
   inputSpec: InputSpecJson,
@@ -298,7 +298,7 @@ export function getDisplayValue(
   return "";
 }
 
-export function typeSpecToString(typeSpec?: unknown): string {
+function typeSpecToString(typeSpec?: unknown): string {
   if (typeSpec === undefined) return "";
   if (typeof typeSpec === "string") return typeSpec;
   return JSON.stringify(typeSpec);

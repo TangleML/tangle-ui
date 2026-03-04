@@ -35,7 +35,7 @@ import type { DynamicDataArgument } from "@/utils/componentSpec";
 
 import { useSpec } from "../providers/SpecContext";
 
-export interface ThunderMenuProps {
+interface ThunderMenuProps {
   inputName: string;
   inputType?: TypeSpecType;
   canReset: boolean;

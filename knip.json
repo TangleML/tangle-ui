@@ -8,7 +8,6 @@
     "src/components/shared/BetaFeatureWrapper/BetaFeatureWrapper.tsx"
   ],
   "ignoreDependencies": [
-    "@radix-ui/react-accordion",
     "@tanstack/react-query-devtools",
     "@typescript-eslint/eslint-plugin",
     "@typescript-eslint/parser",

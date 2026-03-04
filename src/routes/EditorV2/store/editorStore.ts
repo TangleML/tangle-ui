@@ -134,10 +134,6 @@ export function selectNode(
   editorStore.selectNode(nodeId, nodeType, options);
 }
 
-export function getSpec(): ComponentSpec | null {
-  return editorStore.spec;
-}
-
 export function clearSpec() {
   editorStore.clearSpec();
 }

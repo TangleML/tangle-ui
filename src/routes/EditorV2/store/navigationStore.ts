@@ -8,7 +8,7 @@ import {
 
 import { editorStore } from "./editorStore";
 
-export interface NavigationEntry {
+interface NavigationEntry {
   specId: string;
   displayName: string;
 }
@@ -225,26 +225,10 @@ export function navigateToSubgraph(
   return navigationStore.navigateToSubgraph(currentSpec, taskEntityId);
 }
 
-export function navigateBack(): ComponentSpec | null {
-  return navigationStore.navigateBack();
-}
-
 export function navigateToLevel(index: number): ComponentSpec | null {
   return navigationStore.navigateToLevel(index);
 }
 
 export function navigateToPath(pathNames: string[]): ComponentSpec | null {
   return navigationStore.navigateToPath(pathNames);
-}
-
-export function getNavigationDepth(): number {
-  return navigationStore.navigationDepth;
-}
-
-export function canNavigateBack(): boolean {
-  return navigationStore.canNavigateBack;
-}
-
-export function getActiveSpec(): ComponentSpec | null {
-  return navigationStore.activeSpec;
 }
