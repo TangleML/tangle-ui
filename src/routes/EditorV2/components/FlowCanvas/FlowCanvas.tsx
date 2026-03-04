@@ -119,7 +119,7 @@ export const FlowCanvas = observer(function FlowCanvas({
     setEdges(specEdges);
   }, [specNodes, specEdges, setNodes, setEdges]);
 
-  useFitViewOnFocus(reactFlowInstance);
+  useFitViewOnFocus();
   useClipboardShortcuts(spec, containerRef, reactFlowInstance);
 
   const selectionBehavior = useSelectionBehavior();
