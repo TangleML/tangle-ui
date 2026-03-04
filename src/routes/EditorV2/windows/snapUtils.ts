@@ -1,11 +1,6 @@
 import { TOP_NAV_HEIGHT } from "@/utils/constants";
 
-import type {
-  Position,
-  Size,
-  SnapPreviewType,
-  WindowConfig,
-} from "./types";
+import type { Position, Size, SnapPreviewType, WindowConfig } from "./types";
 import {
   DETACH_THRESHOLD,
   EDGE_SNAP_THRESHOLD,
@@ -196,4 +191,3 @@ export function getAttachmentChain(
   findChildren(parentId);
   return chain;
 }
-

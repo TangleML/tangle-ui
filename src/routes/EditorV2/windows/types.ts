@@ -27,7 +27,6 @@ export interface AttachmentInfo {
   offsetX: number;
 }
 
-
 /** Snap preview types for visual feedback during drag */
 export type SnapPreviewType =
   | { type: "edge"; side: "left" | "right" }
