@@ -3,6 +3,7 @@ import type { XYPosition } from "@xyflow/react";
 import {
   type ComponentReference,
   type ComponentSpec,
+  type ComponentSpecJson,
   createSubgraph as modelCreateSubgraph,
   createTaskFromComponentRef,
   IncrementingIdGenerator,
@@ -218,6 +219,58 @@ export function updateNodePosition(
   position: XYPosition,
 ) {
   spec.updateNodePosition(entityId, position);
+}
+
+export function createConnectedIONode(
+  spec: ComponentSpec,
+  taskEntityId: string,
+  handleId: string,
+  position: XYPosition,
+  ioType: "input" | "output",
+): void {
+  const portName =
+    ioType === "input"
+      ? handleId.replace(/^input_/, "")
+      : handleId.replace(/^output_/, "");
+
+  const task = spec.tasks.find((t) => t.$id === taskEntityId);
+  if (!task) return;
+
+  const taskComponentSpec = task.componentRef.spec as
+    | ComponentSpecJson
+    | undefined;
+
+  undoStore.undoManager?.withGroup("Create connected IO node", () => {
+    if (ioType === "input") {
+      const inputSpec = taskComponentSpec?.inputs?.find(
+        (i) => i.name === portName,
+      );
+      const newInput = addInput(spec, position, portName);
+
+      if (inputSpec?.type) {
+        newInput.setType(inputSpec.type);
+      }
+
+      spec.connectNodes(
+        { entityId: newInput.$id, portName: newInput.$id },
+        { entityId: taskEntityId, portName },
+      );
+    } else {
+      const outputSpec = taskComponentSpec?.outputs?.find(
+        (o) => o.name === portName,
+      );
+      const newOutput = addOutput(spec, position, portName);
+
+      if (outputSpec?.type) {
+        newOutput.setType(outputSpec.type);
+      }
+
+      spec.connectNodes(
+        { entityId: taskEntityId, portName },
+        { entityId: newOutput.$id, portName: newOutput.$id },
+      );
+    }
+  });
 }
 
 export function createSubgraph(
