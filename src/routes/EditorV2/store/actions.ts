@@ -11,6 +11,10 @@ import {
   type Task,
 } from "@/models/componentSpec";
 
+import { clipboardStore } from "./clipboardStore";
+import type { SelectedNode } from "./editorStore";
+import { undoStore } from "./undoStore";
+
 const idGen = new IncrementingIdGenerator();
 
 function generateUniqueTaskName(spec: ComponentSpec, baseName: string): string {
@@ -111,6 +115,23 @@ export function getNodeTypeFromId(
   if (nodeId.startsWith("output_")) return "output";
   if (nodeId.startsWith("task_")) return "task";
   return null;
+}
+
+export function findEntityById(
+  spec: ComponentSpec,
+  entityId: string,
+): Task | Input | Output | undefined {
+  const type = getNodeTypeFromId(entityId);
+  switch (type) {
+    case "task":
+      return spec.tasks.find((t) => t.$id === entityId);
+    case "input":
+      return spec.inputs.find((i) => i.$id === entityId);
+    case "output":
+      return spec.outputs.find((o) => o.$id === entityId);
+    default:
+      return undefined;
+  }
 }
 
 export function connectNodes(
@@ -226,4 +247,43 @@ export function createSubgraph(
     console.error("Failed to create subgraph:", error);
     return null;
   }
+}
+
+export function duplicateSelectedNodes(
+  spec: ComponentSpec,
+  selectedNodes: SelectedNode[],
+): string[] {
+  if (selectedNodes.length === 0) return [];
+  return clipboardStore.duplicate(spec, selectedNodes);
+}
+
+export function copySelectedNodes(
+  spec: ComponentSpec,
+  selectedNodes: SelectedNode[],
+) {
+  clipboardStore.copy(spec, selectedNodes);
+}
+
+export async function pasteNodes(
+  spec: ComponentSpec,
+  position: XYPosition,
+): Promise<string[]> {
+  return clipboardStore.paste(spec, position);
+}
+
+export function deleteSelectedNodes(
+  spec: ComponentSpec,
+  selectedNodes: SelectedNode[],
+) {
+  if (selectedNodes.length === 0) return;
+
+  undoStore.undoManager?.withGroup("Delete selected nodes", () => {
+    for (const node of selectedNodes) {
+      const nodeType = getNodeTypeFromId(node.id);
+      // todo: introduce better handling of node types, remove if statements, make it SOLID
+      if (nodeType === "task") spec.deleteTaskById(node.id);
+      else if (nodeType === "input") spec.deleteInputById(node.id);
+      else if (nodeType === "output") spec.deleteOutputById(node.id);
+    }
+  });
 }

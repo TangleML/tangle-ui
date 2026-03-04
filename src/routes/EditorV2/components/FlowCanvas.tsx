@@ -7,6 +7,7 @@ import {
   type Node,
   type NodeChange,
   type NodeMouseHandler,
+  NodeToolbar,
   type OnConnect,
   type OnSelectionChangeParams,
   ReactFlow,
@@ -14,6 +15,7 @@ import {
   SelectionMode,
   useEdgesState,
   useNodesState,
+  useReactFlow,
 } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
 import type { ComponentType, DragEvent } from "react";
@@ -33,11 +35,16 @@ import {
   addOutput,
   addTask,
   connectNodes,
+  copySelectedNodes,
   deleteEdge,
   deleteInput,
   deleteOutput,
+  deleteSelectedNodes,
   deleteTask,
+  duplicateSelectedNodes,
+  findEntityById,
   getNodeTypeFromId,
+  pasteNodes,
   updateNodePosition,
 } from "../store/actions";
 import {
@@ -50,6 +57,7 @@ import {
 } from "../store/editorStore";
 import { undoStore } from "../store/undoStore";
 import { IONode } from "./IONode";
+import { SelectionToolbar } from "./SelectionToolbar";
 import { TaskNode } from "./TaskNode";
 
 const GRID_SIZE = 10;
@@ -78,6 +86,24 @@ const nodeTypes: Record<string, ComponentType<any>> = {
   task: TaskNode,
   io: IONode,
 };
+
+/**
+ * Returns the current effective selection: multiSelection if multiple nodes
+ * are selected, or a single-element array built from selectedNodeId when
+ * exactly one node is selected.
+ */
+function getEffectiveSelection(spec: ComponentSpec): SelectedNode[] {
+  const { multiSelection, selectedNodeId, selectedNodeType } = editorStore;
+  if (multiSelection.length > 0) return multiSelection;
+
+  if (!selectedNodeId || !selectedNodeType) return [];
+
+  const entity = findEntityById(spec, selectedNodeId);
+  if (!entity) return [];
+
+  const position = entity.annotations.get("editor.position");
+  return [{ id: selectedNodeId, type: selectedNodeType, position }];
+}
 
 interface FlowCanvasProps {
   spec: ComponentSpec | null;
@@ -262,6 +288,45 @@ export const FlowCanvas = observer(function FlowCanvas({
     onTaskDoubleClick?.(taskData.entityId);
   };
 
+  useEffect(() => {
+    // todo: introduce hotkey manager for central handling of hotkeys
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!spec) return;
+
+      const isModKey = e.metaKey || e.ctrlKey;
+      const target = e.target as HTMLElement;
+      const isInputFocused =
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable;
+
+      if (isInputFocused || !isModKey) return;
+
+      const selection = getEffectiveSelection(spec);
+
+      if (e.key === "d") {
+        e.preventDefault();
+        if (selection.length > 0) duplicateSelectedNodes(spec, selection);
+      } else if (e.key === "c") {
+        e.preventDefault();
+        if (selection.length > 0) copySelectedNodes(spec, selection);
+      } else if (e.key === "v") {
+        e.preventDefault();
+        const rect = containerRef.current?.getBoundingClientRect();
+        if (rect && reactFlowInstance) {
+          const center = reactFlowInstance.screenToFlowPosition({
+            x: rect.left + rect.width / 2,
+            y: rect.top + rect.height / 2,
+          });
+          pasteNodes(spec, center);
+        }
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  });
+
   return (
     <BlockStack ref={containerRef} fill className={cn("relative", className)}>
       <ReactFlow
@@ -289,10 +354,71 @@ export const FlowCanvas = observer(function FlowCanvas({
         selectionMode={SelectionMode.Partial}
         panOnDrag={[1, 2]}
       >
+        <FloatingSelectionToolbar spec={spec} />
         <Background gap={GRID_SIZE} className="!bg-slate-50" />
         <Controls position="bottom-right" />
         <MiniMap position="bottom-left" pannable zoomable />
       </ReactFlow>
     </BlockStack>
+  );
+});
+
+/**
+ * Isolated observer component for the selection toolbar.
+ * Reads editorStore.multiSelection in its own MobX tracking scope,
+ * so FlowCanvas does not re-render when multiSelection changes.
+ */
+const FloatingSelectionToolbar = observer(function FloatingSelectionToolbar({
+  spec,
+}: {
+  // todo: make ComponentSpec everywhere required, not nullable
+  spec: ComponentSpec | null;
+}) {
+  const { multiSelection } = editorStore;
+  const reactFlow = useReactFlow();
+
+  if (multiSelection.length <= 1) return null;
+
+  const nodeIds = multiSelection.map((n) => n.id);
+
+  const handleDuplicate = () => {
+    if (!spec) return;
+    duplicateSelectedNodes(spec, multiSelection);
+  };
+
+  const handleCopy = () => {
+    if (!spec) return;
+    copySelectedNodes(spec, multiSelection);
+  };
+
+  const handlePaste = () => {
+    if (!spec) return;
+    const viewport = reactFlow.getViewport();
+    const centerX = (window.innerWidth / 2 - viewport.x) / viewport.zoom;
+    const centerY = (window.innerHeight / 2 - viewport.y) / viewport.zoom;
+    pasteNodes(spec, { x: centerX, y: centerY });
+  };
+
+  const handleDelete = () => {
+    if (!spec) return;
+    deleteSelectedNodes(spec, multiSelection);
+    clearMultiSelection();
+  };
+
+  return (
+    <NodeToolbar
+      nodeId={nodeIds}
+      isVisible
+      offset={0}
+      align="end"
+      className="z-50"
+    >
+      <SelectionToolbar
+        onDuplicate={handleDuplicate}
+        onCopy={handleCopy}
+        onPaste={handlePaste}
+        onDelete={handleDelete}
+      />
+    </NodeToolbar>
   );
 });
