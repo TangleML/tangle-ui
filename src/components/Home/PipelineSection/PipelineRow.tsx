@@ -49,6 +49,7 @@ interface PipelineRowProps {
   matchedFields?: MatchedField[];
   componentQuery?: string;
   matchedComponentNames?: string[];
+  onPipelineClick?: (name: string) => void;
 }
 
 const PipelineRow = withSuspenseWrapper(
@@ -63,6 +64,7 @@ const PipelineRow = withSuspenseWrapper(
     matchedFields,
     componentQuery,
     matchedComponentNames,
+    onPipelineClick,
   }: PipelineRowProps) => {
     const navigate = useNavigate();
 
@@ -71,8 +73,12 @@ const PipelineRow = withSuspenseWrapper(
     const tags = getPipelineTagsFromSpec(componentSpec);
 
     const handleRowClick = (e: MouseEvent) => {
-      // Don't navigate if clicking on the popover trigger
       if ((e.target as HTMLElement).closest("[data-popover-trigger]")) {
+        return;
+      }
+
+      if (onPipelineClick && name) {
+        onPipelineClick(name);
         return;
       }
 

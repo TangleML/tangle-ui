@@ -13,6 +13,7 @@ import {
 } from "@/models/componentSpec";
 import { ComponentLibraryProvider } from "@/providers/ComponentLibraryProvider";
 import { ForcedSearchProvider } from "@/providers/ComponentLibraryProvider/ForcedSearchProvider";
+import { loadPipelineByName } from "@/services/pipelineService";
 
 import { DebugPanel } from "./components/DebugPanel";
 import { FlowCanvas } from "./components/FlowCanvas/FlowCanvas";
@@ -39,28 +40,40 @@ async function getSpecByName(name: "test-spec") {
   return availableTemplates[`./assets/${name}.yaml`]();
 }
 
-function useLoadSpec() {
-  const { data: testSpec } = useSuspenseQuery({
-    queryKey: ["test-spec-entity-v2-keystone"],
+function deserializeSpec(data: unknown) {
+  const idGen = new IncrementingIdGenerator();
+  const deserializer = new YamlDeserializer(idGen);
+  const spec = deserializer.deserialize(data);
+  registerRootStore(spec);
+  return spec;
+}
+
+function useLoadSpec(pipelineName: string | null) {
+  const { data: spec } = useSuspenseQuery({
+    queryKey: ["editor-v2-spec", pipelineName],
     queryFn: async () => {
+      if (pipelineName) {
+        const result = await loadPipelineByName(pipelineName);
+        if (!result.experiment?.componentRef?.spec) {
+          throw new Error(`Pipeline "${pipelineName}" not found`);
+        }
+        return deserializeSpec(result.experiment.componentRef.spec);
+      }
+
       const testSpecText = await getSpecByName("test-spec");
-      const idGen = new IncrementingIdGenerator();
-      const deserializer = new YamlDeserializer(idGen);
-      const yamlData = yaml.load(testSpecText);
-      const spec = deserializer.deserialize(yamlData);
-      registerRootStore(spec);
-      return spec;
+      return deserializeSpec(yaml.load(testSpecText));
     },
     staleTime: Infinity,
     retry: false,
   });
 
-  return testSpec;
+  return spec;
 }
 
 const PipelineEditor = withSuspenseWrapper(
   observer(() => {
-    const rootSpec = useLoadSpec();
+    const pipelineName = navigationStore.requestedPipelineName;
+    const rootSpec = useLoadSpec(pipelineName);
 
     useWindowPersistence();
     useSpecLifecycle(rootSpec);
