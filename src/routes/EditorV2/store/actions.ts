@@ -284,16 +284,24 @@ export function createSubgraph(
   const uniqueName = generateUniqueTaskName(spec, subgraphName);
 
   try {
-    const result = modelCreateSubgraph({
-      spec,
-      selectedTaskIds: taskIds,
-      subgraphName: uniqueName,
-      idGen,
-    });
+    const result = undoStore.undoManager?.withGroup(
+      `Create subgraph "${uniqueName}"`,
+      () => {
+        const result = modelCreateSubgraph({
+          spec,
+          selectedTaskIds: taskIds,
+          subgraphName: uniqueName,
+          idGen,
+        });
+
+        if (!result) return null;
+
+        result.replacementTask.annotations.set("editor.position", position);
+        return result;
+      },
+    );
 
     if (!result) return null;
-
-    result.replacementTask.annotations.set("editor.position", position);
 
     return result.replacementTask;
   } catch (error) {
