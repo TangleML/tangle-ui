@@ -1,8 +1,11 @@
 import {
   Background,
   type Connection,
+  type ConnectionLineComponentProps,
   Controls,
   type EdgeChange,
+  type FinalConnectionState,
+  getBezierPath,
   MiniMap,
   type Node,
   type NodeChange,
@@ -13,7 +16,9 @@ import {
   ReactFlow,
   type ReactFlowInstance,
   SelectionMode,
+  useConnection,
   useEdgesState,
+  useNodes,
   useNodesState,
   useReactFlow,
 } from "@xyflow/react";
@@ -28,6 +33,7 @@ import { hydrateComponentReference } from "@/services/componentService";
 import type { TaskSpec } from "@/utils/componentSpec";
 import { debounce } from "@/utils/debounce";
 
+import { useGhostNode } from "../hooks/useGhostNode";
 import type { TaskNodeData } from "../hooks/useSpecToNodesEdges";
 import { useSpecToNodesEdges } from "../hooks/useSpecToNodesEdges";
 import {
@@ -36,6 +42,7 @@ import {
   addTask,
   connectNodes,
   copySelectedNodes,
+  createConnectedIONode,
   deleteEdge,
   deleteInput,
   deleteOutput,
@@ -56,6 +63,13 @@ import {
   setPendingFocusNode,
 } from "../store/editorStore";
 import { undoStore } from "../store/undoStore";
+import {
+  GHOST_ESTIMATED_WIDTH,
+  GHOST_NODE_ID,
+  GHOST_OFFSET_X,
+  GHOST_OFFSET_Y,
+  GhostNode,
+} from "./GhostNode";
 import { IONode } from "./IONode";
 import { SelectionToolbar } from "./SelectionToolbar";
 import { TaskNode } from "./TaskNode";
@@ -85,6 +99,7 @@ const debouncedSetMultiSelection = debounce(
 const nodeTypes: Record<string, ComponentType<any>> = {
   task: TaskNode,
   io: IONode,
+  ghost: GhostNode,
 };
 
 /**
@@ -105,6 +120,39 @@ function getEffectiveSelection(spec: ComponentSpec): SelectedNode[] {
   return [{ id: selectedNodeId, type: selectedNodeType, position }];
 }
 
+function ConnectionLine({
+  fromX,
+  fromY,
+  fromPosition,
+  toX,
+  toY,
+  toPosition,
+}: ConnectionLineComponentProps) {
+  const hasGhost = useNodes().some((n) => n.type === "ghost");
+  if (hasGhost) return null;
+
+  const [path] = getBezierPath({
+    sourceX: fromX,
+    sourceY: fromY,
+    sourcePosition: fromPosition,
+    targetX: toX,
+    targetY: toY,
+    targetPosition: toPosition,
+  });
+
+  return (
+    <g>
+      <path
+        d={path}
+        fill="none"
+        stroke="#b1b1b7"
+        strokeWidth={1.5}
+        className="animated"
+      />
+    </g>
+  );
+}
+
 interface FlowCanvasProps {
   spec: ComponentSpec | null;
   onTaskDoubleClick?: (taskEntityId: string) => void;
@@ -119,11 +167,26 @@ export const FlowCanvas = observer(function FlowCanvas({
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [metaKeyPressed, setMetaKeyPressed] = useState(false);
+
+  const isConnecting = useConnection((connection) => connection.inProgress);
+
+  const metaKeyPressedRef = useRef(false);
+  metaKeyPressedRef.current = metaKeyPressed;
+
+  const { ghostNode, ghostEdge } = useGhostNode({
+    active: metaKeyPressed,
+    isConnecting,
+    spec,
+  });
 
   const { nodes: specNodes, edges: specEdges } = useSpecToNodesEdges(spec);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(specNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(specEdges);
+
+  const displayNodes = ghostNode ? [...nodes, ghostNode] : nodes;
+  const displayEdges = ghostEdge ? [...edges, ghostEdge] : edges;
 
   useEffect(() => {
     setNodes(specNodes);
@@ -289,6 +352,29 @@ export const FlowCanvas = observer(function FlowCanvas({
   };
 
   useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Meta" || e.key === "Control") {
+        setMetaKeyPressed(true);
+      }
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "Meta" || e.key === "Control") {
+        setMetaKeyPressed(false);
+      }
+    };
+    const onBlur = () => setMetaKeyPressed(false);
+
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", onBlur);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", onBlur);
+    };
+  }, []);
+
+  useEffect(() => {
     // todo: introduce hotkey manager for central handling of hotkeys
     const onKeyDown = (e: KeyboardEvent) => {
       if (!spec) return;
@@ -327,14 +413,58 @@ export const FlowCanvas = observer(function FlowCanvas({
     return () => document.removeEventListener("keydown", onKeyDown);
   });
 
+  const handleConnectEnd = (
+    event: MouseEvent | TouchEvent,
+    connectionState: FinalConnectionState,
+  ) => {
+    if (!spec || !reactFlowInstance) return;
+    if (!metaKeyPressedRef.current) return;
+
+    const isGhostTarget = connectionState.toHandle?.nodeId === GHOST_NODE_ID;
+    if (connectionState.isValid && !isGhostTarget) return;
+
+    const fromHandle = connectionState.fromHandle;
+    const fromNode = connectionState.fromNode;
+
+    if (!fromHandle?.id || !fromNode || fromNode.type !== "task") return;
+    if (fromHandle.type !== "source" && fromHandle.type !== "target") return;
+
+    if (!(event instanceof MouseEvent)) return;
+
+    const cursorFlowPos = reactFlowInstance.screenToFlowPosition({
+      x: event.clientX,
+      y: event.clientY,
+    });
+
+    const ioType: "input" | "output" =
+      fromHandle.type === "target" ? "input" : "output";
+
+    const position = {
+      x:
+        ioType === "input"
+          ? cursorFlowPos.x + GHOST_OFFSET_X - GHOST_ESTIMATED_WIDTH
+          : cursorFlowPos.x + GHOST_OFFSET_X,
+      y: cursorFlowPos.y + GHOST_OFFSET_Y,
+    };
+
+    createConnectedIONode(
+      spec,
+      fromHandle.nodeId,
+      fromHandle.id,
+      position,
+      ioType,
+    );
+  };
+
   return (
     <BlockStack ref={containerRef} fill className={cn("relative", className)}>
       <ReactFlow
-        nodes={nodes}
-        edges={edges}
+        nodes={displayNodes}
+        edges={displayEdges}
         onNodesChange={handleNodesChange}
         onEdgesChange={handleEdgesChange}
         onConnect={handleConnect}
+        onConnectEnd={handleConnectEnd}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
         onPaneClick={handlePaneClick}
@@ -342,6 +472,7 @@ export const FlowCanvas = observer(function FlowCanvas({
         onSelectionChange={handleSelectionChange}
         onNodeDoubleClick={handleNodeDoubleClick}
         nodeTypes={nodeTypes}
+        connectionLineComponent={ConnectionLine}
         snapToGrid
         snapGrid={[GRID_SIZE, GRID_SIZE]}
         minZoom={0.1}
