@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 import type { ComponentReference, ComponentSpec } from "@/models/componentSpec";
 import { hydrateComponentReference } from "@/services/componentService";
 import type { TaskSpec } from "@/utils/componentSpec";
+import { debounce } from "@/utils/debounce";
 
 import type { TaskNodeData } from "../hooks/useSpecToNodesEdges";
 import { useSpecToNodesEdges } from "../hooks/useSpecToNodesEdges";
@@ -52,6 +53,26 @@ import { IONode } from "./IONode";
 import { TaskNode } from "./TaskNode";
 
 const GRID_SIZE = 10;
+const SELECTION_DEBOUNCE_MS = 150;
+
+function buildMultiSelection(selected: Node[]): SelectedNode[] {
+  return selected
+    .filter((node) => node.type === "task" || node.type === "io")
+    .map((node) => {
+      let nodeType: SelectedNode["type"];
+      if (node.type === "task") {
+        nodeType = "task";
+      } else {
+        nodeType = node.data?.ioType === "input" ? "input" : "output";
+      }
+      return { id: node.id, type: nodeType, position: node.position };
+    });
+}
+
+const debouncedSetMultiSelection = debounce(
+  (nodes: SelectedNode[]) => setMultiSelection(nodes),
+  SELECTION_DEBOUNCE_MS,
+);
 
 const nodeTypes: Record<string, ComponentType<any>> = {
   task: TaskNode,
@@ -100,27 +121,17 @@ export const FlowCanvas = observer(function FlowCanvas({
     return () => clearTimeout(timer);
   }, [pendingFocusNodeId, reactFlowInstance]);
 
+  useEffect(() => {
+    return () => debouncedSetMultiSelection.cancel();
+  }, []);
+
   const handleSelectionChange = ({
     nodes: selected,
   }: OnSelectionChangeParams) => {
     if (selected.length > 1) {
-      const multiSelection: SelectedNode[] = selected
-        .filter((node) => node.type === "task" || node.type === "io")
-        .map((node) => {
-          let nodeType: SelectedNode["type"];
-          if (node.type === "task") {
-            nodeType = "task";
-          } else {
-            nodeType = node.data?.ioType === "input" ? "input" : "output";
-          }
-          return {
-            id: node.id,
-            type: nodeType,
-            position: node.position,
-          };
-        });
-      setMultiSelection(multiSelection);
+      debouncedSetMultiSelection(buildMultiSelection(selected));
     } else {
+      debouncedSetMultiSelection.cancel();
       clearMultiSelection();
     }
   };
