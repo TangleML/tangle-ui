@@ -1,18 +1,9 @@
-import { Handle, type Node, type NodeProps, Position } from "@xyflow/react";
+import { type Node, type NodeProps, useStore } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
 
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Icon } from "@/components/ui/icon";
-import { BlockStack, InlineStack } from "@/components/ui/layout";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Card } from "@/components/ui/card";
 import { Text } from "@/components/ui/typography";
-import { cn } from "@/lib/utils";
-import type { ComponentSpecJson } from "@/models/componentSpec";
+import type { ComponentSpecJson, TypeSpecType } from "@/models/componentSpec";
 
 import type { TaskNodeData } from "../hooks/useSpecToNodesEdges";
 import { useSpec } from "../providers/SpecContext";
@@ -21,9 +12,31 @@ import {
   selectNode,
   setFocusedArgument,
 } from "../store/editorStore";
+import { TaskNodeCollapsed } from "./TaskNodeCollapsed";
+import { TaskNodeFull } from "./TaskNodeFull";
 
 type TaskNodeType = Node<TaskNodeData, "task">;
 type TaskNodeProps = NodeProps<TaskNodeType>;
+
+export interface TaskNodeViewProps {
+  id: string;
+  entityId: string;
+  taskName: string;
+  selected: boolean;
+  isHovered: boolean;
+  isSubgraph: boolean;
+  description: string;
+  inputs: { name: string; type?: TypeSpecType; optional?: boolean }[];
+  outputs: { name: string; type?: TypeSpecType }[];
+  annotations: { key: string }[];
+  onNodeClick: (event: React.MouseEvent) => void;
+  onInputClick: (inputName: string, event: React.MouseEvent) => void;
+}
+
+export const ZOOM_THRESHOLD = 0.5;
+
+const zoomSelector = (s: { transform: [number, number, number] }) =>
+  s.transform[2] >= ZOOM_THRESHOLD;
 
 /**
  * Check if a task is a subgraph (its component has a graph implementation).
@@ -42,6 +55,7 @@ export const TaskNode = observer(function TaskNode({
   selected,
 }: TaskNodeProps) {
   const { entityId } = data;
+  const showContent = useStore(zoomSelector);
 
   const spec = useSpec();
   const task = spec?.tasks.find((t) => t.$id === entityId);
@@ -72,149 +86,29 @@ export const TaskNode = observer(function TaskNode({
   const taskName = task.name;
   const isHovered = editorStore.hoveredEntityId === entityId;
 
-  return (
-    <Card
-      className={cn(
-        "min-w-[180px] max-w-[280px] rounded-xl border-2 p-0 drop-shadow-sm cursor-pointer transition-all",
-        selected
-          ? "border-blue-500 ring-2 ring-blue-200"
-          : isHovered
-            ? "ring-2 ring-amber-300 border-amber-400"
-            : isSubgraph
-              ? "border-purple-300 hover:border-purple-400"
-              : "border-gray-200 hover:border-gray-300",
-      )}
-      onClick={handleClick}
-    >
-      <CardHeader className="border-b border-slate-200 px-3 py-2">
-        <InlineStack gap="2" wrap="nowrap" blockAlign="center">
-          <Icon
-            name={isSubgraph ? "Layers" : "Circle"}
-            size="sm"
-            className={cn(
-              "shrink-0",
-              isSubgraph ? "text-purple-600" : "text-blue-600",
-            )}
-          />
-          <CardTitle className="truncate text-sm font-medium text-slate-900 flex-1">
-            {taskName}
-          </CardTitle>
-          {isSubgraph && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Badge
-                  variant="secondary"
-                  className="shrink-0 bg-purple-100 text-purple-700 text-[10px] px-1.5 py-0"
-                >
-                  <Icon name="FolderOpen" size="xs" className="mr-0.5" />
-                  Subgraph
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent side="top">
-                <Text size="xs">
-                  Double-click to navigate into this subgraph
-                </Text>
-              </TooltipContent>
-            </Tooltip>
-          )}
-        </InlineStack>
-        {description && (
-          <Text
-            size="xs"
-            tone="subdued"
-            className="truncate mt-1"
-            title={description}
-          >
-            {description}
-          </Text>
-        )}
-      </CardHeader>
+  const handleInputClick = (inputName: string) => {
+    selectNode(id, "task", { entityId });
+    setFocusedArgument(inputName);
+  };
 
-      <CardContent className="p-0">
-        <InlineStack className="divide-x divide-slate-100">
-          {/* Inputs */}
-          <BlockStack className="flex-1 py-2 px-1 min-w-0">
-            {inputs.length > 0 ? (
-              inputs.map((input) => (
-                <div
-                  key={input.name}
-                  className="relative flex items-center py-0.5 px-2 hover:bg-blue-50 rounded cursor-pointer"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    selectNode(id, "task", { entityId });
-                    setFocusedArgument(input.name);
-                  }}
-                >
-                  <Handle
-                    type="target"
-                    position={Position.Left}
-                    id={`input_${input.name}`}
-                    className="!w-2.5 !h-2.5 !bg-blue-400 !border-2 !border-white !-left-1"
-                  />
-                  <Text
-                    size="xs"
-                    tone="subdued"
-                    className={cn(
-                      "truncate",
-                      input.optional && "italic opacity-70",
-                    )}
-                    title={`${input.name}${input.type ? `: ${input.type}` : ""}`}
-                  >
-                    {input.name}
-                  </Text>
-                </div>
-              ))
-            ) : (
-              <Text size="xs" tone="subdued" className="px-2 opacity-50">
-                No inputs
-              </Text>
-            )}
-          </BlockStack>
+  const viewProps: TaskNodeViewProps = {
+    id,
+    entityId,
+    taskName,
+    selected: !!selected,
+    isHovered,
+    isSubgraph,
+    description,
+    inputs,
+    outputs,
+    annotations: task.annotations.map((a) => ({ key: a.key })),
+    onNodeClick: handleClick,
+    onInputClick: handleInputClick,
+  };
 
-          {/* Outputs */}
-          <BlockStack className="flex-1 py-2 px-1 min-w-0">
-            {outputs.length > 0 ? (
-              outputs.map((output) => (
-                <div
-                  key={output.name}
-                  className="relative flex items-center justify-end py-0.5 px-2"
-                >
-                  <Text
-                    size="xs"
-                    tone="subdued"
-                    className="truncate"
-                    title={`${output.name}${output.type ? `: ${output.type}` : ""}`}
-                  >
-                    {output.name}
-                  </Text>
-                  <Handle
-                    type="source"
-                    position={Position.Right}
-                    id={`output_${output.name}`}
-                    className="!w-2.5 !h-2.5 !bg-green-400 !border-2 !border-white !-right-1"
-                  />
-                </div>
-              ))
-            ) : (
-              <Text
-                size="xs"
-                tone="subdued"
-                className="px-2 opacity-50 text-right"
-              >
-                No outputs
-              </Text>
-            )}
-          </BlockStack>
-        </InlineStack>
-
-        {task.annotations.length > 0 && (
-          <BlockStack className="border-t rounded-b-md border-slate-100 px-3 py-1.5 bg-slate-50 overflow-hidden">
-            <Text size="xs" tone="subdued" className="font-mono truncate">
-              annotations: [{task.annotations.map((a) => a.key).join(", ")}]
-            </Text>
-          </BlockStack>
-        )}
-      </CardContent>
-    </Card>
+  return showContent ? (
+    <TaskNodeFull {...viewProps} />
+  ) : (
+    <TaskNodeCollapsed {...viewProps} />
   );
 });
