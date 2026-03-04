@@ -1,6 +1,12 @@
 import { useMutation } from "@tanstack/react-query";
 import yaml from "js-yaml";
-import { type ChangeEvent, type KeyboardEvent, useRef, useState } from "react";
+import {
+  type ChangeEvent,
+  type KeyboardEvent,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 import type { TaskSpecOutput } from "@/api/types.gen";
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
@@ -23,6 +29,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,10 +64,14 @@ import {
   type InputSpec,
   isSecretArgument,
 } from "@/utils/componentSpec";
-import { generateCsvTemplate } from "@/utils/csvBulkArgumentExport";
 import { mapCsvToArguments } from "@/utils/csvBulkArgumentImport";
 import { mapJsonToArguments } from "@/utils/jsonBulkArgumentImport";
 import { extractTaskArguments } from "@/utils/nodes/taskArguments";
+import {
+  generateCsvTemplate,
+  generateJsonTemplate,
+  generateYamlTemplate,
+} from "@/utils/templateExport";
 import { validateArguments } from "@/utils/validations";
 
 type TaskArguments = TaskSpecOutput["arguments"];
@@ -69,6 +85,8 @@ interface SubmitTaskArgumentsDialogProps {
     bulkInputNames: Set<string>,
   ) => void;
   componentSpec: ComponentSpec;
+  initialImportFile?: { text: string; extension: string } | null;
+  onImportComplete?: () => void;
 }
 
 export const SubmitTaskArgumentsDialog = ({
@@ -76,6 +94,8 @@ export const SubmitTaskArgumentsDialog = ({
   onCancel,
   onConfirm,
   componentSpec,
+  initialImportFile,
+  onImportComplete,
 }: SubmitTaskArgumentsDialogProps) => {
   const notify = useToastNotification();
   const initialArgs = getArgumentsFromInputs(componentSpec);
@@ -102,6 +122,13 @@ export const SubmitTaskArgumentsDialog = ({
     validateArguments(inputs, taskArguments) &&
     !hasBulkMismatch &&
     bulkRunCount > 0;
+
+  useEffect(() => {
+    if (initialImportFile && open) {
+      handleFileImport(initialImportFile.text, initialImportFile.extension);
+      onImportComplete?.();
+    }
+  }, [initialImportFile, open]);
 
   const handleCopyFromRun = (args: Record<string, string>) => {
     const diff = Object.entries(args).filter(
@@ -234,7 +261,7 @@ export const SubmitTaskArgumentsDialog = ({
                 Customize the pipeline input values before submitting.
               </Paragraph>
               <InlineStack align="end" gap="1" className="w-full">
-                <DownloadCsvTemplateButton
+                <DownloadTemplateButton
                   inputs={inputs}
                   taskArguments={taskArguments}
                   bulkInputNames={bulkInputNames}
@@ -270,7 +297,7 @@ export const SubmitTaskArgumentsDialog = ({
               ). Each value creates a separate run. Non-bulk inputs reuse their
               single value across all runs. If multiple inputs are set to bulk,
               they must have the same number of values. You can also import a
-              CSV or JSON file to populate values automatically.
+              CSV, JSON, or YAML file to populate values automatically.
             </Paragraph>
           </BlockStack>
         )}
@@ -613,7 +640,34 @@ const ArgumentField = ({
   );
 };
 
-const DownloadCsvTemplateButton = ({
+type TemplateFormat = "csv" | "json" | "yaml";
+
+const templateGenerators: Record<
+  TemplateFormat,
+  {
+    generate: typeof generateCsvTemplate;
+    mimeType: string;
+    extension: string;
+  }
+> = {
+  csv: {
+    generate: generateCsvTemplate,
+    mimeType: "text/csv",
+    extension: "csv",
+  },
+  json: {
+    generate: generateJsonTemplate,
+    mimeType: "application/json",
+    extension: "json",
+  },
+  yaml: {
+    generate: generateYamlTemplate,
+    mimeType: "text/yaml",
+    extension: "yaml",
+  },
+};
+
+const DownloadTemplateButton = ({
   inputs,
   taskArguments,
   bulkInputNames,
@@ -624,24 +678,41 @@ const DownloadCsvTemplateButton = ({
   bulkInputNames: Set<string>;
   pipelineName?: string;
 }) => {
-  const handleDownload = () => {
-    const csv = generateCsvTemplate(inputs, taskArguments, bulkInputNames);
-    if (!csv) return;
+  const downloadFormat = (fmt: TemplateFormat) => {
+    const { generate, mimeType, extension } = templateGenerators[fmt];
+    const content = generate(inputs, taskArguments, bulkInputNames);
+    if (!content) return;
 
-    const blob = new Blob([csv], { type: "text/csv" });
+    const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${pipelineName ?? "pipeline"}-arguments.csv`;
+    a.download = `${pipelineName ?? "pipeline"}-arguments.${extension}`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
   return (
-    <Button variant="ghost" size="sm" onClick={handleDownload}>
-      <Icon name="Download" />
-      Template
-    </Button>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="sm">
+          <Icon name="Download" />
+          Template
+          <Icon name="ChevronDown" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onSelect={() => downloadFormat("csv")}>
+          CSV
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => downloadFormat("json")}>
+          JSON
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => downloadFormat("yaml")}>
+          YAML
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };
 

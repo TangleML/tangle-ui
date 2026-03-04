@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { AlertCircle, CheckCircle, Loader2, SendHorizonal } from "lucide-react";
-import { type MouseEvent, useRef, useState } from "react";
+import { type DragEvent, type MouseEvent, useRef, useState } from "react";
 
 import { useAwaitAuthorization } from "@/components/shared/Authentication/useAwaitAuthorization";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
@@ -103,6 +103,12 @@ const OasisSubmitter = ({
 
   const [submitSuccess, setSubmitSuccess] = useState<boolean | null>(null);
   const [isArgumentsDialogOpen, setIsArgumentsDialogOpen] = useState(false);
+  const [pendingImportFile, setPendingImportFile] = useState<{
+    text: string;
+    extension: string;
+  } | null>(null);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const dragCounter = useRef(0);
   const { cooldownTime, setCooldownTime } = useCooldownTimer(0);
   const notify = useToastNotification();
   const navigate = useNavigate();
@@ -307,6 +313,47 @@ const OasisSubmitter = ({
   const isArgumentsButtonVisible =
     hasConfigurableInputs && !isButtonDisabled && isComponentTreeValid;
 
+  const handleDragEnter = (e: DragEvent) => {
+    e.preventDefault();
+    dragCounter.current++;
+    setIsDraggingOver(true);
+  };
+
+  const handleDragLeave = (e: DragEvent) => {
+    e.preventDefault();
+    dragCounter.current--;
+    if (dragCounter.current === 0) {
+      setIsDraggingOver(false);
+    }
+  };
+
+  const handleDragOver = (e: DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: DragEvent) => {
+    e.preventDefault();
+    dragCounter.current = 0;
+    setIsDraggingOver(false);
+
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+
+    const extension = file.name.includes(".")
+      ? `.${file.name.split(".").pop()?.toLowerCase()}`
+      : "";
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result;
+      if (typeof text === "string") {
+        setPendingImportFile({ text, extension });
+        setIsArgumentsDialogOpen(true);
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const getButtonIcon = () => {
     if (isSubmitting || isBulkSubmitting) {
       return <Loader2 className="animate-spin" />;
@@ -325,49 +372,60 @@ const OasisSubmitter = ({
 
   return (
     <>
-      <InlineStack align="space-between" className="pr-2.5">
-        <Button
-          onClick={() => handleSubmit()}
-          className="flex-1 justify-start"
-          variant="ghost"
-          disabled={isButtonDisabled || !available}
-        >
-          {getButtonIcon()}
-          <span className="font-normal text-xs">{getButtonText()}</span>
-          {!isComponentTreeValid && !onlyFixableIssues && (
-            <div
-              className={cn(
-                "text-xs font-light -ml-1",
-                configured ? "text-destructive" : "text-warning",
-              )}
-            >
-              (has validation issues)
-            </div>
-          )}
-          {!available && (
-            <div
-              className={cn(
-                "text-xs font-light -ml-1",
-                configured ? "text-destructive" : "text-warning",
-              )}
-            >
-              {`(backend ${configured ? "unavailable" : "unconfigured"})`}
-            </div>
-          )}
-        </Button>
-        {isArgumentsButtonVisible && (
-          <TooltipButton
-            tooltip="Submit run with arguments"
-            variant="ghost"
-            size="icon"
-            data-testid="run-with-arguments-button"
-            onClick={() => setIsArgumentsDialogOpen(true)}
-            disabled={!available}
-          >
-            <Icon name="Split" className="rotate-90" />
-          </TooltipButton>
+      <div
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+        className={cn(
+          "rounded-md transition-all",
+          isDraggingOver && "ring-2 ring-primary bg-primary/5",
         )}
-      </InlineStack>
+      >
+        <InlineStack align="space-between" className="pr-2.5">
+          <Button
+            onClick={() => handleSubmit()}
+            className="flex-1 justify-start"
+            variant="ghost"
+            disabled={isButtonDisabled || !available}
+          >
+            {getButtonIcon()}
+            <span className="font-normal text-xs">{getButtonText()}</span>
+            {!isComponentTreeValid && !onlyFixableIssues && (
+              <div
+                className={cn(
+                  "text-xs font-light -ml-1",
+                  configured ? "text-destructive" : "text-warning",
+                )}
+              >
+                (has validation issues)
+              </div>
+            )}
+            {!available && (
+              <div
+                className={cn(
+                  "text-xs font-light -ml-1",
+                  configured ? "text-destructive" : "text-warning",
+                )}
+              >
+                {`(backend ${configured ? "unavailable" : "unconfigured"})`}
+              </div>
+            )}
+          </Button>
+          {isArgumentsButtonVisible && (
+            <TooltipButton
+              tooltip="Submit run with arguments"
+              variant="ghost"
+              size="icon"
+              data-testid="run-with-arguments-button"
+              onClick={() => setIsArgumentsDialogOpen(true)}
+              disabled={!available}
+            >
+              <Icon name="Split" className="rotate-90" />
+            </TooltipButton>
+          )}
+        </InlineStack>
+      </div>
 
       {componentSpec && (
         <SubmitTaskArgumentsDialog
@@ -375,6 +433,8 @@ const OasisSubmitter = ({
           onCancel={() => setIsArgumentsDialogOpen(false)}
           onConfirm={handleSubmitWithArguments}
           componentSpec={componentSpec}
+          initialImportFile={pendingImportFile}
+          onImportComplete={() => setPendingImportFile(null)}
         />
       )}
     </>
