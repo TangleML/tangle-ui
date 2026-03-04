@@ -1,25 +1,46 @@
-import type { ReactFlowInstance } from "@xyflow/react";
-import { useEffect } from "react";
+import { useReactFlow } from "@xyflow/react";
+import { reaction } from "mobx";
+import { useEffect, useRef } from "react";
 
 import { editorStore, setPendingFocusNode } from "../../../store/editorStore";
 
-export function useFitViewOnFocus(
-  reactFlowInstance: ReactFlowInstance | null,
-): void {
-  const pendingFocusNodeId = editorStore.pendingFocusNodeId;
+/**
+ * Uses a MobX reaction instead of render-time observable read + useEffect
+ * so that fitView fires reliably even when navigateToPath triggers
+ * intermediate clearSelection reactions before setPendingFocusNode is called.
+ */
+export function useFitViewOnFocus(): void {
+  const { fitView } = useReactFlow();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!pendingFocusNodeId || !reactFlowInstance) return;
+    const dispose = reaction(
+      () => editorStore.pendingFocusNodeId,
+      (nodeId) => {
+        if (timerRef.current) {
+          clearTimeout(timerRef.current);
+          timerRef.current = null;
+        }
 
-    const timer = setTimeout(async () => {
-      await reactFlowInstance.fitView({
-        nodes: [{ id: pendingFocusNodeId }],
-        maxZoom: 1,
-        duration: 300,
-      });
-      setPendingFocusNode(null);
-    }, 50);
+        if (!nodeId) return;
 
-    return () => clearTimeout(timer);
-  }, [pendingFocusNodeId, reactFlowInstance]);
+        timerRef.current = setTimeout(async () => {
+          timerRef.current = null;
+          await fitView({
+            nodes: [{ id: nodeId }],
+            maxZoom: 1,
+            duration: 300,
+          });
+          setPendingFocusNode(null);
+        }, 50);
+      },
+    );
+
+    return () => {
+      dispose();
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, [fitView]);
 }
