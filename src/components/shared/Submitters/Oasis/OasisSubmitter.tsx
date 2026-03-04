@@ -15,6 +15,7 @@ import { useBackend } from "@/providers/BackendProvider";
 import { APP_ROUTES } from "@/routes/router";
 import { updateRunNotes } from "@/services/pipelineRunService";
 import type { PipelineRun } from "@/types/pipelineRun";
+import { expandBulkArguments } from "@/utils/bulkSubmission";
 import {
   type ArgumentType,
   type ComponentSpec,
@@ -107,6 +108,11 @@ const OasisSubmitter = ({
   const navigate = useNavigate();
 
   const runNotes = useRef<string>("");
+  const [bulkProgress, setBulkProgress] = useState<{
+    total: number;
+    completed: number;
+    failed: number;
+  } | null>(null);
 
   const { mutate: saveNotes } = useMutation({
     mutationFn: (runId: string) =>
@@ -198,18 +204,85 @@ const OasisSubmitter = ({
     });
   };
 
-  const handleSubmitWithArguments = (
+  const handleBulkSubmit = async (argSets: Record<string, ArgumentType>[]) => {
+    if (!componentSpec) {
+      handleError("No pipeline to submit");
+      return;
+    }
+
+    const total = argSets.length;
+    setBulkProgress({ total, completed: 0, failed: 0 });
+    setSubmitSuccess(null);
+
+    let completed = 0;
+    let failed = 0;
+
+    for (const args of argSets) {
+      try {
+        const response = await new Promise<PipelineRun>((resolve, reject) => {
+          submit({
+            componentSpec,
+            taskArguments: args,
+            onSuccess: resolve,
+            onError: reject,
+          });
+        });
+
+        if (runNotes.current.trim() !== "") {
+          saveNotes(response.id.toString());
+        }
+
+        completed++;
+      } catch {
+        failed++;
+      }
+
+      setBulkProgress({ total, completed, failed });
+    }
+
+    setBulkProgress(null);
+    setSubmitSuccess(failed === 0);
+    setCooldownTime(3);
+
+    if (failed === 0) {
+      onSubmitComplete?.();
+      notify(`All ${total} runs submitted successfully`, "success");
+    } else {
+      notify(
+        `${completed} of ${total} runs submitted. ${failed} failed.`,
+        failed === total ? "error" : "warning",
+      );
+    }
+  };
+
+  const handleSubmitWithArguments = async (
     args: Record<string, ArgumentType>,
     notes: string,
+    bulkInputNames: Set<string>,
   ) => {
     runNotes.current = notes;
     setIsArgumentsDialogOpen(false);
-    handleSubmit(args);
+
+    if (bulkInputNames.size === 0) {
+      handleSubmit(args);
+      return;
+    }
+
+    try {
+      const argSets = expandBulkArguments(args, bulkInputNames);
+      await handleBulkSubmit(argSets);
+    } catch (error) {
+      notify(`Bulk submission failed: ${String(error)}`, "error");
+    }
   };
 
   const hasConfigurableInputs = (componentSpec?.inputs?.length ?? 0) > 0;
 
   const getButtonText = () => {
+    if (bulkProgress) {
+      const current = bulkProgress.completed + bulkProgress.failed;
+      return `Submitting ${current + 1} of ${bulkProgress.total}...`;
+    }
     if (cooldownTime > 0) {
       return `Run submitted (${cooldownTime}s)`;
     }
@@ -228,13 +301,14 @@ const OasisSubmitter = ({
     isGraphImplementation(componentSpec.implementation) &&
     Object.keys(componentSpec.implementation.graph.tasks).length > 0;
 
-  const isButtonDisabled = isSubmitting || !isSubmittable;
+  const isBulkSubmitting = bulkProgress !== null;
+  const isButtonDisabled = isSubmitting || isBulkSubmitting || !isSubmittable;
 
   const isArgumentsButtonVisible =
     hasConfigurableInputs && !isButtonDisabled && isComponentTreeValid;
 
   const getButtonIcon = () => {
-    if (isSubmitting) {
+    if (isSubmitting || isBulkSubmitting) {
       return <Loader2 className="animate-spin" />;
     }
     if (submitSuccess === false && cooldownTime > 0) {
