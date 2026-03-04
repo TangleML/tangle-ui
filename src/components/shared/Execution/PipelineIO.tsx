@@ -8,8 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Paragraph } from "@/components/ui/typography";
-import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useContextPanel } from "@/providers/ContextPanelProvider";
+import {
+  useRootGraphSpec,
+  useRootInputs,
+  useRootOutputs,
+} from "@/stores/selectors";
 import { type InputSpec, type OutputSpec } from "@/utils/componentSpec";
 import { getArgumentValue } from "@/utils/nodes/taskArguments";
 
@@ -23,7 +27,9 @@ const PipelineIO = ({
   taskArguments?: TaskSpecOutput["arguments"] | null;
 }) => {
   const { setContent } = useContextPanel();
-  const { componentSpec, graphSpec } = useComponentSpec();
+  const inputs = useRootInputs();
+  const outputs = useRootOutputs();
+  const graphSpec = useRootGraphSpec();
 
   const readOnly = !!taskArguments;
 
@@ -66,9 +72,9 @@ const PipelineIO = ({
   return (
     <BlockStack gap="4">
       <ContentBlock title={taskArguments ? "Arguments" : "Inputs"}>
-        {componentSpec.inputs && componentSpec.inputs.length > 0 ? (
+        {inputs && inputs.length > 0 ? (
           <BlockStack>
-            {componentSpec.inputs.map((input) => (
+            {inputs.map((input) => (
               <IORow
                 key={input.name}
                 value={
@@ -90,9 +96,9 @@ const PipelineIO = ({
         )}
       </ContentBlock>
       <ContentBlock title="Outputs">
-        {componentSpec.outputs && componentSpec.outputs.length > 0 ? (
+        {outputs && outputs.length > 0 ? (
           <BlockStack>
-            {componentSpec.outputs.map((output) => {
+            {outputs.map((output) => {
               const connectedOutput = getOutputConnectedDetails(
                 graphSpec,
                 output.name,

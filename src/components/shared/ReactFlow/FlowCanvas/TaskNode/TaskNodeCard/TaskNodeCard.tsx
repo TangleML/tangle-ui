@@ -13,10 +13,10 @@ import { Text } from "@/components/ui/typography";
 import { useEdgeSelectionHighlight } from "@/hooks/useEdgeSelectionHighlight";
 import { buildExecutionUrl } from "@/hooks/useSubgraphBreadcrumbs";
 import { cn } from "@/lib/utils";
-import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useContextPanel } from "@/providers/ContextPanelProvider";
 import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
 import { useTaskNode } from "@/providers/TaskNodeProvider";
+import { useComponentSpecStore } from "@/stores/componentSpecStore";
 import { isCacheDisabled } from "@/utils/cache";
 import type { ExecutionStatusStats } from "@/utils/executionStatus";
 import { getSubgraphDescription, isSubgraph } from "@/utils/subgraphUtils";
@@ -44,7 +44,6 @@ const TaskNodeCard = () => {
     clearContent,
     setOpen: setContextPanelOpen,
   } = useContextPanel();
-  const { navigateToSubgraph } = useComponentSpec();
   const executionData = useExecutionDataOptional();
   const rootExecutionId = executionData?.rootExecutionId;
   const details = executionData?.details;
@@ -141,7 +140,7 @@ const TaskNodeCard = () => {
 
   const handleDoubleClick = useCallback(() => {
     if (isSubgraphNode && taskId) {
-      navigateToSubgraph(taskId);
+      useComponentSpecStore.getState().navigateToSubgraph(taskId);
 
       if (rootExecutionId && details?.child_task_execution_ids) {
         const subgraphExecutionId = details.child_task_execution_ids[taskId];
@@ -151,14 +150,7 @@ const TaskNodeCard = () => {
         }
       }
     }
-  }, [
-    isSubgraphNode,
-    taskId,
-    navigateToSubgraph,
-    rootExecutionId,
-    details,
-    navigate,
-  ]);
+  }, [isSubgraphNode, taskId, rootExecutionId, details, navigate]);
 
   useEffect(() => {
     if (nodeRef.current) {

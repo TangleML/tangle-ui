@@ -5,7 +5,9 @@ import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Textarea } from "@/components/ui/textarea";
 import { Paragraph } from "@/components/ui/typography";
-import { useComponentSpec } from "@/providers/ComponentSpecProvider";
+import { componentSpecActions } from "@/providers/ComponentSpecProvider";
+import { useComponentSpecStore } from "@/stores/componentSpecStore";
+import { useCurrentGraphSpec, useTaskSpec } from "@/stores/selectors";
 import {
   DISPLAY_NAME_MAX_LENGTH,
   getAnnotationValue,
@@ -15,18 +17,15 @@ import type { MetadataSpec } from "@/utils/componentSpec";
 import { getComponentName } from "@/utils/getComponentName";
 
 export const DisplayNameEditor = ({ taskId }: { taskId: string }) => {
-  const { currentGraphSpec, updateGraphSpec } = useComponentSpec();
-
-  const taskSpec = currentGraphSpec?.tasks[taskId];
+  const taskSpec = useTaskSpec(taskId);
+  const currentGraphSpec = useCurrentGraphSpec();
   const componentRef = taskSpec?.componentRef;
 
-  const initialName = getComponentName(componentRef);
+  const initialName = componentRef ? getComponentName(componentRef) : "";
 
   const currentDisplayName =
-    getAnnotationValue(
-      currentGraphSpec?.tasks[taskId]?.annotations,
-      TASK_DISPLAY_NAME_ANNOTATION,
-    ) ?? "";
+    getAnnotationValue(taskSpec?.annotations, TASK_DISPLAY_NAME_ANNOTATION) ??
+    "";
 
   const [warning, setWarning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -60,12 +59,11 @@ export const DisplayNameEditor = ({ taskId }: { taskId: string }) => {
       return;
     }
 
-    if (!currentGraphSpec) {
-      console.error("Cannot rename task: currentGraphSpec is undefined");
+    if (!taskSpec) {
       return;
     }
 
-    const annotations = taskSpec?.annotations || {};
+    const annotations = taskSpec.annotations || {};
     let updatedAnnotations: MetadataSpec["annotations"];
 
     if (name.trim() === "") {
@@ -78,20 +76,25 @@ export const DisplayNameEditor = ({ taskId }: { taskId: string }) => {
       };
     }
 
-    const updatedTaskSpec = {
-      ...taskSpec,
-      annotations: updatedAnnotations,
-    };
+    // Direct store mutation — granular update
+    const { currentSubgraphPath } = useComponentSpecStore.getState();
+    useComponentSpecStore
+      .getState()
+      .setTaskAnnotations(currentSubgraphPath, taskId, updatedAnnotations);
 
+    // Also update context for remaining consumers
     const updatedGraphSpec = {
       ...currentGraphSpec,
       tasks: {
         ...currentGraphSpec.tasks,
-        [taskId]: updatedTaskSpec,
+        [taskId]: {
+          ...taskSpec,
+          annotations: updatedAnnotations,
+        },
       },
     };
 
-    updateGraphSpec(updatedGraphSpec);
+    componentSpecActions.updateGraphSpec?.(updatedGraphSpec);
   };
 
   const validate = (value: string) => {

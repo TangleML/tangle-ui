@@ -1,4 +1,5 @@
-import { useComponentSpec } from "@/providers/ComponentSpecProvider";
+import { useComponentSpecStore } from "@/stores/componentSpecStore";
+import { useTaskSpec } from "@/stores/selectors";
 import { getSubgraphDescription } from "@/utils/subgraphUtils";
 
 import { ActionButton } from "../../Buttons/ActionButton";
@@ -10,9 +11,8 @@ interface NavigateToSubgraphButtonProps {
 export const NavigateToSubgraphButton = ({
   taskId,
 }: NavigateToSubgraphButtonProps) => {
-  const { navigateToSubgraph, currentGraphSpec } = useComponentSpec();
-
-  const taskSpec = currentGraphSpec.tasks[taskId];
+  const navigateToSubgraph = useComponentSpecStore((s) => s.navigateToSubgraph);
+  const taskSpec = useTaskSpec(taskId);
 
   const subgraphDescription = taskSpec ? getSubgraphDescription(taskSpec) : "";
 

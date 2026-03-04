@@ -1,17 +1,21 @@
 import { Redo2, Undo2 } from "lucide-react";
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 
-import { useComponentSpec } from "@/providers/ComponentSpecProvider";
+import { useComponentSpecStore } from "@/stores/componentSpecStore";
 import { KEYBOARD_SHORTCUTS } from "@/utils/constants";
 
 import TooltipButton from "./Buttons/TooltipButton";
 
 export const UndoRedo = () => {
-  const { undoRedo } = useComponentSpec();
-  const { undo, redo, canUndo, canRedo } = undoRedo;
+  const undo = useComponentSpecStore((s) => s.undo);
+  const redo = useComponentSpecStore((s) => s.redo);
+  const canUndo = useComponentSpecStore((s) => s._historyIndex > 0);
+  const canRedo = useComponentSpecStore(
+    (s) => s._historyIndex < s._history.length - 1,
+  );
 
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent) => {
       const target = event.target as HTMLElement;
       const isInputFocused =
         target &&
@@ -37,11 +41,14 @@ export const UndoRedo = () => {
           redo();
         }
       }
-    };
+    },
+    [undo, redo],
+  );
 
+  useEffect(() => {
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [undo, redo]);
+  }, [handleKeyDown]);
 
   const metaKey = navigator.userAgent.includes("Mac")
     ? KEYBOARD_SHORTCUTS.MAC_META

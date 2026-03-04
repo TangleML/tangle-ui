@@ -53,7 +53,7 @@ import {
   createRequiredContext,
   useRequiredContext,
 } from "../../hooks/useRequiredContext";
-import { useComponentSpec } from "../ComponentSpecProvider";
+import { useRootGraphSpec } from "../../stores/selectors";
 import {
   fetchUsedComponents,
   fetchUserComponents,
@@ -169,7 +169,7 @@ export const ComponentLibraryProvider = ({
 }: {
   children: ReactNode;
 }) => {
-  const { graphSpec } = useComponentSpec();
+  const graphSpec = useRootGraphSpec();
   const { currentSearchFilter } = useForcedSearchContext();
 
   const { getComponentLibraryObject, existingComponentLibraries } =

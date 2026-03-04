@@ -11,9 +11,14 @@ import { QuickTooltip } from "@/components/ui/tooltip";
 import { Paragraph } from "@/components/ui/typography";
 import { useEdgeSelectionHighlight } from "@/hooks/useEdgeSelectionHighlight";
 import { cn } from "@/lib/utils";
-import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useContextPanel } from "@/providers/ContextPanelProvider";
 import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
+import {
+  useCurrentGraphInputs,
+  useCurrentGraphOutputs,
+  useCurrentGraphSpec,
+  useCurrentSubgraphPath,
+} from "@/stores/selectors";
 import { getArgumentValue } from "@/utils/nodes/taskArguments";
 import { isViewingSubgraph } from "@/utils/subgraphUtils";
 
@@ -37,8 +42,10 @@ interface IONodeProps {
 }
 
 const IONode = ({ id, type, data, selected = false }: IONodeProps) => {
-  const { currentGraphSpec, currentSubgraphSpec, currentSubgraphPath } =
-    useComponentSpec();
+  const currentGraphSpec = useCurrentGraphSpec();
+  const currentSubgraphPath = useCurrentSubgraphPath();
+  const graphInputs = useCurrentGraphInputs();
+  const graphOutputs = useCurrentGraphOutputs();
 
   const executionData = useExecutionDataOptional();
   const taskArguments = executionData?.rootDetails?.task_spec.arguments;
@@ -103,17 +110,15 @@ const IONode = ({ id, type, data, selected = false }: IONodeProps) => {
   );
 
   const input = useMemo(
-    () =>
-      currentSubgraphSpec.inputs?.find((input) => input.name === data.label),
-    [currentSubgraphSpec.inputs, data.label],
+    () => graphInputs?.find((input) => input.name === data.label),
+    [graphInputs, data.label],
   );
 
   const inputTaskArgument = getArgumentValue(taskArguments, input?.name);
 
   const output = useMemo(
-    () =>
-      currentSubgraphSpec.outputs?.find((output) => output.name === data.label),
-    [currentSubgraphSpec.outputs, data.label],
+    () => graphOutputs?.find((output) => output.name === data.label),
+    [graphOutputs, data.label],
   );
 
   useEffect(() => {

@@ -6,6 +6,7 @@ import {
 } from "@xyflow/react";
 import { useEffect } from "react";
 
+import { useConnectionFingerprint } from "@/stores/selectors";
 import {
   type ArgumentType,
   type ComponentSpec,
@@ -29,14 +30,17 @@ const useComponentSpecToEdges = (
   edges: Edge<any>[];
   onEdgesChange: (changes: EdgeChange[]) => void;
 } => {
+  const connectionFingerprint = useConnectionFingerprint();
   const [flowEdges, setFlowEdges, onFlowEdgesChange] = useEdgesState(
     getEdges(componentSpec),
   );
 
+  // Only recompute edges when connections actually change (taskOutput/graphInput
+  // arguments), not when scalar argument values change.
   useEffect(() => {
     const newEdges = getEdges(componentSpec);
     setFlowEdges(newEdges);
-  }, [componentSpec]);
+  }, [connectionFingerprint]);
 
   return {
     edges: flowEdges,

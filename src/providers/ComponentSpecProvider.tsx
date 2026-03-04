@@ -1,4 +1,3 @@
-import equal from "fast-deep-equal";
 import {
   type ReactNode,
   useCallback,
@@ -8,19 +7,15 @@ import {
   useState,
 } from "react";
 
-import { type UndoRedo, useUndoRedo } from "@/hooks/useUndoRedo";
-import { loadPipelineByName } from "@/services/pipelineService";
+import { useComponentSpecStore } from "@/stores/componentSpecStore";
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
-import { prepareComponentRefForEditor } from "@/utils/prepareComponentRefForEditor";
 import {
   getSubgraphComponentSpec,
   updateSubgraphSpec,
 } from "@/utils/subgraphUtils";
 import {
-  checkComponentSpecValidity,
   collectComponentValidationIssues,
   type ComponentValidationIssue,
-  type ValidationError,
 } from "@/utils/validations";
 import { componentSpecToYaml } from "@/utils/yaml";
 
@@ -34,7 +29,6 @@ import {
   isGraphImplementation,
 } from "../utils/componentSpec";
 import {
-  type ComponentReferenceWithSpec,
   generateDigest,
   writeComponentToFileListFromText,
 } from "../utils/componentStore";
@@ -52,30 +46,31 @@ interface ComponentSpecContextType {
   componentSpec: ComponentSpec;
   setComponentSpec: (spec: ComponentSpec) => void;
   clearComponentSpec: () => void;
-  graphSpec: GraphSpec;
   currentGraphSpec: GraphSpec;
   currentSubgraphSpec: ComponentSpec;
   digest: string;
   isLoading: boolean;
-  isValid: boolean;
-  errors: ValidationError[];
   isComponentTreeValid: boolean;
   globalValidationIssues: ComponentValidationIssue[];
-  refetch: () => void;
   updateGraphSpec: (newGraphSpec: GraphSpec) => void;
   saveComponentSpec: (name: string) => Promise<void>;
-  undoRedo: UndoRedo;
 
   currentSubgraphPath: string[];
-  navigateToSubgraph: (taskId: string) => void;
-  navigateBack: () => void;
-  navigateToPath: (targetPath: string[]) => void;
-  canNavigateBack: boolean;
 }
 
 const ComponentSpecContext = createRequiredContext<ComponentSpecContextType>(
   "ComponentSpecProvider",
 );
+
+/**
+ * Module-level refs for context actions. Components migrated to store selectors
+ * can call these without subscribing to the full context (avoiding re-renders).
+ * Updated on every render of ComponentSpecProvider.
+ */
+export const componentSpecActions = {
+  updateGraphSpec: null as ((newGraphSpec: GraphSpec) => void) | null,
+  setComponentSpec: null as ((spec: ComponentSpec) => void) | null,
+};
 
 export const ComponentSpecProvider = ({
   spec,
@@ -97,35 +92,79 @@ export const ComponentSpecProvider = ({
     "root",
   ]);
 
-  const undoRedo = useUndoRedo(componentSpec, setComponentSpec, {
-    getMetadata: () => ({ subgraphPath: currentSubgraphPath }),
-    onMetadataRestore: (metadata: { subgraphPath: string[] }) => {
-      if (!equal(metadata.subgraphPath, currentSubgraphPath)) {
-        setCurrentSubgraphPath(metadata.subgraphPath);
+  // Bridge: sync componentSpec into the Zustand store so that
+  // components migrated in later phases can read from store selectors.
+  // Skip re-decomposition when the store was already updated by a direct mutation
+  // (e.g. setTaskArguments) to preserve referential stability.
+  const lastSyncedMutationVersionRef = useRef(0);
+  useEffect(() => {
+    const currentVersion =
+      useComponentSpecStore.getState()._directMutationVersion;
+    if (currentVersion !== lastSyncedMutationVersionRef.current) {
+      lastSyncedMutationVersionRef.current = currentVersion;
+      return;
+    }
+    useComponentSpecStore.getState().loadFromComponentSpec(componentSpec);
+  }, [componentSpec]);
+
+  // Bridge: context→store path sync (guard against redundant updates)
+  useEffect(() => {
+    const storePath = useComponentSpecStore.getState().currentSubgraphPath;
+    if (JSON.stringify(storePath) !== JSON.stringify(currentSubgraphPath)) {
+      useComponentSpecStore.getState().navigateToPath(currentSubgraphPath);
+    }
+  }, [currentSubgraphPath]);
+
+  // Bridge: store→context path sync (enables components to navigate via store)
+  useEffect(() => {
+    const unsubscribe = useComponentSpecStore.subscribe((state, prevState) => {
+      if (state.currentSubgraphPath !== prevState.currentSubgraphPath) {
+        setCurrentSubgraphPath((prev) => {
+          if (
+            JSON.stringify(prev) === JSON.stringify(state.currentSubgraphPath)
+          )
+            return prev;
+          return state.currentSubgraphPath;
+        });
       }
-    },
-  });
-  const undoRedoRef = useRef(undoRedo);
-  undoRedoRef.current = undoRedo;
+    });
+    return unsubscribe;
+  }, []);
+
+  // Bridge: store→context sync for direct mutations (including undo/redo).
+  // When any direct store mutation fires (detected by _directMutationVersion change),
+  // compile the store back to a ComponentSpec and push it into context so remaining
+  // consumers stay in sync.
+  useEffect(() => {
+    const unsubscribe = useComponentSpecStore.subscribe((state, prevState) => {
+      if (state._directMutationVersion !== prevState._directMutationVersion) {
+        const compiledSpec = useComponentSpecStore
+          .getState()
+          .compileComponentSpec();
+        setComponentSpec(compiledSpec);
+      }
+    });
+    return unsubscribe;
+  }, []);
 
   const currentSubgraphSpec = useMemo(() => {
     return getSubgraphComponentSpec(componentSpec, currentSubgraphPath);
   }, [componentSpec, currentSubgraphPath]);
 
-  const isRootSubgraph = currentSubgraphPath.length === 1;
-
-  const { isValid, errors } = useMemo(
-    () =>
-      checkComponentSpecValidity(currentSubgraphSpec, {
-        skipInputValueValidation: !isRootSubgraph,
-      }),
-    [currentSubgraphSpec, isRootSubgraph],
-  );
-
-  const globalValidationIssues = useMemo(
-    () => collectComponentValidationIssues(componentSpec),
-    [componentSpec],
-  );
+  // Debounced global validation (1s) — the validation panel and submission
+  // eligibility don't need instant updates; debouncing avoids the expensive
+  // recursive tree traversal on every keystroke.
+  const [globalValidationIssues, setGlobalValidationIssues] = useState<
+    ComponentValidationIssue[]
+  >(() => collectComponentValidationIssues(componentSpec));
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setGlobalValidationIssues(
+        collectComponentValidationIssues(componentSpec),
+      );
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [componentSpec]);
   const isComponentTreeValid = globalValidationIssues.length === 0;
 
   useEffect(() => {
@@ -150,16 +189,8 @@ export const ComponentSpecProvider = ({
     setComponentSpec(EMPTY_GRAPH_COMPONENT_SPEC);
     setIsLoading(false);
     setCurrentSubgraphPath(["root"]);
-    undoRedoRef.current.clearHistory();
+    useComponentSpecStore.getState().clearHistory();
   }, []);
-
-  const graphSpec = useMemo(() => {
-    if (isGraphImplementation(componentSpec.implementation)) {
-      return componentSpec.implementation.graph;
-    }
-
-    return EMPTY_GRAPH_SPEC;
-  }, [componentSpec]);
 
   const currentGraphSpec = useMemo(() => {
     if (isGraphImplementation(currentSubgraphSpec.implementation)) {
@@ -168,37 +199,6 @@ export const ComponentSpecProvider = ({
 
     return EMPTY_GRAPH_SPEC;
   }, [currentSubgraphSpec]);
-
-  const loadPipeline = useCallback(
-    async (newName?: string) => {
-      if (componentSpec) {
-        setComponentSpec(componentSpec);
-      }
-
-      const name = newName ?? componentSpec.name;
-      if (!name) return;
-
-      const result = await loadPipelineByName(name);
-      if (!result.experiment) return;
-
-      const preparedComponentRef = await prepareComponentRefForEditor(
-        result.experiment.componentRef as ComponentReferenceWithSpec,
-      );
-
-      if (!preparedComponentRef) {
-        console.error("Failed to prepare component reference for editor");
-        return;
-      }
-
-      setComponentSpec(preparedComponentRef);
-      setIsLoading(false);
-    },
-    [componentSpec],
-  );
-
-  const refetch = useCallback(() => {
-    loadPipeline();
-  }, [loadPipeline]);
 
   const saveComponentSpec = useCallback(
     async (name: string) => {
@@ -247,68 +247,42 @@ export const ComponentSpecProvider = ({
     [currentSubgraphPath],
   );
 
-  const navigateToSubgraph = useCallback((taskId: string) => {
-    setCurrentSubgraphPath((prev) => [...prev, taskId]);
-  }, []);
-
-  const navigateBack = useCallback(() => {
-    setCurrentSubgraphPath((prev) => prev.slice(0, -1));
-  }, []);
-
-  const navigateToPath = useCallback((targetPath: string[]) => {
-    setCurrentSubgraphPath(targetPath);
-  }, []);
-
-  const canNavigateBack = currentSubgraphPath.length > 1;
+  // Keep action refs up-to-date for components using store selectors
+  useEffect(() => {
+    componentSpecActions.updateGraphSpec = updateGraphSpec;
+    componentSpecActions.setComponentSpec = setComponentSpec;
+  }, [updateGraphSpec, setComponentSpec]);
 
   const value = useMemo(
     () => ({
       componentSpec,
-      graphSpec,
       currentGraphSpec,
       currentSubgraphSpec,
       digest,
       isLoading,
-      isValid,
-      errors,
       isComponentTreeValid,
       globalValidationIssues,
-      refetch,
       setComponentSpec,
       clearComponentSpec,
       saveComponentSpec,
       updateGraphSpec,
-      undoRedo,
 
       currentSubgraphPath,
-      navigateToSubgraph,
-      navigateBack,
-      navigateToPath,
-      canNavigateBack,
     }),
     [
       componentSpec,
-      graphSpec,
       currentGraphSpec,
       currentSubgraphSpec,
       digest,
       isLoading,
-      isValid,
-      errors,
       isComponentTreeValid,
       globalValidationIssues,
-      refetch,
       setComponentSpec,
       clearComponentSpec,
       saveComponentSpec,
       updateGraphSpec,
-      undoRedo,
 
       currentSubgraphPath,
-      navigateToSubgraph,
-      navigateBack,
-      navigateToPath,
-      canNavigateBack,
     ],
   );
 

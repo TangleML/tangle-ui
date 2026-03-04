@@ -4,6 +4,7 @@ import { useUserDetails } from "@/hooks/useUserDetails";
 import { cn } from "@/lib/utils";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
+import { useCurrentSubgraphPath } from "@/stores/selectors";
 import { extractCanonicalName } from "@/utils/canonicalPipelineName";
 import {
   countInProgressFromStats,
@@ -19,7 +20,8 @@ import { InspectPipelineButton } from "./components/InspectPipelineButton";
 import { RerunPipelineButton } from "./components/RerunPipelineButton";
 
 export const RunToolbar = () => {
-  const { componentSpec, currentSubgraphPath } = useComponentSpec();
+  const { componentSpec } = useComponentSpec();
+  const currentSubgraphPath = useCurrentSubgraphPath();
   const {
     rootState: state,
     runId,

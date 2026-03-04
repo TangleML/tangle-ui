@@ -15,9 +15,8 @@ import {
 import type { BreadcrumbSegment } from "@/hooks/useSubgraphBreadcrumbs";
 import { useSubgraphBreadcrumbs } from "@/hooks/useSubgraphBreadcrumbs";
 import { useFetchPipelineRunMetadata } from "@/services/executionService";
+import { useComponentSpecStore } from "@/stores/componentSpecStore";
 import { getOverallExecutionStatusFromStats } from "@/utils/executionStatus";
-
-import { useComponentSpec } from "./ComponentSpecProvider";
 
 interface CachedExecutionData {
   executionId: string;
@@ -136,7 +135,10 @@ export function ExecutionDataProvider({
   subgraphExecutionId?: string;
 }>) {
   const queryClient = useQueryClient();
-  const { currentSubgraphPath, navigateToPath } = useComponentSpec();
+  const currentSubgraphPath = useComponentSpecStore(
+    (s) => s.currentSubgraphPath,
+  );
+  const navigateToPath = useComponentSpecStore((s) => s.navigateToPath);
 
   const executionDataCache = useRef<Map<string, CachedExecutionData>>(
     new Map(),

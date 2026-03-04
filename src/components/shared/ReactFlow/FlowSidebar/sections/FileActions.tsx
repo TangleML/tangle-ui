@@ -4,8 +4,8 @@ import { InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
 import { useAutoSaveStatus } from "@/providers/AutoSaveProvider";
-import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { getPipelineFile } from "@/services/pipelineService";
+import { useRootName } from "@/stores/selectors";
 import { formatRelativeTime } from "@/utils/date";
 
 import { SidebarSection } from "../components/SidebarSection";
@@ -44,18 +44,18 @@ const AutoSaveStatus = ({ lastSavedAt }: AutoSaveStatusProps) => {
 };
 
 const FileActions = () => {
-  const { componentSpec } = useComponentSpec();
+  const rootName = useRootName();
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
 
   useEffect(() => {
     const fetchLastSaved = async () => {
-      if (componentSpec?.name) {
-        const lastSavedPipeline = await getPipelineFile(componentSpec.name);
+      if (rootName) {
+        const lastSavedPipeline = await getPipelineFile(rootName);
         setLastSavedAt(lastSavedPipeline?.modificationTime ?? null);
       }
     };
     fetchLastSaved();
-  }, [componentSpec?.name]);
+  }, [rootName]);
 
   const handleSaveComplete = () => {
     setLastSavedAt(new Date());

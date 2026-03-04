@@ -36,6 +36,7 @@ import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useContextPanel } from "@/providers/ContextPanelProvider";
 import { hydrateComponentReference } from "@/services/componentService";
+import { useGraphStructuralFingerprint } from "@/stores/selectors";
 import {
   type ComponentSpec,
   type InputSpec,
@@ -144,6 +145,7 @@ const FlowCanvasContent = ({
     updateGraphSpec,
     currentSubgraphPath,
   } = useComponentSpec();
+  const structuralFingerprint = useGraphStructuralFingerprint();
   const { preserveIOSelectionOnSpecChange, resetPrevSpec } =
     useIOSelectionPersistence();
 
@@ -642,10 +644,13 @@ const FlowCanvasContent = ({
         currentGraphSpec,
       );
 
+      const oldTaskSpec =
+        currentGraphSpec.tasks[replaceTarget.data.taskId as string];
       const dialogData = getReplaceConfirmationDetails(
         replaceTarget,
         newTaskId,
         lostInputs,
+        oldTaskSpec,
       );
 
       const confirmed = await triggerConfirmation(dialogData);
@@ -785,7 +790,8 @@ const FlowCanvasContent = ({
         return;
       }
 
-      const taskSpec = node.data.taskSpec as TaskSpec | undefined;
+      const taskId = node.data.taskId as string;
+      const taskSpec = currentGraphSpec.tasks[taskId] as TaskSpec | undefined;
       // Custom components don't have a componentRef.url so they are currently excluded from bulk operations
       if (taskSpec?.componentRef && taskSpec.componentRef.url) {
         const { updatedGraphSpec, lostInputs } = replaceTaskNode(
@@ -871,16 +877,15 @@ const FlowCanvasContent = ({
     setShowToolbar(true);
   };
 
+  // Only recreate React Flow nodes when the graph *structure* changes
+  // (task add/remove, position changes, IO changes, subgraph navigation).
+  // Task argument/annotation edits are handled by TaskNodeProvider reading
+  // from the Zustand store with per-task selectors (CSOM Phase 2).
   useEffect(() => {
     preserveIOSelectionOnSpecChange(componentSpec);
     updateReactFlow(componentSpec);
     initialCanvasLoaded.current = true;
-  }, [
-    replaceTarget,
-    componentSpec,
-    currentSubgraphPath,
-    preserveIOSelectionOnSpecChange,
-  ]);
+  }, [replaceTarget, structuralFingerprint, preserveIOSelectionOnSpecChange]);
 
   useEffect(() => {
     reactFlowInstance?.fitView({

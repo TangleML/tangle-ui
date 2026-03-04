@@ -203,12 +203,9 @@ describe("<PipelineRun/>", () => {
       canNavigateBack: false,
       graphSpec: {} as never,
       isLoading: false,
-      isValid: true,
-      errors: [],
       refetch: vi.fn(),
       updateGraphSpec: vi.fn(),
       saveComponentSpec: vi.fn(),
-      undoRedo: {} as never,
     });
 
     mockUsePipelineRunData.mockReturnValue({

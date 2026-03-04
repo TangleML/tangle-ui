@@ -16,13 +16,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useComponentSpec } from "@/providers/ComponentSpecProvider";
+import { useRootName } from "@/stores/selectors";
 
 export const RecentExecutionsButton = withSuspenseWrapper(
   () => {
-    const { componentSpec } = useComponentSpec();
+    const rootName = useRootName();
 
-    const { data: runs } = usePipelineRuns(componentSpec?.name);
+    const { data: runs } = usePipelineRuns(rootName);
 
     return (
       <TooltipProvider>
@@ -41,7 +41,7 @@ export const RecentExecutionsButton = withSuspenseWrapper(
           </Tooltip>
           <PopoverContent className="w-[500px]">
             <PipelineRunsList
-              pipelineName={componentSpec.name}
+              pipelineName={rootName}
               overviewConfig={{ showName: false, showDescription: true }}
             />
           </PopoverContent>

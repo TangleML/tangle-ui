@@ -2,7 +2,7 @@ import equal from "fast-deep-equal";
 import { useEffect, useRef, useState } from "react";
 
 import { useNodesOverlay } from "@/components/shared/ReactFlow/NodesOverlay/NodesOverlayProvider";
-import { useComponentSpec } from "@/providers/ComponentSpecProvider";
+import { useComponentSpecStore } from "@/stores/componentSpecStore";
 import {
   inputNameToNodeId,
   outputNameToNodeId,
@@ -83,7 +83,10 @@ const groupIssuesByPath = (
 export const useValidationIssueNavigation = (
   validationIssues: ComponentValidationIssue[],
 ) => {
-  const { currentSubgraphPath, navigateToPath } = useComponentSpec();
+  const currentSubgraphPath = useComponentSpecStore(
+    (s) => s.currentSubgraphPath,
+  );
+  const navigateToPath = useComponentSpecStore((s) => s.navigateToPath);
   const { fitNodeIntoView, notifyNode } = useNodesOverlay();
 
   const [pendingIssue, setPendingIssue] =

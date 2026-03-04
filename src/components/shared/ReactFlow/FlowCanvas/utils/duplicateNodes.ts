@@ -91,7 +91,8 @@ export const duplicateNodes = (
 
       nodeIdMap[oldNodeId] = newNodeId;
 
-      const taskSpec = node.data.taskSpec as TaskSpec;
+      const taskSpec =
+        graphSpec.tasks[oldTaskId] ?? (node.data.taskSpec as TaskSpec);
       const annotations = taskSpec.annotations || {};
 
       const updatedAnnotations = setPositionInAnnotations(annotations, {
@@ -427,8 +428,8 @@ export const duplicateNodes = (
       if (node.type === "task") {
         const taskId = nodeIdToTaskId(node.id);
 
-        const taskSpec = node.data.taskSpec as TaskSpec;
-        const annotations = taskSpec.annotations || {};
+        const taskSpec = updatedGraphSpec.tasks[taskId];
+        const annotations = taskSpec?.annotations || {};
 
         const updatedAnnotations = setPositionInAnnotations(
           annotations,

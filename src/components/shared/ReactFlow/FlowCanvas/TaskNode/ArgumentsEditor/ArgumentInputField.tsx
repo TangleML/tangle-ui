@@ -28,12 +28,9 @@ import { Paragraph } from "@/components/ui/typography";
 import { useCallbackOnUnmount } from "@/hooks/useCallbackOnUnmount";
 import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
-import { useComponentSpec } from "@/providers/ComponentSpecProvider";
+import { useCurrentGraphSpec } from "@/stores/selectors";
 import type { ArgumentInput } from "@/types/arguments";
-import {
-  isDynamicDataArgument,
-  isGraphImplementation,
-} from "@/utils/componentSpec";
+import { isDynamicDataArgument } from "@/utils/componentSpec";
 
 import { ArgumentInputDialog } from "./ArgumentInputDialog";
 import { DynamicDataArgumentInput } from "./DynamicDataArgumentInput";
@@ -213,7 +210,7 @@ export const ArgumentInputField = ({
   onSave: (argument: ArgumentInput) => void;
 }) => {
   const notify = useToastNotification();
-  const { currentSubgraphSpec } = useComponentSpec();
+  const currentGraphSpec = useCurrentGraphSpec();
 
   const [inputValue, setInputValue] = useState(getInputValue(argument) ?? "");
   const [lastSubmittedValue, setLastSubmittedValue] = useState<string>(
@@ -377,10 +374,7 @@ export const ArgumentInputField = ({
   );
 
   const placeholder = useMemo(() => {
-    const graphSpec = isGraphImplementation(currentSubgraphSpec.implementation)
-      ? currentSubgraphSpec.implementation.graph
-      : undefined;
-    const inputPlaceholder = getPlaceholder(argument.value, graphSpec);
+    const inputPlaceholder = getPlaceholder(argument.value, currentGraphSpec);
 
     if (inputPlaceholder) {
       return inputPlaceholder;
@@ -395,7 +389,7 @@ export const ArgumentInputField = ({
     }
 
     return "";
-  }, [argument, currentSubgraphSpec]);
+  }, [argument, currentGraphSpec]);
 
   useEffect(() => {
     const value = getInputValue(argument);

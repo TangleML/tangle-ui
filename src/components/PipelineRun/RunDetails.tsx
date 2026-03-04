@@ -10,8 +10,12 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Paragraph, Text } from "@/components/ui/typography";
 import { useUserDetails } from "@/hooks/useUserDetails";
 import { useBackend } from "@/providers/BackendProvider";
-import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
+import {
+  useRootDescription,
+  useRootMetadata,
+  useRootName,
+} from "@/stores/selectors";
 import {
   FLEX_NODES_ANNOTATION,
   getAnnotationValue,
@@ -29,7 +33,9 @@ const EXCLUDED_ANNOTATIONS = [PIPELINE_NOTES_ANNOTATION, FLEX_NODES_ANNOTATION];
 
 export const RunDetails = () => {
   const { configured } = useBackend();
-  const { componentSpec } = useComponentSpec();
+  const rootName = useRootName();
+  const rootDescription = useRootDescription();
+  const rootMetadata = useRootMetadata();
   const { data: currentUserDetails } = useUserDetails();
   const {
     rootDetails: details,
@@ -39,7 +45,7 @@ export const RunDetails = () => {
     error,
   } = useExecutionData();
 
-  if (error || !details || !state || !componentSpec) {
+  if (error || !details || !state) {
     return (
       <BlockStack fill>
         <InfoBox title="Error" variant="error">
@@ -71,7 +77,7 @@ export const RunDetails = () => {
     getOverallExecutionStatusFromStats(executionStatusStats);
   const statusLabel = getExecutionStatusLabel(overallStatus);
 
-  const pipelineAnnotations = componentSpec.metadata?.annotations || {};
+  const pipelineAnnotations = rootMetadata?.annotations || {};
   const pipelineNotes = getAnnotationValue(
     pipelineAnnotations,
     PIPELINE_NOTES_ANNOTATION,
@@ -87,7 +93,7 @@ export const RunDetails = () => {
   return (
     <BlockStack gap="6" className="p-2 h-full">
       <CopyText className="text-lg font-semibold">
-        {componentSpec.name ?? "Unnamed Pipeline"}
+        {rootName ?? "Unnamed Pipeline"}
       </CopyText>
 
       {metadata && (
@@ -107,8 +113,8 @@ export const RunDetails = () => {
         />
       )}
 
-      {componentSpec.description && (
-        <TextBlock title="Description" text={componentSpec.description} />
+      {rootDescription && (
+        <TextBlock title="Description" text={rootDescription} />
       )}
 
       <ContentBlock title="Status">

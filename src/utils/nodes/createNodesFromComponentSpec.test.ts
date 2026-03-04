@@ -70,7 +70,6 @@ describe("createNodesFromComponentSpec", () => {
         type: "task",
         data: expect.objectContaining({
           taskId: "task1",
-          taskSpec: componentSpec.implementation.graph.tasks.task1,
         }),
       }),
     );

@@ -17,7 +17,7 @@ interface ValidationOptions {
 
 type ValidationIssueType = "graph" | "task" | "input" | "argument" | "output";
 
-export interface ValidationError {
+interface ValidationError {
   type: ValidationIssueType;
   message: string;
   taskId?: string;

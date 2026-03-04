@@ -23,7 +23,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useComponentSpec } from "@/providers/ComponentSpecProvider";
+import { useRootName } from "@/stores/selectors";
 import { DOCUMENTATION_URL, TOP_NAV_HEIGHT } from "@/utils/constants";
 
 import BackendStatus from "../shared/BackendStatus";
@@ -34,8 +34,7 @@ import { PersonalPreferences } from "../shared/Settings/PersonalPreferences";
 
 const AppMenu = () => {
   const requiresAuthorization = isAuthorizationRequired();
-  const { componentSpec } = useComponentSpec();
-  const title = componentSpec?.name;
+  const title = useRootName();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (

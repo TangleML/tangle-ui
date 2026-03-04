@@ -25,7 +25,8 @@ export const createTaskNode = (
     id: nodeId,
     data: {
       ...nodeData,
-      taskSpec,
+      // taskSpec is intentionally omitted — TaskNodeProvider reads it from
+      // the Zustand store for granular re-render control (CSOM Phase 2).
       taskId,
       highlighted: false,
       callbacks: dynamicCallbacks, // Use these callbacks internally within the node

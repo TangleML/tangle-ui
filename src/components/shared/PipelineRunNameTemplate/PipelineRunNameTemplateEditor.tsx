@@ -1,13 +1,12 @@
 import { useState } from "react";
 
 import { Textarea } from "@/components/ui/textarea";
-import { useComponentSpec } from "@/providers/ComponentSpecProvider";
+import { useComponentSpecStore } from "@/stores/componentSpecStore";
+import { useRootMetadata } from "@/stores/selectors";
 import {
+  getAnnotationValue,
   RUN_NAME_TEMPLATE_ANNOTATION,
-  setComponentSpecAnnotation,
 } from "@/utils/annotations";
-
-import { getRunNameTemplate } from "./utils";
 
 interface PipelineRunNameTemplateEditorProps {
   autoFocus?: boolean;
@@ -16,9 +15,10 @@ interface PipelineRunNameTemplateEditorProps {
 export const PipelineRunNameTemplateEditor = ({
   autoFocus,
 }: PipelineRunNameTemplateEditorProps) => {
-  const { componentSpec, setComponentSpec } = useComponentSpec();
+  const rootMetadata = useRootMetadata();
+  const setGraphAnnotation = useComponentSpecStore((s) => s.setGraphAnnotation);
   const [localValue, setLocalValue] = useState(
-    getRunNameTemplate(componentSpec),
+    getAnnotationValue(rootMetadata?.annotations, RUN_NAME_TEMPLATE_ANNOTATION),
   );
 
   const updateRunNameTemplate = (runNameTemplate: string | undefined) => {
@@ -26,13 +26,7 @@ export const PipelineRunNameTemplateEditor = ({
       return;
     }
 
-    setComponentSpec(
-      setComponentSpecAnnotation(
-        componentSpec,
-        RUN_NAME_TEMPLATE_ANNOTATION,
-        runNameTemplate,
-      ),
-    );
+    setGraphAnnotation(["root"], RUN_NAME_TEMPLATE_ANNOTATION, runNameTemplate);
   };
 
   return (
