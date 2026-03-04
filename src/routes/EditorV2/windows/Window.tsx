@@ -10,11 +10,12 @@ import { cn } from "@/lib/utils";
 
 import { SnapPreview } from "./SnapPreview";
 import { detectSnapPreview, shouldDetach } from "./snapUtils";
-import type {
-  Position,
-  SnapPreviewType,
-  WindowAction,
-  WindowConfig,
+import {
+  type Position,
+  type SnapPreviewType,
+  TASK_PANEL_HEIGHT,
+  type WindowAction,
+  type WindowConfig,
 } from "./types";
 import {
   attachWindow,
@@ -74,6 +75,11 @@ export function Window({ windowId }: WindowProps) {
   const isMaximized = state === "maximized";
   const isDocked = dockState !== undefined && dockState !== "none";
   const isAttached = !!attachedTo;
+
+  const hasHiddenWindows = snap.windowOrder.some(
+    (id) => snap.windows[id]?.state === "hidden",
+  );
+  const taskPanelOffset = hasHiddenWindows ? TASK_PANEL_HEIGHT : 0;
 
   const isActionDisabled = (action: WindowAction) =>
     disabledActions?.includes(action) ?? false;
@@ -223,6 +229,11 @@ export function Window({ windowId }: WindowProps) {
   // Calculate content height (total height minus header ~44px)
   const contentHeight = size.height - 44;
 
+  // Docked windows shift down by taskPanelOffset when the TaskPanel is visible
+  const dockedTop = isDocked ? position.y + taskPanelOffset : position.y;
+  const dockedHeight =
+    isDocked && !isMinimized ? size.height - taskPanelOffset : size.height;
+
   // Maximized state: full viewport (z-45 to sit above TaskPanel z-40 but below popovers z-50)
   const windowStyle = isMaximized
     ? {
@@ -234,9 +245,9 @@ export function Window({ windowId }: WindowProps) {
       }
     : {
         left: position.x,
-        top: position.y,
+        top: dockedTop,
         width: isMinimized ? "auto" : size.width,
-        height: isMinimized ? "auto" : size.height,
+        height: isMinimized ? "auto" : dockedHeight,
         minWidth: minSize.width,
         minHeight: isMinimized ? "auto" : minSize.height,
         zIndex: 20 + zIndex,

@@ -116,3 +116,6 @@ export const MAGNETIC_SNAP_THRESHOLD = 5;
 
 /** Distance to drag before detaching from parent window (px) */
 export const DETACH_THRESHOLD = 10;
+
+/** Approximate height of the TaskPanel bar (px). Used to offset docked windows when TaskPanel is visible. */
+export const TASK_PANEL_HEIGHT = 43;
