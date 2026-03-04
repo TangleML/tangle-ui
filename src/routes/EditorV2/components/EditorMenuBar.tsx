@@ -4,6 +4,7 @@ import { generate } from "random-words";
 import { useEffect, useRef, useState } from "react";
 
 import logo from "/Tangle_Icon_White.png";
+import { PipelineSection } from "@/components/Home/PipelineSection/PipelineSection";
 import { isAuthorizationRequired } from "@/components/shared/Authentication/helpers";
 import { TopBarAuthentication } from "@/components/shared/Authentication/TopBarAuthentication";
 import BackendStatus from "@/components/shared/BackendStatus";
@@ -12,6 +13,12 @@ import ImportPipeline from "@/components/shared/ImportPipeline";
 import { ManageSecretsButton } from "@/components/shared/SecretsManagement/ManageSecretsButton";
 import { PersonalPreferences } from "@/components/shared/Settings/PersonalPreferences";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,7 +40,10 @@ import {
   USER_PIPELINES_LIST_NAME,
 } from "@/utils/constants";
 
-import { navigationStore } from "../store/navigationStore";
+import {
+  navigationStore,
+  setRequestedPipelineName,
+} from "../store/navigationStore";
 import { restoreWindow } from "../windows/windowStore";
 
 const MenuTriggerButton = ({
@@ -53,6 +63,7 @@ const MenuTriggerButton = ({
 function FileMenu() {
   const navigate = useNavigate();
   const [importOpen, setImportOpen] = useState(false);
+  const [openDialogOpen, setOpenDialogOpen] = useState(false);
   const importTriggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -76,8 +87,9 @@ function FileMenu() {
     });
   };
 
-  const handleOpen = () => {
-    navigate({ to: "/" });
+  const handlePipelineClick = (name: string) => {
+    setRequestedPipelineName(name);
+    setOpenDialogOpen(false);
   };
 
   return (
@@ -87,7 +99,7 @@ function FileMenu() {
           <MenuTriggerButton>File</MenuTriggerButton>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" sideOffset={2}>
-          <DropdownMenuItem onClick={handleOpen}>
+          <DropdownMenuItem onClick={() => setOpenDialogOpen(true)}>
             <Icon name="FolderOpen" size="sm" />
             Open
           </DropdownMenuItem>
@@ -115,6 +127,15 @@ function FileMenu() {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <Dialog open={openDialogOpen} onOpenChange={setOpenDialogOpen}>
+        <DialogContent className="max-w-[95vw] sm:max-w-[95vw] w-full max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Open Pipeline</DialogTitle>
+          </DialogHeader>
+          <PipelineSection onPipelineClick={handlePipelineClick} />
+        </DialogContent>
+      </Dialog>
 
       <ImportPipeline
         triggerComponent={

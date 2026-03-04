@@ -1,4 +1,5 @@
 import { autorun } from "mobx";
+import { isRootStore, unregisterRootStore } from "mobx-keystone";
 import { useEffect, useRef } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
@@ -39,6 +40,9 @@ export function useSpecLifecycle(rootSpec: ComponentSpec) {
         clearNavigation();
         historyStore.clear();
         undoStore.dispose();
+        if (isRootStore(rootSpec)) {
+          unregisterRootStore(rootSpec);
+        }
       };
     }
   }, [rootSpec]);

@@ -87,181 +87,189 @@ const PipelineSectionSkeleton = () => (
   </BlockStack>
 );
 
-export const PipelineSection = withSuspenseWrapper(() => {
-  const [pipelines, setPipelines] = useState<Pipelines>(new Map());
-  const [isLoading, setIsLoading] = useState(false);
-  const [selectedPipelines, setSelectedPipelines] = useState<Set<string>>(
-    new Set(),
-  );
+interface PipelineSectionProps {
+  onPipelineClick?: (name: string) => void;
+}
 
-  const { filteredPipelines, filterBarProps, filterKey } =
-    usePipelineFilters(pipelines);
+export const PipelineSection = withSuspenseWrapper(
+  ({ onPipelineClick }: PipelineSectionProps) => {
+    const [pipelines, setPipelines] = useState<Pipelines>(new Map());
+    const [isLoading, setIsLoading] = useState(false);
+    const [selectedPipelines, setSelectedPipelines] = useState<Set<string>>(
+      new Set(),
+    );
 
-  const {
-    paginatedItems: paginatedPipelines,
-    currentPage,
-    totalPages,
-    hasNextPage,
-    hasPreviousPage,
-    goToNextPage,
-    goToPreviousPage,
-    resetPage,
-  } = usePagination(filteredPipelines, DEFAULT_PAGE_SIZE, filterKey);
+    const { filteredPipelines, filterBarProps, filterKey } =
+      usePipelineFilters(pipelines);
 
-  const fetchUserPipelines = async () => {
-    setIsLoading(true);
-    try {
-      setPipelines(
-        await getAllComponentFilesFromList(USER_PIPELINES_LIST_NAME),
+    const {
+      paginatedItems: paginatedPipelines,
+      currentPage,
+      totalPages,
+      hasNextPage,
+      hasPreviousPage,
+      goToNextPage,
+      goToPreviousPage,
+      resetPage,
+    } = usePagination(filteredPipelines, DEFAULT_PAGE_SIZE, filterKey);
+
+    const fetchUserPipelines = async () => {
+      setIsLoading(true);
+      try {
+        setPipelines(
+          await getAllComponentFilesFromList(USER_PIPELINES_LIST_NAME),
+        );
+      } catch (error) {
+        console.error("Failed to load user pipelines:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const handleSelectAll = (checked: boolean) => {
+      setSelectedPipelines(
+        checked ? new Set(filteredPipelines.map(([name]) => name)) : new Set(),
       );
-    } catch (error) {
-      console.error("Failed to load user pipelines:", error);
-    } finally {
-      setIsLoading(false);
+    };
+
+    const handleSelectPipeline = (name: string, checked: boolean) => {
+      const next = new Set(selectedPipelines);
+      if (checked) next.add(name);
+      else next.delete(name);
+      setSelectedPipelines(next);
+    };
+
+    useEffect(() => {
+      fetchUserPipelines();
+    }, []);
+
+    if (isLoading) return <LoadingScreen message="Loading Pipelines" />;
+
+    if (pipelines.size === 0) {
+      return (
+        <BlockStack gap="4" align="center">
+          <BlockStack gap="2">
+            <Paragraph size="md" tone="subdued">
+              You don&apos;t have any pipelines yet. Get started with a template
+              below.
+            </Paragraph>
+            <QuickStartCards />
+          </BlockStack>
+          <BlockStack align="center" gap="2">
+            <Text tone="subdued">Or start from scratch with</Text>
+            <NewPipelineButton />
+          </BlockStack>
+        </BlockStack>
+      );
     }
-  };
 
-  const handleSelectAll = (checked: boolean) => {
-    setSelectedPipelines(
-      checked ? new Set(filteredPipelines.map(([name]) => name)) : new Set(),
-    );
-  };
+    const isAllSelected =
+      filteredPipelines.length > 0 &&
+      filteredPipelines.every(([name]) => selectedPipelines.has(name));
 
-  const handleSelectPipeline = (name: string, checked: boolean) => {
-    const next = new Set(selectedPipelines);
-    if (checked) next.add(name);
-    else next.delete(name);
-    setSelectedPipelines(next);
-  };
-
-  useEffect(() => {
-    fetchUserPipelines();
-  }, []);
-
-  if (isLoading) return <LoadingScreen message="Loading Pipelines" />;
-
-  if (pipelines.size === 0) {
     return (
-      <BlockStack gap="4" align="center">
-        <BlockStack gap="2">
-          <Paragraph size="md" tone="subdued">
-            You don&apos;t have any pipelines yet. Get started with a template
-            below.
-          </Paragraph>
-          <QuickStartCards />
-        </BlockStack>
-        <BlockStack align="center" gap="2">
-          <Text tone="subdued">Or start from scratch with</Text>
-          <NewPipelineButton />
-        </BlockStack>
-      </BlockStack>
-    );
-  }
+      <BlockStack gap="4" className="w-full">
+        <PipelineFiltersBar
+          filters={filterBarProps}
+          actions={<QuickStartButton />}
+        />
 
-  const isAllSelected =
-    filteredPipelines.length > 0 &&
-    filteredPipelines.every(([name]) => selectedPipelines.has(name));
-
-  return (
-    <BlockStack gap="4" className="w-full">
-      <PipelineFiltersBar
-        filters={filterBarProps}
-        actions={<QuickStartButton />}
-      />
-
-      <Table className="text-sm">
-        <TableHeader>
-          <TableRow className="text-xs">
-            <TableHead className="w-10">
-              <Checkbox
-                checked={isAllSelected}
-                onCheckedChange={handleSelectAll}
-              />
-            </TableHead>
-            <TableHead>Title</TableHead>
-            <TableHead>Modified at</TableHead>
-            <TableHead>Tags</TableHead>
-            <TableHead>Last run</TableHead>
-            <TableHead>Runs</TableHead>
-            <TableHead />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {filteredPipelines.length === 0 && (
-            <TableRow>
-              <TableCell colSpan={7} className="text-center">
-                No pipelines found.
-              </TableCell>
+        <Table className="text-sm">
+          <TableHeader>
+            <TableRow className="text-xs">
+              <TableHead className="w-10">
+                <Checkbox
+                  checked={isAllSelected}
+                  onCheckedChange={handleSelectAll}
+                />
+              </TableHead>
+              <TableHead>Title</TableHead>
+              <TableHead>Modified at</TableHead>
+              <TableHead>Tags</TableHead>
+              <TableHead>Last run</TableHead>
+              <TableHead>Runs</TableHead>
+              <TableHead />
             </TableRow>
-          )}
-          {paginatedPipelines.map(([name, fileEntry, matchMetadata]) => (
-            <PipelineRow
-              key={fileEntry.componentRef.digest}
-              name={name}
-              componentRef={fileEntry.componentRef}
-              modificationTime={fileEntry.modificationTime}
-              onDelete={fetchUserPipelines}
-              isSelected={selectedPipelines.has(name)}
-              onSelect={(checked) => handleSelectPipeline(name, checked)}
-              searchQuery={matchMetadata.searchQuery}
-              matchedFields={matchMetadata.matchedFields}
-              componentQuery={matchMetadata.componentQuery}
-              matchedComponentNames={matchMetadata.matchedComponentNames}
-            />
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {filteredPipelines.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center">
+                  No pipelines found.
+                </TableCell>
+              </TableRow>
+            )}
+            {paginatedPipelines.map(([name, fileEntry, matchMetadata]) => (
+              <PipelineRow
+                key={fileEntry.componentRef.digest}
+                name={name}
+                componentRef={fileEntry.componentRef}
+                modificationTime={fileEntry.modificationTime}
+                onDelete={fetchUserPipelines}
+                isSelected={selectedPipelines.has(name)}
+                onSelect={(checked) => handleSelectPipeline(name, checked)}
+                searchQuery={matchMetadata.searchQuery}
+                matchedFields={matchMetadata.matchedFields}
+                componentQuery={matchMetadata.componentQuery}
+                matchedComponentNames={matchMetadata.matchedComponentNames}
+                onPipelineClick={onPipelineClick}
+              />
+            ))}
+          </TableBody>
+        </Table>
 
-      {totalPages > 1 && (
-        <InlineStack
-          align="space-between"
-          blockAlign="center"
-          className="w-full"
-        >
-          <InlineStack gap="2" blockAlign="center">
-            <Button
-              variant="outline"
-              onClick={resetPage}
-              disabled={currentPage === 1}
-            >
-              <Icon name="ChevronFirst" />
-            </Button>
-            <Button
-              variant="outline"
-              onClick={goToPreviousPage}
-              disabled={!hasPreviousPage}
-            >
-              <Icon name="ChevronLeft" />
-              Previous
-            </Button>
+        {totalPages > 1 && (
+          <InlineStack gap="2" align="space-between" blockAlign="center">
+            <InlineStack gap="2" blockAlign="center">
+              <Button
+                variant="outline"
+                onClick={resetPage}
+                disabled={currentPage === 1}
+              >
+                <Icon name="ChevronFirst" />
+              </Button>
+              <Button
+                variant="outline"
+                onClick={goToPreviousPage}
+                disabled={!hasPreviousPage}
+              >
+                <Icon name="ChevronLeft" />
+                Previous
+              </Button>
+            </InlineStack>
             <Text size="sm" tone="subdued">
               Page {currentPage} of {totalPages}
             </Text>
+            <Button
+              variant="outline"
+              onClick={goToNextPage}
+              disabled={!hasNextPage}
+            >
+              Next
+              <Icon name="ChevronRight" />
+            </Button>
           </InlineStack>
-          <Button
-            variant="outline"
-            onClick={goToNextPage}
-            disabled={!hasNextPage}
-          >
-            Next
-            <Icon name="ChevronRight" />
-          </Button>
-        </InlineStack>
-      )}
+        )}
 
-      {selectedPipelines.size > 0 && (
-        <BulkActionsBar
-          selectedPipelines={Array.from(selectedPipelines)}
-          onDeleteSuccess={() => {
-            setSelectedPipelines(new Set());
-            fetchUserPipelines();
-          }}
-          onClearSelection={() => setSelectedPipelines(new Set())}
-        />
-      )}
-    </BlockStack>
-  );
-}, PipelineSectionSkeleton);
+        <Button onClick={fetchUserPipelines} className="mt-6 max-w-96">
+          Refresh
+        </Button>
+
+        {selectedPipelines.size > 0 && (
+          <BulkActionsBar
+            selectedPipelines={Array.from(selectedPipelines)}
+            onDeleteSuccess={() => {
+              setSelectedPipelines(new Set());
+              fetchUserPipelines();
+            }}
+            onClearSelection={() => setSelectedPipelines(new Set())}
+          />
+        )}
+      </BlockStack>
+    );
+  },
+  PipelineSectionSkeleton,
+);
 
 function QuickStartButton() {
   return (

@@ -22,6 +22,7 @@ class NavigationStore {
   rootSpec: ComponentSpec | null = null;
   nestedSpecs = new Map<string, ComponentSpec>();
   navigationPath: NavigationEntry[] = [];
+  requestedPipelineName: string | null = null;
   private nestedIdGen = new IncrementingIdGenerator();
 
   constructor() {
@@ -29,14 +30,20 @@ class NavigationStore {
       rootSpec: observable.ref,
       nestedSpecs: observable.ref,
       navigationPath: observable.shallow,
+      requestedPipelineName: observable,
       initNavigation: action,
       clearNavigation: action,
       navigateToSubgraph: action,
       navigateBack: action,
       navigateToLevel: action,
       navigateToPath: action,
+      setRequestedPipelineName: action,
       activeSpec: computed,
     });
+  }
+
+  setRequestedPipelineName(name: string | null) {
+    this.requestedPipelineName = name;
   }
 
   initNavigation(rootSpec: ComponentSpec) {
@@ -231,4 +238,8 @@ export function navigateToLevel(index: number): ComponentSpec | null {
 
 export function navigateToPath(pathNames: string[]): ComponentSpec | null {
   return navigationStore.navigateToPath(pathNames);
+}
+
+export function setRequestedPipelineName(name: string | null) {
+  navigationStore.setRequestedPipelineName(name);
 }
