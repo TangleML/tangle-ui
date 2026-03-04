@@ -99,6 +99,59 @@ function IssueBadge({ issues }: IssueBadgeProps) {
   );
 }
 
+interface IssueRowProps {
+  issue: ValidationIssue;
+}
+
+const IssueRow = observer(function IssueRow({ issue }: IssueRowProps) {
+  const isSelected = editorStore.selectedValidationIssue === issue;
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (issue.entityId) {
+      setPendingFocusNode(issue.entityId);
+    }
+    setSelectedValidationIssue(issue);
+  };
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={handleClick}
+      onKeyDown={(e) =>
+        e.key === "Enter" && handleClick(e as unknown as React.MouseEvent)
+      }
+      className={cn(
+        "flex items-baseline gap-1 py-0.5 px-2 rounded text-xs cursor-pointer transition-colors",
+        isSelected ? "ring-1 ring-blue-400" : "",
+        issue.severity === "error"
+          ? "bg-red-50 text-red-800 hover:bg-red-100"
+          : "bg-amber-50 text-amber-800 hover:bg-amber-100",
+      )}
+    >
+      <Text
+        size="xs"
+        weight="semibold"
+        className={cn(
+          "shrink-0 uppercase tracking-wide",
+          issue.severity === "error" ? "text-red-600" : "text-amber-600",
+        )}
+      >
+        {issueTypeLabel(issue.type)}
+      </Text>
+      <Text
+        size="xs"
+        className={
+          issue.severity === "error" ? "text-red-700" : "text-amber-700"
+        }
+      >
+        {issue.message}
+      </Text>
+    </div>
+  );
+});
+
 interface TaskLeafNodeProps {
   task: Task;
   parentSpec: ComponentSpec;
@@ -131,33 +184,52 @@ const TaskLeafNode = observer(function TaskLeafNode({
     setHoveredEntity(null);
   };
 
+  const hasIssues = issues.length > 0;
+  const hasWarnings = countWarnings(issues) > 0;
+
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={handleClick}
-      onKeyDown={(e) => e.key === "Enter" && handleClick()}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      className={cn(
-        "flex items-start gap-1 py-1 px-2 text-slate-600 rounded-md cursor-pointer transition-colors hover:bg-slate-50",
-        hasErrors && "text-red-700",
-      )}
-    >
-      <div className="w-5 shrink-0" />
-      <Icon
-        name="Circle"
-        size="xs"
+    <BlockStack gap="0">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={handleClick}
+        onKeyDown={(e) => e.key === "Enter" && handleClick()}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
         className={cn(
-          "shrink-0 mt-0.5",
-          hasErrors ? "text-red-400" : "text-slate-400",
+          "flex items-start gap-1 py-1 px-2 text-slate-600 rounded-md cursor-pointer transition-colors hover:bg-slate-50",
+          hasErrors && "text-red-700",
         )}
-      />
-      <Text size="sm" className="break-words min-w-0 flex-1">
-        {task.name}
-      </Text>
-      <IssueBadge issues={issues} />
-    </div>
+      >
+        <div className="w-5 shrink-0" />
+        <Icon
+          name={hasIssues ? "CircleAlert" : "Circle"}
+          size="xs"
+          className={cn(
+            "shrink-0 mt-0.5",
+            hasErrors
+              ? "text-red-400"
+              : hasWarnings
+                ? "text-amber-400"
+                : "text-slate-400",
+          )}
+        />
+        <Text size="sm" className="break-words min-w-0 flex-1">
+          {task.name}
+        </Text>
+        <IssueBadge issues={issues} />
+      </div>
+      {hasIssues && (
+        <BlockStack gap="1" className="ml-10 mb-1">
+          {issues.map((issue, index) => (
+            <IssueRow
+              key={`${issue.type}-${issue.entityId ?? "graph"}-${index}`}
+              issue={issue}
+            />
+          ))}
+        </BlockStack>
+      )}
+    </BlockStack>
   );
 });
 
@@ -452,6 +524,17 @@ const RootNode = observer(function RootNode({
           />
         )}
       </div>
+
+      {graphIssues.length > 0 && (
+        <BlockStack gap="1" className="ml-10 mt-0.5 mb-1">
+          {graphIssues.map((issue, index) => (
+            <IssueRow
+              key={`${issue.type}-${issue.entityId ?? "graph"}-${index}`}
+              issue={issue}
+            />
+          ))}
+        </BlockStack>
+      )}
 
       {hasChildren && isExpanded && (
         <BlockStack gap="0" className="ml-4 border-l border-slate-200 pl-2">
