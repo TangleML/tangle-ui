@@ -12,9 +12,11 @@ import {
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 
+import { InputValidationIndicator } from "./InputValidationIndicator";
 import type { TaskNodeViewProps } from "./TaskNode";
 
 export function TaskNodeFull({
+  entityId,
   taskName,
   selected,
   isHovered,
@@ -114,6 +116,11 @@ export function TaskNodeFull({
                   >
                     {input.name}
                   </Text>
+                  <InputValidationIndicator
+                    entityId={entityId}
+                    inputName={input.name}
+                    className="ml-0.5"
+                  />
                 </div>
               ))
             ) : (

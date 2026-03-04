@@ -27,6 +27,7 @@ import type {
 import {
   editorStore,
   selectNode,
+  setFocusedArgument,
   setHoveredEntity,
   setPendingFocusNode,
   setSelectedValidationIssue,
@@ -110,6 +111,10 @@ const IssueRow = observer(function IssueRow({ issue }: IssueRowProps) {
     e.stopPropagation();
     if (issue.entityId) {
       setPendingFocusNode(issue.entityId);
+      selectNode(issue.entityId, "task", { entityId: issue.entityId });
+    }
+    if (issue.argumentName) {
+      setFocusedArgument(issue.argumentName);
     }
     setSelectedValidationIssue(issue);
   };
@@ -197,7 +202,7 @@ const TaskLeafNode = observer(function TaskLeafNode({
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         className={cn(
-          "flex items-start gap-1 py-1 px-2 text-slate-600 rounded-md cursor-pointer transition-colors hover:bg-slate-50",
+          "flex items-start gap-1 py-1 px-2 text-slate-600 rounded-md cursor-pointer transition-colors hover:bg-slate-100",
           hasErrors && "text-red-700",
         )}
       >

@@ -17,6 +17,7 @@ import type {
 import type { DynamicDataArgument } from "@/utils/componentSpec";
 
 import { editorStore, setFocusedArgument } from "../store/editorStore";
+import { InputValidationIndicator } from "./InputValidationIndicator";
 import { ThunderMenu } from "./ThunderMenu";
 
 interface ArgumentRowProps {
@@ -197,6 +198,10 @@ export const ArgumentRow = observer(function ArgumentRow({
               *
             </Text>
           )}
+          <InputValidationIndicator
+            entityId={task.$id}
+            inputName={inputSpec.name}
+          />
         </InlineStack>
 
         <ThunderMenu
