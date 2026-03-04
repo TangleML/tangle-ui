@@ -1,4 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
+import yaml from "js-yaml";
 import { type ChangeEvent, type KeyboardEvent, useRef, useState } from "react";
 
 import type { TaskSpecOutput } from "@/api/types.gen";
@@ -138,16 +139,27 @@ export const SubmitTaskArgumentsDialog = ({
   };
 
   const handleFileImport = (fileText: string, fileExtension: string) => {
-    const isJson = fileExtension === ".json";
+    const isYaml = fileExtension === ".yaml" || fileExtension === ".yml";
+    const isJson = fileExtension === ".json" || isYaml;
+
+    let jsonText = fileText;
+    if (isYaml) {
+      try {
+        jsonText = JSON.stringify(yaml.load(fileText));
+      } catch {
+        notify("YAML file contains invalid syntax", "warning");
+        return;
+      }
+    }
 
     const result = isJson
-      ? mapJsonToArguments(fileText, inputs, taskArguments)
+      ? mapJsonToArguments(jsonText, inputs, taskArguments)
       : mapCsvToArguments(fileText, inputs, taskArguments);
 
     if (result.rowCount === 0 && result.changedInputNames.length === 0) {
       notify(
         isJson
-          ? "JSON file is empty or contains invalid data"
+          ? "File is empty or contains invalid data"
           : "CSV file is empty or contains only headers",
         "warning",
       );
@@ -178,7 +190,7 @@ export const SubmitTaskArgumentsDialog = ({
 
     let message = result.enableBulk
       ? `Imported ${result.rowCount} rows across ${inputCount} input${inputCount !== 1 ? "s" : ""}`
-      : `Imported ${inputCount} input${inputCount !== 1 ? "s" : ""} from ${isJson ? "JSON" : "CSV"}`;
+      : `Imported ${inputCount} input${inputCount !== 1 ? "s" : ""} from ${isJson ? (isYaml ? "YAML" : "JSON") : "CSV"}`;
 
     if (result.unmatchedColumns.length > 0) {
       const keyLabel = isJson ? "keys" : "columns";
@@ -668,7 +680,7 @@ const ImportFileButton = ({
       <input
         ref={fileInputRef}
         type="file"
-        accept=".csv,.json"
+        accept=".csv,.json,.yaml,.yml"
         onChange={handleFileChange}
         className="hidden"
       />
