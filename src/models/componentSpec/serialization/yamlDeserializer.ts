@@ -1,3 +1,4 @@
+import { Annotations, deserializeAnnotationValue } from "../annotations";
 import { Binding } from "../entities/binding";
 import { ComponentSpec } from "../entities/componentSpec";
 import { Input } from "../entities/input";
@@ -38,7 +39,9 @@ export class YamlDeserializer {
     const outputs = this.buildOutputs(json.outputs);
     const tasks = this.buildTasks(graph?.tasks);
     const bindings = this.buildBindings(graph, inputs, outputs, tasks);
-    const annotations = this.buildMetadataAnnotations(json.metadata);
+    const annotations = Annotations.from(
+      this.buildMetadataAnnotations(json.metadata),
+    );
 
     return new ComponentSpec({
       $id: this.idGen.next("spec"),
@@ -56,10 +59,13 @@ export class YamlDeserializer {
     if (!inputsJson) return [];
 
     return inputsJson.map((inputJson) => {
-      const annotations: Annotation[] = [];
+      const annotationItems: Annotation[] = [];
       if (inputJson.annotations) {
         for (const [key, value] of Object.entries(inputJson.annotations)) {
-          annotations.push({ key, value });
+          annotationItems.push({
+            key,
+            value: deserializeAnnotationValue(key, value),
+          });
         }
       }
 
@@ -70,7 +76,7 @@ export class YamlDeserializer {
         description: inputJson.description,
         defaultValue: inputJson.default,
         optional: inputJson.optional,
-        annotations,
+        annotations: Annotations.from(annotationItems),
       });
     });
   }
@@ -79,10 +85,13 @@ export class YamlDeserializer {
     if (!outputsJson) return [];
 
     return outputsJson.map((outputJson) => {
-      const annotations: Annotation[] = [];
+      const annotationItems: Annotation[] = [];
       if (outputJson.annotations) {
         for (const [key, value] of Object.entries(outputJson.annotations)) {
-          annotations.push({ key, value });
+          annotationItems.push({
+            key,
+            value: deserializeAnnotationValue(key, value),
+          });
         }
       }
 
@@ -91,7 +100,7 @@ export class YamlDeserializer {
         name: outputJson.name,
         type: outputJson.type,
         description: outputJson.description,
-        annotations,
+        annotations: Annotations.from(annotationItems),
       });
     });
   }
@@ -100,10 +109,13 @@ export class YamlDeserializer {
     if (!tasksJson) return [];
 
     return Object.entries(tasksJson).map(([taskName, taskJson]) => {
-      const annotations: Annotation[] = [];
+      const annotationItems: Annotation[] = [];
       if (taskJson.annotations) {
         for (const [key, value] of Object.entries(taskJson.annotations)) {
-          annotations.push({ key, value });
+          annotationItems.push({
+            key,
+            value: deserializeAnnotationValue(key, value),
+          });
         }
       }
 
@@ -128,7 +140,7 @@ export class YamlDeserializer {
         name: taskName,
         componentRef: taskJson.componentRef,
         isEnabled: taskJson.isEnabled,
-        annotations,
+        annotations: Annotations.from(annotationItems),
         arguments: args,
       });
     });

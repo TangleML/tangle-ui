@@ -1,10 +1,11 @@
+import type { Annotations } from "../annotations";
+import { serializeAnnotationValue } from "../annotations";
 import type { Binding } from "../entities/binding";
 import type { ComponentSpec } from "../entities/componentSpec";
 import type { Input } from "../entities/input";
 import type { Output } from "../entities/output";
 import type { Task } from "../entities/task";
 import type {
-  Annotation,
   Argument,
   ArgumentType,
   ComponentSpecJson,
@@ -179,20 +180,23 @@ export class JsonSerializer {
   }
 
   private serializeAnnotations(
-    annotations: Annotation[],
+    annotations: Annotations,
   ): Record<string, unknown> {
     const result: Record<string, unknown> = {};
-    for (const annotation of annotations) {
+    for (const annotation of annotations.items) {
       if (!annotation.key.startsWith("metadata.")) {
-        result[annotation.key] = annotation.value;
+        result[annotation.key] = serializeAnnotationValue(
+          annotation.key,
+          annotation.value,
+        );
       }
     }
     return result;
   }
 
-  private extractMetadata(annotations: Annotation[]): MetadataSpec {
+  private extractMetadata(annotations: Annotations): MetadataSpec {
     const metadata: MetadataSpec = {};
-    for (const annotation of annotations) {
+    for (const annotation of annotations.items) {
       if (annotation.key.startsWith("metadata.")) {
         const key = annotation.key.slice("metadata.".length);
         metadata[key] = annotation.value;

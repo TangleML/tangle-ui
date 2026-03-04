@@ -1,13 +1,14 @@
 import { computed } from "mobx";
 import { idProp, Model, model, modelAction, prop } from "mobx-keystone";
 
+import { Annotations } from "../annotations";
 import type { ValidationIssue } from "../validation/types";
 import { validateSpec } from "../validation/validateSpec";
 import { Binding } from "./binding";
 import type { Input } from "./input";
 import type { Output } from "./output";
 import type { Task } from "./task";
-import type { Annotation, ArgumentType, BindingEndpoint } from "./types";
+import type { ArgumentType, BindingEndpoint } from "./types";
 
 @model("spec/ComponentSpec")
 export class ComponentSpec extends Model({
@@ -18,7 +19,7 @@ export class ComponentSpec extends Model({
   outputs: prop<Output[]>(() => []),
   tasks: prop<Task[]>(() => []),
   bindings: prop<Binding[]>(() => []),
-  annotations: prop<Annotation[]>(() => []),
+  annotations: prop<Annotations>(() => new Annotations({})),
 }) {
   // --- Task mutations ---
 
@@ -150,44 +151,15 @@ export class ComponentSpec extends Model({
     return binding;
   }
 
-  // --- Annotation mutations ---
-
-  @modelAction
-  addAnnotation(annotation: Annotation) {
-    this.annotations.push(annotation);
-  }
-
-  @modelAction
-  updateAnnotation(index: number, updates: Partial<Annotation>) {
-    const ann = this.annotations[index];
-    if (ann) Object.assign(ann, updates);
-  }
-
-  @modelAction
-  removeAnnotation(index: number) {
-    this.annotations.splice(index, 1);
-  }
-
-  @modelAction
-  removeAnnotationByKey(key: string) {
-    const idx = this.annotations.findIndex((a) => a.key === key);
-    if (idx >= 0) this.annotations.splice(idx, 1);
-  }
-
   // --- Metadata helpers ---
 
   getMetadata(key: string): unknown {
-    return this.annotations.find((a) => a.key === `metadata.${key}`)?.value;
+    return this.annotations.get(`metadata.${key}`);
   }
 
   @modelAction
   setMetadata(key: string, value: unknown) {
-    const idx = this.annotations.findIndex((a) => a.key === `metadata.${key}`);
-    if (idx >= 0) {
-      Object.assign(this.annotations[idx], { value });
-    } else {
-      this.annotations.push({ key: `metadata.${key}`, value });
-    }
+    this.annotations.set(`metadata.${key}`, value);
   }
 
   // --- Compound mutations (used by editor actions) ---
@@ -273,20 +245,12 @@ export class ComponentSpec extends Model({
 
   @modelAction
   updateNodePosition(entityId: string, position: { x: number; y: number }) {
-    const posValue = JSON.stringify(position);
     const entity =
       this.tasks.find((t) => t.$id === entityId) ??
       this.inputs.find((i) => i.$id === entityId) ??
       this.outputs.find((o) => o.$id === entityId);
     if (!entity) return;
-
-    const key = "editor.position";
-    const idx = entity.annotations.findIndex((a) => a.key === key);
-    if (idx >= 0) {
-      Object.assign(entity.annotations[idx], { value: posValue });
-    } else {
-      entity.annotations.push({ key, value: posValue });
-    }
+    entity.annotations.set("editor.position", position);
   }
 
   // --- Property setters ---

@@ -29,13 +29,16 @@ describe("Output", () => {
     expect(output.annotations.length).toBe(0);
   });
 
-  it("addAnnotation adds to annotations", () => {
+  it("annotations.add adds to annotations", () => {
     const output = new Output({ $id: "output_1", name: "test" });
 
-    output.addAnnotation({ key: "format", value: "json" });
+    output.annotations.add({ key: "format", value: "json" });
 
     expect(output.annotations.length).toBe(1);
-    expect(output.annotations[0]).toEqual({ key: "format", value: "json" });
+    expect(output.annotations.items[0]).toEqual({
+      key: "format",
+      value: "json",
+    });
   });
 
   it("setName updates name", () => {

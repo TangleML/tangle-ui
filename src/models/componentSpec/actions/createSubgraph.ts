@@ -1,3 +1,4 @@
+import { Annotations } from "../annotations";
 import { Binding } from "../entities/binding";
 import { ComponentSpec } from "../entities/componentSpec";
 import { Input } from "../entities/input";
@@ -49,7 +50,7 @@ function snapshotTask(t: Task): TaskSnapshot {
     name: t.name,
     componentRef: deepClone(t.componentRef),
     isEnabled: t.isEnabled ? deepClone(t.isEnabled) : undefined,
-    annotations: t.annotations.map((a) => deepClone(a)),
+    annotations: t.annotations.items.map((a) => deepClone(a)),
     arguments: t.arguments.map((a) => deepClone(a)),
   };
 }
@@ -168,7 +169,7 @@ export function createSubgraph({
         name: t.name,
         componentRef: t.componentRef,
         isEnabled: t.isEnabled,
-        annotations: t.annotations,
+        annotations: Annotations.from(t.annotations),
         arguments: t.arguments,
       }),
   );

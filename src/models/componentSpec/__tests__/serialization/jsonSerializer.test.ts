@@ -111,7 +111,7 @@ describe("JsonSerializer", () => {
       $id: idGen.next("spec"),
       name: "Pipeline",
     });
-    spec.addAnnotation({ key: "regular", value: "annotation" });
+    spec.annotations.add({ key: "regular", value: "annotation" });
 
     const json = serializer.serialize(spec);
 
@@ -275,7 +275,7 @@ describe("JsonSerializer", () => {
       name: "Process",
       componentRef: {},
     });
-    task.addAnnotation({ key: "note", value: "important" });
+    task.annotations.add({ key: "note", value: "important" });
     spec.addTask(task);
 
     const json = serializer.serialize(spec);
@@ -294,7 +294,7 @@ describe("JsonSerializer", () => {
       $id: idGen.next("input"),
       name: "data",
     });
-    input.addAnnotation({ key: "format", value: "json" });
+    input.annotations.add({ key: "format", value: "json" });
     spec.addInput(input);
 
     const json = serializer.serialize(spec);

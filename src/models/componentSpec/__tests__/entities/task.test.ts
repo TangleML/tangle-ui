@@ -26,17 +26,17 @@ describe("Task", () => {
     expect(task.arguments.length).toBe(0);
   });
 
-  it("addAnnotation adds to annotations", () => {
+  it("annotations.add adds to annotations", () => {
     const task = new Task({
       $id: "task_1",
       name: "T",
       componentRef: {},
     });
 
-    task.addAnnotation({ key: "foo", value: "bar" });
+    task.annotations.add({ key: "foo", value: "bar" });
 
     expect(task.annotations.length).toBe(1);
-    expect(task.annotations[0]).toEqual({ key: "foo", value: "bar" });
+    expect(task.annotations.items[0]).toEqual({ key: "foo", value: "bar" });
   });
 
   it("addArgument adds to arguments", () => {

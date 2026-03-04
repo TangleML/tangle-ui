@@ -10,7 +10,6 @@ import {
   Output,
   type Task,
 } from "@/models/componentSpec";
-import { EDITOR_POSITION_ANNOTATION } from "@/utils/annotations";
 
 const idGen = new IncrementingIdGenerator();
 
@@ -53,9 +52,9 @@ export function addTask(
   const taskName = generateUniqueTaskName(spec, componentName);
   const task = createTaskFromComponentRef(idGen, componentRef, taskName);
 
-  task.addAnnotation({
-    key: EDITOR_POSITION_ANNOTATION,
-    value: JSON.stringify({ x: position.x, y: position.y }),
+  task.annotations.set("editor.position", {
+    x: position.x,
+    y: position.y,
   });
 
   spec.addTask(task);
@@ -71,12 +70,10 @@ export function addInput(
   const input = new Input({
     $id: idGen.next("input"),
     name: inputName,
-    annotations: [
-      {
-        key: EDITOR_POSITION_ANNOTATION,
-        value: JSON.stringify({ x: position.x, y: position.y }),
-      },
-    ],
+  });
+  input.annotations.set("editor.position", {
+    x: position.x,
+    y: position.y,
   });
   spec.addInput(input);
   return input;
@@ -91,12 +88,10 @@ export function addOutput(
   const output = new Output({
     $id: idGen.next("output"),
     name: outputName,
-    annotations: [
-      {
-        key: EDITOR_POSITION_ANNOTATION,
-        value: JSON.stringify({ x: position.x, y: position.y }),
-      },
-    ],
+  });
+  output.annotations.set("editor.position", {
+    x: position.x,
+    y: position.y,
   });
   spec.addOutput(output);
   return output;
@@ -224,10 +219,7 @@ export function createSubgraph(
 
     if (!result) return null;
 
-    result.replacementTask.addAnnotation({
-      key: EDITOR_POSITION_ANNOTATION,
-      value: JSON.stringify(position),
-    });
+    result.replacementTask.annotations.set("editor.position", position);
 
     return result.replacementTask;
   } catch (error) {

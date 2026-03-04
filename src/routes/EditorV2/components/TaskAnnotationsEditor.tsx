@@ -34,25 +34,25 @@ export const TaskAnnotationsEditor = observer(function TaskAnnotationsEditor({
   );
 
   const handleAddAnnotation = () => {
-    task.addAnnotation({ key: "", value: "" });
+    task.annotations.add({ key: "", value: "" });
   };
 
   const handleUpdateKey = (
     index: number,
     event: ChangeEvent<HTMLInputElement>,
   ) => {
-    task.updateAnnotation(index, { key: event.target.value });
+    task.annotations.updateAt(index, { key: event.target.value });
   };
 
   const handleUpdateValue = (
     index: number,
     event: ChangeEvent<HTMLInputElement>,
   ) => {
-    task.updateAnnotation(index, { value: event.target.value });
+    task.annotations.updateAt(index, { value: event.target.value });
   };
 
   const handleRemoveAnnotation = (index: number) => {
-    task.removeAnnotation(index);
+    task.annotations.removeAt(index);
   };
 
   return (
