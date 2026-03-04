@@ -1,10 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import {
-  type ChangeEvent,
-  type KeyboardEvent,
-  useEffect,
-  useState,
-} from "react";
+import { type ChangeEvent, type KeyboardEvent, useRef, useState } from "react";
 
 import type { TaskSpecOutput } from "@/api/types.gen";
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
@@ -56,6 +51,8 @@ import {
   type InputSpec,
   isSecretArgument,
 } from "@/utils/componentSpec";
+import { generateCsvTemplate } from "@/utils/csvBulkArgumentExport";
+import { mapCsvToArguments } from "@/utils/csvBulkArgumentImport";
 import { extractTaskArguments } from "@/utils/nodes/taskArguments";
 import { validateArguments } from "@/utils/validations";
 
@@ -99,9 +96,10 @@ export const SubmitTaskArgumentsDialog = ({
   const isBulkMode = bulkInputNames.size > 0;
   const effectiveRunCount = isBulkMode ? Math.max(bulkRunCount, 0) : 1;
 
-  const [isValidToSubmit, setIsValidToSubmit] = useState(
-    validateArguments(inputs, taskArguments),
-  );
+  const isValidToSubmit =
+    validateArguments(inputs, taskArguments) &&
+    !hasBulkMismatch &&
+    bulkRunCount > 0;
 
   const handleCopyFromRun = (args: Record<string, string>) => {
     const diff = Object.entries(args).filter(
@@ -126,12 +124,6 @@ export const SubmitTaskArgumentsDialog = ({
     }));
   };
 
-  useEffect(() => {
-    const baseValid = validateArguments(inputs, taskArguments);
-    const bulkValid = !hasBulkMismatch && bulkRunCount > 0;
-    setIsValidToSubmit(baseValid && bulkValid);
-  }, [inputs, taskArguments, hasBulkMismatch, bulkRunCount]);
-
   const handleBulkToggle = (name: string, enabled: boolean) => {
     setBulkInputNames((prev) => {
       const next = new Set(prev);
@@ -142,6 +134,51 @@ export const SubmitTaskArgumentsDialog = ({
       }
       return next;
     });
+  };
+
+  const handleCsvImport = (csvText: string) => {
+    const result = mapCsvToArguments(csvText, inputs, taskArguments);
+
+    if (result.rowCount === 0 && result.changedInputNames.length === 0) {
+      notify("CSV file is empty or contains only headers", "warning");
+      return;
+    }
+
+    setTaskArguments((prev) => ({ ...prev, ...result.values }));
+
+    if (result.enableBulk) {
+      setBulkInputNames((prev) => {
+        const next = new Set(prev);
+        for (const name of Object.keys(result.values)) {
+          next.add(name);
+        }
+        return next;
+      });
+    }
+
+    const version = Date.now();
+    setHighlightedArgs(
+      new Map(result.changedInputNames.map((name) => [name, version])),
+    );
+
+    const inputCount = result.changedInputNames.length;
+    const hasWarnings =
+      result.unmatchedColumns.length > 0 ||
+      result.skippedSecretInputs.length > 0;
+
+    let message = result.enableBulk
+      ? `Imported ${result.rowCount} rows across ${inputCount} input${inputCount !== 1 ? "s" : ""}`
+      : `Imported ${inputCount} input${inputCount !== 1 ? "s" : ""} from CSV`;
+
+    if (result.unmatchedColumns.length > 0) {
+      message += `. Ignored columns: ${result.unmatchedColumns.join(", ")}`;
+    }
+
+    if (result.skippedSecretInputs.length > 0) {
+      message += `. Skipped secrets: ${result.skippedSecretInputs.join(", ")}`;
+    }
+
+    notify(message, hasWarnings ? "warning" : "success");
   };
 
   const handleConfirm = () =>
@@ -173,7 +210,14 @@ export const SubmitTaskArgumentsDialog = ({
               <Paragraph tone="subdued" size="sm">
                 Customize the pipeline input values before submitting.
               </Paragraph>
-              <InlineStack align="end" className="w-full">
+              <InlineStack align="end" gap="1" className="w-full">
+                <DownloadCsvTemplateButton
+                  inputs={inputs}
+                  taskArguments={taskArguments}
+                  bulkInputNames={bulkInputNames}
+                  pipelineName={componentSpec.name}
+                />
+                <ImportCsvButton onImport={handleCsvImport} />
                 <CopyFromRunPopover
                   componentSpec={componentSpec}
                   onCopy={handleCopyFromRun}
@@ -541,6 +585,85 @@ const ArgumentField = ({
         onOpenChange={setIsSelectSecretDialogOpen}
         onSelect={handleSecretSelect}
       />
+    </>
+  );
+};
+
+const DownloadCsvTemplateButton = ({
+  inputs,
+  taskArguments,
+  bulkInputNames,
+  pipelineName,
+}: {
+  inputs: InputSpec[];
+  taskArguments: Record<string, ArgumentType>;
+  bulkInputNames: Set<string>;
+  pipelineName?: string;
+}) => {
+  const handleDownload = () => {
+    const csv = generateCsvTemplate(inputs, taskArguments, bulkInputNames);
+    if (!csv) return;
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${pipelineName ?? "pipeline"}-arguments.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <Button variant="ghost" size="sm" onClick={handleDownload}>
+      <Icon name="Download" />
+      Template
+    </Button>
+  );
+};
+
+const ImportCsvButton = ({
+  onImport,
+}: {
+  onImport: (csvText: string) => void;
+}) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result;
+      if (typeof text === "string") {
+        onImport(text);
+      }
+    };
+    reader.readAsText(file);
+
+    // Reset so the same file can be re-selected
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  return (
+    <>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".csv"
+        onChange={handleFileChange}
+        className="hidden"
+      />
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => fileInputRef.current?.click()}
+      >
+        <Icon name="FileSpreadsheet" />
+        Import CSV
+      </Button>
     </>
   );
 };
