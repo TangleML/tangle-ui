@@ -15,28 +15,20 @@ import { ComponentLibraryProvider } from "@/providers/ComponentLibraryProvider";
 import { ForcedSearchProvider } from "@/providers/ComponentLibraryProvider/ForcedSearchProvider";
 
 import { DebugPanel } from "./components/DebugPanel";
-import { FlowCanvas } from "./components/FlowCanvas";
+import { FlowCanvas } from "./components/FlowCanvas/FlowCanvas";
 import { useComponentLibraryWindow } from "./hooks/useComponentLibraryWindow";
 import { useHistoryWindow } from "./hooks/useHistoryWindow";
 import { useLinkedWindowCleanup } from "./hooks/useLinkedWindowCleanup";
 import { usePipelineDetailsWindow } from "./hooks/usePipelineDetailsWindow";
-import {
-  PIPELINE_TREE_WINDOW_ID,
-  usePipelineTreeWindow,
-} from "./hooks/usePipelineTreeWindow";
+import { usePipelineTreeWindow } from "./hooks/usePipelineTreeWindow";
 import { useSelectionWindowSync } from "./hooks/useSelectionWindowSync";
 import { useSpecLifecycle } from "./hooks/useSpecLifecycle";
 import { useUndoRedoKeyboard } from "./hooks/useUndoRedoKeyboard";
 import { useWindowPersistence } from "./hooks/useWindowPersistence";
 import { SpecProvider } from "./providers/SpecContext";
-import {
-  isTaskSubgraph,
-  navigateToSubgraph,
-  navigationStore,
-} from "./store/navigationStore";
+import { navigationStore } from "./store/navigationStore";
 import { TaskPanel } from "./windows/TaskPanel";
 import { WindowContainer } from "./windows/WindowContainer";
-import { restoreWindow } from "./windows/windowStore";
 
 const availableTemplates = import.meta.glob<string>("./assets/*.yaml", {
   query: "?raw",
@@ -82,16 +74,6 @@ const PipelineEditor = withSuspenseWrapper(
 
     const activeSpec = navigationStore.activeSpec;
 
-    const handleTaskDoubleClick = (taskEntityId: string) => {
-      if (!activeSpec) return;
-      if (isTaskSubgraph(activeSpec, taskEntityId)) {
-        const newSpec = navigateToSubgraph(activeSpec, taskEntityId);
-        if (newSpec) {
-          restoreWindow(PIPELINE_TREE_WINDOW_ID);
-        }
-      }
-    };
-
     if (!activeSpec) return null;
 
     return (
@@ -100,7 +82,6 @@ const PipelineEditor = withSuspenseWrapper(
         <FlowCanvas
           key={activeSpec?.$id ?? "root"}
           spec={activeSpec}
-          onTaskDoubleClick={handleTaskDoubleClick}
           className="h-full"
         />
         <WindowContainer />
