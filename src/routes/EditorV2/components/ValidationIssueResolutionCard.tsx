@@ -46,19 +46,14 @@ export const ValidationIssueResolutionCard = observer(
 function IssueHeader({ issue }: { issue: ValidationIssue }) {
   const severityColor =
     issue.severity === "error" ? "text-red-600" : "text-amber-600";
-  const severityBg =
-    issue.severity === "error" ? "bg-red-50" : "bg-amber-50";
+  const severityBg = issue.severity === "error" ? "bg-red-50" : "bg-amber-50";
   const severityIcon =
     issue.severity === "error" ? "CircleAlert" : "TriangleAlert";
 
   return (
     <BlockStack gap="2">
       <InlineStack gap="2" blockAlign="center">
-        <Icon
-          name={severityIcon}
-          size="sm"
-          className={severityColor}
-        />
+        <Icon name={severityIcon} size="sm" className={severityColor} />
         <Text size="sm" weight="semibold" className={severityColor}>
           {issue.severity === "error" ? "Error" : "Warning"}
         </Text>
@@ -85,48 +80,98 @@ const ResolutionContent = observer(function ResolutionContent({
     case "MISSING_REQUIRED_INPUT":
       return <MissingRequiredInputResolution issue={issue} spec={spec} />;
     case "EMPTY_TASK_NAME":
-      return <RenameEntityResolution issue={issue} spec={spec} entityType="task" />;
+      return (
+        <RenameEntityResolution issue={issue} spec={spec} entityType="task" />
+      );
     case "EMPTY_COMPONENT_NAME":
-      return <RenameEntityResolution issue={issue} spec={spec} entityType="component" />;
+      return (
+        <RenameEntityResolution
+          issue={issue}
+          spec={spec}
+          entityType="component"
+        />
+      );
     case "EMPTY_INPUT_NAME":
-      return <RenameEntityResolution issue={issue} spec={spec} entityType="input" />;
+      return (
+        <RenameEntityResolution issue={issue} spec={spec} entityType="input" />
+      );
     case "EMPTY_OUTPUT_NAME":
-      return <RenameEntityResolution issue={issue} spec={spec} entityType="output" />;
+      return (
+        <RenameEntityResolution issue={issue} spec={spec} entityType="output" />
+      );
     case "DUPLICATE_INPUT_NAME":
-      return <DuplicateNameResolution issue={issue} spec={spec} entityType="input" />;
+      return (
+        <DuplicateNameResolution issue={issue} spec={spec} entityType="input" />
+      );
     case "DUPLICATE_OUTPUT_NAME":
-      return <DuplicateNameResolution issue={issue} spec={spec} entityType="output" />;
+      return (
+        <DuplicateNameResolution
+          issue={issue}
+          spec={spec}
+          entityType="output"
+        />
+      );
     case "MISSING_COMPONENT_REF":
-      return <DeleteEntityResolution issue={issue} label="Delete Task" onDelete={() => {
-        if (issue.entityId) spec.removeTaskById(issue.entityId);
-        setSelectedValidationIssue(null);
-      }} />;
+      return (
+        <DeleteEntityResolution
+          issue={issue}
+          label="Delete Task"
+          onDelete={() => {
+            if (issue.entityId) spec.removeTaskById(issue.entityId);
+            setSelectedValidationIssue(null);
+          }}
+        />
+      );
     case "BAD_INPUT_REFERENCE":
     case "BAD_TASK_REFERENCE":
     case "BAD_OUTPUT_REFERENCE":
       return <BadReferenceResolution issue={issue} spec={spec} />;
     case "UNCONNECTED_INPUT":
-      return <DeleteEntityResolution issue={issue} label="Delete Input" onDelete={() => {
-        if (issue.entityId) spec.removeInputById(issue.entityId);
-        setSelectedValidationIssue(null);
-      }} />;
+      return (
+        <DeleteEntityResolution
+          issue={issue}
+          label="Delete Input"
+          onDelete={() => {
+            if (issue.entityId) spec.removeInputById(issue.entityId);
+            setSelectedValidationIssue(null);
+          }}
+        />
+      );
     case "UNCONNECTED_OUTPUT":
-      return <DeleteEntityResolution issue={issue} label="Delete Output" onDelete={() => {
-        if (issue.entityId) spec.removeOutputById(issue.entityId);
-        setSelectedValidationIssue(null);
-      }} />;
+      return (
+        <DeleteEntityResolution
+          issue={issue}
+          label="Delete Output"
+          onDelete={() => {
+            if (issue.entityId) spec.removeOutputById(issue.entityId);
+            setSelectedValidationIssue(null);
+          }}
+        />
+      );
     case "ORPHANED_BINDING_SOURCE":
     case "ORPHANED_BINDING_TARGET":
-      return <DeleteEntityResolution issue={issue} label="Delete Binding" onDelete={() => {
-        if (issue.entityId) spec.removeBindingById(issue.entityId);
-        setSelectedValidationIssue(null);
-      }} />;
+      return (
+        <DeleteEntityResolution
+          issue={issue}
+          label="Delete Binding"
+          onDelete={() => {
+            if (issue.entityId) spec.removeBindingById(issue.entityId);
+            setSelectedValidationIssue(null);
+          }}
+        />
+      );
     case "CIRCULAR_DEPENDENCY":
-      return <InfoOnlyResolution message="Circular dependencies must be resolved manually by removing or re-routing connections between the affected tasks." />;
+      return (
+        <InfoOnlyResolution message="Circular dependencies must be resolved manually by removing or re-routing connections between the affected tasks." />
+      );
     case "NO_TASKS":
-      return <InfoOnlyResolution message="Add tasks to the pipeline from the component library." />;
+      return (
+        <InfoOnlyResolution message="Add tasks to the pipeline from the component library." />
+      );
     default:
-      return <InfoOnlyResolution message="No automated fix available for this issue." />;
+      return (
+        <InfoOnlyResolution message="No automated fix available for this issue." />
+      );
   }
 });
 
@@ -143,32 +188,42 @@ const MissingRequiredInputResolution = observer(
     spec: ComponentSpec;
   }) {
     if (!issue.entityId || !issue.argumentName) {
-      return <InfoOnlyResolution message="Cannot resolve: missing entity or argument information." />;
+      return (
+        <InfoOnlyResolution message="Cannot resolve: missing entity or argument information." />
+      );
     }
 
     const task = findTaskById(spec, issue.entityId);
     if (!task) {
-      return <InfoOnlyResolution message="Task not found in the current graph." />;
+      return (
+        <InfoOnlyResolution message="Task not found in the current graph." />
+      );
     }
 
-    const componentSpec = task.componentRef.spec as ComponentSpecJson | undefined;
+    const componentSpec = task.componentRef.spec as
+      | ComponentSpecJson
+      | undefined;
     const inputSpec = componentSpec?.inputs?.find(
       (i) => i.name === issue.argumentName,
     );
 
     if (!inputSpec) {
-      return <InfoOnlyResolution message="Input specification not found for this argument." />;
+      return (
+        <InfoOnlyResolution message="Input specification not found for this argument." />
+      );
     }
 
     const arg = task.arguments.find((a) => a.name === inputSpec.name);
     const binding = spec.bindings.find(
-      (b) => b.targetEntityId === task.$id && b.targetPortName === inputSpec.name,
+      (b) =>
+        b.targetEntityId === task.$id && b.targetPortName === inputSpec.name,
     );
 
     return (
       <BlockStack gap="2">
         <Text size="xs" weight="semibold" className="text-gray-700">
-          Set value for &ldquo;{inputSpec.name}&rdquo; on task &ldquo;{task.name}&rdquo;
+          Set value for &ldquo;{inputSpec.name}&rdquo; on task &ldquo;
+          {task.name}&rdquo;
         </Text>
         <ArgumentRow
           inputSpec={inputSpec}
@@ -235,7 +290,9 @@ function RenameEntityResolution({
         <Input
           ref={inputRef}
           value={value}
-          onChange={(e: ChangeEvent<HTMLInputElement>) => setValue(e.target.value)}
+          onChange={(e: ChangeEvent<HTMLInputElement>) =>
+            setValue(e.target.value)
+          }
           onKeyDown={handleKeyDown}
           placeholder={`Enter ${label} name...`}
           className="h-8 text-xs flex-1"
@@ -303,7 +360,9 @@ function DuplicateNameResolution({
           <Input
             ref={inputRef}
             value={value}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => setValue(e.target.value)}
+            onChange={(e: ChangeEvent<HTMLInputElement>) =>
+              setValue(e.target.value)
+            }
             onKeyDown={handleKeyDown}
             placeholder={`New ${entityType} name...`}
             className="h-8 text-xs flex-1"
@@ -319,11 +378,7 @@ function DuplicateNameResolution({
         <Text size="xs" tone="subdued" className="mb-2">
           Or remove the duplicate:
         </Text>
-        <Button
-          variant="destructive"
-          size="sm"
-          onClick={handleDelete}
-        >
+        <Button variant="destructive" size="sm" onClick={handleDelete}>
           <Icon name="Trash2" size="xs" />
           Delete {entityType}
         </Button>
@@ -343,12 +398,16 @@ const BadReferenceResolution = observer(function BadReferenceResolution({
   spec: ComponentSpec;
 }) {
   if (!issue.entityId || !issue.argumentName) {
-    return <InfoOnlyResolution message="Cannot resolve: missing entity or argument information." />;
+    return (
+      <InfoOnlyResolution message="Cannot resolve: missing entity or argument information." />
+    );
   }
 
   const task = findTaskById(spec, issue.entityId);
   if (!task) {
-    return <InfoOnlyResolution message="Task not found in the current graph." />;
+    return (
+      <InfoOnlyResolution message="Task not found in the current graph." />
+    );
   }
 
   const componentSpec = task.componentRef.spec as ComponentSpecJson | undefined;
@@ -369,18 +428,16 @@ const BadReferenceResolution = observer(function BadReferenceResolution({
     <BlockStack gap="3">
       <BlockStack gap="2">
         <Text size="xs" weight="semibold" className="text-gray-700">
-          Fix reference for &ldquo;{issue.argumentName}&rdquo; on task &ldquo;{task.name}&rdquo;
+          Fix reference for &ldquo;{issue.argumentName}&rdquo; on task &ldquo;
+          {task.name}&rdquo;
         </Text>
         <Text size="xs" tone="subdued">
-          The current reference to &ldquo;{issue.referencedName}&rdquo; is invalid.
+          The current reference to &ldquo;{issue.referencedName}&rdquo; is
+          invalid.
         </Text>
       </BlockStack>
 
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={handleUnset}
-      >
+      <Button variant="outline" size="sm" onClick={handleUnset}>
         <Icon name="Unlink" size="xs" />
         Unset Argument
       </Button>
@@ -439,7 +496,11 @@ function DeleteEntityResolution({
  */
 function InfoOnlyResolution({ message }: { message: string }) {
   return (
-    <InlineStack gap="2" blockAlign="start" className="rounded-md bg-slate-50 p-3">
+    <InlineStack
+      gap="2"
+      blockAlign="start"
+      className="rounded-md bg-slate-50 p-3"
+    >
       <Icon name="Info" size="sm" className="text-slate-500 shrink-0 mt-0.5" />
       <Text size="xs" tone="subdued">
         {message}

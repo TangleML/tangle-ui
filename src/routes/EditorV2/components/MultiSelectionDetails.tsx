@@ -196,9 +196,7 @@ const BatchArgumentRow = observer(function BatchArgumentRow({
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
           placeholder={
-            aggArg.isMixed
-              ? "mixed"
-              : (aggArg.defaultValue ?? "Enter value...")
+            aggArg.isMixed ? "mixed" : (aggArg.defaultValue ?? "Enter value...")
           }
           className="h-7 text-xs font-mono mt-1"
         />
@@ -297,9 +295,7 @@ function typeSpecToString(typeSpec?: TypeSpecType): string {
  * Aggregate arguments across selected tasks. Two inputs match when they share
  * the same name and serialized type. Only arguments present in 2+ tasks are returned.
  */
-function computeAggregatedArguments(
-  tasks: Task[],
-): AggregatedArgument[] {
+function computeAggregatedArguments(tasks: Task[]): AggregatedArgument[] {
   const map = new Map<
     string,
     {

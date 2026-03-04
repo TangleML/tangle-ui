@@ -18,11 +18,11 @@ import { getComponentName } from "@/utils/getComponentName";
 import { isSubgraph } from "@/utils/subgraphUtils";
 
 import { useNodesOverlay } from "../../NodesOverlay/NodesOverlayProvider";
-import { ComponentPreviewContext } from "./ComponentPreviewProvider";
 import {
   ComponentHoverPopover,
   type ComponentHoverPopoverHandle,
 } from "./ComponentHoverPopover";
+import { ComponentPreviewContext } from "./ComponentPreviewProvider";
 
 interface ComponentMarkupProps {
   component: ComponentReference;
