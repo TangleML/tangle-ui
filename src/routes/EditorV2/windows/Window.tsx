@@ -84,7 +84,7 @@ export function Window({ windowId }: WindowProps) {
   // Store sync happens later in onClick to avoid disrupting the click event chain.
   const raiseZIndex = () => {
     if (!isAtFront && panelRef.current) {
-      panelRef.current.style.zIndex = String(50 + snap.windowOrder.length);
+      panelRef.current.style.zIndex = String(20 + snap.windowOrder.length);
     }
   };
 
@@ -223,14 +223,14 @@ export function Window({ windowId }: WindowProps) {
   // Calculate content height (total height minus header ~44px)
   const contentHeight = size.height - 44;
 
-  // Maximized state: full viewport
+  // Maximized state: full viewport (z-45 to sit above TaskPanel z-40 but below popovers z-50)
   const windowStyle = isMaximized
     ? {
         left: 0,
         top: 0,
         width: "100vw",
         height: "100vh",
-        zIndex: 50 + zIndex,
+        zIndex: 45,
       }
     : {
         left: position.x,
@@ -239,7 +239,7 @@ export function Window({ windowId }: WindowProps) {
         height: isMinimized ? "auto" : size.height,
         minWidth: minSize.width,
         minHeight: isMinimized ? "auto" : minSize.height,
-        zIndex: 50 + zIndex,
+        zIndex: 20 + zIndex,
       };
 
   return (
