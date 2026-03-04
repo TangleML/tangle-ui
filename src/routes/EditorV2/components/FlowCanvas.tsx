@@ -149,6 +149,7 @@ export const FlowCanvas = observer(function FlowCanvas({
     if (positionChanges.length > 0) {
       undoStore.undoManager?.withGroup("Move nodes", () => {
         for (const change of positionChanges) {
+          // todo: introduce type guard for change isPositionChange
           if ("id" in change && "position" in change && change.position) {
             updateNodePosition(spec, change.id, change.position);
           }
@@ -158,9 +159,12 @@ export const FlowCanvas = observer(function FlowCanvas({
 
     const removeChanges = changes.filter((change) => change.type === "remove");
     for (const change of removeChanges) {
+      // todo: introduce type guard for change isRemoveChange
       if ("id" in change) {
         const nodeId = change.id;
         const nodeType = getNodeTypeFromId(nodeId);
+
+        // todo: better handling of node types, remove if statements
         if (nodeType === "task") deleteTask(spec, nodeId);
         else if (nodeType === "input") deleteInput(spec, nodeId);
         else if (nodeType === "output") deleteOutput(spec, nodeId);
@@ -178,6 +182,7 @@ export const FlowCanvas = observer(function FlowCanvas({
 
     const removeChanges = changes.filter((change) => change.type === "remove");
     for (const change of removeChanges) {
+      // todo: introduce type guard for change isRemoveChange
       if ("id" in change) {
         deleteEdge(spec, change.id);
       }
@@ -225,6 +230,7 @@ export const FlowCanvas = observer(function FlowCanvas({
     try {
       const parsedData = JSON.parse(droppedData);
 
+      // todo: introduce better handling of node types, remove if statements, make it SOLID
       if (parsedData.task) {
         const taskSpec = parsedData.task as TaskSpec;
         const componentRef = await hydrateComponentReference(

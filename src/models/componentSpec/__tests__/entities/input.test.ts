@@ -33,13 +33,16 @@ describe("Input", () => {
     expect(input.annotations.length).toBe(0);
   });
 
-  it("addAnnotation adds to annotations", () => {
+  it("annotations.add adds to annotations", () => {
     const input = new Input({ $id: "input_1", name: "test" });
 
-    input.addAnnotation({ key: "note", value: "important" });
+    input.annotations.add({ key: "note", value: "important" });
 
     expect(input.annotations.length).toBe(1);
-    expect(input.annotations[0]).toEqual({ key: "note", value: "important" });
+    expect(input.annotations.items[0]).toEqual({
+      key: "note",
+      value: "important",
+    });
   });
 
   it("setName updates name", () => {

@@ -1,3 +1,6 @@
+// Annotations
+export { Annotations } from "./annotations";
+
 // Entities
 export type {
   Annotation,

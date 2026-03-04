@@ -191,7 +191,7 @@ describe("createSubgraph", () => {
       componentRef: { name: "MyComponent" },
       isEnabled: { "==": { op1: "a", op2: "b" } },
     });
-    task.addAnnotation({ key: "note", value: "test" });
+    task.annotations.add({ key: "note", value: "test" });
     spec.addTask(task);
 
     const result = createSubgraph({

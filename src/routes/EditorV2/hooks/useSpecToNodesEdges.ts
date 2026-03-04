@@ -8,38 +8,9 @@ import type {
   Output,
   Task,
 } from "@/models/componentSpec";
-import { EDITOR_POSITION_ANNOTATION } from "@/utils/annotations";
 
-interface NodePosition {
-  x: number;
-  y: number;
-}
-
-const DEFAULT_POSITION: NodePosition = { x: 0, y: 0 };
 const TASK_OFFSET = 200;
 const IO_OFFSET = 150;
-
-function getPositionFromAnnotations(
-  annotations: { key: string; value: unknown }[],
-): NodePosition {
-  const posAnnotation = annotations.find(
-    (a) => a.key === EDITOR_POSITION_ANNOTATION,
-  );
-  if (!posAnnotation?.value) {
-    return DEFAULT_POSITION;
-  }
-
-  try {
-    const posStr = posAnnotation.value;
-    if (typeof posStr === "string") {
-      return JSON.parse(posStr) as NodePosition;
-    }
-  } catch {
-    // Ignore parse errors
-  }
-
-  return DEFAULT_POSITION;
-}
 
 export interface TaskNodeData extends Record<string, unknown> {
   entityId: string;
@@ -62,24 +33,18 @@ function buildFingerprint(spec: ComponentSpec): string {
   const parts: string[] = [];
 
   for (const input of spec.inputs) {
-    const pos = input.annotations.find(
-      (a) => a.key === EDITOR_POSITION_ANNOTATION,
-    )?.value;
-    parts.push(`i:${input.$id}:${input.name}:${pos ?? ""}`);
+    const pos = input.annotations.get("editor.position");
+    parts.push(`i:${input.$id}:${input.name}:${pos.x},${pos.y}`);
   }
 
   for (const output of spec.outputs) {
-    const pos = output.annotations.find(
-      (a) => a.key === EDITOR_POSITION_ANNOTATION,
-    )?.value;
-    parts.push(`o:${output.$id}:${output.name}:${pos ?? ""}`);
+    const pos = output.annotations.get("editor.position");
+    parts.push(`o:${output.$id}:${output.name}:${pos.x},${pos.y}`);
   }
 
   for (const task of spec.tasks) {
-    const pos = task.annotations.find(
-      (a) => a.key === EDITOR_POSITION_ANNOTATION,
-    )?.value;
-    parts.push(`t:${task.$id}:${task.name}:${pos ?? ""}`);
+    const pos = task.annotations.get("editor.position");
+    parts.push(`t:${task.$id}:${task.name}:${pos.x},${pos.y}`);
   }
 
   for (const binding of spec.bindings) {
@@ -104,7 +69,7 @@ function buildNodesAndEdges(
   const edges: Edge[] = [];
 
   inputs.forEach((input, index) => {
-    const position = getPositionFromAnnotations(input.annotations);
+    const position = input.annotations.get("editor.position");
 
     nodes.push({
       id: input.$id,
@@ -122,7 +87,7 @@ function buildNodesAndEdges(
   });
 
   outputs.forEach((output, index) => {
-    const position = getPositionFromAnnotations(output.annotations);
+    const position = output.annotations.get("editor.position");
 
     nodes.push({
       id: output.$id,
@@ -140,7 +105,7 @@ function buildNodesAndEdges(
   });
 
   tasks.forEach((task, index) => {
-    const position = getPositionFromAnnotations(task.annotations);
+    const position = task.annotations.get("editor.position");
 
     nodes.push({
       id: task.$id,
