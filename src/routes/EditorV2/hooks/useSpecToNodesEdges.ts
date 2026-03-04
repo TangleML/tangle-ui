@@ -25,6 +25,42 @@ export interface IONodeData extends Record<string, unknown> {
 
 const EMPTY_RESULT: { nodes: Node[]; edges: Edge[] } = { nodes: [], edges: [] };
 
+function resolvePosition(
+  position: { x: number; y: number },
+  fallback: { x: number; y: number },
+): { x: number; y: number } {
+  return position.x === 0 && position.y === 0 ? fallback : position;
+}
+
+function ioDefaultPosition(index: number, x: number): { x: number; y: number } {
+  return { x, y: index * IO_OFFSET };
+}
+
+function taskDefaultPosition(index: number): { x: number; y: number } {
+  return {
+    x: 200 + (index % 3) * TASK_OFFSET,
+    y: Math.floor(index / 3) * TASK_OFFSET,
+  };
+}
+
+function createEntityNode(
+  entity: {
+    $id: string;
+    annotations: { get(key: string): { x: number; y: number } };
+  },
+  nodeType: string,
+  fallback: { x: number; y: number },
+  data: Record<string, unknown>,
+): Node {
+  const position = entity.annotations.get("editor.position");
+  return {
+    id: entity.$id,
+    type: nodeType,
+    position: resolvePosition(position, fallback),
+    data,
+  };
+}
+
 /**
  * Build a fingerprint string that changes only when the meaningful data changes.
  * This prevents creating new node/edge array references on every render.
@@ -68,65 +104,41 @@ function buildNodesAndEdges(
   const nodes: Node[] = [];
   const edges: Edge[] = [];
 
-  inputs.forEach((input, index) => {
-    const position = input.annotations.get("editor.position");
-
-    nodes.push({
-      id: input.$id,
-      type: "io",
-      position:
-        position.x === 0 && position.y === 0
-          ? { x: -200, y: index * IO_OFFSET }
-          : position,
-      data: {
+  for (const [index, input] of inputs.entries()) {
+    nodes.push(
+      createEntityNode(input, "io", ioDefaultPosition(index, -200), {
         entityId: input.$id,
         ioType: "input",
         name: input.name,
-      } satisfies IONodeData,
-    });
-  });
+      } satisfies IONodeData),
+    );
+  }
 
-  outputs.forEach((output, index) => {
-    const position = output.annotations.get("editor.position");
-
-    nodes.push({
-      id: output.$id,
-      type: "io",
-      position:
-        position.x === 0 && position.y === 0
-          ? { x: 800, y: index * IO_OFFSET }
-          : position,
-      data: {
+  for (const [index, output] of outputs.entries()) {
+    nodes.push(
+      createEntityNode(output, "io", ioDefaultPosition(index, 800), {
         entityId: output.$id,
         ioType: "output",
         name: output.name,
-      } satisfies IONodeData,
-    });
-  });
+      } satisfies IONodeData),
+    );
+  }
 
-  tasks.forEach((task, index) => {
-    const position = task.annotations.get("editor.position");
-
-    nodes.push({
-      id: task.$id,
-      type: "task",
-      position:
-        position.x === 0 && position.y === 0
-          ? {
-              x: 200 + (index % 3) * TASK_OFFSET,
-              y: Math.floor(index / 3) * TASK_OFFSET,
-            }
-          : position,
-      data: {
+  for (const [index, task] of tasks.entries()) {
+    nodes.push(
+      createEntityNode(task, "task", taskDefaultPosition(index), {
         entityId: task.$id,
         name: task.name,
-      } satisfies TaskNodeData,
-    });
-  });
+      } satisfies TaskNodeData),
+    );
+  }
+
+  const indputIds = new Set(inputs.map((i) => i.$id));
+  const outputIds = new Set(outputs.map((o) => o.$id));
 
   for (const binding of bindings) {
-    const isSourceIO = inputs.some((i) => i.$id === binding.sourceEntityId);
-    const isTargetIO = outputs.some((o) => o.$id === binding.targetEntityId);
+    const isSourceIO = indputIds.has(binding.sourceEntityId);
+    const isTargetIO = outputIds.has(binding.targetEntityId);
 
     const sourceHandle = isSourceIO
       ? `output_${binding.sourceEntityId}`
