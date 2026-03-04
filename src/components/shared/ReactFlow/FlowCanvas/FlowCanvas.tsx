@@ -61,7 +61,8 @@ import {
   computeDropPositionFromRefs,
   createGhostEdge,
 } from "./GhostNode/utils";
-import SelectionToolbar from "./SelectionToolbar";
+import { MultiSelectPanel } from "./Multiselect/MultiSelectPanel";
+import SelectionToolbar from "./Multiselect/SelectionToolbar";
 import { handleGroupNodes } from "./Subgraphs/create/handleGroupNodes";
 import { NewSubgraphDialog } from "./Subgraphs/create/NewSubgraphDialog";
 import { canGroupNodes } from "./Subgraphs/create/utils";
@@ -130,7 +131,7 @@ const FlowCanvasContent = ({
 }: FlowCanvasProps) => {
   const initialCanvasLoaded = useRef(false);
 
-  const { clearContent } = useContextPanel();
+  const { clearContent, setContent, setOpen } = useContextPanel();
   const { data: currentUserDetails } = useUserDetails();
 
   useSubgraphKeyboardNavigation();
@@ -148,6 +149,13 @@ const FlowCanvasContent = ({
     useIOSelectionPersistence();
 
   const store = useStoreApi();
+  const getSelectedNodes = () =>
+    store
+      .getState()
+      .nodes.filter(
+        (node) => node.selected && node.type && SELECTABLE_NODES.has(node.type),
+      );
+
   const { edges: specEdges, onEdgesChange } =
     useComponentSpecToEdges(currentSubgraphSpec);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -320,13 +328,6 @@ const FlowCanvasContent = ({
   const selectedNodes = nodes.filter(
     (node) => node.selected && node.type && SELECTABLE_NODES.has(node.type),
   );
-
-  const selectedEdges = edges.filter((edge) => edge.selected);
-
-  const selectedElements = {
-    nodes: selectedNodes,
-    edges: selectedEdges,
-  };
 
   const canUpgrade = selectedNodes.some(
     (node) => node.type && UPGRADEABLE_NODES.has(node.type),
@@ -680,11 +681,12 @@ const FlowCanvasContent = ({
   };
 
   const onRemoveNodes = async () => {
+    const nodes = getSelectedNodes();
     const confirmed = await triggerConfirmation(
-      getDeleteConfirmationDetails({ nodes: selectedNodes, edges: [] }),
+      getDeleteConfirmationDetails({ nodes, edges: [] }),
     );
     if (confirmed) {
-      onElementsRemove(selectedElements);
+      onElementsRemove({ nodes, edges: [] });
     }
   };
 
@@ -754,7 +756,7 @@ const FlowCanvasContent = ({
       updatedComponentSpec: updatedSubgraphSpec,
       newNodes,
       updatedNodes,
-    } = duplicateNodes(currentSubgraphSpec, selectedNodes, {
+    } = duplicateNodes(currentSubgraphSpec, getSelectedNodes(), {
       selected: true,
       author: currentUserDetails?.id,
     });
@@ -779,7 +781,7 @@ const FlowCanvasContent = ({
     const includedNodes: Node[] = [];
     const excludedNodes: Node[] = [];
 
-    selectedNodes.forEach((node) => {
+    getSelectedNodes().forEach((node) => {
       if (node.type && !UPGRADEABLE_NODES.has(node.type)) {
         excludedNodes.push(node);
         return;
@@ -907,12 +909,13 @@ const FlowCanvasContent = ({
 
   const onCopy = () => {
     // Copy selected nodes to clipboard
-    if (selectedNodes.length > 0) {
-      const selectedNodesJson = JSON.stringify(selectedNodes);
+    const nodes = getSelectedNodes();
+    if (nodes.length > 0) {
+      const selectedNodesJson = JSON.stringify(nodes);
       navigator.clipboard.writeText(selectedNodesJson).catch((err) => {
         console.error("Failed to copy nodes to clipboard:", err);
       });
-      const message = `Copied ${selectedNodes.length} nodes to clipboard`;
+      const message = `Copied ${nodes.length} nodes to clipboard`;
       notify(message, "success");
     }
   };
@@ -1036,13 +1039,14 @@ const FlowCanvasContent = ({
   };
 
   const onAutoLayout = () => {
+    const nodes = getSelectedNodes();
     const connectedEdges = edges.filter(
       (edge) =>
-        selectedNodes.some((node) => node.id === edge.source) ||
-        selectedNodes.some((node) => node.id === edge.target),
+        nodes.some((node) => node.id === edge.source) ||
+        nodes.some((node) => node.id === edge.target),
     );
 
-    applyAutoLayout(selectedNodes, connectedEdges);
+    applyAutoLayout(nodes, connectedEdges);
   };
 
   useImperativeHandle(
@@ -1052,6 +1056,29 @@ const FlowCanvasContent = ({
     }),
     [handleAutoLayout],
   );
+
+  const multiSelectCallbacks = {
+    onDelete: !readOnly ? onRemoveNodes : undefined,
+    onDuplicate: !readOnly ? onDuplicateNodes : undefined,
+    onUpgrade: !readOnly && canUpgrade ? onUpgradeNodes : undefined,
+    onGroup: !readOnly && canGroup ? onGroupNodes : undefined,
+    onCopy: onCopy,
+    onAutoLayout: onAutoLayout,
+  };
+
+  useEffect(() => {
+    const nodes = getSelectedNodes();
+    if (nodes.length > 1) {
+      setContent(
+        <MultiSelectPanel
+          selectedNodes={nodes}
+          readOnly={!!readOnly}
+          {...multiSelectCallbacks}
+        />,
+      );
+      setOpen(true);
+    }
+  }, [currentSubgraphSpec, readOnly, canUpgrade, canGroup]);
 
   return (
     <BlockStack fill>
@@ -1096,14 +1123,7 @@ const FlowCanvasContent = ({
           align="end"
           className="z-9999!"
         >
-          <SelectionToolbar
-            onDelete={!readOnly ? onRemoveNodes : undefined}
-            onDuplicate={!readOnly ? onDuplicateNodes : undefined}
-            onCopy={!readOnly ? undefined : onCopy}
-            onUpgrade={!readOnly && canUpgrade ? onUpgradeNodes : undefined}
-            onGroup={!readOnly && canGroup ? onGroupNodes : undefined}
-            onAutoLayout={onAutoLayout}
-          />
+          <SelectionToolbar {...multiSelectCallbacks} />
         </NodeToolbar>
         {children}
       </ReactFlow>

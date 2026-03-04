@@ -19,6 +19,7 @@ describe("createNodesFromComponentSpec", () => {
     setCacheStaleness: vi.fn(),
     onDuplicate: vi.fn(),
     onUpgrade: vi.fn(),
+    onSelect: vi.fn(),
   };
 
   const readOnly = false;

@@ -53,6 +53,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/components/shared/ReactFlow/FlowCanvas/TaskNode/TaskOverview/ZIndexEditor.tsx",
   "src/components/Editor/IOEditor/IOZIndexEditor.tsx",
   "src/components/shared/ReactFlow/FlowCanvas/TaskNode/ArgumentsEditor/DynamicDataDropdown.tsx",
+  "src/components/shared/ReactFlow/FlowCanvas/Multiselect",
   "src/components/shared/HighlightText.tsx",
   "src/components/shared/AnnouncementBanners.tsx",
 

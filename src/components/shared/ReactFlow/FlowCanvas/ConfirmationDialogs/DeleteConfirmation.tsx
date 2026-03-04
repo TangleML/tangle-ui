@@ -4,6 +4,7 @@ import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { createStringList, truncate } from "@/utils/string";
 
+import { getFlexNodeDisplayName } from "../FlexNode/utils";
 import { isFlexNode, type NodesAndEdges } from "../types";
 import { thisCannotBeUndone } from "./shared";
 
@@ -131,11 +132,8 @@ export function getDeleteConfirmationDetails(deletedElements: NodesAndEdges) {
 function getNodeIdsForDisplay(nodes: Node[]) {
   return nodes.map((node) => {
     if (isFlexNode(node)) {
-      const textContent =
-        node.data.properties.title ||
-        truncate(node.data.properties.content, 12, { breakWords: false });
-
-      return `'${textContent.length ? textContent : "untitled"}' (Sticky Note)`;
+      const textContent = getFlexNodeDisplayName(node.data);
+      return `'${textContent}' (Sticky Note)`;
     }
 
     return node.id;

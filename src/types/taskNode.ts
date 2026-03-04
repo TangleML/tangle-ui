@@ -32,6 +32,7 @@ interface TaskNodeCallbacks {
   onDelete: () => void;
   onDuplicate: (selected?: boolean) => void;
   onUpgrade: (newComponentRef: ComponentReference) => void;
+  onSelect: () => void;
 }
 
 function noop() {}
@@ -43,6 +44,7 @@ export const DEFAULT_TASK_NODE_CALLBACKS: TaskNodeCallbacks = {
   onDuplicate: noop,
   onUpgrade: noop,
   setCacheStaleness: noop,
+  onSelect: noop,
 };
 
 // Dynamic Node Callback types - every callback has a version with the node & task id added to it as an input parameter

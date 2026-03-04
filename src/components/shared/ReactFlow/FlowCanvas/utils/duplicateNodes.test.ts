@@ -84,6 +84,7 @@ const createMockTaskNodeCallbacks = () => ({
   onDelete: vi.fn(),
   onDuplicate: vi.fn(),
   onUpgrade: vi.fn(),
+  onSelect: vi.fn(),
 });
 
 const createMockNodeCallbacks = (): NodeCallbacks => ({
@@ -93,6 +94,7 @@ const createMockNodeCallbacks = (): NodeCallbacks => ({
   onDelete: vi.fn(),
   onDuplicate: vi.fn(),
   onUpgrade: vi.fn(),
+  onSelect: vi.fn(),
 });
 
 const createMockTaskNode = (

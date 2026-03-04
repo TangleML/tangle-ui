@@ -8,6 +8,7 @@ import {
 import { type MouseEvent, useEffect, useState } from "react";
 
 import { BlockStack } from "@/components/ui/layout";
+import { useIsMultiSelect } from "@/hooks/useIsMultiSelect";
 import { cn } from "@/lib/utils";
 import { useContextPanel } from "@/providers/ContextPanelProvider";
 
@@ -43,6 +44,8 @@ const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
   } = useContextPanel();
 
   const { updateFlexNode, updateProperties } = useFlexNodeUpdate(data);
+
+  const { isMultiSelect, isMultiSelectRef } = useIsMultiSelect();
 
   const toggleLock = () => {
     updateFlexNode({ locked: !locked });
@@ -120,7 +123,7 @@ const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
   };
 
   useEffect(() => {
-    if (selected) {
+    if (selected && !isMultiSelect) {
       setIsContextPanelFocus(true);
       setContent(
         <FlexNodeEditor
@@ -136,11 +139,11 @@ const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
     }
 
     return () => {
-      if (selected) {
+      if (selected && !isMultiSelectRef.current) {
         clearContent();
       }
     };
-  }, [selected]);
+  }, [selected, isMultiSelect]);
 
   useEffect(() => {
     if (isContextPanelFocus) {
