@@ -1,19 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import type { DynamicDataArgument, InputSpec } from "./componentSpec";
+import type { InputSpec } from "./componentSpec";
 import {
   generateCsvTemplate,
   generateJsonTemplate,
   generateYamlTemplate,
 } from "./templateExport";
-
-function makeSecretArg(name: string): DynamicDataArgument {
-  return { dynamicData: { secret: { name } } };
-}
-
-function makeInput(name: string, optional = false): InputSpec {
-  return { name, optional };
-}
+import { makeInput, makeSecretArg } from "./testHelpers";
 
 describe("generateCsvTemplate", () => {
   const inputs = [

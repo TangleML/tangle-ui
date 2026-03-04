@@ -3,6 +3,7 @@ import {
   type InputSpec,
   isSecretArgument,
 } from "./componentSpec";
+import type { FileImportResult } from "./csvBulkArgumentImport";
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -21,15 +22,6 @@ function valueToString(value: unknown): string {
   return JSON.stringify(value);
 }
 
-interface JsonImportResult {
-  values: Record<string, string>;
-  changedInputNames: string[];
-  enableBulk: boolean;
-  unmatchedColumns: string[];
-  skippedSecretInputs: string[];
-  rowCount: number;
-}
-
 /**
  * Maps JSON data onto pipeline input arguments.
  *
@@ -46,8 +38,8 @@ export function mapJsonToArguments(
   jsonText: string,
   inputs: InputSpec[],
   currentArgs: Record<string, ArgumentType>,
-): JsonImportResult {
-  const empty: JsonImportResult = {
+): FileImportResult {
+  const empty: FileImportResult = {
     values: {},
     changedInputNames: [],
     enableBulk: false,
