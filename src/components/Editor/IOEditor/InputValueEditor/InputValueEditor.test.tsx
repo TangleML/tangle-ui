@@ -11,6 +11,10 @@ const mockTransferSelection = vi.fn();
 const mockNotify = vi.fn();
 const mockClearContent = vi.fn();
 
+vi.mock("@/components/Editor/IOEditor/IOZIndexEditor", () => ({
+  IOZIndexEditor: () => null,
+}));
+
 vi.mock("@/providers/ComponentSpecProvider", () => ({
   useComponentSpec: () => ({
     componentSpec: {
