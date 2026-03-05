@@ -28,6 +28,7 @@ import { validateArguments } from "@/utils/validations";
 import { isAuthorizationRequired } from "../../Authentication/helpers";
 import { useAuthLocalStorage } from "../../Authentication/useAuthLocalStorage";
 import TooltipButton from "../../Buttons/TooltipButton";
+import { ParameterSweepDialog } from "./components/ParameterSweepDialog";
 import { SubmitTaskArgumentsDialog } from "./components/SubmitTaskArgumentsDialog";
 
 interface OasisSubmitterProps {
@@ -104,6 +105,7 @@ const OasisSubmitter = ({
 
   const [submitSuccess, setSubmitSuccess] = useState<boolean | null>(null);
   const [isArgumentsDialogOpen, setIsArgumentsDialogOpen] = useState(false);
+  const [isSweepDialogOpen, setIsSweepDialogOpen] = useState(false);
   const [pendingImportFile, setPendingImportFile] = useState<{
     text: string;
     extension: string;
@@ -410,16 +412,28 @@ const OasisSubmitter = ({
             )}
           </Button>
           {isArgumentsButtonVisible && (
-            <TooltipButton
-              tooltip="Submit run with arguments"
-              variant="ghost"
-              size="icon"
-              data-testid="run-with-arguments-button"
-              onClick={() => setIsArgumentsDialogOpen(true)}
-              disabled={!available}
-            >
-              <Icon name="Split" className="rotate-90" />
-            </TooltipButton>
+            <InlineStack gap="0">
+              <TooltipButton
+                tooltip="Submit run with arguments"
+                variant="ghost"
+                size="icon"
+                data-testid="run-with-arguments-button"
+                onClick={() => setIsArgumentsDialogOpen(true)}
+                disabled={!available}
+              >
+                <Icon name="Split" className="rotate-90" />
+              </TooltipButton>
+              <TooltipButton
+                tooltip="Parameter sweep"
+                variant="ghost"
+                size="icon"
+                data-testid="parameter-sweep-button"
+                onClick={() => setIsSweepDialogOpen(true)}
+                disabled={!available}
+              >
+                <Icon name="Grid3x3" />
+              </TooltipButton>
+            </InlineStack>
           )}
         </InlineStack>
       </div>
@@ -432,6 +446,18 @@ const OasisSubmitter = ({
           componentSpec={componentSpec}
           initialImportFile={pendingImportFile}
           onImportComplete={() => setPendingImportFile(null)}
+        />
+      )}
+
+      {componentSpec && (
+        <ParameterSweepDialog
+          open={isSweepDialogOpen}
+          onCancel={() => setIsSweepDialogOpen(false)}
+          onConfirm={(argSets) => {
+            setIsSweepDialogOpen(false);
+            handleBulkSubmit(argSets);
+          }}
+          componentSpec={componentSpec}
         />
       )}
     </>
