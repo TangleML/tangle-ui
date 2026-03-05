@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
 import { PipelineDetailsContent } from "../components/PipelineDetailsContent";
-import { getWindowById, openWindow } from "../windows/windowStore";
+import { dockWindow, getWindowById, openWindow } from "../windows/windowStore";
 
 const PIPELINE_DETAILS_WINDOW_ID = "pipeline-details";
 
@@ -15,6 +15,7 @@ export function usePipelineDetailsWindow() {
         size: { width: 280, height: 350 },
         disabledActions: ["close"],
       });
+      dockWindow(PIPELINE_DETAILS_WINDOW_ID, "right");
     }
   }, []);
 }
