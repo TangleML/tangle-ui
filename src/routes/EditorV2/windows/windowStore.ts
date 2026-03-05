@@ -3,15 +3,17 @@ import { proxy } from "valtio";
 
 import {
   calculateAttachPosition,
-  calculateDockedDimensions,
   getAttachmentChain,
   getWindowBottom,
 } from "./snapUtils";
 import {
   type AttachmentInfo,
   CASCADE_OFFSET,
+  DEFAULT_DOCK_AREA_WIDTH,
+  DEFAULT_DOCKED_HEIGHT,
   DEFAULT_MIN_SIZE,
   DEFAULT_WINDOW_SIZE,
+  type DockAreaConfig,
   type DockState,
   type Position,
   type Size,
@@ -29,11 +31,24 @@ interface WindowStore {
   windows: Record<string, WindowConfig>;
   /** Ordered list of window IDs for z-index stacking (last = top) */
   windowOrder: string[];
+  /** Dock area configurations for left and right columns */
+  dockAreas: {
+    left: DockAreaConfig;
+    right: DockAreaConfig;
+  };
 }
 
 export const windowStore = proxy<WindowStore>({
   windows: {},
   windowOrder: [],
+  dockAreas: {
+    left: { width: DEFAULT_DOCK_AREA_WIDTH, collapsed: false, windowOrder: [] },
+    right: {
+      width: DEFAULT_DOCK_AREA_WIDTH,
+      collapsed: false,
+      windowOrder: [],
+    },
+  },
 });
 
 /**
@@ -125,6 +140,7 @@ export function openWindow(
     linkedEntityId: options.linkedEntityId,
     disabledActions: options.disabledActions,
     dockState: initialDockState,
+    dockedHeight: persistedState?.dockedHeight,
     attachedTo,
     // Restore pre-docked dimensions from persisted state (needed for undock)
     preDockedPosition: persistedState?.preDockedPosition
@@ -138,10 +154,17 @@ export function openWindow(
   windowStore.windows[id] = config;
   windowStore.windowOrder.push(id);
 
+  // If the window is docked, ensure it's in the dock area order
+  if (initialDockState !== "none") {
+    const dockArea = windowStore.dockAreas[initialDockState];
+    if (!dockArea.windowOrder.includes(id)) {
+      dockArea.windowOrder.push(id);
+    }
+  }
+
   // Apply hidden state after window creation if persisted as hidden
   // Skip if startVisible is true (for selection-driven windows like context-panel)
   if (persistedState?.isHidden && !options.startVisible) {
-    // Use setTimeout to allow the window to be created first
     setTimeout(() => hideWindow(id), 0);
   }
 
@@ -150,6 +173,9 @@ export function openWindow(
 
 /** Close a window (remove from registry) */
 export function closeWindow(id: string): void {
+  // Remove from dock area order if docked
+  removeFromDockAreaOrder(id);
+
   delete windowStore.windows[id];
   windowContentMap.delete(id);
   const index = windowStore.windowOrder.indexOf(id);
@@ -316,77 +342,124 @@ export function toggleMaximize(id: string): void {
 }
 
 // ============================================================================
-// Docking Functions
+// Docking Functions (Column-based Dock Areas)
 // ============================================================================
 
-/** Dock a window to the left or right edge of the viewport */
-export function dockWindow(id: string, side: DockState): void {
-  console.log("[windowStore] dockWindow called:", { id, side });
-  const window = windowStore.windows[id];
-  if (!window || side === "none") {
-    console.log(
-      "[windowStore] dockWindow early return - window:",
-      !!window,
-      "side:",
-      side,
-    );
-    return;
+/** Remove a window from whichever dock area order it's in */
+function removeFromDockAreaOrder(id: string): void {
+  for (const side of ["left", "right"] as const) {
+    const order = windowStore.dockAreas[side].windowOrder;
+    const idx = order.indexOf(id);
+    if (idx !== -1) {
+      order.splice(idx, 1);
+      return;
+    }
+  }
+}
+
+/** Dock a window into a dock area column */
+export function dockWindow(
+  id: string,
+  side: DockState,
+  insertIndex?: number,
+): void {
+  const win = windowStore.windows[id];
+  if (!win || side === "none") return;
+
+  // Store pre-docked state for undocking
+  if (win.dockState === "none") {
+    win.preDockedPosition = { ...win.position };
+    win.preDockedSize = { ...win.size };
   }
 
-  // Store pre-docked state for undocking (separate from hide/restore cycle)
-  window.preDockedPosition = { ...window.position };
-  window.preDockedSize = { ...window.size };
-
-  // Calculate docked dimensions
-  const { position, height } = calculateDockedDimensions(
-    side,
-    window.size.width,
-  );
-  console.log("[windowStore] dockWindow calculated:", { position, height });
-
-  window.position = position;
-  window.size = { ...window.size, height };
-  window.dockState = side;
+  // Remove from any previous dock area
+  removeFromDockAreaOrder(id);
 
   // Detach from any parent when docking
-  if (window.attachedTo) {
+  if (win.attachedTo) {
     detachWindow(id);
   }
 
-  // Update attached children positions
-  updateAttachedWindowPositions(id);
-  console.log("[windowStore] dockWindow complete - new state:", {
-    position: window.position,
-    size: window.size,
-    dockState: window.dockState,
-  });
+  // Set docked state
+  win.dockState = side;
+  win.dockedHeight = win.dockedHeight ?? DEFAULT_DOCKED_HEIGHT;
+
+  // Insert into dock area order
+  const dockArea = windowStore.dockAreas[side];
+  if (insertIndex !== undefined && insertIndex >= 0) {
+    const clampedIndex = Math.min(insertIndex, dockArea.windowOrder.length);
+    dockArea.windowOrder.splice(clampedIndex, 0, id);
+  } else {
+    dockArea.windowOrder.push(id);
+  }
+
+  // Un-collapse the dock area when a window is added
+  dockArea.collapsed = false;
 }
 
-/** Undock a window from edge, restoring pre-docked dimensions */
+/** Undock a window from its dock area, restoring pre-docked dimensions */
 export function undockWindow(id: string): void {
-  const window = windowStore.windows[id];
-  if (!window || window.dockState === "none") return;
+  const win = windowStore.windows[id];
+  if (!win || win.dockState === "none") return;
+
+  // Remove from dock area order
+  removeFromDockAreaOrder(id);
 
   // Restore pre-docked dimensions
-  if (window.preDockedPosition) {
-    window.position = { ...window.preDockedPosition };
+  if (win.preDockedPosition) {
+    win.position = { ...win.preDockedPosition };
   }
-  if (window.preDockedSize) {
-    window.size = { ...window.preDockedSize };
+  if (win.preDockedSize) {
+    win.size = { ...win.preDockedSize };
   }
 
-  window.dockState = "none";
-  window.preDockedPosition = undefined;
-  window.preDockedSize = undefined;
-
-  // Update attached children positions
-  updateAttachedWindowPositions(id);
+  win.dockState = "none";
+  win.preDockedPosition = undefined;
+  win.preDockedSize = undefined;
 }
 
 /** Check if a window is docked */
 export function isWindowDocked(id: string): boolean {
-  const window = windowStore.windows[id];
-  return window?.dockState !== "none" && window?.dockState !== undefined;
+  const win = windowStore.windows[id];
+  return win?.dockState !== "none" && win?.dockState !== undefined;
+}
+
+/** Reorder a docked window within its dock area */
+export function reorderDockedWindow(
+  id: string,
+  side: "left" | "right",
+  newIndex: number,
+): void {
+  const order = windowStore.dockAreas[side].windowOrder;
+  const currentIndex = order.indexOf(id);
+  if (currentIndex === -1) return;
+
+  order.splice(currentIndex, 1);
+  const clampedIndex = Math.min(newIndex, order.length);
+  order.splice(clampedIndex, 0, id);
+}
+
+/** Update a docked window's height */
+export function updateDockedWindowHeight(id: string, height: number): void {
+  const win = windowStore.windows[id];
+  if (!win) return;
+  win.dockedHeight = Math.max(100, height);
+}
+
+/** Set dock area width */
+export function setDockAreaWidth(side: "left" | "right", width: number): void {
+  windowStore.dockAreas[side].width = width;
+}
+
+/** Toggle dock area collapsed state */
+export function toggleDockAreaCollapsed(side: "left" | "right"): void {
+  windowStore.dockAreas[side].collapsed =
+    !windowStore.dockAreas[side].collapsed;
+}
+
+/** Get all window IDs in a dock area */
+export function getDockAreaWindowIds(side: "left" | "right"): string[] {
+  return windowStore.dockAreas[side].windowOrder;
 }
 
 // ============================================================================

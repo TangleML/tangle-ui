@@ -4,34 +4,27 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
-import { TOP_NAV_HEIGHT } from "@/utils/constants";
 
 import { closeWindow, restoreWindow, windowStore } from "./windowStore";
 
 /**
- * Fixed top panel that displays hidden windows (below the AppMenu).
- * Only renders when there are hidden windows.
- * Click on a window title restores it, click X closes it.
+ * Bar that displays hidden windows. Rendered in normal flow above the editor
+ * layout so it pushes content down when visible.
  */
 export function TaskPanel() {
   const snap = useSnapshot(windowStore);
 
-  // Filter for hidden windows
   const hiddenWindows = snap.windowOrder
     .map((id) => snap.windows[id])
     .filter((w) => w?.state === "hidden");
 
-  // Don't render if no hidden windows
   if (hiddenWindows.length === 0) {
     return null;
   }
 
   return (
-    <div
-      className="fixed left-0 right-0 z-40 bg-gray-100 border-b border-gray-300 shadow-sm"
-      style={{ top: TOP_NAV_HEIGHT }}
-    >
-      <InlineStack gap="1" className="px-2 py-1.5 overflow-x-auto">
+    <div className="shrink-0 bg-gray-100 border-b border-gray-300 shadow-sm">
+      <InlineStack gap="1" className="px-2 py-1 overflow-x-auto">
         {hiddenWindows.map((window) => {
           const canClose = !window.disabledActions?.includes("close");
           return (
@@ -39,15 +32,16 @@ export function TaskPanel() {
               key={window.id}
               blockAlign="center"
               gap="1"
-              className="bg-white hover:bg-gray-50 border border-gray-200 rounded px-2 py-1 transition-colors cursor-pointer group shadow-sm"
+              wrap="nowrap"
+              className="bg-white hover:bg-gray-50 border border-gray-200 rounded px-2 py-0.5 transition-colors cursor-pointer group shadow-sm"
             >
               <button
                 onClick={() => restoreWindow(window.id)}
-                className="flex items-center gap-1.5 min-w-0 h-5"
+                className="flex items-center gap-1 min-w-0 h-5"
               >
                 <Icon
                   name="AppWindow"
-                  size="sm"
+                  size="xs"
                   className="text-gray-500 shrink-0"
                 />
                 <Text

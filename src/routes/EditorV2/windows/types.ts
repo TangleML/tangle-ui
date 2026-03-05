@@ -27,6 +27,13 @@ export interface AttachmentInfo {
   offsetX: number;
 }
 
+/** Configuration for a dock area column */
+export interface DockAreaConfig {
+  width: number;
+  collapsed: boolean;
+  windowOrder: string[];
+}
+
 /** Snap preview types for visual feedback during drag */
 export type SnapPreviewType =
   | { type: "edge"; side: "left" | "right" }
@@ -35,6 +42,14 @@ export type SnapPreviewType =
       parentId: string;
       parentBottom: number;
       parentLeft: number;
+    }
+  | {
+      type: "dock-insert";
+      side: "left" | "right";
+      insertIndex: number;
+      indicatorY: number;
+      areaLeft: number;
+      areaWidth: number;
     };
 
 /** Window configuration stored in the registry (no React elements) */
@@ -56,6 +71,8 @@ export interface WindowConfig {
   linkedEntityId?: string;
   /** Actions that are disabled for this window */
   disabledActions?: WindowAction[];
+  /** Height when docked (independent of size.height used in floating mode) */
+  dockedHeight?: number;
   /** Docking state for edge snapping */
   dockState: DockState;
   /** Attachment info if this window is attached to another window's bottom */
@@ -119,3 +136,24 @@ export const DETACH_THRESHOLD = 10;
 
 /** Approximate height of the TaskPanel bar (px). Used to offset docked windows when TaskPanel is visible. */
 export const TASK_PANEL_HEIGHT = 43;
+
+/** Default dock area width (px) */
+export const DEFAULT_DOCK_AREA_WIDTH = 320;
+
+/** Minimum dock area width (px) */
+export const MIN_DOCK_AREA_WIDTH = 220;
+
+/** Maximum dock area width (px) */
+export const MAX_DOCK_AREA_WIDTH = 600;
+
+/** Collapsed dock area width (px) */
+export const COLLAPSED_DOCK_AREA_WIDTH = 36;
+
+/** Default height for a docked window (px) */
+export const DEFAULT_DOCKED_HEIGHT = 300;
+
+/** Minimum height for a docked window (px) */
+export const MIN_DOCKED_HEIGHT = 100;
+
+/** Distance from dock area edge to trigger dock insert preview (px) */
+export const DOCK_AREA_SNAP_THRESHOLD = 40;
