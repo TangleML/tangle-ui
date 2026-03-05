@@ -12,7 +12,7 @@ export type AnnotationConfig = {
   append?: string;
   options?: AnnotationOption[];
   enableQuantity?: boolean;
-  type?: "string" | "number" | "boolean" | "json";
+  type?: "string" | "number" | "integer" | "boolean" | "json";
   min?: number;
   max?: number;
   hidden?: boolean;
