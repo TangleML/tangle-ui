@@ -74,6 +74,7 @@ export const APP_ROUTES = {
   GITHUB_AUTH_CALLBACK: "/authorize/github",
   HUGGINGFACE_AUTH_CALLBACK: "/authorize/huggingface",
   EDITOR_V2: "/editor-v2",
+  EDITOR_V2_PIPELINE: "/editor-v2/$pipelineName",
   PLAYGROUND: "/playground",
 } as const;
 
@@ -262,6 +263,12 @@ const editorV2Route = createRoute({
   component: EditorV2,
 });
 
+const editorV2PipelineRoute = createRoute({
+  getParentRoute: () => mainLayout,
+  path: APP_ROUTES.EDITOR_V2_PIPELINE,
+  component: EditorV2,
+});
+
 const dashboardRouteTree = dashboardRoute.addChildren([
   dashboardIndexRoute,
   dashboardRunsRoute,
@@ -280,6 +287,7 @@ const appRouteTree = mainLayout.addChildren([
   runDetailRoute,
   runDetailWithSubgraphRoute,
   editorV2Route,
+  editorV2PipelineRoute,
   playgroundRoute,
 ]);
 

@@ -1,4 +1,5 @@
 import { autorun } from "mobx";
+import type { UndoStore as MobxUndoStore } from "mobx-keystone";
 import { isRootStore, unregisterRootStore } from "mobx-keystone";
 import { useEffect, useRef } from "react";
 
@@ -14,6 +15,7 @@ import { closeWindowsByLinkedEntity } from "../windows/windowStore";
 export function useSpecLifecycle(
   rootSpec: ComponentSpec,
   pipelineName: string | null,
+  restoredUndoStore?: MobxUndoStore,
 ) {
   const prevTaskEntityIdsRef = useRef<Set<string>>(new Set());
 
@@ -21,7 +23,7 @@ export function useSpecLifecycle(
     if (rootSpec) {
       initializeStore(rootSpec);
       initNavigation(rootSpec);
-      undoStore.init(rootSpec);
+      undoStore.init(rootSpec, restoredUndoStore);
 
       const saveName = pipelineName ?? rootSpec.name;
       if (saveName) {
@@ -55,5 +57,5 @@ export function useSpecLifecycle(
         }
       };
     }
-  }, [rootSpec, pipelineName]);
+  }, [rootSpec, pipelineName, restoredUndoStore]);
 }

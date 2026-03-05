@@ -192,6 +192,7 @@ export class YamlDeserializer {
           if (sourceTask) {
             bindings.push(
               new Binding({
+                $id: this.idGen.next("binding"),
                 sourceEntityId: sourceTask.$id,
                 sourcePortName: taskOutput.outputName,
                 targetEntityId: output.$id,
@@ -220,6 +221,7 @@ export class YamlDeserializer {
         const input = inputs.find((i) => i.name === inputName);
         if (input) {
           return new Binding({
+            $id: this.idGen.next("binding"),
             sourceEntityId: input.$id,
             sourcePortName: inputName,
             targetEntityId,
@@ -236,6 +238,7 @@ export class YamlDeserializer {
         const sourceTask = tasks.find((t) => t.name === taskId);
         if (sourceTask) {
           return new Binding({
+            $id: this.idGen.next("binding"),
             sourceEntityId: sourceTask.$id,
             sourcePortName: outputName,
             targetEntityId,
@@ -252,6 +255,7 @@ export class YamlDeserializer {
         const input = inputs.find((i) => i.name === graphInput.inputName);
         if (input) {
           return new Binding({
+            $id: this.idGen.next("binding"),
             sourceEntityId: input.$id,
             sourcePortName: graphInput.inputName,
             targetEntityId,
@@ -263,6 +267,7 @@ export class YamlDeserializer {
         const sourceTask = tasks.find((t) => t.name === taskOutput.taskId);
         if (sourceTask) {
           return new Binding({
+            $id: this.idGen.next("binding"),
             sourceEntityId: sourceTask.$id,
             sourcePortName: taskOutput.outputName,
             targetEntityId,

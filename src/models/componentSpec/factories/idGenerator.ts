@@ -20,3 +20,30 @@ export class IncrementingIdGenerator implements IdGenerator {
     // No-op for UUID-based generator
   }
 }
+
+/**
+ * Replays a pre-recorded sequence of IDs during deserialization,
+ * ensuring the same entities get the same $id values across save/load cycles.
+ * Falls back to random ID generation if the stack is exhausted.
+ */
+export class ReplayIdGenerator implements IdGenerator {
+  private index = 0;
+  private readonly fallback = new IncrementingIdGenerator();
+
+  constructor(private readonly idStack: string[]) {}
+
+  next(prefix = "entity"): string {
+    if (this.index < this.idStack.length) {
+      return this.idStack[this.index++];
+    }
+    return this.fallback.next(prefix);
+  }
+
+  get consumed(): number {
+    return this.index;
+  }
+
+  get isExhausted(): boolean {
+    return this.index >= this.idStack.length;
+  }
+}

@@ -1,6 +1,6 @@
 import { action, makeObservable, observable } from "mobx";
 import type { UndoManager } from "mobx-keystone";
-import { undoMiddleware } from "mobx-keystone";
+import { undoMiddleware, UndoStore as MobxUndoStore } from "mobx-keystone";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 
@@ -15,9 +15,9 @@ class UndoStore {
     });
   }
 
-  init(spec: ComponentSpec) {
+  init(spec: ComponentSpec, store?: MobxUndoStore) {
     this.dispose();
-    this.undoManager = undoMiddleware(spec);
+    this.undoManager = undoMiddleware(spec, store);
   }
 
   dispose() {
