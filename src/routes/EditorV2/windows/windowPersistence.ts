@@ -8,12 +8,7 @@
 
 import { subscribe } from "valtio";
 
-import type {
-  AttachmentInfo,
-  DockState,
-  Position,
-  Size,
-} from "./types";
+import type { AttachmentInfo, DockState, Position, Size } from "./types";
 import { windowStore } from "./windowStore";
 
 const STORAGE_KEY = "editorV2-window-layout";
