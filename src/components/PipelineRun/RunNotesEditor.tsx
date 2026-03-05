@@ -6,7 +6,7 @@ import { Paragraph } from "@/components/ui/typography";
 import { useBackend } from "@/providers/BackendProvider";
 import {
   fetchRunAnnotations,
-  updateRunNotes,
+  updateRunAnnotation,
 } from "@/services/pipelineRunService";
 import {
   getAnnotationValue,
@@ -35,7 +35,11 @@ export const RunNotesEditor = ({ runId, readOnly }: RunNotesEditorProps) => {
   });
 
   const { mutate: saveRunNotes, isPending } = useMutation({
-    mutationFn: (runId: string) => updateRunNotes(runId, backendUrl, value),
+    mutationFn: (runId: string) =>
+      updateRunAnnotation(runId, backendUrl, {
+        key: PIPELINE_RUN_NOTES_ANNOTATION,
+        value: value,
+      }),
     onSuccess: () => {
       refetch();
     },
