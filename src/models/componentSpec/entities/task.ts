@@ -5,6 +5,7 @@ import type {
   Argument,
   ArgumentType,
   ComponentReference,
+  ExecutionOptions,
   PredicateType,
 } from "./types";
 
@@ -16,6 +17,7 @@ export class Task extends Model({
   isEnabled: prop<PredicateType | undefined>(undefined),
   annotations: prop<Annotations>(() => new Annotations({})),
   arguments: prop<Argument[]>(() => []),
+  executionOptions: prop<ExecutionOptions | undefined>(undefined),
 }) {
   @modelAction
   setName(name: string) {
@@ -61,5 +63,20 @@ export class Task extends Model({
   @modelAction
   clearArguments() {
     this.arguments.splice(0, this.arguments.length);
+  }
+
+  @modelAction
+  setCacheStaleness(value: string | undefined) {
+    if (value) {
+      this.executionOptions = {
+        ...this.executionOptions,
+        cachingStrategy: { maxCacheStaleness: value },
+      };
+    } else {
+      if (this.executionOptions) {
+        const { cachingStrategy: _, ...rest } = this.executionOptions;
+        this.executionOptions = Object.keys(rest).length > 0 ? rest : undefined;
+      }
+    }
   }
 }

@@ -322,4 +322,43 @@ describe("JsonSerializer", () => {
       param: "literal_value",
     });
   });
+
+  it("serializes task with executionOptions", () => {
+    const spec = new ComponentSpec({
+      $id: idGen.next("spec"),
+      name: "Pipeline",
+    });
+    const task = new Task({
+      $id: idGen.next("task"),
+      name: "Process",
+      componentRef: {},
+      executionOptions: {
+        cachingStrategy: { maxCacheStaleness: "P0D" },
+      },
+    });
+    spec.addTask(task);
+
+    const json = serializer.serialize(spec);
+
+    expect(getGraph(json).tasks["Process"].executionOptions).toEqual({
+      cachingStrategy: { maxCacheStaleness: "P0D" },
+    });
+  });
+
+  it("does not include executionOptions when undefined", () => {
+    const spec = new ComponentSpec({
+      $id: idGen.next("spec"),
+      name: "Pipeline",
+    });
+    const task = new Task({
+      $id: idGen.next("task"),
+      name: "Process",
+      componentRef: {},
+    });
+    spec.addTask(task);
+
+    const json = serializer.serialize(spec);
+
+    expect(getGraph(json).tasks["Process"].executionOptions).toBeUndefined();
+  });
 });

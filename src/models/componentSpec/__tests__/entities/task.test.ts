@@ -86,4 +86,76 @@ describe("Task", () => {
 
     expect(task.componentRef).toEqual({ name: "B" });
   });
+
+  it("has undefined executionOptions by default", () => {
+    const task = new Task({
+      $id: "task_1",
+      name: "T",
+      componentRef: {},
+    });
+
+    expect(task.executionOptions).toBeUndefined();
+  });
+
+  it("can be created with executionOptions", () => {
+    const task = new Task({
+      $id: "task_1",
+      name: "T",
+      componentRef: {},
+      executionOptions: {
+        cachingStrategy: { maxCacheStaleness: "P0D" },
+      },
+    });
+
+    expect(task.executionOptions).toEqual({
+      cachingStrategy: { maxCacheStaleness: "P0D" },
+    });
+  });
+
+  it("setCacheStaleness sets cachingStrategy", () => {
+    const task = new Task({
+      $id: "task_1",
+      name: "T",
+      componentRef: {},
+    });
+
+    task.setCacheStaleness("P0D");
+
+    expect(task.executionOptions).toEqual({
+      cachingStrategy: { maxCacheStaleness: "P0D" },
+    });
+  });
+
+  it("setCacheStaleness clears executionOptions when no other options remain", () => {
+    const task = new Task({
+      $id: "task_1",
+      name: "T",
+      componentRef: {},
+      executionOptions: {
+        cachingStrategy: { maxCacheStaleness: "P0D" },
+      },
+    });
+
+    task.setCacheStaleness(undefined);
+
+    expect(task.executionOptions).toBeUndefined();
+  });
+
+  it("setCacheStaleness preserves retryStrategy when clearing cache", () => {
+    const task = new Task({
+      $id: "task_1",
+      name: "T",
+      componentRef: {},
+      executionOptions: {
+        retryStrategy: { maxRetries: 3 },
+        cachingStrategy: { maxCacheStaleness: "P0D" },
+      },
+    });
+
+    task.setCacheStaleness(undefined);
+
+    expect(task.executionOptions).toEqual({
+      retryStrategy: { maxRetries: 3 },
+    });
+  });
 });

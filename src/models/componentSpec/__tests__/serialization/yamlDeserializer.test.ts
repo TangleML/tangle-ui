@@ -302,4 +302,75 @@ describe("YamlDeserializer", () => {
     expect(task?.arguments.at(0)?.name).toBe("param");
     expect(task?.arguments.at(0)?.value).toBe("literal_value");
   });
+
+  it("deserializes task with executionOptions", () => {
+    const yaml = {
+      name: "Pipeline",
+      implementation: {
+        graph: {
+          tasks: {
+            CachedTask: {
+              componentRef: {},
+              executionOptions: {
+                cachingStrategy: { maxCacheStaleness: "P0D" },
+              },
+            },
+          },
+        },
+      },
+    };
+
+    const spec = deserializer.deserialize(yaml);
+
+    const task = spec.tasks.at(0);
+    expect(task?.executionOptions).toEqual({
+      cachingStrategy: { maxCacheStaleness: "P0D" },
+    });
+  });
+
+  it("deserializes task with retryStrategy in executionOptions", () => {
+    const yaml = {
+      name: "Pipeline",
+      implementation: {
+        graph: {
+          tasks: {
+            RetryTask: {
+              componentRef: {},
+              executionOptions: {
+                retryStrategy: { maxRetries: 5 },
+                cachingStrategy: { maxCacheStaleness: "P1D" },
+              },
+            },
+          },
+        },
+      },
+    };
+
+    const spec = deserializer.deserialize(yaml);
+
+    const task = spec.tasks.at(0);
+    expect(task?.executionOptions).toEqual({
+      retryStrategy: { maxRetries: 5 },
+      cachingStrategy: { maxCacheStaleness: "P1D" },
+    });
+  });
+
+  it("deserializes task without executionOptions as undefined", () => {
+    const yaml = {
+      name: "Pipeline",
+      implementation: {
+        graph: {
+          tasks: {
+            SimpleTask: {
+              componentRef: {},
+            },
+          },
+        },
+      },
+    };
+
+    const spec = deserializer.deserialize(yaml);
+
+    expect(spec.tasks.at(0)?.executionOptions).toBeUndefined();
+  });
 });
