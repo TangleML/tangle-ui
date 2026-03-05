@@ -54,6 +54,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/components/Editor/IOEditor/IOZIndexEditor.tsx",
   "src/components/shared/ReactFlow/FlowCanvas/TaskNode/ArgumentsEditor/DynamicDataDropdown.tsx",
   "src/components/shared/HighlightText.tsx",
+  "src/components/shared/AnnouncementBanners.tsx",
 
   // 11-20 useCallback/useMemo
   // "src/components/ui",                         // 12

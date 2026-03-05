@@ -1,5 +1,9 @@
 import type { ReactNode } from "react";
 
+import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
+import { InlineStack } from "@/components/ui/layout";
+import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 
 interface InfoBoxProps {
@@ -8,6 +12,7 @@ interface InfoBoxProps {
   className?: string;
   children: ReactNode;
   variant?: "info" | "error" | "warning" | "success" | "ghost";
+  onDismiss?: () => void;
 }
 
 const variantStyles: Record<
@@ -48,6 +53,7 @@ export const InfoBox = ({
   className,
   children,
   variant = "info",
+  onDismiss,
 }: InfoBoxProps) => {
   const styles = variantStyles[variant];
   const widthClass = widthStyles[width];
@@ -57,12 +63,27 @@ export const InfoBox = ({
       data-testid={`info-box-${variant}`}
       className={cn("border rounded-md p-2", styles.container, widthClass)}
     >
-      <div
-        data-testid="info-box-title"
-        className={cn("text-sm font-semibold mb-1", styles.title)}
-      >
-        {title}
-      </div>
+      <InlineStack align="space-between" blockAlign="start">
+        <Text
+          as="span"
+          size="sm"
+          weight="semibold"
+          className={cn("mb-1", styles.title)}
+          data-testid="info-box-title"
+        >
+          {title}
+        </Text>
+        {onDismiss && (
+          <Button
+            onClick={onDismiss}
+            variant="ghost"
+            size="min"
+            aria-label="Dismiss"
+          >
+            <Icon name="X" size="sm" />
+          </Button>
+        )}
+      </InlineStack>
       <div className={cn("text-sm", className)}>{children}</div>
     </div>
   );
