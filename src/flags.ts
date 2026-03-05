@@ -38,4 +38,12 @@ export const ExistingFlags: ConfigFlags = {
     default: false,
     category: "beta",
   },
+
+  ["classic-node-style"]: {
+    name: "Classic node style",
+    description:
+      "Use the classic visual style for task nodes in the editor. Inputs and outputs are shown as vertical sections instead of side-by-side columns.",
+    default: false,
+    category: "setting",
+  },
 };

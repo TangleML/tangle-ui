@@ -1,9 +1,15 @@
 import { type Node, type NodeProps, useStore } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
 
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Card } from "@/components/ui/card";
 import { Text } from "@/components/ui/typography";
-import type { ComponentSpecJson, TypeSpecType } from "@/models/componentSpec";
+import type {
+  ComponentSpec,
+  ComponentSpecJson,
+  Task,
+  TypeSpecType,
+} from "@/models/componentSpec";
 
 import type { TaskNodeData } from "../hooks/useSpecToNodesEdges";
 import { useSpec } from "../providers/SpecContext";
@@ -12,11 +18,24 @@ import {
   selectNode,
   setFocusedArgument,
 } from "../store/editorStore";
+import { TaskNodeClassic } from "./TaskNodeClassic";
 import { TaskNodeCollapsed } from "./TaskNodeCollapsed";
 import { TaskNodeFull } from "./TaskNodeFull";
 
 type TaskNodeType = Node<TaskNodeData, "task">;
 type TaskNodeProps = NodeProps<TaskNodeType>;
+
+export interface TaskNodeInput {
+  name: string;
+  type?: TypeSpecType;
+  optional?: boolean;
+  default?: string;
+}
+
+export interface TaskNodeOutput {
+  name: string;
+  type?: TypeSpecType;
+}
 
 export interface TaskNodeViewProps {
   id: string;
@@ -26,9 +45,10 @@ export interface TaskNodeViewProps {
   isHovered: boolean;
   isSubgraph: boolean;
   description: string;
-  inputs: { name: string; type?: TypeSpecType; optional?: boolean }[];
-  outputs: { name: string; type?: TypeSpecType }[];
+  inputs: TaskNodeInput[];
+  outputs: TaskNodeOutput[];
   annotations: { key: string }[];
+  inputDisplayValues: Record<string, string | undefined>;
   onNodeClick: (event: React.MouseEvent) => void;
   onInputClick: (inputName: string, event: React.MouseEvent) => void;
 }
@@ -38,15 +58,52 @@ export const ZOOM_THRESHOLD = 0.5;
 const zoomSelector = (s: { transform: [number, number, number] }) =>
   s.transform[2] >= ZOOM_THRESHOLD;
 
-/**
- * Check if a task is a subgraph (its component has a graph implementation).
- */
 function isTaskSubgraph(componentSpec: ComponentSpecJson | undefined): boolean {
   const implementation = componentSpec?.implementation;
   if (!implementation || typeof implementation !== "object") {
     return false;
   }
   return "graph" in implementation;
+}
+
+/**
+ * Resolve display values for task inputs by merging literal argument values
+ * with binding-derived connection labels.
+ */
+function resolveInputDisplayValues(
+  task: Task,
+  entityId: string,
+  spec: ComponentSpec | null,
+): Record<string, string | undefined> {
+  const values: Record<string, string | undefined> = {};
+
+  for (const arg of task.arguments) {
+    if (typeof arg.value === "string") {
+      values[arg.name] = arg.value;
+    }
+  }
+
+  if (!spec) return values;
+
+  for (const binding of spec.bindings) {
+    if (binding.targetEntityId !== entityId) continue;
+
+    const sourceTask = spec.tasks.find((t) => t.$id === binding.sourceEntityId);
+    if (sourceTask) {
+      values[binding.targetPortName] =
+        `→ ${sourceTask.name}.${binding.sourcePortName}`;
+      continue;
+    }
+
+    const sourceInput = spec.inputs.find(
+      (i) => i.$id === binding.sourceEntityId,
+    );
+    if (sourceInput) {
+      values[binding.targetPortName] = `→ ${sourceInput.name}`;
+    }
+  }
+
+  return values;
 }
 
 export const TaskNode = observer(function TaskNode({
@@ -56,6 +113,7 @@ export const TaskNode = observer(function TaskNode({
 }: TaskNodeProps) {
   const { entityId } = data;
   const showContent = useStore(zoomSelector);
+  const useClassicStyle = useFlagValue("classic-node-style");
 
   const spec = useSpec();
   const task = spec?.tasks.find((t) => t.$id === entityId);
@@ -91,6 +149,10 @@ export const TaskNode = observer(function TaskNode({
     setFocusedArgument(inputName);
   };
 
+  const inputDisplayValues = useClassicStyle
+    ? resolveInputDisplayValues(task, entityId, spec)
+    : {};
+
   const viewProps: TaskNodeViewProps = {
     id,
     entityId,
@@ -102,13 +164,18 @@ export const TaskNode = observer(function TaskNode({
     inputs,
     outputs,
     annotations: task.annotations.map((a) => ({ key: a.key })),
+    inputDisplayValues,
     onNodeClick: handleClick,
     onInputClick: handleInputClick,
   };
 
-  return showContent ? (
-    <TaskNodeFull {...viewProps} />
+  if (!showContent) {
+    return <TaskNodeCollapsed {...viewProps} />;
+  }
+
+  return useClassicStyle ? (
+    <TaskNodeClassic {...viewProps} />
   ) : (
-    <TaskNodeCollapsed {...viewProps} />
+    <TaskNodeFull {...viewProps} />
   );
 });
