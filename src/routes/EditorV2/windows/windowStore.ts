@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { proxy } from "valtio";
 
+import { emitDockAreaEvent } from "./dockAreaPlugins";
 import {
   calculateAttachPosition,
   getAttachmentChain,
@@ -160,6 +161,11 @@ export function openWindow(
     if (!dockArea.windowOrder.includes(id)) {
       dockArea.windowOrder.push(id);
     }
+    emitDockAreaEvent({
+      type: "window-docked",
+      side: initialDockState,
+      windowId: id,
+    });
   }
 
   // Apply hidden state after window creation if persisted as hidden
@@ -173,6 +179,15 @@ export function openWindow(
 
 /** Close a window (remove from registry) */
 export function closeWindow(id: string): void {
+  const win = windowStore.windows[id];
+  if (win?.dockState && win.dockState !== "none") {
+    emitDockAreaEvent({
+      type: "window-closing",
+      side: win.dockState,
+      windowId: id,
+    });
+  }
+
   // Remove from dock area order if docked
   removeFromDockAreaOrder(id);
 
@@ -193,6 +208,14 @@ function minimizeWindow(id: string): void {
   window.previousPosition = { ...window.position };
   window.previousSize = { ...window.size };
   window.state = "minimized";
+
+  if (window.dockState !== "none") {
+    emitDockAreaEvent({
+      type: "window-minimized",
+      side: window.dockState,
+      windowId: id,
+    });
+  }
 }
 
 /** Maximize a window (full screen) */
@@ -227,6 +250,8 @@ export function restoreWindow(id: string): void {
   if (!window) return;
 
   const wasHidden = window.state === "hidden";
+  const wasMinimized = window.state === "minimized";
+  const wasDocked = window.dockState !== "none";
 
   // Restore to normal if no previous state or if coming from hidden/minimized
   const targetState = window.previousState ?? "normal";
@@ -252,6 +277,14 @@ export function restoreWindow(id: string): void {
   // Push attached windows down when restoring from hidden
   if (wasHidden) {
     cascadeOnRestore(id);
+  }
+
+  if (wasDocked && (wasMinimized || wasHidden)) {
+    emitDockAreaEvent({
+      type: "window-expanded",
+      side: window.dockState as "left" | "right",
+      windowId: id,
+    });
   }
 }
 
@@ -395,6 +428,8 @@ export function dockWindow(
 
   // Un-collapse the dock area when a window is added
   dockArea.collapsed = false;
+
+  emitDockAreaEvent({ type: "window-docked", side, windowId: id });
 }
 
 /** Undock a window from its dock area, restoring pre-docked dimensions */
