@@ -184,24 +184,23 @@ export class JsonSerializer {
   ): Record<string, unknown> {
     const result: Record<string, unknown> = {};
     for (const annotation of annotations.items) {
-      if (!annotation.key.startsWith("metadata.")) {
-        result[annotation.key] = serializeAnnotationValue(
-          annotation.key,
-          annotation.value,
-        );
-      }
+      result[annotation.key] = serializeAnnotationValue(
+        annotation.key,
+        annotation.value,
+      );
     }
     return result;
   }
 
   private extractMetadata(annotations: Annotations): MetadataSpec {
-    const metadata: MetadataSpec = {};
+    if (annotations.items.length === 0) return {};
+    const record: Record<string, unknown> = {};
     for (const annotation of annotations.items) {
-      if (annotation.key.startsWith("metadata.")) {
-        const key = annotation.key.slice("metadata.".length);
-        metadata[key] = annotation.value;
-      }
+      record[annotation.key] = serializeAnnotationValue(
+        annotation.key,
+        annotation.value,
+      );
     }
-    return metadata;
+    return { annotations: record };
   }
 }

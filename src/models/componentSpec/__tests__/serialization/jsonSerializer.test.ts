@@ -103,15 +103,16 @@ describe("JsonSerializer", () => {
 
     const json = serializer.serialize(spec);
 
-    expect(json.metadata).toEqual({ author: "John", version: "1.0" });
+    expect(json.metadata).toEqual({
+      annotations: { author: "John", version: "1.0" },
+    });
   });
 
-  it("does not include metadata in output when no metadata annotations", () => {
+  it("does not include metadata in output when no annotations", () => {
     const spec = new ComponentSpec({
       $id: idGen.next("spec"),
       name: "Pipeline",
     });
-    spec.annotations.add({ key: "regular", value: "annotation" });
 
     const json = serializer.serialize(spec);
 

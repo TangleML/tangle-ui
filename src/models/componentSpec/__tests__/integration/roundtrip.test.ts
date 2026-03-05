@@ -54,7 +54,9 @@ describe("Serialization Roundtrip", () => {
 
     expect(json.name).toBe(yaml.name);
     expect(json.description).toBe(yaml.description);
-    expect(json.metadata).toEqual(yaml.metadata);
+    expect(json.metadata).toEqual({
+      annotations: { author: "Test", version: "1.0" },
+    });
     expect(Object.keys(getGraph(json).tasks)).toContain("ProcessTask");
   });
 

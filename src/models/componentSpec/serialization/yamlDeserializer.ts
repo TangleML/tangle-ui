@@ -284,10 +284,23 @@ export class YamlDeserializer {
     metadata?: Record<string, unknown>,
   ): Annotation[] {
     if (!metadata) return [];
-    return Object.entries(metadata).map(([key, value]) => ({
-      key: `metadata.${key}`,
-      value,
-    }));
+    const result: Annotation[] = [];
+    for (const [key, value] of Object.entries(metadata)) {
+      if (
+        key === "annotations" &&
+        typeof value === "object" &&
+        value !== null
+      ) {
+        for (const [annKey, annValue] of Object.entries(
+          value as Record<string, unknown>,
+        )) {
+          result.push({ key: annKey, value: annValue });
+        }
+      } else {
+        result.push({ key, value });
+      }
+    }
+    return result;
   }
 
   private isGraphInputReference(value: string): boolean {

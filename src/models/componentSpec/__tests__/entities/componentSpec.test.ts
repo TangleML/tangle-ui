@@ -29,15 +29,13 @@ describe("ComponentSpec", () => {
     expect(spec.getMetadata("missing")).toBeUndefined();
   });
 
-  it("setMetadata creates annotation with metadata. prefix", () => {
+  it("setMetadata creates annotation without prefix", () => {
     const spec = new ComponentSpec({ $id: "spec_1", name: "Test" });
 
     spec.setMetadata("author", "John");
 
     expect(spec.getMetadata("author")).toBe("John");
-    expect(
-      spec.annotations.find((a) => a.key === "metadata.author"),
-    ).toBeDefined();
+    expect(spec.annotations.find((a) => a.key === "author")).toBeDefined();
   });
 
   it("setMetadata updates existing annotation", () => {
@@ -47,9 +45,7 @@ describe("ComponentSpec", () => {
     spec.setMetadata("version", "2.0");
 
     expect(spec.getMetadata("version")).toBe("2.0");
-    expect(
-      spec.annotations.filter((a) => a.key === "metadata.version").length,
-    ).toBe(1);
+    expect(spec.annotations.filter((a) => a.key === "version").length).toBe(1);
   });
 
   it("setName updates name", () => {

@@ -154,12 +154,12 @@ export class ComponentSpec extends Model({
   // --- Metadata helpers ---
 
   getMetadata(key: string): unknown {
-    return this.annotations.get(`metadata.${key}`);
+    return this.annotations.get(key);
   }
 
   @modelAction
   setMetadata(key: string, value: unknown) {
-    this.annotations.set(`metadata.${key}`, value);
+    this.annotations.set(key, value);
   }
 
   // --- Compound mutations (used by editor actions) ---
