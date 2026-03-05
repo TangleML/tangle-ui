@@ -11,6 +11,62 @@ vi.mock("./componentSpec", () => ({
   isGraphImplementation: vi.fn(),
 }));
 
+// Mock the annotation schema with generic test data, avoiding references to real providers
+vi.mock(
+  "@/components/shared/ReactFlow/FlowCanvas/TaskNode/AnnotationsEditor/utils",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("@/components/shared/ReactFlow/FlowCanvas/TaskNode/AnnotationsEditor/utils")
+      >();
+
+    const mockSchema = {
+      cloud_provider: {
+        annotation: "test.io/cloud-provider",
+        type: "string",
+        title: "Cloud Provider",
+      },
+      launcher_annotation_schemas: {
+        "provider-with-required": {
+          type: "object",
+          title: "Provider With Required Fields",
+          properties: {
+            "test.io/required-field": {
+              type: "string",
+              title: "Required Field",
+              required: true,
+            },
+            "test.io/optional-field": {
+              type: "string",
+              title: "Optional Field",
+            },
+          },
+        },
+        "provider-without-required": {
+          type: "object",
+          title: "Provider Without Required Fields",
+          properties: {
+            "test.io/some-field": {
+              type: "string",
+              title: "Some Field",
+            },
+          },
+        },
+      },
+      common_annotations: {
+        type: "object",
+        title: "Common Annotations",
+        properties: {},
+      },
+    };
+
+    return {
+      ...actual,
+      launcherTaskAnnotationSchema: mockSchema,
+    };
+  },
+);
+
 const { isGraphImplementation } = await import("./componentSpec");
 
 // Helper to check if errors contain a specific message
@@ -441,6 +497,127 @@ describe("checkComponentSpecValidity", () => {
           e.message === "Not connected to any tasks",
       );
       expect(outputError).toBeDefined();
+    });
+
+    describe("Task Annotation Validation", () => {
+      const CLOUD_PROVIDER_ANNOTATION = "test.io/cloud-provider";
+      const REQUIRED_FIELD_ANNOTATION = "test.io/required-field";
+      const REQUIRED_ANNOTATION_ERROR =
+        'Required annotation "Required Field" is missing';
+
+      const makeTaskWithAnnotations = (
+        annotations: Record<string, string>,
+      ) => ({
+        componentRef: {
+          name: "child-component",
+          spec: {
+            name: "child-component",
+            implementation: { container: { image: "child-image" } },
+          },
+        },
+        annotations,
+      });
+
+      it("should return error when a required annotation is missing for the selected provider", () => {
+        const componentSpec: ComponentSpec = {
+          name: "test-component",
+          implementation: {
+            graph: {
+              tasks: {
+                task1: makeTaskWithAnnotations({
+                  [CLOUD_PROVIDER_ANNOTATION]: "provider-with-required",
+                }),
+              },
+            },
+          },
+        };
+
+        const result = checkComponentSpecValidity(componentSpec);
+
+        expect(result.isValid).toBe(false);
+        expectErrorWithMessage(result.errors, REQUIRED_ANNOTATION_ERROR);
+        expect(
+          result.errors.find((e) => e.message === REQUIRED_ANNOTATION_ERROR)
+            ?.taskId,
+        ).toBe("task1");
+      });
+
+      it("should return error when required annotation is whitespace only", () => {
+        const componentSpec: ComponentSpec = {
+          name: "test-component",
+          implementation: {
+            graph: {
+              tasks: {
+                task1: makeTaskWithAnnotations({
+                  [CLOUD_PROVIDER_ANNOTATION]: "provider-with-required",
+                  [REQUIRED_FIELD_ANNOTATION]: "   ",
+                }),
+              },
+            },
+          },
+        };
+
+        const result = checkComponentSpecValidity(componentSpec);
+
+        expect(result.isValid).toBe(false);
+        expectErrorWithMessage(result.errors, REQUIRED_ANNOTATION_ERROR);
+      });
+
+      it("should not return error when the required annotation has a value", () => {
+        const componentSpec: ComponentSpec = {
+          name: "test-component",
+          implementation: {
+            graph: {
+              tasks: {
+                task1: makeTaskWithAnnotations({
+                  [CLOUD_PROVIDER_ANNOTATION]: "provider-with-required",
+                  [REQUIRED_FIELD_ANNOTATION]: "some-value",
+                }),
+              },
+            },
+          },
+        };
+
+        const result = checkComponentSpecValidity(componentSpec);
+
+        expectNoErrorWithMessage(result.errors, REQUIRED_ANNOTATION_ERROR);
+      });
+
+      it("should not validate provider-specific annotations when no provider is selected", () => {
+        const componentSpec: ComponentSpec = {
+          name: "test-component",
+          implementation: {
+            graph: {
+              tasks: {
+                task1: makeTaskWithAnnotations({}),
+              },
+            },
+          },
+        };
+
+        const result = checkComponentSpecValidity(componentSpec);
+
+        expectNoErrorWithMessage(result.errors, REQUIRED_ANNOTATION_ERROR);
+      });
+
+      it("should not return required annotation errors for a provider with no required fields", () => {
+        const componentSpec: ComponentSpec = {
+          name: "test-component",
+          implementation: {
+            graph: {
+              tasks: {
+                task1: makeTaskWithAnnotations({
+                  [CLOUD_PROVIDER_ANNOTATION]: "provider-without-required",
+                }),
+              },
+            },
+          },
+        };
+
+        const result = checkComponentSpecValidity(componentSpec);
+
+        expectNoErrorWithMessage(result.errors, REQUIRED_ANNOTATION_ERROR);
+      });
     });
 
     it("should detect circular dependencies", () => {

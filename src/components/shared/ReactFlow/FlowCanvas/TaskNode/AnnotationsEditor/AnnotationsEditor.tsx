@@ -55,9 +55,16 @@ export const AnnotationsEditor = ({
 
       {pinnedAnnotations.map((config) => (
         <BlockStack key={config.annotation}>
-          <Paragraph size="xs" tone="subdued">
-            {config.label} {config.unit && `(${config.unit})`}
-          </Paragraph>
+          <InlineStack>
+            <Paragraph size="xs" tone="subdued">
+              {config.label} {config.unit && `(${config.unit})`}
+            </Paragraph>
+            {config.required && (
+              <Paragraph size="xs" tone="critical">
+                *
+              </Paragraph>
+            )}
+          </InlineStack>
 
           <AnnotationsInput
             key={config.annotation}

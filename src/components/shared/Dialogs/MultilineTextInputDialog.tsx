@@ -19,6 +19,7 @@ interface MultilineTextInputDialogProps {
   placeholder?: string;
   initialValue?: string;
   open: boolean;
+  required?: boolean;
   maxLength?: number;
   onCancel: () => void;
   onConfirm: (value: string) => void;
@@ -30,6 +31,7 @@ export const MultilineTextInputDialog = ({
   placeholder,
   initialValue = "",
   open,
+  required = false,
   maxLength,
   onCancel,
   onConfirm,
@@ -72,6 +74,7 @@ export const MultilineTextInputDialog = ({
           onChange={(e) => setValue(e.target.value)}
           placeholder={placeholder}
           className="min-h-32 max-h-[80vh]"
+          required={required}
           maxLength={maxLength}
         />
         <DialogFooter>
