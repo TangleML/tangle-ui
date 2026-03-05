@@ -26,6 +26,16 @@ export function SnapPreview({ preview, windowWidth }: SnapPreviewProps) {
     );
   }
 
+  if (preview.type === "dock-insert") {
+    return (
+      <DockInsertPreview
+        indicatorY={preview.indicatorY}
+        areaLeft={preview.areaLeft}
+        areaWidth={preview.areaWidth}
+      />
+    );
+  }
+
   return null;
 }
 
@@ -34,9 +44,6 @@ interface EdgeDockPreviewProps {
   windowWidth: number;
 }
 
-/**
- * Preview overlay for edge docking (left or right side of viewport)
- */
 function EdgeDockPreview({ side, windowWidth }: EdgeDockPreviewProps) {
   const viewportHeight = window.innerHeight - TOP_NAV_HEIGHT;
 
@@ -65,9 +72,6 @@ interface AttachPreviewProps {
   windowWidth: number;
 }
 
-/**
- * Preview indicator for vertical window attachment
- */
 function AttachPreview({
   parentBottom,
   parentLeft,
@@ -75,7 +79,6 @@ function AttachPreview({
 }: AttachPreviewProps) {
   return (
     <>
-      {/* Attachment line indicator */}
       <div
         className="fixed pointer-events-none z-[100] h-1 bg-green-500 rounded-full transition-all duration-75"
         style={{
@@ -84,7 +87,6 @@ function AttachPreview({
           width: Math.min(windowWidth, 200),
         }}
       />
-      {/* Snap zone preview area */}
       <div
         className="fixed pointer-events-none z-[99] bg-green-500/10 border-2 border-green-500/40 border-dashed rounded-lg transition-all duration-75"
         style={{
@@ -101,5 +103,36 @@ function AttachPreview({
         </div>
       </div>
     </>
+  );
+}
+
+interface DockInsertPreviewProps {
+  indicatorY: number;
+  areaLeft: number;
+  areaWidth: number;
+}
+
+/**
+ * Horizontal line indicator showing where a window will be inserted in a dock area.
+ */
+function DockInsertPreview({
+  indicatorY,
+  areaLeft,
+  areaWidth,
+}: DockInsertPreviewProps) {
+  const padding = 8;
+  return (
+    <div
+      className="fixed pointer-events-none z-[100] transition-all duration-75"
+      style={{
+        left: areaLeft + padding,
+        top: indicatorY - 2,
+        width: areaWidth - padding * 2,
+        height: 4,
+      }}
+    >
+      <div className="h-full bg-blue-500 rounded-full" />
+      <div className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-blue-500 rounded-full border-2 border-white" />
+    </div>
   );
 }

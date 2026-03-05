@@ -7,12 +7,14 @@ interface ResizeHandleProps {
   minWidth?: number;
   maxWidth?: number;
   side?: "left" | "right";
+  onDoubleClick?: () => void;
 }
 
 export const VerticalResizeHandle = ({
   minWidth = 200,
   maxWidth = 600,
   side = "left",
+  onDoubleClick,
 }: ResizeHandleProps) => {
   const parentElementRef = useRef<HTMLElement | null>(null);
   const resizingRef = useRef<{ startX: number; startWidth: number } | null>(
@@ -75,6 +77,7 @@ export const VerticalResizeHandle = ({
       )}
       ref={captureParentElement}
       onMouseDown={handleMouseDown}
+      onDoubleClick={onDoubleClick}
     >
       {/* Thin visible line with shadow */}
       <div

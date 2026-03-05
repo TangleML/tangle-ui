@@ -3,12 +3,17 @@
  *
  * Persists window arrangement (position, size, docking, attachments, hidden state)
  * to localStorage for static windows. On page reload, windows restore their
- * previous arrangement.
+ * previous arrangement. Also persists dock area configuration.
  */
 
 import { subscribe } from "valtio";
 
-import type { AttachmentInfo, DockState, Position, Size } from "./types";
+import type {
+  AttachmentInfo,
+  DockState,
+  Position,
+  Size,
+} from "./types";
 import { windowStore } from "./windowStore";
 
 const STORAGE_KEY = "editorV2-window-layout";
@@ -35,10 +40,15 @@ interface PersistedWindowState {
   dockState: DockState;
   attachedTo?: AttachmentInfo;
   isHidden: boolean;
-  /** Pre-docked position - needed for undock restore (separate from hide/restore cycle) */
   preDockedPosition?: Position;
-  /** Pre-docked size - needed for undock restore (separate from hide/restore cycle) */
   preDockedSize?: Size;
+  dockedHeight?: number;
+}
+
+interface PersistedDockAreaState {
+  width: number;
+  collapsed: boolean;
+  windowOrder: string[];
 }
 
 /**
@@ -47,17 +57,18 @@ interface PersistedWindowState {
 interface PersistedWindowLayout {
   windows: Record<string, PersistedWindowState>;
   windowOrder: string[];
+  dockAreas: {
+    left: PersistedDockAreaState;
+    right: PersistedDockAreaState;
+  };
   version: number;
 }
 
-const CURRENT_VERSION = 1;
+const CURRENT_VERSION = 2;
 
 let saveTimeout: ReturnType<typeof setTimeout> | null = null;
 let unsubscribe: (() => void) | null = null;
 
-/**
- * Simple debounce utility for saving.
- */
 function debounce<T extends (...args: unknown[]) => void>(
   fn: T,
   delay: number,
@@ -73,45 +84,51 @@ function debounce<T extends (...args: unknown[]) => void>(
   };
 }
 
-/**
- * Save current window layout to localStorage.
- * Only persists windows with static IDs.
- * Preserves state for closed windows (merges with existing persisted state).
- */
 function saveWindowLayoutImmediate(): void {
-  // Load existing persisted state to preserve closed windows' layout
   const existingLayout = loadWindowLayout();
 
   const layout: PersistedWindowLayout = {
     windows: existingLayout?.windows ?? {},
     windowOrder: [],
+    dockAreas: {
+      left: {
+        width: windowStore.dockAreas.left.width,
+        collapsed: windowStore.dockAreas.left.collapsed,
+        windowOrder: windowStore.dockAreas.left.windowOrder.filter((id) =>
+          STATIC_WINDOW_IDS.has(id),
+        ),
+      },
+      right: {
+        width: windowStore.dockAreas.right.width,
+        collapsed: windowStore.dockAreas.right.collapsed,
+        windowOrder: windowStore.dockAreas.right.windowOrder.filter((id) =>
+          STATIC_WINDOW_IDS.has(id),
+        ),
+      },
+    },
     version: CURRENT_VERSION,
   };
 
-  // Update state for currently open static windows
   for (const id of STATIC_WINDOW_IDS) {
     const window = windowStore.windows[id];
     if (window) {
-      // Window is open - save its current state
       layout.windows[id] = {
         position: { ...window.position },
         size: { ...window.size },
         dockState: window.dockState,
         attachedTo: window.attachedTo ? { ...window.attachedTo } : undefined,
         isHidden: window.state === "hidden",
-        // Persist pre-docked dimensions for undock operations
         preDockedPosition: window.preDockedPosition
           ? { ...window.preDockedPosition }
           : undefined,
         preDockedSize: window.preDockedSize
           ? { ...window.preDockedSize }
           : undefined,
+        dockedHeight: window.dockedHeight,
       };
     }
-    // If window is closed (not in store), keep existing persisted state (already in layout.windows)
   }
 
-  // Preserve order only for static windows
   layout.windowOrder = windowStore.windowOrder.filter((id) =>
     STATIC_WINDOW_IDS.has(id),
   );
@@ -123,14 +140,8 @@ function saveWindowLayoutImmediate(): void {
   }
 }
 
-/**
- * Debounced save function (500ms delay) to avoid excessive writes during drag/resize.
- */
 const saveWindowLayout = debounce(saveWindowLayoutImmediate, 500);
 
-/**
- * Load persisted window layout from localStorage.
- */
 function loadWindowLayout(): PersistedWindowLayout | null {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -140,21 +151,18 @@ function loadWindowLayout(): PersistedWindowLayout | null {
 
     const layout = JSON.parse(stored) as PersistedWindowLayout;
 
-    // Version check - if version doesn't match, discard
     if (layout.version !== CURRENT_VERSION) {
       return null;
     }
 
     return layout;
   } catch {
-    // Invalid JSON or other error
     return null;
   }
 }
 
 /**
  * Get persisted state for a specific window ID.
- * Returns null if no persisted state exists.
  */
 export function getPersistedWindowState(
   id: string,
@@ -172,17 +180,37 @@ export function getPersistedWindowState(
 }
 
 /**
+ * Restore persisted dock area state into the window store.
+ * Called once during initialization.
+ */
+function restoreDockAreaState(): void {
+  const layout = loadWindowLayout();
+  if (!layout?.dockAreas) return;
+
+  for (const side of ["left", "right"] as const) {
+    const persisted = layout.dockAreas[side];
+    if (!persisted) continue;
+    windowStore.dockAreas[side].width = persisted.width;
+    windowStore.dockAreas[side].collapsed = persisted.collapsed;
+    // Pre-populate the window order from persisted state.
+    // openWindow() will skip adding IDs that are already present,
+    // preserving the persisted ordering.
+    windowStore.dockAreas[side].windowOrder = [...persisted.windowOrder];
+  }
+}
+
+/**
  * Initialize persistence by subscribing to windowStore changes.
  * Call this once when EditorV2 mounts.
- * Returns a cleanup function to unsubscribe.
  */
 export function initPersistence(): () => void {
-  // Unsubscribe from any previous subscription
   if (unsubscribe) {
     unsubscribe();
   }
 
-  // Subscribe to all changes in windowStore
+  // Restore dock area dimensions/collapsed state
+  restoreDockAreaState();
+
   unsubscribe = subscribe(windowStore, () => {
     saveWindowLayout();
   });
@@ -192,7 +220,6 @@ export function initPersistence(): () => void {
       unsubscribe();
       unsubscribe = null;
     }
-    // Clear any pending save
     if (saveTimeout) {
       clearTimeout(saveTimeout);
       saveTimeout = null;

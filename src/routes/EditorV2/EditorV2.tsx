@@ -7,6 +7,7 @@ import { registerRootStore } from "mobx-keystone";
 import { observer } from "mobx-react-lite";
 
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
+import { InlineStack } from "@/components/ui/layout";
 import {
   IncrementingIdGenerator,
   YamlDeserializer,
@@ -28,6 +29,7 @@ import { useUndoRedoKeyboard } from "./hooks/useUndoRedoKeyboard";
 import { useWindowPersistence } from "./hooks/useWindowPersistence";
 import { SpecProvider } from "./providers/SpecContext";
 import { navigationStore } from "./store/navigationStore";
+import { DockArea } from "./windows/DockArea";
 import { TaskPanel } from "./windows/TaskPanel";
 import { WindowContainer } from "./windows/WindowContainer";
 
@@ -92,13 +94,25 @@ const PipelineEditor = withSuspenseWrapper(
     return (
       <SpecProvider spec={activeSpec}>
         <DebugPanel />
-        <FlowCanvas
-          key={activeSpec?.$id ?? "root"}
-          spec={activeSpec}
-          className="h-full"
-        />
-        <WindowContainer />
         <TaskPanel />
+        <InlineStack
+          className="flex-1 min-h-0 w-full"
+          gap="0"
+          blockAlign="stretch"
+          wrap="nowrap"
+          data-testid="editor-v2"
+        >
+          <DockArea side="left" />
+          <div className="relative flex-1 min-w-0 h-full">
+            <FlowCanvas
+              key={activeSpec?.$id ?? "root"}
+              spec={activeSpec}
+              className="h-full"
+            />
+            <WindowContainer />
+          </div>
+          <DockArea side="right" />
+        </InlineStack>
       </SpecProvider>
     );
   }),
