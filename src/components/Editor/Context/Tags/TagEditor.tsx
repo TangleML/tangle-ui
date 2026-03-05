@@ -32,13 +32,8 @@ export const TagEditor = ({
         value={value}
         onChange={handleChange}
         onBlur={onSave}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            onSave();
-          } else if (e.key === "Escape") {
-            onCancel();
-          }
-        }}
+        onEnter={onSave}
+        onEscape={onCancel}
         placeholder="Enter tag name..."
         className="h-7 text-xs w-36"
       />
