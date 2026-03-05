@@ -32,6 +32,7 @@ import {
 import { DebugPanel } from "./components/DebugPanel";
 import { FlowCanvas } from "./components/FlowCanvas/FlowCanvas";
 import { useComponentLibraryWindow } from "./hooks/useComponentLibraryWindow";
+import { useDockAreaAccordion } from "./hooks/useDockAreaAccordion";
 import { useHistoryWindow } from "./hooks/useHistoryWindow";
 import { useLinkedWindowCleanup } from "./hooks/useLinkedWindowCleanup";
 import { usePipelineDetailsWindow } from "./hooks/usePipelineDetailsWindow";
@@ -109,6 +110,7 @@ const PipelineEditor = withSuspenseWrapper(
     const { spec: rootSpec, restoredUndoStore } = useLoadSpec(pipelineName);
 
     useWindowPersistence();
+    useDockAreaAccordion();
     useSpecLifecycle(rootSpec, pipelineName, restoredUndoStore);
     useSelectionWindowSync();
     useLinkedWindowCleanup();
