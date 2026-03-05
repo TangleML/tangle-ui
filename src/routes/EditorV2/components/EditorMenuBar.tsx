@@ -29,6 +29,7 @@ import {
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Link } from "@/components/ui/link";
+import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/typography";
 import { EDITOR_PATH } from "@/routes/router";
 import { writeComponentToFileListFromText } from "@/utils/componentStore";
@@ -40,11 +41,13 @@ import {
   USER_PIPELINES_LIST_NAME,
 } from "@/utils/constants";
 
+import { autoSaveStore } from "../store/autoSaveStore";
 import {
   navigationStore,
   setRequestedPipelineName,
 } from "../store/navigationStore";
 import { restoreWindow } from "../windows/windowStore";
+import { AutoSaveIndicator } from "./AutoSaveIndicator";
 
 const MenuTriggerButton = ({
   children,
@@ -104,7 +107,7 @@ function FileMenu() {
             Open
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem disabled>
+          <DropdownMenuItem onClick={() => void autoSaveStore.save()}>
             <Icon name="Save" size="sm" />
             Save
           </DropdownMenuItem>
@@ -280,12 +283,11 @@ export const EditorMenuBar = observer(function EditorMenuBar() {
             className="shrink-0 ml-1"
             data-testid="status-indicators"
           >
-            <Button variant="ghost" size="icon">
-              <Icon name="CloudCheck" size="sm" className="text-stone-400" />
-            </Button>
+            <Separator orientation="vertical" />
             <Button variant="ghost" size="icon">
               <Icon name="Folder" size="sm" className="text-stone-400" />
             </Button>
+            <AutoSaveIndicator />
           </InlineStack>
         </InlineStack>
 
