@@ -17,6 +17,7 @@ import type { ComponentSpecJson } from "@/models/componentSpec";
 import { useSpec } from "../providers/SpecContext";
 import { renameTask } from "../store/actions";
 import { editorStore } from "../store/editorStore";
+import { ConfigurationSection } from "./ConfigurationSection";
 import { TaskAnnotationsEditor } from "./TaskAnnotationsEditor";
 import { TaskArgumentsEditor } from "./TaskArgumentsEditor";
 
@@ -171,6 +172,21 @@ export const TaskDetails = observer(function TaskDetails({
               No outputs defined
             </Text>
           )}
+        </AccordionContent>
+      </AccordionItem>
+
+      <AccordionItem value="configuration">
+        <AccordionTrigger className="py-1.5 px-3 text-xs hover:no-underline">
+          <Text
+            size="xs"
+            weight="semibold"
+            className="uppercase tracking-wide text-gray-500"
+          >
+            Configuration
+          </Text>
+        </AccordionTrigger>
+        <AccordionContent className="px-3 pb-2">
+          <ConfigurationSection task={task} />
         </AccordionContent>
       </AccordionItem>
 
