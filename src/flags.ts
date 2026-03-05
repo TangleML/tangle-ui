@@ -39,6 +39,14 @@ export const ExistingFlags: ConfigFlags = {
     category: "beta",
   },
 
+  ["classic-node-style"]: {
+    name: "Classic node style",
+    description:
+      "Use the classic visual style for task nodes in the editor. Inputs and outputs are shown as vertical sections instead of side-by-side columns.",
+    default: false,
+    category: "setting",
+  },
+
   ["input-aggregator"]: {
     name: "Input Aggregator Component",
     description:
