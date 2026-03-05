@@ -2,13 +2,16 @@ import { useNavigate } from "@tanstack/react-router";
 import { type MouseEvent } from "react";
 
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
+import { HighlightText } from "@/components/shared/HighlightText";
 import { PipelineRunInfoCondensed } from "@/components/shared/PipelineRunDisplay/PipelineRunInfoCondensed";
 import { PipelineRunsList } from "@/components/shared/PipelineRunDisplay/PipelineRunsList";
 import { usePipelineRuns } from "@/components/shared/PipelineRunDisplay/usePipelineRuns";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Icon } from "@/components/ui/icon";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
 import {
   Popover,
   PopoverContent,
@@ -22,6 +25,8 @@ import { deletePipeline } from "@/services/pipelineService";
 import type { ComponentReferenceWithSpec } from "@/utils/componentStore";
 import { formatDate } from "@/utils/date";
 
+import type { MatchedField } from "./usePipelineFilters";
+
 interface PipelineRowProps {
   url?: string;
   componentRef?: ComponentReferenceWithSpec;
@@ -30,6 +35,10 @@ interface PipelineRowProps {
   onDelete?: () => void;
   isSelected?: boolean;
   onSelect?: (checked: boolean) => void;
+  searchQuery?: string;
+  matchedFields?: MatchedField[];
+  componentQuery?: string;
+  matchedComponentNames?: string[];
 }
 
 const PipelineRow = withSuspenseWrapper(
@@ -39,6 +48,10 @@ const PipelineRow = withSuspenseWrapper(
     onDelete,
     isSelected = false,
     onSelect,
+    searchQuery,
+    matchedFields,
+    componentQuery,
+    matchedComponentNames,
   }: PipelineRowProps) => {
     const navigate = useNavigate();
 
@@ -90,7 +103,17 @@ const PipelineRow = withSuspenseWrapper(
           />
         </TableCell>
         <TableCell>
-          <Paragraph>{name}</Paragraph>
+          <BlockStack gap="0">
+            <Paragraph>
+              <HighlightText text={name ?? ""} query={searchQuery} />
+            </Paragraph>
+            <MatchBadges
+              matchedFields={matchedFields}
+              matchedComponentNames={matchedComponentNames}
+              searchQuery={searchQuery}
+              componentQuery={componentQuery}
+            />
+          </BlockStack>
         </TableCell>
         <TableCell>
           <Paragraph tone="subdued" size="xs">
@@ -192,6 +215,46 @@ const PipelineRunsButton = withSuspenseWrapper(
     );
   },
 );
+
+function MatchBadges({
+  matchedFields,
+  matchedComponentNames,
+  searchQuery,
+  componentQuery,
+}: {
+  matchedFields?: MatchedField[];
+  matchedComponentNames?: string[];
+  searchQuery?: string;
+  componentQuery?: string;
+}) {
+  const hasFields = matchedFields && matchedFields.length > 0;
+  const hasComponents =
+    matchedComponentNames && matchedComponentNames.length > 0;
+
+  if (!hasFields && !hasComponents) return null;
+
+  return (
+    <InlineStack gap="1" className="mt-1" wrap="wrap">
+      {matchedFields?.map((field) => (
+        <Badge
+          key={field.label}
+          variant="secondary"
+          size="sm"
+          className="max-w-60 truncate"
+        >
+          {field.label}:{" "}
+          <HighlightText text={field.value} query={searchQuery} />
+        </Badge>
+      ))}
+      {matchedComponentNames?.map((compName) => (
+        <Badge key={compName} variant="secondary" size="sm">
+          <Icon name="File" size="xs" />
+          <HighlightText text={compName} query={componentQuery} />
+        </Badge>
+      ))}
+    </InlineStack>
+  );
+}
 
 function formatModificationTime(modificationTime: Date | undefined) {
   return modificationTime ? formatDate(modificationTime) : "N/A";
