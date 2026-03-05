@@ -1,22 +1,32 @@
 import { observer } from "mobx-react-lite";
 import { type ChangeEvent, useState } from "react";
 
+import { ActionBlock } from "@/components/shared/ContextPanel/Blocks/ActionBlock";
+import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlock";
+import { KeyValueList } from "@/components/shared/ContextPanel/Blocks/KeyValueList";
+import { CopyText } from "@/components/shared/CopyText/CopyText";
+import { InfoBox } from "@/components/shared/InfoBox";
+import { Badge } from "@/components/ui/badge";
 import { Icon } from "@/components/ui/icon";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
-import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Text } from "@/components/ui/typography";
+import type { TypeSpecType } from "@/models/componentSpec/entities/types";
 
 import { useSpec } from "../providers/SpecContext";
-import { renamePipeline, updatePipelineDescription } from "../store/actions";
+import { updatePipelineDescription } from "../store/actions";
+import { RenamePipelineButton } from "./RenamePipelineButton";
+import { ValidationSummary } from "./ValidationSummary";
+import { ViewYamlButton } from "./ViewYamlButton";
 
-/**
- * Content for the Pipeline Details window.
- * Displays information about the pipeline itself (name, description, inputs/outputs).
- * Used within the Windows system.
- */
+const EXCLUDED_ANNOTATION_PREFIXES = ["editor."];
+
+function typeSpecToString(typeSpec?: TypeSpecType): string {
+  if (typeSpec === undefined) return "Any";
+  if (typeof typeSpec === "string") return typeSpec;
+  return JSON.stringify(typeSpec);
+}
+
 export const PipelineDetailsContent = observer(
   function PipelineDetailsContent() {
     const spec = useSpec();
@@ -24,7 +34,6 @@ export const PipelineDetailsContent = observer(
     const [description, setDescription] = useState(spec?.description ?? "");
 
     // Sync local state when spec description changes externally (e.g., undo/redo).
-    // MobX observer handles re-renders; we just need to keep local state in sync.
     const specDescription = spec?.description ?? "";
     if (
       description !== specDescription &&
@@ -36,13 +45,6 @@ export const PipelineDetailsContent = observer(
     if (!spec) {
       return <EmptyState />;
     }
-
-    const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
-      const newName = event.target.value;
-      if (newName && newName !== spec.name) {
-        renamePipeline(spec, newName);
-      }
-    };
 
     const handleDescriptionInputChange = (
       event: ChangeEvent<HTMLTextAreaElement>,
@@ -57,140 +59,123 @@ export const PipelineDetailsContent = observer(
       }
     };
 
-    const inputs = spec.inputs;
-    const outputs = spec.outputs;
     const annotations = spec.annotations
-      .filter((a) => a.key.startsWith("metadata."))
-      .map(
-        (a) => [a.key.slice("metadata.".length), a.value] as [string, unknown],
-      );
+      .filter(
+        (a) =>
+          !EXCLUDED_ANNOTATION_PREFIXES.some((prefix) =>
+            a.key.startsWith(prefix),
+          ),
+      )
+      .map((a) => ({
+        label: a.key,
+        value: String(a.value),
+      }));
 
     return (
-      <BlockStack className="h-full bg-white overflow-y-auto">
-        <BlockStack gap="4" className="p-3">
-          {/* Name */}
-          <BlockStack gap="2">
-            <Label htmlFor="pipeline-name" className="text-gray-600">
-              Name
-            </Label>
-            <Input
-              id="pipeline-name"
-              defaultValue={spec.name}
-              onBlur={handleNameChange}
-              className="font-mono text-sm"
-              data-testid="pipeline-name-input"
-            />
-          </BlockStack>
+      <BlockStack
+        gap="4"
+        className="h-full overflow-y-auto px-2 py-3"
+        data-testid="pipeline-details-content"
+      >
+        <CopyText className="text-sm font-semibold">
+          {spec.name ?? "Unnamed Pipeline"}
+        </CopyText>
 
-          {/* Description */}
-          <BlockStack gap="2">
-            <Label htmlFor="pipeline-description" className="text-gray-600">
-              Description
-            </Label>
-            <Textarea
-              id="pipeline-description"
-              value={description}
-              onChange={handleDescriptionInputChange}
-              onBlur={handleDescriptionBlur}
-              placeholder="Add a pipeline description..."
-              className="min-h-16 resize-y text-sm"
-              data-testid="pipeline-description-input"
-            />
-          </BlockStack>
+        <ActionBlock
+          actions={[
+            <RenamePipelineButton key="rename-pipeline" spec={spec} />,
+            <ViewYamlButton key="view-yaml" spec={spec} />,
+          ]}
+        />
 
-          <Separator />
+        <ContentBlock title="Description">
+          <Textarea
+            id="pipeline-description"
+            value={description}
+            onChange={handleDescriptionInputChange}
+            onBlur={handleDescriptionBlur}
+            placeholder="Add a pipeline description..."
+            className="min-h-16 resize-y text-sm"
+            data-testid="pipeline-description-input"
+          />
+        </ContentBlock>
 
-          {/* Inputs */}
-          {inputs.length > 0 && (
-            <BlockStack gap="2">
-              <InlineStack gap="2" blockAlign="center">
-                <Icon name="Download" size="sm" className="text-blue-500" />
-                <Label className="text-gray-600">Inputs</Label>
-              </InlineStack>
-              <BlockStack gap="1">
-                {inputs.map((input) => (
-                  <InlineStack
-                    key={input.$id}
-                    gap="2"
-                    className="text-xs py-1 px-2 bg-gray-50 rounded border border-gray-100"
-                  >
-                    <Text size="xs" weight="semibold" className="text-gray-700">
-                      {input.name}
+        <ContentBlock title="Inputs">
+          {spec.inputs.length > 0 ? (
+            <BlockStack>
+              {spec.inputs.map((input) => (
+                <InlineStack
+                  key={input.$id}
+                  gap="1"
+                  align="space-between"
+                  blockAlign="center"
+                  className="even:bg-white odd:bg-secondary px-2 py-0.5 rounded-xs w-full"
+                  wrap="nowrap"
+                >
+                  <Text size="xs" weight="semibold" className="truncate">
+                    {input.name}
+                  </Text>
+                  <InlineStack gap="1" className="shrink-0" blockAlign="center">
+                    <Text size="xs" tone="subdued">
+                      ({typeSpecToString(input.type)})
                     </Text>
-                    {input.type && (
-                      <Text size="xs" className="text-gray-500">
-                        : {String(input.type)}
-                      </Text>
-                    )}
                     {input.optional && (
-                      <Text size="xs" className="text-gray-400 italic">
-                        (optional)
-                      </Text>
+                      <Badge size="sm" variant="outline">
+                        optional
+                      </Badge>
                     )}
                   </InlineStack>
-                ))}
-              </BlockStack>
+                </InlineStack>
+              ))}
             </BlockStack>
+          ) : (
+            <Text size="xs" tone="subdued">
+              No inputs
+            </Text>
           )}
+        </ContentBlock>
 
-          {/* Outputs */}
-          {outputs.length > 0 && (
-            <BlockStack gap="2">
-              <InlineStack gap="2" blockAlign="center">
-                <Icon name="Upload" size="sm" className="text-green-500" />
-                <Label className="text-gray-600">Outputs</Label>
-              </InlineStack>
-              <BlockStack gap="1">
-                {outputs.map((output) => (
-                  <InlineStack
-                    key={output.$id}
-                    gap="2"
-                    className="text-xs py-1 px-2 bg-gray-50 rounded border border-gray-100"
-                  >
-                    <Text size="xs" weight="semibold" className="text-gray-700">
-                      {output.name}
-                    </Text>
-                    {output.type && (
-                      <Text size="xs" className="text-gray-500">
-                        : {String(output.type)}
-                      </Text>
-                    )}
-                  </InlineStack>
-                ))}
-              </BlockStack>
+        <ContentBlock title="Outputs">
+          {spec.outputs.length > 0 ? (
+            <BlockStack>
+              {spec.outputs.map((output) => (
+                <InlineStack
+                  key={output.$id}
+                  gap="1"
+                  align="space-between"
+                  blockAlign="center"
+                  className="even:bg-white odd:bg-secondary px-2 py-0.5 rounded-xs w-full"
+                  wrap="nowrap"
+                >
+                  <Text size="xs" weight="semibold" className="truncate">
+                    {output.name}
+                  </Text>
+                  <Text size="xs" tone="subdued" className="shrink-0">
+                    ({typeSpecToString(output.type)})
+                  </Text>
+                </InlineStack>
+              ))}
             </BlockStack>
+          ) : (
+            <Text size="xs" tone="subdued">
+              No outputs
+            </Text>
           )}
+        </ContentBlock>
 
-          {/* Annotations */}
-          {annotations.length > 0 && (
-            <>
-              <Separator />
-              <BlockStack gap="2">
-                <Label className="text-gray-600">Annotations</Label>
-                <BlockStack gap="1">
-                  {annotations.map(([key, value]) => (
-                    <BlockStack
-                      key={key}
-                      gap="1"
-                      className="text-xs py-1 px-2 bg-gray-50 rounded border border-gray-100"
-                    >
-                      <Text
-                        size="xs"
-                        weight="semibold"
-                        className="text-gray-600"
-                      >
-                        {key}
-                      </Text>
-                      <Text size="xs" className="text-gray-500 break-all">
-                        {String(value)}
-                      </Text>
-                    </BlockStack>
-                  ))}
-                </BlockStack>
-              </BlockStack>
-            </>
+        {annotations.length > 0 && (
+          <KeyValueList title="Annotations" items={annotations} />
+        )}
+
+        <ContentBlock title="Validations">
+          {spec.validationIssues.length === 0 ? (
+            <InfoBox variant="success" title="No validation issues">
+              Pipeline is ready for submission
+            </InfoBox>
+          ) : (
+            <ValidationSummary spec={spec} />
           )}
-        </BlockStack>
+        </ContentBlock>
       </BlockStack>
     );
   },
