@@ -31,7 +31,8 @@ export function TaskNodeInputs({
   expanded,
   onBackgroundClick,
 }: TaskNodeInputsProps) {
-  const { inputs, taskSpec, state, select } = useTaskNode();
+  const { inputs, taskSpec, state, callbacks } = useTaskNode();
+  const { onSelect } = callbacks;
   const { graphSpec } = useComponentSpec();
   const {
     highlightSearchFilter,
@@ -119,9 +120,9 @@ export function TaskNodeInputs({
   const handleLabelClick = useCallback(
     (e: MouseEvent) => {
       e.stopPropagation();
-      select();
+      onSelect?.();
     },
-    [select],
+    [onSelect],
   );
 
   useEffect(() => {

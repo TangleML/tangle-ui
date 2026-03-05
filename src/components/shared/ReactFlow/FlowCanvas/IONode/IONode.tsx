@@ -10,6 +10,7 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { QuickTooltip } from "@/components/ui/tooltip";
 import { Paragraph } from "@/components/ui/typography";
 import { useEdgeSelectionHighlight } from "@/hooks/useEdgeSelectionHighlight";
+import { useIsMultiSelect } from "@/hooks/useIsMultiSelect";
 import { cn } from "@/lib/utils";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useContextPanel } from "@/providers/ContextPanelProvider";
@@ -83,6 +84,8 @@ const IONode = ({ id, type, data, selected = false }: IONodeProps) => {
 
   const readOnly = !!data.readOnly;
 
+  const { isMultiSelect, isMultiSelectRef } = useIsMultiSelect();
+
   const isInSubgraph = isViewingSubgraph(currentSubgraphPath);
 
   const handleType = isInput ? "source" : "target";
@@ -117,7 +120,7 @@ const IONode = ({ id, type, data, selected = false }: IONodeProps) => {
   );
 
   useEffect(() => {
-    if (selected) {
+    if (selected && !isMultiSelect) {
       if (input && isInput) {
         setContent(
           <InputValueEditor
@@ -148,11 +151,11 @@ const IONode = ({ id, type, data, selected = false }: IONodeProps) => {
     }
 
     return () => {
-      if (selected) {
+      if (selected && !isMultiSelectRef.current) {
         clearContent();
       }
     };
-  }, [input, output, selected, readOnly]);
+  }, [input, output, selected, isMultiSelect, readOnly]);
 
   const connectedOutput = getOutputConnectedDetails(
     currentGraphSpec,

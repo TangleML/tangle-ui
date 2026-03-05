@@ -23,7 +23,8 @@ export function TaskNodeOutputs({
   expanded,
   onBackgroundClick,
 }: TaskNodeOutputsProps) {
-  const { nodeId, outputs, state, select } = useTaskNode();
+  const { nodeId, outputs, state, callbacks } = useTaskNode();
+  const { onSelect } = callbacks;
   const {
     highlightSearchFilter,
     resetSearchFilter,
@@ -108,9 +109,9 @@ export function TaskNodeOutputs({
   const handleLabelClick = useCallback(
     (e: MouseEvent) => {
       e.stopPropagation();
-      select();
+      onSelect?.();
     },
-    [select],
+    [onSelect],
   );
 
   useEffect(() => {

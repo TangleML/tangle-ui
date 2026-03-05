@@ -37,8 +37,8 @@ describe("<TaskNodeInputs />", () => {
       inputs,
       taskSpec,
       state: { readOnly: false },
-      select: vi.fn(),
       nodeId: "test-node",
+      callbacks: { onSelect: vi.fn() },
     } as any);
   };
 

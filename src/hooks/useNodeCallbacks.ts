@@ -251,6 +251,17 @@ export const useNodeCallbacks = ({
     ],
   );
 
+  const onSelect = useCallback(
+    (ids: NodeAndTaskId) => {
+      reactFlowInstance.setNodes((nodes) =>
+        nodes.map((node) =>
+          node.id === ids.nodeId ? { ...node, selected: true } : node,
+        ),
+      );
+    },
+    [reactFlowInstance],
+  );
+
   return {
     onDelete,
     setArguments,
@@ -258,5 +269,6 @@ export const useNodeCallbacks = ({
     setCacheStaleness,
     onDuplicate,
     onUpgrade,
+    onSelect,
   };
 };

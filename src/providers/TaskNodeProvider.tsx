@@ -1,4 +1,3 @@
-import { useReactFlow } from "@xyflow/react";
 import { type ReactNode, useCallback, useMemo } from "react";
 
 import useComponentFromUrl from "@/hooks/useComponentFromUrl";
@@ -57,6 +56,7 @@ type TaskNodeCallbacks = {
   onDelete?: () => void;
   onDuplicate?: () => void;
   onUpgrade?: () => void;
+  onSelect?: () => void;
 };
 
 type TaskNodeProviderProps = {
@@ -77,7 +77,6 @@ export type TaskNodeContextType = {
   displayName: string;
   state: TaskNodeState;
   callbacks: TaskNodeCallbacks;
-  select: () => void;
 };
 
 const TaskNodeContext =
@@ -90,7 +89,6 @@ export const TaskNodeProvider = ({
   status,
 }: TaskNodeProviderProps) => {
   const notify = useToastNotification();
-  const reactFlowInstance = useReactFlow();
 
   const taskSpec = data.taskSpec;
   const taskId = data.taskId;
@@ -103,6 +101,7 @@ export const TaskNodeProvider = ({
     setArguments,
     setAnnotations,
     setCacheStaleness,
+    onSelect,
   } = data.callbacks ?? DEFAULT_TASK_NODE_CALLBACKS;
 
   const componentRef =
@@ -183,14 +182,6 @@ export const TaskNodeProvider = ({
     onUpgrade(mostRecentComponentRef);
   }, [onUpgrade, isOutdated, mostRecentComponentRef, notify]);
 
-  const select = useCallback(() => {
-    reactFlowInstance.setNodes((nodes) =>
-      nodes.map((node) =>
-        node.id === nodeId ? { ...node, selected: true } : node,
-      ),
-    );
-  }, [nodeId, reactFlowInstance]);
-
   const state = useMemo(
     (): TaskNodeState => ({
       selected: selected && !data.isGhost,
@@ -224,6 +215,7 @@ export const TaskNodeProvider = ({
       onDelete: handleDeleteTaskNode,
       onDuplicate: handleDuplicateTaskNode,
       onUpgrade: handleUpgradeTaskNode,
+      onSelect,
     }),
     [
       handleSetArguments,
@@ -232,6 +224,7 @@ export const TaskNodeProvider = ({
       handleDeleteTaskNode,
       handleDuplicateTaskNode,
       handleUpgradeTaskNode,
+      onSelect,
     ],
   );
 
@@ -247,7 +240,6 @@ export const TaskNodeProvider = ({
       displayName,
       state,
       callbacks,
-      select,
     }),
     [
       componentRef,
@@ -260,7 +252,6 @@ export const TaskNodeProvider = ({
       displayName,
       state,
       callbacks,
-      select,
     ],
   );
 

@@ -1,5 +1,7 @@
 import { type Node } from "@xyflow/react";
 
+import { truncate } from "@/utils/string";
+
 import type { FlexNodeData } from "./types";
 
 export const DEFAULT_STICKY_NOTE = {
@@ -30,3 +32,13 @@ export const createFlexNode = (
     className: locked ? "pointer-events-auto!" : undefined,
   } as Node;
 };
+
+export function getFlexNodeDisplayName(data: FlexNodeData): string {
+  if (data.properties.title) {
+    return data.properties.title;
+  }
+  if (data.properties.content) {
+    return truncate(data.properties.content, 12, { breakWords: false });
+  }
+  return "untitled";
+}

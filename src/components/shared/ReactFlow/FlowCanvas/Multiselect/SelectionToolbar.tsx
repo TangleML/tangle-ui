@@ -1,10 +1,9 @@
 import { icons } from "lucide-react";
 
+import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
-
-import TooltipButton from "../../Buttons/TooltipButton";
 
 interface SelectionToolbarProps {
   onCopy?: () => void;
