@@ -424,21 +424,6 @@ export function isWindowDocked(id: string): boolean {
   return win?.dockState !== "none" && win?.dockState !== undefined;
 }
 
-/** Reorder a docked window within its dock area */
-export function reorderDockedWindow(
-  id: string,
-  side: "left" | "right",
-  newIndex: number,
-): void {
-  const order = windowStore.dockAreas[side].windowOrder;
-  const currentIndex = order.indexOf(id);
-  if (currentIndex === -1) return;
-
-  order.splice(currentIndex, 1);
-  const clampedIndex = Math.min(newIndex, order.length);
-  order.splice(clampedIndex, 0, id);
-}
-
 /** Update a docked window's height */
 export function updateDockedWindowHeight(id: string, height: number): void {
   const win = windowStore.windows[id];
