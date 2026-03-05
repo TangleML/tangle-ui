@@ -4,7 +4,8 @@
     ".git/**",
     "src/api/**",
     "src/components/ui/**",
-    "openapi-ts.config.ts"
+    "openapi-ts.config.ts",
+    "src/config/announcements.ts"
   ],
   "ignoreDependencies": [
     "@radix-ui/react-accordion",

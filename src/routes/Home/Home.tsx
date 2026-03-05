@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 
 import { PipelineSection, RunSection } from "@/components/Home";
+import { AnnouncementBanners } from "@/components/shared/AnnouncementBanners";
 import { BetaFeatureWrapper } from "@/components/shared/BetaFeatureWrapper/BetaFeatureWrapper";
 import { PipelineRunFiltersBar } from "@/components/shared/PipelineRunFiltersBar/PipelineRunFiltersBar";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
@@ -24,6 +25,7 @@ const Home = () => {
 
   return (
     <div className="container mx-auto w-3/4 p-4 flex flex-col gap-4">
+      <AnnouncementBanners />
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Pipelines</h1>
       </div>
