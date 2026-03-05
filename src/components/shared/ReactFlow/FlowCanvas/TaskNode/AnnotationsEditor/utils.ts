@@ -11,6 +11,7 @@ interface JSONSchemaProperty {
   exclusiveMaximum?: number;
   pattern?: string;
   enum?: string[];
+  required?: boolean;
   "x-unit"?: string;
   "x-append"?: string;
   "x-enable-quantity"?: boolean;
@@ -52,6 +53,10 @@ export function parseSchemaToAnnotationConfig(
       annotation,
       label: property.title || annotation,
     };
+
+    if (property.required) {
+      config.required = true;
+    }
 
     // Handle unit
     if (property["x-unit"]) {

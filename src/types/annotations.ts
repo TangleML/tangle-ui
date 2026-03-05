@@ -16,4 +16,5 @@ export type AnnotationConfig = {
   min?: number;
   max?: number;
   hidden?: boolean;
+  required?: boolean;
 };

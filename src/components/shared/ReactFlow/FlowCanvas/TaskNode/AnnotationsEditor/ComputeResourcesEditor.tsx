@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 
-import { BlockStack } from "@/components/ui/layout";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Heading, Paragraph } from "@/components/ui/typography";
 import type { AnnotationConfig, Annotations } from "@/types/annotations";
 
@@ -79,9 +79,16 @@ const ComputeResourceField = ({
 
   return (
     <BlockStack key={resource.annotation}>
-      <Paragraph size="xs" tone="subdued">
-        {label}
-      </Paragraph>
+      <InlineStack>
+        <Paragraph size="xs" tone="subdued">
+          {label}
+        </Paragraph>
+        {resource.required && (
+          <Paragraph size="xs" tone="critical">
+            *
+          </Paragraph>
+        )}
+      </InlineStack>
 
       <AnnotationsInput
         value={value}

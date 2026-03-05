@@ -1,4 +1,12 @@
 import {
+  getCloudProviderConfig,
+  getCommonAnnotations,
+  getProviderSchema,
+  launcherTaskAnnotationSchema,
+  parseSchemaToAnnotationConfig,
+} from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/AnnotationsEditor/utils";
+
+import {
   type ArgumentType,
   type ComponentSpec,
   type GraphInputArgument,
@@ -251,6 +259,9 @@ const validateSingleTask = (
   // Validate required inputs
   errors.push(...validateTaskRequiredInputs(taskId, task));
 
+  // Validate required annotations
+  errors.push(...validateTaskAnnotations(taskId, task));
+
   return errors;
 };
 
@@ -397,6 +408,54 @@ const validateTaskRequiredInputs = (
         }
       }
     });
+  }
+
+  return errors;
+};
+
+const validateTaskAnnotations = (
+  taskId: string,
+  task: TaskSpec,
+): ValidationError[] => {
+  const errors: ValidationError[] = [];
+  const taskAnnotations = (task.annotations ?? {}) as Record<string, string>;
+
+  // Check provider-specific required annotations (only when that provider is selected)
+  const cloudProviderAnnotation = getCloudProviderConfig(
+    launcherTaskAnnotationSchema,
+  )?.annotation;
+  const selectedProvider = cloudProviderAnnotation
+    ? taskAnnotations[cloudProviderAnnotation]
+    : undefined;
+
+  if (selectedProvider) {
+    const providerSchema = getProviderSchema(
+      launcherTaskAnnotationSchema,
+      selectedProvider,
+    );
+
+    if (providerSchema) {
+      for (const config of parseSchemaToAnnotationConfig(providerSchema)) {
+        if (config.required && !taskAnnotations[config.annotation]?.trim()) {
+          errors.push({
+            type: "task",
+            message: `Required annotation "${config.label}" is missing`,
+            taskId,
+          });
+        }
+      }
+    }
+  }
+
+  // Check common required annotations (always visible)
+  for (const config of getCommonAnnotations(launcherTaskAnnotationSchema)) {
+    if (config.required && !taskAnnotations[config.annotation]?.trim()) {
+      errors.push({
+        type: "task",
+        message: `Required annotation "${config.label}" is missing`,
+        taskId,
+      });
+    }
   }
 
   return errors;

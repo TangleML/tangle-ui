@@ -228,6 +228,7 @@ export const AnnotationsInput = ({
             ? handleQuantitySelectChange
             : handleNonQuantitySelectChange
         }
+        required={config?.required}
       >
         <div className="relative group grow min-w-24">
           <SelectTrigger className={cn("w-full", className)}>
@@ -273,6 +274,7 @@ export const AnnotationsInput = ({
           onBlur={handleBlur}
           autoFocus={autoFocus}
           className={className}
+          required={config?.required}
         />
 
         {config?.max !== undefined && (
@@ -305,6 +307,7 @@ export const AnnotationsInput = ({
             autoFocus={autoFocus}
             className={cn("min-w-16", className)}
             maxLength={config?.max}
+            required={config?.required}
           />
           <Button
             className="absolute right-0 top-1/2 -translate-y-1/2 hover:bg-transparent hover:text-blue-500 hidden group-hover:flex h-8 w-8 p-0"
@@ -344,6 +347,7 @@ export const AnnotationsInput = ({
             }
             onBlur={handleBlur}
             onChange={handleQuantityValueInputChange}
+            required={config?.required}
           />
         )}
         {deletable && onDelete && (
@@ -365,6 +369,7 @@ export const AnnotationsInput = ({
             onCancel={handleDialogCancel}
             onConfirm={handleDialogConfirm}
             maxLength={config?.max}
+            required={config?.required}
           />
         )}
     </>
@@ -375,6 +380,7 @@ const QuantityInput = ({
   value,
   min,
   max,
+  required,
   disabled,
   onBlur,
   onChange,
@@ -382,6 +388,7 @@ const QuantityInput = ({
   value: string;
   min?: number;
   max?: number;
+  required?: boolean;
   disabled: boolean;
   onBlur: () => void;
   onChange: (value: string) => void;
@@ -410,6 +417,7 @@ const QuantityInput = ({
           !currentQuantity && !disabled && "border-destructive/50",
         )}
         disabled={disabled}
+        required={required}
       />
       {max !== undefined && (
         <Paragraph size="xs" tone="subdued" className="whitespace-nowrap">
