@@ -53,6 +53,7 @@ import {
 } from "@/utils/componentSpec";
 import { generateCsvTemplate } from "@/utils/csvBulkArgumentExport";
 import { mapCsvToArguments } from "@/utils/csvBulkArgumentImport";
+import { mapJsonToArguments } from "@/utils/jsonBulkArgumentImport";
 import { extractTaskArguments } from "@/utils/nodes/taskArguments";
 import { validateArguments } from "@/utils/validations";
 
@@ -136,11 +137,20 @@ export const SubmitTaskArgumentsDialog = ({
     });
   };
 
-  const handleCsvImport = (csvText: string) => {
-    const result = mapCsvToArguments(csvText, inputs, taskArguments);
+  const handleFileImport = (fileText: string, fileExtension: string) => {
+    const isJson = fileExtension === ".json";
+
+    const result = isJson
+      ? mapJsonToArguments(fileText, inputs, taskArguments)
+      : mapCsvToArguments(fileText, inputs, taskArguments);
 
     if (result.rowCount === 0 && result.changedInputNames.length === 0) {
-      notify("CSV file is empty or contains only headers", "warning");
+      notify(
+        isJson
+          ? "JSON file is empty or contains invalid data"
+          : "CSV file is empty or contains only headers",
+        "warning",
+      );
       return;
     }
 
@@ -168,10 +178,11 @@ export const SubmitTaskArgumentsDialog = ({
 
     let message = result.enableBulk
       ? `Imported ${result.rowCount} rows across ${inputCount} input${inputCount !== 1 ? "s" : ""}`
-      : `Imported ${inputCount} input${inputCount !== 1 ? "s" : ""} from CSV`;
+      : `Imported ${inputCount} input${inputCount !== 1 ? "s" : ""} from ${isJson ? "JSON" : "CSV"}`;
 
     if (result.unmatchedColumns.length > 0) {
-      message += `. Ignored columns: ${result.unmatchedColumns.join(", ")}`;
+      const keyLabel = isJson ? "keys" : "columns";
+      message += `. Ignored ${keyLabel}: ${result.unmatchedColumns.join(", ")}`;
     }
 
     if (result.skippedSecretInputs.length > 0) {
@@ -217,7 +228,7 @@ export const SubmitTaskArgumentsDialog = ({
                   bulkInputNames={bulkInputNames}
                   pipelineName={componentSpec.name}
                 />
-                <ImportCsvButton onImport={handleCsvImport} />
+                <ImportFileButton onImport={handleFileImport} />
                 <CopyFromRunPopover
                   componentSpec={componentSpec}
                   onCopy={handleCopyFromRun}
@@ -246,7 +257,8 @@ export const SubmitTaskArgumentsDialog = ({
               </Paragraph>
               ). Each value creates a separate run. Non-bulk inputs reuse their
               single value across all runs. If multiple inputs are set to bulk,
-              they must have the same number of values.
+              they must have the same number of values. You can also import a
+              CSV or JSON file to populate values automatically.
             </Paragraph>
           </BlockStack>
         )}
@@ -621,10 +633,10 @@ const DownloadCsvTemplateButton = ({
   );
 };
 
-const ImportCsvButton = ({
+const ImportFileButton = ({
   onImport,
 }: {
-  onImport: (csvText: string) => void;
+  onImport: (fileText: string, fileExtension: string) => void;
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -632,11 +644,15 @@ const ImportCsvButton = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const extension = file.name.includes(".")
+      ? `.${file.name.split(".").pop()?.toLowerCase()}`
+      : "";
+
     const reader = new FileReader();
     reader.onload = (event) => {
       const text = event.target?.result;
       if (typeof text === "string") {
-        onImport(text);
+        onImport(text, extension);
       }
     };
     reader.readAsText(file);
@@ -652,7 +668,7 @@ const ImportCsvButton = ({
       <input
         ref={fileInputRef}
         type="file"
-        accept=".csv"
+        accept=".csv,.json"
         onChange={handleFileChange}
         className="hidden"
       />
@@ -661,8 +677,8 @@ const ImportCsvButton = ({
         size="sm"
         onClick={() => fileInputRef.current?.click()}
       >
-        <Icon name="FileSpreadsheet" />
-        Import CSV
+        <Icon name="Upload" />
+        Import
       </Button>
     </>
   );

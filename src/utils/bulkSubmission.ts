@@ -1,10 +1,99 @@
 import type { ArgumentType } from "./componentSpec";
 
+/**
+ * Splits a comma-separated bulk value string into individual values.
+ *
+ * Structure-aware: commas inside `{…}`, `[…]`, or `"…"` are not treated
+ * as separators, so JSON-stringified objects survive the round-trip.
+ */
 export function parseBulkValues(raw: string): string[] {
-  return raw
-    .split(",")
-    .map((v) => v.trim())
-    .filter((v) => v.length > 0);
+  const values: string[] = [];
+  let current = "";
+  let braceDepth = 0;
+  let bracketDepth = 0;
+  let inQuote = false;
+
+  for (let i = 0; i < raw.length; i++) {
+    const char = raw[i];
+
+    if (inQuote) {
+      current += char;
+      if (char === "\\" && i + 1 < raw.length) {
+        current += raw[++i];
+      } else if (char === '"') {
+        inQuote = false;
+      }
+      continue;
+    }
+
+    if (char === '"') {
+      inQuote = true;
+      current += char;
+      continue;
+    }
+
+    if (char === "{") {
+      braceDepth++;
+      current += char;
+      continue;
+    }
+
+    if (char === "}") {
+      braceDepth = Math.max(0, braceDepth - 1);
+      current += char;
+      continue;
+    }
+
+    if (char === "[") {
+      bracketDepth++;
+      current += char;
+      continue;
+    }
+
+    if (char === "]") {
+      bracketDepth = Math.max(0, bracketDepth - 1);
+      current += char;
+      continue;
+    }
+
+    if (char === "," && braceDepth === 0 && bracketDepth === 0) {
+      const trimmed = current.trim();
+      if (trimmed.length > 0) {
+        values.push(unquote(trimmed));
+      }
+      current = "";
+      continue;
+    }
+
+    current += char;
+  }
+
+  const trimmed = current.trim();
+  if (trimmed.length > 0) {
+    values.push(unquote(trimmed));
+  }
+
+  return values;
+}
+
+/**
+ * If a value is wrapped in double quotes (e.g. from JSON import quoting
+ * values that contain commas), strip the quotes and unescape.
+ */
+function unquote(value: string): string {
+  if (
+    value.length >= 2 &&
+    value[0] === '"' &&
+    value[value.length - 1] === '"'
+  ) {
+    try {
+      const parsed = JSON.parse(value);
+      if (typeof parsed === "string") return parsed;
+    } catch {
+      // Not valid JSON-quoted string, return as-is
+    }
+  }
+  return value;
 }
 
 export class BulkCountMismatchError extends Error {

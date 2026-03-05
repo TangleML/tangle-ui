@@ -43,6 +43,65 @@ describe("parseBulkValues", () => {
       "foo bar",
     ]);
   });
+
+  it("does not split on commas inside JSON objects", () => {
+    expect(parseBulkValues('{"a":1,"b":2}, {"a":3,"b":4}')).toEqual([
+      '{"a":1,"b":2}',
+      '{"a":3,"b":4}',
+    ]);
+  });
+
+  it("does not split on commas inside JSON arrays", () => {
+    expect(parseBulkValues("[1,2,3], [4,5,6]")).toEqual(["[1,2,3]", "[4,5,6]"]);
+  });
+
+  it("does not split on commas inside nested structures", () => {
+    expect(
+      parseBulkValues(
+        '{"config":{"lr":0.01,"epochs":100}}, {"config":{"lr":0.02,"epochs":200}}',
+      ),
+    ).toEqual([
+      '{"config":{"lr":0.01,"epochs":100}}',
+      '{"config":{"lr":0.02,"epochs":200}}',
+    ]);
+  });
+
+  it("handles mix of plain values and JSON objects", () => {
+    expect(parseBulkValues('simple, {"key":"value"}, plain')).toEqual([
+      "simple",
+      '{"key":"value"}',
+      "plain",
+    ]);
+  });
+
+  it("unquotes JSON-quoted values that contain commas", () => {
+    expect(parseBulkValues('"hello, world", "foo, bar"')).toEqual([
+      "hello, world",
+      "foo, bar",
+    ]);
+  });
+
+  it("unquotes mixed quoted and unquoted values", () => {
+    expect(parseBulkValues('simple, "has, comma", plain')).toEqual([
+      "simple",
+      "has, comma",
+      "plain",
+    ]);
+  });
+
+  it("treats an opening quote as starting a quoted value", () => {
+    // An unclosed quote consumes the rest of the string as one value
+    expect(parseBulkValues('"incomplete, normal')).toEqual([
+      '"incomplete, normal',
+    ]);
+  });
+
+  it("handles quoted values with escaped quotes inside", () => {
+    expect(parseBulkValues('"say \\"hello, world\\"", other')).toEqual([
+      'say "hello, world"',
+      "other",
+    ]);
+  });
 });
 
 describe("expandBulkArguments", () => {
