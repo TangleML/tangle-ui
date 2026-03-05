@@ -31,21 +31,17 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Link } from "@/components/ui/link";
 import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/typography";
-import { EDITOR_PATH } from "@/routes/router";
+import { APP_ROUTES } from "@/routes/router";
 import { writeComponentToFileListFromText } from "@/utils/componentStore";
 import {
   defaultPipelineYamlWithName,
   DOCUMENTATION_URL,
-  IS_GITHUB_PAGES,
   TOP_NAV_HEIGHT,
   USER_PIPELINES_LIST_NAME,
 } from "@/utils/constants";
 
 import { autoSaveStore } from "../store/autoSaveStore";
-import {
-  navigationStore,
-  setRequestedPipelineName,
-} from "../store/navigationStore";
+import { navigationStore } from "../store/navigationStore";
 import { restoreWindow } from "../windows/windowStore";
 import { AutoSaveIndicator } from "./AutoSaveIndicator";
 
@@ -85,13 +81,16 @@ function FileMenu() {
       componentText,
     );
     navigate({
-      to: `${EDITOR_PATH}/${encodeURIComponent(name)}`,
-      reloadDocument: !IS_GITHUB_PAGES,
+      to: APP_ROUTES.EDITOR_V2_PIPELINE,
+      params: { pipelineName: name },
     });
   };
 
   const handlePipelineClick = (name: string) => {
-    setRequestedPipelineName(name);
+    navigate({
+      to: APP_ROUTES.EDITOR_V2_PIPELINE,
+      params: { pipelineName: name },
+    });
     setOpenDialogOpen(false);
   };
 

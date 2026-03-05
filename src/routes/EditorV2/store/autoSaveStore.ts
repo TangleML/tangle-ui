@@ -1,13 +1,16 @@
 import { action, makeObservable, observable, reaction } from "mobx";
 
 import type { ComponentSpec } from "@/models/componentSpec";
-import { JsonSerializer } from "@/models/componentSpec";
+import { collectIdStack, JsonSerializer } from "@/models/componentSpec";
+import { saveUndoHistory } from "@/services/undoHistoryStorage";
 import { writeComponentToFileListFromText } from "@/utils/componentStore";
 import {
   AUTOSAVE_DEBOUNCE_TIME_MS,
   USER_PIPELINES_LIST_NAME,
 } from "@/utils/constants";
 import { componentSpecToText } from "@/utils/yaml";
+
+import { undoStore } from "./undoStore";
 
 const SAVED_MESSAGE_DURATION_MS = 2000;
 const MIN_SAVING_DISPLAY_MS = 1000;
@@ -115,6 +118,7 @@ class AutoSaveStore {
           this.pipelineName!,
           yamlText,
         );
+        await this.persistUndoHistory();
         this.setSaved(new Date());
         this.flashSavedMessage();
       } catch (error) {
@@ -128,6 +132,19 @@ class AutoSaveStore {
     );
 
     await Promise.all([savePromise, minDisplayPromise]);
+  }
+
+  private async persistUndoHistory() {
+    if (!this.spec || !this.pipelineName) return;
+    const manager = undoStore.undoManager;
+    if (!manager) return;
+
+    try {
+      const idStack = collectIdStack(this.spec);
+      await saveUndoHistory(this.pipelineName, idStack, manager);
+    } catch (error) {
+      console.error("Failed to persist undo history:", error);
+    }
   }
 
   private flashSavedMessage() {

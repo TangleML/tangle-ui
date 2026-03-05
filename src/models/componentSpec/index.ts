@@ -10,12 +10,18 @@ export type {
 export { Binding, ComponentSpec, Input, Output, Task } from "./entities";
 
 // Serialization
-export { JsonSerializer, YamlDeserializer } from "./serialization";
+export {
+  collectIdStack,
+  JsonSerializer,
+  YamlDeserializer,
+} from "./serialization";
 
 // Factories
+export type { IdGenerator } from "./factories";
 export {
   createTaskFromComponentRef,
   IncrementingIdGenerator,
+  ReplayIdGenerator,
 } from "./factories";
 
 // Actions

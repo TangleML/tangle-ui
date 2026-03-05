@@ -1,20 +1,33 @@
 import "@xyflow/react/dist/style.css";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useNavigate, useParams } from "@tanstack/react-router";
 import { ReactFlowProvider } from "@xyflow/react";
-import yaml from "js-yaml";
+import type { UndoStore as MobxUndoStore } from "mobx-keystone";
 import { registerRootStore } from "mobx-keystone";
 import { observer } from "mobx-react-lite";
+import { useEffect } from "react";
 
+import { PipelineSection } from "@/components/Home/PipelineSection/PipelineSection";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
-import { InlineStack } from "@/components/ui/layout";
+import { Icon } from "@/components/ui/icon";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { Text } from "@/components/ui/typography";
+import type { IdGenerator } from "@/models/componentSpec";
+import type { ComponentSpec } from "@/models/componentSpec";
 import {
   IncrementingIdGenerator,
+  ReplayIdGenerator,
   YamlDeserializer,
 } from "@/models/componentSpec";
 import { ComponentLibraryProvider } from "@/providers/ComponentLibraryProvider";
 import { ForcedSearchProvider } from "@/providers/ComponentLibraryProvider/ForcedSearchProvider";
+import { APP_ROUTES } from "@/routes/router";
 import { loadPipelineByName } from "@/services/pipelineService";
+import {
+  createUndoStoreWithEvents,
+  loadUndoHistory,
+} from "@/services/undoHistoryStorage";
 
 import { DebugPanel } from "./components/DebugPanel";
 import { FlowCanvas } from "./components/FlowCanvas/FlowCanvas";
@@ -28,57 +41,78 @@ import { useSpecLifecycle } from "./hooks/useSpecLifecycle";
 import { useUndoRedoKeyboard } from "./hooks/useUndoRedoKeyboard";
 import { useWindowPersistence } from "./hooks/useWindowPersistence";
 import { SpecProvider } from "./providers/SpecContext";
-import { navigationStore } from "./store/navigationStore";
+import {
+  navigationStore,
+  setRequestedPipelineName,
+} from "./store/navigationStore";
 import { DockArea } from "./windows/DockArea";
 import { TaskPanel } from "./windows/TaskPanel";
 import { WindowContainer } from "./windows/WindowContainer";
 
-const availableTemplates = import.meta.glob<string>("./assets/*.yaml", {
-  query: "?raw",
-  import: "default",
-});
-
-async function getSpecByName(name: "test-spec") {
-  return availableTemplates[`./assets/${name}.yaml`]();
+interface LoadedSpec {
+  spec: ComponentSpec;
+  restoredUndoStore?: MobxUndoStore;
 }
 
-function deserializeSpec(data: unknown) {
-  const idGen = new IncrementingIdGenerator();
-  const deserializer = new YamlDeserializer(idGen);
+function deserializeSpec(data: unknown, idGen?: IdGenerator): ComponentSpec {
+  const generator = idGen ?? new IncrementingIdGenerator();
+  const deserializer = new YamlDeserializer(generator);
   const spec = deserializer.deserialize(data);
   registerRootStore(spec);
   return spec;
 }
 
-function useLoadSpec(pipelineName: string | null) {
-  const { data: spec } = useSuspenseQuery({
+function useLoadSpec(pipelineName: string) {
+  const { data } = useSuspenseQuery({
     queryKey: ["editor-v2-spec", pipelineName],
-    queryFn: async () => {
-      if (pipelineName) {
-        const result = await loadPipelineByName(pipelineName);
-        if (!result.experiment?.componentRef?.spec) {
-          throw new Error(`Pipeline "${pipelineName}" not found`);
-        }
-        return deserializeSpec(result.experiment.componentRef.spec);
+    queryFn: async (): Promise<LoadedSpec> => {
+      const [result, undoHistory] = await Promise.all([
+        loadPipelineByName(pipelineName),
+        loadUndoHistory(pipelineName).catch(() => null),
+      ]);
+
+      if (!result.experiment?.componentRef?.spec) {
+        throw new Error(`Pipeline "${pipelineName}" not found`);
       }
 
-      const testSpecText = await getSpecByName("test-spec");
-      return deserializeSpec(yaml.load(testSpecText));
+      if (undoHistory) {
+        try {
+          const replayIdGen = new ReplayIdGenerator(undoHistory.idStack);
+          const spec = deserializeSpec(
+            result.experiment.componentRef.spec,
+            replayIdGen,
+          );
+          const restoredUndoStore = createUndoStoreWithEvents(
+            undoHistory.undoEvents,
+          );
+          return { spec, restoredUndoStore };
+        } catch (error) {
+          console.warn(
+            "Failed to restore undo history, loading fresh:",
+            error,
+          );
+        }
+      }
+
+      return { spec: deserializeSpec(result.experiment.componentRef.spec) };
     },
     staleTime: Infinity,
     retry: false,
   });
 
-  return spec;
+  return data;
+}
+
+interface PipelineEditorProps {
+  pipelineName: string;
 }
 
 const PipelineEditor = withSuspenseWrapper(
-  observer(() => {
-    const pipelineName = navigationStore.requestedPipelineName;
-    const rootSpec = useLoadSpec(pipelineName);
+  observer(({ pipelineName }: PipelineEditorProps) => {
+    const { spec: rootSpec, restoredUndoStore } = useLoadSpec(pipelineName);
 
     useWindowPersistence();
-    useSpecLifecycle(rootSpec, pipelineName);
+    useSpecLifecycle(rootSpec, pipelineName, restoredUndoStore);
     useSelectionWindowSync();
     useLinkedWindowCleanup();
     useComponentLibraryWindow();
@@ -118,13 +152,58 @@ const PipelineEditor = withSuspenseWrapper(
   }),
 );
 
+function EmptyEditorState() {
+  const navigate = useNavigate();
+
+  const handlePipelineClick = (name: string) => {
+    navigate({
+      to: APP_ROUTES.EDITOR_V2_PIPELINE,
+      params: { pipelineName: name },
+    });
+  };
+
+  return (
+    <BlockStack
+      className="flex-1 min-h-0 w-full overflow-auto p-8"
+      align="center"
+    >
+      <BlockStack
+        className="w-full max-w-5xl mx-auto"
+        gap="4"
+      >
+        <InlineStack gap="2" blockAlign="center">
+          <Icon name="FolderOpen" size="md" className="text-stone-500" />
+          <Text as="h2" size="lg" weight="semibold">
+            Open Pipeline
+          </Text>
+        </InlineStack>
+        <PipelineSection onPipelineClick={handlePipelineClick} />
+      </BlockStack>
+    </BlockStack>
+  );
+}
+
 export function EditorV2() {
+  const params = useParams({ strict: false });
+  const pipelineName =
+    "pipelineName" in params && typeof params.pipelineName === "string"
+      ? params.pipelineName
+      : null;
+
+  useEffect(() => {
+    setRequestedPipelineName(pipelineName);
+  }, [pipelineName]);
+
   return (
     <div className="h-full w-full flex flex-col bg-slate-100">
       <ReactFlowProvider>
         <ForcedSearchProvider>
           <ComponentLibraryProvider>
-            <PipelineEditor />
+            {pipelineName ? (
+              <PipelineEditor pipelineName={pipelineName} />
+            ) : (
+              <EmptyEditorState />
+            )}
           </ComponentLibraryProvider>
         </ForcedSearchProvider>
       </ReactFlowProvider>
