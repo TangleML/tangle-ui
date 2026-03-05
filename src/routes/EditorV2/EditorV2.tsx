@@ -87,10 +87,7 @@ function useLoadSpec(pipelineName: string) {
           );
           return { spec, restoredUndoStore };
         } catch (error) {
-          console.warn(
-            "Failed to restore undo history, loading fresh:",
-            error,
-          );
+          console.warn("Failed to restore undo history, loading fresh:", error);
         }
       }
 
@@ -167,10 +164,7 @@ function EmptyEditorState() {
       className="flex-1 min-h-0 w-full overflow-auto p-8"
       align="center"
     >
-      <BlockStack
-        className="w-full max-w-5xl mx-auto"
-        gap="4"
-      >
+      <BlockStack className="w-full max-w-5xl mx-auto" gap="4">
         <InlineStack gap="2" blockAlign="center">
           <Icon name="FolderOpen" size="md" className="text-stone-500" />
           <Text as="h2" size="lg" weight="semibold">

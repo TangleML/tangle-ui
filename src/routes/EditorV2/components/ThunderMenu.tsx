@@ -47,6 +47,7 @@ interface ThunderMenuProps {
   onUnset: () => void;
   onSelectDynamicData: (value: DynamicDataArgument) => void;
   onQuickConnect: (sourceEntityId: string, sourcePortName: string) => void;
+  onCreateInputAndConnect?: () => void;
 }
 
 function isTypeCompatible(
@@ -150,6 +151,7 @@ export const ThunderMenu = observer(function ThunderMenu({
   onUnset,
   onSelectDynamicData,
   onQuickConnect,
+  onCreateInputAndConnect,
 }: ThunderMenuProps) {
   const spec = useSpec();
   const isSecretsEnabled = useFlagValue("secrets");
@@ -326,6 +328,16 @@ export const ThunderMenu = observer(function ThunderMenu({
                   ))}
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
+            </>
+          )}
+
+          {onCreateInputAndConnect && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={onCreateInputAndConnect}>
+                <Icon name="Plus" size="sm" className="text-green-600" />
+                Create Input
+              </DropdownMenuItem>
             </>
           )}
         </DropdownMenuContent>

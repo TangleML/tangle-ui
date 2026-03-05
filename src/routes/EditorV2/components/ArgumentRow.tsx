@@ -16,6 +16,7 @@ import type {
 } from "@/models/componentSpec";
 import type { DynamicDataArgument } from "@/utils/componentSpec";
 
+import { createInputAndConnect } from "../store/actions";
 import { editorStore, setFocusedArgument } from "../store/editorStore";
 import { InputValidationIndicator } from "./InputValidationIndicator";
 import { ThunderMenu } from "./ThunderMenu";
@@ -160,6 +161,11 @@ export const ArgumentRow = observer(function ArgumentRow({
     setInputValue("");
   };
 
+  const handleCreateInputAndConnect = () => {
+    createInputAndConnect(spec, [task.$id], inputSpec.name, inputSpec.type);
+    setInputValue("");
+  };
+
   const bindingLabel = isBound ? formatBindingSource(binding, spec) : undefined;
   const displayValue = isBound
     ? bindingLabel
@@ -215,6 +221,7 @@ export const ArgumentRow = observer(function ArgumentRow({
           onUnset={handleUnset}
           onSelectDynamicData={handleSelectDynamicData}
           onQuickConnect={handleQuickConnect}
+          onCreateInputAndConnect={handleCreateInputAndConnect}
         />
       </InlineStack>
 

@@ -57,8 +57,6 @@ export async function loadUndoHistory(
   return data;
 }
 
-export function createUndoStoreWithEvents(
-  events: UndoEvent[],
-): UndoStore {
+export function createUndoStoreWithEvents(events: UndoEvent[]): UndoStore {
   return new UndoStore({ undoEvents: events });
 }
