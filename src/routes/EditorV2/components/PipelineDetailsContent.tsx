@@ -19,7 +19,7 @@ import { RenamePipelineButton } from "./RenamePipelineButton";
 import { ValidationSummary } from "./ValidationSummary";
 import { ViewYamlButton } from "./ViewYamlButton";
 
-const EXCLUDED_ANNOTATION_PREFIXES = ["editor."];
+const EXCLUDED_ANNOTATIONS = ["notes", "flex-nodes"];
 
 function typeSpecToString(typeSpec?: TypeSpecType): string {
   if (typeSpec === undefined) return "Any";
@@ -60,12 +60,7 @@ export const PipelineDetailsContent = observer(
     };
 
     const annotations = spec.annotations
-      .filter(
-        (a) =>
-          !EXCLUDED_ANNOTATION_PREFIXES.some((prefix) =>
-            a.key.startsWith(prefix),
-          ),
-      )
+      .filter((a) => !EXCLUDED_ANNOTATIONS.includes(a.key))
       .map((a) => ({
         label: a.key,
         value: String(a.value),
