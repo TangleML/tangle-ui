@@ -140,6 +140,7 @@ export class YamlDeserializer {
         name: taskName,
         componentRef: taskJson.componentRef,
         isEnabled: taskJson.isEnabled,
+        executionOptions: taskJson.executionOptions,
         annotations: Annotations.from(annotationItems),
         arguments: args,
       });

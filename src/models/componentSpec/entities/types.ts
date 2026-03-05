@@ -122,14 +122,16 @@ export interface ContainerImplementation {
 
 export type ImplementationType = ContainerImplementation | GraphImplementation;
 
+export interface ExecutionOptions {
+  retryStrategy?: { maxRetries?: number };
+  cachingStrategy?: { maxCacheStaleness?: string };
+}
+
 export interface TaskSpecJson {
   componentRef: ComponentReference;
   arguments?: Record<string, ArgumentType>;
   isEnabled?: PredicateType;
-  executionOptions?: {
-    retryStrategy?: { maxRetries?: number };
-    cachingStrategy?: { maxCacheStaleness?: string };
-  };
+  executionOptions?: ExecutionOptions;
   annotations?: Record<string, unknown>;
 }
 

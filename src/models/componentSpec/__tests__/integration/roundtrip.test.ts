@@ -281,4 +281,51 @@ describe("Serialization Roundtrip", () => {
       stringParam: "hello",
     });
   });
+
+  it("preserves executionOptions", () => {
+    const yaml = {
+      name: "ExecutionOptionsTest",
+      implementation: {
+        graph: {
+          tasks: {
+            CachedTask: {
+              componentRef: {},
+              executionOptions: {
+                retryStrategy: { maxRetries: 3 },
+                cachingStrategy: { maxCacheStaleness: "P0D" },
+              },
+            },
+          },
+        },
+      },
+    };
+
+    const spec = deserializer.deserialize(yaml);
+    const json = serializer.serialize(spec);
+
+    expect(getGraph(json).tasks["CachedTask"].executionOptions).toEqual({
+      retryStrategy: { maxRetries: 3 },
+      cachingStrategy: { maxCacheStaleness: "P0D" },
+    });
+  });
+
+  it("omits executionOptions when not present", () => {
+    const yaml = {
+      name: "NoExecOptions",
+      implementation: {
+        graph: {
+          tasks: {
+            SimpleTask: {
+              componentRef: {},
+            },
+          },
+        },
+      },
+    };
+
+    const spec = deserializer.deserialize(yaml);
+    const json = serializer.serialize(spec);
+
+    expect(getGraph(json).tasks["SimpleTask"].executionOptions).toBeUndefined();
+  });
 });

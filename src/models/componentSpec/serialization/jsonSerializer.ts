@@ -97,6 +97,10 @@ export class JsonSerializer {
       result.isEnabled = task.isEnabled;
     }
 
+    if (task.executionOptions) {
+      result.executionOptions = task.executionOptions;
+    }
+
     const annotations = this.serializeAnnotations(task.annotations);
     if (Object.keys(annotations).length > 0) {
       result.annotations = annotations;
