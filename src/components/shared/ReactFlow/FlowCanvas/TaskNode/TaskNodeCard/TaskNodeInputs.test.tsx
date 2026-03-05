@@ -80,7 +80,7 @@ describe("<TaskNodeInputs />", () => {
 
       useMockedUseTaskNode(inputs, taskSpec);
 
-      render(<TaskNodeInputs condensed={false} expanded={true} />, {
+      render(<TaskNodeInputs collapsed={false} expanded={true} />, {
         wrapper: TestWrapper,
       });
 
@@ -108,7 +108,7 @@ describe("<TaskNodeInputs />", () => {
       );
     });
 
-    it("should show hidden invalid arguments warning in condensed mode", () => {
+    it("should show hidden invalid arguments warning in collapsed mode", () => {
       const inputs = [
         createMockInput("visibleInput", "String", false),
         createMockInput("hiddenInvalidInput1", "String", false),
@@ -123,7 +123,7 @@ describe("<TaskNodeInputs />", () => {
 
       useMockedUseTaskNode(inputs, taskSpec);
 
-      render(<TaskNodeInputs condensed={true} expanded={false} />, {
+      render(<TaskNodeInputs collapsed={true} expanded={false} />, {
         wrapper: TestWrapper,
       });
 
@@ -147,7 +147,7 @@ describe("<TaskNodeInputs />", () => {
 
       useMockedUseTaskNode(inputs, taskSpec);
 
-      render(<TaskNodeInputs condensed={true} expanded={false} />, {
+      render(<TaskNodeInputs collapsed={true} expanded={false} />, {
         wrapper: TestWrapper,
       });
 
@@ -170,7 +170,7 @@ describe("<TaskNodeInputs />", () => {
 
       useMockedUseTaskNode(inputs, taskSpec);
 
-      render(<TaskNodeInputs condensed={true} expanded={false} />, {
+      render(<TaskNodeInputs collapsed={true} expanded={false} />, {
         wrapper: TestWrapper,
       });
 
@@ -183,7 +183,7 @@ describe("<TaskNodeInputs />", () => {
     it("should handle edge case with no inputs", () => {
       useMockedUseTaskNode([], createMockTaskSpec());
 
-      render(<TaskNodeInputs condensed={false} expanded={true} />, {
+      render(<TaskNodeInputs collapsed={false} expanded={true} />, {
         wrapper: TestWrapper,
       });
 
@@ -214,7 +214,7 @@ describe("<TaskNodeInputs />", () => {
 
       useMockedUseTaskNode(inputs, taskSpec);
 
-      render(<TaskNodeInputs condensed={false} expanded={true} />, {
+      render(<TaskNodeInputs collapsed={false} expanded={true} />, {
         wrapper: TestWrapper,
       });
 

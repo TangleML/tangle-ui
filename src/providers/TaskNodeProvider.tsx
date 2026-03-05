@@ -12,6 +12,12 @@ import {
   type TaskNodeDimensions,
 } from "@/types/taskNode";
 import {
+  EDITOR_COLLAPSED_ANNOTATION,
+  getAnnotationValue,
+  removeAnnotation,
+  setAnnotation,
+} from "@/utils/annotations";
+import {
   type ArgumentType,
   type ComponentReference,
   type HydratedComponentReference,
@@ -39,6 +45,7 @@ type TaskNodeState = Readonly<{
   connectable: boolean;
   status?: string;
   isCustomComponent: boolean;
+  isCollapsed: boolean;
   dimensions: TaskNodeDimensions;
 }>;
 
@@ -46,6 +53,7 @@ type TaskNodeCallbacks = {
   setArguments: (args: Record<string, ArgumentType>) => void;
   setAnnotations: (annotations: Annotations) => void;
   setCacheStaleness: (cacheStaleness: string | undefined) => void;
+  setCollapsed: (collapsed: boolean) => void;
   onDelete?: () => void;
   onDuplicate?: () => void;
   onUpgrade?: () => void;
@@ -139,6 +147,25 @@ export const TaskNodeProvider = ({
     [setCacheStaleness, notify],
   );
 
+  const isCollapsed =
+    getAnnotationValue(taskSpec?.annotations, EDITOR_COLLAPSED_ANNOTATION) ===
+    "true";
+
+  const handleSetCollapsed = useCallback(
+    (collapsed: boolean) => {
+      const updatedAnnotations = collapsed
+        ? setAnnotation(
+            taskSpec?.annotations,
+            EDITOR_COLLAPSED_ANNOTATION,
+            "true",
+          )
+        : removeAnnotation(taskSpec?.annotations, EDITOR_COLLAPSED_ANNOTATION);
+
+      setAnnotations(updatedAnnotations as Annotations);
+    },
+    [taskSpec?.annotations, setAnnotations],
+  );
+
   const handleDeleteTaskNode = useCallback(() => {
     onDelete();
   }, [onDelete]);
@@ -173,6 +200,7 @@ export const TaskNodeProvider = ({
       status: data.isGhost ? undefined : status,
       disabled: data.isGhost ?? false,
       isCustomComponent,
+      isCollapsed,
       dimensions,
     }),
     [
@@ -182,6 +210,7 @@ export const TaskNodeProvider = ({
       data.isGhost,
       status,
       isCustomComponent,
+      isCollapsed,
       dimensions,
     ],
   );
@@ -191,6 +220,7 @@ export const TaskNodeProvider = ({
       setArguments: handleSetArguments,
       setAnnotations: handleSetAnnotations,
       setCacheStaleness: handleSetCacheStaleness,
+      setCollapsed: handleSetCollapsed,
       onDelete: handleDeleteTaskNode,
       onDuplicate: handleDuplicateTaskNode,
       onUpgrade: handleUpgradeTaskNode,
@@ -198,6 +228,7 @@ export const TaskNodeProvider = ({
     [
       handleSetArguments,
       handleSetAnnotations,
+      handleSetCollapsed,
       handleDeleteTaskNode,
       handleDuplicateTaskNode,
       handleUpgradeTaskNode,

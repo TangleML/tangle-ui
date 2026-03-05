@@ -4,6 +4,7 @@ import { BlockStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import useToastNotification from "@/hooks/useToastNotification";
 import type { AnnotationConfig, Annotations } from "@/types/annotations";
+import { HIDDEN_ANNOTATIONS } from "@/utils/annotations";
 import type { TaskSpec } from "@/utils/componentSpec";
 
 import { AnnotationsEditor } from "./AnnotationsEditor";
@@ -61,7 +62,7 @@ export const AnnotationsSection = ({
 
     return Object.entries(annotations).reduce<Annotations>(
       (acc, [key, value]) => {
-        if (!managedAnnotationKeys.has(key)) {
+        if (!managedAnnotationKeys.has(key) && !HIDDEN_ANNOTATIONS.has(key)) {
           acc[key] = value;
         }
         return acc;
