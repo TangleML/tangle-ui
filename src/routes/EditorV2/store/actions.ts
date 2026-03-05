@@ -10,6 +10,7 @@ import {
   Input,
   Output,
   type Task,
+  type TypeSpecType,
 } from "@/models/componentSpec";
 
 import { clipboardStore } from "./clipboardStore";
@@ -268,6 +269,35 @@ export function createConnectedIONode(
       spec.connectNodes(
         { entityId: taskEntityId, portName },
         { entityId: newOutput.$id, portName: newOutput.$id },
+      );
+    }
+  });
+}
+
+export function createInputAndConnect(
+  spec: ComponentSpec,
+  targetTaskIds: string[],
+  portName: string,
+  portType?: TypeSpecType,
+): void {
+  if (targetTaskIds.length === 0) return;
+
+  const firstTask = spec.tasks.find((t) => targetTaskIds.includes(t.$id));
+  const taskPos = firstTask?.annotations.get("editor.position") ?? {
+    x: 0,
+    y: 0,
+  };
+  const position = { x: taskPos.x - 250, y: taskPos.y };
+
+  undoStore.undoManager?.withGroup("Create input and connect", () => {
+    const newInput = addInput(spec, position, portName);
+    if (portType) {
+      newInput.setType(portType);
+    }
+    for (const taskId of targetTaskIds) {
+      spec.connectNodes(
+        { entityId: newInput.$id, portName: newInput.$id },
+        { entityId: taskId, portName },
       );
     }
   });

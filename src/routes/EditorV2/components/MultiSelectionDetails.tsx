@@ -20,7 +20,7 @@ import type {
 import type { DynamicDataArgument } from "@/utils/componentSpec";
 
 import { useSpec } from "../providers/SpecContext";
-import { createSubgraph } from "../store/actions";
+import { createInputAndConnect, createSubgraph } from "../store/actions";
 import {
   clearMultiSelection,
   editorStore,
@@ -147,6 +147,11 @@ const BatchArgumentRow = observer(function BatchArgumentRow({
     setInputValue("");
   };
 
+  const handleCreateInputAndConnect = () => {
+    createInputAndConnect(spec, aggArg.taskIds, aggArg.name, aggArg.type);
+    setInputValue("");
+  };
+
   return (
     <div
       className={cn(
@@ -185,6 +190,7 @@ const BatchArgumentRow = observer(function BatchArgumentRow({
           onUnset={handleUnset}
           onSelectDynamicData={handleSelectDynamicData}
           onQuickConnect={handleQuickConnect}
+          onCreateInputAndConnect={handleCreateInputAndConnect}
         />
       </InlineStack>
 
