@@ -160,7 +160,7 @@ export const TaskNodeProvider = ({
           )
         : removeAnnotation(taskSpec?.annotations, EDITOR_COLLAPSED_ANNOTATION);
 
-      setAnnotations(updatedAnnotations as Annotations);
+      setAnnotations(updatedAnnotations ?? {});
     },
     [taskSpec?.annotations, setAnnotations],
   );

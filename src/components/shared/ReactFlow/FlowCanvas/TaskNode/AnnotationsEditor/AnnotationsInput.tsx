@@ -23,6 +23,7 @@ import { Paragraph } from "@/components/ui/typography";
 import { useCallbackOnUnmount } from "@/hooks/useCallbackOnUnmount";
 import { cn } from "@/lib/utils";
 import type { AnnotationConfig, Annotations } from "@/types/annotations";
+import { getAnnotationValue as getAnnotationString } from "@/utils/annotations";
 import { clamp } from "@/utils/math";
 
 interface AnnotationsInputProps {
@@ -481,11 +482,17 @@ function parseJsonAndGetProperty(
 }
 
 function getAnnotationKey(annotation: string, annotations: Annotations) {
-  return parseJsonAndGetProperty(annotations[annotation] || "{}", true);
+  return parseJsonAndGetProperty(
+    getAnnotationString(annotations, annotation, "{}"),
+    true,
+  );
 }
 
 function getAnnotationValue(annotation: string, annotations: Annotations) {
-  return parseJsonAndGetProperty(annotations[annotation] || "{}", false);
+  return parseJsonAndGetProperty(
+    getAnnotationString(annotations, annotation, "{}"),
+    false,
+  );
 }
 
 function getKeyFromInputValue(inputValue: string): string {
