@@ -21,13 +21,13 @@ import { InputHandle } from "./Handles";
 import { getDisplayValue } from "./handleUtils";
 
 interface TaskNodeInputsProps {
-  condensed: boolean;
+  collapsed: boolean;
   expanded: boolean;
   onBackgroundClick?: () => void;
 }
 
 export function TaskNodeInputs({
-  condensed,
+  collapsed,
   expanded,
   onBackgroundClick,
 }: TaskNodeInputsProps) {
@@ -76,12 +76,12 @@ export function TaskNodeInputs({
 
   const handleBackgroundClick = useCallback(
     (e: MouseEvent) => {
-      if (condensed && onBackgroundClick) {
+      if (collapsed && onBackgroundClick) {
         e.stopPropagation();
         onBackgroundClick();
       }
     },
-    [condensed, onBackgroundClick],
+    [collapsed, onBackgroundClick],
   );
 
   const handleSelectionChange = useCallback(
@@ -176,7 +176,7 @@ export function TaskNodeInputs({
 
   const hiddenInputs = inputs.length - connectedInputs.length;
   if (hiddenInputs < 1) {
-    condensed = false;
+    collapsed = false;
   }
 
   const hiddenInvalidArguments = invalidArguments.filter(
@@ -188,11 +188,11 @@ export function TaskNodeInputs({
     <div
       className={cn(
         "flex flex-col items-center gap-3 p-2 bg-gray-100 border border-gray-200 rounded-lg",
-        condensed && onBackgroundClick && "hover:bg-gray-200/70 cursor-pointer",
+        collapsed && onBackgroundClick && "hover:bg-gray-200/70 cursor-pointer",
       )}
       onClick={handleBackgroundClick}
     >
-      {condensed && !expanded ? (
+      {collapsed && !expanded ? (
         <>
           {connectedInputs.map((input, i) => (
             <InputHandle
@@ -231,7 +231,7 @@ export function TaskNodeInputs({
               onLabelClick={handleLabelClick}
             />
           ))}
-          {condensed && (
+          {collapsed && (
             <span className="text-xs text-gray-400 mt-1">
               (Click to collapse)
             </span>

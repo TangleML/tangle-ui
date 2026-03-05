@@ -11,6 +11,7 @@ export const PIPELINE_RUN_NOTES_ANNOTATION = "notes";
 export const PIPELINE_CANONICAL_NAME_ANNOTATION = "canonical-pipeline-name";
 export const RUN_NAME_TEMPLATE_ANNOTATION = "run-name-template";
 export const EDITOR_POSITION_ANNOTATION = "editor.position";
+export const EDITOR_COLLAPSED_ANNOTATION = "editor.collapsed";
 export const FLEX_NODES_ANNOTATION = "flex-nodes";
 
 export const DEFAULT_COMMON_ANNOTATIONS: AnnotationConfig[] = [
@@ -26,6 +27,10 @@ export const DEFAULT_COMMON_ANNOTATIONS: AnnotationConfig[] = [
     max: DISPLAY_NAME_MAX_LENGTH,
   },
 ];
+
+export const HIDDEN_ANNOTATIONS = new Set<string>([
+  EDITOR_COLLAPSED_ANNOTATION,
+]);
 
 type Annotations =
   | {
@@ -69,7 +74,7 @@ export function getAnnotationValue(
  * @param value - The value to set
  * @returns
  */
-function setAnnotation(
+export function setAnnotation(
   annotations: Annotations,
   key: string,
   value: string | undefined,
@@ -206,4 +211,22 @@ export function ensureAnnotations(
       },
     },
   };
+}
+
+/*
+ * Removes an annotation from the annotations object.
+ * @param annotations - The annotations object
+ * @param key - The key of the annotation to remove
+ * @returns Updated annotations object with the specified annotation removed
+ */
+export function removeAnnotation(
+  annotations: Annotations,
+  key: string,
+): Annotations {
+  if (!annotations || !hasAnnotation(annotations, key)) {
+    return annotations;
+  }
+
+  const { [key]: _, ...rest } = annotations;
+  return rest;
 }

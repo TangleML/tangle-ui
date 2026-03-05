@@ -41,6 +41,15 @@ const TaskConfiguration = ({ taskNode }: TaskConfigurationProps) => {
           onCheckedChange={handleDisableCacheChange}
         />
       </InlineStack>
+      <InlineStack align="space-between" gap="2" className="w-full">
+        <Paragraph tone="subdued" size="sm">
+          Collapse node
+        </Paragraph>
+        <Switch
+          checked={taskNode.state.isCollapsed}
+          onCheckedChange={taskNode.callbacks.setCollapsed}
+        />
+      </InlineStack>
     </BlockStack>
   );
 };

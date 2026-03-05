@@ -51,20 +51,17 @@ const TaskNodeCard = () => {
   const executionState = executionData?.state;
 
   const nodeRef = useRef<HTMLDivElement | null>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
 
   const [updateOverlayDialogOpen, setUpdateOverlayDialogOpen] = useState<
     UpdateOverlayMessage["data"] | undefined
   >();
   const [highlightedState, setHighlighted] = useState(false);
 
-  const [scrollHeight, setScrollHeight] = useState(0);
-  const [condensed, setCondensed] = useState(false);
   const [expandedInputs, setExpandedInputs] = useState(false);
   const [expandedOutputs, setExpandedOutputs] = useState(false);
 
   const { name, displayName, state, nodeId, taskSpec, taskId } = taskNode;
-  const { dimensions, selected, highlighted, readOnly } = state;
+  const { dimensions, selected, highlighted, readOnly, isCollapsed } = state;
 
   const { isConnectedToSelectedEdge } = useEdgeSelectionHighlight(nodeId);
 
@@ -161,23 +158,6 @@ const TaskNodeCard = () => {
   ]);
 
   useEffect(() => {
-    if (nodeRef.current) {
-      setScrollHeight(nodeRef.current.scrollHeight);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!dimensions.h) {
-      setCondensed(false);
-      return;
-    }
-
-    if (contentRef.current && scrollHeight > 0) {
-      setCondensed(scrollHeight > dimensions.h);
-    }
-  }, [scrollHeight, dimensions.h]);
-
-  useEffect(() => {
     if (selected) {
       setContent(taskConfigMarkup);
       setContextPanelOpen(true);
@@ -211,7 +191,7 @@ const TaskNodeCard = () => {
   return (
     <Card
       className={cn(
-        "rounded-2xl border-gray-200 border-2 wrap-break-word p-0 drop-shadow-none gap-2",
+        "rounded-2xl border-gray-200 border-2 wrap-break-word p-0 drop-shadow-none gap-2 min-h-fit",
         selected ? "border-gray-500" : "hover:border-slate-200",
         (highlighted || highlightedState) && "border-orange-500!",
         isConnectedToSelectedEdge &&
@@ -220,7 +200,7 @@ const TaskNodeCard = () => {
       )}
       style={{
         width: dimensions.w + "px",
-        height: condensed || !dimensions.h ? "auto" : dimensions.h + "px",
+        height: isCollapsed || !dimensions.h ? "auto" : dimensions.h + "px",
         transition: "height 0.2s",
       }}
       ref={nodeRef}
@@ -279,21 +259,22 @@ const TaskNodeCard = () => {
         <div
           style={{
             maxHeight:
-              dimensions.h && !(expandedInputs || expandedOutputs)
+              !isCollapsed &&
+              dimensions.h &&
+              !(expandedInputs || expandedOutputs)
                 ? `${dimensions.h}px`
                 : "100%",
           }}
           className="min-h-fit"
-          ref={contentRef}
         >
           <TaskNodeInputs
-            condensed={condensed}
+            collapsed={isCollapsed}
             expanded={expandedInputs}
             onBackgroundClick={handleInputSectionClick}
           />
 
           <TaskNodeOutputs
-            condensed={condensed}
+            collapsed={isCollapsed}
             expanded={expandedOutputs}
             onBackgroundClick={handleOutputSectionClick}
           />
