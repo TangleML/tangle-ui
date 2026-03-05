@@ -78,7 +78,7 @@ const PipelineEditor = withSuspenseWrapper(
     const rootSpec = useLoadSpec(pipelineName);
 
     useWindowPersistence();
-    useSpecLifecycle(rootSpec);
+    useSpecLifecycle(rootSpec, pipelineName);
     useSelectionWindowSync();
     useLinkedWindowCleanup();
     useComponentLibraryWindow();
