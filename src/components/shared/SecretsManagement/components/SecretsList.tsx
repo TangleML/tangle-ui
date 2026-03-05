@@ -1,24 +1,23 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/typography";
 import { formatRelativeTime } from "@/utils/date";
 
 import { withSuspenseWrapper } from "../../SuspenseWrapper";
 import { fetchSecretsList } from "../secretsStorage";
-import { type Secret, SecretsQueryKeys } from "../types";
+import { SecretsQueryKeys } from "../types";
 import { RemoveSecretButton } from "./RemoveSecretButton";
 
 interface SecretsListProps {
-  onReplace: (secret: Secret) => void;
   onRemoveSuccess?: () => void;
 }
 
-function SecretsListInternal({ onReplace, onRemoveSuccess }: SecretsListProps) {
+function SecretsListInternal({ onRemoveSuccess }: SecretsListProps) {
   const { data: secrets } = useSuspenseQuery({
     queryKey: SecretsQueryKeys.All(),
     queryFn: fetchSecretsList,
@@ -41,9 +40,8 @@ function SecretsListInternal({ onReplace, onRemoveSuccess }: SecretsListProps) {
   }
 
   return (
-    <ScrollArea
-      className="w-full min-h-[100px] max-h-[300px]"
-      type="always"
+    <div
+      className="w-full min-h-[100px] max-h-[80vh] overflow-y-auto"
       data-testid="secrets-list"
     >
       <BlockStack gap="2">
@@ -69,20 +67,22 @@ function SecretsListInternal({ onReplace, onRemoveSuccess }: SecretsListProps) {
             </InlineStack>
 
             <InlineStack gap="1">
-              <Button
-                variant="ghost"
-                size="xs"
-                onClick={() => onReplace(secret)}
+              <Link
+                to="/settings/secrets/$secretId/replace"
+                params={{ secretId: secret.id }}
+                replace
                 data-testid="secret-edit-button"
               >
-                <Icon name="Pencil" size="sm" />
-              </Button>
+                <Button variant="ghost" size="xs">
+                  <Icon name="Pencil" size="sm" />
+                </Button>
+              </Link>
               <RemoveSecretButton secret={secret} onSuccess={onRemoveSuccess} />
             </InlineStack>
           </InlineStack>
         ))}
       </BlockStack>
-    </ScrollArea>
+    </div>
   );
 }
 
