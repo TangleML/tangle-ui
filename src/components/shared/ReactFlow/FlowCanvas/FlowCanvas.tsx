@@ -885,28 +885,29 @@ const FlowCanvasContent = ({
     preserveIOSelectionOnSpecChange,
   ]);
 
-  useEffect(() => {
-    reactFlowInstance?.fitView({
-      maxZoom: 1,
-      duration: 300,
-    });
-  }, [currentSubgraphPath, reactFlowInstance]);
+  // TODO: these fitview handlers are overriding the fitview when linking to a node
+  // useEffect(() => {
+  //   reactFlowInstance?.fitView({
+  //     maxZoom: 1,
+  //     duration: 300,
+  //   });
+  // }, [currentSubgraphPath, reactFlowInstance]);
 
   // Reset when loading a new component file
   useEffect(() => {
     resetPrevSpec();
   }, [componentSpec?.name, resetPrevSpec]);
 
-  const fitView = () => {
-    reactFlowInstance?.fitView({
-      maxZoom: 1,
-    });
-  };
+  // const fitView = () => {
+  //   reactFlowInstance?.fitView({
+  //     maxZoom: 1,
+  //   });
+  // };
 
-  useScheduleExecutionOnceWhenConditionMet(
-    initialCanvasLoaded.current && !!reactFlowInstance,
-    fitView,
-  );
+  // useScheduleExecutionOnceWhenConditionMet(
+  //   initialCanvasLoaded.current && !!reactFlowInstance,
+  //   fitView,
+  // );
 
   const onCopy = () => {
     // Copy selected nodes to clipboard
