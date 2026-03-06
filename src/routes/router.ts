@@ -30,8 +30,8 @@ import { EditorV2 } from "./EditorV2/EditorV2";
 import Home from "./Home";
 import { ImportPage } from "./Import";
 import NotFoundPage from "./NotFoundPage";
+import { PipelineFolders } from "./PipelineFolders/PipelineFolders";
 import PipelineRun from "./PipelineRun";
-import { Playground } from "./Playground";
 import { QuickStartPage } from "./QuickStart";
 import { BackendSettings } from "./Settings/sections/BackendSettings";
 import { BetaFeaturesSettings } from "./Settings/sections/BetaFeaturesSettings";
@@ -75,6 +75,7 @@ export const APP_ROUTES = {
   HUGGINGFACE_AUTH_CALLBACK: "/authorize/huggingface",
   EDITOR_V2: "/editor-v2",
   EDITOR_V2_PIPELINE: "/editor-v2/$pipelineName",
+  PIPELINE_FOLDERS: "/pipeline-folders",
   PLAYGROUND: "/playground",
 } as const;
 
@@ -269,6 +270,12 @@ const editorV2PipelineRoute = createRoute({
   component: EditorV2,
 });
 
+const pipelineFoldersRoute = createRoute({
+  getParentRoute: () => mainLayout,
+  path: APP_ROUTES.PIPELINE_FOLDERS,
+  component: PipelineFolders,
+});
+
 const dashboardRouteTree = dashboardRoute.addChildren([
   dashboardIndexRoute,
   dashboardRunsRoute,
@@ -288,7 +295,7 @@ const appRouteTree = mainLayout.addChildren([
   runDetailWithSubgraphRoute,
   editorV2Route,
   editorV2PipelineRoute,
-  playgroundRoute,
+  pipelineFoldersRoute,
 ]);
 
 const rootRouteTree = rootRoute.addChildren([

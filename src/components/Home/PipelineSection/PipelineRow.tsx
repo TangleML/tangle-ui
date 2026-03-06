@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { type MouseEvent } from "react";
+import { type DragEvent, type MouseEvent, type ReactNode } from "react";
 
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
 import { FavoriteToggle } from "@/components/shared/FavoriteToggle";
@@ -28,6 +28,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Paragraph } from "@/components/ui/typography";
+import { cn } from "@/lib/utils";
 import { EDITOR_PATH } from "@/routes/router";
 import { deletePipeline } from "@/services/pipelineService";
 import { getPipelineTagsFromSpec } from "@/utils/annotations";
@@ -51,6 +52,11 @@ interface PipelineRowProps {
   componentQuery?: string;
   matchedComponentNames?: string[];
   onPipelineClick?: (name: string) => void;
+  icon?: ReactNode;
+  dragData?: string;
+  isDragging?: boolean;
+  dragItemCount?: number;
+  onDragStateChange?: (isDragging: boolean) => void;
 }
 
 const PipelineRow = withSuspenseWrapper(
@@ -66,6 +72,11 @@ const PipelineRow = withSuspenseWrapper(
     componentQuery,
     matchedComponentNames,
     onPipelineClick,
+    icon,
+    dragData,
+    isDragging,
+    dragItemCount,
+    onDragStateChange,
   }: PipelineRowProps) => {
     const navigate = useNavigate();
 
@@ -113,7 +124,10 @@ const PipelineRow = withSuspenseWrapper(
 
     return (
       <TableRow
-        className="cursor-pointer hover:bg-muted/50 group text-xs h-10"
+        className={cn(
+          "cursor-pointer hover:bg-muted/50 group text-xs h-10",
+          isDragging && "opacity-50",
+        )}
         onClick={handleRowClick}
       >
         <TableCell onClick={(e) => e.stopPropagation()}>
@@ -124,34 +138,55 @@ const PipelineRow = withSuspenseWrapper(
             onClick={handleClick}
           />
         </TableCell>
-        <TableCell className="truncate max-w-96" title={name}>
-          <InlineStack gap="1" blockAlign="center">
-            {name && name.length > MAX_TITLE_LENGTH ? (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="text-sm truncate">
-                      <HighlightText
-                        text={name.slice(0, MAX_TITLE_LENGTH) + "..."}
-                        query={searchQuery}
-                      />
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent>{name}</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            ) : (
-              <span className="text-sm truncate">
-                <HighlightText text={name ?? ""} query={searchQuery} />
-              </span>
-            )}
-            <MatchBadges
-              matchedFields={matchedFields}
-              matchedComponentNames={matchedComponentNames}
-              searchQuery={searchQuery}
-              componentQuery={componentQuery}
-            />
-          </InlineStack>
+        <TableCell>
+          <div
+            draggable={!!dragData}
+            onDragStart={(e: DragEvent<HTMLDivElement>) => {
+              if (!dragData) return;
+              e.dataTransfer.setData("application/x-folder-move", dragData);
+              e.dataTransfer.effectAllowed = "move";
+              if (dragItemCount && dragItemCount > 1) {
+                const ghost = document.createElement("div");
+                ghost.style.cssText =
+                  "position:fixed;top:-1000px;left:-1000px;padding:6px 12px;border-radius:6px;font-size:14px;font-weight:500;color:white;background:#0f172a;box-shadow:0 4px 12px rgba(0,0,0,0.15);white-space:nowrap;";
+                ghost.textContent = `${dragItemCount} items`;
+                document.body.appendChild(ghost);
+                e.dataTransfer.setDragImage(ghost, 0, 0);
+                requestAnimationFrame(() => ghost.remove());
+              }
+              onDragStateChange?.(true);
+            }}
+            onDragEnd={() => onDragStateChange?.(false)}
+            className={dragData ? "cursor-grab" : undefined}
+          >
+            <InlineStack gap="1" blockAlign="center">
+              {name && name.length > MAX_TITLE_LENGTH ? (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="text-sm truncate">
+                        <HighlightText
+                          text={name.slice(0, MAX_TITLE_LENGTH) + "..."}
+                          query={searchQuery}
+                        />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>{name}</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : (
+                <span className="text-sm truncate">
+                  <HighlightText text={name ?? ""} query={searchQuery} />
+                </span>
+              )}
+              <MatchBadges
+                matchedFields={matchedFields}
+                matchedComponentNames={matchedComponentNames}
+                searchQuery={searchQuery}
+                componentQuery={componentQuery}
+              />
+            </InlineStack>
+          </div>
         </TableCell>
         <TableCell>
           <span className="text-xs text-muted-foreground">{formattedDate}</span>
@@ -196,7 +231,9 @@ const PipelineRow = withSuspenseWrapper(
           <Skeleton size="sm" />
         </TableCell>
         <TableCell>
-          <Paragraph>{props.name}</Paragraph>
+          <InlineStack gap="2" blockAlign="center">
+            <Paragraph>{props.name}</Paragraph>
+          </InlineStack>
         </TableCell>
         <TableCell>
           <Paragraph tone="subdued" size="sm">
