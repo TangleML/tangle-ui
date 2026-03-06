@@ -200,15 +200,15 @@ const TaskLeafNode = observer(function TaskLeafNode({
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         className={cn(
-          "flex items-start gap-1 py-1 px-2 text-slate-600 rounded-md cursor-pointer transition-colors hover:bg-slate-100",
+          "flex items-start gap-1 py-1 text-slate-600 rounded-md cursor-pointer transition-colors hover:bg-slate-100",
           hasErrors && "text-red-700",
         )}
       >
-        <div className="w-5 shrink-0" />
         <Icon
           name={hasIssues ? "CircleAlert" : "Circle"}
           size="xs"
           className={cn(
+            "bg-white",
             "shrink-0 mt-0.5",
             hasErrors
               ? "text-red-400"
@@ -373,52 +373,54 @@ const SubgraphNode = observer(function SubgraphNode({
 
       {hasChildren && isExpanded && (
         <BlockStack gap="0" className="ml-4 border-l border-slate-200 pl-2">
-          {tasks.map((childTask) => {
-            const isChildSubgraph = isSubgraphTask(childTask);
+          <div className="-ml-3.5">
+            {tasks.map((childTask) => {
+              const isChildSubgraph = isSubgraphTask(childTask);
 
-            if (isChildSubgraph) {
-              const childPathKey =
-                navigationPath.slice(1).join("/") + "/" + childTask.name;
-              const nestedSpec = navigationStore.nestedSpecs.get(
-                childPathKey.startsWith("/")
-                  ? childPathKey.slice(1)
-                  : childPathKey,
-              );
+              if (isChildSubgraph) {
+                const childPathKey =
+                  navigationPath.slice(1).join("/") + "/" + childTask.name;
+                const nestedSpec = navigationStore.nestedSpecs.get(
+                  childPathKey.startsWith("/")
+                    ? childPathKey.slice(1)
+                    : childPathKey,
+                );
 
-              if (!nestedSpec) {
+                if (!nestedSpec) {
+                  return (
+                    <TaskLeafNode
+                      key={childTask.$id}
+                      task={childTask}
+                      parentSpec={spec}
+                      parentNavigationPath={navigationPath}
+                    />
+                  );
+                }
+
                 return (
-                  <TaskLeafNode
+                  <SubgraphNode
                     key={childTask.$id}
+                    spec={nestedSpec}
                     task={childTask}
+                    navigationPath={[...navigationPath, childTask.name]}
+                    currentNavPath={currentNavPath}
+                    expandedNodes={expandedNodes}
+                    onToggleExpand={onToggleExpand}
                     parentSpec={spec}
-                    parentNavigationPath={navigationPath}
                   />
                 );
               }
 
               return (
-                <SubgraphNode
+                <TaskLeafNode
                   key={childTask.$id}
-                  spec={nestedSpec}
                   task={childTask}
-                  navigationPath={[...navigationPath, childTask.name]}
-                  currentNavPath={currentNavPath}
-                  expandedNodes={expandedNodes}
-                  onToggleExpand={onToggleExpand}
                   parentSpec={spec}
+                  parentNavigationPath={navigationPath}
                 />
               );
-            }
-
-            return (
-              <TaskLeafNode
-                key={childTask.$id}
-                task={childTask}
-                parentSpec={spec}
-                parentNavigationPath={navigationPath}
-              />
-            );
-          })}
+            })}
+          </div>
         </BlockStack>
       )}
     </BlockStack>
@@ -540,47 +542,49 @@ const RootNode = observer(function RootNode({
       )}
 
       {hasChildren && isExpanded && (
-        <BlockStack gap="0" className="ml-4 border-l border-slate-200 pl-2">
-          {tasks.map((task) => {
-            const isTaskASubgraph = isSubgraphTask(task);
+        <BlockStack gap="0" className="ml-4 border-l border-slate-200">
+          <div className="-ml-1.5">
+            {tasks.map((task) => {
+              const isTaskASubgraph = isSubgraphTask(task);
 
-            if (isTaskASubgraph) {
-              const nestedSpec = navigationStore.nestedSpecs.get(task.name);
+              if (isTaskASubgraph) {
+                const nestedSpec = navigationStore.nestedSpecs.get(task.name);
 
-              if (!nestedSpec) {
+                if (!nestedSpec) {
+                  return (
+                    <TaskLeafNode
+                      key={task.$id}
+                      task={task}
+                      parentSpec={spec}
+                      parentNavigationPath={navigationPath}
+                    />
+                  );
+                }
+
                 return (
-                  <TaskLeafNode
+                  <SubgraphNode
                     key={task.$id}
+                    spec={nestedSpec}
                     task={task}
+                    navigationPath={[...navigationPath, task.name]}
+                    currentNavPath={currentNavPath}
+                    expandedNodes={expandedNodes}
+                    onToggleExpand={onToggleExpand}
                     parentSpec={spec}
-                    parentNavigationPath={navigationPath}
                   />
                 );
               }
 
               return (
-                <SubgraphNode
+                <TaskLeafNode
                   key={task.$id}
-                  spec={nestedSpec}
                   task={task}
-                  navigationPath={[...navigationPath, task.name]}
-                  currentNavPath={currentNavPath}
-                  expandedNodes={expandedNodes}
-                  onToggleExpand={onToggleExpand}
                   parentSpec={spec}
+                  parentNavigationPath={navigationPath}
                 />
               );
-            }
-
-            return (
-              <TaskLeafNode
-                key={task.$id}
-                task={task}
-                parentSpec={spec}
-                parentNavigationPath={navigationPath}
-              />
-            );
-          })}
+            })}
+          </div>
         </BlockStack>
       )}
     </BlockStack>
