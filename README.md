@@ -56,11 +56,14 @@ If you complete these steps the app will launch on `127.0.0.1:8000` with the lat
 
 ### Reporting errors to Bugsnag (Optional)
 
-To enable error reporting, add your API key to your `.env` file:
+To enable error reporting, add the following to your `.env` file:
 
 ```bash
 VITE_BUGSNAG_API_KEY=your-api-key
+VITE_TANGLE_ENV=production
 ```
+
+Both variables are required for Bugsnag to initialize. `VITE_TANGLE_ENV` sets the Bugsnag `releaseStage` (e.g. `development`, `staging`, `production`). If either variable is missing, error reporting will be disabled.
 
 ## App features:
 
