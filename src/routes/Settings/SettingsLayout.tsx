@@ -61,15 +61,11 @@ export function SettingsLayout() {
               data-testid="settings-back-button"
             >
               <Icon name="ArrowLeft" />
+              <Heading level={1}>Settings</Heading>
             </Button>
-            <Heading level={1}>Settings</Heading>
           </InlineStack>
 
-          <InlineStack
-            gap="8"
-            blockAlign="start"
-            className="w-full min-h-[400px]"
-          >
+          <InlineStack gap="8" blockAlign="start" className="w-full min-h-100">
             <BlockStack
               gap="1"
               className="w-48 shrink-0 border-r border-border pr-4"
