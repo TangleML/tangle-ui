@@ -30,7 +30,7 @@ import { EditorV2 } from "./EditorV2/EditorV2";
 import Home from "./Home";
 import { ImportPage } from "./Import";
 import NotFoundPage from "./NotFoundPage";
-import { PipelineFolders } from "./PipelineFolders/PipelineFolders";
+import { PipelineFoldersPage } from "./PipelineFolders/PipelineFoldersPage";
 import PipelineRun from "./PipelineRun";
 import { QuickStartPage } from "./QuickStart";
 import { BackendSettings } from "./Settings/sections/BackendSettings";
@@ -273,7 +273,7 @@ const editorV2PipelineRoute = createRoute({
 const pipelineFoldersRoute = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.PIPELINE_FOLDERS,
-  component: PipelineFolders,
+  component: PipelineFoldersPage,
 });
 
 const dashboardRouteTree = dashboardRoute.addChildren([
