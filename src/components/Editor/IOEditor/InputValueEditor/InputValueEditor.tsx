@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { updateInputNameOnComponentSpec } from "@/components/Editor/utils/updateInputNameOnComponentSpec";
+import { LinkNodeButton } from "@/components/shared/Buttons/LinkNodeButton";
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { removeGraphInput } from "@/components/shared/ReactFlow/FlowCanvas/utils/removeNode";
@@ -327,6 +328,8 @@ export const InputValueEditor = ({
         )}
 
         <IOZIndexEditor ioSpec={input} ioType="input" />
+
+        {disabled && <LinkNodeButton nodeId={inputNameToNodeId(input.name)} />}
       </InlineStack>
 
       <ConfirmationDialog

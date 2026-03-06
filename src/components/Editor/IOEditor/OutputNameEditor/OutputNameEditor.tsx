@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { LinkNodeButton } from "@/components/shared/Buttons/LinkNodeButton";
 import ConfirmationDialog from "@/components/shared/Dialogs/ConfirmationDialog";
 import { removeGraphOutput } from "@/components/shared/ReactFlow/FlowCanvas/utils/removeNode";
 import { Button } from "@/components/ui/button";
@@ -215,6 +216,10 @@ export const OutputNameEditor = ({
         )}
 
         <IOZIndexEditor ioSpec={output} ioType="output" />
+
+        {disabled && (
+          <LinkNodeButton nodeId={outputNameToNodeId(output.name)} />
+        )}
       </InlineStack>
 
       <ConfirmationDialog

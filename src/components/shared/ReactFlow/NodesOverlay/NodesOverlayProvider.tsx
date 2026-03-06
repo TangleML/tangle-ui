@@ -44,6 +44,7 @@ interface NodesOverlayContextType {
   setReactFlowInstance: (instance: ReactFlowInstance) => void;
   registerNode: (options: RegisterNodeOptions) => () => void;
   fitNodeIntoView: (nodeId: string) => Promise<boolean>;
+  selectNode: (nodeId: string) => void;
   getNodeIdsByDigest: (digest: string) => string[];
   // todo: consider EventTarget
   notifyNode: (nodeId: string, message: NotifyMessage) => void;
@@ -58,6 +59,7 @@ const NodesOverlayContext = createContext<NodesOverlayContextType>({
   setReactFlowInstance: () => {},
   registerNode: () => () => {},
   fitNodeIntoView: () => Promise.resolve(false),
+  selectNode: () => {},
   getNodeIdsByDigest: () => [],
   notifyNode: () => {},
 });
@@ -120,11 +122,18 @@ export const NodesOverlayProvider = ({ children }: PropsWithChildren<{}>) => {
     node.onNotify?.(message);
   }, []);
 
+  const selectNode = useCallback((nodeId: string) => {
+    instanceRef.current?.setNodes((nodes) =>
+      nodes.map((node) => ({ ...node, selected: node.id === nodeId })),
+    );
+  }, []);
+
   const value = useMemo(
     () => ({
       setReactFlowInstance,
       registerNode,
       fitNodeIntoView,
+      selectNode,
       getNodeIdsByDigest,
       notifyNode,
     }),
@@ -132,6 +141,7 @@ export const NodesOverlayProvider = ({ children }: PropsWithChildren<{}>) => {
       setReactFlowInstance,
       registerNode,
       fitNodeIntoView,
+      selectNode,
       getNodeIdsByDigest,
       notifyNode,
     ],

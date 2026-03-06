@@ -2,6 +2,7 @@ import { type TaskNodeContextType } from "@/providers/TaskNodeProvider";
 import type { HydratedComponentReference } from "@/utils/componentSpec";
 import { isSubgraph } from "@/utils/subgraphUtils";
 
+import { LinkNodeButton } from "../Buttons/LinkNodeButton";
 import { ViewYamlButton } from "../Buttons/ViewYamlButton";
 import { ActionBlock } from "../ContextPanel/Blocks/ActionBlock";
 import { CopyYamlButton } from "./Actions/CopyYamlButton";
@@ -27,7 +28,7 @@ const TaskActions = ({
   readOnly = false,
   className,
 }: TaskActionsProps) => {
-  const { taskId, taskSpec, state, callbacks } = taskNode || {};
+  const { taskId, nodeId, taskSpec, state, callbacks } = taskNode || {};
   const { onDuplicate, onUpgrade, onDelete } = callbacks || {};
   const isCustomComponent = state?.isCustomComponent;
 
@@ -48,6 +49,7 @@ const TaskActions = ({
   );
 
   // Canvas Actions
+  const linkTask = readOnly && nodeId && <LinkNodeButton nodeId={nodeId} />;
   const duplicateTask = onDuplicate && !readOnly && (
     <DuplicateTaskButton onDuplicate={onDuplicate} />
   );
@@ -74,6 +76,7 @@ const TaskActions = ({
     upgradeTask,
     navigateToSubgraph,
     unpackSubgraphButton,
+    linkTask,
     deleteComponent,
   ].filter(Boolean);
 
