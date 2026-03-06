@@ -328,6 +328,7 @@ const FlowCanvasContent = ({
   const selectedNodes = nodes.filter(
     (node) => node.selected && node.type && SELECTABLE_NODES.has(node.type),
   );
+  const selectedNodeIds = selectedNodes.map((node) => node.id).join(",");
 
   const canUpgrade = selectedNodes.some(
     (node) => node.type && UPGRADEABLE_NODES.has(node.type),
@@ -1078,7 +1079,7 @@ const FlowCanvasContent = ({
       );
       setOpen(true);
     }
-  }, [currentSubgraphSpec, readOnly, canUpgrade, canGroup]);
+  }, [currentSubgraphSpec, selectedNodeIds, readOnly, canUpgrade, canGroup]);
 
   return (
     <BlockStack fill>
