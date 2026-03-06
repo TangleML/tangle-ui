@@ -25,6 +25,7 @@ import { BlockStack } from "@/components/ui/layout";
 import useComponentSpecToEdges from "@/hooks/useComponentSpecToEdges";
 import useConfirmationDialog from "@/hooks/useConfirmationDialog";
 import { useCopyPaste } from "@/hooks/useCopyPaste";
+import { useFocusNodeFromParam } from "@/hooks/useFocusNodeFromParam";
 import { useGhostNode } from "@/hooks/useGhostNode";
 import { useIOSelectionPersistence } from "@/hooks/useIOSelectionPersistence";
 import { useNodeCallbacks } from "@/hooks/useNodeCallbacks";
@@ -51,6 +52,7 @@ import {
 } from "@/utils/subgraphUtils";
 
 import { SuspenseWrapper } from "../../SuspenseWrapper";
+import { FIT_VIEW_ANIMATION_DURATION, FIT_VIEW_MAX_ZOOM } from "../constants";
 import { useNodesOverlay } from "../NodesOverlay/NodesOverlayProvider";
 import { getBulkUpdateConfirmationDetails } from "./ConfirmationDialogs/BulkUpdateConfirmationDialog";
 import { getDeleteConfirmationDetails } from "./ConfirmationDialogs/DeleteConfirmation";
@@ -268,6 +270,11 @@ const FlowCanvasContent = ({
 
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance>();
+
+  const { clearFocusNode } = useFocusNodeFromParam(
+    reactFlowInstance,
+    nodes.length > 0,
+  );
 
   const onInit: OnInit = (instance) => {
     setReactFlowInstance(instance);
@@ -887,8 +894,8 @@ const FlowCanvasContent = ({
 
   useEffect(() => {
     reactFlowInstance?.fitView({
-      maxZoom: 1,
-      duration: 300,
+      maxZoom: FIT_VIEW_MAX_ZOOM,
+      duration: FIT_VIEW_ANIMATION_DURATION,
     });
   }, [currentSubgraphPath, reactFlowInstance]);
 
@@ -899,7 +906,7 @@ const FlowCanvasContent = ({
 
   const fitView = () => {
     reactFlowInstance?.fitView({
-      maxZoom: 1,
+      maxZoom: FIT_VIEW_MAX_ZOOM,
     });
   };
 
@@ -991,6 +998,9 @@ const FlowCanvasContent = ({
 
   const onPaneClick = () => {
     clearContent();
+    if (readOnly) {
+      clearFocusNode();
+    }
   };
 
   const getSelectionMode = () => {
@@ -1033,8 +1043,8 @@ const FlowCanvasContent = ({
 
     requestAnimationFrame(() => {
       reactFlowInstance?.fitView({
-        maxZoom: 1,
-        duration: 300,
+        maxZoom: FIT_VIEW_MAX_ZOOM,
+        duration: FIT_VIEW_ANIMATION_DURATION,
       });
     });
   };
