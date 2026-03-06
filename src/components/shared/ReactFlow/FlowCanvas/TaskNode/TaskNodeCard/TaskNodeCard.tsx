@@ -11,6 +11,7 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { QuickTooltip } from "@/components/ui/tooltip";
 import { Text } from "@/components/ui/typography";
 import { useEdgeSelectionHighlight } from "@/hooks/useEdgeSelectionHighlight";
+import { useFocusNodeParam } from "@/hooks/useFocusNodeParam";
 import { useIsMultiSelect } from "@/hooks/useIsMultiSelect";
 import { buildExecutionUrl } from "@/hooks/useSubgraphBreadcrumbs";
 import { cn } from "@/lib/utils";
@@ -65,6 +66,7 @@ const TaskNodeCard = () => {
   const { dimensions, selected, highlighted, readOnly, isCollapsed } = state;
 
   const { isMultiSelect, isMultiSelectRef } = useIsMultiSelect();
+  const { setFocusNode, clearFocusNode } = useFocusNodeParam();
 
   const { isConnectedToSelectedEdge } = useEdgeSelectionHighlight(nodeId);
 
@@ -164,11 +166,19 @@ const TaskNodeCard = () => {
     if (selected && !isMultiSelect) {
       setContent(taskConfigMarkup);
       setContextPanelOpen(true);
+
+      if (readOnly && taskId) {
+        setFocusNode(taskId);
+      }
     }
 
     return () => {
       if (selected && !isMultiSelectRef.current) {
         clearContent();
+
+        if (readOnly && taskId) {
+          clearFocusNode();
+        }
       }
     };
   }, [
@@ -178,6 +188,10 @@ const TaskNodeCard = () => {
     setContent,
     clearContent,
     setContextPanelOpen,
+    readOnly,
+    taskId,
+    setFocusNode,
+    clearFocusNode,
   ]);
 
   if (!taskSpec) {
