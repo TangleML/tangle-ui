@@ -9,6 +9,8 @@ interface JSONSchemaProperty {
   maximum?: number;
   exclusiveMinimum?: number;
   exclusiveMaximum?: number;
+  inclusiveMinimum?: number;
+  inclusiveMaximum?: number;
   pattern?: string;
   enum?: string[];
   required?: boolean;
@@ -70,10 +72,16 @@ export function parseSchemaToAnnotationConfig(
 
     // Handle min/max for numbers
     if (property.exclusiveMinimum !== undefined) {
-      config.min = property.exclusiveMinimum;
+      config.min = property.exclusiveMinimum + 1;
     }
     if (property.exclusiveMaximum !== undefined) {
-      config.max = property.exclusiveMaximum;
+      config.max = property.exclusiveMaximum - 1;
+    }
+    if (property.inclusiveMinimum !== undefined) {
+      config.min = property.inclusiveMinimum;
+    }
+    if (property.inclusiveMaximum !== undefined) {
+      config.max = property.inclusiveMaximum;
     }
     if (property.minimum !== undefined) {
       config.min = property.minimum;
