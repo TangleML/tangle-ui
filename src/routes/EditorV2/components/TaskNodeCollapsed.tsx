@@ -3,6 +3,7 @@ import { Handle, Position, useStore } from "@xyflow/react";
 import { Card } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
+import { getContrastTextColor } from "@/utils/color";
 
 import type { TaskNodeViewProps } from "./TaskNode";
 import { ZOOM_THRESHOLD } from "./TaskNode";
@@ -19,10 +20,14 @@ export function TaskNodeCollapsed({
   isSubgraph,
   selected,
   isHovered,
+  taskColor,
   onNodeClick,
 }: TaskNodeViewProps) {
   const zoom = useStore(zoomValueSelector);
   const scale = Math.min(ZOOM_THRESHOLD / zoom, MAX_SCALE);
+  const headerTextColor = taskColor
+    ? getContrastTextColor(taskColor)
+    : undefined;
 
   const fontSize = 18 * scale;
   const iconSize = 16 * scale;
@@ -46,6 +51,9 @@ export function TaskNodeCollapsed({
         minWidth: 180 * scale,
         maxWidth: 280 * scale,
         minHeight: 100 * scale,
+        ...(taskColor
+          ? { backgroundColor: taskColor, color: headerTextColor }
+          : {}),
       }}
       onClick={onNodeClick}
     >
@@ -72,18 +80,22 @@ export function TaskNodeCollapsed({
             width: iconSize,
             height: iconSize,
             marginTop: fontSize * 0.1,
+            ...(taskColor ? { color: headerTextColor } : {}),
           }}
         >
           <Icon
             name={isSubgraph ? "Layers" : "Circle"}
             className={cn(
               "!h-full !w-full",
-              isSubgraph ? "text-purple-600" : "text-blue-600",
+              !taskColor && (isSubgraph ? "text-purple-600" : "text-blue-600"),
             )}
           />
         </div>
         <span
-          className="font-semibold text-slate-900 break-words min-w-0"
+          className={cn(
+            "font-semibold break-words min-w-0",
+            !taskColor && "text-slate-900",
+          )}
           style={{ fontSize, lineHeight: 1.2 }}
         >
           {taskName}

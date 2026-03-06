@@ -3,6 +3,7 @@ import { type ChangeEvent, useEffect, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ColorPicker } from "@/components/ui/color";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,7 +21,11 @@ import type {
 import type { DynamicDataArgument } from "@/utils/componentSpec";
 
 import { useSpec } from "../providers/SpecContext";
-import { createInputAndConnect, createSubgraph } from "../store/actions";
+import {
+  batchSetTaskColor,
+  createInputAndConnect,
+  createSubgraph,
+} from "../store/actions";
 import {
   clearMultiSelection,
   editorStore,
@@ -370,6 +375,46 @@ function computeAggregatedArguments(tasks: Task[]): AggregatedArgument[] {
   return result;
 }
 
+const TASK_COLOR_ANNOTATION = "tangleml.com/editor/task-color";
+
+const BatchTaskColor = observer(function BatchTaskColor({
+  tasks,
+}: {
+  tasks: Task[];
+}) {
+  if (tasks.length === 0) return null;
+
+  const colors = tasks.map(
+    (t) =>
+      (t.annotations.get(TASK_COLOR_ANNOTATION) as string) || "transparent",
+  );
+  const allSame = colors.every((c) => c === colors[0]);
+  const displayColor = allSame ? colors[0] : "transparent";
+
+  return (
+    <>
+      <Separator />
+      <InlineStack align="space-between" gap="2" className="w-full">
+        <InlineStack gap="2" blockAlign="center">
+          <Text size="xs" className="text-gray-600">
+            Task color
+          </Text>
+          {!allSame && (
+            <Text size="xs" className="text-amber-500 italic">
+              mixed
+            </Text>
+          )}
+        </InlineStack>
+        <ColorPicker
+          title="Task color"
+          color={displayColor}
+          setColor={(color) => batchSetTaskColor(tasks, color)}
+        />
+      </InlineStack>
+    </>
+  );
+});
+
 /**
  * Content for multi-selection in the Properties window.
  * Shows list of selected nodes, common argument editing, and Create Subgraph section.
@@ -461,6 +506,9 @@ export const MultiSelectionDetails = observer(function MultiSelectionDetails() {
             ))}
           </BlockStack>
         </BlockStack>
+
+        {/* Batch Task Color */}
+        {selectedTasks.length > 0 && <BatchTaskColor tasks={resolvedTasks} />}
 
         {/* Common Arguments Section */}
         {spec && aggregatedArgs.length > 0 && (

@@ -8,6 +8,7 @@ import {
   launcherTaskAnnotationSchema,
   parseSchemaToAnnotationConfig,
 } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/AnnotationsEditor/utils";
+import { ColorPicker } from "@/components/ui/color";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
@@ -116,8 +117,30 @@ export const ConfigurationSection = observer(function ConfigurationSection({
     }
   };
 
+  const taskColor = task.annotations.get("tangleml.com/editor/task-color");
+
+  const handleColorChange = (color: string) => {
+    if (color === "transparent") {
+      task.annotations.remove("tangleml.com/editor/task-color");
+    } else {
+      task.annotations.set("tangleml.com/editor/task-color", color);
+    }
+  };
+
   return (
     <BlockStack gap="3">
+      <InlineStack align="space-between" gap="2" className="w-full">
+        <Text size="xs" className="text-gray-600">
+          Task color
+        </Text>
+        <ColorPicker
+          title="Task color"
+          color={taskColor}
+          setColor={handleColorChange}
+        />
+      </InlineStack>
+      <Separator />
+
       {!isSubgraph && (
         <>
           <InlineStack align="space-between" gap="2" className="w-full">
