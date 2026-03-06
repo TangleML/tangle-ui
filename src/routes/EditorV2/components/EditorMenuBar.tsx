@@ -4,7 +4,6 @@ import { generate } from "random-words";
 import { useEffect, useRef, useState } from "react";
 
 import logo from "/Tangle_Icon_White.png";
-import { PipelineSection } from "@/components/Home/PipelineSection/PipelineSection";
 import { isAuthorizationRequired } from "@/components/shared/Authentication/helpers";
 import { TopBarAuthentication } from "@/components/shared/Authentication/TopBarAuthentication";
 import BackendStatus from "@/components/shared/BackendStatus";
@@ -31,6 +30,7 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Link } from "@/components/ui/link";
 import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/typography";
+import { PipelineFolders } from "@/routes/PipelineFolders/PipelineFolders";
 import { APP_ROUTES } from "@/routes/router";
 import { writeComponentToFileListFromText } from "@/utils/componentStore";
 import {
@@ -44,6 +44,7 @@ import { autoSaveStore } from "../store/autoSaveStore";
 import { navigationStore } from "../store/navigationStore";
 import { restoreWindow } from "../windows/windowStore";
 import { AutoSaveIndicator } from "./AutoSaveIndicator";
+import { MovePipelineToFolderButton } from "./MovePipelineToFolderButton";
 
 const MenuTriggerButton = ({
   children,
@@ -130,12 +131,18 @@ function FileMenu() {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Dialog open={openDialogOpen} onOpenChange={setOpenDialogOpen}>
-        <DialogContent className="max-w-[95vw] sm:max-w-[95vw] w-full max-h-[85vh] overflow-y-auto">
+      <Dialog
+        open={openDialogOpen}
+        onOpenChange={setOpenDialogOpen}
+        data-testid="open-pipeline-dialog"
+      >
+        <DialogContent className="max-w-[95vw] sm:max-w-[95vw] w-full">
           <DialogHeader>
             <DialogTitle>Open Pipeline</DialogTitle>
           </DialogHeader>
-          <PipelineSection onPipelineClick={handlePipelineClick} />
+          <BlockStack gap="4" className="w-full h-[80vh] overflow-y-auto">
+            <PipelineFolders onPipelineClick={handlePipelineClick} />
+          </BlockStack>
         </DialogContent>
       </Dialog>
 
@@ -283,9 +290,7 @@ export const EditorMenuBar = observer(function EditorMenuBar() {
             data-testid="status-indicators"
           >
             <Separator orientation="vertical" />
-            <Button variant="ghost" size="icon">
-              <Icon name="Folder" size="sm" className="text-stone-400" />
-            </Button>
+            <MovePipelineToFolderButton pipelineName={pipelineName} />
             <AutoSaveIndicator />
           </InlineStack>
         </InlineStack>

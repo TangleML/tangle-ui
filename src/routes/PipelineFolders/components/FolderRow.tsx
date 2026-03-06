@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { APP_ROUTES } from "@/routes/router";
 import { formatDate } from "@/utils/date";
 
+import { useFolderNavigation } from "../context/FolderNavigationContext";
 import {
   useDeleteFolder,
   useRenameFolder,
@@ -53,6 +54,7 @@ export function FolderRow({
   const deleteFolder = useDeleteFolder();
   const renameFolder = useRenameFolder();
   const toggleFavorite = useToggleFavorite();
+  const folderNav = useFolderNavigation();
   const [renameOpen, setRenameOpen] = useState(false);
   const dragCounterRef = useRef(0);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -65,10 +67,14 @@ export function FolderRow({
     ) {
       return;
     }
-    navigate({
-      to: APP_ROUTES.PIPELINE_FOLDERS,
-      search: { folderId: folder.id },
-    });
+    if (folderNav) {
+      folderNav.navigateToFolder(folder.id);
+    } else {
+      navigate({
+        to: APP_ROUTES.PIPELINE_FOLDERS,
+        search: { folderId: folder.id },
+      });
+    }
   };
 
   const handleRename = (newName: string) => {

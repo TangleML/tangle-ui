@@ -8,7 +8,6 @@ import { registerRootStore } from "mobx-keystone";
 import { observer } from "mobx-react-lite";
 import { useEffect } from "react";
 
-import { PipelineSection } from "@/components/Home/PipelineSection/PipelineSection";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -22,6 +21,7 @@ import {
 } from "@/models/componentSpec";
 import { ComponentLibraryProvider } from "@/providers/ComponentLibraryProvider";
 import { ForcedSearchProvider } from "@/providers/ComponentLibraryProvider/ForcedSearchProvider";
+import { PipelineFolders } from "@/routes/PipelineFolders/PipelineFolders";
 import { APP_ROUTES } from "@/routes/router";
 import { loadPipelineByName } from "@/services/pipelineService";
 import {
@@ -173,7 +173,7 @@ function EmptyEditorState() {
             Open Pipeline
           </Text>
         </InlineStack>
-        <PipelineSection onPipelineClick={handlePipelineClick} />
+        <PipelineFolders onPipelineClick={handlePipelineClick} />
       </BlockStack>
     </BlockStack>
   );

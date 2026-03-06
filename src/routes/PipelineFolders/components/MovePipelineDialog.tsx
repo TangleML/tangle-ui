@@ -37,17 +37,20 @@ export function MovePipelineDialog({
   currentFolderId,
   onMoveComplete,
 }: MovePipelineDialogProps) {
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
-  const movePipeline = useMovePipeline();
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(
+    currentFolderId,
+  );
+  const { mutate: movePipeline } = useMovePipeline();
   const [isMoving, setIsMoving] = useState(false);
 
   const totalItems = pipelineNames.length + folderIds.length;
 
   const handleMove = async () => {
+    // todo: move to separate mutation hook
     setIsMoving(true);
     try {
       for (const name of pipelineNames) {
-        await movePipeline.mutateAsync({
+        await movePipeline({
           pipelineName: name,
           folderId: selectedFolderId,
         });

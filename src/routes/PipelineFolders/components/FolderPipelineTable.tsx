@@ -25,6 +25,7 @@ import { APP_ROUTES } from "@/routes/router";
 import { deletePipeline } from "@/services/pipelineService";
 import { getErrorMessage, pluralize } from "@/utils/string";
 
+import { useFolderNavigation } from "../context/FolderNavigationContext";
 import { useFolderBreadcrumbs } from "../hooks/useFolderBreadcrumbs";
 import { useFolderPipelines } from "../hooks/useFolderPipelines";
 import { useFolders } from "../hooks/useFolders";
@@ -75,6 +76,7 @@ export const FolderPipelineTable = withSuspenseWrapper(
     const { data: pipelines, refetch } = useFolderPipelines(folderId);
     const { data: breadcrumbPath } = useFolderBreadcrumbs(folderId);
     const navigate = useNavigate();
+    const folderNav = useFolderNavigation();
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedPipelines, setSelectedPipelines] = useState<Set<string>>(
       new Set(),
@@ -281,10 +283,14 @@ export const FolderPipelineTable = withSuspenseWrapper(
                     const parentId =
                       breadcrumbPath[breadcrumbPath.length - 1]?.parentId ??
                       null;
-                    navigate({
-                      to: APP_ROUTES.PIPELINE_FOLDERS,
-                      search: parentId ? { folderId: parentId } : {},
-                    });
+                    if (folderNav) {
+                      folderNav.navigateToFolder(parentId);
+                    } else {
+                      navigate({
+                        to: APP_ROUTES.PIPELINE_FOLDERS,
+                        search: parentId ? { folderId: parentId } : {},
+                      });
+                    }
                   }}
                 >
                   <TableCell />
@@ -343,6 +349,7 @@ export const FolderPipelineTable = withSuspenseWrapper(
                     onDelete={() => refetch()}
                     isSelected={selectedPipelines.has(name)}
                     onSelect={(checked) => handleSelectPipeline(name, checked)}
+                    onPipelineClick={folderNav?.onPipelineClick}
                     icon={
                       <Icon
                         name="FileSpreadsheet"
