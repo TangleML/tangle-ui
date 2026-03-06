@@ -1,7 +1,7 @@
 import type { XYPosition } from "@xyflow/react";
 
 import { getNodeTypeZIndexDefault } from "@/components/shared/ReactFlow/FlowCanvas/utils/zIndex";
-import type { AnnotationConfig } from "@/types/annotations";
+import type { AnnotationConfig, Annotations } from "@/types/annotations";
 
 import type { ComponentSpec } from "./componentSpec";
 
@@ -35,12 +35,6 @@ export const HIDDEN_ANNOTATIONS = new Set<string>([
   EDITOR_COLLAPSED_ANNOTATION,
 ]);
 
-type Annotations =
-  | {
-      [k: string]: unknown;
-    }
-  | undefined;
-
 /**
  * Gets the value of an annotation.
  * @param annotations - The annotations object
@@ -49,17 +43,17 @@ type Annotations =
  * @returns
  */
 export function getAnnotationValue(
-  annotations: Annotations | null,
+  annotations: Annotations | null | undefined,
   key: string,
   defaultValue: string,
 ): string;
 export function getAnnotationValue(
-  annotations: Annotations | null,
+  annotations: Annotations | null | undefined,
   key: string,
   defaultValue?: undefined,
 ): string | undefined;
 export function getAnnotationValue(
-  annotations: Annotations | null,
+  annotations: Annotations | null | undefined,
   key: string,
   defaultValue?: string,
 ) {
@@ -67,7 +61,9 @@ export function getAnnotationValue(
     return defaultValue;
   }
 
-  return hasAnnotation(annotations, key) ? annotations?.[key] : defaultValue;
+  return hasAnnotation(annotations, key)
+    ? (annotations[key] as string)
+    : defaultValue;
 }
 
 /**
@@ -78,7 +74,7 @@ export function getAnnotationValue(
  * @returns
  */
 export function setAnnotation(
-  annotations: Annotations,
+  annotations: Annotations | undefined,
   key: string,
   value: string | undefined,
 ) {
@@ -95,7 +91,7 @@ export function setAnnotation(
  * @returns boolean
  */
 function hasAnnotation(
-  annotations: Annotations,
+  annotations: Annotations | undefined,
   key: string,
 ): annotations is Annotations {
   if (!annotations) {
@@ -137,7 +133,7 @@ export const setComponentSpecAnnotation = (
  * @returns updated annotations object
  */
 export const setPositionInAnnotations = (
-  annotations: Annotations,
+  annotations: Annotations | undefined,
   position: XYPosition,
 ): Annotations => {
   const updatedAnnotations = { ...annotations };
@@ -223,9 +219,9 @@ export function ensureAnnotations(
  * @returns Updated annotations object with the specified annotation removed
  */
 export function removeAnnotation(
-  annotations: Annotations,
+  annotations: Annotations | undefined,
   key: string,
-): Annotations {
+): Annotations | undefined {
   if (!annotations || !hasAnnotation(annotations, key)) {
     return annotations;
   }
@@ -240,7 +236,7 @@ export function removeAnnotation(
  * @returns z-index number
  */
 export const extractZIndexFromAnnotations = (
-  annotations: Annotations,
+  annotations: Annotations | undefined,
   nodeType: string,
 ): number => {
   const defaultZIndex = getNodeTypeZIndexDefault(nodeType);

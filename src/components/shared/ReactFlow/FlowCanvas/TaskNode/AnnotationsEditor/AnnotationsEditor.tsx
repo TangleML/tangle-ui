@@ -1,10 +1,12 @@
-import { PlusCircleIcon } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Heading, Paragraph } from "@/components/ui/typography";
 import type { AnnotationConfig, Annotations } from "@/types/annotations";
-import { DEFAULT_COMMON_ANNOTATIONS } from "@/utils/annotations";
+import {
+  DEFAULT_COMMON_ANNOTATIONS,
+  getAnnotationValue,
+} from "@/utils/annotations";
 
 import { AnnotationsInput } from "./AnnotationsInput";
 import {
@@ -48,7 +50,7 @@ export const AnnotationsEditor = ({
           className="w-fit"
           type="button"
         >
-          <PlusCircleIcon className="h-4 w-4" />
+          <Icon name="CirclePlus" />
           New
         </Button>
       </InlineStack>
@@ -68,7 +70,7 @@ export const AnnotationsEditor = ({
 
           <AnnotationsInput
             key={config.annotation}
-            value={annotations[config.annotation]}
+            value={getAnnotationValue(annotations, config.annotation, "")}
             onBlur={(newValue) => onSave(config.annotation, newValue)}
             annotations={annotations}
             config={config}
@@ -76,7 +78,7 @@ export const AnnotationsEditor = ({
         </BlockStack>
       ))}
 
-      {remainingAnnotations.map(([key, value]) => (
+      {remainingAnnotations.map(([key]) => (
         <BlockStack key={key}>
           <Paragraph size="xs" tone="subdued">
             {key}
@@ -84,7 +86,7 @@ export const AnnotationsEditor = ({
 
           <AnnotationsInput
             key={key}
-            value={value}
+            value={getAnnotationValue(annotations, key, "")}
             onBlur={(newValue) => onSave(key, newValue)}
             onDelete={() => onRemove(key)}
             annotations={annotations}

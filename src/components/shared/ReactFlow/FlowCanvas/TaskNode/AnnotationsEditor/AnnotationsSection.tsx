@@ -4,7 +4,7 @@ import { BlockStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import useToastNotification from "@/hooks/useToastNotification";
 import type { AnnotationConfig, Annotations } from "@/types/annotations";
-import { HIDDEN_ANNOTATIONS } from "@/utils/annotations";
+import { getAnnotationValue, HIDDEN_ANNOTATIONS } from "@/utils/annotations";
 import type { TaskSpec } from "@/utils/componentSpec";
 
 import { AnnotationsEditor } from "./AnnotationsEditor";
@@ -29,7 +29,7 @@ export const AnnotationsSection = ({
 }: AnnotationsSectionProps) => {
   const notify = useToastNotification();
 
-  const rawAnnotations = (taskSpec.annotations || {}) as Annotations;
+  const rawAnnotations = taskSpec.annotations ?? {};
 
   const [annotations, setAnnotations] = useState<Annotations>({
     ...rawAnnotations,
@@ -51,7 +51,7 @@ export const AnnotationsSection = ({
   const [newRows, setNewRows] = useState<Array<NewAnnotationRowData>>([]);
 
   const selectedProvider = cloudProviderConfig
-    ? annotations[cloudProviderConfig.annotation]
+    ? getAnnotationValue(annotations, cloudProviderConfig.annotation)
     : undefined;
 
   const commonAnnotations = useMemo(() => {
