@@ -470,7 +470,7 @@ const RootNode = observer(function RootNode({
         onClick={handleClick}
         onKeyDown={(e) => e.key === "Enter" && handleClick()}
         className={cn(
-          "flex items-start gap-1 py-1.5 px-2 rounded-md cursor-pointer transition-colors",
+          "flex items-start w-full gap-1 py-1.5 px-2 rounded-md cursor-pointer transition-colors",
           isCurrentGraph
             ? "bg-blue-100 text-blue-900"
             : hasErrors
