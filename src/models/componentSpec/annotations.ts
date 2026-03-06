@@ -7,6 +7,7 @@ import type { Annotation } from "./entities/types";
 
 interface AnnotationTypeMap {
   "editor.position": XYPosition;
+  "tangleml.com/editor/task-color": string;
 }
 
 type KnownAnnotationKey = keyof AnnotationTypeMap;
@@ -38,6 +39,11 @@ const codecs: {
       return { x: 0, y: 0 };
     },
     defaultValue: { x: 0, y: 0 },
+  },
+  "tangleml.com/editor/task-color": {
+    serialize: (color) => color,
+    deserialize: (raw) => (typeof raw === "string" ? raw : "transparent"),
+    defaultValue: "transparent",
   },
 };
 

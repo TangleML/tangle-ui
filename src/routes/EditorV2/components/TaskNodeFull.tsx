@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
+import { getContrastTextColor } from "@/utils/color";
 
 import { InputValidationIndicator } from "./InputValidationIndicator";
 import type { TaskNodeViewProps } from "./TaskNode";
@@ -25,9 +26,14 @@ export function TaskNodeFull({
   inputs,
   outputs,
   annotations,
+  taskColor,
   onNodeClick,
   onInputClick,
 }: TaskNodeViewProps) {
+  const headerTextColor = taskColor
+    ? getContrastTextColor(taskColor)
+    : undefined;
+
   return (
     <Card
       className={cn(
@@ -42,17 +48,37 @@ export function TaskNodeFull({
       )}
       onClick={onNodeClick}
     >
-      <CardHeader className="border-b border-slate-200 px-3 py-2">
+      <CardHeader
+        className={cn(
+          "border-b border-slate-200 px-3 py-2",
+          taskColor && "rounded-t-[10px]",
+        )}
+        style={
+          taskColor
+            ? { backgroundColor: taskColor, color: headerTextColor }
+            : undefined
+        }
+      >
         <InlineStack gap="2" wrap="nowrap" blockAlign="center">
-          <Icon
-            name={isSubgraph ? "Layers" : "Circle"}
-            size="sm"
+          <span
+            className="shrink-0 flex items-center"
+            style={taskColor ? { color: headerTextColor } : undefined}
+          >
+            <Icon
+              name={isSubgraph ? "Layers" : "Circle"}
+              size="sm"
+              className={cn(
+                !taskColor &&
+                  (isSubgraph ? "text-purple-600" : "text-blue-600"),
+              )}
+            />
+          </span>
+          <CardTitle
             className={cn(
-              "shrink-0",
-              isSubgraph ? "text-purple-600" : "text-blue-600",
+              "truncate text-sm font-medium flex-1",
+              !taskColor && "text-slate-900",
             )}
-          />
-          <CardTitle className="truncate text-sm font-medium text-slate-900 flex-1">
+          >
             {taskName}
           </CardTitle>
           {isSubgraph && (
@@ -77,8 +103,8 @@ export function TaskNodeFull({
         {description && (
           <Text
             size="xs"
-            tone="subdued"
-            className="truncate mt-1"
+            tone={taskColor ? undefined : "subdued"}
+            className={cn("truncate mt-1", taskColor && "opacity-80")}
             title={description}
           >
             {description}

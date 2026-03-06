@@ -48,6 +48,7 @@ export interface TaskNodeViewProps {
   inputs: TaskNodeInput[];
   outputs: TaskNodeOutput[];
   annotations: { key: string }[];
+  taskColor?: string;
   inputDisplayValues: Record<string, string | undefined>;
   onNodeClick: (event: React.MouseEvent) => void;
   onInputClick: (inputName: string, event: React.MouseEvent) => void;
@@ -153,6 +154,10 @@ export const TaskNode = observer(function TaskNode({
     ? resolveInputDisplayValues(task, entityId, spec)
     : {};
 
+  const rawColor = task.annotations.get("tangleml.com/editor/task-color");
+  const taskColor =
+    rawColor && rawColor !== "transparent" ? rawColor : undefined;
+
   const viewProps: TaskNodeViewProps = {
     id,
     entityId,
@@ -164,6 +169,7 @@ export const TaskNode = observer(function TaskNode({
     inputs,
     outputs,
     annotations: task.annotations.map((a) => ({ key: a.key })),
+    taskColor,
     inputDisplayValues,
     onNodeClick: handleClick,
     onInputClick: handleInputClick,

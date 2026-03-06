@@ -13,6 +13,8 @@ import {
   type TypeSpecType,
 } from "@/models/componentSpec";
 
+const TASK_COLOR_ANNOTATION = "tangleml.com/editor/task-color";
+
 import { clipboardStore } from "./clipboardStore";
 import type { SelectedNode } from "./editorStore";
 import { undoStore } from "./undoStore";
@@ -375,6 +377,18 @@ export function deleteSelectedNodes(
       if (nodeType === "task") spec.deleteTaskById(node.id);
       else if (nodeType === "input") spec.deleteInputById(node.id);
       else if (nodeType === "output") spec.deleteOutputById(node.id);
+    }
+  });
+}
+
+export function batchSetTaskColor(tasks: Task[], color: string) {
+  undoStore.undoManager?.withGroup("Batch task color update", () => {
+    for (const task of tasks) {
+      if (color === "transparent") {
+        task.annotations.remove(TASK_COLOR_ANNOTATION);
+      } else {
+        task.annotations.set(TASK_COLOR_ANNOTATION, color);
+      }
     }
   });
 }
