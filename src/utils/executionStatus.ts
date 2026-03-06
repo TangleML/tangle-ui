@@ -43,6 +43,23 @@ export const EXECUTION_STATUS_BG_COLORS: Record<string, string> = {
 };
 
 /**
+ * Statuses where the container was never launched.
+ * Used to skip fetches to /container_state and /container_log — both of which
+ * require a container execution record that won't exist for these statuses.
+ *
+ * CANCELLED is excluded: a task cancelled mid-run (while PENDING or RUNNING)
+ * will have a container execution record and uploaded logs, and the frontend
+ * cannot distinguish that from a pre-launch cancellation by status alone.
+ */
+export const CONTAINER_STATUSES_PRE_LAUNCH = new Set([
+  "INVALID",
+  "UNINITIALIZED",
+  "QUEUED",
+  "WAITING_FOR_UPSTREAM",
+  "SKIPPED",
+]);
+
+/**
  * Statuses considered "in progress" (not terminal).
  */
 const IN_PROGRESS_STATUSES = new Set([
