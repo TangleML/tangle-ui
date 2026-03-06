@@ -178,6 +178,14 @@ export async function getFavoriteFolders(): Promise<PipelineFolder[]> {
   );
 }
 
+export async function getPipelineFolderAssignment(
+  pipelineName: string,
+): Promise<string | null> {
+  const assignment =
+    await PipelineFoldersDB.pipeline_folder_assignments.get(pipelineName);
+  return assignment?.folderId ?? null;
+}
+
 export async function getAllFolders(): Promise<PipelineFolder[]> {
   return PipelineFoldersDB.pipeline_folders.toArray();
 }

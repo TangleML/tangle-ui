@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { APP_ROUTES } from "@/routes/router";
 
+import { useFolderNavigation } from "../context/FolderNavigationContext";
 import { useFolderBreadcrumbs } from "../hooks/useFolderBreadcrumbs";
 import { useToggleFavorite } from "../hooks/useFolderMutations";
 
@@ -29,6 +30,29 @@ export const FolderBreadcrumb = withSuspenseWrapper(
   function FolderBreadcrumbContent({ folderId }: FolderBreadcrumbProps) {
     const { data: path } = useFolderBreadcrumbs(folderId);
     const { mutate: toggleFavorite, isPending } = useToggleFavorite();
+    const folderNav = useFolderNavigation();
+
+    const renderFolderLink = (targetFolderId: string | null, label: string) => {
+      if (folderNav) {
+        return (
+          <BreadcrumbLink asChild>
+            <button onClick={() => folderNav.navigateToFolder(targetFolderId)}>
+              {label}
+            </button>
+          </BreadcrumbLink>
+        );
+      }
+      return (
+        <BreadcrumbLink asChild>
+          <Link
+            to={APP_ROUTES.PIPELINE_FOLDERS}
+            search={targetFolderId ? { folderId: targetFolderId } : {}}
+          >
+            {label}
+          </Link>
+        </BreadcrumbLink>
+      );
+    };
 
     return (
       <Breadcrumb>
@@ -37,9 +61,7 @@ export const FolderBreadcrumb = withSuspenseWrapper(
             {folderId === null ? (
               <BreadcrumbPage>Pipelines</BreadcrumbPage>
             ) : (
-              <BreadcrumbLink asChild>
-                <Link to={APP_ROUTES.PIPELINE_FOLDERS}>Pipelines</Link>
-              </BreadcrumbLink>
+              renderFolderLink(null, "Pipelines")
             )}
           </BreadcrumbItem>
 
@@ -71,14 +93,7 @@ export const FolderBreadcrumb = withSuspenseWrapper(
                     </InlineStack>
                   </BreadcrumbPage>
                 ) : (
-                  <BreadcrumbLink asChild>
-                    <Link
-                      to={APP_ROUTES.PIPELINE_FOLDERS}
-                      search={{ folderId: folder.id }}
-                    >
-                      {folder.name}
-                    </Link>
-                  </BreadcrumbLink>
+                  renderFolderLink(folder.id, folder.name)
                 )}
               </BreadcrumbItem>
             );

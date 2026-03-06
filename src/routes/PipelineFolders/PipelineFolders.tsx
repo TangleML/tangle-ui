@@ -1,4 +1,5 @@
 import { useSearch } from "@tanstack/react-router";
+import { useState } from "react";
 
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -8,6 +9,7 @@ import { CreateFolderDialog } from "./components/CreateFolderDialog";
 import { FolderBreadcrumb } from "./components/FolderBreadcrumb";
 import { FolderGrid } from "./components/FolderGrid";
 import { FolderPipelineTable } from "./components/FolderPipelineTable";
+import { FolderNavigationContext } from "./context/FolderNavigationContext";
 
 const PipelineFoldersSkeleton = () => (
   <BlockStack className="h-full p-6" gap="4">
@@ -24,16 +26,30 @@ const PipelineFoldersSkeleton = () => (
   </BlockStack>
 );
 
+interface PipelineFoldersProps {
+  onPipelineClick?: (name: string) => void;
+}
+
 export const PipelineFolders = withSuspenseWrapper(
-  function PipelineFoldersContent() {
-    const { folderId } = useSearch({ strict: false }) as {
+  function PipelineFoldersContent({ onPipelineClick }: PipelineFoldersProps) {
+    const { folderId: routeFolderId } = useSearch({ strict: false }) as {
       folderId?: string;
     };
+    const [localFolderId, setLocalFolderId] = useState<string | null>(null);
 
-    const currentFolderId = folderId ?? null;
+    const isEmbedded = onPipelineClick !== undefined;
+    const currentFolderId = isEmbedded
+      ? localFolderId
+      : (routeFolderId ?? null);
 
-    return (
-      <BlockStack gap="4" className="w-full p-6">
+    const content = (
+      <BlockStack
+        gap="4"
+        className="p-6"
+        fill
+        inlineAlign="start"
+        align="start"
+      >
         <FolderGrid />
 
         <InlineStack
@@ -48,6 +64,18 @@ export const PipelineFolders = withSuspenseWrapper(
         <FolderPipelineTable folderId={currentFolderId} />
       </BlockStack>
     );
+
+    if (isEmbedded) {
+      return (
+        <FolderNavigationContext.Provider
+          value={{ navigateToFolder: setLocalFolderId, onPipelineClick }}
+        >
+          {content}
+        </FolderNavigationContext.Provider>
+      );
+    }
+
+    return content;
   },
   PipelineFoldersSkeleton,
 );
