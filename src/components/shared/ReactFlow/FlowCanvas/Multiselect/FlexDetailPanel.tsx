@@ -2,9 +2,10 @@ import type { Node } from "@xyflow/react";
 
 import { InfoBox } from "@/components/shared/InfoBox";
 import { Paragraph } from "@/components/ui/typography";
+import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 
 import { FlexNodeEditor } from "../FlexNode/FlexNodeEditor";
-import { isFlexNodeData } from "../FlexNode/types";
+import { getFlexNode } from "../FlexNode/interface";
 
 export const FlexDetailPanel = ({
   node,
@@ -13,8 +14,10 @@ export const FlexDetailPanel = ({
   node: Node;
   readOnly: boolean;
 }) => {
-  const data = node.data;
-  if (!isFlexNodeData(data)) {
+  const { currentSubgraphSpec } = useComponentSpec();
+  const flexNode = getFlexNode(node.id, currentSubgraphSpec);
+
+  if (!flexNode) {
     return (
       <InfoBox title="Unable to Load Sticky Note Details" variant="error">
         <Paragraph size="sm" tone="subdued">
@@ -24,5 +27,5 @@ export const FlexDetailPanel = ({
     );
   }
 
-  return <FlexNodeEditor flexNode={data} readOnly={readOnly} />;
+  return <FlexNodeEditor flexNode={flexNode} readOnly={readOnly} />;
 };
