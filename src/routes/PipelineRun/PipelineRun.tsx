@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import PipelineRunPage from "@/components/PipelineRun";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
+import { NodesOverlayProvider } from "@/components/shared/ReactFlow/NodesOverlay/NodesOverlayProvider";
 import { BlockStack } from "@/components/ui/layout";
 import { Paragraph } from "@/components/ui/typography";
 import { faviconManager } from "@/favicon";
@@ -141,12 +142,14 @@ const PipelineRun = () => {
   return (
     <DndContext>
       <ReactFlowProvider>
-        <ExecutionDataProvider
-          pipelineRunId={id}
-          subgraphExecutionId={subgraphExecutionId}
-        >
-          <PipelineRunContent />
-        </ExecutionDataProvider>
+        <NodesOverlayProvider>
+          <ExecutionDataProvider
+            pipelineRunId={id}
+            subgraphExecutionId={subgraphExecutionId}
+          >
+            <PipelineRunContent />
+          </ExecutionDataProvider>
+        </NodesOverlayProvider>
       </ReactFlowProvider>
     </DndContext>
   );

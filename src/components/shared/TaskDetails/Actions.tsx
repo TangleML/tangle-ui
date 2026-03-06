@@ -10,6 +10,7 @@ import { DownloadPythonButton } from "./Actions/DownloadPythonButton";
 import { DownloadYamlButton } from "./Actions/DownloadYamlButton";
 import { DuplicateTaskButton } from "./Actions/DuplicateTaskButton";
 import { EditComponentButton } from "./Actions/EditComponentButton";
+import { LinkTaskButton } from "./Actions/LinkTaskButton";
 import { NavigateToSubgraphButton } from "./Actions/NavigateToSubgraphButton";
 import { UnpackSubgraphButton } from "./Actions/UnpackSubgraphButton";
 import { UpgradeTaskButton } from "./Actions/UpgradeTaskButton";
@@ -48,6 +49,7 @@ const TaskActions = ({
   );
 
   // Canvas Actions
+  const linkTask = readOnly && taskId && <LinkTaskButton taskId={taskId} />;
   const duplicateTask = onDuplicate && !readOnly && (
     <DuplicateTaskButton onDuplicate={onDuplicate} />
   );
@@ -74,6 +76,7 @@ const TaskActions = ({
     upgradeTask,
     navigateToSubgraph,
     unpackSubgraphButton,
+    linkTask,
     deleteComponent,
   ].filter(Boolean);
 
