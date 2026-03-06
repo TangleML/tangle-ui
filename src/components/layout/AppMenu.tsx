@@ -1,5 +1,8 @@
-import { Link as RouterLink } from "@tanstack/react-router";
-import { Menu, Plus, Upload } from "lucide-react";
+import {
+  Link as RouterLink,
+  useLocation,
+  useRouter,
+} from "@tanstack/react-router";
 import { useState } from "react";
 
 import logo from "/Tangle_white.png";
@@ -31,10 +34,20 @@ import TooltipButton from "../shared/Buttons/TooltipButton";
 import NewPipelineButton from "../shared/NewPipelineButton";
 
 const AppMenu = () => {
+  const router = useRouter();
+  const location = useLocation();
+
   const requiresAuthorization = isAuthorizationRequired();
   const { componentSpec } = useComponentSpec();
-  const title = componentSpec?.name;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const title = componentSpec?.name;
+
+  const handleGoBack = () => {
+    router.history.back();
+  };
+
+  const isOnSettingsRoute = location.pathname.startsWith("/settings");
 
   return (
     <div
@@ -64,7 +77,7 @@ const AppMenu = () => {
             <ImportPipeline
               triggerComponent={
                 <TooltipButton tooltip="Import Pipeline">
-                  <Upload className="h-4 w-4" />
+                  <Icon name="Upload" />
                 </TooltipButton>
               }
             />
@@ -72,7 +85,7 @@ const AppMenu = () => {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <NewPipelineButton>
-                    <Plus className="h-4 w-4" />
+                    <Icon name="Plus" />
                   </NewPipelineButton>
                 </TooltipTrigger>
                 <TooltipContent>New Pipeline</TooltipContent>
@@ -82,11 +95,27 @@ const AppMenu = () => {
           </div>
 
           {/* Settings & status */}
-          <RouterLink to="/settings/backend">
-            <TooltipButton tooltip="Settings">
+          {isOnSettingsRoute ? (
+            <TooltipButton
+              tooltip="Close Settings"
+              onClick={handleGoBack}
+              className="relative"
+            >
               <Icon name="Settings" />
+              <Icon
+                name="X"
+                size="xs"
+                className="absolute bottom-1.5 right-1.5 bg-foreground rounded-full"
+              />
             </TooltipButton>
-          </RouterLink>
+          ) : (
+            <RouterLink to="/settings/backend">
+              <TooltipButton tooltip="Settings">
+                <Icon name="Settings" />
+              </TooltipButton>
+            </RouterLink>
+          )}
+
           <Link
             href={DOCUMENTATION_URL}
             target="_blank"
@@ -96,6 +125,7 @@ const AppMenu = () => {
               <Icon name="CircleQuestionMark" />
             </TooltipButton>
           </Link>
+
           {requiresAuthorization && <TopBarAuthentication />}
 
           {/* Mobile hamburger menu */}
@@ -107,7 +137,7 @@ const AppMenu = () => {
                 className="md:hidden text-white hover:bg-stone-800"
                 aria-label="Open menu"
               >
-                <Menu className="h-5 w-5" />
+                <Icon name="Menu" size="lg" />
               </Button>
             </SheetTrigger>
             <SheetContent
