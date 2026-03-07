@@ -1,5 +1,7 @@
 import yaml from "js-yaml";
 
+import type { ComponentSpecJson } from "@/models/componentSpec/entities/types";
+
 import { type ComponentSpec, isValidComponentSpec } from "./componentSpec";
 
 class ComponentSpecParsingError extends Error {
@@ -40,7 +42,9 @@ export const componentSpecToYaml = (componentSpec: ComponentSpec) => {
   return yaml.dump(componentSpec, { lineWidth: -1 });
 };
 
-export const componentSpecToText = (componentSpec: ComponentSpec) => {
+export const componentSpecToText = (
+  componentSpec: ComponentSpec | ComponentSpecJson,
+) => {
   return yaml.dump(componentSpec, {
     lineWidth: -1,
     noRefs: true,

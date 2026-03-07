@@ -39,6 +39,8 @@ class NavigationStore {
       navigateToPath: action,
       setRequestedPipelineName: action,
       activeSpec: computed,
+      navigationDepth: computed,
+      canNavigateBack: computed,
     });
   }
 
@@ -64,7 +66,7 @@ class NavigationStore {
   isTaskSubgraph(spec: ComponentSpec, taskEntityId: string): boolean {
     const task = spec.tasks.find((t) => t.$id === taskEntityId);
     if (!task?.componentRef.spec) return false;
-    return isGraphSpecJson(task.componentRef.spec as ComponentSpecJson);
+    return isGraphSpecJson(task.componentRef.spec);
   }
 
   navigateToSubgraph(
@@ -76,10 +78,7 @@ class NavigationStore {
     const task = currentSpec.tasks.find((t) => t.$id === taskEntityId);
     if (!task) return null;
 
-    if (
-      !task.componentRef.spec ||
-      !isGraphSpecJson(task.componentRef.spec as ComponentSpecJson)
-    ) {
+    if (!task.componentRef.spec || !isGraphSpecJson(task.componentRef.spec)) {
       return null;
     }
 

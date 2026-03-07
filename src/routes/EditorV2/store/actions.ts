@@ -3,7 +3,6 @@ import type { XYPosition } from "@xyflow/react";
 import {
   type ComponentReference,
   type ComponentSpec,
-  type ComponentSpecJson,
   createSubgraph as modelCreateSubgraph,
   createTaskFromComponentRef,
   IncrementingIdGenerator,
@@ -13,43 +12,17 @@ import {
   type TypeSpecType,
 } from "@/models/componentSpec";
 
-const TASK_COLOR_ANNOTATION = "tangleml.com/editor/task-color";
-
 import { clipboardStore } from "./clipboardStore";
 import type { SelectedNode } from "./editorStore";
-import { undoStore } from "./undoStore";
+import {
+  generateUniqueInputName,
+  generateUniqueOutputName,
+  generateUniqueTaskName,
+} from "./nameUtils";
+import { withUndoGroup, withUndoGroupReturn } from "./undoStore";
 
+const TASK_COLOR_ANNOTATION = "tangleml.com/editor/task-color";
 const idGen = new IncrementingIdGenerator();
-
-function generateUniqueTaskName(spec: ComponentSpec, baseName: string): string {
-  const existingNames = new Set(spec.tasks.map((t) => t.name));
-  if (!existingNames.has(baseName)) return baseName;
-  let counter = 2;
-  while (existingNames.has(`${baseName} ${counter}`)) counter++;
-  return `${baseName} ${counter}`;
-}
-
-function generateUniqueInputName(
-  spec: ComponentSpec,
-  baseName = "Input",
-): string {
-  const existingNames = new Set(spec.inputs.map((i) => i.name));
-  if (!existingNames.has(baseName)) return baseName;
-  let counter = 2;
-  while (existingNames.has(`${baseName} ${counter}`)) counter++;
-  return `${baseName} ${counter}`;
-}
-
-function generateUniqueOutputName(
-  spec: ComponentSpec,
-  baseName = "Output",
-): string {
-  const existingNames = new Set(spec.outputs.map((o) => o.name));
-  if (!existingNames.has(baseName)) return baseName;
-  let counter = 2;
-  while (existingNames.has(`${baseName} ${counter}`)) counter++;
-  return `${baseName} ${counter}`;
-}
 
 export function addTask(
   spec: ComponentSpec,
@@ -247,11 +220,9 @@ export function createConnectedIONode(
   const task = spec.tasks.find((t) => t.$id === taskEntityId);
   if (!task) return;
 
-  const taskComponentSpec = task.componentRef.spec as
-    | ComponentSpecJson
-    | undefined;
+  const taskComponentSpec = task.componentRef.spec;
 
-  undoStore.undoManager?.withGroup("Create connected IO node", () => {
+  withUndoGroup("Create connected IO node", () => {
     if (ioType === "input") {
       const inputSpec = taskComponentSpec?.inputs?.find(
         (i) => i.name === portName,
@@ -299,7 +270,7 @@ export function createInputAndConnect(
   };
   const position = { x: taskPos.x - 250, y: taskPos.y };
 
-  undoStore.undoManager?.withGroup("Create input and connect", () => {
+  withUndoGroup("Create input and connect", () => {
     const newInput = addInput(spec, position, portName);
     if (portType) {
       newInput.setType(portType);
@@ -324,7 +295,7 @@ export function createSubgraph(
   const uniqueName = generateUniqueTaskName(spec, subgraphName);
 
   try {
-    const result = undoStore.undoManager?.withGroup(
+    const result = withUndoGroupReturn(
       `Create subgraph "${uniqueName}"`,
       () => {
         const result = modelCreateSubgraph({
@@ -378,7 +349,7 @@ export function deleteSelectedNodes(
 ) {
   if (selectedNodes.length === 0) return;
 
-  undoStore.undoManager?.withGroup("Delete selected nodes", () => {
+  withUndoGroup("Delete selected nodes", () => {
     for (const node of selectedNodes) {
       const nodeType = getNodeTypeFromId(node.id);
       // todo: introduce better handling of node types, remove if statements, make it SOLID
@@ -390,7 +361,7 @@ export function deleteSelectedNodes(
 }
 
 export function batchSetTaskColor(tasks: Task[], color: string) {
-  undoStore.undoManager?.withGroup("Batch task color update", () => {
+  withUndoGroup("Batch task color update", () => {
     for (const task of tasks) {
       if (color === "transparent") {
         task.annotations.remove(TASK_COLOR_ANNOTATION);

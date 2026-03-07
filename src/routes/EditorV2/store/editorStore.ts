@@ -1,6 +1,6 @@
 import { action, makeObservable, observable } from "mobx";
 
-import type { ComponentSpec, ValidationIssue } from "@/models/componentSpec";
+import type { ValidationIssue } from "@/models/componentSpec";
 
 export interface SelectedNode {
   id: string;
@@ -9,7 +9,6 @@ export interface SelectedNode {
 }
 
 class EditorStore {
-  spec: ComponentSpec | null = null;
   selectedNodeId: string | null = null;
   selectedNodeType: "task" | "input" | "output" | null = null;
   lastSelectionWasShiftClick = false;
@@ -22,7 +21,6 @@ class EditorStore {
 
   constructor() {
     makeObservable(this, {
-      spec: observable.ref,
       selectedNodeId: observable,
       selectedNodeType: observable,
       lastSelectionWasShiftClick: observable,
@@ -32,9 +30,8 @@ class EditorStore {
       hoveredEntityId: observable,
       pendingFocusNodeId: observable,
       selectedValidationIssue: observable.ref,
-      initializeStore: action,
+      resetState: action,
       selectNode: action,
-      clearSpec: action,
       clearSelection: action,
       setMultiSelection: action,
       clearMultiSelection: action,
@@ -45,8 +42,7 @@ class EditorStore {
     });
   }
 
-  initializeStore(spec: ComponentSpec) {
-    this.spec = spec;
+  resetState() {
     this.selectedNodeId = null;
     this.selectedNodeType = null;
     this.lastSelectionWasShiftClick = false;
@@ -79,10 +75,6 @@ class EditorStore {
 
   setFocusedArgument(name: string | null) {
     this.focusedArgumentName = name;
-  }
-
-  clearSpec() {
-    this.spec = null;
   }
 
   clearSelection() {
@@ -122,8 +114,8 @@ class EditorStore {
 
 export const editorStore = new EditorStore();
 
-export function initializeStore(spec: ComponentSpec) {
-  editorStore.initializeStore(spec);
+export function resetEditorState() {
+  editorStore.resetState();
 }
 
 export function selectNode(
@@ -132,10 +124,6 @@ export function selectNode(
   options?: { shiftKey?: boolean; entityId?: string },
 ) {
   editorStore.selectNode(nodeId, nodeType, options);
-}
-
-export function clearSpec() {
-  editorStore.clearSpec();
 }
 
 export function clearSelection() {

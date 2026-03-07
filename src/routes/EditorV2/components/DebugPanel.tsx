@@ -75,8 +75,8 @@ function getSpecYaml(spec: ComponentSpec | null): string {
  * Used within the Windows system.
  */
 const DebugPanelContent = observer(function DebugPanelContent() {
-  const spec = editorStore.spec;
-  const specYaml = getSpecYaml(navigationStore.rootSpec);
+  const spec = navigationStore.rootSpec;
+  const specYaml = getSpecYaml(spec);
 
   const stats = {
     name: spec?.name ?? "—",
