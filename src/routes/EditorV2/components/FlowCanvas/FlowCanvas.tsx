@@ -32,9 +32,6 @@ import {
 } from "../../store/actions";
 import { clearMultiSelection, editorStore } from "../../store/editorStore";
 import { GhostNode } from "./GhostNode";
-import { IONode } from "./IONode";
-import { SelectionToolbar } from "./SelectionToolbar";
-import { TaskNode } from "./TaskNode/TaskNode";
 import { useClipboardShortcuts } from "./hooks/useClipboardShortcuts";
 import { useConnectionBehavior } from "./hooks/useConnectionBehavior";
 import { useDoubleClickBehavior } from "./hooks/useDoubleClickBehavior";
@@ -43,6 +40,9 @@ import { useFitViewOnFocus } from "./hooks/useFitViewOnFocus";
 import { useMetaKey } from "./hooks/useMetaKey";
 import { useNodeEdgeChanges } from "./hooks/useNodeEdgeChanges";
 import { useSelectionBehavior } from "./hooks/useSelectionBehavior";
+import { IONode } from "./IONode";
+import { SelectionToolbar } from "./SelectionToolbar";
+import { TaskNode } from "./TaskNode/TaskNode";
 
 const GRID_SIZE = 10;
 

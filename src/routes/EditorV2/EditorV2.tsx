@@ -37,6 +37,7 @@ import { useHistoryWindow } from "./hooks/useHistoryWindow";
 import { useLinkedWindowCleanup } from "./hooks/useLinkedWindowCleanup";
 import { usePipelineDetailsWindow } from "./hooks/usePipelineDetailsWindow";
 import { usePipelineTreeWindow } from "./hooks/usePipelineTreeWindow";
+import { usePropertiesWindowPositioning } from "./hooks/usePropertiesWindowPositioning";
 import { useSelectionWindowSync } from "./hooks/useSelectionWindowSync";
 import { useSpecLifecycle } from "./hooks/useSpecLifecycle";
 import { useUndoRedoKeyboard } from "./hooks/useUndoRedoKeyboard";
@@ -113,6 +114,7 @@ const PipelineEditor = withSuspenseWrapper(
     useDockAreaAccordion();
     useSpecLifecycle(rootSpec, pipelineName, restoredUndoStore);
     useSelectionWindowSync();
+    usePropertiesWindowPositioning();
     useLinkedWindowCleanup();
     useComponentLibraryWindow();
     usePipelineDetailsWindow();
