@@ -1,3 +1,6 @@
+/**
+ * todo: refactor to reduce if-nesting and improve readability
+ */
 import { reaction } from "mobx";
 import { useEffect } from "react";
 

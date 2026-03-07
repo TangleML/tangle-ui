@@ -32,7 +32,10 @@ export const TaskDetails = observer(function TaskDetails({
   const task = spec?.tasks.find((t) => t.$id === entityId);
   const { focusedArgumentName } = editorStore;
 
-  const [openSections, setOpenSections] = useState<string[]>(["task"]);
+  const [openSections, setOpenSections] = useState<string[]>([
+    "task",
+    "arguments",
+  ]);
 
   useEffect(() => {
     if (focusedArgumentName && !openSections.includes("arguments")) {
@@ -63,7 +66,7 @@ export const TaskDetails = observer(function TaskDetails({
       type="multiple"
       value={openSections}
       onValueChange={setOpenSections}
-      className="w-full overflow-hidden"
+      className="w-full overflow-auto"
     >
       <AccordionItem value="task">
         <AccordionTrigger className="py-1.5 px-3 text-xs hover:no-underline">

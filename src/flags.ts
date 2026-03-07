@@ -46,4 +46,12 @@ export const ExistingFlags: ConfigFlags = {
     default: false,
     category: "setting",
   },
+
+  ["snap-properties-to-node"]: {
+    name: "Position Properties near selected node",
+    description:
+      "When enabled, the floating Properties window is automatically positioned next to the selected node.",
+    default: false,
+    category: "setting",
+  },
 };
