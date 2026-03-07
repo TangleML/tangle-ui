@@ -115,12 +115,20 @@ interface ConnectionInfo {
 export function getNodeTypeFromId(
   nodeId: string,
 ): "input" | "output" | "task" | null {
+  // todo: introduce better handling of node types, remove if statements, make it SOLID
   if (nodeId.startsWith("input_")) return "input";
   if (nodeId.startsWith("output_")) return "output";
   if (nodeId.startsWith("task_")) return "task";
   return null;
 }
 
+/**
+ * Find an entity by its id.
+ *
+ * @param spec
+ * @param entityId
+ * @returns
+ */
 export function findEntityById(
   spec: ComponentSpec,
   entityId: string,

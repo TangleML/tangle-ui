@@ -11,6 +11,7 @@ import { useEffect } from "react";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
 import type { IdGenerator } from "@/models/componentSpec";
 import type { ComponentSpec } from "@/models/componentSpec";
@@ -108,6 +109,17 @@ interface PipelineEditorProps {
   pipelineName: string;
 }
 
+const PipelineEditorSkeleton = () => {
+  return (
+    <BlockStack fill>
+      <InlineStack gap="2">
+        <Spinner />
+        <Text>Loading pipeline... </Text>
+      </InlineStack>
+    </BlockStack>
+  );
+};
+
 const PipelineEditor = withSuspenseWrapper(
   observer(({ pipelineName }: PipelineEditorProps) => {
     const { spec: rootSpec, restoredUndoStore } = useLoadSpec(pipelineName);
@@ -155,6 +167,7 @@ const PipelineEditor = withSuspenseWrapper(
       </SpecProvider>
     );
   }),
+  PipelineEditorSkeleton,
 );
 
 function EmptyEditorState() {
