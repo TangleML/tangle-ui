@@ -28,7 +28,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
-import { EditorMenuBar } from "@/routes/EditorV2/components/EditorMenuBar";
+import { EditorMenuBar } from "@/routes/EditorV2/components/EditorMenuBar/EditorMenuBar";
 import { APP_ROUTES } from "@/routes/router";
 import { DOCUMENTATION_URL, TOP_NAV_HEIGHT } from "@/utils/constants";
 

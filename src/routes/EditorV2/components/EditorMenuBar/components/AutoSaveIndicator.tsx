@@ -12,7 +12,7 @@ import {
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 
-import { autoSaveStore } from "../store/autoSaveStore";
+import { autoSaveStore } from "../../../store/autoSaveStore";
 
 function getTooltipText(isSaving: boolean, lastSavedAt: Date | null): string {
   if (isSaving) return "Saving...";

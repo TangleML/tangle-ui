@@ -13,11 +13,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Text } from "@/components/ui/typography";
 import type { TypeSpecType } from "@/models/componentSpec/entities/types";
 
-import { useSpec } from "../providers/SpecContext";
-import { updatePipelineDescription } from "../store/actions";
-import { RenamePipelineButton } from "./RenamePipelineButton";
-import { ValidationSummary } from "./ValidationSummary";
-import { ViewYamlButton } from "./ViewYamlButton";
+import { useSpec } from "../../providers/SpecContext";
+import { updatePipelineDescription } from "../../store/actions";
+import { ValidationSummary } from "../ValidationSummary";
+import { RenamePipelineButton } from "./components/RenamePipelineButton";
+import { ViewYamlButton } from "./components/ViewYamlButton";
 
 const EXCLUDED_ANNOTATIONS = ["notes", "flex-nodes"];
 

@@ -4,12 +4,12 @@ import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 
-import { useSpec } from "../providers/SpecContext";
-import { editorStore } from "../store/editorStore";
-import { InputDetails } from "./InputDetails";
-import { MultiSelectionDetails } from "./MultiSelectionDetails";
-import { OutputDetails } from "./OutputDetails";
-import { TaskDetails } from "./TaskDetails";
+import { useSpec } from "../../providers/SpecContext";
+import { editorStore } from "../../store/editorStore";
+import { InputDetails } from "./components/InputDetails";
+import { MultiSelectionDetails } from "./components/MultiSelectionDetails/MultiSelectionDetails";
+import { OutputDetails } from "./components/OutputDetails";
+import { TaskDetails } from "./components/TaskDetails/TaskDetails";
 
 /**
  * Content for the Context Panel window.

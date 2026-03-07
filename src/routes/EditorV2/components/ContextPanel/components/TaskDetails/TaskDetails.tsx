@@ -14,12 +14,12 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import type { ComponentSpecJson } from "@/models/componentSpec";
 
-import { useSpec } from "../providers/SpecContext";
-import { renameTask } from "../store/actions";
-import { editorStore } from "../store/editorStore";
-import { ConfigurationSection } from "./ConfigurationSection";
-import { TaskAnnotationsEditor } from "./TaskAnnotationsEditor";
-import { TaskArgumentsEditor } from "./TaskArgumentsEditor";
+import { useSpec } from "../../../../providers/SpecContext";
+import { renameTask } from "../../../../store/actions";
+import { editorStore } from "../../../../store/editorStore";
+import { ConfigurationSection } from "./components/ConfigurationSection";
+import { TaskAnnotationsEditor } from "./components/TaskAnnotationsEditor";
+import { TaskArgumentsEditor } from "./components/TaskArgumentsEditor";
 
 interface TaskDetailsProps {
   entityId: string;

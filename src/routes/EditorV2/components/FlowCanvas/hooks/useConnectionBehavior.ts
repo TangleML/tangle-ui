@@ -15,7 +15,7 @@ import {
   GHOST_NODE_ID,
   GHOST_OFFSET_X,
   GHOST_OFFSET_Y,
-} from "../../GhostNode";
+} from "../GhostNode";
 
 export function useConnectionBehavior(
   spec: ComponentSpec | null,
