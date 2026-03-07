@@ -33,6 +33,7 @@ import { DebugPanel } from "./components/DebugPanel";
 import { FlowCanvas } from "./components/FlowCanvas/FlowCanvas";
 import { useComponentLibraryWindow } from "./hooks/useComponentLibraryWindow";
 import { useDockAreaAccordion } from "./hooks/useDockAreaAccordion";
+import { useFocusMode } from "./hooks/useFocusMode";
 import { useHistoryWindow } from "./hooks/useHistoryWindow";
 import { useLinkedWindowCleanup } from "./hooks/useLinkedWindowCleanup";
 import { usePipelineDetailsWindow } from "./hooks/usePipelineDetailsWindow";
@@ -43,6 +44,7 @@ import { useSpecLifecycle } from "./hooks/useSpecLifecycle";
 import { useUndoRedoKeyboard } from "./hooks/useUndoRedoKeyboard";
 import { useWindowPersistence } from "./hooks/useWindowPersistence";
 import { SpecProvider } from "./providers/SpecContext";
+import { useEditorShortcuts } from "./shortcuts/useEditorShortcuts";
 import {
   navigationStore,
   setRequestedPipelineName,
@@ -121,6 +123,8 @@ const PipelineEditor = withSuspenseWrapper(
     usePipelineTreeWindow();
     useHistoryWindow();
     useUndoRedoKeyboard();
+    useFocusMode();
+    useEditorShortcuts();
 
     const activeSpec = navigationStore.activeSpec;
 
