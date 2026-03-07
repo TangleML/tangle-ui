@@ -1,34 +1,35 @@
 import { useEffect } from "react";
 
+import { registerShortcut } from "../shortcuts/keyboardShortcuts";
 import { undoStore } from "../store/undoStore";
 
-function isEditableTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  return (
-    target.tagName === "INPUT" ||
-    target.tagName === "TEXTAREA" ||
-    target.isContentEditable
-  );
-}
-
-export function useUndoRedoKeyboard() {
+export function useUndoRedoKeyboard(): void {
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key === "z") {
-        if (isEditableTarget(event.target)) return;
-        event.preventDefault();
-        if (event.shiftKey) undoStore.redo();
-        else undoStore.undo();
-      }
+    const unregisterUndo = registerShortcut({
+      id: "undo",
+      keys: { mod: true, key: "z" },
+      label: "Undo",
+      action: () => undoStore.undo(),
+    });
 
-      if ((event.metaKey || event.ctrlKey) && event.key === "y") {
-        if (isEditableTarget(event.target)) return;
-        event.preventDefault();
-        undoStore.redo();
-      }
+    const unregisterRedo = registerShortcut({
+      id: "redo",
+      keys: { mod: true, shift: true, key: "z" },
+      label: "Redo",
+      action: () => undoStore.redo(),
+    });
+
+    const unregisterRedoY = registerShortcut({
+      id: "redo-y",
+      keys: { mod: true, key: "y" },
+      label: "Redo",
+      action: () => undoStore.redo(),
+    });
+
+    return () => {
+      unregisterUndo();
+      unregisterRedo();
+      unregisterRedoY();
     };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 }
