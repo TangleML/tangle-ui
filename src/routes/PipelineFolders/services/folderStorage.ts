@@ -16,10 +16,12 @@ const PipelineFoldersDB = new Dexie("oasis-app") as Dexie & {
   >;
 };
 
-PipelineFoldersDB.version(2).stores({
+PipelineFoldersDB.version(5).stores({
   component_libraries: "id, &name",
   pipeline_folders: "id, parentId",
   pipeline_folder_assignments: "pipelineName, folderId",
+  connected_folders: "id, parentId",
+  file_handle_associations: "pipelineName",
 });
 
 export async function getChildFolders(
@@ -156,6 +158,8 @@ export async function moveFolder(
   id: string,
   newParentId: string | null,
 ): Promise<void> {
+  if (id === newParentId) return;
+
   await PipelineFoldersDB.pipeline_folders.update(id, {
     parentId: newParentId,
   });

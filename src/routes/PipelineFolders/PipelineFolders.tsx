@@ -5,10 +5,11 @@ import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Skeleton } from "@/components/ui/skeleton";
 
+import { ConnectFolderButton } from "./components/ConnectFolderButton";
 import { CreateFolderDialog } from "./components/CreateFolderDialog";
 import { FolderBreadcrumb } from "./components/FolderBreadcrumb";
 import { FolderGrid } from "./components/FolderGrid";
-import { FolderPipelineTable } from "./components/FolderPipelineTable";
+import { FolderPipelineTable } from "./components/FolderPipelineTable/FolderPipelineTable";
 import { FolderNavigationContext } from "./context/FolderNavigationContext";
 
 const PipelineFoldersSkeleton = () => (
@@ -58,7 +59,10 @@ export const PipelineFolders = withSuspenseWrapper(
           className="w-full"
         >
           <FolderBreadcrumb folderId={currentFolderId} />
-          <CreateFolderDialog parentId={currentFolderId} />
+          <InlineStack gap="2">
+            <ConnectFolderButton />
+            <CreateFolderDialog parentId={currentFolderId} />
+          </InlineStack>
         </InlineStack>
 
         <FolderPipelineTable folderId={currentFolderId} />

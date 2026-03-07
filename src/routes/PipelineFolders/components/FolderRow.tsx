@@ -1,5 +1,11 @@
 import { useNavigate } from "@tanstack/react-router";
-import { type DragEvent, type MouseEvent, useRef, useState } from "react";
+import {
+  type DragEvent,
+  type MouseEvent,
+  type ReactNode,
+  useRef,
+  useState,
+} from "react";
 
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
 import { Button } from "@/components/ui/button";
@@ -38,6 +44,9 @@ interface FolderRowProps {
   isDragging?: boolean;
   dragItemCount?: number;
   onDragStateChange?: (isDragging: boolean) => void;
+  icon?: ReactNode;
+  extraMenuItems?: ReactNode;
+  hideDefaultMenuItems?: boolean;
 }
 
 export function FolderRow({
@@ -49,6 +58,9 @@ export function FolderRow({
   isDragging,
   dragItemCount,
   onDragStateChange,
+  icon,
+  extraMenuItems,
+  hideDefaultMenuItems = false,
 }: FolderRowProps) {
   const navigate = useNavigate();
   const deleteFolder = useDeleteFolder();
@@ -168,12 +180,14 @@ export function FolderRow({
             className={dragData ? "cursor-grab" : undefined}
           >
             <InlineStack gap="2" blockAlign="center">
-              <Icon
-                name="Folder"
-                fill="currentColor"
-                size="lg"
-                className="text-muted-foreground shrink-0"
-              />
+              {icon ?? (
+                <Icon
+                  name="Folder"
+                  fill="currentColor"
+                  size="lg"
+                  className="text-muted-foreground shrink-0"
+                />
+              )}
               <Paragraph weight="semibold">{folder.name}</Paragraph>
             </InlineStack>
           </div>
@@ -204,47 +218,54 @@ export function FolderRow({
               align="end"
               onClick={(e) => e.stopPropagation()}
             >
-              <DropdownMenuItem
-                onSelect={() => toggleFavorite.mutate(folder.id)}
-              >
-                <Icon
-                  name="Star"
-                  className={cn(
-                    "mr-2 size-4",
-                    folder.favorite && "fill-yellow-400 text-yellow-400",
-                  )}
-                />
-                {folder.favorite ? "Unfavorite" : "Favorite"}
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setRenameOpen(true)}>
-                <Icon name="Pencil" className="mr-2 size-4" />
-                Rename
-              </DropdownMenuItem>
-              <ConfirmationDialog
-                trigger={
+              {!hideDefaultMenuItems && (
+                <>
                   <DropdownMenuItem
-                    onSelect={(e) => e.preventDefault()}
-                    className="text-destructive focus:text-destructive"
+                    onSelect={() => toggleFavorite.mutate(folder.id)}
                   >
-                    <Icon name="Trash" className="mr-2 size-4" />
-                    Delete
+                    <Icon
+                      name="Star"
+                      className={cn(
+                        "mr-2 size-4",
+                        folder.favorite && "fill-yellow-400 text-yellow-400",
+                      )}
+                    />
+                    {folder.favorite ? "Unfavorite" : "Favorite"}
                   </DropdownMenuItem>
-                }
-                title={`Delete folder "${folder.name}"?`}
-                description="All pipelines inside this folder will be moved back to the root. Subfolders will be deleted. This action cannot be undone."
-                onConfirm={handleDelete}
-              />
+                  <DropdownMenuItem onSelect={() => setRenameOpen(true)}>
+                    <Icon name="Pencil" className="mr-2 size-4" />
+                    Rename
+                  </DropdownMenuItem>
+                  <ConfirmationDialog
+                    trigger={
+                      <DropdownMenuItem
+                        onSelect={(e) => e.preventDefault()}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Icon name="Trash" className="mr-2 size-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    }
+                    title={`Delete folder "${folder.name}"?`}
+                    description="All pipelines inside this folder will be moved back to the root. Subfolders will be deleted. This action cannot be undone."
+                    onConfirm={handleDelete}
+                  />
+                </>
+              )}
+              {extraMenuItems}
             </DropdownMenuContent>
           </DropdownMenu>
         </TableCell>
       </TableRow>
 
-      <RenameFolderDialog
-        open={renameOpen}
-        onOpenChange={setRenameOpen}
-        currentName={folder.name}
-        onRename={handleRename}
-      />
+      {!hideDefaultMenuItems && (
+        <RenameFolderDialog
+          open={renameOpen}
+          onOpenChange={setRenameOpen}
+          currentName={folder.name}
+          onRename={handleRename}
+        />
+      )}
     </>
   );
 }

@@ -2,6 +2,7 @@ import { action, makeObservable, observable, reaction } from "mobx";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 import { collectIdStack, JsonSerializer } from "@/models/componentSpec";
+import { writeToFileHandle } from "@/services/fileHandleRegistry";
 import { saveUndoHistory } from "@/services/undoHistoryStorage";
 import { writeComponentToFileListFromText } from "@/utils/componentStore";
 import {
@@ -24,6 +25,7 @@ class AutoSaveStore {
   private pipelineName: string | null = null;
   private serializer = new JsonSerializer();
   private disposeReaction: (() => void) | null = null;
+  // todo: replace with debounce() helper
   private debounceTimeout: ReturnType<typeof setTimeout> | null = null;
   private savedMessageTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -117,6 +119,9 @@ class AutoSaveStore {
           USER_PIPELINES_LIST_NAME,
           this.pipelineName!,
           yamlText,
+        );
+        await writeToFileHandle(this.pipelineName!, yamlText).catch((err) =>
+          console.warn("File system write-back failed:", err),
         );
         await this.persistUndoHistory();
         this.setSaved(new Date());
