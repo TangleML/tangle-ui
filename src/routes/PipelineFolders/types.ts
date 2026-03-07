@@ -11,6 +11,27 @@ export interface PipelineFolderAssignment {
   folderId: string;
 }
 
+export interface ConnectedFolderRecord {
+  id: string;
+  name: string;
+  handle: FileSystemDirectoryHandle;
+  connectedAt: number;
+  parentId: string | null;
+}
+
+export type DragItem = {
+  type: "pipeline" | "folder" | "connected-folder";
+  id: string;
+};
+
+export const ConnectedFoldersQueryKeys = {
+  All: () => ["connected-folders"] as const,
+  Children: (parentId: string | null) =>
+    ["connected-folders", "children", parentId] as const,
+  Files: (folderId: string) =>
+    ["connected-folders", "files", folderId] as const,
+} as const;
+
 export const FoldersQueryKeys = {
   All: () => ["pipeline-folders"] as const,
   Children: (parentId: string | null) =>

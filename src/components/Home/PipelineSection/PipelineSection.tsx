@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import NewPipelineButton from "@/components/shared/NewPipelineButton";
+import { PaginationControls } from "@/components/shared/PaginationControls";
 import QuickStartCards from "@/components/shared/QuickStart/QuickStartCards";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -20,6 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Paragraph, Text } from "@/components/ui/typography";
+import { usePagination } from "@/hooks/usePagination";
 import { QUICK_START_PATH } from "@/routes/router";
 import {
   type ComponentFileEntry,
@@ -33,36 +35,6 @@ import PipelineRow from "./PipelineRow";
 import { usePipelineFilters } from "./usePipelineFilters";
 
 const DEFAULT_PAGE_SIZE = 10;
-
-function usePagination<T>(
-  items: T[],
-  pageSize = DEFAULT_PAGE_SIZE,
-  resetKey = "",
-) {
-  const [currentPage, setCurrentPage] = useState(1);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [resetKey]);
-
-  const totalPages = Math.ceil(items.length / pageSize);
-  const safePage = Math.min(currentPage, totalPages || 1);
-  const paginatedItems = items.slice(
-    (safePage - 1) * pageSize,
-    safePage * pageSize,
-  );
-
-  return {
-    paginatedItems,
-    currentPage: safePage,
-    totalPages,
-    hasNextPage: safePage < totalPages,
-    hasPreviousPage: safePage > 1,
-    goToNextPage: () => setCurrentPage((p) => Math.min(totalPages, p + 1)),
-    goToPreviousPage: () => setCurrentPage((p) => Math.max(1, p - 1)),
-    resetPage: () => setCurrentPage(1),
-  };
-}
 
 type Pipelines = Map<string, ComponentFileEntry>;
 
@@ -230,38 +202,15 @@ export const PipelineSection = withSuspenseWrapper(
           </TableBody>
         </Table>
 
-        {totalPages > 1 && (
-          <InlineStack gap="2" align="space-between" blockAlign="center">
-            <InlineStack gap="2" blockAlign="center">
-              <Button
-                variant="outline"
-                onClick={resetPage}
-                disabled={currentPage === 1}
-              >
-                <Icon name="ChevronFirst" />
-              </Button>
-              <Button
-                variant="outline"
-                onClick={goToPreviousPage}
-                disabled={!hasPreviousPage}
-              >
-                <Icon name="ChevronLeft" />
-                Previous
-              </Button>
-            </InlineStack>
-            <Text size="sm" tone="subdued">
-              Page {currentPage} of {totalPages}
-            </Text>
-            <Button
-              variant="outline"
-              onClick={goToNextPage}
-              disabled={!hasNextPage}
-            >
-              Next
-              <Icon name="ChevronRight" />
-            </Button>
-          </InlineStack>
-        )}
+        <PaginationControls
+          currentPage={currentPage}
+          totalPages={totalPages}
+          hasNextPage={hasNextPage}
+          hasPreviousPage={hasPreviousPage}
+          onNextPage={goToNextPage}
+          onPreviousPage={goToPreviousPage}
+          onReset={resetPage}
+        />
 
         <Button onClick={fetchUserPipelines} className="mt-6 max-w-96">
           Refresh
