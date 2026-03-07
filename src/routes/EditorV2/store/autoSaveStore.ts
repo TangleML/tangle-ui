@@ -89,11 +89,7 @@ class AutoSaveStore {
   private serializeSpec(): string | null {
     if (!this.spec) return null;
     try {
-      return componentSpecToText(
-        this.serializer.serialize(this.spec) as Parameters<
-          typeof componentSpecToText
-        >[0],
-      );
+      return componentSpecToText(this.serializer.serialize(this.spec));
     } catch {
       return null;
     }
@@ -109,7 +105,8 @@ class AutoSaveStore {
   }
 
   private async performSave(yamlText: string) {
-    if (!this.pipelineName) return;
+    const pipelineName = this.pipelineName;
+    if (!pipelineName) return;
 
     this.setSaving(true);
 
@@ -117,10 +114,10 @@ class AutoSaveStore {
       try {
         await writeComponentToFileListFromText(
           USER_PIPELINES_LIST_NAME,
-          this.pipelineName!,
+          pipelineName,
           yamlText,
         );
-        await writeToFileHandle(this.pipelineName!, yamlText).catch((err) =>
+        await writeToFileHandle(pipelineName, yamlText).catch((err) =>
           console.warn("File system write-back failed:", err),
         );
         await this.persistUndoHistory();

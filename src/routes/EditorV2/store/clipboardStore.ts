@@ -10,7 +10,7 @@ import {
   nodeCloneRegistry,
   type NodeSnapshot,
 } from "./nodeCloneHandlers";
-import { undoStore } from "./undoStore";
+import { withUndoGroup } from "./undoStore";
 
 const PASTE_OFFSET = 50;
 const CLIPBOARD_ENVELOPE_TYPE = "tangle-pipeline-nodes";
@@ -129,7 +129,7 @@ class ClipboardStore {
     const newIds: string[] = [];
     const idMap = new Map<string, string>();
 
-    undoStore.undoManager?.withGroup("Duplicate nodes", () => {
+    withUndoGroup("Duplicate nodes", () => {
       for (const snapshot of snapshots) {
         const offsetPosition = {
           x: snapshot.position.x + PASTE_OFFSET,
@@ -176,7 +176,7 @@ function cloneSnapshotsAtPosition(
   const newIds: string[] = [];
   const idMap = new Map<string, string>();
 
-  undoStore.undoManager?.withGroup("Paste nodes", () => {
+  withUndoGroup("Paste nodes", () => {
     for (const snapshot of snapshots) {
       const offsetPosition = {
         x: centerPosition.x + (snapshot.position.x - snapshotCenter.x),

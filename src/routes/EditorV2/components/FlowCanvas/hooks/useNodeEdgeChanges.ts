@@ -10,7 +10,7 @@ import {
   getNodeTypeFromId,
   updateNodePosition,
 } from "../../../store/actions";
-import { undoStore } from "../../../store/undoStore";
+import { withUndoGroup } from "../../../store/undoStore";
 
 export function useNodeEdgeChanges(
   spec: ComponentSpec | null,
@@ -28,7 +28,7 @@ export function useNodeEdgeChanges(
     );
 
     if (positionChanges.length > 0) {
-      undoStore.undoManager?.withGroup("Move nodes", () => {
+      withUndoGroup("Move nodes", () => {
         for (const change of positionChanges) {
           // todo: introduce type guard for change isPositionChange
           if ("id" in change && "position" in change && change.position) {

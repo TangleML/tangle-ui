@@ -1,4 +1,5 @@
 import type { XYPosition } from "@xyflow/react";
+import { computed } from "mobx";
 import { Model, model, modelAction, prop } from "mobx-keystone";
 
 import type { Annotation } from "./entities/types";
@@ -119,6 +120,7 @@ export class Annotations extends Model({
 
   // -- Array-like delegation (backward compat for legacy consumers) --
 
+  @computed
   get length(): number {
     return this.items.length;
   }

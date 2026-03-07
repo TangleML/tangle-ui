@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import { ContextPanelContent } from "../components/ContextPanel/ContextPanel";
 import { PinnedTaskContent } from "../components/PinnedTaskContent";
 import { editorStore } from "../store/editorStore";
+import { navigationStore } from "../store/navigationStore";
 import {
   closeWindow,
   getWindowById,
@@ -21,7 +22,7 @@ function generatePinnedWindowId(): string {
 }
 
 function getTaskNameByEntityId(entityId: string): string | null {
-  const spec = editorStore.spec;
+  const spec = navigationStore.rootSpec;
   if (!spec) return null;
   const task = spec.tasks.find((t) => t.$id === entityId);
   return task?.name ?? null;

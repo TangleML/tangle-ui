@@ -6,8 +6,7 @@ import { useEffect, useRef } from "react";
 import type { ComponentSpec } from "@/models/componentSpec";
 
 import { autoSaveStore } from "../store/autoSaveStore";
-import { clearSpec, editorStore, initializeStore } from "../store/editorStore";
-import { historyStore } from "../store/historyStore";
+import { editorStore, resetEditorState } from "../store/editorStore";
 import { clearNavigation, initNavigation } from "../store/navigationStore";
 import { undoStore } from "../store/undoStore";
 import { closeWindowsByLinkedEntity } from "../windows/windowStore";
@@ -21,7 +20,7 @@ export function useSpecLifecycle(
 
   useEffect(() => {
     if (rootSpec) {
-      initializeStore(rootSpec);
+      resetEditorState();
       initNavigation(rootSpec);
       undoStore.init(rootSpec, restoredUndoStore);
 
@@ -47,10 +46,8 @@ export function useSpecLifecycle(
       return () => {
         disposeTaskWatcher();
         autoSaveStore.dispose();
-        clearSpec();
         editorStore.clearSelection();
         clearNavigation();
-        historyStore.clear();
         undoStore.dispose();
         if (isRootStore(rootSpec)) {
           unregisterRootStore(rootSpec);

@@ -16,6 +16,11 @@ import type {
 import type { IdGenerator } from "@/models/componentSpec/factories/idGenerator";
 
 import type { SelectedNode } from "./editorStore";
+import {
+  generateUniqueInputName,
+  generateUniqueOutputName,
+  generateUniqueTaskName,
+} from "./nameUtils";
 
 // -- Snapshot types --
 
@@ -42,13 +47,31 @@ interface OutputSnapshotData {
   annotations: Annotation[];
 }
 
-export interface NodeSnapshot {
+interface BaseNodeSnapshot {
   entityId: string;
-  type: SelectedNode["type"];
   name: string;
   position: XYPosition;
-  data: TaskSnapshotData | InputSnapshotData | OutputSnapshotData;
 }
+
+export interface TaskNodeSnapshot extends BaseNodeSnapshot {
+  type: "task";
+  data: TaskSnapshotData;
+}
+
+export interface InputNodeSnapshot extends BaseNodeSnapshot {
+  type: "input";
+  data: InputSnapshotData;
+}
+
+export interface OutputNodeSnapshot extends BaseNodeSnapshot {
+  type: "output";
+  data: OutputSnapshotData;
+}
+
+export type NodeSnapshot =
+  | TaskNodeSnapshot
+  | InputNodeSnapshot
+  | OutputNodeSnapshot;
 
 export interface BindingSnapshot {
   sourceEntityId: string;
@@ -105,7 +128,8 @@ class TaskCloneHandler implements NodeCloneHandler {
     idGen: IdGenerator,
     position: XYPosition,
   ): string | null {
-    const data = snapshot.data as TaskSnapshotData;
+    if (snapshot.type !== "task") return null;
+    const { data } = snapshot;
     const uniqueName = generateUniqueTaskName(spec, snapshot.name);
 
     const annotations = Annotations.from([
@@ -161,7 +185,8 @@ class InputCloneHandler implements NodeCloneHandler {
     idGen: IdGenerator,
     position: XYPosition,
   ): string | null {
-    const data = snapshot.data as InputSnapshotData;
+    if (snapshot.type !== "input") return null;
+    const { data } = snapshot;
     const uniqueName = generateUniqueInputName(spec, snapshot.name);
 
     const input = new Input({
@@ -214,7 +239,8 @@ class OutputCloneHandler implements NodeCloneHandler {
     idGen: IdGenerator,
     position: XYPosition,
   ): string | null {
-    const data = snapshot.data as OutputSnapshotData;
+    if (snapshot.type !== "output") return null;
+    const { data } = snapshot;
     const uniqueName = generateUniqueOutputName(spec, snapshot.name);
 
     const output = new Output({
@@ -311,36 +337,3 @@ export const nodeCloneRegistry = new NodeCloneRegistry();
 nodeCloneRegistry.register(new TaskCloneHandler());
 nodeCloneRegistry.register(new InputCloneHandler());
 nodeCloneRegistry.register(new OutputCloneHandler());
-
-// -- Re-exported name generators for use by handlers --
-// These are kept in sync with the ones in actions.ts
-
-function generateUniqueTaskName(spec: ComponentSpec, baseName: string): string {
-  const existingNames = new Set(spec.tasks.map((t) => t.name));
-  if (!existingNames.has(baseName)) return baseName;
-  let counter = 2;
-  while (existingNames.has(`${baseName} ${counter}`)) counter++;
-  return `${baseName} ${counter}`;
-}
-
-function generateUniqueInputName(
-  spec: ComponentSpec,
-  baseName = "Input",
-): string {
-  const existingNames = new Set(spec.inputs.map((i) => i.name));
-  if (!existingNames.has(baseName)) return baseName;
-  let counter = 2;
-  while (existingNames.has(`${baseName} ${counter}`)) counter++;
-  return `${baseName} ${counter}`;
-}
-
-function generateUniqueOutputName(
-  spec: ComponentSpec,
-  baseName = "Output",
-): string {
-  const existingNames = new Set(spec.outputs.map((o) => o.name));
-  if (!existingNames.has(baseName)) return baseName;
-  let counter = 2;
-  while (existingNames.has(`${baseName} ${counter}`)) counter++;
-  return `${baseName} ${counter}`;
-}

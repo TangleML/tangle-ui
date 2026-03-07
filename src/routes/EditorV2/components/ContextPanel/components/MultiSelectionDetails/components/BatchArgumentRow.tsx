@@ -9,7 +9,7 @@ import type { ArgumentType, ComponentSpec } from "@/models/componentSpec";
 import type { DynamicDataArgument } from "@/utils/componentSpec";
 
 import { createInputAndConnect } from "../../../../../store/actions";
-import { undoStore } from "../../../../../store/undoStore";
+import { withUndoGroup } from "../../../../../store/undoStore";
 import { ThunderMenu } from "../../../../ThunderMenu";
 import type { AggregatedArgument } from "../utils";
 
@@ -69,7 +69,7 @@ export const BatchArgumentRow = observer(function BatchArgumentRow({
     if (aggArg.isMixed && trimmed === "") return;
     if (!aggArg.isMixed && trimmed === aggArg.value) return;
 
-    undoStore.undoManager?.withGroup("Batch argument update", () => {
+    withUndoGroup("Batch argument update", () => {
       for (const taskId of aggArg.taskIds) {
         if (trimmed === "") {
           const task = spec.tasks.find((t) => t.$id === taskId);
@@ -83,7 +83,7 @@ export const BatchArgumentRow = observer(function BatchArgumentRow({
 
   const handleResetToDefault = () => {
     const defaultVal = aggArg.defaultValue ?? "";
-    undoStore.undoManager?.withGroup("Batch reset to default", () => {
+    withUndoGroup("Batch reset to default", () => {
       for (const taskId of aggArg.taskIds) {
         spec.setTaskArgument(taskId, aggArg.name, defaultVal);
       }
@@ -92,7 +92,7 @@ export const BatchArgumentRow = observer(function BatchArgumentRow({
   };
 
   const handleUnset = () => {
-    undoStore.undoManager?.withGroup("Batch unset argument", () => {
+    withUndoGroup("Batch unset argument", () => {
       for (const taskId of aggArg.taskIds) {
         const task = spec.tasks.find((t) => t.$id === taskId);
         task?.removeArgumentByName(aggArg.name);
@@ -108,7 +108,7 @@ export const BatchArgumentRow = observer(function BatchArgumentRow({
   const handleSelectDynamicData = (value: DynamicDataArgument) => {
     // Model ArgumentType doesn't include DynamicDataArgument, but it's stored correctly at runtime
     const argValue = value as unknown as ArgumentType;
-    undoStore.undoManager?.withGroup("Batch set dynamic data", () => {
+    withUndoGroup("Batch set dynamic data", () => {
       for (const taskId of aggArg.taskIds) {
         spec.setTaskArgument(taskId, aggArg.name, argValue);
       }
@@ -120,7 +120,7 @@ export const BatchArgumentRow = observer(function BatchArgumentRow({
     sourceEntityId: string,
     sourcePortName: string,
   ) => {
-    undoStore.undoManager?.withGroup("Batch quick connect", () => {
+    withUndoGroup("Batch quick connect", () => {
       for (const taskId of aggArg.taskIds) {
         spec.connectNodes(
           { entityId: sourceEntityId, portName: sourcePortName },

@@ -1,3 +1,4 @@
+import { computed } from "mobx";
 import { idProp, Model, model, modelAction, prop } from "mobx-keystone";
 
 import type { BindingEndpoint } from "./types";
@@ -10,10 +11,12 @@ export class Binding extends Model({
   sourcePortName: prop<string>(),
   targetPortName: prop<string>(),
 }) {
+  @computed
   get source(): BindingEndpoint {
     return { entityId: this.sourceEntityId, portName: this.sourcePortName };
   }
 
+  @computed
   get target(): BindingEndpoint {
     return { entityId: this.targetEntityId, portName: this.targetPortName };
   }
