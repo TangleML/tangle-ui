@@ -1,0 +1,61 @@
+import { LinkBlock } from "@/components/shared/ContextPanel/Blocks/LinkBlock";
+import { TextBlock } from "@/components/shared/ContextPanel/Blocks/TextBlock";
+import { BlockStack } from "@/components/ui/layout";
+import { Heading } from "@/components/ui/typography";
+import {
+  type BlockDescriptor,
+  type BlockRegistry,
+  BlockType,
+  type ComposerSchema,
+  type SectionDescriptor,
+} from "@/types/composerSchema";
+
+const defaultRegistry: BlockRegistry = {
+  [BlockType.TextBlock]: TextBlock,
+  [BlockType.LinkBlock]: LinkBlock,
+};
+
+function ComposerBlock({ block }: { block: BlockDescriptor }) {
+  switch (block.blockType) {
+    case BlockType.TextBlock: {
+      const Component = defaultRegistry[BlockType.TextBlock];
+      return <Component {...block.properties} />;
+    }
+    case BlockType.LinkBlock: {
+      const Component = defaultRegistry[BlockType.LinkBlock];
+      return <Component {...block.properties} />;
+    }
+    default:
+      console.warn(
+        `Unknown block type: "${(block as BlockDescriptor).blockType}"`,
+      );
+      return null;
+  }
+}
+
+function ComposerSection({ section }: { section: SectionDescriptor }) {
+  return (
+    <BlockStack gap="3">
+      <Heading level={2}>{section.title}</Heading>
+      <BlockStack gap="2">
+        {section.blocks.map((block) => (
+          <ComposerBlock key={block.id} block={block} />
+        ))}
+      </BlockStack>
+    </BlockStack>
+  );
+}
+
+export function Composer({ schema }: { schema: ComposerSchema }) {
+  if (schema.sections.length === 0) {
+    return null;
+  }
+
+  return (
+    <BlockStack gap="4">
+      {schema.sections.map((section) => (
+        <ComposerSection key={section.id} section={section} />
+      ))}
+    </BlockStack>
+  );
+}
