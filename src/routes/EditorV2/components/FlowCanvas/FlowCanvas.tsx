@@ -31,10 +31,10 @@ import {
   pasteNodes,
 } from "../../store/actions";
 import { clearMultiSelection, editorStore } from "../../store/editorStore";
-import { GhostNode } from "../GhostNode";
-import { IONode } from "../IONode";
-import { SelectionToolbar } from "../SelectionToolbar";
-import { TaskNode } from "../TaskNode";
+import { GhostNode } from "./GhostNode";
+import { IONode } from "./IONode";
+import { SelectionToolbar } from "./SelectionToolbar";
+import { TaskNode } from "./TaskNode/TaskNode";
 import { useClipboardShortcuts } from "./hooks/useClipboardShortcuts";
 import { useConnectionBehavior } from "./hooks/useConnectionBehavior";
 import { useDoubleClickBehavior } from "./hooks/useDoubleClickBehavior";

@@ -6,8 +6,8 @@ import { Label } from "@/components/ui/label";
 import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 
-import { useSpec } from "../providers/SpecContext";
-import { renameOutput } from "../store/actions";
+import { useSpec } from "../../../providers/SpecContext";
+import { renameOutput } from "../../../store/actions";
 
 interface OutputDetailsProps {
   entityId: string;

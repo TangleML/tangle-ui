@@ -7,7 +7,7 @@ import { InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 
-import { clipboardStore } from "../store/clipboardStore";
+import { clipboardStore } from "../../store/clipboardStore";
 
 interface SelectionToolbarProps {
   onDuplicate: () => void;

@@ -14,10 +14,10 @@ import type {
   ValidationIssue,
 } from "@/models/componentSpec";
 
-import { useSpec } from "../providers/SpecContext";
-import { setSelectedValidationIssue } from "../store/editorStore";
-import { navigationStore } from "../store/navigationStore";
-import { ArgumentRow } from "./ArgumentRow";
+import { useSpec } from "../../../providers/SpecContext";
+import { setSelectedValidationIssue } from "../../../store/editorStore";
+import { navigationStore } from "../../../store/navigationStore";
+import { ArgumentRow } from "../../ArgumentRow";
 
 interface ValidationIssueResolutionCardProps {
   issue: ValidationIssue;

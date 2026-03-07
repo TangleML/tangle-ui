@@ -11,16 +11,16 @@ import type {
   TypeSpecType,
 } from "@/models/componentSpec";
 
-import type { TaskNodeData } from "../hooks/useSpecToNodesEdges";
-import { useSpec } from "../providers/SpecContext";
+import type { TaskNodeData } from "../../../hooks/useSpecToNodesEdges";
+import { useSpec } from "../../../providers/SpecContext";
 import {
   editorStore,
   selectNode,
   setFocusedArgument,
-} from "../store/editorStore";
-import { TaskNodeClassic } from "./TaskNodeClassic";
-import { TaskNodeCollapsed } from "./TaskNodeCollapsed";
-import { TaskNodeFull } from "./TaskNodeFull";
+} from "../../../store/editorStore";
+import { TaskNodeClassic } from "./components/TaskNodeClassic";
+import { TaskNodeCollapsed } from "./components/TaskNodeCollapsed";
+import { TaskNodeFull } from "./components/TaskNodeFull";
 
 type TaskNodeType = Node<TaskNodeData, "task">;
 type TaskNodeProps = NodeProps<TaskNodeType>;

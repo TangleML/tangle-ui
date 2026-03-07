@@ -2,7 +2,7 @@ import { ActionButton } from "@/components/shared/Buttons/ActionButton";
 import { PipelineNameDialog } from "@/components/shared/Dialogs";
 import type { ComponentSpec } from "@/models/componentSpec";
 
-import { renamePipeline } from "../store/actions";
+import { renamePipeline } from "../../../store/actions";
 
 interface RenamePipelineButtonProps {
   spec: ComponentSpec;

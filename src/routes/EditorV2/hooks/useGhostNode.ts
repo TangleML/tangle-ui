@@ -7,7 +7,7 @@ import {
   GHOST_HANDLE_ID,
   GHOST_NODE_ID,
   type GhostNodeData,
-} from "../components/GhostNode";
+} from "../components/FlowCanvas/GhostNode";
 
 interface UseGhostNodeParams {
   active: boolean;

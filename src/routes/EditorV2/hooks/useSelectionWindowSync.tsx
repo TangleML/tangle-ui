@@ -1,7 +1,7 @@
 import { reaction } from "mobx";
 import { useEffect } from "react";
 
-import { ContextPanelContent } from "../components/ContextPanel";
+import { ContextPanelContent } from "../components/ContextPanel/ContextPanel";
 import { PinnedTaskContent } from "../components/PinnedTaskContent";
 import { editorStore } from "../store/editorStore";
 import {

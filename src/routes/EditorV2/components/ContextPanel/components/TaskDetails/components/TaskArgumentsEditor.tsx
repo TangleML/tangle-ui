@@ -4,8 +4,8 @@ import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import type { ComponentSpecJson, Task } from "@/models/componentSpec";
 
-import { useSpec } from "../providers/SpecContext";
-import { ArgumentRow } from "./ArgumentRow";
+import { useSpec } from "../../../../../providers/SpecContext";
+import { ArgumentRow } from "../../../../ArgumentRow";
 
 interface TaskArgumentsEditorProps {
   task: Task;

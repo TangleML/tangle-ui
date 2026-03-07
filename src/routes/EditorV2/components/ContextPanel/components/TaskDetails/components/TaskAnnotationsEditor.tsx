@@ -8,7 +8,7 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import type { Annotation } from "@/models/componentSpec";
 
-import { useSpec } from "../providers/SpecContext";
+import { useSpec } from "../../../../../providers/SpecContext";
 
 interface TaskAnnotationsEditorProps {
   entityId: string;
