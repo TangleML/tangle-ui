@@ -41,6 +41,7 @@ export const ArgumentInputDialog = ({
       open={open}
       onCancel={onCancel}
       onConfirm={onConfirm}
+      highlightSyntax
     />
   );
 };
