@@ -6,6 +6,7 @@ import {
   useState,
 } from "react";
 
+import CodeViewer from "@/components/shared/CodeViewer/CodeViewer";
 import { MultilineTextInputDialog } from "@/components/shared/Dialogs/MultilineTextInputDialog";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -74,6 +75,28 @@ export const AnnotationsInput = ({
 
   const handleDialogCancel = useCallback(() => {
     setIsDialogOpen(false);
+  }, []);
+
+  const [isCodeEditorOpen, setIsCodeEditorOpen] = useState(false);
+
+  const handleOpenCodeEditor = useCallback(() => {
+    setIsCodeEditorOpen(true);
+  }, []);
+
+  const handleCodeEditorConfirm = useCallback(
+    (newValue: string) => {
+      setInputValue(newValue);
+      setIsCodeEditorOpen(false);
+      if (onBlur && newValue !== lastSavedValue) {
+        onBlur(newValue);
+        setLastSavedValue(newValue);
+      }
+    },
+    [onBlur, lastSavedValue],
+  );
+
+  const handleCodeEditorCancel = useCallback(() => {
+    setIsCodeEditorOpen(false);
   }, []);
 
   const validateChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
@@ -358,6 +381,15 @@ export const AnnotationsInput = ({
           >
             <Icon name="Maximize2" />
           </Button>
+          <Button
+            className="absolute right-8 top-1/2 -translate-y-1/2 hover:bg-transparent hover:text-blue-500 hidden group-hover:flex h-8 w-8 p-0"
+            onClick={handleOpenCodeEditor}
+            variant="ghost"
+            type="button"
+            title="Code Editor"
+          >
+            <Icon name="Code" />
+          </Button>
         </div>
         {isInvalid && (
           <InlineStack gap="1" className="my-1">
@@ -409,6 +441,15 @@ export const AnnotationsInput = ({
           onConfirm={handleDialogConfirm}
           maxLength={config?.max}
           required={config?.required}
+        />
+      )}
+
+      {isCodeEditorOpen && (
+        <CodeViewer
+          editable
+          code={inputValue}
+          onConfirm={handleCodeEditorConfirm}
+          onCancel={handleCodeEditorCancel}
         />
       )}
     </>

@@ -2,9 +2,26 @@ import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import { FullscreenElement } from "../FullscreenElement";
+import CodeEditor from "./CodeEditor";
 import CodeSyntaxHighlighter from "./CodeSyntaxHighlighter";
+
+const LANGUAGE_OPTIONS = [
+  { value: "plaintext", label: "Plain Text" },
+  { value: "yaml", label: "YAML" },
+  { value: "python", label: "Python" },
+  { value: "javascript", label: "JavaScript" },
+  { value: "json", label: "JSON" },
+  { value: "sql", label: "SQL" },
+];
 
 interface CodeViewerProps {
   code: string;
@@ -12,7 +29,11 @@ interface CodeViewerProps {
   filename?: string;
   fullscreen?: boolean;
   scrollToBottom?: boolean;
+  editable?: boolean;
+  initialLanguage?: string;
   onClose?: () => void;
+  onConfirm?: (value: string) => void;
+  onCancel?: () => void;
 }
 
 const DEFAULT_CODE_VIEWER_HEIGHT = 128;
@@ -23,9 +44,17 @@ const CodeViewer = ({
   filename = "",
   fullscreen = false,
   scrollToBottom = false,
+  editable = false,
+  initialLanguage = "plaintext",
   onClose,
+  onConfirm,
+  onCancel,
 }: CodeViewerProps) => {
-  const [isFullscreen, setIsFullscreen] = useState(fullscreen);
+  const [isFullscreen, setIsFullscreen] = useState(
+    editable ? true : fullscreen,
+  );
+  const [editValue, setEditValue] = useState(code);
+  const [selectedLanguage, setSelectedLanguage] = useState(initialLanguage);
 
   const handleToggleFullscreen = () => {
     if (isFullscreen && onClose) {
@@ -38,7 +67,11 @@ const CodeViewer = ({
   useEffect(() => {
     const handleEscapeKey = (e: KeyboardEvent) => {
       if (isFullscreen && e.key === "Escape") {
-        setIsFullscreen(false);
+        if (editable && onCancel) {
+          onCancel();
+        } else {
+          setIsFullscreen(false);
+        }
         e.preventDefault();
         e.stopPropagation();
       }
@@ -49,29 +82,71 @@ const CodeViewer = ({
     return () => {
       document.removeEventListener("keydown", handleEscapeKey);
     };
-  }, [isFullscreen]);
+  }, [isFullscreen, editable, onCancel]);
 
   return (
     <FullscreenElement fullscreen={isFullscreen}>
       <div className="flex flex-col transition-shadow duration-150 bg-slate-900 h-full rounded-md">
         <div className="flex items-center justify-between gap-2 bg-slate-800 sticky top-0 z-10 rounded-t-md px-3 py-2.5">
-          <div className="flex items-baseline gap-2">
-            <span className="font-semibold text-base text-secondary">
-              {filename}
-            </span>
-            <span className="text-sm text-secondary">(Read Only)</span>
-          </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={handleToggleFullscreen}
-            className="text-gray-200 hover:text-black"
-            title={isFullscreen ? "Exit fullscreen" : "View fullscreen"}
-            aria-label={isFullscreen ? "Exit fullscreen" : "View fullscreen"}
-          >
-            {isFullscreen ? <Icon name="X" /> : <Icon name="Maximize2" />}
-          </Button>
+          {editable ? (
+            <>
+              <Select
+                value={selectedLanguage}
+                onValueChange={setSelectedLanguage}
+              >
+                <SelectTrigger className="w-36 h-7 text-gray-200 border-slate-600 bg-slate-700 hover:bg-slate-600">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="z-2147483647">
+                  {LANGUAGE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={onCancel}
+                  className="text-gray-200 hover:text-black"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => onConfirm?.(editValue)}
+                >
+                  Confirm
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-baseline gap-2">
+                <span className="font-semibold text-base text-secondary">
+                  {filename}
+                </span>
+                <span className="text-sm text-secondary">(Read Only)</span>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={handleToggleFullscreen}
+                className="text-gray-200 hover:text-black"
+                title={isFullscreen ? "Exit fullscreen" : "View fullscreen"}
+                aria-label={
+                  isFullscreen ? "Exit fullscreen" : "View fullscreen"
+                }
+              >
+                {isFullscreen ? <Icon name="X" /> : <Icon name="Maximize2" />}
+              </Button>
+            </>
+          )}
         </div>
         <div className="flex-1 relative">
           <div
@@ -81,11 +156,19 @@ const CodeViewer = ({
               minHeight: DEFAULT_CODE_VIEWER_HEIGHT,
             }}
           >
-            <CodeSyntaxHighlighter
-              code={code}
-              language={language}
-              scrollToBottom={scrollToBottom}
-            />
+            {editable ? (
+              <CodeEditor
+                value={editValue}
+                language={selectedLanguage}
+                onChange={setEditValue}
+              />
+            ) : (
+              <CodeSyntaxHighlighter
+                code={code}
+                language={language}
+                scrollToBottom={scrollToBottom}
+              />
+            )}
           </div>
         </div>
       </div>

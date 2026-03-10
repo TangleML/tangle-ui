@@ -18,6 +18,8 @@ import { checkInputConnectionToRequiredFields } from "@/utils/inputConnectionUti
 import { inputNameToNodeId } from "@/utils/nodes/nodeIdUtils";
 import { updateSubgraphSpec } from "@/utils/subgraphUtils";
 
+import CodeViewer from "@/components/shared/CodeViewer/CodeViewer";
+
 import { IOZIndexEditor } from "../IOZIndexEditor";
 import {
   DescriptionField,
@@ -55,6 +57,7 @@ export const InputValueEditor = ({
   } = useConfirmationDialog();
 
   const [isValueDialogOpen, setIsValueDialogOpen] = useState(false);
+  const [isCodeEditorOpen, setIsCodeEditorOpen] = useState(false);
   const [triggerSave, setTriggerSave] = useState(false);
 
   const defaultInputValue = input.value ?? input.default ?? "";
@@ -241,6 +244,21 @@ export const InputValueEditor = ({
     setTriggerSave(true);
   };
 
+  const handleOpenCodeEditor = () => {
+    if (disabled) return;
+    setIsCodeEditorOpen(true);
+  };
+
+  const handleCodeEditorConfirm = (value: string) => {
+    setInputValue(value);
+    setIsCodeEditorOpen(false);
+    setTriggerSave(true);
+  };
+
+  const handleCodeEditorCancel = () => {
+    setIsCodeEditorOpen(false);
+  };
+
   useEffect(() => {
     setInputValue(initialInputValue);
     setInputName(input.name);
@@ -296,6 +314,11 @@ export const InputValueEditor = ({
             onClick: handleExpandValueEditor,
           },
           {
+            icon: "Code",
+            hidden: disabled,
+            onClick: handleOpenCodeEditor,
+          },
+          {
             icon: "Copy",
             hidden: !disabled && !inputValue,
             onClick: handleCopyValue,
@@ -343,6 +366,15 @@ export const InputValueEditor = ({
         onCancel={handleDialogCancel}
         onConfirm={handleDialogConfirm}
       />
+
+      {isCodeEditorOpen && (
+        <CodeViewer
+          editable
+          code={inputValue}
+          onConfirm={handleCodeEditorConfirm}
+          onCancel={handleCodeEditorCancel}
+        />
+      )}
     </BlockStack>
   );
 };

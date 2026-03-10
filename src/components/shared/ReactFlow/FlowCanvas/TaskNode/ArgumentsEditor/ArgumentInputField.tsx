@@ -35,6 +35,8 @@ import {
   isGraphImplementation,
 } from "@/utils/componentSpec";
 
+import CodeViewer from "@/components/shared/CodeViewer/CodeViewer";
+
 import { ArgumentInputDialog } from "./ArgumentInputDialog";
 import { DynamicDataArgumentInput } from "./DynamicDataArgumentInput";
 import { DynamicDataDropdown } from "./DynamicDataDropdown";
@@ -64,6 +66,7 @@ interface PlainArgumentInputProps {
   onInputChange: (e: ChangeEvent) => void;
   onBlur: () => void;
   onExpand: () => void;
+  onOpenCodeEditor: () => void;
   onCopy: () => void;
   onReset: () => void;
   onRemove: () => void;
@@ -87,6 +90,7 @@ const PlainArgumentInput = ({
   onInputChange,
   onBlur,
   onExpand,
+  onOpenCodeEditor,
   onCopy,
   onReset,
   onRemove,
@@ -153,6 +157,17 @@ const PlainArgumentInput = ({
           data-testid="multiline-editor-button"
         >
           <Icon name="Maximize2" />
+        </TooltipButton>
+        <TooltipButton
+          onClick={onOpenCodeEditor}
+          className={ACTIONS_BASE_CLASS}
+          disabled={disabled}
+          variant="ghost"
+          size="xs"
+          tooltip="Code Editor"
+          data-testid="code-editor-button"
+        >
+          <Icon name="Code" />
         </TooltipButton>
         {!disabledCopy && (
           <TooltipButton
@@ -221,6 +236,7 @@ export const ArgumentInputField = ({
   );
 
   const [isTextareaDialogOpen, setIsTextareaDialogOpen] = useState(false);
+  const [isCodeEditorOpen, setIsCodeEditorOpen] = useState(false);
   const [isSelectSecretDialogOpen, setIsSelectSecretDialogOpen] =
     useState(false);
 
@@ -320,6 +336,24 @@ export const ArgumentInputField = ({
 
   const handleDialogCancel = useCallback(() => {
     setIsTextareaDialogOpen(false);
+  }, []);
+
+  const handleOpenCodeEditor = useCallback(() => {
+    if (disabled) return;
+    setIsCodeEditorOpen(true);
+  }, [disabled]);
+
+  const handleCodeEditorConfirm = useCallback(
+    (value: string) => {
+      setInputValue(value);
+      setIsCodeEditorOpen(false);
+      handleSubmit(value);
+    },
+    [handleSubmit],
+  );
+
+  const handleCodeEditorCancel = useCallback(() => {
+    setIsCodeEditorOpen(false);
   }, []);
 
   const handleOpenSecretDialog = useCallback(() => {
@@ -514,6 +548,7 @@ export const ArgumentInputField = ({
               onInputChange={handleInputChange}
               onBlur={handleBlur}
               onExpand={handleExpand}
+              onOpenCodeEditor={handleOpenCodeEditor}
               onCopy={handleCopy}
               onReset={handleReset}
               onRemove={handleRemove}
@@ -538,6 +573,15 @@ export const ArgumentInputField = ({
         onOpenChange={setIsSelectSecretDialogOpen}
         onSelect={handleSecretSelect}
       />
+
+      {isCodeEditorOpen && (
+        <CodeViewer
+          editable
+          code={inputValue}
+          onConfirm={handleCodeEditorConfirm}
+          onCancel={handleCodeEditorCancel}
+        />
+      )}
     </>
   );
 };
