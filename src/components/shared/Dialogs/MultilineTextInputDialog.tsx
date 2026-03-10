@@ -1,4 +1,4 @@
-import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -19,17 +19,13 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Paragraph } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
+import {
+  detectLanguage,
+  isLanguageOption,
+  LANGUAGE_OPTIONS,
+} from "@/utils/detectLanguage";
 
 import CodeEditor from "../CodeViewer/CodeEditor";
-
-const LANGUAGE_OPTIONS = [
-  { value: "plaintext", label: "Plain Text" },
-  { value: "yaml", label: "YAML" },
-  { value: "python", label: "Python" },
-  { value: "javascript", label: "JavaScript" },
-  { value: "json", label: "JSON" },
-  { value: "sql", label: "SQL" },
-];
 
 interface MultilineTextInputDialogProps {
   title: ReactNode;
@@ -57,34 +53,39 @@ export const MultilineTextInputDialog = ({
   onConfirm,
 }: MultilineTextInputDialogProps) => {
   const [value, setValue] = useState(initialValue);
-  const [selectedLanguage, setSelectedLanguage] = useState("plaintext");
+  const [selectedLanguage, setSelectedLanguage] = useState(() =>
+    detectLanguage(initialValue),
+  );
 
-  const handleConfirm = useCallback(() => {
+  const handleConfirm = () => {
     onConfirm(value);
-  }, [value, onConfirm]);
+  };
 
-  const handleCancel = useCallback(() => {
+  const handleCancel = () => {
     setValue(initialValue);
     onCancel();
-  }, [initialValue, onCancel]);
+  };
 
-  const setCursorToEnd = useCallback(
-    (ref: HTMLTextAreaElement | null) => {
-      if (ref && open) {
-        ref.focus();
-        ref.setSelectionRange(ref.value.length, ref.value.length);
-      }
-    },
-    [open],
-  );
+  const handleSelectValueChange = (v: string) => {
+    if (isLanguageOption(v)) {
+      setSelectedLanguage(v);
+    }
+  };
+
+  const setCursorToEnd = (ref: HTMLTextAreaElement | null) => {
+    if (ref && open) {
+      ref.focus();
+      ref.setSelectionRange(ref.value.length, ref.value.length);
+    }
+  };
 
   useEffect(() => {
     setValue(initialValue);
   }, [initialValue]);
 
   useEffect(() => {
-    setSelectedLanguage("plaintext");
-  }, [highlightSyntax]);
+    setSelectedLanguage(detectLanguage(initialValue));
+  }, [initialValue]);
 
   return (
     <Dialog open={open} onOpenChange={onCancel}>
@@ -97,7 +98,7 @@ export const MultilineTextInputDialog = ({
           {highlightSyntax && (
             <Select
               value={selectedLanguage}
-              onValueChange={setSelectedLanguage}
+              onValueChange={handleSelectValueChange}
             >
               <SelectTrigger className="w-40">
                 <SelectValue />
