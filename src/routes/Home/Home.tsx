@@ -2,14 +2,11 @@ import { useRef, useState } from "react";
 
 import { PipelineSection, RunSection } from "@/components/Home";
 import { AnnouncementBanners } from "@/components/shared/AnnouncementBanners";
-import { BetaFeatureWrapper } from "@/components/shared/BetaFeatureWrapper/BetaFeatureWrapper";
 import { PipelineRunFiltersBar } from "@/components/shared/PipelineRunFiltersBar/PipelineRunFiltersBar";
-import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Home = () => {
   const [activeTab, setActiveTab] = useState("runs");
-  const isFiltersBarEnabled = useFlagValue("pipeline-run-filters-bar");
 
   const handleTabSelect = (value: string) => {
     setActiveTab(value);
@@ -43,15 +40,8 @@ const Home = () => {
           <PipelineSection />
         </TabsContent>
         <TabsContent value="runs" className="flex flex-col gap-4">
-          {isFiltersBarEnabled && (
-            <BetaFeatureWrapper flagKey="pipeline-run-filters-bar">
-              <PipelineRunFiltersBar />
-            </BetaFeatureWrapper>
-          )}
-          <RunSection
-            onEmptyList={handlePipelineRunsEmpty}
-            hideFilters={isFiltersBarEnabled}
-          />
+          <PipelineRunFiltersBar />
+          <RunSection onEmptyList={handlePipelineRunsEmpty} hideFilters />
         </TabsContent>
       </Tabs>
     </div>

@@ -5,7 +5,8 @@
     "src/api/**",
     "src/components/ui/**",
     "openapi-ts.config.ts",
-    "src/config/announcements.ts"
+    "src/config/announcements.ts",
+    "src/components/shared/BetaFeatureWrapper/BetaFeatureWrapper.tsx"
   ],
   "ignoreDependencies": [
     "@radix-ui/react-accordion",

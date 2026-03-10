@@ -9,12 +9,6 @@ import { isValidExecutionStatus } from "@/utils/executionStatus";
 const VALID_SORT_FIELDS = new Set<string>(["created_at", "pipeline_name"]);
 const VALID_SORT_DIRECTIONS = new Set<string>(["asc", "desc"]);
 
-/**
- * List of filter keys that the API currently supports.
- * Add keys here as the backend adds support for more filters.
- */
-const SUPPORTED_API_FILTERS: (keyof PipelineRunFilters)[] = ["created_by"];
-
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -84,27 +78,86 @@ export function validateFilters(parsed: unknown): PipelineRunFilters {
   return filters;
 }
 
+/** Predicate types for the filter_query JSON format */
+type FilterQueryPredicate =
+  | { key_exists: { key: string } }
+  | { value_equals: { key: string; value: string } }
+  | { value_contains: { key: string; value_substring: string } }
+  | { value_in: { key: string; values: string[] } }
+  | { not: FilterQueryPredicate }
+  | {
+      time_range: {
+        key: string;
+        start_time?: string;
+        end_time?: string;
+      };
+    };
+
+interface FilterQuery {
+  and: FilterQueryPredicate[];
+}
+
 /**
- * Converts PipelineRunFilters to the API's key:value string format.
- * Only includes filters that the API actually supports.
+ * Converts PipelineRunFilters to the backend's filter_query JSON format.
+ * This sends all supported filters server-side (created_by, pipeline_name,
+ * date range, annotations). Status filtering remains client-side since
+ * execution stats are computed separately.
  *
- * @example
- * // Input: { created_by: "me", status: "FAILED", annotations: [...] }
- * // Output: "created_by:me" (status and annotations are stripped as unsupported)
+ * @returns JSON string for the filter_query param, or undefined if no filters apply.
  */
-export function filtersToApiString(
+export function filtersToFilterQuery(
   filters: PipelineRunFilters,
 ): string | undefined {
-  const parts: string[] = [];
+  const predicates: FilterQueryPredicate[] = [];
 
-  for (const key of SUPPORTED_API_FILTERS) {
-    const value = filters[key];
-    if (value) {
-      parts.push(`${key}:${value}`);
+  if (filters.created_by) {
+    predicates.push({
+      value_equals: {
+        key: "system/pipeline_run.created_by",
+        value: filters.created_by,
+      },
+    });
+  }
+
+  if (filters.pipeline_name) {
+    predicates.push({
+      value_contains: {
+        key: "system/pipeline_run.name",
+        value_substring: filters.pipeline_name,
+      },
+    });
+  }
+
+  if (filters.created_after || filters.created_before) {
+    const timeRange: FilterQueryPredicate = {
+      time_range: {
+        key: "system/pipeline_run.date.created_at",
+        ...(filters.created_after && { start_time: filters.created_after }),
+        ...(filters.created_before && { end_time: filters.created_before }),
+      },
+    };
+    predicates.push(timeRange);
+  }
+
+  if (filters.annotations) {
+    for (const annotation of filters.annotations) {
+      if (annotation.value) {
+        predicates.push({
+          value_contains: {
+            key: annotation.key,
+            value_substring: annotation.value,
+          },
+        });
+      } else {
+        predicates.push({ key_exists: { key: annotation.key } });
+      }
     }
   }
 
-  return parts.length > 0 ? parts.join(",") : undefined;
+  if (predicates.length === 0) return undefined;
+
+  const query: FilterQuery = { and: predicates };
+  return JSON.stringify(query);
 }
 
 /**
