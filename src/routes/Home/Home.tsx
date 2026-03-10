@@ -27,7 +27,7 @@ const Home = () => {
     <div className="container mx-auto w-3/4 p-4 flex flex-col gap-4">
       <AnnouncementBanners />
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Pipelines</h1>
+        <h1 className="text-2xl font-bold">Top-hatted Pipelines</h1>
       </div>
       <Tabs
         defaultValue="runs"
