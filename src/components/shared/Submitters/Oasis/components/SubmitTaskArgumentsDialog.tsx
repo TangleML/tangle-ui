@@ -13,6 +13,7 @@ import {
   createSecretArgument,
   extractSecretName,
 } from "@/components/shared/SecretsManagement/types";
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -58,10 +59,8 @@ import {
   type InputSpec,
   isSecretArgument,
 } from "@/utils/componentSpec";
-import {
-  getFileExtension,
-  mapCsvToArguments,
-} from "@/utils/csvBulkArgumentImport";
+import { mapCsvToArguments } from "@/utils/csvBulkArgumentImport";
+import { getFileExtension } from "@/utils/fileImportCommon";
 import { mapJsonToArguments } from "@/utils/jsonBulkArgumentImport";
 import { extractTaskArguments } from "@/utils/nodes/taskArguments";
 import { pluralize } from "@/utils/string";
@@ -96,6 +95,7 @@ export const SubmitTaskArgumentsDialog = ({
   onImportComplete,
 }: SubmitTaskArgumentsDialogProps) => {
   const notify = useToastNotification();
+  const isBulkUploadEnabled = useFlagValue("bulk-argument-upload");
   const initialArgs = getArgumentsFromInputs(componentSpec);
 
   const [runNotes, setRunNotes] = useState<string>("");
@@ -259,13 +259,17 @@ export const SubmitTaskArgumentsDialog = ({
                 Customize the pipeline input values before submitting.
               </Paragraph>
               <InlineStack align="end" gap="1" className="w-full">
-                <DownloadTemplateButton
-                  inputs={inputs}
-                  taskArguments={taskArguments}
-                  bulkInputNames={bulkInputNames}
-                  pipelineName={componentSpec.name}
-                />
-                <ImportFileButton onImport={handleFileImport} />
+                {isBulkUploadEnabled && (
+                  <DownloadTemplateButton
+                    inputs={inputs}
+                    taskArguments={taskArguments}
+                    bulkInputNames={bulkInputNames}
+                    pipelineName={componentSpec.name}
+                  />
+                )}
+                {isBulkUploadEnabled && (
+                  <ImportFileButton onImport={handleFileImport} />
+                )}
                 <CopyFromRunPopover
                   componentSpec={componentSpec}
                   onCopy={handleCopyFromRun}
@@ -322,6 +326,7 @@ export const SubmitTaskArgumentsDialog = ({
                     isBulkEnabled={isBulkEnabled}
                     onBulkToggle={handleBulkToggle}
                     bulkValueCount={bulkValueCount}
+                    showBulkToggle={isBulkUploadEnabled}
                   />
                 );
               })}
@@ -494,6 +499,7 @@ interface ArgumentFieldProps {
   isBulkEnabled?: boolean;
   onBulkToggle?: (name: string, enabled: boolean) => void;
   bulkValueCount?: number;
+  showBulkToggle?: boolean;
 }
 
 const ArgumentField = ({
@@ -504,6 +510,7 @@ const ArgumentField = ({
   isBulkEnabled = false,
   onBulkToggle,
   bulkValueCount = 0,
+  showBulkToggle = false,
 }: ArgumentFieldProps) => {
   const [isSelectSecretDialogOpen, setIsSelectSecretDialogOpen] =
     useState(false);
@@ -553,7 +560,7 @@ const ArgumentField = ({
             {isRequired ? "*" : ""})
           </Paragraph>
           <div className="flex-1" />
-          {canBeBulk && (
+          {canBeBulk && showBulkToggle && (
             <InlineStack gap="1" align="center">
               <Label
                 htmlFor={bulkId}

@@ -1,8 +1,9 @@
+import type { ArgumentType, InputSpec } from "./componentSpec";
 import {
-  type ArgumentType,
-  type InputSpec,
-  isSecretArgument,
-} from "./componentSpec";
+  buildFileImportResult,
+  emptyFileImportResult,
+  type FileImportResult,
+} from "./fileImportCommon";
 
 /**
  * RFC 4180 CSV parser. Handles quoted fields with commas and escaped quotes.
@@ -70,24 +71,6 @@ export function parseCsv(text: string): string[][] {
 }
 
 /**
- * Extracts the file extension (e.g. ".csv", ".json") from a filename.
- * Returns empty string if no extension is found.
- */
-export function getFileExtension(filename: string): string {
-  const dotIdx = filename.lastIndexOf(".");
-  return dotIdx >= 0 ? `.${filename.slice(dotIdx + 1).toLowerCase()}` : "";
-}
-
-export interface FileImportResult {
-  values: Record<string, string>;
-  changedInputNames: string[];
-  enableBulk: boolean;
-  unmatchedColumns: string[];
-  skippedSecretInputs: string[];
-  rowCount: number;
-}
-
-/**
  * Maps CSV data onto pipeline input arguments.
  *
  * Single data row: values go directly into matched inputs.
@@ -100,69 +83,21 @@ export function mapCsvToArguments(
 ): FileImportResult {
   const rows = parseCsv(csvText);
 
-  const empty: FileImportResult = {
-    values: {},
-    changedInputNames: [],
-    enableBulk: false,
-    unmatchedColumns: [],
-    skippedSecretInputs: [],
-    rowCount: 0,
-  };
-
-  if (rows.length === 0) return empty;
+  if (rows.length === 0) return emptyFileImportResult();
 
   const headers = rows[0];
   const dataRows = rows.slice(1);
-  const rowCount = dataRows.length;
 
-  if (rowCount === 0) return { ...empty, rowCount: 0 };
+  if (dataRows.length === 0) return emptyFileImportResult();
 
-  const inputNameSet = new Set(inputs.map((i) => i.name));
-  const secretInputNames = new Set(
-    inputs
-      .filter((i) => isSecretArgument(currentArgs[i.name]))
-      .map((i) => i.name),
-  );
-
-  const unmatchedColumns: string[] = [];
-  const skippedSecretInputs: string[] = [];
-  const values: Record<string, string> = {};
-  const changedInputNames: string[] = [];
-
+  const columns = new Map<string, string[]>();
   for (let colIdx = 0; colIdx < headers.length; colIdx++) {
     const colName = headers[colIdx].trim();
-    if (!colName) continue;
-
-    if (!inputNameSet.has(colName)) {
-      unmatchedColumns.push(colName);
-      continue;
-    }
-
-    if (secretInputNames.has(colName)) {
-      skippedSecretInputs.push(colName);
-      continue;
-    }
-
-    const columnValues = dataRows.map((row) =>
-      colIdx < row.length ? row[colIdx] : "",
+    columns.set(
+      colName,
+      dataRows.map((row) => (colIdx < row.length ? row[colIdx] : "")),
     );
-
-    const newValue =
-      rowCount === 1 ? (columnValues[0] ?? "") : columnValues.join(", ");
-
-    values[colName] = newValue;
-
-    if (currentArgs[colName] !== newValue) {
-      changedInputNames.push(colName);
-    }
   }
 
-  return {
-    values,
-    changedInputNames,
-    enableBulk: rowCount > 1,
-    unmatchedColumns,
-    skippedSecretInputs,
-    rowCount,
-  };
+  return buildFileImportResult(columns, dataRows.length, inputs, currentArgs);
 }
