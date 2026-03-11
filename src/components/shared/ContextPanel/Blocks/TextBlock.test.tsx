@@ -182,4 +182,23 @@ describe("<TextBlock />", () => {
       expect(text).toBeInTheDocument();
     });
   });
+
+  describe("isVisible", () => {
+    test("returns null when isVisible is false", () => {
+      const { container } = render(
+        <TextBlock text="Should not render" isVisible={false} />,
+      );
+      expect(container.firstChild).toBeNull();
+    });
+
+    test("renders when isVisible is true", () => {
+      render(<TextBlock text="Visible content" isVisible={true} />);
+      expect(screen.getByText("Visible content")).toBeInTheDocument();
+    });
+
+    test("renders when isVisible is undefined (default behavior)", () => {
+      render(<TextBlock text="Default visibility" />);
+      expect(screen.getByText("Default visibility")).toBeInTheDocument();
+    });
+  });
 });

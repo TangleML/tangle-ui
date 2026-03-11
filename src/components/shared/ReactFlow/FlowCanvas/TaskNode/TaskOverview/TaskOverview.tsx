@@ -6,6 +6,7 @@ import {
   Parentheses,
 } from "lucide-react";
 
+import type { ContainerExecutionStatus } from "@/api/types.gen";
 import { ComponentDetailsDialog } from "@/components/shared/Dialogs";
 import { ComponentFavoriteToggle } from "@/components/shared/FavoriteComponentToggle";
 import { StatusIcon } from "@/components/shared/Status";
@@ -24,6 +25,7 @@ import ArgumentsSection from "../ArgumentsEditor/ArgumentsSection";
 import ConfigurationSection from "./ConfigurationSection";
 import IOSection from "./IOSection/IOSection";
 import Logs, { OpenLogsInNewWindowLink } from "./logs";
+import { LogsEventsOverlaySection } from "./LogsEventsOverlaySection";
 import OutputsList from "./OutputsList";
 import RenameTask from "./RenameTask";
 import { ZIndexEditor } from "./ZIndexEditor";
@@ -156,6 +158,10 @@ const TaskOverview = ({ taskNode }: TaskOverviewProps) => {
                   />
                 </div>
               )}
+              <LogsEventsOverlaySection
+                executionId={executionId}
+                status={status as ContainerExecutionStatus}
+              />
               <Logs executionId={executionId} status={status} />
             </TabsContent>
           )}

@@ -8,30 +8,35 @@ import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Heading, Paragraph } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
+import type { TextBlockProperties } from "@/types/composerSchema";
 
 import { CopyText } from "../../CopyText/CopyText";
 
-interface TextBlockProps {
+interface TextBlockProps extends TextBlockProperties {
   title?: string;
-  text?: string;
   copyable?: boolean;
   collapsible?: boolean;
   defaultCollapsed?: boolean;
   mono?: boolean;
-  wrap?: boolean;
   className?: string;
 }
 
 export const TextBlock = ({
   title,
   text,
+  tone = "subdued",
   copyable,
   collapsible,
   defaultCollapsed = true,
   mono,
   wrap = false,
+  isVisible,
   className,
 }: TextBlockProps) => {
+  if (isVisible === false) {
+    return null;
+  }
+
   if (!text) {
     return null;
   }
@@ -46,7 +51,7 @@ export const TextBlock = ({
     <CopyText className={textClassName}>{text}</CopyText>
   ) : (
     <Paragraph
-      tone="subdued"
+      tone={tone === "default" ? "inherit" : tone}
       font={mono ? "mono" : "default"}
       size="xs"
       className={wrap ? "wrap-break-words" : "truncate"}
