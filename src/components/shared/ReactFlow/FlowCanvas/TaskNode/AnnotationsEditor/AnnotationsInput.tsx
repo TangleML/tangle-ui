@@ -409,6 +409,7 @@ export const AnnotationsInput = ({
           onConfirm={handleDialogConfirm}
           maxLength={config?.max}
           required={config?.required}
+          highlightSyntax={inputType === "json"}
         />
       )}
     </>

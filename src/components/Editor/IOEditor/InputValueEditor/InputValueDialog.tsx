@@ -38,6 +38,7 @@ export const InputValueDialog = ({
       open={open}
       onCancel={onCancel}
       onConfirm={onConfirm}
+      highlightSyntax
     />
   );
 };

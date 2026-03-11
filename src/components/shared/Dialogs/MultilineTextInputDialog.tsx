@@ -9,9 +9,27 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { InlineStack } from "@/components/ui/layout";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Paragraph } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
+
+import CodeEditor from "../CodeViewer/CodeEditor";
+
+const LANGUAGE_OPTIONS = [
+  { value: "plaintext", label: "Plain Text" },
+  { value: "yaml", label: "YAML" },
+  { value: "python", label: "Python" },
+  { value: "javascript", label: "JavaScript" },
+  { value: "json", label: "JSON" },
+  { value: "sql", label: "SQL" },
+];
 
 interface MultilineTextInputDialogProps {
   title: ReactNode;
@@ -21,6 +39,7 @@ interface MultilineTextInputDialogProps {
   open: boolean;
   required?: boolean;
   maxLength?: number;
+  highlightSyntax?: boolean;
   onCancel: () => void;
   onConfirm: (value: string) => void;
 }
@@ -33,10 +52,12 @@ export const MultilineTextInputDialog = ({
   open,
   required = false,
   maxLength,
+  highlightSyntax,
   onCancel,
   onConfirm,
 }: MultilineTextInputDialogProps) => {
   const [value, setValue] = useState(initialValue);
+  const [selectedLanguage, setSelectedLanguage] = useState("plaintext");
 
   const handleConfirm = useCallback(() => {
     onConfirm(value);
@@ -61,22 +82,55 @@ export const MultilineTextInputDialog = ({
     setValue(initialValue);
   }, [initialValue]);
 
+  useEffect(() => {
+    setSelectedLanguage("plaintext");
+  }, [highlightSyntax]);
+
   return (
     <Dialog open={open} onOpenChange={onCancel}>
       <DialogContent>
         <DialogTitle>{title}</DialogTitle>
-        <DialogDescription className={cn(!description ? "hidden" : "")}>
-          {description ?? title}
-        </DialogDescription>
-        <Textarea
-          ref={setCursorToEnd}
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          placeholder={placeholder}
-          className="min-h-32 max-h-[80vh]"
-          required={required}
-          maxLength={maxLength}
-        />
+        <InlineStack gap="2" align="space-between" wrap="nowrap" fill>
+          <DialogDescription className={cn(!description ? "hidden" : "")}>
+            {description ?? title}
+          </DialogDescription>
+          {highlightSyntax && (
+            <Select
+              value={selectedLanguage}
+              onValueChange={setSelectedLanguage}
+            >
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {LANGUAGE_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </InlineStack>
+        {highlightSyntax && selectedLanguage !== "plaintext" ? (
+          <div className="h-64">
+            <CodeEditor
+              value={value}
+              language={selectedLanguage}
+              onChange={setValue}
+            />
+          </div>
+        ) : (
+          <Textarea
+            ref={setCursorToEnd}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder={placeholder}
+            className="min-h-32 max-h-[80vh]"
+            required={required}
+            maxLength={maxLength}
+          />
+        )}
         <DialogFooter>
           <InlineStack gap="2" align="space-between" className="w-full">
             {maxLength && value.length >= maxLength && (
