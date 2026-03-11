@@ -1,3 +1,5 @@
+import "../../../../nodes"; // ensure manifests are registered
+
 import type {
   ComponentSpec,
   ComponentSpecJson,
@@ -5,6 +7,7 @@ import type {
   TypeSpecType,
 } from "@/models/componentSpec";
 
+import { NODE_TYPE_REGISTRY } from "../../../../nodes/registry";
 import type { SelectedNode } from "../../../../store/editorStore";
 
 export interface AggregatedArgument {
@@ -106,43 +109,14 @@ export function getNodeDisplayName(
   spec: ComponentSpec | null,
 ): string {
   if (!spec) return node.id;
-
-  switch (node.type) {
-    case "task": {
-      const task = spec.tasks.find((t) => t.$id === node.id);
-      return task?.name ?? node.id;
-    }
-    case "input": {
-      const input = spec.inputs.find((i) => i.$id === node.id);
-      return input?.name ?? node.id;
-    }
-    case "output": {
-      const output = spec.outputs.find((o) => o.$id === node.id);
-      return output?.name ?? node.id;
-    }
-    default:
-      return node.id;
-  }
+  const manifest = NODE_TYPE_REGISTRY.get(node.type);
+  return manifest?.displayName?.(spec, node.id) ?? node.id;
 }
 
 export function getNodeIcon(type: SelectedNode["type"]): string {
-  switch (type) {
-    case "task":
-      return "Workflow";
-    case "input":
-      return "Download";
-    case "output":
-      return "Upload";
-  }
+  return NODE_TYPE_REGISTRY.get(type)?.icon ?? "Circle";
 }
 
 export function getNodeIconColor(type: SelectedNode["type"]): string {
-  switch (type) {
-    case "task":
-      return "text-blue-500";
-    case "input":
-      return "text-blue-500";
-    case "output":
-      return "text-green-500";
-  }
+  return NODE_TYPE_REGISTRY.get(type)?.iconColor ?? "text-gray-500";
 }

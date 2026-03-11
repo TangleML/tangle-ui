@@ -9,13 +9,13 @@ import type { MutableRefObject } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 
-import { connectNodes, createConnectedIONode } from "../../../store/actions";
 import {
   GHOST_ESTIMATED_WIDTH,
   GHOST_NODE_ID,
   GHOST_OFFSET_X,
   GHOST_OFFSET_Y,
-} from "../GhostNode";
+} from "../../../nodes/GhostNode/components/GhostNode";
+import { connectNodes, createConnectedIONode } from "../../../store/actions";
 
 export function useConnectionBehavior(
   spec: ComponentSpec | null,

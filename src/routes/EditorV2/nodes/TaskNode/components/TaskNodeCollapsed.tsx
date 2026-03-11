@@ -5,8 +5,8 @@ import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 import { getContrastTextColor } from "@/utils/color";
 
-import type { TaskNodeViewProps } from "../TaskNode";
-import { ZOOM_THRESHOLD } from "../TaskNode";
+import type { TaskNodeViewProps } from "./TaskNode";
+import { ZOOM_THRESHOLD } from "./TaskNode";
 
 const zoomValueSelector = (s: { transform: [number, number, number] }) =>
   s.transform[2];
@@ -29,7 +29,7 @@ export function TaskNodeCollapsed({
     ? getContrastTextColor(taskColor)
     : undefined;
 
-  const fontSize = 22 * scale;
+  const fontSize = 32 * scale;
   const iconSize = 16 * scale;
   const padding = 12 * scale;
   const gap = 8 * scale;

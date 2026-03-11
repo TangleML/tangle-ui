@@ -1,14 +1,10 @@
+import "../../../nodes"; // ensure manifests are registered
+
 import type { Node, NodeMouseHandler, ReactFlowProps } from "@xyflow/react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 
-import { PIPELINE_TREE_WINDOW_ID } from "../../../hooks/usePipelineTreeWindow";
-import type { TaskNodeData } from "../../../hooks/useSpecToNodesEdges";
-import {
-  isTaskSubgraph,
-  navigateToSubgraph,
-} from "../../../store/navigationStore";
-import { restoreWindow } from "../../../windows/windowStore";
+import { NODE_TYPE_REGISTRY } from "../../../nodes/registry";
 
 export function useDoubleClickBehavior(
   spec: ComponentSpec | null,
@@ -18,17 +14,8 @@ export function useDoubleClickBehavior(
     node: Node,
   ) => {
     if (!spec) return;
-    if (node.type !== "task") return;
-
-    const taskData = node.data as TaskNodeData;
-    const taskEntityId = taskData.entityId;
-
-    if (isTaskSubgraph(spec, taskEntityId)) {
-      const newSpec = navigateToSubgraph(spec, taskEntityId);
-      if (newSpec) {
-        restoreWindow(PIPELINE_TREE_WINDOW_ID);
-      }
-    }
+    const manifest = NODE_TYPE_REGISTRY.getByNodeId(node.id);
+    manifest?.onDoubleClick?.(spec, node);
   };
 
   return { onNodeDoubleClick };

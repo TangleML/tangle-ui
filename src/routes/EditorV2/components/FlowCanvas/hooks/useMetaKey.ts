@@ -6,6 +6,10 @@ interface UseMetaKeyReturn {
   metaKeyPressedRef: MutableRefObject<boolean>;
 }
 
+/**
+ * todo: refactor, make part of "Shortcuts"
+ * @returns
+ */
 export function useMetaKey(): UseMetaKeyReturn {
   const [metaKeyPressed, setMetaKeyPressed] = useState(false);
 

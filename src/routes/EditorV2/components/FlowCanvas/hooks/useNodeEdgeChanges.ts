@@ -1,15 +1,12 @@
+import "../../../nodes"; // ensure manifests are registered
+
 import type { EdgeChange, NodeChange, ReactFlowProps } from "@xyflow/react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 
-import {
-  deleteEdge,
-  deleteInput,
-  deleteOutput,
-  deleteTask,
-  getNodeTypeFromId,
-  updateNodePosition,
-} from "../../../store/actions";
+import { cleanupDeletedBinding } from "../../../nodes/ConduitNode/hooks/useConduits";
+import { NODE_TYPE_REGISTRY } from "../../../nodes/registry";
+import { deleteEdge } from "../../../store/actions";
 import { withUndoGroup } from "../../../store/undoStore";
 
 export function useNodeEdgeChanges(
@@ -30,9 +27,9 @@ export function useNodeEdgeChanges(
     if (positionChanges.length > 0) {
       withUndoGroup("Move nodes", () => {
         for (const change of positionChanges) {
-          // todo: introduce type guard for change isPositionChange
           if ("id" in change && "position" in change && change.position) {
-            updateNodePosition(spec, change.id, change.position);
+            const manifest = NODE_TYPE_REGISTRY.getByNodeId(change.id);
+            manifest?.updatePosition(spec, change.id, change.position);
           }
         }
       });
@@ -40,15 +37,9 @@ export function useNodeEdgeChanges(
 
     const removeChanges = changes.filter((change) => change.type === "remove");
     for (const change of removeChanges) {
-      // todo: introduce type guard for change isRemoveChange
       if ("id" in change) {
-        const nodeId = change.id;
-        const nodeType = getNodeTypeFromId(nodeId);
-
-        // todo: better handling of node types, remove if statements
-        if (nodeType === "task") deleteTask(spec, nodeId);
-        else if (nodeType === "input") deleteInput(spec, nodeId);
-        else if (nodeType === "output") deleteOutput(spec, nodeId);
+        const manifest = NODE_TYPE_REGISTRY.getByNodeId(change.id);
+        manifest?.deleteNode(spec, change.id);
       }
     }
 
@@ -63,9 +54,14 @@ export function useNodeEdgeChanges(
 
     const removeChanges = changes.filter((change) => change.type === "remove");
     for (const change of removeChanges) {
-      // todo: introduce type guard for change isRemoveChange
       if ("id" in change) {
-        deleteEdge(spec, change.id);
+        const edgeId = change.id;
+        deleteEdge(spec, edgeId);
+
+        const bindingIdMatch = edgeId.match(/^edge_(.+)$/);
+        if (bindingIdMatch) {
+          cleanupDeletedBinding(spec, bindingIdMatch[1]);
+        }
       }
     }
 

@@ -7,9 +7,9 @@ import { InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 
-import type { IONodeData } from "../../hooks/useSpecToNodesEdges";
-import { useSpec } from "../../providers/SpecContext";
-import { editorStore, selectNode } from "../../store/editorStore";
+import { useSpec } from "../../../providers/SpecContext";
+import { editorStore, selectNode } from "../../../store/editorStore";
+import type { IONodeData } from "../../types";
 
 type IONodeType = Node<IONodeData, "io">;
 type IONodeProps = NodeProps<IONodeType>;

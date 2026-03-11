@@ -1,15 +1,15 @@
+import "../../nodes"; // ensure manifests are registered
+
 import { observer } from "mobx-react-lite";
 
 import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 
+import { NODE_TYPE_REGISTRY } from "../../nodes/registry";
 import { useSpec } from "../../providers/SpecContext";
 import { editorStore } from "../../store/editorStore";
-import { InputDetails } from "./components/InputDetails";
 import { MultiSelectionDetails } from "./components/MultiSelectionDetails/MultiSelectionDetails";
-import { OutputDetails } from "./components/OutputDetails";
-import { TaskDetails } from "./components/TaskDetails/TaskDetails";
 
 /**
  * Content for the Context Panel window.
@@ -29,15 +29,14 @@ export const ContextPanelContent = observer(function ContextPanelContent() {
     return <EmptyState />;
   }
 
+  const manifest = NODE_TYPE_REGISTRY.get(selectedNodeType);
+  const Panel = manifest?.contextPanelComponent;
+
+  if (!Panel) return <EmptyState />;
+
   return (
     <BlockStack className="h-full bg-white overflow-y-auto overflow-x-hidden">
-      {selectedNodeType === "task" && <TaskDetails entityId={selectedNodeId} />}
-      {selectedNodeType === "input" && (
-        <InputDetails entityId={selectedNodeId} />
-      )}
-      {selectedNodeType === "output" && (
-        <OutputDetails entityId={selectedNodeId} />
-      )}
+      <Panel entityId={selectedNodeId} />
     </BlockStack>
   );
 });

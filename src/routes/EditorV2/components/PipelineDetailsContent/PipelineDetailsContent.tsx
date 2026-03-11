@@ -19,7 +19,11 @@ import { ValidationSummary } from "../ValidationSummary";
 import { RenamePipelineButton } from "./components/RenamePipelineButton";
 import { ViewYamlButton } from "./components/ViewYamlButton";
 
-const EXCLUDED_ANNOTATIONS = ["notes", "flex-nodes"];
+const EXCLUDED_ANNOTATIONS = [
+  "notes",
+  "flex-nodes",
+  "tangleml.com/editor/edge-conduits",
+];
 
 function typeSpecToString(typeSpec?: TypeSpecType): string {
   if (typeSpec === undefined) return "Any";

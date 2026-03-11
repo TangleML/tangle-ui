@@ -11,16 +11,16 @@ import type {
   TypeSpecType,
 } from "@/models/componentSpec";
 
-import type { TaskNodeData } from "../../../hooks/useSpecToNodesEdges";
 import { useSpec } from "../../../providers/SpecContext";
 import {
   editorStore,
   selectNode,
   setFocusedArgument,
 } from "../../../store/editorStore";
-import { TaskNodeClassic } from "./components/TaskNodeClassic";
-import { TaskNodeCollapsed } from "./components/TaskNodeCollapsed";
-import { TaskNodeFull } from "./components/TaskNodeFull";
+import type { TaskNodeData } from "../../types";
+import { TaskNodeClassic } from "./TaskNodeClassic";
+import { TaskNodeCollapsed } from "./TaskNodeCollapsed";
+import { TaskNodeFull } from "./TaskNodeFull";
 
 type TaskNodeType = Node<TaskNodeData, "task">;
 type TaskNodeProps = NodeProps<TaskNodeType>;
@@ -54,7 +54,7 @@ export interface TaskNodeViewProps {
   onInputClick: (inputName: string, event: React.MouseEvent) => void;
 }
 
-export const ZOOM_THRESHOLD = 0.5;
+export const ZOOM_THRESHOLD = 0.3;
 
 const zoomSelector = (s: { transform: [number, number, number] }) =>
   s.transform[2] >= ZOOM_THRESHOLD;

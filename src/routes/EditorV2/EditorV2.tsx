@@ -198,6 +198,10 @@ function EmptyEditorState() {
   );
 }
 
+/**
+ * Shell component for the Editor V2 route.
+ * @returns
+ */
 export function EditorV2() {
   const params = useParams({ strict: false });
   const pipelineName =
