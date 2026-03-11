@@ -38,12 +38,4 @@ export const ExistingFlags: ConfigFlags = {
     default: false,
     category: "beta",
   },
-
-  ["pipeline-run-filters-bar"]: {
-    name: "Pipeline run filters bar (Experimental)",
-    description:
-      "Enable the advanced pipeline run filters bar. Note: Only 'Created by' filter is currently functional. Other filters are UI previews.",
-    default: false,
-    category: "beta",
-  },
 };

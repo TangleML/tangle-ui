@@ -1,4 +1,41 @@
 /**
+ * Convert a local Date to the start of that calendar day in UTC (00:00:00.000Z).
+ */
+export const toStartOfDayUTC = (date: Date): string => {
+  const d = new Date(
+    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
+  );
+  return d.toISOString();
+};
+
+/**
+ * Convert a local Date to the end of that calendar day in UTC (23:59:59.999Z).
+ */
+export const toEndOfDayUTC = (date: Date): string => {
+  const d = new Date(
+    Date.UTC(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate(),
+      23,
+      59,
+      59,
+      999,
+    ),
+  );
+  return d.toISOString();
+};
+
+/**
+ * Parse a UTC ISO string back to a local Date preserving the UTC calendar day.
+ * Ensures the displayed date matches the UTC date regardless of timezone.
+ */
+export const parseUTCAsLocalDate = (iso: string): Date => {
+  const d = new Date(iso);
+  return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+};
+
+/**
  * Format date string to localized string
  */
 const defaultFormat: Intl.DateTimeFormatOptions = {
