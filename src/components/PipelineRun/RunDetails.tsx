@@ -111,6 +111,14 @@ export const RunDetails = () => {
                 ? new Date(metadata.created_at).toLocaleString()
                 : undefined,
             },
+            ...(metadata.annotations?.batch_id
+              ? [
+                  {
+                    label: "Batch Id",
+                    value: String(metadata.annotations.batch_id),
+                  },
+                ]
+              : []),
           ]}
         />
       )}
