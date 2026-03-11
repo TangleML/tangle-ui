@@ -9,7 +9,7 @@ import { componentSpecToText } from "@/utils/yaml";
  * For components with digest or URL, use those directly.
  * For inline specs, use a JSON stringification as a stable key.
  */
-function getComponentQueryKey(component: ComponentReference): string {
+export function getComponentQueryKey(component: ComponentReference): string {
   if (component.digest) {
     return `digest:${component.digest}`;
   }
