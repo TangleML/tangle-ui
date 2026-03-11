@@ -1,5 +1,4 @@
 import { BlockStack } from "@/components/ui/layout";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Table,
   TableBody,
@@ -36,7 +35,7 @@ export const SweepPreviewTable = ({
 
   return (
     <BlockStack gap="2">
-      <ScrollArea className="max-h-[50vh]">
+      <div className="max-h-[40vh] overflow-y-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -77,7 +76,7 @@ export const SweepPreviewTable = ({
             ))}
           </TableBody>
         </Table>
-      </ScrollArea>
+      </div>
       {totalCount > MAX_PREVIEW_ROWS && (
         <Paragraph size="xs" tone="subdued">
           Showing {MAX_PREVIEW_ROWS} of {totalCount} runs.

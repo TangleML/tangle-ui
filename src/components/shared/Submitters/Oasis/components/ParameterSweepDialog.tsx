@@ -124,7 +124,12 @@ export const ParameterSweepDialog = ({
               <Icon name="Table" size="sm" />
               Preview
               {hasActiveParams && runCount > 0 && (
-                <Badge variant="secondary" size="xs" shape="rounded">
+                <Badge
+                  variant="secondary"
+                  size="xs"
+                  shape="rounded"
+                  className="w-auto min-w-4 px-1"
+                >
                   {runCount}
                 </Badge>
               )}

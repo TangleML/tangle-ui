@@ -27,7 +27,11 @@ import {
   isGraphImplementation,
 } from "@/utils/componentSpec";
 import { getFileExtension } from "@/utils/fileImportCommon";
-import { submitPipelineRun } from "@/utils/submitPipeline";
+import {
+  MAX_BATCH_SIZE,
+  submitBatchPipelineRuns,
+  submitPipelineRun,
+} from "@/utils/submitPipeline";
 import { validateArguments } from "@/utils/validations";
 
 import { isAuthorizationRequired } from "../../Authentication/helpers";
@@ -103,9 +107,12 @@ const OasisSubmitter = ({
   isComponentTreeValid = true,
   onlyFixableIssues = false,
 }: OasisSubmitterProps) => {
-  const { isAuthorized } = useAwaitAuthorization();
+  const { awaitAuthorization, isAuthorized } = useAwaitAuthorization();
+  const { getToken } = useAuthLocalStorage();
   const { backendUrl, configured, available } = useBackend();
   const { mutate: submit, isPending: isSubmitting } = useSubmitPipeline();
+  const runNameOverride = useFlagValue("templatized-pipeline-run-name");
+  const queryClient = useQueryClient();
   const isAutoRedirect = useFlagValue("redirect-on-new-pipeline-run");
   const isBulkUploadEnabled = useFlagValue("bulk-argument-upload");
   const isParameterSweepEnabled = useFlagValue("parameter-sweep");
@@ -243,52 +250,58 @@ const OasisSubmitter = ({
       return;
     }
 
+    if (argSets.length > MAX_BATCH_SIZE) {
+      handleError(
+        `Cannot submit more than ${MAX_BATCH_SIZE} runs at once. You are trying to submit ${argSets.length} runs.`,
+      );
+      return;
+    }
+
     const total = argSets.length;
     setBulkProgress({ total, completed: 0, failed: 0 });
     setSubmitSuccess(null);
 
-    let completed = 0;
-    let failed = 0;
-
-    for (const args of argSets) {
-      try {
-        const response = await new Promise<PipelineRun>((resolve, reject) => {
-          submit({
-            componentSpec,
-            taskArguments: args,
-            onSuccess: resolve,
-            onError: reject,
-          });
-        });
-
-        if (runNotes.current.trim() !== "") {
-          saveNotes(response.id.toString());
-        }
-
-        const tags = getPipelineTagsFromSpec(componentSpec);
-        if (tags.length > 0) {
-          saveTags(response.id.toString());
-        }
-
-        completed++;
-      } catch {
-        failed++;
+    try {
+      const authorizationRequired = isAuthorizationRequired();
+      let token = getToken();
+      if (authorizationRequired && !isAuthorized) {
+        token = (await awaitAuthorization()) ?? token;
       }
 
-      setBulkProgress({ total, completed, failed });
-    }
+      const createdRuns = await submitBatchPipelineRuns(
+        componentSpec,
+        argSets,
+        backendUrl,
+        {
+          authorizationToken: token,
+          runNameOverride,
+        },
+      );
 
-    setBulkProgress(null);
-    setSubmitSuccess(failed === 0);
-    setCooldownTime(3);
+      for (const run of createdRuns) {
+        if (runNotes.current.trim() !== "") {
+          saveNotes(run.id.toString());
+        }
+        const tags = getPipelineTagsFromSpec(componentSpec);
+        if (tags.length > 0) {
+          saveTags(run.id.toString());
+        }
+      }
 
-    if (failed === 0) {
+      await queryClient.invalidateQueries({ queryKey: ["pipelineRuns"] });
+
+      setBulkProgress(null);
+      setSubmitSuccess(true);
+      setCooldownTime(3);
       onSubmitComplete?.();
-      notify(`${total} runs submitted successfully`, "success");
-    } else {
+      notify(`All ${total} runs submitted successfully`, "success");
+    } catch (error) {
+      setBulkProgress(null);
+      setSubmitSuccess(false);
+      setCooldownTime(3);
       notify(
-        `${completed} of ${total} runs submitted. ${failed} failed.`,
-        failed === total ? "error" : "warning",
+        `Bulk submission failed: ${error instanceof Error ? error.message : String(error)}`,
+        "error",
       );
     }
   };
