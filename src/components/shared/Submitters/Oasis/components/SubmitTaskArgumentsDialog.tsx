@@ -58,7 +58,10 @@ import {
   type InputSpec,
   isSecretArgument,
 } from "@/utils/componentSpec";
-import { mapCsvToArguments } from "@/utils/csvBulkArgumentImport";
+import {
+  getFileExtension,
+  mapCsvToArguments,
+} from "@/utils/csvBulkArgumentImport";
 import { mapJsonToArguments } from "@/utils/jsonBulkArgumentImport";
 import { extractTaskArguments } from "@/utils/nodes/taskArguments";
 import { pluralize } from "@/utils/string";
@@ -117,13 +120,6 @@ export const SubmitTaskArgumentsDialog = ({
     validateArguments(inputs, taskArguments) &&
     !hasBulkMismatch &&
     bulkRunCount > 0;
-
-  useEffect(() => {
-    if (initialImportFile && open) {
-      handleFileImport(initialImportFile.text, initialImportFile.extension);
-      onImportComplete?.();
-    }
-  }, [initialImportFile, open]);
 
   const handleCopyFromRun = (args: Record<string, string>) => {
     const diff = Object.entries(args).filter(
@@ -225,6 +221,13 @@ export const SubmitTaskArgumentsDialog = ({
 
     notify(message, hasWarnings ? "warning" : "success");
   };
+
+  useEffect(() => {
+    if (initialImportFile && open) {
+      handleFileImport(initialImportFile.text, initialImportFile.extension);
+      onImportComplete?.();
+    }
+  }, [initialImportFile, open, handleFileImport, onImportComplete]);
 
   const handleConfirm = () =>
     onConfirm(taskArguments, runNotes, bulkInputNames);
@@ -390,10 +393,6 @@ const CopyFromRunPopover = ({
     isPending: isCopyingFromRun,
     isError,
   } = useMutation({
-    /**
-     * @param run - The run to copy arguments from. Can be a run ID or a run object.
-     * @returns
-     */
     mutationFn: async (run: PipelineRun | string) => {
       const executionId =
         typeof run === "string"
@@ -717,15 +716,11 @@ const ImportFileButton = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const extension = file.name.includes(".")
-      ? `.${file.name.split(".").pop()?.toLowerCase()}`
-      : "";
-
     const reader = new FileReader();
     reader.onload = (event) => {
       const text = event.target?.result;
       if (typeof text === "string") {
-        onImport(text, extension);
+        onImport(text, getFileExtension(file.name));
       }
     };
     reader.readAsText(file);

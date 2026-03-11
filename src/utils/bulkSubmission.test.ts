@@ -5,11 +5,7 @@ import {
   getBulkRunCount,
   parseBulkValues,
 } from "./bulkSubmission";
-import type { DynamicDataArgument } from "./componentSpec";
-
-function makeSecretArg(name: string): DynamicDataArgument {
-  return { dynamicData: { secret: { name } } };
-}
+import { makeSecretArg } from "./testHelpers";
 
 describe("parseBulkValues", () => {
   it("splits comma-separated values and trims whitespace", () => {
