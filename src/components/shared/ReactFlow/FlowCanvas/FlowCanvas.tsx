@@ -111,6 +111,7 @@ export interface FlowCanvasRef {
 
 interface FlowCanvasProps extends ReactFlowProps {
   readOnly?: boolean;
+  fitViewOnInit?: boolean;
   ref?: Ref<FlowCanvasRef>;
 }
 
@@ -125,11 +126,13 @@ const FlowCanvas = ({ ref, ...props }: FlowCanvasProps) => {
 const FlowCanvasContent = ({
   readOnly,
   nodesConnectable,
+  fitViewOnInit = true,
   ref,
   children,
   ...rest
 }: FlowCanvasProps) => {
   const initialCanvasLoaded = useRef(false);
+  const initialFitDone = useRef(false);
 
   const { clearContent, setContent, setOpen } = useContextPanel();
   const { data: currentUserDetails } = useUserDetails();
@@ -886,11 +889,16 @@ const FlowCanvasContent = ({
   ]);
 
   useEffect(() => {
-    reactFlowInstance?.fitView({
-      maxZoom: 1,
-      duration: 300,
-    });
-  }, [currentSubgraphPath, reactFlowInstance]);
+    if (!reactFlowInstance) return;
+
+    if (!initialFitDone.current) {
+      initialFitDone.current = true;
+
+      if (!fitViewOnInit) return;
+    }
+
+    reactFlowInstance.fitView({ maxZoom: 1, duration: 300 });
+  }, [currentSubgraphPath, reactFlowInstance, fitViewOnInit]);
 
   // Reset when loading a new component file
   useEffect(() => {
@@ -898,13 +906,11 @@ const FlowCanvasContent = ({
   }, [componentSpec?.name, resetPrevSpec]);
 
   const fitView = () => {
-    reactFlowInstance?.fitView({
-      maxZoom: 1,
-    });
+    reactFlowInstance?.fitView({ maxZoom: 1 });
   };
 
   useScheduleExecutionOnceWhenConditionMet(
-    initialCanvasLoaded.current && !!reactFlowInstance,
+    fitViewOnInit && initialCanvasLoaded.current && !!reactFlowInstance,
     fitView,
   );
 

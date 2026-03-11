@@ -1,5 +1,6 @@
 import { type ChangeEvent, useEffect, useState } from "react";
 
+import { LinkNodeButton } from "@/components/shared/Buttons/LinkNodeButton";
 import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlock";
 import { KeyValueList } from "@/components/shared/ContextPanel/Blocks/KeyValueList";
 import { CopyText } from "@/components/shared/CopyText/CopyText";
@@ -95,6 +96,8 @@ export const FlexNodeEditor = ({
       />
 
       {!readOnly && !locked && <ZIndexEditor flexNode={flexNode} />}
+
+      {readOnly && <LinkNodeButton nodeId={flexNode.id} />}
     </BlockStack>
   );
 };

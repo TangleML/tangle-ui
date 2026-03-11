@@ -11,11 +11,13 @@ import type { FlowCanvasRef } from "../shared/ReactFlow/FlowCanvas/FlowCanvas";
 import type { LayoutAlgorithm } from "../shared/ReactFlow/FlowCanvas/utils/autolayout";
 import { RunDetails } from "./RunDetails";
 import { RunToolbar } from "./RunToolbar";
+import { useFitNodeFromUrl } from "./useFitNodeFromUrl";
 
 const GRID_SIZE = 10;
 
 const PipelineRunPage = () => {
   const flowCanvasRef = useRef<FlowCanvasRef>(null);
+  const { linkedNodeId } = useFitNodeFromUrl();
 
   const [flowConfig, setFlowConfig] = useState<ReactFlowProps>({
     snapGrid: [GRID_SIZE, GRID_SIZE],
@@ -44,7 +46,12 @@ const PipelineRunPage = () => {
       <ComponentLibraryProvider>
         <InlineStack fill>
           <BlockStack fill className="flex-1">
-            <FlowCanvas ref={flowCanvasRef} {...flowConfig} readOnly>
+            <FlowCanvas
+              ref={flowCanvasRef}
+              {...flowConfig}
+              readOnly
+              fitViewOnInit={!linkedNodeId}
+            >
               <MiniMap position="bottom-left" pannable />
               <RunToolbar />
               <FlowControls
