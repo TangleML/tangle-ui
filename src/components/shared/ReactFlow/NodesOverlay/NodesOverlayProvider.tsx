@@ -13,6 +13,8 @@ import type {
   TaskSpec,
 } from "@/utils/componentSpec";
 
+import { FIT_VIEW_MAX_ZOOM } from "../constants";
+
 type RegisterNodeOptions = {
   nodeId: string;
   taskSpec: TaskSpec;
@@ -95,7 +97,7 @@ export const NodesOverlayProvider = ({ children }: PropsWithChildren<{}>) => {
       (await instanceRef.current?.fitView({
         nodes: [{ id: nodeId }],
         duration: 200,
-        maxZoom: 1,
+        maxZoom: FIT_VIEW_MAX_ZOOM,
       })) ?? false
     );
   }, []);
