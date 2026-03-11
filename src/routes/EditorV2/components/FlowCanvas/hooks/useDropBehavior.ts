@@ -1,11 +1,11 @@
+import "../../../nodes"; // ensure manifests are registered
+
 import type { ReactFlowInstance, ReactFlowProps } from "@xyflow/react";
 import type { DragEvent } from "react";
 
-import type { ComponentReference, ComponentSpec } from "@/models/componentSpec";
-import { hydrateComponentReference } from "@/services/componentService";
-import type { TaskSpec } from "@/utils/componentSpec";
+import type { ComponentSpec } from "@/models/componentSpec";
 
-import { addInput, addOutput, addTask } from "../../../store/actions";
+import { NODE_TYPE_REGISTRY } from "../../../nodes/registry";
 
 export function useDropBehavior(
   spec: ComponentSpec | null,
@@ -31,19 +31,15 @@ export function useDropBehavior(
     try {
       const parsedData = JSON.parse(droppedData);
 
-      // todo: introduce better handling of node types, remove if statements, make it SOLID
-      if (parsedData.task) {
-        const taskSpec = parsedData.task as TaskSpec;
-        const componentRef = await hydrateComponentReference(
-          taskSpec.componentRef,
-        );
-        if (componentRef) {
-          addTask(spec, componentRef as ComponentReference, position);
+      for (const manifest of NODE_TYPE_REGISTRY.all()) {
+        if (manifest.drop && parsedData[manifest.drop.dataKey] !== undefined) {
+          await manifest.drop.handler(
+            spec,
+            parsedData[manifest.drop.dataKey],
+            position,
+          );
+          break;
         }
-      } else if (parsedData.input !== undefined) {
-        addInput(spec, position);
-      } else if (parsedData.output !== undefined) {
-        addOutput(spec, position);
       }
     } catch (err) {
       console.error("Failed to parse dropped data:", err);

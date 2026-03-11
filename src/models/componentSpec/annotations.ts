@@ -6,9 +6,18 @@ import type { Annotation } from "./entities/types";
 
 // -- Registry: known annotation key → typed value --
 
+export interface EdgeConduit {
+  id: string;
+  position: XYPosition;
+  size: { width: number; height: number };
+  color: string;
+  edgeIds: string[];
+}
+
 interface AnnotationTypeMap {
   "editor.position": XYPosition;
   "tangleml.com/editor/task-color": string;
+  "tangleml.com/editor/edge-conduits": EdgeConduit[];
 }
 
 type KnownAnnotationKey = keyof AnnotationTypeMap;
@@ -46,7 +55,25 @@ const codecs: {
     deserialize: (raw) => (typeof raw === "string" ? raw : "transparent"),
     defaultValue: "transparent",
   },
+  "tangleml.com/editor/edge-conduits": {
+    serialize: (conduits) => JSON.stringify(conduits),
+    deserialize: (raw): EdgeConduit[] => {
+      if (typeof raw === "string") {
+        try {
+          const parsed = JSON.parse(raw);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      }
+      if (Array.isArray(raw)) return raw as EdgeConduit[];
+      return [];
+    },
+    defaultValue: [],
+  },
 };
+
+export const EDGE_CONDUITS_ANNOTATION = "tangleml.com/editor/edge-conduits";
 
 // -- Helpers for serialization layer --
 

@@ -1,3 +1,5 @@
+import "../nodes"; // ensure manifests are registered
+
 import type { XYPosition } from "@xyflow/react";
 
 import {
@@ -12,6 +14,7 @@ import {
   type TypeSpecType,
 } from "@/models/componentSpec";
 
+import { NODE_TYPE_REGISTRY } from "../nodes/registry";
 import { clipboardStore } from "./clipboardStore";
 import type { SelectedNode } from "./editorStore";
 import {
@@ -87,36 +90,29 @@ interface ConnectionInfo {
 
 export function getNodeTypeFromId(
   nodeId: string,
-): "input" | "output" | "task" | null {
-  // todo: introduce better handling of node types, remove if statements, make it SOLID
-  if (nodeId.startsWith("input_")) return "input";
-  if (nodeId.startsWith("output_")) return "output";
-  if (nodeId.startsWith("task_")) return "task";
-  return null;
+): "input" | "output" | "task" | "conduit" | null {
+  return (
+    (NODE_TYPE_REGISTRY.getByNodeId(nodeId)?.entityType as
+      | "input"
+      | "output"
+      | "task"
+      | "conduit") ?? null
+  );
 }
 
 /**
- * Find an entity by its id.
- *
- * @param spec
- * @param entityId
- * @returns
+ * Find an entity by its id using the node type registry.
  */
 export function findEntityById(
   spec: ComponentSpec,
   entityId: string,
 ): Task | Input | Output | undefined {
-  const type = getNodeTypeFromId(entityId);
-  switch (type) {
-    case "task":
-      return spec.tasks.find((t) => t.$id === entityId);
-    case "input":
-      return spec.inputs.find((i) => i.$id === entityId);
-    case "output":
-      return spec.outputs.find((o) => o.$id === entityId);
-    default:
-      return undefined;
-  }
+  const manifest = NODE_TYPE_REGISTRY.getByNodeId(entityId);
+  return manifest?.findEntity?.(spec, entityId) as
+    | Task
+    | Input
+    | Output
+    | undefined;
 }
 
 export function connectNodes(
@@ -351,11 +347,8 @@ export function deleteSelectedNodes(
 
   withUndoGroup("Delete selected nodes", () => {
     for (const node of selectedNodes) {
-      const nodeType = getNodeTypeFromId(node.id);
-      // todo: introduce better handling of node types, remove if statements, make it SOLID
-      if (nodeType === "task") spec.deleteTaskById(node.id);
-      else if (nodeType === "input") spec.deleteInputById(node.id);
-      else if (nodeType === "output") spec.deleteOutputById(node.id);
+      const manifest = NODE_TYPE_REGISTRY.getByNodeId(node.id);
+      manifest?.deleteNode(spec, node.id);
     }
   });
 }

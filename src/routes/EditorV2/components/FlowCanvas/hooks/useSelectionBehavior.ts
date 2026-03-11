@@ -1,3 +1,5 @@
+import "../../../nodes"; // ensure manifests are registered
+
 import type {
   Node,
   OnSelectionChangeParams,
@@ -7,6 +9,7 @@ import { useEffect } from "react";
 
 import { debounce } from "@/utils/debounce";
 
+import { NODE_TYPE_REGISTRY } from "../../../nodes/registry";
 import {
   clearMultiSelection,
   clearSelection,
@@ -17,17 +20,14 @@ import {
 const SELECTION_DEBOUNCE_MS = 150;
 
 function buildMultiSelection(selected: Node[]): SelectedNode[] {
-  return selected
-    .filter((node) => node.type === "task" || node.type === "io")
-    .map((node) => {
-      let nodeType: SelectedNode["type"];
-      if (node.type === "task") {
-        nodeType = "task";
-      } else {
-        nodeType = node.data?.ioType === "input" ? "input" : "output";
-      }
-      return { id: node.id, type: nodeType, position: node.position };
-    });
+  const result: SelectedNode[] = [];
+  for (const node of selected) {
+    const manifest = NODE_TYPE_REGISTRY.getByNodeId(node.id);
+    if (!manifest?.selectable) continue;
+    const selectedNode = manifest.toSelectedNode?.(node);
+    if (selectedNode) result.push(selectedNode);
+  }
+  return result;
 }
 
 const debouncedSetMultiSelection = debounce(

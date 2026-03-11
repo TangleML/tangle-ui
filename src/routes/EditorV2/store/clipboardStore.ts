@@ -1,14 +1,18 @@
+import "../nodes"; // ensure manifests are registered
+
 import type { XYPosition } from "@xyflow/react";
 import { action, computed, makeObservable, observable } from "mobx";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 import { IncrementingIdGenerator } from "@/models/componentSpec/factories/idGenerator";
 
+import { NODE_TYPE_REGISTRY } from "../nodes/registry";
 import type { SelectedNode } from "./editorStore";
 import {
   type BindingSnapshot,
-  nodeCloneRegistry,
+  cloneBindings,
   type NodeSnapshot,
+  snapshotInternalBindings,
 } from "./nodeCloneHandlers";
 import { withUndoGroup } from "./undoStore";
 
@@ -81,15 +85,13 @@ class ClipboardStore {
     const snapshots: NodeSnapshot[] = [];
 
     for (const node of selectedNodes) {
-      const snapshot = nodeCloneRegistry.snapshotNode(spec, node);
+      const manifest = NODE_TYPE_REGISTRY.get(node.type);
+      const snapshot = manifest?.cloneHandler?.snapshot(spec, node.id);
       if (snapshot) snapshots.push(snapshot);
     }
 
     const selectedIds = new Set(selectedNodes.map((n) => n.id));
-    const bindings = nodeCloneRegistry.snapshotInternalBindings(
-      spec,
-      selectedIds,
-    );
+    const bindings = snapshotInternalBindings(spec, selectedIds);
 
     this.snapshots = snapshots;
     this.bindingSnapshots = bindings;
@@ -114,17 +116,15 @@ class ClipboardStore {
     const snapshots: NodeSnapshot[] = [];
 
     for (const node of selectedNodes) {
-      const snapshot = nodeCloneRegistry.snapshotNode(spec, node);
+      const manifest = NODE_TYPE_REGISTRY.get(node.type);
+      const snapshot = manifest?.cloneHandler?.snapshot(spec, node.id);
       if (snapshot) snapshots.push(snapshot);
     }
 
     if (snapshots.length === 0) return [];
 
     const selectedIds = new Set(selectedNodes.map((n) => n.id));
-    const bindings = nodeCloneRegistry.snapshotInternalBindings(
-      spec,
-      selectedIds,
-    );
+    const bindings = snapshotInternalBindings(spec, selectedIds);
 
     const newIds: string[] = [];
     const idMap = new Map<string, string>();
@@ -136,7 +136,8 @@ class ClipboardStore {
           y: snapshot.position.y + PASTE_OFFSET,
         };
 
-        const newId = nodeCloneRegistry.cloneNode(
+        const manifest = NODE_TYPE_REGISTRY.get(snapshot.type);
+        const newId = manifest?.cloneHandler?.clone(
           spec,
           snapshot,
           idGen,
@@ -149,7 +150,7 @@ class ClipboardStore {
         }
       }
 
-      nodeCloneRegistry.cloneBindings(spec, bindings, idMap, idGen);
+      cloneBindings(spec, bindings, idMap, idGen);
     });
 
     return newIds;
@@ -183,7 +184,8 @@ function cloneSnapshotsAtPosition(
         y: centerPosition.y + (snapshot.position.y - snapshotCenter.y),
       };
 
-      const newId = nodeCloneRegistry.cloneNode(
+      const manifest = NODE_TYPE_REGISTRY.get(snapshot.type);
+      const newId = manifest?.cloneHandler?.clone(
         spec,
         snapshot,
         idGen,
@@ -196,7 +198,7 @@ function cloneSnapshotsAtPosition(
       }
     }
 
-    nodeCloneRegistry.cloneBindings(spec, bindings, idMap, idGen);
+    cloneBindings(spec, bindings, idMap, idGen);
   });
 
   return newIds;

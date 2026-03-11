@@ -22,8 +22,14 @@ import { BlockStack } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
 import type { ComponentSpec } from "@/models/componentSpec";
 
-import { useGhostNode } from "../../hooks/useGhostNode";
 import { useSpecToNodesEdges } from "../../hooks/useSpecToNodesEdges";
+import { ConduitNode } from "../../nodes/ConduitNode/components/ConduitNode";
+import { ConduitEdge } from "../../nodes/ConduitNode/edges/ConduitEdge";
+import { useConduitEdgeMode } from "../../nodes/ConduitNode/hooks/useConduitEdgeMode";
+import { GhostNode } from "../../nodes/GhostNode/components/GhostNode";
+import { useGhostNode } from "../../nodes/GhostNode/hooks/useGhostNode";
+import { IONode } from "../../nodes/IONode/components/IONode";
+import { TaskNode } from "../../nodes/TaskNode/components/TaskNode";
 import {
   copySelectedNodes,
   deleteSelectedNodes,
@@ -31,7 +37,6 @@ import {
   pasteNodes,
 } from "../../store/actions";
 import { clearMultiSelection, editorStore } from "../../store/editorStore";
-import { GhostNode } from "./GhostNode";
 import { useClipboardShortcuts } from "./hooks/useClipboardShortcuts";
 import { useConnectionBehavior } from "./hooks/useConnectionBehavior";
 import { useDoubleClickBehavior } from "./hooks/useDoubleClickBehavior";
@@ -40,9 +45,7 @@ import { useFitViewOnFocus } from "./hooks/useFitViewOnFocus";
 import { useMetaKey } from "./hooks/useMetaKey";
 import { useNodeEdgeChanges } from "./hooks/useNodeEdgeChanges";
 import { useSelectionBehavior } from "./hooks/useSelectionBehavior";
-import { IONode } from "./IONode";
 import { SelectionToolbar } from "./SelectionToolbar";
-import { TaskNode } from "./TaskNode/TaskNode";
 
 const GRID_SIZE = 10;
 
@@ -50,6 +53,11 @@ const nodeTypes: Record<string, ComponentType<any>> = {
   task: TaskNode,
   io: IONode,
   ghost: GhostNode,
+  conduit: ConduitNode,
+};
+
+const edgeTypes: Record<string, ComponentType<any>> = {
+  conduitEdge: ConduitEdge,
 };
 
 function ConnectionLine({
@@ -101,18 +109,33 @@ export const FlowCanvas = observer(function FlowCanvas({
   const { metaKeyPressed, metaKeyPressedRef } = useMetaKey();
   const isConnecting = useConnection((c) => c.inProgress);
 
-  const { ghostNode, ghostEdge } = useGhostNode({
-    active: metaKeyPressed,
-    isConnecting,
-    spec,
-  });
   const { nodes: specNodes, edges: specEdges } = useSpecToNodesEdges(spec);
 
   const [nodes, setNodes, rfOnNodesChange] = useNodesState(specNodes);
   const [edges, setEdges, rfOnEdgesChange] = useEdgesState(specEdges);
 
+  /**
+   * todo: refactor, move out from FlowCanvas
+   */
+  const { ghostNode, ghostEdge } = useGhostNode({
+    active: metaKeyPressed,
+    isConnecting,
+    spec,
+  });
+  /**
+   * todo: refactor, move out from FlowCanvas
+   */
+  const { edges: conduitStyledEdges, onEdgeClick } = useConduitEdgeMode(
+    edges,
+    spec,
+  );
+
+  // todo: refactor by making "onEdgeClick" to be a composite
   const displayNodes = ghostNode ? [...nodes, ghostNode] : nodes;
-  const displayEdges = ghostEdge ? [...edges, ghostEdge] : edges;
+  // todo: refactor by making "onEdgeClick" to be a composite
+  const displayEdges = ghostEdge
+    ? [...conduitStyledEdges, ghostEdge]
+    : conduitStyledEdges;
 
   useEffect(() => {
     setNodes(specNodes);
@@ -146,8 +169,10 @@ export const FlowCanvas = observer(function FlowCanvas({
         {...connectionBehavior}
         {...dropBehavior}
         {...doubleClickBehavior}
+        onEdgeClick={onEdgeClick}
         onInit={setReactFlowInstance}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         connectionLineComponent={ConnectionLine}
         snapToGrid
         snapGrid={[GRID_SIZE, GRID_SIZE]}
@@ -157,9 +182,9 @@ export const FlowCanvas = observer(function FlowCanvas({
         fitViewOptions={{ maxZoom: 1, padding: 0.2 }}
         proOptions={{ hideAttribution: true }}
         deleteKeyCode={["Delete", "Backspace"]}
-        selectionOnDrag
+        selectionOnDrag={false}
         selectionMode={SelectionMode.Partial}
-        panOnDrag={[1, 2]}
+        panOnDrag={true}
       >
         <FloatingSelectionToolbar spec={spec} />
         <Background gap={GRID_SIZE} className="!bg-slate-50" />
@@ -170,15 +195,9 @@ export const FlowCanvas = observer(function FlowCanvas({
   );
 });
 
-/**
- * Isolated observer component for the selection toolbar.
- * Reads editorStore.multiSelection in its own MobX tracking scope,
- * so FlowCanvas does not re-render when multiSelection changes.
- */
 const FloatingSelectionToolbar = observer(function FloatingSelectionToolbar({
   spec,
 }: {
-  // todo: make ComponentSpec everywhere required, not nullable
   spec: ComponentSpec | null;
 }) {
   const { multiSelection } = editorStore;

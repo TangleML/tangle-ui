@@ -295,7 +295,10 @@ export class YamlDeserializer {
         for (const [annKey, annValue] of Object.entries(
           value as Record<string, unknown>,
         )) {
-          result.push({ key: annKey, value: annValue });
+          result.push({
+            key: annKey,
+            value: deserializeAnnotationValue(annKey, annValue),
+          });
         }
       } else {
         result.push({ key, value });

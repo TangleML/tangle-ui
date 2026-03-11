@@ -11,8 +11,8 @@ import {
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 
-import { InputValidationIndicator } from "../../../InputValidationIndicator";
-import type { TaskNodeInput, TaskNodeViewProps } from "../TaskNode";
+import { InputValidationIndicator } from "../../../components/InputValidationIndicator";
+import type { TaskNodeInput, TaskNodeViewProps } from "./TaskNode";
 
 interface ClassicInputHandleProps {
   input: TaskNodeInput;

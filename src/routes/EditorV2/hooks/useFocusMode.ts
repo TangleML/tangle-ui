@@ -1,3 +1,4 @@
+import { useReactFlow } from "@xyflow/react";
 import { useEffect } from "react";
 import { proxy } from "valtio";
 
@@ -78,12 +79,14 @@ function exitFocusMode(): void {
   }
 }
 
-export function toggleFocusMode(): void {
+export function toggleFocusMode(fitView?: () => void): void {
   if (focusModeStore.active) {
     exitFocusMode();
   } else {
     enterFocusMode();
   }
+
+  fitView?.();
 }
 
 /**
@@ -109,12 +112,14 @@ function handleDockEventDuringFocusMode(event: {
  * Call once at the EditorV2 root level.
  */
 export function useFocusMode(): void {
+  const { fitView } = useReactFlow();
+
   useEffect(() => {
     const unregisterShortcut = registerShortcut({
       id: "focus-mode",
       keys: { mod: true, key: "/" },
       label: "Focus mode",
-      action: () => toggleFocusMode(),
+      action: () => toggleFocusMode(fitView),
     });
 
     const unregisterLeftPlugin = registerDockAreaPlugin(

@@ -13,8 +13,8 @@ import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { getContrastTextColor } from "@/utils/color";
 
-import { InputValidationIndicator } from "../../../InputValidationIndicator";
-import type { TaskNodeViewProps } from "../TaskNode";
+import { InputValidationIndicator } from "../../../components/InputValidationIndicator";
+import type { TaskNodeViewProps } from "./TaskNode";
 
 export function TaskNodeFull({
   entityId,

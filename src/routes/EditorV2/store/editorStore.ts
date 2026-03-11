@@ -2,15 +2,17 @@ import { action, makeObservable, observable } from "mobx";
 
 import type { ValidationIssue } from "@/models/componentSpec";
 
+export type NodeEntityType = "task" | "input" | "output" | "conduit";
+
 export interface SelectedNode {
   id: string;
-  type: "task" | "input" | "output";
+  type: NodeEntityType;
   position: { x: number; y: number };
 }
 
 class EditorStore {
   selectedNodeId: string | null = null;
-  selectedNodeType: "task" | "input" | "output" | null = null;
+  selectedNodeType: NodeEntityType | null = null;
   lastSelectionWasShiftClick = false;
   lastShiftClickEntityId: string | null = null;
   multiSelection: SelectedNode[] = [];
@@ -56,7 +58,7 @@ class EditorStore {
 
   selectNode(
     nodeId: string | null,
-    nodeType: "task" | "input" | "output" | null = null,
+    nodeType: NodeEntityType | null = null,
     options?: { shiftKey?: boolean; entityId?: string },
   ) {
     const isShiftClick = options?.shiftKey ?? false;
@@ -120,7 +122,7 @@ export function resetEditorState() {
 
 export function selectNode(
   nodeId: string | null,
-  nodeType: "task" | "input" | "output" | null = null,
+  nodeType: NodeEntityType | null = null,
   options?: { shiftKey?: boolean; entityId?: string },
 ) {
   editorStore.selectNode(nodeId, nodeType, options);

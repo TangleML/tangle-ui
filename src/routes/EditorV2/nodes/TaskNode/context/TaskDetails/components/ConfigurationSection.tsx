@@ -105,10 +105,12 @@ export const ConfigurationSection = observer(function ConfigurationSection({
     }
   }, [selectedProvider, previousProvider, task.annotations]);
 
+  // todo: move to store
   const handleDisableCacheChange = (checked: boolean) => {
     task.setCacheStaleness(checked ? ISO8601_DURATION_ZERO_DAYS : undefined);
   };
 
+  // todo: move to store
   const handleSave = (key: string, value: string | undefined) => {
     if (value === undefined || value === "") {
       task.annotations.remove(key);
@@ -119,6 +121,7 @@ export const ConfigurationSection = observer(function ConfigurationSection({
 
   const taskColor = task.annotations.get("tangleml.com/editor/task-color");
 
+  // todo: move to store
   const handleColorChange = (color: string) => {
     if (color === "transparent") {
       task.annotations.remove("tangleml.com/editor/task-color");
