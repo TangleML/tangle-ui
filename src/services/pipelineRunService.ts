@@ -71,6 +71,7 @@ export const createBatchPipelineRuns = async (
   }
 
   return response.json() as Promise<{
+    batch_id: string;
     created_runs: Array<{
       id: number;
       root_execution_id: number;
@@ -90,6 +91,7 @@ export const savePipelineRun = async (
   pipelineName: string,
   pipelineDigest?: string,
   pipelineDescription?: string,
+  batchId?: string,
 ): Promise<PipelineRun> => {
   const pipelineRunsDb = localForage.createInstance({
     name: DB_NAME,
@@ -104,6 +106,7 @@ export const savePipelineRun = async (
     pipeline_name: pipelineName || "Untitled Pipeline",
     pipeline_digest: pipelineDigest,
     pipeline_description: pipelineDescription,
+    batch_id: batchId,
   };
 
   await pipelineRunsDb.setItem(String(responseData.id), pipelineRun);

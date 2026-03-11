@@ -181,7 +181,13 @@ export async function submitBatchPipelineRuns(
     | undefined;
   for (const run of response.created_runs) {
     if (run.id) {
-      await savePipelineRun(run, pipelineName, digest);
+      await savePipelineRun(
+        run,
+        pipelineName,
+        digest,
+        undefined,
+        response.batch_id,
+      );
     }
   }
 

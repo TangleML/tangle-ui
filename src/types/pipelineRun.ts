@@ -6,6 +6,7 @@ export interface PipelineRun {
   pipeline_name: string;
   pipeline_description?: string;
   pipeline_digest?: string;
+  batch_id?: string;
   status?: string;
   statusCounts?: TaskStatusCounts;
 }
