@@ -6,6 +6,7 @@ import { processTemplate } from "@/components/shared/PipelineRunNameTemplate/pro
 import { getRunNameTemplate } from "@/components/shared/PipelineRunNameTemplate/utils";
 import { getArgumentsFromInputs } from "@/components/shared/ReactFlow/FlowCanvas/utils/getArgumentsFromInputs";
 import {
+  createBatchPipelineRuns,
   createPipelineRun,
   savePipelineRun,
 } from "@/services/pipelineRunService";
@@ -18,6 +19,8 @@ import type {
   ComponentSpec,
 } from "./componentSpec";
 import { componentSpecFromYaml } from "./yaml";
+
+export const MAX_BATCH_SIZE = 100;
 
 export async function submitPipelineRun(
   componentSpec: ComponentSpec,
@@ -108,6 +111,81 @@ export async function submitPipelineRun(
   } catch (e) {
     options?.onError?.(e as Error);
   }
+}
+
+export async function submitBatchPipelineRuns(
+  componentSpec: ComponentSpec,
+  argSets: Record<string, ArgumentType>[],
+  backendUrl: string,
+  options?: {
+    authorizationToken?: string;
+    runNameOverride?: boolean;
+    canonicalName?: string;
+  },
+): Promise<PipelineRun[]> {
+  const pipelineName =
+    options?.canonicalName ?? componentSpec.name ?? "Pipeline";
+
+  const specCopy = structuredClone(componentSpec);
+  const componentCache = new Map<string, ComponentSpec>();
+  const fullyLoadedSpec = await processComponentSpec(specCopy, componentCache);
+  const argumentsFromInputs = getArgumentsFromInputs(fullyLoadedSpec);
+
+  const taskAnnotations = options?.runNameOverride
+    ? buildAnnotationsWithCanonicalName(pipelineName)
+    : undefined;
+
+  const runs = argSets.map((taskArguments) => {
+    const payloadArguments: Record<string, ArgumentType> = {
+      ...argumentsFromInputs,
+      ...taskArguments,
+    };
+
+    const stringArguments: Record<string, string> = Object.fromEntries(
+      Object.entries(payloadArguments)
+        .filter(([, v]) => typeof v === "string")
+        .map(([k, v]) => [k, v as string]),
+    );
+
+    const runNameOverride = options?.runNameOverride
+      ? processTemplate(getRunNameTemplate(fullyLoadedSpec) ?? "", {
+          componentRef: { spec: fullyLoadedSpec },
+          arguments: stringArguments,
+        }) || undefined
+      : undefined;
+
+    const payload = {
+      root_task: {
+        componentRef: {
+          spec: {
+            ...fullyLoadedSpec,
+            name: runNameOverride ?? pipelineName,
+          } as ComponentSpecInput,
+        },
+        ...(payloadArguments ? { arguments: payloadArguments } : {}),
+        annotations: taskAnnotations ?? {},
+      },
+    };
+
+    return payload as BodyCreateApiPipelineRunsPost;
+  });
+
+  const response = await createBatchPipelineRuns(
+    runs,
+    backendUrl,
+    options?.authorizationToken,
+  );
+
+  const digest = componentSpec.metadata?.annotations?.digest as
+    | string
+    | undefined;
+  for (const run of response.created_runs) {
+    if (run.id) {
+      await savePipelineRun(run, pipelineName, digest);
+    }
+  }
+
+  return response.created_runs as unknown as PipelineRun[];
 }
 
 const processComponentSpec = async (

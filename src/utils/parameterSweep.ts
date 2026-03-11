@@ -1,4 +1,5 @@
 import type { ArgumentType } from "./componentSpec";
+import { MAX_BATCH_SIZE } from "./submitPipeline";
 
 /** A sweep defines multiple values for one or more parameters. */
 export interface SweepParameter {
@@ -47,8 +48,6 @@ export function getSweepRunCount(sweepParams: SweepParameter[]): number {
   return activeParams.reduce((total, p) => total * p.values.length, 1);
 }
 
-const MAX_SWEEP_RUNS = 500;
-
 /** Validates sweep configuration and returns an error message if invalid. */
 export function validateSweep(sweepParams: SweepParameter[]): string | null {
   const activeParams = sweepParams.filter((p) => p.values.length > 0);
@@ -64,8 +63,8 @@ export function validateSweep(sweepParams: SweepParameter[]): string | null {
   }
 
   const runCount = getSweepRunCount(sweepParams);
-  if (runCount > MAX_SWEEP_RUNS) {
-    return `This sweep would create ${runCount} runs, which exceeds the maximum of ${MAX_SWEEP_RUNS}. Reduce the number of values or parameters.`;
+  if (runCount > MAX_BATCH_SIZE) {
+    return `Sweep produces ${runCount} runs, which exceeds the maximum of ${MAX_BATCH_SIZE}.`;
   }
 
   return null;

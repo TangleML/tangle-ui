@@ -48,6 +48,38 @@ export const createPipelineRun = async (
   return response.json();
 };
 
+export const createBatchPipelineRuns = async (
+  runs: BodyCreateApiPipelineRunsPost[],
+  backendUrl: string,
+  authorizationToken?: string,
+) => {
+  const authorizationHeader = authorizationToken
+    ? { Authorization: `Bearer ${authorizationToken}` }
+    : undefined;
+
+  const response = await fetch(`${backendUrl}/api/pipeline_runs/batch`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...authorizationHeader,
+    },
+    body: JSON.stringify(runs),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to create batch pipeline runs");
+  }
+
+  return response.json() as Promise<{
+    created_runs: Array<{
+      id: number;
+      root_execution_id: number;
+      created_at: string;
+      created_by: string;
+    }>;
+  }>;
+};
+
 export const savePipelineRun = async (
   responseData: {
     id: number;
