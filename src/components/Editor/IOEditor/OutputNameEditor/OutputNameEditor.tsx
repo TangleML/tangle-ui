@@ -182,15 +182,15 @@ export const OutputNameEditor = ({
   return (
     <BlockStack gap="3" className="p-4 w-full">
       <Heading level={1}>{output.name}</Heading>
-      <div className="flex-1">
-        <NameField
-          inputName={outputName}
-          onNameChange={handleNameChange}
-          onBlur={handleBlur}
-          disabled={disabled}
-          error={validationError}
-        />
-      </div>
+
+      <NameField
+        inputName={outputName}
+        onNameChange={handleNameChange}
+        onBlur={handleBlur}
+        disabled={disabled}
+        error={validationError}
+      />
+
       <DescriptionField
         inputName={output.name}
         inputDescription={outputDescription}
@@ -198,15 +198,14 @@ export const OutputNameEditor = ({
         onBlur={handleBlur}
         disabled={disabled}
       />
-      <div className="w-36">
-        <TypeField
-          inputValue={connectedDetails.outputType ?? "Any"}
-          onInputChange={() => {}}
-          placeholder="Any"
-          disabled
-          inputName={output.name}
-        />
-      </div>
+
+      <TypeField
+        inputValue={connectedDetails.outputType ?? "Any"}
+        onInputChange={() => {}}
+        placeholder="Any"
+        disabled
+        inputName={output.name}
+      />
 
       <InlineStack gap="4">
         {!disabled && (
