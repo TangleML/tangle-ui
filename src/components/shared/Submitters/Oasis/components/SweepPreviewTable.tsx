@@ -1,3 +1,4 @@
+import { BlockStack } from "@/components/ui/layout";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Table,
@@ -7,7 +8,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { BlockStack } from "@/components/ui/layout";
 import { Paragraph, Text } from "@/components/ui/typography";
 import type { ArgumentType } from "@/utils/componentSpec";
 

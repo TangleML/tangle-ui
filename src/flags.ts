@@ -38,4 +38,19 @@ export const ExistingFlags: ConfigFlags = {
     default: false,
     category: "beta",
   },
+  ["bulk-argument-upload"]: {
+    name: "Bulk Argument Upload",
+    description:
+      "Enable bulk argument features: file import (CSV/JSON/YAML), template download, per-input bulk mode toggles, and multi-run submission.",
+    default: false,
+    category: "beta",
+  },
+
+  ["parameter-sweep"]: {
+    name: "Parameter Sweep",
+    description:
+      "Enable parameter sweep: define multiple values per input and submit all combinations as separate runs.",
+    default: false,
+    category: "beta",
+  },
 };

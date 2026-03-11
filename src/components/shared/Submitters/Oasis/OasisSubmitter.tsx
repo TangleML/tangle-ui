@@ -26,7 +26,7 @@ import {
   type ComponentSpec,
   isGraphImplementation,
 } from "@/utils/componentSpec";
-import { getFileExtension } from "@/utils/csvBulkArgumentImport";
+import { getFileExtension } from "@/utils/fileImportCommon";
 import { submitPipelineRun } from "@/utils/submitPipeline";
 import { validateArguments } from "@/utils/validations";
 
@@ -107,6 +107,8 @@ const OasisSubmitter = ({
   const { backendUrl, configured, available } = useBackend();
   const { mutate: submit, isPending: isSubmitting } = useSubmitPipeline();
   const isAutoRedirect = useFlagValue("redirect-on-new-pipeline-run");
+  const isBulkUploadEnabled = useFlagValue("bulk-argument-upload");
+  const isParameterSweepEnabled = useFlagValue("parameter-sweep");
 
   const [submitSuccess, setSubmitSuccess] = useState<boolean | null>(null);
   const [isArgumentsDialogOpen, setIsArgumentsDialogOpen] = useState(false);
@@ -344,12 +346,14 @@ const OasisSubmitter = ({
     hasConfigurableInputs && !isButtonDisabled && isComponentTreeValid;
 
   const handleDragEnter = (e: DragEvent) => {
+    if (!isBulkUploadEnabled) return;
     e.preventDefault();
     dragCounter.current++;
     setIsDraggingOver(true);
   };
 
   const handleDragLeave = (e: DragEvent) => {
+    if (!isBulkUploadEnabled) return;
     e.preventDefault();
     dragCounter.current--;
     if (dragCounter.current === 0) {
@@ -358,10 +362,12 @@ const OasisSubmitter = ({
   };
 
   const handleDragOver = (e: DragEvent) => {
+    if (!isBulkUploadEnabled) return;
     e.preventDefault();
   };
 
   const handleDrop = (e: DragEvent) => {
+    if (!isBulkUploadEnabled) return;
     e.preventDefault();
     dragCounter.current = 0;
     setIsDraggingOver(false);
@@ -405,7 +411,9 @@ const OasisSubmitter = ({
         onDrop={handleDrop}
         className={cn(
           "rounded-md transition-all",
-          isDraggingOver && "ring-2 ring-primary bg-primary/5",
+          isDraggingOver &&
+            isBulkUploadEnabled &&
+            "ring-2 ring-primary bg-primary/5",
         )}
       >
         <InlineStack align="space-between" className="pr-2.5">
@@ -450,16 +458,18 @@ const OasisSubmitter = ({
               >
                 <Icon name="Split" className="rotate-90" />
               </TooltipButton>
-              <TooltipButton
-                tooltip="Parameter sweep"
-                variant="ghost"
-                size="icon"
-                data-testid="parameter-sweep-button"
-                onClick={() => setIsSweepDialogOpen(true)}
-                disabled={!available}
-              >
-                <Icon name="Grid3x3" />
-              </TooltipButton>
+              {isParameterSweepEnabled && (
+                <TooltipButton
+                  tooltip="Parameter sweep"
+                  variant="ghost"
+                  size="icon"
+                  data-testid="parameter-sweep-button"
+                  onClick={() => setIsSweepDialogOpen(true)}
+                  disabled={!available}
+                >
+                  <Icon name="Grid3x3" />
+                </TooltipButton>
+              )}
             </InlineStack>
           )}
         </InlineStack>
@@ -476,7 +486,7 @@ const OasisSubmitter = ({
         />
       )}
 
-      {componentSpec && (
+      {componentSpec && isParameterSweepEnabled && (
         <ParameterSweepDialog
           open={isSweepDialogOpen}
           onCancel={() => setIsSweepDialogOpen(false)}

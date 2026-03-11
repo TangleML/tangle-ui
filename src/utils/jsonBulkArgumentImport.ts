@@ -1,9 +1,9 @@
+import type { ArgumentType, InputSpec } from "./componentSpec";
 import {
-  type ArgumentType,
-  type InputSpec,
-  isSecretArgument,
-} from "./componentSpec";
-import type { FileImportResult } from "./csvBulkArgumentImport";
+  buildFileImportResult,
+  emptyFileImportResult,
+  type FileImportResult,
+} from "./fileImportCommon";
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -23,6 +23,18 @@ function valueToString(value: unknown): string {
 }
 
 /**
+ * Joins multi-row JSON values, quoting plain strings that contain commas
+ * so parseBulkValues doesn't split them. Values starting with { or [ are
+ * already protected by brace/bracket depth tracking in the parser.
+ */
+function jsonValueJoiner(values: string[]): string {
+  const quotedValues = values.map((v) =>
+    v.includes(",") && v[0] !== "{" && v[0] !== "[" ? JSON.stringify(v) : v,
+  );
+  return quotedValues.join(", ");
+}
+
+/**
  * Maps JSON data onto pipeline input arguments.
  *
  * Single object: values go directly into matched inputs.
@@ -39,42 +51,24 @@ export function mapJsonToArguments(
   inputs: InputSpec[],
   currentArgs: Record<string, ArgumentType>,
 ): FileImportResult {
-  const empty: FileImportResult = {
-    values: {},
-    changedInputNames: [],
-    enableBulk: false,
-    unmatchedColumns: [],
-    skippedSecretInputs: [],
-    rowCount: 0,
-  };
-
   let parsed: unknown;
   try {
     parsed = JSON.parse(jsonText);
   } catch {
-    return empty;
+    return emptyFileImportResult();
   }
 
   let rows: Record<string, unknown>[];
   if (Array.isArray(parsed)) {
-    if (!parsed.every(isPlainObject)) return empty;
+    if (!parsed.every(isPlainObject)) return emptyFileImportResult();
     rows = parsed;
   } else if (isPlainObject(parsed)) {
     rows = [parsed];
   } else {
-    return empty;
+    return emptyFileImportResult();
   }
 
-  if (rows.length === 0) return empty;
-
-  const rowCount = rows.length;
-
-  const inputNameSet = new Set(inputs.map((i) => i.name));
-  const secretInputNames = new Set(
-    inputs
-      .filter((i) => isSecretArgument(currentArgs[i.name]))
-      .map((i) => i.name),
-  );
+  if (rows.length === 0) return emptyFileImportResult();
 
   // Collect all unique keys across all rows
   const allKeys = new Set<string>();
@@ -84,50 +78,19 @@ export function mapJsonToArguments(
     }
   }
 
-  const unmatchedColumns: string[] = [];
-  const skippedSecretInputs: string[] = [];
-  const values: Record<string, string> = {};
-  const changedInputNames: string[] = [];
-
+  const columns = new Map<string, string[]>();
   for (const key of allKeys) {
-    if (!inputNameSet.has(key)) {
-      unmatchedColumns.push(key);
-      continue;
-    }
-
-    if (secretInputNames.has(key)) {
-      skippedSecretInputs.push(key);
-      continue;
-    }
-
-    const columnValues = rows.map((row) => valueToString(row[key]));
-
-    let newValue: string;
-    if (rowCount === 1) {
-      newValue = columnValues[0] ?? "";
-    } else {
-      // Quote plain string values that contain commas so parseBulkValues
-      // doesn't split them. Values starting with { or [ are already protected
-      // by brace/bracket depth tracking in the parser.
-      const quotedValues = columnValues.map((v) =>
-        v.includes(",") && v[0] !== "{" && v[0] !== "[" ? JSON.stringify(v) : v,
-      );
-      newValue = quotedValues.join(", ");
-    }
-
-    values[key] = newValue;
-
-    if (currentArgs[key] !== newValue) {
-      changedInputNames.push(key);
-    }
+    columns.set(
+      key,
+      rows.map((row) => valueToString(row[key])),
+    );
   }
 
-  return {
-    values,
-    changedInputNames,
-    enableBulk: rowCount > 1,
-    unmatchedColumns,
-    skippedSecretInputs,
-    rowCount,
-  };
+  return buildFileImportResult(
+    columns,
+    rows.length,
+    inputs,
+    currentArgs,
+    jsonValueJoiner,
+  );
 }
