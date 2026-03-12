@@ -19,6 +19,8 @@ import type {
 } from "@/models/componentSpec";
 import type { TypeSpecType } from "@/models/componentSpec/entities/types";
 
+import { removeArgument, setArgument } from "./arguments.actions";
+
 const LANGUAGE_OPTIONS = [
   { value: "plaintext", label: "Plain Text" },
   { value: "json", label: "JSON" },
@@ -95,9 +97,9 @@ export function ArgumentCodeEditor({
 
     const trimmed = text.trim();
     if (trimmed === "") {
-      task.removeArgumentByName(inputSpec.name);
+      removeArgument(task, inputSpec.name);
     } else {
-      spec.setTaskArgument(task.$id, inputSpec.name, trimmed);
+      setArgument(spec, task.$id, inputSpec.name, trimmed);
     }
   };
 

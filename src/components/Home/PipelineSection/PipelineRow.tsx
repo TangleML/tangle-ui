@@ -158,33 +158,41 @@ const PipelineRow = withSuspenseWrapper(
             onDragEnd={() => onDragStateChange?.(false)}
             className={dragData ? "cursor-grab" : undefined}
           >
-            <BlockStack gap="0">
-              {name && name.length > MAX_TITLE_LENGTH ? (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Paragraph>
-                        <HighlightText
-                          text={name.slice(0, MAX_TITLE_LENGTH) + "..."}
-                          query={searchQuery}
-                        />
-                      </Paragraph>
-                    </TooltipTrigger>
-                    <TooltipContent>{name}</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              ) : (
-                <Paragraph>
-                  <HighlightText text={name ?? ""} query={searchQuery} />
-                </Paragraph>
-              )}
-              <MatchBadges
-                matchedFields={matchedFields}
-                matchedComponentNames={matchedComponentNames}
-                searchQuery={searchQuery}
-                componentQuery={componentQuery}
-              />
-            </BlockStack>
+            <InlineStack
+              gap="2"
+              blockAlign="start"
+              className="w-full truncate"
+              wrap="nowrap"
+            >
+              {icon}
+              <BlockStack gap="0">
+                {name && name.length > MAX_TITLE_LENGTH ? (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Paragraph>
+                          <HighlightText
+                            text={name.slice(0, MAX_TITLE_LENGTH) + "..."}
+                            query={searchQuery}
+                          />
+                        </Paragraph>
+                      </TooltipTrigger>
+                      <TooltipContent>{name}</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                ) : (
+                  <Paragraph>
+                    <HighlightText text={name ?? ""} query={searchQuery} />
+                  </Paragraph>
+                )}
+                <MatchBadges
+                  matchedFields={matchedFields}
+                  matchedComponentNames={matchedComponentNames}
+                  searchQuery={searchQuery}
+                  componentQuery={componentQuery}
+                />
+              </BlockStack>
+            </InlineStack>
           </div>
         </TableCell>
         <TableCell>

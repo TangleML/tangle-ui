@@ -19,6 +19,13 @@ import { isGraphImplementation } from "@/models/componentSpec/entities/types";
 import type { AnnotationConfig, Annotations } from "@/types/annotations";
 import { ISO8601_DURATION_ZERO_DAYS } from "@/utils/constants";
 
+import {
+  clearProviderAnnotations,
+  saveAnnotation,
+  setTaskColor,
+  toggleCacheDisable,
+} from "./taskConfig.actions";
+
 interface ConfigurationSectionProps {
   task: Task;
 }
@@ -79,9 +86,7 @@ export const ConfigurationSection = observer(function ConfigurationSection({
           const previousResources = parseSchemaToAnnotationConfig(
             previousProviderSchema,
           );
-          for (const res of previousResources) {
-            task.annotations.remove(res.annotation);
-          }
+          clearProviderAnnotations(task, previousResources);
         }
       }
 
@@ -105,29 +110,18 @@ export const ConfigurationSection = observer(function ConfigurationSection({
     }
   }, [selectedProvider, previousProvider, task.annotations]);
 
-  // todo: move to store
   const handleDisableCacheChange = (checked: boolean) => {
-    task.setCacheStaleness(checked ? ISO8601_DURATION_ZERO_DAYS : undefined);
+    toggleCacheDisable(task, checked);
   };
 
-  // todo: move to store
   const handleSave = (key: string, value: string | undefined) => {
-    if (value === undefined || value === "") {
-      task.annotations.remove(key);
-    } else {
-      task.annotations.set(key, value);
-    }
+    saveAnnotation(task, key, value);
   };
 
   const taskColor = task.annotations.get("tangleml.com/editor/task-color");
 
-  // todo: move to store
   const handleColorChange = (color: string) => {
-    if (color === "transparent") {
-      task.annotations.remove("tangleml.com/editor/task-color");
-    } else {
-      task.annotations.set("tangleml.com/editor/task-color", color);
-    }
+    setTaskColor(task, color);
   };
 
   return (

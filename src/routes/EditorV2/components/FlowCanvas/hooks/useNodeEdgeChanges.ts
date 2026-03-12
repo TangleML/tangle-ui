@@ -25,6 +25,7 @@ export function useNodeEdgeChanges(
     );
 
     if (positionChanges.length > 0) {
+      // todo: move action to a separate file
       withUndoGroup("Move nodes", () => {
         for (const change of positionChanges) {
           if ("id" in change && "position" in change && change.position) {
@@ -39,7 +40,10 @@ export function useNodeEdgeChanges(
     for (const change of removeChanges) {
       if ("id" in change) {
         const manifest = NODE_TYPE_REGISTRY.getByNodeId(change.id);
-        manifest?.deleteNode(spec, change.id);
+        // todo: move action to a separate file
+        withUndoGroup("Delete node", () => {
+          manifest?.deleteNode(spec, change.id);
+        });
       }
     }
 

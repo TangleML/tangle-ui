@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import CodeSyntaxHighlighter from "@/components/shared/CodeViewer/CodeSyntaxHighlighter";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Heading, Text } from "@/components/ui/typography";
+import { Text } from "@/components/ui/typography";
 import type { ComponentSpec } from "@/models/componentSpec";
 import { JsonSerializer } from "@/models/componentSpec";
 import { componentSpecToText } from "@/utils/yaml";

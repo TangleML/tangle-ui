@@ -5,26 +5,18 @@ import { undoMiddleware, UndoStore as MobxUndoStore } from "mobx-keystone";
 import type { ComponentSpec } from "@/models/componentSpec";
 
 class UndoStore {
-  undoManager: UndoManager | null = null;
+  @observable.ref accessor undoManager: UndoManager | null = null;
 
   constructor() {
-    makeObservable(this, {
-      undoManager: observable.ref,
-      init: action,
-      dispose: action,
-      canUndo: computed,
-      canRedo: computed,
-      undoLevels: computed,
-      redoLevels: computed,
-    });
+    makeObservable(this);
   }
 
-  init(spec: ComponentSpec, store?: MobxUndoStore) {
+  @action init(spec: ComponentSpec, store?: MobxUndoStore) {
     this.dispose();
     this.undoManager = undoMiddleware(spec, store);
   }
 
-  dispose() {
+  @action dispose() {
     if (this.undoManager) {
       this.undoManager.dispose();
       this.undoManager = null;
@@ -43,19 +35,19 @@ class UndoStore {
     }
   }
 
-  get canUndo(): boolean {
+  @computed get canUndo(): boolean {
     return this.undoManager?.canUndo ?? false;
   }
 
-  get canRedo(): boolean {
+  @computed get canRedo(): boolean {
     return this.undoManager?.canRedo ?? false;
   }
 
-  get undoLevels(): number {
+  @computed get undoLevels(): number {
     return this.undoManager?.undoLevels ?? 0;
   }
 
-  get redoLevels(): number {
+  @computed get redoLevels(): number {
     return this.undoManager?.redoLevels ?? 0;
   }
 

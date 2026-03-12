@@ -8,7 +8,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import type {
-  ArgumentType,
   Binding,
   ComponentSpec,
   InputSpecJson,
@@ -18,6 +17,14 @@ import type { DynamicDataArgument } from "@/utils/componentSpec";
 
 import { createInputAndConnect } from "../store/actions";
 import { editorStore, setFocusedArgument } from "../store/editorStore";
+import {
+  quickConnect,
+  removeArgument,
+  resetArgumentToDefault,
+  setArgument,
+  setDynamicData,
+  unsetArgument,
+} from "./arguments.actions";
 import { InputValidationIndicator } from "./InputValidationIndicator";
 import { ThunderMenu } from "./ThunderMenu";
 
@@ -113,9 +120,9 @@ export const ArgumentRow = observer(function ArgumentRow({
 
     if (trimmed !== (typeof currentValue === "string" ? currentValue : "")) {
       if (trimmed === "" && isSet) {
-        task.removeArgumentByName(inputSpec.name);
+        removeArgument(task, inputSpec.name);
       } else {
-        spec.setTaskArgument(task.$id, inputSpec.name, trimmed);
+        setArgument(spec, task.$id, inputSpec.name, trimmed);
       }
     }
   };
@@ -137,25 +144,17 @@ export const ArgumentRow = observer(function ArgumentRow({
 
   const handleResetToDefault = () => {
     const defaultVal = inputSpec.default ?? "";
-    spec.setTaskArgument(task.$id, inputSpec.name, defaultVal);
+    resetArgumentToDefault(spec, task.$id, inputSpec.name, defaultVal);
     setInputValue(defaultVal);
   };
 
   const handleUnset = () => {
-    task.removeArgumentByName(inputSpec.name);
-    spec.removeAllBindingsBy(
-      (b) =>
-        b.targetEntityId === task.$id && b.targetPortName === inputSpec.name,
-    );
+    unsetArgument(task, spec, inputSpec.name);
     setInputValue("");
   };
 
   const handleSelectDynamicData = (value: DynamicDataArgument) => {
-    spec.setTaskArgument(
-      task.$id,
-      inputSpec.name,
-      value as unknown as ArgumentType,
-    );
+    setDynamicData(spec, task.$id, inputSpec.name, value);
     setInputValue("");
   };
 
@@ -163,9 +162,12 @@ export const ArgumentRow = observer(function ArgumentRow({
     sourceEntityId: string,
     sourcePortName: string,
   ) => {
-    spec.connectNodes(
-      { entityId: sourceEntityId, portName: sourcePortName },
-      { entityId: task.$id, portName: inputSpec.name },
+    quickConnect(
+      spec,
+      sourceEntityId,
+      sourcePortName,
+      task.$id,
+      inputSpec.name,
     );
     setInputValue("");
   };

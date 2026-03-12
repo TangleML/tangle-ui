@@ -86,7 +86,9 @@ export function updateConduitPosition(
   const updated = existing.map((c) =>
     c.id === conduitId ? { ...c, position } : c,
   );
-  setConduits(spec, updated);
+  withUndoGroup("Move conduit", () => {
+    setConduits(spec, updated);
+  });
 }
 
 export function updateConduitSize(
@@ -174,7 +176,9 @@ export function cleanupDeletedBinding(spec: ComponentSpec, bindingId: string) {
     ...c,
     edgeIds: c.edgeIds.filter((id) => id !== bindingId),
   }));
-  setConduits(spec, updated);
+  withUndoGroup("Cleanup deleted binding", () => {
+    setConduits(spec, updated);
+  });
 }
 
 /**

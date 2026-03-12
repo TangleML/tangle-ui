@@ -32,17 +32,20 @@ export function addTask(
   componentRef: ComponentReference,
   position: XYPosition,
 ): Task {
-  const componentName = componentRef.spec?.name ?? componentRef.name ?? "Task";
-  const taskName = generateUniqueTaskName(spec, componentName);
-  const task = createTaskFromComponentRef(idGen, componentRef, taskName);
+  return withUndoGroup("Add task", () => {
+    const componentName =
+      componentRef.spec?.name ?? componentRef.name ?? "Task";
+    const taskName = generateUniqueTaskName(spec, componentName);
+    const task = createTaskFromComponentRef(idGen, componentRef, taskName);
 
-  task.annotations.set("editor.position", {
-    x: position.x,
-    y: position.y,
+    task.annotations.set("editor.position", {
+      x: position.x,
+      y: position.y,
+    });
+
+    spec.addTask(task);
+    return task;
   });
-
-  spec.addTask(task);
-  return task;
 }
 
 export function addInput(
@@ -50,17 +53,19 @@ export function addInput(
   position: XYPosition,
   name?: string,
 ): Input {
-  const inputName = generateUniqueInputName(spec, name);
-  const input = new Input({
-    $id: idGen.next("input"),
-    name: inputName,
+  return withUndoGroup("Add input", () => {
+    const inputName = generateUniqueInputName(spec, name);
+    const input = new Input({
+      $id: idGen.next("input"),
+      name: inputName,
+    });
+    input.annotations.set("editor.position", {
+      x: position.x,
+      y: position.y,
+    });
+    spec.addInput(input);
+    return input;
   });
-  input.annotations.set("editor.position", {
-    x: position.x,
-    y: position.y,
-  });
-  spec.addInput(input);
-  return input;
 }
 
 export function addOutput(
@@ -68,17 +73,19 @@ export function addOutput(
   position: XYPosition,
   name?: string,
 ): Output {
-  const outputName = generateUniqueOutputName(spec, name);
-  const output = new Output({
-    $id: idGen.next("output"),
-    name: outputName,
+  return withUndoGroup("Add output", () => {
+    const outputName = generateUniqueOutputName(spec, name);
+    const output = new Output({
+      $id: idGen.next("output"),
+      name: outputName,
+    });
+    output.annotations.set("editor.position", {
+      x: position.x,
+      y: position.y,
+    });
+    spec.addOutput(output);
+    return output;
   });
-  output.annotations.set("editor.position", {
-    x: position.x,
-    y: position.y,
-  });
-  spec.addOutput(output);
-  return output;
 }
 
 interface ConnectionInfo {
@@ -130,30 +137,31 @@ export function connectNodes(
 
   if (sourceType === "input" && targetType === "output") return false;
 
-  spec.connectNodes(
-    { entityId: sourceNodeId, portName: sourceOutputName },
-    { entityId: targetNodeId, portName: targetInputName },
-  );
-
-  return true;
+  return withUndoGroup("Connect nodes", () => {
+    spec.connectNodes(
+      { entityId: sourceNodeId, portName: sourceOutputName },
+      { entityId: targetNodeId, portName: targetInputName },
+    );
+    return true;
+  });
 }
 
 export function deleteTask(spec: ComponentSpec, entityId: string): boolean {
-  return spec.deleteTaskById(entityId);
+  return withUndoGroup("Delete task", () => spec.deleteTaskById(entityId));
 }
 
 export function deleteInput(spec: ComponentSpec, entityId: string): boolean {
-  return spec.deleteInputById(entityId);
+  return withUndoGroup("Delete input", () => spec.deleteInputById(entityId));
 }
 
 export function deleteOutput(spec: ComponentSpec, entityId: string): boolean {
-  return spec.deleteOutputById(entityId);
+  return withUndoGroup("Delete output", () => spec.deleteOutputById(entityId));
 }
 
 export function deleteEdge(spec: ComponentSpec, edgeId: string): boolean {
   const match = edgeId.match(/^edge_(.+)$/);
   if (!match) return false;
-  return spec.deleteEdgeById(match[1]);
+  return withUndoGroup("Delete edge", () => spec.deleteEdgeById(match[1]));
 }
 
 export function renameTask(
@@ -161,7 +169,7 @@ export function renameTask(
   entityId: string,
   newName: string,
 ): boolean {
-  return spec.renameTask(entityId, newName);
+  return withUndoGroup("Rename task", () => spec.renameTask(entityId, newName));
 }
 
 export function renameInput(
@@ -169,7 +177,9 @@ export function renameInput(
   entityId: string,
   newName: string,
 ): boolean {
-  return spec.renameInput(entityId, newName);
+  return withUndoGroup("Rename input", () =>
+    spec.renameInput(entityId, newName),
+  );
 }
 
 export function renameOutput(
@@ -177,20 +187,26 @@ export function renameOutput(
   entityId: string,
   newName: string,
 ): boolean {
-  return spec.renameOutput(entityId, newName);
+  return withUndoGroup("Rename output", () =>
+    spec.renameOutput(entityId, newName),
+  );
 }
 
 export function renamePipeline(spec: ComponentSpec, newName: string): boolean {
-  spec.setName(newName);
-  return true;
+  return withUndoGroup("Rename pipeline", () => {
+    spec.setName(newName);
+    return true;
+  });
 }
 
 export function updatePipelineDescription(
   spec: ComponentSpec,
   description: string | undefined,
 ): boolean {
-  spec.setDescription(description);
-  return true;
+  return withUndoGroup("Update pipeline description", () => {
+    spec.setDescription(description);
+    return true;
+  });
 }
 
 export function updateNodePosition(
@@ -198,7 +214,9 @@ export function updateNodePosition(
   entityId: string,
   position: XYPosition,
 ) {
-  spec.updateNodePosition(entityId, position);
+  withUndoGroup("Update node position", () => {
+    spec.updateNodePosition(entityId, position);
+  });
 }
 
 export function createConnectedIONode(

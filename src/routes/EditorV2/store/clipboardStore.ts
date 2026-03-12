@@ -64,24 +64,18 @@ async function readFromSystemClipboard(): Promise<ClipboardEnvelope | null> {
 }
 
 class ClipboardStore {
-  snapshots: NodeSnapshot[] = [];
-  bindingSnapshots: BindingSnapshot[] = [];
+  @observable.shallow accessor snapshots: NodeSnapshot[] = [];
+  @observable.shallow accessor bindingSnapshots: BindingSnapshot[] = [];
 
   constructor() {
-    makeObservable(this, {
-      snapshots: observable.shallow,
-      bindingSnapshots: observable.shallow,
-      hasContent: computed,
-      copy: action,
-      clear: action,
-    });
+    makeObservable(this);
   }
 
-  get hasContent(): boolean {
+  @computed get hasContent(): boolean {
     return this.snapshots.length > 0;
   }
 
-  copy(spec: ComponentSpec, selectedNodes: SelectedNode[]) {
+  @action copy(spec: ComponentSpec, selectedNodes: SelectedNode[]) {
     const snapshots: NodeSnapshot[] = [];
 
     for (const node of selectedNodes) {
@@ -156,7 +150,7 @@ class ClipboardStore {
     return newIds;
   }
 
-  clear() {
+  @action clear() {
     this.snapshots = [];
     this.bindingSnapshots = [];
   }

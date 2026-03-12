@@ -221,6 +221,7 @@ export const FolderPipelineTable = withSuspenseWrapper(
                 </TableHead>
                 <TableHead>Title</TableHead>
                 <TableHead className="w-36">Modified at</TableHead>
+                <TableHead className="w-36">Tags</TableHead>
                 <TableHead className="w-36">Last run</TableHead>
                 <TableHead className="w-16">Runs</TableHead>
                 <TableHead className="w-12"></TableHead>
