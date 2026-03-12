@@ -1,6 +1,9 @@
 import { useState } from "react";
 
-import type { ArtifactNodeResponse } from "@/api/types.gen";
+import type {
+  ArtifactDataResponse,
+  ArtifactNodeResponse,
+} from "@/api/types.gen";
 import { CopyText } from "@/components/shared/CopyText/CopyText";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,10 +15,12 @@ import {
 } from "@/components/ui/dialog";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
-import { Link } from "@/components/ui/link";
 import { Text } from "@/components/ui/typography";
 import { formatBytes } from "@/utils/string";
-import { convertArtifactUriToHTTPUrl } from "@/utils/URL";
+
+import ArtifactURI from "./ArtifactURI";
+import ArtifactVisualizer from "./ArtifactVisualizer/ArtifactVisualizer";
+import TextVisualizer from "./ArtifactVisualizer/TextVisualizer";
 
 interface IOCellProps {
   name: string;
@@ -27,6 +32,7 @@ const IOCell = ({ name, type, artifact }: IOCellProps) => {
   const artifactData = artifact?.artifact_data;
   const inlineValue = artifactData?.value;
   const hasInlineValue = canShowInlineValue(inlineValue);
+  const hasDetails = Boolean(artifactData?.uri || hasInlineValue);
 
   const [isOpen, setIsOpen] = useState(false);
 
@@ -60,6 +66,10 @@ const IOCell = ({ name, type, artifact }: IOCellProps) => {
             </InlineStack>
           </InlineStack>
 
+          {artifact && hasDetails && !hasInlineValue && !!type && (
+            <ArtifactVisualizer artifact={artifact} name={name} type={type} />
+          )}
+
           {hasInlineValue && (
             <InlineStack gap="1" wrap="nowrap" blockAlign="center">
               <CopyText
@@ -87,31 +97,7 @@ const IOCell = ({ name, type, artifact }: IOCellProps) => {
           )}
         </InlineStack>
         {artifactData?.uri && (
-          <InlineStack gap="2" wrap="nowrap" blockAlign="center">
-            <Link
-              href={convertArtifactUriToHTTPUrl(
-                artifactData.uri,
-                artifactData.is_dir,
-              )}
-              external
-              size="xs"
-            >
-              Link
-            </Link>
-
-            <Text size="md" tone="subdued">
-              &bull;
-            </Text>
-
-            <CopyText
-              size="xs"
-              compact
-              displayValue="Copy URI"
-              className="text-sky-500 hover:text-sky-600"
-            >
-              {artifactData.uri}
-            </CopyText>
-          </InlineStack>
+          <ArtifactURI uri={artifactData.uri} isDir={artifactData.is_dir} />
         )}
       </BlockStack>
       {inlineValue && (
@@ -119,6 +105,7 @@ const IOCell = ({ name, type, artifact }: IOCellProps) => {
           open={isOpen}
           title={name}
           value={inlineValue}
+          artifactData={artifactData}
           onClose={() => setIsOpen(false)}
         />
       )}
@@ -144,11 +131,13 @@ const TextPreview = ({
   open,
   title,
   value,
+  artifactData,
   onClose,
 }: {
   open: boolean;
   title: string;
   value: string;
+  artifactData?: ArtifactDataResponse;
   onClose: () => void;
 }) => {
   return (
@@ -156,9 +145,10 @@ const TextPreview = ({
       <DialogContent className="max-h-9/10 flex flex-col">
         <DialogTitle>{title}</DialogTitle>
         <DialogDescription>Complete artifact</DialogDescription>
-        <BlockStack className="flex-1 min-h-0 min-w-0 overflow-y-auto wrap-anywhere">
-          <Text size="sm">{value}</Text>
-        </BlockStack>
+        {artifactData?.uri && (
+          <ArtifactURI uri={artifactData.uri} isDir={artifactData.is_dir} />
+        )}
+        <TextVisualizer value={value} />
         <DialogFooter>
           <Button onClick={onClose}>Close</Button>
         </DialogFooter>
