@@ -20,7 +20,8 @@ export function isLanguageOption(value: string): value is LanguageOption {
  * Detection is ordered from most-certain to least-certain.
  */
 export function detectLanguage(value: string): LanguageOption {
-  const trimmed = value.trim();
+  // todo: figure out why we may receive a non-string value
+  const trimmed = String(value).trim();
 
   if (!trimmed) return "plaintext";
 
