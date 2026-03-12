@@ -86,8 +86,9 @@ export function Window({ windowId, docked = false }: WindowProps) {
   const isDocked = dockState !== undefined && dockState !== "none";
   const isAttached = !!attachedTo;
   const effectiveDockedHeight = dockedHeight ?? DEFAULT_DOCKED_HEIGHT;
-  const dockAreaCollapsed =
-    isDocked ? snap.dockAreas[dockState as "left" | "right"].collapsed : false;
+  const dockAreaCollapsed = isDocked
+    ? snap.dockAreas[dockState as "left" | "right"].collapsed
+    : false;
 
   const contentWindowState: ContentWindowState = {
     windowId,

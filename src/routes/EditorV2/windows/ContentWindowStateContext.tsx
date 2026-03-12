@@ -14,9 +14,9 @@ export interface ContentWindowState {
   isAttached: boolean;
 }
 
-const ContentWindowStateContext = createContext<
-  ContentWindowState | undefined
->(undefined);
+const ContentWindowStateContext = createContext<ContentWindowState | undefined>(
+  undefined,
+);
 
 ContentWindowStateContext.displayName = "ContentWindowState";
 
