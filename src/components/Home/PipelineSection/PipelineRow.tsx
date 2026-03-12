@@ -159,32 +159,40 @@ const PipelineRow = withSuspenseWrapper(
             onDragEnd={() => onDragStateChange?.(false)}
             className={dragData ? "cursor-grab" : undefined}
           >
-            <InlineStack gap="1" blockAlign="center">
-              {name && name.length > MAX_TITLE_LENGTH ? (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="text-sm truncate">
-                        <HighlightText
-                          text={name.slice(0, MAX_TITLE_LENGTH) + "..."}
-                          query={searchQuery}
-                        />
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent>{name}</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              ) : (
-                <span className="text-sm truncate">
-                  <HighlightText text={name ?? ""} query={searchQuery} />
-                </span>
-              )}
-              <MatchBadges
-                matchedFields={matchedFields}
-                matchedComponentNames={matchedComponentNames}
-                searchQuery={searchQuery}
-                componentQuery={componentQuery}
-              />
+            <InlineStack
+              gap="2"
+              blockAlign="start"
+              className="w-full truncate"
+              wrap="nowrap"
+            >
+              {icon}
+              <InlineStack gap="1" blockAlign="center">
+                {name && name.length > MAX_TITLE_LENGTH ? (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="text-sm truncate">
+                          <HighlightText
+                            text={name.slice(0, MAX_TITLE_LENGTH) + "..."}
+                            query={searchQuery}
+                          />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>{name}</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                ) : (
+                  <span className="text-sm truncate">
+                    <HighlightText text={name ?? ""} query={searchQuery} />
+                  </span>
+                )}
+                <MatchBadges
+                  matchedFields={matchedFields}
+                  matchedComponentNames={matchedComponentNames}
+                  searchQuery={searchQuery}
+                  componentQuery={componentQuery}
+                />
+              </InlineStack>
             </InlineStack>
           </div>
         </TableCell>

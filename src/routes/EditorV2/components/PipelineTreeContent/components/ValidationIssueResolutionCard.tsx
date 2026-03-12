@@ -18,6 +18,13 @@ import { useSpec } from "../../../providers/SpecContext";
 import { setSelectedValidationIssue } from "../../../store/editorStore";
 import { navigationStore } from "../../../store/navigationStore";
 import { ArgumentRow } from "../../ArgumentRow";
+import {
+  deleteDuplicate,
+  deleteEntity,
+  renameDuplicate,
+  renameEntity,
+  unsetBadReference,
+} from "./validationResolution.actions";
 
 interface ValidationIssueResolutionCardProps {
   issue: ValidationIssue;
@@ -117,7 +124,7 @@ const ResolutionContent = observer(function ResolutionContent({
           issue={issue}
           label="Delete Task"
           onDelete={() => {
-            if (issue.entityId) spec.removeTaskById(issue.entityId);
+            if (issue.entityId) deleteEntity(spec, "task", issue.entityId);
             setSelectedValidationIssue(null);
           }}
         />
@@ -132,7 +139,7 @@ const ResolutionContent = observer(function ResolutionContent({
           issue={issue}
           label="Delete Input"
           onDelete={() => {
-            if (issue.entityId) spec.removeInputById(issue.entityId);
+            if (issue.entityId) deleteEntity(spec, "input", issue.entityId);
             setSelectedValidationIssue(null);
           }}
         />
@@ -143,7 +150,7 @@ const ResolutionContent = observer(function ResolutionContent({
           issue={issue}
           label="Delete Output"
           onDelete={() => {
-            if (issue.entityId) spec.removeOutputById(issue.entityId);
+            if (issue.entityId) deleteEntity(spec, "output", issue.entityId);
             setSelectedValidationIssue(null);
           }}
         />
@@ -155,7 +162,7 @@ const ResolutionContent = observer(function ResolutionContent({
           issue={issue}
           label="Delete Binding"
           onDelete={() => {
-            if (issue.entityId) spec.removeBindingById(issue.entityId);
+            if (issue.entityId) deleteEntity(spec, "binding", issue.entityId);
             setSelectedValidationIssue(null);
           }}
         />
@@ -257,20 +264,7 @@ function RenameEntityResolution({
     const trimmed = value.trim();
     if (!trimmed) return;
 
-    if (entityType === "component") {
-      spec.setName(trimmed);
-    } else if (issue.entityId) {
-      if (entityType === "task") {
-        const task = findTaskById(spec, issue.entityId);
-        task?.setName(trimmed);
-      } else if (entityType === "input") {
-        const input = spec.inputs.find((i) => i.$id === issue.entityId);
-        input?.setName(trimmed);
-      } else if (entityType === "output") {
-        const output = spec.outputs.find((o) => o.$id === issue.entityId);
-        output?.setName(trimmed);
-      }
-    }
+    renameEntity(spec, entityType, issue.entityId, trimmed);
     setValue("");
     setSelectedValidationIssue(null);
   };
@@ -325,24 +319,14 @@ function DuplicateNameResolution({
     const trimmed = value.trim();
     if (!trimmed || !issue.entityId) return;
 
-    if (entityType === "input") {
-      const input = spec.inputs.find((i) => i.$id === issue.entityId);
-      input?.setName(trimmed);
-    } else {
-      const output = spec.outputs.find((o) => o.$id === issue.entityId);
-      output?.setName(trimmed);
-    }
+    renameDuplicate(spec, entityType, issue.entityId, trimmed);
     setValue("");
     setSelectedValidationIssue(null);
   };
 
   const handleDelete = () => {
     if (!issue.entityId) return;
-    if (entityType === "input") {
-      spec.removeInputById(issue.entityId);
-    } else {
-      spec.removeOutputById(issue.entityId);
-    }
+    deleteDuplicate(spec, entityType, issue.entityId);
     setSelectedValidationIssue(null);
   };
 
@@ -416,12 +400,7 @@ const BadReferenceResolution = observer(function BadReferenceResolution({
   );
 
   const handleUnset = () => {
-    task.removeArgumentByName(issue.argumentName!);
-    spec.removeAllBindingsBy(
-      (b) =>
-        b.targetEntityId === task.$id &&
-        b.targetPortName === issue.argumentName,
-    );
+    unsetBadReference(task, spec, issue.argumentName!);
   };
 
   return (

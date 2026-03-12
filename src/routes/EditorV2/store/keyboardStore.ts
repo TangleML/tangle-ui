@@ -21,27 +21,22 @@ class KeyboardStore {
   shortcuts = observable.map<string, ShortcutDefinition>();
 
   constructor() {
-    makeObservable(this, {
-      pressKey: action,
-      releaseKey: action,
-      clearPressed: action,
-      registerShortcut: action,
-    });
+    makeObservable(this);
   }
 
-  pressKey(key: KeyConstant) {
+  @action pressKey(key: KeyConstant) {
     this.pressed.add(key);
   }
 
-  releaseKey(key: KeyConstant) {
+  @action releaseKey(key: KeyConstant) {
     this.pressed.delete(key);
   }
 
-  clearPressed() {
+  @action clearPressed() {
     this.pressed.clear();
   }
 
-  registerShortcut(definition: ShortcutDefinition): () => void {
+  @action registerShortcut(definition: ShortcutDefinition): () => void {
     const comboKey = normalizeComboKey(definition.keys);
     this.shortcuts.set(comboKey, definition);
     return () => {

@@ -17,9 +17,9 @@ const SAVED_MESSAGE_DURATION_MS = 2000;
 const MIN_SAVING_DISPLAY_MS = 1000;
 
 class AutoSaveStore {
-  isSaving = false;
-  lastSavedAt: Date | null = null;
-  showSavedMessage = false;
+  @observable accessor isSaving = false;
+  @observable accessor lastSavedAt: Date | null = null;
+  @observable accessor showSavedMessage = false;
 
   private spec: ComponentSpec | null = null;
   private pipelineName: string | null = null;
@@ -30,19 +30,10 @@ class AutoSaveStore {
   private savedMessageTimeout: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
-    makeObservable(this, {
-      isSaving: observable,
-      lastSavedAt: observable,
-      showSavedMessage: observable,
-      init: action,
-      dispose: action,
-      setSaving: action,
-      setSaved: action,
-      setShowSavedMessage: action,
-    });
+    makeObservable(this);
   }
 
-  init(spec: ComponentSpec, pipelineName: string) {
+  @action init(spec: ComponentSpec, pipelineName: string) {
     this.dispose();
     this.spec = spec;
     this.pipelineName = pipelineName;
@@ -57,7 +48,7 @@ class AutoSaveStore {
     );
   }
 
-  dispose() {
+  @action dispose() {
     this.disposeReaction?.();
     this.disposeReaction = null;
     this.clearDebounce();
@@ -73,16 +64,16 @@ class AutoSaveStore {
     await this.performSave(yamlText);
   }
 
-  setSaving(value: boolean) {
+  @action setSaving(value: boolean) {
     this.isSaving = value;
   }
 
-  setSaved(date: Date) {
+  @action setSaved(date: Date) {
     this.lastSavedAt = date;
     this.isSaving = false;
   }
 
-  setShowSavedMessage(value: boolean) {
+  @action setShowSavedMessage(value: boolean) {
     this.showSavedMessage = value;
   }
 
@@ -112,6 +103,9 @@ class AutoSaveStore {
 
     const savePromise = (async () => {
       try {
+        /**
+         * Create a persistence layer for the pipeline, so we can add more storage drivers (google disk, backend api, etc.)
+         */
         await writeComponentToFileListFromText(
           USER_PIPELINES_LIST_NAME,
           pipelineName,

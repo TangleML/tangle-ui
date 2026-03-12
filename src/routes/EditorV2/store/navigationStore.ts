@@ -19,36 +19,21 @@ function isGraphSpecJson(specJson: ComponentSpecJson | undefined): boolean {
 }
 
 class NavigationStore {
-  rootSpec: ComponentSpec | null = null;
-  nestedSpecs = new Map<string, ComponentSpec>();
-  navigationPath: NavigationEntry[] = [];
-  requestedPipelineName: string | null = null;
+  @observable.ref accessor rootSpec: ComponentSpec | null = null;
+  @observable.ref accessor nestedSpecs = new Map<string, ComponentSpec>();
+  @observable.shallow accessor navigationPath: NavigationEntry[] = [];
+  @observable accessor requestedPipelineName: string | null = null;
   private nestedIdGen = new IncrementingIdGenerator();
 
   constructor() {
-    makeObservable(this, {
-      rootSpec: observable.ref,
-      nestedSpecs: observable.ref,
-      navigationPath: observable.shallow,
-      requestedPipelineName: observable,
-      initNavigation: action,
-      clearNavigation: action,
-      navigateToSubgraph: action,
-      navigateBack: action,
-      navigateToLevel: action,
-      navigateToPath: action,
-      setRequestedPipelineName: action,
-      activeSpec: computed,
-      navigationDepth: computed,
-      canNavigateBack: computed,
-    });
+    makeObservable(this);
   }
 
-  setRequestedPipelineName(name: string | null) {
+  @action setRequestedPipelineName(name: string | null) {
     this.requestedPipelineName = name;
   }
 
-  initNavigation(rootSpec: ComponentSpec) {
+  @action initNavigation(rootSpec: ComponentSpec) {
     this.rootSpec = rootSpec;
     this.navigationPath = [
       { specId: rootSpec.$id, displayName: rootSpec.name },
@@ -57,7 +42,7 @@ class NavigationStore {
     this.nestedIdGen = new IncrementingIdGenerator();
   }
 
-  clearNavigation() {
+  @action clearNavigation() {
     this.rootSpec = null;
     this.navigationPath = [];
     this.nestedSpecs = new Map();
@@ -69,7 +54,7 @@ class NavigationStore {
     return isGraphSpecJson(task.componentRef.spec);
   }
 
-  navigateToSubgraph(
+  @action navigateToSubgraph(
     currentSpec: ComponentSpec,
     taskEntityId: string,
   ): ComponentSpec | null {
@@ -112,7 +97,7 @@ class NavigationStore {
     return nestedSpec;
   }
 
-  navigateBack(): ComponentSpec | null {
+  @action navigateBack(): ComponentSpec | null {
     if (!this.rootSpec || this.navigationPath.length <= 1) return null;
 
     this.navigationPath = this.navigationPath.slice(0, -1);
@@ -122,7 +107,7 @@ class NavigationStore {
     return this.getSpecAtDepth(newDepth) ?? null;
   }
 
-  navigateToLevel(index: number): ComponentSpec | null {
+  @action navigateToLevel(index: number): ComponentSpec | null {
     if (!this.rootSpec || index < 0 || index >= this.navigationPath.length) {
       return null;
     }
@@ -132,7 +117,7 @@ class NavigationStore {
     return this.getSpecAtDepth(index) ?? null;
   }
 
-  navigateToPath(pathNames: string[]): ComponentSpec | null {
+  @action navigateToPath(pathNames: string[]): ComponentSpec | null {
     if (!this.rootSpec || pathNames.length === 0) return null;
     if (pathNames[0] !== this.rootSpec.name) return null;
 
@@ -167,16 +152,16 @@ class NavigationStore {
     return currentSpec;
   }
 
-  get activeSpec(): ComponentSpec | null {
+  @computed get activeSpec(): ComponentSpec | null {
     if (this.navigationPath.length === 0) return null;
     return this.getSpecAtDepth(this.navigationPath.length - 1) ?? null;
   }
 
-  get navigationDepth(): number {
+  @computed get navigationDepth(): number {
     return this.navigationPath.length - 1;
   }
 
-  get canNavigateBack(): boolean {
+  @computed get canNavigateBack(): boolean {
     return this.navigationPath.length > 1;
   }
 

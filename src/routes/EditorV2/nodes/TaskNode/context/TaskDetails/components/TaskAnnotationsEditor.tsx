@@ -9,6 +9,12 @@ import { Text } from "@/components/ui/typography";
 import type { Annotation } from "@/models/componentSpec";
 
 import { useSpec } from "../../../../../providers/SpecContext";
+import {
+  addAnnotation,
+  removeAnnotation,
+  updateAnnotationKey,
+  updateAnnotationValue,
+} from "./taskAnnotation.actions";
 
 interface TaskAnnotationsEditorProps {
   entityId: string;
@@ -34,25 +40,25 @@ export const TaskAnnotationsEditor = observer(function TaskAnnotationsEditor({
   );
 
   const handleAddAnnotation = () => {
-    task.annotations.add({ key: "", value: "" });
+    addAnnotation(task);
   };
 
   const handleUpdateKey = (
     index: number,
     event: ChangeEvent<HTMLInputElement>,
   ) => {
-    task.annotations.updateAt(index, { key: event.target.value });
+    updateAnnotationKey(task, index, event.target.value);
   };
 
   const handleUpdateValue = (
     index: number,
     event: ChangeEvent<HTMLInputElement>,
   ) => {
-    task.annotations.updateAt(index, { value: event.target.value });
+    updateAnnotationValue(task, index, event.target.value);
   };
 
   const handleRemoveAnnotation = (index: number) => {
-    task.annotations.removeAt(index);
+    removeAnnotation(task, index);
   };
 
   return (

@@ -11,40 +11,22 @@ export interface SelectedNode {
 }
 
 class EditorStore {
-  selectedNodeId: string | null = null;
-  selectedNodeType: NodeEntityType | null = null;
-  lastSelectionWasShiftClick = false;
-  lastShiftClickEntityId: string | null = null;
-  multiSelection: SelectedNode[] = [];
-  focusedArgumentName: string | null = null;
-  hoveredEntityId: string | null = null;
-  pendingFocusNodeId: string | null = null;
-  selectedValidationIssue: ValidationIssue | null = null;
+  @observable accessor selectedNodeId: string | null = null;
+  @observable accessor selectedNodeType: NodeEntityType | null = null;
+  @observable accessor lastSelectionWasShiftClick = false;
+  @observable accessor lastShiftClickEntityId: string | null = null;
+  @observable.shallow accessor multiSelection: SelectedNode[] = [];
+  @observable accessor focusedArgumentName: string | null = null;
+  @observable accessor hoveredEntityId: string | null = null;
+  @observable accessor pendingFocusNodeId: string | null = null;
+  @observable.ref accessor selectedValidationIssue: ValidationIssue | null =
+    null;
 
   constructor() {
-    makeObservable(this, {
-      selectedNodeId: observable,
-      selectedNodeType: observable,
-      lastSelectionWasShiftClick: observable,
-      lastShiftClickEntityId: observable,
-      multiSelection: observable.shallow,
-      focusedArgumentName: observable,
-      hoveredEntityId: observable,
-      pendingFocusNodeId: observable,
-      selectedValidationIssue: observable.ref,
-      resetState: action,
-      selectNode: action,
-      clearSelection: action,
-      setMultiSelection: action,
-      clearMultiSelection: action,
-      setFocusedArgument: action,
-      setHoveredEntity: action,
-      setPendingFocusNode: action,
-      setSelectedValidationIssue: action,
-    });
+    makeObservable(this);
   }
 
-  resetState() {
+  @action resetState() {
     this.selectedNodeId = null;
     this.selectedNodeType = null;
     this.lastSelectionWasShiftClick = false;
@@ -56,7 +38,7 @@ class EditorStore {
     this.selectedValidationIssue = null;
   }
 
-  selectNode(
+  @action selectNode(
     nodeId: string | null,
     nodeType: NodeEntityType | null = null,
     options?: { shiftKey?: boolean; entityId?: string },
@@ -75,11 +57,11 @@ class EditorStore {
     this.focusedArgumentName = null;
   }
 
-  setFocusedArgument(name: string | null) {
+  @action setFocusedArgument(name: string | null) {
     this.focusedArgumentName = name;
   }
 
-  clearSelection() {
+  @action clearSelection() {
     this.selectedNodeId = null;
     this.selectedNodeType = null;
     this.lastSelectionWasShiftClick = false;
@@ -89,7 +71,7 @@ class EditorStore {
     this.selectedValidationIssue = null;
   }
 
-  setMultiSelection(nodes: SelectedNode[]) {
+  @action setMultiSelection(nodes: SelectedNode[]) {
     this.multiSelection = nodes;
     if (nodes.length > 1) {
       this.selectedNodeId = null;
@@ -97,19 +79,19 @@ class EditorStore {
     }
   }
 
-  clearMultiSelection() {
+  @action clearMultiSelection() {
     this.multiSelection = [];
   }
 
-  setHoveredEntity(id: string | null) {
+  @action setHoveredEntity(id: string | null) {
     this.hoveredEntityId = id;
   }
 
-  setPendingFocusNode(nodeId: string | null) {
+  @action setPendingFocusNode(nodeId: string | null) {
     this.pendingFocusNodeId = nodeId;
   }
 
-  setSelectedValidationIssue(issue: ValidationIssue | null) {
+  @action setSelectedValidationIssue(issue: ValidationIssue | null) {
     this.selectedValidationIssue = issue;
   }
 }
