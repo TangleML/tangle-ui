@@ -26,7 +26,7 @@ interface CachedExecutionData {
 }
 
 interface ExecutionDataContextType {
-  currentExecutionId: string | undefined;
+  currentExecutionId: string | null | undefined;
   details: GetExecutionInfoResponse | undefined;
   state: GetGraphExecutionStateResponse | undefined;
   rootExecutionId: string | undefined;
@@ -77,16 +77,16 @@ const buildTaskExecutionStatusMap = (
 
 const findExecutionIdAtPath = (
   path: string[],
-  rootExecutionId: string | undefined,
+  runId: string | null | undefined,
   rootDetails: GetExecutionInfoResponse | undefined,
   cache: Map<string, CachedExecutionData>,
   queryClient: ReturnType<typeof useQueryClient>,
 ): string => {
-  if (!rootExecutionId) {
+  if (!runId) {
     return "";
   }
 
-  let currentId = rootExecutionId;
+  let currentId = runId;
   let currentDetails = rootDetails;
 
   for (let i = ROOT_PATH_START_INDEX; i < path.length; i++) {
@@ -168,7 +168,7 @@ export function ExecutionDataProvider({
     path: urlDerivedPath,
     segments,
     isLoading: isLoadingBreadcrumbs,
-  } = useSubgraphBreadcrumbs(rootExecutionId, subgraphExecutionId);
+  } = useSubgraphBreadcrumbs(runId, subgraphExecutionId);
 
   // Wait until rootDetails is loaded so the component spec is available
   useEffect(() => {
@@ -207,12 +207,12 @@ export function ExecutionDataProvider({
     }
 
     if (isAtRoot) {
-      return rootExecutionId;
+      return runId;
     }
 
     return findExecutionIdAtPath(
       currentSubgraphPath,
-      rootExecutionId,
+      runId,
       rootDetails,
       executionDataCache.current,
       queryClient,
@@ -220,7 +220,7 @@ export function ExecutionDataProvider({
   }, [
     subgraphExecutionId,
     currentSubgraphPath,
-    rootExecutionId,
+    runId,
     rootDetails,
     isAtRoot,
     queryClient,
