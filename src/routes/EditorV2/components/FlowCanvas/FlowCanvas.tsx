@@ -13,6 +13,7 @@ import {
   useNodes,
   useNodesState,
   useReactFlow,
+  type Viewport,
 } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
 import type { ComponentType } from "react";
@@ -29,7 +30,10 @@ import { useConduitEdgeMode } from "../../nodes/ConduitNode/hooks/useConduitEdge
 import { GhostNode } from "../../nodes/GhostNode/components/GhostNode";
 import { useGhostNode } from "../../nodes/GhostNode/hooks/useGhostNode";
 import { IONode } from "../../nodes/IONode/components/IONode";
-import { TaskNode } from "../../nodes/TaskNode/components/TaskNode";
+import {
+  TaskNode,
+  ZOOM_THRESHOLD,
+} from "../../nodes/TaskNode/components/TaskNode";
 import { CMDALT } from "../../shortcuts/keys";
 import {
   copySelectedNodes,
@@ -49,6 +53,7 @@ import { useSelectionBehavior } from "./hooks/useSelectionBehavior";
 import { SelectionToolbar } from "./SelectionToolbar";
 
 const GRID_SIZE = 10;
+const MAX_COLLAPSED_SCALE = 7;
 
 const nodeTypes: Record<string, ComponentType<any>> = {
   task: TaskNode,
@@ -156,6 +161,11 @@ export const FlowCanvas = observer(function FlowCanvas({
   const dropBehavior = useDropBehavior(spec, reactFlowInstance);
   const doubleClickBehavior = useDoubleClickBehavior(spec);
 
+  const handleViewportChange = ({ zoom }: Viewport) => {
+    const scale = Math.min(ZOOM_THRESHOLD / zoom, MAX_COLLAPSED_SCALE);
+    containerRef.current?.style.setProperty("--collapsed-scale", String(scale));
+  };
+
   return (
     <BlockStack ref={containerRef} fill className={cn("relative", className)}>
       <ReactFlow
@@ -168,6 +178,7 @@ export const FlowCanvas = observer(function FlowCanvas({
         {...doubleClickBehavior}
         onEdgeClick={onEdgeClick}
         onInit={setReactFlowInstance}
+        onViewportChange={handleViewportChange}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         connectionLineComponent={ConnectionLine}
