@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getGraphExecutionStateApiExecutionsIdStateGet } from "@/api/sdk.gen";
 import type {
   GetArtifactsApiExecutionsIdArtifactsGetResponse,
+  GetArtifactSignedUrlResponse,
   GetContainerExecutionStateResponse,
   GetExecutionInfoResponse,
   PipelineRunResponse,
@@ -117,6 +118,19 @@ export const fetchExecutionStatusLight = rateLimit(
     bucketSize: 1,
   },
 );
+
+export const getArtifactSignedUrl = async (
+  artifactId: string,
+  backendUrl: string,
+): Promise<GetArtifactSignedUrlResponse> => {
+  const response = await fetch(
+    `${backendUrl}/api/artifacts/${artifactId}/signed_artifact_url`,
+  );
+  if (!response.ok) {
+    throw new Error(`(${response.status}) Failed to get signed URL.`);
+  }
+  return response.json();
+};
 
 export const getExecutionArtifacts = async (
   executionId: string,
