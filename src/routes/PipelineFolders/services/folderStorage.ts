@@ -16,7 +16,7 @@ const PipelineFoldersDB = new Dexie("oasis-app") as Dexie & {
   >;
 };
 
-PipelineFoldersDB.version(5).stores({
+PipelineFoldersDB.version(1).stores({
   component_libraries: "id, &name",
   pipeline_folders: "id, parentId",
   pipeline_folder_assignments: "pipelineName, folderId",
