@@ -199,15 +199,15 @@ describe("buildExecutionUrl", () => {
   });
 
   it("should return root URL when subgraphExecutionId equals rootExecutionId", () => {
-    const rootExecutionId = "root-exec-123";
-    const url = buildExecutionUrl(rootExecutionId, rootExecutionId);
+    const runId = "root-exec-123";
+    const url = buildExecutionUrl(runId, runId);
     expect(url).toBe("/runs/root-exec-123");
   });
 
   it("should return nested URL when subgraphExecutionId is different", () => {
-    const rootExecutionId = "root-exec-123";
+    const runId = "root-exec-123";
     const subgraphExecutionId = "subgraph-exec-456";
-    const url = buildExecutionUrl(rootExecutionId, subgraphExecutionId);
+    const url = buildExecutionUrl(runId, subgraphExecutionId);
     expect(url).toBe("/runs/root-exec-123/subgraph-exec-456");
   });
 });

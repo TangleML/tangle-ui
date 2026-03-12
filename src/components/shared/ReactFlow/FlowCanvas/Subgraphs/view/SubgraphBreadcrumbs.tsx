@@ -20,15 +20,15 @@ export const SubgraphBreadcrumbs = () => {
   const navigate = useNavigate();
   const { currentSubgraphPath, navigateToPath } = useComponentSpec();
   const executionData = useExecutionDataOptional();
-  const rootExecutionId = executionData?.rootExecutionId;
+  const runId = executionData?.runId;
   const segments = executionData?.segments || [];
 
   const getExecutionIdForIndex = useCallback(
     (targetIndex: number): string | undefined => {
-      if (!rootExecutionId) return undefined;
+      if (!runId) return undefined;
 
       if (targetIndex === 0) {
-        return rootExecutionId;
+        return runId;
       }
 
       const segmentIndex = targetIndex - 1;
@@ -38,7 +38,7 @@ export const SubgraphBreadcrumbs = () => {
 
       return undefined;
     },
-    [rootExecutionId, segments],
+    [runId, segments],
   );
 
   const handleBreadcrumbClick = useCallback(
@@ -47,16 +47,16 @@ export const SubgraphBreadcrumbs = () => {
 
       navigateToPath(targetPath);
 
-      if (rootExecutionId && executionData) {
+      if (runId && executionData) {
         const targetExecutionId = getExecutionIdForIndex(targetIndex);
-        const url = buildExecutionUrl(rootExecutionId, targetExecutionId);
+        const url = buildExecutionUrl(runId, targetExecutionId);
         navigate({ to: url });
       }
     },
     [
       currentSubgraphPath,
       navigateToPath,
-      rootExecutionId,
+      runId,
       executionData,
       getExecutionIdForIndex,
       navigate,

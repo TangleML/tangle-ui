@@ -24,20 +24,20 @@ interface SubgraphBreadcrumbsResult {
  * by fetching parent execution details recursively until reaching the root.
  */
 export const useSubgraphBreadcrumbs = (
-  rootExecutionId: string | undefined,
+  runId: string | null | undefined,
   subgraphExecutionId: string | undefined,
 ): SubgraphBreadcrumbsResult => {
   const { backendUrl } = useBackend();
   const queryClient = useQueryClient();
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["subgraph-breadcrumbs", rootExecutionId, subgraphExecutionId],
+    queryKey: ["subgraph-breadcrumbs", runId, subgraphExecutionId],
     queryFn: async () => {
-      if (!rootExecutionId || !subgraphExecutionId) {
+      if (!runId || !subgraphExecutionId) {
         return { segments: [] };
       }
 
-      if (subgraphExecutionId === rootExecutionId) {
+      if (subgraphExecutionId === runId) {
         return { segments: [] };
       }
 
@@ -49,7 +49,7 @@ export const useSubgraphBreadcrumbs = (
         staleTime: ONE_MINUTE_IN_MS,
       });
 
-      while (currentExecutionId && currentExecutionId !== rootExecutionId) {
+      while (currentExecutionId && currentExecutionId !== runId) {
         const parentExecutionId = currentDetails.parent_execution_id;
 
         if (!parentExecutionId) {
@@ -92,10 +92,7 @@ export const useSubgraphBreadcrumbs = (
 
       return { segments };
     },
-    enabled:
-      !!rootExecutionId &&
-      !!subgraphExecutionId &&
-      rootExecutionId !== subgraphExecutionId,
+    enabled: !!runId && !!subgraphExecutionId && runId !== subgraphExecutionId,
     staleTime: ONE_MINUTE_IN_MS,
     retry: 1,
   });
@@ -114,10 +111,10 @@ export const useSubgraphBreadcrumbs = (
 };
 
 export const buildExecutionUrl = (
-  rootExecutionId: string,
+  runId: string,
   subgraphExecutionId?: string,
 ): string => {
-  return !subgraphExecutionId || subgraphExecutionId === rootExecutionId
-    ? `/runs/${rootExecutionId}`
-    : `/runs/${rootExecutionId}/${subgraphExecutionId}`;
+  return !subgraphExecutionId || subgraphExecutionId === runId
+    ? `/runs/${runId}`
+    : `/runs/${runId}/${subgraphExecutionId}`;
 };

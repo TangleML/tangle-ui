@@ -47,7 +47,7 @@ const TaskNodeCard = () => {
   } = useContextPanel();
   const { navigateToSubgraph } = useComponentSpec();
   const executionData = useExecutionDataOptional();
-  const rootExecutionId = executionData?.rootExecutionId;
+  const runId = executionData?.runId;
   const details = executionData?.details;
   const executionState = executionData?.state;
 
@@ -143,22 +143,15 @@ const TaskNodeCard = () => {
     if (isSubgraphNode && taskId) {
       navigateToSubgraph(taskId);
 
-      if (rootExecutionId && details?.child_task_execution_ids) {
+      if (runId && details?.child_task_execution_ids) {
         const subgraphExecutionId = details.child_task_execution_ids[taskId];
         if (subgraphExecutionId) {
-          const url = buildExecutionUrl(rootExecutionId, subgraphExecutionId);
+          const url = buildExecutionUrl(runId, subgraphExecutionId);
           navigate({ to: url });
         }
       }
     }
-  }, [
-    isSubgraphNode,
-    taskId,
-    navigateToSubgraph,
-    rootExecutionId,
-    details,
-    navigate,
-  ]);
+  }, [isSubgraphNode, taskId, navigateToSubgraph, runId, details, navigate]);
 
   useEffect(() => {
     if (selected && !isMultiSelect) {
