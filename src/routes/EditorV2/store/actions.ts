@@ -22,7 +22,7 @@ import {
   generateUniqueOutputName,
   generateUniqueTaskName,
 } from "./nameUtils";
-import { withUndoGroup, withUndoGroupReturn } from "./undoStore";
+import { withUndoGroup } from "./undoStore";
 
 const TASK_COLOR_ANNOTATION = "tangleml.com/editor/task-color";
 const idGen = new IncrementingIdGenerator();
@@ -291,22 +291,19 @@ export function createSubgraph(
   const uniqueName = generateUniqueTaskName(spec, subgraphName);
 
   try {
-    const result = withUndoGroupReturn(
-      `Create subgraph "${uniqueName}"`,
-      () => {
-        const result = modelCreateSubgraph({
-          spec,
-          selectedTaskIds: taskIds,
-          subgraphName: uniqueName,
-          idGen,
-        });
+    const result = withUndoGroup(`Create subgraph "${uniqueName}"`, () => {
+      const result = modelCreateSubgraph({
+        spec,
+        selectedTaskIds: taskIds,
+        subgraphName: uniqueName,
+        idGen,
+      });
 
-        if (!result) return null;
+      if (!result) return null;
 
-        result.replacementTask.annotations.set("editor.position", position);
-        return result;
-      },
-    );
+      result.replacementTask.annotations.set("editor.position", position);
+      return result;
+    });
 
     if (!result) return null;
 

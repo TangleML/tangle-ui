@@ -68,24 +68,9 @@ class UndoStore {
 export const undoStore = new UndoStore();
 
 /**
- * Runs `fn` inside an undo group when the undo manager is active,
- * or executes `fn` directly if undo is not initialized.
- *
- */
-export function withUndoGroup(label: string, fn: () => void): void {
-  const manager = undoStore.undoManager;
-  if (manager) {
-    manager.withGroup(label, fn);
-  } else {
-    fn();
-  }
-}
-
-/**
  * Like `withUndoGroup` but returns the value produced by `fn`.
- * @deprecated Use `withUndoGroup` instead.
  */
-export function withUndoGroupReturn<T>(label: string, fn: () => T): T {
+export function withUndoGroup<T = void>(label: string, fn: () => T): T {
   const manager = undoStore.undoManager;
   if (manager) {
     return manager.withGroup(label, fn);
