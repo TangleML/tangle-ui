@@ -14,7 +14,10 @@ import {
 import { ArgumentCodeEditor } from "../../../../../components/ArgumentCodeEditor";
 import { ArgumentRow } from "../../../../../components/ArgumentRow";
 import { useSpec } from "../../../../../providers/SpecContext";
-import { editorStore, setFocusedArgument } from "../../../../../store/editorStore";
+import {
+  editorStore,
+  setFocusedArgument,
+} from "../../../../../store/editorStore";
 import { useContentWindowState } from "../../../../../windows/ContentWindowStateContext";
 
 interface TaskArgumentsEditorProps {
