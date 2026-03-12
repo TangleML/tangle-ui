@@ -13,9 +13,11 @@ import { AuthorizationResultScreen as HuggingFaceAuthorizationResultScreen } fro
 import { AddSecretView } from "@/components/shared/SecretsManagement/components/AddSecretView";
 import { ReplaceSecretView } from "@/components/shared/SecretsManagement/components/ReplaceSecretView";
 import { SecretsListView } from "@/components/shared/SecretsManagement/components/SecretsListView";
+import { isFlagEnabled } from "@/components/shared/Settings/useFlags";
 import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 
 import RootLayout from "../components/layout/RootLayout";
+import { Dashboard } from "./Dashboard/Dashboard";
 import Editor from "./Editor";
 import Home from "./Home";
 import { ImportPage } from "./Import";
@@ -39,8 +41,10 @@ export const RUNS_BASE_PATH = "/runs";
 export const QUICK_START_PATH = "/quick-start";
 const SETTINGS_PATH = "/settings";
 const IMPORT_PATH = "/app/editor/import-pipeline";
+const DASHBOARD_PATH = "/dashboard";
 export const APP_ROUTES = {
   HOME: "/",
+  DASHBOARD: DASHBOARD_PATH,
   QUICK_START: QUICK_START_PATH,
   IMPORT: IMPORT_PATH,
   PIPELINE_EDITOR: `${EDITOR_PATH}/$name`,
@@ -74,6 +78,17 @@ const indexRoute = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.HOME,
   component: Home,
+});
+
+const dashboardRoute = createRoute({
+  getParentRoute: () => mainLayout,
+  path: APP_ROUTES.DASHBOARD,
+  component: Dashboard,
+  beforeLoad: () => {
+    if (!isFlagEnabled("dashboard")) {
+      throw redirect({ to: APP_ROUTES.HOME });
+    }
+  },
 });
 
 const quickStartRoute = createRoute({
@@ -194,6 +209,7 @@ const settingsRouteTree = settingsLayoutRoute.addChildren([
 
 const appRouteTree = mainLayout.addChildren([
   indexRoute,
+  dashboardRoute,
   quickStartRoute,
   settingsRouteTree,
   importRoute,
