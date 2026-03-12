@@ -165,9 +165,9 @@ export const ComponentEditorDialog = withSuspenseWrapper(
           updatedAt: Date.now(),
         });
 
-        addToComponentLibrary(hydratedComponent);
-
         onClose();
+
+        await addToComponentLibrary(hydratedComponent);
 
         notify(
           `Component ${hydratedComponent.name} imported successfully`,

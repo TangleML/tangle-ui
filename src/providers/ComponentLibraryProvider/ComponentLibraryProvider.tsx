@@ -11,6 +11,7 @@ import {
 import ComponentDuplicateDialog from "@/components/shared/Dialogs/ComponentDuplicateDialog";
 import { GitHubFlatComponentLibrary } from "@/components/shared/GitHubLibrary/githubFlatComponentLibrary";
 import { isGitHubLibraryConfiguration } from "@/components/shared/GitHubLibrary/types";
+import { getComponentQueryKey } from "@/hooks/useHydrateComponentReference";
 import {
   fetchAndStoreComponentLibrary,
   hydrateComponentReference,
@@ -171,6 +172,7 @@ export const ComponentLibraryProvider = ({
 }) => {
   const { graphSpec } = useComponentSpec();
   const { currentSearchFilter } = useForcedSearchContext();
+  const queryClient = useQueryClient();
 
   const { getComponentLibraryObject, existingComponentLibraries } =
     useComponentLibraryRegistry();
@@ -429,6 +431,15 @@ export const ComponentLibraryProvider = ({
   const internalAddComponentToLibrary = useCallback(
     async (hydratedComponent: HydratedComponentReference) => {
       await importComponent(hydratedComponent);
+
+      queryClient.invalidateQueries({
+        queryKey: [
+          "component",
+          "hydrate",
+          getComponentQueryKey(hydratedComponent),
+        ],
+      });
+
       await refreshComponentLibrary();
       await refreshUserComponents();
       setNewComponent(null);
