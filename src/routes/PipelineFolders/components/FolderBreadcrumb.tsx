@@ -24,35 +24,42 @@ interface FolderBreadcrumbProps {
   folderId: string | null;
 }
 
+interface FolderLinkProps {
+  folderId: string | null;
+  children: React.ReactNode;
+}
+
+const FolderLink = ({ folderId, children }: FolderLinkProps) => {
+  const folderNav = useFolderNavigation();
+
+  if (folderNav) {
+    return (
+      <BreadcrumbLink asChild>
+        <button onClick={() => folderNav.navigateToFolder(folderId)}>
+          {children}
+        </button>
+      </BreadcrumbLink>
+    );
+  }
+
+  return (
+    <BreadcrumbLink asChild>
+      <Link
+        to={APP_ROUTES.PIPELINE_FOLDERS}
+        search={folderId ? { folderId } : {}}
+      >
+        {children}
+      </Link>
+    </BreadcrumbLink>
+  );
+};
+
 const FolderBreadcrumbSkeleton = () => <Skeleton className="h-5 w-48" />;
 
 export const FolderBreadcrumb = withSuspenseWrapper(
   function FolderBreadcrumbContent({ folderId }: FolderBreadcrumbProps) {
     const { data: path } = useFolderBreadcrumbs(folderId);
     const { mutate: toggleFavorite, isPending } = useToggleFavorite();
-    const folderNav = useFolderNavigation();
-
-    const renderFolderLink = (targetFolderId: string | null, label: string) => {
-      if (folderNav) {
-        return (
-          <BreadcrumbLink asChild>
-            <button onClick={() => folderNav.navigateToFolder(targetFolderId)}>
-              {label}
-            </button>
-          </BreadcrumbLink>
-        );
-      }
-      return (
-        <BreadcrumbLink asChild>
-          <Link
-            to={APP_ROUTES.PIPELINE_FOLDERS}
-            search={targetFolderId ? { folderId: targetFolderId } : {}}
-          >
-            {label}
-          </Link>
-        </BreadcrumbLink>
-      );
-    };
 
     return (
       <Breadcrumb>
@@ -61,7 +68,7 @@ export const FolderBreadcrumb = withSuspenseWrapper(
             {folderId === null ? (
               <BreadcrumbPage>Pipelines</BreadcrumbPage>
             ) : (
-              renderFolderLink(null, "Pipelines")
+              <FolderLink folderId={null}>Pipelines</FolderLink>
             )}
           </BreadcrumbItem>
 
@@ -93,7 +100,7 @@ export const FolderBreadcrumb = withSuspenseWrapper(
                     </InlineStack>
                   </BreadcrumbPage>
                 ) : (
-                  renderFolderLink(folder.id, folder.name)
+                  <FolderLink folderId={folder.id}>{folder.name}</FolderLink>
                 )}
               </BreadcrumbItem>
             );

@@ -28,6 +28,8 @@ interface ArgumentRowProps {
   binding: Binding | undefined;
   task: Task;
   spec: ComponentSpec;
+  externalEditor?: boolean;
+  onSelectionChanged?: (name: string) => void;
 }
 
 export const ArgumentRow = observer(function ArgumentRow({
@@ -37,6 +39,8 @@ export const ArgumentRow = observer(function ArgumentRow({
   binding,
   task,
   spec,
+  externalEditor,
+  onSelectionChanged,
 }: ArgumentRowProps) {
   const [editing, setEditing] = useState(false);
   const [inputValue, setInputValue] = useState(
@@ -69,10 +73,10 @@ export const ArgumentRow = observer(function ArgumentRow({
 
   useEffect(() => {
     if (isFocused) {
-      setEditing(true);
+      if (!externalEditor) setEditing(true);
       rowRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
-  }, [isFocused]);
+  }, [isFocused, externalEditor]);
 
   useEffect(() => {
     if (editing && inputRef.current) {
@@ -90,6 +94,11 @@ export const ArgumentRow = observer(function ArgumentRow({
 
   const handleClick = () => {
     if (isDynamic) return;
+    onSelectionChanged?.(inputSpec.name);
+    if (externalEditor) {
+      setFocusedArgument(inputSpec.name);
+      return;
+    }
     setEditing(true);
   };
 
@@ -177,7 +186,11 @@ export const ArgumentRow = observer(function ArgumentRow({
       ref={rowRef}
       className={cn(
         "group rounded px-2 py-1 cursor-pointer transition-colors w-full overflow-hidden",
-        editing ? "bg-blue-50 ring-1 ring-blue-200" : "hover:bg-gray-50",
+        externalEditor && isFocused
+          ? "bg-blue-50 ring-1 ring-blue-200"
+          : editing
+            ? "bg-blue-50 ring-1 ring-blue-200"
+            : "hover:bg-gray-50",
         !isSet && !isBound && "opacity-60",
       )}
       onClick={handleClick}
@@ -225,7 +238,7 @@ export const ArgumentRow = observer(function ArgumentRow({
         />
       </InlineStack>
 
-      {editing ? (
+      {editing && !externalEditor ? (
         <Input
           ref={inputRef}
           value={inputValue}

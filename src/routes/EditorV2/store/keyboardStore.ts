@@ -25,6 +25,7 @@ class KeyboardStore {
       pressKey: action,
       releaseKey: action,
       clearPressed: action,
+      registerShortcut: action,
     });
   }
 

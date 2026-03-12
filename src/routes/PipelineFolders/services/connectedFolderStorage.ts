@@ -6,7 +6,7 @@ const ConnectedFoldersDB = new Dexie("oasis-app") as Dexie & {
   connected_folders: EntityTable<ConnectedFolderRecord, "id">;
 };
 
-ConnectedFoldersDB.version(5).stores({
+ConnectedFoldersDB.version(1).stores({
   component_libraries: "id, &name",
   pipeline_folders: "id, parentId",
   pipeline_folder_assignments: "pipelineName, folderId",

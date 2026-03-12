@@ -8,6 +8,8 @@ import { InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 
+import type { ContentWindowState } from "./ContentWindowStateContext";
+import { ContentWindowStateProvider } from "./ContentWindowStateContext";
 import { SnapPreview } from "./SnapPreview";
 import { detectSnapPreview, shouldDetach } from "./snapUtils";
 import {
@@ -84,6 +86,19 @@ export function Window({ windowId, docked = false }: WindowProps) {
   const isDocked = dockState !== undefined && dockState !== "none";
   const isAttached = !!attachedTo;
   const effectiveDockedHeight = dockedHeight ?? DEFAULT_DOCKED_HEIGHT;
+  const dockAreaCollapsed =
+    isDocked ? snap.dockAreas[dockState as "left" | "right"].collapsed : false;
+
+  const contentWindowState: ContentWindowState = {
+    windowId,
+    state,
+    isMaximized,
+    isMinimized,
+    isDocked,
+    dockSide: dockState,
+    dockAreaCollapsed,
+    isAttached,
+  };
 
   const hasHiddenWindows = snap.windowOrder.some(
     (id) => snap.windows[id]?.state === "hidden",
@@ -307,7 +322,9 @@ export function Window({ windowId, docked = false }: WindowProps) {
             />
           </div>
           <div className="flex-1 min-h-0 overflow-auto bg-gray-50">
-            {content}
+            <ContentWindowStateProvider value={contentWindowState}>
+              {content}
+            </ContentWindowStateProvider>
           </div>
         </div>,
         document.body,
@@ -377,7 +394,9 @@ export function Window({ windowId, docked = false }: WindowProps) {
               className="flex-1 min-h-0 overflow-auto bg-gray-50"
               style={{ height: effectiveDockedHeight - headerHeight }}
             >
-              {content}
+              <ContentWindowStateProvider value={contentWindowState}>
+                {content}
+              </ContentWindowStateProvider>
             </div>
           )}
 
@@ -521,7 +540,9 @@ export function Window({ windowId, docked = false }: WindowProps) {
                 : contentHeight,
             }}
           >
-            {content}
+            <ContentWindowStateProvider value={contentWindowState}>
+              {content}
+            </ContentWindowStateProvider>
           </div>
         )}
 
