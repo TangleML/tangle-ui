@@ -4,6 +4,7 @@ import { useEffect } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 
+import { CMDALT } from "../../../shortcuts/keys";
 import {
   copySelectedNodes,
   duplicateSelectedNodes,
@@ -11,6 +12,7 @@ import {
   pasteNodes,
 } from "../../../store/actions";
 import { editorStore, type SelectedNode } from "../../../store/editorStore";
+import { registerShortcut } from "../../../store/keyboardStore";
 
 /**
  * Returns the current effective selection: multiSelection if multiple nodes
@@ -36,29 +38,37 @@ export function useClipboardShortcuts(
   reactFlowInstance: ReactFlowInstance | null,
 ): void {
   useEffect(() => {
-    // todo: introduce hotkey manager for central handling of hotkeys
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (!spec) return;
-
-      const isModKey = e.metaKey || e.ctrlKey;
-      const target = e.target as HTMLElement;
-      const isInputFocused =
-        target.tagName === "INPUT" ||
-        target.tagName === "TEXTAREA" ||
-        target.isContentEditable;
-
-      if (isInputFocused || !isModKey) return;
-
-      const selection = getEffectiveSelection(spec);
-
-      if (e.key === "d") {
+    const unregisterDuplicate = registerShortcut({
+      id: "duplicate",
+      keys: [CMDALT, "D"],
+      label: "Duplicate",
+      action: (e) => {
         e.preventDefault();
+        if (!spec) return;
+        const selection = getEffectiveSelection(spec);
         if (selection.length > 0) duplicateSelectedNodes(spec, selection);
-      } else if (e.key === "c") {
+      },
+    });
+
+    const unregisterCopy = registerShortcut({
+      id: "copy",
+      keys: [CMDALT, "C"],
+      label: "Copy",
+      action: (e) => {
         e.preventDefault();
+        if (!spec) return;
+        const selection = getEffectiveSelection(spec);
         if (selection.length > 0) copySelectedNodes(spec, selection);
-      } else if (e.key === "v") {
+      },
+    });
+
+    const unregisterPaste = registerShortcut({
+      id: "paste",
+      keys: [CMDALT, "V"],
+      label: "Paste",
+      action: (e) => {
         e.preventDefault();
+        if (!spec) return;
         const rect = containerRef.current?.getBoundingClientRect();
         if (rect && reactFlowInstance) {
           const center = reactFlowInstance.screenToFlowPosition({
@@ -67,10 +77,13 @@ export function useClipboardShortcuts(
           });
           pasteNodes(spec, center);
         }
-      }
-    };
+      },
+    });
 
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
+    return () => {
+      unregisterDuplicate();
+      unregisterCopy();
+      unregisterPaste();
+    };
   });
 }

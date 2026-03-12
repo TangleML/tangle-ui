@@ -5,7 +5,6 @@ import type {
   ReactFlowInstance,
   ReactFlowProps,
 } from "@xyflow/react";
-import type { MutableRefObject } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 
@@ -15,12 +14,13 @@ import {
   GHOST_OFFSET_X,
   GHOST_OFFSET_Y,
 } from "../../../nodes/GhostNode/components/GhostNode";
+import { CMDALT } from "../../../shortcuts/keys";
 import { connectNodes, createConnectedIONode } from "../../../store/actions";
+import { keyboardStore } from "../../../store/keyboardStore";
 
 export function useConnectionBehavior(
   spec: ComponentSpec | null,
   reactFlowInstance: ReactFlowInstance | null,
-  metaKeyPressedRef: MutableRefObject<boolean>,
 ): Required<Pick<ReactFlowProps, "onConnect" | "onConnectEnd">> {
   const onConnect: OnConnect = (connection: Connection) => {
     if (!spec) return;
@@ -46,7 +46,7 @@ export function useConnectionBehavior(
     connectionState: FinalConnectionState,
   ) => {
     if (!spec || !reactFlowInstance) return;
-    if (!metaKeyPressedRef.current) return;
+    if (!keyboardStore.pressed.has(CMDALT)) return;
 
     const isGhostTarget = connectionState.toHandle?.nodeId === GHOST_NODE_ID;
     if (connectionState.isValid && !isGhostTarget) return;

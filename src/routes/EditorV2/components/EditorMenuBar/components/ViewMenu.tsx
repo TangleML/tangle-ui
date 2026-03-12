@@ -12,10 +12,8 @@ import {
 import { Icon } from "@/components/ui/icon";
 
 import { focusModeStore, toggleFocusMode } from "../../../hooks/useFocusMode";
-import { formatShortcut } from "../../../shortcuts/shortcutUtils";
+import { ShorcutBadge } from "../../ShorcutBadge";
 import { MenuTriggerButton } from "./MenuTriggerButton";
-
-const FOCUS_MODE_SHORTCUT = formatShortcut({ mod: true, key: "/" });
 
 export function ViewMenu() {
   const { active: focusModeActive } = useSnapshot(focusModeStore);
@@ -36,7 +34,9 @@ export function ViewMenu() {
           onCheckedChange={() => toggleFocusMode()}
         >
           Focus mode
-          <DropdownMenuShortcut>{FOCUS_MODE_SHORTCUT}</DropdownMenuShortcut>
+          <DropdownMenuShortcut>
+            <ShorcutBadge id="focus-mode" />
+          </DropdownMenuShortcut>
         </DropdownMenuCheckboxItem>
       </DropdownMenuContent>
     </DropdownMenu>
