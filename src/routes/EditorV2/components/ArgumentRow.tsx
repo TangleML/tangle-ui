@@ -3,8 +3,8 @@ import { type ChangeEvent, useEffect, useRef, useState } from "react";
 
 import { getDynamicDataDisplayInfo } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/ArgumentsEditor/dynamicDataUtils";
 import { Icon } from "@/components/ui/icon";
-import { Input } from "@/components/ui/input";
 import { InlineStack } from "@/components/ui/layout";
+import { Textarea } from "@/components/ui/textarea";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import type {
@@ -46,7 +46,7 @@ export const ArgumentRow = observer(function ArgumentRow({
   const [inputValue, setInputValue] = useState(
     typeof currentValue === "string" ? currentValue : "",
   );
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const rowRef = useRef<HTMLDivElement>(null);
 
   const isFocused = editorStore.focusedArgumentName === inputSpec.name;
@@ -120,12 +120,12 @@ export const ArgumentRow = observer(function ArgumentRow({
     }
   };
 
-  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     setInputValue(e.target.value);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
+    if (e.key === "Enter" && !e.shiftKey) {
       inputRef.current?.blur();
     }
     if (e.key === "Escape") {
@@ -239,7 +239,7 @@ export const ArgumentRow = observer(function ArgumentRow({
       </InlineStack>
 
       {editing && !externalEditor ? (
-        <Input
+        <Textarea
           ref={inputRef}
           value={inputValue}
           onChange={handleChange}
@@ -250,7 +250,7 @@ export const ArgumentRow = observer(function ArgumentRow({
               ? bindingLabel || "Enter value to replace connection..."
               : (inputSpec.default ?? "Enter value...")
           }
-          className="h-7 text-xs font-mono mt-1"
+          className="min-h-2 resize-y text-xs font-mono mt-1"
         />
       ) : isDynamic && dynamicDisplayInfo ? (
         <InlineStack gap="1" blockAlign="center" className="mt-0.5">
