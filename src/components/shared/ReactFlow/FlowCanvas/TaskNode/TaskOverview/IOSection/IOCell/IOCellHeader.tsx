@@ -1,7 +1,6 @@
-import { ChevronsUpDown } from "lucide-react";
-
 import type { ArtifactDataResponse } from "@/api/types.gen";
 import { CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Link } from "@/components/ui/link";
 import {
@@ -42,6 +41,10 @@ const IOCellHeader = ({
     artifactData?.value,
     io.type,
   );
+
+  const hasArtifactDetails =
+    (!!artifactData?.value && artifactData.value.trim() !== "") ||
+    !!artifactData?.uri;
 
   return (
     <BlockStack
@@ -112,14 +115,16 @@ const IOCellHeader = ({
 
               {io.type?.toString()}
 
-              <CollapsibleTrigger
-                disabled={!hasCollapsableContent}
-                className={cn({
-                  hidden: !hasCollapsableContent,
-                })}
-              >
-                <ChevronsUpDown className="w-4 h-4 cursor-pointer" />
-              </CollapsibleTrigger>
+              {hasArtifactDetails && (
+                <CollapsibleTrigger
+                  disabled={!hasCollapsableContent}
+                  className={cn({
+                    hidden: !hasCollapsableContent,
+                  })}
+                >
+                  <Icon name="ChevronsUpDown" className="cursor-pointer" />
+                </CollapsibleTrigger>
+              )}
             </InlineStack>
           </InlineStack>
         )}
@@ -140,7 +145,7 @@ const canShowInlineValue = (
   if (type === "Integer" || type === "Boolean") {
     return true;
   }
-  if (type === "String" && value.length < 31) {
+  if (type === "String" && value.length < 31 && value.trim() !== "") {
     return true;
   }
   return false;
