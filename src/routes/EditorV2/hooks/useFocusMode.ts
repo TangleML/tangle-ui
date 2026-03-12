@@ -2,7 +2,8 @@ import { useReactFlow } from "@xyflow/react";
 import { useEffect } from "react";
 import { proxy } from "valtio";
 
-import { registerShortcut } from "../shortcuts/keyboardShortcuts";
+import { CMDALT } from "../shortcuts/keys";
+import { registerShortcut } from "../store/keyboardStore";
 import { registerDockAreaPlugin } from "../windows/dockAreaPlugins";
 import type { DockState } from "../windows/types";
 import { getPersistedWindowState } from "../windows/windowPersistence";
@@ -117,7 +118,7 @@ export function useFocusMode(): void {
   useEffect(() => {
     const unregisterShortcut = registerShortcut({
       id: "focus-mode",
-      keys: { mod: true, key: "/" },
+      keys: [CMDALT, "/"],
       label: "Focus mode",
       action: () => toggleFocusMode(fitView),
     });

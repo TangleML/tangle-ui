@@ -14,10 +14,13 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
+import { CTRL } from "@/routes/EditorV2/shortcuts/keys";
+import { registerShortcut } from "@/routes/EditorV2/store/keyboardStore";
 import { PipelineFolders } from "@/routes/PipelineFolders/PipelineFolders";
 import { APP_ROUTES } from "@/routes/router";
 import { writeComponentToFileListFromText } from "@/utils/componentStore";
@@ -27,6 +30,7 @@ import {
 } from "@/utils/constants";
 
 import { autoSaveStore } from "../../../store/autoSaveStore";
+import { ShorcutBadge } from "../../ShorcutBadge";
 import { MenuTriggerButton } from "./MenuTriggerButton";
 
 export function FileMenu() {
@@ -34,6 +38,15 @@ export function FileMenu() {
   const [importOpen, setImportOpen] = useState(false);
   const [openDialogOpen, setOpenDialogOpen] = useState(false);
   const importTriggerRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    return registerShortcut({
+      id: "open-pipeline",
+      keys: [CTRL, "O"],
+      label: "Open Pipeline",
+      action: () => setOpenDialogOpen(true),
+    });
+  }, []);
 
   useEffect(() => {
     if (importOpen) {
@@ -74,6 +87,9 @@ export function FileMenu() {
           <DropdownMenuItem onClick={() => setOpenDialogOpen(true)}>
             <Icon name="FolderOpen" size="sm" />
             Open
+            <DropdownMenuShortcut>
+              <ShorcutBadge id="open-pipeline" />
+            </DropdownMenuShortcut>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => void autoSaveStore.save()}>

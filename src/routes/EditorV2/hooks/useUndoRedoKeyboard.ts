@@ -1,27 +1,28 @@
 import { useEffect } from "react";
 
-import { registerShortcut } from "../shortcuts/keyboardShortcuts";
+import { CMDALT, SHIFT } from "../shortcuts/keys";
+import { registerShortcut } from "../store/keyboardStore";
 import { undoStore } from "../store/undoStore";
 
 export function useUndoRedoKeyboard(): void {
   useEffect(() => {
     const unregisterUndo = registerShortcut({
       id: "undo",
-      keys: { mod: true, key: "z" },
+      keys: [CMDALT, "Z"],
       label: "Undo",
       action: () => undoStore.undo(),
     });
 
     const unregisterRedo = registerShortcut({
       id: "redo",
-      keys: { mod: true, shift: true, key: "z" },
+      keys: [CMDALT, SHIFT, "Z"],
       label: "Redo",
       action: () => undoStore.redo(),
     });
 
     const unregisterRedoY = registerShortcut({
       id: "redo-y",
-      keys: { mod: true, key: "y" },
+      keys: [CMDALT, "Y"],
       label: "Redo",
       action: () => undoStore.redo(),
     });

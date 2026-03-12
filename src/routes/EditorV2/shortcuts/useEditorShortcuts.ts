@@ -1,20 +1,25 @@
 import { useEffect } from "react";
 
-import { getShortcuts } from "./keyboardShortcuts";
-import { isEditableTarget, matchesShortcut } from "./shortcutUtils";
+import { keyboardStore } from "../store/keyboardStore";
+import { normalizeKeyFromEvent } from "./keys";
+import { isEditableTarget } from "./shortcutUtils";
 
 /**
- * Single keydown listener that dispatches to all registered shortcuts.
+ * Single keydown/keyup/blur listener that tracks pressed keys in
+ * `keyboardStore.pressed` and dispatches registered shortcuts.
  * Call once at the EditorV2 root level.
  */
 export function useEditorShortcuts(): void {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      const key = normalizeKeyFromEvent(event);
+      if (key) keyboardStore.pressKey(key);
+
       const editable = isEditableTarget(event.target);
 
-      for (const shortcut of getShortcuts()) {
+      for (const shortcut of keyboardStore.shortcuts.values()) {
         if (editable && !shortcut.allowInEditable) continue;
-        if (matchesShortcut(event, shortcut.keys)) {
+        if (keyboardStore.matchesPressed(shortcut.keys)) {
           event.preventDefault();
           shortcut.action(event);
           return;
@@ -22,7 +27,24 @@ export function useEditorShortcuts(): void {
       }
     };
 
+    const handleKeyUp = (event: KeyboardEvent) => {
+      const key = normalizeKeyFromEvent(event);
+      if (key) keyboardStore.releaseKey(key);
+    };
+
+    const handleBlur = () => {
+      keyboardStore.clearPressed();
+    };
+
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("blur", handleBlur);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("blur", handleBlur);
+      keyboardStore.clearPressed();
+    };
   }, []);
 }

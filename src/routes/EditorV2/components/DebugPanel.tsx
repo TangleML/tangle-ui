@@ -4,14 +4,16 @@ import { useEffect } from "react";
 import CodeSyntaxHighlighter from "@/components/shared/CodeViewer/CodeSyntaxHighlighter";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Text } from "@/components/ui/typography";
+import { Heading, Text } from "@/components/ui/typography";
 import type { ComponentSpec } from "@/models/componentSpec";
 import { JsonSerializer } from "@/models/componentSpec";
 import { componentSpecToText } from "@/utils/yaml";
 
 import { editorStore } from "../store/editorStore";
+import { keyboardStore } from "../store/keyboardStore";
 import { navigationStore } from "../store/navigationStore";
 import { closeWindow, getWindowById, openWindow } from "../windows/windowStore";
+import { ShorcutBadge } from "./ShorcutBadge";
 
 const DEBUG_PANEL_WINDOW_ID = "debug-panel";
 
@@ -22,7 +24,7 @@ interface StatItemProps {
 
 function StatItem({ label, value }: StatItemProps) {
   return (
-    <InlineStack blockAlign="center" className="justify-between py-1">
+    <InlineStack blockAlign="center" className="justify-between py-1" gap="2">
       <Text size="xs" className="text-gray-500">
         {label}
       </Text>
@@ -77,6 +79,8 @@ function getSpecYaml(spec: ComponentSpec | null): string {
 const DebugPanelContent = observer(function DebugPanelContent() {
   const spec = navigationStore.rootSpec;
   const specYaml = getSpecYaml(spec);
+
+  const keybordShortcuts = [...keyboardStore.shortcuts.values()];
 
   const stats = {
     name: spec?.name ?? "—",
@@ -134,6 +138,26 @@ const DebugPanelContent = observer(function DebugPanelContent() {
               label="Has Tasks"
               value={spec?.tasks && spec.tasks.length > 0 ? "Yes" : "No"}
             />
+          </StatGroup>
+
+          <StatGroup title="Keyboard Shortcuts">
+            <BlockStack>
+              <BlockStack>
+                {keybordShortcuts.map((shortcut) => (
+                  <InlineStack
+                    key={shortcut.id}
+                    gap="2"
+                    blockAlign="center"
+                    className="justify-between py-1"
+                  >
+                    <Text size="xs" key={shortcut.id}>
+                      {shortcut.label}
+                    </Text>
+                    <ShorcutBadge id={shortcut.id} />
+                  </InlineStack>
+                ))}
+              </BlockStack>
+            </BlockStack>
           </StatGroup>
         </BlockStack>
       </TabsContent>

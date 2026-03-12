@@ -30,6 +30,7 @@ import { GhostNode } from "../../nodes/GhostNode/components/GhostNode";
 import { useGhostNode } from "../../nodes/GhostNode/hooks/useGhostNode";
 import { IONode } from "../../nodes/IONode/components/IONode";
 import { TaskNode } from "../../nodes/TaskNode/components/TaskNode";
+import { CMDALT } from "../../shortcuts/keys";
 import {
   copySelectedNodes,
   deleteSelectedNodes,
@@ -37,12 +38,12 @@ import {
   pasteNodes,
 } from "../../store/actions";
 import { clearMultiSelection, editorStore } from "../../store/editorStore";
+import { keyboardStore } from "../../store/keyboardStore";
 import { useClipboardShortcuts } from "./hooks/useClipboardShortcuts";
 import { useConnectionBehavior } from "./hooks/useConnectionBehavior";
 import { useDoubleClickBehavior } from "./hooks/useDoubleClickBehavior";
 import { useDropBehavior } from "./hooks/useDropBehavior";
 import { useFitViewOnFocus } from "./hooks/useFitViewOnFocus";
-import { useMetaKey } from "./hooks/useMetaKey";
 import { useNodeEdgeChanges } from "./hooks/useNodeEdgeChanges";
 import { useSelectionBehavior } from "./hooks/useSelectionBehavior";
 import { SelectionToolbar } from "./SelectionToolbar";
@@ -106,7 +107,7 @@ export const FlowCanvas = observer(function FlowCanvas({
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance | null>(null);
 
-  const { metaKeyPressed, metaKeyPressedRef } = useMetaKey();
+  const metaKeyPressed = keyboardStore.pressed.has(CMDALT);
   const isConnecting = useConnection((c) => c.inProgress);
 
   const { nodes: specNodes, edges: specEdges } = useSpecToNodesEdges(spec);
@@ -151,11 +152,7 @@ export const FlowCanvas = observer(function FlowCanvas({
     rfOnNodesChange,
     rfOnEdgesChange,
   );
-  const connectionBehavior = useConnectionBehavior(
-    spec,
-    reactFlowInstance,
-    metaKeyPressedRef,
-  );
+  const connectionBehavior = useConnectionBehavior(spec, reactFlowInstance);
   const dropBehavior = useDropBehavior(spec, reactFlowInstance);
   const doubleClickBehavior = useDoubleClickBehavior(spec);
 
