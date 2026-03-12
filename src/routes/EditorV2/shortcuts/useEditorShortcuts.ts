@@ -21,6 +21,11 @@ export function useEditorShortcuts(): void {
         if (editable && !shortcut.allowInEditable) continue;
         if (keyboardStore.matchesPressed(shortcut.keys)) {
           event.preventDefault();
+          /**
+           * In MacOS only one keyup event triggers when Meta key is pressed
+           * @see https://web.archive.org/web/20160304022453/http://bitspushedaround.com/on-a-few-things-you-may-not-know-about-the-hellish-command-key-and-javascript-events/
+           */
+          keyboardStore.clearPressed();
           shortcut.action(event);
           return;
         }
