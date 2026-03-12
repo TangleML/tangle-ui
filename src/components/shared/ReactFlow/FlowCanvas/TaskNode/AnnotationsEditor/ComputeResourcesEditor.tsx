@@ -3,6 +3,7 @@ import { useCallback } from "react";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Heading, Paragraph } from "@/components/ui/typography";
 import type { AnnotationConfig, Annotations } from "@/types/annotations";
+import { getAnnotationValue } from "@/utils/annotations";
 
 import { AnnotationsInput } from "./AnnotationsInput";
 
@@ -67,13 +68,11 @@ const ComputeResourceField = ({
     [resource, onSave],
   );
 
+  const rawValue = getAnnotationValue(annotations, resource.annotation, "");
   const value =
-    resource.append && annotations[resource.annotation]
-      ? annotations[resource.annotation].replace(
-          new RegExp(`${resource.append}$`),
-          "",
-        )
-      : annotations[resource.annotation];
+    resource.append && rawValue
+      ? rawValue.replace(new RegExp(`${resource.append}$`), "")
+      : rawValue;
 
   const label = resource.label + (resource.unit ? ` (${resource.unit})` : "");
 

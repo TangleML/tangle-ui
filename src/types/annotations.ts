@@ -1,4 +1,4 @@
-export type Annotations = Record<string, string>;
+export type Annotations = Record<string, unknown>;
 
 export type AnnotationOption = {
   value: string;
