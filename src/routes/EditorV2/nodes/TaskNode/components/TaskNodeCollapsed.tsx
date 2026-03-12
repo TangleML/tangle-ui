@@ -1,4 +1,4 @@
-import { Handle, Position, useStore } from "@xyflow/react";
+import { Handle, Position } from "@xyflow/react";
 
 import { Card } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
@@ -6,12 +6,8 @@ import { cn } from "@/lib/utils";
 import { getContrastTextColor } from "@/utils/color";
 
 import type { TaskNodeViewProps } from "./TaskNode";
-import { ZOOM_THRESHOLD } from "./TaskNode";
 
-const zoomValueSelector = (s: { transform: [number, number, number] }) =>
-  s.transform[2];
-
-const MAX_SCALE = 7;
+const s = "var(--collapsed-scale, 1)";
 
 export function TaskNodeCollapsed({
   taskName,
@@ -23,17 +19,9 @@ export function TaskNodeCollapsed({
   taskColor,
   onNodeClick,
 }: TaskNodeViewProps) {
-  const zoom = useStore(zoomValueSelector);
-  const scale = Math.min(ZOOM_THRESHOLD / zoom, MAX_SCALE);
   const headerTextColor = taskColor
     ? getContrastTextColor(taskColor)
     : undefined;
-
-  const fontSize = 32 * scale;
-  const iconSize = 16 * scale;
-  const padding = 12 * scale;
-  const gap = 8 * scale;
-  const handleSize = 12 * scale;
 
   return (
     <Card
@@ -48,9 +36,9 @@ export function TaskNodeCollapsed({
               : "border-gray-200 hover:border-gray-300",
       )}
       style={{
-        minWidth: 180 * scale,
-        maxWidth: 280 * scale,
-        minHeight: 100 * scale,
+        minWidth: `calc(${s} * 180px)`,
+        maxWidth: `calc(${s} * 280px)`,
+        minHeight: `calc(${s} * 100px)`,
         ...(taskColor
           ? { backgroundColor: taskColor, color: headerTextColor }
           : {}),
@@ -65,21 +53,27 @@ export function TaskNodeCollapsed({
           id={`input_${input.name}`}
           style={{
             top: "50%",
-            width: handleSize,
-            height: handleSize,
-            left: -(handleSize / 3),
+            width: `calc(${s} * 12px)`,
+            height: `calc(${s} * 12px)`,
+            left: `calc(${s} * -4px)`,
           }}
           className="!bg-blue-400 !border-2 !border-white"
         />
       ))}
 
-      <div className="flex items-start" style={{ padding, gap }}>
+      <div
+        className="flex items-start"
+        style={{
+          padding: `calc(${s} * 12px)`,
+          gap: `calc(${s} * 8px)`,
+        }}
+      >
         <div
           className="shrink-0"
           style={{
-            width: iconSize,
-            height: iconSize,
-            marginTop: fontSize * 0.1,
+            width: `calc(${s} * 16px)`,
+            height: `calc(${s} * 16px)`,
+            marginTop: `calc(${s} * 3.2px)`,
             ...(taskColor ? { color: headerTextColor } : {}),
           }}
         >
@@ -96,7 +90,7 @@ export function TaskNodeCollapsed({
             "font-semibold break-words min-w-0",
             !taskColor && "text-slate-900",
           )}
-          style={{ fontSize, lineHeight: 1.2 }}
+          style={{ fontSize: `calc(${s} * 32px)`, lineHeight: 1.2 }}
         >
           {taskName}
         </span>
@@ -110,9 +104,9 @@ export function TaskNodeCollapsed({
           id={`output_${output.name}`}
           style={{
             top: "50%",
-            width: handleSize,
-            height: handleSize,
-            right: -(handleSize / 3),
+            width: `calc(${s} * 12px)`,
+            height: `calc(${s} * 12px)`,
+            right: `calc(${s} * -4px)`,
           }}
           className="!bg-green-400 !border-2 !border-white"
         />
