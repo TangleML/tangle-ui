@@ -59,7 +59,7 @@ export const ConfigurationSection = observer(function ConfigurationSection({
   );
 
   const selectedProvider = cloudProviderConfig
-    ? annotationsRecord[cloudProviderConfig.annotation]
+    ? String(annotationsRecord[cloudProviderConfig.annotation])
     : undefined;
 
   useEffect(() => {
