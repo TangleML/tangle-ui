@@ -16,7 +16,7 @@ import {
 
 import { NODE_TYPE_REGISTRY } from "../nodes/registry";
 import { clipboardStore } from "./clipboardStore";
-import type { SelectedNode } from "./editorStore";
+import type { NodeEntityType, SelectedNode } from "./editorStore";
 import {
   generateUniqueInputName,
   generateUniqueOutputName,
@@ -96,14 +96,13 @@ interface ConnectionInfo {
 }
 
 export function getNodeTypeFromId(
+  spec: ComponentSpec | null,
   nodeId: string,
-): "input" | "output" | "task" | "conduit" | null {
+): NodeEntityType | null {
   return (
-    (NODE_TYPE_REGISTRY.getByNodeId(nodeId)?.entityType as
-      | "input"
-      | "output"
-      | "task"
-      | "conduit") ?? null
+    (NODE_TYPE_REGISTRY.getByNodeId(spec, nodeId)
+      ?.entityType as NodeEntityType) /** todo: adjust typing to avoid casting */ ??
+    null
   );
 }
 
@@ -114,7 +113,7 @@ export function findEntityById(
   spec: ComponentSpec,
   entityId: string,
 ): Task | Input | Output | undefined {
-  const manifest = NODE_TYPE_REGISTRY.getByNodeId(entityId);
+  const manifest = NODE_TYPE_REGISTRY.getByNodeId(spec, entityId);
   return manifest?.findEntity?.(spec, entityId) as
     | Task
     | Input
@@ -132,8 +131,8 @@ export function connectNodes(
   const sourceOutputName = sourceHandleId.replace(/^output_/, "");
   const targetInputName = targetHandleId.replace(/^input_/, "");
 
-  const sourceType = getNodeTypeFromId(sourceNodeId);
-  const targetType = getNodeTypeFromId(targetNodeId);
+  const sourceType = getNodeTypeFromId(spec, sourceNodeId);
+  const targetType = getNodeTypeFromId(spec, targetNodeId);
 
   if (sourceType === "input" && targetType === "output") return false;
 
@@ -362,7 +361,7 @@ export function deleteSelectedNodes(
 
   withUndoGroup("Delete selected nodes", () => {
     for (const node of selectedNodes) {
-      const manifest = NODE_TYPE_REGISTRY.getByNodeId(node.id);
+      const manifest = NODE_TYPE_REGISTRY.getByNodeId(spec, node.id);
       manifest?.deleteNode(spec, node.id);
     }
   });

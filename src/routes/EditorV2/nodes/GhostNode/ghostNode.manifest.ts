@@ -13,6 +13,11 @@ export const ghostManifest: NodeTypeManifest = {
     return [];
   },
 
+  getPosition() {
+    // Ghost nodes are ephemeral – no position persistence
+    return undefined;
+  },
+
   updatePosition() {
     // Ghost nodes are ephemeral – no position persistence
   },

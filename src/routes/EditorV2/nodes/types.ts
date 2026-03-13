@@ -61,6 +61,7 @@ export interface NodeTypeManifest {
    * (input & output both use RF type "io").
    */
   readonly entityType: string;
+  hasEntityId?(spec: ComponentSpec, id: string): boolean;
 
   // -- Rendering --------------------------------------------------------
 
@@ -92,6 +93,14 @@ export interface NodeTypeManifest {
       position: XYPosition,
     ): void | Promise<void>;
   };
+
+  /**
+   * Used to get the position of a node from the spec.
+   * CopyPaste features rely on this to fetch position of the node regardless of the node type.
+   * @param spec
+   * @param nodeId
+   */
+  getPosition(spec: ComponentSpec, nodeId: string): XYPosition | undefined;
 
   updatePosition(
     spec: ComponentSpec,

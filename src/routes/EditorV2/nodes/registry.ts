@@ -33,10 +33,23 @@ class NodeTypeRegistry {
   }
 
   /** Derive the manifest from a node ID (replaces `getNodeTypeFromId`). */
-  getByNodeId(nodeId: string): NodeTypeManifest | undefined {
+  getByNodeId(
+    spec: ComponentSpec | null,
+    nodeId: string,
+  ): NodeTypeManifest | undefined {
     for (const entry of this.prefixes) {
       if (nodeId.startsWith(entry.prefix)) return entry.manifest;
     }
+
+    const candidates = !spec
+      ? []
+      : this.all().filter(
+          (manifest) =>
+            typeof manifest.hasEntityId === "function" &&
+            manifest.hasEntityId(spec, nodeId),
+        );
+    if (candidates.length === 1) return candidates[0];
+
     return undefined;
   }
 

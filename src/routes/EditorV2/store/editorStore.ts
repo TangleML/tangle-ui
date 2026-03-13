@@ -2,7 +2,7 @@ import { action, makeObservable, observable } from "mobx";
 
 import type { ValidationIssue } from "@/models/componentSpec";
 
-export type NodeEntityType = "task" | "input" | "output" | "conduit";
+export type NodeEntityType = "task" | "input" | "output" | "conduit" | "flex";
 
 export interface SelectedNode {
   id: string;

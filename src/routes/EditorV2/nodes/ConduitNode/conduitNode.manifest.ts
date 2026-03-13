@@ -74,6 +74,14 @@ export const conduitManifest: NodeTypeManifest = {
     return augmentEdgesWithGuidelines(spec, edges, conduits);
   },
 
+  getPosition(spec, nodeId) {
+    const conduit = getConduits(spec).find((c) => c.id === nodeId);
+    if (!conduit) return undefined;
+    return conduit.orientation === "vertical"
+      ? { x: conduit.coordinate, y: -GUIDELINE_HALF_EXTENT }
+      : { x: -GUIDELINE_HALF_EXTENT, y: conduit.coordinate };
+  },
+
   updatePosition(spec, nodeId, position) {
     const conduit = getConduits(spec).find((c) => c.id === nodeId);
     if (!conduit) return;

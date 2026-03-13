@@ -55,10 +55,24 @@ export interface OutputNodeSnapshot extends BaseNodeSnapshot {
   data: OutputSnapshotData;
 }
 
+export interface FlexNodeSnapshot extends BaseNodeSnapshot {
+  type: "flex";
+  data: FlexNodeSnapshotData;
+}
+
+interface FlexNodeSnapshotData {
+  properties: Record<string, unknown>;
+  metadata: Record<string, unknown>;
+  size: { width: number; height: number };
+  zIndex: number;
+  locked?: boolean;
+}
+
 export type NodeSnapshot =
   | TaskNodeSnapshot
   | InputNodeSnapshot
-  | OutputNodeSnapshot;
+  | OutputNodeSnapshot
+  | FlexNodeSnapshot;
 
 export interface BindingSnapshot {
   sourceEntityId: string;
