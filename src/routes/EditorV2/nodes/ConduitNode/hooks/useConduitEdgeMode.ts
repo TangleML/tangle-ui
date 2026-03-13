@@ -6,7 +6,7 @@ import type { ComponentSpec } from "@/models/componentSpec";
 import { ESCAPE } from "../../../shortcuts/keys";
 import { clearSelection, editorStore } from "../../../store/editorStore";
 import { registerShortcut } from "../../../store/keyboardStore";
-import { getConduits, toggleEdgeOnConduit } from "./useConduits";
+import { getConduits, toggleEdgeOnConduit } from "../conduits.actions";
 
 function useConduitSelectionMode(edges: Edge[], spec: ComponentSpec | null) {
   const isConduitSelected = editorStore.selectedNodeType === "conduit";

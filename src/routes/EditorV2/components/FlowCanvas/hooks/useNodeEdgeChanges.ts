@@ -4,7 +4,7 @@ import type { EdgeChange, NodeChange, ReactFlowProps } from "@xyflow/react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 
-import { cleanupDeletedBinding } from "../../../nodes/ConduitNode/hooks/useConduits";
+import { cleanupDeletedBinding } from "../../../nodes/ConduitNode/conduits.actions";
 import { NODE_TYPE_REGISTRY } from "../../../nodes/registry";
 import { deleteEdge } from "../../../store/actions";
 import { withUndoGroup } from "../../../store/undoStore";
@@ -64,6 +64,7 @@ export function useNodeEdgeChanges(
 
         const bindingIdMatch = edgeId.match(/^edge_(.+)$/);
         if (bindingIdMatch) {
+          // todo: find out how to decouple
           cleanupDeletedBinding(spec, bindingIdMatch[1]);
         }
       }

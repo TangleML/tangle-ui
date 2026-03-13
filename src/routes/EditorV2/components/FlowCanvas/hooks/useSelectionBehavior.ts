@@ -12,7 +12,6 @@ import { debounce } from "@/utils/debounce";
 import { NODE_TYPE_REGISTRY } from "../../../nodes/registry";
 import {
   clearMultiSelection,
-  clearSelection,
   type SelectedNode,
   setMultiSelection,
 } from "../../../store/editorStore";
@@ -36,7 +35,7 @@ const debouncedSetMultiSelection = debounce(
 );
 
 export function useSelectionBehavior(): Required<
-  Pick<ReactFlowProps, "onSelectionChange" | "onPaneClick">
+  Pick<ReactFlowProps, "onSelectionChange">
 > {
   useEffect(() => {
     return () => debouncedSetMultiSelection.cancel();
@@ -51,9 +50,5 @@ export function useSelectionBehavior(): Required<
     }
   };
 
-  const onPaneClick = () => {
-    clearSelection();
-  };
-
-  return { onSelectionChange, onPaneClick };
+  return { onSelectionChange };
 }

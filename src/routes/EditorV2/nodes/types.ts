@@ -16,8 +16,6 @@ import type { SelectedNode } from "../store/editorStore";
 // Clone handler types (re-exported for use in manifests)
 // ---------------------------------------------------------------------------
 
-export type { BindingSnapshot, NodeSnapshot } from "../store/nodeCloneHandlers";
-
 export interface NodeCloneHandler {
   snapshot(spec: ComponentSpec, entityId: string): NodeSnapshot | null;
   clone(
@@ -120,6 +118,7 @@ export interface NodeTypeManifest {
   // -- Interactions -----------------------------------------------------
 
   onDoubleClick?(spec: ComponentSpec, node: Node): void;
+  onPaneClick?(spec: ComponentSpec, position: XYPosition): void;
 
   // -- Clone / copy-paste -----------------------------------------------
 
