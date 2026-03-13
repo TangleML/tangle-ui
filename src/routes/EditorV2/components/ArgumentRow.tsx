@@ -4,7 +4,6 @@ import { type ChangeEvent, useEffect, useRef, useState } from "react";
 import { getDynamicDataDisplayInfo } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/ArgumentsEditor/dynamicDataUtils";
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
-import { Textarea } from "@/components/ui/textarea";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import type {
@@ -25,6 +24,7 @@ import {
   setDynamicData,
   unsetArgument,
 } from "./arguments.actions";
+import { AutoGrowTextarea } from "./AutoGrowTextArea";
 import { InputValidationIndicator } from "./InputValidationIndicator";
 import { ThunderMenu } from "./ThunderMenu";
 
@@ -241,7 +241,7 @@ export const ArgumentRow = observer(function ArgumentRow({
       </InlineStack>
 
       {editing && !externalEditor ? (
-        <Textarea
+        <AutoGrowTextarea
           ref={inputRef}
           value={inputValue}
           onChange={handleChange}
@@ -252,7 +252,8 @@ export const ArgumentRow = observer(function ArgumentRow({
               ? bindingLabel || "Enter value to replace connection..."
               : (inputSpec.default ?? "Enter value...")
           }
-          className="min-h-2 resize-y text-xs font-mono mt-1"
+          className="min-h-2 text-xs font-mono mt-1"
+          data-testid="argument-input"
         />
       ) : isDynamic && dynamicDisplayInfo ? (
         <InlineStack gap="1" blockAlign="center" className="mt-0.5">
