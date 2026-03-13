@@ -10,7 +10,7 @@ import type {
 const TASK_OFFSET = 200;
 const IO_OFFSET = 150;
 
-export function resolvePosition(
+function resolvePosition(
   position: { x: number; y: number },
   fallback: { x: number; y: number },
 ): { x: number; y: number } {

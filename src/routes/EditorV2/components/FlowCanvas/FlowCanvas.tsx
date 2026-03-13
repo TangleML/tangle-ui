@@ -49,6 +49,7 @@ import { useDoubleClickBehavior } from "./hooks/useDoubleClickBehavior";
 import { useDropBehavior } from "./hooks/useDropBehavior";
 import { useFitViewOnFocus } from "./hooks/useFitViewOnFocus";
 import { useNodeEdgeChanges } from "./hooks/useNodeEdgeChanges";
+import { usePaneClickBehavior } from "./hooks/usePaneClickBehavior";
 import { useSelectionBehavior } from "./hooks/useSelectionBehavior";
 import { SelectionToolbar } from "./SelectionToolbar";
 
@@ -160,10 +161,12 @@ export const FlowCanvas = observer(function FlowCanvas({
   const connectionBehavior = useConnectionBehavior(spec, reactFlowInstance);
   const dropBehavior = useDropBehavior(spec, reactFlowInstance);
   const doubleClickBehavior = useDoubleClickBehavior(spec);
+  const paneClickBehavior = usePaneClickBehavior(spec, reactFlowInstance);
 
   const handleViewportChange = ({ zoom }: Viewport) => {
     const scale = Math.min(ZOOM_THRESHOLD / zoom, MAX_COLLAPSED_SCALE);
     containerRef.current?.style.setProperty("--collapsed-scale", String(scale));
+    containerRef.current?.style.setProperty("--zoom-level", String(zoom));
   };
 
   return (
@@ -176,6 +179,7 @@ export const FlowCanvas = observer(function FlowCanvas({
         {...connectionBehavior}
         {...dropBehavior}
         {...doubleClickBehavior}
+        {...paneClickBehavior}
         onEdgeClick={onEdgeClick}
         onInit={setReactFlowInstance}
         onViewportChange={handleViewportChange}

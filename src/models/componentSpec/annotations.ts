@@ -6,10 +6,12 @@ import type { Annotation } from "./entities/types";
 
 // -- Registry: known annotation key → typed value --
 
+export type GuidelineOrientation = "horizontal" | "vertical";
+
 export interface EdgeConduit {
   id: string;
-  position: XYPosition;
-  size: { width: number; height: number };
+  orientation: GuidelineOrientation;
+  coordinate: number;
   color: string;
   edgeIds: string[];
 }
@@ -26,6 +28,20 @@ interface AnnotationCodec<T> {
   serialize(value: T): unknown;
   deserialize(raw: unknown): T;
   defaultValue: T;
+}
+
+/**
+ * Migrates old rect-based conduit entries to the new guideline format.
+ * Old format had `position` + `size`; new format has `orientation` + `coordinate`.
+ */
+function isConduitEntry(raw: unknown): raw is EdgeConduit {
+  if (typeof raw !== "object" || raw === null) return false;
+
+  if ("orientation" in raw && "coordinate" in raw) {
+    return true;
+  }
+
+  return false;
 }
 
 const codecs: {
@@ -58,22 +74,25 @@ const codecs: {
   "tangleml.com/editor/edge-conduits": {
     serialize: (conduits) => JSON.stringify(conduits),
     deserialize: (raw): EdgeConduit[] => {
+      let arr: unknown[];
       if (typeof raw === "string") {
         try {
           const parsed = JSON.parse(raw);
-          return Array.isArray(parsed) ? parsed : [];
+          arr = Array.isArray(parsed) ? parsed : [];
         } catch {
           return [];
         }
+      } else if (Array.isArray(raw)) {
+        arr = raw;
+      } else {
+        return [];
       }
-      if (Array.isArray(raw)) return raw as EdgeConduit[];
-      return [];
+
+      return arr.filter(isConduitEntry);
     },
     defaultValue: [],
   },
 };
-
-export const EDGE_CONDUITS_ANNOTATION = "tangleml.com/editor/edge-conduits";
 
 // -- Helpers for serialization layer --
 

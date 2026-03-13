@@ -9,7 +9,6 @@ import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/typography";
 import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
 import { useForcedSearchContext } from "@/providers/ComponentLibraryProvider/ForcedSearchProvider";
-import { ConduitSidebarItem } from "@/routes/EditorV2/nodes/ConduitNode/components/ConduitSidebarItem";
 import type { UIComponentFolder } from "@/types/componentLibrary";
 
 import {
@@ -101,10 +100,7 @@ const GraphComponents = () => {
           folder={
             {
               name: "Canvas Tools",
-              components: [
-                <StickyNoteSidebarItem key="sticky-note" />,
-                <ConduitSidebarItem key="conduit" />,
-              ],
+              components: [<StickyNoteSidebarItem key="sticky-note" />],
               folders: [],
             } as UIComponentFolder
           }

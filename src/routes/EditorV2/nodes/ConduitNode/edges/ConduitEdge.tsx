@@ -1,19 +1,17 @@
 import type { EdgeProps } from "@xyflow/react";
 import { BaseEdge } from "@xyflow/react";
 
-import { buildConduitPath, type ConduitRect } from "./conduitPathUtils";
+import { buildConduitPath, type GuidelineInfo } from "./conduitPathUtils";
 
 export interface ConduitEdgeData extends Record<string, unknown> {
-  conduitRects: ConduitRect[];
-  bundleIndex: number;
-  bundleTotal: number;
+  guidelines: GuidelineInfo[];
   conduitColor?: string;
   isInAssignmentMode?: boolean;
   isAssignedToActiveConduit?: boolean;
   activeConduitColor?: string;
 }
 
-const DEBUG_POINTS = true;
+const DEBUG_POINTS = false;
 
 export function ConduitEdge({
   sourceX,
@@ -28,9 +26,7 @@ export function ConduitEdge({
   selected,
 }: EdgeProps) {
   const edgeData = data as ConduitEdgeData | undefined;
-  const conduits = edgeData?.conduitRects ?? [];
-  const bundleIndex = edgeData?.bundleIndex ?? 0;
-  const bundleTotal = edgeData?.bundleTotal ?? 1;
+  const guidelines = edgeData?.guidelines ?? [];
   const conduitColor = edgeData?.conduitColor;
   const isInAssignmentMode = edgeData?.isInAssignmentMode ?? false;
   const isAssigned = edgeData?.isAssignedToActiveConduit ?? false;
@@ -43,9 +39,7 @@ export function ConduitEdge({
     targetX,
     targetY,
     targetPosition,
-    conduits,
-    bundleIndex,
-    bundleTotal,
+    guidelines,
     options: {
       isSelected: selected,
     },
@@ -78,8 +72,7 @@ export function ConduitEdge({
   }
 
   const debugPointColorMap = {
-    entry: "#22c55e",
-    exit: "#ef4444",
+    waypoint: "#22c55e",
     path: "#6b7280",
   };
 

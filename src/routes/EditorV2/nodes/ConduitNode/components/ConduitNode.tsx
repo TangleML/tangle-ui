@@ -1,12 +1,9 @@
-import {
-  type Node,
-  type NodeProps,
-  NodeResizer,
-  type ResizeParams,
-} from "@xyflow/react";
+import type { Node, NodeProps } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
 
 import { cn } from "@/lib/utils";
+import type { GuidelineOrientation } from "@/models/componentSpec/annotations";
+import { pluralize } from "@/utils/string";
 
 import { useSpec } from "../../../providers/SpecContext";
 import {
@@ -14,25 +11,26 @@ import {
   editorStore,
   selectNode,
 } from "../../../store/editorStore";
-import { getConduits, updateConduitSize } from "../hooks/useConduits";
+import { getConduits } from "../conduits.actions";
 
 export interface ConduitNodeData extends Record<string, unknown> {
   conduitId: string;
   color: string;
   edgeCount: number;
+  orientation: GuidelineOrientation;
+  coordinate: number;
 }
 
 type ConduitNodeType = Node<ConduitNodeData, "conduit">;
 type ConduitNodeProps = NodeProps<ConduitNodeType>;
 
-const MIN_WIDTH = 20;
-const MIN_HEIGHT = 20;
+const cssZoomFactor = "var(--zoom-level, 1)";
 
 export const ConduitNode = observer(function ConduitNode({
   data,
   selected,
 }: ConduitNodeProps) {
-  const { conduitId, color, edgeCount } = data;
+  const { conduitId, color, edgeCount, orientation } = data;
   const spec = useSpec();
 
   const conduit = spec
@@ -54,46 +52,27 @@ export const ConduitNode = observer(function ConduitNode({
     }
   };
 
-  const handleResizeEnd = (_: unknown, params: ResizeParams) => {
-    if (!spec) return;
-    const width = Math.max(params.width, MIN_WIDTH);
-    const height = Math.max(params.height, MIN_HEIGHT);
-    updateConduitSize(
-      spec,
-      conduitId,
-      { width, height },
-      {
-        x: params.x,
-        y: params.y,
-      },
-    );
-  };
+  const isVertical = orientation === "vertical";
 
   return (
-    <>
-      <NodeResizer
-        minWidth={MIN_WIDTH}
-        minHeight={MIN_HEIGHT}
-        isVisible={selected || isActive}
-        onResizeEnd={handleResizeEnd}
-      />
-      <div
-        data-testid="conduit-node"
-        className={cn(
-          "w-full h-full cursor-pointer transition-opacity",
-          isActive
-            ? "opacity-60 ring-2 ring-offset-1"
-            : selected
-              ? "opacity-40"
-              : "opacity-2 hover:opacity-60",
-        )}
-        style={{
-          backgroundColor: displayColor,
-          ...(isActive ? { ringColor: displayColor } : {}),
-        }}
-        title={`Conduit (${assignedCount} edge${assignedCount !== 1 ? "s" : ""})`}
-        onClick={handleClick}
-      ></div>
-    </>
+    <div
+      data-testid="conduit-node"
+      className={cn(
+        "cursor-pointer transition-opacity",
+        isActive
+          ? "opacity-60 ring-2 ring-offset-1"
+          : selected
+            ? "opacity-40"
+            : "opacity-5 hover:opacity-60",
+      )}
+      style={{
+        backgroundColor: displayColor,
+        width: isVertical ? `calc(3 / ${cssZoomFactor} * 1px)` : "100%",
+        height: isVertical ? "100%" : `calc(3 / ${cssZoomFactor} * 1px)`,
+        ...(isActive ? { ringColor: displayColor } : {}),
+      }}
+      title={`Guideline ${isVertical ? "vertical" : "horizontal"} (${assignedCount} ${pluralize(assignedCount, "edge", "edges")})`}
+      onClick={handleClick}
+    />
   );
 });
