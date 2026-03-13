@@ -111,8 +111,7 @@
     "react-toastify": "^11.0.5",
     "tailwind-merge": "^3.5.0",
     "tailwindcss": "^4.1.16",
-    "tailwindcss-animate": "^1.0.7",
-    "valtio": "^2.2.0"
+    "tailwindcss-animate": "^1.0.7"
   },
   "peerDependencies": {
     "monaco-editor": "^0.54.0"

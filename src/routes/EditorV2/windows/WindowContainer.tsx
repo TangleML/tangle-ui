@@ -1,4 +1,4 @@
-import { useSnapshot } from "valtio";
+import { observer } from "mobx-react-lite";
 
 import { Window } from "./Window";
 import { windowStore } from "./windowStore";
@@ -7,16 +7,14 @@ import { windowStore } from "./windowStore";
  * Container component that renders floating (undocked) windows.
  * Docked windows are rendered by their respective DockArea components.
  */
-export function WindowContainer() {
-  const snap = useSnapshot(windowStore);
-
+export const WindowContainer = observer(function WindowContainer() {
   return (
     <>
-      {snap.windowOrder.map((windowId) => {
-        const win = snap.windows[windowId];
+      {windowStore.windowOrder.map((windowId) => {
+        const win = windowStore.windows[windowId];
         if (!win || win.dockState !== "none") return null;
         return <Window key={windowId} windowId={windowId} />;
       })}
     </>
   );
-}
+});
