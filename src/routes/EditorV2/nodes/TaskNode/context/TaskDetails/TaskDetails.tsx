@@ -8,6 +8,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
+import { ColorPicker } from "@/components/ui/color";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -20,6 +21,7 @@ import { editorStore } from "../../../../store/editorStore";
 import { ConfigurationSection } from "./components/ConfigurationSection";
 import { TaskAnnotationsEditor } from "./components/TaskAnnotationsEditor";
 import { TaskArgumentsEditor } from "./components/TaskArgumentsEditor";
+import { setTaskColor } from "./components/taskConfig.actions";
 
 interface TaskDetailsProps {
   entityId: string;
@@ -53,12 +55,17 @@ export const TaskDetails = observer(function TaskDetails({
   const annotationCount = task.annotations.filter(
     (a) => !a.key.startsWith("editor."),
   ).length;
+  const taskColor = task.annotations.get("tangleml.com/editor/task-color");
 
   const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
     const newName = event.target.value;
     if (newName && newName !== task.name) {
       renameTask(spec, entityId, newName);
     }
+  };
+
+  const handleColorChange = (color: string) => {
+    setTaskColor(task, color);
   };
 
   return (
@@ -84,13 +91,25 @@ export const TaskDetails = observer(function TaskDetails({
               <Label htmlFor="task-name" className="text-gray-600 text-xs">
                 Name
               </Label>
-              <Input
-                key={`${entityId}-${task.name}`}
-                id="task-name"
-                defaultValue={task.name}
-                onBlur={handleNameChange}
-                className="font-mono text-xs h-7"
-              />
+              <InlineStack
+                gap="2"
+                blockAlign="center"
+                wrap="nowrap"
+                className="w-full"
+              >
+                <ColorPicker
+                  title="Task color"
+                  color={taskColor}
+                  setColor={handleColorChange}
+                />
+                <Input
+                  key={`${entityId}-${task.name}`}
+                  id="task-name"
+                  defaultValue={task.name}
+                  onBlur={handleNameChange}
+                  className="font-mono text-xs h-7"
+                />
+              </InlineStack>
             </BlockStack>
 
             {componentSpec?.description && (
