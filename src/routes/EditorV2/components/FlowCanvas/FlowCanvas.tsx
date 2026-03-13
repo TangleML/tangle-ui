@@ -1,3 +1,5 @@
+import "../../nodes"; // ensure manifests are registered
+
 import {
   Background,
   type ConnectionLineComponentProps,
@@ -16,7 +18,6 @@ import {
   type Viewport,
 } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
-import type { ComponentType } from "react";
 import { useEffect, useRef, useState } from "react";
 
 import { BlockStack } from "@/components/ui/layout";
@@ -24,16 +25,8 @@ import { cn } from "@/lib/utils";
 import type { ComponentSpec } from "@/models/componentSpec";
 
 import { useSpecToNodesEdges } from "../../hooks/useSpecToNodesEdges";
-import { ConduitNode } from "../../nodes/ConduitNode/components/ConduitNode";
-import { ConduitEdge } from "../../nodes/ConduitNode/edges/ConduitEdge";
-import { useConduitEdgeMode } from "../../nodes/ConduitNode/hooks/useConduitEdgeMode";
-import { GhostNode } from "../../nodes/GhostNode/components/GhostNode";
-import { useGhostNode } from "../../nodes/GhostNode/hooks/useGhostNode";
-import { IONode } from "../../nodes/IONode/components/IONode";
-import {
-  TaskNode,
-  ZOOM_THRESHOLD,
-} from "../../nodes/TaskNode/components/TaskNode";
+import { NODE_TYPE_REGISTRY } from "../../nodes/registry";
+import { ZOOM_THRESHOLD } from "../../nodes/TaskNode/components/TaskNode";
 import { CMDALT } from "../../shortcuts/keys";
 import {
   copySelectedNodes,
@@ -43,6 +36,7 @@ import {
 } from "../../store/actions";
 import { clearMultiSelection, editorStore } from "../../store/editorStore";
 import { keyboardStore } from "../../store/keyboardStore";
+import { useCanvasEnhancements } from "./hooks/useCanvasEnhancements";
 import { useClipboardShortcuts } from "./hooks/useClipboardShortcuts";
 import { useConnectionBehavior } from "./hooks/useConnectionBehavior";
 import { useDoubleClickBehavior } from "./hooks/useDoubleClickBehavior";
@@ -56,16 +50,8 @@ import { SelectionToolbar } from "./SelectionToolbar";
 const GRID_SIZE = 10;
 const MAX_COLLAPSED_SCALE = 7;
 
-const nodeTypes: Record<string, ComponentType<any>> = {
-  task: TaskNode,
-  io: IONode,
-  ghost: GhostNode,
-  conduit: ConduitNode,
-};
-
-const edgeTypes: Record<string, ComponentType<any>> = {
-  conduitEdge: ConduitEdge,
-};
+const nodeTypes = NODE_TYPE_REGISTRY.getNodeTypes();
+const edgeTypes = NODE_TYPE_REGISTRY.getEdgeTypes();
 
 function ConnectionLine({
   fromX,
@@ -121,28 +107,17 @@ export const FlowCanvas = observer(function FlowCanvas({
   const [nodes, setNodes, rfOnNodesChange] = useNodesState(specNodes);
   const [edges, setEdges, rfOnEdgesChange] = useEdgesState(specEdges);
 
-  /**
-   * todo: refactor, move out from FlowCanvas
-   */
-  const { ghostNode, ghostEdge } = useGhostNode({
-    active: metaKeyPressed,
-    isConnecting,
+  const {
+    nodes: displayNodes,
+    edges: displayEdges,
+    onEdgeClick,
+  } = useCanvasEnhancements({
     spec,
-  });
-  /**
-   * todo: refactor, move out from FlowCanvas
-   */
-  const { edges: conduitStyledEdges, onEdgeClick } = useConduitEdgeMode(
+    nodes,
     edges,
-    spec,
-  );
-
-  // todo: refactor by making "onEdgeClick" to be a composite
-  const displayNodes = ghostNode ? [...nodes, ghostNode] : nodes;
-  // todo: refactor by making "onEdgeClick" to be a composite
-  const displayEdges = ghostEdge
-    ? [...conduitStyledEdges, ghostEdge]
-    : conduitStyledEdges;
+    metaKeyPressed,
+    isConnecting,
+  });
 
   useEffect(() => {
     setNodes(specNodes);

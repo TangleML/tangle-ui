@@ -1,5 +1,4 @@
-import type { Edge, EdgeProps, Node, NodeProps } from "@xyflow/react";
-import type { ComponentType } from "react";
+import type { Edge, EdgeTypes, Node, NodeTypes } from "@xyflow/react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 
@@ -49,14 +48,14 @@ class NodeTypeRegistry {
   // -- Aggregated helpers used by FlowCanvas / hooks --------------------
 
   /** Build the `nodeTypes` record for `<ReactFlow nodeTypes={…}>`. */
-  getNodeTypes(): Record<string, ComponentType<NodeProps<any>>> {
+  getNodeTypes(): NodeTypes {
     return Object.fromEntries(
       this.all().map((manifest) => [manifest.type, manifest.component]),
-    );
+    ) as NodeTypes;
   }
 
   /** Build the `edgeTypes` record for `<ReactFlow edgeTypes={…}>`. */
-  getEdgeTypes(): Record<string, ComponentType<EdgeProps<any>>> {
+  getEdgeTypes(): EdgeTypes {
     return Object.assign(
       {},
       ...this.all()

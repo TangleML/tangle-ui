@@ -21,6 +21,7 @@ import {
 import { ConduitDetails } from "./context/ConduitDetails";
 import { ConduitEdge, type ConduitEdgeData } from "./edges/ConduitEdge";
 import type { GuidelineInfo } from "./edges/conduitPathUtils";
+import { useConduitEdgeMode } from "./hooks/useConduitEdgeMode";
 
 const GUIDELINE_EXTENT = 100000;
 const GUIDELINE_HALF_EXTENT = GUIDELINE_EXTENT / 2;
@@ -98,6 +99,14 @@ export const conduitManifest: NodeTypeManifest = {
     const guideline = addGuideline(spec, orientation, coordinate);
     selectNode(guideline.id, "conduit");
     keyboardStore.clearPressed();
+  },
+
+  useCanvasEnhancement({ edges, spec }) {
+    const { edges: styledEdges, onEdgeClick } = useConduitEdgeMode(edges, spec);
+    return {
+      transformedEdges: styledEdges,
+      onEdgeClick,
+    };
   },
 };
 

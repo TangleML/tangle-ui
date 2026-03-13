@@ -5,7 +5,7 @@ import type {
   NodeProps,
   XYPosition,
 } from "@xyflow/react";
-import type { ComponentType } from "react";
+import type { ComponentType, MouseEvent } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 import type { IdGenerator } from "@/models/componentSpec/factories/idGenerator";
@@ -123,4 +123,38 @@ export interface NodeTypeManifest {
   // -- Clone / copy-paste -----------------------------------------------
 
   readonly cloneHandler?: NodeCloneHandler;
+
+  // -- Canvas enhancement (runtime hooks) ---------------------------------
+
+  /**
+   * Optional React hook called by the composing `useCanvasEnhancements` hook.
+   * Manifests use this to inject extra nodes/edges or transform edges at
+   * render time (e.g. ghost-node overlay, conduit edge styling).
+   *
+   * Safe to use React hooks inside — the manifest array is static so call
+   * order is stable across renders.
+   */
+  readonly useCanvasEnhancement?: (
+    params: CanvasEnhancementParams,
+  ) => CanvasEnhancementResult;
+}
+
+// ---------------------------------------------------------------------------
+// Canvas enhancement types used by useCanvasEnhancements composing hook
+// ---------------------------------------------------------------------------
+
+export interface CanvasEnhancementParams {
+  spec: ComponentSpec | null;
+  nodes: Node[];
+  edges: Edge[];
+  metaKeyPressed: boolean;
+  isConnecting: boolean;
+}
+
+export interface CanvasEnhancementResult {
+  extraNodes?: Node[];
+  extraEdges?: Edge[];
+  /** Replaces the incoming edges (used for styling / type transforms). */
+  transformedEdges?: Edge[];
+  onEdgeClick?: (event: MouseEvent, edge: { id: string }) => void;
 }

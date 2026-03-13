@@ -1,5 +1,6 @@
 import type { NodeTypeManifest } from "../types";
 import { GhostNode } from "./components/GhostNode";
+import { useGhostNode } from "./hooks/useGhostNode";
 
 export const ghostManifest: NodeTypeManifest = {
   type: "ghost",
@@ -21,4 +22,16 @@ export const ghostManifest: NodeTypeManifest = {
   },
 
   selectable: false,
+
+  useCanvasEnhancement({ spec, metaKeyPressed, isConnecting }) {
+    const { ghostNode, ghostEdge } = useGhostNode({
+      active: metaKeyPressed,
+      isConnecting,
+      spec,
+    });
+    return {
+      extraNodes: ghostNode ? [ghostNode] : undefined,
+      extraEdges: ghostEdge ? [ghostEdge] : undefined,
+    };
+  },
 };
