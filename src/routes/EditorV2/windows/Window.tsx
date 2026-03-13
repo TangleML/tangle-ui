@@ -1,6 +1,7 @@
+import { runInAction } from "mobx";
+import { observer } from "mobx-react-lite";
 import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useSnapshot } from "valtio";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -19,7 +20,6 @@ import {
   type SnapPreviewType,
   TASK_PANEL_HEIGHT,
   type WindowAction,
-  type WindowConfig,
 } from "./types";
 import {
   attachWindow,
@@ -46,10 +46,12 @@ interface WindowProps {
   docked?: boolean;
 }
 
-export function Window({ windowId, docked = false }: WindowProps) {
-  const snap = useSnapshot(windowStore);
-  const windowConfig = snap.windows[windowId] as WindowConfig | undefined;
-  const zIndex = snap.windowOrder.indexOf(windowId);
+export const Window = observer(function Window({
+  windowId,
+  docked = false,
+}: WindowProps) {
+  const windowConfig = windowStore.windows[windowId];
+  const zIndex = windowStore.windowOrder.indexOf(windowId);
 
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
@@ -87,7 +89,7 @@ export function Window({ windowId, docked = false }: WindowProps) {
   const isAttached = !!attachedTo;
   const effectiveDockedHeight = dockedHeight ?? DEFAULT_DOCKED_HEIGHT;
   const dockAreaCollapsed = isDocked
-    ? snap.dockAreas[dockState as "left" | "right"].collapsed
+    ? windowStore.dockAreas[dockState as "left" | "right"].collapsed
     : false;
 
   const contentWindowState: ContentWindowState = {
@@ -101,19 +103,21 @@ export function Window({ windowId, docked = false }: WindowProps) {
     isAttached,
   };
 
-  const hasHiddenWindows = snap.windowOrder.some(
-    (id) => snap.windows[id]?.state === "hidden",
+  const hasHiddenWindows = windowStore.windowOrder.some(
+    (id) => windowStore.windows[id]?.state === "hidden",
   );
   const taskPanelOffset = hasHiddenWindows ? TASK_PANEL_HEIGHT : 0;
 
   const isActionDisabled = (action: WindowAction) =>
     disabledActions?.includes(action) ?? false;
 
-  const isAtFront = zIndex === snap.windowOrder.length - 1;
+  const isAtFront = zIndex === windowStore.windowOrder.length - 1;
 
   const raiseZIndex = () => {
     if (!docked && !isAtFront && panelRef.current) {
-      panelRef.current.style.zIndex = String(20 + snap.windowOrder.length);
+      panelRef.current.style.zIndex = String(
+        20 + windowStore.windowOrder.length,
+      );
     }
   };
 
@@ -137,7 +141,6 @@ export function Window({ windowId, docked = false }: WindowProps) {
     hasUndocked.current = false;
 
     if (docked) {
-      // For docked windows, use the mouse position relative to the panel element
       const rect = panelRef.current?.getBoundingClientRect();
       dragOffset.current = {
         x: rect ? e.clientX - rect.left : 0,
@@ -189,8 +192,10 @@ export function Window({ windowId, docked = false }: WindowProps) {
           if (win) {
             const halfWidth = win.size.width / 2;
             const headerGrab = 20;
-            win.position.x = moveE.clientX - halfWidth;
-            win.position.y = moveE.clientY - headerGrab;
+            runInAction(() => {
+              win.position.x = moveE.clientX - halfWidth;
+              win.position.y = moveE.clientY - headerGrab;
+            });
             dragOffset.current = { x: halfWidth, y: headerGrab };
           }
         } else {
@@ -572,7 +577,7 @@ export function Window({ windowId, docked = false }: WindowProps) {
         )}
     </>
   );
-}
+});
 
 // --- Shared window action buttons ---
 

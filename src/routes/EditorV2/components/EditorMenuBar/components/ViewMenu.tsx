@@ -1,4 +1,4 @@
-import { useSnapshot } from "valtio";
+import { observer } from "mobx-react-lite";
 
 import {
   DropdownMenu,
@@ -15,9 +15,7 @@ import { focusModeStore, toggleFocusMode } from "../../../hooks/useFocusMode";
 import { ShorcutBadge } from "../../ShorcutBadge";
 import { MenuTriggerButton } from "./MenuTriggerButton";
 
-export function ViewMenu() {
-  const { active: focusModeActive } = useSnapshot(focusModeStore);
-
+export const ViewMenu = observer(function ViewMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -30,7 +28,7 @@ export function ViewMenu() {
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuCheckboxItem
-          checked={focusModeActive}
+          checked={focusModeStore.active}
           onCheckedChange={() => toggleFocusMode()}
         >
           Focus mode
@@ -41,4 +39,4 @@ export function ViewMenu() {
       </DropdownMenuContent>
     </DropdownMenu>
   );
-}
+});

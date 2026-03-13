@@ -1,10 +1,11 @@
+import { observer } from "mobx-react-lite";
 import { useEffect, useRef } from "react";
-import { useSnapshot } from "valtio";
 
 import { BlockStack } from "@/components/ui/layout";
 import { VerticalResizeHandle } from "@/components/ui/resize-handle";
 import { cn } from "@/lib/utils";
 
+import { focusModeStore } from "../hooks/useFocusMode";
 import { registerDockAreaElement } from "./snapUtils";
 import {
   COLLAPSED_DOCK_AREA_WIDTH,
@@ -22,9 +23,8 @@ interface DockAreaProps {
   side: "left" | "right";
 }
 
-export function DockArea({ side }: DockAreaProps) {
-  const snap = useSnapshot(windowStore);
-  const dockArea = snap.dockAreas[side];
+export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
+  const dockArea = windowStore.dockAreas[side];
   const { collapsed, windowOrder } = dockArea;
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -55,7 +55,7 @@ export function DockArea({ side }: DockAreaProps) {
     return () => observer.disconnect();
   }, [side, collapsed, isEmpty]);
 
-  if (isEmpty) return null;
+  if (isEmpty || focusModeStore.active) return null;
 
   const setRef = (element: HTMLDivElement | null) => {
     (containerRef as { current: HTMLDivElement | null }).current = element;
@@ -120,4 +120,4 @@ export function DockArea({ side }: DockAreaProps) {
       />
     </div>
   );
-}
+});

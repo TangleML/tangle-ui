@@ -1,4 +1,4 @@
-import { useSnapshot } from "valtio";
+import { observer } from "mobx-react-lite";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -11,11 +11,9 @@ import { closeWindow, restoreWindow, windowStore } from "./windowStore";
  * Bar that displays hidden windows. Rendered in normal flow above the editor
  * layout so it pushes content down when visible.
  */
-export function TaskPanel() {
-  const snap = useSnapshot(windowStore);
-
-  const hiddenWindows = snap.windowOrder
-    .map((id) => snap.windows[id])
+export const TaskPanel = observer(function TaskPanel() {
+  const hiddenWindows = windowStore.windowOrder
+    .map((id) => windowStore.windows[id])
     .filter((w) => w?.state === "hidden");
 
   if (hiddenWindows.length === 0) {
@@ -72,4 +70,4 @@ export function TaskPanel() {
       </InlineStack>
     </div>
   );
-}
+});

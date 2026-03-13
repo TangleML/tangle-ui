@@ -24,6 +24,7 @@ import { BlockStack } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
 import type { ComponentSpec } from "@/models/componentSpec";
 
+import { focusModeStore } from "../../hooks/useFocusMode";
 import { useSpecToNodesEdges } from "../../hooks/useSpecToNodesEdges";
 import { NODE_TYPE_REGISTRY } from "../../nodes/registry";
 import { ZOOM_THRESHOLD } from "../../nodes/TaskNode/components/TaskNode";
@@ -98,6 +99,7 @@ export const FlowCanvas = observer(function FlowCanvas({
   const containerRef = useRef<HTMLDivElement>(null);
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance | null>(null);
+  const focusModeActive = focusModeStore.active;
 
   const metaKeyPressed = keyboardStore.pressed.has(CMDALT);
   const isConnecting = useConnection((c) => c.inProgress);
@@ -145,7 +147,15 @@ export const FlowCanvas = observer(function FlowCanvas({
   };
 
   return (
-    <BlockStack ref={containerRef} fill className={cn("relative", className)}>
+    <BlockStack
+      ref={containerRef}
+      fill
+      className={cn(
+        "relative",
+        focusModeActive && "border-2 border-red-500",
+        className,
+      )}
+    >
       <ReactFlow
         nodes={displayNodes}
         edges={displayEdges}

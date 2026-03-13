@@ -6,7 +6,7 @@
  * previous arrangement. Also persists dock area configuration.
  */
 
-import { subscribe } from "valtio";
+import { reaction, runInAction } from "mobx";
 
 import type { AttachmentInfo, DockState, Position, Size } from "./types";
 import { windowStore } from "./windowStore";
@@ -182,16 +182,18 @@ function restoreDockAreaState(): void {
   const layout = loadWindowLayout();
   if (!layout?.dockAreas) return;
 
-  for (const side of ["left", "right"] as const) {
-    const persisted = layout.dockAreas[side];
-    if (!persisted) continue;
-    windowStore.dockAreas[side].width = persisted.width;
-    windowStore.dockAreas[side].collapsed = persisted.collapsed;
-    // Pre-populate the window order from persisted state.
-    // openWindow() will skip adding IDs that are already present,
-    // preserving the persisted ordering.
-    windowStore.dockAreas[side].windowOrder = [...persisted.windowOrder];
-  }
+  runInAction(() => {
+    for (const side of ["left", "right"] as const) {
+      const persisted = layout.dockAreas[side];
+      if (!persisted) continue;
+      windowStore.dockAreas[side].width = persisted.width;
+      windowStore.dockAreas[side].collapsed = persisted.collapsed;
+      // Pre-populate the window order from persisted state.
+      // openWindow() will skip adding IDs that are already present,
+      // preserving the persisted ordering.
+      windowStore.dockAreas[side].windowOrder = [...persisted.windowOrder];
+    }
+  });
 }
 
 /**
@@ -206,9 +208,19 @@ export function initPersistence(): () => void {
   // Restore dock area dimensions/collapsed state
   restoreDockAreaState();
 
-  unsubscribe = subscribe(windowStore, () => {
-    saveWindowLayout();
-  });
+  // Deep-serialize all store state to establish MobX tracking on every property.
+  // Fires the effect whenever any tracked observable changes (equivalent to valtio subscribe).
+  unsubscribe = reaction(
+    () =>
+      JSON.stringify({
+        w: windowStore.windows,
+        o: windowStore.windowOrder,
+        d: windowStore.dockAreas,
+      }),
+    () => {
+      saveWindowLayout();
+    },
+  );
 
   return () => {
     if (unsubscribe) {
