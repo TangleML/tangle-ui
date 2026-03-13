@@ -20,7 +20,6 @@ import {
   setSelectedValidationIssue,
 } from "../../store/editorStore";
 import { navigationStore } from "../../store/navigationStore";
-import { ValidationSummary } from "../ValidationSummary";
 import { RootNode } from "./components/RootNode";
 import { ValidationIssueResolutionCard } from "./components/ValidationIssueResolutionCard";
 import { buildExpandedPaths, buildNavPathArray } from "./utils";
@@ -103,10 +102,6 @@ export const PipelineTreeContent = observer(function PipelineTreeContent() {
             currentNavPath={currentNavPath}
             expandedNodes={expandedNodes}
             onToggleExpand={handleToggleExpand}
-          />
-          <ValidationSummary
-            spec={rootSpec}
-            className="border-t border-slate-200 pt-2"
           />
         </BlockStack>
         <BlockStack className="hidden @[600px]:flex overflow-y-auto min-h-0 max-w-md">
