@@ -168,9 +168,9 @@ export function PipelineRunFiltersBar({
   return (
     <BlockStack gap="3">
       {/* Row 1: All Filters */}
-      <InlineStack gap="3" align="center">
+      <InlineStack gap="3" align="center" wrap="wrap">
         {/* Search Input - flexible width */}
-        <div className="relative flex-1 min-w-0">
+        <div className="relative flex-1">
           <Icon
             name="Search"
             className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
@@ -182,7 +182,7 @@ export function PipelineRunFiltersBar({
               setNameInput(e.target.value);
               setFilterDebounced("pipeline_name", e.target.value);
             }}
-            className="pl-9 pr-8 w-full"
+            className="pl-9 pr-8 w-fit min-w-60"
           />
           {nameInput && (
             <Button
