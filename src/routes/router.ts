@@ -23,7 +23,6 @@ import { ImportPage } from "./Import";
 import NotFoundPage from "./NotFoundPage";
 import { PipelineFoldersPage } from "./PipelineFolders/PipelineFoldersPage";
 import PipelineRun from "./PipelineRun";
-import { Playground } from "./Playground";
 import { QuickStartPage } from "./QuickStart";
 import { BackendSettings } from "./Settings/sections/BackendSettings";
 import { BetaFeaturesSettings } from "./Settings/sections/BetaFeaturesSettings";
@@ -217,12 +216,6 @@ const pipelineFoldersRoute = createRoute({
   component: PipelineFoldersPage,
 });
 
-const playgroundRoute = createRoute({
-  getParentRoute: () => mainLayout,
-  path: APP_ROUTES.PLAYGROUND,
-  component: Playground,
-});
-
 const appRouteTree = mainLayout.addChildren([
   indexRoute,
   quickStartRoute,
@@ -234,7 +227,6 @@ const appRouteTree = mainLayout.addChildren([
   editorV2Route,
   editorV2PipelineRoute,
   pipelineFoldersRoute,
-  playgroundRoute,
 ]);
 
 const rootRouteTree = rootRoute.addChildren([
