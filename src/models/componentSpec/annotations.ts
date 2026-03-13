@@ -2,6 +2,9 @@ import type { XYPosition } from "@xyflow/react";
 import { computed } from "mobx";
 import { Model, model, modelAction, prop } from "mobx-keystone";
 
+import type { FlexNodeData } from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/types";
+import { isFlexNodeData } from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/types";
+
 import type { Annotation } from "./entities/types";
 
 // -- Registry: known annotation key → typed value --
@@ -20,6 +23,7 @@ interface AnnotationTypeMap {
   "editor.position": XYPosition;
   "tangleml.com/editor/task-color": string;
   "tangleml.com/editor/edge-conduits": EdgeConduit[];
+  "flex-nodes": FlexNodeData[];
 }
 
 type KnownAnnotationKey = keyof AnnotationTypeMap;
@@ -89,6 +93,27 @@ const codecs: {
       }
 
       return arr.filter(isConduitEntry);
+    },
+    defaultValue: [],
+  },
+  "flex-nodes": {
+    serialize: (nodes) => JSON.stringify(nodes),
+    deserialize: (raw): FlexNodeData[] => {
+      let arr: unknown[];
+      if (typeof raw === "string") {
+        try {
+          const parsed = JSON.parse(raw);
+          arr = Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      } else if (Array.isArray(raw)) {
+        arr = raw;
+      } else {
+        return [];
+      }
+
+      return arr.filter(isFlexNodeData);
     },
     defaultValue: [],
   },

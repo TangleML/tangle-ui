@@ -14,7 +14,7 @@ export function useDoubleClickBehavior(
     node: Node,
   ) => {
     if (!spec) return;
-    const manifest = NODE_TYPE_REGISTRY.getByNodeId(node.id);
+    const manifest = NODE_TYPE_REGISTRY.getByNodeId(spec, node.id);
     manifest?.onDoubleClick?.(spec, node);
   };
 

@@ -3,6 +3,10 @@ import "../../../nodes"; // ensure manifests are registered
 import type { EdgeChange, NodeChange, ReactFlowProps } from "@xyflow/react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
+import {
+  clearMultiSelection,
+  clearSelection,
+} from "@/routes/EditorV2/store/editorStore";
 
 import { cleanupDeletedBinding } from "../../../nodes/ConduitNode/conduits.actions";
 import { NODE_TYPE_REGISTRY } from "../../../nodes/registry";
@@ -29,7 +33,7 @@ export function useNodeEdgeChanges(
       withUndoGroup("Move nodes", () => {
         for (const change of positionChanges) {
           if ("id" in change && "position" in change && change.position) {
-            const manifest = NODE_TYPE_REGISTRY.getByNodeId(change.id);
+            const manifest = NODE_TYPE_REGISTRY.getByNodeId(spec, change.id);
             manifest?.updatePosition(spec, change.id, change.position);
           }
         }
@@ -39,11 +43,15 @@ export function useNodeEdgeChanges(
     const removeChanges = changes.filter((change) => change.type === "remove");
     for (const change of removeChanges) {
       if ("id" in change) {
-        const manifest = NODE_TYPE_REGISTRY.getByNodeId(change.id);
+        const manifest = NODE_TYPE_REGISTRY.getByNodeId(spec, change.id);
         // todo: move action to a separate file
         withUndoGroup("Delete node", () => {
           manifest?.deleteNode(spec, change.id);
         });
+
+        // deselect removed nodes
+        clearSelection();
+        clearMultiSelection();
       }
     }
 

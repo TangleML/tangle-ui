@@ -3,12 +3,12 @@ import type { RefObject } from "react";
 import { useEffect } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
+import { NODE_TYPE_REGISTRY } from "@/routes/EditorV2/nodes/registry";
 
 import { CMDALT } from "../../../shortcuts/keys";
 import {
   copySelectedNodes,
   duplicateSelectedNodes,
-  findEntityById,
   pasteNodes,
 } from "../../../store/actions";
 import { editorStore, type SelectedNode } from "../../../store/editorStore";
@@ -25,10 +25,13 @@ function getEffectiveSelection(spec: ComponentSpec): SelectedNode[] {
 
   if (!selectedNodeId || !selectedNodeType) return [];
 
-  const entity = findEntityById(spec, selectedNodeId);
-  if (!entity) return [];
+  const position = NODE_TYPE_REGISTRY.getByNodeId(
+    spec,
+    selectedNodeId,
+  )?.getPosition(spec, selectedNodeId);
 
-  const position = entity.annotations.get("editor.position");
+  if (!position) return [];
+
   return [{ id: selectedNodeId, type: selectedNodeType, position }];
 }
 

@@ -127,7 +127,7 @@ export const FlowCanvas = observer(function FlowCanvas({
   useFitViewOnFocus();
   useClipboardShortcuts(spec, containerRef, reactFlowInstance);
 
-  const selectionBehavior = useSelectionBehavior();
+  const selectionBehavior = useSelectionBehavior(spec);
   const nodeEdgeBehavior = useNodeEdgeChanges(
     spec,
     rfOnNodesChange,
@@ -172,6 +172,7 @@ export const FlowCanvas = observer(function FlowCanvas({
         selectionOnDrag={false}
         selectionMode={SelectionMode.Partial}
         panOnDrag={true}
+        zIndexMode="manual"
       >
         <FloatingSelectionToolbar spec={spec} />
         <Background gap={GRID_SIZE} className="!bg-slate-50" />

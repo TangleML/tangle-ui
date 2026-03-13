@@ -42,6 +42,12 @@ export const outputManifest: NodeTypeManifest = {
     },
   },
 
+  getPosition(spec, nodeId) {
+    const output = spec.outputs.find((o) => o.$id === nodeId);
+    if (!output) return undefined;
+    return output.annotations.get("editor.position");
+  },
+
   updatePosition(spec, nodeId, position) {
     spec.updateNodePosition(nodeId, position);
   },

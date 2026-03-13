@@ -43,6 +43,12 @@ export const inputManifest: NodeTypeManifest = {
     },
   },
 
+  getPosition(spec, nodeId) {
+    const input = spec.inputs.find((i) => i.$id === nodeId);
+    if (!input) return undefined;
+    return input.annotations.get("editor.position");
+  },
+
   updatePosition(spec, nodeId, position) {
     spec.updateNodePosition(nodeId, position);
   },
