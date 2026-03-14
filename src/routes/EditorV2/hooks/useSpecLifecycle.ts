@@ -9,7 +9,7 @@ import { autoSaveStore } from "../store/autoSaveStore";
 import { editorStore, resetEditorState } from "../store/editorStore";
 import { clearNavigation, initNavigation } from "../store/navigationStore";
 import { undoStore } from "../store/undoStore";
-import { closeWindowsByLinkedEntity } from "../windows/windowStore";
+import { closeWindowsByLinkedEntity } from "../windows/windows.actions";
 
 export function useSpecLifecycle(
   rootSpec: ComponentSpec,

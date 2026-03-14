@@ -71,10 +71,7 @@ export function shouldDetach(
   return dx >= DETACH_THRESHOLD || dy >= DETACH_THRESHOLD;
 }
 
-export function calculateAttachPosition(
-  parentWindow: WindowConfig,
-  _childWidth: number,
-): Position {
+export function calculateAttachPosition(parentWindow: WindowConfig): Position {
   return {
     x: parentWindow.position.x,
     y: getWindowBottom(parentWindow),
@@ -163,9 +160,8 @@ function calculateInsertPosition(
   draggedWindowId: string,
   windowIds: string[],
 ): { insertIndex: number; indicatorY: number } {
-  const scrollContainer = dockAreaEl.querySelector(
-    "[data-dock-scroll]",
-  ) as HTMLElement | null;
+  const scrollContainer =
+    dockAreaEl.querySelector<HTMLElement>("[data-dock-scroll]");
   const container = scrollContainer ?? dockAreaEl;
 
   const windowEls =
@@ -208,25 +204,39 @@ function calculateInsertPosition(
 
 /**
  * Detect all snap possibilities for the current drag state.
- * Now checks dock areas first (highest priority), then edge snap, then magnetic attachment.
+ * Checks dock areas first (highest priority), then edge snap, then magnetic attachment.
  */
+export interface DetectSnapPreviewOptions {
+  windowId: string;
+  position: Position;
+  size: Size;
+  allWindows: WindowConfig[];
+  isAttached: boolean;
+  attachedPosition?: Position;
+  mousePosition?: Position;
+  dockAreaWindowIds?: Record<"left" | "right", string[]>;
+}
+
 export function detectSnapPreview(
-  windowId: string,
-  position: Position,
-  size: Size,
-  allWindows: WindowConfig[],
-  isAttached: boolean,
-  attachedPosition?: Position,
-  mousePosition?: Position,
-  dockAreaWindowIds?: Record<"left" | "right", string[]>,
+  options: DetectSnapPreviewOptions,
 ): SnapPreviewType | null {
+  const {
+    windowId,
+    position,
+    size,
+    allWindows,
+    isAttached,
+    attachedPosition,
+    mousePosition,
+    dockAreaWindowIds,
+  } = options;
+
   if (isAttached && attachedPosition) {
     if (!shouldDetach(position, attachedPosition)) {
       return null;
     }
   }
 
-  // Check dock areas first (highest priority) using actual mouse position
   if (mousePosition && dockAreaWindowIds) {
     const dockSnap = detectDockAreaSnap(
       mousePosition.x,
@@ -237,13 +247,11 @@ export function detectSnapPreview(
     if (dockSnap) return dockSnap;
   }
 
-  // Fallback to edge snap (for when no dock area exists yet)
   const edgeSnap = detectEdgeSnap(position, size);
   if (edgeSnap) {
     return { type: "edge", side: edgeSnap.side };
   }
 
-  // Check for magnetic attachment (only between floating windows)
   const floatingWindows = allWindows.filter((w) => w.dockState === "none");
   const attachTarget = findMagneticAttachTarget(
     windowId,

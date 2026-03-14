@@ -11,9 +11,14 @@
  *   // later: cleanup();
  */
 
-import type { DockAreaEvent } from "./dockAreaPlugins";
-import { registerDockAreaPlugin } from "./dockAreaPlugins";
-import { windowStore } from "./windowStore";
+import type { DockAreaEvent } from "../dockAreaPlugins";
+import { registerDockAreaPlugin } from "../dockAreaPlugins";
+import {
+  getDockAreaConfig,
+  getWindowById,
+  minimizeWindowQuietly,
+  restoreWindowQuietly,
+} from "../windows.actions";
 
 const autoCollapsedStacks = new Map<string, string[]>();
 
@@ -31,38 +36,19 @@ function getStack(side: string): string[] {
  * Returns the IDs of windows that were collapsed.
  */
 function collapseOthers(side: "left" | "right", exceptId: string): string[] {
-  const dockArea = windowStore.dockAreas[side];
+  const dockArea = getDockAreaConfig(side);
   const collapsed: string[] = [];
 
   for (const id of dockArea.windowOrder) {
     if (id === exceptId) continue;
-    const win = windowStore.windows[id];
+    const win = getWindowById(id);
     if (win && win.state !== "minimized" && win.state !== "hidden") {
-      win.previousState = win.state;
-      win.previousPosition = { ...win.position };
-      win.previousSize = { ...win.size };
-      win.state = "minimized";
+      minimizeWindowQuietly(id);
       collapsed.push(id);
     }
   }
 
   return collapsed;
-}
-
-/** Restore a single window from minimized to normal (without emitting events). */
-function restoreQuietly(id: string): void {
-  const win = windowStore.windows[id];
-  if (!win || win.state !== "minimized") return;
-
-  win.state =
-    win.previousState === "maximized"
-      ? "normal"
-      : (win.previousState ?? "normal");
-  if (win.previousPosition) win.position = { ...win.previousPosition };
-  if (win.previousSize) win.size = { ...win.previousSize };
-  win.previousState = undefined;
-  win.previousPosition = undefined;
-  win.previousSize = undefined;
 }
 
 /**
@@ -71,12 +57,16 @@ function restoreQuietly(id: string): void {
  */
 function restoreFromStack(side: "left" | "right"): void {
   const stack = getStack(side);
-  const dockOrder = windowStore.dockAreas[side].windowOrder;
+  const dockOrder = getDockAreaConfig(side).windowOrder;
 
   while (stack.length > 0) {
-    const restoreId = stack.pop()!;
-    if (dockOrder.includes(restoreId) && windowStore.windows[restoreId]) {
-      restoreQuietly(restoreId);
+    const restoreId = stack.pop();
+    if (
+      restoreId &&
+      dockOrder.includes(restoreId) &&
+      getWindowById(restoreId)
+    ) {
+      restoreWindowQuietly(restoreId);
       return;
     }
   }
@@ -100,11 +90,10 @@ function accordionPlugin(event: DockAreaEvent): void {
     }
 
     case "window-closing": {
-      const win = windowStore.windows[windowId];
+      const win = getWindowById(windowId);
       if (win && win.state !== "minimized") {
         restoreFromStack(side);
       }
-      // Clean up any references to the closing window in the stack
       const idx = stack.indexOf(windowId);
       if (idx !== -1) stack.splice(idx, 1);
       break;

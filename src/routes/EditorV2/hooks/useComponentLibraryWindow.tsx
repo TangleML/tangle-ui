@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
 import { ComponentLibraryContent } from "../components/ComponentLibraryContent";
-import { getWindowById, openWindow } from "../windows/windowStore";
+import { getWindowById, openWindow } from "../windows/windows.actions";
 
 const COMPONENT_LIBRARY_WINDOW_ID = "component-library";
 

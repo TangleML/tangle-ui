@@ -8,10 +8,10 @@ import { editorStore } from "../store/editorStore";
 import type { Position } from "../windows/types";
 import { COLLAPSED_DOCK_AREA_WIDTH } from "../windows/types";
 import {
+  getDockAreaConfig,
   getWindowById,
   updateWindowPosition,
-  windowStore,
-} from "../windows/windowStore";
+} from "../windows/windows.actions";
 
 const CONTEXT_PANEL_WINDOW_ID = "context-panel";
 const GAP = 12;
@@ -31,7 +31,7 @@ interface Bounds {
 }
 
 function getDockAreaWidth(side: "left" | "right"): number {
-  const area = windowStore.dockAreas[side];
+  const area = getDockAreaConfig(side);
   return area.collapsed ? COLLAPSED_DOCK_AREA_WIDTH : area.width;
 }
 

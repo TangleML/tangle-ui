@@ -14,7 +14,7 @@ import {
   navigateToSubgraph,
 } from "../../store/navigationStore";
 import type { TaskNodeSnapshot } from "../../store/nodeCloneHandlers";
-import { restoreWindow } from "../../windows/windowStore";
+import { restoreWindow } from "../../windows/windows.actions";
 import { createEntityNode, taskDefaultPosition } from "../buildUtils";
 import type { TaskNodeData } from "../types";
 import type { NodeTypeManifest } from "../types";

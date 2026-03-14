@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-import { initDockAreaAccordion } from "../windows/dockAreaAccordion";
+import { initDockAreaAccordion } from "../windows/plugins/dockAreaAccordion";
 
 /** Enables accordion behavior on the right dock area (only one window expanded at a time). */
 export function useDockAreaAccordion() {

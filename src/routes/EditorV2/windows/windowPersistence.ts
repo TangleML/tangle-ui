@@ -6,10 +6,16 @@
  * previous arrangement. Also persists dock area configuration.
  */
 
-import { reaction, runInAction } from "mobx";
+import { reaction } from "mobx";
 
 import type { AttachmentInfo, DockState, Position, Size } from "./types";
-import { windowStore } from "./windowStore";
+import {
+  getDockAreaConfig,
+  getSerializedStoreState,
+  getWindowById,
+  getWindowOrder,
+  restoreDockArea,
+} from "./windows.actions";
 
 const STORAGE_KEY = "editorV2-window-layout";
 
@@ -82,21 +88,24 @@ function debounce<T extends (...args: unknown[]) => void>(
 function saveWindowLayoutImmediate(): void {
   const existingLayout = loadWindowLayout();
 
+  const leftDock = getDockAreaConfig("left");
+  const rightDock = getDockAreaConfig("right");
+
   const layout: PersistedWindowLayout = {
     windows: existingLayout?.windows ?? {},
     windowOrder: [],
     dockAreas: {
       left: {
-        width: windowStore.dockAreas.left.width,
-        collapsed: windowStore.dockAreas.left.collapsed,
-        windowOrder: windowStore.dockAreas.left.windowOrder.filter((id) =>
+        width: leftDock.width,
+        collapsed: leftDock.collapsed,
+        windowOrder: leftDock.windowOrder.filter((id) =>
           STATIC_WINDOW_IDS.has(id),
         ),
       },
       right: {
-        width: windowStore.dockAreas.right.width,
-        collapsed: windowStore.dockAreas.right.collapsed,
-        windowOrder: windowStore.dockAreas.right.windowOrder.filter((id) =>
+        width: rightDock.width,
+        collapsed: rightDock.collapsed,
+        windowOrder: rightDock.windowOrder.filter((id) =>
           STATIC_WINDOW_IDS.has(id),
         ),
       },
@@ -105,26 +114,24 @@ function saveWindowLayoutImmediate(): void {
   };
 
   for (const id of STATIC_WINDOW_IDS) {
-    const window = windowStore.windows[id];
-    if (window) {
+    const win = getWindowById(id);
+    if (win) {
       layout.windows[id] = {
-        position: { ...window.position },
-        size: { ...window.size },
-        dockState: window.dockState,
-        attachedTo: window.attachedTo ? { ...window.attachedTo } : undefined,
-        isHidden: window.state === "hidden",
-        preDockedPosition: window.preDockedPosition
-          ? { ...window.preDockedPosition }
+        position: { ...win.position },
+        size: { ...win.size },
+        dockState: win.dockState,
+        attachedTo: win.attachedTo ? { ...win.attachedTo } : undefined,
+        isHidden: win.state === "hidden",
+        preDockedPosition: win.preDockedPosition
+          ? { ...win.preDockedPosition }
           : undefined,
-        preDockedSize: window.preDockedSize
-          ? { ...window.preDockedSize }
-          : undefined,
-        dockedHeight: window.dockedHeight,
+        preDockedSize: win.preDockedSize ? { ...win.preDockedSize } : undefined,
+        dockedHeight: win.dockedHeight,
       };
     }
   }
 
-  layout.windowOrder = windowStore.windowOrder.filter((id) =>
+  layout.windowOrder = getWindowOrder().filter((id) =>
     STATIC_WINDOW_IDS.has(id),
   );
 
@@ -137,6 +144,16 @@ function saveWindowLayoutImmediate(): void {
 
 const saveWindowLayout = debounce(saveWindowLayoutImmediate, 500);
 
+function isPersistedLayout(value: unknown): value is PersistedWindowLayout {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "version" in value &&
+    "windows" in value &&
+    "windowOrder" in value
+  );
+}
+
 function loadWindowLayout(): PersistedWindowLayout | null {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -144,13 +161,12 @@ function loadWindowLayout(): PersistedWindowLayout | null {
       return null;
     }
 
-    const layout = JSON.parse(stored) as PersistedWindowLayout;
-
-    if (layout.version !== CURRENT_VERSION) {
+    const parsed: unknown = JSON.parse(stored);
+    if (!isPersistedLayout(parsed) || parsed.version !== CURRENT_VERSION) {
       return null;
     }
 
-    return layout;
+    return parsed;
   } catch {
     return null;
   }
@@ -182,18 +198,15 @@ function restoreDockAreaState(): void {
   const layout = loadWindowLayout();
   if (!layout?.dockAreas) return;
 
-  runInAction(() => {
-    for (const side of ["left", "right"] as const) {
-      const persisted = layout.dockAreas[side];
-      if (!persisted) continue;
-      windowStore.dockAreas[side].width = persisted.width;
-      windowStore.dockAreas[side].collapsed = persisted.collapsed;
-      // Pre-populate the window order from persisted state.
-      // openWindow() will skip adding IDs that are already present,
-      // preserving the persisted ordering.
-      windowStore.dockAreas[side].windowOrder = [...persisted.windowOrder];
-    }
-  });
+  for (const side of ["left", "right"] as const) {
+    const persisted = layout.dockAreas[side];
+    if (!persisted) continue;
+    restoreDockArea(side, {
+      width: persisted.width,
+      collapsed: persisted.collapsed,
+      windowOrder: persisted.windowOrder,
+    });
+  }
 }
 
 /**
@@ -211,12 +224,7 @@ export function initPersistence(): () => void {
   // Deep-serialize all store state to establish MobX tracking on every property.
   // Fires the effect whenever any tracked observable changes (equivalent to valtio subscribe).
   unsubscribe = reaction(
-    () =>
-      JSON.stringify({
-        w: windowStore.windows,
-        o: windowStore.windowOrder,
-        d: windowStore.dockAreas,
-      }),
+    () => getSerializedStoreState(),
     () => {
       saveWindowLayout();
     },
