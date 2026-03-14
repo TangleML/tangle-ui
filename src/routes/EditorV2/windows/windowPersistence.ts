@@ -43,6 +43,7 @@ interface PersistedWindowState {
   dockState: DockState;
   attachedTo?: AttachmentInfo;
   isHidden: boolean;
+  isMinimized: boolean;
   preDockedPosition?: Position;
   preDockedSize?: Size;
   dockedHeight?: number;
@@ -73,7 +74,7 @@ type WindowLayoutStorageMap = {
 
 const storage = getStorage<typeof STORAGE_KEY, WindowLayoutStorageMap>();
 
-const CURRENT_VERSION = 2;
+const CURRENT_VERSION = 3;
 
 let saveTimeout: ReturnType<typeof setTimeout> | null = null;
 let unsubscribe: (() => void) | null = null;
@@ -130,6 +131,7 @@ function saveWindowLayoutImmediate(): void {
         dockState: win.dockState,
         attachedTo: win.attachedTo ? { ...win.attachedTo } : undefined,
         isHidden: win.state === "hidden",
+        isMinimized: win.state === "minimized",
         preDockedPosition: win.preDockedPosition
           ? { ...win.preDockedPosition }
           : undefined,
