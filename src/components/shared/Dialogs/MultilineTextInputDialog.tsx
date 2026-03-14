@@ -8,6 +8,7 @@ import {
   DialogFooter,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
 import {
   Select,
@@ -56,6 +57,7 @@ export const MultilineTextInputDialog = ({
   const [selectedLanguage, setSelectedLanguage] = useState(() =>
     detectLanguage(initialValue),
   );
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const handleConfirm = () => {
     onConfirm(value);
@@ -87,11 +89,33 @@ export const MultilineTextInputDialog = ({
     setSelectedLanguage(detectLanguage(initialValue));
   }, [initialValue]);
 
+  useEffect(() => {
+    if (!open) setIsFullscreen(false);
+  }, [open]);
+
   return (
     <Dialog open={open} onOpenChange={onCancel}>
-      <DialogContent>
+      <DialogContent
+        className={cn(isFullscreen && "max-w-none! h-screen! rounded-none!")}
+      >
         <DialogTitle>{title}</DialogTitle>
-        <InlineStack gap="2" align="space-between" wrap="nowrap" fill>
+        {highlightSyntax && (
+          <Button
+            variant="ghost"
+            onClick={() => setIsFullscreen((prev) => !prev)}
+            className="absolute top-3 right-10 rounded-md"
+            aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+            size="xs"
+          >
+            <Icon name={isFullscreen ? "Minimize2" : "Maximize2"} size="xs" />
+          </Button>
+        )}
+        <InlineStack
+          gap="2"
+          align="space-between"
+          wrap="nowrap"
+          className="w-full"
+        >
           <DialogDescription className={cn(!description ? "hidden" : "")}>
             {description ?? title}
           </DialogDescription>
@@ -114,8 +138,9 @@ export const MultilineTextInputDialog = ({
           )}
         </InlineStack>
         {highlightSyntax && selectedLanguage !== "plaintext" ? (
-          <div className="h-64">
+          <div className={cn(isFullscreen ? "flex-1 min-h-0" : "h-64")}>
             <CodeEditor
+              key={String(isFullscreen)}
               value={value}
               language={selectedLanguage}
               onChange={setValue}
