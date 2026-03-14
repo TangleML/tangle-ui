@@ -1,6 +1,8 @@
 import { observer } from "mobx-react-lite";
 import { type ChangeEvent, useEffect, useState } from "react";
 
+import { ActionBlock } from "@/components/shared/ContextPanel/Blocks/ActionBlock";
+import { DeleteComponentButton } from "@/components/shared/TaskDetails/Actions/DeleteComponentButton";
 import {
   Accordion,
   AccordionContent,
@@ -10,14 +12,24 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ColorPicker } from "@/components/ui/color";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import type { ComponentSpecJson } from "@/models/componentSpec";
+import { componentSpecToText } from "@/utils/yaml";
 
 import { useSpec } from "../../../../providers/SpecContext";
-import { renameTask } from "../../../../store/actions";
+import {
+  deleteTask,
+  duplicateSelectedNodes,
+  renameTask,
+} from "../../../../store/actions";
 import { editorStore } from "../../../../store/editorStore";
+import { CopyYamlButton } from "./components/actions/CopyYamlButton";
+import { DownloadPythonButton } from "./components/actions/DownloadPythonButton";
+import { DownloadYamlButton } from "./components/actions/DownloadYamlButton";
+import { DuplicateTaskButton } from "./components/actions/DuplicateTaskButton";
+import { EditComponentButton } from "./components/actions/EditComponentButton";
+import { ViewTaskYamlButton } from "./components/actions/ViewTaskYamlButton";
 import { ConfigurationSection } from "./components/ConfigurationSection";
 import { TaskAnnotationsEditor } from "./components/TaskAnnotationsEditor";
 import { TaskArgumentsEditor } from "./components/TaskArgumentsEditor";
@@ -57,6 +69,16 @@ export const TaskDetails = observer(function TaskDetails({
   ).length;
   const taskColor = task.annotations.get("tangleml.com/editor/task-color");
 
+  const yamlText =
+    task.componentRef.text ??
+    (componentSpec
+      ? componentSpecToText(
+          componentSpec as Parameters<typeof componentSpecToText>[0],
+        )
+      : "");
+  const pythonCode = componentSpec?.metadata?.annotations
+    ?.python_original_code as string | undefined;
+
   const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
     const newName = event.target.value;
     if (newName && newName !== task.name) {
@@ -68,8 +90,50 @@ export const TaskDetails = observer(function TaskDetails({
     setTaskColor(task, color);
   };
 
+  const handleDuplicate = () => {
+    const position = task.annotations.get("editor.position") ?? {
+      x: 0,
+      y: 0,
+    };
+    duplicateSelectedNodes(spec, [{ id: entityId, type: "task", position }]);
+  };
+
+  const handleDelete = () => {
+    deleteTask(spec, entityId);
+  };
+
   return (
-    <Accordion
+    <BlockStack gap="0" className="w-full overflow-auto">
+      <ActionBlock
+        actions={[
+          <DownloadYamlButton
+            key="download-yaml"
+            yamlText={yamlText}
+            taskName={task.name}
+          />,
+          pythonCode && (
+            <DownloadPythonButton
+              key="download-python"
+              pythonCode={pythonCode}
+              fileName={`${task.name}.py`}
+            />
+          ),
+          <CopyYamlButton key="copy-yaml" yamlText={yamlText} />,
+          <ViewTaskYamlButton
+            key="view-yaml"
+            yamlText={yamlText}
+            taskName={task.name}
+          />,
+          <EditComponentButton key="edit" yamlText={yamlText} />,
+          <DuplicateTaskButton
+            key="duplicate"
+            onDuplicate={handleDuplicate}
+          />,
+          <DeleteComponentButton key="delete" onDelete={handleDelete} />,
+        ].filter(Boolean)}
+        className="px-3 py-2"
+      />
+      <Accordion
       type="multiple"
       value={openSections}
       onValueChange={setOpenSections}
@@ -88,9 +152,6 @@ export const TaskDetails = observer(function TaskDetails({
         <AccordionContent className="px-3 pb-2">
           <BlockStack gap="2">
             <BlockStack gap="1">
-              <Label htmlFor="task-name" className="text-gray-600 text-xs">
-                Name
-              </Label>
               <InlineStack
                 gap="2"
                 blockAlign="center"
@@ -114,7 +175,6 @@ export const TaskDetails = observer(function TaskDetails({
 
             {componentSpec?.description && (
               <BlockStack gap="1">
-                <Label className="text-gray-600 text-xs">Description</Label>
                 <Text size="xs" className="text-gray-500">
                   {componentSpec.description}
                 </Text>
@@ -144,7 +204,7 @@ export const TaskDetails = observer(function TaskDetails({
             )}
           </InlineStack>
         </AccordionTrigger>
-        <AccordionContent className="pb-2">
+        <AccordionContent className="pb-2 px-3">
           <TaskArgumentsEditor task={task} />
         </AccordionContent>
       </AccordionItem>
@@ -237,5 +297,6 @@ export const TaskDetails = observer(function TaskDetails({
         </AccordionContent>
       </AccordionItem>
     </Accordion>
+    </BlockStack>
   );
 });
