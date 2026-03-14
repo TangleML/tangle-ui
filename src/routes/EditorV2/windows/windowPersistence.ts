@@ -8,6 +8,8 @@
 
 import { reaction } from "mobx";
 
+import { getStorage } from "@/utils/typedStorage";
+
 import type { AttachmentInfo, DockState, Position, Size } from "./types";
 import {
   getDockAreaConfig,
@@ -17,19 +19,19 @@ import {
   restoreDockArea,
 } from "./windows.actions";
 
-const STORAGE_KEY = "editorV2-window-layout";
+const STORAGE_KEY = "editorV2-window-layout" as const;
 
 /**
  * Set of static window IDs that should be persisted.
  * Only windows with these IDs will have their layout saved/restored.
  */
 export const STATIC_WINDOW_IDS = new Set([
-  "debug-panel",
   "context-panel",
   "component-library",
   "pipeline-details",
   "pipeline-tree",
   "history",
+  "debug-panel",
 ]);
 
 /**
@@ -64,6 +66,12 @@ interface PersistedWindowLayout {
   };
   version: number;
 }
+
+type WindowLayoutStorageMap = {
+  [STORAGE_KEY]: PersistedWindowLayout;
+};
+
+const storage = getStorage<typeof STORAGE_KEY, WindowLayoutStorageMap>();
 
 const CURRENT_VERSION = 2;
 
@@ -135,11 +143,7 @@ function saveWindowLayoutImmediate(): void {
     STATIC_WINDOW_IDS.has(id),
   );
 
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(layout));
-  } catch {
-    // Ignore storage errors (quota exceeded, etc.)
-  }
+  storage.setItem(STORAGE_KEY, layout);
 }
 
 const saveWindowLayout = debounce(saveWindowLayoutImmediate, 500);
@@ -155,21 +159,11 @@ function isPersistedLayout(value: unknown): value is PersistedWindowLayout {
 }
 
 function loadWindowLayout(): PersistedWindowLayout | null {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) {
-      return null;
-    }
-
-    const parsed: unknown = JSON.parse(stored);
-    if (!isPersistedLayout(parsed) || parsed.version !== CURRENT_VERSION) {
-      return null;
-    }
-
-    return parsed;
-  } catch {
+  const parsed = storage.getItem(STORAGE_KEY);
+  if (!isPersistedLayout(parsed) || parsed.version !== CURRENT_VERSION) {
     return null;
   }
+  return parsed;
 }
 
 /**
