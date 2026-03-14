@@ -7,9 +7,7 @@ interface EditComponentButtonProps {
   yamlText: string;
 }
 
-export const EditComponentButton = ({
-  yamlText,
-}: EditComponentButtonProps) => {
+export const EditComponentButton = ({ yamlText }: EditComponentButtonProps) => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   const handleClick = () => {

@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Paragraph } from "@/components/ui/typography";
 
@@ -7,9 +9,11 @@ import { ContentBlock } from "./ContentBlock";
 export const KeyValueList = ({
   title,
   items,
+  titleAction,
 }: {
   title?: string;
   items: AttributeProps[];
+  titleAction?: ReactNode;
 }) => {
   if (items.length === 0) {
     return (
@@ -22,7 +26,7 @@ export const KeyValueList = ({
   }
 
   return (
-    <ContentBlock title={title}>
+    <ContentBlock title={title} titleAction={titleAction}>
       <BlockStack>
         {items.map((item) => (
           <Row key={item.label} {...item} />
