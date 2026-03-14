@@ -3,7 +3,6 @@ import { type ChangeEvent, useState } from "react";
 
 import { ActionBlock } from "@/components/shared/ContextPanel/Blocks/ActionBlock";
 import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlock";
-import { KeyValueList } from "@/components/shared/ContextPanel/Blocks/KeyValueList";
 import { CopyText } from "@/components/shared/CopyText/CopyText";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +14,7 @@ import type { TypeSpecType } from "@/models/componentSpec/entities/types";
 
 import { useSpec } from "../../providers/SpecContext";
 import { updatePipelineDescription } from "../../store/actions";
+import { AnnotationsBlock } from "../AnnotationsBlock/AnnotationsBlock";
 import { ValidationSummary } from "../ValidationSummary";
 import { RenamePipelineButton } from "./components/RenamePipelineButton";
 import { ViewYamlButton } from "./components/ViewYamlButton";
@@ -62,13 +62,6 @@ export const PipelineDetailsContent = observer(
         updatePipelineDescription(spec, newDescription);
       }
     };
-
-    const annotations = spec.annotations
-      .filter((a) => !EXCLUDED_ANNOTATIONS.includes(a.key))
-      .map((a) => ({
-        label: a.key,
-        value: String(a.value),
-      }));
 
     return (
       <BlockStack
@@ -162,9 +155,10 @@ export const PipelineDetailsContent = observer(
           )}
         </ContentBlock>
 
-        {annotations.length > 0 && (
-          <KeyValueList title="Annotations" items={annotations} />
-        )}
+        <AnnotationsBlock
+          annotations={spec.annotations}
+          ignoreAnnotationKeys={EXCLUDED_ANNOTATIONS}
+        />
 
         <ContentBlock title="Validations">
           {spec.validationIssues.length === 0 ? (

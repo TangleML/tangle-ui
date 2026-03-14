@@ -17,6 +17,7 @@ type ContentBlockProps =
       collapsible?: false;
       defaultOpen?: never;
       className?: string;
+      titleAction?: ReactNode;
     }
   | {
       title?: string;
@@ -24,6 +25,7 @@ type ContentBlockProps =
       collapsible: true;
       defaultOpen?: boolean;
       className?: string;
+      titleAction?: ReactNode;
     };
 
 export const ContentBlock = ({
@@ -32,6 +34,7 @@ export const ContentBlock = ({
   collapsible,
   defaultOpen = false,
   className,
+  titleAction,
 }: ContentBlockProps) => {
   if (!children) {
     return null;
@@ -40,8 +43,14 @@ export const ContentBlock = ({
   return (
     <BlockStack className={className}>
       <Collapsible className="w-full" defaultOpen={defaultOpen}>
-        <InlineStack blockAlign="center" gap="1">
+        <InlineStack
+          blockAlign="center"
+          gap="1"
+          align="space-between"
+          className="w-full"
+        >
           {title && <Heading level={3}>{title}</Heading>}
+          {titleAction && <InlineStack gap="1">{titleAction}</InlineStack>}
           {collapsible && (
             <CollapsibleTrigger asChild>
               <Button variant="ghost" size="sm">
