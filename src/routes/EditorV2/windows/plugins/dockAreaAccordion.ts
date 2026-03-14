@@ -78,6 +78,10 @@ function accordionPlugin(event: DockAreaEvent): void {
 
   switch (event.type) {
     case "window-docked": {
+      const win = getWindowById(windowId);
+      if (win && win.state === "minimized") {
+        break;
+      }
       const collapsed = collapseOthers(side, windowId);
       stack.push(...collapsed);
       break;

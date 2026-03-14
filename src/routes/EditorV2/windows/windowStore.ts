@@ -116,11 +116,20 @@ class WindowStoreImpl {
 
     const shouldStartHidden =
       !!persistedState?.isHidden && !options.startVisible;
+    const shouldStartMinimized =
+      !shouldStartHidden &&
+      !!persistedState?.isMinimized &&
+      initialDockState !== "none";
+    const needsPreviousState = shouldStartHidden || shouldStartMinimized;
 
     const config: WindowConfig = {
       id,
       title: options.title,
-      state: shouldStartHidden ? "hidden" : "normal",
+      state: shouldStartHidden
+        ? "hidden"
+        : shouldStartMinimized
+          ? "minimized"
+          : "normal",
       position: initialPosition,
       size: initialSize,
       minSize: options.minSize ?? { ...DEFAULT_MIN_SIZE },
@@ -135,9 +144,11 @@ class WindowStoreImpl {
       preDockedSize: persistedState?.preDockedSize
         ? { ...persistedState.preDockedSize }
         : undefined,
-      previousState: shouldStartHidden ? "normal" : undefined,
-      previousPosition: shouldStartHidden ? { ...initialPosition } : undefined,
-      previousSize: shouldStartHidden ? { ...initialSize } : undefined,
+      previousState: needsPreviousState ? "normal" : undefined,
+      previousPosition: needsPreviousState
+        ? { ...initialPosition }
+        : undefined,
+      previousSize: needsPreviousState ? { ...initialSize } : undefined,
     };
 
     this.windows[id] = config;
