@@ -20,19 +20,19 @@ export interface DockAreaEvent {
 
 type DockAreaPlugin = (event: DockAreaEvent) => void;
 
-const plugins = new Map<string, DockAreaPlugin[]>();
+const PLUGINS_REGISTRY = new Map<string, DockAreaPlugin[]>();
 
 /** Register a plugin for a specific dock area side. Returns an unsubscribe function. */
 export function registerDockAreaPlugin(
   side: "left" | "right",
   plugin: DockAreaPlugin,
 ): () => void {
-  const list = plugins.get(side) ?? [];
+  const list = PLUGINS_REGISTRY.get(side) ?? [];
   list.push(plugin);
-  plugins.set(side, list);
+  PLUGINS_REGISTRY.set(side, list);
 
   return () => {
-    const current = plugins.get(side);
+    const current = PLUGINS_REGISTRY.get(side);
     if (!current) return;
     const idx = current.indexOf(plugin);
     if (idx !== -1) current.splice(idx, 1);
@@ -41,7 +41,7 @@ export function registerDockAreaPlugin(
 
 /** Emit an event to all plugins registered for the given side. */
 export function emitDockAreaEvent(event: DockAreaEvent): void {
-  const list = plugins.get(event.side);
+  const list = PLUGINS_REGISTRY.get(event.side);
   if (!list) return;
   for (const plugin of list) {
     plugin(event);

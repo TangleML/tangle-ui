@@ -8,7 +8,7 @@ import { Text } from "@/components/ui/typography";
 import { TOP_NAV_HEIGHT } from "@/utils/constants";
 
 import { navigationStore } from "../../store/navigationStore";
-import { restoreWindow } from "../../windows/windowStore";
+import { restoreWindow } from "../../windows/windows.actions";
 import { AppMenuActions } from "./components/AppMenuActions";
 import { AutoSaveIndicator } from "./components/AutoSaveIndicator";
 import { ComponentsLibraryMenu } from "./components/ComponentsLibraryMenu";

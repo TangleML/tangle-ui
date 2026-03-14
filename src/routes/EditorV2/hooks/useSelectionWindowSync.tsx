@@ -13,7 +13,7 @@ import {
   getWindowById,
   openWindow,
   restoreWindow,
-} from "../windows/windowStore";
+} from "../windows/windows.actions";
 
 const CONTEXT_PANEL_WINDOW_ID = "context-panel";
 

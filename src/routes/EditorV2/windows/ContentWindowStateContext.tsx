@@ -34,6 +34,18 @@ export function ContentWindowStateProvider({
   );
 }
 
+/** Returns the window state context, or `undefined` when rendered outside a window. */
 export function useContentWindowState(): ContentWindowState | undefined {
   return useContext(ContentWindowStateContext);
+}
+
+/** Returns the window state context. Throws if rendered outside a window. */
+export function useRequiredContentWindowState(): ContentWindowState {
+  const context = useContext(ContentWindowStateContext);
+  if (!context) {
+    throw new Error(
+      "useRequiredContentWindowState must be used within a ContentWindowStateProvider",
+    );
+  }
+  return context;
 }

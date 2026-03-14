@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
 
-import { restoreWindow } from "../../../windows/windowStore";
+import { restoreWindow } from "../../../windows/windows.actions";
 import { MenuTriggerButton } from "./MenuTriggerButton";
 
 export function ComponentsLibraryMenu() {

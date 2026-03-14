@@ -1,7 +1,11 @@
 import { useEffect } from "react";
 
 import { PipelineDetailsContent } from "../components/PipelineDetailsContent/PipelineDetailsContent";
-import { dockWindow, getWindowById, openWindow } from "../windows/windowStore";
+import {
+  dockWindow,
+  getWindowById,
+  openWindow,
+} from "../windows/windows.actions";
 
 const PIPELINE_DETAILS_WINDOW_ID = "pipeline-details";
 

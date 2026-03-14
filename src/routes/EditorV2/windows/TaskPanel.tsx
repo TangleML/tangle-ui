@@ -5,16 +5,18 @@ import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 
-import { closeWindow, restoreWindow, windowStore } from "./windowStore";
+import {
+  closeWindow,
+  getHiddenWindows,
+  restoreWindow,
+} from "./windows.actions";
 
 /**
  * Bar that displays hidden windows. Rendered in normal flow above the editor
  * layout so it pushes content down when visible.
  */
 export const TaskPanel = observer(function TaskPanel() {
-  const hiddenWindows = windowStore.windowOrder
-    .map((id) => windowStore.windows[id])
-    .filter((w) => w?.state === "hidden");
+  const hiddenWindows = getHiddenWindows();
 
   if (hiddenWindows.length === 0) {
     return null;
@@ -33,9 +35,11 @@ export const TaskPanel = observer(function TaskPanel() {
               wrap="nowrap"
               className="bg-white hover:bg-gray-50 border border-gray-200 rounded px-2 py-0.5 transition-colors cursor-pointer group shadow-sm"
             >
-              <button
+              <Button
+                variant="ghost"
+                size="min"
                 onClick={() => restoreWindow(window.id)}
-                className="flex items-center gap-1 min-w-0 h-5"
+                className="flex items-center gap-1 min-w-0 h-5 p-0"
               >
                 <Icon
                   name="AppWindow"
@@ -49,7 +53,7 @@ export const TaskPanel = observer(function TaskPanel() {
                 >
                   {window.title}
                 </Text>
-              </button>
+              </Button>
               {canClose && (
                 <Button
                   variant="ghost"

@@ -14,19 +14,20 @@ import {
 } from "./types";
 import { Window } from "./Window";
 import {
+  getDockAreaConfig,
+  getDockAreaWidth,
   setDockAreaWidth,
   toggleDockAreaCollapsed,
-  windowStore,
-} from "./windowStore";
+} from "./windows.actions";
 
 interface DockAreaProps {
   side: "left" | "right";
 }
 
 export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
-  const dockArea = windowStore.dockAreas[side];
+  const dockArea = getDockAreaConfig(side);
   const { collapsed, windowOrder } = dockArea;
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   const isEmpty = windowOrder.length === 0;
 
@@ -43,10 +44,7 @@ export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const newWidth = entry.contentRect.width;
-        if (
-          newWidth > 0 &&
-          Math.abs(newWidth - windowStore.dockAreas[side].width) > 1
-        ) {
+        if (newWidth > 0 && Math.abs(newWidth - getDockAreaWidth(side)) > 1) {
           setDockAreaWidth(side, Math.round(newWidth));
         }
       }
@@ -58,7 +56,7 @@ export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
   if (isEmpty || focusModeStore.active) return null;
 
   const setRef = (element: HTMLDivElement | null) => {
-    (containerRef as { current: HTMLDivElement | null }).current = element;
+    containerRef.current = element;
     registerDockAreaElement(side, element);
   };
 

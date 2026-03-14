@@ -7,9 +7,9 @@ import type { ComponentSpecJson, Task } from "@/models/componentSpec";
 import { CTRL, SHIFT } from "@/routes/EditorV2/shortcuts/keys";
 import { registerShortcut } from "@/routes/EditorV2/store/keyboardStore";
 import {
+  getWindowById,
   toggleMaximize,
-  windowStore,
-} from "@/routes/EditorV2/windows/windowStore";
+} from "@/routes/EditorV2/windows/windows.actions";
 
 import { ArgumentCodeEditor } from "../../../../../components/ArgumentCodeEditor";
 import { ArgumentRow } from "../../../../../components/ArgumentRow";
@@ -49,7 +49,7 @@ export const TaskArgumentsEditor = observer(function TaskArgumentsEditor({
 
         const { windowId } = windowState;
         const isCurrentlyMaximized =
-          windowStore.windows[windowId]?.state === "maximized";
+          getWindowById(windowId)?.state === "maximized";
 
         toggleMaximize(windowId);
 

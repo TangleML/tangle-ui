@@ -12,7 +12,11 @@ import { componentSpecToText } from "@/utils/yaml";
 import { editorStore } from "../store/editorStore";
 import { keyboardStore } from "../store/keyboardStore";
 import { navigationStore } from "../store/navigationStore";
-import { closeWindow, getWindowById, openWindow } from "../windows/windowStore";
+import {
+  closeWindow,
+  getWindowById,
+  openWindow,
+} from "../windows/windows.actions";
 import { ShorcutBadge } from "./ShorcutBadge";
 
 const DEBUG_PANEL_WINDOW_ID = "debug-panel";
@@ -176,7 +180,7 @@ const DebugPanelContent = observer(function DebugPanelContent() {
  * If persisted as hidden, windowStore will auto-hide it.
  * Otherwise it starts visible (first-time default).
  */
-export function DebugPanel() {
+export function useDebugPanelWindow() {
   useEffect(() => {
     const existingWindow = getWindowById(DEBUG_PANEL_WINDOW_ID);
     if (!existingWindow) {
@@ -188,11 +192,5 @@ export function DebugPanel() {
         disabledActions: ["close"],
       });
     }
-
-    return () => {
-      closeWindow(DEBUG_PANEL_WINDOW_ID);
-    };
   }, []);
-
-  return null;
 }

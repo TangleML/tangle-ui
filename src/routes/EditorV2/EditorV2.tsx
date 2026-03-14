@@ -30,7 +30,7 @@ import {
   loadUndoHistory,
 } from "@/services/undoHistoryStorage";
 
-import { DebugPanel } from "./components/DebugPanel";
+import { useDebugPanelWindow } from "./components/DebugPanel";
 import { FlowCanvas } from "./components/FlowCanvas/FlowCanvas";
 import { useComponentLibraryWindow } from "./hooks/useComponentLibraryWindow";
 import { useDockAreaAccordion } from "./hooks/useDockAreaAccordion";
@@ -137,6 +137,7 @@ const PipelineEditor = withSuspenseWrapper(
     useUndoRedoKeyboard();
     useFocusMode();
     useEditorShortcuts();
+    useDebugPanelWindow();
 
     const activeSpec = navigationStore.activeSpec;
 
@@ -144,7 +145,6 @@ const PipelineEditor = withSuspenseWrapper(
 
     return (
       <SpecProvider spec={activeSpec}>
-        <DebugPanel />
         <TaskPanel />
         <InlineStack
           className="flex-1 min-h-0 w-full"
