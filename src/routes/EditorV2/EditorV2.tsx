@@ -43,7 +43,6 @@ import { usePropertiesWindowPositioning } from "./hooks/usePropertiesWindowPosit
 import { useSelectionWindowSync } from "./hooks/useSelectionWindowSync";
 import { useSpecLifecycle } from "./hooks/useSpecLifecycle";
 import { useUndoRedoKeyboard } from "./hooks/useUndoRedoKeyboard";
-import { useWindowPersistence } from "./hooks/useWindowPersistence";
 import { SpecProvider } from "./providers/SpecContext";
 import { useEditorShortcuts } from "./shortcuts/useEditorShortcuts";
 import {
@@ -53,6 +52,7 @@ import {
 import { DockArea } from "./windows/DockArea";
 import { TaskPanel } from "./windows/TaskPanel";
 import { WindowContainer } from "./windows/WindowContainer";
+import { useWindowPersistence } from "./windows/windowPersistence";
 
 interface LoadedSpec {
   spec: ComponentSpec;

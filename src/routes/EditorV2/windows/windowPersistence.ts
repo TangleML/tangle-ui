@@ -7,7 +7,9 @@
  */
 
 import { reaction } from "mobx";
+import { useEffect } from "react";
 
+import { debounce } from "@/utils/debounce";
 import { getStorage } from "@/utils/typedStorage";
 
 import type { AttachmentInfo, DockState, Position, Size } from "./types";
@@ -75,24 +77,6 @@ type WindowLayoutStorageMap = {
 const storage = getStorage<typeof STORAGE_KEY, WindowLayoutStorageMap>();
 
 const CURRENT_VERSION = 3;
-
-let saveTimeout: ReturnType<typeof setTimeout> | null = null;
-let unsubscribe: (() => void) | null = null;
-
-function debounce<T extends (...args: unknown[]) => void>(
-  fn: T,
-  delay: number,
-): (...args: Parameters<T>) => void {
-  return (...args: Parameters<T>) => {
-    if (saveTimeout) {
-      clearTimeout(saveTimeout);
-    }
-    saveTimeout = setTimeout(() => {
-      fn(...args);
-      saveTimeout = null;
-    }, delay);
-  };
-}
 
 function saveWindowLayoutImmediate(): void {
   const existingLayout = loadWindowLayout();
@@ -205,35 +189,22 @@ function restoreDockAreaState(): void {
   }
 }
 
-/**
- * Initialize persistence by subscribing to windowStore changes.
- * Call this once when EditorV2 mounts.
- */
-export function initPersistence(): () => void {
-  if (unsubscribe) {
-    unsubscribe();
-  }
+export function useWindowPersistence() {
+  useEffect(() => {
+    // Restore dock area dimensions/collapsed state
+    restoreDockAreaState();
 
-  // Restore dock area dimensions/collapsed state
-  restoreDockAreaState();
+    // Deep-serialize all store state to establish MobX tracking on every property.
+    const unsubscribe = reaction(
+      () => getSerializedStoreState(),
+      () => {
+        saveWindowLayout();
+      },
+    );
 
-  // Deep-serialize all store state to establish MobX tracking on every property.
-  // Fires the effect whenever any tracked observable changes (equivalent to valtio subscribe).
-  unsubscribe = reaction(
-    () => getSerializedStoreState(),
-    () => {
-      saveWindowLayout();
-    },
-  );
-
-  return () => {
-    if (unsubscribe) {
+    return () => {
       unsubscribe();
-      unsubscribe = null;
-    }
-    if (saveTimeout) {
-      clearTimeout(saveTimeout);
-      saveTimeout = null;
-    }
-  };
+      saveWindowLayout.cancel();
+    };
+  }, []);
 }
