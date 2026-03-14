@@ -145,9 +145,7 @@ class WindowStoreImpl {
         ? { ...persistedState.preDockedSize }
         : undefined,
       previousState: needsPreviousState ? "normal" : undefined,
-      previousPosition: needsPreviousState
-        ? { ...initialPosition }
-        : undefined,
+      previousPosition: needsPreviousState ? { ...initialPosition } : undefined,
       previousSize: needsPreviousState ? { ...initialSize } : undefined,
     };
 
