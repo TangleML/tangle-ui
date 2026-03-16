@@ -54,7 +54,7 @@ export const AnnotationsBlock = observer(function AnnotationsBlock({
       title="Annotations"
       items={displayItems.map((a) => ({
         label: a.key,
-        value: String(a.value),
+        value: JSON.stringify(a.value),
       }))}
       titleAction={
         !readonly ? (
