@@ -3,11 +3,11 @@ import { action, makeObservable, observable } from "mobx";
 import type { KeyConstant } from "../shortcuts/keys";
 import { normalizeComboKey } from "../shortcuts/keys";
 
-export type ShortcutKeys = KeyConstant[];
+type ShortcutKeys = KeyConstant[];
 
-export type ShortcutParams = Record<string, unknown>;
+type ShortcutParams = Record<string, unknown>;
 
-export interface ShortcutDefinition {
+interface ShortcutDefinition {
   id: string;
   keys: ShortcutKeys;
   label: string;

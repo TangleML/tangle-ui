@@ -9,7 +9,7 @@ import { ColorPicker } from "@/components/ui/color";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Paragraph } from "@/components/ui/typography";
 
-export interface ColorEditorValue {
+interface ColorEditorValue {
   color: string;
   borderColor?: string;
 }

@@ -9,7 +9,7 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Textarea } from "@/components/ui/textarea";
 import { FONT_SIZE_MD, FONT_SIZE_SM } from "@/utils/constants";
 
-export interface ContentEditorValue {
+interface ContentEditorValue {
   title: string;
   content: string;
   titleFontSize?: number;

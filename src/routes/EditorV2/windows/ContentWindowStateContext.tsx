@@ -40,7 +40,7 @@ export function useContentWindowState(): ContentWindowState | undefined {
 }
 
 /** Returns the window state context. Throws if rendered outside a window. */
-export function useRequiredContentWindowState(): ContentWindowState {
+function useRequiredContentWindowState(): ContentWindowState {
   const context = useContext(ContentWindowStateContext);
   if (!context) {
     throw new Error(

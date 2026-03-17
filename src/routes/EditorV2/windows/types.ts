@@ -7,7 +7,7 @@ export type WindowAction = "close" | "minimize" | "maximize" | "hide";
 /** Docking state for edge snapping */
 export type DockState = "left" | "right" | "none";
 
-export type DockSide = Exclude<DockState, "none">;
+type DockSide = Exclude<DockState, "none">;
 
 /** Type guard: narrows DockState to a concrete dock side ("left" | "right"). */
 export function isDockSide(state: DockState): state is DockSide {

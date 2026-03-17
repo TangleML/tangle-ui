@@ -206,7 +206,7 @@ function calculateInsertPosition(
  * Detect all snap possibilities for the current drag state.
  * Checks dock areas first (highest priority), then edge snap, then magnetic attachment.
  */
-export interface DetectSnapPreviewOptions {
+interface DetectSnapPreviewOptions {
   windowId: string;
   position: Position;
   size: Size;

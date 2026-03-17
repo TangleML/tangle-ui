@@ -3,11 +3,11 @@ export const CTRL = "CTRL" as const;
 export const SHIFT = "SHIFT" as const;
 
 export const ESCAPE = "ESCAPE" as const;
-export const DELETE = "DELETE" as const;
-export const BACKSPACE = "BACKSPACE" as const;
-export const ENTER = "ENTER" as const;
-export const SPACE = "SPACE" as const;
-export const TAB = "TAB" as const;
+const DELETE = "DELETE" as const;
+const BACKSPACE = "BACKSPACE" as const;
+const ENTER = "ENTER" as const;
+const SPACE = "SPACE" as const;
+const TAB = "TAB" as const;
 
 export type ModifierKey = typeof CMDALT | typeof CTRL | typeof SHIFT;
 
