@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { BlockStack } from "@/components/ui/layout";
 import { Textarea } from "@/components/ui/textarea";
 import { Text } from "@/components/ui/typography";
+import { InputLabel } from "@/routes/EditorV2/components/InputLabel";
 
 import { useSpec } from "../../../providers/SpecContext";
 import { renameOutput, setOutputDescription } from "../../../store/actions";
@@ -41,11 +42,11 @@ export const OutputDetails = observer(function OutputDetails({
     <BlockStack>
       <BlockStack gap="4" className="p-3">
         <BlockStack gap="2">
-          <Label htmlFor="output-name" className="text-gray-600">
+          <InputLabel htmlFor="output-name" onCopy={() => output.name}>
             Name
-          </Label>
+          </InputLabel>
           <Input
-            key={`${entityId}-${output.name}`}
+            key={`${entityId}-name`}
             id="output-name"
             defaultValue={output.name}
             onBlur={handleNameChange}
@@ -55,7 +56,12 @@ export const OutputDetails = observer(function OutputDetails({
 
         {output.type && (
           <BlockStack gap="2">
-            <Label className="text-gray-600">Type</Label>
+            <InputLabel
+              htmlFor="output-type"
+              onCopy={() => (output.type ? String(output.type) : "")}
+            >
+              Type
+            </InputLabel>
             <Text size="sm" className="font-mono text-gray-500">
               {String(output.type)}
             </Text>
@@ -63,11 +69,14 @@ export const OutputDetails = observer(function OutputDetails({
         )}
 
         <BlockStack gap="2">
-          <Label htmlFor="output-description" className="text-gray-600">
+          <InputLabel
+            htmlFor="output-description"
+            onCopy={() => output.description}
+          >
             Description
-          </Label>
+          </InputLabel>
           <Textarea
-            key={`${entityId}-desc-${output.description ?? ""}`}
+            key={`${entityId}-description`}
             id="output-description"
             defaultValue={output.description ?? ""}
             placeholder="Describe this output..."

@@ -93,7 +93,11 @@ interface CopyIconProps {
   compact?: boolean;
 }
 
-const CopyIcon = ({ isCopied, alwaysShow, compact = false }: CopyIconProps) => (
+export const CopyIcon = ({
+  isCopied,
+  alwaysShow,
+  compact = false,
+}: CopyIconProps) => (
   <span className={cn("relative h-3 w-3")}>
     <Icon
       name="Check"

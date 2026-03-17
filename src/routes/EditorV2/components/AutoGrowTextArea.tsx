@@ -22,6 +22,7 @@ export function AutoGrowTextarea({
   className,
   style,
   maxGrowHeight = "200px",
+  defaultValue,
   onChange,
   onFocus,
   onPointerDown,
@@ -29,6 +30,12 @@ export function AutoGrowTextarea({
   ...props
 }: AutoGrowTextareaProps) {
   const formula = heightFormula(maxGrowHeight);
+
+  const setDefaultRef = (element: HTMLTextAreaElement) => {
+    if (element) {
+      measureContentHeight(element, formula);
+    }
+  };
 
   const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     onChange?.(e);
@@ -58,6 +65,7 @@ export function AutoGrowTextarea({
 
   return (
     <Textarea
+      ref={setDefaultRef}
       className={cn("field-sizing-fixed resize-y overflow-y-auto", className)}
       style={{
         height: formula,
@@ -67,6 +75,7 @@ export function AutoGrowTextarea({
       onFocus={handleFocus}
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
+      defaultValue={defaultValue}
       {...props}
     />
   );

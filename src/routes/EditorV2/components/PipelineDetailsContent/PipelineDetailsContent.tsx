@@ -6,14 +6,18 @@ import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlo
 import { CopyText } from "@/components/shared/CopyText/CopyText";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Textarea } from "@/components/ui/textarea";
 import { Text } from "@/components/ui/typography";
+import type { ComponentSpec, Input, Output } from "@/models/componentSpec";
 import type { TypeSpecType } from "@/models/componentSpec/entities/types";
 
 import { useSpec } from "../../providers/SpecContext";
 import { updatePipelineDescription } from "../../store/actions";
+import { selectNode, setPendingFocusNode } from "../../store/editorStore";
+import { navigateToPath } from "../../store/navigationStore";
 import { AnnotationsBlock } from "../AnnotationsBlock/AnnotationsBlock";
 import { ValidationSummary } from "../ValidationSummary";
 import { RenamePipelineButton } from "./components/RenamePipelineButton";
@@ -92,68 +96,9 @@ export const PipelineDetailsContent = observer(
           />
         </ContentBlock>
 
-        <ContentBlock title="Inputs">
-          {spec.inputs.length > 0 ? (
-            <BlockStack>
-              {spec.inputs.map((input) => (
-                <InlineStack
-                  key={input.$id}
-                  gap="1"
-                  align="space-between"
-                  blockAlign="center"
-                  className="even:bg-white odd:bg-secondary px-2 py-0.5 rounded-xs w-full"
-                  wrap="nowrap"
-                >
-                  <Text size="xs" weight="semibold" className="truncate">
-                    {input.name}
-                  </Text>
-                  <InlineStack gap="1" className="shrink-0" blockAlign="center">
-                    <Text size="xs" tone="subdued">
-                      ({typeSpecToString(input.type)})
-                    </Text>
-                    {input.optional && (
-                      <Badge size="sm" variant="outline">
-                        optional
-                      </Badge>
-                    )}
-                  </InlineStack>
-                </InlineStack>
-              ))}
-            </BlockStack>
-          ) : (
-            <Text size="xs" tone="subdued">
-              No inputs
-            </Text>
-          )}
-        </ContentBlock>
+        <InputsBlock spec={spec} />
 
-        <ContentBlock title="Outputs">
-          {spec.outputs.length > 0 ? (
-            <BlockStack>
-              {spec.outputs.map((output) => (
-                <InlineStack
-                  key={output.$id}
-                  gap="1"
-                  align="space-between"
-                  blockAlign="center"
-                  className="even:bg-white odd:bg-secondary px-2 py-0.5 rounded-xs w-full"
-                  wrap="nowrap"
-                >
-                  <Text size="xs" weight="semibold" className="truncate">
-                    {output.name}
-                  </Text>
-                  <Text size="xs" tone="subdued" className="shrink-0">
-                    ({typeSpecToString(output.type)})
-                  </Text>
-                </InlineStack>
-              ))}
-            </BlockStack>
-          ) : (
-            <Text size="xs" tone="subdued">
-              No outputs
-            </Text>
-          )}
-        </ContentBlock>
+        <OutputsBlock spec={spec} />
 
         <AnnotationsBlock
           annotations={spec.annotations}
@@ -182,5 +127,98 @@ function EmptyState() {
         No pipeline loaded
       </Text>
     </BlockStack>
+  );
+}
+
+function InputsBlock({ spec }: { spec: ComponentSpec }) {
+  const handleClick = (input: Input) => {
+    navigateToPath([spec.name]);
+    setPendingFocusNode(input.$id);
+    selectNode(input.$id, "input");
+  };
+
+  return (
+    <ContentBlock title="Inputs">
+      {spec.inputs.length > 0 ? (
+        <BlockStack data-testid="pipeline-inputs">
+          {spec.inputs.map((input) => (
+            <InlineStack
+              key={input.$id}
+              gap="1"
+              align="space-between"
+              blockAlign="center"
+              className="even:bg-white odd:bg-secondary px-2 py-0.5 rounded-xs w-full"
+              wrap="nowrap"
+            >
+              <Button
+                variant="ghost"
+                size="xs"
+                className="truncate"
+                onClick={() => handleClick(input)}
+              >
+                {input.name}
+              </Button>
+              <InlineStack gap="1" className="shrink-0" blockAlign="center">
+                <Text size="xs" tone="subdued">
+                  ({typeSpecToString(input.type)})
+                </Text>
+                {input.optional && (
+                  <Badge size="sm" variant="outline">
+                    optional
+                  </Badge>
+                )}
+              </InlineStack>
+            </InlineStack>
+          ))}
+        </BlockStack>
+      ) : (
+        <Text size="xs" tone="subdued">
+          No inputs
+        </Text>
+      )}
+    </ContentBlock>
+  );
+}
+
+function OutputsBlock({ spec }: { spec: ComponentSpec }) {
+  const handleClick = (output: Output) => {
+    navigateToPath([spec.name]);
+    setPendingFocusNode(output.$id);
+    selectNode(output.$id, "output");
+  };
+
+  return (
+    <ContentBlock title="Outputs">
+      {spec.outputs.length > 0 ? (
+        <BlockStack>
+          {spec.outputs.map((output) => (
+            <InlineStack
+              key={output.$id}
+              gap="1"
+              align="space-between"
+              blockAlign="center"
+              className="even:bg-white odd:bg-secondary px-2 py-0.5 rounded-xs w-full"
+              wrap="nowrap"
+            >
+              <Button
+                variant="ghost"
+                size="xs"
+                className="truncate"
+                onClick={() => handleClick(output)}
+              >
+                {output.name}
+              </Button>
+              <Text size="xs" tone="subdued" className="shrink-0">
+                ({typeSpecToString(output.type)})
+              </Text>
+            </InlineStack>
+          ))}
+        </BlockStack>
+      ) : (
+        <Text size="xs" tone="subdued">
+          No outputs
+        </Text>
+      )}
+    </ContentBlock>
   );
 }
