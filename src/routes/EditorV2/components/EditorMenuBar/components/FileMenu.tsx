@@ -3,6 +3,7 @@ import { generate } from "random-words";
 import { useEffect, useRef, useState } from "react";
 
 import ImportPipeline from "@/components/shared/ImportPipeline";
+import { exportPipeline } from "@/components/shared/ReactFlow/FlowSidebar/sections/components/ExportPipelineButton";
 import {
   Dialog,
   DialogContent,
@@ -19,15 +20,19 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
+import { JsonSerializer } from "@/models/componentSpec/serialization/jsonSerializer";
 import { CTRL } from "@/routes/EditorV2/shortcuts/keys";
 import { registerShortcut } from "@/routes/EditorV2/store/keyboardStore";
+import { navigationStore } from "@/routes/EditorV2/store/navigationStore";
 import { PipelineFolders } from "@/routes/PipelineFolders/PipelineFolders";
 import { APP_ROUTES } from "@/routes/router";
+import { type ComponentSpec as WiredComponentSpec } from "@/utils/componentSpec";
 import { writeComponentToFileListFromText } from "@/utils/componentStore";
 import {
   defaultPipelineYamlWithName,
   USER_PIPELINES_LIST_NAME,
 } from "@/utils/constants";
+import { componentSpecToYaml } from "@/utils/yaml";
 
 import { autoSaveStore } from "../../../store/autoSaveStore";
 import { ShorcutBadge } from "../../ShorcutBadge";
@@ -77,6 +82,18 @@ export function FileMenu() {
     setOpenDialogOpen(false);
   };
 
+  const handleExportPipeline = () => {
+    const serializer = new JsonSerializer();
+    const componentSpec = navigationStore.rootSpec;
+
+    if (!componentSpec) return;
+
+    const componentText = componentSpecToYaml(
+      serializer.serialize(componentSpec) as WiredComponentSpec,
+    );
+    exportPipeline(componentSpec.name ?? "Untitled Pipeline", componentText);
+  };
+
   return (
     <>
       <DropdownMenu>
@@ -109,7 +126,7 @@ export function FileMenu() {
             <Icon name="Upload" size="sm" />
             Import
           </DropdownMenuItem>
-          <DropdownMenuItem disabled>
+          <DropdownMenuItem onClick={handleExportPipeline}>
             <Icon name="FileDown" size="sm" />
             Export
           </DropdownMenuItem>

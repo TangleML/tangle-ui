@@ -17,19 +17,7 @@ export const ExportPipelineButton = () => {
   }, [componentSpec]);
 
   const handleExport = useCallback(() => {
-    const blob = new Blob([componentText], { type: "text/yaml" });
-    const url = URL.createObjectURL(blob);
-    const filename = componentSpec?.name
-      ? `${componentSpec.name}.pipeline.component.yaml`
-      : "pipeline.component.yaml";
-
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    exportPipeline(componentSpec?.name ?? "Untitled Pipeline", componentText);
   }, [componentText, componentSpec?.name]);
 
   return (
@@ -40,3 +28,19 @@ export const ExportPipelineButton = () => {
     />
   );
 };
+
+export function exportPipeline(name: string, componentSpecYaml: string) {
+  const blob = new Blob([componentSpecYaml], { type: "text/yaml" });
+  const url = URL.createObjectURL(blob);
+  const filename = name
+    ? `${name}.pipeline.component.yaml`
+    : "pipeline.component.yaml";
+
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
