@@ -1,4 +1,5 @@
 import { List } from "lucide-react";
+import type { ComponentProps } from "react";
 
 import { PipelineRunsList } from "@/components/shared/PipelineRunDisplay/PipelineRunsList";
 import { usePipelineRuns } from "@/components/shared/PipelineRunDisplay/usePipelineRuns";
@@ -16,13 +17,22 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 
 export const RecentExecutionsButton = withSuspenseWrapper(
-  () => {
-    const { componentSpec } = useComponentSpec();
-
-    const { data: runs } = usePipelineRuns(componentSpec?.name);
+  ({
+    pipelineName,
+    overviewConfig,
+    trigger,
+    ...rest
+  }: ComponentProps<typeof PipelineRunsList> & {
+    trigger?: React.ReactNode;
+  }) => {
+    const { data: runs } = usePipelineRuns(pipelineName);
+    const defaultTrigger = (
+      <Button variant="ghost" size="icon" className="size-7">
+        <List className="w-4 h-4" />
+      </Button>
+    );
 
     return (
       <TooltipProvider>
@@ -30,9 +40,7 @@ export const RecentExecutionsButton = withSuspenseWrapper(
           <Tooltip>
             <TooltipTrigger asChild>
               <PopoverTrigger asChild data-popover-trigger>
-                <Button variant="ghost" size="icon" className="size-7">
-                  <List className="w-4 h-4" />
-                </Button>
+                {trigger ?? defaultTrigger}
               </PopoverTrigger>
             </TooltipTrigger>
             <TooltipContent>
@@ -41,8 +49,13 @@ export const RecentExecutionsButton = withSuspenseWrapper(
           </Tooltip>
           <PopoverContent className="w-[500px]">
             <PipelineRunsList
-              pipelineName={componentSpec.name}
-              overviewConfig={{ showName: false, showDescription: true }}
+              pipelineName={pipelineName}
+              overviewConfig={{
+                ...overviewConfig,
+                showName: false,
+                showDescription: true,
+              }}
+              {...rest}
             />
           </PopoverContent>
         </Popover>

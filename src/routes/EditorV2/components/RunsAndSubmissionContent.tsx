@@ -3,10 +3,12 @@ import { observer } from "mobx-react-lite";
 import { useAwaitAuthorization } from "@/components/shared/Authentication/useAwaitAuthorization";
 import { HuggingFaceAuthButton } from "@/components/shared/HuggingFaceAuth/HuggingFaceAuthButton";
 import { PipelineRunsList } from "@/components/shared/PipelineRunDisplay/PipelineRunsList";
+import { RecentExecutionsButton } from "@/components/shared/ReactFlow/FlowSidebar/components/RecentExecutionsButton";
 import GoogleCloudSubmissionDialog from "@/components/shared/Submitters/GoogleCloud/GoogleCloudSubmissionDialog";
 import OasisSubmitter from "@/components/shared/Submitters/Oasis/OasisSubmitter";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
-import { BlockStack } from "@/components/ui/layout";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Heading, Text } from "@/components/ui/typography";
 import { JsonSerializer } from "@/models/componentSpec";
@@ -34,6 +36,17 @@ export const RunsAndSubmissionContent = observer(() => {
   if (!legacySpec) {
     return <EmptyState />;
   }
+
+  const showMoreButton = rootSpec?.name ? (
+    <RecentExecutionsButton
+      pipelineName={rootSpec.name}
+      trigger={
+        <Button variant="ghost" size="xs" className="text-gray-700">
+          Show all runs
+        </Button>
+      }
+    />
+  ) : null;
 
   return (
     <BlockStack fill inlineAlign="start">
@@ -66,7 +79,10 @@ export const RunsAndSubmissionContent = observer(() => {
       </BlockStack>
       <Separator />
       <BlockStack className="p-2">
-        <Heading level={3}>The most recent run:</Heading>
+        <InlineStack align="space-between" className="w-full">
+          <Heading level={3}>The most recent run:</Heading>
+          {showMoreButton}
+        </InlineStack>
         <div className="flex-1 min-h-0 overflow-y-auto">
           <PipelineRunsList
             pipelineName={rootSpec?.name}
