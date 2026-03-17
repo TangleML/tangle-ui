@@ -191,6 +191,50 @@ export function renameOutput(
   );
 }
 
+export function setInputDescription(
+  spec: ComponentSpec,
+  entityId: string,
+  description: string | undefined,
+): void {
+  withUndoGroup("Set input description", () => {
+    const input = spec.inputs.find((i) => i.$id === entityId);
+    input?.setDescription(description);
+  });
+}
+
+export function setInputType(
+  spec: ComponentSpec,
+  entityId: string,
+  type: string | undefined,
+): void {
+  withUndoGroup("Set input type", () => {
+    const input = spec.inputs.find((i) => i.$id === entityId);
+    input?.setType(type);
+  });
+}
+
+export function setInputDefaultValue(
+  spec: ComponentSpec,
+  entityId: string,
+  defaultValue: string | undefined,
+): void {
+  withUndoGroup("Set input default value", () => {
+    const input = spec.inputs.find((i) => i.$id === entityId);
+    input?.setDefaultValue(defaultValue);
+  });
+}
+
+export function setOutputDescription(
+  spec: ComponentSpec,
+  entityId: string,
+  description: string | undefined,
+): void {
+  withUndoGroup("Set output description", () => {
+    const output = spec.outputs.find((o) => o.$id === entityId);
+    output?.setDescription(description);
+  });
+}
+
 export function renamePipeline(spec: ComponentSpec, newName: string): boolean {
   return withUndoGroup("Rename pipeline", () => {
     spec.setName(newName);
