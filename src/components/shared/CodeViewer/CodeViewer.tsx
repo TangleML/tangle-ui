@@ -39,6 +39,7 @@ const CodeViewer = ({
     const handleEscapeKey = (e: KeyboardEvent) => {
       if (isFullscreen && e.key === "Escape") {
         setIsFullscreen(false);
+        onClose?.();
         e.preventDefault();
         e.stopPropagation();
       }
