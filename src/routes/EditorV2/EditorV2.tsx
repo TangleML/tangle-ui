@@ -40,6 +40,7 @@ import { useLinkedWindowCleanup } from "./hooks/useLinkedWindowCleanup";
 import { usePipelineDetailsWindow } from "./hooks/usePipelineDetailsWindow";
 import { usePipelineTreeWindow } from "./hooks/usePipelineTreeWindow";
 import { usePropertiesWindowPositioning } from "./hooks/usePropertiesWindowPositioning";
+import { useRunsAndSubmissionWindow } from "./hooks/useRunsAndSubmissionWindow";
 import { useSelectionWindowSync } from "./hooks/useSelectionWindowSync";
 import { useSpecLifecycle } from "./hooks/useSpecLifecycle";
 import { useUndoRedoKeyboard } from "./hooks/useUndoRedoKeyboard";
@@ -134,6 +135,7 @@ const PipelineEditor = withSuspenseWrapper(
     usePipelineDetailsWindow();
     usePipelineTreeWindow();
     useHistoryWindow();
+    useRunsAndSubmissionWindow();
     useUndoRedoKeyboard();
     useFocusMode();
     useEditorShortcuts();

@@ -34,6 +34,7 @@ export const STATIC_WINDOW_IDS = new Set([
   "pipeline-tree",
   "history",
   "debug-panel",
+  "runs-and-submission",
 ]);
 
 /**
