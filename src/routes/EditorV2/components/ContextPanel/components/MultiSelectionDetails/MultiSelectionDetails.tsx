@@ -1,6 +1,8 @@
+import { useReactFlow } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
 import { useEffect, useState } from "react";
 
+import { autoLayoutNodes } from "@/components/shared/ReactFlow/FlowCanvas/utils/autolayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -12,7 +14,10 @@ import { Text } from "@/components/ui/typography";
 import type { Task } from "@/models/componentSpec";
 
 import { useSpec } from "../../../../providers/SpecContext";
-import { createSubgraph } from "../../../../store/actions";
+import {
+  applyAutoLayoutPositions,
+  createSubgraph,
+} from "../../../../store/actions";
 import {
   clearMultiSelection,
   editorStore,
@@ -33,6 +38,7 @@ import {
 export const MultiSelectionDetails = observer(function MultiSelectionDetails() {
   const { multiSelection } = editorStore;
   const spec = useSpec();
+  const { getNodes, getEdges } = useReactFlow();
 
   const [subgraphName, setSubgraphName] = useState("");
 
@@ -74,6 +80,22 @@ export const MultiSelectionDetails = observer(function MultiSelectionDetails() {
       setSubgraphName("");
       clearMultiSelection();
     }
+  };
+
+  const handleAutoLayoutSelection = () => {
+    if (!spec || multiSelection.length < 2) return;
+
+    const selectedIds = new Set(multiSelection.map((n) => n.id));
+    const allNodes = getNodes();
+    const allEdges = getEdges();
+
+    const selectedRFNodes = allNodes.filter((n) => selectedIds.has(n.id));
+    const connectedEdges = allEdges.filter(
+      (e) => selectedIds.has(e.source) || selectedIds.has(e.target),
+    );
+
+    const layoutedNodes = autoLayoutNodes(selectedRFNodes, connectedEdges);
+    applyAutoLayoutPositions(spec, layoutedNodes);
   };
 
   if (multiSelection.length === 0) {
@@ -141,6 +163,21 @@ export const MultiSelectionDetails = observer(function MultiSelectionDetails() {
                 ))}
               </BlockStack>
             </BlockStack>
+          </>
+        )}
+
+        {multiSelection.length >= 2 && (
+          <>
+            <Separator />
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full gap-1.5"
+              onClick={handleAutoLayoutSelection}
+            >
+              <Icon name="LayoutDashboard" size="sm" />
+              Auto Layout Selection
+            </Button>
           </>
         )}
 

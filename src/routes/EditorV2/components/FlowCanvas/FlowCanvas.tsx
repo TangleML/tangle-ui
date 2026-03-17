@@ -24,6 +24,7 @@ import { BlockStack } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
 import type { ComponentSpec } from "@/models/componentSpec";
 
+import { useAutoLayout } from "../../hooks/useAutoLayout";
 import { focusModeStore } from "../../hooks/useFocusMode";
 import { useSpecToNodesEdges } from "../../hooks/useSpecToNodesEdges";
 import { NODE_TYPE_REGISTRY } from "../../nodes/registry";
@@ -127,6 +128,7 @@ export const FlowCanvas = observer(function FlowCanvas({
   }, [specNodes, specEdges, setNodes, setEdges]);
 
   useFitViewOnFocus();
+  useAutoLayout(spec);
   useClipboardShortcuts(spec, containerRef, reactFlowInstance);
 
   const selectionBehavior = useSelectionBehavior(spec);
