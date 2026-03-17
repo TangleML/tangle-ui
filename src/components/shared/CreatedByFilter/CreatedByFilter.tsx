@@ -40,6 +40,11 @@ export function CreatedByFilter({
     onClear();
   };
 
+  const handleSetMe = () => {
+    setInputValue("me");
+    onChange("me");
+  };
+
   return (
     <div className="relative">
       <Icon
@@ -50,9 +55,9 @@ export function CreatedByFilter({
         placeholder="Search by user..."
         value={inputValue}
         onChange={handleChange}
-        className="pl-9 pr-8 w-44"
+        className="pl-9 pr-10 w-46"
       />
-      {inputValue && (
+      {inputValue ? (
         <Button
           variant="ghost"
           size="icon"
@@ -61,6 +66,15 @@ export function CreatedByFilter({
           aria-label="Clear user filter"
         >
           <Icon name="X" size="sm" />
+        </Button>
+      ) : (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleSetMe}
+          className="absolute right-0 top-1/2 -translate-y-1/2 h-full px-1.5 text-xs rounded-l-none bg-accent/80 hover:bg-accent"
+        >
+          Me
         </Button>
       )}
     </div>
