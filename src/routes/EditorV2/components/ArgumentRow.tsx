@@ -1,5 +1,5 @@
 import { observer } from "mobx-react-lite";
-import { type ChangeEvent, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { getDynamicDataDisplayInfo } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/ArgumentsEditor/dynamicDataUtils";
 import { Icon } from "@/components/ui/icon";
@@ -50,10 +50,6 @@ export const ArgumentRow = observer(function ArgumentRow({
   onSelectionChanged,
 }: ArgumentRowProps) {
   const [editing, setEditing] = useState(false);
-  const [inputValue, setInputValue] = useState(
-    typeof currentValue === "string" ? currentValue : "",
-  );
-  const inputRef = useRef<HTMLTextAreaElement>(null);
   const rowRef = useRef<HTMLDivElement>(null);
 
   const isFocused = editorStore.focusedArgumentName === inputSpec.name;
@@ -85,20 +81,6 @@ export const ArgumentRow = observer(function ArgumentRow({
     }
   }, [isFocused, externalEditor]);
 
-  useEffect(() => {
-    if (editing && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [editing]);
-
-  useEffect(() => {
-    if (typeof currentValue === "string") {
-      setInputValue(currentValue);
-    } else if (currentValue === undefined) {
-      setInputValue("");
-    }
-  }, [currentValue]);
-
   const handleClick = () => {
     if (isDynamic) return;
     onSelectionChanged?.(inputSpec.name);
@@ -114,8 +96,10 @@ export const ArgumentRow = observer(function ArgumentRow({
     if (isFocused) {
       setFocusedArgument(null);
     }
+  };
 
-    const trimmed = inputValue.trim();
+  const handleChangeComplete = (value: string) => {
+    const trimmed = value.trim();
     if (trimmed === "" && !isSet && !isBound) return;
 
     if (trimmed !== (typeof currentValue === "string" ? currentValue : "")) {
@@ -125,37 +109,21 @@ export const ArgumentRow = observer(function ArgumentRow({
         setArgument(spec, task.$id, inputSpec.name, trimmed);
       }
     }
-  };
 
-  const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
-    setInputValue(e.target.value);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      inputRef.current?.blur();
-    }
-    if (e.key === "Escape") {
-      setInputValue(typeof currentValue === "string" ? currentValue : "");
-      setEditing(false);
-      if (isFocused) setFocusedArgument(null);
-    }
+    handleBlur();
   };
 
   const handleResetToDefault = () => {
     const defaultVal = inputSpec.default ?? "";
     resetArgumentToDefault(spec, task.$id, inputSpec.name, defaultVal);
-    setInputValue(defaultVal);
   };
 
   const handleUnset = () => {
     unsetArgument(task, spec, inputSpec.name);
-    setInputValue("");
   };
 
   const handleSelectDynamicData = (value: DynamicDataArgument) => {
     setDynamicData(spec, task.$id, inputSpec.name, value);
-    setInputValue("");
   };
 
   const handleQuickConnect = (
@@ -169,12 +137,10 @@ export const ArgumentRow = observer(function ArgumentRow({
       task.$id,
       inputSpec.name,
     );
-    setInputValue("");
   };
 
   const handleCreateInputAndConnect = () => {
     createInputAndConnect(spec, [task.$id], inputSpec.name, inputSpec.type);
-    setInputValue("");
   };
 
   const bindingLabel = isBound ? formatBindingSource(binding, spec) : undefined;
@@ -242,11 +208,13 @@ export const ArgumentRow = observer(function ArgumentRow({
 
       {editing && !externalEditor ? (
         <AutoGrowTextarea
-          ref={inputRef}
-          value={inputValue}
-          onChange={handleChange}
+          autoFocus
+          key={`${task.$id}-${inputSpec.name}-${String(currentValue ?? "")}`}
+          defaultValue={typeof currentValue === "string" ? currentValue : ""}
+          expandDialogTitle={`Value for ${inputSpec.name}`}
+          onChangeComplete={handleChangeComplete}
           onBlur={handleBlur}
-          onKeyDown={handleKeyDown}
+          highlightSyntax
           placeholder={
             isBound
               ? bindingLabel || "Enter value to replace connection..."

@@ -154,7 +154,6 @@ export const ThunderMenu = observer(function ThunderMenu({
   onCreateInputAndConnect,
 }: ThunderMenuProps) {
   const spec = useSpec();
-  const isSecretsEnabled = useFlagValue("secrets");
   const [isOpen, setIsOpen] = useState(false);
   const [isSecretDialogOpen, setIsSecretDialogOpen] = useState(false);
 
@@ -165,7 +164,7 @@ export const ThunderMenu = observer(function ThunderMenu({
     excludeEntityIds,
   );
 
-  const hasDynamicData = isSecretsEnabled && dynamicDataGroups.length > 0;
+  const hasDynamicData = dynamicDataGroups.length > 0;
   const hasQuickConnect = quickConnectGroups.length > 0;
 
   const handleOpenSecretDialog = () => {
@@ -343,13 +342,11 @@ export const ThunderMenu = observer(function ThunderMenu({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {isSecretsEnabled && (
-        <SelectSecretDialog
-          open={isSecretDialogOpen}
-          onOpenChange={setIsSecretDialogOpen}
-          onSelect={handleSecretSelect}
-        />
-      )}
+      <SelectSecretDialog
+        open={isSecretDialogOpen}
+        onOpenChange={setIsSecretDialogOpen}
+        onSelect={handleSecretSelect}
+      />
     </>
   );
 });

@@ -1,7 +1,6 @@
 import { observer } from "mobx-react-lite";
-import { type ChangeEvent, type FocusEvent, type KeyboardEvent } from "react";
+import { type ChangeEvent, type FocusEvent } from "react";
 
-import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlock";
 import { Input } from "@/components/ui/input";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Textarea } from "@/components/ui/textarea";
@@ -54,26 +53,11 @@ export const InputDetails = observer(function InputDetails({
     }
   };
 
-  const handleDefaultValueChange = (event: FocusEvent<HTMLTextAreaElement>) => {
-    const value = event.target.value;
+  const handleDefaultValueChange = (value: string) => {
     const newDefault = value || undefined;
     if (newDefault !== input.defaultValue) {
       setInputDefaultValue(spec, entityId, newDefault);
     }
-  };
-
-  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key !== "Enter") {
-      return true;
-    }
-
-    if (event.shiftKey) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-    event.currentTarget.blur();
   };
 
   const handleZIndexChange = (newZIndex: number) => {
@@ -144,9 +128,10 @@ export const InputDetails = observer(function InputDetails({
           <AutoGrowTextarea
             id="input-default-value"
             key={`${entityId}-default-value`}
+            expandDialogTitle="Default Value"
+            highlightSyntax={true}
             defaultValue={input.defaultValue}
-            onBlur={handleDefaultValueChange}
-            onKeyDown={handleKeyDown}
+            onChangeComplete={handleDefaultValueChange}
             placeholder="Default value"
             className="h-4 min-h-4 text-xs font-mono"
             data-testid="input-default-value"

@@ -1,4 +1,4 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { observer } from "mobx-react-lite";
 import { type ChangeEvent, useState } from "react";
 
@@ -50,6 +50,8 @@ function typeSpecToString(typeSpec?: TypeSpecType): string {
   return JSON.stringify(typeSpec);
 }
 
+const serializer = new JsonSerializer();
+
 export const PipelineDetailsContent = observer(
   function PipelineDetailsContent() {
     const spec = useSpec();
@@ -58,6 +60,7 @@ export const PipelineDetailsContent = observer(
 
     // Sync local state when spec description changes externally (e.g., undo/redo).
     const specDescription = spec?.description ?? "";
+
     if (
       description !== specDescription &&
       document.activeElement?.id !== "pipeline-description"
@@ -68,6 +71,10 @@ export const PipelineDetailsContent = observer(
     if (!spec) {
       return <EmptyState />;
     }
+
+    const yamlText = componentSpecToYaml(
+      serializer.serialize(spec) as WiredComponentSpec,
+    );
 
     const handleDescriptionInputChange = (
       event: ChangeEvent<HTMLTextAreaElement>,
@@ -99,7 +106,7 @@ export const PipelineDetailsContent = observer(
           ]}
         />
 
-        <DigestBlock spec={spec} />
+        <DigestBlock yamlText={yamlText} />
 
         <MetadataBlock spec={spec} />
 
@@ -149,21 +156,18 @@ function EmptyState() {
   );
 }
 
-const serializer = new JsonSerializer();
-
 const DigestBlock = withSuspenseWrapper(function DigestBlock({
-  spec,
+  yamlText,
 }: {
-  spec: ComponentSpec;
+  yamlText: string;
 }) {
-  const { data: digest } = useSuspenseQuery({
-    queryKey: ["pipeline-digest", spec.name],
+  const { data: generatedDigest } = useQuery({
+    queryKey: ["pipeline-digest", yamlText],
     staleTime: 0,
-    queryFn: () =>
-      generateDigest(
-        componentSpecToYaml(serializer.serialize(spec) as WiredComponentSpec),
-      ),
+    queryFn: () => generateDigest(yamlText),
   });
+
+  const digest = generatedDigest ?? "...";
 
   return (
     <ContentBlock title="Digest">
