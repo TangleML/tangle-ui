@@ -5,6 +5,8 @@ import { normalizeComboKey } from "../shortcuts/keys";
 
 export type ShortcutKeys = KeyConstant[];
 
+export type ShortcutParams = Record<string, unknown>;
+
 export interface ShortcutDefinition {
   id: string;
   keys: ShortcutKeys;
@@ -13,7 +15,7 @@ export interface ShortcutDefinition {
   allowInEditable?: boolean;
   // todo: add DOM element as a scope for the shortcut
   // todo: add enabled: boolean;
-  action: (event: KeyboardEvent) => void;
+  action: (event: KeyboardEvent, params?: ShortcutParams) => void;
 }
 
 class KeyboardStore {
@@ -58,10 +60,25 @@ class KeyboardStore {
     if (this.pressed.size !== keys.length) return false;
     return keys.every((k) => this.pressed.has(k));
   }
+
+  /**
+   * Programmatically invoke a registered shortcut by id with optional params.
+   */
+  invokeShortcut(id: string, params?: ShortcutParams): void {
+    const shortcut = this.getShortcut(id);
+    shortcut?.action(new KeyboardEvent("keydown"), params);
+  }
 }
 
 export const keyboardStore = new KeyboardStore();
 
 export function registerShortcut(definition: ShortcutDefinition): () => void {
   return keyboardStore.registerShortcut(definition);
+}
+
+export function invokeShortcut(
+  id: string,
+  params?: ShortcutParams,
+): void {
+  keyboardStore.invokeShortcut(id, params);
 }

@@ -1,6 +1,6 @@
 import "../nodes"; // ensure manifests are registered
 
-import type { XYPosition } from "@xyflow/react";
+import type { Node, XYPosition } from "@xyflow/react";
 
 import {
   type ComponentReference,
@@ -419,6 +419,18 @@ export function batchSetTaskColor(tasks: Task[], color: string) {
       } else {
         task.annotations.set(TASK_COLOR_ANNOTATION, color);
       }
+    }
+  });
+}
+
+export function applyAutoLayoutPositions(
+  spec: ComponentSpec,
+  layoutedNodes: Node[],
+) {
+  withUndoGroup("Auto layout", () => {
+    for (const node of layoutedNodes) {
+      const manifest = NODE_TYPE_REGISTRY.getByNodeId(spec, node.id);
+      manifest?.updatePosition(spec, node.id, node.position);
     }
   });
 }
