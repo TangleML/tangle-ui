@@ -18,6 +18,7 @@ interface PipelineRunsListProps {
   showMoreButton?: boolean;
   showTitle?: boolean;
   disabled?: boolean;
+  defaultShowingRuns?: number;
   overviewConfig?: ComponentProps<typeof RunOverview>["config"];
   onRunClick?: (run: PipelineRun) => void;
 }
@@ -28,12 +29,15 @@ export const PipelineRunsList = withSuspenseWrapper(
     showMoreButton = true,
     showTitle = true,
     disabled = false,
+    defaultShowingRuns = DEFAULT_SHOWING_RUNS,
     overviewConfig,
     onRunClick,
   }: PipelineRunsListProps) => {
     const { data: pipelineRuns } = usePipelineRuns(pipelineName);
 
-    const [showingRuns, setShowingRuns] = useState(DEFAULT_SHOWING_RUNS);
+    const [showingRuns, setShowingRuns] = useState(
+      defaultShowingRuns ?? DEFAULT_SHOWING_RUNS,
+    );
 
     if (!pipelineRuns) {
       return <RecentRunsTitle pipelineName={pipelineName} runsCount={0} />;
