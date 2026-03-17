@@ -1,5 +1,15 @@
-import { type ChangeEvent, type ComponentProps } from "react";
+import {
+  type ChangeEvent,
+  type ComponentProps,
+  type FocusEvent,
+  type KeyboardEvent,
+  type ReactNode,
+  useRef,
+  useState,
+} from "react";
 
+import { MultilineTextInputDialog } from "@/components/shared/Dialogs/MultilineTextInputDialog";
+import { Icon } from "@/components/ui/icon";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
@@ -14,8 +24,14 @@ function measureContentHeight(el: HTMLTextAreaElement, formula: string): void {
   el.style.setProperty("--content-h", `${scrollH}px`);
 }
 
-interface AutoGrowTextareaProps extends ComponentProps<typeof Textarea> {
+interface AutoGrowTextareaProps extends Omit<
+  ComponentProps<typeof Textarea>,
+  "onChange" | "value"
+> {
   maxGrowHeight?: string;
+  expandDialogTitle?: ReactNode;
+  onChangeComplete?: (value: string) => void;
+  highlightSyntax?: boolean;
 }
 
 export function AutoGrowTextarea({
@@ -23,28 +39,70 @@ export function AutoGrowTextarea({
   style,
   maxGrowHeight = "200px",
   defaultValue,
-  onChange,
+  onBlur,
   onFocus,
+  onKeyDown,
   onPointerDown,
   onPointerUp,
+  expandDialogTitle,
+  onChangeComplete,
+  highlightSyntax,
   ...props
 }: AutoGrowTextareaProps) {
   const formula = heightFormula(maxGrowHeight);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const cancelledRef = useRef(false);
+  const expandingRef = useRef(false);
+  const [localValue, setLocalValue] = useState(
+    typeof defaultValue === "string" ? defaultValue : "",
+  );
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [dialogInitialValue, setDialogInitialValue] = useState("");
 
   const setDefaultRef = (element: HTMLTextAreaElement) => {
+    textareaRef.current = element;
     if (element) {
       measureContentHeight(element, formula);
     }
   };
 
   const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
-    onChange?.(e);
+    setLocalValue(e.target.value);
     measureContentHeight(e.currentTarget, formula);
   };
 
-  const handleFocus = (e: React.FocusEvent<HTMLTextAreaElement>) => {
+  const handleFocus = (e: FocusEvent<HTMLTextAreaElement>) => {
     onFocus?.(e);
     measureContentHeight(e.currentTarget, formula);
+  };
+
+  const handleBlur = (e: FocusEvent<HTMLTextAreaElement>) => {
+    if (expandingRef.current) return;
+    if (!cancelledRef.current) {
+      onChangeComplete?.(localValue);
+    }
+    cancelledRef.current = false;
+    onBlur?.(e);
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      textareaRef.current?.blur();
+      return;
+    }
+    if (e.key === "Escape") {
+      cancelledRef.current = true;
+      const original = typeof defaultValue === "string" ? defaultValue : "";
+      setLocalValue(original);
+      if (textareaRef.current) {
+        textareaRef.current.value = original;
+        measureContentHeight(textareaRef.current, formula);
+      }
+      textareaRef.current?.blur();
+      return;
+    }
+    onKeyDown?.(e);
   };
 
   const handlePointerDown = (e: React.PointerEvent<HTMLTextAreaElement>) => {
@@ -63,20 +121,76 @@ export function AutoGrowTextarea({
     }
   };
 
+  const handleExpandClick = () => {
+    expandingRef.current = true;
+    setDialogInitialValue(localValue);
+    setIsDialogOpen(true);
+  };
+
+  const handleDialogConfirm = (value: string) => {
+    expandingRef.current = false;
+    setIsDialogOpen(false);
+    setLocalValue(value);
+    if (textareaRef.current) {
+      textareaRef.current.value = value;
+      measureContentHeight(textareaRef.current, formula);
+    }
+    onChangeComplete?.(value);
+  };
+
+  const handleDialogCancel = () => {
+    expandingRef.current = false;
+    setIsDialogOpen(false);
+  };
+
+  const showExpandButton = expandDialogTitle && onChangeComplete;
+
   return (
-    <Textarea
-      ref={setDefaultRef}
-      className={cn("field-sizing-fixed resize-y overflow-y-auto", className)}
-      style={{
-        height: formula,
-        ...style,
-      }}
-      onChange={handleChange}
-      onFocus={handleFocus}
-      onPointerDown={handlePointerDown}
-      onPointerUp={handlePointerUp}
-      defaultValue={defaultValue}
-      {...props}
-    />
+    <>
+      <div
+        className={cn(showExpandButton && "group/expand relative", "w-full")}
+      >
+        <Textarea
+          ref={setDefaultRef}
+          className={cn(
+            "field-sizing-fixed resize-y overflow-y-auto",
+            className,
+          )}
+          style={{
+            height: formula,
+            ...style,
+          }}
+          defaultValue={defaultValue}
+          onChange={handleChange}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerUp}
+          {...props}
+        />
+        {showExpandButton && (
+          <button
+            type="button"
+            className="absolute top-1 right-1 rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/expand:opacity-100"
+            onPointerDown={(e) => e.preventDefault()}
+            onClick={handleExpandClick}
+            tabIndex={-1}
+          >
+            <Icon name="Maximize2" size="xs" />
+          </button>
+        )}
+      </div>
+      {showExpandButton && (
+        <MultilineTextInputDialog
+          title={expandDialogTitle}
+          initialValue={dialogInitialValue}
+          open={isDialogOpen}
+          onConfirm={handleDialogConfirm}
+          onCancel={handleDialogCancel}
+          highlightSyntax={highlightSyntax}
+        />
+      )}
+    </>
   );
 }
