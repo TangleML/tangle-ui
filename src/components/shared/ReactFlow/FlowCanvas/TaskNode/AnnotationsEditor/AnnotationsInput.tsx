@@ -37,6 +37,11 @@ interface AnnotationsInputProps {
   onDelete?: () => void;
 }
 
+const CUSTOM_OPTION_SENTINEL = "__custom__";
+
+// enableQuantity takes precedence over allowCustomValue in the onValueChange ternary.
+// Combining both flags on the same config is intentionally unsupported — CUSTOM_OPTION_SENTINEL
+// is not handled in the quantity path.
 export const AnnotationsInput = ({
   value = "",
   config,
@@ -51,6 +56,10 @@ export const AnnotationsInput = ({
   const [isInvalid, setIsInvalid] = useState(false);
   const [lastSavedValue, setLastSavedValue] = useState(value);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isCustomMode, setIsCustomMode] = useState(() => {
+    if (!config?.allowCustomValue || !value) return false;
+    return !config.options?.some((opt) => opt.value === value);
+  });
 
   const inputType = config?.type ?? "string";
   const placeholder = config?.label ?? "";
@@ -201,12 +210,37 @@ export const AnnotationsInput = ({
       }
     } else {
       setInputValue("");
-      if (onBlur && "" !== lastSavedValue) {
+      if (onBlur && lastSavedValue !== "") {
         onBlur("");
         setLastSavedValue("");
       }
     }
   }, [config, onBlur, lastSavedValue]);
+
+  const handleSelectOrCustomChange = useCallback(
+    (selectedKey: string) => {
+      if (selectedKey === CUSTOM_OPTION_SENTINEL) {
+        // Don't propagate onBlur here — the user hasn't typed a custom value yet.
+        // Calling onBlur("") would remove the annotation, causing the value prop to
+        // update to "" and the useEffect to reset isCustomMode back to false.
+        setIsCustomMode(true);
+        setInputValue("");
+      } else {
+        setIsCustomMode(false);
+        handleNonQuantitySelectChange(selectedKey);
+      }
+    },
+    [handleNonQuantitySelectChange],
+  );
+
+  const handleBackToSelect = useCallback(() => {
+    setIsCustomMode(false);
+    setInputValue("");
+    if (onBlur && "" !== lastSavedValue) {
+      onBlur("");
+      setLastSavedValue("");
+    }
+  }, [onBlur, lastSavedValue]);
 
   const handleSwitchChange = useCallback(
     (checked: boolean) => {
@@ -252,49 +286,89 @@ export const AnnotationsInput = ({
   useEffect(() => {
     setInputValue(value);
     setLastSavedValue(value);
-  }, [value]);
+    if (config?.allowCustomValue) {
+      setIsCustomMode(
+        !!value && !config.options?.some((opt) => opt.value === value),
+      );
+    }
+  }, [value, config]);
 
   let inputElement = null;
 
   if (config?.options && config.options.length > 0) {
-    const currentValue = config?.enableQuantity
-      ? getKeyFromInputValue(inputValue)
-      : inputValue;
+    if (config.allowCustomValue && isCustomMode) {
+      inputElement = (
+        <InlineStack gap="2" wrap="nowrap" className="grow">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="shrink-0 h-8 w-8"
+            onClick={handleBackToSelect}
+            title="Back to options"
+            type="button"
+          >
+            <Icon name="List" className="size-3 text-muted-foreground" />
+          </Button>
+          <Input
+            value={inputValue}
+            onChange={validateChange}
+            onBlur={handleBlur}
+            autoFocus
+            placeholder={`Custom ${placeholder}`}
+            className={className}
+            required={config?.required}
+          />
+        </InlineStack>
+      );
+    } else {
+      const currentValue = config?.enableQuantity
+        ? getKeyFromInputValue(inputValue)
+        : inputValue;
 
-    inputElement = (
-      <Select
-        value={currentValue}
-        onValueChange={
-          config?.enableQuantity
-            ? handleQuantitySelectChange
-            : handleNonQuantitySelectChange
-        }
-        required={config?.required}
-      >
-        <div className="relative group grow min-w-24">
-          <SelectTrigger className={cn("w-full", className)}>
-            <SelectValue placeholder={"Select " + placeholder} />
-          </SelectTrigger>
-          {!!currentValue && (
-            <Button
-              variant="ghost"
-              size="min"
-              className="absolute right-8 top-1/2 -translate-y-1/2 hidden group-hover:block"
-              onClick={handleClearSelection}
-            >
-              <Icon name="X" className="size-3 text-muted-foreground" />
-            </Button>
-          )}
-        </div>
-        <SelectContent>
-          {config.options.map((opt) => (
-            <SelectItem key={opt.value} value={opt.value}>
-              {opt.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    );
+      const selectOptions = config.allowCustomValue
+        ? [
+            ...config.options,
+            { value: CUSTOM_OPTION_SENTINEL, name: "Custom..." },
+          ]
+        : config.options;
+
+      inputElement = (
+        <Select
+          value={currentValue}
+          onValueChange={
+            config?.enableQuantity
+              ? handleQuantitySelectChange
+              : config.allowCustomValue
+                ? handleSelectOrCustomChange
+                : handleNonQuantitySelectChange
+          }
+          required={config?.required}
+        >
+          <div className="relative group grow min-w-24">
+            <SelectTrigger className={cn("w-full", className)}>
+              <SelectValue placeholder={"Select " + placeholder} />
+            </SelectTrigger>
+            {!!currentValue && (
+              <Button
+                variant="ghost"
+                size="min"
+                className="absolute right-8 top-1/2 -translate-y-1/2 hidden group-hover:block"
+                onClick={handleClearSelection}
+              >
+                <Icon name="X" className="size-3 text-muted-foreground" />
+              </Button>
+            )}
+          </div>
+          <SelectContent>
+            {selectOptions.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      );
+    }
   } else if (inputType === "boolean") {
     inputElement = (
       <Switch

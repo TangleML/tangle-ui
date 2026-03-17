@@ -9,6 +9,7 @@ import {
 } from "react";
 
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
+import { DescriptionWithLinks } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/AnnotationsEditor/DescriptionWithLinks";
 import { SelectSecretDialog } from "@/components/shared/SecretsManagement/SelectSecretDialog";
 import { createSecretArgument } from "@/components/shared/SecretsManagement/types";
 import { Icon } from "@/components/ui/icon";
@@ -461,7 +462,7 @@ export const ArgumentInputField = ({
               </PopoverTrigger>
               <PopoverContent>
                 <Paragraph size="xs" tone="subdued" className="italic">
-                  {argument.inputSpec.description}
+                  <DescriptionWithLinks text={argument.inputSpec.description} />
                 </Paragraph>
               </PopoverContent>
             </Popover>

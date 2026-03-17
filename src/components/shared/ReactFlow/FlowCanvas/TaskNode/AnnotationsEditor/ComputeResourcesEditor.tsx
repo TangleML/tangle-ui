@@ -1,11 +1,19 @@
 import { useCallback } from "react";
 
+import TooltipButton from "@/components/shared/Buttons/TooltipButton";
+import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Heading, Paragraph } from "@/components/ui/typography";
 import type { AnnotationConfig, Annotations } from "@/types/annotations";
 import { getAnnotationValue } from "@/utils/annotations";
 
 import { AnnotationsInput } from "./AnnotationsInput";
+import { DescriptionWithLinks } from "./DescriptionWithLinks";
 
 interface ComputeResourcesEditorProps {
   annotations: Annotations;
@@ -78,7 +86,7 @@ const ComputeResourceField = ({
 
   return (
     <BlockStack key={resource.annotation}>
-      <InlineStack>
+      <InlineStack gap="1" align="center">
         <Paragraph size="xs" tone="subdued">
           {label}
         </Paragraph>
@@ -86,6 +94,25 @@ const ComputeResourceField = ({
           <Paragraph size="xs" tone="critical">
             *
           </Paragraph>
+        )}
+        {resource.description && (
+          <Popover>
+            <PopoverTrigger asChild>
+              <TooltipButton
+                tooltip="Description"
+                variant="ghost"
+                size="min"
+                className="[&_svg]:size-3 text-muted-foreground hover:text-foreground"
+              >
+                <Icon name="Info" />
+              </TooltipButton>
+            </PopoverTrigger>
+            <PopoverContent>
+              <Paragraph size="xs" tone="subdued" className="italic">
+                <DescriptionWithLinks text={resource.description} />
+              </Paragraph>
+            </PopoverContent>
+          </Popover>
         )}
       </InlineStack>
 
