@@ -42,7 +42,8 @@ export const taskManifest: NodeTypeManifest = {
   fingerprintParts(spec) {
     return [...spec.tasks].map((task) => {
       const pos = task.annotations.get("editor.position");
-      return `t:${task.$id}:${task.name}:${pos.x},${pos.y}`;
+      const z = task.annotations.get("zIndex");
+      return `t:${task.$id}:${task.name}:${pos.x},${pos.y}:z${z ?? ""}`;
     });
   },
 
