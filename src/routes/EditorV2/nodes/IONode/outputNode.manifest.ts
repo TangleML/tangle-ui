@@ -31,7 +31,8 @@ export const outputManifest: NodeTypeManifest = {
   fingerprintParts(spec) {
     return [...spec.outputs].map((output) => {
       const pos = output.annotations.get("editor.position");
-      return `o:${output.$id}:${output.name}:${pos.x},${pos.y}`;
+      const z = output.annotations.get("zIndex");
+      return `o:${output.$id}:${output.name}:${pos.x},${pos.y}:z${z ?? ""}`;
     });
   },
 

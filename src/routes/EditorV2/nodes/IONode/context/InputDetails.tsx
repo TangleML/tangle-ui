@@ -1,6 +1,7 @@
 import { observer } from "mobx-react-lite";
 import { type ChangeEvent, type FocusEvent, type KeyboardEvent } from "react";
 
+import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlock";
 import { Input } from "@/components/ui/input";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,6 +16,8 @@ import {
   setInputDescription,
   setInputType,
 } from "../../../store/actions";
+import { withUndoGroup } from "../../../store/undoStore";
+import { ZIndexEditor } from "../../FlexNode/context/components/ZIndexEditor";
 
 interface InputDetailsProps {
   entityId: string;
@@ -71,6 +74,12 @@ export const InputDetails = observer(function InputDetails({
     event.preventDefault();
     event.stopPropagation();
     event.currentTarget.blur();
+  };
+
+  const handleZIndexChange = (newZIndex: number) => {
+    withUndoGroup("Update input z-index", () => {
+      input.annotations.set("zIndex", newZIndex);
+    });
   };
 
   return (
@@ -148,10 +157,12 @@ export const InputDetails = observer(function InputDetails({
           <Text size="xs" className="text-gray-400">
             Optional:
           </Text>
-          <Text size="xs" weight="semibold" className="text-gray-600">
+          <Text size="xs" weight="semibold" className="text-muted-foreground">
             {input.optional ? "Yes" : "No"}
           </Text>
         </InlineStack>
+
+        <ZIndexEditor nodeId={entityId} onChange={handleZIndexChange} />
       </BlockStack>
     </BlockStack>
   );

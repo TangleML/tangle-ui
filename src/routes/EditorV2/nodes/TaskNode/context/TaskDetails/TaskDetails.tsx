@@ -18,6 +18,7 @@ import type { ComponentSpecJson } from "@/models/componentSpec";
 import { componentSpecToText } from "@/utils/yaml";
 
 import { AnnotationsBlock } from "../../../../components/AnnotationsBlock/AnnotationsBlock";
+import { ZIndexEditor } from "../../../../nodes/FlexNode/context/components/ZIndexEditor";
 import { useSpec } from "../../../../providers/SpecContext";
 import {
   deleteTask,
@@ -25,6 +26,7 @@ import {
   renameTask,
 } from "../../../../store/actions";
 import { editorStore } from "../../../../store/editorStore";
+import { withUndoGroup } from "../../../../store/undoStore";
 import { CopyYamlButton } from "./components/actions/CopyYamlButton";
 import { DownloadPythonButton } from "./components/actions/DownloadPythonButton";
 import { DownloadYamlButton } from "./components/actions/DownloadYamlButton";
@@ -55,6 +57,7 @@ export const TaskDetails = observer(function TaskDetails({
   const [openSections, setOpenSections] = useState<string[]>([
     "task",
     "arguments",
+    "stacking",
   ]);
 
   useEffect(() => {
@@ -106,6 +109,12 @@ export const TaskDetails = observer(function TaskDetails({
 
   const handleDelete = () => {
     deleteTask(spec, entityId);
+  };
+
+  const handleZIndexChange = (newZIndex: number) => {
+    withUndoGroup("Update task z-index", () => {
+      task.annotations.set("zIndex", newZIndex);
+    });
   };
 
   return (
@@ -299,6 +308,25 @@ export const TaskDetails = observer(function TaskDetails({
             <AnnotationsBlock
               annotations={task.annotations}
               ignoreAnnotationKeys={EDITOR_ANNOTATION_KEYS}
+            />
+          </AccordionContent>
+        </AccordionItem>
+
+        <AccordionItem value="stacking">
+          <AccordionTrigger className="py-1.5 px-3 text-xs hover:no-underline">
+            <Text
+              size="xs"
+              weight="semibold"
+              className="uppercase tracking-wide text-gray-500"
+            >
+              Stacking
+            </Text>
+          </AccordionTrigger>
+          <AccordionContent className="px-3 pb-2">
+            <ZIndexEditor
+              nodeId={entityId}
+              title=""
+              onChange={handleZIndexChange}
             />
           </AccordionContent>
         </AccordionItem>

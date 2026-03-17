@@ -31,20 +31,34 @@ export function taskDefaultPosition(index: number): { x: number; y: number } {
   };
 }
 
+function parseZIndex(raw: unknown): number | undefined {
+  if (typeof raw === "number") return Math.round(raw);
+  if (typeof raw === "string") {
+    const parsed = parseInt(raw, 10);
+    if (!isNaN(parsed)) return Math.round(parsed);
+  }
+  return undefined;
+}
+
 export function createEntityNode(
   entity: {
     $id: string;
-    annotations: { get(key: string): { x: number; y: number } };
+    annotations: { get(key: string): unknown };
   },
   nodeType: string,
   fallback: { x: number; y: number },
   data: Record<string, unknown>,
 ): Node {
-  const position = entity.annotations.get("editor.position");
+  const position = entity.annotations.get("editor.position") as {
+    x: number;
+    y: number;
+  };
+  const zIndex = parseZIndex(entity.annotations.get("zIndex"));
   return {
     id: entity.$id,
     type: nodeType,
     position: resolvePosition(position, fallback),
+    zIndex,
     data,
   };
 }
