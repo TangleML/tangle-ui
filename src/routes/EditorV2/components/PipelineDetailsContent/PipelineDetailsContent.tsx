@@ -1,18 +1,33 @@
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { observer } from "mobx-react-lite";
 import { type ChangeEvent, useState } from "react";
 
 import { ActionBlock } from "@/components/shared/ContextPanel/Blocks/ActionBlock";
 import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlock";
+import { KeyValueList } from "@/components/shared/ContextPanel/Blocks/KeyValueList";
 import { CopyText } from "@/components/shared/CopyText/CopyText";
 import { InfoBox } from "@/components/shared/InfoBox";
+import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Textarea } from "@/components/ui/textarea";
 import { Text } from "@/components/ui/typography";
-import type { ComponentSpec, Input, Output } from "@/models/componentSpec";
+import {
+  type ComponentSpec,
+  type Input,
+  JsonSerializer,
+  type Output,
+} from "@/models/componentSpec";
 import type { TypeSpecType } from "@/models/componentSpec/entities/types";
+import { type ComponentSpec as WiredComponentSpec } from "@/utils/componentSpec";
+import {
+  generateDigest,
+  getComponentFileFromList,
+} from "@/utils/componentStore";
+import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
+import { componentSpecToYaml } from "@/utils/yaml";
 
 import { useSpec } from "../../providers/SpecContext";
 import { updatePipelineDescription } from "../../store/actions";
@@ -84,6 +99,10 @@ export const PipelineDetailsContent = observer(
           ]}
         />
 
+        <DigestBlock spec={spec} />
+
+        <MetadataBlock spec={spec} />
+
         <ContentBlock title="Description">
           <Textarea
             id="pipeline-description"
@@ -129,6 +148,31 @@ function EmptyState() {
     </BlockStack>
   );
 }
+
+const serializer = new JsonSerializer();
+
+const DigestBlock = withSuspenseWrapper(function DigestBlock({
+  spec,
+}: {
+  spec: ComponentSpec;
+}) {
+  const { data: digest } = useSuspenseQuery({
+    queryKey: ["pipeline-digest", spec.name],
+    staleTime: 0,
+    queryFn: () =>
+      generateDigest(
+        componentSpecToYaml(serializer.serialize(spec) as WiredComponentSpec),
+      ),
+  });
+
+  return (
+    <ContentBlock title="Digest">
+      <BlockStack className="bg-secondary p-2 rounded-md border truncate text-sm">
+        <CopyText className="font-mono truncate">{digest}</CopyText>
+      </BlockStack>
+    </ContentBlock>
+  );
+});
 
 function InputsBlock({ spec }: { spec: ComponentSpec }) {
   const handleClick = (input: Input) => {
@@ -179,6 +223,37 @@ function InputsBlock({ spec }: { spec: ComponentSpec }) {
     </ContentBlock>
   );
 }
+
+const MetadataBlock = withSuspenseWrapper(function MetadataBlock({
+  spec,
+}: {
+  spec: ComponentSpec;
+}) {
+  const { data: fileMeta } = useSuspenseQuery({
+    queryKey: ["file-meta", spec.name],
+    queryFn: () =>
+      getComponentFileFromList(USER_PIPELINES_LIST_NAME, spec.name),
+  });
+
+  const metadata = fileMeta
+    ? [
+        {
+          label: "Created by",
+          value: fileMeta.componentRef.spec.metadata?.annotations?.author,
+        },
+        {
+          label: "Created at",
+          value: fileMeta.creationTime?.toLocaleString(),
+        },
+        {
+          label: "Last updated",
+          value: fileMeta.modificationTime?.toLocaleString(),
+        },
+      ]
+    : [];
+
+  return <KeyValueList title="Metadata" items={metadata} />;
+});
 
 function OutputsBlock({ spec }: { spec: ComponentSpec }) {
   const handleClick = (output: Output) => {
