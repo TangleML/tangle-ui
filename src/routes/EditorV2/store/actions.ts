@@ -95,7 +95,7 @@ interface ConnectionInfo {
   targetHandleId: string;
 }
 
-export function getNodeTypeFromId(
+function getNodeTypeFromId(
   spec: ComponentSpec | null,
   nodeId: string,
 ): NodeEntityType | null {
@@ -104,21 +104,6 @@ export function getNodeTypeFromId(
       ?.entityType as NodeEntityType) /** todo: adjust typing to avoid casting */ ??
     null
   );
-}
-
-/**
- * Find an entity by its id using the node type registry.
- */
-export function findEntityById(
-  spec: ComponentSpec,
-  entityId: string,
-): Task | Input | Output | undefined {
-  const manifest = NODE_TYPE_REGISTRY.getByNodeId(spec, entityId);
-  return manifest?.findEntity?.(spec, entityId) as
-    | Task
-    | Input
-    | Output
-    | undefined;
 }
 
 export function connectNodes(
@@ -147,14 +132,6 @@ export function connectNodes(
 
 export function deleteTask(spec: ComponentSpec, entityId: string): boolean {
   return withUndoGroup("Delete task", () => spec.deleteTaskById(entityId));
-}
-
-export function deleteInput(spec: ComponentSpec, entityId: string): boolean {
-  return withUndoGroup("Delete input", () => spec.deleteInputById(entityId));
-}
-
-export function deleteOutput(spec: ComponentSpec, entityId: string): boolean {
-  return withUndoGroup("Delete output", () => spec.deleteOutputById(entityId));
 }
 
 export function deleteEdge(spec: ComponentSpec, edgeId: string): boolean {
@@ -249,16 +226,6 @@ export function updatePipelineDescription(
   return withUndoGroup("Update pipeline description", () => {
     spec.setDescription(description);
     return true;
-  });
-}
-
-export function updateNodePosition(
-  spec: ComponentSpec,
-  entityId: string,
-  position: XYPosition,
-) {
-  withUndoGroup("Update node position", () => {
-    spec.updateNodePosition(entityId, position);
   });
 }
 
