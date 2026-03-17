@@ -76,9 +76,6 @@ export function registerShortcut(definition: ShortcutDefinition): () => void {
   return keyboardStore.registerShortcut(definition);
 }
 
-export function invokeShortcut(
-  id: string,
-  params?: ShortcutParams,
-): void {
+export function invokeShortcut(id: string, params?: ShortcutParams): void {
   keyboardStore.invokeShortcut(id, params);
 }
