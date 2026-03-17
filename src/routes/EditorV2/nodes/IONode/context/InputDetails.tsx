@@ -1,11 +1,12 @@
 import { observer } from "mobx-react-lite";
-import { type ChangeEvent, type FocusEvent } from "react";
+import { type ChangeEvent, type FocusEvent, type KeyboardEvent } from "react";
 
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Textarea } from "@/components/ui/textarea";
 import { Text } from "@/components/ui/typography";
+import { AutoGrowTextarea } from "@/routes/EditorV2/components/AutoGrowTextArea";
+import { InputLabel } from "@/routes/EditorV2/components/InputLabel";
 
 import { useSpec } from "../../../providers/SpecContext";
 import {
@@ -50,7 +51,7 @@ export const InputDetails = observer(function InputDetails({
     }
   };
 
-  const handleDefaultValueChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleDefaultValueChange = (event: FocusEvent<HTMLTextAreaElement>) => {
     const value = event.target.value;
     const newDefault = value || undefined;
     if (newDefault !== input.defaultValue) {
@@ -58,15 +59,29 @@ export const InputDetails = observer(function InputDetails({
     }
   };
 
+  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key !== "Enter") {
+      return true;
+    }
+
+    if (event.shiftKey) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.blur();
+  };
+
   return (
     <BlockStack>
       <BlockStack gap="4" className="p-3">
         <BlockStack gap="2">
-          <Label htmlFor="input-name" className="text-gray-600">
+          <InputLabel htmlFor="input-name" onCopy={() => input.name}>
             Name
-          </Label>
+          </InputLabel>
           <Input
-            key={`${entityId}-${input.name}`}
+            key={`${entityId}-name`}
             id="input-name"
             defaultValue={input.name}
             onBlur={handleNameChange}
@@ -75,11 +90,14 @@ export const InputDetails = observer(function InputDetails({
         </BlockStack>
 
         <BlockStack gap="2">
-          <Label htmlFor="input-type" className="text-gray-600">
+          <InputLabel
+            htmlFor="input-type"
+            onCopy={() => (input.type ? String(input.type) : "")}
+          >
             Type
-          </Label>
+          </InputLabel>
           <Input
-            key={`${entityId}-type-${String(input.type ?? "")}`}
+            key={`${entityId}-type`}
             id="input-type"
             defaultValue={input.type ? String(input.type) : ""}
             placeholder="e.g. String, Integer, Float"
@@ -89,11 +107,14 @@ export const InputDetails = observer(function InputDetails({
         </BlockStack>
 
         <BlockStack gap="2">
-          <Label htmlFor="input-description" className="text-gray-600">
+          <InputLabel
+            htmlFor="input-description"
+            onCopy={() => input.description}
+          >
             Description
-          </Label>
+          </InputLabel>
           <Textarea
-            key={`${entityId}-desc-${input.description ?? ""}`}
+            key={`${entityId}-desc`}
             id="input-description"
             defaultValue={input.description ?? ""}
             placeholder="Describe this input..."
@@ -104,16 +125,22 @@ export const InputDetails = observer(function InputDetails({
         </BlockStack>
 
         <BlockStack gap="2">
-          <Label htmlFor="input-default-value" className="text-gray-600">
+          <InputLabel
+            htmlFor="input-default-value"
+            onCopy={() => input.defaultValue}
+          >
             Default Value
-          </Label>
-          <Input
-            key={`${entityId}-default-${input.defaultValue ?? ""}`}
+          </InputLabel>
+
+          <AutoGrowTextarea
             id="input-default-value"
-            defaultValue={input.defaultValue ?? ""}
-            placeholder="Default value"
+            key={`${entityId}-default-value`}
+            defaultValue={input.defaultValue}
             onBlur={handleDefaultValueChange}
-            className="font-mono text-sm"
+            onKeyDown={handleKeyDown}
+            placeholder="Default value"
+            className="h-4 min-h-4 text-xs font-mono"
+            data-testid="input-default-value"
           />
         </BlockStack>
 
