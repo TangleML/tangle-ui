@@ -93,12 +93,6 @@ export const RunSection = ({ onEmptyList, hideFilters }: RunSectionProps) => {
       },
     });
 
-  useEffect(() => {
-    if (!search.page_token && search.filter === undefined) {
-      handleFilterChange(isCreatedByMeDefault);
-    }
-  }, [isCreatedByMeDefault]);
-
   const handleFilterChange = (value: boolean) => {
     const nextSearch: RunSectionSearch = { ...search };
     delete nextSearch.page_token;
