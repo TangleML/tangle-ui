@@ -1,11 +1,10 @@
-import "../nodes"; // ensure manifests are registered
+import "@/routes/EditorV2/nodes"; // ensure manifests are registered
 
 import type { Edge, Node } from "@xyflow/react";
 import { useRef } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
-
-import { NODE_TYPE_REGISTRY } from "../nodes/registry";
+import { NODE_TYPE_REGISTRY } from "@/routes/EditorV2/nodes/registry";
 
 const EMPTY_RESULT: { nodes: Node[]; edges: Edge[] } = { nodes: [], edges: [] };
 

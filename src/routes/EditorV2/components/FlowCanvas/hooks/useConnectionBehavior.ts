@@ -7,16 +7,15 @@ import type {
 } from "@xyflow/react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
-
 import {
   GHOST_ESTIMATED_WIDTH,
   GHOST_NODE_ID,
   GHOST_OFFSET_X,
   GHOST_OFFSET_Y,
-} from "../../../nodes/GhostNode/components/GhostNode";
-import { CMDALT } from "../../../shortcuts/keys";
-import { connectNodes, createConnectedIONode } from "../../../store/actions";
-import { keyboardStore } from "../../../store/keyboardStore";
+} from "@/routes/EditorV2/nodes/GhostNode/components/GhostNode";
+import { CMDALT } from "@/routes/EditorV2/shortcuts/keys";
+import { connectNodes, createConnectedIONode } from "@/routes/EditorV2/store/actions";
+import { keyboardStore } from "@/routes/EditorV2/store/keyboardStore";
 
 export function useConnectionBehavior(
   spec: ComponentSpec | null,

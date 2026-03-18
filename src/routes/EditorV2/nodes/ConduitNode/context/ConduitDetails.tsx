@@ -8,14 +8,13 @@ import { Icon } from "@/components/ui/icon";
 import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
-
-import { useSpec } from "../../../providers/SpecContext";
 import {
   getConduits,
   removeConduit,
   unassignEdgeFromConduit,
   updateConduitColor,
-} from "../conduits.actions";
+} from "@/routes/EditorV2/nodes/ConduitNode/conduits.actions";
+import { useSpec } from "@/routes/EditorV2/providers/SpecContext";
 
 interface ConduitDetailsProps {
   entityId: string;

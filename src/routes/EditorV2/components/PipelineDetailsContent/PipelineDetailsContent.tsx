@@ -21,6 +21,12 @@ import {
   type Output,
 } from "@/models/componentSpec";
 import type { TypeSpecType } from "@/models/componentSpec/entities/types";
+import { AnnotationsBlock } from "@/routes/EditorV2/components/AnnotationsBlock/AnnotationsBlock";
+import { ValidationSummary } from "@/routes/EditorV2/components/ValidationSummary";
+import { useSpec } from "@/routes/EditorV2/providers/SpecContext";
+import { updatePipelineDescription } from "@/routes/EditorV2/store/actions";
+import { selectNode, setPendingFocusNode } from "@/routes/EditorV2/store/editorStore";
+import { navigateToPath } from "@/routes/EditorV2/store/navigationStore";
 import { type ComponentSpec as WiredComponentSpec } from "@/utils/componentSpec";
 import {
   generateDigest,
@@ -29,12 +35,6 @@ import {
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 import { componentSpecToYaml } from "@/utils/yaml";
 
-import { useSpec } from "../../providers/SpecContext";
-import { updatePipelineDescription } from "../../store/actions";
-import { selectNode, setPendingFocusNode } from "../../store/editorStore";
-import { navigateToPath } from "../../store/navigationStore";
-import { AnnotationsBlock } from "../AnnotationsBlock/AnnotationsBlock";
-import { ValidationSummary } from "../ValidationSummary";
 import { RenamePipelineButton } from "./components/RenamePipelineButton";
 import { ViewYamlButton } from "./components/ViewYamlButton";
 

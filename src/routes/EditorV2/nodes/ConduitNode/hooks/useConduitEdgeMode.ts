@@ -2,11 +2,10 @@ import type { Edge } from "@xyflow/react";
 import { useEffect } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
-
-import { ESCAPE } from "../../../shortcuts/keys";
-import { clearSelection, editorStore } from "../../../store/editorStore";
-import { registerShortcut } from "../../../store/keyboardStore";
-import { getConduits, toggleEdgeOnConduit } from "../conduits.actions";
+import { getConduits, toggleEdgeOnConduit } from "@/routes/EditorV2/nodes/ConduitNode/conduits.actions";
+import { ESCAPE } from "@/routes/EditorV2/shortcuts/keys";
+import { clearSelection, editorStore } from "@/routes/EditorV2/store/editorStore";
+import { registerShortcut } from "@/routes/EditorV2/store/keyboardStore";
 
 function useConduitSelectionMode(edges: Edge[], spec: ComponentSpec | null) {
   const isConduitSelected = editorStore.selectedNodeType === "conduit";

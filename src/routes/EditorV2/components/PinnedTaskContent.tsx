@@ -6,9 +6,8 @@ import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Text } from "@/components/ui/typography";
+import { useSpec } from "@/routes/EditorV2/providers/SpecContext";
 import { componentSpecToText } from "@/utils/yaml";
-
-import { useSpec } from "../providers/SpecContext";
 
 interface PinnedTaskContentProps {
   /** The entity ID of the task to display */

@@ -6,8 +6,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
+import { restoreWindow } from "@/routes/EditorV2/windows/windows.actions";
 
-import { restoreWindow } from "../../../windows/windows.actions";
 import { MenuTriggerButton } from "./MenuTriggerButton";
 
 export function ComponentsLibraryMenu() {

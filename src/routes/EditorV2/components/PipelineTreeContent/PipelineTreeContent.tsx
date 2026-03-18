@@ -14,12 +14,12 @@ import { useEffect, useState } from "react";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
-
 import {
   editorStore,
   setSelectedValidationIssue,
-} from "../../store/editorStore";
-import { navigationStore } from "../../store/navigationStore";
+} from "@/routes/EditorV2/store/editorStore";
+import { navigationStore } from "@/routes/EditorV2/store/navigationStore";
+
 import { RootNode } from "./components/RootNode";
 import { ValidationIssueResolutionCard } from "./components/ValidationIssueResolutionCard";
 import { buildExpandedPaths, buildNavPathArray } from "./utils";

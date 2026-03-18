@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 
-import { CMDALT, SHIFT } from "../shortcuts/keys";
-import { registerShortcut } from "../store/keyboardStore";
-import { undoStore } from "../store/undoStore";
+import { CMDALT, SHIFT } from "@/routes/EditorV2/shortcuts/keys";
+import { registerShortcut } from "@/routes/EditorV2/store/keyboardStore";
+import { undoStore } from "@/routes/EditorV2/store/undoStore";
 
 export function useUndoRedoKeyboard(): void {
   useEffect(() => {

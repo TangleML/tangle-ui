@@ -5,8 +5,7 @@ import { InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/typography";
 import type { Task } from "@/models/componentSpec";
-
-import { batchSetTaskColor } from "../../../../../store/actions";
+import { batchSetTaskColor } from "@/routes/EditorV2/store/actions";
 
 const TASK_COLOR_ANNOTATION = "tangleml.com/editor/task-color";
 

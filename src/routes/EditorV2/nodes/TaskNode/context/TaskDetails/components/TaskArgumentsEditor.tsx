@@ -4,21 +4,20 @@ import { useEffect, useRef } from "react";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import type { ComponentSpecJson, Task } from "@/models/componentSpec";
+import { ArgumentCodeEditor } from "@/routes/EditorV2/components/ArgumentCodeEditor";
+import { ArgumentRow } from "@/routes/EditorV2/components/ArgumentRow";
+import { useSpec } from "@/routes/EditorV2/providers/SpecContext";
 import { CTRL, SHIFT } from "@/routes/EditorV2/shortcuts/keys";
+import {
+  editorStore,
+  setFocusedArgument,
+} from "@/routes/EditorV2/store/editorStore";
 import { registerShortcut } from "@/routes/EditorV2/store/keyboardStore";
+import { useContentWindowState } from "@/routes/EditorV2/windows/ContentWindowStateContext";
 import {
   getWindowById,
   toggleMaximize,
 } from "@/routes/EditorV2/windows/windows.actions";
-
-import { ArgumentCodeEditor } from "../../../../../components/ArgumentCodeEditor";
-import { ArgumentRow } from "../../../../../components/ArgumentRow";
-import { useSpec } from "../../../../../providers/SpecContext";
-import {
-  editorStore,
-  setFocusedArgument,
-} from "../../../../../store/editorStore";
-import { useContentWindowState } from "../../../../../windows/ContentWindowStateContext";
 
 interface TaskArgumentsEditorProps {
   task: Task;

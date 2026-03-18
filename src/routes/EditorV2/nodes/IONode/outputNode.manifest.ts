@@ -1,11 +1,11 @@
 import { Annotations } from "@/models/componentSpec/annotations";
 import { Output } from "@/models/componentSpec/entities/output";
+import { createEntityNode, ioDefaultPosition } from "@/routes/EditorV2/nodes/buildUtils";
+import type { IONodeData, NodeTypeManifest } from "@/routes/EditorV2/nodes/types";
+import { addOutput } from "@/routes/EditorV2/store/actions";
+import { generateUniqueOutputName } from "@/routes/EditorV2/store/nameUtils";
+import type { OutputNodeSnapshot } from "@/routes/EditorV2/store/nodeCloneHandlers";
 
-import { addOutput } from "../../store/actions";
-import { generateUniqueOutputName } from "../../store/nameUtils";
-import type { OutputNodeSnapshot } from "../../store/nodeCloneHandlers";
-import { createEntityNode, ioDefaultPosition } from "../buildUtils";
-import type { IONodeData, NodeTypeManifest } from "../types";
 import { IONode } from "./components/IONode";
 import { OutputDetails } from "./context/OutputDetails";
 

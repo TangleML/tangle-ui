@@ -6,10 +6,9 @@ import {
   type LayoutAlgorithm,
 } from "@/components/shared/ReactFlow/FlowCanvas/utils/autolayout";
 import type { ComponentSpec } from "@/models/componentSpec";
-
-import { CMDALT, SHIFT } from "../shortcuts/keys";
-import { applyAutoLayoutPositions } from "../store/actions";
-import { registerShortcut } from "../store/keyboardStore";
+import { CMDALT, SHIFT } from "@/routes/EditorV2/shortcuts/keys";
+import { applyAutoLayoutPositions } from "@/routes/EditorV2/store/actions";
+import { registerShortcut } from "@/routes/EditorV2/store/keyboardStore";
 
 /**
  * Registers Cmd+Shift+L keyboard shortcut for auto-layout.

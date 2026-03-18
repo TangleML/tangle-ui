@@ -1,17 +1,16 @@
-import "../../../nodes"; // ensure manifests are registered
+import "@/routes/EditorV2/nodes"; // ensure manifests are registered
 
 import type { EdgeChange, NodeChange, ReactFlowProps } from "@xyflow/react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
+import { cleanupDeletedBinding } from "@/routes/EditorV2/nodes/ConduitNode/conduits.actions";
+import { NODE_TYPE_REGISTRY } from "@/routes/EditorV2/nodes/registry";
+import { deleteEdge } from "@/routes/EditorV2/store/actions";
 import {
   clearMultiSelection,
   clearSelection,
 } from "@/routes/EditorV2/store/editorStore";
-
-import { cleanupDeletedBinding } from "../../../nodes/ConduitNode/conduits.actions";
-import { NODE_TYPE_REGISTRY } from "../../../nodes/registry";
-import { deleteEdge } from "../../../store/actions";
-import { withUndoGroup } from "../../../store/undoStore";
+import { withUndoGroup } from "@/routes/EditorV2/store/undoStore";
 
 export function useNodeEdgeChanges(
   spec: ComponentSpec | null,

@@ -1,12 +1,11 @@
-import "../../../nodes"; // ensure manifests are registered
+import "@/routes/EditorV2/nodes"; // ensure manifests are registered
 
 import type { ReactFlowInstance, ReactFlowProps } from "@xyflow/react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
-
-import { NODE_TYPE_REGISTRY } from "../../../nodes/registry";
-import { clearSelection } from "../../../store/editorStore";
+import { NODE_TYPE_REGISTRY } from "@/routes/EditorV2/nodes/registry";
+import { clearSelection } from "@/routes/EditorV2/store/editorStore";
 
 export function usePaneClickBehavior(
   spec: ComponentSpec | null,

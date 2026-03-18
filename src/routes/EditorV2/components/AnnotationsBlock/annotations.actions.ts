@@ -1,6 +1,5 @@
 import type { Annotations } from "@/models/componentSpec/annotations";
-
-import { withUndoGroup } from "../../store/undoStore";
+import { withUndoGroup } from "@/routes/EditorV2/store/undoStore";
 
 export function addAnnotation(annotations: Annotations) {
   withUndoGroup("Add annotation", () => {

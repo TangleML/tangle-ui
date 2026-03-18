@@ -1,7 +1,7 @@
 import { action, makeObservable, observable } from "mobx";
 
-import type { KeyConstant } from "../shortcuts/keys";
-import { normalizeComboKey } from "../shortcuts/keys";
+import type { KeyConstant } from "@/routes/EditorV2/shortcuts/keys";
+import { normalizeComboKey } from "@/routes/EditorV2/shortcuts/keys";
 
 type ShortcutKeys = KeyConstant[];
 

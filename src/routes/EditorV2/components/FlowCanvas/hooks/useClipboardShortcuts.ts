@@ -4,15 +4,14 @@ import { useEffect } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 import { NODE_TYPE_REGISTRY } from "@/routes/EditorV2/nodes/registry";
-
-import { CMDALT } from "../../../shortcuts/keys";
+import { CMDALT } from "@/routes/EditorV2/shortcuts/keys";
 import {
   copySelectedNodes,
   duplicateSelectedNodes,
   pasteNodes,
-} from "../../../store/actions";
-import { editorStore, type SelectedNode } from "../../../store/editorStore";
-import { registerShortcut } from "../../../store/keyboardStore";
+} from "@/routes/EditorV2/store/actions";
+import { editorStore, type SelectedNode } from "@/routes/EditorV2/store/editorStore";
+import { registerShortcut } from "@/routes/EditorV2/store/keyboardStore";
 
 /**
  * Returns the current effective selection: multiSelection if multiple nodes

@@ -12,9 +12,8 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Heading, Text } from "@/components/ui/typography";
 import { JsonSerializer } from "@/models/componentSpec";
+import { navigationStore } from "@/routes/EditorV2/store/navigationStore";
 import type { ComponentSpec } from "@/utils/componentSpec";
-
-import { navigationStore } from "../store/navigationStore";
 
 function deepClone<T>(obj: T): T {
   return JSON.parse(JSON.stringify(obj));

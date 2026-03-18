@@ -6,13 +6,13 @@ import type { FlexNodeData } from "@/components/shared/ReactFlow/FlowCanvas/Flex
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
-
-import { useSpec } from "../../../providers/SpecContext";
 import {
   findFlexNode,
   updateFlexNode,
   updateFlexNodeProperties,
-} from "../flexNode.actions";
+} from "@/routes/EditorV2/nodes/FlexNode/flexNode.actions";
+import { useSpec } from "@/routes/EditorV2/providers/SpecContext";
+
 import { ColorEditor } from "./components/ColorEditor";
 import { ContentEditor } from "./components/ContentEditor";
 import { ZIndexEditor } from "./components/ZIndexEditor";

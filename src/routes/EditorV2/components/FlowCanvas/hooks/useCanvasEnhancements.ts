@@ -1,13 +1,13 @@
-import "../../../nodes"; // ensure manifests are registered
+import "@/routes/EditorV2/nodes"; // ensure manifests are registered
 
 import type { Edge, Node } from "@xyflow/react";
 import type { MouseEvent } from "react";
 
-import { NODE_TYPE_REGISTRY } from "../../../nodes/registry";
+import { NODE_TYPE_REGISTRY } from "@/routes/EditorV2/nodes/registry";
 import type {
   CanvasEnhancementParams,
   CanvasEnhancementResult,
-} from "../../../nodes/types";
+} from "@/routes/EditorV2/nodes/types";
 
 const NOOP_ENHANCEMENT = (): CanvasEnhancementResult => ({});
 

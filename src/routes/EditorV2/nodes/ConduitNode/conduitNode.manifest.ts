@@ -5,12 +5,12 @@ import type {
   EdgeConduit,
   GuidelineOrientation,
 } from "@/models/componentSpec/annotations";
+import { buildEntityPositionMap } from "@/routes/EditorV2/nodes/buildUtils";
+import type { NodeTypeManifest } from "@/routes/EditorV2/nodes/types";
+import { SHIFT } from "@/routes/EditorV2/shortcuts/keys";
+import { selectNode } from "@/routes/EditorV2/store/editorStore";
+import { keyboardStore } from "@/routes/EditorV2/store/keyboardStore";
 
-import { SHIFT } from "../../shortcuts/keys";
-import { selectNode } from "../../store/editorStore";
-import { keyboardStore } from "../../store/keyboardStore";
-import { buildEntityPositionMap } from "../buildUtils";
-import type { NodeTypeManifest } from "../types";
 import { ConduitNode, type ConduitNodeData } from "./components/ConduitNode";
 import {
   addGuideline,

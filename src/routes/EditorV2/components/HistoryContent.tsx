@@ -19,8 +19,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
-
-import { undoStore } from "../store/undoStore";
+import { undoStore } from "@/routes/EditorV2/store/undoStore";
 
 function getUndoEventName(event: UndoEvent): string {
   if (event.type === "group") return event.groupName ?? "Group action";

@@ -6,13 +6,13 @@ import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import type { ComponentSpec } from "@/models/componentSpec";
-
+import { isSubgraphTask } from "@/routes/EditorV2/components/PipelineTreeContent/utils";
+import { countErrors } from "@/routes/EditorV2/components/ValidationSummary";
 import {
   navigateToLevel,
   navigationStore,
-} from "../../../store/navigationStore";
-import { countErrors } from "../../ValidationSummary";
-import { isSubgraphTask } from "../utils";
+} from "@/routes/EditorV2/store/navigationStore";
+
 import { IssueBadge } from "./IssueBadge";
 import { IssueRow } from "./IssueRow";
 import { SubgraphNode } from "./SubgraphNode";

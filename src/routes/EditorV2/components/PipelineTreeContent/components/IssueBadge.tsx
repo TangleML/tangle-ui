@@ -1,7 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import type { ValidationIssue } from "@/models/componentSpec";
-
-import { countErrors, countWarnings } from "../../ValidationSummary";
+import { countErrors, countWarnings } from "@/routes/EditorV2/components/ValidationSummary";
 
 interface IssueBadgeProps {
   issues: ValidationIssue[];

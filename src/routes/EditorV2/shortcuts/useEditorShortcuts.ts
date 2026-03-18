@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 
-import { keyboardStore } from "../store/keyboardStore";
+import { keyboardStore } from "@/routes/EditorV2/store/keyboardStore";
+
 import { normalizeKeyFromEvent } from "./keys";
 import { isEditableTarget } from "./shortcutUtils";
 

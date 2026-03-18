@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
-import { PipelineTreeContent } from "../components/PipelineTreeContent/PipelineTreeContent";
-import { getWindowById, openWindow } from "../windows/windows.actions";
+import { PipelineTreeContent } from "@/routes/EditorV2/components/PipelineTreeContent/PipelineTreeContent";
+import { getWindowById, openWindow } from "@/routes/EditorV2/windows/windows.actions";
 
 export const PIPELINE_TREE_WINDOW_ID = "pipeline-tree";
 

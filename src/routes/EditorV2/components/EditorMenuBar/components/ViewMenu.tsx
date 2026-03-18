@@ -14,10 +14,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
+import { ShorcutBadge } from "@/routes/EditorV2/components/ShorcutBadge";
+import { focusModeStore, toggleFocusMode } from "@/routes/EditorV2/hooks/useFocusMode";
+import { invokeShortcut, keyboardStore } from "@/routes/EditorV2/store/keyboardStore";
 
-import { focusModeStore, toggleFocusMode } from "../../../hooks/useFocusMode";
-import { invokeShortcut, keyboardStore } from "../../../store/keyboardStore";
-import { ShorcutBadge } from "../../ShorcutBadge";
 import { MenuTriggerButton } from "./MenuTriggerButton";
 
 const LAYOUT_ALGORITHMS: { key: LayoutAlgorithm; label: string }[] = [

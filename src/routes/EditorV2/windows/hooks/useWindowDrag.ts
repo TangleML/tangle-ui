@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 
-import { detectSnapPreview, shouldDetach } from "../snapUtils";
-import type { Position, SnapPreviewType } from "../types";
+import { detectSnapPreview, shouldDetach } from "@/routes/EditorV2/windows/snapUtils";
+import type { Position, SnapPreviewType } from "@/routes/EditorV2/windows/types";
 import {
   attachWindow,
   bringToFront,
@@ -15,7 +15,7 @@ import {
   isWindowDocked,
   undockWindow,
   updateWindowPosition,
-} from "../windows.actions";
+} from "@/routes/EditorV2/windows/windows.actions";
 
 // ---------------------------------------------------------------------------
 // Drag phase state machine

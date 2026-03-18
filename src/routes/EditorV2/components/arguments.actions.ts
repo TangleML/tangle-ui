@@ -1,7 +1,6 @@
 import type { ArgumentType, ComponentSpec, Task } from "@/models/componentSpec";
+import { withUndoGroup } from "@/routes/EditorV2/store/undoStore";
 import type { DynamicDataArgument } from "@/utils/componentSpec";
-
-import { withUndoGroup } from "../store/undoStore";
 
 export function setArgument(
   spec: ComponentSpec,

@@ -2,8 +2,7 @@ import { observer } from "mobx-react-lite";
 
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
-
-import { useSpec } from "../providers/SpecContext";
+import { useSpec } from "@/routes/EditorV2/providers/SpecContext";
 
 interface InputValidationIndicatorProps {
   entityId: string;

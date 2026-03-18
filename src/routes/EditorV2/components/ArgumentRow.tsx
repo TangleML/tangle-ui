@@ -12,10 +12,10 @@ import type {
   InputSpecJson,
   Task,
 } from "@/models/componentSpec";
+import { createInputAndConnect } from "@/routes/EditorV2/store/actions";
+import { editorStore, setFocusedArgument } from "@/routes/EditorV2/store/editorStore";
 import type { DynamicDataArgument } from "@/utils/componentSpec";
 
-import { createInputAndConnect } from "../store/actions";
-import { editorStore, setFocusedArgument } from "../store/editorStore";
 import {
   quickConnect,
   removeArgument,

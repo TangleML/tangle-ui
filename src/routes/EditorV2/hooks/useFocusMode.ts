@@ -2,8 +2,8 @@ import { useReactFlow } from "@xyflow/react";
 import { action, makeObservable, observable } from "mobx";
 import { useEffect } from "react";
 
-import { CMDALT } from "../shortcuts/keys";
-import { registerShortcut } from "../store/keyboardStore";
+import { CMDALT } from "@/routes/EditorV2/shortcuts/keys";
+import { registerShortcut } from "@/routes/EditorV2/store/keyboardStore";
 
 class FocusModeStore {
   @observable accessor active = false;
@@ -23,9 +23,8 @@ class FocusModeStore {
 
 export const focusModeStore = new FocusModeStore();
 
-export function toggleFocusMode(fitView?: () => void): void {
+export function toggleFocusMode(): void {
   focusModeStore.toggle();
-  //fitView?.();
 }
 
 /**
@@ -41,7 +40,7 @@ export function useFocusMode(): void {
       id: "focus-mode",
       keys: [CMDALT, "/"],
       label: "Focus mode",
-      action: () => toggleFocusMode(fitView),
+      action: () => toggleFocusMode(),
     });
 
     return () => {

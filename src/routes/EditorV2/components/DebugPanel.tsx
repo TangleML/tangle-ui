@@ -7,16 +7,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Text } from "@/components/ui/typography";
 import type { ComponentSpec } from "@/models/componentSpec";
 import { JsonSerializer } from "@/models/componentSpec";
-import { componentSpecToText } from "@/utils/yaml";
-
-import { editorStore } from "../store/editorStore";
-import { keyboardStore } from "../store/keyboardStore";
-import { navigationStore } from "../store/navigationStore";
+import { editorStore } from "@/routes/EditorV2/store/editorStore";
+import { keyboardStore } from "@/routes/EditorV2/store/keyboardStore";
+import { navigationStore } from "@/routes/EditorV2/store/navigationStore";
 import {
-  closeWindow,
   getWindowById,
   openWindow,
-} from "../windows/windows.actions";
+} from "@/routes/EditorV2/windows/windows.actions";
+import { componentSpecToText } from "@/utils/yaml";
+
 import { ShorcutBadge } from "./ShorcutBadge";
 
 const DEBUG_PANEL_WINDOW_ID = "debug-panel";

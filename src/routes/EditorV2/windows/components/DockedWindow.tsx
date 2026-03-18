@@ -4,22 +4,22 @@ import { createPortal } from "react-dom";
 
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
-
-import type { ContentWindowState } from "../ContentWindowStateContext";
-import { ContentWindowStateProvider } from "../ContentWindowStateContext";
-import { useWindowDrag } from "../hooks/useWindowDrag";
-import { SnapPreview } from "../SnapPreview";
+import type { ContentWindowState } from "@/routes/EditorV2/windows/ContentWindowStateContext";
+import { ContentWindowStateProvider } from "@/routes/EditorV2/windows/ContentWindowStateContext";
+import { useWindowDrag } from "@/routes/EditorV2/windows/hooks/useWindowDrag";
+import { SnapPreview } from "@/routes/EditorV2/windows/SnapPreview";
 import {
   DEFAULT_DOCKED_HEIGHT,
   MIN_DOCKED_HEIGHT,
   type WindowAction,
-} from "../types";
+} from "@/routes/EditorV2/windows/types";
 import {
   getWindowById,
   getWindowContent,
   isDockAreaCollapsed,
   updateDockedWindowHeight,
-} from "../windows.actions";
+} from "@/routes/EditorV2/windows/windows.actions";
+
 import { WindowActions } from "./WindowActions";
 import { WindowHeader } from "./WindowHeader";
 

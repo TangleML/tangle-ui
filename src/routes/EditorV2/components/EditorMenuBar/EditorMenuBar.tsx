@@ -5,10 +5,10 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Link } from "@/components/ui/link";
 import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/typography";
+import { navigationStore } from "@/routes/EditorV2/store/navigationStore";
+import { restoreWindow } from "@/routes/EditorV2/windows/windows.actions";
 import { TOP_NAV_HEIGHT } from "@/utils/constants";
 
-import { navigationStore } from "../../store/navigationStore";
-import { restoreWindow } from "../../windows/windows.actions";
 import { AppMenuActions } from "./components/AppMenuActions";
 import { AutoSaveIndicator } from "./components/AutoSaveIndicator";
 import { ComponentsLibraryMenu } from "./components/ComponentsLibraryMenu";

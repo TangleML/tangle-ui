@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
-import { RunsAndSubmissionContent } from "../components/RunsAndSubmissionContent";
-import { getWindowById, openWindow } from "../windows/windows.actions";
+import { RunsAndSubmissionContent } from "@/routes/EditorV2/components/RunsAndSubmissionContent";
+import { getWindowById, openWindow } from "@/routes/EditorV2/windows/windows.actions";
 
 const RUNS_AND_SUBMISSION_WINDOW_ID = "runs-and-submission";
 

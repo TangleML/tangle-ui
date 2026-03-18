@@ -6,8 +6,7 @@ import {
   type EdgeConduit,
   type GuidelineOrientation,
 } from "@/models/componentSpec/annotations";
-
-import { withUndoGroup } from "../../store/undoStore";
+import { withUndoGroup } from "@/routes/EditorV2/store/undoStore";
 
 const DEFAULT_COLORS = [
   "#6366f1",

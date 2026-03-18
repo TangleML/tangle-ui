@@ -6,15 +6,15 @@ import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import type { ComponentSpec, Task } from "@/models/componentSpec";
-
-import { setHoveredEntity } from "../../../store/editorStore";
+import { getEntityIssues, isSubgraphTask } from "@/routes/EditorV2/components/PipelineTreeContent/utils";
+import { countErrors } from "@/routes/EditorV2/components/ValidationSummary";
+import { setHoveredEntity } from "@/routes/EditorV2/store/editorStore";
 import {
   navigateToLevel,
   navigateToPath,
   navigationStore,
-} from "../../../store/navigationStore";
-import { countErrors } from "../../ValidationSummary";
-import { getEntityIssues, isSubgraphTask } from "../utils";
+} from "@/routes/EditorV2/store/navigationStore";
+
 import { IssueBadge } from "./IssueBadge";
 import { TaskLeafNode } from "./TaskLeafNode";
 

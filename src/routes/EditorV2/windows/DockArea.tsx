@@ -4,8 +4,8 @@ import { useEffect, useRef } from "react";
 import { BlockStack } from "@/components/ui/layout";
 import { VerticalResizeHandle } from "@/components/ui/resize-handle";
 import { cn } from "@/lib/utils";
+import { focusModeStore } from "@/routes/EditorV2/hooks/useFocusMode";
 
-import { focusModeStore } from "../hooks/useFocusMode";
 import { registerDockAreaElement } from "./snapUtils";
 import {
   COLLAPSED_DOCK_AREA_WIDTH,
