@@ -476,7 +476,7 @@ function parseJsonAndGetProperty(
   try {
     const obj = JSON.parse(jsonString || "{}");
     const firstKey = Object.keys(obj)[0];
-    return getKey ? firstKey || "" : obj[firstKey] || "";
+    return getKey ? firstKey || "" : String(obj[firstKey] ?? "");
   } catch {
     return "";
   }
