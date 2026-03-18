@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
-import { HistoryContent } from "../components/HistoryContent";
-import { getWindowById, openWindow } from "../windows/windows.actions";
+import { HistoryContent } from "@/routes/EditorV2/components/HistoryContent";
+import { getWindowById, openWindow } from "@/routes/EditorV2/windows/windows.actions";
 
 const HISTORY_WINDOW_ID = "history";
 

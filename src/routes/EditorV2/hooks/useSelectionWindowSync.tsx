@@ -4,16 +4,16 @@
 import { reaction } from "mobx";
 import { useEffect } from "react";
 
-import { ContextPanelContent } from "../components/ContextPanel/ContextPanel";
-import { PinnedTaskContent } from "../components/PinnedTaskContent";
-import { editorStore } from "../store/editorStore";
-import { navigationStore } from "../store/navigationStore";
+import { ContextPanelContent } from "@/routes/EditorV2/components/ContextPanel/ContextPanel";
+import { PinnedTaskContent } from "@/routes/EditorV2/components/PinnedTaskContent";
+import { editorStore } from "@/routes/EditorV2/store/editorStore";
+import { navigationStore } from "@/routes/EditorV2/store/navigationStore";
 import {
   closeWindow,
   getWindowById,
   openWindow,
   restoreWindow,
-} from "../windows/windows.actions";
+} from "@/routes/EditorV2/windows/windows.actions";
 
 const CONTEXT_PANEL_WINDOW_ID = "context-panel";
 

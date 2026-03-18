@@ -1,12 +1,12 @@
 import { Annotations } from "@/models/componentSpec/annotations";
 import { Input } from "@/models/componentSpec/entities/input";
+import { createEntityNode, ioDefaultPosition } from "@/routes/EditorV2/nodes/buildUtils";
+import type { IONodeData } from "@/routes/EditorV2/nodes/types";
+import type { NodeTypeManifest } from "@/routes/EditorV2/nodes/types";
+import { addInput } from "@/routes/EditorV2/store/actions";
+import { generateUniqueInputName } from "@/routes/EditorV2/store/nameUtils";
+import type { InputNodeSnapshot } from "@/routes/EditorV2/store/nodeCloneHandlers";
 
-import { addInput } from "../../store/actions";
-import { generateUniqueInputName } from "../../store/nameUtils";
-import type { InputNodeSnapshot } from "../../store/nodeCloneHandlers";
-import { createEntityNode, ioDefaultPosition } from "../buildUtils";
-import type { IONodeData } from "../types";
-import type { NodeTypeManifest } from "../types";
 import { IONode } from "./components/IONode";
 import { InputDetails } from "./context/InputDetails";
 

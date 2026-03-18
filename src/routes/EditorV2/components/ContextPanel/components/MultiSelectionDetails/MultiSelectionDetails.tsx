@@ -12,16 +12,16 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/typography";
 import type { Task } from "@/models/componentSpec";
-
-import { useSpec } from "../../../../providers/SpecContext";
+import { useSpec } from "@/routes/EditorV2/providers/SpecContext";
 import {
   applyAutoLayoutPositions,
   createSubgraph,
-} from "../../../../store/actions";
+} from "@/routes/EditorV2/store/actions";
 import {
   clearMultiSelection,
   editorStore,
-} from "../../../../store/editorStore";
+} from "@/routes/EditorV2/store/editorStore";
+
 import { BatchArgumentRow } from "./components/BatchArgumentRow";
 import { BatchTaskColor } from "./components/BatchTaskColor";
 import {

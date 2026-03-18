@@ -1,4 +1,4 @@
-import "../../nodes"; // ensure manifests are registered
+import "@/routes/EditorV2/nodes"; // ensure manifests are registered
 
 import {
   Background,
@@ -23,21 +23,21 @@ import { useEffect, useRef, useState } from "react";
 import { BlockStack } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
 import type { ComponentSpec } from "@/models/componentSpec";
-
-import { useAutoLayout } from "../../hooks/useAutoLayout";
-import { focusModeStore } from "../../hooks/useFocusMode";
-import { useSpecToNodesEdges } from "../../hooks/useSpecToNodesEdges";
-import { NODE_TYPE_REGISTRY } from "../../nodes/registry";
-import { ZOOM_THRESHOLD } from "../../nodes/TaskNode/components/TaskNode";
-import { CMDALT } from "../../shortcuts/keys";
+import { useAutoLayout } from "@/routes/EditorV2/hooks/useAutoLayout";
+import { focusModeStore } from "@/routes/EditorV2/hooks/useFocusMode";
+import { useSpecToNodesEdges } from "@/routes/EditorV2/hooks/useSpecToNodesEdges";
+import { NODE_TYPE_REGISTRY } from "@/routes/EditorV2/nodes/registry";
+import { ZOOM_THRESHOLD } from "@/routes/EditorV2/nodes/TaskNode/components/TaskNode";
+import { CMDALT } from "@/routes/EditorV2/shortcuts/keys";
 import {
   copySelectedNodes,
   deleteSelectedNodes,
   duplicateSelectedNodes,
   pasteNodes,
-} from "../../store/actions";
-import { clearMultiSelection, editorStore } from "../../store/editorStore";
-import { keyboardStore } from "../../store/keyboardStore";
+} from "@/routes/EditorV2/store/actions";
+import { clearMultiSelection, editorStore } from "@/routes/EditorV2/store/editorStore";
+import { keyboardStore } from "@/routes/EditorV2/store/keyboardStore";
+
 import { useCanvasEnhancements } from "./hooks/useCanvasEnhancements";
 import { useClipboardShortcuts } from "./hooks/useClipboardShortcuts";
 import { useConnectionBehavior } from "./hooks/useConnectionBehavior";

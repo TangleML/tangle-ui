@@ -10,8 +10,8 @@ import {
 } from "@/components/ui/tooltip";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
+import { InputValidationIndicator } from "@/routes/EditorV2/components/InputValidationIndicator";
 
-import { InputValidationIndicator } from "../../../components/InputValidationIndicator";
 import type { TaskNodeInput, TaskNodeViewProps } from "./TaskNode";
 
 interface ClassicInputHandleProps {

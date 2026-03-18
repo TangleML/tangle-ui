@@ -1,4 +1,4 @@
-import "../../../../nodes"; // ensure manifests are registered
+import "@/routes/EditorV2/nodes"; // ensure manifests are registered
 
 import type {
   ComponentSpec,
@@ -6,9 +6,8 @@ import type {
   Task,
   TypeSpecType,
 } from "@/models/componentSpec";
-
-import { NODE_TYPE_REGISTRY } from "../../../../nodes/registry";
-import type { SelectedNode } from "../../../../store/editorStore";
+import { NODE_TYPE_REGISTRY } from "@/routes/EditorV2/nodes/registry";
+import type { SelectedNode } from "@/routes/EditorV2/store/editorStore";
 
 export interface AggregatedArgument {
   name: string;

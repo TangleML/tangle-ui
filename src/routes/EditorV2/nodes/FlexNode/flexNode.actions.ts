@@ -9,8 +9,7 @@ import {
   type ComponentSpec,
   IncrementingIdGenerator,
 } from "@/models/componentSpec";
-
-import { withUndoGroup } from "../../store/undoStore";
+import { withUndoGroup } from "@/routes/EditorV2/store/undoStore";
 
 const FLEX_NODES_KEY = "flex-nodes" as const;
 

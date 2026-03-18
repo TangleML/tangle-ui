@@ -1,12 +1,12 @@
-import "../nodes"; // ensure manifests are registered
+import "@/routes/EditorV2/nodes"; // ensure manifests are registered
 
 import type { XYPosition } from "@xyflow/react";
 import { action, computed, makeObservable, observable } from "mobx";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 import { IncrementingIdGenerator } from "@/models/componentSpec/factories/idGenerator";
+import { NODE_TYPE_REGISTRY } from "@/routes/EditorV2/nodes/registry";
 
-import { NODE_TYPE_REGISTRY } from "../nodes/registry";
 import type { SelectedNode } from "./editorStore";
 import {
   type BindingSnapshot,

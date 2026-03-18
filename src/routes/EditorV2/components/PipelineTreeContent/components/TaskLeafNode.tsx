@@ -5,19 +5,19 @@ import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import type { ComponentSpec, Task } from "@/models/componentSpec";
-
+import { getEntityIssues } from "@/routes/EditorV2/components/PipelineTreeContent/utils";
+import { countErrors, countWarnings } from "@/routes/EditorV2/components/ValidationSummary";
 import {
   selectNode,
   setHoveredEntity,
   setPendingFocusNode,
   setSelectedValidationIssue,
-} from "../../../store/editorStore";
+} from "@/routes/EditorV2/store/editorStore";
 import {
   navigateToPath,
   navigationStore,
-} from "../../../store/navigationStore";
-import { countErrors, countWarnings } from "../../ValidationSummary";
-import { getEntityIssues } from "../utils";
+} from "@/routes/EditorV2/store/navigationStore";
+
 import { IssueBadge } from "./IssueBadge";
 import { IssueRow } from "./IssueRow";
 

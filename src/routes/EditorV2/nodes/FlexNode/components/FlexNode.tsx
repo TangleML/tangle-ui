@@ -12,10 +12,9 @@ import LockToggle from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/LockTo
 import type { FlexNodeData } from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/types";
 import { BlockStack } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
-
-import { useSpec } from "../../../providers/SpecContext";
-import { selectNode } from "../../../store/editorStore";
-import { updateFlexNode, updateFlexNodeProperties } from "../flexNode.actions";
+import { updateFlexNode, updateFlexNodeProperties } from "@/routes/EditorV2/nodes/FlexNode/flexNode.actions";
+import { useSpec } from "@/routes/EditorV2/providers/SpecContext";
+import { selectNode } from "@/routes/EditorV2/store/editorStore";
 
 type FlexNodeProps = NodeProps<Node<FlexNodeData>>;
 

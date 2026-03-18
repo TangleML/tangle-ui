@@ -4,9 +4,9 @@ import {
   getFlexNodeDisplayName,
 } from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/utils";
 import type { ComponentSpec } from "@/models/componentSpec/entities/componentSpec";
+import type { NodeTypeManifest } from "@/routes/EditorV2/nodes/types";
+import type { FlexNodeSnapshot } from "@/routes/EditorV2/store/nodeCloneHandlers";
 
-import type { FlexNodeSnapshot } from "../../store/nodeCloneHandlers";
-import type { NodeTypeManifest } from "../types";
 import { EditorV2FlexNode } from "./components/FlexNode";
 import { FlexNodeDetails } from "./context/FlexNodeDetails";
 import {

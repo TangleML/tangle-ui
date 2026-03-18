@@ -3,15 +3,14 @@ import { observer } from "mobx-react-lite";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import type { ValidationIssue } from "@/models/componentSpec";
-
+import { issueTypeLabel } from "@/routes/EditorV2/components/ValidationSummary";
 import {
   editorStore,
   selectNode,
   setFocusedArgument,
   setPendingFocusNode,
   setSelectedValidationIssue,
-} from "../../../store/editorStore";
-import { issueTypeLabel } from "../../ValidationSummary";
+} from "@/routes/EditorV2/store/editorStore";
 
 interface IssueRowProps {
   issue: ValidationIssue;

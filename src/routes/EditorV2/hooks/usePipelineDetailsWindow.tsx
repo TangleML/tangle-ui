@@ -1,11 +1,11 @@
 import { useEffect } from "react";
 
-import { PipelineDetailsContent } from "../components/PipelineDetailsContent/PipelineDetailsContent";
+import { PipelineDetailsContent } from "@/routes/EditorV2/components/PipelineDetailsContent/PipelineDetailsContent";
 import {
   dockWindow,
   getWindowById,
   openWindow,
-} from "../windows/windows.actions";
+} from "@/routes/EditorV2/windows/windows.actions";
 
 const PIPELINE_DETAILS_WINDOW_ID = "pipeline-details";
 

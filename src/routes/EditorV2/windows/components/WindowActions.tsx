@@ -1,13 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
-
-import type { WindowAction } from "../types";
+import type { WindowAction } from "@/routes/EditorV2/windows/types";
 import {
   closeWindow,
   hideWindow,
   toggleMaximize,
   toggleMinimize,
-} from "../windows.actions";
+} from "@/routes/EditorV2/windows/windows.actions";
 
 interface WindowActionsProps {
   windowId: string;

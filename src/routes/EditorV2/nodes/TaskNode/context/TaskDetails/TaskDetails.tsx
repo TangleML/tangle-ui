@@ -15,18 +15,18 @@ import { Input } from "@/components/ui/input";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import type { ComponentSpecJson } from "@/models/componentSpec";
-import { componentSpecToText } from "@/utils/yaml";
-
-import { AnnotationsBlock } from "../../../../components/AnnotationsBlock/AnnotationsBlock";
-import { ZIndexEditor } from "../../../../nodes/FlexNode/context/components/ZIndexEditor";
-import { useSpec } from "../../../../providers/SpecContext";
+import { AnnotationsBlock } from "@/routes/EditorV2/components/AnnotationsBlock/AnnotationsBlock";
+import { ZIndexEditor } from "@/routes/EditorV2/nodes/FlexNode/context/components/ZIndexEditor";
+import { useSpec } from "@/routes/EditorV2/providers/SpecContext";
 import {
   deleteTask,
   duplicateSelectedNodes,
   renameTask,
-} from "../../../../store/actions";
-import { editorStore } from "../../../../store/editorStore";
-import { withUndoGroup } from "../../../../store/undoStore";
+} from "@/routes/EditorV2/store/actions";
+import { editorStore } from "@/routes/EditorV2/store/editorStore";
+import { withUndoGroup } from "@/routes/EditorV2/store/undoStore";
+import { componentSpecToText } from "@/utils/yaml";
+
 import { CopyYamlButton } from "./components/actions/CopyYamlButton";
 import { DownloadPythonButton } from "./components/actions/DownloadPythonButton";
 import { DownloadYamlButton } from "./components/actions/DownloadYamlButton";

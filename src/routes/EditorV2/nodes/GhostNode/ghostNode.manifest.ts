@@ -1,4 +1,5 @@
-import type { NodeTypeManifest } from "../types";
+import type { NodeTypeManifest } from "@/routes/EditorV2/nodes/types";
+
 import { GhostNode } from "./components/GhostNode";
 import { useGhostNode } from "./hooks/useGhostNode";
 

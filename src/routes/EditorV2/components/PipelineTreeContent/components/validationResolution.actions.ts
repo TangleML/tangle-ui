@@ -1,6 +1,5 @@
 import type { ComponentSpec, Task } from "@/models/componentSpec";
-
-import { withUndoGroup } from "../../../store/undoStore";
+import { withUndoGroup } from "@/routes/EditorV2/store/undoStore";
 
 export function deleteEntity(
   spec: ComponentSpec,

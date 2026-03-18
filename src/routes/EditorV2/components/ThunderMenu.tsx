@@ -8,7 +8,6 @@ import {
 } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/ArgumentsEditor/dynamicDataUtils";
 import { SelectSecretDialog } from "@/components/shared/SecretsManagement/SelectSecretDialog";
 import { createSecretArgument } from "@/components/shared/SecretsManagement/types";
-import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -31,9 +30,8 @@ import type {
   ComponentSpecJson,
   TypeSpecType,
 } from "@/models/componentSpec";
+import { useSpec } from "@/routes/EditorV2/providers/SpecContext";
 import type { DynamicDataArgument } from "@/utils/componentSpec";
-
-import { useSpec } from "../providers/SpecContext";
 
 interface ThunderMenuProps {
   inputName: string;

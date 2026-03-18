@@ -1,17 +1,18 @@
 import { observer } from "mobx-react-lite";
 import { type ChangeEvent, type FocusEvent } from "react";
 
-import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlock";
 import { Input } from "@/components/ui/input";
 import { BlockStack } from "@/components/ui/layout";
 import { Textarea } from "@/components/ui/textarea";
 import { Text } from "@/components/ui/typography";
 import { InputLabel } from "@/routes/EditorV2/components/InputLabel";
-
-import { useSpec } from "../../../providers/SpecContext";
-import { renameOutput, setOutputDescription } from "../../../store/actions";
-import { withUndoGroup } from "../../../store/undoStore";
-import { ZIndexEditor } from "../../FlexNode/context/components/ZIndexEditor";
+import { ZIndexEditor } from "@/routes/EditorV2/nodes/FlexNode/context/components/ZIndexEditor";
+import { useSpec } from "@/routes/EditorV2/providers/SpecContext";
+import {
+  renameOutput,
+  setOutputDescription,
+} from "@/routes/EditorV2/store/actions";
+import { withUndoGroup } from "@/routes/EditorV2/store/undoStore";
 
 interface OutputDetailsProps {
   entityId: string;

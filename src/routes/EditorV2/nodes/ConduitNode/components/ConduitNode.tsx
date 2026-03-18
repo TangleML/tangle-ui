@@ -3,15 +3,14 @@ import { observer } from "mobx-react-lite";
 
 import { cn } from "@/lib/utils";
 import type { GuidelineOrientation } from "@/models/componentSpec/annotations";
-import { pluralize } from "@/utils/string";
-
-import { useSpec } from "../../../providers/SpecContext";
+import { getConduits } from "@/routes/EditorV2/nodes/ConduitNode/conduits.actions";
+import { useSpec } from "@/routes/EditorV2/providers/SpecContext";
 import {
   clearSelection,
   editorStore,
   selectNode,
-} from "../../../store/editorStore";
-import { getConduits } from "../conduits.actions";
+} from "@/routes/EditorV2/store/editorStore";
+import { pluralize } from "@/utils/string";
 
 export interface ConduitNodeData extends Record<string, unknown> {
   conduitId: string;

@@ -2,12 +2,11 @@ import type { Edge, Node } from "@xyflow/react";
 import { useConnection } from "@xyflow/react";
 
 import type { ComponentSpec, ComponentSpecJson } from "@/models/componentSpec";
-
 import {
   GHOST_HANDLE_ID,
   GHOST_NODE_ID,
   type GhostNodeData,
-} from "../components/GhostNode";
+} from "@/routes/EditorV2/nodes/GhostNode/components/GhostNode";
 
 interface UseGhostNodeParams {
   active: boolean;

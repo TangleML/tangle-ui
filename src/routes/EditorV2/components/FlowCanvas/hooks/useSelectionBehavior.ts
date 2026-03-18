@@ -1,4 +1,4 @@
-import "../../../nodes"; // ensure manifests are registered
+import "@/routes/EditorV2/nodes"; // ensure manifests are registered
 
 import type {
   Node,
@@ -8,14 +8,13 @@ import type {
 import { useEffect } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec/entities/componentSpec";
-import { debounce } from "@/utils/debounce";
-
-import { NODE_TYPE_REGISTRY } from "../../../nodes/registry";
+import { NODE_TYPE_REGISTRY } from "@/routes/EditorV2/nodes/registry";
 import {
   clearMultiSelection,
   type SelectedNode,
   setMultiSelection,
-} from "../../../store/editorStore";
+} from "@/routes/EditorV2/store/editorStore";
+import { debounce } from "@/utils/debounce";
 
 const SELECTION_DEBOUNCE_MS = 150;
 

@@ -1,8 +1,7 @@
 import type { Task } from "@/models/componentSpec";
+import { withUndoGroup } from "@/routes/EditorV2/store/undoStore";
 import type { AnnotationConfig } from "@/types/annotations";
 import { ISO8601_DURATION_ZERO_DAYS } from "@/utils/constants";
-
-import { withUndoGroup } from "../../../../../store/undoStore";
 
 const TASK_COLOR_ANNOTATION = "tangleml.com/editor/task-color";
 

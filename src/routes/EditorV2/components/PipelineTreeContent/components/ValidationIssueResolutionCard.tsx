@@ -13,11 +13,11 @@ import type {
   Task,
   ValidationIssue,
 } from "@/models/componentSpec";
+import { ArgumentRow } from "@/routes/EditorV2/components/ArgumentRow";
+import { useSpec } from "@/routes/EditorV2/providers/SpecContext";
+import { setSelectedValidationIssue } from "@/routes/EditorV2/store/editorStore";
+import { navigationStore } from "@/routes/EditorV2/store/navigationStore";
 
-import { useSpec } from "../../../providers/SpecContext";
-import { setSelectedValidationIssue } from "../../../store/editorStore";
-import { navigationStore } from "../../../store/navigationStore";
-import { ArgumentRow } from "../../ArgumentRow";
 import {
   deleteDuplicate,
   deleteEntity,

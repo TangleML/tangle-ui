@@ -6,10 +6,9 @@ import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
-
-import { useSpec } from "../../../providers/SpecContext";
-import { editorStore, selectNode } from "../../../store/editorStore";
-import type { IONodeData } from "../../types";
+import type { IONodeData } from "@/routes/EditorV2/nodes/types";
+import { useSpec } from "@/routes/EditorV2/providers/SpecContext";
+import { editorStore, selectNode } from "@/routes/EditorV2/store/editorStore";
 
 type IONodeType = Node<IONodeData, "io">;
 type IONodeProps = NodeProps<IONodeType>;

@@ -1,14 +1,14 @@
-import "../../nodes"; // ensure manifests are registered
+import "@/routes/EditorV2/nodes"; // ensure manifests are registered
 
 import { observer } from "mobx-react-lite";
 
 import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
+import { NODE_TYPE_REGISTRY } from "@/routes/EditorV2/nodes/registry";
+import { useSpec } from "@/routes/EditorV2/providers/SpecContext";
+import { editorStore } from "@/routes/EditorV2/store/editorStore";
 
-import { NODE_TYPE_REGISTRY } from "../../nodes/registry";
-import { useSpec } from "../../providers/SpecContext";
-import { editorStore } from "../../store/editorStore";
 import { MultiSelectionDetails } from "./components/MultiSelectionDetails/MultiSelectionDetails";
 
 /**

@@ -4,12 +4,11 @@ import { isRootStore, unregisterRootStore } from "mobx-keystone";
 import { useEffect, useRef } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
-
-import { autoSaveStore } from "../store/autoSaveStore";
-import { editorStore, resetEditorState } from "../store/editorStore";
-import { clearNavigation, initNavigation } from "../store/navigationStore";
-import { undoStore } from "../store/undoStore";
-import { closeWindowsByLinkedEntity } from "../windows/windows.actions";
+import { autoSaveStore } from "@/routes/EditorV2/store/autoSaveStore";
+import { editorStore, resetEditorState } from "@/routes/EditorV2/store/editorStore";
+import { clearNavigation, initNavigation } from "@/routes/EditorV2/store/navigationStore";
+import { undoStore } from "@/routes/EditorV2/store/undoStore";
+import { closeWindowsByLinkedEntity } from "@/routes/EditorV2/windows/windows.actions";
 
 export function useSpecLifecycle(
   rootSpec: ComponentSpec,

@@ -3,15 +3,14 @@ import { reaction } from "mobx";
 import { useEffect, useRef } from "react";
 
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
-
-import { editorStore } from "../store/editorStore";
-import type { Position } from "../windows/types";
-import { COLLAPSED_DOCK_AREA_WIDTH } from "../windows/types";
+import { editorStore } from "@/routes/EditorV2/store/editorStore";
+import type { Position } from "@/routes/EditorV2/windows/types";
+import { COLLAPSED_DOCK_AREA_WIDTH } from "@/routes/EditorV2/windows/types";
 import {
   getDockAreaConfig,
   getWindowById,
   updateWindowPosition,
-} from "../windows/windows.actions";
+} from "@/routes/EditorV2/windows/windows.actions";
 
 const CONTEXT_PANEL_WINDOW_ID = "context-panel";
 const GAP = 12;

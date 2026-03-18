@@ -11,14 +11,14 @@
  *   // later: cleanup();
  */
 
-import type { DockAreaEvent } from "../dockAreaPlugins";
-import { registerDockAreaPlugin } from "../dockAreaPlugins";
+import type { DockAreaEvent } from "@/routes/EditorV2/windows/dockAreaPlugins";
+import { registerDockAreaPlugin } from "@/routes/EditorV2/windows/dockAreaPlugins";
 import {
   getDockAreaConfig,
   getWindowById,
   minimizeWindowQuietly,
   restoreWindowQuietly,
-} from "../windows.actions";
+} from "@/routes/EditorV2/windows/windows.actions";
 
 const autoCollapsedStacks = new Map<string, string[]>();
 

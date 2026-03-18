@@ -21,7 +21,9 @@ import {
 import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
 import { JsonSerializer } from "@/models/componentSpec/serialization/jsonSerializer";
+import { ShorcutBadge } from "@/routes/EditorV2/components/ShorcutBadge";
 import { CTRL } from "@/routes/EditorV2/shortcuts/keys";
+import { autoSaveStore } from "@/routes/EditorV2/store/autoSaveStore";
 import { registerShortcut } from "@/routes/EditorV2/store/keyboardStore";
 import { navigationStore } from "@/routes/EditorV2/store/navigationStore";
 import { PipelineFolders } from "@/routes/PipelineFolders/PipelineFolders";
@@ -34,8 +36,6 @@ import {
 } from "@/utils/constants";
 import { componentSpecToYaml } from "@/utils/yaml";
 
-import { autoSaveStore } from "../../../store/autoSaveStore";
-import { ShorcutBadge } from "../../ShorcutBadge";
 import { MenuTriggerButton } from "./MenuTriggerButton";
 
 export function FileMenu() {

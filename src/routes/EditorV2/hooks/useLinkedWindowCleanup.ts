@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-import { closeWindow, getAllWindows } from "../windows/windows.actions";
+import { closeWindow, getAllWindows } from "@/routes/EditorV2/windows/windows.actions";
 
 export function useLinkedWindowCleanup() {
   useEffect(() => {

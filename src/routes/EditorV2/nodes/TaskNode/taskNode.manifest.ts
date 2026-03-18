@@ -3,21 +3,21 @@ import type { Node } from "@xyflow/react";
 import type { ComponentReference, ComponentSpec } from "@/models/componentSpec";
 import { Annotations } from "@/models/componentSpec/annotations";
 import { Task } from "@/models/componentSpec/entities/task";
-import { hydrateComponentReference } from "@/services/componentService";
-import type { TaskSpec } from "@/utils/componentSpec";
-
-import { PIPELINE_TREE_WINDOW_ID } from "../../hooks/usePipelineTreeWindow";
-import { addTask } from "../../store/actions";
-import { generateUniqueTaskName } from "../../store/nameUtils";
+import { PIPELINE_TREE_WINDOW_ID } from "@/routes/EditorV2/hooks/usePipelineTreeWindow";
+import { createEntityNode, taskDefaultPosition } from "@/routes/EditorV2/nodes/buildUtils";
+import type { TaskNodeData } from "@/routes/EditorV2/nodes/types";
+import type { NodeTypeManifest } from "@/routes/EditorV2/nodes/types";
+import { addTask } from "@/routes/EditorV2/store/actions";
+import { generateUniqueTaskName } from "@/routes/EditorV2/store/nameUtils";
 import {
   isTaskSubgraph,
   navigateToSubgraph,
-} from "../../store/navigationStore";
-import type { TaskNodeSnapshot } from "../../store/nodeCloneHandlers";
-import { restoreWindow } from "../../windows/windows.actions";
-import { createEntityNode, taskDefaultPosition } from "../buildUtils";
-import type { TaskNodeData } from "../types";
-import type { NodeTypeManifest } from "../types";
+} from "@/routes/EditorV2/store/navigationStore";
+import type { TaskNodeSnapshot } from "@/routes/EditorV2/store/nodeCloneHandlers";
+import { restoreWindow } from "@/routes/EditorV2/windows/windows.actions";
+import { hydrateComponentReference } from "@/services/componentService";
+import type { TaskSpec } from "@/utils/componentSpec";
+
 import { TaskNode } from "./components/TaskNode";
 import { TaskDetails } from "./context/TaskDetails/TaskDetails";
 

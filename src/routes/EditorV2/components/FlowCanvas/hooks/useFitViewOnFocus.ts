@@ -2,7 +2,7 @@ import { useReactFlow } from "@xyflow/react";
 import { reaction } from "mobx";
 import { useEffect, useRef } from "react";
 
-import { editorStore, setPendingFocusNode } from "../../../store/editorStore";
+import { editorStore, setPendingFocusNode } from "@/routes/EditorV2/store/editorStore";
 
 /**
  * Uses a MobX reaction instead of render-time observable read + useEffect

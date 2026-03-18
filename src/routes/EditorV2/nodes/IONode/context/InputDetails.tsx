@@ -7,16 +7,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Text } from "@/components/ui/typography";
 import { AutoGrowTextarea } from "@/routes/EditorV2/components/AutoGrowTextArea";
 import { InputLabel } from "@/routes/EditorV2/components/InputLabel";
-
-import { useSpec } from "../../../providers/SpecContext";
+import { ZIndexEditor } from "@/routes/EditorV2/nodes/FlexNode/context/components/ZIndexEditor";
+import { useSpec } from "@/routes/EditorV2/providers/SpecContext";
 import {
   renameInput,
   setInputDefaultValue,
   setInputDescription,
   setInputType,
-} from "../../../store/actions";
-import { withUndoGroup } from "../../../store/undoStore";
-import { ZIndexEditor } from "../../FlexNode/context/components/ZIndexEditor";
+} from "@/routes/EditorV2/store/actions";
+import { withUndoGroup } from "@/routes/EditorV2/store/undoStore";
 
 interface InputDetailsProps {
   entityId: string;

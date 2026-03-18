@@ -7,13 +7,12 @@ import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import type { ComponentSpec, ValidationIssue } from "@/models/componentSpec";
-
 import {
   editorStore,
   setPendingFocusNode,
   setSelectedValidationIssue,
-} from "../store/editorStore";
-import { navigateToLevel } from "../store/navigationStore";
+} from "@/routes/EditorV2/store/editorStore";
+import { navigateToLevel } from "@/routes/EditorV2/store/navigationStore";
 
 export function countErrors(issues: ValidationIssue[]): number {
   return issues.filter((i) => i.severity === "error").length;

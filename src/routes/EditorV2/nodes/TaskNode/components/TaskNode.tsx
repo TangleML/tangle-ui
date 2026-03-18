@@ -10,14 +10,14 @@ import type {
   Task,
   TypeSpecType,
 } from "@/models/componentSpec";
-
-import { useSpec } from "../../../providers/SpecContext";
+import type { TaskNodeData } from "@/routes/EditorV2/nodes/types";
+import { useSpec } from "@/routes/EditorV2/providers/SpecContext";
 import {
   editorStore,
   selectNode,
   setFocusedArgument,
-} from "../../../store/editorStore";
-import type { TaskNodeData } from "../../types";
+} from "@/routes/EditorV2/store/editorStore";
+
 import { TaskNodeClassic } from "./TaskNodeClassic";
 import { TaskNodeCollapsed } from "./TaskNodeCollapsed";
 import { TaskNodeFull } from "./TaskNodeFull";

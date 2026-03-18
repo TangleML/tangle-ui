@@ -11,8 +11,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
-
-import { autoSaveStore } from "../../../store/autoSaveStore";
+import { autoSaveStore } from "@/routes/EditorV2/store/autoSaveStore";
 
 function getTooltipText(isSaving: boolean, lastSavedAt: Date | null): string {
   if (isSaving) return "Saving...";

@@ -1,9 +1,8 @@
 import { observer } from "mobx-react-lite";
 
 import { Badge } from "@/components/ui/badge";
-
-import { CMDALT, type KeyConstant, SHIFT } from "../shortcuts/keys";
-import { keyboardStore } from "../store/keyboardStore";
+import { CMDALT, type KeyConstant, SHIFT } from "@/routes/EditorV2/shortcuts/keys";
+import { keyboardStore } from "@/routes/EditorV2/store/keyboardStore";
 
 export const ShorcutBadge = observer(function ShorcutBadge({
   id,

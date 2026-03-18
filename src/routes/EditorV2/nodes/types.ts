@@ -9,8 +9,7 @@ import type { ComponentType, MouseEvent } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 import type { IdGenerator } from "@/models/componentSpec/factories/idGenerator";
-
-import type { SelectedNode } from "../store/editorStore";
+import type { SelectedNode } from "@/routes/EditorV2/store/editorStore";
 
 // ---------------------------------------------------------------------------
 // Clone handler types (re-exported for use in manifests)
@@ -27,7 +26,7 @@ export interface NodeCloneHandler {
 }
 
 // Re-import after the export so TS resolves the type locally
-import type { NodeSnapshot } from "../store/nodeCloneHandlers";
+import type { NodeSnapshot } from "@/routes/EditorV2/store/nodeCloneHandlers";
 
 // ---------------------------------------------------------------------------
 // Node data types used by manifests and components

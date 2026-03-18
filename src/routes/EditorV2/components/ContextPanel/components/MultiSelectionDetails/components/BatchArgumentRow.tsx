@@ -6,12 +6,11 @@ import { InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import type { ArgumentType, ComponentSpec } from "@/models/componentSpec";
+import type { AggregatedArgument } from "@/routes/EditorV2/components/ContextPanel/components/MultiSelectionDetails/utils";
+import { ThunderMenu } from "@/routes/EditorV2/components/ThunderMenu";
+import { createInputAndConnect } from "@/routes/EditorV2/store/actions";
+import { withUndoGroup } from "@/routes/EditorV2/store/undoStore";
 import type { DynamicDataArgument } from "@/utils/componentSpec";
-
-import { createInputAndConnect } from "../../../../../store/actions";
-import { withUndoGroup } from "../../../../../store/undoStore";
-import { ThunderMenu } from "../../../../ThunderMenu";
-import type { AggregatedArgument } from "../utils";
 
 interface BatchArgumentRowProps {
   aggArg: AggregatedArgument;
