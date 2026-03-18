@@ -33,6 +33,7 @@ import NotFoundPage from "./NotFoundPage";
 import { PipelineFoldersPage } from "./PipelineFolders/PipelineFoldersPage";
 import PipelineRun from "./PipelineRun";
 import { QuickStartPage } from "./QuickStart";
+import { RunViewV2 } from "./RunViewV2/RunViewV2";
 import { BackendSettings } from "./Settings/sections/BackendSettings";
 import { BetaFeaturesSettings } from "./Settings/sections/BetaFeaturesSettings";
 import { PreferencesSettings } from "./Settings/sections/PreferencesSettings";
@@ -75,6 +76,8 @@ export const APP_ROUTES = {
   HUGGINGFACE_AUTH_CALLBACK: "/authorize/huggingface",
   EDITOR_V2: "/editor-v2",
   EDITOR_V2_PIPELINE: "/editor-v2/$pipelineName",
+  RUN_V2: "/run-v2/$id",
+  RUN_V2_WITH_SUBGRAPH: "/run-v2/$id/$subgraphExecutionId",
   PIPELINE_FOLDERS: "/pipeline-folders",
   PLAYGROUND: "/playground",
 } as const;
@@ -270,6 +273,18 @@ const editorV2PipelineRoute = createRoute({
   component: EditorV2,
 });
 
+const runV2Route = createRoute({
+  getParentRoute: () => mainLayout,
+  path: APP_ROUTES.RUN_V2,
+  component: RunViewV2,
+});
+
+const runV2WithSubgraphRoute = createRoute({
+  getParentRoute: () => mainLayout,
+  path: APP_ROUTES.RUN_V2_WITH_SUBGRAPH,
+  component: RunViewV2,
+});
+
 const pipelineFoldersRoute = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.PIPELINE_FOLDERS,
@@ -295,6 +310,8 @@ const appRouteTree = mainLayout.addChildren([
   runDetailWithSubgraphRoute,
   editorV2Route,
   editorV2PipelineRoute,
+  runV2Route,
+  runV2WithSubgraphRoute,
   pipelineFoldersRoute,
 ]);
 
