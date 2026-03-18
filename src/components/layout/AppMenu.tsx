@@ -173,11 +173,17 @@ const DefaultAppMenu = () => {
   );
 };
 
+const RUN_V2_BASE_PATH = "/run-v2";
+
 const AppMenu = () => {
   const { pathname } = useLocation();
 
   if (pathname.startsWith(APP_ROUTES.EDITOR_V2)) {
     return <EditorMenuBar />;
+  }
+
+  if (pathname.startsWith(RUN_V2_BASE_PATH)) {
+    return null;
   }
 
   return <DefaultAppMenu />;
