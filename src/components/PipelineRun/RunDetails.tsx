@@ -116,7 +116,7 @@ export const RunDetails = () => {
       )}
 
       {componentSpec.description && (
-        <TextBlock title="Description" text={componentSpec.description} />
+        <TextBlock title="Description" text={componentSpec.description} wrap />
       )}
 
       <ContentBlock title="Status">
