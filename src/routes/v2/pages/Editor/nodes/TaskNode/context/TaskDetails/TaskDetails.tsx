@@ -1,22 +1,12 @@
 import { observer } from "mobx-react-lite";
 import { type ChangeEvent, useEffect, useState } from "react";
 
-import { ActionBlock } from "@/components/shared/ContextPanel/Blocks/ActionBlock";
-import { DeleteComponentButton } from "@/components/shared/TaskDetails/Actions/DeleteComponentButton";
 import { Badge } from "@/components/ui/badge";
-import { ColorPicker } from "@/components/ui/color";
-import { Input } from "@/components/ui/input";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import type { ComponentSpecJson } from "@/models/componentSpec";
 import { AnnotationsBlock } from "@/routes/v2/pages/Editor/components/AnnotationsBlock/AnnotationsBlock";
 import { ZIndexEditor } from "@/routes/v2/pages/Editor/nodes/FlexNode/context/components/ZIndexEditor";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/routes/v2/pages/Editor/nodes/TaskNode/context/TaskDetails/accordion";
 import {
   deleteTask,
   duplicateSelectedNodes,
@@ -27,15 +17,18 @@ import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { editorStore } from "@/routes/v2/shared/store/editorStore";
 import { componentSpecToText } from "@/utils/yaml";
 
-import { CopyYamlButton } from "./components/actions/CopyYamlButton";
-import { DownloadPythonButton } from "./components/actions/DownloadPythonButton";
-import { DownloadYamlButton } from "./components/actions/DownloadYamlButton";
-import { DuplicateTaskButton } from "./components/actions/DuplicateTaskButton";
-import { EditComponentButton } from "./components/actions/EditComponentButton";
-import { ViewTaskYamlButton } from "./components/actions/ViewTaskYamlButton";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "./accordion";
 import { ConfigurationSection } from "./components/ConfigurationSection";
+import { OutputsSection } from "./components/OutputsSection";
+import { TaskActionsBar } from "./components/TaskActionsBar";
 import { TaskArgumentsEditor } from "./components/TaskArgumentsEditor";
 import { setTaskColor } from "./components/taskConfig.actions";
+import { TaskInfoSection } from "./components/TaskInfoSection";
 
 const EDITOR_ANNOTATION_KEYS = [
   "editor.position",
@@ -119,31 +112,12 @@ export const TaskDetails = observer(function TaskDetails({
 
   return (
     <BlockStack gap="0" className="w-full overflow-auto">
-      <ActionBlock
-        actions={[
-          <DownloadYamlButton
-            key="download-yaml"
-            yamlText={yamlText}
-            taskName={task.name}
-          />,
-          pythonCode && (
-            <DownloadPythonButton
-              key="download-python"
-              pythonCode={pythonCode}
-              fileName={`${task.name}.py`}
-            />
-          ),
-          <CopyYamlButton key="copy-yaml" yamlText={yamlText} />,
-          <ViewTaskYamlButton
-            key="view-yaml"
-            yamlText={yamlText}
-            taskName={task.name}
-          />,
-          <EditComponentButton key="edit" yamlText={yamlText} />,
-          <DuplicateTaskButton key="duplicate" onDuplicate={handleDuplicate} />,
-          <DeleteComponentButton key="delete" onDelete={handleDelete} />,
-        ].filter(Boolean)}
-        className="px-3 py-2"
+      <TaskActionsBar
+        yamlText={yamlText}
+        taskName={task.name}
+        pythonCode={pythonCode}
+        onDuplicate={handleDuplicate}
+        onDelete={handleDelete}
       />
       <Accordion
         type="multiple"
@@ -162,37 +136,14 @@ export const TaskDetails = observer(function TaskDetails({
             </Text>
           </AccordionTrigger>
           <AccordionContent className="px-3 pb-2">
-            <BlockStack gap="2">
-              <BlockStack gap="1">
-                <InlineStack
-                  gap="2"
-                  blockAlign="center"
-                  wrap="nowrap"
-                  className="w-full"
-                >
-                  <ColorPicker
-                    title="Task color"
-                    color={taskColor}
-                    setColor={handleColorChange}
-                  />
-                  <Input
-                    key={`${entityId}-${task.name}`}
-                    id="task-name"
-                    defaultValue={task.name}
-                    onBlur={handleNameChange}
-                    className="font-mono text-xs h-7"
-                  />
-                </InlineStack>
-              </BlockStack>
-
-              {componentSpec?.description && (
-                <BlockStack gap="1">
-                  <Text size="xs" className="text-gray-500">
-                    {componentSpec.description}
-                  </Text>
-                </BlockStack>
-              )}
-            </BlockStack>
+            <TaskInfoSection
+              entityId={entityId}
+              task={task}
+              componentSpec={componentSpec}
+              taskColor={taskColor}
+              onNameChange={handleNameChange}
+              onColorChange={handleColorChange}
+            />
           </AccordionContent>
         </AccordionItem>
 
@@ -242,30 +193,7 @@ export const TaskDetails = observer(function TaskDetails({
             </InlineStack>
           </AccordionTrigger>
           <AccordionContent className="px-3 pb-2">
-            {componentSpec?.outputs && componentSpec.outputs.length > 0 ? (
-              <BlockStack gap="1">
-                {componentSpec.outputs.map((output) => (
-                  <InlineStack
-                    key={output.name}
-                    gap="2"
-                    className="text-xs py-1 px-2 bg-gray-50 rounded border border-gray-100"
-                  >
-                    <Text size="xs" weight="semibold" className="text-gray-700">
-                      {output.name}
-                    </Text>
-                    {output.type && (
-                      <Text size="xs" className="text-gray-500">
-                        : {String(output.type)}
-                      </Text>
-                    )}
-                  </InlineStack>
-                ))}
-              </BlockStack>
-            ) : (
-              <Text size="xs" tone="subdued">
-                No outputs defined
-              </Text>
-            )}
+            <OutputsSection componentSpec={componentSpec} />
           </AccordionContent>
         </AccordionItem>
 
