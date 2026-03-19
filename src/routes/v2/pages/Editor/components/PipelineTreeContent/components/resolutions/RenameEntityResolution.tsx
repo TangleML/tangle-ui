@@ -5,9 +5,8 @@ import { Input } from "@/components/ui/input";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import type { ComponentSpec, ValidationIssue } from "@/models/componentSpec";
+import { renameEntity } from "@/routes/v2/pages/Editor/components/PipelineTreeContent/components/validationResolution.actions";
 import { setSelectedValidationIssue } from "@/routes/v2/shared/store/editorStore";
-
-import { renameEntity } from "../validationResolution.actions";
 
 export function RenameEntityResolution({
   issue,

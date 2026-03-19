@@ -2,7 +2,7 @@ import type { ComponentProps } from "react";
 
 import { Label } from "@/components/ui/label";
 
-import { CopyValueButton } from "./CopyValueButton";
+import { CopyValueButton } from "./components/CopyValueButton";
 
 export function InputLabel({
   children,

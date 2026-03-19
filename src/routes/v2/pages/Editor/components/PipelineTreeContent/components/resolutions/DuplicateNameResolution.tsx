@@ -6,12 +6,11 @@ import { Input } from "@/components/ui/input";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import type { ComponentSpec, ValidationIssue } from "@/models/componentSpec";
-import { setSelectedValidationIssue } from "@/routes/v2/shared/store/editorStore";
-
 import {
   deleteDuplicate,
   renameDuplicate,
-} from "../validationResolution.actions";
+} from "@/routes/v2/pages/Editor/components/PipelineTreeContent/components/validationResolution.actions";
+import { setSelectedValidationIssue } from "@/routes/v2/shared/store/editorStore";
 
 export function DuplicateNameResolution({
   issue,

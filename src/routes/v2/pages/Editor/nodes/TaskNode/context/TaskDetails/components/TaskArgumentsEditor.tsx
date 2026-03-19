@@ -5,7 +5,7 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import type { ComponentSpecJson, Task } from "@/models/componentSpec";
 import { ArgumentCodeEditor } from "@/routes/v2/pages/Editor/components/ArgumentCodeEditor";
-import { ArgumentRow } from "@/routes/v2/pages/Editor/components/ArgumentRow";
+import { ArgumentRow } from "@/routes/v2/pages/Editor/components/ArgumentRow/ArgumentRow";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { CTRL, SHIFT } from "@/routes/v2/shared/shortcuts/keys";
 import {

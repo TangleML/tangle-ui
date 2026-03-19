@@ -5,7 +5,7 @@ import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Text } from "@/components/ui/typography";
-import { CodeBlock } from "@/routes/v2/pages/Editor/components/CodeBlock";
+import { CodeBlock } from "@/routes/v2/pages/Editor/components/PinnedTaskContent/components/CodeBlock";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { componentSpecToText } from "@/utils/yaml";
 

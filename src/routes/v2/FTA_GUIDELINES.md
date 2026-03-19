@@ -35,6 +35,7 @@ Pure functions (type guards, formatters, data transformers, grouping logic) belo
 ### 4. Extract deeply nested JSX into sub-components
 
 If a JSX block is > 30 lines and has its own conditional logic or event handlers, it should be its own component file. Common candidates:
+
 - Accordion/tab sections
 - Submenu content (dropdowns, popovers)
 - List item renderers
@@ -54,10 +55,22 @@ Avoid ternary chains longer than 2 levels in JSX. Instead, extract the branching
 
 ```tsx
 // Avoid
-{editing ? <Editor /> : isDynamic ? <DynamicView /> : displayValue ? <ValueText /> : null}
+{
+  editing ? (
+    <Editor />
+  ) : isDynamic ? (
+    <DynamicView />
+  ) : displayValue ? (
+    <ValueText />
+  ) : null;
+}
 
 // Prefer
-<ValueDisplay editing={editing} isDynamic={isDynamic} displayValue={displayValue} />
+<ValueDisplay
+  editing={editing}
+  isDynamic={isDynamic}
+  displayValue={displayValue}
+/>;
 ```
 
 ### 8. Limit imports
@@ -66,13 +79,13 @@ A high number of unique imports inflates Halstead vocabulary. If a file imports 
 
 ### 9. Naming conventions for extracted files
 
-| Type                   | Pattern                        | Example                        |
-| ---------------------- | ------------------------------ | ------------------------------ |
-| Utility functions      | `<feature>.utils.ts`           | `argumentRow.utils.ts`         |
-| Domain actions         | `<domain>.actions.ts`          | `task.actions.ts`              |
-| Store logic modules    | `<store>.<domain>.ts`          | `windowStore.docking.ts`       |
-| Sub-components         | `PascalCase.tsx`               | `OutputsSection.tsx`           |
-| Sub-component folders  | `<feature>/components/`        | `resolutions/`                 |
+| Type                  | Pattern                 | Example                  |
+| --------------------- | ----------------------- | ------------------------ |
+| Utility functions     | `<feature>.utils.ts`    | `argumentRow.utils.ts`   |
+| Domain actions        | `<domain>.actions.ts`   | `task.actions.ts`        |
+| Store logic modules   | `<store>.<domain>.ts`   | `windowStore.docking.ts` |
+| Sub-components        | `PascalCase.tsx`        | `OutputsSection.tsx`     |
+| Sub-component folders | `<feature>/components/` | `resolutions/`           |
 
 ## Quick Checklist Before Committing a New File
 
