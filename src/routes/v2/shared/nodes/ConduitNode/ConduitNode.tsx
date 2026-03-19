@@ -2,8 +2,7 @@ import type { Node, NodeProps } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
 
 import { cn } from "@/lib/utils";
-import type { GuidelineOrientation } from "@/models/componentSpec/annotations";
-import { getConduits } from "@/routes/v2/pages/Editor/nodes/ConduitNode/conduits.actions";
+import type { ConduitNodeData } from "@/routes/v2/shared/nodes/types";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import {
   clearSelection,
@@ -12,13 +11,7 @@ import {
 } from "@/routes/v2/shared/store/editorStore";
 import { pluralize } from "@/utils/string";
 
-export interface ConduitNodeData extends Record<string, unknown> {
-  conduitId: string;
-  color: string;
-  edgeCount: number;
-  orientation: GuidelineOrientation;
-  coordinate: number;
-}
+import { getConduits } from "./conduit.utils";
 
 type ConduitNodeType = Node<ConduitNodeData, "conduit">;
 type ConduitNodeProps = NodeProps<ConduitNodeType>;

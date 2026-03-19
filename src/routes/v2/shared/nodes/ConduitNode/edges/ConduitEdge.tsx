@@ -1,15 +1,9 @@
 import type { EdgeProps } from "@xyflow/react";
 import { BaseEdge } from "@xyflow/react";
 
-import { buildConduitPath, type GuidelineInfo } from "./conduitPathUtils";
+import type { ConduitEdgeData } from "@/routes/v2/shared/nodes/types";
 
-export interface ConduitEdgeData extends Record<string, unknown> {
-  guidelines: GuidelineInfo[];
-  conduitColor?: string;
-  isInAssignmentMode?: boolean;
-  isAssignedToActiveConduit?: boolean;
-  activeConduitColor?: string;
-}
+import { buildConduitPath } from "./conduitPathUtils";
 
 const DEBUG_POINTS = false;
 

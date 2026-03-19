@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
-import { InputValidationIndicator } from "@/routes/v2/pages/Editor/components/InputValidationIndicator";
+import { InputValidationIndicator } from "@/routes/v2/shared/components/InputValidationIndicator";
 
 import type { TaskNodeInput, TaskNodeViewProps } from "./TaskNode";
 

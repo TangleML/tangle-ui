@@ -6,14 +6,11 @@ import { Task } from "@/models/componentSpec/entities/task";
 import { PIPELINE_TREE_WINDOW_ID } from "@/routes/v2/pages/Editor/hooks/usePipelineTreeWindow";
 import { addTask } from "@/routes/v2/pages/Editor/store/actions";
 import { generateUniqueTaskName } from "@/routes/v2/pages/Editor/store/nameUtils";
-import type { TaskNodeSnapshot } from "@/routes/v2/pages/Editor/store/nodeCloneHandlers";
-import {
-  createEntityNode,
-  taskDefaultPosition,
-} from "@/routes/v2/shared/nodes/buildUtils";
+import { taskManifestBase } from "@/routes/v2/shared/nodes/TaskNode/taskManifestBase";
 import type {
   NodeTypeManifest,
   TaskNodeData,
+  TaskNodeSnapshot,
 } from "@/routes/v2/shared/nodes/types";
 import {
   isTaskSubgraph,
@@ -22,35 +19,12 @@ import {
 import { restoreWindow } from "@/routes/v2/shared/windows/windows.actions";
 import { hydrateComponentReference } from "@/services/componentService";
 import type { TaskSpec } from "@/utils/componentSpec";
+import { deepClone } from "@/utils/deepClone";
 
-import { TaskNode } from "./components/TaskNode";
 import { TaskDetails } from "./context/TaskDetails/TaskDetails";
 
-const deepClone = <T>(obj: T): T => JSON.parse(JSON.stringify(obj));
-
 export const taskManifest: NodeTypeManifest = {
-  type: "task",
-  idPrefix: "task_",
-  entityType: "task",
-
-  component: TaskNode,
-
-  buildNodes(spec) {
-    return [...spec.tasks].map((task, index) =>
-      createEntityNode(task, "task", taskDefaultPosition(index), {
-        entityId: task.$id,
-        name: task.name,
-      } satisfies TaskNodeData),
-    );
-  },
-
-  fingerprintParts(spec) {
-    return [...spec.tasks].map((task) => {
-      const pos = task.annotations.get("editor.position");
-      const z = task.annotations.get("zIndex");
-      return `t:${task.$id}:${task.name}:${pos.x},${pos.y}:z${z ?? ""}`;
-    });
-  },
+  ...taskManifestBase,
 
   drop: {
     dataKey: "task",
@@ -65,12 +39,6 @@ export const taskManifest: NodeTypeManifest = {
     },
   },
 
-  getPosition(spec, nodeId) {
-    const task = spec.tasks.find((t) => t.$id === nodeId);
-    if (!task) return undefined;
-    return task.annotations.get("editor.position");
-  },
-
   updatePosition(spec, nodeId, position) {
     spec.updateNodePosition(nodeId, position);
   },
@@ -79,25 +47,7 @@ export const taskManifest: NodeTypeManifest = {
     spec.deleteTaskById(nodeId);
   },
 
-  findEntity(spec, entityId) {
-    return spec.tasks.find((t) => t.$id === entityId);
-  },
-
-  selectable: true,
-
-  toSelectedNode(node) {
-    return { id: node.id, type: "task", position: node.position };
-  },
-
   contextPanelComponent: TaskDetails,
-
-  displayName(spec, entityId) {
-    const task = spec.tasks.find((t) => t.$id === entityId);
-    return task?.name ?? entityId;
-  },
-
-  icon: "Workflow",
-  iconColor: "text-blue-500",
 
   onDoubleClick(spec: ComponentSpec, node: Node) {
     const taskData = node.data as TaskNodeData;

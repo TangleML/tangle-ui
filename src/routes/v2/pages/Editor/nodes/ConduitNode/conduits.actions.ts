@@ -2,11 +2,12 @@ import {
   type ComponentSpec,
   IncrementingIdGenerator,
 } from "@/models/componentSpec";
-import {
-  type EdgeConduit,
-  type GuidelineOrientation,
+import type {
+  EdgeConduit,
+  GuidelineOrientation,
 } from "@/models/componentSpec/annotations";
 import { withUndoGroup } from "@/routes/v2/pages/Editor/store/undoStore";
+import { getConduits } from "@/routes/v2/shared/nodes/ConduitNode/conduit.utils";
 
 const DEFAULT_COLORS = [
   "#6366f1",
@@ -33,9 +34,7 @@ function pickColor(existing: EdgeConduit[]): string {
   return DEFAULT_COLORS[existing.length % DEFAULT_COLORS.length];
 }
 
-export function getConduits(spec: ComponentSpec): EdgeConduit[] {
-  return spec.annotations.get("tangleml.com/editor/edge-conduits");
-}
+export { getConduits } from "@/routes/v2/shared/nodes/ConduitNode/conduit.utils";
 
 function setConduits(spec: ComponentSpec, conduits: EdgeConduit[]) {
   spec.setMetadata("tangleml.com/editor/edge-conduits", conduits);
