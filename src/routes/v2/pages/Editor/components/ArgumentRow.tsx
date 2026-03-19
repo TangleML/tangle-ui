@@ -2,7 +2,6 @@ import { observer } from "mobx-react-lite";
 import { useEffect, useRef, useState } from "react";
 
 import { getDynamicDataDisplayInfo } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/ArgumentsEditor/dynamicDataUtils";
-import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
@@ -19,6 +18,7 @@ import {
 } from "@/routes/v2/shared/store/editorStore";
 import type { DynamicDataArgument } from "@/utils/componentSpec";
 
+import { formatBindingSource, getDisplayValue, typeSpecToString } from "./argumentRow.utils";
 import {
   quickConnect,
   removeArgument,
@@ -27,7 +27,7 @@ import {
   setDynamicData,
   unsetArgument,
 } from "./arguments.actions";
-import { AutoGrowTextarea } from "./AutoGrowTextArea";
+import { ArgumentValueDisplay } from "./ArgumentValueDisplay";
 import { InputValidationIndicator } from "./InputValidationIndicator";
 import { ThunderMenu } from "./ThunderMenu";
 
@@ -133,13 +133,7 @@ export const ArgumentRow = observer(function ArgumentRow({
     sourceEntityId: string,
     sourcePortName: string,
   ) => {
-    quickConnect(
-      spec,
-      sourceEntityId,
-      sourcePortName,
-      task.$id,
-      inputSpec.name,
-    );
+    quickConnect(spec, sourceEntityId, sourcePortName, task.$id, inputSpec.name);
   };
 
   const handleCreateInputAndConnect = () => {
@@ -209,93 +203,20 @@ export const ArgumentRow = observer(function ArgumentRow({
         />
       </InlineStack>
 
-      {editing && !externalEditor ? (
-        <AutoGrowTextarea
-          autoFocus
-          key={`${task.$id}-${inputSpec.name}-${String(currentValue ?? "")}`}
-          defaultValue={typeof currentValue === "string" ? currentValue : ""}
-          expandDialogTitle={`Value for ${inputSpec.name}`}
-          onChangeComplete={handleChangeComplete}
-          onBlur={handleBlur}
-          highlightSyntax
-          placeholder={
-            isBound
-              ? bindingLabel || "Enter value to replace connection..."
-              : (inputSpec.default ?? "Enter value...")
-          }
-          className="min-h-2 text-xs font-mono mt-1"
-          data-testid="argument-input"
-        />
-      ) : isDynamic && dynamicDisplayInfo ? (
-        <InlineStack gap="1" blockAlign="center" className="mt-0.5">
-          <Icon
-            name={dynamicDisplayInfo.icon}
-            size="xs"
-            className={dynamicDisplayInfo.textColor}
-          />
-          <Text
-            size="xs"
-            font="mono"
-            className={cn("truncate", dynamicDisplayInfo.textColor)}
-          >
-            {dynamicDisplayInfo.displayValue}
-          </Text>
-        </InlineStack>
-      ) : (
-        displayValue && (
-          <Text
-            size="xs"
-            font="mono"
-            className={cn(
-              "truncate block mt-0.5",
-              isBound ? "text-blue-600" : "text-gray-500",
-            )}
-            title={displayValue}
-          >
-            {displayValue}
-          </Text>
-        )
-      )}
+      <ArgumentValueDisplay
+        editing={editing}
+        externalEditor={externalEditor}
+        isDynamic={isDynamic}
+        dynamicDisplayInfo={dynamicDisplayInfo}
+        isBound={isBound}
+        bindingLabel={bindingLabel}
+        displayValue={displayValue ?? ""}
+        task={task}
+        inputSpec={inputSpec}
+        currentValue={currentValue}
+        onChangeComplete={handleChangeComplete}
+        onBlur={handleBlur}
+      />
     </div>
   );
 });
-
-function formatBindingSource(binding: Binding, spec: ComponentSpec): string {
-  const sourceInput = spec.inputs.find((i) => i.$id === binding.sourceEntityId);
-  if (sourceInput) {
-    return `graphInput: ${sourceInput.name}`;
-  }
-
-  const sourceTask = spec.tasks.find((t) => t.$id === binding.sourceEntityId);
-  if (sourceTask) {
-    return `${sourceTask.name}.${binding.sourcePortName}`;
-  }
-
-  return `${binding.sourceEntityId}.${binding.sourcePortName}`;
-}
-
-function getDisplayValue(
-  value: unknown,
-  isSet: boolean,
-  inputSpec: InputSpecJson,
-): string {
-  if (!isSet) {
-    return inputSpec.default ? `default: ${inputSpec.default}` : "";
-  }
-
-  if (typeof value === "string") {
-    return value;
-  }
-
-  if (value !== undefined && value !== null) {
-    return JSON.stringify(value);
-  }
-
-  return "";
-}
-
-function typeSpecToString(typeSpec?: unknown): string {
-  if (typeSpec === undefined) return "";
-  if (typeof typeSpec === "string") return typeSpec;
-  return JSON.stringify(typeSpec);
-}

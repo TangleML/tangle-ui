@@ -2,16 +2,11 @@ import { action, makeObservable, observable } from "mobx";
 import type { ReactNode } from "react";
 
 import { emitDockAreaEvent } from "./dockAreaPlugins";
-import {
-  calculateAttachPosition,
-  getAttachmentChain,
-  getWindowBottom,
-} from "./snapUtils";
+import { calculateAttachPosition } from "./snapUtils";
 import {
   type AttachmentInfo,
   CASCADE_OFFSET,
   DEFAULT_DOCK_AREA_WIDTH,
-  DEFAULT_DOCKED_HEIGHT,
   DEFAULT_MIN_SIZE,
   DEFAULT_WINDOW_SIZE,
   type DockAreaConfig,
@@ -23,6 +18,24 @@ import {
   type WindowOptions,
   type WindowRef,
 } from "./types";
+import {
+  attachWindow as attachWindowFn,
+  cascadeOnHide,
+  cascadeOnRestore,
+  detachWindow as detachWindowFn,
+  updateAttachedWindowPositions,
+} from "./windowStore.attachments";
+import {
+  dockWindow as dockWindowFn,
+  getDockAreaWindowIds as getDockAreaWindowIdsFn,
+  isWindowDocked as isWindowDockedFn,
+  removeFromDockAreaOrder,
+  restoreDockArea as restoreDockAreaFn,
+  setDockAreaWidth as setDockAreaWidthFn,
+  toggleDockAreaCollapsed as toggleDockAreaCollapsedFn,
+  undockWindow as undockWindowFn,
+  updateDockedWindowHeight as updateDockedWindowHeightFn,
+} from "./windowStore.docking";
 import {
   getPersistedWindowState,
   STATIC_WINDOW_IDS,
@@ -178,7 +191,7 @@ class WindowStoreImpl {
       });
     }
 
-    this.removeFromDockAreaOrder(id);
+    removeFromDockAreaOrder(this.dockAreas, id);
 
     delete this.windows[id];
     windowContentMap.delete(id);
@@ -227,7 +240,7 @@ class WindowStoreImpl {
     win.previousSize = { ...win.size };
     win.state = "hidden";
 
-    this.cascadeOnHide(id);
+    cascadeOnHide(this.windows, id);
   }
 
   /** Restore a window to its previous state */
@@ -257,7 +270,7 @@ class WindowStoreImpl {
     this.bringToFront(id);
 
     if (wasHidden) {
-      this.cascadeOnRestore(id);
+      cascadeOnRestore(this.windows, id);
     }
 
     if (wasDocked && (wasMinimized || wasHidden) && isDockSide(win.dockState)) {
@@ -294,7 +307,7 @@ class WindowStoreImpl {
       win.size = size;
 
       if (heightChanged) {
-        this.updateAttachedWindowPositions(id);
+        updateAttachedWindowPositions(this.windows, id);
       }
     }
   }
@@ -353,223 +366,54 @@ class WindowStoreImpl {
     }
   }
 
-  // ============================================================================
-  // Docking Functions (Column-based Dock Areas)
-  // ============================================================================
+  // -- Docking (delegates to windowStore.docking.ts) --
 
-  @action private removeFromDockAreaOrder(id: string): void {
-    for (const side of ["left", "right"] as const) {
-      const order = this.dockAreas[side].windowOrder;
-      const idx = order.indexOf(id);
-      if (idx !== -1) {
-        order.splice(idx, 1);
-        return;
-      }
-    }
-  }
-
-  /** Dock a window into a dock area column */
   @action dockWindow(id: string, side: DockState, insertIndex?: number): void {
-    const win = this.windows[id];
-    if (!win || side === "none") return;
-
-    if (win.dockState === "none") {
-      win.preDockedPosition = { ...win.position };
-      win.preDockedSize = { ...win.size };
-    }
-
-    this.removeFromDockAreaOrder(id);
-
-    if (win.attachedTo) {
-      this.detachWindow(id);
-    }
-
-    win.dockState = side;
-    win.dockedHeight = win.dockedHeight ?? DEFAULT_DOCKED_HEIGHT;
-
-    const dockArea = this.dockAreas[side];
-    if (insertIndex !== undefined && insertIndex >= 0) {
-      const clampedIndex = Math.min(insertIndex, dockArea.windowOrder.length);
-      dockArea.windowOrder.splice(clampedIndex, 0, id);
-    } else {
-      dockArea.windowOrder.push(id);
-    }
-
-    dockArea.collapsed = false;
-
-    emitDockAreaEvent({ type: "window-docked", side, windowId: id });
+    dockWindowFn(this.windows, this.dockAreas, id, side, insertIndex);
   }
 
-  /** Undock a window from its dock area, restoring pre-docked dimensions */
   @action undockWindow(id: string): void {
-    const win = this.windows[id];
-    if (!win || win.dockState === "none") return;
-
-    this.removeFromDockAreaOrder(id);
-
-    if (win.preDockedPosition) {
-      win.position = { ...win.preDockedPosition };
-    }
-    if (win.preDockedSize) {
-      win.size = { ...win.preDockedSize };
-    }
-
-    win.dockState = "none";
-    win.preDockedPosition = undefined;
-    win.preDockedSize = undefined;
+    undockWindowFn(this.windows, this.dockAreas, id);
   }
 
-  /** Check if a window is docked */
   isWindowDocked(id: string): boolean {
-    const win = this.windows[id];
-    return win?.dockState !== "none" && win?.dockState !== undefined;
+    return isWindowDockedFn(this.windows, id);
   }
 
-  /** Update a docked window's height */
   @action updateDockedWindowHeight(id: string, height: number): void {
-    const win = this.windows[id];
-    if (!win) return;
-    win.dockedHeight = Math.max(100, height);
+    updateDockedWindowHeightFn(this.windows, id, height);
   }
 
-  /** Set dock area width */
   @action setDockAreaWidth(side: "left" | "right", width: number): void {
-    this.dockAreas[side].width = width;
+    setDockAreaWidthFn(this.dockAreas, side, width);
   }
 
-  /** Toggle dock area collapsed state */
   @action toggleDockAreaCollapsed(side: "left" | "right"): void {
-    this.dockAreas[side].collapsed = !this.dockAreas[side].collapsed;
+    toggleDockAreaCollapsedFn(this.dockAreas, side);
   }
 
-  /** Get all window IDs in a dock area */
   getDockAreaWindowIds(side: "left" | "right"): string[] {
-    return this.dockAreas[side].windowOrder;
+    return getDockAreaWindowIdsFn(this.dockAreas, side);
   }
 
-  /** Restore a dock area from persisted state */
   @action restoreDockArea(
     side: "left" | "right",
     state: { width: number; collapsed: boolean; windowOrder: string[] },
   ): void {
-    this.dockAreas[side].width = state.width;
-    this.dockAreas[side].collapsed = state.collapsed;
-    this.dockAreas[side].windowOrder = [...state.windowOrder];
+    restoreDockAreaFn(this.dockAreas, side, state);
   }
 
-  // ============================================================================
-  // Attachment Functions
-  // ============================================================================
+  // -- Attachments (delegates to windowStore.attachments.ts) --
 
-  /** Attach a window below another window */
   @action attachWindow(childId: string, parentId: string): void {
-    const childWindow = this.windows[childId];
-    const parentWindow = this.windows[parentId];
-
-    if (!childWindow || !parentWindow) return;
-    if (childId === parentId) return;
-    if (parentWindow.state === "hidden" || parentWindow.state === "minimized") {
-      return;
-    }
-
-    childWindow.attachedTo = { parentId, offsetX: 0 };
-    childWindow.position = {
-      x: parentWindow.position.x,
-      y: getWindowBottom(parentWindow),
-    };
-
-    if (childWindow.dockState !== "none") {
-      childWindow.dockState = "none";
-    }
+    attachWindowFn(this.windows, childId, parentId);
   }
 
-  /** Detach a window from its parent */
   @action detachWindow(id: string): void {
-    const win = this.windows[id];
-    if (!win?.attachedTo) return;
-    win.attachedTo = undefined;
+    detachWindowFn(this.windows, id);
   }
 
-  private findChainRoot(windowId: string): string {
-    let currentId = windowId;
-    let current = this.windows[currentId];
-
-    while (current?.attachedTo?.parentId) {
-      const parent = this.windows[current.attachedTo.parentId];
-      if (!parent) break;
-      currentId = parent.id;
-      current = parent;
-    }
-
-    return currentId;
-  }
-
-  private findVisibleAncestor(windowId: string): WindowConfig | null {
-    const win = this.windows[windowId];
-    if (!win?.attachedTo?.parentId) return null;
-
-    let currentParentId: string | undefined = win.attachedTo.parentId;
-
-    while (currentParentId) {
-      const parentWin: WindowConfig | undefined = this.windows[currentParentId];
-      if (!parentWin) return null;
-
-      if (parentWin.state !== "hidden") {
-        return parentWin;
-      }
-
-      currentParentId = parentWin.attachedTo?.parentId;
-    }
-
-    return null;
-  }
-
-  @action private updateAttachedWindowPositions(rootId: string): void {
-    const rootWindow = this.windows[rootId];
-    if (!rootWindow) return;
-
-    const chain = getAttachmentChain(rootId, Object.values(this.windows));
-
-    const rootX =
-      rootWindow.state === "hidden"
-        ? (rootWindow.previousPosition?.x ?? rootWindow.position.x)
-        : rootWindow.position.x;
-
-    for (const child of chain) {
-      if (child.state === "hidden") continue;
-
-      const visibleAncestor = this.findVisibleAncestor(child.id);
-
-      if (visibleAncestor) {
-        child.position = {
-          x: rootX,
-          y: getWindowBottom(visibleAncestor),
-        };
-      } else if (rootWindow.state !== "hidden") {
-        child.position = {
-          x: rootX,
-          y: getWindowBottom(rootWindow),
-        };
-      } else {
-        const rootY = rootWindow.previousPosition?.y ?? rootWindow.position.y;
-        child.position = { x: rootX, y: rootY };
-      }
-    }
-  }
-
-  private cascadeOnHide(hiddenWindowId: string): void {
-    const rootId = this.findChainRoot(hiddenWindowId);
-    this.updateAttachedWindowPositions(rootId);
-  }
-
-  private cascadeOnRestore(restoredWindowId: string): void {
-    const rootId = this.findChainRoot(restoredWindowId);
-    this.updateAttachedWindowPositions(rootId);
-  }
-
-  // ============================================================================
-  // Quiet mutations (no event emission — used by accordion plugin)
-  // ============================================================================
+  // -- Quiet mutations (no event emission — used by accordion plugin) --
 
   /** Minimize without emitting dock area events. */
   @action minimizeWindowQuietly(id: string): void {

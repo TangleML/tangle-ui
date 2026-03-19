@@ -1,15 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
-import { generate } from "random-words";
 import { useEffect, useRef, useState } from "react";
 
 import ImportPipeline from "@/components/shared/ImportPipeline";
-import { exportPipeline } from "@/components/shared/ReactFlow/FlowSidebar/sections/components/ExportPipelineButton";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,23 +11,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
-import { BlockStack } from "@/components/ui/layout";
-import { JsonSerializer } from "@/models/componentSpec/serialization/jsonSerializer";
-import { PipelineFolders } from "@/routes/PipelineFolders/PipelineFolders";
 import { APP_ROUTES } from "@/routes/router";
 import { autoSaveStore } from "@/routes/v2/pages/Editor/store/autoSaveStore";
 import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButton";
 import { ShorcutBadge } from "@/routes/v2/shared/components/ShorcutBadge";
 import { CTRL } from "@/routes/v2/shared/shortcuts/keys";
 import { registerShortcut } from "@/routes/v2/shared/store/keyboardStore";
-import { navigationStore } from "@/routes/v2/shared/store/navigationStore";
-import { type ComponentSpec as WiredComponentSpec } from "@/utils/componentSpec";
-import { writeComponentToFileListFromText } from "@/utils/componentStore";
-import {
-  defaultPipelineYamlWithName,
-  USER_PIPELINES_LIST_NAME,
-} from "@/utils/constants";
-import { componentSpecToYaml } from "@/utils/yaml";
+
+import { createNewPipeline, exportCurrentPipeline } from "./fileMenu.actions";
+import { OpenPipelineDialog } from "./OpenPipelineDialog";
 
 export function FileMenu() {
   const navigate = useNavigate();
@@ -60,13 +44,7 @@ export function FileMenu() {
   }, [importOpen]);
 
   const handleNewPipeline = async () => {
-    const name = (generate(4) as string[]).join(" ");
-    const componentText = defaultPipelineYamlWithName(name);
-    await writeComponentToFileListFromText(
-      USER_PIPELINES_LIST_NAME,
-      name,
-      componentText,
-    );
+    const name = await createNewPipeline();
     navigate({
       to: APP_ROUTES.EDITOR_V2_PIPELINE,
       params: { pipelineName: name },
@@ -79,18 +57,6 @@ export function FileMenu() {
       params: { pipelineName: name },
     });
     setOpenDialogOpen(false);
-  };
-
-  const handleExportPipeline = () => {
-    const serializer = new JsonSerializer();
-    const componentSpec = navigationStore.rootSpec;
-
-    if (!componentSpec) return;
-
-    const componentText = componentSpecToYaml(
-      serializer.serialize(componentSpec) as WiredComponentSpec,
-    );
-    exportPipeline(componentSpec.name ?? "Untitled Pipeline", componentText);
   };
 
   return (
@@ -125,27 +91,18 @@ export function FileMenu() {
             <Icon name="Upload" size="sm" />
             Import
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleExportPipeline}>
+          <DropdownMenuItem onClick={exportCurrentPipeline}>
             <Icon name="FileDown" size="sm" />
             Export
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Dialog
+      <OpenPipelineDialog
         open={openDialogOpen}
         onOpenChange={setOpenDialogOpen}
-        data-testid="open-pipeline-dialog"
-      >
-        <DialogContent className="max-w-[95vw] sm:max-w-[95vw] w-full">
-          <DialogHeader>
-            <DialogTitle>Open Pipeline</DialogTitle>
-          </DialogHeader>
-          <BlockStack gap="4" className="w-full h-[80vh] overflow-y-auto">
-            <PipelineFolders onPipelineClick={handlePipelineClick} />
-          </BlockStack>
-        </DialogContent>
-      </Dialog>
+        onPipelineClick={handlePipelineClick}
+      />
 
       <ImportPipeline
         triggerComponent={
