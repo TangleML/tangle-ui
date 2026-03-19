@@ -1,12 +1,10 @@
-import "@/routes/v2/pages/Editor/nodes"; // ensure manifests are registered
-
 import type {
   ComponentSpec,
   ComponentSpecJson,
   Task,
   TypeSpecType,
 } from "@/models/componentSpec";
-import { NODE_TYPE_REGISTRY } from "@/routes/v2/shared/nodes/registry";
+import type { NodeTypeRegistry } from "@/routes/v2/shared/nodes/registry";
 import type { SelectedNode } from "@/routes/v2/shared/store/editorStore";
 
 export interface AggregatedArgument {
@@ -104,18 +102,25 @@ export function computeAggregatedArguments(
 }
 
 export function getNodeDisplayName(
+  registry: NodeTypeRegistry,
   node: SelectedNode,
   spec: ComponentSpec | null,
 ): string {
   if (!spec) return node.id;
-  const manifest = NODE_TYPE_REGISTRY.get(node.type);
+  const manifest = registry.get(node.type);
   return manifest?.displayName?.(spec, node.id) ?? node.id;
 }
 
-export function getNodeIcon(type: SelectedNode["type"]): string {
-  return NODE_TYPE_REGISTRY.get(type)?.icon ?? "Circle";
+export function getNodeIcon(
+  registry: NodeTypeRegistry,
+  type: SelectedNode["type"],
+): string {
+  return registry.get(type)?.icon ?? "Circle";
 }
 
-export function getNodeIconColor(type: SelectedNode["type"]): string {
-  return NODE_TYPE_REGISTRY.get(type)?.iconColor ?? "text-gray-500";
+export function getNodeIconColor(
+  registry: NodeTypeRegistry,
+  type: SelectedNode["type"],
+): string {
+  return registry.get(type)?.iconColor ?? "text-gray-500";
 }

@@ -10,6 +10,7 @@ import type { MouseEvent } from "react";
 import { useEffect } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
+import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 
 import { useCanvasEnhancements } from "./useCanvasEnhancements";
 import { useSelectionBehavior } from "./useSelectionBehavior";
@@ -40,6 +41,7 @@ export function useFlowCanvasState({
   metaKeyPressed = false,
   isConnecting = false,
 }: UseFlowCanvasStateParams): UseFlowCanvasStateResult {
+  const registry = useNodeRegistry();
   const { nodes: specNodes, edges: specEdges } = useSpecToNodesEdges(spec);
 
   const [nodes, setNodes, rfOnNodesChange] = useNodesState(specNodes);
@@ -49,7 +51,7 @@ export function useFlowCanvasState({
     nodes: displayNodes,
     edges: displayEdges,
     onEdgeClick,
-  } = useCanvasEnhancements({
+  } = useCanvasEnhancements(registry, {
     spec,
     nodes,
     edges,

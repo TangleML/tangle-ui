@@ -1,7 +1,7 @@
 import type { Edge, Node } from "@xyflow/react";
 import type { MouseEvent } from "react";
 
-import { NODE_TYPE_REGISTRY } from "@/routes/v2/shared/nodes/registry";
+import type { NodeTypeRegistry } from "@/routes/v2/shared/nodes/registry";
 import type {
   CanvasEnhancementParams,
   CanvasEnhancementResult,
@@ -25,9 +25,10 @@ interface CanvasEnhancementsOutput {
  *  3. `onEdgeClick` handlers are composed (first non-undefined wins).
  */
 export function useCanvasEnhancements(
+  registry: NodeTypeRegistry,
   params: CanvasEnhancementParams,
 ): CanvasEnhancementsOutput {
-  const manifests = NODE_TYPE_REGISTRY.all();
+  const manifests = registry.all();
 
   let currentEdges = params.edges;
   const collectedExtraNodes: Node[] = [];

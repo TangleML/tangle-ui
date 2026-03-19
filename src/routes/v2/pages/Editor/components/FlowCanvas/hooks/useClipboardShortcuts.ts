@@ -9,7 +9,8 @@ import {
   pasteNodes,
 } from "@/routes/v2/pages/Editor/store/actions";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
-import { NODE_TYPE_REGISTRY } from "@/routes/v2/shared/nodes/registry";
+import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
+import type { NodeTypeRegistry } from "@/routes/v2/shared/nodes/registry";
 import { CMDALT } from "@/routes/v2/shared/shortcuts/keys";
 import type {
   EditorStore,
@@ -23,6 +24,7 @@ import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
  * exactly one node is selected.
  */
 function getEffectiveSelection(
+  registry: NodeTypeRegistry,
   spec: ComponentSpec,
   editor: EditorStore,
 ): SelectedNode[] {
@@ -31,10 +33,9 @@ function getEffectiveSelection(
 
   if (!selectedNodeId || !selectedNodeType) return [];
 
-  const position = NODE_TYPE_REGISTRY.getByNodeId(
-    spec,
-    selectedNodeId,
-  )?.getPosition(spec, selectedNodeId);
+  const position = registry
+    .getByNodeId(spec, selectedNodeId)
+    ?.getPosition(spec, selectedNodeId);
 
   if (!position) return [];
 
@@ -46,6 +47,7 @@ export function useClipboardShortcuts(
   containerRef: RefObject<HTMLDivElement | null>,
   reactFlowInstance: ReactFlowInstance | null,
 ): void {
+  const registry = useNodeRegistry();
   const { editor, keyboard } = useSharedStores();
   const { clipboard } = useEditorSession();
 
@@ -57,7 +59,7 @@ export function useClipboardShortcuts(
       action: (e) => {
         e.preventDefault();
         if (!spec) return;
-        const selection = getEffectiveSelection(spec, editor);
+        const selection = getEffectiveSelection(registry, spec, editor);
         if (selection.length > 0)
           duplicateSelectedNodes(clipboard, spec, selection);
       },
@@ -70,7 +72,7 @@ export function useClipboardShortcuts(
       action: (e) => {
         e.preventDefault();
         if (!spec) return;
-        const selection = getEffectiveSelection(spec, editor);
+        const selection = getEffectiveSelection(registry, spec, editor);
         if (selection.length > 0) copySelectedNodes(clipboard, spec, selection);
       },
     });
@@ -98,5 +100,13 @@ export function useClipboardShortcuts(
       unregisterCopy();
       unregisterPaste();
     };
-  }, [clipboard, spec, containerRef, reactFlowInstance, editor, keyboard]);
+  }, [
+    clipboard,
+    spec,
+    containerRef,
+    reactFlowInstance,
+    editor,
+    keyboard,
+    registry,
+  ]);
 }

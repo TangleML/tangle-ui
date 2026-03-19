@@ -29,6 +29,7 @@ import {
 } from "@/routes/v2/pages/Editor/utils/undoHistoryStorage";
 import { useDockAreaAccordion } from "@/routes/v2/shared/hooks/useDockAreaAccordion";
 import { useFocusMode } from "@/routes/v2/shared/hooks/useFocusMode";
+import { NodeRegistryProvider } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { SpecProvider } from "@/routes/v2/shared/providers/SpecContext";
 import {
   SharedStoreProvider,
@@ -53,6 +54,7 @@ import { useRunsAndSubmissionWindow } from "./hooks/useRunsAndSubmissionWindow";
 import { useSelectionWindowSync } from "./hooks/useSelectionWindowSync";
 import { useSpecLifecycle } from "./hooks/useSpecLifecycle";
 import { useUndoRedoKeyboard } from "./hooks/useUndoRedoKeyboard";
+import { editorRegistry } from "./nodes";
 import { useEditorShortcuts } from "./shortcuts/useEditorShortcuts";
 import { EditorSessionProvider } from "./store/EditorSessionContext";
 
@@ -148,27 +150,29 @@ const PipelineEditor = withSuspenseWrapper(
     if (!activeSpec) return null;
 
     return (
-      <SpecProvider spec={activeSpec}>
-        <TaskPanel />
-        <InlineStack
-          className="flex-1 min-h-0 w-full"
-          gap="0"
-          blockAlign="stretch"
-          wrap="nowrap"
-          data-testid="editor-v2"
-        >
-          <DockArea side="left" />
-          <div className="relative flex-1 min-w-0 h-full">
-            <FlowCanvas
-              key={activeSpec?.$id ?? "root"}
-              spec={activeSpec}
-              className="h-full"
-            />
-            <WindowContainer />
-          </div>
-          <DockArea side="right" />
-        </InlineStack>
-      </SpecProvider>
+      <NodeRegistryProvider registry={editorRegistry}>
+        <SpecProvider spec={activeSpec}>
+          <TaskPanel />
+          <InlineStack
+            className="flex-1 min-h-0 w-full"
+            gap="0"
+            blockAlign="stretch"
+            wrap="nowrap"
+            data-testid="editor-v2"
+          >
+            <DockArea side="left" />
+            <div className="relative flex-1 min-w-0 h-full">
+              <FlowCanvas
+                key={activeSpec?.$id ?? "root"}
+                spec={activeSpec}
+                className="h-full"
+              />
+              <WindowContainer />
+            </div>
+            <DockArea side="right" />
+          </InlineStack>
+        </SpecProvider>
+      </NodeRegistryProvider>
     );
   }),
   PipelineEditorSkeleton,

@@ -1,12 +1,10 @@
-import "@/routes/v2/pages/Editor/nodes"; // ensure manifests are registered
-
 import type { EdgeChange, NodeChange, ReactFlowProps } from "@xyflow/react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 import { cleanupDeletedBinding } from "@/routes/v2/pages/Editor/nodes/ConduitNode/conduits.actions";
 import { deleteEdge } from "@/routes/v2/pages/Editor/store/actions";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
-import { NODE_TYPE_REGISTRY } from "@/routes/v2/shared/nodes/registry";
+import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 export function useNodeEdgeChanges(
@@ -14,6 +12,7 @@ export function useNodeEdgeChanges(
   rfOnNodesChange: (changes: NodeChange[]) => void,
   rfOnEdgesChange: (changes: EdgeChange[]) => void,
 ): Required<Pick<ReactFlowProps, "onNodesChange" | "onEdgesChange">> {
+  const registry = useNodeRegistry();
   const { editor } = useSharedStores();
   const { undo } = useEditorSession();
 
@@ -32,7 +31,7 @@ export function useNodeEdgeChanges(
       undo.withGroup("Move nodes", () => {
         for (const change of positionChanges) {
           if ("id" in change && "position" in change && change.position) {
-            const manifest = NODE_TYPE_REGISTRY.getByNodeId(spec, change.id);
+            const manifest = registry.getByNodeId(spec, change.id);
             manifest?.updatePosition(undo, spec, change.id, change.position);
           }
         }
@@ -42,7 +41,7 @@ export function useNodeEdgeChanges(
     const removeChanges = changes.filter((change) => change.type === "remove");
     for (const change of removeChanges) {
       if ("id" in change) {
-        const manifest = NODE_TYPE_REGISTRY.getByNodeId(spec, change.id);
+        const manifest = registry.getByNodeId(spec, change.id);
         // todo: move action to a separate file
         undo.withGroup("Delete node", () => {
           manifest?.deleteNode(undo, spec, change.id);

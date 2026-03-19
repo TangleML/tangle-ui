@@ -1,5 +1,3 @@
-import "@/routes/v2/pages/RunView/nodes";
-
 import {
   Background,
   Controls,
@@ -20,11 +18,8 @@ import {
 import { useAutoLayoutShortcut } from "@/routes/v2/shared/hooks/useAutoLayoutShortcut";
 import { useFlowCanvasState } from "@/routes/v2/shared/hooks/useFlowCanvasState";
 import { useViewportScaling } from "@/routes/v2/shared/hooks/useViewportScaling";
-import { NODE_TYPE_REGISTRY } from "@/routes/v2/shared/nodes/registry";
+import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
-
-const nodeTypes = NODE_TYPE_REGISTRY.getNodeTypes();
-const edgeTypes = NODE_TYPE_REGISTRY.getEdgeTypes();
 
 interface RunViewFlowCanvasProps {
   spec: ComponentSpec | null;
@@ -35,6 +30,9 @@ export const RunViewFlowCanvas = observer(function RunViewFlowCanvas({
   spec,
   className,
 }: RunViewFlowCanvasProps) {
+  const registry = useNodeRegistry();
+  const nodeTypes = registry.getNodeTypes();
+  const edgeTypes = registry.getEdgeTypes();
   const { editor } = useSharedStores();
   const { containerRef, handleViewportChange } = useViewportScaling();
   const { setNodes: rfSetNodes } = useReactFlow();
