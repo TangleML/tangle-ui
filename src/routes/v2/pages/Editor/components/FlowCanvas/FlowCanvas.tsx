@@ -9,32 +9,30 @@ import {
   NodeToolbar,
   ReactFlow,
   type ReactFlowInstance,
-  SelectionMode,
   useConnection,
-  useEdgesState,
   useNodes,
-  useNodesState,
   useReactFlow,
-  type Viewport,
 } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 
 import { BlockStack } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
 import type { ComponentSpec } from "@/models/componentSpec";
 import { useAutoLayout } from "@/routes/v2/pages/Editor/hooks/useAutoLayout";
-import { ZOOM_THRESHOLD } from "@/routes/v2/pages/Editor/nodes/TaskNode/components/TaskNode";
 import {
   copySelectedNodes,
   deleteSelectedNodes,
   duplicateSelectedNodes,
   pasteNodes,
 } from "@/routes/v2/pages/Editor/store/actions";
-import { useCanvasEnhancements } from "@/routes/v2/shared/hooks/useCanvasEnhancements";
+import {
+  FLOW_CANVAS_DEFAULT_PROPS,
+  GRID_SIZE,
+} from "@/routes/v2/shared/flowCanvasDefaults";
+import { useFlowCanvasState } from "@/routes/v2/shared/hooks/useFlowCanvasState";
 import { focusModeStore } from "@/routes/v2/shared/hooks/useFocusMode";
-import { useSelectionBehavior } from "@/routes/v2/shared/hooks/useSelectionBehavior";
-import { useSpecToNodesEdges } from "@/routes/v2/shared/hooks/useSpecToNodesEdges";
+import { useViewportScaling } from "@/routes/v2/shared/hooks/useViewportScaling";
 import { NODE_TYPE_REGISTRY } from "@/routes/v2/shared/nodes/registry";
 import { CMDALT } from "@/routes/v2/shared/shortcuts/keys";
 import {
@@ -51,9 +49,6 @@ import { useFitViewOnFocus } from "./hooks/useFitViewOnFocus";
 import { useNodeEdgeChanges } from "./hooks/useNodeEdgeChanges";
 import { usePaneClickBehavior } from "./hooks/usePaneClickBehavior";
 import { SelectionToolbar } from "./SelectionToolbar";
-
-const GRID_SIZE = 10;
-const MAX_COLLAPSED_SCALE = 7;
 
 const nodeTypes = NODE_TYPE_REGISTRY.getNodeTypes();
 const edgeTypes = NODE_TYPE_REGISTRY.getEdgeTypes();
@@ -100,7 +95,7 @@ export const FlowCanvas = observer(function FlowCanvas({
   spec,
   className,
 }: FlowCanvasProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const { containerRef, handleViewportChange } = useViewportScaling();
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance | null>(null);
   const focusModeActive = focusModeStore.active;
@@ -108,33 +103,19 @@ export const FlowCanvas = observer(function FlowCanvas({
   const metaKeyPressed = keyboardStore.pressed.has(CMDALT);
   const isConnecting = useConnection((c) => c.inProgress);
 
-  const { nodes: specNodes, edges: specEdges } = useSpecToNodesEdges(spec);
-
-  const [nodes, setNodes, rfOnNodesChange] = useNodesState(specNodes);
-  const [edges, setEdges, rfOnEdgesChange] = useEdgesState(specEdges);
-
   const {
-    nodes: displayNodes,
-    edges: displayEdges,
+    displayNodes,
+    displayEdges,
     onEdgeClick,
-  } = useCanvasEnhancements({
-    spec,
-    nodes,
-    edges,
-    metaKeyPressed,
-    isConnecting,
-  });
-
-  useEffect(() => {
-    setNodes(specNodes);
-    setEdges(specEdges);
-  }, [specNodes, specEdges, setNodes, setEdges]);
+    rfOnNodesChange,
+    rfOnEdgesChange,
+    selectionBehavior,
+  } = useFlowCanvasState({ spec, metaKeyPressed, isConnecting });
 
   useFitViewOnFocus();
   useAutoLayout(spec);
   useClipboardShortcuts(spec, containerRef, reactFlowInstance);
 
-  const selectionBehavior = useSelectionBehavior(spec);
   const nodeEdgeBehavior = useNodeEdgeChanges(
     spec,
     rfOnNodesChange,
@@ -144,12 +125,6 @@ export const FlowCanvas = observer(function FlowCanvas({
   const dropBehavior = useDropBehavior(spec, reactFlowInstance);
   const doubleClickBehavior = useDoubleClickBehavior(spec);
   const paneClickBehavior = usePaneClickBehavior(spec, reactFlowInstance);
-
-  const handleViewportChange = ({ zoom }: Viewport) => {
-    const scale = Math.min(ZOOM_THRESHOLD / zoom, MAX_COLLAPSED_SCALE);
-    containerRef.current?.style.setProperty("--collapsed-scale", String(scale));
-    containerRef.current?.style.setProperty("--zoom-level", String(zoom));
-  };
 
   return (
     <BlockStack
@@ -162,6 +137,9 @@ export const FlowCanvas = observer(function FlowCanvas({
       )}
     >
       <ReactFlow
+        {...FLOW_CANVAS_DEFAULT_PROPS}
+        nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         nodes={displayNodes}
         edges={displayEdges}
         {...selectionBehavior}
@@ -173,21 +151,8 @@ export const FlowCanvas = observer(function FlowCanvas({
         onEdgeClick={onEdgeClick}
         onInit={setReactFlowInstance}
         onViewportChange={handleViewportChange}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
         connectionLineComponent={ConnectionLine}
-        snapToGrid
-        snapGrid={[GRID_SIZE, GRID_SIZE]}
-        minZoom={0.1}
-        maxZoom={2}
-        fitView
-        fitViewOptions={{ maxZoom: 1, padding: 0.2 }}
-        proOptions={{ hideAttribution: true }}
         deleteKeyCode={["Delete", "Backspace"]}
-        selectionOnDrag={false}
-        selectionMode={SelectionMode.Partial}
-        panOnDrag={true}
-        zIndexMode="manual"
       >
         <FloatingSelectionToolbar spec={spec} />
         <Background gap={GRID_SIZE} className="!bg-slate-50" />
