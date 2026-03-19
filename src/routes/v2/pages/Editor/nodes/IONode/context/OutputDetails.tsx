@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { BlockStack } from "@/components/ui/layout";
 import { Textarea } from "@/components/ui/textarea";
 import { Text } from "@/components/ui/typography";
-import { InputLabel } from "@/routes/v2/pages/Editor/components/InputLabel";
+import { InputLabel } from "@/routes/v2/pages/Editor/components/InputLabel/InputLabel";
 import { ZIndexEditor } from "@/routes/v2/pages/Editor/nodes/FlexNode/context/components/ZIndexEditor";
 import {
   renameOutput,

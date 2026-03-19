@@ -6,12 +6,12 @@ import {
   Output,
   type TypeSpecType,
 } from "@/models/componentSpec";
-
 import {
   generateUniqueInputName,
   generateUniqueOutputName,
-} from "../nameUtils";
-import { withUndoGroup } from "../undoStore";
+} from "@/routes/v2/pages/Editor/store/nameUtils";
+import { withUndoGroup } from "@/routes/v2/pages/Editor/store/undoStore";
+
 import { idGen } from "./utils";
 
 export function addInput(

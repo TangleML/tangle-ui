@@ -3,12 +3,8 @@ import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
-import type {
-  InputSpecJson,
-  Task,
-} from "@/models/componentSpec";
-
-import { AutoGrowTextarea } from "./AutoGrowTextArea";
+import type { InputSpecJson, Task } from "@/models/componentSpec";
+import { AutoGrowTextarea } from "@/routes/v2/pages/Editor/components/AutoGrowTextArea";
 
 type DynamicDataDisplayInfo = NonNullable<
   ReturnType<typeof getDynamicDataDisplayInfo>

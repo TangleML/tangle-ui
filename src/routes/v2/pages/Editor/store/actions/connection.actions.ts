@@ -1,6 +1,6 @@
 import type { ComponentSpec } from "@/models/componentSpec";
+import { withUndoGroup } from "@/routes/v2/pages/Editor/store/undoStore";
 
-import { withUndoGroup } from "../undoStore";
 import { getNodeTypeFromId } from "./utils";
 
 interface ConnectionInfo {

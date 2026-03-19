@@ -42,11 +42,7 @@ export function DynamicDataSubmenu({
             </DropdownMenuLabel>
             {group.requiresDialog ? (
               <DropdownMenuItem onClick={onOpenSecretDialog}>
-                <Icon
-                  name="Lock"
-                  size="sm"
-                  className="text-amber-600"
-                />
+                <Icon name="Lock" size="sm" className="text-amber-600" />
                 Select Secret...
               </DropdownMenuItem>
             ) : (
@@ -55,11 +51,7 @@ export function DynamicDataSubmenu({
                   key={option.key}
                   onClick={() => onSelectSystemData(option.key)}
                 >
-                  <Icon
-                    name={group.icon}
-                    size="sm"
-                    className="text-blue-600"
-                  />
+                  <Icon name={group.icon} size="sm" className="text-blue-600" />
                   {option.title}
                 </DropdownMenuItem>
               ))

@@ -19,7 +19,7 @@ import type {
 } from "@/models/componentSpec";
 import type { TypeSpecType } from "@/models/componentSpec/entities/types";
 
-import { removeArgument, setArgument } from "./arguments.actions";
+import { removeArgument, setArgument } from "./ArgumentRow/arguments.actions";
 
 const LANGUAGE_OPTIONS = [
   { value: "plaintext", label: "Plain Text" },

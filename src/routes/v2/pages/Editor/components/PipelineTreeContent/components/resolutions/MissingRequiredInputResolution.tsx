@@ -7,9 +7,9 @@ import type {
   ComponentSpecJson,
   ValidationIssue,
 } from "@/models/componentSpec";
-import { ArgumentRow } from "@/routes/v2/pages/Editor/components/ArgumentRow";
+import { ArgumentRow } from "@/routes/v2/pages/Editor/components/ArgumentRow/ArgumentRow";
+import { findTaskById } from "@/routes/v2/pages/Editor/components/PipelineTreeContent/components/validationResolution.utils";
 
-import { findTaskById } from "../validationResolution.utils";
 import { InfoOnlyResolution } from "./InfoOnlyResolution";
 
 export const MissingRequiredInputResolution = observer(

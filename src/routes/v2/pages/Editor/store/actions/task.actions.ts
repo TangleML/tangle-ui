@@ -6,14 +6,12 @@ import {
   createTaskFromComponentRef,
   type Task,
 } from "@/models/componentSpec";
+import { clipboardStore } from "@/routes/v2/pages/Editor/store/clipboardStore";
+import { generateUniqueTaskName } from "@/routes/v2/pages/Editor/store/nameUtils";
+import { withUndoGroup } from "@/routes/v2/pages/Editor/store/undoStore";
 import { NODE_TYPE_REGISTRY } from "@/routes/v2/shared/nodes/registry";
 import type { SelectedNode } from "@/routes/v2/shared/store/editorStore";
 
-import { clipboardStore } from "../clipboardStore";
-import {
-  generateUniqueTaskName,
-} from "../nameUtils";
-import { withUndoGroup } from "../undoStore";
 import { idGen, TASK_COLOR_ANNOTATION } from "./utils";
 
 export function addTask(

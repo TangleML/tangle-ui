@@ -5,9 +5,9 @@ import {
   createSubgraph as modelCreateSubgraph,
   type Task,
 } from "@/models/componentSpec";
+import { generateUniqueTaskName } from "@/routes/v2/pages/Editor/store/nameUtils";
+import { withUndoGroup } from "@/routes/v2/pages/Editor/store/undoStore";
 
-import { generateUniqueTaskName } from "../nameUtils";
-import { withUndoGroup } from "../undoStore";
 import { idGen } from "./utils";
 
 export function renamePipeline(spec: ComponentSpec, newName: string): boolean {

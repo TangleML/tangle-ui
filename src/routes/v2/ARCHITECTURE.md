@@ -102,12 +102,52 @@ Follow the hierarchy from most specific to most general:
 3. **Parent folder** -- used across child folders within the same feature
 4. **shared/** -- used by 2+ pages, verified by dependency analysis
 
+### Component Folder Rule
+
+If a component has **related files** (utils, actions, sub-components), it **must** live in a folder named after the component. All related files reside inside that folder:
+
+- **Utils / actions** -- sibling of the main component file inside the folder
+- **Sub-components** -- placed in a nested `components/` directory
+- **Standalone files** (single component, no related files) remain as loose files at the parent level
+
+```
+components/
+  AnnotationsBlock/            # Has actions -> folder
+    AnnotationsBlock.tsx
+    annotations.actions.ts
+  ArgumentRow/                 # Has utils, actions, and sub-components -> folder
+    ArgumentRow.tsx
+    argumentRow.utils.ts
+    arguments.actions.ts
+    components/
+      ArgumentValueDisplay.tsx
+      InputValidationIndicator.tsx
+      ThunderMenu/             # Sub-component with its own utils and sub-components -> nested folder
+        ThunderMenu.tsx
+        thunderMenu.utils.ts
+        components/
+          QuickConnectSubmenu.tsx
+          DynamicDataSubmenu.tsx
+  HistoryContent/              # Has utils and sub-components -> folder
+    HistoryContent.tsx
+    historyContent.utils.ts
+    components/
+      HistoryEntryItem.tsx
+      HistoryToolbar.tsx
+      InitialStateMarker.tsx
+  AutoGrowTextArea.tsx         # Standalone, no related files -> loose file
+  ValidationSummary.tsx        # Standalone -> loose file
+```
+
+This rule applies recursively: if a sub-component itself has related files, it gets its own folder within `components/`.
+
 ### Red Flags
 
 - A file in `shared/` imported by only one page -- move it to that page
 - Deep relative imports (`../../../../`) -- use `@/routes/v2/` absolute imports
 - A "shared" component with page-specific props -- it belongs with the page
 - Side-effect imports (`import "./nodes"`) in shared hooks -- registration belongs at the page level
+- A component with utils/actions/sub-components living as a loose file -- wrap it in a folder
 
 ## Import Conventions
 

@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-import { HistoryContent } from "@/routes/v2/pages/Editor/components/HistoryContent";
+import { HistoryContent } from "@/routes/v2/pages/Editor/components/HistoryContent/HistoryContent";
 import {
   getWindowById,
   openWindow,

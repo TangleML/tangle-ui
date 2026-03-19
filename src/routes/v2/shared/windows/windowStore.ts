@@ -19,6 +19,10 @@ import {
   type WindowRef,
 } from "./types";
 import {
+  getPersistedWindowState,
+  STATIC_WINDOW_IDS,
+} from "./windowPersistence";
+import {
   attachWindow as attachWindowFn,
   cascadeOnHide,
   cascadeOnRestore,
@@ -36,10 +40,6 @@ import {
   undockWindow as undockWindowFn,
   updateDockedWindowHeight as updateDockedWindowHeightFn,
 } from "./windowStore.docking";
-import {
-  getPersistedWindowState,
-  STATIC_WINDOW_IDS,
-} from "./windowPersistence";
 
 /**
  * Content storage - separate from observable store to avoid React Compiler issues.

@@ -5,7 +5,7 @@ import { reaction } from "mobx";
 import { useEffect } from "react";
 
 import { ContextPanelContent } from "@/routes/v2/pages/Editor/components/ContextPanel/ContextPanel";
-import { PinnedTaskContent } from "@/routes/v2/pages/Editor/components/PinnedTaskContent";
+import { PinnedTaskContent } from "@/routes/v2/pages/Editor/components/PinnedTaskContent/PinnedTaskContent";
 import { editorStore } from "@/routes/v2/shared/store/editorStore";
 import { navigationStore } from "@/routes/v2/shared/store/navigationStore";
 import {

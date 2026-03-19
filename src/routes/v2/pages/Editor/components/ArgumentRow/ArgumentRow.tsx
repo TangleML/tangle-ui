@@ -18,7 +18,11 @@ import {
 } from "@/routes/v2/shared/store/editorStore";
 import type { DynamicDataArgument } from "@/utils/componentSpec";
 
-import { formatBindingSource, getDisplayValue, typeSpecToString } from "./argumentRow.utils";
+import {
+  formatBindingSource,
+  getDisplayValue,
+  typeSpecToString,
+} from "./argumentRow.utils";
 import {
   quickConnect,
   removeArgument,
@@ -27,9 +31,9 @@ import {
   setDynamicData,
   unsetArgument,
 } from "./arguments.actions";
-import { ArgumentValueDisplay } from "./ArgumentValueDisplay";
-import { InputValidationIndicator } from "./InputValidationIndicator";
-import { ThunderMenu } from "./ThunderMenu";
+import { ArgumentValueDisplay } from "./components/ArgumentValueDisplay";
+import { InputValidationIndicator } from "./components/InputValidationIndicator";
+import { ThunderMenu } from "./components/ThunderMenu/ThunderMenu";
 
 interface ArgumentRowProps {
   inputSpec: InputSpecJson;
@@ -133,7 +137,13 @@ export const ArgumentRow = observer(function ArgumentRow({
     sourceEntityId: string,
     sourcePortName: string,
   ) => {
-    quickConnect(spec, sourceEntityId, sourcePortName, task.$id, inputSpec.name);
+    quickConnect(
+      spec,
+      sourceEntityId,
+      sourcePortName,
+      task.$id,
+      inputSpec.name,
+    );
   };
 
   const handleCreateInputAndConnect = () => {

@@ -10,8 +10,10 @@ import {
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
-
-import { type QuickConnectGroup, typeSpecToString } from "./thunderMenu.utils";
+import {
+  type QuickConnectGroup,
+  typeSpecToString,
+} from "@/routes/v2/pages/Editor/components/ArgumentRow/components/ThunderMenu/thunderMenu.utils";
 
 interface QuickConnectSubmenuProps {
   groups: QuickConnectGroup[];
@@ -39,16 +41,8 @@ export function QuickConnectSubmenu({
                 className="shrink-0"
                 wrap="nowrap"
               >
-                <Icon
-                  name={group.icon}
-                  size="sm"
-                  className="shrink-0"
-                />
-                <Text
-                  size="xs"
-                  weight="semibold"
-                  className="truncate"
-                >
+                <Icon name={group.icon} size="sm" className="shrink-0" />
+                <Text size="xs" weight="semibold" className="truncate">
                   {group.label}
                 </Text>
               </InlineStack>
@@ -58,18 +52,13 @@ export function QuickConnectSubmenu({
               return (
                 <DropdownMenuItem
                   key={`${port.entityId}::${port.portName}`}
-                  onClick={() =>
-                    onQuickConnect(port.entityId, port.portName)
-                  }
+                  onClick={() => onQuickConnect(port.entityId, port.portName)}
                 >
                   <Text size="xs" className="truncate flex-1">
                     {port.portName}
                   </Text>
                   {typeLabel && (
-                    <Text
-                      size="xs"
-                      className="text-gray-400 shrink-0 ml-auto"
-                    >
+                    <Text size="xs" className="text-gray-400 shrink-0 ml-auto">
                       {typeLabel}
                     </Text>
                   )}

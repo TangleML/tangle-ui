@@ -1,7 +1,4 @@
-import {
-  getAttachmentChain,
-  getWindowBottom,
-} from "./snapUtils";
+import { getAttachmentChain, getWindowBottom } from "./snapUtils";
 import type { WindowConfig } from "./types";
 
 export function attachWindow(

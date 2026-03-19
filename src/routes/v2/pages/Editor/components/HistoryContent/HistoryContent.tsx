@@ -5,10 +5,10 @@ import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { undoStore } from "@/routes/v2/pages/Editor/store/undoStore";
 
+import { HistoryEntryItem } from "./components/HistoryEntryItem";
+import { HistoryToolbar } from "./components/HistoryToolbar";
+import { InitialStateMarker } from "./components/InitialStateMarker";
 import { getUndoEventName } from "./historyContent.utils";
-import { HistoryEntryItem } from "./HistoryEntryItem";
-import { HistoryToolbar } from "./HistoryToolbar";
-import { InitialStateMarker } from "./InitialStateMarker";
 
 export const HistoryContent = observer(function HistoryContent() {
   const { canUndo, canRedo, undoLevels, redoLevels } = undoStore;

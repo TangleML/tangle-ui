@@ -22,8 +22,8 @@ import type { TypeSpecType } from "@/models/componentSpec";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import type { DynamicDataArgument } from "@/utils/componentSpec";
 
-import { DynamicDataSubmenu } from "./DynamicDataSubmenu";
-import { QuickConnectSubmenu } from "./QuickConnectSubmenu";
+import { DynamicDataSubmenu } from "./components/DynamicDataSubmenu";
+import { QuickConnectSubmenu } from "./components/QuickConnectSubmenu";
 import { getQuickConnectGroups } from "./thunderMenu.utils";
 
 interface ThunderMenuProps {
