@@ -12,6 +12,8 @@ interface CreatedByFilterProps {
   onChange: (value: string | undefined) => void;
   /** Called when user clicks the clear button (for immediate clearing). */
   onClear: () => void;
+  /** Pre-fills the input on mount and triggers onChange if no URL value is set. */
+  defaultValue?: string;
 }
 
 /**
@@ -21,13 +23,21 @@ export function CreatedByFilter({
   value,
   onChange,
   onClear,
+  defaultValue,
 }: CreatedByFilterProps) {
-  const [inputValue, setInputValue] = useState(value ?? "");
+  const [inputValue, setInputValue] = useState(value ?? defaultValue ?? "");
 
   // Sync internal state when value changes externally (e.g., URL navigation, badge removal)
   useEffect(() => {
     setInputValue(value ?? "");
   }, [value]);
+
+  // Apply defaultValue on mount if no URL value is already set
+  useEffect(() => {
+    if (defaultValue && value === undefined) {
+      onChange(defaultValue);
+    }
+  }, []);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;

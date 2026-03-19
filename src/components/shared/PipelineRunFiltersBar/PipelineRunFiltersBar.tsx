@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { DateRange } from "react-day-picker";
 
 import { CreatedByFilter } from "@/components/shared/CreatedByFilter/CreatedByFilter";
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DatePickerWithRange } from "@/components/ui/date-picker";
@@ -35,6 +36,7 @@ export function PipelineRunFiltersBar({
   totalCount,
   filteredCount,
 }: PipelineRunFiltersBarProps) {
+  const isCreatedByMeDefault = useFlagValue("created-by-me-default");
   const {
     filters,
     setFilter,
@@ -205,6 +207,9 @@ export function PipelineRunFiltersBar({
           value={filters.created_by}
           onChange={(value) => setFilterDebounced("created_by", value)}
           onClear={() => setFilter("created_by", undefined)}
+          defaultValue={
+            isCreatedByMeDefault && !filters.created_by ? "me" : undefined
+          }
         />
 
         {/* Date Range */}
