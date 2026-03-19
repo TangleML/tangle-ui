@@ -58,6 +58,7 @@ export const MultilineTextInputDialog = ({
     detectLanguage(initialValue),
   );
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
   const handleConfirm = () => {
     onConfirm(value);
@@ -90,7 +91,10 @@ export const MultilineTextInputDialog = ({
   }, [initialValue]);
 
   useEffect(() => {
-    if (!open) setIsFullscreen(false);
+    if (!open) {
+      setIsFullscreen(false);
+      setIsDescriptionExpanded(false);
+    }
   }, [open]);
 
   return (
@@ -110,15 +114,16 @@ export const MultilineTextInputDialog = ({
             <Icon name={isFullscreen ? "Minimize2" : "Maximize2"} size="xs" />
           </Button>
         )}
-        <InlineStack
-          gap="2"
-          align="space-between"
-          wrap="nowrap"
-          className="w-full"
+        <DialogDescription
+          className={cn(
+            "break-all",
+            !isDescriptionExpanded && "line-clamp-2",
+            !description ? "hidden" : "",
+          )}
         >
-          <DialogDescription className={cn(!description ? "hidden" : "")}>
-            {description ?? title}
-          </DialogDescription>
+          {description ?? title}
+        </DialogDescription>
+        <InlineStack align="space-between">
           {highlightSyntax && (
             <Select
               value={selectedLanguage}
@@ -135,6 +140,28 @@ export const MultilineTextInputDialog = ({
                 ))}
               </SelectContent>
             </Select>
+          )}
+
+          {!isDescriptionExpanded &&
+            description &&
+            description.length > 100 && (
+              <Button
+                variant="link"
+                size="xs"
+                onClick={() => setIsDescriptionExpanded(true)}
+              >
+                Show more
+              </Button>
+            )}
+
+          {isDescriptionExpanded && (
+            <Button
+              variant="link"
+              size="xs"
+              onClick={() => setIsDescriptionExpanded(false)}
+            >
+              Show less
+            </Button>
           )}
         </InlineStack>
         {highlightSyntax && selectedLanguage !== "plaintext" ? (
