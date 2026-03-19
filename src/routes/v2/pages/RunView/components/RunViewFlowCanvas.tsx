@@ -6,14 +6,10 @@ import {
   MiniMap,
   type NodeChange,
   ReactFlow,
-  SelectionMode,
-  useEdgesState,
-  useNodesState,
   useReactFlow,
-  type Viewport,
 } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
-import { useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
 
 import {
   autoLayoutNodes,
@@ -22,17 +18,16 @@ import {
 import { BlockStack } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
 import type { ComponentSpec } from "@/models/componentSpec";
-import { ZOOM_THRESHOLD } from "@/routes/v2/pages/Editor/nodes/TaskNode/components/TaskNode";
-import { useCanvasEnhancements } from "@/routes/v2/shared/hooks/useCanvasEnhancements";
-import { useSelectionBehavior } from "@/routes/v2/shared/hooks/useSelectionBehavior";
-import { useSpecToNodesEdges } from "@/routes/v2/shared/hooks/useSpecToNodesEdges";
+import {
+  FLOW_CANVAS_DEFAULT_PROPS,
+  GRID_SIZE,
+} from "@/routes/v2/shared/flowCanvasDefaults";
+import { useFlowCanvasState } from "@/routes/v2/shared/hooks/useFlowCanvasState";
+import { useViewportScaling } from "@/routes/v2/shared/hooks/useViewportScaling";
 import { NODE_TYPE_REGISTRY } from "@/routes/v2/shared/nodes/registry";
 import { CMDALT, SHIFT } from "@/routes/v2/shared/shortcuts/keys";
 import { clearSelection } from "@/routes/v2/shared/store/editorStore";
 import { registerShortcut } from "@/routes/v2/shared/store/keyboardStore";
-
-const GRID_SIZE = 10;
-const MAX_COLLAPSED_SCALE = 7;
 
 const nodeTypes = NODE_TYPE_REGISTRY.getNodeTypes();
 const edgeTypes = NODE_TYPE_REGISTRY.getEdgeTypes();
@@ -46,33 +41,16 @@ export const RunViewFlowCanvas = observer(function RunViewFlowCanvas({
   spec,
   className,
 }: RunViewFlowCanvasProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const { containerRef, handleViewportChange } = useViewportScaling();
   const { getNodes, getEdges, setNodes: rfSetNodes, fitView } = useReactFlow();
-  const [isConnecting] = useState(false);
-
-  const { nodes: specNodes, edges: specEdges } = useSpecToNodesEdges(spec);
-
-  const [nodes, setNodes, rfOnNodesChange] = useNodesState(specNodes);
-  const [edges, setEdges] = useEdgesState(specEdges);
 
   const {
-    nodes: displayNodes,
-    edges: displayEdges,
+    displayNodes,
+    displayEdges,
     onEdgeClick,
-  } = useCanvasEnhancements({
-    spec,
-    nodes,
-    edges,
-    metaKeyPressed: false,
-    isConnecting,
-  });
-
-  useEffect(() => {
-    setNodes(specNodes);
-    setEdges(specEdges);
-  }, [specNodes, specEdges, setNodes, setEdges]);
-
-  const selectionBehavior = useSelectionBehavior(spec);
+    rfOnNodesChange,
+    selectionBehavior,
+  } = useFlowCanvasState({ spec });
 
   const onNodesChange = (changes: NodeChange[]) => {
     const filtered = changes.filter(
@@ -114,15 +92,12 @@ export const RunViewFlowCanvas = observer(function RunViewFlowCanvas({
     return unregister;
   }, [getNodes, getEdges, rfSetNodes, fitView]);
 
-  const handleViewportChange = ({ zoom }: Viewport) => {
-    const scale = Math.min(ZOOM_THRESHOLD / zoom, MAX_COLLAPSED_SCALE);
-    containerRef.current?.style.setProperty("--collapsed-scale", String(scale));
-    containerRef.current?.style.setProperty("--zoom-level", String(zoom));
-  };
-
   return (
     <BlockStack ref={containerRef} fill className={cn("relative", className)}>
       <ReactFlow
+        {...FLOW_CANVAS_DEFAULT_PROPS}
+        nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         nodes={displayNodes}
         edges={displayEdges}
         onNodesChange={onNodesChange}
@@ -130,23 +105,10 @@ export const RunViewFlowCanvas = observer(function RunViewFlowCanvas({
         onEdgeClick={onEdgeClick}
         {...selectionBehavior}
         onViewportChange={handleViewportChange}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
         nodesConnectable={false}
         nodesDraggable
         elementsSelectable
         deleteKeyCode={null}
-        snapToGrid
-        snapGrid={[GRID_SIZE, GRID_SIZE]}
-        minZoom={0.1}
-        maxZoom={2}
-        fitView
-        fitViewOptions={{ maxZoom: 1, padding: 0.2 }}
-        proOptions={{ hideAttribution: true }}
-        selectionOnDrag={false}
-        selectionMode={SelectionMode.Partial}
-        panOnDrag
-        zIndexMode="manual"
       >
         <Background gap={GRID_SIZE} className="!bg-slate-50" />
         <Controls position="bottom-right" />

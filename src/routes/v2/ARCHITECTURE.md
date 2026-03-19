@@ -21,18 +21,20 @@ A page may only depend on `shared/` and external packages. Pages must never impo
 ## shared/ -- What Belongs Here
 
 Code goes into `shared/` only when **both** conditions are met:
+
 1. Used by 2+ pages (or by shared infrastructure that is)
 2. Has a stable API that doesn't change with page-specific features
 
-| Folder | Purpose | Current contents |
-|---|---|---|
-| `store/` | Selection, navigation, keyboard state | `editorStore`, `navigationStore`, `keyboardStore` |
-| `nodes/` | Node type registry class, base types, build utils | `registry.ts`, `types.ts`, `buildUtils.ts` |
-| `windows/` | Window system (dock, float, snap, persist) | 18 files -- entire window subsystem |
-| `hooks/` | Canvas + layout hooks used by both pages | `useSpecToNodesEdges`, `useCanvasEnhancements`, `useSelectionBehavior`, `useDockAreaAccordion`, `useFocusMode` |
-| `components/` | Small UI components shared across pages | `ShorcutBadge`, `MenuTriggerButton`, `AppMenuActions` |
-| `providers/` | React context providers | `SpecContext` |
-| `shortcuts/` | Keyboard shortcut key definitions | `keys.ts` |
+| Folder                  | Purpose                                             | Current contents                                                                                                                                           |
+| ----------------------- | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `store/`                | Selection, navigation, keyboard state               | `editorStore`, `navigationStore`, `keyboardStore`                                                                                                          |
+| `nodes/`                | Node type registry class, base types, build utils   | `registry.ts`, `types.ts`, `buildUtils.ts`                                                                                                                 |
+| `windows/`              | Window system (dock, float, snap, persist)          | 18 files -- entire window subsystem                                                                                                                        |
+| `hooks/`                | Canvas + layout hooks used by both pages            | `useSpecToNodesEdges`, `useCanvasEnhancements`, `useSelectionBehavior`, `useFlowCanvasState`, `useViewportScaling`, `useDockAreaAccordion`, `useFocusMode` |
+| `flowCanvasDefaults.ts` | Shared canvas constants and ReactFlow default props | `GRID_SIZE`, `ZOOM_THRESHOLD`, `FLOW_CANVAS_DEFAULT_PROPS`, `nodeTypes`, `edgeTypes`                                                                       |
+| `components/`           | Small UI components shared across pages             | `ShorcutBadge`, `MenuTriggerButton`, `AppMenuActions`                                                                                                      |
+| `providers/`            | React context providers                             | `SpecContext`                                                                                                                                              |
+| `shortcuts/`            | Keyboard shortcut key definitions                   | `keys.ts`                                                                                                                                                  |
 
 ### When NOT to put something in shared/
 
@@ -67,11 +69,13 @@ pages/RunView/
 Each page registers its own node manifests into the shared `NODE_TYPE_REGISTRY`. This is the key architectural decision that keeps the dependency graph clean.
 
 **Shared** provides the infrastructure:
+
 - `NodeTypeManifest` interface (the contract)
 - `NodeTypeRegistry` class + singleton
 - `buildUtils` (position helpers, edge builders)
 
 **Each page** provides implementations:
+
 - Its own `nodes/index.ts` that registers manifests
 - Its own manifest files with page-appropriate behavior
 - Side-effect import (`import "./nodes"`) in the page's FlowCanvas or entry point
@@ -80,14 +84,14 @@ Each page registers its own node manifests into the shared `NODE_TYPE_REGISTRY`.
 
 Editor nodes pull in editing stores (`undoStore`, `actions`, `clipboardStore`), editing components (`ArgumentRow`, `ThunderMenu`), and editing actions (`drop`, `deleteNode`, `cloneHandler`). Sharing them would force RunView to depend on all of Editor's internals.
 
-| Capability | Editor manifest | RunView manifest |
-|---|---|---|
-| `drop` | Full (add tasks, inputs, outputs) | None |
-| `deleteNode` | Deletes from spec | No-op |
-| `cloneHandler` | Full snapshot + clone | None |
-| `onDoubleClick` | Navigate to subgraph | Navigate to subgraph |
-| `contextPanelComponent` | `TaskDetails` (editable) | `RunViewTaskDetails` (read-only) |
-| `useCanvasEnhancement` | Ghost node, conduit edge mode | Static display |
+| Capability              | Editor manifest                   | RunView manifest                 |
+| ----------------------- | --------------------------------- | -------------------------------- |
+| `drop`                  | Full (add tasks, inputs, outputs) | None                             |
+| `deleteNode`            | Deletes from spec                 | No-op                            |
+| `cloneHandler`          | Full snapshot + clone             | None                             |
+| `onDoubleClick`         | Navigate to subgraph              | Navigate to subgraph             |
+| `contextPanelComponent` | `TaskDetails` (editable)          | `RunViewTaskDetails` (read-only) |
+| `useCanvasEnhancement`  | Ghost node, conduit edge mode     | Static display                   |
 
 ## Colocation Rules
 
@@ -115,19 +119,24 @@ Follow the hierarchy from most specific to most general:
 ## Adding New Code
 
 ### New shared store
+
 Place in `shared/store/`. Must not import from any page.
 
 ### New page-specific store
+
 Place in `pages/<Page>/store/`.
 
 ### New node type
+
 1. Add manifest in `pages/Editor/nodes/<NodeType>/`
 2. Add manifest in `pages/RunView/nodes/<NodeType>/` (read-only variant)
 3. Register both in their respective `nodes/index.ts`
 4. If the node needs new base types, add them to `shared/nodes/types.ts`
 
 ### New shared hook
+
 Place in `shared/hooks/`. Must not import from any page or from `nodes/index.ts`. If it needs registered node types, accept them via the `NODE_TYPE_REGISTRY` singleton (which is populated at runtime by each page).
 
 ### New window type
-The window system lives entirely in `shared/windows/`. Add new window components there. Window *content* (what renders inside a window) belongs to the page that defines it.
+
+The window system lives entirely in `shared/windows/`. Add new window components there. Window _content_ (what renders inside a window) belongs to the page that defines it.

@@ -10,6 +10,7 @@ import type {
   Task,
   TypeSpecType,
 } from "@/models/componentSpec";
+import { ZOOM_THRESHOLD } from "@/routes/v2/shared/flowCanvasDefaults";
 import type { TaskNodeData } from "@/routes/v2/shared/nodes/types";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import {
@@ -53,8 +54,6 @@ export interface TaskNodeViewProps {
   onNodeClick: (event: React.MouseEvent) => void;
   onInputClick: (inputName: string, event: React.MouseEvent) => void;
 }
-
-export const ZOOM_THRESHOLD = 0.3;
 
 const zoomSelector = (s: { transform: [number, number, number] }) =>
   s.transform[2] >= ZOOM_THRESHOLD;
