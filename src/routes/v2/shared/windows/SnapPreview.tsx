@@ -16,16 +16,6 @@ export function SnapPreview({ preview, windowWidth }: SnapPreviewProps) {
     return <EdgeDockPreview side={preview.side} windowWidth={windowWidth} />;
   }
 
-  if (preview.type === "attach") {
-    return (
-      <AttachPreview
-        parentBottom={preview.parentBottom}
-        parentLeft={preview.parentLeft}
-        windowWidth={windowWidth}
-      />
-    );
-  }
-
   if (preview.type === "dock-insert") {
     return (
       <DockInsertPreview
@@ -63,46 +53,6 @@ function EdgeDockPreview({ side, windowWidth }: EdgeDockPreviewProps) {
         </div>
       </div>
     </div>
-  );
-}
-
-interface AttachPreviewProps {
-  parentBottom: number;
-  parentLeft: number;
-  windowWidth: number;
-}
-
-function AttachPreview({
-  parentBottom,
-  parentLeft,
-  windowWidth,
-}: AttachPreviewProps) {
-  return (
-    <>
-      <div
-        className="fixed pointer-events-none z-[100] h-1 bg-green-500 rounded-full transition-all duration-75"
-        style={{
-          left: parentLeft,
-          top: parentBottom - 2,
-          width: Math.min(windowWidth, 200),
-        }}
-      />
-      <div
-        className="fixed pointer-events-none z-[99] bg-green-500/10 border-2 border-green-500/40 border-dashed rounded-lg transition-all duration-75"
-        style={{
-          left: parentLeft,
-          top: parentBottom,
-          width: windowWidth,
-          height: 100,
-        }}
-      >
-        <div className="absolute top-2 left-1/2 -translate-x-1/2">
-          <div className="bg-green-500/80 text-white text-xs px-2 py-0.5 rounded font-medium">
-            Attach here
-          </div>
-        </div>
-      </div>
-    </>
   );
 }
 

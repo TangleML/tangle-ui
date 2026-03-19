@@ -11,7 +11,6 @@ export interface ContentWindowState {
   isDocked: boolean;
   dockSide: DockState;
   dockAreaCollapsed: boolean;
-  isAttached: boolean;
 }
 
 const ContentWindowStateContext = createContext<ContentWindowState | undefined>(

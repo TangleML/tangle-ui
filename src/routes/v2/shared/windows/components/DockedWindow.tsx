@@ -35,21 +35,13 @@ export const DockedWindow = observer(function DockedWindow({
   const windowConfig = getWindowById(windowId);
   if (!windowConfig) return null;
 
-  const {
-    title,
-    state,
-    size,
-    disabledActions,
-    dockState,
-    attachedTo,
-    dockedHeight,
-  } = windowConfig;
+  const { title, state, size, disabledActions, dockState, dockedHeight } =
+    windowConfig;
 
   const content = getWindowContent(windowId);
   const isMinimized = state === "minimized";
   const isMaximized = state === "maximized";
   const isDocked = dockState === "left" || dockState === "right";
-  const isAttached = !!attachedTo;
   const effectiveDockedHeight = dockedHeight ?? DEFAULT_DOCKED_HEIGHT;
   const dockAreaCollapsed = isDockAreaCollapsed(dockState);
 
@@ -75,7 +67,6 @@ export const DockedWindow = observer(function DockedWindow({
     isDocked,
     dockSide: dockState,
     dockAreaCollapsed,
-    isAttached,
   };
 
   const handleResizeMouseDown = (e: React.MouseEvent) => {

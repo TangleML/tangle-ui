@@ -1,19 +1,13 @@
 import { useRef, useState } from "react";
 
-import {
-  detectSnapPreview,
-  shouldDetach,
-} from "@/routes/v2/shared/windows/snapUtils";
+import { detectSnapPreview } from "@/routes/v2/shared/windows/snapUtils";
 import type {
   Position,
   SnapPreviewType,
 } from "@/routes/v2/shared/windows/types";
 import {
-  attachWindow,
   bringToFront,
-  detachWindow,
   dockWindow,
-  getAllWindows,
   getDockAreaWindowIds,
   getWindowById,
   getWindowOrderLength,
@@ -32,7 +26,6 @@ const UNDOCK_THRESHOLD = 20;
 
 type DragPhase =
   | { type: "idle" }
-  | { type: "attached-pending"; startPos: Position }
   | { type: "docked-pending"; originMouse: Position }
   | { type: "free" };
 
@@ -75,7 +68,6 @@ export function useWindowDrag({
 
   const position = windowConfig?.position ?? { x: 0, y: 0 };
   const size = windowConfig?.size ?? { width: 320, height: 420 };
-  const isAttached = !!windowConfig?.attachedTo;
   const isDocked =
     windowConfig?.dockState !== undefined && windowConfig?.dockState !== "none";
 
@@ -120,15 +112,6 @@ export function useWindowDrag({
       } else {
         phaseRef.current = { type: "free" };
       }
-    } else if (isAttached) {
-      dragOffset.current = {
-        x: e.clientX - position.x,
-        y: e.clientY - position.y,
-      };
-      phaseRef.current = {
-        type: "attached-pending",
-        startPos: { ...position },
-      };
     } else {
       dragOffset.current = {
         x: e.clientX - position.x,
@@ -143,13 +126,6 @@ export function useWindowDrag({
         x: moveE.clientX - dragOffset.current.x,
         y: moveE.clientY - dragOffset.current.y,
       };
-
-      // --- Phase: attached-pending ---
-      if (phase.type === "attached-pending") {
-        if (!shouldDetach(newPosition, phase.startPos)) return;
-        detachWindow(windowId);
-        phaseRef.current = { type: "free" };
-      }
 
       // --- Phase: docked-pending ---
       if (phase.type === "docked-pending") {
@@ -184,8 +160,6 @@ export function useWindowDrag({
         windowId,
         position: newPosition,
         size,
-        allWindows: getAllWindows(),
-        isAttached: false,
         mousePosition: { x: moveE.clientX, y: moveE.clientY },
         dockAreaWindowIds: {
           left: [...getDockAreaWindowIds("left")],
@@ -202,8 +176,6 @@ export function useWindowDrag({
       if (currentPreview) {
         if (currentPreview.type === "edge") {
           dockWindow(windowId, currentPreview.side);
-        } else if (currentPreview.type === "attach") {
-          attachWindow(windowId, currentPreview.parentId);
         } else if (currentPreview.type === "dock-insert") {
           dockWindow(windowId, currentPreview.side, currentPreview.insertIndex);
         }

@@ -5,7 +5,6 @@ import {
   type DockState,
   type WindowConfig,
 } from "./types";
-import { detachWindow } from "./windowStore.attachments";
 
 type DockAreas = { left: DockAreaConfig; right: DockAreaConfig };
 
@@ -39,10 +38,6 @@ export function dockWindow(
   }
 
   removeFromDockAreaOrder(dockAreas, id);
-
-  if (win.attachedTo) {
-    detachWindow(windows, id);
-  }
 
   win.dockState = side;
   win.dockedHeight = win.dockedHeight ?? DEFAULT_DOCKED_HEIGHT;

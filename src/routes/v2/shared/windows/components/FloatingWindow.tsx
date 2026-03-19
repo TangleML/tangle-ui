@@ -2,7 +2,6 @@ import { observer } from "mobx-react-lite";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 
-import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 import type { ContentWindowState } from "@/routes/v2/shared/windows/ContentWindowStateContext";
 import { ContentWindowStateProvider } from "@/routes/v2/shared/windows/ContentWindowStateContext";
@@ -38,22 +37,13 @@ export const FloatingWindow = observer(function FloatingWindow({
 
   if (!windowConfig) return null;
 
-  const {
-    title,
-    state,
-    position,
-    size,
-    minSize,
-    disabledActions,
-    dockState,
-    attachedTo,
-  } = windowConfig;
+  const { title, state, position, size, minSize, disabledActions, dockState } =
+    windowConfig;
 
   const content = getWindowContent(windowId);
   const isMinimized = state === "minimized";
   const isMaximized = state === "maximized";
   const isDocked = dockState === "left" || dockState === "right";
-  const isAttached = !!attachedTo;
 
   const taskPanelOffset = checkHasHiddenWindows() ? TASK_PANEL_HEIGHT : 0;
 
@@ -81,7 +71,6 @@ export const FloatingWindow = observer(function FloatingWindow({
     isDocked,
     dockSide: dockState,
     dockAreaCollapsed,
-    isAttached,
   };
 
   const handleResizeMouseDown = (e: React.MouseEvent) => {
@@ -156,11 +145,6 @@ export const FloatingWindow = observer(function FloatingWindow({
           title={title}
           isDragging={isDragging}
           onMouseDown={isMaximized ? undefined : handleHeaderMouseDown}
-          leadingIcon={
-            isAttached ? (
-              <Icon name="Link" size="xs" className="text-green-600 shrink-0" />
-            ) : undefined
-          }
           actions={
             <WindowActions
               windowId={windowId}

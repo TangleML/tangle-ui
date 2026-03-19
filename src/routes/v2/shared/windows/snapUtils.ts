@@ -1,10 +1,5 @@
-import type { Position, Size, SnapPreviewType, WindowConfig } from "./types";
-import {
-  DETACH_THRESHOLD,
-  DOCK_AREA_SNAP_THRESHOLD,
-  EDGE_SNAP_THRESHOLD,
-  MAGNETIC_SNAP_THRESHOLD,
-} from "./types";
+import type { Position, Size, SnapPreviewType } from "./types";
+import { DOCK_AREA_SNAP_THRESHOLD, EDGE_SNAP_THRESHOLD } from "./types";
 
 function isNearLeftEdge(x: number): boolean {
   return x <= EDGE_SNAP_THRESHOLD;
@@ -26,56 +21,6 @@ function detectEdgeSnap(
     return { side: "right" };
   }
   return null;
-}
-
-export function getWindowBottom(window: WindowConfig): number {
-  return window.position.y + window.size.height;
-}
-
-function findMagneticAttachTarget(
-  draggedWindowId: string,
-  draggedPosition: Position,
-  allWindows: WindowConfig[],
-): WindowConfig | null {
-  let closestWindow: WindowConfig | null = null;
-  let closestDistance = Infinity;
-
-  for (const win of allWindows) {
-    if (
-      win.id === draggedWindowId ||
-      win.state === "hidden" ||
-      win.state === "minimized" ||
-      win.dockState !== "none"
-    ) {
-      continue;
-    }
-
-    const windowBottom = getWindowBottom(win);
-    const distance = Math.abs(draggedPosition.y - windowBottom);
-
-    if (distance <= MAGNETIC_SNAP_THRESHOLD && distance < closestDistance) {
-      closestDistance = distance;
-      closestWindow = win;
-    }
-  }
-
-  return closestWindow;
-}
-
-export function shouldDetach(
-  currentPosition: Position,
-  attachedPosition: Position,
-): boolean {
-  const dx = Math.abs(currentPosition.x - attachedPosition.x);
-  const dy = Math.abs(currentPosition.y - attachedPosition.y);
-  return dx >= DETACH_THRESHOLD || dy >= DETACH_THRESHOLD;
-}
-
-export function calculateAttachPosition(parentWindow: WindowConfig): Position {
-  return {
-    x: parentWindow.position.x,
-    y: getWindowBottom(parentWindow),
-  };
 }
 
 // ============================================================================
@@ -204,15 +149,12 @@ function calculateInsertPosition(
 
 /**
  * Detect all snap possibilities for the current drag state.
- * Checks dock areas first (highest priority), then edge snap, then magnetic attachment.
+ * Checks dock areas first (highest priority), then edge snap.
  */
 interface DetectSnapPreviewOptions {
   windowId: string;
   position: Position;
   size: Size;
-  allWindows: WindowConfig[];
-  isAttached: boolean;
-  attachedPosition?: Position;
   mousePosition?: Position;
   dockAreaWindowIds?: Record<"left" | "right", string[]>;
 }
@@ -220,22 +162,8 @@ interface DetectSnapPreviewOptions {
 export function detectSnapPreview(
   options: DetectSnapPreviewOptions,
 ): SnapPreviewType | null {
-  const {
-    windowId,
-    position,
-    size,
-    allWindows,
-    isAttached,
-    attachedPosition,
-    mousePosition,
-    dockAreaWindowIds,
-  } = options;
-
-  if (isAttached && attachedPosition) {
-    if (!shouldDetach(position, attachedPosition)) {
-      return null;
-    }
-  }
+  const { windowId, position, size, mousePosition, dockAreaWindowIds } =
+    options;
 
   if (mousePosition && dockAreaWindowIds) {
     const dockSnap = detectDockAreaSnap(
@@ -252,39 +180,5 @@ export function detectSnapPreview(
     return { type: "edge", side: edgeSnap.side };
   }
 
-  const floatingWindows = allWindows.filter((w) => w.dockState === "none");
-  const attachTarget = findMagneticAttachTarget(
-    windowId,
-    position,
-    floatingWindows,
-  );
-  if (attachTarget) {
-    return {
-      type: "attach",
-      parentId: attachTarget.id,
-      parentBottom: getWindowBottom(attachTarget),
-      parentLeft: attachTarget.position.x,
-    };
-  }
-
   return null;
-}
-
-export function getAttachmentChain(
-  parentId: string,
-  allWindows: WindowConfig[],
-): WindowConfig[] {
-  const chain: WindowConfig[] = [];
-
-  function findChildren(currentParentId: string) {
-    for (const win of allWindows) {
-      if (win.attachedTo?.parentId === currentParentId) {
-        chain.push(win);
-        findChildren(win.id);
-      }
-    }
-  }
-
-  findChildren(parentId);
-  return chain;
 }
