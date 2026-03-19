@@ -12,6 +12,7 @@ interface CopyTextProps {
   className?: string;
   alwaysShowButton?: boolean;
   compact?: boolean;
+  size?: "xs" | "sm" | "md" | "lg" | "xl";
 }
 
 export const CopyText = ({
@@ -19,6 +20,7 @@ export const CopyText = ({
   className,
   alwaysShowButton = false,
   compact = false,
+  size = "md",
 }: CopyTextProps) => {
   const [isCopied, setIsCopied] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -52,10 +54,11 @@ export const CopyText = ({
     >
       <InlineStack gap="1" blockAlign="center" wrap="nowrap">
         <Text
+          size={size}
           className={cn(
             "transition-all duration-150",
             className,
-            isCopied && "scale-[1.01] text-emerald-400!",
+            isCopied && "text-emerald-400!",
           )}
         >
           {children}

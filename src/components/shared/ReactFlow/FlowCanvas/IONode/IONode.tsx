@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { Handle, Position, useEdges, useReactFlow } from "@xyflow/react";
 import type { MouseEvent } from "react";
 import { memo, useCallback, useEffect, useMemo } from "react";
@@ -12,9 +13,11 @@ import { Paragraph } from "@/components/ui/typography";
 import { useEdgeSelectionHighlight } from "@/hooks/useEdgeSelectionHighlight";
 import { useIsMultiSelect } from "@/hooks/useIsMultiSelect";
 import { cn } from "@/lib/utils";
+import { useBackend } from "@/providers/BackendProvider";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useContextPanel } from "@/providers/ContextPanelProvider";
 import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
+import { getExecutionArtifacts } from "@/services/executionService";
 import { getArgumentValue } from "@/utils/nodes/taskArguments";
 import { isViewingSubgraph } from "@/utils/subgraphUtils";
 
@@ -41,8 +44,16 @@ const IONode = ({ id, type, data, selected = false }: IONodeProps) => {
   const { currentGraphSpec, currentSubgraphSpec, currentSubgraphPath } =
     useComponentSpec();
 
+  const { backendUrl } = useBackend();
   const executionData = useExecutionDataOptional();
   const taskArguments = executionData?.rootDetails?.task_spec.arguments;
+  const rootExecutionId = executionData?.rootExecutionId;
+
+  const { data: artifacts } = useQuery({
+    queryKey: ["artifacts", rootExecutionId],
+    queryFn: () => getExecutionArtifacts(String(rootExecutionId), backendUrl),
+    enabled: !!rootExecutionId,
+  });
 
   const {
     setContent,
@@ -137,12 +148,17 @@ const IONode = ({ id, type, data, selected = false }: IONodeProps) => {
           currentGraphSpec,
           output.name,
         );
+
+        const artifactData =
+          artifacts?.output_artifacts?.[output.name]?.artifact_data;
+
         setContent(
           <OutputNameEditor
             output={output}
             connectedDetails={outputConnectedDetails}
             key={output.name}
             disabled={readOnly}
+            artifactData={artifactData}
           />,
         );
       }
