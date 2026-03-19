@@ -17,19 +17,22 @@ import {
 type StatusIndicatorProps = {
   status: string;
   disabledCache?: boolean;
+  isCached?: boolean;
 };
 
 export const StatusIndicator = ({
   status,
   disabledCache = false,
+  isCached = false,
 }: StatusIndicatorProps) => {
   const { style, text, icon } = getStatusMetadata(status);
+  const hasAdjacentBadge = disabledCache || isCached;
 
   return (
     <div className="absolute -z-1 -top-5 left-0 flex items-start">
       <div
         className={cn("h-8.75 rounded-t-md px-2.5 py-1 text-[10px]", style, {
-          "rounded-tr-none": disabledCache,
+          "rounded-tr-none": hasAdjacentBadge,
         })}
       >
         <div className="flex items-center gap-1 font-mono text-white">
@@ -38,9 +41,21 @@ export const StatusIndicator = ({
         </div>
       </div>
       {disabledCache && (
-        <div className="h-5.5 bg-orange-400 rounded-tr-md flex items-center px-1.5">
+        <div
+          className={cn(
+            "h-5.5 bg-orange-400 flex items-center px-1.5",
+            !isCached && "rounded-tr-md",
+          )}
+        >
           <QuickTooltip content="Cache Disabled" className="whitespace-nowrap">
             <Icon name="ZapOff" size="xs" className="text-white" />
+          </QuickTooltip>
+        </div>
+      )}
+      {isCached && (
+        <div className="h-5.5 bg-teal-500 rounded-tr-md flex items-center px-1.5">
+          <QuickTooltip content="Cached" className="whitespace-nowrap">
+            <Icon name="Database" size="xs" className="text-white" />
           </QuickTooltip>
         </div>
       )}

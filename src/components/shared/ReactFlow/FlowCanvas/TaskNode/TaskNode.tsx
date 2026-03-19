@@ -24,10 +24,15 @@ const TaskNodeInternal = ({ data, selected, id }: NodeProps) => {
 
   const typedData = useMemo(() => data as TaskNodeData, [data]);
 
+  const taskId = typedData.taskId ?? "";
+
   const status = useMemo(() => {
-    const taskId = typedData.taskId ?? "";
     return executionData?.taskExecutionStatusMap.get(taskId);
-  }, [executionData?.taskExecutionStatusMap, typedData.taskId]);
+  }, [executionData?.taskExecutionStatusMap, taskId]);
+
+  const isCached = useMemo(() => {
+    return executionData?.cachedTaskIds.has(taskId) ?? false;
+  }, [executionData?.cachedTaskIds, taskId]);
 
   const disabledCache = isCacheDisabled(typedData.taskSpec);
 
@@ -43,7 +48,11 @@ const TaskNodeInternal = ({ data, selected, id }: NodeProps) => {
         )}
       >
         {!!status && (
-          <StatusIndicator status={status} disabledCache={disabledCache} />
+          <StatusIndicator
+            status={status}
+            disabledCache={disabledCache}
+            isCached={isCached}
+          />
         )}
         <TaskNodeCard />
       </div>
