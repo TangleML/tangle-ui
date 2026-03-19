@@ -7,7 +7,7 @@ import {
   type LayoutAlgorithm,
 } from "@/components/shared/ReactFlow/FlowCanvas/utils/autolayout";
 import { CMDALT, SHIFT } from "@/routes/v2/shared/shortcuts/keys";
-import { registerShortcut } from "@/routes/v2/shared/store/keyboardStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 /**
  * Registers the Cmd+Shift+L auto-layout shortcut.
@@ -18,6 +18,7 @@ export function useAutoLayoutShortcut(
   applyLayout: (layoutedNodes: Node[]) => void,
 ): void {
   const { getNodes, getEdges, fitView } = useReactFlow();
+  const { keyboard } = useSharedStores();
 
   useEffect(() => {
     const handleAutoLayout = (algorithm?: LayoutAlgorithm) => {
@@ -33,7 +34,7 @@ export function useAutoLayoutShortcut(
       });
     };
 
-    const unregister = registerShortcut({
+    const unregister = keyboard.registerShortcut({
       id: "auto-layout",
       keys: [CMDALT, SHIFT, "L"],
       label: "Auto layout",
@@ -43,5 +44,5 @@ export function useAutoLayoutShortcut(
     });
 
     return unregister;
-  }, [getNodes, getEdges, fitView, applyLayout]);
+  }, [getNodes, getEdges, fitView, applyLayout, keyboard]);
 }

@@ -5,14 +5,15 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Link } from "@/components/ui/link";
 import { Text } from "@/components/ui/typography";
 import { AppMenuActions } from "@/routes/v2/shared/components/AppMenuActions";
-import { navigationStore } from "@/routes/v2/shared/store/navigationStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { TOP_NAV_HEIGHT } from "@/utils/constants";
 
 import { RunMenu } from "./components/RunMenu";
 import { RunViewViewMenu } from "./components/RunViewViewMenu";
 
 export const RunViewMenuBar = observer(function RunViewMenuBar() {
-  const spec = navigationStore.activeSpec;
+  const { navigation } = useSharedStores();
+  const spec = navigation.activeSpec;
   const pipelineName = spec?.name ?? "Pipeline Run";
 
   return (

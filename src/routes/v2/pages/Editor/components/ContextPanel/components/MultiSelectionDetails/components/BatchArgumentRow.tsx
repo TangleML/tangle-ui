@@ -8,8 +8,8 @@ import { cn } from "@/lib/utils";
 import type { ArgumentType, ComponentSpec } from "@/models/componentSpec";
 import { ThunderMenu } from "@/routes/v2/pages/Editor/components/ArgumentRow/components/ThunderMenu/ThunderMenu";
 import type { AggregatedArgument } from "@/routes/v2/pages/Editor/components/ContextPanel/components/MultiSelectionDetails/utils";
-import { createInputAndConnect } from "@/routes/v2/pages/Editor/store/actions";
-import { withUndoGroup } from "@/routes/v2/pages/Editor/store/undoStore";
+import { useIOActions } from "@/routes/v2/pages/Editor/store/actions/useIOActions";
+import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import type { DynamicDataArgument } from "@/utils/componentSpec";
 
 interface BatchArgumentRowProps {
@@ -21,6 +21,8 @@ export const BatchArgumentRow = observer(function BatchArgumentRow({
   aggArg,
   spec,
 }: BatchArgumentRowProps) {
+  const { undo } = useEditorSession();
+  const { createInputAndConnect } = useIOActions();
   const [editing, setEditing] = useState(false);
   const [inputValue, setInputValue] = useState(aggArg.value);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -68,7 +70,7 @@ export const BatchArgumentRow = observer(function BatchArgumentRow({
     if (aggArg.isMixed && trimmed === "") return;
     if (!aggArg.isMixed && trimmed === aggArg.value) return;
 
-    withUndoGroup("Batch argument update", () => {
+    undo.withGroup("Batch argument update", () => {
       for (const taskId of aggArg.taskIds) {
         if (trimmed === "") {
           const task = spec.tasks.find((t) => t.$id === taskId);
@@ -82,7 +84,7 @@ export const BatchArgumentRow = observer(function BatchArgumentRow({
 
   const handleResetToDefault = () => {
     const defaultVal = aggArg.defaultValue ?? "";
-    withUndoGroup("Batch reset to default", () => {
+    undo.withGroup("Batch reset to default", () => {
       for (const taskId of aggArg.taskIds) {
         spec.setTaskArgument(taskId, aggArg.name, defaultVal);
       }
@@ -91,7 +93,7 @@ export const BatchArgumentRow = observer(function BatchArgumentRow({
   };
 
   const handleUnset = () => {
-    withUndoGroup("Batch unset argument", () => {
+    undo.withGroup("Batch unset argument", () => {
       for (const taskId of aggArg.taskIds) {
         const task = spec.tasks.find((t) => t.$id === taskId);
         task?.removeArgumentByName(aggArg.name);
@@ -107,7 +109,7 @@ export const BatchArgumentRow = observer(function BatchArgumentRow({
   const handleSelectDynamicData = (value: DynamicDataArgument) => {
     // Model ArgumentType doesn't include DynamicDataArgument, but it's stored correctly at runtime
     const argValue = value as unknown as ArgumentType;
-    withUndoGroup("Batch set dynamic data", () => {
+    undo.withGroup("Batch set dynamic data", () => {
       for (const taskId of aggArg.taskIds) {
         spec.setTaskArgument(taskId, aggArg.name, argValue);
       }
@@ -119,7 +121,7 @@ export const BatchArgumentRow = observer(function BatchArgumentRow({
     sourceEntityId: string,
     sourcePortName: string,
   ) => {
-    withUndoGroup("Batch quick connect", () => {
+    undo.withGroup("Batch quick connect", () => {
       for (const taskId of aggArg.taskIds) {
         spec.connectNodes(
           { entityId: sourceEntityId, portName: sourcePortName },

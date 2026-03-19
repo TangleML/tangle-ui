@@ -9,7 +9,7 @@ import {
   type ComponentSpec,
   IncrementingIdGenerator,
 } from "@/models/componentSpec";
-import { withUndoGroup } from "@/routes/v2/pages/Editor/store/undoStore";
+import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
 
 const FLEX_NODES_KEY = "flex-nodes" as const;
 
@@ -19,8 +19,12 @@ export function getFlexNodes(spec: ComponentSpec): FlexNodeData[] {
   return spec.annotations.get(FLEX_NODES_KEY);
 }
 
-export function setFlexNodes(spec: ComponentSpec, nodes: FlexNodeData[]) {
-  withUndoGroup("Update flex nodes", () => {
+export function setFlexNodes(
+  undo: UndoGroupable,
+  spec: ComponentSpec,
+  nodes: FlexNodeData[],
+) {
+  undo.withGroup("Update flex nodes", () => {
     spec.annotations.set(FLEX_NODES_KEY, nodes);
   });
 }
@@ -33,20 +37,22 @@ export function findFlexNode(
 }
 
 export function updateFlexNode(
+  undo: UndoGroupable,
   spec: ComponentSpec,
   nodeId: string,
   updates: Partial<FlexNodeData>,
 ) {
-  withUndoGroup("Update flex node", () => {
+  undo.withGroup("Update flex node", () => {
     const nodes = getFlexNodes(spec);
     const updated = nodes.map((n) =>
       n.id === nodeId ? { ...n, ...updates } : n,
     );
-    setFlexNodes(spec, updated);
+    setFlexNodes(undo, spec, updated);
   });
 }
 
 export function updateFlexNodeProperties(
+  undo: UndoGroupable,
   spec: ComponentSpec,
   nodeId: string,
   properties: Partial<FlexNodeData["properties"]>,
@@ -54,12 +60,16 @@ export function updateFlexNodeProperties(
   const node = findFlexNode(spec, nodeId);
   if (!node) return;
 
-  updateFlexNode(spec, nodeId, {
+  updateFlexNode(undo, spec, nodeId, {
     properties: { ...node.properties, ...properties },
   });
 }
 
-export function addFlexNode(spec: ComponentSpec, position: XYPosition) {
+export function addFlexNode(
+  undo: UndoGroupable,
+  spec: ComponentSpec,
+  position: XYPosition,
+) {
   const nodes = getFlexNodes(spec);
   const id = idGen.next("flex");
   const newNode: FlexNodeData = {
@@ -73,15 +83,20 @@ export function addFlexNode(spec: ComponentSpec, position: XYPosition) {
     position,
     zIndex: 0,
   };
-  withUndoGroup("Add flex node", () => {
-    setFlexNodes(spec, [...nodes, newNode]);
+  undo.withGroup("Add flex node", () => {
+    setFlexNodes(undo, spec, [...nodes, newNode]);
   });
 }
 
-export function removeFlexNode(spec: ComponentSpec, nodeId: string) {
-  withUndoGroup("Remove flex node", () => {
+export function removeFlexNode(
+  undo: UndoGroupable,
+  spec: ComponentSpec,
+  nodeId: string,
+) {
+  undo.withGroup("Remove flex node", () => {
     const nodes = getFlexNodes(spec);
     setFlexNodes(
+      undo,
       spec,
       nodes.filter((n) => n.id !== nodeId),
     );
@@ -89,15 +104,16 @@ export function removeFlexNode(spec: ComponentSpec, nodeId: string) {
 }
 
 export function updateFlexNodePosition(
+  undo: UndoGroupable,
   spec: ComponentSpec,
   nodeId: string,
   position: XYPosition,
 ) {
-  withUndoGroup("Update flex node position", () => {
+  undo.withGroup("Update flex node position", () => {
     const nodes = getFlexNodes(spec);
     const updated = nodes.map((n) =>
       n.id === nodeId ? { ...n, position } : n,
     );
-    setFlexNodes(spec, updated);
+    setFlexNodes(undo, spec, updated);
   });
 }

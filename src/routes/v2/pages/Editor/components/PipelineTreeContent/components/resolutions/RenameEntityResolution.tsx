@@ -5,8 +5,7 @@ import { Input } from "@/components/ui/input";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import type { ComponentSpec, ValidationIssue } from "@/models/componentSpec";
-import { renameEntity } from "@/routes/v2/pages/Editor/components/PipelineTreeContent/components/validationResolution.actions";
-import { setSelectedValidationIssue } from "@/routes/v2/shared/store/editorStore";
+import { useValidationResolutionActions } from "@/routes/v2/pages/Editor/components/PipelineTreeContent/components/useValidationResolutionActions";
 
 export function RenameEntityResolution({
   issue,
@@ -17,6 +16,7 @@ export function RenameEntityResolution({
   spec: ComponentSpec;
   entityType: "task" | "input" | "output" | "component";
 }) {
+  const { renameEntity } = useValidationResolutionActions();
   const [value, setValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -26,7 +26,6 @@ export function RenameEntityResolution({
 
     renameEntity(spec, entityType, issue.entityId, trimmed);
     setValue("");
-    setSelectedValidationIssue(null);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

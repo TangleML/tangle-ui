@@ -10,7 +10,7 @@ export interface SelectedNode {
   position: { x: number; y: number };
 }
 
-class EditorStore {
+export class EditorStore {
   @observable accessor selectedNodeId: string | null = null;
   @observable accessor selectedNodeType: NodeEntityType | null = null;
   @observable accessor lastSelectionWasShiftClick = false;
@@ -94,46 +94,4 @@ class EditorStore {
   @action setSelectedValidationIssue(issue: ValidationIssue | null) {
     this.selectedValidationIssue = issue;
   }
-}
-
-export const editorStore = new EditorStore();
-
-export function resetEditorState() {
-  editorStore.resetState();
-}
-
-export function selectNode(
-  nodeId: string | null,
-  nodeType: NodeEntityType | null = null,
-  options?: { shiftKey?: boolean; entityId?: string },
-) {
-  editorStore.selectNode(nodeId, nodeType, options);
-}
-
-export function clearSelection() {
-  editorStore.clearSelection();
-}
-
-export function setMultiSelection(nodes: SelectedNode[]) {
-  editorStore.setMultiSelection(nodes);
-}
-
-export function clearMultiSelection() {
-  editorStore.clearMultiSelection();
-}
-
-export function setFocusedArgument(name: string | null) {
-  editorStore.setFocusedArgument(name);
-}
-
-export function setHoveredEntity(id: string | null) {
-  editorStore.setHoveredEntity(id);
-}
-
-export function setPendingFocusNode(nodeId: string | null) {
-  editorStore.setPendingFocusNode(nodeId);
-}
-
-export function setSelectedValidationIssue(issue: ValidationIssue | null) {
-  editorStore.setSelectedValidationIssue(issue);
 }

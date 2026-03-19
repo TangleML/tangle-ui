@@ -21,7 +21,7 @@ import { useAutoLayoutShortcut } from "@/routes/v2/shared/hooks/useAutoLayoutSho
 import { useFlowCanvasState } from "@/routes/v2/shared/hooks/useFlowCanvasState";
 import { useViewportScaling } from "@/routes/v2/shared/hooks/useViewportScaling";
 import { NODE_TYPE_REGISTRY } from "@/routes/v2/shared/nodes/registry";
-import { clearSelection } from "@/routes/v2/shared/store/editorStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 const nodeTypes = NODE_TYPE_REGISTRY.getNodeTypes();
 const edgeTypes = NODE_TYPE_REGISTRY.getEdgeTypes();
@@ -35,6 +35,7 @@ export const RunViewFlowCanvas = observer(function RunViewFlowCanvas({
   spec,
   className,
 }: RunViewFlowCanvasProps) {
+  const { editor } = useSharedStores();
   const { containerRef, handleViewportChange } = useViewportScaling();
   const { setNodes: rfSetNodes } = useReactFlow();
 
@@ -59,7 +60,7 @@ export const RunViewFlowCanvas = observer(function RunViewFlowCanvas({
   };
 
   const onPaneClick = () => {
-    clearSelection();
+    editor.clearSelection();
   };
 
   return (

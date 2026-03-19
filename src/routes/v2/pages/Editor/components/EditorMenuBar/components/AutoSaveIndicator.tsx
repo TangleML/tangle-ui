@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
-import { autoSaveStore } from "@/routes/v2/pages/Editor/store/autoSaveStore";
+import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 
 function getTooltipText(isSaving: boolean, lastSavedAt: Date | null): string {
   if (isSaving) return "Saving...";
@@ -22,7 +22,8 @@ function getTooltipText(isSaving: boolean, lastSavedAt: Date | null): string {
 }
 
 export const AutoSaveIndicator = observer(function AutoSaveIndicator() {
-  const { isSaving, lastSavedAt, showSavedMessage } = autoSaveStore;
+  const { autoSave } = useEditorSession();
+  const { isSaving, lastSavedAt, showSavedMessage } = autoSave;
   const tooltipText = getTooltipText(isSaving, lastSavedAt);
 
   return (

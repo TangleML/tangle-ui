@@ -6,6 +6,7 @@ import { action, computed, makeObservable, observable } from "mobx";
 import type { ComponentSpec } from "@/models/componentSpec";
 import { IncrementingIdGenerator } from "@/models/componentSpec/factories/idGenerator";
 import { NODE_TYPE_REGISTRY } from "@/routes/v2/shared/nodes/registry";
+import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
 import type { SelectedNode } from "@/routes/v2/shared/store/editorStore";
 
 import {
@@ -14,7 +15,6 @@ import {
   type NodeSnapshot,
   snapshotInternalBindings,
 } from "./nodeCloneHandlers";
-import { withUndoGroup } from "./undoStore";
 
 const PASTE_OFFSET = 50;
 const CLIPBOARD_ENVELOPE_TYPE = "tangle-pipeline-nodes";
@@ -63,11 +63,34 @@ async function readFromSystemClipboard(): Promise<ClipboardEnvelope | null> {
   return null;
 }
 
-class ClipboardStore {
+function computeSnapshotBounds(snapshots: NodeSnapshot[]): {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+} {
+  if (snapshots.length === 0) return { x: 0, y: 0, width: 0, height: 0 };
+
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+
+  for (const s of snapshots) {
+    minX = Math.min(minX, s.position.x);
+    minY = Math.min(minY, s.position.y);
+    maxX = Math.max(maxX, s.position.x);
+    maxY = Math.max(maxY, s.position.y);
+  }
+
+  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+}
+
+export class ClipboardStore {
   @observable.shallow accessor snapshots: NodeSnapshot[] = [];
   @observable.shallow accessor bindingSnapshots: BindingSnapshot[] = [];
 
-  constructor() {
+  constructor(private undoStore: UndoGroupable) {
     makeObservable(this);
   }
 
@@ -103,7 +126,12 @@ class ClipboardStore {
 
     if (snapshots.length === 0) return [];
 
-    return cloneSnapshotsAtPosition(spec, snapshots, bindings, centerPosition);
+    return this.cloneSnapshotsAtPosition(
+      spec,
+      snapshots,
+      bindings,
+      centerPosition,
+    );
   }
 
   duplicate(spec: ComponentSpec, selectedNodes: SelectedNode[]): string[] {
@@ -123,7 +151,7 @@ class ClipboardStore {
     const newIds: string[] = [];
     const idMap = new Map<string, string>();
 
-    withUndoGroup("Duplicate nodes", () => {
+    this.undoStore.withGroup("Duplicate nodes", () => {
       for (const snapshot of snapshots) {
         const offsetPosition = {
           x: snapshot.position.x + PASTE_OFFSET,
@@ -136,6 +164,7 @@ class ClipboardStore {
           snapshot,
           idGen,
           offsetPosition,
+          this.undoStore,
         );
 
         if (newId) {
@@ -154,71 +183,47 @@ class ClipboardStore {
     this.snapshots = [];
     this.bindingSnapshots = [];
   }
-}
 
-function cloneSnapshotsAtPosition(
-  spec: ComponentSpec,
-  snapshots: NodeSnapshot[],
-  bindings: BindingSnapshot[],
-  centerPosition: XYPosition,
-): string[] {
-  const bounds = computeSnapshotBounds(snapshots);
-  const snapshotCenter = {
-    x: bounds.x + bounds.width / 2,
-    y: bounds.y + bounds.height / 2,
-  };
+  private cloneSnapshotsAtPosition(
+    spec: ComponentSpec,
+    snapshots: NodeSnapshot[],
+    bindings: BindingSnapshot[],
+    centerPosition: XYPosition,
+  ): string[] {
+    const bounds = computeSnapshotBounds(snapshots);
+    const snapshotCenter = {
+      x: bounds.x + bounds.width / 2,
+      y: bounds.y + bounds.height / 2,
+    };
 
-  const newIds: string[] = [];
-  const idMap = new Map<string, string>();
+    const newIds: string[] = [];
+    const idMap = new Map<string, string>();
 
-  withUndoGroup("Paste nodes", () => {
-    for (const snapshot of snapshots) {
-      const offsetPosition = {
-        x: centerPosition.x + (snapshot.position.x - snapshotCenter.x),
-        y: centerPosition.y + (snapshot.position.y - snapshotCenter.y),
-      };
+    this.undoStore.withGroup("Paste nodes", () => {
+      for (const snapshot of snapshots) {
+        const offsetPosition = {
+          x: centerPosition.x + (snapshot.position.x - snapshotCenter.x),
+          y: centerPosition.y + (snapshot.position.y - snapshotCenter.y),
+        };
 
-      const manifest = NODE_TYPE_REGISTRY.get(snapshot.type);
-      const newId = manifest?.cloneHandler?.clone(
-        spec,
-        snapshot,
-        idGen,
-        offsetPosition,
-      );
+        const manifest = NODE_TYPE_REGISTRY.get(snapshot.type);
+        const newId = manifest?.cloneHandler?.clone(
+          spec,
+          snapshot,
+          idGen,
+          offsetPosition,
+          this.undoStore,
+        );
 
-      if (newId) {
-        idMap.set(snapshot.entityId, newId);
-        newIds.push(newId);
+        if (newId) {
+          idMap.set(snapshot.entityId, newId);
+          newIds.push(newId);
+        }
       }
-    }
 
-    cloneBindings(spec, bindings, idMap, idGen);
-  });
+      cloneBindings(spec, bindings, idMap, idGen);
+    });
 
-  return newIds;
-}
-
-function computeSnapshotBounds(snapshots: NodeSnapshot[]): {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-} {
-  if (snapshots.length === 0) return { x: 0, y: 0, width: 0, height: 0 };
-
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-
-  for (const s of snapshots) {
-    minX = Math.min(minX, s.position.x);
-    minY = Math.min(minY, s.position.y);
-    maxX = Math.max(maxX, s.position.x);
-    maxY = Math.max(maxY, s.position.y);
+    return newIds;
   }
-
-  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
 }
-
-export const clipboardStore = new ClipboardStore();

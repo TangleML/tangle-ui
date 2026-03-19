@@ -24,7 +24,10 @@ import {
 } from "@/providers/ExecutionDataProvider";
 import { useDockAreaAccordion } from "@/routes/v2/shared/hooks/useDockAreaAccordion";
 import { SpecProvider } from "@/routes/v2/shared/providers/SpecContext";
-import { navigationStore } from "@/routes/v2/shared/store/navigationStore";
+import {
+  SharedStoreProvider,
+  useSharedStores,
+} from "@/routes/v2/shared/store/SharedStoreContext";
 import { DockArea } from "@/routes/v2/shared/windows/DockArea";
 import { TaskPanel } from "@/routes/v2/shared/windows/TaskPanel";
 import { WindowContainer } from "@/routes/v2/shared/windows/WindowContainer";
@@ -134,7 +137,8 @@ const RunViewLayout = observer(function RunViewLayout({
   useRunViewWindows();
   useRunViewSelectionSync();
 
-  const activeSpec = navigationStore.activeSpec;
+  const { navigation } = useSharedStores();
+  const activeSpec = navigation.activeSpec;
 
   if (!activeSpec) return null;
 
@@ -179,16 +183,18 @@ export function RunViewV2() {
 
   return (
     <div className="h-full w-full flex flex-col bg-slate-100">
-      <ReactFlowProvider>
-        <ContextPanelProvider /** TODO: remove ContextPanelProvider */>
-          <ExecutionDataProvider
-            pipelineRunId={id}
-            subgraphExecutionId={subgraphExecutionId}
-          >
-            <RunViewContent />
-          </ExecutionDataProvider>
-        </ContextPanelProvider>
-      </ReactFlowProvider>
+      <SharedStoreProvider>
+        <ReactFlowProvider>
+          <ContextPanelProvider /** TODO: remove ContextPanelProvider */>
+            <ExecutionDataProvider
+              pipelineRunId={id}
+              subgraphExecutionId={subgraphExecutionId}
+            >
+              <RunViewContent />
+            </ExecutionDataProvider>
+          </ContextPanelProvider>
+        </ReactFlowProvider>
+      </SharedStoreProvider>
     </div>
   );
 }

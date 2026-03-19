@@ -8,9 +8,7 @@ import { Text } from "@/components/ui/typography";
 import type { ComponentSpec } from "@/models/componentSpec";
 import { JsonSerializer } from "@/models/componentSpec";
 import { ShorcutBadge } from "@/routes/v2/shared/components/ShorcutBadge";
-import { editorStore } from "@/routes/v2/shared/store/editorStore";
-import { keyboardStore } from "@/routes/v2/shared/store/keyboardStore";
-import { navigationStore } from "@/routes/v2/shared/store/navigationStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import {
   getWindowById,
   openWindow,
@@ -79,10 +77,11 @@ function getSpecYaml(spec: ComponentSpec | null): string {
  * Used within the Windows system.
  */
 const DebugPanelContent = observer(function DebugPanelContent() {
-  const spec = navigationStore.rootSpec;
+  const { editor, keyboard, navigation } = useSharedStores();
+  const spec = navigation.rootSpec;
   const specYaml = getSpecYaml(spec);
 
-  const keybordShortcuts = [...keyboardStore.shortcuts.values()];
+  const keybordShortcuts = [...keyboard.shortcuts.values()];
 
   const stats = {
     name: spec?.name ?? "—",
@@ -96,8 +95,8 @@ const DebugPanelContent = observer(function DebugPanelContent() {
     bindings: spec?.bindings.length ?? 0,
   };
 
-  const selectedInfo = editorStore.selectedNodeId
-    ? `${editorStore.selectedNodeType}: ${editorStore.selectedNodeId}`
+  const selectedInfo = editor.selectedNodeId
+    ? `${editor.selectedNodeType}: ${editor.selectedNodeId}`
     : "None";
 
   return (

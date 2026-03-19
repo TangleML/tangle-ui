@@ -6,11 +6,8 @@ import type { FlexNodeData } from "@/components/shared/ReactFlow/FlowCanvas/Flex
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
-import {
-  findFlexNode,
-  updateFlexNode,
-  updateFlexNodeProperties,
-} from "@/routes/v2/pages/Editor/nodes/FlexNode/flexNode.actions";
+import { findFlexNode } from "@/routes/v2/pages/Editor/nodes/FlexNode/flexNode.actions";
+import { useFlexNodeActions } from "@/routes/v2/pages/Editor/nodes/FlexNode/useFlexNodeActions";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 
 import { ColorEditor } from "./components/ColorEditor";
@@ -37,6 +34,7 @@ const FlexNodeDetailsInner = observer(function FlexNodeDetailsInner({
   spec: NonNullable<ReturnType<typeof useSpec>>;
   flexNode: FlexNodeData;
 }) {
+  const { updateFlexNode, updateFlexNodeProperties } = useFlexNodeActions();
   const { metadata, zIndex, size, position, locked = false } = flexNode;
 
   const updateCurrentFlexNode = (updates: Partial<FlexNodeData>) => {

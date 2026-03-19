@@ -4,7 +4,7 @@ import { undoMiddleware, UndoStore as MobxUndoStore } from "mobx-keystone";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 
-class UndoStore {
+export class UndoStore {
   @observable.ref accessor undoManager: UndoManager | null = null;
 
   constructor() {
@@ -55,17 +55,11 @@ class UndoStore {
     this.undoManager?.clearUndo();
     this.undoManager?.clearRedo();
   }
-}
 
-export const undoStore = new UndoStore();
-
-/**
- * Like `withUndoGroup` but returns the value produced by `fn`.
- */
-export function withUndoGroup<T = void>(label: string, fn: () => T): T {
-  const manager = undoStore.undoManager;
-  if (manager) {
-    return manager.withGroup(label, fn);
+  withGroup<T = void>(label: string, fn: () => T): T {
+    if (this.undoManager) {
+      return this.undoManager.withGroup(label, fn);
+    }
+    return fn();
   }
-  return fn();
 }

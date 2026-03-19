@@ -4,11 +4,7 @@ import { observer } from "mobx-react-lite";
 import { cn } from "@/lib/utils";
 import type { ConduitNodeData } from "@/routes/v2/shared/nodes/types";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
-import {
-  clearSelection,
-  editorStore,
-  selectNode,
-} from "@/routes/v2/shared/store/editorStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { pluralize } from "@/utils/string";
 
 import { getConduits } from "./conduit.utils";
@@ -23,6 +19,7 @@ export const ConduitNode = observer(function ConduitNode({
   selected,
 }: ConduitNodeProps) {
   const { conduitId, color, edgeCount, orientation } = data;
+  const { editor } = useSharedStores();
   const spec = useSpec();
 
   const conduit = spec
@@ -32,15 +29,15 @@ export const ConduitNode = observer(function ConduitNode({
   const displayColor = conduit?.color ?? color;
   const assignedCount = conduit?.edgeIds.length ?? edgeCount;
   const isActive =
-    editorStore.selectedNodeId === conduitId &&
-    editorStore.selectedNodeType === "conduit";
+    editor.selectedNodeId === conduitId &&
+    editor.selectedNodeType === "conduit";
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isActive) {
-      clearSelection();
+      editor.clearSelection();
     } else {
-      selectNode(conduitId, "conduit");
+      editor.selectNode(conduitId, "conduit");
     }
   };
 

@@ -7,7 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/typography";
 import { AppMenuActions } from "@/routes/v2/shared/components/AppMenuActions";
 import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButton";
-import { navigationStore } from "@/routes/v2/shared/store/navigationStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { restoreWindow } from "@/routes/v2/shared/windows/windows.actions";
 import { TOP_NAV_HEIGHT } from "@/utils/constants";
 
@@ -18,7 +18,8 @@ import { MovePipelineToFolderButton } from "./components/MovePipelineToFolderBut
 import { ViewMenu } from "./components/ViewMenu";
 
 export const EditorMenuBar = observer(function EditorMenuBar() {
-  const spec = navigationStore.activeSpec;
+  const { navigation } = useSharedStores();
+  const spec = navigation.activeSpec;
   const pipelineName = spec?.name ?? "Untitled pipeline";
 
   return (

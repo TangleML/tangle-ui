@@ -19,11 +19,11 @@ export const ghostManifest: NodeTypeManifest = {
     return undefined;
   },
 
-  updatePosition() {
+  updatePosition(_undo, _spec, _nodeId, _position) {
     // Ghost nodes are ephemeral – no position persistence
   },
 
-  deleteNode() {
+  deleteNode(_undo, _spec, _nodeId) {
     // Ghost nodes are ephemeral – no deletion logic
   },
 

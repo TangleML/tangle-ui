@@ -11,12 +11,7 @@ import { Text } from "@/components/ui/typography";
 import type { Annotation } from "@/models/componentSpec";
 import type { Annotations } from "@/models/componentSpec/annotations";
 
-import {
-  addAnnotation,
-  removeAnnotation,
-  updateAnnotationKey,
-  updateAnnotationValue,
-} from "./annotations.actions";
+import { useAnnotationActions } from "./useAnnotationActions";
 
 interface AnnotationsBlockProps {
   annotations: Annotations;
@@ -76,6 +71,8 @@ function AnnotationEditMode({
   ignoredSet?: Set<string>;
   onClose: () => void;
 }) {
+  const { addAnnotation } = useAnnotationActions();
+
   const editableItems = ignoredSet
     ? annotations.filter((a) => !ignoredSet.has(a.key))
     : [...annotations];
@@ -122,6 +119,9 @@ interface AnnotationRowProps {
 }
 
 function AnnotationRow({ annotation, index, annotations }: AnnotationRowProps) {
+  const { updateAnnotationKey, updateAnnotationValue, removeAnnotation } =
+    useAnnotationActions();
+
   const handleUpdateKey = (event: ChangeEvent<HTMLInputElement>) => {
     updateAnnotationKey(annotations, index, event.target.value);
   };

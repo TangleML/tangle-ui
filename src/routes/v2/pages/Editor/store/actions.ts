@@ -12,14 +12,7 @@ export {
   setOutputDescription,
 } from "./actions/io.actions";
 export {
-  createSubgraph,
-  renamePipeline,
-  updatePipelineDescription,
-} from "./actions/pipeline.actions";
-export {
   addTask,
-  applyAutoLayoutPositions,
-  batchSetTaskColor,
   copySelectedNodes,
   deleteSelectedNodes,
   deleteTask,

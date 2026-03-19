@@ -2,7 +2,7 @@ import { generate } from "random-words";
 
 import { exportPipeline } from "@/components/shared/ReactFlow/FlowSidebar/sections/components/ExportPipelineButton";
 import { JsonSerializer } from "@/models/componentSpec/serialization/jsonSerializer";
-import { navigationStore } from "@/routes/v2/shared/store/navigationStore";
+import type { NavigationStore } from "@/routes/v2/shared/store/navigationStore";
 import { type ComponentSpec as WiredComponentSpec } from "@/utils/componentSpec";
 import { writeComponentToFileListFromText } from "@/utils/componentStore";
 import {
@@ -22,9 +22,9 @@ export async function createNewPipeline(): Promise<string> {
   return name;
 }
 
-export function exportCurrentPipeline(): void {
+export function exportCurrentPipeline(navigation: NavigationStore): void {
   const serializer = new JsonSerializer();
-  const componentSpec = navigationStore.rootSpec;
+  const componentSpec = navigation.rootSpec;
 
   if (!componentSpec) return;
 

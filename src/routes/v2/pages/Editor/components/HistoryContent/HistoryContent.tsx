@@ -3,7 +3,7 @@ import { observer } from "mobx-react-lite";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
-import { undoStore } from "@/routes/v2/pages/Editor/store/undoStore";
+import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 
 import { HistoryEntryItem } from "./components/HistoryEntryItem";
 import { HistoryToolbar } from "./components/HistoryToolbar";
@@ -11,8 +11,9 @@ import { InitialStateMarker } from "./components/InitialStateMarker";
 import { getUndoEventName } from "./historyContent.utils";
 
 export const HistoryContent = observer(function HistoryContent() {
-  const { canUndo, canRedo, undoLevels, redoLevels } = undoStore;
-  const undoManager = undoStore.undoManager;
+  const { undo } = useEditorSession();
+  const { canUndo, canRedo, undoLevels, redoLevels } = undo;
+  const undoManager = undo.undoManager;
 
   const totalCommands = undoLevels + redoLevels;
 
@@ -38,8 +39,8 @@ export const HistoryContent = observer(function HistoryContent() {
   const undoEntries = [...undoQueue].reverse();
 
   const handleInitialClick = () => {
-    while (undoStore.canUndo) {
-      undoStore.undo();
+    while (undo.canUndo) {
+      undo.undo();
     }
   };
 
@@ -50,9 +51,9 @@ export const HistoryContent = observer(function HistoryContent() {
         canRedo={canRedo}
         undoLevels={undoLevels}
         totalCommands={totalCommands}
-        onUndo={() => undoStore.undo()}
-        onRedo={() => undoStore.redo()}
-        onClear={() => undoStore.clearHistory()}
+        onUndo={() => undo.undo()}
+        onRedo={() => undo.redo()}
+        onClear={() => undo.clearHistory()}
       />
 
       <div className="flex-1 overflow-y-auto px-1.5 py-1 flex flex-col gap-1 w-full">
@@ -72,7 +73,7 @@ export const HistoryContent = observer(function HistoryContent() {
                   onClick={() => {
                     const stepsForward = displayIndex + 1;
                     for (let i = 0; i < stepsForward; i++) {
-                      undoStore.redo();
+                      undo.redo();
                     }
                   }}
                 />
@@ -101,7 +102,7 @@ export const HistoryContent = observer(function HistoryContent() {
                 onClick={() => {
                   if (!isCurrent) {
                     for (let i = 0; i < displayIndex; i++) {
-                      undoStore.undo();
+                      undo.undo();
                     }
                   }
                 }}

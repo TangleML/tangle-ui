@@ -1,13 +1,15 @@
 import { ActionButton } from "@/components/shared/Buttons/ActionButton";
 import { PipelineNameDialog } from "@/components/shared/Dialogs";
 import type { ComponentSpec } from "@/models/componentSpec";
-import { renamePipeline } from "@/routes/v2/pages/Editor/store/actions";
+import { usePipelineActions } from "@/routes/v2/pages/Editor/store/actions/usePipelineActions";
 
 interface RenamePipelineButtonProps {
   spec: ComponentSpec;
 }
 
 export const RenamePipelineButton = ({ spec }: RenamePipelineButtonProps) => {
+  const { renamePipeline } = usePipelineActions();
+
   const handleSubmit = (name: string) => {
     renamePipeline(spec, name);
   };

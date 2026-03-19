@@ -7,12 +7,8 @@ import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import type { ComponentSpec, ValidationIssue } from "@/models/componentSpec";
-import {
-  editorStore,
-  setPendingFocusNode,
-  setSelectedValidationIssue,
-} from "@/routes/v2/shared/store/editorStore";
-import { navigateToLevel } from "@/routes/v2/shared/store/navigationStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { useFocusActions } from "@/routes/v2/shared/store/useFocusActions";
 
 export function countErrors(issues: ValidationIssue[]): number {
   return issues.filter((i) => i.severity === "error").length;
@@ -47,6 +43,8 @@ export const ValidationSummary = observer(function ValidationSummary({
   className,
 }: ValidationSummaryProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const { editor, navigation } = useSharedStores();
+  const { focusValidationIssue } = useFocusActions();
   const issues = spec.validationIssues;
   const errorCount = countErrors(issues);
   const warningCount = countWarnings(issues);
@@ -87,14 +85,11 @@ export const ValidationSummary = observer(function ValidationSummary({
       {isExpanded && (
         <BlockStack gap="1" className="pl-2">
           {issues.map((issue, index) => {
-            const isSelected = editorStore.selectedValidationIssue === issue;
+            const isSelected = editor.selectedValidationIssue === issue;
 
             const handleIssueClick = () => {
-              navigateToLevel(0);
-              if (issue.entityId) {
-                setPendingFocusNode(issue.entityId);
-              }
-              setSelectedValidationIssue(issue);
+              navigation.navigateToLevel(0);
+              focusValidationIssue(issue);
             };
 
             return (

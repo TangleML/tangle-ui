@@ -6,7 +6,6 @@ import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import type { ComponentSpec, ValidationIssue } from "@/models/componentSpec";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
-import { setSelectedValidationIssue } from "@/routes/v2/shared/store/editorStore";
 
 import { BadReferenceResolution } from "./resolutions/BadReferenceResolution";
 import { DeleteEntityResolution } from "./resolutions/DeleteEntityResolution";
@@ -14,7 +13,7 @@ import { DuplicateNameResolution } from "./resolutions/DuplicateNameResolution";
 import { InfoOnlyResolution } from "./resolutions/InfoOnlyResolution";
 import { MissingRequiredInputResolution } from "./resolutions/MissingRequiredInputResolution";
 import { RenameEntityResolution } from "./resolutions/RenameEntityResolution";
-import { deleteEntity } from "./validationResolution.actions";
+import { useValidationResolutionActions } from "./useValidationResolutionActions";
 
 interface ValidationIssueResolutionCardProps {
   issue: ValidationIssue;
@@ -73,6 +72,8 @@ const ResolutionContent = observer(function ResolutionContent({
   issue,
   spec,
 }: ResolutionContentProps) {
+  const { deleteEntity } = useValidationResolutionActions();
+
   switch (issue.issueCode) {
     case "MISSING_REQUIRED_INPUT":
       return <MissingRequiredInputResolution issue={issue} spec={spec} />;
@@ -115,7 +116,6 @@ const ResolutionContent = observer(function ResolutionContent({
           label="Delete Task"
           onDelete={() => {
             if (issue.entityId) deleteEntity(spec, "task", issue.entityId);
-            setSelectedValidationIssue(null);
           }}
         />
       );
@@ -130,7 +130,6 @@ const ResolutionContent = observer(function ResolutionContent({
           label="Delete Input"
           onDelete={() => {
             if (issue.entityId) deleteEntity(spec, "input", issue.entityId);
-            setSelectedValidationIssue(null);
           }}
         />
       );
@@ -141,7 +140,6 @@ const ResolutionContent = observer(function ResolutionContent({
           label="Delete Output"
           onDelete={() => {
             if (issue.entityId) deleteEntity(spec, "output", issue.entityId);
-            setSelectedValidationIssue(null);
           }}
         />
       );
@@ -153,7 +151,6 @@ const ResolutionContent = observer(function ResolutionContent({
           label="Delete Binding"
           onDelete={() => {
             if (issue.entityId) deleteEntity(spec, "binding", issue.entityId);
-            setSelectedValidationIssue(null);
           }}
         />
       );

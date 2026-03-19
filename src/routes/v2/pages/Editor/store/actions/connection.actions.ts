@@ -1,5 +1,5 @@
 import type { ComponentSpec } from "@/models/componentSpec";
-import { withUndoGroup } from "@/routes/v2/pages/Editor/store/undoStore";
+import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
 
 import { getNodeTypeFromId } from "./utils";
 
@@ -11,6 +11,7 @@ interface ConnectionInfo {
 }
 
 export function connectNodes(
+  undo: UndoGroupable,
   spec: ComponentSpec,
   connection: ConnectionInfo,
 ): boolean {
@@ -25,7 +26,7 @@ export function connectNodes(
 
   if (sourceType === "input" && targetType === "output") return false;
 
-  return withUndoGroup("Connect nodes", () => {
+  return undo.withGroup("Connect nodes", () => {
     spec.connectNodes(
       { entityId: sourceNodeId, portName: sourceOutputName },
       { entityId: targetNodeId, portName: targetInputName },
@@ -34,8 +35,12 @@ export function connectNodes(
   });
 }
 
-export function deleteEdge(spec: ComponentSpec, edgeId: string): boolean {
+export function deleteEdge(
+  undo: UndoGroupable,
+  spec: ComponentSpec,
+  edgeId: string,
+): boolean {
   const match = edgeId.match(/^edge_(.+)$/);
   if (!match) return false;
-  return withUndoGroup("Delete edge", () => spec.deleteEdgeById(match[1]));
+  return undo.withGroup("Delete edge", () => spec.deleteEdgeById(match[1]));
 }

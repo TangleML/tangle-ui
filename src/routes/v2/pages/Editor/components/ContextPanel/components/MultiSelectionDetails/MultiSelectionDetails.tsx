@@ -12,15 +12,10 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/typography";
 import type { Task } from "@/models/componentSpec";
-import {
-  applyAutoLayoutPositions,
-  createSubgraph,
-} from "@/routes/v2/pages/Editor/store/actions";
+import { usePipelineActions } from "@/routes/v2/pages/Editor/store/actions/usePipelineActions";
+import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskActions";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
-import {
-  clearMultiSelection,
-  editorStore,
-} from "@/routes/v2/shared/store/editorStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 import { BatchArgumentRow } from "./components/BatchArgumentRow";
 import { BatchTaskColor } from "./components/BatchTaskColor";
@@ -36,9 +31,12 @@ import {
  * Shows list of selected nodes, common argument editing, and Create Subgraph section.
  */
 export const MultiSelectionDetails = observer(function MultiSelectionDetails() {
-  const { multiSelection } = editorStore;
+  const { editor } = useSharedStores();
+  const { multiSelection } = editor;
   const spec = useSpec();
   const { getNodes, getEdges } = useReactFlow();
+  const { createSubgraph } = usePipelineActions();
+  const { applyAutoLayoutPositions } = useTaskActions();
 
   const [subgraphName, setSubgraphName] = useState("");
 
@@ -78,7 +76,7 @@ export const MultiSelectionDetails = observer(function MultiSelectionDetails() {
 
     if (result) {
       setSubgraphName("");
-      clearMultiSelection();
+      editor.clearMultiSelection();
     }
   };
 

@@ -5,7 +5,7 @@ import { InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/typography";
 import type { Task } from "@/models/componentSpec";
-import { batchSetTaskColor } from "@/routes/v2/pages/Editor/store/actions";
+import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskActions";
 
 const TASK_COLOR_ANNOTATION = "tangleml.com/editor/task-color";
 
@@ -14,6 +14,8 @@ export const BatchTaskColor = observer(function BatchTaskColor({
 }: {
   tasks: Task[];
 }) {
+  const { batchSetTaskColor } = useTaskActions();
+
   if (tasks.length === 0) return null;
 
   const colors = tasks.map(

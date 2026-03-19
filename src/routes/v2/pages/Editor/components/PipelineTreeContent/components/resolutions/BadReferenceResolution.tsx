@@ -10,8 +10,9 @@ import type {
   ValidationIssue,
 } from "@/models/componentSpec";
 import { ArgumentRow } from "@/routes/v2/pages/Editor/components/ArgumentRow/ArgumentRow";
-import { unsetBadReference } from "@/routes/v2/pages/Editor/components/PipelineTreeContent/components/validationResolution.actions";
+import { useValidationResolutionActions } from "@/routes/v2/pages/Editor/components/PipelineTreeContent/components/useValidationResolutionActions";
 import { findTaskById } from "@/routes/v2/pages/Editor/components/PipelineTreeContent/components/validationResolution.utils";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 import { InfoOnlyResolution } from "./InfoOnlyResolution";
 
@@ -22,13 +23,16 @@ export const BadReferenceResolution = observer(function BadReferenceResolution({
   issue: ValidationIssue;
   spec: ComponentSpec;
 }) {
+  const { navigation } = useSharedStores();
+  const { unsetBadReference } = useValidationResolutionActions();
+
   if (!issue.entityId || !issue.argumentName) {
     return (
       <InfoOnlyResolution message="Cannot resolve: missing entity or argument information." />
     );
   }
 
-  const task = findTaskById(spec, issue.entityId);
+  const task = findTaskById(spec, issue.entityId, navigation.nestedSpecs);
   if (!task) {
     return (
       <InfoOnlyResolution message="Task not found in the current graph." />

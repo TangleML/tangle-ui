@@ -1,32 +1,34 @@
 import { useEffect } from "react";
 
 import { normalizeKeyFromEvent } from "@/routes/v2/shared/shortcuts/keys";
-import { keyboardStore } from "@/routes/v2/shared/store/keyboardStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 import { isEditableTarget } from "./shortcutUtils";
 
 /**
  * Single keydown/keyup/blur listener that tracks pressed keys in
- * `keyboardStore.pressed` and dispatches registered shortcuts.
+ * `keyboard.pressed` and dispatches registered shortcuts.
  * Call once at the EditorV2 root level.
  */
 export function useEditorShortcuts(): void {
+  const { keyboard } = useSharedStores();
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const key = normalizeKeyFromEvent(event);
-      if (key) keyboardStore.pressKey(key);
+      if (key) keyboard.pressKey(key);
 
       const editable = isEditableTarget(event.target);
 
-      for (const shortcut of keyboardStore.shortcuts.values()) {
+      for (const shortcut of keyboard.shortcuts.values()) {
         if (editable && !shortcut.allowInEditable) continue;
-        if (keyboardStore.matchesPressed(shortcut.keys)) {
+        if (keyboard.matchesPressed(shortcut.keys)) {
           event.preventDefault();
           /**
            * In MacOS only one keyup event triggers when Meta key is pressed
            * @see https://web.archive.org/web/20160304022453/http://bitspushedaround.com/on-a-few-things-you-may-not-know-about-the-hellish-command-key-and-javascript-events/
            */
-          keyboardStore.clearPressed();
+          keyboard.clearPressed();
           shortcut.action(event);
           return;
         }
@@ -35,11 +37,11 @@ export function useEditorShortcuts(): void {
 
     const handleKeyUp = (event: KeyboardEvent) => {
       const key = normalizeKeyFromEvent(event);
-      if (key) keyboardStore.releaseKey(key);
+      if (key) keyboard.releaseKey(key);
     };
 
     const handleBlur = () => {
-      keyboardStore.clearPressed();
+      keyboard.clearPressed();
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -50,7 +52,7 @@ export function useEditorShortcuts(): void {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
       window.removeEventListener("blur", handleBlur);
-      keyboardStore.clearPressed();
+      keyboard.clearPressed();
     };
-  }, []);
+  }, [keyboard]);
 }

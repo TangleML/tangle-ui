@@ -14,10 +14,7 @@ import {
 import { Icon } from "@/components/ui/icon";
 import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButton";
 import { ShorcutBadge } from "@/routes/v2/shared/components/ShorcutBadge";
-import {
-  invokeShortcut,
-  keyboardStore,
-} from "@/routes/v2/shared/store/keyboardStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 const LAYOUT_ALGORITHMS: { key: LayoutAlgorithm; label: string }[] = [
   { key: "sugiyama", label: "Sugiyama" },
@@ -27,7 +24,8 @@ const LAYOUT_ALGORITHMS: { key: LayoutAlgorithm; label: string }[] = [
 ];
 
 export const RunViewViewMenu = observer(function RunViewViewMenu() {
-  const autoLayoutShortcut = keyboardStore.getShortcut("auto-layout");
+  const { keyboard } = useSharedStores();
+  const autoLayoutShortcut = keyboard.getShortcut("auto-layout");
 
   return (
     <DropdownMenu>
@@ -45,7 +43,9 @@ export const RunViewViewMenu = observer(function RunViewViewMenu() {
               <DropdownMenuItem
                 key={algo.key}
                 onSelect={() =>
-                  invokeShortcut("auto-layout", { algorithm: algo.key })
+                  keyboard.invokeShortcut("auto-layout", {
+                    algorithm: algo.key,
+                  })
                 }
               >
                 {algo.label}

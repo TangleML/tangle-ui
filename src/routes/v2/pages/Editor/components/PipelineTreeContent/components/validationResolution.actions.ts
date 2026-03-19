@@ -1,12 +1,13 @@
 import type { ComponentSpec, Task } from "@/models/componentSpec";
-import { withUndoGroup } from "@/routes/v2/pages/Editor/store/undoStore";
+import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
 
 export function deleteEntity(
+  undo: UndoGroupable,
   spec: ComponentSpec,
   entityType: "task" | "input" | "output" | "binding",
   entityId: string,
 ) {
-  withUndoGroup(`Delete ${entityType}`, () => {
+  undo.withGroup(`Delete ${entityType}`, () => {
     switch (entityType) {
       case "task":
         spec.removeTaskById(entityId);
@@ -25,12 +26,13 @@ export function deleteEntity(
 }
 
 export function renameEntity(
+  undo: UndoGroupable,
   spec: ComponentSpec,
   entityType: "task" | "input" | "output" | "component",
   entityId: string | undefined,
   name: string,
 ) {
-  withUndoGroup(`Rename ${entityType}`, () => {
+  undo.withGroup(`Rename ${entityType}`, () => {
     if (entityType === "component") {
       spec.setName(name);
     } else if (entityId) {
@@ -49,12 +51,13 @@ export function renameEntity(
 }
 
 export function renameDuplicate(
+  undo: UndoGroupable,
   spec: ComponentSpec,
   entityType: "input" | "output",
   entityId: string,
   name: string,
 ) {
-  withUndoGroup(`Rename duplicate ${entityType}`, () => {
+  undo.withGroup(`Rename duplicate ${entityType}`, () => {
     if (entityType === "input") {
       const input = spec.inputs.find((i) => i.$id === entityId);
       input?.setName(name);
@@ -66,11 +69,12 @@ export function renameDuplicate(
 }
 
 export function deleteDuplicate(
+  undo: UndoGroupable,
   spec: ComponentSpec,
   entityType: "input" | "output",
   entityId: string,
 ) {
-  withUndoGroup(`Delete duplicate ${entityType}`, () => {
+  undo.withGroup(`Delete duplicate ${entityType}`, () => {
     if (entityType === "input") {
       spec.removeInputById(entityId);
     } else {
@@ -80,11 +84,12 @@ export function deleteDuplicate(
 }
 
 export function unsetBadReference(
+  undo: UndoGroupable,
   task: Task,
   spec: ComponentSpec,
   argumentName: string,
 ) {
-  withUndoGroup(`Unset bad reference "${argumentName}"`, () => {
+  undo.withGroup(`Unset bad reference "${argumentName}"`, () => {
     task.removeArgumentByName(argumentName);
     spec.removeAllBindingsBy(
       (b) => b.targetEntityId === task.$id && b.targetPortName === argumentName,

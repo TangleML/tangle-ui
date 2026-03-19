@@ -11,12 +11,7 @@ import {
   isSubgraphTask,
 } from "@/routes/v2/pages/Editor/components/PipelineTreeContent/utils";
 import { countErrors } from "@/routes/v2/pages/Editor/components/ValidationSummary";
-import { setHoveredEntity } from "@/routes/v2/shared/store/editorStore";
-import {
-  navigateToLevel,
-  navigateToPath,
-  navigationStore,
-} from "@/routes/v2/shared/store/navigationStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 import { IssueBadge } from "./IssueBadge";
 import { TaskLeafNode } from "./TaskLeafNode";
@@ -40,6 +35,7 @@ export const SubgraphNode = observer(function SubgraphNode({
   onToggleExpand,
   parentSpec,
 }: SubgraphNodeProps) {
+  const { editor, navigation } = useSharedStores();
   const nodePath = navigationPath.join("/");
   const isExpanded = expandedNodes.has(nodePath);
   const depth = navigationPath.length - 1;
@@ -58,13 +54,13 @@ export const SubgraphNode = observer(function SubgraphNode({
   const allIssues = [...taskIssues, ...specIssues];
   const hasErrors = countErrors(allIssues) > 0;
 
-  const isParentOnActiveCanvas = parentSpec === navigationStore.activeSpec;
+  const isParentOnActiveCanvas = parentSpec === navigation.activeSpec;
 
   const handleClick = () => {
-    const pathResult = navigateToPath(navigationPath);
+    const pathResult = navigation.navigateToPath(navigationPath);
     if (!pathResult) {
       const parentLevel = navigationPath.length - 2;
-      navigateToLevel(parentLevel);
+      navigation.navigateToLevel(parentLevel);
     }
   };
 
@@ -74,11 +70,11 @@ export const SubgraphNode = observer(function SubgraphNode({
   };
 
   const handleMouseEnter = () => {
-    if (isParentOnActiveCanvas) setHoveredEntity(task.$id);
+    if (isParentOnActiveCanvas) editor.setHoveredEntity(task.$id);
   };
 
   const handleMouseLeave = () => {
-    setHoveredEntity(null);
+    editor.setHoveredEntity(null);
   };
 
   return (
@@ -164,7 +160,7 @@ export const SubgraphNode = observer(function SubgraphNode({
               if (isChildSubgraph) {
                 const childPathKey =
                   navigationPath.slice(1).join("/") + "/" + childTask.name;
-                const nestedSpec = navigationStore.nestedSpecs.get(
+                const nestedSpec = navigation.nestedSpecs.get(
                   childPathKey.startsWith("/")
                     ? childPathKey.slice(1)
                     : childPathKey,

@@ -17,7 +17,20 @@ import type {
   TypeSpecType,
 } from "@/models/componentSpec/entities/types";
 import type { IdGenerator } from "@/models/componentSpec/factories/idGenerator";
-import type { SelectedNode } from "@/routes/v2/shared/store/editorStore";
+import type {
+  EditorStore,
+  SelectedNode,
+} from "@/routes/v2/shared/store/editorStore";
+import type { KeyboardStore } from "@/routes/v2/shared/store/keyboardStore";
+import type { NavigationStore } from "@/routes/v2/shared/store/navigationStore";
+
+/**
+ * Minimal interface for undo grouping, satisfied by UndoStore.
+ * Defined here so shared/ doesn't import from pages/.
+ */
+export interface UndoGroupable {
+  withGroup<T>(label: string, fn: () => T): T;
+}
 
 // ---------------------------------------------------------------------------
 // Snapshot types (used by clone handlers and copy-paste)
@@ -102,6 +115,7 @@ export interface NodeCloneHandler {
     snapshot: NodeSnapshot,
     idGen: IdGenerator,
     position: XYPosition,
+    undo: UndoGroupable,
   ): string | null;
 }
 
@@ -190,6 +204,7 @@ export interface NodeTypeManifest {
       spec: ComponentSpec,
       data: unknown,
       position: XYPosition,
+      undo: UndoGroupable,
     ): void | Promise<void>;
   };
 
@@ -202,12 +217,13 @@ export interface NodeTypeManifest {
   getPosition(spec: ComponentSpec, nodeId: string): XYPosition | undefined;
 
   updatePosition(
+    undo: UndoGroupable,
     spec: ComponentSpec,
     nodeId: string,
     position: XYPosition,
   ): void;
 
-  deleteNode(spec: ComponentSpec, nodeId: string): void;
+  deleteNode(undo: UndoGroupable, spec: ComponentSpec, nodeId: string): void;
 
   findEntity?(spec: ComponentSpec, entityId: string): unknown | undefined;
 
@@ -225,8 +241,20 @@ export interface NodeTypeManifest {
 
   // -- Interactions -----------------------------------------------------
 
-  onDoubleClick?(spec: ComponentSpec, node: Node): void;
-  onPaneClick?(spec: ComponentSpec, position: XYPosition): void;
+  onDoubleClick?(
+    spec: ComponentSpec,
+    node: Node,
+    navigation: NavigationStore,
+  ): void;
+  onPaneClick?(
+    spec: ComponentSpec,
+    position: XYPosition,
+    stores: {
+      editor: EditorStore;
+      keyboard: KeyboardStore;
+      undo: UndoGroupable;
+    },
+  ): void;
 
   // -- Clone / copy-paste -----------------------------------------------
 

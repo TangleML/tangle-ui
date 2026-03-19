@@ -2,10 +2,7 @@ import { useReactFlow } from "@xyflow/react";
 import { reaction } from "mobx";
 import { useEffect, useRef } from "react";
 
-import {
-  editorStore,
-  setPendingFocusNode,
-} from "@/routes/v2/shared/store/editorStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 /**
  * Uses a MobX reaction instead of render-time observable read + useEffect
@@ -13,12 +10,13 @@ import {
  * intermediate clearSelection reactions before setPendingFocusNode is called.
  */
 export function useFitViewOnFocus(): void {
+  const { editor } = useSharedStores();
   const { fitView } = useReactFlow();
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const dispose = reaction(
-      () => editorStore.pendingFocusNodeId,
+      () => editor.pendingFocusNodeId,
       (nodeId) => {
         if (timerRef.current) {
           clearTimeout(timerRef.current);
@@ -34,7 +32,7 @@ export function useFitViewOnFocus(): void {
             maxZoom: 1,
             duration: 300,
           });
-          setPendingFocusNode(null);
+          editor.setPendingFocusNode(null);
         }, 50);
       },
     );
@@ -45,5 +43,5 @@ export function useFitViewOnFocus(): void {
         clearTimeout(timerRef.current);
       }
     };
-  }, [fitView]);
+  }, [fitView, editor]);
 }

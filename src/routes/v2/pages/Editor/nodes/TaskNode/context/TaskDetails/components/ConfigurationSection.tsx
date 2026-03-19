@@ -19,12 +19,7 @@ import { isGraphImplementation } from "@/models/componentSpec/entities/types";
 import type { AnnotationConfig, Annotations } from "@/types/annotations";
 import { ISO8601_DURATION_ZERO_DAYS } from "@/utils/constants";
 
-import {
-  clearProviderAnnotations,
-  saveAnnotation,
-  setTaskColor,
-  toggleCacheDisable,
-} from "./taskConfig.actions";
+import { useTaskConfigActions } from "./useTaskConfigActions";
 
 interface ConfigurationSectionProps {
   task: Task;
@@ -33,6 +28,12 @@ interface ConfigurationSectionProps {
 export const ConfigurationSection = observer(function ConfigurationSection({
   task,
 }: ConfigurationSectionProps) {
+  const {
+    toggleCacheDisable,
+    saveAnnotation,
+    setTaskColor,
+    clearProviderAnnotations,
+  } = useTaskConfigActions();
   const componentSpec = task.componentRef.spec as ComponentSpecJson | undefined;
   const isSubgraph = componentSpec?.implementation
     ? isGraphImplementation(componentSpec.implementation)

@@ -7,10 +7,7 @@ import {
 } from "@/routes/v2/shared/nodes/buildUtils";
 import type { ManifestPartial } from "@/routes/v2/shared/nodes/manifestBases";
 import type { TaskNodeData } from "@/routes/v2/shared/nodes/types";
-import {
-  isTaskSubgraph,
-  navigateToSubgraph,
-} from "@/routes/v2/shared/store/navigationStore";
+import type { NavigationStore } from "@/routes/v2/shared/store/navigationStore";
 
 import { TaskNode } from "./TaskNode";
 
@@ -62,10 +59,10 @@ export const taskManifestBase: ManifestPartial = {
   icon: "Workflow",
   iconColor: "text-blue-500",
 
-  onDoubleClick(spec: ComponentSpec, node: Node) {
+  onDoubleClick(spec: ComponentSpec, node: Node, navigation: NavigationStore) {
     const taskData = node.data as TaskNodeData;
-    if (isTaskSubgraph(spec, taskData.entityId)) {
-      navigateToSubgraph(spec, taskData.entityId);
+    if (navigation.isTaskSubgraph(spec, taskData.entityId)) {
+      navigation.navigateToSubgraph(spec, taskData.entityId);
     }
   },
 };

@@ -2,7 +2,7 @@ import { reaction } from "mobx";
 import { useEffect } from "react";
 
 import { RunViewContextPanel } from "@/routes/v2/pages/RunView/components/RunViewContextPanel";
-import { editorStore } from "@/routes/v2/shared/store/editorStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import {
   closeWindow,
   getWindowById,
@@ -13,11 +13,13 @@ import {
 const CONTEXT_PANEL_WINDOW_ID = "context-panel";
 
 export function useRunViewSelectionSync() {
+  const { editor } = useSharedStores();
+
   useEffect(() => {
     const dispose = reaction(
       () => ({
-        selectedNodeId: editorStore.selectedNodeId,
-        selectedNodeType: editorStore.selectedNodeType,
+        selectedNodeId: editor.selectedNodeId,
+        selectedNodeType: editor.selectedNodeType,
       }),
       ({ selectedNodeId, selectedNodeType }) => {
         if (selectedNodeId && selectedNodeType) {
@@ -43,5 +45,5 @@ export function useRunViewSelectionSync() {
     );
 
     return dispose;
-  }, []);
+  }, [editor]);
 }

@@ -10,16 +10,17 @@ import {
   generateUniqueInputName,
   generateUniqueOutputName,
 } from "@/routes/v2/pages/Editor/store/nameUtils";
-import { withUndoGroup } from "@/routes/v2/pages/Editor/store/undoStore";
+import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
 
 import { idGen } from "./utils";
 
 export function addInput(
+  undo: UndoGroupable,
   spec: ComponentSpec,
   position: XYPosition,
   name?: string,
 ): Input {
-  return withUndoGroup("Add input", () => {
+  return undo.withGroup("Add input", () => {
     const inputName = generateUniqueInputName(spec, name);
     const input = new Input({
       $id: idGen.next("input"),
@@ -35,11 +36,12 @@ export function addInput(
 }
 
 export function addOutput(
+  undo: UndoGroupable,
   spec: ComponentSpec,
   position: XYPosition,
   name?: string,
 ): Output {
-  return withUndoGroup("Add output", () => {
+  return undo.withGroup("Add output", () => {
     const outputName = generateUniqueOutputName(spec, name);
     const output = new Output({
       $id: idGen.next("output"),
@@ -55,70 +57,77 @@ export function addOutput(
 }
 
 export function renameInput(
+  undo: UndoGroupable,
   spec: ComponentSpec,
   entityId: string,
   newName: string,
 ): boolean {
-  return withUndoGroup("Rename input", () =>
+  return undo.withGroup("Rename input", () =>
     spec.renameInput(entityId, newName),
   );
 }
 
 export function renameOutput(
+  undo: UndoGroupable,
   spec: ComponentSpec,
   entityId: string,
   newName: string,
 ): boolean {
-  return withUndoGroup("Rename output", () =>
+  return undo.withGroup("Rename output", () =>
     spec.renameOutput(entityId, newName),
   );
 }
 
 export function setInputDescription(
+  undo: UndoGroupable,
   spec: ComponentSpec,
   entityId: string,
   description: string | undefined,
 ): void {
-  withUndoGroup("Set input description", () => {
+  undo.withGroup("Set input description", () => {
     const input = spec.inputs.find((i) => i.$id === entityId);
     input?.setDescription(description);
   });
 }
 
 export function setInputType(
+  undo: UndoGroupable,
   spec: ComponentSpec,
   entityId: string,
   type: string | undefined,
 ): void {
-  withUndoGroup("Set input type", () => {
+  undo.withGroup("Set input type", () => {
     const input = spec.inputs.find((i) => i.$id === entityId);
     input?.setType(type);
   });
 }
 
 export function setInputDefaultValue(
+  undo: UndoGroupable,
   spec: ComponentSpec,
   entityId: string,
   defaultValue: string | undefined,
 ): void {
-  withUndoGroup("Set input default value", () => {
+  undo.withGroup("Set input default value", () => {
     const input = spec.inputs.find((i) => i.$id === entityId);
     input?.setDefaultValue(defaultValue);
   });
 }
 
 export function setOutputDescription(
+  undo: UndoGroupable,
   spec: ComponentSpec,
   entityId: string,
   description: string | undefined,
 ): void {
-  withUndoGroup("Set output description", () => {
+  undo.withGroup("Set output description", () => {
     const output = spec.outputs.find((o) => o.$id === entityId);
     output?.setDescription(description);
   });
 }
 
 export function createConnectedIONode(
+  undo: UndoGroupable,
   spec: ComponentSpec,
   taskEntityId: string,
   handleId: string,
@@ -135,12 +144,12 @@ export function createConnectedIONode(
 
   const taskComponentSpec = task.componentRef.spec;
 
-  withUndoGroup("Create connected IO node", () => {
+  undo.withGroup("Create connected IO node", () => {
     if (ioType === "input") {
       const inputSpec = taskComponentSpec?.inputs?.find(
         (i) => i.name === portName,
       );
-      const newInput = addInput(spec, position, portName);
+      const newInput = addInput(undo, spec, position, portName);
 
       if (inputSpec?.type) {
         newInput.setType(inputSpec.type);
@@ -154,7 +163,7 @@ export function createConnectedIONode(
       const outputSpec = taskComponentSpec?.outputs?.find(
         (o) => o.name === portName,
       );
-      const newOutput = addOutput(spec, position, portName);
+      const newOutput = addOutput(undo, spec, position, portName);
 
       if (outputSpec?.type) {
         newOutput.setType(outputSpec.type);
@@ -169,6 +178,7 @@ export function createConnectedIONode(
 }
 
 export function createInputAndConnect(
+  undo: UndoGroupable,
   spec: ComponentSpec,
   targetTaskIds: string[],
   portName: string,
@@ -183,8 +193,8 @@ export function createInputAndConnect(
   };
   const position = { x: taskPos.x - 250, y: taskPos.y };
 
-  withUndoGroup("Create input and connect", () => {
-    const newInput = addInput(spec, position, portName);
+  undo.withGroup("Create input and connect", () => {
+    const newInput = addInput(undo, spec, position, portName);
     if (portType) {
       newInput.setType(portType);
     }
