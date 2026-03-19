@@ -18,6 +18,7 @@ interface JSONSchemaProperty {
   "x-append"?: string;
   "x-enable-quantity"?: boolean;
   "x-enum-labels"?: Record<string, string>;
+  "x-allow-custom-value"?: boolean;
   "x-hidden"?: boolean;
   "x-type"?: string;
 }
@@ -112,6 +113,15 @@ export function parseSchemaToAnnotationConfig(
         name: property["x-enum-labels"]?.[value] || value,
       }));
       config.options = options;
+    }
+
+    // Handle custom value allowance
+    if (property["x-allow-custom-value"]) {
+      config.allowCustomValue = true;
+    }
+
+    if (property.description) {
+      config.description = property.description;
     }
 
     // Handle quantity enablement

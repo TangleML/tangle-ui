@@ -11,10 +11,12 @@ export type AnnotationConfig = {
   unit?: string;
   append?: string;
   options?: AnnotationOption[];
+  allowCustomValue?: boolean;
   enableQuantity?: boolean;
   type?: "string" | "number" | "integer" | "boolean" | "json";
   min?: number;
   max?: number;
   hidden?: boolean;
   required?: boolean;
+  description?: string;
 };
