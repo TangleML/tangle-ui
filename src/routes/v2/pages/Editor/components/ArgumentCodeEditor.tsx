@@ -19,7 +19,7 @@ import type {
 } from "@/models/componentSpec";
 import type { TypeSpecType } from "@/models/componentSpec/entities/types";
 
-import { removeArgument, setArgument } from "./ArgumentRow/arguments.actions";
+import { useArgumentActions } from "./ArgumentRow/useArgumentActions";
 
 const LANGUAGE_OPTIONS = [
   { value: "plaintext", label: "Plain Text" },
@@ -66,6 +66,7 @@ export function ArgumentCodeEditor({
   task,
   spec,
 }: ArgumentCodeEditorProps) {
+  const { setArgument, removeArgument } = useArgumentActions();
   const autoLanguage = getLanguageForType(inputSpec.type);
   const [language, setLanguage] = useState(autoLanguage);
   const [editorValue, setEditorValue] = useState(() =>

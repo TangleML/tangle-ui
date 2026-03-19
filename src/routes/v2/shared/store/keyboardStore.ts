@@ -18,7 +18,7 @@ interface ShortcutDefinition {
   action: (event: KeyboardEvent, params?: ShortcutParams) => void;
 }
 
-class KeyboardStore {
+export class KeyboardStore {
   pressed = observable.set<KeyConstant>();
   shortcuts = observable.map<string, ShortcutDefinition>();
 
@@ -68,14 +68,4 @@ class KeyboardStore {
     const shortcut = this.getShortcut(id);
     shortcut?.action(new KeyboardEvent("keydown"), params);
   }
-}
-
-export const keyboardStore = new KeyboardStore();
-
-export function registerShortcut(definition: ShortcutDefinition): () => void {
-  return keyboardStore.registerShortcut(definition);
-}
-
-export function invokeShortcut(id: string, params?: ShortcutParams): void {
-  keyboardStore.invokeShortcut(id, params);
 }

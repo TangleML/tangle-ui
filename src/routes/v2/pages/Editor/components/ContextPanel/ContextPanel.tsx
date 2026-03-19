@@ -6,7 +6,7 @@ import { BlockStack } from "@/components/ui/layout";
 import { ContextPanelEmptyState } from "@/routes/v2/shared/components/ContextPanelEmptyState";
 import { NODE_TYPE_REGISTRY } from "@/routes/v2/shared/nodes/registry";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
-import { editorStore } from "@/routes/v2/shared/store/editorStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 import { MultiSelectionDetails } from "./components/MultiSelectionDetails/MultiSelectionDetails";
 
@@ -16,7 +16,8 @@ import { MultiSelectionDetails } from "./components/MultiSelectionDetails/MultiS
  * Used within the Windows system.
  */
 export const ContextPanelContent = observer(function ContextPanelContent() {
-  const { selectedNodeId, selectedNodeType, multiSelection } = editorStore;
+  const { editor } = useSharedStores();
+  const { selectedNodeId, selectedNodeType, multiSelection } = editor;
 
   const spec = useSpec();
 

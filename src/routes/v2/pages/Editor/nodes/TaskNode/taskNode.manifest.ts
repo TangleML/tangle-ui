@@ -12,10 +12,7 @@ import type {
   TaskNodeData,
   TaskNodeSnapshot,
 } from "@/routes/v2/shared/nodes/types";
-import {
-  isTaskSubgraph,
-  navigateToSubgraph,
-} from "@/routes/v2/shared/store/navigationStore";
+import type { NavigationStore } from "@/routes/v2/shared/store/navigationStore";
 import { restoreWindow } from "@/routes/v2/shared/windows/windows.actions";
 import { hydrateComponentReference } from "@/services/componentService";
 import type { TaskSpec } from "@/utils/componentSpec";
@@ -28,31 +25,31 @@ export const taskManifest: NodeTypeManifest = {
 
   drop: {
     dataKey: "task",
-    async handler(spec, data, position) {
+    async handler(spec, data, position, undo) {
       const taskSpec = data as TaskSpec;
       const componentRef = await hydrateComponentReference(
         taskSpec.componentRef,
       );
       if (componentRef) {
-        addTask(spec, componentRef as ComponentReference, position);
+        addTask(undo, spec, componentRef as ComponentReference, position);
       }
     },
   },
 
-  updatePosition(spec, nodeId, position) {
+  updatePosition(_undo, spec, nodeId, position) {
     spec.updateNodePosition(nodeId, position);
   },
 
-  deleteNode(spec, nodeId) {
+  deleteNode(_undo, spec, nodeId) {
     spec.deleteTaskById(nodeId);
   },
 
   contextPanelComponent: TaskDetails,
 
-  onDoubleClick(spec: ComponentSpec, node: Node) {
+  onDoubleClick(spec: ComponentSpec, node: Node, navigation: NavigationStore) {
     const taskData = node.data as TaskNodeData;
-    if (isTaskSubgraph(spec, taskData.entityId)) {
-      const newSpec = navigateToSubgraph(spec, taskData.entityId);
+    if (navigation.isTaskSubgraph(spec, taskData.entityId)) {
+      const newSpec = navigation.navigateToSubgraph(spec, taskData.entityId);
       if (newSpec) {
         restoreWindow(PIPELINE_TREE_WINDOW_ID);
       }
@@ -82,7 +79,7 @@ export const taskManifest: NodeTypeManifest = {
       } satisfies TaskNodeSnapshot;
     },
 
-    clone(spec, snapshot, idGen, position) {
+    clone(spec, snapshot, idGen, position, _undo) {
       if (snapshot.type !== "task") return null;
       const { data } = snapshot as TaskNodeSnapshot;
       const uniqueName = generateUniqueTaskName(spec, snapshot.name);

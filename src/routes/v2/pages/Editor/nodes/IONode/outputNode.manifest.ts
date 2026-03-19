@@ -16,16 +16,16 @@ export const outputManifest: NodeTypeManifest = {
 
   drop: {
     dataKey: "output",
-    handler(spec, _data, position) {
-      addOutput(spec, position);
+    handler(spec, _data, position, undo) {
+      addOutput(undo, spec, position);
     },
   },
 
-  updatePosition(spec, nodeId, position) {
+  updatePosition(_undo, spec, nodeId, position) {
     spec.updateNodePosition(nodeId, position);
   },
 
-  deleteNode(spec, nodeId) {
+  deleteNode(_undo, spec, nodeId) {
     spec.deleteOutputById(nodeId);
   },
 
@@ -53,7 +53,7 @@ export const outputManifest: NodeTypeManifest = {
       } satisfies OutputNodeSnapshot;
     },
 
-    clone(spec, snapshot, idGen, position) {
+    clone(spec, snapshot, idGen, position, _undo) {
       if (snapshot.type !== "output") return null;
       const { data } = snapshot as OutputNodeSnapshot;
       const uniqueName = generateUniqueOutputName(spec, snapshot.name);

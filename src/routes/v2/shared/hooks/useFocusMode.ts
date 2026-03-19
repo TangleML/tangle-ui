@@ -3,7 +3,7 @@ import { action, makeObservable, observable } from "mobx";
 import { useEffect } from "react";
 
 import { CMDALT } from "@/routes/v2/shared/shortcuts/keys";
-import { registerShortcut } from "@/routes/v2/shared/store/keyboardStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 class FocusModeStore {
   @observable accessor active = false;
@@ -34,9 +34,10 @@ export function toggleFocusMode(): void {
  */
 export function useFocusMode(): void {
   const { fitView } = useReactFlow();
+  const { keyboard } = useSharedStores();
 
   useEffect(() => {
-    const unregisterShortcut = registerShortcut({
+    const unregisterShortcut = keyboard.registerShortcut({
       id: "focus-mode",
       keys: [CMDALT, "/"],
       label: "Focus mode",
@@ -47,5 +48,5 @@ export function useFocusMode(): void {
       unregisterShortcut();
       focusModeStore.reset();
     };
-  }, [fitView]);
+  }, [fitView, keyboard]);
 }

@@ -5,18 +5,18 @@ import type { EdgeChange, NodeChange, ReactFlowProps } from "@xyflow/react";
 import type { ComponentSpec } from "@/models/componentSpec";
 import { cleanupDeletedBinding } from "@/routes/v2/pages/Editor/nodes/ConduitNode/conduits.actions";
 import { deleteEdge } from "@/routes/v2/pages/Editor/store/actions";
-import { withUndoGroup } from "@/routes/v2/pages/Editor/store/undoStore";
+import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { NODE_TYPE_REGISTRY } from "@/routes/v2/shared/nodes/registry";
-import {
-  clearMultiSelection,
-  clearSelection,
-} from "@/routes/v2/shared/store/editorStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 export function useNodeEdgeChanges(
   spec: ComponentSpec | null,
   rfOnNodesChange: (changes: NodeChange[]) => void,
   rfOnEdgesChange: (changes: EdgeChange[]) => void,
 ): Required<Pick<ReactFlowProps, "onNodesChange" | "onEdgesChange">> {
+  const { editor } = useSharedStores();
+  const { undo } = useEditorSession();
+
   const onNodesChange = (changes: NodeChange[]) => {
     if (!spec) {
       rfOnNodesChange(changes);
@@ -29,11 +29,11 @@ export function useNodeEdgeChanges(
 
     if (positionChanges.length > 0) {
       // todo: move action to a separate file
-      withUndoGroup("Move nodes", () => {
+      undo.withGroup("Move nodes", () => {
         for (const change of positionChanges) {
           if ("id" in change && "position" in change && change.position) {
             const manifest = NODE_TYPE_REGISTRY.getByNodeId(spec, change.id);
-            manifest?.updatePosition(spec, change.id, change.position);
+            manifest?.updatePosition(undo, spec, change.id, change.position);
           }
         }
       });
@@ -44,13 +44,13 @@ export function useNodeEdgeChanges(
       if ("id" in change) {
         const manifest = NODE_TYPE_REGISTRY.getByNodeId(spec, change.id);
         // todo: move action to a separate file
-        withUndoGroup("Delete node", () => {
-          manifest?.deleteNode(spec, change.id);
+        undo.withGroup("Delete node", () => {
+          manifest?.deleteNode(undo, spec, change.id);
         });
 
         // deselect removed nodes
-        clearSelection();
-        clearMultiSelection();
+        editor.clearSelection();
+        editor.clearMultiSelection();
       }
     }
 
@@ -67,12 +67,12 @@ export function useNodeEdgeChanges(
     for (const change of removeChanges) {
       if ("id" in change) {
         const edgeId = change.id;
-        deleteEdge(spec, edgeId);
+        deleteEdge(undo, spec, edgeId);
 
         const bindingIdMatch = edgeId.match(/^edge_(.+)$/);
         if (bindingIdMatch) {
           // todo: find out how to decouple
-          cleanupDeletedBinding(spec, bindingIdMatch[1]);
+          cleanupDeletedBinding(undo, spec, bindingIdMatch[1]);
         }
       }
     }

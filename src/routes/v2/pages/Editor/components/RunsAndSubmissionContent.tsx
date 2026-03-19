@@ -12,7 +12,7 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Heading, Text } from "@/components/ui/typography";
 import { JsonSerializer } from "@/models/componentSpec";
-import { navigationStore } from "@/routes/v2/shared/store/navigationStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import type { ComponentSpec } from "@/utils/componentSpec";
 
 function deepClone<T>(obj: T): T {
@@ -26,7 +26,8 @@ const showGoogleSubmitter =
 
 export const RunsAndSubmissionContent = observer(() => {
   const { isAuthorized } = useAwaitAuthorization();
-  const rootSpec = navigationStore.rootSpec;
+  const { navigation } = useSharedStores();
+  const rootSpec = navigation.rootSpec;
 
   const legacySpec = rootSpec
     ? (deepClone(serializer.serialize(rootSpec)) as ComponentSpec)

@@ -4,16 +4,8 @@ import { isRootStore, unregisterRootStore } from "mobx-keystone";
 import { useEffect, useRef } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
-import { autoSaveStore } from "@/routes/v2/pages/Editor/store/autoSaveStore";
-import { undoStore } from "@/routes/v2/pages/Editor/store/undoStore";
-import {
-  editorStore,
-  resetEditorState,
-} from "@/routes/v2/shared/store/editorStore";
-import {
-  clearNavigation,
-  initNavigation,
-} from "@/routes/v2/shared/store/navigationStore";
+import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { closeWindowsByLinkedEntity } from "@/routes/v2/shared/windows/windows.actions";
 
 export function useSpecLifecycle(
@@ -21,17 +13,19 @@ export function useSpecLifecycle(
   pipelineName: string | null,
   restoredUndoStore?: MobxUndoStore,
 ) {
+  const { editor, navigation } = useSharedStores();
+  const { undo, autoSave } = useEditorSession();
   const prevTaskEntityIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (rootSpec) {
-      resetEditorState();
-      initNavigation(rootSpec);
-      undoStore.init(rootSpec, restoredUndoStore);
+      editor.resetState();
+      navigation.initNavigation(rootSpec);
+      undo.init(rootSpec, restoredUndoStore);
 
       const saveName = pipelineName ?? rootSpec.name;
       if (saveName) {
-        autoSaveStore.init(rootSpec, saveName);
+        autoSave.init(rootSpec, saveName);
       }
 
       prevTaskEntityIdsRef.current = new Set(rootSpec.tasks.map((t) => t.$id));
@@ -50,14 +44,22 @@ export function useSpecLifecycle(
 
       return () => {
         disposeTaskWatcher();
-        autoSaveStore.dispose();
-        editorStore.clearSelection();
-        clearNavigation();
-        undoStore.dispose();
+        autoSave.dispose();
+        editor.clearSelection();
+        navigation.clearNavigation();
+        undo.dispose();
         if (isRootStore(rootSpec)) {
           unregisterRootStore(rootSpec);
         }
       };
     }
-  }, [rootSpec, pipelineName, restoredUndoStore]);
+  }, [
+    rootSpec,
+    pipelineName,
+    restoredUndoStore,
+    editor,
+    navigation,
+    undo,
+    autoSave,
+  ]);
 }

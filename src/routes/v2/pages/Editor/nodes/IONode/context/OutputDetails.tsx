@@ -7,11 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Text } from "@/components/ui/typography";
 import { InputLabel } from "@/routes/v2/pages/Editor/components/InputLabel/InputLabel";
 import { ZIndexEditor } from "@/routes/v2/pages/Editor/nodes/FlexNode/context/components/ZIndexEditor";
-import {
-  renameOutput,
-  setOutputDescription,
-} from "@/routes/v2/pages/Editor/store/actions";
-import { withUndoGroup } from "@/routes/v2/pages/Editor/store/undoStore";
+import { useIOActions } from "@/routes/v2/pages/Editor/store/actions/useIOActions";
+import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 
 interface OutputDetailsProps {
@@ -21,6 +18,8 @@ interface OutputDetailsProps {
 export const OutputDetails = observer(function OutputDetails({
   entityId,
 }: OutputDetailsProps) {
+  const { undo } = useEditorSession();
+  const ioActions = useIOActions();
   const spec = useSpec();
   const output = spec?.outputs.find((o) => o.$id === entityId);
 
@@ -29,7 +28,7 @@ export const OutputDetails = observer(function OutputDetails({
   const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
     const newName = event.target.value;
     if (newName && newName !== output.name) {
-      renameOutput(spec, entityId, newName);
+      ioActions.renameOutput(spec, entityId, newName);
     }
   };
 
@@ -37,12 +36,12 @@ export const OutputDetails = observer(function OutputDetails({
     const value = event.target.value;
     const newDescription = value || undefined;
     if (newDescription !== output.description) {
-      setOutputDescription(spec, entityId, newDescription);
+      ioActions.setOutputDescription(spec, entityId, newDescription);
     }
   };
 
   const handleZIndexChange = (newZIndex: number) => {
-    withUndoGroup("Update output z-index", () => {
+    undo.withGroup("Update output z-index", () => {
       output.annotations.set("zIndex", newZIndex);
     });
   };

@@ -20,12 +20,7 @@ import { BlockStack } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
 import type { ComponentSpec } from "@/models/componentSpec";
 import { useAutoLayout } from "@/routes/v2/pages/Editor/hooks/useAutoLayout";
-import {
-  copySelectedNodes,
-  deleteSelectedNodes,
-  duplicateSelectedNodes,
-  pasteNodes,
-} from "@/routes/v2/pages/Editor/store/actions";
+import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskActions";
 import {
   FLOW_CANVAS_DEFAULT_PROPS,
   GRID_SIZE,
@@ -35,11 +30,7 @@ import { focusModeStore } from "@/routes/v2/shared/hooks/useFocusMode";
 import { useViewportScaling } from "@/routes/v2/shared/hooks/useViewportScaling";
 import { NODE_TYPE_REGISTRY } from "@/routes/v2/shared/nodes/registry";
 import { CMDALT } from "@/routes/v2/shared/shortcuts/keys";
-import {
-  clearMultiSelection,
-  editorStore,
-} from "@/routes/v2/shared/store/editorStore";
-import { keyboardStore } from "@/routes/v2/shared/store/keyboardStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 import { useClipboardShortcuts } from "./hooks/useClipboardShortcuts";
 import { useConnectionBehavior } from "./hooks/useConnectionBehavior";
@@ -95,12 +86,13 @@ export const FlowCanvas = observer(function FlowCanvas({
   spec,
   className,
 }: FlowCanvasProps) {
+  const { keyboard } = useSharedStores();
   const { containerRef, handleViewportChange } = useViewportScaling();
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance | null>(null);
   const focusModeActive = focusModeStore.active;
 
-  const metaKeyPressed = keyboardStore.pressed.has(CMDALT);
+  const metaKeyPressed = keyboard.pressed.has(CMDALT);
   const isConnecting = useConnection((c) => c.inProgress);
 
   const {
@@ -168,7 +160,14 @@ const FloatingSelectionToolbar = observer(function FloatingSelectionToolbar({
 }: {
   spec: ComponentSpec | null;
 }) {
-  const { multiSelection } = editorStore;
+  const { editor } = useSharedStores();
+  const {
+    duplicateSelectedNodes,
+    copySelectedNodes,
+    pasteNodes,
+    deleteSelectedNodes,
+  } = useTaskActions();
+  const { multiSelection } = editor;
   const reactFlow = useReactFlow();
 
   if (multiSelection.length <= 1) return null;
@@ -190,13 +189,12 @@ const FloatingSelectionToolbar = observer(function FloatingSelectionToolbar({
     const viewport = reactFlow.getViewport();
     const centerX = (window.innerWidth / 2 - viewport.x) / viewport.zoom;
     const centerY = (window.innerHeight / 2 - viewport.y) / viewport.zoom;
-    pasteNodes(spec, { x: centerX, y: centerY });
+    void pasteNodes(spec, { x: centerX, y: centerY });
   };
 
   const handleDelete = () => {
     if (!spec) return;
     deleteSelectedNodes(spec, multiSelection);
-    clearMultiSelection();
   };
 
   return (

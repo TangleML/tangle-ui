@@ -1,7 +1,7 @@
 import type { Node } from "@xyflow/react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
-import { applyAutoLayoutPositions } from "@/routes/v2/pages/Editor/store/actions";
+import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskActions";
 import { useAutoLayoutShortcut } from "@/routes/v2/shared/hooks/useAutoLayoutShortcut";
 
 /**
@@ -13,6 +13,8 @@ import { useAutoLayoutShortcut } from "@/routes/v2/shared/hooks/useAutoLayoutSho
  * be invoked programmatically via `invokeShortcut("auto-layout", { algorithm })`.
  */
 export function useAutoLayout(spec: ComponentSpec | null): void {
+  const { applyAutoLayoutPositions } = useTaskActions();
+
   const applyLayout = (layoutedNodes: Node[]) => {
     if (!spec) return;
     applyAutoLayoutPositions(spec, layoutedNodes);

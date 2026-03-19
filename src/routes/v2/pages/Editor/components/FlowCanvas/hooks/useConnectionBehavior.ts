@@ -17,13 +17,16 @@ import {
   connectNodes,
   createConnectedIONode,
 } from "@/routes/v2/pages/Editor/store/actions";
+import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { CMDALT } from "@/routes/v2/shared/shortcuts/keys";
-import { keyboardStore } from "@/routes/v2/shared/store/keyboardStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 export function useConnectionBehavior(
   spec: ComponentSpec | null,
   reactFlowInstance: ReactFlowInstance | null,
 ): Required<Pick<ReactFlowProps, "onConnect" | "onConnectEnd">> {
+  const { keyboard } = useSharedStores();
+  const { undo } = useEditorSession();
   const onConnect: OnConnect = (connection: Connection) => {
     if (!spec) return;
     if (
@@ -35,7 +38,7 @@ export function useConnectionBehavior(
       return;
     if (connection.source === connection.target) return;
 
-    connectNodes(spec, {
+    connectNodes(undo, spec, {
       sourceNodeId: connection.source,
       sourceHandleId: connection.sourceHandle,
       targetNodeId: connection.target,
@@ -48,7 +51,7 @@ export function useConnectionBehavior(
     connectionState: FinalConnectionState,
   ) => {
     if (!spec || !reactFlowInstance) return;
-    if (!keyboardStore.pressed.has(CMDALT)) return;
+    if (!keyboard.pressed.has(CMDALT)) return;
 
     const isGhostTarget = connectionState.toHandle?.nodeId === GHOST_NODE_ID;
     if (connectionState.isValid && !isGhostTarget) return;
@@ -78,6 +81,7 @@ export function useConnectionBehavior(
     };
 
     createConnectedIONode(
+      undo,
       spec,
       fromHandle.nodeId,
       fromHandle.id,

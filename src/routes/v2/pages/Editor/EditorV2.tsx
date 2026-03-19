@@ -31,9 +31,9 @@ import { useDockAreaAccordion } from "@/routes/v2/shared/hooks/useDockAreaAccord
 import { useFocusMode } from "@/routes/v2/shared/hooks/useFocusMode";
 import { SpecProvider } from "@/routes/v2/shared/providers/SpecContext";
 import {
-  navigationStore,
-  setRequestedPipelineName,
-} from "@/routes/v2/shared/store/navigationStore";
+  SharedStoreProvider,
+  useSharedStores,
+} from "@/routes/v2/shared/store/SharedStoreContext";
 import { DockArea } from "@/routes/v2/shared/windows/DockArea";
 import { TaskPanel } from "@/routes/v2/shared/windows/TaskPanel";
 import { WindowContainer } from "@/routes/v2/shared/windows/WindowContainer";
@@ -41,6 +41,7 @@ import { useWindowPersistence } from "@/routes/v2/shared/windows/windowPersisten
 import { loadPipelineByName } from "@/services/pipelineService";
 
 import { useDebugPanelWindow } from "./components/DebugPanel";
+import { EditorMenuBar } from "./components/EditorMenuBar/EditorMenuBar";
 import { FlowCanvas } from "./components/FlowCanvas/FlowCanvas";
 import { useComponentLibraryWindow } from "./hooks/useComponentLibraryWindow";
 import { useHistoryWindow } from "./hooks/useHistoryWindow";
@@ -53,6 +54,7 @@ import { useSelectionWindowSync } from "./hooks/useSelectionWindowSync";
 import { useSpecLifecycle } from "./hooks/useSpecLifecycle";
 import { useUndoRedoKeyboard } from "./hooks/useUndoRedoKeyboard";
 import { useEditorShortcuts } from "./shortcuts/useEditorShortcuts";
+import { EditorSessionProvider } from "./store/EditorSessionContext";
 
 interface LoadedSpec {
   spec: ComponentSpec;
@@ -123,6 +125,7 @@ const PipelineEditorSkeleton = () => {
 const PipelineEditor = withSuspenseWrapper(
   observer(({ pipelineName }: PipelineEditorProps) => {
     const { spec: rootSpec, restoredUndoStore } = useLoadSpec(pipelineName);
+    const { navigation } = useSharedStores();
 
     useWindowPersistence();
     useDockAreaAccordion();
@@ -140,7 +143,7 @@ const PipelineEditor = withSuspenseWrapper(
     useEditorShortcuts();
     useDebugPanelWindow();
 
-    const activeSpec = navigationStore.activeSpec;
+    const activeSpec = navigation.activeSpec;
 
     if (!activeSpec) return null;
 
@@ -199,23 +202,16 @@ function EmptyEditorState() {
   );
 }
 
-/**
- * Shell component for the Editor V2 route.
- * @returns
- */
-export function EditorV2() {
-  const params = useParams({ strict: false });
-  const pipelineName =
-    "pipelineName" in params && typeof params.pipelineName === "string"
-      ? params.pipelineName
-      : null;
+function EditorV2Content({ pipelineName }: { pipelineName: string | null }) {
+  const { navigation } = useSharedStores();
 
   useEffect(() => {
-    setRequestedPipelineName(pipelineName);
-  }, [pipelineName]);
+    navigation.setRequestedPipelineName(pipelineName);
+  }, [navigation, pipelineName]);
 
   return (
-    <div className="h-full w-full flex flex-col bg-slate-100">
+    <>
+      <EditorMenuBar />
       <ReactFlowProvider>
         <ForcedSearchProvider>
           <ComponentLibraryProvider>
@@ -227,6 +223,27 @@ export function EditorV2() {
           </ComponentLibraryProvider>
         </ForcedSearchProvider>
       </ReactFlowProvider>
+    </>
+  );
+}
+
+/**
+ * Shell component for the Editor V2 route.
+ */
+export function EditorV2() {
+  const params = useParams({ strict: false });
+  const pipelineName =
+    "pipelineName" in params && typeof params.pipelineName === "string"
+      ? params.pipelineName
+      : null;
+
+  return (
+    <div className="h-full w-full flex flex-col bg-slate-100">
+      <SharedStoreProvider>
+        <EditorSessionProvider>
+          <EditorV2Content pipelineName={pipelineName} />
+        </EditorSessionProvider>
+      </SharedStoreProvider>
     </div>
   );
 }

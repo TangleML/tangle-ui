@@ -4,12 +4,14 @@ import type { ReactFlowInstance, ReactFlowProps } from "@xyflow/react";
 import type { DragEvent } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
+import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { NODE_TYPE_REGISTRY } from "@/routes/v2/shared/nodes/registry";
 
 export function useDropBehavior(
   spec: ComponentSpec | null,
   reactFlowInstance: ReactFlowInstance | null,
 ): Required<Pick<ReactFlowProps, "onDragOver" | "onDrop">> {
+  const { undo } = useEditorSession();
   const onDragOver = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
@@ -36,6 +38,7 @@ export function useDropBehavior(
             spec,
             parsedData[manifest.drop.dataKey],
             position,
+            undo,
           );
           break;
         }

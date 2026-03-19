@@ -16,16 +16,16 @@ export const inputManifest: NodeTypeManifest = {
 
   drop: {
     dataKey: "input",
-    handler(spec, _data, position) {
-      addInput(spec, position);
+    handler(spec, _data, position, undo) {
+      addInput(undo, spec, position);
     },
   },
 
-  updatePosition(spec, nodeId, position) {
+  updatePosition(_undo, spec, nodeId, position) {
     spec.updateNodePosition(nodeId, position);
   },
 
-  deleteNode(spec, nodeId) {
+  deleteNode(_undo, spec, nodeId) {
     spec.deleteInputById(nodeId);
   },
 
@@ -55,7 +55,7 @@ export const inputManifest: NodeTypeManifest = {
       } satisfies InputNodeSnapshot;
     },
 
-    clone(spec, snapshot, idGen, position) {
+    clone(spec, snapshot, idGen, position, _undo) {
       if (snapshot.type !== "input") return null;
       const { data } = snapshot as InputNodeSnapshot;
       const uniqueName = generateUniqueInputName(spec, snapshot.name);

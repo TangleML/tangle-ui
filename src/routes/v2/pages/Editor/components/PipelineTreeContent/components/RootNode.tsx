@@ -8,10 +8,7 @@ import { cn } from "@/lib/utils";
 import type { ComponentSpec } from "@/models/componentSpec";
 import { isSubgraphTask } from "@/routes/v2/pages/Editor/components/PipelineTreeContent/utils";
 import { countErrors } from "@/routes/v2/pages/Editor/components/ValidationSummary";
-import {
-  navigateToLevel,
-  navigationStore,
-} from "@/routes/v2/shared/store/navigationStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 import { IssueBadge } from "./IssueBadge";
 import { IssueRow } from "./IssueRow";
@@ -31,6 +28,7 @@ export const RootNode = observer(function RootNode({
   expandedNodes,
   onToggleExpand,
 }: RootNodeProps) {
+  const { navigation } = useSharedStores();
   const navigationPath = [spec.name];
   const nodePath = navigationPath.join("/");
   const isExpanded = expandedNodes.has(nodePath);
@@ -45,7 +43,7 @@ export const RootNode = observer(function RootNode({
   const hasErrors = countErrors(specIssues) > 0;
 
   const handleClick = () => {
-    navigateToLevel(0);
+    navigation.navigateToLevel(0);
   };
 
   const handleToggle = (e: React.MouseEvent) => {
@@ -139,7 +137,7 @@ export const RootNode = observer(function RootNode({
               const isTaskASubgraph = isSubgraphTask(task);
 
               if (isTaskASubgraph) {
-                const nestedSpec = navigationStore.nestedSpecs.get(task.name);
+                const nestedSpec = navigation.nestedSpecs.get(task.name);
 
                 if (!nestedSpec) {
                   return (

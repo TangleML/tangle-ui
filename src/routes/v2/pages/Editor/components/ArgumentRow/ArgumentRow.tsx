@@ -11,11 +11,8 @@ import type {
   InputSpecJson,
   Task,
 } from "@/models/componentSpec";
-import { createInputAndConnect } from "@/routes/v2/pages/Editor/store/actions";
-import {
-  editorStore,
-  setFocusedArgument,
-} from "@/routes/v2/shared/store/editorStore";
+import { useIOActions } from "@/routes/v2/pages/Editor/store/actions/useIOActions";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import type { DynamicDataArgument } from "@/utils/componentSpec";
 
 import {
@@ -23,17 +20,10 @@ import {
   getDisplayValue,
   typeSpecToString,
 } from "./argumentRow.utils";
-import {
-  quickConnect,
-  removeArgument,
-  resetArgumentToDefault,
-  setArgument,
-  setDynamicData,
-  unsetArgument,
-} from "./arguments.actions";
 import { ArgumentValueDisplay } from "./components/ArgumentValueDisplay";
 import { InputValidationIndicator } from "./components/InputValidationIndicator";
 import { ThunderMenu } from "./components/ThunderMenu/ThunderMenu";
+import { useArgumentActions } from "./useArgumentActions";
 
 interface ArgumentRowProps {
   inputSpec: InputSpecJson;
@@ -56,10 +46,20 @@ export const ArgumentRow = observer(function ArgumentRow({
   externalEditor,
   onSelectionChanged,
 }: ArgumentRowProps) {
+  const { editor } = useSharedStores();
+  const {
+    setArgument,
+    removeArgument,
+    resetArgumentToDefault,
+    unsetArgument,
+    setDynamicData,
+    quickConnect,
+  } = useArgumentActions();
+  const { createInputAndConnect } = useIOActions();
   const [editing, setEditing] = useState(false);
   const rowRef = useRef<HTMLDivElement>(null);
 
-  const isFocused = editorStore.focusedArgumentName === inputSpec.name;
+  const isFocused = editor.focusedArgumentName === inputSpec.name;
   const isBound = binding !== undefined;
 
   const isDynamic =
@@ -92,7 +92,7 @@ export const ArgumentRow = observer(function ArgumentRow({
     if (isDynamic) return;
     onSelectionChanged?.(inputSpec.name);
     if (externalEditor) {
-      setFocusedArgument(inputSpec.name);
+      editor.setFocusedArgument(inputSpec.name);
       return;
     }
     setEditing(true);
@@ -101,7 +101,7 @@ export const ArgumentRow = observer(function ArgumentRow({
   const handleBlur = () => {
     setEditing(false);
     if (isFocused) {
-      setFocusedArgument(null);
+      editor.setFocusedArgument(null);
     }
   };
 

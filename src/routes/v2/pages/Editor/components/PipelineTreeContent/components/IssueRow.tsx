@@ -4,31 +4,21 @@ import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import type { ValidationIssue } from "@/models/componentSpec";
 import { issueTypeLabel } from "@/routes/v2/pages/Editor/components/ValidationSummary";
-import {
-  editorStore,
-  selectNode,
-  setFocusedArgument,
-  setPendingFocusNode,
-  setSelectedValidationIssue,
-} from "@/routes/v2/shared/store/editorStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { useFocusActions } from "@/routes/v2/shared/store/useFocusActions";
 
 interface IssueRowProps {
   issue: ValidationIssue;
 }
 
 export const IssueRow = observer(function IssueRow({ issue }: IssueRowProps) {
-  const isSelected = editorStore.selectedValidationIssue === issue;
+  const { editor } = useSharedStores();
+  const { focusValidationIssue } = useFocusActions();
+  const isSelected = editor.selectedValidationIssue === issue;
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (issue.entityId) {
-      setPendingFocusNode(issue.entityId);
-      selectNode(issue.entityId, "task", { entityId: issue.entityId });
-    }
-    if (issue.argumentName) {
-      setFocusedArgument(issue.argumentName);
-    }
-    setSelectedValidationIssue(issue);
+    focusValidationIssue(issue);
   };
 
   return (

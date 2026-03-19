@@ -37,8 +37,8 @@ export const conduitManifest: NodeTypeManifest = {
     return getConduitPosition(conduit);
   },
 
-  updatePosition() {},
-  deleteNode() {},
+  updatePosition(_undo, _spec, _nodeId, _position) {},
+  deleteNode(_undo, _spec, _nodeId) {},
 
   selectable: false,
 };

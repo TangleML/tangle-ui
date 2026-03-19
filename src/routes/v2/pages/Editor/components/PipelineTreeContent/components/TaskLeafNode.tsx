@@ -10,16 +10,8 @@ import {
   countErrors,
   countWarnings,
 } from "@/routes/v2/pages/Editor/components/ValidationSummary";
-import {
-  selectNode,
-  setHoveredEntity,
-  setPendingFocusNode,
-  setSelectedValidationIssue,
-} from "@/routes/v2/shared/store/editorStore";
-import {
-  navigateToPath,
-  navigationStore,
-} from "@/routes/v2/shared/store/navigationStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { useFocusActions } from "@/routes/v2/shared/store/useFocusActions";
 
 import { IssueBadge } from "./IssueBadge";
 import { IssueRow } from "./IssueRow";
@@ -35,25 +27,25 @@ export const TaskLeafNode = observer(function TaskLeafNode({
   parentSpec,
   parentNavigationPath,
 }: TaskLeafNodeProps) {
+  const { editor, navigation } = useSharedStores();
+  const { navigateToEntity, focusValidationIssue } = useFocusActions();
   const issues = getEntityIssues(parentSpec, task.$id);
   const hasErrors = countErrors(issues) > 0;
-  const isOnActiveCanvas = parentSpec === navigationStore.activeSpec;
+  const isOnActiveCanvas = parentSpec === navigation.activeSpec;
 
   const handleClick = () => {
-    navigateToPath(parentNavigationPath);
-    setPendingFocusNode(task.$id);
-    selectNode(task.$id, "task");
+    navigateToEntity(parentNavigationPath, task.$id, "task");
     if (issues.length > 0) {
-      setSelectedValidationIssue(issues[0]);
+      focusValidationIssue(issues[0]);
     }
   };
 
   const handleMouseEnter = () => {
-    if (isOnActiveCanvas) setHoveredEntity(task.$id);
+    if (isOnActiveCanvas) editor.setHoveredEntity(task.$id);
   };
 
   const handleMouseLeave = () => {
-    setHoveredEntity(null);
+    editor.setHoveredEntity(null);
   };
 
   const hasIssues = issues.length > 0;

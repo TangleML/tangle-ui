@@ -8,7 +8,7 @@ import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import type { IONodeData } from "@/routes/v2/shared/nodes/types";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
-import { editorStore, selectNode } from "@/routes/v2/shared/store/editorStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 type IONodeType = Node<IONodeData, "io">;
 type IONodeProps = NodeProps<IONodeType>;
@@ -28,6 +28,7 @@ export const IONode = observer(function IONode({
   selected,
 }: IONodeProps) {
   const { entityId, ioType } = data;
+  const { editor } = useSharedStores();
 
   const spec = useSpec();
   const isInput = ioType === "input";
@@ -37,7 +38,7 @@ export const IONode = observer(function IONode({
     : spec?.outputs.find((o) => o.$id === entityId);
 
   const handleClick = (event: React.MouseEvent) => {
-    selectNode(id, ioType, {
+    editor.selectNode(id, ioType, {
       shiftKey: event.shiftKey,
       entityId,
     });
@@ -46,7 +47,7 @@ export const IONode = observer(function IONode({
   const name = entity?.name ?? entityId;
   const type = typeToString(entity?.type);
   const description = entity?.description;
-  const isHovered = editorStore.hoveredEntityId === entityId;
+  const isHovered = editor.hoveredEntityId === entityId;
 
   return (
     <Card

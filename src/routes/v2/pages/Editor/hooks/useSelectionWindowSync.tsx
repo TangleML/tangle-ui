@@ -6,8 +6,8 @@ import { useEffect } from "react";
 
 import { ContextPanelContent } from "@/routes/v2/pages/Editor/components/ContextPanel/ContextPanel";
 import { PinnedTaskContent } from "@/routes/v2/pages/Editor/components/PinnedTaskContent/PinnedTaskContent";
-import { editorStore } from "@/routes/v2/shared/store/editorStore";
-import { navigationStore } from "@/routes/v2/shared/store/navigationStore";
+import type { NavigationStore } from "@/routes/v2/shared/store/navigationStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import {
   closeWindow,
   getWindowById,
@@ -21,22 +21,27 @@ function generatePinnedWindowId(): string {
   return `pinned-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
-function getTaskNameByEntityId(entityId: string): string | null {
-  const spec = navigationStore.rootSpec;
+function getTaskNameByEntityId(
+  navigation: NavigationStore,
+  entityId: string,
+): string | null {
+  const spec = navigation.rootSpec;
   if (!spec) return null;
   const task = spec.tasks.find((t) => t.$id === entityId);
   return task?.name ?? null;
 }
 
 export function useSelectionWindowSync() {
+  const { editor, navigation } = useSharedStores();
+
   useEffect(() => {
     const disposeSelectionWatcher = reaction(
       () => ({
-        selectedNodeId: editorStore.selectedNodeId,
-        selectedNodeType: editorStore.selectedNodeType,
-        lastSelectionWasShiftClick: editorStore.lastSelectionWasShiftClick,
-        lastShiftClickEntityId: editorStore.lastShiftClickEntityId,
-        multiSelectionLength: editorStore.multiSelection.length,
+        selectedNodeId: editor.selectedNodeId,
+        selectedNodeType: editor.selectedNodeType,
+        lastSelectionWasShiftClick: editor.lastSelectionWasShiftClick,
+        lastShiftClickEntityId: editor.lastShiftClickEntityId,
+        multiSelectionLength: editor.multiSelection.length,
       }),
       ({
         selectedNodeId,
@@ -46,7 +51,10 @@ export function useSelectionWindowSync() {
         multiSelectionLength,
       }) => {
         if (lastSelectionWasShiftClick && lastShiftClickEntityId) {
-          const taskName = getTaskNameByEntityId(lastShiftClickEntityId);
+          const taskName = getTaskNameByEntityId(
+            navigation,
+            lastShiftClickEntityId,
+          );
           if (taskName) {
             openWindow(
               <PinnedTaskContent entityId={lastShiftClickEntityId} />,
@@ -57,7 +65,7 @@ export function useSelectionWindowSync() {
               },
             );
           }
-          editorStore.selectNode(null, null);
+          editor.selectNode(null, null);
           return;
         }
 
@@ -100,5 +108,5 @@ export function useSelectionWindowSync() {
     );
 
     return disposeSelectionWatcher;
-  }, []);
+  }, [editor, navigation]);
 }

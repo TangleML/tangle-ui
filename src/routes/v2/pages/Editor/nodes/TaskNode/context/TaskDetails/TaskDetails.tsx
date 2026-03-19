@@ -7,14 +7,10 @@ import { Text } from "@/components/ui/typography";
 import type { ComponentSpecJson } from "@/models/componentSpec";
 import { AnnotationsBlock } from "@/routes/v2/pages/Editor/components/AnnotationsBlock/AnnotationsBlock";
 import { ZIndexEditor } from "@/routes/v2/pages/Editor/nodes/FlexNode/context/components/ZIndexEditor";
-import {
-  deleteTask,
-  duplicateSelectedNodes,
-  renameTask,
-} from "@/routes/v2/pages/Editor/store/actions";
-import { withUndoGroup } from "@/routes/v2/pages/Editor/store/undoStore";
+import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskActions";
+import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
-import { editorStore } from "@/routes/v2/shared/store/editorStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { componentSpecToText } from "@/utils/yaml";
 
 import {
@@ -27,8 +23,8 @@ import { ConfigurationSection } from "./components/ConfigurationSection";
 import { OutputsSection } from "./components/OutputsSection";
 import { TaskActionsBar } from "./components/TaskActionsBar";
 import { TaskArgumentsEditor } from "./components/TaskArgumentsEditor";
-import { setTaskColor } from "./components/taskConfig.actions";
 import { TaskInfoSection } from "./components/TaskInfoSection";
+import { useTaskConfigActions } from "./components/useTaskConfigActions";
 
 const EDITOR_ANNOTATION_KEYS = [
   "editor.position",
@@ -43,9 +39,13 @@ interface TaskDetailsProps {
 export const TaskDetails = observer(function TaskDetails({
   entityId,
 }: TaskDetailsProps) {
+  const { editor } = useSharedStores();
+  const { undo } = useEditorSession();
+  const taskActions = useTaskActions();
+  const { setTaskColor } = useTaskConfigActions();
   const spec = useSpec();
   const task = spec?.tasks.find((t) => t.$id === entityId);
-  const { focusedArgumentName } = editorStore;
+  const { focusedArgumentName } = editor;
 
   const [openSections, setOpenSections] = useState<string[]>([
     "task",
@@ -84,7 +84,7 @@ export const TaskDetails = observer(function TaskDetails({
   const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
     const newName = event.target.value;
     if (newName && newName !== task.name) {
-      renameTask(spec, entityId, newName);
+      taskActions.renameTask(spec, entityId, newName);
     }
   };
 
@@ -97,15 +97,17 @@ export const TaskDetails = observer(function TaskDetails({
       x: 0,
       y: 0,
     };
-    duplicateSelectedNodes(spec, [{ id: entityId, type: "task", position }]);
+    taskActions.duplicateSelectedNodes(spec, [
+      { id: entityId, type: "task", position },
+    ]);
   };
 
   const handleDelete = () => {
-    deleteTask(spec, entityId);
+    taskActions.deleteTask(spec, entityId);
   };
 
   const handleZIndexChange = (newZIndex: number) => {
-    withUndoGroup("Update task z-index", () => {
+    undo.withGroup("Update task z-index", () => {
       task.annotations.set("zIndex", newZIndex);
     });
   };

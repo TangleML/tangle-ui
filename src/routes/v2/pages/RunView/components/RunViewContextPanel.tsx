@@ -5,10 +5,11 @@ import { observer } from "mobx-react-lite";
 import { BlockStack } from "@/components/ui/layout";
 import { ContextPanelEmptyState } from "@/routes/v2/shared/components/ContextPanelEmptyState";
 import { NODE_TYPE_REGISTRY } from "@/routes/v2/shared/nodes/registry";
-import { editorStore } from "@/routes/v2/shared/store/editorStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 export const RunViewContextPanel = observer(function RunViewContextPanel() {
-  const { selectedNodeId, selectedNodeType } = editorStore;
+  const { editor } = useSharedStores();
+  const { selectedNodeId, selectedNodeType } = editor;
 
   if (!selectedNodeId || !selectedNodeType) {
     return <ContextPanelEmptyState />;

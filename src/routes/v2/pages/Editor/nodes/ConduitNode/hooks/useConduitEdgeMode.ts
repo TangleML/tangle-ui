@@ -6,16 +6,18 @@ import {
   getConduits,
   toggleEdgeOnConduit,
 } from "@/routes/v2/pages/Editor/nodes/ConduitNode/conduits.actions";
+import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { ESCAPE } from "@/routes/v2/shared/shortcuts/keys";
-import {
-  clearSelection,
-  editorStore,
-} from "@/routes/v2/shared/store/editorStore";
-import { registerShortcut } from "@/routes/v2/shared/store/keyboardStore";
+import type { EditorStore } from "@/routes/v2/shared/store/editorStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
-function useConduitSelectionMode(edges: Edge[], spec: ComponentSpec | null) {
-  const isConduitSelected = editorStore.selectedNodeType === "conduit";
-  const activeConduitId = isConduitSelected ? editorStore.selectedNodeId : null;
+function useConduitSelectionMode(
+  edges: Edge[],
+  spec: ComponentSpec | null,
+  editor: EditorStore,
+) {
+  const isConduitSelected = editor.selectedNodeType === "conduit";
+  const activeConduitId = isConduitSelected ? editor.selectedNodeId : null;
 
   if (!activeConduitId || !spec) return edges;
 
@@ -70,27 +72,26 @@ export function useConduitEdgeMode(
     | ((event: React.MouseEvent, edge: { id: string }) => void)
     | undefined;
 } {
-  const isConduitSelected = editorStore.selectedNodeType === "conduit";
+  const { editor, keyboard } = useSharedStores();
+  const { undo } = useEditorSession();
+  const isConduitSelected = editor.selectedNodeType === "conduit";
 
   useEffect(() => {
-    const unregister = registerShortcut({
+    const unregister = keyboard.registerShortcut({
       id: "conduit-escape",
       keys: [ESCAPE],
       label: "Deselect conduit",
       action: () => {
-        if (
-          editorStore.selectedNodeType === "conduit" &&
-          editorStore.selectedNodeId
-        ) {
-          clearSelection();
+        if (editor.selectedNodeType === "conduit" && editor.selectedNodeId) {
+          editor.clearSelection();
         }
       },
     });
 
     return unregister;
-  }, []);
+  }, [editor, keyboard, undo]);
 
-  const styledEdges = useConduitSelectionMode(edges, spec);
+  const styledEdges = useConduitSelectionMode(edges, spec, editor);
 
   const handleEdgeClick = (_event: React.MouseEvent, edge: { id: string }) => {
     if (!spec) return;
@@ -99,10 +100,10 @@ export function useConduitEdgeMode(
     if (!bindingMatch) return;
     const bindingId = bindingMatch[1];
 
-    const conduitId = editorStore.selectedNodeId;
-    if (!conduitId || editorStore.selectedNodeType !== "conduit") return;
+    const conduitId = editor.selectedNodeId;
+    if (!conduitId || editor.selectedNodeType !== "conduit") return;
 
-    toggleEdgeOnConduit(spec, conduitId, bindingId);
+    toggleEdgeOnConduit(undo, spec, conduitId, bindingId);
   };
 
   return {

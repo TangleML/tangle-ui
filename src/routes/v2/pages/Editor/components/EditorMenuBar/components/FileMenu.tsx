@@ -12,29 +12,31 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
 import { APP_ROUTES } from "@/routes/router";
-import { autoSaveStore } from "@/routes/v2/pages/Editor/store/autoSaveStore";
+import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButton";
 import { ShorcutBadge } from "@/routes/v2/shared/components/ShorcutBadge";
 import { CTRL } from "@/routes/v2/shared/shortcuts/keys";
-import { registerShortcut } from "@/routes/v2/shared/store/keyboardStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 import { createNewPipeline, exportCurrentPipeline } from "./fileMenu.actions";
 import { OpenPipelineDialog } from "./OpenPipelineDialog";
 
 export function FileMenu() {
+  const { keyboard, navigation } = useSharedStores();
+  const { autoSave } = useEditorSession();
   const navigate = useNavigate();
   const [importOpen, setImportOpen] = useState(false);
   const [openDialogOpen, setOpenDialogOpen] = useState(false);
   const importTriggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    return registerShortcut({
+    return keyboard.registerShortcut({
       id: "open-pipeline",
       keys: [CTRL, "O"],
       label: "Open Pipeline",
       action: () => setOpenDialogOpen(true),
     });
-  }, []);
+  }, [keyboard]);
 
   useEffect(() => {
     if (importOpen) {
@@ -74,7 +76,7 @@ export function FileMenu() {
             </DropdownMenuShortcut>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => void autoSaveStore.save()}>
+          <DropdownMenuItem onClick={() => void autoSave.save()}>
             <Icon name="Save" size="sm" />
             Save
           </DropdownMenuItem>
@@ -91,7 +93,7 @@ export function FileMenu() {
             <Icon name="Upload" size="sm" />
             Import
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={exportCurrentPipeline}>
+          <DropdownMenuItem onClick={() => exportCurrentPipeline(navigation)}>
             <Icon name="FileDown" size="sm" />
             Export
           </DropdownMenuItem>

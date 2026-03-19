@@ -6,7 +6,7 @@ import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
-import { clipboardStore } from "@/routes/v2/pages/Editor/store/clipboardStore";
+import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 
 interface SelectionToolbarProps {
   onDuplicate: () => void;
@@ -21,6 +21,8 @@ export const SelectionToolbar = observer(function SelectionToolbar({
   onPaste,
   onDelete,
 }: SelectionToolbarProps) {
+  const { clipboard } = useEditorSession();
+
   return (
     <InlineStack
       gap="1"
@@ -39,7 +41,7 @@ export const SelectionToolbar = observer(function SelectionToolbar({
         onClick={onCopy}
         testId="selection-copy"
       />
-      {clipboardStore.hasContent && onPaste && (
+      {clipboard.hasContent && onPaste && (
         <ToolbarButton
           label="Paste"
           icon="ClipboardPaste"

@@ -6,7 +6,7 @@ import {
   YamlDeserializer,
 } from "@/models/componentSpec";
 
-import { editorStore } from "./editorStore";
+import type { EditorStore } from "./editorStore";
 
 interface NavigationEntry {
   specId: string;
@@ -18,14 +18,14 @@ function isGraphSpecJson(specJson: ComponentSpecJson | undefined): boolean {
   return "graph" in specJson.implementation;
 }
 
-class NavigationStore {
+export class NavigationStore {
   @observable.ref accessor rootSpec: ComponentSpec | null = null;
   @observable.ref accessor nestedSpecs = new Map<string, ComponentSpec>();
   @observable.shallow accessor navigationPath: NavigationEntry[] = [];
   @observable accessor requestedPipelineName: string | null = null;
   private nestedIdGen = new IncrementingIdGenerator();
 
-  constructor() {
+  constructor(private editorStore: EditorStore) {
     makeObservable(this);
   }
 
@@ -93,7 +93,7 @@ class NavigationStore {
       { specId: nestedSpec.$id, displayName: task.name },
     ];
 
-    editorStore.clearSelection();
+    this.editorStore.clearSelection();
     return nestedSpec;
   }
 
@@ -101,7 +101,7 @@ class NavigationStore {
     if (!this.rootSpec || this.navigationPath.length <= 1) return null;
 
     this.navigationPath = this.navigationPath.slice(0, -1);
-    editorStore.clearSelection();
+    this.editorStore.clearSelection();
 
     const newDepth = this.navigationPath.length - 1;
     return this.getSpecAtDepth(newDepth) ?? null;
@@ -113,7 +113,7 @@ class NavigationStore {
     }
 
     this.navigationPath = this.navigationPath.slice(0, index + 1);
-    editorStore.clearSelection();
+    this.editorStore.clearSelection();
     return this.getSpecAtDepth(index) ?? null;
   }
 
@@ -148,7 +148,7 @@ class NavigationStore {
     }
 
     this.navigationPath = newPath;
-    editorStore.clearSelection();
+    this.editorStore.clearSelection();
     return currentSpec;
   }
 
@@ -190,40 +190,4 @@ class NavigationStore {
       return undefined;
     }
   }
-}
-
-export const navigationStore = new NavigationStore();
-
-export function initNavigation(rootSpec: ComponentSpec) {
-  navigationStore.initNavigation(rootSpec);
-}
-
-export function clearNavigation() {
-  navigationStore.clearNavigation();
-}
-
-export function isTaskSubgraph(
-  spec: ComponentSpec,
-  taskEntityId: string,
-): boolean {
-  return navigationStore.isTaskSubgraph(spec, taskEntityId);
-}
-
-export function navigateToSubgraph(
-  currentSpec: ComponentSpec,
-  taskEntityId: string,
-): ComponentSpec | null {
-  return navigationStore.navigateToSubgraph(currentSpec, taskEntityId);
-}
-
-export function navigateToLevel(index: number): ComponentSpec | null {
-  return navigationStore.navigateToLevel(index);
-}
-
-export function navigateToPath(pathNames: string[]): ComponentSpec | null {
-  return navigationStore.navigateToPath(pathNames);
-}
-
-export function setRequestedPipelineName(name: string | null) {
-  navigationStore.setRequestedPipelineName(name);
 }

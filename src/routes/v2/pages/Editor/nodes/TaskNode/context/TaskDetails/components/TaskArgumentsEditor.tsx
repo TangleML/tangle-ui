@@ -8,11 +8,7 @@ import { ArgumentCodeEditor } from "@/routes/v2/pages/Editor/components/Argument
 import { ArgumentRow } from "@/routes/v2/pages/Editor/components/ArgumentRow/ArgumentRow";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { CTRL, SHIFT } from "@/routes/v2/shared/shortcuts/keys";
-import {
-  editorStore,
-  setFocusedArgument,
-} from "@/routes/v2/shared/store/editorStore";
-import { registerShortcut } from "@/routes/v2/shared/store/keyboardStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { useContentWindowState } from "@/routes/v2/shared/windows/ContentWindowStateContext";
 import {
   getWindowById,
@@ -26,6 +22,7 @@ interface TaskArgumentsEditorProps {
 export const TaskArgumentsEditor = observer(function TaskArgumentsEditor({
   task,
 }: TaskArgumentsEditorProps) {
+  const { editor, keyboard } = useSharedStores();
   const spec = useSpec();
   const windowState = useContentWindowState();
   const isMaximized = windowState?.isMaximized ?? false;
@@ -38,7 +35,7 @@ export const TaskArgumentsEditor = observer(function TaskArgumentsEditor({
   };
 
   useEffect(() => {
-    return registerShortcut({
+    return keyboard.registerShortcut({
       id: "task-arguments-editor--maximize",
       keys: [CTRL, SHIFT, "M"],
       label: "Maximize Arguments Editor",
@@ -53,11 +50,11 @@ export const TaskArgumentsEditor = observer(function TaskArgumentsEditor({
         toggleMaximize(windowId);
 
         if (!isCurrentlyMaximized && lastSelectedArgRef.current) {
-          setFocusedArgument(lastSelectedArgRef.current);
+          editor.setFocusedArgument(lastSelectedArgRef.current);
         }
       },
     });
-  }, []);
+  }, [editor, keyboard, windowState]);
 
   if (!spec || inputs.length === 0) {
     return (
@@ -99,7 +96,7 @@ export const TaskArgumentsEditor = observer(function TaskArgumentsEditor({
     );
   }
 
-  const focusedName = editorStore.focusedArgumentName;
+  const focusedName = editor.focusedArgumentName;
   const focusedInputSpec = focusedName
     ? inputs.find((i) => i.name === focusedName)
     : undefined;

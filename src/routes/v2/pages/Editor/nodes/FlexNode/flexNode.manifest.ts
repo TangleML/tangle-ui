@@ -41,8 +41,8 @@ export const flexNodeManifest: NodeTypeManifest = {
 
   drop: {
     dataKey: "flex",
-    handler(spec, _data, position) {
-      addFlexNode(spec, position);
+    handler(spec, _data, position, undo) {
+      addFlexNode(undo, spec, position);
     },
   },
 
@@ -52,12 +52,12 @@ export const flexNodeManifest: NodeTypeManifest = {
     return flexNode.position;
   },
 
-  updatePosition(spec, nodeId, position) {
-    updateFlexNodePosition(spec, nodeId, position);
+  updatePosition(undo, spec, nodeId, position) {
+    updateFlexNodePosition(undo, spec, nodeId, position);
   },
 
-  deleteNode(spec, nodeId) {
-    removeFlexNode(spec, nodeId);
+  deleteNode(undo, spec, nodeId) {
+    removeFlexNode(undo, spec, nodeId);
   },
 
   findEntity(spec, entityId) {
@@ -101,7 +101,7 @@ export const flexNodeManifest: NodeTypeManifest = {
       } satisfies FlexNodeSnapshot;
     },
 
-    clone(spec, snapshot, _idGen, position) {
+    clone(spec, snapshot, _idGen, position, undo) {
       if (snapshot.type !== "flex") return null;
       const { data } = snapshot as FlexNodeSnapshot;
       const id = `flex_${crypto.randomUUID()}`;
@@ -117,7 +117,7 @@ export const flexNodeManifest: NodeTypeManifest = {
       };
 
       const nodes = getFlexNodes(spec);
-      setFlexNodes(spec, [...nodes, newNode]);
+      setFlexNodes(undo, spec, [...nodes, newNode]);
       return id;
     },
   },

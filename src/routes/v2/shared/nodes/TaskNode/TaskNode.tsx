@@ -13,11 +13,7 @@ import type {
 import { ZOOM_THRESHOLD } from "@/routes/v2/shared/flowCanvasDefaults";
 import type { TaskNodeData } from "@/routes/v2/shared/nodes/types";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
-import {
-  editorStore,
-  selectNode,
-  setFocusedArgument,
-} from "@/routes/v2/shared/store/editorStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 import { TaskNodeClassic } from "./TaskNodeClassic";
 import { TaskNodeCollapsed } from "./TaskNodeCollapsed";
@@ -112,6 +108,7 @@ export const TaskNode = observer(function TaskNode({
   selected,
 }: TaskNodeProps) {
   const { entityId } = data;
+  const { editor } = useSharedStores();
   const showContent = useStore(zoomSelector);
   const useClassicStyle = useFlagValue("classic-node-style");
 
@@ -119,7 +116,7 @@ export const TaskNode = observer(function TaskNode({
   const task = spec?.tasks.find((t) => t.$id === entityId);
 
   const handleClick = (event: React.MouseEvent) => {
-    selectNode(id, "task", {
+    editor.selectNode(id, "task", {
       shiftKey: event.shiftKey,
       entityId,
     });
@@ -142,11 +139,11 @@ export const TaskNode = observer(function TaskNode({
 
   const isSubgraph = isTaskSubgraph(componentSpec);
   const taskName = task.name;
-  const isHovered = editorStore.hoveredEntityId === entityId;
+  const isHovered = editor.hoveredEntityId === entityId;
 
   const handleInputClick = (inputName: string) => {
-    selectNode(id, "task", { entityId });
-    setFocusedArgument(inputName);
+    editor.selectNode(id, "task", { entityId });
+    editor.setFocusedArgument(inputName);
   };
 
   const inputDisplayValues = useClassicStyle

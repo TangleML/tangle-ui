@@ -8,12 +8,8 @@ import { Icon } from "@/components/ui/icon";
 import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
-import {
-  getConduits,
-  removeConduit,
-  unassignEdgeFromConduit,
-  updateConduitColor,
-} from "@/routes/v2/pages/Editor/nodes/ConduitNode/conduits.actions";
+import { getConduits } from "@/routes/v2/pages/Editor/nodes/ConduitNode/conduits.actions";
+import { useConduitActions } from "@/routes/v2/pages/Editor/nodes/ConduitNode/useConduitActions";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 
 interface ConduitDetailsProps {
@@ -35,6 +31,7 @@ export const ConduitDetails = observer(function ConduitDetails({
   entityId,
 }: ConduitDetailsProps) {
   const spec = useSpec();
+  const { updateConduitColor, unassignEdgeFromConduit } = useConduitActions();
   const conduitId = entityId;
   const conduit = spec
     ? getConduits(spec).find((c) => c.id === conduitId)
@@ -131,6 +128,7 @@ export const ConduitDetails = observer(function ConduitDetails({
 
 function DeleteConduitButton({ conduitId }: { conduitId: string }) {
   const spec = useSpec();
+  const { removeConduit } = useConduitActions();
   const conduit = spec
     ? getConduits(spec).find((c) => c.id === conduitId)
     : undefined;

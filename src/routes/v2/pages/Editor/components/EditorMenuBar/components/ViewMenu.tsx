@@ -20,10 +20,7 @@ import {
   focusModeStore,
   toggleFocusMode,
 } from "@/routes/v2/shared/hooks/useFocusMode";
-import {
-  invokeShortcut,
-  keyboardStore,
-} from "@/routes/v2/shared/store/keyboardStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 const LAYOUT_ALGORITHMS: { key: LayoutAlgorithm; label: string }[] = [
   { key: "sugiyama", label: "Sugiyama" },
@@ -33,7 +30,8 @@ const LAYOUT_ALGORITHMS: { key: LayoutAlgorithm; label: string }[] = [
 ];
 
 export const ViewMenu = observer(function ViewMenu() {
-  const autoLayoutShortcut = keyboardStore.getShortcut("auto-layout");
+  const { keyboard } = useSharedStores();
+  const autoLayoutShortcut = keyboard.getShortcut("auto-layout");
 
   return (
     <DropdownMenu>
@@ -51,7 +49,9 @@ export const ViewMenu = observer(function ViewMenu() {
               <DropdownMenuItem
                 key={algo.key}
                 onSelect={() =>
-                  invokeShortcut("auto-layout", { algorithm: algo.key })
+                  keyboard.invokeShortcut("auto-layout", {
+                    algorithm: algo.key,
+                  })
                 }
               >
                 {algo.label}

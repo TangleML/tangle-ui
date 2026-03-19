@@ -8,13 +8,8 @@ import { Text } from "@/components/ui/typography";
 import { AutoGrowTextarea } from "@/routes/v2/pages/Editor/components/AutoGrowTextArea";
 import { InputLabel } from "@/routes/v2/pages/Editor/components/InputLabel/InputLabel";
 import { ZIndexEditor } from "@/routes/v2/pages/Editor/nodes/FlexNode/context/components/ZIndexEditor";
-import {
-  renameInput,
-  setInputDefaultValue,
-  setInputDescription,
-  setInputType,
-} from "@/routes/v2/pages/Editor/store/actions";
-import { withUndoGroup } from "@/routes/v2/pages/Editor/store/undoStore";
+import { useIOActions } from "@/routes/v2/pages/Editor/store/actions/useIOActions";
+import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 
 interface InputDetailsProps {
@@ -24,6 +19,8 @@ interface InputDetailsProps {
 export const InputDetails = observer(function InputDetails({
   entityId,
 }: InputDetailsProps) {
+  const { undo } = useEditorSession();
+  const ioActions = useIOActions();
   const spec = useSpec();
   const input = spec?.inputs.find((i) => i.$id === entityId);
 
@@ -32,7 +29,7 @@ export const InputDetails = observer(function InputDetails({
   const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
     const newName = event.target.value;
     if (newName && newName !== input.name) {
-      renameInput(spec, entityId, newName);
+      ioActions.renameInput(spec, entityId, newName);
     }
   };
 
@@ -40,7 +37,7 @@ export const InputDetails = observer(function InputDetails({
     const value = event.target.value;
     const newDescription = value || undefined;
     if (newDescription !== input.description) {
-      setInputDescription(spec, entityId, newDescription);
+      ioActions.setInputDescription(spec, entityId, newDescription);
     }
   };
 
@@ -48,19 +45,19 @@ export const InputDetails = observer(function InputDetails({
     const value = event.target.value;
     const newType = value || undefined;
     if (newType !== input.type) {
-      setInputType(spec, entityId, newType);
+      ioActions.setInputType(spec, entityId, newType);
     }
   };
 
   const handleDefaultValueChange = (value: string) => {
     const newDefault = value || undefined;
     if (newDefault !== input.defaultValue) {
-      setInputDefaultValue(spec, entityId, newDefault);
+      ioActions.setInputDefaultValue(spec, entityId, newDefault);
     }
   };
 
   const handleZIndexChange = (newZIndex: number) => {
-    withUndoGroup("Update input z-index", () => {
+    undo.withGroup("Update input z-index", () => {
       input.annotations.set("zIndex", newZIndex);
     });
   };

@@ -9,8 +9,7 @@ import { ConduitNode } from "@/routes/v2/shared/nodes/ConduitNode/ConduitNode";
 import { ConduitEdge } from "@/routes/v2/shared/nodes/ConduitNode/edges/ConduitEdge";
 import type { NodeTypeManifest } from "@/routes/v2/shared/nodes/types";
 import { SHIFT } from "@/routes/v2/shared/shortcuts/keys";
-import { selectNode } from "@/routes/v2/shared/store/editorStore";
-import { keyboardStore } from "@/routes/v2/shared/store/keyboardStore";
+import type { KeyboardStore } from "@/routes/v2/shared/store/keyboardStore";
 
 import {
   addGuideline,
@@ -49,31 +48,31 @@ export const conduitManifest: NodeTypeManifest = {
     return getConduitPosition(conduit);
   },
 
-  updatePosition(spec, nodeId, position) {
+  updatePosition(undo, spec, nodeId, position) {
     const conduit = getConduits(spec).find((c) => c.id === nodeId);
     if (!conduit) return;
 
     const coordinate =
       conduit.orientation === "vertical" ? position.x : position.y;
-    updateGuidelineCoordinate(spec, nodeId, coordinate);
+    updateGuidelineCoordinate(undo, spec, nodeId, coordinate);
   },
 
-  deleteNode(spec, nodeId) {
-    removeConduit(spec, nodeId);
+  deleteNode(undo, spec, nodeId) {
+    removeConduit(undo, spec, nodeId);
   },
 
   selectable: false,
 
   contextPanelComponent: ConduitDetails,
 
-  onPaneClick(spec, position) {
-    const orientation = getGuidelineOrientation();
+  onPaneClick(spec, position, { editor, keyboard, undo }) {
+    const orientation = getGuidelineOrientation(keyboard);
     if (!orientation) return;
 
     const coordinate = orientation === "horizontal" ? position.y : position.x;
-    const guideline = addGuideline(spec, orientation, coordinate);
-    selectNode(guideline.id, "conduit");
-    keyboardStore.clearPressed();
+    const guideline = addGuideline(undo, spec, orientation, coordinate);
+    editor.selectNode(guideline.id, "conduit");
+    keyboard.clearPressed();
   },
 
   useCanvasEnhancement({ edges, spec }) {
@@ -85,9 +84,11 @@ export const conduitManifest: NodeTypeManifest = {
   },
 };
 
-function getGuidelineOrientation(): GuidelineOrientation | null {
-  if (!keyboardStore.pressed.has(SHIFT)) return null;
-  if (keyboardStore.pressed.has("Q")) return "horizontal";
-  if (keyboardStore.pressed.has("W")) return "vertical";
+function getGuidelineOrientation(
+  keyboard: KeyboardStore,
+): GuidelineOrientation | null {
+  if (!keyboard.pressed.has(SHIFT)) return null;
+  if (keyboard.pressed.has("Q")) return "horizontal";
+  if (keyboard.pressed.has("W")) return "vertical";
   return null;
 }

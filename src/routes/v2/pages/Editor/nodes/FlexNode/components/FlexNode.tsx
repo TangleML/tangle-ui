@@ -16,14 +16,17 @@ import {
   updateFlexNode,
   updateFlexNodeProperties,
 } from "@/routes/v2/pages/Editor/nodes/FlexNode/flexNode.actions";
+import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
-import { selectNode } from "@/routes/v2/shared/store/editorStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 type FlexNodeProps = NodeProps<Node<FlexNodeData>>;
 
 const MIN_SIZE = { width: 50, height: 50 };
 
 export const EditorV2FlexNode = ({ data, id, selected }: FlexNodeProps) => {
+  const { editor } = useSharedStores();
+  const { undo } = useEditorSession();
   const spec = useSpec();
 
   const { properties, readOnly, locked = false } = data;
@@ -41,14 +44,14 @@ export const EditorV2FlexNode = ({ data, id, selected }: FlexNodeProps) => {
 
   const updateCurrentFlexNode = (updates: Partial<FlexNodeData>) => {
     if (!spec) return;
-    updateFlexNode(spec, id, updates);
+    updateFlexNode(undo, spec, id, updates);
   };
 
   const updateProperties = (
     propertyUpdates: Partial<FlexNodeData["properties"]>,
   ) => {
     if (!spec) return;
-    updateFlexNodeProperties(spec, id, propertyUpdates);
+    updateFlexNodeProperties(undo, spec, id, propertyUpdates);
   };
 
   const toggleLock = () => {
@@ -56,7 +59,7 @@ export const EditorV2FlexNode = ({ data, id, selected }: FlexNodeProps) => {
   };
 
   const handleClick = (e: MouseEvent) => {
-    selectNode(id, "flex", { shiftKey: e.shiftKey, entityId: id });
+    editor.selectNode(id, "flex", { shiftKey: e.shiftKey, entityId: id });
     if (locked) {
       e.stopPropagation();
     }

@@ -11,12 +11,12 @@ import {
 } from "@/utils/constants";
 import { componentSpecToText } from "@/utils/yaml";
 
-import { undoStore } from "./undoStore";
+import type { UndoStore } from "./undoStore";
 
 const SAVED_MESSAGE_DURATION_MS = 2000;
 const MIN_SAVING_DISPLAY_MS = 1000;
 
-class AutoSaveStore {
+export class AutoSaveStore {
   @observable accessor isSaving = false;
   @observable accessor lastSavedAt: Date | null = null;
   @observable accessor showSavedMessage = false;
@@ -29,7 +29,7 @@ class AutoSaveStore {
   private debounceTimeout: ReturnType<typeof setTimeout> | null = null;
   private savedMessageTimeout: ReturnType<typeof setTimeout> | null = null;
 
-  constructor() {
+  constructor(private undoStore: UndoStore) {
     makeObservable(this);
   }
 
@@ -132,7 +132,7 @@ class AutoSaveStore {
 
   private async persistUndoHistory() {
     if (!this.spec || !this.pipelineName) return;
-    const manager = undoStore.undoManager;
+    const manager = this.undoStore.undoManager;
     if (!manager) return;
 
     try {
@@ -165,5 +165,3 @@ class AutoSaveStore {
     }
   }
 }
-
-export const autoSaveStore = new AutoSaveStore();

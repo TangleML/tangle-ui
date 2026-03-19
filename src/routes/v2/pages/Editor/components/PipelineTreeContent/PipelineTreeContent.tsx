@@ -14,19 +14,16 @@ import { useEffect, useState } from "react";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
-import {
-  editorStore,
-  setSelectedValidationIssue,
-} from "@/routes/v2/shared/store/editorStore";
-import { navigationStore } from "@/routes/v2/shared/store/navigationStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 import { RootNode } from "./components/RootNode";
 import { ValidationIssueResolutionCard } from "./components/ValidationIssueResolutionCard";
 import { buildExpandedPaths, buildNavPathArray } from "./utils";
 
 export const PipelineTreeContent = observer(function PipelineTreeContent() {
-  const rootSpec = navigationStore.rootSpec;
-  const { navigationPath } = navigationStore;
+  const { editor, navigation } = useSharedStores();
+  const rootSpec = navigation.rootSpec;
+  const { navigationPath } = navigation;
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
 
   const currentNavPath = buildNavPathArray(navigationPath);
@@ -54,7 +51,7 @@ export const PipelineTreeContent = observer(function PipelineTreeContent() {
     });
   };
 
-  const selectedIssue = editorStore.selectedValidationIssue;
+  const selectedIssue = editor.selectedValidationIssue;
 
   const issueStillExists =
     selectedIssue &&
@@ -67,7 +64,7 @@ export const PipelineTreeContent = observer(function PipelineTreeContent() {
 
   useEffect(() => {
     if (selectedIssue && !issueStillExists) {
-      setSelectedValidationIssue(null);
+      editor.setSelectedValidationIssue(null);
     }
   }, [issueStillExists, selectedIssue]);
 

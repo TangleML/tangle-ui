@@ -4,11 +4,7 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import type { ComponentSpec, Output } from "@/models/componentSpec";
 import type { TypeSpecType } from "@/models/componentSpec/entities/types";
-import {
-  selectNode,
-  setPendingFocusNode,
-} from "@/routes/v2/shared/store/editorStore";
-import { navigateToPath } from "@/routes/v2/shared/store/navigationStore";
+import { useFocusActions } from "@/routes/v2/shared/store/useFocusActions";
 
 function typeSpecToString(typeSpec?: TypeSpecType): string {
   if (typeSpec === undefined) return "Any";
@@ -17,10 +13,9 @@ function typeSpecToString(typeSpec?: TypeSpecType): string {
 }
 
 export function OutputsBlock({ spec }: { spec: ComponentSpec }) {
+  const { navigateToEntity } = useFocusActions();
   const handleClick = (output: Output) => {
-    navigateToPath([spec.name]);
-    setPendingFocusNode(output.$id);
-    selectNode(output.$id, "output");
+    navigateToEntity([spec.name], output.$id, "output");
   };
 
   return (

@@ -3,7 +3,7 @@ import { reaction } from "mobx";
 import { useEffect, useRef } from "react";
 
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
-import { editorStore } from "@/routes/v2/shared/store/editorStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import type { Position } from "@/routes/v2/shared/windows/types";
 import { COLLAPSED_DOCK_AREA_WIDTH } from "@/routes/v2/shared/windows/types";
 import {
@@ -92,6 +92,7 @@ function calculateWindowPosition(
  * positions the floating Properties window adjacent to the selected node.
  */
 export function usePropertiesWindowPositioning() {
+  const { editor } = useSharedStores();
   const enabled = useFlagValue("snap-properties-to-node");
   const reactFlow = useReactFlow();
   const reactFlowRef = useRef(reactFlow);
@@ -102,8 +103,8 @@ export function usePropertiesWindowPositioning() {
 
     const dispose = reaction(
       () => ({
-        selectedNodeId: editorStore.selectedNodeId,
-        multiSelectionLength: editorStore.multiSelection.length,
+        selectedNodeId: editor.selectedNodeId,
+        multiSelectionLength: editor.multiSelection.length,
       }),
       ({ selectedNodeId, multiSelectionLength }) => {
         if (!selectedNodeId || multiSelectionLength > 1) return;
@@ -143,5 +144,5 @@ export function usePropertiesWindowPositioning() {
     );
 
     return dispose;
-  }, [enabled]);
+  }, [enabled, editor]);
 }

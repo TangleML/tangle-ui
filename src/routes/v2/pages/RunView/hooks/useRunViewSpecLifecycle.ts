@@ -2,25 +2,23 @@ import { isRootStore, unregisterRootStore } from "mobx-keystone";
 import { useEffect } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
-import { resetEditorState } from "@/routes/v2/shared/store/editorStore";
-import {
-  clearNavigation,
-  initNavigation,
-} from "@/routes/v2/shared/store/navigationStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 export function useRunViewSpecLifecycle(rootSpec: ComponentSpec) {
+  const { editor, navigation } = useSharedStores();
+
   useEffect(() => {
     if (!rootSpec) return;
 
-    resetEditorState();
-    initNavigation(rootSpec);
+    editor.resetState();
+    navigation.initNavigation(rootSpec);
 
     return () => {
-      clearNavigation();
-      resetEditorState();
+      navigation.clearNavigation();
+      editor.resetState();
       if (isRootStore(rootSpec)) {
         unregisterRootStore(rootSpec);
       }
     };
-  }, [rootSpec]);
+  }, [rootSpec, editor, navigation]);
 }

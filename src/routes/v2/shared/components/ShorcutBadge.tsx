@@ -6,14 +6,15 @@ import {
   type KeyConstant,
   SHIFT,
 } from "@/routes/v2/shared/shortcuts/keys";
-import { keyboardStore } from "@/routes/v2/shared/store/keyboardStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 export const ShorcutBadge = observer(function ShorcutBadge({
   id,
 }: {
   id: string;
 }) {
-  const shortcut = keyboardStore.getShortcut(id);
+  const { keyboard } = useSharedStores();
+  const shortcut = keyboard.getShortcut(id);
 
   if (!shortcut) return null;
 

@@ -12,7 +12,7 @@ import { Text } from "@/components/ui/typography";
 import { JsonSerializer } from "@/models/componentSpec";
 import { AnnotationsBlock } from "@/routes/v2/pages/Editor/components/AnnotationsBlock/AnnotationsBlock";
 import { ValidationSummary } from "@/routes/v2/pages/Editor/components/ValidationSummary";
-import { updatePipelineDescription } from "@/routes/v2/pages/Editor/store/actions";
+import { usePipelineActions } from "@/routes/v2/pages/Editor/store/actions/usePipelineActions";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { type ComponentSpec as WiredComponentSpec } from "@/utils/componentSpec";
 import { componentSpecToYaml } from "@/utils/yaml";
@@ -35,6 +35,7 @@ const serializer = new JsonSerializer();
 export const PipelineDetailsContent = observer(
   function PipelineDetailsContent() {
     const spec = useSpec();
+    const { updatePipelineDescription } = usePipelineActions();
 
     const [description, setDescription] = useState(spec?.description ?? "");
 

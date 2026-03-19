@@ -8,21 +8,25 @@ import {
   duplicateSelectedNodes,
   pasteNodes,
 } from "@/routes/v2/pages/Editor/store/actions";
+import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { NODE_TYPE_REGISTRY } from "@/routes/v2/shared/nodes/registry";
 import { CMDALT } from "@/routes/v2/shared/shortcuts/keys";
-import {
-  editorStore,
-  type SelectedNode,
+import type {
+  EditorStore,
+  SelectedNode,
 } from "@/routes/v2/shared/store/editorStore";
-import { registerShortcut } from "@/routes/v2/shared/store/keyboardStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 /**
  * Returns the current effective selection: multiSelection if multiple nodes
  * are selected, or a single-element array built from selectedNodeId when
  * exactly one node is selected.
  */
-function getEffectiveSelection(spec: ComponentSpec): SelectedNode[] {
-  const { multiSelection, selectedNodeId, selectedNodeType } = editorStore;
+function getEffectiveSelection(
+  spec: ComponentSpec,
+  editor: EditorStore,
+): SelectedNode[] {
+  const { multiSelection, selectedNodeId, selectedNodeType } = editor;
   if (multiSelection.length > 0) return multiSelection;
 
   if (!selectedNodeId || !selectedNodeType) return [];
@@ -42,32 +46,36 @@ export function useClipboardShortcuts(
   containerRef: RefObject<HTMLDivElement | null>,
   reactFlowInstance: ReactFlowInstance | null,
 ): void {
+  const { editor, keyboard } = useSharedStores();
+  const { clipboard } = useEditorSession();
+
   useEffect(() => {
-    const unregisterDuplicate = registerShortcut({
+    const unregisterDuplicate = keyboard.registerShortcut({
       id: "duplicate",
       keys: [CMDALT, "D"],
       label: "Duplicate",
       action: (e) => {
         e.preventDefault();
         if (!spec) return;
-        const selection = getEffectiveSelection(spec);
-        if (selection.length > 0) duplicateSelectedNodes(spec, selection);
+        const selection = getEffectiveSelection(spec, editor);
+        if (selection.length > 0)
+          duplicateSelectedNodes(clipboard, spec, selection);
       },
     });
 
-    const unregisterCopy = registerShortcut({
+    const unregisterCopy = keyboard.registerShortcut({
       id: "copy",
       keys: [CMDALT, "C"],
       label: "Copy",
       action: (e) => {
         e.preventDefault();
         if (!spec) return;
-        const selection = getEffectiveSelection(spec);
-        if (selection.length > 0) copySelectedNodes(spec, selection);
+        const selection = getEffectiveSelection(spec, editor);
+        if (selection.length > 0) copySelectedNodes(clipboard, spec, selection);
       },
     });
 
-    const unregisterPaste = registerShortcut({
+    const unregisterPaste = keyboard.registerShortcut({
       id: "paste",
       keys: [CMDALT, "V"],
       label: "Paste",
@@ -80,7 +88,7 @@ export function useClipboardShortcuts(
             x: rect.left + rect.width / 2,
             y: rect.top + rect.height / 2,
           });
-          pasteNodes(spec, center);
+          void pasteNodes(clipboard, spec, center);
         }
       },
     });
@@ -90,5 +98,5 @@ export function useClipboardShortcuts(
       unregisterCopy();
       unregisterPaste();
     };
-  });
+  }, [clipboard, spec, containerRef, reactFlowInstance, editor, keyboard]);
 }

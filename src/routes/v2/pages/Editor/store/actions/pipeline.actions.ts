@@ -6,28 +6,34 @@ import {
   type Task,
 } from "@/models/componentSpec";
 import { generateUniqueTaskName } from "@/routes/v2/pages/Editor/store/nameUtils";
-import { withUndoGroup } from "@/routes/v2/pages/Editor/store/undoStore";
+import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
 
 import { idGen } from "./utils";
 
-export function renamePipeline(spec: ComponentSpec, newName: string): boolean {
-  return withUndoGroup("Rename pipeline", () => {
+export function renamePipeline(
+  undo: UndoGroupable,
+  spec: ComponentSpec,
+  newName: string,
+): boolean {
+  return undo.withGroup("Rename pipeline", () => {
     spec.setName(newName);
     return true;
   });
 }
 
 export function updatePipelineDescription(
+  undo: UndoGroupable,
   spec: ComponentSpec,
   description: string | undefined,
 ): boolean {
-  return withUndoGroup("Update pipeline description", () => {
+  return undo.withGroup("Update pipeline description", () => {
     spec.setDescription(description);
     return true;
   });
 }
 
 export function createSubgraph(
+  undo: UndoGroupable,
   spec: ComponentSpec,
   taskIds: string[],
   subgraphName: string,
@@ -38,7 +44,7 @@ export function createSubgraph(
   const uniqueName = generateUniqueTaskName(spec, subgraphName);
 
   try {
-    const result = withUndoGroup(`Create subgraph "${uniqueName}"`, () => {
+    const result = undo.withGroup(`Create subgraph "${uniqueName}"`, () => {
       const result = modelCreateSubgraph({
         spec,
         selectedTaskIds: taskIds,

@@ -5,8 +5,8 @@ import type { NodeTypeManifest } from "@/routes/v2/shared/nodes/types";
 export const taskManifest: NodeTypeManifest = {
   ...taskManifestBase,
 
-  updatePosition() {},
-  deleteNode() {},
+  updatePosition(_undo, _spec, _nodeId, _position) {},
+  deleteNode(_undo, _spec, _nodeId) {},
 
   contextPanelComponent: RunViewTaskDetails,
 };

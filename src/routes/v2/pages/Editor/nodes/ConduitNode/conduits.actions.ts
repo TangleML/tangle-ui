@@ -6,8 +6,8 @@ import type {
   EdgeConduit,
   GuidelineOrientation,
 } from "@/models/componentSpec/annotations";
-import { withUndoGroup } from "@/routes/v2/pages/Editor/store/undoStore";
 import { getConduits } from "@/routes/v2/shared/nodes/ConduitNode/conduit.utils";
+import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
 
 const DEFAULT_COLORS = [
   "#6366f1",
@@ -41,6 +41,7 @@ function setConduits(spec: ComponentSpec, conduits: EdgeConduit[]) {
 }
 
 export function addGuideline(
+  undo: UndoGroupable,
   spec: ComponentSpec,
   orientation: GuidelineOrientation,
   coordinate: number,
@@ -54,25 +55,30 @@ export function addGuideline(
     edgeIds: [],
   };
 
-  withUndoGroup("Add guideline", () => {
+  undo.withGroup("Add guideline", () => {
     setConduits(spec, [...existing, guideline]);
   });
 
   return guideline;
 }
 
-export function removeConduit(spec: ComponentSpec, conduitId: string) {
+export function removeConduit(
+  undo: UndoGroupable,
+  spec: ComponentSpec,
+  conduitId: string,
+) {
   const existing = getConduits(spec);
   const filtered = existing.filter((c) => c.id !== conduitId);
 
   if (filtered.length !== existing.length) {
-    withUndoGroup("Remove guideline", () => {
+    undo.withGroup("Remove guideline", () => {
       setConduits(spec, filtered);
     });
   }
 }
 
 export function updateGuidelineCoordinate(
+  undo: UndoGroupable,
   spec: ComponentSpec,
   conduitId: string,
   coordinate: number,
@@ -81,12 +87,13 @@ export function updateGuidelineCoordinate(
   const updated = existing.map((c) =>
     c.id === conduitId ? { ...c, coordinate } : c,
   );
-  withUndoGroup("Move guideline", () => {
+  undo.withGroup("Move guideline", () => {
     setConduits(spec, updated);
   });
 }
 
 export function updateConduitColor(
+  undo: UndoGroupable,
   spec: ComponentSpec,
   conduitId: string,
   color: string,
@@ -95,12 +102,13 @@ export function updateConduitColor(
   const updated = existing.map((c) =>
     c.id === conduitId ? { ...c, color } : c,
   );
-  withUndoGroup("Update guideline color", () => {
+  undo.withGroup("Update guideline color", () => {
     setConduits(spec, updated);
   });
 }
 
 function assignEdgeToConduit(
+  undo: UndoGroupable,
   spec: ComponentSpec,
   conduitId: string,
   bindingId: string,
@@ -111,12 +119,13 @@ function assignEdgeToConduit(
     if (c.edgeIds.includes(bindingId)) return c;
     return { ...c, edgeIds: [...c.edgeIds, bindingId] };
   });
-  withUndoGroup("Assign edge to guideline", () => {
+  undo.withGroup("Assign edge to guideline", () => {
     setConduits(spec, updated);
   });
 }
 
 export function unassignEdgeFromConduit(
+  undo: UndoGroupable,
   spec: ComponentSpec,
   conduitId: string,
   bindingId: string,
@@ -126,12 +135,13 @@ export function unassignEdgeFromConduit(
     if (c.id !== conduitId) return c;
     return { ...c, edgeIds: c.edgeIds.filter((id) => id !== bindingId) };
   });
-  withUndoGroup("Unassign edge from guideline", () => {
+  undo.withGroup("Unassign edge from guideline", () => {
     setConduits(spec, updated);
   });
 }
 
 export function toggleEdgeOnConduit(
+  undo: UndoGroupable,
   spec: ComponentSpec,
   conduitId: string,
   bindingId: string,
@@ -141,13 +151,17 @@ export function toggleEdgeOnConduit(
   if (!conduit) return;
 
   if (conduit.edgeIds.includes(bindingId)) {
-    unassignEdgeFromConduit(spec, conduitId, bindingId);
+    unassignEdgeFromConduit(undo, spec, conduitId, bindingId);
   } else {
-    assignEdgeToConduit(spec, conduitId, bindingId);
+    assignEdgeToConduit(undo, spec, conduitId, bindingId);
   }
 }
 
-export function cleanupDeletedBinding(spec: ComponentSpec, bindingId: string) {
+export function cleanupDeletedBinding(
+  undo: UndoGroupable,
+  spec: ComponentSpec,
+  bindingId: string,
+) {
   const existing = getConduits(spec);
   const needsCleanup = existing.some((c) => c.edgeIds.includes(bindingId));
   if (!needsCleanup) return;
@@ -156,7 +170,7 @@ export function cleanupDeletedBinding(spec: ComponentSpec, bindingId: string) {
     ...c,
     edgeIds: c.edgeIds.filter((id) => id !== bindingId),
   }));
-  withUndoGroup("Cleanup deleted binding", () => {
+  undo.withGroup("Cleanup deleted binding", () => {
     setConduits(spec, updated);
   });
 }

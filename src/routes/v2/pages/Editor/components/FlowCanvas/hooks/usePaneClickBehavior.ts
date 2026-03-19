@@ -4,15 +4,19 @@ import type { ReactFlowInstance, ReactFlowProps } from "@xyflow/react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
+import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { NODE_TYPE_REGISTRY } from "@/routes/v2/shared/nodes/registry";
-import { clearSelection } from "@/routes/v2/shared/store/editorStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 export function usePaneClickBehavior(
   spec: ComponentSpec | null,
   reactFlowInstance: ReactFlowInstance | null,
 ): Required<Pick<ReactFlowProps, "onPaneClick">> {
+  const { editor, keyboard } = useSharedStores();
+  const { undo } = useEditorSession();
+
   const onPaneClick = (event: ReactMouseEvent) => {
-    clearSelection();
+    editor.clearSelection();
 
     if (!spec || !reactFlowInstance) return;
 
@@ -22,7 +26,7 @@ export function usePaneClickBehavior(
     });
 
     for (const manifest of NODE_TYPE_REGISTRY.all()) {
-      manifest.onPaneClick?.(spec, position);
+      manifest.onPaneClick?.(spec, position, { editor, keyboard, undo });
     }
   };
 
