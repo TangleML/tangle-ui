@@ -1,0 +1,244 @@
+import type {
+  Edge,
+  EdgeProps,
+  Node,
+  NodeProps,
+  XYPosition,
+} from "@xyflow/react";
+import type { ComponentType, MouseEvent } from "react";
+
+import type { ComponentSpec } from "@/models/componentSpec";
+import type {
+  Annotation,
+  Argument,
+  ComponentReference,
+  PredicateType,
+  TypeSpecType,
+} from "@/models/componentSpec/entities/types";
+import type { IdGenerator } from "@/models/componentSpec/factories/idGenerator";
+import type { SelectedNode } from "@/routes/v2/shared/store/editorStore";
+
+// ---------------------------------------------------------------------------
+// Snapshot types (used by clone handlers and copy-paste)
+// ---------------------------------------------------------------------------
+
+interface TaskSnapshotData {
+  componentRef: ComponentReference;
+  isEnabled?: PredicateType;
+  arguments: Argument[];
+  annotations: Annotation[];
+}
+
+interface InputSnapshotData {
+  type?: TypeSpecType;
+  description?: string;
+  defaultValue?: string;
+  optional?: boolean;
+  annotations: Annotation[];
+}
+
+interface OutputSnapshotData {
+  type?: TypeSpecType;
+  description?: string;
+  annotations: Annotation[];
+}
+
+interface BaseNodeSnapshot {
+  entityId: string;
+  name: string;
+  position: XYPosition;
+}
+
+export interface TaskNodeSnapshot extends BaseNodeSnapshot {
+  type: "task";
+  data: TaskSnapshotData;
+}
+
+export interface InputNodeSnapshot extends BaseNodeSnapshot {
+  type: "input";
+  data: InputSnapshotData;
+}
+
+export interface OutputNodeSnapshot extends BaseNodeSnapshot {
+  type: "output";
+  data: OutputSnapshotData;
+}
+
+export interface FlexNodeSnapshot extends BaseNodeSnapshot {
+  type: "flex";
+  data: FlexNodeSnapshotData;
+}
+
+interface FlexNodeSnapshotData {
+  properties: Record<string, unknown>;
+  metadata: Record<string, unknown>;
+  size: { width: number; height: number };
+  zIndex: number;
+  locked?: boolean;
+}
+
+export type NodeSnapshot =
+  | TaskNodeSnapshot
+  | InputNodeSnapshot
+  | OutputNodeSnapshot
+  | FlexNodeSnapshot;
+
+export interface BindingSnapshot {
+  sourceEntityId: string;
+  targetEntityId: string;
+  sourcePortName: string;
+  targetPortName: string;
+}
+
+// ---------------------------------------------------------------------------
+// Clone handler types (re-exported for use in manifests)
+// ---------------------------------------------------------------------------
+
+export interface NodeCloneHandler {
+  snapshot(spec: ComponentSpec, entityId: string): NodeSnapshot | null;
+  clone(
+    spec: ComponentSpec,
+    snapshot: NodeSnapshot,
+    idGen: IdGenerator,
+    position: XYPosition,
+  ): string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Node data types used by manifests and components
+// ---------------------------------------------------------------------------
+
+export interface TaskNodeData extends Record<string, unknown> {
+  entityId: string;
+  name: string;
+}
+
+export interface IONodeData extends Record<string, unknown> {
+  entityId: string;
+  ioType: "input" | "output";
+  name: string;
+}
+
+// ---------------------------------------------------------------------------
+// NodeTypeManifest – the contract every node-type plugin implements
+// ---------------------------------------------------------------------------
+
+export interface NodeTypeManifest {
+  /** React Flow node type key (e.g. "task", "io", "conduit", "ghost"). */
+  readonly type: string;
+
+  /** Node ID prefix used to identify this type from an id string. */
+  readonly idPrefix: string;
+
+  /**
+   * Domain entity type (e.g. "task", "input", "output", "conduit").
+   * Multiple manifests may share the same RF `type` but differ here
+   * (input & output both use RF type "io").
+   */
+  readonly entityType: string;
+  hasEntityId?(spec: ComponentSpec, id: string): boolean;
+
+  // -- Rendering --------------------------------------------------------
+
+  readonly component: ComponentType<NodeProps<any>>;
+  readonly edgeTypes?: Record<string, ComponentType<EdgeProps<any>>>;
+
+  // -- Spec → React Flow ------------------------------------------------
+
+  buildNodes(spec: ComponentSpec): Node[];
+  buildEdges?(spec: ComponentSpec): Edge[];
+
+  /** Return strings that uniquely describe this manifest's entities for caching. */
+  fingerprintParts?(spec: ComponentSpec): string[];
+
+  /**
+   * Transform the base binding edges (e.g. replace "default" edges with
+   * a specialised edge type). Called after `buildBindingEdges`.
+   */
+  transformEdges?(spec: ComponentSpec, edges: Edge[]): Edge[];
+
+  // -- Canvas operations ------------------------------------------------
+
+  readonly drop?: {
+    /** Key in the `application/reactflow` JSON payload. */
+    readonly dataKey: string;
+    handler(
+      spec: ComponentSpec,
+      data: unknown,
+      position: XYPosition,
+    ): void | Promise<void>;
+  };
+
+  /**
+   * Used to get the position of a node from the spec.
+   * CopyPaste features rely on this to fetch position of the node regardless of the node type.
+   * @param spec
+   * @param nodeId
+   */
+  getPosition(spec: ComponentSpec, nodeId: string): XYPosition | undefined;
+
+  updatePosition(
+    spec: ComponentSpec,
+    nodeId: string,
+    position: XYPosition,
+  ): void;
+
+  deleteNode(spec: ComponentSpec, nodeId: string): void;
+
+  findEntity?(spec: ComponentSpec, entityId: string): unknown | undefined;
+
+  // -- Selection --------------------------------------------------------
+
+  readonly selectable: boolean;
+  toSelectedNode?(node: Node): SelectedNode | null;
+  readonly contextPanelComponent?: ComponentType<{ entityId: string }>;
+
+  // -- Display metadata (multi-selection, etc.) -------------------------
+
+  displayName?(spec: ComponentSpec, entityId: string): string;
+  readonly icon?: string;
+  readonly iconColor?: string;
+
+  // -- Interactions -----------------------------------------------------
+
+  onDoubleClick?(spec: ComponentSpec, node: Node): void;
+  onPaneClick?(spec: ComponentSpec, position: XYPosition): void;
+
+  // -- Clone / copy-paste -----------------------------------------------
+
+  readonly cloneHandler?: NodeCloneHandler;
+
+  // -- Canvas enhancement (runtime hooks) ---------------------------------
+
+  /**
+   * Optional React hook called by the composing `useCanvasEnhancements` hook.
+   * Manifests use this to inject extra nodes/edges or transform edges at
+   * render time (e.g. ghost-node overlay, conduit edge styling).
+   *
+   * Safe to use React hooks inside — the manifest array is static so call
+   * order is stable across renders.
+   */
+  readonly useCanvasEnhancement?: (
+    params: CanvasEnhancementParams,
+  ) => CanvasEnhancementResult;
+}
+
+// ---------------------------------------------------------------------------
+// Canvas enhancement types used by useCanvasEnhancements composing hook
+// ---------------------------------------------------------------------------
+
+export interface CanvasEnhancementParams {
+  spec: ComponentSpec | null;
+  nodes: Node[];
+  edges: Edge[];
+  metaKeyPressed: boolean;
+  isConnecting: boolean;
+}
+
+export interface CanvasEnhancementResult {
+  extraNodes?: Node[];
+  extraEdges?: Edge[];
+  /** Replaces the incoming edges (used for styling / type transforms). */
+  transformedEdges?: Edge[];
+  onEdgeClick?: (event: MouseEvent, edge: { id: string }) => void;
+}

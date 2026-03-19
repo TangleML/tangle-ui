@@ -1,0 +1,235 @@
+import { useRef, useState } from "react";
+
+import {
+  detectSnapPreview,
+  shouldDetach,
+} from "@/routes/v2/shared/windows/snapUtils";
+import type {
+  Position,
+  SnapPreviewType,
+} from "@/routes/v2/shared/windows/types";
+import {
+  attachWindow,
+  bringToFront,
+  detachWindow,
+  dockWindow,
+  getAllWindows,
+  getDockAreaWindowIds,
+  getWindowById,
+  getWindowOrderLength,
+  isWindowAtFront,
+  isWindowDocked,
+  undockWindow,
+  updateWindowPosition,
+} from "@/routes/v2/shared/windows/windows.actions";
+
+// ---------------------------------------------------------------------------
+// Drag phase state machine
+// ---------------------------------------------------------------------------
+
+/** Distance (px) from origin mouse position before undocking a docked window. */
+const UNDOCK_THRESHOLD = 20;
+
+type DragPhase =
+  | { type: "idle" }
+  | { type: "attached-pending"; startPos: Position }
+  | { type: "docked-pending"; originMouse: Position }
+  | { type: "free" };
+
+// ---------------------------------------------------------------------------
+// Hook interface
+// ---------------------------------------------------------------------------
+
+interface UseWindowDragOptions {
+  windowId: string;
+  docked: boolean;
+}
+
+interface UseWindowDragReturn {
+  isDragging: boolean;
+  snapPreview: SnapPreviewType | null;
+  panelRef: React.RefObject<HTMLDivElement | null>;
+  handleHeaderMouseDown: (e: React.MouseEvent) => void;
+  handleContainerMouseDown: () => void;
+  handleContainerClick: () => void;
+}
+
+// ---------------------------------------------------------------------------
+// Hook implementation
+// ---------------------------------------------------------------------------
+
+export function useWindowDrag({
+  windowId,
+  docked,
+}: UseWindowDragOptions): UseWindowDragReturn {
+  const windowConfig = getWindowById(windowId);
+  const isAtFront = isWindowAtFront(windowId);
+
+  const [isDragging, setIsDragging] = useState(false);
+  const [snapPreview, setSnapPreview] = useState<SnapPreviewType | null>(null);
+
+  const phaseRef = useRef<DragPhase>({ type: "idle" });
+  const dragOffset = useRef<Position>({ x: 0, y: 0 });
+  const snapPreviewRef = useRef<SnapPreviewType | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  const position = windowConfig?.position ?? { x: 0, y: 0 };
+  const size = windowConfig?.size ?? { width: 320, height: 420 };
+  const isAttached = !!windowConfig?.attachedTo;
+  const isDocked =
+    windowConfig?.dockState !== undefined && windowConfig?.dockState !== "none";
+
+  // Optimistic z-index bump: the MobX re-render from bringToFront (on mouseup)
+  // will set the final z-index, but this prevents a visible flicker during drag
+  // start where the window would briefly stay behind others.
+  const raiseZIndex = () => {
+    if (!docked && !isAtFront && panelRef.current) {
+      panelRef.current.style.zIndex = String(20 + getWindowOrderLength());
+    }
+  };
+
+  const handleContainerMouseDown = () => {
+    raiseZIndex();
+  };
+
+  const handleContainerClick = () => {
+    if (!isAtFront) {
+      bringToFront(windowId);
+    }
+  };
+
+  const handleHeaderMouseDown = (e: React.MouseEvent) => {
+    if (e.target instanceof HTMLElement && e.target.closest("button")) return;
+
+    raiseZIndex();
+    setIsDragging(true);
+
+    // Compute drag offset depending on rendering mode
+    if (docked) {
+      const rect = panelRef.current?.getBoundingClientRect();
+      dragOffset.current = {
+        x: rect ? e.clientX - rect.left : 0,
+        y: rect ? e.clientY - rect.top : 0,
+      };
+
+      if (isDocked) {
+        phaseRef.current = {
+          type: "docked-pending",
+          originMouse: { x: e.clientX, y: e.clientY },
+        };
+      } else {
+        phaseRef.current = { type: "free" };
+      }
+    } else if (isAttached) {
+      dragOffset.current = {
+        x: e.clientX - position.x,
+        y: e.clientY - position.y,
+      };
+      phaseRef.current = {
+        type: "attached-pending",
+        startPos: { ...position },
+      };
+    } else {
+      dragOffset.current = {
+        x: e.clientX - position.x,
+        y: e.clientY - position.y,
+      };
+      phaseRef.current = { type: "free" };
+    }
+
+    const handleMouseMove = (moveE: MouseEvent) => {
+      const phase = phaseRef.current;
+      let newPosition = {
+        x: moveE.clientX - dragOffset.current.x,
+        y: moveE.clientY - dragOffset.current.y,
+      };
+
+      // --- Phase: attached-pending ---
+      if (phase.type === "attached-pending") {
+        if (!shouldDetach(newPosition, phase.startPos)) return;
+        detachWindow(windowId);
+        phaseRef.current = { type: "free" };
+      }
+
+      // --- Phase: docked-pending ---
+      if (phase.type === "docked-pending") {
+        const dx = Math.abs(moveE.clientX - phase.originMouse.x);
+        const dy = Math.abs(moveE.clientY - phase.originMouse.y);
+        if (dx <= UNDOCK_THRESHOLD && dy <= UNDOCK_THRESHOLD) return;
+
+        undockWindow(windowId);
+        phaseRef.current = { type: "free" };
+
+        // Center the floating window under the cursor
+        const win = getWindowById(windowId);
+        if (win) {
+          const halfWidth = win.size.width / 2;
+          const headerGrab = 20;
+          dragOffset.current = { x: halfWidth, y: headerGrab };
+          newPosition = {
+            x: moveE.clientX - halfWidth,
+            y: moveE.clientY - headerGrab,
+          };
+        }
+      }
+
+      // --- Phase: free ---
+      updateWindowPosition(windowId, newPosition);
+
+      if (isWindowDocked(windowId)) {
+        undockWindow(windowId);
+      }
+
+      const preview = detectSnapPreview({
+        windowId,
+        position: newPosition,
+        size,
+        allWindows: getAllWindows(),
+        isAttached: false,
+        mousePosition: { x: moveE.clientX, y: moveE.clientY },
+        dockAreaWindowIds: {
+          left: [...getDockAreaWindowIds("left")],
+          right: [...getDockAreaWindowIds("right")],
+        },
+      });
+      snapPreviewRef.current = preview;
+      setSnapPreview(preview);
+    };
+
+    const handleMouseUp = () => {
+      const currentPreview = snapPreviewRef.current;
+
+      if (currentPreview) {
+        if (currentPreview.type === "edge") {
+          dockWindow(windowId, currentPreview.side);
+        } else if (currentPreview.type === "attach") {
+          attachWindow(windowId, currentPreview.parentId);
+        } else if (currentPreview.type === "dock-insert") {
+          dockWindow(windowId, currentPreview.side, currentPreview.insertIndex);
+        }
+      }
+
+      if (!isAtFront) {
+        bringToFront(windowId);
+      }
+      setIsDragging(false);
+      setSnapPreview(null);
+      snapPreviewRef.current = null;
+      phaseRef.current = { type: "idle" };
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+  };
+
+  return {
+    isDragging,
+    snapPreview,
+    panelRef,
+    handleHeaderMouseDown,
+    handleContainerMouseDown,
+    handleContainerClick,
+  };
+}
