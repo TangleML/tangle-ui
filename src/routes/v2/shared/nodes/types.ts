@@ -8,6 +8,7 @@ import type {
 import type { ComponentType, MouseEvent } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
+import type { GuidelineOrientation } from "@/models/componentSpec/annotations";
 import type {
   Annotation,
   Argument,
@@ -117,6 +118,29 @@ export interface IONodeData extends Record<string, unknown> {
   entityId: string;
   ioType: "input" | "output";
   name: string;
+}
+
+export interface ConduitNodeData extends Record<string, unknown> {
+  conduitId: string;
+  color: string;
+  edgeCount: number;
+  orientation: GuidelineOrientation;
+  coordinate: number;
+}
+
+export interface ConduitEdgeData extends Record<string, unknown> {
+  guidelines: GuidelineInfo[];
+  conduitColor?: string;
+  isInAssignmentMode?: boolean;
+  isAssignedToActiveConduit?: boolean;
+  activeConduitColor?: string;
+}
+
+export interface GuidelineInfo {
+  orientation: GuidelineOrientation;
+  coordinate: number;
+  edgeIndex: number;
+  edgeTotal: number;
 }
 
 // ---------------------------------------------------------------------------

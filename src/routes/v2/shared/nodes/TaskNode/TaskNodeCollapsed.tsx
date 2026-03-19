@@ -3,7 +3,7 @@ import { Handle, Position } from "@xyflow/react";
 import { Card } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
-import { getContrastTextColor } from "@/routes/v2/pages/Editor/nodes/TaskNode/components/utils/color";
+import { getContrastTextColor } from "@/routes/v2/shared/nodes/TaskNode/color.utils";
 
 import type { TaskNodeViewProps } from "./TaskNode";
 

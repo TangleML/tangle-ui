@@ -1,16 +1,11 @@
-import type { Edge, Node, XYPosition } from "@xyflow/react";
+import type { Edge, Node } from "@xyflow/react";
 
-import type {
-  ComponentSpec,
-  Input,
-  Output,
-  Task,
-} from "@/models/componentSpec";
+import type { ComponentSpec } from "@/models/componentSpec";
 
 const TASK_OFFSET = 200;
 const IO_OFFSET = 150;
 
-function resolvePosition(
+export function resolvePosition(
   position: { x: number; y: number },
   fallback: { x: number; y: number },
 ): { x: number; y: number } {
@@ -61,27 +56,6 @@ export function createEntityNode(
     zIndex,
     data,
   };
-}
-
-export function buildEntityPositionMap(
-  inputs: Input[],
-  outputs: Output[],
-  tasks: Task[],
-): Map<string, XYPosition> {
-  const map = new Map<string, XYPosition>();
-  for (const [index, input] of inputs.entries()) {
-    const pos = input.annotations.get("editor.position");
-    map.set(input.$id, resolvePosition(pos, ioDefaultPosition(index, -200)));
-  }
-  for (const [index, output] of outputs.entries()) {
-    const pos = output.annotations.get("editor.position");
-    map.set(output.$id, resolvePosition(pos, ioDefaultPosition(index, 800)));
-  }
-  for (const [index, task] of tasks.entries()) {
-    const pos = task.annotations.get("editor.position");
-    map.set(task.$id, resolvePosition(pos, taskDefaultPosition(index)));
-  }
-  return map;
 }
 
 export function buildBindingEdges(spec: ComponentSpec): Edge[] {

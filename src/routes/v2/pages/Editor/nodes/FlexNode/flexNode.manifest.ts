@@ -6,6 +6,7 @@ import {
 import type { ComponentSpec } from "@/models/componentSpec/entities/componentSpec";
 import type { FlexNodeSnapshot } from "@/routes/v2/pages/Editor/store/nodeCloneHandlers";
 import type { NodeTypeManifest } from "@/routes/v2/shared/nodes/types";
+import { deepClone } from "@/utils/deepClone";
 
 import { EditorV2FlexNode } from "./components/FlexNode";
 import { FlexNodeDetails } from "./context/FlexNodeDetails";
@@ -17,8 +18,6 @@ import {
   setFlexNodes,
   updateFlexNodePosition,
 } from "./flexNode.actions";
-
-const deepClone = <T>(obj: T): T => JSON.parse(JSON.stringify(obj));
 
 export const flexNodeManifest: NodeTypeManifest = {
   type: "flex",

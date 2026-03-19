@@ -1,23 +1,13 @@
-import type { Edge, Node, XYPosition } from "@xyflow/react";
-
-import type { ComponentSpec } from "@/models/componentSpec";
-import type { EdgeConduit } from "@/models/componentSpec/annotations";
 import {
-  ConduitNode,
-  type ConduitNodeData,
-} from "@/routes/v2/pages/Editor/nodes/ConduitNode/components/ConduitNode";
-import { getConduits } from "@/routes/v2/pages/Editor/nodes/ConduitNode/conduits.actions";
-import {
-  ConduitEdge,
-  type ConduitEdgeData,
-} from "@/routes/v2/pages/Editor/nodes/ConduitNode/edges/ConduitEdge";
-import type { GuidelineInfo } from "@/routes/v2/pages/Editor/nodes/ConduitNode/edges/conduitPathUtils";
-import { buildEntityPositionMap } from "@/routes/v2/shared/nodes/buildUtils";
+  augmentEdgesWithGuidelines,
+  buildConduitFingerprint,
+  buildConduitNode,
+  getConduitPosition,
+  getConduits,
+} from "@/routes/v2/shared/nodes/ConduitNode/conduit.utils";
+import { ConduitNode } from "@/routes/v2/shared/nodes/ConduitNode/ConduitNode";
+import { ConduitEdge } from "@/routes/v2/shared/nodes/ConduitNode/edges/ConduitEdge";
 import type { NodeTypeManifest } from "@/routes/v2/shared/nodes/types";
-
-const GUIDELINE_EXTENT = 100000;
-const GUIDELINE_HALF_EXTENT = GUIDELINE_EXTENT / 2;
-const GUIDELINE_THICKNESS = 4;
 
 export const conduitManifest: NodeTypeManifest = {
   type: "conduit",
@@ -28,35 +18,11 @@ export const conduitManifest: NodeTypeManifest = {
   edgeTypes: { conduitEdge: ConduitEdge },
 
   buildNodes(spec) {
-    return getConduits(spec).map((conduit): Node => {
-      const isVertical = conduit.orientation === "vertical";
-      return {
-        id: conduit.id,
-        type: "conduit",
-        position: isVertical
-          ? { x: conduit.coordinate, y: -GUIDELINE_HALF_EXTENT }
-          : { x: -GUIDELINE_HALF_EXTENT, y: conduit.coordinate },
-        width: isVertical ? GUIDELINE_THICKNESS : GUIDELINE_EXTENT,
-        height: isVertical ? GUIDELINE_EXTENT : GUIDELINE_THICKNESS,
-        data: {
-          conduitId: conduit.id,
-          color: conduit.color,
-          edgeCount: conduit.edgeIds.length,
-          orientation: conduit.orientation,
-          coordinate: conduit.coordinate,
-        } satisfies ConduitNodeData,
-        draggable: false,
-        selectable: false,
-        connectable: false,
-      };
-    });
+    return getConduits(spec).map((conduit) => buildConduitNode(conduit, false));
   },
 
   fingerprintParts(spec) {
-    return getConduits(spec).map(
-      (conduit) =>
-        `g:${conduit.id}:${conduit.orientation}:${conduit.coordinate}:${conduit.color}:${conduit.edgeIds.join(",")}`,
-    );
+    return getConduits(spec).map(buildConduitFingerprint);
   },
 
   transformEdges(spec, edges) {
@@ -68,9 +34,7 @@ export const conduitManifest: NodeTypeManifest = {
   getPosition(spec, nodeId) {
     const conduit = getConduits(spec).find((c) => c.id === nodeId);
     if (!conduit) return undefined;
-    return conduit.orientation === "vertical"
-      ? { x: conduit.coordinate, y: -GUIDELINE_HALF_EXTENT }
-      : { x: -GUIDELINE_HALF_EXTENT, y: conduit.coordinate };
+    return getConduitPosition(conduit);
   },
 
   updatePosition() {},
@@ -78,111 +42,3 @@ export const conduitManifest: NodeTypeManifest = {
 
   selectable: false,
 };
-
-function buildEdgeConduitMap(
-  conduits: EdgeConduit[],
-  getSourcePosition: (bindingId: string) => XYPosition | undefined,
-): Map<string, EdgeConduit[]> {
-  const map = new Map<string, EdgeConduit[]>();
-
-  for (const conduit of conduits) {
-    for (const edgeId of conduit.edgeIds) {
-      const list = map.get(edgeId);
-      if (list) {
-        list.push(conduit);
-      } else {
-        map.set(edgeId, [conduit]);
-      }
-    }
-  }
-
-  for (const [bindingId, conds] of map) {
-    if (conds.length <= 1) continue;
-    const srcPos = getSourcePosition(bindingId);
-    if (!srcPos) continue;
-
-    conds.sort((a, b) => {
-      const distA =
-        a.orientation === "vertical"
-          ? (a.coordinate - srcPos.x) ** 2
-          : (a.coordinate - srcPos.y) ** 2;
-      const distB =
-        b.orientation === "vertical"
-          ? (b.coordinate - srcPos.x) ** 2
-          : (b.coordinate - srcPos.y) ** 2;
-      return distA - distB;
-    });
-  }
-
-  return map;
-}
-
-function buildPerGuidelineEdgeIndices(
-  edgeConduitMap: Map<string, EdgeConduit[]>,
-): Map<string, Map<string, number>> {
-  const guidelineEdgeIndex = new Map<string, Map<string, number>>();
-
-  for (const [bindingId, conduits] of edgeConduitMap) {
-    for (const conduit of conduits) {
-      let indexMap = guidelineEdgeIndex.get(conduit.id);
-      if (!indexMap) {
-        indexMap = new Map();
-        guidelineEdgeIndex.set(conduit.id, indexMap);
-      }
-      if (!indexMap.has(bindingId)) {
-        indexMap.set(bindingId, indexMap.size);
-      }
-    }
-  }
-
-  return guidelineEdgeIndex;
-}
-
-function augmentEdgesWithGuidelines(
-  spec: ComponentSpec,
-  edges: Edge[],
-  conduits: EdgeConduit[],
-): Edge[] {
-  const entityPositions = buildEntityPositionMap(
-    [...spec.inputs],
-    [...spec.outputs],
-    [...spec.tasks],
-  );
-
-  const edgeConduitMap = buildEdgeConduitMap(conduits, (bindingId) => {
-    const binding = [...spec.bindings].find((b) => b.$id === bindingId);
-    if (!binding) return undefined;
-    return entityPositions.get(binding.sourceEntityId);
-  });
-
-  const perGuidelineIndices = buildPerGuidelineEdgeIndices(edgeConduitMap);
-
-  return edges.map((edge) => {
-    const bindingId = edge.id.replace(/^edge_/, "");
-    const assignedConduits = edgeConduitMap.get(bindingId);
-
-    if (!assignedConduits || assignedConduits.length === 0) return edge;
-
-    const guidelines: GuidelineInfo[] = assignedConduits.map((conduit) => {
-      const indexMap = perGuidelineIndices.get(conduit.id);
-      const edgeIndex = indexMap?.get(bindingId) ?? 0;
-      const edgeTotal = indexMap?.size ?? 1;
-
-      return {
-        orientation: conduit.orientation,
-        coordinate: conduit.coordinate,
-        edgeIndex,
-        edgeTotal,
-      };
-    });
-
-    return {
-      ...edge,
-      type: "conduitEdge",
-      data: {
-        guidelines,
-        conduitColor: assignedConduits[0].color,
-      } satisfies ConduitEdgeData,
-    };
-  });
-}

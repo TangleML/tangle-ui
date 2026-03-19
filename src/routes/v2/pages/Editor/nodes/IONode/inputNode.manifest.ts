@@ -2,57 +2,23 @@ import { Annotations } from "@/models/componentSpec/annotations";
 import { Input } from "@/models/componentSpec/entities/input";
 import { addInput } from "@/routes/v2/pages/Editor/store/actions";
 import { generateUniqueInputName } from "@/routes/v2/pages/Editor/store/nameUtils";
-import type { InputNodeSnapshot } from "@/routes/v2/pages/Editor/store/nodeCloneHandlers";
-import {
-  createEntityNode,
-  ioDefaultPosition,
-} from "@/routes/v2/shared/nodes/buildUtils";
+import { inputManifestBase } from "@/routes/v2/shared/nodes/IONode/inputManifestBase";
 import type {
-  IONodeData,
+  InputNodeSnapshot,
   NodeTypeManifest,
 } from "@/routes/v2/shared/nodes/types";
+import { deepClone } from "@/utils/deepClone";
 
-import { IONode } from "./components/IONode";
 import { InputDetails } from "./context/InputDetails";
 
-const deepClone = <T>(obj: T): T => JSON.parse(JSON.stringify(obj));
-
 export const inputManifest: NodeTypeManifest = {
-  type: "io",
-  idPrefix: "input_",
-  entityType: "input",
-
-  component: IONode,
-
-  buildNodes(spec) {
-    return [...spec.inputs].map((input, index) =>
-      createEntityNode(input, "io", ioDefaultPosition(index, -200), {
-        entityId: input.$id,
-        ioType: "input",
-        name: input.name,
-      } satisfies IONodeData),
-    );
-  },
-
-  fingerprintParts(spec) {
-    return [...spec.inputs].map((input) => {
-      const pos = input.annotations.get("editor.position");
-      const z = input.annotations.get("zIndex");
-      return `i:${input.$id}:${input.name}:${pos.x},${pos.y}:z${z ?? ""}`;
-    });
-  },
+  ...inputManifestBase,
 
   drop: {
     dataKey: "input",
     handler(spec, _data, position) {
       addInput(spec, position);
     },
-  },
-
-  getPosition(spec, nodeId) {
-    const input = spec.inputs.find((i) => i.$id === nodeId);
-    if (!input) return undefined;
-    return input.annotations.get("editor.position");
   },
 
   updatePosition(spec, nodeId, position) {
@@ -63,25 +29,7 @@ export const inputManifest: NodeTypeManifest = {
     spec.deleteInputById(nodeId);
   },
 
-  findEntity(spec, entityId) {
-    return spec.inputs.find((i) => i.$id === entityId);
-  },
-
-  selectable: true,
-
-  toSelectedNode(node) {
-    return { id: node.id, type: "input", position: node.position };
-  },
-
   contextPanelComponent: InputDetails,
-
-  displayName(spec, entityId) {
-    const input = spec.inputs.find((i) => i.$id === entityId);
-    return input?.name ?? entityId;
-  },
-
-  icon: "Download",
-  iconColor: "text-blue-500",
 
   cloneHandler: {
     snapshot(spec, entityId) {

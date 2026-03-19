@@ -1,14 +1,8 @@
-import { useReactFlow } from "@xyflow/react";
-import { useEffect } from "react";
+import type { Node } from "@xyflow/react";
 
-import {
-  autoLayoutNodes,
-  type LayoutAlgorithm,
-} from "@/components/shared/ReactFlow/FlowCanvas/utils/autolayout";
 import type { ComponentSpec } from "@/models/componentSpec";
 import { applyAutoLayoutPositions } from "@/routes/v2/pages/Editor/store/actions";
-import { CMDALT, SHIFT } from "@/routes/v2/shared/shortcuts/keys";
-import { registerShortcut } from "@/routes/v2/shared/store/keyboardStore";
+import { useAutoLayoutShortcut } from "@/routes/v2/shared/hooks/useAutoLayoutShortcut";
 
 /**
  * Registers Cmd+Shift+L keyboard shortcut for auto-layout.
@@ -19,33 +13,10 @@ import { registerShortcut } from "@/routes/v2/shared/store/keyboardStore";
  * be invoked programmatically via `invokeShortcut("auto-layout", { algorithm })`.
  */
 export function useAutoLayout(spec: ComponentSpec | null): void {
-  const { getNodes, getEdges, fitView } = useReactFlow();
-
-  const handleAutoLayout = (algorithm?: LayoutAlgorithm) => {
+  const applyLayout = (layoutedNodes: Node[]) => {
     if (!spec) return;
-
-    const nodes = getNodes();
-    const edges = getEdges();
-    if (nodes.length === 0) return;
-
-    const layoutedNodes = autoLayoutNodes(nodes, edges, algorithm);
     applyAutoLayoutPositions(spec, layoutedNodes);
-
-    requestAnimationFrame(() => {
-      fitView({ maxZoom: 1, duration: 300 });
-    });
   };
 
-  useEffect(() => {
-    const unregister = registerShortcut({
-      id: "auto-layout",
-      keys: [CMDALT, SHIFT, "L"],
-      label: "Auto layout",
-      action: (_event, params) => {
-        handleAutoLayout(params?.algorithm as LayoutAlgorithm | undefined);
-      },
-    });
-
-    return unregister;
-  }, [handleAutoLayout]);
+  useAutoLayoutShortcut(applyLayout);
 }

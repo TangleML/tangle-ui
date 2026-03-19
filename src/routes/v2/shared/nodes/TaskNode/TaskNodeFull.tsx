@@ -11,8 +11,8 @@ import {
 } from "@/components/ui/tooltip";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
-import { InputValidationIndicator } from "@/routes/v2/pages/Editor/components/InputValidationIndicator";
-import { getContrastTextColor } from "@/routes/v2/pages/Editor/nodes/TaskNode/components/utils/color";
+import { InputValidationIndicator } from "@/routes/v2/shared/components/InputValidationIndicator";
+import { getContrastTextColor } from "@/routes/v2/shared/nodes/TaskNode/color.utils";
 
 import type { TaskNodeViewProps } from "./TaskNode";
 

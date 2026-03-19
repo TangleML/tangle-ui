@@ -9,12 +9,7 @@ import {
   useReactFlow,
 } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
-import { useEffect } from "react";
 
-import {
-  autoLayoutNodes,
-  type LayoutAlgorithm,
-} from "@/components/shared/ReactFlow/FlowCanvas/utils/autolayout";
 import { BlockStack } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
 import type { ComponentSpec } from "@/models/componentSpec";
@@ -22,12 +17,11 @@ import {
   FLOW_CANVAS_DEFAULT_PROPS,
   GRID_SIZE,
 } from "@/routes/v2/shared/flowCanvasDefaults";
+import { useAutoLayoutShortcut } from "@/routes/v2/shared/hooks/useAutoLayoutShortcut";
 import { useFlowCanvasState } from "@/routes/v2/shared/hooks/useFlowCanvasState";
 import { useViewportScaling } from "@/routes/v2/shared/hooks/useViewportScaling";
 import { NODE_TYPE_REGISTRY } from "@/routes/v2/shared/nodes/registry";
-import { CMDALT, SHIFT } from "@/routes/v2/shared/shortcuts/keys";
 import { clearSelection } from "@/routes/v2/shared/store/editorStore";
-import { registerShortcut } from "@/routes/v2/shared/store/keyboardStore";
 
 const nodeTypes = NODE_TYPE_REGISTRY.getNodeTypes();
 const edgeTypes = NODE_TYPE_REGISTRY.getEdgeTypes();
@@ -42,7 +36,7 @@ export const RunViewFlowCanvas = observer(function RunViewFlowCanvas({
   className,
 }: RunViewFlowCanvasProps) {
   const { containerRef, handleViewportChange } = useViewportScaling();
-  const { getNodes, getEdges, setNodes: rfSetNodes, fitView } = useReactFlow();
+  const { setNodes: rfSetNodes } = useReactFlow();
 
   const {
     displayNodes,
@@ -51,6 +45,11 @@ export const RunViewFlowCanvas = observer(function RunViewFlowCanvas({
     rfOnNodesChange,
     selectionBehavior,
   } = useFlowCanvasState({ spec });
+
+  const applyLayout = (layoutedNodes: import("@xyflow/react").Node[]) => {
+    rfSetNodes(layoutedNodes);
+  };
+  useAutoLayoutShortcut(applyLayout);
 
   const onNodesChange = (changes: NodeChange[]) => {
     const filtered = changes.filter(
@@ -62,35 +61,6 @@ export const RunViewFlowCanvas = observer(function RunViewFlowCanvas({
   const onPaneClick = () => {
     clearSelection();
   };
-
-  useEffect(() => {
-    const handleAutoLayout = (algorithm?: LayoutAlgorithm) => {
-      const currentNodes = getNodes();
-      const currentEdges = getEdges();
-      if (currentNodes.length === 0) return;
-
-      const layoutedNodes = autoLayoutNodes(
-        currentNodes,
-        currentEdges,
-        algorithm,
-      );
-      rfSetNodes(layoutedNodes);
-      requestAnimationFrame(() => {
-        fitView({ maxZoom: 1, duration: 300 });
-      });
-    };
-
-    const unregister = registerShortcut({
-      id: "auto-layout",
-      keys: [CMDALT, SHIFT, "L"],
-      label: "Auto layout",
-      action: (_event, params) => {
-        handleAutoLayout(params?.algorithm as LayoutAlgorithm | undefined);
-      },
-    });
-
-    return unregister;
-  }, [getNodes, getEdges, rfSetNodes, fitView]);
 
   return (
     <BlockStack ref={containerRef} fill className={cn("relative", className)}>

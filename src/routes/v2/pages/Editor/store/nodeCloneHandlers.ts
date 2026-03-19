@@ -4,20 +4,10 @@ import type { IdGenerator } from "@/models/componentSpec/factories/idGenerator";
 import type {
   BindingSnapshot,
   FlexNodeSnapshot,
-  InputNodeSnapshot,
   NodeSnapshot,
-  OutputNodeSnapshot,
-  TaskNodeSnapshot,
 } from "@/routes/v2/shared/nodes/types";
 
-export type {
-  BindingSnapshot,
-  FlexNodeSnapshot,
-  InputNodeSnapshot,
-  NodeSnapshot,
-  OutputNodeSnapshot,
-  TaskNodeSnapshot,
-};
+export type { BindingSnapshot, FlexNodeSnapshot, NodeSnapshot };
 
 // -- Standalone binding helpers (node-type-independent) --
 

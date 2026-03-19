@@ -1,7 +1,7 @@
 import type { XYPosition } from "@xyflow/react";
 import { Position } from "@xyflow/react";
 
-import type { GuidelineOrientation } from "@/models/componentSpec/annotations";
+import type { GuidelineInfo } from "@/routes/v2/shared/nodes/types";
 
 import {
   buildOrthogonalPolyline,
@@ -10,13 +10,6 @@ import {
 import { roundPathCorners } from "./roundPathCorners";
 
 const EDGE_SPACING = 4;
-
-export interface GuidelineInfo {
-  orientation: GuidelineOrientation;
-  coordinate: number;
-  edgeIndex: number;
-  edgeTotal: number;
-}
 
 interface ConduitEdgePathParams {
   sourceX: number;

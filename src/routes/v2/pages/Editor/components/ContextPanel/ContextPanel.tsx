@@ -2,9 +2,8 @@ import "@/routes/v2/pages/Editor/nodes"; // ensure manifests are registered
 
 import { observer } from "mobx-react-lite";
 
-import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
-import { Text } from "@/components/ui/typography";
+import { ContextPanelEmptyState } from "@/routes/v2/shared/components/ContextPanelEmptyState";
 import { NODE_TYPE_REGISTRY } from "@/routes/v2/shared/nodes/registry";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { editorStore } from "@/routes/v2/shared/store/editorStore";
@@ -26,13 +25,13 @@ export const ContextPanelContent = observer(function ContextPanelContent() {
   }
 
   if (!selectedNodeId || !selectedNodeType || !spec) {
-    return <EmptyState />;
+    return <ContextPanelEmptyState />;
   }
 
   const manifest = NODE_TYPE_REGISTRY.get(selectedNodeType);
   const Panel = manifest?.contextPanelComponent;
 
-  if (!Panel) return <EmptyState />;
+  if (!Panel) return <ContextPanelEmptyState />;
 
   return (
     <BlockStack className="h-full bg-white overflow-y-auto overflow-x-hidden">
@@ -40,14 +39,3 @@ export const ContextPanelContent = observer(function ContextPanelContent() {
     </BlockStack>
   );
 });
-
-function EmptyState() {
-  return (
-    <BlockStack className="h-full items-center justify-center p-4">
-      <Icon name="MousePointerClick" size="lg" className="text-gray-300" />
-      <Text size="sm" tone="subdued" className="text-center mt-2">
-        Select a node to view details
-      </Text>
-    </BlockStack>
-  );
-}
