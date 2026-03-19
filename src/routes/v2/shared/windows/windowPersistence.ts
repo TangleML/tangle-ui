@@ -1,7 +1,7 @@
 /**
  * Window layout persistence module.
  *
- * Persists window arrangement (position, size, docking, attachments, hidden state)
+ * Persists window arrangement (position, size, docking, hidden state)
  * to localStorage for static windows. On page reload, windows restore their
  * previous arrangement. Also persists dock area configuration.
  */
@@ -12,7 +12,7 @@ import { useEffect } from "react";
 import { debounce } from "@/utils/debounce";
 import { getStorage } from "@/utils/typedStorage";
 
-import type { AttachmentInfo, DockState, Position, Size } from "./types";
+import type { DockState, Position, Size } from "./types";
 import {
   getDockAreaConfig,
   getSerializedStoreState,
@@ -44,7 +44,6 @@ interface PersistedWindowState {
   position: Position;
   size: Size;
   dockState: DockState;
-  attachedTo?: AttachmentInfo;
   isHidden: boolean;
   isMinimized: boolean;
   preDockedPosition?: Position;
@@ -77,7 +76,7 @@ type WindowLayoutStorageMap = {
 
 const storage = getStorage<typeof STORAGE_KEY, WindowLayoutStorageMap>();
 
-const CURRENT_VERSION = 3;
+const CURRENT_VERSION = 4;
 
 function saveWindowLayoutImmediate(): void {
   const existingLayout = loadWindowLayout();
@@ -114,7 +113,6 @@ function saveWindowLayoutImmediate(): void {
         position: { ...win.position },
         size: { ...win.size },
         dockState: win.dockState,
-        attachedTo: win.attachedTo ? { ...win.attachedTo } : undefined,
         isHidden: win.state === "hidden",
         isMinimized: win.state === "minimized",
         preDockedPosition: win.preDockedPosition

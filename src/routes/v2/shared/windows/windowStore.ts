@@ -2,9 +2,7 @@ import { action, makeObservable, observable } from "mobx";
 import type { ReactNode } from "react";
 
 import { emitDockAreaEvent } from "./dockAreaPlugins";
-import { calculateAttachPosition } from "./snapUtils";
 import {
-  type AttachmentInfo,
   CASCADE_OFFSET,
   DEFAULT_DOCK_AREA_WIDTH,
   DEFAULT_MIN_SIZE,
@@ -22,13 +20,6 @@ import {
   getPersistedWindowState,
   STATIC_WINDOW_IDS,
 } from "./windowPersistence";
-import {
-  attachWindow as attachWindowFn,
-  cascadeOnHide,
-  cascadeOnRestore,
-  detachWindow as detachWindowFn,
-  updateAttachedWindowPositions,
-} from "./windowStore.attachments";
 import {
   dockWindow as dockWindowFn,
   getDockAreaWindowIds as getDockAreaWindowIdsFn,
@@ -110,22 +101,13 @@ class WindowStoreImpl {
       ? getPersistedWindowState(id)
       : null;
 
-    let initialPosition =
+    const initialPosition =
       persistedState?.position ??
       options.position ??
       this.calculateNewPosition();
-    let attachedTo: AttachmentInfo | undefined = persistedState?.attachedTo;
     const initialDockState: DockState = persistedState?.dockState ?? "none";
     const initialSize = persistedState?.size ??
       options.size ?? { ...DEFAULT_WINDOW_SIZE };
-
-    if (!attachedTo && options.attachTo) {
-      const parentWindow = this.windows[options.attachTo];
-      if (parentWindow && parentWindow.state !== "hidden") {
-        initialPosition = calculateAttachPosition(parentWindow);
-        attachedTo = { parentId: options.attachTo, offsetX: 0 };
-      }
-    }
 
     const shouldStartHidden =
       !!persistedState?.isHidden && !options.startVisible;
@@ -150,7 +132,6 @@ class WindowStoreImpl {
       disabledActions: options.disabledActions,
       dockState: initialDockState,
       dockedHeight: persistedState?.dockedHeight,
-      attachedTo,
       preDockedPosition: persistedState?.preDockedPosition
         ? { ...persistedState.preDockedPosition }
         : undefined,
@@ -239,8 +220,6 @@ class WindowStoreImpl {
     win.previousPosition = { ...win.position };
     win.previousSize = { ...win.size };
     win.state = "hidden";
-
-    cascadeOnHide(this.windows, id);
   }
 
   /** Restore a window to its previous state */
@@ -268,10 +247,6 @@ class WindowStoreImpl {
     win.previousSize = undefined;
 
     this.bringToFront(id);
-
-    if (wasHidden) {
-      cascadeOnRestore(this.windows, id);
-    }
 
     if (wasDocked && (wasMinimized || wasHidden) && isDockSide(win.dockState)) {
       emitDockAreaEvent({
@@ -303,12 +278,7 @@ class WindowStoreImpl {
   @action updateWindowSize(id: string, size: Size): void {
     const win = this.windows[id];
     if (win) {
-      const heightChanged = win.size.height !== size.height;
       win.size = size;
-
-      if (heightChanged) {
-        updateAttachedWindowPositions(this.windows, id);
-      }
     }
   }
 
@@ -401,16 +371,6 @@ class WindowStoreImpl {
     state: { width: number; collapsed: boolean; windowOrder: string[] },
   ): void {
     restoreDockAreaFn(this.dockAreas, side, state);
-  }
-
-  // -- Attachments (delegates to windowStore.attachments.ts) --
-
-  @action attachWindow(childId: string, parentId: string): void {
-    attachWindowFn(this.windows, childId, parentId);
-  }
-
-  @action detachWindow(id: string): void {
-    detachWindowFn(this.windows, id);
   }
 
   // -- Quiet mutations (no event emission — used by accordion plugin) --

@@ -92,14 +92,6 @@ export function toggleDockAreaCollapsed(side: "left" | "right"): void {
   windowStore.toggleDockAreaCollapsed(side);
 }
 
-export function attachWindow(childId: string, parentId: string): void {
-  windowStore.attachWindow(childId, parentId);
-}
-
-export function detachWindow(id: string): void {
-  windowStore.detachWindow(id);
-}
-
 export function minimizeWindowQuietly(id: string): void {
   windowStore.minimizeWindowQuietly(id);
 }

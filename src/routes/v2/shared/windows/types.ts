@@ -26,14 +26,6 @@ export interface Size {
   height: number;
 }
 
-/** Information about window attachment to another window */
-export interface AttachmentInfo {
-  /** ID of the parent window this is attached to */
-  parentId: string;
-  /** X offset from parent's left edge (for alignment preservation) */
-  offsetX: number;
-}
-
 /** Configuration for a dock area column */
 export interface DockAreaConfig {
   width: number;
@@ -44,12 +36,6 @@ export interface DockAreaConfig {
 /** Snap preview types for visual feedback during drag */
 export type SnapPreviewType =
   | { type: "edge"; side: "left" | "right" }
-  | {
-      type: "attach";
-      parentId: string;
-      parentBottom: number;
-      parentLeft: number;
-    }
   | {
       type: "dock-insert";
       side: "left" | "right";
@@ -82,8 +68,6 @@ export interface WindowConfig {
   dockedHeight?: number;
   /** Docking state for edge snapping */
   dockState: DockState;
-  /** Attachment info if this window is attached to another window's bottom */
-  attachedTo?: AttachmentInfo;
 }
 
 /** Reference returned from open() for controlling a window */
@@ -112,8 +96,6 @@ export interface WindowOptions {
   linkedEntityId?: string;
   /** Actions to disable for this window (e.g., ["close"] for non-closable windows) */
   disabledActions?: WindowAction[];
-  /** ID of a window to attach this window below (for vertical stacking) */
-  attachTo?: string;
   /** If true, window starts visible even if persisted state was hidden. Use for selection-driven windows. */
   startVisible?: boolean;
 }
@@ -134,12 +116,6 @@ export const CASCADE_OFFSET = 24;
 
 /** Distance from viewport edge to trigger dock preview (px) */
 export const EDGE_SNAP_THRESHOLD = 2;
-
-/** Distance from another window's bottom to trigger magnetic attachment (px) */
-export const MAGNETIC_SNAP_THRESHOLD = 5;
-
-/** Distance to drag before detaching from parent window (px) */
-export const DETACH_THRESHOLD = 10;
 
 /** Approximate height of the TaskPanel bar (px). Used to offset docked windows when TaskPanel is visible. */
 export const TASK_PANEL_HEIGHT = 43;
