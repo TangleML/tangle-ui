@@ -26,19 +26,19 @@ import { DashboardPipelinesView } from "./Dashboard/DashboardPipelinesView";
 import { DashboardRecentlyViewedView } from "./Dashboard/DashboardRecentlyViewedView";
 import { DashboardRunsView } from "./Dashboard/DashboardRunsView";
 import Editor from "./Editor";
-import { EditorV2 } from "./EditorV2/EditorV2";
 import Home from "./Home";
 import { ImportPage } from "./Import";
 import NotFoundPage from "./NotFoundPage";
 import { PipelineFoldersPage } from "./PipelineFolders/PipelineFoldersPage";
 import PipelineRun from "./PipelineRun";
 import { QuickStartPage } from "./QuickStart";
-import { RunViewV2 } from "./RunViewV2/RunViewV2";
 import { BackendSettings } from "./Settings/sections/BackendSettings";
 import { BetaFeaturesSettings } from "./Settings/sections/BetaFeaturesSettings";
 import { PreferencesSettings } from "./Settings/sections/PreferencesSettings";
 import { SecretsSettings } from "./Settings/sections/SecretsSettings";
 import { SettingsLayout } from "./Settings/SettingsLayout";
+import { EditorV2 } from "./v2/pages/Editor/EditorV2";
+import { RunViewV2 } from "./v2/pages/RunView/RunViewV2";
 
 declare module "@tanstack/react-router" {
   interface Register {

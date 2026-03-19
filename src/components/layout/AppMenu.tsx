@@ -28,8 +28,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
-import { EditorMenuBar } from "@/routes/EditorV2/components/EditorMenuBar/EditorMenuBar";
 import { APP_ROUTES } from "@/routes/router";
+import { EditorMenuBar } from "@/routes/v2/pages/Editor/components/EditorMenuBar/EditorMenuBar";
 import { DOCUMENTATION_URL, TOP_NAV_HEIGHT } from "@/utils/constants";
 
 import TooltipButton from "../shared/Buttons/TooltipButton";
