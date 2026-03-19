@@ -2,19 +2,48 @@
 name: review
 description: Code review of current PR/commit changes against project coding standards. Use when the user asks for a code review or mentions reviewing changes.
 disable-model-invocation: true
-allowed-tools: Bash(git *), Bash(gt *), Read, Grep, Glob
+allowed-tools: Bash(git *), Bash(gt *), Bash(gh *), Read, Grep, Glob, Agent
+argument-hint: [PR number]
 ---
 
 # Code Review
 
-Review the current commit (HEAD) against project coding standards. This team uses **Graphite** for stacked PRs — each commit is a PR in a stack.
+Review code changes against project coding standards. This team uses **Graphite** for stacked PRs — each commit is a PR in a stack.
 
-## Review Process
+## Step 0: Determine Review Target
 
-1. **Default scope**: Review the last commit (`git show HEAD`). Each commit = one Graphite PR.
-2. **Only review changed code**. Do not flag pre-existing issues unless they directly cause problems with the new changes.
-3. **Source of truth**: Use `git show HEAD --stat` to see changed files, then `git show HEAD` for the diff. Do NOT use `git diff main...HEAD` as this shows all commits in the stack, not just the current one.
-4. **Read files**: Always read the full files being reviewed to understand context, not just the diff.
+Check if the user provided a PR number as an argument.
+
+**If a PR number was provided** (e.g., `/review 1234`):
+
+```bash
+gh pr view <number> --json number,title,url,headRefOid --jq '{number, title, url, head_sha: .headRefOid}'
+gh pr diff <number>
+```
+
+**If no argument was provided**, try the current branch:
+
+```bash
+gh pr view --json number,title,url,headRefOid --jq '{number, title, url, head_sha: .headRefOid}'
+gh pr diff
+```
+
+**If no PR exists for the current branch**, fall back to local commit review:
+
+- Use `git show HEAD` as the diff source (existing behavior)
+- Skip all comment posting steps later — just output the review to chat
+- Note: each commit = one Graphite PR, so this reviews a single commit
+
+Store the **PR number** and **head commit SHA** for comment posting later.
+
+## Step 1: Review Process
+
+1. **Only review changed code**. Do not flag pre-existing issues unless they directly cause problems with the new changes.
+2. **Source of truth**:
+   - **PR mode**: Use `gh pr diff <number>` for the diff
+   - **Fallback mode**: Use `git show HEAD --stat` then `git show HEAD` for the diff. Do NOT use `git diff main...HEAD` as this shows all commits in the stack.
+3. **Read files**: Always read the full files being reviewed to understand context, not just the diff.
+4. **Track locations**: For each finding, record the exact file path and line number from the diff — these are needed for posting inline comments.
 
 ## What to Check
 
@@ -69,6 +98,63 @@ Present findings in this format:
 | ----- | --------------- | --------- |
 | ...   | High/Medium/Low | file:line |
 ```
+
+## Step 2: Select Comments to Post (PR mode only)
+
+**Skip this step entirely if in fallback mode (no PR).**
+
+After presenting the review, use `AskUserQuestion` with **multi-select** to let the user pick which findings to post as inline PR comments.
+
+Each option should show:
+
+- Severity
+- File path and line number
+- Issue title
+- A brief preview of the comment that would be posted
+
+Example options:
+
+- `[High] src/utils/api.ts:42 — "Unsafe type cast" → suggest type guard instead of as`
+- `[Medium] src/components/List.tsx:15 — "Missing UI primitive" → use BlockStack instead of div`
+
+The user picks which comments to post. Only proceed with the selected ones.
+
+If the user selects none or there are no findings, skip to the end.
+
+## Step 3: Post Selected Comments (PR mode only)
+
+**Skip this step entirely if in fallback mode (no PR).**
+
+Determine the repo owner/name:
+
+```bash
+gh repo view --json nameWithOwner --jq '.nameWithOwner'
+```
+
+For each selected finding, post an inline review comment. Every comment **must** be prefixed with the AI disclaimer:
+
+```markdown
+> :robot: This is an AI-generated code review comment.
+
+<rest of the comment body>
+```
+
+Post using:
+
+```bash
+gh api repos/{owner}/{repo}/pulls/{pr_number}/comments \
+  -f body="<comment>" \
+  -f path="<file>" \
+  -F line=<line> \
+  -f commit_id="<head_sha>"
+```
+
+After posting, show a summary:
+
+| #   | File                       | Issue                | Posted |
+| --- | -------------------------- | -------------------- | ------ |
+| 1   | src/utils/api.ts:42        | Unsafe type cast     | Yes    |
+| 2   | src/components/List.tsx:15 | Missing UI primitive | Yes    |
 
 ## Review Principles
 
