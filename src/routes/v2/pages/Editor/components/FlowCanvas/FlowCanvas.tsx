@@ -1,5 +1,3 @@
-import "@/routes/v2/pages/Editor/nodes"; // ensure manifests are registered
-
 import {
   Background,
   type ConnectionLineComponentProps,
@@ -28,7 +26,7 @@ import {
 import { useFlowCanvasState } from "@/routes/v2/shared/hooks/useFlowCanvasState";
 import { focusModeStore } from "@/routes/v2/shared/hooks/useFocusMode";
 import { useViewportScaling } from "@/routes/v2/shared/hooks/useViewportScaling";
-import { NODE_TYPE_REGISTRY } from "@/routes/v2/shared/nodes/registry";
+import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { CMDALT } from "@/routes/v2/shared/shortcuts/keys";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
@@ -40,9 +38,6 @@ import { useFitViewOnFocus } from "./hooks/useFitViewOnFocus";
 import { useNodeEdgeChanges } from "./hooks/useNodeEdgeChanges";
 import { usePaneClickBehavior } from "./hooks/usePaneClickBehavior";
 import { SelectionToolbar } from "./SelectionToolbar";
-
-const nodeTypes = NODE_TYPE_REGISTRY.getNodeTypes();
-const edgeTypes = NODE_TYPE_REGISTRY.getEdgeTypes();
 
 function ConnectionLine({
   fromX,
@@ -86,6 +81,9 @@ export const FlowCanvas = observer(function FlowCanvas({
   spec,
   className,
 }: FlowCanvasProps) {
+  const registry = useNodeRegistry();
+  const nodeTypes = registry.getNodeTypes();
+  const edgeTypes = registry.getEdgeTypes();
   const { keyboard } = useSharedStores();
   const { containerRef, handleViewportChange } = useViewportScaling();
   const [reactFlowInstance, setReactFlowInstance] =

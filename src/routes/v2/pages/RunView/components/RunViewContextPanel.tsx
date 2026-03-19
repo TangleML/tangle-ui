@@ -1,13 +1,12 @@
-import "@/routes/v2/pages/RunView/nodes";
-
 import { observer } from "mobx-react-lite";
 
 import { BlockStack } from "@/components/ui/layout";
 import { ContextPanelEmptyState } from "@/routes/v2/shared/components/ContextPanelEmptyState";
-import { NODE_TYPE_REGISTRY } from "@/routes/v2/shared/nodes/registry";
+import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 export const RunViewContextPanel = observer(function RunViewContextPanel() {
+  const registry = useNodeRegistry();
   const { editor } = useSharedStores();
   const { selectedNodeId, selectedNodeType } = editor;
 
@@ -15,7 +14,7 @@ export const RunViewContextPanel = observer(function RunViewContextPanel() {
     return <ContextPanelEmptyState />;
   }
 
-  const manifest = NODE_TYPE_REGISTRY.get(selectedNodeType);
+  const manifest = registry.get(selectedNodeType);
   const Panel = manifest?.contextPanelComponent;
 
   if (!Panel) return <ContextPanelEmptyState />;

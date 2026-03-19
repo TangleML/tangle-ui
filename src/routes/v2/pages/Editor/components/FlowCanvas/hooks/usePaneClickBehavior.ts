@@ -1,17 +1,16 @@
-import "@/routes/v2/pages/Editor/nodes"; // ensure manifests are registered
-
 import type { ReactFlowInstance, ReactFlowProps } from "@xyflow/react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
-import { NODE_TYPE_REGISTRY } from "@/routes/v2/shared/nodes/registry";
+import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 export function usePaneClickBehavior(
   spec: ComponentSpec | null,
   reactFlowInstance: ReactFlowInstance | null,
 ): Required<Pick<ReactFlowProps, "onPaneClick">> {
+  const registry = useNodeRegistry();
   const { editor, keyboard } = useSharedStores();
   const { undo } = useEditorSession();
 
@@ -25,7 +24,7 @@ export function usePaneClickBehavior(
       y: event.clientY,
     });
 
-    for (const manifest of NODE_TYPE_REGISTRY.all()) {
+    for (const manifest of registry.all()) {
       manifest.onPaneClick?.(spec, position, { editor, keyboard, undo });
     }
   };

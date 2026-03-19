@@ -8,10 +8,10 @@ import {
 } from "@/models/componentSpec";
 import type { ClipboardStore } from "@/routes/v2/pages/Editor/store/clipboardStore";
 import { generateUniqueTaskName } from "@/routes/v2/pages/Editor/store/nameUtils";
-import { NODE_TYPE_REGISTRY } from "@/routes/v2/shared/nodes/registry";
 import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
 import type { SelectedNode } from "@/routes/v2/shared/store/editorStore";
 
+import { editorRegistry } from "../../nodes";
 import { idGen, TASK_COLOR_ANNOTATION } from "./utils";
 
 export function addTask(
@@ -89,7 +89,7 @@ export function deleteSelectedNodes(
 
   undo.withGroup("Delete selected nodes", () => {
     for (const node of selectedNodes) {
-      const manifest = NODE_TYPE_REGISTRY.getByNodeId(spec, node.id);
+      const manifest = editorRegistry.getByNodeId(spec, node.id);
       manifest?.deleteNode(undo, spec, node.id);
     }
   });
@@ -118,7 +118,7 @@ export function applyAutoLayoutPositions(
 ) {
   undo.withGroup("Auto layout", () => {
     for (const node of layoutedNodes) {
-      const manifest = NODE_TYPE_REGISTRY.getByNodeId(spec, node.id);
+      const manifest = editorRegistry.getByNodeId(spec, node.id);
       manifest?.updatePosition(undo, spec, node.id, node.position);
     }
   });

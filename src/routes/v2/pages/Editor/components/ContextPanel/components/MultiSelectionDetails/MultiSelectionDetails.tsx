@@ -14,6 +14,7 @@ import { Text } from "@/components/ui/typography";
 import type { Task } from "@/models/componentSpec";
 import { usePipelineActions } from "@/routes/v2/pages/Editor/store/actions/usePipelineActions";
 import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskActions";
+import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
@@ -31,6 +32,7 @@ import {
  * Shows list of selected nodes, common argument editing, and Create Subgraph section.
  */
 export const MultiSelectionDetails = observer(function MultiSelectionDetails() {
+  const registry = useNodeRegistry();
   const { editor } = useSharedStores();
   const { multiSelection } = editor;
   const spec = useSpec();
@@ -121,12 +123,12 @@ export const MultiSelectionDetails = observer(function MultiSelectionDetails() {
                 className="text-xs py-1.5 px-2 bg-slate-50 rounded border border-slate-100"
               >
                 <Icon
-                  name={getNodeIcon(node.type) as any}
+                  name={getNodeIcon(registry, node.type) as any}
                   size="xs"
-                  className={`shrink-0 ${getNodeIconColor(node.type)}`}
+                  className={`shrink-0 ${getNodeIconColor(registry, node.type)}`}
                 />
                 <Text size="xs" className="text-slate-700 truncate flex-1">
-                  {getNodeDisplayName(node, spec)}
+                  {getNodeDisplayName(registry, node, spec)}
                 </Text>
                 <Text size="xs" className="text-slate-400 capitalize">
                   {node.type}

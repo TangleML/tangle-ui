@@ -1,14 +1,12 @@
-import "@/routes/v2/pages/Editor/nodes"; // ensure manifests are registered
-
 import type { XYPosition } from "@xyflow/react";
 import { action, computed, makeObservable, observable } from "mobx";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 import { IncrementingIdGenerator } from "@/models/componentSpec/factories/idGenerator";
-import { NODE_TYPE_REGISTRY } from "@/routes/v2/shared/nodes/registry";
 import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
 import type { SelectedNode } from "@/routes/v2/shared/store/editorStore";
 
+import { editorRegistry } from "../nodes";
 import {
   type BindingSnapshot,
   cloneBindings,
@@ -102,7 +100,7 @@ export class ClipboardStore {
     const snapshots: NodeSnapshot[] = [];
 
     for (const node of selectedNodes) {
-      const manifest = NODE_TYPE_REGISTRY.get(node.type);
+      const manifest = editorRegistry.get(node.type);
       const snapshot = manifest?.cloneHandler?.snapshot(spec, node.id);
       if (snapshot) snapshots.push(snapshot);
     }
@@ -138,7 +136,7 @@ export class ClipboardStore {
     const snapshots: NodeSnapshot[] = [];
 
     for (const node of selectedNodes) {
-      const manifest = NODE_TYPE_REGISTRY.get(node.type);
+      const manifest = editorRegistry.get(node.type);
       const snapshot = manifest?.cloneHandler?.snapshot(spec, node.id);
       if (snapshot) snapshots.push(snapshot);
     }
@@ -158,7 +156,7 @@ export class ClipboardStore {
           y: snapshot.position.y + PASTE_OFFSET,
         };
 
-        const manifest = NODE_TYPE_REGISTRY.get(snapshot.type);
+        const manifest = editorRegistry.get(snapshot.type);
         const newId = manifest?.cloneHandler?.clone(
           spec,
           snapshot,
@@ -206,7 +204,7 @@ export class ClipboardStore {
           y: centerPosition.y + (snapshot.position.y - snapshotCenter.y),
         };
 
-        const manifest = NODE_TYPE_REGISTRY.get(snapshot.type);
+        const manifest = editorRegistry.get(snapshot.type);
         const newId = manifest?.cloneHandler?.clone(
           spec,
           snapshot,

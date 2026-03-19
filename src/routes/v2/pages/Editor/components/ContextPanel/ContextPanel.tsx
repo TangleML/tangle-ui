@@ -1,10 +1,8 @@
-import "@/routes/v2/pages/Editor/nodes"; // ensure manifests are registered
-
 import { observer } from "mobx-react-lite";
 
 import { BlockStack } from "@/components/ui/layout";
 import { ContextPanelEmptyState } from "@/routes/v2/shared/components/ContextPanelEmptyState";
-import { NODE_TYPE_REGISTRY } from "@/routes/v2/shared/nodes/registry";
+import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
@@ -16,6 +14,7 @@ import { MultiSelectionDetails } from "./components/MultiSelectionDetails/MultiS
  * Used within the Windows system.
  */
 export const ContextPanelContent = observer(function ContextPanelContent() {
+  const registry = useNodeRegistry();
   const { editor } = useSharedStores();
   const { selectedNodeId, selectedNodeType, multiSelection } = editor;
 
@@ -29,7 +28,7 @@ export const ContextPanelContent = observer(function ContextPanelContent() {
     return <ContextPanelEmptyState />;
   }
 
-  const manifest = NODE_TYPE_REGISTRY.get(selectedNodeType);
+  const manifest = registry.get(selectedNodeType);
   const Panel = manifest?.contextPanelComponent;
 
   if (!Panel) return <ContextPanelEmptyState />;

@@ -23,6 +23,7 @@ import {
   useExecutionData,
 } from "@/providers/ExecutionDataProvider";
 import { useDockAreaAccordion } from "@/routes/v2/shared/hooks/useDockAreaAccordion";
+import { NodeRegistryProvider } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { SpecProvider } from "@/routes/v2/shared/providers/SpecContext";
 import {
   SharedStoreProvider,
@@ -39,6 +40,7 @@ import { RunViewMenuBar } from "./components/RunViewMenuBar/RunViewMenuBar";
 import { useRunViewSelectionSync } from "./hooks/useRunViewSelectionSync";
 import { useRunViewSpecLifecycle } from "./hooks/useRunViewSpecLifecycle";
 import { useRunViewWindows } from "./hooks/useRunViewWindows";
+import { runViewRegistry } from "./nodes";
 
 function deserializeRunSpec(data: unknown): ComponentSpec {
   const generator = new IncrementingIdGenerator();
@@ -143,27 +145,29 @@ const RunViewLayout = observer(function RunViewLayout({
   if (!activeSpec) return null;
 
   return (
-    <SpecProvider spec={activeSpec}>
-      <RunViewMenuBar />
-      <TaskPanel />
-      <InlineStack
-        className="flex-1 min-h-0 w-full"
-        gap="0"
-        blockAlign="stretch"
-        wrap="nowrap"
-        data-testid="run-view-v2"
-      >
-        <div className="relative flex-1 min-w-0 h-full">
-          <RunViewFlowCanvas
-            key={activeSpec?.$id ?? "root"}
-            spec={activeSpec}
-            className="h-full"
-          />
-          <WindowContainer />
-        </div>
-        <DockArea side="right" />
-      </InlineStack>
-    </SpecProvider>
+    <NodeRegistryProvider registry={runViewRegistry}>
+      <SpecProvider spec={activeSpec}>
+        <RunViewMenuBar />
+        <TaskPanel />
+        <InlineStack
+          className="flex-1 min-h-0 w-full"
+          gap="0"
+          blockAlign="stretch"
+          wrap="nowrap"
+          data-testid="run-view-v2"
+        >
+          <div className="relative flex-1 min-w-0 h-full">
+            <RunViewFlowCanvas
+              key={activeSpec?.$id ?? "root"}
+              spec={activeSpec}
+              className="h-full"
+            />
+            <WindowContainer />
+          </div>
+          <DockArea side="right" />
+        </InlineStack>
+      </SpecProvider>
+    </NodeRegistryProvider>
   );
 });
 

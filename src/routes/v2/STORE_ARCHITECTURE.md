@@ -25,11 +25,11 @@ never through module-level singletons.
 Provided by `SharedStoreProvider`, mounted at the route shell of **both**
 Editor and RunView.
 
-| Store             | Responsibility                                |
-| ----------------- | --------------------------------------------- |
+| Store             | Responsibility                                 |
+| ----------------- | ---------------------------------------------- |
 | `EditorStore`     | Selection, hover, focus, multi-selection state |
-| `KeyboardStore`   | Pressed keys, shortcut registry               |
-| `NavigationStore` | Subgraph navigation, breadcrumbs, root spec   |
+| `KeyboardStore`   | Pressed keys, shortcut registry                |
+| `NavigationStore` | Subgraph navigation, breadcrumbs, root spec    |
 
 `NavigationStore` receives `EditorStore` via constructor so it can clear
 selection during navigation without importing a sibling module.
@@ -43,11 +43,11 @@ const { editor, keyboard, navigation } = useSharedStores();
 Provided by `EditorSessionProvider`, mounted inside the Editor route only.
 RunView does not mount this provider.
 
-| Store            | Responsibility                              |
-| ---------------- | ------------------------------------------- |
-| `UndoStore`      | Undo/redo middleware wrapper, `withGroup`    |
-| `AutoSaveStore`  | Debounced save, undo history persistence    |
-| `ClipboardStore` | Copy/paste/duplicate with system clipboard  |
+| Store            | Responsibility                             |
+| ---------------- | ------------------------------------------ |
+| `UndoStore`      | Undo/redo middleware wrapper, `withGroup`  |
+| `AutoSaveStore`  | Debounced save, undo history persistence   |
+| `ClipboardStore` | Copy/paste/duplicate with system clipboard |
 
 Both `AutoSaveStore` and `ClipboardStore` receive `UndoStore` via constructor.
 
@@ -81,8 +81,8 @@ Cross-store dependencies are resolved at construction time, not at import time.
 // SharedStoreContext.tsx
 class SharedUIStore {
   constructor() {
-    this.editor     = new EditorStore();
-    this.keyboard   = new KeyboardStore();
+    this.editor = new EditorStore();
+    this.keyboard = new KeyboardStore();
     this.navigation = new NavigationStore(this.editor); // DI
   }
 }
@@ -90,14 +90,15 @@ class SharedUIStore {
 // EditorSessionContext.tsx
 class EditorSessionStore {
   constructor() {
-    this.undo      = new UndoStore();
-    this.autoSave  = new AutoSaveStore(this.undo);      // DI
-    this.clipboard = new ClipboardStore(this.undo);      // DI
+    this.undo = new UndoStore();
+    this.autoSave = new AutoSaveStore(this.undo); // DI
+    this.clipboard = new ClipboardStore(this.undo); // DI
   }
 }
 ```
 
 This means:
+
 - Store files have **zero imports** from sibling store files.
 - The wiring graph is explicit and visible in two places.
 - Tests can construct a store with a mock dependency.
@@ -146,11 +147,11 @@ export function useTaskActions() {
   const { undo, clipboard } = useEditorSession();
 
   return {
-    addTask:    addTask.bind(null, undo),
+    addTask: addTask.bind(null, undo),
     deleteTask: deleteTask.bind(null, undo),
     // clipboard-backed actions
     copySelectedNodes: copySelectedNodes.bind(null, clipboard),
-    pasteNodes:        pasteNodes.bind(null, clipboard),
+    pasteNodes: pasteNodes.bind(null, clipboard),
     // ...
   };
 }
@@ -270,6 +271,7 @@ export interface UndoGroupable {
 ```
 
 `UndoStore` satisfies this interface. Using the minimal type means:
+
 - `shared/` code never imports from `pages/` (architecture rule).
 - Action functions declare only the capability they need.
 - Any object with a `withGroup` method can be substituted in tests.
@@ -332,16 +334,16 @@ RunView manifests must also accept (as a no-op).
 
 ## When to Use Each Pattern
 
-| Scenario                                     | Approach                                              |
-| -------------------------------------------- | ----------------------------------------------------- |
-| Component reads observable state             | `useSharedStores()` or `useEditorSession()` directly  |
-| Component calls a spec mutation              | `useXxxActions()` hook (e.g. `useTaskActions`)        |
-| Component navigates + focuses an entity      | `useFocusActions()` hook                              |
-| Hook calls a domain action                   | `useXxxActions()` hook or pass undo via context       |
-| Component inlines a one-off undo group       | `const { undo } = useEditorSession()` + `undo.withGroup(...)` |
-| 1:1 UI setter (select, hover, clear)         | Direct store access is acceptable (see below)         |
-| Non-React code (manifest callback)           | Receives store as parameter from calling hook         |
-| Unit test                                    | Construct store directly, pass to pure action function |
+| Scenario                                | Approach                                                      |
+| --------------------------------------- | ------------------------------------------------------------- |
+| Component reads observable state        | `useSharedStores()` or `useEditorSession()` directly          |
+| Component calls a spec mutation         | `useXxxActions()` hook (e.g. `useTaskActions`)                |
+| Component navigates + focuses an entity | `useFocusActions()` hook                                      |
+| Hook calls a domain action              | `useXxxActions()` hook or pass undo via context               |
+| Component inlines a one-off undo group  | `const { undo } = useEditorSession()` + `undo.withGroup(...)` |
+| 1:1 UI setter (select, hover, clear)    | Direct store access is acceptable (see below)                 |
+| Non-React code (manifest callback)      | Receives store as parameter from calling hook                 |
+| Unit test                               | Construct store directly, pass to pure action function        |
 
 ### When Direct Store Access Is Acceptable
 

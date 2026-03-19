@@ -11,7 +11,7 @@ import type { NodeTypeManifest } from "./types";
  * FlowCanvas and store actions look up manifests here instead of using
  * if/else chains on node ID prefixes or RF node types.
  */
-class NodeTypeRegistry {
+export class NodeTypeRegistry {
   private byEntityType = new Map<string, NodeTypeManifest>();
 
   /**
@@ -122,16 +122,3 @@ class NodeTypeRegistry {
     return [...edges, ...extraEdges];
   }
 }
-
-/**
- * Global registry of node types.
- *
- * This is used to register and lookup node types by their entity type or ID prefix.
- * It is also used to build the `nodeTypes` and `edgeTypes` records for the FlowCanvas.
- *
- * @see NodeTypeRegistry
- * @see NodeTypeManifest
- * @see NodeTypeComponent
- * @see NodeTypeEdgeComponent
- */
-export const NODE_TYPE_REGISTRY = new NodeTypeRegistry();

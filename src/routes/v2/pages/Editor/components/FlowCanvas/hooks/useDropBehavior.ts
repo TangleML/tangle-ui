@@ -1,16 +1,15 @@
-import "@/routes/v2/pages/Editor/nodes"; // ensure manifests are registered
-
 import type { ReactFlowInstance, ReactFlowProps } from "@xyflow/react";
 import type { DragEvent } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
-import { NODE_TYPE_REGISTRY } from "@/routes/v2/shared/nodes/registry";
+import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 
 export function useDropBehavior(
   spec: ComponentSpec | null,
   reactFlowInstance: ReactFlowInstance | null,
 ): Required<Pick<ReactFlowProps, "onDragOver" | "onDrop">> {
+  const registry = useNodeRegistry();
   const { undo } = useEditorSession();
   const onDragOver = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -32,7 +31,7 @@ export function useDropBehavior(
     try {
       const parsedData = JSON.parse(droppedData);
 
-      for (const manifest of NODE_TYPE_REGISTRY.all()) {
+      for (const manifest of registry.all()) {
         if (manifest.drop && parsedData[manifest.drop.dataKey] !== undefined) {
           await manifest.drop.handler(
             spec,
