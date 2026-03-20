@@ -1,6 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
+import { PipelineNameDialog } from "@/components/shared/Dialogs";
 import ImportPipeline from "@/components/shared/ImportPipeline";
 import {
   DropdownMenu,
@@ -11,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
+import useToastNotification from "@/hooks/useToastNotification";
 import { APP_ROUTES } from "@/routes/router";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButton";
@@ -18,15 +20,21 @@ import { ShorcutBadge } from "@/routes/v2/shared/components/ShorcutBadge";
 import { CTRL } from "@/routes/v2/shared/shortcuts/keys";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
-import { createNewPipeline, exportCurrentPipeline } from "./fileMenu.actions";
+import {
+  createNewPipeline,
+  exportCurrentPipeline,
+  savePipelineAs,
+} from "./fileMenu.actions";
 import { OpenPipelineDialog } from "./OpenPipelineDialog";
 
 export function FileMenu() {
   const { keyboard, navigation } = useSharedStores();
   const { autoSave } = useEditorSession();
   const navigate = useNavigate();
+  const notify = useToastNotification();
   const [importOpen, setImportOpen] = useState(false);
   const [openDialogOpen, setOpenDialogOpen] = useState(false);
+  const [saveAsDialogOpen, setSaveAsDialogOpen] = useState(false);
   const importTriggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -61,6 +69,22 @@ export function FileMenu() {
     setOpenDialogOpen(false);
   };
 
+  const handleSavePipelineAs = async (name: string) => {
+    await savePipelineAs(navigation, name);
+    notify(`Pipeline saved as "${name}"`, "success");
+    navigate({
+      to: APP_ROUTES.EDITOR_V2_PIPELINE,
+      params: { pipelineName: name },
+    });
+  };
+
+  const getSaveAsInitialName = () => {
+    const currentName = navigation.rootSpec?.name;
+    return currentName
+      ? `${currentName} (Copy)`
+      : `Untitled Pipeline ${new Date().toLocaleTimeString()}`;
+  };
+
   return (
     <>
       <DropdownMenu>
@@ -80,7 +104,7 @@ export function FileMenu() {
             <Icon name="Save" size="sm" />
             Save
           </DropdownMenuItem>
-          <DropdownMenuItem disabled>
+          <DropdownMenuItem onClick={() => setSaveAsDialogOpen(true)}>
             <Icon name="SaveAll" size="sm" />
             Save as
           </DropdownMenuItem>
@@ -104,6 +128,16 @@ export function FileMenu() {
         open={openDialogOpen}
         onOpenChange={setOpenDialogOpen}
         onPipelineClick={handlePipelineClick}
+      />
+
+      <PipelineNameDialog
+        open={saveAsDialogOpen}
+        onOpenChange={setSaveAsDialogOpen}
+        title="Save Pipeline As"
+        description="Enter a name for your pipeline"
+        initialName={getSaveAsInitialName()}
+        onSubmit={handleSavePipelineAs}
+        submitButtonText="Save"
       />
 
       <ImportPipeline

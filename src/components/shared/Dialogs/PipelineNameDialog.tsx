@@ -24,7 +24,8 @@ import { BlockStack } from "@/components/ui/layout";
 import useLoadUserPipelines from "@/hooks/useLoadUserPipelines";
 
 interface PipelineNameDialogProps {
-  trigger: ReactNode;
+  trigger?: ReactNode;
+  open?: boolean;
   title: string;
   description?: string;
   initialName: string;
@@ -37,6 +38,7 @@ interface PipelineNameDialogProps {
 
 const PipelineNameDialog = ({
   trigger,
+  open,
   title,
   description = "Please, name your pipeline.",
   initialName,
@@ -101,8 +103,8 @@ const PipelineNameDialog = ({
     !!isSubmitDisabled?.(name, error);
 
   return (
-    <Dialog onOpenChange={handleDialogOpenChange}>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
+    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
+      {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
