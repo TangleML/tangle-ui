@@ -46,6 +46,8 @@
     "validate:test": "npm run validate && npm run test",
     "generate-api": "openapi-ts",
     "knip": "knip",
+    "fta": "fta",
+    "depcruise": "depcruise",
     "hydrate-component-library": "tsx scripts/hydrate-component-library.ts public/component_library.original.yaml public/component_library.yaml"
   },
   "dependencies": {
@@ -111,7 +113,8 @@
     "react-toastify": "^11.0.5",
     "tailwind-merge": "^3.5.0",
     "tailwindcss": "^4.1.16",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "zod": "^4.3.6"
   },
   "peerDependencies": {
     "monaco-editor": "^0.54.0"
@@ -134,11 +137,14 @@
     "@vitejs/plugin-react": "^5.1.4",
     "@vitest/coverage-v8": "^3.2.4",
     "babel-plugin-react-compiler": "^1.0.0",
+    "dependency-cruiser": "^17.3.9",
     "eslint": "^9.39.2",
+    "eslint-plugin-no-relative-import-paths": "^1.6.1",
     "eslint-plugin-playwright": "^2.10.1",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-compiler": "^19.1.0-rc.2",
     "fake-indexeddb": "^6.2.5",
+    "fta-cli": "^3.0.0",
     "globals": "^17.4.0",
     "jsdom": "^29.0.1",
     "knip": "^6.0.6",
