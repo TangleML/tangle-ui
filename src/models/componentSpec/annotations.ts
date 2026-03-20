@@ -1,23 +1,35 @@
 import type { XYPosition } from "@xyflow/react";
 import { computed } from "mobx";
 import { Model, model, modelAction, prop } from "mobx-keystone";
+import { z } from "zod";
 
 import type { FlexNodeData } from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/types";
 import { isFlexNodeData } from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/types";
 
 import type { Annotation } from "./entities/types";
 
+// -- Zod schemas --
+
+const xyPositionSchema = z.object({
+  x: z.coerce.number().default(0),
+  y: z.coerce.number().default(0),
+});
+
+const edgeConduitSchema = z.object({
+  id: z.string(),
+  orientation: z.enum(["horizontal", "vertical"]),
+  coordinate: z.number(),
+  color: z.string(),
+  edgeIds: z.array(z.string()),
+});
+
+const flexNodeDataSchema: z.ZodType<FlexNodeData> =
+  z.custom<FlexNodeData>(isFlexNodeData);
+
 // -- Registry: known annotation key → typed value --
 
 export type GuidelineOrientation = "horizontal" | "vertical";
-
-export interface EdgeConduit {
-  id: string;
-  orientation: GuidelineOrientation;
-  coordinate: number;
-  color: string;
-  edgeIds: string[];
-}
+export type EdgeConduit = z.infer<typeof edgeConduitSchema>;
 
 interface AnnotationTypeMap {
   "editor.position": XYPosition;
@@ -34,89 +46,65 @@ interface AnnotationCodec<T> {
   defaultValue: T;
 }
 
-/**
- * Migrates old rect-based conduit entries to the new guideline format.
- * Old format had `position` + `size`; new format has `orientation` + `coordinate`.
- */
-function isConduitEntry(raw: unknown): raw is EdgeConduit {
-  if (typeof raw !== "object" || raw === null) return false;
+// -- JSON codec helpers --
 
-  if ("orientation" in raw && "coordinate" in raw) {
-    return true;
+function safeJsonParse(str: string): unknown {
+  try {
+    return JSON.parse(str);
+  } catch {
+    return undefined;
   }
-
-  return false;
 }
 
-const codecs: {
-  [K in KnownAnnotationKey]: AnnotationCodec<AnnotationTypeMap[K]>;
-} = {
-  "editor.position": {
-    serialize: (pos) => JSON.stringify(pos),
+function parseJsonArray(raw: unknown): unknown[] {
+  if (typeof raw === "string") {
+    const parsed = safeJsonParse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  }
+  return Array.isArray(raw) ? raw : [];
+}
+
+function jsonArrayCodec<T>(schema: z.ZodType<T>): AnnotationCodec<T[]> {
+  return {
+    serialize: (items) => JSON.stringify(items),
+    deserialize: (raw) =>
+      parseJsonArray(raw).flatMap((item) => {
+        const result = schema.safeParse(item);
+        return result.success ? [result.data] : [];
+      }),
+    defaultValue: [],
+  };
+}
+
+function jsonObjectCodec<T>(
+  schema: z.ZodType<T>,
+  defaultValue: T,
+): AnnotationCodec<T> {
+  return {
+    serialize: (value) => JSON.stringify(value),
     deserialize: (raw) => {
-      if (typeof raw === "string") {
-        try {
-          const parsed = JSON.parse(raw);
-          return { x: Number(parsed.x) || 0, y: Number(parsed.y) || 0 };
-        } catch {
-          return { x: 0, y: 0 };
-        }
-      }
-      if (typeof raw === "object" && raw !== null && "x" in raw && "y" in raw) {
-        const r = raw as Record<string, unknown>;
-        return { x: Number(r.x) || 0, y: Number(r.y) || 0 };
-      }
-      return { x: 0, y: 0 };
+      const obj = typeof raw === "string" ? safeJsonParse(raw) : raw;
+      const result = schema.safeParse(obj);
+      return result.success ? result.data : defaultValue;
     },
-    defaultValue: { x: 0, y: 0 },
-  },
+    defaultValue,
+  };
+}
+
+// -- Codecs --
+
+const codecs = {
+  "editor.position": jsonObjectCodec(xyPositionSchema, { x: 0, y: 0 }),
   "tangleml.com/editor/task-color": {
-    serialize: (color) => color,
-    deserialize: (raw) => (typeof raw === "string" ? raw : "transparent"),
+    serialize: (color: string) => color,
+    deserialize: (raw: unknown) =>
+      typeof raw === "string" ? raw : "transparent",
     defaultValue: "transparent",
   },
-  "tangleml.com/editor/edge-conduits": {
-    serialize: (conduits) => JSON.stringify(conduits),
-    deserialize: (raw): EdgeConduit[] => {
-      let arr: unknown[];
-      if (typeof raw === "string") {
-        try {
-          const parsed = JSON.parse(raw);
-          arr = Array.isArray(parsed) ? parsed : [];
-        } catch {
-          return [];
-        }
-      } else if (Array.isArray(raw)) {
-        arr = raw;
-      } else {
-        return [];
-      }
-
-      return arr.filter(isConduitEntry);
-    },
-    defaultValue: [],
-  },
-  "flex-nodes": {
-    serialize: (nodes) => JSON.stringify(nodes),
-    deserialize: (raw): FlexNodeData[] => {
-      let arr: unknown[];
-      if (typeof raw === "string") {
-        try {
-          const parsed = JSON.parse(raw);
-          arr = Array.isArray(parsed) ? parsed : [];
-        } catch {
-          return [];
-        }
-      } else if (Array.isArray(raw)) {
-        arr = raw;
-      } else {
-        return [];
-      }
-
-      return arr.filter(isFlexNodeData);
-    },
-    defaultValue: [],
-  },
+  "tangleml.com/editor/edge-conduits": jsonArrayCodec(edgeConduitSchema),
+  "flex-nodes": jsonArrayCodec(flexNodeDataSchema),
+} satisfies {
+  [K in KnownAnnotationKey]: AnnotationCodec<AnnotationTypeMap[K]>;
 };
 
 // -- Helpers for serialization layer --
