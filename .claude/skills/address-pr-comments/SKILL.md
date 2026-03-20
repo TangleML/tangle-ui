@@ -72,12 +72,22 @@ If there are no actionable comments, tell the user everything has been addressed
 
 For each selected comment, read the relevant file and surrounding context, then decide:
 
+Every reply **must** be prefixed with the AI disclaimer:
+
+```markdown
+> :robot: This is an AI-generated response.
+
+<rest of the reply body>
+```
+
 ### If the suggestion is correct and actionable:
 
 1. Make the code change
 2. Reply to the comment confirming the fix:
 
 ```markdown
+> :robot: This is an AI-generated response.
+
 Fixed — <brief description of what was changed>.
 ```
 
@@ -86,6 +96,8 @@ Fixed — <brief description of what was changed>.
 Reply explaining that it's already handled:
 
 ```markdown
+> :robot: This is an AI-generated response.
+
 This is already handled — <explanation with file path/line reference>.
 ```
 
@@ -94,6 +106,8 @@ This is already handled — <explanation with file path/line reference>.
 Reply respectfully pushing back:
 
 ```markdown
+> :robot: This is an AI-generated response.
+
 I think the current approach is better here because <reasoning>. <Optional: offer an alternative compromise>.
 ```
 
@@ -102,6 +116,8 @@ I think the current approach is better here because <reasoning>. <Optional: offe
 Reply with the answer:
 
 ```markdown
+> :robot: This is an AI-generated response.
+
 <Answer the question with relevant context/file references>.
 ```
 
