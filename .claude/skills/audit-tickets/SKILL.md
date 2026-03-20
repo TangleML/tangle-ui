@@ -32,7 +32,7 @@ Skip issues that are:
 - **Epics** (title contains "epic" or "[Epic]")
 - **Design/brainstorm** issues (title starts with "design:" or "Brainstorm:")
 - **Issues created in the current session** (issues you just created in this conversation)
-- **Recently audited** — issues that already have a comment containing `:robot: This is an AI-generated audit` posted within the last 14 days. Check comments when fetching issues and skip any that match.
+- **Recently audited** — issues that already have a comment containing `🤖 This is an AI-generated audit` posted within the last 14 days. Check comments when fetching issues and skip any that match.
 
 Audit **everything else**, including feature requests and vague tickets. The goal is to close as many tickets as possible.
 
@@ -69,7 +69,7 @@ Ask the user which issues they'd like to comment on. Then for each approved issu
 **For Done issues:**
 
 ```markdown
-> :robot: This is an AI-generated audit of this ticket.
+> 🤖 This is an AI-generated audit of this ticket.
 
 @<author> [and @<assignees/commenters>] — What is the status of this issue? It appears to already be complete.
 
@@ -81,7 +81,7 @@ Can this be closed?
 **For Vague issues (cannot determine implementation status):**
 
 ```markdown
-> :robot: This is an AI-generated audit of this ticket.
+> 🤖 This is an AI-generated audit of this ticket.
 
 @<author> [and @<assignees/commenters>] — This ticket doesn't have enough detail to determine whether it's been addressed. Could you add more context — specific acceptance criteria, expected behavior, or details on what "done" looks like? Otherwise, can this be closed?
 ```
@@ -89,7 +89,7 @@ Can this be closed?
 **For Partial issues:**
 
 ```markdown
-> :robot: This is an AI-generated audit of this ticket.
+> 🤖 This is an AI-generated audit of this ticket.
 
 @<author> [and @<assignees/commenters>] — This issue appears to be partially addressed. Here's what we found:
 

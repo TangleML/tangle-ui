@@ -134,7 +134,7 @@ gh repo view --json nameWithOwner --jq '.nameWithOwner'
 For each selected finding, post an inline review comment. Every comment **must** be prefixed with the AI disclaimer:
 
 ```markdown
-> :robot: This is an AI-generated code review comment.
+> 🤖 This is an AI-generated code review comment.
 
 <rest of the comment body>
 ```
