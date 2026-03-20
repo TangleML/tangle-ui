@@ -16,10 +16,13 @@ import {
   GRID_SIZE,
 } from "@/routes/v2/shared/flowCanvasDefaults";
 import { useAutoLayoutShortcut } from "@/routes/v2/shared/hooks/useAutoLayoutShortcut";
+import { useDoubleClickBehavior } from "@/routes/v2/shared/hooks/useDoubleClickBehavior";
 import { useFlowCanvasState } from "@/routes/v2/shared/hooks/useFlowCanvasState";
 import { useViewportScaling } from "@/routes/v2/shared/hooks/useViewportScaling";
 import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+
+import { RunViewSubgraphBreadcrumbs } from "./RunViewSubgraphBreadcrumbs";
 
 interface RunViewFlowCanvasProps {
   spec: ComponentSpec | null;
@@ -45,6 +48,8 @@ export const RunViewFlowCanvas = observer(function RunViewFlowCanvas({
     selectionBehavior,
   } = useFlowCanvasState({ spec });
 
+  const doubleClickBehavior = useDoubleClickBehavior(spec);
+
   const applyLayout = (layoutedNodes: import("@xyflow/react").Node[]) => {
     rfSetNodes(layoutedNodes);
   };
@@ -63,6 +68,7 @@ export const RunViewFlowCanvas = observer(function RunViewFlowCanvas({
 
   return (
     <BlockStack ref={containerRef} fill className={cn("relative", className)}>
+      <RunViewSubgraphBreadcrumbs />
       <ReactFlow
         {...FLOW_CANVAS_DEFAULT_PROPS}
         nodeTypes={nodeTypes}
@@ -73,6 +79,7 @@ export const RunViewFlowCanvas = observer(function RunViewFlowCanvas({
         onPaneClick={onPaneClick}
         onEdgeClick={onEdgeClick}
         {...selectionBehavior}
+        {...doubleClickBehavior}
         onViewportChange={handleViewportChange}
         nodesConnectable={false}
         nodesDraggable
