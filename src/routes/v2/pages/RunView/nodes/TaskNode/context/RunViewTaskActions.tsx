@@ -17,5 +17,6 @@ const RunViewTaskActionsInternal = ({
   return <TaskActions componentRef={hydratedRef} readOnly />;
 };
 
-export const RunViewTaskActions =
-  withSuspenseWrapper(RunViewTaskActionsInternal);
+export const RunViewTaskActions = withSuspenseWrapper(
+  RunViewTaskActionsInternal,
+);

@@ -68,7 +68,7 @@ const isStatusActivelyLogging = (status?: string): boolean => {
   }
 };
 
-const shouldStatusHaveLogs = (status?: string): boolean => {
+export const shouldStatusHaveLogs = (status?: string): boolean => {
   if (!status) {
     return false;
   }
