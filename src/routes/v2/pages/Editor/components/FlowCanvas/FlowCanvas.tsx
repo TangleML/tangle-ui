@@ -17,6 +17,7 @@ import {
   FLOW_CANVAS_DEFAULT_PROPS,
   GRID_SIZE,
 } from "@/routes/v2/shared/flowCanvasDefaults";
+import { useDoubleClickBehavior } from "@/routes/v2/shared/hooks/useDoubleClickBehavior";
 import { useFlowCanvasState } from "@/routes/v2/shared/hooks/useFlowCanvasState";
 import { focusModeStore } from "@/routes/v2/shared/hooks/useFocusMode";
 import { useViewportScaling } from "@/routes/v2/shared/hooks/useViewportScaling";
@@ -28,7 +29,6 @@ import { ConnectionLine } from "./components/ConnectionLine";
 import { FloatingSelectionToolbar } from "./components/FloatingSelectionToolbar";
 import { useClipboardShortcuts } from "./hooks/useClipboardShortcuts";
 import { useConnectionBehavior } from "./hooks/useConnectionBehavior";
-import { useDoubleClickBehavior } from "./hooks/useDoubleClickBehavior";
 import { useDropBehavior } from "./hooks/useDropBehavior";
 import { useFitViewOnFocus } from "./hooks/useFitViewOnFocus";
 import { useNodeEdgeChanges } from "./hooks/useNodeEdgeChanges";
