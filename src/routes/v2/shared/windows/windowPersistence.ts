@@ -2,8 +2,8 @@
  * Window layout persistence module.
  *
  * Persists window arrangement (position, size, docking, hidden state)
- * to localStorage for static windows. On page reload, windows restore their
- * previous arrangement. Also persists dock area configuration.
+ * to localStorage for windows marked with `persisted: true`. On page reload,
+ * windows restore their previous arrangement. Also persists dock area configuration.
  */
 
 import { reaction } from "mobx";
@@ -15,27 +15,24 @@ import { getStorage } from "@/utils/typedStorage";
 import type { DockState, Position, Size } from "./types";
 import {
   getDockAreaConfig,
+  getPersistedWindowIds,
   getSerializedStoreState,
   getWindowById,
   getWindowOrder,
+  isWindowPersisted,
   restoreDockArea,
 } from "./windows.actions";
 
-const STORAGE_KEY = "editorV2-window-layout" as const;
-
 /**
- * Set of static window IDs that should be persisted.
- * Only windows with these IDs will have their layout saved/restored.
+ * Tracks which layout is currently active so that module-level functions
+ * (save/load/getPersistedWindowState) use the correct localStorage key.
  */
-export const STATIC_WINDOW_IDS = new Set([
-  "context-panel",
-  "component-library",
-  "pipeline-details",
-  "pipeline-tree",
-  "history",
-  "debug-panel",
-  "runs-and-submission",
-]);
+let activeLayoutId: string | null = null;
+
+function getStorageKey(): string {
+  if (!activeLayoutId) return "editorV2-window-layout";
+  return `window-layout-${activeLayoutId}`;
+}
 
 /**
  * Persisted state for a single window (subset of WindowConfig).
@@ -58,7 +55,7 @@ interface PersistedDockAreaState {
 }
 
 /**
- * Full persisted layout including all static windows and their z-order.
+ * Full persisted layout including all persisted windows and their z-order.
  */
 interface PersistedWindowLayout {
   windows: Record<string, PersistedWindowState>;
@@ -70,11 +67,9 @@ interface PersistedWindowLayout {
   version: number;
 }
 
-type WindowLayoutStorageMap = {
-  [STORAGE_KEY]: PersistedWindowLayout;
-};
+type WindowLayoutStorageMap = Record<string, PersistedWindowLayout>;
 
-const storage = getStorage<typeof STORAGE_KEY, WindowLayoutStorageMap>();
+const storage = getStorage<string, WindowLayoutStorageMap>();
 
 const CURRENT_VERSION = 4;
 
@@ -91,22 +86,18 @@ function saveWindowLayoutImmediate(): void {
       left: {
         width: leftDock.width,
         collapsed: leftDock.collapsed,
-        windowOrder: leftDock.windowOrder.filter((id) =>
-          STATIC_WINDOW_IDS.has(id),
-        ),
+        windowOrder: leftDock.windowOrder.filter(isWindowPersisted),
       },
       right: {
         width: rightDock.width,
         collapsed: rightDock.collapsed,
-        windowOrder: rightDock.windowOrder.filter((id) =>
-          STATIC_WINDOW_IDS.has(id),
-        ),
+        windowOrder: rightDock.windowOrder.filter(isWindowPersisted),
       },
     },
     version: CURRENT_VERSION,
   };
 
-  for (const id of STATIC_WINDOW_IDS) {
+  for (const id of getPersistedWindowIds()) {
     const win = getWindowById(id);
     if (win) {
       layout.windows[id] = {
@@ -124,11 +115,9 @@ function saveWindowLayoutImmediate(): void {
     }
   }
 
-  layout.windowOrder = getWindowOrder().filter((id) =>
-    STATIC_WINDOW_IDS.has(id),
-  );
+  layout.windowOrder = getWindowOrder().filter(isWindowPersisted);
 
-  storage.setItem(STORAGE_KEY, layout);
+  storage.setItem(getStorageKey(), layout);
 }
 
 const saveWindowLayout = debounce(saveWindowLayoutImmediate, 500);
@@ -144,7 +133,7 @@ function isPersistedLayout(value: unknown): value is PersistedWindowLayout {
 }
 
 function loadWindowLayout(): PersistedWindowLayout | null {
-  const parsed = storage.getItem(STORAGE_KEY);
+  const parsed = storage.getItem(getStorageKey());
   if (!isPersistedLayout(parsed) || parsed.version !== CURRENT_VERSION) {
     return null;
   }
@@ -157,10 +146,6 @@ function loadWindowLayout(): PersistedWindowLayout | null {
 export function getPersistedWindowState(
   id: string,
 ): PersistedWindowState | null {
-  if (!STATIC_WINDOW_IDS.has(id)) {
-    return null;
-  }
-
   const layout = loadWindowLayout();
   if (!layout) {
     return null;
@@ -188,12 +173,12 @@ function restoreDockAreaState(): void {
   }
 }
 
-export function useWindowPersistence() {
+export function useWindowPersistence(layoutId: string) {
   useEffect(() => {
-    // Restore dock area dimensions/collapsed state
+    activeLayoutId = layoutId;
+
     restoreDockAreaState();
 
-    // Deep-serialize all store state to establish MobX tracking on every property.
     const unsubscribe = reaction(
       () => getSerializedStoreState(),
       () => {
@@ -204,6 +189,7 @@ export function useWindowPersistence() {
     return () => {
       unsubscribe();
       saveWindowLayout.cancel();
+      activeLayoutId = null;
     };
-  }, []);
+  }, [layoutId]);
 }

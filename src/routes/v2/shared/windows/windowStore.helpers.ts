@@ -73,5 +73,6 @@ export function buildWindowConfig(
     previousState: initial.needsPreviousState ? "normal" : undefined,
     previousPosition: initial.needsPreviousState ? { ...position } : undefined,
     previousSize: initial.needsPreviousState ? { ...size } : undefined,
+    persisted: !!options.persisted,
   };
 }

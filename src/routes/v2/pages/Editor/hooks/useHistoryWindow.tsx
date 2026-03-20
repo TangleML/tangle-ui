@@ -17,6 +17,7 @@ export function useHistoryWindow() {
         position: { x: window.innerWidth - 620, y: 80 },
         size: { width: 260, height: 350 },
         disabledActions: ["close"],
+        persisted: true,
       });
     }
   }, []);

@@ -17,6 +17,7 @@ export function usePipelineTreeWindow() {
         position: { x: 300, y: 100 },
         size: { width: 280, height: 400 },
         disabledActions: ["close"],
+        persisted: true,
       });
     }
   }, []);

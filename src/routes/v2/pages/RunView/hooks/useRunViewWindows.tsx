@@ -2,11 +2,7 @@ import { useEffect } from "react";
 
 import { RunDetailsContent } from "@/routes/v2/pages/RunView/components/RunDetailsContent";
 import { RunToolsContent } from "@/routes/v2/pages/RunView/components/RunToolsContent";
-import {
-  closeWindow,
-  dockWindow,
-  openWindow,
-} from "@/routes/v2/shared/windows/windows.actions";
+import { openWindow } from "@/routes/v2/shared/windows/windows.actions";
 
 const RUN_TOOLS_WINDOW_ID = "run-tools";
 const RUN_DETAILS_WINDOW_ID = "run-details";
@@ -21,18 +17,14 @@ export function useRunViewWindows() {
       size: { width: 400, height: 80 },
       position: { x: 0, y: 60 },
       minSize: { width: 400, height: 80 },
+      persisted: true,
     });
 
     openWindow(<RunDetailsContent />, {
       id: RUN_DETAILS_WINDOW_ID,
       title: "Run Details",
       startVisible: true,
+      persisted: true,
     });
-    dockWindow(RUN_DETAILS_WINDOW_ID, "right");
-
-    return () => {
-      closeWindow(RUN_TOOLS_WINDOW_ID);
-      closeWindow(RUN_DETAILS_WINDOW_ID);
-    };
   }, []);
 }

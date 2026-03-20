@@ -15,10 +15,7 @@ import {
   type WindowOptions,
   type WindowRef,
 } from "./types";
-import {
-  getPersistedWindowState,
-  STATIC_WINDOW_IDS,
-} from "./windowPersistence";
+import { getPersistedWindowState } from "./windowPersistence";
 import * as docking from "./windowStore.docking";
 import {
   buildWindowConfig,
@@ -92,9 +89,7 @@ class WindowStoreImpl {
 
     windowContentMap.set(id, content);
 
-    const persisted = STATIC_WINDOW_IDS.has(id)
-      ? getPersistedWindowState(id)
-      : null;
+    const persisted = options.persisted ? getPersistedWindowState(id) : null;
 
     const position =
       persisted?.position ?? options.position ?? this.calculateNewPosition();

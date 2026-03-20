@@ -35,6 +35,7 @@ export function useRunViewSelectionSync() {
               position: { x: window.innerWidth - 340, y: 80 },
               size: { width: 300, height: 400 },
               startVisible: true,
+              persisted: true,
             });
           }
         } else {

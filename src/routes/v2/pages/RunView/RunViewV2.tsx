@@ -32,6 +32,7 @@ import {
 import { DockArea } from "@/routes/v2/shared/windows/DockArea";
 import { TaskPanel } from "@/routes/v2/shared/windows/TaskPanel";
 import { WindowContainer } from "@/routes/v2/shared/windows/WindowContainer";
+import { useWindowPersistence } from "@/routes/v2/shared/windows/windowPersistence";
 import { getBackendStatusString } from "@/utils/backend";
 import type { ComponentSpec as LegacyComponentSpec } from "@/utils/componentSpec";
 
@@ -135,6 +136,7 @@ const RunViewLayout = observer(function RunViewLayout({
   spec,
 }: RunViewLayoutProps) {
   useRunViewSpecLifecycle(spec);
+  useWindowPersistence("runview");
   useDockAreaAccordion();
   useRunViewWindows();
   useRunViewSelectionSync();

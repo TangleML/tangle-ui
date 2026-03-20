@@ -68,6 +68,8 @@ export interface WindowConfig {
   dockedHeight?: number;
   /** Docking state for edge snapping */
   dockState: DockState;
+  /** Whether this window's layout should be persisted to localStorage */
+  persisted?: boolean;
 }
 
 /** Reference returned from open() for controlling a window */
@@ -98,6 +100,8 @@ export interface WindowOptions {
   disabledActions?: WindowAction[];
   /** If true, window starts visible even if persisted state was hidden. Use for selection-driven windows. */
   startVisible?: boolean;
+  /** If true, the window's layout (position, size, dock state) is persisted to localStorage across reloads. */
+  persisted?: boolean;
 }
 
 /** Default window dimensions */
