@@ -2,6 +2,7 @@ import type {
   ContainerExecutionStatus,
   GetContainerExecutionStateResponse,
 } from "@/api/types.gen";
+import { MINUTES } from "@/utils/constants";
 import { formatDate } from "@/utils/date";
 
 // --- Per-block typed replacement types ---
@@ -89,6 +90,14 @@ export function extractPodName(
 
 // --- Resolver functions ---
 
+const DEFAULT_FALLBACK_MINUTES = 60;
+const RELATIVE_NOW = "now";
+
+export function elapsedMinutesCeil(startIso: string): number {
+  const elapsedMs = Date.now() - new Date(startIso).getTime();
+  return Math.ceil(Math.max(elapsedMs, 0) / MINUTES);
+}
+
 export function resolvePodLogsHydrationReplacements(
   metadata: Record<string, unknown>,
   containerState: GetContainerExecutionStateResponse,
@@ -97,22 +106,41 @@ export function resolvePodLogsHydrationReplacements(
   const paddingMinutes =
     typeof metadata.paddingMinutes === "number" ? metadata.paddingMinutes : 0;
 
-  // started_at should always be present — LogsEventsOverlaySection guards
-  // against null before calling this resolver. Fallback is purely defensive.
+  // No start — defensive fallback (LogsEventsOverlaySection guards against
+  // this, so reaching here means something unexpected happened).
   if (!containerState.started_at) {
     console.warn(
       "[resolvePodLogsHydrationReplacements] started_at is missing — this should not happen",
     );
+    return {
+      podName,
+      startTime: `${RELATIVE_NOW}-${DEFAULT_FALLBACK_MINUTES}m`,
+      endTime: RELATIVE_NOW,
+    };
   }
-  const startTime = containerState.started_at
-    ? adjustTimestamp(containerState.started_at, -paddingMinutes)
-    : new Date().toISOString();
 
-  const endTime = containerState.ended_at
-    ? adjustTimestamp(containerState.ended_at, paddingMinutes)
-    : adjustTimestamp(new Date().toISOString(), paddingMinutes);
+  // No end — task still running. Use relative time so Observe auto-refreshes.
+  if (!containerState.ended_at) {
+    const totalMinutes =
+      elapsedMinutesCeil(containerState.started_at) + paddingMinutes;
+    return {
+      podName,
+      startTime: `${RELATIVE_NOW}-${totalMinutes}m`,
+      endTime: RELATIVE_NOW,
+    };
+  }
 
-  return { podName, startTime, endTime };
+  // Both present — use absolute padded timestamps.
+  // Cap endTime to "now" so we never request a future time range from Observe.
+  const paddedEnd = adjustTimestamp(containerState.ended_at, paddingMinutes);
+  const endTime =
+    new Date(paddedEnd).getTime() > Date.now() ? RELATIVE_NOW : paddedEnd;
+
+  return {
+    podName,
+    startTime: adjustTimestamp(containerState.started_at, -paddingMinutes),
+    endTime,
+  };
 }
 
 export function resolveRetentionNoticeHydrationReplacements(
