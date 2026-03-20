@@ -65,7 +65,7 @@ const PipelineEditor = withSuspenseWrapper(
     } = useLoadSpec(pipelineName);
     const { navigation } = useSharedStores();
 
-    useWindowPersistence();
+    useWindowPersistence("editor");
     useDockAreaAccordion();
     useSpecLifecycle(rootSpec, pipelineName, restoredUndoStore);
     useSelectionWindowSync();

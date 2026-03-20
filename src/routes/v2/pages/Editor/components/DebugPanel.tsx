@@ -187,6 +187,7 @@ export function useDebugPanelWindow() {
         position: { x: 16, y: 16 },
         size: { width: 320, height: 420 },
         disabledActions: ["close"],
+        persisted: true,
       });
     }
   }, []);

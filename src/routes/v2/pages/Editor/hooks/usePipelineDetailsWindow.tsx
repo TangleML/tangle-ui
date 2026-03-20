@@ -18,6 +18,7 @@ export function usePipelineDetailsWindow() {
         position: { x: 0, y: 460 },
         size: { width: 280, height: 350 },
         disabledActions: ["close"],
+        persisted: true,
       });
       dockWindow(PIPELINE_DETAILS_WINDOW_ID, "right");
     }

@@ -175,6 +175,16 @@ export function getDockAreaWidth(side: "left" | "right"): number {
   return windowStore.dockAreas[side].width;
 }
 
+export function isWindowPersisted(id: string): boolean {
+  return windowStore.windows[id]?.persisted === true;
+}
+
+export function getPersistedWindowIds(): string[] {
+  return windowStore.windowOrder.filter(
+    (id) => windowStore.windows[id]?.persisted,
+  );
+}
+
 /** Deep-serialize all store state for MobX change tracking. */
 export function getSerializedStoreState(): string {
   return JSON.stringify({

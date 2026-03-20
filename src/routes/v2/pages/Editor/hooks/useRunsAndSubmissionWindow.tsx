@@ -17,6 +17,7 @@ export function useRunsAndSubmissionWindow() {
         position: { x: 0, y: 460 },
         size: { width: 280, height: 320 },
         disabledActions: ["close"],
+        persisted: true,
       });
     }
   }, []);
