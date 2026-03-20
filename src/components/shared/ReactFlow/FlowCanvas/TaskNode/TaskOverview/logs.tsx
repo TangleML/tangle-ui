@@ -71,7 +71,7 @@ const isStatusActivelyLogging = (status?: string): boolean => {
 /**
  * Returns true if the container may have logs worth fetching.
  */
-const shouldStatusHaveLogs = (status?: string): boolean => {
+export const shouldStatusHaveLogs = (status?: string): boolean => {
   if (!status) {
     return false;
   }
