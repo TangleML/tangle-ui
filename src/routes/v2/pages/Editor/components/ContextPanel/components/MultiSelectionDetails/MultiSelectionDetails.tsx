@@ -14,25 +14,19 @@ import { Text } from "@/components/ui/typography";
 import type { Task } from "@/models/componentSpec";
 import { usePipelineActions } from "@/routes/v2/pages/Editor/store/actions/usePipelineActions";
 import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskActions";
-import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 import { BatchArgumentRow } from "./components/BatchArgumentRow";
 import { BatchTaskColor } from "./components/BatchTaskColor";
-import {
-  computeAggregatedArguments,
-  getNodeDisplayName,
-  getNodeIcon,
-  getNodeIconColor,
-} from "./utils";
+import { SelectedNodesList } from "./SelectedNodesList";
+import { computeAggregatedArguments } from "./utils";
 
 /**
  * Content for multi-selection in the Properties window.
  * Shows list of selected nodes, common argument editing, and Create Subgraph section.
  */
 export const MultiSelectionDetails = observer(function MultiSelectionDetails() {
-  const registry = useNodeRegistry();
   const { editor } = useSharedStores();
   const { multiSelection } = editor;
   const spec = useSpec();
@@ -112,31 +106,7 @@ export const MultiSelectionDetails = observer(function MultiSelectionDetails() {
           </Text>
         </InlineStack>
 
-        <BlockStack gap="2">
-          <Label className="text-gray-600">Selected Nodes</Label>
-          <BlockStack gap="1" className="max-h-48 overflow-y-auto">
-            {multiSelection.map((node) => (
-              <InlineStack
-                key={node.id}
-                gap="2"
-                blockAlign="center"
-                className="text-xs py-1.5 px-2 bg-slate-50 rounded border border-slate-100"
-              >
-                <Icon
-                  name={getNodeIcon(registry, node.type) as any}
-                  size="xs"
-                  className={`shrink-0 ${getNodeIconColor(registry, node.type)}`}
-                />
-                <Text size="xs" className="text-slate-700 truncate flex-1">
-                  {getNodeDisplayName(registry, node, spec)}
-                </Text>
-                <Text size="xs" className="text-slate-400 capitalize">
-                  {node.type}
-                </Text>
-              </InlineStack>
-            ))}
-          </BlockStack>
-        </BlockStack>
+        <SelectedNodesList nodes={multiSelection} spec={spec} />
 
         {selectedTasks.length > 0 && <BatchTaskColor tasks={resolvedTasks} />}
 

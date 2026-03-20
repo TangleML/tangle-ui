@@ -9,6 +9,7 @@ import {
   AUTOSAVE_DEBOUNCE_TIME_MS,
   USER_PIPELINES_LIST_NAME,
 } from "@/utils/constants";
+import { debounce } from "@/utils/debounce";
 import { componentSpecToText } from "@/utils/yaml";
 
 import type { UndoStore } from "./undoStore";
@@ -25,9 +26,11 @@ export class AutoSaveStore {
   private pipelineName: string | null = null;
   private serializer = new JsonSerializer();
   private disposeReaction: (() => void) | null = null;
-  // todo: replace with debounce() helper
-  private debounceTimeout: ReturnType<typeof setTimeout> | null = null;
   private savedMessageTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  private debouncedSave = debounce((yamlText: string) => {
+    void this.performSave(yamlText);
+  }, AUTOSAVE_DEBOUNCE_TIME_MS);
 
   constructor(private undoStore: UndoStore) {
     makeObservable(this);
@@ -51,7 +54,7 @@ export class AutoSaveStore {
   @action dispose() {
     this.disposeReaction?.();
     this.disposeReaction = null;
-    this.clearDebounce();
+    this.debouncedSave.cancel();
     this.clearSavedMessageTimeout();
     this.spec = null;
     this.pipelineName = null;
@@ -87,12 +90,11 @@ export class AutoSaveStore {
   }
 
   private scheduleAutoSave(yamlText: string | null) {
-    this.clearDebounce();
-    if (!yamlText || !this.pipelineName) return;
-
-    this.debounceTimeout = setTimeout(() => {
-      void this.performSave(yamlText);
-    }, AUTOSAVE_DEBOUNCE_TIME_MS);
+    if (!yamlText || !this.pipelineName) {
+      this.debouncedSave.cancel();
+      return;
+    }
+    this.debouncedSave(yamlText);
   }
 
   private async performSave(yamlText: string) {
@@ -104,7 +106,7 @@ export class AutoSaveStore {
     const savePromise = (async () => {
       try {
         /**
-         * Create a persistence layer for the pipeline, so we can add more storage drivers (google disk, backend api, etc.)
+         * todo: Create a persistence layer for the pipeline, so we can add more storage drivers (google disk, backend api, etc.)
          */
         await writeComponentToFileListFromText(
           USER_PIPELINES_LIST_NAME,
@@ -149,13 +151,6 @@ export class AutoSaveStore {
     this.savedMessageTimeout = setTimeout(() => {
       this.setShowSavedMessage(false);
     }, SAVED_MESSAGE_DURATION_MS);
-  }
-
-  private clearDebounce() {
-    if (this.debounceTimeout) {
-      clearTimeout(this.debounceTimeout);
-      this.debounceTimeout = null;
-    }
   }
 
   private clearSavedMessageTimeout() {

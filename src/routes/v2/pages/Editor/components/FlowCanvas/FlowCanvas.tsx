@@ -1,15 +1,10 @@
 import {
   Background,
-  type ConnectionLineComponentProps,
   Controls,
-  getBezierPath,
   MiniMap,
-  NodeToolbar,
   ReactFlow,
   type ReactFlowInstance,
   useConnection,
-  useNodes,
-  useReactFlow,
 } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
 import { useState } from "react";
@@ -18,7 +13,6 @@ import { BlockStack } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
 import type { ComponentSpec } from "@/models/componentSpec";
 import { useAutoLayout } from "@/routes/v2/pages/Editor/hooks/useAutoLayout";
-import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskActions";
 import {
   FLOW_CANVAS_DEFAULT_PROPS,
   GRID_SIZE,
@@ -30,6 +24,8 @@ import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { CMDALT } from "@/routes/v2/shared/shortcuts/keys";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
+import { ConnectionLine } from "./components/ConnectionLine";
+import { FloatingSelectionToolbar } from "./components/FloatingSelectionToolbar";
 import { useClipboardShortcuts } from "./hooks/useClipboardShortcuts";
 import { useConnectionBehavior } from "./hooks/useConnectionBehavior";
 import { useDoubleClickBehavior } from "./hooks/useDoubleClickBehavior";
@@ -37,40 +33,6 @@ import { useDropBehavior } from "./hooks/useDropBehavior";
 import { useFitViewOnFocus } from "./hooks/useFitViewOnFocus";
 import { useNodeEdgeChanges } from "./hooks/useNodeEdgeChanges";
 import { usePaneClickBehavior } from "./hooks/usePaneClickBehavior";
-import { SelectionToolbar } from "./SelectionToolbar";
-
-function ConnectionLine({
-  fromX,
-  fromY,
-  fromPosition,
-  toX,
-  toY,
-  toPosition,
-}: ConnectionLineComponentProps) {
-  const hasGhost = useNodes().some((n) => n.type === "ghost");
-  if (hasGhost) return null;
-
-  const [path] = getBezierPath({
-    sourceX: fromX,
-    sourceY: fromY,
-    sourcePosition: fromPosition,
-    targetX: toX,
-    targetY: toY,
-    targetPosition: toPosition,
-  });
-
-  return (
-    <g>
-      <path
-        d={path}
-        fill="none"
-        stroke="#b1b1b7"
-        strokeWidth={1.5}
-        className="animated"
-      />
-    </g>
-  );
-}
 
 interface FlowCanvasProps {
   spec: ComponentSpec | null;
@@ -150,65 +112,5 @@ export const FlowCanvas = observer(function FlowCanvas({
         <MiniMap position="bottom-left" pannable zoomable />
       </ReactFlow>
     </BlockStack>
-  );
-});
-
-const FloatingSelectionToolbar = observer(function FloatingSelectionToolbar({
-  spec,
-}: {
-  spec: ComponentSpec | null;
-}) {
-  const { editor } = useSharedStores();
-  const {
-    duplicateSelectedNodes,
-    copySelectedNodes,
-    pasteNodes,
-    deleteSelectedNodes,
-  } = useTaskActions();
-  const { multiSelection } = editor;
-  const reactFlow = useReactFlow();
-
-  if (multiSelection.length <= 1) return null;
-
-  const nodeIds = multiSelection.map((n) => n.id);
-
-  const handleDuplicate = () => {
-    if (!spec) return;
-    duplicateSelectedNodes(spec, multiSelection);
-  };
-
-  const handleCopy = () => {
-    if (!spec) return;
-    copySelectedNodes(spec, multiSelection);
-  };
-
-  const handlePaste = () => {
-    if (!spec) return;
-    const viewport = reactFlow.getViewport();
-    const centerX = (window.innerWidth / 2 - viewport.x) / viewport.zoom;
-    const centerY = (window.innerHeight / 2 - viewport.y) / viewport.zoom;
-    void pasteNodes(spec, { x: centerX, y: centerY });
-  };
-
-  const handleDelete = () => {
-    if (!spec) return;
-    deleteSelectedNodes(spec, multiSelection);
-  };
-
-  return (
-    <NodeToolbar
-      nodeId={nodeIds}
-      isVisible
-      offset={0}
-      align="end"
-      className="z-50"
-    >
-      <SelectionToolbar
-        onDuplicate={handleDuplicate}
-        onCopy={handleCopy}
-        onPaste={handlePaste}
-        onDelete={handleDelete}
-      />
-    </NodeToolbar>
   );
 });
