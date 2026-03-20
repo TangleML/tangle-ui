@@ -22,6 +22,29 @@ export async function createNewPipeline(): Promise<string> {
   return name;
 }
 
+export async function savePipelineAs(
+  navigation: NavigationStore,
+  newName: string,
+): Promise<void> {
+  const serializer = new JsonSerializer();
+  const componentSpec = navigation.rootSpec;
+
+  if (!componentSpec) return;
+
+  const serialized = {
+    ...serializer.serialize(componentSpec),
+    name: newName,
+  } as WiredComponentSpec;
+
+  const componentText = componentSpecToYaml(serialized);
+
+  await writeComponentToFileListFromText(
+    USER_PIPELINES_LIST_NAME,
+    newName,
+    componentText,
+  );
+}
+
 export function exportCurrentPipeline(navigation: NavigationStore): void {
   const serializer = new JsonSerializer();
   const componentSpec = navigation.rootSpec;
