@@ -7,6 +7,7 @@ import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlo
 import { KeyValueList } from "@/components/shared/ContextPanel/Blocks/KeyValueList";
 import { TextBlock } from "@/components/shared/ContextPanel/Blocks/TextBlock";
 import { CopyText } from "@/components/shared/CopyText/CopyText";
+import { FavoriteToggle } from "@/components/shared/FavoriteToggle";
 import { PipelineDescription } from "@/components/shared/PipelineDescription/PipelineDescription";
 import { PipelineRunNameTemplateEditor } from "@/components/shared/PipelineRunNameTemplate/PipelineRunNameTemplateEditor";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
@@ -102,6 +103,16 @@ const PipelineDetails = () => {
   const actions = [
     <RenamePipeline key="rename-pipeline-action" />,
     <ViewYamlButton key="view-pipeline-yaml" componentSpec={componentSpec} />,
+    ...(componentSpec.name
+      ? [
+          <FavoriteToggle
+            key="favorite-pipeline"
+            type="pipeline"
+            id={componentSpec.name}
+            name={componentSpec.name}
+          />,
+        ]
+      : []),
   ];
 
   return (
