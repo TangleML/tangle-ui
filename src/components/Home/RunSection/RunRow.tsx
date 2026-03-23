@@ -4,6 +4,7 @@ import { type MouseEvent } from "react";
 
 import type { PipelineRunResponse } from "@/api/types.gen";
 import { CopyText } from "@/components/shared/CopyText/CopyText";
+import { FavoriteToggle } from "@/components/shared/FavoriteToggle";
 import { StatusBar, StatusIcon } from "@/components/shared/Status";
 import { TagList } from "@/components/shared/Tags/TagList";
 import { Button } from "@/components/ui/button";
@@ -126,6 +127,9 @@ const RunRow = ({ run }: { run: PipelineRunResponse }) => {
       </TableCell>
       <TableCell className="max-w-64">
         {tags && tags.length > 0 && <TagList tags={tags} />}
+      </TableCell>
+      <TableCell className="w-0">
+        <FavoriteToggle type="run" id={runId} name={name} />
       </TableCell>
     </TableRow>
   );
