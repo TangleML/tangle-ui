@@ -11,6 +11,7 @@ import { BlockStack } from "@/components/ui/layout";
 import { Paragraph } from "@/components/ui/typography";
 import { faviconManager } from "@/favicon";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { useRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import { useBackend } from "@/providers/BackendProvider";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import {
@@ -28,6 +29,8 @@ const PipelineRunContent = () => {
   const { setComponentSpec, clearComponentSpec, componentSpec } =
     useComponentSpec();
   const { configured, available, ready } = useBackend();
+  const { addRecentlyViewed } = useRecentlyViewed();
+  const params = useParams({ strict: false });
 
   const {
     details,
@@ -75,6 +78,13 @@ const PipelineRunContent = () => {
     "/runs/$id": (params) =>
       `Tangle - ${componentSpec?.name || ""} - ${params.id}`,
   });
+
+  useEffect(() => {
+    const id =
+      "id" in params && typeof params.id === "string" ? params.id : null;
+    if (!componentSpec?.name || !id) return;
+    addRecentlyViewed({ type: "run", id, name: componentSpec.name });
+  }, [componentSpec?.name, params, addRecentlyViewed]);
 
   if (isLoading || !ready) {
     return <LoadingScreen message="Loading Pipeline Run" />;
