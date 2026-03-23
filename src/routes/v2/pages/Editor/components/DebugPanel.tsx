@@ -3,6 +3,7 @@ import { useEffect } from "react";
 
 import CodeSyntaxHighlighter from "@/components/shared/CodeViewer/CodeSyntaxHighlighter";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Text } from "@/components/ui/typography";
 import type { ComponentSpec } from "@/models/componentSpec";
@@ -144,6 +145,8 @@ const DebugPanelContent = observer(function DebugPanelContent() {
           <StatGroup title="Keyboard Shortcuts">
             <BlockStack>
               <BlockStack>
+                <PressedKeysList />
+                <Separator />
                 {keybordShortcuts.map((shortcut) => (
                   <InlineStack
                     key={shortcut.id}
@@ -192,3 +195,25 @@ export function useDebugPanelWindow() {
     }
   }, []);
 }
+
+const PressedKeysList = observer(function PressedKeysList() {
+  const { keyboard } = useSharedStores();
+  const pressedKeys = [...keyboard.pressed.values()];
+
+  return (
+    <BlockStack>
+      <Text
+        size="xs"
+        weight="semibold"
+        className="uppercase tracking-wider text-blue-600"
+      >
+        Pressed Keys
+      </Text>
+      <InlineStack gap="2" blockAlign="center">
+        {pressedKeys.map((key) => (
+          <Text key={key}>{key}</Text>
+        ))}
+      </InlineStack>
+    </BlockStack>
+  );
+});

@@ -15,8 +15,12 @@ export function useShortcutListener(): void {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      const key = normalizeKeyFromEvent(event);
-      if (key) keyboard.pressKey(key);
+      if (event.repeat && event.metaKey) return;
+
+      const keys = normalizeKeyFromEvent(event);
+      for (const key of keys) {
+        keyboard.pressKey(key);
+      }
 
       const editable = isEditableTarget(event.target);
 
@@ -36,8 +40,14 @@ export function useShortcutListener(): void {
     };
 
     const handleKeyUp = (event: KeyboardEvent) => {
-      const key = normalizeKeyFromEvent(event);
-      if (key) keyboard.releaseKey(key);
+      if (event.metaKey) {
+        keyboard.clearPressed();
+      }
+
+      const keys = normalizeKeyFromEvent(event);
+      for (const key of keys) {
+        keyboard.releaseKey(key);
+      }
     };
 
     const handleBlur = () => {
