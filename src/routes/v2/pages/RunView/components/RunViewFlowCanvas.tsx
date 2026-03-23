@@ -22,6 +22,8 @@ import { useViewportScaling } from "@/routes/v2/shared/hooks/useViewportScaling"
 import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
+import { useCopyShortcut } from "../hooks/useCopyShortcut";
+import { RunViewSelectionToolbar } from "./RunViewSelectionToolbar";
 import { RunViewSubgraphBreadcrumbs } from "./RunViewSubgraphBreadcrumbs";
 
 interface RunViewFlowCanvasProps {
@@ -49,6 +51,7 @@ export const RunViewFlowCanvas = observer(function RunViewFlowCanvas({
   } = useFlowCanvasState({ spec });
 
   const doubleClickBehavior = useDoubleClickBehavior(spec);
+  useCopyShortcut(spec);
 
   const applyLayout = (layoutedNodes: import("@xyflow/react").Node[]) => {
     rfSetNodes(layoutedNodes);
@@ -86,6 +89,7 @@ export const RunViewFlowCanvas = observer(function RunViewFlowCanvas({
         elementsSelectable
         deleteKeyCode={null}
       >
+        <RunViewSelectionToolbar spec={spec} />
         <Background gap={GRID_SIZE} className="!bg-slate-50" />
         <Controls position="bottom-right" />
         <MiniMap position="bottom-left" pannable zoomable />

@@ -1,15 +1,7 @@
 import { Binding } from "@/models/componentSpec/entities/binding";
 import { ComponentSpec } from "@/models/componentSpec/entities/componentSpec";
 import type { IdGenerator } from "@/models/componentSpec/factories/idGenerator";
-import type {
-  BindingSnapshot,
-  FlexNodeSnapshot,
-  NodeSnapshot,
-} from "@/routes/v2/shared/nodes/types";
-
-export type { BindingSnapshot, FlexNodeSnapshot, NodeSnapshot };
-
-// -- Standalone binding helpers (node-type-independent) --
+import type { BindingSnapshot } from "@/routes/v2/shared/nodes/types";
 
 export function snapshotInternalBindings(
   spec: ComponentSpec,

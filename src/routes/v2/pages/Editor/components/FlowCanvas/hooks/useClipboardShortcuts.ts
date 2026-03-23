@@ -9,38 +9,10 @@ import {
   pasteNodes,
 } from "@/routes/v2/pages/Editor/store/actions";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
+import { getEffectiveSelection } from "@/routes/v2/shared/clipboard/getEffectiveSelection";
 import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
-import type { NodeTypeRegistry } from "@/routes/v2/shared/nodes/registry";
 import { CMDALT } from "@/routes/v2/shared/shortcuts/keys";
-import type {
-  EditorStore,
-  SelectedNode,
-} from "@/routes/v2/shared/store/editorStore";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
-
-/**
- * Returns the current effective selection: multiSelection if multiple nodes
- * are selected, or a single-element array built from selectedNodeId when
- * exactly one node is selected.
- */
-function getEffectiveSelection(
-  registry: NodeTypeRegistry,
-  spec: ComponentSpec,
-  editor: EditorStore,
-): SelectedNode[] {
-  const { multiSelection, selectedNodeId, selectedNodeType } = editor;
-  if (multiSelection.length > 0) return multiSelection;
-
-  if (!selectedNodeId || !selectedNodeType) return [];
-
-  const position = registry
-    .getByNodeId(spec, selectedNodeId)
-    ?.getPosition(spec, selectedNodeId);
-
-  if (!position) return [];
-
-  return [{ id: selectedNodeId, type: selectedNodeType, position }];
-}
 
 export function useClipboardShortcuts(
   spec: ComponentSpec | null,

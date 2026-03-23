@@ -9,13 +9,6 @@ import type { ComponentType, MouseEvent } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 import type { GuidelineOrientation } from "@/models/componentSpec/annotations";
-import type {
-  Annotation,
-  Argument,
-  ComponentReference,
-  PredicateType,
-  TypeSpecType,
-} from "@/models/componentSpec/entities/types";
 import type { IdGenerator } from "@/models/componentSpec/factories/idGenerator";
 import type {
   EditorStore,
@@ -36,66 +29,17 @@ export interface UndoGroupable {
 // Snapshot types (used by clone handlers and copy-paste)
 // ---------------------------------------------------------------------------
 
-interface TaskSnapshotData {
-  componentRef: ComponentReference;
-  isEnabled?: PredicateType;
-  arguments: Argument[];
-  annotations: Annotation[];
-}
-
-interface InputSnapshotData {
-  type?: TypeSpecType;
-  description?: string;
-  defaultValue?: string;
-  optional?: boolean;
-  annotations: Annotation[];
-}
-
-interface OutputSnapshotData {
-  type?: TypeSpecType;
-  description?: string;
-  annotations: Annotation[];
-}
-
-interface BaseNodeSnapshot {
+export interface NodeSnapshot<TData = unknown> {
+  $type: string;
   entityId: string;
   name: string;
   position: XYPosition;
+  data: TData;
 }
 
-export interface TaskNodeSnapshot extends BaseNodeSnapshot {
-  type: "task";
-  data: TaskSnapshotData;
+export interface NodeSnapshotHandler {
+  snapshot(spec: ComponentSpec, entityId: string): NodeSnapshot | null;
 }
-
-export interface InputNodeSnapshot extends BaseNodeSnapshot {
-  type: "input";
-  data: InputSnapshotData;
-}
-
-export interface OutputNodeSnapshot extends BaseNodeSnapshot {
-  type: "output";
-  data: OutputSnapshotData;
-}
-
-export interface FlexNodeSnapshot extends BaseNodeSnapshot {
-  type: "flex";
-  data: FlexNodeSnapshotData;
-}
-
-interface FlexNodeSnapshotData {
-  properties: Record<string, unknown>;
-  metadata: Record<string, unknown>;
-  size: { width: number; height: number };
-  zIndex: number;
-  locked?: boolean;
-}
-
-export type NodeSnapshot =
-  | TaskNodeSnapshot
-  | InputNodeSnapshot
-  | OutputNodeSnapshot
-  | FlexNodeSnapshot;
 
 export interface BindingSnapshot {
   sourceEntityId: string;
@@ -256,7 +200,11 @@ export interface NodeTypeManifest {
     },
   ): void;
 
-  // -- Clone / copy-paste -----------------------------------------------
+  // -- Snapshot (read-only, shared by Editor and RunView) ----------------
+
+  readonly snapshotHandler?: NodeSnapshotHandler;
+
+  // -- Clone / copy-paste (Editor-only) ---------------------------------
 
   readonly cloneHandler?: NodeCloneHandler;
 
