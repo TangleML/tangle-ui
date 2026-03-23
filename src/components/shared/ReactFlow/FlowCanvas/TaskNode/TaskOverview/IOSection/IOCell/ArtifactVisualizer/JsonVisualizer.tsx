@@ -6,15 +6,19 @@ import { TWENTY_FOUR_HOURS_IN_MS } from "@/utils/constants";
 
 import IOCodeViewer from "../IOCodeViewer";
 
-interface JsonVisualizerProps {
-  signedUrl: string;
+type JsonVisualizerProps = {
   name: string;
-}
+} & (
+  | { value: string; signedUrl?: never }
+  | { value?: never; signedUrl: string }
+);
 
-const JsonVisualizer = ({ signedUrl, name }: JsonVisualizerProps) => {
+const JsonVisualizer = ({ name, value, signedUrl }: JsonVisualizerProps) => {
   const { data, isLoading, error } = useQuery({
     queryKey: ["artifact-json", signedUrl],
     queryFn: async () => {
+      if (!signedUrl) return null;
+
       const response = await fetch(signedUrl);
       if (!response.ok) {
         throw new Error(`(${response.status}) Failed to fetch artifact.`);
@@ -24,6 +28,7 @@ const JsonVisualizer = ({ signedUrl, name }: JsonVisualizerProps) => {
     },
     staleTime: TWENTY_FOUR_HOURS_IN_MS,
     retry: false,
+    enabled: !!signedUrl,
   });
 
   if (isLoading) return <Spinner />;
@@ -36,9 +41,10 @@ const JsonVisualizer = ({ signedUrl, name }: JsonVisualizerProps) => {
     );
   }
 
-  if (!data) return null;
+  const content = value ?? data;
+  if (!content) return null;
 
-  return <IOCodeViewer title={name} value={data} />;
+  return <IOCodeViewer title={name} value={content} />;
 };
 
 export default JsonVisualizer;

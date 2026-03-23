@@ -18,7 +18,7 @@ import {
 
 interface TableVisualizerProps {
   data: ArtifactTableData;
-  signedUrl: string;
+  signedUrl?: string;
   isFullscreen: boolean;
 }
 
@@ -42,7 +42,7 @@ const TableVisualizer = ({
             ? `Showing all ${displayedRows.length} rows`
             : `Showing first ${displayedRows.length} rows`}
         </Paragraph>
-        {!isShowingAllRows && (
+        {!isShowingAllRows && signedUrl && (
           <Link
             href={signedUrl}
             target="_blank"

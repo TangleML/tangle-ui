@@ -7,20 +7,25 @@ import { TWENTY_FOUR_HOURS_IN_MS } from "@/utils/constants";
 import TableVisualizer from "./TableVisualizer";
 import { parseCsvPreview } from "./utils";
 
-interface CsvVisualizerProps {
-  signedUrl: string;
+type CsvVisualizerProps = {
   delimiter: string;
   isFullscreen: boolean;
-}
+} & (
+  | { value: string; signedUrl?: never }
+  | { value?: never; signedUrl: string }
+);
 
 const CsvVisualizer = ({
-  signedUrl,
   delimiter,
   isFullscreen,
+  value,
+  signedUrl,
 }: CsvVisualizerProps) => {
   const { data, isLoading, error } = useQuery({
     queryKey: ["artifact-csv", signedUrl, delimiter],
     queryFn: async () => {
+      if (!signedUrl) return null;
+
       const response = await fetch(signedUrl);
       if (!response.ok) {
         throw new Error(`(${response.status}) Failed to fetch artifact.`);
@@ -31,7 +36,10 @@ const CsvVisualizer = ({
     },
     staleTime: TWENTY_FOUR_HOURS_IN_MS,
     retry: false,
+    enabled: !!signedUrl,
   });
+
+  const parsed = value ? parseCsvPreview(value, delimiter) : data;
 
   if (isLoading) return <Spinner />;
 
@@ -43,7 +51,7 @@ const CsvVisualizer = ({
     );
   }
 
-  if (!data || data.headers.length === 0) {
+  if (!parsed || parsed.headers.length === 0) {
     return (
       <Paragraph tone="subdued" size="xs">
         No data
@@ -53,7 +61,7 @@ const CsvVisualizer = ({
 
   return (
     <TableVisualizer
-      data={data}
+      data={parsed}
       signedUrl={signedUrl}
       isFullscreen={isFullscreen}
     />

@@ -37,19 +37,19 @@ const VISUALIZABLE_TYPES = new Set([
   "apacheparquet",
 ]);
 
-interface ArtifactVisualizerProps {
+type ArtifactVisualizerProps = {
   artifact: ArtifactNodeResponse;
   name: string;
   type: string;
-}
+  value?: string;
+};
 
 const ArtifactVisualizer = ({
   artifact,
   name,
   type,
+  value,
 }: ArtifactVisualizerProps) => {
-  const { backendUrl } = useBackend();
-
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const normalizedType = type?.toLowerCase().replace(/\s/g, "") ?? "text";
@@ -67,10 +67,20 @@ const ArtifactVisualizer = ({
   return (
     <Dialog onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="xs">
-          <Icon name="Eye" />
-          Preview
-        </Button>
+        {value ? (
+          <Button variant="ghost" size="xs">
+            <Icon
+              name="Maximize2"
+              size="xs"
+              className="text-muted-foreground"
+            />
+          </Button>
+        ) : (
+          <Button variant="ghost" size="xs">
+            <Icon name="Eye" />
+            Preview
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent
         className={cn(
@@ -110,23 +120,69 @@ const ArtifactVisualizer = ({
           </DialogDescription>
         </DialogHeader>
         <div className="overflow-auto flex-1 min-h-0">
-          <PreviewContent
-            artifactId={artifact.id}
-            type={normalizedType}
-            backendUrl={backendUrl}
-            name={name}
-            isFullscreen={isFullscreen}
-          />
+          {value ? (
+            <InlineContent
+              name={name}
+              value={value}
+              type={normalizedType}
+              isFullscreen={isFullscreen}
+            />
+          ) : (
+            <PreviewContent
+              name={name}
+              artifactId={artifact.id}
+              type={normalizedType}
+              isFullscreen={isFullscreen}
+            />
+          )}
         </div>
       </DialogContent>
     </Dialog>
   );
 };
 
+interface InlineContentProps {
+  type: string;
+  name: string;
+  value: string;
+  isFullscreen: boolean;
+}
+
+const InlineContent = ({
+  type,
+  name,
+  value,
+  isFullscreen,
+}: InlineContentProps) => {
+  switch (type) {
+    case "csv":
+      return (
+        <CsvVisualizer
+          value={value}
+          delimiter=","
+          isFullscreen={isFullscreen}
+        />
+      );
+    case "tsv":
+      return (
+        <CsvVisualizer
+          value={value}
+          delimiter={"\t"}
+          isFullscreen={isFullscreen}
+        />
+      );
+    case "jsonobject":
+    case "jsonarray":
+      return <JsonVisualizer value={value} name={name} />;
+    case "text":
+    default:
+      return <TextVisualizer value={value} />;
+  }
+};
+
 interface PreviewContentProps {
   artifactId: string;
   type: string;
-  backendUrl: string;
   name: string;
   isFullscreen: boolean;
 }
@@ -134,10 +190,11 @@ interface PreviewContentProps {
 const PreviewContent = ({
   artifactId,
   type,
-  backendUrl,
   name,
   isFullscreen,
 }: PreviewContentProps) => {
+  const { backendUrl } = useBackend();
+
   const { data, isLoading, error } = useQuery({
     queryKey: ["artifact-signed-url", artifactId],
     queryFn: () => getArtifactSignedUrl(artifactId, backendUrl),
