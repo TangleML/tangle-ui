@@ -24,6 +24,7 @@ import { TaskPanel } from "@/routes/v2/shared/windows/TaskPanel";
 import { WindowContainer } from "@/routes/v2/shared/windows/WindowContainer";
 import { useWindowPersistence } from "@/routes/v2/shared/windows/windowPersistence";
 
+import { useShortcutListener } from "../../shared/shortcuts/useShortcutListener";
 import { useDebugPanelWindow } from "./components/DebugPanel";
 import { EditorMenuBar } from "./components/EditorMenuBar/EditorMenuBar";
 import { EmptyEditorState } from "./components/EmptyEditorState";
@@ -40,7 +41,6 @@ import { useSelectionWindowSync } from "./hooks/useSelectionWindowSync";
 import { useSpecLifecycle } from "./hooks/useSpecLifecycle";
 import { useUndoRedoKeyboard } from "./hooks/useUndoRedoKeyboard";
 import { editorRegistry } from "./nodes";
-import { useEditorShortcuts } from "./shortcuts/useEditorShortcuts";
 import { EditorSessionProvider } from "./store/EditorSessionContext";
 
 interface PipelineEditorProps {
@@ -78,7 +78,7 @@ const PipelineEditor = withSuspenseWrapper(
     useRunsAndSubmissionWindow();
     useUndoRedoKeyboard();
     useFocusMode();
-    useEditorShortcuts();
+    useShortcutListener();
     useDebugPanelWindow();
 
     const activeSpec = navigation.activeSpec;

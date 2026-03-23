@@ -8,9 +8,9 @@ import { isEditableTarget } from "./shortcutUtils";
 /**
  * Single keydown/keyup/blur listener that tracks pressed keys in
  * `keyboard.pressed` and dispatches registered shortcuts.
- * Call once at the EditorV2 root level.
+ * Call once at the root layout level (Editor, RunView, etc.).
  */
-export function useEditorShortcuts(): void {
+export function useShortcutListener(): void {
   const { keyboard } = useSharedStores();
 
   useEffect(() => {

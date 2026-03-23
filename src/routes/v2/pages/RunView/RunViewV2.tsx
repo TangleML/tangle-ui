@@ -25,6 +25,7 @@ import {
 import { useDockAreaAccordion } from "@/routes/v2/shared/hooks/useDockAreaAccordion";
 import { NodeRegistryProvider } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { SpecProvider } from "@/routes/v2/shared/providers/SpecContext";
+import { useShortcutListener } from "@/routes/v2/shared/shortcuts/useShortcutListener";
 import {
   SharedStoreProvider,
   useSharedStores,
@@ -136,6 +137,7 @@ const RunViewLayout = observer(function RunViewLayout({
   spec,
 }: RunViewLayoutProps) {
   useRunViewSpecLifecycle(spec);
+  useShortcutListener();
   useWindowPersistence("runview");
   useDockAreaAccordion();
   useRunViewWindows();

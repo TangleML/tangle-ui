@@ -4,8 +4,10 @@ import {
   getFlexNodeDisplayName,
 } from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/utils";
 import type { ComponentSpec } from "@/models/componentSpec/entities/componentSpec";
-import type { FlexNodeSnapshot } from "@/routes/v2/pages/Editor/store/nodeCloneHandlers";
-import type { NodeTypeManifest } from "@/routes/v2/shared/nodes/types";
+import type {
+  NodeSnapshot,
+  NodeTypeManifest,
+} from "@/routes/v2/shared/nodes/types";
 import { deepClone } from "@/utils/deepClone";
 
 import { EditorV2FlexNode } from "./components/FlexNode";
@@ -18,6 +20,20 @@ import {
   setFlexNodes,
   updateFlexNodePosition,
 } from "./flexNode.actions";
+
+interface FlexSnapshotData {
+  properties: Record<string, unknown>;
+  metadata: Record<string, unknown>;
+  size: { width: number; height: number };
+  zIndex: number;
+  locked?: boolean;
+}
+
+function isFlexSnapshot(
+  snapshot: NodeSnapshot,
+): snapshot is NodeSnapshot<FlexSnapshotData> {
+  return snapshot.$type === "flex";
+}
 
 export const flexNodeManifest: NodeTypeManifest = {
   type: "flex",
@@ -82,13 +98,13 @@ export const flexNodeManifest: NodeTypeManifest = {
   iconColor: "text-yellow-500",
 
   cloneHandler: {
-    snapshot(spec, entityId) {
+    snapshot(spec, entityId): NodeSnapshot<FlexSnapshotData> | null {
       const node = findFlexNode(spec, entityId);
       if (!node) return null;
 
       return {
+        $type: "flex",
         entityId: node.id,
-        type: "flex",
         name: getFlexNodeDisplayName(node),
         position: node.position,
         data: {
@@ -98,22 +114,23 @@ export const flexNodeManifest: NodeTypeManifest = {
           zIndex: node.zIndex,
           locked: node.locked,
         },
-      } satisfies FlexNodeSnapshot;
+      };
     },
 
     clone(spec, snapshot, _idGen, position, undo) {
-      if (snapshot.type !== "flex") return null;
-      const { data } = snapshot as FlexNodeSnapshot;
-      const id = `flex_${crypto.randomUUID()}`;
+      if (!isFlexSnapshot(snapshot)) return null;
 
+      const id = `flex_${crypto.randomUUID()}`;
       const newNode: FlexNodeData = {
         id,
-        properties: deepClone(data.properties) as FlexNodeData["properties"],
-        metadata: deepClone(data.metadata) as FlexNodeData["metadata"],
-        size: deepClone(data.size),
+        properties: deepClone(
+          snapshot.data.properties,
+        ) as FlexNodeData["properties"],
+        metadata: deepClone(snapshot.data.metadata) as FlexNodeData["metadata"],
+        size: deepClone(snapshot.data.size),
         position,
-        zIndex: data.zIndex,
-        locked: data.locked,
+        zIndex: snapshot.data.zIndex,
+        locked: snapshot.data.locked,
       };
 
       const nodes = getFlexNodes(spec);

@@ -3,86 +3,25 @@ import { action, computed, makeObservable, observable } from "mobx";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 import { IncrementingIdGenerator } from "@/models/componentSpec/factories/idGenerator";
-import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
+import {
+  readFromSystemClipboard,
+  writeToSystemClipboard,
+} from "@/routes/v2/shared/clipboard/clipboardEnvelope";
+import { computeSnapshotBounds } from "@/routes/v2/shared/clipboard/copyNodesToClipboard";
+import { snapshotInternalBindings } from "@/routes/v2/shared/clipboard/snapshotBindings";
+import type {
+  BindingSnapshot,
+  NodeSnapshot,
+  UndoGroupable,
+} from "@/routes/v2/shared/nodes/types";
 import type { SelectedNode } from "@/routes/v2/shared/store/editorStore";
 
 import { editorRegistry } from "../nodes";
-import {
-  type BindingSnapshot,
-  cloneBindings,
-  type NodeSnapshot,
-  snapshotInternalBindings,
-} from "./nodeCloneHandlers";
+import { cloneSnapshotsWithBindings } from "./clipboardStore.helpers";
 
 const PASTE_OFFSET = 50;
-const CLIPBOARD_ENVELOPE_TYPE = "tangle-pipeline-nodes";
 
 const idGen = new IncrementingIdGenerator();
-
-interface ClipboardEnvelope {
-  _type: typeof CLIPBOARD_ENVELOPE_TYPE;
-  snapshots: NodeSnapshot[];
-  bindings: BindingSnapshot[];
-}
-
-function isClipboardEnvelope(data: unknown): data is ClipboardEnvelope {
-  return (
-    typeof data === "object" &&
-    data !== null &&
-    "_type" in data &&
-    (data as Record<string, unknown>)._type === CLIPBOARD_ENVELOPE_TYPE
-  );
-}
-
-async function writeToSystemClipboard(
-  snapshots: NodeSnapshot[],
-  bindings: BindingSnapshot[],
-) {
-  try {
-    const envelope: ClipboardEnvelope = {
-      _type: CLIPBOARD_ENVELOPE_TYPE,
-      snapshots,
-      bindings,
-    };
-    await navigator.clipboard.writeText(JSON.stringify(envelope));
-  } catch {
-    // System clipboard may be unavailable (permissions, insecure context)
-  }
-}
-
-async function readFromSystemClipboard(): Promise<ClipboardEnvelope | null> {
-  try {
-    const text = await navigator.clipboard.readText();
-    const parsed = JSON.parse(text);
-    if (isClipboardEnvelope(parsed)) return parsed;
-  } catch {
-    // Not pipeline data or clipboard unavailable
-  }
-  return null;
-}
-
-function computeSnapshotBounds(snapshots: NodeSnapshot[]): {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-} {
-  if (snapshots.length === 0) return { x: 0, y: 0, width: 0, height: 0 };
-
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-
-  for (const s of snapshots) {
-    minX = Math.min(minX, s.position.x);
-    minY = Math.min(minY, s.position.y);
-    maxX = Math.max(maxX, s.position.x);
-    maxY = Math.max(maxY, s.position.y);
-  }
-
-  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
-}
 
 export class ClipboardStore {
   @observable.shallow accessor snapshots: NodeSnapshot[] = [];
@@ -98,10 +37,11 @@ export class ClipboardStore {
 
   @action copy(spec: ComponentSpec, selectedNodes: SelectedNode[]) {
     const snapshots: NodeSnapshot[] = [];
-
     for (const node of selectedNodes) {
       const manifest = editorRegistry.get(node.type);
-      const snapshot = manifest?.cloneHandler?.snapshot(spec, node.id);
+      const snapshot =
+        manifest?.snapshotHandler?.snapshot(spec, node.id) ??
+        manifest?.cloneHandler?.snapshot(spec, node.id);
       if (snapshot) snapshots.push(snapshot);
     }
 
@@ -134,10 +74,11 @@ export class ClipboardStore {
 
   duplicate(spec: ComponentSpec, selectedNodes: SelectedNode[]): string[] {
     const snapshots: NodeSnapshot[] = [];
-
     for (const node of selectedNodes) {
       const manifest = editorRegistry.get(node.type);
-      const snapshot = manifest?.cloneHandler?.snapshot(spec, node.id);
+      const snapshot =
+        manifest?.snapshotHandler?.snapshot(spec, node.id) ??
+        manifest?.cloneHandler?.snapshot(spec, node.id);
       if (snapshot) snapshots.push(snapshot);
     }
 
@@ -146,35 +87,18 @@ export class ClipboardStore {
     const selectedIds = new Set(selectedNodes.map((n) => n.id));
     const bindings = snapshotInternalBindings(spec, selectedIds);
 
-    const newIds: string[] = [];
-    const idMap = new Map<string, string>();
-
-    this.undoStore.withGroup("Duplicate nodes", () => {
-      for (const snapshot of snapshots) {
-        const offsetPosition = {
-          x: snapshot.position.x + PASTE_OFFSET,
-          y: snapshot.position.y + PASTE_OFFSET,
-        };
-
-        const manifest = editorRegistry.get(snapshot.type);
-        const newId = manifest?.cloneHandler?.clone(
-          spec,
-          snapshot,
-          idGen,
-          offsetPosition,
-          this.undoStore,
-        );
-
-        if (newId) {
-          idMap.set(snapshot.entityId, newId);
-          newIds.push(newId);
-        }
-      }
-
-      cloneBindings(spec, bindings, idMap, idGen);
-    });
-
-    return newIds;
+    return cloneSnapshotsWithBindings(
+      spec,
+      snapshots,
+      bindings,
+      (s) => ({
+        x: s.position.x + PASTE_OFFSET,
+        y: s.position.y + PASTE_OFFSET,
+      }),
+      this.undoStore,
+      idGen,
+      "Duplicate nodes",
+    );
   }
 
   @action clear() {
@@ -194,34 +118,17 @@ export class ClipboardStore {
       y: bounds.y + bounds.height / 2,
     };
 
-    const newIds: string[] = [];
-    const idMap = new Map<string, string>();
-
-    this.undoStore.withGroup("Paste nodes", () => {
-      for (const snapshot of snapshots) {
-        const offsetPosition = {
-          x: centerPosition.x + (snapshot.position.x - snapshotCenter.x),
-          y: centerPosition.y + (snapshot.position.y - snapshotCenter.y),
-        };
-
-        const manifest = editorRegistry.get(snapshot.type);
-        const newId = manifest?.cloneHandler?.clone(
-          spec,
-          snapshot,
-          idGen,
-          offsetPosition,
-          this.undoStore,
-        );
-
-        if (newId) {
-          idMap.set(snapshot.entityId, newId);
-          newIds.push(newId);
-        }
-      }
-
-      cloneBindings(spec, bindings, idMap, idGen);
-    });
-
-    return newIds;
+    return cloneSnapshotsWithBindings(
+      spec,
+      snapshots,
+      bindings,
+      (s) => ({
+        x: centerPosition.x + (s.position.x - snapshotCenter.x),
+        y: centerPosition.y + (s.position.y - snapshotCenter.y),
+      }),
+      this.undoStore,
+      idGen,
+      "Paste nodes",
+    );
   }
 }

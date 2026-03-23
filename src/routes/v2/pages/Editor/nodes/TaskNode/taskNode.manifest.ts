@@ -6,11 +6,14 @@ import { Task } from "@/models/componentSpec/entities/task";
 import { PIPELINE_TREE_WINDOW_ID } from "@/routes/v2/pages/Editor/hooks/usePipelineTreeWindow";
 import { addTask } from "@/routes/v2/pages/Editor/store/actions";
 import { generateUniqueTaskName } from "@/routes/v2/pages/Editor/store/nameUtils";
-import { taskManifestBase } from "@/routes/v2/shared/nodes/TaskNode/taskManifestBase";
+import {
+  isTaskSnapshot,
+  snapshotTask,
+  taskManifestBase,
+} from "@/routes/v2/shared/nodes/TaskNode/taskManifestBase";
 import type {
   NodeTypeManifest,
   TaskNodeData,
-  TaskNodeSnapshot,
 } from "@/routes/v2/shared/nodes/types";
 import type { NavigationStore } from "@/routes/v2/shared/store/navigationStore";
 import { restoreWindow } from "@/routes/v2/shared/windows/windows.actions";
@@ -57,45 +60,26 @@ export const taskManifest: NodeTypeManifest = {
   },
 
   cloneHandler: {
-    snapshot(spec, entityId) {
-      const task = spec.tasks.find((t) => t.$id === entityId);
-      if (!task) return null;
-
-      const nonEditorAnnotations = task.annotations.items
-        .filter((a) => !a.key.startsWith("editor."))
-        .map((a) => deepClone(a));
-
-      return {
-        entityId: task.$id,
-        type: "task",
-        name: task.name,
-        position: task.annotations.get("editor.position"),
-        data: {
-          componentRef: deepClone(task.componentRef),
-          isEnabled: task.isEnabled ? deepClone(task.isEnabled) : undefined,
-          arguments: task.arguments.map((a) => deepClone(a)),
-          annotations: nonEditorAnnotations,
-        },
-      } satisfies TaskNodeSnapshot;
-    },
+    snapshot: snapshotTask,
 
     clone(spec, snapshot, idGen, position, _undo) {
-      if (snapshot.type !== "task") return null;
-      const { data } = snapshot as TaskNodeSnapshot;
-      const uniqueName = generateUniqueTaskName(spec, snapshot.name);
+      if (!isTaskSnapshot(snapshot)) return null;
 
+      const uniqueName = generateUniqueTaskName(spec, snapshot.name);
       const annotations = Annotations.from([
-        ...data.annotations,
+        ...snapshot.data.annotations,
         { key: "editor.position", value: position },
       ]);
 
       const task = new Task({
         $id: idGen.next("task"),
         name: uniqueName,
-        componentRef: deepClone(data.componentRef),
-        isEnabled: data.isEnabled ? deepClone(data.isEnabled) : undefined,
+        componentRef: deepClone(snapshot.data.componentRef),
+        isEnabled: snapshot.data.isEnabled
+          ? deepClone(snapshot.data.isEnabled)
+          : undefined,
         annotations,
-        arguments: deepClone(data.arguments),
+        arguments: deepClone(snapshot.data.arguments),
       });
 
       spec.addTask(task);
