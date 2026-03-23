@@ -93,7 +93,7 @@
     "gh-pages": "^6.3.0",
     "js-yaml": "^4.1.1",
     "localforage": "^1.10.0",
-    "lucide-react": "^0.577.0",
+    "lucide-react": "^1.0.1",
     "nanoid": "^5.1.7",
     "pyodide": "^0.29.3",
     "random-words": "^2.0.1",
