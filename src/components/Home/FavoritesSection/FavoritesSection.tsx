@@ -1,8 +1,17 @@
 import { useNavigate } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, GitBranch, Play, Star, X } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  GitBranch,
+  Play,
+  Star,
+  X,
+} from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
+import { Input } from "@/components/ui/input";
 import { InlineStack } from "@/components/ui/layout";
 import { Paragraph, Text } from "@/components/ui/typography";
 import { type FavoriteItem, useFavorites } from "@/hooks/useFavorites";
@@ -57,16 +66,32 @@ const FavoriteChip = ({ item }: { item: FavoriteItem }) => {
 export const FavoritesSection = () => {
   const { favorites } = useFavorites();
   const [page, setPage] = useState(0);
+  const [query, setQuery] = useState("");
 
-  const totalPages = Math.ceil(favorites.length / PAGE_SIZE);
-  // Reset to last valid page if favorites shrink (e.g. after removing items)
+  const filtered = query.trim()
+    ? favorites.filter((f) => {
+        const q = query.toLowerCase();
+        return (
+          f.id.toLowerCase().includes(q) || f.name.toLowerCase().includes(q)
+        );
+      })
+    : favorites;
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  // Reset to last valid page if filtered results shrink
   const safePage = Math.min(page, Math.max(0, totalPages - 1));
-  const paginated = favorites.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
+  const paginated = filtered.slice(
+    safePage * PAGE_SIZE,
+    (safePage + 1) * PAGE_SIZE,
+  );
 
   return (
     <div className="flex flex-col gap-2">
       <InlineStack blockAlign="center" gap="1">
-        <Star className="h-4 w-4 text-warning" fill="oklch(79.5% 0.184 86.047)" />
+        <Star
+          className="h-4 w-4 text-warning"
+          fill="oklch(79.5% 0.184 86.047)"
+        />
         <Text as="h2" size="sm" weight="semibold">
           Favorites
         </Text>
@@ -78,6 +103,35 @@ export const FavoritesSection = () => {
         </Paragraph>
       ) : (
         <div className="flex flex-col gap-2">
+          <div className="relative w-48">
+            <Icon
+              name="Search"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+            />
+            <Input
+              placeholder="Search by name or ID..."
+              value={query}
+              onChange={(e) => {
+                setPage(0);
+                setQuery(e.target.value);
+              }}
+              className="pl-9 pr-8 w-full"
+            />
+            {query && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  setPage(0);
+                  setQuery("");
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 size-6 text-muted-foreground hover:text-foreground"
+                aria-label="Clear search"
+              >
+                <Icon name="X" size="sm" />
+              </Button>
+            )}
+          </div>
           <div className="flex flex-wrap gap-2">
             {paginated.map((item) => (
               <FavoriteChip key={`${item.type}-${item.id}`} item={item} />
