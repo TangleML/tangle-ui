@@ -1,6 +1,8 @@
 import { observer } from "mobx-react-lite";
 import { type ChangeEvent, useEffect, useState } from "react";
 
+import { StackingControls } from "@/components/shared/ReactFlow/FlowControls/StackingControls";
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import {
   Accordion,
   AccordionContent,
@@ -9,16 +11,17 @@ import {
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/typography";
 import type { ComponentSpecJson } from "@/models/componentSpec";
 import { AnnotationsBlock } from "@/routes/v2/pages/Editor/components/AnnotationsBlock/AnnotationsBlock";
-import { ZIndexEditor } from "@/routes/v2/pages/Editor/nodes/FlexNode/context/components/ZIndexEditor";
 import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskActions";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { componentSpecToText } from "@/utils/yaml";
 
+import { ComponentRefBar } from "./components/ComponentRefBar";
 import { ConfigurationSection } from "./components/ConfigurationSection";
 import { OutputsSection } from "./components/OutputsSection";
 import { TaskActionsBar } from "./components/TaskActionsBar";
@@ -39,18 +42,20 @@ interface TaskDetailsProps {
 export const TaskDetails = observer(function TaskDetails({
   entityId,
 }: TaskDetailsProps) {
+  const showComponentRefBar = useFlagValue("task-component-ref-bar");
   const { editor } = useSharedStores();
   const { undo } = useEditorSession();
-  const taskActions = useTaskActions();
+  const { duplicateSelectedNodes, deleteTask, renameTask } = useTaskActions();
   const { setTaskColor } = useTaskConfigActions();
   const spec = useSpec();
   const task = spec?.tasks.find((t) => t.$id === entityId);
   const { focusedArgumentName } = editor;
 
   const [openSections, setOpenSections] = useState<string[]>([
+    "component",
     "task",
     "arguments",
-    "stacking",
+    "actions",
   ]);
 
   useEffect(() => {
@@ -84,7 +89,7 @@ export const TaskDetails = observer(function TaskDetails({
   const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
     const newName = event.target.value;
     if (newName && newName !== task.name) {
-      taskActions.renameTask(spec, entityId, newName);
+      renameTask(spec, entityId, newName);
     }
   };
 
@@ -97,13 +102,11 @@ export const TaskDetails = observer(function TaskDetails({
       x: 0,
       y: 0,
     };
-    taskActions.duplicateSelectedNodes(spec, [
-      { id: entityId, type: "task", position },
-    ]);
+    duplicateSelectedNodes(spec, [{ id: entityId, type: "task", position }]);
   };
 
   const handleDelete = () => {
-    taskActions.deleteTask(spec, entityId);
+    deleteTask(spec, entityId);
   };
 
   const handleZIndexChange = (newZIndex: number) => {
@@ -114,19 +117,46 @@ export const TaskDetails = observer(function TaskDetails({
 
   return (
     <BlockStack gap="0" className="w-full overflow-auto">
-      <TaskActionsBar
-        yamlText={yamlText}
-        taskName={task.name}
-        pythonCode={pythonCode}
-        onDuplicate={handleDuplicate}
-        onDelete={handleDelete}
-      />
+      {!showComponentRefBar && (
+        <BlockStack className="px-3 py-2">
+          <TaskActionsBar
+            yamlText={yamlText}
+            taskName={task.name}
+            pythonCode={pythonCode}
+            onDuplicate={handleDuplicate}
+            onDelete={handleDelete}
+          />
+        </BlockStack>
+      )}
       <Accordion
         type="multiple"
         value={openSections}
         onValueChange={setOpenSections}
         className="w-full overflow-auto"
       >
+        {showComponentRefBar && (
+          <AccordionItem value="component">
+            <AccordionTrigger className="py-1.5 px-3 text-xs hover:no-underline">
+              <Text
+                size="xs"
+                weight="semibold"
+                className="uppercase tracking-wide text-gray-500"
+              >
+                Component
+              </Text>
+            </AccordionTrigger>
+            <AccordionContent className="px-3 pb-2">
+              <BlockStack>
+                <ComponentRefBar
+                  componentRef={task.componentRef}
+                  yamlText={yamlText}
+                  taskName={task.name}
+                  pythonCode={pythonCode}
+                />
+              </BlockStack>
+            </AccordionContent>
+          </AccordionItem>
+        )}
         <AccordionItem value="task">
           <AccordionTrigger className="py-1.5 px-3 text-xs hover:no-underline">
             <Text
@@ -242,22 +272,35 @@ export const TaskDetails = observer(function TaskDetails({
           </AccordionContent>
         </AccordionItem>
 
-        <AccordionItem value="stacking">
+        <AccordionItem value="actions">
           <AccordionTrigger className="py-1.5 px-3 text-xs hover:no-underline">
             <Text
               size="xs"
               weight="semibold"
               className="uppercase tracking-wide text-gray-500"
             >
-              Stacking
+              Actions
             </Text>
           </AccordionTrigger>
           <AccordionContent className="px-3 pb-2">
-            <ZIndexEditor
-              nodeId={entityId}
-              title=""
-              onChange={handleZIndexChange}
-            />
+            <InlineStack gap="2" blockAlign="center" className="w-full">
+              <StackingControls
+                nodeId={entityId}
+                onChange={handleZIndexChange}
+              />
+              {showComponentRefBar && (
+                <>
+                  <Separator orientation="vertical" />
+                  <TaskActionsBar
+                    yamlText={yamlText}
+                    taskName={task.name}
+                    pythonCode={pythonCode}
+                    onDuplicate={handleDuplicate}
+                    onDelete={handleDelete}
+                  />
+                </>
+              )}
+            </InlineStack>
           </AccordionContent>
         </AccordionItem>
       </Accordion>
