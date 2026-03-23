@@ -38,15 +38,15 @@ const SPECIAL_KEY_MAP: Record<string, KeyConstant> = {
  * Maps a raw `KeyboardEvent.key` value to the canonical KeyConstant.
  * Returns `null` for keys we don't track (e.g. dead keys, CapsLock).
  */
-export function normalizeKeyFromEvent(
-  event: KeyboardEvent,
-): KeyConstant | null {
+export function normalizeKeyFromEvent(event: KeyboardEvent): KeyConstant[] {
+  const keys: KeyConstant[] = [];
+
   const mapped = SPECIAL_KEY_MAP[event.key];
-  if (mapped) return mapped;
+  if (mapped) keys.push(mapped);
 
-  if (event.key.length === 1) return event.key.toUpperCase();
+  if (event.key.length === 1) keys.push(event.key.toUpperCase());
 
-  return null;
+  return keys;
 }
 
 /**
