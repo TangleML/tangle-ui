@@ -107,7 +107,7 @@ export function TaskNodeClassic({
   return (
     <Card
       className={cn(
-        "min-w-[180px] max-w-[280px] rounded-2xl border-2 p-0 drop-shadow-none cursor-pointer gap-2",
+        "min-w-[300px] max-w-[350px] rounded-2xl border-2 p-0 drop-shadow-none cursor-pointer gap-2",
         selected
           ? "border-gray-500"
           : isHovered
