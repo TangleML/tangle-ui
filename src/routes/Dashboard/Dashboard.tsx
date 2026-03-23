@@ -1,4 +1,5 @@
 import { FavoritesSection } from "@/components/Home/FavoritesSection/FavoritesSection";
+import { RecentlyViewedSection } from "@/components/Home/RecentlyViewedSection/RecentlyViewedSection";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 
@@ -18,6 +19,7 @@ export const Dashboard = () => {
           Beta
         </Text>
       </InlineStack>
+      <RecentlyViewedSection />
       <FavoritesSection />
     </BlockStack>
   );
