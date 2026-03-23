@@ -1,3 +1,4 @@
+import { FavoriteToggle } from "@/components/shared/FavoriteToggle";
 import { InlineStack } from "@/components/ui/layout";
 import { useCheckComponentSpecFromPath } from "@/hooks/useCheckComponentSpecFromPath";
 import { useUserDetails } from "@/hooks/useUserDetails";
@@ -66,6 +67,9 @@ export const RunToolbar = () => {
         isViewingSubgraph ? "top-23" : "top-14",
       )}
     >
+      {runId && pipelineName && (
+        <FavoriteToggle type="run" id={runId} name={pipelineName} />
+      )}
       <ViewYamlButton componentSpec={componentSpec} displayLabel="View" />
 
       {canAccessEditorSpec && pipelineName && (

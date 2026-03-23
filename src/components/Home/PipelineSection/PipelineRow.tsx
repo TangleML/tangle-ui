@@ -2,6 +2,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { type MouseEvent } from "react";
 
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
+import { FavoriteToggle } from "@/components/shared/FavoriteToggle";
 import { HighlightText } from "@/components/shared/HighlightText";
 import { PipelineRunInfoCondensed } from "@/components/shared/PipelineRunDisplay/PipelineRunInfoCondensed";
 import { PipelineRunsList } from "@/components/shared/PipelineRunDisplay/PipelineRunsList";
@@ -161,20 +162,23 @@ const PipelineRow = withSuspenseWrapper(
           {name && <PipelineRunsButton pipelineName={name} />}
         </TableCell>
         <TableCell className="w-0">
-          <ConfirmationDialog
-            trigger={
-              <Button
-                variant="ghost"
-                size="icon"
-                className="opacity-0 group-hover:opacity-100 cursor-pointer text-destructive-foreground hover:text-destructive-foreground"
-              >
-                <Icon name="Trash" />
-              </Button>
-            }
-            title={`Delete pipeline "${name}"?`}
-            description="Are you sure you want to delete this pipeline? Existing pipeline runs will not be impacted. This action cannot be undone."
-            onConfirm={confirmPipelineDelete}
-          />
+          <InlineStack gap="1" blockAlign="center">
+            {name && <FavoriteToggle type="pipeline" id={name} name={name} />}
+            <ConfirmationDialog
+              trigger={
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="opacity-0 group-hover:opacity-100 cursor-pointer text-destructive-foreground hover:text-destructive-foreground"
+                >
+                  <Icon name="Trash" />
+                </Button>
+              }
+              title={`Delete pipeline "${name}"?`}
+              description="Are you sure you want to delete this pipeline? Existing pipeline runs will not be impacted. This action cannot be undone."
+              onConfirm={confirmPipelineDelete}
+            />
+          </InlineStack>
         </TableCell>
       </TableRow>
     );
