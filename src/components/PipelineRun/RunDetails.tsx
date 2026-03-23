@@ -8,6 +8,7 @@ import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { StatusBar } from "@/components/shared/Status";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Paragraph, Text } from "@/components/ui/typography";
+import useToastNotification from "@/hooks/useToastNotification";
 import { useUserDetails } from "@/hooks/useUserDetails";
 import { useBackend } from "@/providers/BackendProvider";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
@@ -24,7 +25,9 @@ import {
   getExecutionStatusLabel,
   getOverallExecutionStatusFromStats,
 } from "@/utils/executionStatus";
+import { copyToClipboard } from "@/utils/string";
 
+import { ActionButton } from "../shared/Buttons/ActionButton";
 import { TagList } from "../shared/Tags/TagList";
 import { RunNotesEditor } from "./RunNotesEditor";
 
@@ -45,6 +48,12 @@ export const RunDetails = () => {
     isLoading,
     error,
   } = useExecutionData();
+  const notify = useToastNotification();
+
+  const handleCopyUrl = () => {
+    copyToClipboard(window.location.href);
+    notify("Run URL copied to clipboard", "success");
+  };
 
   if (error || !details || !state || !componentSpec) {
     return (
@@ -94,9 +103,22 @@ export const RunDetails = () => {
 
   return (
     <BlockStack gap="6" className="p-2 h-full">
-      <CopyText className="text-lg font-semibold">
-        {componentSpec.name ?? "Unnamed Pipeline"}
-      </CopyText>
+      <InlineStack
+        align="space-between"
+        blockAlign="start"
+        wrap="nowrap"
+        className="w-full"
+      >
+        <CopyText className="text-lg font-semibold">
+          {componentSpec.name ?? "Unnamed Pipeline"}
+        </CopyText>
+        <ActionButton
+          tooltip="Share Run"
+          onClick={handleCopyUrl}
+          icon="Share2"
+          className="scale-80"
+        />
+      </InlineStack>
 
       {metadata && (
         <KeyValueList
