@@ -17,6 +17,7 @@ import { isFlagEnabled } from "@/components/shared/Settings/useFlags";
 import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 
 import RootLayout from "../components/layout/RootLayout";
+import { DashboardFavoritesView } from "./Dashboard/DashboardFavoritesView";
 import { DashboardLayout } from "./Dashboard/DashboardLayout";
 import Editor from "./Editor";
 import Home from "./Home";
@@ -128,7 +129,7 @@ const dashboardComponentsRoute = createRoute({
 const dashboardFavoritesRoute = createRoute({
   getParentRoute: () => dashboardRoute,
   path: "/favorites",
-  component: ComingSoon,
+  component: DashboardFavoritesView,
 });
 
 const dashboardRecentlyViewedRoute = createRoute({
