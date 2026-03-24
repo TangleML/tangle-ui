@@ -9,6 +9,7 @@ import { copyToClipboard } from "@/utils/string";
 
 interface CopyTextProps {
   children: string;
+  displayValue?: string;
   className?: string;
   alwaysShowButton?: boolean;
   compact?: boolean;
@@ -17,6 +18,7 @@ interface CopyTextProps {
 
 export const CopyText = ({
   children,
+  displayValue,
   className,
   alwaysShowButton = false,
   compact = false,
@@ -61,7 +63,7 @@ export const CopyText = ({
             isCopied && "text-emerald-400!",
           )}
         >
-          {children}
+          {displayValue ?? children}
         </Text>
 
         <Button
