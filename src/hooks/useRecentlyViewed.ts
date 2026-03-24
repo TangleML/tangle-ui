@@ -1,11 +1,13 @@
+import { useEffect, useState } from "react";
+
 import { getStorage } from "@/utils/typedStorage";
 
 const RECENTLY_VIEWED_KEY = "Home/recently_viewed";
-const MAX_ITEMS = 5;
+const MAX_ITEMS = 10;
 
 type RecentlyViewedType = "pipeline" | "run" | "component";
 
-interface RecentlyViewedItem {
+export interface RecentlyViewedItem {
   type: RecentlyViewedType;
   id: string;
   name: string;
@@ -44,6 +46,23 @@ function parseRecentlyViewed(json: string): RecentlyViewedItem[] {
 function readRecentlyViewed(): RecentlyViewedItem[] {
   const json = localStorage.getItem(RECENTLY_VIEWED_KEY);
   return json ? parseRecentlyViewed(json) : [];
+}
+
+export function useRecentlyViewed() {
+  const [recentlyViewed, setRecentlyViewed] =
+    useState<RecentlyViewedItem[]>(readRecentlyViewed);
+
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === RECENTLY_VIEWED_KEY) {
+        setRecentlyViewed(readRecentlyViewed());
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+
+  return { recentlyViewed };
 }
 
 export function addRecentlyViewed(item: Omit<RecentlyViewedItem, "viewedAt">) {
