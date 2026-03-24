@@ -1,4 +1,4 @@
-import { useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { GitBranch, Play } from "lucide-react";
 
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -27,34 +27,29 @@ function formatRelativeTime(viewedAt: number): string {
 }
 
 const RecentlyViewedCard = ({ item }: { item: RecentlyViewedItem }) => {
-  const navigate = useNavigate();
   const isPipeline = item.type === "pipeline";
 
   return (
-    <div
-      onClick={() => navigate({ to: getRecentlyViewedUrl(item) })}
-      className={`flex flex-col gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${
-        isPipeline
-          ? "bg-violet-50/40 hover:bg-violet-50 border-violet-100"
-          : "bg-emerald-50/40 hover:bg-emerald-50 border-emerald-100"
-      }`}
+    <Link
+      to={getRecentlyViewedUrl(item)}
+      className="flex flex-col gap-2.5 p-3 rounded-lg transition-all shadow-sm hover:shadow-md bg-card border border-border hover:border-foreground/20 no-underline"
     >
-      {/* Type badge */}
-      <InlineStack gap="1" blockAlign="center" align="space-between">
-        <InlineStack gap="1" blockAlign="center">
+      {/* Type pill + timestamp */}
+      <InlineStack blockAlign="center" align="space-between">
+        <span
+          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs font-semibold ${
+            isPipeline
+              ? "bg-violet-100 text-violet-700"
+              : "bg-emerald-100 text-emerald-700"
+          }`}
+        >
           {isPipeline ? (
-            <GitBranch className="h-3.5 w-3.5 shrink-0 text-violet-500" />
+            <GitBranch className="h-3 w-3" />
           ) : (
-            <Play className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+            <Play className="h-3 w-3" />
           )}
-          <Text
-            size="xs"
-            weight="semibold"
-            className={isPipeline ? "text-violet-600" : "text-emerald-600"}
-          >
-            {isPipeline ? "Pipeline" : "Run"}
-          </Text>
-        </InlineStack>
+          {isPipeline ? "Pipeline" : "Run"}
+        </span>
         <Text size="xs" className="text-muted-foreground">
           {formatRelativeTime(item.viewedAt)}
         </Text>
@@ -69,7 +64,7 @@ const RecentlyViewedCard = ({ item }: { item: RecentlyViewedItem }) => {
       <Text size="xs" className="truncate text-muted-foreground font-mono">
         {item.id}
       </Text>
-    </div>
+    </Link>
   );
 };
 
