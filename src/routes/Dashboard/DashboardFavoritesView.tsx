@@ -1,4 +1,4 @@
-import { useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -18,26 +18,14 @@ function getFavoriteUrl(item: FavoriteItem): string {
 }
 
 const FavoriteCard = ({ item }: { item: FavoriteItem }) => {
-  const navigate = useNavigate();
   const { removeFavorite } = useFavorites();
 
   const isPipeline = item.type === "pipeline";
 
   return (
-    <a
-      href={getFavoriteUrl(item)}
-      onClick={(e) => {
-        if (!e.metaKey && !e.ctrlKey) {
-          e.preventDefault();
-          navigate({ to: getFavoriteUrl(item) });
-        }
-      }}
-      className={cn(
-        "group relative flex flex-col gap-2 p-3 border rounded-lg cursor-pointer transition-colors text-left w-full",
-        isPipeline
-          ? "bg-violet-50/40 hover:bg-violet-50 border-violet-100"
-          : "bg-emerald-50/40 hover:bg-emerald-50 border-emerald-100",
-      )}
+    <Link
+      to={getFavoriteUrl(item)}
+      className="group relative flex flex-col gap-2.5 p-3 rounded-lg transition-all shadow-sm hover:shadow-md bg-card border border-border hover:border-foreground/20 no-underline"
     >
       {/* Remove button */}
       <Button
@@ -54,23 +42,19 @@ const FavoriteCard = ({ item }: { item: FavoriteItem }) => {
         <Icon name="X" size="sm" />
       </Button>
 
-      {/* Type badge */}
-      <InlineStack gap="1" blockAlign="center">
-        <Icon
-          name={isPipeline ? "GitBranch" : "Play"}
+      {/* Type pill */}
+      <InlineStack>
+        <span
           className={cn(
-            "shrink-0",
-            isPipeline ? "text-violet-500" : "text-emerald-500",
+            "inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs font-semibold",
+            isPipeline
+              ? "bg-violet-100 text-violet-700"
+              : "bg-emerald-100 text-emerald-700",
           )}
-          size="sm"
-        />
-        <Text
-          size="xs"
-          weight="semibold"
-          className={cn(isPipeline ? "text-violet-600" : "text-emerald-600")}
         >
+          <Icon name={isPipeline ? "GitBranch" : "Play"} size="sm" />
           {isPipeline ? "Pipeline" : "Run"}
-        </Text>
+        </span>
       </InlineStack>
 
       {/* Name */}
@@ -82,7 +66,7 @@ const FavoriteCard = ({ item }: { item: FavoriteItem }) => {
       <Text size="xs" tone="subdued" font="mono" className="truncate">
         {item.id}
       </Text>
-    </a>
+    </Link>
   );
 };
 
