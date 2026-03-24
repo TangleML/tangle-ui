@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Icon } from "@/components/ui/icon";
-import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { InlineStack } from "@/components/ui/layout";
 import {
   Popover,
   PopoverContent,
@@ -107,7 +107,7 @@ const PipelineRow = withSuspenseWrapper(
 
     return (
       <TableRow
-        className="cursor-pointer hover:bg-muted/50 group"
+        className="cursor-pointer hover:bg-muted/50 group text-xs h-10"
         onClick={handleRowClick}
       >
         <TableCell onClick={(e) => e.stopPropagation()}>
@@ -119,25 +119,25 @@ const PipelineRow = withSuspenseWrapper(
           />
         </TableCell>
         <TableCell className="truncate max-w-96" title={name}>
-          <BlockStack gap="0">
+          <InlineStack gap="1" blockAlign="center">
             {name && name.length > MAX_TITLE_LENGTH ? (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Paragraph>
+                    <span className="text-sm truncate">
                       <HighlightText
                         text={name.slice(0, MAX_TITLE_LENGTH) + "..."}
                         query={searchQuery}
                       />
-                    </Paragraph>
+                    </span>
                   </TooltipTrigger>
                   <TooltipContent>{name}</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             ) : (
-              <Paragraph>
+              <span className="text-sm truncate">
                 <HighlightText text={name ?? ""} query={searchQuery} />
-              </Paragraph>
+              </span>
             )}
             <MatchBadges
               matchedFields={matchedFields}
@@ -145,12 +145,10 @@ const PipelineRow = withSuspenseWrapper(
               searchQuery={searchQuery}
               componentQuery={componentQuery}
             />
-          </BlockStack>
+          </InlineStack>
         </TableCell>
         <TableCell>
-          <Paragraph tone="subdued" size="xs">
-            {formattedDate}
-          </Paragraph>
+          <span className="text-xs text-muted-foreground">{formattedDate}</span>
         </TableCell>
         <TableCell className="max-w-64">
           {tags && tags.length > 0 && <TagList tags={tags} />}
@@ -161,8 +159,8 @@ const PipelineRow = withSuspenseWrapper(
         <TableCell>
           {name && <PipelineRunsButton pipelineName={name} />}
         </TableCell>
-        <TableCell className="w-0">
-          <InlineStack gap="1" blockAlign="center">
+        <TableCell className="w-16">
+          <InlineStack gap="1" blockAlign="center" wrap="nowrap">
             {name && <FavoriteToggle type="pipeline" id={name} name={name} />}
             <ConfirmationDialog
               trigger={
@@ -195,7 +193,7 @@ const PipelineRow = withSuspenseWrapper(
           <Paragraph>{props.name}</Paragraph>
         </TableCell>
         <TableCell>
-          <Paragraph tone="subdued" size="xs">
+          <Paragraph tone="subdued" size="sm">
             {formattedDate}
           </Paragraph>
         </TableCell>
