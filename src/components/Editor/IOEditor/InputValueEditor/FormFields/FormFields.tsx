@@ -1,18 +1,16 @@
 import type { icons } from "lucide-react";
 import { Activity, type ReactNode } from "react";
 
-import type { ArtifactDataResponse } from "@/api/types.gen";
-import { CopyText } from "@/components/shared/CopyText/CopyText";
+import type { ArtifactNodeResponse } from "@/api/types.gen";
+import IOCell from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/TaskOverview/IOSection/IOCell/IOCell";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
-import { Link } from "@/components/ui/link";
 import { Textarea } from "@/components/ui/textarea";
 import { Paragraph } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import type { InputSpec, OutputSpec } from "@/utils/componentSpec";
-import { convertArtifactUriToHTTPUrl } from "@/utils/URL";
 
 type FormFieldAction = {
   icon: keyof typeof icons;
@@ -204,38 +202,13 @@ const TypeField = ({
 
 const ArtifactField = ({
   io,
-  artifactData,
+  artifact,
 }: {
   io: InputSpec | OutputSpec;
-  artifactData: ArtifactDataResponse;
+  artifact: ArtifactNodeResponse;
 }) => (
   <FormField label="Artifact" id={`artifact-${io.name}`}>
-    <BlockStack gap="3" className="p-2 border rounded-md bg-background">
-      {artifactData.value && (
-        <InlineStack gap="2">
-          <Paragraph size="xs">Value:</Paragraph>
-          <CopyText size="sm" className="font-light font-mono">
-            {artifactData.value}
-          </CopyText>
-        </InlineStack>
-      )}
-
-      {artifactData.uri && (
-        <InlineStack gap="2" wrap="nowrap" blockAlign="start">
-          <Paragraph size="xs">URI:</Paragraph>
-          <Link
-            external
-            href={convertArtifactUriToHTTPUrl(
-              artifactData.uri,
-              artifactData.is_dir,
-            )}
-            className="text-xs whitespace-pre-wrap break-all"
-          >
-            {artifactData.uri}
-          </Link>
-        </InlineStack>
-      )}
-    </BlockStack>
+    <IOCell artifact={artifact} name={io.name} type={io.type?.toString()} />
   </FormField>
 );
 
