@@ -5,9 +5,9 @@ import { getStorage } from "@/utils/typedStorage";
 const RECENTLY_VIEWED_KEY = "Home/recently_viewed";
 const MAX_ITEMS = 5;
 
-export type RecentlyViewedType = "pipeline" | "run" | "component";
+type RecentlyViewedType = "pipeline" | "run" | "component";
 
-export interface RecentlyViewedItem {
+interface RecentlyViewedItem {
   type: RecentlyViewedType;
   id: string;
   name: string;

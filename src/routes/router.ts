@@ -17,7 +17,7 @@ import { isFlagEnabled } from "@/components/shared/Settings/useFlags";
 import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 
 import RootLayout from "../components/layout/RootLayout";
-import { Dashboard } from "./Dashboard/Dashboard";
+import { DashboardLayout } from "./Dashboard/DashboardLayout";
 import Editor from "./Editor";
 import Home from "./Home";
 import { ImportPage } from "./Import";
@@ -45,6 +45,11 @@ const DASHBOARD_PATH = "/dashboard";
 export const APP_ROUTES = {
   HOME: "/",
   DASHBOARD: DASHBOARD_PATH,
+  DASHBOARD_RUNS: `${DASHBOARD_PATH}/runs`,
+  DASHBOARD_PIPELINES: `${DASHBOARD_PATH}/pipelines`,
+  DASHBOARD_COMPONENTS: `${DASHBOARD_PATH}/components`,
+  DASHBOARD_FAVORITES: `${DASHBOARD_PATH}/favorites`,
+  DASHBOARD_RECENTLY_VIEWED: `${DASHBOARD_PATH}/recently-viewed`,
   QUICK_START: QUICK_START_PATH,
   IMPORT: IMPORT_PATH,
   PIPELINE_EDITOR: `${EDITOR_PATH}/$name`,
@@ -83,12 +88,53 @@ const indexRoute = createRoute({
 const dashboardRoute = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.DASHBOARD,
-  component: Dashboard,
+  component: DashboardLayout,
   beforeLoad: () => {
     if (!isFlagEnabled("dashboard")) {
       throw redirect({ to: APP_ROUTES.HOME });
     }
   },
+});
+
+const dashboardIndexRoute = createRoute({
+  getParentRoute: () => dashboardRoute,
+  path: "/",
+  beforeLoad: () => {
+    throw redirect({ to: APP_ROUTES.DASHBOARD_RUNS });
+  },
+});
+
+// Placeholder component — replaced in subsequent PRs
+const ComingSoon = () => null;
+
+const dashboardRunsRoute = createRoute({
+  getParentRoute: () => dashboardRoute,
+  path: "/runs",
+  component: ComingSoon,
+});
+
+const dashboardPipelinesRoute = createRoute({
+  getParentRoute: () => dashboardRoute,
+  path: "/pipelines",
+  component: ComingSoon,
+});
+
+const dashboardComponentsRoute = createRoute({
+  getParentRoute: () => dashboardRoute,
+  path: "/components",
+  component: ComingSoon,
+});
+
+const dashboardFavoritesRoute = createRoute({
+  getParentRoute: () => dashboardRoute,
+  path: "/favorites",
+  component: ComingSoon,
+});
+
+const dashboardRecentlyViewedRoute = createRoute({
+  getParentRoute: () => dashboardRoute,
+  path: "/recently-viewed",
+  component: ComingSoon,
 });
 
 const quickStartRoute = createRoute({
@@ -207,9 +253,18 @@ const settingsRouteTree = settingsLayoutRoute.addChildren([
   secretsRouteTree,
 ]);
 
+const dashboardRouteTree = dashboardRoute.addChildren([
+  dashboardIndexRoute,
+  dashboardRunsRoute,
+  dashboardPipelinesRoute,
+  dashboardComponentsRoute,
+  dashboardFavoritesRoute,
+  dashboardRecentlyViewedRoute,
+]);
+
 const appRouteTree = mainLayout.addChildren([
   indexRoute,
-  dashboardRoute,
+  dashboardRouteTree,
   quickStartRoute,
   settingsRouteTree,
   importRoute,
