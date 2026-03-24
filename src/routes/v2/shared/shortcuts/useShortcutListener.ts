@@ -1,6 +1,9 @@
 import { useEffect } from "react";
 
-import { normalizeKeyFromEvent } from "@/routes/v2/shared/shortcuts/keys";
+import {
+  CMDALT,
+  normalizeKeyFromEvent,
+} from "@/routes/v2/shared/shortcuts/keys";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 import { isEditableTarget } from "./shortcutUtils";
@@ -17,6 +20,11 @@ export function useShortcutListener(): void {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.repeat && event.metaKey) return;
 
+      keyboard.syncModifiers(event);
+      if (event.metaKey) {
+        keyboard.clearNonModifierKeys();
+      }
+
       const keys = normalizeKeyFromEvent(event);
       for (const key of keys) {
         keyboard.pressKey(key);
@@ -28,10 +36,6 @@ export function useShortcutListener(): void {
         if (editable && !shortcut.allowInEditable) continue;
         if (keyboard.matchesPressed(shortcut.keys)) {
           event.preventDefault();
-          /**
-           * In MacOS only one keyup event triggers when Meta key is pressed
-           * @see https://web.archive.org/web/20160304022453/http://bitspushedaround.com/on-a-few-things-you-may-not-know-about-the-hellish-command-key-and-javascript-events/
-           */
           keyboard.clearPressed();
           shortcut.action(event);
           return;
@@ -40,11 +44,12 @@ export function useShortcutListener(): void {
     };
 
     const handleKeyUp = (event: KeyboardEvent) => {
-      if (event.metaKey) {
+      const keys = normalizeKeyFromEvent(event);
+      if (keys.includes(CMDALT)) {
         keyboard.clearPressed();
+        return;
       }
 
-      const keys = normalizeKeyFromEvent(event);
       for (const key of keys) {
         keyboard.releaseKey(key);
       }

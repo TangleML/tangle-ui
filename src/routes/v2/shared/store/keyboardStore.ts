@@ -1,7 +1,12 @@
 import { action, makeObservable, observable } from "mobx";
 
-import type { KeyConstant } from "@/routes/v2/shared/shortcuts/keys";
-import { normalizeComboKey } from "@/routes/v2/shared/shortcuts/keys";
+import {
+  CMDALT,
+  CTRL,
+  type KeyConstant,
+  normalizeComboKey,
+  SHIFT,
+} from "@/routes/v2/shared/shortcuts/keys";
 
 type ShortcutKeys = KeyConstant[];
 
@@ -19,8 +24,11 @@ interface ShortcutDefinition {
 }
 
 export class KeyboardStore {
-  pressed = observable.set<KeyConstant>();
-  shortcuts = observable.map<string, ShortcutDefinition>();
+  @observable.ref accessor pressed = observable.set<KeyConstant>();
+  @observable.ref accessor shortcuts = observable.map<
+    string,
+    ShortcutDefinition
+  >();
 
   constructor() {
     makeObservable(this);
@@ -36,6 +44,29 @@ export class KeyboardStore {
 
   @action clearPressed() {
     this.pressed.clear();
+  }
+
+  /**
+   * Reconcile modifier keys in `pressed` with the actual event state.
+   * Ensures modifiers are restored after `clearPressed()` and stay
+   * accurate even when macOS swallows keyup events.
+   */
+  @action syncModifiers(event: KeyboardEvent) {
+    const toggle = (flag: boolean, key: KeyConstant) => {
+      if (flag) this.pressed.add(key);
+      else this.pressed.delete(key);
+    };
+    toggle(event.metaKey || event.altKey, CMDALT);
+    toggle(event.ctrlKey, CTRL);
+    toggle(event.shiftKey, SHIFT);
+  }
+
+  @action clearNonModifierKeys() {
+    for (const key of this.pressed) {
+      if (key !== CMDALT && key !== CTRL && key !== SHIFT) {
+        this.pressed.delete(key);
+      }
+    }
   }
 
   @action registerShortcut(definition: ShortcutDefinition): () => void {
