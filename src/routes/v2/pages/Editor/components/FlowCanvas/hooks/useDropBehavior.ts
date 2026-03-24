@@ -5,12 +5,20 @@ import type { ComponentSpec } from "@/models/componentSpec";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 
+import { useFileDropHandler } from "./useFileDropHandler";
+
+function isFileComponentDropped(event: DragEvent<HTMLDivElement>): boolean {
+  return event.dataTransfer.files.length > 0;
+}
+
 export function useDropBehavior(
   spec: ComponentSpec | null,
   reactFlowInstance: ReactFlowInstance | null,
 ): Required<Pick<ReactFlowProps, "onDragOver" | "onDrop">> {
   const registry = useNodeRegistry();
   const { undo } = useEditorSession();
+  const handleFileDrop = useFileDropHandler();
+
   const onDragOver = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
@@ -20,13 +28,18 @@ export function useDropBehavior(
     event.preventDefault();
     if (!spec || !reactFlowInstance) return;
 
-    const droppedData = event.dataTransfer.getData("application/reactflow");
-    if (!droppedData) return;
-
     const position = reactFlowInstance.screenToFlowPosition({
       x: event.clientX,
       y: event.clientY,
     });
+
+    if (isFileComponentDropped(event)) {
+      // todo: add support for multiple files
+      return await handleFileDrop(event.dataTransfer.files[0], spec, position);
+    }
+
+    const droppedData = event.dataTransfer.getData("application/reactflow");
+    if (!droppedData) return;
 
     try {
       const parsedData = JSON.parse(droppedData);
