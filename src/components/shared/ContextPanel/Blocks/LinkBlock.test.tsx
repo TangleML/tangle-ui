@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+import { substitutePlaceholders } from "@/services/composer/hydrateSchema";
 import { QueryParamType } from "@/types/composerSchema";
 
 import { buildUrl, LinkBlock } from "./LinkBlock";
@@ -72,6 +73,34 @@ describe("buildUrl", () => {
     const parsed = new URL(url);
     expect(parsed.searchParams.get("filter")).toBe("name=test&type=all");
     expect(url).toBe("https://example.com/?filter=name%3Dtest%26type%3Dall");
+  });
+
+  it("substitutes placeholders in urlTemplate and appends queryParams", () => {
+    const block = {
+      urlTemplate:
+        "https://example.com/logs;query=name%3D{jobName};startTime={startTime};endTime={endTime}",
+      queryParams: {
+        project: {
+          type: QueryParamType.String as const,
+          value: "my-project",
+        },
+      },
+    };
+
+    const hydrated = substitutePlaceholders(block, {
+      jobName: "my-job-123",
+      startTime: "2026-03-24T01:00:00.000Z",
+      endTime: "2026-03-24T02:00:00.000Z",
+    }) as typeof block;
+    const url = buildUrl(hydrated.urlTemplate, hydrated.queryParams);
+
+    expect(url).toContain("name%3Dmy-job-123");
+    expect(url).toContain(";startTime=2026-03-24T01:00:00.000Z");
+    expect(url).toContain(";endTime=2026-03-24T02:00:00.000Z");
+    expect(url).toContain("?project=my-project");
+    expect(url).not.toContain("{jobName}");
+    expect(url).not.toContain("{startTime}");
+    expect(url).not.toContain("{endTime}");
   });
 });
 

@@ -47,6 +47,12 @@ interface BlockDescriptorBase {
    * Declares which {placeholder} tokens appear in this block's properties.
    */
   replacements?: Record<string, ReplacementDescriptor>;
+  /**
+   * Whitelist of execution types this block should be displayed for
+   * (e.g., ["pod"], ["job"], ["pod", "job"]).
+   * If absent or undefined, the block is displayed for all execution types.
+   */
+  displayFor?: string[];
 }
 
 export interface TextBlockDescriptor extends BlockDescriptorBase {

@@ -8,6 +8,7 @@ import {
 } from "@/types/composerSchema";
 
 import {
+  filterAndHydrateSchema,
   hydrateSchema,
   isComposerSchema,
   loadSchema,
@@ -740,5 +741,193 @@ describe("isComposerSchema", () => {
     expect(isComposerSchema({ metadata: {}, sections: "not-array" })).toBe(
       false,
     );
+  });
+});
+
+describe("filterAndHydrateSchema", () => {
+  const schemaWithDisplayFor: ComposerSchema = {
+    metadata: { retentionDays: 30 },
+    sections: [
+      {
+        id: "logsAndEvents",
+        title: "Logs & Events",
+        blocks: [
+          {
+            id: "retentionNotice",
+            blockType: BlockType.TextBlock,
+            properties: { text: "{retentionDays}-day retention." },
+            replacements: {
+              retentionDays: { type: ReplacementType.Number, required: true },
+            },
+          },
+          {
+            id: "podLogs",
+            blockType: BlockType.LinkBlock,
+            displayFor: ["kubernetes_pod", "kubernetes_job"],
+            properties: {
+              urlTemplate: "https://example.com/logs?pod={podName}",
+            },
+            replacements: {
+              podName: { type: ReplacementType.String, required: true },
+            },
+          },
+          {
+            id: "podEvents",
+            blockType: BlockType.LinkBlock,
+            displayFor: ["kubernetes_pod"],
+            properties: {
+              urlTemplate: "https://example.com/events?pod={podName}",
+            },
+            replacements: {
+              podName: { type: ReplacementType.String, required: true },
+            },
+          },
+          {
+            id: "jobEvents",
+            blockType: BlockType.LinkBlock,
+            displayFor: ["kubernetes_job"],
+            properties: {
+              urlTemplate: "https://example.com/events?job={jobName}",
+            },
+            replacements: {
+              jobName: { type: ReplacementType.String, required: true },
+            },
+          },
+          {
+            id: "runningHint",
+            blockType: BlockType.TextBlock,
+            properties: { text: "Still running." },
+          },
+        ],
+      },
+    ],
+  };
+
+  const allReplacements = {
+    retentionNotice: { retentionDays: 30 },
+    podLogs: { podName: "pod-abc" },
+    podEvents: { podName: "pod-abc" },
+    jobEvents: { jobName: "job-xyz" },
+  };
+
+  it("keeps pod-only and shared blocks when displayFor is 'kubernetes_pod'", () => {
+    const result = filterAndHydrateSchema(
+      schemaWithDisplayFor,
+      allReplacements,
+      "kubernetes_pod",
+    );
+    const blockIds = result.sections[0].blocks.map((b) => b.id);
+    expect(blockIds).toContain("retentionNotice");
+    expect(blockIds).toContain("podLogs");
+    expect(blockIds).toContain("podEvents");
+    expect(blockIds).toContain("runningHint");
+    expect(blockIds).not.toContain("jobEvents");
+  });
+
+  it("keeps job-only and shared blocks when displayFor is 'kubernetes_job'", () => {
+    const result = filterAndHydrateSchema(
+      schemaWithDisplayFor,
+      allReplacements,
+      "kubernetes_job",
+    );
+    const blockIds = result.sections[0].blocks.map((b) => b.id);
+    expect(blockIds).toContain("retentionNotice");
+    expect(blockIds).toContain("podLogs");
+    expect(blockIds).toContain("jobEvents");
+    expect(blockIds).toContain("runningHint");
+    expect(blockIds).not.toContain("podEvents");
+  });
+
+  it("keeps all blocks when displayFor is undefined", () => {
+    const result = filterAndHydrateSchema(
+      schemaWithDisplayFor,
+      allReplacements,
+      undefined,
+    );
+    const blockIds = result.sections[0].blocks.map((b) => b.id);
+    expect(blockIds).toEqual([
+      "retentionNotice",
+      "podLogs",
+      "podEvents",
+      "jobEvents",
+      "runningHint",
+    ]);
+  });
+
+  it("keeps all blocks when displayFor is null", () => {
+    const result = filterAndHydrateSchema(
+      schemaWithDisplayFor,
+      allReplacements,
+      null,
+    );
+    const blockIds = result.sections[0].blocks.map((b) => b.id);
+    expect(blockIds).toEqual([
+      "retentionNotice",
+      "podLogs",
+      "podEvents",
+      "jobEvents",
+      "runningHint",
+    ]);
+  });
+
+  it("filters out tagged blocks that don't match, keeps untagged blocks", () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const result = filterAndHydrateSchema(
+      schemaWithDisplayFor,
+      allReplacements,
+      "nonexistent",
+    );
+
+    const survivingBlockIds = result.sections[0].blocks.map((b) => b.id);
+    expect(survivingBlockIds).toEqual(["retentionNotice", "runningHint"]);
+
+    expect(errorSpy).not.toHaveBeenCalled();
+
+    errorSpy.mockRestore();
+  });
+
+  it("hydrates surviving blocks with placeholder substitution", () => {
+    const result = filterAndHydrateSchema(
+      schemaWithDisplayFor,
+      allReplacements,
+      "kubernetes_pod",
+    );
+
+    const retentionBlock = result.sections[0].blocks.find(
+      (b) => b.id === "retentionNotice",
+    );
+    expect(
+      (retentionBlock as { properties: { text: string } }).properties.text,
+    ).toBe("30-day retention.");
+
+    const podEventsBlock = result.sections[0].blocks.find(
+      (b) => b.id === "podEvents",
+    );
+    expect(
+      (podEventsBlock as { properties: { urlTemplate: string } }).properties
+        .urlTemplate,
+    ).toBe("https://example.com/events?pod=pod-abc");
+  });
+
+  it("does not mutate the original schema", () => {
+    const originalBlockCount = schemaWithDisplayFor.sections[0].blocks.length;
+
+    filterAndHydrateSchema(
+      schemaWithDisplayFor,
+      allReplacements,
+      "kubernetes_pod",
+    );
+
+    expect(schemaWithDisplayFor.sections[0].blocks).toHaveLength(
+      originalBlockCount,
+    );
+    expect(schemaWithDisplayFor.sections[0].blocks.map((b) => b.id)).toEqual([
+      "retentionNotice",
+      "podLogs",
+      "podEvents",
+      "jobEvents",
+      "runningHint",
+    ]);
   });
 });

@@ -247,3 +247,38 @@ export function hydrateSchema(
     })),
   };
 }
+
+function filterByDisplayFor(
+  schema: ComposerSchema,
+  displayFor: string,
+): ComposerSchema {
+  return {
+    ...schema,
+    sections: schema.sections.map((section) => ({
+      ...section,
+      blocks: section.blocks.filter(
+        (b) => !b.displayFor || b.displayFor.includes(displayFor),
+      ),
+    })),
+  };
+}
+
+/**
+ * Filters blocks by `displayFor` whitelist, then hydrates surviving blocks.
+ *
+ * @param schema - The static ComposerSchema (from JSON config)
+ * @param allReplacements - Map of block ID -> resolved replacement values
+ * @param displayFor - Execution type to filter by (e.g., "pod", "job").
+ *   If null/undefined, no filtering is applied and all blocks are rendered.
+ * @returns A new ComposerSchema with non-matching blocks removed and placeholders substituted
+ */
+export function filterAndHydrateSchema(
+  schema: ComposerSchema,
+  allReplacements: Record<string, BlockHydrationReplacements>,
+  displayFor?: string | null,
+): ComposerSchema {
+  const filtered =
+    displayFor == null ? schema : filterByDisplayFor(schema, displayFor);
+
+  return hydrateSchema(filtered, allReplacements);
+}

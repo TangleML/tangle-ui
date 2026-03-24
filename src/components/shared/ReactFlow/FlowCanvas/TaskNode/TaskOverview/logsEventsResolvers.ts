@@ -15,6 +15,12 @@ type PodLogsHydrationReplacements = {
   endTime: string;
 };
 
+type JobEventsHydrationReplacements = {
+  jobName: string;
+  startTime: string;
+  endTime: string;
+};
+
 type RetentionNoticeHydrationReplacements = {
   retentionDays: number;
   expiryDate: string;
@@ -88,6 +94,16 @@ export function extractPodName(
   return null;
 }
 
+export function extractJobName(
+  containerState: GetContainerExecutionStateResponse | undefined,
+): string | null {
+  const k8sJob = containerState?.debug_info?.kubernetes_job;
+  if (isRecordWithString(k8sJob, "job_name")) {
+    return k8sJob.job_name;
+  }
+  return null;
+}
+
 // --- Resolver functions ---
 
 const DEFAULT_FALLBACK_MINUTES = 60;
@@ -98,11 +114,13 @@ export function elapsedMinutesCeil(startIso: string): number {
   return Math.ceil(Math.max(elapsedMs, 0) / MINUTES);
 }
 
-export function resolvePodLogsHydrationReplacements(
+type TimeRange = { startTime: string; endTime: string };
+
+function resolveTimeRange(
   metadata: Record<string, unknown>,
   containerState: GetContainerExecutionStateResponse,
-  podName: string,
-): PodLogsHydrationReplacements {
+  callerName: string,
+): TimeRange {
   const paddingMinutes =
     typeof metadata.paddingMinutes === "number" ? metadata.paddingMinutes : 0;
 
@@ -110,10 +128,9 @@ export function resolvePodLogsHydrationReplacements(
   // this, so reaching here means something unexpected happened).
   if (!containerState.started_at) {
     console.warn(
-      "[resolvePodLogsHydrationReplacements] started_at is missing — this should not happen",
+      `[${callerName}] started_at is missing — this should not happen`,
     );
     return {
-      podName,
       startTime: `${RELATIVE_NOW}-${DEFAULT_FALLBACK_MINUTES}m`,
       endTime: RELATIVE_NOW,
     };
@@ -124,22 +141,50 @@ export function resolvePodLogsHydrationReplacements(
     const totalMinutes =
       elapsedMinutesCeil(containerState.started_at) + paddingMinutes;
     return {
-      podName,
       startTime: `${RELATIVE_NOW}-${totalMinutes}m`,
       endTime: RELATIVE_NOW,
     };
   }
 
   // Both present — use absolute padded timestamps.
-  // Cap endTime to "now" so we never request a future time range from Observe.
+  // Cap endTime to "now" so we never request a future time range.
   const paddedEnd = adjustTimestamp(containerState.ended_at, paddingMinutes);
   const endTime =
     new Date(paddedEnd).getTime() > Date.now() ? RELATIVE_NOW : paddedEnd;
 
   return {
-    podName,
     startTime: adjustTimestamp(containerState.started_at, -paddingMinutes),
     endTime,
+  };
+}
+
+export function resolvePodLogsHydrationReplacements(
+  metadata: Record<string, unknown>,
+  containerState: GetContainerExecutionStateResponse,
+  podName: string,
+): PodLogsHydrationReplacements {
+  return {
+    podName,
+    ...resolveTimeRange(
+      metadata,
+      containerState,
+      "resolvePodLogsHydrationReplacements",
+    ),
+  };
+}
+
+export function resolveJobEventsHydrationReplacements(
+  metadata: Record<string, unknown>,
+  containerState: GetContainerExecutionStateResponse,
+  jobName: string,
+): JobEventsHydrationReplacements {
+  return {
+    jobName,
+    ...resolveTimeRange(
+      metadata,
+      containerState,
+      "resolveJobEventsHydrationReplacements",
+    ),
   };
 }
 
