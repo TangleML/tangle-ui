@@ -19,6 +19,7 @@ import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 import RootLayout from "../components/layout/RootLayout";
 import { DashboardFavoritesView } from "./Dashboard/DashboardFavoritesView";
 import { DashboardLayout } from "./Dashboard/DashboardLayout";
+import { DashboardRecentlyViewedView } from "./Dashboard/DashboardRecentlyViewedView";
 import Editor from "./Editor";
 import Home from "./Home";
 import { ImportPage } from "./Import";
@@ -135,7 +136,7 @@ const dashboardFavoritesRoute = createRoute({
 const dashboardRecentlyViewedRoute = createRoute({
   getParentRoute: () => dashboardRoute,
   path: "/recently-viewed",
-  component: ComingSoon,
+  component: DashboardRecentlyViewedView,
 });
 
 const quickStartRoute = createRoute({
