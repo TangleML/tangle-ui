@@ -3,11 +3,11 @@ import { useCallback, useSyncExternalStore } from "react";
 import { getStorage } from "@/utils/typedStorage";
 
 const RECENTLY_VIEWED_KEY = "Home/recently_viewed";
-const MAX_ITEMS = 5;
+const MAX_ITEMS = 10;
 
 type RecentlyViewedType = "pipeline" | "run" | "component";
 
-interface RecentlyViewedItem {
+export interface RecentlyViewedItem {
   type: RecentlyViewedType;
   id: string;
   name: string;
