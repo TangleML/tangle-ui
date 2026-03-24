@@ -221,8 +221,8 @@ export function PipelineRunFiltersBar({
           />
         </div>
 
-        {/* Annotation Filter - inline */}
-        {!isAnnotationExpanded ? (
+        {/* Annotation Filter button */}
+        {!isAnnotationExpanded && (
           <Button
             variant="outline"
             size="sm"
@@ -232,44 +232,47 @@ export function PipelineRunFiltersBar({
             <Icon name="Plus" size="xs" className="mr-1" />
             Annotation
           </Button>
-        ) : (
-          <InlineStack gap="1" align="center" className="shrink-0">
-            <Input
-              placeholder="Key"
-              value={annotationKeyInput}
-              onChange={(e) => setAnnotationKeyInput(e.target.value)}
-              onEnter={handleAddAnnotation}
-              onEscape={handleCancelAnnotation}
-              className="w-28 h-8 text-sm"
-              autoFocus
-            />
-            <Input
-              placeholder="Value (optional)"
-              value={annotationValueInput}
-              onChange={(e) => setAnnotationValueInput(e.target.value)}
-              onEnter={handleAddAnnotation}
-              onEscape={handleCancelAnnotation}
-              className="w-36 h-8 text-sm"
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleAddAnnotation}
-              disabled={!annotationKeyInput.trim()}
-            >
-              Add
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleCancelAnnotation}
-              aria-label="Cancel"
-            >
-              <Icon name="X" size="xs" />
-            </Button>
-          </InlineStack>
         )}
       </InlineStack>
+
+      {/* Annotation input row - rendered below to avoid overflow */}
+      {isAnnotationExpanded && (
+        <InlineStack gap="1" align="center">
+          <Input
+            placeholder="Key"
+            value={annotationKeyInput}
+            onChange={(e) => setAnnotationKeyInput(e.target.value)}
+            onEnter={handleAddAnnotation}
+            onEscape={handleCancelAnnotation}
+            className="w-28 h-8 text-sm"
+            autoFocus
+          />
+          <Input
+            placeholder="Value (optional)"
+            value={annotationValueInput}
+            onChange={(e) => setAnnotationValueInput(e.target.value)}
+            onEnter={handleAddAnnotation}
+            onEscape={handleCancelAnnotation}
+            className="w-36 h-8 text-sm"
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleAddAnnotation}
+            disabled={!annotationKeyInput.trim()}
+          >
+            Add
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleCancelAnnotation}
+            aria-label="Cancel"
+          >
+            <Icon name="X" size="xs" />
+          </Button>
+        </InlineStack>
+      )}
 
       {/* Row 2: Active Filters & Count */}
       {(hasActiveFilters || totalCount !== undefined) && (
