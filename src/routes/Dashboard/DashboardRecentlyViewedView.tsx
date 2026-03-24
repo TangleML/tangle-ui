@@ -22,27 +22,21 @@ const RecentlyViewedCard = ({ item }: { item: RecentlyViewedItem }) => {
   return (
     <Link
       to={getRecentlyViewedUrl(item)}
-      className={`flex flex-col gap-2 p-3 border rounded-lg transition-colors no-underline ${
-        isPipeline
-          ? "bg-violet-50/40 hover:bg-violet-50 border-violet-100"
-          : "bg-emerald-50/40 hover:bg-emerald-50 border-emerald-100"
-      }`}
+      className="flex flex-col gap-2.5 p-3 rounded-lg transition-all shadow-sm hover:shadow-md bg-card border border-border hover:border-foreground/20 no-underline"
     >
-      {/* Type badge */}
-      <InlineStack gap="1" blockAlign="center" align="space-between">
-        <InlineStack gap="1" blockAlign="center">
-          <Icon
-            name={isPipeline ? "GitBranch" : "Play"}
-            size="sm"
-            className={`shrink-0 ${isPipeline ? "text-violet-500" : "text-emerald-500"}`}
-          />
-          <Text
-            size="xs"
-            weight="semibold"
-            className={isPipeline ? "text-violet-600" : "text-emerald-600"}
+      {/* Type pill + timestamp */}
+      <InlineStack blockAlign="center" align="space-between">
+        <InlineStack>
+          <span
+            className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs font-semibold ${
+              isPipeline
+                ? "bg-violet-100 text-violet-700"
+                : "bg-emerald-100 text-emerald-700"
+            }`}
           >
+            <Icon name={isPipeline ? "GitBranch" : "Play"} size="sm" />
             {isPipeline ? "Pipeline" : "Run"}
-          </Text>
+          </span>
         </InlineStack>
         <Text size="xs" className="text-muted-foreground">
           {formatRelativeTime(new Date(item.viewedAt))}
