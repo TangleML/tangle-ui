@@ -221,7 +221,6 @@ export function PipelineRunFiltersBar({
           />
         </div>
 
-        {/* Annotation Filter button */}
         {!isAnnotationExpanded && (
           <Button
             variant="outline"
