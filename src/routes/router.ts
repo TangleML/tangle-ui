@@ -19,6 +19,7 @@ import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 import RootLayout from "../components/layout/RootLayout";
 import { DashboardFavoritesView } from "./Dashboard/DashboardFavoritesView";
 import { DashboardLayout } from "./Dashboard/DashboardLayout";
+import { DashboardPipelinesView } from "./Dashboard/DashboardPipelinesView";
 import { DashboardRecentlyViewedView } from "./Dashboard/DashboardRecentlyViewedView";
 import { DashboardRunsView } from "./Dashboard/DashboardRunsView";
 import Editor from "./Editor";
@@ -119,7 +120,7 @@ const dashboardRunsRoute = createRoute({
 const dashboardPipelinesRoute = createRoute({
   getParentRoute: () => dashboardRoute,
   path: "/pipelines",
-  component: ComingSoon,
+  component: DashboardPipelinesView,
 });
 
 const dashboardComponentsRoute = createRoute({

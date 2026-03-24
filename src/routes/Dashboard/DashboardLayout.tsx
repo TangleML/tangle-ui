@@ -22,7 +22,7 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
 
 export function DashboardLayout() {
   return (
-    <div className="container mx-auto p-6 max-w-6xl">
+    <div className="w-full px-8 py-6">
       <BlockStack gap="6">
         <InlineStack gap="2" blockAlign="center">
           <Heading level={1}>Dashboard</Heading>
