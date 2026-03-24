@@ -1,116 +1,77 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import type { ArtifactNodeResponse } from "@/api/types.gen";
+import { CopyText } from "@/components/shared/CopyText/CopyText";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { Text } from "@/components/ui/typography";
+import { formatBytes } from "@/utils/string";
 
-import type { ArtifactDataResponse } from "@/api/types.gen";
-import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
-import type { InputSpec, OutputSpec } from "@/utils/componentSpec";
-import { copyToClipboard } from "@/utils/string";
-
-import IOCellDetails from "./IOCellDetails";
-import IOCellHeader from "./IOCellHeader";
+import ArtifactURI from "./ArtifactURI";
 
 interface IOCellProps {
-  io: InputSpec | OutputSpec;
-  artifactData: ArtifactDataResponse | null | undefined;
+  name: string;
+  type?: string;
+  artifact: ArtifactNodeResponse | null | undefined;
 }
 
-export interface IOCellCopyState {
-  isCopied: boolean;
-  isTooltipOpen: boolean;
-  copyType?: "Name" | "Value";
-}
+const IOCell = ({ name, type, artifact }: IOCellProps) => {
+  const artifactData = artifact?.artifact_data;
+  const inlineValue = artifactData?.value;
+  const hasInlineValue = canShowInlineValue(inlineValue);
 
-export interface IOCellActions {
-  handleCopyName: () => void;
-  handleCopyValue: () => void;
-  handleTooltipOpen: (open: boolean) => void;
-}
-
-const IOCell = ({ io, artifactData }: IOCellProps) => {
-  const [isCopied, setIsCopied] = useState(false);
-  const [isTooltipOpen, setIsTooltipOpen] = useState(false);
-  const [copyType, setCopyType] = useState<"Name" | "Value">();
-  const [isOpen, setIsOpen] = useState(false);
-  const tooltipTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  const handleTooltipOpen = useCallback((open: boolean) => {
-    // When the tooltip is closed, we need to clear the copied state
-    if (!open) {
-      if (tooltipTimerRef.current) clearTimeout(tooltipTimerRef.current);
-      setIsCopied(false);
-    }
-    setIsTooltipOpen(open);
-  }, []);
-
-  const handleCopy = useCallback((value: string, type: "Name" | "Value") => {
-    copyToClipboard(value);
-    setIsCopied(true);
-    setIsTooltipOpen(true);
-    setCopyType(type);
-
-    // Clear any existing timer
-    if (tooltipTimerRef.current) clearTimeout(tooltipTimerRef.current);
-
-    tooltipTimerRef.current = setTimeout(() => {
-      setIsTooltipOpen(false);
-      setCopyType(undefined);
-      setIsCopied(false);
-    }, 1500);
-  }, []);
-
-  const handleCopyName = useCallback(() => {
-    handleCopy(io.name, "Name");
-  }, [io.name, handleCopy]);
-
-  const handleCopyValue = useCallback(() => {
-    if (!artifactData?.value) return;
-
-    handleCopy(artifactData.value, "Value");
-  }, [artifactData?.value, handleCopy]);
-
-  useEffect(() => {
-    return () => {
-      if (tooltipTimerRef.current) clearTimeout(tooltipTimerRef.current);
-    };
-  }, []);
-
-  const copyState: IOCellCopyState = {
-    isCopied,
-    isTooltipOpen,
-    copyType,
-  };
-
-  const actions: IOCellActions = {
-    handleCopyName,
-    handleCopyValue,
-    handleTooltipOpen,
-  };
+  const artifactType =
+    type ?? artifact?.type_name ?? (artifactData?.is_dir ? "Directory" : "Any");
 
   return (
-    <Collapsible
-      key={io.name}
-      open={isOpen}
-      onOpenChange={setIsOpen}
-      className="w-full"
-    >
-      <IOCellHeader
-        io={io}
-        artifactData={artifactData}
-        copyState={copyState}
-        actions={actions}
-        isOpen={isOpen}
-      />
+    <BlockStack gap="1" className="w-full p-2 border bg-white rounded-md">
+      <InlineStack
+        gap="2"
+        blockAlign="center"
+        align="space-between"
+        className="w-full"
+      >
+        <CopyText compact size="sm" className="break-all">
+          {name}
+        </CopyText>
 
-      {artifactData && (
-        <CollapsibleContent>
-          <IOCellDetails
-            io={io}
-            artifactData={artifactData}
-            actions={actions}
-          />
-        </CollapsibleContent>
+        <InlineStack gap="2" blockAlign="center">
+          <Text size="xs" tone="subdued">
+            {artifactType}
+          </Text>
+
+          {!!artifactData?.total_size && (
+            <Text size="xs" tone="subdued" font="mono">
+              ({formatBytes(artifactData.total_size)})
+            </Text>
+          )}
+        </InlineStack>
+      </InlineStack>
+
+      {hasInlineValue && (
+        <CopyText
+          size="xs"
+          compact
+          className="font-mono text-success line-clamp-2 break-all"
+        >
+          {inlineValue}
+        </CopyText>
       )}
-    </Collapsible>
+
+      {!!artifactData?.uri && (
+        <ArtifactURI uri={artifactData.uri} isDir={artifactData.is_dir} />
+      )}
+    </BlockStack>
   );
 };
 
 export default IOCell;
+
+const canShowInlineValue = (
+  value: string | null | undefined,
+): value is string => {
+  if (!value) {
+    return false;
+  }
+  if (String(value).trim() !== "") {
+    return true;
+  }
+  return false;
+};
