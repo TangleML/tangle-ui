@@ -1,4 +1,5 @@
 import { Handle, Position } from "@xyflow/react";
+import { observer } from "mobx-react-lite";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
@@ -92,7 +93,7 @@ function ClassicInputHandle({
   );
 }
 
-export function TaskNodeClassic({
+export const TaskNodeClassic = observer(function TaskNodeClassic({
   entityId,
   taskName,
   selected,
@@ -195,4 +196,4 @@ export function TaskNodeClassic({
       </CardContent>
     </Card>
   );
-}
+});

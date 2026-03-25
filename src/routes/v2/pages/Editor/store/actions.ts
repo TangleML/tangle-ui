@@ -9,4 +9,6 @@ export {
   copySelectedNodes,
   duplicateSelectedNodes,
   pasteNodes,
+  replaceTask,
+  upgradeSelectedTasks,
 } from "./actions/task.actions";
