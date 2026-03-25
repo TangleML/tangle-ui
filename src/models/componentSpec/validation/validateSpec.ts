@@ -3,7 +3,7 @@ import type { ComponentSpec } from "../entities/componentSpec";
 import type { Input } from "../entities/input";
 import type { Output } from "../entities/output";
 import type { Task } from "../entities/task";
-import type { ComponentSpecJson, InputSpecJson } from "../entities/types";
+import type { ComponentSpecJson, InputSpec } from "../entities/types";
 import { isGraphInputArgument, isTaskOutputArgument } from "../entities/types";
 import type { ValidationIssue } from "./types";
 
@@ -285,7 +285,7 @@ function validateTaskRequiredInputs(
   return issues;
 }
 
-export function isInputRequired(input: InputSpecJson): boolean {
+export function isInputRequired(input: InputSpec): boolean {
   return !input.optional && !input.default;
 }
 

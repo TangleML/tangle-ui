@@ -1,9 +1,9 @@
 import type {
   ComponentSpecJson,
-  InputSpecJson,
+  InputSpec,
   ValidationIssue,
 } from "@/models/componentSpec";
-import type { OutputSpecJson } from "@/models/componentSpec/entities/types";
+import type { OutputSpec } from "@/models/componentSpec/entities/types";
 import { isInputRequired } from "@/models/componentSpec/validation/validateSpec";
 
 import type { LostBinding } from "../../components/UpgradeComponents/types";
@@ -15,8 +15,8 @@ export interface EntityDiff<T> {
 }
 
 interface ComponentSpecDiff {
-  inputDiff: EntityDiff<InputSpecJson>;
-  outputDiff: EntityDiff<OutputSpecJson>;
+  inputDiff: EntityDiff<InputSpec>;
+  outputDiff: EntityDiff<OutputSpec>;
 }
 
 const EMPTY_DIFF: EntityDiff<never> = {

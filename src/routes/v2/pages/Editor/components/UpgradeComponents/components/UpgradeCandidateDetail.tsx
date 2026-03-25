@@ -5,8 +5,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Text } from "@/components/ui/typography";
 import type { ValidationIssue } from "@/models/componentSpec";
 import type {
-  InputSpecJson,
-  OutputSpecJson,
+  InputSpec,
+  OutputSpec,
 } from "@/models/componentSpec/entities/types";
 import type { EntityDiff } from "@/routes/v2/pages/Editor/store/actions/task.utils";
 
@@ -31,7 +31,7 @@ function EmptyDetail() {
   );
 }
 
-function DiffSection<T extends InputSpecJson | OutputSpecJson>({
+function DiffSection<T extends InputSpec | OutputSpec>({
   label,
   diff,
 }: {

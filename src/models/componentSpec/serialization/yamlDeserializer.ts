@@ -11,9 +11,10 @@ import type {
   ComponentSpecJson,
   GraphSpec,
   ImplementationType,
-  InputSpecJson,
-  OutputSpecJson,
-  TaskSpecJson,
+  InputSpec,
+  MetadataSpec,
+  OutputSpec,
+  TaskSpec,
 } from "../entities/types";
 import type { IdGenerator } from "../factories/idGenerator";
 
@@ -55,7 +56,7 @@ export class YamlDeserializer {
     });
   }
 
-  private buildInputs(inputsJson?: InputSpecJson[]): Input[] {
+  private buildInputs(inputsJson?: InputSpec[]): Input[] {
     if (!inputsJson) return [];
 
     return inputsJson.map((inputJson) => {
@@ -81,7 +82,7 @@ export class YamlDeserializer {
     });
   }
 
-  private buildOutputs(outputsJson?: OutputSpecJson[]): Output[] {
+  private buildOutputs(outputsJson?: OutputSpec[]): Output[] {
     if (!outputsJson) return [];
 
     return outputsJson.map((outputJson) => {
@@ -105,7 +106,7 @@ export class YamlDeserializer {
     });
   }
 
-  private buildTasks(tasksJson?: Record<string, TaskSpecJson>): Task[] {
+  private buildTasks(tasksJson?: Record<string, TaskSpec>): Task[] {
     if (!tasksJson) return [];
 
     return Object.entries(tasksJson).map(([taskName, taskJson]) => {
@@ -281,30 +282,12 @@ export class YamlDeserializer {
     return null;
   }
 
-  private buildMetadataAnnotations(
-    metadata?: Record<string, unknown>,
-  ): Annotation[] {
-    if (!metadata) return [];
-    const result: Annotation[] = [];
-    for (const [key, value] of Object.entries(metadata)) {
-      if (
-        key === "annotations" &&
-        typeof value === "object" &&
-        value !== null
-      ) {
-        for (const [annKey, annValue] of Object.entries(
-          value as Record<string, unknown>,
-        )) {
-          result.push({
-            key: annKey,
-            value: deserializeAnnotationValue(annKey, annValue),
-          });
-        }
-      } else {
-        result.push({ key, value });
-      }
-    }
-    return result;
+  private buildMetadataAnnotations(metadata?: MetadataSpec): Annotation[] {
+    if (!metadata?.annotations) return [];
+    return Object.entries(metadata.annotations).map(([key, value]) => ({
+      key,
+      value: deserializeAnnotationValue(key, value),
+    }));
   }
 
   private isGraphInputReference(value: string): boolean {

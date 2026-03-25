@@ -1,8 +1,8 @@
 import type { ComponentReference } from "@/models/componentSpec";
 import type { ComponentSpec } from "@/models/componentSpec/entities/componentSpec";
 import type {
-  InputSpecJson,
-  OutputSpecJson,
+  InputSpec,
+  OutputSpec,
 } from "@/models/componentSpec/entities/types";
 import {
   computeDiffComponentSpecs,
@@ -30,7 +30,7 @@ function pickIndices(seed: number, length: number, dropRate: number): number[] {
   );
 }
 
-function mutateInputs(inputs: InputSpecJson[], seed: number): InputSpecJson[] {
+function mutateInputs(inputs: InputSpec[], seed: number): InputSpec[] {
   const kept = pickIndices(seed, inputs.length, 0.3).map((i) => {
     const input = inputs[i];
     const shouldRename = simpleHash(`rename-in-${seed}-${i}`) % 5 === 0;
@@ -44,7 +44,7 @@ function mutateInputs(inputs: InputSpecJson[], seed: number): InputSpecJson[] {
   });
 
   const addCount = seed % 3;
-  const added: InputSpecJson[] = Array.from({ length: addCount }, (_, i) => ({
+  const added: InputSpec[] = Array.from({ length: addCount }, (_, i) => ({
     name: `new_required_input_${i}`,
     type: "String" as const,
   }));
@@ -52,10 +52,7 @@ function mutateInputs(inputs: InputSpecJson[], seed: number): InputSpecJson[] {
   return [...kept, ...added];
 }
 
-function mutateOutputs(
-  outputs: OutputSpecJson[],
-  seed: number,
-): OutputSpecJson[] {
+function mutateOutputs(outputs: OutputSpec[], seed: number): OutputSpec[] {
   const kept = pickIndices(seed + 7, outputs.length, 0.25).map((i) => {
     const output = outputs[i];
     const shouldRename = simpleHash(`rename-out-${seed}-${i}`) % 6 === 0;
@@ -67,7 +64,7 @@ function mutateOutputs(
   });
 
   const addCount = (seed + 1) % 2;
-  const added: OutputSpecJson[] = Array.from({ length: addCount }, (_, i) => ({
+  const added: OutputSpec[] = Array.from({ length: addCount }, (_, i) => ({
     name: `new_output_${i}`,
     type: "Artifact" as const,
   }));

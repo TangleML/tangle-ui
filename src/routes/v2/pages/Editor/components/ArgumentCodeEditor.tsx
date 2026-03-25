@@ -12,11 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Text } from "@/components/ui/typography";
-import type {
-  ComponentSpec,
-  InputSpecJson,
-  Task,
-} from "@/models/componentSpec";
+import type { ComponentSpec, InputSpec, Task } from "@/models/componentSpec";
 import type { TypeSpecType } from "@/models/componentSpec/entities/types";
 
 import { useArgumentActions } from "./ArgumentRow/useArgumentActions";
@@ -54,7 +50,7 @@ function serializeValue(value: unknown): string {
 }
 
 interface ArgumentCodeEditorProps {
-  inputSpec: InputSpecJson;
+  inputSpec: InputSpec;
   currentValue: unknown;
   task: Task;
   spec: ComponentSpec;

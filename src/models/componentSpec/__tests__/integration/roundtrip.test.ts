@@ -31,7 +31,7 @@ describe("Serialization Roundtrip", () => {
       description: "A test pipeline",
       inputs: [{ name: "data", type: "string" }],
       outputs: [{ name: "result", type: "string" }],
-      metadata: { author: "Test", version: "1.0" },
+      metadata: { annotations: { author: "Test", version: "1.0" } },
       implementation: {
         graph: {
           tasks: {

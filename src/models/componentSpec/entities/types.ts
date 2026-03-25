@@ -1,8 +1,30 @@
-export type TypeSpecType =
-  | string
-  | {
-      [k: string]: TypeSpecType;
-    };
+import type { ArgumentType, ComponentSpec } from "@/utils/componentSpec";
+
+// Wire format types -- canonical source is @/utils/componentSpec
+export type {
+  ArgumentType,
+  ComponentReference,
+  ExecutionOptionsSpec,
+  GraphImplementation,
+  GraphSpec,
+  ImplementationType,
+  InputSpec,
+  MetadataSpec,
+  OutputSpec,
+  PredicateType,
+  TaskOutputArgument,
+  TaskSpec,
+  TypeSpecType,
+} from "@/utils/componentSpec";
+export {
+  isGraphImplementation,
+  isGraphInputArgument,
+  isTaskOutputArgument,
+} from "@/utils/componentSpec";
+
+export type ComponentSpecJson = ComponentSpec;
+
+// Model-specific types (no utils equivalent)
 
 export interface BindingEndpoint {
   entityId: string;
@@ -14,164 +36,7 @@ export interface Annotation {
   value: unknown;
 }
 
-export interface GraphInputArgument {
-  graphInput: {
-    inputName: string;
-    type?: TypeSpecType;
-  };
-}
-
-export interface TaskOutputArgument {
-  taskOutput: {
-    taskId: string;
-    outputName: string;
-    type?: TypeSpecType;
-  };
-}
-
-interface SecretReference {
-  name: string;
-}
-
-interface SecretArgument {
-  secret: SecretReference;
-}
-
-type SystemDataArgument = {
-  [key: string]: Record<string, unknown>;
-};
-
-type DynamicDataValue = SecretArgument | SystemDataArgument;
-
-export interface DynamicDataArgument {
-  dynamicData: DynamicDataValue;
-}
-
-export type ArgumentType =
-  | string
-  | GraphInputArgument
-  | TaskOutputArgument
-  | DynamicDataArgument;
-
 export interface Argument {
   name: string;
   value?: ArgumentType;
 }
-
-interface TwoArgumentOperands {
-  op1: ArgumentType;
-  op2: ArgumentType;
-}
-
-interface TwoLogicalOperands {
-  op1: PredicateType;
-  op2: PredicateType;
-}
-
-export type PredicateType =
-  | { "==": TwoArgumentOperands }
-  | { "!=": TwoArgumentOperands }
-  | { ">": TwoArgumentOperands }
-  | { ">=": TwoArgumentOperands }
-  | { "<": TwoArgumentOperands }
-  | { "<=": TwoArgumentOperands }
-  | { and: TwoLogicalOperands }
-  | { or: TwoLogicalOperands }
-  | { not: PredicateType };
-
-export interface ComponentReference {
-  name?: string;
-  digest?: string;
-  tag?: string;
-  url?: string;
-  spec?: ComponentSpecJson;
-  text?: string;
-  favorited?: boolean;
-  published_by?: string;
-  deprecated?: boolean;
-  superseded_by?: string;
-  owned?: boolean;
-}
-
-export interface ComponentSpecJson {
-  name?: string;
-  description?: string;
-  inputs?: InputSpecJson[];
-  outputs?: OutputSpecJson[];
-  implementation: ImplementationType;
-  metadata?: MetadataSpec;
-}
-
-export interface InputSpecJson {
-  name: string;
-  type?: TypeSpecType;
-  description?: string;
-  default?: string;
-  optional?: boolean;
-  value?: string;
-  annotations?: Record<string, unknown>;
-}
-
-export interface OutputSpecJson {
-  name: string;
-  type?: TypeSpecType;
-  description?: string;
-  annotations?: Record<string, unknown>;
-}
-
-export interface MetadataSpec {
-  annotations?: Record<string, unknown>;
-  [key: string]: unknown;
-}
-
-export interface GraphSpec {
-  tasks: Record<string, TaskSpecJson>;
-  outputValues?: Record<string, TaskOutputArgument>;
-}
-
-export interface GraphImplementation {
-  graph: GraphSpec;
-}
-
-export interface ContainerImplementation {
-  container: {
-    image: string;
-    command?: unknown[];
-    args?: unknown[];
-    env?: Record<string, unknown>;
-  };
-}
-
-export type ImplementationType = ContainerImplementation | GraphImplementation;
-
-export interface ExecutionOptions {
-  retryStrategy?: { maxRetries?: number };
-  cachingStrategy?: { maxCacheStaleness?: string };
-}
-
-export interface TaskSpecJson {
-  componentRef: ComponentReference;
-  arguments?: Record<string, ArgumentType>;
-  isEnabled?: PredicateType;
-  executionOptions?: ExecutionOptions;
-  annotations?: Record<string, unknown>;
-}
-
-export const isGraphImplementation = (
-  implementation: ImplementationType,
-): implementation is GraphImplementation => "graph" in implementation;
-
-export const isTaskOutputArgument = (
-  arg?: ArgumentType,
-): arg is TaskOutputArgument =>
-  typeof arg === "object" && arg !== null && "taskOutput" in arg;
-
-export const isGraphInputArgument = (
-  arg?: ArgumentType,
-): arg is GraphInputArgument =>
-  typeof arg === "object" && arg !== null && "graphInput" in arg;
-
-export const isDynamicDataArgument = (
-  arg?: ArgumentType,
-): arg is DynamicDataArgument =>
-  typeof arg === "object" && arg !== null && "dynamicData" in arg;

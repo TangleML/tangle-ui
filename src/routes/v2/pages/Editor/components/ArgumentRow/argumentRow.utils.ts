@@ -1,8 +1,4 @@
-import type {
-  Binding,
-  ComponentSpec,
-  InputSpecJson,
-} from "@/models/componentSpec";
+import type { Binding, ComponentSpec, InputSpec } from "@/models/componentSpec";
 
 export function formatBindingSource(
   binding: Binding,
@@ -24,7 +20,7 @@ export function formatBindingSource(
 export function getDisplayValue(
   value: unknown,
   isSet: boolean,
-  inputSpec: InputSpecJson,
+  inputSpec: InputSpec,
 ): string {
   if (!isSet) {
     return inputSpec.default ? `default: ${inputSpec.default}` : "";
