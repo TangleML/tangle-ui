@@ -164,7 +164,3 @@ export function getConduitPosition(conduit: EdgeConduit) {
     ? { x: conduit.coordinate, y: -GUIDELINE_HALF_EXTENT }
     : { x: -GUIDELINE_HALF_EXTENT, y: conduit.coordinate };
 }
-
-export function buildConduitFingerprint(conduit: EdgeConduit): string {
-  return `g:${conduit.id}:${conduit.orientation}:${conduit.coordinate}:${conduit.color}:${conduit.edgeIds.join(",")}`;
-}

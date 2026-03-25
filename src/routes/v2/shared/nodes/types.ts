@@ -130,9 +130,6 @@ export interface NodeTypeManifest {
   buildNodes(spec: ComponentSpec): Node[];
   buildEdges?(spec: ComponentSpec): Edge[];
 
-  /** Return strings that uniquely describe this manifest's entities for caching. */
-  fingerprintParts?(spec: ComponentSpec): string[];
-
   /**
    * Transform the base binding edges (e.g. replace "default" edges with
    * a specialised edge type). Called after `buildBindingEdges`.

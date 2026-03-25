@@ -75,14 +75,6 @@ export const taskManifestBase: ManifestPartial = {
     );
   },
 
-  fingerprintParts(spec) {
-    return [...spec.tasks].map((task) => {
-      const pos = task.annotations.get("editor.position");
-      const z = task.annotations.get("zIndex");
-      return `t:${task.$id}:${task.name}:${pos.x},${pos.y}:z${z ?? ""}`;
-    });
-  },
-
   getPosition(spec, nodeId) {
     const task = spec.tasks.find((t) => t.$id === nodeId);
     if (!task) return undefined;

@@ -1,7 +1,6 @@
 import type { GuidelineOrientation } from "@/models/componentSpec/annotations";
 import {
   augmentEdgesWithGuidelines,
-  buildConduitFingerprint,
   buildConduitNode,
   getConduitPosition,
 } from "@/routes/v2/shared/nodes/ConduitNode/conduit.utils";
@@ -30,10 +29,6 @@ export const conduitManifest: NodeTypeManifest = {
 
   buildNodes(spec) {
     return getConduits(spec).map((conduit) => buildConduitNode(conduit, true));
-  },
-
-  fingerprintParts(spec) {
-    return getConduits(spec).map(buildConduitFingerprint);
   },
 
   transformEdges(spec, edges) {
