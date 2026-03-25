@@ -373,4 +373,58 @@ describe("YamlDeserializer", () => {
 
     expect(spec.tasks.at(0)?.executionOptions).toBeUndefined();
   });
+
+  it("deserializes dynamicData argument (secret)", () => {
+    const yaml = {
+      name: "Pipeline",
+      implementation: {
+        graph: {
+          tasks: {
+            Task1: {
+              componentRef: {},
+              arguments: {
+                api_key: {
+                  dynamicData: { secret: { name: "my-secret" } },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+
+    const spec = deserializer.deserialize(yaml);
+
+    const task = spec.tasks.at(0);
+    expect(task?.arguments.length).toBe(1);
+    expect(task?.arguments.at(0)?.name).toBe("api_key");
+    expect(task?.arguments.at(0)?.value).toEqual({
+      dynamicData: { secret: { name: "my-secret" } },
+    });
+  });
+
+  it("does not create bindings for dynamicData arguments", () => {
+    const yaml = {
+      name: "Pipeline",
+      implementation: {
+        graph: {
+          tasks: {
+            Task1: {
+              componentRef: {},
+              arguments: {
+                secret_param: {
+                  dynamicData: { secret: { name: "token" } },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+
+    const spec = deserializer.deserialize(yaml);
+
+    expect(spec.bindings.length).toBe(0);
+    expect(spec.tasks.at(0)?.arguments.length).toBe(1);
+  });
 });
