@@ -12,7 +12,9 @@ export { Binding, ComponentSpec, Input, Output, Task } from "./entities";
 // Serialization
 export {
   collectIdStack,
-  JsonSerializer,
+  serializeComponentSpec,
+  serializeComponentSpecToText,
+  serializeComponentSpecToYaml,
   YamlDeserializer,
 } from "./serialization";
 

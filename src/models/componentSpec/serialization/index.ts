@@ -1,3 +1,7 @@
 export { collectIdStack } from "./collectIdStack";
-export { JsonSerializer } from "./jsonSerializer";
+export {
+  serializeComponentSpec,
+  serializeComponentSpecToText,
+  serializeComponentSpecToYaml,
+} from "./serialize";
 export { YamlDeserializer } from "./yamlDeserializer";

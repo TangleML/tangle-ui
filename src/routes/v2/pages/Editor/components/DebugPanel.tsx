@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Text } from "@/components/ui/typography";
 import type { ComponentSpec } from "@/models/componentSpec";
-import { JsonSerializer } from "@/models/componentSpec";
+import { serializeComponentSpecToText } from "@/models/componentSpec";
 import { openUpgradeComponentsWindow } from "@/routes/v2/pages/Editor/components/UpgradeComponents/openUpgradeWindow";
 import { ShorcutBadge } from "@/routes/v2/shared/components/ShorcutBadge";
 import type { KeyConstant } from "@/routes/v2/shared/shortcuts/keys";
@@ -19,7 +19,6 @@ import {
   getWindowById,
   openWindow,
 } from "@/routes/v2/shared/windows/windows.actions";
-import { componentSpecToText } from "@/utils/yaml";
 
 const DEBUG_PANEL_WINDOW_ID = "debug-panel";
 
@@ -63,16 +62,10 @@ function StatGroup({ title, children }: StatGroupProps) {
   );
 }
 
-/**
- * Helper to generate YAML from spec
- */
 function getSpecYaml(spec: ComponentSpec | null): string {
   if (!spec) return "null";
   try {
-    const serializer = new JsonSerializer();
-    return componentSpecToText(
-      serializer.serialize(spec) as Parameters<typeof componentSpecToText>[0],
-    );
+    return serializeComponentSpecToText(spec);
   } catch {
     return "Error serializing spec";
   }

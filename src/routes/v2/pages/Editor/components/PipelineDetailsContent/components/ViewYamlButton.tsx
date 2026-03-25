@@ -1,10 +1,9 @@
-import yaml from "js-yaml";
 import { useState } from "react";
 
 import { ActionButton } from "@/components/shared/Buttons/ActionButton";
 import { CodeViewer } from "@/components/shared/CodeViewer";
 import type { ComponentSpec } from "@/models/componentSpec";
-import { JsonSerializer } from "@/models/componentSpec";
+import { serializeComponentSpecToText } from "@/models/componentSpec";
 
 interface ViewYamlButtonProps {
   spec: ComponentSpec;
@@ -31,11 +30,7 @@ export const ViewYamlButton = ({ spec }: ViewYamlButtonProps) => {
 
       {showCodeViewer && (
         <CodeViewer
-          code={yaml.dump(new JsonSerializer().serialize(spec), {
-            lineWidth: -1,
-            noRefs: true,
-            indent: 2,
-          })}
+          code={serializeComponentSpecToText(spec)}
           language="yaml"
           filename={spec.name}
           fullscreen
