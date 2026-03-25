@@ -5,9 +5,11 @@ import { BlockStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
 import { Paragraph } from "@/components/ui/typography";
 import { useBackend } from "@/providers/BackendProvider";
+import { useExecutionData } from "@/providers/ExecutionDataProvider";
 import { getExecutionArtifacts } from "@/services/executionService";
 import { getBackendStatusString } from "@/utils/backend";
 import type { TaskSpec } from "@/utils/componentSpec";
+import { isOlderThanDays } from "@/utils/date";
 
 import IOExtras from "./IOExtras";
 import IOInputs from "./IOInputs";
@@ -21,6 +23,7 @@ interface IOSectionProps {
 
 const IOSection = ({ taskSpec, executionId, readOnly }: IOSectionProps) => {
   const { backendUrl, configured, available } = useBackend();
+  const { metadata } = useExecutionData();
 
   const {
     data: artifacts,
@@ -74,8 +77,18 @@ const IOSection = ({ taskSpec, executionId, readOnly }: IOSectionProps) => {
     ? ["inputs", "outputs", "other"]
     : ["outputs", "inputs", "other"];
 
+  const isOlderThan30Days =
+    metadata?.created_at && isOlderThanDays(metadata.created_at, 30);
+
   return (
     <BlockStack gap="4" className="w-full">
+      {isOlderThan30Days && (
+        <InfoBox title="Artifact Storage" variant="warning">
+          Remote artifacts may be unavailable for runs older than 30 days. To
+          keep an artifact, download it using the provided link before it
+          expires.
+        </InfoBox>
+      )}
       {order.map((section) => {
         if (section === "inputs") {
           return (
