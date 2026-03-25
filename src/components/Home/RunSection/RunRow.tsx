@@ -15,7 +15,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Paragraph } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
 import { APP_ROUTES } from "@/routes/router";
@@ -95,14 +94,17 @@ const RunRow = ({ run }: { run: PipelineRunResponse }) => {
   return (
     <TableRow
       onClick={handleRowClick}
-      className="cursor-pointer text-gray-500 text-xs"
+      className="cursor-pointer text-gray-500 text-xs h-10"
     >
       <TableCell>
         <InlineStack gap="2" blockAlign="center" wrap="nowrap">
           <StatusIcon status={overallStatus} />
-          <Paragraph className="truncate max-w-100 text-sm" title={name}>
+          <span
+            className="truncate max-w-100 text-sm text-foreground"
+            title={name}
+          >
             {name}
-          </Paragraph>
+          </span>
           <div
             onClick={(e) => e.stopPropagation()}
             className="flex items-center text-sm"
