@@ -4,7 +4,10 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Text } from "@/components/ui/typography";
 import type { ValidationIssue } from "@/models/componentSpec";
-import type { InputSpecJson, OutputSpecJson } from "@/models/componentSpec/entities/types";
+import type {
+  InputSpecJson,
+  OutputSpecJson,
+} from "@/models/componentSpec/entities/types";
 import type { EntityDiff } from "@/routes/v2/pages/Editor/store/actions/task.utils";
 
 import { candidateHasIssues, type UpgradeCandidate } from "../types";
@@ -49,13 +52,28 @@ function DiffSection<T extends InputSpecJson | OutputSpecJson>({
       </Text>
       <BlockStack className="gap-0.5">
         {diff.lostEntities.map((e) => (
-          <DiffLine key={`lost-${e.name}`} icon="Minus" color="text-red-500" label={`Removed: ${e.name}`} />
+          <DiffLine
+            key={`lost-${e.name}`}
+            icon="Minus"
+            color="text-red-500"
+            label={`Removed: ${e.name}`}
+          />
         ))}
         {diff.newEntities.map((e) => (
-          <DiffLine key={`new-${e.name}`} icon="Plus" color="text-green-600" label={`Added: ${e.name}`} />
+          <DiffLine
+            key={`new-${e.name}`}
+            icon="Plus"
+            color="text-green-600"
+            label={`Added: ${e.name}`}
+          />
         ))}
         {diff.changedEntities.map((e) => (
-          <DiffLine key={`changed-${e.name}`} icon="RefreshCw" color="text-amber-500" label={`Changed: ${e.name}`} />
+          <DiffLine
+            key={`changed-${e.name}`}
+            icon="RefreshCw"
+            color="text-amber-500"
+            label={`Changed: ${e.name}`}
+          />
         ))}
       </BlockStack>
     </BlockStack>
@@ -94,8 +112,16 @@ function PredictedIssuesSection({ issues }: { issues: ValidationIssue[] }) {
           const color = isError ? "text-red-500" : "text-amber-500";
 
           return (
-            <InlineStack key={`${issue.issueCode}-${index}`} gap="1" blockAlign="start">
-              <Icon name={iconName} size="xs" className={`${color} mt-0.5 shrink-0`} />
+            <InlineStack
+              key={`${issue.issueCode}-${index}`}
+              gap="1"
+              blockAlign="start"
+            >
+              <Icon
+                name={iconName}
+                size="xs"
+                className={`${color} mt-0.5 shrink-0`}
+              />
               <Text size="xs">{issue.message}</Text>
             </InlineStack>
           );
