@@ -132,7 +132,7 @@ export const TaskNode = observer(function TaskNode({
     );
   }
 
-  const componentSpec = task.componentRef.spec as ComponentSpecJson | undefined;
+  const componentSpec = task.componentRef.spec;
   const inputs = componentSpec?.inputs ?? [];
   const outputs = componentSpec?.outputs ?? [];
   const description = componentSpec?.description ?? "";

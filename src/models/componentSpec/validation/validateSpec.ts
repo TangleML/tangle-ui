@@ -285,7 +285,7 @@ function validateTaskRequiredInputs(
   return issues;
 }
 
-function isInputRequired(input: InputSpecJson): boolean {
+export function isInputRequired(input: InputSpecJson): boolean {
   return !input.optional && !input.default;
 }
 

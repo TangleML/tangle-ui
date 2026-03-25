@@ -13,6 +13,8 @@ import {
   duplicateSelectedNodes,
   pasteNodes,
   renameTask,
+  replaceTask,
+  upgradeSelectedTasks,
 } from "./task.actions";
 
 export function useTaskActions() {
@@ -36,5 +38,7 @@ export function useTaskActions() {
     },
     batchSetTaskColor: batchSetTaskColor.bind(null, undo),
     applyAutoLayoutPositions: applyAutoLayoutPositions.bind(null, undo),
+    replaceTask: replaceTask.bind(null, undo),
+    upgradeSelectedTasks: upgradeSelectedTasks.bind(null, undo),
   };
 }
