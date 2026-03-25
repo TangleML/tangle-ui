@@ -112,12 +112,12 @@ export function TaskNodeInputs({
 
   const handleBackgroundClick = useCallback(
     (e: MouseEvent) => {
-      if (onBackgroundClick) {
+      if (condensedProp && onBackgroundClick) {
         e.stopPropagation();
         onBackgroundClick();
       }
     },
-    [onBackgroundClick],
+    [condensedProp, onBackgroundClick],
   );
 
   const handleSelectionChange = useCallback(
