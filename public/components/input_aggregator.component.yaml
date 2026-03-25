@@ -1,0 +1,141 @@
+# Input Aggregator component specification.
+# This file is a template; at runtime the spec is extended with additional inputs
+# (agg_1, agg_2, ...) based on the number of values to aggregate.
+# The inputs listed below represent the default template state.
+name: Input Aggregator
+description: |
+  Aggregates multiple pipeline inputs into a single output.
+  Supports JsonArray, JsonObject, and CSV aggregation modes.
+  Pass values as agg_N inputs and set output_type to control the aggregation format.
+metadata:
+  annotations:
+    is_input_aggregator: "true"
+    author: Tangle Team
+inputs:
+- {name: output_type, type: String, default: "JsonArray", optional: true, description: "Output format: JsonArray (array of values), JsonObject (keyed by input name), or CSV (union of CSV inputs with matching columns)."}
+# Example dynamically added input:
+# - {name: agg_1, type: String, optional: true}
+outputs:
+- {name: Output, type: String}
+implementation:
+  container:
+    image: python:3.12-slim
+    command:
+    - sh
+    - -ec
+    - |
+      program_path=$(mktemp)
+      printf "%s" "$0" > "$program_path"
+      python3 -u "$program_path" "$@"
+    - |
+      import csv
+      import io
+      import json
+      import os
+      import re
+      import sys
+
+
+      def aggregate(output_path: str, output_type: str = "JsonArray", **input_values: str) -> None:
+          inputs = {}
+          for key, value in sorted(input_values.items()):
+              if value is not None:
+                  inputs[key] = value
+
+          if not inputs:
+              raise ValueError("No inputs provided. At least one input must be connected.")
+
+          if output_type == "JsonArray":
+              result = json.dumps(list(inputs.values()), indent=2)
+
+          elif output_type == "JsonObject":
+              result = json.dumps(inputs, indent=2)
+
+          elif output_type == "CSV":
+              all_rows = []
+              header = None
+
+              def _normalize_csv_rows(rows: list[list[str]]) -> list[list[str]]:
+                  """Strip leading empty column (pandas index) from all rows if present."""
+                  if rows and rows[0] and rows[0][0] == "":
+                      return [row[1:] if row else row for row in rows]
+                  return rows
+
+              for _name, csv_text in inputs.items():
+                  text = csv_text.strip()
+                  if not text:
+                      continue
+                  reader = csv.reader(io.StringIO(text))
+                  rows = _normalize_csv_rows(list(reader))
+                  if not rows or rows == [[""]]:
+                      continue
+                  if header is None:
+                      header = rows[0]
+                      all_rows.append(header)
+                      all_rows.extend(rows[1:])
+                  else:
+                      # Always treat the first row of subsequent inputs as a header and skip it.
+                      # Raise only if column count differs, which would produce malformed CSV.
+                      if len(rows[0]) != len(header):
+                          raise ValueError(
+                              f"CSV column count mismatch. Expected {len(header)} columns, "
+                              f"got {len(rows[0])} in input '{_name}'. "
+                              "All CSV inputs must have the same columns."
+                          )
+                      all_rows.extend(rows[1:])
+
+              if not all_rows:
+                  raise ValueError("No valid CSV data found in any input.")
+
+              output = io.StringIO()
+              writer = csv.writer(output)
+              writer.writerows(all_rows)
+              result = output.getvalue()
+
+          else:
+              raise ValueError(
+                  f"Unknown output_type: '{output_type}'. Must be 'JsonArray', 'JsonObject', or 'CSV'."
+              )
+
+          os.makedirs(os.path.dirname(output_path), exist_ok=True)
+          with open(output_path, "w") as f:
+              f.write(result)
+
+
+      _args = sys.argv[1:]
+      _output_path = None
+      _output_type = "JsonArray"
+      _input_values = {}
+
+      _i = 0
+      while _i < len(_args):
+          _arg = _args[_i]
+
+          if _arg == "----output-paths" and _i + 1 < len(_args):
+              _output_path = _args[_i + 1]
+              _i += 2
+          elif _arg == "--output-type" and _i + 1 < len(_args):
+              _output_type = _args[_i + 1]
+              _i += 2
+          else:
+              # Match any --agg-N flag dynamically
+              _match = re.match(r"^--agg-(\d+)$", _arg)
+              if _match and _i + 1 < len(_args):
+                  _n = _match.group(1)
+                  _input_values[f"agg_{_n}"] = _args[_i + 1]
+                  _i += 2
+              else:
+                  _i += 1
+
+      if not _output_path:
+          raise ValueError("Output path is required (----output-paths).")
+
+      aggregate(
+          output_path=_output_path,
+          output_type=_output_type,
+          **_input_values,
+      )
+    - --output-type
+    - {inputValue: output_type}
+    - '----output-paths'
+    - {outputPath: Output}
