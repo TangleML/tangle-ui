@@ -43,9 +43,18 @@ interface RunSectionProps {
   onEmptyList?: () => void;
   /** When true, hides the built-in filter UI (used when new filter bar is enabled) */
   hideFilters?: boolean;
+  /** When provided, overrides the URL filter param (e.g. "created_by:me") */
+  forcedFilter?: string;
+  /** When provided, limits the number of rows shown (pagination still works per backend page) */
+  maxItems?: number;
 }
 
-export const RunSection = ({ onEmptyList, hideFilters }: RunSectionProps) => {
+export const RunSection = ({
+  onEmptyList,
+  hideFilters,
+  forcedFilter,
+  maxItems,
+}: RunSectionProps) => {
   const { backendUrl, configured, available, ready } = useBackend();
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -54,7 +63,7 @@ export const RunSection = ({ onEmptyList, hideFilters }: RunSectionProps) => {
   const dataVersion = useRef(0);
 
   // Supports both JSON (new) and key:value (legacy) URL formats
-  const filters = parseFilterParam(search.filter);
+  const filters = parseFilterParam(forcedFilter ?? search.filter);
   const createdByValue = filters.created_by;
 
   const apiFilterQuery = filtersToFilterQuery(filters);
@@ -281,7 +290,10 @@ export const RunSection = ({ onEmptyList, hideFilters }: RunSectionProps) => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.pipeline_runs?.map((run) => (
+          {(maxItems
+            ? data.pipeline_runs?.slice(0, maxItems)
+            : data.pipeline_runs
+          )?.map((run) => (
             <RunRow key={run.id} run={run} />
           ))}
         </TableBody>
