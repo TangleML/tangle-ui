@@ -11,7 +11,8 @@ import type {
   GraphSpec,
   TaskSpec,
 } from "@/utils/componentSpec";
-import { nodeIdToTaskId } from "@/utils/nodes/nodeIdUtils";
+import { inputNameToNodeId, nodeIdToTaskId } from "@/utils/nodes/nodeIdUtils";
+import { componentSpecToText } from "@/utils/yaml";
 
 import { handleConnection } from "./handleConnection";
 
@@ -21,7 +22,7 @@ export const handleAggregatorConnection = (
 ): GraphSpec => {
   const targetHandleId = connection.targetHandle;
 
-  if (targetHandleId !== AGGREGATOR_ADD_INPUT_HANDLE_ID) {
+  if (targetHandleId !== inputNameToNodeId(AGGREGATOR_ADD_INPUT_HANDLE_ID)) {
     return handleConnection(graphSpec, connection);
   }
 
@@ -44,12 +45,15 @@ export const handleAggregatorConnection = (
   const newInputName = getNextAggregatorInputName(currentInputs);
   const newInput = createAggregatorInput(newInputName);
 
+  const updatedSpec = {
+    ...targetTask.componentRef.spec,
+    inputs: [...currentInputs, newInput],
+  };
+
   const updatedComponentRef: ComponentReference = {
     ...targetTask.componentRef,
-    spec: {
-      ...targetTask.componentRef.spec,
-      inputs: [...currentInputs, newInput],
-    },
+    spec: updatedSpec,
+    text: componentSpecToText(updatedSpec),
   };
 
   const updatedTask: TaskSpec = {
@@ -67,7 +71,7 @@ export const handleAggregatorConnection = (
 
   const redirectedConnection: Connection = {
     ...connection,
-    targetHandle: `input_${newInputName}`,
+    targetHandle: inputNameToNodeId(newInputName),
   };
 
   return handleConnection(graphSpecWithNewInput, redirectedConnection);

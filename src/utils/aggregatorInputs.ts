@@ -12,7 +12,7 @@ export const getNextAggregatorInputName = (
   const numbers = aggregatorInputs
     .map((input) => {
       const num = parseInt(input.name, 10);
-      return isNaN(num) ? 0 : num;
+      return num;
     })
     .filter((num) => num > 0);
 
