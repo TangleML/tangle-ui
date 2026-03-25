@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { useCallback } from "react";
+import { type MouseEvent, useCallback, useRef } from "react";
 
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { buildTaskSpecShape } from "@/components/shared/PipelineRunNameTemplate/types";
@@ -32,6 +32,8 @@ export const ClonePipelineButton = ({
   const notify = useToastNotification();
   const runDetails = useExecutionDataOptional();
 
+  const openInNewTabRef = useRef(false);
+
   const { isPending, mutate: clonePipeline } = useMutation({
     mutationFn: async ({
       taskArguments,
@@ -48,7 +50,11 @@ export const ClonePipelineButton = ({
     onSuccess: (result) => {
       if (result?.url) {
         notify(`Pipeline "${result.name}" cloned`, "success");
-        navigate({ to: result.url });
+        if (openInNewTabRef.current) {
+          window.open(result.url, "_blank");
+        } else {
+          navigate({ to: result.url });
+        }
       }
     },
     onError: (error) => {
@@ -56,28 +62,32 @@ export const ClonePipelineButton = ({
     },
   });
 
-  const handleClone = useCallback(() => {
-    /**
-     * We cannnot convert SecretArguments into strings compatible with inputs,
-     * so we need to override them with undefined.
-     */
-    const secretArgumentsOverrides = Object.fromEntries(
-      Object.entries(runDetails?.rootDetails?.task_spec.arguments ?? {})
-        .filter(([_, value]) => isSecretArgument(value as ArgumentType))
-        .map(([key, _]) => [key, undefined] as const),
-    );
+  const handleClone = useCallback(
+    (e: MouseEvent) => {
+      openInNewTabRef.current = e.metaKey || e.ctrlKey;
+      /**
+       * We cannnot convert SecretArguments into strings compatible with inputs,
+       * so we need to override them with undefined.
+       */
+      const secretArgumentsOverrides = Object.fromEntries(
+        Object.entries(runDetails?.rootDetails?.task_spec.arguments ?? {})
+          .filter(([_, value]) => isSecretArgument(value as ArgumentType))
+          .map(([key, _]) => [key, undefined] as const),
+      );
 
-    const plainTaskArguments = extractTaskArguments(
-      runDetails?.rootDetails?.task_spec.arguments ?? {},
-    );
+      const plainTaskArguments = extractTaskArguments(
+        runDetails?.rootDetails?.task_spec.arguments ?? {},
+      );
 
-    const taskArguments = {
-      ...plainTaskArguments,
-      ...secretArgumentsOverrides,
-    };
+      const taskArguments = {
+        ...plainTaskArguments,
+        ...secretArgumentsOverrides,
+      };
 
-    clonePipeline({ taskArguments: taskArguments as Record<string, string> });
-  }, [clonePipeline, runDetails]);
+      clonePipeline({ taskArguments: taskArguments as Record<string, string> });
+    },
+    [clonePipeline, runDetails],
+  );
 
   return (
     <TooltipButton
