@@ -262,7 +262,7 @@ describe("YamlDeserializer", () => {
   it("deserializes metadata as annotations", () => {
     const yaml = {
       name: "SpecWithMetadata",
-      metadata: { author: "Jane", version: "2.0" },
+      metadata: { annotations: { author: "Jane", version: "2.0" } },
     };
 
     const spec = deserializer.deserialize(yaml);

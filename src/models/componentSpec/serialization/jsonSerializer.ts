@@ -10,11 +10,11 @@ import type {
   ArgumentType,
   ComponentSpecJson,
   GraphSpec,
-  InputSpecJson,
+  InputSpec,
   MetadataSpec,
-  OutputSpecJson,
+  OutputSpec,
   TaskOutputArgument,
-  TaskSpecJson,
+  TaskSpec,
 } from "../entities/types";
 
 export class JsonSerializer {
@@ -47,7 +47,7 @@ export class JsonSerializer {
   }
 
   private serializeGraph(spec: ComponentSpec): GraphSpec {
-    const tasks: Record<string, TaskSpecJson> = {};
+    const tasks: Record<string, TaskSpec> = {};
     const outputValues: Record<string, TaskOutputArgument> = {};
 
     for (const task of spec.tasks) {
@@ -79,13 +79,13 @@ export class JsonSerializer {
     };
   }
 
-  private serializeTask(task: Task, spec: ComponentSpec): TaskSpecJson {
+  private serializeTask(task: Task, spec: ComponentSpec): TaskSpec {
     const taskBindings = spec.bindings.filter(
       (b) => b.targetEntityId === task.$id,
     );
     const args = this.serializeArguments(task.arguments, taskBindings, spec);
 
-    const result: TaskSpecJson = {
+    const result: TaskSpec = {
       componentRef: task.componentRef,
     };
 
@@ -149,8 +149,8 @@ export class JsonSerializer {
     return result;
   }
 
-  private serializeInput(input: Input): InputSpecJson {
-    const result: InputSpecJson = {
+  private serializeInput(input: Input): InputSpec {
+    const result: InputSpec = {
       name: input.name,
     };
 
@@ -167,8 +167,8 @@ export class JsonSerializer {
     return result;
   }
 
-  private serializeOutput(output: Output): OutputSpecJson {
-    const result: OutputSpecJson = {
+  private serializeOutput(output: Output): OutputSpec {
+    const result: OutputSpec = {
       name: output.name,
     };
 

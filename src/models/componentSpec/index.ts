@@ -4,7 +4,7 @@ export type {
   ArgumentType,
   ComponentReference,
   ComponentSpecJson,
-  InputSpecJson,
+  InputSpec,
   TypeSpecType,
 } from "./entities";
 export { Binding, ComponentSpec, Input, Output, Task } from "./entities";

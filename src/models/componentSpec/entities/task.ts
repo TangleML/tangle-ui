@@ -5,7 +5,7 @@ import type {
   Argument,
   ArgumentType,
   ComponentReference,
-  ExecutionOptions,
+  ExecutionOptionsSpec,
   PredicateType,
 } from "./types";
 
@@ -17,7 +17,7 @@ export class Task extends Model({
   isEnabled: prop<PredicateType | undefined>(undefined),
   annotations: prop<Annotations>(() => new Annotations({})),
   arguments: prop<Argument[]>(() => []),
-  executionOptions: prop<ExecutionOptions | undefined>(undefined),
+  executionOptions: prop<ExecutionOptionsSpec | undefined>(undefined),
 }) {
   @modelAction
   setName(name: string) {

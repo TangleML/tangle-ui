@@ -137,7 +137,7 @@ interface ContainerSpec {
 export interface ContainerImplementation {
   container: ContainerSpec;
 }
-type ImplementationType = ContainerImplementation | GraphImplementation;
+export type ImplementationType = ContainerImplementation | GraphImplementation;
 export interface MetadataSpec {
   annotations?: {
     [k: string]: unknown;

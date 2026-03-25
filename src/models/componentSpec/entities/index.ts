@@ -8,6 +8,6 @@ export type {
   ArgumentType,
   ComponentReference,
   ComponentSpecJson,
-  InputSpecJson,
+  InputSpec,
   TypeSpecType,
 } from "./types";

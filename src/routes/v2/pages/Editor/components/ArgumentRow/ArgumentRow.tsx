@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import type {
   Binding,
   ComponentSpec,
-  InputSpecJson,
+  InputSpec,
   Task,
 } from "@/models/componentSpec";
 import { useIOActions } from "@/routes/v2/pages/Editor/store/actions/useIOActions";
@@ -26,7 +26,7 @@ import { ThunderMenu } from "./components/ThunderMenu/ThunderMenu";
 import { useArgumentActions } from "./useArgumentActions";
 
 interface ArgumentRowProps {
-  inputSpec: InputSpecJson;
+  inputSpec: InputSpec;
   currentValue: unknown;
   isSet: boolean;
   binding: Binding | undefined;
