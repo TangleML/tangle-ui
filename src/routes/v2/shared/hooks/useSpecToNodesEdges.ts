@@ -1,5 +1,6 @@
 import type { Edge, Node } from "@xyflow/react";
-import { useRef } from "react";
+import { autorun, computed } from "mobx";
+import { useEffect, useState } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
@@ -8,23 +9,23 @@ const EMPTY_RESULT: { nodes: Node[]; edges: Edge[] } = { nodes: [], edges: [] };
 
 export function useSpecToNodesEdges(spec: ComponentSpec | null) {
   const registry = useNodeRegistry();
-  const cacheRef = useRef<{
-    fingerprint: string;
-    result: { nodes: Node[]; edges: Edge[] };
-  } | null>(null);
+  const [result, setResult] = useState(EMPTY_RESULT);
 
-  if (!spec) return EMPTY_RESULT;
+  useEffect(() => {
+    if (!spec) {
+      setResult(EMPTY_RESULT);
+      return;
+    }
 
-  const fingerprint = registry.buildFingerprint(spec);
+    const derivation = computed(() => ({
+      nodes: registry.buildAllNodes(spec),
+      edges: registry.buildAllEdges(spec),
+    }));
 
-  if (cacheRef.current && cacheRef.current.fingerprint === fingerprint) {
-    return cacheRef.current.result;
-  }
+    return autorun(() => {
+      setResult(derivation.get());
+    });
+  }, [spec, registry]);
 
-  const nodes = registry.buildAllNodes(spec);
-  const edges = registry.buildAllEdges(spec);
-
-  const result = { nodes, edges };
-  cacheRef.current = { fingerprint, result };
   return result;
 }

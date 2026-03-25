@@ -83,24 +83,6 @@ export class NodeTypeRegistry {
   }
 
   /**
-   * Build a cache fingerprint by collecting parts from every manifest
-   * that provides `fingerprintParts`, plus cross-cutting binding parts.
-   */
-  buildFingerprint(spec: ComponentSpec): string {
-    const parts = this.all()
-      .filter((manifest) => manifest.fingerprintParts)
-      .flatMap((manifest) => manifest.fingerprintParts!(spec));
-
-    for (const binding of spec.bindings) {
-      parts.push(
-        `b:${binding.$id}:${binding.sourceEntityId}:${binding.sourcePortName}:${binding.targetEntityId}:${binding.targetPortName}`,
-      );
-    }
-
-    return parts.join("|");
-  }
-
-  /**
    * Build all edges:
    * 1. Base binding edges (pure, no node-type knowledge)
    * 2. `transformEdges` from each manifest (e.g. conduit augmentation)

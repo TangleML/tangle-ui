@@ -50,11 +50,6 @@ export const flexNodeManifest: NodeTypeManifest = {
     return getFlexNodes(spec).map((flexNode) => createFlexNode(flexNode));
   },
 
-  fingerprintParts(spec) {
-    const nodes = getFlexNodes(spec);
-    return nodes.map((n) => `flex:${JSON.stringify(n)}`);
-  },
-
   drop: {
     dataKey: "flex",
     handler(spec, _data, position, undo) {

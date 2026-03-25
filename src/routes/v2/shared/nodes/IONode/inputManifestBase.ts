@@ -71,14 +71,6 @@ export const inputManifestBase: ManifestPartial = {
     );
   },
 
-  fingerprintParts(spec) {
-    return [...spec.inputs].map((input) => {
-      const pos = input.annotations.get("editor.position");
-      const z = input.annotations.get("zIndex");
-      return `i:${input.$id}:${input.name}:${pos.x},${pos.y}:z${z ?? ""}`;
-    });
-  },
-
   getPosition(spec, nodeId) {
     const input = spec.inputs.find((i) => i.$id === nodeId);
     if (!input) return undefined;

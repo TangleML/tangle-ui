@@ -1,6 +1,5 @@
 import {
   augmentEdgesWithGuidelines,
-  buildConduitFingerprint,
   buildConduitNode,
   getConduitPosition,
   getConduits,
@@ -19,10 +18,6 @@ export const conduitManifest: NodeTypeManifest = {
 
   buildNodes(spec) {
     return getConduits(spec).map((conduit) => buildConduitNode(conduit, false));
-  },
-
-  fingerprintParts(spec) {
-    return getConduits(spec).map(buildConduitFingerprint);
   },
 
   transformEdges(spec, edges) {
