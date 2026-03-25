@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { type MouseEvent } from "react";
 
 import type { PipelineRunResponse } from "@/api/types.gen";
+import { CopyText } from "@/components/shared/CopyText/CopyText";
 import { StatusBar, StatusIcon } from "@/components/shared/Status";
 import { TagList } from "@/components/shared/Tags/TagList";
 import { Button } from "@/components/ui/button";
@@ -101,9 +102,15 @@ const RunRow = ({ run }: { run: PipelineRunResponse }) => {
           <Paragraph className="truncate max-w-100 text-sm" title={name}>
             {name}
           </Paragraph>
-          <Paragraph tone="subdued" className="text-sm" title={runId}>
-            #{runId}
-          </Paragraph>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center text-sm"
+          >
+            #
+            <CopyText size="sm" className="text-muted-foreground">
+              {runId}
+            </CopyText>
+          </div>
         </InlineStack>
       </TableCell>
       <TableCell>
