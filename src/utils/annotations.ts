@@ -16,7 +16,7 @@ export const EDITOR_POSITION_ANNOTATION = "editor.position";
 export const EDITOR_COLLAPSED_ANNOTATION = "editor.collapsed";
 export const FLEX_NODES_ANNOTATION = "flex-nodes";
 export const ZINDEX_ANNOTATION = "zIndex";
-const PIPELINE_AGGREGATOR_ANNOTATION = "pipeline.aggregator";
+const PIPELINE_AGGREGATOR_ANNOTATION = "is_input_aggregator";
 
 export const DEFAULT_COMMON_ANNOTATIONS: AnnotationConfig[] = [
   {
