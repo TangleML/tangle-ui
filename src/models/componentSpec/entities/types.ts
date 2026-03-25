@@ -29,7 +29,29 @@ export interface TaskOutputArgument {
   };
 }
 
-export type ArgumentType = string | GraphInputArgument | TaskOutputArgument;
+interface SecretReference {
+  name: string;
+}
+
+interface SecretArgument {
+  secret: SecretReference;
+}
+
+type SystemDataArgument = {
+  [key: string]: Record<string, unknown>;
+};
+
+type DynamicDataValue = SecretArgument | SystemDataArgument;
+
+export interface DynamicDataArgument {
+  dynamicData: DynamicDataValue;
+}
+
+export type ArgumentType =
+  | string
+  | GraphInputArgument
+  | TaskOutputArgument
+  | DynamicDataArgument;
 
 export interface Argument {
   name: string;
@@ -148,3 +170,8 @@ export const isGraphInputArgument = (
   arg?: ArgumentType,
 ): arg is GraphInputArgument =>
   typeof arg === "object" && arg !== null && "graphInput" in arg;
+
+export const isDynamicDataArgument = (
+  arg?: ArgumentType,
+): arg is DynamicDataArgument =>
+  typeof arg === "object" && arg !== null && "dynamicData" in arg;

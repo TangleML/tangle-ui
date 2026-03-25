@@ -361,4 +361,27 @@ describe("JsonSerializer", () => {
 
     expect(getGraph(json).tasks["Process"].executionOptions).toBeUndefined();
   });
+
+  it("serializes dynamicData argument values from task", () => {
+    const spec = new ComponentSpec({
+      $id: idGen.next("spec"),
+      name: "Pipeline",
+    });
+    const task = new Task({
+      $id: idGen.next("task"),
+      name: "Process",
+      componentRef: {},
+    });
+    task.addArgument({
+      name: "api_key",
+      value: { dynamicData: { secret: { name: "my-secret" } } },
+    });
+    spec.addTask(task);
+
+    const json = serializer.serialize(spec);
+
+    expect(getGraph(json).tasks["Process"].arguments).toEqual({
+      api_key: { dynamicData: { secret: { name: "my-secret" } } },
+    });
+  });
 });
