@@ -14,7 +14,7 @@ export interface EntityDiff<T> {
   changedEntities: T[];
 }
 
-export interface ComponentSpecDiff {
+interface ComponentSpecDiff {
   inputDiff: EntityDiff<InputSpecJson>;
   outputDiff: EntityDiff<OutputSpecJson>;
 }

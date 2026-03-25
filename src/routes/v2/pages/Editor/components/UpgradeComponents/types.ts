@@ -1,5 +1,11 @@
-import type { ComponentReference, ValidationIssue } from "@/models/componentSpec";
-import type { InputSpecJson, OutputSpecJson } from "@/models/componentSpec/entities/types";
+import type {
+  ComponentReference,
+  ValidationIssue,
+} from "@/models/componentSpec";
+import type {
+  InputSpecJson,
+  OutputSpecJson,
+} from "@/models/componentSpec/entities/types";
 import type { EntityDiff } from "@/routes/v2/pages/Editor/store/actions/task.utils";
 
 export interface LostBinding {

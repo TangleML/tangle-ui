@@ -1,14 +1,19 @@
+import { autorun } from "mobx";
 import { observer } from "mobx-react-lite";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import CodeSyntaxHighlighter from "@/components/shared/CodeViewer/CodeSyntaxHighlighter";
+import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Text } from "@/components/ui/typography";
 import type { ComponentSpec } from "@/models/componentSpec";
 import { JsonSerializer } from "@/models/componentSpec";
+import { openUpgradeComponentsWindow } from "@/routes/v2/pages/Editor/components/UpgradeComponents/openUpgradeWindow";
 import { ShorcutBadge } from "@/routes/v2/shared/components/ShorcutBadge";
+import type { KeyConstant } from "@/routes/v2/shared/shortcuts/keys";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import {
   getWindowById,
@@ -142,6 +147,18 @@ const DebugPanelContent = observer(function DebugPanelContent() {
             />
           </StatGroup>
 
+          <StatGroup title="Actions">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full justify-start gap-2"
+              onClick={openUpgradeComponentsWindow}
+            >
+              <Icon name="CircleArrowUp" size="sm" />
+              Upgrade Components
+            </Button>
+          </StatGroup>
+
           <StatGroup title="Keyboard Shortcuts">
             <BlockStack>
               <BlockStack>
@@ -196,9 +213,14 @@ export function useDebugPanelWindow() {
   }, []);
 }
 
-const PressedKeysList = observer(function PressedKeysList() {
+const PressedKeysList = function PressedKeysList() {
   const { keyboard } = useSharedStores();
-  const pressedKeys = [...keyboard.pressed.values()];
+  const [pressedKeys, setPressedKeys] = useState<KeyConstant[]>([]);
+  useEffect(() => {
+    return autorun(() => {
+      setPressedKeys(keyboard.pressedKeys);
+    });
+  }, [keyboard]);
 
   return (
     <BlockStack>
@@ -207,7 +229,7 @@ const PressedKeysList = observer(function PressedKeysList() {
         weight="semibold"
         className="uppercase tracking-wider text-blue-600"
       >
-        Pressed Keys
+        Pressed Keys ({pressedKeys.length})
       </Text>
       <InlineStack gap="2" blockAlign="center">
         {pressedKeys.map((key) => (
@@ -216,4 +238,4 @@ const PressedKeysList = observer(function PressedKeysList() {
       </InlineStack>
     </BlockStack>
   );
-});
+};

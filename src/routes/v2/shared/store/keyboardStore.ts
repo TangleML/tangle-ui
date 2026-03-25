@@ -1,4 +1,4 @@
-import { action, makeObservable, observable } from "mobx";
+import { action, computed, makeObservable, observable } from "mobx";
 
 import {
   CMDALT,
@@ -78,6 +78,10 @@ export class KeyboardStore {
         this.shortcuts.delete(comboKey);
       }
     };
+  }
+
+  @computed get pressedKeys(): KeyConstant[] {
+    return Array.from(this.pressed.values());
   }
 
   getShortcut(id: string): ShortcutDefinition | undefined {
