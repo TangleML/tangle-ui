@@ -47,10 +47,16 @@ export function TaskNodeOutputs({
     isPipelineAggregator(taskSpec?.componentRef?.spec?.metadata?.annotations);
 
   // For aggregators, get the current output type from the output_type input argument
-  const currentOutputType = isAggregator
-    ? (taskSpec?.arguments?.["output_type"] as AggregatorOutputType) ||
-      AggregatorOutputType.JsonArray
-    : AggregatorOutputType.JsonArray;
+  const rawOutputType = isAggregator
+    ? taskSpec?.arguments?.["output_type"]
+    : undefined;
+  const currentOutputType =
+    isAggregator &&
+    (Object.values(AggregatorOutputType) as string[]).includes(
+      rawOutputType as string,
+    )
+      ? (rawOutputType as AggregatorOutputType)
+      : AggregatorOutputType.JsonArray;
 
   // Local state to immediately reflect dropdown changes
   const [selectedOutputType, setSelectedOutputType] =

@@ -21,5 +21,5 @@ export const shouldInstanceSpec = (spec: ComponentSpec): boolean => {
   if (!annotations) return false;
 
   // Check for input aggregator annotation
-  return annotations["pipeline.aggregator"] === "true";
+  return annotations["is_input_aggregator"] === "true";
 };

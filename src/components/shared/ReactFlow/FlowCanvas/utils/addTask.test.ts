@@ -229,7 +229,7 @@ describe("addTask", () => {
       },
       metadata: {
         annotations: {
-          "pipeline.aggregator": "true",
+          is_input_aggregator: "true",
         },
       },
     };
@@ -265,7 +265,7 @@ describe("addTask", () => {
     // Verify that the spec content is preserved
     expect(task.componentRef.spec?.name).toBe("Input Aggregator");
     expect(
-      task.componentRef.spec?.metadata?.annotations?.["pipeline.aggregator"],
+      task.componentRef.spec?.metadata?.annotations?.["is_input_aggregator"],
     ).toBe("true");
 
     // Verify that library linking fields are removed
