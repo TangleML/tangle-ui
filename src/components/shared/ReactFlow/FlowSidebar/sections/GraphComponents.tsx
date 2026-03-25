@@ -21,6 +21,7 @@ import {
   SearchResults,
 } from "../components";
 import {
+  ComponentItemFromUrl,
   IONodeSidebarItem,
   StickyNoteSidebarItem,
 } from "../components/ComponentItem";
@@ -29,6 +30,8 @@ import PublishedComponentsSearch from "../components/PublishedComponentsSearch";
 import { SidebarSection } from "../components/SidebarSection";
 import { UpgradeAvailableAlertBox } from "../components/UpgradeAvailableAlertBox";
 
+const INPUT_AGGREGATOR_URL = "/components/input_aggregator.component.yaml";
+
 const GraphComponents = () => {
   const remoteComponentLibrarySearchEnabled = useFlagValue(
     "remote-component-library-search",
@@ -36,7 +39,7 @@ const GraphComponents = () => {
   const githubComponentLibraryEnabled = useFlagValue(
     "github-component-library",
   );
-
+  const inputAggregatorEnabled = useFlagValue("input-aggregator");
   const { getComponentLibrary, existingComponentLibraries } =
     useComponentLibrary();
 
@@ -140,6 +143,17 @@ const GraphComponents = () => {
                 components: [
                   <IONodeSidebarItem key="input" nodeType="input" />,
                   <IONodeSidebarItem key="output" nodeType="output" />,
+                  ...(inputAggregatorEnabled
+                    ? [
+                        <ComponentItemFromUrl
+                          key="input-aggregator"
+                          componentRef={{
+                            url: INPUT_AGGREGATOR_URL,
+                            name: "Input Aggregator",
+                          }}
+                        />,
+                      ]
+                    : []),
                 ],
                 folders: [],
               } as UIComponentFolder
@@ -200,6 +214,7 @@ const GraphComponents = () => {
     searchResult,
     remoteComponentLibrarySearchEnabled,
     githubComponentLibraryEnabled,
+    inputAggregatorEnabled,
     existingComponentLibraries,
     getComponentLibrary,
   ]);

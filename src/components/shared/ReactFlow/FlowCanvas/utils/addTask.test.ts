@@ -215,4 +215,114 @@ describe("addTask", () => {
     expect(outputs[1]?.name).toBe("result 2");
     expect(result.ioName).toBe("result 2");
   });
+
+  it("should clone spec and break library link for pipeline aggregators", () => {
+    const aggregatorSpec: ComponentSpec = {
+      name: "Input Aggregator",
+      inputs: [],
+      outputs: [{ name: "Output", type: "String" }],
+      implementation: {
+        container: {
+          image: "python:3.11-slim",
+          command: ["echo", "test"],
+        },
+      },
+      metadata: {
+        annotations: {
+          is_input_aggregator: "true",
+        },
+      },
+    };
+
+    const mockTaskSpec: TaskSpec = {
+      componentRef: {
+        name: "Input Aggregator",
+        digest: "sha256:abc123",
+        url: "https://example.com/component.yaml",
+        spec: aggregatorSpec,
+        text: "name: Input Aggregator",
+      },
+      annotations: {},
+    };
+
+    const result = addTask("task", mockTaskSpec, position, mockComponentSpec);
+
+    const newComponentSpec = result.spec;
+    if (!("graph" in newComponentSpec.implementation)) {
+      throw new Error("Expected graph implementation");
+    }
+
+    const taskId = result.taskId;
+    expect(taskId).toBeDefined();
+
+    if (!taskId) return;
+
+    const task = newComponentSpec.implementation.graph.tasks[taskId];
+
+    // Verify that the spec was cloned (should be a different object reference)
+    expect(task.componentRef.spec).not.toBe(aggregatorSpec);
+
+    // Verify that the spec content is preserved
+    expect(task.componentRef.spec?.name).toBe("Input Aggregator");
+    expect(
+      task.componentRef.spec?.metadata?.annotations?.["is_input_aggregator"],
+    ).toBe("true");
+
+    // Verify that library linking fields are removed
+    expect(task.componentRef.digest).toBeUndefined();
+    expect(task.componentRef.url).toBeUndefined();
+    expect(task.componentRef.name).toBeUndefined();
+
+    // Verify that text field is preserved
+    expect(task.componentRef.text).toBe("name: Input Aggregator");
+
+    // Verify that spec field exists
+    expect(task.componentRef.spec).toBeDefined();
+  });
+
+  it("should preserve library link for non-aggregator components", () => {
+    const regularSpec: ComponentSpec = {
+      name: "Regular Component",
+      inputs: [],
+      outputs: [{ name: "Output", type: "String" }],
+      implementation: {
+        container: {
+          image: "python:3.11-slim",
+          command: ["echo", "test"],
+        },
+      },
+    };
+
+    const mockTaskSpec: TaskSpec = {
+      componentRef: {
+        name: "Regular Component",
+        digest: "sha256:def456",
+        url: "https://example.com/regular.yaml",
+        spec: regularSpec,
+        text: "name: Regular Component",
+      },
+      annotations: {},
+    };
+
+    const result = addTask("task", mockTaskSpec, position, mockComponentSpec);
+
+    const newComponentSpec = result.spec;
+    if (!("graph" in newComponentSpec.implementation)) {
+      throw new Error("Expected graph implementation");
+    }
+
+    const taskId = result.taskId;
+    expect(taskId).toBeDefined();
+
+    if (!taskId) return;
+
+    const task = newComponentSpec.implementation.graph.tasks[taskId];
+
+    // Verify that library linking fields are preserved for non-aggregators
+    expect(task.componentRef.digest).toBe("sha256:def456");
+    expect(task.componentRef.url).toBe("https://example.com/regular.yaml");
+    expect(task.componentRef.name).toBe("Regular Component");
+    expect(task.componentRef.text).toBe("name: Regular Component");
+    expect(task.componentRef.spec).toBe(regularSpec);
+  });
 });

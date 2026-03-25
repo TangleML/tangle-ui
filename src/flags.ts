@@ -39,10 +39,10 @@ export const ExistingFlags: ConfigFlags = {
     category: "beta",
   },
 
-  ["pipeline-aggregator"]: {
-    name: "Pipeline Aggregator Component",
+  ["input-aggregator"]: {
+    name: "Input Aggregator Component",
     description:
-      "Enable the Pipeline Aggregator component that supports multiple dynamic inputs and configurable output types (Array, Object, CSV).",
+      "Enable the Input Aggregator component that supports multiple dynamic inputs and configurable output types (Array, Object, CSV).",
     default: false,
     category: "beta",
   },

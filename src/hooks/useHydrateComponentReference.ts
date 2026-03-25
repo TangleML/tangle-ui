@@ -23,8 +23,10 @@ export function getComponentQueryKey(component: ComponentReference): string {
   }
 
   if (component.spec) {
-    const specYaml = componentSpecToText(component.spec);
-    return `spec:${specYaml}`;
+    // For inline specs, use the YAML text as a stable, content-based cache key.
+    // This ensures any change to the spec creates a new key, and identical specs share a key.
+    const specText = componentSpecToText(component.spec);
+    return `spec:${specText}`;
   }
 
   return `empty:${JSON.stringify(component)}`;
@@ -38,14 +40,10 @@ export function getComponentQueryKey(component: ComponentReference): string {
  * @returns The hydrated component reference or null if the component reference is invalid
  */
 export function useHydrateComponentReference(component: ComponentReference) {
-  /**
-   * If the component has a digest or url, we can assume that the component is not going to change frequently
-   * Otherwise we dont cache result.
-   */
-
   const componentQueryKey = getComponentQueryKey(component);
-
-  const staleTime = componentQueryKey ? 1000 * 60 * 60 * 1 : 0;
+  // 1 hour cache for URL/digest components; inline specs use content-based keys so
+  // they naturally invalidate when the spec changes.
+  const staleTime = 1000 * 60 * 60;
 
   const { data: componentRef } = useSuspenseQuery({
     queryKey: ["component", "hydrate", componentQueryKey],
