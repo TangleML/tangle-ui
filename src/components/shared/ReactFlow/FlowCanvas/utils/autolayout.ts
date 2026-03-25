@@ -1,4 +1,4 @@
-import dagre from "@dagrejs/dagre";
+import dagre, { type Graph } from "@dagrejs/dagre";
 import type { Edge, Node, XYPosition } from "@xyflow/react";
 
 import { DEFAULT_NODE_DIMENSIONS } from "@/utils/constants";
@@ -114,7 +114,7 @@ export const autoLayoutNodes = (
  */
 function centerNodesInBuckets(
   nodes: Node[],
-  dagreGraph: dagre.graphlib.Graph,
+  dagreGraph: Graph,
   config: {
     nodesep: number;
     rankdir?: string;
