@@ -77,6 +77,25 @@ export const formatDuration = (startTime: string, endTime: string): string => {
 };
 
 /**
+ * Check whether a date is older than a given number of calendar days ago.
+ * @param date - Date string or object to check
+ * @param days - Number of calendar days to compare against
+ * @returns True if the date is older than the specified number of days, false otherwise
+ */
+export const isOlderThanDays = (date: string | Date, days: number): boolean => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const cutoff = new Date(today);
+  cutoff.setDate(cutoff.getDate() - days);
+
+  const target = new Date(date);
+  target.setHours(0, 0, 0, 0);
+
+  return target < cutoff;
+};
+
+/**
  * Format relative time between a past date and now
  * @param date - past timestamp string
  * @returns Formatted relative string (e.g., "9:43am", "yesterday", "3 days ago")
