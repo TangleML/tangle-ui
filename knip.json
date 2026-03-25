@@ -8,7 +8,8 @@
     "openapi-ts.config.ts",
     "src/config/announcements.ts",
     "src/components/shared/BetaFeatureWrapper/BetaFeatureWrapper.tsx",
-    "src/types/aggregator.ts"
+    "src/types/aggregator.ts",
+    "src/components/shared/ReactFlow/FlowCanvas/TaskNode/OutputTypeSelector/OutputTypeSelector.tsx"
   ],
   "ignoreDependencies": [
     "@radix-ui/react-accordion",
