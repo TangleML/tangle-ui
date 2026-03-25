@@ -11,7 +11,7 @@ import type {
   PredicateType,
 } from "../entities/types";
 import type { IdGenerator } from "../factories/idGenerator";
-import { JsonSerializer } from "../serialization/jsonSerializer";
+import { serializeComponentSpec } from "../serialization/serialize";
 
 interface CreateSubgraphParams {
   spec: ComponentSpec;
@@ -216,8 +216,7 @@ export function createSubgraph({
     ],
   });
 
-  const serializer = new JsonSerializer();
-  const subgraphSpecJson = deepClone(serializer.serialize(subgraphSpec));
+  const subgraphSpecJson = deepClone(serializeComponentSpec(subgraphSpec));
 
   const replacementTaskArgs: Argument[] = inputGroups.map(({ input }) => ({
     name: input.name,

@@ -11,15 +11,12 @@ import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Heading, Text } from "@/components/ui/typography";
-import { JsonSerializer } from "@/models/componentSpec";
+import { serializeComponentSpec } from "@/models/componentSpec";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
-import type { ComponentSpec } from "@/utils/componentSpec";
 
 function deepClone<T>(obj: T): T {
   return JSON.parse(JSON.stringify(obj));
 }
-
-const serializer = new JsonSerializer();
 
 const showGoogleSubmitter =
   import.meta.env.VITE_ENABLE_GOOGLE_CLOUD_SUBMITTER === "true";
@@ -30,7 +27,7 @@ export const RunsAndSubmissionContent = observer(() => {
   const rootSpec = navigation.rootSpec;
 
   const legacySpec = rootSpec
-    ? (deepClone(serializer.serialize(rootSpec)) as ComponentSpec)
+    ? deepClone(serializeComponentSpec(rootSpec))
     : undefined;
 
   if (!legacySpec) {

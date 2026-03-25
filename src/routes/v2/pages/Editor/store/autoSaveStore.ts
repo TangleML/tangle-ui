@@ -1,7 +1,10 @@
 import { action, makeObservable, observable, reaction } from "mobx";
 
 import type { ComponentSpec } from "@/models/componentSpec";
-import { collectIdStack, JsonSerializer } from "@/models/componentSpec";
+import {
+  collectIdStack,
+  serializeComponentSpecToText,
+} from "@/models/componentSpec";
 import { saveUndoHistory } from "@/routes/v2/pages/Editor/utils/undoHistoryStorage";
 import { writeToFileHandle } from "@/services/fileHandleRegistry";
 import { writeComponentToFileListFromText } from "@/utils/componentStore";
@@ -10,7 +13,6 @@ import {
   USER_PIPELINES_LIST_NAME,
 } from "@/utils/constants";
 import { debounce } from "@/utils/debounce";
-import { componentSpecToText } from "@/utils/yaml";
 
 import type { UndoStore } from "./undoStore";
 
@@ -24,7 +26,6 @@ export class AutoSaveStore {
 
   private spec: ComponentSpec | null = null;
   private pipelineName: string | null = null;
-  private serializer = new JsonSerializer();
   private disposeReaction: (() => void) | null = null;
   private savedMessageTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -83,7 +84,7 @@ export class AutoSaveStore {
   private serializeSpec(): string | null {
     if (!this.spec) return null;
     try {
-      return componentSpecToText(this.serializer.serialize(this.spec));
+      return serializeComponentSpecToText(this.spec);
     } catch {
       return null;
     }

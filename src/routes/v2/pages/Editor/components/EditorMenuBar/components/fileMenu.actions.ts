@@ -1,9 +1,11 @@
 import { generate } from "random-words";
 
 import { exportPipeline } from "@/components/shared/ReactFlow/FlowSidebar/sections/components/ExportPipelineButton";
-import { JsonSerializer } from "@/models/componentSpec/serialization/jsonSerializer";
+import {
+  serializeComponentSpec,
+  serializeComponentSpecToYaml,
+} from "@/models/componentSpec";
 import type { NavigationStore } from "@/routes/v2/shared/store/navigationStore";
-import { type ComponentSpec as WiredComponentSpec } from "@/utils/componentSpec";
 import { writeComponentToFileListFromText } from "@/utils/componentStore";
 import {
   defaultPipelineYamlWithName,
@@ -26,16 +28,14 @@ export async function savePipelineAs(
   navigation: NavigationStore,
   newName: string,
 ): Promise<void> {
-  const serializer = new JsonSerializer();
   const componentSpec = navigation.rootSpec;
 
   if (!componentSpec) return;
 
   const serialized = {
-    ...serializer.serialize(componentSpec),
+    ...serializeComponentSpec(componentSpec),
     name: newName,
-  } as WiredComponentSpec;
-
+  };
   const componentText = componentSpecToYaml(serialized);
 
   await writeComponentToFileListFromText(
@@ -46,13 +46,10 @@ export async function savePipelineAs(
 }
 
 export function exportCurrentPipeline(navigation: NavigationStore): void {
-  const serializer = new JsonSerializer();
   const componentSpec = navigation.rootSpec;
 
   if (!componentSpec) return;
 
-  const componentText = componentSpecToYaml(
-    serializer.serialize(componentSpec) as WiredComponentSpec,
-  );
+  const componentText = serializeComponentSpecToYaml(componentSpec);
   exportPipeline(componentSpec.name ?? "Untitled Pipeline", componentText);
 }

@@ -9,13 +9,11 @@ import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
 import { Textarea } from "@/components/ui/textarea";
 import { Text } from "@/components/ui/typography";
-import { JsonSerializer } from "@/models/componentSpec";
+import { serializeComponentSpecToYaml } from "@/models/componentSpec";
 import { AnnotationsBlock } from "@/routes/v2/pages/Editor/components/AnnotationsBlock/AnnotationsBlock";
 import { ValidationSummary } from "@/routes/v2/pages/Editor/components/ValidationSummary";
 import { usePipelineActions } from "@/routes/v2/pages/Editor/store/actions/usePipelineActions";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
-import { type ComponentSpec as WiredComponentSpec } from "@/utils/componentSpec";
-import { componentSpecToYaml } from "@/utils/yaml";
 
 import { DigestBlock } from "./components/DigestBlock";
 import { InputsBlock } from "./components/InputsBlock";
@@ -29,8 +27,6 @@ const EXCLUDED_ANNOTATIONS = [
   "flex-nodes",
   "tangleml.com/editor/edge-conduits",
 ];
-
-const serializer = new JsonSerializer();
 
 export const PipelineDetailsContent = observer(
   function PipelineDetailsContent() {
@@ -59,9 +55,7 @@ export const PipelineDetailsContent = observer(
       );
     }
 
-    const yamlText = componentSpecToYaml(
-      serializer.serialize(spec) as WiredComponentSpec,
-    );
+    const yamlText = serializeComponentSpecToYaml(spec);
 
     const handleDescriptionInputChange = (
       event: ChangeEvent<HTMLTextAreaElement>,
