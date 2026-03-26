@@ -59,6 +59,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/components/shared/Dialogs/MultilineTextInputDialog.tsx",
   "src/components/shared/HighlightText.tsx",
   "src/components/shared/AnnouncementBanners.tsx",
+  "src/components/shared/ReactFlow/FlowCanvas/TaskNode/TaskOverview/IOSection",
 
   // 11-20 useCallback/useMemo
   // "src/components/ui",                         // 12

@@ -3,7 +3,7 @@ import { BlockStack } from "@/components/ui/layout";
 import { Heading, Paragraph } from "@/components/ui/typography";
 import type { OutputSpec } from "@/utils/componentSpec";
 
-import IoCell from "./IOCell";
+import IOCell from "./IOCell/IOCell";
 
 interface IOOutputsProps {
   outputs?: OutputSpec[];
@@ -25,10 +25,11 @@ const IOOutputs = ({ outputs, artifacts }: IOOutputsProps) => {
         const outputArtifact = artifacts?.output_artifacts?.[output.name];
 
         return (
-          <IoCell
+          <IOCell
             key={output.name}
-            io={output}
-            artifactData={outputArtifact?.artifact_data}
+            name={output.name}
+            type={output.type?.toString()}
+            artifact={outputArtifact}
           />
         );
       })}
