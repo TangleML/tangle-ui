@@ -30,7 +30,14 @@ const getBugsnagConfig = (): BrowserConfig => {
   };
 };
 
-export const handleBugsnagError = (event: Event): void => {
+export const handleBugsnagError = (event: Event): boolean | void => {
+  if (
+    event.errors[0]?.errorMessage ===
+    "ResizeObserver loop completed with undelivered notifications."
+  ) {
+    return false;
+  }
+
   if (
     event.errors.length > 0 &&
     event.errors[0].errorClass === GENERIC_ERROR_CLASS
