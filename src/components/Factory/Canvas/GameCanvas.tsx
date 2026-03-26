@@ -20,10 +20,12 @@ import { GameOverDialog } from "../components/GameOverDialog";
 import { setup } from "../data/setup";
 import { createBuildingNode } from "../objects/buildings/createBuildingNode";
 import { setupConnections } from "../objects/resources/setupConnections";
+import { useGameActions } from "../providers/GameActionsProvider";
 import { useGlobalResources } from "../providers/GlobalResourcesProvider";
 import { useStatistics } from "../providers/StatisticsProvider";
 import { useTime } from "../providers/TimeProvider";
 import { processDay } from "../simulation/processDay";
+import { loadGameState, saveGameState } from "../utils/saveGame";
 import { createIsValidConnection } from "./callbacks/isValidConnection";
 import { createOnConnect } from "./callbacks/onConnect";
 import { createOnDrop } from "./callbacks/onDrop";
@@ -47,13 +49,28 @@ const GameCanvas = ({ children, ...rest }: GameCanvasProps) => {
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance>();
 
-  const { addDayStatistics, getLatestDayStats, resetStatistics, currentDay } =
-    useStatistics();
-  const { resources, updateResources, resetResources, setResource } =
-    useGlobalResources();
-  const { pause, dayAdvanceTrigger } = useTime();
+  const [hasLoadedGame, setHasLoadedGame] = useState(false);
+  const [pendingSetup, setPendingSetup] = useState(false);
 
-  const { fitView } = useReactFlow();
+  const {
+    addDayStatistics,
+    getLatestDayStats,
+    resetStatistics,
+    currentDay,
+    history,
+    setStatisticsHistory,
+  } = useStatistics();
+  const {
+    resources,
+    updateResources,
+    resetResources,
+    setResource,
+    setAllResources,
+  } = useGlobalResources();
+  const { pause, dayAdvanceTrigger } = useTime();
+  const { registerRestartHandler } = useGameActions();
+
+  const { fitView, getViewport, setViewport } = useReactFlow();
   const { clearContent } = useContextPanel();
   const [gameOverOpen, setGameOverOpen] = useState(false);
 
@@ -78,8 +95,19 @@ const GameCanvas = ({ children, ...rest }: GameCanvasProps) => {
     );
 
     setNodes(updatedNodes);
-    updateResources(statistics.global.earned);
+    const updatedResources = updateResources(statistics.global.earned);
     addDayStatistics(statistics);
+
+    const viewport = getViewport();
+    saveGameState(
+      updatedNodes,
+      edges,
+      updatedResources,
+      [...history, statistics],
+      viewport,
+    ).catch((error) => {
+      console.error("Failed to auto-save game:", error);
+    });
 
     if (statistics.global.foodDeficit > 0) {
       if (!hasContinuedGame.current) {
@@ -91,11 +119,13 @@ const GameCanvas = ({ children, ...rest }: GameCanvasProps) => {
     dayAdvanceTrigger,
     currentDay,
     resources,
-    hasContinuedGame,
+    history,
     setNodes,
     updateResources,
     getLatestDayStats,
     addDayStatistics,
+    getViewport,
+    pause,
   ]);
 
   const onInit: OnInit = (instance) => {
@@ -115,11 +145,15 @@ const GameCanvas = ({ children, ...rest }: GameCanvasProps) => {
   };
 
   const runSetup = () => {
+    if (!reactFlowInstance) return;
+
     setNodes([]);
     setEdges([]);
     resetResources();
     resetStatistics();
     clearContent();
+    hasContinuedGame.current = false;
+    prevTriggerRef.current = 0;
 
     const newNodes = setup.buildings?.map((building) =>
       createBuildingNode(building.type, building.position),
@@ -131,33 +165,34 @@ const GameCanvas = ({ children, ...rest }: GameCanvasProps) => {
 
     if (newNodes) {
       setNodes(newNodes);
+      setPendingSetup(true);
     }
+  };
+
+  useEffect(() => {
+    if (!pendingSetup || !reactFlowInstance || nodes.length === 0) return;
 
     // Double RAF is needed to ensure nodes are rendered before we try to create edges between them
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        if (
-          setup.connections &&
-          setup.buildings &&
-          newNodes &&
-          reactFlowInstance
-        ) {
+        if (setup.connections && setup.buildings) {
           const newEdges = setupConnections(
             setup.connections,
             setup.buildings,
-            newNodes,
+            nodes,
             reactFlowInstance,
           );
 
-          if (newEdges) {
-            setEdges(newEdges.filter((edge): edge is Edge => edge !== null));
+          if (newEdges && newEdges.length > 0) {
+            setEdges(newEdges);
           }
         }
+
+        fitView({ maxZoom: 1, padding: 0.2 });
+        setPendingSetup(false);
       });
     });
-
-    fitView({ maxZoom: 1, padding: 0.2 });
-  };
+  }, [pendingSetup, reactFlowInstance, nodes, fitView]);
 
   const handleContinuePlaying = () => {
     setGameOverOpen(false);
@@ -166,13 +201,46 @@ const GameCanvas = ({ children, ...rest }: GameCanvasProps) => {
 
   const handleRestart = () => {
     setGameOverOpen(false);
-    hasContinuedGame.current = false;
     runSetup();
   };
 
   useEffect(() => {
-    runSetup();
-  }, [runSetup]);
+    registerRestartHandler(handleRestart);
+  }, [handleRestart, registerRestartHandler]);
+
+  useEffect(() => {
+    if (!reactFlowInstance || hasLoadedGame) return;
+
+    const loadSavedGame = async () => {
+      try {
+        const savedGame = await loadGameState();
+
+        if (savedGame) {
+          setNodes(savedGame.nodes);
+          setEdges(savedGame.edges);
+          setAllResources(savedGame.globalResources);
+          setStatisticsHistory(savedGame.statisticsHistory);
+
+          if (savedGame.viewport) {
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                setViewport(savedGame.viewport!, { duration: 0 });
+              });
+            });
+          }
+        } else {
+          runSetup();
+        }
+      } catch (error) {
+        console.error("Error loading saved game:", error);
+        runSetup();
+      } finally {
+        setHasLoadedGame(true);
+      }
+    };
+
+    loadSavedGame();
+  }, [reactFlowInstance, hasLoadedGame]);
 
   return (
     <>
