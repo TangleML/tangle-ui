@@ -19,8 +19,7 @@ export const BUILDINGS: Building[] = [
     productionMethod: {
       name: "Trading",
       inputs: [{ resource: "any", amount: 1 }],
-      outputs: [],
-      globalOutputs: [{ resource: "coins", amount: 10 }],
+      outputs: [{ resource: "money", amount: 1 }],
       days: 1,
     },
     stockpile: [{ resource: "any", amount: 0, maxAmount: 1000 }],
@@ -210,8 +209,7 @@ export const BUILDINGS: Building[] = [
         { resource: "paper", amount: 10 },
         { resource: "books", amount: 1 },
       ],
-      outputs: [],
-      globalOutputs: [{ resource: "knowledge", amount: 1 }],
+      outputs: [{ resource: "knowledge", amount: 1 }],
       days: 1,
     },
     stockpile: [

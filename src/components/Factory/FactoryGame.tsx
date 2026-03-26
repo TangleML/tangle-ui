@@ -9,7 +9,10 @@ import { ContextPanelProvider } from "@/providers/ContextPanelProvider";
 
 import GameCanvas from "./Canvas/GameCanvas";
 import GameControls from "./Controls/GameControls";
+import { GlobalResourcesProvider } from "./providers/GlobalResourcesProvider";
+import { StatisticsProvider } from "./providers/StatisticProvider";
 import GameSidebar from "./Sidebar/GameSidebar";
+import type { DayStatistics } from "./types/statistics";
 
 const GRID_SIZE = 10;
 
@@ -23,8 +26,11 @@ const FactoryGame = () => {
   });
 
   const [day, setDay] = useState(0);
-  const [coins, setCoins] = useState(0);
-  const [knowledge, setKnowledge] = useState(0);
+
+  // Statistics tracking
+  const [lastDayStats, setLastDayStats] = useState<DayStatistics | null>(null);
+  const [statsHistory, setStatsHistory] = useState<DayStatistics[]>([]);
+
   const [advanceTrigger, setAdvanceTrigger] = useState(0);
 
   const updateFlowConfig = (updatedConfig: Partial<ReactFlowProps>) => {
@@ -39,42 +45,42 @@ const FactoryGame = () => {
     setAdvanceTrigger((prev) => prev + 1);
   };
 
-  const handleDayAdvance = (globalOutputs: {
-    coins: number;
-    knowledge: number;
-  }) => {
-    setCoins((prev) => prev + globalOutputs.coins);
-    setKnowledge((prev) => prev + globalOutputs.knowledge);
+  const handleDayAdvance = (statistics: DayStatistics) => {
+    setLastDayStats(statistics);
+    setStatsHistory((prev) => [...prev, statistics]);
   };
 
   return (
-    <ContextPanelProvider defaultContent={<p>Factory Game</p>}>
-      <InlineStack fill>
-        <GameSidebar
-          day={day}
-          coins={coins}
-          knowledge={knowledge}
-          onAdvanceDay={handleAdvanceDay}
-        />
-        <BlockStack fill className="flex-1 relative">
-          <GameCanvas
-            {...flowConfig}
-            onDayAdvance={handleDayAdvance}
-            triggerAdvance={advanceTrigger}
-          >
-            <MiniMap position="bottom-left" pannable />
-            <GameControls
-              className="ml-56! mb-6!"
-              config={flowConfig}
-              updateConfig={updateFlowConfig}
-              showInteractive={false}
-            />
-            <Background gap={GRID_SIZE} className="bg-slate-50!" />
-          </GameCanvas>
-        </BlockStack>
-        <CollapsibleContextPanel />
-      </InlineStack>
-    </ContextPanelProvider>
+    <GlobalResourcesProvider>
+      <StatisticsProvider
+        lastDayStats={lastDayStats}
+        statsHistory={statsHistory}
+      >
+        <ContextPanelProvider defaultContent={<p>Factory Game</p>}>
+          <InlineStack fill>
+            <GameSidebar day={day} onAdvanceDay={handleAdvanceDay} />
+            <BlockStack fill className="flex-1 relative">
+              <GameCanvas
+                {...flowConfig}
+                onDayAdvance={handleDayAdvance}
+                triggerAdvance={advanceTrigger}
+                currentDay={day}
+              >
+                <MiniMap position="bottom-left" pannable />
+                <GameControls
+                  className="ml-56! mb-6!"
+                  config={flowConfig}
+                  updateConfig={updateFlowConfig}
+                  showInteractive={false}
+                />
+                <Background gap={GRID_SIZE} className="bg-slate-50!" />
+              </GameCanvas>
+            </BlockStack>
+            <CollapsibleContextPanel />
+          </InlineStack>
+        </ContextPanelProvider>
+      </StatisticsProvider>
+    </GlobalResourcesProvider>
   );
 };
 
