@@ -1,6 +1,11 @@
 import type { BuildingClass } from "../types/buildings";
 
-export const SPECIAL_BUILDINGS = ["firepit", "marketplace", "granary"]; // Buildings with special processing logic that doesn't fit the standard production model
+export const SPECIAL_BUILDINGS = [
+  "firepit",
+  "marketplace",
+  "storagepit",
+  "granary",
+]; // Buildings with special processing logic that doesn't fit the standard production model
 
 export const BUILDINGS: Record<string, BuildingClass> = {
   firepit: {
@@ -60,6 +65,28 @@ export const BUILDINGS: Record<string, BuildingClass> = {
         name: "Reading",
         inputs: [{ resource: "books", amount: 2, nodes: 2 }],
         outputs: [{ resource: "knowledge", amount: 1 }],
+        days: 1,
+      },
+    ],
+  },
+  storagepit: {
+    name: "Storage Pit",
+    icon: "📦",
+    description: "Stores anything!",
+    cost: 0,
+    color: "#A9A9A9",
+    category: "storage",
+    productionMethods: [
+      {
+        name: "Fill",
+        inputs: [{ resource: "any", amount: 100, nodes: 4 }],
+        outputs: [],
+        days: 1,
+      },
+      {
+        name: "Empty",
+        inputs: [],
+        outputs: [{ resource: "any", amount: 100, nodes: 4 }],
         days: 1,
       },
     ],
