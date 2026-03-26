@@ -25,6 +25,10 @@ export const StockpileSection = ({
     isGlobalResource(output.resource),
   );
 
+  const valueMultiplier = building.productionMethod?.outputs.find((o) =>
+    isGlobalResource(o.resource),
+  )?.amount;
+
   if (stockpile.length === 0) {
     return (
       <BlockStack gap="2">
@@ -45,7 +49,6 @@ export const StockpileSection = ({
       </Text>
       <BlockStack gap="1">
         {stockpile.map((stock, idx) => {
-          // Handle "any" resource with breakdown
           if (
             stock.resource === "any" &&
             stock.breakdown &&
@@ -53,8 +56,10 @@ export const StockpileSection = ({
           ) {
             let totalValue = 0;
             stock.breakdown.forEach((amount, resourceType) => {
-              const resourceValue = RESOURCES[resourceType]?.value || 1;
-              totalValue += amount * resourceValue;
+              const resourceValue = RESOURCES[resourceType].value;
+              totalValue += Math.round(
+                amount * resourceValue * (valueMultiplier || 1),
+              );
             });
 
             return (
