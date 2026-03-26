@@ -4,7 +4,7 @@ import { BOTTOM_FOOTER_HEIGHT, TOP_NAV_HEIGHT } from "@/utils/constants";
 
 import Buildings from "./Buildings";
 import GlobalResources from "./GlobalResources";
-import Time from "./Time";
+import { Time } from "./Time";
 
 const MIN_WIDTH = 220;
 const MAX_WIDTH = 400;
