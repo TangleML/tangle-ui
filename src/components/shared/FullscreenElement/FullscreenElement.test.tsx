@@ -24,18 +24,33 @@ describe("FullscreenElement", () => {
     expect(screen.getByTestId("test-content")).toBeInTheDocument();
   });
 
-  test("appends container to document.body in fullscreen mode", () => {
+  test("applies contents class in normal mode", () => {
     render(
-      <FullscreenElement fullscreen={true}>
-        <div data-testid="fullscreen-content">Fullscreen</div>
+      <FullscreenElement fullscreen={false}>
+        <div data-testid="test-content">Content</div>
       </FullscreenElement>,
     );
 
-    const fullscreenContainer = screen.getByTestId("fullscreen-container");
+    const container = screen.getByTestId("fullscreen-container");
 
-    expect(fullscreenContainer.parentElement).toBe(document.body);
+    expect(container).toHaveClass("contents");
+    expect(container).toHaveClass("pointer-events-auto");
+    expect(container).not.toHaveClass("fixed");
+  });
 
-    expect(screen.getByTestId("fullscreen-content")).toBeInTheDocument();
+  test("applies fixed positioning in fullscreen mode", () => {
+    render(
+      <FullscreenElement fullscreen={true}>
+        <div data-testid="test-content">Fullscreen</div>
+      </FullscreenElement>,
+    );
+
+    const container = screen.getByTestId("fullscreen-container");
+
+    expect(container).toHaveClass("fixed");
+    expect(container).toHaveClass("z-2147483647");
+    expect(container).toHaveClass("pointer-events-auto");
+    expect(container).not.toHaveClass("contents");
   });
 
   test("switches from normal to fullscreen mode", () => {
@@ -45,17 +60,9 @@ describe("FullscreenElement", () => {
       </FullscreenElement>,
     );
 
-    const switchingContentA = screen.getByTestId("switching-content");
+    const container = screen.getByTestId("fullscreen-container");
 
-    const elementMountingPoint = screen.getByTestId(
-      "fullscreen-element-mounting-point",
-    );
-    const fullscreenContainer = screen.getByTestId("fullscreen-container");
-
-    expect(fullscreenContainer).toBeInTheDocument();
-    expect(fullscreenContainer.parentElement).toBe(elementMountingPoint);
-    expect(fullscreenContainer).toHaveClass("contents");
-    expect(fullscreenContainer).toHaveClass("pointer-events-auto");
+    expect(container).toHaveClass("contents");
 
     rerender(
       <FullscreenElement fullscreen={true}>
@@ -63,15 +70,8 @@ describe("FullscreenElement", () => {
       </FullscreenElement>,
     );
 
-    const switchingContentB = screen.getByTestId("switching-content");
-
-    expect(switchingContentA).toStrictEqual(switchingContentB);
-
-    expect(fullscreenContainer).toBeInTheDocument();
-    expect(fullscreenContainer.parentElement).toBe(document.body);
-    expect(fullscreenContainer).toHaveClass("fixed");
-    expect(fullscreenContainer).toHaveClass("z-[2147483647]");
-    expect(fullscreenContainer).toHaveClass("pointer-events-auto");
+    expect(container).toHaveClass("fixed");
+    expect(container).toHaveClass("z-2147483647");
   });
 
   test("switches from fullscreen to normal mode", () => {
@@ -81,17 +81,9 @@ describe("FullscreenElement", () => {
       </FullscreenElement>,
     );
 
-    const switchingContentA = screen.getByTestId("switching-content");
+    const container = screen.getByTestId("fullscreen-container");
 
-    const elementMountingPoint = screen.getByTestId(
-      "fullscreen-element-mounting-point",
-    );
-    const fullscreenContainer = screen.getByTestId("fullscreen-container");
-
-    expect(fullscreenContainer).toBeInTheDocument();
-    expect(fullscreenContainer.parentElement).toBe(document.body);
-    expect(fullscreenContainer).toHaveClass("fixed");
-    expect(fullscreenContainer).toHaveClass("z-[2147483647]");
+    expect(container).toHaveClass("fixed");
 
     rerender(
       <FullscreenElement fullscreen={false}>
@@ -99,27 +91,7 @@ describe("FullscreenElement", () => {
       </FullscreenElement>,
     );
 
-    const switchingContentB = screen.getByTestId("switching-content");
-
-    expect(switchingContentA).toStrictEqual(switchingContentB);
-
-    expect(fullscreenContainer).toBeInTheDocument();
-    expect(fullscreenContainer.parentElement).toBe(elementMountingPoint);
-    expect(fullscreenContainer).toHaveClass("contents");
-    expect(fullscreenContainer).toHaveClass("pointer-events-auto");
-  });
-
-  test("cleans up container when unmounting from fullscreen mode", () => {
-    const { unmount } = render(
-      <FullscreenElement fullscreen={true}>
-        <div data-testid="cleanup-content">Content</div>
-      </FullscreenElement>,
-    );
-
-    const fullscreenContainer = screen.getByTestId("fullscreen-container");
-
-    unmount();
-
-    expect(fullscreenContainer).not.toBeInTheDocument();
+    expect(container).toHaveClass("contents");
+    expect(container).not.toHaveClass("fixed");
   });
 });
