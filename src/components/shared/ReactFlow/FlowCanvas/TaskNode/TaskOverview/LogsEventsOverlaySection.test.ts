@@ -1,9 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { GetContainerExecutionStateResponse } from "@/api/types.gen";
+import { MINUTES } from "@/utils/constants";
 
 import {
   addDaysAndFormat,
+  elapsedMinutesCeil,
   extractPodName,
   isRecordWithString,
   resolvePodLogsHydrationReplacements,
@@ -80,39 +82,81 @@ describe("resolvePodLogsHydrationReplacements", () => {
     );
   });
 
-  it("uses current time when ended_at is missing (still running)", () => {
-    const before = Date.now();
+  it("uses relative time format when ended_at is missing (still running)", () => {
+    const now = 1_700_000_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(now);
+
+    const thirtyMinAgo = new Date(now - 30 * MINUTES).toISOString();
+
     const result = resolvePodLogsHydrationReplacements(
-      { paddingMinutes: 0 },
-      makeContainerState({ ended_at: null }),
+      { paddingMinutes: 5 },
+      makeContainerState({ started_at: thirtyMinAgo, ended_at: null }),
       "pod-running",
     );
-    const after = Date.now();
 
-    const endMs = new Date(result.endTime).getTime();
-    expect(endMs).toBeGreaterThanOrEqual(before);
-    expect(endMs).toBeLessThanOrEqual(after + 1000);
+    expect(result.startTime).toBe("now-35m");
+    expect(result.endTime).toBe("now");
+
+    vi.restoreAllMocks();
   });
 
-  it("uses current time when started_at is missing", () => {
+  it("caps endTime to 'now' when padded ended_at would be in the future", () => {
+    const now = 1_700_000_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(now);
+
+    const twoMinAgo = new Date(now - 2 * MINUTES).toISOString();
+
+    const result = resolvePodLogsHydrationReplacements(
+      { paddingMinutes: 5 },
+      makeContainerState({ started_at: twoMinAgo, ended_at: twoMinAgo }),
+      "pod-just-finished",
+    );
+
+    expect(result.endTime).toBe("now");
+
+    vi.restoreAllMocks();
+  });
+
+  it("falls back to now-60m / now when started_at is missing", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    const before = Date.now();
     const result = resolvePodLogsHydrationReplacements(
-      { paddingMinutes: 0 },
+      { paddingMinutes: 5 },
       makeContainerState({ started_at: null }),
       "pod-unknown",
     );
-    const after = Date.now();
 
-    const startMs = new Date(result.startTime).getTime();
-    expect(startMs).toBeGreaterThanOrEqual(before);
-    expect(startMs).toBeLessThanOrEqual(after + 1000);
+    expect(result.startTime).toBe("now-60m");
+    expect(result.endTime).toBe("now");
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining("started_at is missing"),
     );
 
     warnSpy.mockRestore();
+  });
+});
+
+describe("elapsedMinutesCeil", () => {
+  it("rounds up partial minutes", () => {
+    const ninetySecondsAgo = new Date(Date.now() - 90_000).toISOString();
+    expect(elapsedMinutesCeil(ninetySecondsAgo)).toBe(2);
+  });
+
+  it("returns exact minutes for whole-minute offsets", () => {
+    const fiveMinAgo = new Date(Date.now() - 5 * MINUTES).toISOString();
+    const result = elapsedMinutesCeil(fiveMinAgo);
+    expect(result).toBeGreaterThanOrEqual(5);
+    expect(result).toBeLessThanOrEqual(6);
+  });
+
+  it("returns 0 for a future timestamp", () => {
+    const future = new Date(Date.now() + MINUTES).toISOString();
+    expect(elapsedMinutesCeil(future)).toBe(0);
+  });
+
+  it("returns 1 for a timestamp just under 1 minute ago", () => {
+    const thirtySecsAgo = new Date(Date.now() - 30_000).toISOString();
+    expect(elapsedMinutesCeil(thirtySecsAgo)).toBe(1);
   });
 });
 
