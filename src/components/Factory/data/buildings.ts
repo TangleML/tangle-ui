@@ -86,7 +86,7 @@ export const BUILDINGS: Record<string, BuildingClass> = {
       {
         name: "Pulp and Press",
         inputs: [{ resource: "wood", amount: 20 }],
-        outputs: [{ resource: "paper", amount: 50 }],
+        outputs: [{ resource: "paper", amount: 50, nodes: 2 }],
         days: 3,
       },
     ],
