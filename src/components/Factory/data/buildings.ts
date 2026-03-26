@@ -41,7 +41,7 @@ export const BUILDINGS: Record<string, BuildingClass> = {
       {
         name: "Hand Axes",
         inputs: [],
-        outputs: [{ resource: "stone", amount: 5 }],
+        outputs: [{ resource: "stone", amount: 5, nodes: 2 }],
         days: 1,
       },
     ],
@@ -151,13 +151,13 @@ export const BUILDINGS: Record<string, BuildingClass> = {
     productionMethods: [
       {
         name: "Writing",
-        inputs: [{ resource: "paper", amount: 40, nodes: 4 }],
+        inputs: [{ resource: "paper", amount: 80, nodes: 4 }],
         outputs: [{ resource: "knowledge", amount: 1 }],
-        days: 1,
+        days: 2,
       },
       {
         name: "Reading",
-        inputs: [{ resource: "books", amount: 10, nodes: 2 }],
+        inputs: [{ resource: "books", amount: 2, nodes: 2 }],
         outputs: [{ resource: "knowledge", amount: 1 }],
         days: 1,
       },
