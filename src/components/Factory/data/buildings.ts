@@ -1,296 +1,229 @@
-import { Position } from "@xyflow/react";
+import type { BuildingClass } from "../types/buildings";
 
-import type { Building } from "../types/buildings";
-
-export const BUILDINGS: Building[] = [
-  {
-    id: "marketplace",
+export const BUILDINGS: Record<string, BuildingClass> = {
+  marketplace: {
     name: "Marketplace",
     icon: "🏛️",
     description: "Sell goods here",
     cost: 0,
     color: "#FBBF24",
-    inputs: [
-      { resource: "any", position: Position.Left },
-      { resource: "any", position: Position.Right },
-      { resource: "any", position: Position.Top },
-      { resource: "any", position: Position.Bottom },
+    productionMethods: [
+      {
+        name: "Trading",
+        inputs: [{ resource: "any", amount: 100, nodes: 4 }],
+        outputs: [{ resource: "money", amount: 1 }],
+        days: 1,
+      },
     ],
-    productionMethod: {
-      name: "Trading",
-      inputs: [{ resource: "any", amount: 1 }],
-      outputs: [{ resource: "money", amount: 1 }],
-      days: 1,
-    },
-    stockpile: [{ resource: "any", amount: 0, maxAmount: 1000 }],
   },
-  {
-    id: "woodcutter",
+  woodcutter: {
     name: "Woodcutter's Camp",
     icon: "🪓",
     description: "Produces wood",
     cost: 0,
     color: "#A0522D",
-    outputs: [{ resource: "wood", position: Position.Right }],
-    productionMethod: {
-      name: "Hand Axes",
-      inputs: [],
-      outputs: [{ resource: "wood", amount: 10 }],
-      days: 1,
-    },
-    stockpile: [{ resource: "wood", amount: 0, maxAmount: 100 }],
+    productionMethods: [
+      {
+        name: "Hand Axes",
+        inputs: [],
+        outputs: [{ resource: "wood", amount: 10 }],
+        days: 1,
+      },
+    ],
   },
-  {
-    id: "quarry",
+  quarry: {
     name: "Quarry",
     icon: "⛏️",
     description: "Produces stone",
     cost: 0,
     color: "#708090",
-    outputs: [{ resource: "stone", position: Position.Right }],
-    productionMethod: {
-      name: "Hand Axes",
-      inputs: [],
-      outputs: [{ resource: "stone", amount: 5 }],
-      days: 1,
-    },
-    stockpile: [{ resource: "stone", amount: 0, maxAmount: 50 }],
+    productionMethods: [
+      {
+        name: "Hand Axes",
+        inputs: [],
+        outputs: [{ resource: "stone", amount: 5 }],
+        days: 1,
+      },
+    ],
   },
-  {
-    id: "farm",
+  farm: {
     name: "Farm",
     icon: "🌾",
     description: "Produces wheat",
     cost: 0,
     color: "#228B22",
-    outputs: [{ resource: "wheat", position: Position.Right }],
-    productionMethod: {
-      name: "Wheat",
-      inputs: [],
-      outputs: [{ resource: "wheat", amount: 60 }],
-      days: 3,
-    },
-    stockpile: [{ resource: "wheat", amount: 0, maxAmount: 600 }],
+    productionMethods: [
+      {
+        name: "Wheat",
+        inputs: [],
+        outputs: [{ resource: "wheat", amount: 60 }],
+        days: 3,
+      },
+    ],
   },
-  {
-    id: "sawmill",
+  sawmill: {
     name: "Sawmill",
     icon: "🏭",
     description: "Turns wood into planks",
     cost: 0,
     color: "#D2691E",
-    inputs: [
-      { resource: "wood", position: Position.Left },
-      { resource: "wood", position: Position.Left },
-    ],
-    outputs: [{ resource: "planks", position: Position.Right }],
-    productionMethod: {
-      name: "Sandpaper and Hand Saw",
-      inputs: [{ resource: "wood", amount: 40 }],
-      outputs: [{ resource: "planks", amount: 20 }],
-      days: 2,
-    },
-    stockpile: [
-      { resource: "wood", amount: 0, maxAmount: 400 },
-      { resource: "planks", amount: 0, maxAmount: 200 },
+    productionMethods: [
+      {
+        name: "Sandpaper and Hand Saw",
+        inputs: [{ resource: "wood", amount: 40, nodes: 2 }],
+        outputs: [{ resource: "planks", amount: 20 }],
+        days: 2,
+      },
     ],
   },
-  {
-    id: "papermill",
+  papermill: {
     name: "Papermill",
     icon: "🏭",
     description: "Turns wood into paper",
     cost: 0,
     color: "#6A5ACD",
-    inputs: [{ resource: "wood", position: Position.Left }],
-    outputs: [
-      { resource: "paper", position: Position.Right },
-      { resource: "paper", position: Position.Right },
-    ],
-    productionMethod: {
-      name: "Pulp and Press",
-      inputs: [{ resource: "wood", amount: 20 }],
-      outputs: [{ resource: "paper", amount: 50 }],
-      days: 3,
-    },
-    stockpile: [
-      { resource: "wood", amount: 0, maxAmount: 200 },
-      { resource: "paper", amount: 0, maxAmount: 500 },
+    productionMethods: [
+      {
+        name: "Pulp and Press",
+        inputs: [{ resource: "wood", amount: 20 }],
+        outputs: [{ resource: "paper", amount: 50 }],
+        days: 3,
+      },
     ],
   },
-  {
-    id: "pasture",
+  pasture: {
     name: "Pasture",
     icon: "🐄",
     description: "Turns wheat into livestock",
     cost: 0,
     color: "#A52A2A",
-    inputs: [{ resource: "wheat", position: Position.Left }],
-    outputs: [{ resource: "livestock", position: Position.Right }],
-    productionMethod: {
-      name: "Free Range Grazing",
-      inputs: [{ resource: "wheat", amount: 25 }],
-      outputs: [{ resource: "livestock", amount: 1 }],
-      days: 10,
-    },
-    stockpile: [
-      { resource: "wheat", amount: 0, maxAmount: 250 },
-      { resource: "livestock", amount: 0, maxAmount: 10 },
+    productionMethods: [
+      {
+        name: "Free Range Grazing",
+        inputs: [{ resource: "wheat", amount: 25 }],
+        outputs: [{ resource: "livestock", amount: 1 }],
+        days: 10,
+      },
     ],
   },
-  {
-    id: "butchery",
+  butchery: {
     name: "Butchery",
     icon: "🔪",
     description: "Processes livestock",
     cost: 0,
     color: "#8B0000",
-    inputs: [{ resource: "livestock", position: Position.Left }],
-    outputs: [
-      { resource: "meat", position: Position.Right },
-      { resource: "leather", position: Position.Right },
-    ],
-    productionMethod: {
-      name: "Carving Knives",
-      inputs: [{ resource: "livestock", amount: 1 }],
-      outputs: [
-        { resource: "meat", amount: 6 },
-        { resource: "leather", amount: 2 },
-      ],
-      days: 3,
-    },
-    stockpile: [
-      { resource: "livestock", amount: 0, maxAmount: 10 },
-      { resource: "meat", amount: 0, maxAmount: 60 },
-      { resource: "leather", amount: 0, maxAmount: 20 },
+    productionMethods: [
+      {
+        name: "Carving Knives",
+        inputs: [{ resource: "livestock", amount: 1 }],
+        outputs: [
+          { resource: "meat", amount: 6 },
+          { resource: "leather", amount: 2 },
+        ],
+        days: 3,
+      },
     ],
   },
-  {
-    id: "bookbinder",
+  bookbinder: {
     name: "Bookbinder",
     icon: "📚",
     description: "Produces books",
     cost: 0,
     color: "#4B0082",
-    inputs: [
-      { resource: "paper", position: Position.Left },
-      { resource: "leather", position: Position.Left },
-    ],
-    outputs: [{ resource: "books", position: Position.Right }],
-    productionMethod: {
-      name: "Bookbinding",
-      inputs: [
-        { resource: "paper", amount: 20 },
-        { resource: "leather", amount: 2 },
-      ],
-      outputs: [{ resource: "books", amount: 1 }],
-      days: 5,
-    },
-    stockpile: [
-      { resource: "paper", amount: 0, maxAmount: 200 },
-      { resource: "leather", amount: 0, maxAmount: 20 },
-      { resource: "books", amount: 0, maxAmount: 10 },
+    productionMethods: [
+      {
+        name: "Bookbinding",
+        inputs: [
+          { resource: "paper", amount: 20 },
+          { resource: "leather", amount: 2 },
+        ],
+        outputs: [{ resource: "books", amount: 1 }],
+        days: 5,
+      },
     ],
   },
-  {
-    id: "library",
+  library: {
     name: "Library",
     icon: "🏛️",
     description: "Centre of knowledge",
     cost: 0,
     color: "#483D8B",
-    inputs: [
-      { resource: "paper", position: Position.Top },
-      { resource: "books", position: Position.Left },
-    ],
-    productionMethod: {
-      name: "Research",
-      inputs: [
-        { resource: "paper", amount: 10 },
-        { resource: "books", amount: 1 },
-      ],
-      outputs: [{ resource: "knowledge", amount: 1 }],
-      days: 1,
-    },
-    stockpile: [
-      { resource: "paper", amount: 0, maxAmount: 100 },
-      { resource: "books", amount: 0, maxAmount: 10 },
+    productionMethods: [
+      {
+        name: "Writing",
+        inputs: [{ resource: "paper", amount: 40, nodes: 4 }],
+        outputs: [{ resource: "knowledge", amount: 1 }],
+        days: 1,
+      },
+      {
+        name: "Reading",
+        inputs: [{ resource: "books", amount: 10, nodes: 2 }],
+        outputs: [{ resource: "knowledge", amount: 1 }],
+        days: 1,
+      },
     ],
   },
-  {
-    id: "mill",
+  mill: {
     name: "Mill",
     icon: "🏭",
     description: "Grinds wheat into flour",
     cost: 0,
     color: "#DAA520",
-    inputs: [
-      { resource: "wheat", position: Position.Left },
-      { resource: "wheat", position: Position.Left },
-    ],
-    outputs: [{ resource: "flour", position: Position.Right }],
-    productionMethod: {
-      name: "Grinding Stones",
-      inputs: [{ resource: "wheat", amount: 40 }],
-      outputs: [{ resource: "flour", amount: 20 }],
-      days: 4,
-    },
-    stockpile: [
-      { resource: "wheat", amount: 0, maxAmount: 400 },
-      { resource: "flour", amount: 0, maxAmount: 200 },
+    productionMethods: [
+      {
+        name: "Grinding Stones",
+        inputs: [{ resource: "wheat", amount: 40 }],
+        outputs: [{ resource: "flour", amount: 20 }],
+        days: 4,
+      },
     ],
   },
-  {
-    id: "kiln",
+  kiln: {
     name: "Kiln",
     icon: "🏭",
     description: "Burns wood into coal",
     cost: 0,
     color: "#36454F",
-    inputs: [
-      { resource: "wood", position: Position.Left },
-      { resource: "wood", position: Position.Left },
-    ],
-    outputs: [
-      { resource: "coal", position: Position.Right },
-      { resource: "coal", position: Position.Right },
-    ],
-    productionMethod: {
-      name: "Charcoal Burning",
-      inputs: [{ resource: "wood", amount: 50 }],
-      outputs: [{ resource: "coal", amount: 50 }],
-      days: 2,
-    },
-    stockpile: [
-      { resource: "wood", amount: 0, maxAmount: 50 },
-      { resource: "coal", amount: 0, maxAmount: 50 },
+    productionMethods: [
+      {
+        name: "Charcoal Burning",
+        inputs: [{ resource: "wood", amount: 50 }],
+        outputs: [{ resource: "coal", amount: 50 }],
+        days: 2,
+      },
     ],
   },
-  {
-    id: "bakery",
+  bakery: {
     name: "Bakery",
     icon: "🍞",
     description: "Bakes flour into bread",
     cost: 0,
     color: "#F5DEB3",
-    inputs: [
-      { resource: "flour", position: Position.Left },
-      { resource: "coal", position: Position.Top },
-    ],
-    outputs: [{ resource: "bread", position: Position.Right }],
-    productionMethod: {
-      name: "Oven Baking",
-      inputs: [
-        { resource: "flour", amount: 10 },
-        { resource: "coal", amount: 10 },
-      ],
-      outputs: [{ resource: "bread", amount: 10 }],
-      days: 2,
-    },
-    stockpile: [
-      { resource: "flour", amount: 0, maxAmount: 100 },
-      { resource: "bread", amount: 0, maxAmount: 100 },
-      { resource: "coal", amount: 0, maxAmount: 100 },
+    productionMethods: [
+      {
+        name: "Oven Baking",
+        inputs: [
+          { resource: "flour", amount: 10 },
+          { resource: "coal", amount: 10 },
+        ],
+        outputs: [{ resource: "bread", amount: 10 }],
+        days: 2,
+      },
     ],
   },
-];
+  bank: {
+    name: "Bank",
+    icon: "🏦",
+    description: "Generates money over time",
+    cost: 100,
+    color: "#FFD700",
+    productionMethods: [
+      {
+        name: "Minting",
+        inputs: [],
+        outputs: [{ resource: "money", amount: 5 }],
+        days: 3,
+      },
+    ],
+  },
+} as const satisfies Record<string, BuildingClass>;
