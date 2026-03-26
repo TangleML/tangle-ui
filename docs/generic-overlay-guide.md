@@ -12,6 +12,7 @@ A developer guide for building custom overlays using the Composer system.
 4. [File Structure](#file-structure)
 5. [Quick Start: Creating Your First Overlay](#quick-start-creating-your-first-overlay)
 6. [Reference Tables](#reference-tables)
+7. [Conditional Block Rendering with `displayFor`](#conditional-block-rendering-with-displayfor)
 
 ---
 
@@ -44,17 +45,19 @@ flowchart TB
             Resolvers["3. Per-block resolvers"]
         end
 
-        subgraph hydrate ["hydrateSchema"]
-            Validate["4. validateBlock - check required, apply defaults"]
-            Substitute["5. substitutePlaceholders - replace tokens"]
+        subgraph hydrate ["filterAndHydrateSchema"]
+            Filter["4. filterByDisplayFor - remove non-matching blocks"]
+            Validate["5. validateBlock - check required, apply defaults"]
+            Substitute["6. substitutePlaceholders - replace tokens"]
         end
 
-        ComposerComp["6. Composer"]
+        ComposerComp["7. Composer"]
         RegistryNode["BlockRegistry - TextBlock, LinkBlock"]
 
         FetchData --> Resolvers
         ReadMeta --> Resolvers
-        Resolvers -->|"Record of BlockHydrationReplacements"| Validate
+        Resolvers -->|"Record of BlockHydrationReplacements"| Filter
+        Filter --> Validate
         Validate --> Substitute
         Substitute -->|"hydrated ComposerSchema"| ComposerComp
         ComposerComp --> RegistryNode
@@ -70,6 +73,7 @@ flowchart TB
 | ---------- | ---------------------------- | -------------------------------------------------------------------------------- |
 | Load       | `ComposerSchema`             | Raw JSON parsed into `{ metadata, sections[] }`                                  |
 | Resolve    | `BlockHydrationReplacements` | Per-block `Record<string, string / number / boolean>` of resolved values         |
+| Filter     | `ComposerSchema` (filtered)  | Blocks removed if their `displayFor` doesn't match the current execution type    |
 | Validate   | `BlockValidationResult`      | Merges defaults, reports missing required replacements                           |
 | Substitute | `ComposerSchema` (hydrated)  | Placeholders like `{podName}` replaced with actual values in properties          |
 | Render     | `BlockDescriptor`            | Discriminated union dispatched to `TextBlock` or `LinkBlock` via `BlockRegistry` |
@@ -83,7 +87,7 @@ sequenceDiagram
     participant Section as FeatureOverlaySection
     participant Schema as featureOverlaySchema.json
     participant Resolvers as featureResolvers
-    participant Hydrate as hydrateSchema
+    participant Hydrate as filterAndHydrateSchema
     participant Composer as Composer
     participant Block as TextBlock / LinkBlock
 
@@ -96,9 +100,12 @@ sequenceDiagram
     Section->>Resolvers: resolve per block ID
     Resolvers-->>Section: Record of BlockHydrationReplacements
 
-    Section->>Hydrate: hydrateSchema(schema, allReplacements)
+    Section->>Hydrate: filterAndHydrateSchema(schema, allReplacements, displayFor)
 
-    loop Each BlockDescriptor with replacements
+    Hydrate->>Hydrate: filterByDisplayFor(schema, displayFor)
+    Note over Hydrate: Remove blocks whose displayFor<br/>doesn't include the execution type
+
+    loop Each surviving BlockDescriptor with replacements
         Hydrate->>Hydrate: validateBlock() -> BlockValidationResult
         alt BlockValidationResult.ok
             Hydrate->>Hydrate: substitutePlaceholders(properties, values)
@@ -147,7 +154,7 @@ src/
 | --------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------- |
 | `featureOverlaySchema.json` | Per feature | Schema JSON defining sections, blocks, replacements, and metadata constants                                      |
 | `composerSchema.ts`         | Core        | Shared TypeScript types: `ComposerSchema`, `BlockDescriptor`, `TextBlockProperties`, `LinkBlockProperties`, etc. |
-| `hydrateSchema.ts`          | Core        | `loadSchema`, `validateSchema`, `hydrateSchema`, `substitutePlaceholders` utilities                              |
+| `hydrateSchema.ts`          | Core        | `loadSchema`, `validateSchema`, `filterAndHydrateSchema`, `substitutePlaceholders` utilities                     |
 | `Composer.tsx`              | Core        | Pure renderer: maps `ComposerSchema` to React components via `BlockRegistry`                                     |
 | `TextBlock.tsx`             | Core        | Renders text blocks with tone, wrap, and visibility support                                                      |
 | `LinkBlock.tsx`             | Core        | Renders link blocks with `buildUrl` and title fallback                                                           |
@@ -261,7 +268,10 @@ Create `StatusOverlaySection.tsx`:
 ```typescript
 import { Composer } from "@/components/shared/Composer/Composer";
 import overlaySchema from "@/config/statusOverlaySchema.json";
-import { hydrateSchema, loadSchema } from "@/services/composer/hydrateSchema";
+import {
+  filterAndHydrateSchema,
+  loadSchema,
+} from "@/services/composer/hydrateSchema";
 import type { BlockHydrationReplacements } from "@/types/composerSchema";
 
 import {
@@ -278,7 +288,6 @@ interface StatusOverlayProps {
 export const StatusOverlaySection = ({
   userId,
 }: StatusOverlayProps) => {
-  // Fetch runtime data via API hook — same pattern as LogsEventsOverlaySection
   const { data: userProfile } = useFetchUserProfile(userId);
 
   if (schema.sections.length === 0) return null;
@@ -291,12 +300,13 @@ export const StatusOverlaySection = ({
     profileLink: resolveProfileLinkReplacements(userId),
   };
 
-  const hydrated = hydrateSchema(schema, allReplacements);
+  // Pass null for displayFor when no conditional rendering is needed
+  const hydrated = filterAndHydrateSchema(schema, allReplacements);
   return <Composer schema={hydrated} />;
 };
 ```
 
-The keys in `allReplacements` (`"greeting"`, `"profileLink"`) must match the block `id` values in the schema. `loadSchema` is called once at module level — it validates the schema on import and returns a typed `ComposerSchema`.
+The keys in `allReplacements` (`"greeting"`, `"profileLink"`) must match the block `id` values in the schema. `loadSchema` is called once at module level — it validates the schema on import and returns a typed `ComposerSchema`. When no `displayFor` filtering is needed, omit the third argument (all blocks render).
 
 ### Overwriting the Default Schema
 
@@ -342,11 +352,79 @@ Declared per block under the `replacements` key. Each entry describes a `{placeh
 
 ### Schema-Level Properties
 
-| Property                | Type                                    | Description                                                                                                                                 |
-| ----------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `metadata`              | `Record<string, unknown>`               | Constants accessible by resolvers (e.g., `paddingMinutes`, `retentionDays`). Not used as placeholders directly.                             |
-| `sections[].id`         | `string`                                | Unique section identifier. Duplicates produce a validation warning.                                                                         |
-| `sections[].title`      | `string`                                | Section heading rendered in the UI                                                                                                          |
-| `blocks[].id`           | `string`                                | Unique block identifier. Used as the key in the `allReplacements` map passed to `hydrateSchema()`. Duplicates produce a validation warning. |
-| `blocks[].blockType`    | `"TextBlock"` or `"LinkBlock"`          | Determines which component renders the block via `BlockRegistry`                                                                            |
-| `blocks[].replacements` | `Record<string, ReplacementDescriptor>` | Declares which `{placeholder}` tokens exist in this block's properties. Keys are placeholder names, not block IDs.                          |
+| Property                | Type                                    | Description                                                                                                                                          |
+| ----------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `metadata`              | `Record<string, unknown>`               | Constants accessible by resolvers (e.g., `paddingMinutes`, `retentionDays`). Not used as placeholders directly.                                      |
+| `sections[].id`         | `string`                                | Unique section identifier. Duplicates produce a validation warning.                                                                                  |
+| `sections[].title`      | `string`                                | Section heading rendered in the UI                                                                                                                   |
+| `blocks[].id`           | `string`                                | Unique block identifier. Used as the key in the `allReplacements` map passed to `filterAndHydrateSchema()`. Duplicates produce a validation warning. |
+| `blocks[].blockType`    | `"TextBlock"` or `"LinkBlock"`          | Determines which component renders the block via `BlockRegistry`                                                                                     |
+| `blocks[].replacements` | `Record<string, ReplacementDescriptor>` | Declares which `{placeholder}` tokens exist in this block's properties. Keys are placeholder names, not block IDs.                                   |
+| `blocks[].displayFor`   | `string[]` (optional)                   | Whitelist of execution types this block should render for. See [Conditional Block Rendering](#conditional-block-rendering-with-displayfor).          |
+
+---
+
+## Conditional Block Rendering with `displayFor`
+
+Some overlays need to show different blocks depending on runtime context — for example, `kubernetes_pod` executions vs. `kubernetes_job` executions. Instead of hardcoding block IDs in the section component, declare a `displayFor` whitelist on each block in the schema JSON.
+
+### How It Works
+
+| `displayFor` value                     | Behavior                                               |
+| -------------------------------------- | ------------------------------------------------------ |
+| Absent / undefined                     | Block is shown for **all** execution types             |
+| `["kubernetes_pod"]`                   | Block is shown only when `displayFor="kubernetes_pod"` |
+| `["kubernetes_job"]`                   | Block is shown only when `displayFor="kubernetes_job"` |
+| `["kubernetes_pod", "kubernetes_job"]` | Block is shown for both types                          |
+
+### Schema Example
+
+```json
+{
+  "id": "podEvents",
+  "blockType": "LinkBlock",
+  "displayFor": ["kubernetes_pod"],
+  "properties": { "urlTemplate": "https://example.com/pod-events" },
+  "replacements": { "podName": { "type": "string", "required": true } }
+}
+```
+
+### Usage
+
+```typescript
+import {
+  filterAndHydrateSchema,
+  loadSchema,
+} from "@/services/composer/hydrateSchema";
+
+const schema = loadSchema(overlayJSON);
+
+// Provide replacements for ALL blocks unconditionally.
+// filterAndHydrateSchema removes non-matching blocks before hydration.
+const allReplacements = {
+  podLogs: { podName: "worker-abc", startTime: "...", endTime: "..." },
+  podEvents: { podName: "worker-abc", startTime: "...", endTime: "..." },
+  jobEvents: { jobName: "job-xyz", startTime: "...", endTime: "..." },
+};
+
+const executionType = jobName ? "kubernetes_job" : "kubernetes_pod";
+const hydrated = filterAndHydrateSchema(schema, allReplacements, executionType);
+```
+
+**Function signature:**
+
+```typescript
+filterAndHydrateSchema(
+  schema: ComposerSchema,
+  allReplacements: Record<string, BlockHydrationReplacements>,
+  displayFor?: string | null,
+): ComposerSchema
+```
+
+| Parameter         | Description                                                                                     |
+| ----------------- | ----------------------------------------------------------------------------------------------- |
+| `schema`          | The loaded `ComposerSchema`                                                                     |
+| `allReplacements` | Replacements for all blocks (filtered blocks are simply ignored)                                |
+| `displayFor`      | The execution type string. If `null` or `undefined`, no filtering occurs and all blocks render. |
+
+**Error guard:** If filtering removes _all_ blocks, `filterAndHydrateSchema` logs a `console.error` with the provided `displayFor` value and the set of all `displayFor` values found in the schema, helping diagnose misconfigured schemas.
