@@ -167,6 +167,7 @@ describe("<PipelineRun/>", () => {
       "execution-1": { SUCCEEDED: 1 },
       "execution-2": { RUNNING: 1 },
     },
+    summary: { total_nodes: 2, ended_nodes: 1, has_ended: false },
   };
 
   beforeEach(() => {

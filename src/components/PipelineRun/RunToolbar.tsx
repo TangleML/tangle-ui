@@ -5,11 +5,6 @@ import { cn } from "@/lib/utils";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
 import { extractCanonicalName } from "@/utils/canonicalPipelineName";
-import {
-  countInProgressFromStats,
-  flattenExecutionStatusStats,
-  isExecutionComplete,
-} from "@/utils/executionStatus";
 
 import { ViewYamlButton } from "../shared/Buttons/ViewYamlButton";
 import { buildTaskSpecShape } from "../shared/PipelineRunNameTemplate/types";
@@ -44,12 +39,8 @@ export const RunToolbar = () => {
     return null;
   }
 
-  const executionStatusStats =
-    metadata?.execution_status_stats ??
-    flattenExecutionStatusStats(state.child_execution_status_stats);
-
-  const isInProgress = countInProgressFromStats(executionStatusStats) > 0;
-  const isComplete = isExecutionComplete(executionStatusStats);
+  const isComplete = state.summary.has_ended;
+  const isInProgress = !isComplete;
 
   const isViewingSubgraph = currentSubgraphPath.length > 1;
 
