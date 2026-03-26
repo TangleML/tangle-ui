@@ -41,13 +41,22 @@ const AppMenu = () => {
   const { componentSpec } = useComponentSpec();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const title = componentSpec?.name;
+  const isOnFactoryGameRoute = location.pathname.startsWith("/factory");
+  const title = isOnFactoryGameRoute ? "FACTORY GAME" : componentSpec?.name;
 
   const handleGoBack = () => {
     router.history.back();
   };
 
   const isOnSettingsRoute = location.pathname.startsWith("/settings");
+
+  const gameButton = (
+    <Link href="/factory" target="_blank" rel="noopener noreferrer">
+      <TooltipButton tooltip="Factory Game">
+        <Icon name="Gamepad2" />
+      </TooltipButton>
+    </Link>
+  );
 
   return (
     <div
@@ -73,26 +82,30 @@ const AppMenu = () => {
 
         <InlineStack gap="2" wrap="nowrap" className="shrink-0">
           {/* Pipeline actions - desktop only */}
-          <div className="hidden md:flex items-center gap-2">
-            <ImportPipeline
-              triggerComponent={
-                <TooltipButton tooltip="Import Pipeline">
-                  <Icon name="Upload" />
-                </TooltipButton>
-              }
-            />
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <NewPipelineButton>
-                    <Icon name="Plus" />
-                  </NewPipelineButton>
-                </TooltipTrigger>
-                <TooltipContent>New Pipeline</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <div className="w-px h-5 bg-stone-700" />
-          </div>
+          {!isOnFactoryGameRoute && (
+            <div className="hidden md:flex items-center gap-2">
+              <ImportPipeline
+                triggerComponent={
+                  <TooltipButton tooltip="Import Pipeline">
+                    <Icon name="Upload" />
+                  </TooltipButton>
+                }
+              />
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <NewPipelineButton>
+                      <Icon name="Plus" />
+                    </NewPipelineButton>
+                  </TooltipTrigger>
+                  <TooltipContent>New Pipeline</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <div className="w-px h-5 bg-stone-700" />
+            </div>
+          )}
+
+          {gameButton}
 
           {/* Settings & status */}
           {isOnSettingsRoute ? (

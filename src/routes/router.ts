@@ -17,6 +17,7 @@ import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 
 import RootLayout from "../components/layout/RootLayout";
 import Editor from "./Editor";
+import FactoryGame from "./Factory/FactoryGame";
 import Home from "./Home";
 import { ImportPage } from "./Import";
 import NotFoundPage from "./NotFoundPage";
@@ -56,6 +57,7 @@ export const APP_ROUTES = {
   SETTINGS_SECRETS_REPLACE: `${SETTINGS_PATH}/secrets/$secretId/replace`,
   GITHUB_AUTH_CALLBACK: "/authorize/github",
   HUGGINGFACE_AUTH_CALLBACK: "/authorize/huggingface",
+  FACTORY_GAME: "/factory",
 } as const;
 
 const rootRoute = createRootRoute({
@@ -192,6 +194,12 @@ const settingsRouteTree = settingsLayoutRoute.addChildren([
   secretsRouteTree,
 ]);
 
+const factoryGameRoute = createRoute({
+  getParentRoute: () => mainLayout,
+  path: APP_ROUTES.FACTORY_GAME,
+  component: FactoryGame,
+});
+
 const appRouteTree = mainLayout.addChildren([
   indexRoute,
   quickStartRoute,
@@ -200,6 +208,7 @@ const appRouteTree = mainLayout.addChildren([
   editorRoute,
   runDetailRoute,
   runDetailWithSubgraphRoute,
+  factoryGameRoute,
 ]);
 
 const rootRouteTree = rootRoute.addChildren([
