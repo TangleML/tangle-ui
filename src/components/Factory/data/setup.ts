@@ -4,10 +4,12 @@ import { BUILDINGS } from "./buildings";
 
 // Initial marketplace node at the center
 const MARKETPLACE_NODE: Node = {
-  id: "marketplace",
+  id: "starting-marketplace",
   type: "building",
   position: { x: 0, y: 0 },
-  data: { ...BUILDINGS.find((b) => b.id === "marketplace") },
+  data: {
+    ...BUILDINGS.find((b) => b.id === "marketplace"),
+  },
   draggable: false,
   deletable: false,
   selectable: true,
