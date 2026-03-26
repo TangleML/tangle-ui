@@ -5,6 +5,9 @@ export interface GlobalStatistics {
   day: number;
   resources: GlobalResources;
   earned: GlobalResources;
+  foodRequired: number;
+  foodConsumed: number;
+  foodDeficit: number;
 }
 
 export interface StockpileChange {
