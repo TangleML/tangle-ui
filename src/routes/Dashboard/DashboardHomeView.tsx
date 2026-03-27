@@ -10,7 +10,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Paragraph, Text } from "@/components/ui/typography";
+import { Heading, Paragraph, Text } from "@/components/ui/typography";
 import { type FavoriteItem, useFavorites } from "@/hooks/useFavorites";
 import {
   type RecentlyViewedItem,
@@ -50,7 +50,7 @@ const TYPE_CONFIG: Record<
     label: "Run",
   },
   component: {
-    className: "bg-blue-100 text-blue-700",
+    className: "bg-sky-100 text-sky-700",
     icon: "Package",
     label: "Component",
   },
@@ -82,10 +82,8 @@ const SectionHeader = ({
   viewAllTo,
   viewAllLabel = "View all",
 }: SectionHeaderProps) => (
-  <InlineStack gap="3" blockAlign="center">
-    <Text as="h2" size="lg" weight="semibold">
-      {title}
-    </Text>
+  <InlineStack gap="3" blockAlign="center" className="min-w-0">
+    <Heading level={2}>{title}</Heading>
     <Link
       to={viewAllTo}
       className="text-xs text-muted-foreground hover:text-foreground"
@@ -184,7 +182,9 @@ const FavoritesPreview = () => {
 
 const RecentlyViewedPreview = () => {
   const { recentlyViewed } = useRecentlyViewed();
-  const preview = recentlyViewed.slice(0, PREVIEW_COUNT);
+  const preview = recentlyViewed
+    .filter((item) => item.type !== "component")
+    .slice(0, PREVIEW_COUNT);
 
   return (
     <BlockStack gap="3" className="min-w-0">
@@ -212,6 +212,56 @@ const RecentlyViewedPreview = () => {
   );
 };
 
+const RecentComponentsPreview = () => {
+  const { recentlyViewed } = useRecentlyViewed();
+  const preview = recentlyViewed
+    .filter((item) => item.type === "component")
+    .slice(0, PREVIEW_COUNT);
+
+  return (
+    <BlockStack gap="3" className="min-w-0">
+      <SectionHeader
+        title="Recently Used Components"
+        viewAllTo={APP_ROUTES.DASHBOARD_COMPONENTS}
+        viewAllLabel="Browse all"
+      />
+      <div className="w-full border border-border rounded-lg overflow-hidden">
+        {preview.length === 0 ? (
+          <div className="px-4 py-3">
+            <Paragraph tone="subdued" size="sm">
+              No components viewed yet. Open a component to see it here.
+            </Paragraph>
+          </div>
+        ) : (
+          preview.map((item, i) => (
+            <Link
+              key={item.id}
+              to={APP_ROUTES.DASHBOARD_COMPONENTS}
+              search={{ component: item.id }}
+              className={`flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 no-underline ${
+                i < preview.length - 1 ? "border-b border-border" : ""
+              }`}
+            >
+              <TypePill type="component" />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Text size="sm" className="flex-1 min-w-0 truncate">
+                    {item.name}
+                  </Text>
+                </TooltipTrigger>
+                <TooltipContent>{item.name}</TooltipContent>
+              </Tooltip>
+              <Text size="xs" className="text-muted-foreground shrink-0">
+                {formatRelativeTime(new Date(item.viewedAt))}
+              </Text>
+            </Link>
+          ))
+        )}
+      </div>
+    </BlockStack>
+  );
+};
+
 export function DashboardHomeView() {
   return (
     <BlockStack gap="6">
@@ -220,7 +270,7 @@ export function DashboardHomeView() {
       <div className="grid grid-cols-3 gap-6">
         <FavoritesPreview />
         <RecentlyViewedPreview />
-        <div />
+        <RecentComponentsPreview />
       </div>
 
       <BlockStack gap="3">

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
-import { Paragraph, Text } from "@/components/ui/typography";
+import { Heading, Paragraph, Text } from "@/components/ui/typography";
 import { type FavoriteItem, useFavorites } from "@/hooks/useFavorites";
 import { cn } from "@/lib/utils";
 import { EDITOR_PATH, RUNS_BASE_PATH } from "@/routes/router";
@@ -132,9 +132,7 @@ export function DashboardFavoritesView() {
 
   return (
     <BlockStack gap="4">
-      <Text as="h2" size="lg" weight="semibold">
-        Favorites
-      </Text>
+      <Heading level={2}>Favorites</Heading>
 
       {favorites.length === 0 ? (
         <Paragraph tone="subdued" size="sm">

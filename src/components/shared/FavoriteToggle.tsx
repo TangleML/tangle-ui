@@ -31,7 +31,7 @@ export const FavoriteToggle = ({ type, id, name }: FavoriteToggleProps) => {
       variant="ghost"
       size="icon"
     >
-      <Star className="h-4 w-4" fill={active ? "currentColor" : "none"} />
+      <Star className={cn("h-4 w-4", active ? "fill-warning" : "fill-none")} />
     </Button>
   );
 };

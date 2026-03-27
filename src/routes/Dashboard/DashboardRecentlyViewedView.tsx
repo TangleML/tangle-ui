@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
-import { Paragraph, Text } from "@/components/ui/typography";
+import { Heading, Paragraph, Text } from "@/components/ui/typography";
 import {
   type RecentlyViewedItem,
   useRecentlyViewed,
@@ -63,7 +63,10 @@ const RecentlyViewedCard = ({ item }: { item: RecentlyViewedItem }) => {
 };
 
 export function DashboardRecentlyViewedView() {
-  const { recentlyViewed } = useRecentlyViewed();
+  const { recentlyViewed: allRecentlyViewed } = useRecentlyViewed();
+  const recentlyViewed = allRecentlyViewed.filter(
+    (item) => item.type !== "component",
+  );
   const [page, setPage] = useState(0);
 
   const totalPages = Math.ceil(recentlyViewed.length / PAGE_SIZE);
@@ -75,9 +78,7 @@ export function DashboardRecentlyViewedView() {
 
   return (
     <BlockStack gap="4">
-      <Text as="h2" size="lg" weight="semibold">
-        Recently Viewed
-      </Text>
+      <Heading level={2}>Recently Viewed</Heading>
 
       {recentlyViewed.length === 0 ? (
         <Paragraph tone="subdued" size="sm">

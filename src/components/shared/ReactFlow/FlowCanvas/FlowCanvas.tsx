@@ -35,6 +35,7 @@ import { useCopyPaste } from "@/hooks/useCopyPaste";
 import { useGhostNode } from "@/hooks/useGhostNode";
 import { useIOSelectionPersistence } from "@/hooks/useIOSelectionPersistence";
 import { useNodeCallbacks } from "@/hooks/useNodeCallbacks";
+import { addRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import { useSubgraphKeyboardNavigation } from "@/hooks/useSubgraphKeyboardNavigation";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useUserDetails } from "@/hooks/useUserDetails";
@@ -679,6 +680,15 @@ const FlowCanvasContent = ({
           );
 
           setComponentSpec(newComponentSpec);
+
+          const ref = hydratedComponentRef;
+          if (ref.digest && ref.spec?.name) {
+            addRecentlyViewed({
+              type: "component",
+              id: ref.digest,
+              name: ref.spec.name,
+            });
+          }
         }
       } catch (error) {
         console.error("Failed to add imported component to canvas:", error);
@@ -790,6 +800,15 @@ const FlowCanvasContent = ({
       );
 
       setComponentSpec(newRootSpec);
+
+      const ref = droppedTask?.componentRef;
+      if (ref?.digest && ref.spec?.name) {
+        addRecentlyViewed({
+          type: "component",
+          id: ref.digest,
+          name: ref.spec.name,
+        });
+      }
     }
   };
 
