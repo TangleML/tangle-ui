@@ -12,7 +12,7 @@ if (!window.__TANGLE_ANNOUNCEMENTS__) {
 }
 
 import { Link } from "@tanstack/react-router";
-import { GitBranch, Play } from "lucide-react";
+import { GitBranch, Package, Play } from "lucide-react";
 
 import { RunSection } from "@/components/Home/RunSection/RunSection";
 import { AnnouncementBanners } from "@/components/shared/AnnouncementBanners";
@@ -154,7 +154,9 @@ const FavoritesPreview = () => {
 
 const RecentlyViewedPreview = () => {
   const { recentlyViewed } = useRecentlyViewed();
-  const preview = recentlyViewed.slice(0, PREVIEW_COUNT);
+  const preview = recentlyViewed
+    .filter((item) => item.type !== "component")
+    .slice(0, PREVIEW_COUNT);
 
   return (
     <div className="flex flex-col gap-3 min-w-0">
@@ -198,6 +200,61 @@ const RecentlyViewedPreview = () => {
   );
 };
 
+// ─── Recently Used Components ──────────────────────────────────────────────────
+
+const RecentComponentsPreview = () => {
+  const { recentlyViewed } = useRecentlyViewed();
+  const preview = recentlyViewed
+    .filter((item) => item.type === "component")
+    .slice(0, PREVIEW_COUNT);
+
+  return (
+    <div className="flex flex-col gap-3 min-w-0">
+      <SectionHeader
+        title="Recently Used Components"
+        viewAllTo={APP_ROUTES.DASHBOARD_COMPONENTS}
+        viewAllLabel="Browse all"
+      />
+      <div className="border border-border rounded-lg overflow-hidden">
+        {preview.length === 0 ? (
+          <div className="px-4 py-3">
+            <Paragraph tone="subdued" size="sm">
+              No components viewed yet. Open a component to see it here.
+            </Paragraph>
+          </div>
+        ) : (
+          preview.map((item, i) => (
+            <Link
+              key={item.id}
+              to={APP_ROUTES.DASHBOARD_COMPONENTS}
+              search={{ component: item.id }}
+              className={`flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 no-underline ${
+                i < preview.length - 1 ? "border-b border-border" : ""
+              }`}
+            >
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs font-semibold shrink-0 bg-sky-100 text-sky-700">
+                <Package className="h-3 w-3" />
+                Component
+              </span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Text size="sm" className="flex-1 min-w-0 truncate">
+                    {item.name}
+                  </Text>
+                </TooltipTrigger>
+                <TooltipContent>{item.name}</TooltipContent>
+              </Tooltip>
+              <Text size="xs" className="text-muted-foreground shrink-0">
+                {formatRelativeTime(item.viewedAt)}
+              </Text>
+            </Link>
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
+
 // ─── My Dashboard ──────────────────────────────────────────────────────────────
 
 export function DashboardHomeView() {
@@ -205,11 +262,11 @@ export function DashboardHomeView() {
     <BlockStack gap="6">
       <AnnouncementBanners />
 
-      {/* Favorites + Recently Viewed + (future) side by side */}
+      {/* Favorites + Recently Viewed + Recent Components side by side */}
       <div className="grid grid-cols-3 gap-6">
         <FavoritesPreview />
         <RecentlyViewedPreview />
-        <div />
+        <RecentComponentsPreview />
       </div>
 
       {/* My Runs — full table with created_by:me filter */}

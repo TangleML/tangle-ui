@@ -17,6 +17,7 @@ import { isFlagEnabled } from "@/components/shared/Settings/useFlags";
 import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 
 import RootLayout from "../components/layout/RootLayout";
+import { DashboardComponentsView } from "./Dashboard/DashboardComponentsView";
 import { DashboardFavoritesView } from "./Dashboard/DashboardFavoritesView";
 import { DashboardHomeView } from "./Dashboard/DashboardHomeView";
 import { DashboardLayout } from "./Dashboard/DashboardLayout";
@@ -107,9 +108,6 @@ const dashboardIndexRoute = createRoute({
   component: DashboardHomeView,
 });
 
-// Placeholder component — replaced in subsequent PRs
-const ComingSoon = () => null;
-
 const dashboardRunsRoute = createRoute({
   getParentRoute: () => dashboardRoute,
   path: "/runs",
@@ -125,7 +123,7 @@ const dashboardPipelinesRoute = createRoute({
 const dashboardComponentsRoute = createRoute({
   getParentRoute: () => dashboardRoute,
   path: "/components",
-  component: ComingSoon,
+  component: DashboardComponentsView,
 });
 
 const dashboardFavoritesRoute = createRoute({
