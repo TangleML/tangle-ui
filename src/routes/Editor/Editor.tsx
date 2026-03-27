@@ -2,6 +2,7 @@ import "@/styles/editor.css";
 
 import { DndContext } from "@dnd-kit/core";
 import { ReactFlowProvider } from "@xyflow/react";
+import { useEffect } from "react";
 
 import PipelineEditor from "@/components/Editor/PipelineEditor";
 import { InfoBox } from "@/components/shared/InfoBox";
@@ -9,9 +10,20 @@ import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { BlockStack } from "@/components/ui/layout";
 import { Paragraph } from "@/components/ui/typography";
 import { useLoadComponentSpecFromPath } from "@/hooks/useLoadComponentSpecFromPath";
+import { useRecentlyViewed } from "@/hooks/useRecentlyViewed";
 
 const Editor = () => {
   const { componentSpec, error } = useLoadComponentSpecFromPath();
+  const { addRecentlyViewed } = useRecentlyViewed();
+
+  useEffect(() => {
+    if (!componentSpec?.name) return;
+    addRecentlyViewed({
+      type: "pipeline",
+      id: componentSpec.name,
+      name: componentSpec.name,
+    });
+  }, [componentSpec?.name, addRecentlyViewed]);
 
   if (error) {
     return (
