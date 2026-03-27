@@ -14,6 +14,43 @@ export interface EntityDiff<T> {
   changedEntities: T[];
 }
 
+export type DiffStatus = "unchanged" | "lost" | "new" | "changed";
+
+export interface DiffEntry<T> {
+  entry: T;
+  status: DiffStatus;
+}
+
+/**
+ * Merges a list of current entries with an `EntityDiff` delta to produce a flat
+ * list annotated with diff status. Preserves the order of `currentEntries` and
+ * appends new entries at the end.
+ */
+export function buildFlatDiffList<
+  T extends { name: string },
+  TNew extends { name: string },
+>(
+  currentEntries: T[],
+  diff: EntityDiff<TNew>,
+  mapNewEntry: (e: TNew) => T,
+): DiffEntry<T>[] {
+  const lostNames = new Set(diff.lostEntities.map((e) => e.name));
+  const changedNames = new Set(diff.changedEntities.map((e) => e.name));
+
+  const result: DiffEntry<T>[] = currentEntries.map((entry) => {
+    if (lostNames.has(entry.name)) return { entry, status: "lost" as const };
+    if (changedNames.has(entry.name))
+      return { entry, status: "changed" as const };
+    return { entry, status: "unchanged" as const };
+  });
+
+  for (const newEntry of diff.newEntities) {
+    result.push({ entry: mapNewEntry(newEntry), status: "new" });
+  }
+
+  return result;
+}
+
 interface ComponentSpecDiff {
   inputDiff: EntityDiff<InputSpec>;
   outputDiff: EntityDiff<OutputSpec>;

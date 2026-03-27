@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { BlockStack } from "@/components/ui/layout";
+import { VerticalResizeHandle } from "@/components/ui/resize-handle";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
@@ -14,9 +15,11 @@ import { UpgradeFooter } from "./components/UpgradeFooter";
 import { UpgradeHeader } from "./components/UpgradeHeader";
 import { useMockUpgradeCandidates } from "./hooks/useMockUpgradeCandidates";
 import { useSelectionSet } from "./hooks/useSelectionSet";
+import { useUpgradePreviewOverlay } from "./hooks/useUpgradePreviewOverlay";
 import { candidateHasIssues } from "./types";
 
 const WINDOW_ID = "upgrade-components";
+const DEFAULT_LEFT_PANEL_WIDTH = 340;
 
 export function UpgradeComponentsContent() {
   const spec = useSpec();
@@ -29,6 +32,8 @@ export function UpgradeComponentsContent() {
     useSelectionSet(candidateIds);
 
   const selectedCandidates = candidates.filter((c) => selection.has(c.taskId));
+
+  useUpgradePreviewOverlay(selectedCandidates);
 
   const [focusedId, setFocusedId] = useState<string | null>(null);
 
@@ -55,22 +60,30 @@ export function UpgradeComponentsContent() {
         onToggleAll={toggleAll}
       />
       <Separator />
-      <div className="flex flex-1 min-h-0 overflow-hidden">
-        <ScrollArea className="w-1/2 border-r">
-          <BlockStack className="py-1">
-            {candidates.map((candidate) => (
-              <UpgradeCandidateRow
-                key={candidate.taskId}
-                candidate={candidate}
-                checked={selection.has(candidate.taskId)}
-                selected={candidate.taskId === focusedId}
-                onCheckedChange={(checked) => toggle(candidate.taskId, checked)}
-                onSelect={() => setFocusedId(candidate.taskId)}
-              />
-            ))}
-          </BlockStack>
-        </ScrollArea>
-        <div className="flex w-1/2">
+      <div className="flex flex-1 flex-wrap min-h-0 overflow-hidden">
+        <div
+          className="relative shrink-0 border-r"
+          style={{ width: DEFAULT_LEFT_PANEL_WIDTH }}
+        >
+          <ScrollArea className="h-full">
+            <BlockStack className="py-1">
+              {candidates.map((candidate) => (
+                <UpgradeCandidateRow
+                  key={candidate.taskId}
+                  candidate={candidate}
+                  checked={selection.has(candidate.taskId)}
+                  selected={candidate.taskId === focusedId}
+                  onCheckedChange={(checked) =>
+                    toggle(candidate.taskId, checked)
+                  }
+                  onSelect={() => setFocusedId(candidate.taskId)}
+                />
+              ))}
+            </BlockStack>
+          </ScrollArea>
+          <VerticalResizeHandle side="right" minWidth={300} />
+        </div>
+        <div className="flex min-w-[280px] flex-1">
           <UpgradeCandidateDetail candidate={focusedCandidate} />
         </div>
       </div>

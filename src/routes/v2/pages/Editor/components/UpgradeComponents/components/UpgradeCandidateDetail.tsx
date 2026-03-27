@@ -144,9 +144,11 @@ export function UpgradeCandidateDetail({
     <ScrollArea className="h-full">
       <BlockStack className="p-3" gap="3">
         <BlockStack gap="1">
-          <Text size="sm" weight="semibold">
-            {candidate.taskName}
-          </Text>
+          <InlineStack gap="1" blockAlign="center">
+            <Text size="sm" weight="semibold" className="min-w-0 truncate">
+              {candidate.taskName}
+            </Text>
+          </InlineStack>
           <InlineStack gap="1" blockAlign="center">
             <Badge variant="secondary" size="sm">
               {truncateDigest(candidate.currentDigest)}

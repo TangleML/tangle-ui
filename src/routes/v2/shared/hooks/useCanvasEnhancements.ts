@@ -6,8 +6,39 @@ import type {
   CanvasEnhancementParams,
   CanvasEnhancementResult,
 } from "@/routes/v2/shared/nodes/types";
+import type { EdgeOverlayEffect } from "@/routes/v2/shared/store/canvasOverlay.types";
+import type { CanvasOverlayStore } from "@/routes/v2/shared/store/canvasOverlayStore";
 
 const NOOP_ENHANCEMENT = (): CanvasEnhancementResult => ({});
+
+function applyEdgeOverlayEffect(edge: Edge, effect: EdgeOverlayEffect): Edge {
+  const merged: Edge = { ...edge };
+  if (effect.hidden) {
+    merged.hidden = true;
+  }
+  if (effect.opacity !== undefined || effect.style) {
+    merged.style = {
+      ...edge.style,
+      ...effect.style,
+      ...(effect.opacity !== undefined ? { opacity: effect.opacity } : {}),
+    };
+  }
+  return merged;
+}
+
+function applyOverlayEdgeEffects(
+  edges: Edge[],
+  overlayStore: CanvasOverlayStore,
+): Edge[] {
+  const overlay = overlayStore.activeOverlay;
+  if (!overlay?.resolveEdgeEffect) return edges;
+
+  return edges.map((edge) => {
+    const effect = overlay.resolveEdgeEffect!(edge);
+    if (!effect) return edge;
+    return applyEdgeOverlayEffect(edge, effect);
+  });
+}
 
 interface CanvasEnhancementsOutput {
   nodes: Node[];
@@ -27,6 +58,7 @@ interface CanvasEnhancementsOutput {
 export function useCanvasEnhancements(
   registry: NodeTypeRegistry,
   params: CanvasEnhancementParams,
+  overlayStore: CanvasOverlayStore,
 ): CanvasEnhancementsOutput {
   const manifests = registry.all();
 
@@ -60,10 +92,12 @@ export function useCanvasEnhancements(
       ? [...params.nodes, ...collectedExtraNodes]
       : params.nodes;
 
-  const edges =
+  let edges =
     collectedExtraEdges.length > 0
       ? [...currentEdges, ...collectedExtraEdges]
       : currentEdges;
+
+  edges = applyOverlayEdgeEffects(edges, overlayStore);
 
   return { nodes, edges, onEdgeClick: composedOnEdgeClick };
 }

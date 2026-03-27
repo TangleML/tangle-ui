@@ -4,6 +4,7 @@ import { observer } from "mobx-react-lite";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Card } from "@/components/ui/card";
 import { Text } from "@/components/ui/typography";
+import { cn } from "@/lib/utils";
 import type {
   ComponentSpec,
   ComponentSpecJson,
@@ -108,12 +109,14 @@ export const TaskNode = observer(function TaskNode({
   selected,
 }: TaskNodeProps) {
   const { entityId } = data;
-  const { editor } = useSharedStores();
+  const { editor, canvasOverlay } = useSharedStores();
   const showContent = useStore(zoomSelector);
   const useClassicStyle = useFlagValue("classic-node-style");
 
   const spec = useSpec();
   const task = spec?.tasks.find((t) => t.$id === entityId);
+
+  const nodeEffect = canvasOverlay.activeOverlay?.resolveNodeEffect?.(entityId);
 
   const handleClick = (event: React.MouseEvent) => {
     editor.selectNode(id, "task", {
@@ -130,6 +133,10 @@ export const TaskNode = observer(function TaskNode({
         </Text>
       </Card>
     );
+  }
+
+  if (nodeEffect?.hidden) {
+    return null;
   }
 
   const componentSpec = task.componentRef.spec;
@@ -171,13 +178,49 @@ export const TaskNode = observer(function TaskNode({
     onInputClick: handleInputClick,
   };
 
-  if (!showContent) {
-    return <TaskNodeCollapsed {...viewProps} />;
+  const OverrideComponent = nodeEffect?.componentOverride;
+  if (OverrideComponent) {
+    return (
+      <div
+        className={cn(nodeEffect.className)}
+        style={
+          nodeEffect.opacity !== undefined
+            ? { opacity: nodeEffect.opacity }
+            : undefined
+        }
+      >
+        <OverrideComponent {...viewProps} />
+      </div>
+    );
   }
 
-  return useClassicStyle ? (
-    <TaskNodeClassic {...viewProps} />
-  ) : (
-    <TaskNodeFull {...viewProps} />
+  const wrapWithOverlay = (content: React.ReactElement) => {
+    if (!nodeEffect?.className && nodeEffect?.opacity === undefined) {
+      return content;
+    }
+    return (
+      <div
+        className={cn(nodeEffect?.className)}
+        style={
+          nodeEffect?.opacity !== undefined
+            ? { opacity: nodeEffect.opacity }
+            : undefined
+        }
+      >
+        {content}
+      </div>
+    );
+  };
+
+  if (!showContent) {
+    return wrapWithOverlay(<TaskNodeCollapsed {...viewProps} />);
+  }
+
+  return wrapWithOverlay(
+    useClassicStyle ? (
+      <TaskNodeClassic {...viewProps} />
+    ) : (
+      <TaskNodeFull {...viewProps} />
+    ),
   );
 });

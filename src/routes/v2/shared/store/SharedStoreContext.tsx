@@ -6,6 +6,7 @@ import {
   useRequiredContext,
 } from "@/hooks/useRequiredContext";
 
+import { CanvasOverlayStore } from "./canvasOverlayStore";
 import { EditorStore } from "./editorStore";
 import { KeyboardStore } from "./keyboardStore";
 import { NavigationStore } from "./navigationStore";
@@ -14,11 +15,13 @@ class SharedUIStore {
   readonly editor: EditorStore;
   readonly keyboard: KeyboardStore;
   readonly navigation: NavigationStore;
+  readonly canvasOverlay: CanvasOverlayStore;
 
   constructor() {
     this.editor = new EditorStore();
     this.keyboard = new KeyboardStore();
     this.navigation = new NavigationStore(this.editor);
+    this.canvasOverlay = new CanvasOverlayStore();
   }
 }
 
