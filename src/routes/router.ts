@@ -20,6 +20,7 @@ import RootLayout from "../components/layout/RootLayout";
 import { DashboardFavoritesView } from "./Dashboard/DashboardFavoritesView";
 import { DashboardLayout } from "./Dashboard/DashboardLayout";
 import { DashboardRecentlyViewedView } from "./Dashboard/DashboardRecentlyViewedView";
+import { DashboardRunsView } from "./Dashboard/DashboardRunsView";
 import Editor from "./Editor";
 import Home from "./Home";
 import { ImportPage } from "./Import";
@@ -112,7 +113,7 @@ const ComingSoon = () => null;
 const dashboardRunsRoute = createRoute({
   getParentRoute: () => dashboardRoute,
   path: "/runs",
-  component: ComingSoon,
+  component: DashboardRunsView,
 });
 
 const dashboardPipelinesRoute = createRoute({
