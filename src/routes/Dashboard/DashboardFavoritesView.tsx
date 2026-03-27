@@ -1,4 +1,4 @@
-import { useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight, GitBranch, Play, X } from "lucide-react";
 import { useState } from "react";
 
@@ -18,23 +18,19 @@ function getFavoriteUrl(item: FavoriteItem): string {
 }
 
 const FavoriteCard = ({ item }: { item: FavoriteItem }) => {
-  const navigate = useNavigate();
   const { removeFavorite } = useFavorites();
 
   const isPipeline = item.type === "pipeline";
 
   return (
-    <div
-      onClick={() => navigate({ to: getFavoriteUrl(item) })}
-      className={`group relative flex flex-col gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${
-        isPipeline
-          ? "bg-violet-50/40 hover:bg-violet-50 border-violet-100"
-          : "bg-emerald-50/40 hover:bg-emerald-50 border-emerald-100"
-      }`}
+    <Link
+      to={getFavoriteUrl(item)}
+      className="group relative flex flex-col gap-2.5 p-3 rounded-lg transition-all shadow-sm hover:shadow-md bg-card border border-border hover:border-foreground/20 no-underline"
     >
       {/* Remove button */}
       <button
         onClick={(e) => {
+          e.preventDefault();
           e.stopPropagation();
           removeFavorite(item.type, item.id);
         }}
@@ -44,21 +40,23 @@ const FavoriteCard = ({ item }: { item: FavoriteItem }) => {
         <X className="h-3.5 w-3.5" />
       </button>
 
-      {/* Type badge */}
-      <InlineStack gap="1" blockAlign="center">
-        {isPipeline ? (
-          <GitBranch className="h-3.5 w-3.5 shrink-0 text-violet-500" />
-        ) : (
-          <Play className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
-        )}
-        <Text
-          size="xs"
-          weight="semibold"
-          className={isPipeline ? "text-violet-600" : "text-emerald-600"}
+      {/* Type pill */}
+      <div className="flex">
+        <span
+          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs font-semibold ${
+            isPipeline
+              ? "bg-violet-100 text-violet-700"
+              : "bg-emerald-100 text-emerald-700"
+          }`}
         >
+          {isPipeline ? (
+            <GitBranch className="h-3 w-3" />
+          ) : (
+            <Play className="h-3 w-3" />
+          )}
           {isPipeline ? "Pipeline" : "Run"}
-        </Text>
-      </InlineStack>
+        </span>
+      </div>
 
       {/* Name */}
       <Text size="sm" weight="semibold" className="truncate pr-4 leading-tight">
@@ -69,7 +67,7 @@ const FavoriteCard = ({ item }: { item: FavoriteItem }) => {
       <Text size="xs" className="truncate text-muted-foreground font-mono">
         {item.id}
       </Text>
-    </div>
+    </Link>
   );
 };
 
