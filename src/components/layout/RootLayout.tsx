@@ -1,4 +1,4 @@
-import { Outlet } from "@tanstack/react-router";
+import { Outlet, useLocation } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/router-devtools";
 import { ToastContainer } from "react-toastify";
 
@@ -11,6 +11,8 @@ import AppMenu from "./AppMenu";
 
 const RootLayout = () => {
   useDocumentTitle();
+  const { pathname } = useLocation();
+  const isDashboard = pathname.startsWith("/dashboard");
 
   return (
     <BackendProvider>
@@ -24,7 +26,7 @@ const RootLayout = () => {
             <Outlet />
           </main>
 
-          <AppFooter />
+          {!isDashboard && <AppFooter />}
 
           {import.meta.env.VITE_ENABLE_ROUTER_DEVTOOLS === "true" && (
             <TanStackRouterDevtools />
