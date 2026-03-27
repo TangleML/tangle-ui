@@ -1,6 +1,5 @@
 import { action, makeObservable, observable, runInAction } from "mobx";
 
-import { pipelineStorageDb } from "./db";
 import type { PipelineFolder } from "./PipelineFolder";
 import { deleteEntry, updateEntry } from "./pipelineRegistry";
 

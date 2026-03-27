@@ -6,6 +6,7 @@ import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 
 import { candidateHasIssues, type UpgradeCandidate } from "../types";
+import { NavigateToEntityButton } from "./NavigateToEntityButton";
 
 interface UpgradeCandidateRowProps {
   candidate: UpgradeCandidate;
@@ -63,9 +64,21 @@ export function UpgradeCandidateRow({
         <StatusIcon hasIssues={candidateHasIssues(candidate)} />
       </InlineStack>
       <BlockStack className="flex-1 min-w-0 gap-0.5">
-        <Text size="sm" weight="semibold" className="truncate no-wrap">
-          {candidate.taskName}
-        </Text>
+        <InlineStack
+          gap="1"
+          blockAlign="start"
+          className="w-full"
+          align="space-between"
+          wrap="nowrap"
+        >
+          <Text size="sm" weight="semibold" className="truncate no-wrap">
+            {candidate.taskName}
+          </Text>
+          <NavigateToEntityButton
+            entityId={candidate.taskId}
+            entityType="task"
+          />
+        </InlineStack>
         <InlineStack
           gap="1"
           blockAlign="center"

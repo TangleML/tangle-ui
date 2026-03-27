@@ -165,6 +165,7 @@ export function useMockUpgradeCandidates(enabled = true): UpgradeCandidate[] {
   if (!enabled || !spec) return [];
 
   const candidates: UpgradeCandidate[] = [];
+  let count = 0;
   for (const task of spec.tasks) {
     const candidate = buildCandidate(
       task.$id,
@@ -173,7 +174,28 @@ export function useMockUpgradeCandidates(enabled = true): UpgradeCandidate[] {
       spec,
     );
     if (candidate) candidates.push(candidate);
+    count++;
+    if (count > spec.tasks.length / 2) break;
   }
+
+  candidates.push({
+    taskId: spec.tasks[count].$id,
+    taskName: spec.tasks[count].name,
+    currentDigest: "clean-digest",
+    newComponentRef: spec.tasks[count].componentRef,
+    inputDiff: {
+      lostEntities: [],
+      newEntities: [],
+      changedEntities: [],
+    },
+    outputDiff: {
+      lostEntities: [],
+      newEntities: [],
+      changedEntities: [],
+    },
+    lostBindings: [],
+    predictedIssues: [],
+  });
 
   return candidates;
 }

@@ -31,10 +31,6 @@ export async function findByStorageKey(
     .first();
 }
 
-export async function getAllEntries(): Promise<PipelineRegistryEntry[]> {
-  return pipelineStorageDb.pipeline_registry.toArray();
-}
-
 export async function getAllByFolderId(
   folderId: string,
 ): Promise<PipelineRegistryEntry[]> {
