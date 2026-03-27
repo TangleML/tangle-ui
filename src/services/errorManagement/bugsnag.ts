@@ -15,6 +15,19 @@ const TANGLE_ENV = import.meta.env.VITE_TANGLE_ENV;
 
 const GENERIC_ERROR_CLASS = "Error";
 
+// Errors that are intentionally suppressed from Bugsnag reporting.
+//
+// This is NOT an escape hatch for silencing noisy or inconvenient errors.
+// Only add an error here if it meets ALL of the following criteria:
+//   1. It is well understood and confirmed to be non-problematic
+//   2. It cannot be resolved at the source (e.g. a browser/third-party quirk)
+//   3. It provides no actionable signal for debugging
+//
+// Use with discretion — suppressing real errors makes incidents harder to catch.
+const IGNORED_ERROR_MESSAGES = [
+  "ResizeObserver loop completed with undelivered notifications.",
+];
+
 export const IS_BUGSNAG_ENABLED = Boolean(BUGSNAG_API_KEY && TANGLE_ENV);
 
 const getBugsnagConfig = (): BrowserConfig => {
@@ -31,10 +44,7 @@ const getBugsnagConfig = (): BrowserConfig => {
 };
 
 export const handleBugsnagError = (event: Event): boolean | void => {
-  if (
-    event.errors[0]?.errorMessage ===
-    "ResizeObserver loop completed with undelivered notifications."
-  ) {
+  if (IGNORED_ERROR_MESSAGES.includes(event.errors[0]?.errorMessage ?? "")) {
     return false;
   }
 
