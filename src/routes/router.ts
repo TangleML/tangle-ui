@@ -18,6 +18,7 @@ import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 
 import RootLayout from "../components/layout/RootLayout";
 import { DashboardFavoritesView } from "./Dashboard/DashboardFavoritesView";
+import { DashboardHomeView } from "./Dashboard/DashboardHomeView";
 import { DashboardLayout } from "./Dashboard/DashboardLayout";
 import { DashboardPipelinesView } from "./Dashboard/DashboardPipelinesView";
 import { DashboardRecentlyViewedView } from "./Dashboard/DashboardRecentlyViewedView";
@@ -103,9 +104,7 @@ const dashboardRoute = createRoute({
 const dashboardIndexRoute = createRoute({
   getParentRoute: () => dashboardRoute,
   path: "/",
-  beforeLoad: () => {
-    throw redirect({ to: APP_ROUTES.DASHBOARD_RUNS });
-  },
+  component: DashboardHomeView,
 });
 
 // Placeholder component — replaced in subsequent PRs

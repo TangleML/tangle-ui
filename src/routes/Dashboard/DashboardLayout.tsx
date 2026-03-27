@@ -20,11 +20,18 @@ interface SidebarItem {
   to: string;
   label: string;
   icon: IconName;
+  exact?: boolean;
 }
 
 const SIDEBAR_ITEMS: SidebarItem[] = [
-  { to: "/dashboard/runs", label: "Runs", icon: "Play" },
-  { to: "/dashboard/pipelines", label: "Pipelines", icon: "GitBranch" },
+  {
+    to: "/dashboard",
+    label: "My Dashboard",
+    icon: "LayoutDashboard",
+    exact: true,
+  },
+  { to: "/dashboard/pipelines", label: "My Pipelines", icon: "GitBranch" },
+  { to: "/dashboard/runs", label: "All Runs", icon: "Play" },
   { to: "/dashboard/components", label: "Components", icon: "Package" },
   { to: "/dashboard/favorites", label: "Favorites", icon: "Star" },
   { to: "/dashboard/recently-viewed", label: "Recently Viewed", icon: "Clock" },
@@ -71,6 +78,7 @@ export function DashboardLayout() {
               to={item.to}
               className="w-full"
               activeProps={{ className: "is-active" }}
+              activeOptions={item.exact ? { exact: true } : undefined}
             >
               {({ isActive }) => (
                 <div className={navItemClass(isActive)}>
