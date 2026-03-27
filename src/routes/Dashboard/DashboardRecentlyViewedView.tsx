@@ -73,7 +73,10 @@ const RecentlyViewedCard = ({ item }: { item: RecentlyViewedItem }) => {
 };
 
 export function DashboardRecentlyViewedView() {
-  const { recentlyViewed } = useRecentlyViewed();
+  const { recentlyViewed: allRecentlyViewed } = useRecentlyViewed();
+  const recentlyViewed = allRecentlyViewed.filter(
+    (item) => item.type !== "component",
+  );
   const [page, setPage] = useState(0);
 
   const totalPages = Math.ceil(recentlyViewed.length / PAGE_SIZE);
