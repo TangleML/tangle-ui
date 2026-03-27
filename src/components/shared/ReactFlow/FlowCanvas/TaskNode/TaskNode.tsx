@@ -5,10 +5,12 @@ import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEdgeSelectionHighlight } from "@/hooks/useEdgeSelectionHighlight";
 import { cn } from "@/lib/utils";
+import { useBackend } from "@/providers/BackendProvider";
 import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
 import { TaskNodeProvider } from "@/providers/TaskNodeProvider";
+import { useFetchContainerExecutionState } from "@/services/executionService";
 import type { TaskNodeData } from "@/types/taskNode";
-import { isCacheDisabled } from "@/utils/cache";
+import { isCacheDisabled, isCachedExecution } from "@/utils/cache";
 
 import { StatusIndicator } from "./StatusIndicator";
 import { TaskNodeCard } from "./TaskNodeCard";
@@ -21,6 +23,7 @@ const TaskNodeSkeleton = () => (
 
 const TaskNodeInternal = ({ data, selected, id }: NodeProps) => {
   const executionData = useExecutionDataOptional();
+  const { backendUrl } = useBackend();
 
   const typedData = useMemo(() => data as TaskNodeData, [data]);
 
@@ -29,7 +32,26 @@ const TaskNodeInternal = ({ data, selected, id }: NodeProps) => {
     return executionData?.taskExecutionStatusMap.get(taskId);
   }, [executionData?.taskExecutionStatusMap, typedData.taskId]);
 
+  const executionId = useMemo(() => {
+    const taskId = typedData.taskId ?? "";
+    return executionData?.details?.child_task_execution_ids?.[taskId];
+  }, [executionData?.details?.child_task_execution_ids, typedData.taskId]);
+
+  const { data: containerState } = useFetchContainerExecutionState(
+    executionId,
+    backendUrl,
+  );
+
   const disabledCache = isCacheDisabled(typedData.taskSpec);
+
+  const cached = useMemo(
+    () =>
+      isCachedExecution(
+        containerState?.started_at,
+        executionData?.metadata?.created_at,
+      ),
+    [containerState?.started_at, executionData?.metadata?.created_at],
+  );
 
   const { isConnectedToSelectedEdge, hasAnySelectedEdge } =
     useEdgeSelectionHighlight(id);
@@ -43,7 +65,11 @@ const TaskNodeInternal = ({ data, selected, id }: NodeProps) => {
         )}
       >
         {!!status && (
-          <StatusIndicator status={status} disabledCache={disabledCache} />
+          <StatusIndicator
+            status={status}
+            disabledCache={disabledCache}
+            cached={cached}
+          />
         )}
         <TaskNodeCard />
       </div>

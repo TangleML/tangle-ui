@@ -77,6 +77,19 @@ export function isCacheDisabled(taskSpec?: TaskSpec): boolean {
   );
 }
 
+/**
+ * Determines if a task execution was cached by comparing its start time
+ * against the pipeline run's creation time. If the execution started before
+ * the run was created, it was reused from a previous run (i.e., cached).
+ */
+export function isCachedExecution(
+  executionStartedAt: string | null | undefined,
+  runCreatedAt: string | null | undefined,
+): boolean {
+  if (!executionStartedAt || !runCreatedAt) return false;
+  return new Date(executionStartedAt) < new Date(runCreatedAt);
+}
+
 export function removeCachingStrategyFromSpec(taskSpec: TaskSpec): TaskSpec {
   if (taskSpec.executionOptions?.cachingStrategy) {
     const updatedExecutionOptions = {
