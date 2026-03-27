@@ -5,12 +5,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { BlockStack } from "@/components/ui/layout";
+import type { PipelineRef } from "@/routes/PipelineFolders/context/FolderNavigationContext";
 import { PipelineFolders } from "@/routes/PipelineFolders/PipelineFolders";
 
 interface OpenPipelineDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onPipelineClick: (name: string) => void;
+  onPipelineClick: (pipeline: PipelineRef) => void;
 }
 
 export function OpenPipelineDialog({

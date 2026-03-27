@@ -6,31 +6,27 @@ import {
   serializeComponentSpecToYaml,
 } from "@/models/componentSpec";
 import type { NavigationStore } from "@/routes/v2/shared/store/navigationStore";
-import { writeComponentToFileListFromText } from "@/utils/componentStore";
-import {
-  defaultPipelineYamlWithName,
-  USER_PIPELINES_LIST_NAME,
-} from "@/utils/constants";
+import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
+import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
+import { defaultPipelineYamlWithName } from "@/utils/constants";
 import { componentSpecToYaml } from "@/utils/yaml";
 
-export async function createNewPipeline(): Promise<string> {
+export async function createNewPipeline(
+  storage: PipelineStorageService,
+): Promise<PipelineFile> {
   const name = (generate(4) as string[]).join(" ");
   const componentText = defaultPipelineYamlWithName(name);
-  await writeComponentToFileListFromText(
-    USER_PIPELINES_LIST_NAME,
-    name,
-    componentText,
-  );
-  return name;
+
+  return storage.rootFolder.addFile(name, componentText);
 }
 
 export async function savePipelineAs(
   navigation: NavigationStore,
   newName: string,
-): Promise<void> {
+  storage: PipelineStorageService,
+): Promise<PipelineFile | undefined> {
   const componentSpec = navigation.rootSpec;
-
-  if (!componentSpec) return;
+  if (!componentSpec) return undefined;
 
   const serialized = {
     ...serializeComponentSpec(componentSpec),
@@ -38,16 +34,11 @@ export async function savePipelineAs(
   };
   const componentText = componentSpecToYaml(serialized);
 
-  await writeComponentToFileListFromText(
-    USER_PIPELINES_LIST_NAME,
-    newName,
-    componentText,
-  );
+  return storage.rootFolder.addFile(newName, componentText);
 }
 
 export function exportCurrentPipeline(navigation: NavigationStore): void {
   const componentSpec = navigation.rootSpec;
-
   if (!componentSpec) return;
 
   const componentText = serializeComponentSpecToYaml(componentSpec);

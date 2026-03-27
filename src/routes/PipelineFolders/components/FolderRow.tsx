@@ -22,6 +22,7 @@ import { TableCell, TableRow } from "@/components/ui/table";
 import { Paragraph } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { APP_ROUTES } from "@/routes/router";
+import type { PipelineFolder } from "@/services/pipelineStorage/PipelineFolder";
 import { formatDate } from "@/utils/date";
 
 import { useFolderNavigation } from "../context/FolderNavigationContext";
@@ -30,7 +31,6 @@ import {
   useRenameFolder,
   useToggleFavorite,
 } from "../hooks/useFolderMutations";
-import type { PipelineFolder } from "../types";
 import { RenameFolderDialog } from "./RenameFolderDialog";
 
 const DRAG_MIME = "application/x-folder-move";
@@ -40,6 +40,7 @@ interface FolderRowProps {
   isSelected?: boolean;
   onSelect?: (checked: boolean) => void;
   onItemDrop?: (data: string) => void;
+  canAcceptDrop?: boolean;
   dragData?: string;
   isDragging?: boolean;
   dragItemCount?: number;
@@ -54,6 +55,7 @@ export function FolderRow({
   isSelected = false,
   onSelect,
   onItemDrop,
+  canAcceptDrop = true,
   dragData,
   isDragging,
   dragItemCount,
@@ -115,9 +117,13 @@ export function FolderRow({
   };
 
   const handleDragOver = (e: DragEvent) => {
-    if (e.dataTransfer.types.includes(DRAG_MIME)) {
+    if (!e.dataTransfer.types.includes(DRAG_MIME)) return;
+
+    if (canAcceptDrop) {
       e.preventDefault();
       e.dataTransfer.dropEffect = "move";
+    } else {
+      e.dataTransfer.dropEffect = "none";
     }
   };
 
@@ -155,7 +161,8 @@ export function FolderRow({
       <TableRow
         className={cn(
           "cursor-pointer hover:bg-muted/50 group",
-          isDragOver && "bg-primary/10 ring-1 ring-primary",
+          isDragOver && canAcceptDrop && "bg-primary/10 ring-1 ring-primary",
+          isDragOver && !canAcceptDrop && "opacity-50 cursor-not-allowed",
           isDragging && "opacity-50",
         )}
         onClick={handleRowClick}
@@ -197,6 +204,7 @@ export function FolderRow({
             {formattedDate}
           </Paragraph>
         </TableCell>
+        <TableCell />
         <TableCell />
         <TableCell />
         <TableCell className="w-0">

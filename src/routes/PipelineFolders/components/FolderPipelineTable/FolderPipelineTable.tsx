@@ -1,3 +1,4 @@
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { type ChangeEvent, useState } from "react";
 
 import { PaginationControls } from "@/components/shared/PaginationControls";
@@ -18,26 +19,21 @@ import {
 } from "@/components/ui/table";
 import { Text } from "@/components/ui/typography";
 import { usePagination } from "@/hooks/usePagination";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 
 import { useBulkDeleteMutation } from "../../hooks/useBulkDeleteMutation";
-import { useConnectedFolderPipelines } from "../../hooks/useConnectedFolderPipelines";
-import {
-  useConnectedFoldersInParent,
-  useRemoveConnectedFolder,
-} from "../../hooks/useConnectedFolders";
 import { useDropMutation } from "../../hooks/useDropMutation";
 import { useFolderBreadcrumbs } from "../../hooks/useFolderBreadcrumbs";
+import { useDisconnectFolder } from "../../hooks/useFolderMutations";
 import { useFolderPipelines } from "../../hooks/useFolderPipelines";
 import { useFolders } from "../../hooks/useFolders";
-import { useImportLocalPipeline } from "../../hooks/useImportLocalPipeline";
 import { useSelection } from "../../hooks/useSelection";
-import { type DragItem, type PipelineFolder } from "../../types";
+import { type DragItem, FoldersQueryKeys } from "../../types";
 import { MovePipelineDialog } from "../MovePipelineDialog";
-import { ConnectedFolderPermissionBanner } from "./components/ConnectedFolderPermissionBanner";
 import { FolderList } from "./components/FolderList";
-import { LocalPipelineRows } from "./components/LocalPipelineRows";
+import { FolderPermissionBanner } from "./components/FolderPermissionBanner";
 import { ParentFolderRow } from "./components/ParentFolderRow";
-import { RegularPipelineRows } from "./components/RegularPipelineRows";
+import { PipelineRows } from "./components/PipelineRows";
 import { SelectionToolbar } from "./components/SelectionToolbar";
 
 interface FolderPipelineTableProps {
@@ -57,21 +53,27 @@ const FolderPipelineTableSkeleton = () => (
 
 export const FolderPipelineTable = withSuspenseWrapper(
   function FolderPipelineTableContent({ folderId }: FolderPipelineTableProps) {
+    const storage = usePipelineStorage();
+
+    const { data: currentFolder } = useSuspenseQuery({
+      queryKey: [...FoldersQueryKeys.Pipelines(folderId), "folder"],
+      queryFn: () =>
+        folderId === null
+          ? Promise.resolve(storage.rootFolder)
+          : storage.findFolderById(folderId),
+    });
+
     const { data: folders } = useFolders(folderId);
     const { data: pipelines, refetch } = useFolderPipelines(folderId);
     const { data: breadcrumbPath } = useFolderBreadcrumbs(folderId);
-    const { data: connectedFolders } = useConnectedFoldersInParent(folderId);
-    const connectedFolderContent = useConnectedFolderPipelines(folderId);
 
     const selection = useSelection();
     const [searchQuery, setSearchQuery] = useState("");
     const [moveDialogOpen, setMoveDialogOpen] = useState(false);
     const [draggingIds, setDraggingIds] = useState<Set<string>>(new Set());
 
-    const {
-      mutate: removeConnectedFolder,
-      isPending: isRemovingConnectedFolder,
-    } = useRemoveConnectedFolder();
+    const { mutate: disconnectFolder, isPending: isDisconnecting } =
+      useDisconnectFolder();
 
     const { mutate: handleDrop } = useDropMutation({
       onSettled: selection.clearSelection,
@@ -85,63 +87,28 @@ export const FolderPipelineTable = withSuspenseWrapper(
         },
       });
 
-    const { mutate: importLocal, variables: importVariables } =
-      useImportLocalPipeline();
-
-    const isInsideConnectedFolder = connectedFolderContent.isConnectedFolder;
-
-    const connectedFoldersPipelineFolders: PipelineFolder[] =
-      connectedFolders.map((cf) => ({
-        id: cf.id,
-        name: cf.name,
-        parentId: cf.parentId,
-        createdAt: cf.connectedAt,
-      }));
-
-    const allFolders = [...folders, ...connectedFoldersPipelineFolders];
+    const requiresPermission = currentFolder.requiresPermission;
+    const canMoveOut = currentFolder.canMoveFilesOut;
 
     const filteredFolders = folders.filter((f) =>
       f.name.toLowerCase().includes(searchQuery.toLowerCase()),
     );
 
-    const filteredConnectedFolders = connectedFoldersPipelineFolders.filter(
-      (f) => f.name.toLowerCase().includes(searchQuery.toLowerCase()),
+    const filteredPipelines = pipelines.filter((p) =>
+      p.storageKey.toLowerCase().includes(searchQuery.toLowerCase()),
     );
 
-    const filteredPipelines = isInsideConnectedFolder
-      ? []
-      : pipelines.filter(([name]) =>
-          name.toLowerCase().includes(searchQuery.toLowerCase()),
-        );
-
-    const localPipelineFiles = isInsideConnectedFolder
-      ? connectedFolderContent.files.filter((f) =>
-          f.name.toLowerCase().includes(searchQuery.toLowerCase()),
-        )
-      : [];
-
-    const regularPagination = usePagination(filteredPipelines);
-    const localPagination = usePagination(localPipelineFiles);
-
-    const activePagination = isInsideConnectedFolder
-      ? localPagination
-      : regularPagination;
+    const pagination = usePagination(filteredPipelines);
 
     const handleSearch = (e: ChangeEvent<HTMLInputElement>) => {
       setSearchQuery(e.target.value);
-      regularPagination.resetPage();
-      localPagination.resetPage();
+      pagination.resetPage();
     };
 
     const handleSelectAll = (checked: boolean) => {
       if (checked) {
-        const pipelineIds = isInsideConnectedFolder
-          ? localPipelineFiles.map((f) => f.fileName)
-          : filteredPipelines.map(([name]) => name);
-        const folderIds = [
-          ...filteredFolders.map((f) => f.id),
-          ...filteredConnectedFolders.map((f) => f.id),
-        ];
+        const pipelineIds = filteredPipelines.map((p) => p.id);
+        const folderIds = filteredFolders.map((f) => f.id);
         selection.selectAll({ pipelineIds, folderIds });
       } else {
         selection.clearSelection();
@@ -152,8 +119,7 @@ export const FolderPipelineTable = withSuspenseWrapper(
       const isItemSelected =
         (item.type === "pipeline" &&
           selection.selectedPipelines.has(item.id)) ||
-        ((item.type === "folder" || item.type === "connected-folder") &&
-          selection.selectedFolders.has(item.id));
+        (item.type === "folder" && selection.selectedFolders.has(item.id));
 
       if (isItemSelected && selection.totalSelected > 1) {
         return [
@@ -178,38 +144,20 @@ export const FolderPipelineTable = withSuspenseWrapper(
       setMoveDialogOpen(false);
     };
 
-    const hasContent =
-      allFolders.length > 0 ||
-      pipelines.length > 0 ||
-      localPipelineFiles.length > 0;
+    const hasContent = folders.length > 0 || pipelines.length > 0;
 
     const isAllSelected =
       hasContent &&
       filteredFolders.every((f) => selection.selectedFolders.has(f.id)) &&
-      filteredConnectedFolders.every((f) =>
-        selection.selectedFolders.has(f.id),
-      ) &&
-      (isInsideConnectedFolder
-        ? localPipelineFiles.every((f) =>
-            selection.selectedPipelines.has(f.fileName),
-          )
-        : filteredPipelines.every(([name]) =>
-            selection.selectedPipelines.has(name),
-          ));
-
-    const connectedFolderIds = new Set(connectedFolders.map((cf) => cf.id));
+      filteredPipelines.every((p) => selection.selectedPipelines.has(p.id));
 
     return (
       <BlockStack gap="4" className="w-full">
-        {isInsideConnectedFolder && (
-          <ConnectedFolderPermissionBanner
-            connectedFolderContent={connectedFolderContent}
-          />
+        {requiresPermission && (
+          <FolderPermissionBanner folder={currentFolder} onGranted={refetch} />
         )}
 
-        {hasContent ||
-        (isInsideConnectedFolder &&
-          connectedFolderContent.permission === "granted") ? (
+        {hasContent ? (
           <Table className="table-fixed">
             <TableHeader>
               <TableRow className="text-xs">
@@ -258,43 +206,32 @@ export const FolderPipelineTable = withSuspenseWrapper(
 
               <FolderList
                 folders={filteredFolders}
-                connectedFolders={filteredConnectedFolders}
                 selectedFolders={selection.selectedFolders}
                 draggingIds={draggingIds}
+                canDrag={canMoveOut}
                 getDragItems={getDragItems}
                 onSelectFolder={selection.selectFolder}
                 onDrop={(targetFolderId, data) =>
                   handleDrop({ targetFolderId, rawData: data })
                 }
                 onDragStateChange={handleDragStateChange}
-                removeConnectedFolder={removeConnectedFolder}
-                isRemovingConnectedFolder={isRemovingConnectedFolder}
+                disconnectFolder={disconnectFolder}
+                isDisconnecting={isDisconnecting}
               />
 
-              {isInsideConnectedFolder ? (
-                <LocalPipelineRows
-                  pipelines={localPagination.paginatedItems}
-                  selectedPipelines={selection.selectedPipelines}
-                  onSelectPipeline={selection.selectPipeline}
-                  onImport={importLocal}
-                  importingFileName={importVariables?.fileName}
-                />
-              ) : (
-                <RegularPipelineRows
-                  pipelines={regularPagination.paginatedItems}
-                  selectedPipelines={selection.selectedPipelines}
-                  draggingIds={draggingIds}
-                  getDragItems={getDragItems}
-                  onSelectPipeline={selection.selectPipeline}
-                  onDragStateChange={handleDragStateChange}
-                  onDelete={() => refetch()}
-                />
-              )}
+              <PipelineRows
+                pipelines={pagination.paginatedItems}
+                selectedPipelines={selection.selectedPipelines}
+                draggingIds={draggingIds}
+                canDrag={canMoveOut}
+                getDragItems={getDragItems}
+                onSelectPipeline={selection.selectPipeline}
+                onDragStateChange={handleDragStateChange}
+                onDelete={() => refetch()}
+              />
 
               {filteredFolders.length === 0 &&
-                filteredConnectedFolders.length === 0 &&
-                filteredPipelines.length === 0 &&
-                localPipelineFiles.length === 0 && (
+                filteredPipelines.length === 0 && (
                   <TableRow>No items found.</TableRow>
                 )}
             </TableBody>
@@ -306,17 +243,18 @@ export const FolderPipelineTable = withSuspenseWrapper(
         )}
 
         <PaginationControls
-          currentPage={activePagination.currentPage}
-          totalPages={activePagination.totalPages}
-          hasNextPage={activePagination.hasNextPage}
-          hasPreviousPage={activePagination.hasPreviousPage}
-          onNextPage={activePagination.goToNextPage}
-          onPreviousPage={activePagination.goToPreviousPage}
-          onReset={activePagination.resetPage}
+          currentPage={pagination.currentPage}
+          totalPages={pagination.totalPages}
+          hasNextPage={pagination.hasNextPage}
+          hasPreviousPage={pagination.hasPreviousPage}
+          onNextPage={pagination.goToNextPage}
+          onPreviousPage={pagination.goToPreviousPage}
+          onReset={pagination.resetPage}
         />
 
         <SelectionToolbar
           totalSelected={selection.totalSelected}
+          canMove={canMoveOut}
           onMove={() => setMoveDialogOpen(true)}
           onDelete={() => bulkDelete(Array.from(selection.selectedPipelines))}
           onClear={selection.clearSelection}
@@ -326,10 +264,8 @@ export const FolderPipelineTable = withSuspenseWrapper(
         <MovePipelineDialog
           open={moveDialogOpen}
           onOpenChange={setMoveDialogOpen}
-          pipelineNames={Array.from(selection.selectedPipelines)}
-          folderIds={Array.from(selection.selectedFolders).filter(
-            (id) => !connectedFolderIds.has(id),
-          )}
+          pipelineIds={Array.from(selection.selectedPipelines)}
+          folderIds={Array.from(selection.selectedFolders)}
           currentFolderId={folderId}
           onMoveComplete={handleMoveComplete}
         />

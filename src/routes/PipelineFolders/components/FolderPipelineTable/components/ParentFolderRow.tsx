@@ -5,9 +5,9 @@ import { InlineStack } from "@/components/ui/layout";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Text } from "@/components/ui/typography";
 import { APP_ROUTES } from "@/routes/router";
+import type { PipelineFolder } from "@/services/pipelineStorage/PipelineFolder";
 
 import { useFolderNavigation } from "../../../context/FolderNavigationContext";
-import type { PipelineFolder } from "../../../types";
 
 interface ParentFolderRowProps {
   breadcrumbPath: PipelineFolder[];

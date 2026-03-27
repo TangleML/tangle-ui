@@ -1,6 +1,6 @@
 import "@xyflow/react/dist/style.css";
 
-import { useParams } from "@tanstack/react-router";
+import { useParams, useSearch } from "@tanstack/react-router";
 import { ReactFlowProvider } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
 import { useEffect } from "react";
@@ -11,6 +11,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
 import { ComponentLibraryProvider } from "@/providers/ComponentLibraryProvider";
 import { ForcedSearchProvider } from "@/providers/ComponentLibraryProvider/ForcedSearchProvider";
+import type { PipelineRef } from "@/routes/PipelineFolders/context/FolderNavigationContext";
 import { useDockAreaAccordion } from "@/routes/v2/shared/hooks/useDockAreaAccordion";
 import { useFocusMode } from "@/routes/v2/shared/hooks/useFocusMode";
 import { NodeRegistryProvider } from "@/routes/v2/shared/nodes/NodeRegistryContext";
@@ -44,7 +45,7 @@ import { editorRegistry } from "./nodes";
 import { EditorSessionProvider } from "./store/EditorSessionContext";
 
 interface PipelineEditorProps {
-  pipelineName: string;
+  pipelineRef: PipelineRef;
 }
 
 const PipelineEditorSkeleton = () => {
@@ -59,15 +60,15 @@ const PipelineEditorSkeleton = () => {
 };
 
 const PipelineEditor = withSuspenseWrapper(
-  observer(({ pipelineName }: PipelineEditorProps) => {
+  observer(({ pipelineRef }: PipelineEditorProps) => {
     const {
       data: { spec: rootSpec, restoredUndoStore },
-    } = useLoadSpec(pipelineName);
+    } = useLoadSpec(pipelineRef);
     const { navigation } = useSharedStores();
 
     useWindowPersistence("editor");
     useDockAreaAccordion();
-    useSpecLifecycle(rootSpec, pipelineName, restoredUndoStore);
+    useSpecLifecycle(rootSpec, pipelineRef, restoredUndoStore);
     useSelectionWindowSync();
     usePropertiesWindowPositioning();
     useLinkedWindowCleanup();
@@ -114,12 +115,12 @@ const PipelineEditor = withSuspenseWrapper(
   PipelineEditorSkeleton,
 );
 
-function EditorV2Content({ pipelineName }: { pipelineName: string | null }) {
+function EditorV2Content({ pipelineRef }: { pipelineRef: PipelineRef | null }) {
   const { navigation } = useSharedStores();
 
   useEffect(() => {
-    navigation.setRequestedPipelineName(pipelineName);
-  }, [navigation, pipelineName]);
+    navigation.setRequestedPipelineName(pipelineRef?.name ?? null);
+  }, [navigation, pipelineRef?.name]);
 
   return (
     <>
@@ -127,8 +128,8 @@ function EditorV2Content({ pipelineName }: { pipelineName: string | null }) {
       <ReactFlowProvider>
         <ForcedSearchProvider>
           <ComponentLibraryProvider>
-            {pipelineName ? (
-              <PipelineEditor pipelineName={pipelineName} />
+            {pipelineRef ? (
+              <PipelineEditor pipelineRef={pipelineRef} />
             ) : (
               <EmptyEditorState />
             )}
@@ -144,16 +145,26 @@ function EditorV2Content({ pipelineName }: { pipelineName: string | null }) {
  */
 export function EditorV2() {
   const params = useParams({ strict: false });
+  const search = useSearch({ strict: false });
+  const fileId =
+    "fileId" in search && typeof search.fileId === "string"
+      ? search.fileId
+      : undefined;
+
   const pipelineName =
     "pipelineName" in params && typeof params.pipelineName === "string"
       ? params.pipelineName
       : null;
 
+  const pipelineRef: PipelineRef | null = pipelineName
+    ? { name: pipelineName, fileId }
+    : null;
+
   return (
     <div className="h-full w-full flex flex-col bg-slate-100">
       <SharedStoreProvider>
         <EditorSessionProvider>
-          <EditorV2Content pipelineName={pipelineName} />
+          <EditorV2Content pipelineRef={pipelineRef} />
         </EditorSessionProvider>
       </SharedStoreProvider>
     </div>

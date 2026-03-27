@@ -13,12 +13,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
 import useToastNotification from "@/hooks/useToastNotification";
+import type { PipelineRef } from "@/routes/PipelineFolders/context/FolderNavigationContext";
 import { APP_ROUTES } from "@/routes/router";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButton";
 import { ShorcutBadge } from "@/routes/v2/shared/components/ShorcutBadge";
 import { CTRL } from "@/routes/v2/shared/shortcuts/keys";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 
 import {
   createNewPipeline,
@@ -30,6 +32,7 @@ import { OpenPipelineDialog } from "./OpenPipelineDialog";
 export function FileMenu() {
   const { keyboard, navigation } = useSharedStores();
   const { autoSave } = useEditorSession();
+  const storage = usePipelineStorage();
   const navigate = useNavigate();
   const notify = useToastNotification();
   const [importOpen, setImportOpen] = useState(false);
@@ -54,27 +57,30 @@ export function FileMenu() {
   }, [importOpen]);
 
   const handleNewPipeline = async () => {
-    const name = await createNewPipeline();
+    const file = await createNewPipeline(storage);
     navigate({
       to: APP_ROUTES.EDITOR_V2_PIPELINE,
-      params: { pipelineName: name },
+      params: { pipelineName: file.storageKey },
+      search: { fileId: file.id },
     });
   };
 
-  const handlePipelineClick = (name: string) => {
+  const handlePipelineClick = (pipeline: PipelineRef) => {
     navigate({
       to: APP_ROUTES.EDITOR_V2_PIPELINE,
-      params: { pipelineName: name },
+      params: { pipelineName: pipeline.name },
+      search: { fileId: pipeline.fileId },
     });
     setOpenDialogOpen(false);
   };
 
   const handleSavePipelineAs = async (name: string) => {
-    await savePipelineAs(navigation, name);
+    const file = await savePipelineAs(navigation, name, storage);
     notify(`Pipeline saved as "${name}"`, "success");
     navigate({
       to: APP_ROUTES.EDITOR_V2_PIPELINE,
       params: { pipelineName: name },
+      search: { fileId: file?.id },
     });
   };
 

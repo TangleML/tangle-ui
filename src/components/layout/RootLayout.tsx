@@ -6,6 +6,7 @@ import { isFlagEnabled } from "@/components/shared/Settings/useFlags";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { BackendProvider } from "@/providers/BackendProvider";
 import { ComponentSpecProvider } from "@/providers/ComponentSpecProvider";
+import { PipelineStorageProvider } from "@/services/pipelineStorage/PipelineStorageProvider";
 
 import AppFooter from "./AppFooter";
 import AppMenu from "./AppMenu";
@@ -28,21 +29,23 @@ const RootLayout = () => {
   return (
     <BackendProvider>
       <ComponentSpecProvider>
-        <ToastContainer />
+        <PipelineStorageProvider>
+          <ToastContainer />
 
-        <div className="App flex flex-col min-h-screen w-full">
-          <AppMenu />
+          <div className="App flex flex-col min-h-screen w-full">
+            <AppMenu />
 
-          <main className="flex-1 grid">
-            <Outlet />
-          </main>
+            <main className="flex-1 grid">
+              <Outlet />
+            </main>
 
-          {!isDashboard && <AppFooter />}
+            {!isDashboard && <AppFooter />}
 
-          {import.meta.env.VITE_ENABLE_ROUTER_DEVTOOLS === "true" && (
-            <TanStackRouterDevtools />
-          )}
-        </div>
+            {import.meta.env.VITE_ENABLE_ROUTER_DEVTOOLS === "true" && (
+              <TanStackRouterDevtools />
+            )}
+          </div>
+        </PipelineStorageProvider>
       </ComponentSpecProvider>
     </BackendProvider>
   );

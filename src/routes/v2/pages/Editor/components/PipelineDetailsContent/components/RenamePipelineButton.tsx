@@ -1,16 +1,11 @@
-import { useLocation, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 
 import { ActionButton } from "@/components/shared/Buttons/ActionButton";
 import { PipelineNameDialog } from "@/components/shared/Dialogs";
 import type { ComponentSpec } from "@/models/componentSpec";
-import { serializeComponentSpecToYaml } from "@/models/componentSpec";
 import { APP_ROUTES } from "@/routes/router";
 import { usePipelineActions } from "@/routes/v2/pages/Editor/store/actions/usePipelineActions";
-import {
-  renameComponentFileInList,
-  writeComponentToFileListFromText,
-} from "@/utils/componentStore";
-import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
+import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 
 interface RenamePipelineButtonProps {
   spec: ComponentSpec;
@@ -18,31 +13,18 @@ interface RenamePipelineButtonProps {
 
 export const RenamePipelineButton = ({ spec }: RenamePipelineButtonProps) => {
   const { renamePipeline } = usePipelineActions();
+  const { pipelineFile: pipelineFileStore } = useEditorSession();
   const navigate = useNavigate();
-  const location = useLocation();
-  const pathname = location.pathname;
-  const title = spec.name;
 
   const handleSubmit = async (newName: string) => {
-    console.log("handleSubmit", newName);
-    await renameComponentFileInList(
-      USER_PIPELINES_LIST_NAME,
-      title ?? "",
-      newName,
-      pathname,
-    );
+    await pipelineFileStore.activePipelineFile?.rename(newName);
 
     renamePipeline(spec, newName);
-
-    await writeComponentToFileListFromText(
-      USER_PIPELINES_LIST_NAME,
-      newName,
-      serializeComponentSpecToYaml(spec),
-    );
 
     await navigate({
       to: APP_ROUTES.EDITOR_V2_PIPELINE,
       params: { pipelineName: newName },
+      search: { fileId: pipelineFileStore.activePipelineFile?.id },
     });
   };
 

@@ -8,16 +8,19 @@ import {
 
 import { AutoSaveStore } from "./autoSaveStore";
 import { ClipboardStore } from "./clipboardStore";
+import { PipelineFileStore } from "./pipelineFileStore";
 import { UndoStore } from "./undoStore";
 
 class EditorSessionStore {
   readonly undo: UndoStore;
   readonly autoSave: AutoSaveStore;
   readonly clipboard: ClipboardStore;
+  readonly pipelineFile: PipelineFileStore;
 
   constructor() {
     this.undo = new UndoStore();
-    this.autoSave = new AutoSaveStore(this.undo);
+    this.pipelineFile = new PipelineFileStore();
+    this.autoSave = new AutoSaveStore(this.undo, this.pipelineFile);
     this.clipboard = new ClipboardStore(this.undo);
   }
 }

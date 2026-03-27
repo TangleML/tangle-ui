@@ -12,7 +12,7 @@ import {
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { BlockStack } from "@/components/ui/layout";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
 
 import { useCreateFolder } from "../hooks/useFolderMutations";
 
@@ -73,20 +73,22 @@ export function CreateFolderDialog({ parentId }: CreateFolderDialogProps) {
                 autoFocus
               />
             </BlockStack>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => handleOpenChange(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={name.trim().length === 0 || createFolder.isPending}
-              >
-                Create
-              </Button>
+            <DialogFooter className="w-full">
+              <InlineStack gap="2" className="w-full" align="end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleOpenChange(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={name.trim().length === 0 || createFolder.isPending}
+                >
+                  Create
+                </Button>
+              </InlineStack>
             </DialogFooter>
           </BlockStack>
         </form>

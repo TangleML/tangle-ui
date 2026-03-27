@@ -80,7 +80,7 @@ export const EditorMenuBar = observer(function EditorMenuBar() {
             data-testid="status-indicators"
           >
             <Separator orientation="vertical" />
-            <MovePipelineToFolderButton pipelineName={pipelineName} />
+            <MovePipelineToFolderButton />
             <AutoSaveIndicator />
           </InlineStack>
         </InlineStack>
