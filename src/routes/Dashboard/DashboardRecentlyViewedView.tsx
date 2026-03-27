@@ -4,66 +4,46 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
-import { Paragraph, Text } from "@/components/ui/typography";
+import { Heading, Paragraph, Text } from "@/components/ui/typography";
 import {
   type RecentlyViewedItem,
   useRecentlyViewed,
 } from "@/hooks/useRecentlyViewed";
-import { APP_ROUTES, EDITOR_PATH, RUNS_BASE_PATH } from "@/routes/router";
 import { formatRelativeTime } from "@/utils/date";
+
+import { getRecentlyViewedUrl, TypePill } from "./TypePill";
 
 const PAGE_SIZE = 20;
 
-function getRecentlyViewedUrl(item: RecentlyViewedItem): string {
-  if (item.type === "pipeline") return `${EDITOR_PATH}/${item.id}`;
-  if (item.type === "run") return `${RUNS_BASE_PATH}/${item.id}`;
-  return APP_ROUTES.DASHBOARD_COMPONENTS;
-}
-
-const RecentlyViewedCard = ({ item }: { item: RecentlyViewedItem }) => {
-  const isPipeline = item.type === "pipeline";
-
-  return (
-    <Link to={getRecentlyViewedUrl(item)} className="no-underline block">
-      <BlockStack
-        gap="2"
-        className="p-3 rounded-lg transition-all shadow-sm hover:shadow-md bg-card border border-border hover:border-foreground/20 overflow-hidden"
-      >
-        {/* Type pill + timestamp */}
-        <InlineStack blockAlign="center" align="space-between">
-          <InlineStack>
-            <span
-              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs font-semibold ${
-                isPipeline
-                  ? "bg-violet-100 text-violet-700"
-                  : "bg-emerald-100 text-emerald-700"
-              }`}
-            >
-              <Icon name={isPipeline ? "GitBranch" : "Play"} size="sm" />
-              {isPipeline ? "Pipeline" : "Run"}
-            </span>
-          </InlineStack>
-          <Text size="xs" className="text-muted-foreground">
-            {formatRelativeTime(new Date(item.viewedAt))}
-          </Text>
-        </InlineStack>
-
-        {/* Name */}
-        <Text size="sm" weight="semibold" className="truncate leading-tight">
-          {item.name}
+const RecentlyViewedCard = ({ item }: { item: RecentlyViewedItem }) => (
+  <Link to={getRecentlyViewedUrl(item)} className="no-underline block">
+    <BlockStack
+      gap="2"
+      className="p-3 rounded-lg transition-all shadow-sm hover:shadow-md bg-card border border-border hover:border-foreground/20 overflow-hidden"
+    >
+      <InlineStack blockAlign="center" align="space-between">
+        <TypePill type={item.type} />
+        <Text size="xs" className="text-muted-foreground">
+          {formatRelativeTime(new Date(item.viewedAt))}
         </Text>
+      </InlineStack>
 
-        {/* ID */}
-        <Text size="xs" className="truncate text-muted-foreground font-mono">
-          {item.id}
-        </Text>
-      </BlockStack>
-    </Link>
-  );
-};
+      <Text size="sm" weight="semibold" className="truncate leading-tight">
+        {item.name}
+      </Text>
+
+      <Text size="xs" className="truncate text-muted-foreground font-mono">
+        {item.id}
+      </Text>
+    </BlockStack>
+  </Link>
+);
 
 export function DashboardRecentlyViewedView() {
-  const { recentlyViewed } = useRecentlyViewed();
+  const { recentlyViewed: allRecentlyViewed } = useRecentlyViewed();
+  const recentlyViewed = allRecentlyViewed.filter(
+    (item) => item.type !== "component",
+  );
   const [page, setPage] = useState(0);
 
   const totalPages = Math.ceil(recentlyViewed.length / PAGE_SIZE);
@@ -75,9 +55,7 @@ export function DashboardRecentlyViewedView() {
 
   return (
     <BlockStack gap="4">
-      <Text as="h2" size="lg" weight="semibold">
-        Recently Viewed
-      </Text>
+      <Heading level={2}>Recently Viewed</Heading>
 
       {recentlyViewed.length === 0 ? (
         <Paragraph tone="subdued" size="sm">
