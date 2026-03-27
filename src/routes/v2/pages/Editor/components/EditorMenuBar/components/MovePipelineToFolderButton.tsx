@@ -1,48 +1,43 @@
-import { useQuery } from "@tanstack/react-query";
+import { observer } from "mobx-react-lite";
 import { useState } from "react";
 
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { Icon } from "@/components/ui/icon";
 import { MovePipelineDialog } from "@/routes/PipelineFolders/components/MovePipelineDialog";
-import { getPipelineFolderAssignment } from "@/routes/PipelineFolders/services/folderStorage";
-import { FoldersQueryKeys } from "@/routes/PipelineFolders/types";
+import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 
-interface MovePipelineToFolderButtonProps {
-  pipelineName: string;
-}
+export const MovePipelineToFolderButton = observer(
+  function MovePipelineToFolderButton() {
+    const [open, setOpen] = useState(false);
+    const { pipelineFile: pipelineFileStore } = useEditorSession();
 
-export function MovePipelineToFolderButton({
-  pipelineName,
-}: MovePipelineToFolderButtonProps) {
-  const [open, setOpen] = useState(false);
+    const activePipeline = pipelineFileStore.activePipelineFile;
 
-  const { data: currentFolderId = null } = useQuery({
-    // todo: move to separate query hook
-    // todo: handle corresponding key
-    queryKey: [...FoldersQueryKeys.All(), "assignment", pipelineName],
-    queryFn: () => getPipelineFolderAssignment(pipelineName),
-    enabled: open,
-  });
+    if (!activePipeline) return null;
+    if (!activePipeline.folder.canMoveFilesOut) return null;
 
-  return (
-    <>
-      <TooltipButton
-        tooltip="Move to folder"
-        variant="ghost"
-        size="icon"
-        data-testid="move-pipeline-folders-button"
-        onClick={() => setOpen(true)}
-      >
-        <Icon name="Folder" size="sm" className="text-stone-400" />
-      </TooltipButton>
+    const currentFolderId = activePipeline.folder.id;
 
-      <MovePipelineDialog
-        open={open}
-        onOpenChange={setOpen}
-        pipelineNames={[pipelineName]}
-        currentFolderId={currentFolderId}
-        onMoveComplete={() => setOpen(false)}
-      />
-    </>
-  );
-}
+    return (
+      <>
+        <TooltipButton
+          tooltip="Move to folder"
+          variant="ghost"
+          size="icon"
+          data-testid="move-pipeline-folders-button"
+          onClick={() => setOpen(true)}
+        >
+          <Icon name="Folder" size="sm" className="text-stone-400" />
+        </TooltipButton>
+
+        <MovePipelineDialog
+          open={open}
+          onOpenChange={setOpen}
+          pipelineIds={[activePipeline.id]}
+          currentFolderId={currentFolderId}
+          onMoveComplete={() => setOpen(false)}
+        />
+      </>
+    );
+  },
+);

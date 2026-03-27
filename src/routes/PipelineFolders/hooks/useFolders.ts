@@ -1,11 +1,21 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 
-import { getChildFolders } from "../services/folderStorage";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
+
 import { FoldersQueryKeys } from "../types";
 
 export function useFolders(parentId: string | null) {
+  const storage = usePipelineStorage();
+
   return useSuspenseQuery({
     queryKey: FoldersQueryKeys.Children(parentId),
-    queryFn: () => getChildFolders(parentId),
+    queryFn: async () => {
+      const folder =
+        parentId === null
+          ? storage.rootFolder
+          : await storage.findFolderById(parentId);
+
+      return folder.listSubfolders();
+    },
   });
 }

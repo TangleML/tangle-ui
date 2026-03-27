@@ -1,8 +1,13 @@
 import { createContext, useContext } from "react";
 
+export interface PipelineRef {
+  name: string;
+  fileId?: string;
+}
+
 interface FolderNavigationContextType {
   navigateToFolder: (folderId: string | null) => void;
-  onPipelineClick?: (name: string) => void;
+  onPipelineClick?: (pipeline: PipelineRef) => void;
 }
 
 const FolderNavigationContext =

@@ -1,4 +1,5 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
+import yaml from "js-yaml";
 import {
   registerRootStore,
   type UndoStore as MobxUndoStore,
@@ -11,11 +12,13 @@ import {
   ReplayIdGenerator,
   YamlDeserializer,
 } from "@/models/componentSpec";
+import type { PipelineRef } from "@/routes/PipelineFolders/context/FolderNavigationContext";
 import {
   createUndoStoreWithEvents,
   loadUndoHistory,
 } from "@/routes/v2/pages/Editor/utils/undoHistoryStorage";
-import { loadPipelineByName } from "@/services/pipelineService";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
+import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
 
 interface LoadedSpec {
   spec: ComponentSpec;
@@ -30,26 +33,36 @@ function deserializeSpec(data: unknown, idGen?: IdGenerator): ComponentSpec {
   return spec;
 }
 
-export function useLoadSpec(pipelineName: string) {
-  return useSuspenseQuery({
-    queryKey: ["editor-v2-spec", pipelineName],
-    queryFn: async (): Promise<LoadedSpec> => {
-      const [result, undoHistory] = await Promise.all([
-        loadPipelineByName(pipelineName),
-        loadUndoHistory(pipelineName).catch(() => null),
-      ]);
+async function resolveSpecData(
+  ref: PipelineRef,
+  storage: PipelineStorageService,
+): Promise<unknown> {
+  const pipelineFile = ref.fileId
+    ? await storage.findPipelineById(ref.fileId)
+    : await storage.resolvePipelineByName(ref.name);
 
-      if (!result.experiment?.componentRef?.spec) {
-        throw new Error(`Pipeline "${pipelineName}" not found`);
-      }
+  if (!pipelineFile) {
+    throw new Error(`Pipeline "${ref.name}" not found`);
+  }
+  const yamlContent = await pipelineFile.read();
+  return yaml.load(yamlContent);
+}
+
+export function useLoadSpec(ref: PipelineRef) {
+  const storage = usePipelineStorage();
+
+  return useSuspenseQuery({
+    queryKey: ["editor-v2-spec", ref.fileId ?? ref.name],
+    queryFn: async (): Promise<LoadedSpec> => {
+      const [specData, undoHistory] = await Promise.all([
+        resolveSpecData(ref, storage),
+        loadUndoHistory(ref.name).catch(() => null),
+      ]);
 
       if (undoHistory) {
         try {
           const replayIdGen = new ReplayIdGenerator(undoHistory.idStack);
-          const spec = deserializeSpec(
-            result.experiment.componentRef.spec,
-            replayIdGen,
-          );
+          const spec = deserializeSpec(specData, replayIdGen);
           const restoredUndoStore = createUndoStoreWithEvents(
             undoHistory.undoEvents,
           );
@@ -59,7 +72,7 @@ export function useLoadSpec(pipelineName: string) {
         }
       }
 
-      return { spec: deserializeSpec(result.experiment.componentRef.spec) };
+      return { spec: deserializeSpec(specData) };
     },
     staleTime: Infinity,
     retry: false,

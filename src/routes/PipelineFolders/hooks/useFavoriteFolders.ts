@@ -1,11 +1,14 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 
-import { getFavoriteFolders } from "../services/folderStorage";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
+
 import { FoldersQueryKeys } from "../types";
 
 export function useFavoriteFolders() {
+  const storage = usePipelineStorage();
+
   return useSuspenseQuery({
     queryKey: FoldersQueryKeys.Favorites(),
-    queryFn: getFavoriteFolders,
+    queryFn: () => storage.getFavoriteFolders(),
   });
 }

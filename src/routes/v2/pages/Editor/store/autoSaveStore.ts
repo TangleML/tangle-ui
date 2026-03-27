@@ -6,14 +6,10 @@ import {
   serializeComponentSpecToText,
 } from "@/models/componentSpec";
 import { saveUndoHistory } from "@/routes/v2/pages/Editor/utils/undoHistoryStorage";
-import { writeToFileHandle } from "@/services/fileHandleRegistry";
-import { writeComponentToFileListFromText } from "@/utils/componentStore";
-import {
-  AUTOSAVE_DEBOUNCE_TIME_MS,
-  USER_PIPELINES_LIST_NAME,
-} from "@/utils/constants";
+import { AUTOSAVE_DEBOUNCE_TIME_MS } from "@/utils/constants";
 import { debounce } from "@/utils/debounce";
 
+import type { PipelineFileStore } from "./pipelineFileStore";
 import type { UndoStore } from "./undoStore";
 
 const SAVED_MESSAGE_DURATION_MS = 2000;
@@ -33,7 +29,10 @@ export class AutoSaveStore {
     void this.performSave(yamlText);
   }, AUTOSAVE_DEBOUNCE_TIME_MS);
 
-  constructor(private undoStore: UndoStore) {
+  constructor(
+    private undoStore: UndoStore,
+    private pipelineFileStore: PipelineFileStore,
+  ) {
     makeObservable(this);
   }
 
@@ -106,17 +105,7 @@ export class AutoSaveStore {
 
     const savePromise = (async () => {
       try {
-        /**
-         * todo: Create a persistence layer for the pipeline, so we can add more storage drivers (google disk, backend api, etc.)
-         */
-        await writeComponentToFileListFromText(
-          USER_PIPELINES_LIST_NAME,
-          pipelineName,
-          yamlText,
-        );
-        await writeToFileHandle(pipelineName, yamlText).catch((err) =>
-          console.warn("File system write-back failed:", err),
-        );
+        await this.pipelineFileStore.activePipelineFile?.write(yamlText);
         await this.persistUndoHistory();
         this.setSaved(new Date());
         this.flashSavedMessage();

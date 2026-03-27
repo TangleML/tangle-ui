@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 
 import useToastNotification from "@/hooks/useToastNotification";
-import { deletePipeline } from "@/services/pipelineService";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import { getErrorMessage, pluralize } from "@/utils/string";
 
 interface BulkDeleteMutationOptions {
@@ -12,11 +12,17 @@ export function useBulkDeleteMutation({
   onSettled,
 }: BulkDeleteMutationOptions = {}) {
   const notify = useToastNotification();
+  const storage = usePipelineStorage();
 
   return useMutation({
-    mutationFn: async (pipelineNames: string[]) => {
-      await Promise.all(pipelineNames.map((name) => deletePipeline(name)));
-      return pipelineNames.length;
+    mutationFn: async (pipelineIds: string[]) => {
+      await Promise.all(
+        pipelineIds.map(async (id) => {
+          const file = await storage.findPipelineById(id);
+          await file.deleteFile();
+        }),
+      );
+      return pipelineIds.length;
     },
     onSuccess: (deletedCount) => {
       notify(

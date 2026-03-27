@@ -1,30 +1,40 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import useToastNotification from "@/hooks/useToastNotification";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import { getErrorMessage } from "@/utils/string";
 
-import {
-  assignPipelineToFolder,
-  movePipelineToRoot,
-} from "../services/folderStorage";
 import { FoldersQueryKeys } from "../types";
 
 export function useMovePipeline() {
   const queryClient = useQueryClient();
   const notify = useToastNotification();
+  const storage = usePipelineStorage();
 
   return useMutation({
-    mutationFn: ({
-      pipelineName,
+    mutationFn: async ({
+      pipelineId,
       folderId,
     }: {
-      pipelineName: string;
+      pipelineId: string;
       folderId: string | null;
     }) => {
-      if (folderId === null) {
-        return movePipelineToRoot(pipelineName);
+      const file = await storage.findPipelineById(pipelineId);
+
+      if (!file.folder.canMoveFilesOut) {
+        throw new Error(`Cannot move files out of "${file.folder.name}"`);
       }
-      return assignPipelineToFolder(pipelineName, folderId);
+
+      const targetFolder =
+        folderId === null
+          ? storage.rootFolder
+          : await storage.findFolderById(folderId);
+
+      if (!targetFolder.canAcceptFiles) {
+        throw new Error(`"${targetFolder.name}" does not accept moved files`);
+      }
+
+      await file.moveTo(targetFolder);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: FoldersQueryKeys.All() });

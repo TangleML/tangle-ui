@@ -7,6 +7,7 @@ import { pluralize } from "@/utils/string";
 
 interface SelectionToolbarProps {
   totalSelected: number;
+  canMove?: boolean;
   onMove: () => void;
   onDelete: () => void;
   onClear: () => void;
@@ -15,6 +16,7 @@ interface SelectionToolbarProps {
 
 export function SelectionToolbar({
   totalSelected,
+  canMove = true,
   onMove,
   onDelete,
   onClear,
@@ -29,10 +31,12 @@ export function SelectionToolbar({
           {totalSelected} {pluralize(totalSelected, "item")} selected
         </Text>
         <InlineStack gap="2">
-          <Button variant="outline" size="sm" onClick={onMove}>
-            <Icon name="FolderInput" />
-            Move
-          </Button>
+          {canMove && (
+            <Button variant="outline" size="sm" onClick={onMove}>
+              <Icon name="FolderInput" />
+              Move
+            </Button>
+          )}
           <ConfirmationDialog
             trigger={
               <Button variant="destructive" size="sm" disabled={isDeleting}>

@@ -4,13 +4,17 @@ import { useState } from "react";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ROOT_FOLDER_ID } from "@/services/pipelineStorage/types";
 
 import { ConnectFolderButton } from "./components/ConnectFolderButton";
 import { CreateFolderDialog } from "./components/CreateFolderDialog";
 import { FolderBreadcrumb } from "./components/FolderBreadcrumb";
 import { FolderGrid } from "./components/FolderGrid";
 import { FolderPipelineTable } from "./components/FolderPipelineTable/FolderPipelineTable";
-import { FolderNavigationContext } from "./context/FolderNavigationContext";
+import {
+  FolderNavigationContext,
+  type PipelineRef,
+} from "./context/FolderNavigationContext";
 
 const PipelineFoldersSkeleton = () => (
   <BlockStack className="h-full p-6" gap="4">
@@ -28,7 +32,7 @@ const PipelineFoldersSkeleton = () => (
 );
 
 interface PipelineFoldersProps {
-  onPipelineClick?: (name: string) => void;
+  onPipelineClick?: (pipeline: PipelineRef) => void;
 }
 
 export const PipelineFolders = withSuspenseWrapper(
@@ -41,7 +45,7 @@ export const PipelineFolders = withSuspenseWrapper(
     const isEmbedded = onPipelineClick !== undefined;
     const currentFolderId = isEmbedded
       ? localFolderId
-      : (routeFolderId ?? null);
+      : (routeFolderId ?? ROOT_FOLDER_ID);
 
     const content = (
       <BlockStack

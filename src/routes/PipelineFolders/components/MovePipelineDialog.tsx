@@ -1,4 +1,5 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { observer } from "mobx-react-lite";
 import { useState } from "react";
 
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
@@ -15,24 +16,26 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
+import type { PipelineFolder } from "@/services/pipelineStorage/PipelineFolder";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
+import { ROOT_FOLDER_ID } from "@/services/pipelineStorage/types";
 
 import { useMovePipeline } from "../hooks/useMovePipeline";
-import { getAllFolders, moveFolder } from "../services/folderStorage";
-import { FoldersQueryKeys, type PipelineFolder } from "../types";
+import { FoldersQueryKeys } from "../types";
 
 interface MovePipelineDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  pipelineNames: string[];
+  pipelineIds: string[];
   folderIds?: string[];
   currentFolderId: string | null;
   onMoveComplete: () => void;
 }
 
-export function MovePipelineDialog({
+export const MovePipelineDialog = observer(function MovePipelineDialog({
   open,
   onOpenChange,
-  pipelineNames,
+  pipelineIds,
   folderIds = [],
   currentFolderId,
   onMoveComplete,
@@ -40,23 +43,24 @@ export function MovePipelineDialog({
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(
     currentFolderId,
   );
-  const { mutate: movePipeline } = useMovePipeline();
+  const { mutateAsync: movePipeline } = useMovePipeline();
+  const storage = usePipelineStorage();
   const [isMoving, setIsMoving] = useState(false);
 
-  const totalItems = pipelineNames.length + folderIds.length;
+  const totalItems = pipelineIds.length + folderIds.length;
 
   const handleMove = async () => {
-    // todo: move to separate mutation hook
     setIsMoving(true);
     try {
-      for (const name of pipelineNames) {
+      for (const id of pipelineIds) {
         await movePipeline({
-          pipelineName: name,
+          pipelineId: id,
           folderId: selectedFolderId,
         });
       }
       for (const id of folderIds) {
-        await moveFolder(id, selectedFolderId);
+        const folder = await storage.findFolderById(id);
+        await folder.moveToParent(selectedFolderId);
       }
       onMoveComplete();
     } finally {
@@ -100,7 +104,7 @@ export function MovePipelineDialog({
       </DialogContent>
     </Dialog>
   );
-}
+});
 
 interface FolderTreeProps {
   selectedFolderId: string | null;
@@ -121,12 +125,14 @@ const FolderTree = withSuspenseWrapper(function FolderTreeContent({
   currentFolderId,
   onSelect,
 }: FolderTreeProps) {
+  const storage = usePipelineStorage();
+
   const { data: allFolders } = useSuspenseQuery({
     queryKey: [...FoldersQueryKeys.All(), "tree"],
-    queryFn: getAllFolders,
+    queryFn: () => storage.getAllFolders(),
   });
 
-  const rootFolders = allFolders.filter((f) => f.parentId === null);
+  const rootFolders = allFolders.filter((f) => f.parentId === ROOT_FOLDER_ID);
 
   return (
     <BlockStack
@@ -182,6 +188,7 @@ function FolderTreeBranch({
         label={folder.name}
         isSelected={selectedFolderId === folder.id}
         isCurrent={currentFolderId === folder.id}
+        disabled={!folder.canAcceptFiles}
         onSelect={() => onSelect(folder.id)}
         depth={depth}
       />
@@ -205,6 +212,7 @@ interface FolderTreeItemProps {
   label: string;
   isSelected: boolean;
   isCurrent: boolean;
+  disabled?: boolean;
   onSelect: () => void;
   depth: number;
 }
@@ -213,19 +221,25 @@ function FolderTreeItem({
   label,
   isSelected,
   isCurrent,
+  disabled = false,
   onSelect,
   depth,
 }: FolderTreeItemProps) {
   return (
     <button
       type="button"
-      onClick={onSelect}
+      onClick={disabled ? undefined : onSelect}
+      disabled={disabled}
       className={cn(
-        "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted/50",
-        isSelected && "bg-primary/10 ring-1 ring-primary",
+        "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors",
+        disabled ? "cursor-not-allowed opacity-50" : "hover:bg-muted/50",
+        isSelected && !disabled && "bg-primary/10 ring-1 ring-primary",
         isCurrent && "text-muted-foreground",
       )}
       style={{ paddingLeft: `${depth * 16 + 8}px` }}
+      title={
+        disabled ? "This folder does not support moving pipelines" : undefined
+      }
     >
       <Icon
         name={depth === 0 ? "House" : "Folder"}

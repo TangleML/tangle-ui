@@ -10,11 +10,11 @@ export function useSelection() {
 
   const totalSelected = selectedPipelines.size + selectedFolders.size;
 
-  const selectPipeline = (pipelineName: string, checked: boolean) => {
+  const selectPipeline = (pipelineId: string, checked: boolean) => {
     setSelectedPipelines((prev) => {
       const next = new Set(prev);
-      if (checked) next.add(pipelineName);
-      else next.delete(pipelineName);
+      if (checked) next.add(pipelineId);
+      else next.delete(pipelineId);
       return next;
     });
   };
