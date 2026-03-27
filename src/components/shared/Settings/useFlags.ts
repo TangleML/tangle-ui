@@ -7,6 +7,17 @@ import type { BetaFlagsStorage } from "./types";
 
 const storage = getStorage<keyof BetaFlagsStorage, BetaFlagsStorage>();
 
+/**
+ * Non-hook flag check for use outside React (e.g., route beforeLoad).
+ */
+export function isFlagEnabled(flagName: keyof typeof ExistingFlags): boolean {
+  return (
+    storage.getItem("betaFlags")?.[flagName] ??
+    ExistingFlags[flagName]?.default ??
+    false
+  );
+}
+
 export function useFlags() {
   return {
     getFlags: () => storage.getItem("betaFlags"),
