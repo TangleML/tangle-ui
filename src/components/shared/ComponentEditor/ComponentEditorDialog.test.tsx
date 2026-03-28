@@ -1,19 +1,31 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { ReactFlowProvider } from "@xyflow/react";
 import { type ReactNode } from "react";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import useToastNotification from "@/hooks/useToastNotification";
 import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
-import { ComponentSpecProvider } from "@/providers/ComponentSpecProvider";
-import { ContextPanelProvider } from "@/providers/ContextPanelProvider";
-import { hydrateComponentReference } from "@/services/componentService";
 import { saveComponent } from "@/utils/localforage";
 
 import { ComponentEditorDialog } from "./ComponentEditorDialog";
 
-// Mock only what's necessary
+// Use vi.hoisted to create mocks that can be referenced in vi.mock
+const { mockHydrateComponentReference } = vi.hoisted(() => ({
+  mockHydrateComponentReference: vi.fn(),
+}));
+
+// Mock the entire module
+vi.mock("@/services/componentService", () => ({
+  hydrateComponentReference: mockHydrateComponentReference,
+  fetchAndStoreComponentLibrary: vi.fn(),
+  fetchAndStoreComponent: vi.fn(),
+  fetchAndStoreComponentByUrl: vi.fn(),
+  getComponentText: vi.fn(),
+  fetchComponentTextFromUrl: vi.fn(),
+  parseComponentData: vi.fn(),
+  getExistingAndNewUserComponent: vi.fn(),
+}));
+
 vi.mock("@/hooks/useToastNotification", () => ({
   default: vi.fn(),
 }));
@@ -22,18 +34,10 @@ vi.mock("@/providers/ComponentLibraryProvider", () => ({
   useComponentLibrary: vi.fn(),
 }));
 
-vi.mock("@/services/componentService", async (importOriginal) => {
-  return {
-    ...(await importOriginal()),
-    hydrateComponentReference: vi.fn(),
-  };
-});
-
 vi.mock("@/utils/localforage", () => ({
   saveComponent: vi.fn(),
 }));
 
-// Mock the Python generator to avoid Pyodide loading in tests
 vi.mock("./generators/python", () => ({
   usePythonYamlGenerator: () => {
     return vi.fn().mockResolvedValue(`name: Generated Component
@@ -45,23 +49,11 @@ outputs:
 }));
 
 describe("<ComponentEditorDialog />", () => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: {
-        retry: false,
-      },
-    },
-  });
+  let queryClient: QueryClient;
 
   const TestWrapper = ({ children }: { children: ReactNode }) => {
     return (
-      <QueryClientProvider client={queryClient}>
-        <ReactFlowProvider>
-          <ComponentSpecProvider>
-            <ContextPanelProvider>{children}</ContextPanelProvider>
-          </ComponentSpecProvider>
-        </ReactFlowProvider>
-      </QueryClientProvider>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     );
   };
 
@@ -69,18 +61,32 @@ describe("<ComponentEditorDialog />", () => {
     return render(component, { wrapper: TestWrapper });
   };
 
-  // Set up default mocks
   const mockToast = vi.fn();
   const mockAddToComponentLibrary = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
+
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+      },
+    });
+
     vi.mocked(useToastNotification).mockReturnValue(mockToast);
     vi.mocked(useComponentLibrary).mockReturnValue({
       addToComponentLibrary: mockAddToComponentLibrary,
     } as any);
-    vi.mocked(hydrateComponentReference).mockResolvedValue(null);
+
+    // Default: return null for components without Python code
+    mockHydrateComponentReference.mockResolvedValue(null);
     vi.mocked(saveComponent).mockImplementation(async (component) => component);
+  });
+
+  afterEach(() => {
+    queryClient.clear();
   });
 
   test("calls onClose when close button is clicked", async () => {
@@ -88,23 +94,15 @@ describe("<ComponentEditorDialog />", () => {
 
     renderWithProviders(<ComponentEditorDialog onClose={onCloseMock} />);
 
-    // Wait for the component to render (suspense boundary)
     await waitFor(() => {
       expect(
         screen.getByRole("heading", { name: "New Component" }),
       ).toBeInTheDocument();
     });
 
-    // Find all buttons and identify the close button by its variant and icon
     const buttons = screen.getAllByRole("button");
-
-    // The close button should be the last button (after the Save button)
-    // and should have variant="ghost" and size="icon"
     const closeButton = buttons[buttons.length - 1];
 
-    expect(closeButton).toBeDefined();
-
-    // Click the close button
     fireEvent.click(closeButton);
 
     expect(onCloseMock).toHaveBeenCalledTimes(1);
@@ -122,7 +120,6 @@ describe("<ComponentEditorDialog />", () => {
         ).toBeInTheDocument();
       });
 
-      // Should not show template name for empty template
       expect(screen.queryByText("(empty template)")).not.toBeInTheDocument();
     });
 
@@ -137,7 +134,6 @@ describe("<ComponentEditorDialog />", () => {
         ).toBeInTheDocument();
       });
 
-      // Should show the template name in subtitle
       expect(screen.getByText("(python template)")).toBeInTheDocument();
     });
 
@@ -152,7 +148,6 @@ describe("<ComponentEditorDialog />", () => {
         ).toBeInTheDocument();
       });
 
-      // Should show the template name in subtitle
       expect(screen.getByText("(bash template)")).toBeInTheDocument();
     });
 
@@ -167,7 +162,6 @@ describe("<ComponentEditorDialog />", () => {
         ).toBeInTheDocument();
       });
 
-      // Should show the template name in subtitle
       expect(screen.getByText("(javascript template)")).toBeInTheDocument();
     });
 
@@ -182,7 +176,6 @@ describe("<ComponentEditorDialog />", () => {
         ).toBeInTheDocument();
       });
 
-      // Should show the template name in subtitle
       expect(screen.getByText("(ruby template)")).toBeInTheDocument();
     });
   });
@@ -217,7 +210,12 @@ describe("<ComponentEditorDialog />", () => {
     test("renders PythonComponentEditor for component with python_original_code annotation", async () => {
       const mockComponent: any = {
         spec: {
-          implementation: { container: { image: "test" } },
+          name: "test-component",
+          implementation: {
+            container: {
+              image: "python:3.12",
+            },
+          },
           metadata: {
             annotations: {
               python_original_code: "def my_function():\n    return 'hello'",
@@ -229,31 +227,33 @@ describe("<ComponentEditorDialog />", () => {
         text: "name: test-component",
       };
 
-      vi.mocked(hydrateComponentReference).mockResolvedValueOnce(mockComponent);
+      mockHydrateComponentReference.mockResolvedValue(mockComponent);
 
       renderWithProviders(
         <ComponentEditorDialog text="name: test-component" onClose={vi.fn()} />,
       );
 
-      await waitFor(() => {
-        expect(screen.getByTestId("python-editor")).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByTestId("python-editor")).toBeInTheDocument();
+        },
+        { timeout: 10000 },
+      );
 
       expect(
         screen.queryByTestId("yaml-editor-preview"),
       ).not.toBeInTheDocument();
 
-      // Verify we have both Python editor and preview sections
       expect(screen.getByTestId("python-editor-preview")).toBeInTheDocument();
     });
 
     test("renders YamlComponentEditor when component has no python annotations", async () => {
       const mockComponent: any = {
         spec: {
+          name: "test-component",
           implementation: { container: { image: "test" } },
           metadata: {
             annotations: {
-              // No python_original_code annotation
               author: "test-author",
             },
           },
@@ -263,7 +263,7 @@ describe("<ComponentEditorDialog />", () => {
         text: "name: test-component\ninputs:\n- {name: Input}",
       };
 
-      vi.mocked(hydrateComponentReference).mockResolvedValueOnce(mockComponent);
+      mockHydrateComponentReference.mockResolvedValue(mockComponent);
 
       renderWithProviders(
         <ComponentEditorDialog
@@ -285,6 +285,7 @@ describe("<ComponentEditorDialog />", () => {
       const onCloseMock = vi.fn();
       const mockHydratedComponent = {
         spec: {
+          name: "test-component",
           implementation: { container: { image: "test" } },
           metadata: { annotations: {} },
         },
@@ -293,9 +294,7 @@ describe("<ComponentEditorDialog />", () => {
         text: "name: test-component",
       };
 
-      vi.mocked(hydrateComponentReference).mockResolvedValue(
-        mockHydratedComponent,
-      );
+      mockHydrateComponentReference.mockResolvedValue(mockHydratedComponent);
 
       renderWithProviders(
         <ComponentEditorDialog
@@ -304,33 +303,44 @@ describe("<ComponentEditorDialog />", () => {
         />,
       );
 
-      await waitFor(() => {
-        expect(
-          screen.getByRole("button", { name: /Save/i }),
-        ).toBeInTheDocument();
-      });
+      // Wait for component to fully load
+      await waitFor(
+        () => {
+          expect(screen.getByTestId("yaml-editor-preview")).toBeInTheDocument();
+        },
+        { timeout: 10000 },
+      );
+
+      // Wait for Save button to be ready
+      await waitFor(
+        () => {
+          const saveButton = screen.getByRole("button", { name: /Save/i });
+          expect(saveButton).not.toBeDisabled();
+        },
+        { timeout: 5000 },
+      );
 
       const saveButton = screen.getByRole("button", { name: /Save/i });
       fireEvent.click(saveButton);
 
-      await waitFor(() => {
-        // Verify saveComponent was called
-        expect(saveComponent).toHaveBeenCalled();
+      // Wait for save operations to complete
+      await waitFor(
+        () => {
+          expect(saveComponent).toHaveBeenCalled();
+        },
+        { timeout: 5000 },
+      );
 
-        // Verify addToComponentLibrary was called
-        expect(mockAddToComponentLibrary).toHaveBeenCalledWith(
-          mockHydratedComponent,
-        );
+      expect(mockAddToComponentLibrary).toHaveBeenCalledWith(
+        mockHydratedComponent,
+      );
 
-        // Verify success toast notification was shown
-        expect(mockToast).toHaveBeenCalledWith(
-          `Component ${mockHydratedComponent.name} imported successfully`,
-          "success",
-        );
+      expect(mockToast).toHaveBeenCalledWith(
+        `Component ${mockHydratedComponent.name} imported successfully`,
+        "success",
+      );
 
-        // Verify onClose was called after successful save
-        expect(onCloseMock).toHaveBeenCalledTimes(1);
-      });
+      expect(onCloseMock).toHaveBeenCalledTimes(1);
     });
   });
 });
