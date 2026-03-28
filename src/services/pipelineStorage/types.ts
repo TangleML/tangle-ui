@@ -1,3 +1,4 @@
+import type { GoogleDriveDriverConfig } from "../googleDrive/types"; // google-drive
 import type { FolderIndexDbDriverConfig } from "./drivers/FolderIndexDbStorageDriver";
 import type { LocalFileSystemDriverConfig } from "./drivers/LocalFileSystemDriver";
 import type { RootFolderDbDriverConfig } from "./drivers/RootFolderDbStorageDriver";
@@ -33,7 +34,8 @@ export interface PipelineStorageDriver {
 export type DriverConfig =
   | RootFolderDbDriverConfig
   | FolderIndexDbDriverConfig
-  | LocalFileSystemDriverConfig;
+  | LocalFileSystemDriverConfig
+  | GoogleDriveDriverConfig; // google-drive
 
 export interface PipelineRegistryEntry {
   id: string;

@@ -60,9 +60,12 @@ export function UpgradeComponentsContent() {
         onToggleAll={toggleAll}
       />
       <Separator />
-      <div className="flex flex-1 flex-wrap min-h-0 overflow-hidden">
+      <div
+        className="flex flex-1 min-h-0 overflow-hidden"
+        data-testid="upgrade-components-content-container"
+      >
         <div
-          className="relative shrink-0 border-r"
+          className="relative shrink-0 border-r h-full"
           style={{ width: DEFAULT_LEFT_PANEL_WIDTH }}
         >
           <ScrollArea className="h-full">
@@ -83,7 +86,7 @@ export function UpgradeComponentsContent() {
           </ScrollArea>
           <VerticalResizeHandle side="right" minWidth={300} />
         </div>
-        <div className="flex min-w-[280px] flex-1">
+        <div className="flex flex-col min-w-[280px] flex-1 h-full min-h-0">
           <UpgradeCandidateDetail candidate={focusedCandidate} />
         </div>
       </div>
