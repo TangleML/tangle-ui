@@ -51,6 +51,7 @@ export class WindowStoreImpl {
       windowOrder: [],
     },
   };
+  @observable accessor enabledDockSides: Set<"left" | "right"> = new Set();
 
   constructor() {
     makeObservable(this);
@@ -283,6 +284,7 @@ export class WindowStoreImpl {
   // -- Docking (delegates to windowStore.docking.ts) --
 
   @action dockWindow(id: string, side: DockState, insertIndex?: number): void {
+    if (side !== "none" && !this.enabledDockSides.has(side)) return;
     docking.dockWindow(this.windows, this.dockAreas, id, side, insertIndex);
   }
 
@@ -304,6 +306,20 @@ export class WindowStoreImpl {
 
   @action toggleDockAreaCollapsed(side: "left" | "right"): void {
     docking.toggleDockAreaCollapsed(this.dockAreas, side);
+  }
+
+  @action enableDockSide(side: "left" | "right"): void {
+    this.enabledDockSides = new Set([...this.enabledDockSides, side]);
+  }
+
+  @action disableDockSide(side: "left" | "right"): void {
+    const next = new Set(this.enabledDockSides);
+    next.delete(side);
+    this.enabledDockSides = next;
+  }
+
+  isDockSideEnabled(side: "left" | "right"): boolean {
+    return this.enabledDockSides.has(side);
   }
 
   getDockAreaWindowIds(side: "left" | "right"): string[] {

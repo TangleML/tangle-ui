@@ -156,6 +156,7 @@ export function useWindowDrag({
           left: [...windows.getDockAreaWindowIds("left")],
           right: [...windows.getDockAreaWindowIds("right")],
         },
+        enabledDockSides: windows.enabledDockSides,
       });
       snapPreviewRef.current = preview;
       setSnapPreview(preview);

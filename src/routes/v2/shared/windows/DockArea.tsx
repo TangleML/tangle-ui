@@ -28,7 +28,9 @@ export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
   const isEmpty = windowOrder.length === 0;
 
   useEffect(() => {
+    windows.enableDockSide(side);
     return () => {
+      windows.disableDockSide(side);
       registerDockAreaElement(side, null);
     };
   }, [side]);
