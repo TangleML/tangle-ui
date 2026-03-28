@@ -8,7 +8,7 @@ export function useDoubleClickBehavior(
   spec: ComponentSpec | null,
 ): Required<Pick<ReactFlowProps, "onNodeDoubleClick">> {
   const registry = useNodeRegistry();
-  const { navigation } = useSharedStores();
+  const { navigation, windows } = useSharedStores();
 
   const onNodeDoubleClick: NodeMouseHandler = (
     _event: React.MouseEvent,
@@ -16,7 +16,7 @@ export function useDoubleClickBehavior(
   ) => {
     if (!spec) return;
     const manifest = registry.getByNodeId(spec, node.id);
-    manifest?.onDoubleClick?.(spec, node, navigation);
+    manifest?.onDoubleClick?.(spec, node, navigation, windows);
   };
 
   return { onNodeDoubleClick };

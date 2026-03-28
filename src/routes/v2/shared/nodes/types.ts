@@ -16,6 +16,7 @@ import type {
 } from "@/routes/v2/shared/store/editorStore";
 import type { KeyboardStore } from "@/routes/v2/shared/store/keyboardStore";
 import type { NavigationStore } from "@/routes/v2/shared/store/navigationStore";
+import type { WindowStoreImpl } from "@/routes/v2/shared/windows/windowStore";
 
 /**
  * Minimal interface for undo grouping, satisfied by UndoStore.
@@ -186,6 +187,7 @@ export interface NodeTypeManifest {
     spec: ComponentSpec,
     node: Node,
     navigation: NavigationStore,
+    windows: WindowStoreImpl,
   ): void;
   onPaneClick?(
     spec: ComponentSpec,

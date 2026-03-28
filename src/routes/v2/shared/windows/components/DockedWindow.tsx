@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import type { ContentWindowState } from "@/routes/v2/shared/windows/ContentWindowStateContext";
 import { ContentWindowStateProvider } from "@/routes/v2/shared/windows/ContentWindowStateContext";
 import { useWindowDrag } from "@/routes/v2/shared/windows/hooks/useWindowDrag";
@@ -13,12 +14,6 @@ import {
   MIN_DOCKED_HEIGHT,
   type WindowAction,
 } from "@/routes/v2/shared/windows/types";
-import {
-  getWindowById,
-  getWindowContent,
-  isDockAreaCollapsed,
-  updateDockedWindowHeight,
-} from "@/routes/v2/shared/windows/windows.actions";
 
 import { WindowActions } from "./WindowActions";
 import { WindowHeader } from "./WindowHeader";
@@ -32,18 +27,19 @@ const HEADER_HEIGHT = 26;
 export const DockedWindow = observer(function DockedWindow({
   windowId,
 }: DockedWindowProps) {
-  const windowConfig = getWindowById(windowId);
+  const { windows } = useSharedStores();
+  const windowConfig = windows.getWindowById(windowId);
   if (!windowConfig) return null;
 
   const { title, state, size, disabledActions, dockState, dockedHeight } =
     windowConfig;
 
-  const content = getWindowContent(windowId);
+  const content = windows.getWindowContent(windowId);
   const isMinimized = state === "minimized";
   const isMaximized = state === "maximized";
   const isDocked = dockState === "left" || dockState === "right";
   const effectiveDockedHeight = dockedHeight ?? DEFAULT_DOCKED_HEIGHT;
-  const dockAreaCollapsed = isDockAreaCollapsed(dockState);
+  const dockAreaCollapsed = windows.isDockAreaCollapsed(dockState);
 
   const {
     isDragging,
@@ -82,7 +78,7 @@ export const DockedWindow = observer(function DockedWindow({
         MIN_DOCKED_HEIGHT,
         startHeight + (moveE.clientY - startY),
       );
-      updateDockedWindowHeight(windowId, newHeight);
+      windows.updateDockedWindowHeight(windowId, newHeight);
     };
 
     const onMouseUp = () => {

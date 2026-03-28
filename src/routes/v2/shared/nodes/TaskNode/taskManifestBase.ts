@@ -101,7 +101,12 @@ export const taskManifestBase: ManifestPartial = {
 
   snapshotHandler: { snapshot: snapshotTask },
 
-  onDoubleClick(spec: ComponentSpec, node: Node, navigation: NavigationStore) {
+  onDoubleClick(
+    spec: ComponentSpec,
+    node: Node,
+    navigation: NavigationStore,
+    _windows,
+  ) {
     const taskData = node.data as TaskNodeData;
     if (navigation.isTaskSubgraph(spec, taskData.entityId)) {
       navigation.navigateToSubgraph(spec, taskData.entityId);

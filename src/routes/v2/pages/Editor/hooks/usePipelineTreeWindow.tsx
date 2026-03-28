@@ -1,17 +1,15 @@
 import { useEffect } from "react";
 
 import { PipelineTreeContent } from "@/routes/v2/pages/Editor/components/PipelineTreeContent/PipelineTreeContent";
-import {
-  getWindowById,
-  openWindow,
-} from "@/routes/v2/shared/windows/windows.actions";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 export const PIPELINE_TREE_WINDOW_ID = "pipeline-tree";
 
 export function usePipelineTreeWindow() {
+  const { windows } = useSharedStores();
   useEffect(() => {
-    if (!getWindowById(PIPELINE_TREE_WINDOW_ID)) {
-      openWindow(<PipelineTreeContent />, {
+    if (!windows.getWindowById(PIPELINE_TREE_WINDOW_ID)) {
+      windows.openWindow(<PipelineTreeContent />, {
         id: PIPELINE_TREE_WINDOW_ID,
         title: "Pipeline Structure",
         position: { x: 300, y: 100 },
@@ -20,5 +18,5 @@ export function usePipelineTreeWindow() {
         persisted: true,
       });
     }
-  }, []);
+  }, [windows]);
 }

@@ -5,18 +5,15 @@ import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 
-import {
-  closeWindow,
-  getHiddenWindows,
-  restoreWindow,
-} from "./windows.actions";
+import { useSharedStores } from "../store/SharedStoreContext";
 
 /**
  * Bar that displays hidden windows. Rendered in normal flow above the editor
  * layout so it pushes content down when visible.
  */
 export const TaskPanel = observer(function TaskPanel() {
-  const hiddenWindows = getHiddenWindows();
+  const { windows } = useSharedStores();
+  const hiddenWindows = windows.getHiddenWindows();
 
   if (hiddenWindows.length === 0) {
     return null;
@@ -38,7 +35,7 @@ export const TaskPanel = observer(function TaskPanel() {
               <Button
                 variant="ghost"
                 size="min"
-                onClick={() => restoreWindow(window.id)}
+                onClick={() => windows.restoreWindow(window.id)}
                 className="flex items-center gap-1 min-w-0 h-5 p-0"
               >
                 <Icon
@@ -61,7 +58,7 @@ export const TaskPanel = observer(function TaskPanel() {
                   className="h-5 w-5 text-gray-400 hover:text-red-500 hover:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                   onClick={(e) => {
                     e.stopPropagation();
-                    closeWindow(window.id);
+                    windows.closeWindow(window.id);
                   }}
                   title="Close"
                 >

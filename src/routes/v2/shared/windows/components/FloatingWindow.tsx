@@ -3,6 +3,7 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 
 import { cn } from "@/lib/utils";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import type { ContentWindowState } from "@/routes/v2/shared/windows/ContentWindowStateContext";
 import { ContentWindowStateProvider } from "@/routes/v2/shared/windows/ContentWindowStateContext";
 import { useWindowDrag } from "@/routes/v2/shared/windows/hooks/useWindowDrag";
@@ -11,14 +12,6 @@ import {
   TASK_PANEL_HEIGHT,
   type WindowAction,
 } from "@/routes/v2/shared/windows/types";
-import {
-  getWindowById,
-  getWindowContent,
-  getWindowZIndex,
-  hasHiddenWindows as checkHasHiddenWindows,
-  isDockAreaCollapsed,
-  updateWindowSize,
-} from "@/routes/v2/shared/windows/windows.actions";
 
 import { WindowActions } from "./WindowActions";
 import { WindowHeader } from "./WindowHeader";
@@ -32,20 +25,21 @@ const HEADER_HEIGHT = 28;
 export const FloatingWindow = observer(function FloatingWindow({
   windowId,
 }: FloatingWindowProps) {
-  const windowConfig = getWindowById(windowId);
-  const zIndex = getWindowZIndex(windowId);
+  const { windows } = useSharedStores();
+  const windowConfig = windows.getWindowById(windowId);
+  const zIndex = windows.getWindowZIndex(windowId);
 
   if (!windowConfig) return null;
 
   const { title, state, position, size, minSize, disabledActions, dockState } =
     windowConfig;
 
-  const content = getWindowContent(windowId);
+  const content = windows.getWindowContent(windowId);
   const isMinimized = state === "minimized";
   const isMaximized = state === "maximized";
   const isDocked = dockState === "left" || dockState === "right";
 
-  const taskPanelOffset = checkHasHiddenWindows() ? TASK_PANEL_HEIGHT : 0;
+  const taskPanelOffset = windows.hasHiddenWindows ? TASK_PANEL_HEIGHT : 0;
 
   const {
     isDragging,
@@ -61,7 +55,7 @@ export const FloatingWindow = observer(function FloatingWindow({
   const isActionDisabled = (action: WindowAction) =>
     disabledActions?.includes(action) ?? false;
 
-  const dockAreaCollapsed = isDockAreaCollapsed(dockState);
+  const dockAreaCollapsed = windows.isDockAreaCollapsed(dockState);
 
   const contentWindowState: ContentWindowState = {
     windowId,
@@ -92,7 +86,10 @@ export const FloatingWindow = observer(function FloatingWindow({
         minSize.height,
         startHeight + (moveE.clientY - startY),
       );
-      updateWindowSize(windowId, { width: newWidth, height: newHeight });
+      windows.updateWindowSize(windowId, {
+        width: newWidth,
+        height: newHeight,
+      });
     };
 
     const onMouseUp = () => {

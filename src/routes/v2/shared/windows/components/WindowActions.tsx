@@ -1,12 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import type { WindowAction } from "@/routes/v2/shared/windows/types";
-import {
-  closeWindow,
-  hideWindow,
-  toggleMaximize,
-  toggleMinimize,
-} from "@/routes/v2/shared/windows/windows.actions";
 
 interface WindowActionsProps {
   windowId: string;
@@ -24,6 +19,7 @@ export function WindowActions({
   isMaximized,
   isActionDisabled,
 }: WindowActionsProps) {
+  const { windows } = useSharedStores();
   return (
     <div
       className="shrink-0 flex items-center gap-0.5"
@@ -34,7 +30,7 @@ export function WindowActions({
           variant="ghost"
           size="icon"
           className={sharedButtonClassName}
-          onClick={() => toggleMinimize(windowId)}
+          onClick={() => windows.toggleMinimize(windowId)}
           title={isMinimized ? "Expand" : "Minimize"}
         >
           <Icon name={isMinimized ? "ChevronDown" : "Minus"} size="xs" />
@@ -46,7 +42,7 @@ export function WindowActions({
           variant="ghost"
           size="icon"
           className={sharedButtonClassName}
-          onClick={() => toggleMaximize(windowId)}
+          onClick={() => windows.toggleMaximize(windowId)}
           title={isMaximized ? "Restore" : "Maximize"}
         >
           <Icon name={isMaximized ? "Minimize2" : "Maximize2"} size="xs" />
@@ -58,7 +54,7 @@ export function WindowActions({
           variant="ghost"
           size="icon"
           className={sharedButtonClassName}
-          onClick={() => hideWindow(windowId)}
+          onClick={() => windows.hideWindow(windowId)}
           title="Hide to task panel"
         >
           <Icon name="PanelBottomClose" size="xs" />
@@ -70,7 +66,7 @@ export function WindowActions({
           variant="ghost"
           size="icon"
           className="h-5 w-5 text-gray-500 hover:text-red-500 hover:bg-gray-300"
-          onClick={() => closeWindow(windowId)}
+          onClick={() => windows.closeWindow(windowId)}
           title="Close"
         >
           <Icon name="X" size="xs" />

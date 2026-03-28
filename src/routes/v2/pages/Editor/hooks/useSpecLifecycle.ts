@@ -7,7 +7,6 @@ import type { ComponentSpec } from "@/models/componentSpec";
 import type { PipelineRef } from "@/routes/PipelineFolders/context/FolderNavigationContext";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
-import { closeWindowsByLinkedEntity } from "@/routes/v2/shared/windows/windows.actions";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
 
@@ -29,7 +28,7 @@ export function useSpecLifecycle(
   pipelineRef: PipelineRef,
   restoredUndoStore?: MobxUndoStore,
 ) {
-  const { editor, navigation } = useSharedStores();
+  const { editor, navigation, windows: windowStore } = useSharedStores();
   const {
     undo,
     autoSave,
@@ -62,7 +61,7 @@ export function useSpecLifecycle(
 
       for (const prevId of prevTaskEntityIdsRef.current) {
         if (!currentTaskIds.has(prevId)) {
-          closeWindowsByLinkedEntity(prevId);
+          windowStore.closeWindowsByLinkedEntity(prevId);
         }
       }
 
@@ -86,6 +85,7 @@ export function useSpecLifecycle(
     restoredUndoStore,
     editor,
     navigation,
+    windowStore,
     undo,
     autoSave,
     pipelineFileStore,

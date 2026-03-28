@@ -12,16 +12,9 @@ import { useEffect } from "react";
 import { debounce } from "@/utils/debounce";
 import { getStorage } from "@/utils/typedStorage";
 
+import { useSharedStores } from "../store/SharedStoreContext";
 import type { DockState, Position, Size } from "./types";
-import {
-  getDockAreaConfig,
-  getPersistedWindowIds,
-  getSerializedStoreState,
-  getWindowById,
-  getWindowOrder,
-  isWindowPersisted,
-  restoreDockArea,
-} from "./windows.actions";
+import type { WindowStoreImpl } from "./windowStore";
 
 /**
  * Tracks which layout is currently active so that module-level functions
@@ -73,11 +66,11 @@ const storage = getStorage<string, WindowLayoutStorageMap>();
 
 const CURRENT_VERSION = 4;
 
-function saveWindowLayoutImmediate(): void {
+function saveWindowLayoutImmediate(store: WindowStoreImpl): void {
   const existingLayout = loadWindowLayout();
 
-  const leftDock = getDockAreaConfig("left");
-  const rightDock = getDockAreaConfig("right");
+  const leftDock = store.getDockAreaConfig("left");
+  const rightDock = store.getDockAreaConfig("right");
 
   const layout: PersistedWindowLayout = {
     windows: existingLayout?.windows ?? {},
@@ -86,19 +79,23 @@ function saveWindowLayoutImmediate(): void {
       left: {
         width: leftDock.width,
         collapsed: leftDock.collapsed,
-        windowOrder: leftDock.windowOrder.filter(isWindowPersisted),
+        windowOrder: leftDock.windowOrder.filter((id) =>
+          store.isWindowPersisted(id),
+        ),
       },
       right: {
         width: rightDock.width,
         collapsed: rightDock.collapsed,
-        windowOrder: rightDock.windowOrder.filter(isWindowPersisted),
+        windowOrder: rightDock.windowOrder.filter((id) =>
+          store.isWindowPersisted(id),
+        ),
       },
     },
     version: CURRENT_VERSION,
   };
 
-  for (const id of getPersistedWindowIds()) {
-    const win = getWindowById(id);
+  for (const id of store.getPersistedWindowIds()) {
+    const win = store.getWindowById(id);
     if (win) {
       layout.windows[id] = {
         position: { ...win.position },
@@ -115,7 +112,9 @@ function saveWindowLayoutImmediate(): void {
     }
   }
 
-  layout.windowOrder = getWindowOrder().filter(isWindowPersisted);
+  layout.windowOrder = store.currentWindowOrder.filter((id) =>
+    store.isWindowPersisted(id),
+  );
 
   storage.setItem(getStorageKey(), layout);
 }
@@ -154,18 +153,14 @@ export function getPersistedWindowState(
   return layout.windows[id] ?? null;
 }
 
-/**
- * Restore persisted dock area state into the window store.
- * Called once during initialization.
- */
-function restoreDockAreaState(): void {
+function restoreDockAreaState(store: WindowStoreImpl): void {
   const layout = loadWindowLayout();
   if (!layout?.dockAreas) return;
 
   for (const side of ["left", "right"] as const) {
     const persisted = layout.dockAreas[side];
     if (!persisted) continue;
-    restoreDockArea(side, {
+    store.restoreDockArea(side, {
       width: persisted.width,
       collapsed: persisted.collapsed,
       windowOrder: persisted.windowOrder,
@@ -174,15 +169,16 @@ function restoreDockAreaState(): void {
 }
 
 export function useWindowPersistence(layoutId: string) {
+  const { windows: store } = useSharedStores();
   useEffect(() => {
     activeLayoutId = layoutId;
 
-    restoreDockAreaState();
+    restoreDockAreaState(store);
 
     const unsubscribe = reaction(
-      () => getSerializedStoreState(),
+      () => store.getSerializedStoreState(),
       () => {
-        saveWindowLayout();
+        saveWindowLayout(store);
       },
     );
 
@@ -191,5 +187,5 @@ export function useWindowPersistence(layoutId: string) {
       saveWindowLayout.cancel();
       activeLayoutId = null;
     };
-  }, [layoutId]);
+  }, [layoutId, store]);
 }

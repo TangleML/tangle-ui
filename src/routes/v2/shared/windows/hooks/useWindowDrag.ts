@@ -1,21 +1,11 @@
 import { useRef, useState } from "react";
 
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { detectSnapPreview } from "@/routes/v2/shared/windows/snapUtils";
 import type {
   Position,
   SnapPreviewType,
 } from "@/routes/v2/shared/windows/types";
-import {
-  bringToFront,
-  dockWindow,
-  getDockAreaWindowIds,
-  getWindowById,
-  getWindowOrderLength,
-  isWindowAtFront,
-  isWindowDocked,
-  undockWindow,
-  updateWindowPosition,
-} from "@/routes/v2/shared/windows/windows.actions";
 
 // ---------------------------------------------------------------------------
 // Drag phase state machine
@@ -55,8 +45,9 @@ export function useWindowDrag({
   windowId,
   docked,
 }: UseWindowDragOptions): UseWindowDragReturn {
-  const windowConfig = getWindowById(windowId);
-  const isAtFront = isWindowAtFront(windowId);
+  const { windows } = useSharedStores();
+  const windowConfig = windows.getWindowById(windowId);
+  const isAtFront = windows.isWindowAtFront(windowId);
 
   const [isDragging, setIsDragging] = useState(false);
   const [snapPreview, setSnapPreview] = useState<SnapPreviewType | null>(null);
@@ -76,7 +67,7 @@ export function useWindowDrag({
   // start where the window would briefly stay behind others.
   const raiseZIndex = () => {
     if (!docked && !isAtFront && panelRef.current) {
-      panelRef.current.style.zIndex = String(20 + getWindowOrderLength());
+      panelRef.current.style.zIndex = String(20 + windows.windowOrderLength);
     }
   };
 
@@ -86,7 +77,7 @@ export function useWindowDrag({
 
   const handleContainerClick = () => {
     if (!isAtFront) {
-      bringToFront(windowId);
+      windows.bringToFront(windowId);
     }
   };
 
@@ -133,11 +124,11 @@ export function useWindowDrag({
         const dy = Math.abs(moveE.clientY - phase.originMouse.y);
         if (dx <= UNDOCK_THRESHOLD && dy <= UNDOCK_THRESHOLD) return;
 
-        undockWindow(windowId);
+        windows.undockWindow(windowId);
         phaseRef.current = { type: "free" };
 
         // Center the floating window under the cursor
-        const win = getWindowById(windowId);
+        const win = windows.getWindowById(windowId);
         if (win) {
           const halfWidth = win.size.width / 2;
           const headerGrab = 20;
@@ -150,10 +141,10 @@ export function useWindowDrag({
       }
 
       // --- Phase: free ---
-      updateWindowPosition(windowId, newPosition);
+      windows.updateWindowPosition(windowId, newPosition);
 
-      if (isWindowDocked(windowId)) {
-        undockWindow(windowId);
+      if (windows.isWindowDocked(windowId)) {
+        windows.undockWindow(windowId);
       }
 
       const preview = detectSnapPreview({
@@ -162,8 +153,8 @@ export function useWindowDrag({
         size,
         mousePosition: { x: moveE.clientX, y: moveE.clientY },
         dockAreaWindowIds: {
-          left: [...getDockAreaWindowIds("left")],
-          right: [...getDockAreaWindowIds("right")],
+          left: [...windows.getDockAreaWindowIds("left")],
+          right: [...windows.getDockAreaWindowIds("right")],
         },
       });
       snapPreviewRef.current = preview;
@@ -175,14 +166,18 @@ export function useWindowDrag({
 
       if (currentPreview) {
         if (currentPreview.type === "edge") {
-          dockWindow(windowId, currentPreview.side);
+          windows.dockWindow(windowId, currentPreview.side);
         } else if (currentPreview.type === "dock-insert") {
-          dockWindow(windowId, currentPreview.side, currentPreview.insertIndex);
+          windows.dockWindow(
+            windowId,
+            currentPreview.side,
+            currentPreview.insertIndex,
+          );
         }
       }
 
       if (!isAtFront) {
-        bringToFront(windowId);
+        windows.bringToFront(windowId);
       }
       setIsDragging(false);
       setSnapPreview(null);

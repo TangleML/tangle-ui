@@ -1,18 +1,15 @@
 import { useEffect } from "react";
 
 import { PipelineDetailsContent } from "@/routes/v2/pages/Editor/components/PipelineDetailsContent/PipelineDetailsContent";
-import {
-  dockWindow,
-  getWindowById,
-  openWindow,
-} from "@/routes/v2/shared/windows/windows.actions";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 const PIPELINE_DETAILS_WINDOW_ID = "pipeline-details";
 
 export function usePipelineDetailsWindow() {
+  const { windows } = useSharedStores();
   useEffect(() => {
-    if (!getWindowById(PIPELINE_DETAILS_WINDOW_ID)) {
-      openWindow(<PipelineDetailsContent />, {
+    if (!windows.getWindowById(PIPELINE_DETAILS_WINDOW_ID)) {
+      windows.openWindow(<PipelineDetailsContent />, {
         id: PIPELINE_DETAILS_WINDOW_ID,
         title: "Pipeline Details",
         position: { x: 0, y: 460 },
@@ -20,7 +17,7 @@ export function usePipelineDetailsWindow() {
         disabledActions: ["close"],
         persisted: true,
       });
-      dockWindow(PIPELINE_DETAILS_WINDOW_ID, "right");
+      windows.dockWindow(PIPELINE_DETAILS_WINDOW_ID, "right");
     }
-  }, []);
+  }, [windows]);
 }

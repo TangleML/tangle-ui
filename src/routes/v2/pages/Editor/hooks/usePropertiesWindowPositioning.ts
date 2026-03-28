@@ -6,11 +6,6 @@ import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import type { Position } from "@/routes/v2/shared/windows/types";
 import { COLLAPSED_DOCK_AREA_WIDTH } from "@/routes/v2/shared/windows/types";
-import {
-  getDockAreaConfig,
-  getWindowById,
-  updateWindowPosition,
-} from "@/routes/v2/shared/windows/windows.actions";
 
 const CONTEXT_PANEL_WINDOW_ID = "context-panel";
 const GAP = 12;
@@ -29,16 +24,20 @@ interface Bounds {
   bottom: number;
 }
 
-function getDockAreaWidth(side: "left" | "right"): number {
-  const area = getDockAreaConfig(side);
-  return area.collapsed ? COLLAPSED_DOCK_AREA_WIDTH : area.width;
-}
-
-function getAvailableBounds(): Bounds {
+function getAvailableBounds(store: {
+  getDockAreaConfig: (side: "left" | "right") => {
+    collapsed: boolean;
+    width: number;
+  };
+}): Bounds {
+  const effectiveWidth = (side: "left" | "right") => {
+    const area = store.getDockAreaConfig(side);
+    return area.collapsed ? COLLAPSED_DOCK_AREA_WIDTH : area.width;
+  };
   return {
-    left: getDockAreaWidth("left"),
+    left: effectiveWidth("left"),
     top: 0,
-    right: window.innerWidth - getDockAreaWidth("right"),
+    right: window.innerWidth - effectiveWidth("right"),
     bottom: window.innerHeight,
   };
 }
@@ -92,7 +91,7 @@ function calculateWindowPosition(
  * positions the floating Properties window adjacent to the selected node.
  */
 export function usePropertiesWindowPositioning() {
-  const { editor } = useSharedStores();
+  const { editor, windows: windowStore } = useSharedStores();
   const enabled = useFlagValue("snap-properties-to-node");
   const reactFlow = useReactFlow();
   const reactFlowRef = useRef(reactFlow);
@@ -111,7 +110,7 @@ export function usePropertiesWindowPositioning() {
 
         // Defer so useSelectionWindowSync's reaction opens the window first
         queueMicrotask(() => {
-          const win = getWindowById(CONTEXT_PANEL_WINDOW_ID);
+          const win = windowStore.getWindowById(CONTEXT_PANEL_WINDOW_ID);
           if (!win || win.dockState !== "none") return;
 
           const rf = reactFlowRef.current;
@@ -130,7 +129,7 @@ export function usePropertiesWindowPositioning() {
             bottom: bottomRight.y,
           };
 
-          const bounds = getAvailableBounds();
+          const bounds = getAvailableBounds(windowStore);
           const position = calculateWindowPosition(
             nodeRect,
             win.size.width,
@@ -138,11 +137,11 @@ export function usePropertiesWindowPositioning() {
             bounds,
           );
 
-          updateWindowPosition(CONTEXT_PANEL_WINDOW_ID, position);
+          windowStore.updateWindowPosition(CONTEXT_PANEL_WINDOW_ID, position);
         });
       },
     );
 
     return dispose;
-  }, [enabled, editor]);
+  }, [enabled, editor, windowStore]);
 }

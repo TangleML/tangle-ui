@@ -1,17 +1,14 @@
 import { useEffect } from "react";
 
-import {
-  closeWindow,
-  getAllWindows,
-} from "@/routes/v2/shared/windows/windows.actions";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 export function useLinkedWindowCleanup() {
+  const { windows: windowStore } = useSharedStores();
   useEffect(() => {
     return () => {
-      const windows = getAllWindows();
-      for (const win of windows) {
-        if (win.linkedEntityId) closeWindow(win.id);
+      for (const win of windowStore.getAllWindows()) {
+        if (win.linkedEntityId) windowStore.closeWindow(win.id);
       }
     };
-  }, []);
+  }, [windowStore]);
 }

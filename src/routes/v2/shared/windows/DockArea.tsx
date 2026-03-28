@@ -6,6 +6,7 @@ import { VerticalResizeHandle } from "@/components/ui/resize-handle";
 import { cn } from "@/lib/utils";
 import { focusModeStore } from "@/routes/v2/shared/hooks/useFocusMode";
 
+import { useSharedStores } from "../store/SharedStoreContext";
 import { registerDockAreaElement } from "./snapUtils";
 import {
   COLLAPSED_DOCK_AREA_WIDTH,
@@ -13,19 +14,14 @@ import {
   MIN_DOCK_AREA_WIDTH,
 } from "./types";
 import { Window } from "./Window";
-import {
-  getDockAreaConfig,
-  getDockAreaWidth,
-  setDockAreaWidth,
-  toggleDockAreaCollapsed,
-} from "./windows.actions";
 
 interface DockAreaProps {
   side: "left" | "right";
 }
 
 export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
-  const dockArea = getDockAreaConfig(side);
+  const { windows } = useSharedStores();
+  const dockArea = windows.getDockAreaConfig(side);
   const { collapsed, windowOrder } = dockArea;
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -44,8 +40,11 @@ export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const newWidth = entry.contentRect.width;
-        if (newWidth > 0 && Math.abs(newWidth - getDockAreaWidth(side)) > 1) {
-          setDockAreaWidth(side, Math.round(newWidth));
+        if (
+          newWidth > 0 &&
+          Math.abs(newWidth - windows.getDockAreaWidth(side)) > 1
+        ) {
+          windows.setDockAreaWidth(side, Math.round(newWidth));
         }
       }
     });
@@ -61,7 +60,7 @@ export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
   };
 
   const handleToggleCollapse = () => {
-    toggleDockAreaCollapsed(side);
+    windows.toggleDockAreaCollapsed(side);
   };
 
   const handleSide = side === "left" ? "right" : "left";
