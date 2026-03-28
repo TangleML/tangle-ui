@@ -7,6 +7,7 @@ import { Link } from "@/components/ui/link";
 import { Spinner } from "@/components/ui/spinner";
 import { useBackend } from "@/providers/BackendProvider";
 import { getBackendStatusString } from "@/utils/backend";
+import { CONTAINER_STATUSES_PRE_LAUNCH } from "@/utils/executionStatus";
 
 const LogDisplay = ({
   logs,
@@ -52,15 +53,14 @@ const LogDisplay = ({
   );
 };
 
+/**
+ * Statuses where the container is running and actively producing logs.
+ * Used to decide whether to poll for new log content.
+ */
 const isStatusActivelyLogging = (status?: string): boolean => {
-  if (!status) {
-    return false;
-  }
   switch (status) {
     case "RUNNING":
     case "PENDING":
-    case "QUEUED":
-    case "WAITING_FOR_UPSTREAM":
     case "CANCELLING":
       return true;
     default:
@@ -68,24 +68,14 @@ const isStatusActivelyLogging = (status?: string): boolean => {
   }
 };
 
+/**
+ * Returns true if the container may have logs worth fetching.
+ */
 const shouldStatusHaveLogs = (status?: string): boolean => {
   if (!status) {
     return false;
   }
-
-  if (isStatusActivelyLogging(status)) {
-    return true;
-  }
-
-  switch (status) {
-    case "FAILED":
-    case "SYSTEM_ERROR":
-    case "SUCCEEDED":
-    case "CANCELLED":
-      return true;
-    default:
-      return false;
-  }
+  return !CONTAINER_STATUSES_PRE_LAUNCH.has(status);
 };
 
 const getLogs = async (executionId: string, backendUrl: string) => {
@@ -104,8 +94,9 @@ const Logs = ({
 }) => {
   const { backendUrl, configured, available } = useBackend();
 
-  const [isLogging, setIsLogging] = useState(!!executionId);
-  const [shouldHaveLogs, setShouldHaveLogs] = useState(!!executionId);
+  const shouldFetch = !!executionId && shouldStatusHaveLogs(status);
+  const shouldPoll = shouldFetch && isStatusActivelyLogging(status);
+
   const [logs, setLogs] = useState<{
     log_text?: string;
     system_error_exception_full?: string;
@@ -113,17 +104,10 @@ const Logs = ({
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["logs", executionId],
     queryFn: () => getLogs(String(executionId), backendUrl),
-    enabled: isLogging,
-    refetchInterval: 5000,
+    enabled: shouldFetch,
+    refetchInterval: shouldPoll ? 5000 : false,
     refetchIntervalInBackground: false,
   });
-
-  useEffect(() => {
-    if (status) {
-      setIsLogging(isStatusActivelyLogging(status));
-      setShouldHaveLogs(shouldStatusHaveLogs(status));
-    }
-  }, [status]);
 
   useEffect(() => {
     if (data && !error) {
@@ -139,8 +123,10 @@ const Logs = ({
   }, [data, error]);
 
   useEffect(() => {
-    refetch();
-  }, [backendUrl, refetch]);
+    if (shouldFetch) {
+      refetch();
+    }
+  }, [backendUrl, refetch, shouldFetch]);
 
   if (!configured) {
     return (
@@ -150,7 +136,7 @@ const Logs = ({
     );
   }
 
-  if (!shouldHaveLogs) {
+  if (!shouldFetch && !logs) {
     return (
       <InfoBox title="No logs available" variant="info">
         Logs are available only for active, queued and completed executions.
