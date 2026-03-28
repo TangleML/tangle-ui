@@ -5,7 +5,7 @@ import { VerticalResizeHandle } from "@/components/ui/resize-handle";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
-import { closeWindow } from "@/routes/v2/shared/windows/windows.actions";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 import { useTaskActions } from "../../store/actions/useTaskActions";
 import { UpgradeCandidateDetail } from "./components/UpgradeCandidateDetail";
@@ -23,6 +23,7 @@ const DEFAULT_LEFT_PANEL_WIDTH = 340;
 
 export function UpgradeComponentsContent() {
   const spec = useSpec();
+  const { windows } = useSharedStores();
   const candidates = useMockUpgradeCandidates(true);
   const { upgradeSelectedTasks } = useTaskActions();
 
@@ -42,7 +43,7 @@ export function UpgradeComponentsContent() {
   const handleUpgrade = () => {
     if (!spec || selectedCandidates.length === 0) return;
     upgradeSelectedTasks(spec, selectedCandidates);
-    closeWindow(WINDOW_ID);
+    windows.closeWindow(WINDOW_ID);
   };
 
   if (candidates.length === 0) return <UpgradeEmptyState />;
@@ -94,7 +95,7 @@ export function UpgradeComponentsContent() {
       <UpgradeFooter
         selectedCount={selectedCandidates.length}
         onUpgrade={handleUpgrade}
-        onCancel={() => closeWindow(WINDOW_ID)}
+        onCancel={() => windows.closeWindow(WINDOW_ID)}
       />
     </BlockStack>
   );

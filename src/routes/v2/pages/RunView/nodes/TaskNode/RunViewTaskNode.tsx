@@ -11,7 +11,7 @@ import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
 import { TaskNode } from "@/routes/v2/shared/nodes/TaskNode/TaskNode";
 import type { TaskNodeData } from "@/routes/v2/shared/nodes/types";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
-import { openWindow } from "@/routes/v2/shared/windows/windows.actions";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { ISO8601_DURATION_ZERO_DAYS } from "@/utils/constants";
 
 type TaskNodeType = Node<TaskNodeData, "task">;
@@ -21,6 +21,7 @@ export const RunViewTaskNode = observer(function RunViewTaskNode(
 ) {
   const { entityId } = props.data;
   const executionData = useExecutionDataOptional();
+  const { windows } = useSharedStores();
   const spec = useSpec();
 
   const task = spec?.tasks.find((t) => t.$id === entityId);
@@ -37,7 +38,7 @@ export const RunViewTaskNode = observer(function RunViewTaskNode(
 
   const handleOpenLogs = () => {
     if (!task || !executionId) return;
-    openWindow(<Logs executionId={executionId} status={status} />, {
+    windows.openWindow(<Logs executionId={executionId} status={status} />, {
       id: `task-logs-${task.name}`,
       title: `Logs: ${task.name}`,
       size: { width: 500, height: 400 },

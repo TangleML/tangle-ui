@@ -24,22 +24,16 @@ import {
   saveWindowSnapshot,
 } from "./windowStore.helpers";
 
-/**
- * Content storage - separate from observable store to avoid React Compiler issues.
- * React elements should never be stored in an observable.
- */
-const windowContentMap = new Map<string, ReactNode>();
-
-/** Get window content by ID */
-export function getWindowContent(id: string): ReactNode | undefined {
-  return windowContentMap.get(id);
-}
-
 function generateWindowId(): string {
   return `window-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-class WindowStoreImpl {
+export class WindowStoreImpl {
+  /**
+   * Content storage — kept as a plain (non-observable) Map to avoid
+   * React Compiler issues. React elements must never be stored in an observable.
+   */
+  private contentMap = new Map<string, ReactNode>();
   @observable accessor windows: Record<string, WindowConfig> = {};
   @observable.shallow accessor windowOrder: string[] = [];
   @observable accessor dockAreas: {
@@ -76,7 +70,7 @@ class WindowStoreImpl {
 
     const existingWindow = this.windows[id];
     if (existingWindow) {
-      windowContentMap.set(id, content);
+      this.contentMap.set(id, content);
       this.bringToFront(id);
       if (
         existingWindow.state === "hidden" ||
@@ -87,7 +81,7 @@ class WindowStoreImpl {
       return this.createWindowRef(id);
     }
 
-    windowContentMap.set(id, content);
+    this.contentMap.set(id, content);
 
     const persisted = options.persisted ? getPersistedWindowState(id) : null;
 
@@ -137,7 +131,7 @@ class WindowStoreImpl {
     docking.removeFromDockAreaOrder(this.dockAreas, id);
 
     delete this.windows[id];
-    windowContentMap.delete(id);
+    this.contentMap.delete(id);
     const index = this.windowOrder.indexOf(id);
     if (index !== -1) {
       this.windowOrder.splice(index, 1);
@@ -332,6 +326,75 @@ class WindowStoreImpl {
   @action restoreWindowQuietly(id: string): void {
     this.restoreWindow(id, { quiet: true });
   }
-}
 
-export const windowStore = new WindowStoreImpl();
+  // -- Content --
+
+  getWindowContent(id: string): ReactNode | undefined {
+    return this.contentMap.get(id);
+  }
+
+  // -- Query helpers (promoted from windows.actions.ts) --
+
+  getDockAreaConfig(side: "left" | "right"): DockAreaConfig {
+    return this.dockAreas[side];
+  }
+
+  getHiddenWindows(): WindowConfig[] {
+    return this.windowOrder
+      .map((id) => this.windows[id])
+      .filter((w) => w?.state === "hidden");
+  }
+
+  getWindowZIndex(id: string): number {
+    return this.windowOrder.indexOf(id);
+  }
+
+  isWindowAtFront(id: string): boolean {
+    const idx = this.windowOrder.indexOf(id);
+    return idx === this.windowOrder.length - 1;
+  }
+
+  get windowOrderLength(): number {
+    return this.windowOrder.length;
+  }
+
+  get hasHiddenWindows(): boolean {
+    return this.windowOrder.some((id) => this.windows[id]?.state === "hidden");
+  }
+
+  isDockAreaCollapsed(side: DockState): boolean {
+    if (side === "none") return false;
+    return this.dockAreas[side].collapsed;
+  }
+
+  getFloatingWindowIds(): string[] {
+    return this.windowOrder.filter(
+      (id) => this.windows[id]?.dockState === "none",
+    );
+  }
+
+  get currentWindowOrder(): string[] {
+    return this.windowOrder;
+  }
+
+  getDockAreaWidth(side: "left" | "right"): number {
+    return this.dockAreas[side].width;
+  }
+
+  isWindowPersisted(id: string): boolean {
+    return this.windows[id]?.persisted === true;
+  }
+
+  getPersistedWindowIds(): string[] {
+    return this.windowOrder.filter((id) => this.windows[id]?.persisted);
+  }
+
+  /** Deep-serialize all store state for MobX change tracking. */
+  getSerializedStoreState(): string {
+    return JSON.stringify({
+      w: this.windows,
+      o: this.windowOrder,
+      d: this.dockAreas,
+    });
+  }
+}

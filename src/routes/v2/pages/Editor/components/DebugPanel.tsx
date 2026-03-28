@@ -11,14 +11,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Text } from "@/components/ui/typography";
 import type { ComponentSpec } from "@/models/componentSpec";
 import { serializeComponentSpecToText } from "@/models/componentSpec";
-import { openUpgradeComponentsWindow } from "@/routes/v2/pages/Editor/components/UpgradeComponents/openUpgradeWindow";
+import { useUpgradeComponentsWindow } from "@/routes/v2/pages/Editor/components/UpgradeComponents/useUpgradeComponentsWindow";
 import { ShorcutBadge } from "@/routes/v2/shared/components/ShorcutBadge";
 import type { KeyConstant } from "@/routes/v2/shared/shortcuts/keys";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
-import {
-  getWindowById,
-  openWindow,
-} from "@/routes/v2/shared/windows/windows.actions";
 
 const DEBUG_PANEL_WINDOW_ID = "debug-panel";
 
@@ -77,6 +73,7 @@ function getSpecYaml(spec: ComponentSpec | null): string {
  */
 const DebugPanelContent = observer(function DebugPanelContent() {
   const { editor, keyboard, navigation } = useSharedStores();
+  const openUpgradeComponentsWindow = useUpgradeComponentsWindow();
   const spec = navigation.rootSpec;
   const specYaml = getSpecYaml(spec);
 
@@ -191,10 +188,10 @@ const DebugPanelContent = observer(function DebugPanelContent() {
  * Otherwise it starts visible (first-time default).
  */
 export function useDebugPanelWindow() {
+  const { windows } = useSharedStores();
   useEffect(() => {
-    const existingWindow = getWindowById(DEBUG_PANEL_WINDOW_ID);
-    if (!existingWindow) {
-      openWindow(<DebugPanelContent />, {
+    if (!windows.getWindowById(DEBUG_PANEL_WINDOW_ID)) {
+      windows.openWindow(<DebugPanelContent />, {
         id: DEBUG_PANEL_WINDOW_ID,
         title: "Debug Panel",
         position: { x: 16, y: 16 },
@@ -203,7 +200,7 @@ export function useDebugPanelWindow() {
         persisted: true,
       });
     }
-  }, []);
+  }, [windows]);
 }
 
 const PressedKeysList = function PressedKeysList() {

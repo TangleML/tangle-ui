@@ -16,7 +16,7 @@ import type {
   TaskNodeData,
 } from "@/routes/v2/shared/nodes/types";
 import type { NavigationStore } from "@/routes/v2/shared/store/navigationStore";
-import { restoreWindow } from "@/routes/v2/shared/windows/windows.actions";
+import type { WindowStoreImpl } from "@/routes/v2/shared/windows/windowStore";
 import { hydrateComponentReference } from "@/services/componentService";
 import type { TaskSpec } from "@/utils/componentSpec";
 import { deepClone } from "@/utils/deepClone";
@@ -49,12 +49,17 @@ export const taskManifest: NodeTypeManifest = {
 
   contextPanelComponent: TaskDetails,
 
-  onDoubleClick(spec: ComponentSpec, node: Node, navigation: NavigationStore) {
+  onDoubleClick(
+    spec: ComponentSpec,
+    node: Node,
+    navigation: NavigationStore,
+    windows: WindowStoreImpl,
+  ) {
     const taskData = node.data as TaskNodeData;
     if (navigation.isTaskSubgraph(spec, taskData.entityId)) {
       const newSpec = navigation.navigateToSubgraph(spec, taskData.entityId);
       if (newSpec) {
-        restoreWindow(PIPELINE_TREE_WINDOW_ID);
+        windows.restoreWindow(PIPELINE_TREE_WINDOW_ID);
       }
     }
   },

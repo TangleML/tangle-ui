@@ -8,12 +8,6 @@ import { ContextPanelContent } from "@/routes/v2/pages/Editor/components/Context
 import { PinnedTaskContent } from "@/routes/v2/pages/Editor/components/PinnedTaskContent/PinnedTaskContent";
 import type { NavigationStore } from "@/routes/v2/shared/store/navigationStore";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
-import {
-  closeWindow,
-  getWindowById,
-  openWindow,
-  restoreWindow,
-} from "@/routes/v2/shared/windows/windows.actions";
 
 const CONTEXT_PANEL_WINDOW_ID = "context-panel";
 
@@ -32,7 +26,7 @@ function getTaskNameByEntityId(
 }
 
 export function useSelectionWindowSync() {
-  const { editor, navigation } = useSharedStores();
+  const { editor, navigation, windows } = useSharedStores();
 
   useEffect(() => {
     const disposeSelectionWatcher = reaction(
@@ -56,7 +50,7 @@ export function useSelectionWindowSync() {
             lastShiftClickEntityId,
           );
           if (taskName) {
-            openWindow(
+            windows.openWindow(
               <PinnedTaskContent entityId={lastShiftClickEntityId} />,
               {
                 id: generatePinnedWindowId(),
@@ -70,12 +64,12 @@ export function useSelectionWindowSync() {
         }
 
         if (multiSelectionLength > 1) {
-          const existingWindow = getWindowById(CONTEXT_PANEL_WINDOW_ID);
+          const existingWindow = windows.getWindowById(CONTEXT_PANEL_WINDOW_ID);
           if (existingWindow) {
             if (existingWindow.state === "hidden")
-              restoreWindow(CONTEXT_PANEL_WINDOW_ID);
+              windows.restoreWindow(CONTEXT_PANEL_WINDOW_ID);
           } else {
-            openWindow(<ContextPanelContent />, {
+            windows.openWindow(<ContextPanelContent />, {
               id: CONTEXT_PANEL_WINDOW_ID,
               title: "Properties",
               position: { x: window.innerWidth - 340, y: 80 },
@@ -88,12 +82,12 @@ export function useSelectionWindowSync() {
         }
 
         if (selectedNodeId && selectedNodeType) {
-          const existingWindow = getWindowById(CONTEXT_PANEL_WINDOW_ID);
+          const existingWindow = windows.getWindowById(CONTEXT_PANEL_WINDOW_ID);
           if (existingWindow) {
             if (existingWindow.state === "hidden")
-              restoreWindow(CONTEXT_PANEL_WINDOW_ID);
+              windows.restoreWindow(CONTEXT_PANEL_WINDOW_ID);
           } else {
-            openWindow(<ContextPanelContent />, {
+            windows.openWindow(<ContextPanelContent />, {
               id: CONTEXT_PANEL_WINDOW_ID,
               title: "Properties",
               position: { x: window.innerWidth - 340, y: 80 },
@@ -103,12 +97,12 @@ export function useSelectionWindowSync() {
             });
           }
         } else {
-          const existingWindow = getWindowById(CONTEXT_PANEL_WINDOW_ID);
-          if (existingWindow) closeWindow(CONTEXT_PANEL_WINDOW_ID);
+          const existingWindow = windows.getWindowById(CONTEXT_PANEL_WINDOW_ID);
+          if (existingWindow) windows.closeWindow(CONTEXT_PANEL_WINDOW_ID);
         }
       },
     );
 
     return disposeSelectionWatcher;
-  }, [editor, navigation]);
+  }, [editor, navigation, windows]);
 }

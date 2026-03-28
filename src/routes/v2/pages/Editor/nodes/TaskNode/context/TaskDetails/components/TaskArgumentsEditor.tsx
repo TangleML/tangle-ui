@@ -10,10 +10,6 @@ import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { CTRL, SHIFT } from "@/routes/v2/shared/shortcuts/keys";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { useContentWindowState } from "@/routes/v2/shared/windows/ContentWindowStateContext";
-import {
-  getWindowById,
-  toggleMaximize,
-} from "@/routes/v2/shared/windows/windows.actions";
 
 interface TaskArgumentsEditorProps {
   task: Task;
@@ -22,7 +18,7 @@ interface TaskArgumentsEditorProps {
 export const TaskArgumentsEditor = observer(function TaskArgumentsEditor({
   task,
 }: TaskArgumentsEditorProps) {
-  const { editor, keyboard } = useSharedStores();
+  const { editor, keyboard, windows } = useSharedStores();
   const spec = useSpec();
   const windowState = useContentWindowState();
   const isMaximized = windowState?.isMaximized ?? false;
@@ -45,16 +41,16 @@ export const TaskArgumentsEditor = observer(function TaskArgumentsEditor({
 
         const { windowId } = windowState;
         const isCurrentlyMaximized =
-          getWindowById(windowId)?.state === "maximized";
+          windows.getWindowById(windowId)?.state === "maximized";
 
-        toggleMaximize(windowId);
+        windows.toggleMaximize(windowId);
 
         if (!isCurrentlyMaximized && lastSelectedArgRef.current) {
           editor.setFocusedArgument(lastSelectedArgRef.current);
         }
       },
     });
-  }, [editor, keyboard, windowState]);
+  }, [editor, keyboard, windows, windowState]);
 
   if (!spec || inputs.length === 0) {
     return (

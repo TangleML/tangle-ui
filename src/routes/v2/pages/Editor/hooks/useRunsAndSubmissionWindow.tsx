@@ -1,17 +1,15 @@
 import { useEffect } from "react";
 
 import { RunsAndSubmissionContent } from "@/routes/v2/pages/Editor/components/RunsAndSubmissionContent";
-import {
-  getWindowById,
-  openWindow,
-} from "@/routes/v2/shared/windows/windows.actions";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 const RUNS_AND_SUBMISSION_WINDOW_ID = "runs-and-submission";
 
 export function useRunsAndSubmissionWindow() {
+  const { windows } = useSharedStores();
   useEffect(() => {
-    if (!getWindowById(RUNS_AND_SUBMISSION_WINDOW_ID)) {
-      openWindow(<RunsAndSubmissionContent />, {
+    if (!windows.getWindowById(RUNS_AND_SUBMISSION_WINDOW_ID)) {
+      windows.openWindow(<RunsAndSubmissionContent />, {
         id: RUNS_AND_SUBMISSION_WINDOW_ID,
         title: "Runs & Submissions",
         position: { x: 0, y: 460 },
@@ -20,5 +18,5 @@ export function useRunsAndSubmissionWindow() {
         persisted: true,
       });
     }
-  }, []);
+  }, [windows]);
 }
