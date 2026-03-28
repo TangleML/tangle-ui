@@ -13,11 +13,12 @@ function isNearRightEdge(x: number, windowWidth: number): boolean {
 function detectEdgeSnap(
   position: Position,
   size: Size,
+  enabledSides: ReadonlySet<"left" | "right">,
 ): { side: "left" | "right" } | null {
-  if (isNearLeftEdge(position.x)) {
+  if (enabledSides.has("left") && isNearLeftEdge(position.x)) {
     return { side: "left" };
   }
-  if (isNearRightEdge(position.x, size.width)) {
+  if (enabledSides.has("right") && isNearRightEdge(position.x, size.width)) {
     return { side: "right" };
   }
   return null;
@@ -49,8 +50,10 @@ function detectDockAreaSnap(
   mouseY: number,
   windowId: string,
   dockAreaWindowIds: Record<"left" | "right", string[]>,
+  enabledSides: ReadonlySet<"left" | "right">,
 ): SnapPreviewType | null {
   for (const side of ["left", "right"] as const) {
+    if (!enabledSides.has(side)) continue;
     const el = dockAreaElements[side];
 
     // If dock area exists, check if mouse is inside it
@@ -157,13 +160,20 @@ interface DetectSnapPreviewOptions {
   size: Size;
   mousePosition?: Position;
   dockAreaWindowIds?: Record<"left" | "right", string[]>;
+  enabledDockSides?: ReadonlySet<"left" | "right">;
 }
 
 export function detectSnapPreview(
   options: DetectSnapPreviewOptions,
 ): SnapPreviewType | null {
-  const { windowId, position, size, mousePosition, dockAreaWindowIds } =
-    options;
+  const {
+    windowId,
+    position,
+    size,
+    mousePosition,
+    dockAreaWindowIds,
+    enabledDockSides = new Set(["left", "right"] as const),
+  } = options;
 
   if (mousePosition && dockAreaWindowIds) {
     const dockSnap = detectDockAreaSnap(
@@ -171,11 +181,12 @@ export function detectSnapPreview(
       mousePosition.y,
       windowId,
       dockAreaWindowIds,
+      enabledDockSides,
     );
     if (dockSnap) return dockSnap;
   }
 
-  const edgeSnap = detectEdgeSnap(position, size);
+  const edgeSnap = detectEdgeSnap(position, size, enabledDockSides);
   if (edgeSnap) {
     return { type: "edge", side: edgeSnap.side };
   }
