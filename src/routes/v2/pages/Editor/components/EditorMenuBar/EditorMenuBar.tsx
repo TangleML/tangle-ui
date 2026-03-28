@@ -11,6 +11,7 @@ import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { restoreWindow } from "@/routes/v2/shared/windows/windows.actions";
 import { TOP_NAV_HEIGHT } from "@/utils/constants";
 
+import { useEditorSession } from "../../store/EditorSessionContext";
 import { AutoSaveIndicator } from "./components/AutoSaveIndicator";
 import { ComponentsLibraryMenu } from "./components/ComponentsLibraryMenu";
 import { FileMenu } from "./components/FileMenu";
@@ -19,8 +20,11 @@ import { ViewMenu } from "./components/ViewMenu";
 
 export const EditorMenuBar = observer(function EditorMenuBar() {
   const { navigation } = useSharedStores();
+  const { pipelineFile } = useEditorSession();
   const spec = navigation.activeSpec;
   const pipelineName = spec?.name ?? "Untitled pipeline";
+
+  const displayMenu = Boolean(pipelineFile.activePipelineFile);
 
   return (
     <div
@@ -48,41 +52,45 @@ export const EditorMenuBar = observer(function EditorMenuBar() {
             />
           </Link>
 
-          <BlockStack gap="0" className="min-w-0">
-            <Text
-              as="span"
-              size="sm"
-              weight="semibold"
-              className="text-white truncate max-w-64 lg:max-w-md leading-tight ml-1"
-            >
-              {pipelineName}
-            </Text>
-
-            <InlineStack gap="0" wrap="nowrap" blockAlign="center">
-              <FileMenu />
-              <ViewMenu />
-              <MenuTriggerButton
-                onClick={() => restoreWindow("pipeline-details")}
+          {displayMenu && (
+            <BlockStack gap="0" className="min-w-0">
+              <Text
+                as="span"
+                size="sm"
+                weight="semibold"
+                className="text-white truncate max-w-64 lg:max-w-md leading-tight ml-1"
               >
-                Notes
-              </MenuTriggerButton>
-              <MenuTriggerButton disabled>Runs</MenuTriggerButton>
-              <ComponentsLibraryMenu />
-            </InlineStack>
-          </BlockStack>
+                {pipelineName}
+              </Text>
 
-          <InlineStack
-            gap="2"
-            wrap="nowrap"
-            align="start"
-            blockAlign="center"
-            className="shrink-0 ml-1"
-            data-testid="status-indicators"
-          >
-            <Separator orientation="vertical" />
-            <MovePipelineToFolderButton />
-            <AutoSaveIndicator />
-          </InlineStack>
+              <InlineStack gap="0" wrap="nowrap" blockAlign="center">
+                <FileMenu />
+                <ViewMenu />
+                <MenuTriggerButton
+                  onClick={() => restoreWindow("pipeline-details")}
+                >
+                  Notes
+                </MenuTriggerButton>
+                <MenuTriggerButton disabled>Runs</MenuTriggerButton>
+                <ComponentsLibraryMenu />
+              </InlineStack>
+            </BlockStack>
+          )}
+
+          {displayMenu && (
+            <InlineStack
+              gap="2"
+              wrap="nowrap"
+              align="start"
+              blockAlign="center"
+              className="shrink-0 ml-1"
+              data-testid="status-indicators"
+            >
+              <Separator orientation="vertical" />
+              <MovePipelineToFolderButton />
+              <AutoSaveIndicator />
+            </InlineStack>
+          )}
         </InlineStack>
 
         <AppMenuActions />

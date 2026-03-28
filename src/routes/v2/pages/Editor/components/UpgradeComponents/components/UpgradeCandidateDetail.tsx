@@ -1,7 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Text } from "@/components/ui/typography";
 import type { ValidationIssue } from "@/models/componentSpec";
 import type {
@@ -141,7 +140,7 @@ export function UpgradeCandidateDetail({
   const hasIssues = candidateHasIssues(candidate);
 
   return (
-    <ScrollArea className="h-full">
+    <div className="flex-1 min-h-0 overflow-y-auto">
       <BlockStack className="p-3" gap="3">
         <BlockStack gap="1">
           <InlineStack gap="1" blockAlign="center">
@@ -199,6 +198,6 @@ export function UpgradeCandidateDetail({
         <DiffSection label="Output" diff={candidate.outputDiff} />
         <PredictedIssuesSection issues={candidate.predictedIssues} />
       </BlockStack>
-    </ScrollArea>
+    </div>
   );
 }

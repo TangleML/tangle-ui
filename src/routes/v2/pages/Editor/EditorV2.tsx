@@ -27,6 +27,7 @@ import { useWindowPersistence } from "@/routes/v2/shared/windows/windowPersisten
 
 import { useShortcutListener } from "../../shared/shortcuts/useShortcutListener";
 import { useDebugPanelWindow } from "./components/DebugPanel";
+import { DriverPermissionGate } from "./components/DriverPermissionGate";
 import { EditorMenuBar } from "./components/EditorMenuBar/EditorMenuBar";
 import { EmptyEditorState } from "./components/EmptyEditorState";
 import { FlowCanvas } from "./components/FlowCanvas/FlowCanvas";
@@ -129,7 +130,9 @@ function EditorV2Content({ pipelineRef }: { pipelineRef: PipelineRef | null }) {
         <ForcedSearchProvider>
           <ComponentLibraryProvider>
             {pipelineRef ? (
-              <PipelineEditor pipelineRef={pipelineRef} />
+              <DriverPermissionGate pipelineRef={pipelineRef}>
+                <PipelineEditor pipelineRef={pipelineRef} />
+              </DriverPermissionGate>
             ) : (
               <EmptyEditorState />
             )}

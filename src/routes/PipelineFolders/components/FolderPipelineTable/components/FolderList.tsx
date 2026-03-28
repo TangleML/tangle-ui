@@ -1,4 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { FaGoogleDrive } from "react-icons/fa"; // google-drive
 
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
@@ -40,6 +41,7 @@ export function FolderList({
         const folderItem: DragItem = { type: "folder", id: folder.id };
         const items = getDragItems(folderItem);
         const isPermissionGated = folder.requiresPermission;
+        const isGoogleDrive = folder.driver.type === "google-drive"; // google-drive
 
         return (
           <FolderRow
@@ -54,7 +56,9 @@ export function FolderList({
             dragItemCount={items.length}
             onDragStateChange={(dragging) => onDragStateChange(items, dragging)}
             icon={
-              isPermissionGated ? (
+              isGoogleDrive ? ( // google-drive
+                <FaGoogleDrive className="size-5 text-muted-foreground shrink-0" />
+              ) : isPermissionGated ? (
                 <Icon
                   name="HardDrive"
                   size="lg"
