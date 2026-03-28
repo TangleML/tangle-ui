@@ -115,6 +115,7 @@ function PredictedIssuesSection({ issues }: { issues: ValidationIssue[] }) {
               key={`${issue.issueCode}-${index}`}
               gap="1"
               blockAlign="start"
+              wrap="nowrap"
             >
               <Icon
                 name={iconName}

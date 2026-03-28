@@ -143,14 +143,14 @@ export function predictUpgradeIssues(
       binding.reason === "lost_input"
         ? ("ORPHANED_BINDING_TARGET" as const)
         : ("ORPHANED_BINDING_SOURCE" as const);
-    const port =
+    const portDisplay =
       binding.reason === "lost_input"
-        ? binding.targetPortName
-        : binding.sourcePortName;
+        ? `input "${binding.targetPortName}"`
+        : `output "${binding.sourcePortName}"`;
 
     issues.push({
       type: "graph",
-      message: `Binding will be removed (port "${port}" no longer exists)`,
+      message: `Connection will be lost (${portDisplay} no longer exists)`,
       entityId: binding.bindingId,
       severity: "warning",
       issueCode: code,
