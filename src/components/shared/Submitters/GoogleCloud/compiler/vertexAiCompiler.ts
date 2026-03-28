@@ -4,6 +4,7 @@ import {
   type InputSpec,
   isContainerImplementation,
   isGraphImplementation,
+  isSecretArgument,
   type StringOrPlaceholder,
   type TypeSpecType,
 } from "@/utils/componentSpec";
@@ -313,6 +314,10 @@ function buildVertexParameterArgumentSpec(
       },
     };
     return result;
+  } else if (isSecretArgument(taskArgument)) {
+    throw Error(
+      `Secret arguments are not supported in Vertex AI compilation. Input "${inputSpec.name}" uses secret "${taskArgument.secret.name}"`,
+    );
   } else {
     throw Error(`Unknown kind of task argument: "${taskArgument}"`);
   }
@@ -392,6 +397,10 @@ function buildVertexArtifactArgumentSpec(
       },
     };
     return result;
+  } else if (isSecretArgument(taskArgument)) {
+    throw Error(
+      `Secret arguments are not supported in Vertex AI compilation. Input "${inputSpec.name}" uses secret "${taskArgument.secret.name}"`,
+    );
   } else {
     throw Error(`Unknown kind of task argument: "${taskArgument}"`);
   }
