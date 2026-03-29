@@ -7,9 +7,8 @@ import type {
   InputSpec,
   OutputSpec,
 } from "@/models/componentSpec/entities/types";
+import { candidateHasIssues, type UpgradeCandidate } from "@/routes/v2/pages/Editor/components/UpgradeComponents/types";
 import type { EntityDiff } from "@/routes/v2/pages/Editor/store/actions/task.utils";
-
-import { candidateHasIssues, type UpgradeCandidate } from "../types";
 
 function truncateDigest(digest: string): string {
   return digest.length > 8 ? digest.substring(0, 8) : digest;

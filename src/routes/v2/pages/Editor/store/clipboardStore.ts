@@ -3,6 +3,7 @@ import { action, computed, makeObservable, observable } from "mobx";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 import { IncrementingIdGenerator } from "@/models/componentSpec/factories/idGenerator";
+import { editorRegistry } from "@/routes/v2/pages/Editor/nodes";
 import {
   readFromSystemClipboard,
   writeToSystemClipboard,
@@ -16,7 +17,6 @@ import type {
 } from "@/routes/v2/shared/nodes/types";
 import type { SelectedNode } from "@/routes/v2/shared/store/editorStore";
 
-import { editorRegistry } from "../nodes";
 import { cloneSnapshotsWithBindings } from "./clipboardStore.helpers";
 
 const PASTE_OFFSET = 50;

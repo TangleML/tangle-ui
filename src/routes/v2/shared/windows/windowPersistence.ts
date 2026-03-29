@@ -9,10 +9,10 @@
 import { reaction } from "mobx";
 import { useEffect } from "react";
 
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { debounce } from "@/utils/debounce";
 import { getStorage } from "@/utils/typedStorage";
 
-import { useSharedStores } from "../store/SharedStoreContext";
 import type { DockState, Position, Size } from "./types";
 import type { WindowStoreImpl } from "./windowStore";
 

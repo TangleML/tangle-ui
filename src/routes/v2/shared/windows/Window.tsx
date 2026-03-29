@@ -1,6 +1,7 @@
 import { observer } from "mobx-react-lite";
 
-import { useSharedStores } from "../store/SharedStoreContext";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+
 import { DockedWindow } from "./components/DockedWindow";
 import { FloatingWindow } from "./components/FloatingWindow";
 import { WindowContextProvider } from "./ContentWindowStateContext";

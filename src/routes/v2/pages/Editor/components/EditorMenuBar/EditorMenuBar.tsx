@@ -5,12 +5,12 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Link } from "@/components/ui/link";
 import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/typography";
+import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { AppMenuActions } from "@/routes/v2/shared/components/AppMenuActions";
 import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButton";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { TOP_NAV_HEIGHT } from "@/utils/constants";
 
-import { useEditorSession } from "../../store/EditorSessionContext";
 import { AutoSaveIndicator } from "./components/AutoSaveIndicator";
 import { ComponentsLibraryMenu } from "./components/ComponentsLibraryMenu";
 import { FileMenu } from "./components/FileMenu";

@@ -5,8 +5,8 @@ import {
   createRequiredContext,
   useRequiredContext,
 } from "@/hooks/useRequiredContext";
+import { WindowStoreImpl } from "@/routes/v2/shared/windows/windowStore";
 
-import { WindowStoreImpl } from "../windows/windowStore";
 import { CanvasOverlayStore } from "./canvasOverlayStore";
 import { EditorStore } from "./editorStore";
 import { KeyboardStore } from "./keyboardStore";

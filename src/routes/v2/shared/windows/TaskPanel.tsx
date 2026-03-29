@@ -4,8 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
-
-import { useSharedStores } from "../store/SharedStoreContext";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 /**
  * Bar that displays hidden windows. Rendered in normal flow above the editor

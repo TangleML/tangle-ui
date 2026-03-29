@@ -4,8 +4,8 @@ import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
+import { candidateHasIssues, type UpgradeCandidate } from "@/routes/v2/pages/Editor/components/UpgradeComponents/types";
 
-import { candidateHasIssues, type UpgradeCandidate } from "../types";
 import { NavigateToEntityButton } from "./NavigateToEntityButton";
 
 interface UpgradeCandidateRowProps {

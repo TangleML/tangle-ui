@@ -7,12 +7,12 @@ import {
   type Task,
 } from "@/models/componentSpec";
 import type { UpgradeCandidate } from "@/routes/v2/pages/Editor/components/UpgradeComponents/types";
+import { editorRegistry } from "@/routes/v2/pages/Editor/nodes";
 import type { ClipboardStore } from "@/routes/v2/pages/Editor/store/clipboardStore";
 import { generateUniqueTaskName } from "@/routes/v2/pages/Editor/store/nameUtils";
 import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
 import type { SelectedNode } from "@/routes/v2/shared/store/editorStore";
 
-import { editorRegistry } from "../../nodes";
 import { computeDiffComponentSpecs } from "./task.utils";
 import { idGen, TASK_COLOR_ANNOTATION } from "./utils";
 
