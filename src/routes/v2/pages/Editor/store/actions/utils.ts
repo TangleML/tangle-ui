@@ -1,8 +1,7 @@
 import type { ComponentSpec } from "@/models/componentSpec";
 import { IncrementingIdGenerator } from "@/models/componentSpec";
+import { editorRegistry } from "@/routes/v2/pages/Editor/nodes";
 import type { NodeEntityType } from "@/routes/v2/shared/store/editorStore";
-
-import { editorRegistry } from "../../nodes";
 
 export const TASK_COLOR_ANNOTATION = "tangleml.com/editor/task-color";
 export const idGen = new IncrementingIdGenerator();

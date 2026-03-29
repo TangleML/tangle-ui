@@ -3,10 +3,10 @@ import { useState } from "react";
 import { BlockStack } from "@/components/ui/layout";
 import { VerticalResizeHandle } from "@/components/ui/resize-handle";
 import { Separator } from "@/components/ui/separator";
+import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskActions";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
-import { useTaskActions } from "../../store/actions/useTaskActions";
 import { UpgradeCandidateDetail } from "./components/UpgradeCandidateDetail";
 import { UpgradeCandidateRow } from "./components/UpgradeCandidateRow";
 import { UpgradeEmptyState } from "./components/UpgradeEmptyState";

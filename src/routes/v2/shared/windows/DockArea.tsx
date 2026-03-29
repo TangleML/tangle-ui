@@ -5,8 +5,8 @@ import { BlockStack } from "@/components/ui/layout";
 import { VerticalResizeHandle } from "@/components/ui/resize-handle";
 import { cn } from "@/lib/utils";
 import { focusModeStore } from "@/routes/v2/shared/hooks/useFocusMode";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
-import { useSharedStores } from "../store/SharedStoreContext";
 import { registerDockAreaElement } from "./snapUtils";
 import {
   COLLAPSED_DOCK_AREA_WIDTH,

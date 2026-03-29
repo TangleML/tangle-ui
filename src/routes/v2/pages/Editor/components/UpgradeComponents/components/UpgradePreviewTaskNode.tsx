@@ -3,10 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
+import type { UpgradeCandidate } from "@/routes/v2/pages/Editor/components/UpgradeComponents/types";
 import { buildFlatDiffList } from "@/routes/v2/pages/Editor/store/actions/task.utils";
 import type { TaskNodeViewProps } from "@/routes/v2/shared/nodes/TaskNode/TaskNode";
 
-import type { UpgradeCandidate } from "../types";
 import { DiffInputRow } from "./DiffInputRow";
 import { DiffOutputRow } from "./DiffOutputRow";
 import { IssuesBanner } from "./IssuesBanner";

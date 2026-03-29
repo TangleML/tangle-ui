@@ -11,6 +11,7 @@ import { observer } from "mobx-react-lite";
 import { BlockStack } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
 import type { ComponentSpec } from "@/models/componentSpec";
+import { useCopyShortcut } from "@/routes/v2/pages/RunView/hooks/useCopyShortcut";
 import {
   FLOW_CANVAS_DEFAULT_PROPS,
   GRID_SIZE,
@@ -22,7 +23,6 @@ import { useViewportScaling } from "@/routes/v2/shared/hooks/useViewportScaling"
 import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
-import { useCopyShortcut } from "../hooks/useCopyShortcut";
 import { RunViewSelectionToolbar } from "./RunViewSelectionToolbar";
 import { RunViewSubgraphBreadcrumbs } from "./RunViewSubgraphBreadcrumbs";
 

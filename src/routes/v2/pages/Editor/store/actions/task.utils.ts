@@ -5,8 +5,7 @@ import type {
 } from "@/models/componentSpec";
 import type { OutputSpec } from "@/models/componentSpec/entities/types";
 import { isInputRequired } from "@/models/componentSpec/validation/validateSpec";
-
-import type { LostBinding } from "../../components/UpgradeComponents/types";
+import type { LostBinding } from "@/routes/v2/pages/Editor/components/UpgradeComponents/types";
 
 export interface EntityDiff<T> {
   lostEntities: T[];

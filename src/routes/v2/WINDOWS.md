@@ -61,40 +61,40 @@ flowchart TB
 
 ### Root
 
-| File | Role |
-|------|------|
-| `types.ts` | Shared TypeScript types (`WindowState`, `DockState`, `WindowOptions`, `WindowRef`, etc.) and layout constants (`DEFAULT_WINDOW_SIZE`, thresholds, widths) |
-| `windowModel.ts` | `WindowModel` class -- per-window MobX observable state with actions for minimize/maximize/hide/restore/dock/undock and snapshot mechanism |
-| `windowStore.ts` | `WindowStoreImpl` class -- window registry, z-order, dock area config, open/close/dock/undock, content map, query helpers |
-| `windowPersistence.ts` | `useWindowPersistence` hook and `getPersistedWindowState` -- debounced localStorage save via MobX reaction, versioned schema |
-| `dockAreaPlugins.ts` | Lightweight pub/sub for dock area lifecycle events (`window-docked`, `window-expanded`, `window-closing`, `window-minimized`) |
-| `Window.tsx` | Entry component: resolves model + content from store, provides `WindowContextProvider`, routes to `DockedWindow` or `FloatingWindow` |
-| `WindowContainer.tsx` | Renders all floating (`dockState === "none"`) windows |
-| `DockArea.tsx` | Renders a dock column (left or right): enables dock side on mount, observes width via `ResizeObserver`, lists docked `Window` instances |
-| `TaskPanel.tsx` | Horizontal bar showing `hidden` windows as chips with restore/close actions |
-| `SnapPreview.tsx` | Visual overlay during drag: edge dock hint or horizontal insert line |
-| `snapUtils.ts` | DOM registration for dock areas and snap detection logic (`detectSnapPreview`) |
-| `ContentWindowStateContext.tsx` | React context providing `{ model: WindowModel, content: ReactNode }` to the window subtree |
+| File                            | Role                                                                                                                                                      |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `types.ts`                      | Shared TypeScript types (`WindowState`, `DockState`, `WindowOptions`, `WindowRef`, etc.) and layout constants (`DEFAULT_WINDOW_SIZE`, thresholds, widths) |
+| `windowModel.ts`                | `WindowModel` class -- per-window MobX observable state with actions for minimize/maximize/hide/restore/dock/undock and snapshot mechanism                |
+| `windowStore.ts`                | `WindowStoreImpl` class -- window registry, z-order, dock area config, open/close/dock/undock, content map, query helpers                                 |
+| `windowPersistence.ts`          | `useWindowPersistence` hook and `getPersistedWindowState` -- debounced localStorage save via MobX reaction, versioned schema                              |
+| `dockAreaPlugins.ts`            | Lightweight pub/sub for dock area lifecycle events (`window-docked`, `window-expanded`, `window-closing`, `window-minimized`)                             |
+| `Window.tsx`                    | Entry component: resolves model + content from store, provides `WindowContextProvider`, routes to `DockedWindow` or `FloatingWindow`                      |
+| `WindowContainer.tsx`           | Renders all floating (`dockState === "none"`) windows                                                                                                     |
+| `DockArea.tsx`                  | Renders a dock column (left or right): enables dock side on mount, observes width via `ResizeObserver`, lists docked `Window` instances                   |
+| `TaskPanel.tsx`                 | Horizontal bar showing `hidden` windows as chips with restore/close actions                                                                               |
+| `SnapPreview.tsx`               | Visual overlay during drag: edge dock hint or horizontal insert line                                                                                      |
+| `snapUtils.ts`                  | DOM registration for dock areas and snap detection logic (`detectSnapPreview`)                                                                            |
+| `ContentWindowStateContext.tsx` | React context providing `{ model: WindowModel, content: ReactNode }` to the window subtree                                                                |
 
 ### `components/`
 
-| File | Role |
-|------|------|
-| `DockedWindow.tsx` | Docked window chrome: header with grip, vertical resize handle, minimized/maximized states, portal for maximized overlay |
-| `FloatingWindow.tsx` | Floating window chrome: fixed positioning, header drag, SE corner resize, z-order via `model.zIndex` |
-| `WindowActions.tsx` | Observer toolbar with minimize, maximize, hide, close buttons (respects `disabledActions`) |
-| `WindowHeader.tsx` | Presentational header: title, optional leading icon, drag `onMouseDown`, trailing actions slot |
+| File                 | Role                                                                                                                     |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `DockedWindow.tsx`   | Docked window chrome: header with grip, vertical resize handle, minimized/maximized states, portal for maximized overlay |
+| `FloatingWindow.tsx` | Floating window chrome: fixed positioning, header drag, SE corner resize, z-order via `model.zIndex`                     |
+| `WindowActions.tsx`  | Observer toolbar with minimize, maximize, hide, close buttons (respects `disabledActions`)                               |
+| `WindowHeader.tsx`   | Presentational header: title, optional leading icon, drag `onMouseDown`, trailing actions slot                           |
 
 ### `hooks/`
 
-| File | Role |
-|------|------|
+| File               | Role                                                                                                                   |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------- |
 | `useWindowDrag.ts` | Pointer-driven move + snap-to-dock: docked pending-undock threshold, live position updates, snap preview, dock-on-drop |
 
 ### `plugins/`
 
-| File | Role |
-|------|------|
+| File                   | Role                                                                                                         |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------ |
 | `dockAreaAccordion.ts` | Accordion behavior plugin: only one expanded window per dock side, auto-collapse stack with restore-on-close |
 
 ## Component Tree
@@ -367,12 +367,12 @@ Only windows with `persisted: true` are included. The persisted layout schema:
 ```typescript
 interface PersistedWindowLayout {
   windows: Record<string, PersistedWindowState>;
-  windowOrder: string[];               // filtered to persisted IDs only
+  windowOrder: string[]; // filtered to persisted IDs only
   dockAreas: {
-    left: PersistedDockAreaState;       // windowOrder filtered to persisted IDs
+    left: PersistedDockAreaState; // windowOrder filtered to persisted IDs
     right: PersistedDockAreaState;
   };
-  version: number;                      // currently 4
+  version: number; // currently 4
 }
 
 interface PersistedWindowState {
@@ -391,24 +391,24 @@ interface PersistedWindowState {
 
 When a persisted window is opened, `resolveInitialState` determines the starting state:
 
-| Persisted Hidden | `startVisible` | Persisted Minimized | Docked | Result |
-|---|---|---|---|---|
-| true | false | - | - | `"hidden"` + seed `previous*` |
-| true | true | - | - | `"normal"` (override hidden) |
-| false | - | true | yes | `"minimized"` + seed `previous*` |
-| false | - | true | no | `"normal"` (minimized only honored for docked) |
-| false | - | false | - | `"normal"` |
+| Persisted Hidden | `startVisible` | Persisted Minimized | Docked | Result                                         |
+| ---------------- | -------------- | ------------------- | ------ | ---------------------------------------------- |
+| true             | false          | -                   | -      | `"hidden"` + seed `previous*`                  |
+| true             | true           | -                   | -      | `"normal"` (override hidden)                   |
+| false            | -              | true                | yes    | `"minimized"` + seed `previous*`               |
+| false            | -              | true                | no     | `"normal"` (minimized only honored for docked) |
+| false            | -              | false               | -      | `"normal"`                                     |
 
 ## Plugin System
 
 ### Event Types
 
-| Event | Emitted When |
-|-------|-------------|
-| `window-docked` | A window is added to a dock area (via `dockWindow` or `openWindow` with persisted dock state) |
-| `window-expanded` | A docked window is restored from minimized/hidden state (non-quiet) |
-| `window-closing` | A docked window is about to be closed |
-| `window-minimized` | A docked window is minimized (non-quiet) |
+| Event              | Emitted When                                                                                  |
+| ------------------ | --------------------------------------------------------------------------------------------- |
+| `window-docked`    | A window is added to a dock area (via `dockWindow` or `openWindow` with persisted dock state) |
+| `window-expanded`  | A docked window is restored from minimized/hidden state (non-quiet)                           |
+| `window-closing`   | A docked window is about to be closed                                                         |
+| `window-minimized` | A docked window is minimized (non-quiet)                                                      |
 
 ### Registration
 
@@ -479,20 +479,20 @@ interface WindowContextValue {
 
 ## Constants Reference
 
-| Constant | Value | Purpose |
-|----------|-------|---------|
-| `DEFAULT_WINDOW_SIZE` | `320 x 420` | Default width/height for new floating windows |
-| `DEFAULT_MIN_SIZE` | `280 x 200` | Minimum resize dimensions |
-| `CASCADE_OFFSET` | `24px` | Offset between cascaded new windows |
-| `EDGE_SNAP_THRESHOLD` | `2px` | Distance from viewport edge to trigger dock preview |
-| `DOCK_AREA_SNAP_THRESHOLD` | `40px` | Distance from dock area edge to trigger insert preview |
-| `DEFAULT_DOCK_AREA_WIDTH` | `320px` | Initial dock column width |
-| `MIN_DOCK_AREA_WIDTH` | `220px` | Minimum dock column width (resize handle) |
-| `MAX_DOCK_AREA_WIDTH` | `600px` | Maximum dock column width (resize handle) |
-| `COLLAPSED_DOCK_AREA_WIDTH` | `36px` | Width of a collapsed dock column |
-| `DEFAULT_DOCKED_HEIGHT` | `300px` | Default height for a docked window |
-| `MIN_DOCKED_HEIGHT` | `100px` | Minimum height for a docked window (resize handle) |
-| `TASK_PANEL_HEIGHT` | `43px` | Height of the TaskPanel bar (used for floating window offset) |
+| Constant                    | Value       | Purpose                                                       |
+| --------------------------- | ----------- | ------------------------------------------------------------- |
+| `DEFAULT_WINDOW_SIZE`       | `320 x 420` | Default width/height for new floating windows                 |
+| `DEFAULT_MIN_SIZE`          | `280 x 200` | Minimum resize dimensions                                     |
+| `CASCADE_OFFSET`            | `24px`      | Offset between cascaded new windows                           |
+| `EDGE_SNAP_THRESHOLD`       | `2px`       | Distance from viewport edge to trigger dock preview           |
+| `DOCK_AREA_SNAP_THRESHOLD`  | `40px`      | Distance from dock area edge to trigger insert preview        |
+| `DEFAULT_DOCK_AREA_WIDTH`   | `320px`     | Initial dock column width                                     |
+| `MIN_DOCK_AREA_WIDTH`       | `220px`     | Minimum dock column width (resize handle)                     |
+| `MAX_DOCK_AREA_WIDTH`       | `600px`     | Maximum dock column width (resize handle)                     |
+| `COLLAPSED_DOCK_AREA_WIDTH` | `36px`      | Width of a collapsed dock column                              |
+| `DEFAULT_DOCKED_HEIGHT`     | `300px`     | Default height for a docked window                            |
+| `MIN_DOCKED_HEIGHT`         | `100px`     | Minimum height for a docked window (resize handle)            |
+| `TASK_PANEL_HEIGHT`         | `43px`      | Height of the TaskPanel bar (used for floating window offset) |
 
 ## Rules and Restrictions
 
@@ -591,8 +591,8 @@ interface WindowContextValue {
 - **Use the `quiet` flag in plugins** when programmatically minimizing/restoring to prevent recursive event emission.
 
   ```typescript
-  win.minimize({ quiet: true });   // No "window-minimized" event emitted
-  win.restore({ quiet: true });    // No "window-expanded" event emitted
+  win.minimize({ quiet: true }); // No "window-minimized" event emitted
+  win.restore({ quiet: true }); // No "window-expanded" event emitted
   ```
 
 - **Use `startVisible: true` for selection-driven windows** that should always appear when the user selects something, even if they were previously hidden.

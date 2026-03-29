@@ -1,11 +1,10 @@
 import type { ComponentType } from "react";
 
+import { UpgradePreviewTaskNode } from "@/routes/v2/pages/Editor/components/UpgradeComponents/components/UpgradePreviewTaskNode";
+import type { UpgradeCandidate } from "@/routes/v2/pages/Editor/components/UpgradeComponents/types";
 import { useCanvasOverlay } from "@/routes/v2/shared/hooks/useCanvasOverlay";
 import type { TaskNodeViewProps } from "@/routes/v2/shared/nodes/TaskNode/TaskNode";
 import type { CanvasOverlayConfig } from "@/routes/v2/shared/store/canvasOverlay.types";
-
-import { UpgradePreviewTaskNode } from "../components/UpgradePreviewTaskNode";
-import type { UpgradeCandidate } from "../types";
 
 const OVERLAY_ID = "upgrade-preview";
 

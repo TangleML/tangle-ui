@@ -2,14 +2,13 @@ import type { XYPosition } from "@xyflow/react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 import type { IncrementingIdGenerator } from "@/models/componentSpec/factories/idGenerator";
+import { editorRegistry } from "@/routes/v2/pages/Editor/nodes";
 import { cloneBindings } from "@/routes/v2/shared/clipboard/snapshotBindings";
 import type {
   BindingSnapshot,
   NodeSnapshot,
   UndoGroupable,
 } from "@/routes/v2/shared/nodes/types";
-
-import { editorRegistry } from "../nodes";
 
 export function cloneSnapshotsWithBindings(
   spec: ComponentSpec,

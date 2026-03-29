@@ -1,6 +1,7 @@
 import { observer } from "mobx-react-lite";
 
-import { useSharedStores } from "../store/SharedStoreContext";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+
 import { Window } from "./Window";
 
 /**

@@ -16,6 +16,7 @@ import { useDockAreaAccordion } from "@/routes/v2/shared/hooks/useDockAreaAccord
 import { useFocusMode } from "@/routes/v2/shared/hooks/useFocusMode";
 import { NodeRegistryProvider } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { SpecProvider } from "@/routes/v2/shared/providers/SpecContext";
+import { useShortcutListener } from "@/routes/v2/shared/shortcuts/useShortcutListener";
 import {
   SharedStoreProvider,
   useSharedStores,
@@ -25,7 +26,6 @@ import { TaskPanel } from "@/routes/v2/shared/windows/TaskPanel";
 import { WindowContainer } from "@/routes/v2/shared/windows/WindowContainer";
 import { useWindowPersistence } from "@/routes/v2/shared/windows/windowPersistence";
 
-import { useShortcutListener } from "../../shared/shortcuts/useShortcutListener";
 import { useDebugPanelWindow } from "./components/DebugPanel";
 import { DriverPermissionGate } from "./components/DriverPermissionGate";
 import { EditorMenuBar } from "./components/EditorMenuBar/EditorMenuBar";

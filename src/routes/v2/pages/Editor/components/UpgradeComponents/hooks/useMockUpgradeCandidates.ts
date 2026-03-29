@@ -4,13 +4,12 @@ import type {
   InputSpec,
   OutputSpec,
 } from "@/models/componentSpec/entities/types";
+import type { LostBinding, UpgradeCandidate } from "@/routes/v2/pages/Editor/components/UpgradeComponents/types";
 import {
   computeDiffComponentSpecs,
   predictUpgradeIssues,
 } from "@/routes/v2/pages/Editor/store/actions/task.utils";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
-
-import type { LostBinding, UpgradeCandidate } from "../types";
 
 /**
  * Deterministic hash so the same task always produces the same mock mutations.
