@@ -45,36 +45,6 @@ export type SnapPreviewType =
       areaWidth: number;
     };
 
-/** Window configuration stored in the registry (no React elements) */
-export interface WindowConfig {
-  id: string;
-  title: string;
-  state: WindowState;
-  position: Position;
-  size: Size;
-  minSize: Size;
-  /** Stored for restore operations (hide/minimize/maximize) */
-  previousPosition?: Position;
-  previousSize?: Size;
-  previousState?: WindowState;
-  /** Stored specifically for undocking - separate from hide/restore cycle */
-  preDockedPosition?: Position;
-  preDockedSize?: Size;
-  /** Optional entity ID this window is linked to (for auto-close on entity deletion) */
-  linkedEntityId?: string;
-  /** Actions that are disabled for this window */
-  disabledActions?: WindowAction[];
-  /** Height when docked (independent of size.height used in floating mode) */
-  dockedHeight?: number;
-  /** Docking state for edge snapping */
-  dockState: DockState;
-  /** Whether this window's layout should be persisted to localStorage */
-  persisted?: boolean;
-
-  /** Callback to invoke when the window is closed */
-  onClose?: () => void;
-}
-
 /** Reference returned from open() for controlling a window */
 export interface WindowRef {
   id: string;

@@ -27,9 +27,6 @@ function getStorageKey(): string {
   return `window-layout-${activeLayoutId}`;
 }
 
-/**
- * Persisted state for a single window (subset of WindowConfig).
- */
 interface PersistedWindowState {
   position: Position;
   size: Size;
@@ -47,9 +44,6 @@ interface PersistedDockAreaState {
   windowOrder: string[];
 }
 
-/**
- * Full persisted layout including all persisted windows and their z-order.
- */
 interface PersistedWindowLayout {
   windows: Record<string, PersistedWindowState>;
   windowOrder: string[];
@@ -69,27 +63,12 @@ const CURRENT_VERSION = 4;
 function saveWindowLayoutImmediate(store: WindowStoreImpl): void {
   const existingLayout = loadWindowLayout();
 
-  const leftDock = store.getDockAreaConfig("left");
-  const rightDock = store.getDockAreaConfig("right");
-
   const layout: PersistedWindowLayout = {
     windows: existingLayout?.windows ?? {},
     windowOrder: [],
     dockAreas: {
-      left: {
-        width: leftDock.width,
-        collapsed: leftDock.collapsed,
-        windowOrder: leftDock.windowOrder.filter((id) =>
-          store.isWindowPersisted(id),
-        ),
-      },
-      right: {
-        width: rightDock.width,
-        collapsed: rightDock.collapsed,
-        windowOrder: rightDock.windowOrder.filter((id) =>
-          store.isWindowPersisted(id),
-        ),
-      },
+      left: serializeDockArea(store, "left"),
+      right: serializeDockArea(store, "right"),
     },
     version: CURRENT_VERSION,
   };
@@ -102,7 +81,7 @@ function saveWindowLayoutImmediate(store: WindowStoreImpl): void {
         size: { ...win.size },
         dockState: win.dockState,
         isHidden: win.state === "hidden",
-        isMinimized: win.state === "minimized",
+        isMinimized: win.isMinimized,
         preDockedPosition: win.preDockedPosition
           ? { ...win.preDockedPosition }
           : undefined,
@@ -117,6 +96,18 @@ function saveWindowLayoutImmediate(store: WindowStoreImpl): void {
   );
 
   storage.setItem(getStorageKey(), layout);
+}
+
+function serializeDockArea(
+  store: WindowStoreImpl,
+  side: "left" | "right",
+): PersistedDockAreaState {
+  const config = store.getDockAreaConfig(side);
+  return {
+    width: config.width,
+    collapsed: config.collapsed,
+    windowOrder: config.windowOrder.filter((id) => store.isWindowPersisted(id)),
+  };
 }
 
 const saveWindowLayout = debounce(saveWindowLayoutImmediate, 500);

@@ -3,6 +3,7 @@ import { observer } from "mobx-react-lite";
 import { useSharedStores } from "../store/SharedStoreContext";
 import { DockedWindow } from "./components/DockedWindow";
 import { FloatingWindow } from "./components/FloatingWindow";
+import { WindowContextProvider } from "./ContentWindowStateContext";
 
 interface WindowProps {
   windowId: string;
@@ -13,11 +14,15 @@ export const Window = observer(function Window({
   windowId,
   docked = false,
 }: WindowProps) {
-  const windowConfig = useSharedStores().windows.getWindowById(windowId);
-  if (!windowConfig || windowConfig.state === "hidden") return null;
+  const { windows } = useSharedStores();
+  const model = windows.getWindowById(windowId);
+  if (!model || model.state === "hidden") return null;
 
-  if (docked) {
-    return <DockedWindow windowId={windowId} />;
-  }
-  return <FloatingWindow windowId={windowId} />;
+  const content = windows.getWindowContent(windowId);
+
+  return (
+    <WindowContextProvider value={{ model, content }}>
+      {docked ? <DockedWindow /> : <FloatingWindow />}
+    </WindowContextProvider>
+  );
 });

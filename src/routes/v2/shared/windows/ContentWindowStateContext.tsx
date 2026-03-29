@@ -1,39 +1,39 @@
 import type { ReactNode } from "react";
 import { createContext, useContext } from "react";
 
-import type { DockState, WindowState } from "./types";
+import type { WindowModel } from "./windowModel";
 
-export interface ContentWindowState {
-  windowId: string;
-  state: WindowState;
-  isMaximized: boolean;
-  isMinimized: boolean;
-  isDocked: boolean;
-  dockSide: DockState;
-  dockAreaCollapsed: boolean;
+interface WindowContextValue {
+  model: WindowModel;
+  content: ReactNode;
 }
 
-const ContentWindowStateContext = createContext<ContentWindowState | undefined>(
-  undefined,
-);
+const WindowCtx = createContext<WindowContextValue | undefined>(undefined);
 
-ContentWindowStateContext.displayName = "ContentWindowState";
+WindowCtx.displayName = "WindowContext";
 
-export function ContentWindowStateProvider({
+export function WindowContextProvider({
   value,
   children,
 }: {
-  value: ContentWindowState;
+  value: WindowContextValue;
   children: ReactNode;
 }) {
-  return (
-    <ContentWindowStateContext.Provider value={value}>
-      {children}
-    </ContentWindowStateContext.Provider>
-  );
+  return <WindowCtx.Provider value={value}>{children}</WindowCtx.Provider>;
 }
 
-/** Returns the window state context, or `undefined` when rendered outside a window. */
-export function useContentWindowState(): ContentWindowState | undefined {
-  return useContext(ContentWindowStateContext);
+/** Returns the window context. Throws when rendered outside a window. */
+export function useWindowContext(): WindowContextValue {
+  const ctx = useContext(WindowCtx);
+  if (!ctx) {
+    throw new Error(
+      "useWindowContext must be used within a WindowContextProvider",
+    );
+  }
+  return ctx;
+}
+
+/** Returns the window context, or `undefined` when rendered outside a window. */
+export function useOptionalWindowContext(): WindowContextValue | undefined {
+  return useContext(WindowCtx);
 }

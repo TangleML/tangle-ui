@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { useWindowContext } from "@/routes/v2/shared/windows/ContentWindowStateContext";
 import { detectSnapPreview } from "@/routes/v2/shared/windows/snapUtils";
 import type {
   Position,
@@ -24,7 +25,6 @@ type DragPhase =
 // ---------------------------------------------------------------------------
 
 interface UseWindowDragOptions {
-  windowId: string;
   docked: boolean;
 }
 
@@ -42,30 +42,28 @@ interface UseWindowDragReturn {
 // ---------------------------------------------------------------------------
 
 export function useWindowDrag({
-  windowId,
   docked,
 }: UseWindowDragOptions): UseWindowDragReturn {
+  const { model } = useWindowContext();
   const { windows } = useSharedStores();
-  const windowConfig = windows.getWindowById(windowId);
-  const isAtFront = windows.isWindowAtFront(windowId);
 
   const [isDragging, setIsDragging] = useState(false);
   const [snapPreview, setSnapPreview] = useState<SnapPreviewType | null>(null);
 
+  /**
+   * The following refs are read/written inside imperative `mousemove`/`mouseup`
+   * event listeners attached to `document`. These closures outlive React's
+   * render cycle, so stable mutable containers (`useRef`) are required instead
+   * of React state.
+   */
   const phaseRef = useRef<DragPhase>({ type: "idle" });
   const dragOffset = useRef<Position>({ x: 0, y: 0 });
   const snapPreviewRef = useRef<SnapPreviewType | null>(null);
+  /** Standard DOM ref for the panel element. */
   const panelRef = useRef<HTMLDivElement>(null);
 
-  const position = windowConfig?.position ?? { x: 0, y: 0 };
-  const isDocked =
-    windowConfig?.dockState !== undefined && windowConfig?.dockState !== "none";
-
-  // Optimistic z-index bump: the MobX re-render from bringToFront (on mouseup)
-  // will set the final z-index, but this prevents a visible flicker during drag
-  // start where the window would briefly stay behind others.
   const raiseZIndex = () => {
-    if (!docked && !isAtFront && panelRef.current) {
+    if (!docked && !model.isAtFront && panelRef.current) {
       panelRef.current.style.zIndex = String(20 + windows.windowOrderLength);
     }
   };
@@ -75,8 +73,8 @@ export function useWindowDrag({
   };
 
   const handleContainerClick = () => {
-    if (!isAtFront) {
-      windows.bringToFront(windowId);
+    if (!model.isAtFront) {
+      model.bringToFront();
     }
   };
 
@@ -86,7 +84,6 @@ export function useWindowDrag({
     raiseZIndex();
     setIsDragging(true);
 
-    // Compute drag offset depending on rendering mode
     if (docked) {
       const rect = panelRef.current?.getBoundingClientRect();
       dragOffset.current = {
@@ -94,7 +91,7 @@ export function useWindowDrag({
         y: rect ? e.clientY - rect.top : 0,
       };
 
-      if (isDocked) {
+      if (model.isDocked) {
         phaseRef.current = {
           type: "docked-pending",
           originMouse: { x: e.clientX, y: e.clientY },
@@ -104,8 +101,8 @@ export function useWindowDrag({
       }
     } else {
       dragOffset.current = {
-        x: e.clientX - position.x,
-        y: e.clientY - position.y,
+        x: e.clientX - model.position.x,
+        y: e.clientY - model.position.y,
       };
       phaseRef.current = { type: "free" };
     }
@@ -117,37 +114,31 @@ export function useWindowDrag({
         y: moveE.clientY - dragOffset.current.y,
       };
 
-      // --- Phase: docked-pending ---
       if (phase.type === "docked-pending") {
         const dx = Math.abs(moveE.clientX - phase.originMouse.x);
         const dy = Math.abs(moveE.clientY - phase.originMouse.y);
         if (dx <= UNDOCK_THRESHOLD && dy <= UNDOCK_THRESHOLD) return;
 
-        windows.undockWindow(windowId);
+        model.undock();
         phaseRef.current = { type: "free" };
 
-        // Center the floating window under the cursor
-        const win = windows.getWindowById(windowId);
-        if (win) {
-          const halfWidth = win.size.width / 2;
-          const headerGrab = 20;
-          dragOffset.current = { x: halfWidth, y: headerGrab };
-          newPosition = {
-            x: moveE.clientX - halfWidth,
-            y: moveE.clientY - headerGrab,
-          };
-        }
+        const halfWidth = model.size.width / 2;
+        const headerGrab = 20;
+        dragOffset.current = { x: halfWidth, y: headerGrab };
+        newPosition = {
+          x: moveE.clientX - halfWidth,
+          y: moveE.clientY - headerGrab,
+        };
       }
 
-      // --- Phase: free ---
-      windows.updateWindowPosition(windowId, newPosition);
+      model.updatePosition(newPosition);
 
-      if (windows.isWindowDocked(windowId)) {
-        windows.undockWindow(windowId);
+      if (model.isDocked) {
+        model.undock();
       }
 
       const preview = detectSnapPreview({
-        windowId,
+        windowId: model.id,
         mousePosition: { x: moveE.clientX, y: moveE.clientY },
         dockAreaWindowIds: {
           left: [...windows.getDockAreaWindowIds("left")],
@@ -164,18 +155,14 @@ export function useWindowDrag({
 
       if (currentPreview) {
         if (currentPreview.type === "edge") {
-          windows.dockWindow(windowId, currentPreview.side);
+          model.dock(currentPreview.side);
         } else if (currentPreview.type === "dock-insert") {
-          windows.dockWindow(
-            windowId,
-            currentPreview.side,
-            currentPreview.insertIndex,
-          );
+          model.dock(currentPreview.side, currentPreview.insertIndex);
         }
       }
 
-      if (!isAtFront) {
-        windows.bringToFront(windowId);
+      if (!model.isAtFront) {
+        model.bringToFront();
       }
       setIsDragging(false);
       setSnapPreview(null);

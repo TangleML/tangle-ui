@@ -22,11 +22,11 @@ export const TaskPanel = observer(function TaskPanel() {
   return (
     <div className="shrink-0 bg-gray-100 border-b border-gray-300 shadow-sm">
       <InlineStack gap="1" className="px-2 py-1 overflow-x-auto">
-        {hiddenWindows.map((window) => {
-          const canClose = !window.disabledActions?.includes("close");
+        {hiddenWindows.map((win) => {
+          const canClose = !win.isActionDisabled("close");
           return (
             <InlineStack
-              key={window.id}
+              key={win.id}
               blockAlign="center"
               gap="1"
               wrap="nowrap"
@@ -35,7 +35,7 @@ export const TaskPanel = observer(function TaskPanel() {
               <Button
                 variant="ghost"
                 size="min"
-                onClick={() => windows.restoreWindow(window.id)}
+                onClick={() => win.restore()}
                 className="flex items-center gap-1 min-w-0 h-5 p-0"
               >
                 <Icon
@@ -48,7 +48,7 @@ export const TaskPanel = observer(function TaskPanel() {
                   weight="semibold"
                   className="text-gray-700 truncate max-w-[120px]"
                 >
-                  {window.title}
+                  {win.title}
                 </Text>
               </Button>
               {canClose && (
@@ -58,7 +58,7 @@ export const TaskPanel = observer(function TaskPanel() {
                   className="h-5 w-5 text-gray-400 hover:text-red-500 hover:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                   onClick={(e) => {
                     e.stopPropagation();
-                    windows.closeWindow(window.id);
+                    win.close();
                   }}
                   title="Close"
                 >

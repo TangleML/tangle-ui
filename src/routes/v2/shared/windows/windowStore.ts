@@ -5,36 +5,30 @@ import { emitDockAreaEvent } from "./dockAreaPlugins";
 import {
   CASCADE_OFFSET,
   DEFAULT_DOCK_AREA_WIDTH,
+  DEFAULT_MIN_SIZE,
   DEFAULT_WINDOW_SIZE,
   type DockAreaConfig,
   type DockState,
   isDockSide,
   type Position,
-  type Size,
-  type WindowConfig,
   type WindowOptions,
   type WindowRef,
+  type WindowState,
 } from "./types";
+import { WindowModel, type WindowStoreRef } from "./windowModel";
 import { getPersistedWindowState } from "./windowPersistence";
-import * as docking from "./windowStore.docking";
-import {
-  buildWindowConfig,
-  resolveInitialState,
-  restoreWindowSnapshot,
-  saveWindowSnapshot,
-} from "./windowStore.helpers";
 
 function generateWindowId(): string {
   return `window-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-export class WindowStoreImpl {
+export class WindowStoreImpl implements WindowStoreRef {
   /**
    * Content storage — kept as a plain (non-observable) Map to avoid
    * React Compiler issues. React elements must never be stored in an observable.
    */
   private contentMap = new Map<string, ReactNode>();
-  @observable accessor windows: Record<string, WindowConfig> = {};
+  @observable.shallow accessor windows: Record<string, WindowModel> = {};
   @observable.shallow accessor windowOrder: string[] = [];
   @observable accessor dockAreas: {
     left: DockAreaConfig;
@@ -69,39 +63,55 @@ export class WindowStoreImpl {
   @action openWindow(content: ReactNode, options: WindowOptions): WindowRef {
     const id = options.id ?? generateWindowId();
 
-    const existingWindow = this.windows[id];
-    if (existingWindow) {
+    const existing = this.windows[id];
+    if (existing) {
       this.contentMap.set(id, content);
       this.bringToFront(id);
-      if (
-        existingWindow.state === "hidden" ||
-        existingWindow.state === "minimized"
-      ) {
-        this.restoreWindow(id);
+      if (existing.state === "hidden" || existing.isMinimized) {
+        existing.restore();
       }
-      return this.createWindowRef(id);
+      return this.createWindowRef(existing);
     }
 
     this.contentMap.set(id, content);
 
     const persisted = options.persisted ? getPersistedWindowState(id) : null;
-
     const position =
       persisted?.position ?? options.position ?? this.calculateNewPosition();
     const dockState: DockState = persisted?.dockState ?? "none";
     const size = persisted?.size ?? options.size ?? { ...DEFAULT_WINDOW_SIZE };
     const initial = resolveInitialState(persisted, options, dockState);
 
-    this.windows[id] = buildWindowConfig(
-      id,
-      options,
-      persisted,
-      position,
-      size,
-      dockState,
-      initial,
-      options.onClose,
+    const model = new WindowModel(
+      {
+        id,
+        title: options.title,
+        state: initial.state,
+        position,
+        size,
+        minSize: options.minSize ?? { ...DEFAULT_MIN_SIZE },
+        linkedEntityId: options.linkedEntityId,
+        disabledActions: options.disabledActions,
+        dockState,
+        dockedHeight: persisted?.dockedHeight,
+        preDockedPosition: persisted?.preDockedPosition
+          ? { ...persisted.preDockedPosition }
+          : undefined,
+        preDockedSize: persisted?.preDockedSize
+          ? { ...persisted.preDockedSize }
+          : undefined,
+        previousState: initial.needsPreviousState ? "normal" : undefined,
+        previousPosition: initial.needsPreviousState
+          ? { ...position }
+          : undefined,
+        previousSize: initial.needsPreviousState ? { ...size } : undefined,
+        persisted: !!options.persisted,
+        onClose: options.onClose,
+      },
+      this,
     );
+
+    this.windows[id] = model;
     this.windowOrder.push(id);
 
     if (dockState !== "none") {
@@ -116,13 +126,15 @@ export class WindowStoreImpl {
       });
     }
 
-    return this.createWindowRef(id);
+    return this.createWindowRef(model);
   }
 
   /** Close a window (remove from registry) */
   @action closeWindow(id: string): void {
     const win = this.windows[id];
-    if (win?.dockState && win.dockState !== "none") {
+    if (!win) return;
+
+    if (win.isDocked && isDockSide(win.dockState)) {
       emitDockAreaEvent({
         type: "window-closing",
         side: win.dockState,
@@ -130,81 +142,16 @@ export class WindowStoreImpl {
       });
     }
 
-    docking.removeFromDockAreaOrder(this.dockAreas, id);
-
+    this.removeFromDockAreaOrder(id);
     delete this.windows[id];
     this.contentMap.delete(id);
+
     const index = this.windowOrder.indexOf(id);
     if (index !== -1) {
       this.windowOrder.splice(index, 1);
     }
 
-    if (win.onClose) {
-      win.onClose();
-    }
-  }
-
-  @action private minimizeWindow(id: string, { quiet = false } = {}): void {
-    const win = this.windows[id];
-    if (!win || win.state === "minimized") return;
-
-    saveWindowSnapshot(win);
-    win.state = "minimized";
-
-    if (!quiet && win.dockState !== "none") {
-      emitDockAreaEvent({
-        type: "window-minimized",
-        side: win.dockState,
-        windowId: id,
-      });
-    }
-  }
-
-  @action private maximizeWindow(id: string): void {
-    const win = this.windows[id];
-    if (!win || win.state === "maximized") return;
-
-    saveWindowSnapshot(win);
-    win.state = "maximized";
-    this.bringToFront(id);
-  }
-
-  /** Hide a window (move to task panel) */
-  @action hideWindow(id: string): void {
-    const win = this.windows[id];
-    if (!win || win.state === "hidden") return;
-
-    saveWindowSnapshot(win);
-    win.state = "hidden";
-  }
-
-  /** Restore a window to its previous state */
-  @action restoreWindow(id: string, { quiet = false } = {}): void {
-    const win = this.windows[id];
-    if (!win) return;
-
-    const wasHidden = win.state === "hidden";
-    const wasMinimized = win.state === "minimized";
-    const wasDocked = win.dockState !== "none";
-
-    restoreWindowSnapshot(win);
-
-    if (!quiet) {
-      this.bringToFront(id);
-    }
-
-    if (
-      !quiet &&
-      wasDocked &&
-      (wasMinimized || wasHidden) &&
-      isDockSide(win.dockState)
-    ) {
-      emitDockAreaEvent({
-        type: "window-expanded",
-        side: win.dockState,
-        windowId: id,
-      });
-    }
+    win.onClose?.();
   }
 
   /** Bring a window to the front (top of z-order) */
@@ -216,29 +163,23 @@ export class WindowStoreImpl {
     }
   }
 
-  /** Update window position */
-  @action updateWindowPosition(id: string, position: Position): void {
-    const win = this.windows[id];
-    if (win) {
-      win.position = position;
-    }
+  /** Hide a window (move to task panel). Convenience delegation to WindowModel. */
+  hideWindow(id: string): void {
+    this.windows[id]?.hide();
   }
 
-  /** Update window size */
-  @action updateWindowSize(id: string, size: Size): void {
-    const win = this.windows[id];
-    if (win) {
-      win.size = size;
-    }
+  /** Restore a window to its previous state. Convenience delegation to WindowModel. */
+  restoreWindow(id: string): void {
+    this.windows[id]?.restore();
   }
 
-  /** Get a window by ID */
-  getWindowById(id: string): WindowConfig | undefined {
+  /** Get a window model by ID */
+  getWindowById(id: string): WindowModel | undefined {
     return this.windows[id];
   }
 
   /** Get all windows as an array */
-  getAllWindows(): WindowConfig[] {
+  getAllWindows(): WindowModel[] {
     return this.windowOrder.map((id) => this.windows[id]);
   }
 
@@ -252,65 +193,65 @@ export class WindowStoreImpl {
     }
   }
 
-  private createWindowRef(id: string): WindowRef {
+  private createWindowRef(model: WindowModel): WindowRef {
     return {
-      id,
-      close: () => this.closeWindow(id),
-      minimize: () => this.minimizeWindow(id),
-      maximize: () => this.maximizeWindow(id),
-      hide: () => this.hideWindow(id),
-      restore: () => this.restoreWindow(id),
+      id: model.id,
+      close: () => model.close(),
+      minimize: () => model.minimize(),
+      maximize: () => model.maximize(),
+      hide: () => model.hide(),
+      restore: () => model.restore(),
     };
   }
 
-  /** Toggle window state - useful for minimize/maximize buttons */
-  @action toggleMinimize(id: string): void {
-    const win = this.windows[id];
-    if (!win) return;
-
-    if (win.state === "minimized") {
-      this.restoreWindow(id);
-    } else {
-      this.minimizeWindow(id);
-    }
-  }
-
-  @action toggleMaximize(id: string): void {
-    const win = this.windows[id];
-    if (!win) return;
-
-    if (win.state === "maximized") {
-      this.restoreWindow(id);
-    } else {
-      this.maximizeWindow(id);
-    }
-  }
-
-  // -- Docking (delegates to windowStore.docking.ts) --
+  // -- Docking --
 
   @action dockWindow(id: string, side: DockState, insertIndex?: number): void {
-    if (side !== "none" && !this.enabledDockSides.has(side)) return;
-    docking.dockWindow(this.windows, this.dockAreas, id, side, insertIndex);
+    if (side === "none" || !this.enabledDockSides.has(side)) return;
+    const win = this.windows[id];
+    if (!win) return;
+
+    win.savePreDockedState();
+    this.removeFromDockAreaOrder(id);
+    win.applyDockState(side);
+
+    const dockArea = this.dockAreas[side];
+    if (insertIndex !== undefined && insertIndex >= 0) {
+      const clampedIndex = Math.min(insertIndex, dockArea.windowOrder.length);
+      dockArea.windowOrder.splice(clampedIndex, 0, id);
+    } else {
+      dockArea.windowOrder.push(id);
+    }
+    dockArea.collapsed = false;
+
+    emitDockAreaEvent({ type: "window-docked", side, windowId: id });
   }
 
   @action undockWindow(id: string): void {
-    docking.undockWindow(this.windows, this.dockAreas, id);
+    const win = this.windows[id];
+    if (!win || win.dockState === "none") return;
+
+    this.removeFromDockAreaOrder(id);
+    win.applyUndockState();
   }
 
-  isWindowDocked(id: string): boolean {
-    return docking.isWindowDocked(this.windows, id);
-  }
-
-  @action updateDockedWindowHeight(id: string, height: number): void {
-    docking.updateDockedWindowHeight(this.windows, id, height);
+  @action private removeFromDockAreaOrder(id: string): void {
+    for (const side of ["left", "right"] as const) {
+      const order = this.dockAreas[side].windowOrder;
+      const idx = order.indexOf(id);
+      if (idx !== -1) {
+        order.splice(idx, 1);
+        return;
+      }
+    }
   }
 
   @action setDockAreaWidth(side: "left" | "right", width: number): void {
-    docking.setDockAreaWidth(this.dockAreas, side, width);
+    this.dockAreas[side].width = width;
   }
 
   @action toggleDockAreaCollapsed(side: "left" | "right"): void {
-    docking.toggleDockAreaCollapsed(this.dockAreas, side);
+    this.dockAreas[side].collapsed = !this.dockAreas[side].collapsed;
   }
 
   @action enableDockSide(side: "left" | "right"): void {
@@ -323,29 +264,21 @@ export class WindowStoreImpl {
     this.enabledDockSides = next;
   }
 
+  @action restoreDockArea(
+    side: "left" | "right",
+    state: { width: number; collapsed: boolean; windowOrder: string[] },
+  ): void {
+    this.dockAreas[side].width = state.width;
+    this.dockAreas[side].collapsed = state.collapsed;
+    this.dockAreas[side].windowOrder = [...state.windowOrder];
+  }
+
   isDockSideEnabled(side: "left" | "right"): boolean {
     return this.enabledDockSides.has(side);
   }
 
   getDockAreaWindowIds(side: "left" | "right"): string[] {
-    return docking.getDockAreaWindowIds(this.dockAreas, side);
-  }
-
-  @action restoreDockArea(
-    side: "left" | "right",
-    state: { width: number; collapsed: boolean; windowOrder: string[] },
-  ): void {
-    docking.restoreDockArea(this.dockAreas, side, state);
-  }
-
-  /** Minimize without emitting dock area events. */
-  @action minimizeWindowQuietly(id: string): void {
-    this.minimizeWindow(id, { quiet: true });
-  }
-
-  /** Restore without emitting dock area events or cascading. */
-  @action restoreWindowQuietly(id: string): void {
-    this.restoreWindow(id, { quiet: true });
+    return this.dockAreas[side].windowOrder;
   }
 
   // -- Content --
@@ -354,13 +287,13 @@ export class WindowStoreImpl {
     return this.contentMap.get(id);
   }
 
-  // -- Query helpers (promoted from windows.actions.ts) --
+  // -- Query helpers --
 
   getDockAreaConfig(side: "left" | "right"): DockAreaConfig {
     return this.dockAreas[side];
   }
 
-  getHiddenWindows(): WindowConfig[] {
+  getHiddenWindows(): WindowModel[] {
     return this.windowOrder
       .map((id) => this.windows[id])
       .filter((w) => w?.state === "hidden");
@@ -418,4 +351,29 @@ export class WindowStoreImpl {
       d: this.dockAreas,
     });
   }
+}
+
+// ---------------------------------------------------------------------------
+// Helpers (inlined from windowStore.helpers.ts)
+// ---------------------------------------------------------------------------
+
+type PersistedState = ReturnType<typeof getPersistedWindowState>;
+
+function resolveInitialState(
+  persisted: PersistedState,
+  options: WindowOptions,
+  dockState: DockState,
+): { state: WindowState; needsPreviousState: boolean } {
+  const shouldStartHidden = !!persisted?.isHidden && !options.startVisible;
+  const shouldStartMinimized =
+    !shouldStartHidden && !!persisted?.isMinimized && dockState !== "none";
+
+  return {
+    state: shouldStartHidden
+      ? "hidden"
+      : shouldStartMinimized
+        ? "minimized"
+        : "normal",
+    needsPreviousState: shouldStartHidden || shouldStartMinimized,
+  };
 }

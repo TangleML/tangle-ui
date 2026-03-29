@@ -9,7 +9,7 @@ import { ArgumentRow } from "@/routes/v2/pages/Editor/components/ArgumentRow/Arg
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { CTRL, SHIFT } from "@/routes/v2/shared/shortcuts/keys";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
-import { useContentWindowState } from "@/routes/v2/shared/windows/ContentWindowStateContext";
+import { useOptionalWindowContext } from "@/routes/v2/shared/windows/ContentWindowStateContext";
 
 interface TaskArgumentsEditorProps {
   task: Task;
@@ -18,10 +18,10 @@ interface TaskArgumentsEditorProps {
 export const TaskArgumentsEditor = observer(function TaskArgumentsEditor({
   task,
 }: TaskArgumentsEditorProps) {
-  const { editor, keyboard, windows } = useSharedStores();
+  const { editor, keyboard } = useSharedStores();
   const spec = useSpec();
-  const windowState = useContentWindowState();
-  const isMaximized = windowState?.isMaximized ?? false;
+  const windowCtx = useOptionalWindowContext();
+  const isMaximized = windowCtx?.model.isMaximized ?? false;
   const componentSpec = task.componentRef.spec as ComponentSpecJson | undefined;
   const inputs = componentSpec?.inputs ?? [];
   const lastSelectedArgRef = useRef<string | null>(null);
@@ -37,20 +37,18 @@ export const TaskArgumentsEditor = observer(function TaskArgumentsEditor({
       label: "Maximize Arguments Editor",
       allowInEditable: true,
       action: () => {
-        if (!windowState) return;
+        const model = windowCtx?.model;
+        if (!model) return;
 
-        const { windowId } = windowState;
-        const isCurrentlyMaximized =
-          windows.getWindowById(windowId)?.state === "maximized";
+        const wasMaximized = model.isMaximized;
+        model.toggleMaximize();
 
-        windows.toggleMaximize(windowId);
-
-        if (!isCurrentlyMaximized && lastSelectedArgRef.current) {
+        if (!wasMaximized && lastSelectedArgRef.current) {
           editor.setFocusedArgument(lastSelectedArgRef.current);
         }
       },
     });
-  }, [editor, keyboard, windows, windowState]);
+  }, [editor, keyboard, windowCtx]);
 
   if (!spec || inputs.length === 0) {
     return (
