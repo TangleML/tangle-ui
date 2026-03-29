@@ -100,6 +100,7 @@ export class WindowStoreImpl {
       size,
       dockState,
       initial,
+      options.onClose,
     );
     this.windowOrder.push(id);
 
@@ -136,6 +137,10 @@ export class WindowStoreImpl {
     const index = this.windowOrder.indexOf(id);
     if (index !== -1) {
       this.windowOrder.splice(index, 1);
+    }
+
+    if (win.onClose) {
+      win.onClose();
     }
   }
 

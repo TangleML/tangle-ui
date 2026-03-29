@@ -69,7 +69,7 @@ export function UpgradeComponentsContent() {
           className="relative shrink-0 border-r h-full"
           style={{ width: DEFAULT_LEFT_PANEL_WIDTH }}
         >
-          <ScrollArea className="h-full">
+          <div className="h-full overflow-y-auto">
             <BlockStack className="py-1">
               {candidates.map((candidate) => (
                 <UpgradeCandidateRow
@@ -84,7 +84,7 @@ export function UpgradeComponentsContent() {
                 />
               ))}
             </BlockStack>
-          </ScrollArea>
+          </div>
           <VerticalResizeHandle side="right" minWidth={300} />
         </div>
         <div className="flex flex-col min-w-[280px] flex-1 h-full min-h-0">

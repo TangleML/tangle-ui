@@ -15,6 +15,7 @@ export function saveWindowSnapshot(win: WindowConfig): void {
   win.previousPosition = { ...win.position };
   win.previousSize = { ...win.size };
 }
+
 export function restoreWindowSnapshot(win: WindowConfig): void {
   win.state =
     win.previousState === "maximized"
@@ -26,6 +27,7 @@ export function restoreWindowSnapshot(win: WindowConfig): void {
   win.previousPosition = undefined;
   win.previousSize = undefined;
 }
+
 export function resolveInitialState(
   persisted: PersistedState,
   options: WindowOptions,
@@ -44,6 +46,7 @@ export function resolveInitialState(
     needsPreviousState: shouldStartHidden || shouldStartMinimized,
   };
 }
+
 export function buildWindowConfig(
   id: string,
   options: WindowOptions,
@@ -52,6 +55,7 @@ export function buildWindowConfig(
   size: Size,
   dockState: DockState,
   initial: { state: WindowConfig["state"]; needsPreviousState: boolean },
+  onClose?: () => void,
 ): WindowConfig {
   return {
     id,
@@ -74,5 +78,6 @@ export function buildWindowConfig(
     previousPosition: initial.needsPreviousState ? { ...position } : undefined,
     previousSize: initial.needsPreviousState ? { ...size } : undefined,
     persisted: !!options.persisted,
+    onClose,
   };
 }

@@ -70,6 +70,9 @@ export interface WindowConfig {
   dockState: DockState;
   /** Whether this window's layout should be persisted to localStorage */
   persisted?: boolean;
+
+  /** Callback to invoke when the window is closed */
+  onClose?: () => void;
 }
 
 /** Reference returned from open() for controlling a window */
@@ -102,6 +105,8 @@ export interface WindowOptions {
   startVisible?: boolean;
   /** If true, the window's layout (position, size, dock state) is persisted to localStorage across reloads. */
   persisted?: boolean;
+  /** Callback to invoke when the window is closed */
+  onClose?: () => void;
 }
 
 /** Default window dimensions */
