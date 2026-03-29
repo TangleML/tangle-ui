@@ -58,7 +58,6 @@ export function useWindowDrag({
   const panelRef = useRef<HTMLDivElement>(null);
 
   const position = windowConfig?.position ?? { x: 0, y: 0 };
-  const size = windowConfig?.size ?? { width: 320, height: 420 };
   const isDocked =
     windowConfig?.dockState !== undefined && windowConfig?.dockState !== "none";
 
@@ -149,8 +148,6 @@ export function useWindowDrag({
 
       const preview = detectSnapPreview({
         windowId,
-        position: newPosition,
-        size,
         mousePosition: { x: moveE.clientX, y: moveE.clientY },
         dockAreaWindowIds: {
           left: [...windows.getDockAreaWindowIds("left")],
