@@ -2,7 +2,6 @@ import { useState } from "react";
 
 import { BlockStack } from "@/components/ui/layout";
 import { VerticalResizeHandle } from "@/components/ui/resize-handle";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";

@@ -4,42 +4,18 @@ import { createPortal } from "react-dom";
 
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
-import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
-import type { ContentWindowState } from "@/routes/v2/shared/windows/ContentWindowStateContext";
-import { ContentWindowStateProvider } from "@/routes/v2/shared/windows/ContentWindowStateContext";
+import { useWindowContext } from "@/routes/v2/shared/windows/ContentWindowStateContext";
 import { useWindowDrag } from "@/routes/v2/shared/windows/hooks/useWindowDrag";
 import { SnapPreview } from "@/routes/v2/shared/windows/SnapPreview";
-import {
-  DEFAULT_DOCKED_HEIGHT,
-  MIN_DOCKED_HEIGHT,
-  type WindowAction,
-} from "@/routes/v2/shared/windows/types";
+import { MIN_DOCKED_HEIGHT } from "@/routes/v2/shared/windows/types";
 
 import { WindowActions } from "./WindowActions";
 import { WindowHeader } from "./WindowHeader";
 
-interface DockedWindowProps {
-  windowId: string;
-}
-
 const HEADER_HEIGHT = 26;
 
-export const DockedWindow = observer(function DockedWindow({
-  windowId,
-}: DockedWindowProps) {
-  const { windows } = useSharedStores();
-  const windowConfig = windows.getWindowById(windowId);
-  if (!windowConfig) return null;
-
-  const { title, state, size, disabledActions, dockState, dockedHeight } =
-    windowConfig;
-
-  const content = windows.getWindowContent(windowId);
-  const isMinimized = state === "minimized";
-  const isMaximized = state === "maximized";
-  const isDocked = dockState === "left" || dockState === "right";
-  const effectiveDockedHeight = dockedHeight ?? DEFAULT_DOCKED_HEIGHT;
-  const dockAreaCollapsed = windows.isDockAreaCollapsed(dockState);
+export const DockedWindow = observer(function DockedWindow() {
+  const { model, content } = useWindowContext();
 
   const {
     isDragging,
@@ -48,22 +24,9 @@ export const DockedWindow = observer(function DockedWindow({
     handleHeaderMouseDown,
     handleContainerMouseDown,
     handleContainerClick,
-  } = useWindowDrag({ windowId, docked: true });
+  } = useWindowDrag({ docked: true });
 
   const [isResizing, setIsResizing] = useState(false);
-
-  const isActionDisabled = (action: WindowAction) =>
-    disabledActions?.includes(action) ?? false;
-
-  const contentWindowState: ContentWindowState = {
-    windowId,
-    state,
-    isMaximized,
-    isMinimized,
-    isDocked,
-    dockSide: dockState,
-    dockAreaCollapsed,
-  };
 
   const handleResizeMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -71,14 +34,14 @@ export const DockedWindow = observer(function DockedWindow({
     setIsResizing(true);
 
     const startY = e.clientY;
-    const startHeight = effectiveDockedHeight;
+    const startHeight = model.effectiveDockedHeight;
 
     const onMouseMove = (moveE: MouseEvent) => {
       const newHeight = Math.max(
         MIN_DOCKED_HEIGHT,
         startHeight + (moveE.clientY - startY),
       );
-      windows.updateDockedWindowHeight(windowId, newHeight);
+      model.updateDockedHeight(newHeight);
     };
 
     const onMouseUp = () => {
@@ -91,16 +54,9 @@ export const DockedWindow = observer(function DockedWindow({
     document.addEventListener("mouseup", onMouseUp);
   };
 
-  const actions = (
-    <WindowActions
-      windowId={windowId}
-      isMinimized={isMinimized}
-      isMaximized={isMaximized}
-      isActionDisabled={isActionDisabled}
-    />
-  );
+  const actions = <WindowActions />;
 
-  if (isMaximized) {
+  if (model.isMaximized) {
     return createPortal(
       <div
         ref={panelRef}
@@ -109,7 +65,7 @@ export const DockedWindow = observer(function DockedWindow({
         onClick={handleContainerClick}
       >
         <WindowHeader
-          title={title}
+          title={model.title}
           leadingIcon={
             <Icon
               name="PanelLeft"
@@ -120,11 +76,7 @@ export const DockedWindow = observer(function DockedWindow({
           actions={actions}
           className="py-1 bg-blue-50 border-blue-200"
         />
-        <div className="flex-1 min-h-0 overflow-auto bg-gray-50">
-          <ContentWindowStateProvider value={contentWindowState}>
-            {content}
-          </ContentWindowStateProvider>
-        </div>
+        <div className="flex-1 min-h-0 overflow-auto bg-gray-50">{content}</div>
       </div>,
       document.body,
     );
@@ -134,7 +86,7 @@ export const DockedWindow = observer(function DockedWindow({
     <>
       <div
         ref={panelRef}
-        data-dock-window={windowId}
+        data-dock-window={model.id}
         className={cn(
           "rounded border overflow-hidden w-full shrink-0",
           "bg-gray-100 text-gray-900 flex flex-col",
@@ -143,14 +95,14 @@ export const DockedWindow = observer(function DockedWindow({
           isDragging && "cursor-grabbing opacity-50",
         )}
         style={{
-          height: isMinimized ? "auto" : effectiveDockedHeight,
-          minHeight: isMinimized ? undefined : MIN_DOCKED_HEIGHT,
+          height: model.isMinimized ? "auto" : model.effectiveDockedHeight,
+          minHeight: model.isMinimized ? undefined : MIN_DOCKED_HEIGHT,
         }}
         onMouseDown={handleContainerMouseDown}
         onClick={handleContainerClick}
       >
         <WindowHeader
-          title={title}
+          title={model.title}
           isDragging={isDragging}
           onMouseDown={handleHeaderMouseDown}
           leadingIcon={
@@ -164,18 +116,18 @@ export const DockedWindow = observer(function DockedWindow({
           className="py-0.5 bg-blue-50 border-blue-200"
         />
 
-        {!isMinimized && (
+        {!model.isMinimized && (
           <div
             className="flex-1 min-h-0 overflow-auto bg-gray-50"
-            style={{ height: effectiveDockedHeight - HEADER_HEIGHT }}
+            style={{
+              height: model.effectiveDockedHeight - HEADER_HEIGHT,
+            }}
           >
-            <ContentWindowStateProvider value={contentWindowState}>
-              {content}
-            </ContentWindowStateProvider>
+            {content}
           </div>
         )}
 
-        {!isMinimized && (
+        {!model.isMinimized && (
           <div
             className="h-1 cursor-ns-resize hover:bg-blue-200 transition-colors shrink-0"
             onMouseDown={handleResizeMouseDown}
@@ -186,7 +138,7 @@ export const DockedWindow = observer(function DockedWindow({
       {isDragging &&
         snapPreview &&
         createPortal(
-          <SnapPreview preview={snapPreview} windowWidth={size.width} />,
+          <SnapPreview preview={snapPreview} windowWidth={model.size.width} />,
           document.body,
         )}
     </>

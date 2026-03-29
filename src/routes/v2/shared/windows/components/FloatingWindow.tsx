@@ -4,42 +4,19 @@ import { createPortal } from "react-dom";
 
 import { cn } from "@/lib/utils";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
-import type { ContentWindowState } from "@/routes/v2/shared/windows/ContentWindowStateContext";
-import { ContentWindowStateProvider } from "@/routes/v2/shared/windows/ContentWindowStateContext";
+import { useWindowContext } from "@/routes/v2/shared/windows/ContentWindowStateContext";
 import { useWindowDrag } from "@/routes/v2/shared/windows/hooks/useWindowDrag";
 import { SnapPreview } from "@/routes/v2/shared/windows/SnapPreview";
-import {
-  TASK_PANEL_HEIGHT,
-  type WindowAction,
-} from "@/routes/v2/shared/windows/types";
+import { TASK_PANEL_HEIGHT } from "@/routes/v2/shared/windows/types";
 
 import { WindowActions } from "./WindowActions";
 import { WindowHeader } from "./WindowHeader";
 
-interface FloatingWindowProps {
-  windowId: string;
-}
-
 const HEADER_HEIGHT = 28;
 
-export const FloatingWindow = observer(function FloatingWindow({
-  windowId,
-}: FloatingWindowProps) {
+export const FloatingWindow = observer(function FloatingWindow() {
+  const { model, content } = useWindowContext();
   const { windows } = useSharedStores();
-  const windowConfig = windows.getWindowById(windowId);
-  const zIndex = windows.getWindowZIndex(windowId);
-
-  if (!windowConfig) return null;
-
-  const { title, state, position, size, minSize, disabledActions, dockState } =
-    windowConfig;
-
-  const content = windows.getWindowContent(windowId);
-  const isMinimized = state === "minimized";
-  const isMaximized = state === "maximized";
-  const isDocked = dockState === "left" || dockState === "right";
-
-  const taskPanelOffset = windows.hasHiddenWindows ? TASK_PANEL_HEIGHT : 0;
 
   const {
     isDragging,
@@ -48,24 +25,11 @@ export const FloatingWindow = observer(function FloatingWindow({
     handleHeaderMouseDown,
     handleContainerMouseDown,
     handleContainerClick,
-  } = useWindowDrag({ windowId, docked: false });
+  } = useWindowDrag({ docked: false });
 
   const [isResizing, setIsResizing] = useState(false);
 
-  const isActionDisabled = (action: WindowAction) =>
-    disabledActions?.includes(action) ?? false;
-
-  const dockAreaCollapsed = windows.isDockAreaCollapsed(dockState);
-
-  const contentWindowState: ContentWindowState = {
-    windowId,
-    state,
-    isMaximized,
-    isMinimized,
-    isDocked,
-    dockSide: dockState,
-    dockAreaCollapsed,
-  };
+  const taskPanelOffset = windows.hasHiddenWindows ? TASK_PANEL_HEIGHT : 0;
 
   const handleResizeMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -74,22 +38,19 @@ export const FloatingWindow = observer(function FloatingWindow({
 
     const startX = e.clientX;
     const startY = e.clientY;
-    const startWidth = size.width;
-    const startHeight = size.height;
+    const startWidth = model.size.width;
+    const startHeight = model.size.height;
 
     const onMouseMove = (moveE: MouseEvent) => {
       const newWidth = Math.max(
-        minSize.width,
+        model.minSize.width,
         startWidth + (moveE.clientX - startX),
       );
       const newHeight = Math.max(
-        minSize.height,
+        model.minSize.height,
         startHeight + (moveE.clientY - startY),
       );
-      windows.updateWindowSize(windowId, {
-        width: newWidth,
-        height: newHeight,
-      });
+      model.updateSize({ width: newWidth, height: newHeight });
     };
 
     const onMouseUp = () => {
@@ -102,9 +63,9 @@ export const FloatingWindow = observer(function FloatingWindow({
     document.addEventListener("mouseup", onMouseUp);
   };
 
-  const contentHeight = size.height - HEADER_HEIGHT;
+  const contentHeight = model.size.height - HEADER_HEIGHT;
 
-  const windowStyle = isMaximized
+  const windowStyle = model.isMaximized
     ? {
         left: 0,
         top: 0,
@@ -113,13 +74,13 @@ export const FloatingWindow = observer(function FloatingWindow({
         zIndex: 45,
       }
     : {
-        left: position.x,
-        top: position.y + (isDocked ? taskPanelOffset : 0),
-        width: isMinimized ? "auto" : size.width,
-        height: isMinimized ? "auto" : size.height,
-        minWidth: minSize.width,
-        minHeight: isMinimized ? "auto" : minSize.height,
-        zIndex: 20 + zIndex,
+        left: model.position.x,
+        top: model.position.y + (model.isDocked ? taskPanelOffset : 0),
+        width: model.isMinimized ? "auto" : model.size.width,
+        height: model.isMinimized ? "auto" : model.size.height,
+        minWidth: model.minSize.width,
+        minHeight: model.isMinimized ? "auto" : model.minSize.height,
+        zIndex: 20 + model.zIndex,
       };
 
   return (
@@ -131,7 +92,7 @@ export const FloatingWindow = observer(function FloatingWindow({
           "bg-gray-100 text-gray-900 flex flex-col",
           (isDragging || isResizing) && "select-none",
           isDragging && "cursor-grabbing",
-          isMaximized && "rounded-none",
+          model.isMaximized && "rounded-none",
           "border-gray-400",
         )}
         style={windowStyle}
@@ -139,40 +100,31 @@ export const FloatingWindow = observer(function FloatingWindow({
         onClick={handleContainerClick}
       >
         <WindowHeader
-          title={title}
+          title={model.title}
           isDragging={isDragging}
-          onMouseDown={isMaximized ? undefined : handleHeaderMouseDown}
-          actions={
-            <WindowActions
-              windowId={windowId}
-              isMinimized={isMinimized}
-              isMaximized={isMaximized}
-              isActionDisabled={isActionDisabled}
-            />
-          }
+          onMouseDown={model.isMaximized ? undefined : handleHeaderMouseDown}
+          actions={<WindowActions />}
           className={cn(
             "py-1",
-            isMaximized && "cursor-default",
+            model.isMaximized && "cursor-default",
             "bg-gray-200 border-gray-300",
           )}
         />
 
-        {!isMinimized && (
+        {!model.isMinimized && (
           <div
             className="flex-1 min-h-0 overflow-auto bg-gray-50"
             style={{
-              height: isMaximized
+              height: model.isMaximized
                 ? `calc(100vh - ${HEADER_HEIGHT}px)`
                 : contentHeight,
             }}
           >
-            <ContentWindowStateProvider value={contentWindowState}>
-              {content}
-            </ContentWindowStateProvider>
+            {content}
           </div>
         )}
 
-        {!isMinimized && !isMaximized && (
+        {!model.isMinimized && !model.isMaximized && (
           <div
             className="absolute bottom-0 right-0 w-3 h-3 cursor-se-resize hover:bg-gray-300 rounded-tl-sm transition-colors"
             onMouseDown={handleResizeMouseDown}
@@ -191,7 +143,7 @@ export const FloatingWindow = observer(function FloatingWindow({
       {isDragging &&
         snapPreview &&
         createPortal(
-          <SnapPreview preview={snapPreview} windowWidth={size.width} />,
+          <SnapPreview preview={snapPreview} windowWidth={model.size.width} />,
           document.body,
         )}
     </>

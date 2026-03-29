@@ -41,8 +41,8 @@ function collapseOthers(
   for (const id of dockArea.windowOrder) {
     if (id === exceptId) continue;
     const win = store.getWindowById(id);
-    if (win && win.state !== "minimized" && win.state !== "hidden") {
-      store.minimizeWindowQuietly(id);
+    if (win && !win.isMinimized && win.state !== "hidden") {
+      win.minimize({ quiet: true });
       collapsed.push(id);
     }
   }
@@ -68,7 +68,7 @@ function restoreFromStack(
       dockOrder.includes(restoreId) &&
       store.getWindowById(restoreId)
     ) {
-      store.restoreWindowQuietly(restoreId);
+      store.getWindowById(restoreId)!.restore({ quiet: true });
       return;
     }
   }
@@ -87,15 +87,15 @@ function ensureOneVisible(
 
   const hasVisible = dockArea.windowOrder.some((id) => {
     const win = store.getWindowById(id);
-    return win && win.state !== "minimized" && win.state !== "hidden";
+    return win && !win.isMinimized && win.state !== "hidden";
   });
 
   if (hasVisible) return;
 
   for (const id of dockArea.windowOrder) {
     const win = store.getWindowById(id);
-    if (win && win.state === "minimized") {
-      store.restoreWindowQuietly(id);
+    if (win?.isMinimized) {
+      win.restore({ quiet: true });
       return;
     }
   }
@@ -115,7 +115,7 @@ export function initDockAreaAccordion(
     switch (event.type) {
       case "window-docked": {
         const win = store.getWindowById(windowId);
-        if (win && win.state === "minimized") {
+        if (win?.isMinimized) {
           ensureOneVisible(store, side);
           break;
         }
@@ -132,7 +132,7 @@ export function initDockAreaAccordion(
 
       case "window-closing": {
         const win = store.getWindowById(windowId);
-        if (win && win.state !== "minimized") {
+        if (win && !win.isMinimized) {
           restoreFromStack(store, side);
         }
         const idx = stack.indexOf(windowId);

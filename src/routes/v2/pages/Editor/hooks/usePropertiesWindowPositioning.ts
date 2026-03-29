@@ -137,7 +137,7 @@ export function usePropertiesWindowPositioning() {
             bounds,
           );
 
-          windowStore.updateWindowPosition(CONTEXT_PANEL_WINDOW_ID, position);
+          win.updatePosition(position);
         });
       },
     );
