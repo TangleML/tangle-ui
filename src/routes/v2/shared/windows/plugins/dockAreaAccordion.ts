@@ -74,6 +74,33 @@ function restoreFromStack(
   }
 }
 
+/**
+ * Guarantee at least one window is expanded in the dock area.
+ * No-ops when any window is already visible; otherwise restores the first
+ * minimized window it finds.
+ */
+function ensureOneVisible(
+  store: WindowStoreImpl,
+  side: "left" | "right",
+): void {
+  const dockArea = store.getDockAreaConfig(side);
+
+  const hasVisible = dockArea.windowOrder.some((id) => {
+    const win = store.getWindowById(id);
+    return win && win.state !== "minimized" && win.state !== "hidden";
+  });
+
+  if (hasVisible) return;
+
+  for (const id of dockArea.windowOrder) {
+    const win = store.getWindowById(id);
+    if (win && win.state === "minimized") {
+      store.restoreWindowQuietly(id);
+      return;
+    }
+  }
+}
+
 /** Initialize accordion behavior for a dock area side. Returns a cleanup function. */
 export function initDockAreaAccordion(
   side: "left" | "right",
@@ -89,6 +116,7 @@ export function initDockAreaAccordion(
       case "window-docked": {
         const win = store.getWindowById(windowId);
         if (win && win.state === "minimized") {
+          ensureOneVisible(store, side);
           break;
         }
         const collapsed = collapseOthers(store, side, windowId);
@@ -109,11 +137,13 @@ export function initDockAreaAccordion(
         }
         const idx = stack.indexOf(windowId);
         if (idx !== -1) stack.splice(idx, 1);
+        ensureOneVisible(store, side);
         break;
       }
 
       case "window-minimized": {
         restoreFromStack(store, side);
+        ensureOneVisible(store, side);
         break;
       }
     }

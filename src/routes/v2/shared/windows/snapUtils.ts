@@ -1,24 +1,22 @@
-import type { Position, Size, SnapPreviewType } from "./types";
+import type { Position, SnapPreviewType } from "./types";
 import { DOCK_AREA_SNAP_THRESHOLD, EDGE_SNAP_THRESHOLD } from "./types";
 
 function isNearLeftEdge(x: number): boolean {
   return x <= EDGE_SNAP_THRESHOLD;
 }
 
-function isNearRightEdge(x: number, windowWidth: number): boolean {
-  const rightEdge = x + windowWidth;
-  return rightEdge >= window.innerWidth - EDGE_SNAP_THRESHOLD;
+function isNearRightEdge(mouseX: number): boolean {
+  return mouseX >= window.innerWidth - EDGE_SNAP_THRESHOLD;
 }
 
 function detectEdgeSnap(
-  position: Position,
-  size: Size,
+  mouseX: number,
   enabledSides: ReadonlySet<"left" | "right">,
 ): { side: "left" | "right" } | null {
-  if (enabledSides.has("left") && isNearLeftEdge(position.x)) {
+  if (enabledSides.has("left") && isNearLeftEdge(mouseX)) {
     return { side: "left" };
   }
-  if (enabledSides.has("right") && isNearRightEdge(position.x, size.width)) {
+  if (enabledSides.has("right") && isNearRightEdge(mouseX)) {
     return { side: "right" };
   }
   return null;
@@ -156,8 +154,6 @@ function calculateInsertPosition(
  */
 interface DetectSnapPreviewOptions {
   windowId: string;
-  position: Position;
-  size: Size;
   mousePosition?: Position;
   dockAreaWindowIds?: Record<"left" | "right", string[]>;
   enabledDockSides?: ReadonlySet<"left" | "right">;
@@ -168,14 +164,14 @@ export function detectSnapPreview(
 ): SnapPreviewType | null {
   const {
     windowId,
-    position,
-    size,
     mousePosition,
     dockAreaWindowIds,
     enabledDockSides = new Set(["left", "right"] as const),
   } = options;
 
-  if (mousePosition && dockAreaWindowIds) {
+  if (!mousePosition) return null;
+
+  if (dockAreaWindowIds) {
     const dockSnap = detectDockAreaSnap(
       mousePosition.x,
       mousePosition.y,
@@ -186,7 +182,7 @@ export function detectSnapPreview(
     if (dockSnap) return dockSnap;
   }
 
-  const edgeSnap = detectEdgeSnap(position, size, enabledDockSides);
+  const edgeSnap = detectEdgeSnap(mousePosition.x, enabledDockSides);
   if (edgeSnap) {
     return { type: "edge", side: edgeSnap.side };
   }
