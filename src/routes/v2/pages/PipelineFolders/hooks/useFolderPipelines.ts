@@ -2,8 +2,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
-
-import { FoldersQueryKeys } from "../types";
+import { FoldersQueryKeys } from "@/services/pipelineStorage/types";
 
 export function useFolderPipelines(folderId: string | null) {
   const storage = usePipelineStorage();

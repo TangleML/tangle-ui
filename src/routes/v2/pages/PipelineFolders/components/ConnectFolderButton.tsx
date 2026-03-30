@@ -6,9 +6,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Icon, type IconName } from "@/components/ui/icon";
+import { useConnectFolder } from "@/routes/v2/pages/PipelineFolders/hooks/useFolderMutations";
 import { useConnectGoogleDriveFolder } from "@/services/googleDrive/useConnectGoogleDriveFolder"; // google-drive
-
-import { useConnectFolder } from "../hooks/useFolderMutations";
 
 const isLocalFsAvailable = "showDirectoryPicker" in window;
 

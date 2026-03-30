@@ -1,9 +1,6 @@
 import { createContext, useContext } from "react";
 
-export interface PipelineRef {
-  name: string;
-  fileId?: string;
-}
+import type { PipelineRef } from "@/services/pipelineStorage/types";
 
 interface FolderNavigationContextType {
   navigateToFolder: (folderId: string | null) => void;

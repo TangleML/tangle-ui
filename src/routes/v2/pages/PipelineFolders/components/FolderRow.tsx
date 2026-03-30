@@ -22,15 +22,15 @@ import { TableCell, TableRow } from "@/components/ui/table";
 import { Paragraph } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { APP_ROUTES } from "@/routes/router";
-import type { PipelineFolder } from "@/services/pipelineStorage/PipelineFolder";
-import { formatDate } from "@/utils/date";
-
-import { useFolderNavigation } from "../context/FolderNavigationContext";
+import { useFolderNavigation } from "@/routes/v2/pages/PipelineFolders/context/FolderNavigationContext";
 import {
   useDeleteFolder,
   useRenameFolder,
   useToggleFavorite,
-} from "../hooks/useFolderMutations";
+} from "@/routes/v2/pages/PipelineFolders/hooks/useFolderMutations";
+import type { PipelineFolder } from "@/services/pipelineStorage/PipelineFolder";
+import { formatDate } from "@/utils/date";
+
 import { RenameFolderDialog } from "./RenameFolderDialog";
 
 const DRAG_MIME = "application/x-folder-move";

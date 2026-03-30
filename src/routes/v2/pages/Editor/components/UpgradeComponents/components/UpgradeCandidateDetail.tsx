@@ -7,7 +7,10 @@ import type {
   InputSpec,
   OutputSpec,
 } from "@/models/componentSpec/entities/types";
-import { candidateHasIssues, type UpgradeCandidate } from "@/routes/v2/pages/Editor/components/UpgradeComponents/types";
+import {
+  candidateHasIssues,
+  type UpgradeCandidate,
+} from "@/routes/v2/pages/Editor/components/UpgradeComponents/types";
 import type { EntityDiff } from "@/routes/v2/pages/Editor/store/actions/task.utils";
 
 function truncateDigest(digest: string): string {

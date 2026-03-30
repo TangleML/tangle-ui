@@ -6,11 +6,13 @@ import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
-import type { PipelineRef } from "@/routes/PipelineFolders/context/FolderNavigationContext";
 import type { PipelineFolder } from "@/services/pipelineStorage/PipelineFolder";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
-import type { PermissionStatus } from "@/services/pipelineStorage/types";
+import type {
+  PermissionStatus,
+  PipelineRef,
+} from "@/services/pipelineStorage/types";
 
 interface DriverPermissionGateProps {
   pipelineRef: PipelineRef;

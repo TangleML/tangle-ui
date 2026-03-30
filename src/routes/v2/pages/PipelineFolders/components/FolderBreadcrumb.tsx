@@ -15,10 +15,9 @@ import { InlineStack } from "@/components/ui/layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { APP_ROUTES } from "@/routes/router";
-
-import { useFolderNavigation } from "../context/FolderNavigationContext";
-import { useFolderBreadcrumbs } from "../hooks/useFolderBreadcrumbs";
-import { useToggleFavorite } from "../hooks/useFolderMutations";
+import { useFolderNavigation } from "@/routes/v2/pages/PipelineFolders/context/FolderNavigationContext";
+import { useFolderBreadcrumbs } from "@/routes/v2/pages/PipelineFolders/hooks/useFolderBreadcrumbs";
+import { useToggleFavorite } from "@/routes/v2/pages/PipelineFolders/hooks/useFolderMutations";
 
 interface FolderBreadcrumbProps {
   folderId: string | null;

@@ -6,8 +6,7 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import type { PipelineFolder } from "@/services/pipelineStorage/PipelineFolder";
 import type { PermissionStatus } from "@/services/pipelineStorage/types";
-
-import { FoldersQueryKeys } from "../../../types";
+import { FoldersQueryKeys } from "@/services/pipelineStorage/types";
 
 interface FolderPermissionBannerProps {
   folder: PipelineFolder;

@@ -5,8 +5,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { BlockStack } from "@/components/ui/layout";
-import type { PipelineRef } from "@/routes/PipelineFolders/context/FolderNavigationContext";
-import { PipelineFolders } from "@/routes/PipelineFolders/PipelineFolders";
+// TODO: extract PipelineFolders picker to shared or restructure via routing composition
+// eslint-disable-next-line no-restricted-imports
+import { PipelineFolders } from "@/routes/v2/pages/PipelineFolders/PipelineFolders";
+import type { PipelineRef } from "@/services/pipelineStorage/types";
 
 interface OpenPipelineDialogProps {
   open: boolean;

@@ -13,8 +13,7 @@ import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
-
-import { useCreateFolder } from "../hooks/useFolderMutations";
+import { useCreateFolder } from "@/routes/v2/pages/PipelineFolders/hooks/useFolderMutations";
 
 interface CreateFolderDialogProps {
   parentId: string | null;

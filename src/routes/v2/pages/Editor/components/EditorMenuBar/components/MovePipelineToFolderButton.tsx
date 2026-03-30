@@ -3,8 +3,10 @@ import { useState } from "react";
 
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { Icon } from "@/components/ui/icon";
-import { MovePipelineDialog } from "@/routes/PipelineFolders/components/MovePipelineDialog";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
+// TODO: extract MovePipelineDialog to shared or restructure via routing composition
+// eslint-disable-next-line no-restricted-imports
+import { MovePipelineDialog } from "@/routes/v2/pages/PipelineFolders/components/MovePipelineDialog";
 
 export const MovePipelineToFolderButton = observer(
   function MovePipelineToFolderButton() {

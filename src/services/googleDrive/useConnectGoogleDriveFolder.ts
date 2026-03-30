@@ -1,10 +1,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import useToastNotification from "@/hooks/useToastNotification";
-import { FoldersQueryKeys } from "@/routes/PipelineFolders/types";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import { getErrorMessage } from "@/utils/string";
 
+import { FoldersQueryKeys } from "../pipelineStorage/types";
 import { getGoogleDriveAuth } from "./GoogleDriveAuthService";
 import { pickGoogleDriveFolder } from "./pickGoogleDriveFolder";
 

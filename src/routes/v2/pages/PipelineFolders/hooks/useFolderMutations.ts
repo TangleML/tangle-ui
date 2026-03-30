@@ -2,9 +2,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import useToastNotification from "@/hooks/useToastNotification";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
+import { FoldersQueryKeys } from "@/services/pipelineStorage/types";
 import { getErrorMessage } from "@/utils/string";
-
-import { FoldersQueryKeys } from "../types";
 
 export function useCreateFolder() {
   const queryClient = useQueryClient();

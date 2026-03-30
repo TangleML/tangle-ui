@@ -3,9 +3,11 @@ import { useNavigate } from "@tanstack/react-router";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
-import type { PipelineRef } from "@/routes/PipelineFolders/context/FolderNavigationContext";
-import { PipelineFolders } from "@/routes/PipelineFolders/PipelineFolders";
 import { APP_ROUTES } from "@/routes/router";
+// TODO: extract PipelineFolders picker to shared or restructure via routing composition
+// eslint-disable-next-line no-restricted-imports
+import { PipelineFolders } from "@/routes/v2/pages/PipelineFolders/PipelineFolders";
+import type { PipelineRef } from "@/services/pipelineStorage/types";
 
 export function EmptyEditorState() {
   const navigate = useNavigate();

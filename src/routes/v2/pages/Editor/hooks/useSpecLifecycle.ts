@@ -4,11 +4,11 @@ import { isRootStore, unregisterRootStore } from "mobx-keystone";
 import { useEffect, useRef } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
-import type { PipelineRef } from "@/routes/PipelineFolders/context/FolderNavigationContext";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
+import type { PipelineRef } from "@/services/pipelineStorage/types";
 
 /**
  * todo: make public and export to re-use

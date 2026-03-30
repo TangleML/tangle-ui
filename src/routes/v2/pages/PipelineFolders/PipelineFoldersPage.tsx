@@ -1,7 +1,7 @@
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
 import { Heading } from "@/components/ui/typography";
-import { PipelineFolders } from "@/routes/PipelineFolders/PipelineFolders";
+import { PipelineFolders } from "@/routes/v2/pages/PipelineFolders/PipelineFolders";
 
 export function PipelineFoldersPage() {
   return (
