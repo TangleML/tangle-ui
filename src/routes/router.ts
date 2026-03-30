@@ -20,7 +20,6 @@ import Editor from "./Editor";
 import Home from "./Home";
 import { ImportPage } from "./Import";
 import NotFoundPage from "./NotFoundPage";
-import { PipelineFoldersPage } from "./PipelineFolders/PipelineFoldersPage";
 import PipelineRun from "./PipelineRun";
 import { QuickStartPage } from "./QuickStart";
 import { BackendSettings } from "./Settings/sections/BackendSettings";
@@ -29,6 +28,7 @@ import { PreferencesSettings } from "./Settings/sections/PreferencesSettings";
 import { SecretsSettings } from "./Settings/sections/SecretsSettings";
 import { SettingsLayout } from "./Settings/SettingsLayout";
 import { EditorV2 } from "./v2/pages/Editor/EditorV2";
+import { PipelineFoldersPage } from "./v2/pages/PipelineFolders/PipelineFoldersPage";
 import { RunViewV2 } from "./v2/pages/RunView/RunViewV2";
 
 declare module "@tanstack/react-router" {

@@ -3,10 +3,9 @@ import { FaGoogleDrive } from "react-icons/fa"; // google-drive
 
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
+import { FolderRow } from "@/routes/v2/pages/PipelineFolders/components/FolderRow";
+import type { DragItem } from "@/routes/v2/pages/PipelineFolders/types";
 import type { PipelineFolder } from "@/services/pipelineStorage/PipelineFolder";
-
-import type { DragItem } from "../../../types";
-import { FolderRow } from "../../FolderRow";
 
 interface FolderListProps {
   folders: PipelineFolder[];

@@ -4,7 +4,10 @@ import type {
   InputSpec,
   OutputSpec,
 } from "@/models/componentSpec/entities/types";
-import type { LostBinding, UpgradeCandidate } from "@/routes/v2/pages/Editor/components/UpgradeComponents/types";
+import type {
+  LostBinding,
+  UpgradeCandidate,
+} from "@/routes/v2/pages/Editor/components/UpgradeComponents/types";
 import {
   computeDiffComponentSpecs,
   predictUpgradeIssues,

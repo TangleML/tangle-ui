@@ -19,17 +19,18 @@ import {
 } from "@/components/ui/table";
 import { Text } from "@/components/ui/typography";
 import { usePagination } from "@/hooks/usePagination";
+import { MovePipelineDialog } from "@/routes/v2/pages/PipelineFolders/components/MovePipelineDialog";
+import { useBulkDeleteMutation } from "@/routes/v2/pages/PipelineFolders/hooks/useBulkDeleteMutation";
+import { useDropMutation } from "@/routes/v2/pages/PipelineFolders/hooks/useDropMutation";
+import { useFolderBreadcrumbs } from "@/routes/v2/pages/PipelineFolders/hooks/useFolderBreadcrumbs";
+import { useDisconnectFolder } from "@/routes/v2/pages/PipelineFolders/hooks/useFolderMutations";
+import { useFolderPipelines } from "@/routes/v2/pages/PipelineFolders/hooks/useFolderPipelines";
+import { useFolders } from "@/routes/v2/pages/PipelineFolders/hooks/useFolders";
+import { useSelection } from "@/routes/v2/pages/PipelineFolders/hooks/useSelection";
+import { type DragItem } from "@/routes/v2/pages/PipelineFolders/types";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
+import { FoldersQueryKeys } from "@/services/pipelineStorage/types";
 
-import { useBulkDeleteMutation } from "../../hooks/useBulkDeleteMutation";
-import { useDropMutation } from "../../hooks/useDropMutation";
-import { useFolderBreadcrumbs } from "../../hooks/useFolderBreadcrumbs";
-import { useDisconnectFolder } from "../../hooks/useFolderMutations";
-import { useFolderPipelines } from "../../hooks/useFolderPipelines";
-import { useFolders } from "../../hooks/useFolders";
-import { useSelection } from "../../hooks/useSelection";
-import { type DragItem, FoldersQueryKeys } from "../../types";
-import { MovePipelineDialog } from "../MovePipelineDialog";
 import { FolderList } from "./components/FolderList";
 import { FolderPermissionBanner } from "./components/FolderPermissionBanner";
 import { ParentFolderRow } from "./components/ParentFolderRow";

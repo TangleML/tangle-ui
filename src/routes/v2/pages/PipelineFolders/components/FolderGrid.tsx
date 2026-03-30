@@ -6,9 +6,8 @@ import { InlineStack } from "@/components/ui/layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/typography";
 import { APP_ROUTES } from "@/routes/router";
-
-import { useFolderNavigation } from "../context/FolderNavigationContext";
-import { useFavoriteFolders } from "../hooks/useFavoriteFolders";
+import { useFolderNavigation } from "@/routes/v2/pages/PipelineFolders/context/FolderNavigationContext";
+import { useFavoriteFolders } from "@/routes/v2/pages/PipelineFolders/hooks/useFavoriteFolders";
 
 const CARD_CLASS =
   "flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm transition-colors hover:bg-muted/50 cursor-pointer";

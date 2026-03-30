@@ -1,9 +1,8 @@
 import PipelineRow from "@/components/Home/PipelineSection/PipelineRow";
 import { Icon } from "@/components/ui/icon";
+import { useFolderNavigation } from "@/routes/v2/pages/PipelineFolders/context/FolderNavigationContext";
+import type { DragItem } from "@/routes/v2/pages/PipelineFolders/types";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
-
-import { useFolderNavigation } from "../../../context/FolderNavigationContext";
-import type { DragItem } from "../../../types";
 
 interface PipelineRowsProps {
   pipelines: PipelineFile[];

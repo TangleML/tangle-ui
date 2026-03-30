@@ -16,12 +16,11 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
+import { useMovePipeline } from "@/routes/v2/pages/PipelineFolders/hooks/useMovePipeline";
 import type { PipelineFolder } from "@/services/pipelineStorage/PipelineFolder";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import { ROOT_FOLDER_ID } from "@/services/pipelineStorage/types";
-
-import { useMovePipeline } from "../hooks/useMovePipeline";
-import { FoldersQueryKeys } from "../types";
+import { FoldersQueryKeys } from "@/services/pipelineStorage/types";
 
 interface MovePipelineDialogProps {
   open: boolean;

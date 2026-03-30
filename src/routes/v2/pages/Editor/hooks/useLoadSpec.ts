@@ -12,13 +12,13 @@ import {
   ReplayIdGenerator,
   YamlDeserializer,
 } from "@/models/componentSpec";
-import type { PipelineRef } from "@/routes/PipelineFolders/context/FolderNavigationContext";
 import {
   createUndoStoreWithEvents,
   loadUndoHistory,
 } from "@/routes/v2/pages/Editor/utils/undoHistoryStorage";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
+import type { PipelineRef } from "@/services/pipelineStorage/types";
 
 interface LoadedSpec {
   spec: ComponentSpec;

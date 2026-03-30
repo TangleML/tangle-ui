@@ -11,7 +11,6 @@ import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
 import { ComponentLibraryProvider } from "@/providers/ComponentLibraryProvider";
 import { ForcedSearchProvider } from "@/providers/ComponentLibraryProvider/ForcedSearchProvider";
-import type { PipelineRef } from "@/routes/PipelineFolders/context/FolderNavigationContext";
 import { useDockAreaAccordion } from "@/routes/v2/shared/hooks/useDockAreaAccordion";
 import { useFocusMode } from "@/routes/v2/shared/hooks/useFocusMode";
 import { NodeRegistryProvider } from "@/routes/v2/shared/nodes/NodeRegistryContext";
@@ -25,6 +24,7 @@ import { DockArea } from "@/routes/v2/shared/windows/DockArea";
 import { TaskPanel } from "@/routes/v2/shared/windows/TaskPanel";
 import { WindowContainer } from "@/routes/v2/shared/windows/WindowContainer";
 import { useWindowPersistence } from "@/routes/v2/shared/windows/windowPersistence";
+import type { PipelineRef } from "@/services/pipelineStorage/types";
 
 import { useDebugPanelWindow } from "./components/DebugPanel";
 import { DriverPermissionGate } from "./components/DriverPermissionGate";

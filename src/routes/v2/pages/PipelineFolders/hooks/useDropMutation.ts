@@ -1,10 +1,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import useToastNotification from "@/hooks/useToastNotification";
+import { type DragItem } from "@/routes/v2/pages/PipelineFolders/types";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
+import { FoldersQueryKeys } from "@/services/pipelineStorage/types";
 import { getErrorMessage, pluralize } from "@/utils/string";
-
-import { type DragItem, FoldersQueryKeys } from "../types";
 
 async function moveDragItem(
   item: DragItem,
