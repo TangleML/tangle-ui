@@ -200,3 +200,39 @@ code {
     display: none; /* Chrome, Safari, Opera */
   }
 }
+
+/* Dialog stack transition animations */
+.dialog-content-inner {
+  display: grid;
+  gap: 1rem;
+}
+
+@keyframes dialog-slide-forward {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes dialog-slide-backward {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.dialog-slide-in-forward {
+  animation: dialog-slide-forward 200ms ease-out;
+}
+
+.dialog-slide-in-backward {
+  animation: dialog-slide-backward 200ms ease-out;
+}

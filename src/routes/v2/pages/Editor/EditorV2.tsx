@@ -11,6 +11,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
 import { ComponentLibraryProvider } from "@/providers/ComponentLibraryProvider";
 import { ForcedSearchProvider } from "@/providers/ComponentLibraryProvider/ForcedSearchProvider";
+import { DialogProvider } from "@/providers/DialogProvider/DialogProvider";
 import { useDockAreaAccordion } from "@/routes/v2/shared/hooks/useDockAreaAccordion";
 import { useFocusMode } from "@/routes/v2/shared/hooks/useFocusMode";
 import { NodeRegistryProvider } from "@/routes/v2/shared/nodes/NodeRegistryContext";
@@ -167,7 +168,9 @@ export function EditorV2() {
     <div className="h-full w-full flex flex-col bg-slate-100">
       <SharedStoreProvider>
         <EditorSessionProvider>
-          <EditorV2Content pipelineRef={pipelineRef} />
+          <DialogProvider>
+            <EditorV2Content pipelineRef={pipelineRef} />
+          </DialogProvider>
         </EditorSessionProvider>
       </SharedStoreProvider>
     </div>

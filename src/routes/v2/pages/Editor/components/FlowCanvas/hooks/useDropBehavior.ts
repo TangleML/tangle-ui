@@ -1,27 +1,83 @@
-import type { ReactFlowInstance, ReactFlowProps } from "@xyflow/react";
+import type {
+  ReactFlowInstance,
+  ReactFlowProps,
+  XYPosition,
+} from "@xyflow/react";
 import type { DragEvent } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
+import type { NodeTypeRegistry } from "@/routes/v2/shared/nodes/registry";
+import type {
+  NodeTypeManifest,
+  UndoGroupable,
+} from "@/routes/v2/shared/nodes/types";
+import type { TaskSpec } from "@/utils/componentSpec";
 
 import { useFileDropHandler } from "./useFileDropHandler";
+import { useReplaceDropHandler } from "./useReplaceDropHandler";
 
-function isFileComponentDropped(event: DragEvent<HTMLDivElement>): boolean {
+interface DropPayload {
+  task?: TaskSpec;
+  [key: string]: unknown;
+}
+
+function isFileDrop(event: DragEvent<HTMLDivElement>): boolean {
   return event.dataTransfer.files.length > 0;
 }
+
+function parseDropPayload(
+  event: DragEvent<HTMLDivElement>,
+): DropPayload | null {
+  const raw = event.dataTransfer.getData("application/reactflow");
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch (err) {
+    console.error("Failed to parse dropped data:", err);
+    return null;
+  }
+}
+
+function isReplaceTargetDrop(
+  replaceTarget: string | null,
+  payload: DropPayload | null,
+): payload is DropPayload {
+  return replaceTarget !== null && payload?.task !== undefined;
+}
+
+function isDropPayload(payload: DropPayload | null): payload is DropPayload {
+  return payload !== null && payload.task !== undefined;
+}
+
+type DropBehaviorResult = Required<
+  Pick<ReactFlowProps, "onDragOver" | "onDrop">
+>;
 
 export function useDropBehavior(
   spec: ComponentSpec | null,
   reactFlowInstance: ReactFlowInstance | null,
-): Required<Pick<ReactFlowProps, "onDragOver" | "onDrop">> {
+): DropBehaviorResult {
   const registry = useNodeRegistry();
   const { undo } = useEditorSession();
   const handleFileDrop = useFileDropHandler();
+  const { detectReplaceTarget, flushReplaceState, performReplaceDrop } =
+    useReplaceDropHandler(spec, reactFlowInstance);
 
   const onDragOver = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
+
+    const position =
+      reactFlowInstance && !isFileDrop(event)
+        ? reactFlowInstance.screenToFlowPosition({
+            x: event.clientX,
+            y: event.clientY,
+          })
+        : null;
+
+    detectReplaceTarget(position);
   };
 
   const onDrop = async (event: DragEvent<HTMLDivElement>) => {
@@ -33,32 +89,52 @@ export function useDropBehavior(
       y: event.clientY,
     });
 
-    if (isFileComponentDropped(event)) {
-      // todo: add support for multiple files
-      return await handleFileDrop(event.dataTransfer.files[0], spec, position);
-    }
+    const replaceTarget = flushReplaceState();
+    const payload = parseDropPayload(event);
 
-    const droppedData = event.dataTransfer.getData("application/reactflow");
-    if (!droppedData) return;
+    switch (true) {
+      case isFileDrop(event):
+        await handleFileDrop(event.dataTransfer.files[0], spec, position);
+        break;
 
-    try {
-      const parsedData = JSON.parse(droppedData);
+      case isReplaceTargetDrop(replaceTarget, payload):
+        await performReplaceDrop(replaceTarget, payload?.task);
+        break;
 
-      for (const manifest of registry.all()) {
-        if (manifest.drop && parsedData[manifest.drop.dataKey] !== undefined) {
-          await manifest.drop.handler(
-            spec,
-            parsedData[manifest.drop.dataKey],
-            position,
-            undo,
-          );
-          break;
-        }
-      }
-    } catch (err) {
-      console.error("Failed to parse dropped data:", err);
+      case isDropPayload(payload):
+        await resolveDropHandler(registry, payload)?.(spec, position, undo);
+        break;
     }
   };
 
   return { onDragOver, onDrop };
+}
+
+function isValidDropHandler(
+  dropDefinition: NodeTypeManifest["drop"] | undefined,
+): dropDefinition is NonNullable<NodeTypeManifest["drop"]> {
+  return (
+    dropDefinition !== undefined &&
+    dropDefinition.dataKey !== undefined &&
+    dropDefinition.handler !== undefined
+  );
+}
+
+function resolveDropHandler(registry: NodeTypeRegistry, payload: DropPayload) {
+  const dropDefinition = registry
+    .all()
+    .find(
+      (manifest) =>
+        manifest.drop && payload[manifest.drop.dataKey] !== undefined,
+    )?.drop;
+
+  if (!isValidDropHandler(dropDefinition)) return undefined;
+
+  return (spec: ComponentSpec, position: XYPosition, undo: UndoGroupable) =>
+    dropDefinition.handler(
+      spec,
+      payload[dropDefinition.dataKey],
+      position,
+      undo,
+    );
 }

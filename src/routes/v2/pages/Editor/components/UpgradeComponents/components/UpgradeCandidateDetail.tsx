@@ -32,7 +32,7 @@ function EmptyDetail() {
   );
 }
 
-function DiffSection<T extends InputSpec | OutputSpec>({
+export function DiffSection<T extends InputSpec | OutputSpec>({
   label,
   diff,
 }: {
