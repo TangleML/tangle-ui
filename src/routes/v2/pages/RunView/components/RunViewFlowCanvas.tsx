@@ -12,6 +12,7 @@ import { BlockStack } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
 import type { ComponentSpec } from "@/models/componentSpec";
 import { useCopyShortcut } from "@/routes/v2/pages/RunView/hooks/useCopyShortcut";
+import { SubgraphBreadcrumbs } from "@/routes/v2/shared/components/SubgraphBreadcrumbs";
 import {
   FLOW_CANVAS_DEFAULT_PROPS,
   GRID_SIZE,
@@ -24,7 +25,6 @@ import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 import { RunViewSelectionToolbar } from "./RunViewSelectionToolbar";
-import { RunViewSubgraphBreadcrumbs } from "./RunViewSubgraphBreadcrumbs";
 
 interface RunViewFlowCanvasProps {
   spec: ComponentSpec | null;
@@ -71,7 +71,7 @@ export const RunViewFlowCanvas = observer(function RunViewFlowCanvas({
 
   return (
     <BlockStack ref={containerRef} fill className={cn("relative", className)}>
-      <RunViewSubgraphBreadcrumbs />
+      <SubgraphBreadcrumbs />
       <ReactFlow
         {...FLOW_CANVAS_DEFAULT_PROPS}
         nodeTypes={nodeTypes}
