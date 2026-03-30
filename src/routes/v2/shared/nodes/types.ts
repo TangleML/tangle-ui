@@ -102,6 +102,13 @@ export interface GuidelineInfo {
   edgeTotal: number;
 }
 
+export type DropHandler = (
+  spec: ComponentSpec,
+  data: unknown,
+  position: XYPosition,
+  undo: UndoGroupable,
+) => void | Promise<void>;
+
 // ---------------------------------------------------------------------------
 // NodeTypeManifest – the contract every node-type plugin implements
 // ---------------------------------------------------------------------------
@@ -142,12 +149,7 @@ export interface NodeTypeManifest {
   readonly drop?: {
     /** Key in the `application/reactflow` JSON payload. */
     readonly dataKey: string;
-    handler(
-      spec: ComponentSpec,
-      data: unknown,
-      position: XYPosition,
-      undo: UndoGroupable,
-    ): void | Promise<void>;
+    handler: DropHandler;
   };
 
   /**
