@@ -91,6 +91,7 @@ describe("<RunDetails/>", () => {
       execution1: { SUCCEEDED: 1 },
       execution2: { RUNNING: 1 },
     },
+    summary: { total_nodes: 2, ended_nodes: 1, has_ended: false },
   };
 
   const mockComponentSpec: ComponentSpec = {

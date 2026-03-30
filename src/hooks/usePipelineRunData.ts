@@ -7,10 +7,6 @@ import {
   fetchExecutionState,
   fetchPipelineRun,
 } from "@/services/executionService";
-import {
-  flattenExecutionStatusStats,
-  isExecutionComplete,
-} from "@/utils/executionStatus";
 
 const useRootExecutionId = (id: string) => {
   const { backendUrl } = useBackend();
@@ -79,10 +75,7 @@ export const usePipelineRunData = (id: string) => {
         if (!state) {
           return false;
         }
-        const stats = flattenExecutionStatusStats(
-          state.child_execution_status_stats,
-        );
-        return isExecutionComplete(stats) ? false : 5000;
+        return state.summary?.has_ended ? false : 5000;
       }
       return false;
     },
