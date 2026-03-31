@@ -127,24 +127,24 @@ The primary consumer hook. Must be used within a `DialogProvider`.
 const { open, close, closeAll } = useDialog();
 ```
 
-| Method     | Signature                                                    | Description                        |
-|------------|--------------------------------------------------------------|------------------------------------|
-| `open`     | `<T, TProps>(config: DialogConfig<T, TProps>) => Promise<T>` | Open a dialog, returns a promise   |
-| `close`    | `(id: string, result?: any) => void`                         | Close a specific dialog by ID      |
+| Method     | Signature                                                    | Description                             |
+| ---------- | ------------------------------------------------------------ | --------------------------------------- |
+| `open`     | `<T, TProps>(config: DialogConfig<T, TProps>) => Promise<T>` | Open a dialog, returns a promise        |
+| `close`    | `(id: string, result?: any) => void`                         | Close a specific dialog by ID           |
 | `closeAll` | `() => void`                                                 | Close all dialogs, rejects all promises |
 
 ### `DialogConfig<T, TProps>`
 
 Configuration object passed to `open()`.
 
-| Property              | Type                                   | Required | Default | Description                                         |
-|-----------------------|----------------------------------------|----------|---------|-----------------------------------------------------|
-| `component`           | `ComponentType<DialogProps<T, TProps>>` | Yes      | —       | The React component to render inside the dialog     |
-| `props`               | `TProps`                               | No       | —       | Extra props forwarded to the component              |
-| `routeKey`            | `string`                               | No       | —       | Enables URL sync. Value appears as `?dialog=<key>`  |
-| `size`                | `"sm" \| "md" \| "lg" \| "xl" \| "full"` | No    | `"md"`  | Controls dialog width                               |
-| `closeOnEsc`          | `boolean`                              | No       | `true`  | Whether pressing ESC closes the dialog              |
-| `closeOnOverlayClick` | `boolean`                              | No       | `true`  | Whether clicking outside closes the dialog          |
+| Property              | Type                                     | Required | Default | Description                                        |
+| --------------------- | ---------------------------------------- | -------- | ------- | -------------------------------------------------- |
+| `component`           | `ComponentType<DialogProps<T, TProps>>`  | Yes      | —       | The React component to render inside the dialog    |
+| `props`               | `TProps`                                 | No       | —       | Extra props forwarded to the component             |
+| `routeKey`            | `string`                                 | No       | —       | Enables URL sync. Value appears as `?dialog=<key>` |
+| `size`                | `"sm" \| "md" \| "lg" \| "xl" \| "full"` | No       | `"md"`  | Controls dialog width                              |
+| `closeOnEsc`          | `boolean`                                | No       | `true`  | Whether pressing ESC closes the dialog             |
+| `closeOnOverlayClick` | `boolean`                                | No       | `true`  | Whether clicking outside closes the dialog         |
 
 ### `DialogProps<T, TProps>`
 
@@ -157,15 +157,15 @@ type DialogProps<T, TProps> = {
 } & TProps;
 ```
 
-| Prop     | Type                  | Description                                       |
-|----------|-----------------------|---------------------------------------------------|
-| `close`  | `(result?: T) => void`| Call to close the dialog with a success result     |
-| `cancel` | `() => void`          | Call to cancel the dialog (rejects the promise)    |
+| Prop     | Type                   | Description                                     |
+| -------- | ---------------------- | ----------------------------------------------- |
+| `close`  | `(result?: T) => void` | Call to close the dialog with a success result  |
+| `cancel` | `() => void`           | Call to cancel the dialog (rejects the promise) |
 
 ### Dialog Size Classes
 
 | Size   | CSS Class         | Approximate Width |
-|--------|-------------------|-------------------|
+| ------ | ----------------- | ----------------- |
 | `sm`   | `sm:max-w-sm`     | 384px             |
 | `md`   | `sm:max-w-lg`     | 512px             |
 | `lg`   | `sm:max-w-2xl`    | 672px             |
