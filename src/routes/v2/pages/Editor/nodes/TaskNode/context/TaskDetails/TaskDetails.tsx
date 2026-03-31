@@ -13,14 +13,13 @@ import { Badge } from "@/components/ui/badge";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/typography";
-import type { ComponentSpecJson } from "@/models/componentSpec";
 import { AnnotationsBlock } from "@/routes/v2/pages/Editor/components/AnnotationsBlock/AnnotationsBlock";
 import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskActions";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
-import { componentSpecToText } from "@/utils/yaml";
 
+import { getTaskYamlText } from "./components/actions/getTaskYamlText";
 import { ComponentRefBar } from "./components/ComponentRefBar";
 import { ConfigurationSection } from "./components/ConfigurationSection";
 import { OutputsSection } from "./components/OutputsSection";
@@ -28,6 +27,7 @@ import { TaskActionsBar } from "./components/TaskActionsBar";
 import { TaskArgumentsEditor } from "./components/TaskArgumentsEditor";
 import { TaskInfoSection } from "./components/TaskInfoSection";
 import { useTaskConfigActions } from "./components/useTaskConfigActions";
+import { useTask } from "./hooks/useTask";
 
 const EDITOR_ANNOTATION_KEYS = [
   "editor.position",
@@ -45,11 +45,10 @@ export const TaskDetails = observer(function TaskDetails({
   const showComponentRefBar = useFlagValue("task-component-ref-bar");
   const { editor } = useSharedStores();
   const { undo } = useEditorSession();
-  const { duplicateSelectedNodes, deleteTask, renameTask, unpackSubgraphTask } =
-    useTaskActions();
+  const { renameTask } = useTaskActions();
   const { setTaskColor } = useTaskConfigActions();
   const spec = useSpec();
-  const task = spec?.tasks.find((t) => t.$id === entityId);
+  const task = useTask(entityId);
   const { focusedArgumentName } = editor;
 
   const [openSections, setOpenSections] = useState<string[]>([
@@ -69,7 +68,7 @@ export const TaskDetails = observer(function TaskDetails({
     return null;
   }
 
-  const componentSpec = task.componentRef.spec as ComponentSpecJson | undefined;
+  const componentSpec = task.componentRef.spec;
   const inputCount = componentSpec?.inputs?.length ?? 0;
   const outputCount = componentSpec?.outputs?.length ?? 0;
   const annotationCount = task.annotations.filter(
@@ -77,18 +76,8 @@ export const TaskDetails = observer(function TaskDetails({
   ).length;
   const taskColor = task.annotations.get("tangleml.com/editor/task-color");
 
-  const yamlText =
-    task.componentRef.text ??
-    (componentSpec
-      ? componentSpecToText(
-          componentSpec as Parameters<typeof componentSpecToText>[0],
-        )
-      : "");
-  const pythonCode = componentSpec?.metadata?.annotations
-    ?.python_original_code as string | undefined;
-  const isSubgraph = Boolean(
-    componentSpec?.implementation && "graph" in componentSpec.implementation,
-  );
+  const yamlText = getTaskYamlText(task);
+  const pythonCode = componentSpec?.metadata?.annotations?.python_original_code;
 
   const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
     const newName = event.target.value;
@@ -101,22 +90,6 @@ export const TaskDetails = observer(function TaskDetails({
     setTaskColor(task, color);
   };
 
-  const handleDuplicate = () => {
-    const position = task.annotations.get("editor.position") ?? {
-      x: 0,
-      y: 0,
-    };
-    duplicateSelectedNodes(spec, [{ id: entityId, type: "task", position }]);
-  };
-
-  const handleDelete = () => {
-    deleteTask(spec, entityId);
-  };
-
-  const handleUnpackSubgraph = () => {
-    unpackSubgraphTask(spec, entityId);
-  };
-
   const handleZIndexChange = (newZIndex: number) => {
     undo.withGroup("Update task z-index", () => {
       task.annotations.set("zIndex", newZIndex);
@@ -127,15 +100,7 @@ export const TaskDetails = observer(function TaskDetails({
     <BlockStack gap="0" className="w-full overflow-auto">
       {!showComponentRefBar && (
         <BlockStack className="px-3 py-2">
-          <TaskActionsBar
-            yamlText={yamlText}
-            taskName={task.name}
-            pythonCode={pythonCode}
-            isSubgraph={isSubgraph}
-            onDuplicate={handleDuplicate}
-            onDelete={handleDelete}
-            onUnpackSubgraph={handleUnpackSubgraph}
-          />
+          <TaskActionsBar entityId={entityId} />
         </BlockStack>
       )}
       <Accordion
@@ -301,15 +266,7 @@ export const TaskDetails = observer(function TaskDetails({
               {showComponentRefBar && (
                 <>
                   <Separator orientation="vertical" />
-                  <TaskActionsBar
-                    yamlText={yamlText}
-                    taskName={task.name}
-                    pythonCode={pythonCode}
-                    isSubgraph={isSubgraph}
-                    onDuplicate={handleDuplicate}
-                    onDelete={handleDelete}
-                    onUnpackSubgraph={handleUnpackSubgraph}
-                  />
+                  <TaskActionsBar entityId={entityId} />
                 </>
               )}
             </InlineStack>

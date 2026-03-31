@@ -2,43 +2,39 @@ import { useState } from "react";
 
 import { ActionButton } from "@/components/shared/Buttons/ActionButton";
 import { CodeViewer } from "@/components/shared/CodeViewer";
+import { useTask } from "@/routes/v2/pages/Editor/nodes/TaskNode/context/TaskDetails/hooks/useTask";
+
+import { getTaskYamlText } from "./getTaskYamlText";
 
 interface ViewTaskYamlButtonProps {
-  yamlText: string;
-  taskName: string;
+  entityId: string;
 }
 
-export const ViewTaskYamlButton = ({
-  yamlText,
-  taskName,
-}: ViewTaskYamlButtonProps) => {
+export function ViewTaskYamlButton({ entityId }: ViewTaskYamlButtonProps) {
+  const task = useTask(entityId);
   const [showCodeViewer, setShowCodeViewer] = useState(false);
 
-  const handleClick = () => {
-    setShowCodeViewer(true);
-  };
+  if (!task) return null;
 
-  const handleClose = () => {
-    setShowCodeViewer(false);
-  };
+  const yamlText = getTaskYamlText(task);
 
   return (
     <>
       <ActionButton
         tooltip="View YAML"
         icon="FileCodeCorner"
-        onClick={handleClick}
+        onClick={() => setShowCodeViewer(true)}
       />
 
       {showCodeViewer && (
         <CodeViewer
           code={yamlText}
           language="yaml"
-          filename={taskName}
+          filename={task.name}
           fullscreen
-          onClose={handleClose}
+          onClose={() => setShowCodeViewer(false)}
         />
       )}
     </>
   );
-};
+}

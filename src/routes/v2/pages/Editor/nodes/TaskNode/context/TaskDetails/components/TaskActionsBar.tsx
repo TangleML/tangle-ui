@@ -1,8 +1,8 @@
 import { ActionBlock } from "@/components/shared/ContextPanel/Blocks/ActionBlock";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
-import { DeleteComponentButton } from "@/components/shared/TaskDetails/Actions/DeleteComponentButton";
 
 import { CopyYamlButton } from "./actions/CopyYamlButton";
+import { DeleteTaskButton } from "./actions/DeleteTaskButton";
 import { DownloadPythonButton } from "./actions/DownloadPythonButton";
 import { DownloadYamlButton } from "./actions/DownloadYamlButton";
 import { DuplicateTaskButton } from "./actions/DuplicateTaskButton";
@@ -11,24 +11,10 @@ import { UnpackSubgraphButton } from "./actions/UnpackSubgraphButton";
 import { ViewTaskYamlButton } from "./actions/ViewTaskYamlButton";
 
 interface TaskActionsBarProps {
-  yamlText: string;
-  taskName: string;
-  pythonCode: string | undefined;
-  isSubgraph: boolean;
-  onDuplicate: () => void;
-  onDelete: () => void;
-  onUnpackSubgraph: () => void;
+  entityId: string;
 }
 
-export function TaskActionsBar({
-  yamlText,
-  taskName,
-  pythonCode,
-  isSubgraph,
-  onDuplicate,
-  onDelete,
-  onUnpackSubgraph,
-}: TaskActionsBarProps) {
+export function TaskActionsBar({ entityId }: TaskActionsBarProps) {
   const showComponentRefBar = useFlagValue("task-component-ref-bar");
   const showComponentActions = !showComponentRefBar;
 
@@ -36,37 +22,23 @@ export function TaskActionsBar({
     <ActionBlock
       actions={[
         showComponentActions && (
-          <DownloadYamlButton
-            key="download-yaml"
-            yamlText={yamlText}
-            taskName={taskName}
-          />
-        ),
-        showComponentActions && pythonCode && (
-          <DownloadPythonButton
-            key="download-python"
-            pythonCode={pythonCode}
-            fileName={`${taskName}.py`}
-          />
+          <DownloadYamlButton key="download-yaml" entityId={entityId} />
         ),
         showComponentActions && (
-          <CopyYamlButton key="copy-yaml" yamlText={yamlText} />
+          <DownloadPythonButton key="download-python" entityId={entityId} />
         ),
         showComponentActions && (
-          <ViewTaskYamlButton
-            key="view-yaml"
-            yamlText={yamlText}
-            taskName={taskName}
-          />
+          <CopyYamlButton key="copy-yaml" entityId={entityId} />
         ),
         showComponentActions && (
-          <EditComponentButton key="edit" yamlText={yamlText} />
+          <ViewTaskYamlButton key="view-yaml" entityId={entityId} />
         ),
-        isSubgraph && (
-          <UnpackSubgraphButton key="unpack" onUnpack={onUnpackSubgraph} />
+        showComponentActions && (
+          <EditComponentButton key="edit" entityId={entityId} />
         ),
-        <DuplicateTaskButton key="duplicate" onDuplicate={onDuplicate} />,
-        <DeleteComponentButton key="delete" onDelete={onDelete} />,
+        <UnpackSubgraphButton key="unpack" entityId={entityId} />,
+        <DuplicateTaskButton key="duplicate" entityId={entityId} />,
+        <DeleteTaskButton key="delete" entityId={entityId} />,
       ].filter(Boolean)}
       className="w-fit"
     />
