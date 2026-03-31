@@ -9,6 +9,7 @@ import { useContextPanel } from "@/providers/ContextPanelProvider";
 import { getBuildingDefinition } from "../../data/buildings";
 import { RESOURCES } from "../../data/resources";
 import { configureBuildingInstanceForMethod } from "../../objects/production/configureBuildingInstanceForMethod";
+import { useGameUndoRedo } from "../../providers/GameUndoRedoProvider";
 import { useGlobalResources } from "../../providers/GlobalResourcesProvider";
 import { useStatistics } from "../../providers/StatisticsProvider";
 import {
@@ -33,7 +34,8 @@ const BuildingContext = ({ building, nodeId }: BuildingContextProps) => {
     useReactFlow();
   const updateNodeInternals = useUpdateNodeInternals();
   const { currentDay, getLatestBuildingStats } = useStatistics();
-  const { addResource } = useGlobalResources();
+  const { addResource, resources } = useGlobalResources();
+  const { takeSnapshot } = useGameUndoRedo();
   const { clearContent } = useContextPanel();
 
   const buildingClass = getBuildingDefinition(building.type);
@@ -67,6 +69,7 @@ const BuildingContext = ({ building, nodeId }: BuildingContextProps) => {
   const canSell = !isProtected || sameTypeCount > 1;
 
   const handleSell = () => {
+    takeSnapshot(getNodes(), getEdges(), resources);
     addResource("money", refundAmount);
     setNodes((nodes) => nodes.filter((n) => n.id !== nodeId));
     setEdges((edges) =>
@@ -76,6 +79,7 @@ const BuildingContext = ({ building, nodeId }: BuildingContextProps) => {
   };
 
   const handleMethodChange = (method: ProductionMethod) => {
+    takeSnapshot(getNodes(), getEdges(), resources);
     const configuration = configureBuildingInstanceForMethod(method, building);
 
     const updatedBuilding: BuildingInstance = {

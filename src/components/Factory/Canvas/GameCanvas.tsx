@@ -23,6 +23,7 @@ import { setup } from "../data/setup";
 import { createBuildingNode } from "../objects/buildings/createBuildingNode";
 import { setupConnections } from "../objects/resources/setupConnections";
 import { useGameActions } from "../providers/GameActionsProvider";
+import { useGameUndoRedo } from "../providers/GameUndoRedoProvider";
 import { useGlobalResources } from "../providers/GlobalResourcesProvider";
 import { useStatistics } from "../providers/StatisticsProvider";
 import { useTime } from "../providers/TimeProvider";
@@ -77,12 +78,47 @@ const GameCanvas = ({ children, ...rest }: GameCanvasProps) => {
   const { pause, dayAdvanceTrigger } = useTime();
   const { registerRestartHandler } = useGameActions();
 
+  const {
+    takeSnapshot,
+    clearHistory,
+    registerStateAccessor,
+    registerRestoreHandler: registerUndoRedoRestoreHandler,
+  } = useGameUndoRedo();
+
   const { fitView, getViewport, setViewport } = useReactFlow();
   const { clearContent } = useContextPanel();
   const [gameOverOpen, setGameOverOpen] = useState(false);
 
   const hasContinuedGame = useRef(false);
   const prevTriggerRef = useRef(0);
+  const dragStartSnapshotTaken = useRef(false);
+
+  // Keep undo/redo state accessor up to date
+  const nodesRef = useRef(nodes);
+  const edgesRef = useRef(edges);
+  const resourcesRef = useRef(resources);
+  nodesRef.current = nodes;
+  edgesRef.current = edges;
+  resourcesRef.current = resources;
+
+  useEffect(() => {
+    registerStateAccessor(() => ({
+      nodes: nodesRef.current,
+      edges: edgesRef.current,
+      resources: resourcesRef.current,
+    }));
+    registerUndoRedoRestoreHandler((snapshot) => {
+      setNodes(snapshot.nodes);
+      setEdges(snapshot.edges);
+      setAllResources(snapshot.resources);
+    });
+  }, [
+    registerStateAccessor,
+    registerUndoRedoRestoreHandler,
+    setNodes,
+    setEdges,
+    setAllResources,
+  ]);
 
   // Process day advancement
   useEffect(() => {
@@ -90,6 +126,7 @@ const GameCanvas = ({ children, ...rest }: GameCanvasProps) => {
     if (dayAdvanceTrigger === prevTriggerRef.current) return;
 
     prevTriggerRef.current = dayAdvanceTrigger;
+    clearHistory();
 
     const nextDay = currentDay + 1;
 
@@ -148,15 +185,25 @@ const GameCanvas = ({ children, ...rest }: GameCanvasProps) => {
     return true;
   };
 
-  const onConnect = reactFlowInstance
+  const innerOnConnect = reactFlowInstance
     ? createOnConnect(setEdges, reactFlowInstance)
     : undefined;
-  const onDrop = createOnDrop(
+  const onConnect = innerOnConnect
+    ? (connection: Parameters<NonNullable<typeof innerOnConnect>>[0]) => {
+        takeSnapshot(nodes, edges, resources);
+        innerOnConnect(connection);
+      }
+    : undefined;
+  const innerOnDrop = createOnDrop(
     reactFlowInstance,
     setNodes,
     tryPurchase,
     currentDay,
   );
+  const onDrop = (event: DragEvent<HTMLDivElement>) => {
+    takeSnapshot(nodes, edges, resources);
+    innerOnDrop(event);
+  };
   const isValidConnection = createIsValidConnection(edges);
 
   const onBeforeDelete = async ({
@@ -166,6 +213,8 @@ const GameCanvas = ({ children, ...rest }: GameCanvasProps) => {
     nodes: Node[];
     edges: Edge[];
   }) => {
+    takeSnapshot(nodes, edges, resources);
+
     if (nodesToDelete.length === 0 && edgesToDelete.length > 0) return true;
 
     const allNodes = reactFlowInstance?.getNodes() ?? [];
@@ -198,6 +247,17 @@ const GameCanvas = ({ children, ...rest }: GameCanvasProps) => {
     return allowedNodes.length > 0;
   };
 
+  const onNodeDragStart = () => {
+    if (!dragStartSnapshotTaken.current) {
+      takeSnapshot(nodes, edges, resources);
+      dragStartSnapshotTaken.current = true;
+    }
+  };
+
+  const onNodeDragStop = () => {
+    dragStartSnapshotTaken.current = false;
+  };
+
   const onDragOver = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
@@ -211,6 +271,7 @@ const GameCanvas = ({ children, ...rest }: GameCanvasProps) => {
     resetResources();
     resetStatistics();
     clearContent();
+    clearHistory();
     hasContinuedGame.current = false;
     prevTriggerRef.current = 0;
 
@@ -322,6 +383,8 @@ const GameCanvas = ({ children, ...rest }: GameCanvasProps) => {
         onInit={onInit}
         onDragOver={onDragOver}
         onDrop={onDrop}
+        onNodeDragStart={onNodeDragStart}
+        onNodeDragStop={onNodeDragStop}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         minZoom={0.1}
