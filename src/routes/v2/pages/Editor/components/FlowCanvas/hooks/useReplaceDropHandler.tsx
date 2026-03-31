@@ -2,7 +2,7 @@ import type { Node, ReactFlowInstance, XYPosition } from "@xyflow/react";
 import { useRef } from "react";
 
 import { isPositionInNode } from "@/components/shared/ReactFlow/FlowCanvas/utils/geometry";
-import type { ComponentReference, ComponentSpec } from "@/models/componentSpec";
+import type { ComponentSpec } from "@/models/componentSpec";
 import { useDialog } from "@/providers/DialogProvider/hooks/useDialog";
 import { convertCancelErrorTo } from "@/providers/DialogProvider/utils";
 import { ReplaceConfirmationDialog } from "@/routes/v2/pages/Editor/components/FlowCanvas/components/ReplaceConfirmationDialog";
@@ -118,7 +118,7 @@ export function useReplaceDropHandler(
     );
     if (!componentRef) return;
 
-    const newComponentRef = componentRef as ComponentReference;
+    const newComponentRef = componentRef;
 
     const task = spec.tasks.find((t) => t.$id === targetEntityId);
     if (!task) return;
@@ -136,8 +136,7 @@ export function useReplaceDropHandler(
           component: ReplaceConfirmationDialog,
           props: {
             taskName: task.name,
-            newComponentName:
-              newComponentRef.spec?.name ?? newComponentRef.name ?? "Unknown",
+            newComponentName: newComponentRef.name,
             inputDiff,
             outputDiff,
           },
