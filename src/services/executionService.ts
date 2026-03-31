@@ -13,6 +13,7 @@ import {
   TWENTY_FOUR_HOURS_IN_MS,
 } from "@/utils/constants";
 import {
+  CONTAINER_STATUSES_PRE_LAUNCH,
   flattenExecutionStatusStats,
   getOverallExecutionStatusFromStats,
 } from "@/utils/executionStatus";
@@ -69,11 +70,15 @@ const fetchContainerExecutionState = async (
 export const useFetchContainerExecutionState = (
   executionId: string | undefined,
   backendUrl: string,
+  status?: string,
 ) => {
+  const shouldFetch =
+    !!executionId && (!status || !CONTAINER_STATUSES_PRE_LAUNCH.has(status));
+
   return useQuery<GetContainerExecutionStateResponse>({
     queryKey: ["container-execution-state", executionId],
     queryFn: () => fetchContainerExecutionState(executionId!, backendUrl),
-    enabled: !!executionId,
+    enabled: shouldFetch,
     refetchOnWindowFocus: false,
   });
 };

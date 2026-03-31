@@ -18,12 +18,14 @@ import { InfoBox } from "../InfoBox";
 interface ExecutionDetailsProps {
   executionId: string;
   componentSpec?: ComponentSpec;
+  status?: string;
   className?: string;
 }
 
 export const ExecutionDetails = ({
   executionId,
   componentSpec,
+  status,
   className,
 }: ExecutionDetailsProps) => {
   const { backendUrl } = useBackend();
@@ -35,7 +37,11 @@ export const ExecutionDetails = ({
     data: containerState,
     isLoading: isLoadingContainerState,
     error: containerStateError,
-  } = useFetchContainerExecutionState(executionId, backendUrl);
+  } = useFetchContainerExecutionState(
+    isSubgraph ? undefined : executionId,
+    backendUrl,
+    status,
+  );
 
   const getExecutionItems = () => {
     const items: AttributeProps[] = [

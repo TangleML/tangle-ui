@@ -125,6 +125,7 @@ const TaskDetailsInternal = ({
         <ExecutionDetails
           executionId={executionId}
           componentSpec={hydratedComponentRef.spec}
+          status={status}
           className={BASE_BLOCK_CLASS}
         />
       )}
