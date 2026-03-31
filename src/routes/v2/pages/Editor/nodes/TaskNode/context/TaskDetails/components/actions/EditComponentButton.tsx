@@ -2,32 +2,35 @@ import { useState } from "react";
 
 import { ActionButton } from "@/components/shared/Buttons/ActionButton";
 import { ComponentEditorDialog } from "@/components/shared/ComponentEditor/ComponentEditorDialog";
+import { useTask } from "@/routes/v2/pages/Editor/nodes/TaskNode/context/TaskDetails/hooks/useTask";
+
+import { getTaskYamlText } from "./getTaskYamlText";
 
 interface EditComponentButtonProps {
-  yamlText: string;
+  entityId: string;
 }
 
-export const EditComponentButton = ({ yamlText }: EditComponentButtonProps) => {
+export function EditComponentButton({ entityId }: EditComponentButtonProps) {
+  const task = useTask(entityId);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
-  const handleClick = () => {
-    setIsEditDialogOpen(true);
-  };
+  if (!task) return null;
 
-  const handleClose = () => {
-    setIsEditDialogOpen(false);
-  };
+  const yamlText = getTaskYamlText(task);
 
   return (
     <>
       <ActionButton
         tooltip="Edit Component Definition"
         icon="FilePenLine"
-        onClick={handleClick}
+        onClick={() => setIsEditDialogOpen(true)}
       />
       {isEditDialogOpen && (
-        <ComponentEditorDialog text={yamlText} onClose={handleClose} />
+        <ComponentEditorDialog
+          text={yamlText}
+          onClose={() => setIsEditDialogOpen(false)}
+        />
       )}
     </>
   );
-};
+}

@@ -1,13 +1,19 @@
 import { ActionButton } from "@/components/shared/Buttons/ActionButton";
 import useToastNotification from "@/hooks/useToastNotification";
+import { useTask } from "@/routes/v2/pages/Editor/nodes/TaskNode/context/TaskDetails/hooks/useTask";
+
+import { getTaskYamlText } from "./getTaskYamlText";
 
 interface CopyYamlButtonProps {
-  yamlText: string;
+  entityId: string;
 }
 
-export const CopyYamlButton = ({ yamlText }: CopyYamlButtonProps) => {
+export function CopyYamlButton({ entityId }: CopyYamlButtonProps) {
+  const task = useTask(entityId);
   const notify = useToastNotification();
+  if (!task) return null;
 
+  const yamlText = getTaskYamlText(task);
   const handleClick = () => {
     navigator.clipboard.writeText(yamlText).then(
       () => notify("YAML copied to clipboard", "success"),
@@ -18,4 +24,4 @@ export const CopyYamlButton = ({ yamlText }: CopyYamlButtonProps) => {
   return (
     <ActionButton tooltip="Copy YAML" icon="Clipboard" onClick={handleClick} />
   );
-};
+}
