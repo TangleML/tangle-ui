@@ -13,10 +13,18 @@ import { Separator } from "@/components/ui/separator";
 import { Heading, Text } from "@/components/ui/typography";
 import { serializeComponentSpec } from "@/models/componentSpec";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
-import { deepClone } from "@/utils/deepClone";
 
 const showGoogleSubmitter =
   import.meta.env.VITE_ENABLE_GOOGLE_CLOUD_SUBMITTER === "true";
+
+/**
+ * Intentionaly not using deepClone from @/utils/deepClone to avoid MobX observable wrappers.
+ * @param obj
+ * @returns
+ */
+function deepClone<T>(obj: T): T {
+  return JSON.parse(JSON.stringify(obj));
+}
 
 export const RunsAndSubmissionContent = observer(() => {
   const { isAuthorized } = useAwaitAuthorization();

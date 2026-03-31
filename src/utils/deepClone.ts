@@ -1,3 +1,4 @@
-import { toJS } from "mobx";
+import { isObservable, toJS } from "mobx";
 
-export const deepClone = <T>(obj: T): T => structuredClone(toJS(obj));
+export const deepClone = <T>(obj: T): T =>
+  structuredClone(isObservable(obj) ? toJS(obj) : obj);
