@@ -39,6 +39,7 @@ import type { ComponentSpec as LegacyComponentSpec } from "@/utils/componentSpec
 
 import { RunViewFlowCanvas } from "./components/RunViewFlowCanvas";
 import { RunViewMenuBar } from "./components/RunViewMenuBar/RunViewMenuBar";
+import { useFocusTaskFromUrl } from "./hooks/useFocusTaskFromUrl";
 import { useRunViewSelectionSync } from "./hooks/useRunViewSelectionSync";
 import { useRunViewSpecLifecycle } from "./hooks/useRunViewSpecLifecycle";
 import { useRunViewWindows } from "./hooks/useRunViewWindows";
@@ -142,6 +143,7 @@ const RunViewLayout = observer(function RunViewLayout({
   useDockAreaAccordion();
   useRunViewWindows();
   useRunViewSelectionSync();
+  useFocusTaskFromUrl(spec);
 
   const { navigation } = useSharedStores();
   const activeSpec = navigation.activeSpec;
