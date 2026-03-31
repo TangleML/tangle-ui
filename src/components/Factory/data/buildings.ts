@@ -16,6 +16,7 @@ export const BUILDINGS: Record<BuildingType, BuildingClass> = {
     icon: "🔥",
     description: "The centre of civilization",
     cost: 0, // Free — starting building
+    maintenance: 0,
     color: "#0F0F0F",
     category: "special",
     unique: true,
@@ -41,6 +42,7 @@ export const BUILDINGS: Record<BuildingType, BuildingClass> = {
     icon: "🛖",
     description: "Trade with other settlements",
     cost: 50,
+    maintenance: 0,
     color: "#F4C464",
     category: "special",
     protected: true,
@@ -58,6 +60,7 @@ export const BUILDINGS: Record<BuildingType, BuildingClass> = {
     icon: "💲",
     description: "Sell low, buy high!",
     cost: 500,
+    maintenance: 0,
     color: "#FBBF24",
     category: "special",
     productionMethods: [
@@ -74,6 +77,7 @@ export const BUILDINGS: Record<BuildingType, BuildingClass> = {
     icon: "🎓",
     description: "Nexus of knowledge",
     cost: 750,
+    maintenance: 5,
     color: "#483D8B",
     category: "special",
     productionMethods: [
@@ -96,6 +100,7 @@ export const BUILDINGS: Record<BuildingType, BuildingClass> = {
     icon: "📦",
     description: "Stores anything!",
     cost: 75,
+    maintenance: 0,
     color: "#A9A9A9",
     category: "storage",
     productionMethods: [
@@ -118,6 +123,7 @@ export const BUILDINGS: Record<BuildingType, BuildingClass> = {
     icon: "💧",
     description: "Provides water",
     cost: 50,
+    maintenance: 1,
     color: "#1E90FF",
     category: "production",
     productionMethods: [
@@ -134,6 +140,7 @@ export const BUILDINGS: Record<BuildingType, BuildingClass> = {
     icon: "🪓",
     description: "Produces wood",
     cost: 25,
+    maintenance: 1,
     color: "#A0522D",
     category: "production",
     productionMethods: [
@@ -162,6 +169,7 @@ export const BUILDINGS: Record<BuildingType, BuildingClass> = {
     icon: "⛏️",
     description: "Produces stone",
     cost: 50,
+    maintenance: 1,
     color: "#708090",
     category: "production",
     productionMethods: [
@@ -184,6 +192,7 @@ export const BUILDINGS: Record<BuildingType, BuildingClass> = {
     icon: "🌾",
     description: "Produces wheat",
     cost: 100,
+    maintenance: 1,
     color: "#228B22",
     category: "production",
     productionMethods: [
@@ -212,6 +221,7 @@ export const BUILDINGS: Record<BuildingType, BuildingClass> = {
     icon: "🏭",
     description: "Turns wood into planks",
     cost: 200,
+    maintenance: 2,
     color: "#D2691E",
     category: "manufacturing",
     productionMethods: [
@@ -231,6 +241,7 @@ export const BUILDINGS: Record<BuildingType, BuildingClass> = {
     icon: "🏭",
     description: "Turns wood into paper",
     cost: 250,
+    maintenance: 2,
     color: "#6A5ACD",
     category: "manufacturing",
     productionMethods: [
@@ -247,6 +258,7 @@ export const BUILDINGS: Record<BuildingType, BuildingClass> = {
     icon: "🐄",
     description: "Raises animals",
     cost: 150,
+    maintenance: 2,
     color: "#A52A2A",
     category: "production",
     productionMethods: [
@@ -275,6 +287,7 @@ export const BUILDINGS: Record<BuildingType, BuildingClass> = {
     icon: "🔪",
     description: "Processes livestock",
     cost: 200,
+    maintenance: 2,
     color: "#8B0000",
     category: "manufacturing",
     productionMethods: [
@@ -294,6 +307,7 @@ export const BUILDINGS: Record<BuildingType, BuildingClass> = {
     icon: "📚",
     description: "Produces books",
     cost: 400,
+    maintenance: 3,
     color: "#4B0082",
     category: "manufacturing",
     productionMethods: [
@@ -313,6 +327,7 @@ export const BUILDINGS: Record<BuildingType, BuildingClass> = {
     icon: "🏭",
     description: "Grind wheat into flour",
     cost: 150,
+    maintenance: 2,
     color: "#DAA520",
     category: "manufacturing",
     productionMethods: [
@@ -329,6 +344,7 @@ export const BUILDINGS: Record<BuildingType, BuildingClass> = {
     icon: "🏭",
     description: "Burns wood into coal",
     cost: 150,
+    maintenance: 2,
     color: "#36454F",
     category: "manufacturing",
     productionMethods: [
@@ -345,6 +361,7 @@ export const BUILDINGS: Record<BuildingType, BuildingClass> = {
     icon: "🍞",
     description: "Bakes bread and other treats!",
     cost: 300,
+    maintenance: 3,
     color: "#F5CEB3",
     category: "manufacturing",
     productionMethods: [
@@ -365,6 +382,7 @@ export const BUILDINGS: Record<BuildingType, BuildingClass> = {
     icon: "🏦",
     description: "Too big to fail",
     cost: 1000,
+    maintenance: 5,
     color: "#FFD700",
     category: "services",
     productionMethods: [
@@ -381,6 +399,7 @@ export const BUILDINGS: Record<BuildingType, BuildingClass> = {
     icon: "🍇",
     description: "Gathers wild resources",
     cost: 25,
+    maintenance: 1,
     color: "#32CD32",
     category: "production",
     productionMethods: [
@@ -397,6 +416,7 @@ export const BUILDINGS: Record<BuildingType, BuildingClass> = {
     icon: "🎣",
     description: "Catches fish",
     cost: 50,
+    maintenance: 1,
     color: "#1E90FF",
     category: "production",
     productionMethods: [
@@ -419,6 +439,7 @@ export const BUILDINGS: Record<BuildingType, BuildingClass> = {
     icon: "🏹",
     description: "Hunts wild animals",
     cost: 75,
+    maintenance: 1,
     color: "#8B4513",
     category: "production",
     productionMethods: [
@@ -441,6 +462,7 @@ export const BUILDINGS: Record<BuildingType, BuildingClass> = {
     icon: "🫙",
     description: "Food storage",
     cost: 100,
+    maintenance: 0,
     color: "#FFD700",
     category: "storage",
     productionMethods: [
@@ -463,6 +485,7 @@ export const BUILDINGS: Record<BuildingType, BuildingClass> = {
     icon: "🏭",
     description: "Smelts ores into metal",
     cost: 250,
+    maintenance: 3,
     color: "#B22222",
     category: "manufacturing",
     productionMethods: [
@@ -491,6 +514,7 @@ export const BUILDINGS: Record<BuildingType, BuildingClass> = {
     icon: "🛠️",
     description: "Crafts tools for various purposes",
     cost: 300,
+    maintenance: 3,
     color: "#8B4513",
     category: "manufacturing",
     productionMethods: [
@@ -537,6 +561,7 @@ export const BUILDINGS: Record<BuildingType, BuildingClass> = {
     icon: "⛏️",
     description: "Extracts minerals from the earth",
     cost: 150,
+    maintenance: 2,
     color: "#708090",
     category: "production",
     productionMethods: [
@@ -571,6 +596,7 @@ export const BUILDINGS: Record<BuildingType, BuildingClass> = {
     icon: "🏦",
     description: "Produces coins from metal",
     cost: 500,
+    maintenance: 5,
     color: "#FFD700",
     category: "manufacturing",
     productionMethods: [
@@ -587,6 +613,7 @@ export const BUILDINGS: Record<BuildingType, BuildingClass> = {
     icon: "Split",
     description: "Splits an input into multiple outputs",
     cost: 25,
+    maintenance: 0,
     color: "#808080",
     category: "logistics",
     productionMethods: [
@@ -615,6 +642,7 @@ export const BUILDINGS: Record<BuildingType, BuildingClass> = {
     icon: "Merge",
     description: "Merges multiple inputs into one output",
     cost: 25,
+    maintenance: 0,
     color: "#808080",
     category: "logistics",
     productionMethods: [

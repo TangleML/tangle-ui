@@ -32,7 +32,7 @@ const BuildingContext = ({ building, nodeId }: BuildingContextProps) => {
   const { updateNodeData, getNodes, setNodes, getEdges, setEdges } =
     useReactFlow();
   const updateNodeInternals = useUpdateNodeInternals();
-  const { currentDay } = useStatistics();
+  const { currentDay, getLatestBuildingStats } = useStatistics();
   const { addResource } = useGlobalResources();
   const { clearContent } = useContextPanel();
 
@@ -44,6 +44,7 @@ const BuildingContext = ({ building, nodeId }: BuildingContextProps) => {
     name,
     description,
     cost,
+    maintenance = 0,
     builtOnDay = 0,
     productionMethod,
     inputs = [],
@@ -51,6 +52,9 @@ const BuildingContext = ({ building, nodeId }: BuildingContextProps) => {
     stockpile = [],
     productionState,
   } = building;
+
+  const buildingStats = getLatestBuildingStats(nodeId);
+  const isMaintenancePaused = buildingStats?.maintenancePaused ?? false;
 
   const refundAmount = calculateRefund(cost, builtOnDay, currentDay);
 
@@ -96,7 +100,17 @@ const BuildingContext = ({ building, nodeId }: BuildingContextProps) => {
     >
       <ContextHeader icon={icon} name={name} />
 
-      <BuildingDescription description={description} cost={cost} />
+      <BuildingDescription
+        description={description}
+        cost={cost}
+        maintenance={maintenance}
+      />
+
+      {isMaintenancePaused && (
+        <Text size="sm" className="text-red-600 font-medium">
+          Paused — insufficient funds for maintenance
+        </Text>
+      )}
 
       <Separator />
 

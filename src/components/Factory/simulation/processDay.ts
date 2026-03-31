@@ -11,6 +11,7 @@ import type {
 } from "../types/statistics";
 import { advanceProduction } from "./helpers/advanceProduction";
 import { calculateFoodRequirement } from "./helpers/calculateFoodRequirement";
+import { calculateMaintenancePriority } from "./helpers/calculateMaintenancePriority";
 import { processSpecialBuilding } from "./helpers/processSpecialBuilding";
 import { transferResourcesEvenlyDownstream } from "./helpers/transferResourcesEvenlyDownstream";
 
@@ -33,6 +34,11 @@ export const processDay = (
   const buildingStats = new Map<string, BuildingStatistics>();
   const edgeStats = new Map<string, EdgeStatistics>();
 
+  // Calculate maintenance priority (BFS distance from money sinks)
+  const maintenancePriority = calculateMaintenancePriority(updatedNodes, edges);
+  let maintenanceBudget = currentResources.money;
+  let totalMaintenancePaid = 0;
+
   // Build adjacency lists (both forward and reverse)
   const downstream = new Map<string, string[]>(); // node -> nodes it outputs to
   const upstream = new Map<string, string[]>(); // node -> nodes that output to it
@@ -51,12 +57,20 @@ export const processDay = (
   });
 
   // ✅ STEP 1: Find all sink nodes (nodes with no downstream connections)
+  // Sort by maintenance priority (closest to money sinks first) for budget fairness
   const queue: string[] = [];
+  const sinkNodes: string[] = [];
   updatedNodes.forEach((node) => {
     if (outDegree.get(node.id) === 0) {
-      queue.push(node.id);
+      sinkNodes.push(node.id);
     }
   });
+  sinkNodes.sort(
+    (a, b) =>
+      (maintenancePriority.get(a) ?? Infinity) -
+      (maintenancePriority.get(b) ?? Infinity),
+  );
+  queue.push(...sinkNodes);
 
   const processed = new Set<string>();
 
@@ -71,7 +85,12 @@ export const processDay = (
     const building = getBuildingInstance(currentNode);
     if (!building) continue;
 
-    // ✅ STEP 2.1: If there is downstream, transfer resources downstream
+    // Initialize stats for this building
+    if (!buildingStats.has(currentNodeId)) {
+      buildingStats.set(currentNodeId, { stockpileChanges: [] });
+    }
+
+    // ✅ STEP 2.1: Transfer resources downstream (always happens, even if paused)
     const downstreamNodes = downstream.get(currentNodeId) || [];
     transferResourcesEvenlyDownstream(
       currentNodeId,
@@ -82,18 +101,68 @@ export const processDay = (
       edgeStats,
     );
 
-    // ✅ STEP 2.2: If special node, process special, otherwise advance production
-    if (SPECIAL_BUILDINGS.includes(building.type)) {
-      processSpecialBuilding(currentNode, earnedGlobalResources, buildingStats);
-    } else {
-      advanceProduction(currentNode, earnedGlobalResources, buildingStats);
+    // ✅ STEP 2.2: Check maintenance before production
+    const maintenanceCost = building.maintenance ?? 0;
+    let maintenancePaused = false;
+
+    if (maintenanceCost > 0) {
+      // Only charge maintenance if the building is not idle (actively working)
+      const isWorking =
+        building.productionState?.status === "active" ||
+        building.productionState?.status === "complete" ||
+        building.productionState?.status === "paused"; // paused due to output full, still "working"
+
+      if (isWorking) {
+        if (maintenanceBudget >= maintenanceCost) {
+          // Can afford — pay maintenance
+          maintenanceBudget -= maintenanceCost;
+          totalMaintenancePaid += maintenanceCost;
+          const stats = buildingStats.get(currentNodeId)!;
+          stats.maintenancePaid = maintenanceCost;
+        } else {
+          // Cannot afford — pause for maintenance
+          maintenancePaused = true;
+          const stats = buildingStats.get(currentNodeId)!;
+          stats.maintenancePaused = true;
+
+          // Force building into paused state
+          currentNode.data.buildingInstance = {
+            ...building,
+            productionState: {
+              progress: building.productionState?.progress ?? 0,
+              status: "paused",
+            },
+          };
+        }
+      }
+    }
+
+    // ✅ STEP 2.3: Process production (skip if maintenance-paused)
+    if (!maintenancePaused) {
+      if (SPECIAL_BUILDINGS.includes(building.type)) {
+        processSpecialBuilding(
+          currentNode,
+          earnedGlobalResources,
+          buildingStats,
+        );
+
+        // When a marketplace/trading post earns money, add to maintenance budget
+        const moneyEarned = buildingStats.get(currentNodeId)?.produced?.money;
+        if (moneyEarned && moneyEarned > 0) {
+          maintenanceBudget += moneyEarned;
+        }
+      } else {
+        advanceProduction(currentNode, earnedGlobalResources, buildingStats);
+      }
     }
 
     // Mark as processed
     processed.add(currentNodeId);
 
-    // ✅ STEP 2.3: Move upstream - add upstream nodes if all their downstream nodes are processed
+    // ✅ STEP 2.4: Move upstream - add upstream nodes if all their downstream nodes are processed
+    // Sort by priority so closer-to-market buildings get budget first
     const upstreamNodes = upstream.get(currentNodeId) || [];
+    const readyUpstream: string[] = [];
     upstreamNodes.forEach((upstreamNodeId) => {
       const upstreamDownstreamNodes = downstream.get(upstreamNodeId) || [];
       const allDownstreamProcessed = upstreamDownstreamNodes.every((id) =>
@@ -101,10 +170,19 @@ export const processDay = (
       );
 
       if (allDownstreamProcessed && !processed.has(upstreamNodeId)) {
-        queue.push(upstreamNodeId);
+        readyUpstream.push(upstreamNodeId);
       }
     });
+    readyUpstream.sort(
+      (a, b) =>
+        (maintenancePriority.get(a) ?? Infinity) -
+        (maintenancePriority.get(b) ?? Infinity),
+    );
+    queue.push(...readyUpstream);
   }
+
+  // Deduct total maintenance from earned money
+  earnedGlobalResources.money -= totalMaintenancePaid;
 
   // ✅ STEP 3: Calculate food requirement and deduct
   const previousRequirement = previousDayStats?.global.foodRequired;
@@ -133,6 +211,7 @@ export const processDay = (
     foodRequired,
     foodConsumed,
     foodDeficit,
+    maintenanceCost: totalMaintenancePaid,
   };
 
   return {

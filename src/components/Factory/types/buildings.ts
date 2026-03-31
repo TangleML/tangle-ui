@@ -74,6 +74,7 @@ export interface BuildingClass {
   icon: string;
   description: string;
   cost: number;
+  maintenance: number;
   color: string;
   productionMethods: ProductionMethod[];
   category: BuildingCategory;

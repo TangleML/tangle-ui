@@ -71,6 +71,12 @@ const BuildingItem = ({ buildingType }: BuildingItemProps) => {
             )}
           >
             {RESOURCES.money.icon} {building.cost}
+            {building.maintenance > 0 && (
+              <span className="text-gray-400 font-normal">
+                {" "}
+                ({building.maintenance}/day)
+              </span>
+            )}
           </span>
         </div>
       </InlineStack>

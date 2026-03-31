@@ -37,6 +37,7 @@ export function createBuildingInstance(
     icon: building.icon,
     description: building.description,
     cost: building.cost,
+    maintenance: building.maintenance,
     color: building.color,
     category: building.category,
     ...configuration,
