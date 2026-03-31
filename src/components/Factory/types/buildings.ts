@@ -77,6 +77,10 @@ export interface BuildingClass {
   color: string;
   productionMethods: ProductionMethod[];
   category: BuildingCategory;
+  /** Only one copy can exist at a time (hidden from sidebar when placed) */
+  unique?: boolean;
+  /** At least one must always exist (last copy cannot be sold) */
+  protected?: boolean;
 }
 
 export interface BuildingInstance extends Omit<
@@ -85,6 +89,7 @@ export interface BuildingInstance extends Omit<
 > {
   id: string;
   type: BuildingType;
+  builtOnDay: number;
   inputs: BuildingInput[];
   outputs: BuildingOutput[];
   stockpile: Stockpile[];

@@ -7,10 +7,12 @@ export const createBuildingNode = (
   buildingType: BuildingType,
   position: XYPosition,
   productionMethodIndex: number = 0,
+  currentDay: number = 0,
 ): Node => {
   const buildingInstance = createBuildingInstance(
     buildingType,
     productionMethodIndex,
+    currentDay,
   );
 
   const newNode: Node = {

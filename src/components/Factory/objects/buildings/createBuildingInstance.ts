@@ -13,6 +13,7 @@ import { configureBuildingInstanceForMethod } from "../production/configureBuild
 export function createBuildingInstance(
   buildingType: BuildingType,
   productionMethodIndex: number = 0,
+  currentDay: number = 0,
 ): BuildingInstance {
   const building = getBuildingDefinition(buildingType);
 
@@ -31,6 +32,7 @@ export function createBuildingInstance(
   return {
     id,
     type: buildingType,
+    builtOnDay: currentDay,
     name: building.name,
     icon: building.icon,
     description: building.description,

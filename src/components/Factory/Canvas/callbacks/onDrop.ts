@@ -2,10 +2,13 @@ import type { Node, ReactFlowInstance } from "@xyflow/react";
 import type { DragEvent } from "react";
 
 import { createBuildingNode } from "../../objects/buildings/createBuildingNode";
+import type { BuildingType } from "../../types/buildings";
 
 export const createOnDrop = (
   reactFlowInstance: ReactFlowInstance | undefined,
   setNodes: (update: Node[] | ((nodes: Node[]) => Node[])) => void,
+  tryPurchase: (buildingType: BuildingType) => boolean,
+  currentDay: number,
 ) => {
   return (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -19,6 +22,8 @@ export const createOnDrop = (
     try {
       const { buildingType } = JSON.parse(droppedBuildingData);
 
+      if (!tryPurchase(buildingType)) return;
+
       const position = reactFlowInstance.screenToFlowPosition({
         x: event.clientX,
         y: event.clientY,
@@ -31,7 +36,7 @@ export const createOnDrop = (
         position.y -= offsetY;
       }
 
-      const newNode = createBuildingNode(buildingType, position);
+      const newNode = createBuildingNode(buildingType, position, 0, currentDay);
 
       setNodes((nds) => [...nds, newNode]);
     } catch (error) {

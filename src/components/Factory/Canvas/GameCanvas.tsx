@@ -17,6 +17,7 @@ import { useEffect, useRef, useState } from "react";
 import { useContextPanel } from "@/providers/ContextPanelProvider";
 
 import { GameOverDialog } from "../components/GameOverDialog";
+import { getBuildingDefinition } from "../data/buildings";
 import { setup } from "../data/setup";
 import { createBuildingNode } from "../objects/buildings/createBuildingNode";
 import { setupConnections } from "../objects/resources/setupConnections";
@@ -25,7 +26,10 @@ import { useGlobalResources } from "../providers/GlobalResourcesProvider";
 import { useStatistics } from "../providers/StatisticsProvider";
 import { useTime } from "../providers/TimeProvider";
 import { processDay } from "../simulation/processDay";
+import type { BuildingType } from "../types/buildings";
+import { getBuildingInstance } from "../types/buildings";
 import { loadGameState, saveGameState } from "../utils/saveGame";
+import { calculateRefund } from "../utils/sellBuilding";
 import { createIsValidConnection } from "./callbacks/isValidConnection";
 import { createOnConnect } from "./callbacks/onConnect";
 import { createOnDrop } from "./callbacks/onDrop";
@@ -66,6 +70,8 @@ const GameCanvas = ({ children, ...rest }: GameCanvasProps) => {
     resetResources,
     setResource,
     setAllResources,
+    addResource,
+    getResource,
   } = useGlobalResources();
   const { pause, dayAdvanceTrigger } = useTime();
   const { registerRestartHandler } = useGameActions();
@@ -133,11 +139,59 @@ const GameCanvas = ({ children, ...rest }: GameCanvasProps) => {
     instance.fitView({ maxZoom: 1, padding: 0.2 });
   };
 
+  const tryPurchase = (buildingType: BuildingType): boolean => {
+    const definition = getBuildingDefinition(buildingType);
+    const money = getResource("money");
+    if (money < definition.cost) return false;
+    addResource("money", -definition.cost);
+    return true;
+  };
+
   const onConnect = reactFlowInstance
     ? createOnConnect(setEdges, reactFlowInstance)
     : undefined;
-  const onDrop = createOnDrop(reactFlowInstance, setNodes);
+  const onDrop = createOnDrop(
+    reactFlowInstance,
+    setNodes,
+    tryPurchase,
+    currentDay,
+  );
   const isValidConnection = createIsValidConnection(edges);
+
+  const onBeforeDelete = async ({
+    nodes: nodesToDelete,
+  }: {
+    nodes: Node[];
+  }) => {
+    const allNodes = reactFlowInstance?.getNodes() ?? [];
+
+    const allowedNodes = nodesToDelete.filter((node) => {
+      const instance = getBuildingInstance(node);
+      if (!instance) return true;
+
+      const definition = getBuildingDefinition(instance.type);
+
+      if (definition.unique || definition.protected) {
+        const sameTypeCount = allNodes.filter(
+          (n) => getBuildingInstance(n)?.type === instance.type,
+        ).length;
+        if (sameTypeCount <= 1) return false;
+      }
+
+      const refund = calculateRefund(
+        instance.cost,
+        instance.builtOnDay ?? 0,
+        currentDay,
+      );
+      if (refund > 0) {
+        addResource("money", refund);
+      }
+
+      return true;
+    });
+
+    return allowedNodes.length > 0;
+  };
 
   const onDragOver = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -259,6 +313,7 @@ const GameCanvas = ({ children, ...rest }: GameCanvasProps) => {
         maxZoom={2}
         connectionLineComponent={ConnectionLine}
         isValidConnection={isValidConnection}
+        onBeforeDelete={onBeforeDelete}
         deleteKeyCode={["Delete", "Backspace"]}
         proOptions={{ hideAttribution: true }}
         fitView
