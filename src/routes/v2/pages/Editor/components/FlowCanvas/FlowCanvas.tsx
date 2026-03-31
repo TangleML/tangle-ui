@@ -19,6 +19,7 @@ import {
   GRID_SIZE,
 } from "@/routes/v2/shared/flowCanvasDefaults";
 import { useDoubleClickBehavior } from "@/routes/v2/shared/hooks/useDoubleClickBehavior";
+import { useFitViewOnFocus } from "@/routes/v2/shared/hooks/useFitViewOnFocus";
 import { useFlowCanvasState } from "@/routes/v2/shared/hooks/useFlowCanvasState";
 import { focusModeStore } from "@/routes/v2/shared/hooks/useFocusMode";
 import { useViewportScaling } from "@/routes/v2/shared/hooks/useViewportScaling";
@@ -31,7 +32,6 @@ import { FloatingSelectionToolbar } from "./components/FloatingSelectionToolbar"
 import { useClipboardShortcuts } from "./hooks/useClipboardShortcuts";
 import { useConnectionBehavior } from "./hooks/useConnectionBehavior";
 import { useDropBehavior } from "./hooks/useDropBehavior";
-import { useFitViewOnFocus } from "./hooks/useFitViewOnFocus";
 import { useNodeEdgeChanges } from "./hooks/useNodeEdgeChanges";
 import { usePaneClickBehavior } from "./hooks/usePaneClickBehavior";
 

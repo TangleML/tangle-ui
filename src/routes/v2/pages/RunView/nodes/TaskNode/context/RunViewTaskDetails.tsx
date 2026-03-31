@@ -66,7 +66,7 @@ export const RunViewTaskDetails = observer(function RunViewTaskDetails({
         <StatusIcon status={status} tooltip label="task" />
       </InlineStack>
 
-      <RunViewTaskActions componentRef={componentRef} />
+      <RunViewTaskActions componentRef={componentRef} taskName={task.name} />
 
       <div className="overflow-y-auto pb-4 h-full w-full">
         <Tabs defaultValue="artifacts" className="h-full">

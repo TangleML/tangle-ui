@@ -19,6 +19,7 @@ import {
 } from "@/routes/v2/shared/flowCanvasDefaults";
 import { useAutoLayoutShortcut } from "@/routes/v2/shared/hooks/useAutoLayoutShortcut";
 import { useDoubleClickBehavior } from "@/routes/v2/shared/hooks/useDoubleClickBehavior";
+import { useFitViewOnFocus } from "@/routes/v2/shared/hooks/useFitViewOnFocus";
 import { useFlowCanvasState } from "@/routes/v2/shared/hooks/useFlowCanvasState";
 import { useViewportScaling } from "@/routes/v2/shared/hooks/useViewportScaling";
 import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
@@ -52,6 +53,7 @@ export const RunViewFlowCanvas = observer(function RunViewFlowCanvas({
 
   const doubleClickBehavior = useDoubleClickBehavior(spec);
   useCopyShortcut(spec);
+  useFitViewOnFocus();
 
   const applyLayout = (layoutedNodes: import("@xyflow/react").Node[]) => {
     rfSetNodes(layoutedNodes);
