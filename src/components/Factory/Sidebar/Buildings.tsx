@@ -47,9 +47,6 @@ function getBuildingsByCategory() {
   BUILDING_TYPES.forEach((buildingType) => {
     const building = BUILDINGS[buildingType];
 
-    // Unique buildings can't be built from the sidebar
-    if (building.unique) return;
-
     const category = building.category;
 
     if (!grouped.has(category)) {

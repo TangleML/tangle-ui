@@ -87,6 +87,7 @@ export async function loadGameState(): Promise<GameSaveData | null> {
 function serializeNodes(nodes: Node[]): Node[] {
   return nodes.map((node) => ({
     ...node,
+    selected: false,
     data: {
       ...node.data,
       buildingInstance: node.data.buildingInstance
@@ -150,6 +151,7 @@ function deserializeBuildingInstance(instance: any): any {
 function serializeEdges(edges: Edge[]): Edge[] {
   return edges.map((edge) => ({
     ...edge,
+    selected: false,
     data: {
       ...edge.data,
     },

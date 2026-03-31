@@ -1,3 +1,4 @@
+import { useNodes } from "@xyflow/react";
 import { useState } from "react";
 
 import {
@@ -9,10 +10,12 @@ import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
 
+import { BUILDINGS } from "../data/buildings";
 import {
   BUILDING_CATEGORIES,
   type BuildingCategory,
   type BuildingType,
+  getBuildingInstance,
 } from "../types/buildings";
 import BuildingItem from "./BuildingItem";
 
@@ -23,12 +26,19 @@ type BuildingFolderProps = {
 
 const BuildingFolder = ({ category, buildings }: BuildingFolderProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const nodes = useNodes();
 
   const buildingCategory = BUILDING_CATEGORIES.find(
     (cat) => cat.type === category,
   );
 
-  if (!buildingCategory) return null;
+  const visibleCount = buildings.filter((bt) => {
+    const def = BUILDINGS[bt];
+    if (!def.unique) return true;
+    return !nodes.some((n) => getBuildingInstance(n)?.type === bt);
+  }).length;
+
+  if (!buildingCategory || visibleCount === 0) return null;
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-9/10">
@@ -47,7 +57,7 @@ const BuildingFolder = ({ category, buildings }: BuildingFolderProps) => {
           <span className="text-sm font-semibold text-gray-700">
             {buildingCategory.label}
           </span>
-          <span className="text-xs text-gray-500">({buildings.length})</span>
+          <span className="text-xs text-gray-500">({visibleCount})</span>
         </InlineStack>
         <Icon
           name="ChevronDown"

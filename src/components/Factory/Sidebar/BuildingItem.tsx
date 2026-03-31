@@ -1,3 +1,4 @@
+import { useNodes } from "@xyflow/react";
 import type { DragEvent } from "react";
 
 import { InlineStack } from "@/components/ui/layout";
@@ -7,7 +8,7 @@ import BuildingIcon from "../components/BuildingIcon";
 import { getBuildingDefinition } from "../data/buildings";
 import { RESOURCES } from "../data/resources";
 import { useGlobalResources } from "../providers/GlobalResourcesProvider";
-import type { BuildingType } from "../types/buildings";
+import { type BuildingType, getBuildingInstance } from "../types/buildings";
 
 interface BuildingItemProps {
   buildingType: BuildingType;
@@ -16,11 +17,16 @@ interface BuildingItemProps {
 const BuildingItem = ({ buildingType }: BuildingItemProps) => {
   const building = getBuildingDefinition(buildingType);
   const { getResource } = useGlobalResources();
+  const nodes = useNodes();
   const money = getResource("money");
   const canAfford = money >= building.cost;
+  const alreadyPlaced =
+    building.unique &&
+    nodes.some((n) => getBuildingInstance(n)?.type === buildingType);
+  const canBuild = canAfford && !alreadyPlaced;
 
   const onDragStart = (event: DragEvent) => {
-    if (!canAfford) {
+    if (!canBuild) {
       event.preventDefault();
       return;
     }
@@ -41,33 +47,46 @@ const BuildingItem = ({ buildingType }: BuildingItemProps) => {
     event.dataTransfer.effectAllowed = "move";
   };
 
+  if (alreadyPlaced) {
+    return null;
+  }
+
   return (
     <div
       className={cn(
         "px-2 py-1.5 rounded-sm w-full",
-        canAfford
+        canBuild
           ? "cursor-grab hover:bg-gray-100 active:bg-gray-200"
           : "cursor-not-allowed opacity-50",
       )}
-      draggable={canAfford}
+      draggable={canBuild}
       onDragStart={onDragStart}
     >
       <InlineStack wrap="nowrap" gap="2" className="w-full">
         <BuildingIcon icon={building.icon} />
         <div className="flex flex-col flex-1 min-w-0">
-          <span
-            className="truncate text-xs text-gray-800 font-medium"
-            title={building.name}
-          >
-            {building.name}
-          </span>
+          <InlineStack gap="1" align="start" wrap="nowrap">
+            <span
+              className="truncate text-xs text-gray-800 font-medium"
+              title={building.name}
+            >
+              {building.name}
+            </span>
+            {building.unique && (
+              <span className="shrink-0 text-[9px] font-medium text-purple-600 bg-purple-50 px-1 rounded">
+                Unique
+              </span>
+            )}
+          </InlineStack>
           <span className="truncate text-[10px] text-gray-500">
-            {building.description}
+            {alreadyPlaced
+              ? `Only one ${building.name} is allowed`
+              : building.description}
           </span>
           <span
             className={cn(
               "text-[10px] font-semibold",
-              canAfford ? "text-amber-600" : "text-red-500",
+              canBuild ? "text-amber-600" : "text-red-500",
             )}
           >
             {RESOURCES.money.icon} {building.cost}

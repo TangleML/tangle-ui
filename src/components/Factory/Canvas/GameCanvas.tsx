@@ -18,6 +18,7 @@ import { useContextPanel } from "@/providers/ContextPanelProvider";
 
 import { GameOverDialog } from "../components/GameOverDialog";
 import { getBuildingDefinition } from "../data/buildings";
+import type { GlobalResources } from "../data/resources";
 import { setup } from "../data/setup";
 import { createBuildingNode } from "../objects/buildings/createBuildingNode";
 import { setupConnections } from "../objects/resources/setupConnections";
@@ -160,9 +161,13 @@ const GameCanvas = ({ children, ...rest }: GameCanvasProps) => {
 
   const onBeforeDelete = async ({
     nodes: nodesToDelete,
+    edges: edgesToDelete,
   }: {
     nodes: Node[];
+    edges: Edge[];
   }) => {
+    if (nodesToDelete.length === 0 && edgesToDelete.length > 0) return true;
+
     const allNodes = reactFlowInstance?.getNodes() ?? [];
 
     const allowedNodes = nodesToDelete.filter((node) => {
@@ -213,14 +218,24 @@ const GameCanvas = ({ children, ...rest }: GameCanvasProps) => {
       createBuildingNode(building.type, building.position),
     );
 
+    const initialResources: GlobalResources = {
+      money: 0,
+      food: 0,
+      knowledge: 0,
+    };
     setup.resources?.forEach((resource) => {
       setResource(resource.type, resource.amount);
+      initialResources[resource.type] = resource.amount;
     });
 
     if (newNodes) {
       setNodes(newNodes);
       setupEdgesComplete.current = false;
     }
+
+    saveGameState(newNodes ?? [], [], initialResources, []).catch((error) => {
+      console.error("Failed to save game after restart:", error);
+    });
   };
 
   useEffect(() => {
