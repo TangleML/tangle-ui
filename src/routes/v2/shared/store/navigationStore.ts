@@ -5,17 +5,13 @@ import {
   IncrementingIdGenerator,
   YamlDeserializer,
 } from "@/models/componentSpec";
+import { isGraphImplementation } from "@/utils/componentSpec";
 
 import type { EditorStore } from "./editorStore";
 
 interface NavigationEntry {
   specId: string;
   displayName: string;
-}
-
-function isGraphSpecJson(specJson: ComponentSpecJson | undefined): boolean {
-  if (!specJson?.implementation) return false;
-  return "graph" in specJson.implementation;
 }
 
 export class NavigationStore {
@@ -51,7 +47,7 @@ export class NavigationStore {
   isTaskSubgraph(spec: ComponentSpec, taskEntityId: string): boolean {
     const task = spec.tasks.find((t) => t.$id === taskEntityId);
     if (!task?.componentRef.spec) return false;
-    return isGraphSpecJson(task.componentRef.spec);
+    return isGraphImplementation(task.componentRef.spec?.implementation);
   }
 
   @action navigateToSubgraph(
@@ -63,7 +59,10 @@ export class NavigationStore {
     const task = currentSpec.tasks.find((t) => t.$id === taskEntityId);
     if (!task) return null;
 
-    if (!task.componentRef.spec || !isGraphSpecJson(task.componentRef.spec)) {
+    if (
+      !task.componentRef.spec ||
+      !isGraphImplementation(task.componentRef.spec?.implementation)
+    ) {
       return null;
     }
 

@@ -5,6 +5,7 @@ import {
   type ComponentSpec,
   createTaskFromComponentRef,
   type Task,
+  unpackSubgraph,
 } from "@/models/componentSpec";
 import type { UpgradeCandidate } from "@/routes/v2/pages/Editor/components/UpgradeComponents/types";
 import { editorRegistry } from "@/routes/v2/pages/Editor/nodes";
@@ -179,4 +180,19 @@ export function upgradeSelectedTasks(
       replaceTask(undo, spec, candidate.taskId, candidate.newComponentRef);
     }
   });
+}
+
+export function unpackSubgraphTask(
+  undo: UndoGroupable,
+  spec: ComponentSpec,
+  taskId: string,
+): boolean {
+  try {
+    return undo.withGroup("Unpack subgraph", () =>
+      unpackSubgraph({ spec, taskId, idGen }),
+    );
+  } catch (error) {
+    console.error("Failed to unpack subgraph:", error);
+    return false;
+  }
 }

@@ -45,7 +45,8 @@ export const TaskDetails = observer(function TaskDetails({
   const showComponentRefBar = useFlagValue("task-component-ref-bar");
   const { editor } = useSharedStores();
   const { undo } = useEditorSession();
-  const { duplicateSelectedNodes, deleteTask, renameTask } = useTaskActions();
+  const { duplicateSelectedNodes, deleteTask, renameTask, unpackSubgraphTask } =
+    useTaskActions();
   const { setTaskColor } = useTaskConfigActions();
   const spec = useSpec();
   const task = spec?.tasks.find((t) => t.$id === entityId);
@@ -85,6 +86,9 @@ export const TaskDetails = observer(function TaskDetails({
       : "");
   const pythonCode = componentSpec?.metadata?.annotations
     ?.python_original_code as string | undefined;
+  const isSubgraph = Boolean(
+    componentSpec?.implementation && "graph" in componentSpec.implementation,
+  );
 
   const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
     const newName = event.target.value;
@@ -109,6 +113,10 @@ export const TaskDetails = observer(function TaskDetails({
     deleteTask(spec, entityId);
   };
 
+  const handleUnpackSubgraph = () => {
+    unpackSubgraphTask(spec, entityId);
+  };
+
   const handleZIndexChange = (newZIndex: number) => {
     undo.withGroup("Update task z-index", () => {
       task.annotations.set("zIndex", newZIndex);
@@ -123,8 +131,10 @@ export const TaskDetails = observer(function TaskDetails({
             yamlText={yamlText}
             taskName={task.name}
             pythonCode={pythonCode}
+            isSubgraph={isSubgraph}
             onDuplicate={handleDuplicate}
             onDelete={handleDelete}
+            onUnpackSubgraph={handleUnpackSubgraph}
           />
         </BlockStack>
       )}
@@ -295,8 +305,10 @@ export const TaskDetails = observer(function TaskDetails({
                     yamlText={yamlText}
                     taskName={task.name}
                     pythonCode={pythonCode}
+                    isSubgraph={isSubgraph}
                     onDuplicate={handleDuplicate}
                     onDelete={handleDelete}
+                    onUnpackSubgraph={handleUnpackSubgraph}
                   />
                 </>
               )}

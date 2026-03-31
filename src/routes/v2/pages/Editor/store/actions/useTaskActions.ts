@@ -14,6 +14,7 @@ import {
   pasteNodes,
   renameTask,
   replaceTask,
+  unpackSubgraphTask,
   upgradeSelectedTasks,
 } from "./task.actions";
 
@@ -40,5 +41,6 @@ export function useTaskActions() {
     applyAutoLayoutPositions: applyAutoLayoutPositions.bind(null, undo),
     replaceTask: replaceTask.bind(null, undo),
     upgradeSelectedTasks: upgradeSelectedTasks.bind(null, undo),
+    unpackSubgraphTask: unpackSubgraphTask.bind(null, undo),
   };
 }
