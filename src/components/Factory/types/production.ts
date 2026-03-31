@@ -13,6 +13,7 @@ export type ProductionMethod = {
     nodes?: number;
   }>;
   days: number;
+  knowledgeCost: number;
 };
 
 type ProductionStatus = "idle" | "active" | "paused" | "complete";

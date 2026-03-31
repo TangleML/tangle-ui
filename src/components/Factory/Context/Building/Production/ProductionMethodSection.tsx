@@ -1,3 +1,4 @@
+import { RESOURCES } from "@/components/Factory/data/resources";
 import type { BuildingType } from "@/components/Factory/types/buildings";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -68,6 +69,12 @@ export const ProductionMethodSection = ({
         />
         <ProductionOutputs productionMethod={productionMethod} />
         <ProductionDuration productionMethod={productionMethod} />
+        {productionMethod.knowledgeCost > 0 && (
+          <InlineStack gap="2">
+            <Text size="sm">{RESOURCES.knowledge.icon}</Text>
+            <Text size="sm">{productionMethod.knowledgeCost}/day</Text>
+          </InlineStack>
+        )}
         <ProductionProgress
           productionMethod={productionMethod}
           productionState={productionState}

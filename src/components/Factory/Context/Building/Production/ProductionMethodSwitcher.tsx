@@ -113,9 +113,16 @@ export const ProductionMethodSwitcher = ({
                       )}
                     </InlineStack>
 
-                    <Text size="xs" tone="subdued">
-                      {method.days} {pluralize(method.days, "day")}
-                    </Text>
+                    <InlineStack gap="2" align="center">
+                      <Text size="xs" tone="subdued">
+                        {method.days} {pluralize(method.days, "day")}
+                      </Text>
+                      {method.knowledgeCost > 0 && (
+                        <Text size="xs" tone="subdued">
+                          {RESOURCES.knowledge.icon} {method.knowledgeCost}/day
+                        </Text>
+                      )}
+                    </InlineStack>
                   </BlockStack>
                 </button>
               );

@@ -55,6 +55,7 @@ const BuildingContext = ({ building, nodeId }: BuildingContextProps) => {
 
   const buildingStats = getLatestBuildingStats(nodeId);
   const isMaintenancePaused = buildingStats?.maintenancePaused ?? false;
+  const isKnowledgePaused = buildingStats?.knowledgePaused ?? false;
 
   const refundAmount = calculateRefund(cost, builtOnDay, currentDay);
 
@@ -109,6 +110,12 @@ const BuildingContext = ({ building, nodeId }: BuildingContextProps) => {
       {isMaintenancePaused && (
         <Text size="sm" className="text-red-600 font-medium">
           Paused — insufficient funds for maintenance
+        </Text>
+      )}
+
+      {isKnowledgePaused && (
+        <Text size="sm" className="text-red-600 font-medium">
+          Paused — insufficient knowledge for production method
         </Text>
       )}
 

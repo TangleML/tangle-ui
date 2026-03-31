@@ -39,6 +39,10 @@ export const processDay = (
   let maintenanceBudget = currentResources.money;
   let totalMaintenancePaid = 0;
 
+  // Knowledge budget for advanced production methods
+  let knowledgeBudget = currentResources.knowledge;
+  let totalKnowledgePaid = 0;
+
   // Build adjacency lists (both forward and reverse)
   const downstream = new Map<string, string[]>(); // node -> nodes it outputs to
   const upstream = new Map<string, string[]>(); // node -> nodes that output to it
@@ -137,8 +141,40 @@ export const processDay = (
       }
     }
 
-    // ✅ STEP 2.3: Process production (skip if maintenance-paused)
-    if (!maintenancePaused) {
+    // ✅ STEP 2.2b: Check knowledge cost before production
+    const knowledgeCost = building.productionMethod?.knowledgeCost ?? 0;
+    let knowledgePaused = false;
+
+    if (!maintenancePaused && knowledgeCost > 0) {
+      const isWorking =
+        building.productionState?.status === "active" ||
+        building.productionState?.status === "complete" ||
+        building.productionState?.status === "paused";
+
+      if (isWorking) {
+        if (knowledgeBudget >= knowledgeCost) {
+          knowledgeBudget -= knowledgeCost;
+          totalKnowledgePaid += knowledgeCost;
+          const stats = buildingStats.get(currentNodeId)!;
+          stats.knowledgePaid = knowledgeCost;
+        } else {
+          knowledgePaused = true;
+          const stats = buildingStats.get(currentNodeId)!;
+          stats.knowledgePaused = true;
+
+          currentNode.data.buildingInstance = {
+            ...building,
+            productionState: {
+              progress: building.productionState?.progress ?? 0,
+              status: "paused",
+            },
+          };
+        }
+      }
+    }
+
+    // ✅ STEP 2.3: Process production (skip if maintenance-paused or knowledge-paused)
+    if (!maintenancePaused && !knowledgePaused) {
       if (SPECIAL_BUILDINGS.includes(building.type)) {
         processSpecialBuilding(
           currentNode,
@@ -150,6 +186,13 @@ export const processDay = (
         const moneyEarned = buildingStats.get(currentNodeId)?.produced?.money;
         if (moneyEarned && moneyEarned > 0) {
           maintenanceBudget += moneyEarned;
+        }
+
+        // When a library earns knowledge, add to knowledge budget
+        const knowledgeEarned =
+          buildingStats.get(currentNodeId)?.produced?.knowledge;
+        if (knowledgeEarned && knowledgeEarned > 0) {
+          knowledgeBudget += knowledgeEarned;
         }
       } else {
         advanceProduction(currentNode, earnedGlobalResources, buildingStats);
@@ -184,6 +227,9 @@ export const processDay = (
   // Deduct total maintenance from earned money
   earnedGlobalResources.money -= totalMaintenancePaid;
 
+  // Deduct total knowledge cost from earned knowledge
+  earnedGlobalResources.knowledge -= totalKnowledgePaid;
+
   // ✅ STEP 3: Calculate food requirement and deduct
   const previousRequirement = previousDayStats?.global.foodRequired;
   const foodRequired = calculateFoodRequirement(day, previousRequirement);
@@ -212,6 +258,7 @@ export const processDay = (
     foodConsumed,
     foodDeficit,
     maintenanceCost: totalMaintenancePaid,
+    knowledgeCost: totalKnowledgePaid,
   };
 
   return {

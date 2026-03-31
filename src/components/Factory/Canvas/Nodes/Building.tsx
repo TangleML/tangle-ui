@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { useContextPanel } from "@/providers/ContextPanelProvider";
 
 import BuildingIcon from "../../components/BuildingIcon";
+import { PauseIndicators } from "../../components/PauseIndicators";
 import { ProductionFeedback } from "../../components/ProductionFeedback";
 import BuildingContext from "../../Context/Building/BuildingContext";
 import { isGlobalResource } from "../../data/resources";
@@ -103,9 +104,13 @@ const Building = ({ id, data, selected }: NodeProps) => {
 
   return (
     <div
-      className={cn("bg-white rounded-lg", selected && "ring-2 ring-selected")}
+      className={cn(
+        "bg-white rounded-lg relative",
+        selected && "ring-2 ring-selected",
+      )}
       ref={buildingRef}
     >
+      <PauseIndicators statistics={buildingStats} />
       <ProductionFeedback
         buildingRef={buildingRef}
         statistics={buildingStats}

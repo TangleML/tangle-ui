@@ -9,6 +9,7 @@ export interface GlobalStatistics {
   foodConsumed: number;
   foodDeficit: number;
   maintenanceCost: number;
+  knowledgeCost: number;
 }
 
 export interface StockpileChange {
@@ -23,6 +24,8 @@ export interface BuildingStatistics {
   produced?: Partial<Record<ResourceType, number>>;
   maintenancePaid?: number;
   maintenancePaused?: boolean;
+  knowledgePaid?: number;
+  knowledgePaused?: boolean;
 }
 
 export interface EdgeStatistics {
