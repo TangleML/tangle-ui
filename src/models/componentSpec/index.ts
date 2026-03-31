@@ -27,7 +27,7 @@ export {
 } from "./factories";
 
 // Actions
-export { createSubgraph } from "./actions";
+export { createSubgraph, unpackSubgraph } from "./actions";
 
 // Validation
 export type { ValidationIssue } from "./validation";

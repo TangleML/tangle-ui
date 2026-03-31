@@ -13,10 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { Heading, Text } from "@/components/ui/typography";
 import { serializeComponentSpec } from "@/models/componentSpec";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
-
-function deepClone<T>(obj: T): T {
-  return JSON.parse(JSON.stringify(obj));
-}
+import { deepClone } from "@/utils/deepClone";
 
 const showGoogleSubmitter =
   import.meta.env.VITE_ENABLE_GOOGLE_CLOUD_SUBMITTER === "true";

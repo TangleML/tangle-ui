@@ -1,3 +1,5 @@
+import { deepClone } from "@/utils/deepClone";
+
 import { Annotations } from "../annotations";
 import { Binding } from "../entities/binding";
 import { ComponentSpec } from "../entities/componentSpec";
@@ -24,8 +26,6 @@ interface CreateSubgraphResult {
   subgraphSpec: ComponentSpec;
   replacementTask: Task;
 }
-
-const deepClone = <T>(obj: T): T => JSON.parse(JSON.stringify(obj));
 
 interface TaskSnapshot {
   $id: string;
