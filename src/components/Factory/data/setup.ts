@@ -43,7 +43,7 @@ const buildings: BuildingSetup[] = [
 ];
 
 const resources: ResourceSetup[] = [
-  { type: "money", amount: 1000 },
+  { type: "money", amount: 250 },
   { type: "food", amount: 100 },
 ];
 

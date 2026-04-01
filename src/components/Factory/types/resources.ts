@@ -35,8 +35,16 @@ const RESOURCE_TYPES = [
   "copper",
   "tin",
   "bronze",
+  "ironore",
   "iron",
   "steel",
+  "gold",
+  "wool",
+  "jewelry",
+  "furniture",
+  "clothing",
+  "fineclothing",
+  "artwork",
 ] as const;
 
 export type ResourceType = (typeof RESOURCE_TYPES)[number];

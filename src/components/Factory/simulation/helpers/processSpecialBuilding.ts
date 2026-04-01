@@ -28,7 +28,7 @@ export const processSpecialBuilding = (
   const stats = buildingStats.get(node.id)!;
 
   // Marketplace / Trading Post: Sells any resources for money based on their value
-  if (building.type === "marketplace" || building.type === "tradingpost") {
+  if (building.type === "marketplace" || building.type === "tradingpost" || building.type === "stockexchange") {
     const anyStock = building.stockpile?.find((s) => s.resource === "any");
 
     // If no stockpile or empty, set to idle

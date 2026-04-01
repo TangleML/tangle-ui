@@ -32,6 +32,15 @@ export type BuildingType =
   | "toolsmith"
   | "mine"
   | "mint"
+  | "university"
+  | "jeweler"
+  | "carpenter"
+  | "tailor"
+  | "artisansguild"
+  | "meetinghouse"
+  | "townhall"
+  | "stockexchange"
+  | "palace"
   | "splitter"
   | "merger";
 
@@ -63,7 +72,7 @@ export const BUILDING_CATEGORIES: BuildingCategoryDefinition[] = [
   { type: "logistics", label: "Logistics", icon: "Truck" },
   { type: "production", label: "Production", icon: "Hammer" },
   { type: "manufacturing", label: "Manufacturing", icon: "Factory" },
-  { type: "services", label: "Services", icon: "Store" },
+  { type: "commerce", label: "Commerce", icon: "Store" },
   { type: "storage", label: "Storage", icon: "Package" },
 ];
 
