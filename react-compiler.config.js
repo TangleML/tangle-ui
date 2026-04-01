@@ -64,6 +64,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/components/shared/AnnouncementBanners.tsx",
   "src/components/shared/ReactFlow/FlowCanvas/TaskNode/TaskOverview/IOSection",
 
+  "src/providers/DialogProvider",
   "src/routes/EditorV2",
 
   // 11-20 useCallback/useMemo
