@@ -1,90 +1,35 @@
-import { useCallback, useSyncExternalStore } from "react";
+import { useLiveQuery } from "dexie-react-hooks";
 
-import { getStorage } from "@/utils/typedStorage";
+import {
+  type FavoriteItem,
+  type FavoriteType,
+  LibraryDB,
+} from "@/providers/ComponentLibraryProvider/libraries/storage";
 
-const FAVORITES_STORAGE_KEY = "Home/favorites";
-
-export type FavoriteType = "pipeline" | "run";
-
-export interface FavoriteItem {
-  type: FavoriteType;
-  id: string;
-  name: string;
-}
-
-type FavoritesStorageMapping = {
-  [FAVORITES_STORAGE_KEY]: FavoriteItem[];
-};
-
-const storage = getStorage<
-  typeof FAVORITES_STORAGE_KEY,
-  FavoritesStorageMapping
->();
-
-// useSyncExternalStore requires getSnapshot to return a stable reference.
-// We cache the last parsed value and only update it when the raw JSON changes.
-let cachedJson: string | null = null;
-let cachedFavorites: FavoriteItem[] = [];
-
-function readFavorites(): FavoriteItem[] {
-  const json = localStorage.getItem(FAVORITES_STORAGE_KEY);
-  if (json === cachedJson) return cachedFavorites;
-  cachedJson = json;
-  cachedFavorites = json ? (JSON.parse(json) as FavoriteItem[]) : [];
-  return cachedFavorites;
-}
-
-function subscribe(callback: () => void) {
-  const handler = (event: StorageEvent) => {
-    if (event.key === FAVORITES_STORAGE_KEY) callback();
-  };
-  window.addEventListener("storage", handler);
-  return () => window.removeEventListener("storage", handler);
-}
+export type { FavoriteItem, FavoriteType };
 
 export function useFavorites() {
-  // useSyncExternalStore keeps the hook reactive to localStorage changes,
-  // including changes dispatched by typedStorage from the same window.
-  const favorites = useSyncExternalStore(subscribe, readFavorites, () => []);
+  const favorites = useLiveQuery(() => LibraryDB.favorites.toArray(), []) ?? [];
 
-  const addFavorite = useCallback((item: FavoriteItem) => {
-    const current = readFavorites();
-    const alreadyExists = current.some(
-      (f) => f.type === item.type && f.id === item.id,
-    );
-    if (!alreadyExists) {
-      storage.setItem(FAVORITES_STORAGE_KEY, [...current, item]);
-    }
-  }, []);
+  const addFavorite = async (item: FavoriteItem) => {
+    // put is an upsert — compound PK [type+id] prevents duplicates
+    await LibraryDB.favorites.put(item);
+  };
 
-  const removeFavorite = useCallback((type: FavoriteType, id: string) => {
-    const current = readFavorites();
-    storage.setItem(
-      FAVORITES_STORAGE_KEY,
-      current.filter((f) => !(f.type === type && f.id === id)),
-    );
-  }, []);
+  const removeFavorite = async (type: FavoriteType, id: string) => {
+    await LibraryDB.favorites.delete([type, id]);
+  };
 
-  const toggleFavorite = useCallback((item: FavoriteItem) => {
-    const current = readFavorites();
-    const exists = current.some(
-      (f) => f.type === item.type && f.id === item.id,
-    );
-    if (exists) {
-      storage.setItem(
-        FAVORITES_STORAGE_KEY,
-        current.filter((f) => !(f.type === item.type && f.id === item.id)),
-      );
+  const isFavorite = (type: FavoriteType, id: string) =>
+    favorites.some((f) => f.type === type && f.id === id);
+
+  const toggleFavorite = async (item: FavoriteItem) => {
+    if (isFavorite(item.type, item.id)) {
+      await removeFavorite(item.type, item.id);
     } else {
-      storage.setItem(FAVORITES_STORAGE_KEY, [...current, item]);
+      await addFavorite(item);
     }
-  }, []);
-
-  const isFavorite = useCallback(
-    (type: FavoriteType, id: string) =>
-      favorites.some((f) => f.type === type && f.id === id),
-    [favorites],
-  );
+  };
 
   return { favorites, addFavorite, removeFavorite, toggleFavorite, isFavorite };
 }
