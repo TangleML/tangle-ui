@@ -1,5 +1,9 @@
-import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
+import "fake-indexeddb/auto";
+
+import { renderHook, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
+
+import { LibraryDB } from "@/providers/ComponentLibraryProvider/libraries/storage";
 
 import { type FavoriteItem, useFavorites } from "./useFavorites";
 
@@ -10,78 +14,67 @@ const pipeline: FavoriteItem = {
 };
 const run: FavoriteItem = { type: "run", id: "r1", name: "My Run" };
 
-beforeEach(() => {
-  localStorage.clear();
+afterEach(async () => {
+  await LibraryDB.favorites.clear();
 });
 
 describe("useFavorites", () => {
-  it("starts with no favorites", () => {
+  it("starts with no favorites", async () => {
     const { result } = renderHook(() => useFavorites());
-    expect(result.current.favorites).toEqual([]);
+    await waitFor(() => {
+      expect(result.current.favorites).toEqual([]);
+    });
   });
 
-  it("adds a favorite", () => {
+  it("adds a favorite", async () => {
     const { result } = renderHook(() => useFavorites());
-
-    act(() => {
-      result.current.addFavorite(pipeline);
+    await result.current.addFavorite(pipeline);
+    await waitFor(() => {
+      expect(result.current.favorites).toEqual([pipeline]);
     });
-
-    expect(result.current.favorites).toEqual([pipeline]);
   });
 
-  it("does not add a duplicate favorite", () => {
+  it("does not add a duplicate favorite", async () => {
     const { result } = renderHook(() => useFavorites());
-
-    act(() => {
-      result.current.addFavorite(pipeline);
-      result.current.addFavorite(pipeline);
+    await result.current.addFavorite(pipeline);
+    await result.current.addFavorite(pipeline);
+    await waitFor(() => {
+      expect(result.current.favorites).toHaveLength(1);
     });
-
-    expect(result.current.favorites).toHaveLength(1);
   });
 
-  it("removes a favorite", () => {
+  it("removes a favorite", async () => {
     const { result } = renderHook(() => useFavorites());
-
-    act(() => {
-      result.current.addFavorite(pipeline);
-      result.current.addFavorite(run);
+    await result.current.addFavorite(pipeline);
+    await result.current.addFavorite(run);
+    await result.current.removeFavorite("pipeline", "p1");
+    await waitFor(() => {
+      expect(result.current.favorites).toEqual([run]);
     });
-
-    act(() => {
-      result.current.removeFavorite("pipeline", "p1");
-    });
-
-    expect(result.current.favorites).toEqual([run]);
   });
 
-  it("toggles a favorite on and off", () => {
+  it("toggles a favorite on and off", async () => {
     const { result } = renderHook(() => useFavorites());
-
-    act(() => {
-      result.current.toggleFavorite(pipeline);
+    await result.current.toggleFavorite(pipeline);
+    await waitFor(() => {
+      expect(result.current.favorites).toEqual([pipeline]);
     });
-    expect(result.current.favorites).toEqual([pipeline]);
-
-    act(() => {
-      result.current.toggleFavorite(pipeline);
+    await result.current.toggleFavorite(pipeline);
+    await waitFor(() => {
+      expect(result.current.favorites).toEqual([]);
     });
-    expect(result.current.favorites).toEqual([]);
   });
 
-  it("correctly reports isFavorite", () => {
+  it("correctly reports isFavorite", async () => {
     const { result } = renderHook(() => useFavorites());
-
-    act(() => {
-      result.current.addFavorite(pipeline);
+    await result.current.addFavorite(pipeline);
+    await waitFor(() => {
+      expect(result.current.isFavorite("pipeline", "p1")).toBe(true);
+      expect(result.current.isFavorite("run", "r1")).toBe(false);
     });
-
-    expect(result.current.isFavorite("pipeline", "p1")).toBe(true);
-    expect(result.current.isFavorite("run", "r1")).toBe(false);
   });
 
-  it("does not confuse items of different types with the same id", () => {
+  it("does not confuse items of different types with the same id", async () => {
     const pipelineItem: FavoriteItem = {
       type: "pipeline",
       id: "1",
@@ -90,35 +83,15 @@ describe("useFavorites", () => {
     const runItem: FavoriteItem = { type: "run", id: "1", name: "Run" };
     const { result } = renderHook(() => useFavorites());
 
-    act(() => {
-      result.current.addFavorite(pipelineItem);
+    await result.current.addFavorite(pipelineItem);
+    await waitFor(() => {
+      expect(result.current.isFavorite("pipeline", "1")).toBe(true);
+      expect(result.current.isFavorite("run", "1")).toBe(false);
     });
 
-    expect(result.current.isFavorite("pipeline", "1")).toBe(true);
-    expect(result.current.isFavorite("run", "1")).toBe(false);
-
-    act(() => {
-      result.current.addFavorite(runItem);
+    await result.current.addFavorite(runItem);
+    await waitFor(() => {
+      expect(result.current.favorites).toHaveLength(2);
     });
-
-    expect(result.current.favorites).toHaveLength(2);
-  });
-
-  it("reacts to storage events from other windows", () => {
-    const { result } = renderHook(() => useFavorites());
-
-    act(() => {
-      // In a real browser, another tab both updates localStorage and fires the
-      // storage event. jsdom only does the latter, so we simulate both.
-      localStorage.setItem("Home/favorites", JSON.stringify([pipeline]));
-      window.dispatchEvent(
-        new StorageEvent("storage", {
-          key: "Home/favorites",
-          newValue: JSON.stringify([pipeline]),
-        }),
-      );
-    });
-
-    expect(result.current.favorites).toEqual([pipeline]);
   });
 });
