@@ -10,3 +10,5 @@ coverage
 # Generated API files
 src/api/**/*
 
+.github/*
+

@@ -1,7 +1,7 @@
 import { useAwaitAuthorization } from "@/components/shared/Authentication/useAwaitAuthorization";
 import { HuggingFaceAuthButton } from "@/components/shared/HuggingFaceAuth/HuggingFaceAuthButton";
 import GoogleCloudSubmissionDialog from "@/components/shared/Submitters/GoogleCloud/GoogleCloudSubmissionDialog";
-import OasisSubmitter from "@/components/shared/Submitters/Oasis/OasisSubmitter";
+import TangleSubmitter from "@/components/shared/Submitters/Tangle/TangleSubmitter";
 import { BlockStack } from "@/components/ui/layout";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { isFixableIssue } from "@/utils/validations";
@@ -29,7 +29,7 @@ const RunsAndSubmission = () => {
       <BlockStack as="ul" gap="1">
         <li className="w-full">
           {isAuthorized ? (
-            <OasisSubmitter
+            <TangleSubmitter
               componentSpec={componentSpec}
               isComponentTreeValid={isComponentTreeValid}
               onlyFixableIssues={onlyFixableIssues}

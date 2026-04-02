@@ -79,7 +79,7 @@ metadata:
     git_relative_dir: .
     git_local_branch: main
     git_local_sha: e21f92f7e1f55102c97ea965272153f6f580e299
-    git_remote_url: https://github.com/Shopify/shop-promise-modeling.git
+    git_remote_url: https://github.com/example-org/example-component.git
     git_remote_branch: main
     git_remote_sha: c9d9d4f4cc2ecd5b025e9b06e050d1ed85cc5fc7
 inputs:
@@ -89,7 +89,7 @@ outputs:
 - {name: Output, type: String}
 implementation:
   container:
-    image: us-docker.pkg.dev/shopify-docker-images/containers/apps/production/shop-promise-modeling:main
+    image: ghcr.io/example-org/example-component:main
     command:
     - sh
     - -c
