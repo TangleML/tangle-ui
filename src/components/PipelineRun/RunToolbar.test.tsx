@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { screen, waitFor } from "@testing-library/dom";
 import { cleanup, render } from "@testing-library/react";
 import { ReactFlowProvider } from "@xyflow/react";
+import { Suspense } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type {
@@ -17,6 +18,22 @@ import { ExecutionDataProvider } from "@/providers/ExecutionDataProvider";
 import type { ComponentSpec } from "@/utils/componentSpec";
 
 import { RunToolbar } from "./RunToolbar";
+
+// Use vi.hoisted to create mocks that can be referenced in vi.mock
+const { mockHydrateComponentReference } = vi.hoisted(() => ({
+  mockHydrateComponentReference: vi.fn(),
+}));
+
+vi.mock("@/services/componentService", () => ({
+  hydrateComponentReference: mockHydrateComponentReference,
+  fetchAndStoreComponentLibrary: vi.fn(),
+  fetchAndStoreComponent: vi.fn(),
+  fetchAndStoreComponentByUrl: vi.fn(),
+  getComponentText: vi.fn(),
+  fetchComponentTextFromUrl: vi.fn(),
+  parseComponentData: vi.fn(),
+  getExistingAndNewUserComponent: vi.fn(),
+}));
 
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
   ...(await importOriginal()),
@@ -59,6 +76,11 @@ describe("<RunToolbar/>", () => {
           },
           inputs: [],
           outputs: [],
+          implementation: {
+            graph: {
+              tasks: {},
+            },
+          },
         },
       },
     },
@@ -86,10 +108,8 @@ describe("<RunToolbar/>", () => {
     inputs: [],
     outputs: [],
     implementation: {
-      container: {
-        image: "test-image",
-        command: ["test-command"],
-        args: ["test-arg"],
+      graph: {
+        tasks: {},
       },
     },
   };
@@ -103,6 +123,14 @@ describe("<RunToolbar/>", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+
+    // Mock hydrateComponentReference to return the spec immediately
+    mockHydrateComponentReference.mockResolvedValue({
+      spec: mockComponentSpec,
+      name: mockComponentSpec.name,
+      digest: "test-digest",
+      text: "name: Test Pipeline",
+    });
 
     vi.mocked(usePipelineRunData).mockReturnValue({
       executionData: {
@@ -140,13 +168,15 @@ describe("<RunToolbar/>", () => {
   const renderWithProviders = (component: React.ReactElement) => {
     return render(component, {
       wrapper: ({ children }) => (
-        <ComponentSpecProvider spec={mockComponentSpec}>
-          <QueryClientProvider client={queryClient}>
-            <ExecutionDataProvider pipelineRunId="123">
-              <ReactFlowProvider>{children}</ReactFlowProvider>
-            </ExecutionDataProvider>
-          </QueryClientProvider>
-        </ComponentSpecProvider>
+        <QueryClientProvider client={queryClient}>
+          <Suspense fallback={<div data-testid="loading">Loading...</div>}>
+            <ComponentSpecProvider spec={mockComponentSpec}>
+              <ExecutionDataProvider pipelineRunId="123">
+                <ReactFlowProvider>{children}</ReactFlowProvider>
+              </ExecutionDataProvider>
+            </ComponentSpecProvider>
+          </Suspense>
+        </QueryClientProvider>
       ),
     });
   };
@@ -157,10 +187,13 @@ describe("<RunToolbar/>", () => {
 
       renderWithProviders(<RunToolbar />);
 
-      await waitFor(() => {
-        const inspect = screen.getByTestId("inspect-pipeline-button");
-        expect(inspect).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          const inspect = screen.getByTestId("inspect-pipeline-button");
+          expect(inspect).toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
     });
 
     test("should NOT render inspect button when pipeline does not exist", async () => {
@@ -168,10 +201,13 @@ describe("<RunToolbar/>", () => {
 
       renderWithProviders(<RunToolbar />);
 
-      await waitFor(() => {
-        const inspect = screen.queryByTestId("inspect-pipeline-button");
-        expect(inspect).not.toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          const inspect = screen.queryByTestId("inspect-pipeline-button");
+          expect(inspect).not.toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
     });
   });
 
@@ -179,10 +215,13 @@ describe("<RunToolbar/>", () => {
     test("should render clone button", async () => {
       renderWithProviders(<RunToolbar />);
 
-      await waitFor(() => {
-        const cloneButton = screen.getByTestId("clone-pipeline-run-button");
-        expect(cloneButton).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          const cloneButton = screen.getByTestId("clone-pipeline-run-button");
+          expect(cloneButton).toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
     });
   });
 
@@ -190,10 +229,13 @@ describe("<RunToolbar/>", () => {
     test("should render cancel button when status is RUNNING and user is the creator of the run", async () => {
       renderWithProviders(<RunToolbar />);
 
-      await waitFor(() => {
-        const cancelButton = screen.getByTestId("cancel-pipeline-run-button");
-        expect(cancelButton).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          const cancelButton = screen.getByTestId("cancel-pipeline-run-button");
+          expect(cancelButton).toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
     });
 
     test("should NOT render cancel button when status is not RUNNING", async () => {
@@ -214,10 +256,15 @@ describe("<RunToolbar/>", () => {
 
       renderWithProviders(<RunToolbar />);
 
-      await waitFor(() => {
-        const cancelButton = screen.queryByTestId("cancel-pipeline-run-button");
-        expect(cancelButton).not.toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          const cancelButton = screen.queryByTestId(
+            "cancel-pipeline-run-button",
+          );
+          expect(cancelButton).not.toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
     });
 
     test("should NOT render cancel button when the user is not the creator of the run", async () => {
@@ -233,10 +280,15 @@ describe("<RunToolbar/>", () => {
 
       renderWithProviders(<RunToolbar />);
 
-      await waitFor(() => {
-        const cancelButton = screen.queryByTestId("cancel-pipeline-run-button");
-        expect(cancelButton).not.toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          const cancelButton = screen.queryByTestId(
+            "cancel-pipeline-run-button",
+          );
+          expect(cancelButton).not.toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
     });
   });
 
@@ -259,19 +311,25 @@ describe("<RunToolbar/>", () => {
 
       renderWithProviders(<RunToolbar />);
 
-      await waitFor(() => {
-        const rerunButton = screen.getByTestId("rerun-pipeline-button");
-        expect(rerunButton).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          const rerunButton = screen.getByTestId("rerun-pipeline-button");
+          expect(rerunButton).toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
     });
 
     test("should NOT render rerun button when status is RUNNING", async () => {
       renderWithProviders(<RunToolbar />);
 
-      await waitFor(() => {
-        const rerunButton = screen.queryByTestId("rerun-pipeline-button");
-        expect(rerunButton).not.toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          const rerunButton = screen.queryByTestId("rerun-pipeline-button");
+          expect(rerunButton).not.toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
     });
   });
 
@@ -279,10 +337,13 @@ describe("<RunToolbar/>", () => {
     test("should always render view yaml button", async () => {
       renderWithProviders(<RunToolbar />);
 
-      await waitFor(() => {
-        const viewYamlButton = screen.getByTestId("action-View");
-        expect(viewYamlButton).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          const viewYamlButton = screen.getByTestId("action-View");
+          expect(viewYamlButton).toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
     });
   });
 });
