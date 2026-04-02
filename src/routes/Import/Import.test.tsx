@@ -9,7 +9,7 @@ import { ImportPage, isAllowedImportUrl } from "./index";
 const mockNavigate = vi.fn();
 const mockRouterNavigate = vi.fn();
 let mockSearchParams: { url?: string } = {
-  url: "http://127.0.0.1:54321/tangle-deploy/pipeline.yaml",
+  url: "http://127.0.0.1:54321/pipeline-import/pipeline.yaml",
 };
 
 vi.mock("@tanstack/react-router", async (importOriginal) => {
@@ -28,43 +28,51 @@ vi.mock("@/services/pipelineService", () => ({
 describe("isAllowedImportUrl", () => {
   test("accepts valid localhost URL with high port", () => {
     expect(
-      isAllowedImportUrl("http://127.0.0.1:54321/tangle-deploy/pipeline.yaml"),
+      isAllowedImportUrl(
+        "http://127.0.0.1:54321/pipeline-import/pipeline.yaml",
+      ),
     ).toBe(true);
   });
 
   test("accepts minimum allowed port", () => {
     expect(
-      isAllowedImportUrl("http://127.0.0.1:10000/tangle-deploy/pipeline.yaml"),
+      isAllowedImportUrl(
+        "http://127.0.0.1:10000/pipeline-import/pipeline.yaml",
+      ),
     ).toBe(true);
   });
 
   test("rejects wrong scheme (https)", () => {
     expect(
-      isAllowedImportUrl("https://127.0.0.1:54321/tangle-deploy/pipeline.yaml"),
+      isAllowedImportUrl(
+        "https://127.0.0.1:54321/pipeline-import/pipeline.yaml",
+      ),
     ).toBe(false);
   });
 
   test("rejects wrong host", () => {
     expect(
-      isAllowedImportUrl("http://evil.com:54321/tangle-deploy/pipeline.yaml"),
+      isAllowedImportUrl("http://evil.com:54321/pipeline-import/pipeline.yaml"),
     ).toBe(false);
   });
 
   test("rejects localhost hostname (must be 127.0.0.1)", () => {
     expect(
-      isAllowedImportUrl("http://localhost:54321/tangle-deploy/pipeline.yaml"),
+      isAllowedImportUrl(
+        "http://localhost:54321/pipeline-import/pipeline.yaml",
+      ),
     ).toBe(false);
   });
 
   test("rejects port below minimum", () => {
     expect(
-      isAllowedImportUrl("http://127.0.0.1:6379/tangle-deploy/pipeline.yaml"),
+      isAllowedImportUrl("http://127.0.0.1:6379/pipeline-import/pipeline.yaml"),
     ).toBe(false);
   });
 
   test("rejects missing port", () => {
     expect(
-      isAllowedImportUrl("http://127.0.0.1/tangle-deploy/pipeline.yaml"),
+      isAllowedImportUrl("http://127.0.0.1/pipeline-import/pipeline.yaml"),
     ).toBe(false);
   });
 
@@ -87,7 +95,7 @@ describe("ImportPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSearchParams = {
-      url: "http://127.0.0.1:54321/tangle-deploy/pipeline.yaml",
+      url: "http://127.0.0.1:54321/pipeline-import/pipeline.yaml",
     };
     globalThis.fetch = vi.fn();
   });
@@ -124,7 +132,7 @@ describe("ImportPage", () => {
 
     await waitFor(() => {
       expect(globalThis.fetch).toHaveBeenCalledWith(
-        "http://127.0.0.1:54321/tangle-deploy/pipeline.yaml",
+        "http://127.0.0.1:54321/pipeline-import/pipeline.yaml",
       );
     });
 
@@ -190,7 +198,7 @@ describe("ImportPage", () => {
 
   test("shows error for invalid URL (wrong host)", () => {
     mockSearchParams = {
-      url: "http://evil.com:54321/tangle-deploy/pipeline.yaml",
+      url: "http://evil.com:54321/pipeline-import/pipeline.yaml",
     };
 
     render(<ImportPage />);
@@ -202,7 +210,7 @@ describe("ImportPage", () => {
 
   test("shows error for invalid URL (port too low)", () => {
     mockSearchParams = {
-      url: "http://127.0.0.1:80/tangle-deploy/pipeline.yaml",
+      url: "http://127.0.0.1:80/pipeline-import/pipeline.yaml",
     };
 
     render(<ImportPage />);
