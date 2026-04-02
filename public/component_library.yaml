@@ -2,7 +2,7 @@ annotations: {}
 folders:
   - name: Beta
     components:
-      - url: /components/input_aggregator.component.yaml
+      - url: https://raw.githubusercontent.com/TangleML/tangle-ui/main/public/assets/components/input_aggregator.component.yaml
         name: Input Aggregator
         author: Tangle Team
   - name: Quick start
