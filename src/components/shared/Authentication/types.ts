@@ -1,6 +1,6 @@
 type AuthProvider = "github" | "minerva" | "huggingface";
 
-export interface OasisAuthResponse {
+export interface BackendAuthResponse {
   token: string;
   token_type: "JWT";
 }

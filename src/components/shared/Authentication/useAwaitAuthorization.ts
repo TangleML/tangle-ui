@@ -7,7 +7,7 @@ import useToastNotification from "@/hooks/useToastNotification";
 import { isGitHubAuthEnabled } from "../GitHubAuth/helpers";
 import { isHuggingFaceAuthEnabled } from "../HuggingFaceAuth/constants";
 import { convertJWTToJWTPayload, isAuthorizationRequired } from "./helpers";
-import type { OasisAuthResponse } from "./types";
+import type { BackendAuthResponse } from "./types";
 import { useAuthLocalStorage } from "./useAuthLocalStorage";
 
 function createControlledPromise<TReturn>() {
@@ -41,7 +41,7 @@ export function useAwaitAuthorization() {
 
   const isAuthorized = !isAuthorizationRequired() || !!token;
 
-  const onSuccess = (response: OasisAuthResponse) => {
+  const onSuccess = (response: BackendAuthResponse) => {
     notify(`Authorization successful!`, "success");
 
     const jwtPayload = convertJWTToJWTPayload(response.token);
@@ -98,7 +98,7 @@ export function useAwaitAuthorization() {
 function useNoopAuthPopup({
   onError,
 }: {
-  onSuccess: (response: OasisAuthResponse) => void;
+  onSuccess: (response: BackendAuthResponse) => void;
   onError: (error: string) => void;
   onClose?: () => void;
 }) {

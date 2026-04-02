@@ -104,8 +104,10 @@ Can the scope be updated, or should this be closed and a new issue opened for th
 
 ## Codebase locations
 
-- **Frontend (tangle-ui):** `/Users/mattbeaulne/src/github.com/Shopify/pipeline-studio-app`
-- **Backend (tangle):** `/Users/mattbeaulne/src/github.com/Shopify/oasis-backend`
+This skill runs from within the frontend repository. Use the current working directory as the frontend root.
+
+- **Frontend (tangle-ui):** the current working directory (this repo)
+- **Backend (tangle):** a sibling repository containing the backend. It is typically named `tangle`, but the user may have cloned it under a different name. To locate it, first look for a directory named `tangle` adjacent to the current working directory; if not found, look for any sibling whose name suggests a backend (e.g. contains `backend`, `server`, or `api`). If still ambiguous, ask the user to confirm the path before searching.
 
 ## Important
 

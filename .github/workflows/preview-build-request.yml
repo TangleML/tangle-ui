@@ -1,22 +1,22 @@
 ---
-  name: Tophat Build Request
-  
-  # Triggers tophat build in oasis-frontend for each PR
-  # This allows PRs to be tested on the staging environment
-  
+  name: Preview Build
+
+  # Triggers a preview build for each PR
+  # This allows PRs to be tested on the preview environment
+
   on:
     pull_request:
       types: [opened, synchronize]
       paths:
        - '**'
-  
+
   concurrency:
-    group: tophat-build-request-${{ github.event.pull_request.number }}
+    group: preview-build-${{ github.event.pull_request.number }}
     cancel-in-progress: true
 
   jobs:
     notify:
-      name: 'Trigger Tophat Build'
+      name: 'Trigger Preview Build'
       runs-on: ubuntu-latest
       permissions:
           pull-requests: write
@@ -27,15 +27,15 @@
             echo "branch=${{ github.head_ref }}" >> $GITHUB_OUTPUT
             echo "pr_number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
             echo "sha=$(echo '${{ github.event.pull_request.head.sha }}' | cut -c1-7)" >> $GITHUB_OUTPUT
-  
-        - name: Trigger oasis-frontend Tophat Build
+
+        - name: Trigger Preview Build
           env:
             BUILDKITE_BEARER: ${{ secrets.BUILDKITE_BEARER }}
             BUILDKITE_PIPELINE: ${{ secrets.BUILDKITE_PIPELINE }}
           run: |
-            echo "🚀 Triggering tophat build for branch: ${{ steps.pr_info.outputs.branch }}"
+            echo "🚀 Triggering preview build for branch: ${{ steps.pr_info.outputs.branch }}"
             echo "PR: #${{ steps.pr_info.outputs.pr_number }}"
-            
+
             curl -s -o /dev/null -w "%{http_code}" \
             -H "Authorization: Bearer $BUILDKITE_BEARER" \
             -X POST "https://api.buildkite.com/v2/organizations/$BUILDKITE_PIPELINE/builds" \
@@ -44,7 +44,7 @@
               "commit": "HEAD",
               "code": "curl",
               "branch": "main",
-              "message": "Tophat build for PR #${{ steps.pr_info.outputs.pr_number }}",
+              "message": "Preview build for PR #${{ steps.pr_info.outputs.pr_number }}",
               "author": {
                 "name": "Tangle-UI Workflow",
                 "email": "ci@tangleml.com"
@@ -53,19 +53,15 @@
                 "TOPHAT_BRANCH": "${{ steps.pr_info.outputs.branch }}"
               }
             }' || echo "Note: Buildkite trigger may need configuration"
-            
-            echo "✅ Tophat build triggered"
-  
+
+            echo "✅ Preview build triggered"
+
         - name: Comment on PR
           uses: mshick/add-pr-comment@v2
           env:
               GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           with:
               message: |
-                  ### :tophat: To tophat this PR:
+                  ### :tophat: Preview
       
-                  You can add the following URL parameter to your browser to tophat this PR:
-      
-                      `?tophat_location=${{ steps.pr_info.outputs.branch }}/${{ steps.pr_info.outputs.sha }}`
-
-                  ---
+                  A preview build has been created at: `${{ steps.pr_info.outputs.branch }}/${{ steps.pr_info.outputs.sha }}`
