@@ -30,7 +30,8 @@ import PublishedComponentsSearch from "../components/PublishedComponentsSearch";
 import { SidebarSection } from "../components/SidebarSection";
 import { UpgradeAvailableAlertBox } from "../components/UpgradeAvailableAlertBox";
 
-const INPUT_AGGREGATOR_URL = "/components/input_aggregator.component.yaml";
+const INPUT_AGGREGATOR_URL =
+  "https://raw.githubusercontent.com/TangleML/tangle-ui/refs/heads/master/public/assets/components/input_aggregator.component.yaml";
 
 const GraphComponents = () => {
   const remoteComponentLibrarySearchEnabled = useFlagValue(

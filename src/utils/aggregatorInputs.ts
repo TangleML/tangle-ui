@@ -1,6 +1,6 @@
 import type { InputSpec } from "./componentSpec";
 
-const AGGREGATOR_INPUT_PREFIX = "agg_";
+export const AGGREGATOR_INPUT_PREFIX = "agg_";
 export const AGGREGATOR_ADD_INPUT_HANDLE_ID = "__add_aggregator_input__";
 
 export const getNextAggregatorInputName = (
