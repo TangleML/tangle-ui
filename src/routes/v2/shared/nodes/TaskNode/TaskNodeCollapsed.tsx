@@ -1,5 +1,4 @@
 import { Handle, Position } from "@xyflow/react";
-import { cva } from "class-variance-authority";
 
 import { Card } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
@@ -7,46 +6,12 @@ import { cn } from "@/lib/utils";
 import { getContrastTextColor } from "@/routes/v2/shared/nodes/TaskNode/color.utils";
 
 import type { TaskNodeViewProps } from "./TaskNode";
+import { createTaskNodeCardVariants } from "./taskNode.variants";
 
 const s = "var(--collapsed-scale, 1)";
 
-const collapsedCardVariants = cva(
+const collapsedCardVariants = createTaskNodeCardVariants(
   "flex flex-col justify-center rounded-xl border-2 p-0 drop-shadow-sm cursor-pointer transition-[border-color,box-shadow]",
-  {
-    variants: {
-      selected: { true: "", false: "" },
-      hovered: { true: "", false: "" },
-      subgraph: { true: "", false: "" },
-    },
-    compoundVariants: [
-      {
-        selected: false,
-        hovered: false,
-        subgraph: false,
-        className: "border-gray-200 hover:border-gray-300",
-      },
-      {
-        selected: false,
-        hovered: false,
-        subgraph: true,
-        className: "border-purple-300 hover:border-purple-400",
-      },
-      {
-        selected: false,
-        hovered: true,
-        className: "ring-2 ring-amber-300 border-amber-400",
-      },
-      {
-        selected: true,
-        className: "border-blue-500 ring-2 ring-blue-200",
-      },
-    ],
-    defaultVariants: {
-      selected: false,
-      hovered: false,
-      subgraph: false,
-    },
-  },
 );
 
 export function TaskNodeCollapsed({

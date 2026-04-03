@@ -1,4 +1,5 @@
 import { Handle, Position } from "@xyflow/react";
+import { cva } from "class-variance-authority";
 import { observer } from "mobx-react-lite";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +15,74 @@ import { cn } from "@/lib/utils";
 import { InputValidationIndicator } from "@/routes/v2/shared/components/InputValidationIndicator";
 
 import type { TaskNodeInput, TaskNodeViewProps } from "./TaskNode";
+
+const classicCardVariants = cva(
+  "min-w-[300px] max-w-[350px] rounded-2xl border-2 p-0 drop-shadow-none cursor-pointer gap-2",
+  {
+    variants: {
+      selected: { true: "", false: "" },
+      hovered: { true: "", false: "" },
+      subgraph: { true: "", false: "" },
+    },
+    compoundVariants: [
+      {
+        selected: false,
+        hovered: false,
+        subgraph: false,
+        className: "border-gray-200 hover:border-slate-200",
+      },
+      {
+        selected: false,
+        hovered: false,
+        subgraph: true,
+        className: "border-purple-300 hover:border-purple-400",
+      },
+      {
+        selected: false,
+        hovered: true,
+        className: "border-amber-400",
+      },
+      {
+        selected: true,
+        className: "border-gray-500",
+      },
+    ],
+    defaultVariants: {
+      selected: false,
+      hovered: false,
+      subgraph: false,
+    },
+  },
+);
+
+const classicInputLabelVariants = cva(
+  "text-xs text-gray-800 rounded-md px-2 py-1 truncate bg-gray-200 hover:bg-gray-300",
+  {
+    variants: {
+      hasValue: { true: "", false: "" },
+      hasDefault: { true: "", false: "" },
+      optional: { true: "", false: "" },
+    },
+    compoundVariants: [
+      {
+        hasValue: false,
+        hasDefault: true,
+        className: "opacity-50 italic",
+      },
+      {
+        hasValue: false,
+        hasDefault: false,
+        optional: true,
+        className: "opacity-50 italic",
+      },
+    ],
+    defaultVariants: {
+      hasValue: false,
+      hasDefault: false,
+      optional: false,
+    },
+  },
+);
 
 interface ClassicInputHandleProps {
   input: TaskNodeInput;
@@ -58,11 +127,11 @@ function ClassicInputHandle({
           )}
         >
           <div
-            className={cn(
-              "text-xs text-gray-800 rounded-md px-2 py-1 truncate bg-gray-200 hover:bg-gray-300",
-              !hasValue && hasDefault && "opacity-50 italic",
-              input.optional && !hasValue && !hasDefault && "opacity-50 italic",
-            )}
+            className={classicInputLabelVariants({
+              hasValue,
+              hasDefault,
+              optional: input.optional ?? false,
+            })}
             title={`${input.name}${input.type ? `: ${input.type}` : ""}`}
           >
             {input.name.replace(/_/g, " ")}
@@ -107,16 +176,11 @@ export const TaskNodeClassic = observer(function TaskNodeClassic({
 }: TaskNodeViewProps) {
   return (
     <Card
-      className={cn(
-        "min-w-[300px] max-w-[350px] rounded-2xl border-2 p-0 drop-shadow-none cursor-pointer gap-2",
-        selected
-          ? "border-gray-500"
-          : isHovered
-            ? "border-amber-400"
-            : isSubgraph
-              ? "border-purple-300 hover:border-purple-400"
-              : "border-gray-200 hover:border-slate-200",
-      )}
+      className={classicCardVariants({
+        selected,
+        hovered: isHovered,
+        subgraph: isSubgraph,
+      })}
       onClick={onNodeClick}
     >
       <CardHeader className="border-b border-slate-200 px-2 py-2.5">

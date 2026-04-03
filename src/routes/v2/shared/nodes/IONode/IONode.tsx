@@ -1,14 +1,53 @@
 import { Handle, type Node, type NodeProps, Position } from "@xyflow/react";
+import { cva } from "class-variance-authority";
 import { observer } from "mobx-react-lite";
 
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
-import { cn } from "@/lib/utils";
 import type { IONodeData } from "@/routes/v2/shared/nodes/types";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+
+const ioNodeCardVariants = cva(
+  "min-w-[120px] max-w-[180px] rounded-xl border-2 p-0 drop-shadow-sm cursor-pointer transition-all",
+  {
+    variants: {
+      selected: { true: "", false: "" },
+      hovered: { true: "", false: "" },
+      isInput: { true: "bg-blue-50", false: "bg-green-50" },
+    },
+    compoundVariants: [
+      {
+        selected: false,
+        hovered: false,
+        className: "border-gray-200 hover:border-gray-300",
+      },
+      {
+        selected: false,
+        hovered: true,
+        className: "ring-2 ring-amber-300 border-amber-400",
+      },
+      {
+        selected: true,
+        className: "border-blue-500 ring-2 ring-blue-200",
+      },
+    ],
+    defaultVariants: {
+      selected: false,
+      hovered: false,
+      isInput: true,
+    },
+  },
+);
+
+const ioNodeIconVariants = cva("shrink-0", {
+  variants: {
+    isInput: { true: "text-blue-500", false: "text-green-500" },
+  },
+  defaultVariants: { isInput: true },
+});
 
 type IONodeType = Node<IONodeData, "io">;
 type IONodeProps = NodeProps<IONodeType>;
@@ -51,15 +90,11 @@ export const IONode = observer(function IONode({
 
   return (
     <Card
-      className={cn(
-        "min-w-[120px] max-w-[180px] rounded-xl border-2 p-0 drop-shadow-sm cursor-pointer transition-all",
-        selected
-          ? "border-blue-500 ring-2 ring-blue-200"
-          : isHovered
-            ? "ring-2 ring-amber-300 border-amber-400"
-            : "border-gray-200 hover:border-gray-300",
-        isInput ? "bg-blue-50" : "bg-green-50",
-      )}
+      className={ioNodeCardVariants({
+        selected: !!selected,
+        hovered: isHovered,
+        isInput,
+      })}
       onClick={handleClick}
     >
       <CardHeader className="px-3 py-2.5">
@@ -67,10 +102,7 @@ export const IONode = observer(function IONode({
           <Icon
             name={isInput ? "Download" : "Upload"}
             size="sm"
-            className={cn(
-              "shrink-0",
-              isInput ? "text-blue-500" : "text-green-500",
-            )}
+            className={ioNodeIconVariants({ isInput })}
           />
           <CardTitle className="truncate text-sm font-medium text-slate-800">
             {name}
