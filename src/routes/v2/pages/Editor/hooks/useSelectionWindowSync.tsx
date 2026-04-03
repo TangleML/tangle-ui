@@ -1,13 +1,12 @@
-/**
- * todo: refactor to reduce if-nesting and improve readability
- */
 import { reaction } from "mobx";
 import { useEffect } from "react";
 
 import { ContextPanelContent } from "@/routes/v2/pages/Editor/components/ContextPanel/ContextPanel";
 import { PinnedTaskContent } from "@/routes/v2/pages/Editor/components/PinnedTaskContent/PinnedTaskContent";
+import type { EditorStore } from "@/routes/v2/shared/store/editorStore";
 import type { NavigationStore } from "@/routes/v2/shared/store/navigationStore";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import type { WindowStoreImpl } from "@/routes/v2/shared/windows/windowStore";
 
 const CONTEXT_PANEL_WINDOW_ID = "context-panel";
 
@@ -23,6 +22,47 @@ function getTaskNameByEntityId(
   if (!spec) return null;
   const task = spec.tasks.find((t) => t.$id === entityId);
   return task?.name ?? null;
+}
+
+function handleShiftClickPin(
+  navigation: NavigationStore,
+  windows: WindowStoreImpl,
+  editor: EditorStore,
+  entityId: string,
+) {
+  const taskName = getTaskNameByEntityId(navigation, entityId);
+  if (taskName) {
+    windows.openWindow(<PinnedTaskContent entityId={entityId} />, {
+      id: generatePinnedWindowId(),
+      title: taskName,
+      linkedEntityId: entityId,
+    });
+  }
+  editor.selectNode(null, null);
+}
+
+function ensureContextPanelVisible(windows: WindowStoreImpl) {
+  const existing = windows.getWindowById(CONTEXT_PANEL_WINDOW_ID);
+
+  if (existing?.state === "hidden") {
+    windows.restoreWindow(CONTEXT_PANEL_WINDOW_ID);
+    return;
+  }
+  if (existing) return;
+
+  windows.openWindow(<ContextPanelContent />, {
+    id: CONTEXT_PANEL_WINDOW_ID,
+    title: "Properties",
+    position: { x: window.innerWidth - 340, y: 80 },
+    size: { width: 300, height: 400 },
+    startVisible: true,
+    persisted: true,
+  });
+}
+
+function closeContextPanel(windows: WindowStoreImpl) {
+  const existing = windows.getWindowById(CONTEXT_PANEL_WINDOW_ID);
+  if (existing) windows.closeWindow(CONTEXT_PANEL_WINDOW_ID);
 }
 
 export function useSelectionWindowSync() {
@@ -45,60 +85,22 @@ export function useSelectionWindowSync() {
         multiSelectionLength,
       }) => {
         if (lastSelectionWasShiftClick && lastShiftClickEntityId) {
-          const taskName = getTaskNameByEntityId(
+          handleShiftClickPin(
             navigation,
+            windows,
+            editor,
             lastShiftClickEntityId,
           );
-          if (taskName) {
-            windows.openWindow(
-              <PinnedTaskContent entityId={lastShiftClickEntityId} />,
-              {
-                id: generatePinnedWindowId(),
-                title: taskName,
-                linkedEntityId: lastShiftClickEntityId,
-              },
-            );
-          }
-          editor.selectNode(null, null);
           return;
         }
 
-        if (multiSelectionLength > 1) {
-          const existingWindow = windows.getWindowById(CONTEXT_PANEL_WINDOW_ID);
-          if (existingWindow) {
-            if (existingWindow.state === "hidden")
-              windows.restoreWindow(CONTEXT_PANEL_WINDOW_ID);
-          } else {
-            windows.openWindow(<ContextPanelContent />, {
-              id: CONTEXT_PANEL_WINDOW_ID,
-              title: "Properties",
-              position: { x: window.innerWidth - 340, y: 80 },
-              size: { width: 300, height: 400 },
-              startVisible: true,
-              persisted: true,
-            });
-          }
-          return;
-        }
+        const shouldShowPanel =
+          multiSelectionLength > 1 || (selectedNodeId && selectedNodeType);
 
-        if (selectedNodeId && selectedNodeType) {
-          const existingWindow = windows.getWindowById(CONTEXT_PANEL_WINDOW_ID);
-          if (existingWindow) {
-            if (existingWindow.state === "hidden")
-              windows.restoreWindow(CONTEXT_PANEL_WINDOW_ID);
-          } else {
-            windows.openWindow(<ContextPanelContent />, {
-              id: CONTEXT_PANEL_WINDOW_ID,
-              title: "Properties",
-              position: { x: window.innerWidth - 340, y: 80 },
-              size: { width: 300, height: 400 },
-              startVisible: true,
-              persisted: true,
-            });
-          }
+        if (shouldShowPanel) {
+          ensureContextPanelVisible(windows);
         } else {
-          const existingWindow = windows.getWindowById(CONTEXT_PANEL_WINDOW_ID);
-          if (existingWindow) windows.closeWindow(CONTEXT_PANEL_WINDOW_ID);
+          closeContextPanel(windows);
         }
       },
     );
