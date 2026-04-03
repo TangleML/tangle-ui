@@ -39,6 +39,24 @@ export function registerDockAreaElement(
   dockAreaElements[side] = element;
 }
 
+function isMouseInsideDockArea(
+  mouseX: number,
+  mouseY: number,
+  rect: DOMRect,
+): boolean {
+  return (
+    mouseX >= rect.left - DOCK_AREA_SNAP_THRESHOLD &&
+    mouseX <= rect.right + DOCK_AREA_SNAP_THRESHOLD &&
+    mouseY >= rect.top &&
+    mouseY <= rect.bottom
+  );
+}
+
+function isNearDockEdge(side: "left" | "right", mouseX: number): boolean {
+  if (side === "left") return mouseX <= DOCK_AREA_SNAP_THRESHOLD;
+  return mouseX >= window.innerWidth - DOCK_AREA_SNAP_THRESHOLD;
+}
+
 /**
  * Detect if the cursor is inside or near a dock area.
  * Returns the side and insertion index if applicable.
@@ -54,15 +72,9 @@ function detectDockAreaSnap(
     if (!enabledSides.has(side)) continue;
     const el = dockAreaElements[side];
 
-    // If dock area exists, check if mouse is inside it
     if (el) {
       const rect = el.getBoundingClientRect();
-      if (
-        mouseX >= rect.left - DOCK_AREA_SNAP_THRESHOLD &&
-        mouseX <= rect.right + DOCK_AREA_SNAP_THRESHOLD &&
-        mouseY >= rect.top &&
-        mouseY <= rect.bottom
-      ) {
+      if (isMouseInsideDockArea(mouseX, mouseY, rect)) {
         const { insertIndex, indicatorY } = calculateInsertPosition(
           el,
           mouseY,
@@ -81,15 +93,8 @@ function detectDockAreaSnap(
       continue;
     }
 
-    // No dock area element - check viewport edge for creating a new dock area
-    if (side === "left" && mouseX <= DOCK_AREA_SNAP_THRESHOLD) {
-      return { type: "edge", side: "left" };
-    }
-    if (
-      side === "right" &&
-      mouseX >= window.innerWidth - DOCK_AREA_SNAP_THRESHOLD
-    ) {
-      return { type: "edge", side: "right" };
+    if (isNearDockEdge(side, mouseX)) {
+      return { type: "edge", side };
     }
   }
 
