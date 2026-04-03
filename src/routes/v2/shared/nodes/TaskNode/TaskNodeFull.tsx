@@ -15,6 +15,11 @@ import { InputValidationIndicator } from "@/routes/v2/shared/components/InputVal
 import { getContrastTextColor } from "@/routes/v2/shared/nodes/TaskNode/color.utils";
 
 import type { TaskNodeViewProps } from "./TaskNode";
+import { createTaskNodeCardVariants } from "./taskNode.variants";
+
+const fullCardVariants = createTaskNodeCardVariants(
+  "min-w-[180px] max-w-[280px] rounded-xl border-2 p-0 drop-shadow-sm cursor-pointer transition-all",
+);
 
 export function TaskNodeFull({
   entityId,
@@ -36,16 +41,11 @@ export function TaskNodeFull({
 
   return (
     <Card
-      className={cn(
-        "min-w-[180px] max-w-[280px] rounded-xl border-2 p-0 drop-shadow-sm cursor-pointer transition-all",
-        selected
-          ? "border-blue-500 ring-2 ring-blue-200"
-          : isHovered
-            ? "ring-2 ring-amber-300 border-amber-400"
-            : isSubgraph
-              ? "border-purple-300 hover:border-purple-400"
-              : "border-gray-200 hover:border-gray-300",
-      )}
+      className={fullCardVariants({
+        selected,
+        hovered: isHovered,
+        subgraph: isSubgraph,
+      })}
       onClick={onNodeClick}
     >
       <CardHeader

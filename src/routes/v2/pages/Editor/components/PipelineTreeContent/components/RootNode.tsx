@@ -1,3 +1,4 @@
+import { cva } from "class-variance-authority";
 import { observer } from "mobx-react-lite";
 
 import { Button } from "@/components/ui/button";
@@ -6,6 +7,63 @@ import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import type { ComponentSpec } from "@/models/componentSpec";
+
+const rootRowVariants = cva(
+  "flex items-start w-full gap-1 py-1.5 px-2 rounded-md cursor-pointer transition-colors",
+  {
+    variants: {
+      isCurrentGraph: { true: "", false: "" },
+      hasErrors: { true: "", false: "" },
+    },
+    compoundVariants: [
+      {
+        isCurrentGraph: false,
+        hasErrors: false,
+        className: "hover:bg-slate-100",
+      },
+      {
+        isCurrentGraph: false,
+        hasErrors: true,
+        className: "bg-red-50/50 hover:bg-red-50",
+      },
+      {
+        isCurrentGraph: true,
+        className: "bg-blue-100 text-blue-900",
+      },
+    ],
+    defaultVariants: {
+      isCurrentGraph: false,
+      hasErrors: false,
+    },
+  },
+);
+
+const rootIconVariants = cva("shrink-0 mt-0.5", {
+  variants: {
+    isCurrentGraph: { true: "", false: "" },
+    hasErrors: { true: "", false: "" },
+  },
+  compoundVariants: [
+    {
+      isCurrentGraph: false,
+      hasErrors: false,
+      className: "text-slate-500",
+    },
+    {
+      isCurrentGraph: false,
+      hasErrors: true,
+      className: "text-red-500",
+    },
+    {
+      isCurrentGraph: true,
+      className: "text-blue-600",
+    },
+  ],
+  defaultVariants: {
+    isCurrentGraph: false,
+    hasErrors: false,
+  },
+});
 import { isSubgraphTask } from "@/routes/v2/pages/Editor/components/PipelineTreeContent/utils";
 import { countErrors } from "@/routes/v2/pages/Editor/components/ValidationSummary";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
@@ -58,14 +116,7 @@ export const RootNode = observer(function RootNode({
         tabIndex={0}
         onClick={handleClick}
         onKeyDown={(e) => e.key === "Enter" && handleClick()}
-        className={cn(
-          "flex items-start w-full gap-1 py-1.5 px-2 rounded-md cursor-pointer transition-colors",
-          isCurrentGraph
-            ? "bg-blue-100 text-blue-900"
-            : hasErrors
-              ? "bg-red-50/50 hover:bg-red-50"
-              : "hover:bg-slate-100",
-        )}
+        className={rootRowVariants({ isCurrentGraph, hasErrors })}
       >
         {hasChildren ? (
           <Button
@@ -87,14 +138,7 @@ export const RootNode = observer(function RootNode({
         <Icon
           name="Workflow"
           size="sm"
-          className={cn(
-            "shrink-0 mt-0.5",
-            isCurrentGraph
-              ? "text-blue-600"
-              : hasErrors
-                ? "text-red-500"
-                : "text-slate-500",
-          )}
+          className={rootIconVariants({ isCurrentGraph, hasErrors })}
         />
 
         <Text
