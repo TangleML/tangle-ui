@@ -1,7 +1,11 @@
 import { type Node, type XYPosition } from "@xyflow/react";
 
 import type { TaskNodeData } from "@/types/taskNode";
-import { setPositionInAnnotations } from "@/utils/annotations";
+import { AGGREGATOR_INPUT_PREFIX } from "@/utils/aggregatorInputs";
+import {
+  isPipelineAggregator,
+  setPositionInAnnotations,
+} from "@/utils/annotations";
 import {
   type ComponentSpec,
   type GraphInputArgument,
@@ -29,6 +33,7 @@ import {
   getUniqueOutputName,
   getUniqueTaskName,
 } from "@/utils/unique";
+import { componentSpecToText } from "@/utils/yaml";
 
 import {
   getFlexNode,
@@ -99,10 +104,40 @@ export const duplicateNodes = (
         y: node.position.y + OFFSET,
       });
 
-      const newTaskSpec = {
+      let newTaskSpec: TaskSpec = {
         ...taskSpec,
         annotations: updatedAnnotations,
       };
+
+      // Aggregator nodes accumulate dynamic agg_* inputs per connection. A pasted
+      // copy should start as a clean slate with no inputs and no agg_* arguments.
+      if (
+        isPipelineAggregator(taskSpec.componentRef?.spec?.metadata?.annotations)
+      ) {
+        const currentSpec = taskSpec.componentRef?.spec;
+        if (currentSpec) {
+          const strippedSpec = {
+            ...currentSpec,
+            inputs: (currentSpec.inputs ?? []).filter(
+              (input) => !input.name.startsWith(AGGREGATOR_INPUT_PREFIX),
+            ),
+          };
+          newTaskSpec = {
+            ...newTaskSpec,
+            arguments: Object.fromEntries(
+              Object.entries(newTaskSpec.arguments ?? {}).filter(
+                ([key]) => !key.startsWith(AGGREGATOR_INPUT_PREFIX),
+              ),
+            ),
+            componentRef: {
+              ...taskSpec.componentRef,
+              spec: strippedSpec,
+              text: componentSpecToText(strippedSpec),
+            },
+          };
+        }
+      }
+
       newTasks[newTaskId] = newTaskSpec;
     } else if (node.type === "input") {
       const inputSpec = componentSpec.inputs?.find(

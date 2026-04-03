@@ -15,6 +15,10 @@ import {
 } from "@/utils/componentSpec";
 import { deepClone } from "@/utils/deepClone";
 import {
+  instanceComponentSpec,
+  shouldInstanceSpec,
+} from "@/utils/instanceComponentSpec";
+import {
   getUniqueInputName,
   getUniqueOutputName,
   getUniqueTaskName,
@@ -91,16 +95,21 @@ const addTask = (
       return { spec: newComponentSpec, taskId };
     }
 
+    // Instance the spec if this component needs per-task isolation (e.g., aggregators)
+    let componentRefSpec = taskSpec.componentRef.spec;
+    let shouldBreakLibraryLink = false;
+    if (componentRefSpec && shouldInstanceSpec(componentRefSpec)) {
+      componentRefSpec = instanceComponentSpec(componentRefSpec);
+      shouldBreakLibraryLink = true;
+    }
+
     const defaultArguments =
-      taskSpec.componentRef.spec?.inputs?.reduce<Record<string, string>>(
-        (acc, input) => {
-          if (input.default) {
-            acc[input.name] = input.default;
-          }
-          return acc;
-        },
-        {},
-      ) ?? {};
+      componentRefSpec?.inputs?.reduce<Record<string, string>>((acc, input) => {
+        if (input.default) {
+          acc[input.name] = input.default;
+        }
+        return acc;
+      }, {}) ?? {};
 
     const mergedArguments = {
       ...defaultArguments,
@@ -112,16 +121,26 @@ const addTask = (
       ...annotations,
     };
 
+    // For instanced specs (like aggregators), remove the library link
+    // by omitting digest and url fields
+    const componentRef = shouldBreakLibraryLink
+      ? {
+          spec: componentRefSpec,
+          text: taskSpec.componentRef.text,
+        }
+      : {
+          ...taskSpec.componentRef,
+          spec: componentRefSpec,
+        };
+
     const updatedTaskSpec: TaskSpec = {
       ...taskSpec,
+      componentRef,
       annotations: mergedAnnotations,
       arguments: mergedArguments,
     };
 
-    taskId = getUniqueTaskName(
-      graphSpec,
-      taskSpec.componentRef.spec?.name ?? "Task",
-    );
+    taskId = getUniqueTaskName(graphSpec, componentRefSpec?.name ?? "Task");
 
     const newGraphSpec: GraphSpec = {
       ...graphSpec,

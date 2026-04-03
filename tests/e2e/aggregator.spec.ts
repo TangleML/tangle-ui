@@ -7,22 +7,29 @@ import {
   setBetaFlag,
 } from "./helpers";
 
+const INPUT_AGGREGATOR_URL =
+  "https://raw.githubusercontent.com/TangleML/tangle-ui/refs/heads/master/public/assets/components/input_aggregator.component.yaml";
+
 test.describe("Input Aggregator Component", () => {
   test.beforeEach(async ({ page }) => {
-    await setBetaFlag(page, "pipeline-aggregator", true);
+    await setBetaFlag(page, "input-aggregator", true);
+    // The component is served from GitHub raw in production, but that URL isn't
+    // accessible in CI until the standalone PR merges. Serve the local copy instead.
+    await page.route(INPUT_AGGREGATOR_URL, (route) =>
+      route.fulfill({
+        path: "tests/e2e/fixtures/input_aggregator.component.yaml",
+      }),
+    );
   });
 
-  test.skip("should render aggregator component with custom UI elements", async ({
+  test("should render aggregator component with custom UI elements", async ({
     page,
   }) => {
-    // Input Aggregator is not yet in the sidebar at this point in the stack.
-    // It is wired into the "Inputs & Outputs" folder in feat/fixes.
     await createNewPipeline(page);
-    await openComponentLibFolder(page, "Standard library");
 
     const node = await dropComponentFromLibraryOnCanvas(
       page,
-      "Beta",
+      "Inputs & Outputs",
       "Input Aggregator",
     );
 
@@ -50,14 +57,14 @@ test.describe("Input Aggregator Component", () => {
       page,
       "Quick start",
       "Chicago Taxi Trips dataset",
-      { targetPosition: { x: 400, y: 200 } },
+      { targetPosition: { x: 300, y: 300 } },
     );
 
     const aggregatorNode = await dropComponentFromLibraryOnCanvas(
       page,
-      "Beta",
+      "Inputs & Outputs",
       "Input Aggregator",
-      { targetPosition: { x: 400, y: 550 } },
+      { targetPosition: { x: 600, y: 300 } },
     );
 
     await expect(sourceNode).toBeVisible();
@@ -69,27 +76,26 @@ test.describe("Input Aggregator Component", () => {
 
     const sourceHandle = sourceNode.locator('[data-handleid="output_Table"]');
     const targetHandle = aggregatorNode.locator(
-      '[data-handleid="input___add_aggregator_input__"]',
+      '[data-handleid="__add_aggregator_input__"]',
     );
 
-    await sourceHandle.dragTo(targetHandle);
+    await sourceHandle.hover();
+    await page.mouse.down();
+    await targetHandle.hover();
+    await page.mouse.up();
 
-    await expect(
-      aggregatorNode.locator('[data-testid^="input-connection-"]'),
-    ).toHaveCount(initialInputs + 1);
+    const updatedInputs = await aggregatorNode
+      .locator('[data-testid^="input-connection-"]')
+      .count();
+    expect(updatedInputs).toBe(initialInputs + 1);
   });
 
-  test.skip("should change output type when selector is used", async ({
-    page,
-  }) => {
-    // Input Aggregator is not yet in the sidebar at this point in the stack.
-    // It is wired into the "Inputs & Outputs" folder in feat/fixes.
+  test("should change output type when selector is used", async ({ page }) => {
     await createNewPipeline(page);
-    await openComponentLibFolder(page, "Standard library");
 
     const node = await dropComponentFromLibraryOnCanvas(
       page,
-      "Beta",
+      "Inputs & Outputs",
       "Input Aggregator",
     );
 

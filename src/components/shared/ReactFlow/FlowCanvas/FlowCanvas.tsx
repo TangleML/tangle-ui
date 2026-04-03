@@ -15,10 +15,17 @@ import {
   useEdgesState,
   useNodesState,
   useStoreApi,
+  useUpdateNodeInternals,
   type XYPosition,
 } from "@xyflow/react";
 import type { DragEvent, Ref } from "react";
-import { useEffect, useImperativeHandle, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
 
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
 import { BlockStack } from "@/components/ui/layout";
@@ -82,6 +89,8 @@ import { isPositionInNode } from "./utils/geometry";
 import { getNodeFromEvent } from "./utils/getNodeFromEvent";
 import { getPositionFromEvent } from "./utils/getPositionFromEvent";
 import { handleAggregatorConnection } from "./utils/handleAggregatorConnection";
+import { handleAggregatorEdgeDeletion } from "./utils/handleAggregatorEdgeDeletion";
+import { handleConnection } from "./utils/handleConnection";
 import { removeEdge } from "./utils/removeEdge";
 import { removeNode } from "./utils/removeNode";
 import { replaceTaskNode } from "./utils/replaceTaskNode";
@@ -150,6 +159,8 @@ const FlowCanvasContent = ({
   } = useComponentSpec();
   const { preserveIOSelectionOnSpecChange, resetPrevSpec } =
     useIOSelectionPersistence();
+
+  const updateNodeInternals = useUpdateNodeInternals();
 
   const store = useStoreApi();
   const getSelectedNodes = () =>
@@ -342,9 +353,33 @@ const FlowCanvasContent = ({
   const onElementsRemove = (params: NodesAndEdges) => {
     let updatedSubgraphSpec = { ...currentSubgraphSpec };
 
-    for (const edge of params.edges) {
+    // Collect all edges that need to be removed, including those connected to deleted nodes
+    const edgesToRemove = [...params.edges];
+
+    // Add edges connected to deleted nodes
+    for (const node of params.nodes) {
+      const connectedEdges = edges.filter(
+        (edge) => edge.source === node.id || edge.target === node.id,
+      );
+      for (const edge of connectedEdges) {
+        if (!edgesToRemove.find((e) => e.id === edge.id)) {
+          edgesToRemove.push(edge);
+        }
+      }
+    }
+
+    // Handle aggregator input cleanup for deleted edges
+    updatedSubgraphSpec = handleAggregatorEdgeDeletion(
+      updatedSubgraphSpec,
+      edgesToRemove,
+    );
+
+    // Remove edges
+    for (const edge of edgesToRemove) {
       updatedSubgraphSpec = removeEdge(edge, updatedSubgraphSpec);
     }
+
+    // Remove nodes
     for (const node of params.nodes) {
       updatedSubgraphSpec = removeNode(node, updatedSubgraphSpec);
     }
@@ -393,22 +428,93 @@ const FlowCanvasContent = ({
     setNodes((prevNodes) => {
       const updatedNodes = updatedNewNodes.map((newNode) => {
         const existingNode = prevNodes.find((node) => node.id === newNode.id);
-        return existingNode ? { ...existingNode, ...newNode } : newNode;
+        if (!existingNode) {
+          return newNode;
+        }
+
+        // For task nodes, completely replace the data to ensure React sees the change
+        if (newNode.type === "task") {
+          return {
+            ...existingNode,
+            ...newNode,
+            data: newNode.data, // Complete replacement for task nodes
+          };
+        }
+
+        // For other nodes, deep merge
+        return {
+          ...existingNode,
+          ...newNode,
+          data: {
+            ...existingNode.data,
+            ...newNode.data,
+          },
+        };
       });
 
       return updatedNodes;
     });
   };
 
-  const onConnect = (connection: Connection) => {
-    if (connection.source === connection.target) return;
+  // Track the most recent graphSpec to avoid stale state issues with quick consecutive connections
+  const latestGraphSpecRef = useRef(currentGraphSpec);
 
-    const updatedGraphSpec = handleAggregatorConnection(
-      currentGraphSpec,
-      connection,
-    );
-    updateGraphSpec(updatedGraphSpec);
-  };
+  useEffect(() => {
+    latestGraphSpecRef.current = currentGraphSpec;
+  }, [currentGraphSpec]);
+
+  const onConnect = useCallback(
+    (connection: Connection) => {
+      if (connection.source === connection.target) return;
+
+      const isAggregatorConnection =
+        connection.targetHandle === "__add_aggregator_input__";
+
+      // Use the ref to get the most recent graphSpec, avoiding stale closure issues
+      const result = handleAggregatorConnection(
+        latestGraphSpecRef.current,
+        connection,
+        updateNodeInternals,
+      );
+
+      // Update both the ref and the state with the new spec (which includes the new input)
+      latestGraphSpecRef.current = result.graphSpec;
+      updateGraphSpec(result.graphSpec);
+
+      // For aggregator connections, if we should create an edge, do it in the next tick
+      // after React Flow has processed the node updates
+      if (
+        isAggregatorConnection &&
+        result.shouldCreateEdge &&
+        result.redirectedConnection
+      ) {
+        const targetNodeId = connection.target;
+        const redirectedConn = result.redirectedConnection;
+
+        // Update node internals multiple times to ensure React Flow sees the new handles
+        updateNodeInternals(targetNodeId);
+
+        // Create the edge connection after a slight delay
+        requestAnimationFrame(() => {
+          updateNodeInternals(targetNodeId);
+
+          // Now create the actual connection with the redirected handle
+          const finalGraphSpec = handleConnection(
+            latestGraphSpecRef.current,
+            redirectedConn,
+          );
+          latestGraphSpecRef.current = finalGraphSpec;
+          updateGraphSpec(finalGraphSpec);
+
+          // One more update to ensure edge renders properly
+          requestAnimationFrame(() => {
+            updateNodeInternals(targetNodeId);
+          });
+        });
+      }
+    },
+    [updateGraphSpec, updateNodeInternals],
+  );
 
   const handleGhostDrop = (
     finalConnectionState: FinalConnectionState | null,
