@@ -20,12 +20,10 @@ import {
   SearchInput,
   SearchResults,
 } from "../components";
-import { ComponentDetailsPreview } from "../components/ComponentDetailsPreview";
 import {
   IONodeSidebarItem,
   StickyNoteSidebarItem,
 } from "../components/ComponentItem";
-import { ComponentPreviewProvider } from "../components/ComponentPreviewProvider";
 import { LibraryFolderItem } from "../components/FolderItem";
 import PublishedComponentsSearch from "../components/PublishedComponentsSearch";
 import { SidebarSection } from "../components/SidebarSection";
@@ -74,6 +72,7 @@ const GraphComponents = () => {
     if (!componentLibrary) return <EmptyState />;
 
     if (!remoteComponentLibrarySearchEnabled && searchResult) {
+      // If there's a search result, use the SearchResults component
       return (
         <SearchResults
           searchResult={searchResult}
@@ -82,6 +81,7 @@ const GraphComponents = () => {
       );
     }
 
+    // Otherwise show the regular folder structure
     const hasUsedComponents =
       usedComponentsFolder?.components &&
       usedComponentsFolder.components.length > 0;
@@ -93,116 +93,101 @@ const GraphComponents = () => {
       userComponentsFolder?.components &&
       userComponentsFolder.components.length > 0;
 
-    const componentList = (
-      <BlockStack className="flex-1 min-h-0 overflow-y-auto @[600px]:border-r @[600px]:border-border">
-        <FolderItem
-          key="canvas-tools-folder"
-          folder={
-            {
-              name: "Canvas Tools",
-              components: [<StickyNoteSidebarItem key="sticky-note" />],
-              folders: [],
-            } as UIComponentFolder
-          }
-          icon="ToolCase"
-        />
-        <Separator />
-        {hasUsedComponents && (
-          <FolderItem
-            key="used-components-folder"
-            folder={usedComponentsFolder}
-            icon="LayoutGrid"
-          />
-        )}
-        {hasFavouriteComponents && (
-          <FolderItem
-            key="favorite-components-folder"
-            folder={favoritesFolder}
-            icon="Star"
-          />
-        )}
-        {hasUserComponents && (
-          <FolderItem
-            key="my-components-folder"
-            folder={userComponentsFolder}
-            icon="Puzzle"
-          />
-        )}
-        <Separator />
-        <FolderItem
-          key="graph-inputs-outputs-folder"
-          folder={
-            {
-              name: "Inputs & Outputs",
-              components: [
-                <IONodeSidebarItem key="input" nodeType="input" />,
-                <IONodeSidebarItem key="output" nodeType="output" />,
-              ],
-              folders: [],
-            } as UIComponentFolder
-          }
-          icon="Cable"
-        />
-        <Separator />
-        <FolderItem
-          key="standard-library-folder"
-          folder={
-            {
-              name: "Standard library",
-              components: [],
-              folders: componentLibrary.folders,
-            } as UIComponentFolder
-          }
-          icon="Folder"
-        />
-        {githubComponentLibraryEnabled && (
-          <>
-            <Separator />
-            <BlockStack gap="1" className="pl-2 py-2">
-              <InlineStack className="w-full" align="space-between">
-                <Text size="sm" tone="subdued">
-                  Connected libraries
-                </Text>
-                <ManageLibrariesDialog />
-              </InlineStack>
-
-              {existingComponentLibraries?.length === 0 && (
-                <BlockStack gap="1" align="center">
-                  <Text size="sm" tone="subdued">
-                    No libraries connected
-                  </Text>
-                </BlockStack>
-              )}
-            </BlockStack>
-
-            {existingComponentLibraries?.map((library) => (
-              <LibraryFolderItem
-                key={library.id}
-                library={getComponentLibrary(library.id)}
-                icon={library.icon as any /** todo: fix this */}
-              />
-            ))}
-          </>
-        )}
-      </BlockStack>
-    );
-
     return (
-      <BlockStack
-        data-testid="component-library-content"
-        className="@container"
-        fill
-      >
+      <BlockStack gap="2">
         {remoteComponentLibrarySearchEnabled && <UpgradeAvailableAlertBox />}
 
-        <InlineStack
-          className="flex-col @[600px]:grid @[600px]:grid-cols-[40%_60%]"
-          fill
-          data-testid="component-library-content-container"
-        >
-          {componentList}
-          <ComponentDetailsPreview />
-        </InlineStack>
+        <BlockStack>
+          <FolderItem
+            key="canvas-tools-folder"
+            folder={
+              {
+                name: "Canvas Tools",
+                components: [<StickyNoteSidebarItem key="sticky-note" />],
+                folders: [],
+              } as UIComponentFolder
+            }
+            icon="ToolCase"
+          />
+          <Separator />
+          {hasUsedComponents && (
+            <FolderItem
+              key="used-components-folder"
+              folder={usedComponentsFolder}
+              icon="LayoutGrid"
+            />
+          )}
+          {hasFavouriteComponents && (
+            <FolderItem
+              key="favorite-components-folder"
+              folder={favoritesFolder}
+              icon="Star"
+            />
+          )}
+          {hasUserComponents && (
+            <FolderItem
+              key="my-components-folder"
+              folder={userComponentsFolder}
+              icon="Puzzle"
+            />
+          )}
+          <Separator />
+          <FolderItem
+            key="graph-inputs-outputs-folder"
+            folder={
+              {
+                name: "Inputs & Outputs",
+                components: [
+                  <IONodeSidebarItem key="input" nodeType="input" />,
+                  <IONodeSidebarItem key="output" nodeType="output" />,
+                ],
+                folders: [],
+              } as UIComponentFolder
+            }
+            icon="Cable"
+          />
+          <Separator />
+          <FolderItem
+            key="standard-library-folder"
+            folder={
+              {
+                name: "Standard library",
+                components: [],
+                folders: componentLibrary.folders,
+              } as UIComponentFolder
+            }
+            icon="Folder"
+          />
+          {githubComponentLibraryEnabled && (
+            <>
+              <Separator />
+              <BlockStack gap="1" className="pl-2 py-2">
+                <InlineStack className="w-full" align="space-between">
+                  <Text size="sm" tone="subdued">
+                    Connected libraries
+                  </Text>
+                  <ManageLibrariesDialog />
+                </InlineStack>
+
+                {existingComponentLibraries?.length === 0 && (
+                  <BlockStack gap="1" align="center">
+                    <Text size="sm" tone="subdued">
+                      No libraries connected
+                    </Text>
+                  </BlockStack>
+                )}
+              </BlockStack>
+
+              {existingComponentLibraries?.map((library) => (
+                <LibraryFolderItem
+                  key={library.id}
+                  library={getComponentLibrary(library.id)}
+                  icon={library.icon as any /** todo: fix this */}
+                />
+              ))}
+            </>
+          )}
+        </BlockStack>
       </BlockStack>
     );
   }, [
@@ -220,11 +205,9 @@ const GraphComponents = () => {
   ]);
 
   const searchComponent = remoteComponentLibrarySearchEnabled ? (
-    <ComponentPreviewProvider>
-      <PublishedComponentsSearch>{memoizedContent}</PublishedComponentsSearch>
-    </ComponentPreviewProvider>
+    <PublishedComponentsSearch>{memoizedContent}</PublishedComponentsSearch>
   ) : (
-    <ComponentPreviewProvider>
+    <>
       <SearchInput
         value={currentSearchFilter.searchTerm}
         activeFilters={currentSearchFilter.filters}
@@ -233,7 +216,7 @@ const GraphComponents = () => {
       />
 
       {memoizedContent}
-    </ComponentPreviewProvider>
+    </>
   );
 
   const importComponentAction = (

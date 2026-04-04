@@ -41,7 +41,6 @@ import type { ComponentFolder } from "@/types/componentLibrary";
 import { ComponentSearchFilter } from "@/utils/constants";
 import { debounce } from "@/utils/debounce";
 
-import { ComponentDetailsPreview } from "./ComponentDetailsPreview";
 import { ComponentMarkup } from "./ComponentItem";
 
 /**
@@ -245,21 +244,14 @@ const SearchResults = ({ searchResult }: SearchResultsProps) => {
     0,
   );
 
-  const resultsList = (
-    <BlockStack
-      gap="2"
-      className="px-2 min-h-0 @[600px]:border-r @[600px]:border-border"
-      data-testid="search-results-container"
-    >
+  return (
+    <BlockStack gap="2" className="px-2" data-testid="search-results-container">
       <Text
         tone="subdued"
         data-testid="search-results-header"
       >{`Search Results (${totalResults})`}</Text>
       <Separator />
-      <div
-        className="h-[calc(100vh-400px)] w-full overflow-y-auto overflow-x-hidden scrollbar-thin"
-        data-testid="search-results-list"
-      >
+      <div className="h-[calc(100vh-400px)] w-full overflow-y-auto overflow-x-hidden scrollbar-thin">
         <ul>
           {totalResults > 0 ? (
             searchResult.map((folder) => (
@@ -286,18 +278,6 @@ const SearchResults = ({ searchResult }: SearchResultsProps) => {
           )}
         </ul>
       </div>
-    </BlockStack>
-  );
-
-  return (
-    <BlockStack className="@container" fill>
-      <InlineStack
-        className="flex-col @[600px]:grid @[600px]:grid-cols-[40%_60%]"
-        fill
-      >
-        {resultsList}
-        <ComponentDetailsPreview />
-      </InlineStack>
     </BlockStack>
   );
 };

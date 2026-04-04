@@ -22,11 +22,6 @@ const createNodesFromComponentSpec = (
     return [];
   }
 
-  console.log(
-    `%c createNodesFromComponentSpec`,
-    "color: green; font-weight: bold;",
-  );
-
   const graphSpec = componentSpec.implementation.graph;
   const taskNodes = createTaskNodes(graphSpec, nodeData, readOnly);
   const inputNodes = createInputNodes(componentSpec, nodeData, readOnly);

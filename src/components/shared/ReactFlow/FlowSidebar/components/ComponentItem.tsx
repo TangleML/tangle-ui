@@ -1,5 +1,5 @@
 import type { ComponentProps, DragEvent } from "react";
-import { useCallback, useContext, useMemo, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
 
 import { ComponentDetailsDialog } from "@/components/shared/Dialogs";
 import { ComponentFavoriteToggle } from "@/components/shared/FavoriteComponentToggle";
@@ -22,7 +22,6 @@ import {
   ComponentHoverPopover,
   type ComponentHoverPopoverHandle,
 } from "./ComponentHoverPopover";
-import { ComponentPreviewContext } from "./ComponentPreviewProvider";
 
 interface ComponentMarkupProps {
   component: ComponentReference;
@@ -82,9 +81,6 @@ const ComponentMarkup = ({
     "remote-component-library-search",
   );
 
-  // Optional context for component preview - may not be available in all contexts
-  const previewContext = useContext(ComponentPreviewContext);
-
   const popoverRef = useRef<ComponentHoverPopoverHandle>(null);
 
   // TODO: respect selected node as a starting point
@@ -125,9 +121,6 @@ const ComponentMarkup = ({
   );
 
   const onMouseEnter = useCallback(() => {
-    // Update preview context if available
-    previewContext?.setHoveredComponent(component);
-
     if (!digest) return;
 
     const nodeIds = getNodeIdsByDigest(digest);
@@ -136,12 +129,9 @@ const ComponentMarkup = ({
         type: "highlight",
       });
     });
-  }, [digest, previewContext, component]);
+  }, [digest]);
 
   const onMouseLeave = useCallback(() => {
-    // Clear preview context if available
-    previewContext?.setHoveredComponent(null);
-
     if (!digest) return;
 
     const nodeIds = getNodeIdsByDigest(digest);
@@ -150,7 +140,7 @@ const ComponentMarkup = ({
         type: "clear",
       });
     });
-  }, [digest, previewContext]);
+  }, [digest]);
 
   const onMouseClick = useCallback(() => {
     if (!digest) return;
@@ -179,7 +169,7 @@ const ComponentMarkup = ({
   return (
     <li
       className={cn(
-        "w-full pl-2 py-1.5",
+        "pl-2 py-1.5 w-full",
         error
           ? "cursor-not-allowed opacity-60"
           : "cursor-grab hover:bg-gray-100 active:bg-gray-200",
@@ -195,12 +185,11 @@ const ComponentMarkup = ({
             Error loading component
           </span>
         ) : (
-          <div
-            className="flex flex-row flex-nowrap w-full items-center"
+          <InlineStack
+            wrap="nowrap"
+            className="w-full"
             data-testid="component-item"
             data-component-name={displayName}
-            onMouseEnter={onMouseEnter}
-            onMouseLeave={onMouseLeave}
           >
             <InlineStack gap="2" className="flex-1 min-w-0" wrap="nowrap">
               {isRemoteComponentLibrarySearchEnabled ? (
@@ -235,7 +224,8 @@ const ComponentMarkup = ({
                 </span>
               </div>
             </InlineStack>
-            <InlineStack align="end" wrap="nowrap" className="shrink-0">
+
+            <InlineStack align="end" wrap="nowrap">
               <ComponentFavoriteToggle component={component} />
 
               <ComponentHoverPopover ref={popoverRef} component={component}>
@@ -248,7 +238,7 @@ const ComponentMarkup = ({
                 </InlineStack>
               </ComponentHoverPopover>
             </InlineStack>
-          </div>
+          </InlineStack>
         )}
       </InlineStack>
     </li>
