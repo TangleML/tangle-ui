@@ -1,10 +1,10 @@
+import { cva } from "class-variance-authority";
 import { observer } from "mobx-react-lite";
 import { useEffect, useRef, useState } from "react";
 
 import { getDynamicDataDisplayInfo } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/ArgumentsEditor/dynamicDataUtils";
 import { InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
-import { cn } from "@/lib/utils";
 import type {
   Binding,
   ComponentSpec,
@@ -16,10 +16,33 @@ import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import type { DynamicDataArgument } from "@/utils/componentSpec";
 
 import {
-  formatBindingSource,
-  getDisplayValue,
+  canResetArgument,
+  isDynamicDataValue,
+  resolveArgumentChange,
+  resolveDisplayValues,
   typeSpecToString,
 } from "./argumentRow.utils";
+
+const rowVariants = cva(
+  "group rounded px-2 py-1 cursor-pointer transition-colors w-full overflow-hidden",
+  {
+    variants: {
+      active: {
+        true: "bg-blue-50 ring-1 ring-blue-200",
+        false: "hover:bg-gray-50",
+      },
+      unset: { true: "opacity-60", false: "" },
+    },
+    defaultVariants: { active: false, unset: false },
+  },
+);
+
+const nameVariants = cva("shrink-0 text-gray-700", {
+  variants: {
+    unset: { true: "line-through", false: "" },
+  },
+  defaultVariants: { unset: false },
+});
 import { ArgumentValueDisplay } from "./components/ArgumentValueDisplay";
 import { InputValidationIndicator } from "./components/InputValidationIndicator";
 import { ThunderMenu } from "./components/ThunderMenu/ThunderMenu";
@@ -62,23 +85,16 @@ export const ArgumentRow = observer(function ArgumentRow({
   const isFocused = editor.focusedArgumentName === inputSpec.name;
   const isBound = binding !== undefined;
 
-  const isDynamic =
-    typeof currentValue === "object" &&
-    currentValue !== null &&
-    "dynamicData" in currentValue;
+  const isDynamic = isDynamicDataValue(currentValue);
   const dynamicDisplayInfo = isDynamic
-    ? getDynamicDataDisplayInfo(
-        (currentValue as DynamicDataArgument).dynamicData,
-      )
+    ? getDynamicDataDisplayInfo(currentValue.dynamicData)
     : null;
 
   const taskAnnotations = Object.fromEntries(
     task.annotations.map((a) => [a.key, a.value]),
   );
 
-  const canReset =
-    inputSpec.default !== undefined &&
-    (typeof currentValue !== "string" || currentValue !== inputSpec.default);
+  const canReset = canResetArgument(inputSpec, currentValue);
   const canUnset = isSet || isBound;
 
   useEffect(() => {
@@ -107,16 +123,12 @@ export const ArgumentRow = observer(function ArgumentRow({
 
   const handleChangeComplete = (value: string) => {
     const trimmed = value.trim();
-    if (trimmed === "" && !isSet && !isBound) return;
-
-    if (trimmed !== (typeof currentValue === "string" ? currentValue : "")) {
-      if (trimmed === "" && isSet) {
-        removeArgument(task, inputSpec.name);
-      } else {
-        setArgument(spec, task.$id, inputSpec.name, trimmed);
-      }
+    const action = resolveArgumentChange(trimmed, currentValue, isSet, isBound);
+    if (action === "remove") {
+      removeArgument(task, inputSpec.name);
+    } else if (action === "set") {
+      setArgument(spec, task.$id, inputSpec.name, trimmed);
     }
-
     handleBlur();
   };
 
@@ -150,24 +162,22 @@ export const ArgumentRow = observer(function ArgumentRow({
     createInputAndConnect(spec, [task.$id], inputSpec.name, inputSpec.type);
   };
 
-  const bindingLabel = isBound ? formatBindingSource(binding, spec) : undefined;
-  const displayValue = isBound
-    ? bindingLabel
-    : getDisplayValue(currentValue, isSet, inputSpec);
+  const { bindingLabel, displayValue } = resolveDisplayValues(
+    binding,
+    spec,
+    currentValue,
+    isSet,
+    inputSpec,
+  );
   const typeLabel = typeSpecToString(inputSpec.type);
 
   return (
     <div
       ref={rowRef}
-      className={cn(
-        "group rounded px-2 py-1 cursor-pointer transition-colors w-full overflow-hidden",
-        externalEditor && isFocused
-          ? "bg-blue-50 ring-1 ring-blue-200"
-          : editing
-            ? "bg-blue-50 ring-1 ring-blue-200"
-            : "hover:bg-gray-50",
-        !isSet && !isBound && "opacity-60",
-      )}
+      className={rowVariants({
+        active: (externalEditor && isFocused) || editing,
+        unset: !isSet && !isBound,
+      })}
       onClick={handleClick}
     >
       <InlineStack gap="1" blockAlign="center" className="w-full min-h-[24px]">
@@ -175,10 +185,7 @@ export const ArgumentRow = observer(function ArgumentRow({
           <Text
             size="xs"
             weight="semibold"
-            className={cn(
-              "shrink-0 text-gray-700",
-              !isSet && !isBound && "line-through",
-            )}
+            className={nameVariants({ unset: !isSet && !isBound })}
           >
             {inputSpec.name}
           </Text>
@@ -220,7 +227,7 @@ export const ArgumentRow = observer(function ArgumentRow({
         dynamicDisplayInfo={dynamicDisplayInfo}
         isBound={isBound}
         bindingLabel={bindingLabel}
-        displayValue={displayValue ?? ""}
+        displayValue={displayValue}
         task={task}
         inputSpec={inputSpec}
         currentValue={currentValue}

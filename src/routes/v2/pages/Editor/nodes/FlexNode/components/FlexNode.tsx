@@ -5,6 +5,7 @@ import {
   type ResizeDragEvent,
   type ResizeParams,
 } from "@xyflow/react";
+import { cva } from "class-variance-authority";
 import { type MouseEvent, useState } from "react";
 
 import { InlineTextEditor } from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/InlineTextEditor";
@@ -23,6 +24,123 @@ import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 type FlexNodeProps = NodeProps<Node<FlexNodeData>>;
 
 const MIN_SIZE = { width: 50, height: 50 };
+
+const flexNodeVariants = cva("p-1 rounded-lg h-full w-full group", {
+  variants: {
+    readOnlySelected: { true: "ring-2 ring-ring", false: "" },
+    locked: { true: "cursor-grab", false: "" },
+    transparent: { true: "", false: "" },
+    hasContent: { true: "", false: "" },
+    borderTransparent: { true: "", false: "" },
+  },
+  compoundVariants: [
+    {
+      transparent: true,
+      hasContent: true,
+      className: "border-2 border-solid",
+    },
+    {
+      transparent: true,
+      hasContent: false,
+      borderTransparent: false,
+      className: "border-2 border-solid",
+    },
+    {
+      transparent: true,
+      hasContent: false,
+      borderTransparent: true,
+      className: "border-2 border-dashed border-warning!",
+    },
+  ],
+  defaultVariants: {
+    readOnlySelected: false,
+    locked: false,
+    transparent: false,
+    hasContent: true,
+    borderTransparent: false,
+  },
+});
+
+function FlexNodeTitle({
+  title,
+  fontSize,
+  editing,
+  locked,
+  onSave,
+  onCancel,
+  onTab,
+  onDoubleClick,
+}: {
+  title: string;
+  fontSize: number;
+  editing: boolean;
+  locked: boolean;
+  onSave: (value: string) => void;
+  onCancel: () => void;
+  onTab: () => void;
+  onDoubleClick: (e: MouseEvent<HTMLParagraphElement>) => void;
+}) {
+  if (!title) return null;
+
+  if (editing) {
+    return (
+      <InlineTextEditor
+        value={title}
+        placeholder="Enter title..."
+        textSize={fontSize}
+        onSave={onSave}
+        onCancel={onCancel}
+        onTab={onTab}
+        className="font-bold"
+      />
+    );
+  }
+
+  return (
+    <p
+      style={{ fontSize }}
+      className="font-bold whitespace-pre-wrap w-full"
+      onDoubleClick={locked ? undefined : onDoubleClick}
+    >
+      {title}
+    </p>
+  );
+}
+
+function FlexNodeContent({
+  content,
+  fontSize,
+  editing,
+  onSave,
+  onCancel,
+  onTab,
+}: {
+  content: string;
+  fontSize: number;
+  editing: boolean;
+  onSave: (value: string) => void;
+  onCancel: () => void;
+  onTab: () => void;
+}) {
+  if (editing) {
+    return (
+      <InlineTextEditor
+        value={content}
+        placeholder="Enter text..."
+        textSize={fontSize}
+        onSave={onSave}
+        onCancel={onCancel}
+        onTab={onTab}
+      />
+    );
+  }
+
+  return (
+    <p style={{ fontSize }} className="whitespace-pre-wrap">
+      {content}
+    </p>
+  );
+}
 
 export const EditorV2FlexNode = ({ data, id, selected }: FlexNodeProps) => {
   const { editor } = useSharedStores();
@@ -68,9 +186,7 @@ export const EditorV2FlexNode = ({ data, id, selected }: FlexNodeProps) => {
   const handleDoubleClick = (e: MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-
     if (locked || readOnly) return;
-
     setIsInlineEditingTitle(false);
     setIsInlineEditingContent(true);
   };
@@ -88,23 +204,13 @@ export const EditorV2FlexNode = ({ data, id, selected }: FlexNodeProps) => {
   };
 
   const handleResizeEnd = (_: ResizeDragEvent, params: ResizeParams) => {
-    const width = Math.max(params.width, MIN_SIZE.width);
-    const height = Math.max(params.height, MIN_SIZE.height);
-
     updateCurrentFlexNode({
-      size: { width, height },
+      size: {
+        width: Math.max(params.width, MIN_SIZE.width),
+        height: Math.max(params.height, MIN_SIZE.height),
+      },
       position: { x: params.x, y: params.y },
     });
-  };
-
-  const handleSaveContent = (newContent: string) => {
-    updateProperties({ content: newContent });
-    setIsInlineEditingContent(false);
-  };
-
-  const handleSaveTitle = (newTitle: string) => {
-    updateProperties({ title: newTitle });
-    setIsInlineEditingTitle(false);
   };
 
   const switchEditor = () => {
@@ -114,6 +220,7 @@ export const EditorV2FlexNode = ({ data, id, selected }: FlexNodeProps) => {
 
   const isTransparent = color === "transparent";
   const isBorderTransparent = borderColor === "transparent";
+  const hasContent = !!title || !!content;
 
   return (
     <>
@@ -128,17 +235,13 @@ export const EditorV2FlexNode = ({ data, id, selected }: FlexNodeProps) => {
       )}
       <div
         key={id}
-        className={cn(
-          "p-1 rounded-lg h-full w-full group",
-          readOnly && selected && "ring-2 ring-ring",
-          isTransparent && "border-2 border-solid",
-          isTransparent &&
-            !title &&
-            !content &&
-            isBorderTransparent &&
-            "border-2 border-dashed border-warning!",
-          locked && "cursor-grab",
-        )}
+        className={flexNodeVariants({
+          readOnlySelected: !!(readOnly && selected),
+          locked,
+          transparent: isTransparent,
+          hasContent,
+          borderTransparent: isBorderTransparent,
+        })}
         style={{
           backgroundColor: color,
           borderColor: isTransparent ? borderColor : undefined,
@@ -161,44 +264,31 @@ export const EditorV2FlexNode = ({ data, id, selected }: FlexNodeProps) => {
               className="absolute top-1 right-1"
             />
 
-            {title &&
-              (isInlineEditingTitle ? (
-                <InlineTextEditor
-                  value={title}
-                  placeholder="Enter title..."
-                  textSize={titleFontSize}
-                  onSave={handleSaveTitle}
-                  onCancel={() => setIsInlineEditingTitle(false)}
-                  onTab={switchEditor}
-                  className="font-bold"
-                />
-              ) : (
-                <p
-                  style={{ fontSize: titleFontSize }}
-                  className="font-bold whitespace-pre-wrap w-full"
-                  onDoubleClick={handleDoubleClickTitle}
-                >
-                  {title}
-                </p>
-              ))}
+            <FlexNodeTitle
+              title={title}
+              fontSize={titleFontSize}
+              editing={isInlineEditingTitle}
+              locked={locked}
+              onSave={(newTitle) => {
+                updateProperties({ title: newTitle });
+                setIsInlineEditingTitle(false);
+              }}
+              onCancel={() => setIsInlineEditingTitle(false)}
+              onTab={switchEditor}
+              onDoubleClick={handleDoubleClickTitle}
+            />
 
-            {isInlineEditingContent ? (
-              <InlineTextEditor
-                value={content}
-                placeholder="Enter text..."
-                textSize={contentFontSize}
-                onSave={handleSaveContent}
-                onCancel={() => setIsInlineEditingContent(false)}
-                onTab={switchEditor}
-              />
-            ) : (
-              <p
-                style={{ fontSize: contentFontSize }}
-                className="whitespace-pre-wrap"
-              >
-                {content}
-              </p>
-            )}
+            <FlexNodeContent
+              content={content}
+              fontSize={contentFontSize}
+              editing={isInlineEditingContent}
+              onSave={(newContent) => {
+                updateProperties({ content: newContent });
+                setIsInlineEditingContent(false);
+              }}
+              onCancel={() => setIsInlineEditingContent(false)}
+              onTab={switchEditor}
+            />
           </BlockStack>
         </div>
       </div>

@@ -85,6 +85,7 @@
     "@types/gapi": "^0.0.47",
     "@types/papaparse": "^5.5.2",
     "@xyflow/react": "^12.10.2",
+    "@xyflow/system": "^0.0.76",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",

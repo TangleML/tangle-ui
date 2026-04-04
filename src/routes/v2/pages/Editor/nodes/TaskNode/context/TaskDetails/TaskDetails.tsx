@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/typography";
+import type { ComponentSpecJson, Task } from "@/models/componentSpec";
 import { AnnotationsBlock } from "@/routes/v2/pages/Editor/components/AnnotationsBlock/AnnotationsBlock";
 import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskActions";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
@@ -34,6 +35,60 @@ const EDITOR_ANNOTATION_KEYS = [
   "tangleml.com/editor/task-color",
   "tangleml.com/editor/edge-conduits",
 ];
+
+function getTaskDetailsCounts(
+  task: Task,
+  componentSpec: ComponentSpecJson | undefined,
+) {
+  return {
+    inputCount: componentSpec?.inputs?.length ?? 0,
+    outputCount: componentSpec?.outputs?.length ?? 0,
+    annotationCount: task.annotations.filter(
+      (a) => !EDITOR_ANNOTATION_KEYS.includes(a.key),
+    ).length,
+  };
+}
+
+function SectionTriggerWithBadge({
+  label,
+  count,
+}: {
+  label: string;
+  count: number;
+}) {
+  return (
+    <AccordionTrigger className="py-1.5 px-3 text-xs hover:no-underline">
+      <InlineStack gap="2" blockAlign="center">
+        <Text
+          size="xs"
+          weight="semibold"
+          className="uppercase tracking-wide text-gray-500"
+        >
+          {label}
+        </Text>
+        {count > 0 && (
+          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
+            {count}
+          </Badge>
+        )}
+      </InlineStack>
+    </AccordionTrigger>
+  );
+}
+
+function SectionTrigger({ label }: { label: string }) {
+  return (
+    <AccordionTrigger className="py-1.5 px-3 text-xs hover:no-underline">
+      <Text
+        size="xs"
+        weight="semibold"
+        className="uppercase tracking-wide text-gray-500"
+      >
+        {label}
+      </Text>
+    </AccordionTrigger>
+  );
+}
 
 interface TaskDetailsProps {
   entityId: string;
@@ -69,11 +124,10 @@ export const TaskDetails = observer(function TaskDetails({
   }
 
   const componentSpec = task.componentRef.spec;
-  const inputCount = componentSpec?.inputs?.length ?? 0;
-  const outputCount = componentSpec?.outputs?.length ?? 0;
-  const annotationCount = task.annotations.filter(
-    (a) => !EDITOR_ANNOTATION_KEYS.includes(a.key),
-  ).length;
+  const { inputCount, outputCount, annotationCount } = getTaskDetailsCounts(
+    task,
+    componentSpec,
+  );
   const taskColor = task.annotations.get("tangleml.com/editor/task-color");
 
   const yamlText = getTaskYamlText(task);
@@ -111,15 +165,7 @@ export const TaskDetails = observer(function TaskDetails({
       >
         {showComponentRefBar && (
           <AccordionItem value="component">
-            <AccordionTrigger className="py-1.5 px-3 text-xs hover:no-underline">
-              <Text
-                size="xs"
-                weight="semibold"
-                className="uppercase tracking-wide text-gray-500"
-              >
-                Component
-              </Text>
-            </AccordionTrigger>
+            <SectionTrigger label="Component" />
             <AccordionContent className="px-3 pb-2">
               <BlockStack>
                 <ComponentRefBar
@@ -133,15 +179,7 @@ export const TaskDetails = observer(function TaskDetails({
           </AccordionItem>
         )}
         <AccordionItem value="task">
-          <AccordionTrigger className="py-1.5 px-3 text-xs hover:no-underline">
-            <Text
-              size="xs"
-              weight="semibold"
-              className="uppercase tracking-wide text-gray-500"
-            >
-              Task
-            </Text>
-          </AccordionTrigger>
+          <SectionTrigger label="Task" />
           <AccordionContent className="px-3 pb-2">
             <TaskInfoSection
               entityId={entityId}
@@ -155,90 +193,31 @@ export const TaskDetails = observer(function TaskDetails({
         </AccordionItem>
 
         <AccordionItem value="arguments">
-          <AccordionTrigger className="py-1.5 px-3 text-xs hover:no-underline">
-            <InlineStack gap="2" blockAlign="center">
-              <Text
-                size="xs"
-                weight="semibold"
-                className="uppercase tracking-wide text-gray-500"
-              >
-                Arguments
-              </Text>
-              {inputCount > 0 && (
-                <Badge
-                  variant="secondary"
-                  className="text-[10px] px-1.5 py-0 h-4"
-                >
-                  {inputCount}
-                </Badge>
-              )}
-            </InlineStack>
-          </AccordionTrigger>
+          <SectionTriggerWithBadge label="Arguments" count={inputCount} />
           <AccordionContent className="pb-2 px-3">
             <TaskArgumentsEditor task={task} />
           </AccordionContent>
         </AccordionItem>
 
         <AccordionItem value="outputs">
-          <AccordionTrigger className="py-1.5 px-3 text-xs hover:no-underline">
-            <InlineStack gap="2" blockAlign="center">
-              <Text
-                size="xs"
-                weight="semibold"
-                className="uppercase tracking-wide text-gray-500"
-              >
-                Outputs
-              </Text>
-              {outputCount > 0 && (
-                <Badge
-                  variant="secondary"
-                  className="text-[10px] px-1.5 py-0 h-4"
-                >
-                  {outputCount}
-                </Badge>
-              )}
-            </InlineStack>
-          </AccordionTrigger>
+          <SectionTriggerWithBadge label="Outputs" count={outputCount} />
           <AccordionContent className="px-3 pb-2">
             <OutputsSection componentSpec={componentSpec} />
           </AccordionContent>
         </AccordionItem>
 
         <AccordionItem value="configuration">
-          <AccordionTrigger className="py-1.5 px-3 text-xs hover:no-underline">
-            <Text
-              size="xs"
-              weight="semibold"
-              className="uppercase tracking-wide text-gray-500"
-            >
-              Configuration
-            </Text>
-          </AccordionTrigger>
+          <SectionTrigger label="Configuration" />
           <AccordionContent className="px-3 pb-2">
             <ConfigurationSection task={task} />
           </AccordionContent>
         </AccordionItem>
 
         <AccordionItem value="annotations">
-          <AccordionTrigger className="py-1.5 px-3 text-xs hover:no-underline">
-            <InlineStack gap="2" blockAlign="center">
-              <Text
-                size="xs"
-                weight="semibold"
-                className="uppercase tracking-wide text-gray-500"
-              >
-                Annotations
-              </Text>
-              {annotationCount > 0 && (
-                <Badge
-                  variant="secondary"
-                  className="text-[10px] px-1.5 py-0 h-4"
-                >
-                  {annotationCount}
-                </Badge>
-              )}
-            </InlineStack>
-          </AccordionTrigger>
+          <SectionTriggerWithBadge
+            label="Annotations"
+            count={annotationCount}
+          />
           <AccordionContent className="px-3 pb-2">
             <AnnotationsBlock
               annotations={task.annotations}
@@ -248,15 +227,7 @@ export const TaskDetails = observer(function TaskDetails({
         </AccordionItem>
 
         <AccordionItem value="actions">
-          <AccordionTrigger className="py-1.5 px-3 text-xs hover:no-underline">
-            <Text
-              size="xs"
-              weight="semibold"
-              className="uppercase tracking-wide text-gray-500"
-            >
-              Actions
-            </Text>
-          </AccordionTrigger>
+          <SectionTrigger label="Actions" />
           <AccordionContent className="px-3 pb-2">
             <InlineStack gap="2" blockAlign="center" className="w-full">
               <StackingControls
