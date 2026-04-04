@@ -3,56 +3,23 @@ import { ClonePipelineButton } from "@/components/PipelineRun/components/ClonePi
 import { InspectPipelineButton } from "@/components/PipelineRun/components/InspectPipelineButton";
 import { RerunPipelineButton } from "@/components/PipelineRun/components/RerunPipelineButton";
 import { ViewYamlButton } from "@/components/shared/Buttons/ViewYamlButton";
-import { buildTaskSpecShape } from "@/components/shared/PipelineRunNameTemplate/types";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
-import { useCheckComponentSpecFromPath } from "@/hooks/useCheckComponentSpecFromPath";
-import { useUserDetails } from "@/hooks/useUserDetails";
-import { useComponentSpec } from "@/providers/ComponentSpecProvider";
-import { useExecutionData } from "@/providers/ExecutionDataProvider";
-import { extractCanonicalName } from "@/utils/canonicalPipelineName";
-import {
-  countInProgressFromStats,
-  flattenExecutionStatusStats,
-  isExecutionComplete,
-} from "@/utils/executionStatus";
+import { useRunViewActions } from "@/routes/v2/pages/RunView/hooks/useRunViewActions";
 
 export function RunToolsContent() {
-  const { componentSpec } = useComponentSpec();
+  const actions = useRunViewActions();
+
+  if (!actions.ready) return null;
+
   const {
-    rootState: state,
-    runId,
-    metadata,
-    rootDetails: details,
-  } = useExecutionData();
-  const { data: currentUserDetails } = useUserDetails();
-
-  const editorRoute = componentSpec?.name
-    ? `/editor/${encodeURIComponent(componentSpec.name)}`
-    : "";
-
-  const canAccessEditorSpec = useCheckComponentSpecFromPath(
-    editorRoute,
     componentSpec,
-  );
-
-  const isRunCreator =
-    currentUserDetails?.id && metadata?.created_by === currentUserDetails.id;
-
-  if (!componentSpec || !state) {
-    return null;
-  }
-
-  const executionStatusStats =
-    metadata?.execution_status_stats ??
-    flattenExecutionStatusStats(state.child_execution_status_stats);
-
-  const isInProgress = countInProgressFromStats(executionStatusStats) > 0;
-  const isComplete = isExecutionComplete(executionStatusStats);
-
-  const pipelineName =
-    extractCanonicalName(
-      buildTaskSpecShape(details?.task_spec, componentSpec),
-    ) ?? componentSpec.name;
+    runId,
+    canAccessEditorSpec,
+    isRunCreator,
+    isInProgress,
+    isComplete,
+    pipelineName,
+  } = actions;
 
   return (
     <BlockStack gap="2" className="p-2">

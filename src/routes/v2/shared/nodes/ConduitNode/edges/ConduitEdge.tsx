@@ -1,5 +1,6 @@
 import type { EdgeProps } from "@xyflow/react";
 import { BaseEdge } from "@xyflow/react";
+import type { CSSProperties } from "react";
 
 import type { ConduitEdgeData } from "@/routes/v2/shared/nodes/types";
 
@@ -7,41 +8,26 @@ import { buildConduitPath } from "./conduitPathUtils";
 
 const DEBUG_POINTS = false;
 
-export function ConduitEdge({
-  sourceX,
-  sourceY,
-  sourcePosition,
-  targetX,
-  targetY,
-  targetPosition,
-  data,
-  markerEnd,
-  style,
+interface EdgeStyleParams {
+  baseStyle: CSSProperties | undefined;
+  conduitColor: string | undefined;
+  isInAssignmentMode: boolean;
+  isAssigned: boolean;
+  activeColor: string | undefined;
+  selected: boolean | undefined;
+}
+
+function computeEdgeStyle({
+  baseStyle,
+  conduitColor,
+  isInAssignmentMode,
+  isAssigned,
+  activeColor,
   selected,
-}: EdgeProps) {
-  const edgeData = data as ConduitEdgeData | undefined;
-  const guidelines = edgeData?.guidelines ?? [];
-  const conduitColor = edgeData?.conduitColor;
-  const isInAssignmentMode = edgeData?.isInAssignmentMode ?? false;
-  const isAssigned = edgeData?.isAssignedToActiveConduit ?? false;
-  const activeColor = edgeData?.activeConduitColor;
-
-  const { path, debugPoints } = buildConduitPath({
-    sourceX,
-    sourceY,
-    sourcePosition,
-    targetX,
-    targetY,
-    targetPosition,
-    guidelines,
-    options: {
-      isSelected: selected,
-    },
-  });
-
-  let edgeStyle = conduitColor
-    ? { ...style, stroke: conduitColor, strokeWidth: 2 }
-    : { ...style, strokeWidth: 2 };
+}: EdgeStyleParams): CSSProperties {
+  let edgeStyle: CSSProperties = conduitColor
+    ? { ...baseStyle, stroke: conduitColor, strokeWidth: 2 }
+    : { ...baseStyle, strokeWidth: 2 };
 
   if (isInAssignmentMode) {
     if (isAssigned && activeColor) {
@@ -65,10 +51,64 @@ export function ConduitEdge({
     };
   }
 
-  const debugPointColorMap = {
-    waypoint: "#22c55e",
-    path: "#6b7280",
+  return edgeStyle;
+}
+
+function parseEdgeData(data: EdgeProps["data"]) {
+  const edgeData = data as ConduitEdgeData | undefined;
+  return {
+    guidelines: edgeData?.guidelines ?? [],
+    conduitColor: edgeData?.conduitColor,
+    isInAssignmentMode: edgeData?.isInAssignmentMode ?? false,
+    isAssigned: edgeData?.isAssignedToActiveConduit ?? false,
+    activeColor: edgeData?.activeConduitColor,
   };
+}
+
+const debugPointColorMap = {
+  waypoint: "#22c55e",
+  path: "#6b7280",
+} as const;
+
+export function ConduitEdge({
+  sourceX,
+  sourceY,
+  sourcePosition,
+  targetX,
+  targetY,
+  targetPosition,
+  data,
+  markerEnd,
+  style,
+  selected,
+}: EdgeProps) {
+  const {
+    guidelines,
+    conduitColor,
+    isInAssignmentMode,
+    isAssigned,
+    activeColor,
+  } = parseEdgeData(data);
+
+  const { path, debugPoints } = buildConduitPath({
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetX,
+    targetY,
+    targetPosition,
+    guidelines,
+    options: { isSelected: selected },
+  });
+
+  const edgeStyle = computeEdgeStyle({
+    baseStyle: style,
+    conduitColor,
+    isInAssignmentMode,
+    isAssigned,
+    activeColor,
+    selected,
+  });
 
   return (
     <>

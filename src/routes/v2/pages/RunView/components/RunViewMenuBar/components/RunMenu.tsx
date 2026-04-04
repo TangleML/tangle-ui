@@ -1,6 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
 
-import { buildTaskSpecShape } from "@/components/shared/PipelineRunNameTemplate/types";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,41 +8,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
-import { useCheckComponentSpecFromPath } from "@/hooks/useCheckComponentSpecFromPath";
-import { useUserDetails } from "@/hooks/useUserDetails";
-import { useComponentSpec } from "@/providers/ComponentSpecProvider";
-import { useExecutionData } from "@/providers/ExecutionDataProvider";
+import { useRunViewActions } from "@/routes/v2/pages/RunView/hooks/useRunViewActions";
 import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButton";
-import { extractCanonicalName } from "@/utils/canonicalPipelineName";
-import {
-  countInProgressFromStats,
-  flattenExecutionStatusStats,
-  isExecutionComplete,
-} from "@/utils/executionStatus";
 
 export function RunMenu() {
   const navigate = useNavigate();
-  const { componentSpec } = useComponentSpec();
-  const {
-    rootState: state,
-    metadata,
-    rootDetails: details,
-  } = useExecutionData();
-  const { data: currentUserDetails } = useUserDetails();
+  const actions = useRunViewActions();
 
-  const editorRoute = componentSpec?.name
-    ? `/editor/${encodeURIComponent(componentSpec.name)}`
-    : "";
-
-  const canAccessEditorSpec = useCheckComponentSpecFromPath(
-    editorRoute,
-    componentSpec,
-  );
-
-  const isRunCreator =
-    currentUserDetails?.id && metadata?.created_by === currentUserDetails.id;
-
-  if (!componentSpec || !state) {
+  if (!actions.ready) {
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -53,17 +25,13 @@ export function RunMenu() {
     );
   }
 
-  const executionStatusStats =
-    metadata?.execution_status_stats ??
-    flattenExecutionStatusStats(state.child_execution_status_stats);
-
-  const isInProgress = countInProgressFromStats(executionStatusStats) > 0;
-  const isComplete = isExecutionComplete(executionStatusStats);
-
-  const pipelineName =
-    extractCanonicalName(
-      buildTaskSpecShape(details?.task_spec, componentSpec),
-    ) ?? componentSpec.name;
+  const {
+    canAccessEditorSpec,
+    isRunCreator,
+    isInProgress,
+    isComplete,
+    pipelineName,
+  } = actions;
 
   const handleInspect = () => {
     if (pipelineName) {
