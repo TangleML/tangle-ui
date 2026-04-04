@@ -1,6 +1,3 @@
-import { useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
-
 import { PipelineNameDialog } from "@/components/shared/Dialogs";
 import ImportPipeline from "@/components/shared/ImportPipeline";
 import {
@@ -12,84 +9,27 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
-import useToastNotification from "@/hooks/useToastNotification";
-import { APP_ROUTES } from "@/routes/router";
-import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButton";
 import { ShorcutBadge } from "@/routes/v2/shared/components/ShorcutBadge";
-import { CTRL } from "@/routes/v2/shared/shortcuts/keys";
-import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
-import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
-import type { PipelineRef } from "@/services/pipelineStorage/types";
 
-import {
-  createNewPipeline,
-  exportCurrentPipeline,
-  savePipelineAs,
-} from "./fileMenu.actions";
 import { OpenPipelineDialog } from "./OpenPipelineDialog";
+import { useFileMenuState } from "./useFileMenuState";
 
 export function FileMenu() {
-  const { keyboard, navigation } = useSharedStores();
-  const { autoSave } = useEditorSession();
-  const storage = usePipelineStorage();
-  const navigate = useNavigate();
-  const notify = useToastNotification();
-  const [importOpen, setImportOpen] = useState(false);
-  const [openDialogOpen, setOpenDialogOpen] = useState(false);
-  const [saveAsDialogOpen, setSaveAsDialogOpen] = useState(false);
-  const importTriggerRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    return keyboard.registerShortcut({
-      id: "open-pipeline",
-      keys: [CTRL, "O"],
-      label: "Open Pipeline",
-      action: () => setOpenDialogOpen(true),
-    });
-  }, [keyboard]);
-
-  useEffect(() => {
-    if (importOpen) {
-      importTriggerRef.current?.click();
-      setImportOpen(false);
-    }
-  }, [importOpen]);
-
-  const handleNewPipeline = async () => {
-    const file = await createNewPipeline(storage);
-    navigate({
-      to: APP_ROUTES.EDITOR_V2_PIPELINE,
-      params: { pipelineName: file.storageKey },
-      search: { fileId: file.id },
-    });
-  };
-
-  const handlePipelineClick = (pipeline: PipelineRef) => {
-    navigate({
-      to: APP_ROUTES.EDITOR_V2_PIPELINE,
-      params: { pipelineName: pipeline.name },
-      search: { fileId: pipeline.fileId },
-    });
-    setOpenDialogOpen(false);
-  };
-
-  const handleSavePipelineAs = async (name: string) => {
-    const file = await savePipelineAs(navigation, name, storage);
-    notify(`Pipeline saved as "${name}"`, "success");
-    navigate({
-      to: APP_ROUTES.EDITOR_V2_PIPELINE,
-      params: { pipelineName: name },
-      search: { fileId: file?.id },
-    });
-  };
-
-  const getSaveAsInitialName = () => {
-    const currentName = navigation.rootSpec?.name;
-    return currentName
-      ? `${currentName} (Copy)`
-      : `Untitled Pipeline ${new Date().toLocaleTimeString()}`;
-  };
+  const {
+    importTriggerRef,
+    openDialogOpen,
+    setOpenDialogOpen,
+    saveAsDialogOpen,
+    setSaveAsDialogOpen,
+    setImportOpen,
+    handleSave,
+    handleNewPipeline,
+    handlePipelineClick,
+    handleSavePipelineAs,
+    handleExport,
+    getSaveAsInitialName,
+  } = useFileMenuState();
 
   return (
     <>
@@ -106,7 +46,7 @@ export function FileMenu() {
             </DropdownMenuShortcut>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => void autoSave.save()}>
+          <DropdownMenuItem onClick={handleSave}>
             <Icon name="Save" size="sm" />
             Save
           </DropdownMenuItem>
@@ -123,7 +63,7 @@ export function FileMenu() {
             <Icon name="Upload" size="sm" />
             Import
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => exportCurrentPipeline(navigation)}>
+          <DropdownMenuItem onClick={handleExport}>
             <Icon name="FileDown" size="sm" />
             Export
           </DropdownMenuItem>

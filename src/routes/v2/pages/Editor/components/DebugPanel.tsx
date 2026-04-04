@@ -1,6 +1,5 @@
-import { autorun } from "mobx";
 import { observer } from "mobx-react-lite";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 import CodeSyntaxHighlighter from "@/components/shared/CodeViewer/CodeSyntaxHighlighter";
 import { Button } from "@/components/ui/button";
@@ -9,112 +8,15 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Text } from "@/components/ui/typography";
-import type { ComponentSpec } from "@/models/componentSpec";
-import { serializeComponentSpecToText } from "@/models/componentSpec";
 import { useUpgradeComponentsWindow } from "@/routes/v2/pages/Editor/components/UpgradeComponents/useUpgradeComponentsWindow";
 import { ShorcutBadge } from "@/routes/v2/shared/components/ShorcutBadge";
-import type { KeyConstant } from "@/routes/v2/shared/shortcuts/keys";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
+import { getSelectedInfo, getSpecStats, getSpecYaml } from "./debugPanel.utils";
+import { PressedKeysList } from "./PressedKeysList";
+import { StatGroup, StatItem } from "./StatComponents";
+
 const DEBUG_PANEL_WINDOW_ID = "debug-panel";
-
-interface StatItemProps {
-  label: string;
-  value: number | string;
-}
-
-function StatItem({ label, value }: StatItemProps) {
-  return (
-    <InlineStack blockAlign="center" className="justify-between py-1" gap="2">
-      <Text size="xs" className="text-gray-500">
-        {label}
-      </Text>
-      <Text size="xs" weight="semibold" className="font-mono text-gray-700">
-        {value}
-      </Text>
-    </InlineStack>
-  );
-}
-
-interface StatGroupProps {
-  title: string;
-  children: React.ReactNode;
-}
-
-function StatGroup({ title, children }: StatGroupProps) {
-  return (
-    <BlockStack gap="1">
-      <Text
-        size="xs"
-        weight="semibold"
-        className="uppercase tracking-wider text-blue-600"
-      >
-        {title}
-      </Text>
-      <BlockStack className="pl-2 border-l-2 border-gray-200">
-        {children}
-      </BlockStack>
-    </BlockStack>
-  );
-}
-
-function getSpecYaml(spec: ComponentSpec | null): string {
-  if (!spec) return "null";
-  try {
-    return serializeComponentSpecToText(spec);
-  } catch {
-    return "Error serializing spec";
-  }
-}
-
-interface SpecStats {
-  name: string;
-  inputs: number;
-  outputs: number;
-  tasks: number;
-  arguments: number;
-  annotations: number;
-  bindings: number;
-  hasSpec: string;
-  hasTasks: string;
-}
-
-const EMPTY_STATS: SpecStats = {
-  name: "—",
-  inputs: 0,
-  outputs: 0,
-  tasks: 0,
-  arguments: 0,
-  annotations: 0,
-  bindings: 0,
-  hasSpec: "No",
-  hasTasks: "No",
-};
-
-function computeSpecCounts(spec: ComponentSpec): SpecStats {
-  return {
-    name: spec.name ?? "—",
-    inputs: spec.inputs.length,
-    outputs: spec.outputs.length,
-    tasks: spec.tasks.length,
-    arguments: spec.tasks.reduce((acc, t) => acc + t.arguments.length, 0),
-    annotations: spec.tasks.reduce((acc, t) => acc + t.annotations.length, 0),
-    bindings: spec.bindings.length,
-    hasSpec: "Yes",
-    hasTasks: spec.tasks.length > 0 ? "Yes" : "No",
-  };
-}
-
-function getSpecStats(spec: ComponentSpec | null): SpecStats {
-  return spec ? computeSpecCounts(spec) : EMPTY_STATS;
-}
-
-function getSelectedInfo(
-  selectedNodeId: string | null,
-  selectedNodeType: string | null,
-): string {
-  return selectedNodeId ? `${selectedNodeType}: ${selectedNodeId}` : "None";
-}
 
 /**
  * Debug panel content - displays stats and JSON representation of the spec.
@@ -231,30 +133,3 @@ export function useDebugPanelWindow() {
     }
   }, [windows]);
 }
-
-const PressedKeysList = function PressedKeysList() {
-  const { keyboard } = useSharedStores();
-  const [pressedKeys, setPressedKeys] = useState<KeyConstant[]>([]);
-  useEffect(() => {
-    return autorun(() => {
-      setPressedKeys(keyboard.pressedKeys);
-    });
-  }, [keyboard]);
-
-  return (
-    <BlockStack>
-      <Text
-        size="xs"
-        weight="semibold"
-        className="uppercase tracking-wider text-blue-600"
-      >
-        Pressed Keys ({pressedKeys.length})
-      </Text>
-      <InlineStack gap="2" blockAlign="center">
-        {pressedKeys.map((key) => (
-          <Text key={key}>{key}</Text>
-        ))}
-      </InlineStack>
-    </BlockStack>
-  );
-};

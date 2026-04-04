@@ -5,23 +5,15 @@ import { emitDockAreaEvent } from "./dockAreaPlugins";
 import {
   CASCADE_OFFSET,
   DEFAULT_DOCK_AREA_WIDTH,
-  DEFAULT_MIN_SIZE,
-  DEFAULT_WINDOW_SIZE,
   type DockAreaConfig,
   type DockState,
   isDockSide,
   type Position,
-  type Size,
   type WindowOptions,
   type WindowRef,
-  type WindowState,
 } from "./types";
-import {
-  WindowModel,
-  type WindowModelInit,
-  type WindowStoreRef,
-} from "./windowModel";
-import { getPersistedWindowState } from "./windowPersistence";
+import { WindowModel, type WindowStoreRef } from "./windowModel";
+import { buildWindowModelInit } from "./windowStore.utils";
 
 function generateWindowId(): string {
   return `window-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -328,88 +320,4 @@ export class WindowStoreImpl implements WindowStoreRef {
       d: this.dockAreas,
     });
   }
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-type PersistedState = ReturnType<typeof getPersistedWindowState>;
-
-function resolveInitialState(
-  persisted: PersistedState,
-  options: WindowOptions,
-  dockState: DockState,
-): { state: WindowState; needsPreviousState: boolean } {
-  const shouldStartHidden = !!persisted?.isHidden && !options.startVisible;
-  const shouldStartMinimized =
-    !shouldStartHidden && !!persisted?.isMinimized && dockState !== "none";
-
-  return {
-    state: shouldStartHidden
-      ? "hidden"
-      : shouldStartMinimized
-        ? "minimized"
-        : "normal",
-    needsPreviousState: shouldStartHidden || shouldStartMinimized,
-  };
-}
-
-function resolveGeometry(
-  persisted: PersistedState,
-  options: WindowOptions,
-  defaultPosition: Position,
-): { position: Position; size: Size; minSize: Size } {
-  return {
-    position: persisted?.position ?? options.position ?? defaultPosition,
-    size: persisted?.size ?? options.size ?? { ...DEFAULT_WINDOW_SIZE },
-    minSize: options.minSize ?? { ...DEFAULT_MIN_SIZE },
-  };
-}
-
-function resolveDockedOverrides(persisted: PersistedState): {
-  dockState: DockState;
-  dockedHeight: number | undefined;
-  preDockedPosition: Position | undefined;
-  preDockedSize: Size | undefined;
-} {
-  const dockState: DockState = persisted?.dockState ?? "none";
-  return {
-    dockState,
-    dockedHeight: persisted?.dockedHeight,
-    preDockedPosition: persisted?.preDockedPosition
-      ? { ...persisted.preDockedPosition }
-      : undefined,
-    preDockedSize: persisted?.preDockedSize
-      ? { ...persisted.preDockedSize }
-      : undefined,
-  };
-}
-
-function buildWindowModelInit(
-  id: string,
-  options: WindowOptions,
-  defaultPosition: Position,
-): WindowModelInit {
-  const persisted = options.persisted ? getPersistedWindowState(id) : null;
-  const geo = resolveGeometry(persisted, options, defaultPosition);
-  const docked = resolveDockedOverrides(persisted);
-  const initial = resolveInitialState(persisted, options, docked.dockState);
-
-  return {
-    id,
-    title: options.title,
-    state: initial.state,
-    ...geo,
-    linkedEntityId: options.linkedEntityId,
-    disabledActions: options.disabledActions,
-    ...docked,
-    previousState: initial.needsPreviousState ? "normal" : undefined,
-    previousPosition: initial.needsPreviousState
-      ? { ...geo.position }
-      : undefined,
-    previousSize: initial.needsPreviousState ? { ...geo.size } : undefined,
-    persisted: !!options.persisted,
-    onClose: options.onClose,
-  };
 }
