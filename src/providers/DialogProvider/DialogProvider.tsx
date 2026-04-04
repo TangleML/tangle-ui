@@ -37,6 +37,13 @@ export function DialogProvider({
   const searchParamsRef = useRef(searchParams);
   searchParamsRef.current = searchParams;
 
+  // Dialog routing manages search params dynamically across arbitrary routes.
+  // TanStack Router's strict per-route typing cannot express this, so we
+  // funnel all dialog navigations through a single type boundary.
+  const navigateSearch = (search: Record<string, unknown>) => {
+    navigate({ search } as never);
+  };
+
   const open = async <T, TProps = {}>(
     config: DialogConfig<T, TProps>,
   ): Promise<T> => {
@@ -55,12 +62,10 @@ export function DialogProvider({
       if (config.routeKey) {
         pendingDialogIds.current.add(id);
 
-        navigate({
-          search: {
-            ...searchParams,
-            [DIALOG_SEARCH_PARAMS.DIALOG_KEY]: config.routeKey,
-            [DIALOG_SEARCH_PARAMS.DIALOG_ID]: id,
-          } as any,
+        navigateSearch({
+          ...searchParams,
+          [DIALOG_SEARCH_PARAMS.DIALOG_KEY]: config.routeKey,
+          [DIALOG_SEARCH_PARAMS.DIALOG_ID]: id,
         });
       }
 
@@ -77,37 +82,33 @@ export function DialogProvider({
 
     closingDialogIds.current.add(id);
 
-    setStack((prev) => {
-      const dialogIndex = prev.findIndex((d) => d.id === id);
-      const dialog = dialogIndex !== -1 ? prev[dialogIndex] : undefined;
-      const remainingStack = prev.filter((d) => d.id !== id);
+    // Compute navigation intent from current stack before updating state.
+    // This is safe because close() runs synchronously before React commits
+    // the state update.
+    const dialog = stack.find((d) => d.id === id);
+    const remainingStack = stack.filter((d) => d.id !== id);
 
-      if (dialog?.routeKey) {
-        const nextRoutedDialog = getTopRoutedDialog(remainingStack);
+    setStack((prev) => prev.filter((d) => d.id !== id));
 
-        setTimeout(() => {
-          const baseSearch = omitSearchParams(
-            searchParamsRef.current,
-            DIALOG_PARAM_KEYS,
-          );
+    if (dialog?.routeKey) {
+      const nextRoutedDialog = getTopRoutedDialog(remainingStack);
+      const baseSearch = omitSearchParams(
+        searchParamsRef.current,
+        DIALOG_PARAM_KEYS,
+      );
 
-          const nextSearch = nextRoutedDialog
-            ? {
-                ...baseSearch,
-                [DIALOG_SEARCH_PARAMS.DIALOG_KEY]: nextRoutedDialog.routeKey,
-                [DIALOG_SEARCH_PARAMS.DIALOG_ID]: nextRoutedDialog.id,
-              }
-            : baseSearch;
+      const nextSearch = nextRoutedDialog
+        ? {
+            ...baseSearch,
+            [DIALOG_SEARCH_PARAMS.DIALOG_KEY]: nextRoutedDialog.routeKey,
+            [DIALOG_SEARCH_PARAMS.DIALOG_ID]: nextRoutedDialog.id,
+          }
+        : baseSearch;
 
-          navigate({ search: nextSearch as any });
-          closingDialogIds.current.delete(id);
-        }, 0);
-      } else {
-        closingDialogIds.current.delete(id);
-      }
+      navigateSearch(nextSearch);
+    }
 
-      return remainingStack;
-    });
+    closingDialogIds.current.delete(id);
   };
 
   const cancel = (id: string) => {
@@ -132,21 +133,18 @@ export function DialogProvider({
       return [];
     });
 
-    navigate({
-      search: omitSearchParams(
-        searchParamsRef.current,
-        DIALOG_PARAM_KEYS,
-      ) as any,
-    });
+    navigateSearch(
+      omitSearchParams(searchParamsRef.current, DIALOG_PARAM_KEYS),
+    );
   };
 
-  useDialogRouter(
+  useDialogRouter({
     stack,
     cancel,
     pendingDialogIds,
     closingDialogIds,
-    disableRouterSync,
-  );
+    disabled: disableRouterSync,
+  });
 
   const value: DialogContextValue = {
     open,

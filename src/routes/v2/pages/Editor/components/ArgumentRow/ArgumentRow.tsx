@@ -22,6 +22,10 @@ import {
   resolveDisplayValues,
   typeSpecToString,
 } from "./argumentRow.utils";
+import { ArgumentValueDisplay } from "./components/ArgumentValueDisplay";
+import { InputValidationIndicator } from "./components/InputValidationIndicator";
+import { ThunderMenu } from "./components/ThunderMenu/ThunderMenu";
+import { useArgumentActions } from "./useArgumentActions";
 
 const rowVariants = cva(
   "group rounded px-2 py-1 cursor-pointer transition-colors w-full overflow-hidden",
@@ -43,10 +47,6 @@ const nameVariants = cva("shrink-0 text-gray-700", {
   },
   defaultVariants: { unset: false },
 });
-import { ArgumentValueDisplay } from "./components/ArgumentValueDisplay";
-import { InputValidationIndicator } from "./components/InputValidationIndicator";
-import { ThunderMenu } from "./components/ThunderMenu/ThunderMenu";
-import { useArgumentActions } from "./useArgumentActions";
 
 interface ArgumentRowProps {
   inputSpec: InputSpec;

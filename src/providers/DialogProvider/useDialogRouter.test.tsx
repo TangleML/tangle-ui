@@ -42,7 +42,12 @@ describe("useDialogRouter", () => {
 
     const { rerender } = renderHook(
       ({ stack }) =>
-        useDialogRouter(stack, mockCancel, emptyPendingRef, emptyClosingRef),
+        useDialogRouter({
+          stack,
+          cancel: mockCancel,
+          pendingDialogIds: emptyPendingRef,
+          closingDialogIds: emptyClosingRef,
+        }),
       {
         initialProps: { stack },
       },
@@ -64,7 +69,12 @@ describe("useDialogRouter", () => {
     };
 
     renderHook(() =>
-      useDialogRouter(stack, mockCancel, emptyPendingRef, emptyClosingRef),
+      useDialogRouter({
+        stack,
+        cancel: mockCancel,
+        pendingDialogIds: emptyPendingRef,
+        closingDialogIds: emptyClosingRef,
+      }),
     );
 
     expect(mockNavigate).toHaveBeenCalledWith({
@@ -83,7 +93,12 @@ describe("useDialogRouter", () => {
     };
 
     renderHook(() =>
-      useDialogRouter(stack, mockCancel, pendingRef, emptyClosingRef),
+      useDialogRouter({
+        stack,
+        cancel: mockCancel,
+        pendingDialogIds: pendingRef,
+        closingDialogIds: emptyClosingRef,
+      }),
     );
 
     expect(mockNavigate).not.toHaveBeenCalled();
@@ -112,7 +127,12 @@ describe("useDialogRouter", () => {
 
     const { rerender } = renderHook(
       ({ stack }) =>
-        useDialogRouter(stack, mockCancel, emptyPendingRef, emptyClosingRef),
+        useDialogRouter({
+          stack,
+          cancel: mockCancel,
+          pendingDialogIds: emptyPendingRef,
+          closingDialogIds: emptyClosingRef,
+        }),
       {
         initialProps: { stack: initialStack },
       },
@@ -138,7 +158,12 @@ describe("useDialogRouter", () => {
 
     const { rerender } = renderHook(
       ({ stack }) =>
-        useDialogRouter(stack, mockCancel, emptyPendingRef, emptyClosingRef),
+        useDialogRouter({
+          stack,
+          cancel: mockCancel,
+          pendingDialogIds: emptyPendingRef,
+          closingDialogIds: emptyClosingRef,
+        }),
       {
         initialProps: { stack: initialStack },
       },
@@ -184,7 +209,12 @@ describe("useDialogRouter", () => {
     };
 
     const { rerender } = renderHook(() =>
-      useDialogRouter(stack, mockCancel, emptyPendingRef, emptyClosingRef),
+      useDialogRouter({
+        stack,
+        cancel: mockCancel,
+        pendingDialogIds: emptyPendingRef,
+        closingDialogIds: emptyClosingRef,
+      }),
     );
 
     mockSearchParams = {};
@@ -217,7 +247,12 @@ describe("useDialogRouter", () => {
     };
 
     const { rerender } = renderHook(() =>
-      useDialogRouter(stack, mockCancel, emptyPendingRef, emptyClosingRef),
+      useDialogRouter({
+        stack,
+        cancel: mockCancel,
+        pendingDialogIds: emptyPendingRef,
+        closingDialogIds: emptyClosingRef,
+      }),
     );
 
     mockSearchParams = {
@@ -260,7 +295,12 @@ describe("useDialogRouter", () => {
     };
 
     const { rerender } = renderHook(() =>
-      useDialogRouter(stack, mockCancel, emptyPendingRef, emptyClosingRef),
+      useDialogRouter({
+        stack,
+        cancel: mockCancel,
+        pendingDialogIds: emptyPendingRef,
+        closingDialogIds: emptyClosingRef,
+      }),
     );
 
     mockSearchParams = {
@@ -298,7 +338,12 @@ describe("useDialogRouter", () => {
 
     const { rerender } = renderHook(
       ({ stack }) =>
-        useDialogRouter(stack, mockCancel, emptyPendingRef, emptyClosingRef),
+        useDialogRouter({
+          stack,
+          cancel: mockCancel,
+          pendingDialogIds: emptyPendingRef,
+          closingDialogIds: emptyClosingRef,
+        }),
       {
         initialProps: { stack: initialStack },
       },
@@ -323,7 +368,12 @@ describe("useDialogRouter", () => {
     };
 
     renderHook(() =>
-      useDialogRouter(stack, mockCancel, emptyPendingRef, closingRef),
+      useDialogRouter({
+        stack,
+        cancel: mockCancel,
+        pendingDialogIds: emptyPendingRef,
+        closingDialogIds: closingRef,
+      }),
     );
 
     expect(mockNavigate).not.toHaveBeenCalled();
@@ -345,7 +395,12 @@ describe("useDialogRouter", () => {
     const closingRef = createDialogIdsRef(["some-closing-dialog"]);
 
     renderHook(() =>
-      useDialogRouter(stack, mockCancel, emptyPendingRef, closingRef),
+      useDialogRouter({
+        stack,
+        cancel: mockCancel,
+        pendingDialogIds: emptyPendingRef,
+        closingDialogIds: closingRef,
+      }),
     );
 
     expect(mockCancel).not.toHaveBeenCalled();

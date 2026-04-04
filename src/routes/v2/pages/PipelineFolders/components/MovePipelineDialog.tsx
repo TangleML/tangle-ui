@@ -1,5 +1,4 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
-import { observer } from "mobx-react-lite";
+import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
@@ -15,12 +14,14 @@ import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/typography";
+import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
 import { useMovePipeline } from "@/routes/v2/pages/PipelineFolders/hooks/useMovePipeline";
 import type { PipelineFolder } from "@/services/pipelineStorage/PipelineFolder";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import { ROOT_FOLDER_ID } from "@/services/pipelineStorage/types";
 import { FoldersQueryKeys } from "@/services/pipelineStorage/types";
+import { getErrorMessage } from "@/utils/string";
 
 interface MovePipelineDialogProps {
   open: boolean;
@@ -31,7 +32,7 @@ interface MovePipelineDialogProps {
   onMoveComplete: () => void;
 }
 
-export const MovePipelineDialog = observer(function MovePipelineDialog({
+export function MovePipelineDialog({
   open,
   onOpenChange,
   pipelineIds,
@@ -44,28 +45,29 @@ export const MovePipelineDialog = observer(function MovePipelineDialog({
   );
   const { mutateAsync: movePipeline } = useMovePipeline();
   const storage = usePipelineStorage();
-  const [isMoving, setIsMoving] = useState(false);
+  const notify = useToastNotification();
 
   const totalItems = pipelineIds.length + folderIds.length;
 
-  const handleMove = async () => {
-    setIsMoving(true);
-    try {
-      for (const id of pipelineIds) {
-        await movePipeline({
-          pipelineId: id,
-          folderId: selectedFolderId,
-        });
-      }
-      for (const id of folderIds) {
-        const folder = await storage.findFolderById(id);
-        await folder.moveToParent(selectedFolderId);
-      }
+  const { mutate: handleMove, isPending: isMoving } = useMutation({
+    mutationFn: async () => {
+      await Promise.all([
+        ...pipelineIds.map((id) =>
+          movePipeline({ pipelineId: id, folderId: selectedFolderId }),
+        ),
+        ...folderIds.map(async (id) => {
+          const folder = await storage.findFolderById(id);
+          return folder.moveToParent(selectedFolderId);
+        }),
+      ]);
+    },
+    onSuccess: () => {
       onMoveComplete();
-    } finally {
-      setIsMoving(false);
-    }
-  };
+    },
+    onError: (error) => {
+      notify("Failed to move: " + getErrorMessage(error), "error");
+    },
+  });
 
   const handleOpenChange = (nextOpen: boolean) => {
     onOpenChange(nextOpen);
@@ -96,14 +98,17 @@ export const MovePipelineDialog = observer(function MovePipelineDialog({
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleMove} disabled={isSameFolder || isMoving}>
+          <Button
+            onClick={() => handleMove()}
+            disabled={isSameFolder || isMoving}
+          >
             {isMoving ? "Moving..." : "Move"}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-});
+}
 
 interface FolderTreeProps {
   selectedFolderId: string | null;

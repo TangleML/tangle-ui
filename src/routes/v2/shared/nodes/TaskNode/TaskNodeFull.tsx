@@ -87,6 +87,7 @@ function TaskNodeHeader({
   return (
     <CardHeader className={headerVariants({ hasColor })} style={colorStyle}>
       <InlineStack gap="2" wrap="nowrap" blockAlign="center">
+        {/* Raw span required: dynamic task color needs inline style which InlineStack doesn't accept */}
         <span
           className="shrink-0 flex items-center"
           style={colorStyle ? { color: colorStyle.color } : undefined}

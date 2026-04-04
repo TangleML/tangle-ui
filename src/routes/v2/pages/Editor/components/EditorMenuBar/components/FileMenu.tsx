@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
 import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButton";
-import { ShorcutBadge } from "@/routes/v2/shared/components/ShorcutBadge";
+import { ShortcutBadge } from "@/routes/v2/shared/components/ShortcutBadge";
 
 import { OpenPipelineDialog } from "./OpenPipelineDialog";
 import { useFileMenuState } from "./useFileMenuState";
@@ -42,7 +42,7 @@ export function FileMenu() {
             <Icon name="FolderOpen" size="sm" />
             Open
             <DropdownMenuShortcut>
-              <ShorcutBadge id="open-pipeline" />
+              <ShortcutBadge id="open-pipeline" />
             </DropdownMenuShortcut>
           </DropdownMenuItem>
           <DropdownMenuSeparator />

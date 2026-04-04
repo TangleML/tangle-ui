@@ -35,7 +35,7 @@ import { TaskPanel } from "@/routes/v2/shared/windows/TaskPanel";
 import { WindowContainer } from "@/routes/v2/shared/windows/WindowContainer";
 import { useWindowPersistence } from "@/routes/v2/shared/windows/windowPersistence";
 import { getBackendStatusString } from "@/utils/backend";
-import type { ComponentSpec as LegacyComponentSpec } from "@/utils/componentSpec";
+import type { ComponentSpec as DomainComponentSpec } from "@/utils/componentSpec";
 
 import { RunViewFlowCanvas } from "./components/RunViewFlowCanvas";
 import { RunViewMenuBar } from "./components/RunViewMenuBar/RunViewMenuBar";
@@ -63,8 +63,11 @@ const RunViewContent = observer(function RunViewContent() {
 
   useEffect(() => {
     if (rootDetails?.task_spec.componentRef.spec) {
+      // API response uses ComponentSpecOutput (name: string | null | undefined)
+      // while the domain type uses ComponentSpec (name: string | undefined).
+      // The null case is handled at runtime by downstream consumers.
       setComponentSpec(
-        rootDetails.task_spec.componentRef.spec as LegacyComponentSpec,
+        rootDetails.task_spec.componentRef.spec as DomainComponentSpec,
       );
     }
 

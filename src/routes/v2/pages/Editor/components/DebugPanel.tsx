@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Text } from "@/components/ui/typography";
 import { useUpgradeComponentsWindow } from "@/routes/v2/pages/Editor/components/UpgradeComponents/useUpgradeComponentsWindow";
-import { ShorcutBadge } from "@/routes/v2/shared/components/ShorcutBadge";
+import { ShortcutBadge } from "@/routes/v2/shared/components/ShortcutBadge";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 import { getSelectedInfo, getSpecStats, getSpecYaml } from "./debugPanel.utils";
@@ -95,7 +95,7 @@ const DebugPanelContent = observer(function DebugPanelContent() {
                     <Text size="xs" key={shortcut.id}>
                       {shortcut.label}
                     </Text>
-                    <ShorcutBadge id={shortcut.id} />
+                    <ShortcutBadge id={shortcut.id} />
                   </InlineStack>
                 ))}
               </BlockStack>

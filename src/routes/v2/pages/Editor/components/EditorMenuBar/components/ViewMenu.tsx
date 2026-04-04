@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
 import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButton";
-import { ShorcutBadge } from "@/routes/v2/shared/components/ShorcutBadge";
+import { ShortcutBadge } from "@/routes/v2/shared/components/ShortcutBadge";
 import {
   focusModeStore,
   toggleFocusMode,
@@ -57,7 +57,7 @@ export const ViewMenu = observer(function ViewMenu() {
                 {algo.label}
                 {algo.key === "sugiyama" && (
                   <DropdownMenuShortcut>
-                    <ShorcutBadge id="auto-layout" />
+                    <ShortcutBadge id="auto-layout" />
                   </DropdownMenuShortcut>
                 )}
               </DropdownMenuItem>
@@ -71,7 +71,7 @@ export const ViewMenu = observer(function ViewMenu() {
         >
           Focus mode
           <DropdownMenuShortcut>
-            <ShorcutBadge id="focus-mode" />
+            <ShortcutBadge id="focus-mode" />
           </DropdownMenuShortcut>
         </DropdownMenuCheckboxItem>
       </DropdownMenuContent>

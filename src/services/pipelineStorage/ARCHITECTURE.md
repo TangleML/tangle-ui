@@ -189,28 +189,20 @@ erDiagram
         boolean favorite "optional"
     }
 
-    file_handles {
-        string pipelineId PK
-        FileSystemFileHandle handle
-    }
-
     folders ||--o{ pipeline_registry : "contains"
     folders ||--o{ folders : "parent-child"
-    pipeline_registry ||--o| file_handles : "optional handle"
 ```
 
 ### Tables and Indexes
 
-| Table               | Primary Key  | Indexed Fields                                                         | Notes                                                |
-| ------------------- | ------------ | ---------------------------------------------------------------------- | ---------------------------------------------------- |
-| `pipeline_registry` | `id`         | `&storageKey` (unique), `folderId`, `[folderId+storageKey]` (compound) | Maps pipeline names to folders                       |
-| `folders`           | `id`         | `parentId`                                                             | Stores folder tree with `driverConfig`               |
-| `file_handles`      | `pipelineId` | —                                                                      | Stores `FileSystemFileHandle` for local-fs pipelines |
+| Table               | Primary Key | Indexed Fields                                                         | Notes                                  |
+| ------------------- | ----------- | ---------------------------------------------------------------------- | -------------------------------------- |
+| `pipeline_registry` | `id`        | `&storageKey` (unique), `folderId`, `[folderId+storageKey]` (compound) | Maps pipeline names to folders         |
+| `folders`           | `id`        | `parentId`                                                             | Stores folder tree with `driverConfig` |
 
 ### Migrations
 
-- **v1**: Creates all three tables. Runs an upgrade that reads the legacy `RootFolderDbStorageDriver.list()` and seeds `pipeline_registry` with every known pipeline assigned to `ROOT_FOLDER_ID` (`"__root__"`).
-- **v2**: Adds the compound index `[folderId+storageKey]` to `pipeline_registry` for efficient folder-scoped lookups.
+- **v1**: Creates `pipeline_registry` (with compound index `[folderId+storageKey]`) and `folders`. Runs an upgrade that reads the legacy `RootFolderDbStorageDriver.list()` and seeds `pipeline_registry` with every known pipeline assigned to `ROOT_FOLDER_ID` (`"__root__"`).
 
 ---
 
@@ -256,7 +248,7 @@ Represents a single pipeline file. Delegates all I/O to its parent folder's driv
 | `write(content)`       | `Promise<void>`   | —          | Delegates to `folder.driver.write(storageKey, content)`                    |
 | `rename(newName)`      | `Promise<void>`   | —          | `@action`: renames via driver, updates registry, then sets `storageKey`    |
 | `moveTo(targetFolder)` | `Promise<void>`   | —          | `@action`: checks permissions on both folders, updates registry `folderId` |
-| `deleteFile()`         | `Promise<void>`   | —          | Deletes via driver, registry entry, and `file_handles` row                 |
+| `deleteFile()`         | `Promise<void>`   | —          | Deletes via driver and registry entry                                      |
 
 ### PipelineFolder
 
@@ -564,8 +556,6 @@ sequenceDiagram
     participant File as PipelineFile
     participant Driver as PipelineStorageDriver
     participant Registry as pipelineRegistry
-    participant DB as Dexie (file_handles)
-
     UI->>+Service: findPipelineById(id)
     Service-->>-UI: PipelineFile
 
@@ -574,8 +564,6 @@ sequenceDiagram
     Driver-->>-File: ok
     File->>+Registry: deleteEntry(id)
     Registry-->>-File: ok
-    File->>+DB: file_handles.delete(id)
-    DB-->>-File: ok
     File-->>-UI: ok
 ```
 

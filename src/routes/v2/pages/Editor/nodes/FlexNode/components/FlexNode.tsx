@@ -96,6 +96,7 @@ function FlexNodeTitle({
     );
   }
 
+  // Raw <p> required: user-configurable fontSize needs inline style which Text doesn't accept
   return (
     <p
       style={{ fontSize }}
@@ -135,6 +136,7 @@ function FlexNodeContent({
     );
   }
 
+  // Raw <p> required: user-configurable fontSize needs inline style which Text doesn't accept
   return (
     <p style={{ fontSize }} className="whitespace-pre-wrap">
       {content}
