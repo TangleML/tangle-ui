@@ -32,7 +32,7 @@ Code goes into `shared/` only when **both** conditions are met:
 | `windows/`              | Window system (dock, float, snap, persist)          | 18 files -- entire window subsystem                                                                                                                        |
 | `hooks/`                | Canvas + layout hooks used by both pages            | `useSpecToNodesEdges`, `useCanvasEnhancements`, `useSelectionBehavior`, `useFlowCanvasState`, `useViewportScaling`, `useDockAreaAccordion`, `useFocusMode` |
 | `flowCanvasDefaults.ts` | Shared canvas constants and ReactFlow default props | `GRID_SIZE`, `ZOOM_THRESHOLD`, `FLOW_CANVAS_DEFAULT_PROPS`, `nodeTypes`, `edgeTypes`                                                                       |
-| `components/`           | Small UI components shared across pages             | `ShorcutBadge`, `MenuTriggerButton`, `AppMenuActions`                                                                                                      |
+| `components/`           | Small UI components shared across pages             | `ShortcutBadge`, `MenuTriggerButton`, `AppMenuActions`                                                                                                     |
 | `providers/`            | React context providers                             | `SpecContext`                                                                                                                                              |
 | `shortcuts/`            | Keyboard shortcut key definitions                   | `keys.ts`                                                                                                                                                  |
 

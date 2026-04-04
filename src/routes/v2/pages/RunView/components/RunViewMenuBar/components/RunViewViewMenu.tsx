@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
 import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButton";
-import { ShorcutBadge } from "@/routes/v2/shared/components/ShorcutBadge";
+import { ShortcutBadge } from "@/routes/v2/shared/components/ShortcutBadge";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 const LAYOUT_ALGORITHMS: { key: LayoutAlgorithm; label: string }[] = [
@@ -51,7 +51,7 @@ export const RunViewViewMenu = observer(function RunViewViewMenu() {
                 {algo.label}
                 {algo.key === "sugiyama" && (
                   <DropdownMenuShortcut>
-                    <ShorcutBadge id="auto-layout" />
+                    <ShortcutBadge id="auto-layout" />
                   </DropdownMenuShortcut>
                 )}
               </DropdownMenuItem>

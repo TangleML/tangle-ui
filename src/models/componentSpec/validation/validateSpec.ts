@@ -3,7 +3,7 @@ import type { ComponentSpec } from "../entities/componentSpec";
 import type { Input } from "../entities/input";
 import type { Output } from "../entities/output";
 import type { Task } from "../entities/task";
-import type { ComponentSpecJson, InputSpec } from "../entities/types";
+import type { InputSpec } from "../entities/types";
 import { isGraphInputArgument, isTaskOutputArgument } from "../entities/types";
 import type { ValidationIssue } from "./types";
 
@@ -221,7 +221,7 @@ function validateTaskArguments(
           referencedName: refTaskName,
         });
       } else if (refTask.componentRef.spec) {
-        const refSpec = refTask.componentRef.spec as ComponentSpecJson;
+        const refSpec = refTask.componentRef.spec;
         const outputExists = refSpec.outputs?.some(
           (o) => o.name === refOutputName,
         );
@@ -252,7 +252,7 @@ function validateTaskRequiredInputs(
   spec: ComponentSpec,
 ): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
-  const taskSpec = task.componentRef.spec as ComponentSpecJson | undefined;
+  const taskSpec = task.componentRef.spec;
 
   if (!taskSpec?.inputs) return issues;
 

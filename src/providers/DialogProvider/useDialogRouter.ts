@@ -22,16 +22,31 @@ function isPendingOrClosing(
   );
 }
 
-export function useDialogRouter(
-  stack: DialogInstance[],
-  cancel: (id: string) => void,
-  pendingDialogIds: RefObject<Set<string>>,
-  closingDialogIds: RefObject<Set<string>>,
-  disabled: boolean = false,
-) {
+interface UseDialogRouterOptions {
+  stack: DialogInstance[];
+  cancel: (id: string) => void;
+  pendingDialogIds: RefObject<Set<string>>;
+  closingDialogIds: RefObject<Set<string>>;
+  disabled?: boolean;
+}
+
+export function useDialogRouter({
+  stack,
+  cancel,
+  pendingDialogIds,
+  closingDialogIds,
+  disabled = false,
+}: UseDialogRouterOptions) {
   const navigate = useNavigate();
   const searchParams = useSearch({ strict: false }) as Record<string, unknown>;
   const previousStackLength = useRef(stack.length);
+
+  // Dialog routing manages search params dynamically across arbitrary routes.
+  // TanStack Router's strict per-route typing cannot express this, so we
+  // funnel all dialog navigations through a single type boundary.
+  const navigateSearch = (search: Record<string, unknown>) => {
+    navigate({ search } as never);
+  };
 
   // Handle URL changes
   useEffect(() => {
@@ -44,13 +59,12 @@ export function useDialogRouter(
       | string
       | undefined;
 
-    // If URL now has the dialogId we were waiting for, clear the pending flag
     if (dialogId && pendingDialogIds.current?.has(dialogId)) {
       pendingDialogIds.current.delete(dialogId);
       return;
     }
 
-    // If URL has no dialog params but we have dialogs with routeKey open, cancel them
+    // URL has no dialog params but we have dialogs with routeKey open — cancel them
     // (happens when user clicks browser back button)
     if (!dialogId && !dialogKey && stack.length > 0) {
       const topDialogWithRoute = getTopRoutedDialog(stack);
@@ -69,8 +83,8 @@ export function useDialogRouter(
       return;
     }
 
-    // If URL has a dialog ID that matches a dialog in the stack, but there are
-    // routed dialogs above it, close the top one (handles nested dialog back navigation)
+    // URL has a dialog ID that matches a dialog in the stack, but there are
+    // routed dialogs above it — close the top one (nested dialog back navigation)
     if (dialogId) {
       const matchingDialogIndex = stack.findIndex((d) => d.id === dialogId);
 
@@ -98,15 +112,13 @@ export function useDialogRouter(
       }
     }
 
-    // If URL has dialog params but no matching dialog in stack AND not pending/closing, clean URL
+    // URL has dialog params but no matching dialog in stack — clean URL
     if (
       dialogId &&
       !stack.find((d) => d.id === dialogId) &&
       !isPendingOrClosing(dialogId, pendingDialogIds, closingDialogIds)
     ) {
-      navigate({
-        search: omitSearchParams(searchParams, DIALOG_PARAM_KEYS) as any,
-      });
+      navigateSearch(omitSearchParams(searchParams, DIALOG_PARAM_KEYS));
     }
   }, [
     disabled,
@@ -122,22 +134,17 @@ export function useDialogRouter(
   useEffect(() => {
     if (disabled) return;
 
-    // If stack shrunk (dialog closed programmatically), update URL
     if (stack.length < previousStackLength.current) {
       const dialogIdInUrl = searchParams[DIALOG_SEARCH_PARAMS.DIALOG_ID] as
         | string
         | undefined;
 
-      // Only clean URL if the dialog in the URL is no longer in the stack
-      // AND we're not in the middle of closing a dialog (which will handle URL itself)
       if (
         dialogIdInUrl &&
         !stack.find((d) => d.id === dialogIdInUrl) &&
         !closingDialogIds.current?.has(dialogIdInUrl)
       ) {
-        navigate({
-          search: omitSearchParams(searchParams, DIALOG_PARAM_KEYS) as any,
-        });
+        navigateSearch(omitSearchParams(searchParams, DIALOG_PARAM_KEYS));
       }
     }
     previousStackLength.current = stack.length;

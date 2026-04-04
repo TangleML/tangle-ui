@@ -8,7 +8,7 @@ import {
 } from "@/routes/v2/shared/shortcuts/keys";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
-export const ShorcutBadge = observer(function ShorcutBadge({
+export const ShortcutBadge = observer(function ShortcutBadge({
   id,
 }: {
   id: string;
