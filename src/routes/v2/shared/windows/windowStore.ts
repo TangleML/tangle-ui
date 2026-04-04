@@ -11,11 +11,16 @@ import {
   type DockState,
   isDockSide,
   type Position,
+  type Size,
   type WindowOptions,
   type WindowRef,
   type WindowState,
 } from "./types";
-import { WindowModel, type WindowStoreRef } from "./windowModel";
+import {
+  WindowModel,
+  type WindowModelInit,
+  type WindowStoreRef,
+} from "./windowModel";
 import { getPersistedWindowState } from "./windowPersistence";
 
 function generateWindowId(): string {
@@ -59,72 +64,44 @@ export class WindowStoreImpl implements WindowStoreRef {
     };
   }
 
+  private focusExistingWindow(
+    id: string,
+    content: ReactNode,
+    existing: WindowModel,
+  ): WindowRef {
+    this.contentMap.set(id, content);
+    this.bringToFront(id);
+    if (existing.state === "hidden" || existing.isMinimized) {
+      existing.restore();
+    }
+    return this.createWindowRef(existing);
+  }
+
+  private registerNewWindowInDockArea(id: string, dockState: DockState): void {
+    if (dockState === "none") return;
+    const dockArea = this.dockAreas[dockState];
+    if (!dockArea.windowOrder.includes(id)) {
+      dockArea.windowOrder.push(id);
+    }
+    emitDockAreaEvent({ type: "window-docked", side: dockState, windowId: id });
+  }
+
   /** Open a new window or focus existing window with same ID */
   @action openWindow(content: ReactNode, options: WindowOptions): WindowRef {
     const id = options.id ?? generateWindowId();
 
     const existing = this.windows[id];
     if (existing) {
-      this.contentMap.set(id, content);
-      this.bringToFront(id);
-      if (existing.state === "hidden" || existing.isMinimized) {
-        existing.restore();
-      }
-      return this.createWindowRef(existing);
+      return this.focusExistingWindow(id, content, existing);
     }
 
     this.contentMap.set(id, content);
-
-    const persisted = options.persisted ? getPersistedWindowState(id) : null;
-    const position =
-      persisted?.position ?? options.position ?? this.calculateNewPosition();
-    const dockState: DockState = persisted?.dockState ?? "none";
-    const size = persisted?.size ?? options.size ?? { ...DEFAULT_WINDOW_SIZE };
-    const initial = resolveInitialState(persisted, options, dockState);
-
-    const model = new WindowModel(
-      {
-        id,
-        title: options.title,
-        state: initial.state,
-        position,
-        size,
-        minSize: options.minSize ?? { ...DEFAULT_MIN_SIZE },
-        linkedEntityId: options.linkedEntityId,
-        disabledActions: options.disabledActions,
-        dockState,
-        dockedHeight: persisted?.dockedHeight,
-        preDockedPosition: persisted?.preDockedPosition
-          ? { ...persisted.preDockedPosition }
-          : undefined,
-        preDockedSize: persisted?.preDockedSize
-          ? { ...persisted.preDockedSize }
-          : undefined,
-        previousState: initial.needsPreviousState ? "normal" : undefined,
-        previousPosition: initial.needsPreviousState
-          ? { ...position }
-          : undefined,
-        previousSize: initial.needsPreviousState ? { ...size } : undefined,
-        persisted: !!options.persisted,
-        onClose: options.onClose,
-      },
-      this,
-    );
+    const init = buildWindowModelInit(id, options, this.calculateNewPosition());
+    const model = new WindowModel(init, this);
 
     this.windows[id] = model;
     this.windowOrder.push(id);
-
-    if (dockState !== "none") {
-      const dockArea = this.dockAreas[dockState];
-      if (!dockArea.windowOrder.includes(id)) {
-        dockArea.windowOrder.push(id);
-      }
-      emitDockAreaEvent({
-        type: "window-docked",
-        side: dockState,
-        windowId: id,
-      });
-    }
+    this.registerNewWindowInDockArea(id, init.dockState);
 
     return this.createWindowRef(model);
   }
@@ -354,7 +331,7 @@ export class WindowStoreImpl implements WindowStoreRef {
 }
 
 // ---------------------------------------------------------------------------
-// Helpers (inlined from windowStore.helpers.ts)
+// Helpers
 // ---------------------------------------------------------------------------
 
 type PersistedState = ReturnType<typeof getPersistedWindowState>;
@@ -375,5 +352,64 @@ function resolveInitialState(
         ? "minimized"
         : "normal",
     needsPreviousState: shouldStartHidden || shouldStartMinimized,
+  };
+}
+
+function resolveGeometry(
+  persisted: PersistedState,
+  options: WindowOptions,
+  defaultPosition: Position,
+): { position: Position; size: Size; minSize: Size } {
+  return {
+    position: persisted?.position ?? options.position ?? defaultPosition,
+    size: persisted?.size ?? options.size ?? { ...DEFAULT_WINDOW_SIZE },
+    minSize: options.minSize ?? { ...DEFAULT_MIN_SIZE },
+  };
+}
+
+function resolveDockedOverrides(persisted: PersistedState): {
+  dockState: DockState;
+  dockedHeight: number | undefined;
+  preDockedPosition: Position | undefined;
+  preDockedSize: Size | undefined;
+} {
+  const dockState: DockState = persisted?.dockState ?? "none";
+  return {
+    dockState,
+    dockedHeight: persisted?.dockedHeight,
+    preDockedPosition: persisted?.preDockedPosition
+      ? { ...persisted.preDockedPosition }
+      : undefined,
+    preDockedSize: persisted?.preDockedSize
+      ? { ...persisted.preDockedSize }
+      : undefined,
+  };
+}
+
+function buildWindowModelInit(
+  id: string,
+  options: WindowOptions,
+  defaultPosition: Position,
+): WindowModelInit {
+  const persisted = options.persisted ? getPersistedWindowState(id) : null;
+  const geo = resolveGeometry(persisted, options, defaultPosition);
+  const docked = resolveDockedOverrides(persisted);
+  const initial = resolveInitialState(persisted, options, docked.dockState);
+
+  return {
+    id,
+    title: options.title,
+    state: initial.state,
+    ...geo,
+    linkedEntityId: options.linkedEntityId,
+    disabledActions: options.disabledActions,
+    ...docked,
+    previousState: initial.needsPreviousState ? "normal" : undefined,
+    previousPosition: initial.needsPreviousState
+      ? { ...geo.position }
+      : undefined,
+    previousSize: initial.needsPreviousState ? { ...geo.size } : undefined,
+    persisted: !!options.persisted,
+    onClose: options.onClose,
   };
 }

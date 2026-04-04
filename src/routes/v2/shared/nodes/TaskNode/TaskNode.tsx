@@ -1,5 +1,6 @@
 import { type Node, type NodeProps, useStore } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
+import type { ReactElement } from "react";
 
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Card } from "@/components/ui/card";
@@ -14,6 +15,7 @@ import type {
 import { ZOOM_THRESHOLD } from "@/routes/v2/shared/flowCanvasDefaults";
 import type { TaskNodeData } from "@/routes/v2/shared/nodes/types";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
+import type { NodeOverlayEffect } from "@/routes/v2/shared/store/canvasOverlay.types";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 import { TaskNodeClassic } from "./TaskNodeClassic";
@@ -103,6 +105,62 @@ function resolveInputDisplayValues(
   return values;
 }
 
+function resolveTaskColor(task: Task): string | undefined {
+  const rawColor = task.annotations.get("tangleml.com/editor/task-color");
+  return rawColor && rawColor !== "transparent" ? rawColor : undefined;
+}
+
+function getComponentSpecDefaults(spec: ComponentSpecJson | undefined) {
+  return {
+    description: spec?.description ?? "",
+    inputs: spec?.inputs ?? [],
+    outputs: spec?.outputs ?? [],
+  };
+}
+
+function resolveNodeEffect(
+  canvasOverlay: {
+    activeOverlay: {
+      resolveNodeEffect?: (id: string) => NodeOverlayEffect | undefined;
+    } | null;
+  },
+  entityId: string,
+): NodeOverlayEffect | undefined {
+  return canvasOverlay.activeOverlay?.resolveNodeEffect?.(entityId);
+}
+
+function NodeEffectWrapper({
+  effect,
+  children,
+}: {
+  effect: NodeOverlayEffect | undefined;
+  children: ReactElement;
+}) {
+  if (!effect?.className && effect?.opacity === undefined) {
+    return children;
+  }
+  return (
+    <div
+      className={cn(effect?.className)}
+      style={
+        effect?.opacity !== undefined ? { opacity: effect.opacity } : undefined
+      }
+    >
+      {children}
+    </div>
+  );
+}
+
+function TaskNodeNotFound({ entityId }: { entityId: string }) {
+  return (
+    <Card className="min-w-[180px] max-w-[280px] rounded-xl border-2 border-red-300 p-4">
+      <Text size="sm" tone="subdued">
+        Task not found: {entityId}
+      </Text>
+    </Card>
+  );
+}
+
 export const TaskNode = observer(function TaskNode({
   id,
   data,
@@ -115,65 +173,39 @@ export const TaskNode = observer(function TaskNode({
 
   const spec = useSpec();
   const task = spec?.tasks.find((t) => t.$id === entityId);
+  const nodeEffect = resolveNodeEffect(canvasOverlay, entityId);
 
-  const nodeEffect = canvasOverlay.activeOverlay?.resolveNodeEffect?.(entityId);
-
-  const handleClick = (event: React.MouseEvent) => {
-    editor.selectNode(id, "task", {
-      shiftKey: event.shiftKey,
-      entityId,
-    });
-  };
-
-  if (!task) {
-    return (
-      <Card className="min-w-[180px] max-w-[280px] rounded-xl border-2 border-red-300 p-4">
-        <Text size="sm" tone="subdued">
-          Task not found: {entityId}
-        </Text>
-      </Card>
-    );
-  }
-
-  if (nodeEffect?.hidden) {
-    return null;
-  }
+  if (!task) return <TaskNodeNotFound entityId={entityId} />;
+  if (nodeEffect?.hidden) return null;
 
   const componentSpec = task.componentRef.spec;
-  const inputs = componentSpec?.inputs ?? [];
-  const outputs = componentSpec?.outputs ?? [];
-  const description = componentSpec?.description ?? "";
+  const { description, inputs, outputs } =
+    getComponentSpecDefaults(componentSpec);
 
-  const isSubgraph = isTaskSubgraph(componentSpec);
-  const taskName = task.name;
-  const isHovered = editor.hoveredEntityId === entityId;
+  const handleClick = (event: React.MouseEvent) => {
+    editor.selectNode(id, "task", { shiftKey: event.shiftKey, entityId });
+  };
 
   const handleInputClick = (inputName: string) => {
     editor.selectNode(id, "task", { entityId });
     editor.setFocusedArgument(inputName);
   };
 
-  const inputDisplayValues = useClassicStyle
-    ? resolveInputDisplayValues(task, entityId, spec)
-    : {};
-
-  const rawColor = task.annotations.get("tangleml.com/editor/task-color");
-  const taskColor =
-    rawColor && rawColor !== "transparent" ? rawColor : undefined;
-
   const viewProps: TaskNodeViewProps = {
     id,
     entityId,
-    taskName,
+    taskName: task.name,
     selected: !!selected,
-    isHovered,
-    isSubgraph,
+    isHovered: editor.hoveredEntityId === entityId,
+    isSubgraph: isTaskSubgraph(componentSpec),
     description,
     inputs,
     outputs,
     annotations: task.annotations.map((a) => ({ key: a.key })),
-    taskColor,
-    inputDisplayValues,
+    taskColor: resolveTaskColor(task),
+    inputDisplayValues: useClassicStyle
+      ? resolveInputDisplayValues(task, entityId, spec)
+      : {},
     onNodeClick: handleClick,
     onInputClick: handleInputClick,
   };
@@ -181,46 +213,27 @@ export const TaskNode = observer(function TaskNode({
   const OverrideComponent = nodeEffect?.componentOverride;
   if (OverrideComponent) {
     return (
-      <div
-        className={cn(nodeEffect.className)}
-        style={
-          nodeEffect.opacity !== undefined
-            ? { opacity: nodeEffect.opacity }
-            : undefined
-        }
-      >
+      <NodeEffectWrapper effect={nodeEffect}>
         <OverrideComponent {...viewProps} />
-      </div>
+      </NodeEffectWrapper>
     );
   }
-
-  const wrapWithOverlay = (content: React.ReactElement) => {
-    if (!nodeEffect?.className && nodeEffect?.opacity === undefined) {
-      return content;
-    }
-    return (
-      <div
-        className={cn(nodeEffect?.className)}
-        style={
-          nodeEffect?.opacity !== undefined
-            ? { opacity: nodeEffect.opacity }
-            : undefined
-        }
-      >
-        {content}
-      </div>
-    );
-  };
 
   if (!showContent) {
-    return wrapWithOverlay(<TaskNodeCollapsed {...viewProps} />);
+    return (
+      <NodeEffectWrapper effect={nodeEffect}>
+        <TaskNodeCollapsed {...viewProps} />
+      </NodeEffectWrapper>
+    );
   }
 
-  return wrapWithOverlay(
-    useClassicStyle ? (
-      <TaskNodeClassic {...viewProps} />
-    ) : (
-      <TaskNodeFull {...viewProps} />
-    ),
+  return (
+    <NodeEffectWrapper effect={nodeEffect}>
+      {useClassicStyle ? (
+        <TaskNodeClassic {...viewProps} />
+      ) : (
+        <TaskNodeFull {...viewProps} />
+      )}
+    </NodeEffectWrapper>
   );
 });

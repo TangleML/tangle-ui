@@ -30,4 +30,4 @@ export {
 export { createSubgraph, unpackSubgraph } from "./actions";
 
 // Validation
-export type { ValidationIssue } from "./validation";
+export type { ValidationIssue, ValidationIssueCode } from "./validation";

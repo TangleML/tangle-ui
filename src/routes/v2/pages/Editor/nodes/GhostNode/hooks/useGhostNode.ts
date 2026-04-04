@@ -1,5 +1,6 @@
-import type { Edge, Node } from "@xyflow/react";
+import type { Edge, Node, XYPosition } from "@xyflow/react";
 import { useConnection } from "@xyflow/react";
+import type { Handle } from "@xyflow/system";
 
 import type { ComponentSpec, ComponentSpecJson } from "@/models/componentSpec";
 import {
@@ -31,22 +32,96 @@ function lookupPortType(
   ioType: "input" | "output",
 ): string | undefined {
   if (!componentSpec) return undefined;
+  const specs =
+    ioType === "input" ? componentSpec.inputs : componentSpec.outputs;
+  const portSpec = specs?.find((s) => s.name === portName);
+  if (!portSpec?.type) return undefined;
+  return typeof portSpec.type === "string"
+    ? portSpec.type
+    : JSON.stringify(portSpec.type);
+}
 
-  if (ioType === "input") {
-    const inputSpec = componentSpec.inputs?.find((i) => i.name === portName);
-    return typeof inputSpec?.type === "string"
-      ? inputSpec.type
-      : inputSpec?.type
-        ? JSON.stringify(inputSpec.type)
-        : undefined;
-  }
+function buildGhostNode(
+  position: XYPosition,
+  fromHandle: Handle,
+  spec: ComponentSpec,
+): Node<GhostNodeData> {
+  const isInputConnection = fromHandle.type === "target";
+  const ioType: GhostNodeData["ioType"] = isInputConnection
+    ? "input"
+    : "output";
 
-  const outputSpec = componentSpec.outputs?.find((o) => o.name === portName);
-  return typeof outputSpec?.type === "string"
-    ? outputSpec.type
-    : outputSpec?.type
-      ? JSON.stringify(outputSpec.type)
-      : undefined;
+  const handleId = fromHandle.id ?? "";
+  const portName = extractPortName(handleId, ioType);
+
+  const task = spec.tasks.find((t) => t.$id === fromHandle.nodeId);
+  const taskComponentSpec = task?.componentRef.spec as
+    | ComponentSpecJson
+    | undefined;
+  const dataType = lookupPortType(taskComponentSpec, portName, ioType);
+
+  return {
+    id: GHOST_NODE_ID,
+    type: "ghost" as const,
+    position,
+    data: { ioType, label: portName, dataType },
+    draggable: false,
+    selectable: false,
+    deletable: false,
+    connectable: false,
+    focusable: false,
+    zIndex: 1000,
+  };
+}
+
+function buildGhostEdge(fromHandle: Handle): Edge {
+  const isFromSource = fromHandle.type === "source";
+  return {
+    id: "ghost-edge",
+    source: isFromSource ? fromHandle.nodeId : GHOST_NODE_ID,
+    sourceHandle: isFromSource ? fromHandle.id : GHOST_HANDLE_ID,
+    target: isFromSource ? GHOST_NODE_ID : fromHandle.nodeId,
+    targetHandle: isFromSource ? GHOST_HANDLE_ID : fromHandle.id,
+    style: {
+      stroke: isFromSource ? "#4ade80" : "#60a5fa",
+      strokeWidth: 4,
+      strokeDasharray: "5,5",
+      strokeOpacity: 0.5,
+    },
+    animated: true,
+  };
+}
+
+function isTemporarilyValid(
+  connectionIsValid: boolean | null,
+  connectionToHandle: Handle | null,
+): boolean {
+  return (
+    connectionIsValid === true &&
+    !!connectionToHandle &&
+    connectionToHandle.nodeId !== GHOST_NODE_ID
+  );
+}
+
+function shouldShowGhostNode(
+  active: boolean,
+  isConnecting: boolean,
+  connectionPosition: XYPosition | null,
+  connectionFromHandle: Handle | null,
+  connectionFromNodeType: string | undefined,
+  temporarilyValid: boolean,
+  spec: ComponentSpec | null,
+): spec is ComponentSpec {
+  return (
+    active &&
+    isConnecting &&
+    !!connectionPosition &&
+    !!connectionFromHandle &&
+    connectionFromNodeType === "task" &&
+    !!connectionFromHandle.type &&
+    !temporarilyValid &&
+    !!spec
+  );
 }
 
 export function useGhostNode({
@@ -60,80 +135,30 @@ export function useGhostNode({
   const connectionToHandle = useConnection((c) => c.toHandle);
   const connectionIsValid = useConnection((c) => c.isValid);
 
-  const isConnectionTemporarilyValid =
-    connectionIsValid === true &&
-    !!connectionToHandle &&
-    connectionToHandle.nodeId !== GHOST_NODE_ID;
-
-  let ghostNode: Node<GhostNodeData> | null = null;
+  const temporarilyValid = isTemporarilyValid(
+    connectionIsValid,
+    connectionToHandle,
+  );
 
   if (
-    active &&
-    isConnecting &&
-    connectionPosition &&
-    connectionFromHandle &&
-    connectionFromNode?.type === "task" &&
-    connectionFromHandle.type &&
-    !isConnectionTemporarilyValid &&
-    spec
+    !shouldShowGhostNode(
+      active,
+      isConnecting,
+      connectionPosition,
+      connectionFromHandle,
+      connectionFromNode?.type,
+      temporarilyValid,
+      spec,
+    )
   ) {
-    const isInputConnection = connectionFromHandle.type === "target";
-    const ioType: GhostNodeData["ioType"] = isInputConnection
-      ? "input"
-      : "output";
-
-    const handleId = connectionFromHandle.id ?? "";
-    const portName = extractPortName(handleId, ioType);
-
-    const taskEntityId = connectionFromHandle.nodeId;
-    const task = spec.tasks.find((t) => t.$id === taskEntityId);
-    const taskComponentSpec = task?.componentRef.spec as
-      | ComponentSpecJson
-      | undefined;
-
-    const dataType = lookupPortType(taskComponentSpec, portName, ioType);
-
-    ghostNode = {
-      id: GHOST_NODE_ID,
-      type: "ghost" as const,
-      position: connectionPosition,
-      data: {
-        ioType,
-        label: portName,
-        dataType,
-      },
-      draggable: false,
-      selectable: false,
-      deletable: false,
-      connectable: false,
-      focusable: false,
-      zIndex: 1000,
-    };
+    return { ghostNode: null, ghostEdge: null };
   }
 
-  let ghostEdge: Edge | null = null;
+  // Guaranteed non-null by shouldShowGhostNode guard above
+  const position = connectionPosition!;
+  const fromHandle = connectionFromHandle!;
 
-  if (ghostNode && connectionFromHandle) {
-    const isFromSource = connectionFromHandle.type === "source";
-
-    ghostEdge = {
-      id: "ghost-edge",
-      source: isFromSource ? connectionFromHandle.nodeId : GHOST_NODE_ID,
-      sourceHandle: isFromSource ? connectionFromHandle.id : GHOST_HANDLE_ID,
-      target: isFromSource ? GHOST_NODE_ID : connectionFromHandle.nodeId,
-      targetHandle: isFromSource ? GHOST_HANDLE_ID : connectionFromHandle.id,
-      style: {
-        stroke: isFromSource ? "#4ade80" : "#60a5fa",
-        strokeWidth: 4,
-        strokeDasharray: "5,5",
-        strokeOpacity: 0.5,
-      },
-      animated: true,
-    };
-  }
-
-  return {
-    ghostNode,
-    ghostEdge,
-  };
+  const ghostNode = buildGhostNode(position, fromHandle, spec);
+  const ghostEdge = buildGhostEdge(fromHandle);
+  return { ghostNode, ghostEdge };
 }

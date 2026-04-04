@@ -67,6 +67,55 @@ function getSpecYaml(spec: ComponentSpec | null): string {
   }
 }
 
+interface SpecStats {
+  name: string;
+  inputs: number;
+  outputs: number;
+  tasks: number;
+  arguments: number;
+  annotations: number;
+  bindings: number;
+  hasSpec: string;
+  hasTasks: string;
+}
+
+const EMPTY_STATS: SpecStats = {
+  name: "—",
+  inputs: 0,
+  outputs: 0,
+  tasks: 0,
+  arguments: 0,
+  annotations: 0,
+  bindings: 0,
+  hasSpec: "No",
+  hasTasks: "No",
+};
+
+function computeSpecCounts(spec: ComponentSpec): SpecStats {
+  return {
+    name: spec.name ?? "—",
+    inputs: spec.inputs.length,
+    outputs: spec.outputs.length,
+    tasks: spec.tasks.length,
+    arguments: spec.tasks.reduce((acc, t) => acc + t.arguments.length, 0),
+    annotations: spec.tasks.reduce((acc, t) => acc + t.annotations.length, 0),
+    bindings: spec.bindings.length,
+    hasSpec: "Yes",
+    hasTasks: spec.tasks.length > 0 ? "Yes" : "No",
+  };
+}
+
+function getSpecStats(spec: ComponentSpec | null): SpecStats {
+  return spec ? computeSpecCounts(spec) : EMPTY_STATS;
+}
+
+function getSelectedInfo(
+  selectedNodeId: string | null,
+  selectedNodeType: string | null,
+): string {
+  return selectedNodeId ? `${selectedNodeType}: ${selectedNodeId}` : "None";
+}
+
 /**
  * Debug panel content - displays stats and JSON representation of the spec.
  * Used within the Windows system.
@@ -76,24 +125,12 @@ const DebugPanelContent = observer(function DebugPanelContent() {
   const openUpgradeComponentsWindow = useUpgradeComponentsWindow();
   const spec = navigation.rootSpec;
   const specYaml = getSpecYaml(spec);
-
   const keybordShortcuts = [...keyboard.shortcuts.values()];
-
-  const stats = {
-    name: spec?.name ?? "—",
-    inputs: spec?.inputs.length ?? 0,
-    outputs: spec?.outputs.length ?? 0,
-    tasks: spec?.tasks.length ?? 0,
-    arguments:
-      spec?.tasks.reduce((acc, task) => acc + task.arguments.length, 0) ?? 0,
-    annotations:
-      spec?.tasks.reduce((acc, task) => acc + task.annotations.length, 0) ?? 0,
-    bindings: spec?.bindings.length ?? 0,
-  };
-
-  const selectedInfo = editor.selectedNodeId
-    ? `${editor.selectedNodeType}: ${editor.selectedNodeId}`
-    : "None";
+  const stats = getSpecStats(spec);
+  const selectedInfo = getSelectedInfo(
+    editor.selectedNodeId,
+    editor.selectedNodeType,
+  );
 
   return (
     <Tabs defaultValue="stats" className="h-full flex flex-col">
@@ -104,37 +141,29 @@ const DebugPanelContent = observer(function DebugPanelContent() {
 
       <TabsContent value="stats" className="flex-1 min-h-0 overflow-y-auto">
         <BlockStack gap="4" className="p-3">
-          {/* Spec Info */}
           <StatGroup title="Spec">
             <StatItem label="Name" value={stats.name} />
           </StatGroup>
 
-          {/* Selection Info */}
           <StatGroup title="Selection">
             <StatItem label="Selected" value={selectedInfo} />
           </StatGroup>
 
-          {/* Graph Counts */}
           <StatGroup title="Graph Structure">
             <StatItem label="Inputs" value={stats.inputs} />
             <StatItem label="Outputs" value={stats.outputs} />
             <StatItem label="Tasks" value={stats.tasks} />
           </StatGroup>
 
-          {/* Internal State */}
           <StatGroup title="Internal State">
             <StatItem label="Arguments" value={stats.arguments} />
             <StatItem label="Annotations" value={stats.annotations} />
             <StatItem label="Bindings" value={stats.bindings} />
           </StatGroup>
 
-          {/* Memory/Debug Info */}
           <StatGroup title="Store State">
-            <StatItem label="Has Spec" value={spec ? "Yes" : "No"} />
-            <StatItem
-              label="Has Tasks"
-              value={spec?.tasks && spec.tasks.length > 0 ? "Yes" : "No"}
-            />
+            <StatItem label="Has Spec" value={stats.hasSpec} />
+            <StatItem label="Has Tasks" value={stats.hasTasks} />
           </StatGroup>
 
           <StatGroup title="Actions">

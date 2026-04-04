@@ -26,7 +26,7 @@ export interface WindowStoreRef {
   getWindowZIndex(id: string): number;
 }
 
-interface WindowModelInit {
+export interface WindowModelInit {
   id: string;
   title: string;
   state: WindowState;
