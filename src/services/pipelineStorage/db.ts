@@ -1,6 +1,5 @@
 import { Dexie, type EntityTable } from "dexie";
 
-import { getAllComponentFilesFromList } from "@/utils/componentStore";
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 
 import {
@@ -19,15 +18,22 @@ pipelineStorageDb.version(1).stores({
   folders: "id, parentId",
 });
 
-const knownPipelines = await getAllComponentFilesFromList(
-  USER_PIPELINES_LIST_NAME,
-);
+pipelineStorageDb.on("ready", async () => {
+  const count = await pipelineStorageDb.pipeline_registry.count();
+  if (count > 0) return;
 
-pipelineStorageDb.on("populate", async (tx) => {
-  await tx.table("pipeline_registry").bulkAdd(
-    [...knownPipelines.entries()].map(([storageKey, _entry]) => ({
+  const { getAllComponentFilesFromList } =
+    await import("@/utils/componentStore");
+  const knownPipelines = await getAllComponentFilesFromList(
+    USER_PIPELINES_LIST_NAME,
+  );
+
+  if (knownPipelines.size === 0) return;
+
+  await pipelineStorageDb.pipeline_registry.bulkAdd(
+    [...knownPipelines.entries()].map(([storageKey]) => ({
       id: crypto.randomUUID(),
-      storageKey: storageKey,
+      storageKey,
       folderId: ROOT_FOLDER_ID,
     })),
   );
