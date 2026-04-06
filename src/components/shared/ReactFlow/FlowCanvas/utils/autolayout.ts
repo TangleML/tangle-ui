@@ -108,9 +108,6 @@ export const autoLayoutNodes = (
  * 1. Buckets nodes by x position (rank)
  * 2. Within each bucket, sorts nodes by distance from global average y
  * 3. Places nodes as close as possible to center without overlapping
- *
- * This algorithm was adapted by AI directly from the tangle-deploy source code:
- * https://github.com/Shopify/discovery/blob/main/oasis/tangle-deploy/src/tangle_deploy/auto_layout.py#L35
  */
 function centerNodesInBuckets(
   nodes: Node[],

@@ -12,8 +12,8 @@ import { importPipelineFromYaml } from "@/services/pipelineService";
 /**
  * Import route that fetches a pipeline YAML from a URL and imports it into the editor.
  *
- * Used by tangle-deploy CLI's `tangle-view-pipeline` command, which starts a temporary
- * local HTTP server and opens: /app/editor/import-pipeline?url=http://127.0.0.1:PORT/tangle-deploy/pipeline.yaml
+ * Used by CLI tools that start a temporary local HTTP server and open:
+ * /app/editor/import-pipeline?url=http://127.0.0.1:PORT/pipeline-import/pipeline.yaml
  *
  * Flow:
  * 1. Read `url` from search params, validate with isAllowedImportUrl()
@@ -38,7 +38,7 @@ export function isAllowedImportUrl(url: string): boolean {
     if (parsed.hostname !== "127.0.0.1") return false;
     const port = parseInt(parsed.port, 10);
     if (!parsed.port || isNaN(port) || port < MIN_ALLOWED_PORT) return false;
-    if (parsed.pathname !== "/tangle-deploy/pipeline.yaml") return false;
+    if (parsed.pathname !== "/pipeline-import/pipeline.yaml") return false;
     return true;
   } catch {
     return false;
@@ -171,7 +171,7 @@ export const ImportPage = () => {
   const isValidUrl = url && isAllowedImportUrl(url);
   const validationError = isValidUrl
     ? null
-    : `URL must be http://127.0.0.1:PORT/tangle-deploy/pipeline.yaml with port >= ${MIN_ALLOWED_PORT}.`;
+    : `URL must be http://127.0.0.1:PORT/pipeline-import/pipeline.yaml with port >= ${MIN_ALLOWED_PORT}.`;
 
   const handleImport = async () => {
     if (!url || importedRef.current) return;
