@@ -12,7 +12,15 @@ import AppMenu from "./AppMenu";
 const RootLayout = () => {
   useDocumentTitle();
   const { pathname } = useLocation();
-  const isDashboard = pathname.startsWith("/dashboard");
+  // Dashboard routes handle their own footer in the sidebar.
+  // Only show AppFooter on non-dashboard routes (editor, runs, settings, etc.)
+  const isDashboard =
+    pathname === "/" ||
+    pathname.startsWith("/runs") ||
+    pathname.startsWith("/pipelines") ||
+    pathname.startsWith("/components") ||
+    pathname.startsWith("/favorites") ||
+    pathname.startsWith("/recently-viewed");
 
   return (
     <BackendProvider>

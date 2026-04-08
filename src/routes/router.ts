@@ -6,7 +6,6 @@ import {
   Outlet,
   redirect,
 } from "@tanstack/react-router";
-import { createElement } from "react";
 
 import { ErrorPage } from "@/components/shared/ErrorPage";
 import { AuthorizationResultScreen as GitHubAuthorizationResultScreen } from "@/components/shared/GitHubAuth/AuthorizationResultScreen";
@@ -14,7 +13,6 @@ import { AuthorizationResultScreen as HuggingFaceAuthorizationResultScreen } fro
 import { AddSecretView } from "@/components/shared/SecretsManagement/components/AddSecretView";
 import { ReplaceSecretView } from "@/components/shared/SecretsManagement/components/ReplaceSecretView";
 import { SecretsListView } from "@/components/shared/SecretsManagement/components/SecretsListView";
-import { isFlagEnabled } from "@/components/shared/Settings/useFlags";
 import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 
 import RootLayout from "../components/layout/RootLayout";
@@ -26,7 +24,6 @@ import { DashboardPipelinesView } from "./Dashboard/DashboardPipelinesView";
 import { DashboardRecentlyViewedView } from "./Dashboard/DashboardRecentlyViewedView";
 import { DashboardRunsView } from "./Dashboard/DashboardRunsView";
 import Editor from "./Editor";
-import Home from "./Home";
 import { ImportPage } from "./Import";
 import NotFoundPage from "./NotFoundPage";
 import PipelineRun from "./PipelineRun";
@@ -87,23 +84,16 @@ const mainLayout = createRoute({
 
 // Dashboard is a pathless layout — its children resolve to top-level paths
 // (/, /runs, /pipelines, etc.) without a /dashboard prefix.
-// When the dashboard flag is off, the layout is a passthrough and / renders Home.
 const dashboardRoute = createRoute({
   id: "dashboard-layout",
   getParentRoute: () => mainLayout,
-  component: () =>
-    isFlagEnabled("dashboard")
-      ? createElement(DashboardLayout)
-      : createElement(Outlet),
+  component: DashboardLayout,
 });
 
 const dashboardIndexRoute = createRoute({
   getParentRoute: () => dashboardRoute,
   path: "/",
-  component: () =>
-    isFlagEnabled("dashboard")
-      ? createElement(DashboardHomeView)
-      : createElement(Home),
+  component: DashboardHomeView,
 });
 
 const dashboardRunsRoute = createRoute({
