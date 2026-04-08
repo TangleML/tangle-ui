@@ -12,6 +12,7 @@ import {
 import type { PipelineRun } from "@/types/pipelineRun";
 
 import { transformAggregatorComponentSpec } from "./aggregatorTransform";
+import { RUN_SOURCE_ANNOTATION } from "./annotations";
 import { buildAnnotationsWithCanonicalName } from "./canonicalPipelineName";
 import type {
   ArgumentType,
@@ -73,9 +74,12 @@ export async function submitPipelineRun(
 
     const taskAnnotations = runNameOverride
       ? buildAnnotationsWithCanonicalName(pipelineName)
-      : undefined;
+      : {};
 
     const payload = {
+      annotations: {
+        [RUN_SOURCE_ANNOTATION]: "web-app",
+      },
       root_task: {
         componentRef: {
           spec: {
@@ -84,13 +88,9 @@ export async function submitPipelineRun(
           } as ComponentSpecInput,
         },
         ...(payloadArguments ? { arguments: payloadArguments } : {}),
-        annotations: {},
+        annotations: taskAnnotations,
       },
     };
-
-    if (taskAnnotations) {
-      payload.root_task.annotations = taskAnnotations;
-    }
 
     const responseData = await createPipelineRun(
       payload as BodyCreateApiPipelineRunsPost,
