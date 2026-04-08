@@ -6,6 +6,7 @@ import {
   Outlet,
   redirect,
 } from "@tanstack/react-router";
+import { createElement } from "react";
 
 import { ErrorPage } from "@/components/shared/ErrorPage";
 import { AuthorizationResultScreen as GitHubAuthorizationResultScreen } from "@/components/shared/GitHubAuth/AuthorizationResultScreen";
@@ -47,15 +48,14 @@ export const RUNS_BASE_PATH = "/runs";
 export const QUICK_START_PATH = "/quick-start";
 const SETTINGS_PATH = "/settings";
 const IMPORT_PATH = "/app/editor/import-pipeline";
-const DASHBOARD_PATH = "/dashboard";
 export const APP_ROUTES = {
   HOME: "/",
-  DASHBOARD: DASHBOARD_PATH,
-  DASHBOARD_RUNS: `${DASHBOARD_PATH}/runs`,
-  DASHBOARD_PIPELINES: `${DASHBOARD_PATH}/pipelines`,
-  DASHBOARD_COMPONENTS: `${DASHBOARD_PATH}/components`,
-  DASHBOARD_FAVORITES: `${DASHBOARD_PATH}/favorites`,
-  DASHBOARD_RECENTLY_VIEWED: `${DASHBOARD_PATH}/recently-viewed`,
+  DASHBOARD: "/",
+  DASHBOARD_RUNS: "/runs",
+  DASHBOARD_PIPELINES: "/pipelines",
+  DASHBOARD_COMPONENTS: "/components",
+  DASHBOARD_FAVORITES: "/favorites",
+  DASHBOARD_RECENTLY_VIEWED: "/recently-viewed",
   QUICK_START: QUICK_START_PATH,
   IMPORT: IMPORT_PATH,
   PIPELINE_EDITOR: `${EDITOR_PATH}/$name`,
@@ -85,27 +85,25 @@ const mainLayout = createRoute({
   component: RootLayout,
 });
 
-const indexRoute = createRoute({
-  getParentRoute: () => mainLayout,
-  path: APP_ROUTES.HOME,
-  component: Home,
-});
-
+// Dashboard is a pathless layout — its children resolve to top-level paths
+// (/, /runs, /pipelines, etc.) without a /dashboard prefix.
+// When the dashboard flag is off, the layout is a passthrough and / renders Home.
 const dashboardRoute = createRoute({
+  id: "dashboard-layout",
   getParentRoute: () => mainLayout,
-  path: APP_ROUTES.DASHBOARD,
-  component: DashboardLayout,
-  beforeLoad: () => {
-    if (!isFlagEnabled("dashboard")) {
-      throw redirect({ to: APP_ROUTES.HOME });
-    }
-  },
+  component: () =>
+    isFlagEnabled("dashboard")
+      ? createElement(DashboardLayout)
+      : createElement(Outlet),
 });
 
 const dashboardIndexRoute = createRoute({
   getParentRoute: () => dashboardRoute,
   path: "/",
-  component: DashboardHomeView,
+  component: () =>
+    isFlagEnabled("dashboard")
+      ? createElement(DashboardHomeView)
+      : createElement(Home),
 });
 
 const dashboardRunsRoute = createRoute({
@@ -264,7 +262,6 @@ const dashboardRouteTree = dashboardRoute.addChildren([
 ]);
 
 const appRouteTree = mainLayout.addChildren([
-  indexRoute,
   dashboardRouteTree,
   quickStartRoute,
   settingsRouteTree,
