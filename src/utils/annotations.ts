@@ -12,6 +12,7 @@ export const PIPELINE_RUN_NOTES_ANNOTATION = "notes";
 export const PIPELINE_TAGS_ANNOTATION = "tags";
 export const PIPELINE_CANONICAL_NAME_ANNOTATION = "canonical-pipeline-name";
 export const RUN_NAME_TEMPLATE_ANNOTATION = "run-name-template";
+export const RUN_SOURCE_ANNOTATION = "source";
 export const EDITOR_POSITION_ANNOTATION = "editor.position";
 export const EDITOR_COLLAPSED_ANNOTATION = "editor.collapsed";
 export const FLEX_NODES_ANNOTATION = "flex-nodes";

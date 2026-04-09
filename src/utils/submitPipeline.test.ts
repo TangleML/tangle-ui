@@ -73,6 +73,7 @@ describe("submitPipelineRun", () => {
       // Assert
       expect(pipelineRunService.createPipelineRun).toHaveBeenCalledWith(
         {
+          annotations: { source: "web-app" },
           root_task: {
             componentRef: {
               spec: componentSpec,
@@ -111,6 +112,7 @@ describe("submitPipelineRun", () => {
       // Assert
       expect(pipelineRunService.createPipelineRun).toHaveBeenCalledWith(
         {
+          annotations: { source: "web-app" },
           root_task: {
             componentRef: {
               spec: componentSpec,
@@ -181,6 +183,7 @@ describe("submitPipelineRun", () => {
       // Assert
       expect(pipelineRunService.createPipelineRun).toHaveBeenCalledWith(
         {
+          annotations: { source: "web-app" },
           root_task: {
             componentRef: {
               spec: componentSpec,
@@ -221,6 +224,7 @@ describe("submitPipelineRun", () => {
       // Assert
       expect(pipelineRunService.createPipelineRun).toHaveBeenCalledWith(
         {
+          annotations: { source: "web-app" },
           root_task: {
             componentRef: {
               spec: componentSpec,
@@ -263,6 +267,7 @@ describe("submitPipelineRun", () => {
       // Assert - taskArguments should override argumentsFromInputs
       expect(pipelineRunService.createPipelineRun).toHaveBeenCalledWith(
         {
+          annotations: { source: "web-app" },
           root_task: {
             componentRef: {
               spec: componentSpec,
@@ -301,6 +306,7 @@ describe("submitPipelineRun", () => {
       // Assert - all argument values should be preserved (non-strings like SecretArguments are valid)
       expect(pipelineRunService.createPipelineRun).toHaveBeenCalledWith(
         {
+          annotations: { source: "web-app" },
           root_task: {
             componentRef: {
               spec: componentSpec,
@@ -334,6 +340,7 @@ describe("submitPipelineRun", () => {
       // Assert - should only contain argumentsFromInputs
       expect(pipelineRunService.createPipelineRun).toHaveBeenCalledWith(
         {
+          annotations: { source: "web-app" },
           root_task: {
             componentRef: {
               spec: componentSpec,
@@ -408,6 +415,7 @@ describe("submitPipelineRun", () => {
       );
       expect(pipelineRunService.createPipelineRun).toHaveBeenCalledWith(
         {
+          annotations: { source: "web-app" },
           root_task: {
             componentRef: {
               spec: {
