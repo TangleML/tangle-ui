@@ -10,12 +10,10 @@ import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { BlockStack } from "@/components/ui/layout";
 import { Paragraph } from "@/components/ui/typography";
 import { useLoadComponentSpecFromPath } from "@/hooks/useLoadComponentSpecFromPath";
-import { useRecentlyViewed } from "@/hooks/useRecentlyViewed";
+import { addRecentlyViewed } from "@/hooks/useRecentlyViewed";
 
 const Editor = () => {
   const { componentSpec, error } = useLoadComponentSpecFromPath();
-  const { addRecentlyViewed } = useRecentlyViewed();
-
   useEffect(() => {
     if (!componentSpec?.name) return;
     addRecentlyViewed({
@@ -23,7 +21,7 @@ const Editor = () => {
       id: componentSpec.name,
       name: componentSpec.name,
     });
-  }, [componentSpec?.name, addRecentlyViewed]);
+  }, [componentSpec?.name]);
 
   if (error) {
     return (

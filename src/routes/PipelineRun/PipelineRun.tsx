@@ -11,7 +11,7 @@ import { BlockStack } from "@/components/ui/layout";
 import { Paragraph } from "@/components/ui/typography";
 import { faviconManager } from "@/favicon";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
-import { useRecentlyViewed } from "@/hooks/useRecentlyViewed";
+import { addRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import { useBackend } from "@/providers/BackendProvider";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import {
@@ -29,8 +29,9 @@ const PipelineRunContent = () => {
   const { setComponentSpec, clearComponentSpec, componentSpec } =
     useComponentSpec();
   const { configured, available, ready } = useBackend();
-  const { addRecentlyViewed } = useRecentlyViewed();
   const params = useParams({ strict: false });
+  const runId =
+    "id" in params && typeof params.id === "string" ? params.id : null;
 
   const {
     details,
@@ -80,11 +81,9 @@ const PipelineRunContent = () => {
   });
 
   useEffect(() => {
-    const id =
-      "id" in params && typeof params.id === "string" ? params.id : null;
-    if (!componentSpec?.name || !id) return;
-    addRecentlyViewed({ type: "run", id, name: componentSpec.name });
-  }, [componentSpec?.name, params, addRecentlyViewed]);
+    if (!componentSpec?.name || !runId) return;
+    addRecentlyViewed({ type: "run", id: runId, name: componentSpec.name });
+  }, [componentSpec?.name, runId]);
 
   if (isLoading || !ready) {
     return <LoadingScreen message="Loading Pipeline Run" />;
