@@ -5,6 +5,7 @@ import { Text } from "@/components/ui/typography";
 import { formatBytes } from "@/utils/string";
 
 import ArtifactURI from "./ArtifactURI";
+import ArtifactVisualizer from "./ArtifactVisualizer/ArtifactVisualizer";
 
 interface IOCellProps {
   name: string;
@@ -16,6 +17,7 @@ const IOCell = ({ name, type, artifact }: IOCellProps) => {
   const artifactData = artifact?.artifact_data;
   const inlineValue = artifactData?.value;
   const hasInlineValue = canShowInlineValue(inlineValue);
+  const hasDetails = Boolean(artifactData?.uri || hasInlineValue);
 
   const artifactType =
     type ?? artifact?.type_name ?? (artifactData?.is_dir ? "Directory" : "Any");
@@ -45,18 +47,51 @@ const IOCell = ({ name, type, artifact }: IOCellProps) => {
         </InlineStack>
       </InlineStack>
 
-      {hasInlineValue && (
-        <CopyText
-          size="xs"
-          compact
-          className="font-mono text-success line-clamp-2 break-all"
-        >
-          {inlineValue}
-        </CopyText>
-      )}
+      <InlineStack
+        gap="2"
+        blockAlign="center"
+        align="space-between"
+        className="w-full"
+        wrap="nowrap"
+      >
+        {hasInlineValue && (
+          <CopyText
+            size="xs"
+            compact
+            className="font-mono text-success line-clamp-2 break-all"
+          >
+            {inlineValue}
+          </CopyText>
+        )}
+
+        {!artifactData?.uri && artifact && hasDetails && (
+          <ArtifactVisualizer
+            artifact={artifact}
+            name={name}
+            type={type ?? "text"}
+            value={hasInlineValue ? inlineValue : undefined}
+          />
+        )}
+      </InlineStack>
 
       {!!artifactData?.uri && (
-        <ArtifactURI uri={artifactData.uri} isDir={artifactData.is_dir} />
+        <InlineStack
+          gap="2"
+          blockAlign="center"
+          align="space-between"
+          className="w-full"
+        >
+          <ArtifactURI uri={artifactData.uri} isDir={artifactData.is_dir} />
+
+          {artifact && hasDetails && (
+            <ArtifactVisualizer
+              artifact={artifact}
+              name={name}
+              type={type ?? "text"}
+              value={hasInlineValue ? inlineValue : undefined}
+            />
+          )}
+        </InlineStack>
       )}
     </BlockStack>
   );
