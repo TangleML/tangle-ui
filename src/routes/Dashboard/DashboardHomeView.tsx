@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { RunSection } from "@/components/Home/RunSection/RunSection";
 import { AnnouncementBanners } from "@/components/shared/AnnouncementBanners";
 import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
+import { Icon, type IconName } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import {
   Tooltip,
@@ -16,6 +16,7 @@ import {
   type RecentlyViewedItem,
   useRecentlyViewed,
 } from "@/hooks/useRecentlyViewed";
+import { cn } from "@/lib/utils";
 import { APP_ROUTES, EDITOR_PATH, RUNS_BASE_PATH } from "@/routes/router";
 import { formatRelativeTime } from "@/utils/date";
 
@@ -32,18 +33,43 @@ function getFavoriteUrl(item: FavoriteItem): string {
   return `${RUNS_BASE_PATH}/${item.id}`;
 }
 
-const TypePill = ({ type }: { type: "pipeline" | "run" | "component" }) => (
-  <span
-    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs font-semibold shrink-0 ${
-      type === "pipeline"
-        ? "bg-violet-100 text-violet-700"
-        : "bg-emerald-100 text-emerald-700"
-    }`}
-  >
-    <Icon name={type === "pipeline" ? "GitBranch" : "Play"} size="sm" />
-    {type === "pipeline" ? "Pipeline" : type === "run" ? "Run" : "Component"}
-  </span>
-);
+type ItemType = "pipeline" | "run" | "component";
+
+const TYPE_CONFIG: Record<
+  ItemType,
+  { className: string; icon: IconName; label: string }
+> = {
+  pipeline: {
+    className: "bg-violet-100 text-violet-700",
+    icon: "GitBranch",
+    label: "Pipeline",
+  },
+  run: {
+    className: "bg-emerald-100 text-emerald-700",
+    icon: "Play",
+    label: "Run",
+  },
+  component: {
+    className: "bg-blue-100 text-blue-700",
+    icon: "Package",
+    label: "Component",
+  },
+};
+
+const TypePill = ({ type }: { type: ItemType }) => {
+  const config = TYPE_CONFIG[type];
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs font-semibold shrink-0",
+        config.className,
+      )}
+    >
+      <Icon name={config.icon} size="sm" />
+      {config.label}
+    </span>
+  );
+};
 
 interface SectionHeaderProps {
   title: string;
@@ -69,9 +95,65 @@ const SectionHeader = ({
   </InlineStack>
 );
 
+const FavoritePreviewRow = ({
+  item,
+  onRemove,
+}: {
+  item: FavoriteItem;
+  onRemove: () => void;
+}) => (
+  <Link
+    to={getFavoriteUrl(item)}
+    className="group flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 no-underline"
+  >
+    <TypePill type={item.type} />
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Text size="sm" className="flex-1 min-w-0 truncate">
+          {item.name}
+        </Text>
+      </TooltipTrigger>
+      <TooltipContent>{item.name}</TooltipContent>
+    </Tooltip>
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onRemove();
+      }}
+      className="shrink-0 size-5 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground"
+      aria-label="Remove from favorites"
+    >
+      <Icon name="X" size="sm" />
+    </Button>
+  </Link>
+);
+
+const RecentlyViewedPreviewRow = ({ item }: { item: RecentlyViewedItem }) => (
+  <Link
+    to={getRecentlyViewedUrl(item)}
+    className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 no-underline"
+  >
+    <TypePill type={item.type} />
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Text size="sm" className="flex-1 min-w-0 truncate">
+          {item.name}
+        </Text>
+      </TooltipTrigger>
+      <TooltipContent>{item.name}</TooltipContent>
+    </Tooltip>
+    <Text size="xs" className="text-muted-foreground shrink-0">
+      {formatRelativeTime(new Date(item.viewedAt))}
+    </Text>
+  </Link>
+);
+
 const FavoritesPreview = () => {
   const { favorites, removeFavorite } = useFavorites();
-  const preview = favorites.slice(-PREVIEW_COUNT).reverse();
+  const preview = favorites.slice(0, PREVIEW_COUNT);
 
   return (
     <BlockStack gap="3" className="min-w-0">
@@ -79,7 +161,7 @@ const FavoritesPreview = () => {
         title="Favorites"
         viewAllTo={APP_ROUTES.DASHBOARD_FAVORITES}
       />
-      <div className="border border-border rounded-lg overflow-hidden">
+      <div className="border border-border rounded-lg overflow-hidden divide-y divide-border">
         {preview.length === 0 ? (
           <div className="px-4 py-3">
             <Paragraph tone="subdued" size="sm">
@@ -87,37 +169,12 @@ const FavoritesPreview = () => {
             </Paragraph>
           </div>
         ) : (
-          preview.map((item, i) => (
-            <Link
+          preview.map((item) => (
+            <FavoritePreviewRow
               key={`${item.type}-${item.id}`}
-              to={getFavoriteUrl(item)}
-              className={`group flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 no-underline ${
-                i < preview.length - 1 ? "border-b border-border" : ""
-              }`}
-            >
-              <TypePill type={item.type} />
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Text size="sm" className="flex-1 min-w-0 truncate">
-                    {item.name}
-                  </Text>
-                </TooltipTrigger>
-                <TooltipContent>{item.name}</TooltipContent>
-              </Tooltip>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  removeFavorite(item.type, item.id);
-                }}
-                className="shrink-0 size-5 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground"
-                aria-label="Remove from favorites"
-              >
-                <Icon name="X" size="sm" />
-              </Button>
-            </Link>
+              item={item}
+              onRemove={() => removeFavorite(item.type, item.id)}
+            />
           ))
         )}
       </div>
@@ -135,7 +192,7 @@ const RecentlyViewedPreview = () => {
         title="Recently Viewed"
         viewAllTo={APP_ROUTES.DASHBOARD_RECENTLY_VIEWED}
       />
-      <div className="border border-border rounded-lg overflow-hidden">
+      <div className="border border-border rounded-lg overflow-hidden divide-y divide-border">
         {preview.length === 0 ? (
           <div className="px-4 py-3">
             <Paragraph tone="subdued" size="sm">
@@ -143,27 +200,11 @@ const RecentlyViewedPreview = () => {
             </Paragraph>
           </div>
         ) : (
-          preview.map((item, i) => (
-            <Link
+          preview.map((item) => (
+            <RecentlyViewedPreviewRow
               key={`${item.type}-${item.id}`}
-              to={getRecentlyViewedUrl(item)}
-              className={`flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 no-underline ${
-                i < preview.length - 1 ? "border-b border-border" : ""
-              }`}
-            >
-              <TypePill type={item.type} />
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Text size="sm" className="flex-1 min-w-0 truncate">
-                    {item.name}
-                  </Text>
-                </TooltipTrigger>
-                <TooltipContent>{item.name}</TooltipContent>
-              </Tooltip>
-              <Text size="xs" className="text-muted-foreground shrink-0">
-                {formatRelativeTime(new Date(item.viewedAt))}
-              </Text>
-            </Link>
+              item={item}
+            />
           ))
         )}
       </div>

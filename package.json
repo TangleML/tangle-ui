@@ -40,10 +40,10 @@
     "lint:e2e": "eslint tests/e2e --config eslint.config.js",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
-    "gh-pages": "npm run build:ghpages && gh-pages -d dist",
+    "gh-pages": "pnpm run build:ghpages && gh-pages -d dist",
     "lint:fix": "eslint src --config eslint.config.js --fix",
-    "validate": "npm run format && npm run lint:fix && npm run typecheck && npm run knip",
-    "validate:test": "npm run validate && npm run test",
+    "validate": "pnpm run format && pnpm run lint:fix && pnpm run typecheck && pnpm run knip",
+    "validate:test": "pnpm run validate && pnpm run test",
     "generate-api": "openapi-ts",
     "knip": "knip",
     "hydrate-component-library": "tsx scripts/hydrate-component-library.ts public/component_library.original.yaml public/component_library.yaml"
