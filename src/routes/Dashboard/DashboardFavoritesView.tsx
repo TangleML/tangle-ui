@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Paragraph, Text } from "@/components/ui/typography";
 import { type FavoriteItem, useFavorites } from "@/hooks/useFavorites";
+import { cn } from "@/lib/utils";
 import { EDITOR_PATH, RUNS_BASE_PATH } from "@/routes/router";
 
 const PAGE_SIZE = 16;
@@ -23,19 +24,27 @@ const FavoriteCard = ({ item }: { item: FavoriteItem }) => {
   const isPipeline = item.type === "pipeline";
 
   return (
-    <button
-      onClick={() => navigate({ to: getFavoriteUrl(item) })}
-      className={`group relative flex flex-col gap-2 p-3 border rounded-lg cursor-pointer transition-colors text-left w-full ${
+    <a
+      href={getFavoriteUrl(item)}
+      onClick={(e) => {
+        if (!e.metaKey && !e.ctrlKey) {
+          e.preventDefault();
+          navigate({ to: getFavoriteUrl(item) });
+        }
+      }}
+      className={cn(
+        "group relative flex flex-col gap-2 p-3 border rounded-lg cursor-pointer transition-colors text-left w-full",
         isPipeline
           ? "bg-violet-50/40 hover:bg-violet-50 border-violet-100"
-          : "bg-emerald-50/40 hover:bg-emerald-50 border-emerald-100"
-      }`}
+          : "bg-emerald-50/40 hover:bg-emerald-50 border-emerald-100",
+      )}
     >
       {/* Remove button */}
       <Button
         variant="ghost"
         size="icon"
         onClick={(e) => {
+          e.preventDefault();
           e.stopPropagation();
           removeFavorite(item.type, item.id);
         }}
@@ -49,13 +58,16 @@ const FavoriteCard = ({ item }: { item: FavoriteItem }) => {
       <InlineStack gap="1" blockAlign="center">
         <Icon
           name={isPipeline ? "GitBranch" : "Play"}
-          className={`shrink-0 ${isPipeline ? "text-violet-500" : "text-emerald-500"}`}
+          className={cn(
+            "shrink-0",
+            isPipeline ? "text-violet-500" : "text-emerald-500",
+          )}
           size="sm"
         />
         <Text
           size="xs"
           weight="semibold"
-          className={isPipeline ? "text-violet-600" : "text-emerald-600"}
+          className={cn(isPipeline ? "text-violet-600" : "text-emerald-600")}
         >
           {isPipeline ? "Pipeline" : "Run"}
         </Text>
@@ -67,12 +79,46 @@ const FavoriteCard = ({ item }: { item: FavoriteItem }) => {
       </Text>
 
       {/* ID */}
-      <Text size="xs" className="truncate text-muted-foreground font-mono">
+      <Text size="xs" tone="subdued" font="mono" className="truncate">
         {item.id}
       </Text>
-    </button>
+    </a>
   );
 };
+
+interface FavoritesSearchBarProps {
+  query: string;
+  onQueryChange: (query: string) => void;
+}
+
+const FavoritesSearchBar = ({
+  query,
+  onQueryChange,
+}: FavoritesSearchBarProps) => (
+  <div className="relative w-64">
+    <Icon
+      name="Search"
+      className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+    />
+    <Input
+      placeholder="Search by name or ID..."
+      value={query}
+      onChange={(e) => onQueryChange(e.target.value)}
+      className="pl-9 pr-8"
+    />
+    {query && (
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => onQueryChange("")}
+        className="absolute right-2 top-1/2 -translate-y-1/2 size-6 text-muted-foreground hover:text-foreground"
+        aria-label="Clear search"
+      >
+        <Icon name="X" size="sm" />
+      </Button>
+    )}
+  </div>
+);
 
 export function DashboardFavoritesView() {
   const { favorites } = useFavorites();
@@ -95,6 +141,11 @@ export function DashboardFavoritesView() {
     (safePage + 1) * PAGE_SIZE,
   );
 
+  function handleQueryChange(value: string) {
+    setPage(0);
+    setQuery(value);
+  }
+
   return (
     <BlockStack gap="4">
       <Text as="h2" size="lg" weight="semibold">
@@ -107,38 +158,8 @@ export function DashboardFavoritesView() {
         </Paragraph>
       ) : (
         <BlockStack gap="4">
-          {/* Search */}
-          <div className="relative w-64">
-            <Icon
-              name="Search"
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-            />
-            <Input
-              placeholder="Search by name or ID..."
-              value={query}
-              onChange={(e) => {
-                setPage(0);
-                setQuery(e.target.value);
-              }}
-              className="pl-9 pr-8"
-            />
-            {query && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  setPage(0);
-                  setQuery("");
-                }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 size-6 text-muted-foreground hover:text-foreground"
-                aria-label="Clear search"
-              >
-                <Icon name="X" size="sm" />
-              </Button>
-            )}
-          </div>
+          <FavoritesSearchBar query={query} onQueryChange={handleQueryChange} />
 
-          {/* Grid */}
           {paginated.length === 0 ? (
             <Paragraph tone="subdued" size="sm">
               No results for &ldquo;{query}&rdquo;.
@@ -151,7 +172,6 @@ export function DashboardFavoritesView() {
             </div>
           )}
 
-          {/* Pagination */}
           {totalPages > 1 && (
             <InlineStack blockAlign="center" gap="2">
               <Button

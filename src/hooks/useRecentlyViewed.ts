@@ -1,5 +1,3 @@
-import { useSyncExternalStore } from "react";
-
 import { getStorage } from "@/utils/typedStorage";
 
 const RECENTLY_VIEWED_KEY = "Home/recently_viewed";
@@ -23,10 +21,6 @@ const storage = getStorage<
   RecentlyViewedStorageMapping
 >();
 
-// useSyncExternalStore requires getSnapshot to return a stable reference.
-let cachedJson: string | null = null;
-let cachedItems: RecentlyViewedItem[] = [];
-
 function isRecentlyViewedItem(item: unknown): item is RecentlyViewedItem {
   return (
     typeof item === "object" &&
@@ -49,18 +43,7 @@ function parseRecentlyViewed(json: string): RecentlyViewedItem[] {
 
 function readRecentlyViewed(): RecentlyViewedItem[] {
   const json = localStorage.getItem(RECENTLY_VIEWED_KEY);
-  if (json === cachedJson) return cachedItems;
-  cachedJson = json;
-  cachedItems = json ? parseRecentlyViewed(json) : [];
-  return cachedItems;
-}
-
-function subscribe(callback: () => void) {
-  const handler = (event: StorageEvent) => {
-    if (event.key === RECENTLY_VIEWED_KEY) callback();
-  };
-  window.addEventListener("storage", handler);
-  return () => window.removeEventListener("storage", handler);
+  return json ? parseRecentlyViewed(json) : [];
 }
 
 export function addRecentlyViewed(item: Omit<RecentlyViewedItem, "viewedAt">) {
@@ -74,14 +57,4 @@ export function addRecentlyViewed(item: Omit<RecentlyViewedItem, "viewedAt">) {
     MAX_ITEMS,
   );
   storage.setItem(RECENTLY_VIEWED_KEY, updated);
-}
-
-export function useRecentlyViewed() {
-  const recentlyViewed = useSyncExternalStore(
-    subscribe,
-    readRecentlyViewed,
-    () => [],
-  );
-
-  return { recentlyViewed, addRecentlyViewed };
 }
