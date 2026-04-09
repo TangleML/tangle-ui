@@ -63,25 +63,25 @@ function subscribe(callback: () => void) {
   return () => window.removeEventListener("storage", handler);
 }
 
+export function addRecentlyViewed(item: Omit<RecentlyViewedItem, "viewedAt">) {
+  const current = readRecentlyViewed();
+  // Remove any existing entry for the same item, then prepend the fresh one
+  const deduped = current.filter(
+    (existing) => !(existing.type === item.type && existing.id === item.id),
+  );
+  const updated = [{ ...item, viewedAt: Date.now() }, ...deduped].slice(
+    0,
+    MAX_ITEMS,
+  );
+  storage.setItem(RECENTLY_VIEWED_KEY, updated);
+}
+
 export function useRecentlyViewed() {
   const recentlyViewed = useSyncExternalStore(
     subscribe,
     readRecentlyViewed,
     () => [],
   );
-
-  const addRecentlyViewed = (item: Omit<RecentlyViewedItem, "viewedAt">) => {
-    const current = readRecentlyViewed();
-    // Remove any existing entry for the same item, then prepend the fresh one
-    const deduped = current.filter(
-      (existing) => !(existing.type === item.type && existing.id === item.id),
-    );
-    const updated = [{ ...item, viewedAt: Date.now() }, ...deduped].slice(
-      0,
-      MAX_ITEMS,
-    );
-    storage.setItem(RECENTLY_VIEWED_KEY, updated);
-  };
 
   return { recentlyViewed, addRecentlyViewed };
 }
