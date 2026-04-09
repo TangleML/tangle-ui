@@ -27,7 +27,7 @@ const RecentlyViewedCard = ({ item }: { item: RecentlyViewedItem }) => {
     <Link to={getRecentlyViewedUrl(item)} className="no-underline block">
       <BlockStack
         gap="2"
-        className="p-3 rounded-lg transition-all shadow-sm hover:shadow-md bg-card border border-border hover:border-foreground/20"
+        className="p-3 rounded-lg transition-all shadow-sm hover:shadow-md bg-card border border-border hover:border-foreground/20 overflow-hidden"
       >
         {/* Type pill + timestamp */}
         <InlineStack blockAlign="center" align="space-between">
