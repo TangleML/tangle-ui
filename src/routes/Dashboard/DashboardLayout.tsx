@@ -1,5 +1,6 @@
 import { Link, Outlet } from "@tanstack/react-router";
 
+import { Badge } from "@/components/ui/badge";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Heading, Text } from "@/components/ui/typography";
@@ -25,14 +26,9 @@ export function DashboardLayout() {
       <BlockStack gap="6">
         <InlineStack gap="2" blockAlign="center">
           <Heading level={1}>Dashboard</Heading>
-          <Text
-            as="span"
-            size="xs"
-            weight="semibold"
-            className="px-2 py-1 rounded-full bg-amber-100 text-amber-800"
-          >
+          <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
             Beta
-          </Text>
+          </Badge>
         </InlineStack>
 
         <InlineStack gap="8" blockAlign="start" className="w-full min-h-100">
