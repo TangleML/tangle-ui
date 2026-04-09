@@ -149,8 +149,7 @@ const IONode = ({ id, type, data, selected = false }: IONodeProps) => {
           output.name,
         );
 
-        const artifactData =
-          artifacts?.output_artifacts?.[output.name]?.artifact_data;
+        const artifact = artifacts?.output_artifacts?.[output.name];
 
         setContent(
           <OutputNameEditor
@@ -158,7 +157,7 @@ const IONode = ({ id, type, data, selected = false }: IONodeProps) => {
             connectedDetails={outputConnectedDetails}
             key={output.name}
             disabled={readOnly}
-            artifactData={artifactData}
+            artifact={artifact}
           />,
         );
       }

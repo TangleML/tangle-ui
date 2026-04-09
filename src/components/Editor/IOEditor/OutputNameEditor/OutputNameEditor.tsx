@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import type { ArtifactDataResponse } from "@/api/types.gen";
+import type { ArtifactNodeResponse } from "@/api/types.gen";
 import { LinkNodeButton } from "@/components/shared/Buttons/LinkNodeButton";
 import ConfirmationDialog from "@/components/shared/Dialogs/ConfirmationDialog";
 import { removeGraphOutput } from "@/components/shared/ReactFlow/FlowCanvas/utils/removeNode";
@@ -31,14 +31,14 @@ interface OutputNameEditorProps {
   output: OutputSpec;
   disabled?: boolean;
   connectedDetails: OutputConnectedDetails;
-  artifactData?: ArtifactDataResponse | null;
+  artifact?: ArtifactNodeResponse | null;
 }
 
 export const OutputNameEditor = ({
   output,
   disabled,
   connectedDetails,
-  artifactData,
+  artifact,
 }: OutputNameEditorProps) => {
   const { transferSelection } = useNodeSelectionTransfer(outputNameToNodeId);
   const {
@@ -211,8 +211,8 @@ export const OutputNameEditor = ({
         inputName={output.name}
       />
 
-      {disabled && artifactData && (
-        <ArtifactField artifactData={artifactData} io={output} />
+      {disabled && artifact && (
+        <ArtifactField artifact={artifact} io={output} />
       )}
 
       <InlineStack gap="4">
