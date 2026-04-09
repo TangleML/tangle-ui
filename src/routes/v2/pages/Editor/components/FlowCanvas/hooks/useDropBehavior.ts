@@ -48,7 +48,10 @@ function isReplaceTargetDrop(
 }
 
 function isDropPayload(payload: DropPayload | null): payload is DropPayload {
-  return payload !== null && payload.task !== undefined;
+  const supportedKeys = new Set(["task", "flex", "input", "output"]);
+  return (
+    payload !== null && new Set(Object.keys(payload)).isSubsetOf(supportedKeys)
+  );
 }
 
 type DropBehaviorResult = Required<
@@ -102,6 +105,7 @@ export function useDropBehavior(
         break;
 
       case isDropPayload(payload):
+        console.log("resolveDropHandler", payload);
         await resolveDropHandler(registry, payload)?.(spec, position, undo);
         break;
     }
