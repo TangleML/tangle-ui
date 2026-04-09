@@ -3,7 +3,7 @@ import { BlockStack } from "@/components/ui/layout";
 import { Heading, Paragraph } from "@/components/ui/typography";
 import type { InputSpec } from "@/utils/componentSpec";
 
-import IoCell from "./IOCell";
+import IOCell from "./IOCell/IOCell";
 
 interface IOInputsProps {
   inputs?: InputSpec[];
@@ -25,10 +25,11 @@ const IOInputs = ({ inputs, artifacts }: IOInputsProps) => {
         const inputArtifact = artifacts.input_artifacts?.[input.name];
 
         return (
-          <IoCell
+          <IOCell
             key={input.name}
-            io={input}
-            artifactData={inputArtifact?.artifact_data}
+            name={input.name}
+            type={input.type?.toString()}
+            artifact={inputArtifact}
           />
         );
       })}
