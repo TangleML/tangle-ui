@@ -12,7 +12,7 @@ interface SettingsProps {
 export function Settings({ settings, onChange }: SettingsProps) {
   return (
     <BlockStack gap="4">
-      <Paragraph weight="semibold">Settings</Paragraph>
+      <Paragraph weight="semibold">Preferences</Paragraph>
       {settings.length === 0 && <Paragraph>No settings available.</Paragraph>}
       {settings.map((setting) => (
         <Setting

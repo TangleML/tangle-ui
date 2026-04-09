@@ -53,7 +53,7 @@ export function SettingsLayout() {
     <SettingsFlagsProvider>
       <div className="container mx-auto p-6 max-w-4xl">
         <BlockStack gap="6">
-          <InlineStack gap="3" blockAlign="center">
+          <InlineStack className="relative w-full">
             <Button
               variant="ghost"
               size="sm"
@@ -61,8 +61,14 @@ export function SettingsLayout() {
               data-testid="settings-back-button"
             >
               <Icon name="ArrowLeft" />
-              <Heading level={1}>Settings</Heading>
+              Back
             </Button>
+            <InlineStack
+              align="center"
+              className="absolute inset-0 pointer-events-none"
+            >
+              <Heading level={1}>Settings</Heading>
+            </InlineStack>
           </InlineStack>
 
           <InlineStack gap="8" blockAlign="start" className="w-full min-h-100">
