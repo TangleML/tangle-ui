@@ -9,7 +9,7 @@ import {
   vi,
 } from "vitest";
 
-import type { OasisAuthResponse } from "@/components/shared/Authentication/types";
+import type { BackendAuthResponse } from "@/components/shared/Authentication/types";
 
 import { useGitHubAuthPopup } from "../useGitHubAuthPopup";
 
@@ -249,7 +249,7 @@ describe("useGitHubAuthPopup()", () => {
 
   describe("OAuth flow", () => {
     it("should handle successful authorization", async () => {
-      const mockResponse: OasisAuthResponse = {
+      const mockResponse: BackendAuthResponse = {
         token: "test-token",
         token_type: "JWT",
       };

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-import type { OasisAuthResponse } from "@/components/shared/Authentication/types";
+import type { BackendAuthResponse } from "@/components/shared/Authentication/types";
 import { APP_ROUTES } from "@/routes/router";
 import { API_URL } from "@/utils/constants";
 
@@ -36,25 +36,25 @@ async function exchangeCodeForToken(code: string) {
   const state = crypto.randomUUID();
   const oauthExchangeRoute = "/api/auth/github/callback";
 
-  const oasisUserUrl = new URL(
+  const authRequestUrl = new URL(
     `${API_URL}${oauthExchangeRoute}`,
     window.location.origin,
   );
 
-  oasisUserUrl.searchParams.set("code", code);
-  oasisUserUrl.searchParams.set("state", state);
+  authRequestUrl.searchParams.set("code", code);
+  authRequestUrl.searchParams.set("state", state);
 
-  const response = await fetch(oasisUserUrl.toString());
+  const response = await fetch(authRequestUrl.toString());
 
   if (!response.ok) {
     throw new Error("Failed to exchange code for token");
   }
 
-  return (await response.json()) as OasisAuthResponse;
+  return (await response.json()) as BackendAuthResponse;
 }
 
 interface GithubAuthFlowPopupOptions {
-  onSuccess: (response: OasisAuthResponse) => void;
+  onSuccess: (response: BackendAuthResponse) => void;
   onError: (error: string) => void;
   onClose?: () => void;
 }

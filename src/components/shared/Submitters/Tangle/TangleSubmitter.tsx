@@ -33,7 +33,7 @@ import { useAuthLocalStorage } from "../../Authentication/useAuthLocalStorage";
 import TooltipButton from "../../Buttons/TooltipButton";
 import { SubmitTaskArgumentsDialog } from "./components/SubmitTaskArgumentsDialog";
 
-interface OasisSubmitterProps {
+interface TangleSubmitterProps {
   componentSpec?: ComponentSpec;
   onSubmitComplete?: () => void;
   isComponentTreeValid?: boolean;
@@ -94,12 +94,12 @@ function useSubmitPipeline() {
   });
 }
 
-const OasisSubmitter = ({
+const TangleSubmitter = ({
   componentSpec,
   onSubmitComplete,
   isComponentTreeValid = true,
   onlyFixableIssues = false,
-}: OasisSubmitterProps) => {
+}: TangleSubmitterProps) => {
   const { isAuthorized } = useAwaitAuthorization();
   const { backendUrl, configured, available } = useBackend();
   const { mutate: submit, isPending: isSubmitting } = useSubmitPipeline();
@@ -329,4 +329,4 @@ const OasisSubmitter = ({
   );
 };
 
-export default OasisSubmitter;
+export default TangleSubmitter;
