@@ -94,9 +94,10 @@ export function DashboardLayout() {
             href={DOCUMENTATION_URL}
             external
             variant="block"
-            className={navItemClass(false)}
+            size="sm"
+            className={cn("w-full", navItemClass(false))}
           >
-            <InlineStack gap="2" blockAlign="center">
+            <InlineStack gap="2" blockAlign="center" className="flex-1">
               <Icon name="CircleQuestionMark" size="sm" />
               <Text size="sm">Docs</Text>
             </InlineStack>
