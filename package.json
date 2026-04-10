@@ -95,7 +95,7 @@
     "hyparquet": "^1.25.1",
     "js-yaml": "^4.1.1",
     "localforage": "^1.10.0",
-    "lucide-react": "^0.577.0",
+    "lucide-react": "^1.8.0",
     "nanoid": "^5.1.7",
     "papaparse": "^5.5.3",
     "pyodide": "^0.29.3",
