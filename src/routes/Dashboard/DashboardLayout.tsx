@@ -22,11 +22,13 @@ interface SidebarItem {
   to: string;
   label: string;
   icon: IconName;
+  exact?: boolean;
 }
 
 const SIDEBAR_ITEMS: SidebarItem[] = [
-  { to: "/runs", label: "Runs", icon: "Play" },
-  { to: "/pipelines", label: "Pipelines", icon: "GitBranch" },
+  { to: "/", label: "My Dashboard", icon: "LayoutDashboard", exact: true },
+  { to: "/pipelines", label: "My Pipelines", icon: "GitBranch" },
+  { to: "/runs", label: "All Runs", icon: "Play" },
   { to: "/components", label: "Components", icon: "Package" },
   { to: "/favorites", label: "Favorites", icon: "Star" },
   { to: "/recently-viewed", label: "Recently Viewed", icon: "Clock" },
@@ -67,6 +69,7 @@ export function DashboardLayout() {
               to={item.to}
               className="w-full"
               activeProps={{ className: "is-active" }}
+              activeOptions={item.exact ? { exact: true } : undefined}
             >
               {({ isActive }) => (
                 <InlineStack

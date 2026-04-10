@@ -10,7 +10,7 @@ import { type FavoriteItem, useFavorites } from "@/hooks/useFavorites";
 import { cn } from "@/lib/utils";
 import { EDITOR_PATH, RUNS_BASE_PATH } from "@/routes/router";
 
-const PAGE_SIZE = 16;
+const PAGE_SIZE = 20;
 
 function getFavoriteUrl(item: FavoriteItem): string {
   if (item.type === "pipeline") return `${EDITOR_PATH}/${item.id}`;
@@ -25,7 +25,7 @@ const FavoriteCard = ({ item }: { item: FavoriteItem }) => {
   return (
     <Link
       to={getFavoriteUrl(item)}
-      className="group relative flex flex-col gap-2.5 p-3 rounded-lg transition-all shadow-sm hover:shadow-md bg-card border border-border hover:border-foreground/20 no-underline"
+      className="group relative flex flex-col gap-2.5 p-3 rounded-lg transition-all shadow-sm hover:shadow-md bg-card border border-border hover:border-foreground/20 no-underline overflow-hidden"
     >
       {/* Remove button */}
       <Button
