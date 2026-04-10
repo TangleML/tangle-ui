@@ -12,6 +12,7 @@ import {
   createSecretArgument,
   extractSecretName,
 } from "@/components/shared/SecretsManagement/types";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -23,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import {
   Popover,
@@ -31,6 +33,7 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Paragraph } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
@@ -41,6 +44,7 @@ import {
   fetchPipelineRun,
 } from "@/services/executionService";
 import type { PipelineRun } from "@/types/pipelineRun";
+import { getBulkRunCount, parseBulkValues } from "@/utils/bulkSubmission";
 import {
   type ArgumentType,
   type ComponentSpec,
@@ -55,7 +59,11 @@ type TaskArguments = TaskSpecOutput["arguments"];
 interface SubmitTaskArgumentsDialogProps {
   open: boolean;
   onCancel: () => void;
-  onConfirm: (args: Record<string, ArgumentType>, notes: string) => void;
+  onConfirm: (
+    args: Record<string, ArgumentType>,
+    notes: string,
+    bulkInputNames: Set<string>,
+  ) => void;
   componentSpec: ComponentSpec;
 }
 
@@ -77,7 +85,14 @@ export const SubmitTaskArgumentsDialog = ({
     new Map(),
   );
 
+  const [bulkInputNames, setBulkInputNames] = useState<Set<string>>(new Set());
+
   const inputs = componentSpec.inputs ?? [];
+
+  const bulkRunCount = getBulkRunCount(taskArguments, bulkInputNames);
+  const hasBulkMismatch = bulkRunCount === -1;
+  const isBulkMode = bulkInputNames.size > 0;
+  const effectiveRunCount = isBulkMode ? Math.max(bulkRunCount, 0) : 1;
 
   const [isValidToSubmit, setIsValidToSubmit] = useState(
     validateArguments(inputs, taskArguments),
@@ -107,19 +122,31 @@ export const SubmitTaskArgumentsDialog = ({
   };
 
   useEffect(() => {
-    setIsValidToSubmit(validateArguments(inputs, taskArguments));
-  }, [inputs, taskArguments]);
+    const baseValid = validateArguments(inputs, taskArguments);
+    const bulkValid = !hasBulkMismatch && bulkRunCount > 0;
+    setIsValidToSubmit(baseValid && bulkValid);
+  }, [inputs, taskArguments, hasBulkMismatch, bulkRunCount]);
 
-  const handleRunNotesChange = (value: string) => {
-    setRunNotes(value);
+  const handleBulkToggle = (name: string, enabled: boolean) => {
+    setBulkInputNames((prev) => {
+      const next = new Set(prev);
+      if (enabled) {
+        next.add(name);
+      } else {
+        next.delete(name);
+      }
+      return next;
+    });
   };
 
-  const handleConfirm = () => onConfirm(taskArguments, runNotes);
+  const handleConfirm = () =>
+    onConfirm(taskArguments, runNotes, bulkInputNames);
 
   const handleCancel = () => {
     setTaskArguments(initialArgs);
     setRunNotes("");
     setHighlightedArgs(new Map());
+    setBulkInputNames(new Set());
     onCancel();
   };
 
@@ -155,18 +182,48 @@ export const SubmitTaskArgumentsDialog = ({
           )}
         </DialogHeader>
 
+        {isBulkMode && (
+          <BlockStack
+            gap="1"
+            className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground"
+          >
+            <Paragraph size="xs" weight="semibold">
+              Bulk mode
+            </Paragraph>
+            <Paragraph size="xs">
+              Enter comma-separated values for bulk inputs (e.g.{" "}
+              <Paragraph as="span" size="xs" className="font-mono">
+                A, B, C
+              </Paragraph>
+              ). Each value creates a separate run. Non-bulk inputs reuse their
+              single value across all runs. If multiple inputs are set to bulk,
+              they must have the same number of values.
+            </Paragraph>
+          </BlockStack>
+        )}
+
         {hasInputs && (
           <ScrollArea className="max-h-[60vh] pr-4 w-full">
             <BlockStack gap="4" className="p-1">
               {inputs.map((input) => {
                 const highlightVersion = highlightedArgs.get(input.name);
+                const isBulkEnabled = bulkInputNames.has(input.name);
+                const currentValue = taskArguments[input.name];
+                const bulkValueCount =
+                  isBulkEnabled && typeof currentValue === "string"
+                    ? parseBulkValues(currentValue).length
+                    : 0;
+
                 return (
                   <ArgumentField
                     key={`${input.name}-${highlightVersion ?? "static"}`}
                     input={input}
-                    value={taskArguments[input.name]}
+                    value={currentValue}
                     onChange={handleValueChange}
                     isHighlighted={highlightVersion !== undefined}
+                    isBulkEnabled={isBulkEnabled}
+                    onBulkToggle={handleBulkToggle}
+                    bulkValueCount={bulkValueCount}
                   />
                 );
               })}
@@ -180,18 +237,39 @@ export const SubmitTaskArgumentsDialog = ({
           </Paragraph>
           <Textarea
             value={runNotes}
-            onChange={(e) => handleRunNotesChange(e.target.value)}
+            onChange={(e) => setRunNotes(e.target.value)}
             placeholder="Share context about this pipeline run..."
             className="text-xs!"
           />
         </BlockStack>
+
+        {isBulkMode && (
+          <InlineStack gap="2" align="start" className="px-1">
+            {hasBulkMismatch ? (
+              <Paragraph size="xs" tone="critical">
+                Bulk inputs have different numbers of values. All bulk inputs
+                must have the same count.
+              </Paragraph>
+            ) : (
+              <Paragraph size="xs" tone="subdued">
+                This will submit{" "}
+                <Paragraph as="span" size="xs" weight="semibold">
+                  {effectiveRunCount}
+                </Paragraph>{" "}
+                {effectiveRunCount === 1 ? "run" : "runs"}.
+              </Paragraph>
+            )}
+          </InlineStack>
+        )}
 
         <DialogFooter>
           <Button variant="outline" onClick={handleCancel}>
             Cancel
           </Button>
           <Button onClick={handleConfirm} disabled={!isValidToSubmit}>
-            Submit Run
+            {isBulkMode && effectiveRunCount > 1
+              ? `Submit ${effectiveRunCount} Runs`
+              : "Submit Run"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -319,6 +397,9 @@ interface ArgumentFieldProps {
   value: ArgumentType | undefined;
   onChange: (name: string, value: ArgumentType) => void;
   isHighlighted?: boolean;
+  isBulkEnabled?: boolean;
+  onBulkToggle?: (name: string, enabled: boolean) => void;
+  bulkValueCount?: number;
 }
 
 const ArgumentField = ({
@@ -326,14 +407,17 @@ const ArgumentField = ({
   value,
   onChange,
   isHighlighted,
+  isBulkEnabled = false,
+  onBulkToggle,
+  bulkValueCount = 0,
 }: ArgumentFieldProps) => {
   const [isSelectSecretDialogOpen, setIsSelectSecretDialogOpen] =
     useState(false);
 
   const isValueSecret = isSecretArgument(value);
   const secretName = isValueSecret ? extractSecretName(value) : null;
-  // For the submit dialog, we only expect string values or SecretArguments
   const stringValue = typeof value === "string" ? value : "";
+  const canBeBulk = !isValueSecret;
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     onChange(input.name, e.target.value);
@@ -350,9 +434,12 @@ const ArgumentField = ({
 
   const typeLabel = typeSpecToString(input.type);
   const isRequired = !input.optional;
-  const placeholder = input.default ?? "";
+  const placeholder = isBulkEnabled
+    ? "value1, value2, value3"
+    : (input.default ?? "");
   const hasValidValue =
     isValueSecret || Boolean(stringValue) || Boolean(placeholder);
+  const bulkId = `bulk-${input.name}`;
 
   return (
     <>
@@ -363,7 +450,7 @@ const ArgumentField = ({
           isHighlighted && "animate-highlight-fade",
         )}
       >
-        <InlineStack gap="2" align="start">
+        <InlineStack gap="2" align="start" className="w-full">
           <Paragraph size="sm" className="wrap-break-word">
             {input.name}
           </Paragraph>
@@ -371,6 +458,30 @@ const ArgumentField = ({
             ({typeLabel}
             {isRequired ? "*" : ""})
           </Paragraph>
+          <div className="flex-1" />
+          {canBeBulk && (
+            <InlineStack gap="1" align="center">
+              <Label
+                htmlFor={bulkId}
+                className="text-xs text-muted-foreground cursor-pointer"
+              >
+                Bulk
+              </Label>
+              <Switch
+                id={bulkId}
+                checked={isBulkEnabled}
+                onCheckedChange={(checked) =>
+                  onBulkToggle?.(input.name, checked)
+                }
+                className="scale-75"
+              />
+              {isBulkEnabled && bulkValueCount > 0 && (
+                <Badge variant="secondary" size="xs" shape="rounded">
+                  {bulkValueCount}
+                </Badge>
+              )}
+            </InlineStack>
+          )}
         </InlineStack>
 
         {input.description && (
