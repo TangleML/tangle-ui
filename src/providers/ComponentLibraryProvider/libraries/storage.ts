@@ -1,4 +1,4 @@
-import Dexie, { type EntityTable } from "dexie";
+import Dexie, { type EntityTable, type Table } from "dexie";
 import { icons } from "lucide-react";
 
 const DB_NAME = "oasis-app";
@@ -31,15 +31,27 @@ export interface StoredLibrary extends StoredLibraryFolder {
   knownDigests: string[];
 }
 
+export type FavoriteType = "pipeline" | "run";
+
+export interface FavoriteItem {
+  type: FavoriteType;
+  id: string;
+  name: string;
+}
+
 export const LibraryDB = new Dexie(DB_NAME) as Dexie & {
   component_libraries: EntityTable<StoredLibrary, "id">;
+  favorites: Table<FavoriteItem, [FavoriteType, string]>;
 };
 
 /**
- * Initialize the database with the favorite components
  * Each version should be declared in DEXIE_EPOCH + {number}, starting from 1
  */
 LibraryDB.version(DEXIE_EPOCH + 1).stores({
   // id - primary key; name is unique index
   component_libraries: "id, &name",
+});
+
+LibraryDB.version(DEXIE_EPOCH + 2).stores({
+  favorites: "[type+id]",
 });

@@ -29,6 +29,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/hooks/useHandleEdgeSelection.ts",
   "src/hooks/useEdgeSelectionHighlight.ts",
   "src/hooks/useRunSearchParams.ts",
+  "src/hooks/useFavorites.ts",
 
   "src/components/shared/Tags",
   "src/components/shared/Submitters/Oasis/components",
