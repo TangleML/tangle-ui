@@ -13,9 +13,12 @@ import type { BackendAuthResponse } from "@/components/shared/Authentication/typ
 
 import { useGitHubAuthPopup } from "../useGitHubAuthPopup";
 
+vi.mock("@/providers/BackendProvider", () => ({
+  useBackend: () => ({ backendUrl: "https://api.example.com" }),
+}));
+
 vi.mock("@/utils/constants", async (importOriginal) => ({
   ...(await importOriginal()),
-  API_URL: "https://api.example.com",
   APP_ROUTES: {
     GITHUB_AUTH_CALLBACK: "/authorize/github",
   },
@@ -33,7 +36,6 @@ describe("useGitHubAuthPopup()", () => {
     vi.useFakeTimers();
 
     vi.stubEnv("VITE_GITHUB_CLIENT_ID", "test-client-id");
-    vi.stubEnv("VITE_BACKEND_API_URL", "https://api.example.com");
 
     // Mock popup window
     mockPopup = {
@@ -284,7 +286,7 @@ describe("useGitHubAuthPopup()", () => {
 
       expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining(
-          "/api/auth/github/callback?code=test-code&state=",
+          "https://api.example.com/api/auth/github/callback?code=test-code&state=",
         ),
       );
       expect(mockOnSuccess).toHaveBeenCalledWith(mockResponse);

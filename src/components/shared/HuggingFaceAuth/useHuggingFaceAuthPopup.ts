@@ -7,7 +7,7 @@ import type {
   JWTPayload,
 } from "@/components/shared/Authentication/types";
 import { HOURS } from "@/components/shared/ComponentEditor/constants";
-import { API_URL } from "@/utils/constants";
+import { useBackend } from "@/providers/BackendProvider";
 import { getUserDetails } from "@/utils/user";
 
 import { HUGGING_FACE_DEFAULT_JWT } from "./constants";
@@ -15,10 +15,10 @@ import { HUGGING_FACE_DEFAULT_JWT } from "./constants";
 const POPUP_WIDTH = 600;
 const POPUP_HEIGHT = 700;
 
-function buildAuthUrl() {
+function buildAuthUrl(backendUrl: string) {
   const authUrl = new URL(
     "/api/oauth/huggingface/login",
-    !!API_URL && API_URL !== "" ? API_URL : window.location.origin,
+    backendUrl ?? window.location.origin,
   );
 
   // todo: build target url respecting router settings
@@ -43,6 +43,7 @@ export function useHuggingFaceAuthPopup({
   onClose,
 }: HuggingFaceAuthFlowPopupOptions) {
   const queryClient = useQueryClient();
+  const { backendUrl } = useBackend();
 
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -113,7 +114,7 @@ export function useHuggingFaceAuthPopup({
     const { left, top } = centerPopupOnDocument();
 
     window.open(
-      buildAuthUrl(),
+      buildAuthUrl(backendUrl),
       "huggingface-auth",
       `width=${POPUP_WIDTH},height=${POPUP_HEIGHT},left=${left},top=${top},scrollbars=yes,resizable=yes`,
     );
