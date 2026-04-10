@@ -6,6 +6,7 @@ import {
   useState,
 } from "react";
 
+import { client } from "@/api/client.gen";
 import useToastNotification from "@/hooks/useToastNotification";
 import { API_URL } from "@/utils/constants";
 import {
@@ -113,6 +114,10 @@ export const BackendProvider = ({ children }: { children: ReactNode }) => {
             else notify(`Backend unavailable: ${res.statusText}`, "error");
           }
           if (saveAvailability) setAvailable(res.ok);
+
+          if (res.ok) {
+            client.setConfig({ baseUrl: normalizedUrl });
+          }
 
           setReady(true);
 

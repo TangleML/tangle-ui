@@ -18,7 +18,7 @@ import {
   isDiscoverableComponentReference,
 } from "@/utils/componentSpec";
 import type { ComponentReferenceWithSpec } from "@/utils/componentStore";
-import { API_URL, TWENTY_FOUR_HOURS_IN_MS } from "@/utils/constants";
+import { TWENTY_FOUR_HOURS_IN_MS } from "@/utils/constants";
 
 import { isValidFilterRequest, type LibraryFilterRequest } from "../types";
 import {
@@ -60,9 +60,11 @@ class BackendLibraryError extends Error {
 export class PublishedComponentsLibrary implements Library {
   #knownDigests: Set<string> = new Set();
   #queryClient: QueryClient;
+  #backendUrl: string;
 
-  constructor(queryClient: QueryClient) {
+  constructor(queryClient: QueryClient, backendUrl = "") {
     this.#queryClient = queryClient;
+    this.#backendUrl = backendUrl;
     // load known digests from storage
     // todo: prefetch components?
   }
@@ -242,7 +244,9 @@ export class PublishedComponentsLibrary implements Library {
         ({
           digest: component.digest,
           name: component.name,
-          url: component.url ?? `${API_URL}/api/components/${component.digest}`,
+          url:
+            component.url ??
+            `${this.#backendUrl}/api/components/${component.digest}`,
 
           published_by: component.published_by,
           superseded_by: component.superseded_by,
