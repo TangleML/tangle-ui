@@ -5,7 +5,6 @@ import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import NewPipelineButton from "@/components/shared/NewPipelineButton";
 import QuickStartCards from "@/components/shared/QuickStart/QuickStartCards";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Icon } from "@/components/ui/icon";
@@ -165,22 +164,12 @@ export const PipelineSection = withSuspenseWrapper(() => {
 
   return (
     <BlockStack gap="4" className="w-full">
-      <Alert variant="destructive">
-        <Icon name="Terminal" />
-        <AlertTitle>Heads up!</AlertTitle>
-        <AlertDescription>
-          Your pipelines are stored in your browser&apos;s local storage.
-          Clearing your browser data or cookies will delete all saved pipelines.
-          Consider exporting important pipelines to files for backup.
-        </AlertDescription>
-      </Alert>
-
       <PipelineFiltersBar
         filters={filterBarProps}
         actions={<QuickStartButton />}
       />
 
-      <Table>
+      <Table className="text-sm">
         <TableHeader>
           <TableRow className="text-xs">
             <TableHead className="w-10">
@@ -224,7 +213,11 @@ export const PipelineSection = withSuspenseWrapper(() => {
       </Table>
 
       {totalPages > 1 && (
-        <InlineStack gap="2" align="space-between" blockAlign="center">
+        <InlineStack
+          align="space-between"
+          blockAlign="center"
+          className="w-full"
+        >
           <InlineStack gap="2" blockAlign="center">
             <Button
               variant="outline"
@@ -241,10 +234,10 @@ export const PipelineSection = withSuspenseWrapper(() => {
               <Icon name="ChevronLeft" />
               Previous
             </Button>
+            <Text size="sm" tone="subdued">
+              Page {currentPage} of {totalPages}
+            </Text>
           </InlineStack>
-          <Text size="sm" tone="subdued">
-            Page {currentPage} of {totalPages}
-          </Text>
           <Button
             variant="outline"
             onClick={goToNextPage}
@@ -255,10 +248,6 @@ export const PipelineSection = withSuspenseWrapper(() => {
           </Button>
         </InlineStack>
       )}
-
-      <Button onClick={fetchUserPipelines} className="mt-6 max-w-96">
-        Refresh
-      </Button>
 
       {selectedPipelines.size > 0 && (
         <BulkActionsBar
