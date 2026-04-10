@@ -1,18 +1,16 @@
-import { useNavigate } from "@tanstack/react-router";
-import {
-  ChevronLeft,
-  ChevronRight,
-  GitBranch,
-  Play,
-  Star,
-  X,
-} from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { InlineStack } from "@/components/ui/layout";
-import { Paragraph, Text } from "@/components/ui/typography";
-import { type FavoriteItem, useFavorites } from "@/hooks/useFavorites";
+import { Icon } from "@/components/ui/icon";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { Heading, Paragraph, Text } from "@/components/ui/typography";
+import {
+  type FavoriteItem,
+  type FavoriteType,
+  useFavorites,
+} from "@/hooks/useFavorites";
+import { cn } from "@/lib/utils";
 import { EDITOR_PATH, RUNS_BASE_PATH } from "@/routes/router";
 
 const PAGE_SIZE = 10;
@@ -22,51 +20,52 @@ function getFavoriteUrl(item: FavoriteItem): string {
   return `${RUNS_BASE_PATH}/${item.id}`;
 }
 
-const FavoriteChip = ({ item }: { item: FavoriteItem }) => {
-  const navigate = useNavigate();
-  const { removeFavorite } = useFavorites();
-
-  const handleClick = () => {
-    navigate({ to: getFavoriteUrl(item) });
-  };
-
-  const handleRemove = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    removeFavorite(item.type, item.id);
-  };
-
-  return (
-    <div
-      onClick={handleClick}
-      title={item.name}
-      className={`group flex items-center gap-1.5 pl-2 pr-1 py-1 border rounded-md cursor-pointer min-w-0 ${
-        item.type === "pipeline"
-          ? "bg-violet-50/50 hover:bg-violet-50 border-violet-100"
-          : "bg-emerald-50/50 hover:bg-emerald-50 border-emerald-100"
-      }`}
+const FavoriteChip = ({
+  item,
+  onRemove,
+}: {
+  item: FavoriteItem;
+  onRemove: (type: FavoriteType, id: string) => void;
+}) => (
+  <Link
+    to={getFavoriteUrl(item)}
+    title={item.name}
+    className={cn(
+      "group flex items-center gap-1.5 pl-2 pr-1 py-1 border rounded-md min-w-0 no-underline",
+      item.type === "pipeline"
+        ? "bg-violet-50/50 hover:bg-violet-50 border-violet-100"
+        : "bg-emerald-50/50 hover:bg-emerald-50 border-emerald-100",
+    )}
+  >
+    <Icon
+      name={item.type === "pipeline" ? "GitBranch" : "Play"}
+      size="sm"
+      className="shrink-0 text-muted-foreground"
+    />
+    <Text size="sm" className="truncate">
+      {item.name}
+    </Text>
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onRemove(item.type, item.id);
+      }}
+      className="shrink-0 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground"
+      aria-label="Remove from favorites"
     >
-      {item.type === "pipeline" ? (
-        <GitBranch className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-      ) : (
-        <Play className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-      )}
-      <span className="text-sm truncate">{item.name}</span>
-      <button
-        onClick={handleRemove}
-        className="shrink-0 p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer"
-      >
-        <X className="h-3 w-3" />
-      </button>
-    </div>
-  );
-};
+      <Icon name="X" size="sm" />
+    </Button>
+  </Link>
+);
 
 export const FavoritesSection = () => {
-  const { favorites } = useFavorites();
+  const { favorites, removeFavorite } = useFavorites();
   const [page, setPage] = useState(0);
 
   const totalPages = Math.ceil(favorites.length / PAGE_SIZE);
-  // Reset to last valid page if favorites shrink (e.g. after removing items)
   const safePage = Math.min(page, Math.max(0, totalPages - 1));
   const paginated = favorites.slice(
     safePage * PAGE_SIZE,
@@ -74,15 +73,10 @@ export const FavoritesSection = () => {
   );
 
   return (
-    <div className="flex flex-col gap-2">
+    <BlockStack gap="2">
       <InlineStack blockAlign="center" gap="1">
-        <Star
-          className="h-4 w-4 text-warning"
-          fill="oklch(79.5% 0.184 86.047)"
-        />
-        <Text as="h2" size="sm" weight="semibold">
-          Favorites
-        </Text>
+        <Icon name="Star" className="text-warning fill-current" />
+        <Heading level={2}>Favorites</Heading>
       </InlineStack>
 
       {favorites.length === 0 ? (
@@ -90,12 +84,16 @@ export const FavoritesSection = () => {
           No favorites yet. Star a pipeline or run to pin it here.
         </Paragraph>
       ) : (
-        <div className="flex flex-col gap-2">
-          <div className="flex flex-wrap gap-2">
+        <BlockStack gap="2">
+          <InlineStack wrap="wrap" gap="2">
             {paginated.map((item) => (
-              <FavoriteChip key={`${item.type}-${item.id}`} item={item} />
+              <FavoriteChip
+                key={`${item.type}-${item.id}`}
+                item={item}
+                onRemove={removeFavorite}
+              />
             ))}
-          </div>
+          </InlineStack>
 
           {totalPages > 1 && (
             <InlineStack blockAlign="center" gap="2">
@@ -106,7 +104,7 @@ export const FavoritesSection = () => {
                 disabled={safePage === 0}
                 onClick={() => setPage(safePage - 1)}
               >
-                <ChevronLeft className="h-4 w-4" />
+                <Icon name="ChevronLeft" />
               </Button>
               <Paragraph tone="subdued" size="sm">
                 {safePage + 1} / {totalPages}
@@ -118,12 +116,12 @@ export const FavoritesSection = () => {
                 disabled={safePage >= totalPages - 1}
                 onClick={() => setPage(safePage + 1)}
               >
-                <ChevronRight className="h-4 w-4" />
+                <Icon name="ChevronRight" />
               </Button>
             </InlineStack>
           )}
-        </div>
+        </BlockStack>
       )}
-    </div>
+    </BlockStack>
   );
 };
