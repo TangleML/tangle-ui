@@ -7,6 +7,7 @@ import type {
   GetGraphExecutionStateResponse,
   PipelineRunResponse,
 } from "@/api/types.gen";
+import { useCacheStatusMap } from "@/hooks/useCacheStatusMap";
 import { usePipelineRunData } from "@/hooks/usePipelineRunData";
 import {
   createRequiredContext,
@@ -15,7 +16,11 @@ import {
 import type { BreadcrumbSegment } from "@/hooks/useSubgraphBreadcrumbs";
 import { useSubgraphBreadcrumbs } from "@/hooks/useSubgraphBreadcrumbs";
 import { useFetchPipelineRunMetadata } from "@/services/executionService";
-import { getOverallExecutionStatusFromStats } from "@/utils/executionStatus";
+import {
+  flattenExecutionStatusStats,
+  getOverallExecutionStatusFromStats,
+  isExecutionComplete,
+} from "@/utils/executionStatus";
 
 import { useComponentSpec } from "./ComponentSpecProvider";
 
@@ -37,6 +42,7 @@ interface ExecutionDataContextType {
   isLoading: boolean;
   error: Error | null;
   taskExecutionStatusMap: Map<string, string>;
+  cachedTaskIds: Set<string>;
   segments: BreadcrumbSegment[];
 }
 
@@ -273,6 +279,16 @@ export function ExecutionDataProvider({
     [details, state],
   );
 
+  const isRunComplete = useMemo(() => {
+    if (!state?.child_execution_status_stats) return false;
+    const stats = flattenExecutionStatusStats(
+      state.child_execution_status_stats,
+    );
+    return isExecutionComplete(stats);
+  }, [state]);
+
+  const cachedTaskIds = useCacheStatusMap(details, metadata, isRunComplete);
+
   const value = useMemo(
     () => ({
       currentExecutionId,
@@ -286,6 +302,7 @@ export function ExecutionDataProvider({
       isLoading,
       error,
       taskExecutionStatusMap,
+      cachedTaskIds,
       segments,
     }),
     [
@@ -300,6 +317,7 @@ export function ExecutionDataProvider({
       isLoading,
       error,
       taskExecutionStatusMap,
+      cachedTaskIds,
       segments,
     ],
   );
