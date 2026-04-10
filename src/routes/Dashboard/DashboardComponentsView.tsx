@@ -35,6 +35,7 @@ import type {
 } from "@/utils/componentSpec";
 import { TOP_NAV_HEIGHT } from "@/utils/constants";
 import { fetchWithErrorHandling } from "@/utils/fetchWithErrorHandling";
+import { getComponentName } from "@/utils/getComponentName";
 
 const PUBLISHED_COMPONENTS_URL = "/api/published_components/";
 
@@ -94,7 +95,7 @@ const ComponentRow = ({
     )}
   >
     <Text size="xs" className="truncate">
-      {component.name ?? component.digest ?? "Unnamed"}
+      {component.name ?? getComponentName(component)}
     </Text>
     {component.published_by && (
       <Text
