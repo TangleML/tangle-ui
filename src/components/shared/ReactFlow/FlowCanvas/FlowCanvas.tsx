@@ -100,20 +100,6 @@ const SELECTABLE_NODES = new Set(["task", "input", "output", "flex"]);
 const UPGRADEABLE_NODES = new Set(["task"]);
 const REPLACEABLE_NODES = new Set(["task"]);
 const FAST_PLACE_NODE_TYPES = new Set<Node["type"]>(["task"]);
-
-const useScheduleExecutionOnceWhenConditionMet = (
-  condition: boolean,
-  callback: () => void,
-) => {
-  const hasExecuted = useRef(false);
-  useEffect(() => {
-    if (condition && !hasExecuted.current) {
-      callback();
-      hasExecuted.current = true;
-    }
-  }, [condition, callback]);
-};
-
 export interface FlowCanvasRef {
   autoLayout: (algorithm: LayoutAlgorithm) => Promise<void>;
 }
@@ -1013,15 +999,6 @@ const FlowCanvasContent = ({
   useEffect(() => {
     resetPrevSpec();
   }, [componentSpec?.name, resetPrevSpec]);
-
-  const fitView = () => {
-    reactFlowInstance?.fitView({ maxZoom: 1 });
-  };
-
-  useScheduleExecutionOnceWhenConditionMet(
-    fitViewOnInit && initialCanvasLoaded.current && !!reactFlowInstance,
-    fitView,
-  );
 
   const onCopy = () => {
     // Copy selected nodes to clipboard
