@@ -5,70 +5,49 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
-import { Paragraph, Text } from "@/components/ui/typography";
+import { Heading, Paragraph, Text } from "@/components/ui/typography";
 import { type FavoriteItem, useFavorites } from "@/hooks/useFavorites";
-import { cn } from "@/lib/utils";
-import { EDITOR_PATH, RUNS_BASE_PATH } from "@/routes/router";
+
+import { getFavoriteUrl, TypePill } from "./TypePill";
 
 const PAGE_SIZE = 20;
 
-function getFavoriteUrl(item: FavoriteItem): string {
-  if (item.type === "pipeline") return `${EDITOR_PATH}/${item.id}`;
-  return `${RUNS_BASE_PATH}/${item.id}`;
-}
-
-const FavoriteCard = ({ item }: { item: FavoriteItem }) => {
-  const { removeFavorite } = useFavorites();
-
-  const isPipeline = item.type === "pipeline";
-
-  return (
-    <Link
-      to={getFavoriteUrl(item)}
-      className="group relative flex flex-col gap-2.5 p-3 rounded-lg transition-all shadow-sm hover:shadow-md bg-card border border-border hover:border-foreground/20 no-underline overflow-hidden"
+const FavoriteCard = ({
+  item,
+  onRemove,
+}: {
+  item: FavoriteItem;
+  onRemove: () => void;
+}) => (
+  <Link
+    to={getFavoriteUrl(item)}
+    className="group relative flex flex-col gap-2.5 p-3 rounded-lg transition-all shadow-sm hover:shadow-md bg-card border border-border hover:border-foreground/20 no-underline overflow-hidden"
+  >
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onRemove();
+      }}
+      className="absolute top-2 right-2 size-5 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground"
+      aria-label="Remove from favorites"
     >
-      {/* Remove button */}
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          removeFavorite(item.type, item.id);
-        }}
-        className="absolute top-2 right-2 size-5 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground"
-        aria-label="Remove from favorites"
-      >
-        <Icon name="X" size="sm" />
-      </Button>
+      <Icon name="X" size="sm" />
+    </Button>
 
-      {/* Type pill */}
-      <InlineStack>
-        <span
-          className={cn(
-            "inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs font-semibold",
-            isPipeline
-              ? "bg-violet-100 text-violet-700"
-              : "bg-emerald-100 text-emerald-700",
-          )}
-        >
-          <Icon name={isPipeline ? "GitBranch" : "Play"} size="sm" />
-          {isPipeline ? "Pipeline" : "Run"}
-        </span>
-      </InlineStack>
+    <TypePill type={item.type} className="self-start" />
 
-      {/* Name */}
-      <Text size="sm" weight="semibold" className="truncate pr-4 leading-tight">
-        {item.name}
-      </Text>
+    <Text size="sm" weight="semibold" className="truncate pr-4 leading-tight">
+      {item.name}
+    </Text>
 
-      {/* ID */}
-      <Text size="xs" tone="subdued" font="mono" className="truncate">
-        {item.id}
-      </Text>
-    </Link>
-  );
-};
+    <Text size="xs" tone="subdued" font="mono" className="truncate">
+      {item.id}
+    </Text>
+  </Link>
+);
 
 interface FavoritesSearchBarProps {
   query: string;
@@ -105,7 +84,7 @@ const FavoritesSearchBar = ({
 );
 
 export function DashboardFavoritesView() {
-  const { favorites } = useFavorites();
+  const { favorites, removeFavorite } = useFavorites();
   const [page, setPage] = useState(0);
   const [query, setQuery] = useState("");
 
@@ -132,9 +111,7 @@ export function DashboardFavoritesView() {
 
   return (
     <BlockStack gap="4">
-      <Text as="h2" size="lg" weight="semibold">
-        Favorites
-      </Text>
+      <Heading level={2}>Favorites</Heading>
 
       {favorites.length === 0 ? (
         <Paragraph tone="subdued" size="sm">
@@ -151,7 +128,11 @@ export function DashboardFavoritesView() {
           ) : (
             <div className="grid grid-cols-4 gap-3">
               {paginated.map((item) => (
-                <FavoriteCard key={`${item.type}-${item.id}`} item={item} />
+                <FavoriteCard
+                  key={`${item.type}-${item.id}`}
+                  item={item}
+                  onRemove={() => removeFavorite(item.type, item.id)}
+                />
               ))}
             </div>
           )}

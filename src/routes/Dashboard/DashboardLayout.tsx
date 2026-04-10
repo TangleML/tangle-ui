@@ -89,7 +89,7 @@ export function DashboardLayout() {
         <div className="flex-1 min-h-4" />
 
         {/* Bottom utilities */}
-        <div className="flex flex-col gap-1 px-3 border-t border-border pt-3 pb-3">
+        <BlockStack gap="1" className="px-3 border-t border-border pt-3 pb-3">
           <UILink
             href={DOCUMENTATION_URL}
             external
@@ -120,32 +120,36 @@ export function DashboardLayout() {
           )}
 
           {/* Footer links */}
-          <div className="flex flex-col gap-0.5 pt-2 mt-1 border-t border-border">
+          <BlockStack className="gap-0.5 pt-2 mt-1 border-t border-border">
             {[
               { label: "About", href: ABOUT_URL },
               { label: "Give feedback", href: GIVE_FEEDBACK_URL },
               { label: "Privacy policy", href: PRIVACY_POLICY_URL },
             ].map(({ label, href }) => (
-              <a
+              <UILink
                 key={label}
                 href={href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-3 py-1 text-xs text-muted-foreground hover:text-foreground rounded-md hover:bg-accent"
+                variant="block"
+                size="xs"
+                className="px-3 py-1 text-muted-foreground hover:text-foreground rounded-md hover:bg-accent"
               >
                 {label}
-              </a>
+              </UILink>
             ))}
-            <a
+            <UILink
               href={`${GIT_REPO_URL}/commit/${GIT_COMMIT}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-3 py-1 text-xs text-muted-foreground hover:text-foreground rounded-md hover:bg-accent font-mono"
+              variant="block"
+              size="xs"
+              className="px-3 py-1 text-muted-foreground hover:text-foreground rounded-md hover:bg-accent font-mono"
             >
               ver: {GIT_COMMIT.substring(0, 6)}
-            </a>
-          </div>
-        </div>
+            </UILink>
+          </BlockStack>
+        </BlockStack>
       </div>
 
       {/* Main content — independent scroll */}

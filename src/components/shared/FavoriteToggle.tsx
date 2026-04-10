@@ -1,7 +1,7 @@
-import { Star } from "lucide-react";
 import { type MouseEvent } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { type FavoriteType, useFavorites } from "@/hooks/useFavorites";
 import { cn } from "@/lib/utils";
 
@@ -31,7 +31,7 @@ export const FavoriteToggle = ({ type, id, name }: FavoriteToggleProps) => {
       variant="ghost"
       size="icon"
     >
-      <Star className="h-4 w-4" fill={active ? "currentColor" : "none"} />
+      <Icon name="Star" className={cn(active ? "fill-warning" : "fill-none")} />
     </Button>
   );
 };
