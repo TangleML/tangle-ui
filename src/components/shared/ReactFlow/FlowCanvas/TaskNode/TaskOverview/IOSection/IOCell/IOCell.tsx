@@ -7,6 +7,8 @@ import { formatBytes } from "@/utils/string";
 import ArtifactURI from "./ArtifactURI";
 import ArtifactVisualizer from "./ArtifactVisualizer/ArtifactVisualizer";
 
+const MAX_VISUALIZABLE_SIZE_BYTES = 50 * 1024 * 1024; // 50 MB
+
 interface IOCellProps {
   name: string;
   type?: string;
@@ -18,6 +20,10 @@ const IOCell = ({ name, type, artifact }: IOCellProps) => {
   const inlineValue = artifactData?.value;
   const hasInlineValue = canShowInlineValue(inlineValue);
   const hasDetails = Boolean(artifactData?.uri || hasInlineValue);
+  const isTooLargeToVisualize =
+    !hasInlineValue &&
+    !!artifactData?.total_size &&
+    artifactData.total_size > MAX_VISUALIZABLE_SIZE_BYTES;
 
   const artifactType =
     type ?? artifact?.type_name ?? (artifactData?.is_dir ? "Directory" : "Any");
@@ -64,14 +70,17 @@ const IOCell = ({ name, type, artifact }: IOCellProps) => {
           </CopyText>
         )}
 
-        {!artifactData?.uri && artifact && hasDetails && (
-          <ArtifactVisualizer
-            artifact={artifact}
-            name={name}
-            type={type ?? "text"}
-            value={hasInlineValue ? inlineValue : undefined}
-          />
-        )}
+        {!artifactData?.uri &&
+          artifact &&
+          hasDetails &&
+          !isTooLargeToVisualize && (
+            <ArtifactVisualizer
+              artifact={artifact}
+              name={name}
+              type={type ?? "text"}
+              value={hasInlineValue ? inlineValue : undefined}
+            />
+          )}
       </InlineStack>
 
       {!!artifactData?.uri && (
@@ -83,7 +92,7 @@ const IOCell = ({ name, type, artifact }: IOCellProps) => {
         >
           <ArtifactURI uri={artifactData.uri} isDir={artifactData.is_dir} />
 
-          {artifact && hasDetails && (
+          {artifact && hasDetails && !isTooLargeToVisualize && (
             <ArtifactVisualizer
               artifact={artifact}
               name={name}
@@ -92,6 +101,12 @@ const IOCell = ({ name, type, artifact }: IOCellProps) => {
             />
           )}
         </InlineStack>
+      )}
+
+      {!hasDetails && (
+        <Text size="xs" tone="subdued">
+          No data available
+        </Text>
       )}
     </BlockStack>
   );
