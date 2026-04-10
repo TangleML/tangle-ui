@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
+import { Input } from "@/components/ui/input";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
 import {
@@ -64,10 +65,20 @@ const FavoriteChip = ({
 export const FavoritesSection = () => {
   const { favorites, removeFavorite } = useFavorites();
   const [page, setPage] = useState(0);
+  const [query, setQuery] = useState("");
 
-  const totalPages = Math.ceil(favorites.length / PAGE_SIZE);
+  const normalizedQuery = query.trim().toLowerCase();
+  const filtered = normalizedQuery
+    ? favorites.filter(
+        (favorite) =>
+          favorite.id.toLowerCase().includes(normalizedQuery) ||
+          favorite.name.toLowerCase().includes(normalizedQuery),
+      )
+    : favorites;
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const safePage = Math.min(page, Math.max(0, totalPages - 1));
-  const paginated = favorites.slice(
+  const paginated = filtered.slice(
     safePage * PAGE_SIZE,
     (safePage + 1) * PAGE_SIZE,
   );
@@ -85,6 +96,36 @@ export const FavoritesSection = () => {
         </Paragraph>
       ) : (
         <BlockStack gap="2">
+          <div className="relative w-48">
+            <Icon
+              name="Search"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+            />
+            <Input
+              placeholder="Search by name or ID..."
+              value={query}
+              onChange={(e) => {
+                setPage(0);
+                setQuery(e.target.value);
+              }}
+              className="pl-9 pr-8 w-full"
+            />
+            {query && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  setPage(0);
+                  setQuery("");
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 size-6 text-muted-foreground hover:text-foreground"
+                aria-label="Clear search"
+              >
+                <Icon name="X" size="sm" />
+              </Button>
+            )}
+          </div>
+
           <InlineStack wrap="wrap" gap="2">
             {paginated.map((item) => (
               <FavoriteChip
