@@ -32,6 +32,10 @@ vi.mock("@/components/shared/Dialogs/ComponentDuplicateDialog", () => ({
 import { ComponentSpecProvider } from "../ComponentSpecProvider";
 import { ComponentLibraryProvider, useComponentLibrary } from ".";
 
+vi.mock("@/providers/BackendProvider", () => ({
+  useBackend: () => ({ backendUrl: "" }),
+}));
+
 // Mock all dependencies
 vi.mock("@/services/componentService");
 vi.mock("@/utils/componentStore");
