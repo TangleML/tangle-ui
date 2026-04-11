@@ -5,6 +5,7 @@ import { memo, useCallback, useEffect, useMemo } from "react";
 
 import { InputValueEditor } from "@/components/Editor/IOEditor/InputValueEditor";
 import { OutputNameEditor } from "@/components/Editor/IOEditor/OutputNameEditor";
+import type { OutputConnectedDetails } from "@/components/Editor/utils/getOutputConnectedDetails";
 import { getOutputConnectedDetails } from "@/components/Editor/utils/getOutputConnectedDetails";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -18,6 +19,7 @@ import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useContextPanel } from "@/providers/ContextPanelProvider";
 import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
 import { getExecutionArtifacts } from "@/services/executionService";
+import type { OutputSpec } from "@/utils/componentSpec";
 import { getArgumentValue } from "@/utils/nodes/taskArguments";
 import { isViewingSubgraph } from "@/utils/subgraphUtils";
 
@@ -48,12 +50,6 @@ const IONode = ({ id, type, data, selected = false }: IONodeProps) => {
   const executionData = useExecutionDataOptional();
   const taskArguments = executionData?.rootDetails?.task_spec.arguments;
   const rootExecutionId = executionData?.rootExecutionId;
-
-  const { data: artifacts } = useQuery({
-    queryKey: ["artifacts", rootExecutionId],
-    queryFn: () => getExecutionArtifacts(String(rootExecutionId), backendUrl),
-    enabled: !!rootExecutionId,
-  });
 
   const {
     setContent,
@@ -149,15 +145,14 @@ const IONode = ({ id, type, data, selected = false }: IONodeProps) => {
           output.name,
         );
 
-        const artifact = artifacts?.output_artifacts?.[output.name];
-
         setContent(
-          <OutputNameEditor
+          <OutputNodeContent
             output={output}
             connectedDetails={outputConnectedDetails}
             key={output.name}
             disabled={readOnly}
-            artifact={artifact}
+            rootExecutionId={rootExecutionId}
+            backendUrl={backendUrl}
           />,
         );
       }
@@ -271,3 +266,36 @@ const IONode = ({ id, type, data, selected = false }: IONodeProps) => {
 };
 
 export default memo(IONode);
+
+interface OutputNodeContentProps {
+  output: OutputSpec;
+  connectedDetails: OutputConnectedDetails;
+  disabled: boolean;
+  rootExecutionId: string | undefined;
+  backendUrl: string;
+}
+
+const OutputNodeContent = ({
+  output,
+  connectedDetails,
+  disabled,
+  rootExecutionId,
+  backendUrl,
+}: OutputNodeContentProps) => {
+  const { data: artifacts } = useQuery({
+    queryKey: ["artifacts", rootExecutionId],
+    queryFn: () => getExecutionArtifacts(String(rootExecutionId), backendUrl),
+    enabled: !!rootExecutionId,
+  });
+
+  const artifact = artifacts?.output_artifacts?.[output.name];
+
+  return (
+    <OutputNameEditor
+      output={output}
+      connectedDetails={connectedDetails}
+      disabled={disabled}
+      artifact={artifact}
+    />
+  );
+};
