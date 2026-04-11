@@ -105,7 +105,6 @@ export function useDropBehavior(
         break;
 
       case isDropPayload(payload):
-        console.log("resolveDropHandler", payload);
         await resolveDropHandler(registry, payload)?.(spec, position, undo);
         break;
     }
