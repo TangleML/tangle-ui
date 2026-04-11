@@ -10,6 +10,10 @@ import { getExecutionArtifacts } from "@/services/executionService";
 import { getBackendStatusString } from "@/utils/backend";
 import type { TaskSpec } from "@/utils/componentSpec";
 import { isOlderThanDays } from "@/utils/date";
+import {
+  flattenExecutionStatusStats,
+  isExecutionComplete,
+} from "@/utils/executionStatus";
 
 import IOExtras from "./IOExtras";
 import IOInputs from "./IOInputs";
@@ -23,7 +27,12 @@ interface IOSectionProps {
 
 const IOSection = ({ taskSpec, executionId, readOnly }: IOSectionProps) => {
   const { backendUrl, configured, available } = useBackend();
-  const { metadata } = useExecutionData();
+  const { metadata, rootState } = useExecutionData();
+
+  const rootStats = flattenExecutionStatusStats(
+    rootState?.child_execution_status_stats,
+  );
+  const executionDone = !rootState || isExecutionComplete(rootStats);
 
   const {
     data: artifacts,
@@ -33,7 +42,7 @@ const IOSection = ({ taskSpec, executionId, readOnly }: IOSectionProps) => {
   } = useQuery({
     queryKey: ["artifacts", executionId],
     queryFn: () => getExecutionArtifacts(String(executionId), backendUrl),
-    enabled: !!executionId,
+    enabled: !!executionId && executionDone,
   });
 
   if (!configured) {
