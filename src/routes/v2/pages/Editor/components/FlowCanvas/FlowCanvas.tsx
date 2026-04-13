@@ -35,6 +35,8 @@ import { useDropBehavior } from "./hooks/useDropBehavior";
 import { useNodeEdgeChanges } from "./hooks/useNodeEdgeChanges";
 import { usePaneClickBehavior } from "./hooks/usePaneClickBehavior";
 
+const DELETE_KEY_CODE = ["Delete", "Backspace"];
+
 interface FlowCanvasProps {
   spec: ComponentSpec | null;
   className?: string;
@@ -106,7 +108,7 @@ export const FlowCanvas = observer(function FlowCanvas({
         onInit={setReactFlowInstance}
         onViewportChange={handleViewportChange}
         connectionLineComponent={ConnectionLine}
-        deleteKeyCode={["Delete", "Backspace"]}
+        deleteKeyCode={DELETE_KEY_CODE}
       >
         <FloatingSelectionToolbar spec={spec} />
         <Background gap={GRID_SIZE} className="!bg-slate-50" />

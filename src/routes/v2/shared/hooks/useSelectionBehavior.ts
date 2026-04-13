@@ -3,7 +3,7 @@ import type {
   OnSelectionChangeParams,
   ReactFlowProps,
 } from "@xyflow/react";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec/entities/componentSpec";
 import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
@@ -35,9 +35,14 @@ export function useSelectionBehavior(
   const registry = useNodeRegistry();
   const { editor } = useSharedStores();
 
-  const debouncedSetMultiSelection = debounce(
-    (nodes: SelectedNode[]) => editor.setMultiSelection(nodes),
-    SELECTION_DEBOUNCE_MS,
+  // eslint-disable-next-line no-restricted-syntax -- debounce() is stateful; compiler cannot prove purity
+  const debouncedSetMultiSelection = useMemo(
+    () =>
+      debounce(
+        (nodes: SelectedNode[]) => editor.setMultiSelection(nodes),
+        SELECTION_DEBOUNCE_MS,
+      ),
+    [editor],
   );
 
   useEffect(() => {

@@ -20,11 +20,17 @@ export class NodeTypeRegistry {
    */
   private prefixes: Array<{ prefix: string; manifest: NodeTypeManifest }> = [];
 
+  private cachedNodeTypes: NodeTypes | null = null;
+  private cachedEdgeTypes: EdgeTypes | null = null;
+
   register(manifest: NodeTypeManifest): void {
     this.byEntityType.set(manifest.entityType, manifest);
 
     this.prefixes.push({ prefix: manifest.idPrefix, manifest });
     this.prefixes.sort((a, b) => b.prefix.length - a.prefix.length);
+
+    this.cachedNodeTypes = null;
+    this.cachedEdgeTypes = null;
   }
 
   /** Look up by domain entity type (e.g. "task", "input", "conduit"). */
@@ -62,19 +68,21 @@ export class NodeTypeRegistry {
 
   /** Build the `nodeTypes` record for `<ReactFlow nodeTypes={…}>`. */
   getNodeTypes(): NodeTypes {
-    return Object.fromEntries(
-      this.all().map((manifest) => [manifest.type, manifest.component]),
+    this.cachedNodeTypes ??= Object.fromEntries(
+      this.all().map((m) => [m.type, m.component]),
     ) as NodeTypes;
+    return this.cachedNodeTypes;
   }
 
   /** Build the `edgeTypes` record for `<ReactFlow edgeTypes={…}>`. */
   getEdgeTypes(): EdgeTypes {
-    return Object.assign(
+    this.cachedEdgeTypes ??= Object.assign(
       {},
       ...this.all()
-        .filter((manifest) => manifest.edgeTypes)
-        .map((manifest) => manifest.edgeTypes),
-    );
+        .filter((m) => m.edgeTypes)
+        .map((m) => m.edgeTypes),
+    ) as EdgeTypes;
+    return this.cachedEdgeTypes;
   }
 
   /** Aggregate `buildNodes` from every manifest. */

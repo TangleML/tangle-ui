@@ -7,7 +7,7 @@ import type {
 } from "@xyflow/react";
 import { useEdgesState, useNodesState } from "@xyflow/react";
 import type { MouseEvent } from "react";
-import { useEffect } from "react";
+import { useState } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
@@ -50,6 +50,18 @@ export function useFlowCanvasState({
   const [nodes, setNodes, rfOnNodesChange] = useNodesState(specNodes);
   const [edges, setEdges, rfOnEdgesChange] = useEdgesState(specEdges);
 
+  const [syncedSpecNodes, setSyncedSpecNodes] = useState(specNodes);
+  const [syncedSpecEdges, setSyncedSpecEdges] = useState(specEdges);
+
+  if (syncedSpecNodes !== specNodes) {
+    setSyncedSpecNodes(specNodes);
+    setNodes(specNodes);
+  }
+  if (syncedSpecEdges !== specEdges) {
+    setSyncedSpecEdges(specEdges);
+    setEdges(specEdges);
+  }
+
   const {
     nodes: displayNodes,
     edges: displayEdges,
@@ -65,11 +77,6 @@ export function useFlowCanvasState({
     },
     canvasOverlay,
   );
-
-  useEffect(() => {
-    setNodes(specNodes);
-    setEdges(specEdges);
-  }, [specNodes, specEdges, setNodes, setEdges]);
 
   useEdgeSelectionHighlightOverlay();
 
