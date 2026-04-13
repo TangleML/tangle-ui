@@ -50,7 +50,7 @@ export function isOutputSnapshot(
 }
 
 export const outputManifestBase: ManifestPartial = {
-  type: "io",
+  type: "output",
   idPrefix: "output_",
   entityType: "output",
 
@@ -58,7 +58,7 @@ export const outputManifestBase: ManifestPartial = {
 
   buildNodes(spec) {
     return [...spec.outputs].map((output, index) =>
-      createEntityNode(output, "io", ioDefaultPosition(index, 800), {
+      createEntityNode(output, "output", ioDefaultPosition(index, 800), {
         entityId: output.$id,
         ioType: "output",
         name: output.name,

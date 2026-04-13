@@ -114,7 +114,7 @@ export type DropHandler = (
 // ---------------------------------------------------------------------------
 
 export interface NodeTypeManifest {
-  /** React Flow node type key (e.g. "task", "io", "conduit", "ghost"). */
+  /** React Flow node type key (e.g. "task", "input", "output", "conduit", "ghost"). */
   readonly type: string;
 
   /** Node ID prefix used to identify this type from an id string. */
@@ -122,8 +122,6 @@ export interface NodeTypeManifest {
 
   /**
    * Domain entity type (e.g. "task", "input", "output", "conduit").
-   * Multiple manifests may share the same RF `type` but differ here
-   * (input & output both use RF type "io").
    */
   readonly entityType: string;
   hasEntityId?(spec: ComponentSpec, id: string): boolean;

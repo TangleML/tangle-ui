@@ -8,7 +8,7 @@ type ZIndexDefinition = {
   default: number;
 };
 
-export const Z_INDEX_RANGES: Record<string, ZIndexDefinition> = {
+export const Z_INDEX_RANGES: Record<NodeType, ZIndexDefinition> = {
   task: {
     min: -100,
     max: 100,
@@ -20,11 +20,6 @@ export const Z_INDEX_RANGES: Record<string, ZIndexDefinition> = {
     default: 0,
   },
   output: {
-    min: -100,
-    max: 100,
-    default: 0,
-  },
-  io: {
     min: -100,
     max: 100,
     default: 0,

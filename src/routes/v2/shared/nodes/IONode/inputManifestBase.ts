@@ -55,7 +55,7 @@ export function isInputSnapshot(
 }
 
 export const inputManifestBase: ManifestPartial = {
-  type: "io",
+  type: "input",
   idPrefix: "input_",
   entityType: "input",
 
@@ -63,7 +63,7 @@ export const inputManifestBase: ManifestPartial = {
 
   buildNodes(spec) {
     return [...spec.inputs].map((input, index) =>
-      createEntityNode(input, "io", ioDefaultPosition(index, -200), {
+      createEntityNode(input, "input", ioDefaultPosition(index, -200), {
         entityId: input.$id,
         ioType: "input",
         name: input.name,

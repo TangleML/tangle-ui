@@ -49,7 +49,7 @@ const ioNodeIconVariants = cva("shrink-0", {
   defaultVariants: { isInput: true },
 });
 
-type IONodeType = Node<IONodeData, "io">;
+type IONodeType = Node<IONodeData, "input" | "output">;
 type IONodeProps = NodeProps<IONodeType>;
 
 /**

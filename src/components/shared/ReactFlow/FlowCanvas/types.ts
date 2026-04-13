@@ -20,8 +20,6 @@ export const nodeTypes: Record<string, ComponentType<any>> = {
   input: IONode,
   output: IONode,
   ghost: GhostNode,
-  // compatibility with v2
-  io: IONode,
   flex: FlexNode,
 };
 
