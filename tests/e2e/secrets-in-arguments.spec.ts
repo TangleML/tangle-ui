@@ -7,6 +7,7 @@ import {
   locateFlowCanvas,
   navigateToSecretsList,
   removeSecret,
+  setFlagDirectly,
   waitForContextPanel,
 } from "./helpers";
 
@@ -27,6 +28,8 @@ test.describe("Secrets in Component Arguments", () => {
 
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
+    await page.goto("/");
+    await setFlagDirectly(page, "auto-delete-empty-pipelines", false);
     await createNewPipeline(page);
     editorUrl = page.url();
   });

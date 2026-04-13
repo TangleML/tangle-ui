@@ -1,5 +1,6 @@
 import { Outlet } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/router-devtools";
+import { useEffect } from "react";
 import { ToastContainer } from "react-toastify";
 
 import { useClickTracking } from "@/hooks/useClickTracking";
@@ -9,6 +10,7 @@ import { AnalyticsProvider } from "@/providers/AnalyticsProvider";
 import { BackendProvider } from "@/providers/BackendProvider";
 import { ComponentSpecProvider } from "@/providers/ComponentSpecProvider";
 import { PipelineStorageProvider } from "@/services/pipelineStorage/PipelineStorageProvider";
+import { processPendingDeletions } from "@/utils/deletePipelineCleanup";
 
 import AppMenu from "./AppMenu";
 
@@ -41,6 +43,11 @@ function RootLayoutContent() {
 
 const RootLayout = () => {
   useDocumentTitle();
+
+  useEffect(() => {
+    void processPendingDeletions();
+  }, []);
+
   return (
     <AnalyticsProvider>
       <RootLayoutContent />

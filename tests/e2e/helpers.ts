@@ -323,6 +323,31 @@ export async function setBetaFlag(
 }
 
 /**
+ * Sets a beta flag directly in localStorage without navigating to the settings page.
+ * Use this instead of setBetaFlag when calling from inside the editor, to avoid
+ * triggering beforeunload (which would mark an empty pipeline for auto-deletion).
+ * @param page - Playwright page object
+ * @param flagKey - The flag key as defined in flags.ts
+ * @param enabled - Whether the flag should be enabled or disabled
+ */
+export async function setFlagDirectly(
+  page: Page,
+  flagKey: string,
+  enabled: boolean,
+): Promise<void> {
+  await page.evaluate(
+    ({ key, value }) => {
+      const betaFlags = JSON.parse(
+        localStorage.getItem("betaFlags") ?? "{}",
+      ) as Record<string, boolean>;
+      betaFlags[key] = value;
+      localStorage.setItem("betaFlags", JSON.stringify(betaFlags));
+    },
+    { key: flagKey, value: enabled },
+  );
+}
+
+/**
  * Secrets Management Helpers
  */
 
