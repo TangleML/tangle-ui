@@ -56,13 +56,13 @@ const AppMenu = () => {
     >
       <InlineStack align="space-between" wrap="nowrap">
         <InlineStack gap="8" wrap="nowrap" className="min-w-0 flex-1">
-          <Link href="/" aria-label="Home" variant="block" className="shrink-0">
+          <RouterLink to="/" aria-label="Home" className="shrink-0 inline-flex">
             <img
               src={logo}
               alt="logo"
               className="h-8 filter cursor-pointer shrink-0"
             />
-          </Link>
+          </RouterLink>
 
           {title && (
             <CopyText className="text-white text-md font-bold truncate max-w-32 sm:max-w-48 md:max-w-64 lg:max-w-md">

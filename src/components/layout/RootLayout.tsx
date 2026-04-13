@@ -1,11 +1,13 @@
 import { Outlet, useLocation } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/router-devtools";
+import { useEffect } from "react";
 import { ToastContainer } from "react-toastify";
 
 import { isFlagEnabled } from "@/components/shared/Settings/useFlags";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { BackendProvider } from "@/providers/BackendProvider";
 import { ComponentSpecProvider } from "@/providers/ComponentSpecProvider";
+import { processPendingDeletions } from "@/utils/deletePipelineCleanup";
 
 import AppFooter from "./AppFooter";
 import AppMenu from "./AppMenu";
@@ -22,6 +24,11 @@ const DASHBOARD_PATHS = new Set([
 const RootLayout = () => {
   useDocumentTitle();
   const { pathname } = useLocation();
+
+  useEffect(() => {
+    void processPendingDeletions();
+  }, []);
+
   const isDashboard =
     isFlagEnabled("dashboard") && DASHBOARD_PATHS.has(pathname);
 

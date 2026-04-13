@@ -1,3 +1,4 @@
+import type { VariantProps } from "class-variance-authority";
 import { type MouseEvent, type ReactNode, useCallback } from "react";
 
 import {
@@ -11,11 +12,20 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Button, buttonVariants } from "@/components/ui/button";
+
+type SecondaryAction = {
+  label: string;
+  onClick: () => void;
+  variant: VariantProps<typeof buttonVariants>["variant"];
+};
 
 type ConfirmationDialogProps = {
   title?: string;
   description?: string;
   content?: ReactNode;
+  destructive?: boolean;
+  secondaryAction?: SecondaryAction;
   onConfirm: () => void;
   onCancel?: () => void;
 } & (
@@ -31,6 +41,8 @@ const ConfirmationDialog = ({
   title = defaultTitle,
   description = defaultDescription,
   content,
+  destructive = false,
+  secondaryAction,
   isOpen,
   onConfirm,
   onCancel = () => {},
@@ -55,6 +67,14 @@ const ConfirmationDialog = ({
     [onCancel],
   );
 
+  const handleSecondaryAction = useCallback(
+    (e: MouseEvent) => {
+      e.stopPropagation();
+      secondaryAction?.onClick();
+    },
+    [secondaryAction],
+  );
+
   return (
     <AlertDialog open={isOpen}>
       {trigger && (
@@ -74,8 +94,24 @@ const ConfirmationDialog = ({
         {content}
         <AlertDialogFooter>
           <AlertDialogCancel onClick={handleCancel}>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={handleConfirm} autoFocus>
-            Continue
+          {secondaryAction && (
+            <Button
+              variant={secondaryAction.variant ?? "outline"}
+              onClick={handleSecondaryAction}
+            >
+              {secondaryAction.label}
+            </Button>
+          )}
+          <AlertDialogAction
+            onClick={handleConfirm}
+            autoFocus
+            className={
+              destructive
+                ? buttonVariants({ variant: "destructive" })
+                : undefined
+            }
+          >
+            {destructive ? "Delete" : "Continue"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
