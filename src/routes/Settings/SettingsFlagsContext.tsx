@@ -6,7 +6,11 @@ import {
   createRequiredContext,
   useRequiredContext,
 } from "@/hooks/useRequiredContext";
+import { useBackend } from "@/providers/BackendProvider";
 import type { Flag } from "@/types/configuration";
+import { fetchWithErrorHandling } from "@/utils/fetchWithErrorHandling";
+
+const USER_SETTINGS_URL = "/api/users/me/settings";
 
 interface SettingsFlagsContextValue {
   betaFlags: Flag[];
@@ -20,9 +24,21 @@ const SettingsFlagsContext = createRequiredContext<SettingsFlagsContextValue>(
 
 export function SettingsFlagsProvider({ children }: { children: ReactNode }) {
   const [flags, dispatch] = useFlagsReducer(ExistingFlags);
+  const { backendUrl, available } = useBackend();
 
   const handleSetFlag = (flag: string, enabled: boolean) => {
     dispatch({ type: "setFlag", payload: { key: flag, enabled } });
+
+    if (available) {
+      const url = new URL(USER_SETTINGS_URL, backendUrl);
+      fetchWithErrorHandling(url.toString(), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ settings: { [`flag_${flag}`]: enabled } }),
+      }).catch(() => {
+        // fire-and-forget — telemetry only, never surface to user
+      });
+    }
   };
 
   const betaFlags = Object.values(flags).filter(
