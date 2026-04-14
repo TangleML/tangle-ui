@@ -6,6 +6,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TextVisualizerRemote, TextVisualizerValue } from "./TextVisualizer";
 
+vi.mock("@/components/shared/CodeViewer/CodeEditor", () => ({
+  default: ({ value }: { value: string }) => (
+    <pre data-testid="code-editor">{value}</pre>
+  ),
+}));
+
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
 });
@@ -35,9 +41,19 @@ beforeEach(() => {
 });
 
 describe("TextVisualizerValue", () => {
-  it("renders the value directly", () => {
+  it("renders the value in the code editor", () => {
     renderWithQuery(<TextVisualizerValue value="Hello world" />);
-    expect(screen.getByText("Hello world")).toBeInTheDocument();
+    expect(screen.getByTestId("code-editor")).toHaveTextContent("Hello world");
+  });
+
+  it("renders the language selector", () => {
+    renderWithQuery(<TextVisualizerValue value="Hello world" />);
+    expect(screen.getByRole("combobox")).toBeInTheDocument();
+  });
+
+  it("renders 'No data' for empty value", () => {
+    renderWithQuery(<TextVisualizerValue value="" />);
+    expect(screen.getByText("No data")).toBeInTheDocument();
   });
 
   it("does not fetch", () => {
@@ -60,7 +76,9 @@ describe("TextVisualizerRemote", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("Remote content")).toBeInTheDocument();
+      expect(screen.getByTestId("code-editor")).toHaveTextContent(
+        "Remote content",
+      );
     });
 
     vi.restoreAllMocks();
