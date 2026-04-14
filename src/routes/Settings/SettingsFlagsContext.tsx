@@ -32,7 +32,7 @@ export function SettingsFlagsProvider({ children }: { children: ReactNode }) {
     if (available) {
       const url = new URL(USER_SETTINGS_URL, backendUrl);
       fetchWithErrorHandling(url.toString(), {
-        method: "PUT",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ settings: { [`flag_${flag}`]: enabled } }),
       }).catch(() => {
