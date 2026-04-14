@@ -30,11 +30,23 @@ pipelineStorageDb.on("ready", async () => {
 
   if (knownPipelines.size === 0) return;
 
-  await pipelineStorageDb.pipeline_registry.bulkAdd(
-    [...knownPipelines.entries()].map(([storageKey]) => ({
+  const pipelineForRegistry = [...knownPipelines.entries()].map(
+    ([storageKey]) => ({
       id: crypto.randomUUID(),
       storageKey,
       folderId: ROOT_FOLDER_ID,
-    })),
+    }),
   );
+
+  try {
+    /**
+     * This code may be revisited to ensure stability and performance.
+     */
+    pipelineForRegistry.forEach(async (row) => {
+      await pipelineStorageDb.pipeline_registry.upsert(row.id, row);
+    });
+  } catch (e) {
+    console.error(e);
+    throw e;
+  }
 });
