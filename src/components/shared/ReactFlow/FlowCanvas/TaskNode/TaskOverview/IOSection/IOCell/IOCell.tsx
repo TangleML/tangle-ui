@@ -77,7 +77,7 @@ const IOCell = ({ name, type, artifact }: IOCellProps) => {
             <ArtifactVisualizer
               artifact={artifact}
               name={name}
-              type={type ?? "text"}
+              type={artifactType}
               value={hasInlineValue ? inlineValue : undefined}
             />
           )}
@@ -96,7 +96,7 @@ const IOCell = ({ name, type, artifact }: IOCellProps) => {
             <ArtifactVisualizer
               artifact={artifact}
               name={name}
-              type={type ?? "text"}
+              type={artifactType}
               value={hasInlineValue ? inlineValue : undefined}
             />
           )}
