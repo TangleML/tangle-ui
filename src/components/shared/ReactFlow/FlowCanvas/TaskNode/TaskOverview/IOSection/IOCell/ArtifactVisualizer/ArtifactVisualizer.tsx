@@ -175,7 +175,7 @@ const InlineContent = ({
       return <JsonVisualizerValue value={value} name={name} />;
     case "text":
     default:
-      return <TextVisualizerValue value={value} />;
+      return <TextVisualizerValue value={value} isFullscreen={isFullscreen} />;
   }
 };
 
@@ -206,7 +206,12 @@ const PreviewContent = ({
 
   switch (type) {
     case "text":
-      return <TextVisualizerRemote signedUrl={signedUrl} />;
+      return (
+        <TextVisualizerRemote
+          signedUrl={signedUrl}
+          isFullscreen={isFullscreen}
+        />
+      );
     case "image":
       return <ImageVisualizer src={signedUrl} name={name} />;
     case "csv":
