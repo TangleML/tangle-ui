@@ -3,8 +3,8 @@ import { useEffect, useEffectEvent, useRef, useState } from "react";
 
 import type { GetUserResponse } from "@/api/types.gen";
 import type {
+  BackendAuthResponse,
   JWTPayload,
-  OasisAuthResponse,
 } from "@/components/shared/Authentication/types";
 import { HOURS } from "@/components/shared/ComponentEditor/constants";
 import { API_URL } from "@/utils/constants";
@@ -32,7 +32,7 @@ function buildAuthUrl() {
  * todo: make generic for all auth providers
  */
 interface HuggingFaceAuthFlowPopupOptions {
-  onSuccess: (response: OasisAuthResponse) => void;
+  onSuccess: (response: BackendAuthResponse) => void;
   onError: (error: string) => void;
   onClose?: () => void;
 }
