@@ -78,7 +78,7 @@
     "@tanstack/history": "1.161.6",
     "@tanstack/react-query": "^5.99.0",
     "@tanstack/react-query-devtools": "^5.99.0",
-    "@tanstack/react-router": "1.168.19",
+    "@tanstack/react-router": "1.168.21",
     "@tanstack/router-devtools": "1.166.13",
     "@types/gapi": "^0.0.47",
     "@types/papaparse": "^5.5.2",
