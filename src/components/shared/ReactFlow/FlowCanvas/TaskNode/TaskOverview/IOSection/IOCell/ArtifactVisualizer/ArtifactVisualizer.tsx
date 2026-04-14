@@ -17,6 +17,7 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useBackend } from "@/providers/BackendProvider";
 import { getArtifactSignedUrl } from "@/services/executionService";
 import { HOURS } from "@/utils/constants";
@@ -69,6 +70,7 @@ const ArtifactVisualizer = ({
   type,
   value,
 }: ArtifactVisualizerProps) => {
+  const { track } = useAnalytics();
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const rawType = type?.toLowerCase().replace(/\s/g, "") ?? "text";
@@ -76,6 +78,10 @@ const ArtifactVisualizer = ({
 
   const handleOpenChange = (open: boolean) => {
     if (!open) setIsFullscreen(false);
+    if (open)
+      track("pipeline_run.task.artifact_preview.impression", {
+        artifact_type: normalizedType,
+      });
   };
 
   if (!isVisualizableType(normalizedType) && !value) return null;
