@@ -36,7 +36,25 @@ const VISUALIZABLE_TYPES = new Set([
   "csv",
   "tsv",
   "apacheparquet",
-]);
+] as const);
+
+type VisualizableType =
+  typeof VISUALIZABLE_TYPES extends Set<infer T> ? T : never;
+
+const TYPE_ALIASES: Partial<Record<VisualizableType, string[]>> = {
+  text: ["txt", "log", "yaml", "xml"],
+  image: ["png", "jpg", "jpeg", "gif", "bmp", "svg"],
+  jsonobject: ["json"],
+  apacheparquet: ["parquet", "table"],
+};
+
+const resolveType = (raw: string): VisualizableType | string =>
+  (Object.entries(TYPE_ALIASES) as [VisualizableType, string[]][]).find(
+    ([, aliases]) => aliases.includes(raw),
+  )?.[0] ?? raw;
+
+const isVisualizableType = (type: string): type is VisualizableType =>
+  VISUALIZABLE_TYPES.has(type as VisualizableType);
 
 type ArtifactVisualizerProps = {
   artifact: ArtifactNodeResponse;
@@ -53,13 +71,14 @@ const ArtifactVisualizer = ({
 }: ArtifactVisualizerProps) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  const normalizedType = type?.toLowerCase().replace(/\s/g, "") ?? "text";
+  const rawType = type?.toLowerCase().replace(/\s/g, "") ?? "text";
+  const normalizedType = resolveType(rawType);
 
   const handleOpenChange = (open: boolean) => {
     if (!open) setIsFullscreen(false);
   };
 
-  if (!VISUALIZABLE_TYPES.has(normalizedType) && !value) return null;
+  if (!isVisualizableType(normalizedType) && !value) return null;
 
   const artifactData = artifact.artifact_data;
   const isJson =
