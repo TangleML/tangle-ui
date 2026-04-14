@@ -195,7 +195,7 @@ describe("IOCell", () => {
     expect(screen.queryByTestId("artifact-visualizer")).not.toBeInTheDocument();
   });
 
-  it("defaults type to 'text' for inline values without explicit type", () => {
+  it("defaults type to 'Any' for inline values without explicit type or type_name", () => {
     renderWithQuery(
       <IOCell
         name="output"
@@ -210,6 +210,25 @@ describe("IOCell", () => {
     );
 
     const viz = screen.getByTestId("artifact-visualizer");
-    expect(viz).toHaveAttribute("data-type", "text");
+    expect(viz).toHaveAttribute("data-type", "Any");
+  });
+
+  it("uses artifact type_name for visualizer when no explicit type is provided", () => {
+    renderWithQuery(
+      <IOCell
+        name="output"
+        artifact={makeArtifact({
+          type_name: "Image",
+          artifact_data: {
+            total_size: 100,
+            is_dir: false,
+            uri: "gs://bucket/image.png",
+          },
+        })}
+      />,
+    );
+
+    const viz = screen.getByTestId("artifact-visualizer");
+    expect(viz).toHaveAttribute("data-type", "Image");
   });
 });
