@@ -14,10 +14,7 @@ import { cn } from "@/lib/utils";
 import type { ComponentSpec } from "@/models/componentSpec";
 import { useAutoLayout } from "@/routes/v2/pages/Editor/hooks/useAutoLayout";
 import { SubgraphBreadcrumbs } from "@/routes/v2/shared/components/SubgraphBreadcrumbs";
-import {
-  FLOW_CANVAS_DEFAULT_PROPS,
-  GRID_SIZE,
-} from "@/routes/v2/shared/flowCanvasDefaults";
+import { FLOW_CANVAS_DEFAULT_PROPS } from "@/routes/v2/shared/flowCanvasDefaults";
 import { useDoubleClickBehavior } from "@/routes/v2/shared/hooks/useDoubleClickBehavior";
 import { useFitViewOnFocus } from "@/routes/v2/shared/hooks/useFitViewOnFocus";
 import { useFlowCanvasState } from "@/routes/v2/shared/hooks/useFlowCanvasState";
@@ -86,7 +83,7 @@ export const FlowCanvas = observer(function FlowCanvas({
       ref={containerRef}
       fill
       className={cn(
-        "relative",
+        "relative select-none",
         focusModeActive && "border-2 border-red-500",
         className,
       )}
@@ -111,7 +108,7 @@ export const FlowCanvas = observer(function FlowCanvas({
         deleteKeyCode={DELETE_KEY_CODE}
       >
         <FloatingSelectionToolbar spec={spec} />
-        <Background gap={GRID_SIZE} className="!bg-slate-50" />
+        <Background gap={10} className="bg-slate-50!" />
         <Controls position="bottom-right" />
         <MiniMap position="bottom-left" pannable zoomable />
       </ReactFlow>

@@ -2,7 +2,11 @@ import { computed } from "mobx";
 import { idProp, Model, model, modelAction, prop } from "mobx-keystone";
 
 import { Annotations } from "../annotations";
-import type { ValidationIssue } from "../validation/types";
+import { collectValidationIssues } from "../validation/collectIssues";
+import type {
+  ComponentValidationIssue,
+  ValidationIssue,
+} from "../validation/types";
 import { validateSpec } from "../validation/validateSpec";
 import { Binding } from "./binding";
 import type { Input } from "./input";
@@ -294,9 +298,16 @@ export class ComponentSpec extends Model({
     return validateSpec(this);
   }
 
+  /** All issues including nested subgraphs (recursive). */
+  @computed
+  get allValidationIssues(): ComponentValidationIssue[] {
+    return collectValidationIssues(this);
+  }
+
+  /** True only when the entire pipeline (including subgraphs) has no errors. */
   @computed
   get isValid(): boolean {
-    return this.validationIssues.length === 0;
+    return !this.allValidationIssues.some((i) => i.severity === "error");
   }
 
   @computed

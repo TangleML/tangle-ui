@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import { PipelineNameDialog } from "@/components/shared/Dialogs";
 import ImportPipeline from "@/components/shared/ImportPipeline";
 import {
@@ -9,7 +11,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
+import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButton";
+import { MovePipelineDialog } from "@/routes/v2/shared/components/MovePipelineDialog";
 import { ShortcutBadge } from "@/routes/v2/shared/components/ShortcutBadge";
 
 import { OpenPipelineDialog } from "./OpenPipelineDialog";
@@ -22,6 +26,10 @@ export function FileMenu() {
     setOpenDialogOpen,
     saveAsDialogOpen,
     setSaveAsDialogOpen,
+    renameDialogOpen,
+    setRenameDialogOpen,
+    handleRename,
+    getRenameInitialName,
     setImportOpen,
     handleSave,
     handleNewPipeline,
@@ -30,6 +38,11 @@ export function FileMenu() {
     handleExport,
     getSaveAsInitialName,
   } = useFileMenuState();
+
+  const { pipelineFile: pipelineFileStore } = useEditorSession();
+  const activePipeline = pipelineFileStore.activePipelineFile;
+  const [moveDialogOpen, setMoveDialogOpen] = useState(false);
+  const canMove = activePipeline?.folder.canMoveFilesOut ?? false;
 
   return (
     <>
@@ -54,6 +67,10 @@ export function FileMenu() {
             <Icon name="SaveAll" size="sm" />
             Save as
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setRenameDialogOpen(true)}>
+            <Icon name="Pencil" size="sm" />
+            Rename
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleNewPipeline}>
             <Icon name="Plus" size="sm" />
@@ -67,6 +84,15 @@ export function FileMenu() {
             <Icon name="FileDown" size="sm" />
             Export
           </DropdownMenuItem>
+          {canMove && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setMoveDialogOpen(true)}>
+                <Icon name="Folder" size="sm" />
+                Move to folder
+              </DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -85,6 +111,26 @@ export function FileMenu() {
         onSubmit={handleSavePipelineAs}
         submitButtonText="Save"
       />
+
+      <PipelineNameDialog
+        open={renameDialogOpen}
+        onOpenChange={setRenameDialogOpen}
+        title="Rename Pipeline"
+        initialName={getRenameInitialName()}
+        onSubmit={handleRename}
+        submitButtonText="Rename"
+        isSubmitDisabled={(name) => name === getRenameInitialName()}
+      />
+
+      {canMove && activePipeline && (
+        <MovePipelineDialog
+          open={moveDialogOpen}
+          onOpenChange={setMoveDialogOpen}
+          pipelineIds={[activePipeline.id]}
+          currentFolderId={activePipeline.folder.id}
+          onMoveComplete={() => setMoveDialogOpen(false)}
+        />
+      )}
 
       <ImportPipeline
         triggerComponent={

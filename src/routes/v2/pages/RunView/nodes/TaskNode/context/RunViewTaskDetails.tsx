@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Text } from "@/components/ui/typography";
 import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
-import type { ComponentReference, TaskSpec } from "@/utils/componentSpec";
+import type { TaskSpec } from "@/utils/componentSpec";
 
 import { RunViewTaskActions } from "./RunViewTaskActions";
 
@@ -45,7 +45,7 @@ export const RunViewTaskDetails = observer(function RunViewTaskDetails({
   const executionId =
     executionData?.details?.child_task_execution_ids?.[task.name];
 
-  const componentRef = task.componentRef as unknown as ComponentReference;
+  const componentRef = task.componentRef;
   const isSubgraphTask =
     !!task.componentRef.spec?.implementation &&
     "graph" in task.componentRef.spec.implementation;

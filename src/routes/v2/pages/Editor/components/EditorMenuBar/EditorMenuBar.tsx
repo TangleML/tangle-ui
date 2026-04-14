@@ -3,7 +3,6 @@ import { observer } from "mobx-react-lite";
 import logo from "/Tangle_Icon_White.png";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Link } from "@/components/ui/link";
-import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/typography";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { AppMenuActions } from "@/routes/v2/shared/components/AppMenuActions";
@@ -14,8 +13,10 @@ import { TOP_NAV_HEIGHT } from "@/utils/constants";
 import { AutoSaveIndicator } from "./components/AutoSaveIndicator";
 import { ComponentsLibraryMenu } from "./components/ComponentsLibraryMenu";
 import { FileMenu } from "./components/FileMenu";
-import { MovePipelineToFolderButton } from "./components/MovePipelineToFolderButton";
+import { QuickRunButton } from "./components/QuickRunButton";
+import { RunsMenu } from "./components/RunsMenu";
 import { ViewMenu } from "./components/ViewMenu";
+import { WindowsMenu } from "./components/WindowsMenu";
 
 export const EditorMenuBar = observer(function EditorMenuBar() {
   const { navigation, windows } = useSharedStores();
@@ -65,34 +66,34 @@ export const EditorMenuBar = observer(function EditorMenuBar() {
               <InlineStack gap="0" wrap="nowrap" blockAlign="center">
                 <FileMenu />
                 <ViewMenu />
+                <RunsMenu />
                 <MenuTriggerButton
                   onClick={() => windows.restoreWindow("pipeline-details")}
                 >
                   Notes
                 </MenuTriggerButton>
-                <MenuTriggerButton disabled>Runs</MenuTriggerButton>
                 <ComponentsLibraryMenu />
+                <WindowsMenu />
               </InlineStack>
             </BlockStack>
           )}
-
-          {displayMenu && (
-            <InlineStack
-              gap="2"
-              wrap="nowrap"
-              align="start"
-              blockAlign="center"
-              className="shrink-0 ml-1"
-              data-testid="status-indicators"
-            >
-              <Separator orientation="vertical" />
-              <MovePipelineToFolderButton />
-              <AutoSaveIndicator />
-            </InlineStack>
-          )}
         </InlineStack>
 
-        <AppMenuActions />
+        <InlineStack
+          gap="2"
+          wrap="nowrap"
+          blockAlign="center"
+          className="shrink-0"
+        >
+          {displayMenu && (
+            <>
+              <QuickRunButton />
+              <AutoSaveIndicator />
+              <div className="w-px h-5 bg-stone-700" />
+            </>
+          )}
+          <AppMenuActions />
+        </InlineStack>
       </InlineStack>
     </div>
   );

@@ -94,47 +94,51 @@ const RunOverview = ({
         className,
       )}
     >
-      <div className="flex items-center justify-between mb-1">
-        <div className="flex items-center gap-2">
-          {combinedConfig?.showName && <span>{run.pipeline_name}</span>}
-
-          <div className="flex items-center gap-3">
-            {combinedConfig?.showStatus && <PipelineRunStatus run={run} />}
+      <div className="flex items-center gap-2 min-w-0 mb-1">
+        {combinedConfig?.showStatus && (
+          <span className="shrink-0">
+            <PipelineRunStatus run={run} />
+          </span>
+        )}
+        <div className="flex flex-col min-w-0">
+          <div className="flex items-center gap-1.5 min-w-0">
+            {combinedConfig?.showName && (
+              <Text size="xs" weight="semibold" className="truncate">
+                {run.pipeline_name}
+              </Text>
+            )}
             {combinedConfig?.showExecutionId &&
               !combinedConfig?.showDescription && (
-                <div className="text-xs">{`#${run.id}`}</div>
+                <Text size="xs" className="truncate">{`#${run.id}`}</Text>
               )}
             {combinedConfig?.showDescription &&
               !combinedConfig?.showExecutionId && (
-                <Text size="xs">{run.pipeline_description}</Text>
+                <Text size="xs" className="truncate">
+                  {run.pipeline_description || `#${run.id}`}
+                </Text>
               )}
             {combinedConfig?.showDescription &&
               combinedConfig?.showExecutionId && (
-                <div className="flex items-center gap-2">
-                  <Text size="xs">
-                    {run.pipeline_description ?? `#${run.id}`}
-                  </Text>
-                </div>
+                <Text size="xs" className="truncate">
+                  {run.pipeline_description ?? `#${run.id}`}
+                </Text>
               )}
           </div>
-          {combinedConfig?.showCreatedAt && run.created_at && (
-            <div className="flex items-center gap-2">
-              <span>•</span>
-              <span className="text-gray-500 text-xs">
+          <div className="flex items-center gap-1.5 text-gray-400 text-xs">
+            {combinedConfig?.showCreatedAt && run.created_at && (
+              <Text size="xs" className="whitespace-nowrap">
                 {formatDate(run.created_at)}
-              </span>
-            </div>
-          )}
-          {combinedConfig?.showAuthor && run.created_by && (
-            <div className="flex items-center gap-1">
-              <span className="mr-1">•</span>
-              <span className="text-xs">Initiated by</span>
-              <span className="text-gray-500 text-xs max-w-32 truncate">
-                {run.created_by}
-              </span>
-            </div>
-          )}
+              </Text>
+            )}
+            {combinedConfig?.showAuthor && run.created_by && (
+              <Text size="xs" className="truncate">
+                by {run.created_by}
+              </Text>
+            )}
+          </div>
         </div>
+      </div>
+      <div className="flex items-center justify-between">
         {combinedConfig?.showStatusCounts &&
           combinedConfig.showStatusCounts !== "none" &&
           run.statusCounts && (

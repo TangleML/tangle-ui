@@ -63,7 +63,7 @@ export const COMPONENT_SEARCH_FILTERS = Object.values(ComponentSearchFilter);
 
 export const DEFAULT_FILTERS = [ComponentSearchFilter.NAME];
 
-export const AUTOSAVE_DEBOUNCE_TIME_MS = 2000;
+export const AUTOSAVE_DEBOUNCE_TIME_MS = 300;
 
 export const KEYBOARD_SHORTCUTS = {
   UNDO: "z",

@@ -76,7 +76,8 @@ export function buildBindingEdges(spec: ComponentSpec): Edge[] {
       targetHandle: isTargetIO
         ? `input_${binding.targetEntityId}`
         : `input_${binding.targetPortName}`,
-      type: "default",
+      type: "conduitEdge",
+      style: { stroke: "#6b7280", strokeWidth: 4 },
     };
   });
 }

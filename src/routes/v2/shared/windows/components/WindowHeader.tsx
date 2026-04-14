@@ -8,28 +8,37 @@ interface WindowHeaderProps {
   title: string;
   isDragging?: boolean;
   onMouseDown?: (e: React.MouseEvent) => void;
+  onDoubleClick?: () => void;
   leadingIcon?: ReactNode;
   actions: ReactNode;
   className?: string;
+  style?: React.CSSProperties;
+  /** When true, actions are hidden until the parent group/window is hovered. */
+  actionsOnHover?: boolean;
 }
 
 export function WindowHeader({
   title,
   isDragging = false,
   onMouseDown,
+  onDoubleClick,
   leadingIcon,
   actions,
   className,
+  style,
+  actionsOnHover = false,
 }: WindowHeaderProps) {
   return (
     <div
       className={cn(
-        "flex items-center justify-between px-2 border-b shrink-0",
+        "group/header flex items-center justify-between px-2 py-2.5 shrink-0 transition-all duration-300 group-hover/window:bg-purple-500/10",
         onMouseDown && "cursor-grab",
         onMouseDown && isDragging && "cursor-grabbing",
         className,
       )}
+      style={style}
       onMouseDown={onMouseDown}
+      onDoubleClick={onDoubleClick}
     >
       <InlineStack
         gap="1"
@@ -42,7 +51,14 @@ export function WindowHeader({
           {title}
         </Text>
       </InlineStack>
-      {actions}
+      <div
+        className={cn(
+          actionsOnHover &&
+            "opacity-0 group-hover/window:opacity-100 transition-opacity duration-200",
+        )}
+      >
+        {actions}
+      </div>
     </div>
   );
 }

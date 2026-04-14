@@ -25,7 +25,7 @@ export function createTaskNodeCardVariants(baseClasses: string) {
         selected: false,
         hovered: false,
         subgraph: true,
-        className: "border-purple-300 hover:border-purple-400",
+        className: "border-gray-200 hover:border-gray-300",
       },
       {
         selected: false,

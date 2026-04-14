@@ -92,7 +92,7 @@ export const PipelineTreeContent = observer(function PipelineTreeContent() {
       >
         <BlockStack
           gap="2"
-          className="p-2 overflow-y-auto flex-1 min-h-0 @[600px]:border-r @[600px]:border-border"
+          className="p-2 overflow-y-auto overflow-x-hidden hide-scrollbar flex-1 min-h-0 @[600px]:border-r @[600px]:border-border"
         >
           <RootNode
             spec={rootSpec}

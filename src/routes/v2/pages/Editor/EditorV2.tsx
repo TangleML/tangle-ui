@@ -22,7 +22,6 @@ import {
   useSharedStores,
 } from "@/routes/v2/shared/store/SharedStoreContext";
 import { DockArea } from "@/routes/v2/shared/windows/DockArea";
-import { TaskPanel } from "@/routes/v2/shared/windows/TaskPanel";
 import { WindowContainer } from "@/routes/v2/shared/windows/WindowContainer";
 import { useWindowPersistence } from "@/routes/v2/shared/windows/windowPersistence";
 import type { PipelineRef } from "@/services/pipelineStorage/types";
@@ -39,7 +38,7 @@ import { useLoadSpec } from "./hooks/useLoadSpec";
 import { usePipelineDetailsWindow } from "./hooks/usePipelineDetailsWindow";
 import { usePipelineTreeWindow } from "./hooks/usePipelineTreeWindow";
 import { usePropertiesWindowPositioning } from "./hooks/usePropertiesWindowPositioning";
-import { useRunsAndSubmissionWindow } from "./hooks/useRunsAndSubmissionWindow";
+import { useRecentRunsWindow } from "./hooks/useRecentRunsWindow";
 import { useSelectionWindowSync } from "./hooks/useSelectionWindowSync";
 import { useSpecLifecycle } from "./hooks/useSpecLifecycle";
 import { useUndoRedoKeyboard } from "./hooks/useUndoRedoKeyboard";
@@ -78,7 +77,7 @@ const PipelineEditor = withSuspenseWrapper(
     usePipelineDetailsWindow();
     usePipelineTreeWindow();
     useHistoryWindow();
-    useRunsAndSubmissionWindow();
+    useRecentRunsWindow();
     useUndoRedoKeyboard();
     useFocusMode();
     useShortcutListener();
@@ -91,7 +90,6 @@ const PipelineEditor = withSuspenseWrapper(
     return (
       <NodeRegistryProvider registry={editorRegistry}>
         <SpecProvider spec={activeSpec}>
-          <TaskPanel />
           <InlineStack
             className="flex-1 min-h-0 w-full"
             gap="0"
@@ -125,22 +123,20 @@ function EditorV2Content({ pipelineRef }: { pipelineRef: PipelineRef | null }) {
   }, [navigation, pipelineRef?.name]);
 
   return (
-    <>
+    <ComponentLibraryProvider>
       <EditorMenuBar />
       <ReactFlowProvider>
         <ForcedSearchProvider>
-          <ComponentLibraryProvider>
-            {pipelineRef ? (
-              <DriverPermissionGate pipelineRef={pipelineRef}>
-                <PipelineEditor pipelineRef={pipelineRef} />
-              </DriverPermissionGate>
-            ) : (
-              <EmptyEditorState />
-            )}
-          </ComponentLibraryProvider>
+          {pipelineRef ? (
+            <DriverPermissionGate pipelineRef={pipelineRef}>
+              <PipelineEditor pipelineRef={pipelineRef} />
+            </DriverPermissionGate>
+          ) : (
+            <EmptyEditorState />
+          )}
         </ForcedSearchProvider>
       </ReactFlowProvider>
-    </>
+    </ComponentLibraryProvider>
   );
 }
 
@@ -165,7 +161,7 @@ export function EditorV2() {
     : null;
 
   return (
-    <div className="h-full w-full flex flex-col bg-slate-100">
+    <div className="h-full w-full flex flex-col bg-slate-100 select-none">
       <SharedStoreProvider>
         <EditorSessionProvider>
           <DialogProvider>

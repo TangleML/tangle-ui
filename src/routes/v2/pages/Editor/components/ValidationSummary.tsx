@@ -8,7 +8,6 @@ import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import type { ComponentSpec, ValidationIssue } from "@/models/componentSpec";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
-import { useFocusActions } from "@/routes/v2/shared/store/useFocusActions";
 
 export function countErrors(issues: ValidationIssue[]): number {
   return issues.filter((i) => i.severity === "error").length;
@@ -44,8 +43,7 @@ export const ValidationSummary = observer(function ValidationSummary({
 }: ValidationSummaryProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const { editor, navigation } = useSharedStores();
-  const { focusValidationIssue } = useFocusActions();
-  const issues = spec.validationIssues;
+  const issues = spec.allValidationIssues;
   const errorCount = countErrors(issues);
   const warningCount = countWarnings(issues);
   const totalCount = issues.length;
@@ -88,8 +86,48 @@ export const ValidationSummary = observer(function ValidationSummary({
             const isSelected = editor.selectedValidationIssue === issue;
 
             const handleIssueClick = () => {
-              navigation.navigateToLevel(0);
-              focusValidationIssue(issue);
+              if (issue.subgraphPath.length > 1 && navigation.rootSpec) {
+                const navPath = [
+                  navigation.rootSpec.name,
+                  ...issue.subgraphPath.slice(1),
+                ];
+                navigation.navigateToPath(navPath);
+              } else {
+                navigation.navigateToLevel(0);
+              }
+
+              // The issue's entityId comes from validation's own deserialization,
+              // so it won't match the navigation spec's IDs. Look up by name instead.
+              const activeSpec = navigation.activeSpec;
+              if (activeSpec && issue.entityName) {
+                const task = activeSpec.tasks.find(
+                  (t) => t.name === issue.entityName,
+                );
+                const input = activeSpec.inputs.find(
+                  (i) => i.name === issue.entityName,
+                );
+                const output = activeSpec.outputs.find(
+                  (o) => o.name === issue.entityName,
+                );
+                const resolvedId = task?.$id ?? input?.$id ?? output?.$id;
+                if (resolvedId) {
+                  const resolvedType = task
+                    ? "task"
+                    : input
+                      ? "input"
+                      : "output";
+                  editor.setPendingFocusNode(resolvedId);
+                  editor.selectNode(resolvedId, resolvedType, {
+                    entityId: resolvedId,
+                  });
+                  editor.setHoveredEntity(resolvedId);
+                }
+              }
+
+              if (issue.argumentName) {
+                editor.setFocusedArgument(issue.argumentName);
+              }
+              editor.setSelectedValidationIssue(issue);
             };
 
             return (
@@ -98,7 +136,9 @@ export const ValidationSummary = observer(function ValidationSummary({
                 role="button"
                 tabIndex={0}
                 onClick={handleIssueClick}
-                onKeyDown={(e) => e.key === "Enter" && handleIssueClick()}
+                onKeyDown={(e) =>
+                  (e.key === "Enter" || e.key === " ") && handleIssueClick()
+                }
                 className={cn(
                   "flex items-baseline gap-1 py-1 px-2 rounded text-xs cursor-pointer transition-colors",
                   isSelected ? "ring-1 ring-blue-400" : "",
@@ -127,6 +167,12 @@ export const ValidationSummary = observer(function ValidationSummary({
                       : "text-amber-700"
                   }
                 >
+                  {issue.subgraphPath.length > 1 && (
+                    <span className="font-medium">
+                      {issue.subgraphPath.slice(1).join(" > ")}
+                      {" > "}
+                    </span>
+                  )}
                   {issue.message}
                 </Text>
               </div>

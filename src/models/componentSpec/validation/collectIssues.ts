@@ -40,7 +40,7 @@ function collectRecursive(
   const issues = validateSpec(spec);
 
   const currentIssues = issues.map((issue, index) =>
-    toComponentIssue(issue, subgraphPath, index),
+    toComponentIssue(issue, subgraphPath, index, spec),
   );
 
   const nestedIssues = spec.tasks.flatMap((task) => {
@@ -81,11 +81,22 @@ function toComponentIssue(
   issue: ValidationIssue,
   subgraphPath: string[],
   index: number,
+  spec: ComponentSpec,
 ): ComponentValidationIssue {
   const targetKey = issue.entityId ?? "graph";
+
+  let entityName: string | undefined;
+  if (issue.entityId) {
+    const task = spec.tasks.find((t) => t.$id === issue.entityId);
+    const input = spec.inputs.find((i) => i.$id === issue.entityId);
+    const output = spec.outputs.find((o) => o.$id === issue.entityId);
+    entityName = task?.name ?? input?.name ?? output?.name;
+  }
+
   return {
     ...issue,
     id: `${subgraphPath.join(">")}::${issue.type}::${targetKey}::${index}`,
     subgraphPath,
+    entityName,
   };
 }

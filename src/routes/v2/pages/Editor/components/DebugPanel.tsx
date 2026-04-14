@@ -129,7 +129,9 @@ export function useDebugPanelWindow() {
         size: { width: 320, height: 420 },
         disabledActions: ["close"],
         persisted: true,
+        defaultDockState: "left",
       });
+      windows.hideWindow(DEBUG_PANEL_WINDOW_ID);
     }
   }, [windows]);
 }

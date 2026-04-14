@@ -1,9 +1,7 @@
 import { observer } from "mobx-react-lite";
 import { type ChangeEvent, useState } from "react";
 
-import { ActionBlock } from "@/components/shared/ContextPanel/Blocks/ActionBlock";
 import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlock";
-import { CopyText } from "@/components/shared/CopyText/CopyText";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
@@ -19,8 +17,6 @@ import { DigestBlock } from "./components/DigestBlock";
 import { InputsBlock } from "./components/InputsBlock";
 import { MetadataBlock } from "./components/MetadataBlock";
 import { OutputsBlock } from "./components/OutputsBlock";
-import { RenamePipelineButton } from "./components/RenamePipelineButton";
-import { ViewYamlButton } from "./components/ViewYamlButton";
 
 const EXCLUDED_ANNOTATIONS = [
   "notes",
@@ -76,17 +72,6 @@ export const PipelineDetailsContent = observer(
         className="h-full overflow-y-auto px-2 py-3"
         data-testid="pipeline-details-content"
       >
-        <CopyText className="text-sm font-semibold">
-          {spec.name ?? "Unnamed Pipeline"}
-        </CopyText>
-
-        <ActionBlock
-          actions={[
-            <RenamePipelineButton key="rename-pipeline" spec={spec} />,
-            <ViewYamlButton key="view-yaml" spec={spec} />,
-          ]}
-        />
-
         <DigestBlock yamlText={yamlText} />
 
         <MetadataBlock spec={spec} />
@@ -113,7 +98,7 @@ export const PipelineDetailsContent = observer(
         />
 
         <ContentBlock title="Validations">
-          {spec.validationIssues.length === 0 ? (
+          {spec.isValid ? (
             <InfoBox variant="success" title="No validation issues">
               Pipeline is ready for submission
             </InfoBox>

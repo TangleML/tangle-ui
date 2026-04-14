@@ -1,9 +1,6 @@
-import type { Node } from "@xyflow/react";
-
-import type { ComponentReference, ComponentSpec } from "@/models/componentSpec";
+import type { ComponentReference } from "@/models/componentSpec";
 import { Annotations } from "@/models/componentSpec/annotations";
 import { Task } from "@/models/componentSpec/entities/task";
-import { PIPELINE_TREE_WINDOW_ID } from "@/routes/v2/pages/Editor/hooks/usePipelineTreeWindow";
 import { addTask } from "@/routes/v2/pages/Editor/store/actions";
 import { generateUniqueTaskName } from "@/routes/v2/pages/Editor/store/nameUtils";
 import {
@@ -11,12 +8,7 @@ import {
   snapshotTask,
   taskManifestBase,
 } from "@/routes/v2/shared/nodes/TaskNode/taskManifestBase";
-import type {
-  NodeTypeManifest,
-  TaskNodeData,
-} from "@/routes/v2/shared/nodes/types";
-import type { NavigationStore } from "@/routes/v2/shared/store/navigationStore";
-import type { WindowStoreImpl } from "@/routes/v2/shared/windows/windowStore";
+import type { NodeTypeManifest } from "@/routes/v2/shared/nodes/types";
 import { hydrateComponentReference } from "@/services/componentService";
 import type { TaskSpec } from "@/utils/componentSpec";
 import { deepClone } from "@/utils/deepClone";
@@ -48,21 +40,6 @@ export const taskManifest: NodeTypeManifest = {
   },
 
   contextPanelComponent: TaskDetails,
-
-  onDoubleClick(
-    spec: ComponentSpec,
-    node: Node,
-    navigation: NavigationStore,
-    windows: WindowStoreImpl,
-  ) {
-    const taskData = node.data as TaskNodeData;
-    if (navigation.isTaskSubgraph(spec, taskData.entityId)) {
-      const newSpec = navigation.navigateToSubgraph(spec, taskData.entityId);
-      if (newSpec) {
-        windows.restoreWindow(PIPELINE_TREE_WINDOW_ID);
-      }
-    }
-  },
 
   cloneHandler: {
     snapshot: snapshotTask,

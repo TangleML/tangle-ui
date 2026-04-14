@@ -2,6 +2,7 @@ import { Handle, Position } from "@xyflow/react";
 import { cva } from "class-variance-authority";
 import { observer } from "mobx-react-lite";
 
+import { trimDigest } from "@/components/shared/ManageComponent/utils/digest";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -10,15 +11,13 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
-import { InputValidationIndicator } from "@/routes/v2/shared/components/InputValidationIndicator";
-import { getContrastTextColor } from "@/routes/v2/shared/nodes/TaskNode/color.utils";
+import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 
 import type { TaskNodeInput, TaskNodeViewProps } from "./TaskNode";
 
 const classicCardVariants = cva(
-  "min-w-[300px] max-w-[350px] rounded-2xl border-2 p-0 drop-shadow-none cursor-pointer gap-2",
+  "min-w-[300px] max-w-[350px] rounded-2xl border-2 p-0 drop-shadow-none cursor-pointer select-none gap-2",
   {
     variants: {
       selected: { true: "", false: "" },
@@ -36,7 +35,7 @@ const classicCardVariants = cva(
         selected: false,
         hovered: false,
         subgraph: true,
-        className: "border-purple-300 hover:border-purple-400",
+        className: "border-gray-200 hover:border-slate-200",
       },
       {
         selected: false,
@@ -90,14 +89,22 @@ interface ClassicInputHandleProps {
   entityId: string;
   displayValue: string | undefined;
   onInputClick: (name: string, event: React.MouseEvent) => void;
+  onHandleClick: (handleId: string, event: React.MouseEvent) => void;
 }
 
-function ClassicInputHandle({
+const ClassicInputHandle = observer(function ClassicInputHandle({
   input,
   entityId,
   displayValue,
   onInputClick,
+  onHandleClick,
 }: ClassicInputHandleProps) {
+  const spec = useSpec();
+  const issues = spec?.issuesByEntityId.get(entityId);
+  const hasError = issues?.some(
+    (issue) => issue.argumentName === input.name && issue.severity === "error",
+  );
+
   const hasValue = displayValue !== undefined && displayValue !== "";
   const hasDefault = input.default !== undefined && input.default !== "";
 
@@ -114,7 +121,12 @@ function ClassicInputHandle({
           type="target"
           position={Position.Left}
           id={`input_${input.name}`}
-          className="!border-0 !h-full !w-full !transform-none !bg-gray-500"
+          className={
+            hasError
+              ? "border-0! h-full! w-full! transform-none! bg-red-700!"
+              : "border-0! h-full! w-full! transform-none! bg-gray-500!"
+          }
+          onClick={(e) => onHandleClick(`input_${input.name}`, e)}
         />
       </div>
       <InlineStack
@@ -157,11 +169,10 @@ function ClassicInputHandle({
             </Tooltip>
           </div>
         )}
-        <InputValidationIndicator entityId={entityId} inputName={input.name} />
       </InlineStack>
     </div>
   );
-}
+});
 
 export const TaskNodeClassic = observer(function TaskNodeClassic({
   entityId,
@@ -171,16 +182,14 @@ export const TaskNodeClassic = observer(function TaskNodeClassic({
   isSubgraph,
   inputs,
   outputs,
-  taskColor,
   inputDisplayValues,
   onNodeClick,
   onInputClick,
+  onOutputClick,
+  onHandleClick,
+  cacheDisabled,
+  digest,
 }: TaskNodeViewProps) {
-  const hasColor = !!taskColor;
-  const headerColorStyle = taskColor
-    ? { backgroundColor: taskColor, color: getContrastTextColor(taskColor) }
-    : undefined;
-
   return (
     <Card
       className={classicCardVariants({
@@ -190,35 +199,58 @@ export const TaskNodeClassic = observer(function TaskNodeClassic({
       })}
       onClick={onNodeClick}
     >
-      <CardHeader
-        className={cn(
-          "border-b border-slate-200 px-2 py-2.5",
-          hasColor && "rounded-t-[14px]",
-        )}
-        style={headerColorStyle}
-      >
+      <CardHeader className="border-b border-slate-200 px-4 py-5">
         <BlockStack>
-          <InlineStack gap="2" wrap="nowrap" blockAlign="center">
-            {isSubgraph && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span>
-                    <Icon name="Workflow" size="sm" className="text-blue-600" />
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent side="top">
-                  <Text size="xs">Subgraph</Text>
-                </TooltipContent>
-              </Tooltip>
-            )}
-            <CardTitle
-              className={cn(
-                "wrap-anywhere max-w-full text-left text-xs",
-                !hasColor && "text-slate-900",
-              )}
+          <InlineStack
+            gap="2"
+            wrap="nowrap"
+            blockAlign="center"
+            align="space-between"
+            className="w-full"
+          >
+            <InlineStack
+              gap="2"
+              wrap="nowrap"
+              blockAlign="center"
+              className="min-w-0"
             >
-              {taskName}
-            </CardTitle>
+              {isSubgraph && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <Icon
+                        name="Workflow"
+                        size="sm"
+                        className="text-blue-600"
+                      />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">Subgraph</TooltipContent>
+                </Tooltip>
+              )}
+              {cacheDisabled && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <Icon
+                        name="ZapOff"
+                        size="sm"
+                        className="text-orange-400"
+                      />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">Cache Disabled</TooltipContent>
+                </Tooltip>
+              )}
+              <CardTitle className="wrap-anywhere max-w-full text-left text-xs text-slate-900">
+                {taskName}
+              </CardTitle>
+            </InlineStack>
+            {digest && (
+              <span className="text-xs font-light font-mono text-gray-400 shrink-0">
+                {trimDigest(digest)}
+              </span>
+            )}
           </InlineStack>
         </BlockStack>
       </CardHeader>
@@ -236,6 +268,7 @@ export const TaskNodeClassic = observer(function TaskNodeClassic({
                 entityId={entityId}
                 displayValue={inputDisplayValues[input.name]}
                 onInputClick={onInputClick}
+                onHandleClick={onHandleClick}
               />
             ))}
           </BlockStack>
@@ -247,15 +280,15 @@ export const TaskNodeClassic = observer(function TaskNodeClassic({
             className="p-2 bg-gray-100 border border-gray-200 rounded-lg"
           >
             {outputs.map((output) => (
-              <InlineStack
+              <div
                 key={output.name}
-                blockAlign="center"
-                className="w-full justify-end"
+                className="flex items-center justify-end w-full cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOutputClick(output.name, e);
+                }}
               >
-                <InlineStack
-                  blockAlign="center"
-                  className="w-full gap-0.5 flex-row-reverse justify-between"
-                >
+                <div className="flex flex-row-reverse w-full gap-0.5 items-center justify-between">
                   <div className="translate-x-3 min-w-0 inline-block max-w-full">
                     <div
                       className="text-xs text-gray-800 rounded-md px-2 py-1 truncate bg-gray-200 hover:bg-gray-300"
@@ -264,14 +297,15 @@ export const TaskNodeClassic = observer(function TaskNodeClassic({
                       {output.name.replace(/_/g, " ")}
                     </div>
                   </div>
-                </InlineStack>
+                </div>
                 <Handle
                   type="source"
                   position={Position.Right}
                   id={`output_${output.name}`}
-                  className="!relative !border-0 !w-3 !h-3 !transform-none !translate-x-6 !bg-gray-500"
+                  className="relative! border-0! w-3! h-3! transform-none! translate-x-6 bg-gray-500!"
+                  onClick={(e) => onHandleClick(`output_${output.name}`, e)}
                 />
-              </InlineStack>
+              </div>
             ))}
           </BlockStack>
         )}

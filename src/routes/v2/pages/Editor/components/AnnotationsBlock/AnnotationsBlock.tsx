@@ -6,7 +6,7 @@ import { KeyValueList } from "@/components/shared/ContextPanel/Blocks/KeyValueLi
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
-import { InlineStack } from "@/components/ui/layout";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import type { Annotation } from "@/models/componentSpec";
 import type { Annotations } from "@/models/componentSpec/annotations";
@@ -17,14 +17,16 @@ interface AnnotationsBlockProps {
   annotations: Annotations;
   readonly?: boolean;
   ignoreAnnotationKeys?: string[];
+  defaultEditing?: boolean;
 }
 
 export const AnnotationsBlock = observer(function AnnotationsBlock({
   annotations,
   readonly,
   ignoreAnnotationKeys,
+  defaultEditing = false,
 }: AnnotationsBlockProps) {
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(defaultEditing);
 
   const ignoredSet = ignoreAnnotationKeys
     ? new Set(ignoreAnnotationKeys)
@@ -36,11 +38,7 @@ export const AnnotationsBlock = observer(function AnnotationsBlock({
 
   if (isEditing && !readonly) {
     return (
-      <AnnotationEditMode
-        annotations={annotations}
-        ignoredSet={ignoredSet}
-        onClose={() => setIsEditing(false)}
-      />
+      <AnnotationEditMode annotations={annotations} ignoredSet={ignoredSet} />
     );
   }
 
@@ -65,11 +63,9 @@ export const AnnotationsBlock = observer(function AnnotationsBlock({
 function AnnotationEditMode({
   annotations,
   ignoredSet,
-  onClose,
 }: {
   annotations: Annotations;
   ignoredSet?: Set<string>;
-  onClose: () => void;
 }) {
   const { addAnnotation } = useAnnotationActions();
 
@@ -78,18 +74,13 @@ function AnnotationEditMode({
     : [...annotations];
 
   const actions = (
-    <>
-      <Button
-        variant="ghost"
-        size="xs"
-        onClick={() => addAnnotation(annotations)}
-      >
-        <Icon name="CirclePlus" size="xs" /> Add
-      </Button>
-      <Button variant="ghost" size="xs" onClick={onClose}>
-        <Icon name="Check" size="xs" /> Done
-      </Button>
-    </>
+    <Button
+      variant="ghost"
+      size="xs"
+      onClick={() => addAnnotation(annotations)}
+    >
+      <Icon name="CirclePlus" size="xs" /> New
+    </Button>
   );
 
   return (
@@ -135,32 +126,33 @@ function AnnotationRow({ annotation, index, annotations }: AnnotationRowProps) {
   };
 
   return (
-    <InlineStack align="space-between" className="group w-full" gap="1">
-      <InlineStack wrap="nowrap" className="flex-1" gap="1">
-        <Input
-          className="w-full font-mono text-sm"
-          placeholder="Key"
-          defaultValue={annotation.key}
-          onBlur={handleUpdateKey}
-        />
-        <Text className="text-gray-400">:</Text>
-      </InlineStack>
-      <InlineStack wrap="nowrap" className="flex-1">
+    <BlockStack gap="1" className="group w-full">
+      <Input
+        className="w-full font-mono text-xs h-6 border-none px-0 shadow-none text-gray-500"
+        placeholder="Key"
+        defaultValue={annotation.key}
+        onBlur={handleUpdateKey}
+      />
+      <InlineStack gap="1" wrap="nowrap" className="w-full">
         <Input
           className="w-full font-mono text-sm"
           placeholder="Value"
-          defaultValue={String(annotation.value ?? "")}
+          defaultValue={
+            typeof annotation.value === "object"
+              ? JSON.stringify(annotation.value)
+              : String(annotation.value ?? "")
+          }
           onBlur={handleUpdateValue}
         />
         <Button
           variant="ghost"
           size="xs"
-          className="invisible group-hover:visible group-focus-within:visible"
+          className="invisible group-hover:visible group-focus-within:visible shrink-0"
           onClick={handleRemove}
         >
           <Icon name="Trash" className="text-destructive" />
         </Button>
       </InlineStack>
-    </InlineStack>
+    </BlockStack>
   );
 }

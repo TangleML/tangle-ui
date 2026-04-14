@@ -2,7 +2,6 @@
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "tags": ["-@public"],
   "ignore": [
-    "scripts/**",
     "src/api/**",
     "src/components/ui/**",
     "src/config/announcements.ts",

@@ -1,23 +1,18 @@
 import { observer } from "mobx-react-lite";
-import { type ChangeEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
+import { TextBlock } from "@/components/shared/ContextPanel/Blocks/TextBlock";
 import { StackingControls } from "@/components/shared/ReactFlow/FlowControls/StackingControls";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Badge } from "@/components/ui/badge";
+import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
-import { Text } from "@/components/ui/typography";
-import type { ComponentSpecJson, Task } from "@/models/componentSpec";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Heading, Paragraph, Text } from "@/components/ui/typography";
 import { AnnotationsBlock } from "@/routes/v2/pages/Editor/components/AnnotationsBlock/AnnotationsBlock";
-import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskActions";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { isSubgraph } from "@/utils/subgraphUtils";
 
 import { getTaskYamlText } from "./components/actions/getTaskYamlText";
 import { ComponentRefBar } from "./components/ComponentRefBar";
@@ -25,8 +20,6 @@ import { ConfigurationSection } from "./components/ConfigurationSection";
 import { OutputsSection } from "./components/OutputsSection";
 import { TaskActionsBar } from "./components/TaskActionsBar";
 import { TaskArgumentsEditor } from "./components/TaskArgumentsEditor";
-import { TaskInfoSection } from "./components/TaskInfoSection";
-import { useTaskConfigActions } from "./components/useTaskConfigActions";
 import { useTask } from "./hooks/useTask";
 
 const EDITOR_ANNOTATION_KEYS = [
@@ -35,59 +28,7 @@ const EDITOR_ANNOTATION_KEYS = [
   "tangleml.com/editor/edge-conduits",
 ];
 
-function getTaskDetailsCounts(
-  task: Task,
-  componentSpec: ComponentSpecJson | undefined,
-) {
-  return {
-    inputCount: componentSpec?.inputs?.length ?? 0,
-    outputCount: componentSpec?.outputs?.length ?? 0,
-    annotationCount: task.annotations.filter(
-      (a) => !EDITOR_ANNOTATION_KEYS.includes(a.key),
-    ).length,
-  };
-}
-
-function SectionTriggerWithBadge({
-  label,
-  count,
-}: {
-  label: string;
-  count: number;
-}) {
-  return (
-    <AccordionTrigger className="py-1.5 px-3 text-xs hover:no-underline">
-      <InlineStack gap="2" blockAlign="center">
-        <Text
-          size="xs"
-          weight="semibold"
-          className="uppercase tracking-wide text-gray-500"
-        >
-          {label}
-        </Text>
-        {count > 0 && (
-          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
-            {count}
-          </Badge>
-        )}
-      </InlineStack>
-    </AccordionTrigger>
-  );
-}
-
-function SectionTrigger({ label }: { label: string }) {
-  return (
-    <AccordionTrigger className="py-1.5 px-3 text-xs hover:no-underline">
-      <Text
-        size="xs"
-        weight="semibold"
-        className="uppercase tracking-wide text-gray-500"
-      >
-        {label}
-      </Text>
-    </AccordionTrigger>
-  );
-}
+const TAB_CONTENT_CLASS = "overflow-y-auto w-full px-4 py-4 pr-5";
 
 interface TaskDetailsProps {
   entityId: string;
@@ -98,49 +39,28 @@ export const TaskDetails = observer(function TaskDetails({
 }: TaskDetailsProps) {
   const { editor } = useSharedStores();
   const { undo } = useEditorSession();
-  const { renameTask } = useTaskActions();
-  const { setTaskColor } = useTaskConfigActions();
   const spec = useSpec();
   const task = useTask(entityId);
   const { focusedArgumentName } = editor;
 
-  const [openSections, setOpenSections] = useState<string[]>([
-    "component",
-    "task",
-    "arguments",
-    "actions",
-  ]);
+  const [activeTab, setActiveTab] = useState("arguments");
 
   useEffect(() => {
-    if (focusedArgumentName && !openSections.includes("arguments")) {
-      setOpenSections((prev) => [...prev, "arguments"]);
+    if (focusedArgumentName && activeTab !== "arguments") {
+      setActiveTab("arguments");
     }
-  }, [focusedArgumentName]);
+  }, [focusedArgumentName, activeTab]);
 
   if (!spec || !task) {
     return null;
   }
 
   const componentSpec = task.componentRef.spec;
-  const { inputCount, outputCount, annotationCount } = getTaskDetailsCounts(
-    task,
-    componentSpec,
-  );
-  const taskColor = task.annotations.get("tangleml.com/editor/task-color");
-
   const yamlText = getTaskYamlText(task);
   const pythonCode = componentSpec?.metadata?.annotations?.python_original_code;
+  const author = componentSpec?.metadata?.annotations?.author;
 
-  const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const newName = event.target.value;
-    if (newName && newName !== task.name) {
-      renameTask(spec, entityId, newName);
-    }
-  };
-
-  const handleColorChange = (color: string) => {
-    setTaskColor(task, color);
-  };
+  const isSubgraphTask = isSubgraph(task.componentRef.spec);
 
   const handleZIndexChange = (newZIndex: number) => {
     undo.withGroup("Update task z-index", () => {
@@ -149,88 +69,128 @@ export const TaskDetails = observer(function TaskDetails({
   };
 
   return (
-    <BlockStack gap="0" className="w-full overflow-auto">
-      <Accordion
-        type="multiple"
-        value={openSections}
-        onValueChange={setOpenSections}
-        className="w-full overflow-auto"
+    <BlockStack gap="0" className="w-full h-full">
+      {/* ── Header ── */}
+      <BlockStack gap="2" className="px-4 pt-3 pb-2">
+        <InlineStack
+          gap="2"
+          blockAlign="center"
+          align="space-between"
+          className="w-full"
+        >
+          <InlineStack
+            gap="2"
+            blockAlign="center"
+            wrap="nowrap"
+            className="min-w-0"
+          >
+            {isSubgraphTask && <Icon name="Workflow" size="sm" />}
+            <Text size="sm" weight="semibold" className="wrap-anywhere">
+              {task.name} ---
+            </Text>
+          </InlineStack>
+          <InlineStack gap="1" blockAlign="center" className="shrink-0">
+            <TaskActionsBar entityId={entityId} />
+            <StackingControls nodeId={entityId} onChange={handleZIndexChange} />
+          </InlineStack>
+        </InlineStack>
+
+        <ComponentRefBar
+          componentRef={task.componentRef}
+          yamlText={yamlText}
+          taskName={task.name}
+          pythonCode={pythonCode}
+        />
+      </BlockStack>
+
+      {/* ── Tabs ── */}
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="flex-1 flex flex-col gap-0 min-h-0 w-full"
       >
-        <AccordionItem value="component">
-          <SectionTrigger label="Component" />
-          <AccordionContent className="px-3 pb-2">
-            <BlockStack>
-              <ComponentRefBar
-                componentRef={task.componentRef}
-                yamlText={yamlText}
-                taskName={task.name}
-                pythonCode={pythonCode}
-              />
+        <TabsList className="shrink-0 mx-4 mb-1">
+          <TabsTrigger value="arguments" className="gap-1 text-xs px-2.5">
+            <Icon name="Parentheses" size="xs" />
+            Arguments
+          </TabsTrigger>
+          <TabsTrigger value="details" className="gap-1 text-xs px-2.5">
+            <Icon name="Info" size="xs" />
+            Details
+          </TabsTrigger>
+          <TabsTrigger value="configuration" className="gap-1 text-xs px-2.5">
+            <Icon name="Settings" size="xs" />
+            Config
+          </TabsTrigger>
+        </TabsList>
+
+        {/* ── Arguments ── */}
+        <TabsContent value="arguments" className={TAB_CONTENT_CLASS}>
+          <BlockStack gap="4">
+            <BlockStack gap="2">
+              <Heading level={3}>Inputs</Heading>
+              <TaskArgumentsEditor task={task} />
             </BlockStack>
-          </AccordionContent>
-        </AccordionItem>
-        <AccordionItem value="task">
-          <SectionTrigger label="Task" />
-          <AccordionContent className="px-3 pb-2">
-            <TaskInfoSection
-              entityId={entityId}
-              task={task}
-              componentSpec={componentSpec}
-              taskColor={taskColor}
-              onNameChange={handleNameChange}
-              onColorChange={handleColorChange}
+            <Separator />
+            <BlockStack gap="2">
+              <Heading level={3}>Outputs</Heading>
+              <OutputsSection componentSpec={componentSpec} />
+            </BlockStack>
+          </BlockStack>
+        </TabsContent>
+
+        {/* ── Details ── */}
+        <TabsContent value="details" className={TAB_CONTENT_CLASS}>
+          <BlockStack gap="4">
+            <TextBlock title="Task ID" text={entityId} />
+
+            {author && <TextBlock title="Author" text={String(author)} />}
+
+            <TextBlock
+              title="Description"
+              text={componentSpec?.description}
+              collapsible
+              defaultCollapsed
+              wrap
             />
-          </AccordionContent>
-        </AccordionItem>
 
-        <AccordionItem value="arguments">
-          <SectionTriggerWithBadge label="Arguments" count={inputCount} />
-          <AccordionContent className="pb-2 px-3">
-            <TaskArgumentsEditor task={task} />
-          </AccordionContent>
-        </AccordionItem>
-
-        <AccordionItem value="outputs">
-          <SectionTriggerWithBadge label="Outputs" count={outputCount} />
-          <AccordionContent className="px-3 pb-2">
-            <OutputsSection componentSpec={componentSpec} />
-          </AccordionContent>
-        </AccordionItem>
-
-        <AccordionItem value="configuration">
-          <SectionTrigger label="Configuration" />
-          <AccordionContent className="px-3 pb-2">
-            <ConfigurationSection task={task} />
-          </AccordionContent>
-        </AccordionItem>
-
-        <AccordionItem value="annotations">
-          <SectionTriggerWithBadge
-            label="Annotations"
-            count={annotationCount}
-          />
-          <AccordionContent className="px-3 pb-2">
-            <AnnotationsBlock
-              annotations={task.annotations}
-              ignoreAnnotationKeys={EDITOR_ANNOTATION_KEYS}
-            />
-          </AccordionContent>
-        </AccordionItem>
-
-        <AccordionItem value="actions">
-          <SectionTrigger label="Actions" />
-          <AccordionContent className="px-3 pb-2">
-            <InlineStack gap="2" blockAlign="center" className="w-full">
-              <StackingControls
-                nodeId={entityId}
-                onChange={handleZIndexChange}
+            {task.componentRef.digest && (
+              <TextBlock
+                title="Digest"
+                text={task.componentRef.digest}
+                copyable
               />
-              <Separator orientation="vertical" />
-              <TaskActionsBar entityId={entityId} />
-            </InlineStack>
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
+            )}
+
+            {task.annotations.filter(
+              (a) => !EDITOR_ANNOTATION_KEYS.includes(a.key),
+            ).length > 0 && (
+              <>
+                <Separator />
+                <AnnotationsBlock
+                  annotations={task.annotations}
+                  ignoreAnnotationKeys={EDITOR_ANNOTATION_KEYS}
+                />
+              </>
+            )}
+          </BlockStack>
+        </TabsContent>
+
+        {/* ── Configuration ── */}
+        <TabsContent value="configuration" className={TAB_CONTENT_CLASS}>
+          <BlockStack gap="4">
+            <Paragraph size="sm" tone="subdued">
+              Configure task annotations, resources and custom data.
+            </Paragraph>
+
+            <ConfigurationSection task={task} />
+
+            <Separator />
+
+            <AnnotationsBlock annotations={task.annotations} defaultEditing />
+          </BlockStack>
+        </TabsContent>
+      </Tabs>
     </BlockStack>
   );
 });

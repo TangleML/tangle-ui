@@ -16,6 +16,7 @@ export function useComponentLibraryWindow() {
         size: { width: 280, height: 350 },
         disabledActions: ["close"],
         persisted: true,
+        defaultDockState: "left",
       });
     }
   }, [windows]);

@@ -16,8 +16,8 @@ export function usePipelineDetailsWindow() {
         size: { width: 280, height: 350 },
         disabledActions: ["close"],
         persisted: true,
+        defaultDockState: "right",
       });
-      windows.dockWindow(PIPELINE_DETAILS_WINDOW_ID, "right");
     }
   }, [windows]);
 }

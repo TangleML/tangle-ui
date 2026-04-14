@@ -1,6 +1,5 @@
 import { type ChangeEvent, useCallback, useMemo } from "react";
 
-import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { ManageLibrariesDialog } from "@/components/shared/GitHubLibrary/ManageLibrariesDialog";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Icon } from "@/components/ui/icon";
@@ -27,7 +26,6 @@ import {
 } from "../components/ComponentItem";
 import { LibraryFolderItem } from "../components/FolderItem";
 import PublishedComponentsSearch from "../components/PublishedComponentsSearch";
-import { SidebarSection } from "../components/SidebarSection";
 import { UpgradeAvailableAlertBox } from "../components/UpgradeAvailableAlertBox";
 
 const INPUT_AGGREGATOR_URL =
@@ -233,30 +231,26 @@ const GraphComponents = () => {
     </>
   );
 
-  const importComponentAction = (
-    <ImportComponent
-      triggerComponent={
-        <TooltipButton
-          variant="ghost"
-          tooltip="Add component"
-          data-testid="import-component-button"
-        >
-          <Icon name="PackagePlus" />
-        </TooltipButton>
-      }
-    />
-  );
-
   return (
-    <SidebarSection
-      title="Components"
-      headerAction={importComponentAction}
-      className="flex-1 overflow-hidden"
-    >
+    <BlockStack gap="2" className="p-2 flex-1 overflow-hidden">
+      <ImportComponent
+        triggerComponent={
+          <InlineStack
+            gap="1"
+            blockAlign="center"
+            align="center"
+            className="w-full py-1.5 cursor-pointer text-gray-500 hover:text-gray-900 transition-colors border border-dashed border-gray-300 rounded-lg hover:border-gray-400"
+            data-testid="import-component-button"
+          >
+            <Icon name="PackagePlus" size="sm" />
+            <Text size="sm">Add Component</Text>
+          </InlineStack>
+        }
+      />
       <BlockStack className="overflow-y-auto flex-1 [&_li]:marker:hidden [&_li]:before:content-none [&_li]:list-none">
         {searchComponent}
       </BlockStack>
-    </SidebarSection>
+    </BlockStack>
   );
 };
 

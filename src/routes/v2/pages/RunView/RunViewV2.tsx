@@ -31,7 +31,6 @@ import {
   useSharedStores,
 } from "@/routes/v2/shared/store/SharedStoreContext";
 import { DockArea } from "@/routes/v2/shared/windows/DockArea";
-import { TaskPanel } from "@/routes/v2/shared/windows/TaskPanel";
 import { WindowContainer } from "@/routes/v2/shared/windows/WindowContainer";
 import { useWindowPersistence } from "@/routes/v2/shared/windows/windowPersistence";
 import { getBackendStatusString } from "@/utils/backend";
@@ -157,7 +156,6 @@ const RunViewLayout = observer(function RunViewLayout({
     <NodeRegistryProvider registry={runViewRegistry}>
       <SpecProvider spec={activeSpec}>
         <RunViewMenuBar />
-        <TaskPanel />
         <InlineStack
           className="flex-1 min-h-0 w-full"
           gap="0"
@@ -195,7 +193,7 @@ export function RunViewV2() {
       : undefined;
 
   return (
-    <div className="h-full w-full flex flex-col bg-slate-100">
+    <div className="h-full w-full flex flex-col bg-slate-100 select-none">
       <SharedStoreProvider>
         <ReactFlowProvider>
           <ContextPanelProvider /** TODO: remove ContextPanelProvider */>

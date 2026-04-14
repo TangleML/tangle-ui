@@ -1,7 +1,6 @@
 import { SelectionMode } from "@xyflow/react";
 
 export const GRID_SIZE = 10;
-export const MAX_COLLAPSED_SCALE = 7;
 export const ZOOM_THRESHOLD = 0.3;
 
 /**
@@ -24,4 +23,5 @@ export const FLOW_CANVAS_DEFAULT_PROPS = {
   selectionMode: SelectionMode.Partial,
   panOnDrag: true,
   zIndexMode: "manual" as const,
+  defaultEdgeOptions: { style: { stroke: "#6b7280", strokeWidth: 4 } },
 } as const;

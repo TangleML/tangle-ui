@@ -12,6 +12,7 @@ import {
   type WindowOptions,
   type WindowRef,
 } from "./types";
+import type { ViewPreset } from "./viewPresets";
 import { WindowModel, type WindowStoreRef } from "./windowModel";
 import { buildWindowModelInit } from "./windowStore.utils";
 
@@ -248,6 +249,29 @@ export class WindowStoreImpl implements WindowStoreRef {
 
   getDockAreaWindowIds(side: "left" | "right"): string[] {
     return this.dockAreas[side].windowOrder;
+  }
+
+  // -- View presets --
+
+  /** Apply a view preset: toggle visibility and reset dock positions. */
+  @action applyViewPreset(preset: ViewPreset): void {
+    const allWindows = this.getAllWindows();
+    for (const win of allWindows) {
+      if (preset.visible.has(win.id)) {
+        if (win.state === "hidden") win.restore();
+      } else {
+        if (win.state !== "hidden") win.hide();
+      }
+    }
+    if (preset.dockPositions) {
+      for (const [id, side] of Object.entries(preset.dockPositions)) {
+        const win = this.windows[id];
+        if (win && win.dockState !== side) {
+          this.undockWindow(id);
+          this.dockWindow(id, side);
+        }
+      }
+    }
   }
 
   // -- Content --
