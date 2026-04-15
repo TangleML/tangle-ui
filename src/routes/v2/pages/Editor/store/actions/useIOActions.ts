@@ -5,6 +5,8 @@ import {
   addOutput,
   createConnectedIONode,
   createInputAndConnect,
+  deleteInput,
+  deleteOutput,
   renameInput,
   renameOutput,
   setInputDefaultValue,
@@ -19,6 +21,8 @@ export function useIOActions() {
   return {
     addInput: addInput.bind(null, undo),
     addOutput: addOutput.bind(null, undo),
+    deleteInput: deleteInput.bind(null, undo),
+    deleteOutput: deleteOutput.bind(null, undo),
     renameInput: renameInput.bind(null, undo),
     renameOutput: renameOutput.bind(null, undo),
     setInputDescription: setInputDescription.bind(null, undo),

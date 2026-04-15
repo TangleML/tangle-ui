@@ -27,11 +27,13 @@ import { WindowContainer } from "@/routes/v2/shared/windows/WindowContainer";
 import { useWindowPersistence } from "@/routes/v2/shared/windows/windowPersistence";
 import type { PipelineRef } from "@/services/pipelineStorage/types";
 
+import { AiChatStoreProvider } from "./components/AiChat/AiChatStoreContext";
 import { useDebugPanelWindow } from "./components/DebugPanel";
 import { DriverPermissionGate } from "./components/DriverPermissionGate";
 import { EditorMenuBar } from "./components/EditorMenuBar/EditorMenuBar";
 import { EmptyEditorState } from "./components/EmptyEditorState";
 import { FlowCanvas } from "./components/FlowCanvas/FlowCanvas";
+import { useAiChatWindow } from "./hooks/useAiChatWindow";
 import { useComponentLibraryWindow } from "./hooks/useComponentLibraryWindow";
 import { useHistoryWindow } from "./hooks/useHistoryWindow";
 import { useLinkedWindowCleanup } from "./hooks/useLinkedWindowCleanup";
@@ -83,6 +85,7 @@ const PipelineEditor = withSuspenseWrapper(
     useFocusMode();
     useShortcutListener();
     useDebugPanelWindow();
+    useAiChatWindow();
 
     const activeSpec = navigation.activeSpec;
 
@@ -168,9 +171,11 @@ export function EditorV2() {
     <div className="h-full w-full flex flex-col bg-slate-100">
       <SharedStoreProvider>
         <EditorSessionProvider>
-          <DialogProvider>
-            <EditorV2Content pipelineRef={pipelineRef} />
-          </DialogProvider>
+          <AiChatStoreProvider>
+            <DialogProvider>
+              <EditorV2Content pipelineRef={pipelineRef} />
+            </DialogProvider>
+          </AiChatStoreProvider>
         </EditorSessionProvider>
       </SharedStoreProvider>
     </div>

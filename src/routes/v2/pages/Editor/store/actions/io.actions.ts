@@ -126,6 +126,22 @@ export function setOutputDescription(
   });
 }
 
+export function deleteInput(
+  undo: UndoGroupable,
+  spec: ComponentSpec,
+  entityId: string,
+): boolean {
+  return undo.withGroup("Delete input", () => spec.deleteInputById(entityId));
+}
+
+export function deleteOutput(
+  undo: UndoGroupable,
+  spec: ComponentSpec,
+  entityId: string,
+): boolean {
+  return undo.withGroup("Delete output", () => spec.deleteOutputById(entityId));
+}
+
 export function createConnectedIONode(
   undo: UndoGroupable,
   spec: ComponentSpec,
