@@ -17,7 +17,8 @@ export function useCopyPaste({ onCopy, onPaste }: UseCopyPasteProps) {
       const isEditable =
         target instanceof HTMLInputElement ||
         target instanceof HTMLTextAreaElement ||
-        target.isContentEditable;
+        target.isContentEditable ||
+        target.closest(".monaco-editor") !== null;
 
       // Check if there is a text selection
       const selection = window.getSelection();
