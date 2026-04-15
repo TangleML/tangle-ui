@@ -33,3 +33,10 @@ playwright-report
 .local/
 .planning/
 .codanna/index/
+
+# AI agent vector store
+scripts/agent/registry/.vector-store.json
+scripts/agent/registry/.docs-vector-store.json
+
+# AI agent request logs
+scripts/agent/.logs/
