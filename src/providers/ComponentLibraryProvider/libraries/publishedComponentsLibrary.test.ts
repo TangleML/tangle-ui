@@ -4,7 +4,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type {
   ComponentReferenceInput,
-  ComponentResponse,
   HttpValidationError,
   PublishedComponentResponse,
 } from "@/api/types.gen";
@@ -156,18 +155,14 @@ describe("PublishedComponentsLibrary", () => {
   });
 
   describe("hasComponent", () => {
-    it("should return true if component exists in backend", async () => {
+    it("should return true if component exists in published list", async () => {
       // Arrange
       const component = createMockComponentReference();
-      const componentText = yaml.dump(mockComponentSpec);
 
-      const mockComponentResponse: ComponentResponse = {
-        digest: "test-digest-123",
-        text: componentText,
-      };
-
-      mockGetApiComponentsDigestGet.mockResolvedValue(
-        createMockApiResponse(mockComponentResponse),
+      mockListApiPublishedComponentsGet.mockResolvedValue(
+        createMockApiResponse({
+          published_components: [createMockPublishedComponent()],
+        }),
       );
 
       // Act
@@ -175,17 +170,15 @@ describe("PublishedComponentsLibrary", () => {
 
       // Assert
       expect(result).toBe(true);
-      expect(mockGetApiComponentsDigestGet).toHaveBeenCalledWith({
-        path: { digest: component.digest },
-      });
+      expect(mockListApiPublishedComponentsGet).toHaveBeenCalledWith({});
     });
 
-    it("should return false if component does not exist (404)", async () => {
+    it("should return false if component is not in published list", async () => {
       // Arrange
       const component = createMockComponentReference();
 
-      mockGetApiComponentsDigestGet.mockResolvedValue(
-        createMockApiErrorResponse(404),
+      mockListApiPublishedComponentsGet.mockResolvedValue(
+        createMockApiResponse({ published_components: [] }),
       );
 
       // Act
@@ -193,9 +186,7 @@ describe("PublishedComponentsLibrary", () => {
 
       // Assert
       expect(result).toBe(false);
-      expect(mockGetApiComponentsDigestGet).toHaveBeenCalledWith({
-        path: { digest: component.digest },
-      });
+      expect(mockListApiPublishedComponentsGet).toHaveBeenCalledWith({});
     });
 
     it("should use cached digest to return true without API call", async () => {
@@ -205,42 +196,43 @@ describe("PublishedComponentsLibrary", () => {
         digest: await generateDigest(componentText),
       });
 
-      // First call to cache the digest
-      const mockComponentResponse: ComponentResponse = {
-        digest: await generateDigest(componentText),
-        text: componentText,
-      };
-      mockGetApiComponentsDigestGet.mockResolvedValue(
-        createMockApiResponse(mockComponentResponse),
+      mockListApiPublishedComponentsGet.mockResolvedValue(
+        createMockApiResponse({
+          published_components: [
+            createMockPublishedComponent({
+              digest: await generateDigest(componentText),
+            }),
+          ],
+        }),
       );
 
       const firstResult = await library.hasComponent(component);
       expect(firstResult).toBe(true);
-      expect(mockGetApiComponentsDigestGet).toHaveBeenCalledTimes(1);
+      expect(mockListApiPublishedComponentsGet).toHaveBeenCalledTimes(1);
 
-      // Act - second call should use cache
+      // Act - second call should use #knownDigests cache
       const result = await library.hasComponent(component);
 
-      // Assert - the API should have been called only once (during first call)
+      // Assert - list API should have been called only once
       expect(result).toBe(true);
-      expect(mockGetApiComponentsDigestGet).toHaveBeenCalledTimes(1);
+      expect(mockListApiPublishedComponentsGet).toHaveBeenCalledTimes(1);
     });
 
-    it("should throw InvalidComponentReferenceError for invalid component", async () => {
+    it("should return false for invalid component reference without API call", async () => {
       // Arrange
       const invalidComponent = { name: "invalid" } as ComponentReference;
 
       // Act & Assert
       const result = await library.hasComponent(invalidComponent);
       expect(result).toBe(false);
-      expect(mockGetApiComponentsDigestGet).not.toHaveBeenCalled();
+      expect(mockListApiPublishedComponentsGet).not.toHaveBeenCalled();
     });
 
     it("should throw BackendLibraryError for unexpected status codes", async () => {
       // Arrange
       const component = createMockComponentReference();
 
-      mockGetApiComponentsDigestGet.mockResolvedValue(
+      mockListApiPublishedComponentsGet.mockResolvedValue(
         createMockApiErrorResponse(500),
       );
 
@@ -254,7 +246,7 @@ describe("PublishedComponentsLibrary", () => {
       // Arrange
       const component = createMockComponentReference();
 
-      mockGetApiComponentsDigestGet.mockResolvedValue({
+      mockListApiPublishedComponentsGet.mockResolvedValue({
         data: undefined,
         error: undefined,
         request: new Request("http://test.com"),
@@ -268,24 +260,6 @@ describe("PublishedComponentsLibrary", () => {
       // Act & Assert
       await expect(library.hasComponent(component)).rejects.toThrow(
         "No data returned from server",
-      );
-    });
-
-    it("should throw BackendLibraryError when hydration fails", async () => {
-      // Arrange
-      const component = createMockComponentReference();
-
-      const mockComponentResponse: ComponentResponse = {
-        digest: "test-digest-123",
-        text: "invalid: yaml: content: {{{",
-      };
-      mockGetApiComponentsDigestGet.mockResolvedValue(
-        createMockApiResponse(mockComponentResponse),
-      );
-
-      // Act & Assert
-      await expect(library.hasComponent(component)).rejects.toThrow(
-        `Failed to hydrate component: ${component.digest}`,
       );
     });
   });
