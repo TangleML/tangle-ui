@@ -55,14 +55,6 @@ export const ExistingFlags: ConfigFlags = {
     category: "setting",
   },
 
-  ["task-component-ref-bar"]: {
-    name: "Task Component Ref Bar",
-    description:
-      "When enabled, the Component Ref Bar is shown in the Task Details panel moving some of the actions to the Actions section.",
-    default: true,
-    category: "setting",
-  },
-
   ["input-aggregator"]: {
     name: "Input Aggregator Component",
     description:

@@ -2,7 +2,6 @@ import { observer } from "mobx-react-lite";
 import { type ChangeEvent, useEffect, useState } from "react";
 
 import { StackingControls } from "@/components/shared/ReactFlow/FlowControls/StackingControls";
-import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import {
   Accordion,
   AccordionContent,
@@ -97,7 +96,6 @@ interface TaskDetailsProps {
 export const TaskDetails = observer(function TaskDetails({
   entityId,
 }: TaskDetailsProps) {
-  const showComponentRefBar = useFlagValue("task-component-ref-bar");
   const { editor } = useSharedStores();
   const { undo } = useEditorSession();
   const { renameTask } = useTaskActions();
@@ -152,32 +150,25 @@ export const TaskDetails = observer(function TaskDetails({
 
   return (
     <BlockStack gap="0" className="w-full overflow-auto">
-      {!showComponentRefBar && (
-        <BlockStack className="px-3 py-2">
-          <TaskActionsBar entityId={entityId} />
-        </BlockStack>
-      )}
       <Accordion
         type="multiple"
         value={openSections}
         onValueChange={setOpenSections}
         className="w-full overflow-auto"
       >
-        {showComponentRefBar && (
-          <AccordionItem value="component">
-            <SectionTrigger label="Component" />
-            <AccordionContent className="px-3 pb-2">
-              <BlockStack>
-                <ComponentRefBar
-                  componentRef={task.componentRef}
-                  yamlText={yamlText}
-                  taskName={task.name}
-                  pythonCode={pythonCode}
-                />
-              </BlockStack>
-            </AccordionContent>
-          </AccordionItem>
-        )}
+        <AccordionItem value="component">
+          <SectionTrigger label="Component" />
+          <AccordionContent className="px-3 pb-2">
+            <BlockStack>
+              <ComponentRefBar
+                componentRef={task.componentRef}
+                yamlText={yamlText}
+                taskName={task.name}
+                pythonCode={pythonCode}
+              />
+            </BlockStack>
+          </AccordionContent>
+        </AccordionItem>
         <AccordionItem value="task">
           <SectionTrigger label="Task" />
           <AccordionContent className="px-3 pb-2">
@@ -234,12 +225,8 @@ export const TaskDetails = observer(function TaskDetails({
                 nodeId={entityId}
                 onChange={handleZIndexChange}
               />
-              {showComponentRefBar && (
-                <>
-                  <Separator orientation="vertical" />
-                  <TaskActionsBar entityId={entityId} />
-                </>
-              )}
+              <Separator orientation="vertical" />
+              <TaskActionsBar entityId={entityId} />
             </InlineStack>
           </AccordionContent>
         </AccordionItem>
