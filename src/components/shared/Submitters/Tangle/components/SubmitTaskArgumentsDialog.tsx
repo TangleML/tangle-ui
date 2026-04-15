@@ -107,6 +107,15 @@ export const SubmitTaskArgumentsDialog = ({
   };
 
   useEffect(() => {
+    if (open) {
+      const freshArgs = getArgumentsFromInputs(componentSpec);
+      setTaskArguments(freshArgs);
+      setRunNotes("");
+      setHighlightedArgs(new Map());
+    }
+  }, [open, componentSpec]);
+
+  useEffect(() => {
     setIsValidToSubmit(validateArguments(inputs, taskArguments));
   }, [inputs, taskArguments]);
 
