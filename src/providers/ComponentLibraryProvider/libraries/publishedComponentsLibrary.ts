@@ -1,7 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 
 import {
-  getApiComponentsDigestGet,
   listApiPublishedComponentsGet,
   publishApiPublishedComponentsPost,
   updateApiPublishedComponentsDigestPut,
@@ -73,49 +72,35 @@ export class PublishedComponentsLibrary implements Library {
       return false;
     }
 
-    if (isDiscoverable && this.#knownDigests.has(component.digest)) {
+    if (this.#knownDigests.has(component.digest)) {
       return true;
     }
 
-    const getComponentResult = await this.#queryClient.fetchQuery({
-      queryKey: ["componentDigest", component.digest],
-      queryFn: () =>
-        getApiComponentsDigestGet({
-          path: { digest: component.digest },
-        }),
+    // Fetch the full published list once (shared TanStack Query cache) instead of
+    // making N individual GET requests that return 404 for unpublished components.
+    const listResult = await this.#queryClient.fetchQuery({
+      queryKey: ["publishedComponentsList"],
+      queryFn: () => listApiPublishedComponentsGet({}),
       staleTime: TWENTY_FOUR_HOURS_IN_MS,
     });
 
-    if (getComponentResult.response.status !== 200) {
-      switch (getComponentResult.response.status) {
-        case 404:
-          return false;
-        default:
-          console.error(getComponentResult.error);
-          throw new BackendLibraryError(
-            `Unexpected status code: ${getComponentResult.response.status}`,
-          );
-      }
-    }
-
-    if (!getComponentResult.data) {
-      throw new BackendLibraryError("No data returned from server");
-    }
-
-    const hydratedComponent = await hydrateComponentReference({
-      text: getComponentResult.data.text,
-      url: component.url,
-    });
-
-    if (!hydratedComponent) {
+    if (listResult.response.status !== 200) {
+      console.error(listResult.error);
       throw new BackendLibraryError(
-        `Failed to hydrate component: ${component.digest}`,
+        `Unexpected status code: ${listResult.response.status}`,
       );
     }
 
-    this.#knownDigests.add(hydratedComponent.digest);
+    if (!listResult.data) {
+      throw new BackendLibraryError("No data returned from server");
+    }
 
-    return true;
+    // Warm the in-memory cache from the list so subsequent calls skip the fetch.
+    (listResult.data.published_components ?? []).forEach((c) =>
+      this.#knownDigests.add(c.digest),
+    );
+
+    return this.#knownDigests.has(component.digest);
   }
 
   /**
