@@ -165,7 +165,10 @@ export const MultilineTextInputDialog = ({
           )}
         </InlineStack>
         {highlightSyntax && selectedLanguage !== "plaintext" ? (
-          <div className={cn(isFullscreen ? "flex-1 min-h-0" : "h-64")}>
+          <div
+            className={cn(isFullscreen ? "flex-1 min-h-0" : "h-64")}
+            onKeyDown={(e) => e.stopPropagation()}
+          >
             <CodeEditor
               key={String(isFullscreen)}
               value={value}
