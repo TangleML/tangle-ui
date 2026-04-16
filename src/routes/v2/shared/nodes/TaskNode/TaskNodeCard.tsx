@@ -165,7 +165,7 @@ const ClassicInputHandle = observer(function ClassicInputHandle({
   );
 });
 
-export const TaskNodeClassic = observer(function TaskNodeClassic({
+export const TaskNodeCard = observer(function TaskNodeCard({
   entityId,
   taskName,
   selected,
