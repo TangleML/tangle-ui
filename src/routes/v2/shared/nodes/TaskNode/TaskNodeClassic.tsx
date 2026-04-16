@@ -13,6 +13,7 @@ import {
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { InputValidationIndicator } from "@/routes/v2/shared/components/InputValidationIndicator";
+import { getContrastTextColor } from "@/routes/v2/shared/nodes/TaskNode/color.utils";
 
 import type { TaskNodeInput, TaskNodeViewProps } from "./TaskNode";
 
@@ -170,10 +171,16 @@ export const TaskNodeClassic = observer(function TaskNodeClassic({
   isSubgraph,
   inputs,
   outputs,
+  taskColor,
   inputDisplayValues,
   onNodeClick,
   onInputClick,
 }: TaskNodeViewProps) {
+  const hasColor = !!taskColor;
+  const headerColorStyle = taskColor
+    ? { backgroundColor: taskColor, color: getContrastTextColor(taskColor) }
+    : undefined;
+
   return (
     <Card
       className={classicCardVariants({
@@ -183,7 +190,13 @@ export const TaskNodeClassic = observer(function TaskNodeClassic({
       })}
       onClick={onNodeClick}
     >
-      <CardHeader className="border-b border-slate-200 px-2 py-2.5">
+      <CardHeader
+        className={cn(
+          "border-b border-slate-200 px-2 py-2.5",
+          hasColor && "rounded-t-[14px]",
+        )}
+        style={headerColorStyle}
+      >
         <BlockStack>
           <InlineStack gap="2" wrap="nowrap" blockAlign="center">
             {isSubgraph && (
@@ -198,7 +211,12 @@ export const TaskNodeClassic = observer(function TaskNodeClassic({
                 </TooltipContent>
               </Tooltip>
             )}
-            <CardTitle className="wrap-anywhere max-w-full text-left text-xs text-slate-900">
+            <CardTitle
+              className={cn(
+                "wrap-anywhere max-w-full text-left text-xs",
+                !hasColor && "text-slate-900",
+              )}
+            >
               {taskName}
             </CardTitle>
           </InlineStack>
