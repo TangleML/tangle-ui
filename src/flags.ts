@@ -51,7 +51,7 @@ export const ExistingFlags: ConfigFlags = {
     name: "Dashboard",
     description:
       "Enable the new Dashboard page, a redesigned homepage experience.",
-    default: false,
+    default: true,
     category: "beta",
   },
 };
