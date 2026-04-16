@@ -220,7 +220,7 @@ Defined in `shared/store/canvasOverlay.types.ts`. All fields are optional; `unde
 
 1. `hidden` -- if `true`, returns `null` immediately.
 2. `componentOverride` -- if set, renders `<OverrideComponent {...viewProps} />` inside a wrapper `div` with `className` and `opacity`.
-3. `className` / `opacity` -- wraps the default node variant (`TaskNodeFull`, `TaskNodeClassic`, or `TaskNodeCollapsed`) in a `div`.
+3. `className` / `opacity` -- wraps the default node variant (`TaskNodeClassic` or `TaskNodeCollapsed`) in a `div`.
 
 ### `EdgeOverlayEffect`
 

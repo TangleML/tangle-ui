@@ -2,7 +2,6 @@ import { type Node, type NodeProps, useStore } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
 import type { ReactElement } from "react";
 
-import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Card } from "@/components/ui/card";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
@@ -20,7 +19,6 @@ import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 import { TaskNodeClassic } from "./TaskNodeClassic";
 import { TaskNodeCollapsed } from "./TaskNodeCollapsed";
-import { TaskNodeFull } from "./TaskNodeFull";
 
 type TaskNodeType = Node<TaskNodeData, "task">;
 type TaskNodeProps = NodeProps<TaskNodeType>;
@@ -169,7 +167,6 @@ export const TaskNode = observer(function TaskNode({
   const { entityId } = data;
   const { editor, canvasOverlay } = useSharedStores();
   const showContent = useStore(zoomSelector);
-  const useClassicStyle = useFlagValue("classic-node-style");
 
   const spec = useSpec();
   const task = spec?.tasks.find((t) => t.$id === entityId);
@@ -203,9 +200,7 @@ export const TaskNode = observer(function TaskNode({
     outputs,
     annotations: task.annotations.map((a) => ({ key: a.key })),
     taskColor: resolveTaskColor(task),
-    inputDisplayValues: useClassicStyle
-      ? resolveInputDisplayValues(task, entityId, spec)
-      : {},
+    inputDisplayValues: resolveInputDisplayValues(task, entityId, spec),
     onNodeClick: handleClick,
     onInputClick: handleInputClick,
   };
@@ -229,11 +224,7 @@ export const TaskNode = observer(function TaskNode({
 
   return (
     <NodeEffectWrapper effect={nodeEffect}>
-      {useClassicStyle ? (
-        <TaskNodeClassic {...viewProps} />
-      ) : (
-        <TaskNodeFull {...viewProps} />
-      )}
+      <TaskNodeClassic {...viewProps} />
     </NodeEffectWrapper>
   );
 });
