@@ -2,7 +2,6 @@ import { useReactFlow } from "@xyflow/react";
 import { reaction } from "mobx";
 import { useEffect, useRef } from "react";
 
-import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import type { Position } from "@/routes/v2/shared/windows/types";
 import { COLLAPSED_DOCK_AREA_WIDTH } from "@/routes/v2/shared/windows/types";
@@ -92,7 +91,7 @@ function calculateWindowPosition(
  */
 export function usePropertiesWindowPositioning() {
   const { editor, windows: windowStore } = useSharedStores();
-  const enabled = useFlagValue("snap-properties-to-node");
+  const enabled = true;
   const reactFlow = useReactFlow();
   const reactFlowRef = useRef(reactFlow);
   reactFlowRef.current = reactFlow;
