@@ -7,7 +7,6 @@ import {
 import { observer } from "mobx-react-lite";
 import type { ReactElement } from "react";
 
-import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Card } from "@/components/ui/card";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
@@ -24,9 +23,8 @@ import type { NodeOverlayEffect } from "@/routes/v2/shared/store/canvasOverlay.t
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { ISO8601_DURATION_ZERO_DAYS } from "@/utils/constants";
 
-import { TaskNodeClassic } from "./TaskNodeClassic";
+import { TaskNodeCard } from "./TaskNodeCard";
 import { TaskNodeCollapsed } from "./TaskNodeCollapsed";
-import { TaskNodeFull } from "./TaskNodeFull";
 
 type TaskNodeType = Node<TaskNodeData, "task">;
 type TaskNodeProps = NodeProps<TaskNodeType>;
@@ -180,7 +178,6 @@ export const TaskNode = observer(function TaskNode({
   const { editor, canvasOverlay } = useSharedStores();
   const { getEdges, setEdges } = useReactFlow();
   const showContent = useStore(zoomSelector);
-  const useClassicStyle = useFlagValue("classic-node-style");
 
   const spec = useSpec();
   const task = spec?.tasks.find((t) => t.$id === entityId);
@@ -240,9 +237,7 @@ export const TaskNode = observer(function TaskNode({
       task.executionOptions?.cachingStrategy?.maxCacheStaleness ===
       ISO8601_DURATION_ZERO_DAYS,
     digest: task.componentRef.digest,
-    inputDisplayValues: useClassicStyle
-      ? resolveInputDisplayValues(task, entityId, spec)
-      : {},
+    inputDisplayValues: resolveInputDisplayValues(task, entityId, spec),
     onNodeClick: handleClick,
     onInputClick: handleInputClick,
     onOutputClick: handleOutputClick,
@@ -268,11 +263,7 @@ export const TaskNode = observer(function TaskNode({
 
   return (
     <NodeEffectWrapper effect={nodeEffect}>
-      {useClassicStyle ? (
-        <TaskNodeClassic {...viewProps} />
-      ) : (
-        <TaskNodeFull {...viewProps} />
-      )}
+      <TaskNodeCard {...viewProps} />
     </NodeEffectWrapper>
   );
 });
