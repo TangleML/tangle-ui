@@ -153,7 +153,7 @@ importers:
         specifier: ^6.15.0
         version: 6.15.0
       mobx-keystone:
-        specifier: ^1.20.0
+        specifier: ^1.21.0
         version: 1.21.0(mobx@6.15.0)
       mobx-react-lite:
         specifier: ^4.1.1
