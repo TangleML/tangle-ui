@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 
 import type { BackendAuthResponse } from "@/components/shared/Authentication/types";
+import { useBackend } from "@/providers/BackendProvider";
 import { APP_ROUTES } from "@/routes/router";
-import { API_URL } from "@/utils/constants";
 
 const POPUP_WIDTH = 600;
 const POPUP_HEIGHT = 700;
@@ -32,13 +32,13 @@ function centerPopupOnDocument() {
   };
 }
 
-async function exchangeCodeForToken(code: string) {
+async function exchangeCodeForToken(code: string, backendUrl: string) {
   const state = crypto.randomUUID();
   const oauthExchangeRoute = "/api/auth/github/callback";
 
   const authRequestUrl = new URL(
-    `${API_URL}${oauthExchangeRoute}`,
-    window.location.origin,
+    oauthExchangeRoute,
+    backendUrl ?? window.location.origin,
   );
 
   authRequestUrl.searchParams.set("code", code);
@@ -64,6 +64,7 @@ export function useGitHubAuthPopup({
   onError,
   onClose,
 }: GithubAuthFlowPopupOptions) {
+  const { backendUrl } = useBackend();
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -134,7 +135,7 @@ export function useGitHubAuthPopup({
           }
 
           if (code) {
-            exchangeCodeForToken(code)
+            exchangeCodeForToken(code, backendUrl)
               .then((response) => {
                 onSuccess(response);
                 closePopup();

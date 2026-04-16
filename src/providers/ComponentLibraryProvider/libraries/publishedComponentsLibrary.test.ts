@@ -137,7 +137,10 @@ describe("PublishedComponentsLibrary", () => {
       },
     );
 
-    library = new PublishedComponentsLibrary(mockQueryClient);
+    library = new PublishedComponentsLibrary(
+      mockQueryClient,
+      "http://localhost:8000",
+    );
     vi.clearAllMocks();
 
     // Default fetch mock
@@ -726,7 +729,7 @@ describe("PublishedComponentsLibrary", () => {
       );
     });
 
-    it("should use API_URL for components without URL", async () => {
+    it("should use backendUrl for components without URL", async () => {
       // Arrange
       const publishedComponents = [
         createMockPublishedComponent({ url: undefined }),
@@ -743,8 +746,8 @@ describe("PublishedComponentsLibrary", () => {
 
       // Assert
       expect(result.components!).toHaveLength(1);
-      expect(result.components![0].url).toMatch(
-        /\/api\/components\/test-digest-123$/,
+      expect(result.components![0].url).toBe(
+        "http://localhost:8000/api/components/test-digest-123",
       );
     });
 

@@ -12,6 +12,7 @@ import ComponentDuplicateDialog from "@/components/shared/Dialogs/ComponentDupli
 import { GitHubFlatComponentLibrary } from "@/components/shared/GitHubLibrary/githubFlatComponentLibrary";
 import { isGitHubLibraryConfiguration } from "@/components/shared/GitHubLibrary/types";
 import { getComponentQueryKey } from "@/hooks/useHydrateComponentReference";
+import { useBackend } from "@/providers/BackendProvider";
 import {
   fetchAndStoreComponentLibrary,
   hydrateComponentReference,
@@ -121,6 +122,7 @@ registerLibraryFactory("github", (library) => {
 
 function useComponentLibraryRegistry() {
   const queryClient = useQueryClient();
+  const { backendUrl } = useBackend();
   const [existingComponentLibraries, setExistingComponentLibraries] = useState<
     StoredLibrary[]
   >([]);
@@ -128,12 +130,15 @@ function useComponentLibraryRegistry() {
   const componentLibraries = useMemo(
     () =>
       new Map<AvailableComponentLibraries, Library>([
-        ["published_components", new PublishedComponentsLibrary(queryClient)],
+        [
+          "published_components",
+          new PublishedComponentsLibrary(queryClient, backendUrl),
+        ],
         /**
          * In future we will have other library types,  including "standard_library", "favorite_components", "used_components", etc.
          */
       ]),
-    [queryClient],
+    [queryClient, backendUrl],
   );
 
   /**
