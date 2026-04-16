@@ -1212,6 +1212,8 @@ const FlowCanvasContent = ({
         />,
       );
       setOpen(true);
+    } else if (nodes.length === 0) {
+      clearContent();
     }
   }, [currentSubgraphSpec, selectedNodeIds, readOnly, canUpgrade, canGroup]);
 
