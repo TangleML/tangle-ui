@@ -152,7 +152,11 @@ export function ExecutionDataProvider({
   const { details: rootDetails, state: rootState } = executionData ?? {};
   const runId = rootDetails?.pipeline_run_id;
 
-  const metadataQueryId = runId ?? pipelineRunId;
+  const metadataQueryId =
+    runId ??
+    (rootExecutionId && pipelineRunId === rootExecutionId
+      ? undefined
+      : pipelineRunId);
 
   const {
     data: metadata,

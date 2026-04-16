@@ -16,8 +16,18 @@ const useRootExecutionId = (id: string) => {
   const { backendUrl } = useBackend();
   const { data: rootExecutionId } = useQuery({
     queryKey: ["pipeline-run-execution-id", id],
-    queryFn: () =>
-      fetchPipelineRun(id, backendUrl).then((res) => res.root_execution_id),
+    queryFn: async () => {
+      const rootExecutionId = await fetchPipelineRun(id, backendUrl)
+        .then((res) => res.root_execution_id)
+        .catch((_) => undefined);
+
+      if (rootExecutionId) {
+        return rootExecutionId;
+      }
+
+      // assuming id is root_execution_id
+      return id;
+    },
     enabled: !!id && id.length > 0,
     staleTime: Infinity,
   });
@@ -25,7 +35,7 @@ const useRootExecutionId = (id: string) => {
   return rootExecutionId;
 };
 
-/* Accepts run_id and returns execution details and state */
+/* Accepts root_execution_id or run_id and returns execution details and state */
 export const usePipelineRunData = (id: string) => {
   const { backendUrl } = useBackend();
 
