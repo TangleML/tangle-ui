@@ -1,7 +1,9 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 
+import { isFlagEnabled } from "@/components/shared/Settings/useFlags";
+import { ExistingFlags } from "@/flags";
 import {
   createRequiredContext,
   useRequiredContext,
@@ -65,11 +67,13 @@ const AnalyticsContext =
 /**
  * Provides analytics tracking to the component tree.
  *
- * Each `track` call awaits `queryClient.ensureQueryData` for the current user
- * before dispatching — returning the cached value immediately after the first
- * fetch, or waiting for the in-flight request if it hasn't resolved yet. The
- * session ID is created lazily on the first dispatched event and reused for
- * the lifetime of the browser tab.
+ * On mount, fires a `session.tab.start` event with the current feature flags
+ * once the user query resolves. Each `track` call awaits
+ * `queryClient.ensureQueryData` for the current user before dispatching —
+ * returning the cached value immediately after the first fetch, or waiting for
+ * the in-flight request if it hasn't resolved yet. The session ID is created
+ * lazily on the first dispatched event and reused for the lifetime of the
+ * browser tab.
  */
 export function AnalyticsProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
@@ -91,6 +95,18 @@ export function AnalyticsProvider({ children }: { children: ReactNode }) {
     },
     [sessionIdPromise],
   );
+
+  useEffect(() => {
+    const flags = Object.fromEntries(
+      Object.keys(ExistingFlags).map((key) => [
+        key,
+        isFlagEnabled(key as keyof typeof ExistingFlags),
+      ]),
+    );
+    void sessionIdPromise.then((sessionId) => {
+      dispatchTrack(sessionId, "session.tab.start", { flags });
+    });
+  }, [sessionIdPromise]);
 
   return <AnalyticsContext value={{ track }}>{children}</AnalyticsContext>;
 }
