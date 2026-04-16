@@ -8,6 +8,7 @@ import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { APP_ROUTES } from "@/routes/router";
 import { renameComponentFileInList } from "@/utils/componentStore";
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
+import { skipNextNavigationBlock } from "@/utils/skipNavigationBlock";
 
 const RenamePipeline = () => {
   const { componentSpec, saveComponentSpec } = useComponentSpec();
@@ -41,6 +42,7 @@ const RenamePipeline = () => {
     const urlName = encodeURIComponent(name);
     const url = APP_ROUTES.PIPELINE_EDITOR.replace("$name", urlName);
 
+    skipNextNavigationBlock();
     navigate({ to: url });
   };
 
