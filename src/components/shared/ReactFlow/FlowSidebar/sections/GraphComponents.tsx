@@ -76,7 +76,6 @@ const GraphComponents = () => {
     if (!componentLibrary) return <EmptyState />;
 
     if (!remoteComponentLibrarySearchEnabled && searchResult) {
-      // If there's a search result, use the SearchResults component
       return (
         <SearchResults
           searchResult={searchResult}
@@ -85,7 +84,6 @@ const GraphComponents = () => {
       );
     }
 
-    // Otherwise show the regular folder structure
     const hasUsedComponents =
       usedComponentsFolder?.components &&
       usedComponentsFolder.components.length > 0;

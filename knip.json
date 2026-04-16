@@ -2,13 +2,13 @@
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "tags": ["-@public"],
   "ignore": [
+    "scripts/**",
     "src/api/**",
     "src/components/ui/**",
     "src/config/announcements.ts",
     "src/components/shared/BetaFeatureWrapper/BetaFeatureWrapper.tsx"
   ],
   "ignoreDependencies": [
-    "@radix-ui/react-accordion",
     "@tanstack/react-query-devtools",
     "@typescript-eslint/eslint-plugin",
     "@typescript-eslint/parser",

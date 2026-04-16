@@ -21,11 +21,12 @@ const RunsAndSubmission = () => {
   const showGoogleSubmitter =
     import.meta.env.VITE_ENABLE_GOOGLE_CLOUD_SUBMITTER === "true";
 
+  const showMoreButton = componentSpec?.name ? (
+    <RecentExecutionsButton pipelineName={componentSpec.name} />
+  ) : null;
+
   return (
-    <SidebarSection
-      title="Runs & Submissions"
-      headerAction={<RecentExecutionsButton />}
-    >
+    <SidebarSection title="Runs & Submissions" headerAction={showMoreButton}>
       <BlockStack as="ul" gap="1">
         <li className="w-full">
           {isAuthorized ? (

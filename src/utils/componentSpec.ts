@@ -137,7 +137,7 @@ interface ContainerSpec {
 export interface ContainerImplementation {
   container: ContainerSpec;
 }
-type ImplementationType = ContainerImplementation | GraphImplementation;
+export type ImplementationType = ContainerImplementation | GraphImplementation;
 export interface MetadataSpec {
   annotations?: {
     [k: string]: unknown;
@@ -457,7 +457,7 @@ interface TwoLogicalOperands {
 /**
  * Optional configuration that specifies how the task should be executed. Can be used to set some platform-specific options.
  */
-type PredicateType =
+export type PredicateType =
   | {
       "==": TwoArgumentOperands;
     }
@@ -499,7 +499,7 @@ interface CachingStrategySpec {
   maxCacheStaleness?: string;
 }
 
-interface ExecutionOptionsSpec {
+export interface ExecutionOptionsSpec {
   retryStrategy?: RetryStrategySpec;
   cachingStrategy?: CachingStrategySpec;
 }
@@ -544,8 +544,9 @@ export const isContainerImplementation = (
 ): implementation is ContainerImplementation => "container" in implementation;
 
 export const isGraphImplementation = (
-  implementation: ImplementationType,
-): implementation is GraphImplementation => "graph" in implementation;
+  implementation: ImplementationType | undefined,
+): implementation is GraphImplementation =>
+  implementation !== undefined && "graph" in implementation;
 
 export const isGraphImplementationOutput = (
   implementation:

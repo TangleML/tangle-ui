@@ -1,5 +1,5 @@
 import { cva, type VariantProps } from "class-variance-authority";
-import { icons } from "lucide-react";
+import { icons, type LucideProps } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -23,7 +23,17 @@ interface IconProps extends VariantProps<typeof iconVariants> {
   className?: string;
 }
 
-export const Icon = ({ name: icon, size = "md", className }: IconProps) => {
+export const Icon = ({
+  name: icon,
+  size = "md",
+  className,
+  ...lucideIconProps
+}: IconProps & LucideProps) => {
   const Icon = icons[icon];
-  return <Icon className={cn(iconVariants({ size }), className)} />;
+  return (
+    <Icon
+      className={cn(iconVariants({ size }), className)}
+      {...lucideIconProps}
+    />
+  );
 };

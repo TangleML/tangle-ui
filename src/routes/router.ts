@@ -36,6 +36,9 @@ import { BetaFeaturesSettings } from "./Settings/sections/BetaFeaturesSettings";
 import { PreferencesSettings } from "./Settings/sections/PreferencesSettings";
 import { SecretsSettings } from "./Settings/sections/SecretsSettings";
 import { SettingsLayout } from "./Settings/SettingsLayout";
+import { EditorV2 } from "./v2/pages/Editor/EditorV2";
+import { PipelineFoldersPage } from "./v2/pages/PipelineFolders/PipelineFoldersPage";
+import { RunViewV2 } from "./v2/pages/RunView/RunViewV2";
 
 declare module "@tanstack/react-router" {
   interface Register {
@@ -71,6 +74,12 @@ export const APP_ROUTES = {
   SETTINGS_SECRETS_REPLACE: `${SETTINGS_PATH}/secrets/$secretId/replace`,
   GITHUB_AUTH_CALLBACK: "/authorize/github",
   HUGGINGFACE_AUTH_CALLBACK: "/authorize/huggingface",
+  EDITOR_V2: "/editor-v2",
+  EDITOR_V2_PIPELINE: "/editor-v2/$pipelineName",
+  RUN_V2: "/run-v2/$id",
+  RUN_V2_WITH_SUBGRAPH: "/run-v2/$id/$subgraphExecutionId",
+  PIPELINE_FOLDERS: "/pipeline-folders",
+  PLAYGROUND: "/playground",
 } as const;
 
 const rootRoute = createRootRoute({
@@ -252,6 +261,36 @@ const settingsRouteTree = settingsLayoutRoute.addChildren([
   secretsRouteTree,
 ]);
 
+const editorV2Route = createRoute({
+  getParentRoute: () => mainLayout,
+  path: APP_ROUTES.EDITOR_V2,
+  component: EditorV2,
+});
+
+const editorV2PipelineRoute = createRoute({
+  getParentRoute: () => mainLayout,
+  path: APP_ROUTES.EDITOR_V2_PIPELINE,
+  component: EditorV2,
+});
+
+const runV2Route = createRoute({
+  getParentRoute: () => mainLayout,
+  path: APP_ROUTES.RUN_V2,
+  component: RunViewV2,
+});
+
+const runV2WithSubgraphRoute = createRoute({
+  getParentRoute: () => mainLayout,
+  path: APP_ROUTES.RUN_V2_WITH_SUBGRAPH,
+  component: RunViewV2,
+});
+
+const pipelineFoldersRoute = createRoute({
+  getParentRoute: () => mainLayout,
+  path: APP_ROUTES.PIPELINE_FOLDERS,
+  component: PipelineFoldersPage,
+});
+
 const dashboardRouteTree = dashboardRoute.addChildren([
   dashboardIndexRoute,
   dashboardRunsRoute,
@@ -269,6 +308,11 @@ const appRouteTree = mainLayout.addChildren([
   editorRoute,
   runDetailRoute,
   runDetailWithSubgraphRoute,
+  editorV2Route,
+  editorV2PipelineRoute,
+  runV2Route,
+  runV2WithSubgraphRoute,
+  pipelineFoldersRoute,
 ]);
 
 const rootRouteTree = rootRoute.addChildren([

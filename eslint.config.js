@@ -1,4 +1,5 @@
 import pluginJs from "@eslint/js";
+import noRelativeImportPaths from "eslint-plugin-no-relative-import-paths";
 import pluginPlaywright from "eslint-plugin-playwright";
 import pluginReact from "eslint-plugin-react";
 import reactCompiler from "eslint-plugin-react-compiler";
@@ -7,6 +8,22 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 
 import { REACT_COMPILER_ENABLED_GLOBS } from "./react-compiler.config.js";
+
+const baseRestrictedImportPaths = [
+  {
+    name: "@/components/ui",
+    message:
+      "Use absolute imports for '@/components/ui' instead of relative imports.",
+  },
+];
+
+const baseRestrictedImportPatterns = [
+  {
+    group: ["**/ui/*", "!@/components/ui/*", "!**/argo-workflows/ui/*"],
+    message:
+      "Only '@/components/ui/*' is allowed for importing from the ui folder.",
+  },
+];
 
 /** @type {import('eslint').Linter.Config[]} */
 export default [
@@ -36,24 +53,8 @@ export default [
       "no-restricted-imports": [
         "error",
         {
-          paths: [
-            {
-              name: "@/components/ui",
-              message:
-                "Use absolute imports for '@/components/ui' instead of relative imports.",
-            },
-          ],
-          patterns: [
-            {
-              group: [
-                "**/ui/*",
-                "!@/components/ui/*",
-                "!**/argo-workflows/ui/*",
-              ],
-              message:
-                "Only '@/components/ui/*' is allowed for importing from the ui folder.",
-            },
-          ],
+          paths: baseRestrictedImportPaths,
+          patterns: baseRestrictedImportPatterns,
         },
       ],
     },
@@ -77,6 +78,117 @@ export default [
           selector: "CallExpression[callee.name='useMemo']",
           message:
             "useMemo may be unnecessary with React Compiler. The compiler auto-memoizes values.",
+        },
+      ],
+    },
+  },
+  {
+    files: ["src/routes/v2/**/*.{ts,tsx}"],
+    plugins: {
+      "no-relative-import-paths": noRelativeImportPaths,
+    },
+    rules: {
+      "no-relative-import-paths/no-relative-import-paths": [
+        "error",
+        {
+          allowSameFolder: true,
+          rootDir: "src",
+          prefix: "@",
+        },
+      ],
+    },
+  },
+  // v2 Architecture boundary: shared/ must not import from any page
+  {
+    files: ["src/routes/v2/shared/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: baseRestrictedImportPaths,
+          patterns: [
+            ...baseRestrictedImportPatterns,
+            {
+              group: ["@/routes/v2/pages/**"],
+              message:
+                "shared/ must not import from pages/. Dependency direction: pages → shared, never the reverse. See src/routes/v2/ARCHITECTURE.md.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // v2 Architecture boundary: Editor must not import from other pages
+  {
+    files: ["src/routes/v2/pages/Editor/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: baseRestrictedImportPaths,
+          patterns: [
+            ...baseRestrictedImportPatterns,
+            {
+              group: ["@/routes/v2/pages/RunView/**"],
+              message:
+                "Editor must not import from RunView. Pages cannot depend on each other. See src/routes/v2/ARCHITECTURE.md.",
+            },
+            {
+              group: ["@/routes/v2/pages/PipelineFolders/**"],
+              message:
+                "Editor must not import from PipelineFolders. Pages cannot depend on each other. See src/routes/v2/ARCHITECTURE.md.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // v2 Architecture boundary: RunView must not import from other pages
+  {
+    files: ["src/routes/v2/pages/RunView/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: baseRestrictedImportPaths,
+          patterns: [
+            ...baseRestrictedImportPatterns,
+            {
+              group: ["@/routes/v2/pages/Editor/**"],
+              message:
+                "RunView must not import from Editor. Pages cannot depend on each other. See src/routes/v2/ARCHITECTURE.md.",
+            },
+            {
+              group: ["@/routes/v2/pages/PipelineFolders/**"],
+              message:
+                "RunView must not import from PipelineFolders. Pages cannot depend on each other. See src/routes/v2/ARCHITECTURE.md.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // v2 Architecture boundary: PipelineFolders must not import from other pages
+  {
+    files: ["src/routes/v2/pages/PipelineFolders/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: baseRestrictedImportPaths,
+          patterns: [
+            ...baseRestrictedImportPatterns,
+            {
+              group: ["@/routes/v2/pages/Editor/**"],
+              message:
+                "PipelineFolders must not import from Editor. Pages cannot depend on each other. See src/routes/v2/ARCHITECTURE.md.",
+            },
+            {
+              group: ["@/routes/v2/pages/RunView/**"],
+              message:
+                "PipelineFolders must not import from RunView. Pages cannot depend on each other. See src/routes/v2/ARCHITECTURE.md.",
+            },
+          ],
         },
       ],
     },

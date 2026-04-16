@@ -1,0 +1,73 @@
+import { observer } from "mobx-react-lite";
+
+import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
+import { InlineStack } from "@/components/ui/layout";
+import { Text } from "@/components/ui/typography";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+
+/**
+ * Bar that displays hidden windows. Rendered in normal flow above the editor
+ * layout so it pushes content down when visible.
+ */
+export const TaskPanel = observer(function TaskPanel() {
+  const { windows } = useSharedStores();
+  const hiddenWindows = windows.getHiddenWindows();
+
+  if (hiddenWindows.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="shrink-0 bg-gray-100 border-b border-gray-300 shadow-sm">
+      <InlineStack gap="1" className="px-2 py-1 overflow-x-auto">
+        {hiddenWindows.map((win) => {
+          const canClose = !win.isActionDisabled("close");
+          return (
+            <InlineStack
+              key={win.id}
+              blockAlign="center"
+              gap="1"
+              wrap="nowrap"
+              className="bg-white hover:bg-gray-50 border border-gray-200 rounded px-2 py-0.5 transition-colors cursor-pointer group shadow-sm"
+            >
+              <Button
+                variant="ghost"
+                size="min"
+                onClick={() => win.restore()}
+                className="flex items-center gap-1 min-w-0 h-5 p-0"
+              >
+                <Icon
+                  name="AppWindow"
+                  size="xs"
+                  className="text-gray-500 shrink-0"
+                />
+                <Text
+                  size="xs"
+                  weight="semibold"
+                  className="text-gray-700 truncate max-w-[120px]"
+                >
+                  {win.title}
+                </Text>
+              </Button>
+              {canClose && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-5 w-5 text-gray-400 hover:text-red-500 hover:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    win.close();
+                  }}
+                  title="Close"
+                >
+                  <Icon name="X" size="xs" />
+                </Button>
+              )}
+            </InlineStack>
+          );
+        })}
+      </InlineStack>
+    </div>
+  );
+});

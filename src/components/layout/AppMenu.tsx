@@ -28,12 +28,13 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
+import { APP_ROUTES } from "@/routes/router";
 import { DOCUMENTATION_URL, TOP_NAV_HEIGHT } from "@/utils/constants";
 
 import TooltipButton from "../shared/Buttons/TooltipButton";
 import NewPipelineButton from "../shared/NewPipelineButton";
 
-const AppMenu = () => {
+const DefaultAppMenu = () => {
   const router = useRouter();
   const location = useLocation();
 
@@ -71,7 +72,12 @@ const AppMenu = () => {
           )}
         </InlineStack>
 
-        <InlineStack gap="2" wrap="nowrap" className="shrink-0">
+        <InlineStack
+          gap="2"
+          wrap="nowrap"
+          className="shrink-0"
+          data-testid="app-menu-actions"
+        >
           {/* Pipeline actions - desktop only */}
           <div className="hidden md:flex items-center gap-2">
             <ImportPipeline
@@ -164,6 +170,22 @@ const AppMenu = () => {
       </InlineStack>
     </div>
   );
+};
+
+const RUN_V2_BASE_PATH = "/run-v2";
+
+const AppMenu = () => {
+  const { pathname } = useLocation();
+
+  if (pathname.startsWith(APP_ROUTES.EDITOR_V2)) {
+    return null;
+  }
+
+  if (pathname.startsWith(RUN_V2_BASE_PATH)) {
+    return null;
+  }
+
+  return <DefaultAppMenu />;
 };
 
 export default AppMenu;

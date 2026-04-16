@@ -1,0 +1,152 @@
+import { action, makeObservable, observable, reaction } from "mobx";
+
+import type { ComponentSpec } from "@/models/componentSpec";
+import {
+  collectIdStack,
+  serializeComponentSpecToText,
+} from "@/models/componentSpec";
+import { saveUndoHistory } from "@/routes/v2/pages/Editor/utils/undoHistoryStorage";
+import { AUTOSAVE_DEBOUNCE_TIME_MS } from "@/utils/constants";
+import { debounce } from "@/utils/debounce";
+
+import type { PipelineFileStore } from "./pipelineFileStore";
+import type { UndoStore } from "./undoStore";
+
+const SAVED_MESSAGE_DURATION_MS = 2000;
+const MIN_SAVING_DISPLAY_MS = 1000;
+
+export class AutoSaveStore {
+  @observable accessor isSaving = false;
+  @observable accessor lastSavedAt: Date | null = null;
+  @observable accessor showSavedMessage = false;
+
+  private spec: ComponentSpec | null = null;
+  private pipelineName: string | null = null;
+  private disposeReaction: (() => void) | null = null;
+  private savedMessageTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  private debouncedSave = debounce((yamlText: string) => {
+    void this.performSave(yamlText);
+  }, AUTOSAVE_DEBOUNCE_TIME_MS);
+
+  constructor(
+    private undoStore: UndoStore,
+    private pipelineFileStore: PipelineFileStore,
+  ) {
+    makeObservable(this);
+  }
+
+  @action init(spec: ComponentSpec, pipelineName: string) {
+    this.dispose();
+    this.spec = spec;
+    this.pipelineName = pipelineName;
+    this.isSaving = false;
+    this.lastSavedAt = null;
+    this.showSavedMessage = false;
+
+    this.disposeReaction = reaction(
+      () => this.serializeSpec(),
+      (yamlText) => this.scheduleAutoSave(yamlText),
+      { fireImmediately: false },
+    );
+  }
+
+  @action dispose() {
+    this.disposeReaction?.();
+    this.disposeReaction = null;
+    this.debouncedSave.cancel();
+    this.clearSavedMessageTimeout();
+    this.spec = null;
+    this.pipelineName = null;
+  }
+
+  async save() {
+    if (!this.spec || !this.pipelineName) return;
+    const yamlText = this.serializeSpec();
+    if (!yamlText) return;
+    await this.performSave(yamlText);
+  }
+
+  @action setSaving(value: boolean) {
+    this.isSaving = value;
+  }
+
+  @action setSaved(date: Date) {
+    this.lastSavedAt = date;
+    this.isSaving = false;
+  }
+
+  @action setShowSavedMessage(value: boolean) {
+    this.showSavedMessage = value;
+  }
+
+  private serializeSpec(): string | null {
+    if (!this.spec) return null;
+    try {
+      return serializeComponentSpecToText(this.spec);
+    } catch {
+      return null;
+    }
+  }
+
+  private scheduleAutoSave(yamlText: string | null) {
+    if (!yamlText || !this.pipelineName) {
+      this.debouncedSave.cancel();
+      return;
+    }
+    this.debouncedSave(yamlText);
+  }
+
+  private async performSave(yamlText: string) {
+    const pipelineName = this.pipelineName;
+    if (!pipelineName) return;
+
+    this.setSaving(true);
+
+    const savePromise = (async () => {
+      try {
+        await this.pipelineFileStore.activePipelineFile?.write(yamlText);
+        await this.persistUndoHistory();
+        this.setSaved(new Date());
+        this.flashSavedMessage();
+      } catch (error) {
+        console.error("Auto-save failed:", error);
+        this.setSaving(false);
+      }
+    })();
+
+    const minDisplayPromise = new Promise((resolve) =>
+      setTimeout(resolve, MIN_SAVING_DISPLAY_MS),
+    );
+
+    await Promise.all([savePromise, minDisplayPromise]);
+  }
+
+  private async persistUndoHistory() {
+    if (!this.spec || !this.pipelineName) return;
+    const manager = this.undoStore.undoManager;
+    if (!manager) return;
+
+    try {
+      const idStack = collectIdStack(this.spec);
+      await saveUndoHistory(this.pipelineName, idStack, manager);
+    } catch (error) {
+      console.error("Failed to persist undo history:", error);
+    }
+  }
+
+  private flashSavedMessage() {
+    this.clearSavedMessageTimeout();
+    this.setShowSavedMessage(true);
+    this.savedMessageTimeout = setTimeout(() => {
+      this.setShowSavedMessage(false);
+    }, SAVED_MESSAGE_DURATION_MS);
+  }
+
+  private clearSavedMessageTimeout() {
+    if (this.savedMessageTimeout) {
+      clearTimeout(this.savedMessageTimeout);
+      this.savedMessageTimeout = null;
+    }
+  }
+}

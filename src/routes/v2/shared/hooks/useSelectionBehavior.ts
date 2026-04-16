@@ -1,0 +1,62 @@
+import type {
+  Node,
+  OnSelectionChangeParams,
+  ReactFlowProps,
+} from "@xyflow/react";
+import { useEffect, useMemo } from "react";
+
+import type { ComponentSpec } from "@/models/componentSpec/entities/componentSpec";
+import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
+import type { NodeTypeRegistry } from "@/routes/v2/shared/nodes/registry";
+import type { SelectedNode } from "@/routes/v2/shared/store/editorStore";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { debounce } from "@/utils/debounce";
+
+const SELECTION_DEBOUNCE_MS = 150;
+
+function buildMultiSelection(
+  registry: NodeTypeRegistry,
+  spec: ComponentSpec | null,
+  selected: Node[],
+): SelectedNode[] {
+  const result: SelectedNode[] = [];
+  for (const node of selected) {
+    const manifest = registry.getByNodeId(spec, node.id);
+    if (!manifest?.selectable) continue;
+    const selectedNode = manifest.toSelectedNode?.(node);
+    if (selectedNode) result.push(selectedNode);
+  }
+  return result;
+}
+
+export function useSelectionBehavior(
+  spec: ComponentSpec | null,
+): Required<Pick<ReactFlowProps, "onSelectionChange">> {
+  const registry = useNodeRegistry();
+  const { editor } = useSharedStores();
+
+  // eslint-disable-next-line no-restricted-syntax -- debounce() is stateful; compiler cannot prove purity
+  const debouncedSetMultiSelection = useMemo(
+    () =>
+      debounce(
+        (nodes: SelectedNode[]) => editor.setMultiSelection(nodes),
+        SELECTION_DEBOUNCE_MS,
+      ),
+    [editor],
+  );
+
+  useEffect(() => {
+    return () => debouncedSetMultiSelection.cancel();
+  }, [debouncedSetMultiSelection]);
+
+  const onSelectionChange = ({ nodes: selected }: OnSelectionChangeParams) => {
+    if (selected.length > 1) {
+      debouncedSetMultiSelection(buildMultiSelection(registry, spec, selected));
+    } else {
+      debouncedSetMultiSelection.cancel();
+      editor.clearMultiSelection();
+    }
+  };
+
+  return { onSelectionChange };
+}

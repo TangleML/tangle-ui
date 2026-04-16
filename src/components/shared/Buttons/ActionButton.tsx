@@ -39,6 +39,7 @@ export const ActionButton = ({
       onClick={onClick}
       disabled={disabled}
       className={className}
+      size="sm"
     >
       {children === undefined && icon ? <Icon name={icon} /> : children}
       {label && <Paragraph>{label}</Paragraph>}

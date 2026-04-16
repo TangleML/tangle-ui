@@ -46,6 +46,8 @@
     "validate:test": "pnpm run validate && pnpm run test",
     "generate-api": "openapi-ts",
     "knip": "knip",
+    "fta": "fta",
+    "depcruise": "depcruise",
     "hydrate-component-library": "tsx scripts/hydrate-component-library.ts public/component_library.original.yaml public/component_library.yaml"
   },
   "dependencies": {
@@ -83,6 +85,7 @@
     "@types/gapi": "^0.0.47",
     "@types/papaparse": "^5.5.2",
     "@xyflow/react": "^12.10.2",
+    "@xyflow/system": "^0.0.76",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -96,6 +99,10 @@
     "js-yaml": "^4.1.1",
     "localforage": "^1.10.0",
     "lucide-react": "^0.577.0",
+    "mobx": "^6.15.0",
+    "mobx-keystone": "^1.20.0",
+    "mobx-react-lite": "^4.1.1",
+    "prism-react-renderer": "^2.4.1",
     "nanoid": "^5.1.9",
     "papaparse": "^5.5.3",
     "pyodide": "^0.29.3",
@@ -110,12 +117,14 @@
     "react-toastify": "^11.0.5",
     "tailwind-merge": "^3.5.0",
     "tailwindcss": "^4.1.16",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "zod": "^4.3.6"
   },
   "peerDependencies": {
     "monaco-editor": "^0.54.0"
   },
   "devDependencies": {
+    "@babel/plugin-proposal-decorators": "^7.29.0",
     "@eslint/js": "^9.39.2",
     "@hey-api/openapi-ts": "^0.96.0",
     "@playwright/test": "^1.59.1",
@@ -132,11 +141,14 @@
     "@vitejs/plugin-react": "^5.1.4",
     "@vitest/coverage-v8": "^3.2.4",
     "babel-plugin-react-compiler": "^1.0.0",
+    "dependency-cruiser": "^17.3.9",
     "eslint": "^9.39.2",
+    "eslint-plugin-no-relative-import-paths": "^1.6.1",
     "eslint-plugin-playwright": "^2.10.1",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-compiler": "^19.1.0-rc.2",
     "fake-indexeddb": "^6.2.5",
+    "fta-cli": "^3.0.0",
     "globals": "^17.5.0",
     "jsdom": "^29.0.2",
     "knip": "^6.4.1",
