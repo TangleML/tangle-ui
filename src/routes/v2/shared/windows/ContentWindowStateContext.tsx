@@ -6,6 +6,7 @@ import type { WindowModel } from "./windowModel";
 interface WindowContextValue {
   model: WindowModel;
   content: ReactNode;
+  dockIndex?: number;
 }
 
 const WindowCtx = createContext<WindowContextValue | undefined>(undefined);

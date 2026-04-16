@@ -3,6 +3,7 @@ import { type RefObject, useEffect, useRef, useState } from "react";
 
 import useToastNotification from "@/hooks/useToastNotification";
 import { APP_ROUTES } from "@/routes/router";
+import { usePipelineActions } from "@/routes/v2/pages/Editor/store/actions/usePipelineActions";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { CTRL } from "@/routes/v2/shared/shortcuts/keys";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
@@ -21,6 +22,10 @@ interface FileMenuState {
   setOpenDialogOpen: (open: boolean) => void;
   saveAsDialogOpen: boolean;
   setSaveAsDialogOpen: (open: boolean) => void;
+  renameDialogOpen: boolean;
+  setRenameDialogOpen: (open: boolean) => void;
+  handleRename: (name: string) => void;
+  getRenameInitialName: () => string;
   setImportOpen: (open: boolean) => void;
   handleSave: () => void;
   handleNewPipeline: () => void;
@@ -32,13 +37,15 @@ interface FileMenuState {
 
 export function useFileMenuState(): FileMenuState {
   const { keyboard, navigation } = useSharedStores();
-  const { autoSave } = useEditorSession();
+  const { autoSave, pipelineFile: pipelineFileStore } = useEditorSession();
+  const { renamePipeline } = usePipelineActions();
   const storage = usePipelineStorage();
   const navigate = useNavigate();
   const notify = useToastNotification();
   const [importOpen, setImportOpen] = useState(false);
   const [openDialogOpen, setOpenDialogOpen] = useState(false);
   const [saveAsDialogOpen, setSaveAsDialogOpen] = useState(false);
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const importTriggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -89,6 +96,20 @@ export function useFileMenuState(): FileMenuState {
     });
   };
 
+  const handleRename = async (newName: string) => {
+    const spec = navigation.rootSpec;
+    if (!spec) return;
+    await pipelineFileStore.activePipelineFile?.rename(newName);
+    renamePipeline(spec, newName);
+    await navigate({
+      to: APP_ROUTES.EDITOR_V2_PIPELINE,
+      params: { pipelineName: newName },
+      search: { fileId: pipelineFileStore.activePipelineFile?.id },
+    });
+  };
+
+  const getRenameInitialName = () => navigation.rootSpec?.name ?? "";
+
   const handleExport = () => {
     exportCurrentPipeline(navigation);
   };
@@ -106,6 +127,10 @@ export function useFileMenuState(): FileMenuState {
     setOpenDialogOpen,
     saveAsDialogOpen,
     setSaveAsDialogOpen,
+    renameDialogOpen,
+    setRenameDialogOpen,
+    handleRename,
+    getRenameInitialName,
     setImportOpen,
     handleSave,
     handleNewPipeline,

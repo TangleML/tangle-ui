@@ -11,7 +11,7 @@ import { createTaskNodeCardVariants } from "./taskNode.variants";
 const s = "var(--collapsed-scale, 1)";
 
 const collapsedCardVariants = createTaskNodeCardVariants(
-  "flex flex-col justify-center rounded-xl border-2 p-0 drop-shadow-sm cursor-pointer transition-[border-color,box-shadow]",
+  "flex flex-col justify-center rounded-xl border-2 p-0 drop-shadow-sm cursor-pointer select-none transition-[border-color,box-shadow]",
 );
 
 export function TaskNodeCollapsed({

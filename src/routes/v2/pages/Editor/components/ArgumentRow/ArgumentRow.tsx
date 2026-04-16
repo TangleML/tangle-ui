@@ -27,23 +27,11 @@ import { InputValidationIndicator } from "./components/InputValidationIndicator"
 import { ThunderMenu } from "./components/ThunderMenu/ThunderMenu";
 import { useArgumentActions } from "./useArgumentActions";
 
-const rowVariants = cva(
-  "group rounded px-2 py-1 cursor-pointer transition-colors w-full overflow-hidden",
-  {
-    variants: {
-      active: {
-        true: "bg-blue-50 ring-1 ring-blue-200",
-        false: "hover:bg-gray-50",
-      },
-      unset: { true: "opacity-60", false: "" },
-    },
-    defaultVariants: { active: false, unset: false },
-  },
-);
+const rowVariants = cva("group rounded-lg py-2 px-1 w-full");
 
-const nameVariants = cva("shrink-0 text-gray-700", {
+const nameVariants = cva("shrink-0", {
   variants: {
-    unset: { true: "line-through", false: "" },
+    unset: { true: "text-gray-400", false: "text-gray-900" },
   },
   defaultVariants: { unset: false },
 });
@@ -172,39 +160,26 @@ export const ArgumentRow = observer(function ArgumentRow({
   const typeLabel = typeSpecToString(inputSpec.type);
 
   return (
-    <div
-      ref={rowRef}
-      className={rowVariants({
-        active: (externalEditor && isFocused) || editing,
-        unset: !isSet && !isBound,
-      })}
-      onClick={handleClick}
-    >
-      <InlineStack gap="1" blockAlign="center" className="w-full min-h-[24px]">
-        <InlineStack gap="1" blockAlign="baseline" className="flex-1 min-w-0">
-          <Text
-            size="xs"
-            weight="semibold"
-            className={nameVariants({ unset: !isSet && !isBound })}
-          >
-            {inputSpec.name}
+    <div ref={rowRef} className={rowVariants()} onClick={handleClick}>
+      <InlineStack gap="2" blockAlign="center" className="w-full">
+        <Text
+          size="sm"
+          weight="semibold"
+          className={nameVariants({ unset: !isSet && !isBound })}
+        >
+          {inputSpec.name.replace(/_/g, " ")}
+        </Text>
+        {typeLabel && (
+          <Text size="xs" className="text-gray-400 shrink-0">
+            ({typeLabel}
+            {!inputSpec.optional ? "*" : ""})
           </Text>
-          {typeLabel && (
-            <Text size="xs" className="text-gray-400 shrink-0">
-              {typeLabel}
-            </Text>
-          )}
-          {!inputSpec.optional && (
-            <Text size="xs" className="text-red-400 shrink-0">
-              *
-            </Text>
-          )}
-          <InputValidationIndicator
-            entityId={task.$id}
-            inputName={inputSpec.name}
-          />
-        </InlineStack>
-
+        )}
+        <InputValidationIndicator
+          entityId={task.$id}
+          inputName={inputSpec.name}
+        />
+        <div className="flex-1" />
         <ThunderMenu
           inputName={inputSpec.name}
           inputType={inputSpec.type}

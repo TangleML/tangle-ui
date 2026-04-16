@@ -1,15 +1,19 @@
-import { useReactFlow } from "@xyflow/react";
 import { action, makeObservable, observable } from "mobx";
 import { useEffect } from "react";
 
 import { CMDALT } from "@/routes/v2/shared/shortcuts/keys";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { VIEW_PRESETS } from "@/routes/v2/shared/windows/viewPresets";
 
 class FocusModeStore {
   @observable accessor active = false;
 
   constructor() {
     makeObservable(this);
+  }
+
+  @action setActive(value: boolean): void {
+    this.active = value;
   }
 
   @action toggle(): void {
@@ -23,30 +27,43 @@ class FocusModeStore {
 
 export const focusModeStore = new FocusModeStore();
 
-export function toggleFocusMode(): void {
-  focusModeStore.toggle();
-}
-
 /**
- * Registers the Cmd+/ keyboard shortcut for focus mode.
- * Focus mode hides dock areas via CSS without mutating window store state.
- * Call once at the EditorV2 root level.
+ * Registers keyboard shortcuts for view presets:
+ * - Cmd+Alt+/ : Toggle Minimal layout (hide all panels)
+ * - Cmd+Alt+D : Default layout
  */
 export function useFocusMode(): void {
-  const { fitView } = useReactFlow();
-  const { keyboard } = useSharedStores();
+  const { keyboard, windows } = useSharedStores();
+
+  const applyPreset = (presetLabel: string) => {
+    const preset = VIEW_PRESETS.find((p) => p.label === presetLabel);
+    if (!preset) return;
+    windows.applyViewPreset(preset);
+  };
 
   useEffect(() => {
-    const unregisterShortcut = keyboard.registerShortcut({
+    const unregisterMinimal = keyboard.registerShortcut({
       id: "focus-mode",
       keys: [CMDALT, "/"],
-      label: "Focus mode",
-      action: () => toggleFocusMode(),
+      label: "Minimal layout",
+      action: () => {
+        const allHidden = windows
+          .getAllWindows()
+          .every((w) => w.state === "hidden");
+        applyPreset(allHidden ? "Default" : "Minimal");
+      },
+    });
+
+    const unregisterDefault = keyboard.registerShortcut({
+      id: "default-layout",
+      keys: [CMDALT, "D"],
+      label: "Default layout",
+      action: () => applyPreset("Default"),
     });
 
     return () => {
-      unregisterShortcut();
-      focusModeStore.reset();
+      unregisterMinimal();
+      unregisterDefault();
     };
-  }, [fitView, keyboard]);
+  }, [keyboard, windows]);
 }

@@ -19,7 +19,7 @@ export function buildWindowModelInit(
 ): WindowModelInit {
   const persisted = options.persisted ? getPersistedWindowState(id) : null;
   const geo = resolveGeometry(persisted, options, defaultPosition);
-  const docked = resolveDockedOverrides(persisted);
+  const docked = resolveDockedOverrides(persisted, options.defaultDockState);
   const initial = resolveInitialState(persisted, options, docked.dockState);
 
   return {
@@ -68,13 +68,17 @@ function resolveGeometry(
     minSize: options.minSize ?? { ...DEFAULT_MIN_SIZE },
   };
 }
-function resolveDockedOverrides(persisted: PersistedState): {
+function resolveDockedOverrides(
+  persisted: PersistedState,
+  defaultDockState?: "left" | "right",
+): {
   dockState: DockState;
   dockedHeight: number | undefined;
   preDockedPosition: Position | undefined;
   preDockedSize: Size | undefined;
 } {
-  const dockState: DockState = persisted?.dockState ?? "none";
+  const dockState: DockState =
+    persisted?.dockState ?? defaultDockState ?? "none";
   return {
     dockState,
     dockedHeight: persisted?.dockedHeight,

@@ -34,4 +34,6 @@ export interface ValidationIssue {
 export interface ComponentValidationIssue extends ValidationIssue {
   id: string;
   subgraphPath: string[];
+  /** Name of the entity (task/input/output) for cross-spec lookup. */
+  entityName?: string;
 }

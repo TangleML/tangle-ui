@@ -89,7 +89,7 @@ export const useFetchContainerExecutionState = (
  * Returns the highest priority server status from the execution's child tasks.
  */
 export const fetchExecutionStatusLight = rateLimit(
-  async (executionId: string): Promise<string | undefined> => {
+  async (executionId: string): Promise<string> => {
     try {
       const result = await getGraphExecutionStateApiExecutionsIdStateGet({
         path: {
@@ -98,13 +98,13 @@ export const fetchExecutionStatusLight = rateLimit(
       });
 
       if (result.response.status !== 200 || !result.data) {
-        return undefined;
+        return "unknown";
       }
 
       const stats = flattenExecutionStatusStats(
         result.data.child_execution_status_stats,
       );
-      return getOverallExecutionStatusFromStats(stats);
+      return getOverallExecutionStatusFromStats(stats) ?? "unknown";
     } catch (error) {
       console.error(
         `Error fetching task statuses for run ${executionId}:`,

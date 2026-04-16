@@ -3,9 +3,11 @@ import { action, computed, makeObservable, observable } from "mobx";
 import type { ComponentSpec, ComponentSpecJson } from "@/models/componentSpec";
 import {
   IncrementingIdGenerator,
+  serializeComponentSpec,
   YamlDeserializer,
 } from "@/models/componentSpec";
 import { isGraphImplementation } from "@/utils/componentSpec";
+import { deepClone } from "@/utils/deepClone";
 
 import type { EditorStore } from "./editorStore";
 
@@ -162,6 +164,43 @@ export class NavigationStore {
 
   @computed get canNavigateBack(): boolean {
     return this.navigationPath.length > 1;
+  }
+
+  /**
+   * Serialize each active nested spec and write it back into the parent
+   * task's componentRef.spec so the root serialization includes subgraph edits.
+   * Processes deepest-first so inner subgraphs sync before their parents.
+   */
+  @action syncNestedSpecs(): void {
+    if (!this.rootSpec) return;
+
+    const sortedPaths = [...this.nestedSpecs.keys()].sort(
+      (a, b) => b.split("/").length - a.split("/").length,
+    );
+
+    for (const pathKey of sortedPaths) {
+      const nestedSpec = this.nestedSpecs.get(pathKey);
+      if (!nestedSpec) continue;
+
+      const segments = pathKey.split("/");
+      const taskName = segments[segments.length - 1];
+
+      let parentSpec: ComponentSpec;
+      if (segments.length === 1) {
+        parentSpec = this.rootSpec;
+      } else {
+        const parentPathKey = segments.slice(0, -1).join("/");
+        const found = this.nestedSpecs.get(parentPathKey);
+        if (!found) continue;
+        parentSpec = found;
+      }
+
+      const task = parentSpec.tasks.find((t) => t.name === taskName);
+      if (!task) continue;
+
+      const serialized = deepClone(serializeComponentSpec(nestedSpec));
+      task.setComponentRef({ ...task.componentRef, spec: serialized });
+    }
   }
 
   private getSpecAtDepth(depth: number): ComponentSpec | undefined {

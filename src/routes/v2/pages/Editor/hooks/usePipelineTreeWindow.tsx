@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { PipelineTreeContent } from "@/routes/v2/pages/Editor/components/PipelineTreeContent/PipelineTreeContent";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
-export const PIPELINE_TREE_WINDOW_ID = "pipeline-tree";
+const PIPELINE_TREE_WINDOW_ID = "pipeline-tree";
 
 export function usePipelineTreeWindow() {
   const { windows } = useSharedStores();
@@ -16,7 +16,9 @@ export function usePipelineTreeWindow() {
         size: { width: 280, height: 400 },
         disabledActions: ["close"],
         persisted: true,
+        defaultDockState: "left",
       });
+      windows.hideWindow(PIPELINE_TREE_WINDOW_ID);
     }
   }, [windows]);
 }

@@ -16,7 +16,9 @@ export function useHistoryWindow() {
         size: { width: 260, height: 350 },
         disabledActions: ["close"],
         persisted: true,
+        defaultDockState: "left",
       });
+      windows.hideWindow(HISTORY_WINDOW_ID);
     }
   }, [windows]);
 }

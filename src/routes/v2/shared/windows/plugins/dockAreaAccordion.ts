@@ -82,10 +82,12 @@ function restoreFromStack(
 function ensureOneVisible(
   store: WindowStoreImpl,
   side: "left" | "right",
+  excludeId?: string,
 ): void {
   const dockArea = store.getDockAreaConfig(side);
 
   const hasVisible = dockArea.windowOrder.some((id) => {
+    if (id === excludeId) return false;
     const win = store.getWindowById(id);
     return win && !win.isMinimized && win.state !== "hidden";
   });
@@ -93,6 +95,7 @@ function ensureOneVisible(
   if (hasVisible) return;
 
   for (const id of dockArea.windowOrder) {
+    if (id === excludeId) continue;
     const win = store.getWindowById(id);
     if (win?.isMinimized) {
       win.restore({ quiet: true });
@@ -137,7 +140,7 @@ export function initDockAreaAccordion(
         }
         const idx = stack.indexOf(windowId);
         if (idx !== -1) stack.splice(idx, 1);
-        ensureOneVisible(store, side);
+        ensureOneVisible(store, side, windowId);
         break;
       }
 
@@ -150,6 +153,10 @@ export function initDockAreaAccordion(
   }
 
   const unsubscribe = registerDockAreaPlugin(side, accordionPlugin);
+
+  // Ensure at least one window is expanded on initialization
+  // (handles case where all windows loaded from persisted minimized state)
+  ensureOneVisible(store, side);
 
   return () => {
     unsubscribe();

@@ -9,11 +9,13 @@ import { WindowContextProvider } from "./ContentWindowStateContext";
 interface WindowProps {
   windowId: string;
   docked?: boolean;
+  dockIndex?: number;
 }
 
 export const Window = observer(function Window({
   windowId,
   docked = false,
+  dockIndex,
 }: WindowProps) {
   const { windows } = useSharedStores();
   const model = windows.getWindowById(windowId);
@@ -22,7 +24,7 @@ export const Window = observer(function Window({
   const content = windows.getWindowContent(windowId);
 
   return (
-    <WindowContextProvider value={{ model, content }}>
+    <WindowContextProvider value={{ model, content, dockIndex }}>
       {docked ? <DockedWindow /> : <FloatingWindow />}
     </WindowContextProvider>
   );

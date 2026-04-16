@@ -1,7 +1,13 @@
-import { type Node, type NodeProps, useStore } from "@xyflow/react";
+import {
+  type Node,
+  type NodeProps,
+  useReactFlow,
+  useStore,
+} from "@xyflow/react";
 import { observer } from "mobx-react-lite";
 import type { ReactElement } from "react";
 
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Card } from "@/components/ui/card";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
@@ -16,9 +22,11 @@ import type { TaskNodeData } from "@/routes/v2/shared/nodes/types";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import type { NodeOverlayEffect } from "@/routes/v2/shared/store/canvasOverlay.types";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { ISO8601_DURATION_ZERO_DAYS } from "@/utils/constants";
 
 import { TaskNodeClassic } from "./TaskNodeClassic";
 import { TaskNodeCollapsed } from "./TaskNodeCollapsed";
+import { TaskNodeFull } from "./TaskNodeFull";
 
 type TaskNodeType = Node<TaskNodeData, "task">;
 type TaskNodeProps = NodeProps<TaskNodeType>;
@@ -47,9 +55,13 @@ export interface TaskNodeViewProps {
   outputs: TaskNodeOutput[];
   annotations: { key: string }[];
   taskColor?: string;
+  cacheDisabled: boolean;
+  digest?: string;
   inputDisplayValues: Record<string, string | undefined>;
   onNodeClick: (event: React.MouseEvent) => void;
   onInputClick: (inputName: string, event: React.MouseEvent) => void;
+  onOutputClick: (outputName: string, event: React.MouseEvent) => void;
+  onHandleClick: (handleId: string, event: React.MouseEvent) => void;
 }
 
 const zoomSelector = (s: { transform: [number, number, number] }) =>
@@ -166,7 +178,9 @@ export const TaskNode = observer(function TaskNode({
 }: TaskNodeProps) {
   const { entityId } = data;
   const { editor, canvasOverlay } = useSharedStores();
+  const { getEdges, setEdges } = useReactFlow();
   const showContent = useStore(zoomSelector);
+  const useClassicStyle = useFlagValue("classic-node-style");
 
   const spec = useSpec();
   const task = spec?.tasks.find((t) => t.$id === entityId);
@@ -183,9 +197,31 @@ export const TaskNode = observer(function TaskNode({
     editor.selectNode(id, "task", { shiftKey: event.shiftKey, entityId });
   };
 
-  const handleInputClick = (inputName: string) => {
+  const selectEdgesByHandle = (handleId: string) => {
+    setEdges(
+      getEdges().map((edge) => ({
+        ...edge,
+        selected:
+          (edge.target === id && edge.targetHandle === handleId) ||
+          (edge.source === id && edge.sourceHandle === handleId),
+      })),
+    );
+  };
+
+  const handleInputClick = (inputName: string, e: React.MouseEvent) => {
+    e.stopPropagation();
     editor.selectNode(id, "task", { entityId });
     editor.setFocusedArgument(inputName);
+  };
+
+  const handleOutputClick = (_outputName: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    editor.selectNode(id, "task", { entityId });
+  };
+
+  const handleHandleClick = (handleId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    selectEdgesByHandle(handleId);
   };
 
   const viewProps: TaskNodeViewProps = {
@@ -200,9 +236,17 @@ export const TaskNode = observer(function TaskNode({
     outputs,
     annotations: task.annotations.map((a) => ({ key: a.key })),
     taskColor: resolveTaskColor(task),
-    inputDisplayValues: resolveInputDisplayValues(task, entityId, spec),
+    cacheDisabled:
+      task.executionOptions?.cachingStrategy?.maxCacheStaleness ===
+      ISO8601_DURATION_ZERO_DAYS,
+    digest: task.componentRef.digest,
+    inputDisplayValues: useClassicStyle
+      ? resolveInputDisplayValues(task, entityId, spec)
+      : {},
     onNodeClick: handleClick,
     onInputClick: handleInputClick,
+    onOutputClick: handleOutputClick,
+    onHandleClick: handleHandleClick,
   };
 
   const OverrideComponent = nodeEffect?.componentOverride;
@@ -224,7 +268,11 @@ export const TaskNode = observer(function TaskNode({
 
   return (
     <NodeEffectWrapper effect={nodeEffect}>
-      <TaskNodeClassic {...viewProps} />
+      {useClassicStyle ? (
+        <TaskNodeClassic {...viewProps} />
+      ) : (
+        <TaskNodeFull {...viewProps} />
+      )}
     </NodeEffectWrapper>
   );
 });

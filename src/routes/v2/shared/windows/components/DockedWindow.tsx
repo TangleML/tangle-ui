@@ -1,5 +1,5 @@
 import { observer } from "mobx-react-lite";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { Icon } from "@/components/ui/icon";
@@ -12,10 +12,11 @@ import { MIN_DOCKED_HEIGHT } from "@/routes/v2/shared/windows/types";
 import { WindowActions } from "./WindowActions";
 import { WindowHeader } from "./WindowHeader";
 
-const HEADER_HEIGHT = 26;
+/** Height of a docked window header (px). Used to stack sticky headers. */
+const HEADER_HEIGHT = 36;
 
 export const DockedWindow = observer(function DockedWindow() {
-  const { model, content } = useWindowContext();
+  const { model, content, dockIndex = 0 } = useWindowContext();
 
   const {
     isDragging,
@@ -27,6 +28,23 @@ export const DockedWindow = observer(function DockedWindow() {
   } = useWindowDrag({ docked: true });
 
   const [isResizing, setIsResizing] = useState(false);
+  const [isStuck, setIsStuck] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  const stickyTop = dockIndex * HEADER_HEIGHT;
+
+  // Detect when the header is in its "stuck" state
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsStuck(!entry.isIntersecting),
+      { rootMargin: `-${stickyTop + 1}px 0px 0px 0px` },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [stickyTop]);
 
   const handleResizeMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -54,7 +72,12 @@ export const DockedWindow = observer(function DockedWindow() {
     document.addEventListener("mouseup", onMouseUp);
   };
 
+  const handleScrollToWindow = () => {
+    sentinelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   const actions = <WindowActions />;
+  const showCollapsedStyle = model.isMinimized || isStuck;
 
   if (model.isMaximized) {
     return createPortal(
@@ -70,11 +93,11 @@ export const DockedWindow = observer(function DockedWindow() {
             <Icon
               name="PanelLeft"
               size="xs"
-              className="text-blue-600 shrink-0"
+              className="text-gray-400 shrink-0"
             />
           }
           actions={actions}
-          className="py-1 bg-blue-50 border-blue-200"
+          className="bg-white"
         />
         <div className="flex-1 min-h-0 overflow-auto bg-gray-50">{content}</div>
       </div>,
@@ -84,27 +107,33 @@ export const DockedWindow = observer(function DockedWindow() {
 
   return (
     <>
+      {/* Sentinel to detect stuck state and serve as scroll target */}
+      <div ref={sentinelRef} className="h-0 w-full shrink-0" />
+
+      {/* Header is a direct flex item of the dock scroll container so sticky works */}
       <div
         ref={panelRef}
         data-dock-window={model.id}
         className={cn(
-          "rounded border overflow-hidden w-full shrink-0",
-          "bg-gray-100 text-gray-900 flex flex-col",
-          "border-blue-400/50",
+          "group/window w-full sticky",
           (isDragging || isResizing) && "select-none",
           isDragging && "cursor-grabbing opacity-50",
+          showCollapsedStyle
+            ? "bg-purple-50 border-b border-purple-200"
+            : "bg-white border-b border-transparent",
         )}
-        style={{
-          height: model.isMinimized ? "auto" : model.effectiveDockedHeight,
-          minHeight: model.isMinimized ? undefined : MIN_DOCKED_HEIGHT,
-        }}
+        style={{ top: stickyTop, zIndex: 20 - dockIndex }}
         onMouseDown={handleContainerMouseDown}
-        onClick={handleContainerClick}
+        onClick={() => {
+          handleContainerClick();
+          if (isStuck) handleScrollToWindow();
+        }}
       >
         <WindowHeader
           title={model.title}
           isDragging={isDragging}
           onMouseDown={handleHeaderMouseDown}
+          onDoubleClick={() => model.toggleMinimize()}
           leadingIcon={
             <Icon
               name="GripVertical"
@@ -113,27 +142,29 @@ export const DockedWindow = observer(function DockedWindow() {
             />
           }
           actions={actions}
-          className="py-0.5 bg-blue-50 border-blue-200"
+          actionsOnHover
         />
+      </div>
 
-        {!model.isMinimized && (
+      {!model.isMinimized && (
+        <div
+          className={cn(
+            "w-full bg-white text-gray-900",
+            "transition-all duration-300",
+            (isDragging || isResizing) && "select-none",
+            isDragging && "opacity-50",
+          )}
+          style={{ minHeight: MIN_DOCKED_HEIGHT }}
+          onMouseDown={handleContainerMouseDown}
+          onClick={handleContainerClick}
+        >
+          <div className="bg-white">{content}</div>
           <div
-            className="flex-1 min-h-0 overflow-auto bg-gray-50"
-            style={{
-              height: model.effectiveDockedHeight - HEADER_HEIGHT,
-            }}
-          >
-            {content}
-          </div>
-        )}
-
-        {!model.isMinimized && (
-          <div
-            className="h-1 cursor-ns-resize hover:bg-blue-200 transition-colors shrink-0"
+            className="h-1 cursor-ns-resize hover:bg-gray-200 transition-colors shrink-0"
             onMouseDown={handleResizeMouseDown}
           />
-        )}
-      </div>
+        </div>
+      )}
 
       {isDragging &&
         snapPreview &&

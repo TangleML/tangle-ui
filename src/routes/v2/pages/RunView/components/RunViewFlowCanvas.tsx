@@ -72,7 +72,11 @@ export const RunViewFlowCanvas = observer(function RunViewFlowCanvas({
   };
 
   return (
-    <BlockStack ref={containerRef} fill className={cn("relative", className)}>
+    <BlockStack
+      ref={containerRef}
+      fill
+      className={cn("relative select-none", className)}
+    >
       <SubgraphBreadcrumbs />
       <ReactFlow
         {...FLOW_CANVAS_DEFAULT_PROPS}

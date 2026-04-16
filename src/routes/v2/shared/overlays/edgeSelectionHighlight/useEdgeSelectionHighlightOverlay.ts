@@ -11,7 +11,7 @@ import type {
 const OVERLAY_ID = "edge-selection-highlight";
 
 const HIGHLIGHT_EFFECT: NodeOverlayEffect = {
-  className: "ring-4 ring-edge-selected/30 rounded-xl",
+  className: "ring-4 ring-edge-selected/60 rounded-xl",
 };
 
 const DIMMED_EFFECT: NodeOverlayEffect = {

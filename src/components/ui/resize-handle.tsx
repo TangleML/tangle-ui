@@ -79,15 +79,12 @@ export const VerticalResizeHandle = ({
       onMouseDown={handleMouseDown}
       onDoubleClick={onDoubleClick}
     >
-      {/* Thin visible line with shadow */}
+      {/* Thin visible line */}
       <div
         className={cn(
           "absolute top-0 h-full w-px bg-border transition-all pointer-events-none",
           "group-hover:bg-primary/30",
-
-          side === "left"
-            ? "left-1/2 -translate-x-1/2 shadow-[2px_0_8px_rgba(0,0,0,0.08)]"
-            : "right-1/2 translate-x-1/2 shadow-[-2px_0_8px_rgba(0,0,0,0.08)]",
+          side === "left" ? "left-0" : "right-0",
         )}
       />
 

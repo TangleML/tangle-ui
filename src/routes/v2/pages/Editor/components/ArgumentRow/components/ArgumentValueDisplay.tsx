@@ -39,30 +39,9 @@ export function ArgumentValueDisplay({
   onChangeComplete,
   onBlur,
 }: ArgumentValueDisplayProps) {
-  if (editing && !externalEditor) {
-    return (
-      <AutoGrowTextarea
-        autoFocus
-        key={`${task.$id}-${inputSpec.name}-${String(currentValue ?? "")}`}
-        defaultValue={typeof currentValue === "string" ? currentValue : ""}
-        expandDialogTitle={`Value for ${inputSpec.name}`}
-        onChangeComplete={onChangeComplete}
-        onBlur={onBlur}
-        highlightSyntax
-        placeholder={
-          isBound
-            ? bindingLabel || "Enter value to replace connection..."
-            : (inputSpec.default ?? "Enter value...")
-        }
-        className="min-h-2 text-xs font-mono mt-1"
-        data-testid="argument-input"
-      />
-    );
-  }
-
   if (isDynamic && dynamicDisplayInfo) {
     return (
-      <InlineStack gap="1" blockAlign="center" className="mt-0.5">
+      <InlineStack gap="1" blockAlign="center" className="mt-1">
         <Icon
           name={dynamicDisplayInfo.icon}
           size="xs"
@@ -79,19 +58,28 @@ export function ArgumentValueDisplay({
     );
   }
 
-  if (!displayValue) return null;
+  const isUnset = !displayValue && !isBound;
+  const placeholder = isBound
+    ? bindingLabel || "Enter value to replace connection..."
+    : (inputSpec.default ?? "");
 
+  // Always show the input field (V1 style)
   return (
-    <Text
-      size="xs"
-      font="mono"
+    <AutoGrowTextarea
+      autoFocus={editing && !externalEditor}
+      key={`${task.$id}-${inputSpec.name}-${String(currentValue ?? "")}`}
+      defaultValue={typeof currentValue === "string" ? currentValue : ""}
+      expandDialogTitle={`Value for ${inputSpec.name}`}
+      onChangeComplete={onChangeComplete}
+      onBlur={onBlur}
+      highlightSyntax
+      placeholder={isBound ? bindingLabel || "" : placeholder}
       className={cn(
-        "truncate block mt-0.5",
-        isBound ? "text-blue-600" : "text-gray-500",
+        "min-h-2 text-sm font-mono mt-1 rounded-lg",
+        isBound && "text-blue-600",
+        isUnset && "border-dashed border-gray-300",
       )}
-      title={displayValue}
-    >
-      {displayValue}
-    </Text>
+      data-testid="argument-input"
+    />
   );
 }

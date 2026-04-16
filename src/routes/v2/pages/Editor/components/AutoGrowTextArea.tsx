@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
 function heightFormula(maxGrowHeight: string): string {
-  return `min(var(--max-h, ${maxGrowHeight}), max(var(--content-h, 1lh), 1lh))`;
+  return `min(var(--max-h, ${maxGrowHeight}), max(var(--content-h, 2.5rem), 2.5rem))`;
 }
 
 function measureContentHeight(el: HTMLTextAreaElement, formula: string): void {

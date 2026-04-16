@@ -2,6 +2,7 @@ import { NodeToolbar, useReactFlow } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
 
 import type { ComponentSpec } from "@/models/componentSpec";
+import { usePipelineActions } from "@/routes/v2/pages/Editor/store/actions/usePipelineActions";
 import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskActions";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
@@ -16,6 +17,7 @@ export const FloatingSelectionToolbar = observer(
       pasteNodes,
       deleteSelectedNodes,
     } = useTaskActions();
+    const { createSubgraph } = usePipelineActions();
     const { multiSelection } = editor;
     const reactFlow = useReactFlow();
 
@@ -46,6 +48,18 @@ export const FloatingSelectionToolbar = observer(
       deleteSelectedNodes(spec, multiSelection);
     };
 
+    const selectedTasks = multiSelection.filter((n) => n.type === "task");
+
+    const handleCreateSubgraph = (name: string) => {
+      if (!spec) return;
+      const taskIds = selectedTasks.map((n) => n.id);
+      if (taskIds.length === 0) return;
+      const viewport = reactFlow.getViewport();
+      const centerX = (window.innerWidth / 2 - viewport.x) / viewport.zoom;
+      const centerY = (window.innerHeight / 2 - viewport.y) / viewport.zoom;
+      createSubgraph(spec, taskIds, name, { x: centerX, y: centerY });
+    };
+
     return (
       <NodeToolbar
         nodeId={nodeIds}
@@ -59,6 +73,8 @@ export const FloatingSelectionToolbar = observer(
           onCopy={handleCopy}
           onPaste={handlePaste}
           onDelete={handleDelete}
+          onCreateSubgraph={handleCreateSubgraph}
+          selectedTaskCount={selectedTasks.length}
         />
       </NodeToolbar>
     );

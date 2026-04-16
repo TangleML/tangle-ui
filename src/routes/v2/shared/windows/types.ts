@@ -75,6 +75,8 @@ export interface WindowOptions {
   startVisible?: boolean;
   /** If true, the window's layout (position, size, dock state) is persisted to localStorage across reloads. */
   persisted?: boolean;
+  /** Default dock side for first-time users (no persisted state). */
+  defaultDockState?: "left" | "right";
   /** Callback to invoke when the window is closed */
   onClose?: () => void;
 }
@@ -95,9 +97,6 @@ export const CASCADE_OFFSET = 24;
 
 /** Distance from viewport edge to trigger dock preview (px) */
 export const EDGE_SNAP_THRESHOLD = 2;
-
-/** Approximate height of the TaskPanel bar (px). Used to offset docked windows when TaskPanel is visible. */
-export const TASK_PANEL_HEIGHT = 43;
 
 /** Default dock area width (px) */
 export const DEFAULT_DOCK_AREA_WIDTH = 320;

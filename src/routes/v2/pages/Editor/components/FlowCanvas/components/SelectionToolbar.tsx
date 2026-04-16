@@ -1,9 +1,19 @@
 import type { icons } from "lucide-react";
 import { observer } from "mobx-react-lite";
+import { useEffect, useState } from "react";
 
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
-import { InlineStack } from "@/components/ui/layout";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
@@ -13,6 +23,8 @@ interface SelectionToolbarProps {
   onCopy: () => void;
   onPaste?: () => void;
   onDelete: () => void;
+  onCreateSubgraph?: (name: string) => void;
+  selectedTaskCount?: number;
 }
 
 export const SelectionToolbar = observer(function SelectionToolbar({
@@ -20,8 +32,25 @@ export const SelectionToolbar = observer(function SelectionToolbar({
   onCopy,
   onPaste,
   onDelete,
+  onCreateSubgraph,
+  selectedTaskCount = 0,
 }: SelectionToolbarProps) {
   const { clipboard } = useEditorSession();
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const [subgraphName, setSubgraphName] = useState("");
+
+  useEffect(() => {
+    if (popoverOpen && selectedTaskCount >= 2) {
+      setSubgraphName(`Subgraph (${selectedTaskCount} tasks)`);
+    }
+  }, [popoverOpen, selectedTaskCount]);
+
+  const handleCreate = () => {
+    if (!subgraphName.trim() || !onCreateSubgraph) return;
+    onCreateSubgraph(subgraphName.trim());
+    setPopoverOpen(false);
+    setSubgraphName("");
+  };
 
   return (
     <InlineStack
@@ -49,7 +78,55 @@ export const SelectionToolbar = observer(function SelectionToolbar({
           testId="selection-paste"
         />
       )}
-      <div className="mx-0.5 w-px self-stretch bg-gray-200" />
+      {onCreateSubgraph && selectedTaskCount >= 2 && (
+        <>
+          <Separator orientation="vertical" className="mx-0.5 self-stretch" />
+          <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+            <PopoverTrigger asChild>
+              <div>
+                <ToolbarButton
+                  label="Convert to Subgraph"
+                  icon="Layers"
+                  onClick={() => setPopoverOpen(true)}
+                  testId="selection-create-subgraph"
+                />
+              </div>
+            </PopoverTrigger>
+            <PopoverContent side="bottom" align="end" className="w-64">
+              <BlockStack gap="3">
+                <BlockStack gap="1">
+                  <Label className="text-gray-600">Create Subgraph</Label>
+                  <Text size="xs" className="text-gray-400">
+                    Group {selectedTaskCount} tasks into a reusable component
+                  </Text>
+                </BlockStack>
+                <BlockStack gap="2">
+                  <Input
+                    value={subgraphName}
+                    onChange={(e) => setSubgraphName(e.target.value)}
+                    placeholder="Subgraph name..."
+                    className="text-sm"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleCreate();
+                    }}
+                    autoFocus
+                  />
+                  <Button
+                    onClick={handleCreate}
+                    disabled={!subgraphName.trim()}
+                    className="w-full gap-1.5"
+                    size="sm"
+                  >
+                    <Icon name="FolderInput" size="sm" />
+                    Create Subgraph
+                  </Button>
+                </BlockStack>
+              </BlockStack>
+            </PopoverContent>
+          </Popover>
+        </>
+      )}
+      <Separator orientation="vertical" className="mx-0.5 self-stretch" />
       <ToolbarButton
         label="Delete"
         icon="Trash2"

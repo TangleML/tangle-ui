@@ -1,5 +1,4 @@
 import type { EdgeProps } from "@xyflow/react";
-import { BaseEdge } from "@xyflow/react";
 import type { CSSProperties } from "react";
 
 import type { ConduitEdgeData } from "@/routes/v2/shared/nodes/types";
@@ -26,15 +25,15 @@ function computeEdgeStyle({
   selected,
 }: EdgeStyleParams): CSSProperties {
   let edgeStyle: CSSProperties = conduitColor
-    ? { ...baseStyle, stroke: conduitColor, strokeWidth: 2 }
-    : { ...baseStyle, strokeWidth: 2 };
+    ? { ...baseStyle, stroke: conduitColor, strokeWidth: 4 }
+    : { ...baseStyle, stroke: "#6b7280", strokeWidth: 4 };
 
   if (isInAssignmentMode) {
     if (isAssigned && activeColor) {
       edgeStyle = {
         ...edgeStyle,
         stroke: activeColor,
-        strokeWidth: 3,
+        strokeWidth: 5,
         opacity: 1,
       };
     } else {
@@ -46,7 +45,7 @@ function computeEdgeStyle({
     edgeStyle = {
       ...edgeStyle,
       stroke: "#5b2ef4",
-      strokeWidth: 3,
+      strokeWidth: 5,
       opacity: 1,
     };
   }
@@ -78,7 +77,6 @@ export function ConduitEdge({
   targetY,
   targetPosition,
   data,
-  markerEnd,
   style,
   selected,
 }: EdgeProps) {
@@ -110,9 +108,48 @@ export function ConduitEdge({
     selected,
   });
 
+  const edgeColor = (edgeStyle.stroke as string) ?? "#6b7280";
+  const markerId = `conduit-taper-${edgeColor.replace("#", "")}`;
+
   return (
     <>
-      <BaseEdge path={path} markerEnd={markerEnd} style={edgeStyle} />
+      <defs>
+        <marker
+          id={`${markerId}-end`}
+          markerWidth="12"
+          markerHeight="12"
+          refX="8"
+          refY="6"
+          orient="auto"
+          markerUnits="userSpaceOnUse"
+        >
+          <path d="M0,0 L12,6 L0,12 Z" fill={edgeColor} />
+        </marker>
+        <marker
+          id={`${markerId}-start`}
+          markerWidth="12"
+          markerHeight="12"
+          refX="4"
+          refY="6"
+          orient="auto"
+          markerUnits="userSpaceOnUse"
+        >
+          <path
+            d="M2,2 Q10,6 2,10 Q4,6 2,2"
+            fill={edgeColor}
+            stroke={edgeColor}
+            strokeWidth="1"
+            strokeLinejoin="round"
+          />
+        </marker>
+      </defs>
+      <path
+        d={path}
+        className="react-flow__edge-path"
+        markerEnd={`url(#${markerId}-end)`}
+        markerStart={`url(#${markerId}-start)`}
+        style={edgeStyle}
+      />
       <path
         d={path}
         fill="none"

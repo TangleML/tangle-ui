@@ -55,6 +55,7 @@ export class EditorStore {
     this.selectedNodeId = nodeId;
     this.selectedNodeType = nodeType;
     this.focusedArgumentName = null;
+    this.hoveredEntityId = null;
   }
 
   @action setFocusedArgument(name: string | null) {
@@ -68,6 +69,7 @@ export class EditorStore {
     this.lastShiftClickEntityId = null;
     this.multiSelection = [];
     this.focusedArgumentName = null;
+    this.hoveredEntityId = null;
     this.selectedValidationIssue = null;
   }
 

@@ -3,11 +3,9 @@ import { observer } from "mobx-react-lite";
 import { type CSSProperties, useState } from "react";
 import { createPortal } from "react-dom";
 
-import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { useWindowContext } from "@/routes/v2/shared/windows/ContentWindowStateContext";
 import { useWindowDrag } from "@/routes/v2/shared/windows/hooks/useWindowDrag";
 import { SnapPreview } from "@/routes/v2/shared/windows/SnapPreview";
-import { TASK_PANEL_HEIGHT } from "@/routes/v2/shared/windows/types";
 import type { WindowModel } from "@/routes/v2/shared/windows/windowModel";
 
 import { WindowActions } from "./WindowActions";
@@ -38,17 +36,14 @@ const headerVariants = cva("py-1 bg-gray-200 border-gray-300", {
   defaultVariants: { maximized: false },
 });
 
-function getWindowStyle(
-  model: WindowModel,
-  taskPanelOffset: number,
-): CSSProperties {
+function getWindowStyle(model: WindowModel): CSSProperties {
   if (model.isMaximized) {
     return { left: 0, top: 0, width: "100vw", height: "100vh", zIndex: 45 };
   }
 
   return {
     left: model.position.x,
-    top: model.position.y + (model.isDocked ? taskPanelOffset : 0),
+    top: model.position.y,
     width: model.isMinimized ? "auto" : model.size.width,
     height: model.isMinimized ? "auto" : model.size.height,
     minWidth: model.minSize.width,
@@ -98,7 +93,6 @@ function SnapPreviewPortal({
 
 export const FloatingWindow = observer(function FloatingWindow() {
   const { model, content } = useWindowContext();
-  const { windows } = useSharedStores();
 
   const {
     isDragging,
@@ -110,8 +104,6 @@ export const FloatingWindow = observer(function FloatingWindow() {
   } = useWindowDrag({ docked: false });
 
   const [isResizing, setIsResizing] = useState(false);
-
-  const taskPanelOffset = windows.hasHiddenWindows ? TASK_PANEL_HEIGHT : 0;
 
   const handleResizeMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -157,7 +149,7 @@ export const FloatingWindow = observer(function FloatingWindow() {
           dragging: isDragging,
           maximized: model.isMaximized,
         })}
-        style={getWindowStyle(model, taskPanelOffset)}
+        style={getWindowStyle(model)}
         onMouseDown={handleContainerMouseDown}
         onClick={handleContainerClick}
       >

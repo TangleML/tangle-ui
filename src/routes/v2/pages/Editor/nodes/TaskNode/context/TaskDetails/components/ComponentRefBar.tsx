@@ -21,7 +21,6 @@ import {
 import { Text } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import type { ComponentReference as ModelComponentReference } from "@/models/componentSpec/entities/types";
-import type { ComponentReference } from "@/utils/componentSpec";
 import { getComponentName } from "@/utils/getComponentName";
 import { isSubgraph } from "@/utils/subgraphUtils";
 import {
@@ -46,11 +45,9 @@ export function ComponentRefBar({
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [showCodeViewer, setShowCodeViewer] = useState(false);
 
-  // The model ComponentReference is structurally compatible at runtime
-  const utilsRef = componentRef as unknown as ComponentReference;
-  const displayName = componentRef.name ?? getComponentName(utilsRef);
+  const displayName = componentRef.name ?? getComponentName(componentRef);
 
-  const isSubgraphSpec = isSubgraph(utilsRef.spec);
+  const isSubgraphSpec = isSubgraph(componentRef.spec);
   const iconName = isSubgraphSpec ? "Workflow" : "File";
   const iconColor = isSubgraphSpec ? "text-blue-500" : "text-muted-foreground";
 
@@ -80,7 +77,7 @@ export function ComponentRefBar({
         className="w-full rounded-md border px-2 py-1"
       >
         <ComponentDetailsDialog
-          component={utilsRef}
+          component={componentRef}
           displayName={displayName}
           trigger={
             <button

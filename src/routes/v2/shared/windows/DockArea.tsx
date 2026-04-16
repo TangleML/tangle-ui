@@ -25,7 +25,11 @@ export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
   const { collapsed, windowOrder } = dockArea;
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  const isEmpty = windowOrder.length === 0;
+  const visibleWindows = windowOrder.filter((id) => {
+    const win = windows.getWindowById(id);
+    return win && win.state !== "hidden";
+  });
+  const isEmpty = visibleWindows.length === 0;
 
   useEffect(() => {
     windows.enableDockSide(side);
@@ -72,10 +76,7 @@ export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
       <div
         ref={setRef}
         data-dock-area={side}
-        className={cn(
-          "relative shrink-0 bg-gray-100 border-gray-300",
-          side === "left" ? "border-r" : "border-l",
-        )}
+        className={cn("relative shrink-0 bg-gray-100")}
         style={{ width: COLLAPSED_DOCK_AREA_WIDTH }}
       >
         <VerticalResizeHandle
@@ -92,21 +93,21 @@ export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
     <div
       ref={setRef}
       data-dock-area={side}
-      className={cn(
-        "relative shrink-0 bg-gray-100/80",
-        side === "left"
-          ? "border-r border-gray-300"
-          : "border-l border-gray-300",
-      )}
+      className={cn("relative shrink-0 bg-white")}
       style={{ width: dockArea.width }}
     >
       <div
         data-dock-scroll
-        className="absolute inset-0 overflow-y-auto overflow-x-hidden"
+        className="absolute inset-0 overflow-y-auto overflow-x-hidden hide-scrollbar"
       >
         <BlockStack gap="0">
-          {windowOrder.map((windowId) => (
-            <Window key={windowId} windowId={windowId} docked />
+          {visibleWindows.map((windowId, index) => (
+            <Window
+              key={windowId}
+              windowId={windowId}
+              docked
+              dockIndex={index}
+            />
           ))}
         </BlockStack>
       </div>

@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
-import { useMovePipeline } from "@/routes/v2/pages/PipelineFolders/hooks/useMovePipeline";
+import { useMovePipeline } from "@/routes/v2/shared/hooks/useMovePipeline";
 import type { PipelineFolder } from "@/services/pipelineStorage/PipelineFolder";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import { ROOT_FOLDER_ID } from "@/services/pipelineStorage/types";

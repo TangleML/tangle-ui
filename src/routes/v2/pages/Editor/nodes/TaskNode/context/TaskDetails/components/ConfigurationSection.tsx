@@ -8,11 +8,10 @@ import {
   launcherTaskAnnotationSchema,
   parseSchemaToAnnotationConfig,
 } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/AnnotationsEditor/utils";
-import { ColorPicker } from "@/components/ui/color";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import { Text } from "@/components/ui/typography";
+import { Heading, Paragraph } from "@/components/ui/typography";
 import type { Task } from "@/models/componentSpec";
 import type { ComponentSpecJson } from "@/models/componentSpec/entities/types";
 import { isGraphImplementation } from "@/models/componentSpec/entities/types";
@@ -28,12 +27,8 @@ interface ConfigurationSectionProps {
 export const ConfigurationSection = observer(function ConfigurationSection({
   task,
 }: ConfigurationSectionProps) {
-  const {
-    toggleCacheDisable,
-    saveAnnotation,
-    setTaskColor,
-    clearProviderAnnotations,
-  } = useTaskConfigActions();
+  const { toggleCacheDisable, saveAnnotation, clearProviderAnnotations } =
+    useTaskConfigActions();
   const componentSpec = task.componentRef.spec as ComponentSpecJson | undefined;
   const isSubgraph = componentSpec?.implementation
     ? isGraphImplementation(componentSpec.implementation)
@@ -119,32 +114,16 @@ export const ConfigurationSection = observer(function ConfigurationSection({
     saveAnnotation(task, key, value);
   };
 
-  const taskColor = task.annotations.get("tangleml.com/editor/task-color");
-
-  const handleColorChange = (color: string) => {
-    setTaskColor(task, color);
-  };
-
   return (
     <BlockStack gap="3">
-      <InlineStack align="space-between" gap="2" className="w-full">
-        <Text size="xs" className="text-gray-600">
-          Task color
-        </Text>
-        <ColorPicker
-          title="Task color"
-          color={taskColor}
-          setColor={handleColorChange}
-        />
-      </InlineStack>
-      <Separator />
+      <Heading level={1}>Configuration</Heading>
 
       {!isSubgraph && (
         <>
           <InlineStack align="space-between" gap="2" className="w-full">
-            <Text size="xs" className="text-gray-600">
+            <Paragraph size="sm" tone="subdued">
               Disable cache
-            </Text>
+            </Paragraph>
             <Switch
               checked={cacheDisabled}
               onCheckedChange={handleDisableCacheChange}
