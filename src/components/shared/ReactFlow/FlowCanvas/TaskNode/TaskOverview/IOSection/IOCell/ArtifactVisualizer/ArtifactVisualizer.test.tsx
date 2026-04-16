@@ -7,6 +7,11 @@ import type { ArtifactNodeResponse } from "@/api/types.gen";
 
 import ArtifactVisualizer from "./ArtifactVisualizer";
 
+const mockTrack = vi.hoisted(() => vi.fn());
+vi.mock("@/providers/AnalyticsProvider", () => ({
+  useAnalytics: () => ({ track: mockTrack }),
+}));
+
 vi.mock("@/providers/BackendProvider", () => ({
   useBackend: () => ({ backendUrl: "http://localhost:8000" }),
 }));
@@ -83,6 +88,7 @@ const makeArtifact = (
 
 beforeEach(() => {
   queryClient.clear();
+  mockTrack.mockClear();
 });
 
 describe("ArtifactVisualizer", () => {
@@ -248,6 +254,41 @@ describe("ArtifactVisualizer", () => {
       await waitFor(() => {
         expect(screen.getByTestId("parquet-visualizer")).toBeInTheDocument();
       });
+    });
+  });
+
+  describe("analytics", () => {
+    it("tracks pipeline_run.task.artifact_preview.impression with artifact_type when preview is opened", async () => {
+      renderWithQuery(
+        <ArtifactVisualizer
+          artifact={makeArtifact()}
+          name="output"
+          type="CSV"
+        />,
+      );
+
+      await userEvent.click(screen.getByText("Preview"));
+
+      expect(mockTrack).toHaveBeenCalledWith(
+        "pipeline_run.task.artifact_preview.impression",
+        { artifact_type: "csv" },
+      );
+    });
+
+    it("does not track when the dialog is closed", async () => {
+      renderWithQuery(
+        <ArtifactVisualizer
+          artifact={makeArtifact()}
+          name="output"
+          type="CSV"
+        />,
+      );
+
+      await userEvent.click(screen.getByText("Preview"));
+      mockTrack.mockClear();
+      await userEvent.keyboard("{Escape}");
+
+      expect(mockTrack).not.toHaveBeenCalled();
     });
   });
 

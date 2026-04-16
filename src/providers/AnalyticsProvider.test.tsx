@@ -8,6 +8,11 @@ import { AnalyticsProvider, useAnalytics } from "./AnalyticsProvider";
 // ─── Mock user query ──────────────────────────────────────────────────────────
 
 const mockGetUser = vi.hoisted(() => vi.fn());
+const mockIsFlagEnabled = vi.hoisted(() => vi.fn().mockReturnValue(false));
+
+vi.mock("@/components/shared/Settings/useFlags", () => ({
+  isFlagEnabled: (key: string) => mockIsFlagEnabled(key),
+}));
 
 vi.mock("@/hooks/useUserDetails", () => ({
   userQueryOptions: {
@@ -31,6 +36,11 @@ function captureEvents() {
   };
 }
 
+/** Excludes the auto-fired session.tab.start event from assertions. */
+function nonSessionEvents(events: CustomEvent<Record<string, unknown>>[]) {
+  return events.filter((e) => e.detail.actionType !== "session.tab.start");
+}
+
 function makeWrapper() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -48,6 +58,7 @@ function makeWrapper() {
 beforeEach(() => {
   sessionStorage.clear();
   vi.clearAllMocks();
+  mockIsFlagEnabled.mockReturnValue(false);
 });
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -62,7 +73,7 @@ describe("AnalyticsProvider", () => {
 
       const { events, cleanup } = captureEvents();
       act(() => result.current.track("pipeline.component_added"));
-      await waitFor(() => expect(events).toHaveLength(1));
+      await waitFor(() => expect(nonSessionEvents(events)).toHaveLength(1));
       cleanup();
     });
 
@@ -75,8 +86,8 @@ describe("AnalyticsProvider", () => {
       const { events, cleanup } = captureEvents();
       act(() => result.current.track("pipeline.run.submit", { run_id: "r-1" }));
 
-      await waitFor(() => expect(events).toHaveLength(1));
-      const { detail } = events[0];
+      await waitFor(() => expect(nonSessionEvents(events)).toHaveLength(1));
+      const { detail } = nonSessionEvents(events)[0];
       expect(detail.actionType).toBe("pipeline.run.submit");
       expect(detail.metadata).toEqual({ run_id: "r-1" });
       expect(detail.sessionId).toBeTruthy();
@@ -94,8 +105,8 @@ describe("AnalyticsProvider", () => {
 
       const { events, cleanup } = captureEvents();
       act(() => result.current.track("pipeline.component_added"));
-      await waitFor(() => expect(events).toHaveLength(1));
-      expect(events[0].detail.metadata).toBeUndefined();
+      await waitFor(() => expect(nonSessionEvents(events)).toHaveLength(1));
+      expect(nonSessionEvents(events)[0].detail.metadata).toBeUndefined();
       cleanup();
     });
 
@@ -111,8 +122,9 @@ describe("AnalyticsProvider", () => {
         result.current.track("pipeline.run.submit");
       });
 
-      await waitFor(() => expect(events).toHaveLength(2));
-      expect(events[0].detail.sessionId).toBe(events[1].detail.sessionId);
+      await waitFor(() => expect(nonSessionEvents(events)).toHaveLength(2));
+      const [first, second] = nonSessionEvents(events);
+      expect(first.detail.sessionId).toBe(second.detail.sessionId);
       cleanup();
     });
 
@@ -124,8 +136,10 @@ describe("AnalyticsProvider", () => {
 
       const { events, cleanup } = captureEvents();
       act(() => result.current.track("pipeline.component_added"));
-      await waitFor(() => expect(events).toHaveLength(1));
-      expect(events[0].detail.sessionId).toMatch(/^[0-9a-f]{8}:[0-9a-f-]{36}$/);
+      await waitFor(() => expect(nonSessionEvents(events)).toHaveLength(1));
+      expect(nonSessionEvents(events)[0].detail.sessionId).toMatch(
+        /^[0-9a-f]{8}:[0-9a-f-]{36}$/,
+      );
       cleanup();
     });
   });
@@ -146,14 +160,14 @@ describe("AnalyticsProvider", () => {
       const { events, cleanup } = captureEvents();
 
       // Track before user resolves — must not dispatch yet
-      act(() => result.current.track("session.tab.start"));
+      act(() => result.current.track("test.event"));
       expect(events).toHaveLength(0);
 
       // Resolve the user — event should then dispatch
       act(() => resolveUser({ id: "user-2" }));
-      await waitFor(() => expect(events).toHaveLength(1));
+      await waitFor(() => expect(nonSessionEvents(events)).toHaveLength(1));
 
-      expect(events[0].detail.actionType).toBe("session.tab.start");
+      expect(nonSessionEvents(events)[0].detail.actionType).toBe("test.event");
       cleanup();
     });
 
@@ -179,13 +193,65 @@ describe("AnalyticsProvider", () => {
       expect(events).toHaveLength(0);
 
       act(() => resolveUser({ id: "user-3" }));
-      await waitFor(() => expect(events).toHaveLength(3));
+      await waitFor(() => expect(nonSessionEvents(events)).toHaveLength(3));
 
-      expect(events.map((e) => e.detail.actionType)).toEqual([
+      expect(nonSessionEvents(events).map((e) => e.detail.actionType)).toEqual([
         "event.first",
         "event.second",
         "event.third",
       ]);
+      cleanup();
+    });
+  });
+
+  describe("session.tab.start", () => {
+    it("fires session.tab.start automatically on mount", async () => {
+      mockGetUser.mockResolvedValue({ id: "user-1" });
+      const { events, cleanup } = captureEvents();
+      renderHook(() => useAnalytics(), { wrapper: makeWrapper() });
+      await waitFor(() =>
+        expect(
+          events.some((e) => e.detail.actionType === "session.tab.start"),
+        ).toBe(true),
+      );
+      cleanup();
+    });
+
+    it("includes resolved effective flag values in session.tab.start metadata", async () => {
+      mockGetUser.mockResolvedValue({ id: "user-1" });
+      mockIsFlagEnabled.mockImplementation(
+        (key: string) =>
+          key === "dashboard" || key === "remote-component-library-search",
+      );
+      const { events, cleanup } = captureEvents();
+      renderHook(() => useAnalytics(), { wrapper: makeWrapper() });
+      await waitFor(() =>
+        expect(
+          events.some((e) => e.detail.actionType === "session.tab.start"),
+        ).toBe(true),
+      );
+      const { flags } = events.find(
+        (e) => e.detail.actionType === "session.tab.start",
+      )!.detail.metadata as Record<string, Record<string, boolean>>;
+      expect(flags["dashboard"]).toBe(true);
+      expect(flags["remote-component-library-search"]).toBe(true);
+      expect(flags["github-component-library"]).toBe(false);
+      cleanup();
+    });
+
+    it("does not fire session.tab.start when a session ID already exists in sessionStorage", async () => {
+      sessionStorage.setItem("tangle_tab_session_id", "existing-session");
+      mockGetUser.mockResolvedValue({ id: "user-1" });
+      const { events, cleanup } = captureEvents();
+      const { result } = renderHook(() => useAnalytics(), {
+        wrapper: makeWrapper(),
+      });
+      // Trigger a manual track to confirm events are working
+      act(() => result.current.track("probe"));
+      await waitFor(() => expect(nonSessionEvents(events)).toHaveLength(1));
+      expect(
+        events.filter((e) => e.detail.actionType === "session.tab.start"),
+      ).toHaveLength(0);
       cleanup();
     });
   });
@@ -198,8 +264,10 @@ describe("AnalyticsProvider", () => {
       });
       const { events, cleanup } = captureEvents();
       act(() => result.current.track("probe"));
-      await waitFor(() => expect(events).toHaveLength(1));
-      expect(events[0].detail.sessionId).toMatch(/^[0-9a-f]{8}:[0-9a-f-]{36}$/);
+      await waitFor(() => expect(nonSessionEvents(events)).toHaveLength(1));
+      expect(nonSessionEvents(events)[0].detail.sessionId).toMatch(
+        /^[0-9a-f]{8}:[0-9a-f-]{36}$/,
+      );
       cleanup();
     });
 
@@ -210,8 +278,10 @@ describe("AnalyticsProvider", () => {
       });
       const { events: e1, cleanup: c1 } = captureEvents();
       act(() => r1.current.track("probe"));
-      await waitFor(() => expect(e1).toHaveLength(1));
-      const prefix1 = (e1[0].detail.sessionId as string).split(":")[0];
+      await waitFor(() => expect(nonSessionEvents(e1)).toHaveLength(1));
+      const prefix1 = (
+        nonSessionEvents(e1)[0].detail.sessionId as string
+      ).split(":")[0];
       c1();
 
       sessionStorage.clear();
@@ -221,8 +291,10 @@ describe("AnalyticsProvider", () => {
       });
       const { events: e2, cleanup: c2 } = captureEvents();
       act(() => r2.current.track("probe"));
-      await waitFor(() => expect(e2).toHaveLength(1));
-      const prefix2 = (e2[0].detail.sessionId as string).split(":")[0];
+      await waitFor(() => expect(nonSessionEvents(e2)).toHaveLength(1));
+      const prefix2 = (
+        nonSessionEvents(e2)[0].detail.sessionId as string
+      ).split(":")[0];
       c2();
 
       expect(prefix1).toBe(prefix2);
@@ -235,8 +307,10 @@ describe("AnalyticsProvider", () => {
       });
       const { events: e1, cleanup: c1 } = captureEvents();
       act(() => r1.current.track("probe"));
-      await waitFor(() => expect(e1).toHaveLength(1));
-      const prefix1 = (e1[0].detail.sessionId as string).split(":")[0];
+      await waitFor(() => expect(nonSessionEvents(e1)).toHaveLength(1));
+      const prefix1 = (
+        nonSessionEvents(e1)[0].detail.sessionId as string
+      ).split(":")[0];
       c1();
 
       sessionStorage.clear();
@@ -246,8 +320,10 @@ describe("AnalyticsProvider", () => {
       });
       const { events: e2, cleanup: c2 } = captureEvents();
       act(() => r2.current.track("probe"));
-      await waitFor(() => expect(e2).toHaveLength(1));
-      const prefix2 = (e2[0].detail.sessionId as string).split(":")[0];
+      await waitFor(() => expect(nonSessionEvents(e2)).toHaveLength(1));
+      const prefix2 = (
+        nonSessionEvents(e2)[0].detail.sessionId as string
+      ).split(":")[0];
       c2();
 
       expect(prefix1).not.toBe(prefix2);
@@ -260,8 +336,10 @@ describe("AnalyticsProvider", () => {
       });
       const { events, cleanup } = captureEvents();
       act(() => result.current.track("probe"));
-      await waitFor(() => expect(events).toHaveLength(1));
-      expect(events[0].detail.sessionId).toMatch(/^[0-9a-f-]{36}$/);
+      await waitFor(() => expect(nonSessionEvents(events)).toHaveLength(1));
+      expect(nonSessionEvents(events)[0].detail.sessionId).toMatch(
+        /^[0-9a-f-]{36}$/,
+      );
       cleanup();
     });
   });
