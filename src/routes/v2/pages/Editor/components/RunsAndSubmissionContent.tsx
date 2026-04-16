@@ -5,7 +5,7 @@ import { HuggingFaceAuthButton } from "@/components/shared/HuggingFaceAuth/Huggi
 import { PipelineRunsList } from "@/components/shared/PipelineRunDisplay/PipelineRunsList";
 import { RecentExecutionsButton } from "@/components/shared/ReactFlow/FlowSidebar/components/RecentExecutionsButton";
 import GoogleCloudSubmissionDialog from "@/components/shared/Submitters/GoogleCloud/GoogleCloudSubmissionDialog";
-import OasisSubmitter from "@/components/shared/Submitters/Oasis/OasisSubmitter";
+import TangleSubmitter from "@/components/shared/Submitters/Tangle/TangleSubmitter";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -52,7 +52,7 @@ export const RunsAndSubmissionContent = observer(() => {
       >
         <li className="w-full">
           {isAuthorized ? (
-            <OasisSubmitter
+            <TangleSubmitter
               componentSpec={legacySpec}
               isComponentTreeValid={rootSpec?.isValid}
               onlyFixableIssues={false}
