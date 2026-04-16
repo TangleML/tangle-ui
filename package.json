@@ -97,7 +97,7 @@
     "hyparquet": "^1.25.6",
     "js-yaml": "^4.1.1",
     "localforage": "^1.10.0",
-    "lucide-react": "^0.577.0",
+    "lucide-react": "^1.8.0",
     "mobx": "^6.15.0",
     "mobx-keystone": "^1.21.0",
     "mobx-react-lite": "^4.1.1",
