@@ -239,18 +239,19 @@ describe("AnalyticsProvider", () => {
       cleanup();
     });
 
-    it("fires session.tab.start only once per provider mount", async () => {
+    it("does not fire session.tab.start when a session ID already exists in sessionStorage", async () => {
+      sessionStorage.setItem("tangle_tab_session_id", "existing-session");
       mockGetUser.mockResolvedValue({ id: "user-1" });
       const { events, cleanup } = captureEvents();
-      renderHook(() => useAnalytics(), { wrapper: makeWrapper() });
-      await waitFor(() =>
-        expect(
-          events.some((e) => e.detail.actionType === "session.tab.start"),
-        ).toBe(true),
-      );
+      const { result } = renderHook(() => useAnalytics(), {
+        wrapper: makeWrapper(),
+      });
+      // Trigger a manual track to confirm events are working
+      act(() => result.current.track("probe"));
+      await waitFor(() => expect(nonSessionEvents(events)).toHaveLength(1));
       expect(
         events.filter((e) => e.detail.actionType === "session.tab.start"),
-      ).toHaveLength(1);
+      ).toHaveLength(0);
       cleanup();
     });
   });

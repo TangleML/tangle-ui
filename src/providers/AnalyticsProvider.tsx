@@ -97,6 +97,10 @@ export function AnalyticsProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
+    // sessionStorage persists across refreshes within the same tab. If the key
+    // already exists this is a page reload, not a new tab session — skip.
+    if (sessionStorage.getItem(SESSION_KEY)) return;
+
     const flags = Object.fromEntries(
       Object.keys(ExistingFlags).map((key) => [
         key,
