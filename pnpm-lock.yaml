@@ -268,7 +268,7 @@ importers:
         specifier: ^1.0.0
         version: 1.0.0
       dependency-cruiser:
-        specifier: ^17.3.9
+        specifier: ^17.3.10
         version: 17.3.10
       eslint:
         specifier: ^9.39.2
