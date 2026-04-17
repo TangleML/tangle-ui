@@ -16,25 +16,17 @@ import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 
 import type { TaskNodeInput, TaskNodeViewProps } from "./TaskNode";
 
-const classicCardVariants = cva(
+const cardVariants = cva(
   "min-w-[300px] max-w-[350px] rounded-2xl border-2 p-0 drop-shadow-none cursor-pointer select-none gap-2",
   {
     variants: {
       selected: { true: "", false: "" },
       hovered: { true: "", false: "" },
-      subgraph: { true: "", false: "" },
     },
     compoundVariants: [
       {
         selected: false,
         hovered: false,
-        subgraph: false,
-        className: "border-gray-200 hover:border-slate-200",
-      },
-      {
-        selected: false,
-        hovered: false,
-        subgraph: true,
         className: "border-gray-200 hover:border-slate-200",
       },
       {
@@ -50,7 +42,6 @@ const classicCardVariants = cva(
     defaultVariants: {
       selected: false,
       hovered: false,
-      subgraph: false,
     },
   },
 );
@@ -187,19 +178,25 @@ export const TaskNodeClassic = observer(function TaskNodeClassic({
   onInputClick,
   onOutputClick,
   onHandleClick,
+  taskColor,
   cacheDisabled,
   digest,
 }: TaskNodeViewProps) {
+  const cardStyle = taskColor ? { backgroundColor: taskColor } : undefined;
+
   return (
     <Card
-      className={classicCardVariants({
+      className={cardVariants({
         selected,
         hovered: isHovered,
-        subgraph: isSubgraph,
       })}
+      style={cardStyle}
       onClick={onNodeClick}
     >
-      <CardHeader className="border-b border-slate-200 px-4 py-5">
+      <CardHeader
+        className="px-4 py-5"
+        style={taskColor ? { borderBottomColor: `${taskColor}30` } : undefined}
+      >
         <BlockStack>
           <InlineStack
             gap="2"
@@ -242,12 +239,17 @@ export const TaskNodeClassic = observer(function TaskNodeClassic({
                   <TooltipContent side="top">Cache Disabled</TooltipContent>
                 </Tooltip>
               )}
-              <CardTitle className="wrap-anywhere max-w-full text-left text-xs text-slate-900">
+              <CardTitle
+                className={cn(
+                  "wrap-anywhere max-w-full text-left text-xs",
+                  !taskColor && "text-slate-900",
+                )}
+              >
                 {taskName}
               </CardTitle>
             </InlineStack>
             {digest && (
-              <span className="text-xs font-light font-mono text-gray-400 shrink-0">
+              <span className="text-xs font-light font-mono text-gray-500 shrink-0 bg-white/60 rounded px-1">
                 {trimDigest(digest)}
               </span>
             )}
