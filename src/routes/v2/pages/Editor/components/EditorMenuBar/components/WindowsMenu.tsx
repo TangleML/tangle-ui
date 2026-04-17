@@ -6,6 +6,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuShortcut,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
@@ -13,11 +14,18 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
 import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButton";
+import { ShortcutBadge } from "@/routes/v2/shared/components/ShortcutBadge";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import {
   VIEW_PRESETS,
   type ViewPreset,
 } from "@/routes/v2/shared/windows/viewPresets";
+
+const PRESET_SHORTCUT_IDS: Record<string, string> = {
+  Default: "layout-default",
+  Minimal: "layout-minimal",
+  All: "layout-all",
+};
 
 export const WindowsMenu = observer(function WindowsMenu() {
   const { windows } = useSharedStores();
@@ -61,6 +69,11 @@ export const WindowsMenu = observer(function WindowsMenu() {
                 onSelect={() => applyPreset(preset)}
               >
                 {preset.label}
+                {PRESET_SHORTCUT_IDS[preset.label] && (
+                  <DropdownMenuShortcut>
+                    <ShortcutBadge id={PRESET_SHORTCUT_IDS[preset.label]} />
+                  </DropdownMenuShortcut>
+                )}
               </DropdownMenuItem>
             ))}
           </DropdownMenuSubContent>
