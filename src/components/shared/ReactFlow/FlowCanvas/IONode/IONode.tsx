@@ -20,6 +20,10 @@ import { useContextPanel } from "@/providers/ContextPanelProvider";
 import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
 import { getExecutionArtifacts } from "@/services/executionService";
 import type { OutputSpec } from "@/utils/componentSpec";
+import {
+  flattenExecutionStatusStats,
+  isExecutionComplete,
+} from "@/utils/executionStatus";
 import { getArgumentValue } from "@/utils/nodes/taskArguments";
 import { isViewingSubgraph } from "@/utils/subgraphUtils";
 
@@ -282,10 +286,18 @@ const OutputNodeContent = ({
   rootExecutionId,
   backendUrl,
 }: OutputNodeContentProps) => {
+  const executionData = useExecutionDataOptional();
+  const rootState = executionData?.rootState;
+
+  const rootStats = flattenExecutionStatusStats(
+    rootState?.child_execution_status_stats,
+  );
+  const executionDone = !rootState || isExecutionComplete(rootStats);
+
   const { data: artifacts } = useQuery({
     queryKey: ["artifacts", rootExecutionId],
     queryFn: () => getExecutionArtifacts(String(rootExecutionId), backendUrl),
-    enabled: !!rootExecutionId,
+    enabled: !!rootExecutionId && executionDone,
   });
 
   const artifact = artifacts?.output_artifacts?.[output.name];
