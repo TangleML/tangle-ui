@@ -4,24 +4,37 @@ import { useEffect } from "react";
 import { CMDALT } from "@/routes/v2/shared/shortcuts/keys";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { VIEW_PRESETS } from "@/routes/v2/shared/windows/viewPresets";
+import type { WindowStoreImpl } from "@/routes/v2/shared/windows/windowStore";
 
 class FocusModeStore {
   @observable accessor active = false;
+  private previousVisibleIds: string[] = [];
 
   constructor() {
     makeObservable(this);
   }
 
-  @action setActive(value: boolean): void {
-    this.active = value;
+  /** Snapshot which windows are currently visible, then enter minimal. */
+  @action enterMinimal(windows: WindowStoreImpl): void {
+    this.previousVisibleIds = windows
+      .getAllWindows()
+      .filter((w) => w.state !== "hidden")
+      .map((w) => w.id);
+    this.active = true;
   }
 
-  @action toggle(): void {
-    this.active = !this.active;
+  /** Restore the windows that were visible before entering minimal. */
+  @action exitMinimal(windows: WindowStoreImpl): void {
+    for (const id of this.previousVisibleIds) {
+      windows.restoreWindow(id);
+    }
+    this.previousVisibleIds = [];
+    this.active = false;
   }
 
   @action reset(): void {
     this.active = false;
+    this.previousVisibleIds = [];
   }
 }
 
@@ -29,8 +42,9 @@ export const focusModeStore = new FocusModeStore();
 
 /**
  * Registers keyboard shortcuts for view presets:
- * - Cmd+Alt+/ : Toggle Minimal layout (hide all panels)
- * - Cmd+Alt+D : Default layout
+ * - Cmd+Alt+1 : Default layout
+ * - Cmd+Alt+2 : Toggle Minimal layout (restores previous state on exit)
+ * - Cmd+Alt+3 : All windows
  */
 export function useFocusMode(): void {
   const { keyboard, windows } = useSharedStores();
@@ -42,28 +56,44 @@ export function useFocusMode(): void {
   };
 
   useEffect(() => {
-    const unregisterMinimal = keyboard.registerShortcut({
-      id: "focus-mode",
-      keys: [CMDALT, "/"],
-      label: "Minimal layout",
+    const unregisterDefault = keyboard.registerShortcut({
+      id: "layout-default",
+      keys: [CMDALT, "1"],
+      label: "Default layout",
       action: () => {
-        const allHidden = windows
-          .getAllWindows()
-          .every((w) => w.state === "hidden");
-        applyPreset(allHidden ? "Default" : "Minimal");
+        applyPreset("Default");
+        focusModeStore.reset();
       },
     });
 
-    const unregisterDefault = keyboard.registerShortcut({
-      id: "default-layout",
-      keys: [CMDALT, "D"],
-      label: "Default layout",
-      action: () => applyPreset("Default"),
+    const unregisterMinimal = keyboard.registerShortcut({
+      id: "layout-minimal",
+      keys: [CMDALT, "2"],
+      label: "Minimal layout",
+      action: () => {
+        if (focusModeStore.active) {
+          focusModeStore.exitMinimal(windows);
+        } else {
+          focusModeStore.enterMinimal(windows);
+          applyPreset("Minimal");
+        }
+      },
+    });
+
+    const unregisterAll = keyboard.registerShortcut({
+      id: "layout-all",
+      keys: [CMDALT, "3"],
+      label: "All windows",
+      action: () => {
+        applyPreset("All");
+        focusModeStore.reset();
+      },
     });
 
     return () => {
-      unregisterMinimal();
       unregisterDefault();
+      unregisterMinimal();
+      unregisterAll();
     };
   }, [keyboard, windows]);
 }
