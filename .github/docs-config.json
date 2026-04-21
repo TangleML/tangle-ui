@@ -1,0 +1,57 @@
+{
+  "canonicalRepo": "TangleML/tangle-ui",
+  "docsRepo": "TangleML/website",
+  "docsPath": "docs",
+  "reviewers": ["TangleML/Tangle-dev"],
+  "featureAreas": [
+    {
+      "id": "visual-pipeline-editor",
+      "description": "Drag-and-drop pipeline construction in the V2 editor — adding/connecting components, configuring inputs/outputs, YAML editing mode",
+      "routes": ["/editor-v2", "/editor-v2/$pipelineName"]
+    },
+    {
+      "id": "pipeline-execution",
+      "description": "Submitting pipeline runs, monitoring run status, viewing logs and outputs, subgraph execution drill-down",
+      "routes": ["/run-v2/$id", "/run-v2/$id/$subgraphExecutionId", "/runs/$id"]
+    },
+    {
+      "id": "component-libraries",
+      "description": "Browsing, searching, and managing component libraries — published components, user-defined components, and GitHub-based libraries",
+      "routes": ["/components"]
+    },
+    {
+      "id": "pipeline-management",
+      "description": "Creating, organizing, importing, and exporting pipelines — the pipeline library, folders, favorites, and YAML import/export",
+      "routes": ["/pipelines", "/pipeline-folders", "/favorites", "/recently-viewed", "/app/editor/import-pipeline"]
+    },
+    {
+      "id": "pipeline-execution-settings",
+      "description": "Run name templates, auto-redirect on run start, run filtering"
+    },
+    {
+      "id": "secrets",
+      "description": "Storing, replacing, and managing secrets used by pipeline components",
+      "routes": ["/settings/secrets", "/settings/secrets/add", "/settings/secrets/$secretId/replace"]
+    },
+    {
+      "id": "settings",
+      "description": "Backend connection configuration, user preferences, and beta feature toggles",
+      "routes": ["/settings/backend", "/settings/preferences", "/settings/beta-features"]
+    },
+    {
+      "id": "dashboard",
+      "description": "The redesigned home dashboard — pipeline list, run list, component library overview",
+      "routes": ["/", "/runs", "/pipelines", "/components"]
+    },
+    {
+      "id": "subgraphs",
+      "description": "Nested pipeline composition — creating and navigating into subgraph components",
+      "routes": ["/run-v2/$id/$subgraphExecutionId"]
+    },
+    {
+      "id": "quick-start",
+      "description": "Onboarding flow for new users",
+      "routes": ["/quick-start"]
+    }
+  ]
+}
