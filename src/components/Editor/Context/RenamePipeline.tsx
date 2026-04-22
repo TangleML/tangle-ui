@@ -4,14 +4,17 @@ import { Edit3 } from "lucide-react";
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { PipelineNameDialog } from "@/components/shared/Dialogs";
 import useToastNotification from "@/hooks/useToastNotification";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { APP_ROUTES } from "@/routes/router";
 import { renameComponentFileInList } from "@/utils/componentStore";
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
+import { tracking } from "@/utils/tracking";
 
 const RenamePipeline = () => {
   const { componentSpec, saveComponentSpec } = useComponentSpec();
   const notify = useToastNotification();
+  const { track } = useAnalytics();
   const navigate = useNavigate();
 
   const location = useLocation();
@@ -47,7 +50,13 @@ const RenamePipeline = () => {
   return (
     <PipelineNameDialog
       trigger={
-        <TooltipButton variant="outline" tooltip="Rename pipeline">
+        <TooltipButton
+          variant="outline"
+          tooltip="Rename pipeline"
+          {...tracking(
+            "pipeline_editor.configuration_panel.rename_pipeline_click",
+          )}
+        >
           <Edit3 />
         </TooltipButton>
       }
@@ -57,6 +66,9 @@ const RenamePipeline = () => {
       onSubmit={handleTitleUpdate}
       submitButtonText="Update Title"
       isSubmitDisabled={isSubmitDisabled}
+      onOpenChange={(open) => {
+        if (open) track("pipeline_editor.name_pipeline_dialog_impression");
+      }}
     />
   );
 };

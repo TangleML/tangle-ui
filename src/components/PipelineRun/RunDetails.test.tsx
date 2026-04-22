@@ -34,6 +34,10 @@ vi.mock("@tanstack/react-router", async (importOriginal) => {
   };
 });
 
+vi.mock("@/providers/AnalyticsProvider", () => ({
+  useAnalytics: vi.fn().mockReturnValue({ track: vi.fn() }),
+}));
+
 vi.mock("@/hooks/useCheckComponentSpecFromPath");
 vi.mock("@/services/executionService", async (importOriginal) => {
   const actual =

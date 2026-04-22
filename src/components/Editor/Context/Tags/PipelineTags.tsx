@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Paragraph } from "@/components/ui/typography";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import {
   getPipelineTagsFromSpec,
@@ -18,6 +19,7 @@ const TAG_LIMIT = 10;
 
 export const PipelineTags = () => {
   const { componentSpec, setComponentSpec } = useComponentSpec();
+  const { track } = useAnalytics();
 
   const [isAdding, setIsAdding] = useState(false);
   const [newTagValue, setNewTagValue] = useState("");
@@ -40,6 +42,7 @@ export const PipelineTags = () => {
   const handleAddTag = () => {
     const trimmedTag = newTagValue.trim();
     if (trimmedTag && !tags.includes(trimmedTag) && tags.length < TAG_LIMIT) {
+      track("pipeline_editor.configuration_panel.tag_added");
       saveTags([...tags, trimmedTag]);
     }
     setNewTagValue("");
@@ -52,6 +55,7 @@ export const PipelineTags = () => {
   };
 
   const handleRemoveTag = (index: number) => {
+    track("pipeline_editor.configuration_panel.tag_removed");
     saveTags(tags.filter((_, i) => i !== index));
   };
 
