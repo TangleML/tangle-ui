@@ -60,6 +60,7 @@ const PipelineRunPage = () => {
                 updateConfig={updateFlowConfig}
                 onAutoLayout={handleAutoLayout}
                 showInteractive={false}
+                pageType="pipeline_run"
               />
               <Background gap={GRID_SIZE} className="bg-slate-50!" />
             </FlowCanvas>
