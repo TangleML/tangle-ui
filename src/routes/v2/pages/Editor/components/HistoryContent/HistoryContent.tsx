@@ -35,7 +35,7 @@ export const HistoryContent = observer(function HistoryContent() {
   const undoQueue = undoManager?.undoQueue ?? [];
   const redoQueue = undoManager?.redoQueue ?? [];
 
-  const redoEntries = [...redoQueue].reverse();
+  const redoEntries = [...redoQueue];
   const undoEntries = [...undoQueue].reverse();
 
   const handleInitialClick = () => {
@@ -71,7 +71,7 @@ export const HistoryContent = observer(function HistoryContent() {
                   isCurrent={false}
                   isInFuture={true}
                   onClick={() => {
-                    const stepsForward = displayIndex + 1;
+                    const stepsForward = redoEntries.length - displayIndex;
                     for (let i = 0; i < stepsForward; i++) {
                       undo.redo();
                     }
