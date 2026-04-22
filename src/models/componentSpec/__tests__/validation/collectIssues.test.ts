@@ -82,7 +82,12 @@ describe("collectValidationIssues", () => {
 
   it("returns empty array for valid spec with no nested issues", () => {
     const spec = makeSpec("ValidPipeline");
-    spec.addTask(makeTask("t1", "TaskA"));
+    spec.addTask(
+      makeTask("t1", "TaskA", {
+        name: "SomeComponent",
+        implementation: { container: { image: "test" } },
+      }),
+    );
 
     const issues = collectValidationIssues(spec);
 

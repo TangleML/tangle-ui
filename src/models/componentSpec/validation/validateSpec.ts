@@ -1,3 +1,5 @@
+import { isInvalidComponentReference } from "@/utils/componentSpec";
+
 import type { Binding } from "../entities/binding";
 import type { ComponentSpec } from "../entities/componentSpec";
 import type { Input } from "../entities/input";
@@ -160,7 +162,7 @@ function validateSingleTask(
     });
   }
 
-  if (!task.componentRef.name && !task.componentRef.url) {
+  if (isInvalidComponentReference(task.componentRef)) {
     issues.push({
       type: "task",
       message: "Missing component reference",
