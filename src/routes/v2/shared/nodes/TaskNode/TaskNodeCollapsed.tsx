@@ -8,6 +8,7 @@ import { getContrastTextColor } from "@/routes/v2/shared/nodes/TaskNode/color.ut
 import type { TaskNodeViewProps } from "./TaskNode";
 import { createTaskNodeCardVariants } from "./taskNode.variants";
 
+const PERCEIVED_FONT_SIZE = "36px";
 const s = "var(--collapsed-scale, 1)";
 
 const collapsedCardVariants = createTaskNodeCardVariants(
@@ -90,7 +91,10 @@ export function TaskNodeCollapsed({
             "font-semibold break-words min-w-0",
             !taskColor && "text-slate-900",
           )}
-          style={{ fontSize: `calc(${s} * 32px)`, lineHeight: 1.2 }}
+          style={{
+            fontSize: `calc(${s} * ${PERCEIVED_FONT_SIZE})`,
+            lineHeight: 1.2,
+          }}
         >
           {taskName}
         </span>
