@@ -6,13 +6,17 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Heading, Paragraph } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
+import { tracking } from "@/utils/tracking";
 
 import { SecretsList } from "./SecretsList";
 
 export function SecretsListView() {
   const notify = useToastNotification();
+  const { track } = useAnalytics();
 
   const handleRemoveSuccess = () => {
+    track("settings.secrets.secret_mutated", { action: "deleted" });
     notify("Secret removed", "success");
   };
 
@@ -33,7 +37,12 @@ export function SecretsListView() {
       <Separator />
 
       <InlineStack align="end" fill>
-        <Link to="/settings/secrets/add" replace data-testid="add-secret-link">
+        <Link
+          to="/settings/secrets/add"
+          replace
+          data-testid="add-secret-link"
+          {...tracking("settings.secrets.add_secret")}
+        >
           <Button variant="secondary">
             <Icon name="Plus" />
             Add Secret
