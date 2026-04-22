@@ -208,7 +208,11 @@ export const TaskDetails = observer(function TaskDetails({
 
             <Separator />
 
-            <AnnotationsBlock annotations={task.annotations} defaultEditing />
+            <AnnotationsBlock
+              annotations={task.annotations}
+              defaultEditing
+              ignoreAnnotationKeys={EDITOR_ANNOTATION_KEYS}
+            />
           </BlockStack>
         </TabsContent>
       </Tabs>
