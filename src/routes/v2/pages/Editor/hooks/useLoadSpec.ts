@@ -16,6 +16,8 @@ import {
   createUndoStoreWithEvents,
   loadUndoHistory,
 } from "@/routes/v2/pages/Editor/utils/undoHistoryStorage";
+import { RootFolderDbStorageDriver } from "@/services/pipelineStorage/drivers/RootFolderDbStorageDriver";
+import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
 import type { PipelineRef } from "@/services/pipelineStorage/types";
@@ -33,13 +35,29 @@ function deserializeSpec(data: unknown, idGen?: IdGenerator): ComponentSpec {
   return spec;
 }
 
+async function backfillFromLegacyStore(
+  name: string,
+  storage: PipelineStorageService,
+): Promise<PipelineFile | undefined> {
+  const legacyDriver = new RootFolderDbStorageDriver();
+
+  const existsInLegacy = await legacyDriver.hasKey(name);
+  if (!existsInLegacy) return undefined;
+
+  return storage.rootFolder.assignFile(name);
+}
+
 async function resolveSpecData(
   ref: PipelineRef,
   storage: PipelineStorageService,
 ): Promise<unknown> {
-  const pipelineFile = ref.fileId
+  let pipelineFile = ref.fileId
     ? await storage.findPipelineById(ref.fileId)
     : await storage.resolvePipelineByName(ref.name);
+
+  if (!pipelineFile) {
+    pipelineFile = await backfillFromLegacyStore(ref.name, storage);
+  }
 
   if (!pipelineFile) {
     throw new Error(`Pipeline "${ref.name}" not found`);

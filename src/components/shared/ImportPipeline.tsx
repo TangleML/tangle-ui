@@ -25,47 +25,65 @@ import {
   importPipelineFromYaml,
   type ImportResult,
 } from "@/services/pipelineService";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
+import type { PipelineRef } from "@/services/pipelineStorage/types";
 
 interface ImportPipelineProps {
   triggerComponent?: ReactElement<{ onClick?: () => void }>;
+  onImportComplete?: (pipeline: PipelineRef) => void;
 }
 
-const ImportPipeline = ({ triggerComponent }: ImportPipelineProps) => {
+const ImportPipeline = ({
+  triggerComponent,
+  onImportComplete,
+}: ImportPipelineProps) => {
   const { track } = useAnalytics();
   const [isOpen, setIsOpen] = useState(false);
-  const [newPipelineName, setNewPipelineName] = useState<string | null>(null);
+  const [importedPipeline, setImportedPipeline] = useState<PipelineRef | null>(
+    null,
+  );
   const [yamlContent, setYamlContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+  const storage = usePipelineStorage();
 
   const navigateToPipeline = () => {
-    if (newPipelineName) {
-      setIsOpen(false);
-      setNewPipelineName(null);
-      setIsLoading(false);
-      setError(null);
-      setSuccessMessage(null);
-      navigate({ to: `${EDITOR_PATH}/${encodeURIComponent(newPipelineName)}` });
+    if (!importedPipeline) return;
+
+    setIsOpen(false);
+    setImportedPipeline(null);
+    setIsLoading(false);
+    setError(null);
+    setSuccessMessage(null);
+
+    if (onImportComplete) {
+      onImportComplete(importedPipeline);
+    } else {
+      navigate({
+        to: `${EDITOR_PATH}/${encodeURIComponent(importedPipeline.name)}`,
+      });
     }
   };
 
-  const handleImportResult = (result: ImportResult) => {
-    if (result.successful) {
-      if (result.errorMessage?.includes("was renamed")) {
-        setSuccessMessage(result.errorMessage);
-      } else if (result.successful) {
-        setSuccessMessage(`Pipeline "${result.name}" imported successfully.`);
-      }
-      setNewPipelineName(result.name);
-    } else {
+  const handleImportResult = async (result: ImportResult) => {
+    if (!result.successful) {
       throw new Error(
         result.errorMessage ||
           "Failed to import pipeline. Please check that the YAML is valid.",
       );
     }
+
+    if (result.errorMessage?.includes("was renamed")) {
+      setSuccessMessage(result.errorMessage);
+    } else {
+      setSuccessMessage(`Pipeline "${result.name}" imported successfully.`);
+    }
+
+    const file = await storage.rootFolder.assignFile(result.name);
+    setImportedPipeline({ name: result.name, fileId: file.id });
   };
 
   const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -78,7 +96,7 @@ const ImportPipeline = ({ triggerComponent }: ImportPipelineProps) => {
 
     try {
       const result = await importPipelineFromFile(files[0]);
-      handleImportResult(result);
+      await handleImportResult(result);
       if (result.successful) {
         track("pipeline_editor.pipeline_actions.import_pipeline_completed", {
           method: "file",
@@ -109,7 +127,7 @@ const ImportPipeline = ({ triggerComponent }: ImportPipelineProps) => {
 
     try {
       const result = await importPipelineFromYaml(yamlContent);
-      handleImportResult(result);
+      await handleImportResult(result);
       if (result.successful) {
         track("pipeline_editor.pipeline_actions.import_pipeline_completed", {
           method: "content",
@@ -130,6 +148,7 @@ const ImportPipeline = ({ triggerComponent }: ImportPipelineProps) => {
     setError(null);
     setSuccessMessage(null);
     setYamlContent("");
+    setImportedPipeline(null);
   };
 
   const ButtonComponent = triggerComponent ? (
