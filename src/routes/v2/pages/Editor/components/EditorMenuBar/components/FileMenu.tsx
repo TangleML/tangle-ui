@@ -1,6 +1,9 @@
 import { useState } from "react";
 
-import { PipelineNameDialog } from "@/components/shared/Dialogs";
+import {
+  ConfirmationDialog,
+  PipelineNameDialog,
+} from "@/components/shared/Dialogs";
 import ImportPipeline from "@/components/shared/ImportPipeline";
 import {
   DropdownMenu,
@@ -28,6 +31,8 @@ export function FileMenu() {
     setSaveAsDialogOpen,
     renameDialogOpen,
     setRenameDialogOpen,
+    deleteDialogOpen,
+    setDeleteDialogOpen,
     handleRename,
     getRenameInitialName,
     setImportOpen,
@@ -37,6 +42,7 @@ export function FileMenu() {
     handleSavePipelineAs,
     handleExport,
     getSaveAsInitialName,
+    handleDeletePipeline,
   } = useFileMenuState();
 
   const { pipelineFile: pipelineFileStore } = useEditorSession();
@@ -93,6 +99,14 @@ export function FileMenu() {
               </DropdownMenuItem>
             </>
           )}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onClick={() => setDeleteDialogOpen(true)}
+            className="text-destructive focus:text-destructive"
+          >
+            <Icon name="Trash2" size="sm" />
+            Delete pipeline
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -131,6 +145,17 @@ export function FileMenu() {
           onMoveComplete={() => setMoveDialogOpen(false)}
         />
       )}
+
+      <ConfirmationDialog
+        isOpen={deleteDialogOpen}
+        title="Delete pipeline?"
+        description={`"${activePipeline?.storageKey ?? "This pipeline"}" will be permanently deleted. This action cannot be undone.`}
+        onConfirm={() => {
+          void handleDeletePipeline();
+          setDeleteDialogOpen(false);
+        }}
+        onCancel={() => setDeleteDialogOpen(false)}
+      />
 
       <ImportPipeline
         triggerComponent={
