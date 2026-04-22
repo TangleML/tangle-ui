@@ -12,6 +12,7 @@ import { AnnotationsBlock } from "@/routes/v2/pages/Editor/components/Annotation
 import { ValidationSummary } from "@/routes/v2/pages/Editor/components/ValidationSummary";
 import { usePipelineActions } from "@/routes/v2/pages/Editor/store/actions/usePipelineActions";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
+import { PIPELINE_NOTES_ANNOTATION } from "@/utils/annotations";
 
 import { DigestBlock } from "./components/DigestBlock";
 import { InputsBlock } from "./components/InputsBlock";
@@ -27,17 +28,29 @@ const EXCLUDED_ANNOTATIONS = [
 export const PipelineDetailsContent = observer(
   function PipelineDetailsContent() {
     const spec = useSpec();
-    const { updatePipelineDescription } = usePipelineActions();
+    const { updatePipelineDescription, updatePipelineNotes } =
+      usePipelineActions();
 
     const [description, setDescription] = useState(spec?.description ?? "");
+    const [notes, setNotes] = useState(
+      spec?.annotations.get(PIPELINE_NOTES_ANNOTATION) ?? "",
+    );
 
     const specDescription = spec?.description ?? "";
+    const specNotes = spec?.annotations.get(PIPELINE_NOTES_ANNOTATION) ?? "";
 
     if (
       description !== specDescription &&
       document.activeElement?.id !== "pipeline-description"
     ) {
       setDescription(specDescription);
+    }
+
+    if (
+      notes !== specNotes &&
+      document.activeElement?.id !== "pipeline-notes"
+    ) {
+      setNotes(specNotes);
     }
 
     if (!spec) {
@@ -66,6 +79,20 @@ export const PipelineDetailsContent = observer(
       }
     };
 
+    const handleNotesInputChange = (
+      event: ChangeEvent<HTMLTextAreaElement>,
+    ) => {
+      setNotes(event.target.value);
+    };
+
+    const handleNotesBlur = () => {
+      const newNotes = notes || undefined;
+      const currentNotes = specNotes || undefined;
+      if (newNotes !== currentNotes) {
+        updatePipelineNotes(spec, newNotes);
+      }
+    };
+
     return (
       <BlockStack
         gap="4"
@@ -83,7 +110,7 @@ export const PipelineDetailsContent = observer(
             onChange={handleDescriptionInputChange}
             onBlur={handleDescriptionBlur}
             placeholder="Add a pipeline description..."
-            className="min-h-16 resize-y text-sm"
+            className="min-h-16 resize-y text-xs!"
             data-testid="pipeline-description-input"
           />
         </ContentBlock>
@@ -105,6 +132,18 @@ export const PipelineDetailsContent = observer(
           ) : (
             <ValidationSummary spec={spec} />
           )}
+        </ContentBlock>
+
+        <ContentBlock title="Notes">
+          <Textarea
+            id="pipeline-notes"
+            value={notes}
+            onChange={handleNotesInputChange}
+            onBlur={handleNotesBlur}
+            placeholder="Share context about this pipeline..."
+            className="min-h-16 resize-y text-xs!"
+            data-testid="pipeline-notes-input"
+          />
         </ContentBlock>
       </BlockStack>
     );

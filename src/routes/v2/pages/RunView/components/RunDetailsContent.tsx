@@ -110,9 +110,7 @@ function RunDetailsContentLoaded({
   const statusLabel = getExecutionStatusLabel(overallStatus);
 
   const specAnnotations = spec.annotations;
-  const pipelineNotes = specAnnotations.get(PIPELINE_NOTES_ANNOTATION) as
-    | string
-    | undefined;
+  const pipelineNotes = specAnnotations.get(PIPELINE_NOTES_ANNOTATION);
 
   const tagsRaw = specAnnotations.get(PIPELINE_TAGS_ANNOTATION) as
     | string
