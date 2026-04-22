@@ -13,14 +13,17 @@ import { ValidationSummary } from "@/routes/v2/pages/Editor/components/Validatio
 import { usePipelineActions } from "@/routes/v2/pages/Editor/store/actions/usePipelineActions";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { PIPELINE_NOTES_ANNOTATION } from "@/utils/annotations";
+import { PIPELINE_TAGS_ANNOTATION } from "@/utils/annotations";
 
 import { DigestBlock } from "./components/DigestBlock";
 import { InputsBlock } from "./components/InputsBlock";
 import { MetadataBlock } from "./components/MetadataBlock";
 import { OutputsBlock } from "./components/OutputsBlock";
+import { TagsBlock } from "./components/TagsBlock";
 
 const EXCLUDED_ANNOTATIONS = [
   "notes",
+  PIPELINE_TAGS_ANNOTATION,
   "flex-nodes",
   "tangleml.com/editor/edge-conduits",
 ];
@@ -145,6 +148,8 @@ export const PipelineDetailsContent = observer(
             data-testid="pipeline-notes-input"
           />
         </ContentBlock>
+
+        <TagsBlock spec={spec} />
       </BlockStack>
     );
   },

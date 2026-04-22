@@ -37,6 +37,7 @@ interface AnnotationTypeMap {
   "tangleml.com/editor/edge-conduits": EdgeConduit[];
   "flex-nodes": FlexNodeData[];
   notes: string;
+  tags: string[];
 }
 
 type KnownAnnotationKey = keyof AnnotationTypeMap;
@@ -108,6 +109,21 @@ const codecs = {
     serialize: (value: string) => value,
     deserialize: (raw: unknown) => (typeof raw === "string" ? raw : ""),
     defaultValue: "",
+  },
+  tags: {
+    serialize: (value: string[]) =>
+      value
+        .map((t) => t.trim())
+        .filter(Boolean)
+        .join(","),
+    deserialize: (raw: unknown) =>
+      typeof raw === "string"
+        ? raw
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean)
+        : [],
+    defaultValue: [] as string[],
   },
 } satisfies {
   [K in KnownAnnotationKey]: AnnotationCodec<AnnotationTypeMap[K]>;
