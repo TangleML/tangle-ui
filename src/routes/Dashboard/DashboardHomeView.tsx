@@ -18,6 +18,7 @@ import {
 } from "@/hooks/useRecentlyViewed";
 import { APP_ROUTES } from "@/routes/router";
 import { formatRelativeTime } from "@/utils/date";
+import { tracking } from "@/utils/tracking";
 
 import { getFavoriteUrl, getRecentlyViewedUrl, TypePill } from "./TypePill";
 
@@ -55,6 +56,7 @@ const FavoritePreviewRow = ({
   <InlineStack gap="2" className="min-w-0 overflow-hidden">
     <Link
       to={getFavoriteUrl(item)}
+      {...tracking("homepage.favorites.item")}
       className="group flex w-full items-center gap-3 px-4 py-3 hover:bg-muted/50 no-underline"
     >
       <TypePill type={item.type} />
@@ -87,6 +89,7 @@ const RecentlyViewedPreviewRow = ({ item }: { item: RecentlyViewedItem }) => (
   <InlineStack gap="2" className="min-w-0 overflow-hidden">
     <Link
       to={getRecentlyViewedUrl(item)}
+      {...tracking("homepage.recently_viewed_pipelines.item")}
       className="flex w-full items-center gap-3 px-4 py-3 hover:bg-muted/50 no-underline"
     >
       <TypePill type={item.type} />
@@ -173,6 +176,7 @@ const RecentComponentPreviewRow = ({ item }: { item: RecentlyViewedItem }) => (
     <Link
       to={APP_ROUTES.DASHBOARD_COMPONENTS}
       search={{ component: item.id }}
+      {...tracking("homepage.recently_used_components.item")}
       className="flex w-full items-center gap-3 px-4 py-3 hover:bg-muted/50 no-underline"
     >
       <TypePill type="component" />
