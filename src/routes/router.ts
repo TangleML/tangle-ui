@@ -49,6 +49,8 @@ declare module "@tanstack/react-router" {
 export const EDITOR_PATH = "/editor";
 export const RUNS_BASE_PATH = "/runs";
 export const QUICK_START_PATH = "/quick-start";
+const EDITOR_V2_BASE_PATH = "/editor-v2";
+const RUNS_V2_BASE_PATH = "/runs-v2";
 const SETTINGS_PATH = "/settings";
 const IMPORT_PATH = "/app/editor/import-pipeline";
 export const APP_ROUTES = {
@@ -74,10 +76,11 @@ export const APP_ROUTES = {
   SETTINGS_SECRETS_REPLACE: `${SETTINGS_PATH}/secrets/$secretId/replace`,
   GITHUB_AUTH_CALLBACK: "/authorize/github",
   HUGGINGFACE_AUTH_CALLBACK: "/authorize/huggingface",
-  EDITOR_V2: "/editor-v2",
-  EDITOR_V2_PIPELINE: "/editor-v2/$pipelineName",
-  RUN_V2: "/run-v2/$id",
-  RUN_V2_WITH_SUBGRAPH: "/run-v2/$id/$subgraphExecutionId",
+  EDITOR_V2: EDITOR_V2_BASE_PATH,
+  EDITOR_V2_PIPELINE: `${EDITOR_V2_BASE_PATH}/$pipelineName`,
+  RUNS_V2: RUNS_V2_BASE_PATH,
+  RUN_DETAIL_V2: `${RUNS_V2_BASE_PATH}/$id`,
+  RUN_DETAIL_V2_WITH_SUBGRAPH: `${RUNS_V2_BASE_PATH}/$id/$subgraphExecutionId`,
   PIPELINE_FOLDERS: "/pipeline-folders",
   PLAYGROUND: "/playground",
 } as const;
@@ -275,13 +278,13 @@ const editorV2PipelineRoute = createRoute({
 
 const runV2Route = createRoute({
   getParentRoute: () => mainLayout,
-  path: APP_ROUTES.RUN_V2,
+  path: APP_ROUTES.RUN_DETAIL_V2,
   component: RunViewV2,
 });
 
 const runV2WithSubgraphRoute = createRoute({
   getParentRoute: () => mainLayout,
-  path: APP_ROUTES.RUN_V2_WITH_SUBGRAPH,
+  path: APP_ROUTES.RUN_DETAIL_V2_WITH_SUBGRAPH,
   component: RunViewV2,
 });
 

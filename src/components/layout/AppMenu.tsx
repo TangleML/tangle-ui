@@ -172,8 +172,6 @@ const DefaultAppMenu = () => {
   );
 };
 
-const RUN_V2_BASE_PATH = "/run-v2";
-
 const AppMenu = () => {
   const { pathname } = useLocation();
 
@@ -181,7 +179,7 @@ const AppMenu = () => {
     return null;
   }
 
-  if (pathname.startsWith(RUN_V2_BASE_PATH)) {
+  if (pathname.startsWith(APP_ROUTES.RUNS_V2)) {
     return null;
   }
 
