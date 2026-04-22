@@ -1,6 +1,7 @@
 import { Handle, Position } from "@xyflow/react";
 import { cva } from "class-variance-authority";
 import { observer } from "mobx-react-lite";
+import type { MouseEvent as ReactMouseEvent } from "react";
 
 import { trimDigest } from "@/components/shared/ManageComponent/utils/digest";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,7 +28,7 @@ const cardVariants = cva(
       {
         selected: false,
         hovered: false,
-        className: "border-gray-200 hover:border-slate-200",
+        className: "border-black/10 hover:border-black/30",
       },
       {
         selected: false,
@@ -47,7 +48,7 @@ const cardVariants = cva(
 );
 
 const classicInputLabelVariants = cva(
-  "text-xs text-gray-800 rounded-md px-2 py-1 truncate bg-gray-200 hover:bg-gray-300",
+  "text-xs text-gray-800 rounded-md px-2 py-1 truncate bg-black/5 hover:bg-black/10",
   {
     variants: {
       hasValue: { true: "", false: "" },
@@ -79,8 +80,8 @@ interface ClassicInputHandleProps {
   input: TaskNodeInput;
   entityId: string;
   displayValue: string | undefined;
-  onInputClick: (name: string, event: React.MouseEvent) => void;
-  onHandleClick: (handleId: string, event: React.MouseEvent) => void;
+  onInputClick: (name: string, event: ReactMouseEvent) => void;
+  onHandleClick: (handleId: string, event: ReactMouseEvent) => void;
 }
 
 const ClassicInputHandle = observer(function ClassicInputHandle({
@@ -194,7 +195,7 @@ export const TaskNodeCard = observer(function TaskNodeCard({
       onClick={onNodeClick}
     >
       <CardHeader
-        className="px-4 py-5"
+        className="px-4 pt-3 pb-0"
         style={taskColor ? { borderBottomColor: `${taskColor}30` } : undefined}
       >
         <BlockStack>
@@ -249,7 +250,7 @@ export const TaskNodeCard = observer(function TaskNodeCard({
               </CardTitle>
             </InlineStack>
             {digest && (
-              <span className="text-xs font-light font-mono text-gray-500 shrink-0 bg-white/60 rounded px-1">
+              <span className="text-xs font-light font-mono text-gray-600 shrink-0">
                 {trimDigest(digest)}
               </span>
             )}
@@ -259,10 +260,7 @@ export const TaskNodeCard = observer(function TaskNodeCard({
 
       <CardContent className="p-2 flex flex-col gap-2">
         {inputs.length > 0 && (
-          <BlockStack
-            gap="3"
-            className="p-2 bg-gray-100 border border-gray-200 rounded-lg"
-          >
+          <BlockStack gap="3" className="p-2 bg-gray-200/50 rounded-lg">
             {inputs.map((input) => (
               <ClassicInputHandle
                 key={input.name}
@@ -277,10 +275,7 @@ export const TaskNodeCard = observer(function TaskNodeCard({
         )}
 
         {outputs.length > 0 && (
-          <BlockStack
-            gap="3"
-            className="p-2 bg-gray-100 border border-gray-200 rounded-lg"
-          >
+          <BlockStack gap="3" className="p-2 bg-gray-200/50 rounded-lg">
             {outputs.map((output) => (
               <div
                 key={output.name}
@@ -293,7 +288,7 @@ export const TaskNodeCard = observer(function TaskNodeCard({
                 <div className="flex flex-row-reverse w-full gap-0.5 items-center justify-between">
                   <div className="translate-x-3 min-w-0 inline-block max-w-full">
                     <div
-                      className="text-xs text-gray-800 rounded-md px-2 py-1 truncate bg-gray-200 hover:bg-gray-300"
+                      className="text-xs text-gray-800 rounded-md px-2 py-1 truncate bg-black/5 hover:bg-black/10"
                       title={`${output.name}${output.type ? `: ${output.type}` : ""}`}
                     >
                       {output.name.replace(/_/g, " ")}
