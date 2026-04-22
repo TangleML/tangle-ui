@@ -295,8 +295,8 @@ importers:
         specifier: ^29.0.2
         version: 29.0.2
       knip:
-        specifier: ^6.6.0
-        version: 6.6.0(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
+        specifier: ^6.6.1
+        version: 6.6.1(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
       prettier:
         specifier: ^3.8.3
         version: 3.8.3
@@ -3441,8 +3441,8 @@ packages:
     resolution: {integrity: sha512-eTIzlVOSUR+JxdDFepEYcBMtZ9Qqdef+rnzWdRZuMbOywu5tO2w2N7rqjoANZ5k9vywhL6Br1VRjUIgTQx4E8w==}
     engines: {node: '>=6'}
 
-  knip@6.6.0:
-    resolution: {integrity: sha512-IT1YDiHyRctYYsuZNBd/ZiGoa7HmCaxs+ZrWxCfYjQKPG6QyRqMfkteqC+rBuMymBJeLXyBnRa7hn95O+sGG8Q==}
+  knip@6.6.1:
+    resolution: {integrity: sha512-SOmqh25vuAfdynGoDr/kMCxIuD5+PkMIfMSGQeMqfrxwuPTANvJKcVttLgGZjjkATALqukSe/hhDVqcwNkf92g==}
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
 
@@ -7764,7 +7764,7 @@ snapshots:
 
   kleur@3.0.3: {}
 
-  knip@6.6.0(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2):
+  knip@6.6.1(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2):
     dependencies:
       fdir: 6.5.0(picomatch@4.0.4)
       formatly: 0.3.0
