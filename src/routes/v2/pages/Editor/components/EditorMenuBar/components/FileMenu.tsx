@@ -1,3 +1,4 @@
+import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { PipelineNameDialog } from "@/components/shared/Dialogs";
@@ -11,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
+import { APP_ROUTES } from "@/routes/router";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButton";
 import { MovePipelineDialog } from "@/routes/v2/shared/components/MovePipelineDialog";
@@ -39,6 +41,7 @@ export function FileMenu() {
     getSaveAsInitialName,
   } = useFileMenuState();
 
+  const navigate = useNavigate();
   const { pipelineFile: pipelineFileStore } = useEditorSession();
   const activePipeline = pipelineFileStore.activePipelineFile;
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
@@ -141,6 +144,13 @@ export function FileMenu() {
             tabIndex={-1}
           />
         }
+        onImportComplete={(pipeline) => {
+          navigate({
+            to: APP_ROUTES.EDITOR_V2_PIPELINE,
+            params: { pipelineName: pipeline.name },
+            search: { fileId: pipeline.fileId },
+          });
+        }}
       />
     </>
   );
