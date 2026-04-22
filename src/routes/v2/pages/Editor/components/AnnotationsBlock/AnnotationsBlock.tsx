@@ -114,11 +114,21 @@ function AnnotationRow({ annotation, index, annotations }: AnnotationRowProps) {
     useAnnotationActions();
 
   const handleUpdateKey = (event: ChangeEvent<HTMLInputElement>) => {
-    updateAnnotationKey(annotations, index, event.target.value);
+    const newKey = event.target.value;
+    if (newKey !== annotation.key) {
+      updateAnnotationKey(annotations, index, newKey);
+    }
   };
 
   const handleUpdateValue = (event: ChangeEvent<HTMLInputElement>) => {
-    updateAnnotationValue(annotations, index, String(event.target.value));
+    const newValue = String(event.target.value);
+    const currentValue =
+      typeof annotation.value === "object"
+        ? JSON.stringify(annotation.value)
+        : String(annotation.value ?? "");
+    if (newValue !== currentValue) {
+      updateAnnotationValue(annotations, index, newValue);
+    }
   };
 
   const handleRemove = () => {
