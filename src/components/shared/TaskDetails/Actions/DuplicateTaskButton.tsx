@@ -1,3 +1,5 @@
+import { tracking } from "@/utils/tracking";
+
 import { ActionButton } from "../../Buttons/ActionButton";
 
 interface DuplicateTaskButtonProps {
@@ -8,6 +10,11 @@ export const DuplicateTaskButton = ({
   onDuplicate,
 }: DuplicateTaskButtonProps) => {
   return (
-    <ActionButton tooltip="Duplicate Task" icon="Copy" onClick={onDuplicate} />
+    <ActionButton
+      tooltip="Duplicate Task"
+      icon="Copy"
+      onClick={onDuplicate}
+      {...tracking("pipeline_editor.task_node.duplicate_task")}
+    />
   );
 };

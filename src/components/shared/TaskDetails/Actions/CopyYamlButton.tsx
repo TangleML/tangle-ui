@@ -1,5 +1,6 @@
 import useToastNotification from "@/hooks/useToastNotification";
 import type { HydratedComponentReference } from "@/utils/componentSpec";
+import { tracking } from "@/utils/tracking";
 
 import { ActionButton } from "../../Buttons/ActionButton";
 
@@ -20,6 +21,13 @@ export const CopyYamlButton = ({ componentRef }: CopyYamlButtonProps) => {
   };
 
   return (
-    <ActionButton tooltip="Copy YAML" icon="Clipboard" onClick={handleClick} />
+    <ActionButton
+      tooltip="Copy YAML"
+      icon="Clipboard"
+      onClick={handleClick}
+      {...tracking("pipeline_editor.task_node.yaml_action", {
+        action: "copy",
+      })}
+    />
   );
 };

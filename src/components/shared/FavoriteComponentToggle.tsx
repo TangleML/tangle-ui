@@ -22,6 +22,7 @@ import { hydrateComponentReference } from "@/services/componentService";
 import { type ComponentReference } from "@/utils/componentSpec";
 import { MINUTES } from "@/utils/constants";
 import { getComponentName } from "@/utils/getComponentName";
+import { tracking } from "@/utils/tracking";
 
 import { withSuspenseWrapper } from "./SuspenseWrapper";
 
@@ -84,9 +85,13 @@ const FavoriteStarButton = ({ active, onClick }: StateButtonProps) => {
   );
 };
 
-const AddToLibraryButton = ({ active, onClick }: StateButtonProps) => {
+const AddToLibraryButton = ({
+  active,
+  onClick,
+  ...props
+}: StateButtonProps) => {
   return (
-    <IconStateButton active={active} onClick={onClick}>
+    <IconStateButton active={active} onClick={onClick} {...props}>
       <PackagePlus className="h-4 w-4" />
     </IconStateButton>
   );
@@ -232,7 +237,10 @@ const ComponentFavoriteToggleInternal = ({
   return (
     <>
       {!isInLibrary && !isUserComponent && (
-        <AddToLibraryButton onClick={openConfirmationDialog} />
+        <AddToLibraryButton
+          onClick={openConfirmationDialog}
+          {...tracking("pipeline_editor.task_node.add_to_component_library")}
+        />
       )}
 
       {isInLibrary && <FavoriteToggleButton component={component} />}

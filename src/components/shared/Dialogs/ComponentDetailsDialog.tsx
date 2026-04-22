@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useHydrateComponentReference } from "@/hooks/useHydrateComponentReference";
 import type { ComponentReference } from "@/utils/componentSpec";
+import { tracking } from "@/utils/tracking";
 
 import InfoIconButton from "../Buttons/InfoIconButton";
 import { ComponentFavoriteToggle } from "../FavoriteComponentToggle";
@@ -200,7 +201,12 @@ const ComponentDetails = ({
 
   return (
     <Dialog modal={false} open={open} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>{dialogTriggerButton}</DialogTrigger>
+      <DialogTrigger
+        asChild
+        {...tracking("pipeline_editor.task_node.component_info")}
+      >
+        {dialogTriggerButton}
+      </DialogTrigger>
 
       <DialogPortal>
         {open && (

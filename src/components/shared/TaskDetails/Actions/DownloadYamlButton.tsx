@@ -1,5 +1,6 @@
 import type { HydratedComponentReference } from "@/utils/componentSpec";
 import { getComponentName } from "@/utils/getComponentName";
+import { tracking } from "@/utils/tracking";
 import { downloadYamlFromComponentText } from "@/utils/URL";
 
 import { ActionButton } from "../../Buttons/ActionButton";
@@ -21,6 +22,9 @@ export const DownloadYamlButton = ({
       tooltip="Download YAML"
       icon="Download"
       onClick={handleClick}
+      {...tracking("pipeline_editor.task_node.yaml_action", {
+        action: "download",
+      })}
     />
   );
 };

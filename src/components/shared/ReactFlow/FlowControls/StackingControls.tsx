@@ -2,6 +2,7 @@ import { useReactFlow } from "@xyflow/react";
 
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
+import { tracking } from "@/utils/tracking";
 
 import TooltipButton from "../../Buttons/TooltipButton";
 import {
@@ -50,6 +51,9 @@ export const StackingControls = ({
     <InlineStack gap="2" data-testid="stacking-controls">
       <TooltipButton
         data-testid="stacking-move-forward"
+        {...tracking("pipeline_editor.task_node.z_index", {
+          action: "move_forward",
+        })}
         size="sm"
         variant="outline"
         onClick={() => updateZIndex("forward")}
@@ -59,6 +63,9 @@ export const StackingControls = ({
       </TooltipButton>
       <TooltipButton
         data-testid="stacking-move-backward"
+        {...tracking("pipeline_editor.task_node.z_index", {
+          action: "move_backward",
+        })}
         size="sm"
         variant="outline"
         onClick={() => updateZIndex("backward")}
@@ -68,6 +75,9 @@ export const StackingControls = ({
       </TooltipButton>
       <TooltipButton
         data-testid="stacking-bring-to-front"
+        {...tracking("pipeline_editor.task_node.z_index", {
+          action: "bring_to_front",
+        })}
         size="sm"
         variant="outline"
         onClick={() => updateZIndex("front")}
@@ -77,6 +87,9 @@ export const StackingControls = ({
       </TooltipButton>
       <TooltipButton
         data-testid="stacking-send-to-back"
+        {...tracking("pipeline_editor.task_node.z_index", {
+          action: "send_to_back",
+        })}
         size="sm"
         variant="outline"
         onClick={() => updateZIndex("back")}
