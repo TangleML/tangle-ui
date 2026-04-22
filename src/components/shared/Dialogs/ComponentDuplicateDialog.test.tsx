@@ -54,6 +54,11 @@ const createMockComponentLibraryContext = (
   };
 };
 
+// Mock the AnalyticsProvider
+vi.mock("@/providers/AnalyticsProvider", () => ({
+  useAnalytics: vi.fn().mockReturnValue({ track: vi.fn() }),
+}));
+
 // Mock the ComponentLibraryProvider
 vi.mock("@/providers/ComponentLibraryProvider", () => ({
   useComponentLibrary: vi.fn(),

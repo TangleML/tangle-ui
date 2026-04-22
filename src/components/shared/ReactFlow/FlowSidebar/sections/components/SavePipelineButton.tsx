@@ -4,6 +4,7 @@ import { ActionButton } from "@/components/shared/Buttons/ActionButton";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useSavePipeline } from "@/services/pipelineService";
+import { tracking } from "@/utils/tracking";
 
 interface SavePipelineButtonProps {
   onSaveComplete?: () => void;
@@ -30,6 +31,7 @@ export const SavePipelineButton = ({
       tooltip="Save Pipeline"
       icon="Save"
       onClick={handleSavePipeline}
+      {...tracking("pipeline_editor.pipeline_actions.save_pipeline")}
     />
   );
 };

@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { EDITOR_PATH } from "@/routes/router";
 import {
   importPipelineFromFile,
@@ -30,6 +31,7 @@ interface ImportPipelineProps {
 }
 
 const ImportPipeline = ({ triggerComponent }: ImportPipelineProps) => {
+  const { track } = useAnalytics();
   const [isOpen, setIsOpen] = useState(false);
   const [newPipelineName, setNewPipelineName] = useState<string | null>(null);
   const [yamlContent, setYamlContent] = useState("");
@@ -77,6 +79,11 @@ const ImportPipeline = ({ triggerComponent }: ImportPipelineProps) => {
     try {
       const result = await importPipelineFromFile(files[0]);
       handleImportResult(result);
+      if (result.successful) {
+        track("pipeline_editor.pipeline_actions.import_pipeline_completed", {
+          method: "file",
+        });
+      }
     } catch (err) {
       setError(
         (err as Error).message ||
@@ -103,6 +110,11 @@ const ImportPipeline = ({ triggerComponent }: ImportPipelineProps) => {
     try {
       const result = await importPipelineFromYaml(yamlContent);
       handleImportResult(result);
+      if (result.successful) {
+        track("pipeline_editor.pipeline_actions.import_pipeline_completed", {
+          method: "content",
+        });
+      }
     } catch (err) {
       setError(
         (err as Error).message ||

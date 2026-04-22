@@ -2,6 +2,7 @@ import { useCallback, useMemo } from "react";
 
 import { ActionButton } from "@/components/shared/Buttons/ActionButton";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
+import { tracking } from "@/utils/tracking";
 import { componentSpecToYaml } from "@/utils/yaml";
 
 export const ExportPipelineButton = () => {
@@ -25,6 +26,7 @@ export const ExportPipelineButton = () => {
       tooltip="Export Pipeline"
       icon="FileDown"
       onClick={handleExport}
+      {...tracking("pipeline_editor.pipeline_actions.export_pipeline")}
     />
   );
 };

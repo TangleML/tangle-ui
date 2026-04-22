@@ -28,6 +28,7 @@ import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import useToastNotification from "@/hooks/useToastNotification";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
 import { hydrateComponentReference } from "@/services/componentService";
 import { getStringFromData } from "@/utils/string";
@@ -44,6 +45,7 @@ const ImportComponent = ({
   triggerComponent?: ReactNode;
 }) => {
   const notify = useToastNotification();
+  const { track } = useAnalytics();
   const { addToComponentLibrary } = useComponentLibrary();
 
   const [url, setUrl] = useState("");
@@ -57,6 +59,13 @@ const ImportComponent = ({
 
   const [componentEditorTemplateSelected, setComponentEditorTemplateSelected] =
     useState<SupportedTemplate | undefined>();
+
+  const handleTemplateSelected = (template: SupportedTemplate) => {
+    track("pipeline_editor.add_component.new.begin", {
+      selected_template: template,
+    });
+    setComponentEditorTemplateSelected(template);
+  };
 
   const handleComponentEditorDialogClose = () => {
     setComponentEditorTemplateSelected(undefined);
@@ -124,6 +133,9 @@ const ImportComponent = ({
       setSelectedFileName("");
 
       if (result) {
+        track("pipeline_editor.add_component.import_completed", {
+          method: tab === TabType.File ? "file" : "url",
+        });
         notify("Component imported successfully", "success");
       }
     },
@@ -275,7 +287,7 @@ const ImportComponent = ({
               </TabsContent>
               <TabsContent value={TabType.New}>
                 <NewComponentTemplateSelector
-                  onTemplateSelected={setComponentEditorTemplateSelected}
+                  onTemplateSelected={handleTemplateSelected}
                 />
               </TabsContent>
             </Tabs>
