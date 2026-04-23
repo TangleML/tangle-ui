@@ -162,7 +162,7 @@ function validateSingleTask(
     });
   }
 
-  if (isInvalidComponentReference(task.componentRef)) {
+  if (!task.subgraphSpec && isInvalidComponentReference(task.componentRef)) {
     issues.push({
       type: "task",
       message: "Missing component reference",
@@ -222,8 +222,8 @@ function validateTaskArguments(
           argumentName: arg.name,
           referencedName: refTaskName,
         });
-      } else if (refTask.componentRef.spec) {
-        const refSpec = refTask.componentRef.spec;
+      } else if (refTask.resolvedComponentSpec) {
+        const refSpec = refTask.resolvedComponentSpec;
         const outputExists = refSpec.outputs?.some(
           (o) => o.name === refOutputName,
         );
@@ -254,7 +254,7 @@ function validateTaskRequiredInputs(
   spec: ComponentSpec,
 ): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
-  const taskSpec = task.componentRef.spec;
+  const taskSpec = task.resolvedComponentSpec;
 
   if (!taskSpec?.inputs) return issues;
 

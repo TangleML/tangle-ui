@@ -13,7 +13,7 @@ export function useNodeEdgeChanges(
   rfOnEdgesChange: (changes: EdgeChange[]) => void,
 ): Required<Pick<ReactFlowProps, "onNodesChange" | "onEdgesChange">> {
   const registry = useNodeRegistry();
-  const { editor } = useSharedStores();
+  const { editor, navigation } = useSharedStores();
   const { undo } = useEditorSession();
 
   const onNodesChange = (changes: NodeChange[]) => {
@@ -44,7 +44,7 @@ export function useNodeEdgeChanges(
         const manifest = registry.getByNodeId(spec, change.id);
         // todo: move action to a separate file
         undo.withGroup("Delete node", () => {
-          manifest?.deleteNode(undo, spec, change.id);
+          manifest?.deleteNode(undo, spec, change.id, navigation.parentContext);
         });
 
         // deselect removed nodes

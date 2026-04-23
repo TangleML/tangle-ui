@@ -5,7 +5,7 @@ import Dexie, { type EntityTable } from "dexie";
 import type { UndoEvent, UndoManager } from "mobx-keystone";
 import { UndoStore } from "mobx-keystone";
 
-const CURRENT_VERSION = 1;
+const CURRENT_VERSION = 2;
 const MAX_UNDO_EVENTS = 10;
 
 interface StoredUndoHistory {

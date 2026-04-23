@@ -3,6 +3,9 @@ import { describe, expect, it } from "vitest";
 import { ComponentSpec } from "../../entities/componentSpec";
 import { Task } from "../../entities/task";
 import type { ComponentSpecJson } from "../../entities/types";
+import { isGraphImplementation } from "../../entities/types";
+import { IncrementingIdGenerator } from "../../factories/idGenerator";
+import { YamlDeserializer } from "../../serialization/yamlDeserializer";
 import { collectValidationIssues } from "../../validation/collectIssues";
 
 function makeSpec(name = "TestPipeline"): ComponentSpec {
@@ -10,6 +13,17 @@ function makeSpec(name = "TestPipeline"): ComponentSpec {
 }
 
 function makeTask(id: string, name: string, spec?: ComponentSpecJson): Task {
+  if (spec && isGraphImplementation(spec.implementation)) {
+    const idGen = new IncrementingIdGenerator();
+    const deserializer = new YamlDeserializer(idGen);
+    const subgraphSpec = deserializer.deserialize(spec);
+    return new Task({
+      $id: id,
+      name,
+      componentRef: { name: `component-${name}` },
+      subgraphSpec,
+    });
+  }
   return new Task({
     $id: id,
     name,

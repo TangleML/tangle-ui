@@ -186,7 +186,7 @@ export const TaskNode = observer(function TaskNode({
   if (!task) return <TaskNodeNotFound entityId={entityId} />;
   if (nodeEffect?.hidden) return null;
 
-  const componentSpec = task.componentRef.spec;
+  const componentSpec = task.resolvedComponentSpec;
   const { description, inputs, outputs } =
     getComponentSpecDefaults(componentSpec);
 

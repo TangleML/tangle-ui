@@ -4,15 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
-import type {
-  ComponentSpec,
-  ComponentSpecJson,
-  ValidationIssue,
-} from "@/models/componentSpec";
+import type { ComponentSpec, ValidationIssue } from "@/models/componentSpec";
 import { ArgumentRow } from "@/routes/v2/pages/Editor/components/ArgumentRow/ArgumentRow";
 import { useValidationResolutionActions } from "@/routes/v2/pages/Editor/components/PipelineTreeContent/components/useValidationResolutionActions";
 import { findTaskById } from "@/routes/v2/pages/Editor/components/PipelineTreeContent/components/validationResolution.utils";
-import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 import { InfoOnlyResolution } from "./InfoOnlyResolution";
 
@@ -23,7 +18,6 @@ export const BadReferenceResolution = observer(function BadReferenceResolution({
   issue: ValidationIssue;
   spec: ComponentSpec;
 }) {
-  const { navigation } = useSharedStores();
   const { unsetBadReference } = useValidationResolutionActions();
 
   if (!issue.entityId || !issue.argumentName) {
@@ -32,14 +26,14 @@ export const BadReferenceResolution = observer(function BadReferenceResolution({
     );
   }
 
-  const task = findTaskById(spec, issue.entityId, navigation.nestedSpecs);
+  const task = findTaskById(spec, issue.entityId);
   if (!task) {
     return (
       <InfoOnlyResolution message="Task not found in the current graph." />
     );
   }
 
-  const componentSpec = task.componentRef.spec as ComponentSpecJson | undefined;
+  const componentSpec = task.resolvedComponentSpec;
   const inputSpec = componentSpec?.inputs?.find(
     (i) => i.name === issue.argumentName,
   );

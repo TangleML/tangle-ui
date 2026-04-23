@@ -2,14 +2,9 @@ import { observer } from "mobx-react-lite";
 
 import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
-import type {
-  ComponentSpec,
-  ComponentSpecJson,
-  ValidationIssue,
-} from "@/models/componentSpec";
+import type { ComponentSpec, ValidationIssue } from "@/models/componentSpec";
 import { ArgumentRow } from "@/routes/v2/pages/Editor/components/ArgumentRow/ArgumentRow";
 import { findTaskById } from "@/routes/v2/pages/Editor/components/PipelineTreeContent/components/validationResolution.utils";
-import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 import { InfoOnlyResolution } from "./InfoOnlyResolution";
 
@@ -21,24 +16,20 @@ export const MissingRequiredInputResolution = observer(
     issue: ValidationIssue;
     spec: ComponentSpec;
   }) {
-    const { navigation } = useSharedStores();
-
     if (!issue.entityId || !issue.argumentName) {
       return (
         <InfoOnlyResolution message="Cannot resolve: missing entity or argument information." />
       );
     }
 
-    const task = findTaskById(spec, issue.entityId, navigation.nestedSpecs);
+    const task = findTaskById(spec, issue.entityId);
     if (!task) {
       return (
         <InfoOnlyResolution message="Task not found in the current graph." />
       );
     }
 
-    const componentSpec = task.componentRef.spec as
-      | ComponentSpecJson
-      | undefined;
+    const componentSpec = task.resolvedComponentSpec;
     const inputSpec = componentSpec?.inputs?.find(
       (i) => i.name === issue.argumentName,
     );

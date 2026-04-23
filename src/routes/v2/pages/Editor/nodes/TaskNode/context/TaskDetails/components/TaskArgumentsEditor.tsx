@@ -3,7 +3,7 @@ import { useEffect, useRef } from "react";
 
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
-import type { ComponentSpecJson, Task } from "@/models/componentSpec";
+import type { Task } from "@/models/componentSpec";
 import { ArgumentCodeEditor } from "@/routes/v2/pages/Editor/components/ArgumentCodeEditor";
 import { ArgumentRow } from "@/routes/v2/pages/Editor/components/ArgumentRow/ArgumentRow";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
@@ -22,7 +22,7 @@ export const TaskArgumentsEditor = observer(function TaskArgumentsEditor({
   const spec = useSpec();
   const windowCtx = useOptionalWindowContext();
   const isMaximized = windowCtx?.model.isMaximized ?? false;
-  const componentSpec = task.componentRef.spec as ComponentSpecJson | undefined;
+  const componentSpec = task.resolvedComponentSpec;
   const inputs = componentSpec?.inputs ?? [];
   const lastSelectedArgRef = useRef<string | null>(null);
 

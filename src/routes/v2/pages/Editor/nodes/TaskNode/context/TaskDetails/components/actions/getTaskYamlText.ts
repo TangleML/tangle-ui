@@ -1,9 +1,12 @@
+import { serializeComponentSpec } from "@/models/componentSpec";
 import type { Task } from "@/models/componentSpec/entities/task";
 import { componentSpecToText } from "@/utils/yaml";
 
 export function getTaskYamlText(task: Task): string {
-  return (
-    task.componentRef.text ??
-    (task.componentRef.spec ? componentSpecToText(task.componentRef.spec) : "")
-  );
+  if (task.componentRef.text) return task.componentRef.text;
+  if (task.subgraphSpec) {
+    return componentSpecToText(serializeComponentSpec(task.subgraphSpec));
+  }
+  const spec = task.componentRef.spec;
+  return spec ? componentSpecToText(spec) : "";
 }

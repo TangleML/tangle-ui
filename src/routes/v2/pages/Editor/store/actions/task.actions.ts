@@ -13,6 +13,7 @@ import type { ClipboardStore } from "@/routes/v2/pages/Editor/store/clipboardSto
 import { generateUniqueTaskName } from "@/routes/v2/pages/Editor/store/nameUtils";
 import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
 import type { SelectedNode } from "@/routes/v2/shared/store/editorStore";
+import type { ParentContext } from "@/routes/v2/shared/store/navigationStore";
 
 import { computeDiffComponentSpecs } from "./task.utils";
 import { idGen, TASK_COLOR_ANNOTATION } from "./utils";
@@ -87,13 +88,14 @@ export function deleteSelectedNodes(
   undo: UndoGroupable,
   spec: ComponentSpec,
   selectedNodes: SelectedNode[],
+  parentContext?: ParentContext | null,
 ) {
   if (selectedNodes.length === 0) return;
 
   undo.withGroup("Delete selected nodes", () => {
     for (const node of selectedNodes) {
       const manifest = editorRegistry.getByNodeId(spec, node.id);
-      manifest?.deleteNode(undo, spec, node.id);
+      manifest?.deleteNode(undo, spec, node.id, parentContext);
     }
   });
 }
@@ -142,7 +144,7 @@ export function replaceTask(
     if (!task) return { lostInputs: [] };
 
     const { inputDiff, outputDiff } = computeDiffComponentSpecs(
-      task.componentRef.spec,
+      task.resolvedComponentSpec,
       newComponentRef.spec,
     );
 

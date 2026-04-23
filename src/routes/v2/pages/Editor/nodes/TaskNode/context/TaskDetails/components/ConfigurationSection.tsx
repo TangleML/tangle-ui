@@ -14,8 +14,6 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Heading, Paragraph } from "@/components/ui/typography";
 import type { Task } from "@/models/componentSpec";
-import type { ComponentSpecJson } from "@/models/componentSpec/entities/types";
-import { isGraphImplementation } from "@/models/componentSpec/entities/types";
 import type { AnnotationConfig, Annotations } from "@/types/annotations";
 import { ISO8601_DURATION_ZERO_DAYS } from "@/utils/constants";
 
@@ -34,10 +32,7 @@ export const ConfigurationSection = observer(function ConfigurationSection({
     setTaskColor,
     clearProviderAnnotations,
   } = useTaskConfigActions();
-  const componentSpec = task.componentRef.spec as ComponentSpecJson | undefined;
-  const isSubgraph = componentSpec?.implementation
-    ? isGraphImplementation(componentSpec.implementation)
-    : false;
+  const isSubgraph = task.subgraphSpec !== undefined;
 
   const cacheDisabled =
     task.executionOptions?.cachingStrategy?.maxCacheStaleness ===
