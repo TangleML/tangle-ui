@@ -6,6 +6,7 @@ import { BlockStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Paragraph } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 
 import { fetchSecretsList } from "../secretsStorage";
 import { SecretsQueryKeys } from "../types";
@@ -16,6 +17,7 @@ export function ReplaceSecretView() {
   const { secretId } = useParams({ strict: false });
   const notify = useToastNotification();
   const navigate = useNavigate();
+  const { track } = useAnalytics();
 
   const { data: secrets } = useSuspenseQuery({
     queryKey: SecretsQueryKeys.All(),
@@ -39,6 +41,7 @@ export function ReplaceSecretView() {
   }
 
   const handleSuccess = () => {
+    track("settings.secrets.secret_mutated", { action: "updated" });
     notify(`Secret "${secret.name}" updated successfully`, "success");
     navigateToList();
   };
