@@ -30,6 +30,7 @@ import {
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { APP_ROUTES } from "@/routes/router";
 import { DOCUMENTATION_URL, TOP_NAV_HEIGHT } from "@/utils/constants";
+import { tracking } from "@/utils/tracking";
 
 import TooltipButton from "../shared/Buttons/TooltipButton";
 import NewPipelineButton from "../shared/NewPipelineButton";
@@ -37,7 +38,6 @@ import NewPipelineButton from "../shared/NewPipelineButton";
 const DefaultAppMenu = () => {
   const router = useRouter();
   const location = useLocation();
-
   const requiresAuthorization = isAuthorizationRequired();
   const { componentSpec } = useComponentSpec();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -57,7 +57,13 @@ const DefaultAppMenu = () => {
     >
       <InlineStack align="space-between" wrap="nowrap">
         <InlineStack gap="8" wrap="nowrap" className="min-w-0 flex-1">
-          <Link href="/" aria-label="Home" variant="block" className="shrink-0">
+          <Link
+            href="/"
+            aria-label="Home"
+            variant="block"
+            className="shrink-0"
+            {...tracking("header.logo")}
+          >
             <img
               src={logo}
               alt="logo"
@@ -82,7 +88,10 @@ const DefaultAppMenu = () => {
           <div className="hidden md:flex items-center gap-2">
             <ImportPipeline
               triggerComponent={
-                <TooltipButton tooltip="Import Pipeline">
+                <TooltipButton
+                  tooltip="Import Pipeline"
+                  {...tracking("header.import_pipeline")}
+                >
                   <Icon name="Upload" />
                 </TooltipButton>
               }
@@ -90,7 +99,7 @@ const DefaultAppMenu = () => {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <NewPipelineButton>
+                  <NewPipelineButton {...tracking("header.new_pipeline")}>
                     <Icon name="Plus" />
                   </NewPipelineButton>
                 </TooltipTrigger>
@@ -115,7 +124,7 @@ const DefaultAppMenu = () => {
               />
             </TooltipButton>
           ) : (
-            <RouterLink to="/settings/backend">
+            <RouterLink to="/settings/backend" {...tracking("header.settings")}>
               <TooltipButton tooltip="Settings">
                 <Icon name="Settings" />
               </TooltipButton>
@@ -126,6 +135,7 @@ const DefaultAppMenu = () => {
             href={DOCUMENTATION_URL}
             target="_blank"
             rel="noopener noreferrer"
+            {...tracking("header.documentation")}
           >
             <TooltipButton tooltip="Documentation">
               <Icon name="CircleQuestionMark" />
