@@ -2,11 +2,15 @@ import { observer } from "mobx-react-lite";
 import { useEffect, useState } from "react";
 
 import { StackingControls } from "@/components/shared/ReactFlow/FlowControls/StackingControls";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { ColorPicker } from "@/components/ui/color";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Heading, Text } from "@/components/ui/typography";
 import { AnnotationsBlock } from "@/routes/v2/pages/Editor/components/AnnotationsBlock/AnnotationsBlock";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
@@ -23,8 +27,6 @@ import { TaskArgumentsEditor } from "./components/TaskArgumentsEditor";
 import { useTaskConfigActions } from "./components/useTaskConfigActions";
 import { useTask } from "./hooks/useTask";
 
-const TAB_CONTENT_CLASS = "overflow-y-auto w-full px-4 py-4 pr-5";
-
 interface TaskDetailsProps {
   entityId: string;
 }
@@ -39,13 +41,14 @@ export const TaskDetails = observer(function TaskDetails({
   const task = useTask(entityId);
   const { focusedArgumentName } = editor;
 
-  const [activeTab, setActiveTab] = useState("arguments");
+  const [argumentsOpen, setArgumentsOpen] = useState(true);
+  const [configOpen, setConfigOpen] = useState(true);
 
   useEffect(() => {
-    if (focusedArgumentName && activeTab !== "arguments") {
-      setActiveTab("arguments");
+    if (focusedArgumentName && !argumentsOpen) {
+      setArgumentsOpen(true);
     }
-  }, [focusedArgumentName, activeTab]);
+  }, [focusedArgumentName, argumentsOpen]);
 
   if (!spec || !task) {
     return null;
@@ -103,66 +106,89 @@ export const TaskDetails = observer(function TaskDetails({
         />
       </BlockStack>
 
-      {/* ── Tabs ── */}
-      <Tabs
-        value={activeTab}
-        onValueChange={setActiveTab}
-        className="flex-1 flex flex-col gap-0 min-h-0 w-full"
-      >
-        <TabsList className="shrink-0 mx-4 mb-1">
-          <TabsTrigger value="arguments" className="gap-1 text-xs px-2.5">
-            <Icon name="Parentheses" size="xs" />
-            Arguments
-          </TabsTrigger>
-          <TabsTrigger value="configuration" className="gap-1 text-xs px-2.5">
-            <Icon name="Settings" size="xs" />
-            Config
-          </TabsTrigger>
-        </TabsList>
-
+      {/* ── Sections ── */}
+      <BlockStack gap="0" className="flex-1 overflow-y-auto">
         {/* ── Arguments ── */}
-        <TabsContent value="arguments" className={TAB_CONTENT_CLASS}>
-          <BlockStack gap="4">
-            <BlockStack gap="2">
-              <Heading level={3}>Inputs</Heading>
-              <TaskArgumentsEditor task={task} />
+        <Collapsible
+          open={argumentsOpen}
+          onOpenChange={setArgumentsOpen}
+          className="w-full"
+        >
+          <CollapsibleTrigger className="flex w-full items-center justify-between bg-gray-50 px-4 py-2.5 cursor-pointer border-b border-gray-100">
+            <InlineStack gap="2" blockAlign="center">
+              <Icon name="Parentheses" size="xs" />
+              <Text size="sm" weight="semibold">
+                Arguments
+              </Text>
+            </InlineStack>
+            <Icon
+              name={argumentsOpen ? "ChevronDown" : "ChevronRight"}
+              size="xs"
+              className="text-muted-foreground"
+            />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="px-4 py-3">
+            <BlockStack gap="4">
+              <BlockStack gap="2">
+                <Heading level={3}>Inputs</Heading>
+                <TaskArgumentsEditor task={task} />
+              </BlockStack>
+              <Separator />
+              <BlockStack gap="2">
+                <Heading level={3}>Outputs</Heading>
+                <OutputsSection componentSpec={componentSpec} />
+              </BlockStack>
             </BlockStack>
-            <Separator />
-            <BlockStack gap="2">
-              <Heading level={3}>Outputs</Heading>
-              <OutputsSection componentSpec={componentSpec} />
-            </BlockStack>
-          </BlockStack>
-        </TabsContent>
+          </CollapsibleContent>
+        </Collapsible>
 
         {/* ── Configuration ── */}
-        <TabsContent value="configuration" className={TAB_CONTENT_CLASS}>
-          <BlockStack gap="4">
-            <InlineStack
-              align="space-between"
-              blockAlign="center"
-              className="w-full"
-            >
-              <Text size="sm" className="text-gray-600">
-                Task color
+        <Collapsible
+          open={configOpen}
+          onOpenChange={setConfigOpen}
+          className="w-full"
+        >
+          <CollapsibleTrigger className="flex w-full items-center justify-between bg-gray-50 px-4 py-2.5 cursor-pointer border-b border-gray-100">
+            <InlineStack gap="2" blockAlign="center">
+              <Icon name="Settings" size="xs" />
+              <Text size="sm" weight="semibold">
+                Config
               </Text>
-              <ColorPicker
-                title="Task color"
-                color={taskColor}
-                setColor={handleColorChange}
-              />
             </InlineStack>
+            <Icon
+              name={configOpen ? "ChevronDown" : "ChevronRight"}
+              size="xs"
+              className="text-muted-foreground"
+            />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="px-4 py-3">
+            <BlockStack gap="4">
+              <InlineStack
+                align="space-between"
+                blockAlign="center"
+                className="w-full"
+              >
+                <Text size="sm" className="text-gray-600">
+                  Task color
+                </Text>
+                <ColorPicker
+                  title="Task color"
+                  color={taskColor}
+                  setColor={handleColorChange}
+                />
+              </InlineStack>
 
-            <Separator />
+              <Separator />
 
-            <ConfigurationSection task={task} />
+              <ConfigurationSection task={task} />
 
-            <Separator />
+              <Separator />
 
-            <AnnotationsBlock annotations={task.annotations} defaultEditing />
-          </BlockStack>
-        </TabsContent>
-      </Tabs>
+              <AnnotationsBlock annotations={task.annotations} defaultEditing />
+            </BlockStack>
+          </CollapsibleContent>
+        </Collapsible>
+      </BlockStack>
     </BlockStack>
   );
 });
