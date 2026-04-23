@@ -85,8 +85,12 @@ export class JsonSerializer {
     );
     const args = this.serializeArguments(task.arguments, taskBindings, spec);
 
+    const componentRef = task.subgraphSpec
+      ? { ...task.componentRef, spec: this.serialize(task.subgraphSpec) }
+      : task.componentRef;
+
     const result: TaskSpec = {
-      componentRef: task.componentRef,
+      componentRef,
     };
 
     if (Object.keys(args).length > 0) {

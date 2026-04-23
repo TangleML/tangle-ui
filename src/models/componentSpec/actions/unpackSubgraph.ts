@@ -4,9 +4,8 @@ import { Annotations, deserializeAnnotationValue } from "../annotations";
 import { Binding } from "../entities/binding";
 import type { ComponentSpec } from "../entities/componentSpec";
 import { Task } from "../entities/task";
-import { type Annotation, isGraphImplementation } from "../entities/types";
+import type { Annotation } from "../entities/types";
 import type { IdGenerator } from "../factories/idGenerator";
-import { YamlDeserializer } from "../serialization/yamlDeserializer";
 
 interface UnpackSubgraphParams {
   spec: ComponentSpec;
@@ -27,16 +26,8 @@ export function unpackSubgraph({
   const task = spec.tasks.find((t) => t.$id === taskId);
   if (!task) return false;
 
-  const subgraphSpecJson = task.componentRef.spec;
-
-  if (!isGraphImplementation(subgraphSpecJson?.implementation)) return false;
-
-  // Deep-clone to strip MobX Keystone observable wrappers; the
-  // YamlDeserializer expects plain JS objects for Object.entries() etc.
-  const plainSpecJson = deepClone(subgraphSpecJson);
-
-  const deserializer = new YamlDeserializer(idGen);
-  const innerModel = deserializer.deserialize(plainSpecJson);
+  const innerModel = task.subgraphSpec;
+  if (!innerModel) return false;
 
   const innerInputIds = new Set(innerModel.inputs.map((i) => i.$id));
   const innerOutputIds = new Set(innerModel.outputs.map((o) => o.$id));

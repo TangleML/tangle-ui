@@ -1,19 +1,4 @@
-import type {
-  ComponentSpec,
-  ComponentSpecJson,
-  Task,
-  ValidationIssue,
-} from "@/models/componentSpec";
-
-export function isSubgraphTask(task: Task): boolean {
-  const componentSpec = task.componentRef.spec as ComponentSpecJson | undefined;
-  if (!componentSpec?.implementation) {
-    return false;
-  }
-
-  // todo: typeguard
-  return "graph" in componentSpec.implementation;
-}
+import type { ComponentSpec, ValidationIssue } from "@/models/componentSpec";
 
 export function getEntityIssues(
   spec: ComponentSpec,

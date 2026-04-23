@@ -124,7 +124,7 @@ export function useReplaceDropHandler(
     if (!task) return;
 
     const { inputDiff, outputDiff } = computeDiffComponentSpecs(
-      task.componentRef.spec,
+      task.resolvedComponentSpec,
       newComponentRef.spec,
     );
 

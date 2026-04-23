@@ -20,7 +20,7 @@ import {
 
 export function useTaskActions() {
   const { undo, clipboard } = useEditorSession();
-  const { editor } = useSharedStores();
+  const { editor, navigation } = useSharedStores();
 
   return {
     addTask: addTask.bind(null, undo),
@@ -33,7 +33,7 @@ export function useTaskActions() {
       spec: ComponentSpec,
       selectedNodes: SelectedNode[],
     ) => {
-      deleteSelectedNodes(undo, spec, selectedNodes);
+      deleteSelectedNodes(undo, spec, selectedNodes, navigation.parentContext);
       editor.clearSelection();
       editor.clearMultiSelection();
     },

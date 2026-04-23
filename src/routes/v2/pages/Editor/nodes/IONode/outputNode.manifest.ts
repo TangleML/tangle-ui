@@ -1,6 +1,7 @@
 import { Annotations } from "@/models/componentSpec/annotations";
 import { Output } from "@/models/componentSpec/entities/output";
 import { addOutput } from "@/routes/v2/pages/Editor/store/actions";
+import { deleteOutput } from "@/routes/v2/pages/Editor/store/actions/io.actions";
 import { generateUniqueOutputName } from "@/routes/v2/pages/Editor/store/nameUtils";
 import {
   isOutputSnapshot,
@@ -26,8 +27,8 @@ export const outputManifest: NodeTypeManifest = {
     spec.updateNodePosition(nodeId, position);
   },
 
-  deleteNode(_undo, spec, nodeId) {
-    spec.deleteOutputById(nodeId);
+  deleteNode(undo, spec, nodeId, parentContext) {
+    deleteOutput(undo, spec, nodeId, parentContext);
   },
 
   contextPanelComponent: OutputDetails,

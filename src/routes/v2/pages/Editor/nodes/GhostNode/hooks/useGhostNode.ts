@@ -55,9 +55,7 @@ function buildGhostNode(
   const portName = extractPortName(handleId, ioType);
 
   const task = spec.tasks.find((t) => t.$id === fromHandle.nodeId);
-  const taskComponentSpec = task?.componentRef.spec as
-    | ComponentSpecJson
-    | undefined;
+  const taskComponentSpec = task?.resolvedComponentSpec;
   const dataType = lookupPortType(taskComponentSpec, portName, ioType);
 
   return {

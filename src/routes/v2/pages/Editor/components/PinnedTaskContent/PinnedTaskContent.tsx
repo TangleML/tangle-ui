@@ -5,6 +5,7 @@ import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Text } from "@/components/ui/typography";
+import { serializeComponentSpec } from "@/models/componentSpec";
 import { CodeBlock } from "@/routes/v2/pages/Editor/components/PinnedTaskContent/components/CodeBlock";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { componentSpecToText } from "@/utils/yaml";
@@ -34,14 +35,18 @@ export const PinnedTaskContent = observer(function PinnedTaskContent({
   }
 
   const componentRef = task.componentRef;
-  const componentSpec = componentRef.spec;
-  const code =
-    componentRef.text ??
-    (componentSpec
+  const componentSpec = task.resolvedComponentSpec;
+  const code = (() => {
+    if (componentRef.text) return componentRef.text;
+    if (task.subgraphSpec) {
+      return componentSpecToText(serializeComponentSpec(task.subgraphSpec));
+    }
+    return componentRef.spec
       ? componentSpecToText(
-          componentSpec as Parameters<typeof componentSpecToText>[0],
+          componentRef.spec as Parameters<typeof componentSpecToText>[0],
         )
-      : "");
+      : "";
+  })();
 
   return (
     <BlockStack className="h-full w-full bg-white overflow-hidden">

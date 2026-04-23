@@ -8,6 +8,7 @@ import type {
   Annotation,
   Argument,
   ArgumentType,
+  ComponentReference,
   ComponentSpecJson,
   GraphSpec,
   ImplementationType,
@@ -16,6 +17,7 @@ import type {
   OutputSpec,
   TaskSpec,
 } from "../entities/types";
+import { isGraphImplementation } from "../entities/types";
 import type { IdGenerator } from "../factories/idGenerator";
 
 const GRAPH_INPUT_REGEX = /^\{\{inputs\.([^}]+)\}\}$/;
@@ -136,16 +138,30 @@ export class YamlDeserializer {
         }
       }
 
+      const subgraphSpec = this.maybeDeserializeSubgraph(taskJson.componentRef);
+      const componentRef = subgraphSpec
+        ? { ...taskJson.componentRef, spec: undefined }
+        : taskJson.componentRef;
+
       return new Task({
         $id: this.idGen.next("task"),
         name: taskName,
-        componentRef: taskJson.componentRef,
+        componentRef,
+        subgraphSpec,
         isEnabled: taskJson.isEnabled,
         executionOptions: taskJson.executionOptions,
         annotations: Annotations.from(annotationItems),
         arguments: args,
       });
     });
+  }
+
+  private maybeDeserializeSubgraph(
+    ref: ComponentReference,
+  ): ComponentSpec | undefined {
+    if (!ref.spec?.implementation) return undefined;
+    if (!isGraphImplementation(ref.spec.implementation)) return undefined;
+    return this.deserialize(ref.spec);
   }
 
   private buildBindings(

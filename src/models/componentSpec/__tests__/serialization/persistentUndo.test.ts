@@ -44,6 +44,64 @@ const COMPLEX_YAML = {
   },
 };
 
+const SUBGRAPH_YAML = {
+  name: "PipelineWithSubgraph",
+  inputs: [{ name: "data" }],
+  outputs: [{ name: "result" }],
+  implementation: {
+    graph: {
+      tasks: {
+        Preprocess: {
+          componentRef: { name: "Preprocessor" },
+          arguments: { input: "{{inputs.data}}" },
+        },
+        SubgraphTask: {
+          componentRef: {
+            spec: {
+              name: "InnerPipeline",
+              inputs: [{ name: "inner_in" }],
+              outputs: [{ name: "inner_out" }],
+              implementation: {
+                graph: {
+                  tasks: {
+                    InnerStep: {
+                      componentRef: { name: "InnerComponent" },
+                      arguments: {
+                        x: { graphInput: { inputName: "inner_in" } },
+                      },
+                    },
+                  },
+                  outputValues: {
+                    inner_out: {
+                      taskOutput: {
+                        taskId: "InnerStep",
+                        outputName: "out",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          arguments: {
+            inner_in: {
+              taskOutput: {
+                taskId: "Preprocess",
+                outputName: "preprocessed",
+              },
+            },
+          },
+        },
+      },
+      outputValues: {
+        result: {
+          taskOutput: { taskId: "SubgraphTask", outputName: "inner_out" },
+        },
+      },
+    },
+  },
+};
+
 describe("ReplayIdGenerator", () => {
   it("replays IDs from the stack in order", () => {
     const stack = ["id_a", "id_b", "id_c"];
@@ -124,6 +182,33 @@ describe("collectIdStack", () => {
     const ids = collectIdStack(spec);
     expect(ids).toHaveLength(1);
     expect(ids[0]).toBe(spec.$id);
+  });
+
+  it("includes subgraph entity IDs before the parent task ID", () => {
+    const idGen = new IncrementingIdGenerator();
+    const deserializer = new YamlDeserializer(idGen);
+    const spec = deserializer.deserialize(SUBGRAPH_YAML);
+
+    const ids = collectIdStack(spec);
+
+    const subgraphTask = spec.tasks.find((t) => t.subgraphSpec !== undefined);
+    expect(subgraphTask).toBeDefined();
+
+    const subgraphSpec = subgraphTask!.subgraphSpec!;
+    const parentTaskIdx = ids.indexOf(subgraphTask!.$id);
+    const subgraphSpecIdx = ids.indexOf(subgraphSpec.$id);
+
+    expect(subgraphSpecIdx).toBeLessThan(parentTaskIdx);
+
+    for (const input of subgraphSpec.inputs) {
+      expect(ids.indexOf(input.$id)).toBeLessThan(parentTaskIdx);
+    }
+    for (const task of subgraphSpec.tasks) {
+      expect(ids.indexOf(task.$id)).toBeLessThan(parentTaskIdx);
+    }
+    for (const binding of subgraphSpec.bindings) {
+      expect(ids.indexOf(binding.$id)).toBeLessThan(parentTaskIdx);
+    }
   });
 });
 
@@ -212,6 +297,76 @@ describe("ID Replay round-trip", () => {
       expect(spec2.bindings[i].targetEntityId).toBe(
         spec1.bindings[i].targetEntityId,
       );
+    }
+  });
+
+  it("produces identical IDs when replaying a spec with subgraphs", () => {
+    const idGen1 = new IncrementingIdGenerator();
+    const spec1 = new YamlDeserializer(idGen1).deserialize(SUBGRAPH_YAML);
+    const idStack = collectIdStack(spec1);
+
+    const replayGen = new ReplayIdGenerator(idStack);
+    const spec2 = new YamlDeserializer(replayGen).deserialize(SUBGRAPH_YAML);
+
+    expect(spec2.$id).toBe(spec1.$id);
+
+    for (let i = 0; i < spec1.inputs.length; i++) {
+      expect(spec2.inputs[i].$id).toBe(spec1.inputs[i].$id);
+    }
+    for (let i = 0; i < spec1.outputs.length; i++) {
+      expect(spec2.outputs[i].$id).toBe(spec1.outputs[i].$id);
+    }
+    for (let i = 0; i < spec1.tasks.length; i++) {
+      expect(spec2.tasks[i].$id).toBe(spec1.tasks[i].$id);
+
+      const sub1 = spec1.tasks[i].subgraphSpec;
+      const sub2 = spec2.tasks[i].subgraphSpec;
+      if (sub1 && sub2) {
+        expect(sub2.$id).toBe(sub1.$id);
+        for (let j = 0; j < sub1.tasks.length; j++) {
+          expect(sub2.tasks[j].$id).toBe(sub1.tasks[j].$id);
+        }
+        for (let j = 0; j < sub1.inputs.length; j++) {
+          expect(sub2.inputs[j].$id).toBe(sub1.inputs[j].$id);
+        }
+        for (let j = 0; j < sub1.bindings.length; j++) {
+          expect(sub2.bindings[j].$id).toBe(sub1.bindings[j].$id);
+        }
+      }
+    }
+    for (let i = 0; i < spec1.bindings.length; i++) {
+      expect(spec2.bindings[i].$id).toBe(spec1.bindings[i].$id);
+    }
+
+    expect(replayGen.isExhausted).toBe(true);
+  });
+
+  it("preserves correct ID prefixes for subgraph entities after replay", () => {
+    const idGen1 = new IncrementingIdGenerator();
+    const spec1 = new YamlDeserializer(idGen1).deserialize(SUBGRAPH_YAML);
+    const idStack = collectIdStack(spec1);
+
+    const spec2 = new YamlDeserializer(
+      new ReplayIdGenerator(idStack),
+    ).deserialize(SUBGRAPH_YAML);
+
+    for (const task of spec2.tasks) {
+      expect(task.$id).toMatch(/^task_/);
+      if (task.subgraphSpec) {
+        expect(task.subgraphSpec.$id).toMatch(/^spec_/);
+        for (const innerTask of task.subgraphSpec.tasks) {
+          expect(innerTask.$id).toMatch(/^task_/);
+        }
+        for (const innerInput of task.subgraphSpec.inputs) {
+          expect(innerInput.$id).toMatch(/^input_/);
+        }
+        for (const innerOutput of task.subgraphSpec.outputs) {
+          expect(innerOutput.$id).toMatch(/^output_/);
+        }
+        for (const innerBinding of task.subgraphSpec.bindings) {
+          expect(innerBinding.$id).toMatch(/^binding_/);
+        }
+      }
     }
   });
 
