@@ -13,6 +13,7 @@ import { TOP_NAV_HEIGHT } from "@/utils/constants";
 import { AutoSaveIndicator } from "./components/AutoSaveIndicator";
 import { ComponentsLibraryMenu } from "./components/ComponentsLibraryMenu";
 import { FileMenu } from "./components/FileMenu";
+import { NodeMenu } from "./components/NodeMenu";
 import { QuickRunButton } from "./components/QuickRunButton";
 import { RunsMenu } from "./components/RunsMenu";
 import { ViewMenu } from "./components/ViewMenu";
@@ -74,6 +75,7 @@ export const EditorMenuBar = observer(function EditorMenuBar() {
                 </MenuTriggerButton>
                 <ComponentsLibraryMenu />
                 <WindowsMenu />
+                <NodeMenu />
               </InlineStack>
             </BlockStack>
           )}
