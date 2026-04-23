@@ -125,8 +125,8 @@ function EditorV2Content({ pipelineRef }: { pipelineRef: PipelineRef | null }) {
 
   return (
     <ComponentLibraryProvider>
-      <EditorMenuBar />
       <ReactFlowProvider>
+        <EditorMenuBar />
         <ForcedSearchProvider>
           {pipelineRef ? (
             <DriverPermissionGate pipelineRef={pipelineRef}>
