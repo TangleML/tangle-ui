@@ -6,9 +6,7 @@ import { BlockStack } from "@/components/ui/layout";
 import { Textarea } from "@/components/ui/textarea";
 import { Text } from "@/components/ui/typography";
 import { InputLabel } from "@/routes/v2/pages/Editor/components/InputLabel/InputLabel";
-import { ZIndexEditor } from "@/routes/v2/pages/Editor/nodes/FlexNode/context/components/ZIndexEditor";
 import { useIOActions } from "@/routes/v2/pages/Editor/store/actions/useIOActions";
-import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 
 interface OutputDetailsProps {
@@ -18,7 +16,6 @@ interface OutputDetailsProps {
 export const OutputDetails = observer(function OutputDetails({
   entityId,
 }: OutputDetailsProps) {
-  const { undo } = useEditorSession();
   const ioActions = useIOActions();
   const spec = useSpec();
   const output = spec?.outputs.find((o) => o.$id === entityId);
@@ -38,12 +35,6 @@ export const OutputDetails = observer(function OutputDetails({
     if (newDescription !== output.description) {
       ioActions.setOutputDescription(spec, entityId, newDescription);
     }
-  };
-
-  const handleZIndexChange = (newZIndex: number) => {
-    undo.withGroup("Update output z-index", () => {
-      output.annotations.set("zIndex", newZIndex);
-    });
   };
 
   return (
@@ -93,8 +84,6 @@ export const OutputDetails = observer(function OutputDetails({
             rows={2}
           />
         </BlockStack>
-
-        <ZIndexEditor nodeId={entityId} onChange={handleZIndexChange} />
       </BlockStack>
     </BlockStack>
   );
