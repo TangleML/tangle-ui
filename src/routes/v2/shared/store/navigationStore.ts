@@ -141,6 +141,25 @@ export class NavigationStore {
     return this.navigationPath.length > 1;
   }
 
+  /**
+   * Trims navigationPath to the deepest level that still resolves to a valid
+   * spec. Handles cases where undo/redo removes a subgraph the user is viewing.
+   */
+  @action correctInvalidNavigation(): void {
+    if (this.navigationPath.length <= 1) return;
+
+    let deepestValid = 0;
+    for (let i = 1; i < this.navigationPath.length; i++) {
+      if (!this.getSpecAtDepth(i)) break;
+      deepestValid = i;
+    }
+
+    if (deepestValid < this.navigationPath.length - 1) {
+      this.navigationPath = this.navigationPath.slice(0, deepestValid + 1);
+      this.editorStore.clearSelection();
+    }
+  }
+
   private getSpecAtDepth(depth: number): ComponentSpec | undefined {
     if (depth === 0) return this.rootSpec ?? undefined;
     let current: ComponentSpec | undefined = this.rootSpec ?? undefined;
