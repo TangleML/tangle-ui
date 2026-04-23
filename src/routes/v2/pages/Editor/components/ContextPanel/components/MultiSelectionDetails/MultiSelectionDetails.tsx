@@ -1,17 +1,16 @@
 import { useReactFlow } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
-import { useEffect, useState } from "react";
 
 import { autoLayoutNodes } from "@/components/shared/ReactFlow/FlowCanvas/utils/autolayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/typography";
 import type { Task } from "@/models/componentSpec";
+import { CreateSubgraphForm } from "@/routes/v2/pages/Editor/components/CreateSubgraphForm";
 import { usePipelineActions } from "@/routes/v2/pages/Editor/store/actions/usePipelineActions";
 import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskActions";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
@@ -34,8 +33,6 @@ export const MultiSelectionDetails = observer(function MultiSelectionDetails() {
   const { createSubgraph } = usePipelineActions();
   const { applyAutoLayoutPositions } = useTaskActions();
 
-  const [subgraphName, setSubgraphName] = useState("");
-
   const selectedTasks = multiSelection.filter((node) => node.type === "task");
   const canCreateSubgraph = selectedTasks.length >= 2;
 
@@ -47,14 +44,8 @@ export const MultiSelectionDetails = observer(function MultiSelectionDetails() {
 
   const aggregatedArgs = computeAggregatedArguments(resolvedTasks);
 
-  useEffect(() => {
-    if (canCreateSubgraph) {
-      setSubgraphName(`Subgraph (${selectedTasks.length} tasks)`);
-    }
-  }, [canCreateSubgraph, selectedTasks.length]);
-
-  const handleCreateSubgraph = () => {
-    if (!subgraphName.trim() || !canCreateSubgraph || !spec) return;
+  const handleCreateSubgraph = (name: string) => {
+    if (!canCreateSubgraph || !spec) return;
 
     const taskIds = selectedTasks.map((node) => node.id);
 
@@ -65,13 +56,12 @@ export const MultiSelectionDetails = observer(function MultiSelectionDetails() {
       selectedTasks.reduce((sum, node) => sum + node.position.y, 0) /
       selectedTasks.length;
 
-    const result = createSubgraph(spec, taskIds, subgraphName.trim(), {
+    const result = createSubgraph(spec, taskIds, name, {
       x: centerX,
       y: centerY,
     });
 
     if (result) {
-      setSubgraphName("");
       editor.clearMultiSelection();
     }
   };
@@ -154,32 +144,10 @@ export const MultiSelectionDetails = observer(function MultiSelectionDetails() {
         {canCreateSubgraph && (
           <>
             <Separator />
-            <BlockStack gap="3">
-              <BlockStack gap="1">
-                <Label className="text-gray-600">Create Subgraph</Label>
-                <Text size="xs" className="text-gray-400">
-                  Group {selectedTasks.length} tasks into a reusable component
-                </Text>
-              </BlockStack>
-
-              <BlockStack gap="2">
-                <Input
-                  value={subgraphName}
-                  onChange={(e) => setSubgraphName(e.target.value)}
-                  placeholder="Subgraph name..."
-                  className="text-sm"
-                />
-                <Button
-                  onClick={handleCreateSubgraph}
-                  disabled={!subgraphName.trim()}
-                  className="w-full gap-1.5"
-                  size="sm"
-                >
-                  <Icon name="FolderInput" size="sm" />
-                  Create Subgraph
-                </Button>
-              </BlockStack>
-            </BlockStack>
+            <CreateSubgraphForm
+              selectedTaskCount={selectedTasks.length}
+              onSubmit={handleCreateSubgraph}
+            />
           </>
         )}
       </BlockStack>

@@ -80,7 +80,7 @@ export function useFlowCanvasState({
 
   useEdgeSelectionHighlightOverlay();
 
-  const selectionBehavior = useSelectionBehavior(spec);
+  const selectionBehavior = useSelectionBehavior(spec, metaKeyPressed);
 
   return {
     displayNodes,
