@@ -42,7 +42,7 @@ export const GhostNode = memo(function GhostNode({
       <div className="rounded-xl border-2 border-dashed border-blue-400/60 bg-white/40 p-1">
         <Card
           className={cn(
-            "min-w-[120px] max-w-[180px] rounded-xl border-2 p-0 drop-shadow-sm",
+            "min-w-30 max-w-45 rounded-xl border-2 p-0 drop-shadow-sm",
             "border-gray-200",
             isInput ? "bg-blue-50" : "bg-green-50",
           )}
@@ -76,7 +76,7 @@ export const GhostNode = memo(function GhostNode({
               id={GHOST_HANDLE_ID}
               isConnectableStart={false}
               isConnectableEnd={false}
-              className="!w-3 !h-3 !bg-blue-400 !border-2 !border-white"
+              className="w-3! h-3! bg-blue-400! border-2! border-white!"
             />
           )}
 
@@ -87,7 +87,7 @@ export const GhostNode = memo(function GhostNode({
               id={GHOST_HANDLE_ID}
               isConnectableStart={false}
               isConnectableEnd={false}
-              className="!w-3 !h-3 !bg-green-400 !border-2 !border-white"
+              className="w-3! h-3! bg-green-400! border-2! border-white!"
             />
           )}
         </Card>

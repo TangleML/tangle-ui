@@ -220,8 +220,8 @@ const editorRoute = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.PIPELINE_EDITOR,
   component: Editor,
-  beforeLoad: ({ search }) => {
-    const name = (search as { name?: string }).name || "";
+  beforeLoad: ({ search }: { search: { name?: string } }) => {
+    const name = search.name || "";
     return { name };
   },
 });

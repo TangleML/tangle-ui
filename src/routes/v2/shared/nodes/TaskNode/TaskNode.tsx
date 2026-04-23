@@ -161,7 +161,7 @@ function NodeEffectWrapper({
 
 function TaskNodeNotFound({ entityId }: { entityId: string }) {
   return (
-    <Card className="min-w-[180px] max-w-[280px] rounded-xl border-2 border-red-300 p-4">
+    <Card className="min-w-45 max-w-70 rounded-xl border-2 border-red-300 p-4">
       <Text size="sm" tone="subdued">
         Task not found: {entityId}
       </Text>

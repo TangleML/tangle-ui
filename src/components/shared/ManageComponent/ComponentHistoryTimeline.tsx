@@ -104,7 +104,7 @@ export const ComponentHistoryTimeline = withSuspenseWrapper(
         <BlockStack className="relative">
           {/* Timeline line - absolute positioned */}
           <div
-            className={cn("absolute left-[5px] top-0 bottom-0 w-0.5 bg-border")}
+            className={cn("absolute left-1.25 top-0 bottom-0 w-0.5 bg-border")}
             aria-hidden="true"
           />
           <BlockStack gap="2" as="ul" className="relative">

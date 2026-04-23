@@ -25,7 +25,7 @@ const FlowSidebar = () => {
       <BlockStack fill gap="2">
         <FileActions />
         <RunsAndSubmission />
-        <GraphComponents />
+        <GraphComponents showSectionHeader />
       </BlockStack>
 
       <VerticalResizeHandle

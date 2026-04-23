@@ -146,7 +146,7 @@ export const BatchArgumentRow = observer(function BatchArgumentRow({
       )}
       onClick={handleClick}
     >
-      <InlineStack gap="1" blockAlign="center" className="w-full min-h-[24px]">
+      <InlineStack gap="1" blockAlign="center" className="w-full min-h-6">
         <InlineStack gap="1" blockAlign="baseline" className="flex-1 min-w-0">
           <Text size="xs" weight="semibold" className="shrink-0 text-gray-700">
             {aggArg.name}

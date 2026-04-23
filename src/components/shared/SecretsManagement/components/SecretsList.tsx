@@ -41,7 +41,7 @@ function SecretsListInternal({ onRemoveSuccess }: SecretsListProps) {
 
   return (
     <div
-      className="w-full min-h-[100px] max-h-[80vh] overflow-y-auto"
+      className="w-full min-h-25 max-h-[80vh] overflow-y-auto"
       data-testid="secrets-list"
     >
       <BlockStack gap="2">

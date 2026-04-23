@@ -64,7 +64,7 @@ function SelectableSecretsList({
 
   return (
     <ScrollArea
-      className="w-full min-h-[100px] max-h-[300px]"
+      className="w-full min-h-25 max-h-75"
       type="always"
       data-testid="select-secret-list"
     >
