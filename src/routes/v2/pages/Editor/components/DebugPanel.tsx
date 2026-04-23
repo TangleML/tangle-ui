@@ -131,7 +131,6 @@ export function useDebugPanelWindow() {
         persisted: true,
         defaultDockState: "left",
       });
-      windows.hideWindow(DEBUG_PANEL_WINDOW_ID);
     }
   }, [windows]);
 }

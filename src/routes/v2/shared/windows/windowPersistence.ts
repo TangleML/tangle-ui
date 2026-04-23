@@ -131,6 +131,14 @@ function loadWindowLayout(): PersistedWindowLayout | null {
 }
 
 /**
+ * Returns true when a valid persisted layout exists in localStorage.
+ * Used to distinguish first-time users (no data) from returning users.
+ */
+export function hasPersistedLayout(): boolean {
+  return loadWindowLayout() !== null;
+}
+
+/**
  * Get persisted state for a specific window ID.
  */
 export function getPersistedWindowState(

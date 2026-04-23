@@ -18,7 +18,6 @@ export function usePipelineTreeWindow() {
         persisted: true,
         defaultDockState: "left",
       });
-      windows.hideWindow(PIPELINE_TREE_WINDOW_ID);
     }
   }, [windows]);
 }
