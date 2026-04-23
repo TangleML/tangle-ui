@@ -21,7 +21,7 @@ import { useFlowCanvasState } from "@/routes/v2/shared/hooks/useFlowCanvasState"
 import { focusModeStore } from "@/routes/v2/shared/hooks/useFocusMode";
 import { useViewportScaling } from "@/routes/v2/shared/hooks/useViewportScaling";
 import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
-import { CMDALT } from "@/routes/v2/shared/shortcuts/keys";
+import { CMDALT, SHIFT } from "@/routes/v2/shared/shortcuts/keys";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 import { ConnectionLine } from "./components/ConnectionLine";
@@ -53,6 +53,7 @@ export const FlowCanvas = observer(function FlowCanvas({
   const focusModeActive = focusModeStore.active;
 
   const metaKeyPressed = keyboard.pressed.has(CMDALT);
+  const shiftKeyPressed = keyboard.pressed.has(SHIFT);
   const isConnecting = useConnection((c) => c.inProgress);
 
   const {
@@ -106,6 +107,7 @@ export const FlowCanvas = observer(function FlowCanvas({
         onViewportChange={handleViewportChange}
         connectionLineComponent={ConnectionLine}
         deleteKeyCode={DELETE_KEY_CODE}
+        className={cn(shiftKeyPressed && !isConnecting && "cursor-crosshair")}
       >
         <FloatingSelectionToolbar spec={spec} />
         <Background gap={10} className="bg-slate-50!" />

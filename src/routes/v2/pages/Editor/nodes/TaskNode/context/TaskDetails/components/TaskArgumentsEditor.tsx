@@ -100,7 +100,7 @@ export const TaskArgumentsEditor = observer(function TaskArgumentsEditor({
 
   return (
     <InlineStack
-      className="w-full min-h-[500px] h-[500px]"
+      className="w-full min-h-125 h-125"
       align="start"
       blockAlign="stretch"
     >
@@ -112,7 +112,7 @@ export const TaskArgumentsEditor = observer(function TaskArgumentsEditor({
       </BlockStack>
 
       <BlockStack
-        className="basis-[60%] min-w-0 min-h-[600px] h-[600px]"
+        className="basis-[60%] min-w-0 min-h-150 h-150"
         align="stretch"
         data-testid="argument-code-editor"
       >

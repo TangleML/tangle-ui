@@ -47,7 +47,7 @@ export const RecentExecutionsButton = withSuspenseWrapper(
               Recent Pipeline Runs ({runs.length})
             </TooltipContent>
           </Tooltip>
-          <PopoverContent className="w-[500px]">
+          <PopoverContent className="w-125">
             <PipelineRunsList
               pipelineName={pipelineName}
               overviewConfig={{

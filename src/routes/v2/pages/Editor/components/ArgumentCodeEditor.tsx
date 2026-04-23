@@ -112,7 +112,7 @@ export function ArgumentCodeEditor({
           {inputSpec.name}
         </Text>
         <Select value={language} onValueChange={setLanguage}>
-          <SelectTrigger className="h-6 text-xs px-2 py-0 min-w-[100px]">
+          <SelectTrigger className="h-6 text-xs px-2 py-0 min-w-25">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

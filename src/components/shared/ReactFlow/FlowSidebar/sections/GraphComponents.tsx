@@ -26,12 +26,19 @@ import {
 } from "../components/ComponentItem";
 import { LibraryFolderItem } from "../components/FolderItem";
 import PublishedComponentsSearch from "../components/PublishedComponentsSearch";
+import { SidebarSection } from "../components/SidebarSection";
 import { UpgradeAvailableAlertBox } from "../components/UpgradeAvailableAlertBox";
 
 const INPUT_AGGREGATOR_URL =
   "https://raw.githubusercontent.com/TangleML/tangle-ui/refs/heads/master/public/assets/components/input_aggregator.component.yaml";
 
-const GraphComponents = () => {
+interface GraphComponentsProps {
+  showSectionHeader?: boolean;
+}
+
+const GraphComponents = ({
+  showSectionHeader = false,
+}: GraphComponentsProps) => {
   const remoteComponentLibrarySearchEnabled = useFlagValue(
     "remote-component-library-search",
   );
@@ -231,8 +238,8 @@ const GraphComponents = () => {
     </>
   );
 
-  return (
-    <BlockStack gap="2" className="p-2 flex-1 overflow-hidden">
+  const content = (
+    <>
       <ImportComponent
         triggerComponent={
           <InlineStack
@@ -250,6 +257,20 @@ const GraphComponents = () => {
       <BlockStack className="overflow-y-auto flex-1 [&_li]:marker:hidden [&_li]:before:content-none [&_li]:list-none">
         {searchComponent}
       </BlockStack>
+    </>
+  );
+
+  if (showSectionHeader) {
+    return (
+      <SidebarSection title="Components" className="flex-1 overflow-hidden">
+        {content}
+      </SidebarSection>
+    );
+  }
+
+  return (
+    <BlockStack gap="2" className="p-2 flex-1 overflow-hidden">
+      {content}
     </BlockStack>
   );
 };

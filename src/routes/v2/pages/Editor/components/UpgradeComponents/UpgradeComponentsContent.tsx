@@ -86,7 +86,7 @@ export function UpgradeComponentsContent() {
           </div>
           <VerticalResizeHandle side="right" minWidth={300} />
         </div>
-        <div className="flex flex-col min-w-[280px] flex-1 h-full min-h-0">
+        <div className="flex flex-col min-w-70 flex-1 h-full min-h-0">
           <UpgradeCandidateDetail candidate={focusedCandidate} />
         </div>
       </div>

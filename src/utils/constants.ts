@@ -43,7 +43,7 @@ export const PIPELINE_RUNS_STORE_NAME = "pipeline_runs";
 export const USER_COMPONENTS_LIST_NAME = "user_components";
 
 export const TOP_NAV_HEIGHT = 56; // px
-export const BOTTOM_FOOTER_HEIGHT = 30; // px
+export const BOTTOM_FOOTER_HEIGHT = 0; // px
 
 export const DEFAULT_NODE_DIMENSIONS = { w: 300, h: undefined };
 

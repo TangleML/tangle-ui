@@ -41,7 +41,7 @@ export function UpgradePreviewTaskNode({
   return (
     <Card
       className={cn(
-        "min-w-[300px] w-[325px] max-w-[350px] rounded-2xl border-2 p-0 drop-shadow-none cursor-pointer gap-2",
+        "min-w-75 w-81.25 max-w-87.5 rounded-2xl border-2 p-0 drop-shadow-none cursor-pointer gap-2",
         hasIssues ? "border-amber-400" : "border-blue-300",
       )}
       onClick={onNodeClick}

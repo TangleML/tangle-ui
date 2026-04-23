@@ -241,7 +241,7 @@ const CopyFromRunPopover = ({
       setPopoverOpen(false);
       setCustomRunId("");
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       console.error("Failed to fetch run arguments:", error);
     },
   });
