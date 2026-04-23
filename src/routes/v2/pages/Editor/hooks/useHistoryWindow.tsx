@@ -18,7 +18,6 @@ export function useHistoryWindow() {
         persisted: true,
         defaultDockState: "left",
       });
-      windows.hideWindow(HISTORY_WINDOW_ID);
     }
   }, [windows]);
 }
