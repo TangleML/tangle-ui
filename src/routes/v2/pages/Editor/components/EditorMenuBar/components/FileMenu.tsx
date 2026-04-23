@@ -35,7 +35,7 @@ export function FileMenu() {
     setRenameDialogOpen,
     deleteDialogOpen,
     setDeleteDialogOpen,
-    handleRename,
+    renamePipeline,
     getRenameInitialName,
     setImportOpen,
     handleSave,
@@ -134,7 +134,7 @@ export function FileMenu() {
         onOpenChange={setRenameDialogOpen}
         title="Rename Pipeline"
         initialName={getRenameInitialName()}
-        onSubmit={handleRename}
+        onSubmit={renamePipeline}
         submitButtonText="Rename"
         isSubmitDisabled={(name) => name === getRenameInitialName()}
       />
