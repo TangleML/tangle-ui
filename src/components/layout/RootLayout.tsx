@@ -2,6 +2,7 @@ import { Outlet } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/router-devtools";
 import { ToastContainer } from "react-toastify";
 
+import { useClickTracking } from "@/hooks/useClickTracking";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { usePageViewTracking } from "@/hooks/usePageViewTracking";
 import { AnalyticsProvider } from "@/providers/AnalyticsProvider";
@@ -13,6 +14,7 @@ import AppMenu from "./AppMenu";
 
 function RootLayoutContent() {
   usePageViewTracking();
+  useClickTracking();
 
   return (
     <BackendProvider>

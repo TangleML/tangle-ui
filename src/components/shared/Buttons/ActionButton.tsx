@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { type ComponentPropsWithoutRef, type ReactNode } from "react";
 
 import { Icon, type IconName } from "@/components/ui/icon";
 import { Paragraph } from "@/components/ui/typography";
@@ -13,13 +13,19 @@ type AlwaysTooltipOrLabel =
   | { tooltip: string; label?: string }
   | { tooltip?: string; label: string };
 
-type ActionButtonProps = {
+type ActionButtonOwnProps = {
   destructive?: boolean;
   disabled?: boolean;
   onClick: () => void;
   className?: string;
 } & IconOrChildren &
   AlwaysTooltipOrLabel;
+
+type ActionButtonProps = ActionButtonOwnProps &
+  Omit<
+    ComponentPropsWithoutRef<typeof TooltipButton>,
+    keyof ActionButtonOwnProps | "variant" | "size"
+  >;
 
 export const ActionButton = ({
   tooltip,
@@ -30,6 +36,7 @@ export const ActionButton = ({
   className,
   icon,
   children,
+  ...rest
 }: ActionButtonProps) => {
   return (
     <TooltipButton
@@ -40,6 +47,7 @@ export const ActionButton = ({
       disabled={disabled}
       className={className}
       size="sm"
+      {...rest}
     >
       {children === undefined && icon ? <Icon name={icon} /> : children}
       {label && <Paragraph>{label}</Paragraph>}
