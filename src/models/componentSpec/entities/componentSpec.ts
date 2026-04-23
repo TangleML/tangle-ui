@@ -311,6 +311,11 @@ export class ComponentSpec extends Model({
   }
 
   @computed
+  get hasValidationIssues(): boolean {
+    return this.allValidationIssues.length > 0;
+  }
+
+  @computed
   get issuesByEntityId(): Map<string, ValidationIssue[]> {
     const map = new Map<string, ValidationIssue[]>();
     for (const issue of this.validationIssues) {
