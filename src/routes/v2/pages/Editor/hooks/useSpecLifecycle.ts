@@ -1,4 +1,4 @@
-import { autorun } from "mobx";
+import { autorun, reaction } from "mobx";
 import type { UndoStore as MobxUndoStore } from "mobx-keystone";
 import { isRootStore, unregisterRootStore } from "mobx-keystone";
 import { useEffect, useRef } from "react";
@@ -68,8 +68,21 @@ export function useSpecLifecycle(
       prevTaskEntityIdsRef.current = currentTaskIds;
     });
 
+    const disposeNavGuard = reaction(
+      () => ({
+        active: navigation.activeSpec,
+        depth: navigation.navigationPath.length,
+      }),
+      ({ active, depth }) => {
+        if (!active && depth > 1) {
+          navigation.correctInvalidNavigation();
+        }
+      },
+    );
+
     return () => {
       disposeTaskWatcher();
+      disposeNavGuard();
       autoSave.dispose();
       pipelineFileStore.dispose();
       editor.clearSelection();
