@@ -14,7 +14,7 @@ import { Icon } from "./icon";
 import { Input } from "./input";
 import { BlockStack, InlineStack } from "./layout";
 import { Popover, PopoverContent, PopoverTrigger } from "./popover";
-import { Heading } from "./typography";
+import { Heading, Text } from "./typography";
 
 const PRESET_COLORS = [
   "#FFF9C4",
@@ -37,6 +37,7 @@ interface ColorPickerProps {
   debounceMs?: number;
   setColor: (color: string) => void;
   onClose?: () => void;
+  renderTrigger?: (color: string) => React.ReactNode;
 }
 
 export const ColorPicker = ({
@@ -45,6 +46,7 @@ export const ColorPicker = ({
   debounceMs = 300,
   setColor,
   onClose,
+  renderTrigger,
 }: ColorPickerProps) => {
   const [open, setOpen] = useState(false);
   const [localColor, setLocalColor] = useState(color);
@@ -72,12 +74,16 @@ export const ColorPicker = ({
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger>
-        <div
-          className="aspect-square h-4 rounded-full border border-muted-foreground cursor-pointer"
-          data-testid={`color-picker-trigger-${title?.toLowerCase().replace(/\s+/g, "-") ?? "default"}`}
-          style={{ backgroundColor: color }}
-        />
+      <PopoverTrigger asChild={!!renderTrigger}>
+        {renderTrigger ? (
+          renderTrigger(color)
+        ) : (
+          <div
+            className="aspect-square h-4 rounded-full border border-muted-foreground cursor-pointer"
+            data-testid={`color-picker-trigger-${title?.toLowerCase().replace(/\s+/g, "-") ?? "default"}`}
+            style={{ backgroundColor: color }}
+          />
+        )}
       </PopoverTrigger>
       <PopoverContent className="w-fit" data-testid="color-picker-popover">
         <BlockStack gap="4" align="center">
@@ -105,10 +111,22 @@ export const ColorPicker = ({
             ))}
           </InlineStack>
           <div className="relative w-full">
-            <Input
-              value={localColor}
-              onChange={(e) => setLocalColor(e.target.value)}
-            />
+            <div className="flex items-center rounded-md border border-input bg-background">
+              <Text
+                size="sm"
+                className="pl-3 pr-1 text-muted-foreground select-none"
+              >
+                #
+              </Text>
+              <Input
+                value={localColor.replace(/^#/, "")}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/^#/, "");
+                  setLocalColor(`#${raw}`);
+                }}
+                className="border-0 shadow-none focus-visible:ring-0 pl-0"
+              />
+            </div>
             <Collapsible>
               <InlineStack blockAlign="center" gap="1">
                 <CollapsibleTrigger asChild>

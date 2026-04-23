@@ -3,7 +3,10 @@ import { Handle, Position } from "@xyflow/react";
 import { Card } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
-import { getContrastTextColor } from "@/routes/v2/shared/nodes/TaskNode/color.utils";
+import {
+  deriveColorPalette,
+  getContrastTextColor,
+} from "@/routes/v2/shared/nodes/TaskNode/color.utils";
 
 import type { TaskNodeViewProps } from "./TaskNode";
 import { createTaskNodeCardVariants } from "./taskNode.variants";
@@ -24,6 +27,7 @@ export function TaskNodeCollapsed({
   taskColor,
   onNodeClick,
 }: TaskNodeViewProps) {
+  const palette = taskColor ? deriveColorPalette(taskColor) : undefined;
   const headerTextColor = taskColor
     ? getContrastTextColor(taskColor)
     : undefined;
@@ -40,7 +44,11 @@ export function TaskNodeCollapsed({
         maxWidth: `calc(${s} * 280px)`,
         minHeight: `calc(${s} * 100px)`,
         ...(taskColor
-          ? { backgroundColor: taskColor, color: headerTextColor }
+          ? {
+              backgroundColor: taskColor,
+              color: headerTextColor,
+              borderColor: palette?.border,
+            }
           : {}),
       }}
       onClick={onNodeClick}
