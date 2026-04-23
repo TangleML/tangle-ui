@@ -6,7 +6,7 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { DEFAULT_MONACO_OPTIONS } from "../constants";
+import { DEFAULT_MONACO_OPTIONS, handleEditorMount } from "../constants";
 import { usePythonYamlGenerator } from "../generators/python";
 import type { YamlGeneratorOptions } from "../types";
 import { preserveComponentName } from "../utils/preserveComponentName";
@@ -122,6 +122,7 @@ export const PythonComponentEditor = withSuspenseWrapper(
                     value={pythonCode}
                     onChange={handleFunctionTextChange}
                     options={DEFAULT_MONACO_OPTIONS}
+                    onMount={handleEditorMount}
                   />
                 </div>
               </BlockStack>

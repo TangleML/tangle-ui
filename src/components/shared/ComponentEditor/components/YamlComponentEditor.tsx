@@ -4,7 +4,7 @@ import { useState } from "react";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 
-import { DEFAULT_MONACO_OPTIONS } from "../constants";
+import { DEFAULT_MONACO_OPTIONS, handleEditorMount } from "../constants";
 import { useComponentSpecValidator } from "../useComponentSpecValidator";
 import { ComponentSpecErrorsList } from "./ComponentSpecErrorsList";
 import { PreviewTaskNodeCard } from "./PreviewTaskNodeCard";
@@ -50,6 +50,7 @@ export const YamlComponentEditor = withSuspenseWrapper(
                 value={componentText}
                 onChange={handleComponentTextChange}
                 options={DEFAULT_MONACO_OPTIONS}
+                onMount={handleEditorMount}
               />
             </div>
           </BlockStack>
