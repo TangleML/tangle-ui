@@ -8,6 +8,7 @@ import {
   launcherTaskAnnotationSchema,
   parseSchemaToAnnotationConfig,
 } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/AnnotationsEditor/utils";
+import { ColorPicker } from "@/components/ui/color";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
@@ -27,8 +28,12 @@ interface ConfigurationSectionProps {
 export const ConfigurationSection = observer(function ConfigurationSection({
   task,
 }: ConfigurationSectionProps) {
-  const { toggleCacheDisable, saveAnnotation, clearProviderAnnotations } =
-    useTaskConfigActions();
+  const {
+    toggleCacheDisable,
+    saveAnnotation,
+    setTaskColor,
+    clearProviderAnnotations,
+  } = useTaskConfigActions();
   const componentSpec = task.componentRef.spec as ComponentSpecJson | undefined;
   const isSubgraph = componentSpec?.implementation
     ? isGraphImplementation(componentSpec.implementation)
@@ -114,12 +119,30 @@ export const ConfigurationSection = observer(function ConfigurationSection({
     saveAnnotation(task, key, value);
   };
 
+  const taskColor = task.annotations.get("tangleml.com/editor/task-color");
+
+  const handleColorChange = (color: string) => {
+    setTaskColor(task, color);
+  };
+
   return (
     <BlockStack gap="3">
       <Heading level={1}>Configuration</Heading>
 
+      <InlineStack align="space-between" gap="2" className="w-full">
+        <Paragraph size="sm" tone="subdued">
+          Task color
+        </Paragraph>
+        <ColorPicker
+          title="Task color"
+          color={taskColor ?? "transparent"}
+          setColor={handleColorChange}
+        />
+      </InlineStack>
+
       {!isSubgraph && (
         <>
+          <Separator />
           <InlineStack align="space-between" gap="2" className="w-full">
             <Paragraph size="sm" tone="subdued">
               Disable cache
@@ -129,9 +152,10 @@ export const ConfigurationSection = observer(function ConfigurationSection({
               onCheckedChange={handleDisableCacheChange}
             />
           </InlineStack>
-          <Separator />
         </>
       )}
+
+      <Separator />
 
       <ComputeResourcesEditor
         cloudProviderConfig={cloudProviderConfig}

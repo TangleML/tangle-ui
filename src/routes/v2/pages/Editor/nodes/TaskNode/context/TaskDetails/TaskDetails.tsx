@@ -7,7 +7,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ColorPicker } from "@/components/ui/color";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
@@ -24,7 +23,6 @@ import { ConfigurationSection } from "./components/ConfigurationSection";
 import { OutputsSection } from "./components/OutputsSection";
 import { TaskActionsBar } from "./components/TaskActionsBar";
 import { TaskArgumentsEditor } from "./components/TaskArgumentsEditor";
-import { useTaskConfigActions } from "./components/useTaskConfigActions";
 import { useTask } from "./hooks/useTask";
 
 const EDITOR_ANNOTATION_KEYS = [
@@ -42,7 +40,6 @@ export const TaskDetails = observer(function TaskDetails({
 }: TaskDetailsProps) {
   const { editor } = useSharedStores();
   const { undo } = useEditorSession();
-  const { setTaskColor } = useTaskConfigActions();
   const spec = useSpec();
   const task = useTask(entityId);
   const { focusedArgumentName } = editor;
@@ -65,11 +62,6 @@ export const TaskDetails = observer(function TaskDetails({
   const pythonCode = componentSpec?.metadata?.annotations?.python_original_code;
 
   const isSubgraphTask = isSubgraph(task.componentRef.spec);
-  const taskColor = task.annotations.get("tangleml.com/editor/task-color");
-
-  const handleColorChange = (color: string) => {
-    setTaskColor(task, color);
-  };
 
   const handleZIndexChange = (newZIndex: number) => {
     undo.withGroup("Update task z-index", () => {
@@ -93,8 +85,10 @@ export const TaskDetails = observer(function TaskDetails({
             wrap="nowrap"
             className="min-w-0"
           >
-            {isSubgraphTask && <Icon name="Workflow" size="sm" />}
-            <Text size="sm" weight="semibold" className="wrap-anywhere">
+            {isSubgraphTask && (
+              <Icon name="Workflow" size="sm" className="shrink-0" />
+            )}
+            <Text size="md" weight="semibold" className="wrap-anywhere">
               {task.name}
             </Text>
           </InlineStack>
@@ -169,23 +163,6 @@ export const TaskDetails = observer(function TaskDetails({
           </CollapsibleTrigger>
           <CollapsibleContent className="px-4 py-3">
             <BlockStack gap="4">
-              <InlineStack
-                align="space-between"
-                blockAlign="center"
-                className="w-full"
-              >
-                <Text size="sm" className="text-gray-600">
-                  Task color
-                </Text>
-                <ColorPicker
-                  title="Task color"
-                  color={taskColor}
-                  setColor={handleColorChange}
-                />
-              </InlineStack>
-
-              <Separator />
-
               <ConfigurationSection task={task} />
 
               <Separator />
