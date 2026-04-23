@@ -13,7 +13,6 @@ import { AnnotationsBlock } from "@/routes/v2/pages/Editor/components/Annotation
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
-import { isSubgraph } from "@/utils/subgraphUtils";
 
 import { getTaskYamlText } from "./components/actions/getTaskYamlText";
 import { ComponentRefBar } from "./components/ComponentRefBar";
@@ -58,12 +57,12 @@ export const TaskDetails = observer(function TaskDetails({
     return null;
   }
 
-  const componentSpec = task.componentRef.spec;
+  const componentSpec = task.resolvedComponentSpec;
   const yamlText = getTaskYamlText(task);
   const pythonCode = componentSpec?.metadata?.annotations?.python_original_code;
   const author = componentSpec?.metadata?.annotations?.author;
 
-  const isSubgraphTask = isSubgraph(task.componentRef.spec);
+  const isSubgraphTask = task.subgraphSpec !== undefined;
   const taskColor = task.annotations.get("tangleml.com/editor/task-color");
 
   const handleColorChange = (color: string) => {
@@ -104,7 +103,11 @@ export const TaskDetails = observer(function TaskDetails({
         </InlineStack>
 
         <ComponentRefBar
-          componentRef={task.componentRef}
+          componentRef={
+            task.subgraphSpec
+              ? { ...task.componentRef, spec: componentSpec }
+              : task.componentRef
+          }
           yamlText={yamlText}
           taskName={task.name}
           pythonCode={pythonCode}

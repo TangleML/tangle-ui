@@ -1,10 +1,9 @@
-import { autorun, reaction } from "mobx";
+import { autorun } from "mobx";
 import type { UndoStore as MobxUndoStore } from "mobx-keystone";
 import { isRootStore, unregisterRootStore } from "mobx-keystone";
 import { useEffect, useRef } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
-import { serializeComponentSpecToText } from "@/models/componentSpec";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
@@ -57,25 +56,6 @@ export function useSpecLifecycle(
 
     prevTaskEntityIdsRef.current = new Set(rootSpec.tasks.map((t) => t.$id));
 
-    // When the active spec is a nested subgraph, sync its changes back to
-    // the root spec whenever it changes. This mutates the root's task
-    // componentRef.spec, which the existing autoSave reaction picks up.
-    const disposeNestedSync = reaction(
-      () => {
-        const active = navigation.activeSpec;
-        if (!active || active === rootSpec) return null;
-        try {
-          return serializeComponentSpecToText(active);
-        } catch {
-          return null;
-        }
-      },
-      () => {
-        navigation.syncNestedSpecs();
-      },
-      { fireImmediately: false },
-    );
-
     const disposeTaskWatcher = autorun(() => {
       const currentTaskIds = new Set(rootSpec.tasks.map((t) => t.$id));
 
@@ -89,7 +69,6 @@ export function useSpecLifecycle(
     });
 
     return () => {
-      disposeNestedSync();
       disposeTaskWatcher();
       autoSave.dispose();
       pipelineFileStore.dispose();

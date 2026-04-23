@@ -1,6 +1,7 @@
 import { Annotations } from "@/models/componentSpec/annotations";
 import { Input } from "@/models/componentSpec/entities/input";
 import { addInput } from "@/routes/v2/pages/Editor/store/actions";
+import { deleteInput } from "@/routes/v2/pages/Editor/store/actions/io.actions";
 import { generateUniqueInputName } from "@/routes/v2/pages/Editor/store/nameUtils";
 import {
   inputManifestBase,
@@ -26,8 +27,8 @@ export const inputManifest: NodeTypeManifest = {
     spec.updateNodePosition(nodeId, position);
   },
 
-  deleteNode(_undo, spec, nodeId) {
-    spec.deleteInputById(nodeId);
+  deleteNode(undo, spec, nodeId, parentContext) {
+    deleteInput(undo, spec, nodeId, parentContext);
   },
 
   contextPanelComponent: InputDetails,

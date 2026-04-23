@@ -1,9 +1,4 @@
-import type {
-  ComponentSpec,
-  ComponentSpecJson,
-  Task,
-  TypeSpecType,
-} from "@/models/componentSpec";
+import type { ComponentSpec, Task, TypeSpecType } from "@/models/componentSpec";
 import type { NodeTypeRegistry } from "@/routes/v2/shared/nodes/registry";
 import type { SelectedNode } from "@/routes/v2/shared/store/editorStore";
 
@@ -47,9 +42,7 @@ export function computeAggregatedArguments(
   >();
 
   for (const task of tasks) {
-    const componentSpec = task.componentRef.spec as
-      | ComponentSpecJson
-      | undefined;
+    const componentSpec = task.resolvedComponentSpec;
     const inputs = componentSpec?.inputs ?? [];
 
     for (const inputSpec of inputs) {

@@ -6,7 +6,6 @@ import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import type { ComponentSpec } from "@/models/componentSpec";
-import { isSubgraphTask } from "@/routes/v2/pages/Editor/components/PipelineTreeContent/utils";
 import { countErrors } from "@/routes/v2/pages/Editor/components/ValidationSummary";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
@@ -125,26 +124,11 @@ export const RootNode = observer(function RootNode({
         <BlockStack gap="0" className="ml-4 border-l border-slate-200">
           <div className="-ml-1.5">
             {tasks.map((task) => {
-              const isTaskASubgraph = isSubgraphTask(task);
-
-              if (isTaskASubgraph) {
-                const nestedSpec = navigation.nestedSpecs.get(task.name);
-
-                if (!nestedSpec) {
-                  return (
-                    <TaskLeafNode
-                      key={task.$id}
-                      task={task}
-                      parentSpec={spec}
-                      parentNavigationPath={navigationPath}
-                    />
-                  );
-                }
-
+              if (task.subgraphSpec) {
                 return (
                   <SubgraphNode
                     key={task.$id}
-                    spec={nestedSpec}
+                    spec={task.subgraphSpec}
                     task={task}
                     navigationPath={[...navigationPath, task.name]}
                     currentNavPath={currentNavPath}

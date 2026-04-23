@@ -1,8 +1,4 @@
 import type { ComponentSpec } from "../entities/componentSpec";
-import type { ComponentSpecJson } from "../entities/types";
-import { isGraphImplementation } from "../entities/types";
-import { IncrementingIdGenerator } from "../factories/idGenerator";
-import { YamlDeserializer } from "../serialization/yamlDeserializer";
 import type { ComponentValidationIssue, ValidationIssue } from "./types";
 import { validateSpec } from "./validateSpec";
 
@@ -44,16 +40,8 @@ function collectRecursive(
   );
 
   const nestedIssues = spec.tasks.flatMap((task) => {
-    const nestedSpecJson = task.componentRef.spec as
-      | ComponentSpecJson
-      | undefined;
-    if (!nestedSpecJson?.implementation) return [];
-    if (!isGraphImplementation(nestedSpecJson.implementation)) return [];
-
-    const nestedSpec = deserializeNested(nestedSpecJson);
-    if (!nestedSpec) return [];
-
-    return collectRecursive(nestedSpec, {
+    if (!task.subgraphSpec) return [];
+    return collectRecursive(task.subgraphSpec, {
       subgraphPath: [...subgraphPath, task.name],
       skipInputConnectionValidation: true,
       visitedSpecIds: context.visitedSpecIds,
@@ -61,20 +49,6 @@ function collectRecursive(
   });
 
   return [...currentIssues, ...nestedIssues];
-}
-
-function deserializeNested(
-  specJson: ComponentSpecJson,
-): ComponentSpec | undefined {
-  try {
-    const idGen = new IncrementingIdGenerator();
-    const deserializer = new YamlDeserializer(idGen);
-    return deserializer.deserialize(
-      JSON.parse(JSON.stringify(specJson)) as ComponentSpecJson,
-    );
-  } catch {
-    return undefined;
-  }
 }
 
 function toComponentIssue(
