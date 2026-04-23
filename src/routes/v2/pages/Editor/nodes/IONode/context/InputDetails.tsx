@@ -7,9 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Text } from "@/components/ui/typography";
 import { AutoGrowTextarea } from "@/routes/v2/pages/Editor/components/AutoGrowTextArea";
 import { InputLabel } from "@/routes/v2/pages/Editor/components/InputLabel/InputLabel";
-import { ZIndexEditor } from "@/routes/v2/pages/Editor/nodes/FlexNode/context/components/ZIndexEditor";
 import { useIOActions } from "@/routes/v2/pages/Editor/store/actions/useIOActions";
-import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 
 interface InputDetailsProps {
@@ -19,7 +17,6 @@ interface InputDetailsProps {
 export const InputDetails = observer(function InputDetails({
   entityId,
 }: InputDetailsProps) {
-  const { undo } = useEditorSession();
   const ioActions = useIOActions();
   const spec = useSpec();
   const input = spec?.inputs.find((i) => i.$id === entityId);
@@ -54,12 +51,6 @@ export const InputDetails = observer(function InputDetails({
     if (newDefault !== input.defaultValue) {
       ioActions.setInputDefaultValue(spec, entityId, newDefault);
     }
-  };
-
-  const handleZIndexChange = (newZIndex: number) => {
-    undo.withGroup("Update input z-index", () => {
-      input.annotations.set("zIndex", newZIndex);
-    });
   };
 
   return (
@@ -142,8 +133,6 @@ export const InputDetails = observer(function InputDetails({
             {input.optional ? "Yes" : "No"}
           </Text>
         </InlineStack>
-
-        <ZIndexEditor nodeId={entityId} onChange={handleZIndexChange} />
       </BlockStack>
     </BlockStack>
   );

@@ -1,7 +1,6 @@
 import { observer } from "mobx-react-lite";
 import { useEffect, useState } from "react";
 
-import { StackingControls } from "@/components/shared/ReactFlow/FlowControls/StackingControls";
 import {
   Collapsible,
   CollapsibleContent,
@@ -13,7 +12,6 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Heading, Text } from "@/components/ui/typography";
 import { AnnotationsBlock } from "@/routes/v2/pages/Editor/components/AnnotationsBlock/AnnotationsBlock";
-import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { deriveColorPalette } from "@/routes/v2/shared/nodes/TaskNode/color.utils";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
@@ -23,7 +21,6 @@ import { getTaskYamlText } from "./components/actions/getTaskYamlText";
 import { ComponentRefBar } from "./components/ComponentRefBar";
 import { ConfigurationSection } from "./components/ConfigurationSection";
 import { OutputsSection } from "./components/OutputsSection";
-import { TaskActionsBar } from "./components/TaskActionsBar";
 import { TaskArgumentsEditor } from "./components/TaskArgumentsEditor";
 import { useTaskConfigActions } from "./components/useTaskConfigActions";
 import { useTask } from "./hooks/useTask";
@@ -38,7 +35,6 @@ export const TaskDetails = observer(function TaskDetails({
   entityId,
 }: TaskDetailsProps) {
   const { editor } = useSharedStores();
-  const { undo } = useEditorSession();
   const { setTaskColor } = useTaskConfigActions();
   const spec = useSpec();
   const task = useTask(entityId);
@@ -66,12 +62,6 @@ export const TaskDetails = observer(function TaskDetails({
 
   const handleColorChange = (color: string) => {
     setTaskColor(task, color);
-  };
-
-  const handleZIndexChange = (newZIndex: number) => {
-    undo.withGroup("Update task z-index", () => {
-      task.annotations.set("zIndex", newZIndex);
-    });
   };
 
   return (
@@ -123,10 +113,6 @@ export const TaskDetails = observer(function TaskDetails({
             <Text size="md" weight="semibold" className="wrap-anywhere">
               {task.name}
             </Text>
-          </InlineStack>
-          <InlineStack gap="1" blockAlign="center" className="shrink-0">
-            <TaskActionsBar entityId={entityId} />
-            <StackingControls nodeId={entityId} onChange={handleZIndexChange} />
           </InlineStack>
         </InlineStack>
 
