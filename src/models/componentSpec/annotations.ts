@@ -36,6 +36,7 @@ interface AnnotationTypeMap {
   "tangleml.com/editor/task-color": string;
   "tangleml.com/editor/edge-conduits": EdgeConduit[];
   "flex-nodes": FlexNodeData[];
+  notes: string;
 }
 
 type KnownAnnotationKey = keyof AnnotationTypeMap;
@@ -103,6 +104,11 @@ const codecs = {
   },
   "tangleml.com/editor/edge-conduits": jsonArrayCodec(edgeConduitSchema),
   "flex-nodes": jsonArrayCodec(flexNodeDataSchema),
+  notes: {
+    serialize: (value: string) => value,
+    deserialize: (raw: unknown) => (typeof raw === "string" ? raw : ""),
+    defaultValue: "",
+  },
 } satisfies {
   [K in KnownAnnotationKey]: AnnotationCodec<AnnotationTypeMap[K]>;
 };

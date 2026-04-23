@@ -4,6 +4,7 @@ import {
   createSubgraph,
   renamePipeline,
   updatePipelineDescription,
+  updatePipelineNotes,
 } from "./pipeline.actions";
 
 export function usePipelineActions() {
@@ -12,6 +13,7 @@ export function usePipelineActions() {
   return {
     renamePipeline: renamePipeline.bind(null, undo),
     updatePipelineDescription: updatePipelineDescription.bind(null, undo),
+    updatePipelineNotes: updatePipelineNotes.bind(null, undo),
     createSubgraph: createSubgraph.bind(null, undo),
   };
 }
