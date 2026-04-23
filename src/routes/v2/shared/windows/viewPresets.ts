@@ -16,13 +16,15 @@ const DEFAULT_DOCK_POSITIONS: Record<string, "left" | "right"> = {
   "context-panel": "right",
 };
 
+export const DEFAULT_VIEW_PRESET: ViewPreset = {
+  label: "Default",
+  description: "Components, Recent Runs, Pipeline Details",
+  visible: new Set(["component-library", "recent-runs", "pipeline-details"]),
+  dockPositions: DEFAULT_DOCK_POSITIONS,
+};
+
 export const VIEW_PRESETS: ViewPreset[] = [
-  {
-    label: "Default",
-    description: "Components, Recent Runs, Pipeline Details",
-    visible: new Set(["component-library", "recent-runs", "pipeline-details"]),
-    dockPositions: DEFAULT_DOCK_POSITIONS,
-  },
+  DEFAULT_VIEW_PRESET,
   {
     label: "All",
     description: "All windows visible",
