@@ -15,6 +15,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 
+import { deriveColorPalette } from "./color.utils";
 import type { TaskNodeInput, TaskNodeViewProps } from "./TaskNode";
 
 const cardVariants = cva(
@@ -183,7 +184,10 @@ export const TaskNodeCard = observer(function TaskNodeCard({
   cacheDisabled,
   digest,
 }: TaskNodeViewProps) {
-  const cardStyle = taskColor ? { backgroundColor: taskColor } : undefined;
+  const palette = taskColor ? deriveColorPalette(taskColor) : undefined;
+  const cardStyle = palette
+    ? { backgroundColor: palette.background, borderColor: palette.border }
+    : undefined;
 
   return (
     <Card
@@ -196,7 +200,9 @@ export const TaskNodeCard = observer(function TaskNodeCard({
     >
       <CardHeader
         className="px-4 pt-3 pb-0"
-        style={taskColor ? { borderBottomColor: `${taskColor}30` } : undefined}
+        style={
+          palette ? { borderBottomColor: `${palette.border}30` } : undefined
+        }
       >
         <BlockStack>
           <InlineStack
@@ -245,12 +251,16 @@ export const TaskNodeCard = observer(function TaskNodeCard({
                   "wrap-anywhere max-w-full text-left text-xs",
                   !taskColor && "text-slate-900",
                 )}
+                style={palette ? { color: palette.text } : undefined}
               >
                 {taskName}
               </CardTitle>
             </InlineStack>
             {digest && (
-              <span className="text-xs font-light font-mono text-gray-600 shrink-0">
+              <span
+                className="text-xs font-light font-mono shrink-0"
+                style={{ color: palette?.text ?? "#4b5563" }}
+              >
                 {trimDigest(digest)}
               </span>
             )}
@@ -260,51 +270,61 @@ export const TaskNodeCard = observer(function TaskNodeCard({
 
       <CardContent className="p-2 flex flex-col gap-2">
         {inputs.length > 0 && (
-          <BlockStack gap="3" className="p-2 bg-gray-200/50 rounded-lg">
-            {inputs.map((input) => (
-              <ClassicInputHandle
-                key={input.name}
-                input={input}
-                entityId={entityId}
-                displayValue={inputDisplayValues[input.name]}
-                onInputClick={onInputClick}
-                onHandleClick={onHandleClick}
-              />
-            ))}
-          </BlockStack>
+          <div
+            className={cn("p-2 rounded-lg", !palette && "bg-gray-200/50")}
+            style={palette ? { backgroundColor: palette.sectionBg } : undefined}
+          >
+            <BlockStack gap="3">
+              {inputs.map((input) => (
+                <ClassicInputHandle
+                  key={input.name}
+                  input={input}
+                  entityId={entityId}
+                  displayValue={inputDisplayValues[input.name]}
+                  onInputClick={onInputClick}
+                  onHandleClick={onHandleClick}
+                />
+              ))}
+            </BlockStack>
+          </div>
         )}
 
         {outputs.length > 0 && (
-          <BlockStack gap="3" className="p-2 bg-gray-200/50 rounded-lg">
-            {outputs.map((output) => (
-              <div
-                key={output.name}
-                className="flex items-center justify-end w-full cursor-pointer"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onOutputClick(output.name, e);
-                }}
-              >
-                <div className="flex flex-row-reverse w-full gap-0.5 items-center justify-between">
-                  <div className="translate-x-3 min-w-0 inline-block max-w-full">
-                    <div
-                      className="text-xs text-gray-800 rounded-md px-2 py-1 truncate bg-black/5 hover:bg-black/10"
-                      title={`${output.name}${output.type ? `: ${output.type}` : ""}`}
-                    >
-                      {output.name.replace(/_/g, " ")}
+          <div
+            className={cn("p-2 rounded-lg", !palette && "bg-gray-200/50")}
+            style={palette ? { backgroundColor: palette.sectionBg } : undefined}
+          >
+            <BlockStack gap="3">
+              {outputs.map((output) => (
+                <div
+                  key={output.name}
+                  className="flex items-center justify-end w-full cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOutputClick(output.name, e);
+                  }}
+                >
+                  <div className="flex flex-row-reverse w-full gap-0.5 items-center justify-between">
+                    <div className="translate-x-3 min-w-0 inline-block max-w-full">
+                      <div
+                        className="text-xs text-gray-800 rounded-md px-2 py-1 truncate bg-black/5 hover:bg-black/10"
+                        title={`${output.name}${output.type ? `: ${output.type}` : ""}`}
+                      >
+                        {output.name.replace(/_/g, " ")}
+                      </div>
                     </div>
                   </div>
+                  <Handle
+                    type="source"
+                    position={Position.Right}
+                    id={`output_${output.name}`}
+                    className="relative! border-0! w-3! h-3! transform-none! translate-x-6 bg-gray-500!"
+                    onClick={(e) => onHandleClick(`output_${output.name}`, e)}
+                  />
                 </div>
-                <Handle
-                  type="source"
-                  position={Position.Right}
-                  id={`output_${output.name}`}
-                  className="relative! border-0! w-3! h-3! transform-none! translate-x-6 bg-gray-500!"
-                  onClick={(e) => onHandleClick(`output_${output.name}`, e)}
-                />
-              </div>
-            ))}
-          </BlockStack>
+              ))}
+            </BlockStack>
+          </div>
         )}
       </CardContent>
     </Card>

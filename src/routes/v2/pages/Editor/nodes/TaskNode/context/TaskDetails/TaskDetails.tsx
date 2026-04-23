@@ -14,6 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { Heading, Text } from "@/components/ui/typography";
 import { AnnotationsBlock } from "@/routes/v2/pages/Editor/components/AnnotationsBlock/AnnotationsBlock";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
+import { deriveColorPalette } from "@/routes/v2/shared/nodes/TaskNode/color.utils";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { isSubgraph } from "@/utils/subgraphUtils";
@@ -26,6 +27,8 @@ import { TaskActionsBar } from "./components/TaskActionsBar";
 import { TaskArgumentsEditor } from "./components/TaskArgumentsEditor";
 import { useTaskConfigActions } from "./components/useTaskConfigActions";
 import { useTask } from "./hooks/useTask";
+
+const DEFAULT_BORDER_COLOR = "#9ca3af";
 
 interface TaskDetailsProps {
   entityId: string;
@@ -87,8 +90,37 @@ export const TaskDetails = observer(function TaskDetails({
             wrap="nowrap"
             className="min-w-0"
           >
-            {isSubgraphTask && <Icon name="Workflow" size="sm" />}
-            <Text size="sm" weight="semibold" className="wrap-anywhere">
+            <ColorPicker
+              title="Task color"
+              color={taskColor}
+              setColor={handleColorChange}
+              renderTrigger={(currentColor) => {
+                const palette = deriveColorPalette(currentColor);
+                return (
+                  <button
+                    type="button"
+                    className="flex items-center justify-center h-7 w-7 rounded-full border-2 cursor-pointer shrink-0"
+                    style={{
+                      backgroundColor: palette?.background ?? "white",
+                      borderColor: palette?.border ?? DEFAULT_BORDER_COLOR,
+                    }}
+                  >
+                    <Icon
+                      name="Pipette"
+                      size="xs"
+                      style={{
+                        color: palette?.text ?? DEFAULT_BORDER_COLOR,
+                      }}
+                    />
+                  </button>
+                );
+              }}
+            />
+            <div className="w-px h-7 bg-gray-300 shrink-0" />
+            {isSubgraphTask && (
+              <Icon name="Workflow" size="sm" className="shrink-0" />
+            )}
+            <Text size="md" weight="semibold" className="wrap-anywhere">
               {task.name}
             </Text>
           </InlineStack>
@@ -163,23 +195,6 @@ export const TaskDetails = observer(function TaskDetails({
           </CollapsibleTrigger>
           <CollapsibleContent className="px-4 py-3">
             <BlockStack gap="4">
-              <InlineStack
-                align="space-between"
-                blockAlign="center"
-                className="w-full"
-              >
-                <Text size="sm" className="text-gray-600">
-                  Task color
-                </Text>
-                <ColorPicker
-                  title="Task color"
-                  color={taskColor}
-                  setColor={handleColorChange}
-                />
-              </InlineStack>
-
-              <Separator />
-
               <ConfigurationSection task={task} />
 
               <Separator />
