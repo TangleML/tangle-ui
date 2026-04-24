@@ -1,6 +1,7 @@
 import { type TaskNodeContextType } from "@/providers/TaskNodeProvider";
 import type { HydratedComponentReference } from "@/utils/componentSpec";
 import { isSubgraph } from "@/utils/subgraphUtils";
+import { tracking } from "@/utils/tracking";
 
 import { LinkNodeButton } from "../Buttons/LinkNodeButton";
 import { ViewYamlButton } from "../Buttons/ViewYamlButton";
@@ -43,7 +44,14 @@ const TaskActions = ({
     <DownloadPythonButton componentRef={componentRef} />
   );
   const copyYaml = <CopyYamlButton componentRef={componentRef} />;
-  const viewYaml = <ViewYamlButton componentRef={componentRef} />;
+  const viewYaml = (
+    <ViewYamlButton
+      componentRef={componentRef}
+      {...tracking("pipeline_editor.task_node.yaml_action", {
+        action: "view",
+      })}
+    />
+  );
   const editComponent = !readOnly && (
     <EditComponentButton componentRef={componentRef} />
   );

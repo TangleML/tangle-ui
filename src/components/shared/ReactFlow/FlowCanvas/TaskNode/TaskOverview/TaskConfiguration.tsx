@@ -3,6 +3,7 @@ import { useCallback } from "react";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Switch } from "@/components/ui/switch";
 import { Heading, Paragraph } from "@/components/ui/typography";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { type TaskNodeContextType } from "@/providers/TaskNodeProvider";
 import { isCacheDisabled } from "@/utils/cache";
 import { ISO8601_DURATION_ZERO_DAYS } from "@/utils/constants";
@@ -13,14 +14,18 @@ interface TaskConfigurationProps {
 
 const TaskConfiguration = ({ taskNode }: TaskConfigurationProps) => {
   const { taskSpec, callbacks } = taskNode;
+  const { track } = useAnalytics();
 
   const handleDisableCacheChange = useCallback(
     (checked: boolean) => {
+      track("pipeline_editor.task_node.disable_cache_toggle", {
+        new_value: checked,
+      });
       callbacks.setCacheStaleness(
         checked ? ISO8601_DURATION_ZERO_DAYS : undefined,
       );
     },
-    [callbacks],
+    [callbacks, track],
   );
 
   if (!taskSpec) {
@@ -47,7 +52,12 @@ const TaskConfiguration = ({ taskNode }: TaskConfigurationProps) => {
         </Paragraph>
         <Switch
           checked={taskNode.state.isCollapsed}
-          onCheckedChange={taskNode.callbacks.setCollapsed}
+          onCheckedChange={(checked) => {
+            track("pipeline_editor.task_node.collapse_node_toggle", {
+              new_value: checked,
+            });
+            taskNode.callbacks.setCollapsed(checked);
+          }}
         />
       </InlineStack>
     </BlockStack>

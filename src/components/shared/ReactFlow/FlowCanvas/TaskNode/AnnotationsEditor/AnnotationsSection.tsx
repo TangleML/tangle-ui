@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { BlockStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import useToastNotification from "@/hooks/useToastNotification";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import type { AnnotationConfig, Annotations } from "@/types/annotations";
 import { getAnnotationValue, HIDDEN_ANNOTATIONS } from "@/utils/annotations";
 import type { TaskSpec } from "@/utils/componentSpec";
@@ -28,6 +29,7 @@ export const AnnotationsSection = ({
   onApply,
 }: AnnotationsSectionProps) => {
   const notify = useToastNotification();
+  const { track } = useAnalytics();
 
   const rawAnnotations = taskSpec.annotations ?? {};
 
@@ -83,6 +85,7 @@ export const AnnotationsSection = ({
   const handleNewRowBlur = useCallback(
     (newRow: NewAnnotationRowData) => {
       if (newRow.key.trim() && !(newRow.key in annotations)) {
+        track("pipeline_editor.task_node.annotation_added");
         const newAnnotations = {
           ...annotations,
           [newRow.key]: newRow.value,

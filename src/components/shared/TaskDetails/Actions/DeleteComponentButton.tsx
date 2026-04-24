@@ -1,4 +1,5 @@
 import useToastNotification from "@/hooks/useToastNotification";
+import { tracking } from "@/utils/tracking";
 
 import { ActionButton } from "../../Buttons/ActionButton";
 
@@ -26,6 +27,7 @@ export const DeleteComponentButton = ({
       icon="Trash"
       onClick={handleClick}
       destructive
+      {...tracking("pipeline_editor.task_node.delete_component")}
     />
   );
 };

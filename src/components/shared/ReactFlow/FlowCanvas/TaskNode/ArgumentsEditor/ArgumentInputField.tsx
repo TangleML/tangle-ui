@@ -29,12 +29,14 @@ import { Paragraph } from "@/components/ui/typography";
 import { useCallbackOnUnmount } from "@/hooks/useCallbackOnUnmount";
 import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import type { ArgumentInput } from "@/types/arguments";
 import {
   isDynamicDataArgument,
   isGraphImplementation,
 } from "@/utils/componentSpec";
+import { tracking } from "@/utils/tracking";
 
 import { ArgumentInputDialog } from "./ArgumentInputDialog";
 import { DynamicDataArgumentInput } from "./DynamicDataArgumentInput";
@@ -152,6 +154,9 @@ const PlainArgumentInput = ({
           size="xs"
           tooltip="Multiline Editor"
           data-testid="multiline-editor-button"
+          {...tracking("pipeline_editor.task_node.input_action", {
+            action: "multiline_editor",
+          })}
         >
           <Icon name="Maximize2" />
         </TooltipButton>
@@ -165,6 +170,9 @@ const PlainArgumentInput = ({
             variant="ghost"
             size="xs"
             tooltip="Copy Value"
+            {...tracking("pipeline_editor.task_node.input_action", {
+              action: "copy_value",
+            })}
           >
             <Icon name="Copy" />
           </TooltipButton>
@@ -179,6 +187,9 @@ const PlainArgumentInput = ({
             variant="ghost"
             size="xs"
             tooltip="Reset to Default"
+            {...tracking("pipeline_editor.task_node.input_action", {
+              action: "reset_to_default",
+            })}
           >
             <Icon name="ListRestart" />
           </TooltipButton>
@@ -190,6 +201,11 @@ const PlainArgumentInput = ({
           size="xs"
           className={ACTIONS_BASE_CLASS}
           tooltip={argument.isRemoved ? "Include Argument" : "Exclude Argument"}
+          {...tracking("pipeline_editor.task_node.input_action", {
+            action: argument.isRemoved
+              ? "include_argument"
+              : "exclude_argument",
+          })}
         >
           {argument.isRemoved ? (
             <Icon name="SquarePlus" />
@@ -214,6 +230,7 @@ export const ArgumentInputField = ({
   onSave: (argument: ArgumentInput) => void;
 }) => {
   const notify = useToastNotification();
+  const { track } = useAnalytics();
   const { currentSubgraphSpec } = useComponentSpec();
 
   const [inputValue, setInputValue] = useState(getInputValue(argument) ?? "");
@@ -305,7 +322,6 @@ export const ArgumentInputField = ({
 
   const handleExpand = useCallback(() => {
     if (disabled) return;
-
     setIsTextareaDialogOpen(true);
   }, [disabled]);
 
@@ -325,8 +341,12 @@ export const ArgumentInputField = ({
 
   const handleOpenSecretDialog = useCallback(() => {
     if (disabled) return;
+    track("pipeline_editor.task_node.input_action.click", {
+      action: "use_dynamic_data",
+    });
+    track("pipeline_editor.task_node.select_secret_impression");
     setIsSelectSecretDialogOpen(true);
-  }, [disabled]);
+  }, [disabled, track]);
 
   const handleSecretSelect = useCallback(
     (selectedSecretName: string) => {
@@ -456,6 +476,9 @@ export const ArgumentInputField = ({
                   tooltip="Description"
                   variant="ghost"
                   size="icon"
+                  {...tracking("pipeline_editor.task_node.input_action", {
+                    action: "description",
+                  })}
                 >
                   <Icon name="Info" />
                 </TooltipButton>
