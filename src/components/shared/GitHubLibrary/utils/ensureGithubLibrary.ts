@@ -25,7 +25,7 @@ export async function ensureGithubLibrary({
   await LibraryDB.component_libraries.put({
     id,
     name: repoName,
-    icon: "Github",
+    icon: "CloudSync",
     type: "github",
     knownDigests: components.map((component) => component.digest),
     configuration: {

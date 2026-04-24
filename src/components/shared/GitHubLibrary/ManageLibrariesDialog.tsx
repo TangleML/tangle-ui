@@ -89,7 +89,7 @@ export function ManageLibrariesDialog({
                 <BlockStack gap="1" align="end">
                   <Button variant="secondary" onClick={() => setMode("add")}>
                     <InlineStack align="center" gap="1">
-                      <Icon name="Github" />
+                      <Icon name="CloudSync" />
                       Link Library from GitHub
                     </InlineStack>
                   </Button>
