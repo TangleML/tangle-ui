@@ -1,13 +1,10 @@
 import type { icons } from "lucide-react";
 import { observer } from "mobx-react-lite";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
-import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { InlineStack } from "@/components/ui/layout";
 import {
   Popover,
   PopoverContent,
@@ -16,6 +13,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
+import { CreateSubgraphForm } from "@/routes/v2/pages/Editor/components/CreateSubgraphForm";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 
 interface SelectionToolbarProps {
@@ -37,19 +35,11 @@ export const SelectionToolbar = observer(function SelectionToolbar({
 }: SelectionToolbarProps) {
   const { clipboard } = useEditorSession();
   const [popoverOpen, setPopoverOpen] = useState(false);
-  const [subgraphName, setSubgraphName] = useState("");
 
-  useEffect(() => {
-    if (popoverOpen && selectedTaskCount >= 2) {
-      setSubgraphName(`Subgraph (${selectedTaskCount} tasks)`);
-    }
-  }, [popoverOpen, selectedTaskCount]);
-
-  const handleCreate = () => {
-    if (!subgraphName.trim() || !onCreateSubgraph) return;
-    onCreateSubgraph(subgraphName.trim());
+  const handleCreate = (name: string) => {
+    if (!onCreateSubgraph) return;
+    onCreateSubgraph(name);
     setPopoverOpen(false);
-    setSubgraphName("");
   };
 
   return (
@@ -85,7 +75,7 @@ export const SelectionToolbar = observer(function SelectionToolbar({
             <PopoverTrigger asChild>
               <div>
                 <ToolbarButton
-                  label="Convert to Subgraph"
+                  label="Create Subgraph"
                   icon="Layers"
                   onClick={() => setPopoverOpen(true)}
                   testId="selection-create-subgraph"
@@ -93,35 +83,11 @@ export const SelectionToolbar = observer(function SelectionToolbar({
               </div>
             </PopoverTrigger>
             <PopoverContent side="bottom" align="end" className="w-64">
-              <BlockStack gap="3">
-                <BlockStack gap="1">
-                  <Label className="text-gray-600">Create Subgraph</Label>
-                  <Text size="xs" className="text-gray-400">
-                    Group {selectedTaskCount} tasks into a reusable component
-                  </Text>
-                </BlockStack>
-                <BlockStack gap="2">
-                  <Input
-                    value={subgraphName}
-                    onChange={(e) => setSubgraphName(e.target.value)}
-                    placeholder="Subgraph name..."
-                    className="text-sm"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleCreate();
-                    }}
-                    autoFocus
-                  />
-                  <Button
-                    onClick={handleCreate}
-                    disabled={!subgraphName.trim()}
-                    className="w-full gap-1.5"
-                    size="sm"
-                  >
-                    <Icon name="FolderInput" size="sm" />
-                    Create Subgraph
-                  </Button>
-                </BlockStack>
-              </BlockStack>
+              <CreateSubgraphForm
+                selectedTaskCount={selectedTaskCount}
+                onSubmit={handleCreate}
+                autoFocus
+              />
             </PopoverContent>
           </Popover>
         </>

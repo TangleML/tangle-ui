@@ -3,6 +3,7 @@ import type {
   OnSelectionChangeParams,
   ReactFlowProps,
 } from "@xyflow/react";
+import { SelectionMode } from "@xyflow/react";
 import { useEffect, useMemo } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec/entities/componentSpec";
@@ -31,7 +32,8 @@ function buildMultiSelection(
 
 export function useSelectionBehavior(
   spec: ComponentSpec | null,
-): Required<Pick<ReactFlowProps, "onSelectionChange">> {
+  metaKeyPressed = false,
+): Required<Pick<ReactFlowProps, "onSelectionChange" | "selectionMode">> {
   const registry = useNodeRegistry();
   const { editor } = useSharedStores();
 
@@ -58,5 +60,8 @@ export function useSelectionBehavior(
     }
   };
 
-  return { onSelectionChange };
+  return {
+    onSelectionChange,
+    selectionMode: metaKeyPressed ? SelectionMode.Partial : SelectionMode.Full,
+  };
 }
