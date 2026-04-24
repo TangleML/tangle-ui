@@ -4,7 +4,7 @@ import type {
   TypeSpecType,
 } from "@/models/componentSpec";
 
-export interface QuickConnectPort {
+interface QuickConnectPort {
   entityId: string;
   portName: string;
   portType?: TypeSpecType;

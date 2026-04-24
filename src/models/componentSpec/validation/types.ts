@@ -1,6 +1,6 @@
-export type ValidationIssueType = "graph" | "task" | "input" | "output";
+type ValidationIssueType = "graph" | "task" | "input" | "output";
 
-export type ValidationSeverity = "error" | "warning";
+type ValidationSeverity = "error" | "warning";
 
 export type ValidationIssueCode =
   | "MISSING_REQUIRED_INPUT"

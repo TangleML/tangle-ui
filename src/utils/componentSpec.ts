@@ -421,7 +421,7 @@ export interface SecretArgument {
  * Represents dynamic data from system sources (e.g., multi-node execution context).
  * The key is the data identifier (e.g., "system/multi_node/node_index").
  */
-export type SystemDataArgument = {
+type SystemDataArgument = {
   [key: string]: Record<string, unknown>;
 };
 

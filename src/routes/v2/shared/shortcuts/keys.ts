@@ -9,9 +9,9 @@ const ENTER = "ENTER" as const;
 const SPACE = "SPACE" as const;
 const TAB = "TAB" as const;
 
-export type ModifierKey = typeof CMDALT | typeof CTRL | typeof SHIFT;
+type ModifierKey = typeof CMDALT | typeof CTRL | typeof SHIFT;
 
-export type SpecialKey =
+type SpecialKey =
   | typeof ESCAPE
   | typeof DELETE
   | typeof BACKSPACE

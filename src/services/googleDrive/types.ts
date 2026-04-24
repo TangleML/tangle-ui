@@ -41,7 +41,7 @@ interface GoogleAccountsOAuth2 {
 
 // --- Google Picker types ---
 
-export interface PickerDocument {
+interface PickerDocument {
   id: string;
   name: string;
   mimeType: string;
