@@ -31,6 +31,14 @@ export const ExistingFlags: ConfigFlags = {
     category: "setting",
   },
 
+  ["auto-delete-empty-pipelines"]: {
+    name: "Auto-delete empty pipelines",
+    description:
+      "Delete empty pipelines automatically when you navigate away from the editor.",
+    default: true,
+    category: "setting",
+  },
+
   ["templatized-pipeline-run-name"]: {
     name: "Templatized pipeline run name",
     description:
