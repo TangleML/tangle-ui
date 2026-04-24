@@ -53,6 +53,17 @@ function FullscreenElementPortal({
     };
   }, [fullscreen, defaultMountElement]);
 
+  // When fullscreen, stop keyboard events from reaching document-level listeners
+  // (e.g. ContextPanelProvider's Escape handler that would clear the panel and
+  // unmount this component's parent).
+  useEffect(() => {
+    if (!fullscreen) return;
+    const container = containerElementRef.current;
+    const stopPropagation = (e: KeyboardEvent) => e.stopPropagation();
+    container.addEventListener("keydown", stopPropagation);
+    return () => container.removeEventListener("keydown", stopPropagation);
+  }, [fullscreen]);
+
   return createPortal(<>{children}</>, containerElementRef.current, id.current);
 }
 

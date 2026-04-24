@@ -86,6 +86,7 @@ function DialogContent({
           className,
         )}
         onKeyDown={handleKeyDown}
+        onFocusOutside={(e) => e.preventDefault()}
         {...props}
       >
         {children}
