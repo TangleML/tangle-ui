@@ -22,6 +22,8 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
+import { tracking } from "@/utils/tracking";
 
 import type { LayoutAlgorithm } from "../FlowCanvas/utils/autolayout";
 
@@ -29,6 +31,7 @@ interface FlowControlsProps extends ControlProps {
   config: ReactFlowProps;
   updateConfig: (config: Partial<ReactFlowProps>) => void;
   onAutoLayout?: (algorithm: LayoutAlgorithm) => void;
+  pageType?: "pipeline_editor" | "pipeline_run";
 }
 
 const LAYOUT_ALGORITHMS: {
@@ -50,12 +53,21 @@ export default function FlowControls({
   config,
   updateConfig,
   onAutoLayout,
+  pageType = "pipeline_editor",
   ...props
 }: FlowControlsProps) {
+  const { track } = useAnalytics();
   const [multiSelectActive, setMultiSelectActive] = useState(false);
   const [lockActive, setLockActive] = useState(!config.nodesDraggable);
   const [layoutPopoverOpen, setLayoutPopoverOpen] = useState(false);
   const [isLayouting, setIsLayouting] = useState(false);
+
+  const trackTool = (tool: string) => {
+    track("pipeline_canvas.tool_bar.tool.click", {
+      tool,
+      page_type: pageType,
+    });
+  };
 
   const onClickMultiSelect = useCallback(() => {
     updateConfig({
@@ -87,11 +99,20 @@ export default function FlowControls({
   };
 
   return (
-    <Controls {...props}>
+    <Controls
+      {...props}
+      onZoomIn={() => trackTool("zoom_in")}
+      onZoomOut={() => trackTool("zoom_out")}
+      onFitView={() => trackTool("fit_view")}
+    >
       {!props.showInteractive && (
         <ControlButton
           onClick={handleLockChange}
           className={cn(lockActive && "bg-gray-100!")}
+          {...tracking("pipeline_canvas.tool_bar.tool", {
+            tool: "lock_unlock",
+            page_type: pageType,
+          })}
         >
           {lockActive ? (
             <LockKeyhole className="fill-none! -scale-x-120 scale-y-120" />
@@ -103,6 +124,10 @@ export default function FlowControls({
       <ControlButton
         onClick={onClickMultiSelect}
         className={cn(multiSelectActive && "bg-gray-100!")}
+        {...tracking("pipeline_canvas.tool_bar.tool", {
+          tool: "area_select",
+          page_type: pageType,
+        })}
       >
         <SquareDashedMousePointerIcon className="scale-120" />
       </ControlButton>
@@ -130,6 +155,10 @@ export default function FlowControls({
                   className="w-full justify-start"
                   onClick={() => handleLayoutSelect(algo.value)}
                   disabled={isLayouting}
+                  {...tracking("pipeline_canvas.tool_bar.auto_layout_select", {
+                    selected_layout: algo.value,
+                    page_type: pageType,
+                  })}
                 >
                   <Text>{algo.label}</Text>
                   <Text tone="subdued">({algo.description})</Text>
