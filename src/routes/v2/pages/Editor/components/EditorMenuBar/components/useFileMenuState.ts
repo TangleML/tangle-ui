@@ -105,6 +105,7 @@ export function useFileMenuState(): FileMenuState {
     if (!spec) return;
     await pipelineFileStore.activePipelineFile?.rename(newName);
     renamePipeline(spec, newName);
+    await autoSave.save();
     await navigate({
       to: APP_ROUTES.EDITOR_V2_PIPELINE,
       params: { pipelineName: newName },
