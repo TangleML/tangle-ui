@@ -5,12 +5,18 @@ import { ToastContainer } from "react-toastify";
 import { useClickTracking } from "@/hooks/useClickTracking";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { usePageViewTracking } from "@/hooks/usePageViewTracking";
+import { useSessionPipelineStats } from "@/hooks/useSessionPipelineStats";
 import { AnalyticsProvider } from "@/providers/AnalyticsProvider";
 import { BackendProvider } from "@/providers/BackendProvider";
 import { ComponentSpecProvider } from "@/providers/ComponentSpecProvider";
 import { PipelineStorageProvider } from "@/services/pipelineStorage/PipelineStorageProvider";
 
 import AppMenu from "./AppMenu";
+
+function SessionPipelineStatsTracker() {
+  useSessionPipelineStats();
+  return null;
+}
 
 function RootLayoutContent() {
   usePageViewTracking();
@@ -20,6 +26,7 @@ function RootLayoutContent() {
     <BackendProvider>
       <ComponentSpecProvider>
         <PipelineStorageProvider>
+          <SessionPipelineStatsTracker />
           <ToastContainer />
 
           <div className="App flex flex-col min-h-screen w-full">
