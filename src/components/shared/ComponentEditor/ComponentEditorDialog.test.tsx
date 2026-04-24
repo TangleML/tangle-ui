@@ -18,6 +18,10 @@ vi.mock("@/hooks/useToastNotification", () => ({
   default: vi.fn(),
 }));
 
+vi.mock("@/providers/AnalyticsProvider", () => ({
+  useAnalytics: vi.fn().mockReturnValue({ track: vi.fn() }),
+}));
+
 vi.mock("@/providers/ComponentLibraryProvider", () => ({
   useComponentLibrary: vi.fn(),
 }));

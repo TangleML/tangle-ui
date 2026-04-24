@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Heading, Paragraph } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
 import { hydrateComponentReference } from "@/services/componentService";
 import { isContainerImplementation } from "@/utils/componentSpec";
@@ -77,6 +78,7 @@ export const ComponentEditorDialog = withSuspenseWrapper(
     onClose: () => void;
   }) => {
     const notify = useToastNotification();
+    const { track } = useAnalytics();
     const { addToComponentLibrary } = useComponentLibrary();
 
     const { data: templateCode } = useTemplateCodeByName(templateName);
@@ -169,6 +171,9 @@ export const ComponentEditorDialog = withSuspenseWrapper(
 
         await addToComponentLibrary(hydratedComponent);
 
+        track("component_editor.component_created", {
+          selected_template: templateName,
+        });
         notify(
           `Component ${hydratedComponent.name} imported successfully`,
           "success",

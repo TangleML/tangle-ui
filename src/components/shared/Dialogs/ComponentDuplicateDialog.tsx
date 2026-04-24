@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
 import type { HydratedComponentReference } from "@/utils/componentSpec";
 import {
@@ -66,6 +67,7 @@ const ComponentDuplicateDialog = ({
   handleImportComponent: (content: string) => Promise<void>;
 }) => {
   const validateName = useNameValidation();
+  const { track } = useAnalytics();
   const [newName, setNewName] = useState("");
   const [newDigest, setNewDigest] = useState("");
   const [errors, setErrors] = useState<string[]>([]);
@@ -82,6 +84,12 @@ const ComponentDuplicateDialog = ({
     },
     [setClose, setErrors],
   );
+
+  useEffect(() => {
+    if (open) {
+      track("component_editor.save.already_exists_impression");
+    }
+  }, [open]);
 
   useEffect(() => {
     if (newComponent && open) {

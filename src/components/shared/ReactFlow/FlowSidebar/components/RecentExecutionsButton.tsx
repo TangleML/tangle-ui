@@ -17,6 +17,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { tracking } from "@/utils/tracking";
 
 export const RecentExecutionsButton = withSuspenseWrapper(
   ({
@@ -39,7 +40,11 @@ export const RecentExecutionsButton = withSuspenseWrapper(
         <Popover>
           <Tooltip>
             <TooltipTrigger asChild>
-              <PopoverTrigger asChild data-popover-trigger>
+              <PopoverTrigger
+                asChild
+                data-popover-trigger
+                {...tracking("pipeline_editor.recent_pipeline_runs")}
+              >
                 {trigger ?? defaultTrigger}
               </PopoverTrigger>
             </TooltipTrigger>
