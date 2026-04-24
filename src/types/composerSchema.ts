@@ -55,12 +55,12 @@ interface BlockDescriptorBase {
   displayFor?: string[];
 }
 
-export interface TextBlockDescriptor extends BlockDescriptorBase {
+interface TextBlockDescriptor extends BlockDescriptorBase {
   blockType: BlockType.TextBlock;
   properties: TextBlockProperties;
 }
 
-export interface LinkBlockDescriptor extends BlockDescriptorBase {
+interface LinkBlockDescriptor extends BlockDescriptorBase {
   blockType: BlockType.LinkBlock;
   properties: LinkBlockProperties;
 }

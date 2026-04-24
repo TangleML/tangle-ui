@@ -5,7 +5,7 @@ import { isGraphImplementation } from "@/utils/componentSpec";
 import type { ComponentFileEntry } from "@/utils/componentStore";
 
 export type PipelineSortField = "modified_at" | "name";
-export type PipelineSortDirection = "asc" | "desc";
+type PipelineSortDirection = "asc" | "desc";
 
 export interface MatchedField {
   label: string;

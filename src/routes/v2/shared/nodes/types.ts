@@ -38,7 +38,7 @@ export interface NodeSnapshot<TData = unknown> {
   data: TData;
 }
 
-export interface NodeSnapshotHandler {
+interface NodeSnapshotHandler {
   snapshot(spec: ComponentSpec, entityId: string): NodeSnapshot | null;
 }
 
@@ -53,7 +53,7 @@ export interface BindingSnapshot {
 // Clone handler types (re-exported for use in manifests)
 // ---------------------------------------------------------------------------
 
-export interface NodeCloneHandler {
+interface NodeCloneHandler {
   snapshot(spec: ComponentSpec, entityId: string): NodeSnapshot | null;
   clone(
     spec: ComponentSpec,
@@ -102,7 +102,7 @@ export interface GuidelineInfo {
   edgeTotal: number;
 }
 
-export type DropHandler = (
+type DropHandler = (
   spec: ComponentSpec,
   data: unknown,
   position: XYPosition,

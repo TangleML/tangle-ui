@@ -6,7 +6,7 @@
  * without the store needing any knowledge of plugin behavior.
  */
 
-export type DockAreaEventType =
+type DockAreaEventType =
   | "window-docked"
   | "window-expanded"
   | "window-closing"

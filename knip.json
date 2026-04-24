@@ -5,8 +5,7 @@
     "src/api/**",
     "src/components/ui/**",
     "src/config/announcements.ts",
-    "src/components/shared/BetaFeatureWrapper/BetaFeatureWrapper.tsx",
-    "src/utils/tracking.ts"
+    "src/components/shared/BetaFeatureWrapper/BetaFeatureWrapper.tsx"
   ],
   "ignoreDependencies": [
     "@tanstack/react-query-devtools",
