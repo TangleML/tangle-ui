@@ -1,7 +1,6 @@
 import { observer } from "mobx-react-lite";
 import { useEffect, useState } from "react";
 
-import { TextBlock } from "@/components/shared/ContextPanel/Blocks/TextBlock";
 import { StackingControls } from "@/components/shared/ReactFlow/FlowControls/StackingControls";
 import { ColorPicker } from "@/components/ui/color";
 import { Icon } from "@/components/ui/icon";
@@ -23,12 +22,6 @@ import { TaskActionsBar } from "./components/TaskActionsBar";
 import { TaskArgumentsEditor } from "./components/TaskArgumentsEditor";
 import { useTaskConfigActions } from "./components/useTaskConfigActions";
 import { useTask } from "./hooks/useTask";
-
-const EDITOR_ANNOTATION_KEYS = [
-  "editor.position",
-  "tangleml.com/editor/task-color",
-  "tangleml.com/editor/edge-conduits",
-];
 
 const TAB_CONTENT_CLASS = "overflow-y-auto w-full px-4 py-4 pr-5";
 
@@ -61,7 +54,6 @@ export const TaskDetails = observer(function TaskDetails({
   const componentSpec = task.componentRef.spec;
   const yamlText = getTaskYamlText(task);
   const pythonCode = componentSpec?.metadata?.annotations?.python_original_code;
-  const author = componentSpec?.metadata?.annotations?.author;
 
   const isSubgraphTask = isSubgraph(task.componentRef.spec);
   const taskColor = task.annotations.get("tangleml.com/editor/task-color");
@@ -122,10 +114,6 @@ export const TaskDetails = observer(function TaskDetails({
             <Icon name="Parentheses" size="xs" />
             Arguments
           </TabsTrigger>
-          <TabsTrigger value="details" className="gap-1 text-xs px-2.5">
-            <Icon name="Info" size="xs" />
-            Details
-          </TabsTrigger>
           <TabsTrigger value="configuration" className="gap-1 text-xs px-2.5">
             <Icon name="Settings" size="xs" />
             Config
@@ -144,43 +132,6 @@ export const TaskDetails = observer(function TaskDetails({
               <Heading level={3}>Outputs</Heading>
               <OutputsSection componentSpec={componentSpec} />
             </BlockStack>
-          </BlockStack>
-        </TabsContent>
-
-        {/* ── Details ── */}
-        <TabsContent value="details" className={TAB_CONTENT_CLASS}>
-          <BlockStack gap="4">
-            <TextBlock title="Task ID" text={entityId} />
-
-            {author && <TextBlock title="Author" text={String(author)} />}
-
-            <TextBlock
-              title="Description"
-              text={componentSpec?.description}
-              collapsible
-              defaultCollapsed
-              wrap
-            />
-
-            {task.componentRef.digest && (
-              <TextBlock
-                title="Digest"
-                text={task.componentRef.digest}
-                copyable
-              />
-            )}
-
-            {task.annotations.filter(
-              (a) => !EDITOR_ANNOTATION_KEYS.includes(a.key),
-            ).length > 0 && (
-              <>
-                <Separator />
-                <AnnotationsBlock
-                  annotations={task.annotations}
-                  ignoreAnnotationKeys={EDITOR_ANNOTATION_KEYS}
-                />
-              </>
-            )}
           </BlockStack>
         </TabsContent>
 
