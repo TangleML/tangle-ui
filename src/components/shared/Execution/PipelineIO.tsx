@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Paragraph } from "@/components/ui/typography";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useContextPanel } from "@/providers/ContextPanelProvider";
 import { type InputSpec, type OutputSpec } from "@/utils/componentSpec";
@@ -24,14 +25,21 @@ const PipelineIO = ({
 }) => {
   const { setContent } = useContextPanel();
   const { componentSpec, graphSpec } = useComponentSpec();
+  const { track } = useAnalytics();
 
   const readOnly = !!taskArguments;
 
   const handleInputEdit = (input: InputSpec) => {
+    track("pipeline_editor.configuration_panel.io_edit.click", {
+      io_type: "input",
+    });
     setContent(<InputValueEditor key={input.name} input={input} />);
   };
 
   const handleOutputEdit = (output: OutputSpec) => {
+    track("pipeline_editor.configuration_panel.io_edit.click", {
+      io_type: "output",
+    });
     const outputConnectedDetails = getOutputConnectedDetails(
       graphSpec,
       output.name,

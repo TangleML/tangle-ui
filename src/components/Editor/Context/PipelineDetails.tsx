@@ -21,6 +21,7 @@ import {
 } from "@/utils/annotations";
 import { getComponentFileFromList } from "@/utils/componentStore";
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
+import { tracking } from "@/utils/tracking";
 
 import PipelineIO from "../../shared/Execution/PipelineIO";
 import { PipelineNotesEditor } from "./PipelineNotesEditor";
@@ -102,7 +103,11 @@ const PipelineDetails = () => {
 
   const actions = [
     <RenamePipeline key="rename-pipeline-action" />,
-    <ViewYamlButton key="view-pipeline-yaml" componentSpec={componentSpec} />,
+    <ViewYamlButton
+      key="view-pipeline-yaml"
+      componentSpec={componentSpec}
+      {...tracking("pipeline_editor.configuration_panel.view_yaml")}
+    />,
     ...(componentSpec.name
       ? [
           <FavoriteToggle
@@ -110,6 +115,7 @@ const PipelineDetails = () => {
             type="pipeline"
             id={componentSpec.name}
             name={componentSpec.name}
+            analyticsActionType="pipeline_editor.configuration_panel.favorite_click"
           />,
         ]
       : []),

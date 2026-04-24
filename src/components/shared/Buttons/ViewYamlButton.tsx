@@ -11,6 +11,8 @@ import { ActionButton } from "./ActionButton";
 
 type ViewYamlButtonProps = {
   displayLabel?: string;
+  "data-tracking-id"?: string;
+  "data-tracking-metadata"?: string;
 } & (
   | { componentRef: HydratedComponentReference; componentSpec?: never }
   | { componentSpec: ComponentSpec; componentRef?: never }
@@ -20,6 +22,7 @@ export const ViewYamlButton = ({
   componentRef,
   componentSpec,
   displayLabel,
+  ...rest
 }: ViewYamlButtonProps) => {
   const [showCodeViewer, setShowCodeViewer] = useState(false);
 
@@ -27,21 +30,14 @@ export const ViewYamlButton = ({
     ? getComponentName(componentRef)
     : componentSpec.name || "Component";
 
-  const handleClick = () => {
-    setShowCodeViewer(true);
-  };
-
-  const handleClose = () => {
-    setShowCodeViewer(false);
-  };
-
   return (
     <>
       <ActionButton
         tooltip="View YAML"
         icon="FileCodeCorner"
-        onClick={handleClick}
+        onClick={() => setShowCodeViewer(true)}
         label={displayLabel}
+        {...rest}
       />
 
       {showCodeViewer && (
@@ -50,7 +46,7 @@ export const ViewYamlButton = ({
           componentSpec={componentSpec}
           displayName={name}
           fullscreen
-          onClose={handleClose}
+          onClose={() => setShowCodeViewer(false)}
         />
       )}
     </>

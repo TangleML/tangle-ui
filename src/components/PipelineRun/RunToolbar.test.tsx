@@ -23,6 +23,10 @@ vi.mock("@tanstack/react-router", async (importOriginal) => ({
   useNavigate: () => vi.fn(),
 }));
 
+vi.mock("@/providers/AnalyticsProvider", () => ({
+  useAnalytics: vi.fn().mockReturnValue({ track: vi.fn() }),
+}));
+
 vi.mock("@/hooks/useCheckComponentSpecFromPath");
 vi.mock("@/hooks/usePipelineRunData");
 vi.mock("@/providers/BackendProvider");
