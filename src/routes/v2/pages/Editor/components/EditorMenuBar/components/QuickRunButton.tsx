@@ -12,7 +12,9 @@ export const QuickRunButton = observer(function QuickRunButton() {
   const { navigation } = useSharedStores();
   const { isAuthorized } = useAwaitAuthorization();
   const rootSpec = navigation.rootSpec;
-  const hasErrors = rootSpec ? !rootSpec.isValid : false;
+  const allIssues = rootSpec?.allValidationIssues ?? [];
+  const errorCount = allIssues.filter((i) => i.severity === "error").length;
+  const hasErrors = errorCount > 0;
 
   let legacySpec: ReturnType<typeof serializeComponentSpec> | undefined;
   try {
@@ -34,6 +36,7 @@ export const QuickRunButton = observer(function QuickRunButton() {
       <TooltipButton
         tooltip={tooltip}
         className="hover:bg-transparent"
+        disabled={hasErrors}
         onClick={triggerSubmitRun}
       >
         <Icon name="Play" className={`${iconColor} transition-colors`} />
@@ -43,7 +46,7 @@ export const QuickRunButton = observer(function QuickRunButton() {
           <TangleSubmitter
             componentSpec={legacySpec}
             isComponentTreeValid={rootSpec?.isValid}
-            onlyFixableIssues
+            onlyFixableIssues={!hasErrors && allIssues.length > 0}
           />
         </div>
       )}
