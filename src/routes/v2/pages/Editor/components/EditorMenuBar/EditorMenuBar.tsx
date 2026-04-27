@@ -37,8 +37,7 @@ export const EditorMenuBar = observer(function EditorMenuBar() {
   const { setIsOpen: setTourPopupOpen } = useTour();
   const navigate = useNavigate();
 
-  const spec = navigation.activeSpec;
-  const pipelineNameFromSpec = spec?.name ?? "Untitled pipeline";
+  const pipelineNameFromSpec = navigation.rootSpec?.name ?? "Untitled pipeline";
   const displayName =
     tourMode?.tour.displayName ?? tourMode?.tour.id ?? pipelineNameFromSpec;
 

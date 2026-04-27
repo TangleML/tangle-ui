@@ -1,5 +1,6 @@
 import { useRouterState } from "@tanstack/react-router";
 import { observer } from "mobx-react-lite";
+import type { ReactNode } from "react";
 
 import { SubgraphBreadcrumbsView } from "@/components/shared/SubgraphBreadcrumbsView";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
@@ -9,7 +10,13 @@ const RUNS_V2_PATH_PREFIX = "/runs-v2";
 
 import { SubgraphActionsMenu } from "./SubgraphActionsMenu";
 
-export const SubgraphBreadcrumbs = observer(function SubgraphBreadcrumbs() {
+interface SubgraphBreadcrumbsProps {
+  extraMenuItems?: ReactNode;
+}
+
+export const SubgraphBreadcrumbs = observer(function SubgraphBreadcrumbs({
+  extraMenuItems,
+}: SubgraphBreadcrumbsProps) {
   const { navigation } = useSharedStores();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isRunView = pathname.startsWith(RUNS_V2_PATH_PREFIX);
@@ -32,7 +39,7 @@ export const SubgraphBreadcrumbs = observer(function SubgraphBreadcrumbs() {
       path={path}
       onNavigate={handleNavigate}
       getCrumbTracking={getCrumbTracking}
-      actions={<SubgraphActionsMenu />}
+      actions={<SubgraphActionsMenu extraItems={extraMenuItems} />}
     />
   );
 });

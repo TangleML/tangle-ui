@@ -1,5 +1,5 @@
 import { observer } from "mobx-react-lite";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 
 import { CodeViewer } from "@/components/shared/CodeViewer";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
@@ -20,7 +21,13 @@ import { serializeComponentSpecToYaml } from "@/models/componentSpec";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { downloadYamlFromComponentText } from "@/utils/URL";
 
-export const SubgraphActionsMenu = observer(function SubgraphActionsMenu() {
+interface SubgraphActionsMenuProps {
+  extraItems?: ReactNode;
+}
+
+export const SubgraphActionsMenu = observer(function SubgraphActionsMenu({
+  extraItems,
+}: SubgraphActionsMenuProps) {
   const { navigation } = useSharedStores();
   const notify = useToastNotification();
   const [showCodeViewer, setShowCodeViewer] = useState(false);
@@ -69,6 +76,13 @@ export const SubgraphActionsMenu = observer(function SubgraphActionsMenu() {
         </Tooltip>
 
         <DropdownMenuContent align="end">
+          {extraItems && (
+            <>
+              {extraItems}
+              <DropdownMenuSeparator />
+            </>
+          )}
+
           <DropdownMenuItem onClick={handleViewYaml}>
             <Icon name="FileCode" size="sm" />
             View YAML
