@@ -1,11 +1,18 @@
 import { observer } from "mobx-react-lite";
+import type { ReactNode } from "react";
 
 import { SubgraphBreadcrumbsView } from "@/components/shared/SubgraphBreadcrumbsView";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 import { SubgraphActionsMenu } from "./SubgraphActionsMenu";
 
-export const SubgraphBreadcrumbs = observer(function SubgraphBreadcrumbs() {
+interface SubgraphBreadcrumbsProps {
+  extraMenuItems?: ReactNode;
+}
+
+export const SubgraphBreadcrumbs = observer(function SubgraphBreadcrumbs({
+  extraMenuItems,
+}: SubgraphBreadcrumbsProps) {
   const { navigation } = useSharedStores();
 
   const path = navigation.navigationPath.map((entry, i) =>
@@ -20,7 +27,7 @@ export const SubgraphBreadcrumbs = observer(function SubgraphBreadcrumbs() {
     <SubgraphBreadcrumbsView
       path={path}
       onNavigate={handleNavigate}
-      actions={<SubgraphActionsMenu />}
+      actions={<SubgraphActionsMenu extraItems={extraMenuItems} />}
     />
   );
 });

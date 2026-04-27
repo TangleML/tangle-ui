@@ -21,8 +21,7 @@ import { WindowsMenu } from "./components/WindowsMenu";
 export const EditorMenuBar = observer(function EditorMenuBar() {
   const { navigation, windows } = useSharedStores();
   const { pipelineFile } = useEditorSession();
-  const spec = navigation.activeSpec;
-  const pipelineName = spec?.name ?? "Untitled pipeline";
+  const pipelineName = navigation.rootSpec?.name ?? "Untitled pipeline";
 
   const displayMenu = Boolean(pipelineFile.activePipelineFile);
 

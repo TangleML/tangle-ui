@@ -12,6 +12,7 @@ import { useState } from "react";
 import { BlockStack } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
 import type { ComponentSpec } from "@/models/componentSpec";
+import { RenameSubgraphMenuItem } from "@/routes/v2/pages/Editor/components/SubgraphActions/RenameSubgraphMenuItem";
 import { useAutoLayout } from "@/routes/v2/pages/Editor/hooks/useAutoLayout";
 import { SubgraphBreadcrumbs } from "@/routes/v2/shared/components/SubgraphBreadcrumbs";
 import { FLOW_CANVAS_DEFAULT_PROPS } from "@/routes/v2/shared/flowCanvasDefaults";
@@ -89,7 +90,7 @@ export const FlowCanvas = observer(function FlowCanvas({
         className,
       )}
     >
-      <SubgraphBreadcrumbs />
+      <SubgraphBreadcrumbs extraMenuItems={<RenameSubgraphMenuItem />} />
       <ReactFlow
         {...FLOW_CANVAS_DEFAULT_PROPS}
         nodeTypes={nodeTypes}
