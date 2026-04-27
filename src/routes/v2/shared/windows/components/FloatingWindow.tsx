@@ -29,7 +29,7 @@ const containerVariants = cva(
   },
 );
 
-const headerVariants = cva("py-1 bg-gray-200 border-gray-300", {
+const headerVariants = cva("py-1 bg-gray-800 border-gray-700", {
   variants: {
     maximized: { true: "cursor-default", false: "" },
   },
@@ -44,10 +44,10 @@ function getWindowStyle(model: WindowModel): CSSProperties {
   return {
     left: model.position.x,
     top: model.position.y,
-    width: model.isMinimized ? "auto" : model.size.width,
-    height: model.isMinimized ? "auto" : model.size.height,
+    width: model.size.width,
+    height: model.size.height,
     minWidth: model.minSize.width,
-    minHeight: model.isMinimized ? "auto" : model.minSize.height,
+    minHeight: model.minSize.height,
     zIndex: 20 + model.zIndex,
   };
 }
@@ -137,9 +137,6 @@ export const FloatingWindow = observer(function FloatingWindow() {
     document.addEventListener("mouseup", onMouseUp);
   };
 
-  const showContent = !model.isMinimized;
-  const showResize = !model.isMinimized && !model.isMaximized;
-
   return (
     <>
       <div
@@ -159,18 +156,19 @@ export const FloatingWindow = observer(function FloatingWindow() {
           onMouseDown={model.isMaximized ? undefined : handleHeaderMouseDown}
           actions={<WindowActions />}
           className={headerVariants({ maximized: model.isMaximized })}
+          tone="dark"
         />
 
-        {showContent && (
-          <div
-            className="flex-1 min-h-0 overflow-auto bg-gray-50"
-            style={{ height: getContentHeight(model) }}
-          >
-            {content}
-          </div>
-        )}
+        <div
+          className="flex-1 min-h-0 overflow-auto bg-gray-50"
+          style={{ height: getContentHeight(model) }}
+        >
+          {content}
+        </div>
 
-        {showResize && <ResizeHandle onMouseDown={handleResizeMouseDown} />}
+        {!model.isMaximized && (
+          <ResizeHandle onMouseDown={handleResizeMouseDown} />
+        )}
       </div>
 
       {isDragging && snapPreview && (
