@@ -108,12 +108,12 @@ export function ComponentRefBar({
               <Button
                 variant="ghost"
                 size="min"
-                onClick={() => setIsEditDialogOpen(true)}
+                onClick={() => setShowCodeViewer(true)}
               >
-                <Icon name="FilePenLine" size="sm" />
+                <Icon name="FileCode" size="sm" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Edit Component Definition</TooltipContent>
+            <TooltipContent>View YAML</TooltipContent>
           </Tooltip>
 
           <DropdownMenu>
@@ -146,9 +146,9 @@ export function ComponentRefBar({
                 Copy YAML
               </DropdownMenuItem>
 
-              <DropdownMenuItem onClick={() => setShowCodeViewer(true)}>
-                <Icon name="FileCode" size="sm" />
-                View YAML
+              <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
+                <Icon name="FilePenLine" size="sm" />
+                Edit Component
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
