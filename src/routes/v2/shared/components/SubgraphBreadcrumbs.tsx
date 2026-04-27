@@ -7,6 +7,8 @@ import { tracking } from "@/utils/tracking";
 
 const RUNS_V2_PATH_PREFIX = "/runs-v2";
 
+import { SubgraphActionsMenu } from "./SubgraphActionsMenu";
+
 export const SubgraphBreadcrumbs = observer(function SubgraphBreadcrumbs() {
   const { navigation } = useSharedStores();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -30,6 +32,7 @@ export const SubgraphBreadcrumbs = observer(function SubgraphBreadcrumbs() {
       path={path}
       onNavigate={handleNavigate}
       getCrumbTracking={getCrumbTracking}
+      actions={<SubgraphActionsMenu />}
     />
   );
 });
