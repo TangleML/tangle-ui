@@ -24,6 +24,8 @@ interface FileMenuState {
   setSaveAsDialogOpen: (open: boolean) => void;
   renameDialogOpen: boolean;
   setRenameDialogOpen: (open: boolean) => void;
+  deleteDialogOpen: boolean;
+  setDeleteDialogOpen: (open: boolean) => void;
   handleRename: (name: string) => void;
   getRenameInitialName: () => string;
   setImportOpen: (open: boolean) => void;
@@ -33,6 +35,7 @@ interface FileMenuState {
   handleSavePipelineAs: (name: string) => void;
   handleExport: () => void;
   getSaveAsInitialName: () => string;
+  handleDeletePipeline: () => void;
 }
 
 export function useFileMenuState(): FileMenuState {
@@ -46,6 +49,7 @@ export function useFileMenuState(): FileMenuState {
   const [openDialogOpen, setOpenDialogOpen] = useState(false);
   const [saveAsDialogOpen, setSaveAsDialogOpen] = useState(false);
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const importTriggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -114,6 +118,13 @@ export function useFileMenuState(): FileMenuState {
     exportCurrentPipeline(navigation);
   };
 
+  const handleDeletePipeline = async () => {
+    const file = pipelineFileStore.activePipelineFile;
+    if (!file) return;
+    await file.deleteFile();
+    void navigate({ to: APP_ROUTES.HOME });
+  };
+
   const getSaveAsInitialName = () => {
     const currentName = navigation.rootSpec?.name;
     return currentName
@@ -129,6 +140,8 @@ export function useFileMenuState(): FileMenuState {
     setSaveAsDialogOpen,
     renameDialogOpen,
     setRenameDialogOpen,
+    deleteDialogOpen,
+    setDeleteDialogOpen,
     handleRename,
     getRenameInitialName,
     setImportOpen,
@@ -138,5 +151,6 @@ export function useFileMenuState(): FileMenuState {
     handleSavePipelineAs,
     handleExport,
     getSaveAsInitialName,
+    handleDeletePipeline,
   };
 }
