@@ -166,6 +166,74 @@ export class NavigationStore {
     return this.navigationPath.length > 1;
   }
 
+  /** Spec one level up from the current navigation depth, or null at root. */
+  @computed get parentSpec(): ComponentSpec | null {
+    const depth = this.navigationDepth;
+    if (depth === 0) return null;
+    return this.getSpecAtDepth(depth - 1) ?? null;
+  }
+
+  /**
+   * Rename the subgraph at the current depth (depth >= 1). Renames the parent
+   * task in the parent spec, then re-keys our navigation state so the path
+   * key for the renamed subgraph (and any deeper cached subgraphs that pass
+   * through it) keeps matching.
+   *
+   * Returns false if there is no nested subgraph to rename, the new name
+   * collides with a sibling, or the rename otherwise fails.
+   */
+  @action renameCurrentSubgraph(newName: string): boolean {
+    const trimmed = newName.trim();
+    if (!trimmed) return false;
+
+    const depth = this.navigationDepth;
+    if (depth === 0) return false;
+
+    const oldName = this.navigationPath[depth].displayName;
+    if (oldName === trimmed) return false;
+
+    const parentSpec = this.getSpecAtDepth(depth - 1);
+    if (!parentSpec) return false;
+
+    const task = parentSpec.tasks.find((t) => t.name === oldName);
+    if (!task) return false;
+
+    const renamed = parentSpec.renameTask(task.$id, trimmed);
+    if (!renamed) return false;
+
+    const nestedSpec = this.getSpecAtDepth(depth);
+    nestedSpec?.setName(trimmed);
+
+    const newPath = [...this.navigationPath];
+    newPath[depth] = { ...newPath[depth], displayName: trimmed };
+    this.navigationPath = newPath;
+
+    const prefixSegments = this.navigationPath
+      .slice(1, depth)
+      .map((e) => e.displayName);
+    const targetIndex = depth - 1;
+
+    const updatedSpecs = new Map<string, ComponentSpec>();
+    for (const [key, spec] of this.nestedSpecs) {
+      const segments = key.split("/");
+      const prefixMatches = prefixSegments.every((s, i) => segments[i] === s);
+      if (
+        prefixMatches &&
+        segments.length > targetIndex &&
+        segments[targetIndex] === oldName
+      ) {
+        const newSegments = [...segments];
+        newSegments[targetIndex] = trimmed;
+        updatedSpecs.set(newSegments.join("/"), spec);
+      } else {
+        updatedSpecs.set(key, spec);
+      }
+    }
+    this.nestedSpecs = updatedSpecs;
+
+    return true;
+  }
+
   /**
    * Serialize each active nested spec and write it back into the parent
    * task's componentRef.spec so the root serialization includes subgraph edits.
