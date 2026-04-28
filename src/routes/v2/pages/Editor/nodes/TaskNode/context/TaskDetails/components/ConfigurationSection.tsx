@@ -15,6 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { Heading, Paragraph } from "@/components/ui/typography";
 import type { Task } from "@/models/componentSpec";
 import type { AnnotationConfig, Annotations } from "@/types/annotations";
+import { EDITOR_COLLAPSED_ANNOTATION } from "@/utils/annotations";
 import { ISO8601_DURATION_ZERO_DAYS } from "@/utils/constants";
 
 import { useTaskConfigActions } from "./useTaskConfigActions";
@@ -31,6 +32,7 @@ export const ConfigurationSection = observer(function ConfigurationSection({
     saveAnnotation,
     setTaskColor,
     clearProviderAnnotations,
+    setCollapsed,
   } = useTaskConfigActions();
   const isSubgraph = task.subgraphSpec !== undefined;
 
@@ -114,11 +116,17 @@ export const ConfigurationSection = observer(function ConfigurationSection({
     saveAnnotation(task, key, value);
   };
 
-  const taskColor = task.annotations.get("tangleml.com/editor/task-color");
-
   const handleColorChange = (color: string) => {
     setTaskColor(task, color);
   };
+
+  const handleCollapsedChange = (checked: boolean) => {
+    setCollapsed(task, checked);
+  };
+
+  const taskColor = task.annotations.get("tangleml.com/editor/task-color");
+  const isCollapsed =
+    task.annotations.get(EDITOR_COLLAPSED_ANNOTATION) === "true";
 
   return (
     <BlockStack gap="3">
@@ -149,6 +157,13 @@ export const ConfigurationSection = observer(function ConfigurationSection({
           </InlineStack>
         </>
       )}
+
+      <InlineStack align="space-between" gap="2" className="w-full">
+        <Paragraph size="sm" tone="subdued">
+          Collapse node
+        </Paragraph>
+        <Switch checked={isCollapsed} onCheckedChange={handleCollapsedChange} />
+      </InlineStack>
 
       <Separator />
 

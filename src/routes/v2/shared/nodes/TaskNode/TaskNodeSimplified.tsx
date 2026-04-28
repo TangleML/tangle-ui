@@ -12,13 +12,13 @@ import type { TaskNodeViewProps } from "./TaskNode";
 import { createTaskNodeCardVariants } from "./taskNode.variants";
 
 const PERCEIVED_FONT_SIZE = "36px";
-const s = "var(--collapsed-scale, 1)";
+const s = "var(--simplified-scale, 1)";
 
-const collapsedCardVariants = createTaskNodeCardVariants(
+const simplifiedCardVariants = createTaskNodeCardVariants(
   "flex flex-col justify-center rounded-xl border-2 p-0 drop-shadow-sm cursor-pointer select-none transition-[border-color,box-shadow]",
 );
 
-export function TaskNodeCollapsed({
+export function TaskNodeSimplified({
   taskName,
   inputs,
   outputs,
@@ -35,7 +35,7 @@ export function TaskNodeCollapsed({
 
   return (
     <Card
-      className={collapsedCardVariants({
+      className={simplifiedCardVariants({
         selected,
         hovered: isHovered,
         subgraph: isSubgraph,

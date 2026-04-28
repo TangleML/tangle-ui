@@ -2,7 +2,7 @@ import { cva } from "class-variance-authority";
 
 /**
  * Factory for the `selected > hovered > subgraph > default` card border
- * cascade used by TaskNodeCollapsed.
+ * cascade used by TaskNodeSimplified.
  *
  * Each consumer provides its own base classes (sizing, rounding, etc.)
  * while the compound variant logic (border color + ring) stays DRY.

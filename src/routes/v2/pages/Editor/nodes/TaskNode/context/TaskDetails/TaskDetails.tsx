@@ -15,6 +15,7 @@ import { AnnotationsBlock } from "@/routes/v2/pages/Editor/components/Annotation
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { EDITOR_COLLAPSED_ANNOTATION } from "@/utils/annotations";
 
 import { getTaskYamlText } from "./components/actions/getTaskYamlText";
 import { ComponentRefBar } from "./components/ComponentRefBar";
@@ -28,6 +29,7 @@ const EDITOR_ANNOTATION_KEYS = [
   "editor.position",
   "tangleml.com/editor/task-color",
   "tangleml.com/editor/edge-conduits",
+  EDITOR_COLLAPSED_ANNOTATION,
 ];
 
 interface TaskDetailsProps {

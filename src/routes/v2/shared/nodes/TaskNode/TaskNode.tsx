@@ -21,10 +21,11 @@ import type { TaskNodeData } from "@/routes/v2/shared/nodes/types";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import type { NodeOverlayEffect } from "@/routes/v2/shared/store/canvasOverlay.types";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { EDITOR_COLLAPSED_ANNOTATION } from "@/utils/annotations";
 import { ISO8601_DURATION_ZERO_DAYS } from "@/utils/constants";
 
 import { TaskNodeCard } from "./TaskNodeCard";
-import { TaskNodeCollapsed } from "./TaskNodeCollapsed";
+import { TaskNodeSimplified } from "./TaskNodeSimplified";
 
 type TaskNodeType = Node<TaskNodeData, "task">;
 type TaskNodeProps = NodeProps<TaskNodeType>;
@@ -48,9 +49,12 @@ export interface TaskNodeViewProps {
   selected: boolean;
   isHovered: boolean;
   isSubgraph: boolean;
+  collapsed: boolean;
   description: string;
   inputs: TaskNodeInput[];
   outputs: TaskNodeOutput[];
+  connectedInputNames: Set<string>;
+  connectedOutputNames: Set<string>;
   annotations: { key: string }[];
   taskColor?: string;
   cacheDisabled: boolean;
@@ -111,6 +115,27 @@ function resolveInputDisplayValues(
   }
 
   return values;
+}
+
+function resolveConnectedPortNames(
+  entityId: string,
+  spec: ComponentSpec | null,
+): { inputs: Set<string>; outputs: Set<string> } {
+  const inputs = new Set<string>();
+  const outputs = new Set<string>();
+
+  if (!spec) return { inputs, outputs };
+
+  for (const binding of spec.bindings) {
+    if (binding.targetEntityId === entityId) {
+      inputs.add(binding.targetPortName);
+    }
+    if (binding.sourceEntityId === entityId) {
+      outputs.add(binding.sourcePortName);
+    }
+  }
+
+  return { inputs, outputs };
 }
 
 function resolveTaskColor(task: Task): string | undefined {
@@ -189,6 +214,8 @@ export const TaskNode = observer(function TaskNode({
   const componentSpec = task.resolvedComponentSpec;
   const { description, inputs, outputs } =
     getComponentSpecDefaults(componentSpec);
+  const isManuallyCollapsed =
+    task.annotations.get(EDITOR_COLLAPSED_ANNOTATION) === "true";
 
   const handleClick = (event: MouseEvent) => {
     editor.selectNode(id, "task", { shiftKey: event.shiftKey, entityId });
@@ -221,6 +248,8 @@ export const TaskNode = observer(function TaskNode({
     selectEdgesByHandle(handleId);
   };
 
+  const connectedPorts = resolveConnectedPortNames(entityId, spec);
+
   const viewProps: TaskNodeViewProps = {
     id,
     entityId,
@@ -228,9 +257,12 @@ export const TaskNode = observer(function TaskNode({
     selected: !!selected,
     isHovered: editor.hoveredEntityId === entityId,
     isSubgraph: isTaskSubgraph(componentSpec),
+    collapsed: isManuallyCollapsed,
     description,
     inputs,
     outputs,
+    connectedInputNames: connectedPorts.inputs,
+    connectedOutputNames: connectedPorts.outputs,
     annotations: task.annotations.map((a) => ({ key: a.key })),
     taskColor: resolveTaskColor(task),
     cacheDisabled:
@@ -256,7 +288,7 @@ export const TaskNode = observer(function TaskNode({
   if (!showContent) {
     return (
       <NodeEffectWrapper effect={nodeEffect}>
-        <TaskNodeCollapsed {...viewProps} />
+        <TaskNodeSimplified {...viewProps} />
       </NodeEffectWrapper>
     );
   }
