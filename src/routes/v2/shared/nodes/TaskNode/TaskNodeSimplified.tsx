@@ -2,6 +2,11 @@ import { Handle, Position } from "@xyflow/react";
 
 import { Card } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import {
   deriveColorPalette,
@@ -11,7 +16,6 @@ import {
 import type { TaskNodeViewProps } from "./TaskNode";
 import { createTaskNodeCardVariants } from "./taskNode.variants";
 
-const PERCEIVED_FONT_SIZE = "36px";
 const s = "var(--simplified-scale, 1)";
 
 const simplifiedCardVariants = createTaskNodeCardVariants(
@@ -41,9 +45,8 @@ export function TaskNodeSimplified({
         subgraph: isSubgraph,
       })}
       style={{
-        minWidth: `calc(${s} * 180px)`,
-        maxWidth: `calc(${s} * 280px)`,
-        minHeight: `calc(${s} * 100px)`,
+        width: `calc(${s} * 240px)`,
+        height: `calc(${s} * 96px)`,
         ...(taskColor
           ? {
               backgroundColor: taskColor,
@@ -66,46 +69,46 @@ export function TaskNodeSimplified({
             height: `calc(${s} * 12px)`,
             left: `calc(${s} * -4px)`,
           }}
-          className="!bg-blue-400 !border-2 !border-white"
+          className="bg-gray-500! border-0!"
         />
       ))}
 
       <div
-        className="flex items-start"
+        className="flex items-center w-full h-full"
         style={{
-          padding: `calc(${s} * 12px)`,
-          gap: `calc(${s} * 8px)`,
+          padding: `calc(${s} * 14px) calc(${s} * 18px)`,
+          gap: `calc(${s} * 10px)`,
         }}
       >
-        <div
-          className="shrink-0"
-          style={{
-            width: `calc(${s} * 16px)`,
-            height: `calc(${s} * 16px)`,
-            marginTop: `calc(${s} * 3.2px)`,
-            ...(taskColor ? { color: headerTextColor } : {}),
-          }}
-        >
-          <Icon
-            name={isSubgraph ? "Layers" : "Circle"}
-            className={cn(
-              "!h-full !w-full",
-              !taskColor && (isSubgraph ? "text-purple-600" : "text-blue-600"),
-            )}
-          />
-        </div>
-        <span
-          className={cn(
-            "font-semibold break-words min-w-0",
-            !taskColor && "text-slate-900",
-          )}
-          style={{
-            fontSize: `calc(${s} * ${PERCEIVED_FONT_SIZE})`,
-            lineHeight: 1.2,
-          }}
-        >
-          {taskName}
-        </span>
+        {isSubgraph && (
+          <div
+            className="shrink-0"
+            style={{
+              width: `calc(${s} * 32px)`,
+              height: `calc(${s} * 32px)`,
+              ...(taskColor ? { color: headerTextColor } : {}),
+            }}
+          >
+            <Icon
+              name="Workflow"
+              className={cn("h-full! w-full!", !taskColor && "text-blue-600")}
+            />
+          </div>
+        )}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span
+              className={cn(
+                "font-medium min-w-0 line-clamp-2 wrap-break-word",
+                !taskColor && "text-slate-900",
+              )}
+              style={{ fontSize: `calc(${s} * 28px)`, lineHeight: 1.25 }}
+            >
+              {taskName}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="top">{taskName}</TooltipContent>
+        </Tooltip>
       </div>
 
       {outputs.map((output) => (
@@ -120,7 +123,7 @@ export function TaskNodeSimplified({
             height: `calc(${s} * 12px)`,
             right: `calc(${s} * -4px)`,
           }}
-          className="!bg-green-400 !border-2 !border-white"
+          className="bg-gray-500! border-0!"
         />
       ))}
     </Card>

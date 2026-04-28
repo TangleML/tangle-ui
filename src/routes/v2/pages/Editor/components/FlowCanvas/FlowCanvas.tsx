@@ -19,6 +19,7 @@ import { useDoubleClickBehavior } from "@/routes/v2/shared/hooks/useDoubleClickB
 import { useFitViewOnFocus } from "@/routes/v2/shared/hooks/useFitViewOnFocus";
 import { useFlowCanvasState } from "@/routes/v2/shared/hooks/useFlowCanvasState";
 import { focusModeStore } from "@/routes/v2/shared/hooks/useFocusMode";
+import { useIsDetailedView } from "@/routes/v2/shared/hooks/useIsDetailedView";
 import { useViewportScaling } from "@/routes/v2/shared/hooks/useViewportScaling";
 import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { CMDALT, SHIFT } from "@/routes/v2/shared/shortcuts/keys";
@@ -55,6 +56,7 @@ export const FlowCanvas = observer(function FlowCanvas({
   const metaKeyPressed = keyboard.pressed.has(CMDALT);
   const shiftKeyPressed = keyboard.pressed.has(SHIFT);
   const isConnecting = useConnection((c) => c.inProgress);
+  const isDetailedView = useIsDetailedView();
 
   const {
     displayNodes,
@@ -96,6 +98,8 @@ export const FlowCanvas = observer(function FlowCanvas({
         edgeTypes={edgeTypes}
         nodes={displayNodes}
         edges={displayEdges}
+        nodesConnectable={isDetailedView}
+        edgesReconnectable={isDetailedView}
         {...selectionBehavior}
         {...nodeEdgeBehavior}
         {...connectionBehavior}
@@ -107,7 +111,10 @@ export const FlowCanvas = observer(function FlowCanvas({
         onViewportChange={handleViewportChange}
         connectionLineComponent={ConnectionLine}
         deleteKeyCode={DELETE_KEY_CODE}
-        className={cn(shiftKeyPressed && !isConnecting && "cursor-crosshair")}
+        className={cn(
+          shiftKeyPressed && !isConnecting && "cursor-crosshair",
+          !isDetailedView && "connections-disabled",
+        )}
       >
         <FloatingSelectionToolbar spec={spec} />
         <Background gap={10} className="bg-slate-50!" />

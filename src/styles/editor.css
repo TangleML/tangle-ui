@@ -15,6 +15,10 @@ details > * {
   cursor: crosshair;
 }
 
+.react-flow.connections-disabled .react-flow__handle {
+  cursor: inherit;
+}
+
 /* Input and output nodes reset styles */
 .react-flow__node-input,
 .react-flow__node-output,

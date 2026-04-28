@@ -1,16 +1,29 @@
-import { Handle, type Node, type NodeProps, Position } from "@xyflow/react";
+import { type Node, type NodeProps } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BlockStack, InlineStack } from "@/components/ui/layout";
-import { Paragraph } from "@/components/ui/typography";
-import { cn } from "@/lib/utils";
+import { useIsDetailedView } from "@/routes/v2/shared/hooks/useIsDetailedView";
 import type { IONodeData } from "@/routes/v2/shared/nodes/types";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
+import { IONodeCard } from "./IONodeCard";
+import { IONodeSimplified } from "./IONodeSimplified";
+
 type IONodeType = Node<IONodeData, "input" | "output">;
 type IONodeProps = NodeProps<IONodeType>;
+
+export interface IONodeViewProps {
+  entityId: string;
+  name: string;
+  type?: string;
+  description?: string;
+  defaultValue?: string;
+  connectedValue: string | null;
+  isInput: boolean;
+  selected: boolean;
+  isHovered: boolean;
+  onNodeClick: (event: React.MouseEvent) => void;
+}
 
 function typeToString(type: unknown): string | undefined {
   if (type === undefined || type === null) return undefined;
@@ -25,6 +38,7 @@ export const IONode = observer(function IONode({
 }: IONodeProps) {
   const { entityId, ioType } = data;
   const { editor } = useSharedStores();
+  const showContent = useIsDetailedView();
 
   const spec = useSpec();
   const isInput = ioType === "input";
@@ -45,7 +59,6 @@ export const IONode = observer(function IONode({
   const description = entity?.description;
   const isHovered = editor.hoveredEntityId === entityId;
 
-  // For outputs, find the connected task and port name
   let connectedValue: string | null = null;
   if (!isInput && spec && entity) {
     const binding = [...spec.bindings].find(
@@ -61,73 +74,27 @@ export const IONode = observer(function IONode({
     }
   }
 
-  const bgColor = isInput ? "bg-blue-100" : "bg-violet-100";
-  const borderColor = selected
-    ? isInput
-      ? "border-blue-500"
-      : "border-violet-500"
-    : isHovered
-      ? "border-amber-400 ring-2 ring-amber-300"
-      : isInput
-        ? "border-blue-300 hover:border-blue-400"
-        : "border-violet-300 hover:border-violet-400";
+  const defaultValue =
+    isInput && entity && "defaultValue" in entity
+      ? (entity.defaultValue ?? undefined)
+      : undefined;
 
-  return (
-    <Card
-      className={cn(
-        "border-2 max-w-60 p-0 cursor-pointer transition-all",
-        bgColor,
-        borderColor,
-      )}
-      onClick={handleClick}
-    >
-      <CardHeader className="p-2">
-        <CardTitle className="wrap-break-word text-sm">{name}</CardTitle>
-        {description && (
-          <Paragraph tone="subdued" className="italic truncate text-xs">
-            {description}
-          </Paragraph>
-        )}
-      </CardHeader>
-      <CardContent className="p-2 max-w-60">
-        <BlockStack gap="2">
-          <Paragraph size="xs" font="mono" className="truncate text-slate-700">
-            <span className="font-bold">Type:</span> {type ?? "Any"}
-          </Paragraph>
+  const viewProps: IONodeViewProps = {
+    entityId,
+    name,
+    type,
+    description,
+    defaultValue,
+    connectedValue,
+    isInput,
+    selected: !!selected,
+    isHovered,
+    onNodeClick: handleClick,
+  };
 
-          <InlineStack gap="1" className="p-2 bg-white rounded-lg w-full">
-            <Paragraph
-              size="xs"
-              font="mono"
-              weight="bold"
-              className="text-slate-700"
-            >
-              Value:
-            </Paragraph>
-            <Paragraph
-              size="xs"
-              font="mono"
-              tone="subdued"
-              className="truncate"
-            >
-              {isInput
-                ? ((entity && "defaultValue" in entity
-                    ? entity.defaultValue
-                    : null) ?? "No value")
-                : (connectedValue ?? "No value")}
-            </Paragraph>
-          </InlineStack>
-        </BlockStack>
-        <Handle
-          type={isInput ? "source" : "target"}
-          position={isInput ? Position.Right : Position.Left}
-          id={isInput ? `output_${entityId}` : `input_${entityId}`}
-          className={cn(
-            "w-3! h-3! border-0! transform-none! bg-gray-500!",
-            isInput ? "translate-x-1.5" : "-translate-x-1.5",
-          )}
-        />
-      </CardContent>
-    </Card>
-  );
+  if (!showContent) {
+    return <IONodeSimplified {...viewProps} />;
+  }
+
+  return <IONodeCard {...viewProps} />;
 });

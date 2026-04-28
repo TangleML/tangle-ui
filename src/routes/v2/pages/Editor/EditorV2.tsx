@@ -1,4 +1,5 @@
 import "@xyflow/react/dist/style.css";
+import "@/styles/editor.css";
 
 import { useParams, useSearch } from "@tanstack/react-router";
 import { ReactFlowProvider } from "@xyflow/react";
