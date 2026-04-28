@@ -7,7 +7,7 @@ import type {
 } from "@xyflow/react";
 import { useEdgesState, useNodesState } from "@xyflow/react";
 import type { MouseEvent } from "react";
-import { useState } from "react";
+import { useLayoutEffect } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
@@ -33,9 +33,22 @@ interface UseFlowCanvasStateResult {
   selectionBehavior: Required<Pick<ReactFlowProps, "onSelectionChange">>;
 }
 
+function preserveSelection<T extends { id: string; selected?: boolean }>(
+  currentItems: T[],
+  newItems: T[],
+): T[] {
+  const selectedIds = new Set(
+    currentItems.filter((item) => item.selected).map((item) => item.id),
+  );
+  if (selectedIds.size === 0) return newItems;
+  return newItems.map((item) =>
+    selectedIds.has(item.id) ? { ...item, selected: true } : item,
+  );
+}
+
 /**
  * Aggregates the common flow canvas state setup shared by Editor and RunView:
- * spec-to-nodes conversion, React Flow state, sync effect,
+ * spec-to-nodes conversion, React Flow state, MobX-driven sync,
  * canvas enhancements, and selection behavior.
  */
 export function useFlowCanvasState({
@@ -50,17 +63,13 @@ export function useFlowCanvasState({
   const [nodes, setNodes, rfOnNodesChange] = useNodesState(specNodes);
   const [edges, setEdges, rfOnEdgesChange] = useEdgesState(specEdges);
 
-  const [syncedSpecNodes, setSyncedSpecNodes] = useState(specNodes);
-  const [syncedSpecEdges, setSyncedSpecEdges] = useState(specEdges);
+  useLayoutEffect(() => {
+    setNodes((current) => preserveSelection(current, specNodes));
+  }, [specNodes, setNodes]);
 
-  if (syncedSpecNodes !== specNodes) {
-    setSyncedSpecNodes(specNodes);
-    setNodes(specNodes);
-  }
-  if (syncedSpecEdges !== specEdges) {
-    setSyncedSpecEdges(specEdges);
-    setEdges(specEdges);
-  }
+  useLayoutEffect(() => {
+    setEdges((current) => preserveSelection(current, specEdges));
+  }, [specEdges, setEdges]);
 
   const {
     nodes: displayNodes,

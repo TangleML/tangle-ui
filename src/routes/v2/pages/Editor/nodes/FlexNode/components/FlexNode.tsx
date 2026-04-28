@@ -6,6 +6,7 @@ import {
   type ResizeParams,
 } from "@xyflow/react";
 import { cva } from "class-variance-authority";
+import { observer } from "mobx-react-lite";
 import { type MouseEvent, useState } from "react";
 
 import { InlineTextEditor } from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/InlineTextEditor";
@@ -21,7 +22,7 @@ import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionCo
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
-type FlexNodeProps = NodeProps<Node<FlexNodeData>>;
+type FlexNodeProps = NodeProps<Node<FlexNodeData, "flex">>;
 
 const MIN_SIZE = { width: 50, height: 50 };
 
@@ -144,7 +145,11 @@ function FlexNodeContent({
   );
 }
 
-export const EditorV2FlexNode = ({ data, id, selected }: FlexNodeProps) => {
+export const EditorV2FlexNode = observer(function EditorV2FlexNode({
+  data,
+  id,
+  selected,
+}: FlexNodeProps) {
   const { editor } = useSharedStores();
   const { undo } = useEditorSession();
   const spec = useSpec();
@@ -296,4 +301,4 @@ export const EditorV2FlexNode = ({ data, id, selected }: FlexNodeProps) => {
       </div>
     </>
   );
-};
+});
