@@ -133,7 +133,7 @@ export const ColorPicker = ({
                 size="sm"
                 className="pl-3 text-muted-foreground select-none"
               >
-                {localColor === "transparent" ? "" : "#"}
+                #
               </Text>
               <Input
                 value={
