@@ -9,6 +9,7 @@ import logo from "/Tangle_white.png";
 import { isAuthorizationRequired } from "@/components/shared/Authentication/helpers";
 import { TopBarAuthentication } from "@/components/shared/Authentication/TopBarAuthentication";
 import { CopyText } from "@/components/shared/CopyText/CopyText";
+import { EditorVersionToggle } from "@/components/shared/EditorVersionToggle";
 import ImportPipeline from "@/components/shared/ImportPipeline";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -108,6 +109,8 @@ const DefaultAppMenu = () => {
             </TooltipProvider>
             <div className="w-px h-5 bg-stone-700" />
           </div>
+
+          <EditorVersionToggle />
 
           {/* Settings & status */}
           {isOnSettingsRoute ? (
