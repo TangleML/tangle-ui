@@ -1,6 +1,7 @@
 import { observer } from "mobx-react-lite";
 import { useEffect, useRef, useState } from "react";
 
+import { Button } from "@/components/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
@@ -121,13 +122,14 @@ export const TaskDetails = observer(function TaskDetails({
                 <Text size="md" weight="semibold" className="wrap-anywhere">
                   {task.name}
                 </Text>
-                <button
-                  type="button"
-                  className="shrink-0 text-muted-foreground hover:text-foreground cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+                <Button
+                  variant="ghost"
+                  size="inline-xs"
+                  className="shrink-0 p-0 text-muted-foreground hover:bg-transparent hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
                   onClick={startRename}
                 >
                   <Icon name="Pencil" size="xs" />
-                </button>
+                </Button>
               </div>
             )}
           </InlineStack>

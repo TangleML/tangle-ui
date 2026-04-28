@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import logo from "/Tangle_Icon_White.png";
 import { PipelineNameDialog } from "@/components/shared/Dialogs";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Link } from "@/components/ui/link";
@@ -75,13 +76,14 @@ export const EditorMenuBar = observer(function EditorMenuBar() {
                 >
                   {pipelineName}
                 </Text>
-                <button
-                  type="button"
-                  className="shrink-0 text-stone-400 hover:text-white cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+                <Button
+                  variant="ghost"
+                  size="inline-xs"
+                  className="shrink-0 p-0 text-stone-400 hover:bg-transparent hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
                   onClick={() => setRenameOpen(true)}
                 >
                   <Icon name="Pencil" size="xs" />
-                </button>
+                </Button>
               </InlineStack>
               <PipelineNameDialog
                 open={renameOpen}
