@@ -567,7 +567,12 @@ describe("validateSpec", () => {
 
     it("spec.isValid returns true when there are no issues", () => {
       const spec = makeSpec("ValidPipeline");
-      spec.addTask(makeTask("t1", "TaskA"));
+      spec.addTask(
+        makeTask("t1", "TaskA", {
+          name: "SomeComponent",
+          implementation: { container: { image: "test" } },
+        }),
+      );
       expect(spec.isValid).toBe(true);
     });
 
