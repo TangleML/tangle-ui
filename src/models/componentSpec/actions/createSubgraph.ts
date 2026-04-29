@@ -10,6 +10,7 @@ import type {
   Annotation,
   Argument,
   ComponentReference,
+  ExecutionOptionsSpec,
   PredicateType,
 } from "../entities/types";
 import type { IdGenerator } from "../factories/idGenerator";
@@ -34,6 +35,7 @@ interface TaskSnapshot {
   isEnabled?: PredicateType;
   annotations: Annotation[];
   arguments: Argument[];
+  executionOptions?: ExecutionOptionsSpec;
 }
 
 interface BindingSnapshot {
@@ -52,6 +54,9 @@ function snapshotTask(t: Task): TaskSnapshot {
     isEnabled: t.isEnabled ? deepClone(t.isEnabled) : undefined,
     annotations: t.annotations.items.map((a) => deepClone(a)),
     arguments: t.arguments.map((a) => deepClone(a)),
+    executionOptions: t.executionOptions
+      ? deepClone(t.executionOptions)
+      : undefined,
   };
 }
 
@@ -121,9 +126,10 @@ export function createSubgraph({
 
   const subgraphInputs: Input[] = [];
   const inputGroups: Array<{ input: Input; bindings: BindingSnapshot[] }> = [];
+  const usedInputNames = new Set<string>();
   for (const [, bindings] of Object.entries(incomingBySource)) {
     const first = bindings[0];
-    const inputName = first.targetPortName;
+    const inputName = deduplicatePortName(first.targetPortName, usedInputNames);
     const input = new Input({
       $id: idGen.next("input"),
       name: inputName,
@@ -140,9 +146,13 @@ export function createSubgraph({
   const subgraphOutputs: Output[] = [];
   const outputGroups: Array<{ output: Output; bindings: BindingSnapshot[] }> =
     [];
+  const usedOutputNames = new Set<string>();
   for (const [, bindings] of Object.entries(outgoingBySource)) {
     const first = bindings[0];
-    const outputName = first.sourcePortName;
+    const outputName = deduplicatePortName(
+      first.sourcePortName,
+      usedOutputNames,
+    );
     const output = new Output({
       $id: idGen.next("output"),
       name: outputName,
@@ -171,6 +181,7 @@ export function createSubgraph({
         isEnabled: t.isEnabled,
         annotations: Annotations.from(t.annotations),
         arguments: t.arguments,
+        executionOptions: t.executionOptions,
       }),
   );
 
@@ -274,4 +285,16 @@ function groupBy<T>(
     result[key].push(item);
   }
   return result;
+}
+
+function deduplicatePortName(baseName: string, usedNames: Set<string>): string {
+  if (!usedNames.has(baseName)) {
+    usedNames.add(baseName);
+    return baseName;
+  }
+  let counter = 2;
+  while (usedNames.has(`${baseName}_${counter}`)) counter++;
+  const unique = `${baseName}_${counter}`;
+  usedNames.add(unique);
+  return unique;
 }
