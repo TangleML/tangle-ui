@@ -2,6 +2,7 @@ import { SelectionMode } from "@xyflow/react";
 
 export const GRID_SIZE = 10;
 export const ZOOM_THRESHOLD = 0.3;
+export const MAX_COLLAPSED_SCALE = 7;
 
 /**
  * Shared ReactFlow props that are identical across Editor and RunView canvases.
