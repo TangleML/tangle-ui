@@ -54,16 +54,16 @@ If you find you are blocked by CORS, you will, for now, need to use the manual s
 
 If you complete these steps the app will launch on `127.0.0.1:8000` with the latest build you've created on the frontend.
 
-### Reporting errors to Bugsnag (Optional)
+### Environment Variables
 
-To enable error reporting, add the following to your `.env` file:
+Add these to a `.env` file at the root of `tangle-ui`.
 
-```bash
-VITE_BUGSNAG_API_KEY=your-api-key
-VITE_TANGLE_ENV=production
-```
-
-Both variables are required for Bugsnag to initialize. `VITE_TANGLE_ENV` sets the Bugsnag `releaseStage` (e.g. `development`, `staging`, `production`). If either variable is missing, error reporting will be disabled.
+| Variable                       | Required             | Description                                                                                                                                            |
+| ------------------------------ | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `VITE_BACKEND_API_URL`         | For backend features | URL of your Tangle backend (e.g. `http://127.0.0.1:8000`).                                                                                             |
+| `VITE_ARTIFACT_RETENTION_DAYS` | No                   | Number of days artifacts are stored by your backend. When set, the UI shows artifact expiry dates and warns when artifacts may no longer be available. |
+| `VITE_BUGSNAG_API_KEY`         | No                   | Bugsnag API key. Required alongside `VITE_TANGLE_ENV` to enable error reporting.                                                                       |
+| `VITE_TANGLE_ENV`              | No                   | Release stage passed to Bugsnag (e.g. `development`, `staging`, `production`).                                                                         |
 
 ## App features:
 

@@ -1,10 +1,12 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 
+import { ArtifactFetchError } from "@/services/executionService";
 import { HOURS } from "@/utils/constants";
 
 /**
  * Fetches artifact content from a signed URL using suspense mode.
  * Loading and error states are handled by the nearest SuspenseWrapper.
+ * Throws ArtifactFetchError on non-2xx responses so callers can branch on status.
  */
 export function useArtifactFetch<T>(
   queryKey: string,
@@ -16,7 +18,11 @@ export function useArtifactFetch<T>(
     queryFn: async () => {
       const response = await fetch(signedUrl);
       if (!response.ok) {
-        throw new Error(`(${response.status}) Failed to fetch artifact.`);
+        throw new ArtifactFetchError(
+          response.status,
+          response.statusText,
+          "Failed to fetch artifact.",
+        );
       }
 
       return transform(response);
