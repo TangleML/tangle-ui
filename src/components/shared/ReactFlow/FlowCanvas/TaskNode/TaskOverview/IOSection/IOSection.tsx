@@ -9,8 +9,10 @@ import { useExecutionData } from "@/providers/ExecutionDataProvider";
 import { getExecutionArtifacts } from "@/services/executionService";
 import { getBackendStatusString } from "@/utils/backend";
 import type { TaskSpec } from "@/utils/componentSpec";
-import { isOlderThanDays } from "@/utils/date";
+import { addDays, formatDate, isOlderThanDays } from "@/utils/date";
 
+import { ArtifactRetentionNotice } from "./ArtifactRetentionNotice";
+import { getArtifactRetentionDays } from "./artifactRetentionUtils";
 import IOExtras from "./IOExtras";
 import IOInputs from "./IOInputs";
 import IOOutputs from "./IOOutputs";
@@ -77,18 +79,33 @@ const IOSection = ({ taskSpec, executionId, readOnly }: IOSectionProps) => {
     ? ["inputs", "outputs", "other"]
     : ["outputs", "inputs", "other"];
 
-  const isOlderThan30Days =
-    metadata?.created_at && isOlderThanDays(metadata.created_at, 30);
+  const retentionDays = getArtifactRetentionDays();
+
+  const isOlderThanRetentionPeriod =
+    retentionDays !== null &&
+    metadata?.created_at &&
+    isOlderThanDays(metadata.created_at, retentionDays);
+
+  const expiryDate =
+    retentionDays !== null &&
+    metadata?.created_at &&
+    !isOlderThanRetentionPeriod
+      ? formatDate(addDays(metadata.created_at, retentionDays), {
+          month: "long",
+          day: "numeric",
+          year: "numeric",
+        })
+      : null;
 
   return (
     <BlockStack gap="4" className="w-full">
-      {isOlderThan30Days && (
-        <InfoBox title="Artifact Storage" variant="warning">
-          Remote artifacts may be unavailable for runs older than 30 days. To
-          keep an artifact, download it using the provided link before it
-          expires.
+      {isOlderThanRetentionPeriod ? (
+        <ArtifactRetentionNotice title="Artifact Storage" />
+      ) : expiryDate ? (
+        <InfoBox title="Artifact Storage" variant="info" width="full">
+          Artifacts from this run expire on {expiryDate}.
         </InfoBox>
-      )}
+      ) : null}
       {order.map((section) => {
         if (section === "inputs") {
           return (

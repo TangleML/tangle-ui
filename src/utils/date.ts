@@ -77,6 +77,15 @@ export const formatDuration = (startTime: string, endTime: string): string => {
 };
 
 /**
+ * Return a new Date offset by the given number of days.
+ */
+export const addDays = (date: string | Date, days: number): Date => {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+};
+
+/**
  * Check whether a date is older than a given number of calendar days ago.
  * @param date - Date string or object to check
  * @param days - Number of calendar days to compare against
