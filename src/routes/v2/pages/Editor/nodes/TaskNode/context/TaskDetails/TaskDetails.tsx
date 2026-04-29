@@ -27,6 +27,12 @@ import { TaskArgumentsEditor } from "./components/TaskArgumentsEditor";
 import { useTaskConfigActions } from "./components/useTaskConfigActions";
 import { useTask } from "./hooks/useTask";
 
+const EDITOR_ANNOTATION_KEYS = [
+  "editor.position",
+  "tangleml.com/editor/task-color",
+  "tangleml.com/editor/edge-conduits",
+];
+
 interface TaskDetailsProps {
   entityId: string;
 }
@@ -184,7 +190,11 @@ export const TaskDetails = observer(function TaskDetails({
 
               <Separator />
 
-              <AnnotationsBlock annotations={task.annotations} defaultEditing />
+              <AnnotationsBlock
+                annotations={task.annotations}
+                defaultEditing
+                ignoreAnnotationKeys={EDITOR_ANNOTATION_KEYS}
+              />
             </BlockStack>
           </CollapsibleContent>
         </Collapsible>
