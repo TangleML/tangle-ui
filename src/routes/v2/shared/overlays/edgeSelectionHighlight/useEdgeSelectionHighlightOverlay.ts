@@ -11,7 +11,7 @@ import type {
 const OVERLAY_ID = "edge-selection-highlight";
 
 const HIGHLIGHT_EFFECT: NodeOverlayEffect = {
-  className: "ring-4 ring-edge-selected/60 rounded-xl",
+  className: "ring-4 ring-edge-selected/60 rounded-2xl",
 };
 
 const DIMMED_EFFECT: NodeOverlayEffect = {
@@ -19,18 +19,22 @@ const DIMMED_EFFECT: NodeOverlayEffect = {
 };
 
 /**
- * Serialises the set of entity IDs connected to selected edges into a
- * stable comma-separated key. Returns `null` when no edge is selected,
- * so the overlay is deactivated.
+ * Serialises the set of entity IDs connected to selected edges, plus any
+ * selected nodes (so they keep the highlight effect rather than being
+ * dimmed), into a stable comma-separated key. Returns `null` when no edge
+ * is selected, so the overlay is deactivated.
  */
 function selectConnectedKey(state: ReactFlowState): string | null {
-  const selected = state.edges.filter((e: Edge) => e.selected);
-  if (selected.length === 0) return null;
+  const selectedEdges = state.edges.filter((e: Edge) => e.selected);
+  if (selectedEdges.length === 0) return null;
 
   const ids = new Set<string>();
-  for (const edge of selected) {
+  for (const edge of selectedEdges) {
     ids.add(edge.source);
     ids.add(edge.target);
+  }
+  for (const node of state.nodes) {
+    if (node.selected) ids.add(node.id);
   }
   return [...ids].sort().join(",");
 }

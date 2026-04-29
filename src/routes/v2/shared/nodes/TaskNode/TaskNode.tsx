@@ -5,7 +5,7 @@ import {
   useStore,
 } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
-import type { ReactElement } from "react";
+import type { MouseEvent, ReactElement } from "react";
 
 import { Card } from "@/components/ui/card";
 import { Text } from "@/components/ui/typography";
@@ -190,7 +190,7 @@ export const TaskNode = observer(function TaskNode({
   const { description, inputs, outputs } =
     getComponentSpecDefaults(componentSpec);
 
-  const handleClick = (event: React.MouseEvent) => {
+  const handleClick = (event: MouseEvent) => {
     editor.selectNode(id, "task", { shiftKey: event.shiftKey, entityId });
   };
 
@@ -205,18 +205,18 @@ export const TaskNode = observer(function TaskNode({
     );
   };
 
-  const handleInputClick = (inputName: string, e: React.MouseEvent) => {
+  const handleInputClick = (inputName: string, e: MouseEvent) => {
     e.stopPropagation();
     editor.selectNode(id, "task", { entityId });
     editor.setFocusedArgument(inputName);
   };
 
-  const handleOutputClick = (_outputName: string, e: React.MouseEvent) => {
+  const handleOutputClick = (_outputName: string, e: MouseEvent) => {
     e.stopPropagation();
     editor.selectNode(id, "task", { entityId });
   };
 
-  const handleHandleClick = (handleId: string, e: React.MouseEvent) => {
+  const handleHandleClick = (handleId: string, e: MouseEvent) => {
     e.stopPropagation();
     selectEdgesByHandle(handleId);
   };

@@ -20,7 +20,7 @@ export const FLOW_CANVAS_DEFAULT_PROPS = {
   fitViewOptions: { maxZoom: 1, padding: 0.2 },
   proOptions: { hideAttribution: true },
   selectionOnDrag: false,
-  selectionMode: SelectionMode.Partial,
+  selectionMode: SelectionMode.Full,
   panOnDrag: true,
   zIndexMode: "manual" as const,
   defaultEdgeOptions: { style: { stroke: "#6b7280", strokeWidth: 4 } },

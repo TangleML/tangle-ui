@@ -51,12 +51,14 @@ export const FloatingSelectionToolbar = observer(
     const selectedTasks = multiSelection.filter((n) => n.type === "task");
 
     const handleCreateSubgraph = (name: string) => {
-      if (!spec) return;
+      if (!spec || selectedTasks.length === 0) return;
       const taskIds = selectedTasks.map((n) => n.id);
-      if (taskIds.length === 0) return;
-      const viewport = reactFlow.getViewport();
-      const centerX = (window.innerWidth / 2 - viewport.x) / viewport.zoom;
-      const centerY = (window.innerHeight / 2 - viewport.y) / viewport.zoom;
+      const centerX =
+        selectedTasks.reduce((sum, n) => sum + n.position.x, 0) /
+        selectedTasks.length;
+      const centerY =
+        selectedTasks.reduce((sum, n) => sum + n.position.y, 0) /
+        selectedTasks.length;
       createSubgraph(spec, taskIds, name, { x: centerX, y: centerY });
     };
 
