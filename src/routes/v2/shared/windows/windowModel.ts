@@ -245,6 +245,8 @@ export class WindowModel {
     this.dockState = "none";
     this.preDockedPosition = undefined;
     this.preDockedSize = undefined;
+    // Floating windows don't render a minimized state; normalize on undock.
+    if (this.state === "minimized") this.state = "normal";
   }
 
   // -- Snapshot helpers (save/restore for minimize/maximize/hide transitions) --

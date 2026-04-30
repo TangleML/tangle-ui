@@ -8,25 +8,26 @@ interface WindowHeaderProps {
   title: string;
   isDragging?: boolean;
   onMouseDown?: (e: React.MouseEvent) => void;
-  onDoubleClick?: () => void;
   leadingIcon?: ReactNode;
   actions: ReactNode;
   className?: string;
   style?: React.CSSProperties;
   /** When true, actions are hidden until the parent group/window is hovered. */
   actionsOnHover?: boolean;
+  /** Color tone of the header content; affects title text color. */
+  tone?: "light" | "dark";
 }
 
 export function WindowHeader({
   title,
   isDragging = false,
   onMouseDown,
-  onDoubleClick,
   leadingIcon,
   actions,
   className,
   style,
   actionsOnHover = false,
+  tone = "light",
 }: WindowHeaderProps) {
   return (
     <div
@@ -38,7 +39,6 @@ export function WindowHeader({
       )}
       style={style}
       onMouseDown={onMouseDown}
-      onDoubleClick={onDoubleClick}
     >
       <InlineStack
         gap="1"
@@ -47,7 +47,14 @@ export function WindowHeader({
         className="min-w-0 flex-1 overflow-hidden"
       >
         {leadingIcon}
-        <Text size="xs" weight="semibold" className="text-gray-700 truncate">
+        <Text
+          size="xs"
+          weight="semibold"
+          className={cn(
+            "truncate",
+            tone === "dark" ? "text-gray-100" : "text-gray-700",
+          )}
+        >
           {title}
         </Text>
       </InlineStack>

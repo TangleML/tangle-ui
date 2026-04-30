@@ -145,8 +145,9 @@ export function initDockAreaAccordion(
       }
 
       case "window-minimized": {
+        // Manual minimize is allowed to leave the dock area fully collapsed —
+        // we intentionally don't call ensureOneVisible here.
         restoreFromStack(store, side);
-        ensureOneVisible(store, side);
         break;
       }
     }

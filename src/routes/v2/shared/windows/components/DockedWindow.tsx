@@ -2,6 +2,11 @@ import { observer } from "mobx-react-lite";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 import { useWindowContext } from "@/routes/v2/shared/windows/ContentWindowStateContext";
@@ -83,7 +88,7 @@ export const DockedWindow = observer(function DockedWindow() {
     return createPortal(
       <div
         ref={panelRef}
-        className="fixed inset-0 z-[45] bg-gray-100 text-gray-900 flex flex-col rounded-none overflow-hidden"
+        className="fixed inset-0 z-45 bg-gray-100 text-gray-900 flex flex-col rounded-none overflow-hidden"
         onMouseDown={handleContainerMouseDown}
         onClick={handleContainerClick}
       >
@@ -106,47 +111,59 @@ export const DockedWindow = observer(function DockedWindow() {
   }
 
   return (
-    <>
+    <Collapsible
+      className="contents"
+      open={!model.isMinimized}
+      onOpenChange={(shouldExpand) => {
+        const isExpanded = !model.isMinimized;
+        if (shouldExpand !== isExpanded) model.toggleMinimize();
+      }}
+    >
       {/* Sentinel to detect stuck state and serve as scroll target */}
       <div ref={sentinelRef} className="h-0 w-full shrink-0" />
 
       {/* Header is a direct flex item of the dock scroll container so sticky works */}
-      <div
-        ref={panelRef}
-        data-dock-window={model.id}
-        className={cn(
-          "group/window w-full sticky",
-          (isDragging || isResizing) && "select-none",
-          isDragging && "cursor-grabbing opacity-50",
-          showCollapsedStyle
-            ? "bg-purple-50 border-b border-purple-200"
-            : "bg-white border-b border-transparent",
-        )}
-        style={{ top: stickyTop, zIndex: 20 - dockIndex }}
-        onMouseDown={handleContainerMouseDown}
-        onClick={() => {
-          handleContainerClick();
-          if (isStuck) handleScrollToWindow();
-        }}
-      >
-        <WindowHeader
-          title={model.title}
-          isDragging={isDragging}
-          onMouseDown={handleHeaderMouseDown}
-          onDoubleClick={() => model.toggleMinimize()}
-          leadingIcon={
-            <Icon
-              name="GripVertical"
-              size="xs"
-              className="text-gray-400 shrink-0"
-            />
-          }
-          actions={actions}
-          actionsOnHover
-        />
-      </div>
+      <CollapsibleTrigger asChild>
+        <div
+          ref={panelRef}
+          data-dock-window={model.id}
+          className={cn(
+            "group/window w-full sticky text-left",
+            (isDragging || isResizing) && "select-none",
+            isDragging && "cursor-grabbing opacity-50",
+            showCollapsedStyle
+              ? "bg-purple-50 border-b border-purple-200"
+              : "bg-white border-b border-transparent",
+          )}
+          style={{ top: stickyTop, zIndex: 20 - dockIndex }}
+          onMouseDown={handleContainerMouseDown}
+          onClick={(e) => {
+            handleContainerClick();
+            if (isStuck) {
+              // Prefer scroll-to-window over toggling collapse when stuck.
+              e.preventDefault();
+              handleScrollToWindow();
+            }
+          }}
+        >
+          <WindowHeader
+            title={model.title}
+            isDragging={isDragging}
+            onMouseDown={handleHeaderMouseDown}
+            leadingIcon={
+              <Icon
+                name="GripVertical"
+                size="xs"
+                className="text-gray-400 shrink-0"
+              />
+            }
+            actions={actions}
+            actionsOnHover
+          />
+        </div>
+      </CollapsibleTrigger>
 
-      {!model.isMinimized && (
+      <CollapsibleContent>
         <div
           className={cn(
             "w-full bg-white text-gray-900",
@@ -164,7 +181,7 @@ export const DockedWindow = observer(function DockedWindow() {
             onMouseDown={handleResizeMouseDown}
           />
         </div>
-      )}
+      </CollapsibleContent>
 
       {isDragging &&
         snapPreview &&
@@ -172,6 +189,6 @@ export const DockedWindow = observer(function DockedWindow() {
           <SnapPreview preview={snapPreview} windowWidth={model.size.width} />,
           document.body,
         )}
-    </>
+    </Collapsible>
   );
 });
