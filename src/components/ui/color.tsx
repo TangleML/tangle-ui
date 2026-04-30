@@ -3,6 +3,10 @@ import { HexColorPicker } from "react-colorful";
 
 import { useDebouncedState } from "@/hooks/useDebouncedState";
 import { cn } from "@/lib/utils";
+import {
+  deriveColorPalette,
+  getContrastTextColor,
+} from "@/routes/v2/shared/nodes/TaskNode/color.utils";
 
 import { Button } from "./button";
 import {
@@ -14,7 +18,7 @@ import { Icon } from "./icon";
 import { Input } from "./input";
 import { BlockStack, InlineStack } from "./layout";
 import { Popover, PopoverContent, PopoverTrigger } from "./popover";
-import { Heading } from "./typography";
+import { Heading, Text } from "./typography";
 
 const PRESET_COLORS = [
   "#FFF9C4",
@@ -70,14 +74,28 @@ export const ColorPicker = ({
     updatePreviousState(preset);
   };
 
+  const palette = deriveColorPalette(color);
+  const triggerBackground = palette?.background ?? "white";
+  const triggerBorder = palette?.border ?? "var(--color-gray-300)";
+  const triggerIconColor = palette
+    ? getContrastTextColor(palette.background)
+    : "var(--color-gray-400)";
+
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger>
-        <div
-          className="aspect-square h-4 rounded-full border border-muted-foreground cursor-pointer"
+      <PopoverTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-7 rounded-full border-2 hover:bg-transparent"
           data-testid={`color-picker-trigger-${title?.toLowerCase().replace(/\s+/g, "-") ?? "default"}`}
-          style={{ backgroundColor: color }}
-        />
+          style={{
+            backgroundColor: triggerBackground,
+            borderColor: triggerBorder,
+          }}
+        >
+          <Icon name="Pipette" size="sm" style={{ color: triggerIconColor }} />
+        </Button>
       </PopoverTrigger>
       <PopoverContent className="w-fit" data-testid="color-picker-popover">
         <BlockStack gap="4" align="center">
@@ -105,10 +123,31 @@ export const ColorPicker = ({
             ))}
           </InlineStack>
           <div className="relative w-full">
-            <Input
-              value={localColor}
-              onChange={(e) => setLocalColor(e.target.value)}
-            />
+            <InlineStack
+              blockAlign="center"
+              wrap="nowrap"
+              gap="1"
+              className="rounded-md border border-input bg-background"
+            >
+              <Text
+                size="sm"
+                className="pl-3 text-muted-foreground select-none"
+              >
+                {localColor === "transparent" ? "" : "#"}
+              </Text>
+              <Input
+                value={
+                  localColor === "transparent"
+                    ? ""
+                    : localColor.replace(/^#/, "")
+                }
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/^#/, "");
+                  setLocalColor(`#${raw}`);
+                }}
+                className="border-0 shadow-none focus-visible:ring-0 pl-0"
+              />
+            </InlineStack>
             <Collapsible>
               <InlineStack blockAlign="center" gap="1">
                 <CollapsibleTrigger asChild>
