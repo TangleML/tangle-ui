@@ -62,6 +62,9 @@ export const taskManifest: NodeTypeManifest = {
           : undefined,
         annotations,
         arguments: deepClone(snapshot.data.arguments),
+        executionOptions: snapshot.data.executionOptions
+          ? deepClone(snapshot.data.executionOptions)
+          : undefined,
       });
 
       spec.addTask(task);

@@ -23,7 +23,7 @@ import { TaskNode } from "./TaskNode";
 
 type TaskSnapshotData = Pick<
   Task,
-  "componentRef" | "isEnabled" | "arguments"
+  "componentRef" | "isEnabled" | "arguments" | "executionOptions"
 > & {
   annotations: Annotation[];
 };
@@ -35,8 +35,8 @@ export function snapshotTask(
   const task = spec.tasks.find((t) => t.$id === entityId);
   if (!task) return null;
 
-  const nonEditorAnnotations = task.annotations.items
-    .filter((a) => !a.key.startsWith("editor."))
+  const preservedAnnotations = task.annotations.items
+    .filter((a) => a.key !== "editor.position")
     .map((a) => deepClone(a));
 
   return {
@@ -48,7 +48,10 @@ export function snapshotTask(
       componentRef: deepClone(task.componentRef),
       isEnabled: task.isEnabled ? deepClone(task.isEnabled) : undefined,
       arguments: task.arguments.map((a) => deepClone(a)),
-      annotations: nonEditorAnnotations,
+      executionOptions: task.executionOptions
+        ? deepClone(task.executionOptions)
+        : undefined,
+      annotations: preservedAnnotations,
     },
   };
 }

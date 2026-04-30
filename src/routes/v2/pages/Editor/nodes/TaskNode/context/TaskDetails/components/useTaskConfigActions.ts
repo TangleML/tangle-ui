@@ -3,6 +3,7 @@ import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionCo
 import {
   clearProviderAnnotations,
   saveAnnotation,
+  setCollapsed,
   setTaskColor,
   toggleCacheDisable,
 } from "./taskConfig.actions";
@@ -14,6 +15,7 @@ export function useTaskConfigActions() {
     toggleCacheDisable: toggleCacheDisable.bind(null, undo),
     saveAnnotation: saveAnnotation.bind(null, undo),
     setTaskColor: setTaskColor.bind(null, undo),
+    setCollapsed: setCollapsed.bind(null, undo),
     clearProviderAnnotations: clearProviderAnnotations.bind(null, undo),
   };
 }

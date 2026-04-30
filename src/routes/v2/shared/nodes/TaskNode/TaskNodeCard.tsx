@@ -1,7 +1,7 @@
 import { Handle, Position } from "@xyflow/react";
 import { cva } from "class-variance-authority";
 import { observer } from "mobx-react-lite";
-import type { MouseEvent as ReactMouseEvent } from "react";
+import { type MouseEvent as ReactMouseEvent, useEffect, useState } from "react";
 
 import { trimDigest } from "@/components/shared/ManageComponent/utils/digest";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
+import { pluralize } from "@/utils/string";
 
 import { deriveColorPalette } from "./color.utils";
 import type { TaskNodeInput, TaskNodeViewProps } from "./TaskNode";
@@ -173,8 +174,11 @@ export const TaskNodeCard = observer(function TaskNodeCard({
   selected,
   isHovered,
   isSubgraph,
+  collapsed,
   inputs,
   outputs,
+  connectedInputNames,
+  connectedOutputNames,
   inputDisplayValues,
   onNodeClick,
   onInputClick,
@@ -191,6 +195,34 @@ export const TaskNodeCard = observer(function TaskNodeCard({
         ...(isHovered ? {} : { borderColor: palette.border }),
       }
     : undefined;
+
+  const [inputsExpanded, setInputsExpanded] = useState(false);
+  const [outputsExpanded, setOutputsExpanded] = useState(false);
+
+  useEffect(() => {
+    if (collapsed) {
+      setInputsExpanded(false);
+      setOutputsExpanded(false);
+    }
+  }, [collapsed]);
+
+  const condensedInputs =
+    inputs.length > 0 && connectedInputNames.size > 0
+      ? inputs.filter((input) => connectedInputNames.has(input.name))
+      : inputs.slice(0, 1);
+  const hiddenInputCount = inputs.length - condensedInputs.length;
+  const showCondensedInputs =
+    collapsed && !inputsExpanded && hiddenInputCount > 0;
+  const visibleInputs = showCondensedInputs ? condensedInputs : inputs;
+
+  const condensedOutputs =
+    outputs.length > 0 && connectedOutputNames.size > 0
+      ? outputs.filter((output) => connectedOutputNames.has(output.name))
+      : outputs.slice(0, 1);
+  const hiddenOutputCount = outputs.length - condensedOutputs.length;
+  const showCondensedOutputs =
+    collapsed && !outputsExpanded && hiddenOutputCount > 0;
+  const visibleOutputs = showCondensedOutputs ? condensedOutputs : outputs;
 
   return (
     <Card
@@ -274,40 +306,83 @@ export const TaskNodeCard = observer(function TaskNodeCard({
       <CardContent className="p-2 flex flex-col gap-2">
         {inputs.length > 0 && (
           <div
-            className={cn("p-2 rounded-lg", !palette && "bg-gray-200/50")}
+            className={cn(
+              "p-2 rounded-lg",
+              !palette && "bg-gray-200/50",
+              collapsed &&
+                hiddenInputCount > 0 &&
+                "cursor-pointer hover:bg-gray-200/80",
+            )}
             style={palette ? { backgroundColor: palette.sectionBg } : undefined}
+            onClickCapture={
+              collapsed && hiddenInputCount > 0
+                ? (e) => {
+                    e.stopPropagation();
+                    setInputsExpanded((prev) => !prev);
+                  }
+                : undefined
+            }
           >
             <BlockStack gap="3">
-              {inputs.map((input) => (
+              {visibleInputs.map((input, index) => (
                 <ClassicInputHandle
                   key={input.name}
                   input={input}
                   entityId={entityId}
-                  displayValue={inputDisplayValues[input.name]}
+                  displayValue={
+                    showCondensedInputs && index === 0
+                      ? `+${hiddenInputCount} more ${pluralize(hiddenInputCount, "input")}`
+                      : inputDisplayValues[input.name]
+                  }
                   onInputClick={onInputClick}
                   onHandleClick={onHandleClick}
                 />
               ))}
+              {collapsed && inputsExpanded && hiddenInputCount > 0 && (
+                <span className="text-xs text-gray-400 text-center">
+                  (Click to collapse)
+                </span>
+              )}
             </BlockStack>
           </div>
         )}
 
         {outputs.length > 0 && (
           <div
-            className={cn("p-2 rounded-lg", !palette && "bg-gray-200/50")}
+            className={cn(
+              "p-2 rounded-lg",
+              !palette && "bg-gray-200/50",
+              collapsed &&
+                hiddenOutputCount > 0 &&
+                "cursor-pointer hover:bg-gray-200/80",
+            )}
             style={palette ? { backgroundColor: palette.sectionBg } : undefined}
+            onClickCapture={
+              collapsed && hiddenOutputCount > 0
+                ? (e) => {
+                    e.stopPropagation();
+                    setOutputsExpanded((prev) => !prev);
+                  }
+                : undefined
+            }
           >
             <BlockStack gap="3">
-              {outputs.map((output) => (
+              {visibleOutputs.map((output, index) => (
                 <div
                   key={output.name}
                   className="flex items-center justify-end w-full cursor-pointer"
                   onClick={(e) => {
+                    if (collapsed) return;
                     e.stopPropagation();
                     onOutputClick(output.name, e);
                   }}
                 >
                   <div className="flex flex-row-reverse w-full gap-0.5 items-center justify-between">
+                    {showCondensedOutputs && index === 0 && (
+                      <div className="text-xs text-gray-500 italic px-2">
+                        {`+${hiddenOutputCount} more ${pluralize(hiddenOutputCount, "output")}`}
+                      </div>
+                    )}
                     <div className="translate-x-3 min-w-0 inline-block max-w-full">
                       <div
                         className="text-xs text-gray-800 rounded-md px-2 py-1 truncate bg-black/5 hover:bg-black/10"
@@ -326,6 +401,11 @@ export const TaskNodeCard = observer(function TaskNodeCard({
                   />
                 </div>
               ))}
+              {collapsed && outputsExpanded && hiddenOutputCount > 0 && (
+                <span className="text-xs text-gray-400 text-center">
+                  (Click to collapse)
+                </span>
+              )}
             </BlockStack>
           </div>
         )}

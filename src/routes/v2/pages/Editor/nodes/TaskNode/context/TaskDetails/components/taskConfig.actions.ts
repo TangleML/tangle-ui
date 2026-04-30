@@ -1,6 +1,7 @@
 import type { Task } from "@/models/componentSpec";
 import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
 import type { AnnotationConfig } from "@/types/annotations";
+import { EDITOR_COLLAPSED_ANNOTATION } from "@/utils/annotations";
 import { ISO8601_DURATION_ZERO_DAYS } from "@/utils/constants";
 
 const TASK_COLOR_ANNOTATION = "tangleml.com/editor/task-color";
@@ -36,6 +37,20 @@ export function setTaskColor(undo: UndoGroupable, task: Task, color: string) {
       task.annotations.remove(TASK_COLOR_ANNOTATION);
     } else {
       task.annotations.set(TASK_COLOR_ANNOTATION, color);
+    }
+  });
+}
+
+export function setCollapsed(
+  undo: UndoGroupable,
+  task: Task,
+  collapsed: boolean,
+) {
+  undo.withGroup("Toggle collapse node", () => {
+    if (collapsed) {
+      task.annotations.set(EDITOR_COLLAPSED_ANNOTATION, "true");
+    } else {
+      task.annotations.remove(EDITOR_COLLAPSED_ANNOTATION);
     }
   });
 }
