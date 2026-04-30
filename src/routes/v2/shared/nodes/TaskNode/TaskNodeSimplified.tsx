@@ -16,6 +16,7 @@ import {
 import type { TaskNodeViewProps } from "./TaskNode";
 import { createTaskNodeCardVariants } from "./taskNode.variants";
 
+const PERCEIVED_FONT_SIZE = "28px";
 const s = "var(--simplified-scale, 1)";
 
 const simplifiedCardVariants = createTaskNodeCardVariants(
@@ -102,7 +103,10 @@ export function TaskNodeSimplified({
                 "font-medium min-w-0 line-clamp-2 wrap-break-word",
                 !taskColor && "text-slate-900",
               )}
-              style={{ fontSize: `calc(${s} * 28px)`, lineHeight: 1.25 }}
+              style={{
+                fontSize: `calc(${s} * ${PERCEIVED_FONT_SIZE})`,
+                lineHeight: 1.25,
+              }}
             >
               {taskName}
             </span>

@@ -3,10 +3,12 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Paragraph } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 
 import { flexNodeVariants, type FlexNodeViewProps } from "./FlexNode";
+
+const PERCEIVED_FONT_SIZE = "28px";
+const s = "var(--simplified-scale, 1)";
 
 export function FlexNodeSimplified({
   id,
@@ -44,12 +46,15 @@ export function FlexNodeSimplified({
         )}
       >
         {title && (
-          <Paragraph
-            weight="semibold"
-            className="whitespace-pre-wrap line-clamp-3 wrap-break-word w-full text-[calc(var(--simplified-scale,1)*24px)] leading-tight"
+          <p
+            className="font-semibold whitespace-pre-wrap line-clamp-3 wrap-break-word w-full leading-tight"
+            style={{
+              fontSize: `calc(${s} * ${PERCEIVED_FONT_SIZE})`,
+              lineHeight: 1.25,
+            }}
           >
             {title}
-          </Paragraph>
+          </p>
         )}
       </div>
     </div>

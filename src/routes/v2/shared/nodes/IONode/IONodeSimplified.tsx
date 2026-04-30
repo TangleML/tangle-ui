@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 
 import type { IONodeViewProps } from "./IONode";
 
+const PERCEIVED_FONT_SIZE = "28px";
 const s = "var(--simplified-scale, 1)";
 
 export function IONodeSimplified({
@@ -35,7 +36,7 @@ export function IONodeSimplified({
   return (
     <Card
       className={cn(
-        "border-2 p-0 cursor-pointer transition-all flex flex-row items-center justify-start",
+        "border-2 p-0 cursor-pointer flex flex-row items-center justify-start",
         bgColor,
         borderColor,
       )}
@@ -67,7 +68,7 @@ export function IONodeSimplified({
           <span
             className="font-medium min-w-0 line-clamp-2 wrap-break-word text-slate-900 text-left"
             style={{
-              fontSize: `calc(${s} * 24px)`,
+              fontSize: `calc(${s} * ${PERCEIVED_FONT_SIZE})`,
               lineHeight: 1.25,
             }}
           >
