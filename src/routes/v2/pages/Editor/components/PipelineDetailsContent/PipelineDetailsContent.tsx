@@ -125,12 +125,12 @@ export const PipelineDetailsContent = observer(
         />
 
         <ContentBlock title="Validations">
-          {spec.isValid ? (
+          {spec.hasValidationIssues ? (
+            <ValidationSummary spec={spec} />
+          ) : (
             <InfoBox variant="success" title="No validation issues">
               Pipeline is ready for submission
             </InfoBox>
-          ) : (
-            <ValidationSummary spec={spec} />
           )}
         </ContentBlock>
 
