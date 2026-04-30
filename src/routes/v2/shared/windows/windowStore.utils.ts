@@ -7,8 +7,12 @@ import {
   type WindowOptions,
   type WindowState,
 } from "./types";
+import { DEFAULT_VIEW_PRESET } from "./viewPresets";
 import type { WindowModelInit } from "./windowModel";
-import { getPersistedWindowState } from "./windowPersistence";
+import {
+  getPersistedWindowState,
+  hasPersistedLayout,
+} from "./windowPersistence";
 
 type PersistedState = ReturnType<typeof getPersistedWindowState>;
 
@@ -20,7 +24,7 @@ export function buildWindowModelInit(
   const persisted = options.persisted ? getPersistedWindowState(id) : null;
   const geo = resolveGeometry(persisted, options, defaultPosition);
   const docked = resolveDockedOverrides(persisted, options.defaultDockState);
-  const initial = resolveInitialState(persisted, options, docked.dockState);
+  const initial = resolveInitialState(persisted, options, docked.dockState, id);
 
   return {
     id,
@@ -43,19 +47,30 @@ function resolveInitialState(
   persisted: PersistedState,
   options: WindowOptions,
   dockState: DockState,
+  id: string,
 ): { state: WindowState; needsPreviousState: boolean } {
-  const shouldStartHidden = !!persisted?.isHidden && !options.startVisible;
-  const shouldStartMinimized =
-    !shouldStartHidden && !!persisted?.isMinimized && dockState !== "none";
+  if (persisted) {
+    const shouldStartHidden = !!persisted.isHidden && !options.startVisible;
+    const shouldStartMinimized =
+      !shouldStartHidden && !!persisted.isMinimized && dockState !== "none";
 
-  return {
-    state: shouldStartHidden
-      ? "hidden"
-      : shouldStartMinimized
-        ? "minimized"
-        : "normal",
-    needsPreviousState: shouldStartHidden || shouldStartMinimized,
-  };
+    return {
+      state: shouldStartHidden
+        ? "hidden"
+        : shouldStartMinimized
+          ? "minimized"
+          : "normal",
+      needsPreviousState: shouldStartHidden || shouldStartMinimized,
+    };
+  }
+
+  if (options.persisted && !hasPersistedLayout()) {
+    if (!DEFAULT_VIEW_PRESET.visible.has(id)) {
+      return { state: "hidden", needsPreviousState: true };
+    }
+  }
+
+  return { state: "normal", needsPreviousState: false };
 }
 function resolveGeometry(
   persisted: PersistedState,
