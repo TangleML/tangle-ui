@@ -163,7 +163,7 @@ export const DockedWindow = observer(function DockedWindow() {
         </div>
       </CollapsibleTrigger>
 
-      <CollapsibleContent>
+      <CollapsibleContent className="w-full">
         <div
           className={cn(
             "w-full bg-white text-gray-900",
