@@ -19,6 +19,7 @@ export const RunsMenu = observer(function RunsMenu() {
   const rootSpec = navigation.rootSpec;
   const allIssues = rootSpec?.allValidationIssues ?? [];
   const errorCount = allIssues.filter((i) => i.severity === "error").length;
+  const hasErrors = errorCount > 0;
 
   return (
     <DropdownMenu>
@@ -26,11 +27,14 @@ export const RunsMenu = observer(function RunsMenu() {
         <MenuTriggerButton>Runs</MenuTriggerButton>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" sideOffset={2}>
-        <DropdownMenuItem onSelect={triggerSubmitRun}>
+        <DropdownMenuItem onSelect={triggerSubmitRun} disabled={hasErrors}>
           <Icon name="Play" size="sm" />
           Submit Run
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={triggerSubmitWithArguments}>
+        <DropdownMenuItem
+          onSelect={triggerSubmitWithArguments}
+          disabled={hasErrors}
+        >
           <Icon name="Split" size="sm" className="rotate-90" />
           Submit with Arguments
         </DropdownMenuItem>
