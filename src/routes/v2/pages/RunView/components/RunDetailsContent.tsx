@@ -112,15 +112,7 @@ function RunDetailsContentLoaded({
   const specAnnotations = spec.annotations;
   const pipelineNotes = specAnnotations.get(PIPELINE_NOTES_ANNOTATION);
 
-  const tagsRaw = specAnnotations.get(PIPELINE_TAGS_ANNOTATION) as
-    | string
-    | undefined;
-  const tags = tagsRaw
-    ? tagsRaw
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean)
-    : [];
+  const tags = specAnnotations.get(PIPELINE_TAGS_ANNOTATION);
 
   const displayedAnnotations = specAnnotations
     .filter((a) => !EXCLUDED_ANNOTATIONS.includes(a.key))
