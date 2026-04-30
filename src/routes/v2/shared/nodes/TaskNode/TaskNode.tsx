@@ -1,9 +1,4 @@
-import {
-  type Node,
-  type NodeProps,
-  useReactFlow,
-  useStore,
-} from "@xyflow/react";
+import { type Node, type NodeProps, useReactFlow } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
 import type { MouseEvent, ReactElement } from "react";
 
@@ -16,7 +11,7 @@ import type {
   Task,
   TypeSpecType,
 } from "@/models/componentSpec";
-import { ZOOM_THRESHOLD } from "@/routes/v2/shared/flowCanvasDefaults";
+import { useIsDetailedView } from "@/routes/v2/shared/hooks/useIsDetailedView";
 import type { TaskNodeData } from "@/routes/v2/shared/nodes/types";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import type { NodeOverlayEffect } from "@/routes/v2/shared/store/canvasOverlay.types";
@@ -65,9 +60,6 @@ export interface TaskNodeViewProps {
   onOutputClick: (outputName: string, event: React.MouseEvent) => void;
   onHandleClick: (handleId: string, event: React.MouseEvent) => void;
 }
-
-const zoomSelector = (s: { transform: [number, number, number] }) =>
-  s.transform[2] >= ZOOM_THRESHOLD;
 
 function isTaskSubgraph(componentSpec: ComponentSpecJson | undefined): boolean {
   const implementation = componentSpec?.implementation;
@@ -202,7 +194,7 @@ export const TaskNode = observer(function TaskNode({
   const { entityId } = data;
   const { editor, canvasOverlay } = useSharedStores();
   const { getEdges, setEdges } = useReactFlow();
-  const showContent = useStore(zoomSelector);
+  const showContent = useIsDetailedView();
 
   const spec = useSpec();
   const task = spec?.tasks.find((t) => t.$id === entityId);

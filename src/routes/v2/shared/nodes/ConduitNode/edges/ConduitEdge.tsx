@@ -1,11 +1,14 @@
 import type { EdgeProps } from "@xyflow/react";
 import type { CSSProperties } from "react";
 
+import { useIsDetailedView } from "@/routes/v2/shared/hooks/useIsDetailedView";
 import type { ConduitEdgeData } from "@/routes/v2/shared/nodes/types";
 
 import { buildConduitPath } from "./conduitPathUtils";
 
 const DEBUG_POINTS = false;
+
+const SIMPLIFIED_STROKE_MULTIPLIER = 1.5;
 
 interface EdgeStyleParams {
   baseStyle: CSSProperties | undefined;
@@ -14,6 +17,7 @@ interface EdgeStyleParams {
   isAssigned: boolean;
   activeColor: string | undefined;
   selected: boolean | undefined;
+  strokeMultiplier: number;
 }
 
 function computeEdgeStyle({
@@ -23,17 +27,21 @@ function computeEdgeStyle({
   isAssigned,
   activeColor,
   selected,
+  strokeMultiplier,
 }: EdgeStyleParams): CSSProperties {
+  const baseWidth = 4 * strokeMultiplier;
+  const emphasisWidth = 5 * strokeMultiplier;
+
   let edgeStyle: CSSProperties = conduitColor
-    ? { ...baseStyle, stroke: conduitColor, strokeWidth: 4 }
-    : { ...baseStyle, stroke: "#6b7280", strokeWidth: 4 };
+    ? { ...baseStyle, stroke: conduitColor, strokeWidth: baseWidth }
+    : { ...baseStyle, stroke: "#6b7280", strokeWidth: baseWidth };
 
   if (isInAssignmentMode) {
     if (isAssigned && activeColor) {
       edgeStyle = {
         ...edgeStyle,
         stroke: activeColor,
-        strokeWidth: 5,
+        strokeWidth: emphasisWidth,
         opacity: 1,
       };
     } else {
@@ -45,7 +53,7 @@ function computeEdgeStyle({
     edgeStyle = {
       ...edgeStyle,
       stroke: "#5b2ef4",
-      strokeWidth: 5,
+      strokeWidth: emphasisWidth,
       opacity: 1,
     };
   }
@@ -80,6 +88,9 @@ export function ConduitEdge({
   style,
   selected,
 }: EdgeProps) {
+  const showContent = useIsDetailedView();
+  const strokeMultiplier = showContent ? 1 : SIMPLIFIED_STROKE_MULTIPLIER;
+
   const {
     guidelines,
     conduitColor,
@@ -106,6 +117,7 @@ export function ConduitEdge({
     isAssigned,
     activeColor,
     selected,
+    strokeMultiplier,
   });
 
   const edgeColor = (edgeStyle.stroke as string) ?? "#6b7280";
