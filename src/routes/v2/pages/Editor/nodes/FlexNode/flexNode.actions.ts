@@ -110,10 +110,8 @@ export function updateFlexNodePosition(
   position: XYPosition,
 ) {
   undo.withGroup("Update flex node position", () => {
-    const nodes = getFlexNodes(spec);
-    const updated = nodes.map((n) =>
-      n.id === nodeId ? { ...n, position } : n,
-    );
-    setFlexNodes(undo, spec, updated);
+    const flexNode = findFlexNode(spec, nodeId);
+    if (!flexNode) return;
+    updateFlexNode(undo, spec, nodeId, { position });
   });
 }
