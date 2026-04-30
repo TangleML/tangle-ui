@@ -5,7 +5,6 @@ import useToastNotification from "@/hooks/useToastNotification";
 import { useTask } from "@/routes/v2/pages/Editor/nodes/TaskNode/context/TaskDetails/hooks/useTask";
 import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskActions";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
-import { isGraphImplementation } from "@/utils/componentSpec";
 import { getErrorMessage } from "@/utils/string";
 
 interface UnpackSubgraphButtonProps {
@@ -29,8 +28,7 @@ export function UnpackSubgraphButton({ entityId }: UnpackSubgraphButtonProps) {
   });
 
   if (!task) return null;
-  if (!isGraphImplementation(task.componentRef.spec?.implementation))
-    return null;
+  if (!task.subgraphSpec) return null;
 
   return (
     <ActionButton

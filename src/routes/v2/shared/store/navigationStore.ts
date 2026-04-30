@@ -1,13 +1,6 @@
 import { action, computed, makeObservable, observable } from "mobx";
 
-import type { ComponentSpec, ComponentSpecJson } from "@/models/componentSpec";
-import {
-  IncrementingIdGenerator,
-  serializeComponentSpec,
-  YamlDeserializer,
-} from "@/models/componentSpec";
-import { isGraphImplementation } from "@/utils/componentSpec";
-import { deepClone } from "@/utils/deepClone";
+import type { ComponentSpec } from "@/models/componentSpec";
 
 import type { EditorStore } from "./editorStore";
 
@@ -16,12 +9,15 @@ interface NavigationEntry {
   displayName: string;
 }
 
+export interface ParentContext {
+  parentSpec: ComponentSpec;
+  taskId: string;
+}
+
 export class NavigationStore {
   @observable.ref accessor rootSpec: ComponentSpec | null = null;
-  @observable.ref accessor nestedSpecs = new Map<string, ComponentSpec>();
   @observable.shallow accessor navigationPath: NavigationEntry[] = [];
   @observable accessor requestedPipelineName: string | null = null;
-  private nestedIdGen = new IncrementingIdGenerator();
 
   constructor(private editorStore: EditorStore) {
     makeObservable(this);
@@ -36,20 +32,18 @@ export class NavigationStore {
     this.navigationPath = [
       { specId: rootSpec.$id, displayName: rootSpec.name },
     ];
-    this.nestedSpecs = new Map();
-    this.nestedIdGen = new IncrementingIdGenerator();
   }
 
   @action clearNavigation() {
     this.rootSpec = null;
     this.navigationPath = [];
-    this.nestedSpecs = new Map();
   }
 
-  isTaskSubgraph(spec: ComponentSpec, taskEntityId: string): boolean {
-    const task = spec.tasks.find((t) => t.$id === taskEntityId);
-    if (!task?.componentRef.spec) return false;
-    return isGraphImplementation(task.componentRef.spec?.implementation);
+  isTaskSubgraph(_spec: ComponentSpec, taskEntityId: string): boolean {
+    const active = this.activeSpec;
+    if (!active) return false;
+    const task = active.tasks.find((t) => t.$id === taskEntityId);
+    return task?.subgraphSpec !== undefined;
   }
 
   @action navigateToSubgraph(
@@ -59,43 +53,15 @@ export class NavigationStore {
     if (!this.rootSpec) return null;
 
     const task = currentSpec.tasks.find((t) => t.$id === taskEntityId);
-    if (!task) return null;
-
-    if (
-      !task.componentRef.spec ||
-      !isGraphImplementation(task.componentRef.spec?.implementation)
-    ) {
-      return null;
-    }
-
-    const pathKey =
-      this.navigationPath.length > 1
-        ? this.navigationPath
-            .slice(1)
-            .map((e) => e.displayName)
-            .join("/") +
-          "/" +
-          task.name
-        : task.name;
-
-    let nestedSpec = this.nestedSpecs.get(pathKey);
-
-    if (!nestedSpec) {
-      // Deep-clone to detach from the keystone tree before deserializing
-      const specJsonClone = JSON.parse(
-        JSON.stringify(task.componentRef.spec),
-      ) as ComponentSpecJson;
-      nestedSpec = this.deserializeNestedSpec(specJsonClone, pathKey);
-      if (!nestedSpec) return null;
-    }
+    if (!task?.subgraphSpec) return null;
 
     this.navigationPath = [
       ...this.navigationPath,
-      { specId: nestedSpec.$id, displayName: task.name },
+      { specId: task.subgraphSpec.$id, displayName: task.name },
     ];
 
     this.editorStore.clearSelection();
-    return nestedSpec;
+    return task.subgraphSpec;
   }
 
   @action navigateBack(): ComponentSpec | null {
@@ -131,21 +97,13 @@ export class NavigationStore {
     for (let i = 1; i < pathNames.length; i++) {
       const taskName = pathNames[i];
       const task = currentSpec.tasks.find((t) => t.name === taskName);
-      if (!task?.componentRef.spec) return null;
+      if (!task?.subgraphSpec) return null;
 
-      const pathKey = pathNames.slice(1, i + 1).join("/");
-      let nestedSpec = this.nestedSpecs.get(pathKey);
-
-      if (!nestedSpec) {
-        const specJsonClone = JSON.parse(
-          JSON.stringify(task.componentRef.spec),
-        ) as ComponentSpecJson;
-        nestedSpec = this.deserializeNestedSpec(specJsonClone, pathKey);
-        if (!nestedSpec) return null;
-      }
-
-      newPath.push({ specId: nestedSpec.$id, displayName: taskName });
-      currentSpec = nestedSpec;
+      newPath.push({
+        specId: task.subgraphSpec.$id,
+        displayName: taskName,
+      });
+      currentSpec = task.subgraphSpec;
     }
 
     this.navigationPath = newPath;
@@ -158,6 +116,23 @@ export class NavigationStore {
     return this.getSpecAtDepth(this.navigationPath.length - 1) ?? null;
   }
 
+  /**
+   * Resolves the parent spec and the task that owns the current subgraph.
+   * Returns null when at the root level (no parent exists).
+   */
+  @computed get parentContext(): ParentContext | null {
+    if (this.navigationPath.length <= 1) return null;
+    const parentSpec = this.getSpecAtDepth(this.navigationPath.length - 2);
+    if (!parentSpec) return null;
+
+    const taskName =
+      this.navigationPath[this.navigationPath.length - 1].displayName;
+    const task = parentSpec.tasks.find((t) => t.name === taskName);
+    if (!task) return null;
+
+    return { parentSpec, taskId: task.$id };
+  }
+
   @computed get navigationDepth(): number {
     return this.navigationPath.length - 1;
   }
@@ -166,66 +141,14 @@ export class NavigationStore {
     return this.navigationPath.length > 1;
   }
 
-  /**
-   * Serialize each active nested spec and write it back into the parent
-   * task's componentRef.spec so the root serialization includes subgraph edits.
-   * Processes deepest-first so inner subgraphs sync before their parents.
-   */
-  @action syncNestedSpecs(): void {
-    if (!this.rootSpec) return;
-
-    const sortedPaths = [...this.nestedSpecs.keys()].sort(
-      (a, b) => b.split("/").length - a.split("/").length,
-    );
-
-    for (const pathKey of sortedPaths) {
-      const nestedSpec = this.nestedSpecs.get(pathKey);
-      if (!nestedSpec) continue;
-
-      const segments = pathKey.split("/");
-      const taskName = segments[segments.length - 1];
-
-      let parentSpec: ComponentSpec;
-      if (segments.length === 1) {
-        parentSpec = this.rootSpec;
-      } else {
-        const parentPathKey = segments.slice(0, -1).join("/");
-        const found = this.nestedSpecs.get(parentPathKey);
-        if (!found) continue;
-        parentSpec = found;
-      }
-
-      const task = parentSpec.tasks.find((t) => t.name === taskName);
-      if (!task) continue;
-
-      const serialized = deepClone(serializeComponentSpec(nestedSpec));
-      task.setComponentRef({ ...task.componentRef, spec: serialized });
-    }
-  }
-
   private getSpecAtDepth(depth: number): ComponentSpec | undefined {
     if (depth === 0) return this.rootSpec ?? undefined;
-    const pathKey = this.navigationPath
-      .slice(1, depth + 1)
-      .map((e) => e.displayName)
-      .join("/");
-    return this.nestedSpecs.get(pathKey);
-  }
-
-  private deserializeNestedSpec(
-    specJson: ComponentSpecJson,
-    pathKey: string,
-  ): ComponentSpec | undefined {
-    try {
-      const deserializer = new YamlDeserializer(this.nestedIdGen);
-      const nestedSpec = deserializer.deserialize(specJson);
-      const updated = new Map(this.nestedSpecs);
-      updated.set(pathKey, nestedSpec);
-      this.nestedSpecs = updated;
-      return nestedSpec;
-    } catch (error) {
-      console.error("[deserializeNestedSpec] Failed to deserialize:", error);
-      return undefined;
+    let current: ComponentSpec | undefined = this.rootSpec ?? undefined;
+    for (let i = 1; i <= depth && current; i++) {
+      const taskName = this.navigationPath[i]?.displayName;
+      const task = current.tasks.find((t) => t.name === taskName);
+      current = task?.subgraphSpec;
     }
+    return current;
   }
 }

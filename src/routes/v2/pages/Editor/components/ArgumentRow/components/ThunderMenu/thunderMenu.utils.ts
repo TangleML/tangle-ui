@@ -1,8 +1,4 @@
-import type {
-  ComponentSpec,
-  ComponentSpecJson,
-  TypeSpecType,
-} from "@/models/componentSpec";
+import type { ComponentSpec, TypeSpecType } from "@/models/componentSpec";
 
 interface QuickConnectPort {
   entityId: string;
@@ -62,9 +58,7 @@ export function getQuickConnectGroups(
   for (const task of spec.tasks) {
     if (excludeSet.has(task.$id)) continue;
 
-    const componentSpec = task.componentRef.spec as
-      | ComponentSpecJson
-      | undefined;
+    const componentSpec = task.resolvedComponentSpec;
     const outputs = componentSpec?.outputs ?? [];
 
     const compatibleOutputs = outputs.filter((output) =>

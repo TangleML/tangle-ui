@@ -11,7 +11,14 @@ import {
   generateUniqueOutputName,
 } from "@/routes/v2/pages/Editor/store/nameUtils";
 import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
+import type { ParentContext } from "@/routes/v2/shared/store/navigationStore";
 
+import {
+  propagateInputDelete,
+  propagateInputRename,
+  propagateOutputDelete,
+  propagateOutputRename,
+} from "./io.parentPropagation";
 import { idGen } from "./utils";
 
 export function addInput(
@@ -61,10 +68,17 @@ export function renameInput(
   spec: ComponentSpec,
   entityId: string,
   newName: string,
+  parentContext?: ParentContext | null,
 ): boolean {
-  return undo.withGroup("Rename input", () =>
-    spec.renameInput(entityId, newName),
-  );
+  return undo.withGroup("Rename input", () => {
+    const input = spec.inputs.find((i) => i.$id === entityId);
+    const oldName = input?.name;
+    const success = spec.renameInput(entityId, newName);
+    if (success && parentContext && oldName) {
+      propagateInputRename(parentContext, oldName, newName);
+    }
+    return success;
+  });
 }
 
 export function renameOutput(
@@ -72,10 +86,17 @@ export function renameOutput(
   spec: ComponentSpec,
   entityId: string,
   newName: string,
+  parentContext?: ParentContext | null,
 ): boolean {
-  return undo.withGroup("Rename output", () =>
-    spec.renameOutput(entityId, newName),
-  );
+  return undo.withGroup("Rename output", () => {
+    const output = spec.outputs.find((o) => o.$id === entityId);
+    const oldName = output?.name;
+    const success = spec.renameOutput(entityId, newName);
+    if (success && parentContext && oldName) {
+      propagateOutputRename(parentContext, oldName, newName);
+    }
+    return success;
+  });
 }
 
 export function setInputDescription(
@@ -126,6 +147,40 @@ export function setOutputDescription(
   });
 }
 
+export function deleteInput(
+  undo: UndoGroupable,
+  spec: ComponentSpec,
+  entityId: string,
+  parentContext?: ParentContext | null,
+): boolean {
+  return undo.withGroup("Delete input", () => {
+    const input = spec.inputs.find((i) => i.$id === entityId);
+    const inputName = input?.name;
+    const success = spec.deleteInputById(entityId);
+    if (success && parentContext && inputName) {
+      propagateInputDelete(parentContext, inputName);
+    }
+    return success;
+  });
+}
+
+export function deleteOutput(
+  undo: UndoGroupable,
+  spec: ComponentSpec,
+  entityId: string,
+  parentContext?: ParentContext | null,
+): boolean {
+  return undo.withGroup("Delete output", () => {
+    const output = spec.outputs.find((o) => o.$id === entityId);
+    const outputName = output?.name;
+    const success = spec.deleteOutputById(entityId);
+    if (success && parentContext && outputName) {
+      propagateOutputDelete(parentContext, outputName);
+    }
+    return success;
+  });
+}
+
 export function createConnectedIONode(
   undo: UndoGroupable,
   spec: ComponentSpec,
@@ -142,7 +197,7 @@ export function createConnectedIONode(
   const task = spec.tasks.find((t) => t.$id === taskEntityId);
   if (!task) return;
 
-  const taskComponentSpec = task.componentRef.spec;
+  const taskComponentSpec = task.resolvedComponentSpec;
 
   undo.withGroup("Create connected IO node", () => {
     if (ioType === "input") {

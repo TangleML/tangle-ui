@@ -15,7 +15,10 @@ import type {
   SelectedNode,
 } from "@/routes/v2/shared/store/editorStore";
 import type { KeyboardStore } from "@/routes/v2/shared/store/keyboardStore";
-import type { NavigationStore } from "@/routes/v2/shared/store/navigationStore";
+import type {
+  NavigationStore,
+  ParentContext,
+} from "@/routes/v2/shared/store/navigationStore";
 import type { WindowStoreImpl } from "@/routes/v2/shared/windows/windowStore";
 
 /**
@@ -165,7 +168,12 @@ export interface NodeTypeManifest {
     position: XYPosition,
   ): void;
 
-  deleteNode(undo: UndoGroupable, spec: ComponentSpec, nodeId: string): void;
+  deleteNode(
+    undo: UndoGroupable,
+    spec: ComponentSpec,
+    nodeId: string,
+    parentContext?: ParentContext | null,
+  ): void;
 
   findEntity?(spec: ComponentSpec, entityId: string): unknown | undefined;
 

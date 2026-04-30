@@ -6,10 +6,7 @@ import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import type { ComponentSpec, Task } from "@/models/componentSpec";
-import {
-  getEntityIssues,
-  isSubgraphTask,
-} from "@/routes/v2/pages/Editor/components/PipelineTreeContent/utils";
+import { getEntityIssues } from "@/routes/v2/pages/Editor/components/PipelineTreeContent/utils";
 import { countErrors } from "@/routes/v2/pages/Editor/components/ValidationSummary";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
@@ -146,32 +143,11 @@ export const SubgraphNode = observer(function SubgraphNode({
         <BlockStack gap="0" className="ml-4 border-l border-slate-200 pl-2">
           <div className="-ml-3.5">
             {tasks.map((childTask) => {
-              const isChildSubgraph = isSubgraphTask(childTask);
-
-              if (isChildSubgraph) {
-                const childPathKey =
-                  navigationPath.slice(1).join("/") + "/" + childTask.name;
-                const nestedSpec = navigation.nestedSpecs.get(
-                  childPathKey.startsWith("/")
-                    ? childPathKey.slice(1)
-                    : childPathKey,
-                );
-
-                if (!nestedSpec) {
-                  return (
-                    <TaskLeafNode
-                      key={childTask.$id}
-                      task={childTask}
-                      parentSpec={spec}
-                      parentNavigationPath={navigationPath}
-                    />
-                  );
-                }
-
+              if (childTask.subgraphSpec) {
                 return (
                   <SubgraphNode
                     key={childTask.$id}
-                    spec={nestedSpec}
+                    spec={childTask.subgraphSpec}
                     task={childTask}
                     navigationPath={[...navigationPath, childTask.name]}
                     currentNavPath={currentNavPath}
