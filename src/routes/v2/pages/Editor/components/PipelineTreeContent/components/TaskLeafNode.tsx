@@ -78,7 +78,7 @@ export const TaskLeafNode = observer(function TaskLeafNode({
                 : "text-slate-400",
           )}
         />
-        <Text size="sm" className="break-words min-w-0 flex-1">
+        <Text size="xs" className="wrap-break-word min-w-0 flex-1">
           {task.name}
         </Text>
         <IssueBadge issues={issues} />

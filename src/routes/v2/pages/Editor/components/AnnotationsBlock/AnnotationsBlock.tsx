@@ -138,14 +138,14 @@ function AnnotationRow({ annotation, index, annotations }: AnnotationRowProps) {
   return (
     <BlockStack gap="1" className="group w-full">
       <Input
-        className="w-full font-mono text-xs h-6 border-none px-0 shadow-none text-gray-500"
+        className="w-full font-mono text-xs! h-6 border-none px-0 shadow-none text-gray-500"
         placeholder="Key"
         defaultValue={annotation.key}
         onBlur={handleUpdateKey}
       />
       <InlineStack gap="1" wrap="nowrap" className="w-full">
         <Input
-          className="w-full font-mono text-sm"
+          className="w-full font-mono text-xs!"
           placeholder="Value"
           defaultValue={
             typeof annotation.value === "object"

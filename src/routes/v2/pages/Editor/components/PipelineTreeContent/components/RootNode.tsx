@@ -88,10 +88,10 @@ export const RootNode = observer(function RootNode({
         />
 
         <Text
-          size="sm"
+          size="xs"
           weight={isCurrentGraph ? "semibold" : "regular"}
           className={cn(
-            "break-words min-w-0 flex-1",
+            "wrap-break-word min-w-0 flex-1",
             isCurrentGraph && "text-blue-900",
           )}
         >

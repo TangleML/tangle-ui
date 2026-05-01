@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlock";
 import { CopyText } from "@/components/shared/CopyText/CopyText";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
-import { BlockStack } from "@/components/ui/layout";
 import { generateDigest } from "@/utils/componentStore";
 
 export const DigestBlock = withSuspenseWrapper(function DigestBlock({
@@ -21,9 +20,11 @@ export const DigestBlock = withSuspenseWrapper(function DigestBlock({
 
   return (
     <ContentBlock title="Digest">
-      <BlockStack className="bg-secondary p-2 rounded-md border truncate text-sm">
-        <CopyText className="font-mono truncate">{digest}</CopyText>
-      </BlockStack>
+      <div className="bg-secondary p-2 rounded-md border">
+        <CopyText size="xs" className="font-mono truncate">
+          {digest}
+        </CopyText>
+      </div>
     </ContentBlock>
   );
 });

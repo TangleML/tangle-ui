@@ -11,7 +11,7 @@ import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
-import { Heading, Text } from "@/components/ui/typography";
+import { Text } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import { AnnotationsBlock } from "@/routes/v2/pages/Editor/components/AnnotationsBlock/AnnotationsBlock";
 import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskActions";
@@ -158,7 +158,7 @@ export const TaskDetails = observer(function TaskDetails({
           <CollapsibleTrigger className="flex w-full items-center justify-between bg-gray-50 px-4 py-2.5 cursor-pointer border-b border-gray-100">
             <InlineStack gap="2" blockAlign="center">
               <Icon name="Parentheses" size="xs" />
-              <Text size="sm" weight="semibold">
+              <Text size="xs" weight="semibold">
                 Arguments
               </Text>
             </InlineStack>
@@ -171,12 +171,30 @@ export const TaskDetails = observer(function TaskDetails({
           <CollapsibleContent className="px-4 py-3">
             <BlockStack gap="4">
               <BlockStack gap="2">
-                <Heading level={3}>Inputs</Heading>
+                <Text
+                  as="h3"
+                  size="xs"
+                  weight="semibold"
+                  tone="subdued"
+                  role="heading"
+                  aria-level={3}
+                >
+                  Inputs
+                </Text>
                 <TaskArgumentsEditor task={task} />
               </BlockStack>
               <Separator />
               <BlockStack gap="2">
-                <Heading level={3}>Outputs</Heading>
+                <Text
+                  as="h3"
+                  size="xs"
+                  weight="semibold"
+                  tone="subdued"
+                  role="heading"
+                  aria-level={3}
+                >
+                  Outputs
+                </Text>
                 <OutputsSection componentSpec={componentSpec} />
               </BlockStack>
             </BlockStack>
@@ -192,7 +210,7 @@ export const TaskDetails = observer(function TaskDetails({
           <CollapsibleTrigger className="flex w-full items-center justify-between bg-gray-50 px-4 py-2.5 cursor-pointer border-b border-gray-100">
             <InlineStack gap="2" blockAlign="center">
               <Icon name="Settings" size="xs" />
-              <Text size="sm" weight="semibold">
+              <Text size="xs" weight="semibold">
                 Config
               </Text>
             </InlineStack>

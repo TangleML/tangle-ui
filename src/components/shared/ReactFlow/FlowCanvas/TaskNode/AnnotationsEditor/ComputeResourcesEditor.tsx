@@ -30,10 +30,10 @@ export const ComputeResourcesEditor = ({
 }: ComputeResourcesEditorProps) => {
   return (
     <BlockStack gap="2">
-      <Heading level={1}>Compute Resources</Heading>
+      <Heading level={3}>Compute Resources</Heading>
 
       {!cloudProviderConfig && resources.length === 0 && (
-        <Paragraph size="sm" tone="subdued">
+        <Paragraph size="xs" tone="subdued">
           No compute resources available
         </Paragraph>
       )}

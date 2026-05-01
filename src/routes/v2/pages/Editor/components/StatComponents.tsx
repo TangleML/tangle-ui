@@ -30,9 +30,12 @@ export function StatGroup({ title, children }: StatGroupProps) {
   return (
     <BlockStack gap="1">
       <Text
+        as="h3"
         size="xs"
         weight="semibold"
-        className="uppercase tracking-wider text-blue-600"
+        tone="subdued"
+        role="heading"
+        aria-level={3}
       >
         {title}
       </Text>

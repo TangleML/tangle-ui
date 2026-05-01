@@ -12,7 +12,7 @@ import { ColorPicker } from "@/components/ui/color";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import { Heading, Paragraph } from "@/components/ui/typography";
+import { Paragraph, Text } from "@/components/ui/typography";
 import type { Task } from "@/models/componentSpec";
 import type { AnnotationConfig, Annotations } from "@/types/annotations";
 import { EDITOR_COLLAPSED_ANNOTATION } from "@/utils/annotations";
@@ -130,10 +130,19 @@ export const ConfigurationSection = observer(function ConfigurationSection({
 
   return (
     <BlockStack gap="3">
-      <Heading level={1}>Configuration</Heading>
+      <Text
+        as="h3"
+        size="xs"
+        weight="semibold"
+        tone="subdued"
+        role="heading"
+        aria-level={3}
+      >
+        Configuration
+      </Text>
 
       <InlineStack align="space-between" gap="2" className="w-full">
-        <Paragraph size="sm" tone="subdued">
+        <Paragraph size="xs" tone="subdued">
           Task color
         </Paragraph>
         <ColorPicker
@@ -147,7 +156,7 @@ export const ConfigurationSection = observer(function ConfigurationSection({
         <>
           <Separator />
           <InlineStack align="space-between" gap="2" className="w-full">
-            <Paragraph size="sm" tone="subdued">
+            <Paragraph size="xs" tone="subdued">
               Disable cache
             </Paragraph>
             <Switch
@@ -159,7 +168,7 @@ export const ConfigurationSection = observer(function ConfigurationSection({
       )}
 
       <InlineStack align="space-between" gap="2" className="w-full">
-        <Paragraph size="sm" tone="subdued">
+        <Paragraph size="xs" tone="subdued">
           Collapse node
         </Paragraph>
         <Switch checked={isCollapsed} onCheckedChange={handleCollapsedChange} />

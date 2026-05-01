@@ -73,7 +73,7 @@ export const PipelineTreeContent = observer(function PipelineTreeContent() {
   if (!rootSpec) {
     return (
       <BlockStack className="p-4">
-        <Text size="sm" tone="subdued">
+        <Text size="xs" tone="subdued">
           No pipeline loaded
         </Text>
       </BlockStack>

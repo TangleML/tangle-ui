@@ -75,7 +75,7 @@ export function ArgumentValueDisplay({
       highlightSyntax
       placeholder={isBound ? bindingLabel || "" : placeholder}
       className={cn(
-        "min-h-2 text-sm font-mono mt-1 rounded-lg",
+        "min-h-2 text-xs! font-mono mt-1 rounded-lg",
         isBound && "text-blue-600",
         isUnset && "border-dashed border-gray-300",
       )}
