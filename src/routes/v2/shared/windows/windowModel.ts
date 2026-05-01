@@ -43,6 +43,7 @@ export interface WindowModelInit {
   dockedHeight?: number;
   dockState: DockState;
   persisted: boolean;
+  autoSize?: boolean;
   onClose?: () => void;
 }
 
@@ -68,6 +69,7 @@ export class WindowModel {
   @observable accessor dockedHeight: number | undefined;
   @observable accessor dockState: DockState;
   @observable accessor persisted: boolean;
+  @observable accessor autoSize: boolean;
 
   readonly onClose: (() => void) | undefined;
   private readonly store: WindowStoreRef;
@@ -89,6 +91,7 @@ export class WindowModel {
     this.dockedHeight = init.dockedHeight;
     this.dockState = init.dockState;
     this.persisted = init.persisted;
+    this.autoSize = init.autoSize ?? false;
     this.onClose = init.onClose;
     this.store = store;
     makeObservable(this);
@@ -211,6 +214,10 @@ export class WindowModel {
 
   @action updateSize(newSize: Size): void {
     this.size = newSize;
+  }
+
+  @action disableAutoSize(): void {
+    this.autoSize = false;
   }
 
   @action updateDockedHeight(height: number): void {

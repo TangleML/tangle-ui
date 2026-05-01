@@ -40,6 +40,7 @@ export function buildWindowModelInit(
       : undefined,
     previousSize: initial.needsPreviousState ? { ...geo.size } : undefined,
     persisted: !!options.persisted,
+    autoSize: geo.autoSize,
     onClose: options.onClose,
   };
 }
@@ -76,11 +77,12 @@ function resolveGeometry(
   persisted: PersistedState,
   options: WindowOptions,
   defaultPosition: Position,
-): { position: Position; size: Size; minSize: Size } {
+): { position: Position; size: Size; minSize: Size; autoSize: boolean } {
   return {
     position: persisted?.position ?? options.position ?? defaultPosition,
     size: persisted?.size ?? options.size ?? { ...DEFAULT_WINDOW_SIZE },
     minSize: options.minSize ?? { ...DEFAULT_MIN_SIZE },
+    autoSize: !persisted?.size && !options.size,
   };
 }
 function resolveDockedOverrides(

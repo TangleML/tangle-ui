@@ -1,9 +1,14 @@
 import { cva } from "class-variance-authority";
 import { observer } from "mobx-react-lite";
-import { type CSSProperties, useState } from "react";
+import { type CSSProperties, useRef } from "react";
 import { createPortal } from "react-dom";
 
 import { useWindowContext } from "@/routes/v2/shared/windows/ContentWindowStateContext";
+import { useFitWindowToContent } from "@/routes/v2/shared/windows/hooks/useFitWindowToContent";
+import {
+  type ResizeDirection,
+  useFloatingWindowResize,
+} from "@/routes/v2/shared/windows/hooks/useFloatingWindowResize";
 import { useWindowDrag } from "@/routes/v2/shared/windows/hooks/useWindowDrag";
 import { SnapPreview } from "@/routes/v2/shared/windows/SnapPreview";
 import type { WindowModel } from "@/routes/v2/shared/windows/windowModel";
@@ -56,8 +61,6 @@ function getContentHeight(model: WindowModel): string | number {
   if (model.isMaximized) return `calc(100vh - ${HEADER_HEIGHT}px)`;
   return model.size.height - HEADER_HEIGHT;
 }
-
-type ResizeDirection = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
 
 const resizeHandleClasses: Record<ResizeDirection, string> = {
   n: "absolute top-0 left-3 right-3 h-1 cursor-n-resize",
@@ -123,64 +126,9 @@ export const FloatingWindow = observer(function FloatingWindow() {
     handleContainerClick,
   } = useWindowDrag({ docked: false });
 
-  const [isResizing, setIsResizing] = useState(false);
-
-  const handleResizeMouseDown =
-    (direction: ResizeDirection) => (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setIsResizing(true);
-
-      const startX = e.clientX;
-      const startY = e.clientY;
-      const startWidth = model.size.width;
-      const startHeight = model.size.height;
-      const startPosX = model.position.x;
-      const startPosY = model.position.y;
-
-      const resizeRight = direction.includes("e");
-      const resizeLeft = direction.includes("w");
-      const resizeBottom = direction.includes("s");
-      const resizeTop = direction.includes("n");
-
-      const onMouseMove = (moveE: MouseEvent) => {
-        const dx = moveE.clientX - startX;
-        const dy = moveE.clientY - startY;
-
-        let newWidth = startWidth;
-        let newHeight = startHeight;
-        let newX = startPosX;
-        let newY = startPosY;
-
-        if (resizeRight) {
-          newWidth = Math.max(model.minSize.width, startWidth + dx);
-        } else if (resizeLeft) {
-          newWidth = Math.max(model.minSize.width, startWidth - dx);
-          newX = startPosX + (startWidth - newWidth);
-        }
-
-        if (resizeBottom) {
-          newHeight = Math.max(model.minSize.height, startHeight + dy);
-        } else if (resizeTop) {
-          newHeight = Math.max(model.minSize.height, startHeight - dy);
-          newY = startPosY + (startHeight - newHeight);
-        }
-
-        model.updateSize({ width: newWidth, height: newHeight });
-        if (resizeLeft || resizeTop) {
-          model.updatePosition({ x: newX, y: newY });
-        }
-      };
-
-      const onMouseUp = () => {
-        setIsResizing(false);
-        document.removeEventListener("mousemove", onMouseMove);
-        document.removeEventListener("mouseup", onMouseUp);
-      };
-
-      document.addEventListener("mousemove", onMouseMove);
-      document.addEventListener("mouseup", onMouseUp);
-    };
+  const contentRef = useRef<HTMLDivElement>(null);
+  const { isResizing, handleResizeStart } = useFloatingWindowResize(model);
+  useFitWindowToContent(model, contentRef, HEADER_HEIGHT);
 
   return (
     <>
@@ -205,6 +153,7 @@ export const FloatingWindow = observer(function FloatingWindow() {
         />
 
         <div
+          ref={contentRef}
           className="flex-1 min-h-0 overflow-auto bg-gray-50"
           style={{ height: getContentHeight(model) }}
         >
@@ -212,7 +161,7 @@ export const FloatingWindow = observer(function FloatingWindow() {
         </div>
 
         {!model.isMaximized && (
-          <ResizeHandles onResizeStart={handleResizeMouseDown} />
+          <ResizeHandles onResizeStart={handleResizeStart} />
         )}
       </div>
 
