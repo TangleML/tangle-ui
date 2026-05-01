@@ -119,6 +119,18 @@ export const fetchExecutionStatusLight = rateLimit(
   },
 );
 
+export class ArtifactFetchError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly statusText: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = "ArtifactFetchError";
+    Object.setPrototypeOf(this, ArtifactFetchError.prototype);
+  }
+}
+
 export const getArtifactSignedUrl = async (
   artifactId: string,
   backendUrl: string,
@@ -127,7 +139,11 @@ export const getArtifactSignedUrl = async (
     `${backendUrl}/api/artifacts/${artifactId}/signed_artifact_url`,
   );
   if (!response.ok) {
-    throw new Error(`(${response.status}) Failed to get signed URL.`);
+    throw new ArtifactFetchError(
+      response.status,
+      response.statusText,
+      "Failed to get signed URL.",
+    );
   }
   return response.json();
 };

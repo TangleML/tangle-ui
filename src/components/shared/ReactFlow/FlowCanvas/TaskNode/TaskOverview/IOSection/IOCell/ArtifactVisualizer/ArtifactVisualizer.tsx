@@ -19,10 +19,12 @@ import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useBackend } from "@/providers/BackendProvider";
+import { ArtifactFetchError } from "@/services/executionService";
 import { getArtifactSignedUrl } from "@/services/executionService";
 import { HOURS } from "@/utils/constants";
 
 import ArtifactURI from "../ArtifactURI";
+import { ArtifactPreviewError } from "./ArtifactPreviewError";
 import { CsvVisualizerRemote, CsvVisualizerValue } from "./CsvVisualizer";
 import ImageVisualizer from "./ImageVisualizer";
 import { JsonVisualizerRemote, JsonVisualizerValue } from "./JsonVisualizer";
@@ -155,7 +157,35 @@ const ArtifactVisualizer = ({
               isFullscreen={isFullscreen}
             />
           ) : (
-            <SuspenseWrapper fallback={<PreviewSkeleton />}>
+            <SuspenseWrapper
+              fallback={<PreviewSkeleton />}
+              errorFallback={({ error }) => {
+                if (
+                  error instanceof ArtifactFetchError &&
+                  error.status === 404 &&
+                  import.meta.env.VITE_ARTIFACT_RETENTION_DAYS
+                ) {
+                  return (
+                    <ArtifactPreviewError
+                      title="Artifact unavailable"
+                      preamble="This artifact could not be found."
+                      variant="warning"
+                    />
+                  );
+                }
+
+                const statusDetail =
+                  error instanceof ArtifactFetchError
+                    ? ` (${error.status}${error.statusText ? ` ${error.statusText}` : ""})`
+                    : "";
+                return (
+                  <ArtifactPreviewError
+                    title="Failed to load artifact"
+                    preamble={`An unexpected error occurred${statusDetail}.`}
+                  />
+                );
+              }}
+            >
               <PreviewContent
                 name={name}
                 artifactId={artifact.id}
