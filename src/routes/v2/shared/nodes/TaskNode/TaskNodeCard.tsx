@@ -82,6 +82,7 @@ interface ClassicInputHandleProps {
   input: TaskNodeInput;
   entityId: string;
   displayValue: string | undefined;
+  hideValue?: boolean;
   onInputClick: (name: string, event: ReactMouseEvent) => void;
   onHandleClick: (handleId: string, event: ReactMouseEvent) => void;
 }
@@ -90,6 +91,7 @@ const ClassicInputHandle = observer(function ClassicInputHandle({
   input,
   entityId,
   displayValue,
+  hideValue,
   onInputClick,
   onHandleClick,
 }: ClassicInputHandleProps) {
@@ -101,6 +103,9 @@ const ClassicInputHandle = observer(function ClassicInputHandle({
 
   const hasValue = displayValue !== undefined && displayValue !== "";
   const hasDefault = input.default !== undefined && input.default !== "";
+  const showValueDisplay = !hideValue && (hasValue || hasDefault);
+  const labelHasValue = hideValue ? true : hasValue;
+  const labelHasDefault = hideValue ? false : hasDefault;
 
   return (
     <div
@@ -130,13 +135,13 @@ const ClassicInputHandle = observer(function ClassicInputHandle({
         <div
           className={cn(
             "flex w-fit min-w-0",
-            !hasValue ? "max-w-full" : "max-w-3/4",
+            !showValueDisplay ? "max-w-full" : "max-w-3/4",
           )}
         >
           <div
             className={classicInputLabelVariants({
-              hasValue,
-              hasDefault,
+              hasValue: labelHasValue,
+              hasDefault: labelHasDefault,
               optional: input.optional ?? false,
             })}
             title={`${input.name}${input.type ? `: ${input.type}` : ""}`}
@@ -144,7 +149,7 @@ const ClassicInputHandle = observer(function ClassicInputHandle({
             {input.name.replace(/_/g, " ")}
           </div>
         </div>
-        {(hasValue || hasDefault) && (
+        {showValueDisplay && (
           <div className="flex w-fit max-w-1/2 min-w-0 items-center gap-1">
             <Tooltip>
               <TooltipTrigger asChild>
@@ -330,10 +335,13 @@ export const TaskNodeCard = observer(function TaskNodeCard({
                   input={input}
                   entityId={entityId}
                   displayValue={
-                    showCondensedInputs && index === 0
-                      ? `+${hiddenInputCount} more ${pluralize(hiddenInputCount, "input")}`
+                    showCondensedInputs
+                      ? index === 0
+                        ? `+${hiddenInputCount} more ${pluralize(hiddenInputCount, "input")}`
+                        : undefined
                       : inputDisplayValues[input.name]
                   }
+                  hideValue={showCondensedInputs && index !== 0}
                   onInputClick={onInputClick}
                   onHandleClick={onHandleClick}
                 />

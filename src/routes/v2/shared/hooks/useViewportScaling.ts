@@ -11,7 +11,10 @@ export function useViewportScaling() {
 
   const handleViewportChange = ({ zoom }: Viewport) => {
     const scale = Math.min(ZOOM_THRESHOLD / zoom, MAX_COLLAPSED_SCALE);
-    containerRef.current?.style.setProperty("--collapsed-scale", String(scale));
+    containerRef.current?.style.setProperty(
+      "--simplified-scale",
+      String(scale),
+    );
     containerRef.current?.style.setProperty("--zoom-level", String(zoom));
   };
 
