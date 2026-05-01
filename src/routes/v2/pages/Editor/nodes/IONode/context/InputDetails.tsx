@@ -65,7 +65,7 @@ export const InputDetails = observer(function InputDetails({
             id="input-name"
             defaultValue={input.name}
             onBlur={handleNameChange}
-            className="font-mono text-sm"
+            className="font-mono text-xs!"
           />
         </BlockStack>
 
@@ -82,7 +82,7 @@ export const InputDetails = observer(function InputDetails({
             defaultValue={input.type ? String(input.type) : ""}
             placeholder="e.g. String, Integer, Float"
             onBlur={handleTypeChange}
-            className="font-mono text-sm"
+            className="font-mono text-xs!"
           />
         </BlockStack>
 
@@ -99,7 +99,7 @@ export const InputDetails = observer(function InputDetails({
             defaultValue={input.description ?? ""}
             placeholder="Describe this input..."
             onBlur={handleDescriptionChange}
-            className="text-sm"
+            className="text-xs!"
             rows={2}
           />
         </BlockStack>

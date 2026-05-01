@@ -63,7 +63,7 @@ export const ConduitDetails = observer(function ConduitDetails({
             color={conduit.color}
             setColor={handleColorChange}
           />
-          <Text size="sm" weight="semibold">
+          <Text size="xs" weight="semibold">
             Guideline
           </Text>
           <Text size="xs" tone="subdued">
@@ -72,7 +72,7 @@ export const ConduitDetails = observer(function ConduitDetails({
         </InlineStack>
 
         <BlockStack gap="2">
-          <Label className="text-gray-600">
+          <Label className="text-xs! text-gray-600">
             Assigned Edges ({assignedBindings.length})
           </Label>
 

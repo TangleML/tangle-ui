@@ -58,7 +58,7 @@ export const CopyText = ({
         <Text
           size={size}
           className={cn(
-            "transition-all duration-150",
+            "min-w-0 transition-all duration-150",
             className,
             isCopied && "text-emerald-400!",
           )}

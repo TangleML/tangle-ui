@@ -18,15 +18,20 @@ export const PressedKeysList = function PressedKeysList() {
   return (
     <BlockStack>
       <Text
+        as="h3"
         size="xs"
         weight="semibold"
-        className="uppercase tracking-wider text-blue-600"
+        tone="subdued"
+        role="heading"
+        aria-level={3}
       >
         Pressed Keys ({pressedKeys.length})
       </Text>
       <InlineStack gap="2" blockAlign="center">
         {pressedKeys.map((key) => (
-          <Text key={key}>{key}</Text>
+          <Text key={key} size="xs">
+            {key}
+          </Text>
         ))}
       </InlineStack>
     </BlockStack>
