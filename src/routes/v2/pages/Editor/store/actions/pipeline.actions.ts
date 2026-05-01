@@ -7,7 +7,10 @@ import {
 } from "@/models/componentSpec";
 import { generateUniqueTaskName } from "@/routes/v2/pages/Editor/store/nameUtils";
 import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
-import { PIPELINE_NOTES_ANNOTATION } from "@/utils/annotations";
+import {
+  PIPELINE_NOTES_ANNOTATION,
+  PIPELINE_TAGS_ANNOTATION,
+} from "@/utils/annotations";
 
 import { idGen } from "./utils";
 
@@ -43,6 +46,25 @@ export function updatePipelineNotes(
       spec.annotations.set(PIPELINE_NOTES_ANNOTATION, notes);
     } else {
       spec.annotations.remove(PIPELINE_NOTES_ANNOTATION);
+    }
+    return true;
+  });
+}
+
+export function updatePipelineTags(
+  undo: UndoGroupable,
+  spec: ComponentSpec,
+  tags: string[],
+): boolean {
+  return undo.withGroup("Update pipeline tags", () => {
+    const csv = tags
+      .map((t) => t.trim())
+      .filter(Boolean)
+      .join(",");
+    if (csv) {
+      spec.annotations.set(PIPELINE_TAGS_ANNOTATION, csv);
+    } else {
+      spec.annotations.remove(PIPELINE_TAGS_ANNOTATION);
     }
     return true;
   });

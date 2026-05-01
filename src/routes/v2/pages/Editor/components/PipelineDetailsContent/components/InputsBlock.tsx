@@ -13,51 +13,60 @@ function typeSpecToString(typeSpec?: TypeSpecType): string {
   return JSON.stringify(typeSpec);
 }
 
-export function InputsBlock({ spec }: { spec: ComponentSpec }) {
+interface InputsBlockProps {
+  spec: ComponentSpec;
+  /** When true, render only the list (no ContentBlock); use with an outer section title. */
+  embedded?: boolean;
+}
+
+export function InputsBlock({ spec, embedded = false }: InputsBlockProps) {
   const { navigateToEntity } = useFocusActions();
   const handleClick = (input: Input) => {
     navigateToEntity([spec.name], input.$id, "input");
   };
 
-  return (
-    <ContentBlock title="Inputs">
-      {spec.inputs.length > 0 ? (
-        <BlockStack data-testid="pipeline-inputs">
-          {spec.inputs.map((input) => (
-            <InlineStack
-              key={input.$id}
-              gap="1"
-              align="space-between"
-              blockAlign="center"
-              className="even:bg-white odd:bg-secondary px-2 py-0.5 rounded-xs w-full"
-              wrap="nowrap"
+  const list =
+    spec.inputs.length > 0 ? (
+      <BlockStack data-testid="pipeline-inputs">
+        {spec.inputs.map((input) => (
+          <InlineStack
+            key={input.$id}
+            gap="1"
+            align="space-between"
+            blockAlign="center"
+            className="w-full rounded-xs px-2 py-0.5 even:bg-white odd:bg-secondary"
+            wrap="nowrap"
+          >
+            <Button
+              variant="ghost"
+              size="xs"
+              className="truncate"
+              onClick={() => handleClick(input)}
             >
-              <Button
-                variant="ghost"
-                size="xs"
-                className="truncate"
-                onClick={() => handleClick(input)}
-              >
-                {input.name}
-              </Button>
-              <InlineStack gap="1" className="shrink-0" blockAlign="center">
-                <Text size="xs" tone="subdued">
-                  ({typeSpecToString(input.type)})
-                </Text>
-                {input.optional && (
-                  <Badge size="sm" variant="outline">
-                    optional
-                  </Badge>
-                )}
-              </InlineStack>
+              {input.name}
+            </Button>
+            <InlineStack gap="1" className="shrink-0" blockAlign="center">
+              <Text size="xs" tone="subdued">
+                ({typeSpecToString(input.type)})
+              </Text>
+              {input.optional && (
+                <Badge size="sm" variant="outline">
+                  optional
+                </Badge>
+              )}
             </InlineStack>
-          ))}
-        </BlockStack>
-      ) : (
-        <Text size="xs" tone="subdued">
-          No inputs
-        </Text>
-      )}
-    </ContentBlock>
-  );
+          </InlineStack>
+        ))}
+      </BlockStack>
+    ) : (
+      <Text size="xs" tone="subdued">
+        No inputs
+      </Text>
+    );
+
+  if (embedded) {
+    return list;
+  }
+
+  return <ContentBlock title="Inputs">{list}</ContentBlock>;
 }

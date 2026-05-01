@@ -18,6 +18,8 @@ interface AnnotationsBlockProps {
   readonly?: boolean;
   ignoreAnnotationKeys?: string[];
   defaultEditing?: boolean;
+  /** When `null`, the list title is omitted (use an outer heading). When omitted, defaults to `"Annotations"`. */
+  listTitle?: string | null;
 }
 
 export const AnnotationsBlock = observer(function AnnotationsBlock({
@@ -25,6 +27,7 @@ export const AnnotationsBlock = observer(function AnnotationsBlock({
   readonly,
   ignoreAnnotationKeys,
   defaultEditing = false,
+  listTitle,
 }: AnnotationsBlockProps) {
   const [isEditing, setIsEditing] = useState(defaultEditing);
 
@@ -36,15 +39,22 @@ export const AnnotationsBlock = observer(function AnnotationsBlock({
     (a) => a.key !== "" && String(a.value) !== "",
   );
 
+  const resolvedListTitle =
+    listTitle === null ? undefined : (listTitle ?? "Annotations");
+
   if (isEditing && !readonly) {
     return (
-      <AnnotationEditMode annotations={annotations} ignoredSet={ignoredSet} />
+      <AnnotationEditMode
+        annotations={annotations}
+        ignoredSet={ignoredSet}
+        contentTitle={resolvedListTitle}
+      />
     );
   }
 
   return (
     <KeyValueList
-      title="Annotations"
+      title={resolvedListTitle}
       items={displayItems.map((a) => ({
         label: a.key,
         value: JSON.stringify(a.value),
@@ -63,9 +73,11 @@ export const AnnotationsBlock = observer(function AnnotationsBlock({
 function AnnotationEditMode({
   annotations,
   ignoredSet,
+  contentTitle,
 }: {
   annotations: Annotations;
   ignoredSet?: Set<string>;
+  contentTitle?: string;
 }) {
   const { addAnnotation } = useAnnotationActions();
 
@@ -84,7 +96,7 @@ function AnnotationEditMode({
   );
 
   return (
-    <ContentBlock title="Annotations" titleAction={actions}>
+    <ContentBlock title={contentTitle} titleAction={actions}>
       {editableItems.length === 0 ? (
         <Text size="xs" tone="subdued">
           No annotations
