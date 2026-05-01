@@ -26,6 +26,11 @@ export const DEFAULT_VIEW_PRESET: ViewPreset = {
 export const VIEW_PRESETS: ViewPreset[] = [
   DEFAULT_VIEW_PRESET,
   {
+    label: "Minimal",
+    description: "Hide all panels",
+    visible: new Set<string>(),
+  },
+  {
     label: "All",
     description: "All windows visible",
     visible: new Set([
@@ -37,10 +42,5 @@ export const VIEW_PRESETS: ViewPreset[] = [
       "recent-runs",
     ]),
     dockPositions: DEFAULT_DOCK_POSITIONS,
-  },
-  {
-    label: "Minimal",
-    description: "Hide all panels",
-    visible: new Set<string>(),
   },
 ];
