@@ -55,7 +55,7 @@ function IssueHeader({ issue }: { issue: ValidationIssue }) {
     <BlockStack gap="2">
       <InlineStack gap="2" blockAlign="center">
         <Icon name={severityIcon} size="sm" className={severityColor} />
-        <Text size="sm" weight="semibold" className={severityColor}>
+        <Text size="xs" weight="semibold" className={severityColor}>
           {issue.severity === "error" ? "Error" : "Warning"}
         </Text>
       </InlineStack>

@@ -60,7 +60,7 @@ export const PipelineDetailsContent = observer(
       return (
         <BlockStack className="h-full items-center justify-center p-4">
           <Icon name="FileQuestionMark" size="lg" className="text-gray-300" />
-          <Text size="sm" tone="subdued" className="text-center mt-2">
+          <Text size="xs" tone="subdued" className="text-center mt-2">
             No pipeline loaded
           </Text>
         </BlockStack>
@@ -131,7 +131,11 @@ export const PipelineDetailsContent = observer(
           {spec.hasValidationIssues ? (
             <ValidationSummary spec={spec} />
           ) : (
-            <InfoBox variant="success" title="No validation issues">
+            <InfoBox
+              variant="success"
+              title="No validation issues"
+              className="text-xs"
+            >
               Pipeline is ready for submission
             </InfoBox>
           )}

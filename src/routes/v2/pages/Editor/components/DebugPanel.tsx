@@ -37,8 +37,12 @@ const DebugPanelContent = observer(function DebugPanelContent() {
   return (
     <Tabs defaultValue="stats" className="h-full flex flex-col">
       <TabsList className="mx-3 mt-2 shrink-0">
-        <TabsTrigger value="stats">Stats</TabsTrigger>
-        <TabsTrigger value="yaml">YAML</TabsTrigger>
+        <TabsTrigger value="stats" className="text-xs!">
+          Stats
+        </TabsTrigger>
+        <TabsTrigger value="yaml" className="text-xs!">
+          YAML
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="stats" className="flex-1 min-h-0 overflow-y-auto">

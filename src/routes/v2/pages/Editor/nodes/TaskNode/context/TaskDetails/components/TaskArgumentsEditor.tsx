@@ -129,7 +129,7 @@ export const TaskArgumentsEditor = observer(function TaskArgumentsEditor({
             inlineAlign="center"
             className="h-full text-gray-400"
           >
-            <Text size="sm" tone="subdued">
+            <Text size="xs" tone="subdued">
               Select an argument to edit
             </Text>
           </BlockStack>

@@ -49,7 +49,7 @@ export const OutputDetails = observer(function OutputDetails({
             id="output-name"
             defaultValue={output.name}
             onBlur={handleNameChange}
-            className="font-mono text-sm"
+            className="font-mono text-xs!"
           />
         </BlockStack>
 
@@ -61,7 +61,7 @@ export const OutputDetails = observer(function OutputDetails({
             >
               Type
             </InputLabel>
-            <Text size="sm" className="font-mono text-gray-500">
+            <Text size="xs" className="font-mono text-gray-500">
               {String(output.type)}
             </Text>
           </BlockStack>
@@ -80,7 +80,7 @@ export const OutputDetails = observer(function OutputDetails({
             defaultValue={output.description ?? ""}
             placeholder="Describe this output..."
             onBlur={handleDescriptionChange}
-            className="text-sm"
+            className="text-xs!"
             rows={2}
           />
         </BlockStack>

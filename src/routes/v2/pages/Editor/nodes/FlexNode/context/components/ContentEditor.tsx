@@ -72,7 +72,7 @@ export function ContentEditor({
           >
             <Label
               htmlFor="flex-node-title"
-              className="text-muted-foreground text-xs"
+              className="text-muted-foreground text-xs!"
             >
               Title
             </Label>
@@ -87,7 +87,7 @@ export function ContentEditor({
             value={title}
             onChange={handleTitleChange}
             onBlur={saveChanges}
-            className="text-sm"
+            className="text-xs!"
           />
         </BlockStack>
         <BlockStack>
@@ -100,7 +100,7 @@ export function ContentEditor({
           >
             <Label
               htmlFor="flex-node-content"
-              className="text-muted-foreground text-xs"
+              className="text-muted-foreground text-xs!"
             >
               Note
             </Label>
@@ -115,7 +115,7 @@ export function ContentEditor({
             value={content}
             onChange={handleContentChange}
             onBlur={saveChanges}
-            className="text-xs"
+            className="text-xs!"
           />
         </BlockStack>
       </BlockStack>

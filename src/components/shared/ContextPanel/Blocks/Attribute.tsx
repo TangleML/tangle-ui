@@ -24,7 +24,7 @@ export const Attribute = ({
 
   const labelContent =
     copyable && label ? (
-      <CopyText className="text-xs truncate" compact>
+      <CopyText size="xs" className="truncate" compact>
         {label}
       </CopyText>
     ) : (
@@ -56,8 +56,9 @@ export const Attribute = ({
           </Link>
         ) : copyable ? (
           <CopyText
+            size="xs"
             className={cn(
-              "text-xs truncate",
+              "truncate",
               critical ? "text-destructive" : "text-muted-foreground",
             )}
             compact

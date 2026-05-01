@@ -8,7 +8,7 @@ import { BlockStack } from "@/components/ui/layout";
  */
 export function ComponentLibraryContent() {
   return (
-    <BlockStack className="h-full overflow-y-auto">
+    <BlockStack className="h-full overflow-y-auto [&_.text-sm]:text-xs!">
       <GraphComponents />
     </BlockStack>
   );

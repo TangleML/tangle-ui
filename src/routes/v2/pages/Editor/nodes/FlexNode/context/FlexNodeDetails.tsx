@@ -52,9 +52,9 @@ const FlexNodeDetailsInner = observer(function FlexNodeDetailsInner({
   };
 
   return (
-    <BlockStack gap="4" className="h-full px-2">
+    <BlockStack gap="4" className="p-3 [&_.text-sm]:text-xs!">
       <InlineStack gap="2" blockAlign="center">
-        <Text size="lg" weight="semibold" className="wrap-anywhere">
+        <Text size="md" weight="semibold" className="wrap-anywhere">
           Sticky Note
         </Text>
         <LockToggle
