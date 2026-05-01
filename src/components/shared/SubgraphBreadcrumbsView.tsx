@@ -1,5 +1,5 @@
 import { Home } from "lucide-react";
-import { Fragment } from "react";
+import { Fragment, type ReactNode } from "react";
 
 import {
   Breadcrumb,
@@ -11,15 +11,18 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { InlineStack } from "@/components/ui/layout";
+import { pluralize } from "@/utils/string";
 
 interface SubgraphBreadcrumbsViewProps {
   path: string[];
   onNavigate: (index: number) => void;
+  actions?: ReactNode;
 }
 
 export const SubgraphBreadcrumbsView = ({
   path,
   onNavigate,
+  actions,
 }: SubgraphBreadcrumbsViewProps) => {
   if (path.length <= 1) {
     return null;
@@ -28,10 +31,12 @@ export const SubgraphBreadcrumbsView = ({
   return (
     <InlineStack
       align="space-between"
-      gap="0"
+      blockAlign="start"
+      wrap="nowrap"
+      gap="2"
       className="px-4 py-2 bg-gray-50 border-b w-full z-1"
     >
-      <Breadcrumb>
+      <Breadcrumb className="flex-1 min-w-0">
         <BreadcrumbList>
           {path.map((pathSegment, index) => {
             const isLast = index === path.length - 1;
@@ -78,9 +83,12 @@ export const SubgraphBreadcrumbsView = ({
         </BreadcrumbList>
       </Breadcrumb>
 
-      <div className="text-xs text-gray-500">
-        {path.length - 1} level{path.length - 1 !== 1 ? "s" : ""} deep
-      </div>
+      <InlineStack gap="2" blockAlign="center" className="shrink-0">
+        <div className="text-xs text-gray-500">
+          {path.length - 1} {pluralize(path.length - 1, "level")} deep
+        </div>
+        {actions}
+      </InlineStack>
     </InlineStack>
   );
 };
