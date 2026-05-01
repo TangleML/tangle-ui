@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { focusModeStore } from "@/routes/v2/shared/hooks/useFocusMode";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
+import { CollapsedDockWindowMini } from "./CollapsedDockWindowMini";
 import { registerDockAreaElement } from "./snapUtils";
 import {
   COLLAPSED_DOCK_AREA_WIDTH,
@@ -28,6 +29,10 @@ export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
   const visibleWindows = windowOrder.filter((id) => {
     const win = windows.getWindowById(id);
     return win && win.state !== "hidden";
+  });
+  const visibleWindowsWithMini = visibleWindows.filter((id) => {
+    void windows.miniContentSignature;
+    return Boolean(windows.getWindowMiniContent(id));
   });
   const isEmpty = visibleWindows.length === 0;
 
@@ -76,9 +81,22 @@ export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
       <div
         ref={setRef}
         data-dock-area={side}
-        className={cn("relative shrink-0 bg-gray-100")}
+        className={cn("relative shrink-0 bg-gray-100 flex flex-col")}
         style={{ width: COLLAPSED_DOCK_AREA_WIDTH }}
       >
+        <BlockStack
+          gap="1"
+          align="center"
+          className="relative z-20 min-h-0 flex-1 overflow-y-auto overflow-x-hidden hide-scrollbar py-1 px-0.5"
+        >
+          {visibleWindowsWithMini.map((windowId) => (
+            <CollapsedDockWindowMini
+              key={windowId}
+              windowId={windowId}
+              dockSide={side}
+            />
+          ))}
+        </BlockStack>
         <VerticalResizeHandle
           side={handleSide}
           minWidth={COLLAPSED_DOCK_AREA_WIDTH}

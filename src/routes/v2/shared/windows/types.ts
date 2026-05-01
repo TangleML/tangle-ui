@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 /** Window display state */
 export type WindowState = "normal" | "maximized" | "minimized" | "hidden";
 
@@ -79,6 +81,11 @@ export interface WindowOptions {
   defaultDockState?: "left" | "right";
   /** Callback to invoke when the window is closed */
   onClose?: () => void;
+  /**
+   * Optional compact control shown when the window is docked and its dock area
+   * is collapsed. Typically an icon button; click opens full content in a popover.
+   */
+  miniContent?: ReactNode;
 }
 
 /** Default window dimensions */

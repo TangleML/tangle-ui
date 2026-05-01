@@ -26,6 +26,7 @@ export class WindowStoreImpl implements WindowStoreRef {
    * React Compiler issues. React elements must never be stored in an observable.
    */
   private contentMap = new Map<string, ReactNode>();
+  private miniContentMap = new Map<string, ReactNode>();
   @observable.shallow accessor windows: Record<string, WindowModel> = {};
   @observable.shallow accessor windowOrder: string[] = [];
   @observable accessor dockAreas: {
@@ -44,9 +45,18 @@ export class WindowStoreImpl implements WindowStoreRef {
     },
   };
   @observable accessor enabledDockSides: Set<"left" | "right"> = new Set();
+  /**
+   * Bumped when mini content entries change so observers can re-query the
+   * non-observable miniContentMap (e.g. registering mini on persisted windows).
+   */
+  @observable accessor miniContentSignature = 0;
 
   constructor() {
     makeObservable(this);
+  }
+
+  private bumpMiniContentSignature(): void {
+    this.miniContentSignature++;
   }
 
   private calculateNewPosition(): Position {
@@ -61,8 +71,13 @@ export class WindowStoreImpl implements WindowStoreRef {
     id: string,
     content: ReactNode,
     existing: WindowModel,
+    options: WindowOptions,
   ): WindowRef {
     this.contentMap.set(id, content);
+    if (options.miniContent !== undefined) {
+      this.miniContentMap.set(id, options.miniContent);
+      this.bumpMiniContentSignature();
+    }
     this.bringToFront(id);
     if (existing.state === "hidden" || existing.isMinimized) {
       existing.restore();
@@ -85,10 +100,14 @@ export class WindowStoreImpl implements WindowStoreRef {
 
     const existing = this.windows[id];
     if (existing) {
-      return this.focusExistingWindow(id, content, existing);
+      return this.focusExistingWindow(id, content, existing, options);
     }
 
     this.contentMap.set(id, content);
+    if (options.miniContent !== undefined) {
+      this.miniContentMap.set(id, options.miniContent);
+      this.bumpMiniContentSignature();
+    }
     const init = buildWindowModelInit(id, options, this.calculateNewPosition());
     const model = new WindowModel(init, this);
 
@@ -115,6 +134,9 @@ export class WindowStoreImpl implements WindowStoreRef {
     this.removeFromDockAreaOrder(id);
     delete this.windows[id];
     this.contentMap.delete(id);
+    if (this.miniContentMap.delete(id)) {
+      this.bumpMiniContentSignature();
+    }
 
     const index = this.windowOrder.indexOf(id);
     if (index !== -1) {
@@ -278,6 +300,17 @@ export class WindowStoreImpl implements WindowStoreRef {
 
   getWindowContent(id: string): ReactNode | undefined {
     return this.contentMap.get(id);
+  }
+
+  getWindowMiniContent(id: string): ReactNode | undefined {
+    return this.miniContentMap.get(id);
+  }
+
+  /** Register or replace mini content for an existing window (no z-order change). */
+  @action setWindowMiniContent(id: string, miniContent: ReactNode): void {
+    if (!this.windows[id]) return;
+    this.miniContentMap.set(id, miniContent);
+    this.bumpMiniContentSignature();
   }
 
   // -- Query helpers --
