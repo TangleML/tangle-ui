@@ -1,9 +1,14 @@
 import { observer } from "mobx-react-lite";
+import { useState } from "react";
 
 import logo from "/Tangle_Icon_White.png";
+import { PipelineNameDialog } from "@/components/shared/Dialogs";
+import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Link } from "@/components/ui/link";
 import { Text } from "@/components/ui/typography";
+import { usePipelineRename } from "@/routes/v2/pages/Editor/hooks/usePipelineRename";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { AppMenuActions } from "@/routes/v2/shared/components/AppMenuActions";
 import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButton";
@@ -22,10 +27,12 @@ import { WindowsMenu } from "./components/WindowsMenu";
 export const EditorMenuBar = observer(function EditorMenuBar() {
   const { navigation, windows } = useSharedStores();
   const { pipelineFile } = useEditorSession();
+  const handlePipelineRename = usePipelineRename();
   const spec = navigation.activeSpec;
   const pipelineName = spec?.name ?? "Untitled pipeline";
 
   const displayMenu = Boolean(pipelineFile.activePipelineFile);
+  const [renameOpen, setRenameOpen] = useState(false);
 
   return (
     <div
@@ -55,14 +62,38 @@ export const EditorMenuBar = observer(function EditorMenuBar() {
 
           {displayMenu && (
             <BlockStack gap="0" className="min-w-0">
-              <Text
-                as="span"
-                size="sm"
-                weight="semibold"
-                className="text-white truncate max-w-64 lg:max-w-md leading-tight ml-1"
+              <InlineStack
+                gap="1"
+                blockAlign="center"
+                wrap="nowrap"
+                className="group min-w-0 ml-1"
               >
-                {pipelineName}
-              </Text>
+                <Text
+                  as="span"
+                  size="sm"
+                  weight="semibold"
+                  className="text-white truncate max-w-64 lg:max-w-md leading-tight"
+                >
+                  {pipelineName}
+                </Text>
+                <Button
+                  variant="ghost"
+                  size="inline-xs"
+                  className="shrink-0 p-0 text-stone-400 hover:bg-transparent hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={() => setRenameOpen(true)}
+                >
+                  <Icon name="Pencil" size="xs" />
+                </Button>
+              </InlineStack>
+              <PipelineNameDialog
+                open={renameOpen}
+                onOpenChange={setRenameOpen}
+                title="Rename Pipeline"
+                initialName={pipelineName}
+                onSubmit={handlePipelineRename}
+                submitButtonText="Rename"
+                isSubmitDisabled={(name) => name === pipelineName}
+              />
 
               <InlineStack gap="0" wrap="nowrap" blockAlign="center">
                 <FileMenu />

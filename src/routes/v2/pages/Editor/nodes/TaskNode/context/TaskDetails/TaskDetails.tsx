@@ -1,16 +1,20 @@
 import { observer } from "mobx-react-lite";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
+import { Button } from "@/components/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Icon } from "@/components/ui/icon";
+import { Input } from "@/components/ui/input";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Heading, Text } from "@/components/ui/typography";
+import useToastNotification from "@/hooks/useToastNotification";
 import { AnnotationsBlock } from "@/routes/v2/pages/Editor/components/AnnotationsBlock/AnnotationsBlock";
+import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskActions";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { EDITOR_COLLAPSED_ANNOTATION } from "@/utils/annotations";
@@ -37,12 +41,16 @@ export const TaskDetails = observer(function TaskDetails({
   entityId,
 }: TaskDetailsProps) {
   const { editor } = useSharedStores();
+  const { renameTask } = useTaskActions();
+  const notify = useToastNotification();
   const spec = useSpec();
   const task = useTask(entityId);
   const { focusedArgumentName } = editor;
 
   const [argumentsOpen, setArgumentsOpen] = useState(true);
   const [configOpen, setConfigOpen] = useState(true);
+  const [isRenaming, setIsRenaming] = useState(false);
+  const renameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (focusedArgumentName && !argumentsOpen) {
@@ -60,6 +68,25 @@ export const TaskDetails = observer(function TaskDetails({
 
   const isSubgraphTask = task.subgraphSpec !== undefined;
 
+  const handleRenameSubmit = () => {
+    const newName = renameInputRef.current?.value.trim();
+    setIsRenaming(false);
+    if (newName && newName !== task.name) {
+      const success = renameTask(spec, entityId, newName);
+      if (!success) {
+        notify("A task with that name already exists", "error");
+      }
+    }
+  };
+
+  const startRename = () => {
+    setIsRenaming(true);
+    requestAnimationFrame(() => {
+      renameInputRef.current?.focus();
+      renameInputRef.current?.select();
+    });
+  };
+
   return (
     <BlockStack gap="0" className="w-full h-full">
       {/* ── Header ── */}
@@ -72,16 +99,39 @@ export const TaskDetails = observer(function TaskDetails({
         >
           <InlineStack
             gap="2"
-            blockAlign="center"
+            blockAlign="start"
             wrap="nowrap"
             className="min-w-0"
           >
             {isSubgraphTask && (
               <Icon name="Workflow" size="sm" className="shrink-0" />
             )}
-            <Text size="md" weight="semibold" className="wrap-anywhere">
-              {task.name}
-            </Text>
+            {isRenaming ? (
+              <Input
+                ref={renameInputRef}
+                defaultValue={task.name}
+                className="h-7 text-sm font-semibold flex-1 min-w-0"
+                onBlur={handleRenameSubmit}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleRenameSubmit();
+                  if (e.key === "Escape") setIsRenaming(false);
+                }}
+              />
+            ) : (
+              <div className="group min-w-0 flex items-baseline gap-1">
+                <Text size="md" weight="semibold" className="wrap-anywhere">
+                  {task.name}
+                </Text>
+                <Button
+                  variant="ghost"
+                  size="inline-xs"
+                  className="shrink-0 p-0 text-muted-foreground hover:bg-transparent hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={startRename}
+                >
+                  <Icon name="Pencil" size="xs" />
+                </Button>
+              </div>
+            )}
           </InlineStack>
         </InlineStack>
 
