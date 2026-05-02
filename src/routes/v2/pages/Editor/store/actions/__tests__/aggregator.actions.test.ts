@@ -11,6 +11,7 @@ import {
   resetAggregatorOnClone,
   tryConnectAggregatorAddInput,
 } from "@/routes/v2/pages/Editor/store/actions/aggregator.actions";
+import { deleteSelectedEdgesByEdgeIds } from "@/routes/v2/pages/Editor/store/actions/connection.actions";
 
 const noopUndo = {
   withGroup: <T>(_label: string, fn: () => T): T => fn(),
@@ -119,6 +120,46 @@ describe("aggregator.actions integration", () => {
       output_type: "JsonArray",
       agg_1: { graphInput: { inputName: "user_data" } },
     });
+  });
+
+  it("deleting an aggregator edge removes the dynamic agg_N input", () => {
+    const labels: string[] = [];
+    const undo = {
+      withGroup: <T>(label: string, fn: () => T): T => {
+        labels.push(label);
+        return fn();
+      },
+    };
+    const spec = new ComponentSpec({ $id: "spec_1", name: "Pipeline" });
+    const task = makeAggregatorTask("task_1");
+    spec.addTask(task);
+
+    const existingInput = new Input({ $id: "input_1", name: "user_data" });
+    spec.addInput(existingInput);
+    const handled = tryConnectAggregatorAddInput(undo, spec, {
+      sourceNodeId: existingInput.$id,
+      sourceHandleId: `output_${existingInput.$id}`,
+      targetNodeId: task.$id,
+      targetHandleId: "__add_aggregator_input__",
+    });
+    expect(handled).toBe(true);
+
+    const bindingId = spec.bindings[0]?.$id;
+    expect(bindingId).toBeDefined();
+    if (!bindingId) return;
+
+    deleteSelectedEdgesByEdgeIds(undo, spec, [`edge_${bindingId}`]);
+
+    expect(labels).toEqual([
+      "Connect to aggregator",
+      "Delete selected edges",
+      "Remove aggregator input",
+    ]);
+    expect(spec.bindings).toHaveLength(0);
+    expect(task.arguments.find((arg) => arg.name === "agg_1")).toBeUndefined();
+    expect(
+      task.resolvedComponentSpec?.inputs?.map((input) => input.name),
+    ).toEqual(["output_type"]);
   });
 
   it("resetAggregatorOnClone strips agg_* inputs and arguments", () => {

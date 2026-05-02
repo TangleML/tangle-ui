@@ -30,10 +30,9 @@ import { FloatingSelectionToolbar } from "./components/FloatingSelectionToolbar"
 import { useClipboardShortcuts } from "./hooks/useClipboardShortcuts";
 import { useConnectionBehavior } from "./hooks/useConnectionBehavior";
 import { useDropBehavior } from "./hooks/useDropBehavior";
+import { useFlowCanvasOnBeforeDelete } from "./hooks/useFlowCanvasOnBeforeDelete";
 import { useNodeEdgeChanges } from "./hooks/useNodeEdgeChanges";
 import { usePaneClickBehavior } from "./hooks/usePaneClickBehavior";
-
-const DELETE_KEY_CODE = ["Delete", "Backspace"];
 
 interface FlowCanvasProps {
   spec: ComponentSpec | null;
@@ -66,6 +65,8 @@ export const FlowCanvas = observer(function FlowCanvas({
     rfOnEdgesChange,
     selectionBehavior,
   } = useFlowCanvasState({ spec, metaKeyPressed, isConnecting });
+
+  const onBeforeDelete = useFlowCanvasOnBeforeDelete(spec);
 
   useFitViewOnFocus();
   useAutoLayout(spec);
@@ -109,8 +110,9 @@ export const FlowCanvas = observer(function FlowCanvas({
         onEdgeClick={onEdgeClick}
         onInit={setReactFlowInstance}
         onViewportChange={handleViewportChange}
+        onBeforeDelete={onBeforeDelete}
         connectionLineComponent={ConnectionLine}
-        deleteKeyCode={DELETE_KEY_CODE}
+        deleteKeyCode={["Delete", "Backspace"]}
         className={cn(
           shiftKeyPressed && !isConnecting && "cursor-crosshair",
           !isDetailedView && "connections-disabled",

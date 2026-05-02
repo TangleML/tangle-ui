@@ -2,6 +2,7 @@ import { NodeToolbar, useReactFlow } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
 
 import type { ComponentSpec } from "@/models/componentSpec";
+import { getSelectedEdgesFromInstance } from "@/routes/v2/pages/Editor/components/FlowCanvas/canvasDeleteSelection";
 import { usePipelineActions } from "@/routes/v2/pages/Editor/store/actions/usePipelineActions";
 import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskActions";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
@@ -11,12 +12,8 @@ import { SelectionToolbar } from "./SelectionToolbar";
 export const FloatingSelectionToolbar = observer(
   function FloatingSelectionToolbar({ spec }: { spec: ComponentSpec | null }) {
     const { editor } = useSharedStores();
-    const {
-      duplicateSelectedNodes,
-      copySelectedNodes,
-      pasteNodes,
-      deleteSelectedNodes,
-    } = useTaskActions();
+    const { duplicateSelectedNodes, copySelectedNodes, pasteNodes } =
+      useTaskActions();
     const { createSubgraph } = usePipelineActions();
     const { multiSelection } = editor;
     const reactFlow = useReactFlow();
@@ -44,8 +41,12 @@ export const FloatingSelectionToolbar = observer(
     };
 
     const handleDelete = () => {
-      if (!spec) return;
-      deleteSelectedNodes(spec, multiSelection);
+      if (!spec || !reactFlow.viewportInitialized) return;
+      const selectedEdges = getSelectedEdgesFromInstance(reactFlow);
+      void reactFlow.deleteElements({
+        nodes: multiSelection.map((n) => ({ id: n.id })),
+        edges: selectedEdges.map((e) => ({ id: e.id })),
+      });
     };
 
     const selectedTasks = multiSelection.filter((n) => n.type === "task");

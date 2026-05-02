@@ -2,7 +2,6 @@ import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionCo
 
 import {
   addGuideline,
-  cleanupDeletedBinding,
   removeConduit,
   toggleEdgeOnConduit,
   unassignEdgeFromConduit,
@@ -20,6 +19,5 @@ export function useConduitActions() {
     updateConduitColor: updateConduitColor.bind(null, undo),
     unassignEdgeFromConduit: unassignEdgeFromConduit.bind(null, undo),
     toggleEdgeOnConduit: toggleEdgeOnConduit.bind(null, undo),
-    cleanupDeletedBinding: cleanupDeletedBinding.bind(null, undo),
   };
 }
