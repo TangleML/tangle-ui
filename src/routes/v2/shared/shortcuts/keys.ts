@@ -3,8 +3,8 @@ export const CTRL = "CTRL" as const;
 export const SHIFT = "SHIFT" as const;
 
 export const ESCAPE = "ESCAPE" as const;
-const DELETE = "DELETE" as const;
-const BACKSPACE = "BACKSPACE" as const;
+export const DELETE = "DELETE" as const;
+export const BACKSPACE = "BACKSPACE" as const;
 const ENTER = "ENTER" as const;
 const SPACE = "SPACE" as const;
 const TAB = "TAB" as const;

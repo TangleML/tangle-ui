@@ -1,4 +1,7 @@
-export { connectNodes, deleteEdge } from "./actions/connection.actions";
+/**
+ * todo: remove this file
+ */
+export { connectNodes } from "./actions/connection.actions";
 export {
   addInput,
   addOutput,
