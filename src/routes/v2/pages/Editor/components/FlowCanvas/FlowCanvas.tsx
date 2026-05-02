@@ -27,13 +27,12 @@ import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 import { ConnectionLine } from "./components/ConnectionLine";
 import { FloatingSelectionToolbar } from "./components/FloatingSelectionToolbar";
+import { useCanvasDeleteShortcuts } from "./hooks/useCanvasDeleteShortcuts";
 import { useClipboardShortcuts } from "./hooks/useClipboardShortcuts";
 import { useConnectionBehavior } from "./hooks/useConnectionBehavior";
 import { useDropBehavior } from "./hooks/useDropBehavior";
 import { useNodeEdgeChanges } from "./hooks/useNodeEdgeChanges";
 import { usePaneClickBehavior } from "./hooks/usePaneClickBehavior";
-
-const DELETE_KEY_CODE = ["Delete", "Backspace"];
 
 interface FlowCanvasProps {
   spec: ComponentSpec | null;
@@ -70,6 +69,7 @@ export const FlowCanvas = observer(function FlowCanvas({
   useFitViewOnFocus();
   useAutoLayout(spec);
   useClipboardShortcuts(spec, containerRef, reactFlowInstance);
+  useCanvasDeleteShortcuts(spec, reactFlowInstance);
 
   const nodeEdgeBehavior = useNodeEdgeChanges(
     spec,
@@ -110,7 +110,7 @@ export const FlowCanvas = observer(function FlowCanvas({
         onInit={setReactFlowInstance}
         onViewportChange={handleViewportChange}
         connectionLineComponent={ConnectionLine}
-        deleteKeyCode={DELETE_KEY_CODE}
+        deleteKeyCode={null}
         className={cn(
           shiftKeyPressed && !isConnecting && "cursor-crosshair",
           !isDetailedView && "connections-disabled",

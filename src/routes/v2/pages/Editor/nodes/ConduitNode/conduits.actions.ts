@@ -174,3 +174,26 @@ export function cleanupDeletedBinding(
     setConduits(spec, updated);
   });
 }
+
+/**
+ * Removes binding ids from conduit `edgeIds` in one metadata write.
+ * Does not open an undo group — wrap the caller in `undo.withGroup` when needed.
+ */
+export function stripBindingIdsFromConduitMetadata(
+  spec: ComponentSpec,
+  bindingIds: string[],
+): void {
+  if (bindingIds.length === 0) return;
+  const idSet = new Set(bindingIds);
+  const existing = getConduits(spec);
+  const needsUpdate = existing.some((c) =>
+    c.edgeIds.some((id) => idSet.has(id)),
+  );
+  if (!needsUpdate) return;
+
+  const updated = existing.map((c) => ({
+    ...c,
+    edgeIds: c.edgeIds.filter((id) => !idSet.has(id)),
+  }));
+  setConduits(spec, updated);
+}
