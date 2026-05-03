@@ -54,9 +54,18 @@ export function useSelectionBehavior(
   const onSelectionChange = ({ nodes: selected }: OnSelectionChangeParams) => {
     if (selected.length > 1) {
       debouncedSetMultiSelection(buildMultiSelection(registry, spec, selected));
-    } else {
-      debouncedSetMultiSelection.cancel();
-      editor.clearMultiSelection();
+      return;
+    }
+
+    debouncedSetMultiSelection.cancel();
+    editor.clearMultiSelection();
+
+    if (selected.length === 1) {
+      const built = buildMultiSelection(registry, spec, selected);
+      const first = built[0];
+      if (first) {
+        editor.selectNode(first.id, first.type);
+      }
     }
   };
 
