@@ -21,7 +21,9 @@ import {
 
 export const WindowsMenu = observer(function WindowsMenu() {
   const { windows } = useSharedStores();
-  const allWindows = windows.getAllWindows();
+  const sortedWindows = [...windows.getAllWindows()].sort((a, b) =>
+    a.title.localeCompare(b.title),
+  );
 
   const applyPreset = (preset: ViewPreset) => {
     windows.applyViewPreset(preset);
@@ -33,10 +35,11 @@ export const WindowsMenu = observer(function WindowsMenu() {
         <MenuTriggerButton>Windows</MenuTriggerButton>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" sideOffset={2}>
-        {allWindows.map((win) => (
+        {sortedWindows.map((win) => (
           <DropdownMenuCheckboxItem
             key={win.id}
             checked={win.state !== "hidden"}
+            onSelect={(e) => e.preventDefault()}
             onCheckedChange={(checked) => {
               if (checked) {
                 win.restore();
