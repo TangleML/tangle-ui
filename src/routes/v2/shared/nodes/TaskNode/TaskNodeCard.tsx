@@ -151,21 +151,14 @@ const ClassicInputHandle = observer(function ClassicInputHandle({
         </div>
         {showValueDisplay && (
           <div className="flex w-fit max-w-1/2 min-w-0 items-center gap-1">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div
-                  className={cn(
-                    "text-xs text-gray-800 truncate inline-block text-right pr-2",
-                    !hasValue && "text-gray-400 italic",
-                  )}
-                >
-                  {hasValue ? displayValue : input.default}
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="top">
-                {hasValue ? displayValue : input.default}
-              </TooltipContent>
-            </Tooltip>
+            <div
+              className={cn(
+                "text-xs text-gray-800 truncate inline-block text-right pr-2",
+                !hasValue && "text-gray-400 italic",
+              )}
+            >
+              {hasValue ? displayValue : input.default}
+            </div>
           </div>
         )}
       </InlineStack>

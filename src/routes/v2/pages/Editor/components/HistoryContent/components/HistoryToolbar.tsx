@@ -43,9 +43,7 @@ export function HistoryToolbar({
                 <Icon name="Undo2" size="xs" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="bottom">
-              <Text size="xs">Undo (⌘Z)</Text>
-            </TooltipContent>
+            <TooltipContent side="bottom">Undo (⌘Z)</TooltipContent>
           </Tooltip>
         </TooltipProvider>
 
@@ -62,9 +60,7 @@ export function HistoryToolbar({
                 <Icon name="Redo2" size="xs" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="bottom">
-              <Text size="xs">Redo (⌘⇧Z)</Text>
-            </TooltipContent>
+            <TooltipContent side="bottom">Redo (⌘⇧Z)</TooltipContent>
           </Tooltip>
         </TooltipProvider>
       </div>
@@ -81,14 +77,11 @@ export function HistoryToolbar({
               size="sm"
               className="h-5 w-5 p-0 text-slate-500 hover:text-red-500"
               onClick={onClear}
-              title="Clear history"
             >
               <Icon name="Trash2" size="xs" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="bottom">
-            <Text size="xs">Clear history</Text>
-          </TooltipContent>
+          <TooltipContent side="bottom">Clear history</TooltipContent>
         </Tooltip>
       </TooltipProvider>
     </div>

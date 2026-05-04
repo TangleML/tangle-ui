@@ -24,11 +24,6 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radiogroup";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { useBackend } from "@/providers/BackendProvider";
@@ -189,45 +184,40 @@ const SearchRequestInput = ({ value, onChange }: SearchRequestProps) => {
   return (
     <InlineStack align="space-between" gap="2" className="w-full">
       <div className="relative flex-1">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <InputGroup
-              className="px-2 gap-2"
-              prefixElement={
-                <div className="inset-y-0 left-0 flex items-center pointer-events-none">
-                  <Icon name="Search" size="sm" className="text-gray-400" />
-                </div>
-              }
-              suffixElement={
-                <Button
-                  variant="ghost"
-                  size="min"
-                  className={cn(
-                    isValidFilterRequest(searchRequest) ? "visible" : "hidden",
-                  )}
-                  onClick={() => {
-                    dispatch({ type: "SET_SEARCH_TERM", payload: "" });
-                  }}
-                >
-                  <Icon name="X" className="size-3 text-muted-foreground" />
-                </Button>
-              }
+        <InputGroup
+          className="px-2 gap-2"
+          prefixElement={
+            <div className="inset-y-0 left-0 flex items-center pointer-events-none">
+              <Icon name="Search" size="sm" className="text-gray-400" />
+            </div>
+          }
+          suffixElement={
+            <Button
+              variant="ghost"
+              size="min"
+              className={cn(
+                isValidFilterRequest(searchRequest) ? "visible" : "hidden",
+              )}
+              onClick={() => {
+                dispatch({ type: "SET_SEARCH_TERM", payload: "" });
+              }}
             >
-              <Input
-                id="search-input"
-                variant="noBorder"
-                type="text"
-                data-testid="search-input"
-                placeholder="Search components..."
-                className="w-full text-xs p-0"
-                value={searchRequest.searchTerm}
-                autoComplete="off"
-                onChange={handleChange}
-              />
-            </InputGroup>
-          </TooltipTrigger>
-          <TooltipContent>Search components - min 3 characters</TooltipContent>
-        </Tooltip>
+              <Icon name="X" className="size-3 text-muted-foreground" />
+            </Button>
+          }
+        >
+          <Input
+            id="search-input"
+            variant="noBorder"
+            type="text"
+            data-testid="search-input"
+            placeholder="Search components..."
+            className="w-full text-xs p-0"
+            value={searchRequest.searchTerm}
+            autoComplete="off"
+            onChange={handleChange}
+          />
+        </InputGroup>
       </div>
       <SearchFilter onFiltersChange={onFiltersChange} />
     </InlineStack>
