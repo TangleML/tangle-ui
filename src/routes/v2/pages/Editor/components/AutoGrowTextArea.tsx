@@ -9,6 +9,7 @@ import {
 } from "react";
 
 import { MultilineTextInputDialog } from "@/components/shared/Dialogs/MultilineTextInputDialog";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -20,8 +21,12 @@ function heightFormula(maxGrowHeight: string): string {
 function measureContentHeight(el: HTMLTextAreaElement, formula: string): void {
   el.style.setProperty("height", "0px", "important");
   const scrollH = el.scrollHeight;
+  const cs = window.getComputedStyle(el);
+  const borderY =
+    (parseFloat(cs.borderTopWidth) || 0) +
+    (parseFloat(cs.borderBottomWidth) || 0);
   el.style.setProperty("height", formula);
-  el.style.setProperty("--content-h", `${scrollH}px`);
+  el.style.setProperty("--content-h", `${scrollH + borderY}px`);
 }
 
 interface AutoGrowTextareaProps extends Omit<
@@ -153,7 +158,7 @@ export function AutoGrowTextarea({
         <Textarea
           ref={setDefaultRef}
           className={cn(
-            "field-sizing-fixed resize-y overflow-y-auto",
+            "field-sizing-fixed resize-y overflow-y-auto subtle-scrollbar",
             className,
           )}
           style={{
@@ -170,15 +175,16 @@ export function AutoGrowTextarea({
           {...props}
         />
         {showExpandButton && (
-          <button
-            type="button"
-            className="absolute top-1 right-1 rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/expand:opacity-100"
+          <Button
+            variant="ghost"
+            size="min"
+            className="absolute top-1 right-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/expand:opacity-100"
             onPointerDown={(e) => e.preventDefault()}
             onClick={handleExpandClick}
             tabIndex={-1}
           >
             <Icon name="Maximize2" size="xs" />
-          </button>
+          </Button>
         )}
       </div>
       {showExpandButton && (
