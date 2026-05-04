@@ -7,6 +7,7 @@ export interface ViewPreset {
 }
 
 const DEFAULT_DOCK_POSITIONS: Record<string, "left" | "right"> = {
+  "runs-and-submission": "left",
   "component-library": "left",
   "pipeline-tree": "left",
   history: "left",
@@ -18,8 +19,13 @@ const DEFAULT_DOCK_POSITIONS: Record<string, "left" | "right"> = {
 
 export const DEFAULT_VIEW_PRESET: ViewPreset = {
   label: "Default",
-  description: "Components, Recent Runs, Pipeline Details",
-  visible: new Set(["component-library", "recent-runs", "pipeline-details"]),
+  description: "Components, Runs & Submissions, Recent Runs, Pipeline Details",
+  visible: new Set([
+    "runs-and-submission",
+    "recent-runs",
+    "component-library",
+    "pipeline-details",
+  ]),
   dockPositions: DEFAULT_DOCK_POSITIONS,
 };
 
@@ -27,8 +33,10 @@ export const VIEW_PRESETS: ViewPreset[] = [
   DEFAULT_VIEW_PRESET,
   {
     label: "All",
-    description: "All windows visible",
+    description:
+      "All windows visible, including Runs & Submissions and Recent Runs",
     visible: new Set([
+      "runs-and-submission",
       "component-library",
       "history",
       "pipeline-tree",
