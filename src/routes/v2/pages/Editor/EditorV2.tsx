@@ -42,6 +42,7 @@ import { usePipelineTreeWindow } from "./hooks/usePipelineTreeWindow";
 import { usePropertiesWindowPositioning } from "./hooks/usePropertiesWindowPositioning";
 import { useRecentRunsWindow } from "./hooks/useRecentRunsWindow";
 import { useRunsAndSubmissionWindow } from "./hooks/useRunsAndSubmissionWindow";
+import { useSeedInitialDockLayoutFromPreset } from "./hooks/useSeedInitialDockLayoutFromPreset";
 import { useSelectionWindowSync } from "./hooks/useSelectionWindowSync";
 import { useSpecLifecycle } from "./hooks/useSpecLifecycle";
 import { useUndoRedoKeyboard } from "./hooks/useUndoRedoKeyboard";
@@ -87,6 +88,7 @@ const PipelineEditor = withSuspenseWrapper(
     useShortcutListener();
     useEditorEscapeShortcut();
     useDebugPanelWindow();
+    useSeedInitialDockLayoutFromPreset();
 
     const activeSpec = navigation.activeSpec;
 
