@@ -166,16 +166,19 @@ export const DockedWindow = observer(function DockedWindow() {
       <CollapsibleContent className="w-full">
         <div
           className={cn(
-            "w-full bg-white text-gray-900",
-            "transition-all duration-300",
+            "w-full bg-white text-gray-900 flex flex-col overflow-hidden",
+
             (isDragging || isResizing) && "select-none",
             isDragging && "opacity-50",
           )}
-          style={{ minHeight: MIN_DOCKED_HEIGHT }}
+          style={{
+            minHeight: MIN_DOCKED_HEIGHT,
+            height: model.effectiveDockedHeight,
+          }}
           onMouseDown={handleContainerMouseDown}
           onClick={handleContainerClick}
         >
-          <div className="bg-white">{content}</div>
+          <div className="flex-1 min-h-0 overflow-auto bg-white">{content}</div>
           <div
             className="h-1 cursor-ns-resize hover:bg-gray-200 transition-colors shrink-0"
             onMouseDown={handleResizeMouseDown}
