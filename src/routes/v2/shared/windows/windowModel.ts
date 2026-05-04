@@ -2,7 +2,6 @@ import { action, computed, makeObservable, observable } from "mobx";
 
 import { emitDockAreaEvent } from "./dockAreaPlugins";
 import {
-  DEFAULT_DOCKED_HEIGHT,
   type DockState,
   isDockSide,
   MIN_DOCKED_HEIGHT,
@@ -120,10 +119,6 @@ export class WindowModel {
     return this.store.getWindowZIndex(this.id);
   }
 
-  @computed get effectiveDockedHeight(): number {
-    return this.dockedHeight ?? DEFAULT_DOCKED_HEIGHT;
-  }
-
   isActionDisabled(actionType: WindowAction): boolean {
     return this.disabledActions?.includes(actionType) ?? false;
   }
@@ -221,6 +216,11 @@ export class WindowModel {
     this.dockedHeight = Math.max(MIN_DOCKED_HEIGHT, height);
   }
 
+  /** Clears the explicit height so the window returns to fit-to-content sizing. */
+  @action resetDockedHeight(): void {
+    this.dockedHeight = undefined;
+  }
+
   dock(side: DockState, insertIndex?: number): void {
     this.store.dockWindow(this.id, side, insertIndex);
   }
@@ -240,7 +240,6 @@ export class WindowModel {
 
   @action applyDockState(side: Exclude<DockState, "none">): void {
     this.dockState = side;
-    this.dockedHeight = this.dockedHeight ?? DEFAULT_DOCKED_HEIGHT;
   }
 
   @action applyUndockState(): void {
