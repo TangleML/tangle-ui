@@ -11,6 +11,7 @@ import {
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { useIsDetailedView } from "@/routes/v2/shared/hooks/useIsDetailedView";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
+import { isEditorVisualNodeSelected } from "@/routes/v2/shared/store/isEditorVisualNodeSelected";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 import { FlexNodeCard } from "./FlexNodeCard";
@@ -123,6 +124,8 @@ export const EditorV2FlexNode = observer(function EditorV2FlexNode({
   const isBorderTransparent = borderColor === "transparent";
   const hasContent = !!title || !!content;
 
+  const isSelected = isEditorVisualNodeSelected(editor, id, !!selected);
+
   const viewProps: FlexNodeViewProps = {
     id,
     title,
@@ -133,7 +136,7 @@ export const EditorV2FlexNode = observer(function EditorV2FlexNode({
     contentFontSize,
     locked,
     readOnly: !!readOnly,
-    selected: !!selected,
+    selected: isSelected,
     isTransparent,
     isBorderTransparent,
     hasContent,

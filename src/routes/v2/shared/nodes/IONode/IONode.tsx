@@ -4,6 +4,7 @@ import { observer } from "mobx-react-lite";
 import { useIsDetailedView } from "@/routes/v2/shared/hooks/useIsDetailedView";
 import type { IONodeData } from "@/routes/v2/shared/nodes/types";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
+import { isEditorVisualNodeSelected } from "@/routes/v2/shared/store/isEditorVisualNodeSelected";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 import { IONodeCard } from "./IONodeCard";
@@ -79,6 +80,8 @@ export const IONode = observer(function IONode({
       ? (entity.defaultValue ?? undefined)
       : undefined;
 
+  const isSelected = isEditorVisualNodeSelected(editor, id, !!selected);
+
   const viewProps: IONodeViewProps = {
     entityId,
     name,
@@ -87,7 +90,7 @@ export const IONode = observer(function IONode({
     defaultValue,
     connectedValue,
     isInput,
-    selected: !!selected,
+    selected: isSelected,
     isHovered,
     onNodeClick: handleClick,
   };
