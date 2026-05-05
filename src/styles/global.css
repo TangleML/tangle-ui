@@ -199,6 +199,43 @@ code {
   .hide-scrollbar::-webkit-scrollbar {
     display: none; /* Chrome, Safari, Opera */
   }
+
+  /* Thin, translucent scrollbar that overlays content without grabbing attention. */
+  .subtle-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(
+        in oklch,
+        var(--muted-foreground) 30%,
+        transparent
+      )
+      transparent;
+  }
+
+  .subtle-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .subtle-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .subtle-scrollbar::-webkit-scrollbar-thumb {
+    background-color: color-mix(
+      in oklch,
+      var(--muted-foreground) 25%,
+      transparent
+    );
+    border-radius: 3px;
+  }
+
+  .subtle-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: color-mix(
+      in oklch,
+      var(--muted-foreground) 50%,
+      transparent
+    );
+  }
 }
 
 /* Dialog stack transition animations */
