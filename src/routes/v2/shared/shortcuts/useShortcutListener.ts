@@ -34,12 +34,16 @@ export function useShortcutListener(): void {
 
       for (const shortcut of keyboard.shortcuts.values()) {
         if (editable && !shortcut.allowInEditable) continue;
-        if (keyboard.matchesPressed(shortcut.keys)) {
-          event.preventDefault();
-          keyboard.clearPressed();
-          shortcut.action(event);
-          return;
+        if (!keyboard.matchesPressed(shortcut.keys)) continue;
+
+        const handled = shortcut.action(event);
+        keyboard.clearPressed();
+
+        if (handled === false) {
+          break;
         }
+        event.preventDefault();
+        return;
       }
     };
 

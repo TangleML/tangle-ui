@@ -11,6 +11,8 @@ export function useDialog() {
   return {
     open: context.open,
     close: context.close,
+    cancel: context.cancel,
     closeAll: context.closeAll,
+    stack: context.stack,
   };
 }

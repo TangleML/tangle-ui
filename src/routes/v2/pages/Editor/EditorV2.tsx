@@ -33,6 +33,7 @@ import { EditorMenuBar } from "./components/EditorMenuBar/EditorMenuBar";
 import { EmptyEditorState } from "./components/EmptyEditorState";
 import { FlowCanvas } from "./components/FlowCanvas/FlowCanvas";
 import { useComponentLibraryWindow } from "./hooks/useComponentLibraryWindow";
+import { useEditorEscapeShortcut } from "./hooks/useEditorEscapeShortcut";
 import { useHistoryWindow } from "./hooks/useHistoryWindow";
 import { useLinkedWindowCleanup } from "./hooks/useLinkedWindowCleanup";
 import { useLoadSpec } from "./hooks/useLoadSpec";
@@ -82,6 +83,7 @@ const PipelineEditor = withSuspenseWrapper(
     useUndoRedoKeyboard();
     useFocusMode();
     useShortcutListener();
+    useEditorEscapeShortcut();
     useDebugPanelWindow();
 
     const activeSpec = navigation.activeSpec;

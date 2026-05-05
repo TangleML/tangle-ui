@@ -1,4 +1,4 @@
-import { action, makeObservable, observable } from "mobx";
+import { action, computed, makeObservable, observable } from "mobx";
 
 import type { ValidationIssue } from "@/models/componentSpec";
 
@@ -71,6 +71,16 @@ export class EditorStore {
     this.focusedArgumentName = null;
     this.hoveredEntityId = null;
     this.selectedValidationIssue = null;
+  }
+
+  @computed get hasAnySelection(): boolean {
+    return (
+      this.selectedNodeId !== null ||
+      this.selectedNodeType !== null ||
+      this.multiSelection.length > 0 ||
+      this.selectedValidationIssue !== null ||
+      this.focusedArgumentName !== null
+    );
   }
 
   @action setMultiSelection(nodes: SelectedNode[]) {
