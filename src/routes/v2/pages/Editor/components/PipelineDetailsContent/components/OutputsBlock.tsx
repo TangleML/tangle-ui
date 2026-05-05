@@ -1,4 +1,3 @@
-import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlock";
 import { Button } from "@/components/ui/button";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
@@ -19,9 +18,9 @@ export function OutputsBlock({ spec }: { spec: ComponentSpec }) {
   };
 
   return (
-    <ContentBlock title="Outputs">
+    <>
       {spec.outputs.length > 0 ? (
-        <BlockStack>
+        <BlockStack data-testid="pipeline-outputs">
           {spec.outputs.map((output) => (
             <InlineStack
               key={output.$id}
@@ -50,6 +49,6 @@ export function OutputsBlock({ spec }: { spec: ComponentSpec }) {
           No outputs
         </Text>
       )}
-    </ContentBlock>
+    </>
   );
 }

@@ -1,4 +1,3 @@
-import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlock";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -20,7 +19,7 @@ export function InputsBlock({ spec }: { spec: ComponentSpec }) {
   };
 
   return (
-    <ContentBlock title="Inputs">
+    <>
       {spec.inputs.length > 0 ? (
         <BlockStack data-testid="pipeline-inputs">
           {spec.inputs.map((input) => (
@@ -58,6 +57,6 @@ export function InputsBlock({ spec }: { spec: ComponentSpec }) {
           No inputs
         </Text>
       )}
-    </ContentBlock>
+    </>
   );
 }

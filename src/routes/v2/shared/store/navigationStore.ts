@@ -4,7 +4,7 @@ import type { ComponentSpec } from "@/models/componentSpec";
 
 import type { EditorStore } from "./editorStore";
 
-interface NavigationEntry {
+export interface NavigationEntry {
   specId: string;
   displayName: string;
 }

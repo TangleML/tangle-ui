@@ -1,24 +1,27 @@
 import { observer } from "mobx-react-lite";
-import { type ChangeEvent, useState } from "react";
 
-import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlock";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
-import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/typography";
 import { serializeComponentSpecToYaml } from "@/models/componentSpec";
 import { AnnotationsBlock } from "@/routes/v2/pages/Editor/components/AnnotationsBlock/AnnotationsBlock";
 import { ValidationSummary } from "@/routes/v2/pages/Editor/components/ValidationSummary";
 import { usePipelineActions } from "@/routes/v2/pages/Editor/store/actions/usePipelineActions";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
-import { PIPELINE_NOTES_ANNOTATION } from "@/utils/annotations";
-import { PIPELINE_TAGS_ANNOTATION } from "@/utils/annotations";
+import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import {
+  PIPELINE_NOTES_ANNOTATION,
+  PIPELINE_TAGS_ANNOTATION,
+} from "@/utils/annotations";
 
-import { DigestBlock } from "./components/DigestBlock";
 import { InputsBlock } from "./components/InputsBlock";
 import { MetadataBlock } from "./components/MetadataBlock";
 import { OutputsBlock } from "./components/OutputsBlock";
+import { PipelineDetailsCollapsibleSection } from "./components/PipelineDetailsCollapsibleSection";
+import { PipelineDetailsHeader } from "./components/PipelineDetailsHeader";
+import { PipelineDetailsTextField } from "./components/PipelineDetailsTextField";
 import { TagsBlock } from "./components/TagsBlock";
 
 const EXCLUDED_ANNOTATIONS = [
@@ -30,33 +33,12 @@ const EXCLUDED_ANNOTATIONS = [
 
 export const PipelineDetailsContent = observer(
   function PipelineDetailsContent() {
-    const spec = useSpec();
+    const { navigation } = useSharedStores();
+    const pipelineSpec = useSpec();
     const { updatePipelineDescription, updatePipelineNotes } =
       usePipelineActions();
 
-    const [description, setDescription] = useState(spec?.description ?? "");
-    const [notes, setNotes] = useState(
-      spec?.annotations.get(PIPELINE_NOTES_ANNOTATION) ?? "",
-    );
-
-    const specDescription = spec?.description ?? "";
-    const specNotes = spec?.annotations.get(PIPELINE_NOTES_ANNOTATION) ?? "";
-
-    if (
-      description !== specDescription &&
-      document.activeElement?.id !== "pipeline-description"
-    ) {
-      setDescription(specDescription);
-    }
-
-    if (
-      notes !== specNotes &&
-      document.activeElement?.id !== "pipeline-notes"
-    ) {
-      setNotes(specNotes);
-    }
-
-    if (!spec) {
+    if (!pipelineSpec) {
       return (
         <BlockStack className="h-full items-center justify-center p-4">
           <Icon name="FileQuestionMark" size="lg" className="text-gray-300" />
@@ -67,93 +49,125 @@ export const PipelineDetailsContent = observer(
       );
     }
 
-    const yamlText = serializeComponentSpecToYaml(spec);
+    const yamlText = serializeComponentSpecToYaml(pipelineSpec);
+    const isNestedSubgraph = navigation.navigationDepth > 0;
 
-    const handleDescriptionInputChange = (
-      event: ChangeEvent<HTMLTextAreaElement>,
-    ) => {
-      setDescription(event.target.value);
+    const handleNavigateToLevel = (index: number) => {
+      navigation.navigateToLevel(index);
     };
 
-    const handleDescriptionBlur = () => {
-      const newDescription = description || undefined;
-      if (newDescription !== spec.description) {
-        updatePipelineDescription(spec, newDescription);
+    const handleDescriptionCommit = (value: string | undefined) => {
+      if (value !== pipelineSpec.description) {
+        updatePipelineDescription(pipelineSpec, value);
       }
     };
 
-    const handleNotesInputChange = (
-      event: ChangeEvent<HTMLTextAreaElement>,
-    ) => {
-      setNotes(event.target.value);
-    };
-
-    const handleNotesBlur = () => {
-      const newNotes = notes || undefined;
-      const currentNotes = specNotes || undefined;
-      if (newNotes !== currentNotes) {
-        updatePipelineNotes(spec, newNotes);
+    const handleNotesCommit = (value: string | undefined) => {
+      const currentNotes =
+        pipelineSpec.annotations.get(PIPELINE_NOTES_ANNOTATION) || undefined;
+      if (value !== currentNotes) {
+        updatePipelineNotes(pipelineSpec, value);
       }
     };
 
     return (
       <BlockStack
-        gap="4"
-        className="h-full overflow-y-auto px-2 py-3"
+        className="h-full min-h-0 w-full"
         data-testid="pipeline-details-content"
       >
-        <DigestBlock yamlText={yamlText} />
-
-        <MetadataBlock spec={spec} />
-
-        <ContentBlock title="Description">
-          <Textarea
-            id="pipeline-description"
-            value={description}
-            onChange={handleDescriptionInputChange}
-            onBlur={handleDescriptionBlur}
-            placeholder="Add a pipeline description..."
-            className="min-h-16 resize-y text-xs!"
-            data-testid="pipeline-description-input"
-          />
-        </ContentBlock>
-
-        <InputsBlock spec={spec} />
-
-        <OutputsBlock spec={spec} />
-
-        <AnnotationsBlock
-          annotations={spec.annotations}
-          ignoreAnnotationKeys={EXCLUDED_ANNOTATIONS}
+        <PipelineDetailsHeader
+          canNavigateBack={navigation.canNavigateBack}
+          navigationPath={navigation.navigationPath}
+          onNavigateToLevel={handleNavigateToLevel}
+          isNestedSubgraph={isNestedSubgraph}
+          pipelineName={pipelineSpec.name}
+          yamlText={yamlText}
         />
 
-        <ContentBlock title="Validations">
-          {spec.hasValidationIssues ? (
-            <ValidationSummary spec={spec} />
-          ) : (
-            <InfoBox
-              variant="success"
-              title="No validation issues"
-              className="text-xs"
-            >
-              Pipeline is ready for submission
-            </InfoBox>
-          )}
-        </ContentBlock>
+        <Separator />
 
-        <ContentBlock title="Notes">
-          <Textarea
-            id="pipeline-notes"
-            value={notes}
-            onChange={handleNotesInputChange}
-            onBlur={handleNotesBlur}
-            placeholder="Share context about this pipeline..."
-            className="min-h-16 resize-y text-xs!"
-            data-testid="pipeline-notes-input"
-          />
-        </ContentBlock>
+        <BlockStack className="min-h-0 flex-1 overflow-y-auto">
+          <PipelineDetailsCollapsibleSection
+            title="Details"
+            icon="FileText"
+            openDefault
+          >
+            <BlockStack gap="4">
+              <PipelineDetailsTextField
+                title="Description"
+                id="pipeline-description"
+                initialValue={pipelineSpec.description ?? ""}
+                onCommit={handleDescriptionCommit}
+                placeholder="Add a pipeline description..."
+                testId="pipeline-description-input"
+              />
+              <Separator />
+              <PipelineDetailsTextField
+                title="Notes"
+                id="pipeline-notes"
+                initialValue={
+                  pipelineSpec.annotations.get(PIPELINE_NOTES_ANNOTATION) ?? ""
+                }
+                onCommit={handleNotesCommit}
+                placeholder="Share context about this pipeline..."
+                testId="pipeline-notes-input"
+              />
+              <Separator />
+              <TagsBlock spec={pipelineSpec} />
+            </BlockStack>
+          </PipelineDetailsCollapsibleSection>
 
-        <TagsBlock spec={spec} />
+          <PipelineDetailsCollapsibleSection
+            title="Metadata & annotations"
+            icon="Layers"
+            openDefault={false}
+          >
+            <BlockStack gap="4">
+              <MetadataBlock spec={pipelineSpec} />
+              <Separator />
+              <AnnotationsBlock
+                annotations={pipelineSpec.annotations}
+                ignoreAnnotationKeys={EXCLUDED_ANNOTATIONS}
+              />
+            </BlockStack>
+          </PipelineDetailsCollapsibleSection>
+
+          <PipelineDetailsCollapsibleSection
+            title="Inputs"
+            icon="ArrowDownToLine"
+            openDefault={false}
+          >
+            <InputsBlock spec={pipelineSpec} />
+          </PipelineDetailsCollapsibleSection>
+
+          <PipelineDetailsCollapsibleSection
+            title="Outputs"
+            icon="ArrowUpFromLine"
+            openDefault={false}
+          >
+            <OutputsBlock spec={pipelineSpec} />
+          </PipelineDetailsCollapsibleSection>
+
+          <PipelineDetailsCollapsibleSection
+            title="Validations"
+            icon="BadgeCheck"
+            openDefault
+          >
+            <BlockStack gap="2">
+              {pipelineSpec.hasValidationIssues ? (
+                <ValidationSummary spec={pipelineSpec} />
+              ) : (
+                <InfoBox
+                  variant="success"
+                  title="No validation issues"
+                  className="text-xs"
+                >
+                  Pipeline is ready for submission
+                </InfoBox>
+              )}
+            </BlockStack>
+          </PipelineDetailsCollapsibleSection>
+        </BlockStack>
       </BlockStack>
     );
   },
