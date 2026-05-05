@@ -39,6 +39,20 @@ import { getComponentName } from "@/utils/getComponentName";
 
 const PUBLISHED_COMPONENTS_URL = "/api/published_components/";
 
+/**
+ * Sticky source column height when embedded in a maximized editor window.
+ * Uses dynamic viewport height minus approximate window header + padding (floating
+ * and docked maximized headers differ slightly; this is a single conservative value).
+ */
+const EDITOR_EMBED_SOURCE_STICKY_OFFSET_PX = 100;
+
+interface DashboardComponentsViewProps {
+  /** When true, fills the parent window, uses controlled selection, no dashboard navigation. */
+  embedInEditorWindow?: boolean;
+  selectedComponentDigest?: string;
+  onSelectComponentDigest?: (digest: string) => void;
+}
+
 // ─── Collapsible section header ──────────────────────────────────────────────
 
 const CollapsibleSection = ({
@@ -418,7 +432,13 @@ const CompactIO = ({
 
 // ─── Detail Panel (Suspense) ────────────────────────────────────────────────
 
-const ComponentDetailInner = ({ digest }: { digest: string }) => {
+const ComponentDetailInner = ({
+  digest,
+  embedLayout = false,
+}: {
+  digest: string;
+  embedLayout?: boolean;
+}) => {
   const { backendUrl } = useBackend();
   const componentRef: ComponentReference = {
     digest,
@@ -526,7 +546,11 @@ const ComponentDetailInner = ({ digest }: { digest: string }) => {
         <div className="flex-3 min-w-0">
           <div
             className="sticky top-0 flex flex-col gap-1.5"
-            style={{ height: `calc(100vh - ${TOP_NAV_HEIGHT + 48}px)` }}
+            style={{
+              height: embedLayout
+                ? `calc(100dvh - ${EDITOR_EMBED_SOURCE_STICKY_OFFSET_PX}px)`
+                : `calc(100vh - ${TOP_NAV_HEIGHT + 48}px)`,
+            }}
           >
             <Text
               size="xs"
@@ -550,27 +574,53 @@ const ComponentDetailInner = ({ digest }: { digest: string }) => {
 
 // ─── Main View ──────────────────────────────────────────────────────────────
 
-export function DashboardComponentsView() {
+export function DashboardComponentsView({
+  embedInEditorWindow = false,
+  selectedComponentDigest,
+  onSelectComponentDigest,
+}: DashboardComponentsViewProps = {}) {
   const [query, setQuery] = useState("");
   const navigate = useNavigate();
   // useSearch strict:false is required here — this route has no validateSearch defined
-  const { component: selectedDigest } = useSearch({ strict: false }) as {
+  const { component: routeSelectedDigest } = useSearch({ strict: false }) as {
     component?: string;
   };
+  const selectedDigest = embedInEditorWindow
+    ? selectedComponentDigest
+    : routeSelectedDigest;
+
   const handleSelect = (component: ComponentReference) => {
+    const digest = component.digest;
+    if (!digest) return;
+    if (embedInEditorWindow) {
+      onSelectComponentDigest?.(digest);
+      return;
+    }
     navigate({
       to: APP_ROUTES.DASHBOARD_COMPONENTS,
-      search: { component: component.digest },
+      search: { component: digest },
     });
   };
 
   return (
     <div
-      className="flex -mt-4 -mb-6 -mx-8 overflow-hidden border-t border-border"
-      style={{ height: `calc(100vh - ${TOP_NAV_HEIGHT}px)` }}
+      className={cn(
+        "flex overflow-hidden border-t border-border",
+        embedInEditorWindow ? "h-full min-h-0" : "-mt-4 -mb-6 -mx-8",
+      )}
+      style={
+        embedInEditorWindow
+          ? undefined
+          : { height: `calc(100vh - ${TOP_NAV_HEIGHT}px)` }
+      }
     >
       {/* Left: component list */}
-      <div className="w-64 shrink-0 border-r border-border flex flex-col overflow-hidden">
+      <div
+        className={cn(
+          "w-64 shrink-0 border-r border-border flex flex-col overflow-hidden",
+          embedInEditorWindow && "min-h-0",
+        )}
+      >
         <div className="p-3 border-b border-border shrink-0">
           <Input
             placeholder="Search components..."
@@ -588,7 +638,12 @@ export function DashboardComponentsView() {
       </div>
 
       {/* Right: detail panel — single scroll, source sticky on right */}
-      <div className="flex-1 min-w-0 overflow-y-auto p-6">
+      <div
+        className={cn(
+          "flex-1 min-w-0 overflow-y-auto p-6",
+          embedInEditorWindow && "min-h-0",
+        )}
+      >
         {selectedDigest ? (
           <SuspenseWrapper
             fallback={
@@ -603,7 +658,10 @@ export function DashboardComponentsView() {
               </InlineStack>
             }
           >
-            <ComponentDetailInner digest={selectedDigest} />
+            <ComponentDetailInner
+              digest={selectedDigest}
+              embedLayout={embedInEditorWindow}
+            />
           </SuspenseWrapper>
         ) : (
           <InlineStack fill>
