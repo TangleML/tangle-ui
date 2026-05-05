@@ -2,7 +2,6 @@ import { Link, Outlet } from "@tanstack/react-router";
 
 import { isAuthorizationRequired } from "@/components/shared/Authentication/helpers";
 import { TopBarAuthentication } from "@/components/shared/Authentication/TopBarAuthentication";
-import { Badge } from "@/components/ui/badge";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Link as UILink } from "@/components/ui/link";
@@ -52,14 +51,9 @@ export function DashboardLayout() {
       <div className="w-56 shrink-0 border-r border-border flex flex-col overflow-y-auto">
         {/* Dashboard heading */}
         <div className="px-6 pt-6 pb-4 shrink-0">
-          <InlineStack gap="2" blockAlign="center">
-            <Text size="lg" weight="semibold">
-              Dashboard
-            </Text>
-            <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
-              Beta
-            </Badge>
-          </InlineStack>
+          <Text size="lg" weight="semibold">
+            Dashboard
+          </Text>
         </div>
 
         <BlockStack gap="1" className="px-3">

@@ -220,8 +220,7 @@ describe("AnalyticsProvider", () => {
     it("includes resolved effective flag values in session.tab.start metadata", async () => {
       mockGetUser.mockResolvedValue({ id: "user-1" });
       mockIsFlagEnabled.mockImplementation(
-        (key: string) =>
-          key === "dashboard" || key === "remote-component-library-search",
+        (key: string) => key === "remote-component-library-search",
       );
       const { events, cleanup } = captureEvents();
       renderHook(() => useAnalytics(), { wrapper: makeWrapper() });
@@ -233,7 +232,6 @@ describe("AnalyticsProvider", () => {
       const { flags } = events.find(
         (e) => e.detail.actionType === "session.tab.start",
       )!.detail.metadata as Record<string, Record<string, boolean>>;
-      expect(flags["dashboard"]).toBe(true);
       expect(flags["remote-component-library-search"]).toBe(true);
       expect(flags["github-component-library"]).toBe(false);
       cleanup();

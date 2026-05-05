@@ -1,6 +1,5 @@
 import { type MouseEvent } from "react";
 
-import { isFlagEnabled } from "@/components/shared/Settings/useFlags";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { type FavoriteType, useFavorites } from "@/hooks/useFavorites";
@@ -22,8 +21,6 @@ export const FavoriteToggle = ({
 }: FavoriteToggleProps) => {
   const { isFavorite, toggleFavorite } = useFavorites();
   const active = isFavorite(type, id);
-
-  if (!isFlagEnabled("dashboard")) return null;
 
   const handleClick = (e: MouseEvent) => {
     e.stopPropagation();
