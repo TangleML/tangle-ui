@@ -143,6 +143,10 @@ export class WindowStoreImpl implements WindowStoreRef {
     this.windows[id]?.restore();
   }
 
+  maximizeWindow(id: string): void {
+    this.windows[id]?.maximize();
+  }
+
   /** Get a window model by ID */
   getWindowById(id: string): WindowModel | undefined {
     return this.windows[id];
