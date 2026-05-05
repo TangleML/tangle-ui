@@ -78,6 +78,7 @@ export class YamlDeserializer {
         type: inputJson.type,
         description: inputJson.description,
         defaultValue: inputJson.default,
+        value: inputJson.value,
         optional: inputJson.optional,
         annotations: Annotations.from(annotationItems),
       });
@@ -161,7 +162,9 @@ export class YamlDeserializer {
   ): ComponentSpec | undefined {
     if (!ref.spec?.implementation) return undefined;
     if (!isGraphImplementation(ref.spec.implementation)) return undefined;
-    return this.deserialize(ref.spec);
+    const inner = this.deserialize(ref.spec);
+    inner.setEmbeddedSubgraph(true);
+    return inner;
   }
 
   private buildBindings(

@@ -225,6 +225,7 @@ export function createSubgraph({
       ...subgraphOutputBindings,
     ],
   });
+  subgraphSpec.setEmbeddedSubgraph(true);
 
   const replacementTaskArgs: Argument[] = inputGroups.map(({ input }) => ({
     name: input.name,

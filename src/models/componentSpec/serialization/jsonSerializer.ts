@@ -161,6 +161,9 @@ export class JsonSerializer {
     if (input.type) result.type = input.type;
     if (input.description) result.description = input.description;
     if (input.defaultValue) result.default = input.defaultValue;
+    if (input.value !== undefined) {
+      result.value = input.value;
+    }
     if (input.optional !== undefined) result.optional = input.optional;
 
     const annotations = this.serializeAnnotations(input.annotations);

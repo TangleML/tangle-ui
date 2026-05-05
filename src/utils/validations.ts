@@ -5,6 +5,7 @@ import {
   launcherTaskAnnotationSchema,
   parseSchemaToAnnotationConfig,
 } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/AnnotationsEditor/utils";
+import { isPipelineInputMissingConfiguredValue } from "@/models/componentSpec/validation/pipelineInputValue";
 
 import {
   type ArgumentType,
@@ -164,9 +165,11 @@ const validateInputsAndOutputs = (
       // Check that required inputs have a value or default
       if (
         !skipInputValueValidation &&
-        !input.optional &&
-        !input.default &&
-        !input.value
+        isPipelineInputMissingConfiguredValue({
+          optional: input.optional,
+          default: input.default,
+          value: input.value,
+        })
       ) {
         errors.push({
           type: "argument",

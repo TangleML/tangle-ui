@@ -24,6 +24,7 @@ export class ComponentSpec extends Model({
   tasks: prop<Task[]>(() => []),
   bindings: prop<Binding[]>(() => []),
   annotations: prop<Annotations>(() => new Annotations({})),
+  isEmbeddedSubgraph: prop<boolean | undefined>(undefined),
 }) {
   // --- Task mutations ---
 
@@ -267,6 +268,11 @@ export class ComponentSpec extends Model({
   @modelAction
   setDescription(description: string | undefined) {
     this.description = description;
+  }
+
+  @modelAction
+  setEmbeddedSubgraph(isEmbedded: boolean | undefined) {
+    this.isEmbeddedSubgraph = isEmbedded;
   }
 
   // --- Computed helpers ---

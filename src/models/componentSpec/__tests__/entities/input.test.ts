@@ -64,4 +64,12 @@ describe("Input", () => {
 
     expect(input.type).toBe("number");
   });
+
+  it("setValue updates pipeline value", () => {
+    const input = new Input({ $id: "input_1", name: "x" });
+
+    input.setValue("42");
+
+    expect(input.value).toBe("42");
+  });
 });

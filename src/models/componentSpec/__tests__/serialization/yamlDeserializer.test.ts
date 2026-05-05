@@ -56,6 +56,17 @@ describe("YamlDeserializer", () => {
     expect(spec.inputs.at(0)?.defaultValue).toBe("default_value");
   });
 
+  it("deserializes input with pipeline value", () => {
+    const yaml = {
+      name: "Spec",
+      inputs: [{ name: "data", value: "42" }],
+    };
+
+    const spec = deserializer.deserialize(yaml);
+
+    expect(spec.inputs.at(0)?.value).toBe("42");
+  });
+
   it("deserializes spec with outputs", () => {
     const yaml = {
       name: "SpecWithOutputs",

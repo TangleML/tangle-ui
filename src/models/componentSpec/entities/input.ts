@@ -10,6 +10,7 @@ export class Input extends Model({
   type: prop<TypeSpecType | undefined>(undefined),
   description: prop<string | undefined>(undefined),
   defaultValue: prop<string | undefined>(undefined),
+  value: prop<string | undefined>(undefined),
   optional: prop<boolean | undefined>(undefined),
   annotations: prop<Annotations>(() => new Annotations({})),
 }) {
@@ -31,6 +32,11 @@ export class Input extends Model({
   @modelAction
   setDefaultValue(defaultValue: string | undefined) {
     this.defaultValue = defaultValue;
+  }
+
+  @modelAction
+  setValue(value: string | undefined) {
+    this.value = value;
   }
 
   @modelAction

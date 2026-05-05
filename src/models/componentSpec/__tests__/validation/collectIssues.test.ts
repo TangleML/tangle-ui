@@ -17,6 +17,7 @@ function makeTask(id: string, name: string, spec?: ComponentSpecJson): Task {
     const idGen = new IncrementingIdGenerator();
     const deserializer = new YamlDeserializer(idGen);
     const subgraphSpec = deserializer.deserialize(spec);
+    subgraphSpec.setEmbeddedSubgraph(true);
     return new Task({
       $id: id,
       name,

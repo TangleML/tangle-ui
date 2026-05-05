@@ -76,6 +76,21 @@ describe("createComponentSpecProxy", () => {
       ]);
     });
 
+    it("maps input pipeline value to InputSpec", () => {
+      const spec = makeMinimalSpec();
+      spec.addInput(
+        new Input({
+          $id: "in_1",
+          name: "data",
+          value: "42",
+        }),
+      );
+
+      const proxy = createComponentSpecProxy(spec);
+
+      expect(proxy.inputs).toEqual([{ name: "data", value: "42" }]);
+    });
+
     it("returns empty array when no inputs", () => {
       const proxy = createComponentSpecProxy(makeMinimalSpec());
       expect(proxy.inputs).toEqual([]);

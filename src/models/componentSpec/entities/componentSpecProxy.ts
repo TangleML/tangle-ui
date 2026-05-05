@@ -59,13 +59,17 @@ export function createComponentSpecProxy(
 }
 
 function inputModelToSpec(input: Input): InputSpec {
-  return {
+  const spec: InputSpec = {
     name: input.name,
     type: input.type,
     description: input.description,
     default: input.defaultValue,
     optional: input.optional,
   };
+  if (input.value !== undefined) {
+    spec.value = input.value;
+  }
+  return spec;
 }
 
 function outputModelToSpec(output: Output): OutputSpec {

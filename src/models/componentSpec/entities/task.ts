@@ -33,6 +33,9 @@ export class Task extends Model({
 
   @modelAction
   setSubgraphSpec(spec: ComponentSpec | undefined) {
+    if (spec) {
+      spec.setEmbeddedSubgraph(true);
+    }
     this.subgraphSpec = spec;
   }
 
@@ -44,7 +47,8 @@ export class Task extends Model({
   @modelAction
   setComponentRef(ref: ComponentReference) {
     if (ref.spec && isGraphImplementation(ref.spec.implementation)) {
-      this.subgraphSpec = deserializeSubgraphSpec(ref.spec);
+      const subgraph = deserializeSubgraphSpec(ref.spec);
+      this.subgraphSpec = subgraph;
       this.componentRef = { ...ref, spec: undefined };
     } else {
       this.subgraphSpec = undefined;
