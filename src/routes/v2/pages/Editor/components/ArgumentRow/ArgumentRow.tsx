@@ -163,7 +163,7 @@ export const ArgumentRow = observer(function ArgumentRow({
     <div ref={rowRef} className={rowVariants()} onClick={handleClick}>
       <InlineStack gap="2" blockAlign="center" className="w-full">
         <Text
-          size="sm"
+          size="xs"
           weight="semibold"
           className={nameVariants({ unset: !isSet && !isBound })}
         >

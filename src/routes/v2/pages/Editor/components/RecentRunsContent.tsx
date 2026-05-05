@@ -9,7 +9,7 @@ export const RecentRunsContent = observer(function RecentRunsContent() {
   const rootSpec = navigation.rootSpec;
 
   return (
-    <BlockStack className="p-2">
+    <BlockStack className="p-2 [&_.text-sm]:text-xs!">
       <PipelineRunsList
         pipelineName={rootSpec?.name}
         showTitle={false}

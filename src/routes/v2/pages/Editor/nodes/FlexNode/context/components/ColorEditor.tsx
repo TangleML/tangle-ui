@@ -80,7 +80,9 @@ export function ColorEditor({
             color={backgroundColor}
             setColor={handleBackgroundColorChange}
           />
-          <CopyText className="text-xs font-mono">{value.color}</CopyText>
+          <CopyText size="xs" className="font-mono">
+            {value.color}
+          </CopyText>
         </InlineStack>
 
         {isTransparent && (
@@ -91,7 +93,7 @@ export function ColorEditor({
               color={borderColor}
               setColor={handleBorderColorChange}
             />
-            <CopyText className="text-xs font-mono">
+            <CopyText size="xs" className="font-mono">
               {currentBorderColor}
             </CopyText>
           </InlineStack>
