@@ -67,7 +67,11 @@ function PublishedComponentDetailsContent({
         <BlockStack className="w-[85%]">
           <Heading level={2}>This is a published component</Heading>
           <InlineStack gap="1" align="center">
-            <TrimmedDigest digest={component.digest} tone="info" />
+            <TrimmedDigest
+              digest={component.digest}
+              tooltip={false}
+              tone="info"
+            />
             <ComponentUsageCount digest={component.digest}>
               {(count) => (
                 <Text size="xs" tone="subdued">

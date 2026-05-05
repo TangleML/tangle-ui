@@ -11,10 +11,20 @@ import { trimDigest } from "./utils/digest";
 
 export const TrimmedDigest = ({
   digest,
+  tooltip = true,
   ...props
 }: {
   digest: string;
+  tooltip?: boolean;
 } & ComponentProps<typeof Text>) => {
+  if (!tooltip) {
+    return (
+      <Text size="xs" font="mono" {...props}>
+        {trimDigest(digest)}
+      </Text>
+    );
+  }
+
   return (
     <Tooltip>
       <TooltipTrigger asChild>

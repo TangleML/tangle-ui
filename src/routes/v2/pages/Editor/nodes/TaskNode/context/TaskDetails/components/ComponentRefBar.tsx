@@ -95,6 +95,7 @@ export function ComponentRefBar({
               {componentRef.digest && (
                 <TrimmedDigest
                   digest={componentRef.digest}
+                  tooltip={false}
                   className="shrink-0 text-muted-foreground"
                 />
               )}

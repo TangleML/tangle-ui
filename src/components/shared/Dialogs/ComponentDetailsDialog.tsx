@@ -143,7 +143,7 @@ const ComponentDetailsDialogContent = withSuspenseWrapper(
                 <TaskIO componentSpec={componentSpec} />
               </TabsContent>
 
-              <TabsContent value="implementation">
+              <TabsContent value="implementation" className="h-full">
                 <TaskImplementation
                   displayName={displayName}
                   componentRef={componentRef}

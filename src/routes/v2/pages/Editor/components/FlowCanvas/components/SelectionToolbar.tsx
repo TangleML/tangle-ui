@@ -2,7 +2,7 @@ import type { icons } from "lucide-react";
 import { observer } from "mobx-react-lite";
 import { useState } from "react";
 
-import TooltipButton from "@/components/shared/Buttons/TooltipButton";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
 import {
@@ -118,8 +118,7 @@ function ToolbarButton({
   testId?: string;
 }) {
   return (
-    <TooltipButton
-      tooltip={label}
+    <Button
       variant="ghost"
       size="sm"
       className={cn("gap-1.5 px-2", {
@@ -132,6 +131,6 @@ function ToolbarButton({
       <Text size="xs" weight="semibold">
         {label}
       </Text>
-    </TooltipButton>
+    </Button>
   );
 }
