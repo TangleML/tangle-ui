@@ -11,7 +11,6 @@ import { Text } from "@/components/ui/typography";
 import { usePipelineRename } from "@/routes/v2/pages/Editor/hooks/usePipelineRename";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { AppMenuActions } from "@/routes/v2/shared/components/AppMenuActions";
-import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButton";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { TOP_NAV_HEIGHT } from "@/utils/constants";
 
@@ -25,7 +24,7 @@ import { ViewMenu } from "./components/ViewMenu";
 import { WindowsMenu } from "./components/WindowsMenu";
 
 export const EditorMenuBar = observer(function EditorMenuBar() {
-  const { navigation, windows } = useSharedStores();
+  const { navigation } = useSharedStores();
   const { pipelineFile } = useEditorSession();
   const handlePipelineRename = usePipelineRename();
   const spec = navigation.activeSpec;
@@ -99,11 +98,6 @@ export const EditorMenuBar = observer(function EditorMenuBar() {
                 <FileMenu />
                 <ViewMenu />
                 <RunsMenu />
-                <MenuTriggerButton
-                  onClick={() => windows.restoreWindow("pipeline-details")}
-                >
-                  Notes
-                </MenuTriggerButton>
                 <ComponentsLibraryMenu />
                 <WindowsMenu />
                 <NodeMenu />

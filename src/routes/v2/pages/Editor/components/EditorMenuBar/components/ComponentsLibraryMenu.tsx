@@ -1,3 +1,4 @@
+import { useNavigate } from "@tanstack/react-router";
 import { useRef } from "react";
 
 import { ImportComponent } from "@/components/shared/ReactFlow/FlowSidebar/components";
@@ -9,11 +10,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
+import { APP_ROUTES } from "@/routes/router";
 import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButton";
-import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 export function ComponentsLibraryMenu() {
-  const { windows } = useSharedStores();
+  const navigate = useNavigate();
   const importTriggerRef = useRef<HTMLButtonElement>(null);
 
   return (
@@ -24,16 +25,12 @@ export function ComponentsLibraryMenu() {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" sideOffset={2}>
           <DropdownMenuItem
-            onClick={() => windows.restoreWindow("component-library")}
+            onClick={() =>
+              void navigate({ to: APP_ROUTES.DASHBOARD_COMPONENTS })
+            }
           >
             <Icon name="Library" size="sm" />
             Explore library
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => windows.restoreWindow("component-library")}
-          >
-            <Icon name="User" size="sm" />
-            My components
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => importTriggerRef.current?.click()}>
