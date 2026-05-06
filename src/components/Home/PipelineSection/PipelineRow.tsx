@@ -157,7 +157,6 @@ const PipelineRow = withSuspenseWrapper(
               onDragStateChange?.(true);
             }}
             onDragEnd={() => onDragStateChange?.(false)}
-            className={dragData ? "cursor-grab" : undefined}
           >
             <InlineStack
               gap="2"

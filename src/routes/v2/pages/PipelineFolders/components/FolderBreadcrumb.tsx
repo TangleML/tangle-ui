@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { Fragment } from "react";
 
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import {
@@ -74,34 +75,36 @@ export const FolderBreadcrumb = withSuspenseWrapper(
           {path.map((folder, index) => {
             const isLast = index === path.length - 1;
             return (
-              <BreadcrumbItem key={folder.id}>
+              <Fragment key={folder.id}>
                 <BreadcrumbSeparator />
-                {isLast ? (
-                  <BreadcrumbPage>
-                    <InlineStack gap="1" blockAlign="center">
-                      {folder.name}
-                      <Button
-                        variant="ghost"
-                        size="min"
-                        disabled={isPending}
-                        onClick={() => toggleFavorite(folder.id)}
-                      >
-                        <Icon
-                          name="Heart"
-                          className={cn(
-                            "size-4",
-                            folder.favorite
-                              ? "fill-yellow-400 text-yellow-400"
-                              : "text-muted-foreground",
-                          )}
-                        />
-                      </Button>
-                    </InlineStack>
-                  </BreadcrumbPage>
-                ) : (
-                  <FolderLink folderId={folder.id}>{folder.name}</FolderLink>
-                )}
-              </BreadcrumbItem>
+                <BreadcrumbItem>
+                  {isLast ? (
+                    <BreadcrumbPage>
+                      <InlineStack gap="1" blockAlign="center">
+                        {folder.name}
+                        <Button
+                          variant="ghost"
+                          size="min"
+                          disabled={isPending}
+                          onClick={() => toggleFavorite(folder.id)}
+                        >
+                          <Icon
+                            name="Heart"
+                            className={cn(
+                              "size-4",
+                              folder.favorite
+                                ? "fill-yellow-400 text-yellow-400"
+                                : "text-muted-foreground",
+                            )}
+                          />
+                        </Button>
+                      </InlineStack>
+                    </BreadcrumbPage>
+                  ) : (
+                    <FolderLink folderId={folder.id}>{folder.name}</FolderLink>
+                  )}
+                </BreadcrumbItem>
+              </Fragment>
             );
           })}
         </BreadcrumbList>

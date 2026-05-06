@@ -126,7 +126,6 @@ export function FolderRow({
             handleDragStart(e, dragData, dragItemCount, onDragStateChange)
           }
           onDragEnd={() => onDragStateChange?.(false)}
-          className={dragData ? "cursor-grab" : undefined}
         >
           <InlineStack gap="2" blockAlign="center">
             {icon ?? (
