@@ -10,6 +10,10 @@ vi.mock("@/providers/BackendProvider", () => ({
   useBackend: () => ({ backendUrl: "http://localhost:8000" }),
 }));
 
+vi.mock("@/providers/AnalyticsProvider", () => ({
+  useAnalytics: vi.fn().mockReturnValue({ track: vi.fn() }),
+}));
+
 vi.mock("./ArtifactVisualizer/ArtifactVisualizer", () => ({
   default: ({
     name,

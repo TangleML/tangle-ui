@@ -6,6 +6,7 @@ import { BlockStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/typography";
 import { serializeComponentSpecToYaml } from "@/models/componentSpec";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { AnnotationsBlock } from "@/routes/v2/pages/Editor/components/AnnotationsBlock/AnnotationsBlock";
 import { ValidationSummary } from "@/routes/v2/pages/Editor/components/ValidationSummary";
 import { usePipelineActions } from "@/routes/v2/pages/Editor/store/actions/usePipelineActions";
@@ -33,6 +34,7 @@ const EXCLUDED_ANNOTATIONS = [
 
 export const PipelineDetailsContent = observer(
   function PipelineDetailsContent() {
+    const { track } = useAnalytics();
     const { navigation } = useSharedStores();
     const pipelineSpec = useSpec();
     const { updatePipelineDescription, updatePipelineNotes } =
@@ -59,6 +61,7 @@ export const PipelineDetailsContent = observer(
     const handleDescriptionCommit = (value: string | undefined) => {
       if (value !== pipelineSpec.description) {
         updatePipelineDescription(pipelineSpec, value);
+        track("v2.pipeline_editor.configuration_panel.description.updated");
       }
     };
 
@@ -67,6 +70,7 @@ export const PipelineDetailsContent = observer(
         pipelineSpec.annotations.get(PIPELINE_NOTES_ANNOTATION) || undefined;
       if (value !== currentNotes) {
         updatePipelineNotes(pipelineSpec, value);
+        track("v2.pipeline_editor.configuration_panel.notes.updated");
       }
     };
 
