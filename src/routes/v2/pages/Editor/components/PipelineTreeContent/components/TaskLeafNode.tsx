@@ -62,6 +62,7 @@ export const TaskLeafNode = observer(function TaskLeafNode({
         selected={isSelected}
         taskId={task.$id}
         onActivate={handleClick}
+        trackingId="v2.pipeline_editor.pipeline_tree.task_nav"
       >
         <Icon
           name={hasIssues ? "CircleAlert" : "Circle"}

@@ -7,6 +7,7 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import type { ComponentSpec, ValidationIssue } from "@/models/componentSpec";
 import { useValidationResolutionActions } from "@/routes/v2/pages/Editor/components/PipelineTreeContent/components/useValidationResolutionActions";
+import { tracking } from "@/utils/tracking";
 
 export function DuplicateNameResolution({
   issue,
@@ -56,7 +57,14 @@ export function DuplicateNameResolution({
             className="h-8 text-xs flex-1"
             autoFocus
           />
-          <Button size="sm" onClick={handleRename} disabled={!value.trim()}>
+          <Button
+            size="sm"
+            {...tracking(
+              "v2.pipeline_editor.pipeline_tree.resolution.duplicate_rename",
+            )}
+            onClick={handleRename}
+            disabled={!value.trim()}
+          >
             Rename
           </Button>
         </InlineStack>
@@ -66,7 +74,14 @@ export function DuplicateNameResolution({
         <Text size="xs" tone="subdued" className="mb-2">
           Or remove the duplicate:
         </Text>
-        <Button variant="destructive" size="sm" onClick={handleDelete}>
+        <Button
+          variant="destructive"
+          size="sm"
+          {...tracking(
+            "v2.pipeline_editor.pipeline_tree.resolution.duplicate_delete",
+          )}
+          onClick={handleDelete}
+        >
           <Icon name="Trash2" size="xs" />
           Delete {entityType}
         </Button>

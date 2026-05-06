@@ -3,6 +3,7 @@ import type { KeyboardEvent, ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { tracking } from "@/utils/tracking";
 
 type TreeRowActivateLayout = "rootStrip" | "subgraphStrip" | "leafRow";
 
@@ -25,6 +26,7 @@ interface TreeRowActivateProps {
   selected?: boolean;
   taskId?: string;
   className?: string;
+  trackingId?: string;
 
   onActivate: () => void;
 }
@@ -36,6 +38,7 @@ export function TreeRowActivate({
   selected,
   taskId,
   className,
+  trackingId,
 }: TreeRowActivateProps) {
   const { editor } = useSharedStores();
 
@@ -52,6 +55,7 @@ export function TreeRowActivate({
       aria-selected={selected}
       onClick={onActivate}
       onKeyDown={handleKeyDown}
+      {...(trackingId ? tracking(trackingId) : {})}
       {...(taskId !== undefined
         ? {
             onMouseEnter: () => {

@@ -3,6 +3,7 @@ import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import type { ValidationIssue } from "@/models/componentSpec";
+import { tracking } from "@/utils/tracking";
 
 export function DeleteEntityResolution({
   issue,
@@ -21,6 +22,9 @@ export function DeleteEntityResolution({
       <Button
         variant="destructive"
         size="sm"
+        {...tracking(
+          "v2.pipeline_editor.pipeline_tree.resolution.delete_entity",
+        )}
         onClick={onDelete}
         disabled={!issue.entityId}
       >
