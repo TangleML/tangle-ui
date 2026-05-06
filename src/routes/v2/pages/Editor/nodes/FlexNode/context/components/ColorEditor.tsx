@@ -8,6 +8,7 @@ import { DEFAULT_BORDER_COLOR } from "@/components/shared/ReactFlow/FlowCanvas/F
 import { ColorPicker } from "@/components/ui/color";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Paragraph } from "@/components/ui/typography";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 
 interface ColorEditorValue {
   color: string;
@@ -27,6 +28,7 @@ export function ColorEditor({
   readOnly,
   hasTextContent,
 }: ColorEditorProps) {
+  const { track } = useAnalytics();
   const currentBorderColor = value.borderColor ?? DEFAULT_BORDER_COLOR;
 
   const [backgroundColor, setBackgroundColor] = useState(value.color);
@@ -79,6 +81,12 @@ export function ColorEditor({
             title="Background Color"
             color={backgroundColor}
             setColor={handleBackgroundColorChange}
+            onClose={() =>
+              track(
+                "v2.pipeline_editor.flex_node_details.color_picker.closed",
+                { color_kind: "background" },
+              )
+            }
           />
           <CopyText size="xs" className="font-mono">
             {value.color}
@@ -92,6 +100,12 @@ export function ColorEditor({
               title="Border Color"
               color={borderColor}
               setColor={handleBorderColorChange}
+              onClose={() =>
+                track(
+                  "v2.pipeline_editor.flex_node_details.color_picker.closed",
+                  { color_kind: "border" },
+                )
+              }
             />
             <CopyText size="xs" className="font-mono">
               {currentBorderColor}

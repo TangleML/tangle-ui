@@ -21,8 +21,10 @@ import {
 import { Text } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import type { ComponentReference as ModelComponentReference } from "@/models/componentSpec/entities/types";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { getComponentName } from "@/utils/getComponentName";
 import { isSubgraph } from "@/utils/subgraphUtils";
+import { tracking } from "@/utils/tracking";
 import {
   downloadStringAsFile,
   downloadYamlFromComponentText,
@@ -41,6 +43,7 @@ export function ComponentRefBar({
   taskName,
   pythonCode,
 }: ComponentRefBarProps) {
+  const { track } = useAnalytics();
   const notify = useToastNotification();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [showCodeViewer, setShowCodeViewer] = useState(false);
@@ -83,6 +86,9 @@ export function ComponentRefBar({
             <button
               type="button"
               className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 rounded-sm px-1 py-0.5 hover:bg-accent"
+              {...tracking(
+                "v2.pipeline_editor.task_details.component_details_open",
+              )}
             >
               <Icon
                 name={iconName}
@@ -110,6 +116,7 @@ export function ComponentRefBar({
                 variant="ghost"
                 size="min"
                 onClick={() => setShowCodeViewer(true)}
+                {...tracking("v2.pipeline_editor.task_details.view_task_yaml")}
               >
                 <Icon name="FileCode" size="sm" />
               </Button>
@@ -121,7 +128,13 @@ export function ComponentRefBar({
             <Tooltip>
               <TooltipTrigger asChild>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="min">
+                  <Button
+                    variant="ghost"
+                    size="min"
+                    {...tracking(
+                      "v2.pipeline_editor.task_details.component_ref_menu",
+                    )}
+                  >
                     <Icon name="EllipsisVertical" size="sm" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -130,24 +143,46 @@ export function ComponentRefBar({
             </Tooltip>
 
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleDownloadYaml}>
+              <DropdownMenuItem
+                onClick={() => {
+                  track("v2.pipeline_editor.task_details.download_yaml.click");
+                  handleDownloadYaml();
+                }}
+              >
                 <Icon name="Download" size="sm" />
                 Download YAML
               </DropdownMenuItem>
 
               {pythonCode && (
-                <DropdownMenuItem onClick={handleDownloadPython}>
+                <DropdownMenuItem
+                  onClick={() => {
+                    track(
+                      "v2.pipeline_editor.task_details.download_python.click",
+                    );
+                    handleDownloadPython();
+                  }}
+                >
                   <Icon name="Download" size="sm" />
                   Download Python
                 </DropdownMenuItem>
               )}
 
-              <DropdownMenuItem onClick={handleCopyYaml}>
+              <DropdownMenuItem
+                onClick={() => {
+                  track("v2.pipeline_editor.task_details.copy_yaml.click");
+                  handleCopyYaml();
+                }}
+              >
                 <Icon name="Clipboard" size="sm" />
                 Copy YAML
               </DropdownMenuItem>
 
-              <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
+              <DropdownMenuItem
+                onClick={() => {
+                  track("v2.pipeline_editor.task_details.edit_component.click");
+                  setIsEditDialogOpen(true);
+                }}
+              >
                 <Icon name="FilePenLine" size="sm" />
                 Edit Component
               </DropdownMenuItem>

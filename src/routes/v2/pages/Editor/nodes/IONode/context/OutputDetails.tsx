@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { BlockStack } from "@/components/ui/layout";
 import { Textarea } from "@/components/ui/textarea";
 import { Text } from "@/components/ui/typography";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { InputLabel } from "@/routes/v2/pages/Editor/components/InputLabel/InputLabel";
 import { useIOActions } from "@/routes/v2/pages/Editor/store/actions/useIOActions";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
@@ -16,6 +17,7 @@ interface OutputDetailsProps {
 export const OutputDetails = observer(function OutputDetails({
   entityId,
 }: OutputDetailsProps) {
+  const { track } = useAnalytics();
   const ioActions = useIOActions();
   const spec = useSpec();
   const output = spec?.outputs.find((o) => o.$id === entityId);
@@ -26,6 +28,7 @@ export const OutputDetails = observer(function OutputDetails({
     const newName = event.target.value;
     if (newName && newName !== output.name) {
       ioActions.renameOutput(spec, entityId, newName);
+      track("v2.pipeline_editor.output_details.name.updated");
     }
   };
 
@@ -34,6 +37,7 @@ export const OutputDetails = observer(function OutputDetails({
     const newDescription = value || undefined;
     if (newDescription !== output.description) {
       ioActions.setOutputDescription(spec, entityId, newDescription);
+      track("v2.pipeline_editor.output_details.description.updated");
     }
   };
 

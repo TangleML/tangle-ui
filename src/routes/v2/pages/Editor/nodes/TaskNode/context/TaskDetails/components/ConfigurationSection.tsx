@@ -14,6 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Paragraph, Text } from "@/components/ui/typography";
 import type { Task } from "@/models/componentSpec";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import type { AnnotationConfig, Annotations } from "@/types/annotations";
 import { EDITOR_COLLAPSED_ANNOTATION } from "@/utils/annotations";
 import { ISO8601_DURATION_ZERO_DAYS } from "@/utils/constants";
@@ -27,6 +28,7 @@ interface ConfigurationSectionProps {
 export const ConfigurationSection = observer(function ConfigurationSection({
   task,
 }: ConfigurationSectionProps) {
+  const { track } = useAnalytics();
   const {
     toggleCacheDisable,
     saveAnnotation,
@@ -110,6 +112,9 @@ export const ConfigurationSection = observer(function ConfigurationSection({
 
   const handleDisableCacheChange = (checked: boolean) => {
     toggleCacheDisable(task, checked);
+    track("v2.pipeline_editor.task_details.disable_cache.toggle", {
+      cache_disabled: checked,
+    });
   };
 
   const handleSave = (key: string, value: string | undefined) => {
@@ -122,6 +127,7 @@ export const ConfigurationSection = observer(function ConfigurationSection({
 
   const handleCollapsedChange = (checked: boolean) => {
     setCollapsed(task, checked);
+    track("v2.pipeline_editor.task_details.collapse_node.toggle");
   };
 
   const taskColor = task.annotations.get("tangleml.com/editor/task-color");
@@ -149,6 +155,9 @@ export const ConfigurationSection = observer(function ConfigurationSection({
           title="Task color"
           color={taskColor ?? "transparent"}
           setColor={handleColorChange}
+          onClose={() =>
+            track("v2.pipeline_editor.task_details.task_color_picker.closed")
+          }
         />
       </InlineStack>
 

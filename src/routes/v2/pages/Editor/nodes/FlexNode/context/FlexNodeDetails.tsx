@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { findFlexNode } from "@/routes/v2/pages/Editor/nodes/FlexNode/flexNode.actions";
 import { useFlexNodeActions } from "@/routes/v2/pages/Editor/nodes/FlexNode/useFlexNodeActions";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
+import { tracking } from "@/utils/tracking";
 
 import { ColorEditor } from "./components/ColorEditor";
 import { ContentEditor } from "./components/ContentEditor";
@@ -61,6 +62,7 @@ const FlexNodeDetailsInner = observer(function FlexNodeDetailsInner({
           locked={locked}
           onToggleLock={toggleLock}
           className={cn(locked && "text-red-500 hover:text-red-500")}
+          {...tracking("v2.pipeline_editor.flex_node_details.lock_toggle")}
         />
       </InlineStack>
 

@@ -15,9 +15,11 @@ import {
 export const StackingControls = ({
   nodeId,
   onChange,
+  trackingBase = "pipeline_editor.task_node.z_index",
 }: {
   nodeId: string;
   onChange: (newZIndex: number) => void;
+  trackingBase?: string;
 }) => {
   const { getNodes } = useReactFlow();
 
@@ -51,7 +53,7 @@ export const StackingControls = ({
     <InlineStack gap="2" data-testid="stacking-controls">
       <TooltipButton
         data-testid="stacking-move-forward"
-        {...tracking("pipeline_editor.task_node.z_index", {
+        {...tracking(trackingBase, {
           action: "move_forward",
         })}
         size="sm"
@@ -63,7 +65,7 @@ export const StackingControls = ({
       </TooltipButton>
       <TooltipButton
         data-testid="stacking-move-backward"
-        {...tracking("pipeline_editor.task_node.z_index", {
+        {...tracking(trackingBase, {
           action: "move_backward",
         })}
         size="sm"
@@ -75,7 +77,7 @@ export const StackingControls = ({
       </TooltipButton>
       <TooltipButton
         data-testid="stacking-bring-to-front"
-        {...tracking("pipeline_editor.task_node.z_index", {
+        {...tracking(trackingBase, {
           action: "bring_to_front",
         })}
         size="sm"
@@ -87,7 +89,7 @@ export const StackingControls = ({
       </TooltipButton>
       <TooltipButton
         data-testid="stacking-send-to-back"
-        {...tracking("pipeline_editor.task_node.z_index", {
+        {...tracking(trackingBase, {
           action: "send_to_back",
         })}
         size="sm"
