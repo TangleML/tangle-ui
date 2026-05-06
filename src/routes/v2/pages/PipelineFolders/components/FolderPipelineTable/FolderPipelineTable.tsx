@@ -90,6 +90,7 @@ export const FolderPipelineTable = withSuspenseWrapper(
 
     const requiresPermission = currentFolder.requiresPermission;
     const canMoveOut = currentFolder.canMoveFilesOut;
+    const canDrag = canMoveOut && folders.length > 0;
 
     const filteredFolders = folders.filter((f) =>
       f.name.toLowerCase().includes(searchQuery.toLowerCase()),
@@ -173,7 +174,7 @@ export const FolderPipelineTable = withSuspenseWrapper(
                 <TableHead className="w-36">Tags</TableHead>
                 <TableHead className="w-36">Last run</TableHead>
                 <TableHead className="w-16">Runs</TableHead>
-                <TableHead className="w-12"></TableHead>
+                <TableHead className="w-20"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -209,7 +210,7 @@ export const FolderPipelineTable = withSuspenseWrapper(
                 folders={filteredFolders}
                 selectedFolders={selection.selectedFolders}
                 draggingIds={draggingIds}
-                canDrag={canMoveOut}
+                canDrag={canDrag && folders.length > 1}
                 getDragItems={getDragItems}
                 onSelectFolder={selection.selectFolder}
                 onDrop={(targetFolderId, data) =>
@@ -224,7 +225,7 @@ export const FolderPipelineTable = withSuspenseWrapper(
                 pipelines={pagination.paginatedItems}
                 selectedPipelines={selection.selectedPipelines}
                 draggingIds={draggingIds}
-                canDrag={canMoveOut}
+                canDrag={canDrag}
                 getDragItems={getDragItems}
                 onSelectPipeline={selection.selectPipeline}
                 onDragStateChange={handleDragStateChange}

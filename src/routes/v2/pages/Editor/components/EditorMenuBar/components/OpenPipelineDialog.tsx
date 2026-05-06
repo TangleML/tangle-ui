@@ -1,6 +1,7 @@
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -30,6 +31,9 @@ export function OpenPipelineDialog({
       <DialogContent className="max-w-[95vw] sm:max-w-[95vw] w-full">
         <DialogHeader>
           <DialogTitle>Open Pipeline</DialogTitle>
+          <DialogDescription className="hidden">
+            Select a pipeline to open
+          </DialogDescription>
         </DialogHeader>
         <BlockStack gap="4" className="w-full h-[80vh] overflow-y-auto">
           <PipelineFolders onPipelineClick={onPipelineClick} />
