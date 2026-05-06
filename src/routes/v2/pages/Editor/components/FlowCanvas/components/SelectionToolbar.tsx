@@ -15,6 +15,7 @@ import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { CreateSubgraphForm } from "@/routes/v2/pages/Editor/components/CreateSubgraphForm";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
+import { tracking } from "@/utils/tracking";
 
 interface SelectionToolbarProps {
   onDuplicate: () => void;
@@ -53,12 +54,14 @@ export const SelectionToolbar = observer(function SelectionToolbar({
         icon="Copy"
         onClick={onDuplicate}
         testId="selection-duplicate"
+        trackingAction="v2.pipeline_canvas.selection_toolbar.duplicate"
       />
       <ToolbarButton
         label="Copy"
         icon="ClipboardCopy"
         onClick={onCopy}
         testId="selection-copy"
+        trackingAction="v2.pipeline_canvas.selection_toolbar.copy"
       />
       {clipboard.hasContent && onPaste && (
         <ToolbarButton
@@ -66,6 +69,7 @@ export const SelectionToolbar = observer(function SelectionToolbar({
           icon="ClipboardPaste"
           onClick={onPaste}
           testId="selection-paste"
+          trackingAction="v2.pipeline_canvas.selection_toolbar.paste"
         />
       )}
       {onCreateSubgraph && selectedTaskCount >= 2 && (
@@ -79,6 +83,7 @@ export const SelectionToolbar = observer(function SelectionToolbar({
                   icon="Layers"
                   onClick={() => setPopoverOpen(true)}
                   testId="selection-create-subgraph"
+                  trackingAction="v2.pipeline_canvas.selection_toolbar.create_subgraph"
                 />
               </div>
             </PopoverTrigger>
@@ -99,6 +104,7 @@ export const SelectionToolbar = observer(function SelectionToolbar({
         onClick={onDelete}
         dangerous
         testId="selection-delete"
+        trackingAction="v2.pipeline_canvas.selection_toolbar.delete"
       />
     </InlineStack>
   );
@@ -110,12 +116,14 @@ function ToolbarButton({
   onClick,
   dangerous,
   testId,
+  trackingAction,
 }: {
   label: string;
   icon: keyof typeof icons;
   onClick: () => void;
   dangerous?: boolean;
   testId?: string;
+  trackingAction: string;
 }) {
   return (
     <Button
@@ -126,6 +134,7 @@ function ToolbarButton({
       })}
       onClick={onClick}
       data-testid={testId}
+      {...tracking(trackingAction)}
     >
       <Icon name={icon} size="sm" />
       <Text size="xs" weight="semibold">

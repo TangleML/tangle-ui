@@ -9,6 +9,7 @@ import type { InputSpec } from "@/models/componentSpec";
 import type { OutputSpec } from "@/models/componentSpec/entities/types";
 import type { DialogProps } from "@/providers/DialogProvider/types";
 import type { EntityDiff } from "@/routes/v2/pages/Editor/store/actions/task.utils";
+import { tracking } from "@/utils/tracking";
 
 import { ReplaceConfirmationContent } from "./ReplaceConfirmationContent";
 
@@ -42,10 +43,18 @@ export function ReplaceConfirmationDialog({
         outputDiff={outputDiff}
       />
       <DialogFooter>
-        <Button variant="outline" onClick={cancel}>
+        <Button
+          variant="outline"
+          onClick={cancel}
+          {...tracking("v2.pipeline_canvas.replace_confirmation.cancel")}
+        >
           Cancel
         </Button>
-        <Button onClick={() => close(true)} autoFocus>
+        <Button
+          onClick={() => close(true)}
+          autoFocus
+          {...tracking("v2.pipeline_canvas.replace_confirmation.continue")}
+        >
           Continue
         </Button>
       </DialogFooter>
