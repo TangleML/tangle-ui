@@ -4,6 +4,7 @@ import { observer } from "mobx-react-lite";
 import { type MouseEvent as ReactMouseEvent, useEffect, useState } from "react";
 
 import { trimDigest } from "@/components/shared/ManageComponent/utils/digest";
+import { OutputTypeSelector } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/OutputTypeSelector/OutputTypeSelector";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -14,10 +15,17 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
+import { AGGREGATOR_ADD_INPUT_HANDLE_ID } from "@/utils/aggregatorInputs";
 import { pluralize } from "@/utils/string";
 
 import { deriveColorPalette } from "./color.utils";
+import { InputAggregatorHandle } from "./InputAggregatorHandle";
 import type { TaskNodeInput, TaskNodeViewProps } from "./TaskNode";
+
+const AGGREGATOR_INTERNAL_INPUTS = new Set([
+  AGGREGATOR_ADD_INPUT_HANDLE_ID,
+  "output_type",
+]);
 
 const cardVariants = cva(
   "min-w-[300px] max-w-[350px] rounded-2xl border-2 p-0 drop-shadow-none cursor-pointer select-none gap-2 transition-shadow",
@@ -185,6 +193,9 @@ export const TaskNodeCard = observer(function TaskNodeCard({
   taskColor,
   cacheDisabled,
   digest,
+  isAggregator,
+  outputType,
+  onOutputTypeChange,
 }: TaskNodeViewProps) {
   const palette = taskColor ? deriveColorPalette(taskColor) : undefined;
   const cardStyle = palette
@@ -204,14 +215,19 @@ export const TaskNodeCard = observer(function TaskNodeCard({
     }
   }, [collapsed]);
 
+  const filteredInputs = isAggregator
+    ? inputs.filter((input) => !AGGREGATOR_INTERNAL_INPUTS.has(input.name))
+    : inputs;
+
   const condensedInputs =
-    inputs.length > 0 && connectedInputNames.size > 0
-      ? inputs.filter((input) => connectedInputNames.has(input.name))
-      : inputs.slice(0, 1);
-  const hiddenInputCount = inputs.length - condensedInputs.length;
+    filteredInputs.length > 0 && connectedInputNames.size > 0
+      ? filteredInputs.filter((input) => connectedInputNames.has(input.name))
+      : filteredInputs.slice(0, 1);
+  const hiddenInputCount = filteredInputs.length - condensedInputs.length;
   const showCondensedInputs =
-    collapsed && !inputsExpanded && hiddenInputCount > 0;
-  const visibleInputs = showCondensedInputs ? condensedInputs : inputs;
+    !isAggregator && collapsed && !inputsExpanded && hiddenInputCount > 0;
+  const visibleInputs = showCondensedInputs ? condensedInputs : filteredInputs;
+  const showInputsSection = filteredInputs.length > 0 || isAggregator;
 
   const condensedOutputs =
     outputs.length > 0 && connectedOutputNames.size > 0
@@ -302,18 +318,19 @@ export const TaskNodeCard = observer(function TaskNodeCard({
       </CardHeader>
 
       <CardContent className="p-2 flex flex-col gap-2">
-        {inputs.length > 0 && (
+        {showInputsSection && (
           <div
             className={cn(
               "p-2 rounded-lg",
               !palette && "bg-gray-200/50",
-              collapsed &&
+              !isAggregator &&
+                collapsed &&
                 hiddenInputCount > 0 &&
                 "cursor-pointer hover:bg-gray-200/80",
             )}
             style={palette ? { backgroundColor: palette.sectionBg } : undefined}
             onClickCapture={
-              collapsed && hiddenInputCount > 0
+              !isAggregator && collapsed && hiddenInputCount > 0
                 ? (e) => {
                     e.stopPropagation();
                     setInputsExpanded((prev) => !prev);
@@ -322,6 +339,7 @@ export const TaskNodeCard = observer(function TaskNodeCard({
             }
           >
             <BlockStack gap="3">
+              {isAggregator && <InputAggregatorHandle />}
               {visibleInputs.map((input, index) => (
                 <ClassicInputHandle
                   key={input.name}
@@ -348,7 +366,7 @@ export const TaskNodeCard = observer(function TaskNodeCard({
           </div>
         )}
 
-        {outputs.length > 0 && (
+        {(outputs.length > 0 || isAggregator) && (
           <div
             className={cn(
               "p-2 rounded-lg",
@@ -368,6 +386,14 @@ export const TaskNodeCard = observer(function TaskNodeCard({
             }
           >
             <BlockStack gap="3">
+              {isAggregator && (
+                <div className="w-full">
+                  <OutputTypeSelector
+                    value={outputType}
+                    onChange={onOutputTypeChange}
+                  />
+                </div>
+              )}
               {visibleOutputs.map((output, index) => (
                 <div
                   key={output.name}

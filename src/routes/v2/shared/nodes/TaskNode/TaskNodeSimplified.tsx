@@ -12,9 +12,15 @@ import {
   deriveColorPalette,
   getContrastTextColor,
 } from "@/routes/v2/shared/nodes/TaskNode/color.utils";
+import { AGGREGATOR_ADD_INPUT_HANDLE_ID } from "@/utils/aggregatorInputs";
 
 import type { TaskNodeViewProps } from "./TaskNode";
 import { createTaskNodeCardVariants } from "./taskNode.variants";
+
+const AGGREGATOR_INTERNAL_INPUTS = new Set([
+  AGGREGATOR_ADD_INPUT_HANDLE_ID,
+  "output_type",
+]);
 
 const PERCEIVED_FONT_SIZE = "28px";
 const s = "var(--simplified-scale, 1)";
@@ -31,12 +37,17 @@ export function TaskNodeSimplified({
   selected,
   isHovered,
   taskColor,
+  isAggregator,
   onNodeClick,
 }: TaskNodeViewProps) {
   const palette = taskColor ? deriveColorPalette(taskColor) : undefined;
   const headerTextColor = taskColor
     ? getContrastTextColor(taskColor)
     : undefined;
+
+  const visibleInputs = isAggregator
+    ? inputs.filter((input) => !AGGREGATOR_INTERNAL_INPUTS.has(input.name))
+    : inputs;
 
   return (
     <Card
@@ -58,7 +69,7 @@ export function TaskNodeSimplified({
       }}
       onClick={onNodeClick}
     >
-      {inputs.map((input) => (
+      {visibleInputs.map((input) => (
         <Handle
           key={input.name}
           type="target"
@@ -73,6 +84,20 @@ export function TaskNodeSimplified({
           className="bg-gray-500! border-0!"
         />
       ))}
+      {isAggregator && (
+        <Handle
+          type="target"
+          position={Position.Left}
+          id={AGGREGATOR_ADD_INPUT_HANDLE_ID}
+          style={{
+            top: "50%",
+            width: `calc(${s} * 12px)`,
+            height: `calc(${s} * 12px)`,
+            left: `calc(${s} * -4px)`,
+          }}
+          className="bg-blue-400! border-0!"
+        />
+      )}
 
       <div
         className="flex items-center w-full h-full"

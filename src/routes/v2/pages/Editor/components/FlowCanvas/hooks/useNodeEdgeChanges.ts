@@ -3,6 +3,7 @@ import type { EdgeChange, NodeChange, ReactFlowProps } from "@xyflow/react";
 import type { ComponentSpec } from "@/models/componentSpec";
 import { cleanupDeletedBinding } from "@/routes/v2/pages/Editor/nodes/ConduitNode/conduits.actions";
 import { deleteEdge } from "@/routes/v2/pages/Editor/store/actions";
+import { cleanupAggregatorInputForBinding } from "@/routes/v2/pages/Editor/store/actions/aggregator.actions";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
@@ -66,12 +67,26 @@ export function useNodeEdgeChanges(
     for (const change of removeChanges) {
       if ("id" in change) {
         const edgeId = change.id;
+        const bindingIdMatch = edgeId.match(/^edge_(.+)$/);
+        const binding = bindingIdMatch
+          ? spec.bindings.find((b) => b.$id === bindingIdMatch[1])
+          : undefined;
+        const aggregatorTarget = binding
+          ? {
+              targetEntityId: binding.targetEntityId,
+              targetPortName: binding.targetPortName,
+            }
+          : null;
+
         deleteEdge(undo, spec, edgeId);
 
-        const bindingIdMatch = edgeId.match(/^edge_(.+)$/);
         if (bindingIdMatch) {
           // todo: find out how to decouple
           cleanupDeletedBinding(undo, spec, bindingIdMatch[1]);
+        }
+
+        if (aggregatorTarget) {
+          cleanupAggregatorInputForBinding(undo, spec, aggregatorTarget);
         }
       }
     }

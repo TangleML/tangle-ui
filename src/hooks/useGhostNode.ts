@@ -4,6 +4,11 @@ import { useMemo } from "react";
 
 import type { GhostNodeData } from "@/components/shared/ReactFlow/FlowCanvas/GhostNode/types";
 import { createGhostNode } from "@/components/shared/ReactFlow/FlowCanvas/GhostNode/utils";
+import {
+  AGGREGATOR_ADD_INPUT_HANDLE_ID,
+  getNextAggregatorInputName,
+} from "@/utils/aggregatorInputs";
+import { isPipelineAggregator } from "@/utils/annotations";
 import type { ComponentSpec } from "@/utils/componentSpec";
 import { isGraphImplementation } from "@/utils/componentSpec";
 import {
@@ -130,9 +135,17 @@ export const useGhostNode = ({
       ? "input"
       : "output";
 
-    const handleName = isInputConnection
-      ? nodeIdToInputName(connectionFromHandle.id ?? "")
-      : nodeIdToOutputName(connectionFromHandle.id ?? "");
+    const rawHandleId = connectionFromHandle.id ?? "";
+    const isAggregatorAddHandle =
+      isInputConnection &&
+      rawHandleId === AGGREGATOR_ADD_INPUT_HANDLE_ID &&
+      isPipelineAggregator(componentRefSpec?.metadata?.annotations);
+
+    const handleName = isAggregatorAddHandle
+      ? getNextAggregatorInputName(componentRefSpec?.inputs ?? [])
+      : isInputConnection
+        ? nodeIdToInputName(rawHandleId)
+        : nodeIdToOutputName(rawHandleId);
 
     const extractedData = isInputConnection
       ? extractInputGhostData(componentRefSpec, handleName, taskSpec?.arguments)

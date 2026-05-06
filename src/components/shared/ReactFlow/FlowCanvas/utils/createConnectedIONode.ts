@@ -1,17 +1,27 @@
 import type { XYPosition } from "@xyflow/react";
 
 import type { TaskType } from "@/types/taskNode";
+import {
+  AGGREGATOR_ADD_INPUT_HANDLE_ID,
+  createAggregatorInput,
+  getNextAggregatorInputName,
+} from "@/utils/aggregatorInputs";
+import { isPipelineAggregator } from "@/utils/annotations";
 import type {
+  ComponentReference,
   ComponentSpec,
   GraphSpec,
+  TaskSpec,
   TypeSpecType,
 } from "@/utils/componentSpec";
 import { isGraphImplementation } from "@/utils/componentSpec";
+import { deepClone } from "@/utils/deepClone";
 import {
   nodeIdToInputName,
   nodeIdToOutputName,
   nodeIdToTaskId,
 } from "@/utils/nodes/nodeIdUtils";
+import { componentSpecToText } from "@/utils/yaml";
 
 import addTask from "./addTask";
 import { setGraphOutputValue } from "./setGraphOutputValue";
@@ -56,14 +66,30 @@ export const createConnectedIONode = ({
   }
 
   const taskId = nodeIdToTaskId(taskNodeId);
+  const taskSpec = componentSpec.implementation.graph.tasks[taskId];
+  const taskComponentSpec = taskSpec?.componentRef?.spec;
+
+  if (
+    ioType === "input" &&
+    handleId === AGGREGATOR_ADD_INPUT_HANDLE_ID &&
+    taskSpec &&
+    taskComponentSpec &&
+    isPipelineAggregator(taskComponentSpec.metadata?.annotations)
+  ) {
+    return createConnectedAggregatorInputNode({
+      componentSpec,
+      taskId,
+      taskSpec,
+      taskComponentSpec,
+      position,
+    });
+  }
+
   const argName =
     ioType === "input"
       ? nodeIdToInputName(handleId)
       : nodeIdToOutputName(handleId);
   const taskType: TaskType = ioType;
-
-  const taskSpec = componentSpec.implementation.graph.tasks[taskId];
-  const taskComponentSpec = taskSpec?.componentRef?.spec;
 
   let ioNodeType: TypeSpecType | undefined;
   let ioNodeDefault: string | undefined;
@@ -134,5 +160,83 @@ export const createConnectedIONode = ({
     implementation: {
       graph: updatedGraph,
     },
+  };
+};
+
+type CreateConnectedAggregatorInputNodeParams = {
+  componentSpec: ComponentSpec;
+  taskId: string;
+  taskSpec: TaskSpec;
+  taskComponentSpec: ComponentSpec;
+  position: XYPosition;
+};
+
+const createConnectedAggregatorInputNode = ({
+  componentSpec,
+  taskId,
+  taskSpec,
+  taskComponentSpec,
+  position,
+}: CreateConnectedAggregatorInputNodeParams): ComponentSpec => {
+  const newAggInputName = getNextAggregatorInputName(
+    taskComponentSpec.inputs ?? [],
+  );
+  const newAggInput = createAggregatorInput(newAggInputName);
+
+  const clonedSpec: ComponentSpec = deepClone(taskComponentSpec);
+  const updatedTaskInputs = [...(clonedSpec.inputs ?? []), newAggInput];
+
+  const orderedTaskSpec: ComponentSpec = {
+    name: clonedSpec.name,
+    ...(clonedSpec.description && { description: clonedSpec.description }),
+    ...(clonedSpec.metadata && { metadata: clonedSpec.metadata }),
+    inputs: updatedTaskInputs,
+    ...(clonedSpec.outputs && { outputs: clonedSpec.outputs }),
+    implementation: clonedSpec.implementation,
+  };
+
+  const updatedComponentRef: ComponentReference = {
+    ...taskSpec.componentRef,
+    spec: orderedTaskSpec,
+    text: componentSpecToText(orderedTaskSpec),
+  };
+
+  const specWithUpdatedTask = componentSpec;
+
+  if (isGraphImplementation(specWithUpdatedTask.implementation)) {
+    specWithUpdatedTask.implementation.graph.tasks[taskId] = {
+      ...taskSpec,
+      componentRef: updatedComponentRef,
+    };
+  }
+
+  const { spec: specWithGraphInput, ioName: createdGraphInputName } = addTask(
+    "input",
+    null,
+    position,
+    specWithUpdatedTask,
+    {
+      name: newAggInputName,
+      type: newAggInput.type,
+    },
+  );
+
+  if (
+    !createdGraphInputName ||
+    !isGraphImplementation(specWithGraphInput.implementation)
+  ) {
+    return specWithGraphInput;
+  }
+
+  const updatedGraph = setTaskArgument(
+    specWithGraphInput.implementation.graph,
+    taskId,
+    newAggInputName,
+    { graphInput: { inputName: createdGraphInputName } },
+  );
+
+  return {
+    ...specWithGraphInput,
+    implementation: { graph: updatedGraph },
   };
 };

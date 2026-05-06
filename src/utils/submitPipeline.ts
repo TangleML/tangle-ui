@@ -47,6 +47,7 @@ export async function submitPipelineRun(
       },
     );
     const transformedSpec = transformAggregatorComponentSpec(fullyLoadedSpec);
+    coerceMetadataAnnotations(transformedSpec);
     const argumentsFromInputs = getArgumentsFromInputs(transformedSpec);
     // Merge default arguments with provided task arguments
     // Task arguments (including SecretArguments) are preserved as-is
@@ -211,6 +212,38 @@ const parseComponentYaml = (text: string): ComponentSpec => {
   }
 
   return componentSpecFromYaml(text);
+};
+
+/**
+ * Coerce every `metadata.annotations` value (root spec + every nested task
+ * componentRef.spec) to a string, since the backend's MetadataSpec strictly
+ * requires `Record<string, string>`. Strings pass through unchanged; arrays
+ * and objects are JSON-stringified; primitives are stringified; null/undefined
+ * values are dropped. Mutates in place.
+ */
+const coerceMetadataAnnotations = (spec: ComponentSpec): void => {
+  const annotations = spec.metadata?.annotations;
+  if (annotations) {
+    for (const key of Object.keys(annotations)) {
+      const value = annotations[key];
+      if (typeof value === "string") continue;
+      if (value === null || value === undefined) {
+        delete annotations[key];
+        continue;
+      }
+      annotations[key] =
+        typeof value === "object" ? JSON.stringify(value) : String(value);
+    }
+  }
+
+  if (!spec.implementation || !("graph" in spec.implementation)) return;
+  const tasks = spec.implementation.graph?.tasks;
+  if (!tasks) return;
+  for (const task of Object.values(tasks)) {
+    const nestedSpec = (task as { componentRef?: { spec?: ComponentSpec } })
+      ?.componentRef?.spec;
+    if (nestedSpec) coerceMetadataAnnotations(nestedSpec);
+  }
 };
 
 // Fetch component with timeout to avoid hanging on unresponsive URLs
