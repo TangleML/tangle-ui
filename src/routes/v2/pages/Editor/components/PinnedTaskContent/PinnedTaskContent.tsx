@@ -8,6 +8,7 @@ import { Text } from "@/components/ui/typography";
 import { serializeComponentSpec } from "@/models/componentSpec";
 import { CodeBlock } from "@/routes/v2/pages/Editor/components/PinnedTaskContent/components/CodeBlock";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
+import { tracking } from "@/utils/tracking";
 import { componentSpecToText } from "@/utils/yaml";
 
 interface PinnedTaskContentProps {
@@ -55,15 +56,29 @@ export const PinnedTaskContent = observer(function PinnedTaskContent({
         className="flex flex-col flex-1 min-h-0 min-w-0 w-full"
       >
         <TabsList className="mx-3 mt-3 shrink-0 w-auto">
-          <TabsTrigger value="details" className="flex-1 gap-1 min-w-0">
+          <TabsTrigger
+            value="details"
+            className="flex-1 gap-1 min-w-0"
+            {...tracking("v2.pipeline_editor.pinned_task_window.tab_details")}
+          >
             <Icon name="Info" size="sm" className="shrink-0" />
             <span className="truncate">Details</span>
           </TabsTrigger>
-          <TabsTrigger value="io" className="flex-1 gap-1 min-w-0">
+          <TabsTrigger
+            value="io"
+            className="flex-1 gap-1 min-w-0"
+            {...tracking("v2.pipeline_editor.pinned_task_window.tab_io")}
+          >
             <Icon name="ListFilter" size="sm" className="shrink-0" />
             <span className="truncate">I/O</span>
           </TabsTrigger>
-          <TabsTrigger value="implementation" className="flex-1 gap-1 min-w-0">
+          <TabsTrigger
+            value="implementation"
+            className="flex-1 gap-1 min-w-0"
+            {...tracking(
+              "v2.pipeline_editor.pinned_task_window.tab_implementation",
+            )}
+          >
             <Icon name="Code" size="sm" className="shrink-0" />
             <span className="truncate">Code</span>
           </TabsTrigger>

@@ -1,6 +1,7 @@
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
+import { tracking } from "@/utils/tracking";
 
 export function InitialStateMarker({
   isCurrent,
@@ -12,6 +13,7 @@ export function InitialStateMarker({
   return (
     <button
       type="button"
+      {...tracking("v2.pipeline_editor.history.initial_state")}
       onClick={onClick}
       disabled={isCurrent}
       className={cn(

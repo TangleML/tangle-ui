@@ -1,8 +1,10 @@
 import { useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
 
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { APP_ROUTES } from "@/routes/router";
 // TODO: extract PipelineFolders picker to shared or restructure via routing composition
 // eslint-disable-next-line no-restricted-imports
@@ -11,6 +13,11 @@ import type { PipelineRef } from "@/services/pipelineStorage/types";
 
 export function EmptyEditorState() {
   const navigate = useNavigate();
+  const { track } = useAnalytics();
+
+  useEffect(() => {
+    track("v2.pipeline_editor.empty_state.impression");
+  }, [track]);
 
   const handlePipelineClick = (pipeline: PipelineRef) => {
     navigate({

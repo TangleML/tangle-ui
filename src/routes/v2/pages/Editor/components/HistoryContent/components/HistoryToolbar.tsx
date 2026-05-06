@@ -7,6 +7,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Text } from "@/components/ui/typography";
+import { tracking } from "@/utils/tracking";
 
 interface HistoryToolbarProps {
   canUndo: boolean;
@@ -37,6 +38,7 @@ export function HistoryToolbar({
                 variant="ghost"
                 size="sm"
                 className="h-6 w-6 p-0"
+                {...tracking("v2.pipeline_editor.history.undo")}
                 onClick={onUndo}
                 disabled={!canUndo}
               >
@@ -54,6 +56,7 @@ export function HistoryToolbar({
                 variant="ghost"
                 size="sm"
                 className="h-6 w-6 p-0"
+                {...tracking("v2.pipeline_editor.history.redo")}
                 onClick={onRedo}
                 disabled={!canRedo}
               >
@@ -76,6 +79,7 @@ export function HistoryToolbar({
               variant="ghost"
               size="sm"
               className="h-5 w-5 p-0 text-slate-500 hover:text-red-500"
+              {...tracking("v2.pipeline_editor.history.clear")}
               onClick={onClear}
             >
               <Icon name="Trash2" size="xs" />
