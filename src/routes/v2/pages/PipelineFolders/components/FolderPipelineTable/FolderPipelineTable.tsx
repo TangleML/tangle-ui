@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/table";
 import { Text } from "@/components/ui/typography";
 import { usePagination } from "@/hooks/usePagination";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useBulkDeleteMutation } from "@/routes/v2/pages/PipelineFolders/hooks/useBulkDeleteMutation";
 import { useDropMutation } from "@/routes/v2/pages/PipelineFolders/hooks/useDropMutation";
 import { useFolderBreadcrumbs } from "@/routes/v2/pages/PipelineFolders/hooks/useFolderBreadcrumbs";
@@ -30,6 +31,7 @@ import { type DragItem } from "@/routes/v2/pages/PipelineFolders/types";
 import { MovePipelineDialog } from "@/routes/v2/shared/components/MovePipelineDialog";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import { FoldersQueryKeys } from "@/services/pipelineStorage/types";
+import { tracking } from "@/utils/tracking";
 
 import { FolderList } from "./components/FolderList";
 import { FolderPermissionBanner } from "./components/FolderPermissionBanner";
@@ -68,6 +70,7 @@ export const FolderPipelineTable = withSuspenseWrapper(
     const { data: pipelines, refetch } = useFolderPipelines(folderId);
     const { data: breadcrumbPath } = useFolderBreadcrumbs(folderId);
 
+    const { track } = useAnalytics();
     const selection = useSelection();
     const [searchQuery, setSearchQuery] = useState("");
     const [moveDialogOpen, setMoveDialogOpen] = useState(false);
@@ -107,7 +110,11 @@ export const FolderPipelineTable = withSuspenseWrapper(
       pagination.resetPage();
     };
 
-    const handleSelectAll = (checked: boolean) => {
+    const handleSelectAll = (checked: boolean | "indeterminate") => {
+      if (checked === "indeterminate") return;
+      track("v2.pipeline_folders.table.select_all_toggled", {
+        new_value: checked,
+      });
       if (checked) {
         const pipelineIds = filteredPipelines.map((p) => p.id);
         const folderIds = filteredFolders.map((f) => f.id);
@@ -193,6 +200,9 @@ export const FolderPipelineTable = withSuspenseWrapper(
                         <Button
                           variant="ghost"
                           onClick={() => setSearchQuery("")}
+                          {...tracking(
+                            "v2.pipeline_folders.table.search_clear",
+                          )}
                         >
                           <Icon name="CircleX" />
                         </Button>
@@ -252,6 +262,7 @@ export const FolderPipelineTable = withSuspenseWrapper(
           onNextPage={pagination.goToNextPage}
           onPreviousPage={pagination.goToPreviousPage}
           onReset={pagination.resetPage}
+          analyticsTrackingPrefix="v2.pipeline_folders.table"
         />
 
         <SelectionToolbar

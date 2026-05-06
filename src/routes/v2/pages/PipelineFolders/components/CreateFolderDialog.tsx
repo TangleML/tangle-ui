@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -13,7 +13,9 @@ import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useCreateFolder } from "@/routes/v2/pages/PipelineFolders/hooks/useFolderMutations";
+import { tracking } from "@/utils/tracking";
 
 interface CreateFolderDialogProps {
   parentId: string | null;
@@ -23,6 +25,15 @@ export function CreateFolderDialog({ parentId }: CreateFolderDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const createFolder = useCreateFolder();
+  const { track } = useAnalytics();
+
+  useEffect(() => {
+    if (open) {
+      track("v2.pipeline_folders.create_folder_dialog_impression", {
+        has_parent: parentId !== null,
+      });
+    }
+  }, [open, parentId, track]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -33,6 +44,9 @@ export function CreateFolderDialog({ parentId }: CreateFolderDialogProps) {
       { name: trimmed, parentId },
       {
         onSuccess: () => {
+          track("v2.pipeline_folders.create_folder_completed", {
+            has_parent: parentId !== null,
+          });
           setName("");
           setOpen(false);
         },
@@ -51,6 +65,7 @@ export function CreateFolderDialog({ parentId }: CreateFolderDialogProps) {
         <Button
           variant="outline"
           className="gap-2 rounded-lg px-3 py-2 text-sm"
+          {...tracking("v2.pipeline_folders.create_folder_open")}
         >
           <Icon name="FolderPlus" size="lg" />
           New Folder
@@ -78,12 +93,14 @@ export function CreateFolderDialog({ parentId }: CreateFolderDialogProps) {
                   type="button"
                   variant="outline"
                   onClick={() => handleOpenChange(false)}
+                  {...tracking("v2.pipeline_folders.create_folder_cancel")}
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={name.trim().length === 0 || createFolder.isPending}
+                  {...tracking("v2.pipeline_folders.create_folder_submit")}
                 >
                   Create
                 </Button>

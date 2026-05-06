@@ -29,15 +29,20 @@ import {
 } from "@/components/ui/tooltip";
 import { Paragraph } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { EDITOR_PATH } from "@/routes/router";
 import { deletePipeline } from "@/services/pipelineService";
 import { getPipelineTagsFromSpec } from "@/utils/annotations";
 import type { ComponentReferenceWithSpec } from "@/utils/componentStore";
 import { formatDate } from "@/utils/date";
+import { tracking } from "@/utils/tracking";
 
 import type { MatchedField } from "./usePipelineFilters";
 
 const MAX_TITLE_LENGTH = 80;
+
+/** Default `analyticsTrackingPrefix` for the home pipeline list (non-`v2.*` warehouse slice). */
+const DEFAULT_PIPELINE_ROW_ANALYTICS_PREFIX = "pipeline_home.table";
 
 interface PipelineRowProps {
   url?: string;
@@ -57,6 +62,7 @@ interface PipelineRowProps {
   isDragging?: boolean;
   dragItemCount?: number;
   onDragStateChange?: (isDragging: boolean) => void;
+  analyticsTrackingPrefix?: string;
 }
 
 const PipelineRow = withSuspenseWrapper(
@@ -77,8 +83,14 @@ const PipelineRow = withSuspenseWrapper(
     isDragging,
     dragItemCount,
     onDragStateChange,
+    analyticsTrackingPrefix = DEFAULT_PIPELINE_ROW_ANALYTICS_PREFIX,
   }: PipelineRowProps) => {
     const navigate = useNavigate();
+    const { track } = useAnalytics();
+
+    const rowTrack = (suffix: string, metadata?: Record<string, unknown>) => {
+      track(`${analyticsTrackingPrefix}.${suffix}`, metadata);
+    };
 
     const componentSpec = componentRef?.spec;
 
@@ -90,18 +102,27 @@ const PipelineRow = withSuspenseWrapper(
       }
 
       if (onPipelineClick && name) {
+        rowTrack("pipeline_opened", { open_mode: "embedded" });
         onPipelineClick(name);
         return;
       }
 
       if (e.ctrlKey || e.metaKey) {
+        if (name) {
+          rowTrack("pipeline_opened", { open_mode: "editor_new_tab" });
+        }
         window.open(`${EDITOR_PATH}/${name}`, "_blank");
         return;
+      }
+      if (name) {
+        rowTrack("pipeline_opened", { open_mode: "editor_same_tab" });
       }
       navigate({ to: `${EDITOR_PATH}/${name}` });
     };
 
-    const handleCheckboxChange = (checked: boolean) => {
+    const handleCheckboxChange = (checked: boolean | "indeterminate") => {
+      if (checked === "indeterminate") return;
+      rowTrack("pipeline_selection_toggled", { new_value: checked });
       onSelect?.(checked);
     };
 
@@ -216,6 +237,9 @@ const PipelineRow = withSuspenseWrapper(
                   variant="ghost"
                   size="icon"
                   className="opacity-0 group-hover:opacity-100 cursor-pointer text-destructive-foreground hover:text-destructive-foreground"
+                  {...tracking(
+                    `${analyticsTrackingPrefix}.pipeline_delete_confirm_open`,
+                  )}
                 >
                   <Icon name="Trash" />
                 </Button>

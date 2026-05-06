@@ -7,6 +7,7 @@ import { Text } from "@/components/ui/typography";
 import type { PipelineFolder } from "@/services/pipelineStorage/PipelineFolder";
 import type { PermissionStatus } from "@/services/pipelineStorage/types";
 import { FoldersQueryKeys } from "@/services/pipelineStorage/types";
+import { tracking } from "@/utils/tracking";
 
 interface FolderPermissionBannerProps {
   folder: PipelineFolder;
@@ -46,7 +47,11 @@ export function FolderPermissionBanner({
           <Text tone="subdued">
             Permission required to read files from this folder.
           </Text>
-          <Button variant="outline" onClick={handleRequestPermission}>
+          <Button
+            variant="outline"
+            onClick={handleRequestPermission}
+            {...tracking("v2.pipeline_folders.table.permission_grant_access")}
+          >
             <Icon name="KeyRound" size="sm" />
             Grant Access
           </Button>
@@ -60,6 +65,9 @@ export function FolderPermissionBanner({
             size="sm"
             onClick={onGranted}
             title="Refresh file list"
+            {...tracking(
+              "v2.pipeline_folders.table.permission_granted_refresh",
+            )}
           >
             <Icon name="RefreshCw" size="sm" />
             Refresh

@@ -4,6 +4,7 @@ import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Text } from "@/components/ui/typography";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { APP_ROUTES } from "@/routes/router";
 import { useFolderNavigation } from "@/routes/v2/pages/PipelineFolders/context/FolderNavigationContext";
 import type { PipelineFolder } from "@/services/pipelineStorage/PipelineFolder";
@@ -15,10 +16,14 @@ interface ParentFolderRowProps {
 export function ParentFolderRow({ breadcrumbPath }: ParentFolderRowProps) {
   const navigate = useNavigate();
   const folderNav = useFolderNavigation();
+  const { track } = useAnalytics();
 
   const parentId = breadcrumbPath[breadcrumbPath.length - 1]?.parentId ?? null;
 
   const handleNavigateUp = () => {
+    track("v2.pipeline_folders.table.parent_folder_opened", {
+      navigation_context: folderNav ? "embedded" : "route",
+    });
     if (folderNav) {
       folderNav.navigateToFolder(parentId);
     } else {

@@ -4,6 +4,8 @@ import { useFolderNavigation } from "@/routes/v2/pages/PipelineFolders/context/F
 import type { DragItem } from "@/routes/v2/pages/PipelineFolders/types";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 
+const PIPELINE_FOLDERS_TABLE_ANALYTICS_PREFIX = "v2.pipeline_folders.table";
+
 interface PipelineRowsProps {
   pipelines: PipelineFile[];
   selectedPipelines: Set<string>;
@@ -49,6 +51,7 @@ export function PipelineRows({
             key={file.id}
             name={name}
             modificationTime={file.modifiedAt}
+            analyticsTrackingPrefix={PIPELINE_FOLDERS_TABLE_ANALYTICS_PREFIX}
             onDelete={onDelete}
             isSelected={selectedPipelines.has(file.id)}
             onSelect={(checked) => onSelectPipeline(file.id, checked)}

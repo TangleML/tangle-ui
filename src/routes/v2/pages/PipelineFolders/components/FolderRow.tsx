@@ -7,6 +7,7 @@ import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Paragraph } from "@/components/ui/typography";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { APP_ROUTES } from "@/routes/router";
 import { useFolderNavigation } from "@/routes/v2/pages/PipelineFolders/context/FolderNavigationContext";
 import type { PipelineFolder } from "@/services/pipelineStorage/PipelineFolder";
@@ -71,6 +72,7 @@ export function FolderRow({
 }: FolderRowProps) {
   const navigate = useNavigate();
   const folderNav = useFolderNavigation();
+  const { track } = useAnalytics();
 
   const {
     isDragOver,
@@ -89,8 +91,14 @@ export function FolderRow({
       return;
     }
     if (folderNav) {
+      track("v2.pipeline_folders.table.folder_opened", {
+        navigation_context: "embedded",
+      });
       folderNav.navigateToFolder(folder.id);
     } else {
+      track("v2.pipeline_folders.table.folder_opened", {
+        navigation_context: "route",
+      });
       navigate({
         to: APP_ROUTES.PIPELINE_FOLDERS,
         search: { folderId: folder.id },
@@ -115,7 +123,13 @@ export function FolderRow({
         <Checkbox
           data-checkbox
           checked={isSelected}
-          onCheckedChange={(checked: boolean) => onSelect?.(checked)}
+          onCheckedChange={(checked: boolean | "indeterminate") => {
+            if (checked === "indeterminate") return;
+            track("v2.pipeline_folders.table.folder_selection_toggled", {
+              new_value: checked,
+            });
+            onSelect?.(checked);
+          }}
           onClick={(e: MouseEvent) => e.stopPropagation()}
         />
       </TableCell>
