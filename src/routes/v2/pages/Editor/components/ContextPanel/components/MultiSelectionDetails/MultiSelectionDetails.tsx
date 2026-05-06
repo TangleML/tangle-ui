@@ -10,11 +10,13 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/typography";
 import type { Task } from "@/models/componentSpec";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { CreateSubgraphForm } from "@/routes/v2/pages/Editor/components/CreateSubgraphForm";
 import { usePipelineActions } from "@/routes/v2/pages/Editor/store/actions/usePipelineActions";
 import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskActions";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { tracking } from "@/utils/tracking";
 
 import { BatchArgumentRow } from "./components/BatchArgumentRow";
 import { BatchTaskColor } from "./components/BatchTaskColor";
@@ -26,6 +28,7 @@ import { computeAggregatedArguments } from "./utils";
  * Shows list of selected nodes, common argument editing, and Create Subgraph section.
  */
 export const MultiSelectionDetails = observer(function MultiSelectionDetails() {
+  const { track } = useAnalytics();
   const { editor } = useSharedStores();
   const { multiSelection } = editor;
   const spec = useSpec();
@@ -62,6 +65,12 @@ export const MultiSelectionDetails = observer(function MultiSelectionDetails() {
     });
 
     if (result) {
+      track(
+        "v2.pipeline_editor.context_panel.multi_selection.create_subgraph.completed",
+        {
+          task_count: selectedTasks.length,
+        },
+      );
       editor.clearMultiSelection();
     }
   };
@@ -80,6 +89,12 @@ export const MultiSelectionDetails = observer(function MultiSelectionDetails() {
 
     const layoutedNodes = autoLayoutNodes(selectedRFNodes, connectedEdges);
     applyAutoLayoutPositions(spec, layoutedNodes);
+    track(
+      "v2.pipeline_editor.context_panel.multi_selection.auto_layout.completed",
+      {
+        node_count: multiSelection.length,
+      },
+    );
   };
 
   if (multiSelection.length === 0) {
@@ -134,6 +149,9 @@ export const MultiSelectionDetails = observer(function MultiSelectionDetails() {
               size="sm"
               className="w-full gap-1.5"
               onClick={handleAutoLayoutSelection}
+              {...tracking(
+                "v2.pipeline_editor.context_panel.multi_selection.auto_layout",
+              )}
             >
               <Icon name="LayoutDashboard" size="sm" />
               Auto Layout Selection
@@ -147,6 +165,7 @@ export const MultiSelectionDetails = observer(function MultiSelectionDetails() {
             <CreateSubgraphForm
               selectedTaskCount={selectedTasks.length}
               onSubmit={handleCreateSubgraph}
+              submitTrackingAction="v2.pipeline_editor.context_panel.multi_selection.create_subgraph"
             />
           </>
         )}

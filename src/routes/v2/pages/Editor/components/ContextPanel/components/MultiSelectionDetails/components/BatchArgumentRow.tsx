@@ -6,6 +6,7 @@ import { InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import type { ArgumentType, ComponentSpec } from "@/models/componentSpec";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { ThunderMenu } from "@/routes/v2/pages/Editor/components/ArgumentRow/components/ThunderMenu/ThunderMenu";
 import type { AggregatedArgument } from "@/routes/v2/pages/Editor/components/ContextPanel/components/MultiSelectionDetails/utils";
 import { useIOActions } from "@/routes/v2/pages/Editor/store/actions/useIOActions";
@@ -21,6 +22,7 @@ export const BatchArgumentRow = observer(function BatchArgumentRow({
   aggArg,
   spec,
 }: BatchArgumentRowProps) {
+  const { track } = useAnalytics();
   const { undo } = useEditorSession();
   const { createInputAndConnect } = useIOActions();
   const [editing, setEditing] = useState(false);
@@ -42,6 +44,9 @@ export const BatchArgumentRow = observer(function BatchArgumentRow({
   }, [editing]);
 
   const handleClick = () => {
+    track(
+      "v2.pipeline_editor.context_panel.multi_selection.batch_argument.edit_started",
+    );
     setEditing(true);
   };
 
@@ -80,6 +85,12 @@ export const BatchArgumentRow = observer(function BatchArgumentRow({
         }
       }
     });
+    track(
+      "v2.pipeline_editor.context_panel.multi_selection.batch_argument.updated",
+      {
+        task_count: aggArg.taskIds.length,
+      },
+    );
   };
 
   const handleResetToDefault = () => {
@@ -90,6 +101,10 @@ export const BatchArgumentRow = observer(function BatchArgumentRow({
       }
     });
     setInputValue(defaultVal);
+    track(
+      "v2.pipeline_editor.context_panel.multi_selection.batch_argument.reset_to_default",
+      { task_count: aggArg.taskIds.length },
+    );
   };
 
   const handleUnset = () => {
@@ -104,6 +119,12 @@ export const BatchArgumentRow = observer(function BatchArgumentRow({
       }
     });
     setInputValue("");
+    track(
+      "v2.pipeline_editor.context_panel.multi_selection.batch_argument.unset",
+      {
+        task_count: aggArg.taskIds.length,
+      },
+    );
   };
 
   const handleSelectDynamicData = (value: DynamicDataArgument) => {
@@ -115,6 +136,10 @@ export const BatchArgumentRow = observer(function BatchArgumentRow({
       }
     });
     setInputValue("");
+    track(
+      "v2.pipeline_editor.context_panel.multi_selection.batch_argument.dynamic_data_set",
+      { task_count: aggArg.taskIds.length },
+    );
   };
 
   const handleQuickConnect = (
@@ -130,11 +155,19 @@ export const BatchArgumentRow = observer(function BatchArgumentRow({
       }
     });
     setInputValue("");
+    track(
+      "v2.pipeline_editor.context_panel.multi_selection.batch_argument.quick_connect",
+      { task_count: aggArg.taskIds.length },
+    );
   };
 
   const handleCreateInputAndConnect = () => {
     createInputAndConnect(spec, aggArg.taskIds, aggArg.name, aggArg.type);
     setInputValue("");
+    track(
+      "v2.pipeline_editor.context_panel.multi_selection.batch_argument.create_input_and_connect",
+      { task_count: aggArg.taskIds.length },
+    );
   };
 
   return (

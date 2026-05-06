@@ -6,17 +6,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
+import { tracking } from "@/utils/tracking";
 
 interface CreateSubgraphFormProps {
   selectedTaskCount: number;
   onSubmit: (name: string) => void;
   autoFocus?: boolean;
+  submitTrackingAction?: string;
 }
 
 export function CreateSubgraphForm({
   selectedTaskCount,
   onSubmit,
   autoFocus,
+  submitTrackingAction,
 }: CreateSubgraphFormProps) {
   const defaultName = `Subgraph (${selectedTaskCount} tasks)`;
   const [name, setName] = useState(defaultName);
@@ -54,6 +57,7 @@ export function CreateSubgraphForm({
           disabled={!name.trim()}
           className="w-full gap-1.5"
           size="sm"
+          {...(submitTrackingAction ? tracking(submitTrackingAction) : {})}
         >
           <Icon name="Layers" size="sm" />
           Create Subgraph
