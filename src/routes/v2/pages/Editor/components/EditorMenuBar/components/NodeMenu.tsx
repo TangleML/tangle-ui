@@ -20,11 +20,13 @@ import {
 import { Icon } from "@/components/ui/icon";
 import useToastNotification from "@/hooks/useToastNotification";
 import type { ComponentSpec } from "@/models/componentSpec";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskActions";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButton";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { getErrorMessage } from "@/utils/string";
+import { tracking } from "@/utils/tracking";
 
 function findEntityAnnotations(spec: ComponentSpec, entityId: string) {
   for (const t of spec.tasks) if (t.$id === entityId) return t.annotations;
@@ -34,6 +36,7 @@ function findEntityAnnotations(spec: ComponentSpec, entityId: string) {
 }
 
 export const NodeMenu = observer(function NodeMenu() {
+  const { track } = useAnalytics();
   const { editor, navigation } = useSharedStores();
   const { undo } = useEditorSession();
   const spec = navigation.activeSpec;
@@ -57,6 +60,7 @@ export const NodeMenu = observer(function NodeMenu() {
 
   const handleDuplicate = () => {
     if (!task) return;
+    track("v2.pipeline_editor.node_menu.duplicate_task.click");
     const position = task.annotations.get("editor.position") ?? {
       x: 0,
       y: 0,
@@ -70,6 +74,7 @@ export const NodeMenu = observer(function NodeMenu() {
   };
 
   const handleDelete = () => {
+    track("v2.pipeline_editor.node_menu.delete_task.click");
     try {
       deleteTask(spec, entityId);
       editor.clearSelection();
@@ -80,6 +85,7 @@ export const NodeMenu = observer(function NodeMenu() {
   };
 
   const handleUnpack = () => {
+    track("v2.pipeline_editor.node_menu.unpack_subgraph.click");
     try {
       unpackSubgraphTask(spec, entityId);
       notify("Subgraph unpacked", "success");
@@ -91,6 +97,9 @@ export const NodeMenu = observer(function NodeMenu() {
   const handleZIndex = (
     operation: "front" | "back" | "forward" | "backward",
   ) => {
+    track("v2.pipeline_editor.node_menu.z_index.click", {
+      z_index_operation: operation,
+    });
     const nodes = getNodes();
     const currentNode = nodes.find((n) => n.id === entityId);
     if (!currentNode) return;
@@ -119,7 +128,9 @@ export const NodeMenu = observer(function NodeMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <MenuTriggerButton>Node</MenuTriggerButton>
+        <MenuTriggerButton {...tracking("v2.pipeline_editor.node_menu")}>
+          Node
+        </MenuTriggerButton>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" sideOffset={2}>
         {isTask && (

@@ -9,12 +9,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/typography";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButton";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { tracking } from "@/utils/tracking";
 
 import { triggerSubmitRun, triggerSubmitWithArguments } from "./QuickRunButton";
 
 export const RunsMenu = observer(function RunsMenu() {
+  const { track } = useAnalytics();
   const { navigation } = useSharedStores();
   const rootSpec = navigation.rootSpec;
   const allIssues = rootSpec?.allValidationIssues ?? [];
@@ -24,15 +27,26 @@ export const RunsMenu = observer(function RunsMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <MenuTriggerButton>Runs</MenuTriggerButton>
+        <MenuTriggerButton {...tracking("v2.pipeline_editor.runs_menu")}>
+          Runs
+        </MenuTriggerButton>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" sideOffset={2}>
-        <DropdownMenuItem onSelect={triggerSubmitRun} disabled={hasErrors}>
+        <DropdownMenuItem
+          onSelect={() => {
+            track("v2.pipeline_editor.runs_menu.submit_run.click");
+            triggerSubmitRun();
+          }}
+          disabled={hasErrors}
+        >
           <Icon name="Play" size="sm" />
           Submit Run
         </DropdownMenuItem>
         <DropdownMenuItem
-          onSelect={triggerSubmitWithArguments}
+          onSelect={() => {
+            track("v2.pipeline_editor.runs_menu.submit_with_arguments.click");
+            triggerSubmitWithArguments();
+          }}
           disabled={hasErrors}
         >
           <Icon name="Split" size="sm" className="rotate-90" />

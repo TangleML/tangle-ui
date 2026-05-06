@@ -15,16 +15,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { APP_ROUTES } from "@/routes/router";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButton";
 import { MovePipelineDialog } from "@/routes/v2/shared/components/MovePipelineDialog";
 import { ShortcutBadge } from "@/routes/v2/shared/components/ShortcutBadge";
+import { tracking } from "@/utils/tracking";
 
 import { OpenPipelineDialog } from "./OpenPipelineDialog";
 import { useFileMenuState } from "./useFileMenuState";
 
 export function FileMenu() {
+  const { track } = useAnalytics();
   const {
     importTriggerRef,
     openDialogOpen,
@@ -57,10 +60,17 @@ export function FileMenu() {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <MenuTriggerButton>File</MenuTriggerButton>
+          <MenuTriggerButton {...tracking("v2.pipeline_editor.file_menu")}>
+            File
+          </MenuTriggerButton>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" sideOffset={2}>
-          <DropdownMenuItem onClick={() => setOpenDialogOpen(true)}>
+          <DropdownMenuItem
+            onClick={() => {
+              track("v2.pipeline_editor.file_menu.open.click");
+              setOpenDialogOpen(true);
+            }}
+          >
             <Icon name="FolderOpen" size="sm" />
             Open
             <DropdownMenuShortcut>
@@ -68,35 +78,70 @@ export function FileMenu() {
             </DropdownMenuShortcut>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleSave}>
+          <DropdownMenuItem
+            onClick={() => {
+              track("v2.pipeline_editor.file_menu.save.click");
+              void handleSave();
+            }}
+          >
             <Icon name="Save" size="sm" />
             Save
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setSaveAsDialogOpen(true)}>
+          <DropdownMenuItem
+            onClick={() => {
+              track("v2.pipeline_editor.file_menu.save_as.click");
+              setSaveAsDialogOpen(true);
+            }}
+          >
             <Icon name="SaveAll" size="sm" />
             Save as
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setRenameDialogOpen(true)}>
+          <DropdownMenuItem
+            onClick={() => {
+              track("v2.pipeline_editor.file_menu.rename.click");
+              setRenameDialogOpen(true);
+            }}
+          >
             <Icon name="Pencil" size="sm" />
             Rename
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleNewPipeline}>
+          <DropdownMenuItem
+            onClick={() => {
+              track("v2.pipeline_editor.file_menu.new_pipeline.click");
+              void handleNewPipeline();
+            }}
+          >
             <Icon name="Plus" size="sm" />
             New pipeline
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setImportOpen(true)}>
+          <DropdownMenuItem
+            onClick={() => {
+              track("v2.pipeline_editor.file_menu.import.click");
+              setImportOpen(true);
+            }}
+          >
             <Icon name="Upload" size="sm" />
             Import
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleExport}>
+          <DropdownMenuItem
+            onClick={() => {
+              track("v2.pipeline_editor.file_menu.export.click");
+              void handleExport();
+            }}
+          >
             <Icon name="FileDown" size="sm" />
             Export
           </DropdownMenuItem>
           {canMove && (
             <>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setMoveDialogOpen(true)}>
+              <DropdownMenuItem
+                onClick={() => {
+                  track("v2.pipeline_editor.file_menu.move_to_folder.click");
+                  setMoveDialogOpen(true);
+                }}
+              >
                 <Icon name="Folder" size="sm" />
                 Move to folder
               </DropdownMenuItem>
@@ -104,7 +149,10 @@ export function FileMenu() {
           )}
           <DropdownMenuSeparator />
           <DropdownMenuItem
-            onClick={() => setDeleteDialogOpen(true)}
+            onClick={() => {
+              track("v2.pipeline_editor.file_menu.delete_pipeline.click");
+              setDeleteDialogOpen(true);
+            }}
             className="text-destructive focus:text-destructive"
           >
             <Icon name="Trash2" size="sm" />

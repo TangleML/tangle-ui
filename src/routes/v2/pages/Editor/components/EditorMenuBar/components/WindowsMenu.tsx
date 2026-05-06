@@ -12,27 +12,35 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButton";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import {
   VIEW_PRESETS,
   type ViewPreset,
 } from "@/routes/v2/shared/windows/viewPresets";
+import { tracking } from "@/utils/tracking";
 
 export const WindowsMenu = observer(function WindowsMenu() {
+  const { track } = useAnalytics();
   const { windows } = useSharedStores();
   const sortedWindows = [...windows.getAllWindows()].sort((a, b) =>
     a.title.localeCompare(b.title),
   );
 
   const applyPreset = (preset: ViewPreset) => {
+    track("v2.pipeline_editor.windows_menu.view_preset.click", {
+      preset_label: preset.label,
+    });
     windows.applyViewPreset(preset);
   };
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <MenuTriggerButton>Windows</MenuTriggerButton>
+        <MenuTriggerButton {...tracking("v2.pipeline_editor.windows_menu")}>
+          Windows
+        </MenuTriggerButton>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" sideOffset={2}>
         {sortedWindows.map((win) => (
@@ -41,6 +49,13 @@ export const WindowsMenu = observer(function WindowsMenu() {
             checked={win.state !== "hidden"}
             onSelect={(e) => e.preventDefault()}
             onCheckedChange={(checked) => {
+              track(
+                "v2.pipeline_editor.windows_menu.window_visibility.toggle",
+                {
+                  window_id: win.id,
+                  visible: checked,
+                },
+              );
               if (checked) {
                 win.restore();
               } else {
