@@ -13,6 +13,7 @@ import { ShortcutBadge } from "@/routes/v2/shared/components/ShortcutBadge";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { tracking } from "@/utils/tracking";
 
+import { AnalyticsDebugTap } from "./AnalyticsDebugTap";
 import { getSelectedInfo, getSpecStats, getSpecYaml } from "./debugPanel.utils";
 import { PressedKeysList } from "./PressedKeysList";
 import { StatGroup, StatItem } from "./StatComponents";
@@ -51,6 +52,9 @@ const DebugPanelContent = observer(function DebugPanelContent() {
           {...tracking("v2.pipeline_editor.debug_panel.tab_yaml")}
         >
           YAML
+        </TabsTrigger>
+        <TabsTrigger value="analytics" className="text-xs!">
+          Analytics
         </TabsTrigger>
       </TabsList>
 
@@ -122,6 +126,10 @@ const DebugPanelContent = observer(function DebugPanelContent() {
         <div className="m-2 h-full rounded-md overflow-hidden bg-gray-50 border border-gray-200">
           <CodeSyntaxHighlighter code={specYaml} language="yaml" />
         </div>
+      </TabsContent>
+
+      <TabsContent value="analytics" className="flex-1 min-h-0 flex flex-col">
+        <AnalyticsDebugTap />
       </TabsContent>
     </Tabs>
   );
