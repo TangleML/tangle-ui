@@ -2,6 +2,7 @@ import { type Node, type NodeProps, useReactFlow } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
 import type { MouseEvent, ReactElement } from "react";
 
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Card } from "@/components/ui/card";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
@@ -16,7 +17,11 @@ import type { TaskNodeData } from "@/routes/v2/shared/nodes/types";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import type { NodeOverlayEffect } from "@/routes/v2/shared/store/canvasOverlay.types";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
-import { EDITOR_COLLAPSED_ANNOTATION } from "@/utils/annotations";
+import { AggregatorOutputType } from "@/types/aggregator";
+import {
+  EDITOR_COLLAPSED_ANNOTATION,
+  isPipelineAggregator,
+} from "@/utils/annotations";
 import { ISO8601_DURATION_ZERO_DAYS } from "@/utils/constants";
 
 import { TaskNodeCard } from "./TaskNodeCard";
@@ -55,6 +60,9 @@ export interface TaskNodeViewProps {
   cacheDisabled: boolean;
   digest?: string;
   inputDisplayValues: Record<string, string | undefined>;
+  isAggregator: boolean;
+  outputType: AggregatorOutputType;
+  onOutputTypeChange: (value: AggregatorOutputType) => void;
   onNodeClick: (event: React.MouseEvent) => void;
   onInputClick: (inputName: string, event: React.MouseEvent) => void;
   onOutputClick: (outputName: string, event: React.MouseEvent) => void;
@@ -186,6 +194,14 @@ function TaskNodeNotFound({ entityId }: { entityId: string }) {
   );
 }
 
+function resolveAggregatorOutputType(task: Task): AggregatorOutputType {
+  const value = task.arguments.find((a) => a.name === "output_type")?.value;
+  const allowed = Object.values(AggregatorOutputType) as string[];
+  return typeof value === "string" && allowed.includes(value)
+    ? (value as AggregatorOutputType)
+    : AggregatorOutputType.JsonArray;
+}
+
 export const TaskNode = observer(function TaskNode({
   id,
   data,
@@ -195,6 +211,7 @@ export const TaskNode = observer(function TaskNode({
   const { editor, canvasOverlay } = useSharedStores();
   const { getEdges, setEdges } = useReactFlow();
   const showContent = useIsDetailedView();
+  const inputAggregatorEnabled = useFlagValue("input-aggregator");
 
   const spec = useSpec();
   const task = spec?.tasks.find((t) => t.$id === entityId);
@@ -208,6 +225,9 @@ export const TaskNode = observer(function TaskNode({
     getComponentSpecDefaults(componentSpec);
   const isManuallyCollapsed =
     task.annotations.get(EDITOR_COLLAPSED_ANNOTATION) === "true";
+  const isAggregator =
+    inputAggregatorEnabled &&
+    isPipelineAggregator(componentSpec?.metadata?.annotations);
 
   const handleClick = (event: MouseEvent) => {
     editor.selectNode(id, "task", { shiftKey: event.shiftKey, entityId });
@@ -242,6 +262,10 @@ export const TaskNode = observer(function TaskNode({
 
   const connectedPorts = resolveConnectedPortNames(entityId, spec);
 
+  const handleOutputTypeChange = (value: AggregatorOutputType) => {
+    task.setArgument("output_type", value);
+  };
+
   const viewProps: TaskNodeViewProps = {
     id,
     entityId,
@@ -260,6 +284,9 @@ export const TaskNode = observer(function TaskNode({
     cacheDisabled:
       task.executionOptions?.cachingStrategy?.maxCacheStaleness ===
       ISO8601_DURATION_ZERO_DAYS,
+    isAggregator,
+    outputType: resolveAggregatorOutputType(task),
+    onOutputTypeChange: handleOutputTypeChange,
     digest: task.componentRef.digest,
     inputDisplayValues: resolveInputDisplayValues(task, entityId, spec),
     onNodeClick: handleClick,

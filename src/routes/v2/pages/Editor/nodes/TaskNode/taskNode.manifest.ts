@@ -2,6 +2,7 @@ import type { ComponentReference } from "@/models/componentSpec";
 import { Annotations } from "@/models/componentSpec/annotations";
 import { Task } from "@/models/componentSpec/entities/task";
 import { addTask } from "@/routes/v2/pages/Editor/store/actions";
+import { resetAggregatorOnClone } from "@/routes/v2/pages/Editor/store/actions/aggregator.actions";
 import { generateUniqueTaskName } from "@/routes/v2/pages/Editor/store/nameUtils";
 import {
   isTaskSnapshot,
@@ -53,15 +54,19 @@ export const taskManifest: NodeTypeManifest = {
         { key: "editor.position", value: position },
       ]);
 
+      const clonedComponentRef = deepClone(snapshot.data.componentRef);
+      const clonedArguments = deepClone(snapshot.data.arguments);
+      const reset = resetAggregatorOnClone(clonedComponentRef, clonedArguments);
+
       const task = new Task({
         $id: idGen.next("task"),
         name: uniqueName,
-        componentRef: deepClone(snapshot.data.componentRef),
+        componentRef: reset?.componentRef ?? clonedComponentRef,
         isEnabled: snapshot.data.isEnabled
           ? deepClone(snapshot.data.isEnabled)
           : undefined,
         annotations,
-        arguments: deepClone(snapshot.data.arguments),
+        arguments: reset?.arguments ?? clonedArguments,
         executionOptions: snapshot.data.executionOptions
           ? deepClone(snapshot.data.executionOptions)
           : undefined,

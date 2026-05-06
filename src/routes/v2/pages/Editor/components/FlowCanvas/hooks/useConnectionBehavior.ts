@@ -17,10 +17,16 @@ import {
   connectNodes,
   createConnectedIONode,
 } from "@/routes/v2/pages/Editor/store/actions";
+import {
+  createConnectedAggregatorInputNode,
+  isAggregatorTask,
+  tryConnectAggregatorAddInput,
+} from "@/routes/v2/pages/Editor/store/actions/aggregator.actions";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
 import { CMDALT } from "@/routes/v2/shared/shortcuts/keys";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { AGGREGATOR_ADD_INPUT_HANDLE_ID } from "@/utils/aggregatorInputs";
 
 type ValidHandle = NonNullable<FinalConnectionState["fromHandle"]> & {
   id: string;
@@ -79,6 +85,15 @@ function handleConnectEnd(
     y: cursorFlowPos.y + GHOST_OFFSET_Y,
   };
 
+  if (
+    ioType === "input" &&
+    fromHandle.id === AGGREGATOR_ADD_INPUT_HANDLE_ID &&
+    isAggregatorTask(spec.tasks.find((t) => t.$id === fromHandle.nodeId))
+  ) {
+    createConnectedAggregatorInputNode(undo, spec, fromHandle.nodeId, position);
+    return;
+  }
+
   createConnectedIONode(
     undo,
     spec,
@@ -107,12 +122,16 @@ export function useConnectionBehavior(
       return;
     if (connection.source === connection.target) return;
 
-    connectNodes(undo, spec, {
+    const connectionInfo = {
       sourceNodeId: connection.source,
       sourceHandleId: connection.sourceHandle,
       targetNodeId: connection.target,
       targetHandleId: connection.targetHandle,
-    });
+    };
+
+    if (tryConnectAggregatorAddInput(undo, spec, connectionInfo)) return;
+
+    connectNodes(undo, spec, connectionInfo);
   };
 
   const onConnectEnd = (

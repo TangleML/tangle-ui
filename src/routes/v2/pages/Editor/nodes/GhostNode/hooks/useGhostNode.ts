@@ -8,6 +8,11 @@ import {
   GHOST_NODE_ID,
   type GhostNodeData,
 } from "@/routes/v2/pages/Editor/nodes/GhostNode/components/GhostNode";
+import {
+  AGGREGATOR_ADD_INPUT_HANDLE_ID,
+  getNextAggregatorInputName,
+} from "@/utils/aggregatorInputs";
+import { isPipelineAggregator } from "@/utils/annotations";
 
 interface UseGhostNodeParams {
   active: boolean;
@@ -52,11 +57,21 @@ function buildGhostNode(
     : "output";
 
   const handleId = fromHandle.id ?? "";
-  const portName = extractPortName(handleId, ioType);
-
   const task = spec.tasks.find((t) => t.$id === fromHandle.nodeId);
   const taskComponentSpec = task?.resolvedComponentSpec;
-  const dataType = lookupPortType(taskComponentSpec, portName, ioType);
+
+  const isAggregatorAddHandle =
+    isInputConnection &&
+    handleId === AGGREGATOR_ADD_INPUT_HANDLE_ID &&
+    isPipelineAggregator(taskComponentSpec?.metadata?.annotations);
+
+  const portName = isAggregatorAddHandle
+    ? getNextAggregatorInputName(taskComponentSpec?.inputs ?? [])
+    : extractPortName(handleId, ioType);
+
+  const dataType = isAggregatorAddHandle
+    ? undefined
+    : lookupPortType(taskComponentSpec, portName, ioType);
 
   return {
     id: GHOST_NODE_ID,
