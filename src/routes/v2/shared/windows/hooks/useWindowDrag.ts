@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { useWindowContext } from "@/routes/v2/shared/windows/ContentWindowStateContext";
 import { detectSnapPreview } from "@/routes/v2/shared/windows/snapUtils";
@@ -46,6 +47,7 @@ export function useWindowDrag({
 }: UseWindowDragOptions): UseWindowDragReturn {
   const { model } = useWindowContext();
   const { windows } = useSharedStores();
+  const { track } = useAnalytics();
 
   const [isDragging, setIsDragging] = useState(false);
   const [snapPreview, setSnapPreview] = useState<SnapPreviewType | null>(null);
@@ -59,6 +61,7 @@ export function useWindowDrag({
   const phaseRef = useRef<DragPhase>({ type: "idle" });
   const dragOffset = useRef<Position>({ x: 0, y: 0 });
   const snapPreviewRef = useRef<SnapPreviewType | null>(null);
+  const dragUndockTrackedRef = useRef(false);
   /** Standard DOM ref for the panel element. */
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -83,6 +86,13 @@ export function useWindowDrag({
 
     raiseZIndex();
     setIsDragging(true);
+    dragUndockTrackedRef.current = false;
+
+    const trackDragUndockOnce = () => {
+      if (dragUndockTrackedRef.current) return;
+      dragUndockTrackedRef.current = true;
+      track("v2.shared_window.drag_undock_completed", {});
+    };
 
     if (docked) {
       const rect = panelRef.current?.getBoundingClientRect();
@@ -120,6 +130,7 @@ export function useWindowDrag({
         if (dx <= UNDOCK_THRESHOLD && dy <= UNDOCK_THRESHOLD) return;
 
         model.undock();
+        trackDragUndockOnce();
         phaseRef.current = { type: "free" };
 
         const halfWidth = model.size.width / 2;
@@ -135,6 +146,7 @@ export function useWindowDrag({
 
       if (model.isDocked) {
         model.undock();
+        trackDragUndockOnce();
       }
 
       const preview = detectSnapPreview({
@@ -153,12 +165,19 @@ export function useWindowDrag({
     const handleMouseUp = () => {
       const currentPreview = snapPreviewRef.current;
 
-      if (currentPreview) {
-        if (currentPreview.type === "edge") {
-          model.dock(currentPreview.side);
-        } else if (currentPreview.type === "dock-insert") {
-          model.dock(currentPreview.side, currentPreview.insertIndex);
-        }
+      if (currentPreview?.type === "edge") {
+        model.dock(currentPreview.side);
+        track("v2.shared_window.snap_dock_completed", {
+          snap_kind: "edge",
+          dock_side: currentPreview.side,
+        });
+      } else if (currentPreview?.type === "dock-insert") {
+        model.dock(currentPreview.side, currentPreview.insertIndex);
+        track("v2.shared_window.snap_dock_completed", {
+          snap_kind: "dock_insert",
+          dock_side: currentPreview.side,
+          insert_index: currentPreview.insertIndex,
+        });
       }
 
       if (!model.isAtFront) {
