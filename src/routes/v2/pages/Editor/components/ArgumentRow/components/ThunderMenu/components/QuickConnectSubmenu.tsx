@@ -14,6 +14,7 @@ import {
   type QuickConnectGroup,
   typeSpecToString,
 } from "@/routes/v2/pages/Editor/components/ArgumentRow/components/ThunderMenu/thunderMenu.utils";
+import { tracking } from "@/utils/tracking";
 
 interface QuickConnectSubmenuProps {
   groups: QuickConnectGroup[];
@@ -52,6 +53,9 @@ export function QuickConnectSubmenu({
               return (
                 <DropdownMenuItem
                   key={`${port.entityId}::${port.portName}`}
+                  {...tracking(
+                    "v2.pipeline_editor.task_arguments.thunder_menu.quick_connect",
+                  )}
                   onClick={() => onQuickConnect(port.entityId, port.portName)}
                 >
                   <Text size="xs" className="truncate flex-1">

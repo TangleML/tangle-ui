@@ -14,6 +14,7 @@ import {
 import { Text } from "@/components/ui/typography";
 import type { ComponentSpec, InputSpec, Task } from "@/models/componentSpec";
 import type { TypeSpecType } from "@/models/componentSpec/entities/types";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 
 import { useArgumentActions } from "./ArgumentRow/useArgumentActions";
 
@@ -62,6 +63,7 @@ export function ArgumentCodeEditor({
   task,
   spec,
 }: ArgumentCodeEditorProps) {
+  const { track } = useAnalytics();
   const { setArgument, removeArgument } = useArgumentActions();
   const autoLanguage = getLanguageForType(inputSpec.type);
   const [language, setLanguage] = useState(autoLanguage);
@@ -111,7 +113,15 @@ export function ArgumentCodeEditor({
         <Text size="xs" weight="semibold" className="text-gray-700">
           {inputSpec.name}
         </Text>
-        <Select value={language} onValueChange={setLanguage}>
+        <Select
+          value={language}
+          onValueChange={(next) => {
+            setLanguage(next);
+            track(
+              "v2.pipeline_editor.task_arguments.code_editor.language.changed",
+            );
+          }}
+        >
           <SelectTrigger className="h-6 text-xs px-2 py-0 min-w-25">
             <SelectValue />
           </SelectTrigger>

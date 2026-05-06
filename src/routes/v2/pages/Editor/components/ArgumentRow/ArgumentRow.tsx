@@ -11,6 +11,7 @@ import type {
   InputSpec,
   Task,
 } from "@/models/componentSpec";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useIOActions } from "@/routes/v2/pages/Editor/store/actions/useIOActions";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import type { DynamicDataArgument } from "@/utils/componentSpec";
@@ -57,6 +58,7 @@ export const ArgumentRow = observer(function ArgumentRow({
   externalEditor,
   onSelectionChanged,
 }: ArgumentRowProps) {
+  const { track } = useAnalytics();
   const { editor } = useSharedStores();
   const {
     setArgument,
@@ -94,6 +96,7 @@ export const ArgumentRow = observer(function ArgumentRow({
 
   const handleClick = () => {
     if (isDynamic) return;
+    track("v2.pipeline_editor.task_arguments.argument_row.edit_started");
     onSelectionChanged?.(inputSpec.name);
     if (externalEditor) {
       editor.setFocusedArgument(inputSpec.name);
@@ -113,8 +116,10 @@ export const ArgumentRow = observer(function ArgumentRow({
     const trimmed = value.trim();
     const action = resolveArgumentChange(trimmed, currentValue, isSet, isBound);
     if (action === "remove") {
+      track("v2.pipeline_editor.task_arguments.argument_row.value_removed");
       removeArgument(task, inputSpec.name);
     } else if (action === "set") {
+      track("v2.pipeline_editor.task_arguments.argument_row.value_updated");
       setArgument(spec, task.$id, inputSpec.name, trimmed);
     }
     handleBlur();
