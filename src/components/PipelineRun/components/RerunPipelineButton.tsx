@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { useCallback } from "react";
+import { type ComponentPropsWithoutRef, useCallback } from "react";
 
 import { isAuthorizationRequired } from "@/components/shared/Authentication/helpers";
 import { useAuthLocalStorage } from "@/components/shared/Authentication/useAuthLocalStorage";
@@ -21,11 +21,15 @@ import { submitPipelineRun } from "@/utils/submitPipeline";
 type RerunPipelineButtonProps = {
   componentSpec: ComponentSpec;
   showLabel?: boolean;
-};
+} & Omit<
+  ComponentPropsWithoutRef<typeof TooltipButton>,
+  "onClick" | "tooltip" | "variant" | "children"
+>;
 
 export const RerunPipelineButton = ({
   componentSpec,
   showLabel,
+  ...rest
 }: RerunPipelineButtonProps) => {
   const runNameOverride = useFlagValue("templatized-pipeline-run-name");
   const { backendUrl } = useBackend();
@@ -94,6 +98,7 @@ export const RerunPipelineButton = ({
       tooltip="Rerun pipeline"
       disabled={isPending}
       data-testid="rerun-pipeline-button"
+      {...rest}
     >
       <Icon name="RefreshCcw" />
       {showLabel && "Rerun"}

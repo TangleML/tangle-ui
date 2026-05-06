@@ -15,6 +15,7 @@ import { Icon } from "@/components/ui/icon";
 import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButton";
 import { ShortcutBadge } from "@/routes/v2/shared/components/ShortcutBadge";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { tracking } from "@/utils/tracking";
 
 const LAYOUT_ALGORITHMS: { key: LayoutAlgorithm; label: string }[] = [
   { key: "sugiyama", label: "Sugiyama" },
@@ -30,11 +31,16 @@ export const RunViewViewMenu = observer(function RunViewViewMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <MenuTriggerButton>View</MenuTriggerButton>
+        <MenuTriggerButton {...tracking("v2.run_view.menu_bar.view_menu")}>
+          View
+        </MenuTriggerButton>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" sideOffset={2}>
         <DropdownMenuSub>
-          <DropdownMenuSubTrigger disabled={!autoLayoutShortcut}>
+          <DropdownMenuSubTrigger
+            disabled={!autoLayoutShortcut}
+            {...tracking("v2.run_view.menu_bar.auto_layout_submenu")}
+          >
             <Icon name="LayoutDashboard" size="sm" />
             Auto-layout
           </DropdownMenuSubTrigger>
@@ -47,6 +53,9 @@ export const RunViewViewMenu = observer(function RunViewViewMenu() {
                     algorithm: algo.key,
                   })
                 }
+                {...tracking("v2.run_view.menu_bar.auto_layout", {
+                  selected_layout: algo.key,
+                })}
               >
                 {algo.label}
                 {algo.key === "sugiyama" && (

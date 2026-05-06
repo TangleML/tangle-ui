@@ -120,7 +120,10 @@ function RunDetailsContentLoaded({
 
   return (
     <BlockStack gap="6" className="p-2 h-full">
-      <CopyText className="text-lg font-semibold">
+      <CopyText
+        className="text-lg font-semibold"
+        copyTrackingAction="v2.run_view.context_panel.run_details_pipeline_title_copy"
+      >
         {spec.name ?? "Unnamed Pipeline"}
       </CopyText>
 

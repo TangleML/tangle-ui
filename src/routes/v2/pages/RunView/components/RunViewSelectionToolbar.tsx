@@ -9,6 +9,7 @@ import type { ComponentSpec } from "@/models/componentSpec";
 import { copyNodesToClipboard } from "@/routes/v2/shared/clipboard/copyNodesToClipboard";
 import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { tracking } from "@/utils/tracking";
 
 export const RunViewSelectionToolbar = observer(
   function RunViewSelectionToolbar({ spec }: { spec: ComponentSpec | null }) {
@@ -45,6 +46,7 @@ export const RunViewSelectionToolbar = observer(
             className="gap-1.5 px-2"
             onClick={handleCopy}
             data-testid="runview-selection-copy"
+            {...tracking("v2.run_view.toolbar.selection_copy")}
           >
             <Icon name="ClipboardCopy" size="sm" />
             <Text size="xs" weight="semibold">
