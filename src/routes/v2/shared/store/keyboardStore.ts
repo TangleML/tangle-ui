@@ -20,7 +20,14 @@ interface ShortcutDefinition {
   allowInEditable?: boolean;
   // todo: add DOM element as a scope for the shortcut
   // todo: add enabled: boolean;
-  action: (event: KeyboardEvent, params?: ShortcutParams) => void;
+  /**
+   * Return `false` to allow the native event to propagate:
+   * the listener skips preventDefault so the
+   * browser / Radix portal handlers (e.g. dialog ESC) can run.
+   * The shortcut registry holds at most one handler per combo,
+   * so this is NOT a fallthrough to another shortcut.
+   */
+  action: (event: KeyboardEvent, params?: ShortcutParams) => void | false;
 }
 
 export class KeyboardStore {

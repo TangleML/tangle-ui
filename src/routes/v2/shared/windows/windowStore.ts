@@ -153,6 +153,16 @@ export class WindowStoreImpl implements WindowStoreRef {
     return this.windowOrder.map((id) => this.windows[id]);
   }
 
+  /** Top-most maximized window (last in z-order among maximized). */
+  getFrontMaximizedWindow(): WindowModel | undefined {
+    for (let i = this.windowOrder.length - 1; i >= 0; i--) {
+      const id = this.windowOrder[i];
+      const win = this.windows[id];
+      if (win?.isMaximized) return win;
+    }
+    return undefined;
+  }
+
   /** Close all windows linked to a specific entity */
   @action closeWindowsByLinkedEntity(entityId: string): void {
     const windowsToClose = this.windowOrder.filter(

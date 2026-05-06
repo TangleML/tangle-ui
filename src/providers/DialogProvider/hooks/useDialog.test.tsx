@@ -107,7 +107,10 @@ describe("useDialog", () => {
 
     expect(result.current).toHaveProperty("open");
     expect(result.current).toHaveProperty("close");
+    expect(result.current).toHaveProperty("cancel");
     expect(result.current).toHaveProperty("closeAll");
+    expect(result.current).toHaveProperty("stack");
+    expect(Array.isArray(result.current.stack)).toBe(true);
     expect(typeof result.current.open).toBe("function");
   });
 

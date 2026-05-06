@@ -1,5 +1,4 @@
 import type { Edge } from "@xyflow/react";
-import { useEffect } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 import {
@@ -7,7 +6,6 @@ import {
   toggleEdgeOnConduit,
 } from "@/routes/v2/pages/Editor/nodes/ConduitNode/conduits.actions";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
-import { ESCAPE } from "@/routes/v2/shared/shortcuts/keys";
 import type { EditorStore } from "@/routes/v2/shared/store/editorStore";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
@@ -61,7 +59,8 @@ function useConduitSelectionMode(
  * Encapsulates conduit-specific canvas behaviour:
  * - styles edges when a conduit is selected (assignment-mode highlighting)
  * - provides an `onEdgeClick` handler that toggles edge assignment
- * - registers an Escape-key shortcut that deselects the conduit
+ *
+ * ESC deselect for conduit is handled by `useEditorEscapeShortcut`.
  */
 export function useConduitEdgeMode(
   edges: Edge[],
@@ -72,24 +71,9 @@ export function useConduitEdgeMode(
     | ((event: React.MouseEvent, edge: { id: string }) => void)
     | undefined;
 } {
-  const { editor, keyboard } = useSharedStores();
+  const { editor } = useSharedStores();
   const { undo } = useEditorSession();
   const isConduitSelected = editor.selectedNodeType === "conduit";
-
-  useEffect(() => {
-    const unregister = keyboard.registerShortcut({
-      id: "conduit-escape",
-      keys: [ESCAPE],
-      label: "Deselect conduit",
-      action: () => {
-        if (editor.selectedNodeType === "conduit" && editor.selectedNodeId) {
-          editor.clearSelection();
-        }
-      },
-    });
-
-    return unregister;
-  }, [editor, keyboard, undo]);
 
   const styledEdges = useConduitSelectionMode(edges, spec, editor);
 
