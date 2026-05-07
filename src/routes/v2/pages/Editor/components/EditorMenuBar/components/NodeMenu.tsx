@@ -25,6 +25,7 @@ import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskAc
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButton";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { componentMetadata } from "@/utils/componentTracking";
 import { getErrorMessage } from "@/utils/string";
 import { tracking } from "@/utils/tracking";
 
@@ -36,13 +37,13 @@ function findEntityAnnotations(spec: ComponentSpec, entityId: string) {
 }
 
 export const NodeMenu = observer(function NodeMenu() {
-  const { track } = useAnalytics();
   const { editor, navigation } = useSharedStores();
   const { undo } = useEditorSession();
   const spec = navigation.activeSpec;
   const { deleteTask, duplicateSelectedNodes, unpackSubgraphTask } =
     useTaskActions();
   const notify = useToastNotification();
+  const { track } = useAnalytics();
   const { getNodes } = useReactFlow();
 
   const entityId = editor.selectedNodeId;
@@ -68,6 +69,9 @@ export const NodeMenu = observer(function NodeMenu() {
     try {
       duplicateSelectedNodes(spec, [{ id: entityId, type: "task", position }]);
       notify("Task duplicated", "success");
+      track("pipeline_editor.component.duplicated", {
+        ...componentMetadata(task.componentRef),
+      });
     } catch (error) {
       notify("Failed to duplicate task: " + getErrorMessage(error), "error");
     }
@@ -76,9 +80,13 @@ export const NodeMenu = observer(function NodeMenu() {
   const handleDelete = () => {
     track("v2.pipeline_editor.node_menu.delete_task.click");
     try {
+      const removedComponentRef = task?.componentRef;
       deleteTask(spec, entityId);
       editor.clearSelection();
       editor.clearMultiSelection();
+      track("pipeline_editor.component.removed", {
+        ...componentMetadata(removedComponentRef),
+      });
     } catch (error) {
       notify("Failed to delete task: " + getErrorMessage(error), "error");
     }

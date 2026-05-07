@@ -1,5 +1,7 @@
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { type TaskNodeContextType } from "@/providers/TaskNodeProvider";
 import type { HydratedComponentReference } from "@/utils/componentSpec";
+import { componentMetadata } from "@/utils/componentTracking";
 import { isSubgraph } from "@/utils/subgraphUtils";
 import { tracking } from "@/utils/tracking";
 
@@ -32,6 +34,7 @@ const TaskActions = ({
   const { taskId, nodeId, taskSpec, state, callbacks } = taskNode || {};
   const { onDuplicate, onUpgrade, onDelete } = callbacks || {};
   const isCustomComponent = state?.isCustomComponent;
+  const { track } = useAnalytics();
 
   const isSubgraphNode = taskSpec ? isSubgraph(taskSpec) : false;
 
@@ -59,10 +62,24 @@ const TaskActions = ({
   // Canvas Actions
   const linkTask = readOnly && nodeId && <LinkNodeButton nodeId={nodeId} />;
   const duplicateTask = onDuplicate && !readOnly && (
-    <DuplicateTaskButton onDuplicate={onDuplicate} />
+    <DuplicateTaskButton
+      onDuplicate={() => {
+        onDuplicate();
+        track("pipeline_editor.component.duplicated", {
+          ...componentMetadata(componentRef),
+        });
+      }}
+    />
   );
   const upgradeTask = onUpgrade && !isCustomComponent && !readOnly && (
-    <UpgradeTaskButton onUpgrade={onUpgrade} />
+    <UpgradeTaskButton
+      onUpgrade={() => {
+        onUpgrade();
+        track("pipeline_editor.component.upgraded", {
+          ...componentMetadata(componentRef),
+        });
+      }}
+    />
   );
   const navigateToSubgraph = isSubgraphNode && taskId && !readOnly && (
     <NavigateToSubgraphButton taskId={taskId} />
@@ -71,7 +88,14 @@ const TaskActions = ({
     <UnpackSubgraphButton taskId={taskId} />
   );
   const deleteComponent = onDelete && !readOnly && (
-    <DeleteComponentButton onDelete={onDelete} />
+    <DeleteComponentButton
+      onDelete={() => {
+        onDelete();
+        track("pipeline_editor.component.removed", {
+          ...componentMetadata(componentRef),
+        });
+      }}
+    />
   );
 
   const actions = [

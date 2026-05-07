@@ -13,6 +13,7 @@ import {
   type RecentlyViewedItem,
   useRecentlyViewed,
 } from "@/hooks/useRecentlyViewed";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { APP_ROUTES } from "@/routes/router";
 import { formatRelativeTime } from "@/utils/date";
 import { tracking } from "@/utils/tracking";
@@ -99,29 +100,40 @@ const RecentlyViewedPreview = () => {
   );
 };
 
-const RecentComponentPreviewRow = ({ item }: { item: RecentlyViewedItem }) => (
-  <InlineStack gap="2" className="min-w-0 overflow-hidden">
-    <Link
-      to={APP_ROUTES.DASHBOARD_COMPONENTS}
-      search={{ component: item.id }}
-      {...tracking("homepage.recently_used_components.item")}
-      className="flex w-full items-center gap-3 px-4 py-3 hover:bg-muted/50 no-underline"
-    >
-      <TypePill type="component" />
-      <Tooltip>
-        <TooltipTrigger className="flex-1 min-w-0 overflow-hidden text-left">
-          <Text size="sm" className="truncate block">
-            {item.name}
-          </Text>
-        </TooltipTrigger>
-        <TooltipContent>{item.name}</TooltipContent>
-      </Tooltip>
-      <Text size="xs" className="text-muted-foreground shrink-0">
-        {formatRelativeTime(new Date(item.viewedAt))}
-      </Text>
-    </Link>
-  </InlineStack>
-);
+const RecentComponentPreviewRow = ({ item }: { item: RecentlyViewedItem }) => {
+  const { track } = useAnalytics();
+  return (
+    <InlineStack gap="2" className="min-w-0 overflow-hidden">
+      <Link
+        to={APP_ROUTES.DASHBOARD_COMPONENTS}
+        search={{ component: item.id }}
+        {...tracking("homepage.recently_used_components.item")}
+        onClick={() => {
+          track("component_library.row.click", {
+            component_id: item.id,
+            component_name: item.name,
+            component_source: "unknown",
+            surface: "homepage_recent",
+          });
+        }}
+        className="flex w-full items-center gap-3 px-4 py-3 hover:bg-muted/50 no-underline"
+      >
+        <TypePill type="component" />
+        <Tooltip>
+          <TooltipTrigger className="flex-1 min-w-0 overflow-hidden text-left">
+            <Text size="sm" className="truncate block">
+              {item.name}
+            </Text>
+          </TooltipTrigger>
+          <TooltipContent>{item.name}</TooltipContent>
+        </Tooltip>
+        <Text size="xs" className="text-muted-foreground shrink-0">
+          {formatRelativeTime(new Date(item.viewedAt))}
+        </Text>
+      </Link>
+    </InlineStack>
+  );
+};
 
 const RecentComponentsPreview = () => {
   const { recentlyViewed } = useRecentlyViewed();
