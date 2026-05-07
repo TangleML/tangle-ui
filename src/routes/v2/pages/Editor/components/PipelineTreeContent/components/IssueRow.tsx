@@ -1,4 +1,5 @@
 import { observer } from "mobx-react-lite";
+import type { KeyboardEvent, MouseEvent } from "react";
 
 import { Text } from "@/components/ui/typography";
 import type { ValidationIssue } from "@/models/componentSpec";
@@ -24,9 +25,22 @@ export const IssueRow = observer(function IssueRow({ issue }: IssueRowProps) {
   const severity: IssueRowSeverity =
     issue.severity === "error" ? "error" : "warning";
 
-  const handleClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleSelectIssue = () => {
     focusValidationIssue(issue);
+  };
+
+  const handleClick = (e: MouseEvent) => {
+    e.stopPropagation();
+    handleSelectIssue();
+  };
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key !== "Enter" && e.key !== " ") {
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    handleSelectIssue();
   };
 
   return (
@@ -34,9 +48,7 @@ export const IssueRow = observer(function IssueRow({ issue }: IssueRowProps) {
       role="button"
       tabIndex={0}
       onClick={handleClick}
-      onKeyDown={(e) =>
-        e.key === "Enter" && handleClick(e as unknown as React.MouseEvent)
-      }
+      onKeyDown={handleKeyDown}
       className={issueRowVariants({
         selected: isSelected,
         severity,
