@@ -45,6 +45,7 @@ export function deleteTask(
   spec: ComponentSpec,
   entityId: string,
 ): boolean {
+  if (!spec.tasks.some((t) => t.$id === entityId)) return false;
   return undo.withGroup("Delete task", () => spec.deleteTaskById(entityId));
 }
 
@@ -84,6 +85,22 @@ export async function pasteNodes(
   return clipboard.paste(spec, position);
 }
 
+/**
+ * Deletes nodes via manifests. Caller must wrap in `undo.withGroup` when
+ * batching with other operations (e.g. edge deletes in one shortcut).
+ */
+export function deleteSelectedNodesCore(
+  undo: UndoGroupable,
+  spec: ComponentSpec,
+  selectedNodes: SelectedNode[],
+  parentContext?: ParentContext | null,
+): void {
+  for (const node of selectedNodes) {
+    const manifest = editorRegistry.getByNodeId(spec, node.id);
+    manifest?.deleteNode(undo, spec, node.id, parentContext);
+  }
+}
+
 export function deleteSelectedNodes(
   undo: UndoGroupable,
   spec: ComponentSpec,
@@ -93,10 +110,7 @@ export function deleteSelectedNodes(
   if (selectedNodes.length === 0) return;
 
   undo.withGroup("Delete selected nodes", () => {
-    for (const node of selectedNodes) {
-      const manifest = editorRegistry.getByNodeId(spec, node.id);
-      manifest?.deleteNode(undo, spec, node.id, parentContext);
-    }
+    deleteSelectedNodesCore(undo, spec, selectedNodes, parentContext);
   });
 }
 
