@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import type { ComponentSpec, ValidationIssue } from "@/models/componentSpec";
-import { useValidationResolutionActions } from "@/routes/v2/pages/Editor/components/PipelineTreeContent/components/useValidationResolutionActions";
+import { useValidationResolutionActions } from "@/routes/v2/pages/Editor/components/IssueResolution/useValidationResolutionActions";
 import { tracking } from "@/utils/tracking";
 
 export function DuplicateNameResolution({

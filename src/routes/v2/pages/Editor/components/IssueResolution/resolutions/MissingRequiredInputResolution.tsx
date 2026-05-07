@@ -4,7 +4,7 @@ import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import type { ComponentSpec, ValidationIssue } from "@/models/componentSpec";
 import { ArgumentRow } from "@/routes/v2/pages/Editor/components/ArgumentRow/ArgumentRow";
-import { findTaskById } from "@/routes/v2/pages/Editor/components/PipelineTreeContent/components/validationResolution.utils";
+import { findTaskById } from "@/routes/v2/pages/Editor/components/IssueResolution/validationResolution.utils";
 
 import { InfoOnlyResolution } from "./InfoOnlyResolution";
 
