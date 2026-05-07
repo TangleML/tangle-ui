@@ -16,6 +16,7 @@ import { useIsDetailedView } from "@/routes/v2/shared/hooks/useIsDetailedView";
 import type { TaskNodeData } from "@/routes/v2/shared/nodes/types";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import type { NodeOverlayEffect } from "@/routes/v2/shared/store/canvasOverlay.types";
+import { isEditorVisualNodeSelected } from "@/routes/v2/shared/store/isEditorVisualNodeSelected";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { AggregatorOutputType } from "@/types/aggregator";
 import {
@@ -262,6 +263,8 @@ export const TaskNode = observer(function TaskNode({
 
   const connectedPorts = resolveConnectedPortNames(entityId, spec);
 
+  const isSelected = isEditorVisualNodeSelected(editor, id, !!selected);
+
   const handleOutputTypeChange = (value: AggregatorOutputType) => {
     task.setArgument("output_type", value);
   };
@@ -270,7 +273,7 @@ export const TaskNode = observer(function TaskNode({
     id,
     entityId,
     taskName: task.name,
-    selected: !!selected,
+    selected: isSelected,
     isHovered: editor.hoveredEntityId === entityId,
     isSubgraph: isTaskSubgraph(componentSpec),
     collapsed: isManuallyCollapsed,
