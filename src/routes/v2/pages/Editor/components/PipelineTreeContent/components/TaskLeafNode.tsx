@@ -61,7 +61,7 @@ export const TaskLeafNode = observer(function TaskLeafNode({
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         className={cn(
-          "flex items-start gap-1 py-1 text-slate-600 rounded-md cursor-pointer transition-colors hover:bg-slate-100",
+          "flex items-start gap-1 py-1 px-2 text-slate-600 rounded-md cursor-pointer transition-colors hover:bg-slate-100",
           hasErrors && "text-red-700",
         )}
       >
@@ -69,7 +69,6 @@ export const TaskLeafNode = observer(function TaskLeafNode({
           name={hasIssues ? "CircleAlert" : "Circle"}
           size="xs"
           className={cn(
-            "bg-white",
             "shrink-0 mt-0.5",
             hasErrors
               ? "text-red-400"
