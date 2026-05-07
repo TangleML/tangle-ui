@@ -75,6 +75,7 @@ export const RootNode = observer(function RootNode({
               <IssueRow
                 key={`${issue.type}-${issue.entityId ?? "graph"}-${index}`}
                 issue={issue}
+                issueNavigationPath={navigationPath}
               />
             ))}
           </BlockStack>

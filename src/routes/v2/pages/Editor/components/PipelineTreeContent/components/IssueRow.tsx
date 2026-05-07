@@ -17,17 +17,21 @@ import {
 
 interface IssueRowProps {
   issue: ValidationIssue;
+  issueNavigationPath: string[];
 }
 
-export const IssueRow = observer(function IssueRow({ issue }: IssueRowProps) {
+export const IssueRow = observer(function IssueRow({
+  issue,
+  issueNavigationPath,
+}: IssueRowProps) {
   const { editor } = useSharedStores();
-  const { focusValidationIssue } = useFocusActions();
+  const { focusIssueAtNavigationPath } = useFocusActions();
   const isSelected = editor.selectedValidationIssue === issue;
   const severity: IssueRowSeverity =
     issue.severity === "error" ? "error" : "warning";
 
   const handleSelectIssue = () => {
-    focusValidationIssue(issue);
+    focusIssueAtNavigationPath(issueNavigationPath, issue);
   };
 
   const handleClick = (e: MouseEvent) => {
