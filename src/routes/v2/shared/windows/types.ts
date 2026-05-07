@@ -114,7 +114,7 @@ export const COLLAPSED_DOCK_AREA_WIDTH = 36;
 export const DEFAULT_DOCKED_HEIGHT = 300;
 
 /** Minimum height for a docked window (px) */
-export const MIN_DOCKED_HEIGHT = 100;
+export const MIN_DOCKED_HEIGHT = 50;
 
 /** Distance from dock area edge to trigger dock insert preview (px) */
 export const DOCK_AREA_SNAP_THRESHOLD = 40;
