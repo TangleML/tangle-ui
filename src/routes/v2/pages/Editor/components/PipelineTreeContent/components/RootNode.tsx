@@ -9,7 +9,6 @@ import {
 import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
-import { cn } from "@/lib/utils";
 import type { ComponentSpec } from "@/models/componentSpec";
 import { countErrors } from "@/routes/v2/pages/Editor/components/ValidationSummary";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
@@ -18,7 +17,12 @@ import { IssueBadge } from "./IssueBadge";
 import { IssueRow } from "./IssueRow";
 import { SubgraphNode } from "./SubgraphNode";
 import { TaskLeafNode } from "./TaskLeafNode";
-import { treeNodeIconVariants, treeNodeRowVariants } from "./treeNode.variants";
+import {
+  treeNodeChevronIconVariants,
+  treeNodeLabelToneVariants,
+  treeNodeRowVariants,
+} from "./treeNode.variants";
+import { TreeRowActivate } from "./TreeRowActivate";
 
 interface RootNodeProps {
   spec: ComponentSpec;
@@ -38,8 +42,6 @@ export const RootNode = observer(function RootNode({
   const nodePath = navigationPath.join("/");
   const isExpanded = expandedNodes.has(nodePath);
 
-  const isCurrentGraph = currentNavPath.join("/") === nodePath;
-
   const tasks = spec.tasks;
   const hasChildren = tasks.length > 0;
 
@@ -47,79 +49,58 @@ export const RootNode = observer(function RootNode({
   const graphIssues = spec.graphLevelIssues;
   const hasErrors = countErrors(specIssues) > 0;
 
-  const handleClick = () => {
+  const handleRowNavigate = () => {
     navigation.navigateToLevel(0);
   };
 
-  const handleChevronClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onToggleExpand(nodePath);
-  };
-
   return (
-    <BlockStack gap="0">
+    <BlockStack gap="0" align="stretch" className="min-w-0 w-full">
       <Collapsible
         open={isExpanded}
         onOpenChange={() => onToggleExpand(nodePath)}
         className="w-full"
       >
-        <CollapsibleTrigger asChild>
-          <div
-            role="button"
-            tabIndex={0}
-            onClick={handleClick}
-            onKeyDown={(e) => e.key === "Enter" && handleClick()}
-            className={treeNodeRowVariants({
-              isCurrentGraph,
-              hasErrors,
-              fullWidth: true,
-            })}
-          >
-            {hasChildren ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                aria-label={isExpanded ? "Collapse" : "Expand"}
-                className="h-5 w-5 p-0 shrink-0"
-                onClick={handleChevronClick}
-              >
-                <Icon
-                  name={isExpanded ? "ChevronDown" : "ChevronRight"}
-                  size="sm"
-                  className="text-slate-500"
-                />
-              </Button>
-            ) : (
-              <div className="w-5 shrink-0" />
-            )}
-
-            <Icon
-              name="Network"
-              size="sm"
-              className={cn(
-                "rotate-270",
-                treeNodeIconVariants({ isCurrentGraph, hasErrors }),
-              )}
-            />
-
+        <div
+          className={treeNodeRowVariants({
+            hasErrors,
+            fullWidth: true,
+          })}
+        >
+          <TreeRowActivate layout="rootStrip" onActivate={handleRowNavigate}>
             <Text
               size="xs"
-              weight={isCurrentGraph ? "semibold" : "regular"}
-              className={cn(
-                "wrap-break-word min-w-0 flex-1",
-                isCurrentGraph && "text-blue-900",
-              )}
+              weight="semibold"
+              className={treeNodeLabelToneVariants({ tone: "none" })}
             >
               {spec.name}
             </Text>
 
             <IssueBadge issues={graphIssues} />
-          </div>
-        </CollapsibleTrigger>
+          </TreeRowActivate>
 
-        <CollapsibleContent>
+          {hasChildren && (
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="shrink-0 p-0"
+                aria-label={
+                  isExpanded ? "Collapse pipeline" : "Expand pipeline"
+                }
+              >
+                <Icon
+                  name={isExpanded ? "ChevronDown" : "ChevronRight"}
+                  size="sm"
+                  className={treeNodeChevronIconVariants({ hasErrors })}
+                />
+              </Button>
+            </CollapsibleTrigger>
+          )}
+        </div>
+
+        <CollapsibleContent className="w-full">
           {graphIssues.length > 0 && (
-            <BlockStack gap="1" className="ml-10 mt-0.5 mb-1">
+            <BlockStack gap="1" className="ml-2 mt-0.5 mb-1">
               {graphIssues.map((issue, index) => (
                 <IssueRow
                   key={`${issue.type}-${issue.entityId ?? "graph"}-${index}`}
@@ -130,8 +111,12 @@ export const RootNode = observer(function RootNode({
           )}
 
           {hasChildren && (
-            <BlockStack gap="0" className="ml-4 border-l border-slate-200">
-              <div className="-ml-1.5">
+            <BlockStack
+              gap="0"
+              align="stretch"
+              className="ml-2 min-w-0 w-full border-l border-slate-200"
+            >
+              <div className="-ml-1.5 min-w-0 w-full">
                 {tasks.map((task) => {
                   if (task.subgraphSpec) {
                     return (

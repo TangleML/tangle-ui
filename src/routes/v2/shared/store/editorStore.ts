@@ -106,4 +106,14 @@ export class EditorStore {
   @action setSelectedValidationIssue(issue: ValidationIssue | null) {
     this.selectedValidationIssue = issue;
   }
+
+  /** True when this task is the sole selection or part of a canvas multi-selection. */
+  isTaskSelected(taskId: string): boolean {
+    if (this.selectedNodeType === "task" && this.selectedNodeId === taskId) {
+      return true;
+    }
+    return this.multiSelection.some(
+      (n) => n.type === "task" && n.id === taskId,
+    );
+  }
 }

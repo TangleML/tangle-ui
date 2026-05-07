@@ -4,7 +4,7 @@
  * Shows the hierarchical structure of the pipeline including all tasks.
  * Subgraph tasks are clickable and can be navigated into.
  * Regular tasks are displayed but not clickable.
- * Highlights the currently displayed graph in the tree.
+ * Highlights the navigation path via label weight on root and subgraph rows; expansion follows the navigation path.
  * Displays validation error badges per entity.
  */
 
@@ -82,17 +82,18 @@ export const PipelineTreeContent = observer(function PipelineTreeContent() {
 
   return (
     <BlockStack
-      className="@container h-full"
+      className="@container min-w-0 h-full"
       data-testid="pipeline-tree-content"
     >
       <InlineStack
-        className="flex-col @[600px]:grid @[600px]:grid-cols-[40%_60%] @[600px]:items-start h-full"
+        className="h-full min-w-0 flex-col @[600px]:grid @[600px]:grid-cols-[minmax(0,40%)_minmax(0,60%)] @[600px]:items-start"
         fill
         data-testid="pipeline-tree-content-container"
       >
         <BlockStack
           gap="2"
-          className="p-2 overflow-y-auto overflow-x-hidden hide-scrollbar flex-1 min-h-0 @[600px]:border-r @[600px]:border-border"
+          align="stretch"
+          className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-2 hide-scrollbar @[600px]:border-r @[600px]:border-border"
         >
           <RootNode
             spec={rootSpec}
@@ -101,7 +102,7 @@ export const PipelineTreeContent = observer(function PipelineTreeContent() {
             onToggleExpand={handleToggleExpand}
           />
         </BlockStack>
-        <BlockStack className="hidden @[600px]:flex overflow-y-auto min-h-0 max-w-md">
+        <BlockStack className="hidden min-h-0 min-w-0 max-w-md overflow-y-auto @[600px]:flex">
           {activeIssue ? (
             <ValidationIssueResolutionCard issue={activeIssue} />
           ) : (

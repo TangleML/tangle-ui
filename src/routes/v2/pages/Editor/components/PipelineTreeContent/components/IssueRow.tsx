@@ -1,11 +1,17 @@
 import { observer } from "mobx-react-lite";
 
 import { Text } from "@/components/ui/typography";
-import { cn } from "@/lib/utils";
 import type { ValidationIssue } from "@/models/componentSpec";
 import { issueTypeLabel } from "@/routes/v2/pages/Editor/components/ValidationSummary";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { useFocusActions } from "@/routes/v2/shared/store/useFocusActions";
+
+import {
+  issueRowMessageVariants,
+  type IssueRowSeverity,
+  issueRowTypeLabelVariants,
+  issueRowVariants,
+} from "./issueRow.variants";
 
 interface IssueRowProps {
   issue: ValidationIssue;
@@ -15,6 +21,8 @@ export const IssueRow = observer(function IssueRow({ issue }: IssueRowProps) {
   const { editor } = useSharedStores();
   const { focusValidationIssue } = useFocusActions();
   const isSelected = editor.selectedValidationIssue === issue;
+  const severity: IssueRowSeverity =
+    issue.severity === "error" ? "error" : "warning";
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -29,30 +37,19 @@ export const IssueRow = observer(function IssueRow({ issue }: IssueRowProps) {
       onKeyDown={(e) =>
         e.key === "Enter" && handleClick(e as unknown as React.MouseEvent)
       }
-      className={cn(
-        "flex items-baseline gap-1 py-0.5 px-2 rounded text-xs cursor-pointer transition-colors",
-        isSelected ? "ring-1 ring-blue-400" : "",
-        issue.severity === "error"
-          ? "bg-red-50 text-red-800 hover:bg-red-100"
-          : "bg-amber-50 text-amber-800 hover:bg-amber-100",
-      )}
+      className={issueRowVariants({
+        selected: isSelected,
+        severity,
+      })}
     >
       <Text
         size="xs"
         weight="semibold"
-        className={cn(
-          "shrink-0 uppercase tracking-wide",
-          issue.severity === "error" ? "text-red-600" : "text-amber-600",
-        )}
+        className={issueRowTypeLabelVariants({ severity })}
       >
         {issueTypeLabel(issue.type)}
       </Text>
-      <Text
-        size="xs"
-        className={
-          issue.severity === "error" ? "text-red-700" : "text-amber-700"
-        }
-      >
+      <Text size="xs" className={issueRowMessageVariants({ severity })}>
         {issue.message}
       </Text>
     </div>
