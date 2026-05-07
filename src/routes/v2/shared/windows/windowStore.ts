@@ -12,7 +12,7 @@ import {
   type WindowOptions,
   type WindowRef,
 } from "./types";
-import type { ViewPreset } from "./viewPresets";
+import { dockSideByWindowId, type ViewPreset } from "./viewPresets";
 import { WindowModel, type WindowStoreRef } from "./windowModel";
 import { buildWindowModelInit } from "./windowStore.utils";
 
@@ -263,7 +263,64 @@ export class WindowStoreImpl implements WindowStoreRef {
 
   // -- View presets --
 
-  /** Apply a view preset: toggle visibility and reset dock positions. */
+  /**
+   * First-visit only: align dock sides and stack order with `preset.dockAreas`.
+   * Call only when there is no persisted layout (e.g. gated on `hasPersistedLayout()`).
+   */
+  @action seedInitialDockLayoutFromPreset(preset: ViewPreset): void {
+    const areas = preset.dockAreas;
+    if (!areas) return;
+
+    const presetIdSet = new Set([...areas.left, ...areas.right]);
+    this.alignDockSidesWithPresetAreas(areas);
+    this.alignDockStackOrderWithPresetAreas(areas, presetIdSet);
+  }
+
+  private alignDockSidesWithPresetAreas(
+    areas: NonNullable<ViewPreset["dockAreas"]>,
+  ): void {
+    for (const id of areas.left) {
+      this.moveWindowToDockSideIfNeeded(id, "left");
+    }
+    for (const id of areas.right) {
+      this.moveWindowToDockSideIfNeeded(id, "right");
+    }
+  }
+
+  private moveWindowToDockSideIfNeeded(
+    id: string,
+    side: "left" | "right",
+  ): void {
+    const win = this.windows[id];
+    if (!win) return;
+    if (win.dockState === side) return;
+    this.undockWindow(id);
+    this.dockWindow(id, side);
+  }
+
+  private alignDockStackOrderWithPresetAreas(
+    areas: NonNullable<ViewPreset["dockAreas"]>,
+    presetIdSet: Set<string>,
+  ): void {
+    this.alignDockSideStackOrder("left", areas.left, presetIdSet);
+    this.alignDockSideStackOrder("right", areas.right, presetIdSet);
+  }
+
+  private alignDockSideStackOrder(
+    side: "left" | "right",
+    presetOrderOnSide: string[],
+    presetIdSet: Set<string>,
+  ): void {
+    const desired = presetOrderOnSide.filter(
+      (id) => this.windows[id]?.dockState === side,
+    );
+    const remaining = this.dockAreas[side].windowOrder.filter(
+      (id) => !presetIdSet.has(id),
+    );
+    this.dockAreas[side].windowOrder = [...desired, ...remaining];
+  }
+
+  /** Apply a view preset: toggle visibility and correct dock sides (does not reshuffle stack order). */
   @action applyViewPreset(preset: ViewPreset): void {
     const allWindows = this.getAllWindows();
     for (const win of allWindows) {
@@ -273,8 +330,9 @@ export class WindowStoreImpl implements WindowStoreRef {
         if (win.state !== "hidden") win.hide();
       }
     }
-    if (preset.dockPositions) {
-      for (const [id, side] of Object.entries(preset.dockPositions)) {
+    if (preset.dockAreas) {
+      const sides = dockSideByWindowId(preset.dockAreas);
+      for (const [id, side] of sides) {
         const win = this.windows[id];
         if (win && win.dockState !== side) {
           this.undockWindow(id);

@@ -1,21 +1,42 @@
+/** Ordered window ids per dock column; array order is the default stack order (first visit only). */
+interface PresetDockAreas {
+  left: string[];
+  right: string[];
+}
+
 export interface ViewPreset {
   label: string;
   description: string;
   visible: Set<string>;
-  /** Default dock positions to restore when applying this preset. */
-  dockPositions?: Record<string, "left" | "right">;
+  /** Default dock columns: ids per side, order matters for first-visit layout seeding. */
+  dockAreas?: PresetDockAreas;
 }
 
-const DEFAULT_DOCK_POSITIONS: Record<string, "left" | "right"> = {
-  "runs-and-submission": "left",
-  "component-library": "left",
-  "pipeline-tree": "left",
-  history: "left",
-  "debug-panel": "left",
-  "pipeline-details": "right",
-  "recent-runs": "left",
-  "context-panel": "right",
+export const DEFAULT_DOCK_AREAS: PresetDockAreas = {
+  left: [
+    "runs-and-submission",
+    "component-library",
+    "pipeline-tree",
+    "history",
+    "debug-panel",
+    "recent-runs",
+  ],
+  right: ["pipeline-details", "context-panel"],
 };
+
+/** Target dock side for each window id listed in a preset's `dockAreas`. Right wins if listed on both. */
+export function dockSideByWindowId(
+  areas: PresetDockAreas,
+): Map<string, "left" | "right"> {
+  const map = new Map<string, "left" | "right">();
+  for (const id of areas.left) {
+    map.set(id, "left");
+  }
+  for (const id of areas.right) {
+    map.set(id, "right");
+  }
+  return map;
+}
 
 export const DEFAULT_VIEW_PRESET: ViewPreset = {
   label: "Default",
@@ -26,7 +47,7 @@ export const DEFAULT_VIEW_PRESET: ViewPreset = {
     "component-library",
     "pipeline-details",
   ]),
-  dockPositions: DEFAULT_DOCK_POSITIONS,
+  dockAreas: DEFAULT_DOCK_AREAS,
 };
 
 export const VIEW_PRESETS: ViewPreset[] = [
@@ -44,7 +65,7 @@ export const VIEW_PRESETS: ViewPreset[] = [
       "debug-panel",
       "recent-runs",
     ]),
-    dockPositions: DEFAULT_DOCK_POSITIONS,
+    dockAreas: DEFAULT_DOCK_AREAS,
   },
   {
     label: "Minimal",
