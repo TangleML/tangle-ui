@@ -13,6 +13,7 @@ import type { CanvasOverlayConfig } from "@/routes/v2/shared/store/canvasOverlay
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { hydrateComponentReference } from "@/services/componentService";
 import type { TaskSpec } from "@/utils/componentSpec";
+import { componentMetadata } from "@/utils/componentTracking";
 
 const OVERLAY_ID = "replace-drop-target";
 const REPLACEABLE_NODE_TYPE = "task";
@@ -51,10 +52,10 @@ export function useReplaceDropHandler(
   spec: ComponentSpec | null,
   reactFlowInstance: ReactFlowInstance | null,
 ) {
-  const { track } = useAnalytics();
   const { canvasOverlay } = useSharedStores();
   const { replaceTask } = useTaskActions();
   const { open: openDialog } = useDialog();
+  const { track } = useAnalytics();
 
   const replaceTargetRef = useRef<string | null>(null);
 
@@ -147,9 +148,23 @@ export function useReplaceDropHandler(
 
     if (!canReplace) return;
 
+    const fromComponentRef = task.componentRef;
+
     replaceTask(spec, targetEntityId, newComponentRef);
+
     track("v2.pipeline_canvas.replace_drop.completed", {
       had_breaking_change_prompt: hasBreakingChanges,
+    });
+
+    track("pipeline_editor.component.replaced", {
+      from_component_id: fromComponentRef?.digest,
+      from_component_name: fromComponentRef
+        ? componentMetadata(fromComponentRef).component_name
+        : undefined,
+      to_component_id: newComponentRef.digest,
+      to_component_name: componentMetadata(newComponentRef).component_name,
+      lost_inputs_count: inputDiff.lostEntities.length,
+      pipeline_id: spec.name,
     });
   };
 

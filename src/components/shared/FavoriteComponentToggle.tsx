@@ -221,9 +221,9 @@ const ComponentFavoriteToggleInternal = ({
         return;
       }
 
-      await addToComponentLibrary(hydratedComponent);
+      await addToComponentLibrary(hydratedComponent, "favorite_button");
     } else {
-      await removeFromComponentLibrary(component);
+      await removeFromComponentLibrary(component, "favorite_button");
     }
   }, [
     component,

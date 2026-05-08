@@ -124,7 +124,7 @@ const ImportComponent = ({
         throw new Error("Failed to hydrate component");
       }
 
-      return await addToComponentLibrary(hydratedComponent);
+      return await addToComponentLibrary(hydratedComponent, "import_dialog");
     },
     onSuccess: async (result) => {
       setIsOpen(false);

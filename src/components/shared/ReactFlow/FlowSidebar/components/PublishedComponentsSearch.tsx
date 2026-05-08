@@ -26,6 +26,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useBackend } from "@/providers/BackendProvider";
 import { useComponentLibrary } from "@/providers/ComponentLibraryProvider/ComponentLibraryProvider";
 import {
@@ -356,6 +357,27 @@ const Search = withSuspenseWrapper(
         return result;
       },
     });
+
+    const { track } = useAnalytics();
+    const queryLength = searchRequest.searchTerm?.length ?? 0;
+    const resultCount = (data ?? []).reduce(
+      (acc, folder) => acc + (folder.components?.length ?? 0),
+      0,
+    );
+
+    // The parent only renders <Search> when isSearchRequestValid (≥ MIN_SEARCH_TERM_LENGTH),
+    // so queryLength is guaranteed to be > 0 here.
+    useEffect(() => {
+      const timeoutId = setTimeout(() => {
+        track("component_library.search.query", {
+          query_length: queryLength,
+          result_count: resultCount,
+          surface: "editor_sidebar",
+          search_backend: "frontend_title",
+        });
+      }, 400);
+      return () => clearTimeout(timeoutId);
+    }, [queryLength, resultCount, track]);
 
     if (data) {
       return (

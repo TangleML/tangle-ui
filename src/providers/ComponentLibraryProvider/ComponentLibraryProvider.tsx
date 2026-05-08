@@ -12,6 +12,7 @@ import ComponentDuplicateDialog from "@/components/shared/Dialogs/ComponentDupli
 import { GitHubFlatComponentLibrary } from "@/components/shared/GitHubLibrary/githubFlatComponentLibrary";
 import { isGitHubLibraryConfiguration } from "@/components/shared/GitHubLibrary/types";
 import { getComponentQueryKey } from "@/hooks/useHydrateComponentReference";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useBackend } from "@/providers/BackendProvider";
 import {
   fetchAndStoreComponentLibrary,
@@ -33,6 +34,7 @@ import {
   updateComponentInListByText,
   updateComponentRefInList,
 } from "@/utils/componentStore";
+import { type ComponentLibraryEntryPoint } from "@/utils/componentTracking";
 import {
   ComponentSearchFilter,
   MINUTES,
@@ -91,8 +93,12 @@ type ComponentLibraryContextType = {
   ) => Promise<SearchResult | null>;
   addToComponentLibrary: (
     component: HydratedComponentReference,
+    entryPoint?: ComponentLibraryEntryPoint,
   ) => Promise<HydratedComponentReference | undefined>;
-  removeFromComponentLibrary: (component: ComponentReference) => void;
+  removeFromComponentLibrary: (
+    component: ComponentReference,
+    entryPoint?: ComponentLibraryEntryPoint,
+  ) => Promise<void>;
   setComponentFavorite: (
     component: ComponentReference,
     favorited: boolean,
@@ -178,6 +184,7 @@ export const ComponentLibraryProvider = ({
   const { graphSpec } = useComponentSpec();
   const { currentSearchFilter } = useForcedSearchContext();
   const queryClient = useQueryClient();
+  const { track } = useAnalytics();
 
   const { getComponentLibraryObject, existingComponentLibraries } =
     useComponentLibraryRegistry();
@@ -523,6 +530,7 @@ export const ComponentLibraryProvider = ({
   const addToComponentLibrary = useCallback(
     async (
       hydratedComponentRef: HydratedComponentReference,
+      entryPoint: ComponentLibraryEntryPoint = "unknown",
     ): Promise<HydratedComponentReference | undefined> => {
       const abortController = new AbortController();
       const [result, _] = await Promise.all([
@@ -543,13 +551,27 @@ export const ComponentLibraryProvider = ({
         abortController.abort();
       });
 
-      return result instanceof CustomEvent ? hydratedComponentRef : undefined;
+      const succeeded =
+        result instanceof CustomEvent &&
+        result.type === "tangle.library.componentAdded";
+      if (succeeded) {
+        track("component_library.added", {
+          component_id: hydratedComponentRef.digest,
+          component_name: getComponentName(hydratedComponentRef),
+          entry_point: entryPoint,
+        });
+      }
+
+      return succeeded ? hydratedComponentRef : undefined;
     },
-    [addToComponentLibraryWithDuplicateCheck],
+    [addToComponentLibraryWithDuplicateCheck, track],
   );
 
   const removeFromComponentLibrary = useCallback(
-    async (component: ComponentReference) => {
+    async (
+      component: ComponentReference,
+      entryPoint: ComponentLibraryEntryPoint = "unknown",
+    ) => {
       try {
         if (component.name) {
           await deleteComponentFileFromList(
@@ -558,6 +580,11 @@ export const ComponentLibraryProvider = ({
           ).then(async () => {
             await refreshComponentLibrary();
             await refreshUserComponents();
+          });
+          track("component_library.removed", {
+            component_id: component.digest,
+            component_name: getComponentName(component),
+            entry_point: entryPoint,
           });
         } else {
           console.error(
@@ -568,7 +595,7 @@ export const ComponentLibraryProvider = ({
         console.error("Error deleting component:", error);
       }
     },
-    [refreshComponentLibrary, refreshUserComponents],
+    [refreshComponentLibrary, refreshUserComponents, track],
   );
 
   const handleCloseDuplicationDialog = useCallback(() => {

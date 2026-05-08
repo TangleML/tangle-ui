@@ -324,6 +324,7 @@ describe("<ComponentEditorDialog />", () => {
         // Verify addToComponentLibrary was called
         expect(mockAddToComponentLibrary).toHaveBeenCalledWith(
           mockHydratedComponent,
+          "editor_save",
         );
 
         // Verify success toast notification was shown

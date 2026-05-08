@@ -2,10 +2,12 @@ import type { XYPosition } from "@xyflow/react";
 
 import useToastNotification from "@/hooks/useToastNotification";
 import type { ComponentReference, ComponentSpec } from "@/models/componentSpec";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
 import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskActions";
 import { hydrateComponentReference } from "@/services/componentService";
 import type { HydratedComponentReference } from "@/utils/componentSpec";
+import { componentMetadata } from "@/utils/componentTracking";
 import { readTextFromFile } from "@/utils/dom";
 
 /**
@@ -22,6 +24,7 @@ function toModelComponentRef(
 export function useFileDropHandler() {
   const { addTask } = useTaskActions();
   const { addToComponentLibrary } = useComponentLibrary();
+  const { track } = useAnalytics();
   const notify = useToastNotification();
 
   return async (file: File, spec: ComponentSpec, position: XYPosition) => {
@@ -34,10 +37,19 @@ export function useFileDropHandler() {
         return;
       }
 
-      const result = await addToComponentLibrary(hydrated);
+      const result = await addToComponentLibrary(
+        hydrated,
+        "canvas_file_drop_v2",
+      );
       if (!result) return;
 
       addTask(spec, toModelComponentRef(result), position);
+
+      track("pipeline_editor.component.dropped", {
+        ...componentMetadata(result, "file"),
+        drop_kind: "file_import",
+        pipeline_id: spec.name,
+      });
     } catch (error) {
       console.error("Failed to add imported component to canvas:", error);
       notify("Failed to add component to canvas", "error");

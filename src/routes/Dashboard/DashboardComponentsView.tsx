@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import type { ListPublishedComponentsResponse } from "@/api/types.gen";
 import { CodeViewer } from "@/components/shared/CodeViewer";
@@ -20,6 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
 import { useHydrateComponentReference } from "@/hooks/useHydrateComponentReference";
 import { cn } from "@/lib/utils";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useBackend } from "@/providers/BackendProvider";
 import {
   fetchUserComponents,
@@ -33,9 +34,13 @@ import type {
   InputSpec,
   OutputSpec,
 } from "@/utils/componentSpec";
+import { componentMetadata } from "@/utils/componentTracking";
 import { TOP_NAV_HEIGHT } from "@/utils/constants";
 import { fetchWithErrorHandling } from "@/utils/fetchWithErrorHandling";
 import { getComponentName } from "@/utils/getComponentName";
+import { tracking } from "@/utils/tracking";
+
+type ComponentRowSection = "user" | "library" | "published";
 
 const PUBLISHED_COMPONENTS_URL = "/api/published_components/";
 
@@ -80,11 +85,17 @@ const ComponentRow = ({
   selectedDigest,
   onSelect,
   depth = 0,
+  section,
+  position,
+  hadQuery,
 }: {
   component: ComponentReference;
   selectedDigest?: string;
   onSelect: (c: ComponentReference) => void;
   depth?: number;
+  section: ComponentRowSection;
+  position: number;
+  hadQuery: boolean;
 }) => (
   <button
     onClick={() => onSelect(component)}
@@ -93,6 +104,13 @@ const ComponentRow = ({
       "w-full text-left pr-3 py-1.5 border-b border-border/50 hover:bg-muted/50 flex flex-col gap-0 cursor-pointer",
       selectedDigest === component.digest && "bg-muted",
     )}
+    {...tracking("component_library.row", {
+      ...componentMetadata(component, section),
+      surface: "dashboard",
+      section,
+      result_position: position,
+      had_query: hadQuery,
+    })}
   >
     <Text size="xs" className="truncate">
       {component.name ?? getComponentName(component)}
@@ -115,11 +133,13 @@ const FolderNode = ({
   depth,
   selectedDigest,
   onSelect,
+  hadQuery,
 }: {
   folder: ComponentFolder;
   depth: number;
   selectedDigest?: string;
   onSelect: (c: ComponentReference) => void;
+  hadQuery: boolean;
 }) => (
   <Collapsible defaultOpen>
     <CollapsibleTrigger
@@ -137,13 +157,16 @@ const FolderNode = ({
       </Text>
     </CollapsibleTrigger>
     <CollapsibleContent>
-      {folder.components?.map((c) => (
+      {folder.components?.map((c, i) => (
         <ComponentRow
           key={c.digest ?? c.url ?? c.name}
           component={c}
           selectedDigest={selectedDigest}
           onSelect={onSelect}
           depth={depth + 1}
+          section="library"
+          position={i}
+          hadQuery={hadQuery}
         />
       ))}
       {folder.folders?.map((sub) => (
@@ -153,6 +176,7 @@ const FolderNode = ({
           depth={depth + 1}
           selectedDigest={selectedDigest}
           onSelect={onSelect}
+          hadQuery={hadQuery}
         />
       ))}
     </CollapsibleContent>
@@ -171,6 +195,7 @@ const ComponentList = ({
   onSelect: (component: ComponentReference) => void;
 }) => {
   const { backendUrl, configured, available, ready } = useBackend();
+  const { track } = useAnalytics();
 
   // User components — IndexedDB, no backend needed
   const { data: userFolder } = useQuery({
@@ -199,17 +224,8 @@ const ComponentList = ({
       },
     });
 
-  if (!ready || publishedLoading) {
-    return (
-      <BlockStack gap="2" className="p-3">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <Skeleton key={i} className="h-9 w-full" />
-        ))}
-      </BlockStack>
-    );
-  }
-
   const q = query.trim().toLowerCase();
+  const hadQuery = q.length > 0;
 
   const matches = (name?: string | null, author?: string | null) =>
     !q || name?.toLowerCase().includes(q) || author?.toLowerCase().includes(q);
@@ -241,6 +257,29 @@ const ComponentList = ({
     filteredLibraryComponents.length +
     publishedComponents.length;
 
+  useEffect(() => {
+    if (!ready || publishedLoading || q.length === 0) return;
+    const timeoutId = setTimeout(() => {
+      track("component_library.search.query", {
+        query_length: q.length,
+        result_count: total,
+        surface: "dashboard",
+        search_backend: "frontend_title",
+      });
+    }, 400);
+    return () => clearTimeout(timeoutId);
+  }, [q, total, ready, publishedLoading, track]);
+
+  if (!ready || publishedLoading) {
+    return (
+      <BlockStack gap="2" className="p-3">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Skeleton key={i} className="h-9 w-full" />
+        ))}
+      </BlockStack>
+    );
+  }
+
   if (total === 0) {
     return (
       <div className="px-4 py-3">
@@ -258,12 +297,15 @@ const ComponentList = ({
           label="User Components"
           count={userComponents.length}
         >
-          {userComponents.map((c) => (
+          {userComponents.map((c, i) => (
             <ComponentRow
               key={c.digest ?? c.url ?? c.name}
               component={c}
               selectedDigest={selectedDigest}
               onSelect={onSelect}
+              section="user"
+              position={i}
+              hadQuery={hadQuery}
             />
           ))}
         </CollapsibleSection>
@@ -276,12 +318,15 @@ const ComponentList = ({
         >
           {q
             ? // When searching, show a flat filtered list
-              filteredLibraryComponents.map((c) => (
+              filteredLibraryComponents.map((c, i) => (
                 <ComponentRow
                   key={c.digest ?? c.url ?? c.name}
                   component={c}
                   selectedDigest={selectedDigest}
                   onSelect={onSelect}
+                  section="library"
+                  position={i}
+                  hadQuery={hadQuery}
                 />
               ))
             : // When not searching, show the folder tree
@@ -292,6 +337,7 @@ const ComponentList = ({
                   depth={0}
                   selectedDigest={selectedDigest}
                   onSelect={onSelect}
+                  hadQuery={hadQuery}
                 />
               ))}
         </CollapsibleSection>
@@ -302,12 +348,15 @@ const ComponentList = ({
           label="Published Components"
           count={publishedComponents.length}
         >
-          {publishedComponents.map((c) => (
+          {publishedComponents.map((c, i) => (
             <ComponentRow
               key={c.digest}
               component={c}
               selectedDigest={selectedDigest}
               onSelect={onSelect}
+              section="published"
+              position={i}
+              hadQuery={hadQuery}
             />
           ))}
         </CollapsibleSection>

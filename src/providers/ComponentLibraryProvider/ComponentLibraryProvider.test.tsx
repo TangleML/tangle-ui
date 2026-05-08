@@ -36,6 +36,11 @@ vi.mock("@/providers/BackendProvider", () => ({
   useBackend: () => ({ backendUrl: "" }),
 }));
 
+const mockTrack = vi.fn();
+vi.mock("@/providers/AnalyticsProvider", () => ({
+  useAnalytics: () => ({ track: mockTrack }),
+}));
+
 // Mock all dependencies
 vi.mock("@/services/componentService");
 vi.mock("@/utils/componentStore");
@@ -617,6 +622,150 @@ describe("ComponentLibraryProvider - Component Management", () => {
         ...mockStoredComponent,
         favorited: true,
       });
+    });
+  });
+
+  describe("Analytics tracking", () => {
+    it("emits component_library.added on successful add with entry_point", async () => {
+      const newComponent: HydratedComponentReference = {
+        name: "tracked-component",
+        digest: "tracked-digest",
+        spec: mockComponentSpec,
+        text: "tracked yaml",
+      };
+
+      mockImportComponent.mockResolvedValue(undefined);
+      mockFlattenFolders.mockReturnValue([]);
+
+      const { result } = renderHook(() => useComponentLibrary(), {
+        wrapper: createWrapper,
+      });
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      await act(async () => {
+        await result.current.addToComponentLibrary(
+          newComponent,
+          "favorite_button",
+        );
+      });
+
+      expect(mockTrack).toHaveBeenCalledWith("component_library.added", {
+        component_id: "tracked-digest",
+        component_name: "tracked-component",
+        entry_point: "favorite_button",
+      });
+    });
+
+    it("does not emit component_library.added when duplicate dialog opens", async () => {
+      const newComponent: HydratedComponentReference = {
+        name: "duplicate-name",
+        digest: "new-digest",
+        spec: mockComponentSpec,
+        text: "yaml",
+      };
+
+      const existingComponent: ComponentReference = {
+        name: "duplicate-name",
+        digest: "existing-digest",
+        spec: mockComponentSpec,
+      };
+
+      mockFlattenFolders.mockReturnValue([existingComponent]);
+      mockGetUserComponentByName.mockResolvedValue({
+        componentRef: existingComponent,
+        name: "duplicate-name",
+        data: new ArrayBuffer(0),
+        creationTime: new Date(),
+        modificationTime: new Date(),
+      });
+
+      const { result } = renderHook(() => useComponentLibrary(), {
+        wrapper: createWrapper,
+      });
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      await act(async () => {
+        const pending = result.current.addToComponentLibrary(newComponent);
+        // Simulate user dismissing the duplicate dialog
+        window.dispatchEvent(
+          new CustomEvent("tangle.library.duplicateDialogClosed"),
+        );
+        await pending;
+      });
+
+      expect(mockTrack).not.toHaveBeenCalledWith(
+        "component_library.added",
+        expect.anything(),
+      );
+    });
+
+    it("emits component_library.removed on successful remove", async () => {
+      const componentToRemove: ComponentReference = {
+        name: "removed-component",
+        digest: "removed-digest",
+        spec: mockComponentSpec,
+      };
+
+      mockDeleteComponentFileFromList.mockResolvedValue();
+
+      const { result } = renderHook(() => useComponentLibrary(), {
+        wrapper: createWrapper,
+      });
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      await act(async () => {
+        await result.current.removeFromComponentLibrary(
+          componentToRemove,
+          "favorite_button",
+        );
+      });
+
+      expect(mockTrack).toHaveBeenCalledWith("component_library.removed", {
+        component_id: "removed-digest",
+        component_name: "removed-component",
+        entry_point: "favorite_button",
+      });
+    });
+
+    it("does not emit component_library.removed when delete fails", async () => {
+      const componentToRemove: ComponentReference = {
+        name: "error-component",
+        digest: "error-digest",
+        spec: mockComponentSpec,
+      };
+
+      mockDeleteComponentFileFromList.mockRejectedValue(new Error("boom"));
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+
+      const { result } = renderHook(() => useComponentLibrary(), {
+        wrapper: createWrapper,
+      });
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      await act(async () => {
+        await result.current.removeFromComponentLibrary(componentToRemove);
+      });
+
+      expect(mockTrack).not.toHaveBeenCalledWith(
+        "component_library.removed",
+        expect.anything(),
+      );
+
+      consoleSpy.mockRestore();
     });
   });
 });

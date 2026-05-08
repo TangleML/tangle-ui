@@ -40,6 +40,7 @@ import { useSubgraphKeyboardNavigation } from "@/hooks/useSubgraphKeyboardNaviga
 import useToastNotification from "@/hooks/useToastNotification";
 import { useUserDetails } from "@/hooks/useUserDetails";
 import { cn } from "@/lib/utils";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useContextPanel } from "@/providers/ContextPanelProvider";
@@ -50,6 +51,7 @@ import {
   isNotMaterializedComponentReference,
   type TaskSpec,
 } from "@/utils/componentSpec";
+import { componentMetadata } from "@/utils/componentTracking";
 import { readTextFromFile } from "@/utils/dom";
 import { deselectAllNodes } from "@/utils/flowUtils";
 import createNodesFromComponentSpec from "@/utils/nodes/createNodesFromComponentSpec";
@@ -215,6 +217,7 @@ const FlowCanvasContent = ({
   const [metaKeyPressed, setMetaKeyPressed] = useState(false);
 
   const { addToComponentLibrary } = useComponentLibrary();
+  const { track } = useAnalytics();
 
   const handleKeyDown = (event: KeyboardEvent) => {
     const target = event.target as HTMLElement;
@@ -663,7 +666,10 @@ const FlowCanvasContent = ({
           return;
         }
 
-        const result = await addToComponentLibrary(hydratedComponentRef);
+        const result = await addToComponentLibrary(
+          hydratedComponentRef,
+          "canvas_file_drop",
+        );
 
         if (result && reactFlowInstance) {
           // Use the drop position if available
@@ -689,6 +695,12 @@ const FlowCanvasContent = ({
               name: ref.spec.name,
             });
           }
+
+          track("pipeline_editor.component.dropped", {
+            ...componentMetadata(hydratedComponentRef, "file"),
+            drop_kind: "file_import",
+            pipeline_id: componentSpec.name,
+          });
         }
       } catch (error) {
         console.error("Failed to add imported component to canvas:", error);
@@ -760,8 +772,10 @@ const FlowCanvasContent = ({
         return;
       }
 
+      const targetTaskId = replaceTarget.data.taskId as string;
+
       const { updatedGraphSpec, lostInputs, newTaskId } = replaceTaskNode(
-        replaceTarget.data.taskId as string,
+        targetTaskId,
         droppedTask.componentRef,
         currentGraphSpec,
       );
@@ -774,10 +788,26 @@ const FlowCanvasContent = ({
 
       const confirmed = await triggerConfirmation(dialogData);
 
+      const fromComponentRef =
+        currentGraphSpec.tasks[targetTaskId]?.componentRef;
+
       setReplaceTarget(null);
 
       if (confirmed) {
         updateGraphSpec(updatedGraphSpec);
+
+        track("pipeline_editor.component.replaced", {
+          from_component_id: fromComponentRef?.digest,
+          from_component_name: fromComponentRef
+            ? componentMetadata(fromComponentRef).component_name
+            : undefined,
+          to_component_id: droppedTask.componentRef?.digest,
+          to_component_name: droppedTask.componentRef
+            ? componentMetadata(droppedTask.componentRef).component_name
+            : undefined,
+          lost_inputs_count: lostInputs.length,
+          pipeline_id: componentSpec.name,
+        });
       }
 
       return;
@@ -807,6 +837,14 @@ const FlowCanvasContent = ({
           type: "component",
           id: ref.digest,
           name: ref.spec.name,
+        });
+      }
+
+      if (ref) {
+        track("pipeline_editor.component.dropped", {
+          ...componentMetadata(ref, "library"),
+          drop_kind: "new_node",
+          pipeline_id: componentSpec.name,
         });
       }
     }

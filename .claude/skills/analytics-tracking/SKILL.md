@@ -197,3 +197,50 @@ tracking("pipeline_canvas.tool_bar.auto_layout_select", {
 
 track("settings.secrets.secret_mutated", { action: "created" });
 ```
+
+## Component events
+
+Two namespaces are reserved for the Component Marketplace telemetry baseline:
+
+- `pipeline_editor.component.*` — canvas interactions for a specific component instance (drop, replace, remove, upgrade, duplicate).
+- `component_library.*` — discovery and library CRUD (search, row click, add, remove, future publish/deprecate).
+
+### Standard metadata for component events
+
+Spread `componentMetadata(ref, source)` from `@/utils/componentTracking` so every event carries the same identity fields:
+
+```ts
+import { componentMetadata } from "@/utils/componentTracking";
+
+track("pipeline_editor.component.dropped", {
+  ...componentMetadata(componentRef, "library"),
+  drop_kind: "new_node",
+  pipeline_id: pipelineId,
+});
+```
+
+| Key                | Type                                                                 | Notes                                            |
+| ------------------ | -------------------------------------------------------------------- | ------------------------------------------------ |
+| `component_id`     | `string \| undefined`                                                | Content-addressed digest. Stable across renames. |
+| `component_name`   | `string \| undefined`                                                | Human-readable name.                             |
+| `component_source` | `"user" \| "library" \| "published" \| "url" \| "file" \| "unknown"` | Where the component came from.                   |
+
+### Library mutation events fire from the provider
+
+`component_library.added` and `component_library.removed` are emitted from inside `ComponentLibraryProvider` — callers do **not** call `track()` for them. Instead, pass an `entryPoint` string so the provider can attribute which UI surface triggered the mutation:
+
+```ts
+await addToComponentLibrary(hydratedComponent, "favorite_button");
+await removeFromComponentLibrary(component, "favorite_button");
+```
+
+Valid `entryPoint` values: `"favorite_button"`, `"canvas_file_drop"`, `"canvas_file_drop_v2"`, `"import_dialog"`, `"editor_save"`, `"unknown"`.
+
+### Reserved names (do not use yet)
+
+These are documented so future PRs don't collide with the marketplace taxonomy:
+
+- `component_library.published`, `component_library.deprecated`, `component_library.superseded`
+- `component_library.shared_link.copied`
+- `component_collection.created`, `component_collection.viewed`, `component_collection.member_added`
+- `component_library.search.result.semantic_match`

@@ -6,6 +6,7 @@ import type {
 import type { DragEvent } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import type { NodeTypeRegistry } from "@/routes/v2/shared/nodes/registry";
@@ -14,6 +15,7 @@ import type {
   UndoGroupable,
 } from "@/routes/v2/shared/nodes/types";
 import type { TaskSpec } from "@/utils/componentSpec";
+import { componentMetadata } from "@/utils/componentTracking";
 
 import { useFileDropHandler } from "./useFileDropHandler";
 import { useReplaceDropHandler } from "./useReplaceDropHandler";
@@ -64,6 +66,7 @@ export function useDropBehavior(
 ): DropBehaviorResult {
   const registry = useNodeRegistry();
   const { undo } = useEditorSession();
+  const { track } = useAnalytics();
   const handleFileDrop = useFileDropHandler();
   const { detectReplaceTarget, flushReplaceState, performReplaceDrop } =
     useReplaceDropHandler(spec, reactFlowInstance);
@@ -94,19 +97,31 @@ export function useDropBehavior(
 
     const replaceTarget = flushReplaceState();
     const payload = parseDropPayload(event);
+    const droppedTaskComponentRef = payload?.task?.componentRef;
 
-    switch (true) {
-      case isFileDrop(event):
-        await handleFileDrop(event.dataTransfer.files[0], spec, position);
-        break;
+    if (isFileDrop(event)) {
+      await handleFileDrop(event.dataTransfer.files[0], spec, position);
+      return;
+    }
 
-      case isReplaceTargetDrop(replaceTarget, payload):
-        await performReplaceDrop(replaceTarget, payload?.task);
-        break;
+    if (isReplaceTargetDrop(replaceTarget, payload)) {
+      await performReplaceDrop(replaceTarget, payload?.task);
+      return;
+    }
 
-      case isDropPayload(payload):
-        await resolveDropHandler(registry, payload)?.(spec, position, undo);
-        break;
+    if (!isDropPayload(payload)) return;
+
+    const handler = resolveDropHandler(registry, payload);
+    if (!handler) return;
+
+    await handler(spec, position, undo);
+
+    if (droppedTaskComponentRef) {
+      track("pipeline_editor.component.dropped", {
+        ...componentMetadata(droppedTaskComponentRef, "library"),
+        drop_kind: "new_node",
+        pipeline_id: spec.name,
+      });
     }
   };
 

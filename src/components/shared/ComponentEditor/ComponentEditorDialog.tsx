@@ -1,5 +1,5 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -82,8 +82,21 @@ export const ComponentEditorDialog = withSuspenseWrapper(
     const { addToComponentLibrary } = useComponentLibrary();
 
     const { data: templateCode } = useTemplateCodeByName(templateName);
-    const [componentText, setComponentText] = useState(text ?? templateCode);
+    const initialText = text ?? templateCode;
+    const [componentText, setComponentText] = useState(initialText);
     const [errors, setErrors] = useState<string[]>([]);
+
+    const mode = text ? "edit" : "create";
+
+    const hasTrackedOpen = useRef(false);
+    useEffect(() => {
+      if (hasTrackedOpen.current) return;
+      hasTrackedOpen.current = true;
+      track("component_editor.opened", {
+        mode,
+        selected_template: templateName,
+      });
+    }, [mode, templateName, track]);
 
     const { data: pythonCodeDetection } = useSuspenseQuery({
       queryKey: ["isPython", `${templateName}-${JSON.stringify(text)}`],
@@ -158,30 +171,43 @@ export const ComponentEditorDialog = withSuspenseWrapper(
         text: componentText,
       });
 
-      if (hydratedComponent) {
-        await saveComponent({
-          id: `component-${hydratedComponent.digest}`,
-          url: "",
-          data: componentText,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        });
-
-        onClose();
-
-        await addToComponentLibrary(hydratedComponent);
-
-        track("component_editor.component_created", {
+      if (!hydratedComponent) {
+        track("component_editor.save.failed", {
+          mode,
           selected_template: templateName,
+          reason: "hydration_failed",
         });
-        notify(
-          `Component ${hydratedComponent.name} imported successfully`,
-          "success",
-        );
+        return;
       }
+
+      await saveComponent({
+        id: `component-${hydratedComponent.digest}`,
+        url: "",
+        data: componentText,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+
+      onClose();
+
+      await addToComponentLibrary(hydratedComponent, "editor_save");
+
+      track("component_editor.save.completed", {
+        mode,
+        selected_template: templateName,
+      });
+      notify(
+        `Component ${hydratedComponent.name} imported successfully`,
+        "success",
+      );
     };
 
     const handleClose = () => {
+      track("component_editor.dismissed", {
+        mode,
+        selected_template: templateName,
+        had_changes: componentText !== initialText,
+      });
       onClose();
     };
 
