@@ -138,6 +138,14 @@ function renderInfoResolution(message: string): ReactNode {
 }
 
 const RESOLUTION_MAP: Record<ValidationIssueCode, ResolutionResolver> = {
+  MISSING_PIPELINE_INPUT_VALUE: () =>
+    renderInfoResolution(
+      "Set a default or pipeline value on this input in pipeline details, or mark the input as optional.",
+    ),
+  MISSING_REQUIRED_ANNOTATION: () =>
+    renderInfoResolution(
+      "Open the task and fill in the required launcher annotation in the task settings.",
+    ),
   MISSING_REQUIRED_INPUT: (p) => (
     <MissingRequiredInputResolution issue={p.issue} spec={p.spec} />
   ),

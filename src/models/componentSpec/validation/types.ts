@@ -3,6 +3,8 @@ type ValidationIssueType = "graph" | "task" | "input" | "output";
 type ValidationSeverity = "error" | "warning";
 
 export type ValidationIssueCode =
+  | "MISSING_PIPELINE_INPUT_VALUE"
+  | "MISSING_REQUIRED_ANNOTATION"
   | "MISSING_REQUIRED_INPUT"
   | "EMPTY_TASK_NAME"
   | "MISSING_COMPONENT_REF"

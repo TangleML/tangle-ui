@@ -1,3 +1,10 @@
+import {
+  getCloudProviderConfig,
+  getCommonAnnotations,
+  getProviderSchema,
+  launcherTaskAnnotationSchema,
+  parseSchemaToAnnotationConfig,
+} from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/AnnotationsEditor/utils";
 import { isInvalidComponentReference } from "@/utils/componentSpec";
 
 import type { Binding } from "../entities/binding";
@@ -7,6 +14,7 @@ import type { Output } from "../entities/output";
 import type { Task } from "../entities/task";
 import type { InputSpec } from "../entities/types";
 import { isGraphInputArgument, isTaskOutputArgument } from "../entities/types";
+import { isPipelineInputMissingConfiguredValue } from "./pipelineInputValue";
 import type { ValidationIssue } from "./types";
 
 /**
@@ -17,6 +25,9 @@ export function validateSpec(spec: ComponentSpec): ValidationIssue[] {
   return [
     ...validateGraphLevel(spec),
     ...validateInputs(spec),
+    ...(spec.isEmbeddedSubgraph !== true
+      ? validatePipelineInputConfiguredValues(spec)
+      : []),
     ...validateOutputs(spec),
     ...validateTasks(spec),
     ...validateBindings(spec),
@@ -47,6 +58,38 @@ function validateGraphLevel(spec: ComponentSpec): ValidationIssue[] {
       severity: "error",
       issueCode: "NO_TASKS",
     });
+  }
+
+  return issues;
+}
+
+/**
+ * Root pipeline only (skipped when `spec.isEmbeddedSubgraph` is true).
+ * Required inputs without a non-empty default or pipeline value are warnings so
+ * runs can still be gated on errors only.
+ */
+function validatePipelineInputConfiguredValues(
+  spec: ComponentSpec,
+): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+
+  for (const input of spec.inputs) {
+    if (
+      isPipelineInputMissingConfiguredValue({
+        optional: input.optional,
+        default: input.defaultValue,
+        value: input.value,
+      })
+    ) {
+      issues.push({
+        type: "input",
+        message: "Required input missing value",
+        entityId: input.$id,
+        severity: "warning",
+        issueCode: "MISSING_PIPELINE_INPUT_VALUE",
+        argumentName: input.name,
+      });
+    }
   }
 
   return issues;
@@ -174,6 +217,69 @@ function validateSingleTask(
 
   issues.push(...validateTaskArguments(task, spec));
   issues.push(...validateTaskRequiredInputs(task, spec));
+  issues.push(...validateLauncherTaskAnnotations(task));
+
+  return issues;
+}
+
+function taskAnnotationsAsStringRecord(task: Task): Record<string, string> {
+  const taskAnnotations: Record<string, string> = {};
+  for (const a of task.annotations.items) {
+    const v = a.value;
+    taskAnnotations[a.key] =
+      typeof v === "string"
+        ? v
+        : v === undefined || v === null
+          ? ""
+          : String(v);
+  }
+  return taskAnnotations;
+}
+
+function validateLauncherTaskAnnotations(task: Task): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  const taskAnnotations = taskAnnotationsAsStringRecord(task);
+
+  const cloudProviderAnnotation = getCloudProviderConfig(
+    launcherTaskAnnotationSchema,
+  )?.annotation;
+  const selectedProvider = cloudProviderAnnotation
+    ? taskAnnotations[cloudProviderAnnotation]
+    : undefined;
+
+  const providerSchema =
+    selectedProvider &&
+    getProviderSchema(launcherTaskAnnotationSchema, selectedProvider);
+
+  if (providerSchema) {
+    for (const config of parseSchemaToAnnotationConfig(providerSchema)) {
+      if (!config.required) continue;
+      if (taskAnnotations[config.annotation]?.trim()) continue;
+      issues.push({
+        type: "task",
+        message: `Required annotation "${config.label}" is missing`,
+        entityId: task.$id,
+        severity: "error",
+        issueCode: "MISSING_REQUIRED_ANNOTATION",
+        argumentName: config.annotation,
+        referencedName: config.label,
+      });
+    }
+  }
+
+  for (const config of getCommonAnnotations(launcherTaskAnnotationSchema)) {
+    if (config.required && !taskAnnotations[config.annotation]?.trim()) {
+      issues.push({
+        type: "task",
+        message: `Required annotation "${config.label}" is missing`,
+        entityId: task.$id,
+        severity: "error",
+        issueCode: "MISSING_REQUIRED_ANNOTATION",
+        argumentName: config.annotation,
+        referencedName: config.label,
+      });
+    }
+  }
 
   return issues;
 }

@@ -14,14 +14,12 @@ export function collectValidationIssues(
 ): ComponentValidationIssue[] {
   return collectRecursive(spec, {
     subgraphPath: [ROOT_PATH_ID],
-    skipInputConnectionValidation: false,
     visitedSpecIds: new Set(),
   });
 }
 
 interface CollectionContext {
   subgraphPath: string[];
-  skipInputConnectionValidation: boolean;
   visitedSpecIds: Set<string>;
 }
 
@@ -43,7 +41,6 @@ function collectRecursive(
     if (!task.subgraphSpec) return [];
     return collectRecursive(task.subgraphSpec, {
       subgraphPath: [...subgraphPath, task.name],
-      skipInputConnectionValidation: true,
       visitedSpecIds: context.visitedSpecIds,
     });
   });

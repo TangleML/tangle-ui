@@ -146,6 +146,27 @@ describe("JsonSerializer", () => {
     });
   });
 
+  it("serializes inputs with pipeline value", () => {
+    const spec = new ComponentSpec({
+      $id: idGen.next("spec"),
+      name: "Pipeline",
+    });
+    spec.addInput(
+      new Input({
+        $id: idGen.next("input"),
+        name: "data",
+        value: "run-time",
+      }),
+    );
+
+    const json = serializer.serialize(spec);
+
+    expect(json.inputs![0]).toMatchObject({
+      name: "data",
+      value: "run-time",
+    });
+  });
+
   it("serializes outputs", () => {
     const spec = new ComponentSpec({
       $id: idGen.next("spec"),

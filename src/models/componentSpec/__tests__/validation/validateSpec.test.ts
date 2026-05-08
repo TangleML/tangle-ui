@@ -172,6 +172,92 @@ describe("validateSpec", () => {
 
       expect(unconnectedInputs).toHaveLength(0);
     });
+
+    it("reports warning when required pipeline input has no default or value (root only)", () => {
+      const spec = makeSpec("Pipeline");
+      spec.addTask(makeTask("t1", "TaskA"));
+      const input = new Input({
+        $id: "i1",
+        name: "param",
+        optional: false,
+      });
+      spec.addInput(input);
+
+      const issues = validateSpec(spec);
+
+      expect(issues).toContainEqual(
+        expect.objectContaining({
+          type: "input",
+          message: "Required input missing value",
+          entityId: "i1",
+          severity: "warning",
+          issueCode: "MISSING_PIPELINE_INPUT_VALUE",
+          argumentName: "param",
+        }),
+      );
+    });
+
+    it("does not report missing pipeline input value when defaultValue is set", () => {
+      const spec = makeSpec("Pipeline");
+      spec.addTask(makeTask("t1", "TaskA"));
+      spec.addInput(
+        new Input({
+          $id: "i1",
+          name: "param",
+          optional: false,
+          defaultValue: "x",
+        }),
+      );
+
+      const issues = validateSpec(spec).filter(
+        (i) => i.issueCode === "MISSING_PIPELINE_INPUT_VALUE",
+      );
+      expect(issues).toHaveLength(0);
+    });
+
+    it("does not report missing pipeline input value when value is set", () => {
+      const spec = makeSpec("Pipeline");
+      spec.addTask(makeTask("t1", "TaskA"));
+      spec.addInput(
+        new Input({
+          $id: "i1",
+          name: "param",
+          optional: false,
+          value: "42",
+        }),
+      );
+
+      const issues = validateSpec(spec).filter(
+        (i) => i.issueCode === "MISSING_PIPELINE_INPUT_VALUE",
+      );
+      expect(issues).toHaveLength(0);
+    });
+
+    it("does not report missing pipeline input value when input is optional", () => {
+      const spec = makeSpec("Pipeline");
+      spec.addTask(makeTask("t1", "TaskA"));
+      spec.addInput(makeInput("i1", "param", true));
+
+      const issues = validateSpec(spec).filter(
+        (i) => i.issueCode === "MISSING_PIPELINE_INPUT_VALUE",
+      );
+      expect(issues).toHaveLength(0);
+    });
+
+    it("skips pipeline input value warnings for embedded subgraph specs", () => {
+      const spec = new ComponentSpec({
+        $id: "spec_embed",
+        name: "Inner",
+        isEmbeddedSubgraph: true,
+      });
+      spec.addTask(makeTask("t1", "TaskA"));
+      spec.addInput(new Input({ $id: "i1", name: "p", optional: false }));
+
+      const issues = validateSpec(spec).filter(
+        (i) => i.issueCode === "MISSING_PIPELINE_INPUT_VALUE",
+      );
+      expect(issues).toHaveLength(0);
+    });
   });
 
   describe("output rules", () => {

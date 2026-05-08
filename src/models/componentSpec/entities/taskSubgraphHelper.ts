@@ -13,5 +13,7 @@ export function deserializeSubgraphSpec(
 ): ComponentSpec {
   const idGen = new IncrementingIdGenerator();
   const deserializer = new YamlDeserializer(idGen);
-  return deserializer.deserialize(specJson);
+  const spec = deserializer.deserialize(specJson);
+  spec.setEmbeddedSubgraph(true);
+  return spec;
 }
