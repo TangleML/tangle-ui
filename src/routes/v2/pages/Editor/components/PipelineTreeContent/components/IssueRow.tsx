@@ -6,6 +6,7 @@ import type { ValidationIssue } from "@/models/componentSpec";
 import { issueTypeLabel } from "@/routes/v2/pages/Editor/components/ValidationSummary";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { useFocusActions } from "@/routes/v2/shared/store/useFocusActions";
+import { tracking } from "@/utils/tracking";
 
 import {
   issueRowMessageVariants,
@@ -47,6 +48,7 @@ export const IssueRow = observer(function IssueRow({ issue }: IssueRowProps) {
     <div
       role="button"
       tabIndex={0}
+      {...tracking("v2.pipeline_editor.pipeline_tree.validation_issue_select")}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       className={issueRowVariants({

@@ -6,6 +6,7 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import type { ComponentSpec, ValidationIssue } from "@/models/componentSpec";
 import { useValidationResolutionActions } from "@/routes/v2/pages/Editor/components/PipelineTreeContent/components/useValidationResolutionActions";
+import { tracking } from "@/utils/tracking";
 
 export function RenameEntityResolution({
   issue,
@@ -51,7 +52,14 @@ export function RenameEntityResolution({
           className="h-8 text-xs flex-1"
           autoFocus
         />
-        <Button size="sm" onClick={handleSave} disabled={!value.trim()}>
+        <Button
+          size="sm"
+          {...tracking(
+            "v2.pipeline_editor.pipeline_tree.resolution.rename_save",
+          )}
+          onClick={handleSave}
+          disabled={!value.trim()}
+        >
           Save
         </Button>
       </InlineStack>

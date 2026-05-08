@@ -8,6 +8,7 @@ import type { ComponentSpec, ValidationIssue } from "@/models/componentSpec";
 import { ArgumentRow } from "@/routes/v2/pages/Editor/components/ArgumentRow/ArgumentRow";
 import { useValidationResolutionActions } from "@/routes/v2/pages/Editor/components/PipelineTreeContent/components/useValidationResolutionActions";
 import { findTaskById } from "@/routes/v2/pages/Editor/components/PipelineTreeContent/components/validationResolution.utils";
+import { tracking } from "@/utils/tracking";
 
 import { InfoOnlyResolution } from "./InfoOnlyResolution";
 
@@ -56,7 +57,14 @@ export const BadReferenceResolution = observer(function BadReferenceResolution({
         </Text>
       </BlockStack>
 
-      <Button variant="outline" size="sm" onClick={handleUnset}>
+      <Button
+        variant="outline"
+        size="sm"
+        {...tracking(
+          "v2.pipeline_editor.pipeline_tree.resolution.bad_reference_unset",
+        )}
+        onClick={handleUnset}
+      >
         <Icon name="Unlink" size="xs" />
         Unset Argument
       </Button>

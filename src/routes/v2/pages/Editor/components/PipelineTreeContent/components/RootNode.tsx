@@ -51,7 +51,11 @@ export const RootNode = observer(function RootNode({
           fullWidth: true,
         })}
       >
-        <TreeRowActivate layout="rootStrip" onActivate={handleRowNavigate}>
+        <TreeRowActivate
+          layout="rootStrip"
+          onActivate={handleRowNavigate}
+          trackingId="v2.pipeline_editor.pipeline_tree.root_nav"
+        >
           <Text
             size="xs"
             weight="semibold"

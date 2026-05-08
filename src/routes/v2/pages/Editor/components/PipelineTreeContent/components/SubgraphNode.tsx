@@ -14,6 +14,7 @@ import type { ComponentSpec, Task } from "@/models/componentSpec";
 import { getEntityIssues } from "@/routes/v2/pages/Editor/components/PipelineTreeContent/utils";
 import { countErrors } from "@/routes/v2/pages/Editor/components/ValidationSummary";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { tracking } from "@/utils/tracking";
 
 import { IssueBadge } from "./IssueBadge";
 import { IssueRow } from "./IssueRow";
@@ -96,6 +97,7 @@ export const SubgraphNode = observer(function SubgraphNode({
             selected={isSelected}
             taskId={task.$id}
             onActivate={handleClick}
+            trackingId="v2.pipeline_editor.pipeline_tree.subgraph_nav"
           >
             <InlineStack
               className="shrink-0 rounded-sm bg-white"
@@ -139,6 +141,9 @@ export const SubgraphNode = observer(function SubgraphNode({
                 aria-label={
                   isExpanded ? "Collapse subgraph" : "Expand subgraph"
                 }
+                {...tracking(
+                  "v2.pipeline_editor.pipeline_tree.subgraph_expand_toggle",
+                )}
               >
                 <Icon
                   name={isExpanded ? "ChevronDown" : "ChevronRight"}
