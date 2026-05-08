@@ -2,7 +2,8 @@
  * Returns HTML data attributes that the document-level click tracker
  * (`useClickTracking`) reads to fire an analytics event automatically.
  *
- * Spread the result onto any interactive element (`<button>`, `<a>`, etc.):
+ * Spread the result onto any interactive element (`<button>`, `<a>`, shadcn
+ * `DropdownMenuItem` / `role="menuitem"`, etc.):
  *
  * ```tsx
  * <Button {...tracking("header.settings")} onClick={navigate} />

@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
+import { tracking } from "@/utils/tracking";
 
 type DynamicDataGroup = ReturnType<typeof getDynamicDataGroups>[number];
 
@@ -41,7 +42,12 @@ export function DynamicDataSubmenu({
               </InlineStack>
             </DropdownMenuLabel>
             {group.requiresDialog ? (
-              <DropdownMenuItem onClick={onOpenSecretDialog}>
+              <DropdownMenuItem
+                {...tracking(
+                  "v2.pipeline_editor.task_arguments.thunder_menu.dynamic_data.secret_dialog_open",
+                )}
+                onClick={onOpenSecretDialog}
+              >
                 <Icon name="Lock" size="sm" className="text-amber-600" />
                 Select Secret...
               </DropdownMenuItem>
@@ -49,6 +55,9 @@ export function DynamicDataSubmenu({
               group.options.map((option) => (
                 <DropdownMenuItem
                   key={option.key}
+                  {...tracking(
+                    "v2.pipeline_editor.task_arguments.thunder_menu.dynamic_data.system_option",
+                  )}
                   onClick={() => onSelectSystemData(option.key)}
                 >
                   <Icon name={group.icon} size="sm" className="text-blue-600" />

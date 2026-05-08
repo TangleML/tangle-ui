@@ -4,6 +4,15 @@ import { useAnalytics } from "@/providers/AnalyticsProvider";
 
 const INTERACTIVE_ELEMENTS: Set<string> = new Set(["a", "button", "summary"]);
 
+/** Radix/shadcn menus use these roles; they support `{...tracking()}` like buttons. */
+const INTERACTIVE_ROLES: Set<string> = new Set([
+  "button",
+  "link",
+  "menuitem",
+  "menuitemcheckbox",
+  "menuitemradio",
+]);
+
 const TRACKING_ATTR = "data-tracking-id";
 
 function findTrackedInteractiveElement(
@@ -16,7 +25,8 @@ function findTrackedInteractiveElement(
     const role = node.getAttribute("role");
 
     const isInteractive =
-      INTERACTIVE_ELEMENTS.has(tag) || role === "button" || role === "link";
+      INTERACTIVE_ELEMENTS.has(tag) ||
+      (role !== null && INTERACTIVE_ROLES.has(role));
 
     if (isInteractive && node.hasAttribute(TRACKING_ATTR)) {
       return node;
@@ -46,7 +56,8 @@ export function getTrackingAttributes(domElement: HTMLElement) {
  * event when the click originates from an interactive element that carries a
  * `data-tracking-id` attribute. The attribute value is used as the `action_type`,
  * with `.click` automatically appended (e.g. `data-tracking-id="header.settings"`
- * fires as `header.settings.click`).
+ * fires as `header.settings.click`). Elements with `role="menuitem"` (and related
+ * menu roles) are included so shadcn `DropdownMenuItem` can use `{...tracking()}`.
  */
 export function useClickTracking() {
   const { track } = useAnalytics();

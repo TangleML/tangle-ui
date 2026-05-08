@@ -19,8 +19,10 @@ import {
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 import type { TypeSpecType } from "@/models/componentSpec";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import type { DynamicDataArgument } from "@/utils/componentSpec";
+import { tracking } from "@/utils/tracking";
 
 import { DynamicDataSubmenu } from "./components/DynamicDataSubmenu";
 import { QuickConnectSubmenu } from "./components/QuickConnectSubmenu";
@@ -54,6 +56,7 @@ export const ThunderMenu = observer(function ThunderMenu({
   onQuickConnect,
   onCreateInputAndConnect,
 }: ThunderMenuProps) {
+  const { track } = useAnalytics();
   const spec = useSpec();
   const [isOpen, setIsOpen] = useState(false);
   const [isSecretDialogOpen, setIsSecretDialogOpen] = useState(false);
@@ -75,6 +78,9 @@ export const ThunderMenu = observer(function ThunderMenu({
 
   const handleSecretSelect = (secretName: string) => {
     setIsSecretDialogOpen(false);
+    track(
+      "v2.pipeline_editor.task_arguments.thunder_menu.dynamic_data.secret_apply.completed",
+    );
     onSelectDynamicData(createSecretArgument(secretName));
   };
 
@@ -95,6 +101,7 @@ export const ThunderMenu = observer(function ThunderMenu({
               isOpen ? "visible" : "invisible group-hover:visible",
             )}
             data-testid="thunder-menu-trigger"
+            {...tracking("v2.pipeline_editor.task_arguments.thunder_menu")}
           >
             <Icon
               name="Zap"
@@ -109,12 +116,24 @@ export const ThunderMenu = observer(function ThunderMenu({
           sideOffset={4}
           className="w-56 z-[9999]"
         >
-          <DropdownMenuItem disabled={!canReset} onClick={onResetToDefault}>
+          <DropdownMenuItem
+            disabled={!canReset}
+            {...tracking(
+              "v2.pipeline_editor.task_arguments.thunder_menu.reset_to_default",
+            )}
+            onClick={onResetToDefault}
+          >
             <Icon name="RotateCcw" size="sm" />
             Reset to Default
           </DropdownMenuItem>
 
-          <DropdownMenuItem disabled={!canUnset} onClick={onUnset}>
+          <DropdownMenuItem
+            disabled={!canUnset}
+            {...tracking(
+              "v2.pipeline_editor.task_arguments.thunder_menu.unset",
+            )}
+            onClick={onUnset}
+          >
             <Icon name="Trash2" size="sm" />
             Unset Argument
           </DropdownMenuItem>
@@ -143,7 +162,12 @@ export const ThunderMenu = observer(function ThunderMenu({
           {onCreateInputAndConnect && (
             <>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onCreateInputAndConnect}>
+              <DropdownMenuItem
+                {...tracking(
+                  "v2.pipeline_editor.task_arguments.thunder_menu.create_input",
+                )}
+                onClick={onCreateInputAndConnect}
+              >
                 <Icon name="Plus" size="sm" className="text-green-600" />
                 Create Input
               </DropdownMenuItem>
