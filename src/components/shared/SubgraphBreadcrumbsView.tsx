@@ -35,7 +35,6 @@ export const SubgraphBreadcrumbsView = ({
   return (
     <InlineStack
       align="space-between"
-      gap="0"
       className="px-4 py-2 bg-gray-50 border-b w-full z-1"
     >
       <Breadcrumb>

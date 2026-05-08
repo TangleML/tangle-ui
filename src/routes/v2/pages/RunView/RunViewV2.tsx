@@ -158,7 +158,6 @@ const RunViewLayout = observer(function RunViewLayout({
         <RunViewMenuBar />
         <InlineStack
           className="flex-1 min-h-0 w-full"
-          gap="0"
           blockAlign="stretch"
           wrap="nowrap"
           data-testid="run-view-v2"

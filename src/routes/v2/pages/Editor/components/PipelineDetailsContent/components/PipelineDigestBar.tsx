@@ -92,7 +92,7 @@ export const PipelineDigestBar = withSuspenseWrapper(
             />
           </Button>
 
-          <InlineStack gap="0" blockAlign="center" className="shrink-0">
+          <InlineStack blockAlign="center" className="shrink-0">
             <Button variant="ghost" size="min" onClick={handleCopyDigest}>
               <Icon name="Copy" size="sm" />
             </Button>

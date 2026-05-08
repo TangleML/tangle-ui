@@ -72,7 +72,7 @@ const TaskStatusBar = ({
   executionStatusStats?: ExecutionStatusStats | null;
 }) => {
   if (!executionStatusStats) {
-    return <InlineStack wrap="nowrap" gap="0" className={BAR_CLASS} />;
+    return <InlineStack wrap="nowrap" className={BAR_CLASS} />;
   }
 
   const entries = Object.entries(executionStatusStats).filter(
@@ -80,7 +80,7 @@ const TaskStatusBar = ({
   );
 
   if (entries.length === 0) {
-    return <InlineStack wrap="nowrap" gap="0" className={BAR_CLASS} />;
+    return <InlineStack wrap="nowrap" className={BAR_CLASS} />;
   }
 
   const total = entries.reduce((sum, [, count]) => sum + (count ?? 0), 0);
@@ -101,7 +101,7 @@ const TaskStatusBar = ({
 
   return (
     <BlockStack className="relative">
-      <InlineStack wrap="nowrap" gap="0" className={BAR_CLASS}>
+      <InlineStack wrap="nowrap" className={BAR_CLASS}>
         {sortedEntries.map(([status, count]) => (
           <StatusSegment
             key={status}

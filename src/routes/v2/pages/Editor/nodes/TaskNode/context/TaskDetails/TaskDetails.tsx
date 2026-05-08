@@ -105,7 +105,7 @@ export const TaskDetails = observer(function TaskDetails({
   };
 
   return (
-    <BlockStack gap="0" className="h-full min-h-0 w-full">
+    <BlockStack className="h-full min-h-0 w-full">
       {/* ── Header ── */}
       <BlockStack gap="2" className="shrink-0 px-4 pt-3 pb-2">
         <InlineStack

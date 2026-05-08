@@ -444,7 +444,6 @@ export const ArgumentInputField = ({
   return (
     <>
       <BlockStack
-        gap="0"
         className="relative w-full px-2"
         data-testid="argument-input-field"
         data-argument-name={argument.inputSpec.name}

@@ -100,7 +100,7 @@ export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
         data-dock-scroll
         className="absolute inset-0 overflow-y-auto overflow-x-hidden hide-scrollbar"
       >
-        <BlockStack gap="0">
+        <BlockStack>
           {visibleWindows.map((windowId, index) => (
             <Window
               key={windowId}

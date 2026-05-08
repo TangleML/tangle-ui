@@ -44,7 +44,7 @@ export const RootNode = observer(function RootNode({
   };
 
   return (
-    <BlockStack gap="0" align="stretch" className="min-w-0 w-full">
+    <BlockStack align="stretch" className="min-w-0 w-full">
       <div
         className={treeNodeRowVariants({
           hasErrors,

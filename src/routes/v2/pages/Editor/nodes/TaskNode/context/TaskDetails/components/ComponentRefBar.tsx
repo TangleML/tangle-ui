@@ -109,7 +109,7 @@ export function ComponentRefBar({
           }
         />
 
-        <InlineStack gap="0" blockAlign="center" className="shrink-0">
+        <InlineStack blockAlign="center" className="shrink-0">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
