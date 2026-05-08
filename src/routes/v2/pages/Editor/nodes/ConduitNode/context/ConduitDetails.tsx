@@ -8,9 +8,11 @@ import { Icon } from "@/components/ui/icon";
 import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { getConduits } from "@/routes/v2/pages/Editor/nodes/ConduitNode/conduits.actions";
 import { useConduitActions } from "@/routes/v2/pages/Editor/nodes/ConduitNode/useConduitActions";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
+import { tracking } from "@/utils/tracking";
 
 interface ConduitDetailsProps {
   entityId: string;
@@ -30,6 +32,7 @@ function edgeLabel(
 export const ConduitDetails = observer(function ConduitDetails({
   entityId,
 }: ConduitDetailsProps) {
+  const { track } = useAnalytics();
   const spec = useSpec();
   const { updateConduitColor, unassignEdgeFromConduit } = useConduitActions();
   const conduitId = entityId;
@@ -62,6 +65,9 @@ export const ConduitDetails = observer(function ConduitDetails({
             title="Guideline Color"
             color={conduit.color}
             setColor={handleColorChange}
+            onClose={() =>
+              track("v2.pipeline_editor.conduit_details.color_picker.closed")
+            }
           />
           <Text size="xs" weight="semibold">
             Guideline
@@ -94,6 +100,9 @@ export const ConduitDetails = observer(function ConduitDetails({
                     size="icon"
                     className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                     onClick={() => handleUnassign(binding.$id)}
+                    {...tracking(
+                      "v2.pipeline_editor.conduit_details.unassign_edge",
+                    )}
                   >
                     <Icon name="X" size="xs" />
                   </Button>
@@ -127,6 +136,7 @@ export const ConduitDetails = observer(function ConduitDetails({
 });
 
 function DeleteConduitButton({ conduitId }: { conduitId: string }) {
+  const { track } = useAnalytics();
   const spec = useSpec();
   const { removeConduit } = useConduitActions();
   const conduit = spec
@@ -137,6 +147,7 @@ function DeleteConduitButton({ conduitId }: { conduitId: string }) {
 
   const handleDelete = () => {
     removeConduit(spec, conduitId);
+    track("v2.pipeline_editor.conduit_details.delete.completed");
   };
 
   return (

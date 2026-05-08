@@ -13,11 +13,13 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { AnnotationsBlock } from "@/routes/v2/pages/Editor/components/AnnotationsBlock/AnnotationsBlock";
 import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskActions";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { EDITOR_COLLAPSED_ANNOTATION } from "@/utils/annotations";
+import { tracking } from "@/utils/tracking";
 
 import { getTaskYamlText } from "./components/actions/getTaskYamlText";
 import { ComponentRefBar } from "./components/ComponentRefBar";
@@ -40,6 +42,7 @@ interface TaskDetailsProps {
 export const TaskDetails = observer(function TaskDetails({
   entityId,
 }: TaskDetailsProps) {
+  const { track } = useAnalytics();
   const { editor } = useSharedStores();
   const { renameTask } = useTaskActions();
   const notify = useToastNotification();
@@ -73,7 +76,9 @@ export const TaskDetails = observer(function TaskDetails({
     setIsRenaming(false);
     if (newName && newName !== task.name) {
       const success = renameTask(spec, entityId, newName);
-      if (!success) {
+      if (success) {
+        track("v2.pipeline_editor.task_details.rename.completed");
+      } else {
         notify("A task with that name already exists", "error");
       }
     }
@@ -127,6 +132,7 @@ export const TaskDetails = observer(function TaskDetails({
                   size="inline-xs"
                   className="shrink-0 p-0 text-muted-foreground hover:bg-transparent hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
                   onClick={startRename}
+                  {...tracking("v2.pipeline_editor.task_details.rename_start")}
                 >
                   <Icon name="Pencil" size="xs" />
                 </Button>
@@ -155,7 +161,12 @@ export const TaskDetails = observer(function TaskDetails({
           onOpenChange={setArgumentsOpen}
           className="w-full"
         >
-          <CollapsibleTrigger className="flex w-full items-center justify-between bg-gray-50 px-4 py-2.5 cursor-pointer border-b border-gray-100">
+          <CollapsibleTrigger
+            className="flex w-full items-center justify-between bg-gray-50 px-4 py-2.5 cursor-pointer border-b border-gray-100"
+            {...tracking(
+              "v2.pipeline_editor.task_details.arguments_section_toggle",
+            )}
+          >
             <InlineStack gap="2" blockAlign="center">
               <Icon name="Parentheses" size="xs" />
               <Text size="xs" weight="semibold">
@@ -207,7 +218,12 @@ export const TaskDetails = observer(function TaskDetails({
           onOpenChange={setConfigOpen}
           className="w-full"
         >
-          <CollapsibleTrigger className="flex w-full items-center justify-between bg-gray-50 px-4 py-2.5 cursor-pointer border-b border-gray-100">
+          <CollapsibleTrigger
+            className="flex w-full items-center justify-between bg-gray-50 px-4 py-2.5 cursor-pointer border-b border-gray-100"
+            {...tracking(
+              "v2.pipeline_editor.task_details.config_section_toggle",
+            )}
+          >
             <InlineStack gap="2" blockAlign="center">
               <Icon name="Settings" size="xs" />
               <Text size="xs" weight="semibold">

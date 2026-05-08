@@ -14,7 +14,11 @@ export function ZIndexEditor({
 }: ZIndexEditorProps) {
   return (
     <ContentBlock title={title}>
-      <StackingControls nodeId={nodeId} onChange={onChange} />
+      <StackingControls
+        nodeId={nodeId}
+        onChange={onChange}
+        trackingBase="v2.pipeline_editor.flex_node_details.z_index"
+      />
     </ContentBlock>
   );
 }

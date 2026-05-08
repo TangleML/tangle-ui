@@ -1,16 +1,19 @@
-import { type MouseEvent } from "react";
+import { type ComponentProps, type MouseEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 
-interface LockToggleProps {
+type LockToggleProps = {
   size?: "xs" | "sm" | "md" | "lg" | "xl";
   locked: boolean;
   onToggleLock: () => void;
   showOnlyOnHover?: boolean;
   className?: string;
-}
+} & Omit<
+  ComponentProps<typeof Button>,
+  "size" | "variant" | "onClick" | "children" | "className"
+>;
 
 const LockToggle = ({
   size = "md",
@@ -18,6 +21,7 @@ const LockToggle = ({
   onToggleLock,
   showOnlyOnHover = false,
   className,
+  ...rest
 }: LockToggleProps) => {
   const handleLockToggle = (e: MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
@@ -42,6 +46,7 @@ const LockToggle = ({
         !locked && showOnlyOnHover && "hidden group-hover:block hover:block",
         className,
       )}
+      {...rest}
     >
       <Icon
         name={locked ? "Lock" : "LockOpen"}

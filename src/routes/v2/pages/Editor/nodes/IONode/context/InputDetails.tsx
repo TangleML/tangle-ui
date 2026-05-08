@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Textarea } from "@/components/ui/textarea";
 import { Text } from "@/components/ui/typography";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { AutoGrowTextarea } from "@/routes/v2/pages/Editor/components/AutoGrowTextArea";
 import { InputLabel } from "@/routes/v2/pages/Editor/components/InputLabel/InputLabel";
 import { useIOActions } from "@/routes/v2/pages/Editor/store/actions/useIOActions";
@@ -17,6 +18,7 @@ interface InputDetailsProps {
 export const InputDetails = observer(function InputDetails({
   entityId,
 }: InputDetailsProps) {
+  const { track } = useAnalytics();
   const ioActions = useIOActions();
   const spec = useSpec();
   const input = spec?.inputs.find((i) => i.$id === entityId);
@@ -27,6 +29,7 @@ export const InputDetails = observer(function InputDetails({
     const newName = event.target.value;
     if (newName && newName !== input.name) {
       ioActions.renameInput(spec, entityId, newName);
+      track("v2.pipeline_editor.input_details.name.updated");
     }
   };
 
@@ -35,6 +38,7 @@ export const InputDetails = observer(function InputDetails({
     const newDescription = value || undefined;
     if (newDescription !== input.description) {
       ioActions.setInputDescription(spec, entityId, newDescription);
+      track("v2.pipeline_editor.input_details.description.updated");
     }
   };
 
@@ -43,6 +47,7 @@ export const InputDetails = observer(function InputDetails({
     const newType = value || undefined;
     if (newType !== input.type) {
       ioActions.setInputType(spec, entityId, newType);
+      track("v2.pipeline_editor.input_details.type.updated");
     }
   };
 
@@ -50,6 +55,7 @@ export const InputDetails = observer(function InputDetails({
     const newDefault = value || undefined;
     if (newDefault !== input.defaultValue) {
       ioActions.setInputDefaultValue(spec, entityId, newDefault);
+      track("v2.pipeline_editor.input_details.default_value.updated");
     }
   };
 

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Textarea } from "@/components/ui/textarea";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { FONT_SIZE_MD, FONT_SIZE_SM } from "@/utils/constants";
 
 interface ContentEditorValue {
@@ -27,6 +28,7 @@ export function ContentEditor({
   onChange,
   readOnly,
 }: ContentEditorProps) {
+  const { track } = useAnalytics();
   const [title, setTitle] = useState(value.title);
   const [content, setContent] = useState(value.content);
 
@@ -39,7 +41,11 @@ export function ContentEditor({
   };
 
   const saveChanges = () => {
+    const changed = title !== value.title || content !== value.content;
     onChange({ title, content });
+    if (changed) {
+      track("v2.pipeline_editor.flex_node_details.content.updated");
+    }
   };
 
   useEffect(() => {
@@ -78,7 +84,12 @@ export function ContentEditor({
             </Label>
             <TextSizeSelector
               value={value.titleFontSize ?? FONT_SIZE_MD}
-              onChange={(newSize) => onChange({ titleFontSize: newSize })}
+              onChange={(newSize) => {
+                track(
+                  "v2.pipeline_editor.flex_node_details.title_font_size.changed",
+                );
+                onChange({ titleFontSize: newSize });
+              }}
               className="mb-1"
             />
           </InlineStack>
@@ -106,7 +117,12 @@ export function ContentEditor({
             </Label>
             <TextSizeSelector
               value={value.contentFontSize ?? FONT_SIZE_SM}
-              onChange={(newSize) => onChange({ contentFontSize: newSize })}
+              onChange={(newSize) => {
+                track(
+                  "v2.pipeline_editor.flex_node_details.content_font_size.changed",
+                );
+                onChange({ contentFontSize: newSize });
+              }}
               className="mb-1"
             />
           </InlineStack>
