@@ -12,6 +12,7 @@ import type { ComponentSpec } from "@/models/componentSpec";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { usePipelineActions } from "@/routes/v2/pages/Editor/store/actions/usePipelineActions";
 import { PIPELINE_TAGS_ANNOTATION } from "@/utils/annotations";
+import { tracking } from "@/utils/tracking";
 
 const TAG_LIMIT = 10;
 
@@ -37,7 +38,7 @@ export const TagsBlock = observer(function TagsBlock({
   const handleAddTag = () => {
     const trimmedTag = newTagValue.trim();
     if (trimmedTag && !tags.includes(trimmedTag) && tags.length < TAG_LIMIT) {
-      track("pipeline_editor.configuration_panel.tag_added");
+      track("v2.pipeline_editor.configuration_panel.tag_added");
       saveTags([...tags, trimmedTag]);
     }
     setNewTagValue("");
@@ -50,11 +51,12 @@ export const TagsBlock = observer(function TagsBlock({
   };
 
   const handleRemoveTag = (index: number) => {
-    track("pipeline_editor.configuration_panel.tag_removed");
+    track("v2.pipeline_editor.configuration_panel.tag_removed");
     saveTags(tags.filter((_, i) => i !== index));
   };
 
   const handleStartEdit = (index: number) => {
+    track("v2.pipeline_editor.configuration_panel.tag_edit.click");
     setEditingIndex(index);
     setEditValue(tags[index]);
   };
@@ -100,6 +102,7 @@ export const TagsBlock = observer(function TagsBlock({
             size="xs"
             onClick={() => setIsAdding(true)}
             className="my-0.5"
+            {...tracking("v2.pipeline_editor.configuration_panel.add_tag")}
           >
             <Icon name="Plus" size="sm" />
             Add Tag

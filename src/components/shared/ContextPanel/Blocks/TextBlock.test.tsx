@@ -1,7 +1,11 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import { TextBlock } from "./TextBlock";
+
+vi.mock("@/providers/AnalyticsProvider", () => ({
+  useAnalytics: vi.fn().mockReturnValue({ track: vi.fn() }),
+}));
 
 describe("<TextBlock />", () => {
   test("renders with text only", () => {

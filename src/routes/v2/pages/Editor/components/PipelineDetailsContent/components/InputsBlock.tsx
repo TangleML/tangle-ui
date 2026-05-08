@@ -5,6 +5,7 @@ import { Text } from "@/components/ui/typography";
 import type { ComponentSpec, Input } from "@/models/componentSpec";
 import type { TypeSpecType } from "@/models/componentSpec/entities/types";
 import { useFocusActions } from "@/routes/v2/shared/store/useFocusActions";
+import { tracking } from "@/utils/tracking";
 
 function typeSpecToString(typeSpec?: TypeSpecType): string {
   if (typeSpec === undefined) return "Any";
@@ -36,6 +37,9 @@ export function InputsBlock({ spec }: { spec: ComponentSpec }) {
                 size="xs"
                 className="truncate"
                 onClick={() => handleClick(input)}
+                {...tracking(
+                  "v2.pipeline_editor.configuration_panel.input_row",
+                )}
               >
                 {input.name}
               </Button>

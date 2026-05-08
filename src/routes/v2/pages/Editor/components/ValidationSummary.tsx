@@ -7,7 +7,9 @@ import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import type { ComponentSpec, ValidationIssue } from "@/models/componentSpec";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { tracking } from "@/utils/tracking";
 
 export function countErrors(issues: ValidationIssue[]): number {
   return issues.filter((i) => i.severity === "error").length;
@@ -41,6 +43,7 @@ export const ValidationSummary = observer(function ValidationSummary({
   spec,
   className,
 }: ValidationSummaryProps) {
+  const { track } = useAnalytics();
   const [isExpanded, setIsExpanded] = useState(false);
   const { editor, navigation } = useSharedStores();
   const issues = spec.allValidationIssues;
@@ -68,6 +71,9 @@ export const ValidationSummary = observer(function ValidationSummary({
             : "text-amber-700 hover:bg-amber-50",
         )}
         onClick={() => setIsExpanded((prev) => !prev)}
+        {...tracking(
+          "v2.pipeline_editor.configuration_panel.validation_summary_toggle",
+        )}
       >
         <Icon
           name={isExpanded ? "ChevronDown" : "ChevronRight"}
@@ -86,6 +92,13 @@ export const ValidationSummary = observer(function ValidationSummary({
             const isSelected = editor.selectedValidationIssue === issue;
 
             const handleIssueClick = () => {
+              track(
+                "v2.pipeline_editor.configuration_panel.validation_issue.click",
+                {
+                  issue_type: issue.type,
+                  severity: issue.severity,
+                },
+              );
               if (issue.subgraphPath.length > 1 && navigation.rootSpec) {
                 const navPath = [
                   navigation.rootSpec.name,

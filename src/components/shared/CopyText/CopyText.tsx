@@ -5,6 +5,7 @@ import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { copyToClipboard } from "@/utils/string";
 
 interface CopyTextProps {
@@ -14,6 +15,7 @@ interface CopyTextProps {
   alwaysShowButton?: boolean;
   compact?: boolean;
   size?: "xs" | "sm" | "md" | "lg" | "xl";
+  copyTrackingAction?: string;
 }
 
 export const CopyText = ({
@@ -23,13 +25,18 @@ export const CopyText = ({
   alwaysShowButton = false,
   compact = false,
   size = "md",
+  copyTrackingAction,
 }: CopyTextProps) => {
+  const { track } = useAnalytics();
   const [isCopied, setIsCopied] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
   const handleCopy = () => {
     copyToClipboard(children);
     setIsCopied(true);
+    if (copyTrackingAction) {
+      track(`${copyTrackingAction}.click`);
+    }
   };
 
   useEffect(() => {
