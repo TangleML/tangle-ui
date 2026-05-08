@@ -33,15 +33,16 @@ export const TaskLeafNode = observer(function TaskLeafNode({
   parentNavigationPath,
 }: TaskLeafNodeProps) {
   const { editor } = useSharedStores();
-  const { navigateToEntity, focusValidationIssue } = useFocusActions();
+  const { navigateToEntity, focusIssueAtNavigationPath } = useFocusActions();
   const issues = getEntityIssues(parentSpec, task.$id);
   const hasErrors = countErrors(issues) > 0;
   const isSelected = editor.isTaskSelected(task.$id);
 
   const handleClick = () => {
-    navigateToEntity(parentNavigationPath, task.$id, "task");
     if (issues.length > 0) {
-      focusValidationIssue(issues[0]);
+      focusIssueAtNavigationPath(parentNavigationPath, issues[0]);
+    } else {
+      navigateToEntity(parentNavigationPath, task.$id, "task");
     }
   };
 
@@ -83,6 +84,7 @@ export const TaskLeafNode = observer(function TaskLeafNode({
             <IssueRow
               key={`${issue.type}-${issue.entityId ?? "graph"}-${index}`}
               issue={issue}
+              issueNavigationPath={parentNavigationPath}
             />
           ))}
         </BlockStack>

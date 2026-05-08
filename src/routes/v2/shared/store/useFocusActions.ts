@@ -1,4 +1,8 @@
-import { focusValidationIssue, navigateToEntity } from "./focus.actions";
+import {
+  focusIssueAtNavigationPath,
+  focusValidationIssue,
+  navigateToEntity,
+} from "./focus.actions";
 import { useSharedStores } from "./SharedStoreContext";
 
 export function useFocusActions() {
@@ -7,5 +11,10 @@ export function useFocusActions() {
   return {
     navigateToEntity: navigateToEntity.bind(null, editor, navigation),
     focusValidationIssue: focusValidationIssue.bind(null, editor),
+    focusIssueAtNavigationPath: focusIssueAtNavigationPath.bind(
+      null,
+      editor,
+      navigation,
+    ),
   };
 }

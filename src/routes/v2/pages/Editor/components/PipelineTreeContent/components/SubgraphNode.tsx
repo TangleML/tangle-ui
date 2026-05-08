@@ -64,6 +64,7 @@ export const SubgraphNode = observer(function SubgraphNode({
     (issue) => !issue.entityId || !childTaskIds.has(issue.entityId),
   );
   const ownIssues = [...taskIssues, ...specIssuesWithoutChildTaskRow];
+  const parentNavPath = navigationPath.slice(0, -1);
   const allIssues = [...taskIssues, ...spec.allValidationIssues];
   const hasErrors = countErrors(allIssues) > 0;
 
@@ -162,6 +163,9 @@ export const SubgraphNode = observer(function SubgraphNode({
                 <IssueRow
                   key={`${issue.type}-${issue.entityId ?? "graph"}-${index}`}
                   issue={issue}
+                  issueNavigationPath={
+                    taskIssues.includes(issue) ? parentNavPath : navigationPath
+                  }
                 />
               ))}
             </BlockStack>

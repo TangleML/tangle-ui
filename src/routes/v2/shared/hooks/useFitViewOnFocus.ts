@@ -8,6 +8,11 @@ import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
  * Uses a MobX reaction instead of render-time observable read + useEffect
  * so that fitView fires reliably even when navigateToPath triggers
  * intermediate clearSelection reactions before setPendingFocusNode is called.
+ *
+ * `fireImmediately` is required: `FlowCanvas` remounts when `activeSpec.$id`
+ * changes (subgraph navigation), so this hook often subscribes after
+ * `pendingFocusNodeId` is already set—without an immediate run the effect
+ * would never fire until a later change.
  */
 export function useFitViewOnFocus(): void {
   const { editor } = useSharedStores();
@@ -35,6 +40,7 @@ export function useFitViewOnFocus(): void {
           editor.setPendingFocusNode(null);
         }, 50);
       },
+      { fireImmediately: true },
     );
 
     return () => {
