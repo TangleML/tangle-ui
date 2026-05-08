@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/collapsible";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useWindowContext } from "@/routes/v2/shared/windows/ContentWindowStateContext";
 import { useWindowDrag } from "@/routes/v2/shared/windows/hooks/useWindowDrag";
 import { SnapPreview } from "@/routes/v2/shared/windows/SnapPreview";
@@ -22,6 +23,7 @@ const HEADER_HEIGHT = 36;
 
 export const DockedWindow = observer(function DockedWindow() {
   const { model, content, dockIndex = 0 } = useWindowContext();
+  const { track } = useAnalytics();
 
   const {
     isDragging,
@@ -116,7 +118,11 @@ export const DockedWindow = observer(function DockedWindow() {
       open={!model.isMinimized}
       onOpenChange={(shouldExpand) => {
         const isExpanded = !model.isMinimized;
-        if (shouldExpand !== isExpanded) model.toggleMinimize();
+        if (shouldExpand === isExpanded) return;
+        track("v2.shared_window.docked_panel_toggle_completed", {
+          panel_expanded: shouldExpand,
+        });
+        model.toggleMinimize();
       }}
     >
       {/* Sentinel to detect stuck state and serve as scroll target */}

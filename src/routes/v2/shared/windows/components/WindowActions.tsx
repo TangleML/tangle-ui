@@ -3,6 +3,7 @@ import { observer } from "mobx-react-lite";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { useWindowContext } from "@/routes/v2/shared/windows/ContentWindowStateContext";
+import { tracking } from "@/utils/tracking";
 
 const lightButtonClassName =
   "h-5 w-5 text-gray-700 hover:text-gray-900 hover:bg-white/50";
@@ -36,6 +37,9 @@ export const WindowActions = observer(function WindowActions() {
           className={buttonClassName}
           onClick={() => model.toggleMinimize()}
           aria-label={model.isMinimized ? "Expand" : "Minimize"}
+          {...tracking("v2.shared_window.chrome.minimize", {
+            placement: "docked",
+          })}
         >
           <Icon name={model.isMinimized ? "ChevronDown" : "Minus"} size="xs" />
         </Button>
@@ -48,6 +52,9 @@ export const WindowActions = observer(function WindowActions() {
           className={buttonClassName}
           onClick={() => model.toggleMaximize()}
           aria-label={model.isMaximized ? "Restore" : "Maximize"}
+          {...tracking("v2.shared_window.chrome.maximize", {
+            placement: model.isDocked ? "docked" : "floating",
+          })}
         >
           <Icon
             name={model.isMaximized ? "Minimize2" : "Maximize2"}
@@ -63,6 +70,9 @@ export const WindowActions = observer(function WindowActions() {
           className={buttonClassName}
           onClick={() => model.hide()}
           aria-label="Hide"
+          {...tracking("v2.shared_window.chrome.hide", {
+            placement: model.isDocked ? "docked" : "floating",
+          })}
         >
           <Icon name="X" size="xs" />
         </Button>
@@ -73,6 +83,9 @@ export const WindowActions = observer(function WindowActions() {
           className={closeButtonClassName}
           onClick={() => model.close()}
           aria-label="Close"
+          {...tracking("v2.shared_window.chrome.close", {
+            placement: model.isDocked ? "docked" : "floating",
+          })}
         >
           <Icon name="X" size="xs" />
         </Button>
