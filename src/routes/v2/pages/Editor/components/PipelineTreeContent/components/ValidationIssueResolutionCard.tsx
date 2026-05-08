@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
-import { cn } from "@/lib/utils";
 import type {
   ComponentSpec,
   ValidationIssue,
@@ -19,6 +18,11 @@ import { InfoOnlyResolution } from "./resolutions/InfoOnlyResolution";
 import { MissingRequiredInputResolution } from "./resolutions/MissingRequiredInputResolution";
 import { RenameEntityResolution } from "./resolutions/RenameEntityResolution";
 import { useValidationResolutionActions } from "./useValidationResolutionActions";
+import {
+  validationIssueHeaderAccentVariants,
+  validationIssueHeaderMessageBoxVariants,
+  type ValidationIssueHeaderSeverity,
+} from "./validationIssueHeader.variants";
 
 interface ValidationIssueResolutionCardProps {
   issue: ValidationIssue;
@@ -45,22 +49,32 @@ export const ValidationIssueResolutionCard = observer(
 );
 
 function IssueHeader({ issue }: { issue: ValidationIssue }) {
-  const severityColor =
-    issue.severity === "error" ? "text-red-600" : "text-amber-600";
-  const severityBg = issue.severity === "error" ? "bg-red-50" : "bg-amber-50";
+  const severity: ValidationIssueHeaderSeverity =
+    issue.severity === "error" ? "error" : "warning";
   const severityIcon =
     issue.severity === "error" ? "CircleAlert" : "TriangleAlert";
 
   return (
     <BlockStack gap="2">
       <InlineStack gap="2" blockAlign="center">
-        <Icon name={severityIcon} size="sm" className={severityColor} />
-        <Text size="xs" weight="semibold" className={severityColor}>
+        <Icon
+          name={severityIcon}
+          size="sm"
+          className={validationIssueHeaderAccentVariants({ severity })}
+        />
+        <Text
+          size="xs"
+          weight="semibold"
+          className={validationIssueHeaderAccentVariants({ severity })}
+        >
           {issue.severity === "error" ? "Error" : "Warning"}
         </Text>
       </InlineStack>
-      <div className={cn("rounded-md p-2", severityBg)}>
-        <Text size="xs" className={severityColor}>
+      <div className={validationIssueHeaderMessageBoxVariants({ severity })}>
+        <Text
+          size="xs"
+          className={validationIssueHeaderAccentVariants({ severity })}
+        >
           {issue.message}
         </Text>
       </div>

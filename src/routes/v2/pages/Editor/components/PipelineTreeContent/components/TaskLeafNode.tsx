@@ -3,7 +3,6 @@ import { observer } from "mobx-react-lite";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
-import { cn } from "@/lib/utils";
 import type { ComponentSpec, Task } from "@/models/componentSpec";
 import { getEntityIssues } from "@/routes/v2/pages/Editor/components/PipelineTreeContent/utils";
 import {
@@ -15,6 +14,12 @@ import { useFocusActions } from "@/routes/v2/shared/store/useFocusActions";
 
 import { IssueBadge } from "./IssueBadge";
 import { IssueRow } from "./IssueRow";
+import {
+  type TreeNodeLabelTone,
+  treeNodeLabelToneVariants,
+  treeNodeLeafIconToneVariants,
+} from "./treeNode.variants";
+import { TreeRowActivate } from "./TreeRowActivate";
 
 interface TaskLeafNodeProps {
   task: Task;
@@ -27,11 +32,11 @@ export const TaskLeafNode = observer(function TaskLeafNode({
   parentSpec,
   parentNavigationPath,
 }: TaskLeafNodeProps) {
-  const { editor, navigation } = useSharedStores();
+  const { editor } = useSharedStores();
   const { navigateToEntity, focusValidationIssue } = useFocusActions();
   const issues = getEntityIssues(parentSpec, task.$id);
   const hasErrors = countErrors(issues) > 0;
-  const isOnActiveCanvas = parentSpec === navigation.activeSpec;
+  const isSelected = editor.isTaskSelected(task.$id);
 
   const handleClick = () => {
     navigateToEntity(parentNavigationPath, task.$id, "task");
@@ -40,50 +45,39 @@ export const TaskLeafNode = observer(function TaskLeafNode({
     }
   };
 
-  const handleMouseEnter = () => {
-    if (isOnActiveCanvas) editor.setHoveredEntity(task.$id);
-  };
-
-  const handleMouseLeave = () => {
-    editor.setHoveredEntity(null);
-  };
-
   const hasIssues = issues.length > 0;
   const hasWarnings = countWarnings(issues) > 0;
 
+  let iconTone: TreeNodeLabelTone = "none";
+  if (hasErrors) {
+    iconTone = "error";
+  } else if (hasWarnings) {
+    iconTone = "warning";
+  }
+
   return (
-    <BlockStack gap="0">
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={handleClick}
-        onKeyDown={(e) => e.key === "Enter" && handleClick()}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-        className={cn(
-          "flex items-start gap-1 py-1 px-2 text-slate-600 rounded-md cursor-pointer transition-colors hover:bg-slate-100",
-          hasErrors && "text-red-700",
-        )}
+    <BlockStack gap="0" align="stretch" className="min-w-0 w-full">
+      <TreeRowActivate
+        layout="leafRow"
+        selected={isSelected}
+        taskId={task.$id}
+        onActivate={handleClick}
       >
         <Icon
           name={hasIssues ? "CircleAlert" : "Circle"}
           size="xs"
-          className={cn(
-            "shrink-0 mt-0.5",
-            hasErrors
-              ? "text-red-400"
-              : hasWarnings
-                ? "text-amber-400"
-                : "text-slate-400",
-          )}
+          className={treeNodeLeafIconToneVariants({
+            tone: iconTone,
+            selected: isSelected,
+          })}
         />
-        <Text size="xs" className="wrap-break-word min-w-0 flex-1">
+        <Text size="xs" className={treeNodeLabelToneVariants({ tone: "none" })}>
           {task.name}
         </Text>
         <IssueBadge issues={issues} />
-      </div>
+      </TreeRowActivate>
       {hasIssues && (
-        <BlockStack gap="1" className="ml-10 mb-1">
+        <BlockStack gap="1" className="ml-3 mb-1">
           {issues.map((issue, index) => (
             <IssueRow
               key={`${issue.type}-${issue.entityId ?? "graph"}-${index}`}
