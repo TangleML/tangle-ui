@@ -46,4 +46,12 @@ export const ExistingFlags: ConfigFlags = {
     default: false,
     category: "beta",
   },
+
+  ["v2_editor"]: {
+    name: "V2 Editor",
+    description:
+      "Enable the V2 Editor. You can switch back and forth between the V1 and V2 editors.",
+    default: false,
+    category: "beta",
+  },
 };

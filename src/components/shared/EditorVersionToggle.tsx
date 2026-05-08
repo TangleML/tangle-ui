@@ -4,7 +4,7 @@ import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { Icon } from "@/components/ui/icon";
 import { APP_ROUTES, EDITOR_PATH } from "@/routes/router";
 
-const isEnabled = import.meta.env.VITE_ENABLE_V2_EDITOR_TOGGLE === "true";
+import { useFlagValue } from "./Settings/useFlags";
 
 type EditorVersion = "v1" | "v2";
 
@@ -17,6 +17,7 @@ const detectEditorVersion = (pathname: string): EditorVersion | null => {
 export const EditorVersionToggle = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const isEnabled = useFlagValue("v2_editor");
 
   if (!isEnabled) return null;
 
