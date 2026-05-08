@@ -1,1 +1,5 @@
-export type { ValidationIssue, ValidationIssueCode } from "./types";
+export type {
+  ComponentValidationIssue,
+  ValidationIssue,
+  ValidationIssueCode,
+} from "./types";

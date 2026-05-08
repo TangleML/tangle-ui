@@ -254,7 +254,7 @@ components/ArgumentRow/
   useArgumentActions.ts
   ArgumentRow.tsx
 
-components/PipelineTreeContent/components/
+components/IssueResolution/
   validationResolution.actions.ts
   useValidationResolutionActions.ts  # wraps with editor.setSelectedValidationIssue(null)
 ```

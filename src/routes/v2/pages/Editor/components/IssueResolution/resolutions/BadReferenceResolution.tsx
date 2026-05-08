@@ -6,8 +6,8 @@ import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import type { ComponentSpec, ValidationIssue } from "@/models/componentSpec";
 import { ArgumentRow } from "@/routes/v2/pages/Editor/components/ArgumentRow/ArgumentRow";
-import { useValidationResolutionActions } from "@/routes/v2/pages/Editor/components/PipelineTreeContent/components/useValidationResolutionActions";
-import { findTaskById } from "@/routes/v2/pages/Editor/components/PipelineTreeContent/components/validationResolution.utils";
+import { useValidationResolutionActions } from "@/routes/v2/pages/Editor/components/IssueResolution/useValidationResolutionActions";
+import { findTaskById } from "@/routes/v2/pages/Editor/components/IssueResolution/validationResolution.utils";
 import { tracking } from "@/utils/tracking";
 
 import { InfoOnlyResolution } from "./InfoOnlyResolution";

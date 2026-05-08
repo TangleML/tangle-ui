@@ -3,11 +3,16 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
-import { BlockStack } from "@/components/ui/layout";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import type { ComponentSpec, ValidationIssue } from "@/models/componentSpec";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
+import { useIssueResolutionWindow } from "@/routes/v2/pages/Editor/components/IssueResolution/useIssueResolutionWindow";
+import {
+  navigateAndSelectIssue,
+  sameValidationIssue,
+} from "@/routes/v2/shared/store/focus.actions";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { tracking } from "@/utils/tracking";
 
@@ -46,6 +51,7 @@ export const ValidationSummary = observer(function ValidationSummary({
   const { track } = useAnalytics();
   const [isExpanded, setIsExpanded] = useState(false);
   const { editor, navigation } = useSharedStores();
+  const openIssueResolutionWindow = useIssueResolutionWindow();
   const issues = spec.allValidationIssues;
   const errorCount = countErrors(issues);
   const warningCount = countWarnings(issues);
@@ -59,37 +65,60 @@ export const ValidationSummary = observer(function ValidationSummary({
   if (warningCount > 0)
     summaryParts.push(`${warningCount} warning${warningCount > 1 ? "s" : ""}`);
 
+  const selectedIssue = editor.selectedValidationIssue;
+
+  const handleOpenFixWindow = () => {
+    const sel = editor.selectedValidationIssue;
+    if (!sel || !issues.some((i) => sameValidationIssue(i, sel))) {
+      navigateAndSelectIssue(editor, navigation, issues[0]);
+    }
+    openIssueResolutionWindow();
+  };
+
   return (
     <BlockStack gap="1" className={className}>
-      <Button
-        variant="ghost"
-        size="sm"
-        className={cn(
-          "w-full justify-start gap-1.5 h-auto py-1.5",
-          errorCount > 0
-            ? "text-red-700 hover:bg-red-50"
-            : "text-amber-700 hover:bg-amber-50",
-        )}
-        onClick={() => setIsExpanded((prev) => !prev)}
-        {...tracking(
-          "v2.pipeline_editor.configuration_panel.validation_summary_toggle",
-        )}
-      >
-        <Icon
-          name={isExpanded ? "ChevronDown" : "ChevronRight"}
+      <InlineStack gap="1" blockAlign="stretch" className="w-full min-w-0">
+        <Button
+          variant="ghost"
           size="sm"
-          className="shrink-0"
-        />
-        <Icon name="TriangleAlert" size="sm" className="shrink-0" />
-        <Text size="sm" weight="semibold">
-          {summaryParts.join(", ")}
-        </Text>
-      </Button>
+          className={cn(
+            "min-w-0 flex-1 justify-start gap-1.5 h-auto py-1.5",
+            errorCount > 0
+              ? "text-red-700 hover:bg-red-50"
+              : "text-amber-700 hover:bg-amber-50",
+          )}
+          onClick={() => setIsExpanded((prev) => !prev)}
+          {...tracking(
+            "v2.pipeline_editor.configuration_panel.validation_summary_toggle",
+          )}
+        >
+          <Icon
+            name={isExpanded ? "ChevronDown" : "ChevronRight"}
+            size="sm"
+            className="shrink-0"
+          />
+          <Icon name="TriangleAlert" size="sm" className="shrink-0" />
+          <Text size="sm" weight="semibold">
+            {summaryParts.join(", ")}
+          </Text>
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="shrink-0 h-auto py-1.5"
+          onClick={handleOpenFixWindow}
+          data-testid="validation-summary-fix-button"
+        >
+          Fix
+        </Button>
+      </InlineStack>
 
       {isExpanded && (
         <BlockStack gap="1" className="pl-2">
           {issues.map((issue, index) => {
-            const isSelected = editor.selectedValidationIssue === issue;
+            const isSelected =
+              selectedIssue !== null &&
+              sameValidationIssue(selectedIssue, issue);
 
             const handleIssueClick = () => {
               track(
@@ -99,48 +128,7 @@ export const ValidationSummary = observer(function ValidationSummary({
                   severity: issue.severity,
                 },
               );
-              if (issue.subgraphPath.length > 1 && navigation.rootSpec) {
-                const navPath = [
-                  navigation.rootSpec.name,
-                  ...issue.subgraphPath.slice(1),
-                ];
-                navigation.navigateToPath(navPath);
-              } else {
-                navigation.navigateToLevel(0);
-              }
-
-              // The issue's entityId comes from validation's own deserialization,
-              // so it won't match the navigation spec's IDs. Look up by name instead.
-              const activeSpec = navigation.activeSpec;
-              if (activeSpec && issue.entityName) {
-                const task = activeSpec.tasks.find(
-                  (t) => t.name === issue.entityName,
-                );
-                const input = activeSpec.inputs.find(
-                  (i) => i.name === issue.entityName,
-                );
-                const output = activeSpec.outputs.find(
-                  (o) => o.name === issue.entityName,
-                );
-                const resolvedId = task?.$id ?? input?.$id ?? output?.$id;
-                if (resolvedId) {
-                  const resolvedType = task
-                    ? "task"
-                    : input
-                      ? "input"
-                      : "output";
-                  editor.setPendingFocusNode(resolvedId);
-                  editor.selectNode(resolvedId, resolvedType, {
-                    entityId: resolvedId,
-                  });
-                  editor.setHoveredEntity(resolvedId);
-                }
-              }
-
-              if (issue.argumentName) {
-                editor.setFocusedArgument(issue.argumentName);
-              }
-              editor.setSelectedValidationIssue(issue);
+              navigateAndSelectIssue(editor, navigation, issue);
             };
 
             return (
