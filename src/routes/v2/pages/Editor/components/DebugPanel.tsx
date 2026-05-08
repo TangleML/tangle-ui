@@ -11,6 +11,7 @@ import { Text } from "@/components/ui/typography";
 import { useUpgradeComponentsWindow } from "@/routes/v2/pages/Editor/components/UpgradeComponents/useUpgradeComponentsWindow";
 import { ShortcutBadge } from "@/routes/v2/shared/components/ShortcutBadge";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { tracking } from "@/utils/tracking";
 
 import { getSelectedInfo, getSpecStats, getSpecYaml } from "./debugPanel.utils";
 import { PressedKeysList } from "./PressedKeysList";
@@ -37,10 +38,18 @@ const DebugPanelContent = observer(function DebugPanelContent() {
   return (
     <Tabs defaultValue="stats" className="h-full flex flex-col">
       <TabsList className="mx-3 mt-2 shrink-0">
-        <TabsTrigger value="stats" className="text-xs!">
+        <TabsTrigger
+          value="stats"
+          className="text-xs!"
+          {...tracking("v2.pipeline_editor.debug_panel.tab_stats")}
+        >
           Stats
         </TabsTrigger>
-        <TabsTrigger value="yaml" className="text-xs!">
+        <TabsTrigger
+          value="yaml"
+          className="text-xs!"
+          {...tracking("v2.pipeline_editor.debug_panel.tab_yaml")}
+        >
           YAML
         </TabsTrigger>
       </TabsList>
@@ -77,6 +86,7 @@ const DebugPanelContent = observer(function DebugPanelContent() {
               variant="outline"
               size="sm"
               className="w-full justify-start gap-2"
+              {...tracking("v2.pipeline_editor.debug_panel.upgrade_components")}
               onClick={openUpgradeComponentsWindow}
             >
               <Icon name="CircleArrowUp" size="sm" />

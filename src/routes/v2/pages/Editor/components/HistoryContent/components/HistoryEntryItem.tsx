@@ -2,6 +2,7 @@ import { cva } from "class-variance-authority";
 
 import { Icon } from "@/components/ui/icon";
 import { Text } from "@/components/ui/typography";
+import { tracking } from "@/utils/tracking";
 
 const historyButtonVariants = cva(
   "flex items-start gap-1.5 px-2 py-1 rounded w-full text-left transition-colors hover:bg-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-400 focus:ring-inset",
@@ -88,6 +89,9 @@ export function HistoryEntryItem({
   return (
     <button
       type="button"
+      {...(isInFuture
+        ? tracking("v2.pipeline_editor.history.entry_future")
+        : tracking("v2.pipeline_editor.history.entry_past"))}
       onClick={onClick}
       className={historyButtonVariants({ isCurrent, isInFuture })}
     >

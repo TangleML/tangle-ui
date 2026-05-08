@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+
 import {
   Dialog,
   DialogContent,
@@ -6,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { BlockStack } from "@/components/ui/layout";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 // TODO: extract PipelineFolders picker to shared or restructure via routing composition
 // eslint-disable-next-line no-restricted-imports
 import { PipelineFolders } from "@/routes/v2/pages/PipelineFolders/PipelineFolders";
@@ -22,6 +25,13 @@ export function OpenPipelineDialog({
   onOpenChange,
   onPipelineClick,
 }: OpenPipelineDialogProps) {
+  const { track } = useAnalytics();
+
+  useEffect(() => {
+    if (!open) return;
+    track("v2.pipeline_editor.open_pipeline_dialog.impression");
+  }, [open, track]);
+
   return (
     <Dialog
       open={open}
