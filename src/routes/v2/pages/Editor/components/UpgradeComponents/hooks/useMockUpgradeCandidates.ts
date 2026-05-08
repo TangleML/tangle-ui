@@ -1,17 +1,11 @@
-import type { ComponentReference } from "@/models/componentSpec";
+import type { ComponentReference, Task } from "@/models/componentSpec";
 import type { ComponentSpec } from "@/models/componentSpec/entities/componentSpec";
 import type {
   InputSpec,
   OutputSpec,
 } from "@/models/componentSpec/entities/types";
-import type {
-  LostBinding,
-  UpgradeCandidate,
-} from "@/routes/v2/pages/Editor/components/UpgradeComponents/types";
-import {
-  computeDiffComponentSpecs,
-  predictUpgradeIssues,
-} from "@/routes/v2/pages/Editor/store/actions/task.utils";
+import type { UpgradeCandidate } from "@/routes/v2/pages/Editor/components/UpgradeComponents/types";
+import { buildUpgradeCandidateFromResolved } from "@/routes/v2/pages/Editor/components/UpgradeComponents/utils/buildUpgradeCandidateFromResolved";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 
 /**
@@ -92,70 +86,24 @@ function buildMockComponentRef(
   };
 }
 
-function collectLostBindings(
-  taskId: string,
-  diff: ReturnType<typeof computeDiffComponentSpecs>,
-  spec: ComponentSpec,
-): LostBinding[] {
-  const lostInputNames = new Set(
-    diff.inputDiff.lostEntities.map((i) => i.name),
-  );
-  const lostOutputNames = new Set(
-    diff.outputDiff.lostEntities.map((o) => o.name),
-  );
-
-  const result: LostBinding[] = [];
-
-  for (const b of spec.bindings) {
-    if (b.targetEntityId === taskId && lostInputNames.has(b.targetPortName)) {
-      result.push({
-        bindingId: b.$id,
-        sourceEntityId: b.sourceEntityId,
-        sourcePortName: b.sourcePortName,
-        targetEntityId: b.targetEntityId,
-        targetPortName: b.targetPortName,
-        reason: "lost_input",
-      });
-    }
-    if (b.sourceEntityId === taskId && lostOutputNames.has(b.sourcePortName)) {
-      result.push({
-        bindingId: b.$id,
-        sourceEntityId: b.sourceEntityId,
-        sourcePortName: b.sourcePortName,
-        targetEntityId: b.targetEntityId,
-        targetPortName: b.targetPortName,
-        reason: "lost_output",
-      });
-    }
-  }
-
-  return result;
-}
-
-function buildCandidate(
-  taskId: string,
-  taskName: string,
-  currentRef: ComponentReference,
+function buildMockCandidateForTask(
+  task: Task,
   spec: ComponentSpec,
 ): UpgradeCandidate | null {
-  const currentDigest = currentRef.digest;
-  if (!currentDigest) return null;
+  const currentDigest = task.componentRef.digest;
+  if (!currentDigest) {
+    return null;
+  }
 
-  const newComponentRef = buildMockComponentRef(currentRef, taskName);
-  const diff = computeDiffComponentSpecs(currentRef.spec, newComponentRef.spec);
-  const lostBindings = collectLostBindings(taskId, diff, spec);
-  const predictedIssues = predictUpgradeIssues(taskId, diff, lostBindings);
-
-  return {
-    taskId,
-    taskName,
+  const newComponentRef = buildMockComponentRef(task.componentRef, task.name);
+  return buildUpgradeCandidateFromResolved(
+    task.$id,
+    task.name,
     currentDigest,
+    task.resolvedComponentSpec,
     newComponentRef,
-    inputDiff: diff.inputDiff,
-    outputDiff: diff.outputDiff,
-    lostBindings,
-    predictedIssues,
-  };
+    spec,
+  );
 }
 
 /**
@@ -164,40 +112,44 @@ function buildCandidate(
  */
 export function useMockUpgradeCandidates(enabled = true): UpgradeCandidate[] {
   const spec = useSpec();
-  if (!enabled || !spec) return [];
+  if (!enabled || !spec) {
+    return [];
+  }
 
   const candidates: UpgradeCandidate[] = [];
   let count = 0;
   for (const task of spec.tasks) {
-    const candidate = buildCandidate(
-      task.$id,
-      task.name,
-      task.componentRef,
-      spec,
-    );
-    if (candidate) candidates.push(candidate);
+    const candidate = buildMockCandidateForTask(task, spec);
+    if (candidate) {
+      candidates.push(candidate);
+    }
     count++;
-    if (count > spec.tasks.length / 2) break;
+    if (count > spec.tasks.length / 2) {
+      break;
+    }
   }
 
-  candidates.push({
-    taskId: spec.tasks[count].$id,
-    taskName: spec.tasks[count].name,
-    currentDigest: "clean-digest",
-    newComponentRef: spec.tasks[count].componentRef,
-    inputDiff: {
-      lostEntities: [],
-      newEntities: [],
-      changedEntities: [],
-    },
-    outputDiff: {
-      lostEntities: [],
-      newEntities: [],
-      changedEntities: [],
-    },
-    lostBindings: [],
-    predictedIssues: [],
-  });
+  const tailTask = spec.tasks[count];
+  if (tailTask) {
+    candidates.push({
+      taskId: tailTask.$id,
+      taskName: tailTask.name,
+      currentDigest: "clean-digest",
+      newComponentRef: tailTask.componentRef,
+      inputDiff: {
+        lostEntities: [],
+        newEntities: [],
+        changedEntities: [],
+      },
+      outputDiff: {
+        lostEntities: [],
+        newEntities: [],
+        changedEntities: [],
+      },
+      lostBindings: [],
+      predictedIssues: [],
+    });
+  }
 
   return candidates;
 }
