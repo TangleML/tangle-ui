@@ -1,6 +1,11 @@
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { type MouseEvent, useCallback, useRef } from "react";
+import {
+  type ComponentPropsWithoutRef,
+  type MouseEvent,
+  useCallback,
+  useRef,
+} from "react";
 
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { buildTaskSpecShape } from "@/components/shared/PipelineRunNameTemplate/types";
@@ -21,12 +26,16 @@ type ClonePipelineButtonProps = {
   componentSpec: ComponentSpec;
   runId?: string | null;
   showLabel?: boolean;
-};
+} & Omit<
+  ComponentPropsWithoutRef<typeof TooltipButton>,
+  "onClick" | "tooltip" | "variant" | "children"
+>;
 
 export const ClonePipelineButton = ({
   componentSpec,
   runId,
   showLabel,
+  ...rest
 }: ClonePipelineButtonProps) => {
   const navigate = useNavigate();
   const notify = useToastNotification();
@@ -96,6 +105,7 @@ export const ClonePipelineButton = ({
       tooltip="Clone pipeline"
       disabled={isPending}
       data-testid="clone-pipeline-run-button"
+      {...rest}
     >
       <Icon name="CopyPlus" />
       {showLabel && "Clone"}

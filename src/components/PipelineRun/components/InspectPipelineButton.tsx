@@ -1,5 +1,9 @@
 import { useNavigate } from "@tanstack/react-router";
-import { type MouseEvent, useCallback } from "react";
+import {
+  type ComponentPropsWithoutRef,
+  type MouseEvent,
+  useCallback,
+} from "react";
 
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { Icon } from "@/components/ui/icon";
@@ -7,11 +11,15 @@ import { Icon } from "@/components/ui/icon";
 type InspectPipelineButtonProps = {
   pipelineName: string;
   showLabel?: boolean;
-};
+} & Omit<
+  ComponentPropsWithoutRef<typeof TooltipButton>,
+  "onClick" | "tooltip" | "variant" | "children"
+>;
 
 export const InspectPipelineButton = ({
   pipelineName,
   showLabel,
+  ...rest
 }: InspectPipelineButtonProps) => {
   const navigate = useNavigate();
 
@@ -35,6 +43,7 @@ export const InspectPipelineButton = ({
       onClick={handleInspect}
       tooltip="Inspect pipeline"
       data-testid="inspect-pipeline-button"
+      {...rest}
     >
       <Icon name="Network" className="rotate-270" />
       {showLabel && "Inspect"}

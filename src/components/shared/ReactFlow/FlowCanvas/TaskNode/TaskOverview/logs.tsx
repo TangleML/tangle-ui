@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { type ComponentPropsWithoutRef, useEffect, useState } from "react";
 
 import { CodeViewer } from "@/components/shared/CodeViewer";
 import { InfoBox } from "@/components/shared/InfoBox";
@@ -171,13 +171,19 @@ const Logs = ({
   );
 };
 
+type OpenLogsInNewWindowLinkProps = {
+  executionId: string;
+  status?: string;
+} & Omit<
+  ComponentPropsWithoutRef<typeof Link>,
+  "href" | "children" | "external" | "variant" | "size" | "aria-label"
+>;
+
 export const OpenLogsInNewWindowLink = ({
   executionId,
   status,
-}: {
-  executionId: string;
-  status?: string;
-}) => {
+  ...linkRest
+}: OpenLogsInNewWindowLinkProps) => {
   const { backendUrl, available } = useBackend();
   const logsUrl = `${backendUrl}/api/executions/${executionId}/stream_container_log`;
 
@@ -196,6 +202,7 @@ export const OpenLogsInNewWindowLink = ({
           ? "Open logs in a new tab"
           : "Cant open logs: Backend not available"
       }
+      {...linkRest}
     >
       Open in new tab
     </Link>

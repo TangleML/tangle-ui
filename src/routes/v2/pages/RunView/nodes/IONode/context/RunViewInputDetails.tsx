@@ -7,6 +7,7 @@ import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
+import { tracking } from "@/utils/tracking";
 
 interface RunViewInputDetailsProps {
   entityId: string;
@@ -44,7 +45,13 @@ export const RunViewInputDetails = observer(function RunViewInputDetails({
       </InlineStack>
 
       <ActionBlock
-        actions={[<LinkNodeButton key="link" nodeId={input.name} />]}
+        actions={[
+          <LinkNodeButton
+            key="link"
+            nodeId={input.name}
+            {...tracking("v2.run_view.context_panel.input_link_share")}
+          />,
+        ]}
       />
 
       <BlockStack gap="4" className="p-1">

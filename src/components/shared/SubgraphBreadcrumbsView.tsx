@@ -12,14 +12,21 @@ import {
 import { Button } from "@/components/ui/button";
 import { InlineStack } from "@/components/ui/layout";
 
+type CrumbTrackingAttrs = {
+  "data-tracking-id": string;
+  "data-tracking-metadata"?: string;
+};
+
 interface SubgraphBreadcrumbsViewProps {
   path: string[];
   onNavigate: (index: number) => void;
+  getCrumbTracking?: (index: number) => CrumbTrackingAttrs;
 }
 
 export const SubgraphBreadcrumbsView = ({
   path,
   onNavigate,
+  getCrumbTracking,
 }: SubgraphBreadcrumbsViewProps) => {
   if (path.length <= 1) {
     return null;
@@ -47,6 +54,7 @@ export const SubgraphBreadcrumbsView = ({
                         size="sm"
                         onClick={() => onNavigate(index)}
                         className="h-6 px-2"
+                        {...(getCrumbTracking?.(index) ?? {})}
                       >
                         {isRoot ? (
                           <InlineStack align="start" gap="1">

@@ -13,9 +13,11 @@ import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Text } from "@/components/ui/typography";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import type { TaskSpec } from "@/utils/componentSpec";
+import { tracking } from "@/utils/tracking";
 
 import { RunViewTaskActions } from "./RunViewTaskActions";
 
@@ -26,6 +28,7 @@ interface RunViewTaskDetailsProps {
 export const RunViewTaskDetails = observer(function RunViewTaskDetails({
   entityId,
 }: RunViewTaskDetailsProps) {
+  const { track } = useAnalytics();
   const spec = useSpec();
   const executionData = useExecutionDataOptional();
 
@@ -67,7 +70,15 @@ export const RunViewTaskDetails = observer(function RunViewTaskDetails({
       <RunViewTaskActions componentRef={componentRef} taskName={task.name} />
 
       <div className="overflow-y-auto pb-4 h-full w-full">
-        <Tabs defaultValue="artifacts" className="h-full">
+        <Tabs
+          defaultValue="artifacts"
+          className="h-full"
+          onValueChange={(activeTab) =>
+            track("v2.run_view.context_panel.task_detail_tab.select", {
+              active_tab: activeTab,
+            })
+          }
+        >
           <TabsList className="mb-2">
             <TabsTrigger value="artifacts" className="flex-1">
               <AmphoraIcon className="w-4 h-4" />
@@ -110,6 +121,7 @@ export const RunViewTaskDetails = observer(function RunViewTaskDetails({
                   <OpenLogsInNewWindowLink
                     executionId={executionId}
                     status={status}
+                    {...tracking("v2.run_view.context_panel.open_logs_new_tab")}
                   />
                 </div>
               )}

@@ -1,12 +1,17 @@
+import { type ComponentPropsWithoutRef } from "react";
+
 import useToastNotification from "@/hooks/useToastNotification";
 
 import { ActionButton } from "./ActionButton";
 
-interface LinkNodeButtonProps {
+type LinkNodeButtonProps = {
   nodeId: string;
-}
+} & Omit<
+  ComponentPropsWithoutRef<typeof ActionButton>,
+  "onClick" | "tooltip" | "icon" | "children"
+>;
 
-export const LinkNodeButton = ({ nodeId }: LinkNodeButtonProps) => {
+export const LinkNodeButton = ({ nodeId, ...rest }: LinkNodeButtonProps) => {
   const notify = useToastNotification();
 
   const handleLink = () => {
@@ -18,6 +23,11 @@ export const LinkNodeButton = ({ nodeId }: LinkNodeButtonProps) => {
   };
 
   return (
-    <ActionButton tooltip="Shareable Link" icon="Link" onClick={handleLink} />
+    <ActionButton
+      tooltip="Shareable Link"
+      icon="Link"
+      onClick={handleLink}
+      {...rest}
+    />
   );
 };

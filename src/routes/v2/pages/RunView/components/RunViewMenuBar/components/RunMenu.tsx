@@ -10,6 +10,7 @@ import {
 import { Icon } from "@/components/ui/icon";
 import { useRunViewActions } from "@/routes/v2/pages/RunView/hooks/useRunViewActions";
 import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButton";
+import { tracking } from "@/utils/tracking";
 
 export function RunMenu() {
   const navigate = useNavigate();
@@ -19,7 +20,12 @@ export function RunMenu() {
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <MenuTriggerButton disabled>Run</MenuTriggerButton>
+          <MenuTriggerButton
+            disabled
+            {...tracking("v2.run_view.menu_bar.run_menu")}
+          >
+            Run
+          </MenuTriggerButton>
         </DropdownMenuTrigger>
       </DropdownMenu>
     );
@@ -42,11 +48,16 @@ export function RunMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <MenuTriggerButton>Run</MenuTriggerButton>
+        <MenuTriggerButton {...tracking("v2.run_view.menu_bar.run_menu")}>
+          Run
+        </MenuTriggerButton>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" sideOffset={2}>
         {canAccessEditorSpec && pipelineName && (
-          <DropdownMenuItem onSelect={handleInspect}>
+          <DropdownMenuItem
+            onSelect={handleInspect}
+            {...tracking("v2.run_view.menu_bar.inspect_pipeline")}
+          >
             <Icon name="ExternalLink" size="sm" />
             Inspect Pipeline
           </DropdownMenuItem>

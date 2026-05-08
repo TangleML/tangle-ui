@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { useCallback, useState } from "react";
+import { type ComponentPropsWithoutRef, useCallback, useState } from "react";
 
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import ConfirmationDialog from "@/components/shared/Dialogs/ConfirmationDialog";
@@ -9,14 +9,18 @@ import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
 import { cancelPipelineRun } from "@/services/pipelineRunService";
 
-interface CancelPipelineRunButtonProps {
+type CancelPipelineRunButtonProps = {
   runId: string | null | undefined;
   showLabel?: boolean;
-}
+} & Omit<
+  ComponentPropsWithoutRef<typeof TooltipButton>,
+  "onClick" | "tooltip" | "variant" | "children"
+>;
 
 export const CancelPipelineRunButton = ({
   runId,
   showLabel,
+  ...rest
 }: CancelPipelineRunButtonProps) => {
   const { backendUrl, available } = useBackend();
   const notify = useToastNotification();
@@ -67,7 +71,7 @@ export const CancelPipelineRunButton = ({
 
   if (isSuccess) {
     return (
-      <TooltipButton disabled tooltip="Run cancelled">
+      <TooltipButton disabled tooltip="Run cancelled" {...rest}>
         <Icon name="CircleSlash" />
         {showLabel && "Cancelled"}
       </TooltipButton>
@@ -82,6 +86,7 @@ export const CancelPipelineRunButton = ({
         tooltip="Cancel run"
         disabled={isPending || !available}
         data-testid="cancel-pipeline-run-button"
+        {...rest}
       >
         {isPending ? (
           <Spinner className="mr-2" />

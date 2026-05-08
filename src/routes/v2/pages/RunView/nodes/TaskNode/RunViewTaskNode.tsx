@@ -8,6 +8,7 @@ import { Icon } from "@/components/ui/icon";
 import { TaskNode } from "@/routes/v2/shared/nodes/TaskNode/TaskNode";
 import type { TaskNodeData } from "@/routes/v2/shared/nodes/types";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { tracking } from "@/utils/tracking";
 
 import { useTaskRunStatus } from "./useTaskRunStatus";
 
@@ -41,6 +42,7 @@ export const RunViewTaskNode = observer(function RunViewTaskNode(
           variant="outline"
           size="sm"
           className="absolute -z-1 -top-8 right-0"
+          {...tracking("v2.run_view.canvas.task_node_open_logs")}
         >
           <Icon name="ScrollText" size="xs" />
           Open Logs

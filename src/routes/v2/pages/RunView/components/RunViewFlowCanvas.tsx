@@ -11,6 +11,7 @@ import { observer } from "mobx-react-lite";
 import { BlockStack } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
 import type { ComponentSpec } from "@/models/componentSpec";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useCopyShortcut } from "@/routes/v2/pages/RunView/hooks/useCopyShortcut";
 import { SubgraphBreadcrumbs } from "@/routes/v2/shared/components/SubgraphBreadcrumbs";
 import {
@@ -36,6 +37,7 @@ export const RunViewFlowCanvas = observer(function RunViewFlowCanvas({
   spec,
   className,
 }: RunViewFlowCanvasProps) {
+  const { track } = useAnalytics();
   const registry = useNodeRegistry();
   const nodeTypes = registry.getNodeTypes();
   const edgeTypes = registry.getEdgeTypes();
@@ -97,8 +99,24 @@ export const RunViewFlowCanvas = observer(function RunViewFlowCanvas({
       >
         <RunViewSelectionToolbar spec={spec} />
         <Background gap={GRID_SIZE} className="!bg-slate-50" />
-        <Controls position="bottom-right" />
-        <MiniMap position="bottom-left" pannable zoomable />
+        <Controls
+          position="bottom-right"
+          onZoomIn={() => track("v2.run_view.canvas.controls.zoom_in.click")}
+          onZoomOut={() => track("v2.run_view.canvas.controls.zoom_out.click")}
+          onFitView={() => track("v2.run_view.canvas.controls.fit_view.click")}
+          onInteractiveChange={(interactive) =>
+            track("v2.run_view.canvas.controls.interactive.toggle", {
+              interactive,
+            })
+          }
+        />
+        <MiniMap
+          position="bottom-left"
+          pannable
+          zoomable
+          onClick={() => track("v2.run_view.canvas.minimap.click")}
+          onNodeClick={() => track("v2.run_view.canvas.minimap.node.click")}
+        />
       </ReactFlow>
     </BlockStack>
   );

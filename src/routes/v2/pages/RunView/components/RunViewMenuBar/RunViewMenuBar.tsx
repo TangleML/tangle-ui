@@ -7,6 +7,7 @@ import { Text } from "@/components/ui/typography";
 import { AppMenuActions } from "@/routes/v2/shared/components/AppMenuActions";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { TOP_NAV_HEIGHT } from "@/utils/constants";
+import { tracking } from "@/utils/tracking";
 
 import { RunMenu } from "./components/RunMenu";
 import { RunViewViewMenu } from "./components/RunViewViewMenu";
@@ -34,7 +35,13 @@ export const RunViewMenuBar = observer(function RunViewMenuBar() {
           blockAlign="center"
           className="min-w-0"
         >
-          <Link href="/" aria-label="Home" variant="block" className="shrink-0">
+          <Link
+            href="/"
+            aria-label="Home"
+            variant="block"
+            className="shrink-0"
+            {...tracking("v2.run_view.menu_bar.home")}
+          >
             <img
               src={logo}
               alt="logo"
