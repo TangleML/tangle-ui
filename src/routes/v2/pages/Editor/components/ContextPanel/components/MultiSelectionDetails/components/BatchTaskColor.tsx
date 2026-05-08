@@ -5,6 +5,7 @@ import { InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/typography";
 import type { Task } from "@/models/componentSpec";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskActions";
 
 const TASK_COLOR_ANNOTATION = "tangleml.com/editor/task-color";
@@ -14,6 +15,7 @@ export const BatchTaskColor = observer(function BatchTaskColor({
 }: {
   tasks: Task[];
 }) {
+  const { track } = useAnalytics();
   const { batchSetTaskColor } = useTaskActions();
 
   if (tasks.length === 0) return null;
@@ -43,6 +45,12 @@ export const BatchTaskColor = observer(function BatchTaskColor({
           title="Task color"
           color={displayColor}
           setColor={(color) => batchSetTaskColor(tasks, color)}
+          onClose={() =>
+            track(
+              "v2.pipeline_editor.context_panel.multi_selection.batch_task_color_picker.closed",
+              { task_count: tasks.length },
+            )
+          }
         />
       </InlineStack>
     </>
