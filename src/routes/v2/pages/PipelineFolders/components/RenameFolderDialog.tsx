@@ -11,6 +11,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BlockStack } from "@/components/ui/layout";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
+import { tracking } from "@/utils/tracking";
 
 interface RenameFolderDialogProps {
   open: boolean;
@@ -26,10 +28,17 @@ export function RenameFolderDialog({
   onRename,
 }: RenameFolderDialogProps) {
   const [name, setName] = useState(currentName);
+  const { track } = useAnalytics();
 
   useEffect(() => {
     if (open) setName(currentName);
   }, [open, currentName]);
+
+  useEffect(() => {
+    if (open) {
+      track("v2.pipeline_folders.rename_folder_dialog_impression");
+    }
+  }, [open, track]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -61,10 +70,15 @@ export function RenameFolderDialog({
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
+                {...tracking("v2.pipeline_folders.rename_folder_cancel")}
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={name.trim().length === 0}>
+              <Button
+                type="submit"
+                disabled={name.trim().length === 0}
+                {...tracking("v2.pipeline_folders.rename_folder_submit")}
+              >
                 Rename
               </Button>
             </DialogFooter>

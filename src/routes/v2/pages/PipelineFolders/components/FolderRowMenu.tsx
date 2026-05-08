@@ -16,6 +16,7 @@ import {
   useToggleFavorite,
 } from "@/routes/v2/pages/PipelineFolders/hooks/useFolderMutations";
 import type { PipelineFolder } from "@/services/pipelineStorage/PipelineFolder";
+import { tracking } from "@/utils/tracking";
 
 import { RenameFolderDialog } from "./RenameFolderDialog";
 
@@ -56,6 +57,7 @@ export function FolderRowMenu({
             variant="ghost"
             size="icon"
             className="opacity-0 group-hover:opacity-100 cursor-pointer"
+            {...tracking("v2.pipeline_folders.table.folder_row_menu")}
           >
             <Icon name="EllipsisVertical" />
           </Button>
@@ -65,6 +67,12 @@ export function FolderRowMenu({
             <>
               <DropdownMenuItem
                 onSelect={() => toggleFavorite.mutate(folder.id)}
+                {...tracking(
+                  "v2.pipeline_folders.table.folder_toggle_favorite",
+                  {
+                    new_value: !folder.favorite,
+                  },
+                )}
               >
                 <Icon
                   name="Star"
@@ -75,7 +83,10 @@ export function FolderRowMenu({
                 />
                 {folder.favorite ? "Unfavorite" : "Favorite"}
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setRenameOpen(true)}>
+              <DropdownMenuItem
+                onSelect={() => setRenameOpen(true)}
+                {...tracking("v2.pipeline_folders.table.folder_rename_open")}
+              >
                 <Icon name="Pencil" className="mr-2 size-4" />
                 Rename
               </DropdownMenuItem>
@@ -84,6 +95,9 @@ export function FolderRowMenu({
                   <DropdownMenuItem
                     onSelect={(e) => e.preventDefault()}
                     className="text-destructive focus:text-destructive"
+                    {...tracking(
+                      "v2.pipeline_folders.table.folder_delete_confirm_open",
+                    )}
                   >
                     <Icon name="Trash" className="mr-2 size-4" />
                     Delete

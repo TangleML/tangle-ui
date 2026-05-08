@@ -4,6 +4,7 @@ import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { pluralize } from "@/utils/string";
+import { tracking } from "@/utils/tracking";
 
 interface SelectionToolbarProps {
   totalSelected: number;
@@ -32,14 +33,26 @@ export function SelectionToolbar({
         </Text>
         <InlineStack gap="2">
           {canMove && (
-            <Button variant="outline" size="sm" onClick={onMove}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onMove}
+              {...tracking("v2.pipeline_folders.table.selection_move")}
+            >
               <Icon name="FolderInput" />
               Move
             </Button>
           )}
           <ConfirmationDialog
             trigger={
-              <Button variant="destructive" size="sm" disabled={isDeleting}>
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={isDeleting}
+                {...tracking(
+                  "v2.pipeline_folders.table.selection_bulk_delete_open",
+                )}
+              >
                 <Icon name="Trash2" />
                 Delete
               </Button>
@@ -48,7 +61,12 @@ export function SelectionToolbar({
             description="Are you sure? Pipelines runs will not be impacted. Deleted folders will have their contents moved to root. This action cannot be undone."
             onConfirm={onDelete}
           />
-          <Button variant="ghost" size="sm" onClick={onClear}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClear}
+            {...tracking("v2.pipeline_folders.table.selection_clear")}
+          >
             <Icon name="X" />
           </Button>
         </InlineStack>

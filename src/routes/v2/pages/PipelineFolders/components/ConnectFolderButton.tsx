@@ -8,6 +8,7 @@ import {
 import { Icon, type IconName } from "@/components/ui/icon";
 import { useConnectFolder } from "@/routes/v2/pages/PipelineFolders/hooks/useFolderMutations";
 import { useConnectGoogleDriveFolder } from "@/services/googleDrive/useConnectGoogleDriveFolder"; // google-drive
+import { tracking } from "@/utils/tracking";
 
 const isLocalFsAvailable = "showDirectoryPicker" in window;
 
@@ -61,6 +62,9 @@ export function ConnectFolderButton() {
         className="gap-2 px-3 py-2 text-sm"
         onClick={primary.action}
         disabled={isPending}
+        {...tracking("v2.pipeline_folders.connect_folder", {
+          driver: primary.id,
+        })}
       >
         <Icon name={primary.icon} size="lg" />
         {primary.label}
@@ -75,6 +79,9 @@ export function ConnectFolderButton() {
         className="gap-2 rounded-r-none border-r-0 px-3 py-2 text-sm"
         onClick={primary.action}
         disabled={isPending}
+        {...tracking("v2.pipeline_folders.connect_folder", {
+          driver: primary.id,
+        })}
       >
         <Icon name={primary.icon} size="lg" />
         {primary.label}
@@ -85,6 +92,7 @@ export function ConnectFolderButton() {
             variant="outline"
             className="rounded-l-none px-1.5 py-2"
             disabled={isPending}
+            {...tracking("v2.pipeline_folders.connect_folder_driver_menu")}
           >
             <Icon name="ChevronDown" size="sm" />
           </Button>
@@ -95,6 +103,9 @@ export function ConnectFolderButton() {
               key={driver.id}
               onClick={driver.action}
               disabled={driver.isPending}
+              {...tracking("v2.pipeline_folders.connect_folder_driver_option", {
+                driver: driver.id,
+              })}
             >
               <Icon name={driver.icon} size="sm" />
               {driver.label}

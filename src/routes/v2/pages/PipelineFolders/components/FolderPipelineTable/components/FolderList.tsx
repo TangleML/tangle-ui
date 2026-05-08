@@ -6,6 +6,7 @@ import { Icon } from "@/components/ui/icon";
 import { FolderRow } from "@/routes/v2/pages/PipelineFolders/components/FolderRow";
 import type { DragItem } from "@/routes/v2/pages/PipelineFolders/types";
 import type { PipelineFolder } from "@/services/pipelineStorage/PipelineFolder";
+import { tracking } from "@/utils/tracking";
 
 interface FolderListProps {
   folders: PipelineFolder[];
@@ -75,6 +76,9 @@ export function FolderList({
                         queryKey: ["pipeline-folders"],
                       })
                     }
+                    {...tracking(
+                      "v2.pipeline_folders.table.permission_gated_folder_refresh",
+                    )}
                   >
                     <Icon name="RefreshCw" className="mr-2 size-4" />
                     Refresh
@@ -83,6 +87,9 @@ export function FolderList({
                     onSelect={() => disconnectFolder(folder.id)}
                     disabled={isDisconnecting}
                     className="text-destructive focus:text-destructive"
+                    {...tracking(
+                      "v2.pipeline_folders.table.permission_gated_folder_disconnect",
+                    )}
                   >
                     <Icon name="Unplug" className="mr-2 size-4" />
                     Disconnect
