@@ -1,5 +1,5 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -88,12 +88,15 @@ export const ComponentEditorDialog = withSuspenseWrapper(
 
     const mode = text ? "edit" : "create";
 
+    const hasTrackedOpen = useRef(false);
     useEffect(() => {
+      if (hasTrackedOpen.current) return;
+      hasTrackedOpen.current = true;
       track("component_editor.opened", {
         mode,
         selected_template: templateName,
       });
-    }, []);
+    }, [mode, templateName, track]);
 
     const { data: pythonCodeDetection } = useSuspenseQuery({
       queryKey: ["isPython", `${templateName}-${JSON.stringify(text)}`],

@@ -111,7 +111,10 @@ export function useDropBehavior(
 
     if (!isDropPayload(payload)) return;
 
-    await resolveDropHandler(registry, payload)?.(spec, position, undo);
+    const handler = resolveDropHandler(registry, payload);
+    if (!handler) return;
+
+    await handler(spec, position, undo);
 
     if (droppedTaskComponentRef) {
       track("pipeline_editor.component.dropped", {
