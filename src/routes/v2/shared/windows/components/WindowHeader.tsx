@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, MouseEvent, ReactNode } from "react";
 
 import { InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
@@ -7,14 +7,12 @@ import { cn } from "@/lib/utils";
 interface WindowHeaderProps {
   title: string;
   isDragging?: boolean;
-  onMouseDown?: (e: React.MouseEvent) => void;
+  onMouseDown?: (e: MouseEvent) => void;
   leadingIcon?: ReactNode;
   actions: ReactNode;
   className?: string;
-  style?: React.CSSProperties;
-  /** When true, actions are hidden until the parent group/window is hovered. */
+  style?: CSSProperties;
   actionsOnHover?: boolean;
-  /** Color tone of the header content; affects title text color. */
   tone?: "light" | "dark";
 }
 

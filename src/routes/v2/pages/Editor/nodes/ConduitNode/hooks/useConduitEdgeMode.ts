@@ -1,4 +1,5 @@
 import type { Edge } from "@xyflow/react";
+import { type MouseEvent } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 import {
@@ -67,9 +68,7 @@ export function useConduitEdgeMode(
   spec: ComponentSpec | null,
 ): {
   edges: Edge[];
-  onEdgeClick:
-    | ((event: React.MouseEvent, edge: { id: string }) => void)
-    | undefined;
+  onEdgeClick: ((event: MouseEvent, edge: { id: string }) => void) | undefined;
 } {
   const { editor } = useSharedStores();
   const { undo } = useEditorSession();
@@ -77,7 +76,7 @@ export function useConduitEdgeMode(
 
   const styledEdges = useConduitSelectionMode(edges, spec, editor);
 
-  const handleEdgeClick = (_event: React.MouseEvent, edge: { id: string }) => {
+  const handleEdgeClick = (_event: MouseEvent, edge: { id: string }) => {
     if (!spec) return;
 
     const bindingMatch = edge.id.match(/^edge_(.+)$/);

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 import type { ListPublishedComponentsResponse } from "@/api/types.gen";
 import { CodeViewer } from "@/components/shared/CodeViewer";
@@ -55,7 +55,7 @@ const CollapsibleSection = ({
   label: string;
   count: number;
   defaultOpen?: boolean;
-  children: React.ReactNode;
+  children: ReactNode;
 }) => (
   <Collapsible defaultOpen={defaultOpen}>
     <CollapsibleTrigger className="group w-full flex items-center gap-1.5 px-3 py-1.5 bg-muted/40 border-b border-border/50 sticky top-0 z-10 hover:bg-muted/60 cursor-pointer">

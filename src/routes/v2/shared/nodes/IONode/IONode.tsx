@@ -1,5 +1,6 @@
 import { type Node, type NodeProps } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
+import { type MouseEvent } from "react";
 
 import { useIsDetailedView } from "@/routes/v2/shared/hooks/useIsDetailedView";
 import type { IONodeData } from "@/routes/v2/shared/nodes/types";
@@ -23,7 +24,7 @@ export interface IONodeViewProps {
   isInput: boolean;
   selected: boolean;
   isHovered: boolean;
-  onNodeClick: (event: React.MouseEvent) => void;
+  onNodeClick: (event: MouseEvent) => void;
 }
 
 function typeToString(type: unknown): string | undefined {
@@ -48,7 +49,7 @@ export const IONode = observer(function IONode({
     ? spec?.inputs.find((i) => i.$id === entityId)
     : spec?.outputs.find((o) => o.$id === entityId);
 
-  const handleClick = (event: React.MouseEvent) => {
+  const handleClick = (event: MouseEvent) => {
     editor.selectNode(id, ioType, {
       shiftKey: event.shiftKey,
       entityId,

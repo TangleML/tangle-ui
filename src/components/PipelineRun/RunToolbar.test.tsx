@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { screen, waitFor } from "@testing-library/dom";
 import { cleanup, render } from "@testing-library/react";
 import { ReactFlowProvider } from "@xyflow/react";
+import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type {
@@ -141,7 +142,7 @@ describe("<RunToolbar/>", () => {
     queryClient.clear();
   });
 
-  const renderWithProviders = (component: React.ReactElement) => {
+  const renderWithProviders = (component: ReactElement) => {
     return render(component, {
       wrapper: ({ children }) => (
         <ComponentSpecProvider spec={mockComponentSpec}>
