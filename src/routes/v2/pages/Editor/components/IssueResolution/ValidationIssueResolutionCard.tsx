@@ -15,6 +15,7 @@ import { BadReferenceResolution } from "./resolutions/BadReferenceResolution";
 import { DeleteEntityResolution } from "./resolutions/DeleteEntityResolution";
 import { DuplicateNameResolution } from "./resolutions/DuplicateNameResolution";
 import { InfoOnlyResolution } from "./resolutions/InfoOnlyResolution";
+import { MissingPipelineInputValueResolution } from "./resolutions/MissingPipelineInputValueResolution";
 import { MissingRequiredInputResolution } from "./resolutions/MissingRequiredInputResolution";
 import { RenameEntityResolution } from "./resolutions/RenameEntityResolution";
 import { useValidationResolutionActions } from "./useValidationResolutionActions";
@@ -152,10 +153,9 @@ function renderInfoResolution(message: string): ReactNode {
 }
 
 const RESOLUTION_MAP: Record<ValidationIssueCode, ResolutionResolver> = {
-  MISSING_PIPELINE_INPUT_VALUE: () =>
-    renderInfoResolution(
-      "Set a default or pipeline value on this input in pipeline details, or mark the input as optional.",
-    ),
+  MISSING_PIPELINE_INPUT_VALUE: (p) => (
+    <MissingPipelineInputValueResolution issue={p.issue} spec={p.spec} />
+  ),
   MISSING_REQUIRED_ANNOTATION: () =>
     renderInfoResolution(
       "Open the task and fill in the required launcher annotation in the task settings.",
