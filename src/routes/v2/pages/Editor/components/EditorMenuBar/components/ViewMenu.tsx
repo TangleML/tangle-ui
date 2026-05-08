@@ -16,9 +16,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
 import { serializeComponentSpecToText } from "@/models/componentSpec";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButton";
 import { ShortcutBadge } from "@/routes/v2/shared/components/ShortcutBadge";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { tracking } from "@/utils/tracking";
 
 const LAYOUT_ALGORITHMS: { key: LayoutAlgorithm; label: string }[] = [
   { key: "sugiyama", label: "Sugiyama" },
@@ -28,6 +30,7 @@ const LAYOUT_ALGORITHMS: { key: LayoutAlgorithm; label: string }[] = [
 ];
 
 export const ViewMenu = observer(function ViewMenu() {
+  const { track } = useAnalytics();
   const { keyboard, navigation } = useSharedStores();
   const autoLayoutShortcut = keyboard.getShortcut("auto-layout");
   const [showYaml, setShowYaml] = useState(false);
@@ -38,7 +41,9 @@ export const ViewMenu = observer(function ViewMenu() {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <MenuTriggerButton>View</MenuTriggerButton>
+          <MenuTriggerButton {...tracking("v2.pipeline_editor.view_menu")}>
+            View
+          </MenuTriggerButton>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" sideOffset={2}>
           <DropdownMenuSub>
@@ -50,11 +55,14 @@ export const ViewMenu = observer(function ViewMenu() {
               {LAYOUT_ALGORITHMS.map((algo) => (
                 <DropdownMenuItem
                   key={algo.key}
-                  onSelect={() =>
+                  onSelect={() => {
+                    track("v2.pipeline_editor.view_menu.auto_layout.click", {
+                      layout_algorithm: algo.key,
+                    });
                     keyboard.invokeShortcut("auto-layout", {
                       algorithm: algo.key,
-                    })
-                  }
+                    });
+                  }}
                 >
                   {algo.label}
                   {algo.key === "sugiyama" && (
@@ -67,7 +75,13 @@ export const ViewMenu = observer(function ViewMenu() {
             </DropdownMenuSubContent>
           </DropdownMenuSub>
           <DropdownMenuSeparator />
-          <DropdownMenuItem disabled={!spec} onSelect={() => setShowYaml(true)}>
+          <DropdownMenuItem
+            disabled={!spec}
+            onSelect={() => {
+              track("v2.pipeline_editor.view_menu.view_yaml.click");
+              setShowYaml(true);
+            }}
+          >
             <Icon name="FileCode" size="sm" />
             View YAML
           </DropdownMenuItem>
@@ -80,7 +94,10 @@ export const ViewMenu = observer(function ViewMenu() {
           language="yaml"
           filename={spec.name}
           fullscreen
-          onClose={() => setShowYaml(false)}
+          onClose={() => {
+            track("v2.pipeline_editor.view_menu.view_yaml.close.click");
+            setShowYaml(false);
+          }}
         />
       )}
     </>

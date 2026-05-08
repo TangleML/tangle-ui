@@ -8,6 +8,7 @@ import { Icon } from "@/components/ui/icon";
 import { serializeComponentSpec } from "@/models/componentSpec";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { deepClone } from "@/utils/deepClone";
+import { tracking } from "@/utils/tracking";
 
 const quickRunIconVariants = cva("transition-colors", {
   variants: {
@@ -69,6 +70,7 @@ export const QuickRunButton = observer(function QuickRunButton() {
         className="hover:bg-transparent"
         disabled={hasErrors}
         onClick={triggerSubmitRun}
+        {...tracking("v2.pipeline_editor.quick_run")}
       >
         <Icon
           name="Play"

@@ -13,6 +13,7 @@ import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionCo
 import { AppMenuActions } from "@/routes/v2/shared/components/AppMenuActions";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { TOP_NAV_HEIGHT } from "@/utils/constants";
+import { tracking } from "@/utils/tracking";
 
 import { AutoSaveIndicator } from "./components/AutoSaveIndicator";
 import { ComponentsLibraryMenu } from "./components/ComponentsLibraryMenu";
@@ -51,7 +52,13 @@ export const EditorMenuBar = observer(function EditorMenuBar() {
           blockAlign="center"
           className="min-w-0"
         >
-          <Link href="/" aria-label="Home" variant="block" className="shrink-0">
+          <Link
+            href="/"
+            aria-label="Home"
+            variant="block"
+            className="shrink-0"
+            {...tracking("v2.pipeline_editor.menubar.home")}
+          >
             <img
               src={logo}
               alt="logo"
@@ -80,6 +87,7 @@ export const EditorMenuBar = observer(function EditorMenuBar() {
                   size="inline-xs"
                   className="shrink-0 p-0 text-stone-400 hover:bg-transparent hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
                   onClick={() => setRenameOpen(true)}
+                  {...tracking("v2.pipeline_editor.menubar.rename_pipeline")}
                 >
                   <Icon name="Pencil" size="xs" />
                 </Button>

@@ -4,6 +4,7 @@ import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { Icon } from "@/components/ui/icon";
 import { Spinner } from "@/components/ui/spinner";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
+import { tracking } from "@/utils/tracking";
 
 function getTooltipText(isSaving: boolean, lastSavedAt: Date | null): string {
   if (isSaving) return "Saving...";
@@ -24,6 +25,7 @@ export const AutoSaveIndicator = observer(function AutoSaveIndicator() {
       className="hover:bg-transparent"
       disabled={isSaving}
       data-testid="auto-save-button"
+      {...tracking("v2.pipeline_editor.auto_save_indicator")}
     >
       {isSaving ? (
         <Spinner size={16} />
