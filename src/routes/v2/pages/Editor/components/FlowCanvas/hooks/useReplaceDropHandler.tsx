@@ -3,6 +3,7 @@ import { useRef } from "react";
 
 import { isPositionInNode } from "@/components/shared/ReactFlow/FlowCanvas/utils/geometry";
 import type { ComponentSpec } from "@/models/componentSpec";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useDialog } from "@/providers/DialogProvider/hooks/useDialog";
 import { convertCancelErrorTo } from "@/providers/DialogProvider/utils";
 import { ReplaceConfirmationDialog } from "@/routes/v2/pages/Editor/components/FlowCanvas/components/ReplaceConfirmationDialog";
@@ -50,6 +51,7 @@ export function useReplaceDropHandler(
   spec: ComponentSpec | null,
   reactFlowInstance: ReactFlowInstance | null,
 ) {
+  const { track } = useAnalytics();
   const { canvasOverlay } = useSharedStores();
   const { replaceTask } = useTaskActions();
   const { open: openDialog } = useDialog();
@@ -146,6 +148,9 @@ export function useReplaceDropHandler(
     if (!canReplace) return;
 
     replaceTask(spec, targetEntityId, newComponentRef);
+    track("v2.pipeline_canvas.replace_drop.completed", {
+      had_breaking_change_prompt: hasBreakingChanges,
+    });
   };
 
   return {
