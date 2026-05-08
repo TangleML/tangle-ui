@@ -26,7 +26,10 @@ export const BadReferenceResolution = observer(function BadReferenceResolution({
     );
   }
 
-  const task = findTaskById(spec, issue.entityId);
+  const entityId = issue.entityId;
+  const argumentName = issue.argumentName;
+
+  const task = findTaskById(spec, entityId);
   if (!task) {
     return (
       <InfoOnlyResolution message="Task not found in the current graph." />
@@ -34,19 +37,17 @@ export const BadReferenceResolution = observer(function BadReferenceResolution({
   }
 
   const componentSpec = task.resolvedComponentSpec;
-  const inputSpec = componentSpec?.inputs?.find(
-    (i) => i.name === issue.argumentName,
-  );
+  const inputSpec = componentSpec?.inputs?.find((i) => i.name === argumentName);
 
   const handleUnset = () => {
-    unsetBadReference(task, spec, issue.argumentName!);
+    unsetBadReference(task, spec, argumentName);
   };
 
   return (
     <BlockStack gap="3">
       <BlockStack gap="2">
         <Text size="xs" weight="semibold" className="text-gray-700">
-          Fix reference for &ldquo;{issue.argumentName}&rdquo; on task &ldquo;
+          Fix reference for &ldquo;{argumentName}&rdquo; on task &ldquo;
           {task.name}&rdquo;
         </Text>
         <Text size="xs" tone="subdued">
