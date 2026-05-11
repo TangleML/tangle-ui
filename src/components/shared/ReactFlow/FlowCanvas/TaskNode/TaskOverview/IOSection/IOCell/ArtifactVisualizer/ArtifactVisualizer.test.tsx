@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
+import type { ReactElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ArtifactNodeResponse } from "@/api/types.gen";
@@ -75,7 +76,7 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
 });
 
-const renderWithQuery = (ui: React.ReactElement) =>
+const renderWithQuery = (ui: ReactElement) =>
   render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 
 const makeArtifact = (

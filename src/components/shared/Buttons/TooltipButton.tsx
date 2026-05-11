@@ -1,4 +1,4 @@
-import * as React from "react";
+import { forwardRef, type ReactNode } from "react";
 
 import { Button, type ButtonProps } from "@/components/ui/button";
 import {
@@ -9,12 +9,12 @@ import {
 } from "@/components/ui/tooltip";
 
 interface TooltipButtonProps extends ButtonProps {
-  tooltip: React.ReactNode;
+  tooltip: ReactNode;
   tooltipSide?: "top" | "right" | "bottom" | "left";
   tooltipAlign?: "start" | "center" | "end";
 }
 
-const TooltipButton = React.forwardRef<HTMLButtonElement, TooltipButtonProps>(
+const TooltipButton = forwardRef<HTMLButtonElement, TooltipButtonProps>(
   (
     {
       tooltip,

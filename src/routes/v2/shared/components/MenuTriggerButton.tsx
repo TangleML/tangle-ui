@@ -1,9 +1,11 @@
+import type { ComponentProps } from "react";
+
 import { Button } from "@/components/ui/button";
 
 export const MenuTriggerButton = ({
   children,
   ...props
-}: React.ComponentProps<typeof Button>) => (
+}: ComponentProps<typeof Button>) => (
   <Button
     variant="ghost"
     size="sm"

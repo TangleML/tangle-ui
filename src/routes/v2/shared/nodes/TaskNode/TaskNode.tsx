@@ -64,10 +64,10 @@ export interface TaskNodeViewProps {
   isAggregator: boolean;
   outputType: AggregatorOutputType;
   onOutputTypeChange: (value: AggregatorOutputType) => void;
-  onNodeClick: (event: React.MouseEvent) => void;
-  onInputClick: (inputName: string, event: React.MouseEvent) => void;
-  onOutputClick: (outputName: string, event: React.MouseEvent) => void;
-  onHandleClick: (handleId: string, event: React.MouseEvent) => void;
+  onNodeClick: (event: MouseEvent) => void;
+  onInputClick: (inputName: string, event: MouseEvent) => void;
+  onOutputClick: (outputName: string, event: MouseEvent) => void;
+  onHandleClick: (handleId: string, event: MouseEvent) => void;
 }
 
 function isTaskSubgraph(componentSpec: ComponentSpecJson | undefined): boolean {

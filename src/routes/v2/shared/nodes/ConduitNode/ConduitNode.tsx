@@ -1,5 +1,6 @@
 import type { Node, NodeProps } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
+import { type MouseEvent } from "react";
 
 import { cn } from "@/lib/utils";
 import type { ConduitNodeData } from "@/routes/v2/shared/nodes/types";
@@ -32,7 +33,7 @@ export const ConduitNode = observer(function ConduitNode({
     editor.selectedNodeId === conduitId &&
     editor.selectedNodeType === "conduit";
 
-  const handleClick = (e: React.MouseEvent) => {
+  const handleClick = (e: MouseEvent) => {
     e.stopPropagation();
     if (isActive) {
       editor.clearSelection();

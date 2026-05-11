@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ReactFlowProvider } from "@xyflow/react";
-import { type ReactNode } from "react";
+import { type ReactElement, type ReactNode } from "react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import useToastNotification from "@/hooks/useToastNotification";
@@ -69,7 +69,7 @@ describe("<ComponentEditorDialog />", () => {
     );
   };
 
-  const renderWithProviders = (component: React.ReactElement) => {
+  const renderWithProviders = (component: ReactElement) => {
     return render(component, { wrapper: TestWrapper });
   };
 

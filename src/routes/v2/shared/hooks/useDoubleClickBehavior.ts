@@ -1,4 +1,5 @@
 import type { Node, NodeMouseHandler, ReactFlowProps } from "@xyflow/react";
+import { type MouseEvent } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
@@ -11,7 +12,7 @@ export function useDoubleClickBehavior(
   const { navigation, windows } = useSharedStores();
 
   const onNodeDoubleClick: NodeMouseHandler = (
-    _event: React.MouseEvent,
+    _event: MouseEvent,
     node: Node,
   ) => {
     if (!spec) return;

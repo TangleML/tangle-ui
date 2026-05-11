@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { screen, waitFor } from "@testing-library/dom";
 import { act, fireEvent, render } from "@testing-library/react";
+import type { ReactElement } from "react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import useToastNotification from "@/hooks/useToastNotification";
@@ -32,7 +33,7 @@ describe("<ClonePipelineButton/>", () => {
 
   const componentSpec = { name: "Test Pipeline" } as any;
 
-  const renderWithClient = (component: React.ReactElement) =>
+  const renderWithClient = (component: ReactElement) =>
     render(
       <QueryClientProvider client={queryClient}>
         {component}

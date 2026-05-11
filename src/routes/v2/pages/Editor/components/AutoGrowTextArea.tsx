@@ -3,6 +3,7 @@ import {
   type ComponentProps,
   type FocusEvent,
   type KeyboardEvent,
+  type PointerEvent,
   type ReactNode,
   useRef,
   useState,
@@ -110,12 +111,12 @@ export function AutoGrowTextarea({
     onKeyDown?.(e);
   };
 
-  const handlePointerDown = (e: React.PointerEvent<HTMLTextAreaElement>) => {
+  const handlePointerDown = (e: PointerEvent<HTMLTextAreaElement>) => {
     onPointerDown?.(e);
     e.currentTarget.dataset.h = String(e.currentTarget.offsetHeight);
   };
 
-  const handlePointerUp = (e: React.PointerEvent<HTMLTextAreaElement>) => {
+  const handlePointerUp = (e: PointerEvent<HTMLTextAreaElement>) => {
     onPointerUp?.(e);
     const el = e.currentTarget;
     const before = Number(el.dataset.h);

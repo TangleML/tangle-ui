@@ -7,6 +7,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { BackendProvider } from "@/providers/BackendProvider";
@@ -86,7 +87,7 @@ describe("<RerunPipelineButton/>", () => {
   const componentSpec = { name: "Test Pipeline" } as any;
   let queryClient: QueryClient;
 
-  const renderWithProviders = (ui: React.ReactElement) => {
+  const renderWithProviders = (ui: ReactElement) => {
     queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },

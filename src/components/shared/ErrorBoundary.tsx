@@ -1,5 +1,5 @@
 import Bugsnag from "@bugsnag/js";
-import React, { type ReactNode } from "react";
+import React, { type ErrorInfo, type ReactNode } from "react";
 import { ErrorBoundary as ReactErrorBoundary } from "react-error-boundary";
 
 import { ErrorPage } from "@/components/shared/ErrorPage";
@@ -24,7 +24,7 @@ export const ErrorBoundary = ({ children }: ErrorBoundaryProps) => {
         <BugsnagBoundary
           FallbackComponent={(props: {
             error: Error;
-            info: React.ErrorInfo;
+            info: ErrorInfo;
             clearError: () => void;
           }) => <ErrorPage error={props.error} reset={props.clearError} />}
         >

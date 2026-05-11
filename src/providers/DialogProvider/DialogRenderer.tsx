@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { type ComponentType, useEffect, useRef, useState } from "react";
 
 import { AnimatedHeight } from "@/components/ui/animated-height";
 import { Button } from "@/components/ui/button";
@@ -80,7 +80,7 @@ export default function DialogRenderer({
 
   if (!activeDialog) return null;
 
-  const Component = activeDialog.component as React.ComponentType<{
+  const Component = activeDialog.component as ComponentType<{
     close: (result?: unknown) => void;
     cancel: () => void;
     [key: string]: unknown;

@@ -1,5 +1,11 @@
 import { observer } from "mobx-react-lite";
-import { type ChangeEvent, useEffect, useRef, useState } from "react";
+import {
+  type ChangeEvent,
+  type KeyboardEvent,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 import { Input } from "@/components/ui/input";
 import { InlineStack } from "@/components/ui/layout";
@@ -59,7 +65,7 @@ export const BatchArgumentRow = observer(function BatchArgumentRow({
     commitValue();
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === "Enter") {
       inputRef.current?.blur();
     }

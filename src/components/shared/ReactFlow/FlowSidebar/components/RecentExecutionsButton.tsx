@@ -1,5 +1,5 @@
 import { List } from "lucide-react";
-import type { ComponentProps } from "react";
+import type { ComponentProps, ReactNode } from "react";
 
 import { PipelineRunsList } from "@/components/shared/PipelineRunDisplay/PipelineRunsList";
 import { usePipelineRuns } from "@/components/shared/PipelineRunDisplay/usePipelineRuns";
@@ -26,7 +26,7 @@ export const RecentExecutionsButton = withSuspenseWrapper(
     trigger,
     ...rest
   }: ComponentProps<typeof PipelineRunsList> & {
-    trigger?: React.ReactNode;
+    trigger?: ReactNode;
   }) => {
     const { data: runs } = usePipelineRuns(pipelineName);
     const defaultTrigger = (

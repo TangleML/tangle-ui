@@ -7,6 +7,7 @@ import {
   render,
   waitFor,
 } from "@testing-library/react";
+import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import useToastNotification from "@/hooks/useToastNotification";
@@ -55,7 +56,7 @@ describe("<CancelPipelineRunButton/>", () => {
     return new Promise((resolve) => setTimeout(resolve, 0));
   });
 
-  const renderWithQueryClient = (component: React.ReactElement) => {
+  const renderWithQueryClient = (component: ReactElement) => {
     return render(
       <QueryClientProvider client={queryClient}>
         {component}

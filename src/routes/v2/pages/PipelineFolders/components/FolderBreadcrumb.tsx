@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Fragment } from "react";
+import { Fragment, type ReactNode } from "react";
 
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import {
@@ -26,7 +26,7 @@ interface FolderBreadcrumbProps {
 
 interface FolderLinkProps {
   folderId: string | null;
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 const FolderLink = ({ folderId, children }: FolderLinkProps) => {

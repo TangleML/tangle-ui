@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { type ReactNode, useCallback, useRef } from "react";
 import { Bounce, type Id, toast } from "react-toastify";
 
 const useToastNotification = () => {
@@ -6,7 +6,7 @@ const useToastNotification = () => {
 
   const notify = useCallback(
     (
-      message: string | React.ReactNode,
+      message: string | ReactNode,
       type: "success" | "warning" | "error" | "info" = "info",
     ) => {
       toastId.current = toast(message, {

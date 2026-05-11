@@ -1,5 +1,6 @@
 import { observer } from "mobx-react-lite";
 import { useEffect, useRef, useState } from "react";
+import { type MouseEvent as ReactMouseEvent } from "react";
 import { createPortal } from "react-dom";
 
 import {
@@ -53,7 +54,7 @@ export const DockedWindow = observer(function DockedWindow() {
     return () => observer.disconnect();
   }, [stickyTop]);
 
-  const handleResizeMouseDown = (e: React.MouseEvent) => {
+  const handleResizeMouseDown = (e: ReactMouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsResizing(true);

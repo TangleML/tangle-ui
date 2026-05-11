@@ -1,4 +1,9 @@
-import { useRef, useState } from "react";
+import {
+  type MouseEvent as ReactMouseEvent,
+  type RefObject,
+  useRef,
+  useState,
+} from "react";
 
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
@@ -32,8 +37,8 @@ interface UseWindowDragOptions {
 interface UseWindowDragReturn {
   isDragging: boolean;
   snapPreview: SnapPreviewType | null;
-  panelRef: React.RefObject<HTMLDivElement | null>;
-  handleHeaderMouseDown: (e: React.MouseEvent) => void;
+  panelRef: RefObject<HTMLDivElement | null>;
+  handleHeaderMouseDown: (e: ReactMouseEvent) => void;
   handleContainerMouseDown: () => void;
   handleContainerClick: () => void;
 }
@@ -81,7 +86,7 @@ export function useWindowDrag({
     }
   };
 
-  const handleHeaderMouseDown = (e: React.MouseEvent) => {
+  const handleHeaderMouseDown = (e: ReactMouseEvent) => {
     if (e.target instanceof HTMLElement && e.target.closest("button")) return;
 
     raiseZIndex();

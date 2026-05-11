@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import yaml from "js-yaml";
+import type { ReactNode } from "react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { HydratedComponentReference } from "@/utils/componentSpec";
@@ -37,7 +38,7 @@ vi.mock("@/providers/ComponentLibraryProvider", () => ({
 }));
 
 // Create a test wrapper with QueryClient
-const TestWrapper = ({ children }: { children: React.ReactNode }) => {
+const TestWrapper = ({ children }: { children: ReactNode }) => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
