@@ -56,7 +56,7 @@ function SecretsListInternal({ onRemoveSuccess }: SecretsListProps) {
           >
             <InlineStack gap="2" blockAlign="center" wrap="nowrap">
               <Icon name="Lock" size="lg" className="shrink-0" />
-              <BlockStack gap="0">
+              <BlockStack>
                 <Text size="sm" weight="semibold">
                   {secret.name}
                 </Text>

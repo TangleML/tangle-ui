@@ -67,7 +67,7 @@ export const EditorMenuBar = observer(function EditorMenuBar() {
           </Link>
 
           {displayMenu && (
-            <BlockStack gap="0" className="min-w-0">
+            <BlockStack className="min-w-0">
               <InlineStack
                 gap="1"
                 blockAlign="center"
@@ -102,7 +102,7 @@ export const EditorMenuBar = observer(function EditorMenuBar() {
                 isSubmitDisabled={(name) => name === pipelineName}
               />
 
-              <InlineStack gap="0" wrap="nowrap" blockAlign="center">
+              <InlineStack wrap="nowrap" blockAlign="center">
                 <FileMenu />
                 <ViewMenu />
                 <RunsMenu />

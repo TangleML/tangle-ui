@@ -81,7 +81,7 @@ export const SubgraphNode = observer(function SubgraphNode({
   const collapsibleOpen = hasChildren ? isExpanded : true;
 
   return (
-    <BlockStack gap="0" align="stretch" className="min-w-0 w-full">
+    <BlockStack align="stretch" className="min-w-0 w-full">
       <Collapsible
         open={collapsibleOpen}
         onOpenChange={() => onToggleExpand(nodePath)}
@@ -173,7 +173,6 @@ export const SubgraphNode = observer(function SubgraphNode({
 
           {hasChildren && (
             <BlockStack
-              gap="0"
               align="stretch"
               className="ml-4 min-w-0 w-full border-l border-slate-200 pl-2"
             >

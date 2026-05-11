@@ -45,7 +45,7 @@ export const InputField = ({
   return (
     <BlockStack gap="2">
       <Label htmlFor={id}>{label}</Label>
-      <BlockStack gap="0">
+      <BlockStack>
         <Input
           id={id}
           placeholder={placeholder}

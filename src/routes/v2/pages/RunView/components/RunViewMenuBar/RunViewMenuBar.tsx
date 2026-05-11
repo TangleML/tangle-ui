@@ -49,7 +49,7 @@ export const RunViewMenuBar = observer(function RunViewMenuBar() {
             />
           </Link>
 
-          <BlockStack gap="0" className="min-w-0">
+          <BlockStack className="min-w-0">
             <Text
               as="span"
               size="sm"
@@ -59,7 +59,7 @@ export const RunViewMenuBar = observer(function RunViewMenuBar() {
               {pipelineName}
             </Text>
 
-            <InlineStack gap="0" wrap="nowrap" blockAlign="center">
+            <InlineStack wrap="nowrap" blockAlign="center">
               <RunMenu />
               <RunViewViewMenu />
             </InlineStack>

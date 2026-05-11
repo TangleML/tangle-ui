@@ -99,7 +99,6 @@ const PipelineEditor = withSuspenseWrapper(
         <SpecProvider spec={activeSpec}>
           <InlineStack
             className="flex-1 min-h-0 w-full"
-            gap="0"
             blockAlign="stretch"
             wrap="nowrap"
             data-testid="editor-v2"

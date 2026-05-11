@@ -57,7 +57,7 @@ export const TaskLeafNode = observer(function TaskLeafNode({
   }
 
   return (
-    <BlockStack gap="0" align="stretch" className="min-w-0 w-full">
+    <BlockStack align="stretch" className="min-w-0 w-full">
       <TreeRowActivate
         layout="leafRow"
         selected={isSelected}
