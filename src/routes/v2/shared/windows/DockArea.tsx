@@ -19,6 +19,11 @@ interface DockAreaProps {
   side: "left" | "right";
 }
 
+// Context panel ("Properties") is selection-driven and stays visible in
+// focus mode so users can still inspect a selected task or multi-selection
+// without leaving focus mode.
+const FOCUS_MODE_ALLOWED_WINDOW_IDS = new Set(["context-panel"]);
+
 export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
   const { windows } = useSharedStores();
   const dockArea = windows.getDockAreaConfig(side);
@@ -27,7 +32,11 @@ export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
 
   const visibleWindows = windowOrder.filter((id) => {
     const win = windows.getWindowById(id);
-    return win && win.state !== "hidden";
+    if (!win || win.state === "hidden") return false;
+    if (focusModeStore.active && !FOCUS_MODE_ALLOWED_WINDOW_IDS.has(id)) {
+      return false;
+    }
+    return true;
   });
   const isEmpty = visibleWindows.length === 0;
 
@@ -58,7 +67,7 @@ export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
     return () => observer.disconnect();
   }, [side, collapsed, isEmpty]);
 
-  if (isEmpty || focusModeStore.active) return null;
+  if (isEmpty) return null;
 
   const setRef = (element: HTMLDivElement | null) => {
     containerRef.current = element;

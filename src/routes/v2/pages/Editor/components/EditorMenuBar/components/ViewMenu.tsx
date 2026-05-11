@@ -5,6 +5,7 @@ import { CodeViewer } from "@/components/shared/CodeViewer";
 import type { LayoutAlgorithm } from "@/components/shared/ReactFlow/FlowCanvas/utils/autolayout";
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
@@ -19,6 +20,7 @@ import { serializeComponentSpecToText } from "@/models/componentSpec";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButton";
 import { ShortcutBadge } from "@/routes/v2/shared/components/ShortcutBadge";
+import { focusModeStore } from "@/routes/v2/shared/hooks/useFocusMode";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { tracking } from "@/utils/tracking";
 
@@ -74,7 +76,7 @@ export const ViewMenu = observer(function ViewMenu() {
               ))}
             </DropdownMenuSubContent>
           </DropdownMenuSub>
-          <DropdownMenuSeparator />
+
           <DropdownMenuItem
             disabled={!spec}
             onSelect={() => {
@@ -85,6 +87,22 @@ export const ViewMenu = observer(function ViewMenu() {
             <Icon name="FileCode" size="sm" />
             View YAML
           </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuCheckboxItem
+            checked={focusModeStore.active}
+            onSelect={(e) => e.preventDefault()}
+            onCheckedChange={(checked) => {
+              track("v2.pipeline_editor.view_menu.focus_mode.toggle", {
+                enabled: checked,
+              });
+              focusModeStore.toggle();
+            }}
+          >
+            Focus mode
+            <DropdownMenuShortcut>
+              <ShortcutBadge id="focus-mode" />
+            </DropdownMenuShortcut>
+          </DropdownMenuCheckboxItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
