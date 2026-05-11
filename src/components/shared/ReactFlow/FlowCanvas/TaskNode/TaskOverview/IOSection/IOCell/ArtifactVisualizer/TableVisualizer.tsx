@@ -34,7 +34,10 @@ const TableVisualizer = ({
   const isShowingAllRows = displayedRows.length >= data.rows.length;
 
   return (
-    <BlockStack gap="2">
+    <BlockStack
+      gap="2"
+      className={isFullscreen ? "min-h-0 flex-1" : "max-h-100"}
+    >
       <ArtifactTable headers={data.headers} rows={displayedRows} />
       <InlineStack gap="4">
         <Paragraph tone="subdued" size="xs">
@@ -65,11 +68,14 @@ interface ArtifactTableProps {
 }
 
 const ArtifactTable = ({ headers, rows }: ArtifactTableProps) => (
-  <Table>
+  <Table containerClassName="flex-1 overflow-auto">
     <TableHeader>
       <TableRow>
         {headers.map((h) => (
-          <TableHead key={h} className="text-xs">
+          <TableHead
+            key={h}
+            className="bg-background sticky top-0 z-10 text-xs"
+          >
             {h}
           </TableHead>
         ))}
@@ -81,7 +87,7 @@ const ArtifactTable = ({ headers, rows }: ArtifactTableProps) => (
           {row.map((cell, j) => (
             <TableCell
               key={j}
-              className="font-mono text-xs truncate"
+              className="font-mono text-xs"
               title={String(cell)}
             >
               {String(cell)}

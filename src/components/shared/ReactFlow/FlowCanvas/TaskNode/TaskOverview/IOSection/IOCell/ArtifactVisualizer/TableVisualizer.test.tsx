@@ -84,4 +84,36 @@ describe("TableVisualizer", () => {
 
     expect(screen.queryByText("See all")).not.toBeInTheDocument();
   });
+
+  it("uses the Table container as the scroll element with sticky header cells", () => {
+    const data = makeData(3);
+    const { container } = render(
+      <TableVisualizer data={data} isFullscreen={false} />,
+    );
+
+    const tableContainer = container.querySelector(
+      '[data-slot="table-container"]',
+    );
+    expect(tableContainer).toHaveClass("overflow-auto", "flex-1");
+
+    const tableHeads = container.querySelectorAll('[data-slot="table-head"]');
+    expect(tableHeads.length).toBeGreaterThan(0);
+    tableHeads.forEach((th) => {
+      expect(th).toHaveClass("sticky", "top-0");
+    });
+  });
+
+  it("renders the row-count footer outside the Table scroll container", () => {
+    const data = makeData(3);
+    const { container } = render(
+      <TableVisualizer data={data} isFullscreen={false} />,
+    );
+
+    const tableContainer = container.querySelector(
+      '[data-slot="table-container"]',
+    );
+    const footer = screen.getByText("Showing all 3 rows");
+
+    expect(tableContainer?.contains(footer)).toBe(false);
+  });
 });
