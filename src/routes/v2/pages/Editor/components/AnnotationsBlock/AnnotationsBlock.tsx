@@ -44,7 +44,7 @@ export const AnnotationsBlock = observer(function AnnotationsBlock({
 
   return (
     <KeyValueList
-      title="Annotations"
+      title="Task annotations"
       items={displayItems.map((a) => ({
         label: a.key,
         value: JSON.stringify(a.value),
@@ -84,7 +84,7 @@ function AnnotationEditMode({
   );
 
   return (
-    <ContentBlock title="Annotations" titleAction={actions}>
+    <ContentBlock title="Task annotations" titleAction={actions}>
       {editableItems.length === 0 ? (
         <Text size="xs" tone="subdued">
           No annotations
