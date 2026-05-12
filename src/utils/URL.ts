@@ -1,4 +1,5 @@
 import { RUNS_BASE_PATH } from "@/routes/router";
+import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 
 const convertGcsUrlToBrowserUrl = (
   url: string,
@@ -165,6 +166,25 @@ const normalizeUrl = (url: string) => {
   return normalizedUrl;
 };
 
+const getArtifactPreviewUrl = (
+  artifactId: string,
+  type?: string,
+  name?: string,
+): string => {
+  const search = new URLSearchParams();
+  if (type) search.set("type", type);
+  if (name) search.set("name", name);
+  const query = search.toString() ? `?${search}` : "";
+
+  const basepath = BASE_URL.replace(/\/$/, "");
+  const path = `/artifact/${encodeURIComponent(artifactId)}${query}`;
+
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  return IS_GITHUB_PAGES
+    ? `${origin}${basepath}/#${path}`
+    : `${origin}${basepath}${path}`;
+};
+
 export {
   convertArtifactUriToHTTPUrl,
   convertGcsUrlToBrowserUrl,
@@ -172,6 +192,7 @@ export {
   convertHfUrlToDirectoryUrl,
   downloadStringAsFile,
   downloadYamlFromComponentText,
+  getArtifactPreviewUrl,
   getIdOrTitleFromPath,
   isGithubUrl,
   normalizeUrl,

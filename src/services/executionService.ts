@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { getGraphExecutionStateApiExecutionsIdStateGet } from "@/api/sdk.gen";
 import type {
+  GetArtifactInfoResponse,
   GetArtifactsApiExecutionsIdArtifactsGetResponse,
   GetArtifactSignedUrlResponse,
   GetContainerExecutionStateResponse,
@@ -148,6 +149,21 @@ export const getArtifactSignedUrl = async (
       response.status,
       response.statusText,
       "Failed to get signed URL.",
+    );
+  }
+  return response.json();
+};
+
+export const getArtifactInfo = async (
+  artifactId: string,
+  backendUrl: string,
+): Promise<GetArtifactInfoResponse> => {
+  const response = await fetch(`${backendUrl}/api/artifacts/${artifactId}`);
+  if (!response.ok) {
+    throw new ArtifactFetchError(
+      response.status,
+      response.statusText,
+      "Failed to load artifact info.",
     );
   }
   return response.json();
