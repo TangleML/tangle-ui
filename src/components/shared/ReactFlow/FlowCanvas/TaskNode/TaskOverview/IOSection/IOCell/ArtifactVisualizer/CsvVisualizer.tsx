@@ -24,7 +24,7 @@ const CsvContent = ({
 }) => {
   const { data, onLoadMore, onLoadAll } = useRowCap(parsed);
 
-  if (parsed.headers.length === 0) {
+  if (data.columns.length === 0) {
     return (
       <Paragraph tone="subdued" size="xs">
         No data

@@ -23,7 +23,7 @@ export function useRowCap(parsed: ParsedArtifact): UseRowCapReturn {
 
   return {
     data: {
-      headers: parsed.headers,
+      columns: parsed.columns,
       rows: parsed.rows.slice(0, rowCap),
       hasMore: canLoadMore || parsed.truncated,
     },

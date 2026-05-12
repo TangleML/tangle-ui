@@ -5,9 +5,11 @@ import { ErrorBoundary } from "react-error-boundary";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import ParquetVisualizer from "./ParquetVisualizer";
+import type { ArtifactColumn } from "./utils";
 
 vi.mock("hyparquet", () => ({
   parquetReadObjects: vi.fn(),
+  parquetMetadata: vi.fn(),
 }));
 
 vi.mock("./TableVisualizer", () => ({
@@ -15,19 +17,20 @@ vi.mock("./TableVisualizer", () => ({
     data,
     isFullscreen,
   }: {
-    data: { headers: string[]; rows: string[][] };
+    data: { columns: ArtifactColumn[]; rows: string[][] };
     isFullscreen: boolean;
   }) => (
     <div
       data-testid="table-visualizer"
       data-fullscreen={isFullscreen}
-      data-headers={data.headers.join(",")}
+      data-headers={data.columns.map((c) => c.name).join(",")}
       data-row-count={data.rows.length}
+      data-columns={JSON.stringify(data.columns)}
     />
   ),
 }));
 
-const { parquetReadObjects } = await import("hyparquet");
+const { parquetReadObjects, parquetMetadata } = await import("hyparquet");
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
@@ -50,8 +53,15 @@ const renderWithSuspense = (ui: ReactElement) =>
     </QueryClientProvider>,
   );
 
+const mockMetadata = (schema: unknown[] = []) =>
+  vi.mocked(parquetMetadata).mockReturnValue({
+    schema,
+  } as unknown as ReturnType<typeof parquetMetadata>);
+
 beforeEach(() => {
   queryClient.clear();
+  vi.mocked(parquetMetadata).mockReset();
+  vi.mocked(parquetReadObjects).mockReset();
 });
 
 describe("ParquetVisualizer", () => {
@@ -62,6 +72,11 @@ describe("ParquetVisualizer", () => {
       arrayBuffer: () => Promise.resolve(buffer),
     } as Response);
 
+    mockMetadata([
+      { name: "root" },
+      { name: "name", type: "BYTE_ARRAY", repetition_type: "OPTIONAL" },
+      { name: "score", type: "INT64", repetition_type: "REQUIRED" },
+    ]);
     vi.mocked(parquetReadObjects).mockResolvedValue([
       { name: "Alice", score: 100 },
       { name: "Bob", score: 90 },
@@ -110,6 +125,7 @@ describe("ParquetVisualizer", () => {
       arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
     } as Response);
 
+    mockMetadata([]);
     vi.mocked(parquetReadObjects).mockResolvedValue([]);
 
     renderWithSuspense(
@@ -132,6 +148,10 @@ describe("ParquetVisualizer", () => {
       arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
     } as Response);
 
+    mockMetadata([
+      { name: "root" },
+      { name: "col", type: "BYTE_ARRAY", repetition_type: "OPTIONAL" },
+    ]);
     vi.mocked(parquetReadObjects).mockResolvedValue([{ col: "val" }]);
 
     renderWithSuspense(
@@ -146,6 +166,43 @@ describe("ParquetVisualizer", () => {
         "data-fullscreen",
         "true",
       );
+    });
+
+    vi.restoreAllMocks();
+  });
+
+  it("attaches schema-derived type and nullable flags to each column", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
+    } as Response);
+
+    mockMetadata([
+      { name: "root" },
+      { name: "id", type: "INT64", repetition_type: "REQUIRED" },
+      {
+        name: "label",
+        type: "BYTE_ARRAY",
+        repetition_type: "OPTIONAL",
+        logical_type: { type: "STRING" },
+      },
+    ]);
+    vi.mocked(parquetReadObjects).mockResolvedValue([{ id: 1, label: "a" }]);
+
+    renderWithSuspense(
+      <ParquetVisualizer
+        signedUrl="https://storage.example.com/data.parquet"
+        isFullscreen={false}
+      />,
+    );
+
+    await waitFor(() => {
+      const table = screen.getByTestId("table-visualizer");
+      const columns = JSON.parse(table.getAttribute("data-columns") ?? "[]");
+      expect(columns).toEqual([
+        { name: "id", type: "INT64", nullable: false },
+        { name: "label", type: "STRING", nullable: true },
+      ]);
     });
 
     vi.restoreAllMocks();
