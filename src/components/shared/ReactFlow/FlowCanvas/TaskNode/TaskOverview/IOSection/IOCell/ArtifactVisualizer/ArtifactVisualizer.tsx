@@ -153,7 +153,6 @@ const ArtifactVisualizer = ({
               name={name}
               value={value}
               type={normalizedType}
-              remoteLink={artifactData?.uri}
               isFullscreen={isFullscreen}
             />
           ) : (
@@ -204,7 +203,6 @@ interface InlineContentProps {
   type: string;
   name: string;
   value: string;
-  remoteLink?: string | null;
   isFullscreen: boolean;
 }
 
@@ -212,19 +210,12 @@ const InlineContent = ({
   type,
   name,
   value,
-  remoteLink,
   isFullscreen,
 }: InlineContentProps) => {
   switch (type) {
     case "csv":
     case "tsv":
-      return (
-        <CsvVisualizerValue
-          value={value}
-          isFullscreen={isFullscreen}
-          remoteLink={remoteLink}
-        />
-      );
+      return <CsvVisualizerValue value={value} isFullscreen={isFullscreen} />;
     case "jsonobject":
     case "jsonarray":
       return <JsonVisualizerValue value={value} name={name} />;
