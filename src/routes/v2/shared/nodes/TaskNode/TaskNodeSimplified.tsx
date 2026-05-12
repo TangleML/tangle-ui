@@ -22,7 +22,7 @@ const AGGREGATOR_INTERNAL_INPUTS = new Set([
   "output_type",
 ]);
 
-const PERCEIVED_FONT_SIZE = "28px";
+const PERCEIVED_FONT_SIZE = "32px";
 const s = "var(--simplified-scale, 1)";
 
 const simplifiedCardVariants = createTaskNodeCardVariants(
