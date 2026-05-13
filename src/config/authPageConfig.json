@@ -1,0 +1,5 @@
+{
+  "title": "Couldn't reach the server",
+  "body": "Your session may have expired or the connection was interrupted by an authentication service. Reload the page to reauthenticate and restore the connection.",
+  "reloadLabel": "Reload page"
+}
