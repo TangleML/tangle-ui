@@ -12,18 +12,15 @@ import { debounce } from "@/utils/debounce";
 import type { PipelineFileStore } from "./pipelineFileStore";
 import type { UndoStore } from "./undoStore";
 
-const SAVED_MESSAGE_DURATION_MS = 2000;
-const MIN_SAVING_DISPLAY_MS = 1000;
+const AUTOSAVE_MIN_SAVING_INDICATOR_MS = 600;
 
 export class AutoSaveStore {
   @observable accessor isSaving = false;
   @observable accessor lastSavedAt: Date | null = null;
-  @observable accessor showSavedMessage = false;
 
   private spec: ComponentSpec | null = null;
   private pipelineName: string | null = null;
   private disposeReaction: (() => void) | null = null;
-  private savedMessageTimeout: ReturnType<typeof setTimeout> | null = null;
 
   private debouncedSave = debounce((yamlText: string) => {
     void this.performSave(yamlText);
@@ -42,7 +39,6 @@ export class AutoSaveStore {
     this.pipelineName = pipelineName;
     this.isSaving = false;
     this.lastSavedAt = null;
-    this.showSavedMessage = false;
 
     this.disposeReaction = reaction(
       () => this.serializeSpec(),
@@ -55,7 +51,6 @@ export class AutoSaveStore {
     this.disposeReaction?.();
     this.disposeReaction = null;
     this.debouncedSave.cancel();
-    this.clearSavedMessageTimeout();
     this.spec = null;
     this.pipelineName = null;
   }
@@ -74,10 +69,6 @@ export class AutoSaveStore {
   @action setSaved(date: Date) {
     this.lastSavedAt = date;
     this.isSaving = false;
-  }
-
-  @action setShowSavedMessage(value: boolean) {
-    this.showSavedMessage = value;
   }
 
   private serializeSpec(): string | null {
@@ -107,19 +98,24 @@ export class AutoSaveStore {
       try {
         await this.pipelineFileStore.activePipelineFile?.write(yamlText);
         await this.persistUndoHistory();
-        this.setSaved(new Date());
-        this.flashSavedMessage();
+        return new Date();
       } catch (error) {
         console.error("Auto-save failed:", error);
-        this.setSaving(false);
+        return null;
       }
     })();
 
     const minDisplayPromise = new Promise((resolve) =>
-      setTimeout(resolve, MIN_SAVING_DISPLAY_MS),
+      setTimeout(resolve, AUTOSAVE_MIN_SAVING_INDICATOR_MS),
     );
 
-    await Promise.all([savePromise, minDisplayPromise]);
+    const [savedAt] = await Promise.all([savePromise, minDisplayPromise]);
+
+    if (savedAt) {
+      this.setSaved(savedAt);
+    } else {
+      this.setSaving(false);
+    }
   }
 
   private async persistUndoHistory() {
@@ -132,21 +128,6 @@ export class AutoSaveStore {
       await saveUndoHistory(this.pipelineName, idStack, manager);
     } catch (error) {
       console.error("Failed to persist undo history:", error);
-    }
-  }
-
-  private flashSavedMessage() {
-    this.clearSavedMessageTimeout();
-    this.setShowSavedMessage(true);
-    this.savedMessageTimeout = setTimeout(() => {
-      this.setShowSavedMessage(false);
-    }, SAVED_MESSAGE_DURATION_MS);
-  }
-
-  private clearSavedMessageTimeout() {
-    if (this.savedMessageTimeout) {
-      clearTimeout(this.savedMessageTimeout);
-      this.savedMessageTimeout = null;
     }
   }
 }
