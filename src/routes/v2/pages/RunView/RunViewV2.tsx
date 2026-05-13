@@ -8,6 +8,7 @@ import { useEffect, useRef } from "react";
 
 import { InfoBox } from "@/components/shared/InfoBox";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
+import { RemoteAuthErrorView } from "@/components/shared/RemoteAuthErrorView";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Paragraph } from "@/components/ui/typography";
 import type { ComponentSpec } from "@/models/componentSpec";
@@ -35,6 +36,7 @@ import { WindowContainer } from "@/routes/v2/shared/windows/WindowContainer";
 import { useWindowPersistence } from "@/routes/v2/shared/windows/windowPersistence";
 import { getBackendStatusString } from "@/utils/backend";
 import type { ComponentSpec as DomainComponentSpec } from "@/utils/componentSpec";
+import { RemoteAuthError } from "@/utils/fetchWithErrorHandling";
 
 import { RunViewFlowCanvas } from "./components/RunViewFlowCanvas";
 import { RunViewMenuBar } from "./components/RunViewMenuBar/RunViewMenuBar";
@@ -114,6 +116,9 @@ const RunViewContent = observer(function RunViewContent() {
   }
 
   if (error) {
+    if (error instanceof RemoteAuthError) {
+      return <RemoteAuthErrorView />;
+    }
     const backendStatusString = getBackendStatusString(configured, available);
     return (
       <BlockStack fill>

@@ -11,6 +11,10 @@ import {
   flattenExecutionStatusStats,
   isExecutionComplete,
 } from "@/utils/executionStatus";
+import { RemoteAuthError } from "@/utils/fetchWithErrorHandling";
+
+const retryUnlessAuth = (failureCount: number, error: Error) =>
+  !(error instanceof RemoteAuthError) && failureCount < 3;
 
 const useRootExecutionId = (id: string) => {
   const { backendUrl } = useBackend();
@@ -41,7 +45,7 @@ export const usePipelineRunData = (id: string) => {
 
   const rootExecutionId = useRootExecutionId(id);
 
-  const { data: executionDetails } = useQuery({
+  const { data: executionDetails, error: executionDetailsError } = useQuery({
     enabled: !!rootExecutionId,
     queryKey: ["execution-details", rootExecutionId],
     queryFn: async () => {
@@ -52,11 +56,12 @@ export const usePipelineRunData = (id: string) => {
       return fetchExecutionDetails(rootExecutionId, backendUrl);
     },
     staleTime: 1 * HOURS,
+    retry: retryUnlessAuth,
   });
 
   const {
     data: executionData,
-    error,
+    error: executionDataError,
     isLoading,
   } = useQuery({
     enabled: !!rootExecutionId && !!executionDetails,
@@ -87,12 +92,13 @@ export const usePipelineRunData = (id: string) => {
       return false;
     },
     staleTime: 5000,
+    retry: retryUnlessAuth,
   });
 
   return {
     executionData,
     rootExecutionId,
     isLoading,
-    error,
+    error: executionDetailsError ?? executionDataError,
   };
 };
