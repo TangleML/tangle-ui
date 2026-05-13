@@ -27,6 +27,7 @@ export const DEFAULT_DOCK_AREAS: PresetDockAreas = {
     "history",
     "debug-panel",
     "recent-runs",
+    "canvas-controls",
   ],
   right: ["pipeline-details", "context-panel"],
 };
@@ -56,6 +57,7 @@ export const DEFAULT_VIEW_PRESET: ViewPreset = {
     "component-library",
     AI_ASSISTANT_WINDOW_ID,
     "pipeline-details",
+    "canvas-controls",
     "tip-of-the-day",
   ]),
   dockAreas: DEFAULT_DOCK_AREAS,
@@ -77,6 +79,7 @@ export const VIEW_PRESETS: ViewPreset[] = [
       "pipeline-details",
       "debug-panel",
       "recent-runs",
+      "canvas-controls",
       "tip-of-the-day",
     ]),
     dockAreas: DEFAULT_DOCK_AREAS,

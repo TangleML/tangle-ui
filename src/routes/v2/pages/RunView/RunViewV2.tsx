@@ -26,6 +26,7 @@ import {
   useExecutionData,
 } from "@/providers/ExecutionDataProvider";
 import { AiChatStoreProvider } from "@/routes/v2/shared/components/AiChat/AiChatStoreContext";
+import { useCanvasControlsWindow } from "@/routes/v2/shared/components/MiniMap/useCanvasControlsWindow";
 import { useDockAreaAccordion } from "@/routes/v2/shared/hooks/useDockAreaAccordion";
 import { NodeRegistryProvider } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { SpecProvider } from "@/routes/v2/shared/providers/SpecContext";
@@ -168,6 +169,7 @@ const RunViewLayout = observer(function RunViewLayout({
   useRunViewSelectionSync();
   useRunViewSubgraphUrlSync();
   useFocusTaskFromUrl(spec);
+  useCanvasControlsWindow("v2.run_view");
 
   const aiEnabled = useFlagValue("ai-assistant");
   useAiChatWindow(aiEnabled);
