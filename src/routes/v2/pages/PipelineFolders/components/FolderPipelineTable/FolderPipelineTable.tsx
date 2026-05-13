@@ -99,9 +99,14 @@ export const FolderPipelineTable = withSuspenseWrapper(
       f.name.toLowerCase().includes(searchQuery.toLowerCase()),
     );
 
-    const filteredPipelines = pipelines.filter((p) =>
-      p.storageKey.toLowerCase().includes(searchQuery.toLowerCase()),
-    );
+    const filteredPipelines = pipelines
+      .filter((p) =>
+        p.storageKey.toLowerCase().includes(searchQuery.toLowerCase()),
+      )
+      .sort(
+        (a, b) =>
+          (b.modifiedAt?.getTime() ?? 0) - (a.modifiedAt?.getTime() ?? 0),
+      );
 
     const pagination = usePagination(filteredPipelines);
 
