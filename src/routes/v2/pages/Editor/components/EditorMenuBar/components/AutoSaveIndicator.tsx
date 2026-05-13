@@ -30,7 +30,7 @@ function IdleLayer({ children }: { children: ReactNode }) {
     <span
       className={cn(
         LAYER_BASE_CLASS,
-        "text-stone-400 opacity-100 hover:text-white",
+        "opacity-100 hover:text-white",
         "[transition:opacity_150ms_ease-out_600ms,color_1000ms_ease-out_750ms]",
         "group-data-[saving=true]:text-green-500 group-data-[saving=true]:opacity-0",
         "group-data-[saving=true]:[transition:opacity_150ms_ease-out,color_0ms]",
@@ -54,11 +54,16 @@ export const AutoSaveIndicator = observer(function AutoSaveIndicator() {
   const { isSaving, lastSavedAt } = autoSave;
   const tooltipText = getTooltipText(isSaving, lastSavedAt);
 
+  const handleClick = () => {
+    void autoSave.save();
+  };
+
   return (
     <TooltipButton
       tooltip={tooltipText}
       className="hover:bg-transparent"
       disabled={isSaving}
+      onClick={handleClick}
       data-testid="auto-save-button"
       {...tracking("v2.pipeline_editor.auto_save_indicator")}
     >
