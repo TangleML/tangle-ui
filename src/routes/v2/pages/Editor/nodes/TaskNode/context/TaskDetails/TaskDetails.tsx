@@ -140,7 +140,11 @@ export const TaskDetails = observer(function TaskDetails({
               />
             ) : (
               <div className="group min-w-0 flex items-baseline gap-1">
-                <Text size="md" weight="semibold" className="wrap-anywhere">
+                <Text
+                  size="md"
+                  weight="semibold"
+                  className="wrap-anywhere select-text"
+                >
                   {task.name}
                 </Text>
                 <Button
