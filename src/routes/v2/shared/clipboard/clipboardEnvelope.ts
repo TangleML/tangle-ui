@@ -5,7 +5,7 @@ import type {
 
 const CLIPBOARD_ENVELOPE_TYPE = "tangle-pipeline-nodes";
 
-interface ClipboardEnvelope {
+export interface ClipboardEnvelope {
   _type: typeof CLIPBOARD_ENVELOPE_TYPE;
   snapshots: NodeSnapshot[];
   bindings: BindingSnapshot[];
@@ -18,6 +18,30 @@ function isClipboardEnvelope(data: unknown): data is ClipboardEnvelope {
     "_type" in data &&
     (data as Record<string, unknown>)._type === CLIPBOARD_ENVELOPE_TYPE
   );
+}
+
+export type SystemClipboardInfo =
+  | { kind: "envelope"; envelope: ClipboardEnvelope }
+  | { kind: "text"; text: string }
+  | { kind: "empty" }
+  | { kind: "unavailable" };
+
+export async function readSystemClipboardInfo(): Promise<SystemClipboardInfo> {
+  try {
+    const text = await navigator.clipboard.readText();
+    if (!text) return { kind: "empty" };
+    try {
+      const parsed = JSON.parse(text);
+      if (isClipboardEnvelope(parsed)) {
+        return { kind: "envelope", envelope: parsed };
+      }
+    } catch {
+      // Not JSON — fall through to plain-text result
+    }
+    return { kind: "text", text };
+  } catch {
+    return { kind: "unavailable" };
+  }
 }
 
 export async function writeToSystemClipboard(
