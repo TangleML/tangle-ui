@@ -28,41 +28,35 @@ class FocusModeStore {
 export const focusModeStore = new FocusModeStore();
 
 /**
- * Registers keyboard shortcuts for view presets:
- * - Cmd+Alt+/ : Toggle Minimal layout (hide all panels)
- * - Cmd+Alt+D : Default layout
+ * Registers keyboard shortcuts:
+ * - Cmd+Alt+/ : Toggle Focus mode (temporarily hide dock panels without
+ *               mutating window layout state)
+ * - Cmd+Alt+D : Default layout (apply the Default view preset)
  */
 export function useFocusMode(): void {
   const { keyboard, windows } = useSharedStores();
 
-  const applyPreset = (presetLabel: string) => {
-    const preset = VIEW_PRESETS.find((p) => p.label === presetLabel);
-    if (!preset) return;
-    windows.applyViewPreset(preset);
-  };
-
   useEffect(() => {
-    const unregisterMinimal = keyboard.registerShortcut({
+    const unregisterFocusMode = keyboard.registerShortcut({
       id: "focus-mode",
       keys: [CMDALT, "/"],
-      label: "Minimal layout",
-      action: () => {
-        const allHidden = windows
-          .getAllWindows()
-          .every((w) => w.state === "hidden");
-        applyPreset(allHidden ? "Default" : "Minimal");
-      },
+      label: "Focus mode",
+      action: () => focusModeStore.toggle(),
     });
 
     const unregisterDefault = keyboard.registerShortcut({
       id: "default-layout",
       keys: [CMDALT, "D"],
       label: "Default layout",
-      action: () => applyPreset("Default"),
+      action: () => {
+        const preset = VIEW_PRESETS.find((p) => p.label === "Default");
+        if (!preset) return;
+        windows.applyViewPreset(preset);
+      },
     });
 
     return () => {
-      unregisterMinimal();
+      unregisterFocusMode();
       unregisterDefault();
     };
   }, [keyboard, windows]);

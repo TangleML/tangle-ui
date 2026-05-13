@@ -90,7 +90,7 @@ export const FlowCanvas = observer(function FlowCanvas({
       fill
       className={cn(
         "relative select-none",
-        focusModeActive && "border-2 border-red-500",
+        focusModeActive && "ring-2 ring-blue-500",
         className,
       )}
     >
