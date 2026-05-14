@@ -25,11 +25,13 @@ import { PipelineDetailsHeader } from "./components/PipelineDetailsHeader";
 import { PipelineDetailsTextField } from "./components/PipelineDetailsTextField";
 import { TagsBlock } from "./components/TagsBlock";
 
-const EXCLUDED_ANNOTATIONS = [
+const SYSTEM_PIPELINE_ANNOTATIONS = [
   "notes",
   PIPELINE_TAGS_ANNOTATION,
   "flex-nodes",
   "tangleml.com/editor/edge-conduits",
+  "sdk",
+  "editor.flow-direction",
 ];
 
 export const PipelineDetailsContent = observer(
@@ -131,7 +133,7 @@ export const PipelineDetailsContent = observer(
               <Separator />
               <AnnotationsBlock
                 annotations={pipelineSpec.annotations}
-                ignoreAnnotationKeys={EXCLUDED_ANNOTATIONS}
+                systemAnnotationKeys={SYSTEM_PIPELINE_ANNOTATIONS}
               />
             </BlockStack>
           </PipelineDetailsCollapsibleSection>
