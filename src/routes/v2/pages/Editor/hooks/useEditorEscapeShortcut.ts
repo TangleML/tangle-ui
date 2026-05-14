@@ -2,6 +2,7 @@ import { useReactFlow } from "@xyflow/react";
 import { useEffect } from "react";
 
 import { useDialog } from "@/providers/DialogProvider/hooks/useDialog";
+import { useDeselectAll } from "@/routes/v2/shared/hooks/useDeselectAll";
 import { ESCAPE } from "@/routes/v2/shared/shortcuts/keys";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
@@ -25,6 +26,7 @@ export function useEditorEscapeShortcut(): void {
   const { stack } = useDialog();
   const { editor, keyboard, windows } = useSharedStores();
   const reactFlow = useReactFlow();
+  const deselectAll = useDeselectAll();
 
   useEffect(() => {
     const unregister = keyboard.registerShortcut({
@@ -41,21 +43,13 @@ export function useEditorEscapeShortcut(): void {
           return;
         }
 
-        const rfSelected = hasReactFlowSelection(reactFlow);
-        const editorSelected = editor.hasAnySelection;
-        if (!rfSelected && !editorSelected) return false;
-
-        editor.clearSelection();
-        if (rfSelected) {
-          reactFlow.setNodes((ns) =>
-            ns.map((n) => (n.selected ? { ...n, selected: false } : n)),
-          );
-          reactFlow.setEdges((es) =>
-            es.map((e) => (e.selected ? { ...e, selected: false } : e)),
-          );
+        if (!hasReactFlowSelection(reactFlow) && !editor.hasAnySelection) {
+          return false;
         }
+
+        deselectAll();
       },
     });
     return unregister;
-  }, [editor, keyboard, reactFlow, stack, windows]);
+  }, [editor, keyboard, reactFlow, stack, windows, deselectAll]);
 }

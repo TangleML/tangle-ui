@@ -3,6 +3,7 @@ import { useEffect } from "react";
 
 import { ContextPanelContent } from "@/routes/v2/pages/Editor/components/ContextPanel/ContextPanel";
 import { PinnedTaskContent } from "@/routes/v2/pages/Editor/components/PinnedTaskContent/PinnedTaskContent";
+import { useDeselectAll } from "@/routes/v2/shared/hooks/useDeselectAll";
 import type { EditorStore } from "@/routes/v2/shared/store/editorStore";
 import type { NavigationStore } from "@/routes/v2/shared/store/navigationStore";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
@@ -76,7 +77,10 @@ function scrollWindowIntoView() {
   }, 100);
 }
 
-function ensureContextPanelVisible(windows: WindowStoreImpl) {
+function ensureContextPanelVisible(
+  windows: WindowStoreImpl,
+  deselectAll: () => void,
+) {
   const existing = windows.getWindowById(CONTEXT_PANEL_WINDOW_ID);
 
   if (existing) {
@@ -96,6 +100,8 @@ function ensureContextPanelVisible(windows: WindowStoreImpl) {
     startVisible: true,
     persisted: true,
     defaultDockState: "right",
+    disabledActions: ["hide"],
+    onClose: deselectAll,
   });
   scrollWindowIntoView();
 }
@@ -107,6 +113,7 @@ function closeContextPanel(windows: WindowStoreImpl) {
 
 export function useSelectionWindowSync() {
   const { editor, navigation, windows } = useSharedStores();
+  const deselectAll = useDeselectAll();
 
   useEffect(() => {
     const disposeSelectionWatcher = reaction(
@@ -138,7 +145,7 @@ export function useSelectionWindowSync() {
           multiSelectionLength > 1 || (selectedNodeId && selectedNodeType);
 
         if (shouldShowPanel) {
-          ensureContextPanelVisible(windows);
+          ensureContextPanelVisible(windows, deselectAll);
         } else {
           closeContextPanel(windows);
         }
@@ -146,5 +153,5 @@ export function useSelectionWindowSync() {
     );
 
     return disposeSelectionWatcher;
-  }, [editor, navigation, windows]);
+  }, [editor, navigation, windows, deselectAll]);
 }
