@@ -119,8 +119,10 @@ const DebugPanelContent = observer(function DebugPanelContent() {
       </TabsContent>
 
       <TabsContent value="yaml" className="flex-1 min-h-0">
-        <div className="m-2 h-full rounded-md overflow-hidden bg-gray-50 border border-gray-200">
-          <CodeSyntaxHighlighter code={specYaml} language="yaml" />
+        <div className="m-2 h-full min-h-75 rounded-md overflow-hidden bg-gray-50 border border-gray-200 relative">
+          <div className="absolute inset-0">
+            <CodeSyntaxHighlighter code={specYaml} language="yaml" />
+          </div>
         </div>
       </TabsContent>
     </Tabs>
