@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 
 import { HistoryContent } from "@/routes/v2/pages/Editor/components/HistoryContent/HistoryContent";
+import { HistoryWindowMiniContent } from "@/routes/v2/pages/Editor/components/HistoryContent/HistoryWindowMiniContent";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 const HISTORY_WINDOW_ID = "history";
@@ -17,6 +18,7 @@ export function useHistoryWindow() {
         disabledActions: ["close"],
         persisted: true,
         defaultDockState: "left",
+        miniContent: <HistoryWindowMiniContent />,
       });
     }
   }, [windows]);
