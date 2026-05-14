@@ -192,15 +192,14 @@ export const TaskDetails = observer(function TaskDetails({
             {...tracking("v2.pipeline_editor.task_details.tab_configuration")}
           >
             <Icon name="Settings" size="xs" className="shrink-0" />
-            <span className="truncate">Configuration</span>
+            <span className="truncate">Config</span>
           </TabsTrigger>
           <TabsTrigger
             value="annotations"
-            className="min-w-0 flex-1 gap-1.5"
+            className="flex-none w-8 px-0"
             {...tracking("v2.pipeline_editor.task_details.tab_annotations")}
           >
-            <Icon name="Tag" size="xs" className="shrink-0" />
-            <span className="truncate">Annotations</span>
+            <Icon name="EllipsisVertical" size="xs" className="shrink-0" />
           </TabsTrigger>
         </TabsList>
 
