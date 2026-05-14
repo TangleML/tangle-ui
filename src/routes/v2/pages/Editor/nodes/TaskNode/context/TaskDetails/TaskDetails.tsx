@@ -37,7 +37,7 @@ interface TaskDetailsProps {
   entityId: string;
 }
 
-type DetailsTab = "arguments" | "configuration";
+type DetailsTab = "arguments" | "configuration" | "annotations";
 
 export const TaskDetails = observer(function TaskDetails({
   entityId,
@@ -62,7 +62,11 @@ export const TaskDetails = observer(function TaskDetails({
   }, [focusedArgumentName]);
 
   const handleDetailsTabChange = (value: string) => {
-    if (value === "arguments" || value === "configuration") {
+    if (
+      value === "arguments" ||
+      value === "configuration" ||
+      value === "annotations"
+    ) {
       setDetailsTab(value);
     }
   };
@@ -190,6 +194,14 @@ export const TaskDetails = observer(function TaskDetails({
             <Icon name="Settings" size="xs" className="shrink-0" />
             <span className="truncate">Configuration</span>
           </TabsTrigger>
+          <TabsTrigger
+            value="annotations"
+            className="min-w-0 flex-1 gap-1.5"
+            {...tracking("v2.pipeline_editor.task_details.tab_annotations")}
+          >
+            <Icon name="Tag" size="xs" className="shrink-0" />
+            <span className="truncate">Annotations</span>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent
@@ -203,17 +215,18 @@ export const TaskDetails = observer(function TaskDetails({
           value="configuration"
           className="mt-0 min-h-0 min-w-0 flex-1 overflow-y-auto py-3"
         >
-          <BlockStack gap="4">
-            <ConfigurationSection task={task} />
+          <ConfigurationSection task={task} />
+        </TabsContent>
 
-            <Separator />
-
-            <AnnotationsBlock
-              annotations={task.annotations}
-              defaultEditing
-              ignoreAnnotationKeys={EDITOR_ANNOTATION_KEYS}
-            />
-          </BlockStack>
+        <TabsContent
+          value="annotations"
+          className="mt-0 min-h-0 min-w-0 flex-1 overflow-y-auto py-3"
+        >
+          <AnnotationsBlock
+            annotations={task.annotations}
+            defaultEditing
+            ignoreAnnotationKeys={EDITOR_ANNOTATION_KEYS}
+          />
         </TabsContent>
       </Tabs>
       <Separator />

@@ -12,7 +12,7 @@ import { ColorPicker } from "@/components/ui/color";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import { Paragraph, Text } from "@/components/ui/typography";
+import { Heading, Paragraph } from "@/components/ui/typography";
 import type { Task } from "@/models/componentSpec";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import type { AnnotationConfig, Annotations } from "@/types/annotations";
@@ -136,16 +136,7 @@ export const ConfigurationSection = observer(function ConfigurationSection({
 
   return (
     <BlockStack gap="3">
-      <Text
-        as="h3"
-        size="xs"
-        weight="semibold"
-        tone="subdued"
-        role="heading"
-        aria-level={3}
-      >
-        Configuration
-      </Text>
+      <Heading level={3}>General configuration</Heading>
 
       <InlineStack align="space-between" gap="2" className="w-full">
         <Paragraph size="xs" tone="subdued">
