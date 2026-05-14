@@ -7,6 +7,7 @@ import PipelineRunPage from "@/components/PipelineRun";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { NodesOverlayProvider } from "@/components/shared/ReactFlow/NodesOverlay/NodesOverlayProvider";
+import { RemoteAuthErrorView } from "@/components/shared/RemoteAuthErrorView";
 import { BlockStack } from "@/components/ui/layout";
 import { Paragraph } from "@/components/ui/typography";
 import { faviconManager } from "@/favicon";
@@ -24,6 +25,7 @@ import {
   flattenExecutionStatusStats,
   getOverallExecutionStatusFromStats,
 } from "@/utils/executionStatus";
+import { RemoteAuthError } from "@/utils/fetchWithErrorHandling";
 
 const PipelineRunContent = () => {
   const { setComponentSpec, clearComponentSpec, componentSpec } =
@@ -109,17 +111,10 @@ const PipelineRunContent = () => {
     );
   }
 
-  if (!componentSpec) {
-    return (
-      <BlockStack fill>
-        <InfoBox title="Error loading pipeline run" variant="error">
-          No pipeline data available.
-        </InfoBox>
-      </BlockStack>
-    );
-  }
-
-  if (error) {
+  if (error && !rootDetails) {
+    if (error instanceof RemoteAuthError) {
+      return <RemoteAuthErrorView />;
+    }
     const backendStatusString = getBackendStatusString(configured, available);
     return (
       <BlockStack fill>

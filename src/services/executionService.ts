@@ -18,8 +18,14 @@ import {
   flattenExecutionStatusStats,
   getOverallExecutionStatusFromStats,
 } from "@/utils/executionStatus";
-import { fetchWithErrorHandling } from "@/utils/fetchWithErrorHandling";
+import {
+  fetchWithErrorHandling,
+  RemoteAuthError,
+} from "@/utils/fetchWithErrorHandling";
 import { rateLimit } from "@/utils/rateLimit";
+
+const retryUnlessAuth = (failureCount: number, error: Error) =>
+  !(error instanceof RemoteAuthError) && failureCount < 3;
 
 export const fetchExecutionState = async (
   executionId: string,
@@ -41,11 +47,8 @@ export const fetchPipelineRun = async (
   runId: string,
   backendUrl: string,
 ): Promise<PipelineRunResponse> => {
-  const response = await fetch(`${backendUrl}/api/pipeline_runs/${runId}`);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch pipeline run: ${response.statusText}`);
-  }
-  return response.json();
+  const url = `${backendUrl}/api/pipeline_runs/${runId}`;
+  return fetchWithErrorHandling(url);
 };
 
 export const useFetchPipelineRunMetadata = (runId: string | undefined) => {
@@ -57,6 +60,7 @@ export const useFetchPipelineRunMetadata = (runId: string | undefined) => {
     enabled: !!runId,
     refetchOnWindowFocus: false,
     staleTime: TWENTY_FOUR_HOURS_IN_MS,
+    retry: retryUnlessAuth,
   });
 };
 
@@ -81,6 +85,7 @@ export const useFetchContainerExecutionState = (
     queryFn: () => fetchContainerExecutionState(executionId!, backendUrl),
     enabled: shouldFetch,
     refetchOnWindowFocus: false,
+    retry: retryUnlessAuth,
   });
 };
 
