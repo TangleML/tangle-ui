@@ -10,15 +10,21 @@ import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 export const ShortcutBadge = observer(function ShortcutBadge({
   id,
+  className,
 }: {
   id: string;
+  className?: string;
 }) {
   const { keyboard } = useSharedStores();
   const shortcut = keyboard.getShortcut(id);
 
   if (!shortcut) return null;
 
-  return <Badge variant="outline">{formatShortcut(shortcut.keys)}</Badge>;
+  return (
+    <Badge variant="outline" className={className}>
+      {formatShortcut(shortcut.keys)}
+    </Badge>
+  );
 });
 
 const isMac =

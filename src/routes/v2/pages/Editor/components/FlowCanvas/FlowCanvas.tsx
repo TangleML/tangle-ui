@@ -26,6 +26,7 @@ import { useNodeRegistry } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { CMDALT, SHIFT } from "@/routes/v2/shared/shortcuts/keys";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
+import { CanvasUndoRedo } from "./components/CanvasUndoRedo";
 import { ConnectionLine } from "./components/ConnectionLine";
 import { FloatingSelectionToolbar } from "./components/FloatingSelectionToolbar";
 import { useClipboardShortcuts } from "./hooks/useClipboardShortcuts";
@@ -141,6 +142,7 @@ export const FlowCanvas = observer(function FlowCanvas({
           onNodeClick={() => track("v2.pipeline_canvas.minimap.node.click")}
         />
       </ReactFlow>
+      <CanvasUndoRedo />
     </BlockStack>
   );
 });
