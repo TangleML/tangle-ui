@@ -1,3 +1,4 @@
+import { observer } from "mobx-react-lite";
 import { useCallback, useState } from "react";
 
 import { InfoBox } from "@/components/shared/InfoBox";
@@ -9,6 +10,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Paragraph } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
+import { useUpgradeComponentsWindow } from "@/routes/v2/pages/Editor/components/UpgradeComponents/useUpgradeComponentsWindow";
+import {
+  collectUsedComponentReferencesFromV2Spec,
+  EMPTY_USED_COMPONENTS,
+} from "@/routes/v2/pages/Editor/components/UpgradeComponents/utils/collectUsedComponentReferencesFromV2Spec";
+import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
+import { useOptionalWindowContext } from "@/routes/v2/shared/windows/ContentWindowStateContext";
 import { getStorage } from "@/utils/typedStorage";
 
 import { useNodesOverlay } from "../../NodesOverlay/NodesOverlayProvider";
@@ -21,29 +29,66 @@ const UpgradeAvailableAlertBoxSkeleton = () => {
   );
 };
 
-/**
- * Component to display an alert box when there are outdated components in the graph
- *
- * @returns The UpgradeAvailableAlertBox component
- */
-export const UpgradeAvailableAlertBox = withSuspenseWrapper(
-  () => {
-    const notify = useToastNotification();
-    const [dismissed, setDismissed] = useDissmissedStorage();
+interface UpgradeAlertViewProps {
+  onReview: () => void;
+  onDismiss: () => void;
+}
 
+function UpgradeAlertView({ onReview, onDismiss }: UpgradeAlertViewProps) {
+  return (
+    <BlockStack className="px-2">
+      <InfoBox title="Upgrades available" key="outdated-components">
+        <BlockStack gap="2">
+          <Paragraph size="xs">
+            You have outdated components used in your Pipeline.
+          </Paragraph>
+          <InlineStack align="space-between" className="w-full">
+            <Button size="xs" variant="secondary" onClick={onDismiss}>
+              Dismiss
+            </Button>
+            <Button size="xs" onClick={onReview}>
+              Review
+            </Button>
+          </InlineStack>
+        </BlockStack>
+      </InfoBox>
+    </BlockStack>
+  );
+}
+
+/**
+ * Computes alert visibility (outdated > 0 && not dismissed) and a dismiss
+ * callback that persists the dismissal and toasts the user.
+ */
+function useUpgradeAlertVisibility(outdatedCount: number) {
+  const notify = useToastNotification();
+  const [dismissed, setDismissed] = useDissmissedStorage();
+
+  const dismiss = useCallback(() => {
+    setDismissed();
+    notify("Upgrade alert dismissed for next 24 hours", "success");
+  }, [setDismissed, notify]);
+
+  return {
+    visible: outdatedCount > 0 && !dismissed,
+    dismiss,
+  };
+}
+
+const UpgradeAvailableAlertBoxLegacy = withSuspenseWrapper(
+  function UpgradeAvailableAlertBoxLegacyInner() {
     const { usedComponentsFolder } = useComponentLibrary();
 
     const { data: outdatedComponents } = useOutdatedComponents(
       usedComponentsFolder.components ?? [],
     );
 
+    const { visible, dismiss } = useUpgradeAlertVisibility(
+      outdatedComponents.length,
+    );
+
     const { notifyNode, getNodeIdsByDigest, fitNodeIntoView } =
       useNodesOverlay();
-
-    const dismissCallback = useCallback(() => {
-      setDismissed();
-      notify("Upgrade alert dismissed for next 24 hours", "success");
-    }, [setDismissed, notify]);
 
     const upgradeAllComponentsCallback = useCallback(async () => {
       if (outdatedComponents.length === 0) {
@@ -77,36 +122,68 @@ export const UpgradeAvailableAlertBox = withSuspenseWrapper(
       });
     }, [getNodeIdsByDigest, fitNodeIntoView, notifyNode, outdatedComponents]);
 
-    const showOutdatedComponentsAlert =
-      outdatedComponents.length > 0 && !dismissed;
-
-    if (!showOutdatedComponentsAlert) {
+    if (!visible) {
       return null;
     }
 
     return (
-      <BlockStack className="px-2">
-        <InfoBox title="Upgrades available" key="outdated-components">
-          <BlockStack gap="2">
-            <Paragraph size="xs">
-              You have outdated components used in your Pipeline.
-            </Paragraph>
-            <InlineStack align="space-between" className="w-full">
-              <Button size="xs" variant="secondary" onClick={dismissCallback}>
-                Dismiss
-              </Button>
-              <Button size="xs" onClick={upgradeAllComponentsCallback}>
-                Review
-              </Button>
-            </InlineStack>
-          </BlockStack>
-        </InfoBox>
-      </BlockStack>
+      <UpgradeAlertView
+        onDismiss={dismiss}
+        onReview={upgradeAllComponentsCallback}
+      />
     );
   },
   UpgradeAvailableAlertBoxSkeleton,
   () => null,
 );
+
+const UpgradeAvailableAlertBoxV2WindowInner = observer(
+  function UpgradeAvailableAlertBoxV2WindowInner() {
+    const openUpgradeComponentsWindow = useUpgradeComponentsWindow();
+    const spec = useSpec();
+
+    const usedComponents = spec
+      ? collectUsedComponentReferencesFromV2Spec(spec)
+      : EMPTY_USED_COMPONENTS;
+
+    const { data: outdatedComponents } = useOutdatedComponents(usedComponents);
+
+    const { visible, dismiss } = useUpgradeAlertVisibility(
+      outdatedComponents.length,
+    );
+
+    if (!spec || !visible) {
+      return null;
+    }
+
+    return (
+      <UpgradeAlertView
+        onDismiss={dismiss}
+        onReview={() => openUpgradeComponentsWindow()}
+      />
+    );
+  },
+);
+
+const UpgradeAvailableAlertBoxV2Window = withSuspenseWrapper(
+  UpgradeAvailableAlertBoxV2WindowInner,
+  UpgradeAvailableAlertBoxSkeleton,
+  () => null,
+);
+
+/**
+ * When this component is rendered inside the v2 window chrome (e.g. docked
+ * Component Library), `useOptionalWindowContext()` is defined and Review opens
+ * the v2 Upgrade Components window. In the v1 sidebar there is no window
+ * context; Review uses the nodes overlay flow instead.
+ */
+export function UpgradeAvailableAlertBox() {
+  const windowCtx = useOptionalWindowContext();
+  if (windowCtx) {
+    return <UpgradeAvailableAlertBoxV2Window />;
+  }
+  return <UpgradeAvailableAlertBoxLegacy />;
+}
 
 interface DismissedStorage {
   upgradeAvailableAlertDismissed: Date | undefined;

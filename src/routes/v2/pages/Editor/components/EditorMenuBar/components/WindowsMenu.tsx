@@ -24,9 +24,9 @@ import { tracking } from "@/utils/tracking";
 export const WindowsMenu = observer(function WindowsMenu() {
   const { track } = useAnalytics();
   const { windows } = useSharedStores();
-  const sortedWindows = [...windows.getAllWindows()].sort((a, b) =>
-    a.title.localeCompare(b.title),
-  );
+  const sortedWindows = [...windows.getAllWindows()]
+    .filter((window) => window.persisted)
+    .sort((a, b) => a.title.localeCompare(b.title));
 
   const applyPreset = (preset: ViewPreset) => {
     track("v2.pipeline_editor.windows_menu.view_preset.click", {

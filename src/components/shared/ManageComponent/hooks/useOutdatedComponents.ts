@@ -14,6 +14,15 @@ import { hasSupersededBy } from "../types";
 import { hydrateAllComponents } from "../utils/hydrateAllComponents";
 import { useAllPublishedComponents } from "./useAllPublishedComponents";
 
+function usedComponentsQueryKeyDigests(
+  usedComponents: ComponentReference[],
+): string[] {
+  return usedComponents
+    .map((c) => c.digest)
+    .filter((d): d is string => Boolean(d))
+    .sort();
+}
+
 /**
  * Hook to get the outdated components in the graph
  *
@@ -25,8 +34,10 @@ export function useOutdatedComponents(usedComponents: ComponentReference[]) {
   const { existingComponentLibraries, getComponentLibrary } =
     useComponentLibrary();
 
+  const usedDigestsKey = usedComponentsQueryKeyDigests(usedComponents);
+
   return useSuspenseQuery({
-    queryKey: ["outdated-components", usedComponents],
+    queryKey: ["outdated-components", usedDigestsKey],
     staleTime: 1000 * 60 * 5,
     queryFn: async () => {
       const mostRecentComponents = await findMostRecentComponents(

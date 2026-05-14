@@ -1,3 +1,4 @@
+import { observer } from "mobx-react-lite";
 import { useState } from "react";
 
 import { BlockStack } from "@/components/ui/layout";
@@ -5,7 +6,7 @@ import { VerticalResizeHandle } from "@/components/ui/resize-handle";
 import { Separator } from "@/components/ui/separator";
 import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskActions";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
-import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { useOptionalWindowContext } from "@/routes/v2/shared/windows/ContentWindowStateContext";
 
 import { UpgradeCandidateDetail } from "./components/UpgradeCandidateDetail";
 import { UpgradeCandidateRow } from "./components/UpgradeCandidateRow";
@@ -14,16 +15,25 @@ import { UpgradeFooter } from "./components/UpgradeFooter";
 import { UpgradeHeader } from "./components/UpgradeHeader";
 import { useMockUpgradeCandidates } from "./hooks/useMockUpgradeCandidates";
 import { useSelectionSet } from "./hooks/useSelectionSet";
+import { useUpgradeCandidatesFromOutdated } from "./hooks/useUpgradeCandidatesFromOutdated";
 import { useUpgradePreviewOverlay } from "./hooks/useUpgradePreviewOverlay";
-import { candidateHasIssues } from "./types";
+import { candidateHasIssues, type UpgradeCandidate } from "./types";
 
-const WINDOW_ID = "upgrade-components";
 const DEFAULT_LEFT_PANEL_WIDTH = 340;
 
-export function UpgradeComponentsContent() {
+type UpgradeComponentsDataSource = "real" | "mock";
+
+interface UpgradeComponentsContentProps {
+  dataSource?: UpgradeComponentsDataSource;
+}
+
+const UpgradeComponentsInner = observer(function UpgradeComponentsInner({
+  candidates,
+}: {
+  candidates: UpgradeCandidate[];
+}) {
   const spec = useSpec();
-  const { windows } = useSharedStores();
-  const candidates = useMockUpgradeCandidates(true);
+  const windowCtx = useOptionalWindowContext();
   const { upgradeSelectedTasks } = useTaskActions();
 
   const candidateIds = candidates.map((c) => c.taskId);
@@ -40,12 +50,16 @@ export function UpgradeComponentsContent() {
   const focusedCandidate = candidates.find((c) => c.taskId === focusedId);
 
   const handleUpgrade = () => {
-    if (!spec || selectedCandidates.length === 0) return;
+    if (!spec || selectedCandidates.length === 0) {
+      return;
+    }
     upgradeSelectedTasks(spec, selectedCandidates);
-    windows.closeWindow(WINDOW_ID);
+    windowCtx?.model.close();
   };
 
-  if (candidates.length === 0) return <UpgradeEmptyState />;
+  if (candidates.length === 0) {
+    return <UpgradeEmptyState />;
+  }
 
   const issueCount = candidates.filter(candidateHasIssues).length;
 
@@ -94,8 +108,31 @@ export function UpgradeComponentsContent() {
       <UpgradeFooter
         selectedCount={selectedCandidates.length}
         onUpgrade={handleUpgrade}
-        onCancel={() => windows.closeWindow(WINDOW_ID)}
+        onCancel={() => windowCtx?.model.close()}
       />
     </BlockStack>
   );
+});
+
+const UpgradeComponentsContentReal = observer(
+  function UpgradeComponentsContentReal() {
+    const candidates = useUpgradeCandidatesFromOutdated();
+    return <UpgradeComponentsInner candidates={candidates} />;
+  },
+);
+
+const UpgradeComponentsContentMock = observer(
+  function UpgradeComponentsContentMock() {
+    const candidates = useMockUpgradeCandidates(true);
+    return <UpgradeComponentsInner candidates={candidates} />;
+  },
+);
+
+export function UpgradeComponentsContent({
+  dataSource = "real",
+}: UpgradeComponentsContentProps) {
+  if (dataSource === "mock") {
+    return <UpgradeComponentsContentMock />;
+  }
+  return <UpgradeComponentsContentReal />;
 }
