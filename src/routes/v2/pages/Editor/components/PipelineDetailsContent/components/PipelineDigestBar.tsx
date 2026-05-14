@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
+import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { CodeViewer } from "@/components/shared/CodeViewer";
-import { TrimmedDigest } from "@/components/shared/ManageComponent/TrimmedDigest";
+import { trimDigest } from "@/components/shared/ManageComponent/utils/digest";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
+import { Text } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import { generateDigest } from "@/utils/componentStore";
 import { downloadYamlFromComponentText } from "@/utils/URL";
@@ -79,23 +81,31 @@ export const PipelineDigestBar = withSuspenseWrapper(
             variant="ghost"
             aria-label="View pipeline YAML"
             className="h-auto min-h-0 min-w-0 flex-1 justify-start gap-1.5 px-1 py-0.5 font-normal"
-            onClick={() => setShowCodeViewer(true)}
+            onClick={() => handleCopyDigest()}
           >
             <Icon
               name={isNestedSubgraph ? "Workflow" : "GitBranch"}
               size="sm"
               className="shrink-0 text-muted-foreground"
             />
-            <TrimmedDigest
-              digest={digest}
+            <Text
+              size="xs"
+              font="mono"
               className="min-w-0 shrink truncate text-muted-foreground"
-            />
+            >
+              {trimDigest(digest)}
+            </Text>
           </Button>
 
           <InlineStack blockAlign="center" className="shrink-0">
-            <Button variant="ghost" size="min" onClick={handleCopyDigest}>
-              <Icon name="Copy" size="sm" />
-            </Button>
+            <TooltipButton
+              variant="ghost"
+              size="min"
+              onClick={() => setShowCodeViewer(true)}
+              tooltip="View pipeline YAML"
+            >
+              <Icon name="FileCode" size="sm" />
+            </TooltipButton>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
