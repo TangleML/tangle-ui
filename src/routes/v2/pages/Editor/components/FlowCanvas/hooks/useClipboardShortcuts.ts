@@ -42,6 +42,14 @@ export function useClipboardShortcuts(
       keys: [CMDALT, "C"],
       label: "Copy",
       action: (e) => {
+        const textSelection = window.getSelection();
+        if (
+          textSelection &&
+          !textSelection.isCollapsed &&
+          textSelection.toString().length > 0
+        ) {
+          return false;
+        }
         e.preventDefault();
         if (!spec) return;
         const selection = getEffectiveSelection(registry, spec, editor);

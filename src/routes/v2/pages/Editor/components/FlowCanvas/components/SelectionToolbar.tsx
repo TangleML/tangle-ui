@@ -14,13 +14,11 @@ import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { CreateSubgraphForm } from "@/routes/v2/pages/Editor/components/CreateSubgraphForm";
-import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { tracking } from "@/utils/tracking";
 
 interface SelectionToolbarProps {
   onDuplicate: () => void;
   onCopy: () => void;
-  onPaste?: () => void;
   onDelete: () => void;
   onCreateSubgraph?: (name: string) => void;
   selectedTaskCount?: number;
@@ -29,12 +27,10 @@ interface SelectionToolbarProps {
 export const SelectionToolbar = observer(function SelectionToolbar({
   onDuplicate,
   onCopy,
-  onPaste,
   onDelete,
   onCreateSubgraph,
   selectedTaskCount = 0,
 }: SelectionToolbarProps) {
-  const { clipboard } = useEditorSession();
   const [popoverOpen, setPopoverOpen] = useState(false);
 
   const handleCreate = (name: string) => {
@@ -63,15 +59,6 @@ export const SelectionToolbar = observer(function SelectionToolbar({
         testId="selection-copy"
         trackingAction="v2.pipeline_canvas.selection_toolbar.copy"
       />
-      {clipboard.hasContent && onPaste && (
-        <ToolbarButton
-          label="Paste"
-          icon="ClipboardPaste"
-          onClick={onPaste}
-          testId="selection-paste"
-          trackingAction="v2.pipeline_canvas.selection_toolbar.paste"
-        />
-      )}
       {onCreateSubgraph && selectedTaskCount >= 2 && (
         <>
           <Separator orientation="vertical" className="mx-0.5 self-stretch" />

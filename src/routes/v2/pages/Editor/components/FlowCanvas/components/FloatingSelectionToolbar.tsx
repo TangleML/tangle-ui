@@ -12,8 +12,7 @@ import { SelectionToolbar } from "./SelectionToolbar";
 export const FloatingSelectionToolbar = observer(
   function FloatingSelectionToolbar({ spec }: { spec: ComponentSpec | null }) {
     const { editor } = useSharedStores();
-    const { duplicateSelectedNodes, copySelectedNodes, pasteNodes } =
-      useTaskActions();
+    const { duplicateSelectedNodes, copySelectedNodes } = useTaskActions();
     const { createSubgraph } = usePipelineActions();
     const { multiSelection } = editor;
     const reactFlow = useReactFlow();
@@ -30,14 +29,6 @@ export const FloatingSelectionToolbar = observer(
     const handleCopy = () => {
       if (!spec) return;
       copySelectedNodes(spec, multiSelection);
-    };
-
-    const handlePaste = () => {
-      if (!spec) return;
-      const viewport = reactFlow.getViewport();
-      const centerX = (window.innerWidth / 2 - viewport.x) / viewport.zoom;
-      const centerY = (window.innerHeight / 2 - viewport.y) / viewport.zoom;
-      void pasteNodes(spec, { x: centerX, y: centerY });
     };
 
     const handleDelete = () => {
@@ -74,7 +65,6 @@ export const FloatingSelectionToolbar = observer(
         <SelectionToolbar
           onDuplicate={handleDuplicate}
           onCopy={handleCopy}
-          onPaste={handlePaste}
           onDelete={handleDelete}
           onCreateSubgraph={handleCreateSubgraph}
           selectedTaskCount={selectedTasks.length}

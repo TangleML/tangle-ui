@@ -1,5 +1,11 @@
 import type { XYPosition } from "@xyflow/react";
-import { action, computed, makeObservable, observable } from "mobx";
+import {
+  action,
+  computed,
+  makeObservable,
+  observable,
+  runInAction,
+} from "mobx";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 import { IncrementingIdGenerator } from "@/models/componentSpec/factories/idGenerator";
@@ -26,6 +32,7 @@ const idGen = new IncrementingIdGenerator();
 export class ClipboardStore {
   @observable.shallow accessor snapshots: NodeSnapshot[] = [];
   @observable.shallow accessor bindingSnapshots: BindingSnapshot[] = [];
+  @observable accessor pasteOffsetIndex: number = 0;
 
   constructor(private undoStore: UndoGroupable) {
     makeObservable(this);
@@ -50,6 +57,7 @@ export class ClipboardStore {
 
     this.snapshots = snapshots;
     this.bindingSnapshots = bindings;
+    this.pasteOffsetIndex = 0;
 
     writeToSystemClipboard(snapshots, bindings);
   }
@@ -64,11 +72,20 @@ export class ClipboardStore {
 
     if (snapshots.length === 0) return [];
 
+    const offset = this.pasteOffsetIndex * PASTE_OFFSET;
+    const offsetCenter = {
+      x: centerPosition.x + offset,
+      y: centerPosition.y + offset,
+    };
+    runInAction(() => {
+      this.pasteOffsetIndex += 1;
+    });
+
     return this.cloneSnapshotsAtPosition(
       spec,
       snapshots,
       bindings,
-      centerPosition,
+      offsetCenter,
     );
   }
 
@@ -104,6 +121,7 @@ export class ClipboardStore {
   @action clear() {
     this.snapshots = [];
     this.bindingSnapshots = [];
+    this.pasteOffsetIndex = 0;
   }
 
   private cloneSnapshotsAtPosition(
