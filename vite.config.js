@@ -2,7 +2,11 @@ import tailwindcss from "@tailwindcss/vite";
 import viteReact from "@vitejs/plugin-react";
 import path from "path";
 import { fileURLToPath } from "url";
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
+import {
+  BugsnagBuildReporterPlugin,
+  BugsnagSourceMapUploaderPlugin,
+} from "vite-plugin-bugsnag";
 
 import { REACT_COMPILER_ENABLED_DIRS } from "./react-compiler.config.js";
 
@@ -10,63 +14,94 @@ import { REACT_COMPILER_ENABLED_DIRS } from "./react-compiler.config.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export default defineConfig({
-  plugins: [
-    viteReact({
-      babel: {
-        plugins: [
-          ["@babel/plugin-proposal-decorators", { version: "2023-11" }],
-          [
-            "babel-plugin-react-compiler",
-            {
-              sources: (filename) => {
-                return REACT_COMPILER_ENABLED_DIRS.some((dir) =>
-                  filename.includes(dir),
-                );
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), "");
+
+  const apiKey = process.env.BUGSNAG_API_KEY;
+  const appVersion = env.VITE_GIT_COMMIT ?? "dev";
+  const appUrl = process.env.APP_URL;
+  const sourceMapEndpoint = process.env.BUGSNAG_SOURCE_MAP_ENDPOINT;
+
+  const uploadSourcemaps = Boolean(apiKey && appUrl && sourceMapEndpoint);
+
+  const bugsnagConfig = {
+    apiKey,
+    appVersion,
+    endpoint: sourceMapEndpoint,
+  };
+
+  return {
+    plugins: [
+      viteReact({
+        babel: {
+          plugins: [
+            ["@babel/plugin-proposal-decorators", { version: "2023-11" }],
+            [
+              "babel-plugin-react-compiler",
+              {
+                sources: (filename) => {
+                  return REACT_COMPILER_ENABLED_DIRS.some((dir) =>
+                    filename.includes(dir),
+                  );
+                },
               },
-            },
+            ],
           ],
+        },
+      }),
+      tailwindcss(),
+      ...(uploadSourcemaps
+        ? [
+            BugsnagBuildReporterPlugin({
+              ...bugsnagConfig,
+              releaseStage: process.env.TANGLE_ENV || "unknown",
+            }),
+            BugsnagSourceMapUploaderPlugin({
+              ...bugsnagConfig,
+              base: appUrl,
+              overwrite: true,
+            }),
+          ]
+        : []),
+    ],
+    base: "/",
+    build: {
+      manifest: "assets-registry.json",
+      sourcemap: "hidden",
+      rollupOptions: {
+        input: {
+          index: path.resolve(__dirname, "index.html"),
+          main: path.resolve(__dirname, "src/index.tsx"),
+        },
+      },
+    },
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
+      },
+    },
+    assetsInclude: ["**/*.yaml", "**/*.py"],
+    test: {
+      globals: true,
+      environment: "jsdom",
+      setupFiles: ["./vitest-setup.js"],
+      include: ["src/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
+      coverage: {
+        provider: "v8",
+        reporter: ["text", "json", "html"],
+        exclude: [
+          "node_modules/",
+          "test/",
+          "tests/",
+          "tests/e2e/",
+          "*.test.tsx",
+          "*.test.ts",
+          "*.d.ts",
         ],
       },
-    }),
-    tailwindcss(),
-  ],
-  base: "/",
-  build: {
-    manifest: "assets-registry.json",
-    rollupOptions: {
-      input: {
-        index: path.resolve(__dirname, "index.html"),
-        main: path.resolve(__dirname, "src/index.tsx"),
-      },
     },
-  },
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
+    optimizeDeps: {
+      exclude: ["lucide-react"],
     },
-  },
-  assetsInclude: ["**/*.yaml", "**/*.py"],
-  test: {
-    globals: true,
-    environment: "jsdom",
-    setupFiles: ["./vitest-setup.js"],
-    include: ["src/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
-    coverage: {
-      provider: "v8",
-      reporter: ["text", "json", "html"],
-      exclude: [
-        "node_modules/",
-        "test/",
-        "tests/",
-        "tests/e2e/",
-        "*.test.tsx",
-        "*.test.ts",
-        "*.d.ts",
-      ],
-    },
-  },
-  optimizeDeps: {
-    exclude: ["lucide-react"],
-  },
+  };
 });
