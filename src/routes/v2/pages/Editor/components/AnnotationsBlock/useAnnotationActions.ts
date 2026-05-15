@@ -3,6 +3,7 @@ import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionCo
 import {
   addAnnotation,
   removeAnnotation,
+  removeBlankAnnotations,
   updateAnnotationKey,
   updateAnnotationValue,
 } from "./annotations.actions";
@@ -15,5 +16,6 @@ export function useAnnotationActions() {
     updateAnnotationKey: updateAnnotationKey.bind(null, undo),
     updateAnnotationValue: updateAnnotationValue.bind(null, undo),
     removeAnnotation: removeAnnotation.bind(null, undo),
+    removeBlankAnnotations: removeBlankAnnotations.bind(null, undo),
   };
 }

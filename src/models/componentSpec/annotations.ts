@@ -167,7 +167,7 @@ export class Annotations extends Model({
   ) {
     const idx = this.items.findIndex((a) => a.key === key);
     if (idx >= 0) {
-      Object.assign(this.items[idx], { value });
+      this.items[idx] = { key, value };
     } else {
       this.items.push({ key, value });
     }
@@ -191,12 +191,19 @@ export class Annotations extends Model({
   @modelAction
   updateAt(index: number, updates: Partial<Annotation>) {
     const ann = this.items[index];
-    if (ann) Object.assign(ann, updates);
+    if (ann) this.items[index] = { ...ann, ...updates };
   }
 
   @modelAction
   removeAt(index: number) {
     this.items.splice(index, 1);
+  }
+
+  @modelAction
+  removeBlanks() {
+    this.items = this.items.filter(
+      (a) => a.key !== "" || String(a.value ?? "") !== "",
+    );
   }
 
   // -- Array-like delegation (backward compat for legacy consumers) --
@@ -222,7 +229,7 @@ export class Annotations extends Model({
     return this.items.map(fn);
   }
 
-  some(fn: (a: Annotation) => boolean) {
+  some(fn: (a: Annotation, i: number) => boolean) {
     return this.items.some(fn);
   }
 

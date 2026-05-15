@@ -26,7 +26,7 @@ import { TaskActionsBar } from "./components/TaskActionsBar";
 import { TaskArgumentsEditor } from "./components/TaskArgumentsEditor";
 import { useTask } from "./hooks/useTask";
 
-const EDITOR_ANNOTATION_KEYS = [
+const SYSTEM_TASK_ANNOTATIONS = [
   "editor.position",
   "tangleml.com/editor/task-color",
   "tangleml.com/editor/edge-conduits",
@@ -227,8 +227,7 @@ export const TaskDetails = observer(function TaskDetails({
         >
           <AnnotationsBlock
             annotations={task.annotations}
-            defaultEditing
-            ignoreAnnotationKeys={EDITOR_ANNOTATION_KEYS}
+            systemAnnotationKeys={SYSTEM_TASK_ANNOTATIONS}
           />
         </TabsContent>
       </Tabs>
