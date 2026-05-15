@@ -2,11 +2,11 @@ import { Paragraph } from "@/components/ui/typography";
 
 import TableVisualizer from "./TableVisualizer";
 import { useArtifactFetch } from "./useArtifactFetch";
-import { type ArtifactTableData, parseCsv } from "./utils";
+import { useRowCap } from "./useRowCap";
+import { parseCsv, type ParsedArtifact } from "./utils";
 
 interface CsvVisualizerValueProps {
   value: string;
-  remoteLink?: string | null;
   isFullscreen: boolean;
 }
 
@@ -16,15 +16,15 @@ interface CsvVisualizerRemoteProps {
 }
 
 const CsvContent = ({
-  data,
-  remoteLink,
+  parsed,
   isFullscreen,
 }: {
-  data: ArtifactTableData;
-  remoteLink?: string | null;
+  parsed: ParsedArtifact;
   isFullscreen: boolean;
 }) => {
-  if (data.headers.length === 0) {
+  const { data, onLoadMore, onLoadAll } = useRowCap(parsed);
+
+  if (parsed.headers.length === 0) {
     return (
       <Paragraph tone="subdued" size="xs">
         No data
@@ -35,36 +35,29 @@ const CsvContent = ({
   return (
     <TableVisualizer
       data={data}
-      remoteLink={remoteLink}
       isFullscreen={isFullscreen}
+      onLoadMore={onLoadMore}
+      onLoadAll={onLoadAll}
     />
   );
 };
 
 export const CsvVisualizerValue = ({
   value,
-  remoteLink,
   isFullscreen,
 }: CsvVisualizerValueProps) => (
-  <CsvContent
-    data={parseCsv(value)}
-    remoteLink={remoteLink}
-    isFullscreen={isFullscreen}
-  />
+  <CsvContent parsed={parseCsv(value)} isFullscreen={isFullscreen} />
 );
 
 export const CsvVisualizerRemote = ({
   signedUrl,
   isFullscreen,
 }: CsvVisualizerRemoteProps) => {
-  const data = useArtifactFetch("csv", signedUrl, async (r) =>
-    parseCsv(await r.text()),
+  const parsed = useArtifactFetch<ParsedArtifact>(
+    "csv",
+    signedUrl,
+    async (response) => parseCsv(await response.text()),
   );
-  return (
-    <CsvContent
-      data={data}
-      remoteLink={signedUrl}
-      isFullscreen={isFullscreen}
-    />
-  );
+
+  return <CsvContent parsed={parsed} isFullscreen={isFullscreen} />;
 };

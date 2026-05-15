@@ -1,5 +1,5 @@
+import { Button } from "@/components/ui/button";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
-import { Link } from "@/components/ui/link";
 import {
   Table,
   TableBody,
@@ -10,50 +10,53 @@ import {
 } from "@/components/ui/table";
 import { Paragraph } from "@/components/ui/typography";
 
-import {
-  type ArtifactTableData,
-  DEFAULT_PREVIEW_ROWS,
-  MAX_PREVIEW_ROWS,
-} from "./utils";
+import { type ArtifactTableData } from "./utils";
 
 interface TableVisualizerProps {
   data: ArtifactTableData;
-  remoteLink?: string | null;
   isFullscreen: boolean;
+  onLoadMore?: () => void;
+  onLoadAll?: () => void;
 }
+
+const getRowCountMessage = (
+  data: ArtifactTableData,
+  limitReached: boolean,
+): string => {
+  if (!data.hasMore) return `Showing all ${data.rows.length} rows`;
+  if (limitReached)
+    return `Showing first ${data.rows.length} rows (preview limit reached)`;
+  return `Showing first ${data.rows.length} rows`;
+};
 
 const TableVisualizer = ({
   data,
-  remoteLink,
   isFullscreen,
+  onLoadMore,
+  onLoadAll,
 }: TableVisualizerProps) => {
-  const displayedRows = isFullscreen
-    ? data.rows.slice(0, MAX_PREVIEW_ROWS)
-    : data.rows.slice(0, DEFAULT_PREVIEW_ROWS);
-
-  const isShowingAllRows = displayedRows.length >= data.rows.length;
+  const limitReached = data.hasMore && !onLoadMore;
+  const rowCountMessage = getRowCountMessage(data, limitReached);
 
   return (
     <BlockStack
       gap="2"
-      className={isFullscreen ? "min-h-0 flex-1" : "max-h-100"}
+      className={isFullscreen ? "h-full min-h-0" : "max-h-100"}
     >
-      <ArtifactTable headers={data.headers} rows={displayedRows} />
+      <ArtifactTable headers={data.headers} rows={data.rows} />
       <InlineStack gap="4">
         <Paragraph tone="subdued" size="xs">
-          {isShowingAllRows
-            ? `Showing all ${displayedRows.length} rows`
-            : `Showing first ${displayedRows.length} rows`}
+          {rowCountMessage}
         </Paragraph>
-        {!isShowingAllRows && remoteLink && (
-          <Link
-            href={remoteLink}
-            target="_blank"
-            rel="noopener"
-            className="text-xs"
-          >
-            See all
-          </Link>
+        {onLoadMore && (
+          <Button variant="link" size="inline-xs" onClick={onLoadMore}>
+            Load more
+          </Button>
+        )}
+        {onLoadAll && (
+          <Button variant="link" size="inline-xs" onClick={onLoadAll}>
+            Load all
+          </Button>
         )}
       </InlineStack>
     </BlockStack>

@@ -1,19 +1,21 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { userEvent } from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 
 import TableVisualizer from "./TableVisualizer";
 import type { ArtifactTableData } from "./utils";
 
-const makeData = (rowCount: number): ArtifactTableData => ({
+const makeData = (rowCount: number, hasMore = false): ArtifactTableData => ({
   headers: ["Name", "Score"],
   rows: Array.from({ length: rowCount }, (_, i) => [
     `row-${i}`,
     String(i * 10),
   ]),
+  hasMore,
 });
 
 describe("TableVisualizer", () => {
-  it("renders headers and rows", () => {
+  it("renders headers and all rows it was given", () => {
     const data = makeData(3);
     render(<TableVisualizer data={data} isFullscreen={false} />);
 
@@ -23,66 +25,66 @@ describe("TableVisualizer", () => {
     expect(screen.getByText("row-2")).toBeInTheDocument();
   });
 
-  it("limits rows to DEFAULT_PREVIEW_ROWS (10) when not fullscreen", () => {
-    const data = makeData(20);
-    render(<TableVisualizer data={data} isFullscreen={false} />);
-
-    expect(screen.getByText("row-9")).toBeInTheDocument();
-    expect(screen.queryByText("row-10")).not.toBeInTheDocument();
-    expect(screen.getByText("Showing first 10 rows")).toBeInTheDocument();
-  });
-
-  it("shows up to MAX_PREVIEW_ROWS (30) when fullscreen", () => {
-    const data = makeData(35);
-    render(<TableVisualizer data={data} isFullscreen={true} />);
-
-    expect(screen.getByText("row-29")).toBeInTheDocument();
-    expect(screen.queryByText("row-30")).not.toBeInTheDocument();
-    expect(screen.getByText("Showing first 30 rows")).toBeInTheDocument();
-  });
-
-  it("shows 'Showing all N rows' when all rows fit", () => {
+  it("says 'Showing all N rows' when hasMore is false", () => {
     const data = makeData(5);
     render(<TableVisualizer data={data} isFullscreen={false} />);
 
     expect(screen.getByText("Showing all 5 rows")).toBeInTheDocument();
   });
 
-  it("renders 'See all' link when remoteLink is provided and rows are truncated", () => {
-    const data = makeData(20);
+  it("says 'Showing first N rows' when hasMore is true and load handlers are provided", () => {
+    const data = makeData(100, true);
     render(
       <TableVisualizer
         data={data}
-        remoteLink="https://storage.example.com/file.csv"
         isFullscreen={false}
+        onLoadMore={() => {}}
+        onLoadAll={() => {}}
       />,
     );
 
-    const link = screen.getByRole("link", { name: "See all" });
-    expect(link).toHaveAttribute(
-      "href",
-      "https://storage.example.com/file.csv",
-    );
+    expect(screen.getByText("Showing first 100 rows")).toBeInTheDocument();
   });
 
-  it("does not render 'See all' link when remoteLink is not provided", () => {
-    const data = makeData(20);
+  it("flags the preview limit when hasMore is true but no onLoadMore is provided", () => {
+    const data = makeData(10000, true);
     render(<TableVisualizer data={data} isFullscreen={false} />);
 
-    expect(screen.queryByText("See all")).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Showing first 10000 rows (preview limit reached)"),
+    ).toBeInTheDocument();
   });
 
-  it("does not render 'See all' link when all rows are shown", () => {
-    const data = makeData(3);
+  it("renders Load more / Load all buttons when handlers are provided and fires them on click", async () => {
+    const onLoadMore = vi.fn();
+    const onLoadAll = vi.fn();
+    const data = makeData(100, true);
+
     render(
       <TableVisualizer
         data={data}
-        remoteLink="https://storage.example.com/file.csv"
         isFullscreen={false}
+        onLoadMore={onLoadMore}
+        onLoadAll={onLoadAll}
       />,
     );
 
-    expect(screen.queryByText("See all")).not.toBeInTheDocument();
+    const loadMore = screen.getByRole("button", { name: "Load more" });
+    const loadAll = screen.getByRole("button", { name: "Load all" });
+
+    await userEvent.click(loadMore);
+    expect(onLoadMore).toHaveBeenCalledOnce();
+
+    await userEvent.click(loadAll);
+    expect(onLoadAll).toHaveBeenCalledOnce();
+  });
+
+  it("does not render Load more / Load all when no handlers are provided", () => {
+    const data = makeData(100, true);
+    render(<TableVisualizer data={data} isFullscreen={false} />);
+
+    expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Load all" })).toBeNull();
   });
 
   it("uses the Table container as the scroll element with sticky header cells", () => {
