@@ -147,7 +147,7 @@ const ArtifactVisualizer = ({
             Artifact visualization for {name}
           </DialogDescription>
         </DialogHeader>
-        <div className="overflow-auto flex-1 min-h-0">
+        <div className="flex-1 min-h-0">
           {value ? (
             <InlineContent
               name={name}
