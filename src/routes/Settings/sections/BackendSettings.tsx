@@ -101,10 +101,17 @@ export function BackendSettings() {
     ? "Save"
     : "Continue without backend";
 
+  const tempTestSourceMapping = () => {
+    throw new Error("Testing.");
+  };
+
   return (
     <BlockStack gap="4">
       <BlockStack gap="2">
         <Heading level={2}>Backend Configuration</Heading>
+        <button type="button" onClick={tempTestSourceMapping}>
+          Test source mapping
+        </button>
         <Paragraph tone="subdued" size="sm">
           Configure the connection to your Tangle backend server.
         </Paragraph>

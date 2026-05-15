@@ -3,10 +3,7 @@ import viteReact from "@vitejs/plugin-react";
 import path from "path";
 import { fileURLToPath } from "url";
 import { defineConfig, loadEnv } from "vite";
-import {
-  BugsnagBuildReporterPlugin,
-  BugsnagSourceMapUploaderPlugin,
-} from "vite-plugin-bugsnag";
+import { BugsnagSourceMapUploaderPlugin } from "vite-plugin-bugsnag";
 
 import { REACT_COMPILER_ENABLED_DIRS } from "./react-compiler.config.js";
 
@@ -52,10 +49,6 @@ export default defineConfig(({ mode }) => {
       tailwindcss(),
       ...(uploadSourcemaps
         ? [
-            BugsnagBuildReporterPlugin({
-              ...bugsnagConfig,
-              releaseStage: process.env.TANGLE_ENV || "unknown",
-            }),
             BugsnagSourceMapUploaderPlugin({
               ...bugsnagConfig,
               base: appUrl,
