@@ -5,6 +5,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   // ✅ Enabled
   "src/components/Home",
   "src/components/Editor",
+  "src/components/Learn",
 
   // 0 useCallback/useMemo - ready to enable
   "src/components/layout",

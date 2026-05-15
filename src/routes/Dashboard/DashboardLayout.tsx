@@ -31,6 +31,7 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
   { to: "/components", label: "Components", icon: "Package" },
   { to: "/favorites", label: "Favorites", icon: "Star" },
   { to: "/recently-viewed", label: "Recently Viewed", icon: "Clock" },
+  { to: "/learn", label: "Learning Hub", icon: "GraduationCap" },
 ];
 
 const navItemClass = (isActive: boolean) =>
