@@ -1,5 +1,6 @@
 import { cva } from "class-variance-authority";
 import { observer } from "mobx-react-lite";
+import type { ComponentProps, MouseEvent } from "react";
 
 import { useAwaitAuthorization } from "@/components/shared/Authentication/useAwaitAuthorization";
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
@@ -12,6 +13,7 @@ import { tracking } from "@/utils/tracking";
 
 const quickRunIconVariants = cva("transition-colors", {
   variants: {
+    variant: { menubar: "", mini: "" },
     hasErrors: { true: "", false: "" },
     onlyWarnings: { true: "", false: "" },
   },
@@ -32,6 +34,7 @@ const quickRunIconVariants = cva("transition-colors", {
     },
   ],
   defaultVariants: {
+    variant: "menubar",
     hasErrors: false,
     onlyWarnings: false,
   },
@@ -43,7 +46,19 @@ function tooltipLabel(hasErrors: boolean, onlyWarnings: boolean) {
   return "Submit Run";
 }
 
-export const QuickRunButton = observer(function QuickRunButton() {
+interface QuickRunButtonProps {
+  variant?: "menubar" | "mini";
+  renderSubmitter?: boolean;
+  trackingKey?: string;
+}
+
+export const QuickRunButton = observer(function QuickRunButton({
+  variant = "menubar",
+  renderSubmitter = true,
+  trackingKey = "v2.pipeline_editor.quick_run",
+  ...tooltipButtonProps
+}: QuickRunButtonProps &
+  Omit<ComponentProps<typeof TooltipButton>, "tooltip" | "variant" | "size">) {
   const { navigation } = useSharedStores();
   const { isAuthorized } = useAwaitAuthorization();
   const rootSpec = navigation.rootSpec;
@@ -52,35 +67,52 @@ export const QuickRunButton = observer(function QuickRunButton() {
   const hasErrors = errorCount > 0;
   const onlyWarnings = allIssues.length > 0 && errorCount === 0;
 
-  let legacySpec: ReturnType<typeof serializeComponentSpec> | undefined;
+  let serializedPipelineSpec:
+    | ReturnType<typeof serializeComponentSpec>
+    | undefined;
   try {
-    legacySpec = rootSpec
+    serializedPipelineSpec = rootSpec
       ? deepClone(serializeComponentSpec(rootSpec))
       : undefined;
   } catch {
-    legacySpec = undefined;
+    serializedPipelineSpec = undefined;
   }
 
   const tooltip = tooltipLabel(hasErrors, onlyWarnings);
+  const isMini = variant === "mini";
+
+  const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
+    if (isMini) event.stopPropagation();
+    triggerSubmitRun();
+  };
 
   return (
     <>
       <TooltipButton
+        {...tooltipButtonProps}
         tooltip={tooltip}
-        className="hover:bg-transparent"
+        variant={isMini ? "outline" : undefined}
+        size={isMini ? "icon" : undefined}
+        className={
+          isMini
+            ? "relative size-8 shrink-0 rounded-md"
+            : "hover:bg-transparent"
+        }
+        aria-label={isMini ? tooltip : undefined}
         disabled={hasErrors}
-        onClick={triggerSubmitRun}
-        {...tracking("v2.pipeline_editor.quick_run")}
+        onClick={handleClick}
+        {...tracking(trackingKey)}
       >
         <Icon
           name="Play"
-          className={quickRunIconVariants({ hasErrors, onlyWarnings })}
+          size={isMini ? "sm" : undefined}
+          className={quickRunIconVariants({ variant, hasErrors, onlyWarnings })}
         />
       </TooltipButton>
-      {legacySpec && isAuthorized && (
+      {renderSubmitter && serializedPipelineSpec && isAuthorized && (
         <div data-quick-run className="sr-only">
           <TangleSubmitter
-            componentSpec={legacySpec}
+            componentSpec={serializedPipelineSpec}
             isComponentTreeValid={rootSpec?.isValid}
             onlyFixableIssues={!hasErrors && allIssues.length > 0}
           />

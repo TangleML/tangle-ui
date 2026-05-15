@@ -26,6 +26,7 @@ export class WindowStoreImpl implements WindowStoreRef {
    * React Compiler issues. React elements must never be stored in an observable.
    */
   private contentMap = new Map<string, ReactNode>();
+  private miniContentMap = new Map<string, ReactNode>();
   @observable.shallow accessor windows: Record<string, WindowModel> = {};
   @observable.shallow accessor windowOrder: string[] = [];
   @observable accessor dockAreas: {
@@ -89,6 +90,9 @@ export class WindowStoreImpl implements WindowStoreRef {
     }
 
     this.contentMap.set(id, content);
+    if (options.miniContent !== undefined) {
+      this.miniContentMap.set(id, options.miniContent);
+    }
     const init = buildWindowModelInit(id, options, this.calculateNewPosition());
     const model = new WindowModel(init, this);
 
@@ -115,6 +119,7 @@ export class WindowStoreImpl implements WindowStoreRef {
     this.removeFromDockAreaOrder(id);
     delete this.windows[id];
     this.contentMap.delete(id);
+    this.miniContentMap.delete(id);
 
     const index = this.windowOrder.indexOf(id);
     if (index !== -1) {
@@ -346,6 +351,10 @@ export class WindowStoreImpl implements WindowStoreRef {
 
   getWindowContent(id: string): ReactNode | undefined {
     return this.contentMap.get(id);
+  }
+
+  getWindowMiniContent(id: string): ReactNode | undefined {
+    return this.miniContentMap.get(id);
   }
 
   // -- Query helpers --
