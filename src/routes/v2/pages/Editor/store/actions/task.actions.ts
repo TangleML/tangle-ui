@@ -14,9 +14,13 @@ import { generateUniqueTaskName } from "@/routes/v2/pages/Editor/store/nameUtils
 import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
 import type { SelectedNode } from "@/routes/v2/shared/store/editorStore";
 import type { ParentContext } from "@/routes/v2/shared/store/navigationStore";
+import {
+  EDITOR_POSITION_ANNOTATION,
+  TASK_COLOR_ANNOTATION,
+} from "@/utils/annotations";
 
 import { computeDiffComponentSpecs } from "./task.utils";
-import { idGen, TASK_COLOR_ANNOTATION } from "./utils";
+import { idGen } from "./utils";
 
 export function addTask(
   undo: UndoGroupable,
@@ -30,7 +34,7 @@ export function addTask(
     const taskName = generateUniqueTaskName(spec, componentName);
     const task = createTaskFromComponentRef(idGen, componentRef, taskName);
 
-    task.annotations.set("editor.position", {
+    task.annotations.set(EDITOR_POSITION_ANNOTATION, {
       x: position.x,
       y: position.y,
     });

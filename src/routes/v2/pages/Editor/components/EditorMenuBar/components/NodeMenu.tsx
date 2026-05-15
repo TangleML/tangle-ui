@@ -25,6 +25,7 @@ import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskAc
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButton";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { EDITOR_POSITION_ANNOTATION } from "@/utils/annotations";
 import { componentMetadata } from "@/utils/componentTracking";
 import { getErrorMessage } from "@/utils/string";
 import { tracking } from "@/utils/tracking";
@@ -62,7 +63,7 @@ export const NodeMenu = observer(function NodeMenu() {
   const handleDuplicate = () => {
     if (!task) return;
     track("v2.pipeline_editor.node_menu.duplicate_task.click");
-    const position = task.annotations.get("editor.position") ?? {
+    const position = task.annotations.get(EDITOR_POSITION_ANNOTATION) ?? {
       x: 0,
       y: 0,
     };

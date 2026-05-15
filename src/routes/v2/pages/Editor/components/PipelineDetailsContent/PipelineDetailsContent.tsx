@@ -14,7 +14,7 @@ import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import {
   PIPELINE_NOTES_ANNOTATION,
-  PIPELINE_TAGS_ANNOTATION,
+  SYSTEM_ANNOTATIONS,
 } from "@/utils/annotations";
 
 import { InputsBlock } from "./components/InputsBlock";
@@ -24,15 +24,6 @@ import { PipelineDetailsCollapsibleSection } from "./components/PipelineDetailsC
 import { PipelineDetailsHeader } from "./components/PipelineDetailsHeader";
 import { PipelineDetailsTextField } from "./components/PipelineDetailsTextField";
 import { TagsBlock } from "./components/TagsBlock";
-
-const SYSTEM_PIPELINE_ANNOTATIONS = [
-  "notes",
-  PIPELINE_TAGS_ANNOTATION,
-  "flex-nodes",
-  "tangleml.com/editor/edge-conduits",
-  "sdk",
-  "editor.flow-direction",
-];
 
 export const PipelineDetailsContent = observer(
   function PipelineDetailsContent() {
@@ -133,7 +124,7 @@ export const PipelineDetailsContent = observer(
               <Separator />
               <AnnotationsBlock
                 annotations={pipelineSpec.annotations}
-                systemAnnotationKeys={SYSTEM_PIPELINE_ANNOTATIONS}
+                systemAnnotationKeys={SYSTEM_ANNOTATIONS}
               />
             </BlockStack>
           </PipelineDetailsCollapsibleSection>

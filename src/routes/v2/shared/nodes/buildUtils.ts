@@ -1,6 +1,10 @@
 import type { Edge, Node } from "@xyflow/react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
+import {
+  EDITOR_POSITION_ANNOTATION,
+  ZINDEX_ANNOTATION,
+} from "@/utils/annotations";
 
 const TASK_OFFSET = 200;
 const IO_OFFSET = 150;
@@ -44,11 +48,11 @@ export function createEntityNode(
   fallback: { x: number; y: number },
   data: Record<string, unknown>,
 ): Node {
-  const position = entity.annotations.get("editor.position") as {
+  const position = entity.annotations.get(EDITOR_POSITION_ANNOTATION) as {
     x: number;
     y: number;
   };
-  const zIndex = parseZIndex(entity.annotations.get("zIndex"));
+  const zIndex = parseZIndex(entity.annotations.get(ZINDEX_ANNOTATION));
   return {
     id: entity.$id,
     type: nodeType,

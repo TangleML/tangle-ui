@@ -8,6 +8,7 @@ import type {
 } from "@/models/componentSpec/annotations";
 import { getConduits } from "@/routes/v2/shared/nodes/ConduitNode/conduit.utils";
 import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
+import { EDGE_CONDUITS_ANNOTATION } from "@/utils/annotations";
 
 const DEFAULT_COLORS = [
   "#6366f1",
@@ -37,7 +38,7 @@ function pickColor(existing: EdgeConduit[]): string {
 export { getConduits } from "@/routes/v2/shared/nodes/ConduitNode/conduit.utils";
 
 function setConduits(spec: ComponentSpec, conduits: EdgeConduit[]) {
-  spec.setMetadata("tangleml.com/editor/edge-conduits", conduits);
+  spec.setMetadata(EDGE_CONDUITS_ANNOTATION, conduits);
 }
 
 export function addGuideline(

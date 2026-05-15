@@ -16,7 +16,10 @@ import { Heading, Paragraph } from "@/components/ui/typography";
 import type { Task } from "@/models/componentSpec";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import type { AnnotationConfig, Annotations } from "@/types/annotations";
-import { EDITOR_COLLAPSED_ANNOTATION } from "@/utils/annotations";
+import {
+  EDITOR_COLLAPSED_ANNOTATION,
+  TASK_COLOR_ANNOTATION,
+} from "@/utils/annotations";
 import { ISO8601_DURATION_ZERO_DAYS } from "@/utils/constants";
 
 import { useTaskConfigActions } from "./useTaskConfigActions";
@@ -130,7 +133,7 @@ export const ConfigurationSection = observer(function ConfigurationSection({
     track("v2.pipeline_editor.task_details.collapse_node.toggle");
   };
 
-  const taskColor = task.annotations.get("tangleml.com/editor/task-color");
+  const taskColor = task.annotations.get(TASK_COLOR_ANNOTATION);
   const isCollapsed =
     task.annotations.get(EDITOR_COLLAPSED_ANNOTATION) === "true";
 

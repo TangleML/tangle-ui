@@ -29,8 +29,10 @@ import {
 } from "@/utils/componentSpec";
 
 import {
+  EDITOR_FLOW_DIRECTION_ANNOTATION,
   EDITOR_POSITION_ANNOTATION,
   FLEX_NODES_ANNOTATION,
+  SDK_ANNOTATION,
 } from "../annotations";
 import { extractPositionFromAnnotations } from "../annotations";
 import { generateDigest } from "../componentStore";
@@ -221,8 +223,8 @@ const createSubgraphTask = async (
     },
     metadata: {
       annotations: {
-        sdk: "https://cloud-pipelines.net/pipeline-editor/",
-        "editor.flow-direction": "left-to-right",
+        [SDK_ANNOTATION]: "https://cloud-pipelines.net/pipeline-editor/",
+        [EDITOR_FLOW_DIRECTION_ANNOTATION]: "left-to-right",
         author,
         ...annotations,
       },

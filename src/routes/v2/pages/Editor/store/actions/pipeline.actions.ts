@@ -7,8 +7,11 @@ import {
 } from "@/models/componentSpec";
 import { generateUniqueTaskName } from "@/routes/v2/pages/Editor/store/nameUtils";
 import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
-import { PIPELINE_NOTES_ANNOTATION } from "@/utils/annotations";
-import { PIPELINE_TAGS_ANNOTATION } from "@/utils/annotations";
+import {
+  EDITOR_POSITION_ANNOTATION,
+  PIPELINE_NOTES_ANNOTATION,
+  PIPELINE_TAGS_ANNOTATION,
+} from "@/utils/annotations";
 
 import { idGen } from "./utils";
 
@@ -87,7 +90,10 @@ export function createSubgraph(
 
       if (!result) return null;
 
-      result.replacementTask.annotations.set("editor.position", position);
+      result.replacementTask.annotations.set(
+        EDITOR_POSITION_ANNOTATION,
+        position,
+      );
       return result;
     });
 
