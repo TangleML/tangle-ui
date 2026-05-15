@@ -8,9 +8,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Paragraph } from "@/components/ui/typography";
+import { Paragraph, Text } from "@/components/ui/typography";
 
-import { type ArtifactTableData } from "./utils";
+import { type ArtifactColumn, type ArtifactTableData } from "./utils";
 
 interface TableVisualizerProps {
   data: ArtifactTableData;
@@ -43,7 +43,7 @@ const TableVisualizer = ({
       gap="2"
       className={isFullscreen ? "h-full min-h-0" : "max-h-100"}
     >
-      <ArtifactTable headers={data.headers} rows={data.rows} />
+      <ArtifactTable columns={data.columns} rows={data.rows} />
       <InlineStack gap="4">
         <Paragraph tone="subdued" size="xs">
           {rowCountMessage}
@@ -66,20 +66,28 @@ const TableVisualizer = ({
 export default TableVisualizer;
 
 interface ArtifactTableProps {
-  headers: string[];
+  columns: ArtifactColumn[];
   rows: string[][];
 }
 
-const ArtifactTable = ({ headers, rows }: ArtifactTableProps) => (
+const ArtifactTable = ({ columns, rows }: ArtifactTableProps) => (
   <Table containerClassName="flex-1 overflow-auto">
     <TableHeader>
       <TableRow>
-        {headers.map((h) => (
+        {columns.map((col) => (
           <TableHead
-            key={h}
-            className="bg-background sticky top-0 z-10 text-xs"
+            key={col.name}
+            className="bg-background sticky top-0 z-10 h-auto py-2 align-bottom text-xs"
           >
-            {h}
+            <BlockStack>
+              <Text>{col.name}</Text>
+              {col.type && (
+                <Text tone="subdued" className="text-[10px]">
+                  {col.type}
+                  {col.nullable ? "?" : ""}
+                </Text>
+              )}
+            </BlockStack>
           </TableHead>
         ))}
       </TableRow>

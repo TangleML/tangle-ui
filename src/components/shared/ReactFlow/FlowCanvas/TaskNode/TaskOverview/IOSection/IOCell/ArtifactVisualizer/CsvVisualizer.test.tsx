@@ -11,13 +11,13 @@ vi.mock("./TableVisualizer", () => ({
     data,
     isFullscreen,
   }: {
-    data: { headers: string[]; rows: string[][] };
+    data: { columns: { name: string }[]; rows: string[][] };
     isFullscreen: boolean;
   }) => (
     <div
       data-testid="table-visualizer"
       data-fullscreen={isFullscreen}
-      data-headers={data.headers.join(",")}
+      data-headers={data.columns.map((c) => c.name).join(",")}
       data-row-count={data.rows.length}
     />
   ),

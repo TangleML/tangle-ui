@@ -1,13 +1,19 @@
 import Papa from "papaparse";
 
+export type ArtifactColumn = {
+  name: string;
+  type?: string;
+  nullable?: boolean;
+};
+
 export type ArtifactTableData = {
-  headers: string[];
+  columns: ArtifactColumn[];
   rows: string[][];
   hasMore: boolean;
 };
 
 export type ParsedArtifact = {
-  headers: string[];
+  columns: ArtifactColumn[];
   rows: string[][];
   truncated: boolean;
 };
@@ -26,10 +32,11 @@ export function parseCsv(text: string, delimiter?: string): ParsedArtifact {
   });
 
   if (result.data.length === 0) {
-    return { headers: [], rows: [], truncated: false };
+    return { columns: [], rows: [], truncated: false };
   }
 
   const [headers, ...rows] = result.data;
+  const columns = headers.map((name) => ({ name }));
   const truncated = rows.length > MAX_PREVIEW_ROWS;
-  return { headers, rows: rows.slice(0, MAX_PREVIEW_ROWS), truncated };
+  return { columns, rows: rows.slice(0, MAX_PREVIEW_ROWS), truncated };
 }

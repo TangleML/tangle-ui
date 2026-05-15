@@ -6,7 +6,7 @@ import TableVisualizer from "./TableVisualizer";
 import type { ArtifactTableData } from "./utils";
 
 const makeData = (rowCount: number, hasMore = false): ArtifactTableData => ({
-  headers: ["Name", "Score"],
+  columns: [{ name: "Name" }, { name: "Score" }],
   rows: Array.from({ length: rowCount }, (_, i) => [
     `row-${i}`,
     String(i * 10),
