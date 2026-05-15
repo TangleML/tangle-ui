@@ -23,6 +23,10 @@ import { DashboardLayout } from "./Dashboard/DashboardLayout";
 import { DashboardPipelinesView } from "./Dashboard/DashboardPipelinesView";
 import { DashboardRecentlyViewedView } from "./Dashboard/DashboardRecentlyViewedView";
 import { DashboardRunsView } from "./Dashboard/DashboardRunsView";
+import { LearnExamplesView } from "./Dashboard/Learn/LearnExamplesView";
+import { LearnHomeView } from "./Dashboard/Learn/LearnHomeView";
+import { LearnTipsView } from "./Dashboard/Learn/LearnTipsView";
+import { LearnToursView } from "./Dashboard/Learn/LearnToursView";
 import Editor from "./Editor";
 import { ImportPage } from "./Import";
 import NotFoundPage from "./NotFoundPage";
@@ -47,6 +51,7 @@ declare module "@tanstack/react-router" {
 export const EDITOR_PATH = "/editor";
 export const RUNS_BASE_PATH = "/runs";
 export const QUICK_START_PATH = "/quick-start";
+const LEARN_BASE_PATH = "/learn";
 const EDITOR_V2_BASE_PATH = "/editor-v2";
 const RUNS_V2_BASE_PATH = "/runs-v2";
 const SETTINGS_PATH = "/settings";
@@ -59,6 +64,10 @@ export const APP_ROUTES = {
   DASHBOARD_COMPONENTS: "/components",
   DASHBOARD_FAVORITES: "/favorites",
   DASHBOARD_RECENTLY_VIEWED: "/recently-viewed",
+  LEARN: LEARN_BASE_PATH,
+  LEARN_EXAMPLES: `${LEARN_BASE_PATH}/examples`,
+  LEARN_TIPS: `${LEARN_BASE_PATH}/tips`,
+  LEARN_TOURS: `${LEARN_BASE_PATH}/tours`,
   QUICK_START: QUICK_START_PATH,
   IMPORT: IMPORT_PATH,
   PIPELINE_EDITOR: `${EDITOR_PATH}/$name`,
@@ -138,6 +147,30 @@ const dashboardRecentlyViewedRoute = createRoute({
   getParentRoute: () => dashboardRoute,
   path: "/recently-viewed",
   component: DashboardRecentlyViewedView,
+});
+
+const learnIndexRoute = createRoute({
+  getParentRoute: () => dashboardRoute,
+  path: LEARN_BASE_PATH,
+  component: LearnHomeView,
+});
+
+const learnExamplesRoute = createRoute({
+  getParentRoute: () => dashboardRoute,
+  path: APP_ROUTES.LEARN_EXAMPLES,
+  component: LearnExamplesView,
+});
+
+const learnTipsRoute = createRoute({
+  getParentRoute: () => dashboardRoute,
+  path: APP_ROUTES.LEARN_TIPS,
+  component: LearnTipsView,
+});
+
+const learnToursRoute = createRoute({
+  getParentRoute: () => dashboardRoute,
+  path: APP_ROUTES.LEARN_TOURS,
+  component: LearnToursView,
 });
 
 const quickStartRoute = createRoute({
@@ -299,6 +332,10 @@ const dashboardRouteTree = dashboardRoute.addChildren([
   dashboardComponentsRoute,
   dashboardFavoritesRoute,
   dashboardRecentlyViewedRoute,
+  learnIndexRoute,
+  learnExamplesRoute,
+  learnTipsRoute,
+  learnToursRoute,
 ]);
 
 const appRouteTree = mainLayout.addChildren([

@@ -1,6 +1,7 @@
 /* Environment Config */
-export const ABOUT_URL =
-  import.meta.env.VITE_ABOUT_URL || "https://tangleml.com/";
+export const TANGLE_WEBSITE_URL = "https://tangleml.com/";
+
+export const ABOUT_URL = import.meta.env.VITE_ABOUT_URL || TANGLE_WEBSITE_URL;
 
 export const GIVE_FEEDBACK_URL =
   import.meta.env.VITE_GIVE_FEEDBACK_URL ||
@@ -11,7 +12,7 @@ export const PRIVACY_POLICY_URL =
   "https://tangleml.com/docs/privacy_policy/";
 
 export const DOCUMENTATION_URL =
-  import.meta.env.VITE_DOCUMENTATION_URL || "https://tangleml.com/docs/";
+  import.meta.env.VITE_DOCUMENTATION_URL || `${TANGLE_WEBSITE_URL}docs/`;
 
 export const API_URL = import.meta.env.VITE_BACKEND_API_URL || "";
 export const BASE_URL = import.meta.env.VITE_BASE_URL || "/";
