@@ -12,6 +12,7 @@ const BUGSNAG_SESSIONS_ENDPOINT =
 const BUGSNAG_CUSTOM_GROUPING_KEY = import.meta.env
   .VITE_BUGSNAG_CUSTOM_GROUPING_KEY;
 const TANGLE_ENV = import.meta.env.VITE_TANGLE_ENV;
+const GIT_COMMIT = import.meta.env.VITE_GIT_COMMIT;
 
 const GENERIC_ERROR_CLASS = "Error";
 
@@ -33,6 +34,7 @@ export const IS_BUGSNAG_ENABLED = Boolean(BUGSNAG_API_KEY && TANGLE_ENV);
 const getBugsnagConfig = (): BrowserConfig => {
   return {
     apiKey: BUGSNAG_API_KEY,
+    appVersion: GIT_COMMIT,
     endpoints: {
       notify: BUGSNAG_NOTIFY_ENDPOINT,
       sessions: BUGSNAG_SESSIONS_ENDPOINT,
