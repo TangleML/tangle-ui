@@ -13,7 +13,7 @@ const ArtifactURI = ({ uri, isDir }: ArtifactURIProps) => {
   return (
     <InlineStack gap="1" wrap="nowrap" blockAlign="center">
       <Link href={convertArtifactUriToHTTPUrl(uri, isDir)} external size="xs">
-        Link
+        Raw data
       </Link>
 
       <Icon name="Dot" size="md" className="text-muted-foreground" />

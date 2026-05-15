@@ -21,7 +21,29 @@ vi.mock("@/services/executionService", () => ({
   getArtifactSignedUrl: vi.fn().mockResolvedValue({
     signed_url: "https://storage.example.com/signed",
   }),
+  ArtifactFetchError: class extends Error {
+    status: number;
+    statusText: string;
+    constructor(status: number, statusText: string, message: string) {
+      super(message);
+      this.status = status;
+      this.statusText = statusText;
+    }
+  },
 }));
+
+vi.mock("@/utils/URL", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/utils/URL")>();
+  return {
+    ...actual,
+    getArtifactPreviewUrl: (id: string, type?: string, name?: string) => {
+      const params = new URLSearchParams();
+      if (type) params.set("type", type);
+      if (name) params.set("name", name);
+      return `https://app.example.com/artifact/${id}?${params.toString()}`;
+    },
+  };
+});
 
 vi.mock("./TextVisualizer", () => ({
   TextVisualizerValue: ({ value }: { value: string }) => (
@@ -310,6 +332,66 @@ describe("ArtifactVisualizer", () => {
         expect(screen.getByText("my-output")).toBeInTheDocument();
         expect(screen.getByText("CSV")).toBeInTheDocument();
       });
+    });
+
+    it("renders a Share button for remote previews", async () => {
+      renderWithQuery(
+        <ArtifactVisualizer
+          artifact={makeArtifact()}
+          name="output"
+          type="CSV"
+        />,
+      );
+
+      await userEvent.click(screen.getByText("Preview"));
+
+      await waitFor(() => {
+        expect(screen.getByText("Share")).toBeInTheDocument();
+      });
+    });
+
+    it("does NOT render Share for inline values", async () => {
+      renderWithQuery(
+        <ArtifactVisualizer
+          artifact={makeArtifact()}
+          name="output"
+          type="text"
+          value="hello"
+        />,
+      );
+
+      await userEvent.click(screen.getByRole("button"));
+
+      await waitFor(() => {
+        expect(screen.queryByText("Share")).toBeNull();
+      });
+    });
+
+    it("cmd+click on the fullscreen toggle opens the preview URL in a new tab", async () => {
+      const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+      renderWithQuery(
+        <ArtifactVisualizer
+          artifact={makeArtifact()}
+          name="output"
+          type="CSV"
+        />,
+      );
+
+      await userEvent.click(screen.getByText("Preview"));
+
+      const fullscreenBtn = await waitFor(() =>
+        screen.getByLabelText(/Enter fullscreen/),
+      );
+      const user = userEvent.setup();
+      await user.keyboard("{Meta>}");
+      await user.click(fullscreenBtn);
+      await user.keyboard("{/Meta}");
+
+      expect(openSpy).toHaveBeenCalledWith(
+        expect.stringContaining("/artifact/artifact-1"),
+        "_blank",
+      );
+      openSpy.mockRestore();
     });
 
     it("shows artifact URI when available", async () => {

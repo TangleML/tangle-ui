@@ -27,6 +27,7 @@ import Editor from "./Editor";
 import { ImportPage } from "./Import";
 import NotFoundPage from "./NotFoundPage";
 import PipelineRun from "./PipelineRun";
+import ArtifactPreviewPage from "./PipelineRun/ArtifactPreview";
 import { QuickStartPage } from "./QuickStart";
 import { BackendSettings } from "./Settings/sections/BackendSettings";
 import { BetaFeaturesSettings } from "./Settings/sections/BetaFeaturesSettings";
@@ -80,6 +81,7 @@ export const APP_ROUTES = {
   RUN_DETAIL_V2_WITH_SUBGRAPH: `${RUNS_V2_BASE_PATH}/$id/$subgraphExecutionId`,
   PIPELINE_FOLDERS: "/pipeline-folders",
   PLAYGROUND: "/playground",
+  ARTIFACT_PREVIEW: "/artifact/$artifactId",
 } as const;
 
 const rootRoute = createRootRoute({
@@ -284,6 +286,12 @@ const pipelineFoldersRoute = createRoute({
   component: PipelineFoldersPage,
 });
 
+const artifactPreviewRoute = createRoute({
+  getParentRoute: () => mainLayout,
+  path: APP_ROUTES.ARTIFACT_PREVIEW,
+  component: ArtifactPreviewPage,
+});
+
 const dashboardRouteTree = dashboardRoute.addChildren([
   dashboardIndexRoute,
   dashboardRunsRoute,
@@ -306,6 +314,7 @@ const appRouteTree = mainLayout.addChildren([
   runV2Route,
   runV2WithSubgraphRoute,
   pipelineFoldersRoute,
+  artifactPreviewRoute,
 ]);
 
 const rootRouteTree = rootRoute.addChildren([
