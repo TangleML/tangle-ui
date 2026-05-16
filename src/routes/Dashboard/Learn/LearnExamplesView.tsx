@@ -1,4 +1,4 @@
-import { LearnComingSoon } from "@/components/Learn/LearnComingSoon";
+import { ExamplePipelines } from "@/components/Learn/ExamplePipelines";
 import { LearnPageHeader } from "@/components/Learn/LearnPageHeader";
 import { BlockStack } from "@/components/ui/layout";
 
@@ -7,15 +7,11 @@ export function LearnExamplesView() {
     <BlockStack gap="8">
       <LearnPageHeader
         title="Example Pipelines"
-        description="Ready-made pipelines you can import and run to learn by example."
-        icon="Sparkles"
+        description="Ready-made pipelines you can import and run to learn by example. Click any card to begin exploring."
+        icon="Presentation"
         backTo="/learn"
       />
-      <LearnComingSoon
-        title="Example pipelines are on the way"
-        description="A gallery of importable example pipelines, organised by topic and difficulty."
-        icon="Sparkles"
-      />
+      <ExamplePipelines />
     </BlockStack>
   );
 }

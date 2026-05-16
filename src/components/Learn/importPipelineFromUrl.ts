@@ -2,6 +2,7 @@ import {
   importPipelineFromYaml,
   type ImportResult,
 } from "@/services/pipelineService";
+import { ASSETS_BASE } from "@/utils/publicAsset";
 import { isGithubUrl } from "@/utils/URL";
 
 /**
@@ -34,10 +35,12 @@ export async function importPipelineFromUrl(
 }
 
 function isUrlAllowed(url: string) {
-  // Allow if it's a github URL or a relative URL (starts with '/'), and ends with .yaml
-  return (isGithubUrl(url) || isRelativeUrl(url)) && url.endsWith(".yaml");
+  return (
+    (isGithubUrl(url) || isRelativeUrl(url) || url.startsWith(ASSETS_BASE)) &&
+    url.endsWith(".yaml")
+  );
 }
 
 function isRelativeUrl(url: string) {
-  return url.indexOf("://") === -1 && !url.startsWith("//");
+  return !/^[a-z][a-z0-9+.-]*:/i.test(url) && !url.startsWith("//");
 }

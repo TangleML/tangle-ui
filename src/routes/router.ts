@@ -32,7 +32,6 @@ import { ImportPage } from "./Import";
 import NotFoundPage from "./NotFoundPage";
 import PipelineRun from "./PipelineRun";
 import ArtifactPreviewPage from "./PipelineRun/ArtifactPreview";
-import { QuickStartPage } from "./QuickStart";
 import { BackendSettings } from "./Settings/sections/BackendSettings";
 import { BetaFeaturesSettings } from "./Settings/sections/BetaFeaturesSettings";
 import { PreferencesSettings } from "./Settings/sections/PreferencesSettings";
@@ -50,7 +49,6 @@ declare module "@tanstack/react-router" {
 
 export const EDITOR_PATH = "/editor";
 export const RUNS_BASE_PATH = "/runs";
-export const QUICK_START_PATH = "/quick-start";
 const LEARN_BASE_PATH = "/learn";
 const EDITOR_V2_BASE_PATH = "/editor-v2";
 const RUNS_V2_BASE_PATH = "/runs-v2";
@@ -68,7 +66,6 @@ export const APP_ROUTES = {
   LEARN_EXAMPLES: `${LEARN_BASE_PATH}/examples`,
   LEARN_TIPS: `${LEARN_BASE_PATH}/tips`,
   LEARN_TOURS: `${LEARN_BASE_PATH}/tours`,
-  QUICK_START: QUICK_START_PATH,
   IMPORT: IMPORT_PATH,
   PIPELINE_EDITOR: `${EDITOR_PATH}/$name`,
   RUN_DETAIL: `${RUNS_BASE_PATH}/$id`,
@@ -175,8 +172,10 @@ const learnToursRoute = createRoute({
 
 const quickStartRoute = createRoute({
   getParentRoute: () => mainLayout,
-  path: APP_ROUTES.QUICK_START,
-  component: QuickStartPage,
+  path: "/quick-start",
+  beforeLoad: () => {
+    throw redirect({ to: APP_ROUTES.LEARN_EXAMPLES });
+  },
 });
 
 const settingsLayoutRoute = createRoute({

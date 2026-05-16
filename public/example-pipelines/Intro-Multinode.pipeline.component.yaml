@@ -1,0 +1,625 @@
+name: 'Intro: Multinode Pipelines'
+implementation:
+  graph:
+    tasks:
+      Generate Data:
+        componentRef:
+          spec:
+            name: Generate data v01
+            description: |-
+              Generate synthetic classification data, split into shards for distributed training.
+
+              Creates a multi-shard dataset where each shard is a CSV file suitable for
+              parallel loading across multiple training nodes.
+            metadata:
+              annotations:
+                cloud_pipelines.net: 'true'
+                component_yaml_path: generate-data.yaml
+                python_dependencies: '["torch>=2.0.0"]'
+                python_original_code_path: generate_data.py
+                components new regenerate python-function-component: 'true'
+            inputs:
+              - name: num_shards
+                type: Integer
+                description: Number of data shards to create.
+                default: '4'
+                optional: true
+              - name: rows_per_shard
+                type: Integer
+                description: Number of rows per shard.
+                default: '10000'
+                optional: true
+              - name: num_features
+                type: Integer
+                description: Number of input features.
+                default: '20'
+                optional: true
+              - name: seed
+                type: Integer
+                description: Random seed for reproducibility.
+                default: '42'
+                optional: true
+            outputs:
+              - name: output_data_dir
+                type: Directory
+                description: Directory containing the sharded CSV files.
+            implementation:
+              container:
+                image: python:3.12
+                command:
+                  - sh
+                  - '-c'
+                  - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'torch>=2.0.0' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'torch>=2.0.0' --user) && "$0" "$@"
+                  - sh
+                  - '-ec'
+                  - |
+                    program_path=$(mktemp)
+                    printf "%s" "$0" > "$program_path"
+                    python3 -u "$program_path" "$@"
+                  - |
+                    def _make_parent_dirs_and_return_path(file_path: str):
+                        import os
+                        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                        return file_path
+
+                    def generate_data_v01(
+                        output_data_dir,
+                        num_shards = 4,
+                        rows_per_shard = 10000,
+                        num_features = 20,
+                        seed = 42,
+                    ):
+                        """Generate synthetic classification data, split into shards for distributed training.
+
+                        Creates a multi-shard dataset where each shard is a CSV file suitable for
+                        parallel loading across multiple training nodes.
+
+                        Args:
+                            output_data_dir: Directory containing the sharded CSV files.
+                            num_shards: Number of data shards to create.
+                            rows_per_shard: Number of rows per shard.
+                            num_features: Number of input features.
+                            seed: Random seed for reproducibility.
+                        """
+                        import json
+                        import math
+                        import os
+                        import random
+
+                        random.seed(seed)
+                        os.makedirs(output_data_dir, exist_ok=True)
+
+                        feature_names = [f"feat_{i}" for i in range(num_features)]
+                        header = ",".join(feature_names + ["label"])
+
+                        # Generate a random linear decision boundary
+                        weights = [random.gauss(0, 1) for _ in range(num_features)]
+                        bias = random.gauss(0, 0.5)
+
+                        for shard_idx in range(num_shards):
+                            shard_path = os.path.join(output_data_dir, f"shard_{shard_idx:04d}.csv")
+                            with open(shard_path, "w") as f:
+                                f.write(header + "\n")
+                                for _ in range(rows_per_shard):
+                                    features = [random.gauss(0, 1) for _ in range(num_features)]
+                                    logit = sum(w * x for w, x in zip(weights, features)) + bias
+                                    # Add noise to make it non-trivial
+                                    logit += random.gauss(0, 0.3)
+                                    prob = 1.0 / (1.0 + math.exp(-logit))
+                                    label = 1 if random.random() < prob else 0
+                                    row = ",".join(f"{x:.6f}" for x in features) + f",{label}"
+                                    f.write(row + "\n")
+
+                            print(f"Wrote shard {shard_idx}: {shard_path} ({rows_per_shard} rows)")
+
+                        # Write metadata
+                        meta = {
+                            "num_shards": num_shards,
+                            "rows_per_shard": rows_per_shard,
+                            "total_rows": num_shards * rows_per_shard,
+                            "num_features": num_features,
+                            "feature_names": feature_names,
+                            "seed": seed,
+                        }
+                        with open(os.path.join(output_data_dir, "metadata.json"), "w") as f:
+                            json.dump(meta, f, indent=2)
+
+                        print(f"\nDataset ready: {num_shards} shards, {num_shards * rows_per_shard} total rows")
+
+                    import argparse
+                    _parser = argparse.ArgumentParser(prog='Generate data v01', description='Generate synthetic classification data, split into shards for distributed training.\n\nCreates a multi-shard dataset where each shard is a CSV file suitable for\nparallel loading across multiple training nodes.')
+                    _parser.add_argument("--num-shards", dest="num_shards", type=int, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--rows-per-shard", dest="rows_per_shard", type=int, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--num-features", dest="num_features", type=int, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--seed", dest="seed", type=int, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--output-data-dir", dest="output_data_dir", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+                    _parsed_args = vars(_parser.parse_args())
+
+                    _outputs = generate_data_v01(**_parsed_args)
+                args:
+                  - if:
+                      cond:
+                        isPresent: num_shards
+                      then:
+                        - '--num-shards'
+                        - inputValue: num_shards
+                  - if:
+                      cond:
+                        isPresent: rows_per_shard
+                      then:
+                        - '--rows-per-shard'
+                        - inputValue: rows_per_shard
+                  - if:
+                      cond:
+                        isPresent: num_features
+                      then:
+                        - '--num-features'
+                        - inputValue: num_features
+                  - if:
+                      cond:
+                        isPresent: seed
+                      then:
+                        - '--seed'
+                        - inputValue: seed
+                  - '--output-data-dir'
+                  - outputPath: output_data_dir
+        arguments:
+          seed: '42'
+          num_shards: '8'
+          num_features: '20'
+          rows_per_shard: '5000'
+        annotations:
+          editor.position: '{"x":0,"y":10}'
+      Distributed Train:
+        componentRef:
+          spec:
+            name: Distributed train v01
+            description: |-
+              Distributed gradient-descent training across multiple nodes using PyTorch DDP.
+
+              Each node loads its assigned data shards and participates in synchronized
+              gradient averaging via torch.distributed. Node 0 acts as the master and
+              saves the final model + metrics.
+
+              This is a minimal but real multi-node training example using only PyTorch
+              (no external ML frameworks). It demonstrates:
+              - torch.distributed init_process_group with NCCL/gloo backend
+              - DistributedDataParallel model wrapping
+              - Shard-based data partitioning across nodes
+              - Gradient synchronization and synchronized evaluation
+              - Checkpoint saving on the master node
+            metadata:
+              annotations:
+                cloud_pipelines.net: 'true'
+                component_yaml_path: distributed-train.yaml
+                python_dependencies: '["torch>=2.0.0"]'
+                python_original_code_path: distributed_train.py
+                components new regenerate python-function-component: 'true'
+            inputs:
+              - name: data_dir
+                type: Directory
+                description: Directory with sharded CSV data files.
+              - name: num_nodes
+                type: Integer
+                description: Total number of nodes in the distributed job.
+                default: '1'
+                optional: true
+              - name: node_rank
+                type: Integer
+                description: Rank of the current node (0-indexed).
+                default: '0'
+                optional: true
+              - name: all_node_addresses
+                type: String
+                description: Comma-separated DNS/IP addresses for all nodes.
+                default: ''
+                optional: true
+              - name: num_epochs
+                type: Integer
+                description: Number of training epochs.
+                default: '10'
+                optional: true
+              - name: learning_rate
+                type: Float
+                description: SGD learning rate.
+                default: '0.01'
+                optional: true
+              - name: batch_size
+                type: Integer
+                description: Per-node batch size.
+                default: '64'
+                optional: true
+              - name: hidden_size
+                type: Integer
+                description: Hidden layer size in the MLP.
+                default: '64'
+                optional: true
+            outputs:
+              - name: output_model_dir
+                type: Directory
+                description: Directory to save the trained model checkpoint.
+              - name: output_metrics
+                type: JSON
+                description: JSON file with training and evaluation metrics.
+            implementation:
+              container:
+                image: python:3.12
+                command:
+                  - sh
+                  - '-c'
+                  - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'torch>=2.0.0' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'torch>=2.0.0' --user) && "$0" "$@"
+                  - sh
+                  - '-ec'
+                  - |
+                    program_path=$(mktemp)
+                    printf "%s" "$0" > "$program_path"
+                    python3 -u "$program_path" "$@"
+                  - |
+                    def _make_parent_dirs_and_return_path(file_path: str):
+                        import os
+                        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                        return file_path
+
+                    def distributed_train_v01(
+                        data_dir,
+                        output_model_dir,
+                        output_metrics,
+                        num_nodes = 1,
+                        node_rank = 0,
+                        all_node_addresses = "",
+                        num_epochs = 10,
+                        learning_rate = 0.01,
+                        batch_size = 64,
+                        hidden_size = 64,
+                    ):
+                        """Distributed gradient-descent training across multiple nodes using PyTorch DDP.
+
+                        Each node loads its assigned data shards and participates in synchronized
+                        gradient averaging via torch.distributed. Node 0 acts as the master and
+                        saves the final model + metrics.
+
+                        This is a minimal but real multi-node training example using only PyTorch
+                        (no external ML frameworks). It demonstrates:
+                        - torch.distributed init_process_group with NCCL/gloo backend
+                        - DistributedDataParallel model wrapping
+                        - Shard-based data partitioning across nodes
+                        - Gradient synchronization and synchronized evaluation
+                        - Checkpoint saving on the master node
+
+                        Args:
+                            data_dir: Directory with sharded CSV data files.
+                            output_model_dir: Directory to save the trained model checkpoint.
+                            output_metrics: JSON file with training and evaluation metrics.
+                            num_nodes: Total number of nodes in the distributed job.
+                            node_rank: Rank of the current node (0-indexed).
+                            all_node_addresses: Comma-separated DNS/IP addresses for all nodes.
+                            num_epochs: Number of training epochs.
+                            learning_rate: SGD learning rate.
+                            batch_size: Per-node batch size.
+                            hidden_size: Hidden layer size in the MLP.
+                        """
+                        import csv
+                        import json
+                        import math
+                        import os
+                        import socket
+                        import time
+
+                        import torch
+                        import torch.distributed as dist
+                        import torch.nn as nn
+                        from torch.nn.parallel import DistributedDataParallel as DDP
+                        from torch.utils.data import DataLoader, TensorDataset
+
+                        # ── Setup distributed ──────────────────────────────────────────────
+                        os.makedirs(output_model_dir, exist_ok=True)
+
+                        master_port = "29500"
+                        if all_node_addresses:
+                            addrs = all_node_addresses.split(",")
+                            master_addr = addrs[0].strip()
+                        else:
+                            master_addr = "127.0.0.1"
+
+                        os.environ["MASTER_ADDR"] = master_addr
+                        os.environ["MASTER_PORT"] = master_port
+                        os.environ["RANK"] = str(node_rank)
+                        os.environ["WORLD_SIZE"] = str(num_nodes)
+
+                        backend = "nccl" if torch.cuda.is_available() else "gloo"
+                        print(f"[Node {node_rank}/{num_nodes}] Initializing distributed: "
+                              f"backend={backend}, master={master_addr}:{master_port}")
+
+                        dist.init_process_group(
+                            backend=backend,
+                            rank=node_rank,
+                            world_size=num_nodes,
+                        )
+                        print(f"[Node {node_rank}] Distributed initialized successfully")
+
+                        device = torch.device(f"cuda:{0}" if torch.cuda.is_available() else "cpu")
+
+                        # ── Load data shards for this node ─────────────────────────────────
+                        shard_files = sorted(
+                            f for f in os.listdir(data_dir)
+                            if f.startswith("shard_") and f.endswith(".csv")
+                        )
+                        # Partition shards round-robin across nodes
+                        my_shards = [f for i, f in enumerate(shard_files) if i % num_nodes == node_rank]
+                        print(f"[Node {node_rank}] Loading {len(my_shards)}/{len(shard_files)} shards: {my_shards}")
+
+                        all_features = []
+                        all_labels = []
+                        for shard_name in my_shards:
+                            shard_path = os.path.join(data_dir, shard_name)
+                            with open(shard_path, "r") as f:
+                                reader = csv.reader(f)
+                                header = next(reader)
+                                for row in reader:
+                                    features = [float(x) for x in row[:-1]]
+                                    label = int(row[-1])
+                                    all_features.append(features)
+                                    all_labels.append(label)
+
+                        X = torch.tensor(all_features, dtype=torch.float32)
+                        y = torch.tensor(all_labels, dtype=torch.float32)
+                        num_features = X.shape[1]
+
+                        print(f"[Node {node_rank}] Loaded {len(X)} samples, {num_features} features")
+
+                        # Split 80/20 train/eval
+                        n_train = int(0.8 * len(X))
+                        X_train, X_eval = X[:n_train], X[n_train:]
+                        y_train, y_eval = y[:n_train], y[n_train:]
+
+                        train_dataset = TensorDataset(X_train, y_train)
+                        eval_dataset = TensorDataset(X_eval, y_eval)
+                        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+                        eval_loader = DataLoader(eval_dataset, batch_size=batch_size)
+
+                        # ── Define model ───────────────────────────────────────────────────
+                        class MLP(nn.Module):
+                            def __init__(self, in_features, hidden_size):
+                                super().__init__()
+                                self.net = nn.Sequential(
+                                    nn.Linear(in_features, hidden_size),
+                                    nn.ReLU(),
+                                    nn.BatchNorm1d(hidden_size),
+                                    nn.Dropout(0.2),
+                                    nn.Linear(hidden_size, hidden_size),
+                                    nn.ReLU(),
+                                    nn.BatchNorm1d(hidden_size),
+                                    nn.Dropout(0.2),
+                                    nn.Linear(hidden_size, 1),
+                                )
+
+                            def forward(self, x):
+                                return self.net(x).squeeze(-1)
+
+                        model = MLP(num_features, hidden_size).to(device)
+                        model = DDP(model)
+                        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+                        criterion = nn.BCEWithLogitsLoss()
+
+                        # ── Training loop ──────────────────────────────────────────────────
+                        epoch_metrics = []
+                        start_time = time.time()
+
+                        for epoch in range(num_epochs):
+                            model.train()
+                            epoch_loss = 0.0
+                            epoch_correct = 0
+                            epoch_total = 0
+
+                            for batch_X, batch_y in train_loader:
+                                batch_X, batch_y = batch_X.to(device), batch_y.to(device)
+                                optimizer.zero_grad()
+                                logits = model(batch_X)
+                                loss = criterion(logits, batch_y)
+                                loss.backward()
+                                optimizer.step()
+
+                                epoch_loss += loss.item() * len(batch_X)
+                                preds = (torch.sigmoid(logits) > 0.5).float()
+                                epoch_correct += (preds == batch_y).sum().item()
+                                epoch_total += len(batch_X)
+
+                            # Aggregate metrics across nodes
+                            metrics_tensor = torch.tensor(
+                                [epoch_loss, epoch_correct, epoch_total], dtype=torch.float64, device=device
+                            )
+                            dist.all_reduce(metrics_tensor, op=dist.ReduceOp.SUM)
+
+                            global_loss = metrics_tensor[0].item() / metrics_tensor[2].item()
+                            global_acc = metrics_tensor[1].item() / metrics_tensor[2].item()
+
+                            # Evaluation
+                            model.eval()
+                            eval_loss = 0.0
+                            eval_correct = 0
+                            eval_total = 0
+
+                            with torch.no_grad():
+                                for batch_X, batch_y in eval_loader:
+                                    batch_X, batch_y = batch_X.to(device), batch_y.to(device)
+                                    logits = model(batch_X)
+                                    loss = criterion(logits, batch_y)
+                                    eval_loss += loss.item() * len(batch_X)
+                                    preds = (torch.sigmoid(logits) > 0.5).float()
+                                    eval_correct += (preds == batch_y).sum().item()
+                                    eval_total += len(batch_X)
+
+                            eval_metrics_tensor = torch.tensor(
+                                [eval_loss, eval_correct, eval_total], dtype=torch.float64, device=device
+                            )
+                            dist.all_reduce(eval_metrics_tensor, op=dist.ReduceOp.SUM)
+
+                            global_eval_loss = eval_metrics_tensor[0].item() / max(eval_metrics_tensor[2].item(), 1)
+                            global_eval_acc = eval_metrics_tensor[1].item() / max(eval_metrics_tensor[2].item(), 1)
+
+                            em = {
+                                "epoch": epoch + 1,
+                                "train_loss": round(global_loss, 6),
+                                "train_accuracy": round(global_acc, 6),
+                                "eval_loss": round(global_eval_loss, 6),
+                                "eval_accuracy": round(global_eval_acc, 6),
+                            }
+                            epoch_metrics.append(em)
+
+                            if node_rank == 0:
+                                print(f"[Epoch {epoch+1}/{num_epochs}] "
+                                      f"train_loss={em['train_loss']:.4f} train_acc={em['train_accuracy']:.4f} "
+                                      f"eval_loss={em['eval_loss']:.4f} eval_acc={em['eval_accuracy']:.4f}")
+
+                        elapsed = time.time() - start_time
+
+                        # ── Save model and metrics (node 0 only) ───────────────────────────
+                        if node_rank == 0:
+                            checkpoint_path = os.path.join(output_model_dir, "model.pt")
+                            torch.save({
+                                "model_state_dict": model.module.state_dict(),
+                                "optimizer_state_dict": optimizer.state_dict(),
+                                "num_features": num_features,
+                                "hidden_size": hidden_size,
+                                "num_epochs": num_epochs,
+                                "final_eval_accuracy": epoch_metrics[-1]["eval_accuracy"],
+                            }, checkpoint_path)
+
+                            results = {
+                                "training": {
+                                    "num_nodes": num_nodes,
+                                    "total_samples": int(metrics_tensor[2].item()),
+                                    "samples_per_node": int(metrics_tensor[2].item()) // num_nodes,
+                                    "num_epochs": num_epochs,
+                                    "learning_rate": learning_rate,
+                                    "batch_size": batch_size,
+                                    "hidden_size": hidden_size,
+                                    "elapsed_seconds": round(elapsed, 2),
+                                    "backend": backend,
+                                },
+                                "final_metrics": epoch_metrics[-1],
+                                "epoch_history": epoch_metrics,
+                            }
+
+                            with open(output_metrics, "w") as f:
+                                json.dump(results, f, indent=2)
+
+                            print(f"\n[Node 0] Training complete in {elapsed:.1f}s")
+                            print(f"[Node 0] Final eval accuracy: {epoch_metrics[-1]['eval_accuracy']:.4f}")
+                            print(f"[Node 0] Model saved to {checkpoint_path}")
+
+                        dist.destroy_process_group()
+
+                    import argparse
+                    _parser = argparse.ArgumentParser(prog='Distributed train v01', description='Distributed gradient-descent training across multiple nodes using PyTorch DDP.\n\nEach node loads its assigned data shards and participates in synchronized\ngradient averaging via torch.distributed. Node 0 acts as the master and\nsaves the final model + metrics.\n\nThis is a minimal but real multi-node training example using only PyTorch\n(no external ML frameworks). It demonstrates:\n- torch.distributed init_process_group with NCCL/gloo backend\n- DistributedDataParallel model wrapping\n- Shard-based data partitioning across nodes\n- Gradient synchronization and synchronized evaluation\n- Checkpoint saving on the master node')
+                    _parser.add_argument("--data-dir", dest="data_dir", type=str, required=True, default=argparse.SUPPRESS)
+                    _parser.add_argument("--num-nodes", dest="num_nodes", type=int, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--node-rank", dest="node_rank", type=int, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--all-node-addresses", dest="all_node_addresses", type=str, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--num-epochs", dest="num_epochs", type=int, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--learning-rate", dest="learning_rate", type=float, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--batch-size", dest="batch_size", type=int, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--hidden-size", dest="hidden_size", type=int, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--output-model-dir", dest="output_model_dir", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+                    _parser.add_argument("--output-metrics", dest="output_metrics", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+                    _parsed_args = vars(_parser.parse_args())
+
+                    _outputs = distributed_train_v01(**_parsed_args)
+                args:
+                  - '--data-dir'
+                  - inputPath: data_dir
+                  - if:
+                      cond:
+                        isPresent: num_nodes
+                      then:
+                        - '--num-nodes'
+                        - inputValue: num_nodes
+                  - if:
+                      cond:
+                        isPresent: node_rank
+                      then:
+                        - '--node-rank'
+                        - inputValue: node_rank
+                  - if:
+                      cond:
+                        isPresent: all_node_addresses
+                      then:
+                        - '--all-node-addresses'
+                        - inputValue: all_node_addresses
+                  - if:
+                      cond:
+                        isPresent: num_epochs
+                      then:
+                        - '--num-epochs'
+                        - inputValue: num_epochs
+                  - if:
+                      cond:
+                        isPresent: learning_rate
+                      then:
+                        - '--learning-rate'
+                        - inputValue: learning_rate
+                  - if:
+                      cond:
+                        isPresent: batch_size
+                      then:
+                        - '--batch-size'
+                        - inputValue: batch_size
+                  - if:
+                      cond:
+                        isPresent: hidden_size
+                      then:
+                        - '--hidden-size'
+                        - inputValue: hidden_size
+                  - '--output-model-dir'
+                  - outputPath: output_model_dir
+                  - '--output-metrics'
+                  - outputPath: output_metrics
+        arguments:
+          data_dir:
+            taskOutput:
+              taskId: Generate Data
+              outputName: output_data_dir
+          node_rank:
+            dynamicData:
+              system/multi_node/node_index: {}
+          num_nodes:
+            dynamicData:
+              system/multi_node/number_of_nodes: {}
+          batch_size: '64'
+          num_epochs: '10'
+          hidden_size: '64'
+          learning_rate: '0.01'
+          all_node_addresses:
+            dynamicData:
+              system/multi_node/all_node_addresses: {}
+        annotations:
+          editor.position: '{"x":400,"y":0}'
+          tangleml.com/launchers/kubernetes/multi_node/number_of_nodes: '2'
+          cloud-pipelines.net/launchers/generic/resources.shared_memory: 2Gi
+    outputValues:
+      trained_model:
+        taskOutput:
+          taskId: Distributed Train
+          outputName: output_model_dir
+      training_metrics:
+        taskOutput:
+          taskId: Distributed Train
+          outputName: output_metrics
+description: Open-source demo of Tangle multi-node distributed training. Generates synthetic classification data, then trains a PyTorch MLP across multiple nodes using DistributedDataParallel with synchronized gradient averaging.
+outputs:
+  - name: trained_model
+    type: Directory
+    description: Directory containing the trained model checkpoint.
+    annotations:
+      editor.position: '{"x":800,"y":200}'
+  - name: training_metrics
+    type: JSON
+    description: JSON file with training and evaluation metrics.
+    annotations:
+      editor.position: '{"x":800,"y":430}'
+metadata:
+  annotations:
+    author: tangle-demo
+    flex-nodes: '[{"id":"mn-overview","properties":{"title":"Multi-Node Training","content":"This pipeline shows off Tangle''s multi-node feature. The ''Distributed Train'' task runs on 2 pods at the same time. Each pod gets its own node_rank (0 or 1) plus the DNS addresses of all its peers, injected through dynamicData:\n\n• system/multi_node/node_index → per-pod rank\n• system/multi_node/number_of_nodes → total pods\n• system/multi_node/all_node_addresses → comma-separated DNS\n\nThe tangleml.com/.../number_of_nodes annotation on the task tells Tangle how many pods to spawn. Every pod runs the same container image but with different injected values, which is what lets PyTorch DistributedDataParallel (DDP) sync gradients across nodes.","color":"#E3F2FD","borderColor":"#1565C0"},"metadata":{"createdAt":"2026-05-30T00:15:00.000Z","createdBy":"tangle-demo"},"size":{"width":320,"height":380},"position":{"x":390,"y":-430},"zIndex":0},{"id":"mn-data-flow","properties":{"title":"Data Partitioning","content":"Shards get handed out round-robin:\n\n• Node 0 takes shards 0, 2, 4, 6\n• Node 1 takes shards 1, 3, 5, 7\n\nAfter each training step, gradients are averaged across all nodes with torch.distributed.all_reduce(). Only Node 0 (the master) writes out the final checkpoint and metrics.","color":"#FFF9C4","borderColor":"#F9A825"},"metadata":{"createdAt":"2026-05-30T00:15:00.000Z","createdBy":"tangle-demo"},"size":{"width":280,"height":220},"position":{"x":770,"y":-270},"zIndex":0},{"id":"flex_mpvikik96fvb_9","properties":{"title":"How to Set Up Multi-Node in Tangle UI","content":"How to turn on multi-node for any task:\n\n1. Select the task and open its Settings panel.\n\n2. Under Annotations, add:\n   tangleml.com/launchers/kubernetes/\n   multi_node/number_of_nodes = \"2\"\n   (or however many pods you want)\n\n3. Add the shared memory annotation:\n   cloud-pipelines.net/launchers/\n   generic/resources.shared_memory\n   = \"2Gi\" (NCCL/gloo IPC needs this)\n\n4. Add 3 component inputs of type String/Integer\n   for: num_nodes, node_rank, all_node_addresses.\n\n5. Wire each input to Dynamic Data:\n   • num_nodes → system/multi_node/\n     number_of_nodes\n   • node_rank → system/multi_node/\n     node_index\n   • all_node_addresses → system/\n     multi_node/all_node_addresses\n\n6. In your container code, feed these values\n   into torch.distributed.init_process_group(),\n   using MASTER_ADDR from the first address\n   and RANK from node_rank.\n\nThat''s it. Tangle spawns N identical pods\nand injects the right values into each one.","color":"#E8F5E9","borderColor":"#BCBCBC"},"metadata":{"createdAt":"2026-06-01T18:00:10.233Z","createdBy":"tangle-demo"},"size":{"width":290,"height":530},"position":{"x":1150,"y":70},"zIndex":0}]'
+    editor.flow-direction: left-to-right
+    cloned_from_run_id: 019e8446133b96b877b7
