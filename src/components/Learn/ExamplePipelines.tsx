@@ -1,6 +1,3 @@
-import { useMutation } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
-
 import { InfoBox } from "@/components/shared/InfoBox";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -13,33 +10,42 @@ import {
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
 import { Paragraph } from "@/components/ui/typography";
-import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
-import { EDITOR_PATH } from "@/routes/router";
+import { publicAsset } from "@/utils/publicAsset";
+import { tracking } from "@/utils/tracking";
 
-import { importPipelineFromUrl } from "./importPipelineFromUrl";
-import { type SamplePipeline, samplePipelines } from "./samplePipelines";
+import examplePipelinesData from "./examplePipelines.json";
+import { useImportPipeline } from "./useImportPipeline";
 
-const QuickStartCards = () => {
-  const navigate = useNavigate();
-  const notify = useToastNotification();
+export interface ExamplePipeline {
+  id: string;
+  name: string;
+  description: string;
+  url: string;
+  previewImage?: string;
+  tags?: string[];
+}
 
-  const {
-    mutate: importPipeline,
-    isPending,
-    error,
-  } = useMutation({
-    mutationFn: async (url: string) => await importPipelineFromUrl(url),
-    onSuccess: (result) => {
-      notify(`Pipeline "${result.name}" created successfully`, "success");
-      navigate({
-        to: `${EDITOR_PATH}/${encodeURIComponent(result.name)}`,
-      });
-    },
-  });
+export const examplePipelines: ExamplePipeline[] = (
+  examplePipelinesData as ExamplePipeline[]
+).map((pipeline) => ({
+  ...pipeline,
+  url: publicAsset(pipeline.url),
+  previewImage: pipeline.previewImage
+    ? publicAsset(pipeline.previewImage)
+    : undefined,
+}));
+
+interface ExamplePipelinesProps {
+  limit?: number;
+}
+
+export function ExamplePipelines({ limit }: ExamplePipelinesProps) {
+  const { mutate: importPipeline, isPending, error } = useImportPipeline();
+  const pipelines = limit ? examplePipelines.slice(0, limit) : examplePipelines;
 
   return (
-    <BlockStack>
+    <BlockStack gap="4">
       {!!error && (
         <InfoBox title="Error importing pipeline" variant="error">
           <Paragraph>{error.message}</Paragraph>
@@ -47,25 +53,29 @@ const QuickStartCards = () => {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {samplePipelines.map((pipeline: SamplePipeline) => (
+        {pipelines.map((pipeline) => (
           <Card
-            key={pipeline.name}
+            key={pipeline.id}
             className={cn(
               "overflow-hidden hover:shadow-lg transition-shadow duration-200 cursor-pointer group",
               isPending && "opacity-50 pointer-events-none",
             )}
             onClick={() => importPipeline(pipeline.url)}
+            {...tracking("learning_hub.examples.import", {
+              example_id: pipeline.id,
+            })}
           >
             <div className="aspect-video relative bg-linear-to-br from-gray-100 to-gray-200 overflow-hidden">
-              <img
-                src={pipeline.previewImage}
-                alt={pipeline.name}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                onError={(e) => {
-                  // If image fails to load, hide it and show fallback gradient
-                  e.currentTarget.style.display = "none";
-                }}
-              />
+              {pipeline.previewImage && (
+                <img
+                  src={pipeline.previewImage}
+                  alt={pipeline.name}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                />
+              )}
               {isPending && (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <Spinner size={20} />
@@ -80,33 +90,31 @@ const QuickStartCards = () => {
                 {pipeline.description}
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              {pipeline.tags && pipeline.tags.length > 0 && (
+            {pipeline.tags && pipeline.tags.length > 0 && (
+              <CardContent>
                 <InlineStack
                   gap="1"
                   wrap="wrap"
                   blockAlign="start"
                   align="start"
                 >
-                  {pipeline.tags.map((tag: string) => (
+                  {pipeline.tags.map((tag) => (
                     <Badge size="sm" key={tag}>
                       {tag}
                     </Badge>
                   ))}
                 </InlineStack>
-              )}
-            </CardContent>
+              </CardContent>
+            )}
           </Card>
         ))}
       </div>
 
-      {samplePipelines.length === 0 && (
-        <InfoBox title="No sample pipelines available yet." variant="info">
-          <Paragraph>No sample pipelines available yet.</Paragraph>
+      {pipelines.length === 0 && (
+        <InfoBox title="No example pipelines available yet." variant="info">
+          <Paragraph>No example pipelines available yet.</Paragraph>
         </InfoBox>
       )}
     </BlockStack>
   );
-};
-
-export default QuickStartCards;
+}
