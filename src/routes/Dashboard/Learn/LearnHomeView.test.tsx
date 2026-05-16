@@ -34,7 +34,7 @@ describe("<LearnHomeView/>", () => {
   test("renders the search bar", () => {
     render(<LearnHomeView />);
     expect(
-      screen.getByRole("textbox", { name: /search the learning hub/i }),
+      screen.getByRole("textbox", { name: /search the tangle docs/i }),
     ).toBeInTheDocument();
   });
 
@@ -48,7 +48,14 @@ describe("<LearnHomeView/>", () => {
     ).toBeInTheDocument();
   });
 
-  test("renders the tip of the day, tours, examples and documentation sections", () => {
+  test("renders the docs quicklinks and full-docs link at the top", () => {
+    render(<LearnHomeView />);
+    expect(screen.getByText("Getting started")).toBeInTheDocument();
+    expect(screen.getByText("Schema reference")).toBeInTheDocument();
+    expect(screen.getByText("Full docs")).toBeInTheDocument();
+  });
+
+  test("renders the tip, tours, examples and FAQ sections", () => {
     render(<LearnHomeView />);
     expect(
       screen.getByRole("heading", { level: 3, name: /tip of the day/i }),
@@ -60,7 +67,7 @@ describe("<LearnHomeView/>", () => {
       screen.getByRole("heading", { level: 2, name: /example pipelines/i }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { level: 2, name: /documentation/i }),
+      screen.getByRole("heading", { level: 2, name: /frequently asked/i }),
     ).toBeInTheDocument();
   });
 });
