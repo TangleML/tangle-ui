@@ -7,6 +7,10 @@ export const GIVE_FEEDBACK_URL =
   import.meta.env.VITE_GIVE_FEEDBACK_URL ||
   "https://github.com/TangleML/tangle/issues";
 
+export const GITHUB_DISCUSSIONS_URL =
+  import.meta.env.VITE_GITHUB_DISCUSSIONS_URL ||
+  "https://github.com/TangleML/tangle/discussions";
+
 export const PRIVACY_POLICY_URL =
   import.meta.env.VITE_PRIVACY_POLICY_URL ||
   "https://tangleml.com/docs/privacy_policy/";
