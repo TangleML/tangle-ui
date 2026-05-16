@@ -34,7 +34,6 @@ export async function importPipelineFromUrl(
 }
 
 function isUrlAllowed(url: string) {
-  // Allow if it's a github URL or a relative URL (starts with '/'), and ends with .yaml
   return (isGithubUrl(url) || isRelativeUrl(url)) && url.endsWith(".yaml");
 }
 
