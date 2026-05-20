@@ -110,7 +110,7 @@ export function ArgumentCodeEditor({
         align="start"
         className="shrink-0 px-2 py-1 border-b border-gray-200 bg-gray-100 w-full"
       >
-        <Text size="xs" weight="semibold" className="text-gray-700">
+        <Text size="xs" weight="semibold" tone="subdued">
           {inputSpec.name}
         </Text>
         <Select

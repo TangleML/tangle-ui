@@ -4,8 +4,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { ListRow } from "@/components/ui/patterns/list-row";
 import { Text } from "@/components/ui/typography";
-import { cn } from "@/lib/utils";
 import type { ComponentSpec, ValidationIssue } from "@/models/componentSpec";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useIssueResolutionWindow } from "@/routes/v2/pages/Editor/components/IssueResolution/useIssueResolutionWindow";
@@ -75,29 +75,25 @@ export const ValidationSummary = observer(function ValidationSummary({
     openIssueResolutionWindow();
   };
 
+  const summaryTone = errorCount > 0 ? "critical" : "warning";
+
   return (
     <BlockStack gap="1" className={className}>
       <InlineStack gap="1" blockAlign="stretch" className="w-full min-w-0">
         <Button
           variant="ghost"
+          tone={summaryTone}
           size="sm"
-          className={cn(
-            "min-w-0 flex-1 justify-start gap-1.5 h-auto py-1.5",
-            errorCount > 0
-              ? "text-red-700 hover:bg-red-50"
-              : "text-amber-700 hover:bg-amber-50",
-          )}
+          align="start"
+          fullWidth
+          className="min-w-0 h-auto py-1.5 gap-1.5"
           onClick={() => setIsExpanded((prev) => !prev)}
           {...tracking(
             "v2.pipeline_editor.configuration_panel.validation_summary_toggle",
           )}
         >
-          <Icon
-            name={isExpanded ? "ChevronDown" : "ChevronRight"}
-            size="sm"
-            className="shrink-0"
-          />
-          <Icon name="TriangleAlert" size="sm" className="shrink-0" />
+          <Icon name={isExpanded ? "ChevronDown" : "ChevronRight"} size="sm" />
+          <Icon name="TriangleAlert" size="sm" />
           <Text size="sm" weight="semibold">
             {summaryParts.join(", ")}
           </Text>
@@ -119,6 +115,8 @@ export const ValidationSummary = observer(function ValidationSummary({
             const isSelected =
               selectedIssue !== null &&
               sameValidationIssue(selectedIssue, issue);
+            const issueTone =
+              issue.severity === "error" ? "critical" : "warning";
 
             const handleIssueClick = () => {
               track(
@@ -132,51 +130,32 @@ export const ValidationSummary = observer(function ValidationSummary({
             };
 
             return (
-              <div
+              <ListRow
                 key={`${issue.type}-${issue.entityId ?? "graph"}-${index}`}
-                role="button"
-                tabIndex={0}
+                density="compact"
+                gap="1"
+                hoverable
+                selected={isSelected}
                 onClick={handleIssueClick}
-                onKeyDown={(e) =>
-                  (e.key === "Enter" || e.key === " ") && handleIssueClick()
-                }
-                className={cn(
-                  "flex items-baseline gap-1 py-1 px-2 rounded text-xs cursor-pointer transition-colors",
-                  isSelected ? "ring-1 ring-blue-400" : "",
-                  issue.severity === "error"
-                    ? "bg-red-50 text-red-800 hover:bg-red-100"
-                    : "bg-amber-50 text-amber-800 hover:bg-amber-100",
-                )}
               >
                 <Text
                   size="xs"
                   weight="semibold"
-                  className={cn(
-                    "shrink-0 uppercase tracking-wide",
-                    issue.severity === "error"
-                      ? "text-red-600"
-                      : "text-amber-600",
-                  )}
+                  tone={issueTone}
+                  transform="uppercase"
                 >
                   {issueTypeLabel(issue.type)}
                 </Text>
-                <Text
-                  size="xs"
-                  className={
-                    issue.severity === "error"
-                      ? "text-red-700"
-                      : "text-amber-700"
-                  }
-                >
+                <Text size="xs" tone={issueTone}>
                   {issue.subgraphPath.length > 1 && (
-                    <span className="font-medium">
+                    <Text weight="medium">
                       {issue.subgraphPath.slice(1).join(" > ")}
                       {" > "}
-                    </span>
+                    </Text>
                   )}
                   {issue.message}
                 </Text>
-              </div>
+              </ListRow>
             );
           })}
         </BlockStack>

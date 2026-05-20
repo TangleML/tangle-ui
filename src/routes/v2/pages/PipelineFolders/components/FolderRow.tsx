@@ -147,7 +147,7 @@ export function FolderRow({
                 name="Folder"
                 fill="currentColor"
                 size="lg"
-                className="text-muted-foreground shrink-0"
+                tone="subdued"
               />
             )}
             <Paragraph weight="semibold">{folder.name}</Paragraph>

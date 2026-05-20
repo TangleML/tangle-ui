@@ -187,21 +187,21 @@ export const BatchArgumentRow = observer(function BatchArgumentRow({
     >
       <InlineStack gap="1" blockAlign="center" className="w-full min-h-6">
         <InlineStack gap="1" blockAlign="baseline" className="flex-1 min-w-0">
-          <Text size="xs" weight="semibold" className="shrink-0 text-gray-700">
+          <Text size="xs" weight="semibold" tone="subdued">
             {aggArg.name}
           </Text>
           {aggArg.typeLabel && (
-            <Text size="xs" className="text-gray-400 shrink-0">
+            <Text size="xs" tone="weak">
               {aggArg.typeLabel}
             </Text>
           )}
           {!aggArg.optional && (
-            <Text size="xs" className="text-red-400 shrink-0">
+            <Text size="xs" tone="critical">
               *
             </Text>
           )}
         </InlineStack>
-        <Text size="xs" className="text-gray-400 shrink-0 mr-1">
+        <Text size="xs" tone="weak">
           {aggArg.taskIds.length} tasks
         </Text>
         <ThunderMenu
@@ -228,16 +228,19 @@ export const BatchArgumentRow = observer(function BatchArgumentRow({
           placeholder={
             aggArg.isMixed ? "mixed" : (aggArg.defaultValue ?? "Enter value...")
           }
-          className="h-7 text-xs font-mono mt-1"
+          inputSize="xs"
+          font="mono"
+          className="mt-1"
         />
       ) : (
         <Text
+          as="p"
           size="xs"
           font="mono"
-          className={cn(
-            "truncate block mt-0.5",
-            aggArg.isMixed ? "text-amber-500 italic" : "text-gray-500",
-          )}
+          truncate
+          italic={aggArg.isMixed}
+          tone={aggArg.isMixed ? "warning" : "subdued"}
+          className="mt-0.5"
           title={aggArg.isMixed ? "Values differ across tasks" : aggArg.value}
         >
           {aggArg.isMixed ? "mixed" : aggArg.value || null}

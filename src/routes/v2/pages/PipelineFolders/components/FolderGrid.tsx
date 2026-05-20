@@ -35,11 +35,7 @@ export const FolderGrid = withSuspenseWrapper(function FolderGridContent() {
             onClick={() => folderNav.navigateToFolder(folder.id)}
             className={CARD_CLASS}
           >
-            <Icon
-              name="FolderHeart"
-              className="text-muted-foreground shrink-0"
-              size="lg"
-            />
+            <Icon name="FolderHeart" tone="subdued" size="lg" />
             <Text size="sm">{folder.name}</Text>
           </button>
         ) : (
@@ -49,11 +45,7 @@ export const FolderGrid = withSuspenseWrapper(function FolderGridContent() {
             search={{ folderId: folder.id }}
             className={CARD_CLASS}
           >
-            <Icon
-              name="FolderHeart"
-              className="text-muted-foreground shrink-0"
-              size="lg"
-            />
+            <Icon name="FolderHeart" tone="subdued" size="lg" />
             <Text size="sm">{folder.name}</Text>
           </Link>
         ),

@@ -23,7 +23,7 @@ export function NavigateToEntityButton({
       onClick={handleClick}
       tooltip="Navigate to task"
     >
-      <Icon name="Eye" size="xs" className="text-muted-foreground" />
+      <Icon name="Eye" size="xs" tone="subdued" />
     </TooltipButton>
   );
 }

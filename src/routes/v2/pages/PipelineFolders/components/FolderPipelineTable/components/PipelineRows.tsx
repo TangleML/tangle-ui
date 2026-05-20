@@ -23,7 +23,7 @@ const pipelineIcon = (
     fill="currentColor"
     stroke="#2563eb"
     size="lg"
-    className="shrink-0 text-blue-500"
+    tone="info"
   />
 );
 

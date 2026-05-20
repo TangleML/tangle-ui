@@ -97,13 +97,7 @@ export const DockedWindow = observer(function DockedWindow() {
       >
         <WindowHeader
           title={model.title}
-          leadingIcon={
-            <Icon
-              name="PanelLeft"
-              size="xs"
-              className="text-gray-400 shrink-0"
-            />
-          }
+          leadingIcon={<Icon name="PanelLeft" size="xs" tone="weak" />}
           actions={actions}
           className="bg-white"
         />
@@ -157,13 +151,7 @@ export const DockedWindow = observer(function DockedWindow() {
             title={model.title}
             isDragging={isDragging}
             onMouseDown={handleHeaderMouseDown}
-            leadingIcon={
-              <Icon
-                name="GripVertical"
-                size="xs"
-                className="text-gray-400 shrink-0"
-              />
-            }
+            leadingIcon={<Icon name="GripVertical" size="xs" tone="weak" />}
             actions={actions}
             actionsOnHover
           />

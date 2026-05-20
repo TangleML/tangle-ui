@@ -28,7 +28,7 @@ export function QuickConnectSubmenu({
   return (
     <DropdownMenuSub>
       <DropdownMenuSubTrigger>
-        <Icon name="Cable" size="sm" className="text-blue-600" />
+        <Icon name="Cable" size="sm" tone="info" />
         Connect to...
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent className="w-52 max-h-64 overflow-y-auto z-[9999]">
@@ -42,8 +42,8 @@ export function QuickConnectSubmenu({
                 className="shrink-0"
                 wrap="nowrap"
               >
-                <Icon name={group.icon} size="sm" className="shrink-0" />
-                <Text size="xs" weight="semibold" className="truncate">
+                <Icon name={group.icon} size="sm" />
+                <Text size="xs" weight="semibold" truncate>
                   {group.label}
                 </Text>
               </InlineStack>

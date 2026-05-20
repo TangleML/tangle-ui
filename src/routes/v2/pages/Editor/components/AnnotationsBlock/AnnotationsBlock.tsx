@@ -7,6 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { HoverReveal } from "@/components/ui/patterns/hover-reveal";
+import { IconButton } from "@/components/ui/patterns/icon-button";
+import { ListRow } from "@/components/ui/patterns/list-row";
+import { Truncating } from "@/components/ui/patterns/truncating";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import type { Annotation } from "@/models/componentSpec";
@@ -212,57 +216,51 @@ function AnnotationRow({
 
   if (!isEditing) {
     return (
-      <InlineStack
-        gap="2"
-        wrap="nowrap"
-        blockAlign="center"
-        className="group w-full rounded-xs px-1 py-0.5 hover:bg-gray-50"
-      >
-        <BlockStack align="stretch" className="flex-1 min-w-0">
-          {annotation.key ? (
-            <CopyText
-              size="xs"
-              compact
-              className="font-mono! text-muted-foreground truncate"
-            >
-              {annotation.key}
-            </CopyText>
-          ) : (
-            <Text size="xs" font="mono" tone="subdued">
-              (empty key)
-            </Text>
-          )}
-          {formatAnnotationValue(annotation.value) ? (
-            <CopyText size="xs" compact className="font-mono! truncate">
-              {formatAnnotationValue(annotation.value)}
-            </CopyText>
-          ) : (
-            <Text size="xs" font="mono" tone="subdued">
-              (empty value)
-            </Text>
-          )}
-        </BlockStack>
+      <ListRow density="compact" gap="2">
+        <Truncating>
+          <BlockStack align="stretch">
+            {annotation.key ? (
+              <CopyText
+                size="xs"
+                compact
+                className="font-mono! text-muted-foreground truncate"
+              >
+                {annotation.key}
+              </CopyText>
+            ) : (
+              <Text size="xs" font="mono" tone="subdued">
+                (empty key)
+              </Text>
+            )}
+            {formatAnnotationValue(annotation.value) ? (
+              <CopyText size="xs" compact className="font-mono! truncate">
+                {formatAnnotationValue(annotation.value)}
+              </CopyText>
+            ) : (
+              <Text size="xs" font="mono" tone="subdued">
+                (empty value)
+              </Text>
+            )}
+          </BlockStack>
+        </Truncating>
         {!readonly && (
-          <InlineStack className="shrink-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
-            <Button
-              variant="ghost"
+          <HoverReveal>
+            <IconButton
+              icon="Pencil"
               size="xs"
               onClick={onStartEdit}
               aria-label="Edit annotation"
-            >
-              <Icon name="Pencil" size="xs" />
-            </Button>
-            <Button
-              variant="ghost"
+            />
+            <IconButton
+              icon="Trash"
               size="xs"
+              tone="critical"
               onClick={handleRemove}
               aria-label="Remove annotation"
-            >
-              <Icon name="Trash" className="text-destructive" />
-            </Button>
-          </InlineStack>
+            />
+          </HoverReveal>
         )}
-      </InlineStack>
+      </ListRow>
     );
   }
 
@@ -274,41 +272,43 @@ function AnnotationRow({
         className="w-full px-1 py-0.5"
         blockAlign="start"
       >
-        <BlockStack gap="1" className="flex-1 min-w-0">
-          <Input
-            autoFocus
-            className={cn(
-              "w-full font-mono text-xs!",
-              keyError && "border-destructive focus-visible:ring-destructive",
+        <Truncating>
+          <BlockStack gap="1">
+            <Input
+              autoFocus
+              inputSize="xs"
+              font="mono"
+              className={cn(
+                keyError && "border-destructive focus-visible:ring-destructive",
+              )}
+              placeholder="Key"
+              value={keyDraft}
+              onChange={(e) => setKeyDraft(e.target.value)}
+              onBlur={handleCommitKey}
+              aria-invalid={keyError !== null}
+            />
+            <Input
+              inputSize="xs"
+              font="mono"
+              placeholder="Value"
+              value={valueDraft}
+              onChange={(e) => setValueDraft(e.target.value)}
+              onBlur={handleCommitValue}
+            />
+            {keyError && (
+              <Text size="xs" tone="critical">
+                {keyError}
+              </Text>
             )}
-            placeholder="Key"
-            value={keyDraft}
-            onChange={(e) => setKeyDraft(e.target.value)}
-            onBlur={handleCommitKey}
-            aria-invalid={keyError !== null}
-          />
-          <Input
-            className="w-full font-mono text-xs!"
-            placeholder="Value"
-            value={valueDraft}
-            onChange={(e) => setValueDraft(e.target.value)}
-            onBlur={handleCommitValue}
-          />
-          {keyError && (
-            <Text size="xs" tone="critical">
-              {keyError}
-            </Text>
-          )}
-        </BlockStack>
-        <Button
-          variant="ghost"
+          </BlockStack>
+        </Truncating>
+        <IconButton
+          icon="Trash"
           size="xs"
-          className="shrink-0"
+          tone="critical"
           onClick={handleRemove}
           aria-label="Remove annotation"
-        >
-          <Icon name="Trash" className="text-destructive" />
-        </Button>
+        />
       </InlineStack>
     </div>
   );
@@ -363,43 +363,45 @@ function NewAnnotationRow({ annotations, onClose }: NewAnnotationRowProps) {
         className="w-full px-1 py-0.5"
         blockAlign="start"
       >
-        <BlockStack align="stretch" gap="1" className="flex-1 min-w-0">
-          <Input
-            autoFocus
-            className={cn(
-              "w-full font-mono text-xs!",
-              keyError && "border-destructive focus-visible:ring-destructive",
+        <Truncating>
+          <BlockStack align="stretch" gap="1">
+            <Input
+              autoFocus
+              inputSize="xs"
+              font="mono"
+              className={cn(
+                keyError && "border-destructive focus-visible:ring-destructive",
+              )}
+              placeholder="Key"
+              value={keyDraft}
+              onChange={(e) => {
+                setKeyDraft(e.target.value);
+                if (keyError) setKeyError(null);
+              }}
+              onBlur={handleKeyBlur}
+              aria-invalid={keyError !== null}
+            />
+            <Input
+              inputSize="xs"
+              font="mono"
+              placeholder="Value"
+              value={valueDraft}
+              onChange={(e) => setValueDraft(e.target.value)}
+            />
+            {keyError && (
+              <Text size="xs" tone="critical">
+                {keyError}
+              </Text>
             )}
-            placeholder="Key"
-            value={keyDraft}
-            onChange={(e) => {
-              setKeyDraft(e.target.value);
-              if (keyError) setKeyError(null);
-            }}
-            onBlur={handleKeyBlur}
-            aria-invalid={keyError !== null}
-          />
-          <Input
-            className="w-full font-mono text-xs!"
-            placeholder="Value"
-            value={valueDraft}
-            onChange={(e) => setValueDraft(e.target.value)}
-          />
-          {keyError && (
-            <Text size="xs" tone="critical">
-              {keyError}
-            </Text>
-          )}
-        </BlockStack>
-        <Button
-          variant="ghost"
+          </BlockStack>
+        </Truncating>
+        <IconButton
+          icon="Trash"
           size="xs"
-          className="shrink-0"
+          tone="critical"
           onClick={onClose}
           aria-label="Discard new annotation"
-        >
-          <Icon name="Trash" className="text-destructive" />
-        </Button>
+        />
       </InlineStack>
     </div>
   );

@@ -49,9 +49,7 @@ export function UpgradePreviewTaskNode({
       <CardHeader className="border-b border-slate-200 px-2 py-2.5">
         <BlockStack>
           <InlineStack gap="2" wrap="nowrap" blockAlign="center">
-            {isSubgraph && (
-              <Icon name="Workflow" size="sm" className="text-blue-600" />
-            )}
+            {isSubgraph && <Icon name="Workflow" size="sm" tone="info" />}
             <CardTitle className="wrap-anywhere max-w-full text-left text-xs text-slate-900 flex-1">
               {taskName}
             </CardTitle>

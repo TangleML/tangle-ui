@@ -105,8 +105,8 @@ export const MultiSelectionDetails = observer(function MultiSelectionDetails() {
     <BlockStack className="h-full bg-white overflow-y-auto">
       <BlockStack gap="4" className="p-3">
         <InlineStack gap="2" blockAlign="center">
-          <Icon name="MousePointer2" size="sm" className="text-blue-500" />
-          <Text size="sm" weight="semibold" className="text-slate-700">
+          <Icon name="MousePointer2" size="sm" tone="info" />
+          <Text size="sm" weight="semibold" tone="subdued">
             {multiSelection.length} nodes selected
           </Text>
         </InlineStack>

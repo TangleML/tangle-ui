@@ -59,11 +59,7 @@ export function FolderList({
               isGoogleDrive ? ( // google-drive
                 <FaGoogleDrive className="size-5 text-muted-foreground shrink-0" />
               ) : isPermissionGated ? (
-                <Icon
-                  name="HardDrive"
-                  size="lg"
-                  className="text-muted-foreground shrink-0"
-                />
+                <Icon name="HardDrive" size="lg" tone="subdued" />
               ) : undefined
             }
             hideDefaultMenuItems={isPermissionGated}

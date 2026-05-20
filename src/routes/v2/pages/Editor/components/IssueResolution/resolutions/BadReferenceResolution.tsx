@@ -47,7 +47,7 @@ export const BadReferenceResolution = observer(function BadReferenceResolution({
   return (
     <BlockStack gap="3">
       <BlockStack gap="2">
-        <Text size="xs" weight="semibold" className="text-gray-700">
+        <Text size="xs" weight="semibold" tone="subdued">
           Fix reference for &ldquo;{argumentName}&rdquo; on task &ldquo;
           {task.name}&rdquo;
         </Text>

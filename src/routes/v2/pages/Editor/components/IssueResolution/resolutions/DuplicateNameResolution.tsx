@@ -42,7 +42,7 @@ export function DuplicateNameResolution({
   return (
     <BlockStack gap="3">
       <BlockStack gap="2">
-        <Text size="xs" weight="semibold" className="text-gray-700">
+        <Text size="xs" weight="semibold" tone="subdued">
           Rename {entityType}
         </Text>
         <InlineStack gap="2" blockAlign="end">

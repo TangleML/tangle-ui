@@ -86,7 +86,7 @@ export const PipelineDigestBar = withSuspenseWrapper(
             <Icon
               name={isNestedSubgraph ? "Workflow" : "GitBranch"}
               size="sm"
-              className="shrink-0 text-muted-foreground"
+              tone="subdued"
             />
             <Text
               size="xs"

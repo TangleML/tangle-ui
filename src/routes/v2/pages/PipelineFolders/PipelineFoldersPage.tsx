@@ -7,7 +7,7 @@ export function PipelineFoldersPage() {
   return (
     <div className="container mx-auto w-3/4 p-4 flex flex-col gap-4">
       <InlineStack gap="2" blockAlign="center">
-        <Icon name="FolderOpen" size="lg" className="text-stone-500" />
+        <Icon name="FolderOpen" size="lg" tone="subdued" />
         <Heading level={1}>Open Pipeline</Heading>
       </InlineStack>
       <PipelineFolders />

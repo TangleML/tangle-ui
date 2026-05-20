@@ -38,7 +38,7 @@ export const RunViewOutputDetails = observer(function RunViewOutputDetails({
       data-context-panel="output-overview"
     >
       <InlineStack gap="2" blockAlign="center">
-        <Icon name="Upload" size="sm" className="text-green-500 shrink-0" />
+        <Icon name="Upload" size="sm" tone="success" />
         <CopyText size="lg" className="font-semibold wrap-anywhere">
           {output.name}
         </CopyText>
