@@ -1,43 +1,50 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
+import { APP_ROUTES } from "@/routes/router";
 import { tracking } from "@/utils/tracking";
+
+import { tours as tourCards } from "./tours";
 
 interface FeaturedTour {
   id: string;
   title: string;
   duration: string;
   tag?: "new" | "popular";
+  available: boolean;
 }
 
-const STUB_TOURS: FeaturedTour[] = [
-  {
-    id: "first-pipeline",
-    title: "Build your first pipeline",
-    duration: "4 min",
-    tag: "popular",
-  },
-  { id: "using-secrets", title: "Using secrets safely", duration: "2 min" },
-  {
-    id: "multinode-tasks",
-    title: "Run multinode tasks",
-    duration: "3 min",
-    tag: "new",
-  },
-  {
-    id: "custom-components",
-    title: "Create a custom component",
-    duration: "5 min",
-  },
+const FEATURED_TOUR_IDS: Array<Pick<FeaturedTour, "id" | "tag">> = [
+  { id: "navigating-the-editor", tag: "new" },
+  { id: "first-pipeline", tag: "popular" },
+  { id: "using-secrets" },
+  { id: "multinode-tasks" },
 ];
 
+function buildFeaturedTours(): FeaturedTour[] {
+  return FEATURED_TOUR_IDS.flatMap(({ id, tag }) => {
+    const card = tourCards.find((c) => c.id === id);
+    if (!card) return [];
+    return [
+      { id, title: card.title, duration: card.duration, tag, available: false },
+    ];
+  });
+}
+
 export function FeaturedTours() {
+  const featured = buildFeaturedTours();
+  const navigate = useNavigate();
+
+  const startTour = (tourId: string) => {
+    void navigate({ to: APP_ROUTES.TOUR_DETAIL, params: { tourId } });
+  };
+
   return (
-    <div className="h-full rounded-xl border border-border bg-card p-5">
+    <div className="h-full rounded-xl border border-border bg-card p-5 max-w-160">
       <BlockStack gap="3" className="h-full">
         <InlineStack gap="2" blockAlign="center" align="space-between">
           <InlineStack gap="2" blockAlign="center">
@@ -60,44 +67,67 @@ export function FeaturedTours() {
           </Button>
         </InlineStack>
 
-        <ul className="list-none p-0 m-0 flex flex-col gap-1 flex-1">
-          {STUB_TOURS.map((tour) => (
-            <li key={tour.id}>
-              <button
-                type="button"
-                className="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-md hover:bg-muted/60 text-left"
-                {...tracking("learning_hub.tours.start", { tour_id: tour.id })}
+        <BlockStack gap="1">
+          {featured.map((tour) => (
+            <Button
+              key={tour.id}
+              variant="ghost"
+              size="lg"
+              disabled
+              onClick={() => startTour(tour.id)}
+              className="h-auto min-h-10 w-full justify-start whitespace-normal py-2 text-left"
+              {...tracking("learning_hub.tours.start", {
+                tour_id: tour.id,
+              })}
+            >
+              <InlineStack
+                gap="4"
+                align="space-between"
+                blockAlign="center"
+                wrap="nowrap"
+                fill
               >
-                <BlockStack gap="0" className="min-w-0">
-                  <InlineStack gap="2" blockAlign="center">
-                    <Paragraph size="sm" weight="semibold" className="truncate">
-                      {tour.title}
-                    </Paragraph>
-                    {tour.tag && (
-                      <Badge
-                        size="sm"
-                        variant={tour.tag === "new" ? "default" : "secondary"}
-                        className="capitalize"
-                      >
-                        {tour.tag}
-                      </Badge>
-                    )}
-                  </InlineStack>
-                  <Text size="xs" tone="subdued">
-                    {tour.duration}
-                  </Text>
-                </BlockStack>
+                <FeaturedTourLabel tour={tour} />
                 <Icon
                   name="Play"
                   size="sm"
                   className="text-muted-foreground shrink-0"
                   aria-hidden="true"
                 />
-              </button>
-            </li>
+              </InlineStack>
+            </Button>
           ))}
-        </ul>
+        </BlockStack>
       </BlockStack>
     </div>
+  );
+}
+
+function FeaturedTourLabel({ tour }: { tour: FeaturedTour }) {
+  return (
+    <BlockStack className="min-w-0">
+      <InlineStack gap="2" blockAlign="center">
+        <Paragraph size="sm" weight="semibold" className="truncate">
+          {tour.title}
+        </Paragraph>
+        {tour.tag && (
+          <Badge
+            size="sm"
+            variant={tour.tag === "new" ? "default" : "secondary"}
+            className="capitalize"
+          >
+            {tour.tag}
+          </Badge>
+        )}
+        {!tour.available && (
+          <Badge size="sm" variant="outline">
+            Coming soon
+          </Badge>
+        )}
+      </InlineStack>
+      <Text size="xs" tone="subdued">
+        {tour.duration}
+      </Text>
+    </BlockStack>
   );
 }
