@@ -2,6 +2,7 @@ import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
+import { Box } from "@/components/ui/box";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -119,7 +120,7 @@ interface FolderTreeProps {
 const FolderTreeSkeleton = () => (
   <BlockStack gap="1">
     {Array.from({ length: 3 }).map((_, i) => (
-      <Skeleton key={i} className="h-8 w-full" />
+      <Skeleton key={i} shape="block" width="full" />
     ))}
   </BlockStack>
 );
@@ -139,30 +140,37 @@ const FolderTree = withSuspenseWrapper(function FolderTreeContent({
   const rootFolders = allFolders.filter((f) => f.parentId === ROOT_FOLDER_ID);
 
   return (
-    <BlockStack
-      gap="1"
-      className="max-h-64 overflow-y-auto rounded-md border border-border p-2"
+    <Box
+      maxBlockSize="md"
+      overflow="scroll-y"
+      border="sm"
+      borderColor="base"
+      borderRadius="base"
+      padding="sm"
+      inlineSize="full"
     >
-      <FolderTreeItem
-        folderId={null}
-        label="Root"
-        isSelected={selectedFolderId === null}
-        isCurrent={currentFolderId === null}
-        onSelect={() => onSelect(null)}
-        depth={0}
-      />
-      {rootFolders.map((folder) => (
-        <FolderTreeBranch
-          key={folder.id}
-          folder={folder}
-          allFolders={allFolders}
-          selectedFolderId={selectedFolderId}
-          currentFolderId={currentFolderId}
-          onSelect={onSelect}
-          depth={1}
+      <BlockStack gap="1">
+        <FolderTreeItem
+          folderId={null}
+          label="Root"
+          isSelected={selectedFolderId === null}
+          isCurrent={currentFolderId === null}
+          onSelect={() => onSelect(null)}
+          depth={0}
         />
-      ))}
-    </BlockStack>
+        {rootFolders.map((folder) => (
+          <FolderTreeBranch
+            key={folder.id}
+            folder={folder}
+            allFolders={allFolders}
+            selectedFolderId={selectedFolderId}
+            currentFolderId={currentFolderId}
+            onSelect={onSelect}
+            depth={1}
+          />
+        ))}
+      </BlockStack>
+    </Box>
   );
 }, FolderTreeSkeleton);
 
@@ -245,10 +253,7 @@ function FolderTreeItem({
         disabled ? "This folder does not support moving pipelines" : undefined
       }
     >
-      <Icon
-        name={depth === 0 ? "House" : "Folder"}
-        className="size-4 shrink-0"
-      />
+      <Icon name={depth === 0 ? "House" : "Folder"} size="md" />
       <InlineStack gap="1" blockAlign="center">
         <Text size="sm">{label}</Text>
         {isCurrent && (

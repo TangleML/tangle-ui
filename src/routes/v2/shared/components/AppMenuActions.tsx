@@ -14,12 +14,7 @@ export function AppMenuActions() {
   const requiresAuthorization = isAuthorizationRequired();
 
   return (
-    <InlineStack
-      gap="2"
-      wrap="nowrap"
-      className="shrink-0"
-      data-testid="app-menu-actions"
-    >
+    <InlineStack gap="2" wrap="nowrap" data-testid="app-menu-actions">
       <EditorVersionToggle />
       <RouterLink to="/settings/backend">
         <TooltipButton tooltip="Settings" {...tracking("v2.header.settings")}>

@@ -23,8 +23,8 @@ export function InputAggregatorHandle() {
           className="border-0! h-full! w-full! transform-none! bg-blue-400!"
         />
       </div>
-      <InlineStack blockAlign="center" className="rounded-md relative">
-        <div className="text-xs text-blue-600! rounded-md px-2 py-1 bg-blue-50 border border-blue-200 border-dashed">
+      <InlineStack blockAlign="center">
+        <div className="relative text-xs text-blue-600! rounded-md px-2 py-1 bg-blue-50 border border-blue-200 border-dashed">
           + Add Input
         </div>
       </InlineStack>
