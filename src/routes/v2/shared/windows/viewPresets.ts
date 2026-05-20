@@ -14,6 +14,7 @@ export interface ViewPreset {
 
 export const DEFAULT_DOCK_AREAS: PresetDockAreas = {
   left: [
+    "tip-of-the-day",
     "runs-and-submission",
     "component-library",
     "pipeline-tree",
@@ -46,6 +47,7 @@ export const DEFAULT_VIEW_PRESET: ViewPreset = {
     "recent-runs",
     "component-library",
     "pipeline-details",
+    "tip-of-the-day",
   ]),
   dockAreas: DEFAULT_DOCK_AREAS,
 };
@@ -64,6 +66,7 @@ export const VIEW_PRESETS: ViewPreset[] = [
       "pipeline-details",
       "debug-panel",
       "recent-runs",
+      "tip-of-the-day",
     ]),
     dockAreas: DEFAULT_DOCK_AREAS,
   },
