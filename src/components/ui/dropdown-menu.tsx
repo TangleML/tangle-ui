@@ -43,14 +43,38 @@ const DropdownMenuSubTrigger = forwardRef<
 DropdownMenuSubTrigger.displayName =
   DropdownMenuPrimitive.SubTrigger.displayName;
 
+const subContentWidthClass = {
+  sm: "w-32",
+  md: "w-44",
+  lg: "w-52",
+  xl: "w-64",
+  "2xl": "w-80",
+  auto: "",
+} as const;
+
+const subContentMaxHeightClass = {
+  sm: "max-h-32",
+  md: "max-h-48",
+  lg: "max-h-64",
+  xl: "max-h-80",
+  screen: "max-h-[80vh]",
+  none: "",
+} as const;
+
 const DropdownMenuSubContent = forwardRef<
   ComponentRef<typeof DropdownMenuPrimitive.SubContent>,
-  ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.SubContent>
->(({ className, ...props }, ref) => (
+  ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.SubContent> & {
+    width?: keyof typeof subContentWidthClass;
+    maxHeight?: keyof typeof subContentMaxHeightClass;
+  }
+>(({ className, width = "auto", maxHeight = "none", ...props }, ref) => (
   <DropdownMenuPrimitive.SubContent
     ref={ref}
     className={cn(
-      "z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[--radix-dropdown-menu-content-transform-origin]",
+      "z-[9999] min-w-[8rem] rounded-md border bg-popover p-1 text-popover-foreground shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[--radix-dropdown-menu-content-transform-origin]",
+      subContentWidthClass[width],
+      subContentMaxHeightClass[maxHeight],
+      maxHeight !== "none" ? "overflow-y-auto" : "overflow-hidden",
       className,
     )}
     {...props}
