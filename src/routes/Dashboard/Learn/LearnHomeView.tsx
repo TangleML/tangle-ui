@@ -32,7 +32,7 @@ export function LearnHomeView() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <TipOfTheDay />
-        {DO_NOT_RELEASE && <FeaturedTours />}
+        <FeaturedTours />
       </div>
 
       <FeaturedExamples />

@@ -78,9 +78,9 @@ describe("<LearnHomeView/>", () => {
     expect(
       screen.getByRole("heading", { level: 3, name: /tip of the day/i }),
     ).toBeInTheDocument();
-    // expect(
-    //   screen.getByRole("heading", { level: 3, name: /featured tours/i }),
-    // ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 3, name: /featured tours/i }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { level: 2, name: /example pipelines/i }),
     ).toBeInTheDocument();
