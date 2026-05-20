@@ -95,7 +95,7 @@ export function ComponentRefBar({
                 size="sm"
                 className={`shrink-0 ${iconColor}`}
               />
-              <Text size="xs" className="truncate">
+              <Text size="xs" truncate>
                 {displayName}
               </Text>
               {componentRef.digest && (

@@ -24,8 +24,8 @@ export const HistoryContent = observer(function HistoryContent() {
         className="p-3 h-full items-center justify-center"
         align="center"
       >
-        <Icon name="History" size="md" className="text-slate-300" />
-        <Text size="xs" tone="subdued" className="text-center">
+        <Icon name="History" size="md" tone="weak" />
+        <Text size="xs" tone="subdued" align="center">
           No history yet
         </Text>
       </BlockStack>

@@ -63,7 +63,7 @@ export const CollapsedDockWindowMini = observer(
           }
         >
           <div className="shrink-0 border-b bg-white px-2 py-1.5">
-            <Text size="xs" weight="semibold" className="truncate">
+            <Text size="xs" weight="semibold" truncate>
               {model.title}
             </Text>
           </div>

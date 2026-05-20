@@ -74,8 +74,8 @@ export const IssueResolutionWindowContent = observer(
     if (issues.length === 0) {
       return (
         <BlockStack className="p-3" gap="2" align="center" inlineAlign="center">
-          <Icon name="CircleCheck" size="lg" className="text-slate-300" />
-          <Text size="xs" tone="subdued" className="text-center">
+          <Icon name="CircleCheck" size="lg" tone="weak" />
+          <Text size="xs" tone="subdued" align="center">
             No issues to fix
           </Text>
         </BlockStack>

@@ -124,9 +124,7 @@ export const TaskDetails = observer(function TaskDetails({
             wrap="nowrap"
             className="min-w-0"
           >
-            {isSubgraphTask && (
-              <Icon name="Workflow" size="sm" className="shrink-0" />
-            )}
+            {isSubgraphTask && <Icon name="Workflow" size="sm" />}
             {isRenaming ? (
               <Input
                 ref={renameInputRef}
@@ -187,7 +185,7 @@ export const TaskDetails = observer(function TaskDetails({
             className="min-w-0 flex-1 gap-1.5"
             {...tracking("v2.pipeline_editor.task_details.tab_arguments")}
           >
-            <Icon name="Parentheses" size="xs" className="shrink-0" />
+            <Icon name="Parentheses" size="xs" />
             <span className="truncate">Arguments</span>
           </TabsTrigger>
           <TabsTrigger
@@ -195,7 +193,7 @@ export const TaskDetails = observer(function TaskDetails({
             className="min-w-0 flex-1 gap-1.5"
             {...tracking("v2.pipeline_editor.task_details.tab_configuration")}
           >
-            <Icon name="Settings" size="xs" className="shrink-0" />
+            <Icon name="Settings" size="xs" />
             <span className="truncate">Config</span>
           </TabsTrigger>
           <TabsTrigger
@@ -203,7 +201,7 @@ export const TaskDetails = observer(function TaskDetails({
             className="flex-none w-8 px-0"
             {...tracking("v2.pipeline_editor.task_details.tab_annotations")}
           >
-            <Icon name="EllipsisVertical" size="xs" className="shrink-0" />
+            <Icon name="EllipsisVertical" size="xs" />
           </TabsTrigger>
         </TabsList>
 

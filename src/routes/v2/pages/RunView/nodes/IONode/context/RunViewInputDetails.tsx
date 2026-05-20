@@ -38,7 +38,7 @@ export const RunViewInputDetails = observer(function RunViewInputDetails({
       data-context-panel="input-overview"
     >
       <InlineStack gap="2" blockAlign="center">
-        <Icon name="Download" size="sm" className="text-blue-500 shrink-0" />
+        <Icon name="Download" size="sm" tone="info" />
         <CopyText size="lg" className="font-semibold wrap-anywhere">
           {input.name}
         </CopyText>

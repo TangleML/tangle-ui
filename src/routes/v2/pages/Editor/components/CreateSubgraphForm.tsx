@@ -37,7 +37,7 @@ export function CreateSubgraphForm({
     <BlockStack gap="3">
       <BlockStack gap="1">
         <Label className="text-gray-600">Create Subgraph</Label>
-        <Text size="xs" className="text-gray-400">
+        <Text size="xs" tone="weak">
           Group {selectedTaskCount} tasks into a reusable component
         </Text>
       </BlockStack>

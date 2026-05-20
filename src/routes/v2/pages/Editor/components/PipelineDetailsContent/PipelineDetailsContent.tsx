@@ -45,7 +45,7 @@ export const PipelineDetailsContent = observer(
     if (!pipelineSpec) {
       return (
         <BlockStack className="h-full items-center justify-center p-4">
-          <Icon name="FileQuestionMark" size="lg" className="text-gray-300" />
+          <Icon name="FileQuestionMark" size="lg" tone="weak" />
           <Text size="xs" tone="subdued" className="text-center mt-2">
             No pipeline loaded
           </Text>

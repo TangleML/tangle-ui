@@ -36,9 +36,7 @@ export function PipelineDetailsHeader({
         wrap="nowrap"
         className="min-w-0 w-full"
       >
-        {isNestedSubgraph && (
-          <Icon name="Workflow" size="sm" className="shrink-0" />
-        )}
+        {isNestedSubgraph && <Icon name="Workflow" size="sm" />}
         <Text size="md" weight="semibold" className="wrap-anywhere min-w-0">
           {pipelineName}
         </Text>

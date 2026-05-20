@@ -168,7 +168,7 @@ export const ThunderMenu = observer(function ThunderMenu({
                 )}
                 onClick={onCreateInputAndConnect}
               >
-                <Icon name="Plus" size="sm" className="text-green-600" />
+                <Icon name="Plus" size="sm" tone="success" />
                 Create Input
               </DropdownMenuItem>
             </>

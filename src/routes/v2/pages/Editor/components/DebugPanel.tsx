@@ -278,13 +278,7 @@ function ClipboardNodePreview({
     <BlockStack gap="1" className="pt-1">
       <BlockStack gap="0">
         {visible.map((s) => (
-          <Text
-            key={s.entityId}
-            size="xs"
-            font="mono"
-            tone="subdued"
-            className="truncate"
-          >
+          <Text key={s.entityId} size="xs" font="mono" tone="subdued" truncate>
             {s.$type}: {s.name}
           </Text>
         ))}

@@ -2,7 +2,8 @@ import { Handle, Position } from "@xyflow/react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
-import { Paragraph } from "@/components/ui/typography";
+import { Surface } from "@/components/ui/patterns/surface";
+import { Paragraph, Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 
 import type { IONodeViewProps } from "./IONode";
@@ -32,47 +33,44 @@ export function IONodeCard({
 
   return (
     <Card
+      density="compact"
       className={cn(
-        "border-2 max-w-60 p-0 cursor-pointer transition-all",
+        "border-2 max-w-60 cursor-pointer transition-all",
         bgColor,
         borderColor,
       )}
       onClick={onNodeClick}
     >
-      <CardHeader className="p-2">
-        <CardTitle className="wrap-break-word text-sm">{name}</CardTitle>
+      <CardHeader density="compact">
+        <CardTitle>
+          <Text size="sm" weight="semibold" wrap="break-word">
+            {name}
+          </Text>
+        </CardTitle>
         {description && (
-          <Paragraph tone="subdued" className="italic truncate text-xs">
+          <Paragraph size="xs" tone="subdued" italic truncate>
             {description}
           </Paragraph>
         )}
       </CardHeader>
-      <CardContent className="p-2 max-w-60">
+      <CardContent density="compact">
         <BlockStack gap="2">
-          <Paragraph size="xs" font="mono" className="truncate text-slate-700">
-            <span className="font-bold">Type:</span> {type ?? "Any"}
+          <Paragraph size="xs" font="mono" truncate tone="strong">
+            <Text weight="bold">Type:</Text> {type ?? "Any"}
           </Paragraph>
 
-          <InlineStack gap="1" className="p-2 bg-white rounded-lg w-full">
-            <Paragraph
-              size="xs"
-              font="mono"
-              weight="bold"
-              className="text-slate-700"
-            >
-              Value:
-            </Paragraph>
-            <Paragraph
-              size="xs"
-              font="mono"
-              tone="subdued"
-              className="truncate"
-            >
-              {isInput
-                ? (defaultValue ?? "No value")
-                : (connectedValue ?? "No value")}
-            </Paragraph>
-          </InlineStack>
+          <Surface>
+            <InlineStack gap="1">
+              <Paragraph size="xs" font="mono" weight="bold" tone="strong">
+                Value:
+              </Paragraph>
+              <Paragraph size="xs" font="mono" tone="subdued" truncate>
+                {isInput
+                  ? (defaultValue ?? "No value")
+                  : (connectedValue ?? "No value")}
+              </Paragraph>
+            </InlineStack>
+          </Surface>
         </BlockStack>
         <Handle
           type={isInput ? "source" : "target"}

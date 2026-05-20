@@ -27,13 +27,13 @@ function StatusIcon({ hasIssues }: { hasIssues: boolean }) {
   if (hasIssues) {
     return (
       <span className="inline-flex shrink-0">
-        <Icon name="TriangleAlert" size="sm" className="text-amber-500" />
+        <Icon name="TriangleAlert" size="sm" tone="warning" />
       </span>
     );
   }
   return (
     <span className="inline-flex shrink-0">
-      <Icon name="CircleCheck" size="sm" className="text-green-500" />
+      <Icon name="CircleCheck" size="sm" tone="success" />
     </span>
   );
 }
@@ -90,7 +90,7 @@ export function UpgradeCandidateRow({
           <Badge variant="secondary" size="sm">
             {truncateDigest(candidate.currentDigest)}
           </Badge>
-          <Icon name="ArrowRight" size="xs" className="text-muted-foreground" />
+          <Icon name="ArrowRight" size="xs" tone="subdued" />
           <Badge variant="secondary" size="sm">
             {truncateDigest(candidate.newComponentRef.digest ?? "")}
           </Badge>

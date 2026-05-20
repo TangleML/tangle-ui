@@ -68,7 +68,7 @@ export const RunsAndSubmissionContent = observer(() => {
 function EmptyState() {
   return (
     <BlockStack fill className="p-4" inlineAlign="center" align="center">
-      <Icon name="FileQuestionMark" size="lg" className="text-gray-300" />
+      <Icon name="FileQuestionMark" size="lg" tone="weak" />
       <Text size="sm" tone="subdued" className="text-center mt-2">
         No pipeline loaded
       </Text>

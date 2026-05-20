@@ -8,6 +8,7 @@ import { OutputTypeSelector } from "@/components/shared/ReactFlow/FlowCanvas/Tas
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { Surface } from "@/components/ui/patterns/surface";
 import {
   Tooltip,
   TooltipContent,
@@ -271,11 +272,7 @@ export const TaskNodeCard = observer(function TaskNodeCard({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span>
-                      <Icon
-                        name="Workflow"
-                        size="sm"
-                        className="text-blue-600"
-                      />
+                      <Icon name="Workflow" size="sm" tone="info" />
                     </span>
                   </TooltipTrigger>
                   <TooltipContent side="top">Subgraph</TooltipContent>
@@ -285,11 +282,7 @@ export const TaskNodeCard = observer(function TaskNodeCard({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span>
-                      <Icon
-                        name="ZapOff"
-                        size="sm"
-                        className="text-orange-400"
-                      />
+                      <Icon name="ZapOff" size="sm" tone="warning" />
                     </span>
                   </TooltipTrigger>
                   <TooltipContent side="top">Cache Disabled</TooltipContent>
@@ -319,17 +312,13 @@ export const TaskNodeCard = observer(function TaskNodeCard({
 
       <CardContent className="p-2 flex flex-col gap-2">
         {showInputsSection && (
-          <div
-            className={cn(
-              "p-2 rounded-lg",
-              !palette && "bg-gray-200/50",
-              !isAggregator &&
-                collapsed &&
-                hiddenInputCount > 0 &&
-                "cursor-pointer hover:bg-gray-200/80",
-            )}
+          <Surface
+            hoverable={
+              !isAggregator && collapsed && hiddenInputCount > 0 ? true : false
+            }
+            // Per-node palette colour is a dynamic value (layer-4 exception per the plan).
             style={palette ? { backgroundColor: palette.sectionBg } : undefined}
-            onClickCapture={
+            onClick={
               !isAggregator && collapsed && hiddenInputCount > 0
                 ? (e) => {
                     e.stopPropagation();
@@ -363,20 +352,14 @@ export const TaskNodeCard = observer(function TaskNodeCard({
                 </span>
               )}
             </BlockStack>
-          </div>
+          </Surface>
         )}
 
         {(outputs.length > 0 || isAggregator) && (
-          <div
-            className={cn(
-              "p-2 rounded-lg",
-              !palette && "bg-gray-200/50",
-              collapsed &&
-                hiddenOutputCount > 0 &&
-                "cursor-pointer hover:bg-gray-200/80",
-            )}
+          <Surface
+            hoverable={collapsed && hiddenOutputCount > 0 ? true : false}
             style={palette ? { backgroundColor: palette.sectionBg } : undefined}
-            onClickCapture={
+            onClick={
               collapsed && hiddenOutputCount > 0
                 ? (e) => {
                     e.stopPropagation();
@@ -434,7 +417,7 @@ export const TaskNodeCard = observer(function TaskNodeCard({
                 </span>
               )}
             </BlockStack>
-          </div>
+          </Surface>
         )}
       </CardContent>
     </Card>

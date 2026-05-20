@@ -20,11 +20,7 @@ function truncateDigest(digest: string): string {
 function EmptyDetail() {
   return (
     <BlockStack className="flex-1 items-center justify-center p-4" gap="1">
-      <Icon
-        name="MousePointerClick"
-        size="md"
-        className="text-muted-foreground"
-      />
+      <Icon name="MousePointerClick" size="md" tone="subdued" />
       <Text size="xs" tone="subdued">
         Select a component to see details
       </Text>
@@ -155,11 +151,7 @@ export function UpgradeCandidateDetail({
             <Badge variant="secondary" size="sm">
               {truncateDigest(candidate.currentDigest)}
             </Badge>
-            <Icon
-              name="ArrowRight"
-              size="xs"
-              className="text-muted-foreground"
-            />
+            <Icon name="ArrowRight" size="xs" tone="subdued" />
             <Badge variant="default" size="sm">
               {truncateDigest(candidate.newComponentRef.digest ?? "")}
             </Badge>
@@ -183,7 +175,7 @@ export function UpgradeCandidateDetail({
           </Text>
           {hasIssues ? (
             <InlineStack gap="1" blockAlign="center">
-              <Icon name="TriangleAlert" size="sm" className="text-amber-500" />
+              <Icon name="TriangleAlert" size="sm" tone="warning" />
               <Text size="xs">
                 {candidate.predictedIssues.length} issue
                 {candidate.predictedIssues.length !== 1 ? "s" : ""} detected
@@ -191,7 +183,7 @@ export function UpgradeCandidateDetail({
             </InlineStack>
           ) : (
             <InlineStack gap="1" blockAlign="center">
-              <Icon name="CircleCheck" size="sm" className="text-green-500" />
+              <Icon name="CircleCheck" size="sm" tone="success" />
               <Text size="xs">No issues — safe to upgrade</Text>
             </InlineStack>
           )}

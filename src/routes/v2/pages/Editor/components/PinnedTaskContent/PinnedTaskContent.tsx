@@ -61,7 +61,7 @@ export const PinnedTaskContent = observer(function PinnedTaskContent({
             className="flex-1 gap-1 min-w-0"
             {...tracking("v2.pipeline_editor.pinned_task_window.tab_details")}
           >
-            <Icon name="Info" size="sm" className="shrink-0" />
+            <Icon name="Info" size="sm" />
             <span className="truncate">Details</span>
           </TabsTrigger>
           <TabsTrigger
@@ -69,7 +69,7 @@ export const PinnedTaskContent = observer(function PinnedTaskContent({
             className="flex-1 gap-1 min-w-0"
             {...tracking("v2.pipeline_editor.pinned_task_window.tab_io")}
           >
-            <Icon name="ListFilter" size="sm" className="shrink-0" />
+            <Icon name="ListFilter" size="sm" />
             <span className="truncate">I/O</span>
           </TabsTrigger>
           <TabsTrigger
@@ -79,7 +79,7 @@ export const PinnedTaskContent = observer(function PinnedTaskContent({
               "v2.pipeline_editor.pinned_task_window.tab_implementation",
             )}
           >
-            <Icon name="Code" size="sm" className="shrink-0" />
+            <Icon name="Code" size="sm" />
             <span className="truncate">Code</span>
           </TabsTrigger>
         </TabsList>
@@ -132,7 +132,7 @@ interface NotFoundStateProps {
 function NotFoundState({ entityId }: NotFoundStateProps) {
   return (
     <BlockStack className="h-full items-center justify-center p-4 bg-white">
-      <Icon name="CircleAlert" size="lg" className="text-gray-300" />
+      <Icon name="CircleAlert" size="lg" tone="weak" />
       <Text size="sm" tone="subdued" className="text-center mt-2">
         Task not found
       </Text>

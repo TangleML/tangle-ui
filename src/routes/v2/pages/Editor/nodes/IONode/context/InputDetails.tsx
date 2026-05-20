@@ -132,10 +132,10 @@ export const InputDetails = observer(function InputDetails({
         </BlockStack>
 
         <InlineStack gap="2">
-          <Text size="xs" className="text-gray-400">
+          <Text size="xs" tone="weak">
             Optional:
           </Text>
-          <Text size="xs" weight="semibold" className="text-muted-foreground">
+          <Text size="xs" weight="semibold" tone="subdued">
             {input.optional ? "Yes" : "No"}
           </Text>
         </InlineStack>

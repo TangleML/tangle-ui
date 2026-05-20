@@ -36,7 +36,7 @@ export function PipelineDetailsCollapsibleSection({
         <Icon
           name={open ? "ChevronDown" : "ChevronRight"}
           size="xs"
-          className="text-muted-foreground"
+          tone="subdued"
         />
       </CollapsibleTrigger>
       <CollapsibleContent className="px-4 py-3">{children}</CollapsibleContent>

@@ -9,12 +9,8 @@ export function IssuesBanner({ count }: { count: number }) {
       blockAlign="center"
       className="px-2 py-1 bg-amber-50 border border-amber-200 rounded-md"
     >
-      <Icon
-        name="TriangleAlert"
-        size="xs"
-        className="text-amber-500 shrink-0"
-      />
-      <Text size="xs" className="text-amber-700">
+      <Icon name="TriangleAlert" size="xs" tone="warning" />
+      <Text size="xs" tone="warning">
         {count} predicted {count === 1 ? "issue" : "issues"}
       </Text>
     </InlineStack>

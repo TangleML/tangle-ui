@@ -49,14 +49,14 @@ export const RunsMenu = observer(function RunsMenu() {
           }}
           disabled={hasErrors}
         >
-          <Icon name="Split" size="sm" className="rotate-90" />
+          <Icon name="Split" size="sm" rotate="90" />
           Submit with Arguments
         </DropdownMenuItem>
         {errorCount > 0 && (
           <>
             <DropdownMenuSeparator />
             <div className="px-2 py-1.5">
-              <Text size="xs" className="text-red-500">
+              <Text size="xs" tone="critical">
                 {errorCount} validation {errorCount === 1 ? "issue" : "issues"}
               </Text>
             </div>

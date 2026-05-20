@@ -34,13 +34,7 @@ export function PipelineNavigationBreadcrumb({
         const label = getBreadcrumbLabel(index, entry);
         return (
           <Fragment key={`${entry.specId}-${index}`}>
-            {index > 0 && (
-              <Icon
-                name="ChevronRight"
-                size="xs"
-                className="shrink-0 text-muted-foreground"
-              />
-            )}
+            {index > 0 && <Icon name="ChevronRight" size="xs" tone="subdued" />}
             {!isLast && (
               <Button
                 type="button"

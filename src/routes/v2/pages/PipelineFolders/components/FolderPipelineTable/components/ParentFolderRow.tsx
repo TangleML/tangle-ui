@@ -42,10 +42,7 @@ export function ParentFolderRow({ breadcrumbPath }: ParentFolderRowProps) {
       <TableCell />
       <TableCell>
         <InlineStack gap="2" blockAlign="center">
-          <Icon
-            name="CornerLeftUp"
-            className="text-muted-foreground shrink-0"
-          />
+          <Icon name="CornerLeftUp" tone="subdued" />
           <Text size="sm" tone="subdued">
             ..
           </Text>

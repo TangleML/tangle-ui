@@ -11,7 +11,7 @@ interface StatItemProps {
 export function StatItem({ label, value }: StatItemProps) {
   return (
     <InlineStack blockAlign="center" className="justify-between py-1" gap="2">
-      <Text size="xs" className="text-gray-500">
+      <Text size="xs" tone="subdued">
         {label}
       </Text>
       <Text size="xs" weight="semibold" className="font-mono text-gray-700">

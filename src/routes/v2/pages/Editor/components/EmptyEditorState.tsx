@@ -37,7 +37,7 @@ export function EmptyEditorState() {
         gap="4"
       >
         <InlineStack gap="2" blockAlign="center">
-          <Icon name="FolderOpen" size="md" className="text-stone-500" />
+          <Icon name="FolderOpen" size="md" tone="subdued" />
           <Text as="h2" size="lg" weight="semibold">
             Open Pipeline
           </Text>
