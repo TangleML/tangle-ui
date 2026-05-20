@@ -1,14 +1,17 @@
+import { Box } from "@/components/ui/box";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 
 export function ContextPanelEmptyState() {
   return (
-    <BlockStack className="h-full items-center justify-center p-4">
-      <Icon name="MousePointerClick" size="lg" tone="weak" />
-      <Text size="sm" tone="subdued" className="text-center mt-2">
-        Select a node to view details
-      </Text>
-    </BlockStack>
+    <Box padding="lg" blockSize="full" inlineSize="full">
+      <BlockStack fill gap="2">
+        <Icon name="MousePointerClick" size="lg" tone="weak" />
+        <Text size="sm" tone="subdued" align="center">
+          Select a node to view details
+        </Text>
+      </BlockStack>
+    </Box>
   );
 }

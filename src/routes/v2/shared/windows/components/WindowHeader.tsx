@@ -1,6 +1,7 @@
 import type { CSSProperties, MouseEvent, ReactNode } from "react";
 
 import { InlineStack } from "@/components/ui/layout";
+import { Truncating } from "@/components/ui/patterns/truncating";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 
@@ -38,24 +39,19 @@ export function WindowHeader({
       style={style}
       onMouseDown={onMouseDown}
     >
-      <InlineStack
-        gap="1"
-        blockAlign="center"
-        wrap="nowrap"
-        className="min-w-0 flex-1 overflow-hidden"
-      >
-        {leadingIcon}
-        <Text
-          size="xs"
-          weight="semibold"
-          className={cn(
-            "truncate",
-            tone === "dark" ? "text-gray-100" : "text-gray-700",
-          )}
-        >
-          {title}
-        </Text>
-      </InlineStack>
+      <Truncating>
+        <InlineStack gap="1" blockAlign="center" wrap="nowrap">
+          {leadingIcon}
+          <Text
+            size="xs"
+            weight="semibold"
+            truncate
+            tone={tone === "dark" ? "inverted" : "strong"}
+          >
+            {title}
+          </Text>
+        </InlineStack>
+      </Truncating>
       <div
         className={cn(
           actionsOnHover &&

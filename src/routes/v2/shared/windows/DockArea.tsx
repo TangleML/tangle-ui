@@ -1,7 +1,9 @@
 import { observer } from "mobx-react-lite";
 import { useEffect, useRef } from "react";
 
+import { Box } from "@/components/ui/box";
 import { BlockStack } from "@/components/ui/layout";
+import { ScrollRegion } from "@/components/ui/patterns/scroll-region";
 import { VerticalResizeHandle } from "@/components/ui/resize-handle";
 import { cn } from "@/lib/utils";
 import { focusModeStore } from "@/routes/v2/shared/hooks/useFocusMode";
@@ -92,19 +94,24 @@ export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
         className={cn("relative shrink-0 bg-gray-100 flex flex-col")}
         style={{ width: COLLAPSED_DOCK_AREA_WIDTH }}
       >
-        <BlockStack
-          gap="1"
-          align="center"
-          className="relative z-20 min-h-0 flex-1 overflow-y-auto overflow-x-hidden hide-scrollbar py-1 px-0.5"
+        <ScrollRegion
+          axis="y"
+          scrollbar="hidden"
+          position="relative"
+          zIndex="20"
         >
-          {visibleWindowsWithMini.map((windowId) => (
-            <CollapsedDockWindowMini
-              key={windowId}
-              windowId={windowId}
-              dockSide={side}
-            />
-          ))}
-        </BlockStack>
+          <Box paddingBlock="xs" paddingInline="xs">
+            <BlockStack gap="1" align="center">
+              {visibleWindowsWithMini.map((windowId) => (
+                <CollapsedDockWindowMini
+                  key={windowId}
+                  windowId={windowId}
+                  dockSide={side}
+                />
+              ))}
+            </BlockStack>
+          </Box>
+        </ScrollRegion>
         <VerticalResizeHandle
           side={handleSide}
           minWidth={COLLAPSED_DOCK_AREA_WIDTH}

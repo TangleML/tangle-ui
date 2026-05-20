@@ -3,7 +3,7 @@ import { observer } from "mobx-react-lite";
 import type { MouseEvent, ReactElement } from "react";
 
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
-import { Card } from "@/components/ui/card";
+import { Surface } from "@/components/ui/patterns/surface";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import type {
@@ -187,11 +187,11 @@ function NodeEffectWrapper({
 
 function TaskNodeNotFound({ entityId }: { entityId: string }) {
   return (
-    <Card className="min-w-45 max-w-70 rounded-xl border-2 border-red-300 p-4">
+    <Surface level={1} tone="critical">
       <Text size="sm" tone="subdued">
         Task not found: {entityId}
       </Text>
-    </Card>
+    </Surface>
   );
 }
 
