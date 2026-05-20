@@ -7,6 +7,8 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
 import { tracking } from "@/utils/tracking";
 
+import { tours as tourCards } from "./tours";
+
 interface FeaturedTour {
   id: string;
   title: string;
@@ -14,28 +16,24 @@ interface FeaturedTour {
   tag?: "new" | "popular";
 }
 
-const STUB_TOURS: FeaturedTour[] = [
-  {
-    id: "first-pipeline",
-    title: "Build your first pipeline",
-    duration: "4 min",
-    tag: "popular",
-  },
-  { id: "using-secrets", title: "Using secrets safely", duration: "2 min" },
-  {
-    id: "multinode-tasks",
-    title: "Run multinode tasks",
-    duration: "3 min",
-    tag: "new",
-  },
-  {
-    id: "custom-components",
-    title: "Create a custom component",
-    duration: "5 min",
-  },
+const FEATURED_TOUR_IDS: Array<Pick<FeaturedTour, "id" | "tag">> = [
+  { id: "navigating-editor", tag: "new" },
+  { id: "first-pipeline", tag: "popular" },
+  { id: "using-secrets" },
+  { id: "multinode-tasks" },
 ];
 
+function buildFeaturedTours(): FeaturedTour[] {
+  return FEATURED_TOUR_IDS.flatMap(({ id, tag }) => {
+    const card = tourCards.find((c) => c.id === id);
+    if (!card) return [];
+    return [{ id, title: card.title, duration: card.duration, tag }];
+  });
+}
+
 export function FeaturedTours() {
+  const featured = buildFeaturedTours();
+
   return (
     <div className="h-full rounded-xl border border-border bg-card p-5">
       <BlockStack gap="3" className="h-full">
@@ -61,11 +59,13 @@ export function FeaturedTours() {
         </InlineStack>
 
         <ul className="list-none p-0 m-0 flex flex-col gap-1 flex-1">
-          {STUB_TOURS.map((tour) => (
+          {featured.map((tour) => (
             <li key={tour.id}>
-              <button
+              <Button
                 type="button"
-                className="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-md hover:bg-muted/60 text-left"
+                variant="ghost"
+                disabled
+                className="w-full h-auto justify-between gap-3 px-3 py-2 text-left"
                 {...tracking("learning_hub.tours.start", { tour_id: tour.id })}
               >
                 <BlockStack gap="0" className="min-w-0">
@@ -82,6 +82,9 @@ export function FeaturedTours() {
                         {tour.tag}
                       </Badge>
                     )}
+                    <Badge size="sm" variant="outline">
+                      Coming soon
+                    </Badge>
                   </InlineStack>
                   <Text size="xs" tone="subdued">
                     {tour.duration}
@@ -93,7 +96,7 @@ export function FeaturedTours() {
                   className="text-muted-foreground shrink-0"
                   aria-hidden="true"
                 />
-              </button>
+              </Button>
             </li>
           ))}
         </ul>
