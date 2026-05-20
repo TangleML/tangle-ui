@@ -7,14 +7,24 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Heading, Paragraph } from "@/components/ui/typography";
 import { tracking } from "@/utils/tracking";
 
-const STUB_TIP = {
-  id: "subgraph-navigation",
-  category: "Editor",
-  title: "Use subgraphs to keep complex pipelines readable",
-  body: "Double-click any task to dive into its subgraph. Use the breadcrumbs at the top of the editor to navigate back up — perfect for organising large pipelines without clutter.",
-};
+import { tips } from "./tips";
+
+function getDayOfYear(date: Date) {
+  const start = Date.UTC(date.getUTCFullYear(), 0, 0);
+
+  const now = Date.UTC(
+    date.getUTCFullYear(),
+    date.getUTCMonth(),
+    date.getUTCDate(),
+  );
+
+  return Math.floor((now - start) / 86_400_000);
+}
 
 export function TipOfTheDay() {
+  const index = getDayOfYear(new Date()) % tips.length;
+  const tip = tips[index];
+
   return (
     <div className="h-full rounded-xl border border-border bg-card p-5">
       <BlockStack gap="3" className="h-full">
@@ -29,16 +39,16 @@ export function TipOfTheDay() {
             <Heading level={3}>Tip of the day</Heading>
           </InlineStack>
           <Badge size="sm" variant="secondary">
-            {STUB_TIP.category}
+            {tip.category}
           </Badge>
         </InlineStack>
 
         <BlockStack gap="1" className="flex-1">
           <Paragraph size="sm" weight="semibold">
-            {STUB_TIP.title}
+            {tip.title}
           </Paragraph>
           <Paragraph size="sm" tone="subdued">
-            {STUB_TIP.body}
+            {tip.body}
           </Paragraph>
         </BlockStack>
 
