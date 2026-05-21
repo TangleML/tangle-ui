@@ -31,29 +31,29 @@ Pipeline Studio is a React Flow-based ML pipeline editor with:
 
 ```bash
 # Open app with Playwright codegen for locator discovery
-npx playwright codegen http://localhost:3000
+pnpm exec playwright codegen http://localhost:3000
 
 # Record actions and generate test code
-npx playwright codegen http://localhost:3000 --output tests/e2e/recorded.spec.ts
+pnpm exec playwright codegen http://localhost:3000 --output tests/e2e/recorded.spec.ts
 ```
 
 ### Running Tests
 
 ```bash
-npm run test:e2e              # Run all E2E tests (headless)
-npm run test:e2e:ui           # Playwright UI (interactive debugging)
-npm run test:e2e:headed       # Headed mode (see the browser)
-npx playwright test file.spec.ts        # Specific file
-npx playwright test -g "test name"      # Specific test by name
-npx playwright test --debug             # Debug mode with step-through
-npx playwright test --trace on          # Trace viewer on failure
+pnpm run test:e2e              # Run all E2E tests (headless)
+pnpm run test:e2e:ui           # Playwright UI (interactive debugging)
+pnpm run test:e2e:headed       # Headed mode (see the browser)
+pnpm exec playwright test file.spec.ts        # Specific file
+pnpm exec playwright test -g "test name"      # Specific test by name
+pnpm exec playwright test --debug             # Debug mode with step-through
+pnpm exec playwright test --trace on          # Trace viewer on failure
 ```
 
 ### Locator Exploration
 
 ```bash
 # Open Playwright Inspector to explore locators
-npx playwright open http://localhost:3000
+pnpm exec playwright open http://localhost:3000
 
 # In codegen: Click "Pick locator" → Click element → Copy locator
 ```
@@ -65,7 +65,7 @@ Use `playwright-cli` for interactive debugging and probing. It's designed for co
 **Install globally:**
 
 ```bash
-npm install -g @playwright/cli@latest
+pnpm add -g @playwright/cli@latest
 ```
 
 ### Core Debugging Workflow
@@ -173,8 +173,8 @@ Opens a dashboard showing:
 ### Trace Analysis (for test failures)
 
 ```bash
-npx playwright test failing-test.spec.ts --trace on
-npx playwright show-trace test-results/*/trace.zip
+pnpm exec playwright test failing-test.spec.ts --trace on
+pnpm exec playwright show-trace test-results/*/trace.zip
 ```
 
 ## Test Patterns
@@ -847,7 +847,7 @@ const popover = page.getByTestId("color-picker-popover");
 **Always run before committing:**
 
 ```bash
-npm run validate  # Runs format, lint:fix, typecheck, and knip
+pnpm run validate  # Runs format, lint:fix, typecheck, and knip
 ```
 
 This catches:

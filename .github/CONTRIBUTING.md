@@ -94,8 +94,8 @@ A small, focused Pull Request is easier to understand and review, which means it
 
 Tests prove that your change works correctly and prevent it from breaking in the future.
 
-- Use `npm run test` to run unit tests (**Vitest**).
-- Use `npm run test:e2e:ci` to run end-to-end tests (**Playwright**).
+- Use `pnpm test` to run unit tests (**Vitest**).
+- Use `pnpm run test:e2e:ci` to run end-to-end tests (**Playwright**).
 
 ### Match existing code style
 
@@ -106,10 +106,10 @@ Read through the following resources to familiarize with our programming standar
 
 Use the following commands to lint and format code before submitting for review:
 
-- `npm run format` to format code.
-- `npm run lint` to detect linting errors.
-- `npm run lint:fix` to fix linting errors.
-- `npm run lint:e2e` to detect linting errors in end-to-end tests.
+- `pnpm run format` to format code.
+- `pnpm run lint` to detect linting errors.
+- `pnpm run lint:fix` to fix linting errors.
+- `pnpm run lint:e2e` to detect linting errors in end-to-end tests.
 
 Propose new standards in an issue or small proof-of-concept pull request. Changes that introduce new standards without discussion first won't receive complete review and are unlikely to be merged.
 

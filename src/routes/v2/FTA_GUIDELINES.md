@@ -8,7 +8,7 @@ FTA (File Type Analysis) scores measure file complexity. Lower is better.
 | Could be better   | 50–60       |
 | Needs improvement | >= 60       |
 
-Run `npm run fta -- src/routes/v2` to check all files, or `npm run fta -- <filepath> --json` for detailed per-file metrics.
+Run `pnpm run fta -- src/routes/v2` to check all files, or `pnpm run fta -- <filepath> --json` for detailed per-file metrics.
 
 ## What Drives the Score
 
@@ -95,4 +95,4 @@ A high number of unique imports inflates Halstead vocabulary. If a file imports 
 - [ ] No ternary chains deeper than 2 levels in JSX
 - [ ] Pure functions are in a `.utils.ts` sibling, not inline
 - [ ] Imports come from < 10 distinct modules
-- [ ] Run `npm run fta -- <filepath> --json` and confirm score < 50
+- [ ] Run `pnpm run fta -- <filepath> --json` and confirm score < 50

@@ -24,10 +24,10 @@ The app is under active development and supported by Shopify Engineers.
 
 ### Standalone Web App - Instructions
 
-1. Install [Node Package Manager](https://www.npmjs.com/) (`npm`) & `node`
+1. Install [Node](https://nodejs.org/) and [pnpm](https://pnpm.io/installation)
 2. Fork the `tangle-ui` repo - we recommend colocating the repo with the backend
-3. Navigate to the forked repo and install dependencies with `npm i`
-4. You are now ready to go! Run the app with `npm run start` 🚀
+3. Navigate to the forked repo and install dependencies with `pnpm install`
+4. You are now ready to go! Run the app with `pnpm start` 🚀
 
 You can now run tangle-ui as a standalone web app! Pipelines and data will be stored in browser storage. If you want to make use of backend features, such as executing runs you will need to connect to a backend.
 
@@ -49,7 +49,7 @@ If you find you are blocked by CORS, you will, for now, need to use the manual s
 
 1. Complete the installation steps for the backend as specified in the [backend repo](https://github.com/TangleML/tangle)
 2. Co-locate your local `tangle-ui` repo inside your local `tangle` repo
-3. Run `npm run build` inside `tangle-ui`
+3. Run `pnpm run build` inside `tangle-ui`
 4. Start the backend using the provided instructions in the `tangle` repo
 
 If you complete these steps the app will launch on `127.0.0.1:8000` with the latest build you've created on the frontend.

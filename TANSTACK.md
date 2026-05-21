@@ -5,8 +5,8 @@ Welcome to your new TanStack app!
 To run this application:
 
 ```bash
-npm install
-npm start
+pnpm install
+pnpm start
 ```
 
 # Building For Production
@@ -14,7 +14,7 @@ npm start
 To build this application for production:
 
 ```bash
-npm run build
+pnpm run build
 ```
 
 ## Testing
@@ -22,7 +22,7 @@ npm run build
 This project uses [Vitest](https://vitest.dev/) for testing. You can run the tests with:
 
 ```bash
-npm run test
+pnpm test
 ```
 
 ## Styling
@@ -136,7 +136,7 @@ More information on layouts can be found in the [Layouts documentation](hthttps:
 First you need to add the Vite plugin for Tanstack Router:
 
 ```bash
-npm install -D @tanstack/router-plugin
+pnpm add -D @tanstack/router-plugin
 ```
 
 From there you need to update your `vite.config.js` file to use the plugin:
@@ -304,7 +304,7 @@ React-Query is an excellent addition or alternative to route loading and integra
 First add your dependencies:
 
 ```bash
-npm install @tanstack/react-query @tanstack/react-query-devtools
+pnpm add @tanstack/react-query @tanstack/react-query-devtools
 ```
 
 Next we'll need to creata query client and provider. We recommend putting those in `main.tsx`.
@@ -385,7 +385,7 @@ Another common requirement for React applications is state management. There are
 First you need to add TanStack Store as a dependency:
 
 ```bash
-npm install @tanstack/store
+pnpm add @tanstack/store
 ```
 
 Now let's create a simple counter in the `src/App.tsx` file as a demonstration.

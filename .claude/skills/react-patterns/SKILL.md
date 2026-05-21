@@ -105,7 +105,7 @@ This project uses the React Compiler for automatic memoization. Files/directorie
 When a file is added to `react-compiler.config.js`:
 
 - Remove unnecessary `useCallback` and `useMemo` (compiler handles this)
-- Verify no compiler violations with `npm run validate`
+- Verify no compiler violations with `pnpm run validate`
 - Test the component still works correctly
 - **Consolidate entries by folder** when all files in a directory are compiler-enabled (e.g., use `/path/to/folder` instead of listing each file individually)
 

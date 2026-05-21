@@ -7,7 +7,7 @@
 ## Installation
 
 ```bash
-npm install -g @playwright/cli@latest
+pnpm add -g @playwright/cli@latest
 playwright-cli --help
 ```
 
