@@ -5,7 +5,7 @@ import type {
 } from "@/models/componentSpec";
 import { isGraphImplementation } from "@/utils/componentSpec";
 
-export interface AiInputSpec {
+interface AiInputSpec {
   $id: string;
   name: string;
   type?: TypeSpecType;
@@ -14,14 +14,14 @@ export interface AiInputSpec {
   optional?: boolean;
 }
 
-export interface AiOutputSpec {
+interface AiOutputSpec {
   $id: string;
   name: string;
   type?: TypeSpecType;
   description?: string;
 }
 
-export interface AiComponentRef {
+interface AiComponentRef {
   name?: string;
   url?: string;
   spec?: {
@@ -31,7 +31,7 @@ export interface AiComponentRef {
   };
 }
 
-export interface AiTaskSpec {
+interface AiTaskSpec {
   $id: string;
   name: string;
   componentRef: AiComponentRef;
@@ -39,7 +39,7 @@ export interface AiTaskSpec {
   isSubgraph?: boolean;
 }
 
-export interface AiBindingSpec {
+interface AiBindingSpec {
   $id: string;
   sourceEntityId: string;
   sourcePortName: string;
