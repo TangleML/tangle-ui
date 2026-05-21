@@ -6,6 +6,9 @@ updates:
       interval: daily
     open-pull-requests-limit: 100
     registries: "*"
+    cooldown:
+      default-days: 2
+      semver-major-days: 7
     groups:
       npm-minor-patch:
         patterns:
