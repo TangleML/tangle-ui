@@ -12,6 +12,7 @@ import {
 } from "@/routes/v2/pages/Editor/store/nameUtils";
 import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
 import type { ParentContext } from "@/routes/v2/shared/store/navigationStore";
+import { EDITOR_POSITION_ANNOTATION } from "@/utils/annotations";
 
 import {
   propagateInputDelete,
@@ -33,7 +34,7 @@ export function addInput(
       $id: idGen.next("input"),
       name: inputName,
     });
-    input.annotations.set("editor.position", {
+    input.annotations.set(EDITOR_POSITION_ANNOTATION, {
       x: position.x,
       y: position.y,
     });
@@ -54,7 +55,7 @@ export function addOutput(
       $id: idGen.next("output"),
       name: outputName,
     });
-    output.annotations.set("editor.position", {
+    output.annotations.set(EDITOR_POSITION_ANNOTATION, {
       x: position.x,
       y: position.y,
     });
@@ -242,7 +243,7 @@ export function createInputAndConnect(
   if (targetTaskIds.length === 0) return;
 
   const firstTask = spec.tasks.find((t) => targetTaskIds.includes(t.$id));
-  const taskPos = firstTask?.annotations.get("editor.position") ?? {
+  const taskPos = firstTask?.annotations.get(EDITOR_POSITION_ANNOTATION) ?? {
     x: 0,
     y: 0,
   };

@@ -5,6 +5,7 @@ import useToastNotification from "@/hooks/useToastNotification";
 import { useTask } from "@/routes/v2/pages/Editor/nodes/TaskNode/context/TaskDetails/hooks/useTask";
 import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskActions";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
+import { EDITOR_POSITION_ANNOTATION } from "@/utils/annotations";
 import { getErrorMessage } from "@/utils/string";
 
 interface DuplicateTaskButtonProps {
@@ -20,7 +21,7 @@ export function DuplicateTaskButton({ entityId }: DuplicateTaskButtonProps) {
   const { mutate, isPending } = useMutation({
     mutationFn: async () => {
       if (!spec || !task) throw new Error("No spec or task available");
-      const position = task.annotations.get("editor.position") ?? {
+      const position = task.annotations.get(EDITOR_POSITION_ANNOTATION) ?? {
         x: 0,
         y: 0,
       };

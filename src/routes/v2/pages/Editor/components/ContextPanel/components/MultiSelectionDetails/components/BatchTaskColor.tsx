@@ -7,8 +7,7 @@ import { Text } from "@/components/ui/typography";
 import type { Task } from "@/models/componentSpec";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskActions";
-
-const TASK_COLOR_ANNOTATION = "tangleml.com/editor/task-color";
+import { TASK_COLOR_ANNOTATION } from "@/utils/annotations";
 
 export const BatchTaskColor = observer(function BatchTaskColor({
   tasks,

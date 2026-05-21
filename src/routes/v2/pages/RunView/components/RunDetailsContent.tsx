@@ -23,21 +23,15 @@ import { useBackend } from "@/providers/BackendProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import {
-  FLEX_NODES_ANNOTATION,
   PIPELINE_NOTES_ANNOTATION,
   PIPELINE_TAGS_ANNOTATION,
+  SYSTEM_ANNOTATIONS,
 } from "@/utils/annotations";
 import {
   flattenExecutionStatusStats,
   getExecutionStatusLabel,
   getOverallExecutionStatusFromStats,
 } from "@/utils/executionStatus";
-
-const EXCLUDED_ANNOTATIONS = [
-  PIPELINE_NOTES_ANNOTATION,
-  FLEX_NODES_ANNOTATION,
-  PIPELINE_TAGS_ANNOTATION,
-];
 
 export const RunDetailsContent = observer(function RunDetailsContent() {
   const { configured } = useBackend();
@@ -115,7 +109,7 @@ function RunDetailsContentLoaded({
   const tags = specAnnotations.get(PIPELINE_TAGS_ANNOTATION);
 
   const displayedAnnotations = specAnnotations
-    .filter((a) => !EXCLUDED_ANNOTATIONS.includes(a.key))
+    .filter((a) => !SYSTEM_ANNOTATIONS.includes(a.key))
     .map((a) => ({ label: a.key, value: String(a.value) }));
 
   return (

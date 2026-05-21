@@ -6,6 +6,7 @@ import {
   resolvePosition,
   taskDefaultPosition,
 } from "@/routes/v2/shared/nodes/buildUtils";
+import { EDITOR_POSITION_ANNOTATION } from "@/utils/annotations";
 
 export function buildEntityPositionMap(
   inputs: Input[],
@@ -14,15 +15,15 @@ export function buildEntityPositionMap(
 ): Map<string, XYPosition> {
   const map = new Map<string, XYPosition>();
   for (const [index, input] of inputs.entries()) {
-    const pos = input.annotations.get("editor.position");
+    const pos = input.annotations.get(EDITOR_POSITION_ANNOTATION);
     map.set(input.$id, resolvePosition(pos, ioDefaultPosition(index, -200)));
   }
   for (const [index, output] of outputs.entries()) {
-    const pos = output.annotations.get("editor.position");
+    const pos = output.annotations.get(EDITOR_POSITION_ANNOTATION);
     map.set(output.$id, resolvePosition(pos, ioDefaultPosition(index, 800)));
   }
   for (const [index, task] of tasks.entries()) {
-    const pos = task.annotations.get("editor.position");
+    const pos = task.annotations.get(EDITOR_POSITION_ANNOTATION);
     map.set(task.$id, resolvePosition(pos, taskDefaultPosition(index)));
   }
   return map;

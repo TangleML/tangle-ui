@@ -13,6 +13,7 @@ import type {
   TaskNodeData,
 } from "@/routes/v2/shared/nodes/types";
 import type { NavigationStore } from "@/routes/v2/shared/store/navigationStore";
+import { EDITOR_POSITION_ANNOTATION } from "@/utils/annotations";
 import { deepClone } from "@/utils/deepClone";
 
 import { TaskNode } from "./TaskNode";
@@ -36,14 +37,14 @@ export function snapshotTask(
   if (!task) return null;
 
   const preservedAnnotations = task.annotations.items
-    .filter((a) => a.key !== "editor.position")
+    .filter((a) => a.key !== EDITOR_POSITION_ANNOTATION)
     .map((a) => deepClone(a));
 
   return {
     $type: "task",
     entityId: task.$id,
     name: task.name,
-    position: task.annotations.get("editor.position"),
+    position: task.annotations.get(EDITOR_POSITION_ANNOTATION),
     data: {
       componentRef: deepClone(task.componentRef),
       isEnabled: task.isEnabled ? deepClone(task.isEnabled) : undefined,
@@ -81,7 +82,7 @@ export const taskManifestBase: ManifestPartial = {
   getPosition(spec, nodeId) {
     const task = spec.tasks.find((t) => t.$id === nodeId);
     if (!task) return undefined;
-    return task.annotations.get("editor.position");
+    return task.annotations.get(EDITOR_POSITION_ANNOTATION);
   },
 
   findEntity(spec, entityId) {

@@ -14,11 +14,7 @@ import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { BlockStack } from "@/components/ui/layout";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
-import {
-  FLEX_NODES_ANNOTATION,
-  PIPELINE_NOTES_ANNOTATION,
-  PIPELINE_TAGS_ANNOTATION,
-} from "@/utils/annotations";
+import { SYSTEM_ANNOTATIONS } from "@/utils/annotations";
 import { getComponentFileFromList } from "@/utils/componentStore";
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 import { tracking } from "@/utils/tracking";
@@ -28,12 +24,6 @@ import { PipelineNotesEditor } from "./PipelineNotesEditor";
 import { PipelineValidationList } from "./PipelineValidationList";
 import RenamePipeline from "./RenamePipeline";
 import { PipelineTags } from "./Tags/PipelineTags";
-
-const EXCLUDED_ANNOTATIONS = [
-  PIPELINE_NOTES_ANNOTATION,
-  FLEX_NODES_ANNOTATION,
-  PIPELINE_TAGS_ANNOTATION,
-];
 
 const PipelineDetails = () => {
   const notify = useToastNotification();
@@ -95,7 +85,7 @@ const PipelineDetails = () => {
   ];
 
   const annotations = Object.entries(componentSpec.metadata?.annotations || {})
-    .filter(([key]) => !EXCLUDED_ANNOTATIONS.includes(key))
+    .filter(([key]) => !SYSTEM_ANNOTATIONS.includes(key))
     .map(([key, value]) => ({
       label: key,
       value: String(value),

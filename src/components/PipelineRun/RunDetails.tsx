@@ -14,11 +14,10 @@ import { useBackend } from "@/providers/BackendProvider";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
 import {
-  FLEX_NODES_ANNOTATION,
   getAnnotationValue,
   getPipelineTagsFromSpec,
   PIPELINE_NOTES_ANNOTATION,
-  PIPELINE_TAGS_ANNOTATION,
+  SYSTEM_ANNOTATIONS,
 } from "@/utils/annotations";
 import {
   flattenExecutionStatusStats,
@@ -30,12 +29,6 @@ import { copyToClipboard } from "@/utils/string";
 import { ActionButton } from "../shared/Buttons/ActionButton";
 import { TagList } from "../shared/Tags/TagList";
 import { RunNotesEditor } from "./RunNotesEditor";
-
-const EXCLUDED_ANNOTATIONS = [
-  PIPELINE_NOTES_ANNOTATION,
-  FLEX_NODES_ANNOTATION,
-  PIPELINE_TAGS_ANNOTATION,
-];
 
 export const RunDetails = () => {
   const { configured } = useBackend();
@@ -95,7 +88,7 @@ export const RunDetails = () => {
   const tags = getPipelineTagsFromSpec(componentSpec);
 
   const displayedAnnotations = Object.entries(pipelineAnnotations)
-    .filter(([key]) => !EXCLUDED_ANNOTATIONS.includes(key))
+    .filter(([key]) => !SYSTEM_ANNOTATIONS.includes(key))
     .map(([key, value]) => ({ label: key, value: String(value) }));
 
   const isRunCreator =

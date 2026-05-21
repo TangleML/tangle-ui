@@ -22,6 +22,7 @@ import { AggregatorOutputType } from "@/types/aggregator";
 import {
   EDITOR_COLLAPSED_ANNOTATION,
   isPipelineAggregator,
+  TASK_COLOR_ANNOTATION,
 } from "@/utils/annotations";
 import { ISO8601_DURATION_ZERO_DAYS } from "@/utils/constants";
 
@@ -140,7 +141,7 @@ function resolveConnectedPortNames(
 }
 
 function resolveTaskColor(task: Task): string | undefined {
-  const rawColor = task.annotations.get("tangleml.com/editor/task-color");
+  const rawColor = task.annotations.get(TASK_COLOR_ANNOTATION);
   return rawColor && rawColor !== "transparent" ? rawColor : undefined;
 }
 

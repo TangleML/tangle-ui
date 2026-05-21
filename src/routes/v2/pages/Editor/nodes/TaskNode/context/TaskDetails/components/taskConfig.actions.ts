@@ -1,10 +1,11 @@
 import type { Task } from "@/models/componentSpec";
 import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
 import type { AnnotationConfig } from "@/types/annotations";
-import { EDITOR_COLLAPSED_ANNOTATION } from "@/utils/annotations";
+import {
+  EDITOR_COLLAPSED_ANNOTATION,
+  TASK_COLOR_ANNOTATION,
+} from "@/utils/annotations";
 import { ISO8601_DURATION_ZERO_DAYS } from "@/utils/constants";
-
-const TASK_COLOR_ANNOTATION = "tangleml.com/editor/task-color";
 
 export function toggleCacheDisable(
   undo: UndoGroupable,

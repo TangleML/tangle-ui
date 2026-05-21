@@ -6,6 +6,7 @@ import type {
 } from "@/api/types.gen";
 import { APP_ROUTES } from "@/routes/router";
 import type { PipelineRun } from "@/types/pipelineRun";
+import { EDITOR_FLOW_DIRECTION_ANNOTATION } from "@/utils/annotations";
 import { removeCachingStrategyFromSpec } from "@/utils/cache";
 import {
   type ComponentSpec,
@@ -100,8 +101,9 @@ export const copyRunToPipeline = async (
     // But there are already many runs that are left-to-right but not marked as such.
     cleanComponentSpec.metadata ??= {};
     cleanComponentSpec.metadata.annotations ??= {};
-    cleanComponentSpec.metadata.annotations["editor.flow-direction"] ??=
-      "left-to-right";
+    cleanComponentSpec.metadata.annotations[
+      EDITOR_FLOW_DIRECTION_ANNOTATION
+    ] ??= "left-to-right";
     if (runId) {
       cleanComponentSpec.metadata.annotations["cloned_from_run_id"] = runId;
     }

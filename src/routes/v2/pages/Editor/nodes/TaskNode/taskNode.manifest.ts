@@ -11,6 +11,7 @@ import {
 } from "@/routes/v2/shared/nodes/TaskNode/taskManifestBase";
 import type { NodeTypeManifest } from "@/routes/v2/shared/nodes/types";
 import { hydrateComponentReference } from "@/services/componentService";
+import { EDITOR_POSITION_ANNOTATION } from "@/utils/annotations";
 import type { TaskSpec } from "@/utils/componentSpec";
 import { deepClone } from "@/utils/deepClone";
 
@@ -51,7 +52,7 @@ export const taskManifest: NodeTypeManifest = {
       const uniqueName = generateUniqueTaskName(spec, snapshot.name);
       const annotations = Annotations.from([
         ...snapshot.data.annotations,
-        { key: "editor.position", value: position },
+        { key: EDITOR_POSITION_ANNOTATION, value: position },
       ]);
 
       const clonedComponentRef = deepClone(snapshot.data.componentRef);

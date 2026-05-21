@@ -9,6 +9,7 @@ import {
   snapshotOutput,
 } from "@/routes/v2/shared/nodes/IONode/outputManifestBase";
 import type { NodeTypeManifest } from "@/routes/v2/shared/nodes/types";
+import { EDITOR_POSITION_ANNOTATION } from "@/utils/annotations";
 import { deepClone } from "@/utils/deepClone";
 
 import { OutputDetails } from "./context/OutputDetails";
@@ -47,7 +48,7 @@ export const outputManifest: NodeTypeManifest = {
         description: snapshot.data.description,
         annotations: Annotations.from([
           ...snapshot.data.annotations,
-          { key: "editor.position", value: position },
+          { key: EDITOR_POSITION_ANNOTATION, value: position },
         ]),
       });
 

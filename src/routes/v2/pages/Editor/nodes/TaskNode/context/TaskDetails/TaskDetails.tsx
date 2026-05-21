@@ -16,7 +16,7 @@ import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskAc
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
-import { EDITOR_COLLAPSED_ANNOTATION } from "@/utils/annotations";
+import { SYSTEM_ANNOTATIONS, ZINDEX_ANNOTATION } from "@/utils/annotations";
 import { tracking } from "@/utils/tracking";
 
 import { getTaskYamlText } from "./components/actions/getTaskYamlText";
@@ -25,13 +25,6 @@ import { ConfigurationSection } from "./components/ConfigurationSection";
 import { TaskActionsBar } from "./components/TaskActionsBar";
 import { TaskArgumentsEditor } from "./components/TaskArgumentsEditor";
 import { useTask } from "./hooks/useTask";
-
-const SYSTEM_TASK_ANNOTATIONS = [
-  "editor.position",
-  "tangleml.com/editor/task-color",
-  "tangleml.com/editor/edge-conduits",
-  EDITOR_COLLAPSED_ANNOTATION,
-];
 
 interface TaskDetailsProps {
   entityId: string;
@@ -83,7 +76,7 @@ export const TaskDetails = observer(function TaskDetails({
 
   const handleZIndexChange = (newZIndex: number) => {
     undo.withGroup("Update task z-index", () => {
-      task.annotations.set("zIndex", newZIndex);
+      task.annotations.set(ZINDEX_ANNOTATION, newZIndex);
     });
   };
 
@@ -227,7 +220,7 @@ export const TaskDetails = observer(function TaskDetails({
         >
           <AnnotationsBlock
             annotations={task.annotations}
-            systemAnnotationKeys={SYSTEM_TASK_ANNOTATIONS}
+            systemAnnotationKeys={SYSTEM_ANNOTATIONS}
           />
         </TabsContent>
       </Tabs>

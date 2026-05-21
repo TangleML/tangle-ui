@@ -7,6 +7,7 @@ import {
 } from "@/routes/v2/shared/nodes/buildUtils";
 import type { ManifestPartial } from "@/routes/v2/shared/nodes/manifestBases";
 import type { IONodeData, NodeSnapshot } from "@/routes/v2/shared/nodes/types";
+import { EDITOR_POSITION_ANNOTATION } from "@/utils/annotations";
 import { deepClone } from "@/utils/deepClone";
 
 import { IONode } from "./IONode";
@@ -34,7 +35,7 @@ export function snapshotOutput(
     $type: "output",
     entityId: output.$id,
     name: output.name,
-    position: output.annotations.get("editor.position"),
+    position: output.annotations.get(EDITOR_POSITION_ANNOTATION),
     data: {
       type: output.type ? deepClone(output.type) : undefined,
       description: output.description,
@@ -69,7 +70,7 @@ export const outputManifestBase: ManifestPartial = {
   getPosition(spec, nodeId) {
     const output = spec.outputs.find((o) => o.$id === nodeId);
     if (!output) return undefined;
-    return output.annotations.get("editor.position");
+    return output.annotations.get(EDITOR_POSITION_ANNOTATION);
   },
 
   findEntity(spec, entityId) {

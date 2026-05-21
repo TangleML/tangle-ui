@@ -10,13 +10,12 @@ import {
   IncrementingIdGenerator,
 } from "@/models/componentSpec";
 import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
-
-const FLEX_NODES_KEY = "flex-nodes" as const;
+import { FLEX_NODES_ANNOTATION } from "@/utils/annotations";
 
 const idGen = new IncrementingIdGenerator();
 
 export function getFlexNodes(spec: ComponentSpec): FlexNodeData[] {
-  return spec.annotations.get(FLEX_NODES_KEY);
+  return spec.annotations.get(FLEX_NODES_ANNOTATION);
 }
 
 export function setFlexNodes(
@@ -25,7 +24,7 @@ export function setFlexNodes(
   nodes: FlexNodeData[],
 ) {
   undo.withGroup("Update flex nodes", () => {
-    spec.annotations.set(FLEX_NODES_KEY, nodes);
+    spec.annotations.set(FLEX_NODES_ANNOTATION, nodes);
   });
 }
 

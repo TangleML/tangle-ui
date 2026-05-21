@@ -7,11 +7,12 @@ import type {
   ConduitNodeData,
   GuidelineInfo,
 } from "@/routes/v2/shared/nodes/types";
+import { EDGE_CONDUITS_ANNOTATION } from "@/utils/annotations";
 
 import { buildEntityPositionMap } from "./build.utils";
 
 export function getConduits(spec: ComponentSpec): EdgeConduit[] {
-  return spec.annotations.get("tangleml.com/editor/edge-conduits");
+  return spec.annotations.get(EDGE_CONDUITS_ANNOTATION);
 }
 
 const GUIDELINE_EXTENT = 100000;
