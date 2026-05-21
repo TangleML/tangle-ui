@@ -80,7 +80,7 @@
     "@tanstack/history": "1.162.0",
     "@tanstack/react-query": "^5.100.11",
     "@tanstack/react-query-devtools": "^5.100.11",
-    "@tanstack/react-router": "1.170.6",
+    "@tanstack/react-router": "1.170.7",
     "@tanstack/router-devtools": "1.167.0",
     "@types/gapi": "^0.0.47",
     "@types/papaparse": "^5.5.2",
@@ -116,7 +116,7 @@
     "react-scan": "^0.5.6",
     "react-toastify": "^11.1.0",
     "tailwind-merge": "^3.6.0",
-    "tailwindcss": "^4.1.16",
+    "tailwindcss": "^4.3.0",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^4.4.3"
   },
@@ -156,7 +156,7 @@
     "tsx": "^4.22.3",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.59.4",
-    "vite": "^8.0.13",
+    "vite": "^8.0.14",
     "vite-plugin-bugsnag": "^2.0.2",
     "vitest": "^3.0.5"
   }
