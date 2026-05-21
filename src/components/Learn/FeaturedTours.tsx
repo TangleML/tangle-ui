@@ -5,15 +5,18 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
+import { useTours } from "@/providers/TourProvider";
 import { tracking } from "@/utils/tracking";
 
 import { tours as tourCards } from "./tours";
+import { getTour } from "./tours/registry";
 
 interface FeaturedTour {
   id: string;
   title: string;
   duration: string;
   tag?: "new" | "popular";
+  available: boolean;
 }
 
 const FEATURED_TOUR_IDS: Array<Pick<FeaturedTour, "id" | "tag">> = [
@@ -27,11 +30,20 @@ function buildFeaturedTours(): FeaturedTour[] {
   return FEATURED_TOUR_IDS.flatMap(({ id, tag }) => {
     const card = tourCards.find((c) => c.id === id);
     if (!card) return [];
-    return [{ id, title: card.title, duration: card.duration, tag }];
+    return [
+      {
+        id,
+        title: card.title,
+        duration: card.duration,
+        tag,
+        available: getTour(id) !== undefined,
+      },
+    ];
   });
 }
 
 export function FeaturedTours() {
+  const { startTour } = useTours();
   const featured = buildFeaturedTours();
 
   return (
@@ -64,7 +76,10 @@ export function FeaturedTours() {
               <Button
                 type="button"
                 variant="ghost"
-                disabled
+                disabled={!tour.available}
+                onClick={() => {
+                  if (tour.available) void startTour(tour.id);
+                }}
                 className="w-full h-auto justify-between gap-3 px-3 py-2 text-left"
                 {...tracking("learning_hub.tours.start", { tour_id: tour.id })}
               >
@@ -82,9 +97,11 @@ export function FeaturedTours() {
                         {tour.tag}
                       </Badge>
                     )}
-                    <Badge size="sm" variant="outline">
-                      Coming soon
-                    </Badge>
+                    {!tour.available && (
+                      <Badge size="sm" variant="outline">
+                        Coming soon
+                      </Badge>
+                    )}
                   </InlineStack>
                   <Text size="xs" tone="subdued">
                     {tour.duration}

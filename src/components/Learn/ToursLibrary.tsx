@@ -10,6 +10,7 @@ import {
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
+import { useTours } from "@/providers/TourProvider";
 import { tracking } from "@/utils/tracking";
 
 import {
@@ -21,8 +22,12 @@ import {
   type TourDifficulty,
   tours,
 } from "./tours";
+import { getTour } from "./tours/registry";
 
 function TourCard({ tour }: { tour: Tour }) {
+  const { startTour } = useTours();
+  const isAvailable = getTour(tour.id) !== undefined;
+
   return (
     <Card className="h-full py-4 gap-2 hover:border-primary/40 hover:shadow-md transition-all duration-200">
       <CardHeader className="px-4 gap-2">
@@ -44,10 +49,12 @@ function TourCard({ tour }: { tour: Tour }) {
           <Button
             size="sm"
             variant="ghost"
+            disabled={!isAvailable}
+            onClick={() => startTour(tour.id)}
             {...tracking("learning_hub.tours.start", { tour_id: tour.id })}
           >
-            Start tour
-            <Icon name="Play" size="sm" aria-hidden="true" />
+            {isAvailable ? "Start tour" : "Coming soon"}
+            {isAvailable && <Icon name="Play" size="sm" aria-hidden="true" />}
           </Button>
         </InlineStack>
       </CardContent>

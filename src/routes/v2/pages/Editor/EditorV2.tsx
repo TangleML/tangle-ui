@@ -30,8 +30,10 @@ import type { PipelineRef } from "@/services/pipelineStorage/types";
 import { useDebugPanelWindow } from "./components/DebugPanel";
 import { DriverPermissionGate } from "./components/DriverPermissionGate";
 import { EditorMenuBar } from "./components/EditorMenuBar/EditorMenuBar";
+import { EditorTourBridge } from "./components/EditorTourBridge";
 import { EmptyEditorState } from "./components/EmptyEditorState";
 import { FlowCanvas } from "./components/FlowCanvas/FlowCanvas";
+import { ResumeTourButton } from "./components/ResumeTourButton";
 import { useComponentLibraryWindow } from "./hooks/useComponentLibraryWindow";
 import { useEditorEscapeShortcut } from "./hooks/useEditorEscapeShortcut";
 import { useHistoryWindow } from "./hooks/useHistoryWindow";
@@ -132,6 +134,8 @@ function EditorV2Content({ pipelineRef }: { pipelineRef: PipelineRef | null }) {
     <ComponentLibraryProvider>
       <ReactFlowProvider>
         <EditorMenuBar />
+        <EditorTourBridge />
+        <ResumeTourButton />
         <ForcedSearchProvider>
           {pipelineRef ? (
             <DriverPermissionGate pipelineRef={pipelineRef}>
