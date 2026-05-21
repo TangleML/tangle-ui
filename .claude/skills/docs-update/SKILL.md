@@ -1,7 +1,7 @@
 ---
 name: docs-update
 description: Analyzes merged PRs from the past week, identifies user-facing changes, and opens a draft PR to the TangleML/website docs repo with updated documentation. Use when running the weekly documentation sync, or when the user invokes /docs-update.
-allowed-tools: Bash(gh *), Bash(git *), Bash(node *), Bash(date *), Bash(base64 *), Bash(npx playwright *), Bash(pnpm playwright *), Bash(ls *), Bash(find *), Read, Write, Glob, Grep
+allowed-tools: Bash(gh *), Bash(git *), Bash(node *), Bash(date *), Bash(base64 *), Bash(pnpm exec playwright *), Bash(pnpm playwright *), Bash(ls *), Bash(find *), Read, Write, Glob, Grep
 argument-hint: "[--since YYYY-MM-DD] [--dry-run]"
 ---
 
@@ -330,7 +330,7 @@ Read the relevant test files using the Read tool to extract:
 **Optional: capture screenshots from E2E tests.** If you decide a screenshot would meaningfully improve a doc page (e.g., showing a new dialog or settings panel), and a test already covers that screen, you may run that single test in headed/screenshot mode to capture an image:
 
 ```bash
-npx playwright test tests/e2e/<file>.spec.ts --grep "<test name>" --reporter=list
+pnpm exec playwright test tests/e2e/<file>.spec.ts --grep "<test name>" --reporter=list
 ```
 
 Then either reuse an existing screenshot from `playwright-report/` or add `await page.screenshot({ path: '/tmp/docs-screenshots/<name>.png' })` to a test ONLY if the user has explicitly asked for screenshots in this run. Do not modify test files speculatively. Save captured screenshots under `/tmp/docs-screenshots/` so they can be uploaded to the docs repo's image folder in Step 8.

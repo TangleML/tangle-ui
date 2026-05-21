@@ -350,13 +350,13 @@ From the helpers file comments:
 
 ```bash
 # Run all E2E tests (headless)
-npm run test:e2e
+pnpm run test:e2e
 
 # Run with UI (for debugging)
-npm run test:e2e:ui
+pnpm run test:e2e:ui
 
 # Run in headed mode (see the browser)
-npm run test:e2e:headed
+pnpm run test:e2e:headed
 ```
 
 ### Test Files

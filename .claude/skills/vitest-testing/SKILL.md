@@ -232,8 +232,8 @@ await waitFor(() => {
 await expect(promise).resolves.toBe(expectedValue);
 ```
 
-## npm Scripts
+## pnpm Scripts
 
-- `npm test` — Run all unit tests once
-- `npm run test:coverage` — Run with coverage report
-- `npm run validate:test` — Full validate + unit tests
+- `pnpm test` — Run all unit tests once
+- `pnpm run test:coverage` — Run with coverage report
+- `pnpm run validate:test` — Full validate + unit tests

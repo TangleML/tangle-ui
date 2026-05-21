@@ -4,9 +4,12 @@ WORKDIR /app
 
 # RUN git clone https://github.com/Cloud-Pipelines/pipeline-studio-app.git .
 
+# Enable Corepack so the pinned pnpm version from package.json is used.
+RUN corepack enable
+
 # Leverage caching by installing dependencies first
-COPY package.json package-lock.json ./
-RUN npm install --frozen-lockfile
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 
 # Copy the rest of the application code and build for production
 COPY . .
@@ -15,7 +18,7 @@ COPY . .
 # Our base image does not have git. So we have to use Shell scripts.
 ### RUN echo VITE_GIT_COMMIT=\"$(git rev-parse --short HEAD | tr -d "\n")\" >.env
 # RUN echo VITE_GIT_COMMIT=\"$(< ./master_commit tr -d "\n")\" | tee .env
-RUN npm run build
+RUN pnpm run build
 
 # Stage 3: Production environment
 FROM nginxinc/nginx-unprivileged:alpine AS production
