@@ -697,9 +697,11 @@ Agents emit standard Markdown links whose `href` uses a custom protocol:
 
 ```markdown
 <!-- Entity chip — references a task, input, or output in the current pipeline -->
+
 [Preprocess Data](entity://task_abc123)
 
 <!-- Component chip — references a component from the registry -->
+
 [Train XGBoost](component://train-xgboost-on-csv)
 ```
 
@@ -709,12 +711,12 @@ The link label becomes the chip's display text. The identifier after the protoco
 
 Renders an **EntityChip** (`EntityChip.tsx`) for tasks, inputs, and outputs in the current pipeline.
 
-| Aspect          | Detail                                                                                   |
-| --------------- | ---------------------------------------------------------------------------------------- |
-| **Protocol**    | `entity://<entityId>`                                                                    |
-| **Resolved by** | Looks up the entity in the current `rootSpec` (tasks, inputs, outputs)                   |
+| Aspect          | Detail                                                                                           |
+| --------------- | ------------------------------------------------------------------------------------------------ |
+| **Protocol**    | `entity://<entityId>`                                                                            |
+| **Resolved by** | Looks up the entity in the current `rootSpec` (tasks, inputs, outputs)                           |
 | **Icon**        | Context-aware: `SquareFunction` (task), `ArrowRightToLine` (input), `ArrowLeftFromLine` (output) |
-| **Click**       | Navigates the editor to the referenced entity (selects + focuses the node on the canvas) |
+| **Click**       | Navigates the editor to the referenced entity (selects + focuses the node on the canvas)         |
 
 ### `component://` — Component Registry Chip
 

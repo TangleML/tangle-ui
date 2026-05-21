@@ -1,8 +1,12 @@
 import { action, makeObservable, observable, runInAction } from "mobx";
 
+import type { RecentPipelineRun } from "@/agent/session";
+import type { ComponentSpec } from "@/models/componentSpec";
+import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
 import type { PipelineRun } from "@/types/pipelineRun";
 import { getErrorMessage } from "@/utils/string";
 
+import { getAgentClient } from "./agentClient";
 import type {
   AiChatRequest,
   ChatMessage,
@@ -50,6 +54,21 @@ interface SendMessageOptions {
   recentRuns: PipelineRun[];
   processCommand: (command: Command) => void;
   onError: (message: string) => void;
+}
+
+interface SendMessageViaWorkerOptions {
+  selectedEntityId: string | null;
+  recentRuns: RecentPipelineRun[];
+  getSpec: () => ComponentSpec | null;
+  undo: UndoGroupable;
+  onError: (message: string) => void;
+}
+
+const WORKER_RUNTIME_FLAG = "agent.runtime";
+
+export function isWorkerRuntimeEnabled(): boolean {
+  if (typeof localStorage === "undefined") return false;
+  return localStorage.getItem(WORKER_RUNTIME_FLAG) === "worker";
 }
 
 /**
@@ -172,6 +191,76 @@ export class AiChatStore {
     } finally {
       this.abortController = null;
       this.pendingCommands = [];
+      runInAction(() => {
+        this.isPending = false;
+        this.thinkingText = null;
+      });
+    }
+  }
+
+  /**
+   * Send a message using the in-browser agent worker. Tools mutate the
+   * live MobX spec directly via the tool bridge, so the assistant's
+   * changes are visible immediately and no command-replay step is
+   * needed. Mirrors `sendMessage` for thread, status, and message
+   * accounting.
+   */
+  async sendMessageViaWorker(
+    prompt: string,
+    options: SendMessageViaWorkerOptions,
+  ) {
+    runInAction(() => {
+      this.messages = [
+        ...this.messages,
+        { id: generateMessageId(), role: "user", content: prompt },
+      ];
+      this.isPending = true;
+      this.thinkingText = null;
+    });
+
+    try {
+      const client = getAgentClient();
+      const response = await client.ask(
+        {
+          getSpec: options.getSpec,
+          undo: options.undo,
+          onStatus: (status) => {
+            runInAction(() => {
+              this.thinkingText = status.text;
+            });
+          },
+        },
+        {
+          message: prompt,
+          ...(this.threadId && { threadId: this.threadId }),
+          ...(options.selectedEntityId && {
+            selectedEntityId: options.selectedEntityId,
+          }),
+          ...(options.recentRuns.length > 0 && {
+            recentRuns: options.recentRuns,
+          }),
+        },
+      );
+
+      runInAction(() => {
+        this.thinkingText = null;
+        this.threadId = response.threadId;
+        const hasRefs = Object.keys(response.componentReferences).length > 0;
+        this.messages = [
+          ...this.messages,
+          {
+            id: generateMessageId(),
+            role: "assistant",
+            content: response.answer,
+            ...(hasRefs && {
+              componentReferences: response.componentReferences,
+            }),
+          },
+        ];
+      });
+    } catch (error) {
+      options.onError("AI request failed: " + getErrorMessage(error));
+    } finally {
       runInAction(() => {
         this.isPending = false;
         this.thinkingText = null;
