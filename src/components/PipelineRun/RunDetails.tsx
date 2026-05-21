@@ -1,3 +1,5 @@
+import { useQuery } from "@tanstack/react-query";
+
 import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlock";
 import { KeyValueList } from "@/components/shared/ContextPanel/Blocks/KeyValueList";
 import { TextBlock } from "@/components/shared/ContextPanel/Blocks/TextBlock";
@@ -5,6 +7,7 @@ import { CopyText } from "@/components/shared/CopyText/CopyText";
 import PipelineIO from "@/components/shared/Execution/PipelineIO";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
+import { RunSourceIcon } from "@/components/shared/RunSource";
 import { StatusBar } from "@/components/shared/Status";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Paragraph, Text } from "@/components/ui/typography";
@@ -13,12 +16,15 @@ import { useUserDetails } from "@/hooks/useUserDetails";
 import { useBackend } from "@/providers/BackendProvider";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
+import { fetchRunAnnotations } from "@/services/pipelineRunService";
 import {
   getAnnotationValue,
   getPipelineTagsFromSpec,
   PIPELINE_NOTES_ANNOTATION,
+  RUN_SOURCE_ANNOTATION,
   SYSTEM_ANNOTATIONS,
 } from "@/utils/annotations";
+import { TWENTY_FOUR_HOURS_IN_MS } from "@/utils/constants";
 import {
   flattenExecutionStatusStats,
   getExecutionStatusLabel,
@@ -31,7 +37,7 @@ import { TagList } from "../shared/Tags/TagList";
 import { RunNotesEditor } from "./RunNotesEditor";
 
 export const RunDetails = () => {
-  const { configured } = useBackend();
+  const { backendUrl, configured } = useBackend();
   const { componentSpec } = useComponentSpec();
   const { data: currentUserDetails } = useUserDetails();
   const {
@@ -42,6 +48,16 @@ export const RunDetails = () => {
     error,
   } = useExecutionData();
   const notify = useToastNotification();
+
+  const runId = metadata?.id;
+  const { data: runAnnotations } = useQuery({
+    queryKey: ["pipeline-run-annotations", runId],
+    queryFn: () => fetchRunAnnotations(runId!, backendUrl),
+    enabled: !!runId,
+    refetchOnWindowFocus: false,
+    staleTime: TWENTY_FOUR_HOURS_IN_MS,
+  });
+  const runSource = getAnnotationValue(runAnnotations, RUN_SOURCE_ANNOTATION);
 
   const handleCopyUrl = () => {
     copyToClipboard(window.location.href);
@@ -116,6 +132,7 @@ export const RunDetails = () => {
       {metadata && (
         <KeyValueList
           title="Run Info"
+          titleAction={<RunSourceIcon source={runSource} />}
           items={[
             { label: "Run Id", value: metadata.id },
             { label: "Execution Id", value: metadata.root_execution_id },

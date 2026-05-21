@@ -5,6 +5,7 @@ import { type MouseEvent } from "react";
 import type { PipelineRunResponse } from "@/api/types.gen";
 import { CopyText } from "@/components/shared/CopyText/CopyText";
 import { FavoriteToggle } from "@/components/shared/FavoriteToggle";
+import { RunSourceIcon } from "@/components/shared/RunSource";
 import { StatusBar, StatusIcon } from "@/components/shared/Status";
 import { TagList } from "@/components/shared/Tags/TagList";
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,11 @@ import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
 import { APP_ROUTES } from "@/routes/router";
 import { fetchRunAnnotations } from "@/services/pipelineRunService";
-import { getPipelineTagsFromAnnotations } from "@/utils/annotations";
+import {
+  getAnnotationValue,
+  getPipelineTagsFromAnnotations,
+  RUN_SOURCE_ANNOTATION,
+} from "@/utils/annotations";
 import { TWENTY_FOUR_HOURS_IN_MS } from "@/utils/constants";
 import { formatDate } from "@/utils/date";
 import { getOverallExecutionStatusFromStats } from "@/utils/executionStatus";
@@ -41,6 +46,7 @@ const RunRow = ({ run }: { run: PipelineRunResponse }) => {
 
   const name = run.pipeline_name ?? "Unknown pipeline";
   const tags = getPipelineTagsFromAnnotations(annotations);
+  const source = getAnnotationValue(annotations, RUN_SOURCE_ANNOTATION);
 
   const createdBy = run.created_by ?? "Unknown user";
   const truncatedCreatedBy = truncateMiddle(createdBy);
@@ -131,7 +137,10 @@ const RunRow = ({ run }: { run: PipelineRunResponse }) => {
         {tags && tags.length > 0 && <TagList tags={tags} />}
       </TableCell>
       <TableCell className="w-0">
-        <FavoriteToggle type="run" id={runId} name={name} />
+        <InlineStack gap="2" blockAlign="center" wrap="nowrap">
+          <RunSourceIcon source={source} className="opacity-50" />
+          <FavoriteToggle type="run" id={runId} name={name} />
+        </InlineStack>
       </TableCell>
     </TableRow>
   );
