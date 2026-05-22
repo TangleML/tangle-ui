@@ -1,0 +1,110 @@
+{
+  "id": "navigating-the-editor",
+  "displayName": "Guided Tour: Navigating the Editor",
+  "requiresEditor": true,
+  "starterPipelineUrl": "tour-pipelines/Hello World.pipeline.component.yaml",
+  "steps": [
+    {
+      "selector": "[data-tour-anchor=\"no-spotlight\"]",
+      "content": "Welcome to the pipeline editor! This quick tour will show you around so you know where to find everything: the menu bar, canvas, dockable panels, and floating windows.",
+      "position": "center"
+    },
+    {
+      "selector": "[data-tour=\"editor-top-bar-left\"]",
+      "highlightedSelectors": [
+        "[data-tour=\"editor-top-bar-left\"]",
+        "[data-tour=\"editor-menu-items\"]"
+      ],
+      "content": "The top bar holds your pipeline name and editor menus.\n\nEach menu groups one type of command: **File** for pipeline operations, **View** for layout presets, **Runs** for submissions, **Components** for your libraries, and **Windows** for panels. A **Node** menu also appears here when you have a task selected.",
+      "position": "bottom"
+    },
+    {
+      "selector": "[data-tour=\"editor-top-bar-actions\"]",
+      "content": "Over on the right are your quick actions. Submit a run, check autosave status, jump to Settings, or open the documentation.",
+      "position": "bottom"
+    },
+    {
+      "selector": "[data-tour=\"editor-canvas\"]",
+      "content": "This is your workspace. Drag components onto it, connect tasks by linking their input and output handles, and pan or zoom around larger graphs.\n\nUseful controls sit along the bottom: a **minimap** in the bottom-left, and **viewport controls** with **undo/redo** in the bottom-right.",
+      "position": "center",
+      "resizeObservables": ["[data-tour=\"editor-canvas\"]"]
+    },
+    {
+      "selector": "[data-dock-area=\"left\"]",
+      "highlightedSelectors": [
+        "[data-dock-window=\"component-library\"]",
+        "[data-dock-window-content=\"component-library\"]",
+        "[data-dock-window=\"runs-and-submission\"]",
+        "[data-dock-window-content=\"runs-and-submission\"]",
+        "[data-dock-window=\"recent-runs\"]",
+        "[data-dock-window-content=\"recent-runs\"]"
+      ],
+      "content": "The left sidebar holds your docked panels.\n\n**Components** lets you browse and drag tasks onto the canvas. **Runs and submission** lets you submit your pipeline, and **Recent runs** shows the latest runs of this pipeline.",
+      "position": "right",
+      "resizeObservables": ["[data-dock-area=\"left\"]"]
+    },
+    {
+      "selector": "[data-dock-area=\"right\"]",
+      "content": "The right sidebar holds Pipeline Details and its properties. Set the pipeline description, tags, and notes here, and review any validation warnings.",
+      "resizeObservables": ["[data-dock-area=\"right\"]"]
+    },
+    {
+      "selector": "[data-tour-node=\"task\"][data-task-name=\"Greet\"]",
+      "content": "Try clicking the **Greet** task on the canvas to select it.",
+      "position": "top",
+      "stepInteraction": true,
+      "interaction": "select-task"
+    },
+    {
+      "selector": "[data-window-id=\"context-panel\"]",
+      "position": "left",
+      "highlightedSelectors": [
+        "[data-window-id=\"context-panel\"]",
+        "[data-dock-window-content=\"context-panel\"]"
+      ],
+      "mutationObservables": [
+        "[data-window-id=\"context-panel\"]",
+        "[data-dock-window-content=\"context-panel\"]"
+      ],
+      "resizeObservables": [
+        "[data-window-id=\"context-panel\"]",
+        "[data-dock-window-content=\"context-panel\"]"
+      ],
+      "targetWindowId": "context-panel",
+      "content": "Selecting a task opens its Task Properties panel here in the right sidebar. From this panel you can edit input arguments, configure node settings, define annotations, and inspect the component spec."
+    },
+    {
+      "selector": "[data-window-id=\"context-panel\"]",
+      "content": "Windows are flexible. Try grabbing the Task Properties header and dragging it out of the dock to float it as its own window.",
+      "position": "left",
+      "stepInteraction": true,
+      "interaction": "undock-window",
+      "targetWindowId": "context-panel",
+      "fallbackContent": "Windows are flexible. Try grabbing the Task Properties header and dragging it around the canvas."
+    },
+    {
+      "selector": "[data-window-id=\"context-panel\"]",
+      "content": "Nice! Now drag that floating window back onto the left or right sidebar to re-dock it.",
+      "position": "left",
+      "stepInteraction": true,
+      "interaction": "redock-window",
+      "targetWindowId": "context-panel",
+      "fallbackContent": "Windows can be docked in either sidebar. Create the perfect layout that suits you!"
+    },
+    {
+      "selector": "[data-tracking-id=\"v2.pipeline_editor.windows_menu\"]",
+      "highlightedSelectors": [
+        "[data-tracking-id=\"v2.pipeline_editor.windows_menu\"]",
+        "[data-tour=\"windows-menu-content\"]",
+        "[data-tour=\"windows-menu-submenu-content\"]"
+      ],
+      "mutationObservables": [
+        "[data-tour=\"windows-menu-content\"]",
+        "[data-tour=\"windows-menu-submenu-content\"]"
+      ],
+      "content": "Last one. If you ever need to reconfigure your layout, the Windows menu lets you toggle panels on or off and apply a layout preset.",
+      "position": "right",
+      "stepInteraction": true
+    }
+  ]
+}

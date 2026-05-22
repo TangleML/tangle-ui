@@ -122,7 +122,10 @@ const PipelineEditor = withSuspenseWrapper(
             data-editor-ready="true"
           >
             <DockArea side="left" />
-            <div className="relative flex-1 min-w-0 h-full">
+            <div
+              className="relative flex-1 min-w-0 h-full"
+              data-tour="editor-canvas"
+            >
               <FlowCanvas
                 key={activeSpec?.$id ?? "root"}
                 spec={activeSpec}

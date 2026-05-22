@@ -72,10 +72,16 @@ export const taskManifestBase: ManifestPartial = {
 
   buildNodes(spec) {
     return [...spec.tasks].map((task, index) =>
-      createEntityNode(task, "task", taskDefaultPosition(index), {
-        entityId: task.$id,
-        name: task.name,
-      } satisfies TaskNodeData),
+      createEntityNode(
+        task,
+        "task",
+        taskDefaultPosition(index),
+        {
+          entityId: task.$id,
+          name: task.name,
+        } satisfies TaskNodeData,
+        { "data-task-name": task.name, "data-tour-node": "task" },
+      ),
     );
   },
 

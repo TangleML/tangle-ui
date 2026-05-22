@@ -1,0 +1,134 @@
+name: Hello World
+description: A simple pipeline that demonstrates the hello world component.
+inputs:
+  - name: name
+    type: String
+    description: The name to greet.
+    default: ''
+    annotations:
+      editor.position: '{"x":140,"y":0}'
+    value: ''
+    optional: false
+outputs:
+  - name: greeting
+    type: Text
+    description: The generated greeting message.
+    annotations:
+      editor.position: '{"x": 850, "y": 0}'
+implementation:
+  graph:
+    tasks:
+      Greet:
+        componentRef:
+          name: Hello world
+          digest: 8cf1bcc31ce9cd9be6982a7ba95cf233f23efcb7769842b6b03e917ad5dfdd0a
+          spec:
+            name: Hello world
+            description: A simple hello world component that generates a greeting.
+            metadata:
+              annotations:
+                cloud_pipelines.net: 'true'
+                component_yaml_path: hello_world.component.yaml
+                python_original_code: |
+                  from cloud_pipelines import components
+
+
+                  def hello_world(
+                      name: str,
+                      greeting_output: components.OutputPath("Text"),
+                      greeting_prefix: str = "Hello",
+                  ):
+                      """A simple hello world component that generates a greeting.
+
+                      Args:
+                          name: The name to greet.
+                          greeting_output: Output file containing the greeting message.
+                          greeting_prefix: Prefix for the greeting (default: Hello).
+                      """
+                      greeting = f"{greeting_prefix}, {name}! Welcome to Tangle."
+                      print(greeting)
+                      with open(greeting_output, "w") as f:
+                          f.write(greeting)
+                components new regenerate python-function-component: 'true'
+            inputs:
+              - name: name
+                type: String
+                description: The name to greet.
+              - name: greeting_prefix
+                type: String
+                description: 'Prefix for the greeting (default: Hello).'
+                default: Hello
+                optional: true
+            outputs:
+              - name: greeting_output
+                type: Text
+                description: Output file containing the greeting message.
+            implementation:
+              container:
+                image: python:3.12
+                command:
+                  - sh
+                  - '-ec'
+                  - |
+                    program_path=$(mktemp)
+                    printf "%s" "$0" > "$program_path"
+                    python3 -u "$program_path" "$@"
+                  - |
+                    def _make_parent_dirs_and_return_path(file_path: str):
+                        import os
+
+                        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                        return file_path
+
+                    def hello_world(
+                        name,
+                        greeting_output,
+                        greeting_prefix = "Hello",
+                    ):
+                        """A simple hello world component that generates a greeting.
+
+                        Args:
+                            name: The name to greet.
+                            greeting_output: Output file containing the greeting message.
+                            greeting_prefix: Prefix for the greeting (default: Hello).
+                        """
+                        greeting = f"{greeting_prefix}, {name}! Welcome to Tangle."
+                        print(greeting)
+                        with open(greeting_output, "w") as f:
+                            f.write(greeting)
+
+                    import argparse
+                    _parser = argparse.ArgumentParser(prog='Hello world', description='A simple hello world component that generates a greeting.')
+                    _parser.add_argument("--name", dest="name", type=str, required=True, default=argparse.SUPPRESS)
+                    _parser.add_argument("--greeting-prefix", dest="greeting_prefix", type=str, required=False, default=argparse.SUPPRESS)
+                    _parser.add_argument("--greeting-output", dest="greeting_output", type=_make_parent_dirs_and_return_path, required=True, default=argparse.SUPPRESS)
+                    _parsed_args = vars(_parser.parse_args())
+
+                    _outputs = hello_world(**_parsed_args)
+                args:
+                  - '--name'
+                  - inputValue: name
+                  - if:
+                      cond:
+                        isPresent: greeting_prefix
+                      then:
+                        - '--greeting-prefix'
+                        - inputValue: greeting_prefix
+                  - '--greeting-output'
+                  - outputPath: greeting_output
+        arguments:
+          name:
+            graphInput:
+              inputName: name
+        annotations:
+          editor.position: '{"x":430,"y":0}'
+          editor.collapsed: 'true'
+    outputValues:
+      greeting:
+        taskOutput:
+          outputName: greeting_output
+          taskId: Greet
+metadata:
+  annotations:
+    editor.flow-direction: left-to-right
+    notes: Enter a name in the Input Node or configure it when submitting the pipeline.
