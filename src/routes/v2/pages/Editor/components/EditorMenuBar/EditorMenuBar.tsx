@@ -54,6 +54,7 @@ export const EditorMenuBar = observer(function EditorMenuBar() {
     <div
       className="relative w-full bg-stone-900 px-3 py-1 md:px-4"
       style={{ height: `${TOP_NAV_HEIGHT}px` }}
+      data-tour="editor-top-bar"
     >
       <InlineStack
         align="space-between"
@@ -67,6 +68,7 @@ export const EditorMenuBar = observer(function EditorMenuBar() {
           align="start"
           blockAlign="center"
           className="min-w-0"
+          data-tour="editor-top-bar-left"
         >
           <Link
             href="/"
@@ -128,7 +130,11 @@ export const EditorMenuBar = observer(function EditorMenuBar() {
                 />
               )}
 
-              <InlineStack wrap="nowrap" blockAlign="center">
+              <InlineStack
+                wrap="nowrap"
+                blockAlign="center"
+                data-tour="editor-menu-items"
+              >
                 <FileMenu />
                 <ViewMenu />
                 <RunsMenu />
@@ -159,6 +165,7 @@ export const EditorMenuBar = observer(function EditorMenuBar() {
           wrap="nowrap"
           blockAlign="center"
           className="shrink-0"
+          data-tour="editor-top-bar-actions"
         >
           {displayMenu && (
             <>

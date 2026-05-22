@@ -184,7 +184,7 @@ export function EditorTourBridge() {
     if (interaction === "select-task") {
       const handleClick = (event: MouseEvent) => {
         const target = event.target as Element | null;
-        if (target?.closest(".react-flow__node")) {
+        if (target?.closest('[data-tour-node="task"]')) {
           advance();
         }
       };
