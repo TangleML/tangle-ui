@@ -9,6 +9,7 @@ import { APP_ROUTES } from "@/routes/router";
 import { tracking } from "@/utils/tracking";
 
 import { tours as tourCards } from "./tours";
+import { getTour } from "./tours/registry";
 
 interface FeaturedTour {
   id: string;
@@ -30,7 +31,13 @@ function buildFeaturedTours(): FeaturedTour[] {
     const card = tourCards.find((c) => c.id === id);
     if (!card) return [];
     return [
-      { id, title: card.title, duration: card.duration, tag, available: false },
+      {
+        id,
+        title: card.title,
+        duration: card.duration,
+        tag,
+        available: getTour(id) !== undefined,
+      },
     ];
   });
 }
@@ -73,7 +80,7 @@ export function FeaturedTours() {
               key={tour.id}
               variant="ghost"
               size="lg"
-              disabled
+              disabled={!tour.available}
               onClick={() => startTour(tour.id)}
               {...tracking("learning_hub.tours.start", {
                 tour_id: tour.id,
