@@ -10,9 +10,9 @@
   {
     "id": "navigating-editor",
     "title": "Find your way around the editor",
-    "description": "Get oriented with the canvas, side panels, properties view, and the menu bar so you know where every feature lives.",
+    "description": "Get oriented with the canvas, dockable panels, properties view, canvas tools, and the menu bar so you know where every feature lives.",
     "difficulty": "Beginner",
-    "duration": "3 min",
+    "duration": "5 min",
     "area": "Editor"
   },
   {

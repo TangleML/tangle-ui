@@ -134,6 +134,7 @@ export const DockedWindow = observer(function DockedWindow() {
         <div
           ref={panelRef}
           data-dock-window={model.id}
+          data-window-id={model.id}
           className={cn(
             "group/window w-full sticky text-left",
             (isDragging || isResizing) && "select-none",
@@ -170,7 +171,10 @@ export const DockedWindow = observer(function DockedWindow() {
         </div>
       </CollapsibleTrigger>
 
-      <CollapsibleContent className="w-full">
+      <CollapsibleContent
+        className="w-full"
+        data-dock-window-content={model.id}
+      >
         <div
           className={cn(
             "w-full bg-white text-gray-900",

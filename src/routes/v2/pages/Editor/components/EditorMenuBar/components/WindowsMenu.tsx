@@ -35,14 +35,34 @@ export const WindowsMenu = observer(function WindowsMenu() {
     windows.applyViewPreset(preset);
   };
 
+  // Notify any listener (e.g. the Learning Hub tour) that the menu has
+  // opened or closed so they can re-measure highlight regions for portal-rendered
+  // dropdown content. On close we also wait past Radix's exit animation
+  // (~150ms zoom/fade out) before re-measuring, since the content is still
+  // mounted with non-zero bounds while animating away.
+  const notifyOpenStateChange = (open: boolean) => {
+    requestAnimationFrame(() => {
+      window.dispatchEvent(new Event("resize"));
+    });
+    if (!open) {
+      setTimeout(() => {
+        window.dispatchEvent(new Event("resize"));
+      }, 250);
+    }
+  };
+
   return (
-    <DropdownMenu>
+    <DropdownMenu onOpenChange={notifyOpenStateChange}>
       <DropdownMenuTrigger asChild>
         <MenuTriggerButton {...tracking("v2.pipeline_editor.windows_menu")}>
           Windows
         </MenuTriggerButton>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" sideOffset={2}>
+      <DropdownMenuContent
+        align="start"
+        sideOffset={2}
+        data-tour="windows-menu-content"
+      >
         {sortedWindows.map((win) => (
           <DropdownMenuCheckboxItem
             key={win.id}
@@ -67,12 +87,12 @@ export const WindowsMenu = observer(function WindowsMenu() {
           </DropdownMenuCheckboxItem>
         ))}
         <DropdownMenuSeparator />
-        <DropdownMenuSub>
+        <DropdownMenuSub onOpenChange={notifyOpenStateChange}>
           <DropdownMenuSubTrigger>
             <Icon name="LayoutDashboard" size="sm" />
             Views
           </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent>
+          <DropdownMenuSubContent data-tour="windows-menu-submenu-content">
             {VIEW_PRESETS.map((preset) => (
               <DropdownMenuItem
                 key={preset.label}
