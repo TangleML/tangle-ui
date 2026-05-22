@@ -5,8 +5,6 @@ import { useEffect } from "react";
 import type { TourStep } from "@/components/Learn/tours/registry";
 import { APP_ROUTES } from "@/routes/router";
 
-import { finishingSignal } from "./finishingSignal";
-
 // Keep the popover at least this many pixels away from every viewport edge.
 // Matches the badge's outside offset (≈13px) plus a small safety margin so
 // the step-number chip in the top-left of the popover never gets clipped.
@@ -112,7 +110,10 @@ function FinishButton({ setIsOpen }: Pick<NextButtonProps, "setIsOpen">) {
         color: "#1f2937",
       }}
       onClick={() => {
-        finishingSignal.mark();
+        // Finish exits the tour entirely. The route's unmount handles
+        // cleanup (delete temp pipeline, clear session, restore layout).
+        // X / ESC, by contrast, just close the popover and leave the
+        // user on the tour route so they can save or resume.
         setIsOpen(false);
         navigate({ to: APP_ROUTES.LEARN_TOURS });
       }}

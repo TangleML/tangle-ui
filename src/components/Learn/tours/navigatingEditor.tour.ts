@@ -140,7 +140,7 @@ const steps: TourStep[] = [
 ];
 
 export const navigatingEditorTour: TourDefinition = {
-  id: "navigating-editor",
+  id: "navigating-the-editor",
   displayName: "Guided Tour: Navigating the Editor",
   requiresEditor: true,
   starterPipelineUrl:

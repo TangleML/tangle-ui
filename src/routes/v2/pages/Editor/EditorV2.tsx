@@ -33,7 +33,6 @@ import { EditorMenuBar } from "./components/EditorMenuBar/EditorMenuBar";
 import { EditorTourBridge } from "./components/EditorTourBridge";
 import { EmptyEditorState } from "./components/EmptyEditorState";
 import { FlowCanvas } from "./components/FlowCanvas/FlowCanvas";
-import { ResumeTourButton } from "./components/ResumeTourButton";
 import { useComponentLibraryWindow } from "./hooks/useComponentLibraryWindow";
 import { useEditorEscapeShortcut } from "./hooks/useEditorEscapeShortcut";
 import { useHistoryWindow } from "./hooks/useHistoryWindow";
@@ -135,7 +134,6 @@ function EditorV2Content({ pipelineRef }: { pipelineRef: PipelineRef | null }) {
       <ReactFlowProvider>
         <EditorMenuBar />
         <EditorTourBridge />
-        <ResumeTourButton />
         <ForcedSearchProvider>
           {pipelineRef ? (
             <DriverPermissionGate pipelineRef={pipelineRef}>
@@ -151,9 +149,16 @@ function EditorV2Content({ pipelineRef }: { pipelineRef: PipelineRef | null }) {
 }
 
 /**
- * Shell component for the Editor V2 route.
+ * Shell component for the Editor V2 route. Accepts a `pipelineRef` prop so
+ * non-editor-v2 routes (notably `/tour/$tourId`) can mount the same editor
+ * against a pipeline they resolved themselves; when no prop is passed, the
+ * shell reads `pipelineName` / `fileId` from the current route.
  */
-export function EditorV2() {
+export function EditorV2({
+  pipelineRef: pipelineRefProp,
+}: {
+  pipelineRef?: PipelineRef | null;
+} = {}) {
   const params = useParams({ strict: false });
   const search = useSearch({ strict: false });
   const fileId =
@@ -166,9 +171,12 @@ export function EditorV2() {
       ? params.pipelineName
       : null;
 
-  const pipelineRef: PipelineRef | null = pipelineName
-    ? { name: pipelineName, fileId }
-    : null;
+  const pipelineRef: PipelineRef | null =
+    pipelineRefProp !== undefined
+      ? pipelineRefProp
+      : pipelineName
+        ? { name: pipelineName, fileId }
+        : null;
 
   return (
     <div className="h-full w-full flex flex-col bg-slate-100 select-none">

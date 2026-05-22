@@ -1,3 +1,5 @@
+import { Link } from "@tanstack/react-router";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,7 +12,7 @@ import {
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
-import { useTours } from "@/providers/TourProvider";
+import { APP_ROUTES } from "@/routes/router";
 import { tracking } from "@/utils/tracking";
 
 import {
@@ -25,7 +27,6 @@ import {
 import { getTour } from "./tours/registry";
 
 function TourCard({ tour }: { tour: Tour }) {
-  const { startTour } = useTours();
   const isAvailable = getTour(tour.id) !== undefined;
 
   return (
@@ -46,16 +47,28 @@ function TourCard({ tour }: { tour: Tour }) {
               {tour.duration}
             </Text>
           </InlineStack>
-          <Button
-            size="sm"
-            variant="ghost"
-            disabled={!isAvailable}
-            onClick={() => startTour(tour.id)}
-            {...tracking("learning_hub.tours.start", { tour_id: tour.id })}
-          >
-            {isAvailable ? "Start tour" : "Coming soon"}
-            {isAvailable && <Icon name="Play" size="sm" aria-hidden="true" />}
-          </Button>
+          {isAvailable ? (
+            <Button
+              asChild
+              size="sm"
+              variant="ghost"
+              {...tracking("learning_hub.tours.start", { tour_id: tour.id })}
+            >
+              <Link to={APP_ROUTES.TOUR_DETAIL} params={{ tourId: tour.id }}>
+                Start tour
+                <Icon name="Play" size="sm" aria-hidden="true" />
+              </Link>
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled
+              {...tracking("learning_hub.tours.start", { tour_id: tour.id })}
+            >
+              Coming soon
+            </Button>
+          )}
         </InlineStack>
       </CardContent>
     </Card>

@@ -1,1 +1,2 @@
-export { TourProvider, useTours } from "./TourProvider";
+export { useTourMode } from "./TourModeContext";
+export { TourProvider } from "./TourProvider";

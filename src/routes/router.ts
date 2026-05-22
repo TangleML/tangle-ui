@@ -37,6 +37,7 @@ import { BetaFeaturesSettings } from "./Settings/sections/BetaFeaturesSettings";
 import { PreferencesSettings } from "./Settings/sections/PreferencesSettings";
 import { SecretsSettings } from "./Settings/sections/SecretsSettings";
 import { SettingsLayout } from "./Settings/SettingsLayout";
+import { TourPage } from "./Tour";
 import { EditorV2 } from "./v2/pages/Editor/EditorV2";
 import { PipelineFoldersPage } from "./v2/pages/PipelineFolders/PipelineFoldersPage";
 import { RunViewV2 } from "./v2/pages/RunView/RunViewV2";
@@ -54,6 +55,7 @@ const EDITOR_V2_BASE_PATH = "/editor-v2";
 const RUNS_V2_BASE_PATH = "/runs-v2";
 const SETTINGS_PATH = "/settings";
 const IMPORT_PATH = "/app/editor/import-pipeline";
+const TOUR_BASE_PATH = "/tour";
 export const APP_ROUTES = {
   HOME: "/",
   DASHBOARD: "/",
@@ -88,6 +90,8 @@ export const APP_ROUTES = {
   PIPELINE_FOLDERS: "/pipeline-folders",
   PLAYGROUND: "/playground",
   ARTIFACT_PREVIEW: "/artifact/$artifactId",
+  TOUR: TOUR_BASE_PATH,
+  TOUR_DETAIL: `${TOUR_BASE_PATH}/$tourId`,
 } as const;
 
 const rootRoute = createRootRoute({
@@ -324,6 +328,12 @@ const artifactPreviewRoute = createRoute({
   component: ArtifactPreviewPage,
 });
 
+const tourRoute = createRoute({
+  getParentRoute: () => mainLayout,
+  path: APP_ROUTES.TOUR_DETAIL,
+  component: TourPage,
+});
+
 const dashboardRouteTree = dashboardRoute.addChildren([
   dashboardIndexRoute,
   dashboardRunsRoute,
@@ -351,6 +361,7 @@ const appRouteTree = mainLayout.addChildren([
   runV2WithSubgraphRoute,
   pipelineFoldersRoute,
   artifactPreviewRoute,
+  tourRoute,
 ]);
 
 const rootRouteTree = rootRoute.addChildren([

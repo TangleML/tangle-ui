@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
-import { useTours } from "@/providers/TourProvider";
+import { APP_ROUTES } from "@/routes/router";
 import { tracking } from "@/utils/tracking";
 
 import { tours as tourCards } from "./tours";
@@ -20,7 +20,7 @@ interface FeaturedTour {
 }
 
 const FEATURED_TOUR_IDS: Array<Pick<FeaturedTour, "id" | "tag">> = [
-  { id: "navigating-editor", tag: "new" },
+  { id: "navigating-the-editor", tag: "new" },
   { id: "first-pipeline", tag: "popular" },
   { id: "using-secrets" },
   { id: "multinode-tasks" },
@@ -43,7 +43,6 @@ function buildFeaturedTours(): FeaturedTour[] {
 }
 
 export function FeaturedTours() {
-  const { startTour } = useTours();
   const featured = buildFeaturedTours();
 
   return (
@@ -73,51 +72,80 @@ export function FeaturedTours() {
         <ul className="list-none p-0 m-0 flex flex-col gap-1 flex-1">
           {featured.map((tour) => (
             <li key={tour.id}>
-              <Button
-                type="button"
-                variant="ghost"
-                disabled={!tour.available}
-                onClick={() => {
-                  if (tour.available) void startTour(tour.id);
-                }}
-                className="w-full h-auto justify-between gap-3 px-3 py-2 text-left"
-                {...tracking("learning_hub.tours.start", { tour_id: tour.id })}
-              >
-                <BlockStack gap="0" className="min-w-0">
-                  <InlineStack gap="2" blockAlign="center">
-                    <Paragraph size="sm" weight="semibold" className="truncate">
-                      {tour.title}
-                    </Paragraph>
-                    {tour.tag && (
-                      <Badge
-                        size="sm"
-                        variant={tour.tag === "new" ? "default" : "secondary"}
-                        className="capitalize"
-                      >
-                        {tour.tag}
-                      </Badge>
-                    )}
-                    {!tour.available && (
-                      <Badge size="sm" variant="outline">
-                        Coming soon
-                      </Badge>
-                    )}
-                  </InlineStack>
-                  <Text size="xs" tone="subdued">
-                    {tour.duration}
-                  </Text>
-                </BlockStack>
-                <Icon
-                  name="Play"
-                  size="sm"
-                  className="text-muted-foreground shrink-0"
-                  aria-hidden="true"
-                />
-              </Button>
+              {tour.available ? (
+                <Button
+                  asChild
+                  variant="ghost"
+                  className="w-full h-auto justify-between gap-3 px-3 py-2 text-left"
+                  {...tracking("learning_hub.tours.start", {
+                    tour_id: tour.id,
+                  })}
+                >
+                  <Link
+                    to={APP_ROUTES.TOUR_DETAIL}
+                    params={{ tourId: tour.id }}
+                  >
+                    <FeaturedTourLabel tour={tour} />
+                    <Icon
+                      name="Play"
+                      size="sm"
+                      className="text-muted-foreground shrink-0"
+                      aria-hidden="true"
+                    />
+                  </Link>
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled
+                  className="w-full h-auto justify-between gap-3 px-3 py-2 text-left"
+                  {...tracking("learning_hub.tours.start", {
+                    tour_id: tour.id,
+                  })}
+                >
+                  <FeaturedTourLabel tour={tour} />
+                  <Icon
+                    name="Play"
+                    size="sm"
+                    className="text-muted-foreground shrink-0"
+                    aria-hidden="true"
+                  />
+                </Button>
+              )}
             </li>
           ))}
         </ul>
       </BlockStack>
     </div>
+  );
+}
+
+function FeaturedTourLabel({ tour }: { tour: FeaturedTour }) {
+  return (
+    <BlockStack gap="0" className="min-w-0">
+      <InlineStack gap="2" blockAlign="center">
+        <Paragraph size="sm" weight="semibold" className="truncate">
+          {tour.title}
+        </Paragraph>
+        {tour.tag && (
+          <Badge
+            size="sm"
+            variant={tour.tag === "new" ? "default" : "secondary"}
+            className="capitalize"
+          >
+            {tour.tag}
+          </Badge>
+        )}
+        {!tour.available && (
+          <Badge size="sm" variant="outline">
+            Coming soon
+          </Badge>
+        )}
+      </InlineStack>
+      <Text size="xs" tone="subdued">
+        {tour.duration}
+      </Text>
+    </BlockStack>
   );
 }
