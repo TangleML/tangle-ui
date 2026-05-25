@@ -54,4 +54,12 @@ export const ExistingFlags: ConfigFlags = {
     default: true,
     category: "beta",
   },
+
+  ["component-search-v2"]: {
+    name: "Component Search V2",
+    description:
+      "Show the experimental Components V2 page in the dashboard. Uses placeholder data for now.",
+    default: false,
+    category: "beta",
+  },
 };
