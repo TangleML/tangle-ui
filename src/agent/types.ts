@@ -7,3 +7,5 @@ export interface AgentResponse {
   threadId: string;
   componentReferences: Record<string, { name: string; yamlText: string }>;
 }
+
+export type StatusCallback = (status: { text: string }) => void;
