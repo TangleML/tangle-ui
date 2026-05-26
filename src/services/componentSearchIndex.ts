@@ -18,6 +18,28 @@ import { getComponentName } from "@/utils/getComponentName";
 /** Which field of a component matched the query. Surfaced in the UI. */
 export type MatchField = "name" | "description" | "io" | "implementation";
 
+/**
+ * Where a component came from. Attached to every index entry and threaded
+ * through to UI cards as a source badge so users know whether a result is
+ * from the curated standard library, the backend's published catalog, a
+ * registered external library (e.g. GitHub), or their own user components.
+ */
+export interface ComponentSource {
+  kind: "standard" | "user" | "published" | "registered";
+  /** Short label shown in the UI badge (e.g. "Standard", "Published", or a library name). */
+  label: string;
+  /**
+   * Stable identifier for future filter chips / URL state. For built-in kinds
+   * this matches the kind; for `registered` libraries it's the stored library id.
+   */
+  id: string;
+}
+
+export interface SourcedReference {
+  reference: ComponentReference;
+  source: ComponentSource;
+}
+
 export interface IndexEntry {
   /** Full reference, kept so callers can render whatever they need. */
   reference: ComponentReference;
@@ -25,6 +47,8 @@ export interface IndexEntry {
   digest: string;
   /** Display name. */
   name: string;
+  /** Where this component came from. */
+  source: ComponentSource;
   /** Pre-lowercased searchable text, one per logical field. */
   searchable: Record<MatchField, string>;
 }
@@ -33,6 +57,7 @@ export interface LexicalMatch {
   reference: ComponentReference;
   digest: string;
   name: string;
+  source: ComponentSource;
   /** Which fields matched the query (for UX labels like "matched: command"). */
   matchedFields: MatchField[];
 }
@@ -76,17 +101,15 @@ function extractImplementationText(reference: ComponentReference): string {
 }
 
 /**
- * Build the searchable index from hydrated component references. References
- * without a digest are skipped (can't round-trip an LLM rerank without one).
- * References with no useful spec metadata are also skipped — they'd just be
- * noise that ranks below every real result.
+ * Build the searchable index from sourced, hydrated component references.
+ * References without a digest are skipped (can't round-trip an LLM rerank
+ * without one). References with no useful spec metadata are also skipped —
+ * they'd just be noise that ranks below every real result.
  */
-export function buildSearchIndex(
-  references: ComponentReference[],
-): IndexEntry[] {
+export function buildSearchIndex(sourced: SourcedReference[]): IndexEntry[] {
   const entries: IndexEntry[] = [];
 
-  for (const reference of references) {
+  for (const { reference, source } of sourced) {
     if (!reference.digest) continue;
 
     const spec = reference.spec;
@@ -115,6 +138,7 @@ export function buildSearchIndex(
       reference,
       digest: reference.digest,
       name,
+      source,
       searchable: {
         name: name.toLowerCase(),
         description: description.toLowerCase(),
@@ -225,6 +249,7 @@ export function lexicalSearch(
       reference: entry.reference,
       digest: entry.digest,
       name: entry.name,
+      source: entry.source,
       matchedFields,
       score,
     });
