@@ -74,6 +74,13 @@ export default defineConfig(({ mode }) => {
       },
     },
     assetsInclude: ["**/*.yaml", "**/*.py"],
+    // The agent runs in a Web Worker. The `@openai/agents-core/_shims`
+    // alias and matching plugin land in PR 3 alongside the SDK
+    // dependency itself; PR 2 only needs ESM output for the worker
+    // bundle so dynamic `import.meta.url` resolves correctly.
+    worker: {
+      format: "es",
+    },
     test: {
       globals: true,
       environment: "jsdom",

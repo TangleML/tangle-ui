@@ -2,6 +2,7 @@ import { action, makeObservable, observable, runInAction } from "mobx";
 
 import { getErrorMessage } from "@/utils/string";
 
+import { getAgentClient } from "./agentClient";
 import type { ChatMessage } from "./types";
 
 function generateMessageId(): string {
@@ -15,9 +16,6 @@ interface SendMessageOptions {
 /**
  * Stores AI chat state (messages, thread, pending status) outside the
  * React component tree so it survives window minimize / hide / unmount.
- *
- * PR 1: `sendMessage` is a stub that appends a hardcoded assistant echo.
- * The real worker / LLM round-trip lands in PR 2 / PR 3.
  */
 export class AiChatStore {
   @observable.shallow accessor messages: ChatMessage[] = [];
@@ -55,17 +53,30 @@ export class AiChatStore {
     });
 
     try {
-      /**
-       * Echo the user's message back to the user.
-       * TODO: replace with actual AI response.
-       */
+      const client = getAgentClient();
+      const response = await client.ask(
+        {
+          onStatus: (status) => {
+            runInAction(() => {
+              this.thinkingText = status.text;
+            });
+          },
+        },
+        {
+          message: prompt,
+          ...(this.threadId && { threadId: this.threadId }),
+        },
+      );
+
       runInAction(() => {
+        this.thinkingText = null;
+        this.threadId = response.threadId;
         this.messages = [
           ...this.messages,
           {
             id: generateMessageId(),
             role: "assistant",
-            content: `${prompt}`,
+            content: response.answer,
           },
         ];
       });
