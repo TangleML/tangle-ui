@@ -73,7 +73,7 @@ export const inputManifestBase: ManifestPartial = {
           ioType: "input",
           name: input.name,
         } satisfies IONodeData,
-        { "data-task-name": input.name },
+        { "data-task-name": input.name, "data-tour-node": "input" },
       ),
     );
   },

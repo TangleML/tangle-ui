@@ -165,7 +165,12 @@ export const ArgumentRow = observer(function ArgumentRow({
   const typeLabel = typeSpecToString(inputSpec.type);
 
   return (
-    <div ref={rowRef} className={rowVariants()} onClick={handleClick}>
+    <div
+      ref={rowRef}
+      className={rowVariants()}
+      onClick={handleClick}
+      data-argument-name={inputSpec.name}
+    >
       <InlineStack gap="2" blockAlign="center" className="w-full">
         <Text
           size="xs"

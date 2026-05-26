@@ -33,7 +33,7 @@ export const ENABLE_GOOGLE_CLOUD_SUBMITTER =
 export const USER_PIPELINES_LIST_NAME = "user_pipelines";
 
 export const defaultPipelineYamlWithName = (name: string) => `
-name: ${name}
+name: ${JSON.stringify(name)}
 metadata:
   annotations:
     sdk: https://cloud-pipelines.net/pipeline-editor/

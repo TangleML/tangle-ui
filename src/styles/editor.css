@@ -1,3 +1,14 @@
+/* Tour step ring: reactour merges highlightedSelectors into one bounding rect,
+   so per-element rings need their own mechanism. EditorTourBridge applies
+   this class to elements matching a step's ringSelectors. */
+.tour-ring {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+  border-radius: 6px;
+  position: relative;
+  z-index: 1;
+}
+
 /* Use the proper box layout model by default, but allow elements to override */
 html {
   box-sizing: border-box;
