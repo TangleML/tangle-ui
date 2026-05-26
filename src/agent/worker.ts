@@ -11,7 +11,13 @@ import "./processPolyfill";
 
 import * as Comlink from "comlink";
 
-import type { AgentResponse } from "./types";
+import {
+  createDispatcher,
+  type TangleDispatcher,
+} from "./agents/tangleDispatcher";
+import { getAiToken } from "./aiTokenStore";
+import { createSession } from "./session";
+import type { AgentResponse, StatusCallback } from "./types";
 
 export interface AskParams {
   message: string;
@@ -19,43 +25,73 @@ export interface AskParams {
 }
 
 export interface AgentWorkerApi {
-  ask(params: AskParams, signal?: AbortSignal): Promise<AgentResponse>;
+  init(onStatus: StatusCallback): void;
   ping(): Promise<"pong">;
+  ask(params: AskParams, signal?: AbortSignal): Promise<AgentResponse>;
 }
-
-let emitStatus: (status: { text: string }) => void = () => {};
 
 function generateThreadId(): string {
   return `thread-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-const api: AgentWorkerApi = {
-  async ping() {
-    return "pong";
-  },
+function createWorkerApi(): AgentWorkerApi {
+  let dispatcher: TangleDispatcher | null = null;
 
-  async ask({ message, threadId }, _signal) {
-    // todo: add logic to handle the signal
+  return {
+    /**
+     * Initialization entry point. Called once by the main thread
+     * immediately after spawning the worker. Splits init from ask() so
+     * the tool bridge plumbing and skill warm-up have an explicit
+     * lifecycle hook later.
+     */
+    init(onStatus) {
+      // Dispose any prior dispatcher (detaches its observability listeners)
+      // so a fresh onStatus fully replaces the old one on re-init.
+      dispatcher?.dispose();
+      dispatcher = createDispatcher({ emitStatus: onStatus });
+    },
 
-    return {
-      answer: `Worker echo: ${message}`,
-      threadId: threadId ?? generateThreadId(),
-      componentReferences: {},
-    };
-  },
-};
+    async ping() {
+      return "pong";
+    },
 
-/**
- * Initialization entry point. Called once by the main thread immediately
- * after spawning the worker. Splits init from ask() so future bridge /
- * skill plumbing has an explicit lifecycle hook.
- */
-export function init(onStatus: (status: { text: string }) => void): void {
-  emitStatus = onStatus;
-  // TODO: read `emitStatus` from the dispatcher's observability hooks;
-  // until then this no-op read keeps `noUnusedLocals` quiet without
-  // dropping the assignment that locks in the init() contract.
-  void emitStatus;
+    async ask({ message, threadId }, _signal) {
+      // todo: add logic to handle the signal
+
+      if (!dispatcher) {
+        throw new Error(
+          "Agent worker not initialized. Call init() before ask().",
+        );
+      }
+      const token = await getAiToken();
+      if (!token) {
+        throw new Error(
+          "AI assistant token is missing. Open the AI panel to set it.",
+        );
+      }
+      const resolvedThreadId = threadId ?? generateThreadId();
+      const session = createSession({
+        threadId: resolvedThreadId,
+      });
+
+      const result = await dispatcher.invoke({
+        message,
+        threadId: resolvedThreadId,
+        token,
+        session,
+      });
+
+      // TODO: populate from session.componentReferences once the
+      // search_components tool is wired (PR 4+).
+      const componentReferences: AgentResponse["componentReferences"] = {};
+
+      return {
+        answer: result.answer,
+        threadId: result.threadId,
+        componentReferences,
+      };
+    },
+  };
 }
 
-Comlink.expose({ ...api, init });
+Comlink.expose(createWorkerApi());
