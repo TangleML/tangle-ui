@@ -19,13 +19,7 @@ import {
   type XYPosition,
 } from "@xyflow/react";
 import type { DragEvent, Ref } from "react";
-import {
-  useCallback,
-  useEffect,
-  useImperativeHandle,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useImperativeHandle, useRef, useState } from "react";
 
 import { ConfirmationDialog } from "@/components/shared/Dialogs";
 import { BlockStack } from "@/components/ui/layout";
@@ -467,58 +461,55 @@ const FlowCanvasContent = ({
     latestGraphSpecRef.current = currentGraphSpec;
   }, [currentGraphSpec]);
 
-  const onConnect = useCallback(
-    (connection: Connection) => {
-      if (connection.source === connection.target) return;
+  const onConnect = (connection: Connection) => {
+    if (connection.source === connection.target) return;
 
-      const isAggregatorConnection =
-        connection.targetHandle === "__add_aggregator_input__";
+    const isAggregatorConnection =
+      connection.targetHandle === "__add_aggregator_input__";
 
-      // Use the ref to get the most recent graphSpec, avoiding stale closure issues
-      const result = handleAggregatorConnection(
-        latestGraphSpecRef.current,
-        connection,
-        updateNodeInternals,
-      );
+    // Use the ref to get the most recent graphSpec, avoiding stale closure issues
+    const result = handleAggregatorConnection(
+      latestGraphSpecRef.current,
+      connection,
+      updateNodeInternals,
+    );
 
-      // Update both the ref and the state with the new spec (which includes the new input)
-      latestGraphSpecRef.current = result.graphSpec;
-      updateGraphSpec(result.graphSpec);
+    // Update both the ref and the state with the new spec (which includes the new input)
+    latestGraphSpecRef.current = result.graphSpec;
+    updateGraphSpec(result.graphSpec);
 
-      // For aggregator connections, if we should create an edge, do it in the next tick
-      // after React Flow has processed the node updates
-      if (
-        isAggregatorConnection &&
-        result.shouldCreateEdge &&
-        result.redirectedConnection
-      ) {
-        const targetNodeId = connection.target;
-        const redirectedConn = result.redirectedConnection;
+    // For aggregator connections, if we should create an edge, do it in the next tick
+    // after React Flow has processed the node updates
+    if (
+      isAggregatorConnection &&
+      result.shouldCreateEdge &&
+      result.redirectedConnection
+    ) {
+      const targetNodeId = connection.target;
+      const redirectedConn = result.redirectedConnection;
 
-        // Update node internals multiple times to ensure React Flow sees the new handles
+      // Update node internals multiple times to ensure React Flow sees the new handles
+      updateNodeInternals(targetNodeId);
+
+      // Create the edge connection after a slight delay
+      requestAnimationFrame(() => {
         updateNodeInternals(targetNodeId);
 
-        // Create the edge connection after a slight delay
+        // Now create the actual connection with the redirected handle
+        const finalGraphSpec = handleConnection(
+          latestGraphSpecRef.current,
+          redirectedConn,
+        );
+        latestGraphSpecRef.current = finalGraphSpec;
+        updateGraphSpec(finalGraphSpec);
+
+        // One more update to ensure edge renders properly
         requestAnimationFrame(() => {
           updateNodeInternals(targetNodeId);
-
-          // Now create the actual connection with the redirected handle
-          const finalGraphSpec = handleConnection(
-            latestGraphSpecRef.current,
-            redirectedConn,
-          );
-          latestGraphSpecRef.current = finalGraphSpec;
-          updateGraphSpec(finalGraphSpec);
-
-          // One more update to ensure edge renders properly
-          requestAnimationFrame(() => {
-            updateNodeInternals(targetNodeId);
-          });
         });
-      }
-    },
-    [updateGraphSpec, updateNodeInternals],
-  );
+      });
+    }
+  };
 
   const handleGhostDrop = (
     finalConnectionState: FinalConnectionState | null,

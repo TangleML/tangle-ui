@@ -16,7 +16,7 @@ import type { ComponentReference } from "@/utils/componentSpec";
 import { getComponentName } from "@/utils/getComponentName";
 
 /** Which field of a component matched the query. Surfaced in the UI. */
-type MatchField = "name" | "description" | "io" | "implementation";
+export type MatchField = "name" | "description" | "io" | "implementation";
 
 /**
  * Where a component came from. Attached to every index entry and threaded
