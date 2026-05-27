@@ -1,13 +1,19 @@
 /**
  * Top-level dispatcher agent for the in-browser AI assistant.
+ *
+ * The dispatcher itself does not perform end-user tasks. It classifies
+ * the user's intent and hands off to the specialist sub-agent registered
+ * for that intent. Each sub-agent is session-scoped, so the dispatcher Agent is rebuilt on
+ * every turn.
  */
 import { Agent, MemorySession, run } from "@openai/agents";
+import { RECOMMENDED_PROMPT_PREFIX } from "@openai/agents-core/extensions";
 
-import { ensureProxyConfigured, requireOrchestratorModel } from "../config";
+import { requireOrchestratorModel } from "../config";
 import { attachObservabilityHooks } from "../middleware/observability";
 import dispatcherPrompt from "../prompts/dispatcher.md?raw";
 import type { AgentSession } from "../session";
-import type { StatusCallback } from "../types";
+import { createGeneralHelpAgent } from "./subagents/generalHelp";
 
 interface DispatcherInvokeParams {
   message: string;
@@ -25,21 +31,20 @@ export interface TangleDispatcher {
   invoke(params: DispatcherInvokeParams): Promise<DispatcherInvokeResult>;
 }
 
-export function createDispatcher({
-  emitStatus,
-}: {
-  emitStatus: StatusCallback;
-}): TangleDispatcher {
-  const sessions = new Map<string, MemorySession>();
-
+function createDispatcherAgent(session: AgentSession): Agent {
   const agent = Agent.create({
     name: "tangle-dispatcher",
     model: requireOrchestratorModel(),
-    instructions: dispatcherPrompt,
+    instructions: `${RECOMMENDED_PROMPT_PREFIX}\n\n${dispatcherPrompt}`,
     tools: [],
-    handoffs: [],
+    handoffs: [createGeneralHelpAgent(session)],
   });
-  attachObservabilityHooks(agent, emitStatus);
+  attachObservabilityHooks(agent, session.emitStatus);
+  return agent;
+}
+
+export function createDispatcher(): TangleDispatcher {
+  const sessions = new Map<string, MemorySession>();
 
   function getOrCreateSessionMemory(threadId: string): MemorySession {
     const existing = sessions.get(threadId);
@@ -51,8 +56,9 @@ export function createDispatcher({
 
   return {
     async invoke(params) {
-      ensureProxyConfigured(params.token);
+      params.session.proxyClient.ensureConfigured(params.token);
       const sessionMemory = getOrCreateSessionMemory(params.threadId);
+      const agent = createDispatcherAgent(params.session);
       const result = await run(agent, params.message, {
         session: sessionMemory,
       });

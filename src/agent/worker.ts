@@ -45,6 +45,7 @@ import {
   type TangleDispatcher,
 } from "./agents/tangleDispatcher";
 import { getAiToken } from "./aiTokenStore";
+import { ProxyClient } from "./config";
 import { createSession } from "./session";
 import type { AgentResponse, StatusCallback } from "./types";
 
@@ -65,6 +66,8 @@ function generateThreadId(): string {
 
 function createWorkerApi(): AgentWorkerApi {
   let dispatcher: TangleDispatcher | null = null;
+  let emitStatus: StatusCallback = () => {};
+  const proxyClient = new ProxyClient();
 
   return {
     /**
@@ -75,7 +78,8 @@ function createWorkerApi(): AgentWorkerApi {
      */
     init(onStatus) {
       if (dispatcher) return;
-      dispatcher = createDispatcher({ emitStatus: onStatus });
+      emitStatus = onStatus;
+      dispatcher = createDispatcher();
     },
 
     async ping() {
@@ -97,6 +101,8 @@ function createWorkerApi(): AgentWorkerApi {
       const resolvedThreadId = threadId ?? generateThreadId();
       const session = createSession({
         threadId: resolvedThreadId,
+        emitStatus,
+        proxyClient,
       });
 
       const result = await dispatcher.invoke({

@@ -1,17 +1,14 @@
 /**
- * Configuration and one-time setup for the in-browser agent.
+ * Configuration and proxy-client wiring for the in-browser agent.
  *
- * Static values (proxy URL, model names, mode) come from the committed
- * `src/config/aiAssistantConfig.json` file. The secret proxy token is
- * NOT read here — the worker reads it from IndexedDB (via
- * `src/agent/aiTokenStore.ts`, shared with the main thread) on every
- * `ask()` turn and passes the resolved value into
- * `ensureProxyConfigured(token)`, which re-builds the OpenAI client
- * when the token rotates.
+ * The single `ProxyClient` instance is owned by the worker (see
+ * `src/agent/worker.ts`) and threaded into every `AgentSession` so
+ * tools (e.g. `searchDocs`) can read the configured client without
+ * touching module-global state.
  *
  * `proxyMode` exists so a future PR can flip the runtime from
  * `"browser-direct"` (current beta) to `"backend-proxy"` without a
- * rewrite. Only `"browser-direct"` is implemented in this PR.
+ * rewrite.
  */
 import {
   setDefaultOpenAIClient,
@@ -27,6 +24,7 @@ export const config = aiAssistantConfig as {
   proxyMode: "browser-direct" | "backend-proxy";
   orchestratorModel: string;
   subagentModel: string;
+  embeddingModel: string;
 };
 
 function requireProxyBaseUrl(): string {
@@ -47,13 +45,43 @@ export function requireOrchestratorModel(): string {
   return config.orchestratorModel;
 }
 
-let lastConfiguredToken: string | null = null;
+export function requireSubagentModel(): string {
+  if (!config.subagentModel) {
+    throw new Error(
+      "AI assistant: subagentModel is empty. Set it in src/config/aiAssistantConfig.json.",
+    );
+  }
+  return config.subagentModel;
+}
+
+export function requireEmbeddingModel(): string {
+  if (!config.embeddingModel) {
+    throw new Error(
+      "AI assistant: embeddingModel is empty. Set it in src/config/aiAssistantConfig.json.",
+    );
+  }
+  return config.embeddingModel;
+}
 
 /**
- * Wires the configured LLM proxy as the default OpenAI client for
- * `@openai/agents`. Called once per turn from the dispatcher with the
- * current token. Re-builds the client when the token rotates; otherwise
- * a no-op.
+ * Read-only seam used by tools (e.g. `searchDocs`) that need the
+ * configured `OpenAI` client. `ProxyClient` implements this; tests can
+ * provide a duck-typed substitute without instantiating the class.
+ */
+export interface OpenAIProvider {
+  readonly openai: OpenAI;
+}
+
+/**
+ * Owns the lifecycle of the configured `OpenAI` client for the
+ * in-browser agent. A single instance is allocated by the worker and
+ * threaded through every `AgentSession`.
+ *
+ * `ensureConfigured(token)` is called once per turn from the
+ * dispatcher and re-builds the underlying client when the token
+ * rotates; otherwise it is a no-op. The `openai` getter exposes that
+ * same client to worker-side tools that need direct API access (e.g.
+ * `embeddings.create`) without going through the agent SDK runtime.
  *
  * - `setOpenAIAPI("chat_completions")`: the proxy exposes Chat
  *   Completions, not the OpenAI Responses API.
@@ -61,26 +89,39 @@ let lastConfiguredToken: string | null = null;
  *   would POST to `api.openai.com`, which is unreachable through the
  *   proxy.
  */
-export function ensureProxyConfigured(token: string): void {
-  if (config.proxyMode === "backend-proxy") {
-    throw new Error(
-      "AI assistant: backend-proxy mode is not implemented yet. Set proxyMode to 'browser-direct' in src/config/aiAssistantConfig.json.",
-    );
-  }
-  if (!token) {
-    throw new Error(
-      "AI assistant: missing proxy token. Set it via the AI panel.",
-    );
-  }
-  if (lastConfiguredToken === token) return;
-  setDefaultOpenAIClient(
-    new OpenAI({
+export class ProxyClient implements OpenAIProvider {
+  #client: OpenAI | null = null;
+  #lastToken: string | null = null;
+
+  ensureConfigured(token: string): void {
+    if (config.proxyMode === "backend-proxy") {
+      throw new Error(
+        "AI assistant: backend-proxy mode is not implemented yet. Set proxyMode to 'browser-direct' in src/config/aiAssistantConfig.json.",
+      );
+    }
+    if (!token) {
+      throw new Error(
+        "AI assistant: missing proxy token. Set it via the AI panel.",
+      );
+    }
+    if (this.#lastToken === token && this.#client) return;
+    this.#client = new OpenAI({
       apiKey: token,
       baseURL: requireProxyBaseUrl(),
       dangerouslyAllowBrowser: true,
-    }),
-  );
-  setOpenAIAPI("chat_completions");
-  setTracingDisabled(true);
-  lastConfiguredToken = token;
+    });
+    setDefaultOpenAIClient(this.#client);
+    setOpenAIAPI("chat_completions");
+    setTracingDisabled(true);
+    this.#lastToken = token;
+  }
+
+  get openai(): OpenAI {
+    if (!this.#client) {
+      throw new Error(
+        "AI assistant: OpenAI client is not configured. proxyClient.ensureConfigured(token) must run first (the dispatcher does this on every turn).",
+      );
+    }
+    return this.#client;
+  }
 }
