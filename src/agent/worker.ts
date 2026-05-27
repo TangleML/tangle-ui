@@ -18,6 +18,7 @@ import {
 import { getAiToken } from "./aiTokenStore";
 import { ProxyClient } from "./config";
 import { createSession } from "./session";
+import type { ToolBridgeApi } from "./toolBridgeApi";
 import type { AgentResponse, StatusCallback } from "./types";
 
 export interface AskParams {
@@ -26,7 +27,7 @@ export interface AskParams {
 }
 
 export interface AgentWorkerApi {
-  init(onStatus: StatusCallback): void;
+  init(bridge: ToolBridgeApi, onStatus: StatusCallback): void;
   ping(): Promise<"pong">;
   ask(params: AskParams, signal?: AbortSignal): Promise<AgentResponse>;
 }
@@ -37,6 +38,7 @@ function generateThreadId(): string {
 
 function createWorkerApi(): AgentWorkerApi {
   let dispatcher: TangleDispatcher | null = null;
+  let bridge: ToolBridgeApi | null = null;
   let emitStatus: StatusCallback = () => {};
   const proxyClient = new ProxyClient();
 
@@ -47,10 +49,11 @@ function createWorkerApi(): AgentWorkerApi {
      * the tool bridge plumbing and skill warm-up have an explicit
      * lifecycle hook later.
      */
-    init(onStatus) {
+    init(toolBridge, onStatus) {
       // Dispose any prior dispatcher (detaches its observability listeners)
       // so a fresh onStatus fully replaces the old one on re-init.
       dispatcher?.dispose();
+      bridge = toolBridge;
       emitStatus = onStatus;
       dispatcher = createDispatcher();
     },
@@ -62,7 +65,7 @@ function createWorkerApi(): AgentWorkerApi {
     async ask({ message, threadId }, _signal) {
       // todo: add logic to handle the signal
 
-      if (!dispatcher) {
+      if (!dispatcher || !bridge) {
         throw new Error(
           "Agent worker not initialized. Call init() before ask().",
         );
@@ -78,6 +81,7 @@ function createWorkerApi(): AgentWorkerApi {
         threadId: resolvedThreadId,
         emitStatus,
         proxyClient,
+        bridge,
       });
 
       const result = await dispatcher.invoke({
