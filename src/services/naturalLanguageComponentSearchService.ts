@@ -30,7 +30,7 @@ export interface RerankCandidate {
   outputs?: string[];
 }
 
-interface RerankedMatch {
+export interface RerankedMatch {
   id: string;
   /** Model-provided relevance, clamped to [0, 1]. */
   score: number;

@@ -1,6 +1,6 @@
 import Bugsnag from "@bugsnag/js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useLiveQuery } from "dexie-react-hooks";
 import { type ChangeEvent, useEffect, useState } from "react";
 
@@ -16,9 +16,12 @@ import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { QuickTooltip } from "@/components/ui/tooltip";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
 import { getComponentQueryKey } from "@/hooks/useHydrateComponentReference";
+import { useNaturalLanguageComponentRerank } from "@/hooks/useNaturalLanguageComponentSearch";
+import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
 import { useBackend } from "@/providers/BackendProvider";
 import {
@@ -45,6 +48,11 @@ import {
   hydrateComponentReference,
 } from "@/services/componentService";
 import { IS_BUGSNAG_ENABLED } from "@/services/errorManagement/bugsnag";
+import {
+  componentReferenceToCandidate,
+  NaturalLanguageSearchConfigError,
+  type RerankedMatch,
+} from "@/services/naturalLanguageComponentSearchService";
 import type { ComponentFolder } from "@/types/componentLibrary";
 import type {
   ComponentReference,
@@ -56,6 +64,7 @@ import { getComponentName } from "@/utils/getComponentName";
 import { tracking } from "@/utils/tracking";
 
 import { APP_ROUTES } from "../router";
+import { copyComponentReferenceToClipboard } from "../v2/shared/clipboard/copyComponentReferenceToClipboard";
 import { readSelectedComponentDigest } from "./searchParams";
 
 // Repeated Tailwind combos extracted as named constants.
@@ -84,7 +93,7 @@ const SOURCE_ICON_TONE_BY_KIND: Record<ComponentSearchSource["kind"], string> =
     user: "text-amber-500",
   };
 
-/** How many lexical hits to display. */
+/** How many lexical hits to display (and to feed into rerank). */
 const LEXICAL_RESULT_LIMIT = 20;
 
 const MATCH_FIELD_LABEL: Record<MatchField, string> = {
@@ -632,8 +641,40 @@ export const DashboardComponentsV2View = () => {
     limit: LEXICAL_RESULT_LIMIT,
   });
 
+  const {
+    mutate: rerank,
+    data: rerankData,
+    isPending: isReranking,
+    error: rerankError,
+    reset: resetRerank,
+    isConfigured,
+  } = useNaturalLanguageComponentRerank();
+
+  // Reranked results are tied to the exact query that triggered them. If the
+  // user types more, we drop the rerank rather than show results for an old
+  // query. Tracked here so we can clear on input change.
+  const [rerankedFor, setRerankedFor] = useState<string | null>(null);
+
   const handleQueryChange = (event: ChangeEvent<HTMLInputElement>) => {
     setQuery(event.target.value);
+    if (rerankedFor !== null) {
+      setRerankedFor(null);
+      resetRerank();
+    }
+  };
+
+  const handleSmartSearch = () => {
+    const trimmed = query.trim();
+    if (trimmed.length === 0 || lexicalMatches.length === 0) return;
+
+    const candidates = lexicalMatches
+      .map((m) => componentReferenceToCandidate(m.reference))
+      .filter((c): c is NonNullable<typeof c> => c !== null);
+
+    if (candidates.length === 0) return;
+
+    setRerankedFor(trimmed);
+    rerank({ query: trimmed, candidates });
   };
 
   const handleSourceToggle = (sourceKey: string) => {
@@ -642,10 +683,18 @@ export const DashboardComponentsV2View = () => {
         ? current.filter((key) => key !== sourceKey)
         : [...current, sourceKey],
     );
+    if (rerankedFor !== null) {
+      setRerankedFor(null);
+      resetRerank();
+    }
   };
 
   const handleEnableAllSources = () => {
     setDisabledSourceKeys([]);
+    if (rerankedFor !== null) {
+      setRerankedFor(null);
+      resetRerank();
+    }
   };
 
   const isLoadingLibrary =
@@ -657,6 +706,18 @@ export const DashboardComponentsV2View = () => {
   const noLibraryData = !isLoadingLibrary && totalAcrossSources === 0;
   const trimmedQuery = query.trim();
   const isEmpty = trimmedQuery.length === 0;
+  const isConfigError = rerankError instanceof NaturalLanguageSearchConfigError;
+  const rerankActive =
+    rerankedFor !== null &&
+    rerankedFor === trimmedQuery &&
+    rerankData !== undefined &&
+    !isReranking;
+
+  // What we actually render. Rerank wins when active; otherwise lexical.
+  const displayedResults = rerankActive
+    ? mergeRerankIntoLexical(rerankData.matches, lexicalMatches)
+    : lexicalMatches.map((m) => ({ ...m, reason: undefined }));
+
   // Resolve the full reference for the selected digest. Prefer the already-
   // hydrated copy (no extra network), fall back to the un-hydrated index
   // entry, then to a backend stub. The shared ComponentDetail will suspend on
@@ -677,6 +738,23 @@ export const DashboardComponentsV2View = () => {
     };
   })();
   const isDetailOpen = Boolean(selectedDigest);
+  const notify = useToastNotification();
+
+  const handleCopyToPipeline = async () => {
+    if (!selectedReference) return;
+    try {
+      await copyComponentReferenceToClipboard(selectedReference);
+      notify(
+        "Component copied. Paste (Cmd/Ctrl+V) into a pipeline to add it.",
+        "success",
+      );
+    } catch {
+      notify(
+        "Couldn't copy to clipboard. Check browser permissions and try again.",
+        "error",
+      );
+    }
+  };
 
   // Render helpers — keeps the JSX below tidy. These read the closed-over
   // state from the surrounding component; React Compiler memoises them.
@@ -736,15 +814,17 @@ export const DashboardComponentsV2View = () => {
     return (
       <BlockStack gap="2" align="stretch">
         <Paragraph size="xs" tone="subdued">
-          {lexicalMatches.length} result{lexicalMatches.length === 1 ? "" : "s"}{" "}
-          for “{trimmedQuery}”
+          {rerankActive
+            ? `AI-reranked ${displayedResults.length} result${displayedResults.length === 1 ? "" : "s"} for “${trimmedQuery}”`
+            : `${displayedResults.length} result${displayedResults.length === 1 ? "" : "s"} for “${trimmedQuery}”`}
         </Paragraph>
-        {lexicalMatches.map((result, idx) => (
+        {displayedResults.map((result, idx) => (
           <ComponentCard
             key={result.digest}
             reference={result.reference}
             source={result.source}
             matchedFields={result.matchedFields}
+            reason={result.reason}
             isSelected={result.digest === selectedDigest}
             position={idx}
             hadQuery={true}
@@ -776,17 +856,36 @@ export const DashboardComponentsV2View = () => {
               Type to search across every component source — standard library,
               your published components, registered libraries, and local user
               components. Results match on name, description, inputs/outputs,
-              and container command.
+              and container command. Use AI search to rerank with an LLM when
+              literal matching isn&apos;t enough.
             </Paragraph>
           </BlockStack>
-          <Input
-            type="search"
-            placeholder="e.g. train_test_split, pandas, clean up my data"
-            value={query}
-            onChange={handleQueryChange}
-            aria-label="Search components"
-            disabled={isLoadingLibrary || noLibraryData}
-          />
+          <InlineStack gap="3" blockAlign="center" wrap="nowrap">
+            <Input
+              type="search"
+              placeholder="e.g. train_test_split, pandas, clean up my data"
+              value={query}
+              onChange={handleQueryChange}
+              aria-label="Search components"
+              disabled={isLoadingLibrary || noLibraryData}
+              className="flex-1"
+            />
+            <Button
+              variant="secondary"
+              size="icon"
+              onClick={handleSmartSearch}
+              disabled={
+                isReranking ||
+                isEmpty ||
+                lexicalMatches.length === 0 ||
+                !isConfigured
+              }
+              aria-label={isReranking ? "AI search in progress" : "AI search"}
+              title="AI search — rerank these results with an LLM"
+            >
+              {isReranking ? <Spinner size={16} /> : <Icon name="Sparkles" />}
+            </Button>
+          </InlineStack>
           <SourceFilterBar
             options={sourceFilterOptions}
             disabledSourceKeys={disabledSourceKeys}
@@ -815,6 +914,30 @@ export const DashboardComponentsV2View = () => {
               : "flex-1",
           )}
         >
+          {/* AI-search-unavailable banner and rerank error live in the
+              results column — they describe what just happened to the
+              search the user is looking at. */}
+          {!isConfigured && !isEmpty && lexicalMatches.length > 0 && (
+            <BlockStack gap="1" className={cn(PANEL_CLASS, "mb-3")}>
+              <Text size="sm" weight="semibold">
+                AI search unavailable
+              </Text>
+              <Paragraph size="sm" tone="subdued">
+                Configure an OpenAI-compatible API key to use AI search. Lexical
+                results above are unaffected.
+              </Paragraph>
+              <Link to={APP_ROUTES.SETTINGS_AGENT}>
+                <Text size="sm" weight="semibold">
+                  Configure in Settings →
+                </Text>
+              </Link>
+            </BlockStack>
+          )}
+          {rerankError && !isConfigError && rerankError instanceof Error && (
+            <Paragraph size="sm" tone="subdued" className="mb-3">
+              AI search failed: {rerankError.message}
+            </Paragraph>
+          )}
           {renderResults()}
         </div>
 
@@ -827,15 +950,43 @@ export const DashboardComponentsV2View = () => {
             aria-label="Component details"
             className="flex-1 min-h-0 min-w-0 overflow-y-auto px-8 py-4 relative"
           >
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={closeDetail}
-              aria-label="Close component details"
-              className="sticky top-0 float-right z-10 bg-background/80 backdrop-blur-sm rounded-md"
-            >
-              <Icon name="X" />
-            </Button>
+            {/* Sticky action row: copy + close. `float-right` here is
+                intentional — it lets the row sit above the content without
+                taking flow space, and the detail's first heading flows up
+                next to it. Wrapping in a sticky inline-block keeps both
+                buttons pinned together. */}
+            <div className="sticky top-0 float-right z-10 flex gap-1 bg-background/80 backdrop-blur-sm rounded-md">
+              <QuickTooltip content="Copy to clipboard" side="bottom">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleCopyToPipeline}
+                  aria-label="Copy component to clipboard"
+                  {...tracking(
+                    "component_library.result_detail_v2.copy_button",
+                    {
+                      surface: "dashboard_v2",
+                    },
+                  )}
+                >
+                  <Icon name="Copy" />
+                </Button>
+              </QuickTooltip>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={closeDetail}
+                aria-label="Close component details"
+                {...tracking(
+                  "component_library.result_detail_v2.close_button",
+                  {
+                    surface: "dashboard_v2",
+                  },
+                )}
+              >
+                <Icon name="X" />
+              </Button>
+            </div>
             <SuspenseWrapper fallback={<ComponentDetailSkeleton />}>
               <ComponentDetail
                 key={selectedDigest}
@@ -850,3 +1001,30 @@ export const DashboardComponentsV2View = () => {
     </div>
   );
 };
+
+/**
+ * Merge LLM rerank results back into the lexical match metadata so the UI
+ * can still show "matched: name" badges alongside the rerank reason. Items
+ * the LLM dropped are appended after the reranked ones (the lexical layer
+ * thought they were relevant, even if the LLM disagreed — surfacing them
+ * builds trust by not silently hiding lexical hits).
+ */
+function mergeRerankIntoLexical(
+  reranked: RerankedMatch[],
+  lexical: LexicalMatch[],
+): Array<LexicalMatch & { reason?: string }> {
+  const lexicalByDigest = new Map(lexical.map((m) => [m.digest, m]));
+  const out: Array<LexicalMatch & { reason?: string }> = [];
+
+  for (const r of reranked) {
+    const lex = lexicalByDigest.get(r.id);
+    if (!lex) continue;
+    out.push({ ...lex, reason: r.reason });
+    lexicalByDigest.delete(r.id);
+  }
+  // Tail: lexical hits the LLM didn't rank.
+  for (const lex of lexicalByDigest.values()) {
+    out.push({ ...lex });
+  }
+  return out;
+}
