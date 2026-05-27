@@ -16,17 +16,14 @@ const STORAGE_KEY = "tangle.componentSearchV2.config";
 export interface ComponentSearchConfig {
   apiBase: string;
   apiKey: string;
-  /** Fast / default model. */
+  /** Model id used for AI search reranking (any OpenAI-compatible model). */
   model: string;
-  /** Better-quality model used when the "Thinking" toggle is on. */
-  thinkingModel: string;
 }
 
 const DEFAULTS: ComponentSearchConfig = {
   apiBase: "",
   apiKey: "",
-  model: "gemini-2.5-flash-lite",
-  thinkingModel: "gpt-5-mini",
+  model: "",
 };
 
 function readStoredConfig(): ComponentSearchConfig {
@@ -36,18 +33,32 @@ function readStoredConfig(): ComponentSearchConfig {
     if (!raw) return DEFAULTS;
     const parsed: unknown = JSON.parse(raw);
     if (!parsed || typeof parsed !== "object") return DEFAULTS;
-    const p = parsed as Partial<ComponentSearchConfig>;
+    const record = parsed;
+    const legacyThinking =
+      "thinkingModel" in record &&
+      typeof record.thinkingModel === "string" &&
+      record.thinkingModel.trim().length > 0
+        ? record.thinkingModel
+        : "";
+    const storedModel =
+      "model" in record &&
+      typeof record.model === "string" &&
+      record.model.trim().length > 0
+        ? record.model
+        : "";
+    // Migration: previous reranking used `thinkingModel` when present, even if
+    // `model` was also stored. Preserve that precedence for existing users.
+    const model = legacyThinking || storedModel || DEFAULTS.model;
     return {
-      apiBase: typeof p.apiBase === "string" ? p.apiBase : DEFAULTS.apiBase,
-      apiKey: typeof p.apiKey === "string" ? p.apiKey : DEFAULTS.apiKey,
-      model:
-        typeof p.model === "string" && p.model.trim().length > 0
-          ? p.model
-          : DEFAULTS.model,
-      thinkingModel:
-        typeof p.thinkingModel === "string" && p.thinkingModel.trim().length > 0
-          ? p.thinkingModel
-          : DEFAULTS.thinkingModel,
+      apiBase:
+        "apiBase" in record && typeof record.apiBase === "string"
+          ? record.apiBase
+          : DEFAULTS.apiBase,
+      apiKey:
+        "apiKey" in record && typeof record.apiKey === "string"
+          ? record.apiKey
+          : DEFAULTS.apiKey,
+      model,
     };
   } catch {
     return DEFAULTS;
@@ -116,7 +127,10 @@ export function useComponentSearchSettings() {
     window.dispatchEvent(new Event("tangle:component-search-config"));
   };
 
-  const isConfigured = config.apiBase.length > 0 && config.apiKey.length > 0;
+  const isConfigured =
+    config.apiBase.length > 0 &&
+    config.apiKey.length > 0 &&
+    config.model.length > 0;
 
   return { config, update, clear, isConfigured };
 }

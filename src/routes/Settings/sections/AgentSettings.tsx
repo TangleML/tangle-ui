@@ -3,6 +3,7 @@ import { type FormEvent, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
@@ -21,23 +22,36 @@ export function AgentSettings() {
 
   const [apiBase, setApiBase] = useState(config.apiBase);
   const [apiKey, setApiKey] = useState(config.apiKey);
+  const [model, setModel] = useState(config.model);
+  const [modelError, setModelError] = useState<string | null>(null);
   const [showKey, setShowKey] = useState(false);
   const [testing, setTesting] = useState(false);
 
   // Keep the form in sync if `config` changes externally (other tab, etc.).
   // We snapshot the saved values and rehydrate the inputs whenever they
   // differ — not on every render — so the user can keep editing.
-  const savedRef = useRef({ apiBase: config.apiBase, apiKey: config.apiKey });
+  const savedRef = useRef({
+    apiBase: config.apiBase,
+    apiKey: config.apiKey,
+    model: config.model,
+  });
   useEffect(() => {
     if (
       savedRef.current.apiBase !== config.apiBase ||
-      savedRef.current.apiKey !== config.apiKey
+      savedRef.current.apiKey !== config.apiKey ||
+      savedRef.current.model !== config.model
     ) {
-      savedRef.current = { apiBase: config.apiBase, apiKey: config.apiKey };
+      savedRef.current = {
+        apiBase: config.apiBase,
+        apiKey: config.apiKey,
+        model: config.model,
+      };
       setApiBase(config.apiBase);
       setApiKey(config.apiKey);
+      setModel(config.model);
+      setModelError(null);
     }
-  }, [config.apiBase, config.apiKey]);
+  }, [config.apiBase, config.apiKey, config.model]);
 
   // Abort in-flight test connections if the user navigates away.
   const testAbortRef = useRef<AbortController | null>(null);
@@ -51,11 +65,24 @@ export function AgentSettings() {
     event.preventDefault();
     const trimmedBase = apiBase.trim();
     const trimmedKey = apiKey.trim();
+    const trimmedModel = model.trim();
     // Reflect the trimmed values back into the inputs so what the user sees
     // matches what's stored.
     setApiBase(trimmedBase);
     setApiKey(trimmedKey);
-    update({ apiBase: trimmedBase, apiKey: trimmedKey });
+    setModel(trimmedModel);
+
+    if (!trimmedModel) {
+      setModelError("Enter a model id before saving.");
+      return;
+    }
+
+    setModelError(null);
+    update({
+      apiBase: trimmedBase,
+      apiKey: trimmedKey,
+      model: trimmedModel,
+    });
     notify("Agent settings saved", "success");
   };
 
@@ -63,6 +90,8 @@ export function AgentSettings() {
     clear();
     setApiBase("");
     setApiKey("");
+    setModel("");
+    setModelError(null);
     setShowKey(false);
     notify("Agent settings cleared", "success");
   };
@@ -129,10 +158,9 @@ export function AgentSettings() {
       <form onSubmit={handleSave}>
         <BlockStack gap="4">
           <BlockStack gap="1">
-            <Text size="sm" weight="semibold">
-              API base URL
-            </Text>
+            <Label htmlFor="agent-settings-api-base">API base URL</Label>
             <Input
+              id="agent-settings-api-base"
               type="url"
               placeholder="https://api.openai.com/v1"
               value={apiBase}
@@ -147,11 +175,10 @@ export function AgentSettings() {
           </BlockStack>
 
           <BlockStack gap="1">
-            <Text size="sm" weight="semibold">
-              API key
-            </Text>
+            <Label htmlFor="agent-settings-api-key">API key</Label>
             <InlineStack gap="2" blockAlign="center" wrap="nowrap">
               <Input
+                id="agent-settings-api-key"
                 type={showKey ? "text" : "password"}
                 placeholder="sk-… or provider-specific token"
                 value={apiKey}
@@ -173,6 +200,38 @@ export function AgentSettings() {
             </InlineStack>
             <Text size="xs" tone="subdued">
               Stored in browser localStorage. Clear it when sharing this device.
+            </Text>
+          </BlockStack>
+
+          <BlockStack gap="1">
+            <Label htmlFor="agent-settings-model">Model</Label>
+            <Input
+              id="agent-settings-model"
+              type="text"
+              placeholder="e.g. gpt-4o-mini, gemini-2.5-flash, claude-3-5-haiku"
+              value={model}
+              onChange={(e) => {
+                setModel(e.target.value);
+                if (modelError) setModelError(null);
+              }}
+              aria-label="Model id"
+              aria-invalid={modelError ? true : undefined}
+              aria-describedby={
+                modelError
+                  ? "agent-settings-model-error agent-settings-model-hint"
+                  : "agent-settings-model-hint"
+              }
+              autoComplete="off"
+              spellCheck={false}
+            />
+            {modelError && (
+              <Text id="agent-settings-model-error" size="xs" tone="critical">
+                {modelError}
+              </Text>
+            )}
+            <Text id="agent-settings-model-hint" size="xs" tone="subdued">
+              Model id sent to the provider for AI search reranking. Must be
+              available on the provider above.
             </Text>
           </BlockStack>
 

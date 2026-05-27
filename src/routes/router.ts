@@ -198,6 +198,11 @@ const settingsAgentRoute = createRoute({
   getParentRoute: () => settingsLayoutRoute,
   path: "/agent",
   component: AgentSettings,
+  beforeLoad: () => {
+    if (!isFlagEnabled("component-search-v2")) {
+      throw redirect({ to: APP_ROUTES.SETTINGS_BACKEND });
+    }
+  },
 });
 
 const settingsSecretsRoute = createRoute({

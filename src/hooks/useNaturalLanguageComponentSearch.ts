@@ -25,15 +25,10 @@ interface RerankVariables {
 export function useNaturalLanguageComponentRerank() {
   const { config, isConfigured } = useComponentSearchSettings();
 
-  // Prefer the thinking model for rerank — rerank is the moment we *want*
-  // careful judgment, and the payload is small enough that latency is fine.
-  // Fall back to the default model when no thinking model is configured.
-  const model = config.thinkingModel || config.model;
-
   const mutation = useMutation<RerankResult, Error, RerankVariables>({
     mutationFn: ({ query, candidates }) =>
       rerankComponentsByNaturalLanguage(query, candidates, {
-        model,
+        model: config.model,
         apiBase: config.apiBase,
         apiKey: config.apiKey,
       }),
