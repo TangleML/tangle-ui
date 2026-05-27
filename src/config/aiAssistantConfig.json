@@ -2,5 +2,6 @@
   "proxyBaseUrl": "",
   "proxyMode": "browser-direct",
   "orchestratorModel": "",
-  "subagentModel": ""
+  "subagentModel": "",
+  "embeddingModel": ""
 }
