@@ -65,6 +65,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/components/shared/HighlightText.tsx",
   "src/components/shared/AnnouncementBanners.tsx",
   "src/components/shared/ReactFlow/FlowCanvas/TaskNode/TaskOverview/IOSection",
+  "src/components/ui/typography.tsx",
 
   "src/providers/DialogProvider",
   "src/routes/EditorV2",
@@ -84,5 +85,5 @@ export const REACT_COMPILER_ENABLED_DIRS = [
 
 // Convert to glob patterns for ESLint
 export const REACT_COMPILER_ENABLED_GLOBS = REACT_COMPILER_ENABLED_DIRS.map(
-  (dir) => `${dir}/**/*.{ts,tsx}`,
+  (path) => (/\.[cm]?[jt]sx?$/.test(path) ? path : `${path}/**/*.{ts,tsx}`),
 );
