@@ -3,6 +3,7 @@ import { Link, Outlet } from "@tanstack/react-router";
 import { TipOfTheDay } from "@/components/Learn/TipOfTheDay";
 import { isAuthorizationRequired } from "@/components/shared/Authentication/helpers";
 import { TopBarAuthentication } from "@/components/shared/Authentication/TopBarAuthentication";
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Link as UILink } from "@/components/ui/link";
@@ -25,7 +26,7 @@ interface SidebarItem {
   exact?: boolean;
 }
 
-const SIDEBAR_ITEMS: SidebarItem[] = [
+const BASE_SIDEBAR_ITEMS: SidebarItem[] = [
   { to: "/", label: "My Dashboard", icon: "LayoutDashboard", exact: true },
   { to: "/pipelines", label: "My Pipelines", icon: "GitBranch" },
   { to: "/runs", label: "All Runs", icon: "Play" },
@@ -35,6 +36,12 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
   { to: "/learn", label: "Learning Hub", icon: "GraduationCap" },
 ];
 
+const COMPONENTS_V2_ITEM: SidebarItem = {
+  to: "/components-v2",
+  label: "Components V2",
+  icon: "PackageSearch",
+};
+
 const navItemClass = (isActive: boolean) =>
   cn(
     "w-full px-3 py-2 rounded-md text-sm cursor-pointer hover:bg-accent",
@@ -43,6 +50,18 @@ const navItemClass = (isActive: boolean) =>
 
 export function DashboardLayout() {
   const requiresAuthorization = isAuthorizationRequired();
+  const isComponentsV2Enabled = useFlagValue("component-search-v2");
+
+  // Insert the Components V2 entry directly after "Components" when the
+  // beta flag is on. Keeps the nav order intuitive without touching the
+  // base list.
+  const sidebarItems = isComponentsV2Enabled
+    ? [
+        ...BASE_SIDEBAR_ITEMS.slice(0, 4),
+        COMPONENTS_V2_ITEM,
+        ...BASE_SIDEBAR_ITEMS.slice(4),
+      ]
+    : BASE_SIDEBAR_ITEMS;
 
   return (
     <div
@@ -59,7 +78,7 @@ export function DashboardLayout() {
         </div>
 
         <BlockStack gap="1" className="px-3">
-          {SIDEBAR_ITEMS.map((item) => (
+          {sidebarItems.map((item) => (
             <Link
               key={item.to}
               to={item.to}

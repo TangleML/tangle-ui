@@ -62,4 +62,12 @@ export const ExistingFlags: ConfigFlags = {
     default: false,
     category: "beta",
   },
+
+  ["component-search-v2"]: {
+    name: "Component Search V2",
+    description:
+      "Show the experimental Components V2 page that searches across standard, published, registered, and user component sources, with optional AI rerank.",
+    default: false,
+    category: "beta",
+  },
 };
