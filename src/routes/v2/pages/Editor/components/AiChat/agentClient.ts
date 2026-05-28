@@ -7,6 +7,7 @@
  */
 import * as Comlink from "comlink";
 
+import type { RecentPipelineRun } from "@/agent/session";
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import type { AgentResponse, StatusCallback } from "@/agent/types";
 import type { AgentWorkerApi } from "@/agent/worker";
@@ -19,6 +20,7 @@ interface InitDeps {
 interface AskOptions {
   message: string;
   threadId?: string;
+  recentRuns?: RecentPipelineRun[];
 }
 
 class AgentClient {

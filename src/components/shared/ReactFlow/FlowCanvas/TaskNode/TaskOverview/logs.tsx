@@ -6,6 +6,7 @@ import { InfoBox } from "@/components/shared/InfoBox";
 import { Link } from "@/components/ui/link";
 import { Spinner } from "@/components/ui/spinner";
 import { useBackend } from "@/providers/BackendProvider";
+import { fetchContainerLog } from "@/services/executionService";
 import { getBackendStatusString } from "@/utils/backend";
 import { CONTAINER_STATUSES_PRE_LAUNCH } from "@/utils/executionStatus";
 
@@ -78,13 +79,6 @@ export const shouldStatusHaveLogs = (status?: string): boolean => {
   return !CONTAINER_STATUSES_PRE_LAUNCH.has(status);
 };
 
-const getLogs = async (executionId: string, backendUrl: string) => {
-  const response = await fetch(
-    `${backendUrl}/api/executions/${executionId}/container_log`,
-  );
-  return response.json();
-};
-
 const Logs = ({
   executionId,
   status,
@@ -103,7 +97,7 @@ const Logs = ({
   }>();
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["logs", executionId],
-    queryFn: () => getLogs(String(executionId), backendUrl),
+    queryFn: () => fetchContainerLog(String(executionId), backendUrl),
     enabled: shouldFetch,
     refetchInterval: shouldPoll ? 5000 : false,
     refetchIntervalInBackground: false,
@@ -112,8 +106,9 @@ const Logs = ({
   useEffect(() => {
     if (data && !error) {
       setLogs({
-        log_text: data?.log_text,
-        system_error_exception_full: data?.system_error_exception_full,
+        log_text: data?.log_text ?? undefined,
+        system_error_exception_full:
+          data?.system_error_exception_full ?? undefined,
       });
     }
 
