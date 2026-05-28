@@ -13,88 +13,16 @@
 import { tool } from "@openai/agents";
 import { z } from "zod";
 
-import type {
-  ContainerLogPayload,
-  ContainerState,
-  ExecutionDetails,
-  ToolBridgeApi,
-} from "../toolBridgeApi";
+import {
+  truncateContainerLog,
+  truncateContainerState,
+  truncateExecutionDetails,
+} from "@/agent/util/truncate";
 
-const LOG_BYTE_BUDGET = 8_192;
-const ORCHESTRATION_ERROR_BUDGET = 2_048;
-const STRING_FIELD_BUDGET = 2_048;
-const MAX_DEBUG_INFO_KEYS = 20;
+import type { ToolBridgeApi } from "../toolBridgeApi";
 
 function asJson(value: unknown): string {
   return JSON.stringify(value);
-}
-
-/**
- * Keep the trailing window — for execution logs the failure context
- * almost always lives at the end of the stream, so the head is the
- * easiest part to drop.
- */
-function truncateLogText(text: string, budget: number): string {
-  if (text.length <= budget) return text;
-  return `…[truncated ${text.length - budget} chars]\n${text.slice(-budget)}`;
-}
-
-function truncateContainerLog(
-  log: ContainerLogPayload,
-): ContainerLogPayload & { truncated?: boolean } {
-  let truncated = false;
-  const result: ContainerLogPayload & { truncated?: boolean } = {};
-  if (log.log_text != null) {
-    truncated ||= log.log_text.length > LOG_BYTE_BUDGET;
-    result.log_text = truncateLogText(log.log_text, LOG_BYTE_BUDGET);
-  }
-  if (log.system_error_exception_full != null) {
-    truncated ||= log.system_error_exception_full.length > LOG_BYTE_BUDGET;
-    result.system_error_exception_full = truncateLogText(
-      log.system_error_exception_full,
-      LOG_BYTE_BUDGET,
-    );
-  }
-  if (log.orchestration_error_message != null) {
-    truncated ||=
-      log.orchestration_error_message.length > ORCHESTRATION_ERROR_BUDGET;
-    result.orchestration_error_message = truncateLogText(
-      log.orchestration_error_message,
-      ORCHESTRATION_ERROR_BUDGET,
-    );
-  }
-  if (truncated) result.truncated = true;
-  return result;
-}
-
-function truncateContainerState(state: ContainerState): ContainerState {
-  if (!state.debug_info) return state;
-  const entries = Object.entries(state.debug_info).slice(
-    0,
-    MAX_DEBUG_INFO_KEYS,
-  );
-  const truncatedDebugInfo: Record<string, unknown> = {};
-  for (const [key, value] of entries) {
-    if (typeof value === "string" && value.length > STRING_FIELD_BUDGET) {
-      truncatedDebugInfo[key] = truncateLogText(value, STRING_FIELD_BUDGET);
-    } else {
-      truncatedDebugInfo[key] = value;
-    }
-  }
-  return { ...state, debug_info: truncatedDebugInfo };
-}
-
-function truncateExecutionDetails(details: ExecutionDetails): ExecutionDetails {
-  // Drop heavy artifact maps to empty objects so the model still knows
-  // they exist (and can call `get_execution_state` for counts) without
-  // pulling MB of artifact metadata into context.
-  const inputCount = Object.keys(details.input_artifacts ?? {}).length;
-  const outputCount = Object.keys(details.output_artifacts ?? {}).length;
-  return {
-    ...details,
-    input_artifacts: inputCount > 0 ? {} : details.input_artifacts,
-    output_artifacts: outputCount > 0 ? {} : details.output_artifacts,
-  };
 }
 
 export function createDebugTools(bridge: ToolBridgeApi) {
