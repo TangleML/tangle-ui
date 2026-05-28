@@ -5,11 +5,13 @@ import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
+import { Text } from "@/components/ui/typography";
 import { APP_ROUTES } from "@/routes/router";
 import { setTourActive } from "@/utils/tourActive";
 import { tracking } from "@/utils/tracking";
 
 import { useTourProgress } from "./TourProgressContext";
+import { useTourSaveExplore } from "./TourSaveExploreContext";
 
 // Matches the step-number badge's ≈13px outside offset plus a small margin.
 const POPOVER_VIEWPORT_MARGIN = 16;
@@ -93,10 +95,16 @@ export function computeDefaultPopoverPosition(
 export function TourCompletionActions() {
   const navigate = useNavigate();
   const { setIsOpen } = useTour();
+  const { available, setOpen } = useTourSaveExplore();
 
   const onDone = () => {
     setIsOpen(false);
     void navigate({ to: APP_ROUTES.LEARN_TOURS });
+  };
+
+  const onSavePipeline = () => {
+    setIsOpen(false);
+    setOpen(true);
   };
 
   return (
@@ -110,6 +118,22 @@ export function TourCompletionActions() {
         <Icon name="Check" size="sm" />
         Finish Tour
       </Button>
+      {available && (
+        <BlockStack align="center">
+          <Text size="xs" tone="subdued">
+            Continue exploring:
+          </Text>
+          <Button
+            size="xs"
+            variant="link"
+            onClick={onSavePipeline}
+            {...tracking("v2.pipeline_editor.tour.save_as_pipeline")}
+          >
+            <Icon name="SaveAll" size="xs" />
+            Save demo pipeline
+          </Button>
+        </BlockStack>
+      )}
     </BlockStack>
   );
 }
