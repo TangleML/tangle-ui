@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import {
+  buildComponentSourceUrl,
   convertGcsUrlToBrowserUrl,
   convertGithubUrlToDirectoryUrl,
   convertHfUrlToDirectoryUrl,
@@ -62,6 +63,34 @@ describe("convertGcsUrlToBrowserUrl", () => {
   it("converts gs:// file to cloud storage url", () => {
     expect(convertGcsUrlToBrowserUrl("gs://my-bucket/my-file.txt", false)).toBe(
       "https://storage.cloud.google.com/my-bucket/my-file.txt",
+    );
+  });
+});
+
+describe("buildComponentSourceUrl", () => {
+  it("builds source file URLs from the provided remote URL", () => {
+    expect(
+      buildComponentSourceUrl({
+        remoteUrl: "https://git.example.com/org/repo",
+        branch: "feature/branch",
+        relativeDir: "components/train",
+        filePath: "component.yaml",
+      }),
+    ).toBe(
+      "https://git.example.com/org/repo/blob/feature/branch/components/train/component.yaml",
+    );
+  });
+
+  it("preserves GitHub behavior while stripping .git suffixes", () => {
+    expect(
+      buildComponentSourceUrl({
+        remoteUrl: "https://github.com/user/repo.git",
+        branch: "main",
+        relativeDir: "components/train",
+        filePath: "component.yaml",
+      }),
+    ).toBe(
+      "https://github.com/user/repo/blob/main/components/train/component.yaml",
     );
   });
 });

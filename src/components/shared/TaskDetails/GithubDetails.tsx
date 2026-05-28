@@ -11,6 +11,16 @@ const linkProps = {
   rel: "noopener noreferrer",
 } as const;
 
+function getGithubDirectoryUrl(url: string): string | null {
+  if (!isGithubUrl(url)) return null;
+
+  try {
+    return convertGithubUrlToDirectoryUrl(url);
+  } catch {
+    return null;
+  }
+}
+
 export function GithubDetails({
   url,
   canonicalUrl,
@@ -23,6 +33,13 @@ export function GithubDetails({
   className?: string;
 }) {
   const hasUrl = url || canonicalUrl;
+  const directoryUrl = url ? getGithubDirectoryUrl(url) : null;
+  const canonicalDirectoryUrl = canonicalUrl
+    ? getGithubDirectoryUrl(canonicalUrl)
+    : null;
+  const documentationDirectoryUrl = documentationUrl
+    ? getGithubDirectoryUrl(documentationUrl)
+    : null;
 
   if (!hasUrl && !documentationUrl) return null;
 
@@ -37,14 +54,11 @@ export function GithubDetails({
                 View raw component.yaml
               </Link>
 
-              <Link
-                href={
-                  isGithubUrl(url) ? convertGithubUrlToDirectoryUrl(url) : url
-                }
-                {...linkProps}
-              >
-                View directory on GitHub
-              </Link>
+              {directoryUrl && (
+                <Link href={directoryUrl} {...linkProps}>
+                  View directory on GitHub
+                </Link>
+              )}
             </>
           )}
           {!!canonicalUrl && (
@@ -53,12 +67,11 @@ export function GithubDetails({
                 View canonical URL
               </Link>
 
-              <Link
-                href={convertGithubUrlToDirectoryUrl(canonicalUrl)}
-                {...linkProps}
-              >
-                View canonical URL on GitHub
-              </Link>
+              {canonicalDirectoryUrl && (
+                <Link href={canonicalDirectoryUrl} {...linkProps}>
+                  View canonical URL on GitHub
+                </Link>
+              )}
             </>
           )}
         </BlockStack>
@@ -70,16 +83,11 @@ export function GithubDetails({
             View documentation
           </Link>
 
-          <Link
-            href={
-              isGithubUrl(documentationUrl)
-                ? convertGithubUrlToDirectoryUrl(documentationUrl)
-                : documentationUrl
-            }
-            {...linkProps}
-          >
-            View directory on GitHub
-          </Link>
+          {documentationDirectoryUrl && (
+            <Link href={documentationDirectoryUrl} {...linkProps}>
+              View directory on GitHub
+            </Link>
+          )}
         </BlockStack>
       )}
     </BlockStack>
