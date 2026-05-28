@@ -46,13 +46,14 @@ import {
 } from "./agents/tangleDispatcher";
 import { getAiToken } from "./aiTokenStore";
 import { ProxyClient } from "./config";
-import { createSession } from "./session";
+import { createSession, type RecentPipelineRun } from "./session";
 import type { ToolBridgeApi } from "./toolBridgeApi";
 import type { AgentResponse, StatusCallback } from "./types";
 
 export interface AskParams {
   message: string;
   threadId?: string;
+  recentRuns?: RecentPipelineRun[];
 }
 
 export interface AgentWorkerApi {
@@ -89,7 +90,7 @@ function createWorkerApi(): AgentWorkerApi {
       return "pong";
     },
 
-    async ask({ message, threadId }) {
+    async ask({ message, threadId, recentRuns }) {
       if (!dispatcher || !bridge) {
         throw new Error(
           "Agent worker not initialized. Call init() before ask().",
@@ -107,6 +108,7 @@ function createWorkerApi(): AgentWorkerApi {
         emitStatus,
         proxyClient,
         bridge,
+        recentRuns,
       });
 
       const result = await dispatcher.invoke({

@@ -11,6 +11,12 @@
  * `success` flag plus contextual ids so the model can chain calls
  * (e.g. take the returned `taskId` and call `set_task_argument`).
  */
+import type {
+  GetContainerExecutionStateResponse,
+  GetExecutionInfoResponse,
+  GetGraphExecutionStateResponse,
+  PipelineRunResponse,
+} from "@/api/types.gen";
 import type { ComponentReference } from "@/models/componentSpec";
 import type { AiSpec } from "@/routes/v2/pages/Editor/components/AiChat/serializeSpecForAi";
 
@@ -34,6 +40,45 @@ export interface ConnectArgs {
   targetEntityId: string;
   targetPortName: string;
 }
+
+export interface RunSubmissionResult {
+  success: boolean;
+  runId?: string;
+  rootExecutionId?: string;
+  error?: string;
+}
+
+export interface ContainerLogPayload {
+  log_text?: string;
+  system_error_exception_full?: string;
+  orchestration_error_message?: string;
+  truncated?: boolean;
+}
+
+export interface RunDebugSnapshotChild {
+  taskId: string;
+  executionId: string;
+  status?: string;
+  details?: GetExecutionInfoResponse;
+  containerState?: GetContainerExecutionStateResponse;
+  log?: ContainerLogPayload;
+  error?: string;
+}
+
+export interface RunDebugSnapshot {
+  success: boolean;
+  run?: PipelineRunResponse;
+  rootExecutionId?: string;
+  rootStatus?: string;
+  failedChildren: RunDebugSnapshotChild[];
+  truncatedChildren: number;
+  error?: string;
+}
+
+export type RunDetails = PipelineRunResponse;
+export type ExecutionDetails = GetExecutionInfoResponse;
+export type ExecutionState = GetGraphExecutionStateResponse;
+export type ContainerState = GetContainerExecutionStateResponse;
 
 export interface ToolBridgeApi {
   getPipelineState(): Promise<AiSpec>;
@@ -89,4 +134,12 @@ export interface ToolBridgeApi {
   unpackSubgraph(taskEntityId: string): Promise<{ success: boolean }>;
 
   validatePipeline(): Promise<ValidationResult>;
+
+  submitPipelineRun(): Promise<RunSubmissionResult>;
+  getRunDetails(runId: string): Promise<RunDetails>;
+  getExecutionDetails(executionId: string): Promise<ExecutionDetails>;
+  getExecutionState(executionId: string): Promise<ExecutionState>;
+  getContainerState(executionId: string): Promise<ContainerState>;
+  getContainerLog(executionId: string): Promise<ContainerLogPayload>;
+  debugPipelineRun(runId: string): Promise<RunDebugSnapshot>;
 }
