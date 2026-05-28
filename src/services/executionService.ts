@@ -5,6 +5,7 @@ import type {
   GetArtifactInfoResponse,
   GetArtifactsApiExecutionsIdArtifactsGetResponse,
   GetArtifactSignedUrlResponse,
+  GetContainerExecutionLogResponse,
   GetContainerExecutionStateResponse,
   GetExecutionInfoResponse,
   PipelineRunResponse,
@@ -65,12 +66,22 @@ export const useFetchPipelineRunMetadata = (runId: string | undefined) => {
   });
 };
 
-const fetchContainerExecutionState = async (
+export const fetchContainerExecutionState = async (
   executionId: string,
   backendUrl: string,
 ): Promise<GetContainerExecutionStateResponse> => {
   const url = `${backendUrl}/api/executions/${executionId}/container_state`;
   return fetchWithErrorHandling(url);
+};
+
+export const fetchContainerLog = async (
+  executionId: string,
+  backendUrl: string,
+): Promise<GetContainerExecutionLogResponse> => {
+  const response = await fetch(
+    `${backendUrl}/api/executions/${executionId}/container_log`,
+  );
+  return response.json();
 };
 
 export const useFetchContainerExecutionState = (
