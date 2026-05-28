@@ -39,6 +39,7 @@ import { TOP_NAV_HEIGHT } from "@/utils/constants";
 import { fetchWithErrorHandling } from "@/utils/fetchWithErrorHandling";
 import { getComponentName } from "@/utils/getComponentName";
 import { tracking } from "@/utils/tracking";
+import { buildComponentSourceUrl } from "@/utils/URL";
 
 type ComponentRowSection = "user" | "library" | "published";
 
@@ -516,14 +517,22 @@ const ComponentDetailInner = ({ digest }: { digest: string }) => {
   let documentationUrl: string | undefined;
 
   if (gitRemoteUrl && gitRemoteBranch && gitRelativeDir) {
-    const repoPath = gitRemoteUrl
-      .replace(/^https:\/\/github\.com\//, "")
-      .replace(/\.git$/, "");
-    const buildGitHubUrl = (filePath: string) =>
-      `https://github.com/${repoPath}/blob/${gitRemoteBranch}/${gitRelativeDir}/${filePath}`;
-    if (!hydrated.url && componentYamlPath)
-      reconstructedUrl = buildGitHubUrl(componentYamlPath);
-    if (documentationPath) documentationUrl = buildGitHubUrl(documentationPath);
+    if (!hydrated.url && componentYamlPath) {
+      reconstructedUrl = buildComponentSourceUrl({
+        remoteUrl: gitRemoteUrl,
+        branch: gitRemoteBranch,
+        relativeDir: gitRelativeDir,
+        filePath: componentYamlPath,
+      });
+    }
+    if (documentationPath) {
+      documentationUrl = buildComponentSourceUrl({
+        remoteUrl: gitRemoteUrl,
+        branch: gitRemoteBranch,
+        relativeDir: gitRelativeDir,
+        filePath: documentationPath,
+      });
+    }
   }
 
   const hasIO =

@@ -5,6 +5,7 @@ import { useGuaranteedHydrateComponentReference } from "@/hooks/useHydrateCompon
 import type { TaskNodeContextType } from "@/providers/TaskNodeProvider";
 import type { ComponentReference } from "@/utils/componentSpec";
 import { getExecutionStatusLabel } from "@/utils/executionStatus";
+import { buildComponentSourceUrl } from "@/utils/URL";
 
 import { ContentBlock } from "../ContextPanel/Blocks/ContentBlock";
 import { KeyValueList } from "../ContextPanel/Blocks/KeyValueList";
@@ -70,28 +71,22 @@ const TaskDetailsInternal = ({
     typeof git_remote_branch === "string" &&
     typeof git_relative_dir === "string"
   ) {
-    const repoPath = git_remote_url
-      .replace(/^https:\/\/github\.com\//, "")
-      .replace(/\.git$/, "");
-
-    const buildGitHubUrl = (filePath: string) => {
-      const url = new URL(`https://github.com`);
-      url.pathname = [
-        repoPath,
-        "blob",
-        git_remote_branch,
-        git_relative_dir,
-        filePath,
-      ].join("/");
-      return url.toString();
-    };
-
     if (!url && typeof component_yaml_path === "string") {
-      reconstructedUrl = buildGitHubUrl(component_yaml_path);
+      reconstructedUrl = buildComponentSourceUrl({
+        remoteUrl: git_remote_url,
+        branch: git_remote_branch,
+        relativeDir: git_relative_dir,
+        filePath: component_yaml_path,
+      });
     }
 
     if (typeof documentation_path === "string") {
-      documentationUrl = buildGitHubUrl(documentation_path);
+      documentationUrl = buildComponentSourceUrl({
+        remoteUrl: git_remote_url,
+        branch: git_remote_branch,
+        relativeDir: git_relative_dir,
+        filePath: documentation_path,
+      });
     }
   }
 

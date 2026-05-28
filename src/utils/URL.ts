@@ -112,6 +112,28 @@ const convertGithubUrlToDirectoryUrl = (url: string) => {
   }
 };
 
+const buildComponentSourceUrl = ({
+  remoteUrl,
+  branch,
+  relativeDir,
+  filePath,
+}: {
+  remoteUrl: string;
+  branch: string;
+  relativeDir: string;
+  filePath: string;
+}): string => {
+  const baseUrl = remoteUrl.replace(/\/+$/, "").replace(/\.git$/, "");
+  const pathParts = [
+    "blob",
+    branch.replace(/^\/+|\/+$/g, ""),
+    relativeDir.replace(/^\/+|\/+$/g, ""),
+    filePath.replace(/^\/+|\/+$/g, ""),
+  ];
+
+  return `${baseUrl}/${pathParts.join("/")}`;
+};
+
 const downloadStringAsFile = (
   content: string,
   filename: string,
@@ -186,6 +208,7 @@ const getArtifactPreviewUrl = (
 };
 
 export {
+  buildComponentSourceUrl,
   convertArtifactUriToHTTPUrl,
   convertGcsUrlToBrowserUrl,
   convertGithubUrlToDirectoryUrl,
