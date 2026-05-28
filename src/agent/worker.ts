@@ -18,6 +18,7 @@ import {
 import { getAiToken } from "./aiTokenStore";
 import { ProxyClient } from "./config";
 import { createSession, type RecentPipelineRun } from "./session";
+import { SkillsLoader } from "./skills/loader";
 import type { ToolBridgeApi } from "./toolBridgeApi";
 import type { AgentResponse, StatusCallback } from "./types";
 
@@ -42,13 +43,12 @@ function createWorkerApi(): AgentWorkerApi {
   let bridge: ToolBridgeApi | null = null;
   let emitStatus: StatusCallback = () => {};
   const proxyClient = new ProxyClient();
+  const skillsLoader = new SkillsLoader();
 
   return {
     /**
      * Initialization entry point. Called once by the main thread
-     * immediately after spawning the worker. Splits init from ask() so
-     * the tool bridge plumbing and skill warm-up have an explicit
-     * lifecycle hook later.
+     * immediately after spawning the worker.
      */
     init(toolBridge, onStatus) {
       // Dispose any prior dispatcher (detaches its observability listeners)
@@ -83,6 +83,7 @@ function createWorkerApi(): AgentWorkerApi {
         emitStatus,
         proxyClient,
         bridge,
+        skillsLoader,
         recentRuns,
       });
 

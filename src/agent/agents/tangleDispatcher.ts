@@ -21,6 +21,7 @@ import dispatcherPrompt from "../prompts/dispatcher.md?raw";
 import type { AgentSession } from "../session";
 import { createDebugAssistantAgent } from "./subagents/debugAssistant";
 import { createGeneralHelpAgent } from "./subagents/generalHelp";
+import { createPipelineArchitectAgent } from "./subagents/pipelineArchitect";
 import { createPipelineRepairAgent } from "./subagents/pipelineRepair";
 
 interface DispatcherInvokeParams {
@@ -40,9 +41,10 @@ export interface TangleDispatcher {
   dispose(): void;
 }
 
-function createDispatcherAgent(session: AgentSession): Agent {
+async function createDispatcherAgent(session: AgentSession): Promise<Agent> {
   const generalHelp = createGeneralHelpAgent(session);
   const pipelineRepair = createPipelineRepairAgent(session);
+  const pipelineArchitect = await createPipelineArchitectAgent(session);
   const debugAssistant = createDebugAssistantAgent(session);
 
   const agent = new Agent({
@@ -59,6 +61,11 @@ function createDispatcherAgent(session: AgentSession): Agent {
         toolName: "ask_pipeline_repair",
         toolDescription:
           "Ask the pipeline-repair specialist to inspect, validate, or fix the user's currently-open pipeline, or to apply a specific CSOM mutation directive. Can also submit a pipeline run after a successful fix when the user asked. Input: a clear directive. For open-ended repair use 'Validate and fix the current pipeline.'. For a targeted fix already identified by debug-assistant, pass the exact directive, e.g. 'Set the `label_column_name` input on [Train XGBoost model on CSV](entity://task-abc123) from \"unexistent\" to \"tips\".'. Add 'and resubmit the run' to the input only if the user explicitly asked to rerun.",
+      }),
+      pipelineArchitect.asTool({
+        toolName: "ask_pipeline_architect",
+        toolDescription:
+          "Ask the pipeline-architect specialist to design or build new pipeline structure — a whole pipeline from scratch, a new stage in an existing pipeline, or a multi-task subgraph. Can mutate the pipeline via CSOM tools and submit a run after a successful build when the user asked. NOT for fixing validation errors or single-task tweaks (use `ask_pipeline_repair`). Input: a clear design directive, e.g. 'Build a pipeline that loads a CSV, trains an XGBoost model on the `tips` column, and exposes the trained model as a pipeline output.'. Add 'and submit the run' to the input only if the user explicitly asked to run.",
       }),
       debugAssistant.asTool({
         toolName: "ask_debug_assistant",
@@ -86,7 +93,7 @@ export function createDispatcher(): TangleDispatcher {
     async invoke(params) {
       params.session.proxyClient.ensureConfigured(params.token);
       const sessionMemory = getOrCreateSessionMemory(params.threadId);
-      const agent = createDispatcherAgent(params.session);
+      const agent = await createDispatcherAgent(params.session);
       const result = await run(agent, params.message, {
         session: sessionMemory,
       });
