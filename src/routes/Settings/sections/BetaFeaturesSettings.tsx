@@ -6,6 +6,14 @@ import { useSettingsFlags } from "../SettingsFlagsContext";
 export function BetaFeaturesSettings() {
   const { betaFlags, handleSetFlag } = useSettingsFlags();
   const { track } = useAnalytics();
+  const componentSearchV2Enabled = betaFlags.some(
+    (flag) => flag.key === "component-search-v2" && flag.enabled,
+  );
+  const visibleBetaFlags = componentSearchV2Enabled
+    ? betaFlags
+    : betaFlags.filter(
+        (flag) => flag.key !== "component-search-v2-ai-descriptions",
+      );
 
   const handleChange = (key: string, enabled: boolean) => {
     track("settings.toggle_changed", {
@@ -16,5 +24,5 @@ export function BetaFeaturesSettings() {
     handleSetFlag(key, enabled);
   };
 
-  return <BetaFeatures betaFlags={betaFlags} onChange={handleChange} />;
+  return <BetaFeatures betaFlags={visibleBetaFlags} onChange={handleChange} />;
 }
