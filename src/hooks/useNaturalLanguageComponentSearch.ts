@@ -2,14 +2,21 @@ import { useMutation } from "@tanstack/react-query";
 
 import { useComponentSearchSettings } from "@/hooks/useComponentSearchSettings";
 import {
+  type ComponentDescriptionResult,
+  generateComponentAiDescription,
   type RerankCandidate,
   rerankComponentsByNaturalLanguage,
   type RerankResult,
 } from "@/services/naturalLanguageComponentSearchService";
+import type { ComponentReference } from "@/utils/componentSpec";
 
 interface RerankVariables {
   query: string;
   candidates: RerankCandidate[];
+}
+
+interface DescriptionVariables {
+  reference: ComponentReference;
 }
 
 /**
@@ -28,6 +35,25 @@ export function useNaturalLanguageComponentRerank() {
   const mutation = useMutation<RerankResult, Error, RerankVariables>({
     mutationFn: ({ query, candidates }) =>
       rerankComponentsByNaturalLanguage(query, candidates, {
+        model: config.model,
+        apiBase: config.apiBase,
+        apiKey: config.apiKey,
+      }),
+  });
+
+  return { ...mutation, isConfigured };
+}
+
+export function useComponentAiDescription() {
+  const { config, isConfigured } = useComponentSearchSettings();
+
+  const mutation = useMutation<
+    ComponentDescriptionResult,
+    Error,
+    DescriptionVariables
+  >({
+    mutationFn: ({ reference }) =>
+      generateComponentAiDescription(reference, {
         model: config.model,
         apiBase: config.apiBase,
         apiKey: config.apiKey,

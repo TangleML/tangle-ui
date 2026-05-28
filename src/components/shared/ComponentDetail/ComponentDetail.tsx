@@ -183,12 +183,15 @@ interface ComponentDetailProps {
    * top nav). In `stacked` layout this caps the inline source card's height.
    */
   sourcePanelHeight?: string;
+  /** Hide the source-authored description when the caller renders its own description panel. */
+  hideDescription?: boolean;
 }
 
 export const ComponentDetail = ({
   reference,
   layout = "split",
   sourcePanelHeight,
+  hideDescription = false,
 }: ComponentDetailProps) => {
   const hydrated = useHydrateComponentReference(reference);
 
@@ -305,7 +308,7 @@ export const ComponentDetail = ({
     return (
       <BlockStack gap="6" align="stretch">
         {header}
-        {description}
+        {!hideDescription && description}
         {githubLinks}
         {io}
         {hydrated.text && (
@@ -331,7 +334,7 @@ export const ComponentDetail = ({
     <InlineStack gap="6" blockAlign="start">
       <BlockStack gap="4" className="flex-2 min-w-0">
         {header}
-        {description}
+        {!hideDescription && description}
         {githubLinks}
         {io}
       </BlockStack>

@@ -9,6 +9,7 @@ import {
   ComponentDetail,
   ComponentDetailSkeleton,
 } from "@/components/shared/ComponentDetail/ComponentDetail";
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { SuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,7 +21,10 @@ import { Spinner } from "@/components/ui/spinner";
 import { QuickTooltip } from "@/components/ui/tooltip";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
 import { getComponentQueryKey } from "@/hooks/useHydrateComponentReference";
-import { useNaturalLanguageComponentRerank } from "@/hooks/useNaturalLanguageComponentSearch";
+import {
+  useComponentAiDescription,
+  useNaturalLanguageComponentRerank,
+} from "@/hooks/useNaturalLanguageComponentSearch";
 import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
 import { useBackend } from "@/providers/BackendProvider";
@@ -65,6 +69,11 @@ import { tracking } from "@/utils/tracking";
 
 import { APP_ROUTES } from "../router";
 import { copyComponentReferenceToClipboard } from "../v2/shared/clipboard/copyComponentReferenceToClipboard";
+import {
+  createSourceFilterOptions,
+  filterIndexByDisabledSourceKeys,
+  SourceFilterBar,
+} from "./DashboardComponentsV2SourceFilter";
 import { readSelectedComponentDigest } from "./searchParams";
 
 // Repeated Tailwind combos extracted as named constants.
@@ -101,98 +110,6 @@ const MATCH_FIELD_LABEL: Record<MatchField, string> = {
   description: "description",
   io: "inputs/outputs",
   implementation: "command",
-};
-
-export interface SourceFilterOption {
-  source: ComponentSearchSource;
-  count: number;
-}
-
-function sourceFilterKey(source: ComponentSearchSource): string {
-  return `${source.kind}:${source.id}`;
-}
-
-function createSourceFilterOptions(index: IndexEntry[]): SourceFilterOption[] {
-  const optionsByKey = new Map<string, SourceFilterOption>();
-
-  for (const entry of index) {
-    const key = sourceFilterKey(entry.source);
-    const option = optionsByKey.get(key);
-    if (option) {
-      option.count += 1;
-    } else {
-      optionsByKey.set(key, { source: entry.source, count: 1 });
-    }
-  }
-
-  return Array.from(optionsByKey.values());
-}
-
-interface SourceFilterBarProps {
-  options: SourceFilterOption[];
-  disabledSourceKeys: string[];
-  onToggle: (sourceKey: string) => void;
-  onEnableAll: () => void;
-}
-
-export const SourceFilterBar = ({
-  options,
-  disabledSourceKeys,
-  onToggle,
-  onEnableAll,
-}: SourceFilterBarProps) => {
-  if (options.length <= 1) return null;
-
-  const disabled = new Set(disabledSourceKeys);
-  const activeCount = options.filter(
-    (option) => !disabled.has(sourceFilterKey(option.source)),
-  ).length;
-
-  return (
-    <BlockStack gap="2">
-      <InlineStack gap="2" blockAlign="center" wrap="wrap">
-        <Text size="xs" tone="subdued">
-          Sources
-        </Text>
-        {options.map(({ source, count }) => {
-          const key = sourceFilterKey(source);
-          const active = !disabled.has(key);
-          return (
-            <Button
-              key={key}
-              type="button"
-              size="xs"
-              variant={active ? "secondary" : "outline"}
-              aria-pressed={active}
-              aria-label={`${active ? "Hide" : "Show"} ${source.label} source (${count} component${count === 1 ? "" : "s"})`}
-              onClick={() => onToggle(key)}
-              className={cn(!active && "opacity-60")}
-            >
-              <Icon
-                name="Package"
-                size="sm"
-                className={SOURCE_ICON_TONE_BY_KIND[source.kind]}
-              />
-              {source.label}
-              <Text as="span" size="xs" tone="subdued">
-                {count}
-              </Text>
-            </Button>
-          );
-        })}
-        {activeCount < options.length && (
-          <Button type="button" size="xs" variant="ghost" onClick={onEnableAll}>
-            Show all
-          </Button>
-        )}
-      </InlineStack>
-      {activeCount === 0 && (
-        <Paragraph size="xs" tone="subdued">
-          No sources selected. Turn on at least one source to show components.
-        </Paragraph>
-      )}
-    </BlockStack>
-  );
 };
 
 // Built-in sources are constants — only registered libraries vary per row.
@@ -243,7 +160,7 @@ export function createRegisteredLibrariesFingerprint(
         id: library.id,
         type: library.type,
         name: library.name,
-        knownDigestsCount: library.knownDigests.length,
+        knownDigests: [...library.knownDigests].sort(),
         configuration: registeredLibraryConfigurationFingerprint(
           library.configuration,
         ),
@@ -364,6 +281,78 @@ const ComponentCard = ({
   );
 };
 
+interface ComponentDescriptionPanelProps {
+  prefilledDescription?: string;
+  generatedDescription?: string;
+  isGenerating: boolean;
+  generationError: Error | null;
+  isConfigured: boolean;
+  onGenerate: () => void;
+}
+
+const ComponentDescriptionPanel = ({
+  prefilledDescription,
+  generatedDescription,
+  isGenerating,
+  generationError,
+  isConfigured,
+  onGenerate,
+}: ComponentDescriptionPanelProps) => {
+  return (
+    <BlockStack gap="3">
+      <BlockStack gap="1">
+        <Text size="xs" weight="semibold" tone="subdued">
+          Prefilled description
+        </Text>
+        <Paragraph size="sm" className="[overflow-wrap:anywhere]">
+          {prefilledDescription?.trim() || "No prefilled description provided."}
+        </Paragraph>
+      </BlockStack>
+      <BlockStack gap="1">
+        <InlineStack gap="2" blockAlign="center">
+          <Text size="xs" weight="semibold" tone="subdued">
+            AI-generated description
+          </Text>
+          {isGenerating && <Spinner size={14} />}
+        </InlineStack>
+        {!isConfigured ? (
+          <Paragraph size="sm" tone="subdued">
+            Configure Agent settings to generate an AI description.
+          </Paragraph>
+        ) : generationError ? (
+          <BlockStack gap="2" align="start">
+            <Paragraph size="sm" tone="critical">
+              Couldn&apos;t generate a description: {generationError.message}
+            </Paragraph>
+            <Button type="button" size="sm" onClick={onGenerate}>
+              Try again
+            </Button>
+          </BlockStack>
+        ) : generatedDescription ? (
+          <Paragraph size="sm" className="[overflow-wrap:anywhere]">
+            {generatedDescription}
+          </Paragraph>
+        ) : isGenerating ? (
+          <Paragraph size="sm" tone="subdued">
+            Generating description…
+          </Paragraph>
+        ) : (
+          <Button type="button" size="sm" onClick={onGenerate}>
+            Generate AI description
+          </Button>
+        )}
+      </BlockStack>
+      {!isConfigured && (
+        <Link to={APP_ROUTES.SETTINGS_AGENT}>
+          <Text size="sm" weight="semibold">
+            Configure in Settings →
+          </Text>
+        </Link>
+      )}
+    </BlockStack>
+  );
+};
+
 /**
  * Merge every component source the rest of the app knows about into a single
  * deduped, source-attributed list.
@@ -416,6 +405,9 @@ function collectAllSourcedReferences({
 
 export const DashboardComponentsV2View = () => {
   const queryClient = useQueryClient();
+  const aiDescriptionsEnabled = useFlagValue(
+    "component-search-v2-ai-descriptions",
+  );
   const { backendUrl, configured, available } = useBackend();
   const [query, setQuery] = useState("");
   const [disabledSourceKeys, setDisabledSourceKeys] = useState<string[]>([]);
@@ -624,9 +616,9 @@ export const DashboardComponentsV2View = () => {
   // The search index is a pure derivation. React Compiler will memoize this.
   const index: IndexEntry[] = buildSearchIndex(sourcedHydrated);
   const sourceFilterOptions = createSourceFilterOptions(index);
-  const disabledSourceKeySet = new Set(disabledSourceKeys);
-  const filteredIndex = index.filter(
-    (entry) => !disabledSourceKeySet.has(sourceFilterKey(entry.source)),
+  const filteredIndex = filterIndexByDisabledSourceKeys(
+    index,
+    disabledSourceKeys,
   );
   const total = filteredIndex.length;
   const totalAcrossSources = index.length;
@@ -649,11 +641,21 @@ export const DashboardComponentsV2View = () => {
     reset: resetRerank,
     isConfigured,
   } = useNaturalLanguageComponentRerank();
+  const {
+    mutate: generateAiDescription,
+    isPending: isGeneratingDescription,
+    error: descriptionError,
+    reset: resetDescription,
+    isConfigured: canGenerateDescription,
+  } = useComponentAiDescription();
 
   // Reranked results are tied to the exact query that triggered them. If the
   // user types more, we drop the rerank rather than show results for an old
   // query. Tracked here so we can clear on input change.
   const [rerankedFor, setRerankedFor] = useState<string | null>(null);
+  const [generatedDescriptions, setGeneratedDescriptions] = useState<
+    Record<string, string>
+  >({});
 
   const handleQueryChange = (event: ChangeEvent<HTMLInputElement>) => {
     setQuery(event.target.value);
@@ -744,7 +746,59 @@ export const DashboardComponentsV2View = () => {
     };
   })();
   const isDetailOpen = Boolean(selectedDigest);
+  const selectedGeneratedDescription = selectedDigest
+    ? generatedDescriptions[selectedDigest]
+    : undefined;
   const notify = useToastNotification();
+
+  const handleGenerateDescription = () => {
+    if (!selectedReference?.digest || !selectedReference.spec) return;
+    if (!canGenerateDescription) return;
+
+    const digest = selectedReference.digest;
+    resetDescription();
+    generateAiDescription(
+      { reference: selectedReference },
+      {
+        onSuccess: (result) => {
+          setGeneratedDescriptions((current) => ({
+            ...current,
+            [digest]: result.description,
+          }));
+        },
+      },
+    );
+  };
+
+  useEffect(() => {
+    resetDescription();
+  }, [resetDescription, selectedDigest]);
+
+  useEffect(() => {
+    if (!selectedReference?.digest || !selectedReference.spec) {
+      resetDescription();
+      return;
+    }
+    if (!aiDescriptionsEnabled) return;
+    if (!canGenerateDescription) {
+      resetDescription();
+      return;
+    }
+    if (isGeneratingDescription) return;
+    if (descriptionError) return;
+    if (generatedDescriptions[selectedReference.digest]) return;
+
+    handleGenerateDescription();
+  }, [
+    aiDescriptionsEnabled,
+    canGenerateDescription,
+    descriptionError,
+    generatedDescriptions,
+    handleGenerateDescription,
+    isGeneratingDescription,
+    resetDescription,
+    selectedReference,
+  ]);
 
   const handleCopyToPipeline = async () => {
     if (!selectedReference) return;
@@ -995,14 +1049,27 @@ export const DashboardComponentsV2View = () => {
                 </Button>
               </InlineStack>
             </div>
-            <SuspenseWrapper fallback={<ComponentDetailSkeleton />}>
-              <ComponentDetail
-                key={selectedDigest}
-                reference={selectedReference}
-                layout="stacked"
-                sourcePanelHeight="480px"
+            <BlockStack gap="6" align="stretch">
+              <ComponentDescriptionPanel
+                prefilledDescription={selectedReference.spec?.description}
+                generatedDescription={selectedGeneratedDescription}
+                isGenerating={
+                  isGeneratingDescription && !selectedGeneratedDescription
+                }
+                generationError={descriptionError}
+                isConfigured={canGenerateDescription}
+                onGenerate={handleGenerateDescription}
               />
-            </SuspenseWrapper>
+              <SuspenseWrapper fallback={<ComponentDetailSkeleton />}>
+                <ComponentDetail
+                  key={selectedDigest}
+                  reference={selectedReference}
+                  layout="stacked"
+                  sourcePanelHeight="480px"
+                  hideDescription
+                />
+              </SuspenseWrapper>
+            </BlockStack>
           </div>
         )}
       </div>

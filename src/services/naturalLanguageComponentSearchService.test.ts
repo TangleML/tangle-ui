@@ -5,6 +5,7 @@ import { isRecord } from "@/utils/typeGuards";
 
 import {
   componentReferenceToCandidate,
+  generateComponentAiDescription,
   NaturalLanguageSearchConfigError,
   rerankComponentsByNaturalLanguage,
 } from "./naturalLanguageComponentSearchService";
@@ -259,5 +260,69 @@ describe("rerankComponentsByNaturalLanguage", () => {
     expect(body.max_tokens).toBeDefined();
     expect(body.max_completion_tokens).toBeUndefined();
     expect(body.temperature).toBe(0);
+  });
+});
+
+describe("generateComponentAiDescription", () => {
+  beforeEach(() => {
+    global.fetch = vi.fn();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const reference: ComponentReference = {
+    digest: "abc",
+    spec: {
+      name: "train_model",
+      description: "Trains a model.",
+      inputs: [{ name: "dataset", description: "Training data" }],
+      outputs: [{ name: "model", description: "Trained model" }],
+      implementation: {
+        container: {
+          image: "python:3.12",
+          command: ["python", "train.py"],
+        },
+      },
+    },
+  };
+
+  it("generates a description from a component spec", async () => {
+    vi.mocked(global.fetch).mockResolvedValue(
+      mockChatResponse({
+        description:
+          "This component trains a model from the dataset input and writes the trained model output.",
+      }),
+    );
+
+    const result = await generateComponentAiDescription(
+      reference,
+      VALID_OPTIONS,
+    );
+
+    expect(result.description).toContain("trains a model");
+    const call = vi.mocked(global.fetch).mock.calls[0];
+    const body = parseFetchBody(call);
+    const serializedMessages = JSON.stringify(body.messages);
+    expect(serializedMessages).toContain("train_model");
+    expect(serializedMessages).toContain("dataset");
+  });
+
+  it("requires a hydrated component spec", async () => {
+    await expect(
+      generateComponentAiDescription({ digest: "abc" }, VALID_OPTIONS),
+    ).rejects.toThrow("Component details are not loaded yet");
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it("throws when the model returns an empty description", async () => {
+    vi.mocked(global.fetch).mockResolvedValue(
+      mockChatResponse({ description: "" }),
+    );
+
+    await expect(
+      generateComponentAiDescription(reference, VALID_OPTIONS),
+    ).rejects.toThrow("empty description");
   });
 });

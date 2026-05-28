@@ -12,6 +12,7 @@
  */
 
 import type { ComponentReference } from "@/utils/componentSpec";
+import { getComponentName } from "@/utils/getComponentName";
 import { isRecord } from "@/utils/typeGuards";
 
 import { extractComponentMetadata } from "./componentSearchIndex";
@@ -43,6 +44,12 @@ export interface RerankResult {
   rawContent?: string;
 }
 
+export interface ComponentDescriptionResult {
+  description: string;
+  /** Raw model response, kept for debugging. */
+  rawContent?: string;
+}
+
 export class NaturalLanguageSearchConfigError extends Error {
   constructor(message: string) {
     super(message);
@@ -50,7 +57,7 @@ export class NaturalLanguageSearchConfigError extends Error {
   }
 }
 
-interface RerankOptions {
+interface LlmOptions {
   signal?: AbortSignal;
   /** Model id (OpenAI-compatible). Required. */
   model: string;
@@ -122,7 +129,7 @@ export function componentReferenceToCandidate(
   };
 }
 
-function buildSystemPrompt(): string {
+function buildRerankSystemPrompt(): string {
   return [
     "You are a reranker for an ML pipeline component search.",
     "The user gives you a natural-language query and a small list of candidate components that were already retrieved by lexical search.",
@@ -141,7 +148,10 @@ function buildSystemPrompt(): string {
   ].join("\n");
 }
 
-function buildUserPrompt(query: string, candidates: RerankCandidate[]): string {
+function buildRerankUserPrompt(
+  query: string,
+  candidates: RerankCandidate[],
+): string {
   // No pretty-printing: indentation adds ~25-30% to the payload for no signal.
   // Candidates are wrapped in an explicit delimiter and tagged as untrusted in
   // the system prompt — candidate descriptions can come from published/
@@ -157,7 +167,7 @@ function buildUserPrompt(query: string, candidates: RerankCandidate[]): string {
   ].join("\n");
 }
 
-function validateConfig(options: RerankOptions): {
+function validateConfig(options: LlmOptions): {
   base: string;
   key: string;
   model: string;
@@ -186,7 +196,7 @@ function validateConfig(options: RerankOptions): {
 export async function rerankComponentsByNaturalLanguage(
   query: string,
   candidates: RerankCandidate[],
-  options: RerankOptions,
+  options: LlmOptions,
 ): Promise<RerankResult> {
   const trimmed = query.trim();
   if (trimmed.length === 0) return { matches: [] };
@@ -213,8 +223,8 @@ export async function rerankComponentsByNaturalLanguage(
         : { max_tokens: 1500 }),
       response_format: { type: "json_object" },
       messages: [
-        { role: "system", content: buildSystemPrompt() },
-        { role: "user", content: buildUserPrompt(trimmed, candidates) },
+        { role: "system", content: buildRerankSystemPrompt() },
+        { role: "user", content: buildRerankUserPrompt(trimmed, candidates) },
       ],
     }),
   });
@@ -265,4 +275,141 @@ export async function rerankComponentsByNaturalLanguage(
     .sort((a, b) => b.score - a.score);
 
   return { matches, rawContent };
+}
+
+interface ComponentDescriptionInput {
+  name: string;
+  prefilledDescription: string;
+  inputs?: Array<{
+    name: string;
+    type?: unknown;
+    description?: string;
+    optional?: boolean;
+    default?: unknown;
+  }>;
+  outputs?: Array<{
+    name: string;
+    type?: unknown;
+    description?: string;
+  }>;
+  implementation: unknown;
+}
+
+function componentReferenceToDescriptionInput(
+  reference: ComponentReference,
+): ComponentDescriptionInput | null {
+  const spec = reference.spec;
+  if (!spec) return null;
+
+  return {
+    name: getComponentName(reference),
+    prefilledDescription: spec.description?.trim() ?? "",
+    ...(spec.inputs && spec.inputs.length > 0
+      ? {
+          inputs: spec.inputs.map((input) => ({
+            name: input.name,
+            type: input.type,
+            description: input.description,
+            optional: input.optional,
+            default: input.default,
+          })),
+        }
+      : {}),
+    ...(spec.outputs && spec.outputs.length > 0
+      ? {
+          outputs: spec.outputs.map((output) => ({
+            name: output.name,
+            type: output.type,
+            description: output.description,
+          })),
+        }
+      : {}),
+    implementation: spec.implementation,
+  };
+}
+
+function buildDescriptionSystemPrompt(): string {
+  return [
+    "You explain ML pipeline components for users deciding whether to add a component to a pipeline.",
+    "Use only the component spec provided. Do not invent behavior that is not supported by the spec.",
+    "Explain exactly what the component does, what it consumes, what it produces, and any important implementation detail visible in the spec.",
+    "Respond with a single JSON object:",
+    '{ "description": "<2-4 sentence precise explanation>" }',
+    "Rules:",
+    "- Be specific and concrete.",
+    "- If the spec is sparse, say what is known and what is not specified.",
+    "- Keep the description under 900 characters.",
+  ].join("\n");
+}
+
+function buildDescriptionUserPrompt(input: ComponentDescriptionInput): string {
+  return ["Component spec summary:", JSON.stringify(input)].join("\n");
+}
+
+function readDescription(rawContent: string): string {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(rawContent);
+  } catch {
+    throw new Error(
+      `Could not parse LLM response as JSON: ${rawContent.slice(0, 200)}`,
+    );
+  }
+
+  if (!isRecord(parsed)) return "";
+  const description = parsed.description;
+  return typeof description === "string" ? description.trim() : "";
+}
+
+export async function generateComponentAiDescription(
+  reference: ComponentReference,
+  options: LlmOptions,
+): Promise<ComponentDescriptionResult> {
+  const input = componentReferenceToDescriptionInput(reference);
+  if (!input) {
+    throw new Error("Component details are not loaded yet.");
+  }
+
+  const { base, key, model } = validateConfig(options);
+
+  const response = await fetch(`${base}/chat/completions`, {
+    method: "POST",
+    signal: options.signal,
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${key}`,
+    },
+    body: JSON.stringify({
+      model,
+      ...(usesCompletionTokensParam(model) ? {} : { temperature: 0 }),
+      ...(usesCompletionTokensParam(model)
+        ? { max_completion_tokens: 2000 }
+        : { max_tokens: 900 }),
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: buildDescriptionSystemPrompt() },
+        { role: "user", content: buildDescriptionUserPrompt(input) },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new Error(
+      `LLM proxy returned ${response.status}: ${detail.slice(0, 200) || response.statusText}`,
+    );
+  }
+
+  const payload: unknown = await response.json();
+  const rawContent = readChatCompletionContent(payload);
+  if (!rawContent) {
+    throw new Error("LLM proxy returned an empty response");
+  }
+
+  const description = readDescription(rawContent);
+  if (!description) {
+    throw new Error("LLM proxy returned an empty description");
+  }
+
+  return { description, rawContent };
 }

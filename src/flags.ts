@@ -70,4 +70,12 @@ export const ExistingFlags: ConfigFlags = {
     default: false,
     category: "beta",
   },
+
+  ["component-search-v2-ai-descriptions"]: {
+    name: "Auto-generate Components V2 AI descriptions",
+    description:
+      "Automatically generate an AI description when viewing a component in Components V2.",
+    default: false,
+    category: "beta",
+  },
 };
