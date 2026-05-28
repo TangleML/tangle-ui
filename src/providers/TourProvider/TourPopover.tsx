@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
+import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { APP_ROUTES } from "@/routes/router";
 import { tracking } from "@/utils/tracking";
@@ -93,6 +94,19 @@ export function computeDefaultPopoverPosition(
 
 type NextButtonProps = Parameters<NonNullable<ProviderProps["nextButton"]>>[0];
 
+let saveExploreHandler: (() => void) | null = null;
+
+export function registerSaveExploreHandler(
+  handler: (() => void) | null,
+): () => void {
+  saveExploreHandler = handler;
+  return () => {
+    if (saveExploreHandler === handler) {
+      saveExploreHandler = null;
+    }
+  };
+}
+
 export function TourCompletionActions() {
   const navigate = useNavigate();
   const { setIsOpen } = useTour();
@@ -100,6 +114,11 @@ export function TourCompletionActions() {
   const onDone = () => {
     setIsOpen(false);
     void navigate({ to: APP_ROUTES.LEARN_TOURS });
+  };
+
+  const onSavePipeline = () => {
+    setIsOpen(false);
+    saveExploreHandler?.();
   };
 
   return (
@@ -113,6 +132,22 @@ export function TourCompletionActions() {
         <Icon name="Check" size="sm" />
         Finish Tour
       </Button>
+      {saveExploreHandler && (
+        <BlockStack align="center">
+          <Text size="xs" tone="subdued">
+            Continue exploring:
+          </Text>
+          <Button
+            size="xs"
+            variant="link"
+            onClick={onSavePipeline}
+            {...tracking("v2.pipeline_editor.tour.save_as_pipeline")}
+          >
+            <Icon name="SaveAll" size="xs" />
+            Save demo pipeline
+          </Button>
+        </BlockStack>
+      )}
     </BlockStack>
   );
 }

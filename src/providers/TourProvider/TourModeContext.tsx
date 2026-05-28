@@ -5,6 +5,7 @@ import type { TourDefinition } from "@/components/Learn/tours/registry";
 export interface TourModeValue {
   tour: TourDefinition;
   tempPipelineName: string;
+  promoteToPipeline: (newName: string, yamlContent: string) => Promise<void>;
 }
 
 const TourModeContext = createContext<TourModeValue | null>(null);

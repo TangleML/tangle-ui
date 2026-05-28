@@ -14,6 +14,7 @@ import { ComponentLibraryProvider } from "@/providers/ComponentLibraryProvider";
 import { ForcedSearchProvider } from "@/providers/ComponentLibraryProvider/ForcedSearchProvider";
 import { DialogProvider } from "@/providers/DialogProvider/DialogProvider";
 import { useTourMode } from "@/providers/TourProvider/TourModeContext";
+import { TourSaveExploreDialog } from "@/providers/TourProvider/TourSaveExploreDialog";
 import { useDockAreaAccordion } from "@/routes/v2/shared/hooks/useDockAreaAccordion";
 import { useFocusMode } from "@/routes/v2/shared/hooks/useFocusMode";
 import { NodeRegistryProvider } from "@/routes/v2/shared/nodes/NodeRegistryContext";
@@ -151,6 +152,7 @@ function EditorV2Content({ pipelineRef }: { pipelineRef: PipelineRef | null }) {
       <ReactFlowProvider>
         <EditorMenuBar />
         <EditorTourBridge />
+        <TourSaveExploreDialog />
         <ForcedSearchProvider>{body}</ForcedSearchProvider>
       </ReactFlowProvider>
     </ComponentLibraryProvider>
