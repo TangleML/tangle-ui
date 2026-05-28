@@ -14,6 +14,7 @@ import { attachObservabilityHooks } from "../middleware/observability";
 import dispatcherPrompt from "../prompts/dispatcher.md?raw";
 import type { AgentSession } from "../session";
 import { createGeneralHelpAgent } from "./subagents/generalHelp";
+import { createPipelineRepairAgent } from "./subagents/pipelineRepair";
 
 interface DispatcherInvokeParams {
   message: string;
@@ -37,7 +38,10 @@ function createDispatcherAgent(session: AgentSession): Agent {
     model: requireOrchestratorModel(),
     instructions: `${RECOMMENDED_PROMPT_PREFIX}\n\n${dispatcherPrompt}`,
     tools: [],
-    handoffs: [createGeneralHelpAgent(session)],
+    handoffs: [
+      createGeneralHelpAgent(session),
+      createPipelineRepairAgent(session),
+    ],
   });
   attachObservabilityHooks(agent, session.emitStatus);
   return agent;
