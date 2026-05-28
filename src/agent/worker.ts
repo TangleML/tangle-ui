@@ -1,15 +1,18 @@
 /**
  * Web Worker entry point for the in-browser agent.
  *
- * A placeholder `ask()` that echoes the user's message — it
- * proves the bundling, lazy-spawn, and Comlink round-trip are working
- * end-to-end before we wire the LLM and the tool bridge.
+ * Main-thread `AgentClient` spawns this worker once (lazily) and
+ * `init(onStatus)` is called immediately after spawn.
  *
- * The `globalThis.process` stub below covers an unguarded
- * `process.env.X` read in `@openai/agents-core` v0.4.x
- * (`runner/sessionPersistence.mjs` reads
+ * Worker-only resolution of `@openai/agents-core/_shims` to its
+ * browser variant is handled by the `worker.plugins` block in
+ * `vite.config.js`. The runtime side of "no Node in the worker" — the
+ * unguarded `process.env.X` read in `@openai/agents-core` v0.4.x —
+ * is handled by the `globalThis.process` stub below.
+ *
+ * The stub covers `runner/sessionPersistence.mjs` reading
  * `process.env.OPENAI_AGENTS__DEBUG_SAVE_SESSION` without a
- * `typeof process` guard) that would otherwise throw
+ * `typeof process` guard, which would otherwise throw
  * `ReferenceError: process is not defined` on every turn that
  * persists session state. The stub deliberately omits `.on` /
  * `.exit` so the SDK's `typeof process.on === 'function'` checks
@@ -35,7 +38,15 @@ if (!Object.prototype.hasOwnProperty.call(globalThis, "process")) {
 
 import * as Comlink from "comlink";
 
-import type { AgentResponse } from "./types";
+import type { ComponentRefData } from "@/routes/v2/pages/Editor/components/AiChat/aiChat.types";
+
+import {
+  createDispatcher,
+  type TangleDispatcher,
+} from "./agents/tangleDispatcher";
+import { getAiToken } from "./aiTokenStore";
+import { createSession } from "./session";
+import type { AgentResponse, StatusCallback } from "./types";
 
 export interface AskParams {
   message: string;
@@ -43,44 +54,78 @@ export interface AskParams {
 }
 
 export interface AgentWorkerApi {
-  ask(params: AskParams): Promise<AgentResponse>;
+  init(onStatus: StatusCallback): void;
   ping(): Promise<"pong">;
+  ask(params: AskParams): Promise<AgentResponse>;
 }
-
-let emitStatus: (status: { text: string }) => void = () => {};
 
 function generateThreadId(): string {
   return `thread-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-const api: AgentWorkerApi = {
-  async ping() {
-    return "pong";
-  },
+function createWorkerApi(): AgentWorkerApi {
+  let dispatcher: TangleDispatcher | null = null;
 
-  async ask({ message, threadId }) {
+  return {
     /**
-     * todo: replace with actual AI response.
+     * Initialization entry point. Called once by the main thread
+     * immediately after spawning the worker. Splits init from ask() so
+     * the tool bridge plumbing and skill warm-up have an explicit
+     * lifecycle hook later.
      */
-    return {
-      answer: `Worker echo: ${message}`,
-      threadId: threadId ?? generateThreadId(),
-      componentReferences: {},
-    };
-  },
-};
+    init(onStatus) {
+      if (dispatcher) return;
+      dispatcher = createDispatcher({ emitStatus: onStatus });
+    },
 
-/**
- * Initialization entry point. Called once by the main thread immediately
- * after spawning the worker. Splits init from ask() so future bridge /
- * skill plumbing has an explicit lifecycle hook.
- */
-export function init(onStatus: (status: { text: string }) => void): void {
-  emitStatus = onStatus;
-  // TODO: read `emitStatus` from the dispatcher's observability hooks;
-  // until then this no-op read keeps `noUnusedLocals` quiet without
-  // dropping the assignment that locks in the init() contract.
-  void emitStatus;
+    async ping() {
+      return "pong";
+    },
+
+    async ask({ message, threadId }) {
+      if (!dispatcher) {
+        throw new Error(
+          "Agent worker not initialized. Call init() before ask().",
+        );
+      }
+      const token = await getAiToken();
+      if (!token) {
+        throw new Error(
+          "AI assistant token is missing. Open the AI panel to set it.",
+        );
+      }
+      const resolvedThreadId = threadId ?? generateThreadId();
+      const session = createSession({
+        threadId: resolvedThreadId,
+      });
+
+      const result = await dispatcher.invoke({
+        message,
+        threadId: resolvedThreadId,
+        token,
+        session,
+      });
+
+      // TODO: replace this empty map with `session.componentReferences`
+      // populated by the search_components tool.
+      const componentReferences: AgentResponse["componentReferences"] = {};
+      const refs = new Map<string, ComponentRefData>();
+      for (const [id, ref] of refs) {
+        if (result.answer.includes(`component://${id}`)) {
+          componentReferences[id] = {
+            name: ref.name,
+            yamlText: ref.yamlText,
+          };
+        }
+      }
+
+      return {
+        answer: result.answer,
+        threadId: result.threadId,
+        componentReferences,
+      };
+    },
+  };
 }
 
-Comlink.expose({ ...api, init });
+Comlink.expose(createWorkerApi());

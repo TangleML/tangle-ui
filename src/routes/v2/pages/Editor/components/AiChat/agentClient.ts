@@ -10,10 +10,6 @@ import * as Comlink from "comlink";
 import type { AgentResponse } from "@/agent/types";
 import type { AgentWorkerApi } from "@/agent/worker";
 
-interface WorkerExports extends AgentWorkerApi {
-  init(onStatus: (status: { text: string }) => void): void;
-}
-
 interface InitDeps {
   onStatus: (status: { text: string }) => void;
 }
@@ -25,18 +21,18 @@ interface AskOptions {
 
 class AgentClient {
   private worker: Worker | null = null;
-  private remote: Comlink.Remote<WorkerExports> | null = null;
+  private remote: Comlink.Remote<AgentWorkerApi> | null = null;
   private initPromise: Promise<void> | null = null;
 
   private async ensureInit(
     deps: InitDeps,
-  ): Promise<Comlink.Remote<WorkerExports>> {
+  ): Promise<Comlink.Remote<AgentWorkerApi>> {
     if (!this.worker) {
       this.worker = new Worker(new URL("@/agent/worker.ts", import.meta.url), {
         type: "module",
         name: "tangle-agent",
       });
-      this.remote = Comlink.wrap<WorkerExports>(this.worker);
+      this.remote = Comlink.wrap<AgentWorkerApi>(this.worker);
     }
     if (!this.remote) {
       throw new Error("Worker remote was not created");
