@@ -73,10 +73,12 @@ async function resolveSpecData(
   return yaml.load(yamlContent, PIPELINE_YAML_LOAD_OPTIONS);
 }
 
+export const EDITOR_SPEC_QUERY_KEY = "editor-v2-spec";
+
 export function useLoadSpec(ref: PipelineRef) {
   const storage = usePipelineStorage();
   const queryClient = useQueryClient();
-  const queryKey = ["editor-v2-spec", ref.fileId ?? ref.name];
+  const queryKey = [EDITOR_SPEC_QUERY_KEY, ref.fileId ?? ref.name];
 
   // When the v1 editor writes to the same IndexedDB file, drop our cached
   // deserialization so the next read of this query goes back to disk. We
@@ -84,7 +86,7 @@ export function useLoadSpec(ref: PipelineRef) {
   // spec under our feet would discard MobX editor state (selection, undo, …)
   // and the in-memory model is already authoritative for v2.
   useEffect(() => {
-    const matchKey = ["editor-v2-spec", ref.fileId ?? ref.name];
+    const matchKey = [EDITOR_SPEC_QUERY_KEY, ref.fileId ?? ref.name];
 
     const state = queryClient.getQueryState(matchKey);
     const lastFetched = state?.dataUpdatedAt;

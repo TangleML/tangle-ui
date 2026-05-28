@@ -19,9 +19,16 @@ import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 import { componentSpecToYaml } from "@/utils/yaml";
 import { componentSpecFromYaml } from "@/utils/yaml";
 
+import {
+  deleteEntry,
+  findByStorageKey,
+} from "./pipelineStorage/pipelineRegistry";
+
 export const deletePipeline = async (name: string, onDelete?: () => void) => {
   try {
     await deleteComponentFileFromList(USER_PIPELINES_LIST_NAME, name);
+    const entry = await findByStorageKey(name);
+    if (entry) await deleteEntry(entry.id);
     onDelete?.();
   } catch (error) {
     console.error("Error deleting pipeline:", error);

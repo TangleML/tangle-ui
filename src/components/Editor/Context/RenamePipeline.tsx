@@ -66,6 +66,7 @@ const RenamePipeline = () => {
       onSubmit={handleTitleUpdate}
       submitButtonText="Update Title"
       isSubmitDisabled={isSubmitDisabled}
+      excludeNames={title ? [title] : undefined}
       onOpenChange={(open) => {
         if (open) track("pipeline_editor.name_pipeline_dialog_impression");
       }}
