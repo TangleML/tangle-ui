@@ -66,11 +66,13 @@ async function resolveSpecData(
   return yaml.load(yamlContent);
 }
 
+export const EDITOR_SPEC_QUERY_KEY = "editor-v2-spec";
+
 export function useLoadSpec(ref: PipelineRef) {
   const storage = usePipelineStorage();
 
   return useSuspenseQuery({
-    queryKey: ["editor-v2-spec", ref.fileId ?? ref.name],
+    queryKey: [EDITOR_SPEC_QUERY_KEY, ref.fileId ?? ref.name],
     queryFn: async (): Promise<LoadedSpec> => {
       const [specData, undoHistory] = await Promise.all([
         resolveSpecData(ref, storage),

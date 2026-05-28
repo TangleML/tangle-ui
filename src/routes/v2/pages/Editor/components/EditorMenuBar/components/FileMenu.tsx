@@ -193,6 +193,7 @@ export function FileMenu() {
         onSubmit={renamePipeline}
         submitButtonText="Rename"
         isSubmitDisabled={(name) => name === getRenameInitialName()}
+        excludeNames={[getRenameInitialName()]}
       />
 
       {canMove && activePipeline && (

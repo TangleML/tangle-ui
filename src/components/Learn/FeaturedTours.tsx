@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 
 import { Badge } from "@/components/ui/badge";
@@ -5,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
+import { resetAllTourPipelineState } from "@/providers/TourProvider/tourPipelineStorage/resetAllTourPipelineState";
 import { APP_ROUTES } from "@/routes/router";
 import { tracking } from "@/utils/tracking";
 
@@ -45,8 +47,10 @@ function buildFeaturedTours(): FeaturedTour[] {
 export function FeaturedTours() {
   const featured = buildFeaturedTours();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const startTour = (tourId: string) => {
+    resetAllTourPipelineState(queryClient);
     void navigate({ to: APP_ROUTES.TOUR_DETAIL, params: { tourId } });
   };
 
