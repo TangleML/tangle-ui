@@ -47,6 +47,7 @@ import {
 import { getAiToken } from "./aiTokenStore";
 import { ProxyClient } from "./config";
 import { createSession, type RecentPipelineRun } from "./session";
+import { SkillsLoader } from "./skills/loader";
 import type { ToolBridgeApi } from "./toolBridgeApi";
 import type { AgentResponse, StatusCallback } from "./types";
 
@@ -71,6 +72,7 @@ function createWorkerApi(): AgentWorkerApi {
   let bridge: ToolBridgeApi | null = null;
   let emitStatus: StatusCallback = () => {};
   const proxyClient = new ProxyClient();
+  const skillsLoader = new SkillsLoader();
 
   return {
     /**
@@ -108,6 +110,7 @@ function createWorkerApi(): AgentWorkerApi {
         emitStatus,
         proxyClient,
         bridge,
+        skillsLoader,
         recentRuns,
       });
 

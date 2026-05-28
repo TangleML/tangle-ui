@@ -25,6 +25,7 @@ export const config = aiAssistantConfig as {
   orchestratorModel: string;
   subagentModel: string;
   embeddingModel: string;
+  skillsBaseUrl: string;
 };
 
 function requireProxyBaseUrl(): string {
@@ -61,6 +62,15 @@ export function requireEmbeddingModel(): string {
     );
   }
   return config.embeddingModel;
+}
+
+export function requireSkillsBaseUrl(): string {
+  if (!config.skillsBaseUrl) {
+    throw new Error(
+      "AI assistant: skillsBaseUrl is empty. Set it in src/config/aiAssistantConfig.json.",
+    );
+  }
+  return config.skillsBaseUrl;
 }
 
 /**
