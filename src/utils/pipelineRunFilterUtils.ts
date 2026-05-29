@@ -5,13 +5,10 @@ import type {
   SortField,
 } from "@/types/pipelineRunFilters";
 import { isValidExecutionStatus } from "@/utils/executionStatus";
+import { isRecord } from "@/utils/typeGuards";
 
 const VALID_SORT_FIELDS = new Set<string>(["created_at", "pipeline_name"]);
 const VALID_SORT_DIRECTIONS = new Set<string>(["asc", "desc"]);
-
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function isValidAnnotationFilter(value: unknown): value is AnnotationFilter {
   return (

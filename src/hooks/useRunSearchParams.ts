@@ -4,10 +4,10 @@ import { useEffect, useRef } from "react";
 import type { PipelineRunFilters } from "@/types/pipelineRunFilters";
 import {
   countActiveFilters,
-  isRecord,
   serializeFiltersToUrl,
   validateFilters,
 } from "@/utils/pipelineRunFilterUtils";
+import { isRecord } from "@/utils/typeGuards";
 
 const DEBOUNCE_MS = 500;
 
