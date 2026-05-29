@@ -3,11 +3,11 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { type ReactNode, useEffect, useState } from "react";
 
 import type { ListPublishedComponentsResponse } from "@/api/types.gen";
-import { CodeViewer } from "@/components/shared/CodeViewer";
-import { CopyText } from "@/components/shared/CopyText/CopyText";
+import {
+  ComponentDetail,
+  ComponentDetailSkeleton,
+} from "@/components/shared/ComponentDetail/ComponentDetail";
 import { SuspenseWrapper } from "@/components/shared/SuspenseWrapper";
-import { GithubDetails } from "@/components/shared/TaskDetails/GithubDetails";
-import { Badge } from "@/components/ui/badge";
 import {
   Collapsible,
   CollapsibleContent,
@@ -17,8 +17,7 @@ import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Heading, Paragraph, Text } from "@/components/ui/typography";
-import { useHydrateComponentReference } from "@/hooks/useHydrateComponentReference";
+import { Paragraph, Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useBackend } from "@/providers/BackendProvider";
@@ -29,20 +28,22 @@ import {
 import { APP_ROUTES } from "@/routes/router";
 import { fetchAndStoreComponentLibrary } from "@/services/componentService";
 import type { ComponentFolder } from "@/types/componentLibrary";
-import type {
-  ComponentReference,
-  InputSpec,
-  OutputSpec,
-} from "@/utils/componentSpec";
+import type { ComponentReference } from "@/utils/componentSpec";
 import { componentMetadata } from "@/utils/componentTracking";
 import { TOP_NAV_HEIGHT } from "@/utils/constants";
 import { fetchWithErrorHandling } from "@/utils/fetchWithErrorHandling";
 import { getComponentName } from "@/utils/getComponentName";
 import { tracking } from "@/utils/tracking";
+import { isRecord } from "@/utils/typeGuards";
 
 type ComponentRowSection = "user" | "library" | "published";
 
 const PUBLISHED_COMPONENTS_URL = "/api/published_components/";
+
+function readSelectedComponentDigest(search: unknown): string | undefined {
+  if (!isRecord(search)) return undefined;
+  return typeof search.component === "string" ? search.component : undefined;
+}
 
 // ─── Collapsible section header ──────────────────────────────────────────────
 
@@ -365,247 +366,16 @@ const ComponentList = ({
   );
 };
 
-// ─── Compact I/O table ───────────────────────────────────────────────────────
-
-const IORow = ({
-  name,
-  type,
-  required,
-  defaultValue,
-  description,
-}: {
-  name: string;
-  type?: unknown;
-  required?: boolean;
-  defaultValue?: unknown;
-  description?: string;
-}) => (
-  <div className="grid grid-cols-[1fr_auto_auto] items-start gap-x-3 gap-y-0.5 px-3 py-2 border-b border-border/50 last:border-0">
-    <div className="flex flex-col gap-0.5 min-w-0">
-      <Text size="xs" weight="semibold" className="truncate font-mono">
-        {name}
-      </Text>
-      {description && (
-        <Text size="xs" className="text-muted-foreground leading-snug">
-          {description}
-        </Text>
-      )}
-      {defaultValue !== undefined && (
-        <Text size="xs" className="text-muted-foreground">
-          Default: <span className="font-mono">{String(defaultValue)}</span>
-        </Text>
-      )}
-    </div>
-    <Text size="xs" className="text-muted-foreground shrink-0 pt-0.5">
-      {type ? String(type) : "—"}
-    </Text>
-    <Badge
-      className={cn(
-        "shrink-0 mt-0.5 text-[10px] font-semibold leading-none",
-        required
-          ? "bg-rose-100 text-rose-700 hover:bg-rose-100"
-          : "bg-muted text-muted-foreground hover:bg-muted",
-      )}
-    >
-      {required ? "req" : "opt"}
-    </Badge>
-  </div>
-);
-
-const CompactIO = ({
-  inputs,
-  outputs,
-}: {
-  inputs?: InputSpec[];
-  outputs?: OutputSpec[];
-}) => (
-  <BlockStack gap="3">
-    {inputs && inputs.length > 0 && (
-      <div>
-        <Text
-          size="xs"
-          className="text-muted-foreground font-medium uppercase tracking-wide px-1 mb-1"
-        >
-          Inputs
-        </Text>
-        <div className="border border-border rounded-md overflow-hidden">
-          {inputs.map((input) => (
-            <IORow
-              key={input.name}
-              name={input.name}
-              type={input.type}
-              required={!input.optional}
-              defaultValue={input.default}
-              description={input.description}
-            />
-          ))}
-        </div>
-      </div>
-    )}
-    {outputs && outputs.length > 0 && (
-      <div>
-        <Text
-          size="xs"
-          className="text-muted-foreground font-medium uppercase tracking-wide px-1 mb-1"
-        >
-          Outputs
-        </Text>
-        <div className="border border-border rounded-md overflow-hidden">
-          {outputs.map((output) => (
-            <IORow
-              key={output.name}
-              name={output.name}
-              type={output.type}
-              description={output.description}
-            />
-          ))}
-        </div>
-      </div>
-    )}
-  </BlockStack>
-);
-
-// ─── Detail Panel (Suspense) ────────────────────────────────────────────────
-
-const ComponentDetailInner = ({ digest }: { digest: string }) => {
-  const { backendUrl } = useBackend();
-  const componentRef: ComponentReference = {
-    digest,
-    url: `${backendUrl}/api/components/${digest}`,
-  };
-  const hydrated = useHydrateComponentReference(componentRef);
-
-  if (!hydrated?.spec) {
-    return (
-      <Paragraph tone="subdued" size="sm">
-        Could not load component details.
-      </Paragraph>
-    );
-  }
-
-  const { spec } = hydrated;
-  const annotations = spec.metadata?.annotations ?? {};
-  const author =
-    typeof annotations.author === "string" ? annotations.author : undefined;
-  const canonicalUrl =
-    typeof annotations.canonical_location === "string"
-      ? annotations.canonical_location
-      : undefined;
-  const gitRemoteUrl =
-    typeof annotations.git_remote_url === "string"
-      ? annotations.git_remote_url
-      : undefined;
-  const gitRemoteBranch =
-    typeof annotations.git_remote_branch === "string"
-      ? annotations.git_remote_branch
-      : undefined;
-  const gitRelativeDir =
-    typeof annotations.git_relative_dir === "string"
-      ? annotations.git_relative_dir
-      : undefined;
-  const componentYamlPath =
-    typeof annotations.component_yaml_path === "string"
-      ? annotations.component_yaml_path
-      : undefined;
-  const documentationPath =
-    typeof annotations.documentation_path === "string"
-      ? annotations.documentation_path
-      : undefined;
-
-  let reconstructedUrl: string | undefined;
-  let documentationUrl: string | undefined;
-
-  if (gitRemoteUrl && gitRemoteBranch && gitRelativeDir) {
-    const repoPath = gitRemoteUrl
-      .replace(/^https:\/\/github\.com\//, "")
-      .replace(/\.git$/, "");
-    const buildGitHubUrl = (filePath: string) =>
-      `https://github.com/${repoPath}/blob/${gitRemoteBranch}/${gitRelativeDir}/${filePath}`;
-    if (!hydrated.url && componentYamlPath)
-      reconstructedUrl = buildGitHubUrl(componentYamlPath);
-    if (documentationPath) documentationUrl = buildGitHubUrl(documentationPath);
-  }
-
-  const hasIO =
-    (spec.inputs && spec.inputs.length > 0) ||
-    (spec.outputs && spec.outputs.length > 0);
-
-  return (
-    // Side-by-side layout: info+IO on left, source code sticky on right
-    <InlineStack gap="6" blockAlign="start">
-      {/* Left: metadata + I/O — flows naturally with the page scroll */}
-      <div className="flex-2 min-w-0 flex flex-col gap-4">
-        {/* Header */}
-        <BlockStack gap="1">
-          <Heading level={2}>{spec.name ?? digest}</Heading>
-          {author && (
-            <Text size="sm" className="text-muted-foreground">
-              {author}
-            </Text>
-          )}
-          {hydrated.digest && (
-            <Badge
-              variant="outline"
-              className="font-mono text-xs min-w-0 max-w-full overflow-hidden"
-            >
-              <CopyText size="xs" className="font-mono truncate">
-                {hydrated.digest}
-              </CopyText>
-            </Badge>
-          )}
-        </BlockStack>
-
-        {spec.description && (
-          <Paragraph size="sm" tone="subdued">
-            {spec.description}
-          </Paragraph>
-        )}
-
-        <GithubDetails
-          url={hydrated.url ?? reconstructedUrl}
-          canonicalUrl={canonicalUrl}
-          documentationUrl={documentationUrl}
-        />
-
-        {hasIO && <CompactIO inputs={spec.inputs} outputs={spec.outputs} />}
-      </div>
-
-      {/* Right: source code — sticky so it stays in view while left side scrolls */}
-      {hydrated.text && (
-        <div className="flex-3 min-w-0">
-          <div
-            className="sticky top-0 flex flex-col gap-1.5"
-            style={{ height: `calc(100vh - ${TOP_NAV_HEIGHT + 48}px)` }}
-          >
-            <Text
-              size="xs"
-              className="text-muted-foreground font-medium uppercase tracking-wide shrink-0"
-            >
-              Source
-            </Text>
-            <div className="flex-1 min-h-0">
-              <CodeViewer
-                code={hydrated.text}
-                language="yaml"
-                filename={spec.name ?? "component.yaml"}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-    </InlineStack>
-  );
-};
-
 // ─── Main View ──────────────────────────────────────────────────────────────
 
 export function DashboardComponentsView() {
   const [query, setQuery] = useState("");
   const navigate = useNavigate();
+  const { backendUrl } = useBackend();
   // useSearch strict:false is required here — this route has no validateSearch defined
-  const { component: selectedDigest } = useSearch({ strict: false }) as {
-    component?: string;
-  };
+  const selectedDigest = readSelectedComponentDigest(
+    useSearch({ strict: false }),
+  );
   const handleSelect = (component: ComponentReference) => {
     navigate({
       to: APP_ROUTES.DASHBOARD_COMPONENTS,
@@ -639,20 +409,13 @@ export function DashboardComponentsView() {
       {/* Right: detail panel — single scroll, source sticky on right */}
       <div className="flex-1 min-w-0 overflow-y-auto p-6">
         {selectedDigest ? (
-          <SuspenseWrapper
-            fallback={
-              <InlineStack gap="6">
-                <div className="flex-1 flex flex-col gap-3">
-                  <Skeleton className="h-6 w-48" />
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-3/4" />
-                </div>
-                <Skeleton className="flex-3 min-w-0 h-64" />
-              </InlineStack>
-            }
-          >
-            <ComponentDetailInner digest={selectedDigest} />
+          <SuspenseWrapper fallback={<ComponentDetailSkeleton />}>
+            <ComponentDetail
+              reference={{
+                digest: selectedDigest,
+                url: `${backendUrl}/api/components/${selectedDigest}`,
+              }}
+            />
           </SuspenseWrapper>
         ) : (
           <InlineStack fill>
