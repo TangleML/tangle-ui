@@ -1,4 +1,4 @@
-import { type ProviderProps, useTour } from "@reactour/tour";
+import { useTour } from "@reactour/tour";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 
@@ -9,8 +9,14 @@ import { APP_ROUTES } from "@/routes/router";
 import { setTourActive } from "@/utils/tourActive";
 import { tracking } from "@/utils/tracking";
 
+import { useTourProgress } from "./TourProgressContext";
+
 // Matches the step-number badge's ≈13px outside offset plus a small margin.
 const POPOVER_VIEWPORT_MARGIN = 16;
+// Popover padding (40) + prev icon button (~32) + "Next" text button (~60) + buffer.
+const POPOVER_NAV_BASE_WIDTH = 140;
+const POPOVER_DOT_WIDTH = 16;
+const POPOVER_DEFAULT_MAX_WIDTH = 420;
 
 export const POPOVER_STYLES = {
   popover: (base: object) => ({
@@ -18,7 +24,7 @@ export const POPOVER_STYLES = {
     borderRadius: "0.75rem",
     padding: "1.25rem",
     boxShadow: "0 10px 30px rgba(0,0,0,0.12)",
-    maxWidth: "420px",
+    maxWidth: `${POPOVER_DEFAULT_MAX_WIDTH}px`,
   }),
   maskWrapper: (base: object) => ({
     ...base,
@@ -84,8 +90,6 @@ export function computeDefaultPopoverPosition(
   return "bottom";
 }
 
-type NextButtonProps = Parameters<NonNullable<ProviderProps["nextButton"]>>[0];
-
 export function TourCompletionActions() {
   const navigate = useNavigate();
   const { setIsOpen } = useTour();
@@ -107,40 +111,6 @@ export function TourCompletionActions() {
         Finish Tour
       </Button>
     </BlockStack>
-  );
-}
-
-export function renderNextButton(props: NextButtonProps) {
-  const { Button, currentStep, stepsLength, setCurrentStep, steps } = props;
-
-  const hiddenPlaceholder = (
-    <span aria-hidden style={{ visibility: "hidden", pointerEvents: "none" }}>
-      <Button onClick={() => undefined} kind="next" />
-    </span>
-  );
-
-  const isLastStep = currentStep === stepsLength - 1;
-  if (isLastStep) {
-    return hiddenPlaceholder;
-  }
-
-  const step = steps?.[currentStep];
-  if (!step) {
-    return hiddenPlaceholder;
-  }
-
-  // Interaction steps advance via the prompted action, not a Next click.
-  if ("interaction" in step && step.interaction) {
-    return hiddenPlaceholder;
-  }
-
-  return (
-    <Button
-      onClick={() =>
-        setCurrentStep((step: number) => Math.min(step + 1, stepsLength - 1))
-      }
-      kind="next"
-    />
   );
 }
 
@@ -166,8 +136,19 @@ function clampPopoverElement(el: HTMLElement): void {
   }
 }
 
+// Reactour has no viewport-padding setting and lets the popover snap flush to
+// edges, which clips our step-number badge. We observe its inline transform
+// and clamp it to stay POPOVER_VIEWPORT_MARGIN inside the viewport.
 export function PopoverClampBridge() {
-  const { isOpen } = useTour();
+  const { isOpen, steps } = useTour();
+  const { reset: resetTourProgress } = useTourProgress();
+  const stepCount = steps?.length ?? 0;
+
+  useEffect(() => {
+    if (isOpen) {
+      resetTourProgress();
+    }
+  }, [isOpen, resetTourProgress]);
 
   // Expose tour-open state to non-React callers (e.g. dispatchResizeOnToggle)
   // so app-wide popover/dropdown side effects can no-op outside tours.
@@ -182,7 +163,15 @@ export function PopoverClampBridge() {
     let styleObserver: MutationObserver | null = null;
     let findObserver: MutationObserver | null = null;
 
+    const applyMinWidth = (el: HTMLElement) => {
+      const required = POPOVER_NAV_BASE_WIDTH + stepCount * POPOVER_DOT_WIDTH;
+      const width = Math.max(POPOVER_DEFAULT_MAX_WIDTH, required);
+      el.style.minWidth = `${width}px`;
+      el.style.maxWidth = `${width}px`;
+    };
+
     const observe = (el: HTMLElement) => {
+      applyMinWidth(el);
       styleObserver = new MutationObserver(() => clampPopoverElement(el));
       styleObserver.observe(el, {
         attributes: true,
@@ -213,7 +202,7 @@ export function PopoverClampBridge() {
       styleObserver?.disconnect();
       findObserver?.disconnect();
     };
-  }, [isOpen]);
+  }, [isOpen, stepCount]);
 
   return null;
 }

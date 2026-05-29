@@ -1,8 +1,9 @@
 import type { StepType } from "@reactour/tour";
 
+import type { TourAction } from "@/providers/TourProvider/tourActions";
 import { publicAsset } from "@/utils/publicAsset";
 
-type TourStep = StepType;
+type TourStep = StepType & TourAction;
 
 export interface TourDefinition {
   id: string;

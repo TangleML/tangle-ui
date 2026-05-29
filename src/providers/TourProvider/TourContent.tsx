@@ -4,7 +4,7 @@ import { Paragraph } from "@/components/ui/typography";
 
 const INLINE_TOKEN = /(\*\*[^*]+\*\*|_[^_]+_|`[^`]+`)/g;
 
-function renderInline(text: string): ReactNode[] {
+export function renderInline(text: string): ReactNode[] {
   return text.split(INLINE_TOKEN).map((part, index) => {
     if (part.startsWith("**") && part.endsWith("**")) {
       return <strong key={index}>{part.slice(2, -2)}</strong>;
