@@ -184,7 +184,7 @@ const SearchRequestInput = ({ value, onChange }: SearchRequestProps) => {
 
   return (
     <InlineStack align="space-between" gap="2" className="w-full">
-      <div className="relative flex-1">
+      <div className="relative flex-1" data-tour="library-search">
         <InputGroup
           className="px-2 gap-2"
           prefixElement={
