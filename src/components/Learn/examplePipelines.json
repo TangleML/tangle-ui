@@ -1,0 +1,82 @@
+[
+  {
+    "id": "hello-world",
+    "name": "Intro: Hello World",
+    "description": "A simple pipeline demonstrating the basics of Tangle.",
+    "url": "example-pipelines/Intro-Hello World.pipeline.component.yaml",
+    "previewImage": "example-pipelines/Intro-Hello World.pipeline.component.png",
+    "tags": ["Introduction"]
+  },
+  {
+    "id": "io",
+    "name": "Intro: Input and Output Nodes",
+    "description": "A pipeline demonstrating input and output nodes in Tangle. Includes data ingestion, processing, and export steps.",
+    "url": "example-pipelines/Intro-Input and Output Nodes.pipeline.component.yaml",
+    "previewImage": "example-pipelines/Intro-Input and Output Nodes.pipeline.component.png",
+    "tags": ["Introduction"]
+  },
+  {
+    "id": "subgraphs",
+    "name": "Intro: Subgraphs",
+    "description": "A pipeline demonstrating the use of subgraphs in Tangle. Includes modular components and reusable workflows.",
+    "url": "example-pipelines/Intro-Subgraphs.pipeline.component.yaml",
+    "previewImage": "example-pipelines/Intro-Subgraphs.pipeline.component.png",
+    "tags": ["Introduction"]
+  },
+  {
+    "id": "data-flow",
+    "name": "Intro: Data Flow",
+    "description": "A pipeline to get familiar with data flow in Tangle. Includes basic data processing and model training steps.",
+    "url": "example-pipelines/Intro-Data Flow.pipeline.component.yaml",
+    "previewImage": "example-pipelines/Intro-Data Flow.pipeline.component.png",
+    "tags": ["Introduction"]
+  },
+  {
+    "id": "secrets",
+    "name": "Intro: Secrets",
+    "description": "A pipeline to get familiar with managing secrets in Tangle.",
+    "url": "example-pipelines/Intro-Secrets.pipeline.component.yaml",
+    "previewImage": "example-pipelines/Intro-Secrets.pipeline.component.png",
+    "tags": ["Introduction"]
+  },
+  {
+    "id": "multinode",
+    "name": "Intro: Multi-Node Pipelines",
+    "description": "A pipeline demonstrating a multinodal setup in Tangle.",
+    "url": "example-pipelines/Intro-Multinode.pipeline.component.yaml",
+    "previewImage": "example-pipelines/Intro-Multinode.pipeline.component.png",
+    "tags": ["Introduction"]
+  },
+  {
+    "id": "xgboost",
+    "name": "XGBoost Sample Pipeline",
+    "description": "Train and evaluate an XGBoost model with feature preprocessing and hyperparameter tuning. Demonstrates a complete ML workflow from data loading to model evaluation.",
+    "url": "example-pipelines/XGBoost pipeline.pipeline.component.yaml",
+    "previewImage": "example-pipelines/XGBoost pipeline.pipeline.component.png",
+    "tags": ["XGBoost", "Classification", "Tabular Data"]
+  },
+  {
+    "id": "pytorch",
+    "name": "PyTorch Network",
+    "description": "Build and train a fully-connected neural network using PyTorch. Includes data loading, model architecture definition, training loop, and evaluation metrics.",
+    "url": "example-pipelines/Pytorch pipeline.pipeline.component.yaml",
+    "previewImage": "example-pipelines/Pytorch pipeline.pipeline.component.png",
+    "tags": ["PyTorch", "Deep Learning", "Neural Network"]
+  },
+  {
+    "id": "vertex-automl",
+    "name": "Vertex AI AutoML Tables",
+    "description": "Leverage Google Cloud's Vertex AI AutoML to automatically build and deploy tabular models. No coding required for model training.",
+    "url": "example-pipelines/Vertex AI AutoML Tables pipeline.pipeline.component.yaml",
+    "previewImage": "example-pipelines/Vertex AI AutoML Tables pipeline.pipeline.component.png",
+    "tags": ["AutoML", "Google Cloud", "Vertex AI"]
+  },
+  {
+    "id": "tfx",
+    "name": "TFX Pipeline",
+    "description": "Production-ready TensorFlow Extended (TFX) pipeline for end-to-end ML workflows. Includes data validation, transformation, training, and model serving.",
+    "url": "example-pipelines/Tfx pipeline.pipeline.component.yaml",
+    "previewImage": "example-pipelines/Tfx pipeline.pipeline.component.png",
+    "tags": ["TensorFlow", "TFX", "Production"]
+  }
+]

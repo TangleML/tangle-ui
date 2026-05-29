@@ -1,10 +1,10 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
+import { ExamplePipelines } from "@/components/Learn/ExamplePipelines";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import NewPipelineButton from "@/components/shared/NewPipelineButton";
 import { PaginationControls } from "@/components/shared/PaginationControls";
-import QuickStartCards from "@/components/shared/QuickStart/QuickStartCards";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/table";
 import { Paragraph, Text } from "@/components/ui/typography";
 import { usePagination } from "@/hooks/usePagination";
-import { QUICK_START_PATH } from "@/routes/router";
+import { APP_ROUTES } from "@/routes/router";
 import {
   type ComponentFileEntry,
   getAllComponentFilesFromList,
@@ -125,7 +125,7 @@ export const PipelineSection = withSuspenseWrapper(
               You don&apos;t have any pipelines yet. Get started with a template
               below.
             </Paragraph>
-            <QuickStartCards />
+            <ExamplePipelines />
           </BlockStack>
           <BlockStack align="center" gap="2">
             <Text tone="subdued">Or start from scratch with</Text>
@@ -143,7 +143,7 @@ export const PipelineSection = withSuspenseWrapper(
       <BlockStack gap="4" className="w-full">
         <PipelineFiltersBar
           filters={filterBarProps}
-          actions={<QuickStartButton />}
+          actions={<ExamplePipelineButton />}
         />
 
         <Table className="text-sm">
@@ -220,10 +220,10 @@ export const PipelineSection = withSuspenseWrapper(
   PipelineSectionSkeleton,
 );
 
-function QuickStartButton() {
+function ExamplePipelineButton() {
   return (
     <Button variant="secondary" asChild className="shrink-0">
-      <Link to={QUICK_START_PATH as string}>
+      <Link to={APP_ROUTES.LEARN_EXAMPLES}>
         <Icon name="Sparkles" />
         Example Pipelines
       </Link>

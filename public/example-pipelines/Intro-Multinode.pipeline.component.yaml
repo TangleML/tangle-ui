@@ -1,0 +1,169 @@
+name: 'Intro: Multinode'
+description: |
+  Demonstrates Tangle's multi-node feature: a single task expanded into N parallel
+  pods that share a Kubernetes Job and discover each other via launcher-injected
+  rendezvous metadata. Each pod prints its rank, then non-zero ranks open a TCP
+  connection to rank 0 to confirm the address resolves. Uses only the public
+  python:3.12-slim image and the Python standard library, so it works on both
+  Shopify's Oasis deployment and any open-source TangleML / cloud-pipelines.net
+  deployment.
+
+  Defaults to 2 pods. To change the pod count, edit the literal value of the
+  `tangleml.com/launchers/kubernetes/multi_node/number_of_nodes` annotation on
+  the `Multinode Greeter` task below — it must be a string literal because
+  Kubernetes annotations don't support runtime references.
+metadata:
+  annotations:
+    flex-nodes: '[{"id":"note-multinode","properties":{"title":"Multi-node Feature","content":"One task, N pods, one Kubernetes Job. The launcher injects WORLD_SIZE, RANK, and the rank-0 DNS address into each pod via dynamicData. Rank 0''s output is what Tangle records as the task output — other ranks'' outputs are dropped. Scale the pod count by editing the multi_node annotation on the task (literal string only — annotations cannot reference pipeline inputs).","color":"#E3F2FD"},"metadata":{"createdAt":"2026-05-22T00:00:00.000Z","createdBy":"river-tangent"},"size":{"width":340,"height":180},"position":{"x":40,"y":-220},"zIndex":0},{"id":"note-multinode-prereqs","properties":{"title":"How it works","content":"Required: the multi_node annotation on the task and the three dynamicData inputs (number_of_nodes, node_index, node_0_address). Optional but typical for real distributed training: IPC_LOCK capability, shared_memory, and a dynamic_volume PVC so all pods share a filesystem. This demo skips those — it only needs TCP connectivity to prove the rendezvous works.","color":"#FFF3E0"},"metadata":{"createdAt":"2026-05-22T00:00:00.000Z","createdBy":"river-tangent"},"size":{"width":340,"height":200},"position":{"x":420,"y":-220},"zIndex":0}]'
+    editor.flow-direction: left-to-right
+    cloned_from_run_id: 019e50eb18ef20c6ce6b
+inputs: []
+outputs: []
+implementation:
+  graph:
+    tasks:
+      Print Summary:
+        componentRef:
+          name: Print Summary
+          spec:
+            name: Print Summary
+            description: Echoes the rank-0 summary line so it appears in the run output.
+            inputs:
+              - name: summary
+                type: String
+            outputs:
+              - name: echoed
+                type: String
+            implementation:
+              container:
+                image: python:3.12-slim
+                command:
+                  - sh
+                  - '-ec'
+                  - |
+                    # $0 is the first positional arg (inputPath), $1 the second (outputPath)
+                    cat "$0"
+                    mkdir -p "$(dirname "$1")"
+                    cp "$0" "$1"
+                  - inputPath: summary
+                  - outputPath: echoed
+        arguments:
+          summary:
+            taskOutput:
+              outputName: summary
+              taskId: Multinode Greeter
+        annotations:
+          editor.position: '{"x": 600, "y": 100}'
+      Multinode Greeter:
+        componentRef:
+          name: Multinode Greeter
+          spec:
+            name: Multinode Greeter
+            description: |
+              Runs once per pod in a multi-node task. Prints rank, world size, and
+              the master address. Non-zero ranks open a TCP connection to rank 0 to
+              prove the launcher-injected DNS address actually resolves. Rank 0
+              listens for one connection per worker, then writes a summary.
+            metadata:
+              annotations:
+                cloud_pipelines.net: 'true'
+            inputs:
+              - name: world_size
+                type: String
+                description: Total number of pods (WORLD_SIZE). Injected by the launcher.
+              - name: node_rank
+                type: String
+                description: This pod's rank in [0, world_size). Injected by the launcher.
+              - name: master_addr
+                type: String
+                description: DNS address of rank 0. Injected by the launcher.
+            outputs:
+              - name: summary
+                type: String
+                description: Per-rank summary line.
+            implementation:
+              container:
+                image: python:3.12-slim
+                command:
+                  - python3
+                  - '-u'
+                  - '-c'
+                  - |
+                    import os, socket, sys, time
+
+                    world_size = int(sys.argv[1])
+                    rank = int(sys.argv[2])
+                    master_addr = sys.argv[3]
+                    summary_path = sys.argv[4]
+                    port = 29500
+                    hostname = socket.gethostname()
+
+                    print(f"[rank={rank}/{world_size}] hostname={hostname} master_addr={master_addr}", flush=True)
+
+                    if rank == 0:
+                        # Rank 0: bind and accept one connection per worker.
+                        srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                        srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                        srv.bind(("0.0.0.0", port))
+                        srv.listen(max(world_size, 1))
+                        srv.settimeout(120.0)
+                        peers = []
+                        print(f"[rank=0] listening on :{port} for {world_size - 1} peers", flush=True)
+                        for _ in range(world_size - 1):
+                            conn, addr = srv.accept()
+                            peer = conn.recv(64).decode("utf-8").strip()
+                            peers.append(peer)
+                            conn.sendall(b"ack\n")
+                            conn.close()
+                            print(f"[rank=0] greeted peer {peer} from {addr}", flush=True)
+                        srv.close()
+                        summary = f"rank=0 world_size={world_size} peers={peers}"
+                    else:
+                        # Other ranks: dial rank 0 and announce ourselves.
+                        deadline = time.time() + 120.0
+                        last_err = None
+                        while time.time() < deadline:
+                            try:
+                                s = socket.create_connection((master_addr, port), timeout=10)
+                                s.sendall(f"rank={rank}\n".encode("utf-8"))
+                                ack = s.recv(64).decode("utf-8").strip()
+                                s.close()
+                                print(f"[rank={rank}] handshake ok ack={ack!r}", flush=True)
+                                break
+                            except Exception as e:
+                                last_err = e
+                                time.sleep(2.0)
+                        else:
+                            raise SystemExit(f"[rank={rank}] failed to reach {master_addr}:{port}: {last_err}")
+                        summary = f"rank={rank} world_size={world_size} master_addr={master_addr}"
+
+                    print(summary, flush=True)
+
+                    # Only rank 0 materializes the task output. The shared mount across
+                    # pods is racy if multiple ranks write the same file, and Tangle
+                    # treats rank 0's output as the canonical one. Other ranks exit cleanly.
+                    if rank == 0:
+                        os.makedirs(os.path.dirname(summary_path), exist_ok=True)
+                        with open(summary_path, "w") as f:
+                            f.write(summary + "\n")
+                args:
+                  - inputValue: world_size
+                  - inputValue: node_rank
+                  - inputValue: master_addr
+                  - outputPath: summary
+        arguments:
+          node_rank:
+            dynamicData:
+              system/multi_node/node_index: {}
+          world_size:
+            dynamicData:
+              system/multi_node/number_of_nodes: {}
+          master_addr:
+            dynamicData:
+              system/multi_node/node_0_address: {}
+        annotations:
+          editor.position: '{"x": 200, "y": 100}'
+          cloud-pipelines.net/launchers/generic/resources.cpu: '1'
+          cloud-pipelines.net/launchers/generic/resources.memory: 1Gi
+          tangleml.com/launchers/kubernetes/multi_node/number_of_nodes: '2'
+    outputValues: {}
