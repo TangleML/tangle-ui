@@ -124,6 +124,7 @@ export const EditorMenuBar = observer(function EditorMenuBar() {
                   onSubmit={handlePipelineRename}
                   submitButtonText="Rename"
                   isSubmitDisabled={(name) => name === pipelineNameFromSpec}
+                  excludeNames={[pipelineNameFromSpec]}
                 />
               )}
 

@@ -17,6 +17,7 @@ import {
   buildTourPipelineYaml,
   TOUR_PIPELINE_PREFIX,
 } from "@/providers/TourProvider/tourPipelineLifecycle";
+import { TourPipelineStorageProvider } from "@/providers/TourProvider/tourPipelineStorage/TourPipelineStorageProvider";
 import { TourCompletionActions } from "@/providers/TourProvider/TourPopover";
 import { waitForSelector } from "@/providers/TourProvider/waitForSelector";
 import { APP_ROUTES } from "@/routes/router";
@@ -39,7 +40,7 @@ function tourPipelineName(tour: TourDefinition): string {
   return `${TOUR_PIPELINE_PREFIX}${tour.id}`;
 }
 
-async function createTourPipeline(
+async function findOrCreateTourPipeline(
   tour: TourDefinition,
   storage: PipelineStorageService,
 ): Promise<ResolvedPipeline> {
@@ -136,37 +137,51 @@ function TourReactourBridge({
 
 export function TourPage() {
   const params = useParams({ strict: false });
-  const search = useSearch({ strict: false });
-  const navigate = useNavigate();
-  const storage = usePipelineStorage();
-
   const tourId =
     "tourId" in params && typeof params.tourId === "string"
       ? params.tourId
       : "";
-
   const tour = getTour(tourId);
 
+  if (!tour) {
+    return <Navigate to={APP_ROUTES.LEARN_TOURS} replace />;
+  }
+
+  return (
+    <TourPipelineStorageProvider>
+      <TourPageBody tour={tour} tourId={tourId} />
+    </TourPipelineStorageProvider>
+  );
+}
+
+function TourPageBody({
+  tour,
+  tourId,
+}: {
+  tour: TourDefinition;
+  tourId: string;
+}) {
+  const search = useSearch({ strict: false });
+  const navigate = useNavigate();
+  const storage = usePipelineStorage();
   const [resolved, setResolved] = useState<ResolvedPipeline | null>(null);
 
   useEffect(() => {
-    if (!tour) return;
     snapshotLayout(EDITOR_LAYOUT_ID);
     return () => {
       restoreLayout(EDITOR_LAYOUT_ID);
     };
-  }, [tour]);
+  }, []);
 
   useEffect(() => {
-    if (!tour) return undefined;
     let cancelled = false;
     void (async () => {
       try {
-        const created = await createTourPipeline(tour, storage);
+        const result = await findOrCreateTourPipeline(tour, storage);
         if (cancelled) return;
-        setResolved(created);
+        setResolved(result);
       } catch (error) {
-        console.warn("Failed to create tour pipeline:", error);
+        console.warn("Failed to resolve tour pipeline:", error);
       }
     })();
     return () => {
@@ -182,10 +197,6 @@ export function TourPage() {
       replace: true,
     });
   };
-
-  if (!tour) {
-    return <Navigate to={APP_ROUTES.LEARN_TOURS} replace />;
-  }
 
   const rawStep = (search as { step?: unknown }).step;
   const parsedStep =

@@ -48,9 +48,14 @@ export class AutoSaveStore {
   }
 
   @action dispose() {
+    const yaml = this.serializeSpec();
+    const file = this.pipelineFileStore.activePipelineFile;
+    if (yaml && file) {
+      void file.write(yaml);
+    }
+    this.debouncedSave.cancel();
     this.disposeReaction?.();
     this.disposeReaction = null;
-    this.debouncedSave.cancel();
     this.spec = null;
     this.pipelineName = null;
   }

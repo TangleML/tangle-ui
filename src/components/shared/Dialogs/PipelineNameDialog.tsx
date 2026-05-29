@@ -3,6 +3,7 @@ import {
   type ChangeEvent,
   type ReactNode,
   useCallback,
+  useMemo,
   useState,
 } from "react";
 
@@ -29,6 +30,7 @@ interface PipelineNameDialogProps {
   title: string;
   description?: string;
   initialName: string;
+  excludeNames?: string[];
   submitButtonText: string;
   submitButtonIcon?: ReactNode;
   onSubmit: (name: string) => void;
@@ -42,13 +44,13 @@ const PipelineNameDialog = ({
   title,
   description = "Please, name your pipeline.",
   initialName,
+  excludeNames,
   submitButtonText,
   submitButtonIcon,
   onSubmit,
   isSubmitDisabled,
   onOpenChange,
 }: PipelineNameDialogProps) => {
-  const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState(initialName);
 
   const {
@@ -57,33 +59,29 @@ const PipelineNameDialog = ({
     refetch: refetchUserPipelines,
   } = useLoadUserPipelines();
 
-  const handleOnChange = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) => {
-      const newName = e.target.value;
-      const existingPipelineNames = new Set(
-        Array.from(userPipelines.keys()).map((name) => name.toLowerCase()),
-      );
+  const error = useMemo(() => {
+    if (isLoadingUserPipelines) return null;
+    const normalized = name.trim().toLowerCase();
+    if (normalized === "") return "Name cannot be empty";
+    const excluded = new Set(
+      (excludeNames ?? []).map((n) => n.trim().toLowerCase()),
+    );
+    const existing = new Set(
+      Array.from(userPipelines.keys())
+        .map((n) => n.toLowerCase())
+        .filter((n) => !excluded.has(n)),
+    );
+    if (existing.has(normalized)) return "Name already exists";
+    return null;
+  }, [name, userPipelines, isLoadingUserPipelines, excludeNames]);
 
-      const normalizedNewName = newName.trim().toLowerCase();
-
-      if (normalizedNewName === "") {
-        setError("Name cannot be empty");
-      } else if (existingPipelineNames.has(normalizedNewName)) {
-        setError("Name already exists");
-      } else {
-        setError(null);
-      }
-
-      setName(newName);
-    },
-    [userPipelines],
-  );
+  const handleOnChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    setName(e.target.value);
+  }, []);
 
   const handleDialogOpenChange = useCallback(
     (open: boolean) => {
-      if (!open) {
-        setError(null);
-      } else {
+      if (open) {
         setName(initialName);
         refetchUserPipelines();
       }
