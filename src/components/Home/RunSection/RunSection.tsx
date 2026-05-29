@@ -20,6 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Text } from "@/components/ui/typography";
+import { useRunSearchParams } from "@/hooks/useRunSearchParams";
 import { useBackend } from "@/providers/BackendProvider";
 import { getBackendStatusString } from "@/utils/backend";
 import { fetchWithErrorHandling } from "@/utils/fetchWithErrorHandling";
@@ -41,11 +42,8 @@ type RunSectionSearch = { page_token?: string; filter?: string };
 
 interface RunSectionProps {
   onEmptyList?: () => void;
-  /** When true, hides the built-in filter UI (used when new filter bar is enabled) */
   hideFilters?: boolean;
-  /** When provided, overrides the URL filter param (e.g. "created_by:me") */
   forcedFilter?: string;
-  /** When provided, limits the number of rows shown (pagination still works per backend page) */
   maxItems?: number;
 }
 
@@ -60,7 +58,12 @@ export const RunSection = ({
   const { pathname } = useLocation();
   const search = useSearch({ strict: false }) as RunSectionSearch;
   const isCreatedByMeDefault = useFlagValue("created-by-me-default");
+  const { setFilter } = useRunSearchParams();
   const dataVersion = useRef(0);
+
+  const onFilterByUser = forcedFilter
+    ? undefined
+    : (createdBy: string) => setFilter("created_by", createdBy);
 
   // Supports both JSON (new) and key:value (legacy) URL formats
   const filters = parseFilterParam(forcedFilter ?? search.filter);
@@ -294,7 +297,7 @@ export const RunSection = ({
             ? data.pipeline_runs?.slice(0, maxItems)
             : data.pipeline_runs
           )?.map((run) => (
-            <RunRow key={run.id} run={run} />
+            <RunRow key={run.id} run={run} onFilterByUser={onFilterByUser} />
           ))}
         </TableBody>
       </Table>
