@@ -27,6 +27,7 @@ import { LearnExamplesView } from "./Dashboard/Learn/LearnExamplesView";
 import { LearnHomeView } from "./Dashboard/Learn/LearnHomeView";
 import { LearnTipsView } from "./Dashboard/Learn/LearnTipsView";
 import { LearnToursView } from "./Dashboard/Learn/LearnToursView";
+import { TourPage } from "./Dashboard/Learn/Tour";
 import Editor from "./Editor";
 import { ImportPage } from "./Import";
 import NotFoundPage from "./NotFoundPage";
@@ -54,6 +55,8 @@ const EDITOR_V2_BASE_PATH = "/editor-v2";
 const RUNS_V2_BASE_PATH = "/runs-v2";
 const SETTINGS_PATH = "/settings";
 const IMPORT_PATH = "/app/editor/import-pipeline";
+const TOUR_BASE_PATH = "/tour";
+
 export const APP_ROUTES = {
   HOME: "/",
   DASHBOARD: "/",
@@ -66,6 +69,8 @@ export const APP_ROUTES = {
   LEARN_EXAMPLES: `${LEARN_BASE_PATH}/examples`,
   LEARN_TIPS: `${LEARN_BASE_PATH}/tips`,
   LEARN_TOURS: `${LEARN_BASE_PATH}/tours`,
+  TOUR: TOUR_BASE_PATH,
+  TOUR_DETAIL: `${TOUR_BASE_PATH}/$tourId`,
   IMPORT: IMPORT_PATH,
   PIPELINE_EDITOR: `${EDITOR_PATH}/$name`,
   RUN_DETAIL: `${RUNS_BASE_PATH}/$id`,
@@ -168,6 +173,12 @@ const learnToursRoute = createRoute({
   getParentRoute: () => dashboardRoute,
   path: APP_ROUTES.LEARN_TOURS,
   component: LearnToursView,
+});
+
+const tourRoute = createRoute({
+  getParentRoute: () => mainLayout,
+  path: APP_ROUTES.TOUR_DETAIL,
+  component: TourPage,
 });
 
 const quickStartRoute = createRoute({
@@ -351,6 +362,7 @@ const appRouteTree = mainLayout.addChildren([
   runV2WithSubgraphRoute,
   pipelineFoldersRoute,
   artifactPreviewRoute,
+  tourRoute,
 ]);
 
 const rootRouteTree = rootRoute.addChildren([
