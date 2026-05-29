@@ -67,6 +67,9 @@ interface TextProps
    */
   className?: string;
 
+  /** HTML id used to associate text with form controls and ARIA descriptions. */
+  id?: string;
+
   /** Native browser tooltip text */
   title?: string;
 }
