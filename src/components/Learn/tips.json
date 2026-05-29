@@ -1,0 +1,302 @@
+[
+  {
+    "id": "undo-redo",
+    "category": "Shortcuts",
+    "title": "Undo and redo with Cmd/Ctrl+Z",
+    "body": "Cmd/Ctrl+Z undoes your last canvas change. Cmd/Ctrl+Y (or Cmd/Ctrl+Shift+Z) redoes it. The editor remembers roughly the last 50 changes per session, including node placement, edges, and IO edits."
+  },
+  {
+    "id": "copy-paste-nodes",
+    "category": "Shortcuts",
+    "title": "Copy and paste nodes across pipelines",
+    "body": "Select one or more tasks, press Cmd/Ctrl+C, then Cmd/Ctrl+V to drop them anywhere. It works across pipeline tabs, and even across browsers, because nodes are copied as YAML."
+  },
+  {
+    "id": "duplicate-shortcut",
+    "category": "Shortcuts",
+    "title": "Cmd/Ctrl+D duplicates the selection",
+    "body": "Select a task (or several) and press Cmd/Ctrl+D to drop a clone right next to it. It's the fastest way to fan out a single task into a batch when you're about to wire up a parameter sweep."
+  },
+  {
+    "id": "delete-selection",
+    "category": "Shortcuts",
+    "title": "Delete the selection",
+    "body": "Delete or Backspace removes the selected tasks and any connections going into them. The deletion goes through undo, so Cmd/Ctrl+Z brings everything back if you change your mind."
+  },
+  {
+    "id": "escape-key",
+    "category": "Shortcuts",
+    "title": "Escape closes panels and pops subgraphs",
+    "body": "Escape deselects nodes and closes the Context panel. If you're inside a subgraph, it pops you back up to the parent, which is much faster than clicking the breadcrumbs."
+  },
+  {
+    "id": "meta-drag-io-nodes",
+    "category": "Shortcuts",
+    "title": "Cmd/Ctrl-drag to fast-place an input or output node",
+    "body": "Hold Cmd/Ctrl while dragging a connection out from a task into empty canvas, and you'll instantly drop a connected input or output node. It's the fastest way to wire up a fresh pipeline without trips back to the sidebar."
+  },
+  {
+    "id": "cmd-click-toggle",
+    "category": "Shortcuts",
+    "title": "Cmd/Ctrl+Click to toggle nodes in and out of a selection",
+    "body": "Hold Cmd/Ctrl and click individual nodes to add or remove them from the current selection. It's perfect for building a precise group when a box select would grab too much."
+  },
+  {
+    "id": "cmd-click-new-tab",
+    "category": "Shortcuts",
+    "title": "Cmd/Ctrl+Click opens links in a new tab",
+    "body": "Cmd/Ctrl+Click on any pipeline, run, or component in a list to open it in a new browser tab and keep your current view intact. The same modifier works on the Clone button (cloned pipeline opens in a new tab) and on an artifact's fullscreen icon (artifact opens in a new tab)."
+  },
+  {
+    "id": "auto-layout",
+    "category": "Shortcuts",
+    "title": "Auto-layout (Cmd/Alt+Shift+L) with four algorithms",
+    "body": "Cmd/Alt+Shift+L re-arranges the whole graph using the Sugiyama layout. Open View → Auto-layout for the full set: Sugiyama, Sugiyama Centered, Compact, and Spread. Different graph shapes look better under different ones, so it's worth trying them all."
+  },
+  {
+    "id": "multi-select-toolbar",
+    "category": "Editor",
+    "title": "The multi-select toolbar bundles bulk actions",
+    "body": "Select two or more tasks and a floating toolbar appears above them with Duplicate, Copy, Create Subgraph (once you've selected at least two tasks), and Delete. It's the quickest way to operate on a group without leaving the canvas."
+  },
+  {
+    "id": "bulk-edit-common-args",
+    "category": "Editor",
+    "title": "Edit shared arguments across multiple tasks at once",
+    "body": "Multi-select tasks and the Properties panel surfaces a Common Arguments section listing every input the selection shares. Set a value once and it lands on every selected task, which saves you a lot of clicking when you're tuning a hyperparameter across a row of components."
+  },
+  {
+    "id": "collapse-tasks",
+    "category": "Editor",
+    "title": "Collapse big tasks to declutter the canvas",
+    "body": "Open a task's Properties panel, head to Configuration, and flip the Collapse node switch to hide unused inputs and outputs. For pipelines with lots of ports, this turns a spaghetti diagram into something you can actually read."
+  },
+  {
+    "id": "pipeline-tree-window",
+    "category": "Editor",
+    "title": "Navigate nested subgraphs with the Pipeline Tree",
+    "body": "Subgraphs are pipelines you can drop into other pipelines like any other component, which means real graphs end up nested several levels deep. Open the Pipeline Tree window for a hierarchical view of every subgraph in the open pipeline. Clicking an entry dives the canvas straight to that level, so you don't lose your place chasing breadcrumbs."
+  },
+  {
+    "id": "validate-before-submit",
+    "category": "Editor",
+    "title": "The validator flags issues before you can submit",
+    "body": "Tangle continuously validates the pipeline as you edit and surfaces a Validation Summary in the side panel with error and warning counts. Expand it to see every issue, or hit Fix to open the Issue Resolution window. Clicking an issue jumps the canvas (and the pipeline tree, for nested subgraphs) straight to the entity at fault. Errors must be resolved before Submit Run will queue."
+  },
+  {
+    "id": "unset-vs-empty",
+    "category": "Editor",
+    "title": "Unset vs. empty inputs are not the same",
+    "body": "An empty input still passes an empty value to the component. An unset input is removed from the execution parameters entirely. Open the lightning-bolt menu next to an argument and pick Unset Argument when you want the component to fall back to its internal default, not when you want to pass a blank string."
+  },
+  {
+    "id": "dynamic-data-args",
+    "category": "Editor",
+    "title": "Switch arguments to dynamic data with the lightning-bolt menu",
+    "body": "Each task argument has a lightning-bolt (⚡) dropdown that swaps a plain value for a Secret or a System Data reference like `pipeline_run_id` or `pipeline_name`. Secrets resolve at runtime and never touch the YAML. System Data is great for generating unique output paths."
+  },
+  {
+    "id": "customizable-window-layout",
+    "category": "Editor",
+    "title": "Lay the editor out the way you actually work",
+    "body": "Every side panel is a window you can drag, dock left or right, undock to float, resize, minimize, or maximize. The Windows menu toggles each one on or off and includes a Views submenu with three presets: Default, All, and Minimal. Cmd/Alt+D snaps everything back to the Default layout, and your customizations persist across sessions so you only set things up once."
+  },
+  {
+    "id": "recent-runs-window",
+    "category": "Editor",
+    "title": "Recent runs of the open pipeline are one click away",
+    "body": "The Recent Runs window in the editor lists the latest runs of the exact pipeline you're editing. It's faster than scrolling through All Runs to find the one you just submitted."
+  },
+  {
+    "id": "area-select",
+    "category": "Editor",
+    "title": "Shift+drag to box-select, Cmd/Ctrl for partial",
+    "body": "Hold Shift and drag across the canvas to draw a selection rectangle and pick up every task that's fully inside it. The cursor switches to a crosshair so you know box-select is armed. Hold Cmd/Ctrl during the drag to switch to partial mode, where any task the rectangle even touches gets selected."
+  },
+  {
+    "id": "subgraph-nav",
+    "category": "Editor",
+    "title": "Double-click a subgraph node to dive in",
+    "body": "Pipelines are themselves reusable graph components. A task whose implementation is another pipeline shows a Workflow icon in its header. Double-click it to navigate inside, and use the breadcrumbs at the top of the canvas (or Escape) to climb back out."
+  },
+  {
+    "id": "create-subgraph",
+    "category": "Editor",
+    "title": "Group selected tasks into a subgraph",
+    "body": "Multi-select related tasks and use Create Subgraph from the selection toolbar to bundle them into a reusable subgraph component. Tangle rewires external connections for you, so the parent pipeline keeps working unchanged."
+  },
+  {
+    "id": "replace-task",
+    "category": "Editor",
+    "title": "Drop a new component onto a task to replace it",
+    "body": "Drag a different component from the sidebar onto an existing task. The target highlights, and dropping replaces the task while preserving inputs and outputs that still line up. It saves you from rewiring connections by hand when you're swapping in a newer or alternate component."
+  },
+  {
+    "id": "secrets-store-credentials",
+    "category": "Library",
+    "title": "Store credentials as Secrets, never as plain values",
+    "body": "Settings → Secrets is the only safe place for API keys and tokens. The value is encrypted at rest, injected at execution time, and never serialized into the pipeline YAML. The argument field only ever shows the secret's name."
+  },
+  {
+    "id": "secrets-replace-not-recreate",
+    "category": "Library",
+    "title": "Replacing a secret beats deleting and re-adding it",
+    "body": "Use Replace in Settings → Secrets to update a value without changing the name. Every pipeline that references the secret keeps working. Deleting a secret that's still referenced will fail the next run that touches it."
+  },
+  {
+    "id": "component-info-tabs",
+    "category": "Library",
+    "title": "Component info dialog has everything in three tabs",
+    "body": "Click the (ⓘ) on any component to open Details, Inputs/Outputs, and Implementation tabs. Implementation shows the full YAML (container image, command, args), so you can audit exactly what will run. Components you own get a fourth Publish tab."
+  },
+  {
+    "id": "library-search-filters",
+    "category": "Library",
+    "title": "Filter library search by input or output type",
+    "body": "Beneath the component search box, you can switch the filter mode between Name, Input Name, Input Type, Output Name, and Output Type. Searching `CSV` by output type finds everything that produces a CSV, which is useful when you know the shape of the data but not the component name."
+  },
+  {
+    "id": "exact-match",
+    "category": "Library",
+    "title": "Use Exact Match for short, common names",
+    "body": "Flip on the Exact Match toggle when you're searching for short or generic component names. You'll dodge the long list of partial matches that 'split' or 'train' would otherwise pull in."
+  },
+  {
+    "id": "favorite-components",
+    "category": "Library",
+    "title": "Star components to pin them",
+    "body": "Click the star next to any component in the library to mark it a favorite. Favorites surface at the top of the list and persist across sessions, so the components you reach for most often are always a click away."
+  },
+  {
+    "id": "github-libraries",
+    "category": "Library",
+    "title": "Point Tangle at a whole GitHub repo of components",
+    "body": "Manage Libraries (from the component sidebar) lets you register an entire GitHub repository as a component source, rather than importing components one URL at a time. It's useful for teams that maintain a shared component library in git."
+  },
+  {
+    "id": "in-app-editor",
+    "category": "Library",
+    "title": "Build components in-browser, no dev environment needed",
+    "body": "Tangle ships an in-browser component editor. Open Add Component → New to write Python or full YAML directly in the browser. Python components get special treatment: you edit the function code and Tangle generates the wrapper around it."
+  },
+  {
+    "id": "publish-component",
+    "category": "Library",
+    "title": "Publish a component once everyone needs it",
+    "body": "Open a User Component's (ⓘ) → Publish tab to share it with the whole workspace. The publish flow checks documentation, metadata, and structure before letting it through, so published components stay high-quality by default."
+  },
+  {
+    "id": "all-runs-filter-bar",
+    "category": "Runs",
+    "title": "Find old runs fast with the All Runs filter bar",
+    "body": "All Runs supports filtering by name, creator, date range, and custom annotation key/value pairs. Active filters appear as removable chips below the bar, which is handy when you want to slice a wall of runs by session, round, or experiment label."
+  },
+  {
+    "id": "filter-by-annotation",
+    "category": "Runs",
+    "title": "Annotate runs so future-you can find them",
+    "body": "Set annotations on tasks (or pass them at submit time) like `session: 2026-05-19-foo`, `label: baseline`, or `experiment: lr-sweep`. They show up in the All Runs filter bar as predicates and turn run sprawl into a queryable log."
+  },
+  {
+    "id": "rerun",
+    "category": "Runs",
+    "title": "Rerun a pipeline in one click",
+    "body": "The Rerun button on a run's toolbar resubmits the same pipeline with the same inputs. Cache hits mean the unchanged parts complete in seconds, which is great when a flaky external dependency caused the original failure."
+  },
+  {
+    "id": "clone-run",
+    "category": "Runs",
+    "title": "Clone a run to iterate without overwriting",
+    "body": "From any run's detail page, Clone creates a new pipeline draft from that run's configuration. Tweak inputs or tasks and resubmit without touching the original. It's perfect for parameter sweeps and what-if explorations."
+  },
+  {
+    "id": "cancel-run",
+    "category": "Runs",
+    "title": "Cancel a misbehaving run early",
+    "body": "Spotted that a long-running pipeline has gone wrong? Hit Cancel in the run toolbar instead of waiting for it to time out. Failing fast saves both compute and your iteration time."
+  },
+  {
+    "id": "templatized-run-names",
+    "category": "Runs",
+    "title": "Templatize run names so you can tell experiments apart",
+    "body": "Turn on Templatized pipeline run name in Settings → Beta Features, then add a template so each submitted run gets a unique auto-generated name. Available placeholders: `${arguments.<input name>}`, `${date.timestamp}`, `${date.short}`, `${date.long}`, and `${annotations.<key>}`."
+  },
+  {
+    "id": "submit-with-arguments",
+    "category": "Runs",
+    "title": "Tweak arguments per run without editing the pipeline",
+    "body": "Use Submit Run with Arguments to override the pipeline's inputs for a single run and attach a note. The dialog also has Copy from a previous run, which pulls the exact argument set from any earlier run so you can repeat or perturb an experiment without retyping everything."
+  },
+  {
+    "id": "artifact-visualizations",
+    "category": "Runs",
+    "title": "Visualize artifacts inline, no download required",
+    "body": "On a run, click the Preview (eye) icon next to a task's input or output to open the artifact visualizer. Text, JSON, CSV/TSV, and Parquet render with a proper viewer (the tabular formats land in a scrollable table with the first 1,000 rows); images render in place. Use the maximize icon for a fullscreen view, Cmd/Ctrl+click that same icon to pop the artifact into a new tab, or hit the share icon to copy a direct link."
+  },
+  {
+    "id": "exit-code-137",
+    "category": "Runs",
+    "title": "Exit code 137 means out-of-memory",
+    "body": "If a task exits with 137, the runtime killed it for exceeding its memory budget (SIGKILL, 128 + 9). Open the Logs tab and read the lines right before the kill to see whether it's a leak, a single oversized input, or just a genuine size problem. Common fixes: stream or chunk the input, drop columns you don't use, or split the work across two tasks."
+  },
+  {
+    "id": "drafts-vs-runs",
+    "category": "System",
+    "title": "Drafts live in your browser, runs live on the backend",
+    "body": "Pipelines in the Editor are saved to your browser's IndexedDB. They're personal, draft-only, and lost if you clear browser data. Submitting creates a Pipeline Run that's stored on the backend and shareable via URL. Export important drafts as YAML if you care about them."
+  },
+  {
+    "id": "autosave",
+    "category": "System",
+    "title": "There's no save button, autosave handles it",
+    "body": "The Editor autosaves to browser local storage 300ms after your last change, so there's no manual save button to forget. Keep an eye on the save indicator in the toolbar to confirm a change landed before you close the tab."
+  },
+  {
+    "id": "favorites",
+    "category": "System",
+    "title": "Favorite pipelines and runs to keep them at the top",
+    "body": "Star pipelines or runs to surface them at the top of My Pipelines, the All Runs list, and the Favorites view. My Dashboard shows your five most recent favorites, with a hover-X to unfavorite in place."
+  },
+  {
+    "id": "backend-availability",
+    "category": "System",
+    "title": "Tangle pings your backend so you know before you Submit",
+    "body": "The configured Backend URL is health-checked on load. If it's offline, the Submit Run button tells you immediately instead of leaving you wondering why nothing happens. Settings → Backend lets you swap to a different backend in seconds."
+  },
+  {
+    "id": "caching-saves-hours",
+    "category": "Advanced",
+    "title": "Caching can save hours, and it's automatic",
+    "body": "Tangle hashes a task's container spec plus its input artifacts to build a cache key. If a matching task has run before, the cached outputs are reused instantly. A re-run of a pipeline where only the last step changed often finishes in seconds."
+  },
+  {
+    "id": "disable-cache-per-task",
+    "category": "Advanced",
+    "title": "Disable cache on a single task when you must",
+    "body": "In the Configuration context panel for any task, toggle 'Disable cache' to force re-execution. Use it sparingly. The typical case is a component that pulls live external data, where cache hits would silently serve stale results."
+  },
+  {
+    "id": "pipeline-tags",
+    "category": "Advanced",
+    "title": "Tag pipelines so the search bar actually helps",
+    "body": "Add tags from the Pipeline Context panel. Tangle stores them in IndexedDB, surfaces them as filters in My Pipelines, and writes them into the YAML so they survive export and import. Tagging up front saves you from grepping through a wall of similar names later."
+  },
+  {
+    "id": "pipeline-notes",
+    "category": "Advanced",
+    "title": "Leave notes on every pipeline and every run",
+    "body": "Both pipelines and runs have a Notes field in their Context panel. They're perfect for postmortems, todos, or 'what changed in this version'. Notes stick with the artifact they're attached to, so future-you (or your teammate) gets the context that doesn't fit in a tag."
+  },
+  {
+    "id": "recently-viewed",
+    "category": "Advanced",
+    "title": "Recently Viewed remembers what you actually opened",
+    "body": "Tangle tracks the pipelines, runs, and components you've opened lately and surfaces them in the sidebar's Recently Viewed list. No bookmarking required. The things you actually touch are always one click away."
+  },
+  {
+    "id": "history-window",
+    "category": "Advanced",
+    "title": "The History window shows every edit you can step back through",
+    "body": "Open the History window from the editor menu to see a list of every change you've made this session, with separators for the moments you've returned to and forward steps you've taken. It's the easy way to find the exact point you want to roll back to instead of mashing Cmd/Ctrl+Z."
+  }
+]
