@@ -16,7 +16,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import useToastNotification from "@/hooks/useToastNotification";
+import { Text } from "@/components/ui/typography";
 import { useBackend } from "@/providers/BackendProvider";
 import { APP_ROUTES } from "@/routes/router";
 import { fetchRunAnnotations } from "@/services/pipelineRunService";
@@ -29,9 +29,13 @@ import { TWENTY_FOUR_HOURS_IN_MS } from "@/utils/constants";
 import { formatDate } from "@/utils/date";
 import { getOverallExecutionStatusFromStats } from "@/utils/executionStatus";
 
-const RunRow = ({ run }: { run: PipelineRunResponse }) => {
+interface RunRowProps {
+  run: PipelineRunResponse;
+  onFilterByUser?: (createdBy: string) => void;
+}
+
+const RunRow = ({ run, onFilterByUser }: RunRowProps) => {
   const navigate = useNavigate();
-  const notify = useToastNotification();
   const { backendUrl } = useBackend();
 
   const runId = `${run.id}`;
@@ -52,10 +56,9 @@ const RunRow = ({ run }: { run: PipelineRunResponse }) => {
   const truncatedCreatedBy = truncateMiddle(createdBy);
   const isTruncated = createdBy !== truncatedCreatedBy;
 
-  const handleCopy = (e: MouseEvent) => {
+  const handleFilterByUser = (e: MouseEvent) => {
     e.stopPropagation();
-    navigator.clipboard.writeText(createdBy);
-    notify(`"${createdBy}" copied to clipboard`, "success");
+    onFilterByUser?.(createdBy);
   };
 
   const overallStatus = getOverallExecutionStatusFromStats(
@@ -77,20 +80,26 @@ const RunRow = ({ run }: { run: PipelineRunResponse }) => {
     navigate({ to: clickThroughUrl });
   };
 
-  const createdByButton = (
+  const createdByContent = onFilterByUser ? (
     <Button
-      className="truncate underline"
-      onClick={handleCopy}
+      className="underline"
+      onClick={handleFilterByUser}
       tabIndex={0}
       variant="ghost"
     >
-      {truncatedCreatedBy}
+      <Text size="xs" tone="subdued" className="truncate">
+        {truncatedCreatedBy}
+      </Text>
     </Button>
+  ) : (
+    <Text size="xs" tone="subdued" className="truncate">
+      {truncatedCreatedBy}
+    </Text>
   );
 
-  const createdByButtonWithTooltip = (
+  const createdByContentWithTooltip = (
     <Tooltip>
-      <TooltipTrigger asChild>{createdByButton}</TooltipTrigger>
+      <TooltipTrigger asChild>{createdByContent}</TooltipTrigger>
       <TooltipContent>
         <span>{createdBy}</span>
       </TooltipContent>
@@ -131,7 +140,7 @@ const RunRow = ({ run }: { run: PipelineRunResponse }) => {
         {run.created_at ? formatDate(run.created_at) : "Data not found..."}
       </TableCell>
       <TableCell>
-        {isTruncated ? createdByButtonWithTooltip : createdByButton}
+        {isTruncated ? createdByContentWithTooltip : createdByContent}
       </TableCell>
       <TableCell className="max-w-64">
         {tags && tags.length > 0 && <TagList tags={tags} />}
