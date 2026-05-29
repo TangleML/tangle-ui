@@ -1,7 +1,5 @@
 import {
   Background,
-  Controls,
-  MiniMap,
   ReactFlow,
   type ReactFlowInstance,
   useConnection,
@@ -12,7 +10,6 @@ import { useState } from "react";
 import { BlockStack } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
 import type { ComponentSpec } from "@/models/componentSpec";
-import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useAutoLayout } from "@/routes/v2/pages/Editor/hooks/useAutoLayout";
 import { SubgraphBreadcrumbs } from "@/routes/v2/shared/components/SubgraphBreadcrumbs";
 import { FLOW_CANVAS_DEFAULT_PROPS } from "@/routes/v2/shared/flowCanvasDefaults";
@@ -45,7 +42,6 @@ export const FlowCanvas = observer(function FlowCanvas({
   spec,
   className,
 }: FlowCanvasProps) {
-  const { track } = useAnalytics();
   const registry = useNodeRegistry();
   const nodeTypes = registry.getNodeTypes();
   const edgeTypes = registry.getEdgeTypes();
@@ -123,24 +119,6 @@ export const FlowCanvas = observer(function FlowCanvas({
       >
         <FloatingSelectionToolbar spec={spec} />
         <Background gap={10} className="bg-slate-50!" />
-        <Controls
-          position="bottom-right"
-          onZoomIn={() => track("v2.pipeline_canvas.controls.zoom_in.click")}
-          onZoomOut={() => track("v2.pipeline_canvas.controls.zoom_out.click")}
-          onFitView={() => track("v2.pipeline_canvas.controls.fit_view.click")}
-          onInteractiveChange={(interactive) =>
-            track("v2.pipeline_canvas.controls.interactive.toggle", {
-              interactive,
-            })
-          }
-        />
-        <MiniMap
-          position="bottom-left"
-          pannable
-          zoomable
-          onClick={() => track("v2.pipeline_canvas.minimap.click")}
-          onNodeClick={() => track("v2.pipeline_canvas.minimap.node.click")}
-        />
       </ReactFlow>
       <CanvasUndoRedo />
     </BlockStack>

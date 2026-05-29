@@ -32,6 +32,7 @@ import { DriverPermissionGate } from "./components/DriverPermissionGate";
 import { EditorMenuBar } from "./components/EditorMenuBar/EditorMenuBar";
 import { EmptyEditorState } from "./components/EmptyEditorState";
 import { FlowCanvas } from "./components/FlowCanvas/FlowCanvas";
+import { useCanvasControlsWindow } from "./hooks/useCanvasControlsWindow";
 import { useComponentLibraryWindow } from "./hooks/useComponentLibraryWindow";
 import { useEditorEscapeShortcut } from "./hooks/useEditorEscapeShortcut";
 import { useHistoryWindow } from "./hooks/useHistoryWindow";
@@ -81,6 +82,7 @@ const PipelineEditor = withSuspenseWrapper(
     usePipelineDetailsWindow();
     usePipelineTreeWindow();
     useHistoryWindow();
+    useCanvasControlsWindow();
     useRecentRunsWindow();
     useRunsAndSubmissionWindow();
     useUndoRedoKeyboard();

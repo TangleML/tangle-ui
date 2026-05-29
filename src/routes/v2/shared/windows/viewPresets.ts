@@ -20,6 +20,7 @@ export const DEFAULT_DOCK_AREAS: PresetDockAreas = {
     "history",
     "debug-panel",
     "recent-runs",
+    "canvas-controls",
   ],
   right: ["pipeline-details", "context-panel"],
 };
@@ -46,6 +47,7 @@ export const DEFAULT_VIEW_PRESET: ViewPreset = {
     "recent-runs",
     "component-library",
     "pipeline-details",
+    "canvas-controls",
   ]),
   dockAreas: DEFAULT_DOCK_AREAS,
 };
@@ -64,6 +66,7 @@ export const VIEW_PRESETS: ViewPreset[] = [
       "pipeline-details",
       "debug-panel",
       "recent-runs",
+      "canvas-controls",
     ]),
     dockAreas: DEFAULT_DOCK_AREAS,
   },
