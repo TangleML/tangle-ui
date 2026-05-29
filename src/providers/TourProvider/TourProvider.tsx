@@ -6,6 +6,7 @@ import {
   POPOVER_STYLES,
   PopoverClampBridge,
   renderNextButton,
+  TourNavigation,
 } from "./TourPopover";
 
 export function TourProvider({ children }: { children: ReactNode }) {
@@ -13,6 +14,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
     <ReactourProvider
       steps={[]}
       styles={POPOVER_STYLES}
+      components={{ Navigation: TourNavigation }}
       scrollSmooth
       showBadge
       showCloseButton={false}
