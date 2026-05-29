@@ -45,6 +45,7 @@ import { useRunsAndSubmissionWindow } from "./hooks/useRunsAndSubmissionWindow";
 import { useSeedInitialDockLayoutFromPreset } from "./hooks/useSeedInitialDockLayoutFromPreset";
 import { useSelectionWindowSync } from "./hooks/useSelectionWindowSync";
 import { useSpecLifecycle } from "./hooks/useSpecLifecycle";
+import { useTipOfTheDayWindow } from "./hooks/useTipOfTheDayWindow";
 import { useUndoRedoKeyboard } from "./hooks/useUndoRedoKeyboard";
 import { editorRegistry } from "./nodes";
 import { EditorSessionProvider } from "./store/EditorSessionContext";
@@ -88,6 +89,7 @@ const PipelineEditor = withSuspenseWrapper(
     useShortcutListener();
     useEditorEscapeShortcut();
     useDebugPanelWindow();
+    useTipOfTheDayWindow();
     useSeedInitialDockLayoutFromPreset();
 
     const activeSpec = navigation.activeSpec;
