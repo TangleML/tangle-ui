@@ -1,10 +1,13 @@
 import { type ProviderProps, useTour } from "@reactour/tour";
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import type { FC, PropsWithChildren, ReactNode } from "react";
+import { useEffect, useRef } from "react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
+import { cn } from "@/lib/utils";
 import { APP_ROUTES } from "@/routes/router";
 import { tracking } from "@/utils/tracking";
 
@@ -168,6 +171,133 @@ function clampPopoverElement(el: HTMLElement): void {
   if (clampedX !== x || clampedY !== y) {
     el.style.transform = `translate(${Math.round(clampedX)}px, ${Math.round(clampedY)}px)`;
   }
+}
+
+type ComponentsProp = NonNullable<ProviderProps["components"]>;
+type NavigationProps = React.ComponentProps<
+  NonNullable<ComponentsProp["Navigation"]>
+>;
+
+type NavButtonProps = {
+  onClick?: () => void;
+  kind?: "next" | "prev";
+  hideArrow?: boolean;
+};
+
+export function TourNavigation(props: NavigationProps) {
+  const {
+    setCurrentStep,
+    currentStep,
+    steps,
+    nextButton,
+    prevButton,
+    setIsOpen,
+    hideButtons,
+    hideDots,
+    disableAll,
+    rtl,
+  } = props;
+
+  const stepsLength = steps.length;
+
+  const visitedMaxRef = useRef(currentStep);
+  if (currentStep > visitedMaxRef.current) {
+    visitedMaxRef.current = currentStep;
+  }
+  const visited = visitedMaxRef.current;
+
+  const NavButton: FC<PropsWithChildren<NavButtonProps>> = ({
+    onClick,
+    kind = "next",
+    hideArrow,
+    children,
+  }) => {
+    const isDisabled = disableAll
+      ? true
+      : kind === "next"
+        ? stepsLength - 1 === currentStep
+        : currentStep === 0;
+    const handleClick = () => {
+      if (disableAll) return;
+      if (onClick) onClick();
+      else if (kind === "next")
+        setCurrentStep(Math.min(currentStep + 1, stepsLength - 1));
+      else setCurrentStep(Math.max(currentStep - 1, 0));
+    };
+    const inverted = rtl ? kind === "prev" : kind === "next";
+    return (
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={handleClick}
+        disabled={isDisabled}
+        aria-label={`Go to ${kind} step`}
+      >
+        {!hideArrow ? (
+          <Icon name={inverted ? "ChevronRight" : "ChevronLeft"} />
+        ) : null}
+        {children}
+      </Button>
+    );
+  };
+
+  const btnCtx = {
+    Button: NavButton,
+    setCurrentStep,
+    currentStep,
+    stepsLength,
+    setIsOpen,
+    steps,
+  };
+
+  const renderPrev: ReactNode = !hideButtons ? (
+    typeof prevButton === "function" ? (
+      prevButton(btnCtx)
+    ) : (
+      <NavButton kind="prev" />
+    )
+  ) : null;
+
+  const renderNext: ReactNode = !hideButtons ? (
+    typeof nextButton === "function" ? (
+      nextButton(btnCtx)
+    ) : (
+      <NavButton kind="next" />
+    )
+  ) : null;
+
+  return (
+    <div
+      dir={rtl ? "rtl" : "ltr"}
+      className="flex flex-row items-center justify-between mt-6"
+    >
+      {renderPrev}
+      {!hideDots ? (
+        <div
+          aria-hidden
+          className="flex flex-row items-center justify-between flex-wrap"
+        >
+          {Array.from({ length: stepsLength }, (_, i) => i).map((index) => {
+            const isCurrent = index === currentStep;
+            const isVisited = index <= visited && !isCurrent;
+            return (
+              <Badge
+                key={`tour-dot-${index}`}
+                variant="dot"
+                className={cn(
+                  "m-1 transition-all",
+                  isCurrent && "text-blue-500 scale-125",
+                  isVisited && "text-blue-300",
+                  !isCurrent && !isVisited && "text-zinc-300",
+                )}
+              />
+            );
+          })}
+        </div>
+      ) : null}
+      {renderNext}
+    </div>
+  );
 }
 
 // Reactour has no viewport-padding setting and lets the popover snap flush to
