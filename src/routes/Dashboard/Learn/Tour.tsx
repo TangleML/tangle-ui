@@ -11,8 +11,12 @@ import {
   getTour,
   type TourDefinition,
 } from "@/components/Learn/tours/registry";
+import useToastNotification from "@/hooks/useToastNotification";
 import { TourContent } from "@/providers/TourProvider/TourContent";
-import { TourModeProvider } from "@/providers/TourProvider/TourModeContext";
+import {
+  TourModeProvider,
+  type TourModeValue,
+} from "@/providers/TourProvider/TourModeContext";
 import {
   buildTourPipelineYaml,
   TOUR_PIPELINE_PREFIX,
@@ -142,6 +146,24 @@ export function TourPage() {
       ? params.tourId
       : "";
   const tour = getTour(tourId);
+  const navigate = useNavigate();
+  const storage = usePipelineStorage();
+  const notify = useToastNotification();
+
+  const promoteToPipeline = async (newName: string, yamlContent: string) => {
+    try {
+      const file = await storage.rootFolder.addFile(newName, yamlContent);
+      await navigate({
+        to: APP_ROUTES.EDITOR_V2_PIPELINE,
+        params: { pipelineName: newName },
+        search: { fileId: file.id },
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to save pipeline";
+      notify(message, "error");
+    }
+  };
 
   if (!tour) {
     return <Navigate to={APP_ROUTES.LEARN_TOURS} replace />;
@@ -149,7 +171,11 @@ export function TourPage() {
 
   return (
     <TourPipelineStorageProvider>
-      <TourPageBody tour={tour} tourId={tourId} />
+      <TourPageBody
+        tour={tour}
+        tourId={tourId}
+        promoteToPipeline={promoteToPipeline}
+      />
     </TourPipelineStorageProvider>
   );
 }
@@ -157,9 +183,11 @@ export function TourPage() {
 function TourPageBody({
   tour,
   tourId,
+  promoteToPipeline,
 }: {
   tour: TourDefinition;
   tourId: string;
+  promoteToPipeline: TourModeValue["promoteToPipeline"];
 }) {
   const search = useSearch({ strict: false });
   const navigate = useNavigate();
@@ -212,6 +240,7 @@ function TourPageBody({
       value={{
         tour,
         tempPipelineName: resolved?.name ?? tourPipelineName(tour),
+        promoteToPipeline,
       }}
     >
       {resolved && (
