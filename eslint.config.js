@@ -7,7 +7,51 @@ import simpleImportSort from "eslint-plugin-simple-import-sort";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 
+import tangleUi from "./eslint-rules/index.js";
 import { REACT_COMPILER_ENABLED_GLOBS } from "./react-compiler.config.js";
+
+/**
+ * Primitive components whose `className` prop is being phased out. The ESLint rule
+ * `tangle-ui/no-classname-on-primitives` warns on any usage; once all sites are
+ * migrated the rule is promoted to `error` and the prop is removed from each
+ * primitive's type. See `.local/.../ban-classname-on-primitives` plan.
+ */
+const BANNED_CLASSNAME_PRIMITIVES = [
+  "BlockStack",
+  "InlineStack",
+  "Text",
+  "Paragraph",
+  "Heading",
+  "Button",
+  "Icon",
+  "IconButton",
+  "Surface",
+  "Section",
+  "Card",
+  "CardHeader",
+  "CardContent",
+  "CardFooter",
+  "CardTitle",
+  "CardDescription",
+  "ScrollRegion",
+  "Truncating",
+  "Toolbar",
+  "ListRow",
+  "ZebraList",
+  "HoverReveal",
+  "EmptyState",
+  "StickyHeader",
+  "Pill",
+  "FieldRow",
+  "Divider",
+  "TabsList",
+  "TabsTrigger",
+  "TabsContent",
+  "Label",
+  "Skeleton",
+  "TableHead",
+  "TableCell",
+];
 
 const baseRestrictedImportPaths = [
   {
@@ -86,6 +130,7 @@ export default [
     files: ["src/routes/v2/**/*.{ts,tsx}"],
     plugins: {
       "no-relative-import-paths": noRelativeImportPaths,
+      "tangle-ui": tangleUi,
     },
     rules: {
       "no-relative-import-paths/no-relative-import-paths": [
@@ -94,6 +139,20 @@ export default [
           allowSameFolder: true,
           rootDir: "src",
           prefix: "@",
+        },
+      ],
+      // Forbid className on Tangle UI primitives and the new layer-3 patterns.
+      // Soft-warn on Box imports (Box is the low-level escape hatch).
+      //
+      // Severity is "warn" today. To promote to "error" once `pnpm lint`
+      // reports 0 className warnings, change the severity below and delete the
+      // `className?: string` field from each primitive's type (see plan
+      // `.local/.../ban-classname-on-primitives`).
+      "tangle-ui/no-classname-on-primitives": [
+        "warn",
+        {
+          components: BANNED_CLASSNAME_PRIMITIVES,
+          softBanned: ["Box"],
         },
       ],
     },
