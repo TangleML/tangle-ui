@@ -35,14 +35,29 @@ export const WindowsMenu = observer(function WindowsMenu() {
     windows.applyViewPreset(preset);
   };
 
+  const notifyOpenStateChange = (open: boolean) => {
+    requestAnimationFrame(() => {
+      window.dispatchEvent(new Event("resize"));
+    });
+    if (!open) {
+      setTimeout(() => {
+        window.dispatchEvent(new Event("resize"));
+      }, 250);
+    }
+  };
+
   return (
-    <DropdownMenu>
+    <DropdownMenu onOpenChange={notifyOpenStateChange}>
       <DropdownMenuTrigger asChild>
         <MenuTriggerButton {...tracking("v2.pipeline_editor.windows_menu")}>
           Windows
         </MenuTriggerButton>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" sideOffset={2}>
+      <DropdownMenuContent
+        align="start"
+        sideOffset={2}
+        data-tour="windows-menu-content"
+      >
         {sortedWindows.map((win) => (
           <DropdownMenuCheckboxItem
             key={win.id}
@@ -67,12 +82,12 @@ export const WindowsMenu = observer(function WindowsMenu() {
           </DropdownMenuCheckboxItem>
         ))}
         <DropdownMenuSeparator />
-        <DropdownMenuSub>
+        <DropdownMenuSub onOpenChange={notifyOpenStateChange}>
           <DropdownMenuSubTrigger>
             <Icon name="LayoutDashboard" size="sm" />
             Views
           </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent>
+          <DropdownMenuSubContent data-tour="windows-menu-submenu-content">
             {VIEW_PRESETS.map((preset) => (
               <DropdownMenuItem
                 key={preset.label}

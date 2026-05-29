@@ -47,6 +47,7 @@ export function createEntityNode(
   nodeType: string,
   fallback: { x: number; y: number },
   data: Record<string, unknown>,
+  domAttributes?: Record<string, string>,
 ): Node {
   const position = entity.annotations.get(EDITOR_POSITION_ANNOTATION) as {
     x: number;
@@ -59,6 +60,7 @@ export function createEntityNode(
     position: resolvePosition(position, fallback),
     zIndex,
     data,
+    domAttributes,
   };
 }
 
