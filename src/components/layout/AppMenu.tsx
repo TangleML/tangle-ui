@@ -196,6 +196,10 @@ const AppMenu = () => {
     return null;
   }
 
+  if (pathname.startsWith(APP_ROUTES.TOUR)) {
+    return null;
+  }
+
   return <DefaultAppMenu />;
 };
 

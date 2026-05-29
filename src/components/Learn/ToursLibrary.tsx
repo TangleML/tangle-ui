@@ -1,3 +1,5 @@
+import { useNavigate } from "@tanstack/react-router";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +12,7 @@ import {
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
+import { APP_ROUTES } from "@/routes/router";
 import { tracking } from "@/utils/tracking";
 
 import {
@@ -21,8 +24,19 @@ import {
   type TourDifficulty,
   tours,
 } from "./tours";
+import { getTour } from "./tours/registry";
 
 function TourCard({ tour }: { tour: Tour }) {
+  const isAvailable = getTour(tour.id) !== undefined;
+  const navigate = useNavigate();
+
+  const startTour = () => {
+    void navigate({
+      to: APP_ROUTES.TOUR_DETAIL,
+      params: { tourId: tour.id },
+    });
+  };
+
   return (
     <Card className="h-full py-4 gap-2 hover:border-primary/40 hover:shadow-md transition-all duration-200">
       <CardHeader className="px-4 gap-2">
@@ -41,14 +55,26 @@ function TourCard({ tour }: { tour: Tour }) {
               {tour.duration}
             </Text>
           </InlineStack>
-          <Button
-            size="sm"
-            variant="ghost"
-            {...tracking("learning_hub.tours.start", { tour_id: tour.id })}
-          >
-            Start tour
-            <Icon name="Play" size="sm" aria-hidden="true" />
-          </Button>
+          {isAvailable ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={startTour}
+              {...tracking("learning_hub.tours.start", { tour_id: tour.id })}
+            >
+              Start tour
+              <Icon name="Play" size="sm" aria-hidden="true" />
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled
+              {...tracking("learning_hub.tours.start", { tour_id: tour.id })}
+            >
+              Coming soon
+            </Button>
+          )}
         </InlineStack>
       </CardContent>
     </Card>
