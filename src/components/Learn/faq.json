@@ -1,0 +1,52 @@
+[
+  {
+    "id": "create-pipeline",
+    "question": "How do I create my first pipeline?",
+    "answer": "Head to My Pipelines and click 'New pipeline', or import one of the example pipelines from the Learning Hub to get going in seconds."
+  },
+  {
+    "id": "components",
+    "question": "What's the difference between a component and a task?",
+    "answer": "Components are reusable building blocks defined in YAML. Tasks are individual instances of a component placed on the canvas as part of a pipeline."
+  },
+  {
+    "id": "share-pipeline",
+    "question": "Can I share a pipeline with someone else?",
+    "answer": "Yes. Export the pipeline as YAML from the editor and share the file. The recipient can import it from the home dashboard or open the import URL directly."
+  },
+  {
+    "id": "secrets",
+    "question": "How do I use secrets in my pipeline?",
+    "answer": "Go to Settings, then Secrets, and click Add Secret with a name and value. In the pipeline editor, click the dynamic data dropdown (database icon) on any task argument field, select Secret, and choose it by name. The value is injected at runtime and never stored in the pipeline YAML."
+  },
+  {
+    "id": "viewing-logs",
+    "question": "How do I view and debug logs for my pipeline components?",
+    "answer": "Select a task in the Pipeline Run view and click the Logs tab in the right panel to see error traces. If the Logs tab is empty, the container likely never started, so check the Details tab for error info. For subgraph nodes, double-click to navigate inside. Logs live on the inner tasks, not the parent."
+  },
+  {
+    "id": "caching",
+    "question": "How does caching work, and how do I control it?",
+    "answer": "Tangle automatically caches task results based on the container spec and a hash of all inputs. If the same task with the same inputs has run before, the cached result is reused instantly. To disable caching for a task, select it, open the Configuration tab, and toggle caching off."
+  },
+  {
+    "id": "runs",
+    "question": "How do I share, search, and navigate pipeline runs?",
+    "answer": "Select any task in a run and click the Copy node link button in the Arguments tab to get a shareable deep link to that specific node. Use the All Runs view in the Dashboard to search by pipeline name, creator, date range, or custom annotations."
+  },
+  {
+    "id": "complex-pipelines",
+    "question": "How do I structure complex pipelines with subgraphs, branching, and conditional execution?",
+    "answer": "Pipelines are graph components, so you can nest one pipeline inside another as a subgraph. Export it as YAML and import it as a component. Tasks with no data dependency run in parallel automatically; tasks with dependencies run sequentially. Conditional if/else branching is not yet supported. If a task fails, only its downstream dependents are affected; other branches continue."
+  },
+  {
+    "id": "manage-components",
+    "question": "How do I manage components: publishing, versioning, and reuse?",
+    "answer": "Components live in three places: User Components (browser-local, only you), Standard Library (built-in), and Published Components (shared workspace-wide). To publish, open the component info dialog from User Components, go to the Publish tab, and click Publish. Published components can't be deleted. Publish a new version instead."
+  },
+  {
+    "id": "cancel-pipeline",
+    "question": "How do I cancel a pipeline?",
+    "answer": "In the Pipeline Run view, click the Cancel button. Only the run creator can cancel. Completed tasks keep their results; only pending and running tasks are terminated."
+  }
+]
