@@ -23,6 +23,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/components/shared/GitHubAuth",
   "src/components/shared/Authentication",
   "src/routes",
+  "src/routes/tangent",
   "src/components/shared/ReactFlow/FlowCanvas/FlowCanvas.tsx",
   "src/components/shared/ComponentEditor",
   "src/components/shared/Settings",

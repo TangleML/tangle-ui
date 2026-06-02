@@ -40,6 +40,9 @@ import { BetaFeaturesSettings } from "./Settings/sections/BetaFeaturesSettings";
 import { PreferencesSettings } from "./Settings/sections/PreferencesSettings";
 import { SecretsSettings } from "./Settings/sections/SecretsSettings";
 import { SettingsLayout } from "./Settings/SettingsLayout";
+import { TangentDashboardView } from "./tangent/TangentDashboardView";
+import { TangentLayout } from "./tangent/TangentLayout";
+import { TangentProjectDetailView } from "./tangent/TangentProjectDetailView";
 import { EditorV2 } from "./v2/pages/Editor/EditorV2";
 import { PipelineFoldersPage } from "./v2/pages/PipelineFolders/PipelineFoldersPage";
 import { RunViewV2 } from "./v2/pages/RunView/RunViewV2";
@@ -93,6 +96,8 @@ export const APP_ROUTES = {
   PIPELINE_FOLDERS: "/pipeline-folders",
   PLAYGROUND: "/playground",
   ARTIFACT_PREVIEW: "/artifact/$artifactId",
+  TANGENT: "/tangent",
+  TANGENT_PROJECT: "/tangent/$runId",
 } as const;
 
 const rootRoute = createRootRoute({
@@ -355,6 +360,29 @@ const artifactPreviewRoute = createRoute({
   component: ArtifactPreviewPage,
 });
 
+const tangentLayoutRoute = createRoute({
+  id: "tangent-layout",
+  getParentRoute: () => mainLayout,
+  component: TangentLayout,
+});
+
+const tangentRoute = createRoute({
+  getParentRoute: () => tangentLayoutRoute,
+  path: APP_ROUTES.TANGENT,
+  component: TangentDashboardView,
+});
+
+const tangentProjectRoute = createRoute({
+  getParentRoute: () => tangentLayoutRoute,
+  path: APP_ROUTES.TANGENT_PROJECT,
+  component: TangentProjectDetailView,
+});
+
+const tangentRouteTree = tangentLayoutRoute.addChildren([
+  tangentRoute,
+  tangentProjectRoute,
+]);
+
 const dashboardRouteTree = dashboardRoute.addChildren([
   dashboardIndexRoute,
   dashboardRunsRoute,
@@ -383,6 +411,7 @@ const appRouteTree = mainLayout.addChildren([
   runV2WithSubgraphRoute,
   pipelineFoldersRoute,
   artifactPreviewRoute,
+  tangentRouteTree,
 ]);
 
 const rootRouteTree = rootRoute.addChildren([
