@@ -38,6 +38,8 @@ export function IONodeCard({
         borderColor,
       )}
       onClick={onNodeClick}
+      data-tour-card={isInput ? "input" : "output"}
+      data-tour-card-name={name}
     >
       <CardHeader className="p-2">
         <CardTitle className="wrap-break-word text-sm">{name}</CardTitle>
@@ -47,7 +49,7 @@ export function IONodeCard({
           </Paragraph>
         )}
       </CardHeader>
-      <CardContent className="p-2 max-w-60">
+      <CardContent className="py-2 px-4 max-w-60">
         <BlockStack gap="2">
           <Paragraph size="xs" font="mono" className="truncate text-slate-700">
             <span className="font-bold">Type:</span> {type ?? "Any"}

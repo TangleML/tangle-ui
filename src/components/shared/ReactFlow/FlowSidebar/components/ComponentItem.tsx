@@ -367,6 +367,7 @@ interface IONodeSidebarItemProps {
 }
 
 export const IONodeSidebarItem = ({ nodeType }: IONodeSidebarItemProps) => {
+  const displayName = nodeType === "input" ? "Input Node" : "Output Node";
   const onDragStart = useCallback(
     (event: DragEvent) => {
       event.dataTransfer.setData(
@@ -392,12 +393,11 @@ export const IONodeSidebarItem = ({ nodeType }: IONodeSidebarItemProps) => {
       )}
       draggable
       onDragStart={onDragStart}
+      data-component-name={displayName}
     >
       <div className="flex items-center gap-2">
         <Icon name="File" className="text-gray-400 shrink-0" />
-        <span className="truncate text-xs text-gray-800">
-          {nodeType === "input" ? "Input Node" : "Output Node"}
-        </span>
+        <span className="truncate text-xs text-gray-800">{displayName}</span>
       </div>
     </li>
   );

@@ -68,7 +68,7 @@ export const outputManifestBase: ManifestPartial = {
           ioType: "output",
           name: output.name,
         } satisfies IONodeData,
-        { "data-task-name": output.name },
+        { "data-task-name": output.name, "data-tour-node": "output" },
       ),
     );
   },

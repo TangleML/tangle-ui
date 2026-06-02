@@ -1,0 +1,284 @@
+{
+  "id": "first-pipeline",
+  "displayName": "Guided Tour: Build Your First Pipeline",
+  "requiresEditor": true,
+  "starterPipelineUrl": "tour-pipelines/Empty Pipeline.pipeline.component.yaml",
+  "steps": [
+    {
+      "selector": "[data-tour-anchor=\"no-spotlight\"]",
+      "content": "Let's build your first pipeline!\n\nA pipeline is a visual graph of three kinds of nodes: **task nodes** that do the work, **input nodes** that pass run-time parameters, and **output nodes** that capture results.\n\nIn this tour we'll connect some components into a working pipeline that loads data, trains a model, and makes predictions.",
+      "position": "center"
+    },
+    {
+      "selector": "[data-folder-name=\"Standard library\"]",
+      "mutationObservables": [
+        "[data-dock-window-content=\"component-library\"]"
+      ],
+      "resizeObservables": ["[data-dock-window-content=\"component-library\"]"],
+      "content": "Let's start by opening the **Standard library** folder in the Component Library.",
+      "position": "right",
+      "stepInteraction": true,
+      "interaction": "expand-folder",
+      "targetFolderName": "Standard library"
+    },
+    {
+      "selector": "[data-folder-name=\"Quick start\"]",
+      "mutationObservables": [
+        "[data-dock-window-content=\"component-library\"]"
+      ],
+      "resizeObservables": ["[data-dock-window-content=\"component-library\"]"],
+      "content": "Now open **Quick start** to see three premade components.",
+      "position": "right",
+      "stepInteraction": true,
+      "interaction": "expand-folder",
+      "targetFolderName": "Quick start"
+    },
+    {
+      "selector": "[data-component-name=\"Chicago Taxi Trips dataset\"]",
+      "mutationObservables": [
+        "[data-dock-window-content=\"component-library\"]"
+      ],
+      "resizeObservables": ["[data-dock-window-content=\"component-library\"]"],
+      "content": "Drag the **Chicago Taxi Trips dataset** onto the canvas. It becomes a **task**, one step in your pipeline.\n\nA task is a unit of execution: it takes inputs, runs some code, and produces outputs.",
+      "position": "right",
+      "stepInteraction": true,
+      "interaction": "add-task",
+      "targetTaskName": "Chicago Taxi Trips dataset"
+    },
+    {
+      "selector": "[data-tour=\"library-search\"]",
+      "mutationObservables": [
+        "[data-dock-window-content=\"component-library\"]"
+      ],
+      "resizeObservables": ["[data-dock-window-content=\"component-library\"]"],
+      "content": "When you know what you're looking for, the **search box** is faster than browsing folders.\n\nType **predict** to filter the library down to matching components.",
+      "position": "right",
+      "stepInteraction": true,
+      "interaction": "library-search",
+      "targetSearchTerm": "predict"
+    },
+    {
+      "selector": "[data-component-name*=\"xgboost predict on csv\" i]",
+      "mutationObservables": [
+        "[data-dock-window-content=\"component-library\"]"
+      ],
+      "resizeObservables": ["[data-dock-window-content=\"component-library\"]"],
+      "content": "Drag **Xgboost predict on CSV** from the search results onto the canvas.",
+      "position": "right",
+      "stepInteraction": true,
+      "interaction": "add-task",
+      "targetTaskName": "Xgboost predict on CSV"
+    },
+    {
+      "selector": "[data-dock-window-content=\"component-library\"]",
+      "highlightedSelectors": [
+        "[data-dock-window=\"component-library\"]",
+        "[data-dock-window-content=\"component-library\"]"
+      ],
+      "ringSelectors": [
+        "[data-component-name*=\"train xgboost model on csv\" i]"
+      ],
+      "mutationObservables": [
+        "[data-dock-window-content=\"component-library\"]"
+      ],
+      "resizeObservables": ["[data-dock-window-content=\"component-library\"]"],
+      "content": "Now add **Train XGBoost model on CSV** onto the canvas.\n\nFind it however you like. Search for **train**, or clear the search box and browse Quick start.",
+      "stepInteraction": true,
+      "interaction": "add-task",
+      "targetTaskName": "Train XGBoost model on CSV"
+    },
+    {
+      "selector": "[data-tour=\"editor-canvas\"]",
+      "highlightedSelectors": ["[data-tour=\"editor-canvas\"]"],
+      "resizeObservables": ["[data-tour=\"editor-canvas\"]"],
+      "content": "You now have three tasks on the canvas, but they're not connected yet. Take a moment to **lay out your tasks** by dragging them. This will make the next steps easier.\n\nTasks pass data through **edges** that link one task's output to another task's input. Whatever a task produces flows along the edge to the next step; Tangle handles the actual storage and transfer behind the scenes.",
+      "position": [16, 80]
+    },
+    {
+      "selector": "[data-tour=\"editor-canvas\"]",
+      "highlightedSelectors": ["[data-tour=\"editor-canvas\"]"],
+      "ringSelectors": [
+        "[data-task-name=\"Chicago Taxi Trips dataset\"] [data-handleid=\"output_Table\"]",
+        "[data-task-name=\"Train XGBoost model on CSV\"] [data-handleid=\"input_training_data\"]"
+      ],
+      "resizeObservables": ["[data-tour=\"editor-canvas\"]"],
+      "content": "Let's make the first connection.\n\nDrag from the **dataset's** `Table` **output** (right side) to the **train task's** `training_data` **input** (left side). This feeds your data into the training step.",
+      "position": [16, 80],
+      "stepInteraction": true,
+      "interaction": "connect-edge",
+      "targetEdge": {
+        "sourceTaskName": "Chicago Taxi Trips dataset",
+        "sourcePortName": "Table",
+        "targetTaskName": "Train XGBoost model on CSV",
+        "targetPortName": "training_data"
+      }
+    },
+    {
+      "selector": "[data-tour=\"editor-canvas\"]",
+      "highlightedSelectors": ["[data-tour=\"editor-canvas\"]"],
+      "ringSelectors": [
+        "[data-task-name=\"Chicago Taxi Trips dataset\"] [data-handleid=\"output_Table\"]",
+        "[data-task-name=\"Xgboost predict on CSV\"] [data-handleid=\"input_data\"]"
+      ],
+      "resizeObservables": ["[data-tour=\"editor-canvas\"]"],
+      "content": "The prediction step needs the same data.\n\nDrag from the **dataset's** `Table` **output** to the **predict task's** `data` **input**.",
+      "position": [16, 80],
+      "stepInteraction": true,
+      "interaction": "connect-edge",
+      "targetEdge": {
+        "sourceTaskName": "Chicago Taxi Trips dataset",
+        "sourcePortName": "Table",
+        "targetTaskName": "Xgboost predict on CSV",
+        "targetPortName": "data"
+      }
+    },
+    {
+      "selector": "[data-tour=\"editor-canvas\"]",
+      "highlightedSelectors": ["[data-tour=\"editor-canvas\"]"],
+      "ringSelectors": [
+        "[data-task-name=\"Train XGBoost model on CSV\"] [data-handleid=\"output_model\"]",
+        "[data-task-name=\"Xgboost predict on CSV\"] [data-handleid=\"input_model\"]"
+      ],
+      "resizeObservables": ["[data-tour=\"editor-canvas\"]"],
+      "content": "One more edge.\n\nDrag from the **train task's** `model` **output** to the **predict task's** `model` **input**. This hands what the trainer learned to the predictor.",
+      "position": [16, 80],
+      "stepInteraction": true,
+      "interaction": "connect-edge",
+      "targetEdge": {
+        "sourceTaskName": "Train XGBoost model on CSV",
+        "sourcePortName": "model",
+        "targetTaskName": "Xgboost predict on CSV",
+        "targetPortName": "model"
+      }
+    },
+    {
+      "selector": "[data-folder-name=\"Inputs & Outputs\"]",
+      "highlightedSelectors": ["[data-folder-name=\"Inputs & Outputs\"]"],
+      "mutationObservables": [
+        "[data-dock-window-content=\"component-library\"]"
+      ],
+      "resizeObservables": ["[data-dock-window-content=\"component-library\"]"],
+      "content": "Let's expose the model's predictions at the pipeline boundary.\n\nOpen the **Inputs & Outputs** folder in the Component Library.",
+      "position": "right",
+      "stepInteraction": true,
+      "interaction": "expand-folder",
+      "targetFolderName": "Inputs & Outputs",
+      "resetLibrarySearch": true,
+      "ensureWindowRestored": "component-library"
+    },
+    {
+      "selector": "[data-component-name=\"Output Node\"]",
+      "mutationObservables": [
+        "[data-dock-window-content=\"component-library\"]"
+      ],
+      "resizeObservables": ["[data-dock-window-content=\"component-library\"]"],
+      "content": "Drag an **Output Node** onto the canvas.\n\nOutput nodes capture task results so they're easy to find after the pipeline runs.",
+      "position": "right",
+      "stepInteraction": true,
+      "interaction": "add-output",
+      "targetComponentName": "Output Node"
+    },
+    {
+      "selector": "[data-tour=\"editor-canvas\"]",
+      "highlightedSelectors": ["[data-tour=\"editor-canvas\"]"],
+      "ringSelectors": [
+        "[data-task-name=\"Xgboost predict on CSV\"] [data-handleid=\"output_predictions\"]",
+        "[data-tour-card=\"output\"] .react-flow__handle-left"
+      ],
+      "resizeObservables": ["[data-tour=\"editor-canvas\"]"],
+      "content": "Now connect the predict task to your new Output node.\n\nDrag from the **predict task's** `predictions` **output** (right side) to the **Output node's** input handle (left side of the new node).",
+      "position": [16, 80],
+      "stepInteraction": true,
+      "interaction": "connect-edge",
+      "targetEdge": {
+        "sourceTaskName": "Xgboost predict on CSV",
+        "sourcePortName": "predictions"
+      }
+    },
+    {
+      "selector": "[data-tour=\"editor-canvas\"]",
+      "highlightedSelectors": ["[data-tour=\"editor-canvas\"]"],
+      "ringSelectors": [
+        "[data-task-name=\"Chicago Taxi Trips dataset\"] [data-handleid=\"input_Limit\"]"
+      ],
+      "resizeObservables": ["[data-tour=\"editor-canvas\"]"],
+      "content": "Now for the other end: make the dataset's row count configurable.\n\nHere's a helpful trick: hold **Cmd** (or **Alt**) and drag from the dataset's `Limit` **input handle**. You will see a preview node, which you can drop to create a new **Input node** already connected to that handle.\n\nInput nodes are pipeline-level parameters set at submission time, so the same pipeline can be re-run with different settings.",
+      "position": [16, 80],
+      "stepInteraction": true,
+      "interaction": "add-input"
+    },
+    {
+      "selector": "[data-tour=\"editor-canvas\"]",
+      "highlightedSelectors": [
+        "[data-tour=\"editor-canvas\"]",
+        "[data-window-id=\"context-panel\"]"
+      ],
+      "ringSelectors": [
+        "[data-tour-card=\"task\"][data-tour-card-name=\"Train XGBoost model on CSV\"]"
+      ],
+      "resizeObservables": [
+        "[data-tour=\"editor-canvas\"]",
+        "[data-window-id=\"context-panel\"]"
+      ],
+      "content": "Last thing: there's one required argument on the training step.\n\n**Click the Train XGBoost task** to select it. Its details will appear in the **Task Properties** panel on the right.",
+      "position": [16, 80],
+      "stepInteraction": true,
+      "interaction": "select-task",
+      "targetTaskName": "Train XGBoost model on CSV"
+    },
+    {
+      "selector": "[data-window-id=\"context-panel\"]",
+      "highlightedSelectors": [
+        "[data-window-id=\"context-panel\"]",
+        "[data-dock-window-content=\"context-panel\"]"
+      ],
+      "mutationObservables": [
+        "[data-window-id=\"context-panel\"]",
+        "[data-dock-window-content=\"context-panel\"]"
+      ],
+      "resizeObservables": [
+        "[data-window-id=\"context-panel\"]",
+        "[data-dock-window-content=\"context-panel\"]"
+      ],
+      "targetWindowId": "context-panel",
+      "content": "Task Properties lists every input the task accepts. Each one is an **argument** you can set directly, leave at its default, or feed from another source.\n\nArguments marked with a `*` are required.",
+      "requiresTaskSelected": "Train XGBoost model on CSV"
+    },
+    {
+      "selector": "[data-argument-name=\"label_column_name\"]",
+      "highlightedSelectors": ["[data-argument-name=\"label_column_name\"]"],
+      "mutationObservables": [
+        "[data-window-id=\"context-panel\"]",
+        "[data-dock-window-content=\"context-panel\"]",
+        "[data-argument-name=\"label_column_name\"]"
+      ],
+      "resizeObservables": [
+        "[data-window-id=\"context-panel\"]",
+        "[data-dock-window-content=\"context-panel\"]",
+        "[data-argument-name=\"label_column_name\"]"
+      ],
+      "targetWindowId": "context-panel",
+      "content": "The `label_column_name` field requires a value, but currently it is faded out, indicating that the argument is not set. Type **tips** to set the value. That tells XGBoost which column of the dataset to predict.",
+      "position": "left",
+      "stepInteraction": true,
+      "interaction": "set-argument",
+      "targetArgumentName": "label_column_name",
+      "requiresTaskSelected": "Train XGBoost model on CSV"
+    },
+    {
+      "selector": "[data-dock-window=\"runs-and-submission\"]",
+      "highlightedSelectors": [
+        "[data-dock-window=\"runs-and-submission\"]",
+        "[data-dock-window-content=\"runs-and-submission\"]"
+      ],
+      "mutationObservables": [
+        "[data-dock-window-content=\"runs-and-submission\"]"
+      ],
+      "resizeObservables": [
+        "[data-dock-window-content=\"runs-and-submission\"]"
+      ],
+      "content": "You now have a complete pipeline! Try to submit it and see the results. In the **Runs and submission** panel select **submit run**. You also have the option to configure runtime arguments by clicking the split arrows icon next to submit.",
+      "position": "right"
+    }
+  ]
+}
