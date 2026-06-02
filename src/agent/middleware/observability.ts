@@ -46,6 +46,7 @@ const TOOL_STATUS_LABELS: Record<string, string> = {
   // the dispatcher has no handoffs anymore.
   ask_general_help: "Looking up information...",
   ask_pipeline_repair: "Asking pipeline-repair...",
+  ask_pipeline_architect: "Designing pipeline...",
   ask_debug_assistant: "Analyzing run failure...",
 };
 
