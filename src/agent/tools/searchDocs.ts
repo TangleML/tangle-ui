@@ -188,7 +188,7 @@ async function embedQuery(
   return first.embedding;
 }
 
-async function executeSearchDocs(
+export async function executeSearchDocs(
   params: {
     query: string;
     topK?: number | null;
