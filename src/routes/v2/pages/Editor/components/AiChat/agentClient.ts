@@ -7,11 +7,13 @@
  */
 import * as Comlink from "comlink";
 
-import type { AgentResponse } from "@/agent/types";
+import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
+import type { AgentResponse, StatusCallback } from "@/agent/types";
 import type { AgentWorkerApi } from "@/agent/worker";
 
 interface InitDeps {
-  onStatus: (status: { text: string }) => void;
+  bridge: ToolBridgeApi;
+  onStatus: StatusCallback;
 }
 
 interface AskOptions {
@@ -38,14 +40,15 @@ class AgentClient {
       throw new Error("Worker remote was not created");
     }
     if (!this.initPromise) {
-      // Pass onStatus as a top-level Comlink-proxied arg.
-      // Each new one must stay a separate top-level argument because Comlink only applies its proxy
-      // transfer handler to top-level argument values, it does not
-      // recursively walk into properties of an object arg.
-      //
-      // Wrapping proxied values in a single object would cause structured-clone
-      // of the methods and fail.
-      this.initPromise = this.remote.init(Comlink.proxy(deps.onStatus));
+      // Pass `bridge` and `onStatus` as SEPARATE top-level Comlink-proxied
+      // args. Comlink only applies its proxy transfer handler to top-level
+      // argument values; it does not recursively walk into properties of
+      // an object arg. Wrapping them in a single `{ bridge, onStatus }`
+      // object would cause structured-clone of the methods and fail.
+      this.initPromise = this.remote.init(
+        Comlink.proxy(deps.bridge),
+        Comlink.proxy(deps.onStatus),
+      );
     }
     await this.initPromise;
     return this.remote;

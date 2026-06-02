@@ -1,5 +1,6 @@
 import { action, makeObservable, observable, runInAction } from "mobx";
 
+import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import { getErrorMessage } from "@/utils/string";
 
 import { getAgentClient } from "./agentClient";
@@ -11,6 +12,7 @@ function generateMessageId(): string {
 
 interface SendMessageOptions {
   onError: (message: string) => void;
+  bridge: ToolBridgeApi;
 }
 
 /**
@@ -56,6 +58,7 @@ export class AiChatStore {
       const client = getAgentClient();
       const response = await client.ask(
         {
+          bridge: options.bridge,
           onStatus: (status) => {
             runInAction(() => {
               this.thinkingText = status.text;
