@@ -6,6 +6,7 @@ import { ReactFlowProvider } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
 import { useEffect } from "react";
 
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
@@ -27,11 +28,13 @@ import { WindowContainer } from "@/routes/v2/shared/windows/WindowContainer";
 import { useWindowPersistence } from "@/routes/v2/shared/windows/windowPersistence";
 import type { PipelineRef } from "@/services/pipelineStorage/types";
 
+import { AiChatStoreProvider } from "./components/AiChat/AiChatStoreContext";
 import { useDebugPanelWindow } from "./components/DebugPanel";
 import { DriverPermissionGate } from "./components/DriverPermissionGate";
 import { EditorMenuBar } from "./components/EditorMenuBar/EditorMenuBar";
 import { EmptyEditorState } from "./components/EmptyEditorState";
 import { FlowCanvas } from "./components/FlowCanvas/FlowCanvas";
+import { useAiChatWindow } from "./hooks/useAiChatWindow";
 import { useComponentLibraryWindow } from "./hooks/useComponentLibraryWindow";
 import { useEditorEscapeShortcut } from "./hooks/useEditorEscapeShortcut";
 import { useHistoryWindow } from "./hooks/useHistoryWindow";
@@ -89,6 +92,9 @@ const PipelineEditor = withSuspenseWrapper(
     useEditorEscapeShortcut();
     useDebugPanelWindow();
     useSeedInitialDockLayoutFromPreset();
+
+    const aiEnabled = useFlagValue("ai-assistant");
+    useAiChatWindow(aiEnabled);
 
     const activeSpec = navigation.activeSpec;
 
@@ -170,9 +176,11 @@ export function EditorV2() {
     <div className="h-full w-full flex flex-col bg-slate-100 select-none">
       <SharedStoreProvider>
         <EditorSessionProvider>
-          <DialogProvider>
-            <EditorV2Content pipelineRef={pipelineRef} />
-          </DialogProvider>
+          <AiChatStoreProvider>
+            <DialogProvider>
+              <EditorV2Content pipelineRef={pipelineRef} />
+            </DialogProvider>
+          </AiChatStoreProvider>
         </EditorSessionProvider>
       </SharedStoreProvider>
     </div>
