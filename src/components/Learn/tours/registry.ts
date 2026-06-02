@@ -5,6 +5,10 @@ import { publicAsset } from "@/utils/publicAsset";
 
 export type TourStep = StepType &
   TourAction & {
+    ringSelectors?: string[];
+    resetLibrarySearch?: boolean;
+    ensureWindowRestored?: string;
+    requiresTaskSelected?: string;
     fallbackContent?: string;
   };
 

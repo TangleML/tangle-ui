@@ -18,6 +18,28 @@ export function tourActionLabel(step: TourAction): string {
       return step.targetWindowName
         ? `Dock the **${step.targetWindowName}** panel back into place`
         : "Dock the panel back into place";
+    case "expand-folder":
+      return step.targetFolderName
+        ? `Open the **${step.targetFolderName}** folder`
+        : "Open the highlighted folder";
+    case "library-search":
+      return step.targetSearchTerm
+        ? `Search the library for **${step.targetSearchTerm}**`
+        : "Search the component library";
+    case "add-task":
+      return step.targetTaskName
+        ? `Add **${step.targetTaskName}** to the canvas`
+        : "Add the highlighted component to the canvas";
+    case "add-input":
+      return "Add an input node to the canvas";
+    case "add-output":
+      return "Add an output node to the canvas";
+    case "connect-edge":
+      return "Connect the highlighted ports";
+    case "set-argument":
+      return step.targetArgumentName
+        ? `Set the **${step.targetArgumentName}** value`
+        : "Set the highlighted value";
     default:
       return GENERIC_LABEL;
   }
