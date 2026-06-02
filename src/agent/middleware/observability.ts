@@ -6,9 +6,10 @@
  * the raw events into short status strings and forward them to the
  * main thread through the Comlink-proxied status callback.
  *
- * Wire this on EVERY agent. Once an agent is active after a handoff, only its
- * own hooks fire, not the dispatcher's. Without per-agent wiring the
- * status line freezes mid-conversation.
+ * Wire this on EVERY agent. Specialist sub-agents are invoked as nested
+ * runs via `Agent.asTool(...)`, and inside those nested runs only the
+ * sub-agent's own hooks fire — without per-agent wiring the status line
+ * freezes while a specialist is working.
  */
 import type { Agent } from "@openai/agents";
 
@@ -39,8 +40,18 @@ const TOOL_STATUS_LABELS: Record<string, string> = {
   get_execution_details: "Fetching execution details...",
   get_container_state: "Inspecting container state...",
   get_container_log: "Fetching container logs...",
+  // Specialist sub-agents wrapped via `Agent.asTool(...)`. The dispatcher
+  // fires `agent_tool_start` with these names whenever it delegates to a
+  // specialist; the legacy `agent_handoff` event no longer fires because
+  // the dispatcher has no handoffs anymore.
+  ask_general_help: "Looking up information...",
+  ask_pipeline_repair: "Asking pipeline-repair...",
+  ask_debug_assistant: "Analyzing run failure...",
 };
 
+// Retained for the (hypothetical) case where a sub-agent itself uses
+// handoffs internally. The dispatcher no longer does — its specialists
+// are exposed as asTool wrappers, see `ask_*` entries above.
 const SUB_AGENT_LABELS: Record<string, string> = {
   "pipeline-architect": "Building pipeline...",
   "pipeline-repair": "Repairing pipeline...",

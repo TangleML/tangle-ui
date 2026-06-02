@@ -1,18 +1,25 @@
 /**
  * Top-level dispatcher agent for the in-browser AI assistant.
  *
- * The dispatcher itself does not perform end-user tasks. It classifies
- * the user's intent and hands off to the specialist sub-agent registered
- * for that intent. Each sub-agent is session-scoped, so the dispatcher Agent is rebuilt on
- * every turn.
+ * The dispatcher is the only top-level agent in the system. It owns
+ * orchestration: it never edits the spec or fetches runs directly,
+ * instead it calls specialist sub-agents that are exposed as *tools*
+ * via the `Agent.asTool(...)` adapter. The dispatcher's own LLM loop
+ * is what chains those tool calls together for multi-step requests
+ * (e.g. "investigate AND fix" needs `ask_debug_assistant` followed by
+ * `ask_pipeline_repair`).
+ *
+ * The dispatcher Agent and its specialist tool wrappers are rebuilt
+ * on every turn because the underlying sub-agents close over the
+ * per-turn `AgentSession` (bridge, recent runs, status emitter).
  */
 import { Agent, MemorySession, run } from "@openai/agents";
-import { RECOMMENDED_PROMPT_PREFIX } from "@openai/agents-core/extensions";
 
 import { requireOrchestratorModel } from "../config";
 import { attachObservabilityHooks } from "../middleware/observability";
 import dispatcherPrompt from "../prompts/dispatcher.md?raw";
 import type { AgentSession } from "../session";
+import { createDebugAssistantAgent } from "./subagents/debugAssistant";
 import { createGeneralHelpAgent } from "./subagents/generalHelp";
 import { createPipelineRepairAgent } from "./subagents/pipelineRepair";
 
@@ -34,14 +41,30 @@ export interface TangleDispatcher {
 }
 
 function createDispatcherAgent(session: AgentSession): Agent {
-  const agent = Agent.create({
+  const generalHelp = createGeneralHelpAgent(session);
+  const pipelineRepair = createPipelineRepairAgent(session);
+  const debugAssistant = createDebugAssistantAgent(session);
+
+  const agent = new Agent({
     name: "tangle-dispatcher",
     model: requireOrchestratorModel(),
-    instructions: `${RECOMMENDED_PROMPT_PREFIX}\n\n${dispatcherPrompt}`,
-    tools: [],
-    handoffs: [
-      createGeneralHelpAgent(session),
-      createPipelineRepairAgent(session),
+    instructions: dispatcherPrompt,
+    tools: [
+      generalHelp.asTool({
+        toolName: "ask_general_help",
+        toolDescription:
+          "Ask the general-help specialist a question about Tangle concepts, features, how things work, best practices, getting started, or documentation lookups. Input: the user's question phrased as a clear, standalone question.",
+      }),
+      pipelineRepair.asTool({
+        toolName: "ask_pipeline_repair",
+        toolDescription:
+          "Ask the pipeline-repair specialist to inspect, validate, or fix the user's currently-open pipeline, or to apply a specific CSOM mutation directive. Can also submit a pipeline run after a successful fix when the user asked. Input: a clear directive. For open-ended repair use 'Validate and fix the current pipeline.'. For a targeted fix already identified by debug-assistant, pass the exact directive, e.g. 'Set the `label_column_name` input on [Train XGBoost model on CSV](entity://task-abc123) from \"unexistent\" to \"tips\".'. Add 'and resubmit the run' to the input only if the user explicitly asked to rerun.",
+      }),
+      debugAssistant.asTool({
+        toolName: "ask_debug_assistant",
+        toolDescription:
+          "Ask the debug-assistant specialist to diagnose a failed pipeline run from execution details, container state, and logs. Read-only — cannot edit the spec or submit runs. Input: a clear question, e.g. 'Investigate the latest failed run and identify the root cause and the specific fix needed.' or 'Why did run 12345 fail?'.",
+      }),
     ],
   });
   attachObservabilityHooks(agent, session.emitStatus);
