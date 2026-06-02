@@ -92,6 +92,11 @@ describe("<RunDetails/>", () => {
   };
 
   const mockExecutionState: GetGraphExecutionStateResponse = {
+    child_execution_status_summary: {
+      total_executions: 2,
+      ended_executions: 1,
+      has_ended: false,
+    },
     child_execution_status_stats: {
       execution1: { SUCCEEDED: 1 },
       execution2: { RUNNING: 1 },
