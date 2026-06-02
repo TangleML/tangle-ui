@@ -205,10 +205,20 @@ export function createConnectedIONode(
       const inputSpec = taskComponentSpec?.inputs?.find(
         (i) => i.name === portName,
       );
+      const existingArgValue = task.arguments.find(
+        (a) => a.name === portName,
+      )?.value;
+      const literalArgValue =
+        typeof existingArgValue === "string" ? existingArgValue : undefined;
+      const defaultValue = literalArgValue ?? inputSpec?.default;
+
       const newInput = addInput(undo, spec, position, portName);
 
       if (inputSpec?.type) {
         newInput.setType(inputSpec.type);
+      }
+      if (defaultValue !== undefined) {
+        newInput.setDefaultValue(defaultValue);
       }
 
       spec.connectNodes(
