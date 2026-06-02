@@ -1,5 +1,6 @@
 import { action, makeObservable, observable, runInAction } from "mobx";
 
+import { emitPipelineFileChanged } from "./pipelineFileEvents";
 import type { PipelineFolder } from "./PipelineFolder";
 import { deleteEntry, updateEntry } from "./pipelineRegistry";
 
@@ -35,6 +36,7 @@ export class PipelineFile {
 
   async write(content: string): Promise<void> {
     await this.folder.driver.write(this.storageKey, content);
+    emitPipelineFileChanged({ storageKey: this.storageKey, source: "v2" });
   }
 
   @action
