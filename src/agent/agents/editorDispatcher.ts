@@ -1,49 +1,34 @@
 /**
- * Top-level dispatcher agent for the in-browser AI assistant.
+ * Editor dispatcher agent for the in-browser AI assistant.
  *
- * The dispatcher is the only top-level agent in the system. It owns
- * orchestration: it never edits the spec or fetches runs directly,
- * instead it calls specialist sub-agents that are exposed as *tools*
- * via the `Agent.asTool(...)` adapter. The dispatcher's own LLM loop
- * is what chains those tool calls together for multi-step requests
- * (e.g. "investigate AND fix" needs `ask_debug_assistant` followed by
+ * The dispatcher is the only top-level agent in the Editor worker. It
+ * owns orchestration: it never edits the spec or fetches runs directly,
+ * instead it calls specialist sub-agents that are exposed as *tools* via
+ * the `Agent.asTool(...)` adapter. The dispatcher's own LLM loop is what
+ * chains those tool calls together for multi-step requests (e.g.
+ * "investigate AND fix" needs `ask_debug_assistant` followed by
  * `ask_pipeline_repair`).
  *
- * The dispatcher Agent and its specialist tool wrappers are rebuilt
- * on every turn because the underlying sub-agents close over the
- * per-turn `AgentSession` (bridge, recent runs, status emitter).
+ * The dispatcher Agent and its specialist tool wrappers are rebuilt on
+ * every turn because the underlying sub-agents close over the per-turn
+ * `AgentSession` (bridge, recent runs, status emitter).
  */
-import { Agent, MemorySession, run } from "@openai/agents";
-
-import type { AiProviderConfig } from "@/types/aiProvider";
+import { Agent } from "@openai/agents";
 
 import { getAgentModelConfig } from "../config";
 import { attachObservabilityHooks } from "../middleware/observability";
 import dispatcherPrompt from "../prompts/dispatcher.md?raw";
 import type { AgentSession } from "../session";
+import {
+  createDispatcherRuntime,
+  type TangleDispatcher,
+} from "./dispatcherRuntime";
 import { createDebugAssistantAgent } from "./subagents/debugAssistant";
 import { createGeneralHelpAgent } from "./subagents/generalHelp";
 import { createPipelineArchitectAgent } from "./subagents/pipelineArchitect";
 import { createPipelineRepairAgent } from "./subagents/pipelineRepair";
 
-interface DispatcherInvokeParams {
-  message: string;
-  threadId: string;
-  aiConfig: AiProviderConfig;
-  session: AgentSession;
-}
-
-interface DispatcherInvokeResult {
-  answer: string;
-  threadId: string;
-}
-
-export interface TangleDispatcher {
-  invoke(params: DispatcherInvokeParams): Promise<DispatcherInvokeResult>;
-  dispose(): void;
-}
-
-async function createDispatcherAgent(session: AgentSession): Promise<Agent> {
+async function buildEditorAgent(session: AgentSession): Promise<Agent> {
   const generalHelp = createGeneralHelpAgent(session);
   const pipelineRepair = createPipelineRepairAgent(session);
   const pipelineArchitect = await createPipelineArchitectAgent(session);
@@ -80,33 +65,6 @@ async function createDispatcherAgent(session: AgentSession): Promise<Agent> {
   return agent;
 }
 
-export function createDispatcher(): TangleDispatcher {
-  const sessions = new Map<string, MemorySession>();
-
-  function getOrCreateSessionMemory(threadId: string): MemorySession {
-    const existing = sessions.get(threadId);
-    if (existing) return existing;
-    const created = new MemorySession({ sessionId: threadId });
-    sessions.set(threadId, created);
-    return created;
-  }
-
-  return {
-    async invoke(params) {
-      params.session.proxyClient.ensureConfigured(params.aiConfig);
-      const sessionMemory = getOrCreateSessionMemory(params.threadId);
-      const agent = await createDispatcherAgent(params.session);
-      const result = await run(agent, params.message, {
-        session: sessionMemory,
-      });
-      const answer =
-        typeof result.finalOutput === "string"
-          ? result.finalOutput
-          : JSON.stringify(result.finalOutput ?? "");
-      return { answer, threadId: params.threadId };
-    },
-    dispose() {
-      sessions.clear();
-    },
-  };
+export function createEditorDispatcher(): TangleDispatcher {
+  return createDispatcherRuntime(buildEditorAgent);
 }

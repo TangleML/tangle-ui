@@ -2,6 +2,7 @@ import { action, makeObservable, observable, runInAction } from "mobx";
 
 import type { RecentPipelineRun } from "@/agent/session";
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
+import type { AgentContext } from "@/agent/types";
 import type { AiProviderConfig } from "@/types/aiProvider";
 import { getErrorMessage } from "@/utils/string";
 
@@ -24,6 +25,16 @@ interface SendMessageOptions {
 }
 
 /**
+ * Per-thread worker configuration supplied by the page that owns the AI
+ * chat. `createWorker` spawns the page-specific worker (Editor vs Run
+ * View) and `context` is baked into that worker at init time.
+ */
+export interface AgentThreadConfig {
+  createWorker: () => Worker;
+  context: AgentContext;
+}
+
+/**
  * A single AI conversation: one Web Worker (agent + in-memory session)
  * plus the chat state that survives the React component tree (window
  * minimize / hide / unmount). Disposing a thread terminates its worker
@@ -39,10 +50,14 @@ export class AgentThread {
   private readonly client: AgentClient;
   private abortController: AbortController | null = null;
 
-  constructor(threadId?: string) {
+  constructor(config: AgentThreadConfig, threadId?: string) {
     makeObservable(this);
     this.threadId = threadId ?? generateThreadId();
-    this.client = new AgentClient(this.threadId);
+    this.client = new AgentClient(
+      this.threadId,
+      config.createWorker,
+      config.context,
+    );
   }
 
   abort() {

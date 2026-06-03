@@ -1,7 +1,7 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "tags": ["-@public"],
-  "entry": ["src/agent/worker.ts"],
+  "entry": ["src/agent/editorWorker.ts", "src/agent/runViewWorker.ts"],
   "ignore": [
     "src/api/**",
     "src/components/ui/**",
