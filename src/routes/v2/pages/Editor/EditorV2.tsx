@@ -4,7 +4,7 @@ import "@/styles/editor.css";
 import { useParams, useSearch } from "@tanstack/react-router";
 import { ReactFlowProvider } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
-import { useEffect } from "react";
+import { type ReactNode, useEffect } from "react";
 
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
@@ -14,6 +14,7 @@ import { Text } from "@/components/ui/typography";
 import { ComponentLibraryProvider } from "@/providers/ComponentLibraryProvider";
 import { ForcedSearchProvider } from "@/providers/ComponentLibraryProvider/ForcedSearchProvider";
 import { DialogProvider } from "@/providers/DialogProvider/DialogProvider";
+import { useTourMode } from "@/providers/TourProvider/TourModeContext";
 import { AiChatStoreProvider } from "@/routes/v2/shared/components/AiChat/AiChatStoreContext";
 import { useDockAreaAccordion } from "@/routes/v2/shared/hooks/useDockAreaAccordion";
 import { useFocusMode } from "@/routes/v2/shared/hooks/useFocusMode";
@@ -33,6 +34,7 @@ import { createEditorAgentWorker } from "./components/AiChat/editorAgentWorker";
 import { useDebugPanelWindow } from "./components/DebugPanel";
 import { DriverPermissionGate } from "./components/DriverPermissionGate";
 import { EditorMenuBar } from "./components/EditorMenuBar/EditorMenuBar";
+import { EditorTourBridge } from "./components/EditorTourBridge";
 import { EmptyEditorState } from "./components/EmptyEditorState";
 import { FlowCanvas } from "./components/FlowCanvas/FlowCanvas";
 import { useAiChatWindow } from "./hooks/useAiChatWindow";
@@ -137,33 +139,43 @@ const PipelineEditor = withSuspenseWrapper(
 
 function EditorV2Content({ pipelineRef }: { pipelineRef: PipelineRef | null }) {
   const { navigation } = useSharedStores();
+  const tourMode = useTourMode();
 
   useEffect(() => {
     navigation.setRequestedPipelineName(pipelineRef?.name ?? null);
   }, [navigation, pipelineRef?.name]);
 
+  let body: ReactNode;
+  if (pipelineRef) {
+    body = (
+      <DriverPermissionGate pipelineRef={pipelineRef}>
+        <PipelineEditor pipelineRef={pipelineRef} />
+      </DriverPermissionGate>
+    );
+  } else if (tourMode) {
+    body = <PipelineEditorSkeleton />;
+  } else {
+    body = <EmptyEditorState />;
+  }
+
   return (
     <ComponentLibraryProvider>
       <ReactFlowProvider>
         <EditorMenuBar />
-        <ForcedSearchProvider>
-          {pipelineRef ? (
-            <DriverPermissionGate pipelineRef={pipelineRef}>
-              <PipelineEditor pipelineRef={pipelineRef} />
-            </DriverPermissionGate>
-          ) : (
-            <EmptyEditorState />
-          )}
-        </ForcedSearchProvider>
+        <EditorTourBridge />
+        <ForcedSearchProvider>{body}</ForcedSearchProvider>
       </ReactFlowProvider>
     </ComponentLibraryProvider>
   );
 }
 
-/**
- * Shell component for the Editor V2 route.
- */
-export function EditorV2() {
+// Non-editor-v2 routes (e.g. `/tour/$tourId`) pass `pipelineRef` directly.
+// Without a prop, we fall back to reading the route's params/search.
+export function EditorV2({
+  pipelineRef: pipelineRefProp,
+}: {
+  pipelineRef?: PipelineRef | null;
+} = {}) {
   const params = useParams({ strict: false });
   const search = useSearch({ strict: false });
   const fileId =
@@ -176,9 +188,12 @@ export function EditorV2() {
       ? params.pipelineName
       : null;
 
-  const pipelineRef: PipelineRef | null = pipelineName
-    ? { name: pipelineName, fileId }
-    : null;
+  const pipelineRef: PipelineRef | null =
+    pipelineRefProp !== undefined
+      ? pipelineRefProp
+      : pipelineName
+        ? { name: pipelineName, fileId }
+        : null;
 
   return (
     <div className="h-full w-full flex flex-col bg-slate-100 select-none">

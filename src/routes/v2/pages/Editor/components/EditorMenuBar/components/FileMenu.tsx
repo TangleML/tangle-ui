@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
+import { useTourMode } from "@/providers/TourProvider/TourModeContext";
 import { APP_ROUTES } from "@/routes/router";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButton";
@@ -55,6 +56,7 @@ export function FileMenu() {
   const activePipeline = pipelineFileStore.activePipelineFile;
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const canMove = activePipeline?.folder.canMoveFilesOut ?? false;
+  const tourMode = useTourMode();
 
   return (
     <>
@@ -96,15 +98,17 @@ export function FileMenu() {
             <Icon name="SaveAll" size="sm" />
             Save as
           </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => {
-              track("v2.pipeline_editor.file_menu.rename.click");
-              setRenameDialogOpen(true);
-            }}
-          >
-            <Icon name="Pencil" size="sm" />
-            Rename
-          </DropdownMenuItem>
+          {!tourMode && (
+            <DropdownMenuItem
+              onClick={() => {
+                track("v2.pipeline_editor.file_menu.rename.click");
+                setRenameDialogOpen(true);
+              }}
+            >
+              <Icon name="Pencil" size="sm" />
+              Rename
+            </DropdownMenuItem>
+          )}
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onClick={() => {
@@ -147,17 +151,21 @@ export function FileMenu() {
               </DropdownMenuItem>
             </>
           )}
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onClick={() => {
-              track("v2.pipeline_editor.file_menu.delete_pipeline.click");
-              setDeleteDialogOpen(true);
-            }}
-            className="text-destructive focus:text-destructive"
-          >
-            <Icon name="Trash2" size="sm" />
-            Delete pipeline
-          </DropdownMenuItem>
+          {!tourMode && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => {
+                  track("v2.pipeline_editor.file_menu.delete_pipeline.click");
+                  setDeleteDialogOpen(true);
+                }}
+                className="text-destructive focus:text-destructive"
+              >
+                <Icon name="Trash2" size="sm" />
+                Delete pipeline
+              </DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
 

@@ -1,13 +1,18 @@
+import { useTour } from "@reactour/tour";
+import { useNavigate } from "@tanstack/react-router";
 import { observer } from "mobx-react-lite";
 import { useState } from "react";
 
 import logo from "/Tangle_Icon_White.png";
 import { PipelineNameDialog } from "@/components/shared/Dialogs";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Link } from "@/components/ui/link";
 import { Text } from "@/components/ui/typography";
+import { useTourMode } from "@/providers/TourProvider/TourModeContext";
+import { APP_ROUTES } from "@/routes/router";
 import { usePipelineRename } from "@/routes/v2/pages/Editor/hooks/usePipelineRename";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { AppMenuActions } from "@/routes/v2/shared/components/AppMenuActions";
@@ -28,15 +33,26 @@ export const EditorMenuBar = observer(function EditorMenuBar() {
   const { navigation } = useSharedStores();
   const { pipelineFile } = useEditorSession();
   const handlePipelineRename = usePipelineRename();
+  const tourMode = useTourMode();
+  const { setIsOpen: setTourPopupOpen } = useTour();
+  const navigate = useNavigate();
+
   const spec = navigation.activeSpec;
-  const pipelineName = spec?.name ?? "Untitled pipeline";
+  const pipelineNameFromSpec = spec?.name ?? "Untitled pipeline";
+  const displayName =
+    tourMode?.tour.displayName ?? tourMode?.tour.id ?? pipelineNameFromSpec;
 
   const displayMenu = Boolean(pipelineFile.activePipelineFile);
   const [renameOpen, setRenameOpen] = useState(false);
 
+  const handleExitTour = () => {
+    setTourPopupOpen(false);
+    void navigate({ to: APP_ROUTES.LEARN_TOURS });
+  };
+
   return (
     <div
-      className="w-full bg-stone-900 px-3 py-1 md:px-4"
+      className="relative w-full bg-stone-900 px-3 py-1 md:px-4"
       style={{ height: `${TOP_NAV_HEIGHT}px` }}
     >
       <InlineStack
@@ -80,27 +96,36 @@ export const EditorMenuBar = observer(function EditorMenuBar() {
                   weight="semibold"
                   className="text-white truncate max-w-64 lg:max-w-md leading-tight"
                 >
-                  {pipelineName}
+                  {displayName}
                 </Text>
-                <Button
-                  variant="ghost"
-                  size="inline-xs"
-                  className="shrink-0 p-0 text-stone-400 hover:bg-transparent hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={() => setRenameOpen(true)}
-                  {...tracking("v2.pipeline_editor.menubar.rename_pipeline")}
-                >
-                  <Icon name="Pencil" size="xs" />
-                </Button>
+                {tourMode && (
+                  <Badge size="sm" variant="default" className="shrink-0">
+                    Tour
+                  </Badge>
+                )}
+                {!tourMode && (
+                  <Button
+                    variant="ghost"
+                    size="inline-xs"
+                    className="shrink-0 p-0 text-stone-400 hover:bg-transparent hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => setRenameOpen(true)}
+                    {...tracking("v2.pipeline_editor.menubar.rename_pipeline")}
+                  >
+                    <Icon name="Pencil" size="xs" />
+                  </Button>
+                )}
               </InlineStack>
-              <PipelineNameDialog
-                open={renameOpen}
-                onOpenChange={setRenameOpen}
-                title="Rename Pipeline"
-                initialName={pipelineName}
-                onSubmit={handlePipelineRename}
-                submitButtonText="Rename"
-                isSubmitDisabled={(name) => name === pipelineName}
-              />
+              {!tourMode && (
+                <PipelineNameDialog
+                  open={renameOpen}
+                  onOpenChange={setRenameOpen}
+                  title="Rename Pipeline"
+                  initialName={pipelineNameFromSpec}
+                  onSubmit={handlePipelineRename}
+                  submitButtonText="Rename"
+                  isSubmitDisabled={(name) => name === pipelineNameFromSpec}
+                />
+              )}
 
               <InlineStack wrap="nowrap" blockAlign="center">
                 <FileMenu />
@@ -113,6 +138,20 @@ export const EditorMenuBar = observer(function EditorMenuBar() {
             </BlockStack>
           )}
         </InlineStack>
+
+        {tourMode && (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={handleExitTour}
+            aria-label="Exit tour"
+            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[100001] text-background/80 hover:text-background hover:bg-transparent"
+            {...tracking("v2.pipeline_editor.tour.exit")}
+          >
+            <Icon name="X" size="sm" />
+            Exit Tour
+          </Button>
+        )}
 
         <InlineStack
           gap="2"
