@@ -1,9 +1,12 @@
 /**
  * Main-thread client for the in-browser agent worker.
  *
- * Spawns a single Web Worker (lazy, on first use), wires it up over
- * Comlink, and exposes a typed `ask()` method that the AI Chat store
- * calls.
+ * Each `AgentClient` instance is bound to a single `threadId` and owns
+ * exactly one Web Worker (spawned lazily on first use). It wires the
+ * worker up over Comlink and exposes a typed `ask()` method. The thread
+ * id is injected into every request so the worker keys its in-memory
+ * conversation memory by it. Lifecycle (create / terminate) is owned by
+ * the `AgentThread` primitive — there is no global singleton.
  */
 import * as Comlink from "comlink";
 
@@ -20,15 +23,16 @@ interface InitDeps {
 
 interface AskOptions {
   message: string;
-  threadId?: string;
   recentRuns?: RecentPipelineRun[];
   aiConfig: AiProviderConfig;
 }
 
-class AgentClient {
+export class AgentClient {
   private worker: Worker | null = null;
   private remote: Comlink.Remote<AgentWorkerApi> | null = null;
   private initPromise: Promise<void> | null = null;
+
+  constructor(private readonly threadId: string) {}
 
   private async ensureInit(
     deps: InitDeps,
@@ -64,9 +68,10 @@ class AgentClient {
     signal?: AbortSignal,
   ): Promise<AgentResponse> {
     const remote = await this.ensureInit(deps);
+    const params = { ...options, threadId: this.threadId };
     return signal
-      ? remote.ask(options, Comlink.proxy(signal))
-      : remote.ask(options);
+      ? remote.ask(params, Comlink.proxy(signal))
+      : remote.ask(params);
   }
 
   terminate(): void {
@@ -75,11 +80,4 @@ class AgentClient {
     this.remote = null;
     this.initPromise = null;
   }
-}
-
-let singleton: AgentClient | null = null;
-
-export function getAgentClient(): AgentClient {
-  if (!singleton) singleton = new AgentClient();
-  return singleton;
 }

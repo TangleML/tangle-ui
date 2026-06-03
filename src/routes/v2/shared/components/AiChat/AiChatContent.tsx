@@ -5,7 +5,9 @@ import { useEffect, useRef, useState } from "react";
 import type { RecentPipelineRun } from "@/agent/session";
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import { useAuthLocalStorage } from "@/components/shared/Authentication/useAuthLocalStorage";
-import { BlockStack } from "@/components/ui/layout";
+import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
@@ -99,11 +101,14 @@ export const AiChatContent = observer(function AiChatContent({
     refetchOnWindowFocus: false,
   });
 
+  const thread = aiChat.activeThread;
+
   function handleSend(prompt: string) {
+    if (!thread) return;
     const recentRuns = recentRunsData
       ? projectRecentRuns(recentRunsData)
       : undefined;
-    aiChat.sendMessage(prompt, {
+    thread.sendMessage(prompt, {
       onError: (msg) => notify(msg, "error"),
       bridge,
       aiConfig,
@@ -115,13 +120,29 @@ export const AiChatContent = observer(function AiChatContent({
     return <AiProviderSetup />;
   }
 
+  if (!thread) return null;
+
   return (
     <BlockStack fill>
+      <InlineStack
+        className="border-b p-2 w-full"
+        align="end"
+        blockAlign="center"
+      >
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => aiChat.newThread()}
+          aria-label="New chat"
+        >
+          <Icon name="SquarePen" />
+        </Button>
+      </InlineStack>
       <ChatMessageList
-        messages={aiChat.messages}
-        thinkingText={aiChat.thinkingText}
+        messages={thread.messages}
+        thinkingText={thread.thinkingText}
       />
-      <ChatInput isPending={aiChat.isPending} onSubmit={handleSend} />
+      <ChatInput isPending={thread.isPending} onSubmit={handleSend} />
     </BlockStack>
   );
 });
