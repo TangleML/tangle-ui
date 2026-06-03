@@ -9,6 +9,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -21,6 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Paragraph, Text } from "@/components/ui/typography";
+import { useRunAutomatedResearch } from "@/routes/tangent/hooks/useRunAutomatedResearch";
 import { useRunScenarios } from "@/routes/tangent/hooks/useRunScenarios";
 import type {
   ScenarioEntry,
@@ -88,9 +90,16 @@ function IdeaRow({ idea }: { idea: ScenarioIdea }) {
 interface ScenarioRowProps {
   scenario: ScenarioEntry;
   onSelect: () => void;
+  onRunResearch: () => void;
+  isResearchPending: boolean;
 }
 
-function ScenarioRow({ scenario, onSelect }: ScenarioRowProps) {
+function ScenarioRow({
+  scenario,
+  onSelect,
+  onRunResearch,
+  isResearchPending,
+}: ScenarioRowProps) {
   return (
     <TableRow className="cursor-pointer" onClick={onSelect}>
       <TableCell>
@@ -113,6 +122,19 @@ function ScenarioRow({ scenario, onSelect }: ScenarioRowProps) {
           {formatCreatedAt(scenario.createdAt)}
         </Text>
       </TableCell>
+      <TableCell>
+        <Button
+          size="xs"
+          variant="outline"
+          disabled={isResearchPending}
+          onClick={(event) => {
+            event.stopPropagation();
+            onRunResearch();
+          }}
+        >
+          Run automated research
+        </Button>
+      </TableCell>
     </TableRow>
   );
 }
@@ -120,9 +142,16 @@ function ScenarioRow({ scenario, onSelect }: ScenarioRowProps) {
 interface ScenarioDetailProps {
   scenario: ScenarioEntry;
   onBack: () => void;
+  onRunResearch: () => void;
+  isResearchPending: boolean;
 }
 
-function ScenarioDetail({ scenario, onBack }: ScenarioDetailProps) {
+function ScenarioDetail({
+  scenario,
+  onBack,
+  onRunResearch,
+  isResearchPending,
+}: ScenarioDetailProps) {
   return (
     <BlockStack gap="3" fill className="p-3" inlineAlign="start">
       <Breadcrumb>
@@ -151,6 +180,13 @@ function ScenarioDetail({ scenario, onBack }: ScenarioDetailProps) {
               {scenario.plan.name}
             </Text>
           </InlineStack>
+          <Button
+            size="sm"
+            disabled={isResearchPending}
+            onClick={onRunResearch}
+          >
+            Run automated research
+          </Button>
           <Text as="p" size="sm" tone="subdued">
             {scenario.rationale}
           </Text>
@@ -183,6 +219,8 @@ export function MlExperimentPlannerContent({
   selectedScenarioId,
 }: MlExperimentPlannerContentProps) {
   const { scenarios } = useRunScenarios(runId);
+  const { mutate: runResearch, isPending: isResearchPending } =
+    useRunAutomatedResearch();
   const [selectedId, setSelectedId] = useState<string | null>(
     selectedScenarioId ?? null,
   );
@@ -211,6 +249,8 @@ export function MlExperimentPlannerContent({
         <ScenarioDetail
           scenario={selectedScenario}
           onBack={() => setSelectedId(null)}
+          onRunResearch={() => runResearch(selectedScenario)}
+          isResearchPending={isResearchPending}
         />
       </BlockStack>
     );
@@ -226,6 +266,7 @@ export function MlExperimentPlannerContent({
               <TableHead>Name</TableHead>
               <TableHead>Ideas</TableHead>
               <TableHead>Created</TableHead>
+              <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -234,6 +275,8 @@ export function MlExperimentPlannerContent({
                 key={scenario.id}
                 scenario={scenario}
                 onSelect={() => setSelectedId(scenario.id)}
+                onRunResearch={() => runResearch(scenario)}
+                isResearchPending={isResearchPending}
               />
             ))}
           </TableBody>
