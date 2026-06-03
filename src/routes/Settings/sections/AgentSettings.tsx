@@ -44,10 +44,8 @@ export function AgentSettings() {
 
   const validateRequiredFields = () => {
     const trimmed = getTrimmedConfig();
-    if (!trimmed.apiBase || !trimmed.apiKey || !trimmed.model) {
-      setValidationError(
-        "Enter an API base URL, API key, and model before continuing.",
-      );
+    if (!trimmed.apiBase) {
+      setValidationError("Enter an API base URL before continuing.");
       return null;
     }
     setValidationError(null);
@@ -91,7 +89,9 @@ export function AgentSettings() {
     setTesting(true);
     try {
       const response = await fetch(`${trimmed.apiBase}/models`, {
-        headers: { authorization: `Bearer ${trimmed.apiKey}` },
+        headers: trimmed.apiKey
+          ? { authorization: `Bearer ${trimmed.apiKey}` }
+          : undefined,
       });
       if (!isCurrentTest()) return;
       if (!response.ok) {
@@ -104,6 +104,10 @@ export function AgentSettings() {
 
       const modelIds = readModelIds(await response.json());
       if (!isCurrentTest()) return;
+      if (!trimmed.model) {
+        notify("Connected to AI provider.", "success");
+        return;
+      }
       if (!modelIds.includes(trimmed.model)) {
         notify(
           `Connected, but model “${trimmed.model}” was not found.`,
@@ -128,14 +132,14 @@ export function AgentSettings() {
       <BlockStack gap="2">
         <Heading level={2}>AI Provider Settings</Heading>
         <Paragraph size="sm" tone="subdued">
-          AI search features use an OpenAI-compatible API of your choice. Your
-          key is stored in this browser only — it is never sent to Tangle
-          servers.
+          AI search features use an OpenAI-compatible API or proxy of your
+          choice. API keys are optional when your proxy supplies its own
+          credentials.
         </Paragraph>
         <Paragraph size="xs" tone="subdued">
           {isConfigured
             ? "Status: configured ✅"
-            : "Status: not configured. AI search is disabled until you save credentials."}
+            : "Status: not configured. AI search is disabled until you save an API base URL."}
         </Paragraph>
       </BlockStack>
 
@@ -159,13 +163,13 @@ export function AgentSettings() {
               autoComplete="off"
             />
             <Text id="agent-settings-api-base-hint" size="xs" tone="subdued">
-              Any OpenAI-compatible base URL, such as https://api.openai.com/v1.
-              Do not include /chat/completions.
+              Any OpenAI-compatible base URL or proxy, such as
+              https://api.openai.com/v1. Do not include /chat/completions.
             </Text>
           </BlockStack>
 
           <BlockStack gap="1">
-            <Label htmlFor="agent-settings-api-key">API key</Label>
+            <Label htmlFor="agent-settings-api-key">API key (optional)</Label>
             <InlineStack gap="2" blockAlign="center" wrap="nowrap">
               <Input
                 id="agent-settings-api-key"
@@ -193,12 +197,13 @@ export function AgentSettings() {
               </Button>
             </InlineStack>
             <Text id="agent-settings-api-key-hint" size="xs" tone="subdued">
-              Stored in browser localStorage. Clear it when sharing this device.
+              Optional. Stored in browser localStorage only when provided. Leave
+              blank if your proxy supplies credentials.
             </Text>
           </BlockStack>
 
           <BlockStack gap="1">
-            <Label htmlFor="agent-settings-model">Model</Label>
+            <Label htmlFor="agent-settings-model">Model (optional)</Label>
             <Input
               id="agent-settings-model"
               type="text"
@@ -214,8 +219,8 @@ export function AgentSettings() {
               spellCheck={false}
             />
             <Text id="agent-settings-model-hint" size="xs" tone="subdued">
-              Model id sent to the provider for AI search reranking. Must be
-              available on the provider above.
+              Optional model id sent to the provider. Leave blank if your proxy
+              supplies a default model.
             </Text>
           </BlockStack>
 

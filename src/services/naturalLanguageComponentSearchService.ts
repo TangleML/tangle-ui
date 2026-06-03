@@ -57,12 +57,12 @@ export class NaturalLanguageSearchConfigError extends Error {
 
 interface LlmOptions {
   signal?: AbortSignal;
-  /** Model id (OpenAI-compatible). Required. */
-  model: string;
-  /** Base URL of an OpenAI-compatible API. Required. */
+  /** Optional model id. Proxies may supply a default when this is blank. */
+  model?: string;
+  /** Base URL of an OpenAI-compatible API or proxy. Required. */
   apiBase: string;
-  /** Bearer token. Required. */
-  apiKey: string;
+  /** Optional bearer token. Proxies may supply their own credentials. */
+  apiKey?: string;
 }
 
 /**
@@ -177,16 +177,11 @@ function validateConfig(options: LlmOptions): {
   model: string;
 } {
   const base = options.apiBase.trim();
-  const key = options.apiKey.trim();
-  const model = options.model.trim();
-  if (!base || !key) {
+  const key = options.apiKey?.trim() ?? "";
+  const model = options.model?.trim() ?? "";
+  if (!base) {
     throw new NaturalLanguageSearchConfigError(
-      "Configure your API base URL and key in Settings → Agent Configuration to use AI search.",
-    );
-  }
-  if (!model) {
-    throw new NaturalLanguageSearchConfigError(
-      "No model configured. Set one in Settings → Agent Configuration.",
+      "Configure an API base URL in Settings → Agent Configuration to use AI search.",
     );
   }
   return { base: base.replace(/\/+$/, ""), key, model };
@@ -213,10 +208,10 @@ export async function rerankComponentsByNaturalLanguage(
     signal: options.signal,
     headers: {
       "content-type": "application/json",
-      authorization: `Bearer ${key}`,
+      ...(key ? { authorization: `Bearer ${key}` } : {}),
     },
     body: JSON.stringify({
-      model,
+      ...(model ? { model } : {}),
       // gpt-5 / o-series reject temperature overrides entirely; omit for them.
       ...(usesCompletionTokensParam(model) ? {} : { temperature: 0 }),
       // Tiny payload now (≤20 candidates × ~150 chars), so the response is
@@ -236,14 +231,14 @@ export async function rerankComponentsByNaturalLanguage(
   if (!response.ok) {
     const detail = await response.text().catch(() => "");
     throw new Error(
-      `LLM proxy returned ${response.status}: ${detail.slice(0, 200) || response.statusText}`,
+      `AI provider returned ${response.status}: ${detail.slice(0, 200) || response.statusText}`,
     );
   }
 
   const payload: unknown = await response.json();
   const rawContent = readChatCompletionContent(payload);
   if (!rawContent) {
-    throw new Error("LLM proxy returned an empty response");
+    throw new Error("AI provider returned an empty response");
   }
 
   let parsed: unknown;
@@ -370,10 +365,10 @@ export async function generateComponentAiDescription(
     signal: options.signal,
     headers: {
       "content-type": "application/json",
-      authorization: `Bearer ${key}`,
+      ...(key ? { authorization: `Bearer ${key}` } : {}),
     },
     body: JSON.stringify({
-      model,
+      ...(model ? { model } : {}),
       ...(usesCompletionTokensParam(model) ? {} : { temperature: 0 }),
       ...(usesCompletionTokensParam(model)
         ? { max_completion_tokens: 2000 }
@@ -389,19 +384,19 @@ export async function generateComponentAiDescription(
   if (!response.ok) {
     const detail = await response.text().catch(() => "");
     throw new Error(
-      `LLM proxy returned ${response.status}: ${detail.slice(0, 200) || response.statusText}`,
+      `AI provider returned ${response.status}: ${detail.slice(0, 200) || response.statusText}`,
     );
   }
 
   const payload: unknown = await response.json();
   const rawContent = readChatCompletionContent(payload);
   if (!rawContent) {
-    throw new Error("LLM proxy returned an empty response");
+    throw new Error("AI provider returned an empty response");
   }
 
   const description = readDescription(rawContent);
   if (!description) {
-    throw new Error("LLM proxy returned an empty description");
+    throw new Error("AI provider returned an empty description");
   }
 
   return { description, rawContent };

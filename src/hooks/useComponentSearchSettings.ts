@@ -4,14 +4,14 @@ import { getStorage } from "@/utils/typedStorage";
 import { isRecord } from "@/utils/typeGuards";
 
 /**
- * Bring-your-own-key configuration for the Components V2 natural-language
- * search. Stored in localStorage so each user holds their own credentials —
- * we ship no shared API key in the bundle.
+ * OpenAI-compatible proxy/provider configuration for the Components V2
+ * natural-language search. Stored in localStorage so users can bring their own
+ * key when a proxy does not supply credentials.
  *
  * SECURITY NOTE: localStorage is per-origin and readable by any JS running on
  * this origin. It is not encrypted. This is the same trust model as every
- * other BYOK web tool — users should generate scoped keys with limited
- * permissions and rotate them if compromised.
+ * other BYOK web tool when a key is provided — users should generate scoped
+ * keys with limited permissions and rotate them if compromised.
  */
 
 const STORAGE_KEY = "tangle.componentSearchV2.config";
@@ -29,14 +29,24 @@ const storage = getStorage<
 export interface ComponentSearchConfig {
   apiBase: string;
   apiKey: string;
-  /** Model id used for AI search reranking (any OpenAI-compatible model). */
+  /** Optional model id. Proxies may supply a default when this is blank. */
   model: string;
 }
 
 const DEFAULTS: ComponentSearchConfig = {
-  apiBase: "",
+  apiBase:
+    import.meta.env.MODE === "test"
+      ? ""
+      : (import.meta.env.VITE_LLM_API_BASE ??
+        import.meta.env.VITE_OPENAI_API_BASE ??
+        ""),
   apiKey: "",
-  model: "",
+  model:
+    import.meta.env.MODE === "test"
+      ? ""
+      : (import.meta.env.VITE_LLM_MODEL ??
+        import.meta.env.VITE_OPENAI_MODEL ??
+        ""),
 };
 
 function readStoredConfig(): ComponentSearchConfig {
@@ -49,16 +59,14 @@ function readStoredConfig(): ComponentSearchConfig {
       typeof record.thinkingModel === "string" &&
       record.thinkingModel.trim().length > 0
         ? record.thinkingModel
-        : "";
+        : undefined;
     const storedModel =
-      "model" in record &&
-      typeof record.model === "string" &&
-      record.model.trim().length > 0
+      "model" in record && typeof record.model === "string"
         ? record.model
-        : "";
+        : undefined;
     // Migration: previous versions stored `thinkingModel`. Prefer the current
-    // `model` value when present, and only fall back to the legacy key.
-    const model = storedModel || legacyThinking || DEFAULTS.model;
+    // `model` value when present, including an intentional blank override.
+    const model = storedModel ?? legacyThinking ?? DEFAULTS.model;
     return {
       apiBase:
         "apiBase" in record && typeof record.apiBase === "string"
@@ -128,10 +136,7 @@ export function useComponentSearchSettings() {
     storage.setItem(STORAGE_KEY, null);
   };
 
-  const isConfigured =
-    config.apiBase.length > 0 &&
-    config.apiKey.length > 0 &&
-    config.model.length > 0;
+  const isConfigured = config.apiBase.length > 0;
 
   return { config, update, clear, isConfigured };
 }

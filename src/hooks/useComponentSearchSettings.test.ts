@@ -45,18 +45,18 @@ describe("useComponentSearchSettings", () => {
     expect(result.current.isConfigured).toBe(true);
   });
 
-  it("isConfigured requires apiBase, apiKey, and model", () => {
+  it("isConfigured only requires apiBase", () => {
     window.localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
         apiBase: "https://api.example.com/v1",
-        apiKey: "sk-test",
+        apiKey: "",
         model: "",
       }),
     );
 
     const { result } = renderHook(() => useComponentSearchSettings());
-    expect(result.current.isConfigured).toBe(false);
+    expect(result.current.isConfigured).toBe(true);
   });
 
   it("update() writes to localStorage and merges partial values", () => {
@@ -134,6 +134,21 @@ describe("useComponentSearchSettings", () => {
 
     const { result } = renderHook(() => useComponentSearchSettings());
     expect(result.current.config.model).toBe("gpt-4o-mini");
+  });
+
+  it("keeps an intentionally blank `model` over legacy `thinkingModel`", () => {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        apiBase: "https://api.example.com/v1",
+        apiKey: "sk-test",
+        model: "",
+        thinkingModel: "gpt-5-mini",
+      }),
+    );
+
+    const { result } = renderHook(() => useComponentSearchSettings());
+    expect(result.current.config.model).toBe("");
   });
 
   it("falls back to defaults when stored JSON is malformed", () => {

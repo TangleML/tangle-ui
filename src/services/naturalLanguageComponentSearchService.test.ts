@@ -143,15 +143,7 @@ describe("rerankComponentsByNaturalLanguage", () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
-  it("throws NaturalLanguageSearchConfigError when API base or key is missing", async () => {
-    await expect(
-      rerankComponentsByNaturalLanguage(
-        "train",
-        [{ id: "a", name: "n", description: "d" }],
-        { ...VALID_OPTIONS, apiKey: "" },
-      ),
-    ).rejects.toBeInstanceOf(NaturalLanguageSearchConfigError);
-
+  it("throws NaturalLanguageSearchConfigError when API base is missing", async () => {
     await expect(
       rerankComponentsByNaturalLanguage(
         "train",
@@ -161,14 +153,24 @@ describe("rerankComponentsByNaturalLanguage", () => {
     ).rejects.toBeInstanceOf(NaturalLanguageSearchConfigError);
   });
 
-  it("throws NaturalLanguageSearchConfigError when model is missing", async () => {
-    await expect(
-      rerankComponentsByNaturalLanguage(
-        "train",
-        [{ id: "a", name: "n", description: "d" }],
-        { ...VALID_OPTIONS, model: "" },
-      ),
-    ).rejects.toBeInstanceOf(NaturalLanguageSearchConfigError);
+  it("allows the proxy to supply credentials and a default model", async () => {
+    vi.mocked(global.fetch).mockResolvedValue(
+      mockChatResponse({ matches: [] }),
+    );
+
+    await rerankComponentsByNaturalLanguage(
+      "train",
+      [{ id: "a", name: "a", description: "" }],
+      { apiBase: "https://proxy.example.com/v1" },
+    );
+
+    const call = vi.mocked(global.fetch).mock.calls[0];
+    const init = call?.[1];
+    expect(init).toMatchObject({
+      headers: { "content-type": "application/json" },
+    });
+    const body = parseFetchBody(call);
+    expect(body.model).toBeUndefined();
   });
 
   it("filters out hallucinated ids the model returned", async () => {

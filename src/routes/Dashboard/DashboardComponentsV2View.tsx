@@ -314,7 +314,7 @@ const ComponentDescriptionPanel = ({
         </InlineStack>
         {!isConfigured ? (
           <Paragraph size="sm" tone="subdued">
-            Configure Agent settings to generate an AI description.
+            Configure an AI provider to generate an AI description.
           </Paragraph>
         ) : generationError ? (
           <BlockStack gap="2" align="start">
@@ -952,8 +952,8 @@ export const DashboardComponentsV2View = () => {
                 AI search unavailable
               </Text>
               <Paragraph size="sm" tone="subdued">
-                Configure an OpenAI-compatible API key to use AI search. Lexical
-                results above are unaffected.
+                Configure an OpenAI-compatible API or proxy to use AI search.
+                Lexical results above are unaffected.
               </Paragraph>
               <Link to={APP_ROUTES.SETTINGS_AGENT}>
                 <Text size="sm" weight="semibold">
