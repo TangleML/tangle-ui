@@ -13,14 +13,18 @@ import { CopyText } from "@/components/shared/CopyText/CopyText";
 import PipelineIO from "@/components/shared/Execution/PipelineIO";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { StatusBar } from "@/components/shared/Status";
 import { TagList } from "@/components/shared/Tags/TagList";
+import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Paragraph, Text } from "@/components/ui/typography";
 import { useUserDetails } from "@/hooks/useUserDetails";
 import type { ComponentSpec } from "@/models/componentSpec";
 import { useBackend } from "@/providers/BackendProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
+import { useStartOptimizationChat } from "@/routes/v2/pages/RunView/hooks/useStartOptimizationChat";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import {
   PIPELINE_NOTES_ANNOTATION,
@@ -121,6 +125,8 @@ function RunDetailsContentLoaded({
         {spec.name ?? "Unnamed Pipeline"}
       </CopyText>
 
+      <OptimizationButton />
+
       {metadata && <RunInfoSection metadata={metadata} />}
 
       {spec.description && (
@@ -152,6 +158,20 @@ function RunDetailsContentLoaded({
         <TagList tags={tags} />
       </ContentBlock>
     </BlockStack>
+  );
+}
+
+function OptimizationButton() {
+  const aiEnabled = useFlagValue("ai-assistant");
+  const startOptimizationChat = useStartOptimizationChat();
+
+  if (!aiEnabled) return null;
+
+  return (
+    <Button variant="secondary" onClick={startOptimizationChat}>
+      <Icon name="Sparkles" />
+      Suggest optimization
+    </Button>
   );
 }
 

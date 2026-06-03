@@ -4,7 +4,7 @@ import { createRunViewToolBridge } from "@/routes/v2/pages/RunView/toolBridge/ru
 import { AiChatContent } from "@/routes/v2/shared/components/AiChat/AiChatContent";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
-const AI_CHAT_WINDOW_ID = "run-ai-assistant-chat";
+export const AI_CHAT_WINDOW_ID = "run-ai-assistant-chat";
 
 export function useAiChatWindow(enabled: boolean) {
   const { windows } = useSharedStores();

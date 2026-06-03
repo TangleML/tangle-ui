@@ -26,6 +26,12 @@ export interface AiChatStoreConfig {
 export class AiChatStore {
   @observable.shallow accessor threads: AgentThread[] = [];
   @observable accessor activeThreadId: string | null = null;
+  /**
+   * Prompt queued by a consumer (e.g. an external "ask the assistant"
+   * button) to be sent on the active thread. {@link AiChatContent} owns
+   * the tool bridge, so it observes this and dispatches the send.
+   */
+  @observable accessor pendingPrompt: string | null = null;
 
   constructor(private readonly config: AiChatStoreConfig) {
     makeObservable(this);
@@ -62,11 +68,30 @@ export class AiChatStore {
     return thread;
   }
 
+  /**
+   * Starts a fresh thread and queues a prompt to be sent on it. The
+   * dispatch happens in {@link AiChatContent}, which holds the tool
+   * bridge required to fulfil tool calls.
+   */
+  @action startThreadWithPrompt(prompt: string): AgentThread {
+    const thread = this.newThread();
+    this.pendingPrompt = prompt;
+    return thread;
+  }
+
+  /** Returns and clears the queued prompt, guarding against double-sends. */
+  @action consumePendingPrompt(): string | null {
+    const prompt = this.pendingPrompt;
+    this.pendingPrompt = null;
+    return prompt;
+  }
+
   @action disposeAll() {
     for (const thread of this.threads) {
       thread.dispose();
     }
     this.threads = [];
     this.activeThreadId = null;
+    this.pendingPrompt = null;
   }
 }
