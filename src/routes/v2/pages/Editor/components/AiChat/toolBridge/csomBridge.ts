@@ -12,7 +12,6 @@ import type {
   ValidationResult,
 } from "@/agent/toolBridgeApi";
 import { validateSpec } from "@/models/componentSpec/validation/validateSpec";
-import { serializeSpecForAi } from "@/routes/v2/pages/Editor/components/AiChat/serializeSpecForAi";
 import {
   connectNodes,
   deleteSelectedEdgesByEdgeIds,
@@ -40,10 +39,22 @@ import {
   renameTask,
   unpackSubgraphTask,
 } from "@/routes/v2/pages/Editor/store/actions/task.actions";
+import { serializeSpecForAi } from "@/routes/v2/shared/components/AiChat/serializeSpecForAi";
+import type { BridgeDeps } from "@/routes/v2/shared/components/AiChat/toolBridge/utils";
+import {
+  computeNextPosition,
+  requireSpec,
+} from "@/routes/v2/shared/components/AiChat/toolBridge/utils";
+import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
 import { hydrateComponentReference } from "@/services/componentService";
 
-import type { BridgeDeps } from "./utils";
-import { computeNextPosition, requireSpec } from "./utils";
+/**
+ * CSOM handlers need the Editor's undo store to make the agent's spec
+ * edits user-visible and undoable as a single step. `undo` lives here
+ * (not in the shared `BridgeDeps`) because only the Editor's mutating
+ * bridge depends on it.
+ */
+export type CsomBridgeDeps = BridgeDeps & { undo: UndoGroupable };
 
 type CsomHandlers = Pick<
   ToolBridgeApi,
@@ -67,7 +78,7 @@ type CsomHandlers = Pick<
   | "validatePipeline"
 >;
 
-export function createCsomBridgeHandlers(deps: BridgeDeps): CsomHandlers {
+export function createCsomBridgeHandlers(deps: CsomBridgeDeps): CsomHandlers {
   return {
     async getPipelineState() {
       return serializeSpecForAi(requireSpec(deps), {

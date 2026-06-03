@@ -12,8 +12,8 @@ import { Link } from "@/components/ui/link";
 import { Separator } from "@/components/ui/separator";
 import { Paragraph, Text } from "@/components/ui/typography";
 import { getComponentQueryKey } from "@/hooks/useHydrateComponentReference";
-import type { ComponentRefData } from "@/routes/v2/pages/Editor/components/AiChat/types";
-import { CodeBlock } from "@/routes/v2/pages/Editor/components/PinnedTaskContent/components/CodeBlock";
+import type { ComponentRefData } from "@/routes/v2/shared/components/AiChat/types";
+import { CodeBlock } from "@/routes/v2/shared/components/CodeBlock";
 import { hydrateComponentReference } from "@/services/componentService";
 
 import { ComponentChip } from "./ComponentChip";

@@ -49,7 +49,7 @@ vi.mock("@/utils/submitPipeline", () => ({
     ),
 }));
 
-import { createToolBridge } from "./toolBridge";
+import { createEditorToolBridge } from "./toolBridge";
 
 /**
  * Pass-through undo stub: records every withGroup label invoked so tests
@@ -91,7 +91,7 @@ function buildSpec(): ComponentSpec {
 function makeBridge() {
   const spec = buildSpec();
   const undo = new RecordingUndo();
-  const bridge = createToolBridge({
+  const bridge = createEditorToolBridge({
     getSpec: () => spec,
     getActiveSubgraphPath: () => [],
     undo,
@@ -101,7 +101,7 @@ function makeBridge() {
 
 function makeEmptyBridge() {
   const undo = new RecordingUndo();
-  const bridge = createToolBridge({
+  const bridge = createEditorToolBridge({
     getSpec: () => null,
     getActiveSubgraphPath: () => [],
     undo,
@@ -119,7 +119,7 @@ function makeBackendBridge(
 ) {
   const spec = buildSpec();
   const undo = new RecordingUndo();
-  const bridge = createToolBridge({
+  const bridge = createEditorToolBridge({
     getSpec: () => spec,
     getActiveSubgraphPath: () => [],
     undo,
@@ -130,7 +130,7 @@ function makeBackendBridge(
   return { bridge, spec };
 }
 
-describe("createToolBridge", () => {
+describe("createEditorToolBridge", () => {
   describe("requireSpec guard", () => {
     it("throws on every mutating call when getSpec returns null", async () => {
       const { bridge } = makeEmptyBridge();
@@ -146,7 +146,7 @@ describe("createToolBridge", () => {
     it("returns the serialized spec with the active subgraph path", async () => {
       const spec = buildSpec();
       const undo = new RecordingUndo();
-      const bridge = createToolBridge({
+      const bridge = createEditorToolBridge({
         getSpec: () => spec,
         getActiveSubgraphPath: () => ["preprocess"],
         undo,
@@ -314,7 +314,7 @@ describe("createToolBridge", () => {
         }),
       );
       const undo = new RecordingUndo();
-      const bridge = createToolBridge({
+      const bridge = createEditorToolBridge({
         getSpec: () => spec,
         getActiveSubgraphPath: () => [],
         undo,
@@ -372,7 +372,7 @@ describe("createToolBridge", () => {
         }),
       );
       const undo = new RecordingUndo();
-      const bridge = createToolBridge({
+      const bridge = createEditorToolBridge({
         getSpec: () => spec,
         getActiveSubgraphPath: () => [],
         undo,
@@ -386,7 +386,7 @@ describe("createToolBridge", () => {
     it("maps validation issues into the wire shape", async () => {
       const spec = new ComponentSpec({ $id: "spec_1", name: "" });
       const undo = new RecordingUndo();
-      const bridge = createToolBridge({
+      const bridge = createEditorToolBridge({
         getSpec: () => spec,
         getActiveSubgraphPath: () => [],
         undo,

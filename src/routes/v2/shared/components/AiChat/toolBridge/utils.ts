@@ -14,7 +14,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 
 import type { ComponentSpec } from "@/models/componentSpec";
-import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
 import { EDITOR_POSITION_ANNOTATION } from "@/utils/annotations";
 
 const DEFAULT_POSITION = { x: 250, y: 250 };
@@ -23,7 +22,6 @@ const POSITION_OFFSET = 200;
 export interface BridgeDeps {
   getSpec: () => ComponentSpec | null;
   getActiveSubgraphPath: () => string[];
-  undo: UndoGroupable;
   getBackendUrl?: () => string;
   getAuthToken?: () => string | undefined;
   queryClient?: QueryClient;

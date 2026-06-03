@@ -1,7 +1,7 @@
 import type { DragEvent } from "react";
 
 import ComponentDetailsDialog from "@/components/shared/Dialogs/ComponentDetailsDialog";
-import type { ComponentRefData } from "@/routes/v2/pages/Editor/components/AiChat/types";
+import type { ComponentRefData } from "@/routes/v2/shared/components/AiChat/types";
 import type { ComponentReference } from "@/utils/componentSpec";
 
 import { ChatEntityChip } from "./ChatEntityChip";
