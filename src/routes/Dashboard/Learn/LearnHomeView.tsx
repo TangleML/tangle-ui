@@ -9,6 +9,10 @@ import { OnboardingHero } from "@/components/Learn/OnboardingHero";
 import { TipOfTheDay } from "@/components/Learn/TipOfTheDay";
 import { BlockStack } from "@/components/ui/layout";
 
+// Learning Hub Milestone 1: Documentation, FAQ, Example Pipelines & Tips
+// Not included: Guided Tours & Onboarding
+const SHOW_WIP_FEATURES = false;
+
 export function LearnHomeView() {
   return (
     <BlockStack gap="6">
@@ -24,11 +28,11 @@ export function LearnHomeView() {
         </BlockStack>
       </BlockStack>
 
-      <OnboardingHero />
+      {SHOW_WIP_FEATURES && <OnboardingHero />}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <TipOfTheDay />
-        <FeaturedTours />
+        {SHOW_WIP_FEATURES && <FeaturedTours />}
       </div>
 
       <FeaturedExamples />
