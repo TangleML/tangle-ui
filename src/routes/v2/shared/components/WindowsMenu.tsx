@@ -23,7 +23,14 @@ import {
 } from "@/routes/v2/shared/windows/viewPresets";
 import { tracking } from "@/utils/tracking";
 
-export const WindowsMenu = observer(function WindowsMenu() {
+interface WindowsMenuProps {
+  /** Tracking id for the menu trigger; sub-events are derived from it. */
+  trackingPrefix: string;
+}
+
+export const WindowsMenu = observer(function WindowsMenu({
+  trackingPrefix,
+}: WindowsMenuProps) {
   const { track } = useAnalytics();
   const componentSearchV2Enabled = useFlagValue("component-search-v2");
   const { windows } = useSharedStores();
@@ -32,7 +39,7 @@ export const WindowsMenu = observer(function WindowsMenu() {
     .sort((a, b) => a.title.localeCompare(b.title));
 
   const applyPreset = (preset: ViewPreset) => {
-    track("v2.pipeline_editor.windows_menu.view_preset.click", {
+    track(`${trackingPrefix}.view_preset.click`, {
       preset_label: preset.label,
     });
     windows.applyViewPreset(
@@ -43,7 +50,7 @@ export const WindowsMenu = observer(function WindowsMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <MenuTriggerButton {...tracking("v2.pipeline_editor.windows_menu")}>
+        <MenuTriggerButton {...tracking(trackingPrefix)}>
           Windows
         </MenuTriggerButton>
       </DropdownMenuTrigger>
@@ -58,13 +65,10 @@ export const WindowsMenu = observer(function WindowsMenu() {
             checked={win.state !== "hidden"}
             onSelect={(e) => e.preventDefault()}
             onCheckedChange={(checked) => {
-              track(
-                "v2.pipeline_editor.windows_menu.window_visibility.toggle",
-                {
-                  window_id: win.id,
-                  visible: checked,
-                },
-              );
+              track(`${trackingPrefix}.window_visibility.toggle`, {
+                window_id: win.id,
+                visible: checked,
+              });
               if (checked) {
                 win.restore();
               } else {
