@@ -1,5 +1,5 @@
-import { LearnComingSoon } from "@/components/Learn/LearnComingSoon";
 import { LearnPageHeader } from "@/components/Learn/LearnPageHeader";
+import { TipsLibrary } from "@/components/Learn/TipsLibrary";
 import { BlockStack } from "@/components/ui/layout";
 
 export function LearnTipsView() {
@@ -7,15 +7,11 @@ export function LearnTipsView() {
     <BlockStack gap="8">
       <LearnPageHeader
         title="Tips & Tricks"
-        description="Bite-sized tips covering shortcuts, hidden features and best practices."
+        description="Useful tips covering shortcuts, features and best practices."
         icon="Lightbulb"
         backTo="/learn"
       />
-      <LearnComingSoon
-        title="Tips library is on the way"
-        description="A browsable library of in-app tips — searchable, filterable and shareable by link."
-        icon="Lightbulb"
-      />
+      <TipsLibrary />
     </BlockStack>
   );
 }
