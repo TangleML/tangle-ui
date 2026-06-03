@@ -4,50 +4,81 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
-import { Heading, Paragraph } from "@/components/ui/typography";
+import { Heading, Text } from "@/components/ui/typography";
 import { tracking } from "@/utils/tracking";
 
-const STUB_TIP = {
-  id: "subgraph-navigation",
-  category: "Editor",
-  title: "Use subgraphs to keep complex pipelines readable",
-  body: "Double-click any task to dive into its subgraph. Use the breadcrumbs at the top of the editor to navigate back up — perfect for organising large pipelines without clutter.",
-};
+import { tips } from "./tips";
 
-export function TipOfTheDay() {
+function getDayOfYear(date: Date) {
+  const start = Date.UTC(date.getUTCFullYear(), 0, 0);
+
+  const now = Date.UTC(
+    date.getUTCFullYear(),
+    date.getUTCMonth(),
+    date.getUTCDate(),
+  );
+
+  return Math.floor((now - start) / 86_400_000);
+}
+
+interface TipOfTheDayProps {
+  variant?: "card" | "compact";
+}
+
+export function TipOfTheDay({ variant = "card" }: TipOfTheDayProps = {}) {
+  const index = getDayOfYear(new Date()) % tips.length;
+  const tip = tips[index];
+  const isCompact = variant === "compact";
+  const textSize = isCompact ? "xs" : "sm";
+
+  const badge = (
+    <Badge size="sm" variant="secondary">
+      {tip.category}
+    </Badge>
+  );
+
   return (
-    <div className="h-full rounded-xl border border-border bg-card p-5">
-      <BlockStack gap="3" className="h-full">
-        <InlineStack gap="2" blockAlign="center" align="space-between">
-          <InlineStack gap="2" blockAlign="center">
-            <Icon
-              name="Lightbulb"
-              size="md"
-              className="text-amber-500"
-              aria-hidden="true"
-            />
-            <Heading level={3}>Tip of the day</Heading>
+    <div
+      className={
+        isCompact
+          ? "h-full p-2"
+          : "h-full rounded-xl border border-border bg-card p-5"
+      }
+    >
+      <BlockStack gap={isCompact ? "2" : "3"} className="h-full">
+        {!isCompact && (
+          <InlineStack gap="2" blockAlign="center" align="space-between">
+            <InlineStack gap="2" blockAlign="center">
+              <Icon
+                name="Lightbulb"
+                size="md"
+                className="text-amber-500"
+                aria-hidden="true"
+              />
+              <Heading level={3}>Tip of the day</Heading>
+            </InlineStack>
+            {badge}
           </InlineStack>
-          <Badge size="sm" variant="secondary">
-            {STUB_TIP.category}
-          </Badge>
-        </InlineStack>
+        )}
 
         <BlockStack gap="1" className="flex-1">
-          <Paragraph size="sm" weight="semibold">
-            {STUB_TIP.title}
-          </Paragraph>
-          <Paragraph size="sm" tone="subdued">
-            {STUB_TIP.body}
-          </Paragraph>
+          <InlineStack gap="2" blockAlign="center" align="space-between">
+            <Text as="p" size={textSize} weight="semibold">
+              {tip.title}
+            </Text>
+            {isCompact && badge}
+          </InlineStack>
+          <Text as="p" size={textSize} tone="subdued">
+            {tip.body}
+          </Text>
         </BlockStack>
 
-        <InlineStack gap="2" align="space-between" blockAlign="center">
+        <InlineStack gap="2" blockAlign="center">
           <Button
             asChild
             size="sm"
             variant="link"
-            className="px-0"
+            className={isCompact ? "px-0 text-xs" : "px-0"}
             {...tracking("learning_hub.tip.browse_all")}
           >
             <Link to="/learn/tips">
