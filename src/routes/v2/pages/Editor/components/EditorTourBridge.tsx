@@ -1,4 +1,5 @@
 import { useTour } from "@reactour/tour";
+import { useViewport } from "@xyflow/react";
 import { reaction } from "mobx";
 import { useEffect } from "react";
 
@@ -113,6 +114,15 @@ export function EditorTourBridge() {
   const { steps, currentStep, setCurrentStep, setSteps, isOpen } = useTour();
   const { windows, navigation, editor } = useSharedStores();
   const { markStepComplete, isStepComplete } = useTourProgress();
+  const { x: viewportX, y: viewportY, zoom: viewportZoom } = useViewport();
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const rafId = requestAnimationFrame(() => {
+      window.dispatchEvent(new Event("resize"));
+    });
+    return () => cancelAnimationFrame(rafId);
+  }, [isOpen, viewportX, viewportY, viewportZoom]);
 
   const step = steps[currentStep] as TourStep | undefined;
   const interaction = step?.interaction;
@@ -122,15 +132,47 @@ export function EditorTourBridge() {
   const ensureWindowRestoredId = step?.ensureWindowRestored;
   const requiresTaskSelected = step?.requiresTaskSelected;
   const libraryDragAllow = step?.targetComponentName ?? step?.targetTaskName;
+  const stepSelector = step?.selector;
 
   useEffect(() => {
     if (!isOpen) return;
     if (!ensureWindowRestoredId) return;
     const w = windows.getWindowById(ensureWindowRestoredId);
-    if (w && (w.state === "hidden" || w.isMinimized)) {
+    const wasHidden = !!w && (w.state === "hidden" || w.isMinimized);
+    if (wasHidden) {
       w.restore();
     }
-  }, [isOpen, ensureWindowRestoredId, currentStep, windows]);
+    if (!w) return;
+
+    let cancelled = false;
+    const start = Date.now();
+    const wantSelector = typeof stepSelector === "string" ? stepSelector : null;
+    const waitForDom = () => {
+      if (cancelled) return;
+      const found = wantSelector
+        ? document.querySelector(wantSelector)
+        : document.querySelector(
+            `[data-dock-window="${ensureWindowRestoredId}"]`,
+          );
+      if (found || Date.now() - start > 1500) {
+        setSteps?.((prev) => [...prev]);
+        return;
+      }
+      window.setTimeout(waitForDom, 50);
+    };
+    window.setTimeout(waitForDom, 50);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    isOpen,
+    ensureWindowRestoredId,
+    currentStep,
+    windows,
+    stepSelector,
+    setSteps,
+  ]);
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -219,7 +261,6 @@ export function EditorTourBridge() {
     };
   }, [isOpen, libraryDragAllow]);
 
-  const stepSelector = step?.selector;
   useEffect(() => {
     if (!isOpen) return;
     if (!resetLibrarySearchFlag) return;
@@ -548,6 +589,138 @@ export function EditorTourBridge() {
 
       const dispose = reaction(
         () => countMatches(),
+        (current) => {
+          if (current > baseline) {
+            dispose();
+            advance();
+          }
+        },
+      );
+
+      return () => {
+        stopFollow();
+        dispose();
+      };
+    }
+
+    if (interaction === "navigate-into-subgraph") {
+      const targetName = step?.targetTaskName?.toLowerCase();
+      const baselineDepth = navigation.navigationDepth;
+
+      const matches = () => {
+        if (navigation.navigationDepth <= baselineDepth) return false;
+        if (!targetName) return true;
+        const last =
+          navigation.navigationPath[navigation.navigationPath.length - 1];
+        return last?.displayName.toLowerCase() === targetName;
+      };
+
+      if (matches()) {
+        skip();
+        return stopFollow;
+      }
+
+      const dispose = reaction(
+        () => matches(),
+        (m) => {
+          if (m) {
+            dispose();
+            advance();
+          }
+        },
+      );
+
+      return () => {
+        stopFollow();
+        dispose();
+      };
+    }
+
+    if (interaction === "navigate-to-root") {
+      const isAtRoot = () => navigation.navigationDepth === 0;
+
+      if (isAtRoot()) {
+        skip();
+        return stopFollow;
+      }
+
+      const dispose = reaction(
+        () => isAtRoot(),
+        (m) => {
+          if (m) {
+            dispose();
+            advance();
+          }
+        },
+      );
+
+      return () => {
+        stopFollow();
+        dispose();
+      };
+    }
+
+    if (interaction === "unpack-subgraph") {
+      const countSubgraphTasks = () => {
+        const spec = navigation.activeSpec;
+        if (!spec) return 0;
+        return spec.tasks.filter((t) => t.subgraphSpec !== undefined).length;
+      };
+      const baseline = countSubgraphTasks();
+
+      const dispose = reaction(
+        () => countSubgraphTasks(),
+        (current) => {
+          if (current < baseline) {
+            dispose();
+            advance();
+          }
+        },
+      );
+
+      return () => {
+        stopFollow();
+        dispose();
+      };
+    }
+
+    if (interaction === "multi-select-tasks") {
+      const minCount = step?.targetMinCount ?? 2;
+
+      const taskSelectionCount = () =>
+        editor.multiSelection.filter((n) => n.type === "task").length;
+
+      if (taskSelectionCount() >= minCount) {
+        skip();
+        return stopFollow;
+      }
+
+      const dispose = reaction(
+        () => taskSelectionCount(),
+        (current) => {
+          if (current >= minCount) {
+            dispose();
+            advance();
+          }
+        },
+      );
+
+      return () => {
+        stopFollow();
+        dispose();
+      };
+    }
+
+    if (interaction === "create-subgraph") {
+      const countSubgraphTasks = () => {
+        const spec = navigation.activeSpec;
+        if (!spec) return 0;
+        return spec.tasks.filter((t) => t.subgraphSpec !== undefined).length;
+      };
+      const baseline = countSubgraphTasks();
+
+      const dispose = reaction(
+        () => countSubgraphTasks(),
         (current) => {
           if (current > baseline) {
             dispose();
