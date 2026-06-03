@@ -86,9 +86,7 @@ describe("TourStepChecklist", () => {
         />
       </TourProgressProvider>,
     );
-    expect(
-      screen.getByText("Complete the highlighted action to continue"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Select the highlighted task")).toBeInTheDocument();
   });
 
   it("renders nothing for a non-interactive step", () => {
@@ -110,9 +108,7 @@ describe("TourStepChecklist", () => {
         />
       </TourProgressProvider>,
     );
-    const label = screen.getByText(
-      "Complete the highlighted action to continue",
-    );
+    const label = screen.getByText("Drag the panel out of its dock");
     expect(label.className).toContain("line-through");
   });
 });

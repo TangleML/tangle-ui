@@ -3,7 +3,10 @@ import type { StepType } from "@reactour/tour";
 import type { TourAction } from "@/providers/TourProvider/tourActions";
 import { publicAsset } from "@/utils/publicAsset";
 
-type TourStep = StepType & TourAction;
+export type TourStep = StepType &
+  TourAction & {
+    fallbackContent?: string;
+  };
 
 export interface TourDefinition {
   id: string;
