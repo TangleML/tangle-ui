@@ -71,6 +71,20 @@ export default defineConfig(({ mode }) => {
         : []),
     ],
     base: "/",
+    experimental: {
+      // Deploy base is unknown at build time: production serves assets from
+      // the origin root, tophat from a CDN subpath. Emit in-bundle asset
+      // URLs (notably the `?worker&url` scripts) as `import.meta.url`-relative
+      // so they resolve against the chunk location instead of an absolute
+      // `/assets/...` path that drops the tophat prefix. See
+      // `src/utils/createCrossOriginWorker.ts`.
+      renderBuiltUrl(filename, { hostType }) {
+        if (hostType === "js") {
+          return { relative: true };
+        }
+        return { relative: false };
+      },
+    },
     build: {
       manifest: "assets-registry.json",
       sourcemap: "hidden",

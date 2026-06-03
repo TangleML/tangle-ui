@@ -1,11 +1,16 @@
 /**
  * Worker factory for the Run View AI assistant.
  *
- * The Run View window owns spawning its agent worker so the URL literal
- * stays statically analyzable for Vite's worker bundling.
+ * The Run View window owns spawning its agent worker. We import the worker
+ * via `?worker&url` so Vite still runs it through the worker build pipeline
+ * (applying the `worker.plugins` shims), then hand the URL to
+ * `createCrossOriginWorker` which tolerates CDN-hosted (cross-origin) scripts.
  */
+import runViewWorkerUrl from "@/agent/runViewWorker.ts?worker&url";
+import { createCrossOriginWorker } from "@/utils/createCrossOriginWorker";
+
 export function createRunViewAgentWorker(): Worker {
-  return new Worker(new URL("@/agent/runViewWorker.ts", import.meta.url), {
+  return createCrossOriginWorker(runViewWorkerUrl, {
     type: "module",
     name: "tangle-run-view-agent",
   });
