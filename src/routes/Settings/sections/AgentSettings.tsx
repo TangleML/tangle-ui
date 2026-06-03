@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
-import { useComponentSearchSettings } from "@/hooks/useComponentSearchSettings";
+import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
 import { isRecord } from "@/utils/typeGuards";
 
@@ -21,11 +21,12 @@ function readModelIds(payload: unknown): string[] {
 }
 
 /**
- * Bring-your-own-key configuration UI for AI search features. Credentials live
- * in localStorage on the user's machine — no shared key is bundled into the app.
+ * Shared bring-your-own-provider configuration UI for AI features. Credentials
+ * live in localStorage on the user's machine — no shared key is bundled into
+ * the app.
  */
 export function AgentSettings() {
-  const { config, update, clear, isConfigured } = useComponentSearchSettings();
+  const { config, update, clear, isConfigured } = useAiProviderSettings();
   const notify = useToastNotification();
 
   const [apiBase, setApiBase] = useState(config.apiBase);
@@ -44,10 +45,8 @@ export function AgentSettings() {
 
   const validateRequiredFields = () => {
     const trimmed = getTrimmedConfig();
-    if (!trimmed.apiBase || !trimmed.apiKey || !trimmed.model) {
-      setValidationError(
-        "Enter an API base URL, API key, and model before continuing.",
-      );
+    if (!trimmed.apiBase) {
+      setValidationError("Enter an API base URL before continuing.");
       return null;
     }
     setValidationError(null);
@@ -91,7 +90,9 @@ export function AgentSettings() {
     setTesting(true);
     try {
       const response = await fetch(`${trimmed.apiBase}/models`, {
-        headers: { authorization: `Bearer ${trimmed.apiKey}` },
+        headers: trimmed.apiKey
+          ? { authorization: `Bearer ${trimmed.apiKey}` }
+          : undefined,
       });
       if (!isCurrentTest()) return;
       if (!response.ok) {
@@ -104,14 +105,19 @@ export function AgentSettings() {
 
       const modelIds = readModelIds(await response.json());
       if (!isCurrentTest()) return;
-      if (!modelIds.includes(trimmed.model)) {
+      if (trimmed.model && !modelIds.includes(trimmed.model)) {
         notify(
           `Connected, but model “${trimmed.model}” was not found.`,
           "error",
         );
         return;
       }
-      notify(`Connected. Model “${trimmed.model}” is available.`, "success");
+      notify(
+        trimmed.model
+          ? `Connected. Model “${trimmed.model}” is available.`
+          : "Connected. The provider is reachable.",
+        "success",
+      );
     } catch (err) {
       if (!isCurrentTest()) return;
       notify(
@@ -128,14 +134,14 @@ export function AgentSettings() {
       <BlockStack gap="2">
         <Heading level={2}>AI Provider Settings</Heading>
         <Paragraph size="sm" tone="subdued">
-          AI search features use an OpenAI-compatible API of your choice. Your
-          key is stored in this browser only — it is never sent to Tangle
-          servers.
+          AI features use an OpenAI-compatible API of your choice. Your key is
+          stored in this browser only and is sent only to the configured
+          provider.
         </Paragraph>
         <Paragraph size="xs" tone="subdued">
           {isConfigured
             ? "Status: configured ✅"
-            : "Status: not configured. AI search is disabled until you save credentials."}
+            : "Status: not configured. AI features are disabled until you save a provider."}
         </Paragraph>
       </BlockStack>
 
@@ -193,7 +199,8 @@ export function AgentSettings() {
               </Button>
             </InlineStack>
             <Text id="agent-settings-api-key-hint" size="xs" tone="subdued">
-              Stored in browser localStorage. Clear it when sharing this device.
+              Optional. Stored in browser localStorage. Leave blank when your
+              proxy handles authentication.
             </Text>
           </BlockStack>
 
@@ -214,8 +221,8 @@ export function AgentSettings() {
               spellCheck={false}
             />
             <Text id="agent-settings-model-hint" size="xs" tone="subdued">
-              Model id sent to the provider for AI search reranking. Must be
-              available on the provider above.
+              Optional. Model id sent to the provider for AI requests. Leave
+              blank to use the default model.
             </Text>
           </BlockStack>
 

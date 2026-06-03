@@ -10,7 +10,7 @@
  */
 import { Agent } from "@openai/agents";
 
-import { requireOrchestratorModel } from "../../config";
+import { getAgentModelConfig } from "../../config";
 import { attachObservabilityHooks } from "../../middleware/observability";
 import architectPrompt from "../../prompts/architect.md?raw";
 import type { AgentSession } from "../../session";
@@ -45,7 +45,7 @@ export async function createPipelineArchitectAgent(
       are ambiguous.`,
     instructions: await buildInstructions(session),
     tools: [...csom.allTools, runTools.submitPipelineRun],
-    model: requireOrchestratorModel(),
+    ...getAgentModelConfig(session.aiConfig),
   });
   attachObservabilityHooks(agent, session.emitStatus);
   return agent;

@@ -350,7 +350,7 @@ const ComponentDescriptionPanel = ({
       case "unconfigured":
         return (
           <Paragraph size="sm" tone="subdued">
-            Configure Agent settings to generate an AI description.
+            Configure AI settings to generate an AI description.
           </Paragraph>
         );
       case "error":
@@ -1000,8 +1000,8 @@ export const DashboardComponentsV2View = () => {
                 AI search unavailable
               </Text>
               <Paragraph size="sm" tone="subdued">
-                Configure an OpenAI-compatible API key to use AI search. Lexical
-                results above are unaffected.
+                Configure an OpenAI-compatible provider to use AI search.
+                Lexical results above are unaffected.
               </Paragraph>
               <ConfigureInSettingsLink />
             </BlockStack>

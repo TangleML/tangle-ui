@@ -11,6 +11,7 @@ import type { RecentPipelineRun } from "@/agent/session";
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import type { AgentResponse, StatusCallback } from "@/agent/types";
 import type { AgentWorkerApi } from "@/agent/worker";
+import type { AiProviderConfig } from "@/types/aiProvider";
 
 interface InitDeps {
   bridge: ToolBridgeApi;
@@ -21,6 +22,7 @@ interface AskOptions {
   message: string;
   threadId?: string;
   recentRuns?: RecentPipelineRun[];
+  aiConfig: AiProviderConfig;
 }
 
 class AgentClient {

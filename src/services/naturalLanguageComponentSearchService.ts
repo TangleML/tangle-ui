@@ -59,11 +59,11 @@ export class NaturalLanguageSearchConfigError extends Error {
 
 interface LlmOptions {
   signal?: AbortSignal;
-  /** Model id (OpenAI-compatible). Required. */
+  /** Optional model id (OpenAI-compatible). Leave blank when the proxy owns selection. */
   model: string;
   /** Base URL of an OpenAI-compatible API. Required. */
   apiBase: string;
-  /** Bearer token. Required. */
+  /** Optional bearer token. Leave blank when the proxy owns authentication. */
   apiKey: string;
 }
 
@@ -175,14 +175,9 @@ function validateConfig(options: LlmOptions): {
   const base = options.apiBase.trim();
   const key = options.apiKey.trim();
   const model = options.model.trim();
-  if (!base || !key) {
+  if (!base) {
     throw new NaturalLanguageSearchConfigError(
-      "Configure your API base URL and key in Settings → Agent Configuration to use AI search.",
-    );
-  }
-  if (!model) {
-    throw new NaturalLanguageSearchConfigError(
-      "No model configured. Set one in Settings → Agent Configuration.",
+      "Configure your API base URL in Settings → AI Configuration to use AI features.",
     );
   }
   return { base: base.replace(/\/+$/, ""), key, model };
@@ -218,15 +213,18 @@ async function callLlmChatCompletion(
     signal: options.signal,
     headers: {
       "content-type": "application/json",
-      authorization: `Bearer ${key}`,
+      ...(key ? { authorization: `Bearer ${key}` } : {}),
     },
     body: JSON.stringify({
-      model,
-      // gpt-5 / o-series reject temperature overrides entirely; omit for them.
-      ...(usesCompletionTokensParam(model) ? {} : { temperature: 0 }),
-      ...(usesCompletionTokensParam(model)
-        ? { max_completion_tokens: 2000 }
-        : { max_tokens: config.maxTokens }),
+      ...(model ? { model } : {}),
+      // gpt-5 / o-series reject temperature and max_tokens. When the proxy
+      // owns model selection (blank model), omit model-specific tuning entirely.
+      ...(model && !usesCompletionTokensParam(model) ? { temperature: 0 } : {}),
+      ...(model
+        ? usesCompletionTokensParam(model)
+          ? { max_completion_tokens: 2000 }
+          : { max_tokens: config.maxTokens }
+        : {}),
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: config.systemPrompt },

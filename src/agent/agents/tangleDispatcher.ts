@@ -15,7 +15,9 @@
  */
 import { Agent, MemorySession, run } from "@openai/agents";
 
-import { requireOrchestratorModel } from "../config";
+import type { AiProviderConfig } from "@/types/aiProvider";
+
+import { getAgentModelConfig } from "../config";
 import { attachObservabilityHooks } from "../middleware/observability";
 import dispatcherPrompt from "../prompts/dispatcher.md?raw";
 import type { AgentSession } from "../session";
@@ -27,7 +29,7 @@ import { createPipelineRepairAgent } from "./subagents/pipelineRepair";
 interface DispatcherInvokeParams {
   message: string;
   threadId: string;
-  token: string;
+  aiConfig: AiProviderConfig;
   session: AgentSession;
 }
 
@@ -49,7 +51,7 @@ async function createDispatcherAgent(session: AgentSession): Promise<Agent> {
 
   const agent = new Agent({
     name: "tangle-dispatcher",
-    model: requireOrchestratorModel(),
+    ...getAgentModelConfig(session.aiConfig),
     instructions: dispatcherPrompt,
     tools: [
       generalHelp.asTool({
@@ -91,7 +93,7 @@ export function createDispatcher(): TangleDispatcher {
 
   return {
     async invoke(params) {
-      params.session.proxyClient.ensureConfigured(params.token);
+      params.session.proxyClient.ensureConfigured(params.aiConfig);
       const sessionMemory = getOrCreateSessionMemory(params.threadId);
       const agent = await createDispatcherAgent(params.session);
       const result = await run(agent, params.message, {

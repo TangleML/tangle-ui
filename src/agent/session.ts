@@ -1,6 +1,8 @@
 /**
  * Per-request session for the in-browser agent.
  */
+import type { AiProviderConfig } from "@/types/aiProvider";
+
 import type { ProxyClient } from "./config";
 import type { SkillsLoader } from "./skills/loader";
 import type { ToolBridgeApi } from "./toolBridgeApi";
@@ -20,6 +22,7 @@ export interface AgentSession {
   proxyClient: ProxyClient;
   bridge: ToolBridgeApi;
   skillsLoader: SkillsLoader;
+  aiConfig: AiProviderConfig;
   recentRuns: RecentPipelineRun[];
 }
 
@@ -28,6 +31,7 @@ export function createSession(params: {
   proxyClient: ProxyClient;
   bridge: ToolBridgeApi;
   skillsLoader: SkillsLoader;
+  aiConfig: AiProviderConfig;
   emitStatus?: StatusCallback;
   recentRuns?: RecentPipelineRun[];
 }): AgentSession {
@@ -37,6 +41,7 @@ export function createSession(params: {
     proxyClient: params.proxyClient,
     bridge: params.bridge,
     skillsLoader: params.skillsLoader,
+    aiConfig: params.aiConfig,
     recentRuns: params.recentRuns ?? [],
   };
 }

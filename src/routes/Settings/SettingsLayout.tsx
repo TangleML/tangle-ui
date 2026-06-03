@@ -45,17 +45,19 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
 
 const AGENT_ITEM: SidebarItem = {
   to: "/settings/agent",
-  label: "Agent Configuration",
+  label: "AI Configuration",
   icon: "Bot",
   testId: "settings-nav-agent",
 };
 
 export function SettingsLayout() {
   const router = useRouter();
-  const agentSettingsEnabled = useFlagValue("component-search-v2");
-  const sidebarItems = agentSettingsEnabled
-    ? [...SIDEBAR_ITEMS, AGENT_ITEM]
-    : SIDEBAR_ITEMS;
+  const componentSearchEnabled = useFlagValue("component-search-v2");
+  const aiAssistantEnabled = useFlagValue("ai-assistant");
+  const sidebarItems =
+    componentSearchEnabled || aiAssistantEnabled
+      ? [...SIDEBAR_ITEMS, AGENT_ITEM]
+      : SIDEBAR_ITEMS;
 
   const handleGoBack = () => {
     router.history.back();

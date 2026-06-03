@@ -2,11 +2,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { observer } from "mobx-react-lite";
 import { useEffect, useRef, useState } from "react";
 
-import { getAiToken } from "@/agent/aiTokenStore";
-import { config } from "@/agent/config";
 import type { RecentPipelineRun } from "@/agent/session";
 import { useAuthLocalStorage } from "@/components/shared/Authentication/useAuthLocalStorage";
 import { BlockStack } from "@/components/ui/layout";
+import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
@@ -15,11 +14,10 @@ import { fetchPipelineRuns } from "@/services/pipelineRunService";
 import type { PipelineRun } from "@/types/pipelineRun";
 
 import { useAiChatStore } from "./AiChatStoreContext";
-import { AiTokenSetup } from "./components/AiTokenSetup";
+import { AiProviderSetup } from "./components/AiProviderSetup";
 import { ChatInput } from "./components/ChatInput";
 import { ChatMessageList } from "./components/ChatMessageList";
 import { createToolBridge } from "./toolBridge";
-import { AiAssistantTokenQueryKeys } from "./types";
 
 const RECENT_RUNS_LIMIT = 5;
 
@@ -42,11 +40,8 @@ export const AiChatContent = observer(function AiChatContent() {
   const authStorage = useAuthLocalStorage();
   const queryClient = useQueryClient();
 
-  const { data: token, isPending: isTokenLoading } = useQuery({
-    queryKey: AiAssistantTokenQueryKeys.Token(),
-    queryFn: getAiToken,
-    staleTime: Infinity,
-  });
+  const { config: aiConfig, isConfigured: isAiConfigured } =
+    useAiProviderSettings();
 
   // Refs keep the bridge closure honest about the latest backend/auth
   // values without rebuilding the bridge. Updated on every render so
@@ -99,15 +94,13 @@ export const AiChatContent = observer(function AiChatContent() {
     aiChat.sendMessage(prompt, {
       onError: (msg) => notify(msg, "error"),
       bridge,
+      aiConfig,
       ...(recentRuns && { recentRuns }),
     });
   }
 
-  if (isTokenLoading) return null;
-
-  const needsToken = token == null && config.proxyMode === "browser-direct";
-  if (needsToken) {
-    return <AiTokenSetup />;
+  if (!isAiConfigured) {
+    return <AiProviderSetup />;
   }
 
   return (

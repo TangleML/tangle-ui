@@ -6,7 +6,7 @@
  */
 import { Agent } from "@openai/agents";
 
-import { requireOrchestratorModel } from "../../config";
+import { getAgentModelConfig } from "../../config";
 import { attachObservabilityHooks } from "../../middleware/observability";
 import pipelineRepairPrompt from "../../prompts/pipelineRepair.md?raw";
 import type { AgentSession } from "../../session";
@@ -23,7 +23,7 @@ export function createPipelineRepairAgent(session: AgentSession): Agent {
       after a successful fix when the user asks. Asks the user for input when fixes are ambiguous.`,
     instructions: pipelineRepairPrompt,
     tools: [...csom.allTools, runTools.submitPipelineRun],
-    model: requireOrchestratorModel(),
+    ...getAgentModelConfig(session.aiConfig),
   });
   attachObservabilityHooks(agent, session.emitStatus);
   return agent;
