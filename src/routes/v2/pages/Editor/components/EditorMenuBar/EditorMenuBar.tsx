@@ -11,6 +11,7 @@ import { Text } from "@/components/ui/typography";
 import { usePipelineRename } from "@/routes/v2/pages/Editor/hooks/usePipelineRename";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { AppMenuActions } from "@/routes/v2/shared/components/AppMenuActions";
+import { WindowsMenu } from "@/routes/v2/shared/components/WindowsMenu";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { TOP_NAV_HEIGHT } from "@/utils/constants";
 import { tracking } from "@/utils/tracking";
@@ -22,7 +23,6 @@ import { NodeMenu } from "./components/NodeMenu";
 import { QuickRunButton } from "./components/QuickRunButton";
 import { RunsMenu } from "./components/RunsMenu";
 import { ViewMenu } from "./components/ViewMenu";
-import { WindowsMenu } from "./components/WindowsMenu";
 
 export const EditorMenuBar = observer(function EditorMenuBar() {
   const { navigation } = useSharedStores();
@@ -107,7 +107,7 @@ export const EditorMenuBar = observer(function EditorMenuBar() {
                 <ViewMenu />
                 <RunsMenu />
                 <ComponentsLibraryMenu />
-                <WindowsMenu />
+                <WindowsMenu trackingPrefix="v2.pipeline_editor.windows_menu" />
                 <NodeMenu />
               </InlineStack>
             </BlockStack>

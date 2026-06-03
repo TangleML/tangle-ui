@@ -5,6 +5,7 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Link } from "@/components/ui/link";
 import { Text } from "@/components/ui/typography";
 import { AppMenuActions } from "@/routes/v2/shared/components/AppMenuActions";
+import { WindowsMenu } from "@/routes/v2/shared/components/WindowsMenu";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { TOP_NAV_HEIGHT } from "@/utils/constants";
 import { tracking } from "@/utils/tracking";
@@ -62,6 +63,7 @@ export const RunViewMenuBar = observer(function RunViewMenuBar() {
             <InlineStack wrap="nowrap" blockAlign="center">
               <RunMenu />
               <RunViewViewMenu />
+              <WindowsMenu trackingPrefix="v2.run_view.windows_menu" />
             </InlineStack>
           </BlockStack>
         </InlineStack>
