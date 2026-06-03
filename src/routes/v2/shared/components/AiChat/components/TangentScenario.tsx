@@ -1,7 +1,18 @@
+import { useState } from "react";
+
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Paragraph, Text } from "@/components/ui/typography";
+import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
+import {
+  saveScenario,
+  type ScenarioEntry,
+  type ScenarioIdea,
+} from "@/routes/tangent/idb/tangentDb";
+import { useMlExperimentPlannerWindow } from "@/routes/v2/shared/components/MlExperimentPlanner/useMlExperimentPlannerWindow";
 
 type Impact = "high" | "medium" | "low";
 
@@ -11,7 +22,7 @@ type IdeaType =
   | "input_data"
   | "model_architecture";
 
-interface ScenarioIdea {
+interface ScenarioIdeaData {
   title: string;
   ideaType: IdeaType;
   impact: Impact;
@@ -22,7 +33,7 @@ interface Scenario {
   score: number;
   rationale: string;
   summary: string;
-  ideas: ScenarioIdea[];
+  ideas: ScenarioIdeaData[];
 }
 
 const IDEA_TYPE_LABEL: Record<IdeaType, string> = {
@@ -44,7 +55,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-function parseIdea(value: unknown): ScenarioIdea | null {
+function parseIdea(value: unknown): ScenarioIdeaData | null {
   if (!isRecord(value)) return null;
   const { title, ideaType, impact, evidence } = value;
   if (typeof title !== "string") return null;
@@ -75,7 +86,7 @@ function parseScenario(raw: string): Scenario | null {
   if (typeof summary !== "string") return null;
   if (!Array.isArray(ideas)) return null;
 
-  const parsedIdeas: ScenarioIdea[] = [];
+  const parsedIdeas: ScenarioIdeaData[] = [];
   for (const idea of ideas) {
     const parsed = parseIdea(idea);
     if (parsed) parsedIdeas.push(parsed);
@@ -90,26 +101,42 @@ function scoreVariant(score: number): BadgeVariant {
   return "outline";
 }
 
-function IdeaCard({ idea }: { idea: ScenarioIdea }) {
+interface IdeaCardProps {
+  idea: ScenarioIdeaData;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+}
+
+function IdeaCard({ idea, checked, onCheckedChange }: IdeaCardProps) {
   return (
     <Card className="gap-3 py-3">
       <CardHeader className="px-4">
-        <CardTitle>
-          <Text as="span" size="sm" weight="semibold">
-            {idea.title}
-          </Text>
-        </CardTitle>
-        <InlineStack gap="1">
-          <Badge variant="outline" size="sm" shape="rounded">
-            {IDEA_TYPE_LABEL[idea.ideaType]}
-          </Badge>
-          <Badge
-            variant={IMPACT_VARIANT[idea.impact]}
-            size="sm"
-            shape="rounded"
-          >
-            {idea.impact} impact
-          </Badge>
+        <InlineStack gap="2" blockAlign="start" wrap="nowrap">
+          <Checkbox
+            checked={checked}
+            onCheckedChange={(value) => onCheckedChange(value === true)}
+            aria-label={`Include idea ${idea.title}`}
+            className="mt-0.5"
+          />
+          <BlockStack gap="1">
+            <CardTitle>
+              <Text as="span" size="sm" weight="semibold">
+                {idea.title}
+              </Text>
+            </CardTitle>
+            <InlineStack gap="1">
+              <Badge variant="outline" size="sm" shape="rounded">
+                {IDEA_TYPE_LABEL[idea.ideaType]}
+              </Badge>
+              <Badge
+                variant={IMPACT_VARIANT[idea.impact]}
+                size="sm"
+                shape="rounded"
+              >
+                {idea.impact} impact
+              </Badge>
+            </InlineStack>
+          </BlockStack>
         </InlineStack>
       </CardHeader>
       <CardContent className="px-4">
@@ -123,6 +150,14 @@ function IdeaCard({ idea }: { idea: ScenarioIdea }) {
 
 export function TangentScenario({ raw }: { raw: string }) {
   const scenario = parseScenario(raw);
+  const ideaCount = scenario?.ideas.length ?? 0;
+  const [selected, setSelected] = useState<Set<number>>(
+    () => new Set(Array.from({ length: ideaCount }, (_, index) => index)),
+  );
+
+  const executionData = useExecutionDataOptional();
+  const runId = executionData?.runId ?? undefined;
+  const openPlanner = useMlExperimentPlannerWindow();
 
   if (!scenario) {
     return (
@@ -131,6 +166,49 @@ export function TangentScenario({ raw }: { raw: string }) {
       </Paragraph>
     );
   }
+
+  const toggleIdea = (index: number, isChecked: boolean) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (isChecked) {
+        next.add(index);
+      } else {
+        next.delete(index);
+      }
+      return next;
+    });
+  };
+
+  const handleUseScenario = async () => {
+    if (!runId) return;
+
+    const selectedIdeas: ScenarioIdea[] = scenario.ideas.filter((_, index) =>
+      selected.has(index),
+    );
+    const now = Date.now();
+    const id =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `scenario-${now}`;
+    const name = selectedIdeas[0]?.title ?? "Experiment plan";
+
+    const entry: ScenarioEntry = {
+      id,
+      run: { runId, url: window.location.href },
+      score: scenario.score,
+      rationale: scenario.rationale,
+      summary: scenario.summary,
+      ideas: selectedIdeas,
+      plan: { name, description: scenario.summary },
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    await saveScenario(entry);
+    openPlanner(runId, id);
+  };
+
+  const canUseScenario = Boolean(runId) && selected.size > 0;
 
   return (
     <BlockStack gap="3">
@@ -157,10 +235,24 @@ export function TangentScenario({ raw }: { raw: string }) {
             Ideas
           </Text>
           {scenario.ideas.map((idea, index) => (
-            <IdeaCard key={`${idea.title}-${index}`} idea={idea} />
+            <IdeaCard
+              key={`${idea.title}-${index}`}
+              idea={idea}
+              checked={selected.has(index)}
+              onCheckedChange={(isChecked) => toggleIdea(index, isChecked)}
+            />
           ))}
         </BlockStack>
       )}
+
+      <Button
+        size="sm"
+        onClick={handleUseScenario}
+        disabled={!canUseScenario}
+        title={runId ? undefined : "Open a run to plan an experiment scenario"}
+      >
+        Use scenario
+      </Button>
     </BlockStack>
   );
 }
