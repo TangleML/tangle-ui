@@ -17,16 +17,18 @@ Check if the user provided a PR number as an argument.
 **If a PR number was provided** (e.g., `/review 1234`):
 
 ```bash
-gh pr view <number> --json number,title,url,headRefOid --jq '{number, title, url, head_sha: .headRefOid}'
+gh pr view <number> --json number,title,url,headRefOid,baseRefName --jq '{number, title, url, head_sha: .headRefOid, base: .baseRefName}'
 gh pr diff <number>
 ```
 
 **If no argument was provided**, try the current branch:
 
 ```bash
-gh pr view --json number,title,url,headRefOid --jq '{number, title, url, head_sha: .headRefOid}'
+gh pr view --json number,title,url,headRefOid,baseRefName --jq '{number, title, url, head_sha: .headRefOid, base: .baseRefName}'
 gh pr diff
 ```
+
+Note the **base branch**. In a Graphite stack the base is usually the _parent PR's_ branch (not `main`), and `gh pr diff` is already scoped to that base — so the diff it returns contains **only this PR's own changes**. Trust that scope (see "Stack Awareness" below); don't widen it with `git diff main...HEAD`.
 
 **If no PR exists for the current branch**, fall back to local commit review:
 
@@ -45,30 +47,61 @@ Store the **PR number** and **head commit SHA** for comment posting later.
 3. **Read files**: Always read the full files being reviewed to understand context, not just the diff.
 4. **Track locations**: For each finding, record the exact file path and line number from the diff — these are needed for posting inline comments.
 
+## Stack Awareness (Graphite)
+
+PRs in this repo are **stacked** — each PR builds on the one below it, and they're reviewed (and merged) bottom-to-top. A finding only belongs on the PR that _introduced_ it.
+
+- **Scope to this PR's own diff.** `gh pr diff <number>` already returns only the changes this PR adds on top of its base (the parent PR's branch). Review exactly that set — do not pull in code from parent PRs or unrelated files.
+- **Don't re-flag what an earlier PR in the stack introduced.** If a line of code or a pattern came from a lower PR, it's out of scope here even if it shows up as surrounding context — it was (or should have been) reviewed on that PR. Re-raising it duplicates comments across the stack and creates noise on the wrong PR.
+- **Watch for context vs. additions.** When reading a file for context, distinguish lines this PR _added/changed_ (the `+` lines in the diff) from lines that merely surround them. Only the former are in scope. When in doubt, confirm a line is part of this PR's diff before commenting on it.
+- **Exception — new or extracted files.** A file this PR creates (including one extracted/moved from elsewhere) is the author's to get right, so its contents are fair game even if some lines were copied verbatim from older code. Say so in the comment ("this file is new here, so flagging…").
+- **Cross-stack observations belong in prose, not inline comments.** If you notice the same issue recurring across PRs (e.g. a helper that keeps getting duplicated), mention it once in the summary and point to the PR where the fix belongs — don't post the same inline comment on every PR.
+- **Carrying forward:** if you reviewed a lower PR in this session, remember what you already flagged there and don't repeat it when its code reappears as context higher in the stack.
+
 ## What to Check
+
+Changed code should follow this project's documented standards and React best practices. **These skills are the source of truth — consult them rather than guessing, and frame findings in their terms** (link the relevant one in the comment):
+
+- **`ui-primitives`** — `BlockStack`/`InlineStack`/`Text`/`Heading`/`Paragraph`/`Button`/`Icon`, the `tone` prop, when raw HTML is acceptable
+- **`react-patterns`** — Rules of Hooks, React Compiler compatibility, provider/custom-hook structure
+- **`typescript-standards`** — no unsafe `as`, type guards, `interface` vs `type`, naming
+- **`project-conventions`** — file structure, import order, **comments policy**, error handling, no inline styles for static values
+- **`tanstack-query`** / **`tanstack-router`** — server-state and routing patterns
+- **`accessibility`** — interactive components, forms, dialogs, ARIA
 
 Review changed code for violations, prioritizing:
 
 ### High Priority
 
-- Unsafe type casting (`as`) - suggest type guards instead
+- Unsafe type casting (`as`) — suggest type guards instead (`typescript-standards`)
 - Potential runtime errors (undefined access, null checks)
-- Missing error handling
-- Security concerns
-- Incorrect use of React hooks (missing deps, unnecessary async)
-- React Compiler violations (mutating during render, reading refs during render)
+- Missing error handling; security concerns
+- Incorrect use of React hooks — missing/**unstable** deps (e.g. effects depending on an object rebuilt every render), conditional hooks, unnecessary `async` (`react-patterns`)
+- React Compiler violations — mutating during render, reading refs during render (`react-patterns`)
+- **React Compiler registration** — when a PR adds a new component/hook, or moves/renames a registered one, confirm `react-compiler.config.js` is updated. A new file under an already-enabled directory is covered automatically; a new top-level file is NOT, and a **rename leaves a dead entry pointing at a deleted file** while the new file loses coverage
+- Invalid or inaccessible markup — e.g. nested interactive elements (`<a><button>` from `<Link><Button>`; use `<Button asChild>`), missing labels (`accessibility`)
 
 ### Medium Priority
 
-- Not using UI primitives (`BlockStack`, `InlineStack`, `Text`, `Icon`)
-- Import order violations
-- Duplicated logic that should be extracted
+- **UI primitives used incorrectly — not just whether they're imported.** A file importing `BlockStack` does NOT mean it uses primitives everywhere it should. Scan every changed JSX block for the raw-HTML equivalents (`ui-primitives`):
+  - `<div className="flex flex-col …">` → `BlockStack`; `<div className="flex …">` (row) → `InlineStack`
+  - Hardcoded color classes on text (`text-muted-foreground`, `text-rose-600`, …) → the `tone` prop (`subdued`, `critical`, …)
+  - Raw `<h1>`–`<h6>` / `Text as="h*"` → `Heading`; raw `<p>` → `Paragraph`; styled `<span>` → `Text` (e.g. `font="mono"`, not `className="font-mono"`)
+  - Repeated Tailwind class combinations across elements → suggest extracting a small component
+- Import order violations (external → internal `@/` → relative; `project-conventions`)
+- Duplicated logic that should be extracted — especially against helpers/components established **earlier in the same stack** (recurring drift is worth a shared util)
 
 ### Low Priority
 
-- Redundant code (unnecessary null coalescing, etc.)
-- Minor style inconsistencies
-- Unused props or parameters
+- **Excessive or low-value comments** (`project-conventions` → Comments & Documentation). Comments should explain _why_, not narrate _what_. Flag:
+  - Comments restating what the code plainly does (`// loop over items` above a `.map`)
+  - Redundant doc comments on self-explanatory functions/variables
+  - Commented-out code
+  - Keep the good ones: non-obvious reasoning, trade-offs, gotchas, and links
+- Inline `style={}` for **static** values → use Tailwind classes (inline style is only for dynamic/computed values; `project-conventions`)
+- Deeply nested ternaries / long conditional chains in JSX → extract a helper or use early returns
+- Naming that doesn't match conventions (`typescript-standards`)
+- Redundant code (unnecessary null coalescing, dead defensive branches); unused props or parameters; minor style inconsistencies
 
 ## Review Output Format
 
@@ -161,8 +194,9 @@ After posting, show a summary:
 - **Be specific**: Include file paths and line numbers
 - **Be actionable**: Provide concrete fixes, not vague suggestions
 - **Be proportional**: Don't over-engineer simple code
-- **Acknowledge good patterns**: Note when code follows best practices
+- **Acknowledge good patterns**: Note when code follows best practices — including correct primitive/`tone` usage and well-judged comments
 - **Don't nitpick**: Focus on meaningful improvements
+- **Keep style findings proportional**: Comment/primitive/naming nits are usually Low severity — group them, don't let them dominate the review, and cite the relevant standards skill so the author can see the rule
 - **Offer to fix**: After review, ask "Want me to fix these?"
 
 ## What NOT to Do
@@ -170,5 +204,6 @@ After posting, show a summary:
 - Don't review unchanged code (unless it causes issues with new code)
 - Don't suggest rewrites of working code just for style preferences
 - Don't flag issues that are already present in the codebase (pre-existing)
+- **Don't re-flag issues introduced by an earlier PR in the stack** — review only what _this_ PR's diff adds (see "Stack Awareness")
 - Don't recommend adding complexity without clear benefit
-- Don't suggest patterns that conflict with existing codebase conventions
+- Don't suggest patterns that conflict with existing codebase conventions — when unsure what the convention is, check the relevant standards skill before flagging
