@@ -2,11 +2,22 @@ import * as PopoverPrimitive from "@radix-ui/react-popover";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
+import { dispatchResizeOnToggle } from "@/utils/dispatchResizeOnToggle";
 
 function Popover({
+  onOpenChange,
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Root>) {
-  return <PopoverPrimitive.Root data-slot="popover" {...props} />;
+  return (
+    <PopoverPrimitive.Root
+      data-slot="popover"
+      onOpenChange={(open) => {
+        dispatchResizeOnToggle(open);
+        onOpenChange?.(open);
+      }}
+      {...props}
+    />
+  );
 }
 
 function PopoverTrigger({

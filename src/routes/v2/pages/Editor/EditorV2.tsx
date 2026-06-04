@@ -118,6 +118,7 @@ const PipelineEditor = withSuspenseWrapper(
             blockAlign="stretch"
             wrap="nowrap"
             data-testid="editor-v2"
+            data-editor-ready="true"
           >
             <DockArea side="left" />
             <div className="relative flex-1 min-w-0 h-full">

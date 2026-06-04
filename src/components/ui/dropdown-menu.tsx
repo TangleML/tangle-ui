@@ -1,5 +1,6 @@
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import {
+  type ComponentProps,
   type ComponentPropsWithoutRef,
   type ComponentRef,
   forwardRef,
@@ -8,8 +9,20 @@ import {
 
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
+import { dispatchResizeOnToggle } from "@/utils/dispatchResizeOnToggle";
 
-const DropdownMenu = DropdownMenuPrimitive.Root;
+const DropdownMenu = ({
+  onOpenChange,
+  ...props
+}: ComponentProps<typeof DropdownMenuPrimitive.Root>) => (
+  <DropdownMenuPrimitive.Root
+    onOpenChange={(open) => {
+      dispatchResizeOnToggle(open);
+      onOpenChange?.(open);
+    }}
+    {...props}
+  />
+);
 
 const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
 
@@ -17,7 +30,18 @@ const DropdownMenuGroup = DropdownMenuPrimitive.Group;
 
 const DropdownMenuPortal = DropdownMenuPrimitive.Portal;
 
-const DropdownMenuSub = DropdownMenuPrimitive.Sub;
+const DropdownMenuSub = ({
+  onOpenChange,
+  ...props
+}: ComponentProps<typeof DropdownMenuPrimitive.Sub>) => (
+  <DropdownMenuPrimitive.Sub
+    onOpenChange={(open) => {
+      dispatchResizeOnToggle(open);
+      onOpenChange?.(open);
+    }}
+    {...props}
+  />
+);
 
 const DropdownMenuRadioGroup = DropdownMenuPrimitive.RadioGroup;
 

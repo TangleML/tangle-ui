@@ -23,7 +23,7 @@ export async function buildTourPipelineYaml(
       );
     }
     const text = await response.text();
-    const parsed = yaml.load(text) as Record<string, unknown> | null;
+    const parsed: unknown = yaml.load(text);
     if (!parsed || typeof parsed !== "object") {
       throw new Error("Starter pipeline YAML is not an object");
     }

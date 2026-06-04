@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
 import { APP_ROUTES } from "@/routes/router";
+import { setTourActive } from "@/utils/tourActive";
 import { tracking } from "@/utils/tracking";
 
 // Matches the step-number badge's ≈13px outside offset plus a small margin.
@@ -60,12 +61,7 @@ interface PositionProps {
 }
 
 type ResolvedPosition =
-  | "top"
-  | "right"
-  | "bottom"
-  | "left"
-  | "center"
-  | [number, number];
+  "top" | "right" | "bottom" | "left" | "center" | [number, number];
 
 export function computeDefaultPopoverPosition(
   props: PositionProps,
@@ -172,6 +168,13 @@ function clampPopoverElement(el: HTMLElement): void {
 
 export function PopoverClampBridge() {
   const { isOpen } = useTour();
+
+  // Expose tour-open state to non-React callers (e.g. dispatchResizeOnToggle)
+  // so app-wide popover/dropdown side effects can no-op outside tours.
+  useEffect(() => {
+    setTourActive(isOpen);
+    return () => setTourActive(false);
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return undefined;

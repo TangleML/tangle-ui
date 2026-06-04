@@ -73,6 +73,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/components/ui/typography.tsx",
 
   "src/providers/DialogProvider",
+  "src/providers/TourProvider",
   "src/routes/EditorV2",
 
   // 11-20 useCallback/useMemo

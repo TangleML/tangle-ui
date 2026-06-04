@@ -1,5 +1,7 @@
 import { Fragment, type ReactNode } from "react";
 
+import { Paragraph } from "@/components/ui/typography";
+
 const INLINE_TOKEN = /(\*\*[^*]+\*\*|_[^_]+_|`[^`]+`)/g;
 
 function renderInline(text: string): ReactNode[] {
@@ -22,9 +24,9 @@ export function TourContent({ text }: { text: string }) {
   return (
     <>
       {paragraphs.map((paragraph, index) => (
-        <p key={index} className={index > 0 ? "mt-2" : undefined}>
+        <Paragraph key={index} className={index > 0 ? "mt-2" : undefined}>
           {renderInline(paragraph)}
-        </p>
+        </Paragraph>
       ))}
     </>
   );

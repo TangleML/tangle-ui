@@ -18,7 +18,6 @@ import {
   TOUR_PIPELINE_PREFIX,
 } from "@/providers/TourProvider/tourPipelineLifecycle";
 import { TourCompletionActions } from "@/providers/TourProvider/TourPopover";
-import { waitForSelector } from "@/providers/TourProvider/waitForSelector";
 import { APP_ROUTES } from "@/routes/router";
 import { EditorV2 } from "@/routes/v2/pages/Editor/EditorV2";
 import {
@@ -27,6 +26,8 @@ import {
 } from "@/routes/v2/shared/windows/windowPersistence";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
+import { isRecord } from "@/utils/typeGuards";
+import { waitForSelector } from "@/utils/waitForSelector";
 
 const EDITOR_LAYOUT_ID = "editor";
 
@@ -70,12 +71,19 @@ function TourReactourBridge({
   const lastSyncRef = useRef<number | null>(null);
   const initializedRef = useRef(false);
 
-  // Reactour silently no-ops if step selectors aren't in the DOM at open time.
+  // Reactour silently no-ops if step selectors aren't in the DOM at open time,
+  // so wait for the editor to mount (data-editor-ready) before opening.
   useEffect(() => {
-    if (initializedRef.current) return;
-    let cancelled = false;
-    void waitForSelector('[data-testid="editor-v2"]').then(() => {
-      if (cancelled || initializedRef.current) return;
+    if (initializedRef.current) return undefined;
+    const controller = new AbortController();
+    void waitForSelector("[data-editor-ready]", {
+      signal: controller.signal,
+    }).then((found) => {
+      if (controller.signal.aborted || initializedRef.current) return;
+      if (!found) {
+        console.warn("Editor did not become ready in time; tour not opened.");
+        return;
+      }
       initializedRef.current = true;
 
       const lastIdx = tour.steps.length - 1;
@@ -105,9 +113,7 @@ function TourReactourBridge({
       lastSyncRef.current = clamped;
       setIsOpen(true);
     });
-    return () => {
-      cancelled = true;
-    };
+    return () => controller.abort();
   }, [tour, urlStep, setSteps, setCurrentStep, setIsOpen]);
 
   useEffect(() => {
@@ -159,6 +165,7 @@ export function TourPage() {
 
   useEffect(() => {
     if (!tour) return undefined;
+    setResolved(null);
     let cancelled = false;
     void (async () => {
       try {
@@ -187,7 +194,7 @@ export function TourPage() {
     return <Navigate to={APP_ROUTES.LEARN_TOURS} replace />;
   }
 
-  const rawStep = (search as { step?: unknown }).step;
+  const rawStep = isRecord(search) ? search.step : undefined;
   const parsedStep =
     typeof rawStep === "number"
       ? rawStep
@@ -205,6 +212,7 @@ export function TourPage() {
     >
       {resolved && (
         <TourReactourBridge
+          key={tour.id}
           tour={tour}
           urlStep={urlStep}
           onUrlStepChange={handleUrlStepChange}
@@ -218,5 +226,3 @@ export function TourPage() {
     </TourModeProvider>
   );
 }
-
-// placeholder for empty pr
