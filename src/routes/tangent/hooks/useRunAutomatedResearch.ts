@@ -1,8 +1,12 @@
 import { useMutation } from "@tanstack/react-query";
 
 import useToastNotification from "@/hooks/useToastNotification";
-import type { ScenarioEntry } from "@/routes/tangent/idb/tangentDb";
 import {
+  saveScenario,
+  type ScenarioEntry,
+} from "@/routes/tangent/idb/tangentDb";
+import {
+  buildOpencodeSessionUrl,
   createOpencodeSession,
   resolveInstanceId,
   sendAutoresearchMessage,
@@ -25,6 +29,13 @@ export function useRunAutomatedResearch() {
       );
       const prompt = buildAutoresearchPrompt(scenario);
       await sendAutoresearchMessage(instanceId, sessionId, prompt);
+
+      const url = buildOpencodeSessionUrl(instanceId, sessionId);
+      await saveScenario({
+        ...scenario,
+        research: { instanceId, sessionId, url, startedAt: Date.now() },
+        updatedAt: Date.now(),
+      });
     },
     onSuccess: () => {
       notify("Automated research started", "success");
