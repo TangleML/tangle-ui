@@ -5,6 +5,22 @@ import type { ComponentSpec } from "@/models/componentSpec";
 import { buildBindingEdges } from "./buildUtils";
 import type { NodeTypeManifest } from "./types";
 
+type EntityOwnership = "owns" | "missing" | "unknown";
+
+function manifestOwnership(
+  manifest: NodeTypeManifest,
+  spec: ComponentSpec,
+  nodeId: string,
+): EntityOwnership {
+  if (typeof manifest.findEntity === "function") {
+    return manifest.findEntity(spec, nodeId) !== undefined ? "owns" : "missing";
+  }
+  if (typeof manifest.hasEntityId === "function") {
+    return manifest.hasEntityId(spec, nodeId) ? "owns" : "missing";
+  }
+  return "unknown";
+}
+
 /**
  * Central registry of node-type plugins.
  *
@@ -38,22 +54,27 @@ export class NodeTypeRegistry {
     return this.byEntityType.get(entityType);
   }
 
-  /** Derive the manifest from a node ID (replaces `getNodeTypeFromId`). */
+  /**
+   * Derive the manifest from a node ID (replaces `getNodeTypeFromId`).
+   */
   getByNodeId(
     spec: ComponentSpec | null,
     nodeId: string,
   ): NodeTypeManifest | undefined {
     for (const entry of this.prefixes) {
-      if (nodeId.startsWith(entry.prefix)) return entry.manifest;
+      if (!nodeId.startsWith(entry.prefix)) continue;
+      if (!spec) return entry.manifest;
+      if (manifestOwnership(entry.manifest, spec, nodeId) !== "missing") {
+        return entry.manifest;
+      }
+      break;
     }
 
-    const candidates = !spec
-      ? []
-      : this.all().filter(
-          (manifest) =>
-            typeof manifest.hasEntityId === "function" &&
-            manifest.hasEntityId(spec, nodeId),
-        );
+    if (!spec) return undefined;
+
+    const candidates = this.all().filter(
+      (manifest) => manifestOwnership(manifest, spec, nodeId) === "owns",
+    );
     if (candidates.length === 1) return candidates[0];
 
     return undefined;

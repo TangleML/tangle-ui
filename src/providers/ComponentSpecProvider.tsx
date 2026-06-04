@@ -10,6 +10,7 @@ import {
 
 import { type UndoRedo, useUndoRedo } from "@/hooks/useUndoRedo";
 import { loadPipelineByName } from "@/services/pipelineService";
+import { emitPipelineFileChanged } from "@/services/pipelineStorage/pipelineFileEvents";
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 import { prepareComponentRefForEditor } from "@/utils/prepareComponentRefForEditor";
 import {
@@ -214,6 +215,7 @@ export const ComponentSpecProvider = ({
         name,
         componentText,
       );
+      emitPipelineFileChanged({ storageKey: name, source: "v1" });
     },
     [componentSpec, readOnly],
   );
