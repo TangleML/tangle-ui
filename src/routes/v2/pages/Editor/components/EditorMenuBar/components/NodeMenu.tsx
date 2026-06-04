@@ -137,11 +137,18 @@ export const NodeMenu = observer(function NodeMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <MenuTriggerButton {...tracking("v2.pipeline_editor.node_menu")}>
+        <MenuTriggerButton
+          data-tour="node-menu-trigger"
+          {...tracking("v2.pipeline_editor.node_menu")}
+        >
           Node
         </MenuTriggerButton>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" sideOffset={2}>
+      <DropdownMenuContent
+        align="start"
+        sideOffset={2}
+        data-tour="node-menu-content"
+      >
         {isTask && (
           <>
             <DropdownMenuItem onSelect={handleDuplicate}>
@@ -181,7 +188,10 @@ export const NodeMenu = observer(function NodeMenu() {
         {isSubgraph && (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={handleUnpack}>
+            <DropdownMenuItem
+              onSelect={handleUnpack}
+              data-tour="node-menu-unpack"
+            >
               <Icon name="PackageOpen" size="sm" />
               Unpack Subgraph
             </DropdownMenuItem>
