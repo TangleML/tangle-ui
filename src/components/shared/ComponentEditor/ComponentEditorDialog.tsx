@@ -1,5 +1,5 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Heading, Paragraph } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
+import { cn } from "@/lib/utils";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
 import { hydrateComponentReference } from "@/services/componentService";
@@ -21,6 +22,7 @@ import { FullscreenElement } from "../FullscreenElement";
 import { withSuspenseWrapper } from "../SuspenseWrapper";
 import { PythonComponentEditor } from "./components/PythonComponentEditor";
 import { YamlComponentEditor } from "./components/YamlComponentEditor";
+import type { SaveAction } from "./saveAction";
 import type { SupportedTemplate, YamlGeneratorOptions } from "./types";
 import { useTemplateCodeByName } from "./useTemplateCodeByName";
 
@@ -76,6 +78,7 @@ export const ComponentEditorDialog = withSuspenseWrapper(
     templateName = "empty",
     onClose,
     onComponentSaved,
+    renderSaveActions,
   }: {
     text?: string;
     templateName?: SupportedTemplate;
@@ -84,12 +87,27 @@ export const ComponentEditorDialog = withSuspenseWrapper(
      * When provided, the editor is being used to edit an existing target (e.g.
      * a selected task's component) rather than to import a brand new component
      * into the library. The callback receives the hydrated, edited component
-     * and is responsible for applying it (and any user feedback). When omitted,
-     * the editor falls back to importing the component into the library.
+     * and the chosen {@link SaveAction}, and is responsible for applying it
+     * (and any user feedback). When omitted, the editor falls back to importing
+     * the component into the library.
      */
     onComponentSaved?: (
       hydratedComponent: HydratedComponentReference,
+      action: SaveAction,
     ) => void | Promise<void>;
+    /**
+     * When provided, Save swaps the fullscreen surface from the editor to a
+     * full-area "choose what to do" view (rendered by this function), with a
+     * Back affordance to return to the editor. The function receives the
+     * hydrated edit and an `onChoose` callback; `"import"` runs the
+     * library-import path, `"update"`/`"place"` are forwarded to
+     * {@link onComponentSaved}. When omitted, Save imports to the library (or
+     * calls {@link onComponentSaved} with `"update"`) directly.
+     */
+    renderSaveActions?: (args: {
+      hydratedComponent: HydratedComponentReference;
+      onChoose: (action: "update" | "import" | "place") => void;
+    }) => ReactNode;
   }) => {
     const notify = useToastNotification();
     const { track } = useAnalytics();
@@ -99,6 +117,10 @@ export const ComponentEditorDialog = withSuspenseWrapper(
     const initialText = text ?? templateCode;
     const [componentText, setComponentText] = useState(initialText);
     const [errors, setErrors] = useState<string[]>([]);
+    // When set, the fullscreen surface shows the "choose what to do" view for
+    // this hydrated edit instead of the editor.
+    const [pendingSave, setPendingSave] =
+      useState<HydratedComponentReference | null>(null);
 
     const mode = text ? "edit" : "create";
 
@@ -180,6 +202,16 @@ export const ComponentEditorDialog = withSuspenseWrapper(
       setComponentText(value);
     };
 
+    const importToLibrary = async (
+      hydratedComponent: HydratedComponentReference,
+    ) => {
+      await addToComponentLibrary(hydratedComponent, "editor_save");
+      notify(
+        `Component ${hydratedComponent.name} imported successfully`,
+        "success",
+      );
+    };
+
     const handleSave = async () => {
       const hydratedComponent = await hydrateComponentReference({
         text: componentText,
@@ -202,22 +234,51 @@ export const ComponentEditorDialog = withSuspenseWrapper(
         updatedAt: Date.now(),
       });
 
+      // When a caller offers a choose-what-to-do step, swap the fullscreen
+      // surface to it instead of finishing the save here.
+      if (renderSaveActions) {
+        setPendingSave(hydratedComponent);
+        return;
+      }
+
+      // Otherwise: editing an existing target updates it in place; the
+      // create/import flow imports to the library.
       onClose();
 
       if (onComponentSaved) {
-        // Editing an existing target (e.g. a selected task): apply the edit to
-        // that target instead of importing a new library component. The caller
-        // owns the success/feedback messaging.
-        await onComponentSaved(hydratedComponent);
+        await onComponentSaved(hydratedComponent, "update");
       } else {
-        await addToComponentLibrary(hydratedComponent, "editor_save");
-        notify(
-          `Component ${hydratedComponent.name} imported successfully`,
-          "success",
-        );
+        await importToLibrary(hydratedComponent);
       }
 
       track("component_editor.save.completed", {
+        mode,
+        selected_template: templateName,
+      });
+    };
+
+    const handleSaveChoice = async (action: "update" | "import" | "place") => {
+      const hydratedComponent = pendingSave;
+      if (!hydratedComponent) return;
+
+      onClose();
+
+      if (action === "import") {
+        await importToLibrary(hydratedComponent);
+      } else {
+        await onComponentSaved?.(hydratedComponent, action);
+      }
+
+      track("component_editor.save.completed", {
+        mode,
+        selected_template: templateName,
+        action,
+      });
+    };
+
+    const handleBackToEditor = () => {
+      setPendingSave(null);
+      track("component_editor.save.cancelled", {
         mode,
         selected_template: templateName,
       });
@@ -237,50 +298,81 @@ export const ComponentEditorDialog = withSuspenseWrapper(
 
     return (
       <FullscreenElement fullscreen={true}>
-        <BlockStack className="h-full w-full p-2 bg-white">
-          <InlineStack
-            className="w-full py-3 border-b-3 border-gray-100"
-            align="space-between"
+        <div className="relative h-full w-full bg-white">
+          {/* Editor view — kept mounted (preserves edits) and faded out while
+              the save-actions view is shown. */}
+          <BlockStack
+            className={cn(
+              "h-full w-full p-2 transition-opacity duration-200",
+              pendingSave && "pointer-events-none opacity-0",
+            )}
+            aria-hidden={pendingSave !== null}
           >
-            <InlineStack gap="2">
-              <Heading level={1}>{title}</Heading>
-              {hasTemplate && (
-                <Paragraph size="sm" tone="subdued">
-                  ({templateName} template)
-                </Paragraph>
-              )}
+            <InlineStack
+              className="w-full py-3 border-b-3 border-gray-100"
+              align="space-between"
+            >
+              <InlineStack gap="2">
+                <Heading level={1}>{title}</Heading>
+                {hasTemplate && (
+                  <Paragraph size="sm" tone="subdued">
+                    ({templateName} template)
+                  </Paragraph>
+                )}
+              </InlineStack>
+
+              <InlineStack gap="2">
+                <Button
+                  variant="default"
+                  onClick={handleSave}
+                  disabled={errors.length > 0}
+                >
+                  <Icon name="Save" /> Save
+                </Button>
+                <Button variant="ghost" size="icon" onClick={handleClose}>
+                  <Icon name="X" />
+                </Button>
+              </InlineStack>
             </InlineStack>
 
-            <InlineStack gap="2">
-              <Button
-                variant="default"
-                onClick={handleSave}
-                disabled={errors.length > 0}
+            {pythonCodeDetection?.isPython ? (
+              <PythonComponentEditor
+                text={pythonCodeDetection.pythonOriginalCode}
+                options={pythonCodeDetection.options}
+                onComponentTextChange={handleComponentTextChange}
+                onErrorsChange={setErrors}
+                preserveComponentName={pythonCodeDetection.componentName}
+              />
+            ) : (
+              <YamlComponentEditor
+                text={componentText}
+                onComponentTextChange={handleComponentTextChange}
+                onErrorsChange={setErrors}
+              />
+            )}
+          </BlockStack>
+
+          {/* Save-actions view — full-area, fades in over the editor. */}
+          {pendingSave && renderSaveActions && (
+            <BlockStack className="absolute inset-0 bg-white p-2 animate-in fade-in duration-200">
+              <InlineStack
+                className="w-full py-3 border-b-3 border-gray-100"
+                gap="2"
+                blockAlign="center"
               >
-                <Icon name="Save" /> Save
-              </Button>
-              <Button variant="ghost" size="icon" onClick={handleClose}>
-                <Icon name="X" />
-              </Button>
-            </InlineStack>
-          </InlineStack>
+                <Button variant="ghost" size="sm" onClick={handleBackToEditor}>
+                  <Icon name="ArrowLeft" /> Back
+                </Button>
+                <Heading level={1}>Apply your edit</Heading>
+              </InlineStack>
 
-          {pythonCodeDetection?.isPython ? (
-            <PythonComponentEditor
-              text={pythonCodeDetection.pythonOriginalCode}
-              options={pythonCodeDetection.options}
-              onComponentTextChange={handleComponentTextChange}
-              onErrorsChange={setErrors}
-              preserveComponentName={pythonCodeDetection.componentName}
-            />
-          ) : (
-            <YamlComponentEditor
-              text={componentText}
-              onComponentTextChange={handleComponentTextChange}
-              onErrorsChange={setErrors}
-            />
+              {renderSaveActions({
+                hydratedComponent: pendingSave,
+                onChoose: handleSaveChoice,
+              })}
+            </BlockStack>
           )}
-        </BlockStack>
+        </div>
       </FullscreenElement>
     );
   },

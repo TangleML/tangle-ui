@@ -372,9 +372,10 @@ describe("<ComponentEditorDialog />", () => {
       fireEvent.click(screen.getByRole("button", { name: /Save/i }));
 
       await waitFor(() => {
-        // The edited component is handed to the caller to apply.
+        // The edited component is handed to the caller to apply in place.
         expect(onComponentSavedMock).toHaveBeenCalledWith(
           mockHydratedComponent,
+          "update",
         );
         expect(onCloseMock).toHaveBeenCalledTimes(1);
       });
@@ -385,6 +386,147 @@ describe("<ComponentEditorDialog />", () => {
         expect.stringContaining("imported successfully"),
         "success",
       );
+    });
+
+    const renderActionsWith = (label: string, action: string) =>
+      vi.fn(
+        ({
+          onChoose,
+        }: {
+          onChoose: (a: "update" | "import" | "place") => void;
+        }) => (
+          <button
+            onClick={() => onChoose(action as "update" | "import" | "place")}
+          >
+            {label}
+          </button>
+        ),
+      );
+
+    test("renderSaveActions: Save swaps to the actions view and defers application", async () => {
+      const onCloseMock = vi.fn();
+      const onComponentSavedMock = vi.fn();
+      const renderSaveActions = renderActionsWith("do-update", "update");
+      const mockHydratedComponent = {
+        spec: { implementation: { container: { image: "test" } } },
+        name: "test-component",
+        digest: "abc123",
+        text: "name: test-component",
+      };
+      vi.mocked(hydrateComponentReference).mockResolvedValue(
+        mockHydratedComponent,
+      );
+
+      renderWithProviders(
+        <ComponentEditorDialog
+          text="name: test-component"
+          onClose={onCloseMock}
+          onComponentSaved={onComponentSavedMock}
+          renderSaveActions={renderSaveActions}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("button", { name: /Save/i }),
+        ).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByRole("button", { name: /Save/i }));
+
+      // The actions view is shown; nothing is applied or closed yet.
+      await waitFor(() => {
+        expect(
+          screen.getByRole("button", { name: "do-update" }),
+        ).toBeInTheDocument();
+      });
+      expect(onCloseMock).not.toHaveBeenCalled();
+      expect(onComponentSavedMock).not.toHaveBeenCalled();
+
+      // Choosing "update" applies via onComponentSaved and closes.
+      fireEvent.click(screen.getByRole("button", { name: "do-update" }));
+      await waitFor(() => {
+        expect(onComponentSavedMock).toHaveBeenCalledWith(
+          mockHydratedComponent,
+          "update",
+        );
+        expect(onCloseMock).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    test("renderSaveActions: choosing 'import' runs the library path, not onComponentSaved", async () => {
+      const onCloseMock = vi.fn();
+      const onComponentSavedMock = vi.fn();
+      const renderSaveActions = renderActionsWith("do-import", "import");
+      const mockHydratedComponent = {
+        spec: { implementation: { container: { image: "test" } } },
+        name: "test-component",
+        digest: "abc123",
+        text: "name: test-component",
+      };
+      vi.mocked(hydrateComponentReference).mockResolvedValue(
+        mockHydratedComponent,
+      );
+
+      renderWithProviders(
+        <ComponentEditorDialog
+          text="name: test-component"
+          onClose={onCloseMock}
+          onComponentSaved={onComponentSavedMock}
+          renderSaveActions={renderSaveActions}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("button", { name: /Save/i }),
+        ).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByRole("button", { name: /Save/i }));
+      fireEvent.click(await screen.findByRole("button", { name: "do-import" }));
+
+      await waitFor(() => {
+        expect(mockAddToComponentLibrary).toHaveBeenCalledWith(
+          mockHydratedComponent,
+          "editor_save",
+        );
+        expect(onCloseMock).toHaveBeenCalledTimes(1);
+      });
+      expect(onComponentSavedMock).not.toHaveBeenCalled();
+    });
+
+    test("renderSaveActions: Back returns to the editor without applying", async () => {
+      const onCloseMock = vi.fn();
+      const onComponentSavedMock = vi.fn();
+      const renderSaveActions = renderActionsWith("do-update", "update");
+      vi.mocked(hydrateComponentReference).mockResolvedValue({
+        spec: { implementation: { container: { image: "test" } } },
+        name: "test-component",
+        digest: "abc123",
+        text: "name: test-component",
+      });
+
+      renderWithProviders(
+        <ComponentEditorDialog
+          text="name: test-component"
+          onClose={onCloseMock}
+          onComponentSaved={onComponentSavedMock}
+          renderSaveActions={renderSaveActions}
+        />,
+      );
+
+      fireEvent.click(await screen.findByRole("button", { name: /Save/i }));
+      // Now in the actions view; go Back.
+      fireEvent.click(await screen.findByRole("button", { name: /Back/i }));
+
+      // Editor is shown again; nothing applied or closed.
+      await waitFor(() => {
+        expect(
+          screen.getByRole("button", { name: /Save/i }),
+        ).toBeInTheDocument();
+      });
+      expect(onComponentSavedMock).not.toHaveBeenCalled();
+      expect(onCloseMock).not.toHaveBeenCalled();
+      expect(mockAddToComponentLibrary).not.toHaveBeenCalled();
     });
   });
 });
