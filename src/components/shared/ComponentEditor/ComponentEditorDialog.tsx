@@ -11,7 +11,10 @@ import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useComponentLibrary } from "@/providers/ComponentLibraryProvider";
 import { hydrateComponentReference } from "@/services/componentService";
-import { isContainerImplementation } from "@/utils/componentSpec";
+import {
+  type HydratedComponentReference,
+  isContainerImplementation,
+} from "@/utils/componentSpec";
 import { saveComponent } from "@/utils/localforage";
 
 import { FullscreenElement } from "../FullscreenElement";
@@ -72,10 +75,21 @@ export const ComponentEditorDialog = withSuspenseWrapper(
     text,
     templateName = "empty",
     onClose,
+    onComponentSaved,
   }: {
     text?: string;
     templateName?: SupportedTemplate;
     onClose: () => void;
+    /**
+     * When provided, the editor is being used to edit an existing target (e.g.
+     * a selected task's component) rather than to import a brand new component
+     * into the library. The callback receives the hydrated, edited component
+     * and is responsible for applying it (and any user feedback). When omitted,
+     * the editor falls back to importing the component into the library.
+     */
+    onComponentSaved?: (
+      hydratedComponent: HydratedComponentReference,
+    ) => void | Promise<void>;
   }) => {
     const notify = useToastNotification();
     const { track } = useAnalytics();
@@ -190,16 +204,23 @@ export const ComponentEditorDialog = withSuspenseWrapper(
 
       onClose();
 
-      await addToComponentLibrary(hydratedComponent, "editor_save");
+      if (onComponentSaved) {
+        // Editing an existing target (e.g. a selected task): apply the edit to
+        // that target instead of importing a new library component. The caller
+        // owns the success/feedback messaging.
+        await onComponentSaved(hydratedComponent);
+      } else {
+        await addToComponentLibrary(hydratedComponent, "editor_save");
+        notify(
+          `Component ${hydratedComponent.name} imported successfully`,
+          "success",
+        );
+      }
 
       track("component_editor.save.completed", {
         mode,
         selected_template: templateName,
       });
-      notify(
-        `Component ${hydratedComponent.name} imported successfully`,
-        "success",
-      );
     };
 
     const handleClose = () => {
