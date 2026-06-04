@@ -35,9 +35,17 @@ type ClearMessage = {
   type: "clear";
 };
 
+/** A brief, self-clearing "spotlight" pulse to reveal a node (e.g. one that
+ * was just placed on the canvas). Unlike "highlight", it animates out on its
+ * own and does not need a matching "clear". */
+type SpotlightMessage = {
+  type: "spotlight";
+};
+
 export type NotifyMessage =
   | HighlightMessage
   | ClearMessage
+  | SpotlightMessage
   | UpdateOverlayMessage;
 
 interface NodesOverlayContextType {
