@@ -17,7 +17,7 @@ import { isFlagEnabled } from "@/components/shared/Settings/useFlags";
 import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 
 import RootLayout from "../components/layout/RootLayout";
-import { DashboardComponentsV2View } from "./Dashboard/DashboardComponentsV2View";
+import { DashboardComponentMarketplaceView } from "./Dashboard/DashboardComponentMarketplaceView";
 import { DashboardComponentsView } from "./Dashboard/DashboardComponentsView";
 import { DashboardFavoritesView } from "./Dashboard/DashboardFavoritesView";
 import { DashboardHomeView } from "./Dashboard/DashboardHomeView";
@@ -142,7 +142,7 @@ const dashboardComponentsRoute = createRoute({
 const dashboardComponentsV2Route = createRoute({
   getParentRoute: () => dashboardRoute,
   path: "/components-v2",
-  component: DashboardComponentsV2View,
+  component: DashboardComponentMarketplaceView,
   beforeLoad: () => {
     if (!isFlagEnabled("component-search-v2")) {
       throw redirect({ to: APP_ROUTES.DASHBOARD_COMPONENTS });

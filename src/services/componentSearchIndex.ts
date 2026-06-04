@@ -189,6 +189,23 @@ function tokenize(text: string): string[] {
     .filter((t) => t.length > 0);
 }
 
+function extractForbiddenNameTokens(query: string): string[] {
+  const forbiddenTokens: string[] = [];
+  const patterns = [
+    /(?:title|name)\s+(?:cannot|can\s+not|can't|must\s+not|should\s+not)\s+(?:have|contain|include)\s+([a-z0-9][a-z0-9_-]*)/gi,
+    /(?:without|exclude|excluding)\s+([a-z0-9][a-z0-9_-]*)\s+(?:in\s+)?(?:the\s+)?(?:title|name)/gi,
+  ];
+
+  for (const pattern of patterns) {
+    for (const match of query.matchAll(pattern)) {
+      const token = match[1]?.toLowerCase();
+      if (token) forbiddenTokens.push(token);
+    }
+  }
+
+  return forbiddenTokens;
+}
+
 /**
  * Per-field weights. Name matches are by far the most signal: `train` in the
  * name means the component is *about* training. The same word in implementation
@@ -271,9 +288,16 @@ export function lexicalSearch(
 
   const tokens = tokenize(trimmed);
   if (tokens.length === 0) return [];
+  const forbiddenNameTokens = extractForbiddenNameTokens(trimmed);
 
   const scored: Array<LexicalMatch & { score: number }> = [];
   for (const entry of index) {
+    if (
+      forbiddenNameTokens.some((token) => entry.searchable.name.includes(token))
+    ) {
+      continue;
+    }
+
     const { score, matchedFields } = scoreEntry(entry, tokens);
     if (score === 0) continue;
     scored.push({

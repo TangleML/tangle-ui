@@ -64,17 +64,17 @@ export const ExistingFlags: ConfigFlags = {
   },
 
   ["component-search-v2"]: {
-    name: "Component Search V2",
+    name: "Component Marketplace",
     description:
-      "Show the experimental Components V2 page that searches across standard, published, registered, and user component sources, with optional AI rerank.",
+      "Show the experimental Component Marketplace page that searches across standard, published, registered, and user component sources, with optional AI rerank.",
     default: false,
     category: "beta",
   },
 
   ["component-search-v2-ai-descriptions"]: {
-    name: "Auto-generate Components V2 AI descriptions",
+    name: "Auto-generate Component Marketplace AI descriptions",
     description:
-      "Automatically generate an AI description when viewing a component in Components V2.",
+      "Automatically generate an AI description when viewing a component in Component Marketplace.",
     default: false,
     category: "beta",
   },

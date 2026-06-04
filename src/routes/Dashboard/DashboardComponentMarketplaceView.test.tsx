@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { StoredLibrary } from "@/providers/ComponentLibraryProvider/libraries/storage";
@@ -31,7 +37,10 @@ const routeMocks = vi.hoisted(() => {
     navigate: vi.fn(),
     notify: vi.fn(),
     refetchDescription: vi.fn(),
+    rerank: vi.fn(),
+    resetRerank: vi.fn(),
     descriptionErrorState,
+    rerankConfigured: false,
     aiDescriptionsEnabled: false,
     search,
   };
@@ -142,12 +151,12 @@ vi.mock("@/hooks/useNaturalLanguageComponentSearch", () => ({
     };
   },
   useNaturalLanguageComponentRerank: () => ({
-    mutate: vi.fn(),
+    mutate: routeMocks.rerank,
     data: undefined,
     isPending: false,
     error: null,
-    reset: vi.fn(),
-    isConfigured: false,
+    reset: routeMocks.resetRerank,
+    isConfigured: routeMocks.rerankConfigured,
   }),
 }));
 
@@ -186,11 +195,11 @@ import {
   filterIndexByDisabledSourceKeys,
   SourceFilterBar,
   type SourceFilterOption,
-} from "./DashboardComponentsV2SourceFilter";
+} from "./DashboardComponentMarketplaceSourceFilter";
 import {
   createRegisteredLibrariesFingerprint,
-  DashboardComponentsV2View,
-} from "./DashboardComponentsV2View";
+  DashboardComponentMarketplaceView,
+} from "./DashboardComponentMarketplaceView";
 
 const options: SourceFilterOption[] = [
   {
@@ -377,16 +386,20 @@ describe("SourceFilterBar", () => {
   });
 });
 
-describe("DashboardComponentsV2View", () => {
+describe("DashboardComponentMarketplaceView", () => {
   beforeEach(() => {
+    vi.useRealTimers();
     routeMocks.aiDescriptionsEnabled = false;
+    routeMocks.rerankConfigured = false;
     routeMocks.descriptionErrorState.current = null;
     routeMocks.search = {};
     routeMocks.refetchDescription.mockClear();
+    routeMocks.rerank.mockReset();
+    routeMocks.resetRerank.mockClear();
   });
 
   it("filters visible component results by source type and restores them", () => {
-    render(<DashboardComponentsV2View />);
+    render(<DashboardComponentMarketplaceView />);
 
     expect(screen.getByText("Registered component")).toBeInTheDocument();
     expect(screen.getByText("Standard component")).toBeInTheDocument();
@@ -407,10 +420,101 @@ describe("DashboardComponentsV2View", () => {
     expect(screen.getByText("Registered component")).toBeInTheDocument();
   });
 
+  it("prepares AI rerank after typing and applies it when clicked", () => {
+    vi.useFakeTimers();
+    routeMocks.rerankConfigured = true;
+    routeMocks.rerank.mockImplementation(
+      (
+        variables: { query: string; candidates: unknown[] },
+        options?: {
+          onSuccess?: (
+            result: {
+              matches: Array<{ id: string; score: number; reason: string }>;
+            },
+            variables: { query: string; candidates: unknown[] },
+          ) => void;
+        },
+      ) => {
+        options?.onSuccess?.(
+          {
+            matches: [
+              {
+                id: "standard-digest",
+                score: 0.9,
+                reason: "Matches the query",
+              },
+            ],
+          },
+          variables,
+        );
+      },
+    );
+
+    render(<DashboardComponentMarketplaceView />);
+
+    fireEvent.change(screen.getByLabelText("Search components"), {
+      target: { value: "standard" },
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(750);
+    });
+
+    expect(routeMocks.rerank).toHaveBeenCalledTimes(1);
+    expect(
+      screen.queryByText("Why: Matches the query"),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Apply AI search results" }),
+    );
+
+    expect(screen.getByText("Why: Matches the query")).toBeInTheDocument();
+    vi.useRealTimers();
+  });
+
+  it("aborts a pending AI rerank when the query changes", () => {
+    vi.useFakeTimers();
+    routeMocks.rerankConfigured = true;
+    const signals: AbortSignal[] = [];
+    routeMocks.rerank.mockImplementation(
+      (variables: { signal?: AbortSignal }) => {
+        if (variables.signal) signals.push(variables.signal);
+      },
+    );
+
+    render(<DashboardComponentMarketplaceView />);
+
+    fireEvent.change(screen.getByLabelText("Search components"), {
+      target: { value: "standard" },
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(750);
+    });
+
+    expect(signals).toHaveLength(1);
+    expect(signals[0].aborted).toBe(false);
+
+    fireEvent.change(screen.getByLabelText("Search components"), {
+      target: { value: "user" },
+    });
+
+    expect(signals[0].aborted).toBe(true);
+
+    act(() => {
+      vi.advanceTimersByTime(750);
+    });
+
+    expect(signals).toHaveLength(2);
+    expect(signals[1].aborted).toBe(false);
+    vi.useRealTimers();
+  });
+
   it("shows a manual generate button when automatic descriptions are disabled", () => {
     routeMocks.search = { component: "standard-digest" };
 
-    render(<DashboardComponentsV2View />);
+    render(<DashboardComponentMarketplaceView />);
 
     // enabled=false → the hook does not auto-fetch.
     expect(routeMocks.refetchDescription).not.toHaveBeenCalled();
@@ -428,7 +532,7 @@ describe("DashboardComponentsV2View", () => {
     routeMocks.aiDescriptionsEnabled = true;
     routeMocks.search = { component: "standard-digest" };
 
-    render(<DashboardComponentsV2View />);
+    render(<DashboardComponentMarketplaceView />);
 
     // enabled=true → React Query auto-fetches; the mock fires the spy on render.
     await waitFor(() => {
@@ -443,7 +547,7 @@ describe("DashboardComponentsV2View", () => {
     routeMocks.descriptionErrorState.current = new Error("provider failed");
     routeMocks.search = { component: "standard-digest" };
 
-    render(<DashboardComponentsV2View />);
+    render(<DashboardComponentMarketplaceView />);
 
     // With retry: false the errored query stays errored — no auto-refetch.
     expect(routeMocks.refetchDescription).not.toHaveBeenCalled();

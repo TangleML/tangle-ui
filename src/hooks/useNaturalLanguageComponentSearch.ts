@@ -13,6 +13,11 @@ import type { ComponentReference } from "@/utils/componentSpec";
 interface RerankVariables {
   query: string;
   candidates: RerankCandidate[];
+  signal?: AbortSignal;
+}
+
+function isAbortError(error: Error | null): boolean {
+  return error?.name === "AbortError";
 }
 
 /**
@@ -29,15 +34,23 @@ export function useNaturalLanguageComponentRerank() {
   const { config, isConfigured } = useAiProviderSettings();
 
   const mutation = useMutation<RerankResult, Error, RerankVariables>({
-    mutationFn: ({ query, candidates }) =>
+    mutationFn: ({ query, candidates, signal }) =>
       rerankComponentsByNaturalLanguage(query, candidates, {
         model: config.model,
         apiBase: config.apiBase,
         apiKey: config.apiKey,
+        signal,
       }),
   });
 
-  return { ...mutation, isConfigured };
+  const error = isAbortError(mutation.error) ? null : mutation.error;
+
+  return {
+    ...mutation,
+    error,
+    isError: mutation.isError && error !== null,
+    isConfigured,
+  };
 }
 
 /**

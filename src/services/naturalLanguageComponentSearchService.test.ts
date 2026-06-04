@@ -244,6 +244,32 @@ describe("rerankComponentsByNaturalLanguage", () => {
     expect(body.temperature).toBeUndefined();
   });
 
+  it("tells the model to treat negative name constraints as hard filters", async () => {
+    vi.mocked(global.fetch).mockResolvedValue(
+      mockChatResponse({ matches: [] }),
+    );
+
+    await rerankComponentsByNaturalLanguage(
+      "upload a file but the title cannot have GCS in it",
+      [
+        { id: "a", name: "GCS upload", description: "Uploads to GCS" },
+        { id: "b", name: "File upload", description: "Uploads a file" },
+      ],
+      VALID_OPTIONS,
+    );
+
+    const call = vi.mocked(global.fetch).mock.calls[0];
+    const body = parseFetchBody(call);
+    const messages = body.messages;
+    if (!Array.isArray(messages) || !isRecord(messages[0])) {
+      throw new Error("Expected chat messages in fetch body");
+    }
+    expect(messages[0].content).toContain("Treat negative constraints");
+    expect(messages[0].content).toContain(
+      "drop candidates whose name contains that term",
+    );
+  });
+
   it("uses max_tokens and temperature for non-reasoning models", async () => {
     vi.mocked(global.fetch).mockResolvedValue(
       mockChatResponse({ matches: [] }),

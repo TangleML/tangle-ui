@@ -2,7 +2,7 @@ import Bugsnag from "@bugsnag/js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useLiveQuery } from "dexie-react-hooks";
-import { type ChangeEvent, useEffect, useState } from "react";
+import { type ChangeEvent, useEffect, useRef, useState } from "react";
 
 import { listApiPublishedComponentsGet } from "@/api/sdk.gen";
 import {
@@ -73,7 +73,7 @@ import {
   createSourceFilterOptions,
   filterIndexByDisabledSourceKeys,
   SourceFilterBar,
-} from "./DashboardComponentsV2SourceFilter";
+} from "./DashboardComponentMarketplaceSourceFilter";
 import { readSelectedComponentDigest } from "./searchParams";
 
 // Repeated Tailwind combos extracted as named constants.
@@ -104,6 +104,7 @@ const SOURCE_ICON_TONE_BY_KIND: Record<ComponentSearchSource["kind"], string> =
 
 /** How many lexical hits to display (and to feed into rerank). */
 const LEXICAL_RESULT_LIMIT = 20;
+const AI_RERANK_DEBOUNCE_MS = 750;
 
 const MATCH_FIELD_LABEL: Record<MatchField, string> = {
   name: "name",
@@ -459,7 +460,7 @@ function collectAllSourcedReferences({
   return out;
 }
 
-export const DashboardComponentsV2View = () => {
+export const DashboardComponentMarketplaceView = () => {
   const queryClient = useQueryClient();
   const aiDescriptionsEnabled = useFlagValue(
     "component-search-v2-ai-descriptions",
@@ -595,7 +596,7 @@ export const DashboardComponentsV2View = () => {
               });
             }
             console.warn(
-              "Components V2: registered library failed to load",
+              "Component Marketplace: registered library failed to load",
               result.reason,
             );
             continue;
@@ -688,10 +689,15 @@ export const DashboardComponentsV2View = () => {
   const lexicalMatches: LexicalMatch[] = lexicalSearch(filteredIndex, query, {
     limit: LEXICAL_RESULT_LIMIT,
   });
+  const rerankCandidates = lexicalMatches
+    .map((m) => componentReferenceToCandidate(m.reference))
+    .filter((c): c is NonNullable<typeof c> => c !== null);
+  const rerankCandidatesFingerprint = JSON.stringify(
+    rerankCandidates.map((candidate) => candidate.id),
+  );
 
   const {
     mutate: rerank,
-    data: rerankData,
     isPending: isReranking,
     error: rerankError,
     reset: resetRerank,
@@ -702,27 +708,78 @@ export const DashboardComponentsV2View = () => {
   // user types more, we drop the rerank rather than show results for an old
   // query. Tracked here so we can clear on input change.
   const [rerankedFor, setRerankedFor] = useState<string | null>(null);
+  const [autoRerankFor, setAutoRerankFor] = useState<string | null>(null);
+  const [autoRerankMatches, setAutoRerankMatches] = useState<
+    RerankedMatch[] | null
+  >(null);
+  const [applyRerankWhenReady, setApplyRerankWhenReady] = useState(false);
+  const rerankAbortControllerRef = useRef<AbortController | null>(null);
+  const rerankRequestQueryRef = useRef<string | null>(null);
+
+  const abortPendingRerank = () => {
+    rerankAbortControllerRef.current?.abort();
+    rerankAbortControllerRef.current = null;
+    rerankRequestQueryRef.current = null;
+  };
+
+  const clearRerankState = () => {
+    abortPendingRerank();
+    setRerankedFor(null);
+    setAutoRerankFor(null);
+    setAutoRerankMatches(null);
+    setApplyRerankWhenReady(false);
+    resetRerank();
+  };
+
+  const runRerank = (
+    requestQuery: string,
+    candidates: typeof rerankCandidates,
+  ) => {
+    abortPendingRerank();
+    const abortController = new AbortController();
+    rerankAbortControllerRef.current = abortController;
+    rerankRequestQueryRef.current = requestQuery;
+
+    rerank(
+      {
+        query: requestQuery,
+        candidates,
+        signal: abortController.signal,
+      },
+      {
+        onSuccess: (result, variables) => {
+          if (abortController.signal.aborted) return;
+          setAutoRerankFor(variables.query);
+          setAutoRerankMatches(result.matches);
+        },
+        onSettled: () => {
+          if (rerankAbortControllerRef.current !== abortController) return;
+          rerankAbortControllerRef.current = null;
+          rerankRequestQueryRef.current = null;
+        },
+      },
+    );
+  };
 
   const handleQueryChange = (event: ChangeEvent<HTMLInputElement>) => {
     setQuery(event.target.value);
-    if (rerankedFor !== null) {
-      setRerankedFor(null);
-      resetRerank();
-    }
+    clearRerankState();
   };
 
   const handleSmartSearch = () => {
     const trimmed = query.trim();
-    if (trimmed.length === 0 || lexicalMatches.length === 0) return;
+    if (trimmed.length === 0 || rerankCandidates.length === 0) return;
 
-    const candidates = lexicalMatches
-      .map((m) => componentReferenceToCandidate(m.reference))
-      .filter((c): c is NonNullable<typeof c> => c !== null);
+    if (autoRerankFor === trimmed && autoRerankMatches) {
+      setRerankedFor(trimmed);
+      setApplyRerankWhenReady(false);
+      return;
+    }
 
-    if (candidates.length === 0) return;
+    setApplyRerankWhenReady(true);
+    if (isReranking && rerankRequestQueryRef.current === trimmed) return;
 
-    setRerankedFor(trimmed);
-    rerank({ query: trimmed, candidates });
+    runRerank(trimmed, rerankCandidates);
   };
 
   const handleSourceToggle = (sourceKey: string) => {
@@ -731,18 +788,12 @@ export const DashboardComponentsV2View = () => {
         ? current.filter((key) => key !== sourceKey)
         : [...current, sourceKey],
     );
-    if (rerankedFor !== null) {
-      setRerankedFor(null);
-      resetRerank();
-    }
+    clearRerankState();
   };
 
   const handleEnableAllSources = () => {
     setDisabledSourceKeys([]);
-    if (rerankedFor !== null) {
-      setRerankedFor(null);
-      resetRerank();
-    }
+    clearRerankState();
   };
 
   const isLoadingLibrary =
@@ -755,6 +806,11 @@ export const DashboardComponentsV2View = () => {
   const trimmedQuery = query.trim();
   const isEmpty = trimmedQuery.length === 0;
   const isConfigError = rerankError instanceof NaturalLanguageSearchConfigError;
+  const rerankReady =
+    autoRerankFor === trimmedQuery &&
+    autoRerankMatches !== null &&
+    autoRerankMatches.length > 0;
+  const isWaitingToApplyRerank = applyRerankWhenReady && !rerankReady;
   // Only treat rerank as "active" when the model actually returned matches.
   // An empty result set (model decided nothing fit, or the response was
   // malformed and the service degraded it to `{ matches: [] }`) means the
@@ -763,13 +819,53 @@ export const DashboardComponentsV2View = () => {
   const rerankActive =
     rerankedFor !== null &&
     rerankedFor === trimmedQuery &&
-    rerankData !== undefined &&
-    rerankData.matches.length > 0 &&
+    autoRerankMatches !== null &&
+    autoRerankMatches.length > 0 &&
     !isReranking;
+
+  useEffect(() => {
+    if (
+      !isConfigured ||
+      isEmpty ||
+      rerankCandidates.length === 0 ||
+      applyRerankWhenReady ||
+      rerankedFor === trimmedQuery ||
+      autoRerankFor === trimmedQuery
+    ) {
+      return;
+    }
+
+    const requestQuery = trimmedQuery;
+    const timeoutId = window.setTimeout(() => {
+      runRerank(requestQuery, rerankCandidates);
+    }, AI_RERANK_DEBOUNCE_MS);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    applyRerankWhenReady,
+    autoRerankFor,
+    isConfigured,
+    isEmpty,
+    rerankCandidatesFingerprint,
+    rerankedFor,
+    trimmedQuery,
+  ]);
+
+  useEffect(() => abortPendingRerank, []);
+
+  useEffect(() => {
+    if (!applyRerankWhenReady || !rerankReady) return;
+    setRerankedFor(trimmedQuery);
+    setApplyRerankWhenReady(false);
+  }, [applyRerankWhenReady, rerankReady, trimmedQuery]);
+
+  useEffect(() => {
+    if (rerankError) setApplyRerankWhenReady(false);
+  }, [rerankError]);
 
   // What we actually render. Rerank wins when active; otherwise lexical.
   const displayedResults = rerankActive
-    ? mergeRerankIntoLexical(rerankData.matches, lexicalMatches)
+    ? mergeRerankIntoLexical(autoRerankMatches, lexicalMatches)
     : lexicalMatches.map((m) => ({ ...m, reason: undefined }));
 
   // Resolve the full reference for the selected digest. Prefer the already-
@@ -928,13 +1024,14 @@ export const DashboardComponentsV2View = () => {
       <div className="shrink-0 px-8 pt-4 pb-4 border-b border-border">
         <BlockStack gap="3" align="stretch">
           <BlockStack gap="1">
-            <Heading level={2}>Components V2</Heading>
+            <Heading level={2}>Component Marketplace</Heading>
             <Paragraph size="sm" tone="subdued">
               Type to search across every component source — standard library,
               your published components, registered libraries, and local user
               components. Results match on name, description, inputs/outputs,
-              and container command. Use AI search to rerank with an LLM when
-              literal matching isn&apos;t enough.
+              and container command. AI search prepares reranked results as you
+              type, then you can apply them when literal matching isn&apos;t
+              enough.
             </Paragraph>
           </BlockStack>
           <InlineStack gap="3" blockAlign="center" wrap="nowrap">
@@ -952,15 +1049,26 @@ export const DashboardComponentsV2View = () => {
               size="icon"
               onClick={handleSmartSearch}
               disabled={
-                isReranking ||
                 isEmpty ||
-                lexicalMatches.length === 0 ||
-                !isConfigured
+                rerankCandidates.length === 0 ||
+                !isConfigured ||
+                isWaitingToApplyRerank ||
+                rerankActive
               }
-              aria-label={isReranking ? "AI search in progress" : "AI search"}
-              title="AI search — rerank these results with an LLM"
+              aria-label={
+                isWaitingToApplyRerank
+                  ? "Waiting for AI search results"
+                  : rerankReady
+                    ? "Apply AI search results"
+                    : "AI search"
+              }
+              title="AI search — apply reranked results"
             >
-              {isReranking ? <Spinner size={16} /> : <Icon name="Sparkles" />}
+              {isWaitingToApplyRerank ? (
+                <Spinner size={16} />
+              ) : (
+                <Icon name="Sparkles" />
+              )}
             </Button>
           </InlineStack>
           <SourceFilterBar

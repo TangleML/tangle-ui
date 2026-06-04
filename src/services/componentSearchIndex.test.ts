@@ -214,6 +214,38 @@ describe("lexicalSearch", () => {
     expect(results[0]?.digest).toBe("b");
   });
 
+  it("filters name matches that violate negative title constraints", () => {
+    const index = buildSearchIndex([
+      makeSourced({
+        digest: "gcs",
+        spec: {
+          name: "GCS upload file",
+          description: "Uploads a file.",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+      makeSourced({
+        digest: "file",
+        spec: {
+          name: "File upload",
+          description: "Uploads a file without cloud-specific naming.",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+    ]);
+
+    const results = lexicalSearch(
+      index,
+      "upload a file but the title cannot have GCS in it",
+    );
+
+    expect(results.map((r) => r.digest)).toEqual(["file"]);
+  });
+
   it("matches implementation/command text with the lowest weight", () => {
     const index = buildSearchIndex(fixtures);
     const results = lexicalSearch(index, "pandas");

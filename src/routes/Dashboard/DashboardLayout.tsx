@@ -37,9 +37,9 @@ const BASE_SIDEBAR_ITEMS: SidebarItem[] = [
   { to: "/learn", label: "Learning Hub", icon: "GraduationCap" },
 ];
 
-const COMPONENTS_V2_ITEM: SidebarItem = {
+const COMPONENT_MARKETPLACE_ITEM: SidebarItem = {
   to: "/components-v2",
-  label: "Components V2",
+  label: "Components",
   icon: "PackageSearch",
 };
 
@@ -53,21 +53,20 @@ export function DashboardLayout() {
   const requiresAuthorization = isAuthorizationRequired();
   const isComponentsV2Enabled = useFlagValue("component-search-v2");
 
-  // Insert the Components V2 entry directly after "Components" when the
-  // beta flag is on. Keeps the nav order intuitive without touching the
-  // base list and stays correct if BASE_SIDEBAR_ITEMS gets reordered.
+  // Replace the legacy Components page with Component Marketplace when the
+  // beta flag is on. Derive the slot via findIndex so reordering
+  // BASE_SIDEBAR_ITEMS can't silently misplace the marketplace entry.
   const componentsIndex = BASE_SIDEBAR_ITEMS.findIndex(
     (item) => item.to === APP_ROUTES.DASHBOARD_COMPONENTS,
   );
-  const insertAt =
-    componentsIndex >= 0 ? componentsIndex + 1 : BASE_SIDEBAR_ITEMS.length;
-  const sidebarItems = isComponentsV2Enabled
-    ? [
-        ...BASE_SIDEBAR_ITEMS.slice(0, insertAt),
-        COMPONENTS_V2_ITEM,
-        ...BASE_SIDEBAR_ITEMS.slice(insertAt),
-      ]
-    : BASE_SIDEBAR_ITEMS;
+  const sidebarItems =
+    isComponentsV2Enabled && componentsIndex >= 0
+      ? [
+          ...BASE_SIDEBAR_ITEMS.slice(0, componentsIndex),
+          COMPONENT_MARKETPLACE_ITEM,
+          ...BASE_SIDEBAR_ITEMS.slice(componentsIndex + 1),
+        ]
+      : BASE_SIDEBAR_ITEMS;
 
   return (
     <div
