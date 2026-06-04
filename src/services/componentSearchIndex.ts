@@ -24,7 +24,7 @@ type MatchField = "name" | "description" | "io" | "implementation";
  * from the curated standard library, the backend's published catalog, a
  * registered external library (e.g. GitHub), or their own user components.
  */
-export interface ComponentSource {
+export interface ComponentSearchSource {
   kind: "standard" | "user" | "published" | "registered";
   /** Short label shown in the UI badge (e.g. "Standard", "Published", or a library name). */
   label: string;
@@ -37,7 +37,7 @@ export interface ComponentSource {
 
 export interface SourcedReference {
   reference: ComponentReference;
-  source: ComponentSource;
+  source: ComponentSearchSource;
 }
 
 export interface IndexEntry {
@@ -48,7 +48,7 @@ export interface IndexEntry {
   /** Display name. */
   name: string;
   /** Where this component came from. */
-  source: ComponentSource;
+  source: ComponentSearchSource;
   /** Pre-lowercased searchable text, one per logical field. */
   searchable: Record<MatchField, string>;
 }
@@ -57,7 +57,7 @@ export interface LexicalMatch {
   reference: ComponentReference;
   digest: string;
   name: string;
-  source: ComponentSource;
+  source: ComponentSearchSource;
   /** Which fields matched the query (for UX labels like "matched: command"). */
   matchedFields: MatchField[];
 }
@@ -160,7 +160,7 @@ export function buildSearchIndex(sourced: SourcedReference[]): IndexEntry[] {
 function tokenize(text: string): string[] {
   return text
     .toLowerCase()
-    .split(/[^a-z0-9]+/i)
+    .split(/[^a-z0-9]+/)
     .filter((t) => t.length > 0);
 }
 
@@ -200,7 +200,6 @@ interface SearchOptions {
 function scoreEntry(
   entry: IndexEntry,
   tokens: string[],
-  fullQuery: string,
 ): { score: number; matchedFields: MatchField[] } {
   const fields: MatchField[] = ["name", "description", "io", "implementation"];
   const matched = new Set<MatchField>();
@@ -215,10 +214,17 @@ function scoreEntry(
     }
   }
 
-  // Multi-token contiguous match in the name is a very strong signal.
-  if (tokens.length > 1 && entry.searchable.name.includes(fullQuery)) {
-    score += 10;
-    matched.add("name");
+  // Multi-token contiguous match in the name is a very strong signal. Both
+  // sides are normalized so the bonus also fires for snake_case names —
+  // query "train test split" should match `train_test_split`, not just
+  // names that happen to contain literal spaces.
+  if (tokens.length > 1) {
+    const normalizedName = entry.searchable.name.replace(/[^a-z0-9]+/g, " ");
+    const normalizedQuery = tokens.join(" ");
+    if (normalizedName.includes(normalizedQuery)) {
+      score += 10;
+      matched.add("name");
+    }
   }
 
   return { score, matchedFields: [...matched] };
@@ -243,7 +249,7 @@ export function lexicalSearch(
 
   const scored: Array<LexicalMatch & { score: number }> = [];
   for (const entry of index) {
-    const { score, matchedFields } = scoreEntry(entry, tokens, trimmed);
+    const { score, matchedFields } = scoreEntry(entry, tokens);
     if (score === 0) continue;
     scored.push({
       reference: entry.reference,

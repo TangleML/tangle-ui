@@ -4,17 +4,17 @@ import type { ComponentReference } from "@/utils/componentSpec";
 
 import {
   buildSearchIndex,
-  type ComponentSource,
+  type ComponentSearchSource,
   lexicalSearch,
   type SourcedReference,
 } from "./componentSearchIndex";
 
-const STANDARD: ComponentSource = {
+const STANDARD: ComponentSearchSource = {
   kind: "standard",
   label: "Standard",
   id: "standard",
 };
-const USER: ComponentSource = { kind: "user", label: "User", id: "user" };
+const USER: ComponentSearchSource = { kind: "user", label: "User", id: "user" };
 
 function makeRef(
   partial: Partial<ComponentReference> & { digest?: string },
@@ -29,7 +29,7 @@ function makeRef(
 
 function makeSourced(
   partial: Partial<ComponentReference> & { digest?: string },
-  source: ComponentSource = STANDARD,
+  source: ComponentSearchSource = STANDARD,
 ): SourcedReference {
   return { reference: makeRef(partial), source };
 }
@@ -177,9 +177,35 @@ describe("lexicalSearch", () => {
   });
 
   it("applies the multi-token full-substring bonus on the name", () => {
-    const index = buildSearchIndex(fixtures);
+    // Two candidates that match the same three tokens on the name (3*5 = 15
+    // per-token score either way), one scattered and one contiguous. Without
+    // the +10 contiguous-substring bonus, the scattered name wins on the
+    // alphabetical tiebreak ("a_..." < "train..."). With the bonus, the
+    // contiguous snake_case name pulls ahead — this is the case the bonus
+    // exists for.
+    const localFixtures: SourcedReference[] = [
+      makeSourced({
+        digest: "scattered",
+        spec: {
+          name: "a_train_b_test_c_split_d",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+      makeSourced({
+        digest: "contiguous",
+        spec: {
+          name: "train_test_split",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+    ];
+    const index = buildSearchIndex(localFixtures);
     const results = lexicalSearch(index, "train test split");
-    expect(results[0]?.digest).toBe("a");
+    expect(results[0]?.digest).toBe("contiguous");
   });
 
   it("tokenizes snake_case queries so each segment matches independently", () => {
