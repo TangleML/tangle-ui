@@ -4,6 +4,8 @@ import { buildSchemaDocument } from "@hyperjump/json-schema/experimental";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import yaml from "js-yaml";
 
+import { PIPELINE_YAML_LOAD_OPTIONS } from "@/utils/yaml";
+
 const COMPONENT_SPEC_SCHEMA_URL =
   "https://raw.githubusercontent.com/Cloud-Pipelines/component_spec_schema/refs/heads/master/component_spec.json_schema.json";
 
@@ -123,7 +125,7 @@ function normalizeValue(value: any): any {
     // assuming it is YAML
     // todo: worth revisiting
     try {
-      return yaml.load(value) as any;
+      return yaml.load(value, PIPELINE_YAML_LOAD_OPTIONS) as any;
     } catch {
       return undefined;
     }
