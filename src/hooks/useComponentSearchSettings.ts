@@ -16,10 +16,7 @@ import { isRecord } from "@/utils/typeGuards";
 
 const STORAGE_KEY = "tangle.componentSearchV2.config";
 
-interface ComponentSearchSettingsStorage extends Record<
-  typeof STORAGE_KEY,
-  unknown
-> {}
+type ComponentSearchSettingsStorage = Record<typeof STORAGE_KEY, unknown>;
 
 const storage = getStorage<
   typeof STORAGE_KEY,
@@ -39,40 +36,32 @@ const DEFAULTS: ComponentSearchConfig = {
   model: "",
 };
 
+function readTrimmedString(
+  record: Record<string, unknown>,
+  key: string,
+): string {
+  if (!(key in record)) return "";
+  const value = record[key];
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : "";
+}
+
 function readStoredConfig(): ComponentSearchConfig {
   if (typeof window === "undefined") return DEFAULTS;
-  try {
-    const record = storage.getItem(STORAGE_KEY);
-    if (!isRecord(record)) return DEFAULTS;
-    const legacyThinking =
-      "thinkingModel" in record &&
-      typeof record.thinkingModel === "string" &&
-      record.thinkingModel.trim().length > 0
-        ? record.thinkingModel
-        : "";
-    const storedModel =
-      "model" in record &&
-      typeof record.model === "string" &&
-      record.model.trim().length > 0
-        ? record.model
-        : "";
-    // Migration: previous versions stored `thinkingModel`. Prefer the current
-    // `model` value when present, and only fall back to the legacy key.
-    const model = storedModel || legacyThinking || DEFAULTS.model;
-    return {
-      apiBase:
-        "apiBase" in record && typeof record.apiBase === "string"
-          ? record.apiBase
-          : DEFAULTS.apiBase,
-      apiKey:
-        "apiKey" in record && typeof record.apiKey === "string"
-          ? record.apiKey
-          : DEFAULTS.apiKey,
-      model,
-    };
-  } catch {
-    return DEFAULTS;
-  }
+  const record = storage.getItem(STORAGE_KEY);
+  if (!isRecord(record)) return DEFAULTS;
+  // Migration: previous versions stored `thinkingModel`. Prefer the current
+  // `model` value when present, and only fall back to the legacy key.
+  const model =
+    readTrimmedString(record, "model") ||
+    readTrimmedString(record, "thinkingModel") ||
+    DEFAULTS.model;
+  return {
+    apiBase: readTrimmedString(record, "apiBase") || DEFAULTS.apiBase,
+    apiKey: readTrimmedString(record, "apiKey") || DEFAULTS.apiKey,
+    model,
+  };
 }
 
 /**
@@ -117,9 +106,14 @@ export function useComponentSearchSettings() {
   );
 
   // The React Compiler memoizes these for us; no useCallback needed.
+  // Read fresh from storage instead of merging onto the render-time `config`
+  // so two updates in the same tick (e.g. two field handlers firing back-to-
+  // back, or an update racing a cross-tab storage event) don't both clobber
+  // each other with the same stale snapshot.
   const update = (partial: Partial<ComponentSearchConfig>) => {
     if (typeof window === "undefined") return;
-    const next: ComponentSearchConfig = { ...config, ...partial };
+    const current = readStoredConfig();
+    const next: ComponentSearchConfig = { ...current, ...partial };
     storage.setItem(STORAGE_KEY, next);
   };
 
