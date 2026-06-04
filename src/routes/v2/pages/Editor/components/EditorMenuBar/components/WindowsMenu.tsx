@@ -40,19 +40,8 @@ export const WindowsMenu = observer(function WindowsMenu() {
     );
   };
 
-  const notifyOpenStateChange = (open: boolean) => {
-    requestAnimationFrame(() => {
-      window.dispatchEvent(new Event("resize"));
-    });
-    if (!open) {
-      setTimeout(() => {
-        window.dispatchEvent(new Event("resize"));
-      }, 250);
-    }
-  };
-
   return (
-    <DropdownMenu onOpenChange={notifyOpenStateChange}>
+    <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <MenuTriggerButton {...tracking("v2.pipeline_editor.windows_menu")}>
           Windows
@@ -87,7 +76,7 @@ export const WindowsMenu = observer(function WindowsMenu() {
           </DropdownMenuCheckboxItem>
         ))}
         <DropdownMenuSeparator />
-        <DropdownMenuSub onOpenChange={notifyOpenStateChange}>
+        <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <Icon name="LayoutDashboard" size="sm" />
             Views
