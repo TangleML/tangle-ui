@@ -113,4 +113,6 @@ export const TangentQueryKeys = {
   Stats: () => ["tangent", "stats"] as const,
   Pipelines: () => ["tangent", "pipelines"] as const,
   Pipeline: (runId: string) => ["tangent", "pipeline", runId] as const,
+  Research: (instanceId: string, sessionId: string) =>
+    ["tangent", "research", instanceId, sessionId] as const,
 } as const;

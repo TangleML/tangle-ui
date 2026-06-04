@@ -23,6 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Paragraph, Text } from "@/components/ui/typography";
+import { useResearchProgress } from "@/routes/tangent/hooks/useResearchProgress";
 import { useRunAutomatedResearch } from "@/routes/tangent/hooks/useRunAutomatedResearch";
 import { useRunScenarios } from "@/routes/tangent/hooks/useRunScenarios";
 import type {
@@ -31,6 +32,7 @@ import type {
   ScenarioIdeaType,
   ScenarioImpact,
 } from "@/routes/tangent/idb/tangentDb";
+import { ResearchProgressView } from "@/routes/v2/shared/components/MlExperimentPlanner/components/ResearchProgressView";
 
 const IDEA_TYPE_LABEL: Record<ScenarioIdeaType, string> = {
   feature_engineering: "Feature engineering",
@@ -101,6 +103,9 @@ function ScenarioRow({
   onRunResearch,
   isResearchPending,
 }: ScenarioRowProps) {
+  const { data: progress, isLoading: isProgressLoading, isError } =
+    useResearchProgress(scenario.research);
+
   return (
     <TableRow className="cursor-pointer" onClick={onSelect}>
       <TableCell>
@@ -125,14 +130,21 @@ function ScenarioRow({
       </TableCell>
       <TableCell>
         {scenario.research ? (
-          <Link
-            external
-            href={scenario.research.url}
-            size="sm"
-            onClick={(event) => event.stopPropagation()}
-          >
-            Open research session
-          </Link>
+          <BlockStack gap="2" inlineAlign="start">
+            <ResearchProgressView
+              progress={progress}
+              isLoading={isProgressLoading}
+              isError={isError}
+            />
+            <Link
+              external
+              href={scenario.research.url}
+              size="sm"
+              onClick={(event) => event.stopPropagation()}
+            >
+              Open research session
+            </Link>
+          </BlockStack>
         ) : (
           <Button
             size="xs"
@@ -164,6 +176,9 @@ function ScenarioDetail({
   onRunResearch,
   isResearchPending,
 }: ScenarioDetailProps) {
+  const { data: progress, isLoading: isProgressLoading, isError } =
+    useResearchProgress(scenario.research);
+
   return (
     <BlockStack gap="3" fill className="p-3" inlineAlign="start">
       <Breadcrumb>
@@ -193,9 +208,16 @@ function ScenarioDetail({
             </Text>
           </InlineStack>
           {scenario.research ? (
-            <Link external href={scenario.research.url} size="sm">
-              Open research session
-            </Link>
+            <BlockStack gap="2" inlineAlign="start">
+              <ResearchProgressView
+                progress={progress}
+                isLoading={isProgressLoading}
+                isError={isError}
+              />
+              <Link external href={scenario.research.url} size="sm">
+                Open research session
+              </Link>
+            </BlockStack>
           ) : (
             <Button
               size="sm"
