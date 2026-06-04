@@ -2,6 +2,7 @@ import yaml from "js-yaml";
 
 import type { TaskSpec } from "./componentSpec";
 import { ISO8601_DURATION_ZERO_DAYS } from "./constants";
+import { PIPELINE_YAML_LOAD_OPTIONS } from "./yaml";
 
 const httpGetDataWithCache = async <T>(
   url: string,
@@ -63,7 +64,7 @@ function loadTextFromData(buffer: ArrayBuffer): string {
 }
 
 export function loadObjectFromYamlData(buffer: ArrayBuffer): object {
-  const obj = yaml.load(loadTextFromData(buffer));
+  const obj = yaml.load(loadTextFromData(buffer), PIPELINE_YAML_LOAD_OPTIONS);
   if (typeof obj === "object" && obj !== undefined && obj !== null) {
     return obj;
   }

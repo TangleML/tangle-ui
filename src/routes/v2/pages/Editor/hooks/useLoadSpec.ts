@@ -21,6 +21,7 @@ import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
 import type { PipelineRef } from "@/services/pipelineStorage/types";
+import { PIPELINE_YAML_LOAD_OPTIONS } from "@/utils/yaml";
 
 interface LoadedSpec {
   spec: ComponentSpec;
@@ -63,7 +64,7 @@ async function resolveSpecData(
     throw new Error(`Pipeline "${ref.name}" not found`);
   }
   const yamlContent = await pipelineFile.read();
-  return yaml.load(yamlContent);
+  return yaml.load(yamlContent, PIPELINE_YAML_LOAD_OPTIONS);
 }
 
 export function useLoadSpec(ref: PipelineRef) {
