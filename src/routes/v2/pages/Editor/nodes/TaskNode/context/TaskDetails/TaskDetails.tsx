@@ -17,6 +17,7 @@ import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionCo
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { SYSTEM_ANNOTATIONS, ZINDEX_ANNOTATION } from "@/utils/annotations";
+import type { HydratedComponentReference } from "@/utils/componentSpec";
 import { tracking } from "@/utils/tracking";
 
 import { getTaskYamlText } from "./components/actions/getTaskYamlText";
@@ -38,7 +39,7 @@ export const TaskDetails = observer(function TaskDetails({
   const { track } = useAnalytics();
   const { editor } = useSharedStores();
   const { undo } = useEditorSession();
-  const { renameTask } = useTaskActions();
+  const { renameTask, replaceTask } = useTaskActions();
   const notify = useToastNotification();
   const spec = useSpec();
   const task = useTask(entityId);
@@ -73,6 +74,23 @@ export const TaskDetails = observer(function TaskDetails({
   const pythonCode = componentSpec?.metadata?.annotations?.python_original_code;
 
   const isSubgraphTask = task.subgraphSpec !== undefined;
+
+  const handleComponentSaved = (
+    hydratedComponent: HydratedComponentReference,
+  ) => {
+    const result = replaceTask(spec, task.$id, hydratedComponent);
+    const lostInputs = result.inputDiff?.lostEntities ?? [];
+
+    if (lostInputs.length > 0) {
+      const inputNames = lostInputs.map((input) => input.name).join(", ");
+      notify(
+        `Component updated. Removed ${lostInputs.length} input(s) no longer defined: ${inputNames}.`,
+        "warning",
+      );
+    } else {
+      notify("Component updated", "success");
+    }
+  };
 
   const handleZIndexChange = (newZIndex: number) => {
     undo.withGroup("Update task z-index", () => {
@@ -163,6 +181,7 @@ export const TaskDetails = observer(function TaskDetails({
           yamlText={yamlText}
           taskName={task.name}
           pythonCode={pythonCode}
+          onComponentSaved={handleComponentSaved}
         />
       </BlockStack>
 

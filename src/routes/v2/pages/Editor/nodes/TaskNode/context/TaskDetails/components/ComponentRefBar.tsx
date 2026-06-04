@@ -22,6 +22,7 @@ import { Text } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import type { ComponentReference as ModelComponentReference } from "@/models/componentSpec/entities/types";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
+import type { HydratedComponentReference } from "@/utils/componentSpec";
 import { getComponentName } from "@/utils/getComponentName";
 import { isSubgraph } from "@/utils/subgraphUtils";
 import { tracking } from "@/utils/tracking";
@@ -35,6 +36,9 @@ interface ComponentRefBarProps {
   yamlText: string;
   taskName: string;
   pythonCode: string | undefined;
+  onComponentSaved?: (
+    hydratedComponent: HydratedComponentReference,
+  ) => void | Promise<void>;
 }
 
 export function ComponentRefBar({
@@ -42,6 +46,7 @@ export function ComponentRefBar({
   yamlText,
   taskName,
   pythonCode,
+  onComponentSaved,
 }: ComponentRefBarProps) {
   const { track } = useAnalytics();
   const notify = useToastNotification();
@@ -195,6 +200,7 @@ export function ComponentRefBar({
         <ComponentEditorDialog
           text={yamlText}
           onClose={() => setIsEditDialogOpen(false)}
+          onComponentSaved={onComponentSaved}
         />
       )}
 
