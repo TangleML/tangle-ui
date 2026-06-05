@@ -9,6 +9,7 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Link as UILink } from "@/components/ui/link";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
+import { APP_ROUTES } from "@/routes/router";
 import {
   ABOUT_URL,
   DOCUMENTATION_URL,
@@ -54,12 +55,17 @@ export function DashboardLayout() {
 
   // Insert the Components V2 entry directly after "Components" when the
   // beta flag is on. Keeps the nav order intuitive without touching the
-  // base list.
+  // base list and stays correct if BASE_SIDEBAR_ITEMS gets reordered.
+  const componentsIndex = BASE_SIDEBAR_ITEMS.findIndex(
+    (item) => item.to === APP_ROUTES.DASHBOARD_COMPONENTS,
+  );
+  const insertAt =
+    componentsIndex >= 0 ? componentsIndex + 1 : BASE_SIDEBAR_ITEMS.length;
   const sidebarItems = isComponentsV2Enabled
     ? [
-        ...BASE_SIDEBAR_ITEMS.slice(0, 4),
+        ...BASE_SIDEBAR_ITEMS.slice(0, insertAt),
         COMPONENTS_V2_ITEM,
-        ...BASE_SIDEBAR_ITEMS.slice(4),
+        ...BASE_SIDEBAR_ITEMS.slice(insertAt),
       ]
     : BASE_SIDEBAR_ITEMS;
 

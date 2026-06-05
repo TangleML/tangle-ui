@@ -17,33 +17,37 @@ export const DashboardComponentsV2View = () => {
   };
 
   return (
+    // Outer wrapper carries the inline height; BlockStack's typed props don't
+    // include `style`, so the height stays on a plain div and BlockStack owns
+    // the vertical flex semantic.
     <div
-      className="flex flex-col -mt-4 -mb-6 -mx-8 overflow-hidden"
+      className="-mt-4 -mb-6 -mx-8 overflow-hidden"
       style={{ height: `calc(100vh - ${TOP_NAV_HEIGHT}px)` }}
     >
-      <div className="shrink-0 px-8 pt-4 pb-4 border-b border-border">
-        <BlockStack gap="3" align="stretch">
-          <BlockStack gap="1">
-            <Heading level={2}>Components V2</Heading>
-            <Paragraph size="sm" tone="subdued">
-              Search across component sources from one experimental dashboard.
-            </Paragraph>
+      <BlockStack className="h-full">
+        <div className="shrink-0 px-8 pt-4 pb-4 border-b border-border">
+          <BlockStack gap="3" align="stretch">
+            <BlockStack gap="1">
+              <Heading level={2}>Components V2</Heading>
+              <Paragraph size="sm" tone="subdued">
+                Search across component sources from one experimental dashboard.
+              </Paragraph>
+            </BlockStack>
+            <Input
+              type="search"
+              placeholder="e.g. train_test_split, pandas, clean up my data"
+              value={query}
+              onChange={handleQueryChange}
+              aria-label="Search components"
+            />
           </BlockStack>
-          <Input
-            type="search"
-            placeholder="e.g. train_test_split, pandas, clean up my data"
-            value={query}
-            onChange={handleQueryChange}
-            aria-label="Search components"
-            className="flex-1"
-          />
-        </BlockStack>
-      </div>
-      <div className="flex-1 min-h-0 overflow-y-auto px-8 py-4">
-        <Paragraph size="sm" tone="subdued">
-          Component results will appear here.
-        </Paragraph>
-      </div>
+        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto px-8 py-4">
+          <Paragraph size="sm" tone="subdued">
+            Component results will appear here.
+          </Paragraph>
+        </div>
+      </BlockStack>
     </div>
   );
 };
