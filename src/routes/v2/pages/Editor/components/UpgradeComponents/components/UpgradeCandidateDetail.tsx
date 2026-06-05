@@ -28,7 +28,11 @@ function EmptyDetail() {
   );
 }
 
-function PredictedIssuesSection({ issues }: { issues: ValidationIssue[] }) {
+export function PredictedIssuesSection({
+  issues,
+}: {
+  issues: ValidationIssue[];
+}) {
   if (issues.length === 0) return null;
 
   return (
