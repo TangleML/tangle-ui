@@ -16,12 +16,35 @@ import { AnalyzeRunBlock } from "@/routes/tangent/components/AnalyzeRunBlock";
 import { HeroBanner } from "@/routes/tangent/components/HeroBanner";
 import { PipelineRow } from "@/routes/tangent/components/PipelineRow";
 import { useReanalyzeAll } from "@/routes/tangent/hooks/useReanalyzeAll";
+import { useScenarioRunIds } from "@/routes/tangent/hooks/useScenarioRunIds";
 import { useTangentPipelines } from "@/routes/tangent/hooks/useTangentPipelines";
+import type { ScenarioEntry } from "@/routes/tangent/idb/tangentDb";
 import { PIPELINE_FILTERS } from "@/routes/tangent/labels";
 import type { PipelineFilter, TangentPipeline } from "@/routes/tangent/types";
 
 interface TangentSearch {
   filter?: string;
+}
+
+/**
+ * Builds a dashboard pipeline row from a locally-saved scenario for runs that
+ * are not present in the mocked pipeline data (e.g. real runs the user planned
+ * a scenario against). Mocked pipelines are preferred when a run id matches.
+ */
+function pipelineFromScenario(scenario: ScenarioEntry): TangentPipeline {
+  return {
+    runId: scenario.run.runId,
+    name: scenario.plan.name,
+    runStatus: "succeeded",
+    lastRunAt: new Date(scenario.createdAt).toISOString(),
+    scenarioStatus: scenario.research ? "tangent_running" : "scenario_built",
+    opportunityScore: scenario.score,
+    analyzing: false,
+    builtByCurrentUser: true,
+    ideas: [],
+    rationale: scenario.rationale,
+    summary: scenario.summary,
+  };
 }
 
 function isPipelineFilter(value: unknown): value is PipelineFilter {
@@ -35,8 +58,6 @@ function matchesFilter(
   filter: PipelineFilter,
 ): boolean {
   if (filter === "my_pipelines") return pipeline.builtByCurrentUser;
-  if (filter === "no_scenario")
-    return pipeline.scenarioStatus === "no_scenario";
   if (filter === "has_results") {
     return pipeline.scenarioStatus === "results_available";
   }
@@ -57,21 +78,35 @@ export function TangentDashboardView() {
     ? search.filter
     : "all";
 
-  const { data: pipelines, isPending, isError } = useTangentPipelines();
+  const {
+    data: pipelines,
+    isPending: pipelinesPending,
+    isError,
+  } = useTangentPipelines();
+  const { representativeByRun, isLoading: scenariosLoading } =
+    useScenarioRunIds();
   const reanalyze = useReanalyzeAll();
 
-  const allPipelines = pipelines ?? [];
-  const sorted = [...allPipelines].sort(byOpportunity);
+  const isPending = pipelinesPending || scenariosLoading;
+
+  const mockByRun = new Map(
+    (pipelines ?? []).map((pipeline) => [pipeline.runId, pipeline]),
+  );
+  const withScenarios = Array.from(representativeByRun.entries()).map(
+    ([runId, scenario]) =>
+      mockByRun.get(runId) ?? pipelineFromScenario(scenario),
+  );
+  const sorted = [...withScenarios].sort(byOpportunity);
   const visible = sorted.filter((pipeline) =>
     matchesFilter(pipeline, activeFilter),
   );
-  const scoredCount = allPipelines.filter(
+  const scoredCount = withScenarios.filter(
     (pipeline) => pipeline.opportunityScore !== null,
   ).length;
 
   const subtitle = isPending
     ? "Loading pipelines…"
-    : `Ranked by Tangent improvement opportunity · Search team · ${allPipelines.length} pipelines · ${scoredCount} analyzed`;
+    : `Ranked by Tangent improvement opportunity · Search team · ${withScenarios.length} pipelines with scenarios · ${scoredCount} analyzed`;
 
   return (
     <BlockStack gap="6">
@@ -136,7 +171,7 @@ export function TangentDashboardView() {
         )}
 
         {!isPending && !isError && visible.length > 0 && (
-          <Table>
+          <Table data-testid="tangent-pipelines-table">
             <TableHeader>
               <TableRow className="text-xs">
                 <TableHead className="w-2/5">Name</TableHead>

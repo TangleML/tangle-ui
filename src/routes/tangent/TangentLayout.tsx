@@ -29,7 +29,6 @@ interface FilterLink {
 
 const FILTER_LINKS: FilterLink[] = [
   { filter: "my_pipelines", icon: "GitBranch" },
-  { filter: "no_scenario", icon: "CircleDashed" },
   { filter: "has_results", icon: "ChartLine" },
 ];
 

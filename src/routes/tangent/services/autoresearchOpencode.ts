@@ -275,7 +275,9 @@ function extractErrorMessage(error: unknown): string | undefined {
 }
 
 /** Pull the narration / running tool / completion state from message parts. */
-function parseAssistantMessage(message: unknown): ParsedAssistantMessage | null {
+function parseAssistantMessage(
+  message: unknown,
+): ParsedAssistantMessage | null {
   if (!isRecord(message)) return null;
   const { info, parts } = message;
   if (!isRecord(info) || info.role !== "assistant") return null;
