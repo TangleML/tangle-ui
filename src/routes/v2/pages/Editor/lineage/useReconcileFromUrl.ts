@@ -1,6 +1,8 @@
 import { useSearch } from "@tanstack/react-router";
 import { useEffect } from "react";
 
+import { focusModeStore } from "@/routes/v2/shared/hooks/useFocusMode";
+
 import { reconcileModeStore } from "./reconcileModeStore";
 import {
   getReconcileSession,
@@ -25,16 +27,18 @@ export function useReconcileFromUrl(): void {
   }, []);
 
   useEffect(() => {
-    if (!sessionId) {
-      reconcileModeStore.exit();
-      return;
-    }
-    const session = getReconcileSession(sessionId);
+    const session = sessionId ? getReconcileSession(sessionId) : undefined;
     if (session) {
       reconcileModeStore.enter(session);
+      // Reuse focus mode to hide dock panels while reconciling (shared store —
+      // keeps the architecture's pages → shared dependency direction).
+      focusModeStore.setActive(true);
     } else {
       reconcileModeStore.exit();
     }
-    return () => reconcileModeStore.exit();
+    return () => {
+      reconcileModeStore.exit();
+      focusModeStore.setActive(false);
+    };
   }, [sessionId]);
 }
