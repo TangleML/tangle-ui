@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import type { ComponentSpec } from "@/models/componentSpec";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useAutoLayout } from "@/routes/v2/pages/Editor/hooks/useAutoLayout";
+import { ReconcileModeController } from "@/routes/v2/pages/Editor/lineage/ReconcileModeController";
 import { SubgraphBreadcrumbs } from "@/routes/v2/shared/components/SubgraphBreadcrumbs";
 import { FLOW_CANVAS_DEFAULT_PROPS } from "@/routes/v2/shared/flowCanvasDefaults";
 import { useDoubleClickBehavior } from "@/routes/v2/shared/hooks/useDoubleClickBehavior";
@@ -122,6 +123,7 @@ export const FlowCanvas = observer(function FlowCanvas({
         )}
       >
         <FloatingSelectionToolbar spec={spec} />
+        <ReconcileModeController />
         <Background gap={10} className="bg-slate-50!" />
         <Controls
           position="bottom-right"

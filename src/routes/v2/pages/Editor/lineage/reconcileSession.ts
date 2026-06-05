@@ -27,8 +27,8 @@ const reconcileSessionSchema = z.object({
   /** Self-contained edited component YAML, so the session needs no store lookup. */
   targetComponentText: z.string(),
   targetName: z.string(),
-  /** Where to return when reconciling ends (origin editor + reconcile overview). */
-  returnTo: z.string(),
+  /** Origin pipeline (storage key) to return to — reopens the overview there. */
+  returnToPipeline: z.string(),
   worklist: z.array(worklistItemSchema),
   createdAt: z.number(),
 });

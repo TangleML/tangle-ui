@@ -1,4 +1,4 @@
-import { useParams } from "@tanstack/react-router";
+import { useNavigate, useParams } from "@tanstack/react-router";
 import { observer } from "mobx-react-lite";
 import { useEffect, useRef, useState } from "react";
 
@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Heading, Text } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
+import { APP_ROUTES } from "@/routes/router";
 import { AnnotationsBlock } from "@/routes/v2/pages/Editor/components/AnnotationsBlock/AnnotationsBlock";
 import { PredictedIssuesSection } from "@/routes/v2/pages/Editor/components/UpgradeComponents/components/UpgradeCandidateDetail";
 import { buildUpgradeCandidateFromResolved } from "@/routes/v2/pages/Editor/components/UpgradeComponents/utils/buildUpgradeCandidateFromResolved";
@@ -24,7 +25,7 @@ import {
   type LineageUsage,
 } from "@/routes/v2/pages/Editor/lineage/collectLineageUsages";
 import { findTaskContext } from "@/routes/v2/pages/Editor/lineage/findTaskContext";
-import { ReconcileOverview } from "@/routes/v2/pages/Editor/lineage/ReconcileOverview";
+import { createReconcileSession } from "@/routes/v2/pages/Editor/lineage/reconcileSession";
 import { ReconcileSiblingsDialog } from "@/routes/v2/pages/Editor/lineage/ReconcileSiblingsDialog";
 import { scanPipelinesForLineage } from "@/routes/v2/pages/Editor/lineage/scanPipelinesForLineage";
 import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskActions";
@@ -63,6 +64,7 @@ export const TaskDetails = observer(function TaskDetails({
   const { undo } = useEditorSession();
   const { renameTask, replaceTask, addTask } = useTaskActions();
   const notify = useToastNotification();
+  const navigate = useNavigate();
   const spec = useSpec();
   const task = useTask(entityId);
   const { focusedArgumentName } = editor;
@@ -80,11 +82,29 @@ export const TaskDetails = observer(function TaskDetails({
     matches: LineageUsage[];
     crossPipelineCount: number;
   } | null>(null);
-  const [overview, setOverview] = useState<{
-    component: HydratedComponentReference;
-    originId: string;
-  } | null>(null);
   const renameInputRef = useRef<HTMLInputElement>(null);
+
+  // Start a cross-pipeline reconcile: create a session carrying the edited
+  // component and open the overview via the URL (so it reopens on return).
+  const launchReconcileOverview = (
+    component: HydratedComponentReference,
+    originId: string,
+  ) => {
+    if (!currentPipelineKey) return;
+    const session = createReconcileSession({
+      originId,
+      targetDigest: component.digest,
+      targetComponentText: component.text,
+      targetName: component.name,
+      returnToPipeline: currentPipelineKey,
+      worklist: [],
+    });
+    void navigate({
+      to: APP_ROUTES.EDITOR_V2_PIPELINE,
+      params: { pipelineName: currentPipelineKey },
+      search: { reconcileOverview: session.sessionId },
+    });
+  };
 
   useEffect(() => {
     if (focusedArgumentName) {
@@ -189,7 +209,7 @@ export const TaskDetails = observer(function TaskDetails({
             crossPipelineCount: otherPipelinesPending,
           });
         } else if (otherPipelinesPending > 0) {
-          setOverview({ component: hydratedComponent, originId });
+          launchReconcileOverview(hydratedComponent, originId);
         }
       },
     );
@@ -455,18 +475,10 @@ export const TaskDetails = observer(function TaskDetails({
               LINEAGE_ORIGIN_ANNOTATION,
             )?.originId;
             setReconcile(null);
-            if (originId) setOverview({ component, originId });
+            if (originId) launchReconcileOverview(component, originId);
           }}
           onConfirm={handleReconcileConfirm}
           onCancel={() => setReconcile(null)}
-        />
-      )}
-
-      {overview && (
-        <ReconcileOverview
-          component={overview.component}
-          originId={overview.originId}
-          onClose={() => setOverview(null)}
         />
       )}
     </BlockStack>

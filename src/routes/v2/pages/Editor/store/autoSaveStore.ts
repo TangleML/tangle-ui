@@ -17,6 +17,12 @@ const AUTOSAVE_MIN_SAVING_INDICATOR_MS = 600;
 export class AutoSaveStore {
   @observable accessor isSaving = false;
   @observable accessor lastSavedAt: Date | null = null;
+  /**
+   * When true, debounced autosave is held — used during reconcile so the staged
+   * change stays in-memory until the explicit "Finish Reconciling" commit.
+   * Explicit `save()` still works.
+   */
+  @observable accessor suspended = false;
 
   private spec: ComponentSpec | null = null;
   private pipelineName: string | null = null;
@@ -39,6 +45,7 @@ export class AutoSaveStore {
     this.pipelineName = pipelineName;
     this.isSaving = false;
     this.lastSavedAt = null;
+    this.suspended = false;
 
     this.disposeReaction = reaction(
       () => this.serializeSpec(),
@@ -71,6 +78,11 @@ export class AutoSaveStore {
     this.isSaving = false;
   }
 
+  @action setSuspended(value: boolean) {
+    this.suspended = value;
+    if (value) this.debouncedSave.cancel();
+  }
+
   private serializeSpec(): string | null {
     if (!this.spec) return null;
     try {
@@ -81,7 +93,7 @@ export class AutoSaveStore {
   }
 
   private scheduleAutoSave(yamlText: string | null) {
-    if (!yamlText || !this.pipelineName) {
+    if (this.suspended || !yamlText || !this.pipelineName) {
       this.debouncedSave.cancel();
       return;
     }
