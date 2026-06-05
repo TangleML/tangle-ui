@@ -7,6 +7,7 @@ import type { Bounds } from "@/components/shared/ReactFlow/FlowCanvas/utils/geom
 import { replaceTaskComponentRef } from "@/components/shared/ReactFlow/FlowCanvas/utils/replaceTaskComponentRef";
 import { useNodesOverlay } from "@/components/shared/ReactFlow/NodesOverlay/NodesOverlayProvider";
 import useToastNotification from "@/hooks/useToastNotification";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { extractPositionFromAnnotations } from "@/utils/annotations";
 import {
@@ -16,6 +17,7 @@ import {
   type TaskSpec,
 } from "@/utils/componentSpec";
 import { diffComponentIO } from "@/utils/componentSpecDiff";
+import { componentMetadata } from "@/utils/componentTracking";
 import { DEFAULT_NODE_DIMENSIONS } from "@/utils/constants";
 import { taskIdToNodeId } from "@/utils/nodes/nodeIdUtils";
 import { tracking } from "@/utils/tracking";
@@ -39,6 +41,7 @@ export const EditComponentButton = ({
 }: EditComponentButtonProps) => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const notify = useToastNotification();
+  const { track } = useAnalytics();
   const { currentGraphSpec, updateGraphSpec } = useComponentSpec();
   const { getNodes } = useReactFlow();
   const { fitNodeIntoView, selectNode, notifyNode } = useNodesOverlay();
@@ -61,6 +64,12 @@ export const EditComponentButton = ({
     );
 
     updateGraphSpec(updatedGraphSpec);
+
+    track("pipeline_editor.component.edited", {
+      ...componentMetadata(hydratedComponent, "user"),
+      action: "update",
+      lost_inputs_count: lostInputs.length,
+    });
 
     if (lostInputs.length > 0) {
       const inputNames = lostInputs.map((input) => input.name).join(", ");
@@ -147,6 +156,12 @@ export const EditComponentButton = ({
     }
 
     updateGraphSpec(updatedWrapper.implementation.graph);
+
+    track("pipeline_editor.component.edited", {
+      ...componentMetadata(hydratedComponent, "user"),
+      action: "place",
+    });
+
     notify("Task added", "success");
 
     // The new node mounts asynchronously; wait for it, then reveal + spotlight.
@@ -194,6 +209,8 @@ export const EditComponentButton = ({
                   return (
                     <SaveActionsView
                       taskName={componentRef.name}
+                      currentDigest={editedTask?.componentRef.digest}
+                      newDigest={hydratedComponent.digest}
                       inputDiff={inputDiff}
                       outputDiff={outputDiff}
                       allowPlace
