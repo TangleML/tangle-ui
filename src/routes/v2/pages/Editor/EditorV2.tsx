@@ -50,6 +50,8 @@ import { useSelectionWindowSync } from "./hooks/useSelectionWindowSync";
 import { useSpecLifecycle } from "./hooks/useSpecLifecycle";
 import { useTipOfTheDayWindow } from "./hooks/useTipOfTheDayWindow";
 import { useUndoRedoKeyboard } from "./hooks/useUndoRedoKeyboard";
+import { reconcileModeStore } from "./lineage/reconcileModeStore";
+import { ReconcileNavigationGuard } from "./lineage/ReconcileNavigationGuard";
 import { ReconcileOverviewHost } from "./lineage/ReconcileOverviewHost";
 import { useReconcileFromUrl } from "./lineage/useReconcileFromUrl";
 import { editorRegistry } from "./nodes";
@@ -131,6 +133,12 @@ const PipelineEditor = withSuspenseWrapper(
   PipelineEditorSkeleton,
 );
 
+/** Hides the editor menu bar (and its navigation escape hatches) while in
+ * reconcile mode, leaving the canvas and reconcile banner. */
+const EditorTopBar = observer(function EditorTopBar() {
+  return reconcileModeStore.active ? null : <EditorMenuBar />;
+});
+
 function EditorV2Content({ pipelineRef }: { pipelineRef: PipelineRef | null }) {
   const { navigation } = useSharedStores();
 
@@ -143,7 +151,8 @@ function EditorV2Content({ pipelineRef }: { pipelineRef: PipelineRef | null }) {
   return (
     <ComponentLibraryProvider>
       <ReactFlowProvider>
-        <EditorMenuBar />
+        <EditorTopBar />
+        <ReconcileNavigationGuard />
         <ForcedSearchProvider>
           {pipelineRef ? (
             <DriverPermissionGate pipelineRef={pipelineRef}>
