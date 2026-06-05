@@ -22,6 +22,10 @@ interface ReconcileSiblingsDialogProps {
   matches: LineageUsage[];
   onConfirm: (taskIds: string[]) => void;
   onCancel: () => void;
+  /** Number of OTHER pipelines that also use this origin (cross-pipeline). */
+  crossPipelineCount?: number;
+  /** Open the cross-pipeline reconcile overview. */
+  onReconcileAcrossPipelines?: () => void;
 }
 
 /**
@@ -35,6 +39,8 @@ export function ReconcileSiblingsDialog({
   matches,
   onConfirm,
   onCancel,
+  crossPipelineCount = 0,
+  onReconcileAcrossPipelines,
 }: ReconcileSiblingsDialogProps) {
   const [selected, setSelected] = useState<Set<string>>(
     () => new Set(matches.map((m) => m.taskId)),
@@ -105,6 +111,31 @@ export function ReconcileSiblingsDialog({
             </label>
           ))}
         </BlockStack>
+
+        {crossPipelineCount > 0 && onReconcileAcrossPipelines && (
+          <button
+            type="button"
+            onClick={onReconcileAcrossPipelines}
+            className="flex w-full items-center justify-between rounded-md border border-dashed px-3 py-2 text-left hover:bg-accent"
+          >
+            <InlineStack gap="2" blockAlign="center">
+              <Icon
+                name="Workflow"
+                size="sm"
+                className="shrink-0 text-muted-foreground"
+              />
+              <Text size="sm">
+                Also used in {crossPipelineCount} other{" "}
+                {crossPipelineCount === 1 ? "pipeline" : "pipelines"}
+              </Text>
+            </InlineStack>
+            <Icon
+              name="ArrowRight"
+              size="sm"
+              className="shrink-0 text-muted-foreground"
+            />
+          </button>
+        )}
 
         <AlertDialogFooter>
           <AlertDialogCancel onClick={onCancel}>Not now</AlertDialogCancel>

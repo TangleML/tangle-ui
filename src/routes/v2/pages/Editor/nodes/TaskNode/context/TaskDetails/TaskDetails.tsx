@@ -1,3 +1,4 @@
+import { useParams } from "@tanstack/react-router";
 import { observer } from "mobx-react-lite";
 import { useEffect, useRef, useState } from "react";
 
@@ -23,7 +24,9 @@ import {
   type LineageUsage,
 } from "@/routes/v2/pages/Editor/lineage/collectLineageUsages";
 import { findTaskContext } from "@/routes/v2/pages/Editor/lineage/findTaskContext";
+import { ReconcileOverview } from "@/routes/v2/pages/Editor/lineage/ReconcileOverview";
 import { ReconcileSiblingsDialog } from "@/routes/v2/pages/Editor/lineage/ReconcileSiblingsDialog";
+import { scanPipelinesForLineage } from "@/routes/v2/pages/Editor/lineage/scanPipelinesForLineage";
 import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskActions";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
@@ -64,11 +67,22 @@ export const TaskDetails = observer(function TaskDetails({
   const task = useTask(entityId);
   const { focusedArgumentName } = editor;
 
+  const params = useParams({ strict: false });
+  const currentPipelineKey =
+    "pipelineName" in params && typeof params.pipelineName === "string"
+      ? params.pipelineName
+      : undefined;
+
   const [detailsTab, setDetailsTab] = useState<DetailsTab>("arguments");
   const [isRenaming, setIsRenaming] = useState(false);
   const [reconcile, setReconcile] = useState<{
     component: HydratedComponentReference;
     matches: LineageUsage[];
+    crossPipelineCount: number;
+  } | null>(null);
+  const [overview, setOverview] = useState<{
+    component: HydratedComponentReference;
+    originId: string;
   } | null>(null);
   const renameInputRef = useRef<HTMLInputElement>(null);
 
@@ -151,19 +165,34 @@ export const TaskDetails = observer(function TaskDetails({
       notify("Component updated", "success");
     }
 
-    // Offer to reconcile other tasks that share this component's origin (incl.
-    // nested in subgraphs) but haven't been updated to the edited version yet.
+    // Offer to reconcile other tasks that share this component's origin — both
+    // in this pipeline (incl. nested subgraphs) and across other saved
+    // pipelines (client-side scan).
     const originId = task.annotations.get(LINEAGE_ORIGIN_ANNOTATION)?.originId;
-    if (originId) {
-      const matches = collectLineageUsages(spec, originId).filter(
-        (usage) =>
-          usage.taskId !== task.$id &&
-          usage.digest !== hydratedComponent.digest,
-      );
-      if (matches.length > 0) {
-        setReconcile({ component: hydratedComponent, matches });
-      }
-    }
+    if (!originId) return;
+
+    const sameMatches = collectLineageUsages(spec, originId).filter(
+      (usage) =>
+        usage.taskId !== task.$id && usage.digest !== hydratedComponent.digest,
+    );
+
+    void scanPipelinesForLineage(originId, hydratedComponent.digest).then(
+      (results) => {
+        const otherPipelinesPending = results.filter(
+          (r) => r.storageKey !== currentPipelineKey && r.pendingCount > 0,
+        ).length;
+
+        if (sameMatches.length > 0) {
+          setReconcile({
+            component: hydratedComponent,
+            matches: sameMatches,
+            crossPipelineCount: otherPipelinesPending,
+          });
+        } else if (otherPipelinesPending > 0) {
+          setOverview({ component: hydratedComponent, originId });
+        }
+      },
+    );
   };
 
   const handleReconcileConfirm = (taskIds: string[]) => {
@@ -419,8 +448,25 @@ export const TaskDetails = observer(function TaskDetails({
         <ReconcileSiblingsDialog
           componentName={task.name}
           matches={reconcile.matches}
+          crossPipelineCount={reconcile.crossPipelineCount}
+          onReconcileAcrossPipelines={() => {
+            const { component } = reconcile;
+            const originId = task.annotations.get(
+              LINEAGE_ORIGIN_ANNOTATION,
+            )?.originId;
+            setReconcile(null);
+            if (originId) setOverview({ component, originId });
+          }}
           onConfirm={handleReconcileConfirm}
           onCancel={() => setReconcile(null)}
+        />
+      )}
+
+      {overview && (
+        <ReconcileOverview
+          component={overview.component}
+          originId={overview.originId}
+          onClose={() => setOverview(null)}
         />
       )}
     </BlockStack>

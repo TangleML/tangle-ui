@@ -50,6 +50,7 @@ import { useSelectionWindowSync } from "./hooks/useSelectionWindowSync";
 import { useSpecLifecycle } from "./hooks/useSpecLifecycle";
 import { useTipOfTheDayWindow } from "./hooks/useTipOfTheDayWindow";
 import { useUndoRedoKeyboard } from "./hooks/useUndoRedoKeyboard";
+import { useReconcileFromUrl } from "./lineage/useReconcileFromUrl";
 import { editorRegistry } from "./nodes";
 import { EditorSessionProvider } from "./store/EditorSessionContext";
 
@@ -131,6 +132,8 @@ const PipelineEditor = withSuspenseWrapper(
 
 function EditorV2Content({ pipelineRef }: { pipelineRef: PipelineRef | null }) {
   const { navigation } = useSharedStores();
+
+  useReconcileFromUrl();
 
   useEffect(() => {
     navigation.setRequestedPipelineName(pipelineRef?.name ?? null);
