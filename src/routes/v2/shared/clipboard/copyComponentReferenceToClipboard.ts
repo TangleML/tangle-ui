@@ -1,3 +1,4 @@
+import type { TaskSnapshotData } from "@/routes/v2/shared/nodes/TaskNode/taskManifestBase";
 import type { NodeSnapshot } from "@/routes/v2/shared/nodes/types";
 import type { ComponentReference } from "@/utils/componentSpec";
 
@@ -17,7 +18,7 @@ export async function copyComponentReferenceToClipboard(
   reference: ComponentReference,
 ): Promise<void> {
   const name = reference.spec?.name ?? reference.name ?? "task";
-  const snapshot: NodeSnapshot = {
+  const snapshot: NodeSnapshot<TaskSnapshotData> = {
     $type: "task",
     entityId: "",
     name,

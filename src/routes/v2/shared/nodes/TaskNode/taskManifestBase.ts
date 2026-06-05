@@ -22,7 +22,7 @@ import { TaskNode } from "./TaskNode";
 // Task snapshot (shared between Editor and RunView for copy)
 // ---------------------------------------------------------------------------
 
-type TaskSnapshotData = Pick<
+export type TaskSnapshotData = Pick<
   Task,
   "componentRef" | "isEnabled" | "arguments" | "executionOptions"
 > & {
