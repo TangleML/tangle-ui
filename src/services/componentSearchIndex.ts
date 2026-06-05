@@ -101,6 +101,50 @@ function extractImplementationText(reference: ComponentReference): string {
 }
 
 /**
+ * Common projection of a `ComponentReference` into the fields used downstream
+ * by both the lexical index and the LLM reranker. Returns `null` when the
+ * reference has no digest or no useful metadata — both consumers want to
+ * skip such references for the same reason (un-roundtrippable / noise).
+ */
+export interface ComponentMetadata {
+  digest: string;
+  name: string;
+  /** Trimmed; empty string when missing. */
+  description: string;
+  inputNames: string[];
+  outputNames: string[];
+}
+
+export function extractComponentMetadata(
+  reference: ComponentReference,
+): ComponentMetadata | null {
+  if (!reference.digest) return null;
+  const spec = reference.spec;
+  const description = spec?.description?.trim() ?? "";
+  const inputNames =
+    spec?.inputs
+      ?.map((i) => i.name)
+      .filter((n): n is string => typeof n === "string" && n.length > 0) ?? [];
+  const outputNames =
+    spec?.outputs
+      ?.map((o) => o.name)
+      .filter((n): n is string => typeof n === "string" && n.length > 0) ?? [];
+  const hasUsefulMetadata =
+    Boolean(spec?.name) ||
+    description.length > 0 ||
+    inputNames.length > 0 ||
+    outputNames.length > 0;
+  if (!hasUsefulMetadata) return null;
+  return {
+    digest: reference.digest,
+    name: getComponentName(reference),
+    description,
+    inputNames,
+    outputNames,
+  };
+}
+
+/**
  * Build the searchable index from sourced, hydrated component references.
  * References without a digest are skipped (can't round-trip an LLM rerank
  * without one). References with no useful spec metadata are also skipped —
@@ -110,39 +154,20 @@ export function buildSearchIndex(sourced: SourcedReference[]): IndexEntry[] {
   const entries: IndexEntry[] = [];
 
   for (const { reference, source } of sourced) {
-    if (!reference.digest) continue;
-
-    const spec = reference.spec;
-    const description = spec?.description?.trim() ?? "";
-    const inputNames =
-      spec?.inputs
-        ?.map((i) => i.name)
-        .filter((n): n is string => typeof n === "string" && n.length > 0) ??
-      [];
-    const outputNames =
-      spec?.outputs
-        ?.map((o) => o.name)
-        .filter((n): n is string => typeof n === "string" && n.length > 0) ??
-      [];
-
-    const hasUsefulMetadata =
-      Boolean(spec?.name) ||
-      description.length > 0 ||
-      inputNames.length > 0 ||
-      outputNames.length > 0;
-    if (!hasUsefulMetadata) continue;
-
-    const name = getComponentName(reference);
+    const metadata = extractComponentMetadata(reference);
+    if (!metadata) continue;
 
     entries.push({
       reference,
-      digest: reference.digest,
-      name,
+      digest: metadata.digest,
+      name: metadata.name,
       source,
       searchable: {
-        name: name.toLowerCase(),
-        description: description.toLowerCase(),
-        io: [...inputNames, ...outputNames].join(" ").toLowerCase(),
+        name: metadata.name.toLowerCase(),
+        description: metadata.description.toLowerCase(),
+        io: [...metadata.inputNames, ...metadata.outputNames]
+          .join(" ")
+          .toLowerCase(),
         implementation: extractImplementationText(reference),
       },
     });

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ComponentReference } from "@/utils/componentSpec";
+import { isRecord } from "@/utils/typeGuards";
 
 import {
   componentReferenceToCandidate,
@@ -24,10 +25,6 @@ function mockChatResponse(content: unknown, status = 200) {
       statusText: status === 200 ? "OK" : "Internal Server Error",
     },
   );
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function parseFetchBody(call: unknown[] | undefined): Record<string, unknown> {
