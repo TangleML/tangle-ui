@@ -707,10 +707,16 @@ export const DashboardComponentsV2View = () => {
   const trimmedQuery = query.trim();
   const isEmpty = trimmedQuery.length === 0;
   const isConfigError = rerankError instanceof NaturalLanguageSearchConfigError;
+  // Only treat rerank as "active" when the model actually returned matches.
+  // An empty result set (model decided nothing fit, or the response was
+  // malformed and the service degraded it to `{ matches: [] }`) means the
+  // ordering we'd render is plain lexical — labeling that "AI-reranked"
+  // would lie to the user.
   const rerankActive =
     rerankedFor !== null &&
     rerankedFor === trimmedQuery &&
     rerankData !== undefined &&
+    rerankData.matches.length > 0 &&
     !isReranking;
 
   // What we actually render. Rerank wins when active; otherwise lexical.
@@ -953,39 +959,41 @@ export const DashboardComponentsV2View = () => {
             {/* Sticky action row: copy + close. `float-right` here is
                 intentional — it lets the row sit above the content without
                 taking flow space, and the detail's first heading flows up
-                next to it. Wrapping in a sticky inline-block keeps both
-                buttons pinned together. */}
-            <div className="sticky top-0 float-right z-10 flex gap-1 bg-background/80 backdrop-blur-sm rounded-md">
-              <QuickTooltip content="Copy to clipboard" side="bottom">
+                next to it. Outer div handles sticky/positioning; inner
+                InlineStack handles the button row's layout. */}
+            <div className="sticky top-0 float-right z-10 bg-background/80 backdrop-blur-sm rounded-md">
+              <InlineStack gap="1">
+                <QuickTooltip content="Copy to clipboard" side="bottom">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleCopyToPipeline}
+                    aria-label="Copy component to clipboard"
+                    {...tracking(
+                      "component_library.result_detail_v2.copy_button",
+                      {
+                        surface: "dashboard_v2",
+                      },
+                    )}
+                  >
+                    <Icon name="Copy" />
+                  </Button>
+                </QuickTooltip>
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={handleCopyToPipeline}
-                  aria-label="Copy component to clipboard"
+                  onClick={closeDetail}
+                  aria-label="Close component details"
                   {...tracking(
-                    "component_library.result_detail_v2.copy_button",
+                    "component_library.result_detail_v2.close_button",
                     {
                       surface: "dashboard_v2",
                     },
                   )}
                 >
-                  <Icon name="Copy" />
+                  <Icon name="X" />
                 </Button>
-              </QuickTooltip>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={closeDetail}
-                aria-label="Close component details"
-                {...tracking(
-                  "component_library.result_detail_v2.close_button",
-                  {
-                    surface: "dashboard_v2",
-                  },
-                )}
-              >
-                <Icon name="X" />
-              </Button>
+              </InlineStack>
             </div>
             <SuspenseWrapper fallback={<ComponentDetailSkeleton />}>
               <ComponentDetail
