@@ -6,12 +6,9 @@ import type {
 import type { OutputSpec } from "@/models/componentSpec/entities/types";
 import { isInputRequired } from "@/models/componentSpec/validation/validateSpec";
 import type { LostBinding } from "@/routes/v2/pages/Editor/components/UpgradeComponents/types";
+import { diffComponentIO, type EntityDiff } from "@/utils/componentSpecDiff";
 
-export interface EntityDiff<T> {
-  lostEntities: T[];
-  newEntities: T[];
-  changedEntities: T[];
-}
+export type { EntityDiff };
 
 export type DiffStatus = "unchanged" | "lost" | "new" | "changed";
 
@@ -55,61 +52,11 @@ interface ComponentSpecDiff {
   outputDiff: EntityDiff<OutputSpec>;
 }
 
-const EMPTY_DIFF: EntityDiff<never> = {
-  lostEntities: [],
-  newEntities: [],
-  changedEntities: [],
-};
-
 export function computeDiffComponentSpecs(
   oldSpec: ComponentSpecJson | undefined,
   newSpec: ComponentSpecJson | undefined,
 ): ComponentSpecDiff {
-  const inputDiff = computeDiff(
-    oldSpec?.inputs,
-    newSpec?.inputs,
-    (a, b) => a.type === b.type,
-  );
-  const outputDiff = computeDiff(
-    oldSpec?.outputs,
-    newSpec?.outputs,
-    (a, b) => a.type === b.type,
-  );
-  return { inputDiff, outputDiff };
-}
-
-function computeDiff<TEntity extends { name: string }>(
-  prevEntities: TEntity[] | undefined,
-  currentEntities: TEntity[] | undefined,
-  isEqual: (oldEntity: TEntity, newEntity: TEntity) => boolean,
-): EntityDiff<TEntity> {
-  if (!prevEntities || !currentEntities) return EMPTY_DIFF;
-
-  const newEntitiesIndex = new Map(currentEntities.map((i) => [i.name, i]));
-  const oldEntitiesIndex = new Map(prevEntities.map((i) => [i.name, i]));
-
-  const oldEntityNames = new Set(oldEntitiesIndex.keys());
-  const newEntityNames = new Set(newEntitiesIndex.keys());
-
-  const lostEntities = [...oldEntityNames.difference(newEntityNames)]
-    .map((name) => oldEntitiesIndex.get(name))
-    .filter((e) => e !== undefined);
-
-  const newEntities = [...newEntityNames.difference(oldEntityNames)]
-    .map((name) => newEntitiesIndex.get(name))
-    .filter((e) => e !== undefined);
-
-  const changedEntities = [...oldEntityNames.intersection(newEntityNames)]
-    .map((name) => {
-      const oldEntity = oldEntitiesIndex.get(name);
-      const newEntity = newEntitiesIndex.get(name);
-      if (!oldEntity || !newEntity) return undefined;
-      if (isEqual(oldEntity, newEntity)) return undefined;
-      return newEntity;
-    })
-    .filter((e) => e !== undefined);
-
-  return { lostEntities, newEntities, changedEntities };
+  return diffComponentIO<InputSpec, OutputSpec>(oldSpec, newSpec);
 }
 
 /**

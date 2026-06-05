@@ -1,9 +1,9 @@
+import { DiffSection } from "@/components/shared/ComponentDiff/DiffSection";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import type { InputSpec } from "@/models/componentSpec";
 import type { OutputSpec } from "@/models/componentSpec/entities/types";
-import { DiffSection } from "@/routes/v2/pages/Editor/components/UpgradeComponents/components/UpgradeCandidateDetail";
 import type { EntityDiff } from "@/routes/v2/pages/Editor/store/actions/task.utils";
 
 interface ReplaceConfirmationContentProps {
