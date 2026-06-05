@@ -4,6 +4,11 @@ import { getNodeTypeZIndexDefault } from "@/components/shared/ReactFlow/FlowCanv
 import type { AnnotationConfig, Annotations } from "@/types/annotations";
 
 import type { ComponentSpec } from "./componentSpec";
+import { LINEAGE_ORIGIN_ANNOTATION } from "./lineage";
+
+// Re-export so existing consumers can keep importing it from here; the source of
+// truth lives in the lighter `./lineage` module (see its definition for why).
+export { LINEAGE_ORIGIN_ANNOTATION };
 
 export const DISPLAY_NAME_MAX_LENGTH = 100;
 export const TASK_DISPLAY_NAME_ANNOTATION = "display_name";
@@ -33,6 +38,7 @@ export const SYSTEM_ANNOTATIONS = [
   EDITOR_FLOW_DIRECTION_ANNOTATION,
   TASK_COLOR_ANNOTATION,
   EDGE_CONDUITS_ANNOTATION,
+  LINEAGE_ORIGIN_ANNOTATION,
 ];
 
 export const DEFAULT_COMMON_ANNOTATIONS: AnnotationConfig[] = [

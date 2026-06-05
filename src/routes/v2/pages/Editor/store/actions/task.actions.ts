@@ -16,8 +16,10 @@ import type { SelectedNode } from "@/routes/v2/shared/store/editorStore";
 import type { ParentContext } from "@/routes/v2/shared/store/navigationStore";
 import {
   EDITOR_POSITION_ANNOTATION,
+  LINEAGE_ORIGIN_ANNOTATION,
   TASK_COLOR_ANNOTATION,
 } from "@/utils/annotations";
+import type { ComponentLineage } from "@/utils/lineage";
 
 import { computeDiffComponentSpecs } from "./task.utils";
 import { idGen } from "./utils";
@@ -27,6 +29,13 @@ export function addTask(
   spec: ComponentSpec,
   componentRef: ComponentReference,
   position: XYPosition,
+  /**
+   * Override the lineage stamped on the new task. Used when placing a task that
+   * descends from an existing instance (e.g. edit → "Place as a new task"): the
+   * placed task should inherit the edited task's origin, not derive a fresh one
+   * from the edited component's (now-changed) digest.
+   */
+  lineageOverride?: ComponentLineage,
 ): Task {
   return undo.withGroup("Add task", () => {
     const componentName =
@@ -38,6 +47,10 @@ export function addTask(
       x: position.x,
       y: position.y,
     });
+
+    if (lineageOverride) {
+      task.annotations.set(LINEAGE_ORIGIN_ANNOTATION, lineageOverride);
+    }
 
     spec.addTask(task);
     return task;
