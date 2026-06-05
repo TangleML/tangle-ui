@@ -9,8 +9,6 @@ import {
 } from "react";
 
 import ComponentDuplicateDialog from "@/components/shared/Dialogs/ComponentDuplicateDialog";
-import { GitHubFlatComponentLibrary } from "@/components/shared/GitHubLibrary/githubFlatComponentLibrary";
-import { isGitHubLibraryConfiguration } from "@/components/shared/GitHubLibrary/types";
 import { getComponentQueryKey } from "@/hooks/useHydrateComponentReference";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useBackend } from "@/providers/BackendProvider";
@@ -67,11 +65,9 @@ import {
   populateComponentRefs,
 } from "./componentLibrary";
 import { useForcedSearchContext } from "./ForcedSearchProvider";
-import {
-  createLibraryObject,
-  registerLibraryFactory,
-} from "./libraries/factory";
+import { createLibraryObject } from "./libraries/factory";
 import { PublishedComponentsLibrary } from "./libraries/publishedComponentsLibrary";
+import { ensureLibraryFactoriesRegistered } from "./libraries/setup";
 import { LibraryDB, type StoredLibrary } from "./libraries/storage";
 import type { Library } from "./libraries/types";
 
@@ -113,18 +109,11 @@ const ComponentLibraryContext =
     "ComponentLibraryProvider",
   );
 
-/**
- * Register the GitHub library factory. This allows to have multiple instances of the same library type.
- */
-registerLibraryFactory("github", (library) => {
-  if (!isGitHubLibraryConfiguration(library.configuration)) {
-    throw new Error(
-      `GitHub library configuration is not valid for "${library.id}"`,
-    );
-  }
-
-  return new GitHubFlatComponentLibrary(library.configuration.repo_name);
-});
+// Register library factories at module load. The same helper is also called
+// from places that read libraries from Dexie without mounting this provider
+// (e.g. the dashboard search page), so the factory body stays in exactly one
+// place — see `./libraries/setup`.
+ensureLibraryFactoriesRegistered();
 
 function useComponentLibraryRegistry() {
   const queryClient = useQueryClient();
