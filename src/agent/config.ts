@@ -10,9 +10,9 @@ import { BASE_URL } from "@/utils/constants";
 
 const AI_ASSISTANT_EMBEDDING_MODEL = "text-embedding-3-small";
 
-export function getAgentModelConfig(
-  config: AiProviderConfig,
-): { model: string } | {} {
+export function getAgentModelConfig(config: AiProviderConfig): {
+  model?: string;
+} {
   const model = config.model.trim();
   return model ? { model } : {};
 }

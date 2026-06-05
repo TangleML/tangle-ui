@@ -13,9 +13,9 @@ export function AiProviderSetup() {
         Configure an OpenAI-compatible provider to enable the assistant. The
         same settings power AI search and generated component descriptions.
       </Paragraph>
-      <Link to={APP_ROUTES.SETTINGS_AGENT}>
-        <Button size="sm">Open AI settings</Button>
-      </Link>
+      <Button asChild size="sm">
+        <Link to={APP_ROUTES.SETTINGS_AGENT}>Open AI settings</Link>
+      </Button>
     </BlockStack>
   );
 }

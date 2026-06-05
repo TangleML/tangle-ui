@@ -52,12 +52,24 @@ function parseStoredConfig(value: unknown): AiProviderConfig | null {
   };
 }
 
+function isAllEmpty(config: AiProviderConfig): boolean {
+  return (
+    config.apiBase.length === 0 &&
+    config.apiKey.length === 0 &&
+    config.model.length === 0
+  );
+}
+
 function readStoredConfig(): AiProviderConfig {
   if (typeof window === "undefined") return DEFAULTS;
+  // Treat an all-empty central record as "absent" so a partial save (e.g. a
+  // blanked-out apiBase) doesn't shadow a working legacy config from before
+  // this hook was renamed.
   const current = parseStoredConfig(storage.getItem(AI_PROVIDER_STORAGE_KEY));
-  if (current) return current;
+  if (current && !isAllEmpty(current)) return current;
   return (
     parseStoredConfig(storage.getItem(LEGACY_COMPONENT_SEARCH_STORAGE_KEY)) ??
+    current ??
     DEFAULTS
   );
 }
