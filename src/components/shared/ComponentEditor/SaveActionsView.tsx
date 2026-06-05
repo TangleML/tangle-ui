@@ -1,20 +1,27 @@
 import type { ReactNode } from "react";
 
-import { DiffSection } from "@/components/shared/ComponentDiff/DiffSection";
+import { ComponentEditSummary } from "@/components/shared/ComponentDiff/ComponentEditSummary";
 import { Button } from "@/components/ui/button";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
-import { type EntityDiff, hasIODiff } from "@/utils/componentSpecDiff";
+import type { EntityDiff } from "@/utils/componentSpecDiff";
 
 type ChooseableAction = "update" | "import" | "place";
 
 export interface SaveActionsViewProps {
   taskName: string;
+  currentDigest?: string;
+  newDigest?: string;
   inputDiff: EntityDiff<{ name: string }>;
   outputDiff: EntityDiff<{ name: string }>;
   /** Whether to offer "Place as a new task". */
   allowPlace?: boolean;
+  /**
+   * When false, the lost/new/changed diff list is hidden (e.g. the v2 editor
+   * shows a ghost-diff preview card instead). Defaults to true.
+   */
+  showDiffList?: boolean;
   /** Extra content shown above the actions (e.g. v2 predicted issues + preview). */
   children?: ReactNode;
   onChoose: (action: ChooseableAction) => void;
@@ -29,14 +36,15 @@ export interface SaveActionsViewProps {
  */
 export function SaveActionsView({
   taskName,
+  currentDigest,
+  newDigest,
   inputDiff,
   outputDiff,
   allowPlace = false,
+  showDiffList = true,
   children,
   onChoose,
 }: SaveActionsViewProps) {
-  const showDiff = hasIODiff(inputDiff, outputDiff);
-
   return (
     <div className="mx-auto w-full max-w-xl overflow-y-auto p-4">
       <BlockStack gap="4">
@@ -44,12 +52,13 @@ export function SaveActionsView({
           Choose what to do with your changes to “{taskName}”.
         </Text>
 
-        {showDiff && (
-          <BlockStack gap="2">
-            <DiffSection label="Input" diff={inputDiff} />
-            <DiffSection label="Output" diff={outputDiff} />
-          </BlockStack>
-        )}
+        <ComponentEditSummary
+          currentDigest={currentDigest}
+          newDigest={newDigest}
+          inputDiff={inputDiff}
+          outputDiff={outputDiff}
+          showDiffList={showDiffList}
+        />
 
         {children}
 

@@ -145,6 +145,39 @@ describe("replaceTaskComponentRef", () => {
     expect(updatedGraphSpec.tasks.train.arguments).toEqual({});
   });
 
+  it("seeds default arguments for newly added inputs", () => {
+    const graphSpec = baseGraphSpec();
+    const refWithNewInput: ComponentReference = {
+      name: "Chicago Taxi Trips dataset",
+      digest: "new-digest",
+      spec: {
+        name: "Chicago Taxi Trips dataset",
+        inputs: [
+          { name: "Limit", type: "Integer", default: "1000" },
+          { name: "Select", type: "String" },
+          { name: "Format", type: "String", default: "csv" },
+          { name: "NoDefault", type: "String" },
+        ],
+        outputs: [{ name: "Table" }],
+        implementation: { container: { image: "alpine/curl" } },
+      },
+    };
+
+    const { updatedGraphSpec } = replaceTaskComponentRef(
+      "dataset",
+      refWithNewInput,
+      graphSpec,
+    );
+
+    // New input with a default is seeded; one without a default is not; and
+    // existing arguments are preserved.
+    expect(updatedGraphSpec.tasks.dataset.arguments).toEqual({
+      Limit: { graphInput: { inputName: "Input" } },
+      Select: "tips,trip_seconds",
+      Format: "csv",
+    });
+  });
+
   it("returns the graph unchanged when the task does not exist", () => {
     const graphSpec = baseGraphSpec();
     const fixedRef = { ...taxiRef("fixed"), digest: "new-digest" };
