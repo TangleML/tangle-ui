@@ -18,6 +18,12 @@ import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { AnnotationsBlock } from "@/routes/v2/pages/Editor/components/AnnotationsBlock/AnnotationsBlock";
 import { PredictedIssuesSection } from "@/routes/v2/pages/Editor/components/UpgradeComponents/components/UpgradeCandidateDetail";
 import { buildUpgradeCandidateFromResolved } from "@/routes/v2/pages/Editor/components/UpgradeComponents/utils/buildUpgradeCandidateFromResolved";
+import {
+  collectLineageUsages,
+  type LineageUsage,
+} from "@/routes/v2/pages/Editor/lineage/collectLineageUsages";
+import { findTaskContext } from "@/routes/v2/pages/Editor/lineage/findTaskContext";
+import { ReconcileSiblingsDialog } from "@/routes/v2/pages/Editor/lineage/ReconcileSiblingsDialog";
 import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskActions";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
@@ -60,6 +66,10 @@ export const TaskDetails = observer(function TaskDetails({
 
   const [detailsTab, setDetailsTab] = useState<DetailsTab>("arguments");
   const [isRenaming, setIsRenaming] = useState(false);
+  const [reconcile, setReconcile] = useState<{
+    component: HydratedComponentReference;
+    matches: LineageUsage[];
+  } | null>(null);
   const renameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -140,6 +150,44 @@ export const TaskDetails = observer(function TaskDetails({
     } else {
       notify("Component updated", "success");
     }
+
+    // Offer to reconcile other tasks that share this component's origin (incl.
+    // nested in subgraphs) but haven't been updated to the edited version yet.
+    const originId = task.annotations.get(LINEAGE_ORIGIN_ANNOTATION)?.originId;
+    if (originId) {
+      const matches = collectLineageUsages(spec, originId).filter(
+        (usage) =>
+          usage.taskId !== task.$id &&
+          usage.digest !== hydratedComponent.digest,
+      );
+      if (matches.length > 0) {
+        setReconcile({ component: hydratedComponent, matches });
+      }
+    }
+  };
+
+  const handleReconcileConfirm = (taskIds: string[]) => {
+    if (!reconcile) return;
+    const { component } = reconcile;
+
+    undo.withGroup("Reconcile component", () => {
+      for (const taskId of taskIds) {
+        const ctx = findTaskContext(spec, taskId);
+        if (ctx) replaceTask(ctx.spec, taskId, component);
+      }
+    });
+
+    track("pipeline_editor.component.lineage_reconcile", {
+      ...componentMetadata(component, "user"),
+      applied_count: taskIds.length,
+      matched_count: reconcile.matches.length,
+    });
+
+    notify(
+      `Updated ${taskIds.length} matching ${taskIds.length === 1 ? "task" : "tasks"}.`,
+      "success",
+    );
+    setReconcile(null);
   };
 
   const placeAsNewTask = (hydratedComponent: HydratedComponentReference) => {
@@ -366,6 +414,15 @@ export const TaskDetails = observer(function TaskDetails({
           <TaskActionsBar entityId={entityId} />
         </InlineStack>
       </BlockStack>
+
+      {reconcile && (
+        <ReconcileSiblingsDialog
+          componentName={task.name}
+          matches={reconcile.matches}
+          onConfirm={handleReconcileConfirm}
+          onCancel={() => setReconcile(null)}
+        />
+      )}
     </BlockStack>
   );
 });
