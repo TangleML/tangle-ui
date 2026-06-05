@@ -4,6 +4,7 @@ import { useState } from "react";
 import { BlockStack } from "@/components/ui/layout";
 import { VerticalResizeHandle } from "@/components/ui/resize-handle";
 import { Separator } from "@/components/ui/separator";
+import { Text } from "@/components/ui/typography";
 import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskActions";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { useOptionalWindowContext } from "@/routes/v2/shared/windows/ContentWindowStateContext";
@@ -18,8 +19,60 @@ import { useSelectionSet } from "./hooks/useSelectionSet";
 import { useUpgradeCandidatesFromOutdated } from "./hooks/useUpgradeCandidatesFromOutdated";
 import { useUpgradePreviewOverlay } from "./hooks/useUpgradePreviewOverlay";
 import { candidateHasIssues, type UpgradeCandidate } from "./types";
+import { groupCandidatesByOrigin } from "./utils/groupCandidatesByOrigin";
 
 const DEFAULT_LEFT_PANEL_WIDTH = 340;
+
+/** Flat or grouped list of candidates depending on whether grouping is helpful. */
+function CandidateList({
+  candidates,
+  selection,
+  focusedId,
+  onToggle,
+  onFocus,
+}: {
+  candidates: UpgradeCandidate[];
+  selection: Set<string>;
+  focusedId: string | null;
+  onToggle: (id: string, checked: boolean) => void;
+  onFocus: (id: string) => void;
+}) {
+  const groups = groupCandidatesByOrigin(candidates);
+
+  const renderRow = (candidate: UpgradeCandidate) => (
+    <UpgradeCandidateRow
+      key={candidate.taskId}
+      candidate={candidate}
+      checked={selection.has(candidate.taskId)}
+      selected={candidate.taskId === focusedId}
+      onCheckedChange={(checked) => onToggle(candidate.taskId, checked)}
+      onSelect={() => onFocus(candidate.taskId)}
+    />
+  );
+
+  if (!groups) {
+    return (
+      <BlockStack className="py-1">{candidates.map(renderRow)}</BlockStack>
+    );
+  }
+
+  return (
+    <BlockStack className="py-1">
+      {groups.map((group) => (
+        <BlockStack key={group.originId ?? "__ungrouped"}>
+          {group.componentName && (
+            <div className="px-3 pt-2 pb-0.5">
+              <Text size="xs" tone="subdued" className="truncate">
+                {group.componentName}
+              </Text>
+            </div>
+          )}
+          {group.candidates.map(renderRow)}
+        </BlockStack>
+      ))}
+    </BlockStack>
+  );
+}
 
 type UpgradeComponentsDataSource = "real" | "mock";
 
@@ -83,20 +136,13 @@ const UpgradeComponentsInner = observer(function UpgradeComponentsInner({
           style={{ width: DEFAULT_LEFT_PANEL_WIDTH }}
         >
           <div className="h-full overflow-y-auto">
-            <BlockStack className="py-1">
-              {candidates.map((candidate) => (
-                <UpgradeCandidateRow
-                  key={candidate.taskId}
-                  candidate={candidate}
-                  checked={selection.has(candidate.taskId)}
-                  selected={candidate.taskId === focusedId}
-                  onCheckedChange={(checked) =>
-                    toggle(candidate.taskId, checked)
-                  }
-                  onSelect={() => setFocusedId(candidate.taskId)}
-                />
-              ))}
-            </BlockStack>
+            <CandidateList
+              candidates={candidates}
+              selection={selection}
+              focusedId={focusedId}
+              onToggle={toggle}
+              onFocus={setFocusedId}
+            />
           </div>
           <VerticalResizeHandle side="right" minWidth={300} />
         </div>

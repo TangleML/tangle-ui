@@ -87,10 +87,26 @@ export function UpgradeCandidateRow({
           blockAlign="center"
           data-testid="upgrade-candidate-row-digest"
         >
-          <Badge variant="secondary" size="sm">
-            {truncateDigest(candidate.currentDigest)}
-          </Badge>
-          <Icon name="ArrowRight" size="xs" className="text-muted-foreground" />
+          {candidate.isEditedOffMainline ? (
+            <Badge
+              variant="outline"
+              size="sm"
+              className="border-amber-400 text-amber-600"
+            >
+              Edited locally
+            </Badge>
+          ) : (
+            <>
+              <Badge variant="secondary" size="sm">
+                {truncateDigest(candidate.currentDigest)}
+              </Badge>
+              <Icon
+                name="ArrowRight"
+                size="xs"
+                className="text-muted-foreground"
+              />
+            </>
+          )}
           <Badge variant="secondary" size="sm">
             {truncateDigest(candidate.newComponentRef.digest ?? "")}
           </Badge>
