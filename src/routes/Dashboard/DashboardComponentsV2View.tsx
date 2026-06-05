@@ -290,6 +290,46 @@ interface ComponentDescriptionPanelProps {
   onGenerate: () => void;
 }
 
+/**
+ * Router-Link styled to read as a clickable link (color + hover underline).
+ * Used wherever we point the user at the Agent settings page — keeps the
+ * affordance consistent and avoids duplicating the link target string.
+ */
+const ConfigureInSettingsLink = () => (
+  <Link
+    to={APP_ROUTES.SETTINGS_AGENT}
+    className="text-sm font-semibold text-primary hover:underline"
+  >
+    Configure in Settings →
+  </Link>
+);
+
+type DescriptionPanelStatus =
+  | { kind: "unconfigured" }
+  | { kind: "error"; message: string }
+  | { kind: "done"; text: string }
+  | { kind: "generating" }
+  | { kind: "idle" };
+
+function getDescriptionPanelStatus({
+  isConfigured,
+  generationError,
+  generatedDescription,
+  isGenerating,
+}: {
+  isConfigured: boolean;
+  generationError: Error | null;
+  generatedDescription?: string;
+  isGenerating: boolean;
+}): DescriptionPanelStatus {
+  if (!isConfigured) return { kind: "unconfigured" };
+  if (generationError)
+    return { kind: "error", message: generationError.message };
+  if (generatedDescription) return { kind: "done", text: generatedDescription };
+  if (isGenerating) return { kind: "generating" };
+  return { kind: "idle" };
+}
+
 const ComponentDescriptionPanel = ({
   prefilledDescription,
   generatedDescription,
@@ -298,6 +338,53 @@ const ComponentDescriptionPanel = ({
   isConfigured,
   onGenerate,
 }: ComponentDescriptionPanelProps) => {
+  const status = getDescriptionPanelStatus({
+    isConfigured,
+    generationError,
+    generatedDescription,
+    isGenerating,
+  });
+
+  const renderStatusBody = () => {
+    switch (status.kind) {
+      case "unconfigured":
+        return (
+          <Paragraph size="sm" tone="subdued">
+            Configure Agent settings to generate an AI description.
+          </Paragraph>
+        );
+      case "error":
+        return (
+          <BlockStack gap="2" align="start">
+            <Paragraph size="sm" tone="critical">
+              Couldn&apos;t generate a description: {status.message}
+            </Paragraph>
+            <Button type="button" size="sm" onClick={onGenerate}>
+              Try again
+            </Button>
+          </BlockStack>
+        );
+      case "done":
+        return (
+          <Paragraph size="sm" className="[overflow-wrap:anywhere]">
+            {status.text}
+          </Paragraph>
+        );
+      case "generating":
+        return (
+          <Paragraph size="sm" tone="subdued">
+            Generating description…
+          </Paragraph>
+        );
+      case "idle":
+        return (
+          <Button type="button" size="sm" onClick={onGenerate}>
+            Generate AI description
+          </Button>
+        );
+    }
+  };
+
   return (
     <BlockStack gap="3">
       <BlockStack gap="1">
@@ -315,40 +402,9 @@ const ComponentDescriptionPanel = ({
           </Text>
           {isGenerating && <Spinner size={14} />}
         </InlineStack>
-        {!isConfigured ? (
-          <Paragraph size="sm" tone="subdued">
-            Configure Agent settings to generate an AI description.
-          </Paragraph>
-        ) : generationError ? (
-          <BlockStack gap="2" align="start">
-            <Paragraph size="sm" tone="critical">
-              Couldn&apos;t generate a description: {generationError.message}
-            </Paragraph>
-            <Button type="button" size="sm" onClick={onGenerate}>
-              Try again
-            </Button>
-          </BlockStack>
-        ) : generatedDescription ? (
-          <Paragraph size="sm" className="[overflow-wrap:anywhere]">
-            {generatedDescription}
-          </Paragraph>
-        ) : isGenerating ? (
-          <Paragraph size="sm" tone="subdued">
-            Generating description…
-          </Paragraph>
-        ) : (
-          <Button type="button" size="sm" onClick={onGenerate}>
-            Generate AI description
-          </Button>
-        )}
+        {renderStatusBody()}
       </BlockStack>
-      {!isConfigured && (
-        <Link to={APP_ROUTES.SETTINGS_AGENT}>
-          <Text size="sm" weight="semibold">
-            Configure in Settings →
-          </Text>
-        </Link>
-      )}
+      {!isConfigured && <ConfigureInSettingsLink />}
     </BlockStack>
   );
 };
@@ -641,21 +697,11 @@ export const DashboardComponentsV2View = () => {
     reset: resetRerank,
     isConfigured,
   } = useNaturalLanguageComponentRerank();
-  const {
-    mutate: generateAiDescription,
-    isPending: isGeneratingDescription,
-    error: descriptionError,
-    reset: resetDescription,
-    isConfigured: canGenerateDescription,
-  } = useComponentAiDescription();
 
   // Reranked results are tied to the exact query that triggered them. If the
   // user types more, we drop the rerank rather than show results for an old
   // query. Tracked here so we can clear on input change.
   const [rerankedFor, setRerankedFor] = useState<string | null>(null);
-  const [generatedDescriptions, setGeneratedDescriptions] = useState<
-    Record<string, string>
-  >({});
 
   const handleQueryChange = (event: ChangeEvent<HTMLInputElement>) => {
     setQuery(event.target.value);
@@ -746,59 +792,30 @@ export const DashboardComponentsV2View = () => {
     };
   })();
   const isDetailOpen = Boolean(selectedDigest);
-  const selectedGeneratedDescription = selectedDigest
-    ? generatedDescriptions[selectedDigest]
-    : undefined;
+
+  // AI description query. Keyed by digest so each component gets its own
+  // cached result, isolated error/pending, and an AbortSignal that fires
+  // when the user switches components mid-flight (no more uncancellable
+  // billed calls). `enabled` opts into auto-generation when the flag is on;
+  // when off, the panel's "Generate AI description" button calls
+  // `refetchDescription()` manually.
+  const {
+    description: selectedGeneratedDescription,
+    isFetching: isGeneratingDescription,
+    error: descriptionError,
+    refetch: refetchDescription,
+    isConfigured: canGenerateDescription,
+  } = useComponentAiDescription({
+    reference: selectedReference,
+    enabled: aiDescriptionsEnabled,
+  });
   const notify = useToastNotification();
 
   const handleGenerateDescription = () => {
     if (!selectedReference?.digest || !selectedReference.spec) return;
     if (!canGenerateDescription) return;
-
-    const digest = selectedReference.digest;
-    resetDescription();
-    generateAiDescription(
-      { reference: selectedReference },
-      {
-        onSuccess: (result) => {
-          setGeneratedDescriptions((current) => ({
-            ...current,
-            [digest]: result.description,
-          }));
-        },
-      },
-    );
+    refetchDescription();
   };
-
-  useEffect(() => {
-    resetDescription();
-  }, [resetDescription, selectedDigest]);
-
-  useEffect(() => {
-    if (!selectedReference?.digest || !selectedReference.spec) {
-      resetDescription();
-      return;
-    }
-    if (!aiDescriptionsEnabled) return;
-    if (!canGenerateDescription) {
-      resetDescription();
-      return;
-    }
-    if (isGeneratingDescription) return;
-    if (descriptionError) return;
-    if (generatedDescriptions[selectedReference.digest]) return;
-
-    handleGenerateDescription();
-  }, [
-    aiDescriptionsEnabled,
-    canGenerateDescription,
-    descriptionError,
-    generatedDescriptions,
-    handleGenerateDescription,
-    isGeneratingDescription,
-    resetDescription,
-    selectedReference,
-  ]);
 
   const handleCopyToPipeline = async () => {
     if (!selectedReference) return;
@@ -986,11 +1003,7 @@ export const DashboardComponentsV2View = () => {
                 Configure an OpenAI-compatible API key to use AI search. Lexical
                 results above are unaffected.
               </Paragraph>
-              <Link to={APP_ROUTES.SETTINGS_AGENT}>
-                <Text size="sm" weight="semibold">
-                  Configure in Settings →
-                </Text>
-              </Link>
+              <ConfigureInSettingsLink />
             </BlockStack>
           )}
           {rerankError && !isConfigError && rerankError instanceof Error && (

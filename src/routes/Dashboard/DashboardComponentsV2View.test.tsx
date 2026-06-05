@@ -30,8 +30,7 @@ const routeMocks = vi.hoisted(() => {
     user: makeComponent("user-digest", "User component"),
     navigate: vi.fn(),
     notify: vi.fn(),
-    generateAiDescription: vi.fn(),
-    resetAiDescription: vi.fn(),
+    refetchDescription: vi.fn(),
     descriptionErrorState,
     aiDescriptionsEnabled: false,
     search,
@@ -119,13 +118,29 @@ vi.mock("@/components/shared/Settings/useFlags", () => ({
 }));
 
 vi.mock("@/hooks/useNaturalLanguageComponentSearch", () => ({
-  useComponentAiDescription: () => ({
-    mutate: routeMocks.generateAiDescription,
-    isPending: false,
-    error: routeMocks.descriptionErrorState.current,
-    reset: routeMocks.resetAiDescription,
-    isConfigured: true,
-  }),
+  useComponentAiDescription: ({
+    reference,
+    enabled,
+  }: {
+    reference: ComponentReference | undefined;
+    enabled: boolean;
+  }) => {
+    const error = routeMocks.descriptionErrorState.current;
+    // Simulate React Query's auto-fetch: when `enabled` is true and we have a
+    // hydrated reference, the query fires on mount/key-change. A pre-seeded
+    // error short-circuits the auto-fetch (retry: false → an errored query
+    // stays errored without re-firing).
+    if (enabled && reference?.digest && reference.spec && !error) {
+      routeMocks.refetchDescription(reference);
+    }
+    return {
+      description: undefined,
+      isFetching: false,
+      error,
+      refetch: () => routeMocks.refetchDescription(reference),
+      isConfigured: true,
+    };
+  },
   useNaturalLanguageComponentRerank: () => ({
     mutate: vi.fn(),
     data: undefined,
@@ -367,8 +382,7 @@ describe("DashboardComponentsV2View", () => {
     routeMocks.aiDescriptionsEnabled = false;
     routeMocks.descriptionErrorState.current = null;
     routeMocks.search = {};
-    routeMocks.generateAiDescription.mockClear();
-    routeMocks.resetAiDescription.mockClear();
+    routeMocks.refetchDescription.mockClear();
   });
 
   it("filters visible component results by source type and restores them", () => {
@@ -398,15 +412,15 @@ describe("DashboardComponentsV2View", () => {
 
     render(<DashboardComponentsV2View />);
 
-    expect(routeMocks.generateAiDescription).not.toHaveBeenCalled();
+    // enabled=false → the hook does not auto-fetch.
+    expect(routeMocks.refetchDescription).not.toHaveBeenCalled();
 
     fireEvent.click(
       screen.getByRole("button", { name: "Generate AI description" }),
     );
 
-    expect(routeMocks.generateAiDescription).toHaveBeenCalledWith(
-      { reference: routeMocks.standard },
-      expect.any(Object),
+    expect(routeMocks.refetchDescription).toHaveBeenCalledWith(
+      routeMocks.standard,
     );
   });
 
@@ -416,10 +430,10 @@ describe("DashboardComponentsV2View", () => {
 
     render(<DashboardComponentsV2View />);
 
+    // enabled=true → React Query auto-fetches; the mock fires the spy on render.
     await waitFor(() => {
-      expect(routeMocks.generateAiDescription).toHaveBeenCalledWith(
-        { reference: routeMocks.standard },
-        expect.any(Object),
+      expect(routeMocks.refetchDescription).toHaveBeenCalledWith(
+        routeMocks.standard,
       );
     });
   });
@@ -431,7 +445,8 @@ describe("DashboardComponentsV2View", () => {
 
     render(<DashboardComponentsV2View />);
 
-    expect(routeMocks.generateAiDescription).not.toHaveBeenCalled();
+    // With retry: false the errored query stays errored — no auto-refetch.
+    expect(routeMocks.refetchDescription).not.toHaveBeenCalled();
     expect(screen.getByText(/provider failed/)).toBeInTheDocument();
   });
 });

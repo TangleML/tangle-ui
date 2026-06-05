@@ -188,20 +188,29 @@ function validateConfig(options: LlmOptions): {
   return { base: base.replace(/\/+$/, ""), key, model };
 }
 
-/**
- * Rerank lexical candidates against the user's query. Returns an empty result
- * when called with no candidates — callers should fall back to the lexical
- * ordering in that case.
- */
-export async function rerankComponentsByNaturalLanguage(
-  query: string,
-  candidates: RerankCandidate[],
-  options: LlmOptions,
-): Promise<RerankResult> {
-  const trimmed = query.trim();
-  if (trimmed.length === 0) return { matches: [] };
-  if (candidates.length === 0) return { matches: [] };
+interface ChatCompletionCallConfig {
+  systemPrompt: string;
+  userPrompt: string;
+  /**
+   * Token budget for the visible response. Used as `max_tokens` for non-
+   * reasoning models. Reasoning models (gpt-5 / o-series) use a fixed
+   * `max_completion_tokens` of 2000 because they also burn budget on hidden
+   * thinking tokens.
+   */
+  maxTokens: number;
+}
 
+/**
+ * Shared LLM chat-completion call. Owns the request/response plumbing every
+ * AI feature in this service needs: config validation, model-family
+ * detection for `max_tokens` vs `max_completion_tokens`, header construction,
+ * non-JSON / empty / non-2xx error handling. Callers supply the prompts and
+ * parse the returned `rawContent` string themselves.
+ */
+async function callLlmChatCompletion(
+  options: LlmOptions,
+  config: ChatCompletionCallConfig,
+): Promise<string> {
   const { base, key, model } = validateConfig(options);
 
   const response = await fetch(`${base}/chat/completions`, {
@@ -215,16 +224,13 @@ export async function rerankComponentsByNaturalLanguage(
       model,
       // gpt-5 / o-series reject temperature overrides entirely; omit for them.
       ...(usesCompletionTokensParam(model) ? {} : { temperature: 0 }),
-      // Output sizing: at most 20 candidates × roughly {25 id + 30 reason + JSON
-      // structure} ≈ 1200-1500 tokens for a full response. Reasoning models
-      // burn additional budget on hidden thinking, so they get more headroom.
       ...(usesCompletionTokensParam(model)
         ? { max_completion_tokens: 2000 }
-        : { max_tokens: 1500 }),
+        : { max_tokens: config.maxTokens }),
       response_format: { type: "json_object" },
       messages: [
-        { role: "system", content: buildRerankSystemPrompt() },
-        { role: "user", content: buildRerankUserPrompt(trimmed, candidates) },
+        { role: "system", content: config.systemPrompt },
+        { role: "user", content: config.userPrompt },
       ],
     }),
   });
@@ -246,6 +252,30 @@ export async function rerankComponentsByNaturalLanguage(
   if (!rawContent) {
     throw new Error("LLM proxy returned an empty response");
   }
+  return rawContent;
+}
+
+/**
+ * Rerank lexical candidates against the user's query. Returns an empty result
+ * when called with no candidates — callers should fall back to the lexical
+ * ordering in that case.
+ */
+export async function rerankComponentsByNaturalLanguage(
+  query: string,
+  candidates: RerankCandidate[],
+  options: LlmOptions,
+): Promise<RerankResult> {
+  const trimmed = query.trim();
+  if (trimmed.length === 0) return { matches: [] };
+  if (candidates.length === 0) return { matches: [] };
+
+  // Output sizing: at most 20 candidates × roughly {25 id + 30 reason + JSON
+  // structure} ≈ 1200-1500 tokens for a full response.
+  const rawContent = await callLlmChatCompletion(options, {
+    systemPrompt: buildRerankSystemPrompt(),
+    userPrompt: buildRerankUserPrompt(trimmed, candidates),
+    maxTokens: 1500,
+  });
 
   let parsed: unknown;
   try {
@@ -370,41 +400,11 @@ export async function generateComponentAiDescription(
     throw new Error("Component details are not loaded yet.");
   }
 
-  const { base, key, model } = validateConfig(options);
-
-  const response = await fetch(`${base}/chat/completions`, {
-    method: "POST",
-    signal: options.signal,
-    headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${key}`,
-    },
-    body: JSON.stringify({
-      model,
-      ...(usesCompletionTokensParam(model) ? {} : { temperature: 0 }),
-      ...(usesCompletionTokensParam(model)
-        ? { max_completion_tokens: 2000 }
-        : { max_tokens: 900 }),
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: buildDescriptionSystemPrompt() },
-        { role: "user", content: buildDescriptionUserPrompt(input) },
-      ],
-    }),
+  const rawContent = await callLlmChatCompletion(options, {
+    systemPrompt: buildDescriptionSystemPrompt(),
+    userPrompt: buildDescriptionUserPrompt(input),
+    maxTokens: 900,
   });
-
-  if (!response.ok) {
-    const detail = await response.text().catch(() => "");
-    throw new Error(
-      `LLM proxy returned ${response.status}: ${detail.slice(0, 200) || response.statusText}`,
-    );
-  }
-
-  const payload: unknown = await response.json();
-  const rawContent = readChatCompletionContent(payload);
-  if (!rawContent) {
-    throw new Error("LLM proxy returned an empty response");
-  }
 
   const description = readDescription(rawContent);
   if (!description) {
