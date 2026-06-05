@@ -34,18 +34,12 @@ import { TOP_NAV_HEIGHT } from "@/utils/constants";
 import { fetchWithErrorHandling } from "@/utils/fetchWithErrorHandling";
 import { getComponentName } from "@/utils/getComponentName";
 import { tracking } from "@/utils/tracking";
-import { isRecord } from "@/utils/typeGuards";
+
+import { readSelectedComponentDigest } from "./searchParams";
 
 type ComponentRowSection = "user" | "library" | "published";
 
 const PUBLISHED_COMPONENTS_URL = "/api/published_components/";
-
-export function readSelectedComponentDigest(
-  search: unknown,
-): string | undefined {
-  if (!isRecord(search)) return undefined;
-  return typeof search.component === "string" ? search.component : undefined;
-}
 
 // ─── Collapsible section header ──────────────────────────────────────────────
 
