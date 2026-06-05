@@ -83,17 +83,25 @@ export function makeLineage(ref: ReferenceLike): ComponentLineage | undefined {
 }
 
 /**
+ * Parse a lineage value as stored in an annotation — either a JSON string (the
+ * serialized form that round-trips through YAML) or an already-parsed object.
+ * Returns `undefined` when absent or invalid.
+ */
+export function parseLineage(raw: unknown): ComponentLineage | undefined {
+  if (raw == null) return undefined;
+  const value = typeof raw === "string" ? safeJsonParse(raw) : raw;
+  const result = componentLineageSchema.safeParse(value);
+  return result.success ? result.data : undefined;
+}
+
+/**
  * Read a lineage previously embedded in a (published) component spec's metadata
  * annotations, if present and valid.
  */
 export function embeddedLineageOf(
   spec: ComponentSpec | undefined,
 ): ComponentLineage | undefined {
-  const raw = spec?.metadata?.annotations?.[EMBEDDED_LINEAGE_KEY];
-  if (raw == null) return undefined;
-  const value = typeof raw === "string" ? safeJsonParse(raw) : raw;
-  const result = componentLineageSchema.safeParse(value);
-  return result.success ? result.data : undefined;
+  return parseLineage(spec?.metadata?.annotations?.[EMBEDDED_LINEAGE_KEY]);
 }
 
 /**
