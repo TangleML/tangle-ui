@@ -6,6 +6,7 @@
     "src/api/**",
     "src/components/ui/**",
     "src/config/announcements.ts",
+    "src/config/preSubmitHooks.ts",
     "src/components/shared/BetaFeatureWrapper/BetaFeatureWrapper.tsx"
   ],
   "ignoreDependencies": [

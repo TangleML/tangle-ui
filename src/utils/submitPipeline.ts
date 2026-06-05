@@ -19,6 +19,7 @@ import type {
   ComponentReference,
   ComponentSpec,
 } from "./componentSpec";
+import { runPreSubmitHooks } from "./runPreSubmitHooks";
 import { componentSpecFromYaml } from "./yaml";
 
 export async function submitPipelineRun(
@@ -35,6 +36,16 @@ export async function submitPipelineRun(
 ) {
   const pipelineName =
     options?.canonicalName ?? componentSpec.name ?? "Pipeline";
+
+  const proceed = await runPreSubmitHooks({
+    componentSpec,
+    taskArguments: options?.taskArguments,
+  });
+  if (!proceed) {
+    // User declined via a pre-submit hook. This is a successful cancel, not an
+    // error, so we don't invoke onError.
+    return;
+  }
 
   try {
     const specCopy = structuredClone(componentSpec);

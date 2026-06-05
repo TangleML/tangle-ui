@@ -48,6 +48,71 @@ describe("submitPipelineRun", () => {
     vi.restoreAllMocks();
   });
 
+  describe("pre-submit hooks", () => {
+    afterEach(() => {
+      delete window.__TANGLE_PRE_SUBMIT_HOOKS__;
+    });
+
+    const componentSpec: ComponentSpec = {
+      name: "hooked-component",
+      implementation: { container: { image: "test:latest" } },
+    };
+
+    it("awaits a registered hook before submitting", async () => {
+      const order: string[] = [];
+      const hook = vi.fn(async () => {
+        order.push("hook");
+        return { proceed: true };
+      });
+      vi.mocked(pipelineRunService.createPipelineRun).mockImplementation(
+        async () => {
+          order.push("create");
+          return mockPipelineRun;
+        },
+      );
+      window.__TANGLE_PRE_SUBMIT_HOOKS__ = [hook];
+
+      await submitPipelineRun(componentSpec, mockBackendUrl);
+
+      expect(hook).toHaveBeenCalledWith({
+        componentSpec,
+        taskArguments: undefined,
+      });
+      expect(order).toEqual(["hook", "create"]);
+    });
+
+    it("skips submission and does not call onError when a hook declines", async () => {
+      const mockOnError = vi.fn();
+      const mockOnSuccess = vi.fn();
+      window.__TANGLE_PRE_SUBMIT_HOOKS__ = [
+        vi.fn(async () => ({ proceed: false })),
+      ];
+
+      await submitPipelineRun(componentSpec, mockBackendUrl, {
+        onSuccess: mockOnSuccess,
+        onError: mockOnError,
+      });
+
+      expect(pipelineRunService.createPipelineRun).not.toHaveBeenCalled();
+      expect(mockOnError).not.toHaveBeenCalled();
+      expect(mockOnSuccess).not.toHaveBeenCalled();
+    });
+
+    it("forwards taskArguments to the hook context", async () => {
+      const hook = vi.fn(async () => ({ proceed: true }));
+      window.__TANGLE_PRE_SUBMIT_HOOKS__ = [hook];
+
+      await submitPipelineRun(componentSpec, mockBackendUrl, {
+        taskArguments: { param1: "value1" },
+      });
+
+      expect(hook).toHaveBeenCalledWith({
+        componentSpec,
+        taskArguments: { param1: "value1" },
+      });
+    });
+  });
+
   describe("basic functionality", () => {
     it("should successfully submit a simple component spec", async () => {
       // Arrange
