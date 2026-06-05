@@ -8,7 +8,6 @@ import {
   ComponentDetailSkeleton,
 } from "@/components/shared/ComponentDetail/ComponentDetail";
 import { SuspenseWrapper } from "@/components/shared/SuspenseWrapper";
-import { Button } from "@/components/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
@@ -35,81 +34,12 @@ import { TOP_NAV_HEIGHT } from "@/utils/constants";
 import { fetchWithErrorHandling } from "@/utils/fetchWithErrorHandling";
 import { getComponentName } from "@/utils/getComponentName";
 import { tracking } from "@/utils/tracking";
-import { isRecord } from "@/utils/typeGuards";
+
+import { readSelectedComponentDigest } from "./searchParams";
 
 type ComponentRowSection = "user" | "library" | "published";
 
 const PUBLISHED_COMPONENTS_URL = "/api/published_components/";
-
-export function readSelectedComponentDigest(
-  search: unknown,
-): string | undefined {
-  if (!isRecord(search)) return undefined;
-  return typeof search.component === "string" ? search.component : undefined;
-}
-
-interface SourceFilterOption {
-  source: ComponentRowSection;
-  label: string;
-}
-
-const SOURCE_FILTER_OPTIONS: SourceFilterOption[] = [
-  { source: "user", label: "User generated" },
-  { source: "library", label: "Library / GitHub" },
-  { source: "published", label: "Published" },
-];
-
-export const SourceFilterBar = ({
-  disabledSources,
-  onToggle,
-  onEnableAll,
-}: {
-  disabledSources: ComponentRowSection[];
-  onToggle: (source: ComponentRowSection) => void;
-  onEnableAll: () => void;
-}) => {
-  const disabled = new Set(disabledSources);
-  const activeCount = SOURCE_FILTER_OPTIONS.filter(
-    (option) => !disabled.has(option.source),
-  ).length;
-
-  return (
-    <BlockStack gap="2">
-      <InlineStack gap="2" blockAlign="center" wrap="wrap">
-        <Text size="xs" tone="subdued">
-          Sources
-        </Text>
-        {SOURCE_FILTER_OPTIONS.map(({ source, label }) => {
-          const active = !disabled.has(source);
-          return (
-            <Button
-              key={source}
-              type="button"
-              size="xs"
-              variant={active ? "secondary" : "outline"}
-              aria-pressed={active}
-              aria-label={`${active ? "Hide" : "Show"} ${label} source`}
-              onClick={() => onToggle(source)}
-            >
-              <Icon name={active ? "Check" : "Plus"} size="sm" />
-              {label}
-            </Button>
-          );
-        })}
-        {activeCount < SOURCE_FILTER_OPTIONS.length && (
-          <Button type="button" size="xs" variant="ghost" onClick={onEnableAll}>
-            Show all
-          </Button>
-        )}
-      </InlineStack>
-      {activeCount === 0 && (
-        <Paragraph size="xs" tone="subdued">
-          No sources selected. Turn on at least one source to show components.
-        </Paragraph>
-      )}
-    </BlockStack>
-  );
-};
 
 // ─── Collapsible section header ──────────────────────────────────────────────
 

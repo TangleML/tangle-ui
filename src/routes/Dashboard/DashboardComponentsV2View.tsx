@@ -1,3 +1,4 @@
+import Bugsnag from "@bugsnag/js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -43,6 +44,7 @@ import {
   fetchAndStoreComponentLibrary,
   hydrateComponentReference,
 } from "@/services/componentService";
+import { IS_BUGSNAG_ENABLED } from "@/services/errorManagement/bugsnag";
 import type { ComponentFolder } from "@/types/componentLibrary";
 import type {
   ComponentReference,
@@ -52,9 +54,9 @@ import { componentMetadata } from "@/utils/componentTracking";
 import { HOURS, TOP_NAV_HEIGHT } from "@/utils/constants";
 import { getComponentName } from "@/utils/getComponentName";
 import { tracking } from "@/utils/tracking";
-import { isRecord } from "@/utils/typeGuards";
 
 import { APP_ROUTES } from "../router";
+import { readSelectedComponentDigest } from "./searchParams";
 
 // Repeated Tailwind combos extracted as named constants.
 const PANEL_CLASS = "p-3 rounded-lg bg-card border border-border";
@@ -205,11 +207,6 @@ function registeredSource(library: StoredLibrary): ComponentSearchSource {
   return { kind: "registered", label: library.name, id: library.id };
 }
 
-function readSelectedComponentDigest(search: unknown): string | undefined {
-  if (!isRecord(search)) return undefined;
-  return typeof search.component === "string" ? search.component : undefined;
-}
-
 function registeredLibraryConfigurationFingerprint(
   configuration: StoredLibrary["configuration"],
 ): string {
@@ -280,6 +277,11 @@ const ComponentCard = ({
     : "unknown";
 
   return (
+    // Raw <button> rather than the <Button> primitive: the primitive's variants
+    // are sized for compact text/icon buttons, not a full-width multi-line card
+    // with an accent bar + selected/hover/focus states. Keeping the native
+    // <button> preserves accessibility (aria-pressed, focus-visible ring) and
+    // lets the card layout grow freely.
     <button
       type="button"
       onClick={() => onSelect(reference)}
@@ -485,14 +487,15 @@ export const DashboardComponentsV2View = () => {
   // Dexie is only the source of which libraries are registered. Fetching
   // remote/GitHub library contents stays in TanStack Query so loading, errors,
   // and cache lifetime follow the rest of the app's server-state conventions.
-  const registeredLibraries = useLiveQuery<StoredLibrary[], StoredLibrary[]>(
-    async () => {
-      ensureLibraryFactoriesRegistered();
-      return LibraryDB.component_libraries.toArray();
-    },
-    [],
-    [],
-  );
+  //
+  // No default value: `registeredLibraries` is `undefined` until Dexie resolves
+  // so downstream `=== undefined` loading checks fire correctly. Returning an
+  // empty `[]` default would race the first paint with a momentary
+  // empty-results state for users whose library is mostly registered.
+  const registeredLibraries = useLiveQuery<StoredLibrary[]>(async () => {
+    ensureLibraryFactoriesRegistered();
+    return LibraryDB.component_libraries.toArray();
+  }, []);
 
   const registeredLibrariesFingerprint =
     createRegisteredLibrariesFingerprint(registeredLibraries);
@@ -520,7 +523,20 @@ export const DashboardComponentsV2View = () => {
         const out: SourcedReference[] = [];
         for (const result of results) {
           if (result.status !== "fulfilled") {
-            // One broken library shouldn't kill the whole search.
+            // One broken library shouldn't kill the whole search — surface the
+            // failure to Bugsnag (gated by IS_BUGSNAG_ENABLED) so we can act on
+            // it, but keep a console.warn for dev visibility.
+            const reason =
+              result.reason instanceof Error
+                ? result.reason
+                : new Error(String(result.reason));
+            if (IS_BUGSNAG_ENABLED) {
+              Bugsnag.notify(reason, (event) => {
+                event.addMetadata("components_v2", {
+                  message: "registered library failed to load",
+                });
+              });
+            }
             console.warn(
               "Components V2: registered library failed to load",
               result.reason,
@@ -742,89 +758,95 @@ export const DashboardComponentsV2View = () => {
   return (
     // App-shell layout: escape the dashboard's outer padding (`-mt-4 -mb-6
     // -mx-8`) so we can paint a fixed-height shell with our own internal
-    // padding per zone. Outer div carries the inline height (BlockStack's
-    // typed props don't accept `style`); BlockStack owns the vertical flex
-    // semantic for the header + body scroll-zones below.
+    // padding per zone. Raw flex-col here (rather than BlockStack) because we
+    // need the inline `style={{ height }}` AND independent vertical-scroll
+    // columns — both BlockStack's typed props and its `items-start` /
+    // `min-height: auto` defaults fight against that flex chain.
     <div
-      className="-mt-4 -mb-6 -mx-8 overflow-hidden"
+      className="flex flex-col -mt-4 -mb-6 -mx-8 overflow-hidden"
       style={{ height: `calc(100vh - ${TOP_NAV_HEIGHT}px)` }}
     >
-      <BlockStack className="h-full">
-        {/* Header zone: page title, description, search input. shrink-0 so it
-            never gets squeezed by the body below. */}
-        <div className="shrink-0 px-8 pt-4 pb-4 border-b border-border">
-          <BlockStack gap="3" align="stretch">
-            <BlockStack gap="1">
-              <Heading level={2}>Components V2</Heading>
-              <Paragraph size="sm" tone="subdued">
-                Type to search across every component source — standard library,
-                your published components, registered libraries, and local user
-                components. Results match on name, description, inputs/outputs,
-                and container command.
-              </Paragraph>
-            </BlockStack>
-            <Input
-              type="search"
-              placeholder="e.g. train_test_split, pandas, clean up my data"
-              value={query}
-              onChange={handleQueryChange}
-              aria-label="Search components"
-              disabled={isLoadingLibrary || noLibraryData}
-            />
-            <SourceFilterBar
-              options={sourceFilterOptions}
-              disabledSourceKeys={disabledSourceKeys}
-              onToggle={handleSourceToggle}
-              onEnableAll={handleEnableAllSources}
-            />
+      {/* Header zone: page title, description, search input. shrink-0 so it
+          never gets squeezed by the body below. */}
+      <div className="shrink-0 px-8 pt-4 pb-4 border-b border-border">
+        <BlockStack gap="3" align="stretch">
+          <BlockStack gap="1">
+            <Heading level={2}>Components V2</Heading>
+            <Paragraph size="sm" tone="subdued">
+              Type to search across every component source — standard library,
+              your published components, registered libraries, and local user
+              components. Results match on name, description, inputs/outputs,
+              and container command.
+            </Paragraph>
           </BlockStack>
-        </div>
+          <Input
+            type="search"
+            placeholder="e.g. train_test_split, pandas, clean up my data"
+            value={query}
+            onChange={handleQueryChange}
+            aria-label="Search components"
+            disabled={isLoadingLibrary || noLibraryData}
+          />
+          <SourceFilterBar
+            options={sourceFilterOptions}
+            disabledSourceKeys={disabledSourceKeys}
+            onToggle={handleSourceToggle}
+            onEnableAll={handleEnableAllSources}
+          />
+        </BlockStack>
+      </div>
 
-        {/* Body zone: two scroll columns. `min-h-0` is required so the flex
-            children can shrink and scroll instead of growing the parent. */}
-        <div className="flex-1 min-h-0 flex">
-          {/* Results column — own scroll. When detail is open, narrows to a
-              fixed width with a divider; otherwise fills the whole body. */}
-          <div
-            className={cn(
-              "min-w-0 overflow-y-auto px-8 py-4",
-              isDetailOpen
-                ? "w-[360px] shrink-0 border-r border-border"
-                : "flex-1",
-            )}
-          >
-            {renderResults()}
-          </div>
-
-          {/* Detail column — own scroll. Close button sticky to the top of
-              this column's scroll viewport so it stays reachable. */}
-          {isDetailOpen && selectedReference && (
-            <div
-              role="region"
-              aria-label="Component details"
-              className="flex-1 min-w-0 overflow-y-auto px-8 py-4 relative"
-            >
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={closeDetail}
-                aria-label="Close component details"
-                className="sticky top-0 float-right z-10 bg-background/80 backdrop-blur-sm rounded-md"
-              >
-                <Icon name="X" />
-              </Button>
-              <SuspenseWrapper fallback={<ComponentDetailSkeleton />}>
-                <ComponentDetail
-                  key={selectedDigest}
-                  reference={selectedReference}
-                  layout="stacked"
-                  sourcePanelHeight="480px"
-                />
-              </SuspenseWrapper>
-            </div>
+      {/* Body zone: two scroll columns. Raw flex-row (rather than
+          InlineStack) because InlineStack's `items-start` default would
+          collapse each column to its content height and break the inner
+          `overflow-y-auto`. `min-h-0` lets the row shrink below content so
+          its children's overflow can clip. */}
+      <div className="flex flex-1 min-h-0">
+        {/* Results column — own scroll. When detail is open, narrows to a
+              fixed width with a divider; otherwise fills the whole body.
+              `min-h-0` is critical: flex items default to `min-height: auto`
+              which lets content push the column past the parent's height and
+              breaks the `overflow-y-auto` clip. */}
+        <div
+          className={cn(
+            "min-h-0 min-w-0 overflow-y-auto px-8 py-4",
+            isDetailOpen
+              ? "w-[360px] shrink-0 border-r border-border"
+              : "flex-1",
           )}
+        >
+          {renderResults()}
         </div>
-      </BlockStack>
+
+        {/* Detail column — own scroll. Close button sticky to the top of
+              this column's scroll viewport so it stays reachable.
+              Same `min-h-0` rule as the results column above. */}
+        {isDetailOpen && selectedReference && (
+          <div
+            role="region"
+            aria-label="Component details"
+            className="flex-1 min-h-0 min-w-0 overflow-y-auto px-8 py-4 relative"
+          >
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={closeDetail}
+              aria-label="Close component details"
+              className="sticky top-0 float-right z-10 bg-background/80 backdrop-blur-sm rounded-md"
+            >
+              <Icon name="X" />
+            </Button>
+            <SuspenseWrapper fallback={<ComponentDetailSkeleton />}>
+              <ComponentDetail
+                key={selectedDigest}
+                reference={selectedReference}
+                layout="stacked"
+                sourcePanelHeight="480px"
+              />
+            </SuspenseWrapper>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

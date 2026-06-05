@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { readSelectedComponentDigest } from "./DashboardComponentsView";
+import { readSelectedComponentDigest } from "./searchParams";
 
 describe("readSelectedComponentDigest", () => {
   it("returns the digest from a search record with a string `component`", () => {
