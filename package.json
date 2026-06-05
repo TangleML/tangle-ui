@@ -102,7 +102,7 @@
     "js-yaml": "^4.2.0",
     "localforage": "^1.10.0",
     "lucide-react": "^1.17.0",
-    "mobx": "^6.15.4",
+    "mobx": "^6.16.0",
     "mobx-keystone": "^1.21.0",
     "mobx-react-lite": "^4.1.1",
     "nanoid": "^5.1.11",
