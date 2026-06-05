@@ -59,6 +59,7 @@ const TaskNodeCard = () => {
     UpdateOverlayMessage["data"] | undefined
   >();
   const [highlightedState, setHighlighted] = useState(false);
+  const [spotlightState, setSpotlight] = useState(false);
 
   const [expandedInputs, setExpandedInputs] = useState(false);
   const [expandedOutputs, setExpandedOutputs] = useState(false);
@@ -112,8 +113,18 @@ const TaskNodeCard = () => {
           ...message.data,
         });
         break;
+      case "spotlight":
+        setSpotlight(true);
+        break;
     }
   }, []);
+
+  // The spotlight is a one-shot reveal animation; clear it once it has played.
+  useEffect(() => {
+    if (!spotlightState) return;
+    const timeout = setTimeout(() => setSpotlight(false), 1300);
+    return () => clearTimeout(timeout);
+  }, [spotlightState]);
 
   useEffect(() => {
     if (!taskSpec) return;
@@ -200,6 +211,7 @@ const TaskNodeCard = () => {
         isConnectedToSelectedEdge &&
           "border-edge-selected! ring-2 ring-edge-selected/30",
         isSubgraphNode && "cursor-pointer",
+        spotlightState && "animate-spotlight",
       )}
       style={{
         width: dimensions.w + "px",

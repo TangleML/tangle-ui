@@ -2,6 +2,13 @@ import type { Node, XYPosition } from "@xyflow/react";
 
 export type Bounds = { x: number; y: number; width: number; height: number };
 
+/** Axis-aligned bounding-box overlap test for two rects. */
+export const rectsOverlap = (a: Bounds, b: Bounds): boolean =>
+  a.x < b.x + b.width &&
+  a.x + a.width > b.x &&
+  a.y < b.y + b.height &&
+  a.y + a.height > b.y;
+
 export const isPositionInNode = (node: Node, position: XYPosition) => {
   const nodeRect = {
     x: node.position.x,

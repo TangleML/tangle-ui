@@ -151,6 +151,9 @@ code {
   /* Custom animations */
   --animate-revert-copied: revert-copied 0.5s ease-in-out forwards;
   --animate-highlight-fade: highlight-fade 2s ease-out forwards;
+  /* Brief spotlight that pulses in and fades out, used to reveal a node that
+     was just placed on the canvas (e.g. "Place as a new task"). */
+  --animate-spotlight: spotlight 1.2s ease-out forwards;
 
   @keyframes revert-copied {
     0%,
@@ -176,6 +179,25 @@ code {
     100% {
       background-color: transparent;
       box-shadow: none;
+    }
+  }
+
+  @keyframes spotlight {
+    0% {
+      box-shadow: 0 0 0 0 oklch(0.62 0.19 260 / 0);
+      transform: scale(1);
+    }
+    25% {
+      box-shadow: 0 0 0 6px oklch(0.62 0.19 260 / 0.55);
+      transform: scale(1.02);
+    }
+    60% {
+      box-shadow: 0 0 0 4px oklch(0.62 0.19 260 / 0.35);
+      transform: scale(1);
+    }
+    100% {
+      box-shadow: 0 0 0 0 oklch(0.62 0.19 260 / 0);
+      transform: scale(1);
     }
   }
 }
