@@ -28,7 +28,7 @@ const baseInput: Omit<ReconcileSession, "sessionId" | "createdAt"> = {
   targetDigest: "edited-digest",
   targetComponentText: "name: Train\n",
   targetName: "Train",
-  returnTo: "/editor-v2/Origin?reconcileOverview=X",
+  returnToPipeline: "Origin",
   worklist: [{ storageKey: "Pipeline A", status: "pending" }],
 };
 

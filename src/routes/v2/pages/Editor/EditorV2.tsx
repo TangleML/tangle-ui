@@ -50,6 +50,7 @@ import { useSelectionWindowSync } from "./hooks/useSelectionWindowSync";
 import { useSpecLifecycle } from "./hooks/useSpecLifecycle";
 import { useTipOfTheDayWindow } from "./hooks/useTipOfTheDayWindow";
 import { useUndoRedoKeyboard } from "./hooks/useUndoRedoKeyboard";
+import { ReconcileOverviewHost } from "./lineage/ReconcileOverviewHost";
 import { useReconcileFromUrl } from "./lineage/useReconcileFromUrl";
 import { editorRegistry } from "./nodes";
 import { EditorSessionProvider } from "./store/EditorSessionContext";
@@ -152,6 +153,7 @@ function EditorV2Content({ pipelineRef }: { pipelineRef: PipelineRef | null }) {
             <EmptyEditorState />
           )}
         </ForcedSearchProvider>
+        <ReconcileOverviewHost />
       </ReactFlowProvider>
     </ComponentLibraryProvider>
   );

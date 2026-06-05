@@ -1,5 +1,5 @@
-import { useLocation, useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -15,42 +15,34 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { APP_ROUTES } from "@/routes/router";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
-import type { HydratedComponentReference } from "@/utils/componentSpec";
 
-import {
-  createReconcileSession,
-  type ReconcileSession,
-  updateReconcileSession,
-} from "./reconcileSession";
+import type { ReconcileSession } from "./reconcileSession";
 import {
   type PipelineLineageMatch,
   scanPipelinesForLineage,
 } from "./scanPipelinesForLineage";
 
 interface ReconcileOverviewProps {
-  /** The edited (target) component every instance is reconciled to. */
-  component: HydratedComponentReference;
-  originId: string;
+  session: ReconcileSession;
   onClose: () => void;
 }
 
 /**
- * Cross-pipeline reconcile overview: lists every locally-stored pipeline that
- * uses the edited component's origin and lets the user reconcile each in turn.
- * Clicking "Reconcile" flushes the current pipeline, then routes to the target
- * pipeline in reconcile mode (`?reconcile=<sessionId>`), where the change is
- * staged and committed via the node-anchored "Finish Reconciling" button.
+ * Cross-pipeline reconcile overview (URL-driven via `?reconcileOverview=<id>`):
+ * lists every locally-stored pipeline using the edited component's origin and
+ * lets the user reconcile each in turn. Status is recomputed by re-scan on each
+ * open, so it is self-healing across refresh / back / "reconcile next". Clicking
+ * "Reconcile" flushes the current pipeline, then routes to the target in
+ * reconcile mode (`?reconcile=<id>`), where the change is staged and committed
+ * via the node-anchored "Finish Reconciling" button.
  */
 export function ReconcileOverview({
-  component,
-  originId,
+  session,
   onClose,
 }: ReconcileOverviewProps) {
   const navigate = useNavigate();
-  const location = useLocation();
   const { autoSave } = useEditorSession();
 
-  const sessionRef = useRef<ReconcileSession | null>(null);
   const [pipelines, setPipelines] = useState<PipelineLineageMatch[] | null>(
     null,
   );
@@ -58,37 +50,18 @@ export function ReconcileOverview({
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const results = await scanPipelinesForLineage(originId, component.digest);
-      if (cancelled) return;
-
-      const session = createReconcileSession({
-        originId,
-        targetDigest: component.digest,
-        targetComponentText: component.text,
-        targetName: component.name,
-        returnTo: "",
-        worklist: results.map((r) => ({
-          storageKey: r.storageKey,
-          status: "pending" as const,
-        })),
-      });
-      const returnTo = `${location.pathname}?reconcileOverview=${session.sessionId}`;
-      updateReconcileSession(session.sessionId, { returnTo });
-      sessionRef.current = { ...session, returnTo };
-
-      setPipelines(results);
+      const results = await scanPipelinesForLineage(
+        session.originId,
+        session.targetDigest,
+      );
+      if (!cancelled) setPipelines(results);
     })();
     return () => {
       cancelled = true;
     };
-    // Intentionally runs once when the overview opens; props are fixed for its
-    // lifetime (it is mounted only while active).
-  }, []);
+  }, [session.originId, session.targetDigest]);
 
   const handleReconcile = async (storageKey: string) => {
-    const session = sessionRef.current;
-    if (!session) return;
-    // Persist the current pipeline before navigating away.
     await autoSave.save();
     await navigate({
       to: APP_ROUTES.EDITOR_V2_PIPELINE,
@@ -109,7 +82,7 @@ export function ReconcileOverview({
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>
-            Reconcile “{component.name}” across pipelines
+            Reconcile “{session.targetName}” across pipelines
           </DialogTitle>
           <DialogDescription>
             Update other pipelines that use this component’s origin to your
