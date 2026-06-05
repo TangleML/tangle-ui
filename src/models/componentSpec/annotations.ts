@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import type { FlexNodeData } from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/types";
 import { isFlexNodeData } from "@/components/shared/ReactFlow/FlowCanvas/FlexNode/types";
+import { type ComponentLineage, componentLineageSchema } from "@/utils/lineage";
 
 import type { Annotation } from "./entities/types";
 
@@ -35,6 +36,7 @@ interface AnnotationTypeMap {
   "editor.position": XYPosition;
   "tangleml.com/editor/task-color": string;
   "tangleml.com/editor/edge-conduits": EdgeConduit[];
+  "tangleml.com/lineage/origin": ComponentLineage | undefined;
   "flex-nodes": FlexNodeData[];
   notes: string;
   tags: string[];
@@ -104,6 +106,16 @@ const codecs = {
     defaultValue: "transparent",
   },
   "tangleml.com/editor/edge-conduits": jsonArrayCodec(edgeConduitSchema),
+  "tangleml.com/lineage/origin": {
+    serialize: (value: ComponentLineage | undefined) =>
+      value ? JSON.stringify(value) : undefined,
+    deserialize: (raw: unknown): ComponentLineage | undefined => {
+      const obj = typeof raw === "string" ? safeJsonParse(raw) : raw;
+      const result = componentLineageSchema.safeParse(obj);
+      return result.success ? result.data : undefined;
+    },
+    defaultValue: undefined,
+  },
   "flex-nodes": jsonArrayCodec(flexNodeDataSchema),
   notes: {
     serialize: (value: string) => value,

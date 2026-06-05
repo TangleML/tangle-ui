@@ -24,6 +24,7 @@ import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import {
   EDITOR_POSITION_ANNOTATION,
+  LINEAGE_ORIGIN_ANNOTATION,
   SYSTEM_ANNOTATIONS,
   ZINDEX_ANNOTATION,
 } from "@/utils/annotations";
@@ -170,7 +171,16 @@ export const TaskDetails = observer(function TaskDetails({
       prefer: "below",
     });
 
-    const newTask = addTask(spec, hydratedComponent, position);
+    // The placed task descends from the same origin as the edited task, so it
+    // inherits that task's lineage rather than deriving a fresh one from the
+    // edited component's (now-changed) digest.
+    const inheritedLineage = task.annotations.get(LINEAGE_ORIGIN_ANNOTATION);
+    const newTask = addTask(
+      spec,
+      hydratedComponent,
+      position,
+      inheritedLineage,
+    );
 
     track("pipeline_editor.component.edited", {
       ...componentMetadata(hydratedComponent, "user"),
