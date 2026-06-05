@@ -19,8 +19,11 @@ export class EditorStore {
   @observable accessor focusedArgumentName: string | null = null;
   @observable accessor hoveredEntityId: string | null = null;
   @observable accessor pendingFocusNodeId: string | null = null;
+  @observable accessor spotlightNodeId: string | null = null;
   @observable.ref accessor selectedValidationIssue: ValidationIssue | null =
     null;
+
+  private spotlightTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     makeObservable(this);
@@ -35,6 +38,11 @@ export class EditorStore {
     this.focusedArgumentName = null;
     this.hoveredEntityId = null;
     this.pendingFocusNodeId = null;
+    this.spotlightNodeId = null;
+    if (this.spotlightTimer !== null) {
+      clearTimeout(this.spotlightTimer);
+      this.spotlightTimer = null;
+    }
     this.selectedValidationIssue = null;
   }
 
@@ -101,6 +109,27 @@ export class EditorStore {
 
   @action setPendingFocusNode(nodeId: string | null) {
     this.pendingFocusNodeId = nodeId;
+  }
+
+  /**
+   * Briefly spotlight a node (e.g. one just placed on the canvas). Auto-clears
+   * after the reveal animation so the effect plays once.
+   */
+  @action setSpotlightNode(nodeId: string | null) {
+    this.spotlightNodeId = nodeId;
+    if (this.spotlightTimer !== null) {
+      clearTimeout(this.spotlightTimer);
+      this.spotlightTimer = null;
+    }
+    if (nodeId !== null) {
+      this.spotlightTimer = setTimeout(
+        action(() => {
+          this.spotlightNodeId = null;
+          this.spotlightTimer = null;
+        }),
+        1300,
+      );
+    }
   }
 
   @action setSelectedValidationIssue(issue: ValidationIssue | null) {

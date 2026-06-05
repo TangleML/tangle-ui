@@ -299,10 +299,20 @@ export const TaskNode = observer(function TaskNode({
     onHandleClick: handleHandleClick,
   };
 
+  // Briefly spotlight a node that was just placed on the canvas. Merges into
+  // any active overlay effect rather than replacing it.
+  const wrapperEffect: NodeOverlayEffect | undefined =
+    editor.spotlightNodeId === entityId
+      ? {
+          ...nodeEffect,
+          className: cn(nodeEffect?.className, "animate-spotlight rounded-2xl"),
+        }
+      : nodeEffect;
+
   const OverrideComponent = nodeEffect?.componentOverride;
   if (OverrideComponent) {
     return (
-      <NodeEffectWrapper effect={nodeEffect}>
+      <NodeEffectWrapper effect={wrapperEffect}>
         <OverrideComponent {...viewProps} />
       </NodeEffectWrapper>
     );
@@ -310,14 +320,14 @@ export const TaskNode = observer(function TaskNode({
 
   if (!showContent) {
     return (
-      <NodeEffectWrapper effect={nodeEffect}>
+      <NodeEffectWrapper effect={wrapperEffect}>
         <TaskNodeSimplified {...viewProps} />
       </NodeEffectWrapper>
     );
   }
 
   return (
-    <NodeEffectWrapper effect={nodeEffect}>
+    <NodeEffectWrapper effect={wrapperEffect}>
       <TaskNodeCard {...viewProps} />
     </NodeEffectWrapper>
   );

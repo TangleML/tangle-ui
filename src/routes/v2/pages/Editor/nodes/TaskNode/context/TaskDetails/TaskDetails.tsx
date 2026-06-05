@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from "react";
 
 import type { SaveAction } from "@/components/shared/ComponentEditor/saveAction";
 import { SaveActionsView } from "@/components/shared/ComponentEditor/SaveActionsView";
+import { computePlacementPosition } from "@/components/shared/ReactFlow/FlowCanvas/utils/computePlacementPosition";
+import type { Bounds } from "@/components/shared/ReactFlow/FlowCanvas/utils/geometry";
 import { StackingControls } from "@/components/shared/ReactFlow/FlowControls/StackingControls";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -18,9 +20,14 @@ import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskAc
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
-import { SYSTEM_ANNOTATIONS, ZINDEX_ANNOTATION } from "@/utils/annotations";
+import {
+  EDITOR_POSITION_ANNOTATION,
+  SYSTEM_ANNOTATIONS,
+  ZINDEX_ANNOTATION,
+} from "@/utils/annotations";
 import type { HydratedComponentReference } from "@/utils/componentSpec";
 import { diffComponentIO } from "@/utils/componentSpecDiff";
+import { DEFAULT_NODE_DIMENSIONS } from "@/utils/constants";
 import { tracking } from "@/utils/tracking";
 
 import { getTaskYamlText } from "./components/actions/getTaskYamlText";
@@ -42,7 +49,7 @@ export const TaskDetails = observer(function TaskDetails({
   const { track } = useAnalytics();
   const { editor } = useSharedStores();
   const { undo } = useEditorSession();
-  const { renameTask, replaceTask } = useTaskActions();
+  const { renameTask, replaceTask, addTask } = useTaskActions();
   const notify = useToastNotification();
   const spec = useSpec();
   const task = useTask(entityId);
@@ -95,20 +102,13 @@ export const TaskDetails = observer(function TaskDetails({
         taskName={task.name}
         inputDiff={inputDiff}
         outputDiff={outputDiff}
+        allowPlace
         onChoose={onChoose}
       />
     );
   };
 
-  const handleComponentSaved = (
-    hydratedComponent: HydratedComponentReference,
-    action: SaveAction,
-  ) => {
-    if (action !== "update") {
-      // "place" arrives once placement ships; nothing else applies in place.
-      return;
-    }
-
+  const updateInPlace = (hydratedComponent: HydratedComponentReference) => {
     const result = replaceTask(spec, task.$id, hydratedComponent);
     const lostInputs = result.inputDiff?.lostEntities ?? [];
 
@@ -120,6 +120,54 @@ export const TaskDetails = observer(function TaskDetails({
       );
     } else {
       notify("Component updated", "success");
+    }
+  };
+
+  const placeAsNewTask = (hydratedComponent: HydratedComponentReference) => {
+    // Positions live in task annotations; sizes aren't tracked there, so use
+    // the default node dimensions for overlap (the reveal animation handles
+    // any imprecision).
+    const ESTIMATED_NODE_HEIGHT = 120;
+    const toRect = (pos: { x: number; y: number }): Bounds => ({
+      x: pos.x,
+      y: pos.y,
+      width: DEFAULT_NODE_DIMENSIONS.w,
+      height: ESTIMATED_NODE_HEIGHT,
+    });
+    const positionOf = (taskId: string) =>
+      [...spec.tasks]
+        .find((t) => t.$id === taskId)
+        ?.annotations.get(EDITOR_POSITION_ANNOTATION) as
+        | { x: number; y: number }
+        | undefined;
+
+    const anchorRect = toRect(positionOf(task.$id) ?? { x: 0, y: 0 });
+    const otherRects = [...spec.tasks]
+      .filter((t) => t.$id !== task.$id)
+      .map((t) => t.annotations.get(EDITOR_POSITION_ANNOTATION))
+      .filter((pos): pos is { x: number; y: number } => pos != null)
+      .map(toRect);
+
+    const position = computePlacementPosition(anchorRect, otherRects, {
+      prefer: "below",
+    });
+
+    const newTask = addTask(spec, hydratedComponent, position);
+    notify("Task added", "success");
+
+    // Reveal the new node: animate the viewport to it, then spotlight it.
+    editor.setPendingFocusNode(newTask.$id);
+    editor.setSpotlightNode(newTask.$id);
+  };
+
+  const handleComponentSaved = (
+    hydratedComponent: HydratedComponentReference,
+    action: SaveAction,
+  ) => {
+    if (action === "update") {
+      updateInPlace(hydratedComponent);
+    } else if (action === "place") {
+      placeAsNewTask(hydratedComponent);
     }
   };
 
