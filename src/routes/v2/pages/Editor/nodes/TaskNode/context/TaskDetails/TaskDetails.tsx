@@ -16,6 +16,8 @@ import { Heading, Text } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { AnnotationsBlock } from "@/routes/v2/pages/Editor/components/AnnotationsBlock/AnnotationsBlock";
+import { PredictedIssuesSection } from "@/routes/v2/pages/Editor/components/UpgradeComponents/components/UpgradeCandidateDetail";
+import { buildUpgradeCandidateFromResolved } from "@/routes/v2/pages/Editor/components/UpgradeComponents/utils/buildUpgradeCandidateFromResolved";
 import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskActions";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
@@ -26,7 +28,7 @@ import {
   ZINDEX_ANNOTATION,
 } from "@/utils/annotations";
 import type { HydratedComponentReference } from "@/utils/componentSpec";
-import { diffComponentIO } from "@/utils/componentSpecDiff";
+import { componentMetadata } from "@/utils/componentTracking";
 import { DEFAULT_NODE_DIMENSIONS } from "@/utils/constants";
 import { tracking } from "@/utils/tracking";
 
@@ -92,25 +94,41 @@ export const TaskDetails = observer(function TaskDetails({
     hydratedComponent: HydratedComponentReference;
     onChoose: (action: "update" | "import" | "place") => void;
   }) => {
-    const { inputDiff, outputDiff } = diffComponentIO<
-      { name: string; type?: unknown },
-      { name: string; type?: unknown }
-    >(task.resolvedComponentSpec, hydratedComponent.spec);
+    // Model the edit as an upgrade candidate so we reuse the upgrade flow's
+    // diff + predicted-issues computation in the choose-action view.
+    const candidate = buildUpgradeCandidateFromResolved(
+      task.$id,
+      task.name,
+      task.componentRef.digest ?? "",
+      task.resolvedComponentSpec,
+      hydratedComponent,
+      spec,
+    );
 
     return (
       <SaveActionsView
         taskName={task.name}
-        inputDiff={inputDiff}
-        outputDiff={outputDiff}
+        currentDigest={task.componentRef.digest}
+        newDigest={hydratedComponent.digest}
+        inputDiff={candidate.inputDiff}
+        outputDiff={candidate.outputDiff}
         allowPlace
         onChoose={onChoose}
-      />
+      >
+        <PredictedIssuesSection issues={candidate.predictedIssues} />
+      </SaveActionsView>
     );
   };
 
   const updateInPlace = (hydratedComponent: HydratedComponentReference) => {
     const result = replaceTask(spec, task.$id, hydratedComponent);
     const lostInputs = result.inputDiff?.lostEntities ?? [];
+
+    track("pipeline_editor.component.edited", {
+      ...componentMetadata(hydratedComponent, "user"),
+      action: "update",
+      lost_inputs_count: lostInputs.length,
+    });
 
     if (lostInputs.length > 0) {
       const inputNames = lostInputs.map((input) => input.name).join(", ");
@@ -153,6 +171,12 @@ export const TaskDetails = observer(function TaskDetails({
     });
 
     const newTask = addTask(spec, hydratedComponent, position);
+
+    track("pipeline_editor.component.edited", {
+      ...componentMetadata(hydratedComponent, "user"),
+      action: "place",
+    });
+
     notify("Task added", "success");
 
     // Reveal the new node: animate the viewport to it, then spotlight it.
