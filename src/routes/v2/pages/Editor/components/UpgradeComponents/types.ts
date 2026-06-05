@@ -26,6 +26,14 @@ export interface UpgradeCandidate {
   outputDiff: EntityDiff<OutputSpec>;
   lostBindings: LostBinding[];
   predictedIssues: ValidationIssue[];
+  /** Lineage origin id shared by all tasks descended from the same component. */
+  originId?: string;
+  /**
+   * True when this task was locally edited so its digest fell outside the
+   * published supersession chain, but its lineage still traces back to a
+   * component family that has a catalog upgrade available.
+   */
+  isEditedOffMainline?: boolean;
 }
 
 export function candidateHasIssues(candidate: UpgradeCandidate): boolean {
