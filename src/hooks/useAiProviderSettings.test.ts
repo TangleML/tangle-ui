@@ -1,11 +1,14 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { useComponentSearchSettings } from "./useComponentSearchSettings";
+import {
+  AI_PROVIDER_STORAGE_KEY,
+  useAiProviderSettings,
+} from "./useAiProviderSettings";
 
-const STORAGE_KEY = "tangle.componentSearchV2.config";
+const LEGACY_STORAGE_KEY = "tangle.componentSearchV2.config";
 
-describe("useComponentSearchSettings", () => {
+describe("useAiProviderSettings", () => {
   beforeEach(() => {
     window.localStorage.clear();
   });
@@ -15,7 +18,7 @@ describe("useComponentSearchSettings", () => {
   });
 
   it("returns defaults when nothing is stored", () => {
-    const { result } = renderHook(() => useComponentSearchSettings());
+    const { result } = renderHook(() => useAiProviderSettings());
 
     expect(result.current.config).toEqual({
       apiBase: "",
@@ -27,7 +30,7 @@ describe("useComponentSearchSettings", () => {
 
   it("reads stored values from localStorage", () => {
     window.localStorage.setItem(
-      STORAGE_KEY,
+      AI_PROVIDER_STORAGE_KEY,
       JSON.stringify({
         apiBase: "https://api.example.com/v1",
         apiKey: "sk-test",
@@ -35,7 +38,7 @@ describe("useComponentSearchSettings", () => {
       }),
     );
 
-    const { result } = renderHook(() => useComponentSearchSettings());
+    const { result } = renderHook(() => useAiProviderSettings());
 
     expect(result.current.config).toEqual({
       apiBase: "https://api.example.com/v1",
@@ -45,22 +48,22 @@ describe("useComponentSearchSettings", () => {
     expect(result.current.isConfigured).toBe(true);
   });
 
-  it("isConfigured requires apiBase, apiKey, and model", () => {
+  it("isConfigured only requires apiBase", () => {
     window.localStorage.setItem(
-      STORAGE_KEY,
+      AI_PROVIDER_STORAGE_KEY,
       JSON.stringify({
         apiBase: "https://api.example.com/v1",
-        apiKey: "sk-test",
+        apiKey: "",
         model: "",
       }),
     );
 
-    const { result } = renderHook(() => useComponentSearchSettings());
-    expect(result.current.isConfigured).toBe(false);
+    const { result } = renderHook(() => useAiProviderSettings());
+    expect(result.current.isConfigured).toBe(true);
   });
 
-  it("update() writes to localStorage and merges partial values", () => {
-    const { result } = renderHook(() => useComponentSearchSettings());
+  it("update() writes to the central storage key and merges partial values", () => {
+    const { result } = renderHook(() => useAiProviderSettings());
 
     act(() => {
       result.current.update({
@@ -77,7 +80,7 @@ describe("useComponentSearchSettings", () => {
       result.current.update({ model: "claude-3-5-haiku" });
     });
 
-    const storedConfig = window.localStorage.getItem(STORAGE_KEY);
+    const storedConfig = window.localStorage.getItem(AI_PROVIDER_STORAGE_KEY);
     expect(storedConfig).not.toBeNull();
     const stored = JSON.parse(storedConfig ?? "");
     expect(stored).toEqual({
@@ -87,59 +90,64 @@ describe("useComponentSearchSettings", () => {
     });
   });
 
-  it("clear() removes the stored config", () => {
+  it("clear() removes central and legacy stored config", () => {
     window.localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
-        apiBase: "https://api.example.com/v1",
-        apiKey: "sk-test",
-        model: "gpt-4o-mini",
-      }),
+      AI_PROVIDER_STORAGE_KEY,
+      JSON.stringify({ apiBase: "https://api.example.com/v1" }),
+    );
+    window.localStorage.setItem(
+      LEGACY_STORAGE_KEY,
+      JSON.stringify({ apiBase: "https://legacy.example.com/v1" }),
     );
 
-    const { result } = renderHook(() => useComponentSearchSettings());
+    const { result } = renderHook(() => useAiProviderSettings());
 
     act(() => {
       result.current.clear();
     });
 
-    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
+    expect(window.localStorage.getItem(AI_PROVIDER_STORAGE_KEY)).toBeNull();
+    expect(window.localStorage.getItem(LEGACY_STORAGE_KEY)).toBeNull();
     expect(result.current.isConfigured).toBe(false);
   });
 
-  it("migrates legacy `thinkingModel` into `model` when model is unset", () => {
+  it("falls back to legacy Components V2 config", () => {
     window.localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
-        apiBase: "https://api.example.com/v1",
-        apiKey: "sk-test",
-        thinkingModel: "gpt-5-mini",
-      }),
-    );
-
-    const { result } = renderHook(() => useComponentSearchSettings());
-    expect(result.current.config.model).toBe("gpt-5-mini");
-  });
-
-  it("prefers `model` over legacy `thinkingModel` when both exist", () => {
-    window.localStorage.setItem(
-      STORAGE_KEY,
+      LEGACY_STORAGE_KEY,
       JSON.stringify({
         apiBase: "https://api.example.com/v1",
         apiKey: "sk-test",
         model: "gpt-4o-mini",
+      }),
+    );
+
+    const { result } = renderHook(() => useAiProviderSettings());
+
+    expect(result.current.config).toEqual({
+      apiBase: "https://api.example.com/v1",
+      apiKey: "sk-test",
+      model: "gpt-4o-mini",
+    });
+  });
+
+  it("migrates legacy `thinkingModel` into `model` when model is unset", () => {
+    window.localStorage.setItem(
+      LEGACY_STORAGE_KEY,
+      JSON.stringify({
+        apiBase: "https://api.example.com/v1",
+        apiKey: "sk-test",
         thinkingModel: "gpt-5-mini",
       }),
     );
 
-    const { result } = renderHook(() => useComponentSearchSettings());
-    expect(result.current.config.model).toBe("gpt-4o-mini");
+    const { result } = renderHook(() => useAiProviderSettings());
+    expect(result.current.config.model).toBe("gpt-5-mini");
   });
 
   it("falls back to defaults when stored JSON is malformed", () => {
-    window.localStorage.setItem(STORAGE_KEY, "not json");
+    window.localStorage.setItem(AI_PROVIDER_STORAGE_KEY, "not json");
 
-    const { result } = renderHook(() => useComponentSearchSettings());
+    const { result } = renderHook(() => useAiProviderSettings());
     expect(result.current.config).toEqual({
       apiBase: "",
       apiKey: "",

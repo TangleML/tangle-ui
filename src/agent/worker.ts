@@ -11,11 +11,12 @@ import "./processPolyfill";
 
 import * as Comlink from "comlink";
 
+import type { AiProviderConfig } from "@/types/aiProvider";
+
 import {
   createDispatcher,
   type TangleDispatcher,
 } from "./agents/tangleDispatcher";
-import { getAiToken } from "./aiTokenStore";
 import { ProxyClient } from "./config";
 import { createSession, type RecentPipelineRun } from "./session";
 import { SkillsLoader } from "./skills/loader";
@@ -26,6 +27,7 @@ export interface AskParams {
   message: string;
   threadId?: string;
   recentRuns?: RecentPipelineRun[];
+  aiConfig: AiProviderConfig;
 }
 
 export interface AgentWorkerApi {
@@ -63,18 +65,12 @@ function createWorkerApi(): AgentWorkerApi {
       return "pong";
     },
 
-    async ask({ message, threadId, recentRuns }, _signal) {
+    async ask({ message, threadId, recentRuns, aiConfig }, _signal) {
       // todo: add logic to handle the signal
 
       if (!dispatcher || !bridge) {
         throw new Error(
           "Agent worker not initialized. Call init() before ask().",
-        );
-      }
-      const token = await getAiToken();
-      if (!token) {
-        throw new Error(
-          "AI assistant token is missing. Open the AI panel to set it.",
         );
       }
       const resolvedThreadId = threadId ?? generateThreadId();
@@ -84,13 +80,14 @@ function createWorkerApi(): AgentWorkerApi {
         proxyClient,
         bridge,
         skillsLoader,
+        aiConfig,
         recentRuns,
       });
 
       const result = await dispatcher.invoke({
         message,
         threadId: resolvedThreadId,
-        token,
+        aiConfig,
         session,
       });
 

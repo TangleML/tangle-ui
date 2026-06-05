@@ -5,7 +5,7 @@
  */
 import { Agent } from "@openai/agents";
 
-import { requireSubagentModel } from "../../config";
+import { getAgentModelConfig } from "../../config";
 import { attachObservabilityHooks } from "../../middleware/observability";
 import generalHelpPrompt from "../../prompts/generalHelp.md?raw";
 import type { AgentSession } from "../../session";
@@ -18,7 +18,7 @@ export function createGeneralHelpAgent(session: AgentSession): Agent {
       and product behavior. Not specific to the current pipeline.`,
     instructions: generalHelpPrompt,
     tools: [createSearchDocsTool(session.proxyClient)],
-    model: requireSubagentModel(),
+    ...getAgentModelConfig(session.aiConfig),
   });
   attachObservabilityHooks(agent, session.emitStatus);
   return agent;

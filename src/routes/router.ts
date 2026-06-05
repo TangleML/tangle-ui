@@ -231,7 +231,10 @@ const settingsAgentRoute = createRoute({
   path: "/agent",
   component: AgentSettings,
   beforeLoad: () => {
-    if (!isFlagEnabled("component-search-v2")) {
+    if (
+      !isFlagEnabled("component-search-v2") &&
+      !isFlagEnabled("ai-assistant")
+    ) {
       throw redirect({ to: APP_ROUTES.SETTINGS_BACKEND });
     }
   },

@@ -12,7 +12,7 @@
  */
 import { Agent } from "@openai/agents";
 
-import { requireOrchestratorModel } from "../../config";
+import { getAgentModelConfig } from "../../config";
 import { attachObservabilityHooks } from "../../middleware/observability";
 import debugAssistantPrompt from "../../prompts/debugAssistant.md?raw";
 import type { AgentSession, RecentPipelineRun } from "../../session";
@@ -50,7 +50,7 @@ export function createDebugAssistantAgent(session: AgentSession): Agent {
       runTools.debugPipelineRun,
       ...debugTools.allTools,
     ],
-    model: requireOrchestratorModel(),
+    ...getAgentModelConfig(session.aiConfig),
   });
   attachObservabilityHooks(agent, session.emitStatus);
   return agent;

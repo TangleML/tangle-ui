@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 
-import { useComponentSearchSettings } from "@/hooks/useComponentSearchSettings";
+import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import {
   type ComponentDescriptionResult,
   generateComponentAiDescription,
@@ -26,7 +26,7 @@ interface RerankVariables {
  * than literal matching.
  */
 export function useNaturalLanguageComponentRerank() {
-  const { config, isConfigured } = useComponentSearchSettings();
+  const { config, isConfigured } = useAiProviderSettings();
 
   const mutation = useMutation<RerankResult, Error, RerankVariables>({
     mutationFn: ({ query, candidates }) =>
@@ -65,7 +65,7 @@ export function useComponentAiDescription({
   reference: ComponentReference | undefined;
   enabled: boolean;
 }) {
-  const { config, isConfigured } = useComponentSearchSettings();
+  const { config, isConfigured } = useAiProviderSettings();
   const digest = reference?.digest;
   const hasSpec = Boolean(reference?.spec);
 

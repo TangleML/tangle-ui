@@ -2,6 +2,7 @@ import { action, makeObservable, observable, runInAction } from "mobx";
 
 import type { RecentPipelineRun } from "@/agent/session";
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
+import type { AiProviderConfig } from "@/types/aiProvider";
 import { getErrorMessage } from "@/utils/string";
 
 import { getAgentClient } from "./agentClient";
@@ -14,6 +15,7 @@ function generateMessageId(): string {
 interface SendMessageOptions {
   onError: (message: string) => void;
   bridge: ToolBridgeApi;
+  aiConfig: AiProviderConfig;
   recentRuns?: RecentPipelineRun[];
 }
 
@@ -69,6 +71,7 @@ export class AiChatStore {
         },
         {
           message: prompt,
+          aiConfig: options.aiConfig,
           ...(this.threadId && { threadId: this.threadId }),
           ...(options.recentRuns && { recentRuns: options.recentRuns }),
         },

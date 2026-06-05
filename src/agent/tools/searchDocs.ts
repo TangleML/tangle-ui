@@ -17,7 +17,7 @@ import { z } from "zod";
 
 import { BASE_URL } from "@/utils/constants";
 
-import { config, type OpenAIProvider, requireEmbeddingModel } from "../config";
+import { type OpenAIProvider, requireEmbeddingModel } from "../config";
 import {
   agentDb,
   type PersistedVector,
@@ -128,7 +128,7 @@ function cosineSimilarity(a: number[], b: number[]): number {
   if (a.length !== b.length) {
     throw new Error(
       `Vector length mismatch: query=${a.length}, doc=${b.length}. ` +
-        `The docs index was likely built with a different embedding model than ${config.embeddingModel}.`,
+        `The docs index was likely built with a different embedding model than ${requireEmbeddingModel()}.`,
     );
   }
   let dot = 0;

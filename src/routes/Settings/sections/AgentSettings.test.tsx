@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AgentSettings } from "./AgentSettings";
 
-const STORAGE_KEY = "tangle.componentSearchV2.config";
+const STORAGE_KEY = "tangle.aiProvider.config";
 const mockNotify = vi.fn();
 const mockFetch = vi.fn();
 
@@ -23,23 +23,17 @@ describe("AgentSettings", () => {
     window.localStorage.clear();
   });
 
-  it("shows inline feedback instead of saving when model is blank", () => {
+  it("shows inline feedback instead of saving when API base URL is blank", () => {
     render(<AgentSettings />);
 
     fireEvent.change(screen.getByLabelText("API base URL"), {
-      target: { value: "https://api.example.com/v1" },
-    });
-    fireEvent.change(screen.getByLabelText("API key"), {
-      target: { value: "sk-test" },
-    });
-    fireEvent.change(screen.getByLabelText("Model id"), {
       target: { value: "   " },
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Enter an API base URL, API key, and model before continuing.",
+      "Enter an API base URL before continuing.",
     );
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
     expect(mockNotify).not.toHaveBeenCalledWith(
@@ -103,6 +97,26 @@ describe("AgentSettings", () => {
         "error",
       );
     });
+  });
+
+  it("saves when API key and model are blank", () => {
+    render(<AgentSettings />);
+
+    fireEvent.change(screen.getByLabelText("API base URL"), {
+      target: { value: "https://api.example.com/v1" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "")).toEqual({
+      apiBase: "https://api.example.com/v1",
+      apiKey: "",
+      model: "",
+    });
+    expect(mockNotify).toHaveBeenCalledWith(
+      "AI provider settings saved",
+      "success",
+    );
   });
 
   it("allows clearing partially configured settings", () => {
