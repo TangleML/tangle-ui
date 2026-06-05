@@ -5,6 +5,7 @@ import { BlockStack } from "@/components/ui/layout";
 import { VerticalResizeHandle } from "@/components/ui/resize-handle";
 import { cn } from "@/lib/utils";
 import { focusModeStore } from "@/routes/v2/shared/hooks/useFocusMode";
+import { reconcileUIModeStore } from "@/routes/v2/shared/hooks/useReconcileUIMode";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 import { CollapsedDockWindowMini } from "./CollapsedDockWindowMini";
@@ -25,6 +26,13 @@ interface DockAreaProps {
 // without leaving focus mode.
 const FOCUS_MODE_ALLOWED_WINDOW_IDS = new Set(["context-panel"]);
 
+// During reconcile mode the component library stays open so users can still
+// browse and drop components while reviewing a change in context.
+const RECONCILE_MODE_ALLOWED_WINDOW_IDS = new Set([
+  "context-panel",
+  "component-library",
+]);
+
 export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
   const { windows } = useSharedStores();
   const dockArea = windows.getDockAreaConfig(side);
@@ -34,8 +42,10 @@ export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
   const visibleWindows = windowOrder.filter((id) => {
     const win = windows.getWindowById(id);
     if (!win || win.state === "hidden") return false;
-    if (focusModeStore.active && !FOCUS_MODE_ALLOWED_WINDOW_IDS.has(id)) {
-      return false;
+    if (reconcileUIModeStore.active) {
+      if (!RECONCILE_MODE_ALLOWED_WINDOW_IDS.has(id)) return false;
+    } else if (focusModeStore.active) {
+      if (!FOCUS_MODE_ALLOWED_WINDOW_IDS.has(id)) return false;
     }
     return true;
   });

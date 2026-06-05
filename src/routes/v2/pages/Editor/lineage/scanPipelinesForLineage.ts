@@ -12,21 +12,29 @@ import { parseLineage } from "@/utils/lineage";
 
 interface PipelineLineageTaskMatch {
   taskName: string;
-  subgraphPath: string[];
   digest?: string;
-  /** True when this task is already on the target (edited) version. */
   reconciled: boolean;
 }
 
-export interface PipelineLineageMatch {
+/**
+ * A single reconcile target: a specific pipeline at a specific subgraph depth.
+ * Each unique (storageKey, subgraphPath) pair is its own row in the overview so
+ * the user can navigate directly to the right context.
+ */
+export interface ReconcileTarget {
   /** Storage key (also the pipeline route param). */
   storageKey: string;
   pipelineName: string;
+  /**
+   * Path of task names leading to this subgraph level.
+   * Empty array = root level of the pipeline.
+   */
+  subgraphPath: string[];
   tasks: PipelineLineageTaskMatch[];
-  /** Tasks sharing the origin but not yet on the target version. */
   pendingCount: number;
-  /** Tasks already on the target version. */
   reconciledCount: number;
+  modifiedAt: Date | undefined;
+  author: string | undefined;
 }
 
 function walkSpec(
@@ -34,18 +42,19 @@ function walkSpec(
   originId: string,
   targetDigest: string | undefined,
   path: string[],
-  out: PipelineLineageTaskMatch[],
+  out: Map<string, { path: string[]; tasks: PipelineLineageTaskMatch[] }>,
 ): void {
   const impl = spec?.implementation;
   if (!impl || !isGraphImplementation(impl)) return;
 
+  const pathKey = path.join("\0");
   for (const [taskName, task] of Object.entries(impl.graph.tasks)) {
     const lineage = parseLineage(task.annotations?.[LINEAGE_ORIGIN_ANNOTATION]);
     if (lineage?.originId === originId) {
+      if (!out.has(pathKey)) out.set(pathKey, { path, tasks: [] });
       const digest = task.componentRef.digest;
-      out.push({
+      out.get(pathKey)!.tasks.push({
         taskName,
-        subgraphPath: path,
         digest,
         reconciled: targetDigest != null && digest === targetDigest,
       });
@@ -60,34 +69,55 @@ function walkSpec(
 
 /**
  * Scan every locally-stored pipeline for tasks sharing `originId` (recursing
- * through subgraphs). Pipelines live client-side, so this is the cross-pipeline
- * discovery mechanism — no backend involved. `targetDigest` is the edited
- * version: tasks already at it are counted as reconciled, the rest as pending.
- *
- * Returns only pipelines with at least one matching task.
+ * through subgraphs). Each unique (pipeline, subgraph depth) combination is
+ * returned as a separate ReconcileTarget so the overview can navigate directly
+ * to the right context. Results are sorted most-recently-updated first.
  */
 export async function scanPipelinesForLineage(
   originId: string,
   targetDigest?: string,
-): Promise<PipelineLineageMatch[]> {
+): Promise<ReconcileTarget[]> {
   const files = await getAllComponentFilesFromList(USER_PIPELINES_LIST_NAME);
 
-  const results: PipelineLineageMatch[] = [];
+  const results: ReconcileTarget[] = [];
+
   for (const [storageKey, entry] of files) {
-    const spec = (entry as ComponentFileEntry).componentRef.spec;
-    const tasks: PipelineLineageTaskMatch[] = [];
-    walkSpec(spec, originId, targetDigest, [], tasks);
+    const fileEntry = entry as ComponentFileEntry;
+    const spec = fileEntry.componentRef.spec;
 
-    if (tasks.length === 0) continue;
+    const grouped = new Map<
+      string,
+      { path: string[]; tasks: PipelineLineageTaskMatch[] }
+    >();
+    walkSpec(spec, originId, targetDigest, [], grouped);
 
-    results.push({
-      storageKey,
-      pipelineName: spec?.name ?? storageKey,
-      tasks,
-      pendingCount: tasks.filter((t) => !t.reconciled).length,
-      reconciledCount: tasks.filter((t) => t.reconciled).length,
-    });
+    if (grouped.size === 0) continue;
+
+    const pipelineName = spec?.name ?? storageKey;
+    const modifiedAt = fileEntry.modificationTime;
+    const author = spec?.metadata?.annotations?.author as string | undefined;
+
+    for (const { path, tasks } of grouped.values()) {
+      results.push({
+        storageKey,
+        pipelineName,
+        subgraphPath: path,
+        tasks,
+        pendingCount: tasks.filter((t) => !t.reconciled).length,
+        reconciledCount: tasks.filter((t) => t.reconciled).length,
+        modifiedAt,
+        author,
+      });
+    }
   }
+
+  // Most recently updated first; no modification time goes last.
+  results.sort((a, b) => {
+    if (!a.modifiedAt && !b.modifiedAt) return 0;
+    if (!a.modifiedAt) return 1;
+    if (!b.modifiedAt) return -1;
+    return b.modifiedAt.getTime() - a.modifiedAt.getTime();
+  });
 
   return results;
 }

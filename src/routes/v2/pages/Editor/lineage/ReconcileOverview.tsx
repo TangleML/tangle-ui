@@ -17,35 +17,50 @@ import { APP_ROUTES } from "@/routes/router";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 
 import type { ReconcileSession } from "./reconcileSession";
+import { updateReconcileSession } from "./reconcileSession";
 import {
-  type PipelineLineageMatch,
+  type ReconcileTarget,
   scanPipelinesForLineage,
 } from "./scanPipelinesForLineage";
 
 interface ReconcileOverviewProps {
   session: ReconcileSession;
-  onClose: () => void;
+  onFinish: () => void;
 }
 
 /**
- * Cross-pipeline reconcile overview (URL-driven via `?reconcileOverview=<id>`):
- * lists every locally-stored pipeline using the edited component's origin and
- * lets the user reconcile each in turn. Status is recomputed by re-scan on each
- * open, so it is self-healing across refresh / back / "reconcile next". Clicking
- * "Reconcile" flushes the current pipeline, then routes to the target in
- * reconcile mode (`?reconcile=<id>`), where the change is staged and committed
- * via the node-anchored "Finish Reconciling" button.
+ * Format an author string for compact display.
+ *   morgan.wowk@shopify.com → Morgan
+ *   mwowk@shopify.com       → Mwowk
+ *   Tangle Dev Team         → Tangle Dev Team (unchanged)
  */
+function formatAuthor(raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  if (raw.includes("@")) {
+    const left = raw.split("@")[0];
+    const name = left.includes(".") ? left.split(".")[0] : left;
+    return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+  }
+  return raw;
+}
+
+/**
+ * Human-readable label for a reconcile target row.
+ * Root level shows just the pipeline name; subgraph levels append the path.
+ */
+function targetLabel(target: ReconcileTarget): string {
+  if (target.subgraphPath.length === 0) return target.pipelineName;
+  return `${target.pipelineName} › ${target.subgraphPath.join(" › ")}`;
+}
+
 export function ReconcileOverview({
   session,
-  onClose,
+  onFinish,
 }: ReconcileOverviewProps) {
   const navigate = useNavigate();
   const { autoSave } = useEditorSession();
 
-  const [pipelines, setPipelines] = useState<PipelineLineageMatch[] | null>(
-    null,
-  );
+  const [targets, setTargets] = useState<ReconcileTarget[] | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -54,100 +69,134 @@ export function ReconcileOverview({
         session.originId,
         session.targetDigest,
       );
-      if (!cancelled) setPipelines(results);
+      if (!cancelled) setTargets(results);
     })();
     return () => {
       cancelled = true;
     };
   }, [session.originId, session.targetDigest]);
 
-  const handleReconcile = async (storageKey: string) => {
+  const handleReconcile = async (target: ReconcileTarget) => {
+    // Store the target subgraph path so ReconcileModeController can navigate
+    // into the right depth automatically after the pipeline loads.
+    updateReconcileSession(session.sessionId, {
+      targetSubgraphPath: target.subgraphPath,
+    });
     await autoSave.save();
     await navigate({
       to: APP_ROUTES.EDITOR_V2_PIPELINE,
-      params: { pipelineName: storageKey },
+      params: { pipelineName: target.storageKey },
       search: { reconcile: session.sessionId },
     });
   };
 
-  const totalPending = pipelines?.reduce((n, p) => n + p.pendingCount, 0) ?? 0;
+  const copyLink = (storageKey: string) => {
+    const url = `${window.location.origin}/editor-v2/${encodeURIComponent(storageKey)}`;
+    void navigator.clipboard.writeText(url);
+  };
 
   return (
     <Dialog
       open
       onOpenChange={(isOpen) => {
-        if (!isOpen) onClose();
+        if (!isOpen) onFinish();
       }}
     >
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>
-            Reconcile “{session.targetName}” across pipelines
+            Reconcile &ldquo;{session.targetName}&rdquo; across pipelines
           </DialogTitle>
           <DialogDescription>
-            Update other pipelines that use this component’s origin to your
-            edited version. Each opens in the editor so you can review and apply
-            the change in context.
+            Update other pipelines (and subgraphs) that use this
+            component&apos;s origin to your edited version. Each opens directly
+            at the right context.
           </DialogDescription>
         </DialogHeader>
 
-        <BlockStack gap="2" className="max-h-[55vh] overflow-y-auto py-1">
-          {pipelines === null && (
-            <Text size="sm" tone="subdued">
+        <BlockStack gap="0" className="max-h-[60vh] overflow-y-auto">
+          {targets === null && (
+            <Text size="sm" tone="subdued" className="py-2">
               Scanning pipelines…
             </Text>
           )}
 
-          {pipelines !== null && pipelines.length === 0 && (
-            <Text size="sm" tone="subdued">
-              No other pipelines use this component.
+          {targets !== null && targets.length === 0 && (
+            <Text size="sm" tone="subdued" className="py-2">
+              No pipelines use this component.
             </Text>
           )}
 
-          {pipelines?.map((pipeline) => {
-            const done = pipeline.pendingCount === 0;
-            return (
-              <InlineStack
-                key={pipeline.storageKey}
-                align="space-between"
-                blockAlign="center"
-                gap="2"
-                className="rounded-md border px-3 py-2"
-              >
-                <BlockStack gap="0" className="min-w-0">
-                  <Text size="sm" weight="semibold" className="truncate">
-                    {pipeline.pipelineName}
-                  </Text>
-                  <Text size="xs" tone="subdued">
-                    {done
-                      ? `${pipeline.reconciledCount} reconciled`
-                      : `${pipeline.pendingCount} of ${pipeline.tasks.length} to update`}
-                  </Text>
-                </BlockStack>
+          {targets?.map((target) => {
+            const done = target.pendingCount === 0;
+            const author = formatAuthor(target.author);
+            const label = targetLabel(target);
 
-                {done ? (
-                  <InlineStack gap="1" blockAlign="center">
-                    <Icon name="Check" size="sm" className="text-emerald-600" />
-                    <Text size="xs" tone="subdued">
-                      Reconciled
-                    </Text>
-                  </InlineStack>
-                ) : (
-                  <Button
-                    size="sm"
-                    onClick={() => void handleReconcile(pipeline.storageKey)}
+            return (
+              <div
+                key={`${target.storageKey}::${target.subgraphPath.join("/")}`}
+                className="group flex h-6 items-center gap-2 rounded-sm px-1 hover:bg-muted/50"
+              >
+                {/* Status dot */}
+                <span
+                  className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                    done ? "bg-emerald-500" : "bg-amber-400"
+                  }`}
+                />
+
+                {/* Label (pipeline › subgraph path) + author */}
+                <span className="flex min-w-0 flex-1 items-baseline gap-1.5 overflow-hidden">
+                  <Text
+                    size="xs"
+                    className="truncate"
+                    tone={done ? "subdued" : undefined}
                   >
-                    Reconcile
-                  </Button>
-                )}
-              </InlineStack>
+                    {label}
+                  </Text>
+                  {author && (
+                    <Text size="xs" tone="subdued" className="shrink-0">
+                      {author}
+                    </Text>
+                  )}
+                </span>
+
+                {/* Right-side actions */}
+                <InlineStack gap="1" blockAlign="center" className="shrink-0">
+                  {done ? (
+                    <>
+                      <Icon
+                        name="Check"
+                        size="xs"
+                        className="text-emerald-600"
+                      />
+                      <button
+                        type="button"
+                        title="Copy link to pipeline"
+                        className="flex items-center rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground group-hover:opacity-100"
+                        onClick={() => copyLink(target.storageKey)}
+                      >
+                        <Icon name="Link" size="xs" />
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      className="flex items-center gap-0.5 rounded bg-primary px-1.5 py-0.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
+                      onClick={() => void handleReconcile(target)}
+                    >
+                      Reconcile
+                      <Icon name="ArrowRight" size="xs" />
+                    </button>
+                  )}
+                </InlineStack>
+              </div>
             );
           })}
         </BlockStack>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            {totalPending === 0 ? "Done" : "Close"}
+          <Button variant="outline" onClick={onFinish}>
+            Finish
           </Button>
         </DialogFooter>
       </DialogContent>

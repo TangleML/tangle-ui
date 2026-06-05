@@ -10,6 +10,12 @@ import type {
   UndoGroupable,
 } from "@/routes/v2/shared/nodes/types";
 
+export interface CloneResult {
+  newIds: string[];
+  /** Maps each source task's entityId to the newly created task's id. */
+  idMap: Map<string, string>;
+}
+
 export function cloneSnapshotsWithBindings(
   spec: ComponentSpec,
   snapshots: NodeSnapshot[],
@@ -18,7 +24,7 @@ export function cloneSnapshotsWithBindings(
   undoStore: UndoGroupable,
   idGen: IncrementingIdGenerator,
   label: string,
-): string[] {
+): CloneResult {
   const newIds: string[] = [];
   const idMap = new Map<string, string>();
 
@@ -42,5 +48,5 @@ export function cloneSnapshotsWithBindings(
     cloneBindings(spec, bindings, idMap, idGen);
   });
 
-  return newIds;
+  return { newIds, idMap };
 }

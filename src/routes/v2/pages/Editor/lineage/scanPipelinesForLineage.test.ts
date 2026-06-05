@@ -39,13 +39,14 @@ const pipeline = (name: string, tasks: Record<string, unknown>) => ({
   componentRef: { spec: { name, implementation: { graph: { tasks } } } },
 });
 
+ 
 const asStore = (entries: Record<string, unknown>) =>
   new Map<string, any>(Object.entries(entries));
 
 describe("scanPipelinesForLineage", () => {
   beforeEach(() => mockGetAll.mockReset());
 
-  it("returns pipelines with matching tasks and pending/reconciled counts", async () => {
+  it("returns one target per (pipeline, depth) with pending/reconciled counts", async () => {
     mockGetAll.mockResolvedValue(
       asStore({
         "Pipeline A": pipeline("Pipeline A", {
@@ -61,10 +62,12 @@ describe("scanPipelinesForLineage", () => {
 
     const results = await scanPipelinesForLineage(ORIGIN, TARGET);
 
+    // One target: Pipeline A root level (Pipeline B has no matching tasks)
     expect(results).toHaveLength(1);
     expect(results[0]).toMatchObject({
       storageKey: "Pipeline A",
       pipelineName: "Pipeline A",
+      subgraphPath: [],
       pendingCount: 1,
       reconciledCount: 1,
     });
@@ -74,10 +77,11 @@ describe("scanPipelinesForLineage", () => {
     ]);
   });
 
-  it("recurses into subgraphs and records the path", async () => {
+  it("creates separate targets for root and subgraph depths", async () => {
     mockGetAll.mockResolvedValue(
       asStore({
         "Pipeline C": pipeline("Pipeline C", {
+          "Root train": containerTask("Root train", "old", ORIGIN),
           Group: subgraphTask("Group", {
             "Nested train": containerTask("Nested train", "old", ORIGIN),
           }),
@@ -87,12 +91,14 @@ describe("scanPipelinesForLineage", () => {
 
     const results = await scanPipelinesForLineage(ORIGIN, TARGET);
 
-    expect(results).toHaveLength(1);
-    expect(results[0].tasks[0]).toMatchObject({
-      taskName: "Nested train",
-      subgraphPath: ["Group"],
-      reconciled: false,
-    });
+    // Two separate targets: root level and inside Group
+    expect(results).toHaveLength(2);
+    const root = results.find((r) => r.subgraphPath.length === 0)!;
+    const nested = results.find((r) => r.subgraphPath.length > 0)!;
+
+    expect(root.tasks[0].taskName).toBe("Root train");
+    expect(nested.subgraphPath).toEqual(["Group"]);
+    expect(nested.tasks[0].taskName).toBe("Nested train");
   });
 
   it("returns nothing when no pipeline shares the origin", async () => {
