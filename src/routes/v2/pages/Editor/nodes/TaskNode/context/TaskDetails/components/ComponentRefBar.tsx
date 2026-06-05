@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 
 import { CodeViewer } from "@/components/shared/CodeViewer";
 import { ComponentEditorDialog } from "@/components/shared/ComponentEditor/ComponentEditorDialog";
+import type { SaveAction } from "@/components/shared/ComponentEditor/saveAction";
 import ComponentDetailsDialog from "@/components/shared/Dialogs/ComponentDetailsDialog";
 import { TrimmedDigest } from "@/components/shared/ManageComponent/TrimmedDigest";
 import { Button } from "@/components/ui/button";
@@ -38,7 +39,12 @@ interface ComponentRefBarProps {
   pythonCode: string | undefined;
   onComponentSaved?: (
     hydratedComponent: HydratedComponentReference,
+    action: SaveAction,
   ) => void | Promise<void>;
+  renderSaveActions?: (args: {
+    hydratedComponent: HydratedComponentReference;
+    onChoose: (action: "update" | "import" | "place") => void;
+  }) => ReactNode;
 }
 
 export function ComponentRefBar({
@@ -47,6 +53,7 @@ export function ComponentRefBar({
   taskName,
   pythonCode,
   onComponentSaved,
+  renderSaveActions,
 }: ComponentRefBarProps) {
   const { track } = useAnalytics();
   const notify = useToastNotification();
@@ -201,6 +208,7 @@ export function ComponentRefBar({
           text={yamlText}
           onClose={() => setIsEditDialogOpen(false)}
           onComponentSaved={onComponentSaved}
+          renderSaveActions={renderSaveActions}
         />
       )}
 

@@ -1,6 +1,8 @@
 import { observer } from "mobx-react-lite";
 import { useEffect, useRef, useState } from "react";
 
+import type { SaveAction } from "@/components/shared/ComponentEditor/saveAction";
+import { SaveActionsView } from "@/components/shared/ComponentEditor/SaveActionsView";
 import { StackingControls } from "@/components/shared/ReactFlow/FlowControls/StackingControls";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -18,6 +20,7 @@ import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { SYSTEM_ANNOTATIONS, ZINDEX_ANNOTATION } from "@/utils/annotations";
 import type { HydratedComponentReference } from "@/utils/componentSpec";
+import { diffComponentIO } from "@/utils/componentSpecDiff";
 import { tracking } from "@/utils/tracking";
 
 import { getTaskYamlText } from "./components/actions/getTaskYamlText";
@@ -75,9 +78,37 @@ export const TaskDetails = observer(function TaskDetails({
 
   const isSubgraphTask = task.subgraphSpec !== undefined;
 
+  const renderSaveActions = ({
+    hydratedComponent,
+    onChoose,
+  }: {
+    hydratedComponent: HydratedComponentReference;
+    onChoose: (action: "update" | "import" | "place") => void;
+  }) => {
+    const { inputDiff, outputDiff } = diffComponentIO<
+      { name: string; type?: unknown },
+      { name: string; type?: unknown }
+    >(task.resolvedComponentSpec, hydratedComponent.spec);
+
+    return (
+      <SaveActionsView
+        taskName={task.name}
+        inputDiff={inputDiff}
+        outputDiff={outputDiff}
+        onChoose={onChoose}
+      />
+    );
+  };
+
   const handleComponentSaved = (
     hydratedComponent: HydratedComponentReference,
+    action: SaveAction,
   ) => {
+    if (action !== "update") {
+      // "place" arrives once placement ships; nothing else applies in place.
+      return;
+    }
+
     const result = replaceTask(spec, task.$id, hydratedComponent);
     const lostInputs = result.inputDiff?.lostEntities ?? [];
 
@@ -182,6 +213,7 @@ export const TaskDetails = observer(function TaskDetails({
           taskName={task.name}
           pythonCode={pythonCode}
           onComponentSaved={handleComponentSaved}
+          renderSaveActions={renderSaveActions}
         />
       </BlockStack>
 
