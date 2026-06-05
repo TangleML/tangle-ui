@@ -13,9 +13,11 @@ import { AuthorizationResultScreen as HuggingFaceAuthorizationResultScreen } fro
 import { AddSecretView } from "@/components/shared/SecretsManagement/components/AddSecretView";
 import { ReplaceSecretView } from "@/components/shared/SecretsManagement/components/ReplaceSecretView";
 import { SecretsListView } from "@/components/shared/SecretsManagement/components/SecretsListView";
+import { isFlagEnabled } from "@/components/shared/Settings/useFlags";
 import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 
 import RootLayout from "../components/layout/RootLayout";
+import { DashboardComponentsV2View } from "./Dashboard/DashboardComponentsV2View";
 import { DashboardComponentsView } from "./Dashboard/DashboardComponentsView";
 import { DashboardFavoritesView } from "./Dashboard/DashboardFavoritesView";
 import { DashboardHomeView } from "./Dashboard/DashboardHomeView";
@@ -32,6 +34,7 @@ import { ImportPage } from "./Import";
 import NotFoundPage from "./NotFoundPage";
 import PipelineRun from "./PipelineRun";
 import ArtifactPreviewPage from "./PipelineRun/ArtifactPreview";
+import { AgentSettings } from "./Settings/sections/AgentSettings";
 import { BackendSettings } from "./Settings/sections/BackendSettings";
 import { BetaFeaturesSettings } from "./Settings/sections/BetaFeaturesSettings";
 import { PreferencesSettings } from "./Settings/sections/PreferencesSettings";
@@ -60,6 +63,7 @@ export const APP_ROUTES = {
   DASHBOARD_RUNS: "/runs",
   DASHBOARD_PIPELINES: "/pipelines",
   DASHBOARD_COMPONENTS: "/components",
+  DASHBOARD_COMPONENTS_V2: "/components-v2",
   DASHBOARD_FAVORITES: "/favorites",
   DASHBOARD_RECENTLY_VIEWED: "/recently-viewed",
   LEARN: LEARN_BASE_PATH,
@@ -75,6 +79,7 @@ export const APP_ROUTES = {
   SETTINGS_BACKEND: `${SETTINGS_PATH}/backend`,
   SETTINGS_PREFERENCES: `${SETTINGS_PATH}/preferences`,
   SETTINGS_BETA_FEATURES: `${SETTINGS_PATH}/beta-features`,
+  SETTINGS_AGENT: `${SETTINGS_PATH}/agent`,
   SETTINGS_SECRETS: `${SETTINGS_PATH}/secrets`,
   SETTINGS_SECRETS_ADD: `${SETTINGS_PATH}/secrets/add`,
   SETTINGS_SECRETS_REPLACE: `${SETTINGS_PATH}/secrets/$secretId/replace`,
@@ -132,6 +137,17 @@ const dashboardComponentsRoute = createRoute({
   getParentRoute: () => dashboardRoute,
   path: "/components",
   component: DashboardComponentsView,
+});
+
+const dashboardComponentsV2Route = createRoute({
+  getParentRoute: () => dashboardRoute,
+  path: "/components-v2",
+  component: DashboardComponentsV2View,
+  beforeLoad: () => {
+    if (!isFlagEnabled("component-search-v2")) {
+      throw redirect({ to: APP_ROUTES.DASHBOARD_COMPONENTS });
+    }
+  },
 });
 
 const dashboardFavoritesRoute = createRoute({
@@ -210,6 +226,17 @@ const settingsBetaFeaturesRoute = createRoute({
   component: BetaFeaturesSettings,
 });
 
+const settingsAgentRoute = createRoute({
+  getParentRoute: () => settingsLayoutRoute,
+  path: "/agent",
+  component: AgentSettings,
+  beforeLoad: () => {
+    if (!isFlagEnabled("component-search-v2")) {
+      throw redirect({ to: APP_ROUTES.SETTINGS_BACKEND });
+    }
+  },
+});
+
 const settingsSecretsRoute = createRoute({
   getParentRoute: () => settingsLayoutRoute,
   path: "/secrets",
@@ -285,6 +312,7 @@ const settingsRouteTree = settingsLayoutRoute.addChildren([
   settingsBackendRoute,
   settingsPreferencesRoute,
   settingsBetaFeaturesRoute,
+  settingsAgentRoute,
   secretsRouteTree,
 ]);
 
@@ -329,6 +357,7 @@ const dashboardRouteTree = dashboardRoute.addChildren([
   dashboardRunsRoute,
   dashboardPipelinesRoute,
   dashboardComponentsRoute,
+  dashboardComponentsV2Route,
   dashboardFavoritesRoute,
   dashboardRecentlyViewedRoute,
   learnIndexRoute,
