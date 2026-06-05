@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { CodeViewer } from "@/components/shared/CodeViewer";
 import { CopyText } from "@/components/shared/CopyText/CopyText";
 import { GithubDetails } from "@/components/shared/TaskDetails/GithubDetails";
@@ -13,7 +15,27 @@ import type {
   OutputSpec,
 } from "@/utils/componentSpec";
 import { TOP_NAV_HEIGHT } from "@/utils/constants";
+import { getComponentName } from "@/utils/getComponentName";
 import { buildComponentSourceUrl } from "@/utils/URL";
+
+// Repeated label style used for "Inputs"/"Outputs"/"Source" headings — small,
+// subdued, uppercase. Extracted so the three call sites stay in sync.
+const SectionLabel = ({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) => (
+  <Text
+    size="xs"
+    tone="subdued"
+    weight="semibold"
+    className={cn("uppercase tracking-wide", className)}
+  >
+    {children}
+  </Text>
+);
 
 // ─── Compact I/O table ───────────────────────────────────────────────────────
 
@@ -40,11 +62,12 @@ const IORow = ({
       <Text
         size="sm"
         weight="semibold"
-        className="font-mono truncate min-w-0 flex-1"
+        font="mono"
+        className="truncate min-w-0 flex-1"
       >
         {name}
       </Text>
-      {type !== undefined && type !== null && (
+      {!!type && (
         <Text size="xs" tone="subdued" className="shrink-0">
           {String(type)}
         </Text>
@@ -52,25 +75,23 @@ const IORow = ({
       <Text
         size="xs"
         weight="semibold"
-        className={cn(
-          "shrink-0 uppercase tracking-wide",
-          required ? "text-rose-600" : "text-muted-foreground",
-        )}
+        tone={required ? "critical" : "subdued"}
+        className="shrink-0 uppercase tracking-wide"
       >
         {required ? "required" : "optional"}
       </Text>
     </InlineStack>
     {description && (
-      <Text
-        size="xs"
-        className="text-muted-foreground leading-snug block mt-0.5"
-      >
+      <Text size="xs" tone="subdued" className="leading-snug block mt-0.5">
         {description}
       </Text>
     )}
     {defaultValue !== undefined && (
-      <Text size="xs" className="text-muted-foreground block mt-0.5">
-        Default: <span className="font-mono">{String(defaultValue)}</span>
+      <Text size="xs" tone="subdued" className="block mt-0.5">
+        Default:{" "}
+        <Text as="span" font="mono">
+          {String(defaultValue)}
+        </Text>
       </Text>
     )}
   </div>
@@ -89,15 +110,8 @@ const IOSection = ({
     description?: string;
   }>;
 }) => (
-  // align="stretch" so the row list fills the section's width; BlockStack
-  // defaults to items-start otherwise.
   <BlockStack gap="1" align="stretch">
-    <Text
-      size="xs"
-      className="text-muted-foreground font-medium uppercase tracking-wide"
-    >
-      {label}
-    </Text>
+    <SectionLabel>{label}</SectionLabel>
     <div>
       {rows.map((row, idx) => (
         <IORow
@@ -244,9 +258,9 @@ export const ComponentDetail = ({
   // ── Shared sub-blocks ──────────────────────────────────────────────────
   const header = (
     <BlockStack gap="2">
-      <Heading level={2}>{spec.name ?? hydrated.digest ?? ""}</Heading>
+      <Heading level={2}>{getComponentName(hydrated)}</Heading>
       {author && (
-        <Text size="sm" className="text-muted-foreground">
+        <Text size="sm" tone="subdued">
           {author}
         </Text>
       )}
@@ -289,17 +303,12 @@ export const ComponentDetail = ({
   if (layout === "stacked") {
     const stackedSourceHeight = sourcePanelHeight ?? "60vh";
     return (
-      // align="stretch" so every child fills the container's width. Without
-      // this, BlockStack defaults to `items-start` and children collapse to
-      // their intrinsic width, which looks broken in wide panes.
       <BlockStack gap="6" align="stretch">
         {header}
         {description}
         {githubLinks}
         {io}
         {hydrated.text && (
-          // CodeViewer already provides its own dark frame + header bar, so
-          // no extra border/card chrome around it — keeps the look minimal.
           <div
             style={{ height: stackedSourceHeight }}
             className="min-h-0 rounded-md overflow-hidden"
@@ -320,32 +329,26 @@ export const ComponentDetail = ({
     sourcePanelHeight ?? `calc(100vh - ${TOP_NAV_HEIGHT + 48}px)`;
   return (
     <InlineStack gap="6" blockAlign="start">
-      <div className="flex-2 min-w-0 flex flex-col gap-4">
+      <BlockStack gap="4" className="flex-2 min-w-0">
         {header}
         {description}
         {githubLinks}
         {io}
-      </div>
+      </BlockStack>
 
       {hydrated.text && (
         <div className="flex-3 min-w-0">
-          <div
-            className="sticky top-0 flex flex-col gap-1.5"
-            style={{ height: splitSourceHeight }}
-          >
-            <Text
-              size="xs"
-              className="text-muted-foreground font-medium uppercase tracking-wide shrink-0"
-            >
-              Source
-            </Text>
-            <div className="flex-1 min-h-0">
-              <CodeViewer
-                code={hydrated.text}
-                language="yaml"
-                filename={spec.name ?? "component.yaml"}
-              />
-            </div>
+          <div className="sticky top-0" style={{ height: splitSourceHeight }}>
+            <BlockStack className="gap-1.5 h-full" align="stretch">
+              <SectionLabel className="shrink-0">Source</SectionLabel>
+              <div className="flex-1 min-h-0">
+                <CodeViewer
+                  code={hydrated.text}
+                  language="yaml"
+                  filename={spec.name ?? "component.yaml"}
+                />
+              </div>
+            </BlockStack>
           </div>
         </div>
       )}
@@ -355,12 +358,12 @@ export const ComponentDetail = ({
 
 export const ComponentDetailSkeleton = () => (
   <InlineStack gap="6">
-    <div className="flex-1 flex flex-col gap-3">
+    <BlockStack gap="3" className="flex-1">
       <Skeleton className="h-6 w-48" />
       <Skeleton className="h-4 w-32" />
       <Skeleton className="h-4 w-full" />
       <Skeleton className="h-4 w-3/4" />
-    </div>
+    </BlockStack>
     <Skeleton className="flex-3 min-w-0 h-64" />
   </InlineStack>
 );

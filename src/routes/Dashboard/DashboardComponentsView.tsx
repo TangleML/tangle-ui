@@ -40,7 +40,9 @@ type ComponentRowSection = "user" | "library" | "published";
 
 const PUBLISHED_COMPONENTS_URL = "/api/published_components/";
 
-function readSelectedComponentDigest(search: unknown): string | undefined {
+export function readSelectedComponentDigest(
+  search: unknown,
+): string | undefined {
   if (!isRecord(search)) return undefined;
   return typeof search.component === "string" ? search.component : undefined;
 }

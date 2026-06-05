@@ -19,6 +19,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/components/shared/FullscreenElement",
   "src/components/shared/CopyText",
   "src/components/shared/TaskDetails",
+  "src/components/shared/ComponentDetail",
   "src/components/shared/GitHubAuth",
   "src/components/shared/Authentication",
   "src/routes",
