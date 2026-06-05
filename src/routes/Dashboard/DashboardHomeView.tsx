@@ -1,7 +1,6 @@
 import { Link } from "@tanstack/react-router";
 
 import { RunSection } from "@/components/Home/RunSection/RunSection";
-import { TipOfTheDay } from "@/components/Learn/TipOfTheDay";
 import { AnnouncementBanners } from "@/components/shared/AnnouncementBanners";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import {
@@ -171,13 +170,10 @@ export function DashboardHomeView() {
     <BlockStack gap="6">
       <AnnouncementBanners />
 
-      <div className="w-full grid grid-cols-3 xl:grid-cols-6 gap-6 overflow-hidden">
+      <div className="w-full grid grid-cols-3 gap-6 overflow-hidden">
         <FavoritesPreview />
         <RecentlyViewedPreview />
         <RecentComponentsPreview />
-        <div className="col-span-3 max-w-4xl mx-auto">
-          <TipOfTheDay />
-        </div>
       </div>
 
       <BlockStack gap="3">

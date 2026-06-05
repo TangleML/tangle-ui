@@ -23,13 +23,18 @@ function getDayOfYear(date: Date) {
 
 interface TipOfTheDayProps {
   variant?: "card" | "compact";
+  showHeader?: boolean;
 }
 
-export function TipOfTheDay({ variant = "card" }: TipOfTheDayProps = {}) {
+export function TipOfTheDay({
+  variant = "card",
+  showHeader,
+}: TipOfTheDayProps = {}) {
   const index = getDayOfYear(new Date()) % tips.length;
   const tip = tips[index];
   const isCompact = variant === "compact";
   const textSize = isCompact ? "xs" : "sm";
+  const headerVisible = showHeader ?? !isCompact;
 
   const badge = (
     <Badge size="sm" variant="secondary">
@@ -46,16 +51,22 @@ export function TipOfTheDay({ variant = "card" }: TipOfTheDayProps = {}) {
       }
     >
       <BlockStack gap={isCompact ? "2" : "3"} className="h-full">
-        {!isCompact && (
+        {headerVisible && (
           <InlineStack gap="2" blockAlign="center" align="space-between">
             <InlineStack gap="2" blockAlign="center">
               <Icon
                 name="Lightbulb"
-                size="md"
+                size={isCompact ? "sm" : "md"}
                 className="text-amber-500"
                 aria-hidden="true"
               />
-              <Heading level={3}>Tip of the day</Heading>
+              {isCompact ? (
+                <Text size="xs" weight="semibold" tone="subdued">
+                  Tip of the day
+                </Text>
+              ) : (
+                <Heading level={3}>Tip of the day</Heading>
+              )}
             </InlineStack>
             {badge}
           </InlineStack>
@@ -66,9 +77,14 @@ export function TipOfTheDay({ variant = "card" }: TipOfTheDayProps = {}) {
             <Text as="p" size={textSize} weight="semibold">
               {tip.title}
             </Text>
-            {isCompact && badge}
+            {!headerVisible && badge}
           </InlineStack>
-          <Text as="p" size={textSize} tone="subdued">
+          <Text
+            as="p"
+            size={textSize}
+            tone="subdued"
+            className={isCompact ? "line-clamp-3" : undefined}
+          >
             {tip.body}
           </Text>
         </BlockStack>

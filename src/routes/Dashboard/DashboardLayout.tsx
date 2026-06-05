@@ -1,5 +1,6 @@
 import { Link, Outlet } from "@tanstack/react-router";
 
+import { TipOfTheDay } from "@/components/Learn/TipOfTheDay";
 import { isAuthorizationRequired } from "@/components/shared/Authentication/helpers";
 import { TopBarAuthentication } from "@/components/shared/Authentication/TopBarAuthentication";
 import { Icon, type IconName } from "@/components/ui/icon";
@@ -82,6 +83,13 @@ export function DashboardLayout() {
 
         {/* Spacer */}
         <div className="flex-1 min-h-4" />
+
+        {/* Tip of the day */}
+        <div className="px-3 pb-2">
+          <div className="rounded-lg border border-border bg-card">
+            <TipOfTheDay variant="compact" showHeader />
+          </div>
+        </div>
 
         {/* Bottom utilities */}
         <BlockStack gap="1" className="px-3 border-t border-border pt-3 pb-3">
