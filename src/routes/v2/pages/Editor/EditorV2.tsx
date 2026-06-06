@@ -50,6 +50,8 @@ import { useSelectionWindowSync } from "./hooks/useSelectionWindowSync";
 import { useSpecLifecycle } from "./hooks/useSpecLifecycle";
 import { useTipOfTheDayWindow } from "./hooks/useTipOfTheDayWindow";
 import { useUndoRedoKeyboard } from "./hooks/useUndoRedoKeyboard";
+import { CopyLineageModal } from "./lineage/CopyLineageModal";
+import { PasteLineagePrompt } from "./lineage/PasteLineagePrompt";
 import { reconcileModeStore } from "./lineage/reconcileModeStore";
 import { ReconcileNavigationGuard } from "./lineage/ReconcileNavigationGuard";
 import { ReconcileOverviewHost } from "./lineage/ReconcileOverviewHost";
@@ -123,6 +125,8 @@ const PipelineEditor = withSuspenseWrapper(
                 className="h-full"
               />
               <WindowContainer />
+              <CopyLineageModal />
+              <PasteLineagePrompt />
             </div>
             <DockArea side="right" />
           </InlineStack>

@@ -29,6 +29,17 @@ const reconcileSessionSchema = z.object({
   targetName: z.string(),
   /** Origin pipeline (storage key) to return to — reopens the overview there. */
   returnToPipeline: z.string(),
+  /**
+   * $id of the task that was originally edited. Used to spotlight that task
+   * when the reconcile overview is closed (so the user lands with context).
+   */
+  originTaskId: z.string().optional(),
+  /**
+   * Subgraph path (array of task names) for the target being reconciled.
+   * Empty or absent = root level. Set per-target when the user clicks Reconcile
+   * so ReconcileModeController can navigate into the right depth automatically.
+   */
+  targetSubgraphPath: z.array(z.string()).optional(),
   worklist: z.array(worklistItemSchema),
   createdAt: z.number(),
 });

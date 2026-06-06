@@ -14,6 +14,7 @@ import { hydrateComponentReference } from "@/services/componentService";
 import { EDITOR_POSITION_ANNOTATION } from "@/utils/annotations";
 import type { TaskSpec } from "@/utils/componentSpec";
 import { deepClone } from "@/utils/deepClone";
+import { LINEAGE_ORIGIN_ANNOTATION } from "@/utils/lineage";
 
 import { TaskDetails } from "./context/TaskDetails/TaskDetails";
 
@@ -50,9 +51,33 @@ export const taskManifest: NodeTypeManifest = {
       if (!isTaskSnapshot(snapshot)) return null;
 
       const uniqueName = generateUniqueTaskName(spec, snapshot.name);
+
+      // If the source task has no lineage, generate a fresh UUID origin so that
+      // any subsequent copies of the pasted task carry a stable lineage going
+      // forward. The PasteLineagePrompt then offers to back-link the source task.
+      const hasLineage = snapshot.data.annotations.some(
+        (a) => a.key === LINEAGE_ORIGIN_ANNOTATION,
+      );
+      const extraAnnotations = hasLineage
+        ? []
+        : [
+            {
+              key: LINEAGE_ORIGIN_ANNOTATION,
+              value: {
+                originId:
+                  snapshot.data.componentRef.url ??
+                  snapshot.data.componentRef.digest ??
+                  crypto.randomUUID(),
+                originDigest: snapshot.data.componentRef.digest,
+                originName: snapshot.data.componentRef.name,
+              },
+            },
+          ];
+
       const annotations = Annotations.from([
         ...snapshot.data.annotations,
         { key: EDITOR_POSITION_ANNOTATION, value: position },
+        ...extraAnnotations,
       ]);
 
       const clonedComponentRef = deepClone(snapshot.data.componentRef);

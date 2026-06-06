@@ -11,8 +11,28 @@ import { APP_ROUTES } from "@/routes/router";
 import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskActions";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
+import type { NavigationStore } from "@/routes/v2/shared/store/navigationStore";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { hydrateComponentReference } from "@/services/componentService";
+
+/**
+ * Walk a subgraph path (array of task names), calling navigateToSubgraph at
+ * each level. MobX updates navigation.activeSpec synchronously after each call,
+ * so reading it in the next iteration gives the correct deeper spec.
+ */
+function navigateToSubgraphPath(
+  navigation: NavigationStore,
+  path: string[],
+): void {
+  for (const taskName of path) {
+    const currentSpec = navigation.activeSpec;
+    if (!currentSpec) break;
+    const task = currentSpec.tasks.find((t) => t.name === taskName);
+    if (task?.subgraphSpec) {
+      navigation.navigateToSubgraph(currentSpec, task.$id);
+    }
+  }
+}
 
 import { collectLineageUsages } from "./collectLineageUsages";
 import { findTaskContext } from "./findTaskContext";
@@ -35,7 +55,7 @@ export const ReconcileModeController = observer(
     const navigate = useNavigate();
     const { autoSave, undo } = useEditorSession();
     const { replaceTask } = useTaskActions();
-    const { editor } = useSharedStores();
+    const { editor, navigation } = useSharedStores();
 
     const [ready, setReady] = useState(false);
     const [matchTaskIds, setMatchTaskIds] = useState<string[]>([]);
@@ -60,9 +80,18 @@ export const ReconcileModeController = observer(
         });
         if (cancelled || !component) return;
 
-        const matches = collectLineageUsages(spec, session.originId).filter(
-          (m) => m.digest !== session.targetDigest,
-        );
+        // Navigate into the target subgraph depth before staging. MobX updates
+        // navigation.activeSpec synchronously, so we read it immediately after.
+        navigateToSubgraphPath(navigation, session.targetSubgraphPath ?? []);
+
+        // Use navigation.activeSpec (reflects any subgraph navigation above)
+        // rather than the spec prop, which still reflects the pre-nav render.
+        const targetSpec = navigation.activeSpec ?? spec;
+
+        const matches = collectLineageUsages(
+          targetSpec,
+          session.originId,
+        ).filter((m) => m.digest !== session.targetDigest);
 
         stagedSessionRef.current = session.sessionId;
 
@@ -70,7 +99,7 @@ export const ReconcileModeController = observer(
           autoSave.setSuspended(true);
           undo.withGroup("Reconcile component", () => {
             for (const match of matches) {
-              const ctx = findTaskContext(spec, match.taskId);
+              const ctx = findTaskContext(targetSpec, match.taskId);
               if (ctx) replaceTask(ctx.spec, match.taskId, component);
             }
           });

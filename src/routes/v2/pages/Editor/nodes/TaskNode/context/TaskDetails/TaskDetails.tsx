@@ -89,6 +89,7 @@ export const TaskDetails = observer(function TaskDetails({
   const launchReconcileOverview = (
     component: HydratedComponentReference,
     originId: string,
+    originTaskId?: string,
   ) => {
     if (!currentPipelineKey) return;
     const session = createReconcileSession({
@@ -97,6 +98,7 @@ export const TaskDetails = observer(function TaskDetails({
       targetComponentText: component.text,
       targetName: component.name,
       returnToPipeline: currentPipelineKey,
+      originTaskId,
       worklist: [],
     });
     void navigate({
@@ -209,7 +211,7 @@ export const TaskDetails = observer(function TaskDetails({
             crossPipelineCount: otherPipelinesPending,
           });
         } else if (otherPipelinesPending > 0) {
-          launchReconcileOverview(hydratedComponent, originId);
+          launchReconcileOverview(hydratedComponent, originId, task.$id);
         }
       },
     );
@@ -475,7 +477,8 @@ export const TaskDetails = observer(function TaskDetails({
               LINEAGE_ORIGIN_ANNOTATION,
             )?.originId;
             setReconcile(null);
-            if (originId) launchReconcileOverview(component, originId);
+            if (originId)
+              launchReconcileOverview(component, originId, task.$id);
           }}
           onConfirm={handleReconcileConfirm}
           onCancel={() => setReconcile(null)}
