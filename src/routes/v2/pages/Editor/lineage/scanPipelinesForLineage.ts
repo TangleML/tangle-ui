@@ -1,4 +1,7 @@
-import { LINEAGE_ORIGIN_ANNOTATION } from "@/utils/annotations";
+import {
+  LINEAGE_EXCLUDE_ANNOTATION,
+  LINEAGE_ORIGIN_ANNOTATION,
+} from "@/utils/annotations";
 import {
   type ComponentSpec,
   isGraphImplementation,
@@ -50,7 +53,8 @@ function walkSpec(
   const pathKey = path.join("\0");
   for (const [taskName, task] of Object.entries(impl.graph.tasks)) {
     const lineage = parseLineage(task.annotations?.[LINEAGE_ORIGIN_ANNOTATION]);
-    if (lineage?.originId === originId) {
+    const excluded = task.annotations?.[LINEAGE_EXCLUDE_ANNOTATION] === "true";
+    if (lineage?.originId === originId && !excluded) {
       if (!out.has(pathKey)) out.set(pathKey, { path, tasks: [] });
       const digest = task.componentRef.digest;
       out.get(pathKey)!.tasks.push({

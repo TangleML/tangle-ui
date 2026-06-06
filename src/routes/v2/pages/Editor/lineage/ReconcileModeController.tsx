@@ -6,6 +6,11 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Text } from "@/components/ui/typography";
 import { APP_ROUTES } from "@/routes/router";
 import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskActions";
@@ -39,14 +44,17 @@ import { findTaskContext } from "./findTaskContext";
 import { reconcileModeStore } from "./reconcileModeStore";
 
 /**
- * Drives the in-canvas reconcile experience when reconcile mode is active:
- * holds autosave, stages the edited component onto matching tasks in-memory
- * (rendered immediately, fully undoable), spotlights them, and surfaces a
- * node-anchored "Finish Reconciling" button (the explicit commit) plus a banner.
+ * Drives the in-canvas reconcile experience when reconcile mode is active.
  *
- * Rendered inside `<ReactFlow>` so `NodeToolbar` can anchor to the target nodes.
- * Nothing is persisted until Finish; Cancel / leaving discards the staged change
- * (the pipeline reloads fresh from storage).
+ * All matching tasks are staged simultaneously (in-memory, nothing persisted).
+ * The user reviews them one at a time — each has a "Mark Done" button that
+ * works like a checkbox. Previous/Next navigate freely. When every task is
+ * marked done the pipeline is saved and the user returns to the overview.
+ * Cancel discards all staged changes.
+ *
+ * Issue 4 fix: stagedSessionRef is explicitly cleared in leave() to prevent
+ * "Nothing to reconcile" on re-entry when the same FlowCanvas key is reused
+ * (i.e. the same pipeline is navigated to a second time without re-mounting).
  */
 export const ReconcileModeController = observer(
   function ReconcileModeController() {
@@ -59,6 +67,9 @@ export const ReconcileModeController = observer(
 
     const [ready, setReady] = useState(false);
     const [matchTaskIds, setMatchTaskIds] = useState<string[]>([]);
+    const [currentIndex, setCurrentIndex] = useState(0);
+    // Checkbox model: every task must be marked before finishing.
+    const [doneTaskIds, setDoneTaskIds] = useState<Set<string>>(new Set());
     const stagedSessionRef = useRef<string | null>(null);
 
     useEffect(() => {
@@ -66,6 +77,8 @@ export const ReconcileModeController = observer(
         stagedSessionRef.current = null;
         setReady(false);
         setMatchTaskIds([]);
+        setCurrentIndex(0);
+        setDoneTaskIds(new Set());
       }
     }, [session]);
 
@@ -80,12 +93,7 @@ export const ReconcileModeController = observer(
         });
         if (cancelled || !component) return;
 
-        // Navigate into the target subgraph depth before staging. MobX updates
-        // navigation.activeSpec synchronously, so we read it immediately after.
         navigateToSubgraphPath(navigation, session.targetSubgraphPath ?? []);
-
-        // Use navigation.activeSpec (reflects any subgraph navigation above)
-        // rather than the spec prop, which still reflects the pre-nav render.
         const targetSpec = navigation.activeSpec ?? spec;
 
         const matches = collectLineageUsages(
@@ -105,10 +113,14 @@ export const ReconcileModeController = observer(
           });
           editor.setPendingFocusNode(matches[0].taskId);
           editor.setSpotlightNode(matches[0].taskId);
+          editor.selectNode(matches[0].taskId, "task");
+          reconcileModeStore.setCurrentReconcileTaskId(matches[0].taskId);
         }
 
         if (!cancelled) {
           setMatchTaskIds(matches.map((m) => m.taskId));
+          setCurrentIndex(0);
+          setDoneTaskIds(new Set());
           setReady(true);
         }
       })();
@@ -116,10 +128,17 @@ export const ReconcileModeController = observer(
       return () => {
         cancelled = true;
       };
-      // Stage once per session; deps kept stable intentionally.
     }, [session?.sessionId, spec]);
 
     if (!session || !ready) return null;
+
+    const count = matchTaskIds.length;
+    const currentTaskId = matchTaskIds[currentIndex] ?? null;
+    const doneCount = doneTaskIds.size;
+    const allDone = doneCount === count && count > 0;
+    const currentIsDone = currentTaskId
+      ? doneTaskIds.has(currentTaskId)
+      : false;
 
     const returnToOverview = () =>
       navigate({
@@ -136,26 +155,121 @@ export const ReconcileModeController = observer(
     };
 
     const leave = async () => {
-      // Leave without saving — the staged change is discarded on reload.
+      // Clear stagedSessionRef so re-entering reconcile mode for the same
+      // pipeline will re-run staging (the FlowCanvas key may not change).
+      stagedSessionRef.current = null;
       reconcileModeStore.exit();
       await returnToOverview();
     };
 
-    const count = matchTaskIds.length;
+    const goTo = (index: number) => {
+      const clamped = Math.max(0, Math.min(index, count - 1));
+      setCurrentIndex(clamped);
+      const taskId = matchTaskIds[clamped];
+      if (taskId) {
+        editor.setPendingFocusNode(taskId);
+        editor.setSpotlightNode(taskId);
+        editor.selectNode(taskId, "task");
+        reconcileModeStore.setCurrentReconcileTaskId(taskId);
+      }
+    };
+
+    /** Find the next task that hasn't been marked done, searching forward. */
+    const findNextUndone = (fromIndex: number): number | null => {
+      for (let i = 1; i < count; i++) {
+        const idx = (fromIndex + i) % count;
+        if (!doneTaskIds.has(matchTaskIds[idx])) return idx;
+      }
+      return null;
+    };
+
+    const toggleDone = () => {
+      if (!currentTaskId) return;
+      const newDone = new Set(doneTaskIds);
+
+      if (currentIsDone) {
+        // Unmark — user changed their mind.
+        newDone.delete(currentTaskId);
+        setDoneTaskIds(newDone);
+      } else {
+        // Mark done.
+        newDone.add(currentTaskId);
+        setDoneTaskIds(newDone);
+
+        if (newDone.size === count) {
+          // All tasks reviewed — finish.
+          void finish();
+        } else {
+          // Advance to the next undone task.
+          const nextIdx = findNextUndone(currentIndex);
+          if (nextIdx !== null) goTo(nextIdx);
+        }
+      }
+    };
 
     return (
       <>
-        {count > 0 && (
+        {currentTaskId && (
           <NodeToolbar
-            nodeId={matchTaskIds}
+            nodeId={currentTaskId}
             isVisible
             position={Position.Top}
             offset={12}
           >
-            <Button size="sm" onClick={() => void finish()}>
-              <Icon name="Check" size="sm" />
-              Finish Reconciling{count > 1 ? ` (${count} tasks)` : ""}
-            </Button>
+            <InlineStack gap="1" blockAlign="center">
+              {count > 1 && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="min"
+                      className="h-8 w-8"
+                      disabled={currentIndex === 0}
+                      onClick={() => goTo(currentIndex - 1)}
+                    >
+                      <Icon name="ChevronLeft" size="sm" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Previous task</TooltipContent>
+                </Tooltip>
+              )}
+
+              {count === 1 ? (
+                <Button size="sm" onClick={() => void finish()}>
+                  <Icon name="Check" size="sm" />
+                  Finish Reconciling
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  variant={currentIsDone ? "outline" : "default"}
+                  onClick={toggleDone}
+                >
+                  <Icon
+                    name={currentIsDone ? "CheckCheck" : "Check"}
+                    size="sm"
+                  />
+                  {currentIsDone ? "Done — Undo" : "Mark Done"}
+                </Button>
+              )}
+
+              {count > 1 && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="min"
+                      className="h-8 w-8"
+                      disabled={currentIndex === count - 1}
+                      onClick={() => goTo(currentIndex + 1)}
+                    >
+                      <Icon name="ChevronRight" size="sm" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Next task</TooltipContent>
+                </Tooltip>
+              )}
+            </InlineStack>
           </NodeToolbar>
         )}
 
@@ -168,8 +282,14 @@ export const ReconcileModeController = observer(
             <Icon name="RefreshCw" size="sm" className="text-blue-600" />
             {count > 0 ? (
               <Text size="sm">
-                Reconciling <strong>{session.targetName}</strong> · {count}{" "}
-                {count === 1 ? "task" : "tasks"} staged
+                Reconciling <strong>{session.targetName}</strong>
+                {count > 1 && (
+                  <>
+                    {" "}
+                    · {doneCount}/{count} done
+                    {!allDone && ` · task ${currentIndex + 1} of ${count}`}
+                  </>
+                )}
               </Text>
             ) : (
               <Text size="sm">Nothing to reconcile in this pipeline</Text>

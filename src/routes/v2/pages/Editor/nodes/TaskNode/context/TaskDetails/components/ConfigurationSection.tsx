@@ -9,15 +9,24 @@ import {
   parseSchemaToAnnotationConfig,
 } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/AnnotationsEditor/utils";
 import { ColorPicker } from "@/components/ui/color";
+import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Heading, Paragraph } from "@/components/ui/typography";
 import type { Task } from "@/models/componentSpec";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
+import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import type { AnnotationConfig, Annotations } from "@/types/annotations";
 import {
   EDITOR_COLLAPSED_ANNOTATION,
+  LINEAGE_EXCLUDE_ANNOTATION,
+  LINEAGE_ORIGIN_ANNOTATION,
   TASK_COLOR_ANNOTATION,
 } from "@/utils/annotations";
 import { ISO8601_DURATION_ZERO_DAYS } from "@/utils/constants";
@@ -32,6 +41,7 @@ export const ConfigurationSection = observer(function ConfigurationSection({
   task,
 }: ConfigurationSectionProps) {
   const { track } = useAnalytics();
+  const { undo } = useEditorSession();
   const {
     toggleCacheDisable,
     saveAnnotation,
@@ -133,9 +143,36 @@ export const ConfigurationSection = observer(function ConfigurationSection({
     track("v2.pipeline_editor.task_details.collapse_node.toggle");
   };
 
+  const handleTrackingChange = (checked: boolean) => {
+    undo.withGroup("Toggle lineage tracking", () => {
+      if (!task.annotations.has(LINEAGE_ORIGIN_ANNOTATION)) {
+        // First time enabling: stamp the origin so lineage exists going forward.
+        task.annotations.set(LINEAGE_ORIGIN_ANNOTATION, {
+          originId:
+            task.componentRef.url ??
+            task.componentRef.digest ??
+            crypto.randomUUID(),
+          originDigest: task.componentRef.digest,
+          originName: task.componentRef.name,
+        });
+      }
+      task.annotations.set(
+        LINEAGE_EXCLUDE_ANNOTATION,
+        checked ? "false" : "true",
+      );
+    });
+    track("v2.pipeline_editor.task_details.lineage_tracking.toggle");
+  };
+
   const taskColor = task.annotations.get(TASK_COLOR_ANNOTATION);
   const isCollapsed =
     task.annotations.get(EDITOR_COLLAPSED_ANNOTATION) === "true";
+  // Tracking is ON when the exclude annotation is explicitly "false" (opted in)
+  // OR when origin exists but the user has never been asked (exclude absent).
+  const excludeValue = task.annotations.get(LINEAGE_EXCLUDE_ANNOTATION) as
+    | string
+    | undefined;
+  const isTracking = excludeValue !== "true";
 
   return (
     <BlockStack gap="3">
@@ -175,6 +212,26 @@ export const ConfigurationSection = observer(function ConfigurationSection({
           Collapse node
         </Paragraph>
         <Switch checked={isCollapsed} onCheckedChange={handleCollapsedChange} />
+      </InlineStack>
+
+      <InlineStack align="space-between" gap="2" className="w-full">
+        <InlineStack gap="1" blockAlign="center">
+          <Paragraph size="xs" tone="subdued">
+            Reconcile changes
+          </Paragraph>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="flex items-center text-muted-foreground">
+                <Icon name="Info" size="xs" />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              When on, editing this component will offer to update any linked
+              copies in this or other pipelines.
+            </TooltipContent>
+          </Tooltip>
+        </InlineStack>
+        <Switch checked={isTracking} onCheckedChange={handleTrackingChange} />
       </InlineStack>
 
       <Separator />

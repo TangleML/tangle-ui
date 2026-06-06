@@ -15,6 +15,7 @@ import type { ComponentSpec } from "@/models/componentSpec";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useAutoLayout } from "@/routes/v2/pages/Editor/hooks/useAutoLayout";
 import { ReconcileModeController } from "@/routes/v2/pages/Editor/lineage/ReconcileModeController";
+import { reconcileModeStore } from "@/routes/v2/pages/Editor/lineage/reconcileModeStore";
 import { SubgraphBreadcrumbs } from "@/routes/v2/shared/components/SubgraphBreadcrumbs";
 import { FLOW_CANVAS_DEFAULT_PROPS } from "@/routes/v2/shared/flowCanvasDefaults";
 import { useDoubleClickBehavior } from "@/routes/v2/shared/hooks/useDoubleClickBehavior";
@@ -62,13 +63,29 @@ export const FlowCanvas = observer(function FlowCanvas({
   const isDetailedView = useIsDetailedView();
 
   const {
-    displayNodes,
+    displayNodes: rawDisplayNodes,
     displayEdges,
     onEdgeClick,
     rfOnNodesChange,
     rfOnEdgesChange,
-    selectionBehavior,
+    selectionBehavior: rawSelectionBehavior,
   } = useFlowCanvasState({ spec, metaKeyPressed, isConnecting });
+
+  // During reconcile mode: boost the current task's zIndex above all others so
+  // it's always visible regardless of user-set stacking order, and lock canvas
+  // selection to that task so clicks don't shift the blue ring elsewhere.
+  const reconcileTaskId = reconcileModeStore.currentReconcileTaskId;
+  const isReconciling = reconcileModeStore.active;
+
+  const displayNodes = reconcileTaskId
+    ? rawDisplayNodes.map((n) =>
+        n.id === reconcileTaskId ? { ...n, zIndex: 10000 } : n,
+      )
+    : rawDisplayNodes;
+
+  const selectionBehavior = isReconciling
+    ? { ...rawSelectionBehavior, onSelectionChange: () => {} }
+    : rawSelectionBehavior;
 
   const onBeforeDelete = useFlowCanvasOnBeforeDelete(spec);
 
@@ -116,7 +133,7 @@ export const FlowCanvas = observer(function FlowCanvas({
         onViewportChange={handleViewportChange}
         onBeforeDelete={onBeforeDelete}
         connectionLineComponent={ConnectionLine}
-        deleteKeyCode={["Delete", "Backspace"]}
+        deleteKeyCode={isReconciling ? null : ["Delete", "Backspace"]}
         className={cn(
           shiftKeyPressed && !isConnecting && "cursor-crosshair",
           !isDetailedView && "connections-disabled",

@@ -61,6 +61,7 @@ export function ReconcileOverview({
   const { autoSave } = useEditorSession();
 
   const [targets, setTargets] = useState<ReconcileTarget[] | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -69,7 +70,20 @@ export function ReconcileOverview({
         session.originId,
         session.targetDigest,
       );
-      if (!cancelled) setTargets(results);
+      if (!cancelled) {
+        // Exclude the root-level of the origin pipeline — the user just did
+        // "Update this task" there, so it already appears reconciled and adds
+        // noise. Subgraph-level targets from the origin pipeline are kept.
+        setTargets(
+          results.filter(
+            (t) =>
+              !(
+                t.storageKey === session.returnToPipeline &&
+                t.subgraphPath.length === 0
+              ),
+          ),
+        );
+      }
     })();
     return () => {
       cancelled = true;
@@ -93,6 +107,8 @@ export function ReconcileOverview({
   const copyLink = (storageKey: string) => {
     const url = `${window.location.origin}/editor-v2/${encodeURIComponent(storageKey)}`;
     void navigator.clipboard.writeText(url);
+    setCopiedKey(storageKey);
+    setTimeout(() => setCopiedKey(null), 1200);
   };
 
   return (
@@ -131,6 +147,9 @@ export function ReconcileOverview({
             const done = target.pendingCount === 0;
             const author = formatAuthor(target.author);
             const label = targetLabel(target);
+            const isCurrent =
+              target.storageKey === session.returnToPipeline &&
+              target.subgraphPath.length === 0;
 
             return (
               <div
@@ -144,7 +163,7 @@ export function ReconcileOverview({
                   }`}
                 />
 
-                {/* Label (pipeline › subgraph path) + author */}
+                {/* Label (pipeline › subgraph path) + current + author */}
                 <span className="flex min-w-0 flex-1 items-baseline gap-1.5 overflow-hidden">
                   <Text
                     size="xs"
@@ -153,6 +172,11 @@ export function ReconcileOverview({
                   >
                     {label}
                   </Text>
+                  {isCurrent && (
+                    <Text size="xs" tone="subdued" className="shrink-0 italic">
+                      current
+                    </Text>
+                  )}
                   {author && (
                     <Text size="xs" tone="subdued" className="shrink-0">
                       {author}
@@ -172,7 +196,11 @@ export function ReconcileOverview({
                       <button
                         type="button"
                         title="Copy link to pipeline"
-                        className="flex items-center rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground group-hover:opacity-100"
+                        className={`flex cursor-pointer items-center rounded p-0.5 opacity-0 transition-all group-hover:opacity-100 ${
+                          copiedKey === target.storageKey
+                            ? "text-emerald-600"
+                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        }`}
                         onClick={() => copyLink(target.storageKey)}
                       >
                         <Icon name="Link" size="xs" />
@@ -181,7 +209,7 @@ export function ReconcileOverview({
                   ) : (
                     <button
                       type="button"
-                      className="flex items-center gap-0.5 rounded bg-primary px-1.5 py-0.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
+                      className="flex cursor-pointer items-center gap-0.5 rounded bg-primary px-1.5 py-0.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
                       onClick={() => void handleReconcile(target)}
                     >
                       Reconcile
