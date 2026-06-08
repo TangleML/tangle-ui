@@ -10,6 +10,10 @@ import type { ReconcileSession } from "./reconcileSession";
  */
 class ReconcileModeStore {
   @observable accessor session: ReconcileSession | null = null;
+  /** The task node id currently shown with the Mark Done button. Updated by
+   * ReconcileModeController on staging and on each goTo() navigation. Used by
+   * FlowCanvas to temporarily boost that node's zIndex above all others. */
+  @observable accessor currentReconcileTaskId: string | null = null;
 
   constructor() {
     makeObservable(this);
@@ -28,6 +32,12 @@ class ReconcileModeStore {
   @action
   exit(): void {
     this.session = null;
+    this.currentReconcileTaskId = null;
+  }
+
+  @action
+  setCurrentReconcileTaskId(id: string | null): void {
+    this.currentReconcileTaskId = id;
   }
 }
 

@@ -1,5 +1,8 @@
 import type { ComponentSpec, Task } from "@/models/componentSpec";
-import { LINEAGE_ORIGIN_ANNOTATION } from "@/utils/annotations";
+import {
+  LINEAGE_EXCLUDE_ANNOTATION,
+  LINEAGE_ORIGIN_ANNOTATION,
+} from "@/utils/annotations";
 import type { ComponentLineage } from "@/utils/lineage";
 
 export interface LineageUsage {
@@ -29,7 +32,9 @@ export function collectLineageUsages(
   const walk = (tasks: Task[], path: string[]) => {
     for (const task of tasks) {
       const lineage = task.annotations.get(LINEAGE_ORIGIN_ANNOTATION);
-      if (lineage && lineage.originId === originId) {
+      const excluded =
+        task.annotations.get(LINEAGE_EXCLUDE_ANNOTATION) === "true";
+      if (lineage && lineage.originId === originId && !excluded) {
         matches.push({
           taskId: task.$id,
           taskName: task.name,

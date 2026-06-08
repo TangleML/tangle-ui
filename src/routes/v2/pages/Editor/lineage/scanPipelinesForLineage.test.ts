@@ -39,7 +39,6 @@ const pipeline = (name: string, tasks: Record<string, unknown>) => ({
   componentRef: { spec: { name, implementation: { graph: { tasks } } } },
 });
 
- 
 const asStore = (entries: Record<string, unknown>) =>
   new Map<string, any>(Object.entries(entries));
 

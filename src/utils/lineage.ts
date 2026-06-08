@@ -40,6 +40,15 @@ export const componentLineageSchema = z.object({
 export const LINEAGE_ORIGIN_ANNOTATION = "tangleml.com/lineage/origin";
 
 /**
+ * When set to the string `"true"` on a task, the task's lineage origin is
+ * recorded but the task is excluded from reconcile offers. Setting it to
+ * `"false"` (or removing it) re-enables reconcile. The origin annotation itself
+ * is permanent once stamped; only this flag is toggled.
+ */
+export const LINEAGE_EXCLUDE_ANNOTATION =
+  "tangleml.com/lineage/exclude_from_reconcile";
+
+/**
  * Key used to embed lineage inside a *published* component's spec metadata
  * (the cross-pipeline discovery extension). Dot-free on purpose: Elasticsearch
  * splits dotted field keys into nested objects, which would break filtering.

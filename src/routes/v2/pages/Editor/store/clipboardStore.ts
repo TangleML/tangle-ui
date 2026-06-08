@@ -22,7 +22,10 @@ import type {
   UndoGroupable,
 } from "@/routes/v2/shared/nodes/types";
 import type { SelectedNode } from "@/routes/v2/shared/store/editorStore";
-import { LINEAGE_ORIGIN_ANNOTATION } from "@/utils/lineage";
+import {
+  LINEAGE_EXCLUDE_ANNOTATION,
+  LINEAGE_ORIGIN_ANNOTATION,
+} from "@/utils/lineage";
 
 import {
   type CloneResult,
@@ -88,13 +91,13 @@ export class ClipboardStore {
     this.bindingSnapshots = bindings;
     this.pasteOffsetIndex = 0;
 
-    // Check whether any of the copied tasks lack a lineage annotation.
-    // If so, defer the clipboard write and show the CopyLineageModal so the
-    // user can link the original before the copy is committed.
+    // Show the CopyLineageModal for any task that has not yet made an explicit
+    // tracking choice. Absence of exclude_from_reconcile = "never chose";
+    // presence (true or false) = already decided, no modal needed.
     const unlinkedNodeIds = selectedNodes
       .filter((node) => {
         const task = spec.tasks.find((t) => t.$id === node.id);
-        return task && !task.annotations.has(LINEAGE_ORIGIN_ANNOTATION);
+        return task && !task.annotations.has(LINEAGE_EXCLUDE_ANNOTATION);
       })
       .map((n) => n.id);
 
@@ -109,20 +112,24 @@ export class ClipboardStore {
 
   /**
    * Complete a deferred copy. Called by CopyLineageModal when the user clicks
-   * "Copy". If `track` is true, the source tasks are stamped with a shared
-   * lineage origin, the in-memory snapshots are refreshed, and the updated
-   * snapshots are written to the clipboard. If `track` is false (or the user
-   * dismissed via Escape/✕), the snapshots are written as-is.
+   * "Copy".
+   *
+   * Regardless of `track`, the origin annotation is ALWAYS stamped on the source
+   * tasks so we know where they came from and don't ask again. When `track` is
+   * false the `exclude_from_reconcile` flag is also set to `"true"` so the task
+   * opts out of reconcile offers while keeping its lineage history. The snapshots
+   * are refreshed to carry the new annotations into the clipboard.
    */
   @action executeCopy(track: boolean, spec: ComponentSpec) {
     const ctx = this.pendingCopyContext;
 
-    if (track && ctx) {
-      // Stamp each unlinked source task with a lineage origin.
+    if (ctx) {
       this.undoStore.withGroup("Link task lineage", () => {
         for (const nodeId of ctx.nodeIds) {
           const task = spec.tasks.find((t) => t.$id === nodeId);
           if (!task) continue;
+
+          // Stamp the origin (permanent — written even when not tracking).
           task.annotations.set(LINEAGE_ORIGIN_ANNOTATION, {
             originId:
               task.componentRef.url ??
@@ -131,10 +138,19 @@ export class ClipboardStore {
             originDigest: task.componentRef.digest,
             originName: task.componentRef.name,
           });
+
+          // Record the explicit choice so we don't ask again.
+          // "false" = opted in; "true" = opted out.
+          task.annotations.set(
+            LINEAGE_EXCLUDE_ANNOTATION,
+            track ? "false" : "true",
+          );
         }
       });
 
-      // Re-take the snapshots so the clipboard data reflects the new lineage.
+      // Re-take snapshots so the clipboard data reflects the new lineage.
+      // Note: exclude_from_reconcile is stripped from snapshots in snapshotTask
+      // so copies start fresh without inheriting the source's opt-out.
       const updated = this.snapshots.map((snapshot) => {
         if (!ctx.nodeIds.includes(snapshot.entityId)) return snapshot;
         const manifest = editorRegistry.get(snapshot.$type);

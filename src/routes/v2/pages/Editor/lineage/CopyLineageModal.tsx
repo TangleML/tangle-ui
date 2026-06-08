@@ -15,7 +15,7 @@ import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
-import { LINEAGE_ORIGIN_ANNOTATION } from "@/utils/lineage";
+import { LINEAGE_EXCLUDE_ANNOTATION } from "@/utils/lineage";
 
 /**
  * Modal shown when the user initiates a copy (Cmd+C / Copy button) and the
@@ -46,15 +46,16 @@ export const CopyLineageModal = observer(function CopyLineageModal() {
       ? `"${sourceNames[0]}"`
       : `${sourceNames.length} tasks`;
 
-  // Check which tasks actually still lack lineage (defensive — could have been
-  // stamped by another operation since the copy was initiated).
-  const hasAnyUnlinked = ctx.nodeIds.some((id) => {
+  // Defensive check: if all tasks already have an explicit tracking choice
+  // (exclude_from_reconcile present), skip the modal and copy immediately.
+  // Must match the same condition as ClipboardStore.copy() — absence of
+  // exclude_from_reconcile means "never chose", not absence of origin.
+  const hasAnyUndecided = ctx.nodeIds.some((id) => {
     const task = spec.tasks.find((t) => t.$id === id);
-    return task && !task.annotations.has(LINEAGE_ORIGIN_ANNOTATION);
+    return task && !task.annotations.has(LINEAGE_EXCLUDE_ANNOTATION);
   });
 
-  if (!hasAnyUnlinked) {
-    // All tasks are already linked — just commit the copy silently.
+  if (!hasAnyUndecided) {
     clipboard.executeCopy(false, spec);
     return null;
   }
