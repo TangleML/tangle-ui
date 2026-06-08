@@ -1,14 +1,14 @@
 /**
  * LLM reranker for component search.
  *
- * Takes a small candidate set already pre-filtered by the lexical index (see
+ * Takes a small candidate set selected from the component index (see
  * `componentSearchIndex.ts`) and asks an LLM to:
  *   1. Reorder by best fit to the user's query
  *   2. Write a one-sentence reason per result
  *
- * The LLM is intentionally NOT used for retrieval — that's the lexical index's
- * job. Reranking 20 candidates is fast, cheap, and plays to the LLM's actual
- * strength: judgment over a small, well-defined set.
+ * The LLM is intentionally used on a bounded candidate set, not the whole
+ * world. Local indexing keeps search fast and predictable; the LLM adds
+ * judgment over a small, well-defined list when literal matching is not enough.
  */
 
 import type { ComponentReference } from "@/utils/componentSpec";
@@ -67,15 +67,6 @@ interface LlmOptions {
   apiKey: string;
 }
 
-/**
- * gpt-5 / o-series reasoning models reject `max_tokens` and require
- * `max_completion_tokens` instead. Detect by name prefix and use the
- * appropriate field.
- */
-function usesCompletionTokensParam(model: string): boolean {
-  return /^(gpt-5|o\d|openai:gpt-5|openai:o\d)/i.test(model);
-}
-
 /** Clamp score to [0, 1] and reject NaN so the UI/sort never sees garbage. */
 function normalizeScore(value: number): number {
   if (Number.isNaN(value)) return 0;
@@ -93,15 +84,20 @@ function isValidMatch(parsed: unknown): parsed is RerankedMatch {
   );
 }
 
-function readChatCompletionContent(payload: unknown): string {
-  if (!isRecord(payload) || !Array.isArray(payload.choices)) return "";
+function readResponsesContent(payload: unknown): string {
+  if (!isRecord(payload)) return "";
+  if (typeof payload.output_text === "string") return payload.output_text;
+  if (!Array.isArray(payload.output)) return "";
 
-  const [firstChoice] = payload.choices;
-  if (!isRecord(firstChoice) || !isRecord(firstChoice.message)) return "";
+  for (const output of payload.output) {
+    if (!isRecord(output) || !Array.isArray(output.content)) continue;
+    for (const content of output.content) {
+      if (!isRecord(content)) continue;
+      if (typeof content.text === "string") return content.text;
+    }
+  }
 
-  return typeof firstChoice.message.content === "string"
-    ? firstChoice.message.content
-    : "";
+  return "";
 }
 
 function isMatchArray(value: unknown): value is RerankedMatch[] {
@@ -132,7 +128,7 @@ export function componentReferenceToCandidate(
 function buildRerankSystemPrompt(): string {
   return [
     "You are a reranker for an ML pipeline component search.",
-    "The user gives you a natural-language query and a small list of candidate components that were already retrieved by lexical search.",
+    "The user gives you a natural-language query and a small list of candidate components selected from the component library.",
     "Your job: reorder the candidates by how well they fit the query's intent, and write one short reason per match.",
     "Respond with a single JSON object:",
     '{ "matches": [ { "id": "<candidate id>", "score": <0..1>, "reason": "<one short sentence>" } ] }',
@@ -183,32 +179,19 @@ function validateConfig(options: LlmOptions): {
   return { base: base.replace(/\/+$/, ""), key, model };
 }
 
-interface ChatCompletionCallConfig {
+interface ResponsesCallConfig {
   systemPrompt: string;
   userPrompt: string;
-  /**
-   * Token budget for the visible response. Used as `max_tokens` for non-
-   * reasoning models. Reasoning models (gpt-5 / o-series) use a fixed
-   * `max_completion_tokens` of 2000 because they also burn budget on hidden
-   * thinking tokens.
-   */
   maxTokens: number;
 }
 
-/**
- * Shared LLM chat-completion call. Owns the request/response plumbing every
- * AI feature in this service needs: config validation, model-family
- * detection for `max_tokens` vs `max_completion_tokens`, header construction,
- * non-JSON / empty / non-2xx error handling. Callers supply the prompts and
- * parse the returned `rawContent` string themselves.
- */
-async function callLlmChatCompletion(
+async function callLlmResponse(
   options: LlmOptions,
-  config: ChatCompletionCallConfig,
+  config: ResponsesCallConfig,
 ): Promise<string> {
   const { base, key, model } = validateConfig(options);
 
-  const response = await fetch(`${base}/chat/completions`, {
+  const response = await fetch(`${base}/responses`, {
     method: "POST",
     signal: options.signal,
     headers: {
@@ -217,19 +200,10 @@ async function callLlmChatCompletion(
     },
     body: JSON.stringify({
       ...(model ? { model } : {}),
-      // gpt-5 / o-series reject temperature and max_tokens. When the proxy
-      // owns model selection (blank model), omit model-specific tuning entirely.
-      ...(model && !usesCompletionTokensParam(model) ? { temperature: 0 } : {}),
-      ...(model
-        ? usesCompletionTokensParam(model)
-          ? { max_completion_tokens: 2000 }
-          : { max_tokens: config.maxTokens }
-        : {}),
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: config.systemPrompt },
-        { role: "user", content: config.userPrompt },
-      ],
+      max_output_tokens: config.maxTokens,
+      instructions: config.systemPrompt,
+      input: config.userPrompt,
+      text: { format: { type: "json_object" } },
     }),
   });
 
@@ -246,7 +220,7 @@ async function callLlmChatCompletion(
   } catch {
     throw new Error("LLM proxy returned a non-JSON response");
   }
-  const rawContent = readChatCompletionContent(payload);
+  const rawContent = readResponsesContent(payload);
   if (!rawContent) {
     throw new Error("LLM proxy returned an empty response");
   }
@@ -269,7 +243,7 @@ export async function rerankComponentsByNaturalLanguage(
 
   // Output sizing: at most 20 candidates × roughly {25 id + 30 reason + JSON
   // structure} ≈ 1200-1500 tokens for a full response.
-  const rawContent = await callLlmChatCompletion(options, {
+  const rawContent = await callLlmResponse(options, {
     systemPrompt: buildRerankSystemPrompt(),
     userPrompt: buildRerankUserPrompt(trimmed, candidates),
     maxTokens: 1500,
@@ -398,7 +372,7 @@ export async function generateComponentAiDescription(
     throw new Error("Component details are not loaded yet.");
   }
 
-  const rawContent = await callLlmChatCompletion(options, {
+  const rawContent = await callLlmResponse(options, {
     systemPrompt: buildDescriptionSystemPrompt(),
     userPrompt: buildDescriptionUserPrompt(input),
     maxTokens: 900,

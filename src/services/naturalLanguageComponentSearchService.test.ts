@@ -16,10 +16,10 @@ const VALID_OPTIONS = {
   model: "gpt-4o-mini",
 };
 
-function mockChatResponse(content: unknown, status = 200) {
+function mockResponsesResponse(content: unknown, status = 200) {
   return new Response(
     JSON.stringify({
-      choices: [{ message: { content: JSON.stringify(content) } }],
+      output_text: JSON.stringify(content),
     }),
     {
       status,
@@ -152,7 +152,7 @@ describe("rerankComponentsByNaturalLanguage", () => {
 
   it("omits authorization and model when API key and model are blank", async () => {
     vi.mocked(global.fetch).mockResolvedValue(
-      mockChatResponse({ matches: [] }),
+      mockResponsesResponse({ matches: [] }),
     );
 
     await rerankComponentsByNaturalLanguage(
@@ -165,12 +165,13 @@ describe("rerankComponentsByNaturalLanguage", () => {
     const init = call?.[1];
     const body = parseFetchBody(call);
     expect(body.model).toBeUndefined();
+    expect(body.max_output_tokens).toBeDefined();
     expect(JSON.stringify(init)).not.toContain("authorization");
   });
 
   it("filters out hallucinated ids the model returned", async () => {
     vi.mocked(global.fetch).mockResolvedValue(
-      mockChatResponse({
+      mockResponsesResponse({
         matches: [
           { id: "a", score: 0.9, reason: "best fit" },
           { id: "ghost", score: 0.8, reason: "made up" },
@@ -191,7 +192,7 @@ describe("rerankComponentsByNaturalLanguage", () => {
     // serializes to `null`, which never reaches `normalizeScore` because
     // `isValidMatch` rejects it upstream.
     vi.mocked(global.fetch).mockResolvedValue(
-      mockChatResponse({
+      mockResponsesResponse({
         matches: [
           { id: "a", score: 1.5, reason: "over" },
           { id: "b", score: -0.4, reason: "under" },
@@ -214,7 +215,7 @@ describe("rerankComponentsByNaturalLanguage", () => {
 
   it("returns empty matches when the response shape is wrong, but keeps raw content", async () => {
     vi.mocked(global.fetch).mockResolvedValue(
-      mockChatResponse({ matches: "not an array" }),
+      mockResponsesResponse({ matches: "not an array" }),
     );
 
     const result = await rerankComponentsByNaturalLanguage(
@@ -226,27 +227,9 @@ describe("rerankComponentsByNaturalLanguage", () => {
     expect(result.rawContent).toContain("not an array");
   });
 
-  it("uses max_completion_tokens for gpt-5 / o-series models", async () => {
+  it("uses the Responses API for component search generation", async () => {
     vi.mocked(global.fetch).mockResolvedValue(
-      mockChatResponse({ matches: [] }),
-    );
-
-    await rerankComponentsByNaturalLanguage(
-      "train",
-      [{ id: "a", name: "a", description: "" }],
-      { ...VALID_OPTIONS, model: "gpt-5-mini" },
-    );
-
-    const call = vi.mocked(global.fetch).mock.calls[0];
-    const body = parseFetchBody(call);
-    expect(body.max_completion_tokens).toBeDefined();
-    expect(body.max_tokens).toBeUndefined();
-    expect(body.temperature).toBeUndefined();
-  });
-
-  it("uses max_tokens and temperature for non-reasoning models", async () => {
-    vi.mocked(global.fetch).mockResolvedValue(
-      mockChatResponse({ matches: [] }),
+      mockResponsesResponse({ matches: [] }),
     );
 
     await rerankComponentsByNaturalLanguage(
@@ -257,9 +240,31 @@ describe("rerankComponentsByNaturalLanguage", () => {
 
     const call = vi.mocked(global.fetch).mock.calls[0];
     const body = parseFetchBody(call);
-    expect(body.max_tokens).toBeDefined();
+    expect(call?.[0]).toBe("https://api.example.com/v1/responses");
+    expect(body.instructions).toContain("reranker");
+    expect(body.input).toContain("Query: train");
+    expect(body.text).toEqual({ format: { type: "json_object" } });
+    expect(body.max_output_tokens).toBeDefined();
+    expect(body.max_tokens).toBeUndefined();
     expect(body.max_completion_tokens).toBeUndefined();
-    expect(body.temperature).toBe(0);
+    expect(body.temperature).toBeUndefined();
+  });
+
+  it("still bounds Responses output when model is blank", async () => {
+    vi.mocked(global.fetch).mockResolvedValue(
+      mockResponsesResponse({ matches: [] }),
+    );
+
+    await rerankComponentsByNaturalLanguage(
+      "train",
+      [{ id: "a", name: "a", description: "" }],
+      { ...VALID_OPTIONS, model: "" },
+    );
+
+    const call = vi.mocked(global.fetch).mock.calls[0];
+    const body = parseFetchBody(call);
+    expect(body.model).toBeUndefined();
+    expect(body.max_output_tokens).toBeDefined();
   });
 });
 
@@ -290,7 +295,7 @@ describe("generateComponentAiDescription", () => {
 
   it("generates a description from a component spec", async () => {
     vi.mocked(global.fetch).mockResolvedValue(
-      mockChatResponse({
+      mockResponsesResponse({
         description:
           "This component trains a model from the dataset input and writes the trained model output.",
       }),
@@ -304,9 +309,9 @@ describe("generateComponentAiDescription", () => {
     expect(result.description).toContain("trains a model");
     const call = vi.mocked(global.fetch).mock.calls[0];
     const body = parseFetchBody(call);
-    const serializedMessages = JSON.stringify(body.messages);
-    expect(serializedMessages).toContain("train_model");
-    expect(serializedMessages).toContain("dataset");
+    expect(call?.[0]).toBe("https://api.example.com/v1/responses");
+    expect(JSON.stringify(body.input)).toContain("train_model");
+    expect(JSON.stringify(body.input)).toContain("dataset");
   });
 
   it("requires a hydrated component spec", async () => {
@@ -318,7 +323,7 @@ describe("generateComponentAiDescription", () => {
 
   it("throws when the model returns an empty description", async () => {
     vi.mocked(global.fetch).mockResolvedValue(
-      mockChatResponse({ description: "" }),
+      mockResponsesResponse({ description: "" }),
     );
 
     await expect(

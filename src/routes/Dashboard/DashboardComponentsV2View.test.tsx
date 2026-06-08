@@ -31,8 +31,11 @@ const routeMocks = vi.hoisted(() => {
     navigate: vi.fn(),
     notify: vi.fn(),
     refetchDescription: vi.fn(),
+    rerank: vi.fn(),
+    resetRerank: vi.fn(),
     descriptionErrorState,
     aiDescriptionsEnabled: false,
+    aiSearchConfigured: false,
     search,
   };
 });
@@ -142,12 +145,12 @@ vi.mock("@/hooks/useNaturalLanguageComponentSearch", () => ({
     };
   },
   useNaturalLanguageComponentRerank: () => ({
-    mutate: vi.fn(),
+    mutate: routeMocks.rerank,
     data: undefined,
     isPending: false,
     error: null,
-    reset: vi.fn(),
-    isConfigured: false,
+    reset: routeMocks.resetRerank,
+    isConfigured: routeMocks.aiSearchConfigured,
   }),
 }));
 
@@ -383,6 +386,9 @@ describe("DashboardComponentsV2View", () => {
     routeMocks.descriptionErrorState.current = null;
     routeMocks.search = {};
     routeMocks.refetchDescription.mockClear();
+    routeMocks.rerank.mockClear();
+    routeMocks.resetRerank.mockClear();
+    routeMocks.aiSearchConfigured = false;
   });
 
   it("filters visible component results by source type and restores them", () => {
@@ -405,6 +411,25 @@ describe("DashboardComponentsV2View", () => {
     fireEvent.click(screen.getByRole("button", { name: "Show all" }));
 
     expect(screen.getByText("Registered component")).toBeInTheDocument();
+  });
+
+  it("lets AI search run against a bounded candidate pool when literal search has no matches", () => {
+    routeMocks.aiSearchConfigured = true;
+    render(<DashboardComponentsV2View />);
+
+    fireEvent.change(screen.getByLabelText("Search components"), {
+      target: { value: "find something semantically relevant" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "AI search" }));
+
+    expect(routeMocks.rerank).toHaveBeenCalledWith({
+      query: "find something semantically relevant",
+      candidates: expect.arrayContaining([
+        expect.objectContaining({ id: "standard-digest" }),
+        expect.objectContaining({ id: "registered-digest" }),
+        expect.objectContaining({ id: "user-digest" }),
+      ]),
+    });
   });
 
   it("shows a manual generate button when automatic descriptions are disabled", () => {

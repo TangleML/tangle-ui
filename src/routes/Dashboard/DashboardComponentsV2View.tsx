@@ -42,6 +42,7 @@ import {
   buildSearchIndex,
   type ComponentSearchSource,
   type IndexEntry,
+  indexEntryToLexicalMatch,
   type LexicalMatch,
   lexicalSearch,
   type MatchField,
@@ -102,8 +103,10 @@ const SOURCE_ICON_TONE_BY_KIND: Record<ComponentSearchSource["kind"], string> =
     user: "text-amber-500",
   };
 
-/** How many lexical hits to display (and to feed into rerank). */
+/** How many lexical hits to display before the user asks for AI judgment. */
 const LEXICAL_RESULT_LIMIT = 20;
+/** Bounded pool sent to AI search on click. */
+const AI_CANDIDATE_LIMIT = 80;
 
 const MATCH_FIELD_LABEL: Record<MatchField, string> = {
   name: "name",
@@ -685,9 +688,26 @@ export const DashboardComponentsV2View = () => {
     a.name.localeCompare(b.name),
   );
 
+  const trimmedQuery = query.trim();
+
   const lexicalMatches: LexicalMatch[] = lexicalSearch(filteredIndex, query, {
     limit: LEXICAL_RESULT_LIMIT,
   });
+  const aiCandidateMatches: LexicalMatch[] = (() => {
+    if (trimmedQuery.length === 0) return [];
+
+    const broadLexicalMatches = lexicalSearch(filteredIndex, query, {
+      limit: AI_CANDIDATE_LIMIT,
+    });
+    if (broadLexicalMatches.length > 0) return broadLexicalMatches;
+
+    // If literal matching found nothing, AI search can still judge a bounded
+    // browse pool. This keeps natural-language queries useful for small and
+    // medium libraries without sending the entire library to the model.
+    return sortedIndex
+      .slice(0, AI_CANDIDATE_LIMIT)
+      .map(indexEntryToLexicalMatch);
+  })();
 
   const {
     mutate: rerank,
@@ -702,25 +722,30 @@ export const DashboardComponentsV2View = () => {
   // user types more, we drop the rerank rather than show results for an old
   // query. Tracked here so we can clear on input change.
   const [rerankedFor, setRerankedFor] = useState<string | null>(null);
+  const [rerankBaseMatches, setRerankBaseMatches] = useState<LexicalMatch[]>(
+    [],
+  );
 
   const handleQueryChange = (event: ChangeEvent<HTMLInputElement>) => {
     setQuery(event.target.value);
     if (rerankedFor !== null) {
       setRerankedFor(null);
+      setRerankBaseMatches([]);
       resetRerank();
     }
   };
 
   const handleSmartSearch = () => {
     const trimmed = query.trim();
-    if (trimmed.length === 0 || lexicalMatches.length === 0) return;
+    if (trimmed.length === 0 || aiCandidateMatches.length === 0) return;
 
-    const candidates = lexicalMatches
+    const candidates = aiCandidateMatches
       .map((m) => componentReferenceToCandidate(m.reference))
       .filter((c): c is NonNullable<typeof c> => c !== null);
 
     if (candidates.length === 0) return;
 
+    setRerankBaseMatches(aiCandidateMatches);
     setRerankedFor(trimmed);
     rerank({ query: trimmed, candidates });
   };
@@ -733,6 +758,7 @@ export const DashboardComponentsV2View = () => {
     );
     if (rerankedFor !== null) {
       setRerankedFor(null);
+      setRerankBaseMatches([]);
       resetRerank();
     }
   };
@@ -741,6 +767,7 @@ export const DashboardComponentsV2View = () => {
     setDisabledSourceKeys([]);
     if (rerankedFor !== null) {
       setRerankedFor(null);
+      setRerankBaseMatches([]);
       resetRerank();
     }
   };
@@ -752,7 +779,6 @@ export const DashboardComponentsV2View = () => {
     registeredLoading ||
     hydrating;
   const noLibraryData = !isLoadingLibrary && totalAcrossSources === 0;
-  const trimmedQuery = query.trim();
   const isEmpty = trimmedQuery.length === 0;
   const isConfigError = rerankError instanceof NaturalLanguageSearchConfigError;
   // Only treat rerank as "active" when the model actually returned matches.
@@ -765,11 +791,12 @@ export const DashboardComponentsV2View = () => {
     rerankedFor === trimmedQuery &&
     rerankData !== undefined &&
     rerankData.matches.length > 0 &&
+    rerankBaseMatches.length > 0 &&
     !isReranking;
 
   // What we actually render. Rerank wins when active; otherwise lexical.
   const displayedResults = rerankActive
-    ? mergeRerankIntoLexical(rerankData.matches, lexicalMatches)
+    ? mergeRerankIntoLexical(rerankData.matches, rerankBaseMatches)
     : lexicalMatches.map((m) => ({ ...m, reason: undefined }));
 
   // Resolve the full reference for the selected digest. Prefer the already-
@@ -880,7 +907,7 @@ export const DashboardComponentsV2View = () => {
         </BlockStack>
       );
     }
-    if (lexicalMatches.length === 0) {
+    if (lexicalMatches.length === 0 && !rerankActive) {
       return (
         <Paragraph size="sm" tone="subdued">
           No components matched “{trimmedQuery}”. Try different terms or check
@@ -954,7 +981,7 @@ export const DashboardComponentsV2View = () => {
               disabled={
                 isReranking ||
                 isEmpty ||
-                lexicalMatches.length === 0 ||
+                aiCandidateMatches.length === 0 ||
                 !isConfigured
               }
               aria-label={isReranking ? "AI search in progress" : "AI search"}
@@ -994,14 +1021,14 @@ export const DashboardComponentsV2View = () => {
           {/* AI-search-unavailable banner and rerank error live in the
               results column — they describe what just happened to the
               search the user is looking at. */}
-          {!isConfigured && !isEmpty && lexicalMatches.length > 0 && (
+          {!isConfigured && !isEmpty && aiCandidateMatches.length > 0 && (
             <BlockStack gap="1" className={cn(PANEL_CLASS, "mb-3")}>
               <Text size="sm" weight="semibold">
                 AI search unavailable
               </Text>
               <Paragraph size="sm" tone="subdued">
-                Configure an OpenAI-compatible provider to use AI search.
-                Lexical results above are unaffected.
+                Configure an OpenAI-compatible provider to use AI search. Search
+                results are unaffected.
               </Paragraph>
               <ConfigureInSettingsLink />
             </BlockStack>

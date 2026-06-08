@@ -9,16 +9,6 @@ import { Separator } from "@/components/ui/separator";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
-import { isRecord } from "@/utils/typeGuards";
-
-function readModelIds(payload: unknown): string[] {
-  if (!isRecord(payload) || !Array.isArray(payload.data)) return [];
-  return payload.data
-    .map((item) =>
-      isRecord(item) && typeof item.id === "string" ? item.id : null,
-    )
-    .filter((id): id is string => id !== null);
-}
 
 /**
  * Shared bring-your-own-provider configuration UI for AI features. Credentials
@@ -53,16 +43,68 @@ export function AgentSettings() {
     return trimmed;
   };
 
-  const handleSave = (event: FormEvent<HTMLFormElement>) => {
+  const handleSave = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (testing) return;
+
     const trimmed = validateRequiredFields();
     if (!trimmed) return;
 
-    setApiBase(trimmed.apiBase);
-    setApiKey(trimmed.apiKey);
-    setModel(trimmed.model);
-    update(trimmed);
-    notify("AI provider settings saved", "success");
+    const testRunId = testRunIdRef.current + 1;
+    testRunIdRef.current = testRunId;
+    const isCurrentTest = () => testRunIdRef.current === testRunId;
+
+    setTesting(true);
+    try {
+      const response = await fetch(`${trimmed.apiBase}/responses`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          ...(trimmed.apiKey
+            ? { authorization: `Bearer ${trimmed.apiKey}` }
+            : {}),
+        },
+        body: JSON.stringify({
+          ...(trimmed.model ? { model: trimmed.model } : {}),
+          max_output_tokens: 32,
+          instructions:
+            "You are testing provider compatibility. Return only JSON.",
+          input: 'Return the JSON object {"ok": true}.',
+          text: { format: { type: "json_object" } },
+        }),
+      });
+      if (!isCurrentTest()) return;
+      if (!response.ok) {
+        const detail = await response.text().catch(() => "");
+        if (!isCurrentTest()) return;
+        notify(
+          `AI test failed: ${response.status} ${response.statusText}${detail ? ` — ${detail.slice(0, 200)}` : ""}`,
+          "error",
+        );
+        return;
+      }
+
+      setApiBase(trimmed.apiBase);
+      setApiKey(trimmed.apiKey);
+      setModel(trimmed.model);
+      update(trimmed);
+      notify(
+        trimmed.model
+          ? `AI provider settings saved. Model “${trimmed.model}” works with the Responses API.`
+          : "AI provider settings saved. The provider works with the Responses API.",
+        "success",
+      );
+    } catch (err) {
+      if (!isCurrentTest()) return;
+      notify(
+        err instanceof Error
+          ? `AI test failed: ${err.message}`
+          : "AI test failed",
+        "error",
+      );
+    } finally {
+      if (isCurrentTest()) setTesting(false);
+    }
   };
 
   const handleClear = () => {
@@ -75,58 +117,6 @@ export function AgentSettings() {
     setShowKey(false);
     setTesting(false);
     notify("AI provider settings cleared", "success");
-  };
-
-  const handleTest = async () => {
-    if (testing) return;
-
-    const trimmed = validateRequiredFields();
-    if (!trimmed) return;
-
-    const testRunId = testRunIdRef.current + 1;
-    testRunIdRef.current = testRunId;
-    const isCurrentTest = () => testRunIdRef.current === testRunId;
-
-    setTesting(true);
-    try {
-      const response = await fetch(`${trimmed.apiBase}/models`, {
-        headers: trimmed.apiKey
-          ? { authorization: `Bearer ${trimmed.apiKey}` }
-          : undefined,
-      });
-      if (!isCurrentTest()) return;
-      if (!response.ok) {
-        notify(
-          `Test failed: ${response.status} ${response.statusText}`,
-          "error",
-        );
-        return;
-      }
-
-      const modelIds = readModelIds(await response.json());
-      if (!isCurrentTest()) return;
-      if (trimmed.model && !modelIds.includes(trimmed.model)) {
-        notify(
-          `Connected, but model “${trimmed.model}” was not found.`,
-          "error",
-        );
-        return;
-      }
-      notify(
-        trimmed.model
-          ? `Connected. Model “${trimmed.model}” is available.`
-          : "Connected. The provider is reachable.",
-        "success",
-      );
-    } catch (err) {
-      if (!isCurrentTest()) return;
-      notify(
-        err instanceof Error ? `Test failed: ${err.message}` : "Test failed",
-        "error",
-      );
-    } finally {
-      if (isCurrentTest()) setTesting(false);
-    }
   };
 
   return (
@@ -166,7 +156,7 @@ export function AgentSettings() {
             />
             <Text id="agent-settings-api-base-hint" size="xs" tone="subdued">
               Any OpenAI-compatible base URL, such as https://api.openai.com/v1.
-              Do not include /chat/completions.
+              Do not include /chat/completions or /responses.
             </Text>
           </BlockStack>
 
@@ -221,8 +211,8 @@ export function AgentSettings() {
               spellCheck={false}
             />
             <Text id="agent-settings-model-hint" size="xs" tone="subdued">
-              Optional. Model id sent to the provider for AI requests. Leave
-              blank to use the default model.
+              Optional. Used by all generation features through the Responses
+              API. Documentation search uses its embedding model separately.
             </Text>
           </BlockStack>
 
@@ -233,14 +223,8 @@ export function AgentSettings() {
           )}
 
           <InlineStack gap="2">
-            <Button type="submit">Save</Button>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={handleTest}
-              disabled={testing}
-            >
-              {testing ? "Testing…" : "Test connection"}
+            <Button type="submit" disabled={testing}>
+              {testing ? "Testing…" : "Save and test AI"}
             </Button>
             <Button type="button" variant="ghost" onClick={handleClear}>
               Clear
