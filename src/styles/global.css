@@ -155,6 +155,12 @@ code {
      was just placed on the canvas (e.g. "Place as a new task"). */
   --animate-spotlight: spotlight 1.2s ease-out forwards;
 
+  /* Demo caption overlay — cursor blink */
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
   @keyframes revert-copied {
     0%,
     80% {

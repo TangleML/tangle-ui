@@ -28,6 +28,7 @@ import { WindowContainer } from "@/routes/v2/shared/windows/WindowContainer";
 import { useWindowPersistence } from "@/routes/v2/shared/windows/windowPersistence";
 import type { PipelineRef } from "@/services/pipelineStorage/types";
 
+import { DemoCaptionOverlay } from "@/components/shared/DemoCaptionOverlay";
 import { AiChatStoreProvider } from "./components/AiChat/AiChatStoreContext";
 import { useDebugPanelWindow } from "./components/DebugPanel";
 import { DriverPermissionGate } from "./components/DriverPermissionGate";
@@ -203,6 +204,8 @@ export function EditorV2() {
           </AiChatStoreProvider>
         </EditorSessionProvider>
       </SharedStoreProvider>
+      {/* Demo caption overlay — dispatched via window.__demo_caption__ CustomEvent. Remove before production. */}
+      <DemoCaptionOverlay />
     </div>
   );
 }
