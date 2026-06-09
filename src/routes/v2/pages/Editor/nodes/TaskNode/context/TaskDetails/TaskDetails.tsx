@@ -196,7 +196,7 @@ export const TaskDetails = observer(function TaskDetails({
             className="flex-none w-8 px-0"
             {...tracking("v2.pipeline_editor.task_details.tab_annotations")}
           >
-            <Icon name="EllipsisVertical" size="xs" className="shrink-0" />
+            <Icon name="Tag" size="xs" className="shrink-0" />
           </TabsTrigger>
         </TabsList>
 
