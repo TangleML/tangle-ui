@@ -103,6 +103,21 @@ export function computeDefaultPopoverPosition(
     return [props.right + margin, Math.max(props.top + margin, 64)];
   }
 
+  // Tall centered modal/dialog (inset from both side edges): place the popover
+  // to its LEFT, aligned to the dialog's top edge (not vertically centered, as
+  // reactour's "left" would do).
+  if (
+    isTallStrip &&
+    props.left > margin &&
+    props.right < props.windowWidth - margin
+  ) {
+    const popoverWidth = props.width || 380;
+    return [
+      Math.max(margin, props.left - popoverWidth - margin),
+      Math.max(props.top, margin),
+    ];
+  }
+
   return "bottom";
 }
 

@@ -8,6 +8,9 @@ import type { ComponentSpec } from "@/models/componentSpec";
 import { useTourProgress } from "@/providers/TourProvider/TourProgressContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import type { WindowStoreImpl } from "@/routes/v2/shared/windows/windowStore";
+import { isSecretArgument } from "@/utils/componentSpec";
+
+// PLACEHOLDER FOR EMPTY PR - REMOVE WHEN PR IS POPULATED
 
 type CountInteraction =
   "add-task" | "add-input" | "add-output" | "connect-edge";
@@ -520,6 +523,135 @@ export function EditorTourBridge() {
       return () => {
         stopFollow();
         dispose();
+      };
+    }
+
+    if (interaction === "assign-secret-argument") {
+      const targetArgumentName = step?.targetArgumentName;
+
+      const hasSecretArgument = () => {
+        const spec = navigation.activeSpec;
+        if (!spec) return false;
+        return spec.tasks.some((task) =>
+          task.arguments.some(
+            (arg) =>
+              (!targetArgumentName || arg.name === targetArgumentName) &&
+              isSecretArgument(arg.value),
+          ),
+        );
+      };
+
+      if (hasSecretArgument()) {
+        skip();
+        return stopFollow;
+      }
+
+      const dispose = reaction(
+        () => hasSecretArgument(),
+        (matches) => {
+          if (matches) {
+            dispose();
+            advance();
+          }
+        },
+      );
+
+      return () => {
+        stopFollow();
+        dispose();
+      };
+    }
+
+    if (interaction === "open-secret-dialog") {
+      const dialogSelector = '[data-testid="select-secret-dialog"]';
+      const isDialogOpen = () => !!document.querySelector(dialogSelector);
+
+      if (isDialogOpen()) {
+        skip();
+        return stopFollow;
+      }
+
+      const observer = new MutationObserver(() => {
+        if (isDialogOpen()) {
+          observer.disconnect();
+          advance();
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+
+      return () => {
+        stopFollow();
+        observer.disconnect();
+      };
+    }
+
+    if (interaction === "open-settings-panel") {
+      const panelSelector = '[data-tour="tour-settings-dialog"]';
+      const isPanelOpen = () => !!document.querySelector(panelSelector);
+
+      if (isPanelOpen()) {
+        skip();
+        return stopFollow;
+      }
+
+      const observer = new MutationObserver(() => {
+        if (isPanelOpen()) {
+          observer.disconnect();
+          advance();
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+
+      return () => {
+        stopFollow();
+        observer.disconnect();
+      };
+    }
+
+    if (interaction === "open-submit-dialog") {
+      const dialogSelector = '[data-tour="submit-arguments-dialog"]';
+      const isDialogOpen = () => !!document.querySelector(dialogSelector);
+
+      if (isDialogOpen()) {
+        skip();
+        return stopFollow;
+      }
+
+      const observer = new MutationObserver(() => {
+        if (isDialogOpen()) {
+          observer.disconnect();
+          advance();
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+
+      return () => {
+        stopFollow();
+        observer.disconnect();
+      };
+    }
+
+    if (interaction === "assign-secret-submit") {
+      const secretSelector =
+        '[data-tour="submit-arguments-dialog"] [data-testid="dynamic-data-argument-input"]';
+      const hasSecret = () => !!document.querySelector(secretSelector);
+
+      if (hasSecret()) {
+        skip();
+        return stopFollow;
+      }
+
+      const observer = new MutationObserver(() => {
+        if (hasSecret()) {
+          observer.disconnect();
+          advance();
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+
+      return () => {
+        stopFollow();
+        observer.disconnect();
       };
     }
 

@@ -36,6 +36,7 @@ import { Paragraph } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
 import { useBackend } from "@/providers/BackendProvider";
+import { useTourMode } from "@/providers/TourProvider/TourModeContext";
 import {
   fetchExecutionDetails,
   fetchPipelineRun,
@@ -66,6 +67,7 @@ export const SubmitTaskArgumentsDialog = ({
   componentSpec,
 }: SubmitTaskArgumentsDialogProps) => {
   const notify = useToastNotification();
+  const tourMode = useTourMode();
   const initialArgs = getArgumentsFromInputs(componentSpec);
 
   const [runNotes, setRunNotes] = useState<string>("");
@@ -135,8 +137,16 @@ export const SubmitTaskArgumentsDialog = ({
   const hasInputs = inputs.length > 0;
 
   return (
-    <Dialog open={open} onOpenChange={handleCancel}>
-      <DialogContent className="sm:max-w-lg">
+    <Dialog open={open} onOpenChange={handleCancel} modal={!tourMode}>
+      <DialogContent
+        className="sm:max-w-lg"
+        {...(tourMode
+          ? {
+              onInteractOutside: (event) => event.preventDefault(),
+              onEscapeKeyDown: (event) => event.preventDefault(),
+            }
+          : {})}
+      >
         <DialogHeader>
           <DialogTitle>Submit Run with Arguments</DialogTitle>
           <DialogDescription className="hidden">

@@ -9,9 +9,18 @@ import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { tracking } from "@/utils/tracking";
 
+import type { Secret } from "../types";
 import { SecretsList } from "./SecretsList";
 
-export function SecretsListView() {
+interface SecretsListViewProps {
+  onAddSecret?: () => void;
+  onEditSecret?: (secret: Secret) => void;
+}
+
+export function SecretsListView({
+  onAddSecret,
+  onEditSecret,
+}: SecretsListViewProps = {}) {
   const notify = useToastNotification();
   const { track } = useAnalytics();
 
@@ -32,22 +41,36 @@ export function SecretsListView() {
 
       <Separator />
 
-      <SecretsList onRemoveSuccess={handleRemoveSuccess} />
+      <SecretsList
+        onRemoveSuccess={handleRemoveSuccess}
+        onEditSecret={onEditSecret}
+      />
 
       <Separator />
 
       <InlineStack align="end" fill>
-        <Link
-          to="/settings/secrets/add"
-          replace
-          data-testid="add-secret-link"
-          {...tracking("settings.secrets.add_secret")}
-        >
-          <Button variant="secondary">
+        {onAddSecret ? (
+          <Button
+            variant="secondary"
+            data-testid="add-secret-link"
+            onClick={onAddSecret}
+          >
             <Icon name="Plus" />
             Add Secret
           </Button>
-        </Link>
+        ) : (
+          <Link
+            to="/settings/secrets/add"
+            replace
+            data-testid="add-secret-link"
+            {...tracking("settings.secrets.add_secret")}
+          >
+            <Button variant="secondary">
+              <Icon name="Plus" />
+              Add Secret
+            </Button>
+          </Link>
+        )}
       </InlineStack>
     </BlockStack>
   );

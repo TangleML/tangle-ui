@@ -6,6 +6,7 @@ import { publicAsset } from "@/utils/publicAsset";
 export type TourStep = StepType &
   TourAction & {
     ringSelectors?: string[];
+    tourPanel?: "secrets-manager";
     resetLibrarySearch?: boolean;
     ensureWindowRestored?: string;
     requiresTaskSelected?: string;

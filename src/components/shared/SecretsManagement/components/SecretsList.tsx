@@ -10,14 +10,18 @@ import { formatRelativeTime } from "@/utils/date";
 
 import { withSuspenseWrapper } from "../../SuspenseWrapper";
 import { fetchSecretsList } from "../secretsStorage";
-import { SecretsQueryKeys } from "../types";
+import { type Secret, SecretsQueryKeys } from "../types";
 import { RemoveSecretButton } from "./RemoveSecretButton";
 
 interface SecretsListProps {
   onRemoveSuccess?: () => void;
+  onEditSecret?: (secret: Secret) => void;
 }
 
-function SecretsListInternal({ onRemoveSuccess }: SecretsListProps) {
+function SecretsListInternal({
+  onRemoveSuccess,
+  onEditSecret,
+}: SecretsListProps) {
   const { data: secrets } = useSuspenseQuery({
     queryKey: SecretsQueryKeys.All(),
     queryFn: fetchSecretsList,
@@ -67,16 +71,27 @@ function SecretsListInternal({ onRemoveSuccess }: SecretsListProps) {
             </InlineStack>
 
             <InlineStack gap="1">
-              <Link
-                to="/settings/secrets/$secretId/replace"
-                params={{ secretId: secret.id }}
-                replace
-                data-testid="secret-edit-button"
-              >
-                <Button variant="ghost" size="xs">
+              {onEditSecret ? (
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  data-testid="secret-edit-button"
+                  onClick={() => onEditSecret(secret)}
+                >
                   <Icon name="Pencil" size="sm" />
                 </Button>
-              </Link>
+              ) : (
+                <Link
+                  to="/settings/secrets/$secretId/replace"
+                  params={{ secretId: secret.id }}
+                  replace
+                  data-testid="secret-edit-button"
+                >
+                  <Button variant="ghost" size="xs">
+                    <Icon name="Pencil" size="sm" />
+                  </Button>
+                </Link>
+              )}
               <RemoveSecretButton secret={secret} onSuccess={onRemoveSuccess} />
             </InlineStack>
           </InlineStack>
