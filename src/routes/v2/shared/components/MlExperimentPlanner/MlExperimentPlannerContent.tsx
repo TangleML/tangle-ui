@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { Link } from "@/components/ui/link";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Table,
@@ -123,17 +124,28 @@ function ScenarioRow({
         </Text>
       </TableCell>
       <TableCell>
-        <Button
-          size="xs"
-          variant="outline"
-          disabled={isResearchPending}
-          onClick={(event) => {
-            event.stopPropagation();
-            onRunResearch();
-          }}
-        >
-          Run automated research
-        </Button>
+        {scenario.research ? (
+          <Link
+            external
+            href={scenario.research.url}
+            size="sm"
+            onClick={(event) => event.stopPropagation()}
+          >
+            Open research session
+          </Link>
+        ) : (
+          <Button
+            size="xs"
+            variant="outline"
+            disabled={isResearchPending}
+            onClick={(event) => {
+              event.stopPropagation();
+              onRunResearch();
+            }}
+          >
+            Run automated research
+          </Button>
+        )}
       </TableCell>
     </TableRow>
   );
@@ -180,13 +192,19 @@ function ScenarioDetail({
               {scenario.plan.name}
             </Text>
           </InlineStack>
-          <Button
-            size="sm"
-            disabled={isResearchPending}
-            onClick={onRunResearch}
-          >
-            Run automated research
-          </Button>
+          {scenario.research ? (
+            <Link external href={scenario.research.url} size="sm">
+              Open research session
+            </Link>
+          ) : (
+            <Button
+              size="sm"
+              disabled={isResearchPending}
+              onClick={onRunResearch}
+            >
+              Run automated research
+            </Button>
+          )}
           <Text as="p" size="sm" tone="subdued">
             {scenario.rationale}
           </Text>
@@ -219,8 +237,11 @@ export function MlExperimentPlannerContent({
   selectedScenarioId,
 }: MlExperimentPlannerContentProps) {
   const { scenarios } = useRunScenarios(runId);
-  const { mutate: runResearch, isPending: isResearchPending } =
-    useRunAutomatedResearch();
+  const {
+    mutate: runResearch,
+    isPending: isResearchPending,
+    variables: researchVariables,
+  } = useRunAutomatedResearch();
   const [selectedId, setSelectedId] = useState<string | null>(
     selectedScenarioId ?? null,
   );
@@ -250,7 +271,9 @@ export function MlExperimentPlannerContent({
           scenario={selectedScenario}
           onBack={() => setSelectedId(null)}
           onRunResearch={() => runResearch(selectedScenario)}
-          isResearchPending={isResearchPending}
+          isResearchPending={
+            isResearchPending && researchVariables?.id === selectedScenario.id
+          }
         />
       </BlockStack>
     );
@@ -276,7 +299,9 @@ export function MlExperimentPlannerContent({
                 scenario={scenario}
                 onSelect={() => setSelectedId(scenario.id)}
                 onRunResearch={() => runResearch(scenario)}
-                isResearchPending={isResearchPending}
+                isResearchPending={
+                  isResearchPending && researchVariables?.id === scenario.id
+                }
               />
             ))}
           </TableBody>

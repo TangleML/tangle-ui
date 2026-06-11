@@ -41,6 +41,17 @@ interface ScenarioPlan {
   failure_playbook?: unknown[];
 }
 
+/**
+ * Reference to the OpenCode agent session created when automated research is
+ * started for a scenario. Persisted so the UI can surface a follow link.
+ */
+interface ScenarioResearch {
+  instanceId: string;
+  sessionId: string;
+  url: string;
+  startedAt: number;
+}
+
 export interface ScenarioEntry {
   id: string;
   run: ScenarioRunRef;
@@ -50,6 +61,7 @@ export interface ScenarioEntry {
   /** Only the ideas the user selected when building the scenario. */
   ideas: ScenarioIdea[];
   plan: ScenarioPlan;
+  research?: ScenarioResearch;
   createdAt: number;
   updatedAt: number;
 }

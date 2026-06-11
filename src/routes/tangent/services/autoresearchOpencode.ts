@@ -3,6 +3,7 @@ import {
   createInstanceApiTangentInstancesPost,
   listInstancesApiTangentInstancesGet,
 } from "@/api/sdk.gen";
+import { API_URL } from "@/utils/constants";
 
 /**
  * Workspace directory the OpenCode agent runs in. OpenCode scopes sessions to
@@ -94,6 +95,19 @@ export async function createOpencodeSession(
     throw new Error("OpenCode session response did not include an id");
   }
   return data.id;
+}
+
+/**
+ * Build the OpenCode web UI URL for following a created session, mirroring the
+ * structure produced by the backend redirect. The base resolves to the
+ * configured backend (or the current origin in relative-path mode).
+ */
+export function buildOpencodeSessionUrl(
+  instanceId: string,
+  sessionId: string,
+): string {
+  const base = API_URL || window.location.origin;
+  return `${base}/api/tangent/instances/${instanceId}/opencode/app/default/Lw/session/${sessionId}`;
 }
 
 /**
