@@ -64,7 +64,7 @@ function resolveInitialState(
     };
   }
 
-  if (options.persisted && !hasPersistedLayout()) {
+  if (options.persisted && !hasPersistedLayout() && !options.startVisible) {
     if (!DEFAULT_VIEW_PRESET.visible.has(id)) {
       return { state: "hidden", needsPreviousState: true };
     }
