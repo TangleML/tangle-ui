@@ -18,9 +18,12 @@ import { hydrateComponentReference } from "@/services/componentService";
 
 import { ComponentChip } from "./ComponentChip";
 import { EntityChip } from "./EntityChip";
+import { TangentScenario } from "./TangentScenario";
 
 const ENTITY_PROTOCOL = "entity://";
 const COMPONENT_PROTOCOL = "component://";
+
+const TANGENT_SCENARIO_CLASS = "language-tangent-scenario";
 
 const INLINE_CODE_CLASS = "rounded bg-muted px-1 py-0.5 text-xs font-mono";
 
@@ -114,6 +117,11 @@ function MarkdownCode({
   node: _node,
   ...rest
 }: ComponentProps<"code"> & { node?: unknown }) {
+  if (className?.includes(TANGENT_SCENARIO_CLASS)) {
+    const raw = String(children).replace(/\n$/, "");
+    return <TangentScenario raw={raw} />;
+  }
+
   const match = className?.match(/language-(\w+)/);
 
   if (match) {

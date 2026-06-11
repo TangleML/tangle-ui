@@ -25,6 +25,7 @@ import {
 } from "./dispatcherRuntime";
 import { createDebugAssistantAgent } from "./subagents/debugAssistant";
 import { createGeneralHelpAgent } from "./subagents/generalHelp";
+import { createTangentResearcherAgent } from "./subagents/tangentResearcher";
 
 function formatCurrentRunSection(context: AgentContext): string {
   if (context.mode !== "runView") {
@@ -39,6 +40,7 @@ function formatCurrentRunSection(context: AgentContext): string {
 async function buildRunViewAgent(session: AgentSession): Promise<Agent> {
   const generalHelp = createGeneralHelpAgent(session);
   const debugAssistant = createDebugAssistantAgent(session);
+  const tangentResearcher = createTangentResearcherAgent(session);
 
   const instructions = `${runViewDispatcherPrompt}\n\n${formatCurrentRunSection(session.context)}`;
 
@@ -56,6 +58,11 @@ async function buildRunViewAgent(session: AgentSession): Promise<Agent> {
         toolName: "ask_debug_assistant",
         toolDescription:
           "Ask the debug-assistant specialist to inspect or explain a pipeline run from execution details, container state, and logs. Read-only — cannot edit the spec or submit runs. Input: a clear question that names the run id, e.g. 'Explain what run 12345 did and its outcome.' or 'Why did run 12345 fail?'.",
+      }),
+      tangentResearcher.asTool({
+        toolName: "create_optimization_scenario",
+        toolDescription:
+          "Ask the Tangent Researcher to analyze the current run for ML optimization potential and produce a 0-100 score plus prioritized hyperparameter-tuning and experiment ideas. Read-only. Input must name the run id, e.g. 'Analyze run 12345 for optimization opportunities.'.",
       }),
     ],
   });
