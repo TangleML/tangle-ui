@@ -14,7 +14,7 @@
  */
 import { Agent } from "@openai/agents";
 
-import { requireOrchestratorModel } from "../../config";
+import { getAgentModelConfig } from "../../config";
 import { attachObservabilityHooks } from "../../middleware/observability";
 import tangentResearcherPrompt from "../../prompts/tangentResearcher.md?raw";
 import type { AgentSession, RecentPipelineRun } from "../../session";
@@ -44,7 +44,7 @@ export function createTangentResearcherAgent(session: AgentSession): Agent {
       hyperparameter-tuning and experiment ideas. Read-only — cannot edit the pipeline or submit runs.`,
     instructions,
     tools: [runTools.getRunStatus, csom.getPipelineState],
-    model: requireOrchestratorModel(),
+    ...getAgentModelConfig(session.aiConfig),
     modelSettings: { reasoning: { effort: "high" } },
   });
   attachObservabilityHooks(agent, session.emitStatus);

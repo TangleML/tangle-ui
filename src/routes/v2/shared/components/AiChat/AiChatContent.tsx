@@ -116,6 +116,16 @@ export const AiChatContent = observer(function AiChatContent({
     });
   }
 
+  // Dispatch a prompt queued externally (e.g. a "suggest optimization"
+  // button on another panel). This component owns the tool bridge, so it
+  // is the right place to actually send the message.
+  const pendingPrompt = aiChat.pendingPrompt;
+  useEffect(() => {
+    if (!pendingPrompt || !thread) return;
+    const prompt = aiChat.consumePendingPrompt();
+    if (prompt) handleSend(prompt);
+  }, [pendingPrompt, thread, aiChat]);
+
   if (!isAiConfigured) {
     return <AiProviderSetup />;
   }
