@@ -123,7 +123,11 @@ export function ResearchProgressView({
       {progress.todos.length > 0 && (
         <BlockStack gap="1">
           {progress.todos.map((todo) => (
-            <TodoItem key={todo.id} content={todo.content} status={todo.status} />
+            <TodoItem
+              key={todo.id}
+              content={todo.content}
+              status={todo.status}
+            />
           ))}
         </BlockStack>
       )}

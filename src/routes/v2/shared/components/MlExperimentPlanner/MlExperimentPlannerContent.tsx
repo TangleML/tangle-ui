@@ -103,8 +103,11 @@ function ScenarioRow({
   onRunResearch,
   isResearchPending,
 }: ScenarioRowProps) {
-  const { data: progress, isLoading: isProgressLoading, isError } =
-    useResearchProgress(scenario.research);
+  const {
+    data: progress,
+    isLoading: isProgressLoading,
+    isError,
+  } = useResearchProgress(scenario.research);
 
   return (
     <TableRow className="cursor-pointer" onClick={onSelect}>
@@ -176,8 +179,11 @@ function ScenarioDetail({
   onRunResearch,
   isResearchPending,
 }: ScenarioDetailProps) {
-  const { data: progress, isLoading: isProgressLoading, isError } =
-    useResearchProgress(scenario.research);
+  const {
+    data: progress,
+    isLoading: isProgressLoading,
+    isError,
+  } = useResearchProgress(scenario.research);
 
   return (
     <BlockStack gap="3" fill className="p-3" inlineAlign="start">

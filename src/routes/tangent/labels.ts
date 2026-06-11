@@ -1,16 +1,8 @@
 import type {
-  IdeaType,
   PipelineFilter,
   RunStatus,
   ScenarioStatus,
 } from "@/routes/tangent/types";
-
-export const IDEA_TYPE_LABELS: Record<IdeaType, string> = {
-  feature_engineering: "Feature Engineering",
-  hyper_parameter_optimization: "Hyper Parameter Optimization",
-  input_data: "Input Data",
-  model_architecture: "Model Architecture",
-};
 
 export const RUN_STATUS_LABELS: Record<RunStatus, string> = {
   succeeded: "Succeeded",
@@ -29,14 +21,12 @@ export const SCENARIO_STATUS_LABELS: Record<ScenarioStatus, string> = {
 export const PIPELINE_FILTER_LABELS: Record<PipelineFilter, string> = {
   all: "All",
   my_pipelines: "My pipelines",
-  no_scenario: "No scenario",
   has_results: "Has results",
 };
 
 export const PIPELINE_FILTERS: PipelineFilter[] = [
   "all",
   "my_pipelines",
-  "no_scenario",
   "has_results",
 ];
 

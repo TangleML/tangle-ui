@@ -30,11 +30,6 @@ export const fetchTangentStats = (): Promise<TeamStats> =>
 export const fetchTangentPipelines = (): Promise<TangentPipeline[]> =>
   delay(clone(MOCK_PIPELINES));
 
-export const fetchTangentPipeline = (
-  runId: string,
-): Promise<TangentPipeline | undefined> =>
-  delay(clone(MOCK_PIPELINES.find((pipeline) => pipeline.runId === runId)));
-
 /**
  * Stubbed re-analyze trigger. In Phase 1 this is a no-op that resolves after a
  * simulated delay so the UI can show a queued/refresh affordance.

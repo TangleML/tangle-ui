@@ -16,7 +16,7 @@ export type ScenarioStatus =
   | "tangent_running"
   | "results_available";
 
-export type IdeaType =
+type IdeaType =
   | "feature_engineering"
   | "hyper_parameter_optimization"
   | "input_data"
@@ -48,14 +48,14 @@ export interface ExperimentIdea {
   downvotes?: number;
 }
 
-export interface ResultsCase {
+interface ResultsCase {
   example: string;
   baseline: string;
   best: string;
   delta: string;
 }
 
-export interface TangentResults {
+interface TangentResults {
   metricDelta: string;
   bestDelta: string;
   bestRunId: string;
@@ -102,11 +102,7 @@ export interface TeamStats {
   withResults: number | null;
 }
 
-export type PipelineFilter =
-  | "all"
-  | "my_pipelines"
-  | "no_scenario"
-  | "has_results";
+export type PipelineFilter = "all" | "my_pipelines" | "has_results";
 
 export const TangentQueryKeys = {
   All: () => ["tangent"] as const,
