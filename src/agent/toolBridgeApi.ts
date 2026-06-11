@@ -18,7 +18,7 @@ import type {
   PipelineRunResponse,
 } from "@/api/types.gen";
 import type { ArgumentType, ComponentReference } from "@/models/componentSpec";
-import type { AiSpec } from "@/routes/v2/pages/Editor/components/AiChat/serializeSpecForAi";
+import type { AiSpec } from "@/routes/v2/shared/components/AiChat/serializeSpecForAi";
 
 interface ValidationIssue {
   type: string;

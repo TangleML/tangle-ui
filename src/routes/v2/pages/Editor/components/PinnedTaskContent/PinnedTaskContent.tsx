@@ -6,7 +6,7 @@ import { BlockStack } from "@/components/ui/layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Text } from "@/components/ui/typography";
 import { serializeComponentSpec } from "@/models/componentSpec";
-import { CodeBlock } from "@/routes/v2/pages/Editor/components/PinnedTaskContent/components/CodeBlock";
+import { CodeBlock } from "@/routes/v2/shared/components/CodeBlock";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { tracking } from "@/utils/tracking";
 import { componentSpecToText } from "@/utils/yaml";

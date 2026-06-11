@@ -1,5 +1,5 @@
 import { Text } from "@/components/ui/typography";
-import type { ChatMessage as ChatMessageType } from "@/routes/v2/pages/Editor/components/AiChat/types";
+import type { ChatMessage as ChatMessageType } from "@/routes/v2/shared/components/AiChat/types";
 
 import { MessageBubble } from "./MessageBubble";
 import { renderMarkdown } from "./renderMarkdown";

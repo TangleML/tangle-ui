@@ -13,15 +13,21 @@
  * changes are picked up without rebuilding the bridge.
  */
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
+import { createDebugBridgeHandlers } from "@/routes/v2/shared/components/AiChat/toolBridge/debugBridge";
+import { createRunBridgeHandlers } from "@/routes/v2/shared/components/AiChat/toolBridge/runBridge";
 
+import type { CsomBridgeDeps } from "./csomBridge";
 import { createCsomBridgeHandlers } from "./csomBridge";
-import { createDebugBridgeHandlers } from "./debugBridge";
-import { createRunBridgeHandlers } from "./runBridge";
-import type { BridgeDeps } from "./utils";
 
-export type { BridgeDeps } from "./utils";
+export type EditorToolBridgeDeps = CsomBridgeDeps;
 
-export function createToolBridge(deps: BridgeDeps): ToolBridgeApi {
+/**
+ * Full Editor bridge — shared run/debug handlers plus the Editor's
+ * spec-mutating CSOM handlers (which require the undo store).
+ */
+export function createEditorToolBridge(
+  deps: EditorToolBridgeDeps,
+): ToolBridgeApi {
   return {
     ...createCsomBridgeHandlers(deps),
     ...createRunBridgeHandlers(deps),

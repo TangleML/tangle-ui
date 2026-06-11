@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 
 import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
-import type { ChatMessage as ChatMessageType } from "@/routes/v2/pages/Editor/components/AiChat/types";
+import type { ChatMessage as ChatMessageType } from "@/routes/v2/shared/components/AiChat/types";
 
 import { ChatMessage } from "./ChatMessage";
 import { ThinkingMessage } from "./ThinkingMessage";
