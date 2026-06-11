@@ -142,6 +142,7 @@ export const SubmitTaskArgumentsDialog = ({
     <Dialog open={open} onOpenChange={handleCancel} modal={!tourMode}>
       <DialogContent
         className="sm:max-w-lg"
+        data-tour="submit-arguments-dialog"
         {...(tourMode
           ? {
               onInteractOutside: (event) => event.preventDefault(),
@@ -214,6 +215,7 @@ export const SubmitTaskArgumentsDialog = ({
           <Button
             onClick={handleConfirm}
             disabled={!isValidToSubmit || mockBackend}
+            data-tour="submit-arguments-confirm"
           >
             Submit Run
           </Button>
