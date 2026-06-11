@@ -133,6 +133,18 @@ export type BodyCreateSecretApiSecretsPost = {
 };
 
 /**
+ * Body_set_settings_api_users_me_settings_patch
+ */
+export type BodySetSettingsApiUsersMeSettingsPatch = {
+    /**
+     * Settings
+     */
+    settings: {
+        [key: string]: unknown;
+    };
+};
+
+/**
  * Body_update_secret_api_secrets__secret_name__put
  */
 export type BodyUpdateSecretApiSecretsSecretNamePut = {
@@ -480,11 +492,43 @@ export type DynamicDataArgument = {
 };
 
 /**
+ * ExecutionNodeReference
+ */
+export type ExecutionNodeReference = {
+    /**
+     * Execution Node Id
+     */
+    execution_node_id: string;
+    /**
+     * Pipeline Run Id
+     */
+    pipeline_run_id: string | null;
+};
+
+/**
  * ExecutionOptionsSpec
  */
 export type ExecutionOptionsSpec = {
     retryStrategy?: RetryStrategySpec | null;
     cachingStrategy?: CachingStrategySpec | null;
+};
+
+/**
+ * ExecutionStatusSummary
+ */
+export type ExecutionStatusSummary = {
+    /**
+     * Total Executions
+     */
+    total_executions: number;
+    /**
+     * Ended Executions
+     */
+    ended_executions: number;
+    /**
+     * Has Ended
+     */
+    has_ended: boolean;
 };
 
 /**
@@ -549,6 +593,10 @@ export type GetContainerExecutionStateResponse = {
     debug_info?: {
         [key: string]: unknown;
     } | null;
+    /**
+     * Execution Nodes Linked To Same Container Execution
+     */
+    execution_nodes_linked_to_same_container_execution?: Array<ExecutionNodeReference> | null;
 };
 
 /**
@@ -618,6 +666,7 @@ export type GetGraphExecutionStateResponse = {
             [key: string]: number;
         };
     };
+    child_execution_status_summary: ExecutionStatusSummary;
 };
 
 /**
@@ -842,6 +891,16 @@ export type ListComponentLibrariesResponse = {
 };
 
 /**
+ * ListInstancesResponse
+ */
+export type ListInstancesResponse = {
+    /**
+     * Instances
+     */
+    instances: Array<TangentInstance>;
+};
+
+/**
  * ListPipelineJobsResponse
  */
 export type ListPipelineJobsResponse = {
@@ -965,6 +1024,7 @@ export type PipelineRunResponse = {
     execution_status_stats?: {
         [key: string]: number;
     } | null;
+    execution_summary?: ExecutionStatusSummary | null;
 };
 
 /**
@@ -1031,6 +1091,20 @@ export type SecretInfoResponse = {
      * Description
      */
     description?: string | null;
+};
+
+/**
+ * TangentInstance
+ */
+export type TangentInstance = {
+    /**
+     * Instance Id
+     */
+    instance_id: string;
+    /**
+     * Agent Kinds
+     */
+    agent_kinds?: Array<string> | null;
 };
 
 /**
@@ -1113,6 +1187,18 @@ export type UserComponentLibraryPinsResponse = {
 };
 
 /**
+ * UserSettingsResponse
+ */
+export type UserSettingsResponse = {
+    /**
+     * Settings
+     */
+    settings: {
+        [key: string]: unknown;
+    };
+};
+
+/**
  * ValidationError
  */
 export type ValidationError = {
@@ -1128,6 +1214,16 @@ export type ValidationError = {
      * Error Type
      */
     type: string;
+    /**
+     * Input
+     */
+    input?: unknown;
+    /**
+     * Context
+     */
+    ctx?: {
+        [key: string]: unknown;
+    };
 };
 
 export type GetApiArtifactsIdGetData = {
@@ -1258,7 +1354,12 @@ export type GetContainerExecutionStateApiExecutionsIdContainerStateGetData = {
          */
         id: string;
     };
-    query?: never;
+    query?: {
+        /**
+         * Include Execution Nodes Linked To Same Container Execution
+         */
+        include_execution_nodes_linked_to_same_container_execution?: boolean | null;
+    };
     url: '/api/executions/{id}/container_state';
 };
 
@@ -1381,6 +1482,10 @@ export type ListApiPipelineRunsGetData = {
          */
         filter?: string | null;
         /**
+         * Filter Query
+         */
+        filter_query?: string | null;
+        /**
          * Include Pipeline Names
          */
         include_pipeline_names?: boolean;
@@ -1443,7 +1548,12 @@ export type GetApiPipelineRunsIdGetData = {
          */
         id: string;
     };
-    query?: never;
+    query?: {
+        /**
+         * Include Execution Stats
+         */
+        include_execution_stats?: boolean;
+    };
     url: '/api/pipeline_runs/{id}';
 };
 
@@ -1764,6 +1874,87 @@ export type UpdateSecretApiSecretsSecretNamePutResponses = {
 };
 
 export type UpdateSecretApiSecretsSecretNamePutResponse = UpdateSecretApiSecretsSecretNamePutResponses[keyof UpdateSecretApiSecretsSecretNamePutResponses];
+
+export type DeleteSettingsApiUsersMeSettingsDeleteData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * Setting Names
+         */
+        setting_names: Array<string>;
+    };
+    url: '/api/users/me/settings';
+};
+
+export type DeleteSettingsApiUsersMeSettingsDeleteErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeleteSettingsApiUsersMeSettingsDeleteError = DeleteSettingsApiUsersMeSettingsDeleteErrors[keyof DeleteSettingsApiUsersMeSettingsDeleteErrors];
+
+export type DeleteSettingsApiUsersMeSettingsDeleteResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type GetSettingsApiUsersMeSettingsGetData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Setting Names
+         */
+        setting_names?: Array<string> | null;
+    };
+    url: '/api/users/me/settings';
+};
+
+export type GetSettingsApiUsersMeSettingsGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetSettingsApiUsersMeSettingsGetError = GetSettingsApiUsersMeSettingsGetErrors[keyof GetSettingsApiUsersMeSettingsGetErrors];
+
+export type GetSettingsApiUsersMeSettingsGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: UserSettingsResponse;
+};
+
+export type GetSettingsApiUsersMeSettingsGetResponse = GetSettingsApiUsersMeSettingsGetResponses[keyof GetSettingsApiUsersMeSettingsGetResponses];
+
+export type SetSettingsApiUsersMeSettingsPatchData = {
+    body: BodySetSettingsApiUsersMeSettingsPatch;
+    path?: never;
+    query?: never;
+    url: '/api/users/me/settings';
+};
+
+export type SetSettingsApiUsersMeSettingsPatchErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SetSettingsApiUsersMeSettingsPatchError = SetSettingsApiUsersMeSettingsPatchErrors[keyof SetSettingsApiUsersMeSettingsPatchErrors];
+
+export type SetSettingsApiUsersMeSettingsPatchResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
 
 export type GetApiComponentsDigestGetData = {
     body?: never;
@@ -2149,6 +2340,116 @@ export type GetSqlEngineConnectionPoolStatusApiAdminSqlEngineConnectionPoolStatu
 
 export type GetSqlEngineConnectionPoolStatusApiAdminSqlEngineConnectionPoolStatusGetResponse = GetSqlEngineConnectionPoolStatusApiAdminSqlEngineConnectionPoolStatusGetResponses[keyof GetSqlEngineConnectionPoolStatusApiAdminSqlEngineConnectionPoolStatusGetResponses];
 
+export type AdminBackfillCreatedByApiAdminBackfillCreatedByPostData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/admin/backfill/created_by';
+};
+
+export type AdminBackfillCreatedByApiAdminBackfillCreatedByPostResponses = {
+    /**
+     * Response Admin Backfill Created By Api Admin Backfill Created By Post
+     *
+     * Successful Response
+     */
+    200: {
+        [key: string]: unknown;
+    };
+};
+
+export type AdminBackfillCreatedByApiAdminBackfillCreatedByPostResponse = AdminBackfillCreatedByApiAdminBackfillCreatedByPostResponses[keyof AdminBackfillCreatedByApiAdminBackfillCreatedByPostResponses];
+
+export type AdminBackfillPipelineNamesExtraDataApiAdminBackfillPipelineNamesExtraDataPostData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/admin/backfill/pipeline_names/extra_data';
+};
+
+export type AdminBackfillPipelineNamesExtraDataApiAdminBackfillPipelineNamesExtraDataPostResponses = {
+    /**
+     * Response Admin Backfill Pipeline Names Extra Data Api Admin Backfill Pipeline Names Extra Data Post
+     *
+     * Successful Response
+     */
+    200: {
+        [key: string]: unknown;
+    };
+};
+
+export type AdminBackfillPipelineNamesExtraDataApiAdminBackfillPipelineNamesExtraDataPostResponse = AdminBackfillPipelineNamesExtraDataApiAdminBackfillPipelineNamesExtraDataPostResponses[keyof AdminBackfillPipelineNamesExtraDataApiAdminBackfillPipelineNamesExtraDataPostResponses];
+
+export type AdminBackfillPipelineNamesComponentSpecApiAdminBackfillPipelineNamesComponentSpecPostData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/admin/backfill/pipeline_names/component_spec';
+};
+
+export type AdminBackfillPipelineNamesComponentSpecApiAdminBackfillPipelineNamesComponentSpecPostResponses = {
+    /**
+     * Response Admin Backfill Pipeline Names Component Spec Api Admin Backfill Pipeline Names Component Spec Post
+     *
+     * Successful Response
+     */
+    200: {
+        [key: string]: unknown;
+    };
+};
+
+export type AdminBackfillPipelineNamesComponentSpecApiAdminBackfillPipelineNamesComponentSpecPostResponse = AdminBackfillPipelineNamesComponentSpecApiAdminBackfillPipelineNamesComponentSpecPostResponses[keyof AdminBackfillPipelineNamesComponentSpecApiAdminBackfillPipelineNamesComponentSpecPostResponses];
+
+export type AdminBackfillAllApiAdminBackfillAllPostData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/admin/backfill/all';
+};
+
+export type AdminBackfillAllApiAdminBackfillAllPostResponses = {
+    /**
+     * Response Admin Backfill All Api Admin Backfill All Post
+     *
+     * Successful Response
+     */
+    200: {
+        [key: string]: unknown;
+    };
+};
+
+export type AdminBackfillAllApiAdminBackfillAllPostResponse = AdminBackfillAllApiAdminBackfillAllPostResponses[keyof AdminBackfillAllApiAdminBackfillAllPostResponses];
+
+export type FlagStatsApiStatsFlagsGetData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Format
+         *
+         * Response format: 'html' or 'json'
+         */
+        format?: string;
+    };
+    url: '/api/stats/flags';
+};
+
+export type FlagStatsApiStatsFlagsGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type FlagStatsApiStatsFlagsGetError = FlagStatsApiStatsFlagsGetErrors[keyof FlagStatsApiStatsFlagsGetErrors];
+
+export type FlagStatsApiStatsFlagsGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
 export type PingServicesPingGetData = {
     body?: never;
     path?: never;
@@ -2162,404 +2463,6 @@ export type PingServicesPingGetResponses = {
      */
     200: unknown;
 };
-
-export type GetUserNamesGetUserNamesGetData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/get_user_names';
-};
-
-export type GetUserNamesGetUserNamesGetResponses = {
-    /**
-     * Response Get User Names Get User Names Get
-     *
-     * Successful Response
-     */
-    200: [
-        string | null,
-        string | null,
-        string | null,
-        string | null
-    ];
-};
-
-export type GetUserNamesGetUserNamesGetResponse = GetUserNamesGetUserNamesGetResponses[keyof GetUserNamesGetUserNamesGetResponses];
-
-export type TestGetUserDetailsApiTestGetUserDetailsGetData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/api/test/get_user_details';
-};
-
-export type TestGetUserDetailsApiTestGetUserDetailsGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: unknown;
-};
-
-export type GetRequestHeadersApiTestGetRequestHeadersGetData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/api/test/get_request_headers';
-};
-
-export type GetRequestHeadersApiTestGetRequestHeadersGetResponses = {
-    /**
-     * Response Get Request Headers Api Test Get Request Headers Get
-     *
-     * Successful Response
-     */
-    200: Array<[
-        Blob | File,
-        Blob | File
-    ]>;
-};
-
-export type GetRequestHeadersApiTestGetRequestHeadersGetResponse = GetRequestHeadersApiTestGetRequestHeadersGetResponses[keyof GetRequestHeadersApiTestGetRequestHeadersGetResponses];
-
-export type ReadUrlTestReadUrlGetData = {
-    body?: never;
-    path?: never;
-    query: {
-        /**
-         * Url
-         */
-        url: string;
-    };
-    url: '/test/read_url';
-};
-
-export type ReadUrlTestReadUrlGetErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type ReadUrlTestReadUrlGetError = ReadUrlTestReadUrlGetErrors[keyof ReadUrlTestReadUrlGetErrors];
-
-export type ReadUrlTestReadUrlGetResponses = {
-    /**
-     * Response Read Url Test Read Url Get
-     *
-     * Successful Response
-     */
-    200: Array<{
-        [key: string]: unknown;
-    }>;
-};
-
-export type ReadUrlTestReadUrlGetResponse = ReadUrlTestReadUrlGetResponses[keyof ReadUrlTestReadUrlGetResponses];
-
-export type GcsReadGcsReadGetData = {
-    body?: never;
-    path?: never;
-    query?: {
-        /**
-         * Bucket Name
-         */
-        bucket_name?: string | null;
-        /**
-         * Path
-         */
-        path?: string | null;
-    };
-    url: '/gcs_read';
-};
-
-export type GcsReadGcsReadGetErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type GcsReadGcsReadGetError = GcsReadGcsReadGetErrors[keyof GcsReadGcsReadGetErrors];
-
-export type GcsReadGcsReadGetResponses = {
-    /**
-     * Response Gcs Read Gcs Read Get
-     *
-     * Successful Response
-     */
-    200: Array<string>;
-};
-
-export type GcsReadGcsReadGetResponse = GcsReadGcsReadGetResponses[keyof GcsReadGcsReadGetResponses];
-
-export type GkeGetClusterConfigGkeGetClusterConfigGetData = {
-    body?: never;
-    path?: never;
-    query?: {
-        /**
-         * Context
-         */
-        context?: string | null;
-    };
-    url: '/gke_get_cluster_config';
-};
-
-export type GkeGetClusterConfigGkeGetClusterConfigGetErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type GkeGetClusterConfigGkeGetClusterConfigGetError = GkeGetClusterConfigGkeGetClusterConfigGetErrors[keyof GkeGetClusterConfigGkeGetClusterConfigGetErrors];
-
-export type GkeGetClusterConfigGkeGetClusterConfigGetResponses = {
-    /**
-     * Response Gke Get Cluster Config Gke Get Cluster Config Get
-     *
-     * Successful Response
-     */
-    200: string;
-};
-
-export type GkeGetClusterConfigGkeGetClusterConfigGetResponse = GkeGetClusterConfigGkeGetClusterConfigGetResponses[keyof GkeGetClusterConfigGkeGetClusterConfigGetResponses];
-
-export type GkeListNamespacesGkeListNamespacesGetData = {
-    body?: never;
-    path?: never;
-    query?: {
-        /**
-         * Context
-         */
-        context?: string | null;
-    };
-    url: '/gke_list_namespaces';
-};
-
-export type GkeListNamespacesGkeListNamespacesGetErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type GkeListNamespacesGkeListNamespacesGetError = GkeListNamespacesGkeListNamespacesGetErrors[keyof GkeListNamespacesGkeListNamespacesGetErrors];
-
-export type GkeListNamespacesGkeListNamespacesGetResponses = {
-    /**
-     * Response Gke List Namespaces Gke List Namespaces Get
-     *
-     * Successful Response
-     */
-    200: {
-        [key: string]: unknown;
-    };
-};
-
-export type GkeListNamespacesGkeListNamespacesGetResponse = GkeListNamespacesGkeListNamespacesGetResponses[keyof GkeListNamespacesGkeListNamespacesGetResponses];
-
-export type GetMysqlUrlGetMysqlUrlGetData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/get_mysql_url';
-};
-
-export type GetMysqlUrlGetMysqlUrlGetResponses = {
-    /**
-     * Response Get Mysql Url Get Mysql Url Get
-     *
-     * Successful Response
-     */
-    200: string;
-};
-
-export type GetMysqlUrlGetMysqlUrlGetResponse = GetMysqlUrlGetMysqlUrlGetResponses[keyof GetMysqlUrlGetMysqlUrlGetResponses];
-
-export type MysqlListTablesMysqlListTablesGetData = {
-    body?: never;
-    path?: never;
-    query?: {
-        /**
-         * Db Uri
-         */
-        db_uri?: string | null;
-    };
-    url: '/mysql_list_tables';
-};
-
-export type MysqlListTablesMysqlListTablesGetErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type MysqlListTablesMysqlListTablesGetError = MysqlListTablesMysqlListTablesGetErrors[keyof MysqlListTablesMysqlListTablesGetErrors];
-
-export type MysqlListTablesMysqlListTablesGetResponses = {
-    /**
-     * Response Mysql List Tables Mysql List Tables Get
-     *
-     * Successful Response
-     */
-    200: Array<string>;
-};
-
-export type MysqlListTablesMysqlListTablesGetResponse = MysqlListTablesMysqlListTablesGetResponses[keyof MysqlListTablesMysqlListTablesGetResponses];
-
-export type MysqlRecreateAllTablesDontRunAdminMysqlRecreateAllTablesDontRunPostData = {
-    body?: never;
-    path?: never;
-    query: {
-        /**
-         * Authorization
-         */
-        authorization: string;
-    };
-    url: '/admin/mysql_recreate_all_tables_dont_run';
-};
-
-export type MysqlRecreateAllTablesDontRunAdminMysqlRecreateAllTablesDontRunPostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type MysqlRecreateAllTablesDontRunAdminMysqlRecreateAllTablesDontRunPostError = MysqlRecreateAllTablesDontRunAdminMysqlRecreateAllTablesDontRunPostErrors[keyof MysqlRecreateAllTablesDontRunAdminMysqlRecreateAllTablesDontRunPostErrors];
-
-export type MysqlRecreateAllTablesDontRunAdminMysqlRecreateAllTablesDontRunPostResponses = {
-    /**
-     * Response Mysql Recreate All Tables Dont Run Admin Mysql Recreate All Tables Dont Run Post
-     *
-     * Successful Response
-     */
-    200: Array<string>;
-};
-
-export type MysqlRecreateAllTablesDontRunAdminMysqlRecreateAllTablesDontRunPostResponse = MysqlRecreateAllTablesDontRunAdminMysqlRecreateAllTablesDontRunPostResponses[keyof MysqlRecreateAllTablesDontRunAdminMysqlRecreateAllTablesDontRunPostResponses];
-
-export type VertexListCustomJobsVertexListCustomJobsGetData = {
-    body?: never;
-    path?: never;
-    query?: {
-        /**
-         * Project
-         */
-        project?: string | null;
-        /**
-         * Location
-         */
-        location?: string | null;
-    };
-    url: '/vertex_list_custom_jobs';
-};
-
-export type VertexListCustomJobsVertexListCustomJobsGetErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type VertexListCustomJobsVertexListCustomJobsGetError = VertexListCustomJobsVertexListCustomJobsGetErrors[keyof VertexListCustomJobsVertexListCustomJobsGetErrors];
-
-export type VertexListCustomJobsVertexListCustomJobsGetResponses = {
-    /**
-     * Response Vertex List Custom Jobs Vertex List Custom Jobs Get
-     *
-     * Successful Response
-     */
-    200: Array<{
-        [key: string]: unknown;
-    }>;
-};
-
-export type VertexListCustomJobsVertexListCustomJobsGetResponse = VertexListCustomJobsVertexListCustomJobsGetResponses[keyof VertexListCustomJobsVertexListCustomJobsGetResponses];
-
-export type GkeCreateSimplePodTestGkeCreateSimplePodGetData = {
-    body?: never;
-    path?: never;
-    query?: {
-        /**
-         * Context
-         */
-        context?: string | null;
-        /**
-         * Namespace
-         */
-        namespace?: string;
-    };
-    url: '/test/gke_create_simple_pod';
-};
-
-export type GkeCreateSimplePodTestGkeCreateSimplePodGetErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type GkeCreateSimplePodTestGkeCreateSimplePodGetError = GkeCreateSimplePodTestGkeCreateSimplePodGetErrors[keyof GkeCreateSimplePodTestGkeCreateSimplePodGetErrors];
-
-export type GkeCreateSimplePodTestGkeCreateSimplePodGetResponses = {
-    /**
-     * Response Gke Create Simple Pod Test Gke Create Simple Pod Get
-     *
-     * Successful Response
-     */
-    200: {
-        [key: string]: unknown;
-    };
-};
-
-export type GkeCreateSimplePodTestGkeCreateSimplePodGetResponse = GkeCreateSimplePodTestGkeCreateSimplePodGetResponses[keyof GkeCreateSimplePodTestGkeCreateSimplePodGetResponses];
-
-export type GkeCreateGcsfusePodTestGkeCreateGcsfusePodGetData = {
-    body?: never;
-    path?: never;
-    query?: {
-        /**
-         * Context
-         */
-        context?: string | null;
-        /**
-         * Namespace
-         */
-        namespace?: string;
-        /**
-         * Gcs Bucket Name
-         */
-        gcs_bucket_name?: unknown;
-        /**
-         * Service Account Name
-         */
-        service_account_name?: string | null;
-    };
-    url: '/test/gke_create_gcsfuse_pod';
-};
-
-export type GkeCreateGcsfusePodTestGkeCreateGcsfusePodGetErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type GkeCreateGcsfusePodTestGkeCreateGcsfusePodGetError = GkeCreateGcsfusePodTestGkeCreateGcsfusePodGetErrors[keyof GkeCreateGcsfusePodTestGkeCreateGcsfusePodGetErrors];
-
-export type GkeCreateGcsfusePodTestGkeCreateGcsfusePodGetResponses = {
-    /**
-     * Response Gke Create Gcsfuse Pod Test Gke Create Gcsfuse Pod Get
-     *
-     * Successful Response
-     */
-    200: {
-        [key: string]: unknown;
-    };
-};
-
-export type GkeCreateGcsfusePodTestGkeCreateGcsfusePodGetResponse = GkeCreateGcsfusePodTestGkeCreateGcsfusePodGetResponses[keyof GkeCreateGcsfusePodTestGkeCreateGcsfusePodGetResponses];
 
 export type QuickStatsApiStatsQuickGetData = {
     body?: never;
@@ -2585,6 +2488,212 @@ export type QuickStatsApiStatsQuickGetErrors = {
 export type QuickStatsApiStatsQuickGetError = QuickStatsApiStatsQuickGetErrors[keyof QuickStatsApiStatsQuickGetErrors];
 
 export type QuickStatsApiStatsQuickGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type ProxyApiTangentInstancesInstanceIdOpencodeApiPathDeleteData = {
+    body?: never;
+    path: {
+        /**
+         * Instance Id
+         */
+        instance_id: string;
+        /**
+         * Path
+         */
+        path: string;
+    };
+    query?: never;
+    url: '/api/tangent/instances/{instance_id}/opencode/api/{path}';
+};
+
+export type ProxyApiTangentInstancesInstanceIdOpencodeApiPathDeleteErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ProxyApiTangentInstancesInstanceIdOpencodeApiPathDeleteError = ProxyApiTangentInstancesInstanceIdOpencodeApiPathDeleteErrors[keyof ProxyApiTangentInstancesInstanceIdOpencodeApiPathDeleteErrors];
+
+export type ProxyApiTangentInstancesInstanceIdOpencodeApiPathDeleteResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type ProxyApiTangentInstancesInstanceIdOpencodeApiPathGetData = {
+    body?: never;
+    path: {
+        /**
+         * Instance Id
+         */
+        instance_id: string;
+        /**
+         * Path
+         */
+        path: string;
+    };
+    query?: never;
+    url: '/api/tangent/instances/{instance_id}/opencode/api/{path}';
+};
+
+export type ProxyApiTangentInstancesInstanceIdOpencodeApiPathGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ProxyApiTangentInstancesInstanceIdOpencodeApiPathGetError = ProxyApiTangentInstancesInstanceIdOpencodeApiPathGetErrors[keyof ProxyApiTangentInstancesInstanceIdOpencodeApiPathGetErrors];
+
+export type ProxyApiTangentInstancesInstanceIdOpencodeApiPathGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type ProxyApiTangentInstancesInstanceIdOpencodeApiPathPatchData = {
+    body?: never;
+    path: {
+        /**
+         * Instance Id
+         */
+        instance_id: string;
+        /**
+         * Path
+         */
+        path: string;
+    };
+    query?: never;
+    url: '/api/tangent/instances/{instance_id}/opencode/api/{path}';
+};
+
+export type ProxyApiTangentInstancesInstanceIdOpencodeApiPathPatchErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ProxyApiTangentInstancesInstanceIdOpencodeApiPathPatchError = ProxyApiTangentInstancesInstanceIdOpencodeApiPathPatchErrors[keyof ProxyApiTangentInstancesInstanceIdOpencodeApiPathPatchErrors];
+
+export type ProxyApiTangentInstancesInstanceIdOpencodeApiPathPatchResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type ProxyApiTangentInstancesInstanceIdOpencodeApiPathPostData = {
+    body?: never;
+    path: {
+        /**
+         * Instance Id
+         */
+        instance_id: string;
+        /**
+         * Path
+         */
+        path: string;
+    };
+    query?: never;
+    url: '/api/tangent/instances/{instance_id}/opencode/api/{path}';
+};
+
+export type ProxyApiTangentInstancesInstanceIdOpencodeApiPathPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ProxyApiTangentInstancesInstanceIdOpencodeApiPathPostError = ProxyApiTangentInstancesInstanceIdOpencodeApiPathPostErrors[keyof ProxyApiTangentInstancesInstanceIdOpencodeApiPathPostErrors];
+
+export type ProxyApiTangentInstancesInstanceIdOpencodeApiPathPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type ProxyApiTangentInstancesInstanceIdOpencodeApiPathPutData = {
+    body?: never;
+    path: {
+        /**
+         * Instance Id
+         */
+        instance_id: string;
+        /**
+         * Path
+         */
+        path: string;
+    };
+    query?: never;
+    url: '/api/tangent/instances/{instance_id}/opencode/api/{path}';
+};
+
+export type ProxyApiTangentInstancesInstanceIdOpencodeApiPathPutErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ProxyApiTangentInstancesInstanceIdOpencodeApiPathPutError = ProxyApiTangentInstancesInstanceIdOpencodeApiPathPutErrors[keyof ProxyApiTangentInstancesInstanceIdOpencodeApiPathPutErrors];
+
+export type ProxyApiTangentInstancesInstanceIdOpencodeApiPathPutResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type ListInstancesApiTangentInstancesGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/tangent/instances';
+};
+
+export type ListInstancesApiTangentInstancesGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: ListInstancesResponse;
+};
+
+export type ListInstancesApiTangentInstancesGetResponse = ListInstancesApiTangentInstancesGetResponses[keyof ListInstancesApiTangentInstancesGetResponses];
+
+export type CreateInstanceApiTangentInstancesPostData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/tangent/instances';
+};
+
+export type CreateInstanceApiTangentInstancesPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: TangentInstance;
+};
+
+export type CreateInstanceApiTangentInstancesPostResponse = CreateInstanceApiTangentInstancesPostResponses[keyof CreateInstanceApiTangentInstancesPostResponses];
+
+export type RedirectToDefaultInstanceApiTangentGoGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/tangent/go';
+};
+
+export type RedirectToDefaultInstanceApiTangentGoGetResponses = {
     /**
      * Successful Response
      */

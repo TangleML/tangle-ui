@@ -163,6 +163,11 @@ describe("<PipelineRun/>", () => {
   };
 
   const mockExecutionState: GetGraphExecutionStateResponse = {
+    child_execution_status_summary: {
+      total_executions: 2,
+      ended_executions: 1,
+      has_ended: false,
+    },
     child_execution_status_stats: {
       "execution-1": { SUCCEEDED: 1 },
       "execution-2": { RUNNING: 1 },
