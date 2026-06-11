@@ -1,6 +1,19 @@
 import { action, computed, makeObservable, observable } from "mobx";
 
+import type { AgentContext } from "@/agent/types";
+
 import { AgentThread } from "./agentThread";
+
+/**
+ * Config the page supplies so the store can build page-specific threads:
+ * `createWorker` spawns the Editor vs Run View worker, and `getContext`
+ * is resolved freshly on every {@link AiChatStore.newThread} call so a
+ * thread created after navigation captures the current run context.
+ */
+export interface AiChatStoreConfig {
+  createWorker: () => Worker;
+  getContext: () => AgentContext;
+}
 
 /**
  * Owns the collection of {@link AgentThread}s for one AI chat provider.
@@ -14,7 +27,7 @@ export class AiChatStore {
   @observable.shallow accessor threads: AgentThread[] = [];
   @observable accessor activeThreadId: string | null = null;
 
-  constructor() {
+  constructor(private readonly config: AiChatStoreConfig) {
     makeObservable(this);
     this.newThread();
   }
@@ -40,7 +53,10 @@ export class AiChatStore {
       this.threads = this.threads.filter((t) => t !== previous);
     }
 
-    const thread = new AgentThread();
+    const thread = new AgentThread({
+      createWorker: this.config.createWorker,
+      context: this.config.getContext(),
+    });
     this.threads = [...this.threads, thread];
     this.activeThreadId = thread.threadId;
     return thread;

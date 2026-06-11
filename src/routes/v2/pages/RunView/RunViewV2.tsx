@@ -48,6 +48,7 @@ import { useRunViewSelectionSync } from "./hooks/useRunViewSelectionSync";
 import { useRunViewSpecLifecycle } from "./hooks/useRunViewSpecLifecycle";
 import { useRunViewWindows } from "./hooks/useRunViewWindows";
 import { runViewRegistry } from "./nodes";
+import { createRunViewAgentWorker } from "./toolBridge/runViewAgentWorker";
 
 function deserializeRunSpec(data: unknown): ComponentSpec {
   const generator = new IncrementingIdGenerator();
@@ -205,7 +206,10 @@ export function RunViewV2() {
   return (
     <div className="h-full w-full flex flex-col bg-slate-100 select-none">
       <SharedStoreProvider>
-        <AiChatStoreProvider>
+        <AiChatStoreProvider
+          createWorker={createRunViewAgentWorker}
+          context={{ mode: "runView", runId: id, subgraphExecutionId }}
+        >
           <ReactFlowProvider>
             <ContextPanelProvider /** TODO: remove ContextPanelProvider */>
               <ExecutionDataProvider

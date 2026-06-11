@@ -29,6 +29,7 @@ import { WindowContainer } from "@/routes/v2/shared/windows/WindowContainer";
 import { useWindowPersistence } from "@/routes/v2/shared/windows/windowPersistence";
 import type { PipelineRef } from "@/services/pipelineStorage/types";
 
+import { createEditorAgentWorker } from "./components/AiChat/editorAgentWorker";
 import { useDebugPanelWindow } from "./components/DebugPanel";
 import { DriverPermissionGate } from "./components/DriverPermissionGate";
 import { EditorMenuBar } from "./components/EditorMenuBar/EditorMenuBar";
@@ -178,7 +179,10 @@ export function EditorV2() {
     <div className="h-full w-full flex flex-col bg-slate-100 select-none">
       <SharedStoreProvider>
         <EditorSessionProvider>
-          <AiChatStoreProvider>
+          <AiChatStoreProvider
+            createWorker={createEditorAgentWorker}
+            context={{ mode: "editor" }}
+          >
             <DialogProvider>
               <EditorV2Content pipelineRef={pipelineRef} />
             </DialogProvider>
