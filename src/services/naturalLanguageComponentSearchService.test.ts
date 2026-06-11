@@ -247,6 +247,22 @@ describe("rerankComponentsByNaturalLanguage", () => {
     expect(body.max_output_tokens).toBeDefined();
     expect(body.max_tokens).toBeUndefined();
     expect(body.max_completion_tokens).toBeUndefined();
+    // Non-reasoning model: temperature pinned for deterministic ordering.
+    expect(body.temperature).toBe(0);
+  });
+
+  it("omits temperature for reasoning models that reject it", async () => {
+    vi.mocked(global.fetch).mockResolvedValue(
+      mockResponsesResponse({ matches: [] }),
+    );
+
+    await rerankComponentsByNaturalLanguage(
+      "train",
+      [{ id: "a", name: "a", description: "" }],
+      { ...VALID_OPTIONS, model: "gpt-5-mini" },
+    );
+
+    const body = parseFetchBody(vi.mocked(global.fetch).mock.calls[0]);
     expect(body.temperature).toBeUndefined();
   });
 
@@ -265,6 +281,8 @@ describe("rerankComponentsByNaturalLanguage", () => {
     const body = parseFetchBody(call);
     expect(body.model).toBeUndefined();
     expect(body.max_output_tokens).toBeDefined();
+    // Blank model: proxy owns selection, so we send no temperature.
+    expect(body.temperature).toBeUndefined();
   });
 });
 

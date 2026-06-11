@@ -61,9 +61,16 @@ const argumentValueSchema = z.union([
     }),
   }),
   z.object({
-    dynamicData: z.object({
-      secret: z.object({ name: z.string() }),
-    }),
+    // `DynamicDataValue` is `SecretArgument | SystemDataArgument`. The secret
+    // shape is spelled out so the model has a concrete target; system sources
+    // use arbitrary string keys (e.g. `{ "system/multi_node/node_index": {} }`)
+    // and go through the catchall object. `z.record` is intentionally avoided
+    // here for the same reason as `implementation` below — it emits
+    // `propertyNames`, which OpenAI strict mode rejects at tool registration.
+    dynamicData: z.union([
+      z.object({ secret: z.object({ name: z.string() }) }),
+      arbitraryObjectSchema,
+    ]),
   }),
 ]);
 
@@ -316,12 +323,12 @@ export function createCsomTools(bridge: ToolBridgeApi) {
   const setTaskArgument = tool({
     name: "set_task_argument",
     description:
-      "Set a value for a task input. Removes any existing connection to that port. Accepts a literal string or a graph-input, task-output, or secret reference object.",
+      "Set a value for a task input. Removes any existing connection to that port. Accepts a literal string or a graph-input, task-output, or dynamic-data (secret or system) reference object.",
     parameters: z.object({
       taskEntityId: z.string().describe("$id of the task"),
       inputName: z.string().describe("Name of the input port"),
       value: argumentValueSchema.describe(
-        "Literal string or a graph-input, task-output, or secret reference object",
+        "Literal string or a graph-input, task-output, or dynamic-data (secret or system) reference object",
       ),
     }),
     execute: async ({ taskEntityId, inputName, value }) =>

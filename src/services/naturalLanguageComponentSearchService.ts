@@ -67,6 +67,16 @@ interface LlmOptions {
   apiKey: string;
 }
 
+/**
+ * gpt-5 / o-series reasoning models reject an explicit `temperature`. For every
+ * other configured model we pin `temperature: 0` so the reranker's ordering is
+ * deterministic run-to-run; without it the provider default (often 1.0) makes
+ * the same query reorder differently between runs.
+ */
+function isReasoningModel(model: string): boolean {
+  return /^(openai:)?(gpt-5|o\d)/i.test(model);
+}
+
 /** Clamp score to [0, 1] and reject NaN so the UI/sort never sees garbage. */
 function normalizeScore(value: number): number {
   if (Number.isNaN(value)) return 0;
@@ -200,6 +210,10 @@ async function callLlmResponse(
     },
     body: JSON.stringify({
       ...(model ? { model } : {}),
+      // Deterministic ordering for non-reasoning models; omitted when the proxy
+      // owns model selection (blank model) or for reasoning models that reject
+      // an explicit temperature.
+      ...(model && !isReasoningModel(model) ? { temperature: 0 } : {}),
       max_output_tokens: config.maxTokens,
       instructions: config.systemPrompt,
       input: config.userPrompt,

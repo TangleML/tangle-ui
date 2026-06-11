@@ -69,6 +69,11 @@ export function createDispatcherRuntime(
       const agent = await buildAgent(params.session);
       const result = await run(agent, params.message, {
         session: sessionMemory,
+        // `reasoningItemIdPolicy: "omit"` is the primary fix: it stops the SDK
+        // from sending reasoning-item ids on outgoing turns. The callback is
+        // belt-and-suspenders — it scrubs ids the SDK may have already
+        // persisted into replayed session history. Keep both until the SDK
+        // guarantees history is sanitized on read.
         reasoningItemIdPolicy: "omit",
         sessionInputCallback: (history, newItems) => [
           ...stripReasoningItemIds(history),

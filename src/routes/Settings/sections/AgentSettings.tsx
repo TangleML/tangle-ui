@@ -75,7 +75,12 @@ export function AgentSettings() {
       });
       if (!isCurrentTest()) return;
       if (!response.ok) {
-        const detail = await response.text().catch(() => "");
+        // Some misconfigured proxies echo request headers back in error bodies.
+        // Redact any bearer token before surfacing the detail in a toast.
+        const detail = (await response.text().catch(() => "")).replace(
+          /Bearer\s+[\w.\-~+/]+=*/gi,
+          "Bearer ***",
+        );
         if (!isCurrentTest()) return;
         notify(
           `AI test failed: ${response.status} ${response.statusText}${detail ? ` — ${detail.slice(0, 200)}` : ""}`,
@@ -156,7 +161,7 @@ export function AgentSettings() {
             />
             <Text id="agent-settings-api-base-hint" size="xs" tone="subdued">
               Any OpenAI-compatible base URL, such as https://api.openai.com/v1.
-              Do not include /chat/completions or /responses.
+              Do not include endpoint paths like /responses.
             </Text>
           </BlockStack>
 

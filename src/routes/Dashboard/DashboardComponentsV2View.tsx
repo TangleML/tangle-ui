@@ -420,6 +420,22 @@ const ComponentDescriptionPanel = ({
  * `standard > published > registered > user` so the most canonical label
  * sticks when the same component appears in multiple places.
  */
+/**
+ * Pick up to `limit` entries spread evenly across `entries`, preserving order.
+ * Used to build a representative browse pool for AI search when literal
+ * matching returns nothing — taking the first N would bias toward names that
+ * sort early in a library larger than the limit.
+ */
+function sampleEvenly<T>(entries: T[], limit: number): T[] {
+  if (entries.length <= limit) return entries;
+  const step = entries.length / limit;
+  const sampled: T[] = [];
+  for (let i = 0; i < limit; i++) {
+    sampled.push(entries[Math.floor(i * step)]);
+  }
+  return sampled;
+}
+
 function collectAllSourcedReferences({
   standardLibrary,
   publishedRefs,
@@ -690,23 +706,31 @@ export const DashboardComponentsV2View = () => {
 
   const trimmedQuery = query.trim();
 
-  const lexicalMatches: LexicalMatch[] = lexicalSearch(filteredIndex, query, {
-    limit: LEXICAL_RESULT_LIMIT,
-  });
+  // One lexical pass at the wider AI-candidate limit; the display list is the
+  // top slice of that same scored result, so we never score and sort the index
+  // twice per render. `lexicalSearch` already orders by score desc then name
+  // asc, so slicing is equivalent to a separate narrower search.
+  const broadLexicalMatches: LexicalMatch[] =
+    trimmedQuery.length === 0
+      ? []
+      : lexicalSearch(filteredIndex, query, { limit: AI_CANDIDATE_LIMIT });
+
+  const lexicalMatches: LexicalMatch[] = broadLexicalMatches.slice(
+    0,
+    LEXICAL_RESULT_LIMIT,
+  );
+
   const aiCandidateMatches: LexicalMatch[] = (() => {
     if (trimmedQuery.length === 0) return [];
-
-    const broadLexicalMatches = lexicalSearch(filteredIndex, query, {
-      limit: AI_CANDIDATE_LIMIT,
-    });
     if (broadLexicalMatches.length > 0) return broadLexicalMatches;
 
     // If literal matching found nothing, AI search can still judge a bounded
-    // browse pool. This keeps natural-language queries useful for small and
-    // medium libraries without sending the entire library to the model.
-    return sortedIndex
-      .slice(0, AI_CANDIDATE_LIMIT)
-      .map(indexEntryToLexicalMatch);
+    // browse pool. Sample evenly across the (alphabetically sorted) library so
+    // the model sees a representative spread instead of only names that sort
+    // early — matters for libraries larger than AI_CANDIDATE_LIMIT.
+    return sampleEvenly(sortedIndex, AI_CANDIDATE_LIMIT).map(
+      indexEntryToLexicalMatch,
+    );
   })();
 
   const {
