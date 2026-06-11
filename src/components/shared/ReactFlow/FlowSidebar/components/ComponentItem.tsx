@@ -27,6 +27,8 @@ interface ComponentMarkupProps {
   component: ComponentReference;
   isLoading?: boolean;
   error?: string | null;
+  className?: string;
+  rerankScore?: number;
 }
 
 type ComponentIconProps = {
@@ -72,10 +74,19 @@ const ComponentIcon = withSuspenseWrapper(
     ),
 );
 
+function rerankScoreClass(score: number): string {
+  if (score >= 0.9) return "text-emerald-700 bg-emerald-50 border-emerald-200";
+  if (score >= 0.75)
+    return "text-emerald-600 bg-emerald-50/70 border-emerald-100";
+  return "text-emerald-500 bg-white border-emerald-100";
+}
+
 const ComponentMarkup = ({
   component,
   isLoading,
   error,
+  className,
+  rerankScore,
 }: ComponentMarkupProps) => {
   const isRemoteComponentLibrarySearchEnabled = useFlagValue(
     "remote-component-library-search",
@@ -173,6 +184,7 @@ const ComponentMarkup = ({
         error
           ? "cursor-not-allowed opacity-60"
           : "cursor-grab hover:bg-gray-100 active:bg-gray-200",
+        className,
       )}
       draggable={!error && !isLoading}
       onDragStart={onDragStart}
@@ -225,7 +237,21 @@ const ComponentMarkup = ({
               </div>
             </InlineStack>
 
-            <InlineStack align="end" wrap="nowrap">
+            <InlineStack align="end" blockAlign="center" gap="1" wrap="nowrap">
+              {rerankScore !== undefined && (
+                <Text
+                  size="xs"
+                  weight="semibold"
+                  className={cn(
+                    "shrink-0 rounded-full border px-1.5 py-0.5 leading-none",
+                    rerankScoreClass(rerankScore),
+                  )}
+                  title={`${Math.round(rerankScore * 100)}% likely to match your search`}
+                  aria-label={`${Math.round(rerankScore * 100)} percent likely to match your search`}
+                >
+                  {Math.round(rerankScore * 100)}%
+                </Text>
+              )}
               <ComponentFavoriteToggle component={component} />
 
               <ComponentHoverPopover ref={popoverRef} component={component}>

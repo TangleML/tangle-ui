@@ -187,6 +187,35 @@ describe("rerankComponentsByNaturalLanguage", () => {
     expect(result.matches.map((m) => m.id)).toEqual(["a"]);
   });
 
+  it("recovers matches from malformed JSON regardless of field order", async () => {
+    // `output_text` is not valid JSON, so the service falls back to partial
+    // parsing. Fields are deliberately ordered score/reason/id to prove the
+    // recovery does not depend on a fixed id/score/reason order.
+    vi.mocked(global.fetch).mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          output_text:
+            'here are the matches: {"score": 0.9, "reason": "strong fit", "id": "a"} {"reason": "weaker", "id": "b", "score": 0.4} (truncated',
+        }),
+        { status: 200, statusText: "OK" },
+      ),
+    );
+
+    const result = await rerankComponentsByNaturalLanguage(
+      "train",
+      [
+        { id: "a", name: "a", description: "" },
+        { id: "b", name: "b", description: "" },
+      ],
+      VALID_OPTIONS,
+    );
+
+    expect(result.matches).toEqual([
+      { id: "a", score: 0.9, reason: "strong fit" },
+      { id: "b", score: 0.4, reason: "weaker" },
+    ]);
+  });
+
   it("clamps out-of-range score values into [0, 1]", async () => {
     // NaN scores are intentionally not tested here: JSON.stringify({score: NaN})
     // serializes to `null`, which never reaches `normalizeScore` because
