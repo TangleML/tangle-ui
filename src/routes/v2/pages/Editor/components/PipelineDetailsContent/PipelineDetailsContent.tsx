@@ -10,6 +10,7 @@ import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { AnnotationsBlock } from "@/routes/v2/pages/Editor/components/AnnotationsBlock/AnnotationsBlock";
 import { ValidationSummary } from "@/routes/v2/pages/Editor/components/ValidationSummary";
 import { usePipelineActions } from "@/routes/v2/pages/Editor/store/actions/usePipelineActions";
+import { PipelineDetailsCollapsibleSection } from "@/routes/v2/shared/components/PipelineDetailsCollapsibleSection";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import {
@@ -20,7 +21,6 @@ import {
 import { InputsBlock } from "./components/InputsBlock";
 import { MetadataBlock } from "./components/MetadataBlock";
 import { OutputsBlock } from "./components/OutputsBlock";
-import { PipelineDetailsCollapsibleSection } from "./components/PipelineDetailsCollapsibleSection";
 import { PipelineDetailsHeader } from "./components/PipelineDetailsHeader";
 import { PipelineDetailsTextField } from "./components/PipelineDetailsTextField";
 import { TagsBlock } from "./components/TagsBlock";

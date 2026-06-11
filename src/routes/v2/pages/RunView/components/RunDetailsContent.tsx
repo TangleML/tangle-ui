@@ -9,22 +9,22 @@ import { RunNotesEditor } from "@/components/PipelineRun/RunNotesEditor";
 import { ContentBlock } from "@/components/shared/ContextPanel/Blocks/ContentBlock";
 import { KeyValueList } from "@/components/shared/ContextPanel/Blocks/KeyValueList";
 import { TextBlock } from "@/components/shared/ContextPanel/Blocks/TextBlock";
-import { CopyText } from "@/components/shared/CopyText/CopyText";
 import PipelineIO from "@/components/shared/Execution/PipelineIO";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
-import { StatusBar } from "@/components/shared/Status";
 import { TagList } from "@/components/shared/Tags/TagList";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
-import { BlockStack, InlineStack } from "@/components/ui/layout";
-import { Paragraph, Text } from "@/components/ui/typography";
+import { BlockStack } from "@/components/ui/layout";
+import { Separator } from "@/components/ui/separator";
+import { Paragraph } from "@/components/ui/typography";
 import { useUserDetails } from "@/hooks/useUserDetails";
 import type { ComponentSpec } from "@/models/componentSpec";
 import { useBackend } from "@/providers/BackendProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
 import { useStartOptimizationChat } from "@/routes/v2/pages/RunView/hooks/useStartOptimizationChat";
+import { PipelineDetailsCollapsibleSection } from "@/routes/v2/shared/components/PipelineDetailsCollapsibleSection";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import {
   PIPELINE_NOTES_ANNOTATION,
@@ -36,6 +36,8 @@ import {
   getExecutionStatusLabel,
   getOverallExecutionStatusFromStats,
 } from "@/utils/executionStatus";
+
+import { RunDetailsHeader } from "./RunDetailsHeader";
 
 export const RunDetailsContent = observer(function RunDetailsContent() {
   const { configured } = useBackend();
@@ -109,7 +111,6 @@ function RunDetailsContentLoaded({
 
   const specAnnotations = spec.annotations;
   const pipelineNotes = specAnnotations.get(PIPELINE_NOTES_ANNOTATION);
-
   const tags = specAnnotations.get(PIPELINE_TAGS_ANNOTATION);
 
   const displayedAnnotations = specAnnotations
@@ -117,68 +118,91 @@ function RunDetailsContentLoaded({
     .map((a) => ({ label: a.key, value: String(a.value) }));
 
   return (
-    <BlockStack gap="6" className="p-2 h-full">
-      <CopyText
-        className="text-lg font-semibold"
-        copyTrackingAction="v2.run_view.context_panel.run_details_pipeline_title_copy"
-      >
-        {spec.name ?? "Unnamed Pipeline"}
-      </CopyText>
-
-      <OptimizationButton />
-
-      {metadata && <RunInfoSection metadata={metadata} />}
-
-      {spec.description && (
-        <TextBlock title="Description" text={spec.description} />
-      )}
-
-      <ContentBlock title="Status">
-        <InlineStack gap="2" blockAlign="center" className="mb-1">
-          <Text size="sm" weight="semibold">
-            {statusLabel}
-          </Text>
-        </InlineStack>
-        <StatusBar executionStatusStats={executionStatusStats} />
-      </ContentBlock>
-
-      {displayedAnnotations.length > 0 && (
-        <KeyValueList title="Annotations" items={displayedAnnotations} />
-      )}
-
-      <PipelineIO taskArguments={details.task_spec.arguments} />
-
-      <NotesSection
-        pipelineNotes={pipelineNotes}
-        metadata={metadata}
-        currentUserId={currentUserId}
+    <BlockStack className="h-full min-h-0 w-full">
+      <RunDetailsHeader
+        pipelineName={spec.name ?? "Unnamed Pipeline"}
+        executionStatusStats={executionStatusStats}
+        statusLabel={statusLabel}
       />
 
-      <ContentBlock title="Tags">
-        <TagList tags={tags} />
-      </ContentBlock>
+      <Separator />
+
+      <BlockStack className="min-h-0 flex-1 overflow-y-auto">
+        <PipelineDetailsCollapsibleSection
+          title="Run Info"
+          icon="Info"
+          openDefault
+        >
+          {metadata ? (
+            <RunInfoSection metadata={metadata} />
+          ) : (
+            <Paragraph tone="subdued" size="xs">
+              No run information available.
+            </Paragraph>
+          )}
+        </PipelineDetailsCollapsibleSection>
+
+        <PipelineDetailsCollapsibleSection
+          title="Details"
+          icon="FileText"
+          openDefault={false}
+        >
+          <BlockStack gap="4">
+            <DetailsSection
+              description={spec.description}
+              tags={tags}
+              annotations={displayedAnnotations}
+            />
+            <NotesSection
+              pipelineNotes={pipelineNotes}
+              metadata={metadata}
+              currentUserId={currentUserId}
+            />
+          </BlockStack>
+        </PipelineDetailsCollapsibleSection>
+
+        <PipelineDetailsCollapsibleSection
+          title="Arguments"
+          icon="ArrowDownToLine"
+          openDefault={false}
+        >
+          <PipelineIO
+            section="inputs"
+            taskArguments={details.task_spec.arguments}
+          />
+        </PipelineDetailsCollapsibleSection>
+
+        <PipelineDetailsCollapsibleSection
+          title="Outputs"
+          icon="ArrowUpFromLine"
+          openDefault={false}
+        >
+          <PipelineIO
+            section="outputs"
+            taskArguments={details.task_spec.arguments}
+          />
+        </PipelineDetailsCollapsibleSection>
+
+        <PipelineDetailsCollapsibleSection
+          title="Optimization"
+          icon="Sparkles"
+          openDefault={true}
+        >
+          <BlockStack gap="2">
+            <Paragraph size="xs" tone="subdued">
+              Metrics and optimizations
+            </Paragraph>
+            <SuggestOptimizationButton />
+          </BlockStack>
+        </PipelineDetailsCollapsibleSection>
+      </BlockStack>
     </BlockStack>
-  );
-}
-
-function OptimizationButton() {
-  const aiEnabled = useFlagValue("ai-assistant");
-  const startOptimizationChat = useStartOptimizationChat();
-
-  if (!aiEnabled) return null;
-
-  return (
-    <Button variant="secondary" onClick={startOptimizationChat}>
-      <Icon name="Sparkles" />
-      Suggest optimization
-    </Button>
   );
 }
 
 function RunInfoSection({ metadata }: { metadata: PipelineRunResponse }) {
   return (
     <KeyValueList
-      title="Run Info"
       items={[
         { label: "Run Id", value: metadata.id },
         { label: "Execution Id", value: metadata.root_execution_id },
@@ -191,6 +215,32 @@ function RunInfoSection({ metadata }: { metadata: PipelineRunResponse }) {
         },
       ]}
     />
+  );
+}
+
+interface DetailsSectionProps {
+  description: string | undefined;
+  tags: string[];
+  annotations: { label: string; value: string }[];
+}
+
+function DetailsSection({
+  description,
+  tags,
+  annotations,
+}: DetailsSectionProps) {
+  return (
+    <BlockStack gap="4">
+      {description && <TextBlock title="Description" text={description} />}
+
+      <ContentBlock title="Tags">
+        <TagList tags={tags} />
+      </ContentBlock>
+
+      {annotations.length > 0 && (
+        <KeyValueList title="Annotations" items={annotations} />
+      )}
+    </BlockStack>
   );
 }
 
@@ -209,21 +259,37 @@ function NotesSection({
     !!currentUserId && metadata?.created_by === currentUserId;
 
   return (
-    <ContentBlock title="Notes">
-      <BlockStack gap="2">
-        <BlockStack>
-          <Paragraph size="xs">Pipeline Notes</Paragraph>
-          <Paragraph size="xs" tone="subdued">
-            {pipelineNotes || "No notes available for this pipeline."}
-          </Paragraph>
-        </BlockStack>
-        {!!metadata?.id && (
-          <BlockStack>
-            <Paragraph size="xs">Run Notes</Paragraph>
-            <RunNotesEditor runId={metadata.id} readOnly={!isRunCreator} />
-          </BlockStack>
-        )}
+    <BlockStack gap="2">
+      <BlockStack>
+        <Paragraph size="xs">Pipeline Notes</Paragraph>
+        <Paragraph size="xs" tone="subdued">
+          {pipelineNotes || "No notes available for this pipeline."}
+        </Paragraph>
       </BlockStack>
-    </ContentBlock>
+      {!!metadata?.id && (
+        <BlockStack>
+          <Paragraph size="xs">Run Notes</Paragraph>
+          <RunNotesEditor runId={metadata.id} readOnly={!isRunCreator} />
+        </BlockStack>
+      )}
+    </BlockStack>
+  );
+}
+
+function SuggestOptimizationButton() {
+  const aiEnabled = useFlagValue("ai-assistant");
+  const startOptimizationChat = useStartOptimizationChat();
+
+  if (!aiEnabled) return null;
+
+  return (
+    <Button
+      variant="secondary"
+      onClick={startOptimizationChat}
+      className="w-full"
+    >
+      <Icon name="Sparkles" />
+      Suggest optimization
+    </Button>
   );
 }
