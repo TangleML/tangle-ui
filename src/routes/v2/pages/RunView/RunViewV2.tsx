@@ -9,6 +9,7 @@ import { useEffect, useRef } from "react";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { RemoteAuthErrorView } from "@/components/shared/RemoteAuthErrorView";
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Paragraph } from "@/components/ui/typography";
 import type { ComponentSpec } from "@/models/componentSpec";
@@ -23,6 +24,7 @@ import {
   ExecutionDataProvider,
   useExecutionData,
 } from "@/providers/ExecutionDataProvider";
+import { AiChatStoreProvider } from "@/routes/v2/shared/components/AiChat/AiChatStoreContext";
 import { useDockAreaAccordion } from "@/routes/v2/shared/hooks/useDockAreaAccordion";
 import { NodeRegistryProvider } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { SpecProvider } from "@/routes/v2/shared/providers/SpecContext";
@@ -40,6 +42,7 @@ import { RemoteAuthError } from "@/utils/fetchWithErrorHandling";
 
 import { RunViewFlowCanvas } from "./components/RunViewFlowCanvas";
 import { RunViewMenuBar } from "./components/RunViewMenuBar/RunViewMenuBar";
+import { useAiChatWindow } from "./hooks/useAiChatWindow";
 import { useFocusTaskFromUrl } from "./hooks/useFocusTaskFromUrl";
 import { useRunViewSelectionSync } from "./hooks/useRunViewSelectionSync";
 import { useRunViewSpecLifecycle } from "./hooks/useRunViewSpecLifecycle";
@@ -152,6 +155,9 @@ const RunViewLayout = observer(function RunViewLayout({
   useRunViewSelectionSync();
   useFocusTaskFromUrl(spec);
 
+  const aiEnabled = useFlagValue("ai-assistant");
+  useAiChatWindow(aiEnabled);
+
   const { navigation } = useSharedStores();
   const activeSpec = navigation.activeSpec;
 
@@ -199,16 +205,18 @@ export function RunViewV2() {
   return (
     <div className="h-full w-full flex flex-col bg-slate-100 select-none">
       <SharedStoreProvider>
-        <ReactFlowProvider>
-          <ContextPanelProvider /** TODO: remove ContextPanelProvider */>
-            <ExecutionDataProvider
-              pipelineRunId={id}
-              subgraphExecutionId={subgraphExecutionId}
-            >
-              <RunViewContent />
-            </ExecutionDataProvider>
-          </ContextPanelProvider>
-        </ReactFlowProvider>
+        <AiChatStoreProvider>
+          <ReactFlowProvider>
+            <ContextPanelProvider /** TODO: remove ContextPanelProvider */>
+              <ExecutionDataProvider
+                pipelineRunId={id}
+                subgraphExecutionId={subgraphExecutionId}
+              >
+                <RunViewContent />
+              </ExecutionDataProvider>
+            </ContextPanelProvider>
+          </ReactFlowProvider>
+        </AiChatStoreProvider>
       </SharedStoreProvider>
     </div>
   );
