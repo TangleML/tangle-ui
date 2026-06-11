@@ -1,12 +1,11 @@
 import { useState } from "react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Paragraph, Text } from "@/components/ui/typography";
 import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
+import { OpportunityScoreRing } from "@/routes/tangent/components/OpportunityScoreRing";
 import {
   saveScenario,
   type ScenarioEntry,
@@ -35,21 +34,6 @@ interface Scenario {
   summary: string;
   ideas: ScenarioIdeaData[];
 }
-
-const IDEA_TYPE_LABEL: Record<IdeaType, string> = {
-  feature_engineering: "Feature engineering",
-  hyperparameter_optimization: "Hyperparameter optimization",
-  input_data: "Input data",
-  model_architecture: "Model architecture",
-};
-
-type BadgeVariant = "default" | "secondary" | "outline";
-
-const IMPACT_VARIANT: Record<Impact, BadgeVariant> = {
-  high: "default",
-  medium: "secondary",
-  low: "outline",
-};
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -95,56 +79,25 @@ function parseScenario(raw: string): Scenario | null {
   return { score, rationale, summary, ideas: parsedIdeas };
 }
 
-function scoreVariant(score: number): BadgeVariant {
-  if (score >= 70) return "default";
-  if (score >= 40) return "secondary";
-  return "outline";
-}
-
 interface IdeaCardProps {
   idea: ScenarioIdeaData;
   checked: boolean;
   onCheckedChange: (checked: boolean) => void;
 }
 
-function IdeaCard({ idea, checked, onCheckedChange }: IdeaCardProps) {
+function CondensedIdeaCard({ idea, checked, onCheckedChange }: IdeaCardProps) {
   return (
-    <Card className="gap-3 py-3">
-      <CardHeader className="px-4">
-        <InlineStack gap="2" blockAlign="start" wrap="nowrap">
-          <Checkbox
-            checked={checked}
-            onCheckedChange={(value) => onCheckedChange(value === true)}
-            aria-label={`Include idea ${idea.title}`}
-            className="mt-0.5"
-          />
-          <BlockStack gap="1">
-            <CardTitle>
-              <Text as="span" size="sm" weight="semibold">
-                {idea.title}
-              </Text>
-            </CardTitle>
-            <InlineStack gap="1">
-              <Badge variant="outline" size="sm" shape="rounded">
-                {IDEA_TYPE_LABEL[idea.ideaType]}
-              </Badge>
-              <Badge
-                variant={IMPACT_VARIANT[idea.impact]}
-                size="sm"
-                shape="rounded"
-              >
-                {idea.impact} impact
-              </Badge>
-            </InlineStack>
-          </BlockStack>
-        </InlineStack>
-      </CardHeader>
-      <CardContent className="px-4">
-        <Text as="p" size="sm" tone="subdued">
-          {idea.evidence}
-        </Text>
-      </CardContent>
-    </Card>
+    <InlineStack gap="2" blockAlign="start" wrap="nowrap">
+      <Checkbox
+        checked={checked}
+        onCheckedChange={(value) => onCheckedChange(value === true)}
+        aria-label={`Include idea ${idea.title}`}
+        className="mt-0.5"
+      />
+      <Text as="span" size="sm" weight="semibold">
+        {idea.title}
+      </Text>
+    </InlineStack>
   );
 }
 
@@ -212,22 +165,26 @@ export function TangentScenario({ raw }: { raw: string }) {
 
   return (
     <BlockStack gap="3">
-      <InlineStack gap="2" blockAlign="center">
-        <Badge variant={scoreVariant(scenario.score)} shape="rounded">
-          {scenario.score}/100
-        </Badge>
+      <InlineStack
+        gap="2"
+        blockAlign="center"
+        align="space-between"
+        className="w-full"
+      >
         <Text as="span" size="sm" weight="semibold">
           Optimization potential
         </Text>
+        <OpportunityScoreRing
+          score={scenario.score}
+          size={32}
+          labelTextSize="xs"
+          strokeWidth={3}
+        />
       </InlineStack>
 
       <Text as="p" size="sm" tone="subdued">
         {scenario.rationale}
       </Text>
-
-      <Paragraph size="sm" className="whitespace-pre-line leading-relaxed">
-        {scenario.summary}
-      </Paragraph>
 
       {scenario.ideas.length > 0 && (
         <BlockStack gap="2">
@@ -235,7 +192,7 @@ export function TangentScenario({ raw }: { raw: string }) {
             Ideas
           </Text>
           {scenario.ideas.map((idea, index) => (
-            <IdeaCard
+            <CondensedIdeaCard
               key={`${idea.title}-${index}`}
               idea={idea}
               checked={selected.has(index)}
@@ -247,6 +204,8 @@ export function TangentScenario({ raw }: { raw: string }) {
 
       <Button
         size="sm"
+        className="w-full"
+        variant="outline"
         onClick={handleUseScenario}
         disabled={!canUseScenario}
         title={runId ? undefined : "Open a run to plan an experiment scenario"}

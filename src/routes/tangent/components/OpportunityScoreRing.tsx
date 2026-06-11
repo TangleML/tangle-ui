@@ -3,7 +3,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Text } from "@/components/ui/typography";
+import { Text, type TextProps } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import {
   getScoreColorClass,
@@ -14,6 +14,8 @@ interface OpportunityScoreRingProps {
   score: number | null;
   /** Pixel diameter of the ring. */
   size?: number;
+  strokeWidth?: number;
+  labelTextSize?: TextProps["size"];
   /** Show the "Opportunity" label beneath the ring. */
   showLabel?: boolean;
 }
@@ -23,9 +25,11 @@ const STROKE_WIDTH = 6;
 export function OpportunityScoreRing({
   score,
   size = 64,
+  strokeWidth = STROKE_WIDTH,
+  labelTextSize = "md",
   showLabel = false,
 }: OpportunityScoreRingProps) {
-  const radius = (size - STROKE_WIDTH) / 2;
+  const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const progress = score === null ? 0 : Math.max(0, Math.min(100, score)) / 100;
   const dashOffset = circumference * (1 - progress);
@@ -73,7 +77,7 @@ export function OpportunityScoreRing({
               )}
             </svg>
             <Text
-              size="md"
+              size={labelTextSize}
               weight="bold"
               className={cn("absolute", getScoreColorClass(score))}
             >
