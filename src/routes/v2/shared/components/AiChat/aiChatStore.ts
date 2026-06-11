@@ -1,102 +1,56 @@
-import { action, makeObservable, observable, runInAction } from "mobx";
+import { action, computed, makeObservable, observable } from "mobx";
 
-import type { RecentPipelineRun } from "@/agent/session";
-import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
-import type { AiProviderConfig } from "@/types/aiProvider";
-import { getErrorMessage } from "@/utils/string";
-
-import { getAgentClient } from "./agentClient";
-import type { ChatMessage } from "./types";
-
-function generateMessageId(): string {
-  return `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-}
-
-interface SendMessageOptions {
-  onError: (message: string) => void;
-  bridge: ToolBridgeApi;
-  aiConfig: AiProviderConfig;
-  recentRuns?: RecentPipelineRun[];
-}
+import { AgentThread } from "./agentThread";
 
 /**
- * Stores AI chat state (messages, thread, pending status) outside the
- * React component tree so it survives window minimize / hide / unmount.
+ * Owns the collection of {@link AgentThread}s for one AI chat provider.
+ *
+ * Today only a single thread is effectively active: starting a new
+ * session (or navigating to a different pipeline / run) disposes the
+ * current thread and creates a fresh one in one go. The collection shape
+ * leaves room for multiple concurrent threads in the future.
  */
 export class AiChatStore {
-  @observable.shallow accessor messages: ChatMessage[] = [];
-  @observable accessor threadId: string | undefined = undefined;
-  @observable accessor thinkingText: string | null = null;
-  @observable accessor isPending = false;
-
-  private abortController: AbortController | null = null;
+  @observable.shallow accessor threads: AgentThread[] = [];
+  @observable accessor activeThreadId: string | null = null;
 
   constructor() {
     makeObservable(this);
+    this.newThread();
   }
 
-  @action resetState() {
-    this.messages = [];
-    this.threadId = undefined;
-    this.thinkingText = null;
-    this.isPending = false;
-    this.abortController?.abort();
-    this.abortController = null;
+  @computed get activeThread(): AgentThread | null {
+    return this.threads.find((t) => t.threadId === this.activeThreadId) ?? null;
   }
 
-  abort() {
-    this.abortController?.abort();
+  /** Creates a thread if none is active. Idempotent. */
+  @action ensureActiveThread(): AgentThread {
+    return this.activeThread ?? this.newThread();
   }
 
-  async sendMessage(prompt: string, options: SendMessageOptions) {
-    runInAction(() => {
-      this.messages = [
-        ...this.messages,
-        { id: generateMessageId(), role: "user", content: prompt },
-      ];
-      this.isPending = true;
-      this.thinkingText = null;
-    });
-
-    try {
-      const client = getAgentClient();
-      const response = await client.ask(
-        {
-          bridge: options.bridge,
-          onStatus: (status) => {
-            runInAction(() => {
-              this.thinkingText = status.text;
-            });
-          },
-        },
-        {
-          message: prompt,
-          aiConfig: options.aiConfig,
-          ...(this.threadId && { threadId: this.threadId }),
-          ...(options.recentRuns && { recentRuns: options.recentRuns }),
-        },
-      );
-
-      runInAction(() => {
-        this.thinkingText = null;
-        this.threadId = response.threadId;
-        this.messages = [
-          ...this.messages,
-          {
-            id: generateMessageId(),
-            role: "assistant",
-            content: response.answer,
-          },
-        ];
-      });
-    } catch (error) {
-      options.onError(`AI request failed: ${getErrorMessage(error)}`);
-    } finally {
-      this.abortController = null;
-      runInAction(() => {
-        this.isPending = false;
-        this.thinkingText = null;
-      });
+  /**
+   * Disposes the current active thread and spins up a fresh one,
+   * making it active. Used for both navigation resets and the
+   * user-triggered "new chat" action.
+   */
+  @action newThread(): AgentThread {
+    const previous = this.activeThread;
+    if (previous) {
+      previous.dispose();
+      this.threads = this.threads.filter((t) => t !== previous);
     }
+
+    const thread = new AgentThread();
+    this.threads = [...this.threads, thread];
+    this.activeThreadId = thread.threadId;
+    return thread;
+  }
+
+  @action disposeAll() {
+    for (const thread of this.threads) {
+      thread.dispose();
+    }
+    this.threads = [];
+    this.activeThreadId = null;
   }
 }
