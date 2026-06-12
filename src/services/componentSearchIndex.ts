@@ -62,6 +62,16 @@ export interface LexicalMatch {
   matchedFields: MatchField[];
 }
 
+export function indexEntryToLexicalMatch(entry: IndexEntry): LexicalMatch {
+  return {
+    reference: entry.reference,
+    digest: entry.digest,
+    name: entry.name,
+    source: entry.source,
+    matchedFields: [],
+  };
+}
+
 /**
  * Flatten a container implementation's image + command + args into a single
  * lowercase string. Placeholder objects (e.g. `{ inputValue: "Where" }`) are
@@ -176,17 +186,52 @@ export function buildSearchIndex(sourced: SourcedReference[]): IndexEntry[] {
   return entries;
 }
 
+const QUERY_STOP_WORDS = new Set([
+  "a",
+  "an",
+  "and",
+  "are",
+  "component",
+  "for",
+  "from",
+  "i",
+  "in",
+  "into",
+  "me",
+  "my",
+  "of",
+  "on",
+  "please",
+  "that",
+  "the",
+  "to",
+  "want",
+  "with",
+]);
+
 /**
- * Split a query into lowercase alphanumeric tokens. `train_test_split` becomes
- * `["train", "test", "split"]` — users almost always type the parts
- * individually, and exact-string matches are still caught by substring search
- * on the original lowercased text.
+ * Split a query into meaningful lowercase alphanumeric tokens. Natural-language
+ * searches often include filler words ("I want to upload a component to GCS").
+ * Dropping those words prevents common tokens like "a"/"to" from matching
+ * nearly every component and drowning out the useful intent terms.
  */
 function tokenize(text: string): string[] {
-  return text
+  const rawTokens = text
     .toLowerCase()
     .split(/[^a-z0-9]+/)
     .filter((t) => t.length > 0);
+
+  const tokens: string[] = [];
+  const seen = new Set<string>();
+  for (const token of rawTokens) {
+    if (QUERY_STOP_WORDS.has(token)) continue;
+    if (!seen.has(token)) {
+      tokens.push(token);
+      seen.add(token);
+    }
+  }
+
+  return tokens;
 }
 
 /**

@@ -10,6 +10,7 @@ interface JsonSchemaNode {
   type?: string | string[];
   properties?: Record<string, JsonSchemaNode>;
   anyOf?: JsonSchemaNode[];
+  allOf?: JsonSchemaNode[];
   additionalProperties?: boolean | JsonSchemaNode;
   $ref?: string;
 }
@@ -57,6 +58,19 @@ function getImplementationAnyOf(schema: JsonSchemaNode): JsonSchemaNode[] {
   if (!specObjectSchema) return [];
 
   return specObjectSchema.properties?.implementation?.anyOf ?? [];
+}
+
+function hasAllOf(schema: JsonSchemaNode | undefined): boolean {
+  if (!schema) return false;
+  if (schema.allOf) return true;
+  if (schema.anyOf?.some(hasAllOf)) return true;
+  if (schema.properties && Object.values(schema.properties).some(hasAllOf)) {
+    return true;
+  }
+  const additionalProperties = schema.additionalProperties;
+  return (
+    typeof additionalProperties === "object" && hasAllOf(additionalProperties)
+  );
 }
 
 describe("createCsomTools", () => {
@@ -241,6 +255,44 @@ describe("createCsomTools", () => {
       value: "data.csv",
     });
     expect(setTaskArgument).toHaveBeenCalledWith("task_1", "path", "data.csv");
+  });
+
+  it("set_task_argument accepts graph input and task output argument objects", async () => {
+    const setTaskArgument = vi.fn().mockResolvedValue({ success: true });
+    const { allTools } = createCsomTools(makeBridge({ setTaskArgument }));
+
+    await invoke(findTool(allTools, "set_task_argument"), {
+      taskEntityId: "task_1",
+      inputName: "path",
+      value: { graphInput: { inputName: "dataset" } },
+    });
+    await invoke(findTool(allTools, "set_task_argument"), {
+      taskEntityId: "task_2",
+      inputName: "model",
+      value: { taskOutput: { taskId: "train", outputName: "model" } },
+    });
+
+    expect(setTaskArgument).toHaveBeenNthCalledWith(1, "task_1", "path", {
+      graphInput: { inputName: "dataset" },
+    });
+    expect(setTaskArgument).toHaveBeenNthCalledWith(2, "task_2", "model", {
+      taskOutput: { taskId: "train", outputName: "model" },
+    });
+  });
+
+  it("set_task_argument schema avoids recursive allOf shapes rejected by Responses", () => {
+    const { allTools } = createCsomTools(makeBridge());
+    const setTaskArgumentTool = findTool(allTools, "set_task_argument");
+    const valueSchema = (setTaskArgumentTool.parameters as JsonSchemaNode)
+      .properties?.value;
+
+    expect(valueSchema?.anyOf).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: "string" }),
+        expect.objectContaining({ type: "object" }),
+      ]),
+    );
+    expect(hasAllOf(valueSchema)).toBe(false);
   });
 
   it("add_input normalizes null optional fields to undefined", async () => {

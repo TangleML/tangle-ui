@@ -214,6 +214,51 @@ describe("lexicalSearch", () => {
     expect(results[0]?.digest).toBe("b");
   });
 
+  it("ignores natural-language filler words that would otherwise swamp intent", () => {
+    const index = buildSearchIndex([
+      makeSourced({
+        digest: "target",
+        spec: {
+          name: "upload_to_storage",
+          description: "Upload data to cloud storage.",
+          inputs: [{ name: "dataset" }],
+          outputs: [{ name: "uri" }],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+      makeSourced({
+        digest: "noise",
+        spec: {
+          name: "train_component",
+          description: "A component to train a model.",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+    ]);
+
+    const results = lexicalSearch(index, "I want to upload a component to GCS");
+    expect(results.map((result) => result.digest)).toEqual(["target"]);
+  });
+
+  it("does not special-case single-letter non-stop-word tokens", () => {
+    const index = buildSearchIndex([
+      makeSourced({
+        digest: "x",
+        spec: {
+          name: "x_transform",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+    ]);
+
+    const results = lexicalSearch(index, "x");
+    expect(results[0]?.digest).toBe("x");
+  });
+
   it("matches implementation/command text with the lowest weight", () => {
     const index = buildSearchIndex(fixtures);
     const results = lexicalSearch(index, "pandas");

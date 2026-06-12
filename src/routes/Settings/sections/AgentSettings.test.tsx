@@ -30,25 +30,20 @@ describe("AgentSettings", () => {
       target: { value: "   " },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save and test AI" }));
 
     expect(screen.getByRole("alert")).toHaveTextContent(
       "Enter an API base URL before continuing.",
     );
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
     expect(mockNotify).not.toHaveBeenCalledWith(
-      "AI provider settings saved",
+      expect.stringContaining("AI provider settings saved"),
       "success",
     );
   });
 
-  it("validates that the configured model exists when testing connection", async () => {
-    mockFetch.mockResolvedValue(
-      new Response(
-        JSON.stringify({ data: [{ id: "gpt-4o-mini" }, { id: "o3-mini" }] }),
-        { status: 200 },
-      ),
-    );
+  it("saves after testing the Responses API path used by AI generation", async () => {
+    mockFetch.mockResolvedValue(new Response(JSON.stringify({ ok: true })));
     render(<AgentSettings />);
 
     fireEvent.change(screen.getByLabelText("API base URL"), {
@@ -61,20 +56,41 @@ describe("AgentSettings", () => {
       target: { value: "gpt-4o-mini" },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Test connection" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save and test AI" }));
 
     await waitFor(() => {
       expect(mockNotify).toHaveBeenCalledWith(
-        "Connected. Model “gpt-4o-mini” is available.",
+        "AI provider settings saved. Model “gpt-4o-mini” works with the Responses API.",
         "success",
       );
     });
+    expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "")).toEqual({
+      apiBase: "https://api.example.com/v1",
+      apiKey: "sk-test",
+      model: "gpt-4o-mini",
+    });
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      "https://api.example.com/v1/responses",
+      expect.objectContaining({ method: "POST" }),
+    );
+    const init = mockFetch.mock.calls[0]?.[1];
+    if (typeof init !== "object" || init === null || !("body" in init)) {
+      throw new Error("Expected fetch init with a body");
+    }
+    expect(JSON.parse(String(init.body))).toMatchObject({
+      model: "gpt-4o-mini",
+      max_output_tokens: 32,
+      text: { format: { type: "json_object" } },
+    });
+    expect(JSON.stringify(init)).toContain("Bearer sk-test");
   });
 
-  it("reports an error when the configured model is missing from provider models", async () => {
+  it("reports an error and does not save when the Responses API is not supported", async () => {
     mockFetch.mockResolvedValue(
-      new Response(JSON.stringify({ data: [{ id: "gpt-4o-mini" }] }), {
-        status: 200,
+      new Response("Endpoint not supported: /v1/responses", {
+        status: 404,
+        statusText: "Not Found",
       }),
     );
     render(<AgentSettings />);
@@ -82,39 +98,42 @@ describe("AgentSettings", () => {
     fireEvent.change(screen.getByLabelText("API base URL"), {
       target: { value: "https://api.example.com/v1" },
     });
-    fireEvent.change(screen.getByLabelText("API key"), {
-      target: { value: "sk-test" },
-    });
     fireEvent.change(screen.getByLabelText("Model id"), {
-      target: { value: "missing-model" },
+      target: { value: "claude-opus" },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Test connection" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save and test AI" }));
 
     await waitFor(() => {
       expect(mockNotify).toHaveBeenCalledWith(
-        "Connected, but model “missing-model” was not found.",
+        "AI test failed: 404 Not Found — Endpoint not supported: /v1/responses",
         "error",
       );
     });
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
-  it("saves when API key and model are blank", () => {
+  it("saves after a successful provider-default AI test when API key and model are blank", async () => {
+    mockFetch.mockResolvedValue(new Response(JSON.stringify({ ok: true })));
     render(<AgentSettings />);
 
     fireEvent.change(screen.getByLabelText("API base URL"), {
       target: { value: "https://api.example.com/v1" },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save and test AI" }));
 
-    expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "")).toEqual({
-      apiBase: "https://api.example.com/v1",
-      apiKey: "",
-      model: "",
+    await waitFor(() => {
+      expect(
+        JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? ""),
+      ).toEqual({
+        apiBase: "https://api.example.com/v1",
+        apiKey: "",
+        model: "",
+      });
     });
     expect(mockNotify).toHaveBeenCalledWith(
-      "AI provider settings saved",
+      "AI provider settings saved. The provider works with the Responses API.",
       "success",
     );
   });

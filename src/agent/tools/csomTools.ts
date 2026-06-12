@@ -45,6 +45,35 @@ const jsonValueSchema: z.ZodType<JsonValue> = z.lazy(() =>
 
 const arbitraryObjectSchema = z.object({}).catchall(jsonValueSchema);
 
+const argumentValueSchema = z.union([
+  z.string(),
+  z.object({
+    graphInput: z.object({
+      inputName: z.string(),
+      type: z.string().nullable().optional(),
+    }),
+  }),
+  z.object({
+    taskOutput: z.object({
+      taskId: z.string(),
+      outputName: z.string(),
+      type: z.string().nullable().optional(),
+    }),
+  }),
+  z.object({
+    // `DynamicDataValue` is `SecretArgument | SystemDataArgument`. The secret
+    // shape is spelled out so the model has a concrete target; system sources
+    // use arbitrary string keys (e.g. `{ "system/multi_node/node_index": {} }`)
+    // and go through the catchall object. `z.record` is intentionally avoided
+    // here for the same reason as `implementation` below — it emits
+    // `propertyNames`, which OpenAI strict mode rejects at tool registration.
+    dynamicData: z.union([
+      z.object({ secret: z.object({ name: z.string() }) }),
+      arbitraryObjectSchema,
+    ]),
+  }),
+]);
+
 /**
  * Recursively strips `null` values from an object so the bridge contract
  * (which uses `T?` for optional fields) sees missing keys instead of
@@ -294,12 +323,12 @@ export function createCsomTools(bridge: ToolBridgeApi) {
   const setTaskArgument = tool({
     name: "set_task_argument",
     description:
-      "Set a value for a task input. Removes any existing connection to that port. Accepts a literal string/number/boolean or a structured value (e.g. a graph-input or task-output reference object).",
+      "Set a value for a task input. Removes any existing connection to that port. Accepts a literal string or a graph-input, task-output, or dynamic-data (secret or system) reference object.",
     parameters: z.object({
       taskEntityId: z.string().describe("$id of the task"),
       inputName: z.string().describe("Name of the input port"),
-      value: jsonValueSchema.describe(
-        "Literal value (string/number/boolean) or a structured argument value object",
+      value: argumentValueSchema.describe(
+        "Literal string or a graph-input, task-output, or dynamic-data (secret or system) reference object",
       ),
     }),
     execute: async ({ taskEntityId, inputName, value }) =>

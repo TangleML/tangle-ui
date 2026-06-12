@@ -9,6 +9,7 @@ import type { AiProviderConfig } from "@/types/aiProvider";
 import { BASE_URL } from "@/utils/constants";
 
 const AI_ASSISTANT_EMBEDDING_MODEL = "text-embedding-3-small";
+const SIDEKICK_OPENAI_API = "responses";
 
 export function getAgentModelConfig(config: AiProviderConfig): {
   model?: string;
@@ -73,7 +74,7 @@ export class ProxyClient implements OpenAIProvider {
       ...(apiKey ? {} : { fetch: stripAuthorizationFetch }),
     });
     setDefaultOpenAIClient(this.#client);
-    setOpenAIAPI("chat_completions");
+    setOpenAIAPI(SIDEKICK_OPENAI_API);
     setTracingDisabled(true);
     this.#lastConfigKey = configKey;
   }
