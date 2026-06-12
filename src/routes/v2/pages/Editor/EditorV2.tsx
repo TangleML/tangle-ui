@@ -37,6 +37,7 @@ import { EmptyEditorState } from "./components/EmptyEditorState";
 import { FlowCanvas } from "./components/FlowCanvas/FlowCanvas";
 import { useAiChatWindow } from "./hooks/useAiChatWindow";
 import { useComponentLibraryWindow } from "./hooks/useComponentLibraryWindow";
+import { useComponentSearchV2Window } from "./hooks/useComponentSearchV2Window";
 import { useEditorEscapeShortcut } from "./hooks/useEditorEscapeShortcut";
 import { useHistoryWindow } from "./hooks/useHistoryWindow";
 import { useLinkedWindowCleanup } from "./hooks/useLinkedWindowCleanup";
@@ -98,6 +99,9 @@ const PipelineEditor = withSuspenseWrapper(
 
     const aiEnabled = useFlagValue("ai-assistant");
     useAiChatWindow(aiEnabled);
+
+    const componentSearchV2Enabled = useFlagValue("component-search-v2");
+    useComponentSearchV2Window(componentSearchV2Enabled);
 
     const activeSpec = navigation.activeSpec;
 

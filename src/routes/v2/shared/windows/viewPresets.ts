@@ -16,6 +16,7 @@ export const DEFAULT_DOCK_AREAS: PresetDockAreas = {
   left: [
     "tip-of-the-day",
     "runs-and-submission",
+    "component-search-v2",
     "component-library",
     "pipeline-tree",
     "history",
@@ -45,6 +46,7 @@ export const DEFAULT_VIEW_PRESET: ViewPreset = {
   visible: new Set([
     "runs-and-submission",
     "recent-runs",
+    "component-search-v2",
     "component-library",
     "pipeline-details",
     "tip-of-the-day",
@@ -60,6 +62,7 @@ export const VIEW_PRESETS: ViewPreset[] = [
       "All windows visible, including Runs & Submissions and Recent Runs",
     visible: new Set([
       "runs-and-submission",
+      "component-search-v2",
       "component-library",
       "history",
       "pipeline-tree",

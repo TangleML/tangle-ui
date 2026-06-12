@@ -13,6 +13,12 @@ import type { ComponentReference } from "@/utils/componentSpec";
 interface RerankVariables {
   query: string;
   candidates: RerankCandidate[];
+  /**
+   * When true, ask the model to score every candidate (not just the strongest)
+   * so every displayed result can show a relevance percentage. Costs more
+   * tokens; callers opt in per surface.
+   */
+  scoreAllCandidates?: boolean;
 }
 
 /**
@@ -29,12 +35,17 @@ export function useNaturalLanguageComponentRerank() {
   const { config, isConfigured } = useAiProviderSettings();
 
   const mutation = useMutation<RerankResult, Error, RerankVariables>({
-    mutationFn: ({ query, candidates }) =>
-      rerankComponentsByNaturalLanguage(query, candidates, {
-        model: config.model,
-        apiBase: config.apiBase,
-        apiKey: config.apiKey,
-      }),
+    mutationFn: ({ query, candidates, scoreAllCandidates }) =>
+      rerankComponentsByNaturalLanguage(
+        query,
+        candidates,
+        {
+          model: config.model,
+          apiBase: config.apiBase,
+          apiKey: config.apiKey,
+        },
+        { scoreAllCandidates },
+      ),
   });
 
   return { ...mutation, isConfigured };
