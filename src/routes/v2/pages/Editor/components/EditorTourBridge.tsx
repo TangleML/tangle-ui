@@ -10,8 +10,6 @@ import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import type { WindowStoreImpl } from "@/routes/v2/shared/windows/windowStore";
 import { isSecretArgument } from "@/utils/componentSpec";
 
-// PLACEHOLDER FOR EMPTY PR - REMOVE WHEN PR IS POPULATED
-
 type CountInteraction =
   "add-task" | "add-input" | "add-output" | "connect-edge";
 

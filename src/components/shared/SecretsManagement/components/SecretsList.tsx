@@ -6,12 +6,15 @@ import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/typography";
+import { useBackend } from "@/providers/BackendProvider";
+import { useTourMockBackend } from "@/providers/TourProvider/tourMockBackend";
 import { formatRelativeTime } from "@/utils/date";
 
 import { withSuspenseWrapper } from "../../SuspenseWrapper";
 import { fetchSecretsList } from "../secretsStorage";
 import { type Secret, SecretsQueryKeys } from "../types";
 import { RemoveSecretButton } from "./RemoveSecretButton";
+import { SecretsBackendUnavailable } from "./SecretsBackendUnavailable";
 
 interface SecretsListProps {
   onRemoveSuccess?: () => void;
@@ -111,7 +114,16 @@ function SecretsListSkeleton() {
   );
 }
 
-export const SecretsList = withSuspenseWrapper(
+const SecretsListWithSuspense = withSuspenseWrapper(
   SecretsListInternal,
   SecretsListSkeleton,
 );
+
+export function SecretsList(props: SecretsListProps) {
+  const { available } = useBackend();
+  const mockBackend = useTourMockBackend();
+  if (!available && !mockBackend) {
+    return <SecretsBackendUnavailable />;
+  }
+  return <SecretsListWithSuspense {...props} />;
+}

@@ -12,6 +12,7 @@ import useCooldownTimer from "@/hooks/useCooldownTimer";
 import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
 import { useBackend } from "@/providers/BackendProvider";
+import { useTourMockBackend } from "@/providers/TourProvider/tourMockBackend";
 import { APP_ROUTES } from "@/routes/router";
 import { updateRunAnnotation } from "@/services/pipelineRunService";
 import type { PipelineRun } from "@/types/pipelineRun";
@@ -102,6 +103,7 @@ const TangleSubmitter = ({
 }: TangleSubmitterProps) => {
   const { isAuthorized } = useAwaitAuthorization();
   const { backendUrl, configured, available } = useBackend();
+  const mockBackend = useTourMockBackend();
   const { mutate: submit, isPending: isSubmitting } = useSubmitPipeline();
   const isAutoRedirect = useFlagValue("redirect-on-new-pipeline-run");
 
@@ -310,7 +312,7 @@ const TangleSubmitter = ({
             size="icon"
             data-testid="run-with-arguments-button"
             onClick={() => setIsArgumentsDialogOpen(true)}
-            disabled={!available}
+            disabled={!available && !mockBackend}
           >
             <Icon name="Split" className="rotate-90" />
           </TooltipButton>

@@ -82,9 +82,6 @@ export function computeDefaultPopoverPosition(
   const isTallStrip = targetHeight > props.windowHeight * 0.5;
   const margin = 16;
 
-  // Right-anchored full-height strip (e.g. right sidebar): place popover to
-  // its LEFT. Reactour's "left" fallback can swap to "top"/"bottom" for tall
-  // targets, so we return explicit coords.
   if (isTallStrip && props.right >= props.windowWidth - 4) {
     const popoverWidth = props.width || 380;
     return [
@@ -93,19 +90,10 @@ export function computeDefaultPopoverPosition(
     ];
   }
 
-  // Left-anchored full-height strip (e.g. left dock): place popover to its
-  // RIGHT. Same reason — reactour's "right" fallback drops to "top" for tall
-  // targets even when there's plenty of room horizontally. We test the
-  // target's right edge against the viewport midline rather than its left
-  // edge against zero, so a dock that isn't flush to the window edge still
-  // qualifies.
   if (isTallStrip && props.right < props.windowWidth * 0.5) {
     return [props.right + margin, Math.max(props.top + margin, 64)];
   }
 
-  // Tall centered modal/dialog (inset from both side edges): place the popover
-  // to its LEFT, aligned to the dialog's top edge (not vertically centered, as
-  // reactour's "left" would do).
   if (
     isTallStrip &&
     props.left > margin &&

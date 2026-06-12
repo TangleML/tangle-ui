@@ -36,6 +36,7 @@ import { Paragraph } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
 import { useBackend } from "@/providers/BackendProvider";
+import { useTourMockBackend } from "@/providers/TourProvider/tourMockBackend";
 import { useTourMode } from "@/providers/TourProvider/TourModeContext";
 import {
   fetchExecutionDetails,
@@ -68,6 +69,7 @@ export const SubmitTaskArgumentsDialog = ({
 }: SubmitTaskArgumentsDialogProps) => {
   const notify = useToastNotification();
   const tourMode = useTourMode();
+  const mockBackend = useTourMockBackend();
   const initialArgs = getArgumentsFromInputs(componentSpec);
 
   const [runNotes, setRunNotes] = useState<string>("");
@@ -209,7 +211,10 @@ export const SubmitTaskArgumentsDialog = ({
           <Button variant="outline" onClick={handleCancel}>
             Cancel
           </Button>
-          <Button onClick={handleConfirm} disabled={!isValidToSubmit}>
+          <Button
+            onClick={handleConfirm}
+            disabled={!isValidToSubmit || mockBackend}
+          >
             Submit Run
           </Button>
         </DialogFooter>

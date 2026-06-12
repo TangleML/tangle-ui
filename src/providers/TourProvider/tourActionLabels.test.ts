@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { tourActionLabel } from "./tourActionLabels";
+import type { TourInteraction } from "./tourActions";
 
 describe("tourActionLabel", () => {
   it("labels assign-secret-argument with the target argument name", () => {
@@ -52,8 +53,10 @@ describe("tourActionLabel", () => {
   });
 
   it("uses the generic label for unknown interactions", () => {
-    expect(tourActionLabel({ interaction: "not-a-real-interaction" })).toBe(
-      "Complete the highlighted action to continue",
-    );
+    expect(
+      tourActionLabel({
+        interaction: "not-a-real-interaction" as TourInteraction,
+      }),
+    ).toBe("Complete the highlighted action to continue");
   });
 });

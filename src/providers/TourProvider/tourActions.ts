@@ -1,4 +1,4 @@
-type TourInteraction =
+export type TourInteraction =
   | "undock-window"
   | "redock-window"
   | "select-task"

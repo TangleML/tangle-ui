@@ -18,6 +18,7 @@ export interface TourDefinition {
   displayName?: string;
   requiresEditor?: boolean;
   starterPipelineUrl?: string;
+  mockBackend?: boolean;
   steps: TourStep[];
 }
 

@@ -42,9 +42,7 @@ const SETTINGS_TABS: Array<{ label: string; icon: IconName; active: boolean }> =
   ];
 
 type ManagerMode =
-  | { kind: "list" }
-  | { kind: "add" }
-  | { kind: "replace"; secret: Secret };
+  { kind: "list" } | { kind: "add" } | { kind: "replace"; secret: Secret };
 
 function TourSecretsManager() {
   const [mode, setMode] = useState<ManagerMode>({ kind: "list" });
