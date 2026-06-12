@@ -12,12 +12,15 @@ export interface ViewPreset {
   dockAreas?: PresetDockAreas;
 }
 
+const COMPONENT_SEARCH_WINDOW_ID = "component-search-v2";
+const COMPONENT_LIBRARY_WINDOW_ID = "component-library";
+
 export const DEFAULT_DOCK_AREAS: PresetDockAreas = {
   left: [
     "tip-of-the-day",
     "runs-and-submission",
-    "component-search-v2",
-    "component-library",
+    COMPONENT_SEARCH_WINDOW_ID,
+    COMPONENT_LIBRARY_WINDOW_ID,
     "pipeline-tree",
     "history",
     "debug-panel",
@@ -62,8 +65,8 @@ export const VIEW_PRESETS: ViewPreset[] = [
       "All windows visible, including Runs & Submissions and Recent Runs",
     visible: new Set([
       "runs-and-submission",
-      "component-search-v2",
-      "component-library",
+      COMPONENT_SEARCH_WINDOW_ID,
+      COMPONENT_LIBRARY_WINDOW_ID,
       "history",
       "pipeline-tree",
       "pipeline-details",
@@ -79,3 +82,48 @@ export const VIEW_PRESETS: ViewPreset[] = [
     visible: new Set<string>(),
   },
 ];
+
+function filterWindowIdsForComponentSearchMode(
+  ids: string[],
+  componentSearchV2Enabled: boolean,
+): string[] {
+  const hiddenWindowId = componentSearchV2Enabled
+    ? COMPONENT_LIBRARY_WINDOW_ID
+    : COMPONENT_SEARCH_WINDOW_ID;
+  return ids.filter((id) => id !== hiddenWindowId);
+}
+
+export function viewPresetForComponentSearchMode(
+  preset: ViewPreset,
+  componentSearchV2Enabled: boolean,
+): ViewPreset {
+  const visible = new Set(
+    filterWindowIdsForComponentSearchMode(
+      [...preset.visible],
+      componentSearchV2Enabled,
+    ),
+  );
+
+  const dockAreas = preset.dockAreas
+    ? {
+        left: filterWindowIdsForComponentSearchMode(
+          preset.dockAreas.left,
+          componentSearchV2Enabled,
+        ),
+        right: filterWindowIdsForComponentSearchMode(
+          preset.dockAreas.right,
+          componentSearchV2Enabled,
+        ),
+      }
+    : undefined;
+
+  return { ...preset, visible, dockAreas };
+}
+
+export function viewPresetsForComponentSearchMode(
+  componentSearchV2Enabled: boolean,
+): ViewPreset[] {
+  return VIEW_PRESETS.map((preset) =>
+    viewPresetForComponentSearchMode(preset, componentSearchV2Enabled),
+  );
+}

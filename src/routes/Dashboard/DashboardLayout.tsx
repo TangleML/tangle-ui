@@ -9,7 +9,7 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Link as UILink } from "@/components/ui/link";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
-import { APP_ROUTES } from "@/routes/router";
+import { APP_ROUTES } from "@/routes/appRoutes";
 import {
   ABOUT_URL,
   DOCUMENTATION_URL,
@@ -37,9 +37,9 @@ const BASE_SIDEBAR_ITEMS: SidebarItem[] = [
   { to: "/learn", label: "Learning Hub", icon: "GraduationCap" },
 ];
 
-const COMPONENTS_V2_ITEM: SidebarItem = {
-  to: "/components-v2",
-  label: "Components V2",
+const COMPONENT_SEARCH_ITEM: SidebarItem = {
+  to: APP_ROUTES.DASHBOARD_COMPONENTS_V2,
+  label: "Components",
   icon: "PackageSearch",
 };
 
@@ -51,22 +51,14 @@ const navItemClass = (isActive: boolean) =>
 
 export function DashboardLayout() {
   const requiresAuthorization = isAuthorizationRequired();
-  const isComponentsV2Enabled = useFlagValue("component-search-v2");
+  const isComponentSearchEnabled = useFlagValue("component-search-v2");
 
-  // Insert the Components V2 entry directly after "Components" when the
-  // beta flag is on. Keeps the nav order intuitive without touching the
-  // base list and stays correct if BASE_SIDEBAR_ITEMS gets reordered.
-  const componentsIndex = BASE_SIDEBAR_ITEMS.findIndex(
-    (item) => item.to === APP_ROUTES.DASHBOARD_COMPONENTS,
-  );
-  const insertAt =
-    componentsIndex >= 0 ? componentsIndex + 1 : BASE_SIDEBAR_ITEMS.length;
-  const sidebarItems = isComponentsV2Enabled
-    ? [
-        ...BASE_SIDEBAR_ITEMS.slice(0, insertAt),
-        COMPONENTS_V2_ITEM,
-        ...BASE_SIDEBAR_ITEMS.slice(insertAt),
-      ]
+  const sidebarItems = isComponentSearchEnabled
+    ? BASE_SIDEBAR_ITEMS.map((item) =>
+        item.to === APP_ROUTES.DASHBOARD_COMPONENTS
+          ? COMPONENT_SEARCH_ITEM
+          : item,
+      )
     : BASE_SIDEBAR_ITEMS;
 
   return (
@@ -130,7 +122,7 @@ export function DashboardLayout() {
               <Text size="sm">Docs</Text>
             </InlineStack>
           </UILink>
-          <Link to="/settings/backend" className="w-full">
+          <Link to={APP_ROUTES.SETTINGS_BACKEND} className="w-full">
             {({ isActive }) => (
               <InlineStack
                 gap="2"

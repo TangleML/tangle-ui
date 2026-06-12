@@ -83,7 +83,9 @@ const PipelineEditor = withSuspenseWrapper(
     useSelectionWindowSync();
     usePropertiesWindowPositioning();
     useLinkedWindowCleanup();
-    useComponentLibraryWindow();
+
+    const componentSearchV2Enabled = useFlagValue("component-search-v2");
+    useComponentLibraryWindow(!componentSearchV2Enabled);
     usePipelineDetailsWindow();
     usePipelineTreeWindow();
     useHistoryWindow();
@@ -95,12 +97,11 @@ const PipelineEditor = withSuspenseWrapper(
     useEditorEscapeShortcut();
     useDebugPanelWindow();
     useTipOfTheDayWindow();
-    useSeedInitialDockLayoutFromPreset();
+    useSeedInitialDockLayoutFromPreset(componentSearchV2Enabled);
 
     const aiEnabled = useFlagValue("ai-assistant");
     useAiChatWindow(aiEnabled);
 
-    const componentSearchV2Enabled = useFlagValue("component-search-v2");
     useComponentSearchV2Window(componentSearchV2Enabled);
 
     const activeSpec = navigation.activeSpec;

@@ -1,5 +1,6 @@
 import { observer } from "mobx-react-lite";
 
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -16,13 +17,15 @@ import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButton";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import {
-  VIEW_PRESETS,
   type ViewPreset,
+  viewPresetForComponentSearchMode,
+  viewPresetsForComponentSearchMode,
 } from "@/routes/v2/shared/windows/viewPresets";
 import { tracking } from "@/utils/tracking";
 
 export const WindowsMenu = observer(function WindowsMenu() {
   const { track } = useAnalytics();
+  const componentSearchV2Enabled = useFlagValue("component-search-v2");
   const { windows } = useSharedStores();
   const sortedWindows = [...windows.getAllWindows()]
     .filter((window) => window.persisted)
@@ -32,7 +35,9 @@ export const WindowsMenu = observer(function WindowsMenu() {
     track("v2.pipeline_editor.windows_menu.view_preset.click", {
       preset_label: preset.label,
     });
-    windows.applyViewPreset(preset);
+    windows.applyViewPreset(
+      viewPresetForComponentSearchMode(preset, componentSearchV2Enabled),
+    );
   };
 
   return (
@@ -73,14 +78,16 @@ export const WindowsMenu = observer(function WindowsMenu() {
             Views
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
-            {VIEW_PRESETS.map((preset) => (
-              <DropdownMenuItem
-                key={preset.label}
-                onSelect={() => applyPreset(preset)}
-              >
-                {preset.label}
-              </DropdownMenuItem>
-            ))}
+            {viewPresetsForComponentSearchMode(componentSearchV2Enabled).map(
+              (preset) => (
+                <DropdownMenuItem
+                  key={preset.label}
+                  onSelect={() => applyPreset(preset)}
+                >
+                  {preset.label}
+                </DropdownMenuItem>
+              ),
+            )}
           </DropdownMenuSubContent>
         </DropdownMenuSub>
       </DropdownMenuContent>
