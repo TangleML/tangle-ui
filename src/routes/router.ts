@@ -16,7 +16,6 @@ import { SecretsListView } from "@/components/shared/SecretsManagement/component
 import { isFlagEnabled } from "@/components/shared/Settings/useFlags";
 import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 
-export { APP_ROUTES, EDITOR_PATH, RUNS_BASE_PATH } from "./appRoutes";
 import RootLayout from "../components/layout/RootLayout";
 import { APP_ROUTES } from "./appRoutes";
 import { DashboardComponentsV2View } from "./Dashboard/DashboardComponentsV2View";
@@ -45,6 +44,10 @@ import { SettingsLayout } from "./Settings/SettingsLayout";
 import { EditorV2 } from "./v2/pages/Editor/EditorV2";
 import { PipelineFoldersPage } from "./v2/pages/PipelineFolders/PipelineFoldersPage";
 import { RunViewV2 } from "./v2/pages/RunView/RunViewV2";
+
+// Re-exported so existing `@/routes/router` import paths keep working after the
+// constants moved to the dependency-free `./appRoutes` leaf module.
+export { APP_ROUTES, EDITOR_PATH, RUNS_BASE_PATH } from "./appRoutes";
 
 declare module "@tanstack/react-router" {
   interface Register {
