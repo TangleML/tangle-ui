@@ -27,8 +27,8 @@ import { BetaFeaturesSettings } from "./BetaFeaturesSettings";
 
 const componentSearchFlag: Flag = {
   key: "component-search-v2",
-  name: "Component Search V2",
-  description: "Show Components V2.",
+  name: "Component Search",
+  description: "Show component search.",
   default: false,
   enabled: false,
   category: "beta",
@@ -36,7 +36,7 @@ const componentSearchFlag: Flag = {
 
 const aiDescriptionFlag: Flag = {
   key: "component-search-v2-ai-descriptions",
-  name: "Auto-generate Components V2 AI descriptions",
+  name: "Auto-generate component search AI descriptions",
   description: "Automatically generate AI descriptions.",
   default: false,
   enabled: false,
@@ -50,18 +50,18 @@ describe("BetaFeaturesSettings", () => {
     mocks.track.mockClear();
   });
 
-  it("hides the AI descriptions flag when Components V2 is disabled", () => {
+  it("hides the AI descriptions flag when component search is disabled", () => {
     mocks.betaFlags = [componentSearchFlag, aiDescriptionFlag];
 
     render(<BetaFeaturesSettings />);
 
-    expect(screen.getByText("Component Search V2")).toBeInTheDocument();
+    expect(screen.getByText("Component Search")).toBeInTheDocument();
     expect(
-      screen.queryByText("Auto-generate Components V2 AI descriptions"),
+      screen.queryByText("Auto-generate component search AI descriptions"),
     ).not.toBeInTheDocument();
   });
 
-  it("shows the AI descriptions flag when Components V2 is enabled", () => {
+  it("shows the AI descriptions flag when component search is enabled", () => {
     mocks.betaFlags = [
       { ...componentSearchFlag, enabled: true },
       aiDescriptionFlag,
@@ -69,9 +69,9 @@ describe("BetaFeaturesSettings", () => {
 
     render(<BetaFeaturesSettings />);
 
-    expect(screen.getByText("Component Search V2")).toBeInTheDocument();
+    expect(screen.getByText("Component Search")).toBeInTheDocument();
     expect(
-      screen.getByText("Auto-generate Components V2 AI descriptions"),
+      screen.getByText("Auto-generate component search AI descriptions"),
     ).toBeInTheDocument();
   });
 });

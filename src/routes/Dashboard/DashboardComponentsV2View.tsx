@@ -614,7 +614,7 @@ export const DashboardComponentsV2View = () => {
               });
             }
             console.warn(
-              "Components V2: registered library failed to load",
+              "Components: registered library failed to load",
               result.reason,
             );
             continue;
@@ -979,7 +979,7 @@ export const DashboardComponentsV2View = () => {
       <div className="shrink-0 px-8 pt-4 pb-4 border-b border-border">
         <BlockStack gap="3" align="stretch">
           <BlockStack gap="1">
-            <Heading level={2}>Components V2</Heading>
+            <Heading level={2}>Components</Heading>
             <Paragraph size="sm" tone="subdued">
               Type to search across every component source — standard library,
               your published components, registered libraries, and local user

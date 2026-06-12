@@ -6,10 +6,15 @@ import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 const COMPONENT_LIBRARY_WINDOW_ID = "component-library";
 
-export function useComponentLibraryWindow() {
+export function useComponentLibraryWindow(enabled: boolean) {
   const { windows } = useSharedStores();
   useEffect(() => {
-    if (windows.getWindowById(COMPONENT_LIBRARY_WINDOW_ID)) return;
+    const existing = windows.getWindowById(COMPONENT_LIBRARY_WINDOW_ID);
+    if (!enabled) {
+      existing?.hide();
+      return;
+    }
+    if (existing) return;
     windows.openWindow(<ComponentLibraryContent />, {
       id: COMPONENT_LIBRARY_WINDOW_ID,
       title: "Components",
@@ -20,5 +25,5 @@ export function useComponentLibraryWindow() {
       defaultDockState: "left",
       miniContent: <ComponentLibraryWindowMiniContent />,
     });
-  }, [windows]);
+  }, [enabled, windows]);
 }
