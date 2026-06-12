@@ -29,8 +29,9 @@ import type {
 
 /** How many lexical hits to display before the user asks for AI judgment. */
 const LEXICAL_RESULT_LIMIT = 50;
-/** Bounded candidate pool sent to AI rerank on click. */
-const AI_CANDIDATE_LIMIT = 25;
+// Candidate pool sent to AI rerank on click. Matches LEXICAL_RESULT_LIMIT so
+// every displayed result is scored and can show a relevance percentage.
+const AI_CANDIDATE_LIMIT = 50;
 // Scores at or below this are treated as the model excluding a candidate: such
 // items keep their place in the list but are not badged as relevance matches.
 const RERANK_EXCLUSION_THRESHOLD = 0.01;

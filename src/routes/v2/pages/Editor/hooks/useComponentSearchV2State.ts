@@ -219,7 +219,8 @@ export function useComponentSearchV2State(
       lexicalMatches.length > 0 ? lexicalMatches : aiCandidateMatches,
     );
     setRerankedFor(trimmedQuery);
-    mutate({ query: trimmedQuery, candidates });
+    // Score every candidate so each displayed result shows a relevance %.
+    mutate({ query: trimmedQuery, candidates, scoreAllCandidates: true });
   };
 
   const rerankScoreByDigest = buildRerankScoreByDigest(

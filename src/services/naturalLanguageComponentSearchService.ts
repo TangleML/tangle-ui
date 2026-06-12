@@ -135,20 +135,32 @@ export function componentReferenceToCandidate(
   };
 }
 
-function buildRerankSystemPrompt(): string {
+function buildRerankSystemPrompt(scoreAllCandidates: boolean): string {
+  // Two coverage modes. The default returns only the strongest matches (the UI
+  // keeps lexical results after them). `scoreAllCandidates` instead asks the
+  // model to score every candidate it was given, so every displayed row can
+  // show a relevance percentage.
+  const coverageRules = scoreAllCandidates
+    ? [
+        "- Score EVERY candidate you are given; do not omit any.",
+        "- Give weak or unrelated candidates a low score (close to 0) rather than dropping them.",
+      ]
+    : [
+        "- Return at most the 20 strongest candidates.",
+        "- Drop weak or unrelated candidates; the UI will keep lexical results after your ranked matches.",
+      ];
   return [
     "You are a reranker for an ML pipeline component search.",
     "The user gives you a natural-language query and a small list of candidate components selected from the component library.",
-    "Your job: score and reorder the strongest candidates by how well they fit the query's intent, and write one short reason per match.",
+    "Your job: score and reorder the candidates by how well they fit the query's intent, and write one short reason per match.",
     "Respond with a single JSON object:",
     '{ "matches": [ { "id": "<candidate id>", "score": <0..1>, "reason": "<one short sentence>" } ] }',
     "Rules:",
-    "- Return at most the 20 strongest candidates.",
+    ...coverageRules,
     "- Treat negative constraints as hard constraints before considering positive matches.",
     "- Respect negative constraints in the query: phrases like 'not X', 'no X', 'without X', 'do not use X', 'exclude X', and 'I don't want X' mean X is excluded.",
     "- Components that match an excluded constraint must score near 0 even if they strongly match positive terms.",
     "- Example: for 'upload a file not to GCS', upload components that use GCS should rank below non-GCS upload components.",
-    "- Drop weak or unrelated candidates; the UI will keep lexical results after your ranked matches.",
     '- If none of the candidates fit, return { "matches": [] }.',
     "- Order matches from highest to lowest score.",
     "- Use the exact id strings provided. Do not invent ids.",
@@ -293,17 +305,23 @@ export async function rerankComponentsByNaturalLanguage(
   query: string,
   candidates: RerankCandidate[],
   options: LlmOptions,
+  { scoreAllCandidates = false }: { scoreAllCandidates?: boolean } = {},
 ): Promise<RerankResult> {
   const trimmed = query.trim();
   if (trimmed.length === 0) return { matches: [] };
   if (candidates.length === 0) return { matches: [] };
 
-  // Output sizing: at most 20 candidates × roughly {25 id + 30 reason + JSON
-  // structure} ≈ 1200-1500 tokens for a full response.
+  // Output sizing: each match is roughly {digest id + short reason + JSON
+  // structure} ≈ 90 tokens. The default (strongest-20) fits in ~1500; when
+  // scoring every candidate we scale to the candidate count so the response is
+  // not truncated for larger pools.
+  const maxTokens = scoreAllCandidates
+    ? Math.max(1500, candidates.length * 100)
+    : 1500;
   const rawContent = await callLlmResponse(options, {
-    systemPrompt: buildRerankSystemPrompt(),
+    systemPrompt: buildRerankSystemPrompt(scoreAllCandidates),
     userPrompt: buildRerankUserPrompt(trimmed, candidates),
-    maxTokens: 1500,
+    maxTokens,
   });
 
   let matchesValue: RerankedMatch[] = [];
