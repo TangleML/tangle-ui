@@ -13,6 +13,7 @@ import {
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
+import { useTourCompletion } from "@/providers/TourProvider/tourCompletion";
 import { resetAllTourPipelineState } from "@/providers/TourProvider/tourPipelineStorage/resetAllTourPipelineState";
 import { APP_ROUTES } from "@/routes/router";
 import { tracking } from "@/utils/tracking";
@@ -30,6 +31,7 @@ import { getTour } from "./tours/registry";
 
 function TourCard({ tour }: { tour: Tour }) {
   const isAvailable = getTour(tour.id) !== undefined;
+  const completed = useTourCompletion(tour.id);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -55,6 +57,12 @@ function TourCard({ tour }: { tour: Tour }) {
             <Badge size="sm" variant="secondary">
               {tour.area}
             </Badge>
+            {completed && (
+              <Badge size="sm" variant="outline" className="text-green-600">
+                <Icon name="Check" size="xs" aria-hidden="true" />
+                Completed
+              </Badge>
+            )}
             <Text size="xs" tone="subdued">
               {tour.duration}
             </Text>
@@ -64,10 +72,17 @@ function TourCard({ tour }: { tour: Tour }) {
               size="sm"
               variant="ghost"
               onClick={startTour}
-              {...tracking("learning_hub.tours.start", { tour_id: tour.id })}
+              {...tracking("learning_hub.tours.start", {
+                tour_id: tour.id,
+                is_restart: completed,
+              })}
             >
-              Start tour
-              <Icon name="Play" size="sm" aria-hidden="true" />
+              {completed ? "Restart" : "Start tour"}
+              <Icon
+                name={completed ? "RotateCcw" : "Play"}
+                size="sm"
+                aria-hidden="true"
+              />
             </Button>
           ) : (
             <Button

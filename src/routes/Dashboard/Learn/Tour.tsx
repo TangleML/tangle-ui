@@ -26,6 +26,7 @@ import {
 } from "@/providers/TourProvider/tourPipelineLifecycle";
 import { TourPipelineStorageProvider } from "@/providers/TourProvider/tourPipelineStorage/TourPipelineStorageProvider";
 import { TourCompletionActions } from "@/providers/TourProvider/TourPopover";
+import { TourTelemetryBridge } from "@/providers/TourProvider/TourTelemetryBridge";
 import { APP_ROUTES } from "@/routes/router";
 import { EditorV2 } from "@/routes/v2/pages/Editor/EditorV2";
 import {
@@ -255,12 +256,15 @@ function TourPageBody({
     >
       <TourMockBackendController />
       {resolved && (
-        <TourReactourBridge
-          key={tour.id}
-          tour={tour}
-          urlStep={urlStep}
-          onUrlStepChange={handleUrlStepChange}
-        />
+        <>
+          <TourReactourBridge
+            key={tour.id}
+            tour={tour}
+            urlStep={urlStep}
+            onUrlStepChange={handleUrlStepChange}
+          />
+          <TourTelemetryBridge key={tour.id} />
+        </>
       )}
       <EditorV2
         pipelineRef={
