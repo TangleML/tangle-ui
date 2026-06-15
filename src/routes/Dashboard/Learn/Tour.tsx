@@ -258,12 +258,12 @@ function TourPageBody({
       {resolved && (
         <>
           <TourReactourBridge
-            key={tour.id}
+            key={`reactour-${tour.id}`}
             tour={tour}
             urlStep={urlStep}
             onUrlStepChange={handleUrlStepChange}
           />
-          <TourTelemetryBridge key={tour.id} />
+          <TourTelemetryBridge key={`telemetry-${tour.id}`} />
         </>
       )}
       <EditorV2
