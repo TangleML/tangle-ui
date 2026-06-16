@@ -6,7 +6,7 @@ import type { AiProviderConfig } from "@/types/aiProvider";
 import type { ProxyClient } from "./config";
 import type { SkillsLoader } from "./skills/loader";
 import type { ToolBridgeApi } from "./toolBridgeApi";
-import type { AgentContext, StatusCallback } from "./types";
+import type { AgentContext, AgentResponse, StatusCallback } from "./types";
 
 export interface RecentPipelineRun {
   id: number;
@@ -25,6 +25,7 @@ export interface AgentSession {
   aiConfig: AiProviderConfig;
   recentRuns: RecentPipelineRun[];
   context: AgentContext;
+  componentReferences: AgentResponse["componentReferences"];
 }
 
 export function createSession(params: {
@@ -46,5 +47,6 @@ export function createSession(params: {
     aiConfig: params.aiConfig,
     recentRuns: params.recentRuns ?? [],
     context: params.context,
+    componentReferences: {},
   };
 }

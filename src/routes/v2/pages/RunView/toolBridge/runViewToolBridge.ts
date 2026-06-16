@@ -39,6 +39,7 @@ type ReadOnlyCsomHandlers = Pick<
   | "createSubgraph"
   | "unpackSubgraph"
   | "validatePipeline"
+  | "searchComponents"
 >;
 
 function createReadOnlyCsomHandlers(deps: BridgeDeps): ReadOnlyCsomHandlers {
@@ -61,6 +62,14 @@ function createReadOnlyCsomHandlers(deps: BridgeDeps): ReadOnlyCsomHandlers {
           entityId: i.entityId,
           issueCode: i.issueCode,
         })),
+      };
+    },
+
+    async searchComponents() {
+      return {
+        success: false,
+        results: [],
+        error: "Component search is only available in the editor.",
       };
     },
 

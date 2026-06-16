@@ -97,12 +97,16 @@ export class AgentThread {
 
       runInAction(() => {
         this.thinkingText = null;
+        const componentReferences = response.componentReferences;
         this.messages = [
           ...this.messages,
           {
             id: generateMessageId(),
             role: "assistant",
             content: response.answer,
+            ...(Object.keys(componentReferences).length > 0
+              ? { componentReferences }
+              : {}),
           },
         ];
       });

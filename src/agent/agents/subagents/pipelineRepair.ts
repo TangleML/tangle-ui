@@ -10,11 +10,13 @@ import { getAgentModelConfig } from "../../config";
 import { attachObservabilityHooks } from "../../middleware/observability";
 import pipelineRepairPrompt from "../../prompts/pipelineRepair.md?raw";
 import type { AgentSession } from "../../session";
+import { createComponentSearchTools } from "../../tools/componentSearchTools";
 import { createCsomTools } from "../../tools/csomTools";
 import { createRunTools } from "../../tools/runTools";
 
 export function createPipelineRepairAgent(session: AgentSession): Agent {
   const csom = createCsomTools(session.bridge);
+  const componentSearch = createComponentSearchTools(session);
   const runTools = createRunTools(session.bridge);
   const agent = new Agent({
     name: "pipeline-repair",
@@ -22,7 +24,11 @@ export function createPipelineRepairAgent(session: AgentSession): Agent {
       structural problems in existing pipelines. Can mutate the pipeline via CSOM tools and submit a run
       after a successful fix when the user asks. Asks the user for input when fixes are ambiguous.`,
     instructions: pipelineRepairPrompt,
-    tools: [...csom.allTools, runTools.submitPipelineRun],
+    tools: [
+      componentSearch.searchComponents,
+      ...csom.allTools,
+      runTools.submitPipelineRun,
+    ],
     ...getAgentModelConfig(session.aiConfig),
   });
   attachObservabilityHooks(agent, session.emitStatus);

@@ -19,6 +19,7 @@ import { getAgentModelConfig } from "../config";
 import { attachObservabilityHooks } from "../middleware/observability";
 import dispatcherPrompt from "../prompts/dispatcher.md?raw";
 import type { AgentSession } from "../session";
+import { createComponentSearchTools } from "../tools/componentSearchTools";
 import {
   createDispatcherRuntime,
   type TangleDispatcher,
@@ -33,12 +34,14 @@ async function buildEditorAgent(session: AgentSession): Promise<Agent> {
   const pipelineRepair = createPipelineRepairAgent(session);
   const pipelineArchitect = await createPipelineArchitectAgent(session);
   const debugAssistant = createDebugAssistantAgent(session);
+  const componentSearch = createComponentSearchTools(session);
 
   const agent = new Agent({
     name: "tangle-dispatcher",
     ...getAgentModelConfig(session.aiConfig),
     instructions: dispatcherPrompt,
     tools: [
+      componentSearch.searchComponents,
       generalHelp.asTool({
         toolName: "ask_general_help",
         toolDescription:

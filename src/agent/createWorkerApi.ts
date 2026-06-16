@@ -93,14 +93,10 @@ export function createWorkerApi(
         session,
       });
 
-      // TODO: populate from session.componentReferences once the
-      // search_components tool is wired.
-      const componentReferences: AgentResponse["componentReferences"] = {};
-
       return {
         answer: result.answer,
         threadId: result.threadId,
-        componentReferences,
+        componentReferences: session.componentReferences,
       };
     },
   };
