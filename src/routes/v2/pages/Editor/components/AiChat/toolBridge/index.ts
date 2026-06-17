@@ -13,6 +13,7 @@
  * changes are picked up without rebuilding the bridge.
  */
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
+import { createComponentSearchBridgeHandlers } from "@/routes/v2/shared/components/AiChat/toolBridge/componentSearchBridge";
 import { createDebugBridgeHandlers } from "@/routes/v2/shared/components/AiChat/toolBridge/debugBridge";
 import { createRunBridgeHandlers } from "@/routes/v2/shared/components/AiChat/toolBridge/runBridge";
 
@@ -30,6 +31,7 @@ export function createEditorToolBridge(
 ): ToolBridgeApi {
   return {
     ...createCsomBridgeHandlers(deps),
+    ...createComponentSearchBridgeHandlers(deps),
     ...createRunBridgeHandlers(deps),
     ...createDebugBridgeHandlers(deps),
   };

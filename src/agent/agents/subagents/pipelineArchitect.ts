@@ -14,6 +14,7 @@ import { getAgentModelConfig } from "../../config";
 import { attachObservabilityHooks } from "../../middleware/observability";
 import architectPrompt from "../../prompts/architect.md?raw";
 import type { AgentSession } from "../../session";
+import { createComponentSearchTools } from "../../tools/componentSearchTools";
 import { createCsomTools } from "../../tools/csomTools";
 import { createRunTools } from "../../tools/runTools";
 
@@ -36,6 +37,7 @@ export async function createPipelineArchitectAgent(
   session: AgentSession,
 ): Promise<Agent> {
   const csom = createCsomTools(session.bridge);
+  const componentSearch = createComponentSearchTools(session);
   const runTools = createRunTools(session.bridge);
   const agent = new Agent({
     name: "pipeline-architect",
@@ -44,7 +46,11 @@ export async function createPipelineArchitectAgent(
       after a successful build when the user asks. Asks the user for input when design choices
       are ambiguous.`,
     instructions: await buildInstructions(session),
-    tools: [...csom.allTools, runTools.submitPipelineRun],
+    tools: [
+      componentSearch.searchComponents,
+      ...csom.allTools,
+      runTools.submitPipelineRun,
+    ],
     ...getAgentModelConfig(session.aiConfig),
   });
   attachObservabilityHooks(agent, session.emitStatus);

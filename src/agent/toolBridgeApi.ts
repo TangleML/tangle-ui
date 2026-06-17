@@ -75,6 +75,29 @@ export interface RunDebugSnapshot {
   error?: string;
 }
 
+interface SearchComponentsArgs {
+  query: string;
+  limit?: number;
+}
+
+interface ComponentSearchBridgeResult {
+  id: string;
+  name: string;
+  description: string;
+  source: string;
+  matchedFields: string[];
+  inputs: string[];
+  outputs: string[];
+  componentRef: Pick<ComponentReference, "name" | "url" | "spec">;
+  yamlText: string | null;
+}
+
+interface SearchComponentsResult {
+  success: boolean;
+  results: ComponentSearchBridgeResult[];
+  error?: string;
+}
+
 export type RunDetails = PipelineRunResponse;
 export type ExecutionDetails = GetExecutionInfoResponse;
 export type ExecutionState = GetGraphExecutionStateResponse;
@@ -134,6 +157,8 @@ export interface ToolBridgeApi {
   unpackSubgraph(taskEntityId: string): Promise<{ success: boolean }>;
 
   validatePipeline(): Promise<ValidationResult>;
+
+  searchComponents(args: SearchComponentsArgs): Promise<SearchComponentsResult>;
 
   submitPipelineRun(): Promise<RunSubmissionResult>;
   getRunDetails(runId: string): Promise<RunDetails>;

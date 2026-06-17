@@ -24,6 +24,7 @@ vi.mock("@openai/agents", () => {
     Agent: FakeAgent,
     MemorySession: FakeMemorySession,
     run: (...args: unknown[]) => runMock(...args),
+    tool: (config: unknown) => ({ type: "tool", config }),
   };
 });
 
