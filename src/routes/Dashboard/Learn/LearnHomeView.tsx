@@ -8,12 +8,10 @@ import { LearnSearchBar } from "@/components/Learn/LearnSearchBar";
 import { OnboardingHero } from "@/components/Learn/OnboardingHero";
 import { TipOfTheDay } from "@/components/Learn/TipOfTheDay";
 import { BlockStack } from "@/components/ui/layout";
-
-// Learning Hub Milestone 1: Documentation, FAQ, Example Pipelines & Tips
-// Not included: Guided Tours & Onboarding
-const SHOW_WIP_FEATURES = false;
+import { useOnboarding } from "@/providers/OnboardingProvider/OnboardingProvider";
 
 export function LearnHomeView() {
+  const { dismissed } = useOnboarding();
   return (
     <BlockStack gap="6">
       <BlockStack gap="4">
@@ -28,7 +26,7 @@ export function LearnHomeView() {
         </BlockStack>
       </BlockStack>
 
-      {SHOW_WIP_FEATURES && <OnboardingHero />}
+      {!dismissed && <OnboardingHero />}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <TipOfTheDay />
@@ -45,6 +43,8 @@ export function LearnHomeView() {
           <HelpCard />
         </div>
       </div>
+
+      {dismissed && <OnboardingHero />}
     </BlockStack>
   );
 }

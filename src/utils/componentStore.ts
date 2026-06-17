@@ -5,8 +5,12 @@ import { fetchComponentTextFromUrl } from "@/services/componentService";
 import type { DownloadDataType } from "./cache";
 import { downloadDataWithCache } from "./cache";
 import type { ComponentReference, ComponentSpec } from "./componentSpec";
-import { USER_COMPONENTS_LIST_NAME } from "./constants";
+import {
+  USER_COMPONENTS_LIST_NAME,
+  USER_PIPELINES_LIST_NAME,
+} from "./constants";
 import { getIdOrTitleFromPath } from "./URL";
+import { emitUserPipelineWritten } from "./userPipelineWriteEvents";
 import { componentSpecFromYaml, componentSpecToYaml } from "./yaml";
 
 // IndexedDB: DB and table names
@@ -500,7 +504,13 @@ export const writeComponentToFileListFromText = async (
   componentText: string | ArrayBuffer,
 ) => {
   const componentRef = await storeComponentText(componentText);
-  return writeComponentRefToFile(listName, fileName, componentRef);
+  const result = await writeComponentRefToFile(
+    listName,
+    fileName,
+    componentRef,
+  );
+  if (listName === USER_PIPELINES_LIST_NAME) emitUserPipelineWritten();
+  return result;
 };
 
 export const renameComponentFileInList = async (

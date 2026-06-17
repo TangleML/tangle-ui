@@ -4,16 +4,19 @@ import { Icon } from "@/components/ui/icon";
 import { Input, InputGroup } from "@/components/ui/input";
 import { Text } from "@/components/ui/typography";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
+import { useOnboarding } from "@/providers/OnboardingProvider/OnboardingProvider";
 import { TANGLE_WEBSITE_URL } from "@/utils/constants";
 
 export function LearnSearchBar() {
   const [value, setValue] = useState("");
   const { track } = useAnalytics();
+  const { markDocsRead } = useOnboarding();
 
   const handleSubmit = () => {
     const query = value.trim();
     if (!query) return;
     track("learning_hub.search.submitted");
+    markDocsRead();
     const url = `${TANGLE_WEBSITE_URL}search/?q=${encodeURIComponent(query)}`;
     window.open(url, "_blank", "noopener,noreferrer");
   };

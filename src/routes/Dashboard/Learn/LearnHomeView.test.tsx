@@ -4,6 +4,8 @@ import { cleanup, render } from "@testing-library/react";
 import type { ReactElement, ReactNode } from "react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
+import { OnboardingProvider } from "@/providers/OnboardingProvider/OnboardingProvider";
+
 import { LearnHomeView } from "./LearnHomeView";
 
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
@@ -41,7 +43,9 @@ const queryClient = new QueryClient({
 
 const renderWithClient = (component: ReactElement) =>
   render(
-    <QueryClientProvider client={queryClient}>{component}</QueryClientProvider>,
+    <QueryClientProvider client={queryClient}>
+      <OnboardingProvider>{component}</OnboardingProvider>
+    </QueryClientProvider>,
   );
 
 describe("<LearnHomeView/>", () => {
@@ -64,7 +68,7 @@ describe("<LearnHomeView/>", () => {
     ).toBeInTheDocument();
   });
 
-  test.skip("renders the onboarding hero with progress", () => {
+  test("renders the onboarding hero with progress", () => {
     renderWithClient(<LearnHomeView />);
     expect(
       screen.getByRole("heading", { level: 2, name: /welcome to tangle/i }),
