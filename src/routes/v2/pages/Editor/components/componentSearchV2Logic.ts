@@ -62,6 +62,7 @@ export interface ComponentSearchV2Result {
   reference: ComponentReference;
   source: ComponentSearchSource;
   rerankScore?: number;
+  rerankReason?: string;
 }
 
 export interface ComponentSearchV2State {
@@ -70,7 +71,9 @@ export interface ComponentSearchV2State {
   isLoading: boolean;
   canRerank: boolean;
   isReranking: boolean;
+  isRerankActive: boolean;
   rerank: () => void;
+  clearRerank: () => void;
 }
 
 export function registeredSource(
@@ -208,7 +211,8 @@ export function rerankedMatches(
     baseByDigest.delete(match.id);
   }
 
-  ordered.push(...baseByDigest.values(), ...excluded);
+  ordered.push(...baseByDigest.values());
+  ordered.push(...excluded);
   return ordered;
 }
 
@@ -312,12 +316,13 @@ function appendUniqueMatches(
   target: LexicalMatch[],
   seenDigests: Set<string>,
   matches: LexicalMatch[],
+  limit: number,
 ) {
   for (const match of matches) {
     if (seenDigests.has(match.digest)) continue;
     seenDigests.add(match.digest);
     target.push(match);
-    if (target.length >= AI_CANDIDATE_LIMIT) return;
+    if (target.length >= limit) return;
   }
 }
 
@@ -363,25 +368,26 @@ export function buildAiCandidateMatches(
       limit: AI_LEXICAL_CANDIDATE_LIMIT,
       minLength: 1,
     }),
+    AI_CANDIDATE_LIMIT,
   );
 
   appendUniqueMatches(
     candidates,
     seenDigests,
     buildSourceDiverseLexicalMatches(index, trimmedQuery),
+    AI_CANDIDATE_LIMIT,
   );
 
   return candidates;
 }
 
-export function buildRerankScoreByDigest(
+export function buildRerankMatchByDigest(
   rerankData: RerankResult | undefined,
   isRerankActive: boolean,
-): Map<string, number> {
+): Map<string, RerankResult["matches"][number]> {
   return new Map(
     isRerankActive
-      ? (rerankData?.matches.map((match) => [match.id, match.score] as const) ??
-          [])
+      ? (rerankData?.matches.map((match) => [match.id, match] as const) ?? [])
       : [],
   );
 }
@@ -393,18 +399,23 @@ export function buildRerankScoreByDigest(
  */
 export function buildResults(
   displayedMatches: LexicalMatch[],
-  rerankScoreByDigest: Map<string, number>,
+  rerankMatchByDigest: Map<string, RerankResult["matches"][number]>,
   isRerankActive: boolean,
 ): ComponentSearchV2Result[] {
   return displayedMatches.map((match) => {
-    const rerankScore = isRerankActive
-      ? rerankScoreByDigest.get(match.digest)
+    const rerankMatch = isRerankActive
+      ? rerankMatchByDigest.get(match.digest)
       : undefined;
+    const rerankScore = rerankMatch?.score;
+    const hasRerankMatch =
+      rerankMatch !== undefined &&
+      rerankScore !== undefined &&
+      rerankScore > RERANK_EXCLUSION_THRESHOLD;
     return {
       reference: match.reference,
       source: match.source,
-      ...(rerankScore !== undefined && rerankScore > RERANK_EXCLUSION_THRESHOLD
-        ? { rerankScore }
+      ...(hasRerankMatch
+        ? { rerankScore, rerankReason: rerankMatch.reason }
         : {}),
     };
   });

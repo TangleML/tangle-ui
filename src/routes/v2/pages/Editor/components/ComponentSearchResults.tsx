@@ -4,6 +4,7 @@ import {
   StickyNoteSidebarItem,
 } from "@/components/shared/ReactFlow/FlowSidebar/components/ComponentItem";
 import FolderItem from "@/components/shared/ReactFlow/FlowSidebar/components/FolderItem";
+import { Button } from "@/components/ui/button";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
@@ -17,6 +18,8 @@ interface ComponentSearchResultsProps {
   results: ComponentSearchV2Result[];
   browseFolders: UIComponentFolder[];
   isLoading: boolean;
+  isRerankActive: boolean;
+  onClearRerank: () => void;
 }
 
 export function ComponentSearchResults({
@@ -24,6 +27,8 @@ export function ComponentSearchResults({
   results,
   browseFolders,
   isLoading,
+  isRerankActive,
+  onClearRerank,
 }: ComponentSearchResultsProps) {
   if (isLoading) {
     return (
@@ -74,9 +79,22 @@ export function ComponentSearchResults({
       className="px-2 min-h-0 flex-1"
       data-testid="search-results-container"
     >
-      <Text tone="subdued" data-testid="search-results-header">
-        Search Results ({results.length})
-      </Text>
+      <InlineStack align="space-between" blockAlign="center" gap="2">
+        <Text tone="subdued" data-testid="search-results-header">
+          {isRerankActive ? "AI-ranked results" : "Search Results"} (
+          {results.length})
+        </Text>
+        {isRerankActive && (
+          <Button
+            type="button"
+            variant="link"
+            size="inline-xs"
+            onClick={onClearRerank}
+          >
+            Use lexical ranking
+          </Button>
+        )}
+      </InlineStack>
       <Separator />
       <div className="min-h-0 w-full flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin">
         {results.length > 0 ? (
@@ -89,6 +107,7 @@ export function ComponentSearchResults({
                 key={`${result.reference.digest}-${result.reference.name ?? result.reference.url ?? "component"}`}
                 component={result.reference}
                 rerankScore={result.rerankScore}
+                rerankReason={result.rerankReason}
               />
             ))}
           </BlockStack>

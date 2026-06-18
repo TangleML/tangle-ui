@@ -11,24 +11,42 @@
  * judgment over a small, well-defined list when literal matching is not enough.
  */
 
-import type { ComponentReference } from "@/utils/componentSpec";
+import type {
+  ComponentReference,
+  InputSpec,
+  OutputSpec,
+} from "@/utils/componentSpec";
 import { getComponentName } from "@/utils/getComponentName";
 import { isRecord } from "@/utils/typeGuards";
 
-import { extractComponentMetadata } from "./componentSearchIndex";
+import {
+  type ComponentSearchSource,
+  extractComponentMetadata,
+} from "./componentSearchIndex";
 
 /**
  * Compact candidate shape sent to the model. Only the fields that inform
- * judgment: name, description, i/o names. Implementation/command text is
- * already covered by the lexical layer and would just inflate the prompt.
+ * judgment: name, description, source, and i/o summaries. Implementation/
+ * command text is already covered by the lexical layer and would just inflate
+ * the prompt.
  */
+interface RerankCandidateIO {
+  name: string;
+  type?: string;
+  description?: string;
+}
+
 export interface RerankCandidate {
   /** Component digest. Used to round-trip the model's response to references. */
   id: string;
   name: string;
   description: string;
-  inputs?: string[];
-  outputs?: string[];
+  source?: {
+    kind: ComponentSearchSource["kind"];
+    label: string;
+  };
+  inputs?: RerankCandidateIO[];
+  outputs?: RerankCandidateIO[];
 }
 
 export interface RerankedMatch {
@@ -119,19 +137,44 @@ function isMatchArray(value: unknown): value is RerankedMatch[] {
  * the model. Returns null when the reference has no usable metadata — those
  * would just waste tokens.
  */
+function stringifyCandidateField(value: unknown): string {
+  if (typeof value === "string") return value.trim();
+  if (value === null || value === undefined) return "";
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return "";
+  }
+}
+
+function componentIoToCandidateIo(
+  ioSpec: InputSpec | OutputSpec,
+): RerankCandidateIO {
+  const type = stringifyCandidateField(ioSpec.type);
+  const description = ioSpec.description?.trim() ?? "";
+  return {
+    name: ioSpec.name,
+    ...(type ? { type } : {}),
+    ...(description ? { description } : {}),
+  };
+}
+
 export function componentReferenceToCandidate(
   reference: ComponentReference,
+  source?: ComponentSearchSource,
 ): RerankCandidate | null {
   const metadata = extractComponentMetadata(reference);
   if (!metadata) return null;
+  const inputs = reference.spec?.inputs?.map(componentIoToCandidateIo) ?? [];
+  const outputs = reference.spec?.outputs?.map(componentIoToCandidateIo) ?? [];
+
   return {
     id: metadata.digest,
     name: metadata.name,
     description: metadata.description,
-    ...(metadata.inputNames.length > 0 ? { inputs: metadata.inputNames } : {}),
-    ...(metadata.outputNames.length > 0
-      ? { outputs: metadata.outputNames }
-      : {}),
+    ...(source ? { source: { kind: source.kind, label: source.label } } : {}),
+    ...(inputs.length > 0 ? { inputs } : {}),
+    ...(outputs.length > 0 ? { outputs } : {}),
   };
 }
 

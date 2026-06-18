@@ -29,6 +29,7 @@ interface ComponentMarkupProps {
   error?: string | null;
   className?: string;
   rerankScore?: number;
+  rerankReason?: string;
 }
 
 type ComponentIconProps = {
@@ -87,6 +88,7 @@ const ComponentMarkup = ({
   error,
   className,
   rerankScore,
+  rerankReason,
 }: ComponentMarkupProps) => {
   const isRemoteComponentLibrarySearchEnabled = useFlagValue(
     "remote-component-library-search",
@@ -231,9 +233,18 @@ const ComponentMarkup = ({
                     {author}
                   </span>
                 )}
-                <span className="truncate text-[10px] text-gray-500 font-mono">
-                  Ver: {digest}
-                </span>
+                {rerankReason ? (
+                  <span
+                    className="truncate text-[10px] text-gray-500"
+                    title={rerankReason}
+                  >
+                    Why: {rerankReason}
+                  </span>
+                ) : (
+                  <span className="truncate text-[10px] text-gray-500 font-mono">
+                    Ver: {digest}
+                  </span>
+                )}
               </div>
             </InlineStack>
 

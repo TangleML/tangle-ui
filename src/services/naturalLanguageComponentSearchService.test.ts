@@ -90,23 +90,54 @@ describe("componentReferenceToCandidate", () => {
     });
   });
 
-  it("includes input/output names when present", () => {
+  it("includes input/output types, descriptions, and source when present", () => {
     const ref: ComponentReference = {
       digest: "abc",
       spec: {
         name: "train",
         description: "",
-        inputs: [{ name: "dataset" }],
-        outputs: [{ name: "model" }],
+        inputs: [
+          {
+            name: "dataset",
+            type: "Dataset",
+            description: "Training data",
+          },
+        ],
+        outputs: [
+          {
+            name: "model",
+            type: { Model: { format: "xgboost" } },
+            description: "Trained model",
+          },
+        ],
         implementation: { container: { image: "x" } },
       },
     };
-    expect(componentReferenceToCandidate(ref)).toEqual({
+    expect(
+      componentReferenceToCandidate(ref, {
+        kind: "published",
+        label: "Published",
+        id: "published",
+      }),
+    ).toEqual({
       id: "abc",
       name: "train",
       description: "",
-      inputs: ["dataset"],
-      outputs: ["model"],
+      source: { kind: "published", label: "Published" },
+      inputs: [
+        {
+          name: "dataset",
+          type: "Dataset",
+          description: "Training data",
+        },
+      ],
+      outputs: [
+        {
+          name: "model",
+          type: '{"Model":{"format":"xgboost"}}',
+          description: "Trained model",
+        },
+      ],
     });
   });
 });

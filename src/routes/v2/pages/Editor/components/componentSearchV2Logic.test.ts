@@ -17,6 +17,7 @@ import type {
 import {
   buildAiCandidateMatches,
   buildLexicalMatches,
+  buildRerankMatchByDigest,
   buildResultFolders,
   buildResults,
   buildSourcedHydratedReferences,
@@ -193,22 +194,35 @@ describe("buildResults", () => {
   const displayed = [match("a"), match("b"), match("c")];
 
   it("badges only items scored above the exclusion threshold", () => {
-    const scores = new Map([
-      ["a", 0.9],
-      ["b", 0.0], // model-excluded
-      // "c" was never scored
-    ]);
-    const results = buildResults(displayed, scores, true);
+    const rerankMatches = buildRerankMatchByDigest(
+      {
+        matches: [
+          { id: "a", score: 0.9, reason: "Strong match" },
+          { id: "b", score: 0.0, reason: "Weak match" }, // model-excluded
+          // "c" was never scored
+        ],
+      },
+      true,
+    );
+    const results = buildResults(displayed, rerankMatches, true);
     expect(results.map((r) => r.rerankScore)).toEqual([
       0.9,
+      undefined,
+      undefined,
+    ]);
+    expect(results.map((r) => r.rerankReason)).toEqual([
+      "Strong match",
       undefined,
       undefined,
     ]);
   });
 
   it("never badges when rerank is not active", () => {
-    const scores = new Map([["a", 0.9]]);
-    const results = buildResults(displayed, scores, false);
+    const rerankMatches = buildRerankMatchByDigest(
+      { matches: [{ id: "a", score: 0.9, reason: "Strong match" }] },
+      true,
+    );
+    const results = buildResults(displayed, rerankMatches, false);
     expect(results.every((r) => r.rerankScore === undefined)).toBe(true);
   });
 });
