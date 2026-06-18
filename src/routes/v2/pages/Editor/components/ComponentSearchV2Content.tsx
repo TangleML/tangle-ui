@@ -1,4 +1,4 @@
-import { type ChangeEvent, useDeferredValue, useState } from "react";
+import { useState } from "react";
 
 import ImportComponent from "@/components/shared/ReactFlow/FlowSidebar/components/ImportComponent";
 import { Button } from "@/components/ui/button";
@@ -7,13 +7,34 @@ import { Input } from "@/components/ui/input";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
+import { useDebouncedSearchValue } from "@/hooks/useDebouncedSearchValue";
 import { useComponentSearchV2State } from "@/routes/v2/pages/Editor/hooks/useComponentSearchV2State";
 
 import { ComponentSearchResults } from "./ComponentSearchResults";
 
+function DebouncedComponentSearchInput({
+  onCommit,
+}: {
+  onCommit: (value: string) => void;
+}) {
+  const [localValue, setLocalValue] = useDebouncedSearchValue(onCommit);
+
+  return (
+    <Input
+      type="text"
+      data-testid="search-input"
+      placeholder="Search components..."
+      className="w-full pl-8 text-sm h-8 focus-visible:ring-gray-400/50"
+      value={localValue}
+      onChange={(event) => setLocalValue(event.target.value)}
+      aria-label="Search components"
+      autoComplete="off"
+    />
+  );
+}
+
 export function ComponentSearchV2Content() {
   const [query, setQuery] = useState("");
-  const deferredQuery = useDeferredValue(query);
   const {
     results,
     browseFolders,
@@ -23,10 +44,10 @@ export function ComponentSearchV2Content() {
     isRerankActive,
     rerank,
     clearRerank,
-  } = useComponentSearchV2State(deferredQuery);
+  } = useComponentSearchV2State(query);
 
-  const handleQueryChange = (event: ChangeEvent<HTMLInputElement>) => {
-    setQuery(event.target.value);
+  const handleQueryCommit = (value: string) => {
+    setQuery(value);
   };
 
   return (
@@ -59,16 +80,7 @@ export function ComponentSearchV2Content() {
             >
               <Icon name="Search" size="sm" className="text-gray-400" />
             </InlineStack>
-            <Input
-              type="text"
-              data-testid="search-input"
-              placeholder="Search components..."
-              className="w-full pl-8 text-sm h-8 focus-visible:ring-gray-400/50"
-              value={query}
-              onChange={handleQueryChange}
-              aria-label="Search components"
-              autoComplete="off"
-            />
+            <DebouncedComponentSearchInput onCommit={handleQueryCommit} />
           </div>
           <Button
             variant="outline"
@@ -84,7 +96,7 @@ export function ComponentSearchV2Content() {
         </InlineStack>
       </BlockStack>
       <ComponentSearchResults
-        query={deferredQuery}
+        query={query}
         results={results}
         browseFolders={browseFolders}
         isLoading={isLoading}

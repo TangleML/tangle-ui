@@ -414,12 +414,15 @@ describe("DashboardComponentsV2View", () => {
     expect(screen.getByText("Registered component")).toBeInTheDocument();
   });
 
-  it("lets AI search run against a bounded candidate pool when literal search has no matches", () => {
+  it("lets AI search run against a bounded candidate pool when literal search has no matches", async () => {
     routeMocks.aiSearchConfigured = true;
     render(<DashboardComponentsV2View />);
 
     fireEvent.change(screen.getByLabelText("Search components"), {
       target: { value: "find something semantically relevant" },
+    });
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "AI search" })).toBeEnabled();
     });
     fireEvent.click(screen.getByRole("button", { name: "AI search" }));
 

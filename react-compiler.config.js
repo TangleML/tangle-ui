@@ -33,6 +33,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/hooks/useRunSearchParams.ts",
   "src/hooks/useAiProviderSettings.ts",
   "src/hooks/useNaturalLanguageComponentSearch.ts",
+  "src/hooks/useDebouncedSearchValue.ts",
   "src/hooks/useFavorites.ts",
   "src/hooks/useRecentlyViewed.ts",
   "src/components/shared/FavoriteToggle.tsx",
