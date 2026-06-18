@@ -207,7 +207,8 @@ export function useComponentSearchV2State(
       return;
     }
 
-    const candidates = aiCandidateMatches
+    const rerankBase = aiCandidateMatches;
+    const candidates = rerankBase
       .map((match) => componentReferenceToCandidate(match.reference))
       .filter((candidate): candidate is NonNullable<typeof candidate> =>
         Boolean(candidate),
@@ -215,9 +216,7 @@ export function useComponentSearchV2State(
 
     if (candidates.length === 0) return;
 
-    setRerankBaseMatches(
-      lexicalMatches.length > 0 ? lexicalMatches : aiCandidateMatches,
-    );
+    setRerankBaseMatches(rerankBase);
     setRerankedFor(trimmedQuery);
     // Score every candidate so each displayed result shows a relevance %.
     mutate({ query: trimmedQuery, candidates, scoreAllCandidates: true });

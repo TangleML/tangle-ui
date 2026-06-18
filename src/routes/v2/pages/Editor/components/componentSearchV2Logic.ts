@@ -28,10 +28,10 @@ import type {
 } from "@/utils/componentSpec";
 
 /** How many lexical hits to display before the user asks for AI judgment. */
-const LEXICAL_RESULT_LIMIT = 50;
-// Candidate pool sent to AI rerank on click. Matches LEXICAL_RESULT_LIMIT so
-// every displayed result is scored and can show a relevance percentage.
-const AI_CANDIDATE_LIMIT = 50;
+export const LEXICAL_RESULT_LIMIT = 50;
+const AI_CANDIDATE_LIMIT = 80;
+const AI_LEXICAL_CANDIDATE_LIMIT = 60;
+const AI_SOURCE_DIVERSITY_CANDIDATES_PER_SOURCE = 8;
 // Scores at or below this are treated as the model excluding a candidate: such
 // items keep their place in the list but are not badged as relevance matches.
 const RERANK_EXCLUSION_THRESHOLD = 0.01;
@@ -252,10 +252,9 @@ export function buildResultFolders({
     } else if (result.source.kind === "published") {
       published.push(result.reference);
     } else if (result.source.kind === "registered") {
-      connectedByName.set(name, [
-        ...(connectedByName.get(name) ?? []),
-        result.reference,
-      ]);
+      const components = connectedByName.get(name) ?? [];
+      components.push(result.reference);
+      connectedByName.set(name, components);
     }
   }
 
@@ -300,10 +299,53 @@ export function buildLexicalMatches(
   });
 }
 
+function sampleEvenly<T>(items: T[], limit: number): T[] {
+  if (items.length <= limit) return items;
+  const step = items.length / limit;
+  return Array.from(
+    { length: limit },
+    (_, index) => items[Math.floor(index * step)],
+  );
+}
+
+function appendUniqueMatches(
+  target: LexicalMatch[],
+  seenDigests: Set<string>,
+  matches: LexicalMatch[],
+) {
+  for (const match of matches) {
+    if (seenDigests.has(match.digest)) continue;
+    seenDigests.add(match.digest);
+    target.push(match);
+    if (target.length >= AI_CANDIDATE_LIMIT) return;
+  }
+}
+
+function buildSourceDiverseLexicalMatches(
+  index: IndexEntry[],
+  trimmedQuery: string,
+): LexicalMatch[] {
+  const lexicalMatches = lexicalSearch(index, trimmedQuery, {
+    limit: index.length,
+    minLength: 1,
+  });
+  const bySource = new Map<string, LexicalMatch[]>();
+  for (const match of lexicalMatches) {
+    const key = `${match.source.kind}:${match.source.id}`;
+    const matches = bySource.get(key) ?? [];
+    matches.push(match);
+    bySource.set(key, matches);
+  }
+
+  return [...bySource.values()].flatMap((matches) =>
+    sampleEvenly(matches, AI_SOURCE_DIVERSITY_CANDIDATES_PER_SOURCE),
+  );
+}
+
 /**
- * Bounded candidate pool for AI rerank. Prefers broad lexical hits; when
- * literal matching finds nothing it falls back to an alphabetical browse slice
- * so natural-language queries stay useful.
+ * Bounded candidate pool for AI rerank. Starts with the strongest lexical hits,
+ * then adds a source-diverse lexical sample so AI can rescue plausible matches
+ * from lower-ranked sources without falling back to query-independent browse.
  */
 export function buildAiCandidateMatches(
   index: IndexEntry[],
@@ -311,16 +353,25 @@ export function buildAiCandidateMatches(
 ): LexicalMatch[] {
   if (trimmedQuery.length === 0) return [];
 
-  const broadMatches = lexicalSearch(index, trimmedQuery, {
-    limit: AI_CANDIDATE_LIMIT,
-    minLength: 1,
-  });
-  if (broadMatches.length > 0) return broadMatches;
+  const candidates: LexicalMatch[] = [];
+  const seenDigests = new Set<string>();
 
-  return [...index]
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .slice(0, AI_CANDIDATE_LIMIT)
-    .map(indexEntryToLexicalMatch);
+  appendUniqueMatches(
+    candidates,
+    seenDigests,
+    lexicalSearch(index, trimmedQuery, {
+      limit: AI_LEXICAL_CANDIDATE_LIMIT,
+      minLength: 1,
+    }),
+  );
+
+  appendUniqueMatches(
+    candidates,
+    seenDigests,
+    buildSourceDiverseLexicalMatches(index, trimmedQuery),
+  );
+
+  return candidates;
 }
 
 export function buildRerankScoreByDigest(
