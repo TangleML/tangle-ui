@@ -1,8 +1,9 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLiveQuery } from "dexie-react-hooks";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { listApiPublishedComponentsGet } from "@/api/sdk.gen";
+import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import { getComponentQueryKey } from "@/hooks/useHydrateComponentReference";
 import { useNaturalLanguageComponentRerank } from "@/hooks/useNaturalLanguageComponentSearch";
 import { useBackend } from "@/providers/BackendProvider";
@@ -25,12 +26,15 @@ import {
   buildSourcedHydratedReferences,
   collectAllSourcedReferences,
   type ComponentSearchV2State,
+  LEXICAL_RESULT_LIMIT,
   registeredLibrariesFingerprint,
   registeredSource,
   rerankedMatches,
 } from "@/routes/v2/pages/Editor/components/componentSearchV2Logic";
+import { rankComponentMatchesByEmbeddings } from "@/services/componentSearchEmbeddings";
 import {
   buildSearchIndex,
+  type IndexEntry,
   type LexicalMatch,
   type SourcedReference,
 } from "@/services/componentSearchIndex";
@@ -46,11 +50,29 @@ import type {
 } from "@/utils/componentSpec";
 import { HOURS } from "@/utils/constants";
 
+function mergeUniqueMatches(
+  primary: LexicalMatch[],
+  secondary: LexicalMatch[],
+  fallback: LexicalMatch[],
+  limit: number,
+): LexicalMatch[] {
+  const merged: LexicalMatch[] = [];
+  const seen = new Set<string>();
+  for (const match of [...primary, ...secondary, ...fallback]) {
+    if (seen.has(match.digest)) continue;
+    seen.add(match.digest);
+    merged.push(match);
+    if (merged.length >= limit) return merged;
+  }
+  return merged;
+}
+
 export function useComponentSearchV2State(
   query: string,
 ): ComponentSearchV2State {
   const queryClient = useQueryClient();
   const { backendUrl, configured, available } = useBackend();
+  const { config: aiConfig } = useAiProviderSettings();
 
   const { data: standardLibrary, isLoading: isLoadingStandardLibrary } =
     useQuery({
@@ -185,6 +207,9 @@ export function useComponentSearchV2State(
   const [rerankBaseMatches, setRerankBaseMatches] = useState<LexicalMatch[]>(
     [],
   );
+  const [isEmbeddingSearchPending, setIsEmbeddingSearchPending] =
+    useState(false);
+  const embeddingAbortControllerRef = useRef<AbortController | null>(null);
 
   const clearRerank = () => {
     setRerankedFor(null);
@@ -194,26 +219,93 @@ export function useComponentSearchV2State(
   useEffect(() => {
     setRerankedFor(null);
     setRerankBaseMatches([]);
+    embeddingAbortControllerRef.current?.abort();
   }, [query]);
+
+  useEffect(() => {
+    return () => embeddingAbortControllerRef.current?.abort();
+  }, []);
 
   const isRerankActive =
     rerankedFor === trimmedQuery &&
     rerankBaseMatches.length > 0 &&
     !isReranking &&
+    !isEmbeddingSearchPending &&
     (rerankData?.matches.length ?? 0) > 0;
 
   const displayedMatches = isRerankActive
     ? rerankedMatches(rerankData, rerankBaseMatches)
     : lexicalMatches;
 
-  const startRerank = (
-    matches: LexicalMatch[],
-    { scoreAllCandidates }: { scoreAllCandidates: boolean },
-  ) => {
-    if (!trimmedQuery || matches.length === 0 || !isConfigured) return;
+  const buildEmbeddingMatches = async ({
+    sourceIndex,
+    limit,
+  }: {
+    sourceIndex: IndexEntry[];
+    limit: number;
+  }): Promise<LexicalMatch[]> => {
+    if (!aiConfig.apiBase.trim()) return [];
+    embeddingAbortControllerRef.current?.abort();
+    const abortController = new AbortController();
+    embeddingAbortControllerRef.current = abortController;
+    setIsEmbeddingSearchPending(true);
+    try {
+      return await rankComponentMatchesByEmbeddings(
+        sourceIndex,
+        trimmedQuery,
+        {
+          apiBase: aiConfig.apiBase,
+          apiKey: aiConfig.apiKey,
+          signal: abortController.signal,
+        },
+        { limit },
+      );
+    } catch {
+      return [];
+    } finally {
+      if (embeddingAbortControllerRef.current === abortController) {
+        embeddingAbortControllerRef.current = null;
+        setIsEmbeddingSearchPending(false);
+      }
+    }
+  };
 
-    const rerankBase = matches;
-    const candidates = rerankBase
+  const startRerank = async (
+    matches: LexicalMatch[],
+    {
+      scoreAllCandidates,
+      useEmbeddings,
+      limit,
+    }: {
+      scoreAllCandidates: boolean;
+      useEmbeddings: boolean;
+      limit: number;
+    },
+  ) => {
+    if (!trimmedQuery || !isConfigured) return;
+
+    const canUseEmbeddings =
+      useEmbeddings && aiConfig.apiBase.trim().length > 0;
+    if (matches.length === 0 && !canUseEmbeddings) return;
+
+    const effectiveLimit = limit || LEXICAL_RESULT_LIMIT;
+    const embeddingMatches = canUseEmbeddings
+      ? await buildEmbeddingMatches({
+          sourceIndex: index,
+          limit: effectiveLimit,
+        })
+      : [];
+    const lexicalMatchesToKeep = useEmbeddings
+      ? matches.slice(0, Math.min(60, effectiveLimit))
+      : matches;
+    const rerankMatches = mergeUniqueMatches(
+      lexicalMatchesToKeep,
+      embeddingMatches,
+      matches,
+      effectiveLimit,
+    );
+
+    const candidates = rerankMatches
       .map((match) =>
         componentReferenceToCandidate(match.reference, match.source),
       )
@@ -223,14 +315,16 @@ export function useComponentSearchV2State(
 
     if (candidates.length === 0) return;
 
-    setRerankBaseMatches(rerankBase);
+    setRerankBaseMatches(rerankMatches);
     setRerankedFor(trimmedQuery);
     mutate({ query: trimmedQuery, candidates, scoreAllCandidates });
   };
 
   const rerank = () => {
-    startRerank(aiCandidateMatches, {
+    void startRerank(aiCandidateMatches, {
       scoreAllCandidates: true,
+      useEmbeddings: true,
+      limit: aiCandidateMatches.length,
     });
   };
 
@@ -255,8 +349,10 @@ export function useComponentSearchV2State(
       isLoadingRegistered ||
       isHydrating,
     canRerank:
-      trimmedQuery.length > 0 && aiCandidateMatches.length > 0 && isConfigured,
-    isReranking,
+      trimmedQuery.length > 0 &&
+      (aiCandidateMatches.length > 0 || aiConfig.apiBase.trim().length > 0) &&
+      isConfigured,
+    isReranking: isReranking || isEmbeddingSearchPending,
     isRerankActive,
     rerank,
     clearRerank,
