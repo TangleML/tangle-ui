@@ -113,6 +113,7 @@ const MATCH_FIELD_LABEL: Record<MatchField, string> = {
   description: "description",
   io: "inputs/outputs",
   implementation: "command",
+  metadata: "metadata",
 };
 
 // Built-in sources are constants — only registered libraries vary per row.

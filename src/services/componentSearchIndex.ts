@@ -16,7 +16,12 @@ import type { ComponentReference } from "@/utils/componentSpec";
 import { getComponentName } from "@/utils/getComponentName";
 
 /** Which field of a component matched the query. Surfaced in the UI. */
-export type MatchField = "name" | "description" | "io" | "implementation";
+export type MatchField =
+  | "name"
+  | "description"
+  | "io"
+  | "implementation"
+  | "metadata";
 
 /**
  * Where a component came from. Attached to every index entry and threaded
@@ -72,6 +77,59 @@ export function indexEntryToLexicalMatch(entry: IndexEntry): LexicalMatch {
   };
 }
 
+const ANNOTATION_KEYS_EXCLUDED_FROM_SEARCH = new Set([
+  "editor.position",
+  "editor.collapsed",
+  "editor.flow-direction",
+  "flex-nodes",
+  "python_dependencies",
+  "python_original_code",
+  "tangleml.com/editor/task-color",
+  "tangleml.com/editor/edge-conduits",
+  "zIndex",
+]);
+
+const MAX_ANNOTATION_TEXT_LENGTH = 500;
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function stringifySearchValue(value: unknown): string {
+  switch (typeof value) {
+    case "string":
+    case "number":
+    case "boolean":
+      return String(value);
+    case "undefined":
+      return "";
+    default:
+      if (value === null) return "";
+      try {
+        return JSON.stringify(value);
+      } catch {
+        return "";
+      }
+  }
+}
+
+function extractAnnotationsText(
+  annotations: Record<string, unknown> | undefined,
+): string {
+  if (!annotations) return "";
+
+  const parts: string[] = [];
+  for (const [key, value] of Object.entries(annotations)) {
+    if (ANNOTATION_KEYS_EXCLUDED_FROM_SEARCH.has(key)) continue;
+
+    const valueText = stringifySearchValue(value).trim();
+    if (!valueText || valueText.length > MAX_ANNOTATION_TEXT_LENGTH) continue;
+    parts.push(key, valueText);
+  }
+
+  return parts.join(" ");
+}
+
 /**
  * Flatten a container implementation's image + command + args into a single
  * lowercase string. Placeholder objects (e.g. `{ inputValue: "Where" }`) are
@@ -123,6 +181,10 @@ export interface ComponentMetadata {
   description: string;
   inputNames: string[];
   outputNames: string[];
+  /** Names, descriptions, types, and annotations for inputs/outputs. */
+  ioText: string;
+  /** Searchable component-level metadata annotations. */
+  metadataText: string;
 }
 
 export function extractComponentMetadata(
@@ -132,18 +194,24 @@ export function extractComponentMetadata(
   const spec = reference.spec;
   const description = spec?.description?.trim() ?? "";
   const inputNames =
-    spec?.inputs
-      ?.map((i) => i.name)
-      .filter((n): n is string => typeof n === "string" && n.length > 0) ?? [];
+    spec?.inputs?.map((input) => input.name).filter(isNonEmptyString) ?? [];
   const outputNames =
-    spec?.outputs
-      ?.map((o) => o.name)
-      .filter((n): n is string => typeof n === "string" && n.length > 0) ?? [];
+    spec?.outputs?.map((output) => output.name).filter(isNonEmptyString) ?? [];
+  const ioText = [...(spec?.inputs ?? []), ...(spec?.outputs ?? [])]
+    .flatMap((ioSpec) => [
+      ioSpec.name,
+      ioSpec.description,
+      stringifySearchValue(ioSpec.type),
+      extractAnnotationsText(ioSpec.annotations),
+    ])
+    .filter(isNonEmptyString)
+    .join(" ");
+  const metadataText = extractAnnotationsText(spec?.metadata?.annotations);
   const hasUsefulMetadata =
     Boolean(spec?.name) ||
     description.length > 0 ||
-    inputNames.length > 0 ||
-    outputNames.length > 0;
+    ioText.length > 0 ||
+    metadataText.length > 0;
   if (!hasUsefulMetadata) return null;
   return {
     digest: reference.digest,
@@ -151,6 +219,8 @@ export function extractComponentMetadata(
     description,
     inputNames,
     outputNames,
+    ioText,
+    metadataText,
   };
 }
 
@@ -175,10 +245,12 @@ export function buildSearchIndex(sourced: SourcedReference[]): IndexEntry[] {
       searchable: {
         name: metadata.name.toLowerCase(),
         description: metadata.description.toLowerCase(),
-        io: [...metadata.inputNames, ...metadata.outputNames]
+        io: metadata.ioText.toLowerCase(),
+        implementation: extractImplementationText(reference),
+        metadata: [metadata.metadataText, source.label, reference.published_by]
+          .filter(isNonEmptyString)
           .join(" ")
           .toLowerCase(),
-        implementation: extractImplementationText(reference),
       },
     });
   }
@@ -244,7 +316,16 @@ const FIELD_WEIGHTS: Record<MatchField, number> = {
   description: 2,
   io: 2,
   implementation: 1,
+  metadata: 1,
 };
+
+const SEARCH_FIELDS: MatchField[] = [
+  "name",
+  "description",
+  "io",
+  "implementation",
+  "metadata",
+];
 
 interface SearchOptions {
   /** Max results to return. Default 20. */
@@ -271,12 +352,11 @@ function scoreEntry(
   entry: IndexEntry,
   tokens: string[],
 ): { score: number; matchedFields: MatchField[] } {
-  const fields: MatchField[] = ["name", "description", "io", "implementation"];
   const matched = new Set<MatchField>();
   let score = 0;
 
   for (const token of tokens) {
-    for (const field of fields) {
+    for (const field of SEARCH_FIELDS) {
       if (entry.searchable[field].includes(token)) {
         score += FIELD_WEIGHTS[field];
         matched.add(field);

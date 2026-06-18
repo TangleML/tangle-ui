@@ -23,6 +23,7 @@ function makeRef(
     digest: partial.digest,
     url: partial.url,
     name: partial.name,
+    published_by: partial.published_by,
     spec: partial.spec,
   };
 }
@@ -84,20 +85,40 @@ describe("buildSearchIndex", () => {
     expect(index[0].source).toEqual(USER);
   });
 
-  it("indexes name, description, io, and container command text", () => {
+  it("indexes name, description, io details, metadata, and container command text", () => {
     const index = buildSearchIndex([
       makeSourced({
         digest: "a",
+        published_by: "publisher@example.com",
         spec: {
           name: "train_model",
           description: "Train a regression model on a dataset.",
-          inputs: [{ name: "dataset" }],
-          outputs: [{ name: "model" }],
+          inputs: [
+            {
+              name: "dataset",
+              type: "Dataset",
+              description: "Training table with labeled rows.",
+              annotations: { format: "parquet" },
+            },
+          ],
+          outputs: [
+            {
+              name: "model",
+              type: { artifact: "Model" },
+              description: "Serialized classifier artifact.",
+            },
+          ],
           implementation: {
             container: {
               image: "python:3.11",
               command: ["python", "-m", "pandas.train"],
               args: ["--epochs", "10"],
+            },
+          },
+          metadata: {
+            annotations: {
+              framework: "sklearn",
+              python_original_code: "do not index this large source blob",
             },
           },
         },
@@ -107,7 +128,14 @@ describe("buildSearchIndex", () => {
     expect(index[0].searchable.name).toContain("train_model");
     expect(index[0].searchable.description).toContain("regression");
     expect(index[0].searchable.io).toContain("dataset");
+    expect(index[0].searchable.io).toContain("training table");
+    expect(index[0].searchable.io).toContain("parquet");
     expect(index[0].searchable.io).toContain("model");
+    expect(index[0].searchable.io).toContain("serialized classifier");
+    expect(index[0].searchable.io).toContain("artifact");
+    expect(index[0].searchable.metadata).toContain("sklearn");
+    expect(index[0].searchable.metadata).toContain("publisher@example.com");
+    expect(index[0].searchable.metadata).not.toContain("source blob");
     expect(index[0].searchable.implementation).toContain("pandas.train");
     expect(index[0].searchable.implementation).toContain("--epochs");
   });
@@ -257,6 +285,62 @@ describe("lexicalSearch", () => {
 
     const results = lexicalSearch(index, "x");
     expect(results[0]?.digest).toBe("x");
+  });
+
+  it("matches input/output descriptions and types", () => {
+    const index = buildSearchIndex([
+      makeSourced({
+        digest: "typed-io",
+        spec: {
+          name: "generic_processor",
+          inputs: [
+            {
+              name: "data",
+              type: "Dataset",
+              description: "Tabular dataframe rows to clean.",
+            },
+          ],
+          outputs: [
+            {
+              name: "result",
+              type: { artifact: "Model" },
+              description: "Trained classifier artifact.",
+            },
+          ],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+    ]);
+
+    expect(lexicalSearch(index, "dataframe")[0]?.digest).toBe("typed-io");
+    const typeResults = lexicalSearch(index, "artifact");
+    expect(typeResults[0]?.digest).toBe("typed-io");
+    expect(typeResults[0]?.matchedFields).toContain("io");
+  });
+
+  it("matches component metadata and source information", () => {
+    const index = buildSearchIndex([
+      makeSourced(
+        {
+          digest: "meta",
+          published_by: "publisher@example.com",
+          spec: {
+            name: "generic_processor",
+            inputs: [],
+            outputs: [],
+            implementation: { container: { image: "x" } },
+            metadata: { annotations: { framework: "lightgbm" } },
+          },
+        },
+        USER,
+      ),
+    ]);
+
+    expect(lexicalSearch(index, "lightgbm")[0]?.matchedFields).toContain(
+      "metadata",
+    );
+    expect(lexicalSearch(index, "publisher@example")[0]?.digest).toBe("meta");
+    expect(lexicalSearch(index, "user")[0]?.digest).toBe("meta");
   });
 
   it("matches implementation/command text with the lowest weight", () => {
