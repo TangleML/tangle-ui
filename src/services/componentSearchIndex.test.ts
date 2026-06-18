@@ -236,10 +236,59 @@ describe("lexicalSearch", () => {
     expect(results[0]?.digest).toBe("contiguous");
   });
 
-  it("tokenizes snake_case queries so each segment matches independently", () => {
-    const index = buildSearchIndex(fixtures);
-    const results = lexicalSearch(index, "drop nulls");
-    expect(results[0]?.digest).toBe("b");
+  it("normalizes snake_case, kebab-case, and camelCase text", () => {
+    const index = buildSearchIndex([
+      makeSourced({
+        digest: "snake",
+        spec: {
+          name: "drop_nulls",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+      makeSourced({
+        digest: "kebab",
+        spec: {
+          name: "train-model",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+      makeSourced({
+        digest: "camel",
+        spec: {
+          name: "loadCSVFile",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+    ]);
+
+    expect(lexicalSearch(index, "drop nulls")[0]?.digest).toBe("snake");
+    expect(lexicalSearch(index, "train model")[0]?.digest).toBe("kebab");
+    expect(lexicalSearch(index, "load csv file")[0]?.digest).toBe("camel");
+  });
+
+  it("normalizes plurals and simple stemmed terms", () => {
+    const index = buildSearchIndex([
+      makeSourced({
+        digest: "normalize",
+        spec: {
+          name: "train_model",
+          description: "Train models on a dataset with labeled batches.",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+    ]);
+
+    expect(lexicalSearch(index, "training")[0]?.digest).toBe("normalize");
+    expect(lexicalSearch(index, "datasets")[0]?.digest).toBe("normalize");
+    expect(lexicalSearch(index, "batch")[0]?.digest).toBe("normalize");
   });
 
   it("ignores natural-language filler words that would otherwise swamp intent", () => {

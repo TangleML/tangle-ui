@@ -54,7 +54,7 @@ export interface IndexEntry {
   name: string;
   /** Where this component came from. */
   source: ComponentSearchSource;
-  /** Pre-lowercased searchable text, one per logical field. */
+  /** Normalized searchable text, one per logical field. */
   searchable: Record<MatchField, string>;
 }
 
@@ -111,6 +111,62 @@ function stringifySearchValue(value: unknown): string {
         return "";
       }
   }
+}
+
+function splitIdentifierText(text: string): string {
+  return text
+    .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ");
+}
+
+function removeSuffixAndCollapseDoubleFinal(
+  token: string,
+  suffixLength: number,
+): string {
+  const stemmed = token.slice(0, -suffixLength);
+  if (stemmed.length < 3) return stemmed;
+
+  const last = stemmed.at(-1);
+  const previous = stemmed.at(-2);
+  return last && last === previous ? stemmed.slice(0, -1) : stemmed;
+}
+
+function stemToken(token: string): string {
+  if (token.length <= 3) return token;
+  if (token.endsWith("ies") && token.length > 4) {
+    return `${token.slice(0, -3)}y`;
+  }
+  if (token.endsWith("ing") && token.length > 5) {
+    return removeSuffixAndCollapseDoubleFinal(token, 3);
+  }
+  if (token.endsWith("ed") && token.length > 4) {
+    return removeSuffixAndCollapseDoubleFinal(token, 2);
+  }
+  if (/(ches|shes|xes|zes|ses)$/.test(token) && token.length > 4) {
+    return token.slice(0, -2);
+  }
+  if (token.endsWith("s") && !token.endsWith("ss") && token.length > 3) {
+    return token.slice(0, -1);
+  }
+  return token;
+}
+
+function normalizeSearchText(text: string): string {
+  const splitText = splitIdentifierText(text).toLowerCase();
+  const tokens = splitText.split(/[^a-z0-9]+/).filter(isNonEmptyString);
+  const expandedTokens: string[] = [];
+  const seen = new Set<string>();
+
+  for (const token of tokens) {
+    for (const variant of [token, stemToken(token)]) {
+      if (seen.has(variant)) continue;
+      seen.add(variant);
+      expandedTokens.push(variant);
+    }
+  }
+
+  return [text.toLowerCase(), splitText, expandedTokens.join(" ")].join(" ");
 }
 
 function extractAnnotationsText(
@@ -250,11 +306,16 @@ export function buildSearchIndex(sourced: SourcedReference[]): IndexEntry[] {
       name: metadata.name,
       source,
       searchable: {
-        name: metadata.name.toLowerCase(),
-        description: metadata.description.toLowerCase(),
-        io: metadata.ioText.toLowerCase(),
-        implementation: extractImplementationText(reference),
-        metadata: metadata.metadataText.toLowerCase(),
+        name: normalizeSearchText(metadata.name),
+        description: normalizeSearchText(metadata.description),
+        io: normalizeSearchText(metadata.ioText),
+        implementation: normalizeSearchText(
+          extractImplementationText(reference),
+        ),
+        metadata: normalizeSearchText(metadata.metadataText).slice(
+          0,
+          MAX_ANNOTATION_TOTAL_TEXT_LENGTH,
+        ),
       },
     });
   }
@@ -292,10 +353,9 @@ const QUERY_STOP_WORDS = new Set([
  * nearly every component and drowning out the useful intent terms.
  */
 function tokenize(text: string): string[] {
-  const rawTokens = text
-    .toLowerCase()
+  const rawTokens = normalizeSearchText(text)
     .split(/[^a-z0-9]+/)
-    .filter((t) => t.length > 0);
+    .filter(isNonEmptyString);
 
   const tokens: string[] = [];
   const seen = new Set<string>();
@@ -350,7 +410,8 @@ interface SearchOptions {
  *   "train test split" matching `train_test_split` strongly even though we
  *   tokenized.
  *
- * We deliberately do not normalize — raw scores are only used for ordering.
+ * Indexed text and query text are normalized before scoring; raw scores are
+ * only used for ordering.
  */
 function scoreEntry(
   entry: IndexEntry,
