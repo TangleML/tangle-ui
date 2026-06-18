@@ -291,6 +291,33 @@ describe("lexicalSearch", () => {
     expect(lexicalSearch(index, "batch")[0]?.digest).toBe("normalize");
   });
 
+  it("scores surface tokens and stems as one concept", () => {
+    const index = buildSearchIndex([
+      makeSourced({
+        digest: "inflected-only",
+        spec: {
+          name: "training_metadata",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+      makeSourced({
+        digest: "stronger-concept-match",
+        spec: {
+          name: "train_model",
+          description: "Training classifier.",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+    ]);
+
+    const results = lexicalSearch(index, "training");
+    expect(results[0]?.digest).toBe("stronger-concept-match");
+  });
+
   it("ignores natural-language filler words that would otherwise swamp intent", () => {
     const index = buildSearchIndex([
       makeSourced({

@@ -115,7 +115,7 @@ function stringifySearchValue(value: unknown): string {
 
 function splitIdentifierText(text: string): string {
   return text
-    .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
+    .replace(/([A-Z])([A-Z][a-z])/g, "$1 $2")
     .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
     .replace(/[_-]+/g, " ");
 }
@@ -132,6 +132,7 @@ function removeSuffixAndCollapseDoubleFinal(
   return last && last === previous ? stemmed.slice(0, -1) : stemmed;
 }
 
+// Deliberately lossy search heuristic, not a full Porter stemmer.
 function stemToken(token: string): string {
   if (token.length <= 3) return token;
   if (token.endsWith("ies") && token.length > 4) {
@@ -146,7 +147,13 @@ function stemToken(token: string): string {
   if (/(ches|shes|xes|zes|ses)$/.test(token) && token.length > 4) {
     return token.slice(0, -2);
   }
-  if (token.endsWith("s") && !token.endsWith("ss") && token.length > 3) {
+  if (
+    token.endsWith("s") &&
+    !token.endsWith("ss") &&
+    !token.endsWith("is") &&
+    !token.endsWith("us") &&
+    token.length > 3
+  ) {
     return token.slice(0, -1);
   }
   return token;
@@ -352,22 +359,28 @@ const QUERY_STOP_WORDS = new Set([
  * Dropping those words prevents common tokens like "a"/"to" from matching
  * nearly every component and drowning out the useful intent terms.
  */
-function tokenize(text: string): string[] {
-  const rawTokens = normalizeSearchText(text)
-    .split(/[^a-z0-9]+/)
-    .filter(isNonEmptyString);
+function tokenizeConcepts(text: string): string[][] {
+  const splitText = splitIdentifierText(text).toLowerCase();
+  const rawTokens = splitText.split(/[^a-z0-9]+/).filter(isNonEmptyString);
 
-  const tokens: string[] = [];
+  const concepts: string[][] = [];
   const seen = new Set<string>();
   for (const token of rawTokens) {
     if (QUERY_STOP_WORDS.has(token)) continue;
-    if (!seen.has(token)) {
-      tokens.push(token);
-      seen.add(token);
-    }
+
+    const variants = Array.from(new Set([token, stemToken(token)])).filter(
+      (variant) => !QUERY_STOP_WORDS.has(variant),
+    );
+    if (variants.length === 0) continue;
+
+    const conceptKey = variants.join("\0");
+    if (seen.has(conceptKey)) continue;
+
+    concepts.push(variants);
+    seen.add(conceptKey);
   }
 
-  return tokens;
+  return concepts;
 }
 
 /**
@@ -405,7 +418,8 @@ interface SearchOptions {
  * Score one entry against the tokenized query. Returns 0 if no field matched.
  *
  * Scoring model:
- * - Per query token: each field that contains the token contributes its weight.
+ * - Per query concept: each field that contains any token variant contributes
+ *   its weight once.
  * - Bonus: full multi-token query as a substring of the name (+10). Catches
  *   "train test split" matching `train_test_split` strongly even though we
  *   tokenized.
@@ -415,14 +429,14 @@ interface SearchOptions {
  */
 function scoreEntry(
   entry: IndexEntry,
-  tokens: string[],
+  concepts: string[][],
 ): { score: number; matchedFields: MatchField[] } {
   const matched = new Set<MatchField>();
   let score = 0;
 
-  for (const token of tokens) {
+  for (const concept of concepts) {
     for (const field of SEARCH_FIELDS) {
-      if (entry.searchable[field].includes(token)) {
+      if (concept.some((token) => entry.searchable[field].includes(token))) {
         score += FIELD_WEIGHTS[field];
         matched.add(field);
       }
@@ -433,9 +447,9 @@ function scoreEntry(
   // sides are normalized so the bonus also fires for snake_case names —
   // query "train test split" should match `train_test_split`, not just
   // names that happen to contain literal spaces.
-  if (tokens.length > 1) {
+  if (concepts.length > 1) {
     const normalizedName = entry.searchable.name.replace(/[^a-z0-9]+/g, " ");
-    const normalizedQuery = tokens.join(" ");
+    const normalizedQuery = concepts.map((concept) => concept[0]).join(" ");
     if (normalizedName.includes(normalizedQuery)) {
       score += 10;
       matched.add("name");
@@ -459,12 +473,12 @@ export function lexicalSearch(
   const trimmed = query.trim().toLowerCase();
   if (trimmed.length < minLength) return [];
 
-  const tokens = tokenize(trimmed);
-  if (tokens.length === 0) return [];
+  const concepts = tokenizeConcepts(trimmed);
+  if (concepts.length === 0) return [];
 
   const scored: Array<LexicalMatch & { score: number }> = [];
   for (const entry of index) {
-    const { score, matchedFields } = scoreEntry(entry, tokens);
+    const { score, matchedFields } = scoreEntry(entry, concepts);
     if (score === 0) continue;
     scored.push({
       reference: entry.reference,
