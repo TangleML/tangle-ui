@@ -318,6 +318,56 @@ describe("lexicalSearch", () => {
     expect(results[0]?.digest).toBe("stronger-concept-match");
   });
 
+  it("expands domain-neutral synonyms", () => {
+    const index = buildSearchIndex([
+      makeSourced({
+        digest: "storage",
+        spec: {
+          name: "upload_object",
+          description: "Upload files to a cloud storage bucket.",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+      makeSourced({
+        digest: "train",
+        spec: {
+          name: "train_model",
+          description: "Train a model on tabular data.",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+      makeSourced({
+        digest: "predict",
+        spec: {
+          name: "predict_labels",
+          description: "Predict labels for examples.",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+      makeSourced({
+        digest: "table",
+        spec: {
+          name: "clean_table",
+          description: "Clean tabular dataframe rows.",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+    ]);
+
+    expect(lexicalSearch(index, "gcs")[0]?.digest).toBe("storage");
+    expect(lexicalSearch(index, "fit")[0]?.digest).toBe("train");
+    expect(lexicalSearch(index, "infer")[0]?.digest).toBe("predict");
+    expect(lexicalSearch(index, "df")[0]?.digest).toBe("table");
+  });
+
   it("ignores natural-language filler words that would otherwise swamp intent", () => {
     const index = buildSearchIndex([
       makeSourced({
@@ -478,6 +528,23 @@ describe("lexicalSearch", () => {
     const index = buildSearchIndex(fixtures);
     const results = lexicalSearch(index, "my_custom_train");
     expect(results[0]?.source).toEqual(USER);
+  });
+
+  it("expands dataframe synonyms to table-only metadata", () => {
+    const index = buildSearchIndex([
+      makeSourced({
+        digest: "table-only",
+        spec: {
+          name: "clean_rows",
+          description: "Clean table rows.",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+    ]);
+
+    expect(lexicalSearch(index, "df")[0]?.digest).toBe("table-only");
   });
 
   it("respects the limit option", () => {
