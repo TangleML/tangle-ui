@@ -8,6 +8,7 @@ import {
   Output,
   Task,
 } from "@/models/componentSpec";
+import { ONBOARDING_MY_RUN_COUNT_KEY } from "@/providers/OnboardingProvider/onboardingQueryKeys";
 import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
 
 vi.mock("@/services/componentService", () => ({
@@ -444,6 +445,9 @@ describe("createEditorToolBridge", () => {
       expect(urlArg).toBe(TEST_BACKEND_URL);
       expect(optionsArg.authorizationToken).toBe("auth-token");
       expect(invalidate).toHaveBeenCalledWith({ queryKey: ["pipelineRuns"] });
+      expect(invalidate).toHaveBeenCalledWith({
+        queryKey: ONBOARDING_MY_RUN_COUNT_KEY,
+      });
     });
 
     it("returns submission failure with the helper's error message", async () => {

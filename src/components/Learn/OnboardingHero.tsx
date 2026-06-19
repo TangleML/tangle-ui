@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Heading, Paragraph } from "@/components/ui/typography";
+import { cn } from "@/lib/utils";
 import { useOnboarding } from "@/providers/OnboardingProvider/OnboardingProvider";
 
 function scrollNearestScrollableToTop(el: HTMLElement | null) {
@@ -21,12 +22,15 @@ function scrollNearestScrollableToTop(el: HTMLElement | null) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-export function OnboardingHero() {
+export function OnboardingHero({ className }: { className?: string }) {
   const { isComplete, dismissed, dismiss, reopen } = useOnboarding();
 
   if (dismissed) {
     return (
-      <InlineStack align="end" className="text-muted-foreground opacity-50">
+      <InlineStack
+        align="end"
+        className={cn("text-muted-foreground opacity-50", className)}
+      >
         <Button
           variant="ghost"
           size="sm"
@@ -46,7 +50,12 @@ export function OnboardingHero() {
   }
 
   return (
-    <div className="relative rounded-xl border border-border bg-linear-to-br from-primary/5 to-transparent p-6">
+    <div
+      className={cn(
+        "relative rounded-xl border border-border bg-linear-to-br from-primary/5 to-transparent p-6",
+        className,
+      )}
+    >
       <Button
         variant="ghost"
         size="icon"

@@ -98,9 +98,11 @@ export function usePersistOnboardingProgress() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ settings: { [ONBOARDING_KEY]: next } }),
-        // Often fired just before a navigation/reload; survive page unload.
         keepalive: true,
       });
+    },
+    onError: () => {
+      queryClient.invalidateQueries({ queryKey: queryKey(backendUrl) });
     },
   });
 

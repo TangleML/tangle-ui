@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useState } from "react";
 
-import type { ListPipelineJobsResponse } from "@/api/types.gen";
 import { useDocsVisitTracking } from "@/hooks/useDocsVisitTracking";
 import {
   createRequiredContext,
@@ -15,6 +14,7 @@ import {
   filtersToFilterQuery,
   parseFilterParam,
 } from "@/utils/pipelineRunFilterUtils";
+import { isRecord } from "@/utils/typeGuards";
 import { subscribeUserPipelineWritten } from "@/utils/userPipelineWriteEvents";
 
 import {
@@ -22,6 +22,7 @@ import {
   useOnboardingProgress,
   usePersistOnboardingProgress,
 } from "./onboardingProgress";
+import { ONBOARDING_MY_RUN_COUNT_KEY } from "./onboardingQueryKeys";
 import {
   ONBOARDING_STEP_IDS,
   ONBOARDING_STEPS,
@@ -30,6 +31,11 @@ import {
 
 const PIPELINE_RUNS_QUERY_URL = "/api/pipeline_runs/";
 const STALE_MS = 1000 * 60 * 5;
+
+function countPipelineRuns(payload: unknown): number {
+  if (!isRecord(payload) || !Array.isArray(payload.pipeline_runs)) return 0;
+  return payload.pipeline_runs.length;
+}
 
 export interface OnboardingStep extends OnboardingStepMeta {
   completed: boolean;
@@ -54,17 +60,15 @@ function useHasMyRun(): boolean {
   const filterQuery = filtersToFilterQuery(parseFilterParam("created_by:me"));
 
   const { data } = useQuery({
-    queryKey: ["onboarding", "myRunCount", backendUrl],
+    queryKey: [...ONBOARDING_MY_RUN_COUNT_KEY, backendUrl],
     enabled: available && Boolean(backendUrl),
     staleTime: STALE_MS,
     refetchOnWindowFocus: false,
     queryFn: async () => {
       const url = new URL(PIPELINE_RUNS_QUERY_URL, backendUrl);
       if (filterQuery) url.searchParams.set("filter_query", filterQuery);
-      const payload = (await fetchWithErrorHandling(
-        url.toString(),
-      )) as ListPipelineJobsResponse;
-      return payload.pipeline_runs?.length ?? 0;
+      const payload = await fetchWithErrorHandling(url.toString());
+      return countPipelineRuns(payload);
     },
   });
   return (data ?? 0) > 0;

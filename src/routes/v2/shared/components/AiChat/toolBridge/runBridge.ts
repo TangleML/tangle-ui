@@ -26,6 +26,7 @@ import {
   truncateExecutionDetails,
 } from "@/agent/util/truncate";
 import { serializeComponentSpec } from "@/models/componentSpec/serialization/serialize";
+import { ONBOARDING_MY_RUN_COUNT_KEY } from "@/providers/OnboardingProvider/onboardingQueryKeys";
 import {
   fetchContainerExecutionState,
   fetchContainerLog,
@@ -85,6 +86,11 @@ export function createRunBridgeHandlers(deps: BridgeDeps): RunHandlers {
       }
       // Refresh both the editor list (per pipeline) and the home runs page.
       deps.queryClient?.invalidateQueries({ queryKey: ["pipelineRuns"] });
+      // Keep the onboarding checklist's run-count fresh so a first run flips
+      // `execute_run` immediately rather than after its stale window.
+      deps.queryClient?.invalidateQueries({
+        queryKey: ONBOARDING_MY_RUN_COUNT_KEY,
+      });
       return {
         success: true,
         runId: String(submission.run.id),

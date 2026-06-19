@@ -26,7 +26,7 @@ export function LearnHomeView() {
         </BlockStack>
       </BlockStack>
 
-      {!dismissed && <OnboardingHero />}
+      <OnboardingHero className={dismissed ? "order-last" : undefined} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <TipOfTheDay />
@@ -43,8 +43,6 @@ export function LearnHomeView() {
           <HelpCard />
         </div>
       </div>
-
-      {dismissed && <OnboardingHero />}
     </BlockStack>
   );
 }

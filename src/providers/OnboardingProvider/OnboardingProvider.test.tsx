@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { emitUserPipelineWritten } from "@/utils/userPipelineWriteEvents";
 
 import { OnboardingProvider, useOnboarding } from "./OnboardingProvider";
+import { ONBOARDING_MY_RUN_COUNT_KEY } from "./onboardingQueryKeys";
 
 const fetchWithErrorHandling = vi.hoisted(() =>
   vi.fn<(url: string, options?: RequestInit) => Promise<unknown>>(),
@@ -47,6 +48,21 @@ function wrapper({ children }: { children: ReactNode }) {
 
 function render() {
   return renderHook(() => useOnboarding(), { wrapper });
+}
+
+function renderWithClient() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const clientWrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>
+      <OnboardingProvider>{children}</OnboardingProvider>
+    </QueryClientProvider>
+  );
+  return {
+    ...renderHook(() => useOnboarding(), { wrapper: clientWrapper }),
+    queryClient,
+  };
 }
 
 function completedSteps(result: { current: ReturnType<typeof useOnboarding> }) {
@@ -108,6 +124,37 @@ describe("OnboardingProvider", () => {
       ]),
     );
     expect(patched()).toBe(false);
+  });
+
+  it("refreshes execute_run when the run-count query is invalidated after a run is created", async () => {
+    const { result, queryClient } = renderWithClient();
+
+    await waitFor(() => expect(result.current.total).toBe(4));
+    expect(completedSteps(result)).not.toContain("execute_run");
+
+    // A run now exists, and the run-create mutation path invalidates the
+    // shared onboarding run-count key — execute_run should flip without
+    // waiting out the query's stale window.
+    runsPayload = { pipeline_runs: [{ id: "run-1" }] };
+    await act(async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ONBOARDING_MY_RUN_COUNT_KEY,
+      });
+    });
+
+    await waitFor(() =>
+      expect(completedSteps(result)).toContain("execute_run"),
+    );
+    expect(patched()).toBe(false);
+  });
+
+  it("treats a malformed run-count payload as zero runs", async () => {
+    runsPayload = { pipeline_runs: "not-an-array" };
+
+    const { result } = render();
+
+    await waitFor(() => expect(result.current.total).toBe(4));
+    expect(completedSteps(result)).not.toContain("execute_run");
   });
 
   it("persists create_pipeline when the user writes a pipeline", async () => {
