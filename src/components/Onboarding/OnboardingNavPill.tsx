@@ -12,10 +12,9 @@ import { useOnboarding } from "@/providers/OnboardingProvider/OnboardingProvider
 import { tracking } from "@/utils/tracking";
 
 export function OnboardingNavPill() {
-  const { completedCount, total, isComplete, dismissed, isResolved } =
-    useOnboarding();
+  const { completedCount, total, shouldShowOnboarding } = useOnboarding();
 
-  if (!isResolved || isComplete || dismissed) {
+  if (!shouldShowOnboarding) {
     return null;
   }
 

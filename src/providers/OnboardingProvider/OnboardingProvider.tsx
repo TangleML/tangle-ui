@@ -51,6 +51,8 @@ interface OnboardingContextValue {
   dismissed: boolean;
   isReady: boolean;
   isResolved: boolean;
+  isOnboardingAvailable: boolean;
+  shouldShowOnboarding: boolean;
   markDocsRead: () => void;
   dismiss: () => void;
   reopen: () => void;
@@ -84,7 +86,13 @@ function useHasMyRun(): {
 export function OnboardingProvider({ children }: { children: ReactNode }) {
   const { track } = useAnalytics();
   const notify = useToastNotification();
-  const { ready: backendReady, configured } = useBackend();
+  const {
+    ready: backendReady,
+    configured,
+    available,
+    backendUrl,
+  } = useBackend();
+  const hasBackend = available && Boolean(backendUrl);
   const { data: progress, isLoading: progressLoading } =
     useOnboardingProgress();
   const persist = usePersistOnboardingProgress();
@@ -105,8 +113,12 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   };
 
   const isComplete = ONBOARDING_STEP_IDS.every((id) => desiredSteps[id]);
+  const dismissed = progress?.dismissed ?? false;
   const isReady = !progressLoading && !toursLoading && !runsLoading;
   const isResolved = (backendReady || !configured) && isReady;
+  const isOnboardingAvailable = isResolved && hasBackend;
+  const shouldShowOnboarding =
+    isOnboardingAvailable && !isComplete && !dismissed;
 
   const [pipelineWriteCount, setPipelineWriteCount] = useState(0);
 
@@ -166,9 +178,11 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     completedCount: steps.filter((step) => step.completed).length,
     total: steps.length,
     isComplete,
-    dismissed: progress?.dismissed ?? false,
+    dismissed,
     isReady,
     isResolved,
+    isOnboardingAvailable,
+    shouldShowOnboarding,
     markDocsRead,
     dismiss,
     reopen,

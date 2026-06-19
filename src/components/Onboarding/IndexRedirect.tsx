@@ -6,9 +6,9 @@ import { useOnboarding } from "@/providers/OnboardingProvider/OnboardingProvider
 import { APP_ROUTES } from "@/routes/appRoutes";
 
 export function IndexRedirect() {
-  const { isReady, isComplete, dismissed } = useOnboarding();
+  const { isResolved, shouldShowOnboarding } = useOnboarding();
 
-  if (!isReady) {
+  if (!isResolved) {
     return (
       <BlockStack align="center" inlineAlign="center" className="h-full">
         <Spinner />
@@ -16,11 +16,10 @@ export function IndexRedirect() {
     );
   }
 
-  const showOnboarding = !isComplete && !dismissed;
   return (
     <Navigate
       replace
-      to={showOnboarding ? APP_ROUTES.WELCOME : APP_ROUTES.DASHBOARD}
+      to={shouldShowOnboarding ? APP_ROUTES.WELCOME : APP_ROUTES.DASHBOARD}
     />
   );
 }

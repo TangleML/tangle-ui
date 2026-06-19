@@ -68,14 +68,14 @@ describe("<LearnHomeView/>", () => {
     ).toBeInTheDocument();
   });
 
-  test("renders the onboarding hero with progress", () => {
+  test("hides the onboarding hero when no backend is available", () => {
     renderWithClient(<LearnHomeView />);
     expect(
-      screen.getByRole("heading", { level: 2, name: /welcome to tangle/i }),
-    ).toBeInTheDocument();
+      screen.queryByRole("heading", { level: 2, name: /welcome to tangle/i }),
+    ).not.toBeInTheDocument();
     expect(
-      screen.getByRole("progressbar", { name: /onboarding progress/i }),
-    ).toBeInTheDocument();
+      screen.queryByRole("progressbar", { name: /onboarding progress/i }),
+    ).not.toBeInTheDocument();
   });
 
   test("renders the docs quicklinks and full-docs link at the top", () => {

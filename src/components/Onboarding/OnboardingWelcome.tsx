@@ -2,14 +2,23 @@ import { Link, Navigate } from "@tanstack/react-router";
 
 import { OnboardingHero } from "@/components/Learn/OnboardingHero";
 import { BlockStack } from "@/components/ui/layout";
+import { Spinner } from "@/components/ui/spinner";
 import { useOnboarding } from "@/providers/OnboardingProvider/OnboardingProvider";
-import { APP_ROUTES } from "@/routes/router";
+import { APP_ROUTES } from "@/routes/appRoutes";
 import { tracking } from "@/utils/tracking";
 
 export function OnboardingWelcome() {
-  const { isReady, isComplete, dismissed } = useOnboarding();
+  const { isResolved, shouldShowOnboarding } = useOnboarding();
 
-  if (isReady && (isComplete || dismissed)) {
+  if (!isResolved) {
+    return (
+      <BlockStack align="center" inlineAlign="center" className="h-full">
+        <Spinner />
+      </BlockStack>
+    );
+  }
+
+  if (!shouldShowOnboarding) {
     return <Navigate to={APP_ROUTES.DASHBOARD} replace />;
   }
 

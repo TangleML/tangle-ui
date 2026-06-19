@@ -12,9 +12,7 @@ let onboarding = {
   steps: [],
   completedCount: 1,
   total: 4,
-  isComplete: false,
-  dismissed: false,
-  isResolved: true,
+  shouldShowOnboarding: true,
   markDocsRead: vi.fn(),
 };
 vi.mock("@/providers/OnboardingProvider/OnboardingProvider", () => ({
@@ -26,9 +24,7 @@ function resetState() {
     steps: [],
     completedCount: 1,
     total: 4,
-    isComplete: false,
-    dismissed: false,
-    isResolved: true,
+    shouldShowOnboarding: true,
     markDocsRead: vi.fn(),
   };
 }
@@ -39,19 +35,13 @@ afterEach(cleanup);
 const pill = () => screen.queryByText(/Onboarding/);
 
 describe("OnboardingNavPill", () => {
-  it("shows progress while onboarding is in progress", () => {
+  it("shows progress while onboarding should show", () => {
     render(<OnboardingNavPill />);
     expect(pill()).toHaveTextContent("Onboarding · 1/4");
   });
 
-  it("is hidden once onboarding is complete", () => {
-    onboarding.isComplete = true;
-    render(<OnboardingNavPill />);
-    expect(pill()).toBeNull();
-  });
-
-  it("is hidden once onboarding is dismissed", () => {
-    onboarding.dismissed = true;
+  it("is hidden when onboarding should not show", () => {
+    onboarding.shouldShowOnboarding = false;
     render(<OnboardingNavPill />);
     expect(pill()).toBeNull();
   });

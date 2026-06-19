@@ -59,8 +59,7 @@ export function DashboardLayout() {
   const requiresAuthorization = isAuthorizationRequired();
   const isComponentSearchEnabled = useFlagValue("component-search-v2");
 
-  const { isComplete, dismissed, isResolved } = useOnboarding();
-  const showOnboarding = isResolved && !isComplete && !dismissed;
+  const { shouldShowOnboarding } = useOnboarding();
 
   const baseItems = isComponentSearchEnabled
     ? BASE_SIDEBAR_ITEMS.map((item) =>
@@ -70,11 +69,11 @@ export function DashboardLayout() {
       )
     : BASE_SIDEBAR_ITEMS;
 
-  const sidebarItems: SidebarItem[] = showOnboarding
+  const sidebarItems: SidebarItem[] = shouldShowOnboarding
     ? [
         {
           to: APP_ROUTES.WELCOME,
-          label: "Get started",
+          label: "Get Started",
           icon: "Rocket",
           exact: true,
         },
