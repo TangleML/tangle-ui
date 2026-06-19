@@ -1,3 +1,5 @@
+import { componentSpecFromYaml } from "@/utils/yaml";
+
 import { Annotations, deserializeAnnotationValue } from "../annotations";
 import { Binding } from "../entities/binding";
 import { ComponentSpec } from "../entities/componentSpec";
@@ -139,10 +141,11 @@ export class YamlDeserializer {
         }
       }
 
-      const subgraphSpec = this.maybeDeserializeSubgraph(taskJson.componentRef);
+      const resolvedRef = this.resolveComponentRefSpec(taskJson.componentRef);
+      const subgraphSpec = this.maybeDeserializeSubgraph(resolvedRef);
       const componentRef = subgraphSpec
-        ? { ...taskJson.componentRef, spec: undefined }
-        : taskJson.componentRef;
+        ? { ...resolvedRef, spec: undefined }
+        : resolvedRef;
 
       return new Task({
         $id: this.idGen.next("task"),
@@ -155,6 +158,19 @@ export class YamlDeserializer {
         arguments: args,
       });
     });
+  }
+
+  // Derive `spec` from inlined `text` as a fallback, only when no spec exists.
+  private resolveComponentRefSpec(ref: ComponentReference): ComponentReference {
+    if (ref.spec) return ref;
+    if (!ref.text) return ref;
+
+    try {
+      return { ...ref, spec: componentSpecFromYaml(ref.text) };
+    } catch (error) {
+      console.warn("Failed to parse componentRef.text into spec:", error);
+      return ref;
+    }
   }
 
   private maybeDeserializeSubgraph(

@@ -85,9 +85,12 @@ export class JsonSerializer {
     );
     const args = this.serializeArguments(task.arguments, taskBindings, spec);
 
+    // For text-backed refs, `text` is authoritative; drop the load-time derived spec.
     const componentRef = task.subgraphSpec
       ? { ...task.componentRef, spec: this.serialize(task.subgraphSpec) }
-      : task.componentRef;
+      : task.componentRef.text
+        ? { ...task.componentRef, spec: undefined }
+        : task.componentRef;
 
     const result: TaskSpec = {
       componentRef,

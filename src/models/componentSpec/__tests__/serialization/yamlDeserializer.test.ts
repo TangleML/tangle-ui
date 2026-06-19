@@ -438,4 +438,118 @@ describe("YamlDeserializer", () => {
     expect(spec.bindings.length).toBe(0);
     expect(spec.tasks.at(0)?.arguments.length).toBe(1);
   });
+
+  describe("componentRef spec hydration", () => {
+    const containerText = [
+      "name: Adder",
+      "inputs:",
+      "- {name: a, type: Integer}",
+      "- {name: b, type: Integer}",
+      "outputs:",
+      "- {name: sum, type: Integer}",
+      "implementation:",
+      "  container:",
+      "    image: python:3.9",
+    ].join("\n");
+
+    it("hydrates componentRef.spec from text when spec is absent", () => {
+      const yaml = {
+        name: "Pipeline",
+        implementation: {
+          graph: {
+            tasks: {
+              Add: {
+                componentRef: { url: "http://x/c.yaml", digest: "abc", text: containerText },
+              },
+            },
+          },
+        },
+      };
+
+      const spec = deserializer.deserialize(yaml);
+      const componentRef = spec.tasks.at(0)?.componentRef;
+
+      expect(componentRef?.spec).toBeDefined();
+      expect(componentRef?.spec?.inputs?.map((i) => i.name)).toEqual(["a", "b"]);
+      expect(componentRef?.spec?.outputs?.map((o) => o.name)).toEqual(["sum"]);
+      // url/digest/text are preserved alongside the derived spec.
+      expect(componentRef?.url).toBe("http://x/c.yaml");
+      expect(componentRef?.digest).toBe("abc");
+      expect(componentRef?.text).toBe(containerText);
+    });
+
+    it("keeps an existing parsed spec and does not re-derive from text", () => {
+      const inlineSpec = {
+        name: "Inline",
+        implementation: { container: { image: "node:20" } },
+      };
+      const yaml = {
+        name: "Pipeline",
+        implementation: {
+          graph: {
+            tasks: {
+              Task1: {
+                componentRef: { spec: inlineSpec, text: containerText },
+              },
+            },
+          },
+        },
+      };
+
+      const spec = deserializer.deserialize(yaml);
+
+      // The pre-parsed spec wins over the (different) text.
+      expect(spec.tasks.at(0)?.componentRef.spec?.name).toBe("Inline");
+    });
+
+    it("promotes a text-backed graph implementation to subgraphSpec", () => {
+      const graphText = [
+        "name: InnerPipeline",
+        "implementation:",
+        "  graph:",
+        "    tasks: {}",
+      ].join("\n");
+      const yaml = {
+        name: "Pipeline",
+        implementation: {
+          graph: {
+            tasks: {
+              Sub: { componentRef: { text: graphText } },
+            },
+          },
+        },
+      };
+
+      const spec = deserializer.deserialize(yaml);
+      const task = spec.tasks.at(0);
+
+      expect(task?.subgraphSpec).toBeDefined();
+      expect(task?.subgraphSpec?.name).toBe("InnerPipeline");
+      // Graph spec is promoted, not left inline on the ref.
+      expect(task?.componentRef.spec).toBeUndefined();
+    });
+
+    it("falls back gracefully when text is not a valid component spec", () => {
+      const yaml = {
+        name: "Pipeline",
+        implementation: {
+          graph: {
+            tasks: {
+              Broken: {
+                componentRef: { text: "this is not a component spec" },
+              },
+            },
+          },
+        },
+      };
+
+      expect(() => deserializer.deserialize(yaml)).not.toThrow();
+
+      const componentRef = deserializer
+        .deserialize(yaml)
+        .tasks.at(0)?.componentRef;
+      expect(componentRef?.spec).toBeUndefined();
+      expect(componentRef?.text).toBe("this is not a component spec");
+    });
+  });
 });

@@ -73,6 +73,37 @@ describe("JsonSerializer", () => {
     });
   });
 
+  it("drops the derived spec from a text-backed componentRef on write", () => {
+    const spec = new ComponentSpec({
+      $id: idGen.next("spec"),
+      name: "Pipeline",
+    });
+    const task = new Task({
+      $id: idGen.next("task"),
+      name: "Add",
+      componentRef: {
+        url: "http://x/c.yaml",
+        digest: "abc",
+        text: "name: Adder\nimplementation:\n  container:\n    image: python:3.9",
+        spec: {
+          name: "Adder",
+          implementation: { container: { image: "python:3.9" } },
+        },
+      },
+    });
+    spec.addTask(task);
+
+    const componentRef = getGraph(serializer.serialize(spec)).tasks["Add"]
+      .componentRef;
+
+    expect(componentRef.spec).toBeUndefined();
+    expect(componentRef).toMatchObject({
+      url: "http://x/c.yaml",
+      digest: "abc",
+    });
+    expect(componentRef.text).toContain("Adder");
+  });
+
   it("serializes task with isEnabled", () => {
     const spec = new ComponentSpec({
       $id: idGen.next("spec"),
