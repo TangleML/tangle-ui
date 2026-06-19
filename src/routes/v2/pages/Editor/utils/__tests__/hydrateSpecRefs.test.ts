@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ComponentSpec } from "@/models/componentSpec/entities/componentSpec";
 import { Task } from "@/models/componentSpec/entities/task";
 import { IncrementingIdGenerator } from "@/models/componentSpec/factories/idGenerator";
+import { validateSpec } from "@/models/componentSpec/validation/validateSpec";
 import { hydrateLoadedSpecRefs } from "@/routes/v2/pages/Editor/utils/hydrateSpecRefs";
 import { hydrateComponentReference } from "@/services/componentService";
 import type {
@@ -64,6 +65,31 @@ describe("hydrateLoadedSpecRefs", () => {
     expect(mockHydrate).toHaveBeenCalledTimes(1);
     expect(task.resolvedComponentSpec).toBeDefined();
     expect(task.resolvedComponentSpec?.name).toBe("Foo");
+  });
+
+  it("leaves the ref untouched and surfaces a validation issue on failure", async () => {
+    const task = new Task({
+      $id: idGen.next("task"),
+      name: "Process",
+      componentRef: { url: "https://example.com/comp.yaml", digest: "abc" },
+    });
+    const spec = specWithTask(task);
+
+    mockHydrate.mockResolvedValue(null);
+
+    await hydrateLoadedSpecRefs(spec);
+
+    expect(task.componentRef.url).toBe("https://example.com/comp.yaml");
+    expect(task.resolvedComponentSpec).toBeUndefined();
+
+    const issues = validateSpec(spec);
+    expect(
+      issues.some(
+        (issue) =>
+          issue.entityId === task.$id &&
+          issue.issueCode === "COMPONENT_HYDRATION_FAILED",
+      ),
+    ).toBe(true);
   });
 
   it("recurses into subgraph tasks without re-hydrating the subgraph ref", async () => {
