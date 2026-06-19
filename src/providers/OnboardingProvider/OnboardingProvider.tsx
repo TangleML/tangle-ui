@@ -6,6 +6,7 @@ import {
   createRequiredContext,
   useRequiredContext,
 } from "@/hooks/useRequiredContext";
+import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useBackend } from "@/providers/BackendProvider";
 import { useTourCompletions } from "@/providers/TourProvider/tourCompletion";
@@ -28,6 +29,7 @@ import {
   ONBOARDING_STEPS,
   type OnboardingStepMeta,
 } from "./steps";
+import { useStepCompletionToasts } from "./useStepCompletionToasts";
 
 const PIPELINE_RUNS_QUERY_URL = "/api/pipeline_runs/";
 const STALE_MS = 1000 * 60 * 5;
@@ -47,6 +49,8 @@ interface OnboardingContextValue {
   total: number;
   isComplete: boolean;
   dismissed: boolean;
+  isReady: boolean;
+  isResolved: boolean;
   markDocsRead: () => void;
   dismiss: () => void;
   reopen: () => void;
@@ -55,11 +59,14 @@ interface OnboardingContextValue {
 const OnboardingContext =
   createRequiredContext<OnboardingContextValue>("OnboardingProvider");
 
-function useHasMyRun(): boolean {
+function useHasMyRun(): {
+  hasRun: boolean;
+  isLoading: boolean;
+} {
   const { available, backendUrl } = useBackend();
   const filterQuery = filtersToFilterQuery(parseFilterParam("created_by:me"));
 
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: [...ONBOARDING_MY_RUN_COUNT_KEY, backendUrl],
     enabled: available && Boolean(backendUrl),
     staleTime: STALE_MS,
@@ -71,19 +78,23 @@ function useHasMyRun(): boolean {
       return countPipelineRuns(payload);
     },
   });
-  return (data ?? 0) > 0;
+  return { hasRun: (data ?? 0) > 0, isLoading };
 }
 
 export function OnboardingProvider({ children }: { children: ReactNode }) {
   const { track } = useAnalytics();
-  const { data: progress } = useOnboardingProgress();
+  const notify = useToastNotification();
+  const { ready: backendReady, configured } = useBackend();
+  const { data: progress, isLoading: progressLoading } =
+    useOnboardingProgress();
   const persist = usePersistOnboardingProgress();
 
-  const { data: tourCompletions } = useTourCompletions();
+  const { data: tourCompletions, isLoading: toursLoading } =
+    useTourCompletions();
   const hasCompletedTour = Boolean(
     tourCompletions && Object.keys(tourCompletions).length > 0,
   );
-  const hasMyRun = useHasMyRun();
+  const { hasRun: hasMyRun, isLoading: runsLoading } = useHasMyRun();
 
   const stored = progress?.steps;
   const desiredSteps: OnboardingSteps = {
@@ -94,6 +105,8 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   };
 
   const isComplete = ONBOARDING_STEP_IDS.every((id) => desiredSteps[id]);
+  const isReady = !progressLoading && !toursLoading && !runsLoading;
+  const isResolved = (backendReady || !configured) && isReady;
 
   const [pipelineWriteCount, setPipelineWriteCount] = useState(0);
 
@@ -120,6 +133,8 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     track("onboarding.step.completed", { step_id: "create_pipeline" });
   }, [pipelineWriteCount, progress, persist, track]);
 
+  useStepCompletionToasts({ isResolved, desiredSteps, isComplete });
+
   const markDocsRead = () => {
     if (!progress || progress.steps.read_docs) return;
     persist({ ...progress, steps: { ...progress.steps, read_docs: true } });
@@ -132,6 +147,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     if (!progress || progress.dismissed) return;
     persist({ ...progress, dismissed: true });
     track("onboarding.dismissed");
+    notify("You can resume onboarding from the Learning Hub", "info");
   };
 
   const reopen = () => {
@@ -151,6 +167,8 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     total: steps.length,
     isComplete,
     dismissed: progress?.dismissed ?? false,
+    isReady,
+    isResolved,
     markDocsRead,
     dismiss,
     reopen,
