@@ -180,9 +180,7 @@ test.describe("Sticky Note (FlexNode) Functionality", () => {
     const greenPreset = page.getByTestId("color-preset-c8e6c9");
     await greenPreset.click();
 
-    // Click the sticky note to close popover while keeping it selected
-    // (Escape would deselect the node in React Flow)
-    await stickyNote.click();
+    await backgroundColorPicker.click();
     await expect(popover).toBeHidden();
   });
 
@@ -211,9 +209,7 @@ test.describe("Sticky Note (FlexNode) Functionality", () => {
     const transparentPreset = page.getByTestId("color-preset-transparent");
     await transparentPreset.click();
 
-    // Click the sticky note to close popover while keeping it selected
-    // (Escape would deselect the node in React Flow)
-    await stickyNote.click();
+    await backgroundColorPicker.click();
     await expect(popover).toBeHidden();
 
     await expect(
@@ -230,8 +226,8 @@ test.describe("Sticky Note (FlexNode) Functionality", () => {
     const redPreset = page.getByTestId("color-preset-ef9a9a");
     await redPreset.click();
 
-    // Click sticky note again to close popover while keeping selection
-    await stickyNote.click();
+    // Toggle the trigger to close the popover while keeping the node selected.
+    await borderColorPicker.click();
     await expect(borderPopover).toBeHidden();
   });
 
