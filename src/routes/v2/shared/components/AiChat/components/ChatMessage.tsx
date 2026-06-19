@@ -3,6 +3,7 @@ import type { ChatMessage as ChatMessageType } from "@/routes/v2/shared/componen
 
 import { MessageBubble } from "./MessageBubble";
 import { renderMarkdown } from "./renderMarkdown";
+import { ResponseFeedback } from "./ResponseFeedback";
 
 interface ChatMessageProps {
   message: ChatMessageType;
@@ -18,9 +19,15 @@ export function ChatMessage({ message }: ChatMessageProps) {
           {message.content}
         </Text>
       ) : (
-        <div className="text-sm break-words min-w-0 overflow-x-auto">
-          {renderMarkdown(message.content, message.componentReferences)}
-        </div>
+        <>
+          <div className="text-sm break-words min-w-0 overflow-x-auto">
+            {renderMarkdown(message.content, message.componentReferences)}
+          </div>
+          <ResponseFeedback
+            prompt={message.prompt}
+            response={message.content}
+          />
+        </>
       )}
     </MessageBubble>
   );

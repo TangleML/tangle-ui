@@ -120,6 +120,7 @@ export class AgentThread {
             id: generateMessageId(),
             role: "assistant",
             content: response.answer,
+            prompt,
             ...(Object.keys(componentReferences).length > 0
               ? { componentReferences }
               : {}),
@@ -135,6 +136,7 @@ export class AgentThread {
             id: generateMessageId(),
             role: "assistant",
             content: formatAssistantError(error),
+            prompt,
           },
         ];
       });

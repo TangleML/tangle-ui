@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useBackend } from "@/providers/BackendProvider";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { fetchPipelineRuns } from "@/services/pipelineRunService";
@@ -48,6 +49,7 @@ export const AiChatContent = observer(function AiChatContent({
   createBridge,
 }: AiChatContentProps) {
   const aiChat = useAiChatStore();
+  const { track } = useAnalytics();
   const { navigation } = useSharedStores();
   const { backendUrl } = useBackend();
   const authStorage = useAuthLocalStorage();
@@ -101,16 +103,31 @@ export const AiChatContent = observer(function AiChatContent({
 
   const thread = aiChat.activeThread;
 
-  function handleSend(prompt: string) {
+  async function handleSend(prompt: string) {
     if (!thread) return;
     const recentRuns = recentRunsData
       ? projectRecentRuns(recentRunsData)
       : undefined;
-    thread.sendMessage(prompt, {
+
+    track("ai_assistant.message.submitted", {
+      prompt,
+      thread_message_count: thread.messages.length,
+    });
+
+    await thread.sendMessage(prompt, {
       bridge,
       aiConfig,
       ...(recentRuns && { recentRuns }),
     });
+
+    const lastMessage = thread.messages[thread.messages.length - 1];
+    if (lastMessage?.role === "assistant") {
+      track("ai_assistant.response.received", {
+        prompt,
+        response: lastMessage.content,
+        thread_message_count: thread.messages.length,
+      });
+    }
   }
 
   if (!isAiConfigured) {
