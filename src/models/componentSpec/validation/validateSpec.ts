@@ -213,6 +213,16 @@ function validateSingleTask(
       severity: "error",
       issueCode: "MISSING_COMPONENT_REF",
     });
+  } else if (!task.subgraphSpec && !task.resolvedComponentSpec) {
+    // The ref points at a loadable component (url/digest/text) but hydration
+    // never populated its spec, so the component could not be resolved.
+    issues.push({
+      type: "task",
+      message: "Failed to load component",
+      entityId: task.$id,
+      severity: "error",
+      issueCode: "COMPONENT_HYDRATION_FAILED",
+    });
   }
 
   issues.push(...validateTaskArguments(task, spec));

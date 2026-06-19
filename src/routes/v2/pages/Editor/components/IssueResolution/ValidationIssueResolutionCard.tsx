@@ -171,6 +171,10 @@ const RESOLUTION_MAP: Record<ValidationIssueCode, ResolutionResolver> = {
   DUPLICATE_OUTPUT_NAME: (p) => renderDuplicateNameResolution("output", p),
   MISSING_COMPONENT_REF: (p) =>
     renderDeleteResolution("Delete Task", "task", p),
+  COMPONENT_HYDRATION_FAILED: () =>
+    renderInfoResolution(
+      "The component could not be loaded from its source. Check the component URL or your connection, then reload the pipeline.",
+    ),
   BAD_INPUT_REFERENCE: renderBadRefResolution,
   BAD_TASK_REFERENCE: renderBadRefResolution,
   BAD_OUTPUT_REFERENCE: renderBadRefResolution,
