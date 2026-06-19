@@ -13,6 +13,7 @@ import {
   ReplayIdGenerator,
   YamlDeserializer,
 } from "@/models/componentSpec";
+import { hydrateLoadedSpecRefs } from "@/routes/v2/pages/Editor/utils/hydrateSpecRefs";
 import {
   createUndoStoreWithEvents,
   loadUndoHistory,
@@ -119,22 +120,32 @@ export function useLoadSpec(ref: PipelineRef) {
         loadUndoHistory(ref.name).catch(() => null),
       ]);
 
-      if (undoHistory) {
-        try {
-          const replayIdGen = new ReplayIdGenerator(undoHistory.idStack);
-          const spec = deserializeSpec(specData, replayIdGen);
-          const restoredUndoStore = createUndoStoreWithEvents(
-            undoHistory.undoEvents,
-          );
-          return { spec, restoredUndoStore };
-        } catch (error) {
-          console.warn("Failed to restore undo history, loading fresh:", error);
-        }
-      }
+      const loadedSpec = deserializeSpecData(specData, undoHistory);
+      await hydrateLoadedSpecRefs(loadedSpec.spec);
 
-      return { spec: deserializeSpec(specData) };
+      return loadedSpec;
     },
     staleTime: Infinity,
     retry: false,
   });
+}
+
+function deserializeSpecData(
+  specData: unknown,
+  undoHistory: Awaited<ReturnType<typeof loadUndoHistory>> | null,
+): LoadedSpec {
+  if (undoHistory) {
+    try {
+      const replayIdGen = new ReplayIdGenerator(undoHistory.idStack);
+      const spec = deserializeSpec(specData, replayIdGen);
+      const restoredUndoStore = createUndoStoreWithEvents(
+        undoHistory.undoEvents,
+      );
+      return { spec, restoredUndoStore };
+    } catch (error) {
+      console.warn("Failed to restore undo history, loading fresh:", error);
+    }
+  }
+
+  return { spec: deserializeSpec(specData) };
 }
