@@ -1,13 +1,13 @@
-import { QueryErrorResetBoundary } from "@tanstack/react-query";
-import { Suspense, useRef } from "react";
+import { ReactFlowProvider } from "@xyflow/react";
+import { useRef } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { TaskNodeProvider } from "@/providers/TaskNodeProvider";
-import type { TaskNodeData } from "@/types/taskNode";
+import type { TaskNodeViewProps } from "@/routes/v2/shared/nodes/TaskNode/TaskNode";
+import { TaskNodeCard } from "@/routes/v2/shared/nodes/TaskNode/TaskNodeCard";
+import { SpecProvider } from "@/routes/v2/shared/providers/SpecContext";
 
-import { TaskNodeCard } from "../../ReactFlow/FlowCanvas/TaskNode/TaskNodeCard";
-import { usePreviewTaskNodeData } from "../usePreviewTaskNodeData";
+import { buildPreviewTaskNodeViewProps } from "../utils/buildPreviewTaskNodeViewProps";
 import { PointersEventBlock } from "./PointersEventBlock";
 
 export const PreviewTaskNodeCard = ({
@@ -15,32 +15,28 @@ export const PreviewTaskNodeCard = ({
 }: {
   componentText: string;
 }) => {
-  const previewNodeData = usePreviewTaskNodeData(componentText);
-  const lastValidDataRef = useRef<TaskNodeData | null>(null);
+  const viewProps = buildPreviewTaskNodeViewProps(componentText);
+  const lastValidPropsRef = useRef<TaskNodeViewProps | null>(null);
 
-  if (previewNodeData) {
-    lastValidDataRef.current = previewNodeData;
+  if (viewProps) {
+    lastValidPropsRef.current = viewProps;
   }
 
-  const displayData = previewNodeData || lastValidDataRef.current;
+  const displayProps = viewProps ?? lastValidPropsRef.current;
 
-  if (!displayData) {
+  if (!displayProps) {
     return <Skeleton size="lg" shape="square" />;
   }
 
   return (
-    <QueryErrorResetBoundary>
-      {({ reset }) => (
-        <ErrorBoundary onReset={reset} fallbackRender={() => null}>
-          <Suspense fallback={null}>
-            <PointersEventBlock>
-              <TaskNodeProvider data={displayData} selected={false}>
-                <TaskNodeCard />
-              </TaskNodeProvider>
-            </PointersEventBlock>
-          </Suspense>
-        </ErrorBoundary>
-      )}
-    </QueryErrorResetBoundary>
+    <ErrorBoundary resetKeys={[componentText]} fallbackRender={() => null}>
+      <ReactFlowProvider>
+        <SpecProvider spec={null}>
+          <PointersEventBlock>
+            <TaskNodeCard {...displayProps} />
+          </PointersEventBlock>
+        </SpecProvider>
+      </ReactFlowProvider>
+    </ErrorBoundary>
   );
 };
