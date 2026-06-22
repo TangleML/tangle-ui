@@ -1,3 +1,4 @@
+import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
@@ -67,12 +68,33 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
   );
 }
 
-function TableHead({ className, ...props }: React.ComponentProps<"th">) {
+const cellWidthVariants = cva("", {
+  variants: {
+    width: {
+      auto: "",
+      xs: "w-10",
+      sm: "w-16",
+      md: "w-20",
+      lg: "w-28",
+      xl: "w-36",
+      "2xl": "w-48",
+    },
+  },
+});
+
+type CellWidth = NonNullable<VariantProps<typeof cellWidthVariants>["width"]>;
+
+interface TableHeadProps extends React.ComponentProps<"th"> {
+  width?: CellWidth;
+}
+
+function TableHead({ className, width, ...props }: TableHeadProps) {
   return (
     <th
       data-slot="table-head"
       className={cn(
         "text-foreground h-10 px-2 text-left align-middle font-medium whitespace-nowrap [&:has([role=checkbox])]:pr-0 *:[[role=checkbox]]:translate-y-0.5",
+        cellWidthVariants({ width }),
         className,
       )}
       {...props}
@@ -80,12 +102,17 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
   );
 }
 
-function TableCell({ className, ...props }: React.ComponentProps<"td">) {
+interface TableCellProps extends React.ComponentProps<"td"> {
+  width?: CellWidth;
+}
+
+function TableCell({ className, width, ...props }: TableCellProps) {
   return (
     <td
       data-slot="table-cell"
       className={cn(
         "p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 *:[[role=checkbox]]:translate-y-0.5",
+        cellWidthVariants({ width }),
         className,
       )}
       {...props}

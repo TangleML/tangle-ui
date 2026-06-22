@@ -28,7 +28,9 @@ const blockStackVariants = cva("flex flex-col w-full", {
     },
     gap: {
       "0": "gap-0",
+      "0.5": "gap-0.5",
       "1": "gap-1",
+      "1.5": "gap-1.5",
       "2": "gap-2",
       "3": "gap-3",
       "4": "gap-4",
@@ -47,7 +49,13 @@ interface BlockStackProps
   as?: StackElement;
   /** Fill the container and center content */
   fill?: boolean;
-  /** Additional CSS classes */
+  /**
+   * Escape-hatch className. Kept for backward compatibility during the
+   * ban-classname-on-primitives migration. Will be removed once the
+   * `tangle-ui/no-classname-on-primitives` rule is promoted to `error`.
+   * @deprecated Use a Layer-3 semantic primitive (Surface, ScrollRegion,
+   * Truncating, ListRow, ...) instead of stacking utility classes here.
+   */
   className?: string;
 }
 
@@ -102,7 +110,9 @@ const inlineStackVariants = cva("flex flex-row", {
     },
     gap: {
       "0": "gap-0",
+      "0.5": "gap-0.5",
       "1": "gap-1",
+      "1.5": "gap-1.5",
       "2": "gap-2",
       "3": "gap-3",
       "4": "gap-4",
@@ -125,7 +135,13 @@ interface InlineStackProps
   as?: StackElement;
   /** Fill the container and center content */
   fill?: boolean;
-  /** Additional CSS classes */
+  /**
+   * Escape-hatch className. Kept for backward compatibility during the
+   * ban-classname-on-primitives migration. Will be removed once the
+   * `tangle-ui/no-classname-on-primitives` rule is promoted to `error`.
+   * @deprecated Use a Layer-3 semantic primitive (Surface, ScrollRegion,
+   * Truncating, ListRow, ...) instead of stacking utility classes here.
+   */
   className?: string;
 }
 

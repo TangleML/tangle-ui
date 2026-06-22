@@ -25,6 +25,15 @@ const buttonVariants = cva(
           "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
         link: "text-primary underline-offset-4 hover:underline",
         "link-info": "text-info underline decoration-dotted",
+        // Dark-chrome menubar button (top app menubar, window chrome).
+        menubar:
+          "text-stone-400 hover:text-white hover:bg-stone-700 data-[state=open]:bg-stone-700 data-[state=open]:text-white",
+        // Light-chrome menubar button (light theme menubars / window chrome).
+        "menubar-light":
+          "text-white/80 hover:text-white hover:bg-stone-700/30 data-[state=open]:bg-stone-700/30",
+        // Dense toolbar action (small height, no chrome).
+        toolbar:
+          "hover:bg-accent hover:text-accent-foreground text-foreground/80",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",
@@ -35,10 +44,62 @@ const buttonVariants = cva(
         icon: "size-9",
         min: "h-fit w-fit p-1 rounded-sm",
       },
+      tone: {
+        default: "",
+        critical: "",
+        warning: "",
+        success: "",
+      },
+      align: {
+        center: "justify-center",
+        start: "justify-start text-left",
+        end: "justify-end text-right",
+        "space-between": "justify-between",
+      },
+      fullWidth: {
+        true: "w-full",
+        false: "",
+      },
+      truncate: {
+        true: "[&>span]:truncate min-w-0",
+        false: "",
+      },
     },
+    compoundVariants: [
+      // tone on ghost/link
+      {
+        variant: "ghost",
+        tone: "critical",
+        className:
+          "text-destructive hover:bg-destructive/10 hover:text-destructive",
+      },
+      {
+        variant: "ghost",
+        tone: "warning",
+        className: "text-warning hover:bg-warning/10 hover:text-warning",
+      },
+      {
+        variant: "ghost",
+        tone: "success",
+        className: "text-success hover:bg-success/10 hover:text-success",
+      },
+      { variant: "link", tone: "critical", className: "text-destructive" },
+      { variant: "link", tone: "warning", className: "text-warning" },
+      { variant: "link", tone: "success", className: "text-success" },
+      // tone on toolbar
+      {
+        variant: "toolbar",
+        tone: "critical",
+        className: "text-destructive hover:bg-destructive/10",
+      },
+    ],
     defaultVariants: {
       variant: "default",
       size: "default",
+      tone: "default",
+      align: "center",
+      fullWidth: false,
+      truncate: false,
     },
   },
 );
@@ -52,6 +113,10 @@ function Button({
   className,
   variant,
   size,
+  tone,
+  align,
+  fullWidth,
+  truncate,
   asChild = false,
   ...props
 }: ButtonProps) {
@@ -60,7 +125,17 @@ function Button({
   return (
     <Comp
       data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
+      className={cn(
+        buttonVariants({
+          variant,
+          size,
+          tone,
+          align,
+          fullWidth,
+          truncate,
+          className,
+        }),
+      )}
       {...props}
     />
   );
