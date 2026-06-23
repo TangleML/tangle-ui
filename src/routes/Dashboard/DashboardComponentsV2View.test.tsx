@@ -547,10 +547,11 @@ describe("DashboardComponentsV2View", () => {
     });
   });
 
-  it("shows actionable no-results guidance", async () => {
+  it("shows actionable no-results guidance with clickable suggestions", async () => {
     render(<DashboardComponentsV2View />);
 
-    fireEvent.change(screen.getByLabelText("Search components"), {
+    const input = screen.getByLabelText("Search components");
+    fireEvent.change(input, {
       target: { value: "no-such-component" },
     });
 
@@ -560,6 +561,12 @@ describe("DashboardComponentsV2View", () => {
       ).toBeInTheDocument();
     });
     expect(screen.getByText(/Try a component name/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "csv" }));
+
+    await waitFor(() => {
+      expect(input).toHaveValue("csv");
+    });
   });
 
   it("initializes search state from URL params", () => {

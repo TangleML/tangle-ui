@@ -1,3 +1,4 @@
+import { ComponentSearchEmptyStateSuggestions } from "@/components/shared/ComponentSearchEmptyStateSuggestions";
 import {
   ComponentMarkup,
   IONodeSidebarItem,
@@ -20,6 +21,7 @@ interface ComponentSearchResultsProps {
   isLoading: boolean;
   isRerankActive: boolean;
   onClearRerank: () => void;
+  onSuggestedSearch: (query: string) => void;
 }
 
 export function ComponentSearchResults({
@@ -29,6 +31,7 @@ export function ComponentSearchResults({
   isLoading,
   isRerankActive,
   onClearRerank,
+  onSuggestedSearch,
 }: ComponentSearchResultsProps) {
   if (isLoading) {
     return (
@@ -113,14 +116,19 @@ export function ComponentSearchResults({
             ))}
           </BlockStack>
         ) : (
-          <BlockStack gap="1">
-            <Paragraph size="sm" tone="subdued">
-              No components matched “{query.trim()}”.
-            </Paragraph>
-            <Paragraph size="xs" tone="subdued">
-              Try a component name, input/output type, or task intent like
-              “csv”, “train”, “predict”, or “dataframe”.
-            </Paragraph>
+          <BlockStack gap="2">
+            <BlockStack gap="1">
+              <Paragraph size="sm" tone="subdued">
+                No components matched “{query.trim()}”.
+              </Paragraph>
+              <Paragraph size="xs" tone="subdued">
+                Try a component name, input/output type, or task intent like
+                “csv”, “train”, “predict”, or “dataframe”.
+              </Paragraph>
+            </BlockStack>
+            <ComponentSearchEmptyStateSuggestions
+              onSelectSuggestion={onSuggestedSearch}
+            />
           </BlockStack>
         )}
       </div>

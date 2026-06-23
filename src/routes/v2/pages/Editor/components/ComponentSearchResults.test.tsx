@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { ComponentSearchResults } from "./ComponentSearchResults";
@@ -38,18 +38,29 @@ const baseProps = {
   isLoading: false,
   isRerankActive: false,
   onClearRerank: vi.fn(),
+  onSuggestedSearch: vi.fn(),
 };
 
 describe("ComponentSearchResults", () => {
-  it("shows actionable no-results guidance", () => {
+  it("shows actionable no-results guidance with clickable suggestions", () => {
+    const onSuggestedSearch = vi.fn();
     render(
-      <ComponentSearchResults {...baseProps} query="missing" results={[]} />,
+      <ComponentSearchResults
+        {...baseProps}
+        query="missing"
+        results={[]}
+        onSuggestedSearch={onSuggestedSearch}
+      />,
     );
 
     expect(
       screen.getByText("No components matched “missing”."),
     ).toBeInTheDocument();
     expect(screen.getByText(/Try a component name/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "csv" }));
+
+    expect(onSuggestedSearch).toHaveBeenCalledWith("csv");
   });
 
   it("passes matched fields through for result explanations", () => {

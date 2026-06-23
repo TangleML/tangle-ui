@@ -16,6 +16,7 @@ import {
   ComponentDetailSkeleton,
 } from "@/components/shared/ComponentDetail/ComponentDetail";
 import { ComponentLifecycleBadges } from "@/components/shared/ComponentLifecycleBadges";
+import { ComponentSearchEmptyStateSuggestions } from "@/components/shared/ComponentSearchEmptyStateSuggestions";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { SuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { Badge } from "@/components/ui/badge";
@@ -988,6 +989,15 @@ export const DashboardComponentsV2View = () => {
     });
   };
 
+  const handleSuggestedSearch = (value: string) => {
+    startSearchTransition(() => {
+      setQuery(value);
+      if (rerankedFor !== null) {
+        clearRerank();
+      }
+    });
+  };
+
   const buildEmbeddingMatches = async (
     trimmed: string,
     limit: number,
@@ -1268,6 +1278,9 @@ export const DashboardComponentsV2View = () => {
             like “csv”, “train model”, “predict”, or “dataframe”. AI search
             reranks matching local candidates when it is configured.
           </Paragraph>
+          <ComponentSearchEmptyStateSuggestions
+            onSelectSuggestion={handleSuggestedSearch}
+          />
         </BlockStack>
       );
     }
@@ -1348,7 +1361,7 @@ export const DashboardComponentsV2View = () => {
             <DebouncedComponentSearchInput
               onCommit={handleQueryCommit}
               disabled={isLoadingLibrary || noLibraryData}
-              initialValue={queryFromUrl}
+              initialValue={query}
             />
             <Button
               variant="secondary"

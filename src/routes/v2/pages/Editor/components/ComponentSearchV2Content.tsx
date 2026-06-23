@@ -15,13 +15,16 @@ import { ComponentSearchResults } from "./ComponentSearchResults";
 const EDITOR_SEARCH_RESULT_DEBOUNCE_MS = 500;
 
 function DebouncedComponentSearchInput({
+  initialValue,
   onCommit,
 }: {
+  initialValue: string;
   onCommit: (value: string) => void;
 }) {
   const [localValue, setLocalValue] = useDebouncedSearchValue(
     onCommit,
     EDITOR_SEARCH_RESULT_DEBOUNCE_MS,
+    initialValue,
   );
 
   return (
@@ -57,6 +60,10 @@ export function ComponentSearchV2Content() {
     startSearchTransition(() => setQuery(value));
   };
 
+  const handleSuggestedSearch = (value: string) => {
+    startSearchTransition(() => setQuery(value));
+  };
+
   return (
     <BlockStack className="h-full min-h-0 overflow-hidden [&_.text-sm]:text-xs!">
       <BlockStack gap="2" className="px-2 py-2">
@@ -87,7 +94,10 @@ export function ComponentSearchV2Content() {
             >
               <Icon name="Search" size="sm" className="text-gray-400" />
             </InlineStack>
-            <DebouncedComponentSearchInput onCommit={handleQueryCommit} />
+            <DebouncedComponentSearchInput
+              initialValue={query}
+              onCommit={handleQueryCommit}
+            />
           </div>
           <Button
             variant="outline"
@@ -109,6 +119,7 @@ export function ComponentSearchV2Content() {
         isLoading={isLoading}
         isRerankActive={isRerankActive}
         onClearRerank={clearRerank}
+        onSuggestedSearch={handleSuggestedSearch}
       />
     </BlockStack>
   );
