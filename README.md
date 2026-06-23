@@ -16,7 +16,7 @@ The experimental new version of the Tangle app is now available at <https://tang
 
 Please check it out and report any bugs you find using [GitHub Issues](https://github.com/TangleML/tangle/issues).
 
-The app is under active development and supported by Shopify Engineers.
+The app is under active development and supported by its maintainers.
 
 ## Installation
 
@@ -75,7 +75,7 @@ Add these to a `.env` file at the root of `tangle-ui`.
 - User component library (add private components)
 - Remote component library
 - GitHub-based libraries
-- Component search
+- [Component discovery and search](docs/component-discovery.md)
 - Import and export pipelines
 - Create subgraphs and nested pipelines
 - In-app component editor
