@@ -570,6 +570,20 @@ export type GetExecutionArtifactsResponse = {
 };
 
 /**
+ * ExecutionStatusHistoryEntry
+ */
+export type ExecutionStatusHistoryEntry = {
+    /**
+     * Status
+     */
+    status: string;
+    /**
+     * First Observed At
+     */
+    first_observed_at: string;
+};
+
+/**
  * GetExecutionInfoResponse
  */
 export type GetExecutionInfoResponse = {
@@ -604,6 +618,10 @@ export type GetExecutionInfoResponse = {
     output_artifacts?: {
         [key: string]: ArtifactNodeIdResponse;
     } | null;
+    /**
+     * Status History
+     */
+    status_history?: Array<ExecutionStatusHistoryEntry> | null;
 };
 
 /**

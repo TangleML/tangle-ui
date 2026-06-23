@@ -1,3 +1,4 @@
+import { useParams } from "@tanstack/react-router";
 import { AmphoraIcon, InfoIcon, LogsIcon } from "lucide-react";
 import { observer } from "mobx-react-lite";
 
@@ -7,6 +8,7 @@ import Logs, {
   OpenLogsInNewWindowLink,
 } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/TaskOverview/logs";
 import { LogsEventsOverlaySection } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/TaskOverview/LogsEventsOverlaySection";
+import { RemoteTroubleshootButton } from "@/components/shared/RemoteTroubleshootAction/RemoteTroubleshootButton";
 import { StatusIcon } from "@/components/shared/Status";
 import TaskDetails from "@/components/shared/TaskDetails/Details";
 import { Icon } from "@/components/ui/icon";
@@ -31,6 +33,9 @@ export const RunViewTaskDetails = observer(function RunViewTaskDetails({
   const { track } = useAnalytics();
   const spec = useSpec();
   const executionData = useExecutionDataOptional();
+  const params = useParams({ strict: false });
+  const runId =
+    "id" in params && typeof params.id === "string" ? params.id : undefined;
 
   const task = spec?.tasks.find((t) => t.$id === entityId);
 
@@ -68,6 +73,15 @@ export const RunViewTaskDetails = observer(function RunViewTaskDetails({
       </InlineStack>
 
       <RunViewTaskActions componentRef={componentRef} taskName={task.name} />
+
+      {runId && (
+        <RemoteTroubleshootButton
+          runId={runId}
+          executionId={executionId}
+          taskName={task.name}
+          status={status}
+        />
+      )}
 
       <div className="overflow-y-auto pb-4 h-full w-full">
         <Tabs
