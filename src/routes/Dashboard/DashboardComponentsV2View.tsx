@@ -191,6 +191,45 @@ export function createRegisteredLibrariesFingerprint(
 type ComponentLibraryFolder = Parameters<typeof flattenFolders>[0];
 type UserFolder = { components?: ComponentReference[] };
 
+interface ComponentCollectionMatch {
+  id: string;
+  label: string;
+  count: number;
+  previewNames: string[];
+}
+
+export function buildComponentCollectionMatches(
+  index: IndexEntry[],
+  query: string,
+): ComponentCollectionMatch[] {
+  const trimmedQuery = query.trim().toLowerCase();
+  if (!trimmedQuery) return [];
+
+  const bySourceId = new Map<string, ComponentCollectionMatch>();
+  for (const entry of index) {
+    if (entry.source.kind !== "registered") continue;
+    const current = bySourceId.get(entry.source.id);
+    if (current) {
+      current.count += 1;
+      if (current.previewNames.length < 3)
+        current.previewNames.push(entry.name);
+    } else {
+      bySourceId.set(entry.source.id, {
+        id: entry.source.id,
+        label: entry.source.label,
+        count: 1,
+        previewNames: [entry.name],
+      });
+    }
+  }
+
+  return Array.from(bySourceId.values())
+    .filter((collection) =>
+      collection.label.toLowerCase().includes(trimmedQuery),
+    )
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
 interface ComponentCardProps {
   reference: ComponentReference;
   source?: ComponentSearchSource;
@@ -311,6 +350,29 @@ const ComponentCard = ({
     </button>
   );
 };
+
+interface CollectionCardProps {
+  collection: ComponentCollectionMatch;
+}
+
+const CollectionCard = ({ collection }: CollectionCardProps) => (
+  <BlockStack gap="2" className={PANEL_CLASS}>
+    <InlineStack gap="2" blockAlign="center" wrap="wrap">
+      <Icon name="Library" size="sm" className="text-violet-500" />
+      <Text size="sm" weight="semibold">
+        {collection.label}
+      </Text>
+      <Badge variant="secondary">
+        {collection.count} component{collection.count === 1 ? "" : "s"}
+      </Badge>
+    </InlineStack>
+    {collection.previewNames.length > 0 && (
+      <Paragraph size="xs" tone="subdued">
+        Includes {collection.previewNames.join(", ")}
+      </Paragraph>
+    )}
+  </BlockStack>
+);
 
 interface ComponentDescriptionPanelProps {
   prefilledDescription?: string;
@@ -815,6 +877,11 @@ export const DashboardComponentsV2View = () => {
     0,
     LEXICAL_RESULT_LIMIT,
   );
+  const collectionMatches = buildComponentCollectionMatches(
+    filteredIndex,
+    deferredQuery,
+  );
+
   const aiCandidateMatches: LexicalMatch[] = (() => {
     if (trimmedQuery.length === 0) return [];
     return broadLexicalMatches;
@@ -1116,7 +1183,11 @@ export const DashboardComponentsV2View = () => {
         </BlockStack>
       );
     }
-    if (lexicalMatches.length === 0 && !rerankActive) {
+    if (
+      lexicalMatches.length === 0 &&
+      collectionMatches.length === 0 &&
+      !rerankActive
+    ) {
       return (
         <Paragraph size="sm" tone="subdued">
           No components matched “{trimmedQuery}”. Try different terms or check
@@ -1126,11 +1197,21 @@ export const DashboardComponentsV2View = () => {
     }
     return (
       <BlockStack gap="2" align="stretch">
+        {collectionMatches.length > 0 && (
+          <BlockStack gap="2" align="stretch">
+            <Paragraph size="xs" tone="subdued">
+              Collection{collectionMatches.length === 1 ? "" : "s"}
+            </Paragraph>
+            {collectionMatches.map((collection) => (
+              <CollectionCard key={collection.id} collection={collection} />
+            ))}
+          </BlockStack>
+        )}
         <InlineStack align="space-between" blockAlign="center" gap="2">
           <Paragraph size="xs" tone="subdued">
             {rerankActive
               ? `AI-ranked ${displayedResults.length} result${displayedResults.length === 1 ? "" : "s"} for “${trimmedQuery}”`
-              : `${displayedResults.length} result${displayedResults.length === 1 ? "" : "s"} for “${trimmedQuery}”`}
+              : `${displayedResults.length} component result${displayedResults.length === 1 ? "" : "s"} for “${trimmedQuery}”`}
           </Paragraph>
           {rerankActive && (
             <Button
