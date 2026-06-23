@@ -36,6 +36,7 @@ const routeMocks = vi.hoisted(() => {
     standard: makeComponent("standard-digest", "Standard component"),
     registered: makeComponent("registered-digest", "Registered component"),
     user: makeComponent("user-digest", "User component"),
+    extraStandardComponents: [] as ComponentReference[],
     navigate: vi.fn(),
     notify: vi.fn(),
     refetchDescription: vi.fn(),
@@ -59,7 +60,10 @@ vi.mock("@tanstack/react-query", () => ({
       return {
         data: {
           name: "Standard",
-          components: [routeMocks.standard],
+          components: [
+            routeMocks.standard,
+            ...routeMocks.extraStandardComponents,
+          ],
           folders: [],
         },
         isLoading: false,
@@ -98,7 +102,12 @@ vi.mock("@tanstack/react-query", () => ({
 
     if (key === "component-search-v2" && queryKey[1] === "hydrate-library") {
       return {
-        data: [routeMocks.standard, routeMocks.registered, routeMocks.user],
+        data: [
+          routeMocks.standard,
+          routeMocks.registered,
+          routeMocks.user,
+          ...routeMocks.extraStandardComponents,
+        ],
         isLoading: false,
       };
     }
@@ -467,6 +476,7 @@ describe("DashboardComponentsV2View", () => {
     routeMocks.search = {};
     routeMocks.standard.deprecated = false;
     routeMocks.standard.superseded_by = undefined;
+    routeMocks.extraStandardComponents = [];
     routeMocks.navigate.mockClear();
     routeMocks.notify.mockClear();
     routeMocks.refetchDescription.mockClear();
@@ -474,6 +484,43 @@ describe("DashboardComponentsV2View", () => {
     routeMocks.resetRerank.mockClear();
     routeMocks.aiSearchConfigured = false;
     routeMocks.aiApiBase = "";
+  });
+
+  it("limits browse rendering and lets users show more results", async () => {
+    routeMocks.extraStandardComponents = Array.from(
+      { length: 105 },
+      (_, idx) => {
+        const paddedIndex = String(idx).padStart(3, "0");
+        return {
+          digest: `browse-${paddedIndex}`,
+          name: `Browse component ${paddedIndex}`,
+          text: "component yaml",
+          spec: {
+            name: `Browse component ${paddedIndex}`,
+            description: `Browse component ${paddedIndex} description`,
+            inputs: [],
+            outputs: [],
+            implementation: { container: { image: "python:3.11" } },
+          },
+        };
+      },
+    );
+
+    render(<DashboardComponentsV2View />);
+
+    expect(
+      screen.getByText(
+        "Showing 100 of 108 components in selected sources. Start typing to search.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Browse component 099")).toBeInTheDocument();
+    expect(screen.queryByText("Browse component 100")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Show 8 more" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Browse component 104")).toBeInTheDocument();
+    });
   });
 
   it("filters visible component results by source type and restores them", () => {
