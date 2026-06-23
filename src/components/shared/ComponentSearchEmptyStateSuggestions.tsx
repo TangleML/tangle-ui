@@ -1,16 +1,18 @@
 import { Button } from "@/components/ui/button";
 import { InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
-import { COMPONENT_SEARCH_EMPTY_STATE_SUGGESTIONS } from "@/services/componentSearchSuggestions";
+import type { ComponentSearchSuggestion } from "@/services/componentSearchSuggestions";
 import { tracking } from "@/utils/tracking";
 
 interface ComponentSearchEmptyStateSuggestionsProps {
   onSelectSuggestion: (query: string) => void;
+  suggestions: ComponentSearchSuggestion[];
   surface: string;
 }
 
 export function ComponentSearchEmptyStateSuggestions({
   onSelectSuggestion,
+  suggestions,
   surface,
 }: ComponentSearchEmptyStateSuggestionsProps) {
   return (
@@ -18,19 +20,20 @@ export function ComponentSearchEmptyStateSuggestions({
       <Text size="xs" tone="subdued">
         Suggested searches:
       </Text>
-      {COMPONENT_SEARCH_EMPTY_STATE_SUGGESTIONS.map((suggestion) => (
+      {suggestions.map((suggestion, index) => (
         <Button
-          key={suggestion}
+          key={suggestion.label}
           type="button"
           variant="outline"
           size="xs"
-          onClick={() => onSelectSuggestion(suggestion)}
+          onClick={() => onSelectSuggestion(suggestion.label)}
           {...tracking("component_library.search.suggestion", {
             surface,
-            suggested_query: suggestion,
+            suggestion_kind: suggestion.kind,
+            suggestion_position: index,
           })}
         >
-          {suggestion}
+          {suggestion.label}
         </Button>
       ))}
     </InlineStack>

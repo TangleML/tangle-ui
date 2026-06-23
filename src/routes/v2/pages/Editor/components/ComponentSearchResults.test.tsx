@@ -1,6 +1,8 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+import type { ComponentSearchSuggestion } from "@/services/componentSearchSuggestions";
+
 import { ComponentSearchResults } from "./ComponentSearchResults";
 import type { ComponentSearchV2Result } from "./componentSearchV2Logic";
 
@@ -35,6 +37,10 @@ vi.mock(
 
 const baseProps = {
   browseFolders: [],
+  searchSuggestions: [
+    { label: "csv", kind: "default" },
+    { label: "dataset", kind: "type" },
+  ] satisfies ComponentSearchSuggestion[],
   isLoading: false,
   isRerankActive: false,
   onClearRerank: vi.fn(),
@@ -68,7 +74,8 @@ describe("ComponentSearchResults", () => {
       "data-tracking-metadata",
       JSON.stringify({
         surface: "editor_component_search_v2",
-        suggested_query: "csv",
+        suggestion_kind: "default",
+        suggestion_position: 0,
       }),
     );
 

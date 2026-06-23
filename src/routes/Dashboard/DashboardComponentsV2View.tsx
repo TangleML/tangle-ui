@@ -64,6 +64,7 @@ import {
   type MatchField,
   type SourcedReference,
 } from "@/services/componentSearchIndex";
+import { buildComponentSearchSuggestions } from "@/services/componentSearchSuggestions";
 import {
   fetchAndStoreComponentLibrary,
   hydrateComponentReference,
@@ -959,6 +960,9 @@ export const DashboardComponentsV2View = () => {
     filteredIndex,
     deferredQuery,
   );
+  const searchSuggestions = buildComponentSearchSuggestions(filteredIndex, {
+    query: trimmedQuery,
+  });
 
   const aiCandidateMatches: LexicalMatch[] = (() => {
     if (trimmedQuery.length === 0) return [];
@@ -1341,11 +1345,12 @@ export const DashboardComponentsV2View = () => {
             No components matched “{trimmedQuery}”.
           </Paragraph>
           <Paragraph size="xs" tone="subdued">
-            Try a component name, input/output type, source term, or task intent
-            like “csv”, “train model”, “predict”, or “dataframe”. AI search
+            Try a component name, input/output type, source term, or task intent.
+            Suggestions below are based on your loaded component sources. AI search
             reranks matching local candidates when it is configured.
           </Paragraph>
           <ComponentSearchEmptyStateSuggestions
+            suggestions={searchSuggestions}
             surface="dashboard_v2"
             onSelectSuggestion={handleSuggestedSearch}
           />

@@ -39,6 +39,7 @@ describe("ComponentSearchV2Content", () => {
     mocks.useComponentSearchV2State.mockImplementation(() => ({
       results: [],
       browseFolders: [],
+      searchSuggestions: [],
       isLoading: false,
       canRerank: false,
       isReranking: false,
