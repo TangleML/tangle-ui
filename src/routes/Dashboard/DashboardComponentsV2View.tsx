@@ -47,6 +47,7 @@ import {
   LibraryDB,
   type StoredLibrary,
 } from "@/providers/ComponentLibraryProvider/libraries/storage";
+import { buildCompatibleComponentSuggestions } from "@/services/componentCompatibility";
 import { rankComponentMatchesByEmbeddings } from "@/services/componentSearchEmbeddings";
 import {
   buildSearchIndex,
@@ -373,6 +374,73 @@ const CollectionCard = ({ collection }: CollectionCardProps) => (
     )}
   </BlockStack>
 );
+
+interface CompatibleComponentsPanelProps {
+  suggestions: ReturnType<typeof buildCompatibleComponentSuggestions>;
+  onSelect: (reference: ComponentReference) => void;
+}
+
+const CompatibleComponentsPanel = ({
+  suggestions,
+  onSelect,
+}: CompatibleComponentsPanelProps) => {
+  if (suggestions.length === 0) return null;
+
+  return (
+    <BlockStack gap="2" align="stretch">
+      <Text
+        size="xs"
+        tone="subdued"
+        weight="semibold"
+        className="uppercase tracking-wide"
+      >
+        Compatible components
+      </Text>
+      <BlockStack gap="2" align="stretch">
+        {suggestions.map((suggestion) => {
+          const name = getComponentName(suggestion.reference);
+          return (
+            <button
+              key={`${suggestion.direction}:${suggestion.reference.digest}`}
+              type="button"
+              onClick={() => onSelect(suggestion.reference)}
+              aria-label={`View details for compatible component ${name}`}
+              className={cn(
+                PANEL_CLASS,
+                "w-full text-left cursor-pointer hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring",
+              )}
+            >
+              <BlockStack gap="1">
+                <InlineStack gap="2" blockAlign="center" wrap="wrap">
+                  <Icon
+                    name={
+                      suggestion.direction === "downstream"
+                        ? "ArrowRight"
+                        : "ArrowLeft"
+                    }
+                    size="sm"
+                  />
+                  <Text size="sm" weight="semibold">
+                    {name}
+                  </Text>
+                  <Badge variant="secondary">
+                    {suggestion.direction === "downstream"
+                      ? "Can use outputs"
+                      : "Can provide inputs"}
+                  </Badge>
+                </InlineStack>
+                <Paragraph size="xs" tone="subdued">
+                  Matching type{suggestion.matchedTypes.length === 1 ? "" : "s"}
+                  : {suggestion.matchedTypes.join(", ")}
+                </Paragraph>
+              </BlockStack>
+            </button>
+          );
+        })}
+      </BlockStack>
+    </BlockStack>
+  );
+};
 
 interface ComponentDescriptionPanelProps {
   prefilledDescription?: string;
@@ -1075,6 +1143,10 @@ export const DashboardComponentsV2View = () => {
     };
   })();
   const isDetailOpen = Boolean(selectedDigest);
+  const compatibleComponentSuggestions = buildCompatibleComponentSuggestions(
+    selectedReference,
+    sourcedHydrated.map((sourced) => sourced.reference),
+  );
 
   // AI description query. Keyed by digest so each component gets its own
   // cached result, isolated error/pending, and an AbortSignal that fires
@@ -1434,6 +1506,10 @@ export const DashboardComponentsV2View = () => {
                   hideDescription
                 />
               </SuspenseWrapper>
+              <CompatibleComponentsPanel
+                suggestions={compatibleComponentSuggestions}
+                onSelect={selectComponent}
+              />
             </BlockStack>
           </div>
         )}

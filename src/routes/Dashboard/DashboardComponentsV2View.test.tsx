@@ -19,6 +19,12 @@ const routeMocks = vi.hoisted(() => {
     spec: {
       name,
       description: `${name} description`,
+      inputs:
+        digest === "registered-digest"
+          ? [{ name: "data", type: "Dataset" }]
+          : [],
+      outputs:
+        digest === "standard-digest" ? [{ name: "data", type: "Dataset" }] : [],
       implementation: { container: { image: "python:3.11" } },
     },
   });
@@ -599,6 +605,17 @@ describe("DashboardComponentsV2View", () => {
       "Component link copied to clipboard",
       "success",
     );
+  });
+
+  it("shows compatible component suggestions in details", () => {
+    routeMocks.search = { component: "standard-digest" };
+
+    render(<DashboardComponentsV2View />);
+
+    expect(screen.getByText("Compatible components")).toBeInTheDocument();
+    expect(screen.getAllByText("Registered component")).not.toHaveLength(0);
+    expect(screen.getByText("Can use outputs")).toBeInTheDocument();
+    expect(screen.getByText("Matching type: dataset")).toBeInTheDocument();
   });
 
   it("clears only the selected component when closing details", () => {
