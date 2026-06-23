@@ -52,7 +52,7 @@ import {
 import { buildCompatibleComponentSuggestions } from "@/services/componentCompatibility";
 import { rankComponentMatchesByEmbeddings } from "@/services/componentSearchEmbeddings";
 import {
-  COMPONENT_SEARCH_MATCH_FIELD_LABEL,
+  formatComponentSearchMatchSummary,
   formatMatchedFieldsExplanation,
 } from "@/services/componentSearchExplanations";
 import {
@@ -124,6 +124,13 @@ const SOURCE_ICON_TONE_BY_KIND: Record<ComponentSearchSource["kind"], string> =
     registered: "text-violet-500",
     user: "text-amber-500",
   };
+
+function rerankScoreClass(score: number): string {
+  if (score >= 0.9) return "text-emerald-700 bg-emerald-50 border-emerald-200";
+  if (score >= 0.75)
+    return "text-emerald-600 bg-emerald-50/70 border-emerald-100";
+  return "text-emerald-500 bg-white border-emerald-100";
+}
 
 /** How many lexical hits to display before the user asks for AI judgment. */
 const LEXICAL_RESULT_LIMIT = 20;
@@ -244,7 +251,17 @@ interface ComponentCardProps {
   position?: number;
   /** Whether the user had typed a query when this card was rendered. */
   hadQuery?: boolean;
+  /** Whether the detail pane is open, forcing the results list into compact rows. */
+  isDetailOpen?: boolean;
   onSelect: (reference: ComponentReference) => void;
+}
+
+function cleanComponentCardDescription(
+  description: string | undefined,
+): string | undefined {
+  const cleaned = description?.replace(/\s*Annotations:.*$/i, "").trim();
+
+  return cleaned || description;
 }
 
 const ComponentCard = ({
@@ -257,18 +274,22 @@ const ComponentCard = ({
   isSelected,
   position,
   hadQuery,
+  isDetailOpen,
   onSelect,
 }: ComponentCardProps) => {
   const name = getComponentName(reference);
-  const description = reference.spec?.description;
+  const description = cleanComponentCardDescription(
+    reference.spec?.description,
+  );
   const publishedBy = reference.published_by;
   const trackingSource = source
     ? TRACKING_SOURCE_BY_KIND[source.kind]
     : "unknown";
-  const showLexicalMatchBadges = isAiRanked ? undefined : matchedFields;
-  const showDescription = description;
-  const matchExplanation =
-    reason ?? formatMatchedFieldsExplanation(showLexicalMatchBadges);
+  const showLexicalMatchFields = isAiRanked ? undefined : matchedFields;
+  const showDescription = !isDetailOpen ? description : undefined;
+  const matchSummary = formatComponentSearchMatchSummary(
+    reason ?? formatMatchedFieldsExplanation(showLexicalMatchFields),
+  );
 
   return (
     // Raw <button> rather than the <Button> primitive: the primitive's variants
@@ -285,11 +306,15 @@ const ComponentCard = ({
         PANEL_CLASS,
         // Card is a button: align text, full width, subtle hover, focus ring.
         "w-full text-left cursor-pointer transition-colors",
+        isDetailOpen ? "p-3" : "p-4",
         "hover:bg-muted/40",
         "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring",
         // Selected state: left accent bar + tinted background.
         isSelected &&
-          "bg-muted/60 border-l-4 border-l-primary pl-[calc(0.75rem-3px)]",
+          cn(
+            "bg-[#5B35F5]/5 border-l-4 border-l-[#5B35F5]",
+            isDetailOpen ? "pl-[calc(0.75rem-3px)]" : "pl-[calc(1rem-3px)]",
+          ),
       )}
       {...tracking("component_library.result_card_v2", {
         ...componentMetadata(reference, trackingSource),
@@ -302,52 +327,75 @@ const ComponentCard = ({
       {/* min-w-0 so the flex column can shrink below its content width;
           without this, long unbroken URLs in the description force the
           card to grow horizontally. */}
-      <BlockStack gap="2" className="min-w-0">
-        <InlineStack gap="2" blockAlign="center" wrap="wrap">
+      <BlockStack gap={isDetailOpen ? "1" : "2"} className="min-w-0">
+        <InlineStack
+          gap="2"
+          blockAlign="center"
+          wrap="wrap"
+          className="min-w-0"
+        >
           {source ? (
             <QuickTooltip content={source.label}>
               <Icon
                 name="Package"
                 size="sm"
-                className={SOURCE_ICON_TONE_BY_KIND[source.kind]}
+                className={cn(
+                  "shrink-0",
+                  SOURCE_ICON_TONE_BY_KIND[source.kind],
+                )}
                 aria-label={`Source: ${source.label}`}
               />
             </QuickTooltip>
           ) : (
-            <Icon name="Package" size="sm" />
+            <Icon name="Package" size="sm" className="shrink-0" />
           )}
-          <Text size="sm" weight="semibold">
+          <Text
+            size="sm"
+            weight="semibold"
+            className="block min-w-0 flex-1 basis-0 whitespace-normal [overflow-wrap:anywhere] line-clamp-2"
+          >
             {name}
           </Text>
-          <ComponentLifecycleBadges reference={reference} />
-          {rerankScore !== undefined && (
-            <Badge variant="secondary">
-              Relevance: {Math.round(rerankScore * 100)}%
+          {!isDetailOpen && <ComponentLifecycleBadges reference={reference} />}
+          {rerankScore !== undefined && !isDetailOpen && (
+            <Badge
+              variant="secondary"
+              className={cn(
+                "shrink-0 whitespace-nowrap rounded-full px-1.5 py-0.5 font-semibold leading-none",
+                rerankScoreClass(rerankScore),
+              )}
+              aria-label={`${Math.round(rerankScore * 100)} percent relevance`}
+              title={`${Math.round(rerankScore * 100)}% relevance`}
+            >
+              {Math.round(rerankScore * 100)}%
             </Badge>
           )}
-          {showLexicalMatchBadges?.map((field) => (
-            <Badge key={field} variant="secondary">
-              matched: {COMPONENT_SEARCH_MATCH_FIELD_LABEL[field]}
-            </Badge>
-          ))}
         </InlineStack>
-        {publishedBy && (
+        {publishedBy && !isDetailOpen && (
           <Text size="xs" tone="subdued">
             by {publishedBy}
           </Text>
+        )}
+        {matchSummary && (
+          <Paragraph
+            size="xs"
+            tone="subdued"
+            className={cn("line-clamp-1", isDetailOpen ? "pl-6" : undefined)}
+          >
+            Why: {matchSummary}
+          </Paragraph>
         )}
         {showDescription && (
           // `[overflow-wrap:anywhere]` breaks at any character if needed —
           // `break-words` only breaks at word boundaries, which doesn't help
           // for long URLs without spaces. Pair with `min-w-0` on the parent
           // so the flex container actually allows shrinking.
-          <Paragraph size="sm" className="[overflow-wrap:anywhere] min-w-0">
+          <Paragraph
+            size="sm"
+            tone="subdued"
+            className="[overflow-wrap:anywhere] min-w-0 line-clamp-2"
+          >
             {description}
-          </Paragraph>
-        )}
-        {matchExplanation && (
-          <Paragraph size="xs" tone="subdued">
-            Why: {matchExplanation}
           </Paragraph>
         )}
       </BlockStack>
@@ -542,9 +590,22 @@ const ComponentDescriptionPanel = ({
         );
       case "idle":
         return (
-          <Button type="button" size="sm" onClick={onGenerate}>
-            Generate AI description
-          </Button>
+          <InlineStack gap="2" blockAlign="center" wrap="wrap">
+            <Button
+              type="button"
+              variant="outline"
+              size="xs"
+              onClick={onGenerate}
+              aria-label="Generate AI description"
+              className="border-border/60 bg-background/60 text-muted-foreground shadow-none hover:bg-muted/50 hover:text-foreground"
+            >
+              <Icon name="Sparkles" size="xs" />
+              Generate with AI
+            </Button>
+            <Text size="xs" tone="subdued">
+              Optional
+            </Text>
+          </InlineStack>
         );
     }
   };
@@ -1306,17 +1367,27 @@ export const DashboardComponentsV2View = () => {
             {total === 1 ? "" : "s"} in selected sources. Start typing to
             search.
           </Paragraph>
-          {visibleBrowseEntries.map((entry, idx) => (
-            <ComponentCard
-              key={entry.digest}
-              reference={entry.reference}
-              source={entry.source}
-              isSelected={entry.digest === selectedDigest}
-              position={idx}
-              hadQuery={false}
-              onSelect={selectComponent}
-            />
-          ))}
+          <div
+            className={cn(
+              "grid gap-2",
+              isDetailOpen
+                ? "grid-cols-1"
+                : "grid-cols-[repeat(auto-fit,minmax(420px,1fr))]",
+            )}
+          >
+            {visibleBrowseEntries.map((entry, idx) => (
+              <ComponentCard
+                key={entry.digest}
+                reference={entry.reference}
+                source={entry.source}
+                isSelected={entry.digest === selectedDigest}
+                position={idx}
+                hadQuery={false}
+                isDetailOpen={isDetailOpen}
+                onSelect={selectComponent}
+              />
+            ))}
+          </div>
           {hasMoreBrowseResults && (
             <Button
               type="button"
@@ -1345,9 +1416,10 @@ export const DashboardComponentsV2View = () => {
             No components matched “{trimmedQuery}”.
           </Paragraph>
           <Paragraph size="xs" tone="subdued">
-            Try a component name, input/output type, source term, or task intent.
-            Suggestions below are based on your loaded component sources. AI search
-            reranks matching local candidates when it is configured.
+            Try a component name, input/output type, source term, or task
+            intent. Suggestions below are based on your loaded component
+            sources. AI search reranks matching local candidates when it is
+            configured.
           </Paragraph>
           <ComponentSearchEmptyStateSuggestions
             suggestions={searchSuggestions}
@@ -1386,21 +1458,31 @@ export const DashboardComponentsV2View = () => {
             </Button>
           )}
         </InlineStack>
-        {displayedResults.map((result, idx) => (
-          <ComponentCard
-            key={result.digest}
-            reference={result.reference}
-            source={result.source}
-            matchedFields={result.matchedFields}
-            reason={result.reason}
-            rerankScore={result.rerankScore}
-            isAiRanked={rerankActive}
-            isSelected={result.digest === selectedDigest}
-            position={idx}
-            hadQuery={true}
-            onSelect={selectComponent}
-          />
-        ))}
+        <div
+          className={cn(
+            "grid gap-2",
+            isDetailOpen
+              ? "grid-cols-1"
+              : "grid-cols-[repeat(auto-fit,minmax(420px,1fr))]",
+          )}
+        >
+          {displayedResults.map((result, idx) => (
+            <ComponentCard
+              key={result.digest}
+              reference={result.reference}
+              source={result.source}
+              matchedFields={result.matchedFields}
+              reason={result.reason}
+              rerankScore={result.rerankScore}
+              isAiRanked={rerankActive}
+              isSelected={result.digest === selectedDigest}
+              position={idx}
+              hadQuery={true}
+              isDetailOpen={isDetailOpen}
+              onSelect={selectComponent}
+            />
+          ))}
+        </div>
       </BlockStack>
     );
   };
@@ -1491,7 +1573,7 @@ export const DashboardComponentsV2View = () => {
           className={cn(
             "min-h-0 min-w-0 overflow-y-auto px-8 py-4",
             isDetailOpen
-              ? "w-[360px] shrink-0 border-r border-border"
+              ? "w-[420px] shrink-0 border-r border-border"
               : "flex-1",
           )}
         >

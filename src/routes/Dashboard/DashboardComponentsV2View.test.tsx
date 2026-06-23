@@ -529,6 +529,33 @@ describe("DashboardComponentsV2View", () => {
     });
   });
 
+  it("allows long component result titles to wrap inside cards", () => {
+    const longName =
+      "Train regression model using Vowpal Wabbit on VowpalWabbitJsonDatasetWithAnExtremelyLongName";
+    routeMocks.extraStandardComponents = [
+      {
+        digest: "long-title-component",
+        name: longName,
+        text: "component yaml",
+        spec: {
+          name: longName,
+          description: "Long title component description",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "python:3.11" } },
+        },
+      },
+    ];
+
+    render(<DashboardComponentsV2View />);
+
+    expect(screen.getByText(longName)).toHaveClass(
+      "whitespace-normal",
+      "[overflow-wrap:anywhere]",
+      "line-clamp-2",
+    );
+  });
+
   it("filters visible component results by source type and restores them", () => {
     render(<DashboardComponentsV2View />);
 
@@ -596,8 +623,24 @@ describe("DashboardComponentsV2View", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText(/Why: Matched/)).toBeInTheDocument();
+      expect(screen.getByText(/Why: name/)).toBeInTheDocument();
     });
+  });
+
+  it("keeps dashboard search result cards summary-only", async () => {
+    render(<DashboardComponentsV2View />);
+
+    fireEvent.change(screen.getByLabelText("Search components"), {
+      target: { value: "registered" },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/Why: name/)).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText("Inputs")).not.toBeInTheDocument();
+    expect(screen.queryByText("1 required")).not.toBeInTheDocument();
+    expect(screen.queryByText(/data: Dataset/)).not.toBeInTheDocument();
   });
 
   it("tracks dashboard component search completions without query text", async () => {

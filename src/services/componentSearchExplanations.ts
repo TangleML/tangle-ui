@@ -1,6 +1,6 @@
 import type { MatchField } from "@/services/componentSearchIndex";
 
-export const COMPONENT_SEARCH_MATCH_FIELD_LABEL: Record<MatchField, string> = {
+const COMPONENT_SEARCH_MATCH_FIELD_LABEL: Record<MatchField, string> = {
   name: "name",
   description: "description",
   io: "inputs/outputs",
@@ -24,4 +24,12 @@ export function formatMatchedFieldsExplanation(
     new Set(fields.map((field) => COMPONENT_SEARCH_MATCH_FIELD_LABEL[field])),
   );
   return `Matched ${joinReadableList(labels)}.`;
+}
+
+export function formatComponentSearchMatchSummary(
+  explanation: string | undefined,
+): string | undefined {
+  if (!explanation) return undefined;
+
+  return explanation.replace(/^Matched /, "").replace(/\.$/, "");
 }
