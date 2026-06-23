@@ -15,6 +15,7 @@ import {
   ComponentDetail,
   ComponentDetailSkeleton,
 } from "@/components/shared/ComponentDetail/ComponentDetail";
+import { ComponentLifecycleBadges } from "@/components/shared/ComponentLifecycleBadges";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { SuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { Badge } from "@/components/ui/badge";
@@ -275,6 +276,7 @@ const ComponentCard = ({
           <Text size="sm" weight="semibold">
             {name}
           </Text>
+          <ComponentLifecycleBadges reference={reference} />
           {rerankScore !== undefined && (
             <Badge variant="secondary">
               Relevance: {Math.round(rerankScore * 100)}%

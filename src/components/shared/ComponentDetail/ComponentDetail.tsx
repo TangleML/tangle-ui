@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { CodeViewer } from "@/components/shared/CodeViewer";
+import { ComponentLifecycleBadges } from "@/components/shared/ComponentLifecycleBadges";
 import { CopyText } from "@/components/shared/CopyText/CopyText";
 import { GithubDetails } from "@/components/shared/TaskDetails/GithubDetails";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
 import { useHydrateComponentReference } from "@/hooks/useHydrateComponentReference";
 import { cn } from "@/lib/utils";
+import { getComponentLifecycleInfo } from "@/services/componentLifecycle";
 import type {
   ComponentReference,
   InputSpec,
@@ -257,11 +259,15 @@ export const ComponentDetail = ({
   const hasIO =
     (spec.inputs && spec.inputs.length > 0) ||
     (spec.outputs && spec.outputs.length > 0);
+  const lifecycle = getComponentLifecycleInfo(hydrated);
 
   // ── Shared sub-blocks ──────────────────────────────────────────────────
   const header = (
     <BlockStack gap="2">
-      <Heading level={2}>{getComponentName(hydrated)}</Heading>
+      <InlineStack gap="2" blockAlign="center" wrap="wrap">
+        <Heading level={2}>{getComponentName(hydrated)}</Heading>
+        <ComponentLifecycleBadges reference={hydrated} />
+      </InlineStack>
       {author && (
         <Text size="sm" tone="subdued">
           {author}
@@ -278,6 +284,14 @@ export const ComponentDetail = ({
         </Badge>
       )}
     </BlockStack>
+  );
+
+  const lifecycleWarning = lifecycle && (
+    <Paragraph size="sm" tone="subdued">
+      {lifecycle.state === "superseded"
+        ? "This component has been superseded. Prefer the replacement when possible."
+        : "This component is deprecated. Prefer an active replacement when possible."}
+    </Paragraph>
   );
 
   const description = spec.description && (
@@ -308,6 +322,7 @@ export const ComponentDetail = ({
     return (
       <BlockStack gap="6" align="stretch">
         {header}
+        {lifecycleWarning}
         {!hideDescription && description}
         {githubLinks}
         {io}
@@ -334,6 +349,7 @@ export const ComponentDetail = ({
     <InlineStack gap="6" blockAlign="start">
       <BlockStack gap="4" className="flex-2 min-w-0">
         {header}
+        {lifecycleWarning}
         {!hideDescription && description}
         {githubLinks}
         {io}
