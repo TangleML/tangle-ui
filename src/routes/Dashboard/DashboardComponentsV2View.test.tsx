@@ -535,6 +535,33 @@ describe("DashboardComponentsV2View", () => {
     });
   });
 
+  it("explains why lexical component results matched", async () => {
+    render(<DashboardComponentsV2View />);
+
+    fireEvent.change(screen.getByLabelText("Search components"), {
+      target: { value: "standard" },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/Why: Matched/)).toBeInTheDocument();
+    });
+  });
+
+  it("shows actionable no-results guidance", async () => {
+    render(<DashboardComponentsV2View />);
+
+    fireEvent.change(screen.getByLabelText("Search components"), {
+      target: { value: "no-such-component" },
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("No components matched “no-such-component”."),
+      ).toBeInTheDocument();
+    });
+    expect(screen.getByText(/Try a component name/)).toBeInTheDocument();
+  });
+
   it("initializes search state from URL params", () => {
     routeMocks.search = {
       q: "registered",

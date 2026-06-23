@@ -13,6 +13,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
 import { useHydrateComponentReference } from "@/hooks/useHydrateComponentReference";
 import { cn } from "@/lib/utils";
+import { formatMatchedFieldsExplanation } from "@/services/componentSearchExplanations";
+import type { MatchField } from "@/services/componentSearchIndex";
 import { type ComponentReference, type TaskSpec } from "@/utils/componentSpec";
 import { getComponentName } from "@/utils/getComponentName";
 import { isSubgraph } from "@/utils/subgraphUtils";
@@ -28,6 +30,7 @@ interface ComponentMarkupProps {
   isLoading?: boolean;
   error?: string | null;
   className?: string;
+  matchedFields?: MatchField[];
   rerankScore?: number;
   rerankReason?: string;
 }
@@ -87,6 +90,7 @@ const ComponentMarkup = ({
   isLoading,
   error,
   className,
+  matchedFields,
   rerankScore,
   rerankReason,
 }: ComponentMarkupProps) => {
@@ -173,6 +177,8 @@ const ComponentMarkup = ({
   }, []);
 
   const iconName = isSubgraphSpec ? "Workflow" : owned ? "FileBadge" : "File";
+  const matchExplanation =
+    rerankReason ?? formatMatchedFieldsExplanation(matchedFields);
 
   const iconClass = cn(
     "shrink-0",
@@ -233,12 +239,12 @@ const ComponentMarkup = ({
                     {author}
                   </span>
                 )}
-                {rerankReason ? (
+                {matchExplanation ? (
                   <span
                     className="truncate text-[10px] text-gray-500"
-                    title={rerankReason}
+                    title={matchExplanation}
                   >
-                    Why: {rerankReason}
+                    Why: {matchExplanation}
                   </span>
                 ) : (
                   <span className="truncate text-[10px] text-gray-500 font-mono">
