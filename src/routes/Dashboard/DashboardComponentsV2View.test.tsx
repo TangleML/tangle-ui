@@ -39,6 +39,7 @@ const routeMocks = vi.hoisted(() => {
     extraStandardComponents: [] as ComponentReference[],
     navigate: vi.fn(),
     notify: vi.fn(),
+    track: vi.fn(),
     refetchDescription: vi.fn(),
     rerank: vi.fn(),
     resetRerank: vi.fn(),
@@ -124,6 +125,10 @@ vi.mock("@tanstack/react-router", () => ({
 
 vi.mock("dexie-react-hooks", () => ({
   useLiveQuery: () => [],
+}));
+
+vi.mock("@/providers/AnalyticsProvider", () => ({
+  useAnalytics: () => ({ track: routeMocks.track }),
 }));
 
 vi.mock("@/providers/BackendProvider", () => ({
@@ -479,6 +484,7 @@ describe("DashboardComponentsV2View", () => {
     routeMocks.extraStandardComponents = [];
     routeMocks.navigate.mockClear();
     routeMocks.notify.mockClear();
+    routeMocks.track.mockClear();
     routeMocks.refetchDescription.mockClear();
     routeMocks.rerank.mockClear();
     routeMocks.resetRerank.mockClear();
@@ -592,6 +598,34 @@ describe("DashboardComponentsV2View", () => {
     await waitFor(() => {
       expect(screen.getByText(/Why: Matched/)).toBeInTheDocument();
     });
+  });
+
+  it("tracks dashboard component search completions without query text", async () => {
+    render(<DashboardComponentsV2View />);
+
+    fireEvent.change(screen.getByLabelText("Search components"), {
+      target: { value: "standard" },
+    });
+
+    await waitFor(() => {
+      expect(routeMocks.track).toHaveBeenCalledWith(
+        "component_library.search.completed",
+        expect.objectContaining({
+          surface: "dashboard_v2",
+          search_backend: "frontend_aggregate",
+          query_length: "standard".length,
+          result_count: 1,
+          component_result_count: 1,
+          collection_result_count: 0,
+          ai_ranked: false,
+        }),
+      );
+    });
+
+    expect(routeMocks.track).not.toHaveBeenCalledWith(
+      "component_library.search.completed",
+      expect.objectContaining({ query: "standard" }),
+    );
   });
 
   it("shows actionable no-results guidance with clickable suggestions", async () => {

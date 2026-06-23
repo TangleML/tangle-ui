@@ -37,6 +37,7 @@ import {
 } from "@/hooks/useNaturalLanguageComponentSearch";
 import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useBackend } from "@/providers/BackendProvider";
 import {
   fetchUserComponents,
@@ -674,6 +675,7 @@ export const DashboardComponentsV2View = () => {
   const aiDescriptionsEnabled = useFlagValue(
     "component-search-v2-ai-descriptions",
   );
+  const { track } = useAnalytics();
   const { backendUrl, configured, available } = useBackend();
   const { config: aiConfig } = useAiProviderSettings();
   const dashboardSearch = useSearch({ strict: false });
@@ -1146,6 +1148,37 @@ export const DashboardComponentsV2View = () => {
         rerankScore: undefined,
       }));
 
+  const trackedSearchResultCount =
+    displayedResults.length + collectionMatches.length;
+
+  useEffect(() => {
+    if (isLoadingLibrary || trimmedQuery.length === 0) return;
+
+    const timeout = window.setTimeout(() => {
+      track("component_library.search.completed", {
+        surface: "dashboard_v2",
+        search_backend: rerankActive
+          ? "frontend_aggregate_ai_rerank"
+          : "frontend_aggregate",
+        query_length: trimmedQuery.length,
+        result_count: trackedSearchResultCount,
+        component_result_count: displayedResults.length,
+        collection_result_count: collectionMatches.length,
+        ai_ranked: rerankActive,
+      });
+    }, 400);
+
+    return () => window.clearTimeout(timeout);
+  }, [
+    collectionMatches.length,
+    displayedResults.length,
+    isLoadingLibrary,
+    rerankActive,
+    track,
+    trackedSearchResultCount,
+    trimmedQuery,
+  ]);
+
   // Resolve the full reference for the selected digest. Prefer the already-
   // hydrated copy (no extra network), fall back to the un-hydrated index
   // entry, then to a backend stub. The shared ComponentDetail will suspend on
@@ -1313,6 +1346,7 @@ export const DashboardComponentsV2View = () => {
             reranks matching local candidates when it is configured.
           </Paragraph>
           <ComponentSearchEmptyStateSuggestions
+            surface="dashboard_v2"
             onSelectSuggestion={handleSuggestedSearch}
           />
         </BlockStack>
@@ -1414,6 +1448,12 @@ export const DashboardComponentsV2View = () => {
                   : "AI search"
               }
               title="AI search — rerank a bounded set of top candidates with an LLM"
+              {...tracking("component_library.search.ai_rerank", {
+                surface: "dashboard_v2",
+                mode: "smart",
+                query_length: trimmedQuery.length,
+                candidate_count: aiCandidateMatches.length,
+              })}
             >
               {isReranking || isEmbeddingSearchPending ? (
                 <Spinner size={16} />
