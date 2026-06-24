@@ -94,6 +94,23 @@ describe("registeredLibrariesFingerprint", () => {
     ]);
     expect(before).not.toBe(after);
   });
+
+  it("changes when non-secret configuration fields change", () => {
+    const before = registeredLibrariesFingerprint([
+      {
+        ...library("lib-a", ["d1"]),
+        configuration: { repo_name: "old/repo", token: "secret" },
+      },
+    ]);
+    const after = registeredLibrariesFingerprint([
+      {
+        ...library("lib-a", ["d1"]),
+        configuration: { repo_name: "new/repo", token: "secret" },
+      },
+    ]);
+    expect(before).not.toBe(after);
+    expect(before).not.toContain("secret");
+  });
 });
 
 describe("collectAllSourcedReferences", () => {

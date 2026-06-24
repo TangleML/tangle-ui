@@ -82,7 +82,6 @@ const ANNOTATION_KEYS_EXCLUDED_FROM_SEARCH = new Set([
   "editor.collapsed",
   "editor.flow-direction",
   "flex-nodes",
-  "python_dependencies",
   "python_original_code",
   "tangleml.com/editor/task-color",
   "tangleml.com/editor/edge-conduits",
@@ -90,6 +89,7 @@ const ANNOTATION_KEYS_EXCLUDED_FROM_SEARCH = new Set([
 ]);
 
 const MAX_ANNOTATION_TEXT_LENGTH = 500;
+const MAX_ANNOTATION_TOTAL_TEXT_LENGTH = 2_000;
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
@@ -119,12 +119,19 @@ function extractAnnotationsText(
   if (!annotations) return "";
 
   const parts: string[] = [];
+  let textLength = 0;
   for (const [key, value] of Object.entries(annotations)) {
     if (ANNOTATION_KEYS_EXCLUDED_FROM_SEARCH.has(key)) continue;
 
     const valueText = stringifySearchValue(value).trim();
     if (!valueText || valueText.length > MAX_ANNOTATION_TEXT_LENGTH) continue;
-    parts.push(key, valueText);
+
+    const part = `${key} ${valueText}`;
+    const nextLength = textLength + (parts.length > 0 ? 1 : 0) + part.length;
+    if (nextLength > MAX_ANNOTATION_TOTAL_TEXT_LENGTH) break;
+
+    parts.push(part);
+    textLength = nextLength;
   }
 
   return parts.join(" ");
@@ -247,10 +254,7 @@ export function buildSearchIndex(sourced: SourcedReference[]): IndexEntry[] {
         description: metadata.description.toLowerCase(),
         io: metadata.ioText.toLowerCase(),
         implementation: extractImplementationText(reference),
-        metadata: [metadata.metadataText, source.label, reference.published_by]
-          .filter(isNonEmptyString)
-          .join(" ")
-          .toLowerCase(),
+        metadata: metadata.metadataText.toLowerCase(),
       },
     });
   }

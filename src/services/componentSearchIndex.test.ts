@@ -134,7 +134,7 @@ describe("buildSearchIndex", () => {
     expect(index[0].searchable.io).toContain("serialized classifier");
     expect(index[0].searchable.io).toContain("artifact");
     expect(index[0].searchable.metadata).toContain("sklearn");
-    expect(index[0].searchable.metadata).toContain("publisher@example.com");
+    expect(index[0].searchable.metadata).not.toContain("publisher@example.com");
     expect(index[0].searchable.metadata).not.toContain("source blob");
     expect(index[0].searchable.implementation).toContain("pandas.train");
     expect(index[0].searchable.implementation).toContain("--epochs");
@@ -318,7 +318,7 @@ describe("lexicalSearch", () => {
     expect(typeResults[0]?.matchedFields).toContain("io");
   });
 
-  it("matches component metadata and source information", () => {
+  it("matches component metadata without treating source labels or author emails as free text", () => {
     const index = buildSearchIndex([
       makeSourced(
         {
@@ -339,8 +339,56 @@ describe("lexicalSearch", () => {
     expect(lexicalSearch(index, "lightgbm")[0]?.matchedFields).toContain(
       "metadata",
     );
-    expect(lexicalSearch(index, "publisher@example")[0]?.digest).toBe("meta");
-    expect(lexicalSearch(index, "user")[0]?.digest).toBe("meta");
+    expect(lexicalSearch(index, "publisher@example")).toHaveLength(0);
+    expect(lexicalSearch(index, "user")).toHaveLength(0);
+  });
+
+  it("matches dependency annotations after filtering noisy annotation keys", () => {
+    const index = buildSearchIndex([
+      makeSourced({
+        digest: "deps",
+        spec: {
+          name: "dependency_component",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+          metadata: {
+            annotations: {
+              python_dependencies: ["tensorflow", "lightgbm"],
+              python_original_code: "import noisy_private_blob",
+            },
+          },
+        },
+      }),
+    ]);
+
+    expect(lexicalSearch(index, "tensorflow")[0]?.digest).toBe("deps");
+    expect(lexicalSearch(index, "noisy_private_blob")).toHaveLength(0);
+  });
+
+  it("caps aggregate annotation text indexed per component", () => {
+    const annotations = Object.fromEntries(
+      Array.from({ length: 20 }, (_, index) => [
+        `annotation_${index}`,
+        `${index}`.padEnd(200, "x"),
+      ]),
+    );
+    const index = buildSearchIndex([
+      makeSourced({
+        digest: "capped",
+        spec: {
+          name: "capped_component",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+          metadata: { annotations },
+        },
+      }),
+    ]);
+
+    expect(index[0].searchable.metadata.length).toBeLessThanOrEqual(2_000);
+    expect(index[0].searchable.metadata).toContain("annotation_0");
+    expect(index[0].searchable.metadata).not.toContain("annotation_19");
   });
 
   it("matches implementation/command text with the lowest weight", () => {
