@@ -46,7 +46,9 @@ const routeMocks = vi.hoisted(() => {
     descriptionErrorState,
     aiDescriptionsEnabled: false,
     aiSearchConfigured: false,
+    aiRerankPending: false,
     aiApiBase: "",
+    aiModel: "",
     search,
   };
 });
@@ -170,7 +172,7 @@ vi.mock("@/hooks/useNaturalLanguageComponentSearch", () => ({
   useNaturalLanguageComponentRerank: () => ({
     mutate: routeMocks.rerank,
     data: undefined,
-    isPending: false,
+    isPending: routeMocks.aiRerankPending,
     error: null,
     reset: routeMocks.resetRerank,
     isConfigured: routeMocks.aiSearchConfigured,
@@ -183,7 +185,11 @@ vi.mock("@/hooks/useToastNotification", () => ({
 
 vi.mock("@/hooks/useAiProviderSettings", () => ({
   useAiProviderSettings: () => ({
-    config: { apiBase: routeMocks.aiApiBase, apiKey: "" },
+    config: {
+      apiBase: routeMocks.aiApiBase,
+      apiKey: "",
+      model: routeMocks.aiModel,
+    },
   }),
 }));
 
@@ -489,7 +495,21 @@ describe("DashboardComponentsV2View", () => {
     routeMocks.rerank.mockClear();
     routeMocks.resetRerank.mockClear();
     routeMocks.aiSearchConfigured = false;
+    routeMocks.aiRerankPending = false;
     routeMocks.aiApiBase = "";
+    routeMocks.aiModel = "";
+  });
+
+  it("shows active AI search progress below the search box", () => {
+    routeMocks.aiSearchConfigured = true;
+    routeMocks.aiRerankPending = true;
+    routeMocks.aiModel = "gpt-4o-mini";
+
+    render(<DashboardComponentsV2View />);
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "component candidates with GPT-4o mini",
+    );
   });
 
   it("limits browse rendering and lets users show more results", async () => {

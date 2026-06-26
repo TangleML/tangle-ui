@@ -1,5 +1,6 @@
 import { Link as RouterLink } from "@tanstack/react-router";
 
+import { AiModelQuickSelect } from "@/components/layout/AiModelQuickSelect";
 import { isAuthorizationRequired } from "@/components/shared/Authentication/helpers";
 import { TopBarAuthentication } from "@/components/shared/Authentication/TopBarAuthentication";
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
@@ -20,6 +21,7 @@ export function AppMenuActions() {
       className="shrink-0"
       data-testid="app-menu-actions"
     >
+      <AiModelQuickSelect />
       <EditorVersionToggle />
       <RouterLink to="/settings/backend">
         <TooltipButton tooltip="Settings" {...tracking("v2.header.settings")}>

@@ -1,12 +1,22 @@
-import { type FormEvent, useRef, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
+import { getAiModelOptions, getDefaultAiModelId } from "@/config/aiModels";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import useToastNotification from "@/hooks/useToastNotification";
 
@@ -26,12 +36,24 @@ export function AgentSettings() {
   const [showKey, setShowKey] = useState(false);
   const [testing, setTesting] = useState(false);
   const testRunIdRef = useRef(0);
+  const modelOptions = getAiModelOptions();
+  const defaultModelId = getDefaultAiModelId();
+
+  useEffect(() => {
+    setModel(config.model);
+  }, [config.model]);
 
   const getTrimmedConfig = () => ({
     apiBase: apiBase.trim().replace(/\/+$/, ""),
     apiKey: apiKey.trim(),
     model: model.trim(),
   });
+
+  const handleModelChange = (nextModel: string) => {
+    setModel(nextModel);
+    setValidationError(null);
+    update({ model: nextModel.trim() });
+  };
 
   const validateRequiredFields = () => {
     const trimmed = getTrimmedConfig();
@@ -194,30 +216,49 @@ export function AgentSettings() {
               </Button>
             </InlineStack>
             <Text id="agent-settings-api-key-hint" size="xs" tone="subdued">
-              Optional. Stored in browser localStorage. Leave blank when your
-              proxy handles authentication.
+              Optional if your proxy already handles authentication. Stored in
+              this browser only when provided.
             </Text>
           </BlockStack>
 
           <BlockStack gap="1">
             <Label htmlFor="agent-settings-model">Model</Label>
-            <Input
-              id="agent-settings-model"
-              type="text"
-              placeholder="e.g. gpt-4o-mini, gemini-2.5-flash, claude-3-5-haiku"
-              value={model}
-              onChange={(e) => {
-                setModel(e.target.value);
-                setValidationError(null);
-              }}
-              aria-label="Model id"
-              aria-describedby="agent-settings-model-hint"
-              autoComplete="off"
-              spellCheck={false}
-            />
+            <InlineStack gap="0" wrap="nowrap">
+              <Input
+                id="agent-settings-model"
+                type="text"
+                placeholder={`e.g. ${defaultModelId}`}
+                value={model}
+                onChange={(e) => handleModelChange(e.target.value)}
+                aria-label="Model id"
+                aria-describedby="agent-settings-model-hint"
+                autoComplete="off"
+                spellCheck={false}
+                className="rounded-r-none"
+              />
+              <Select onValueChange={handleModelChange}>
+                <SelectTrigger
+                  aria-label="Select a model"
+                  className="w-11 rounded-l-none border-l-0 px-2 [&_[data-slot=select-value]]:hidden"
+                >
+                  <SelectValue placeholder="Model suggestions" />
+                </SelectTrigger>
+                <SelectContent align="end">
+                  <SelectGroup>
+                    <SelectLabel>Common models</SelectLabel>
+                    {modelOptions.map((option) => (
+                      <SelectItem key={option.id} value={option.id}>
+                        {option.label ?? option.id}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </InlineStack>
             <Text id="agent-settings-model-hint" size="xs" tone="subdued">
-              Optional. Used by all generation features through the Responses
-              API. Documentation search uses its embedding model separately.
+              Optional if your proxy selects a model. Choose a common
+              OpenAI-compatible model or enter any model id supported by your
+              provider.
             </Text>
           </BlockStack>
 

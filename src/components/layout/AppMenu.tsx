@@ -35,6 +35,7 @@ import { tracking } from "@/utils/tracking";
 
 import TooltipButton from "../shared/Buttons/TooltipButton";
 import NewPipelineButton from "../shared/NewPipelineButton";
+import { AiModelQuickSelect } from "./AiModelQuickSelect";
 
 const DefaultAppMenu = () => {
   const router = useRouter();
@@ -50,6 +51,11 @@ const DefaultAppMenu = () => {
   };
 
   const isOnSettingsRoute = location.pathname.startsWith("/settings");
+  const showAiModelQuickSelect =
+    location.pathname.startsWith(APP_ROUTES.DASHBOARD_COMPONENTS) ||
+    location.pathname.startsWith(APP_ROUTES.DASHBOARD_COMPONENTS_V2) ||
+    location.pathname.startsWith(APP_ROUTES.EDITOR_V2) ||
+    location.pathname.startsWith(APP_ROUTES.SETTINGS_AGENT);
 
   return (
     <div
@@ -110,6 +116,7 @@ const DefaultAppMenu = () => {
             <div className="w-px h-5 bg-stone-700" />
           </div>
 
+          {showAiModelQuickSelect && <AiModelQuickSelect />}
           <EditorVersionToggle />
 
           {/* Settings & status */}
