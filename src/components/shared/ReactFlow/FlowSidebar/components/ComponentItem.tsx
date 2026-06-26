@@ -13,7 +13,10 @@ import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
 import { useHydrateComponentReference } from "@/hooks/useHydrateComponentReference";
 import { cn } from "@/lib/utils";
-import { formatMatchedFieldsExplanation } from "@/services/componentSearchExplanations";
+import {
+  formatComponentSearchMatchSummary,
+  formatMatchedFieldsExplanation,
+} from "@/services/componentSearchExplanations";
 import type { MatchField } from "@/services/componentSearchIndex";
 import { type ComponentReference, type TaskSpec } from "@/utils/componentSpec";
 import { getComponentName } from "@/utils/getComponentName";
@@ -104,7 +107,7 @@ const ComponentMarkup = ({
   const carousel = useRef(0);
   const { notifyNode, getNodeIdsByDigest, fitNodeIntoView } = useNodesOverlay();
 
-  const { spec, digest, url, name, published_by: author, owned } = component;
+  const { spec, digest, url, name, owned } = component;
 
   const displayName = useMemo(
     () => name ?? getComponentName({ spec, url }),
@@ -176,22 +179,27 @@ const ComponentMarkup = ({
     }
   }, []);
 
-  const iconName = isSubgraphSpec ? "Workflow" : owned ? "FileBadge" : "File";
-  const matchExplanation =
-    rerankReason ?? formatMatchedFieldsExplanation(matchedFields);
+  const iconName = isSubgraphSpec ? "Workflow" : "Package";
+  const matchExplanation = formatComponentSearchMatchSummary(
+    rerankReason ?? formatMatchedFieldsExplanation(matchedFields),
+  );
 
   const iconClass = cn(
     "shrink-0",
-    isSubgraphSpec ? "text-blue-400" : "text-gray-400",
+    isSubgraphSpec
+      ? "text-violet-500"
+      : owned
+        ? "text-orange-500"
+        : "text-blue-500",
   );
 
   return (
     <li
       className={cn(
-        "pl-2 py-1.5 w-full",
+        "group w-full px-3 py-2 text-left transition-colors",
         error
           ? "cursor-not-allowed opacity-60"
-          : "cursor-grab hover:bg-gray-100 active:bg-gray-200",
+          : "cursor-grab hover:bg-muted/40 active:bg-muted/60",
         className,
       )}
       draggable={!error && !isLoading}
@@ -207,54 +215,62 @@ const ComponentMarkup = ({
         ) : (
           <InlineStack
             wrap="nowrap"
+            gap="3"
             className="w-full"
             data-testid="component-item"
             data-component-name={displayName}
           >
-            <InlineStack gap="2" className="flex-1 min-w-0" wrap="nowrap">
+            <InlineStack
+              gap="2"
+              className="flex-1 min-w-0"
+              wrap="nowrap"
+              blockAlign="start"
+            >
               {isRemoteComponentLibrarySearchEnabled ? (
                 <ComponentIcon
                   name={iconName}
                   className={iconClass}
                   component={component}
+                  size="sm"
                 />
               ) : (
-                <Icon name={iconName} className={iconClass} />
+                <Icon name={iconName} className={iconClass} size="sm" />
               )}
 
               <div
-                className="flex flex-col flex-1 min-w-0"
+                className="flex flex-col flex-1 min-w-0 gap-1"
                 onMouseEnter={onMouseEnter}
                 onMouseLeave={onMouseLeave}
                 onClick={onMouseClick}
               >
-                <span
-                  className="truncate text-xs text-gray-800"
+                <Text
+                  size="sm"
+                  weight="semibold"
+                  className="min-w-0 truncate"
                   title={displayName}
                 >
                   {displayName}
-                </span>
-                {author && author.length > 0 && (
-                  <span className="truncate text-[10px] text-gray-500 font-mono">
-                    {author}
-                  </span>
-                )}
-                {matchExplanation ? (
-                  <span
-                    className="truncate text-[10px] text-gray-500"
+                </Text>
+                {matchExplanation && (
+                  <Text
+                    size="xs"
+                    tone="subdued"
+                    className="min-w-0 line-clamp-1"
                     title={matchExplanation}
                   >
                     Why: {matchExplanation}
-                  </span>
-                ) : (
-                  <span className="truncate text-[10px] text-gray-500 font-mono">
-                    Ver: {digest}
-                  </span>
+                  </Text>
                 )}
               </div>
             </InlineStack>
 
-            <InlineStack align="end" blockAlign="center" gap="1" wrap="nowrap">
+            <InlineStack
+              align="end"
+              blockAlign="center"
+              gap="1"
+              wrap="nowrap"
+              className="shrink-0 self-center opacity-70 transition-opacity group-hover:opacity-100"
+            >
               {rerankScore !== undefined && (
                 <Text
                   size="xs"
