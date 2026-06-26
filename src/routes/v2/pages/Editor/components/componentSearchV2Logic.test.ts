@@ -262,10 +262,28 @@ describe("buildLexicalMatches / buildAiCandidateMatches", () => {
     expect(buildAiCandidateMatches(index, "")).toEqual([]);
   });
 
-  it("falls back to a browse pool when literal search finds nothing", () => {
-    // A query with no token overlap returns no lexical hits, so the AI
-    // candidate pool falls back to the (alphabetical) browse slice.
+  it("returns no AI candidates when literal search finds nothing", () => {
     const candidates = buildAiCandidateMatches(index, "qqzznomatch");
-    expect(candidates.map((m) => m.digest)).toEqual(["alpha", "zebra"]);
+    expect(candidates).toEqual([]);
+  });
+
+  it("adds source-diverse lexical candidates beyond the top lexical hits", () => {
+    const broadIndex = buildSearchIndex([
+      ...Array.from({ length: 100 }, (_, i) => ({
+        reference: ref(`train-${i}`, `train_${i}`),
+        source: source("standard"),
+      })),
+      {
+        reference: ref("user-upload", "train_user_upload"),
+        source: USER_SOURCE,
+      },
+    ]);
+
+    const candidates = buildAiCandidateMatches(broadIndex, "train");
+
+    expect(candidates.length).toBeLessThanOrEqual(80);
+    expect(candidates.map((candidate) => candidate.digest)).toContain(
+      "user-upload",
+    );
   });
 });
