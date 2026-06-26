@@ -719,6 +719,171 @@ describe("lexicalSearch", () => {
     expect(results.map((result) => result.digest)).toEqual(["target"]);
   });
 
+  describe("search quality expectations", () => {
+    const qualityIndex = buildSearchIndex([
+      makeSourced({
+        digest: "train-test-split",
+        spec: {
+          name: "train_test_split",
+          description: "Split a dataset into train and test partitions.",
+          inputs: [{ name: "dataset", type: "Dataset" }],
+          outputs: [{ name: "train" }, { name: "test" }],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+      makeSourced({
+        digest: "train-model",
+        spec: {
+          name: "train_model",
+          description: "Fit a classifier on tabular data.",
+          inputs: [{ name: "table", type: "Dataset" }],
+          outputs: [{ name: "model", type: { artifact: "Model" } }],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+      makeSourced({
+        digest: "filter-rows",
+        spec: {
+          name: "filter_rows",
+          description: "Filter dataset rows with a boolean condition.",
+          inputs: [{ name: "dataset" }],
+          outputs: [{ name: "filtered_dataset" }],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+      makeSourced({
+        digest: "load-csv",
+        spec: {
+          name: "load_csv_file",
+          description: "Read a CSV file into a tabular dataframe.",
+          inputs: [{ name: "path", type: "String" }],
+          outputs: [{ name: "table", type: "Dataset" }],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+      makeSourced({
+        digest: "local-upload",
+        spec: {
+          name: "upload_file",
+          description: "Upload a file to a local directory.",
+          inputs: [{ name: "file" }],
+          outputs: [{ name: "path" }],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+      makeSourced({
+        digest: "gcs-upload",
+        spec: {
+          name: "upload_to_gcs",
+          description: "Upload a file to GCS cloud storage.",
+          inputs: [{ name: "file" }],
+          outputs: [{ name: "gcs_uri" }],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+      makeSourced({
+        digest: "predict-labels",
+        spec: {
+          name: "predict_labels",
+          description: "Infer labels from examples using a trained model.",
+          inputs: [{ name: "model" }, { name: "examples" }],
+          outputs: [{ name: "predictions" }],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+      makeSourced({
+        digest: "text-embeddings",
+        spec: {
+          name: "create_text_embeddings",
+          description: "Create vector embeddings for text documents.",
+          inputs: [{ name: "documents" }],
+          outputs: [{ name: "embeddings", type: "EmbeddingVector" }],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+    ]);
+
+    // These lock in current relevance expectations by design. They are allowed
+    // to fail when scoring changes, but failures should be reviewed as search
+    // quality changes rather than treated as incidental snapshots.
+    it.each<{
+      query: string;
+      expectedDigests: string[];
+      absentDigests?: string[];
+    }>([
+      {
+        query: "split dataset into train and test",
+        expectedDigests: ["train-test-split"],
+      },
+      {
+        query: "fit model on tabular data",
+        expectedDigests: ["train-model"],
+      },
+      {
+        query: "read csv file",
+        expectedDigests: ["load-csv"],
+      },
+      {
+        query: "filtr dataset rows",
+        expectedDigests: ["filter-rows"],
+      },
+      {
+        query: "infer labels from model",
+        expectedDigests: ["predict-labels"],
+      },
+      {
+        query: "make vector embeddings for text",
+        expectedDigests: ["text-embeddings"],
+      },
+      // Synonym-only: neither query shares a literal token with its target, so
+      // these fail unless synonym expansion is working ("vectorize" → embed/
+      // vector, "bucket" → gcs/storage).
+      {
+        query: "vectorize",
+        expectedDigests: ["text-embeddings"],
+      },
+      {
+        query: "bucket",
+        expectedDigests: ["gcs-upload"],
+      },
+      // Multi-match with a deterministic order: both upload components match,
+      // but local-upload matches "file" in its name (weight 5) while gcs-upload
+      // only matches it in the description (weight 2), so the order is stable.
+      {
+        query: "upload file",
+        expectedDigests: ["local-upload", "gcs-upload"],
+      },
+      // Negative constraint: assert the exclusion directly. Without it the
+      // plain query already ranks local-upload #1, so only `absentDigests`
+      // actually guards the "not to GCS" parsing.
+      {
+        query: "upload a file but not to GCS",
+        expectedDigests: ["local-upload"],
+        absentDigests: ["gcs-upload"],
+      },
+    ])(
+      "returns expected results for '$query'",
+      ({ query, expectedDigests, absentDigests }) => {
+        const results = lexicalSearch(qualityIndex, query).map(
+          (result) => result.digest,
+        );
+
+        expect(results.slice(0, expectedDigests.length)).toEqual(
+          expectedDigests,
+        );
+        for (const digest of absentDigests ?? []) {
+          expect(results).not.toContain(digest);
+        }
+      },
+    );
+
+    it("returns nothing for a nonsense query", () => {
+      expect(
+        lexicalSearch(qualityIndex, "sdkjhfgsjkhhgfiluiowehfj"),
+      ).toHaveLength(0);
+    });
+  });
+
   it("does not special-case single-letter non-stop-word tokens", () => {
     const index = buildSearchIndex([
       makeSourced({
