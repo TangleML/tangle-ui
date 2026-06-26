@@ -371,33 +371,59 @@ const QUERY_STOP_WORDS = new Set([
  * prevents common tokens like "a"/"to" from matching nearly every component and
  * drowning out the useful intent terms.
  */
+function uniqueTokens(tokens: string[]): string[] {
+  const unique: string[] = [];
+  const seen = new Set<string>();
+  for (const token of tokens) {
+    if (QUERY_STOP_WORDS.has(token) || seen.has(token)) continue;
+    seen.add(token);
+    unique.push(token);
+  }
+  return unique;
+}
+
 function tokenizeQuery(text: string): {
   concepts: string[][];
-  phraseTokens: string[];
+  tokens: string[];
+  requiredTokens: string[];
+  phraseTokenSequences: string[][];
 } {
-  const splitText = splitIdentifierText(text).toLowerCase();
-  const rawTokens = splitText.split(/[^a-z0-9]+/).filter(isNonEmptyString);
+  const rawTokens = splitIdentifierText(text)
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(isNonEmptyString);
+  const positiveRawTokens = rawTokens.filter(
+    (token) => !QUERY_STOP_WORDS.has(token),
+  );
   const concepts: string[][] = [];
-  const phraseTokens: string[] = [];
-  const seen = new Set<string>();
+  const conceptTokens: string[] = [];
+  const seenConcepts = new Set<string>();
 
   for (const token of rawTokens) {
     if (QUERY_STOP_WORDS.has(token)) continue;
 
-    phraseTokens.push(token);
-    const variants = expandSynonymTokens([token, stemToken(token)]).filter(
-      (variant) => !QUERY_STOP_WORDS.has(variant),
+    const variants = uniqueTokens(
+      expandSynonymTokens([token, stemToken(token)]),
     );
     if (variants.length === 0) continue;
 
     const conceptKey = variants.join("\0");
-    if (seen.has(conceptKey)) continue;
+    if (seenConcepts.has(conceptKey)) continue;
 
     concepts.push(variants);
-    seen.add(conceptKey);
+    conceptTokens.push(...variants);
+    seenConcepts.add(conceptKey);
   }
 
-  return { concepts, phraseTokens };
+  return {
+    concepts,
+    tokens: uniqueTokens(conceptTokens),
+    requiredTokens: uniqueTokens(positiveRawTokens.map(stemToken)),
+    phraseTokenSequences: [
+      positiveRawTokens,
+      positiveRawTokens.map(stemToken),
+    ].filter((sequence) => sequence.length > 1),
+  };
 }
 
 /**
@@ -412,6 +438,17 @@ const FIELD_WEIGHTS: Record<MatchField, number> = {
   implementation: 1,
   metadata: 1,
 };
+
+const FIELD_PHRASE_BONUS: Record<MatchField, number> = {
+  name: 10,
+  description: 4,
+  io: 4,
+  implementation: 2,
+  metadata: 2,
+};
+
+const PREFIX_MATCH_BONUS_MULTIPLIER = 0.5;
+const ALL_QUERY_TOKENS_BONUS = 6;
 
 const SEARCH_FIELDS: MatchField[] = [
   "name",
@@ -431,15 +468,47 @@ interface SearchOptions {
   minLength?: number;
 }
 
+function searchableTokens(text: string): string[] {
+  return text.split(/[^a-z0-9]+/).filter(isNonEmptyString);
+}
+
+function entryMatchesToken(entry: IndexEntry, token: string): boolean {
+  return SEARCH_FIELDS.some((field) => entry.searchable[field].includes(token));
+}
+
+function buildRareTokenWeights(
+  index: IndexEntry[],
+  tokens: string[],
+): Map<string, number> {
+  const documentFrequencies = new Map(tokens.map((token) => [token, 0]));
+
+  for (const entry of index) {
+    for (const token of tokens) {
+      if (!entryMatchesToken(entry, token)) continue;
+      documentFrequencies.set(token, (documentFrequencies.get(token) ?? 0) + 1);
+    }
+  }
+
+  const weights = new Map<string, number>();
+  for (const [token, documentFrequency] of documentFrequencies) {
+    const inverseFrequency = Math.log(
+      (index.length + 1) / (documentFrequency + 1),
+    );
+    weights.set(token, 1 + inverseFrequency);
+  }
+  return weights;
+}
+
 /**
  * Score one entry against the tokenized query. Returns 0 if no field matched.
  *
  * Scoring model:
  * - Per query concept: each field that contains any token variant contributes
  *   its weight once.
- * - Bonus: full multi-token query as a substring of the name (+10). Catches
- *   "train test split" matching `train_test_split` strongly even though we
- *   tokenized.
+ * - Word-boundary matches (a query token that begins an indexed token,
+ *   including exact matches) get a small extra boost, useful for partial names.
+ * - Rare query tokens count more than tokens that match many components.
+ * - Contiguous multi-token phrase matches and all-token matches get bonuses.
  *
  * Indexed text and query text are normalized before scoring; raw scores are
  * only used for ordering.
@@ -447,31 +516,74 @@ interface SearchOptions {
 function scoreEntry(
   entry: IndexEntry,
   concepts: string[][],
-  phraseTokens: string[],
+  requiredTokens: string[],
+  phraseTokenSequences: string[][],
+  tokenWeights: Map<string, number>,
 ): { score: number; matchedFields: MatchField[] } {
   const matched = new Set<MatchField>();
   let score = 0;
 
+  // A field's tokenization depends only on the field, not the query token, so
+  // split it once per entry (cached) rather than re-splitting inside the
+  // per-query-token loop — that re-split is hot on every keystroke.
+  const fieldTokenCache = new Map<MatchField, string[]>();
+  const fieldTokensFor = (field: MatchField): string[] => {
+    const cached = fieldTokenCache.get(field);
+    if (cached) return cached;
+    const fieldTokens = searchableTokens(entry.searchable[field]);
+    fieldTokenCache.set(field, fieldTokens);
+    return fieldTokens;
+  };
+
   for (const concept of concepts) {
     for (const field of SEARCH_FIELDS) {
-      if (concept.some((token) => entry.searchable[field].includes(token))) {
-        score += FIELD_WEIGHTS[field];
-        matched.add(field);
+      const fieldText = entry.searchable[field];
+      const matchingTokens = concept.filter((token) =>
+        fieldText.includes(token),
+      );
+      if (matchingTokens.length === 0) continue;
+
+      const fieldWeight = FIELD_WEIGHTS[field];
+      const tokenWeight = Math.max(
+        ...matchingTokens.map((token) => tokenWeights.get(token) ?? 1),
+      );
+      score += fieldWeight * tokenWeight;
+      matched.add(field);
+
+      const hasPrefixMatch = matchingTokens.some((token) =>
+        fieldTokensFor(field).some((fieldToken) =>
+          fieldToken.startsWith(token),
+        ),
+      );
+      if (hasPrefixMatch) {
+        score += fieldWeight * PREFIX_MATCH_BONUS_MULTIPLIER * tokenWeight;
       }
     }
   }
 
-  // Multi-token contiguous match in the name is a very strong signal. Both
-  // sides are normalized so the bonus also fires for snake_case names —
-  // query "train test split" should match `train_test_split`, not just
-  // names that happen to contain literal spaces.
-  if (phraseTokens.length > 1) {
-    const normalizedName = entry.searchable.name.replace(/[^a-z0-9]+/g, " ");
-    const normalizedQuery = phraseTokens.join(" ");
-    if (normalizedName.includes(normalizedQuery)) {
-      score += 10;
-      matched.add("name");
+  if (phraseTokenSequences.length > 0) {
+    for (const field of SEARCH_FIELDS) {
+      const normalizedField = entry.searchable[field].replace(
+        /[^a-z0-9]+/g,
+        " ",
+      );
+      if (
+        !phraseTokenSequences.some((sequence) =>
+          normalizedField.includes(sequence.join(" ")),
+        )
+      ) {
+        continue;
+      }
+      score += FIELD_PHRASE_BONUS[field];
+      matched.add(field);
     }
+  }
+
+  if (
+    requiredTokens.length > 1 &&
+    requiredTokens.every((token) => entryMatchesToken(entry, token))
+  ) {
+    score += ALL_QUERY_TOKENS_BONUS;
   }
 
   return { score, matchedFields: [...matched] };
@@ -491,12 +603,20 @@ export function lexicalSearch(
   const trimmed = query.trim().toLowerCase();
   if (trimmed.length < minLength) return [];
 
-  const { concepts, phraseTokens } = tokenizeQuery(trimmed);
+  const { concepts, tokens, requiredTokens, phraseTokenSequences } =
+    tokenizeQuery(trimmed);
   if (concepts.length === 0) return [];
+  const tokenWeights = buildRareTokenWeights(index, tokens);
 
   const scored: Array<LexicalMatch & { score: number }> = [];
   for (const entry of index) {
-    const { score, matchedFields } = scoreEntry(entry, concepts, phraseTokens);
+    const { score, matchedFields } = scoreEntry(
+      entry,
+      concepts,
+      requiredTokens,
+      phraseTokenSequences,
+      tokenWeights,
+    );
     if (score === 0) continue;
     scored.push({
       reference: entry.reference,

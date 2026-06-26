@@ -318,6 +318,136 @@ describe("lexicalSearch", () => {
     expect(results[0]?.digest).toBe("stronger-concept-match");
   });
 
+  it("boosts prefix matches for partial search terms", () => {
+    // Both components match "classif" in the same (name) field, so the only
+    // thing that can separate them is the prefix bonus. The substring candidate
+    // also sorts first alphabetically, so without the bonus it would win the
+    // tie-break — making this test fail if PREFIX_MATCH_BONUS_MULTIPLIER were 0.
+    const index = buildSearchIndex([
+      makeSourced({
+        digest: "prefix",
+        spec: {
+          name: "classify_rows", // "classify" is a true word-prefix of "classif"
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+      makeSourced({
+        digest: "substring",
+        spec: {
+          // "reclassify" contains "classif" mid-word (never as a prefix), and
+          // "alpha_…" sorts before "classify_rows".
+          name: "alpha_reclassify",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+    ]);
+
+    expect(lexicalSearch(index, "classif")[0]?.digest).toBe("prefix");
+  });
+
+  it("boosts rare tokens over common tokens", () => {
+    // Both candidates contain BOTH query tokens (so the all-tokens bonus applies
+    // equally) and differ only in which token sits in the high-weight name
+    // field. The filler components make "model" common and "xgboost" rare, so
+    // only the IDF weighting can make the rare-token-in-name candidate win — the
+    // test fails if rare-token weighting is removed (then it ties and the
+    // alphabetically-earlier "common-in-name" wins instead).
+    const filler = ["m1", "m2", "m3"].map((digest) =>
+      makeSourced({
+        digest,
+        spec: {
+          name: `${digest}_model`,
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+    );
+    const index = buildSearchIndex([
+      ...filler,
+      makeSourced({
+        digest: "common-in-name",
+        spec: {
+          name: "train_model",
+          description: "Uses xgboost.",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+      makeSourced({
+        digest: "rare-in-name",
+        spec: {
+          name: "xgboost_runner",
+          description: "Builds a model.",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+    ]);
+
+    expect(lexicalSearch(index, "model xgboost")[0]?.digest).toBe(
+      "rare-in-name",
+    );
+  });
+
+  it("applies phrase bonuses to inflected multi-word queries", () => {
+    const index = buildSearchIndex([
+      makeSourced({
+        digest: "phrase",
+        spec: {
+          name: "training_testing_split",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+      makeSourced({
+        digest: "scattered",
+        spec: {
+          name: "training_alpha_testing_split",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+    ]);
+
+    expect(lexicalSearch(index, "training testing")[0]?.digest).toBe("phrase");
+  });
+
+  it("boosts matches that include every query token across fields", () => {
+    const index = buildSearchIndex([
+      makeSourced({
+        digest: "partial",
+        spec: {
+          name: "a_train_task",
+          description: "Train something.",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+      makeSourced({
+        digest: "complete",
+        spec: {
+          name: "z_train_task",
+          description: "Produces a model artifact.",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+    ]);
+
+    expect(lexicalSearch(index, "train model")[0]?.digest).toBe("complete");
+  });
+
   it("expands domain-neutral synonyms", () => {
     const index = buildSearchIndex([
       makeSourced({
