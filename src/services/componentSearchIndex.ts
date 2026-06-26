@@ -15,6 +15,8 @@
 import type { ComponentReference } from "@/utils/componentSpec";
 import { getComponentName } from "@/utils/getComponentName";
 
+import { expandSynonymTokens } from "./componentSearchSynonyms";
+
 /** Which field of a component matched the query. Surfaced in the UI. */
 export type MatchField =
   | "name"
@@ -159,7 +161,7 @@ function stemToken(token: string): string {
   return token;
 }
 
-function normalizeSearchText(text: string): string {
+function baseSearchTokens(text: string): string[] {
   const splitText = splitIdentifierText(text).toLowerCase();
   const tokens = splitText.split(/[^a-z0-9]+/).filter(isNonEmptyString);
   const expandedTokens: string[] = [];
@@ -173,7 +175,17 @@ function normalizeSearchText(text: string): string {
     }
   }
 
-  return [text.toLowerCase(), splitText, expandedTokens.join(" ")].join(" ");
+  return expandedTokens;
+}
+
+function normalizeSearchText(text: string): string {
+  const splitText = splitIdentifierText(text).toLowerCase();
+  // Synonym expansion happens on the query side only (see `tokenize`). Expanding
+  // the index too would make a query token set intersect a ballooned index token
+  // set, surfacing components that match neither the literal text nor the intent.
+  return [text.toLowerCase(), splitText, baseSearchTokens(text).join(" ")].join(
+    " ",
+  );
 }
 
 function extractAnnotationsText(
@@ -354,21 +366,26 @@ const QUERY_STOP_WORDS = new Set([
 ]);
 
 /**
- * Split a query into meaningful lowercase alphanumeric tokens. Natural-language
- * searches often include filler words ("I want to upload a component to GCS").
- * Dropping those words prevents common tokens like "a"/"to" from matching
- * nearly every component and drowning out the useful intent terms.
+ * Drop filler words and de-duplicate query tokens. Natural-language searches
+ * often include filler ("I want to upload a component to GCS"); removing those
+ * prevents common tokens like "a"/"to" from matching nearly every component and
+ * drowning out the useful intent terms.
  */
-function tokenizeConcepts(text: string): string[][] {
+function tokenizeQuery(text: string): {
+  concepts: string[][];
+  phraseTokens: string[];
+} {
   const splitText = splitIdentifierText(text).toLowerCase();
   const rawTokens = splitText.split(/[^a-z0-9]+/).filter(isNonEmptyString);
-
   const concepts: string[][] = [];
+  const phraseTokens: string[] = [];
   const seen = new Set<string>();
+
   for (const token of rawTokens) {
     if (QUERY_STOP_WORDS.has(token)) continue;
 
-    const variants = Array.from(new Set([token, stemToken(token)])).filter(
+    phraseTokens.push(token);
+    const variants = expandSynonymTokens([token, stemToken(token)]).filter(
       (variant) => !QUERY_STOP_WORDS.has(variant),
     );
     if (variants.length === 0) continue;
@@ -380,7 +397,7 @@ function tokenizeConcepts(text: string): string[][] {
     seen.add(conceptKey);
   }
 
-  return concepts;
+  return { concepts, phraseTokens };
 }
 
 /**
@@ -430,6 +447,7 @@ interface SearchOptions {
 function scoreEntry(
   entry: IndexEntry,
   concepts: string[][],
+  phraseTokens: string[],
 ): { score: number; matchedFields: MatchField[] } {
   const matched = new Set<MatchField>();
   let score = 0;
@@ -447,9 +465,9 @@ function scoreEntry(
   // sides are normalized so the bonus also fires for snake_case names —
   // query "train test split" should match `train_test_split`, not just
   // names that happen to contain literal spaces.
-  if (concepts.length > 1) {
+  if (phraseTokens.length > 1) {
     const normalizedName = entry.searchable.name.replace(/[^a-z0-9]+/g, " ");
-    const normalizedQuery = concepts.map((concept) => concept[0]).join(" ");
+    const normalizedQuery = phraseTokens.join(" ");
     if (normalizedName.includes(normalizedQuery)) {
       score += 10;
       matched.add("name");
@@ -473,12 +491,12 @@ export function lexicalSearch(
   const trimmed = query.trim().toLowerCase();
   if (trimmed.length < minLength) return [];
 
-  const concepts = tokenizeConcepts(trimmed);
+  const { concepts, phraseTokens } = tokenizeQuery(trimmed);
   if (concepts.length === 0) return [];
 
   const scored: Array<LexicalMatch & { score: number }> = [];
   for (const entry of index) {
-    const { score, matchedFields } = scoreEntry(entry, concepts);
+    const { score, matchedFields } = scoreEntry(entry, concepts, phraseTokens);
     if (score === 0) continue;
     scored.push({
       reference: entry.reference,
