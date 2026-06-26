@@ -20,6 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { QuickTooltip } from "@/components/ui/tooltip";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
+import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import { getComponentQueryKey } from "@/hooks/useHydrateComponentReference";
 import {
   useComponentAiDescription,
@@ -38,6 +39,7 @@ import {
   LibraryDB,
   type StoredLibrary,
 } from "@/providers/ComponentLibraryProvider/libraries/storage";
+import { rankComponentMatchesByEmbeddings } from "@/services/componentSearchEmbeddings";
 import {
   buildSearchIndex,
   type ComponentSearchSource,
@@ -448,6 +450,23 @@ function sampleEvenly<T>(entries: T[], limit: number): T[] {
   return sampled;
 }
 
+function mergeUniqueMatches(
+  primary: LexicalMatch[],
+  secondary: LexicalMatch[],
+  fallback: LexicalMatch[],
+  limit: number,
+): LexicalMatch[] {
+  const merged: LexicalMatch[] = [];
+  const seen = new Set<string>();
+  for (const match of [...primary, ...secondary, ...fallback]) {
+    if (seen.has(match.digest)) continue;
+    seen.add(match.digest);
+    merged.push(match);
+    if (merged.length >= limit) return merged;
+  }
+  return merged;
+}
+
 function collectAllSourcedReferences({
   standardLibrary,
   publishedRefs,
@@ -496,6 +515,7 @@ export const DashboardComponentsV2View = () => {
     "component-search-v2-ai-descriptions",
   );
   const { backendUrl, configured, available } = useBackend();
+  const { config: aiConfig } = useAiProviderSettings();
   const [query, setQuery] = useState("");
   const [disabledSourceKeys, setDisabledSourceKeys] = useState<string[]>([]);
 
@@ -761,6 +781,8 @@ export const DashboardComponentsV2View = () => {
   const [rerankBaseMatches, setRerankBaseMatches] = useState<LexicalMatch[]>(
     [],
   );
+  const [isEmbeddingSearchPending, setIsEmbeddingSearchPending] =
+    useState(false);
 
   const clearRerank = () => {
     setRerankedFor(null);
@@ -775,27 +797,61 @@ export const DashboardComponentsV2View = () => {
     }
   };
 
-  const startAiSearch = (
+  const buildEmbeddingMatches = async (
+    trimmed: string,
+    limit: number,
+  ): Promise<LexicalMatch[]> => {
+    if (!aiConfig.apiBase.trim()) return [];
+    setIsEmbeddingSearchPending(true);
+    try {
+      return await rankComponentMatchesByEmbeddings(
+        filteredIndex,
+        trimmed,
+        { apiBase: aiConfig.apiBase, apiKey: aiConfig.apiKey },
+        { limit },
+      );
+    } catch {
+      return [];
+    } finally {
+      setIsEmbeddingSearchPending(false);
+    }
+  };
+
+  const startAiSearch = async (
     matches: LexicalMatch[],
-    { scoreAllCandidates }: { scoreAllCandidates: boolean },
+    {
+      scoreAllCandidates,
+      limit,
+    }: { scoreAllCandidates: boolean; limit: number },
   ) => {
     const trimmed = query.trim();
     if (trimmed.length === 0 || matches.length === 0) return;
 
-    const candidates = matches
+    const embeddingMatches = aiConfig.apiBase.trim()
+      ? await buildEmbeddingMatches(trimmed, limit)
+      : [];
+    const rerankMatches = mergeUniqueMatches(
+      matches.slice(0, 60),
+      embeddingMatches,
+      matches,
+      limit,
+    );
+
+    const candidates = rerankMatches
       .map((m) => componentReferenceToCandidate(m.reference, m.source))
       .filter((c): c is NonNullable<typeof c> => c !== null);
 
     if (candidates.length === 0) return;
 
-    setRerankBaseMatches(matches);
+    setRerankBaseMatches(rerankMatches);
     setRerankedFor(trimmed);
     rerank({ query: trimmed, candidates, scoreAllCandidates });
   };
 
   const handleSmartSearch = () => {
-    startAiSearch(aiCandidateMatches, {
+    void startAiSearch(aiCandidateMatches, {
       scoreAllCandidates: true,
+      limit: aiCandidateMatches.length,
     });
   };
 
@@ -837,7 +893,8 @@ export const DashboardComponentsV2View = () => {
     rerankData !== undefined &&
     rerankData.matches.length > 0 &&
     rerankBaseMatches.length > 0 &&
-    !isReranking;
+    !isReranking &&
+    !isEmbeddingSearchPending;
 
   // What we actually render. Rerank wins when active; otherwise lexical.
   const displayedResults: Array<
@@ -1045,14 +1102,23 @@ export const DashboardComponentsV2View = () => {
               onClick={handleSmartSearch}
               disabled={
                 isReranking ||
+                isEmbeddingSearchPending ||
                 isEmpty ||
                 aiCandidateMatches.length === 0 ||
                 !isConfigured
               }
-              aria-label={isReranking ? "AI search in progress" : "AI search"}
+              aria-label={
+                isReranking || isEmbeddingSearchPending
+                  ? "AI search in progress"
+                  : "AI search"
+              }
               title="AI search — rerank a bounded set of top candidates with an LLM"
             >
-              {isReranking ? <Spinner size={16} /> : <Icon name="Sparkles" />}
+              {isReranking || isEmbeddingSearchPending ? (
+                <Spinner size={16} />
+              ) : (
+                <Icon name="Sparkles" />
+              )}
             </Button>
           </InlineStack>
           <SourceFilterBar
