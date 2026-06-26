@@ -2,7 +2,7 @@ import Bugsnag from "@bugsnag/js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useLiveQuery } from "dexie-react-hooks";
-import { type ChangeEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { listApiPublishedComponentsGet } from "@/api/sdk.gen";
 import {
@@ -21,6 +21,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { QuickTooltip } from "@/components/ui/tooltip";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
+import { useDebouncedSearchValue } from "@/hooks/useDebouncedSearchValue";
 import { getComponentQueryKey } from "@/hooks/useHydrateComponentReference";
 import {
   useComponentAiDescription,
@@ -467,6 +468,28 @@ function mergeUniqueMatches(
   return merged;
 }
 
+function DebouncedComponentSearchInput({
+  onCommit,
+  disabled,
+}: {
+  onCommit: (value: string) => void;
+  disabled: boolean;
+}) {
+  const [localValue, setLocalValue] = useDebouncedSearchValue(onCommit);
+
+  return (
+    <Input
+      type="search"
+      placeholder="e.g. train_test_split, pandas, clean up my data"
+      value={localValue}
+      onChange={(event) => setLocalValue(event.target.value)}
+      aria-label="Search components"
+      disabled={disabled}
+      className="flex-1"
+    />
+  );
+}
+
 function collectAllSourcedReferences({
   standardLibrary,
   publishedRefs,
@@ -745,7 +768,9 @@ export const DashboardComponentsV2View = () => {
   const broadLexicalMatches: LexicalMatch[] =
     trimmedQuery.length === 0
       ? []
-      : lexicalSearch(filteredIndex, query, { limit: AI_CANDIDATE_LIMIT });
+      : lexicalSearch(filteredIndex, query, {
+          limit: AI_CANDIDATE_LIMIT,
+        });
 
   const lexicalMatches: LexicalMatch[] = broadLexicalMatches.slice(
     0,
@@ -790,8 +815,8 @@ export const DashboardComponentsV2View = () => {
     resetRerank();
   };
 
-  const handleQueryChange = (event: ChangeEvent<HTMLInputElement>) => {
-    setQuery(event.target.value);
+  const handleQueryCommit = (value: string) => {
+    setQuery(value);
     if (rerankedFor !== null) {
       clearRerank();
     }
@@ -824,7 +849,7 @@ export const DashboardComponentsV2View = () => {
       limit,
     }: { scoreAllCandidates: boolean; limit: number },
   ) => {
-    const trimmed = query.trim();
+    const trimmed = trimmedQuery;
     if (trimmed.length === 0 || matches.length === 0) return;
 
     const embeddingMatches = aiConfig.apiBase.trim()
@@ -1087,14 +1112,9 @@ export const DashboardComponentsV2View = () => {
             </Paragraph>
           </BlockStack>
           <InlineStack gap="3" blockAlign="center" wrap="nowrap">
-            <Input
-              type="search"
-              placeholder="e.g. train_test_split, pandas, clean up my data"
-              value={query}
-              onChange={handleQueryChange}
-              aria-label="Search components"
+            <DebouncedComponentSearchInput
+              onCommit={handleQueryCommit}
               disabled={isLoadingLibrary || noLibraryData}
-              className="flex-1"
             />
             <Button
               variant="secondary"

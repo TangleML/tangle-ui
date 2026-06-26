@@ -9,11 +9,12 @@ export function BetaFeaturesSettings() {
   const componentSearchV2Enabled = betaFlags.some(
     (flag) => flag.key === "component-search-v2" && flag.enabled,
   );
+  const componentSearchChildFlags = new Set([
+    "component-search-v2-ai-descriptions",
+  ]);
   const visibleBetaFlags = componentSearchV2Enabled
     ? betaFlags
-    : betaFlags.filter(
-        (flag) => flag.key !== "component-search-v2-ai-descriptions",
-      );
+    : betaFlags.filter((flag) => !componentSearchChildFlags.has(flag.key));
 
   const handleChange = (key: string, enabled: boolean) => {
     track("settings.toggle_changed", {
