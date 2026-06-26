@@ -37,6 +37,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/hooks/useFavorites.ts",
   "src/hooks/useRecentlyViewed.ts",
   "src/components/shared/FavoriteToggle.tsx",
+  "src/components/shared/ComponentLifecycleBadges.tsx",
 
   "src/components/shared/Tags",
   "src/components/shared/Submitters/Tangle/components",

@@ -411,6 +411,8 @@ describe("DashboardComponentsV2View", () => {
     routeMocks.aiDescriptionsEnabled = false;
     routeMocks.descriptionErrorState.current = null;
     routeMocks.search = {};
+    routeMocks.standard.deprecated = false;
+    routeMocks.standard.superseded_by = undefined;
     routeMocks.navigate.mockClear();
     routeMocks.notify.mockClear();
     routeMocks.refetchDescription.mockClear();
@@ -539,6 +541,14 @@ describe("DashboardComponentsV2View", () => {
       to: "/dashboard/components-v2",
       search: { q: "standard", disabled_sources: "registered" },
     });
+  });
+
+  it("shows lifecycle badges from component metadata", () => {
+    routeMocks.standard.deprecated = true;
+
+    render(<DashboardComponentsV2View />);
+
+    expect(screen.getByText("Deprecated")).toBeInTheDocument();
   });
 
   it("does not run AI search when literal search has no matches", async () => {
