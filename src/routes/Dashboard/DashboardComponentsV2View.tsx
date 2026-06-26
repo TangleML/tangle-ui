@@ -50,6 +50,10 @@ import {
 import { buildCompatibleComponentSuggestions } from "@/services/componentCompatibility";
 import { rankComponentMatchesByEmbeddings } from "@/services/componentSearchEmbeddings";
 import {
+  COMPONENT_SEARCH_MATCH_FIELD_LABEL,
+  formatMatchedFieldsExplanation,
+} from "@/services/componentSearchExplanations";
+import {
   buildSearchIndex,
   type ComponentSearchSource,
   type IndexEntry,
@@ -123,14 +127,6 @@ const LEXICAL_RESULT_LIMIT = 20;
 /** Bounded pool sent to AI search on click. */
 const AI_CANDIDATE_LIMIT = 80;
 const DASHBOARD_SEARCH_RESULT_DEBOUNCE_MS = 500;
-
-const MATCH_FIELD_LABEL: Record<MatchField, string> = {
-  name: "name",
-  description: "description",
-  io: "inputs/outputs",
-  implementation: "command",
-  metadata: "metadata",
-};
 
 // Built-in sources are constants — only registered libraries vary per row.
 const STANDARD_SOURCE: ComponentSearchSource = {
@@ -266,6 +262,8 @@ const ComponentCard = ({
     : "unknown";
   const showLexicalMatchBadges = isAiRanked ? undefined : matchedFields;
   const showDescription = description;
+  const matchExplanation =
+    reason ?? formatMatchedFieldsExplanation(showLexicalMatchBadges);
 
   return (
     // Raw <button> rather than the <Button> primitive: the primitive's variants
@@ -324,7 +322,7 @@ const ComponentCard = ({
           )}
           {showLexicalMatchBadges?.map((field) => (
             <Badge key={field} variant="secondary">
-              matched: {MATCH_FIELD_LABEL[field]}
+              matched: {COMPONENT_SEARCH_MATCH_FIELD_LABEL[field]}
             </Badge>
           ))}
         </InlineStack>
@@ -342,9 +340,9 @@ const ComponentCard = ({
             {description}
           </Paragraph>
         )}
-        {reason && (
+        {matchExplanation && (
           <Paragraph size="xs" tone="subdued">
-            Why: {reason}
+            Why: {matchExplanation}
           </Paragraph>
         )}
       </BlockStack>
@@ -1261,10 +1259,16 @@ export const DashboardComponentsV2View = () => {
       !rerankActive
     ) {
       return (
-        <Paragraph size="sm" tone="subdued">
-          No components matched “{trimmedQuery}”. Try different terms or check
-          for typos.
-        </Paragraph>
+        <BlockStack gap="2">
+          <Paragraph size="sm" tone="subdued">
+            No components matched “{trimmedQuery}”.
+          </Paragraph>
+          <Paragraph size="xs" tone="subdued">
+            Try a component name, input/output type, source term, or task intent
+            like “csv”, “train model”, “predict”, or “dataframe”. AI search
+            reranks matching local candidates when it is configured.
+          </Paragraph>
+        </BlockStack>
       );
     }
     return (
@@ -1335,9 +1339,9 @@ export const DashboardComponentsV2View = () => {
             <Paragraph size="sm" tone="subdued">
               Type to search across every component source — standard library,
               your published components, registered libraries, and local user
-              components. Results match on name, description, inputs/outputs,
-              and container command. Use AI search to rerank with an LLM when
-              literal matching isn&apos;t enough.
+              components. Local results match on name, description,
+              inputs/outputs, metadata, and container command. Optional AI
+              search reranks matching local candidates when configured.
             </Paragraph>
           </BlockStack>
           <InlineStack gap="3" blockAlign="center" wrap="nowrap">

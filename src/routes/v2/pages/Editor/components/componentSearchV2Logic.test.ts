@@ -57,13 +57,14 @@ function source(
 function match(
   digest: string,
   src: ComponentSearchSource = source("standard"),
+  matchedFields: LexicalMatch["matchedFields"] = [],
 ): LexicalMatch {
   return {
     reference: ref(digest),
     digest,
     name: digest,
     source: src,
-    matchedFields: [],
+    matchedFields,
   };
 }
 
@@ -192,6 +193,16 @@ describe("rerankedMatches", () => {
 
 describe("buildResults", () => {
   const displayed = [match("a"), match("b"), match("c")];
+
+  it("carries matched fields for lexical explanations", () => {
+    const results = buildResults(
+      [match("a", source("standard"), ["name", "io"])],
+      new Map(),
+      false,
+    );
+
+    expect(results[0]?.matchedFields).toEqual(["name", "io"]);
+  });
 
   it("badges only items scored above the exclusion threshold", () => {
     const rerankMatches = buildRerankMatchByDigest(

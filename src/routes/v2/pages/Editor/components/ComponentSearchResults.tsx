@@ -106,15 +106,22 @@ export function ComponentSearchResults({
               <ComponentMarkup
                 key={`${result.reference.digest}-${result.reference.name ?? result.reference.url ?? "component"}`}
                 component={result.reference}
+                matchedFields={result.matchedFields}
                 rerankScore={result.rerankScore}
                 rerankReason={result.rerankReason}
               />
             ))}
           </BlockStack>
         ) : (
-          <Paragraph size="sm" tone="subdued">
-            No results found
-          </Paragraph>
+          <BlockStack gap="1">
+            <Paragraph size="sm" tone="subdued">
+              No components matched “{query.trim()}”.
+            </Paragraph>
+            <Paragraph size="xs" tone="subdued">
+              Try a component name, input/output type, or task intent like
+              “csv”, “train”, “predict”, or “dataframe”.
+            </Paragraph>
+          </BlockStack>
         )}
       </div>
     </BlockStack>

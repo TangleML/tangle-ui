@@ -14,6 +14,7 @@ import {
   indexEntryToLexicalMatch,
   type LexicalMatch,
   lexicalSearch,
+  type MatchField,
   type SourcedReference,
 } from "@/services/componentSearchIndex";
 import type { RerankResult } from "@/services/naturalLanguageComponentSearchService";
@@ -61,6 +62,7 @@ export interface UserFolder {
 export interface ComponentSearchV2Result {
   reference: ComponentReference;
   source: ComponentSearchSource;
+  matchedFields?: MatchField[];
   rerankScore?: number;
   rerankReason?: string;
 }
@@ -417,6 +419,7 @@ export function buildResults(
     return {
       reference: match.reference,
       source: match.source,
+      matchedFields: match.matchedFields,
       ...(hasRerankMatch
         ? { rerankScore, rerankReason: rerankMatch.reason }
         : {}),
