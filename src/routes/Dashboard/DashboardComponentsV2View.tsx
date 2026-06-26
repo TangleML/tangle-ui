@@ -2,7 +2,13 @@ import Bugsnag from "@bugsnag/js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useLiveQuery } from "dexie-react-hooks";
-import { useEffect, useState } from "react";
+import {
+  useDeferredValue,
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 
 import { listApiPublishedComponentsGet } from "@/api/sdk.gen";
 import {
@@ -77,7 +83,12 @@ import {
   filterIndexByDisabledSourceKeys,
   SourceFilterBar,
 } from "./DashboardComponentsV2SourceFilter";
-import { readSelectedComponentDigest } from "./searchParams";
+import {
+  createDashboardComponentsV2SearchParams,
+  readComponentSearchQuery,
+  readDisabledSourceKeys,
+  readSelectedComponentDigest,
+} from "./searchParams";
 
 // Repeated Tailwind combos extracted as named constants.
 const PANEL_CLASS = "p-3 rounded-lg bg-card border border-border";
@@ -109,6 +120,7 @@ const SOURCE_ICON_TONE_BY_KIND: Record<ComponentSearchSource["kind"], string> =
 const LEXICAL_RESULT_LIMIT = 20;
 /** Bounded pool sent to AI search on click. */
 const AI_CANDIDATE_LIMIT = 80;
+const DASHBOARD_SEARCH_RESULT_DEBOUNCE_MS = 500;
 
 const MATCH_FIELD_LABEL: Record<MatchField, string> = {
   name: "name",
@@ -454,14 +466,23 @@ function mergeUniqueMatches(
 function DebouncedComponentSearchInput({
   onCommit,
   disabled,
+  initialValue,
 }: {
   onCommit: (value: string) => void;
   disabled: boolean;
+  initialValue: string;
 }) {
-  const [localValue, setLocalValue] = useDebouncedSearchValue(onCommit);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [localValue, setLocalValue] = useDebouncedSearchValue(
+    onCommit,
+    DASHBOARD_SEARCH_RESULT_DEBOUNCE_MS,
+    initialValue,
+    () => document.activeElement !== inputRef.current,
+  );
 
   return (
     <Input
+      ref={inputRef}
       type="search"
       placeholder="e.g. train_test_split, pandas, clean up my data"
       value={localValue}
@@ -522,38 +543,71 @@ export const DashboardComponentsV2View = () => {
   );
   const { backendUrl, configured, available } = useBackend();
   const { config: aiConfig } = useAiProviderSettings();
-  const [query, setQuery] = useState("");
-  const [disabledSourceKeys, setDisabledSourceKeys] = useState<string[]>([]);
+  const dashboardSearch = useSearch({ strict: false });
+  const queryFromUrl = readComponentSearchQuery(dashboardSearch);
+  const disabledSourceKeysFromUrl = readDisabledSourceKeys(dashboardSearch);
+  const disabledSourceKeysParam = disabledSourceKeysFromUrl.join(",");
+  const [query, setQuery] = useState(queryFromUrl);
+  const deferredQuery = useDeferredValue(query);
+  const [, startSearchTransition] = useTransition();
+  const [disabledSourceKeys, setDisabledSourceKeys] = useState<string[]>(
+    disabledSourceKeysFromUrl,
+  );
 
   // Detail-pane selection lives in the URL so refreshes preserve it and the
   // selection can be linked-to. The V2 route has no validateSearch defined.
   const navigate = useNavigate();
-  const selectedDigest = readSelectedComponentDigest(
-    useSearch({ strict: false }),
-  );
+  const selectedDigest = readSelectedComponentDigest(dashboardSearch);
+  const buildSearch = ({
+    component = selectedDigest,
+    q = query,
+    sourceKeys = disabledSourceKeys,
+  }: {
+    component?: string | null;
+    q?: string;
+    sourceKeys?: string[];
+  }) =>
+    createDashboardComponentsV2SearchParams({
+      component: component ?? undefined,
+      q,
+      disabledSourceKeys: sourceKeys,
+    });
   const selectComponent = (reference: ComponentReference) => {
     navigate({
       to: APP_ROUTES.DASHBOARD_COMPONENTS_V2,
-      search: { component: reference.digest },
+      search: buildSearch({ component: reference.digest }),
     });
   };
   const closeDetail = () => {
-    navigate({ to: APP_ROUTES.DASHBOARD_COMPONENTS_V2, search: {} });
+    navigate({
+      to: APP_ROUTES.DASHBOARD_COMPONENTS_V2,
+      search: buildSearch({ component: null }),
+    });
   };
 
+  useEffect(() => {
+    startSearchTransition(() => setQuery(queryFromUrl));
+  }, [queryFromUrl, startSearchTransition]);
+
+  useEffect(() => {
+    setDisabledSourceKeys(disabledSourceKeysFromUrl);
+  }, [disabledSourceKeysParam]);
+
   // Close detail on Escape — only when something is open, so we don't fight
-  // other Esc handlers (e.g. inside Inputs). Navigate inline so the effect has
-  // no callback dep that would re-bind on every render.
+  // other Esc handlers (e.g. inside Inputs).
   useEffect(() => {
     if (!selectedDigest) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        navigate({ to: APP_ROUTES.DASHBOARD_COMPONENTS_V2, search: {} });
+        navigate({
+          to: APP_ROUTES.DASHBOARD_COMPONENTS_V2,
+          search: buildSearch({ component: null }),
+        });
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [selectedDigest, navigate]);
+  }, [selectedDigest, navigate, buildSearch]);
 
   // The dashboard search page doesn't mount `ComponentLibraryProvider` (which
   // is editor-scoped), so the GitHub library factory isn't auto-registered.
@@ -742,7 +796,7 @@ export const DashboardComponentsV2View = () => {
     a.name.localeCompare(b.name),
   );
 
-  const trimmedQuery = query.trim();
+  const trimmedQuery = deferredQuery.trim();
 
   // One lexical pass at the wider AI-candidate limit; the display list is the
   // top slice of that same scored result, so we never score and sort the index
@@ -751,7 +805,7 @@ export const DashboardComponentsV2View = () => {
   const broadLexicalMatches: LexicalMatch[] =
     trimmedQuery.length === 0
       ? []
-      : lexicalSearch(filteredIndex, query, {
+      : lexicalSearch(filteredIndex, deferredQuery, {
           limit: AI_CANDIDATE_LIMIT,
         });
 
@@ -759,7 +813,6 @@ export const DashboardComponentsV2View = () => {
     0,
     LEXICAL_RESULT_LIMIT,
   );
-
   const aiCandidateMatches: LexicalMatch[] = (() => {
     if (trimmedQuery.length === 0) return [];
     return broadLexicalMatches;
@@ -792,10 +845,12 @@ export const DashboardComponentsV2View = () => {
   };
 
   const handleQueryCommit = (value: string) => {
-    setQuery(value);
-    if (rerankedFor !== null) {
-      clearRerank();
-    }
+    startSearchTransition(() => {
+      setQuery(value);
+      if (rerankedFor !== null) {
+        clearRerank();
+      }
+    });
   };
 
   const buildEmbeddingMatches = async (
@@ -857,12 +912,30 @@ export const DashboardComponentsV2View = () => {
     });
   };
 
+  useEffect(() => {
+    if (query === queryFromUrl) return;
+    const timeout = window.setTimeout(() => {
+      navigate({
+        to: APP_ROUTES.DASHBOARD_COMPONENTS_V2,
+        search: createDashboardComponentsV2SearchParams({
+          component: selectedDigest,
+          q: query,
+          disabledSourceKeys,
+        }),
+      });
+    }, 400);
+    return () => window.clearTimeout(timeout);
+  }, [query, queryFromUrl, selectedDigest, disabledSourceKeys, navigate]);
+
   const handleSourceToggle = (sourceKey: string) => {
-    setDisabledSourceKeys((current) =>
-      current.includes(sourceKey)
-        ? current.filter((key) => key !== sourceKey)
-        : [...current, sourceKey],
-    );
+    const nextDisabledSourceKeys = disabledSourceKeys.includes(sourceKey)
+      ? disabledSourceKeys.filter((key) => key !== sourceKey)
+      : [...disabledSourceKeys, sourceKey];
+    setDisabledSourceKeys(nextDisabledSourceKeys);
+    navigate({
+      to: APP_ROUTES.DASHBOARD_COMPONENTS_V2,
+      search: buildSearch({ sourceKeys: nextDisabledSourceKeys }),
+    });
     if (rerankedFor !== null) {
       clearRerank();
     }
@@ -870,6 +943,10 @@ export const DashboardComponentsV2View = () => {
 
   const handleEnableAllSources = () => {
     setDisabledSourceKeys([]);
+    navigate({
+      to: APP_ROUTES.DASHBOARD_COMPONENTS_V2,
+      search: buildSearch({ sourceKeys: [] }),
+    });
     if (rerankedFor !== null) {
       clearRerank();
     }
@@ -952,6 +1029,26 @@ export const DashboardComponentsV2View = () => {
     if (!selectedReference?.digest || !selectedReference.spec) return;
     if (!canGenerateDescription) return;
     refetchDescription();
+  };
+
+  const handleCopyLink = async () => {
+    if (!selectedDigest) return;
+    if (!navigator.clipboard) {
+      notify(
+        "Couldn't copy link. Check browser permissions and try again.",
+        "error",
+      );
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      notify("Component link copied to clipboard", "success");
+    } catch {
+      notify(
+        "Couldn't copy link. Check browser permissions and try again.",
+        "error",
+      );
+    }
   };
 
   const handleCopyToPipeline = async () => {
@@ -1092,6 +1189,7 @@ export const DashboardComponentsV2View = () => {
             <DebouncedComponentSearchInput
               onCommit={handleQueryCommit}
               disabled={isLoadingLibrary || noLibraryData}
+              initialValue={queryFromUrl}
             />
             <Button
               variant="secondary"
@@ -1185,6 +1283,22 @@ export const DashboardComponentsV2View = () => {
                 InlineStack handles the button row's layout. */}
             <div className="sticky top-0 float-right z-10 bg-background/80 backdrop-blur-sm rounded-md">
               <InlineStack gap="1">
+                <QuickTooltip content="Copy link" side="bottom">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleCopyLink}
+                    aria-label="Copy component link"
+                    {...tracking(
+                      "component_library.result_detail_v2.copy_link_button",
+                      {
+                        surface: "dashboard_v2",
+                      },
+                    )}
+                  >
+                    <Icon name="Link" />
+                  </Button>
+                </QuickTooltip>
                 <QuickTooltip content="Copy to clipboard" side="bottom">
                   <Button
                     variant="ghost"

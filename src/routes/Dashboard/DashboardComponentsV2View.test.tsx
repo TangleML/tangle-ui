@@ -7,6 +7,8 @@ import type { ComponentReference } from "@/utils/componentSpec";
 
 interface DashboardComponentsV2Search {
   component?: string;
+  q?: string;
+  disabled_sources?: string;
 }
 
 const routeMocks = vi.hoisted(() => {
@@ -409,6 +411,8 @@ describe("DashboardComponentsV2View", () => {
     routeMocks.aiDescriptionsEnabled = false;
     routeMocks.descriptionErrorState.current = null;
     routeMocks.search = {};
+    routeMocks.navigate.mockClear();
+    routeMocks.notify.mockClear();
     routeMocks.refetchDescription.mockClear();
     routeMocks.rerank.mockClear();
     routeMocks.resetRerank.mockClear();
@@ -432,10 +436,109 @@ describe("DashboardComponentsV2View", () => {
     expect(screen.queryByText("Registered component")).not.toBeInTheDocument();
     expect(screen.getByText("Standard component")).toBeInTheDocument();
     expect(screen.getByText("User component")).toBeInTheDocument();
+    expect(routeMocks.navigate).toHaveBeenLastCalledWith({
+      to: "/dashboard/components-v2",
+      search: { disabled_sources: "registered" },
+    });
 
     fireEvent.click(screen.getByRole("button", { name: "Show all" }));
 
     expect(screen.getByText("Registered component")).toBeInTheDocument();
+    expect(routeMocks.navigate).toHaveBeenLastCalledWith({
+      to: "/dashboard/components-v2",
+      search: {},
+    });
+  });
+
+  it("initializes search state from URL params", () => {
+    routeMocks.search = {
+      q: "registered",
+      disabled_sources: "standard,user",
+    };
+
+    render(<DashboardComponentsV2View />);
+
+    expect(screen.getByLabelText("Search components")).toHaveValue(
+      "registered",
+    );
+    expect(screen.getByText("Registered component")).toBeInTheDocument();
+    expect(screen.queryByText("Standard component")).not.toBeInTheDocument();
+    expect(screen.queryByText("User component")).not.toBeInTheDocument();
+  });
+
+  it("writes search text into URL params after debounce without trimming active input whitespace", async () => {
+    render(<DashboardComponentsV2View />);
+
+    fireEvent.change(screen.getByLabelText("Search components"), {
+      target: { value: "standard " },
+    });
+
+    await waitFor(() => {
+      expect(routeMocks.navigate).toHaveBeenCalledWith({
+        to: "/dashboard/components-v2",
+        search: { q: "standard " },
+      });
+    });
+    expect(screen.getByLabelText("Search components")).toHaveValue("standard ");
+  });
+
+  it("does not let URL echo updates rewrite the focused search input", async () => {
+    const { rerender } = render(<DashboardComponentsV2View />);
+    const input = screen.getByLabelText("Search components");
+
+    input.focus();
+    fireEvent.change(input, { target: { value: "standard " } });
+
+    await waitFor(() => {
+      expect(routeMocks.navigate).toHaveBeenCalled();
+    });
+
+    routeMocks.search = { q: "standard" };
+    rerender(<DashboardComponentsV2View />);
+
+    expect(input).toHaveValue("standard ");
+  });
+
+  it("copies a shareable link for a selected component", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+    routeMocks.search = { component: "standard-digest", q: "standard" };
+
+    render(<DashboardComponentsV2View />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Copy component link" }),
+    );
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith(window.location.href);
+    });
+    expect(routeMocks.notify).toHaveBeenCalledWith(
+      "Component link copied to clipboard",
+      "success",
+    );
+  });
+
+  it("clears only the selected component when closing details", () => {
+    routeMocks.search = {
+      component: "standard-digest",
+      q: "standard",
+      disabled_sources: "registered",
+    };
+
+    render(<DashboardComponentsV2View />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Close component details" }),
+    );
+
+    expect(routeMocks.navigate).toHaveBeenCalledWith({
+      to: "/dashboard/components-v2",
+      search: { q: "standard", disabled_sources: "registered" },
+    });
   });
 
   it("does not run AI search when literal search has no matches", async () => {
