@@ -228,6 +228,7 @@ function createIndexEntry(
       description: "",
       io: "",
       implementation: "",
+      metadata: "",
     },
   };
 }

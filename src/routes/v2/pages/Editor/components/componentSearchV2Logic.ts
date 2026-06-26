@@ -79,6 +79,22 @@ export function registeredSource(
   return { kind: "registered", label: library.name, id: library.id };
 }
 
+function registeredLibraryConfigurationFingerprint(
+  configuration: StoredLibrary["configuration"],
+): string {
+  if (!configuration) return "";
+
+  const repoName = configuration.repo_name;
+  const lastUpdatedAt = configuration.last_updated_at;
+  const autoUpdate = configuration.auto_update;
+
+  return JSON.stringify({
+    repoName: typeof repoName === "string" ? repoName : "",
+    lastUpdatedAt: typeof lastUpdatedAt === "string" ? lastUpdatedAt : "",
+    autoUpdate: typeof autoUpdate === "boolean" ? autoUpdate : "",
+  });
+}
+
 export function registeredLibrariesFingerprint(
   libraries: StoredLibrary[] | undefined,
 ): string {
@@ -91,6 +107,9 @@ export function registeredLibrariesFingerprint(
         name: library.name,
         type: library.type,
         knownDigests: [...library.knownDigests].sort(),
+        configuration: registeredLibraryConfigurationFingerprint(
+          library.configuration,
+        ),
       }))
       .sort((a, b) => a.id.localeCompare(b.id)),
   );
