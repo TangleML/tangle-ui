@@ -216,6 +216,7 @@ import {
   type SourceFilterOption,
 } from "./DashboardComponentsV2SourceFilter";
 import {
+  buildComponentCollectionMatches,
   createRegisteredLibrariesFingerprint,
   DashboardComponentsV2View,
 } from "./DashboardComponentsV2View";
@@ -406,6 +407,53 @@ describe("SourceFilterBar", () => {
   });
 });
 
+describe("buildComponentCollectionMatches", () => {
+  it("returns registered library collections matching the query", () => {
+    const result = buildComponentCollectionMatches(
+      [
+        createIndexEntry("standard-component", {
+          kind: "standard",
+          label: "Standard",
+          id: "standard",
+        }),
+        createIndexEntry("load-csv", {
+          kind: "registered",
+          label: "Data tools",
+          id: "data-tools",
+        }),
+        createIndexEntry("clean-data", {
+          kind: "registered",
+          label: "Data tools",
+          id: "data-tools",
+        }),
+      ],
+      "data",
+    );
+
+    expect(result).toEqual([
+      {
+        id: "data-tools",
+        label: "Data tools",
+        count: 2,
+        previewNames: ["load-csv", "clean-data"],
+      },
+    ]);
+  });
+
+  it("returns no collections for empty or unmatched queries", () => {
+    const index = [
+      createIndexEntry("load-csv", {
+        kind: "registered",
+        label: "Data tools",
+        id: "data-tools",
+      }),
+    ];
+
+    expect(buildComponentCollectionMatches(index, "")).toEqual([]);
+    expect(buildComponentCollectionMatches(index, "training")).toEqual([]);
+  });
+});
+
 describe("DashboardComponentsV2View", () => {
   beforeEach(() => {
     routeMocks.aiDescriptionsEnabled = false;
@@ -449,6 +497,35 @@ describe("DashboardComponentsV2View", () => {
     expect(routeMocks.navigate).toHaveBeenLastCalledWith({
       to: "/dashboard/components-v2",
       search: {},
+    });
+  });
+
+  it("shows registered library collection results when the query matches", async () => {
+    render(<DashboardComponentsV2View />);
+
+    fireEvent.change(screen.getByLabelText("Search components"), {
+      target: { value: "github" },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("GitHub library")).toBeInTheDocument();
+    });
+  });
+
+  it("hides collection results from disabled sources", async () => {
+    render(<DashboardComponentsV2View />);
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Registered libraries source (1 component)",
+      }),
+    );
+    fireEvent.change(screen.getByLabelText("Search components"), {
+      target: { value: "github" },
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText("GitHub library")).not.toBeInTheDocument();
     });
   });
 
