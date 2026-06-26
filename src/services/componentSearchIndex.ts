@@ -448,6 +448,7 @@ const FIELD_PHRASE_BONUS: Record<MatchField, number> = {
 };
 
 const PREFIX_MATCH_BONUS_MULTIPLIER = 0.5;
+const FUZZY_MATCH_BONUS_MULTIPLIER = 0.75;
 const ALL_QUERY_TOKENS_BONUS = 6;
 
 const SEARCH_FIELDS: MatchField[] = [
@@ -457,6 +458,7 @@ const SEARCH_FIELDS: MatchField[] = [
   "implementation",
   "metadata",
 ];
+const FUZZY_SEARCH_FIELDS: MatchField[] = ["name", "io"];
 
 interface SearchOptions {
   /** Max results to return. Default 20. */
@@ -470,6 +472,65 @@ interface SearchOptions {
 
 function searchableTokens(text: string): string[] {
   return text.split(/[^a-z0-9]+/).filter(isNonEmptyString);
+}
+
+function maxTypoDistance(field: MatchField, token: string): number {
+  // Require length >= 5 before allowing any edits: 4-char tokens are too short
+  // for distance-1 fuzziness without false positives on generic IO names
+  // (data<->date, path<->bath, list<->last). Keep IO stricter than names:
+  // generic interface words are more likely to produce surprising fuzzy hits.
+  if (token.length < 5) return 0;
+  if (field === "io") return 1;
+  if (token.length < 7) return 1;
+  return 2;
+}
+
+function isEditDistanceAtMost(
+  left: string,
+  right: string,
+  maxDistance: number,
+): boolean {
+  if (maxDistance === 0) return left === right;
+  if (Math.abs(left.length - right.length) > maxDistance) return false;
+
+  let previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+  for (let leftIndex = 1; leftIndex <= left.length; leftIndex++) {
+    const current = [leftIndex];
+    let rowMinimum = current[0];
+
+    for (let rightIndex = 1; rightIndex <= right.length; rightIndex++) {
+      const substitutionCost =
+        left[leftIndex - 1] === right[rightIndex - 1] ? 0 : 1;
+      const value = Math.min(
+        previous[rightIndex] + 1,
+        current[rightIndex - 1] + 1,
+        previous[rightIndex - 1] + substitutionCost,
+      );
+      current[rightIndex] = value;
+      rowMinimum = Math.min(rowMinimum, value);
+    }
+
+    if (rowMinimum > maxDistance) return false;
+    previous = current;
+  }
+
+  return previous[right.length] <= maxDistance;
+}
+
+function hasFuzzyTokenMatch(
+  field: MatchField,
+  fieldTokens: string[],
+  token: string,
+): boolean {
+  const maxDistance = maxTypoDistance(field, token);
+  if (maxDistance === 0) return false;
+  return fieldTokens.some(
+    (fieldToken) =>
+      fieldToken[0] === token[0] &&
+      Math.abs(fieldToken.length - token.length) <= maxDistance &&
+      token !== fieldToken &&
+      isEditDistanceAtMost(token, fieldToken, maxDistance),
+  );
 }
 
 function entryMatchesToken(entry: IndexEntry, token: string): boolean {
@@ -538,26 +599,46 @@ function scoreEntry(
   for (const concept of concepts) {
     for (const field of SEARCH_FIELDS) {
       const fieldText = entry.searchable[field];
+      const fieldWeight = FIELD_WEIGHTS[field];
       const matchingTokens = concept.filter((token) =>
         fieldText.includes(token),
       );
-      if (matchingTokens.length === 0) continue;
 
-      const fieldWeight = FIELD_WEIGHTS[field];
-      const tokenWeight = Math.max(
-        ...matchingTokens.map((token) => tokenWeights.get(token) ?? 1),
-      );
-      score += fieldWeight * tokenWeight;
-      matched.add(field);
+      if (matchingTokens.length > 0) {
+        const tokenWeight = Math.max(
+          ...matchingTokens.map((token) => tokenWeights.get(token) ?? 1),
+        );
+        score += fieldWeight * tokenWeight;
+        matched.add(field);
 
-      const hasPrefixMatch = matchingTokens.some((token) =>
-        fieldTokensFor(field).some((fieldToken) =>
-          fieldToken.startsWith(token),
-        ),
-      );
-      if (hasPrefixMatch) {
-        score += fieldWeight * PREFIX_MATCH_BONUS_MULTIPLIER * tokenWeight;
+        const hasPrefixMatch = matchingTokens.some((token) =>
+          fieldTokensFor(field).some((fieldToken) =>
+            fieldToken.startsWith(token),
+          ),
+        );
+        if (hasPrefixMatch) {
+          score += fieldWeight * PREFIX_MATCH_BONUS_MULTIPLIER * tokenWeight;
+        }
+        continue;
       }
+
+      if (!FUZZY_SEARCH_FIELDS.includes(field)) continue;
+
+      const literalToken = concept[0];
+      const fuzzyTokens = hasFuzzyTokenMatch(
+        field,
+        fieldTokensFor(field),
+        literalToken,
+      )
+        ? [literalToken]
+        : [];
+      if (fuzzyTokens.length === 0) continue;
+
+      const tokenWeight = Math.max(
+        ...fuzzyTokens.map((token) => tokenWeights.get(token) ?? 1),
+      );
+      score += fieldWeight * FUZZY_MATCH_BONUS_MULTIPLIER * tokenWeight;
+      matched.add(field);
     }
   }
 

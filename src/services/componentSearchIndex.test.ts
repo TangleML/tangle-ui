@@ -349,6 +349,77 @@ describe("lexicalSearch", () => {
     expect(lexicalSearch(index, "classif")[0]?.digest).toBe("prefix");
   });
 
+  it("applies typo tolerance to component names and input/output fields", () => {
+    const index = buildSearchIndex([
+      makeSourced({
+        digest: "name-typo",
+        spec: {
+          name: "filter_rows",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+      makeSourced({
+        digest: "io-typo",
+        spec: {
+          name: "prepare_data",
+          inputs: [{ name: "dataset" }],
+          outputs: [{ name: "clean_table" }],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+    ]);
+
+    expect(lexicalSearch(index, "filtr")[0]?.digest).toBe("name-typo");
+    expect(lexicalSearch(index, "filterr")[0]?.digest).toBe("name-typo");
+    expect(lexicalSearch(index, "datset")[0]?.digest).toBe("io-typo");
+    expect(lexicalSearch(index, "datasetz")[0]?.digest).toBe("io-typo");
+  });
+
+  it("keeps input/output typo tolerance to one edit", () => {
+    const index = buildSearchIndex([
+      makeSourced({
+        digest: "io",
+        spec: {
+          name: "prepare_data",
+          inputs: [{ name: "customer_identifier" }],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+    ]);
+
+    expect(lexicalSearch(index, "identifer")[0]?.digest).toBe("io");
+    expect(lexicalSearch(index, "identifr")).toHaveLength(0);
+  });
+
+  it("does not apply typo tolerance to descriptions or implementation text", () => {
+    const index = buildSearchIndex([
+      makeSourced({
+        digest: "description-only",
+        spec: {
+          name: "generic_component",
+          description: "Runs an xgboost classifier.",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+      makeSourced({
+        digest: "implementation-only",
+        spec: {
+          name: "generic_runner",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "python:3.11-xgboost" } },
+        },
+      }),
+    ]);
+
+    expect(lexicalSearch(index, "xgbost")).toHaveLength(0);
+  });
+
   it("boosts rare tokens over common tokens", () => {
     // Both candidates contain BOTH query tokens (so the all-tokens bonus applies
     // equally) and differ only in which token sits in the high-weight name
