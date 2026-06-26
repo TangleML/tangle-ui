@@ -347,6 +347,7 @@ const QUERY_STOP_WORDS = new Set([
   "an",
   "and",
   "are",
+  "but",
   "component",
   "for",
   "from",
@@ -355,6 +356,7 @@ const QUERY_STOP_WORDS = new Set([
   "into",
   "me",
   "my",
+  "no",
   "of",
   "on",
   "please",
@@ -426,6 +428,46 @@ function tokenizeQuery(text: string): {
   };
 }
 
+interface ParsedSearchQuery {
+  positiveText: string;
+  negativeText: string;
+}
+
+// Bind a negation to its term(s): capture consecutive words but stop at a
+// conjunction/filler word (and punctuation), so "not gcs and also train"
+// excludes only "gcs" and leaves "and also train" for positive matching
+// instead of swallowing the whole tail.
+const NEGATIVE_CONSTRAINT_PATTERN =
+  /\b(?:without|excluding|exclude|not|no)\b\s+(?:(?:to|use|using)\s+)?([a-z0-9][a-z0-9-]*(?:\s+(?!(?:and|or|but|then|also|plus|with)\b)[a-z0-9][a-z0-9-]*)*)/gi;
+const NEGATIVE_LEADING_FILLER_PATTERN = /^(?:(?:to|use|using)\s+)+/i;
+
+function parseSearchQuery(text: string): ParsedSearchQuery {
+  const negativeParts: string[] = [];
+  const positiveText = text.replace(
+    NEGATIVE_CONSTRAINT_PATTERN,
+    (_match, negativePart: string) => {
+      negativeParts.push(
+        negativePart.replace(NEGATIVE_LEADING_FILLER_PATTERN, ""),
+      );
+      return " ";
+    },
+  );
+
+  return {
+    positiveText,
+    negativeText: negativeParts.join(" "),
+  };
+}
+
+function literalSearchTokens(text: string): string[] {
+  return uniqueTokens(
+    splitIdentifierText(text)
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .filter(isNonEmptyString),
+  );
+}
+
 /**
  * Per-field weights. Name matches are by far the most signal: `train` in the
  * name means the component is *about* training. The same word in implementation
@@ -459,6 +501,7 @@ const SEARCH_FIELDS: MatchField[] = [
   "metadata",
 ];
 const FUZZY_SEARCH_FIELDS: MatchField[] = ["name", "io"];
+const NEGATIVE_SEARCH_FIELDS: MatchField[] = ["name", "description", "io"];
 
 interface SearchOptions {
   /** Max results to return. Default 20. */
@@ -579,6 +622,7 @@ function scoreEntry(
   concepts: string[][],
   requiredTokens: string[],
   phraseTokenSequences: string[][],
+  negativeTokens: string[],
   tokenWeights: Map<string, number>,
 ): { score: number; matchedFields: MatchField[] } {
   const matched = new Set<MatchField>();
@@ -595,6 +639,19 @@ function scoreEntry(
     fieldTokenCache.set(field, fieldTokens);
     return fieldTokens;
   };
+
+  // Hard exclusion uses a whole-token match (not substring): a zero-score
+  // filter removes the entire component, so a short negated token must not
+  // knock one out by incidentally appearing inside an unrelated word.
+  if (
+    negativeTokens.some((token) =>
+      NEGATIVE_SEARCH_FIELDS.some((field) =>
+        fieldTokensFor(field).includes(token),
+      ),
+    )
+  ) {
+    return { score: 0, matchedFields: [] };
+  }
 
   for (const concept of concepts) {
     for (const field of SEARCH_FIELDS) {
@@ -684,9 +741,16 @@ export function lexicalSearch(
   const trimmed = query.trim().toLowerCase();
   if (trimmed.length < minLength) return [];
 
+  const parsedQuery = parseSearchQuery(trimmed);
   const { concepts, tokens, requiredTokens, phraseTokenSequences } =
-    tokenizeQuery(trimmed);
+    tokenizeQuery(parsedQuery.positiveText);
+  // An all-negative query (e.g. "not gcs") has no positive intent to rank.
+  // Exclusion only filters positive matches — it doesn't enumerate the whole
+  // library — so there's nothing to return.
   if (concepts.length === 0) return [];
+  // Literal exclusion: don't synonym-expand the negated term, so "not gcs"
+  // removes gcs components without also dropping storage/bucket/etc.
+  const negativeTokens = literalSearchTokens(parsedQuery.negativeText);
   const tokenWeights = buildRareTokenWeights(index, tokens);
 
   const scored: Array<LexicalMatch & { score: number }> = [];
@@ -696,6 +760,7 @@ export function lexicalSearch(
       concepts,
       requiredTokens,
       phraseTokenSequences,
+      negativeTokens,
       tokenWeights,
     );
     if (score === 0) continue;

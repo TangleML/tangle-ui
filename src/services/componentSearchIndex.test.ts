@@ -569,6 +569,128 @@ describe("lexicalSearch", () => {
     expect(lexicalSearch(index, "df")[0]?.digest).toBe("table");
   });
 
+  it("parses negative constraints and excludes matching components", () => {
+    const index = buildSearchIndex([
+      makeSourced({
+        digest: "local-upload",
+        spec: {
+          name: "upload_file",
+          description: "Upload a file to a local directory.",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+      makeSourced({
+        digest: "gcs-upload",
+        spec: {
+          name: "upload_to_gcs",
+          description: "Upload a file to GCS.",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+    ]);
+
+    expect(
+      lexicalSearch(index, "I want to upload a file but not to GCS").map(
+        (result) => result.digest,
+      ),
+    ).toEqual(["local-upload"]);
+    expect(
+      lexicalSearch(index, "I want to upload a file excluding GCS").map(
+        (result) => result.digest,
+      ),
+    ).toEqual(["local-upload"]);
+    expect(
+      lexicalSearch(index, "upload not to use GCS").map(
+        (result) => result.digest,
+      ),
+    ).toEqual(["local-upload"]);
+  });
+
+  it("excludes only the literal negated term, not its synonyms", () => {
+    const index = buildSearchIndex([
+      makeSourced({
+        digest: "gcs-uploader",
+        spec: {
+          name: "upload_to_gcs",
+          description: "Upload to GCS.",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+      makeSourced({
+        digest: "storage-uploader",
+        spec: {
+          name: "upload_to_storage",
+          description: "Upload to a storage bucket.",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+    ]);
+
+    // "gcs" is a synonym of "storage"/"bucket", but negation is literal: only
+    // the gcs component is dropped, the storage one survives.
+    const results = lexicalSearch(index, "upload not gcs").map((r) => r.digest);
+    expect(results).toContain("storage-uploader");
+    expect(results).not.toContain("gcs-uploader");
+  });
+
+  it("does not exclude implementation-only negated matches", () => {
+    const index = buildSearchIndex([
+      makeSourced({
+        digest: "implementation-match",
+        spec: {
+          name: "upload_file",
+          description: "Upload a file.",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "gcs-upload:latest" } },
+        },
+      }),
+    ]);
+
+    expect(lexicalSearch(index, "upload not gcs")[0]?.digest).toBe(
+      "implementation-match",
+    );
+  });
+
+  it("does not stem negated terms", () => {
+    const index = buildSearchIndex([
+      makeSourced({
+        digest: "singular",
+        spec: {
+          name: "train_model",
+          description: "Train one model.",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+      makeSourced({
+        digest: "plural",
+        spec: {
+          name: "train_models",
+          description: "Train many models.",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+    ]);
+
+    const results = lexicalSearch(index, "train no models").map(
+      (result) => result.digest,
+    );
+    expect(results).toContain("singular");
+    expect(results).not.toContain("plural");
+  });
+
   it("ignores natural-language filler words that would otherwise swamp intent", () => {
     const index = buildSearchIndex([
       makeSourced({
