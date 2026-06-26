@@ -38,6 +38,7 @@ import {
   type LexicalMatch,
   type SourcedReference,
 } from "@/services/componentSearchIndex";
+import { buildComponentSearchSuggestions } from "@/services/componentSearchSuggestions";
 import {
   fetchAndStoreComponentLibrary,
   hydrateComponentReference,
@@ -345,6 +346,10 @@ export function useComponentSearchV2State(
   return {
     results,
     browseFolders: buildResultFolders({ results, standardLibrary }),
+    searchSuggestions: buildComponentSearchSuggestions(index, {
+      includeSources: false,
+      query: trimmedQuery,
+    }),
     isLoading:
       isLoadingStandardLibrary ||
       isLoadingUserComponents ||

@@ -10,6 +10,7 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import { Paragraph, Text } from "@/components/ui/typography";
+import type { ComponentSearchSuggestion } from "@/services/componentSearchSuggestions";
 import type { UIComponentFolder } from "@/types/componentLibrary";
 
 import type { ComponentSearchV2Result } from "./componentSearchV2Logic";
@@ -18,6 +19,7 @@ interface ComponentSearchResultsProps {
   query: string;
   results: ComponentSearchV2Result[];
   browseFolders: UIComponentFolder[];
+  searchSuggestions: ComponentSearchSuggestion[];
   isLoading: boolean;
   isRerankActive: boolean;
   onClearRerank: () => void;
@@ -28,6 +30,7 @@ export function ComponentSearchResults({
   query,
   results,
   browseFolders,
+  searchSuggestions,
   isLoading,
   isRerankActive,
   onClearRerank,
@@ -122,11 +125,13 @@ export function ComponentSearchResults({
                 No components matched “{query.trim()}”.
               </Paragraph>
               <Paragraph size="xs" tone="subdued">
-                Try a component name, input/output type, or task intent like
-                “csv”, “train”, “predict”, or “dataframe”.
+                Try a component name, input/output type, source term, or task
+                intent. Suggestions below are based on your loaded component
+                sources.
               </Paragraph>
             </BlockStack>
             <ComponentSearchEmptyStateSuggestions
+              suggestions={searchSuggestions}
               surface="editor_component_search_v2"
               onSelectSuggestion={onSuggestedSearch}
             />

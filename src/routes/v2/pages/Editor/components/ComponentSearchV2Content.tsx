@@ -51,6 +51,7 @@ export function ComponentSearchV2Content() {
   const {
     results,
     browseFolders,
+    searchSuggestions,
     isLoading,
     canRerank,
     isReranking,
@@ -145,6 +146,7 @@ export function ComponentSearchV2Content() {
         query={deferredQuery}
         results={results}
         browseFolders={browseFolders}
+        searchSuggestions={searchSuggestions}
         isLoading={isLoading}
         isRerankActive={isRerankActive}
         onClearRerank={clearRerank}

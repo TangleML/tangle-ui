@@ -17,6 +17,7 @@ import {
   type MatchField,
   type SourcedReference,
 } from "@/services/componentSearchIndex";
+import type { ComponentSearchSuggestion } from "@/services/componentSearchSuggestions";
 import type { RerankResult } from "@/services/naturalLanguageComponentSearchService";
 import type {
   ComponentFolder,
@@ -70,6 +71,7 @@ export interface ComponentSearchV2Result {
 export interface ComponentSearchV2State {
   results: ComponentSearchV2Result[];
   browseFolders: UIComponentFolder[];
+  searchSuggestions: ComponentSearchSuggestion[];
   isLoading: boolean;
   canRerank: boolean;
   isReranking: boolean;
