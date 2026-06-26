@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useDeferredValue, useState, useTransition } from "react";
 
 import ImportComponent from "@/components/shared/ReactFlow/FlowSidebar/components/ImportComponent";
 import { Button } from "@/components/ui/button";
@@ -12,12 +12,17 @@ import { useComponentSearchV2State } from "@/routes/v2/pages/Editor/hooks/useCom
 
 import { ComponentSearchResults } from "./ComponentSearchResults";
 
+const EDITOR_SEARCH_RESULT_DEBOUNCE_MS = 500;
+
 function DebouncedComponentSearchInput({
   onCommit,
 }: {
   onCommit: (value: string) => void;
 }) {
-  const [localValue, setLocalValue] = useDebouncedSearchValue(onCommit);
+  const [localValue, setLocalValue] = useDebouncedSearchValue(
+    onCommit,
+    EDITOR_SEARCH_RESULT_DEBOUNCE_MS,
+  );
 
   return (
     <Input
@@ -35,6 +40,8 @@ function DebouncedComponentSearchInput({
 
 export function ComponentSearchV2Content() {
   const [query, setQuery] = useState("");
+  const deferredQuery = useDeferredValue(query);
+  const [, startSearchTransition] = useTransition();
   const {
     results,
     browseFolders,
@@ -44,10 +51,10 @@ export function ComponentSearchV2Content() {
     isRerankActive,
     rerank,
     clearRerank,
-  } = useComponentSearchV2State(query);
+  } = useComponentSearchV2State(deferredQuery);
 
   const handleQueryCommit = (value: string) => {
-    setQuery(value);
+    startSearchTransition(() => setQuery(value));
   };
 
   return (
@@ -96,7 +103,7 @@ export function ComponentSearchV2Content() {
         </InlineStack>
       </BlockStack>
       <ComponentSearchResults
-        query={query}
+        query={deferredQuery}
         results={results}
         browseFolders={browseFolders}
         isLoading={isLoading}
