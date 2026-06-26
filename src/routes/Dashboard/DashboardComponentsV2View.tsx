@@ -128,6 +128,8 @@ const LEXICAL_RESULT_LIMIT = 20;
 /** Bounded pool sent to AI search on click. */
 const AI_CANDIDATE_LIMIT = 80;
 const DASHBOARD_SEARCH_RESULT_DEBOUNCE_MS = 500;
+const BROWSE_RESULT_INITIAL_LIMIT = 100;
+const BROWSE_RESULT_INCREMENT = 100;
 
 // Built-in sources are constants — only registered libraries vary per row.
 const STANDARD_SOURCE: ComponentSearchSource = {
@@ -684,6 +686,9 @@ export const DashboardComponentsV2View = () => {
   const [disabledSourceKeys, setDisabledSourceKeys] = useState<string[]>(
     disabledSourceKeysFromUrl,
   );
+  const [browseResultLimit, setBrowseResultLimit] = useState(
+    BROWSE_RESULT_INITIAL_LIMIT,
+  );
 
   // Detail-pane selection lives in the URL so refreshes preserve it and the
   // selection can be linked-to. The V2 route has no validateSearch defined.
@@ -927,6 +932,10 @@ export const DashboardComponentsV2View = () => {
     a.name.localeCompare(b.name),
   );
 
+  useEffect(() => {
+    setBrowseResultLimit(BROWSE_RESULT_INITIAL_LIMIT);
+  }, [deferredQuery, disabledSourceKeysParam, total]);
+
   const trimmedQuery = deferredQuery.trim();
 
   // One lexical pass at the wider AI-candidate limit; the display list is the
@@ -1097,6 +1106,12 @@ export const DashboardComponentsV2View = () => {
     }
   };
 
+  const handleShowMoreBrowseResults = () => {
+    setBrowseResultLimit((currentLimit) =>
+      Math.min(currentLimit + BROWSE_RESULT_INCREMENT, sortedIndex.length),
+    );
+  };
+
   const isLoadingLibrary =
     libraryLoading ||
     userLoading ||
@@ -1243,13 +1258,18 @@ export const DashboardComponentsV2View = () => {
       );
     }
     if (isEmpty) {
+      const visibleBrowseEntries = sortedIndex.slice(0, browseResultLimit);
+      const hasMoreBrowseResults =
+        visibleBrowseEntries.length < sortedIndex.length;
+
       return (
         <BlockStack gap="2" align="stretch">
           <Paragraph size="xs" tone="subdued">
-            {total} component{total === 1 ? "" : "s"} in selected sources. Start
-            typing to search.
+            Showing {visibleBrowseEntries.length} of {total} component
+            {total === 1 ? "" : "s"} in selected sources. Start typing to
+            search.
           </Paragraph>
-          {sortedIndex.map((entry, idx) => (
+          {visibleBrowseEntries.map((entry, idx) => (
             <ComponentCard
               key={entry.digest}
               reference={entry.reference}
@@ -1260,6 +1280,20 @@ export const DashboardComponentsV2View = () => {
               onSelect={selectComponent}
             />
           ))}
+          {hasMoreBrowseResults && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleShowMoreBrowseResults}
+            >
+              Show{" "}
+              {Math.min(
+                BROWSE_RESULT_INCREMENT,
+                sortedIndex.length - visibleBrowseEntries.length,
+              )}{" "}
+              more
+            </Button>
+          )}
         </BlockStack>
       );
     }
