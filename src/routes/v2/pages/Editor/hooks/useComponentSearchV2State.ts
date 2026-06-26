@@ -194,11 +194,13 @@ export function useComponentSearchV2State(
     }),
   );
 
+  const canUseEmbeddingSearch = aiConfig.apiBase.trim().length > 0;
   const trimmedQuery = query.trim();
   const lexicalMatches = buildLexicalMatches(index, trimmedQuery);
   const aiCandidateMatches = buildAiCandidateMatches(index, trimmedQuery);
   const {
     mutate,
+    reset: resetRerank,
     data: rerankData,
     isPending: isReranking,
     isConfigured,
@@ -212,15 +214,17 @@ export function useComponentSearchV2State(
   const embeddingAbortControllerRef = useRef<AbortController | null>(null);
 
   const clearRerank = () => {
+    resetRerank();
     setRerankedFor(null);
     setRerankBaseMatches([]);
   };
 
   useEffect(() => {
+    resetRerank();
     setRerankedFor(null);
     setRerankBaseMatches([]);
     embeddingAbortControllerRef.current?.abort();
-  }, [query]);
+  }, [query, resetRerank]);
 
   useEffect(() => {
     return () => embeddingAbortControllerRef.current?.abort();
@@ -244,7 +248,7 @@ export function useComponentSearchV2State(
     sourceIndex: IndexEntry[];
     limit: number;
   }): Promise<LexicalMatch[]> => {
-    if (!aiConfig.apiBase.trim()) return [];
+    if (!canUseEmbeddingSearch) return [];
     embeddingAbortControllerRef.current?.abort();
     const abortController = new AbortController();
     embeddingAbortControllerRef.current = abortController;
@@ -284,8 +288,7 @@ export function useComponentSearchV2State(
   ) => {
     if (!trimmedQuery || !isConfigured) return;
 
-    const canUseEmbeddings =
-      useEmbeddings && aiConfig.apiBase.trim().length > 0;
+    const canUseEmbeddings = useEmbeddings && canUseEmbeddingSearch;
     if (matches.length === 0 && !canUseEmbeddings) return;
 
     const effectiveLimit = limit || LEXICAL_RESULT_LIMIT;
@@ -315,6 +318,7 @@ export function useComponentSearchV2State(
 
     if (candidates.length === 0) return;
 
+    resetRerank();
     setRerankBaseMatches(rerankMatches);
     setRerankedFor(trimmedQuery);
     mutate({ query: trimmedQuery, candidates, scoreAllCandidates });
@@ -324,7 +328,7 @@ export function useComponentSearchV2State(
     void startRerank(aiCandidateMatches, {
       scoreAllCandidates: true,
       useEmbeddings: true,
-      limit: aiCandidateMatches.length,
+      limit: aiCandidateMatches.length || LEXICAL_RESULT_LIMIT,
     });
   };
 
@@ -350,7 +354,7 @@ export function useComponentSearchV2State(
       isHydrating,
     canRerank:
       trimmedQuery.length > 0 &&
-      (aiCandidateMatches.length > 0 || aiConfig.apiBase.trim().length > 0) &&
+      (aiCandidateMatches.length > 0 || canUseEmbeddingSearch) &&
       isConfigured,
     isReranking: isReranking || isEmbeddingSearchPending,
     isRerankActive,

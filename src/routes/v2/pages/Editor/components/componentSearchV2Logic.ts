@@ -358,16 +358,19 @@ export function buildAiCandidateMatches(
 ): LexicalMatch[] {
   if (trimmedQuery.length === 0) return [];
 
+  const lexicalMatches = lexicalSearch(index, trimmedQuery, {
+    limit: AI_LEXICAL_CANDIDATE_LIMIT,
+    minLength: 1,
+  });
+  if (lexicalMatches.length === 0) return [];
+
   const candidates: LexicalMatch[] = [];
   const seenDigests = new Set<string>();
 
   appendUniqueMatches(
     candidates,
     seenDigests,
-    lexicalSearch(index, trimmedQuery, {
-      limit: AI_LEXICAL_CANDIDATE_LIMIT,
-      minLength: 1,
-    }),
+    lexicalMatches,
     AI_CANDIDATE_LIMIT,
   );
 

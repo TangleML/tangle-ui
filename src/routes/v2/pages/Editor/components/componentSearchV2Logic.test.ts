@@ -277,8 +277,7 @@ describe("buildLexicalMatches / buildAiCandidateMatches", () => {
   });
 
   it("returns no AI candidates when literal search finds nothing", () => {
-    const candidates = buildAiCandidateMatches(index, "qqzznomatch");
-    expect(candidates).toEqual([]);
+    expect(buildAiCandidateMatches(index, "qqzznomatch")).toEqual([]);
   });
 
   it("adds source-diverse lexical candidates beyond the top lexical hits", () => {

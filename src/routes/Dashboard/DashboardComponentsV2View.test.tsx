@@ -36,6 +36,7 @@ const routeMocks = vi.hoisted(() => {
     descriptionErrorState,
     aiDescriptionsEnabled: false,
     aiSearchConfigured: false,
+    aiApiBase: "",
     search,
   };
 });
@@ -156,6 +157,28 @@ vi.mock("@/hooks/useNaturalLanguageComponentSearch", () => ({
 
 vi.mock("@/hooks/useToastNotification", () => ({
   default: () => routeMocks.notify,
+}));
+
+vi.mock("@/hooks/useAiProviderSettings", () => ({
+  useAiProviderSettings: () => ({
+    config: { apiBase: routeMocks.aiApiBase, apiKey: "" },
+  }),
+}));
+
+vi.mock("@/services/componentSearchEmbeddings", () => ({
+  rankComponentMatchesByEmbeddings: vi.fn(async (index: IndexEntry[]) =>
+    index.length > 0
+      ? [
+          {
+            reference: index[0].reference,
+            digest: index[0].digest,
+            name: index[0].name,
+            source: index[0].source,
+            matchedFields: [],
+          },
+        ]
+      : [],
+  ),
 }));
 
 vi.mock("@/components/shared/ComponentDetail/ComponentDetail", () => ({
@@ -390,6 +413,7 @@ describe("DashboardComponentsV2View", () => {
     routeMocks.rerank.mockClear();
     routeMocks.resetRerank.mockClear();
     routeMocks.aiSearchConfigured = false;
+    routeMocks.aiApiBase = "";
   });
 
   it("filters visible component results by source type and restores them", () => {
@@ -414,8 +438,24 @@ describe("DashboardComponentsV2View", () => {
     expect(screen.getByText("Registered component")).toBeInTheDocument();
   });
 
-  it("lets AI search run against a bounded candidate pool when literal search has no matches", async () => {
+  it("does not run AI search when literal search has no matches", async () => {
     routeMocks.aiSearchConfigured = true;
+    render(<DashboardComponentsV2View />);
+
+    fireEvent.change(screen.getByLabelText("Search components"), {
+      target: { value: "find something semantically relevant" },
+    });
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "AI search" })).toBeDisabled();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "AI search" }));
+
+    expect(routeMocks.rerank).not.toHaveBeenCalled();
+  });
+
+  it("allows AI search with embeddings when literal search has no matches", async () => {
+    routeMocks.aiSearchConfigured = true;
+    routeMocks.aiApiBase = "https://api.example.com/v1";
     render(<DashboardComponentsV2View />);
 
     fireEvent.change(screen.getByLabelText("Search components"), {
@@ -426,15 +466,7 @@ describe("DashboardComponentsV2View", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "AI search" }));
 
-    expect(routeMocks.rerank).toHaveBeenCalledWith({
-      query: "find something semantically relevant",
-      candidates: expect.arrayContaining([
-        expect.objectContaining({ id: "standard-digest" }),
-        expect.objectContaining({ id: "registered-digest" }),
-        expect.objectContaining({ id: "user-digest" }),
-      ]),
-      scoreAllCandidates: true,
-    });
+    await waitFor(() => expect(routeMocks.rerank).toHaveBeenCalled());
   });
 
   it("shows a manual generate button when automatic descriptions are disabled", () => {

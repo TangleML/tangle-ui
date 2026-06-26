@@ -148,9 +148,14 @@ describe("component search embeddings", () => {
       ),
     );
 
-    await rankComponentMatchesByEmbeddings(index, "open a spreadsheet", OPTIONS, {
-      limit: 1,
-    });
+    await rankComponentMatchesByEmbeddings(
+      index,
+      "open a spreadsheet",
+      OPTIONS,
+      {
+        limit: 1,
+      },
+    );
 
     expect(global.fetch).toHaveBeenCalledTimes(2);
   });
