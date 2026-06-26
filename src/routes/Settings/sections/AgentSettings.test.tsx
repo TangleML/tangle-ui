@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AgentSettings } from "./AgentSettings";
@@ -14,6 +20,7 @@ vi.mock("@/hooks/useToastNotification", () => ({
 describe("AgentSettings", () => {
   beforeEach(() => {
     window.localStorage.clear();
+    delete window.__TANGLE_AI_MODELS__;
     mockNotify.mockClear();
     mockFetch.mockReset();
     global.fetch = mockFetch;
@@ -21,6 +28,7 @@ describe("AgentSettings", () => {
 
   afterEach(() => {
     window.localStorage.clear();
+    delete window.__TANGLE_AI_MODELS__;
   });
 
   it("shows inline feedback instead of saving when API base URL is blank", () => {
@@ -86,7 +94,87 @@ describe("AgentSettings", () => {
     expect(JSON.stringify(init)).toContain("Bearer sk-test");
   });
 
-  it("reports an error and does not save when the Responses API is not supported", async () => {
+  it("renders injectable model suggestions for the freeform model input", () => {
+    window.__TANGLE_AI_MODELS__ = {
+      defaultModel: "proxy-frontier",
+      models: [
+        {
+          id: "proxy-frontier",
+          label: "Proxy frontier",
+          description: "Default proxy model",
+        },
+      ],
+    };
+
+    render(<AgentSettings />);
+
+    expect(screen.getByLabelText("Model id")).toHaveAttribute(
+      "placeholder",
+      "e.g. proxy-frontier",
+    );
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Select a model" }));
+
+    expect(
+      screen.getByRole("option", { name: "Proxy frontier" }),
+    ).toBeInTheDocument();
+  });
+
+  it("updates saved model settings as the model field changes", () => {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        apiBase: "https://api.example.com/v1",
+        apiKey: "",
+        model: "gpt-5",
+      }),
+    );
+
+    render(<AgentSettings />);
+
+    fireEvent.change(screen.getByLabelText("Model id"), {
+      target: { value: "gpt-5.5" },
+    });
+
+    expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "")).toEqual({
+      apiBase: "https://api.example.com/v1",
+      apiKey: "",
+      model: "gpt-5.5",
+    });
+  });
+
+  it("syncs the model field when another control updates saved AI settings", async () => {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        apiBase: "https://api.example.com/v1",
+        apiKey: "",
+        model: "gpt-5",
+      }),
+    );
+
+    render(<AgentSettings />);
+
+    expect(screen.getByLabelText("Model id")).toHaveValue("gpt-5");
+
+    act(() => {
+      window.localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          apiBase: "https://api.example.com/v1",
+          apiKey: "",
+          model: "gpt-5.5",
+        }),
+      );
+      window.dispatchEvent(new StorageEvent("storage", { key: STORAGE_KEY }));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Model id")).toHaveValue("gpt-5.5");
+    });
+  });
+
+  it("reports an error and does not save provider details when the Responses API is not supported", async () => {
     mockFetch.mockResolvedValue(
       new Response("Endpoint not supported: /v1/responses", {
         status: 404,
@@ -110,7 +198,11 @@ describe("AgentSettings", () => {
         "error",
       );
     });
-    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
+    expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "")).toEqual({
+      apiBase: "",
+      apiKey: "",
+      model: "claude-opus",
+    });
   });
 
   it("saves after a successful provider-default AI test when API key and model are blank", async () => {

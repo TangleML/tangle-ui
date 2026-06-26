@@ -28,6 +28,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { QuickTooltip } from "@/components/ui/tooltip";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
+import { getAiModelLabel } from "@/config/aiModels";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import { useDebouncedSearchValue } from "@/hooks/useDebouncedSearchValue";
 import { getComponentQueryKey } from "@/hooks/useHydrateComponentReference";
@@ -659,6 +660,51 @@ function mergeUniqueMatches(
   return merged;
 }
 
+const AI_SEARCH_PROGRESS_VERBS = [
+  "Scanning",
+  "Comparing",
+  "Scoring",
+  "Ranking",
+];
+
+function AiSearchProgress({
+  mode,
+  modelLabel,
+}: {
+  mode: "embedding" | "smart";
+  modelLabel: string;
+}) {
+  const [verbIndex, setVerbIndex] = useState(0);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setVerbIndex(
+        (current) => (current + 1) % AI_SEARCH_PROGRESS_VERBS.length,
+      );
+    }, 1200);
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  const verb = AI_SEARCH_PROGRESS_VERBS[verbIndex];
+  const message =
+    mode === "embedding"
+      ? "Finding semantic matches in local embeddings…"
+      : `${verb} component candidates with ${modelLabel}…`;
+
+  return (
+    <InlineStack
+      gap="2"
+      blockAlign="center"
+      className="rounded-md bg-muted/50 px-3 py-2 text-muted-foreground"
+    >
+      <Spinner size={14} />
+      <Text size="xs" tone="subdued" role="status" aria-live="polite">
+        {message}
+      </Text>
+    </InlineStack>
+  );
+}
+
 function DebouncedComponentSearchInput({
   onCommit,
   disabled,
@@ -1188,6 +1234,10 @@ export const DashboardComponentsV2View = () => {
   const noLibraryData = !isLoadingLibrary && totalAcrossSources === 0;
   const isEmpty = trimmedQuery.length === 0;
   const isConfigError = rerankError instanceof NaturalLanguageSearchConfigError;
+  const aiSearchProgressMode = isEmbeddingSearchPending ? "embedding" : "smart";
+  const aiSearchModelLabel = aiConfig.model.trim()
+    ? getAiModelLabel(aiConfig.model)
+    : "the configured model";
   // Only treat rerank as "active" when the model actually returned matches.
   // An empty result set (model decided nothing fit, or the response was
   // malformed and the service degraded it to `{ matches: [] }`) means the
@@ -1549,6 +1599,12 @@ export const DashboardComponentsV2View = () => {
               )}
             </Button>
           </InlineStack>
+          {(isReranking || isEmbeddingSearchPending) && (
+            <AiSearchProgress
+              mode={aiSearchProgressMode}
+              modelLabel={aiSearchModelLabel}
+            />
+          )}
           <SourceFilterBar
             options={sourceFilterOptions}
             disabledSourceKeys={disabledSourceKeys}
