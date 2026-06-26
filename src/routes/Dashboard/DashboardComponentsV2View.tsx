@@ -181,6 +181,8 @@ interface ComponentCardProps {
   source?: ComponentSearchSource;
   matchedFields?: MatchField[];
   reason?: string;
+  rerankScore?: number;
+  isAiRanked?: boolean;
   isSelected?: boolean;
   /** Position within the current result list — passed to analytics. */
   position?: number;
@@ -194,6 +196,8 @@ const ComponentCard = ({
   source,
   matchedFields,
   reason,
+  rerankScore,
+  isAiRanked,
   isSelected,
   position,
   hadQuery,
@@ -205,6 +209,8 @@ const ComponentCard = ({
   const trackingSource = source
     ? TRACKING_SOURCE_BY_KIND[source.kind]
     : "unknown";
+  const showLexicalMatchBadges = isAiRanked ? undefined : matchedFields;
+  const showDescription = description;
 
   return (
     // Raw <button> rather than the <Button> primitive: the primitive's variants
@@ -255,7 +261,12 @@ const ComponentCard = ({
           <Text size="sm" weight="semibold">
             {name}
           </Text>
-          {matchedFields?.map((field) => (
+          {rerankScore !== undefined && (
+            <Badge variant="secondary">
+              Relevance: {Math.round(rerankScore * 100)}%
+            </Badge>
+          )}
+          {showLexicalMatchBadges?.map((field) => (
             <Badge key={field} variant="secondary">
               matched: {MATCH_FIELD_LABEL[field]}
             </Badge>
@@ -266,7 +277,7 @@ const ComponentCard = ({
             by {publishedBy}
           </Text>
         )}
-        {description && (
+        {showDescription && (
           // `[overflow-wrap:anywhere]` breaks at any character if needed —
           // `break-words` only breaks at word boundaries, which doesn't help
           // for long URLs without spaces. Pair with `min-w-0` on the parent
@@ -751,28 +762,41 @@ export const DashboardComponentsV2View = () => {
     [],
   );
 
+  const clearRerank = () => {
+    setRerankedFor(null);
+    setRerankBaseMatches([]);
+    resetRerank();
+  };
+
   const handleQueryChange = (event: ChangeEvent<HTMLInputElement>) => {
     setQuery(event.target.value);
     if (rerankedFor !== null) {
-      setRerankedFor(null);
-      setRerankBaseMatches([]);
-      resetRerank();
+      clearRerank();
     }
   };
 
-  const handleSmartSearch = () => {
+  const startAiSearch = (
+    matches: LexicalMatch[],
+    { scoreAllCandidates }: { scoreAllCandidates: boolean },
+  ) => {
     const trimmed = query.trim();
-    if (trimmed.length === 0 || aiCandidateMatches.length === 0) return;
+    if (trimmed.length === 0 || matches.length === 0) return;
 
-    const candidates = aiCandidateMatches
-      .map((m) => componentReferenceToCandidate(m.reference))
+    const candidates = matches
+      .map((m) => componentReferenceToCandidate(m.reference, m.source))
       .filter((c): c is NonNullable<typeof c> => c !== null);
 
     if (candidates.length === 0) return;
 
-    setRerankBaseMatches(aiCandidateMatches);
+    setRerankBaseMatches(matches);
     setRerankedFor(trimmed);
-    rerank({ query: trimmed, candidates });
+    rerank({ query: trimmed, candidates, scoreAllCandidates });
+  };
+
+  const handleSmartSearch = () => {
+    startAiSearch(aiCandidateMatches, {
+      scoreAllCandidates: true,
+    });
   };
 
   const handleSourceToggle = (sourceKey: string) => {
@@ -782,18 +806,14 @@ export const DashboardComponentsV2View = () => {
         : [...current, sourceKey],
     );
     if (rerankedFor !== null) {
-      setRerankedFor(null);
-      setRerankBaseMatches([]);
-      resetRerank();
+      clearRerank();
     }
   };
 
   const handleEnableAllSources = () => {
     setDisabledSourceKeys([]);
     if (rerankedFor !== null) {
-      setRerankedFor(null);
-      setRerankBaseMatches([]);
-      resetRerank();
+      clearRerank();
     }
   };
 
@@ -820,9 +840,15 @@ export const DashboardComponentsV2View = () => {
     !isReranking;
 
   // What we actually render. Rerank wins when active; otherwise lexical.
-  const displayedResults = rerankActive
+  const displayedResults: Array<
+    LexicalMatch & { reason?: string; rerankScore?: number }
+  > = rerankActive
     ? mergeRerankIntoLexical(rerankData.matches, rerankBaseMatches)
-    : lexicalMatches.map((m) => ({ ...m, reason: undefined }));
+    : lexicalMatches.map((m) => ({
+        ...m,
+        reason: undefined,
+        rerankScore: undefined,
+      }));
 
   // Resolve the full reference for the selected digest. Prefer the already-
   // hydrated copy (no extra network), fall back to the un-hydrated index
@@ -942,11 +968,23 @@ export const DashboardComponentsV2View = () => {
     }
     return (
       <BlockStack gap="2" align="stretch">
-        <Paragraph size="xs" tone="subdued">
-          {rerankActive
-            ? `AI-reranked ${displayedResults.length} result${displayedResults.length === 1 ? "" : "s"} for “${trimmedQuery}”`
-            : `${displayedResults.length} result${displayedResults.length === 1 ? "" : "s"} for “${trimmedQuery}”`}
-        </Paragraph>
+        <InlineStack align="space-between" blockAlign="center" gap="2">
+          <Paragraph size="xs" tone="subdued">
+            {rerankActive
+              ? `AI-ranked ${displayedResults.length} result${displayedResults.length === 1 ? "" : "s"} for “${trimmedQuery}”`
+              : `${displayedResults.length} result${displayedResults.length === 1 ? "" : "s"} for “${trimmedQuery}”`}
+          </Paragraph>
+          {rerankActive && (
+            <Button
+              type="button"
+              variant="link"
+              size="inline-xs"
+              onClick={clearRerank}
+            >
+              Use lexical ranking
+            </Button>
+          )}
+        </InlineStack>
         {displayedResults.map((result, idx) => (
           <ComponentCard
             key={result.digest}
@@ -954,6 +992,8 @@ export const DashboardComponentsV2View = () => {
             source={result.source}
             matchedFields={result.matchedFields}
             reason={result.reason}
+            rerankScore={result.rerankScore}
+            isAiRanked={rerankActive}
             isSelected={result.digest === selectedDigest}
             position={idx}
             hadQuery={true}
@@ -1010,7 +1050,7 @@ export const DashboardComponentsV2View = () => {
                 !isConfigured
               }
               aria-label={isReranking ? "AI search in progress" : "AI search"}
-              title="AI search — rerank these results with an LLM"
+              title="AI search — rerank a bounded set of top candidates with an LLM"
             >
               {isReranking ? <Spinner size={16} /> : <Icon name="Sparkles" />}
             </Button>
@@ -1143,26 +1183,23 @@ export const DashboardComponentsV2View = () => {
 };
 
 /**
- * Merge LLM rerank results back into the lexical match metadata so the UI
- * can still show "matched: name" badges alongside the rerank reason. Items
- * the LLM dropped are appended after the reranked ones (the lexical layer
- * thought they were relevant, even if the LLM disagreed — surfacing them
- * builds trust by not silently hiding lexical hits).
+ * Merge LLM rerank results back into the lexical match metadata. AI search
+ * keeps unranked lexical matches after the model-ranked set.
  */
 function mergeRerankIntoLexical(
   reranked: RerankedMatch[],
   lexical: LexicalMatch[],
-): Array<LexicalMatch & { reason?: string }> {
+): Array<LexicalMatch & { reason?: string; rerankScore?: number }> {
   const lexicalByDigest = new Map(lexical.map((m) => [m.digest, m]));
-  const out: Array<LexicalMatch & { reason?: string }> = [];
+  const out: Array<LexicalMatch & { reason?: string; rerankScore?: number }> =
+    [];
 
   for (const r of reranked) {
     const lex = lexicalByDigest.get(r.id);
     if (!lex) continue;
-    out.push({ ...lex, reason: r.reason });
+    out.push({ ...lex, reason: r.reason, rerankScore: r.score });
     lexicalByDigest.delete(r.id);
   }
-  // Tail: lexical hits the LLM didn't rank.
   for (const lex of lexicalByDigest.values()) {
     out.push({ ...lex });
   }

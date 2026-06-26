@@ -19,7 +19,7 @@ import {
 import {
   buildAiCandidateMatches,
   buildLexicalMatches,
-  buildRerankScoreByDigest,
+  buildRerankMatchByDigest,
   buildResultFolders,
   buildResults,
   buildSourcedHydratedReferences,
@@ -175,7 +175,6 @@ export function useComponentSearchV2State(
   const trimmedQuery = query.trim();
   const lexicalMatches = buildLexicalMatches(index, trimmedQuery);
   const aiCandidateMatches = buildAiCandidateMatches(index, trimmedQuery);
-
   const {
     mutate,
     data: rerankData,
@@ -187,6 +186,11 @@ export function useComponentSearchV2State(
     [],
   );
 
+  const clearRerank = () => {
+    setRerankedFor(null);
+    setRerankBaseMatches([]);
+  };
+
   useEffect(() => {
     setRerankedFor(null);
     setRerankBaseMatches([]);
@@ -196,20 +200,23 @@ export function useComponentSearchV2State(
     rerankedFor === trimmedQuery &&
     rerankBaseMatches.length > 0 &&
     !isReranking &&
-    rerankData !== undefined;
+    (rerankData?.matches.length ?? 0) > 0;
 
   const displayedMatches = isRerankActive
     ? rerankedMatches(rerankData, rerankBaseMatches)
     : lexicalMatches;
 
-  const rerank = () => {
-    if (!trimmedQuery || aiCandidateMatches.length === 0 || !isConfigured) {
-      return;
-    }
+  const startRerank = (
+    matches: LexicalMatch[],
+    { scoreAllCandidates }: { scoreAllCandidates: boolean },
+  ) => {
+    if (!trimmedQuery || matches.length === 0 || !isConfigured) return;
 
-    const rerankBase = aiCandidateMatches;
+    const rerankBase = matches;
     const candidates = rerankBase
-      .map((match) => componentReferenceToCandidate(match.reference))
+      .map((match) =>
+        componentReferenceToCandidate(match.reference, match.source),
+      )
       .filter((candidate): candidate is NonNullable<typeof candidate> =>
         Boolean(candidate),
       );
@@ -218,17 +225,22 @@ export function useComponentSearchV2State(
 
     setRerankBaseMatches(rerankBase);
     setRerankedFor(trimmedQuery);
-    // Score every candidate so each displayed result shows a relevance %.
-    mutate({ query: trimmedQuery, candidates, scoreAllCandidates: true });
+    mutate({ query: trimmedQuery, candidates, scoreAllCandidates });
   };
 
-  const rerankScoreByDigest = buildRerankScoreByDigest(
+  const rerank = () => {
+    startRerank(aiCandidateMatches, {
+      scoreAllCandidates: true,
+    });
+  };
+
+  const rerankMatchByDigest = buildRerankMatchByDigest(
     rerankData,
     isRerankActive,
   );
   const results = buildResults(
     displayedMatches,
-    rerankScoreByDigest,
+    rerankMatchByDigest,
     isRerankActive,
   );
 
@@ -245,6 +257,8 @@ export function useComponentSearchV2State(
     canRerank:
       trimmedQuery.length > 0 && aiCandidateMatches.length > 0 && isConfigured,
     isReranking,
+    isRerankActive,
     rerank,
+    clearRerank,
   };
 }

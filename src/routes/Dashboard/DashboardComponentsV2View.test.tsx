@@ -430,6 +430,7 @@ describe("DashboardComponentsV2View", () => {
         expect.objectContaining({ id: "registered-digest" }),
         expect.objectContaining({ id: "user-digest" }),
       ]),
+      scoreAllCandidates: true,
     });
   });
 

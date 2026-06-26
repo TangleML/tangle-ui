@@ -14,8 +14,16 @@ import { ComponentSearchResults } from "./ComponentSearchResults";
 export function ComponentSearchV2Content() {
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
-  const { results, browseFolders, isLoading, canRerank, isReranking, rerank } =
-    useComponentSearchV2State(deferredQuery);
+  const {
+    results,
+    browseFolders,
+    isLoading,
+    canRerank,
+    isReranking,
+    isRerankActive,
+    rerank,
+    clearRerank,
+  } = useComponentSearchV2State(deferredQuery);
 
   const handleQueryChange = (event: ChangeEvent<HTMLInputElement>) => {
     setQuery(event.target.value);
@@ -67,7 +75,7 @@ export function ComponentSearchV2Content() {
             size="icon"
             className="h-8 w-8 p-0 shrink-0"
             aria-label={isReranking ? "AI reranking in progress" : "AI rerank"}
-            title="AI rerank"
+            title="AI rerank — rerank a bounded set of top candidates"
             onClick={rerank}
             disabled={!canRerank || isReranking}
           >
@@ -80,6 +88,8 @@ export function ComponentSearchV2Content() {
         results={results}
         browseFolders={browseFolders}
         isLoading={isLoading}
+        isRerankActive={isRerankActive}
+        onClearRerank={clearRerank}
       />
     </BlockStack>
   );
