@@ -58,7 +58,21 @@ describe("ComponentSearchResults", () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/Try a component name/)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "csv" }));
+    const suggestion = screen.getByRole("button", { name: "csv" });
+
+    expect(suggestion).toHaveAttribute(
+      "data-tracking-id",
+      "component_library.search.suggestion",
+    );
+    expect(suggestion).toHaveAttribute(
+      "data-tracking-metadata",
+      JSON.stringify({
+        surface: "editor_component_search_v2",
+        suggested_query: "csv",
+      }),
+    );
+
+    fireEvent.click(suggestion);
 
     expect(onSuggestedSearch).toHaveBeenCalledWith("csv");
   });

@@ -1,4 +1,4 @@
-import { useDeferredValue, useState, useTransition } from "react";
+import { useDeferredValue, useEffect, useState, useTransition } from "react";
 
 import ImportComponent from "@/components/shared/ReactFlow/FlowSidebar/components/ImportComponent";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,9 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
 import { useDebouncedSearchValue } from "@/hooks/useDebouncedSearchValue";
+import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useComponentSearchV2State } from "@/routes/v2/pages/Editor/hooks/useComponentSearchV2State";
+import { tracking } from "@/utils/tracking";
 
 import { ComponentSearchResults } from "./ComponentSearchResults";
 
@@ -42,6 +44,7 @@ function DebouncedComponentSearchInput({
 }
 
 export function ComponentSearchV2Content() {
+  const { track } = useAnalytics();
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
   const [, startSearchTransition] = useTransition();
@@ -63,6 +66,26 @@ export function ComponentSearchV2Content() {
   const handleSuggestedSearch = (value: string) => {
     startSearchTransition(() => setQuery(value));
   };
+
+  const trimmedDeferredQuery = deferredQuery.trim();
+
+  useEffect(() => {
+    if (isLoading || trimmedDeferredQuery.length === 0) return;
+
+    const timeout = window.setTimeout(() => {
+      track("component_library.search.completed", {
+        surface: "editor_component_search_v2",
+        search_backend: isRerankActive
+          ? "frontend_aggregate_ai_rerank"
+          : "frontend_aggregate",
+        query_length: trimmedDeferredQuery.length,
+        result_count: results.length,
+        ai_ranked: isRerankActive,
+      });
+    }, 400);
+
+    return () => window.clearTimeout(timeout);
+  }, [isLoading, isRerankActive, results.length, track, trimmedDeferredQuery]);
 
   return (
     <BlockStack className="h-full min-h-0 overflow-hidden [&_.text-sm]:text-xs!">
@@ -107,6 +130,12 @@ export function ComponentSearchV2Content() {
             title="AI rerank — rerank a bounded set of top candidates"
             onClick={rerank}
             disabled={!canRerank || isReranking}
+            {...tracking("component_library.search.ai_rerank", {
+              surface: "editor_component_search_v2",
+              mode: "smart",
+              query_length: trimmedDeferredQuery.length,
+              result_count: results.length,
+            })}
           >
             {isReranking ? <Spinner size={14} /> : <Icon name="Sparkles" />}
           </Button>

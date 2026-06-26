@@ -2,13 +2,16 @@ import { Button } from "@/components/ui/button";
 import { InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import { COMPONENT_SEARCH_EMPTY_STATE_SUGGESTIONS } from "@/services/componentSearchSuggestions";
+import { tracking } from "@/utils/tracking";
 
 interface ComponentSearchEmptyStateSuggestionsProps {
   onSelectSuggestion: (query: string) => void;
+  surface: string;
 }
 
 export function ComponentSearchEmptyStateSuggestions({
   onSelectSuggestion,
+  surface,
 }: ComponentSearchEmptyStateSuggestionsProps) {
   return (
     <InlineStack gap="2">
@@ -22,6 +25,10 @@ export function ComponentSearchEmptyStateSuggestions({
           variant="outline"
           size="xs"
           onClick={() => onSelectSuggestion(suggestion)}
+          {...tracking("component_library.search.suggestion", {
+            surface,
+            suggested_query: suggestion,
+          })}
         >
           {suggestion}
         </Button>

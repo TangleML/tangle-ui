@@ -127,6 +127,7 @@ export function ComponentSearchResults({
               </Paragraph>
             </BlockStack>
             <ComponentSearchEmptyStateSuggestions
+              surface="editor_component_search_v2"
               onSelectSuggestion={onSuggestedSearch}
             />
           </BlockStack>
