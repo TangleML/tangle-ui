@@ -17,8 +17,24 @@ function generateThreadId(): string {
   return `thread-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function formatAssistantError(error: unknown): string {
+  const message = getErrorMessage(error);
+  if (isProviderConversationStateError(message)) {
+    return "I ran into a model conversation-state error while processing that request. Please try again in this chat, or start a new chat if it keeps happening.";
+  }
+
+  return `I couldn't complete that request: ${message}`;
+}
+
+function isProviderConversationStateError(message: string): boolean {
+  return (
+    /\brs_[a-zA-Z0-9]+\b/.test(message) ||
+    /required ['"]reasoning['"] item/i.test(message) ||
+    /Item with id .* not found/i.test(message)
+  );
+}
+
 interface SendMessageOptions {
-  onError: (message: string) => void;
   bridge: ToolBridgeApi;
   aiConfig: AiProviderConfig;
   recentRuns?: RecentPipelineRun[];
@@ -111,7 +127,17 @@ export class AgentThread {
         ];
       });
     } catch (error) {
-      options.onError(`AI request failed: ${getErrorMessage(error)}`);
+      runInAction(() => {
+        this.thinkingText = null;
+        this.messages = [
+          ...this.messages,
+          {
+            id: generateMessageId(),
+            role: "assistant",
+            content: formatAssistantError(error),
+          },
+        ];
+      });
     } finally {
       this.abortController = null;
       runInAction(() => {
