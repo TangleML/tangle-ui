@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
-import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { fetchPipelineRuns } from "@/services/pipelineRunService";
@@ -49,7 +48,6 @@ export const AiChatContent = observer(function AiChatContent({
   createBridge,
 }: AiChatContentProps) {
   const aiChat = useAiChatStore();
-  const notify = useToastNotification();
   const { navigation } = useSharedStores();
   const { backendUrl } = useBackend();
   const authStorage = useAuthLocalStorage();
@@ -109,7 +107,6 @@ export const AiChatContent = observer(function AiChatContent({
       ? projectRecentRuns(recentRunsData)
       : undefined;
     thread.sendMessage(prompt, {
-      onError: (msg) => notify(msg, "error"),
       bridge,
       aiConfig,
       ...(recentRuns && { recentRuns }),

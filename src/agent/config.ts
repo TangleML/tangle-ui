@@ -11,11 +11,21 @@ import { BASE_URL } from "@/utils/constants";
 const AI_ASSISTANT_EMBEDDING_MODEL = "text-embedding-3-small";
 const SIDEKICK_OPENAI_API = "responses";
 
+const RESPONSES_REASONING_INCLUDE = ["reasoning.encrypted_content"];
+
 export function getAgentModelConfig(config: AiProviderConfig): {
   model?: string;
+  modelSettings: { providerData: { include: string[] } };
 } {
   const model = config.model.trim();
-  return model ? { model } : {};
+  return {
+    ...(model ? { model } : {}),
+    modelSettings: {
+      providerData: {
+        include: RESPONSES_REASONING_INCLUDE,
+      },
+    },
+  };
 }
 
 export function requireEmbeddingModel(): string {

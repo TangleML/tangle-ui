@@ -31,13 +31,24 @@ const BASE_CONFIG = {
 
 describe("getAgentModelConfig", () => {
   it("omits the model when the configured model is blank", () => {
-    expect(getAgentModelConfig(BASE_CONFIG)).toEqual({});
+    expect(getAgentModelConfig(BASE_CONFIG)).toEqual({
+      modelSettings: {
+        providerData: {
+          include: ["reasoning.encrypted_content"],
+        },
+      },
+    });
   });
 
-  it("uses the configured model without extra settings", () => {
-    expect(
-      getAgentModelConfig({ ...BASE_CONFIG, model: "gpt-4o-mini" }),
-    ).toEqual({ model: "gpt-4o-mini" });
+  it("uses the configured model with Responses reasoning continuity", () => {
+    expect(getAgentModelConfig({ ...BASE_CONFIG, model: "gpt-5.5" })).toEqual({
+      model: "gpt-5.5",
+      modelSettings: {
+        providerData: {
+          include: ["reasoning.encrypted_content"],
+        },
+      },
+    });
   });
 });
 

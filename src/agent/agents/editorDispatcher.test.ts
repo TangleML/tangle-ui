@@ -87,7 +87,7 @@ describe("createEditorDispatcher", () => {
     runMock.mockResolvedValue({ finalOutput: "Done" });
   });
 
-  it("omits Responses reasoning item ids from Sidekick session history", async () => {
+  it("preserves Responses reasoning continuity for Sidekick runs", async () => {
     const dispatcher = createEditorDispatcher();
     await dispatcher.invoke({
       message: "add a component",
@@ -100,28 +100,19 @@ describe("createEditorDispatcher", () => {
       session: makeSession(),
     });
 
-    const options = runMock.mock.calls[0]?.[2];
-    expect(options).toMatchObject({
-      reasoningItemIdPolicy: "omit",
+    const agentConfig = agentCtor.mock.calls.at(-1)?.[0];
+    expect(agentConfig).toMatchObject({
+      model: "gpt-5.5",
+      modelSettings: {
+        providerData: {
+          include: ["reasoning.encrypted_content"],
+        },
+      },
     });
 
-    const callback = options.sessionInputCallback;
-    const result = callback(
-      [
-        {
-          type: "reasoning",
-          id: "rs_123",
-          summary: [],
-        },
-        { type: "message", role: "assistant", content: "hello" },
-      ],
-      [{ type: "message", role: "user", content: "next" }],
-    );
-
-    expect(result).toEqual([
-      { type: "reasoning", summary: [] },
-      { type: "message", role: "assistant", content: "hello" },
-      { type: "message", role: "user", content: "next" },
-    ]);
+    const options = runMock.mock.calls[0]?.[2];
+    expect(options).toEqual({
+      session: expect.any(Object),
+    });
   });
 });
