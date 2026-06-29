@@ -68,16 +68,25 @@ export interface ComponentSearchV2Result {
   rerankReason?: string;
 }
 
+interface ComponentSearchV2SourceFilterOption {
+  source: ComponentSearchSource;
+  count: number;
+}
+
 export interface ComponentSearchV2State {
   results: ComponentSearchV2Result[];
   browseFolders: UIComponentFolder[];
   searchSuggestions: ComponentSearchSuggestion[];
+  sourceFilterOptions: ComponentSearchV2SourceFilterOption[];
+  disabledSourceKeys: string[];
   isLoading: boolean;
   canRerank: boolean;
   isReranking: boolean;
   isRerankActive: boolean;
   rerank: () => void;
   clearRerank: () => void;
+  toggleSourceFilter: (sourceKey: string) => void;
+  enableAllSources: () => void;
 }
 
 export function registeredSource(

@@ -9,6 +9,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
 import { useDebouncedSearchValue } from "@/hooks/useDebouncedSearchValue";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
+import { SourceFilterBar } from "@/routes/Dashboard/DashboardComponentsV2SourceFilter";
 import { useComponentSearchV2State } from "@/routes/v2/pages/Editor/hooks/useComponentSearchV2State";
 import { tracking } from "@/utils/tracking";
 
@@ -96,6 +97,10 @@ export function ComponentSearchV2Content() {
     isRerankActive,
     rerank,
     clearRerank,
+    sourceFilterOptions,
+    disabledSourceKeys,
+    toggleSourceFilter,
+    enableAllSources,
   } = useComponentSearchV2State(deferredQuery);
 
   const handleQueryCommit = (value: string) => {
@@ -183,6 +188,13 @@ export function ComponentSearchV2Content() {
           </Button>
         </InlineStack>
         {isReranking && <AiRerankProgress />}
+        <SourceFilterBar
+          options={sourceFilterOptions}
+          disabledSourceKeys={disabledSourceKeys}
+          onToggle={toggleSourceFilter}
+          onEnableAll={enableAllSources}
+          display="icons"
+        />
       </BlockStack>
       <ComponentSearchResults
         query={deferredQuery}

@@ -18,6 +18,10 @@ import {
   type StoredLibrary,
 } from "@/providers/ComponentLibraryProvider/libraries/storage";
 import {
+  createSourceFilterOptions,
+  filterIndexByDisabledSourceKeys,
+} from "@/routes/Dashboard/DashboardComponentsV2SourceFilter";
+import {
   buildAiCandidateMatches,
   buildLexicalMatches,
   buildRerankMatchByDigest,
@@ -195,10 +199,20 @@ export function useComponentSearchV2State(
     }),
   );
 
+  const [disabledSourceKeys, setDisabledSourceKeys] = useState<string[]>([]);
+  const sourceFilterOptions = createSourceFilterOptions(index);
+  const filteredIndex = filterIndexByDisabledSourceKeys(
+    index,
+    disabledSourceKeys,
+  );
+
   const canUseEmbeddingSearch = aiConfig.apiBase.trim().length > 0;
   const trimmedQuery = query.trim();
-  const lexicalMatches = buildLexicalMatches(index, trimmedQuery);
-  const aiCandidateMatches = buildAiCandidateMatches(index, trimmedQuery);
+  const lexicalMatches = buildLexicalMatches(filteredIndex, trimmedQuery);
+  const aiCandidateMatches = buildAiCandidateMatches(
+    filteredIndex,
+    trimmedQuery,
+  );
   const {
     mutate,
     reset: resetRerank,
@@ -225,7 +239,7 @@ export function useComponentSearchV2State(
     setRerankedFor(null);
     setRerankBaseMatches([]);
     embeddingAbortControllerRef.current?.abort();
-  }, [query, resetRerank]);
+  }, [query, disabledSourceKeys, resetRerank]);
 
   useEffect(() => {
     return () => embeddingAbortControllerRef.current?.abort();
@@ -297,7 +311,7 @@ export function useComponentSearchV2State(
     const effectiveLimit = limit || LEXICAL_RESULT_LIMIT;
     const embeddingMatches = canUseEmbeddings
       ? await buildEmbeddingMatches({
-          sourceIndex: index,
+          sourceIndex: filteredIndex,
           limit: effectiveLimit,
         })
       : [];
@@ -335,6 +349,16 @@ export function useComponentSearchV2State(
     });
   };
 
+  const toggleSourceFilter = (sourceKey: string) => {
+    setDisabledSourceKeys((current) =>
+      current.includes(sourceKey)
+        ? current.filter((key) => key !== sourceKey)
+        : [...current, sourceKey],
+    );
+  };
+
+  const enableAllSources = () => setDisabledSourceKeys([]);
+
   const rerankMatchByDigest = buildRerankMatchByDigest(
     rerankData,
     isRerankActive,
@@ -347,11 +371,18 @@ export function useComponentSearchV2State(
 
   return {
     results,
-    browseFolders: buildResultFolders({ results, standardLibrary }),
-    searchSuggestions: buildComponentSearchSuggestions(index, {
+    browseFolders: buildResultFolders({
+      results,
+      standardLibrary: disabledSourceKeys.includes("standard")
+        ? undefined
+        : standardLibrary,
+    }),
+    searchSuggestions: buildComponentSearchSuggestions(filteredIndex, {
       includeSources: false,
       query: trimmedQuery,
     }),
+    sourceFilterOptions,
+    disabledSourceKeys,
     isLoading:
       isLoadingStandardLibrary ||
       isLoadingUserComponents ||
@@ -367,5 +398,7 @@ export function useComponentSearchV2State(
     isRerankActive,
     rerank,
     clearRerank,
+    toggleSourceFilter,
+    enableAllSources,
   };
 }

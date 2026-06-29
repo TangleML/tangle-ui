@@ -55,6 +55,10 @@ describe("ComponentSearchV2Content", () => {
       isRerankActive: false,
       rerank: vi.fn(),
       clearRerank: vi.fn(),
+      sourceFilterOptions: [],
+      disabledSourceKeys: [],
+      toggleSourceFilter: vi.fn(),
+      enableAllSources: vi.fn(),
     }));
   });
 
@@ -98,6 +102,10 @@ describe("ComponentSearchV2Content", () => {
       isRerankActive: false,
       rerank: vi.fn(),
       clearRerank: vi.fn(),
+      sourceFilterOptions: [],
+      disabledSourceKeys: [],
+      toggleSourceFilter: vi.fn(),
+      enableAllSources: vi.fn(),
     }));
 
     render(<ComponentSearchV2Content />);
@@ -113,6 +121,47 @@ describe("ComponentSearchV2Content", () => {
     expect(screen.getByRole("status")).toHaveTextContent(
       "Comparing component candidates with AI…",
     );
+  });
+
+  it("shows source filters and toggles them from editor search", () => {
+    const toggleSourceFilter = vi.fn();
+    const enableAllSources = vi.fn();
+    mocks.useComponentSearchV2State.mockImplementation(() => ({
+      results: [],
+      browseFolders: [],
+      searchSuggestions: [],
+      isLoading: false,
+      canRerank: false,
+      isReranking: false,
+      isRerankActive: false,
+      rerank: vi.fn(),
+      clearRerank: vi.fn(),
+      sourceFilterOptions: [
+        {
+          source: { kind: "standard", id: "standard", label: "Standard" },
+          count: 2,
+        },
+        {
+          source: { kind: "user", id: "user", label: "User generated" },
+          count: 1,
+        },
+      ],
+      disabledSourceKeys: ["user"],
+      toggleSourceFilter,
+      enableAllSources,
+    }));
+
+    render(<ComponentSearchV2Content />);
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "User generated source (1 component)",
+      }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Show all" }));
+
+    expect(toggleSourceFilter).toHaveBeenCalledWith("user");
+    expect(enableAllSources).toHaveBeenCalled();
   });
 
   it("tracks editor component search completions without query text", async () => {
