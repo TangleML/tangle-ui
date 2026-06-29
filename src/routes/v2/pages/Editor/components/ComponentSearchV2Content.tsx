@@ -15,13 +15,47 @@ import { tracking } from "@/utils/tracking";
 import { ComponentSearchResults } from "./ComponentSearchResults";
 
 const EDITOR_SEARCH_RESULT_DEBOUNCE_MS = 500;
+const AI_SEARCH_PROGRESS_VERBS = [
+  "Scanning",
+  "Comparing",
+  "Scoring",
+  "Ranking",
+];
+
+function AiRerankProgress() {
+  const [verbIndex, setVerbIndex] = useState(0);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setVerbIndex(
+        (current) => (current + 1) % AI_SEARCH_PROGRESS_VERBS.length,
+      );
+    }, 1200);
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  return (
+    <InlineStack
+      gap="2"
+      blockAlign="center"
+      className="rounded-md bg-muted/50 px-3 py-2 text-muted-foreground"
+    >
+      <Spinner size={14} />
+      <Text size="xs" tone="subdued" role="status" aria-live="polite">
+        {AI_SEARCH_PROGRESS_VERBS[verbIndex]} component candidates with AI…
+      </Text>
+    </InlineStack>
+  );
+}
 
 function DebouncedComponentSearchInput({
   initialValue,
   onCommit,
+  onLocalChange,
 }: {
   initialValue: string;
   onCommit: (value: string) => void;
+  onLocalChange: (value: string) => void;
 }) {
   const [localValue, setLocalValue] = useDebouncedSearchValue(
     onCommit,
@@ -36,7 +70,10 @@ function DebouncedComponentSearchInput({
       placeholder="Search components..."
       className="w-full pl-8 text-sm h-8 focus-visible:ring-gray-400/50"
       value={localValue}
-      onChange={(event) => setLocalValue(event.target.value)}
+      onChange={(event) => {
+        setLocalValue(event.target.value);
+        onLocalChange(event.target.value);
+      }}
       aria-label="Search components"
       autoComplete="off"
     />
@@ -46,6 +83,7 @@ function DebouncedComponentSearchInput({
 export function ComponentSearchV2Content() {
   const { track } = useAnalytics();
   const [query, setQuery] = useState("");
+  const [localQuery, setLocalQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
   const [, startSearchTransition] = useTransition();
   const {
@@ -65,10 +103,12 @@ export function ComponentSearchV2Content() {
   };
 
   const handleSuggestedSearch = (value: string) => {
+    setLocalQuery(value);
     startSearchTransition(() => setQuery(value));
   };
 
   const trimmedDeferredQuery = deferredQuery.trim();
+  const isSearching = localQuery.trim() !== trimmedDeferredQuery;
 
   useEffect(() => {
     if (isLoading || trimmedDeferredQuery.length === 0) return;
@@ -121,6 +161,7 @@ export function ComponentSearchV2Content() {
             <DebouncedComponentSearchInput
               initialValue={query}
               onCommit={handleQueryCommit}
+              onLocalChange={setLocalQuery}
             />
           </div>
           <Button
@@ -141,6 +182,7 @@ export function ComponentSearchV2Content() {
             {isReranking ? <Spinner size={14} /> : <Icon name="Sparkles" />}
           </Button>
         </InlineStack>
+        {isReranking && <AiRerankProgress />}
       </BlockStack>
       <ComponentSearchResults
         query={deferredQuery}
@@ -148,6 +190,7 @@ export function ComponentSearchV2Content() {
         browseFolders={browseFolders}
         searchSuggestions={searchSuggestions}
         isLoading={isLoading}
+        isSearching={isSearching}
         isRerankActive={isRerankActive}
         onClearRerank={clearRerank}
         onSuggestedSearch={handleSuggestedSearch}
