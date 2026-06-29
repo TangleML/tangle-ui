@@ -39,6 +39,7 @@ interface ComponentMarkupProps {
   matchedFields?: MatchField[];
   rerankScore?: number;
   rerankReason?: string;
+  showOutdatedBadge?: boolean;
   source?: ComponentSearchSource;
 }
 
@@ -100,11 +101,14 @@ const ComponentMarkup = ({
   matchedFields,
   rerankScore,
   rerankReason,
+  showOutdatedBadge = true,
   source,
 }: ComponentMarkupProps) => {
   const isRemoteComponentLibrarySearchEnabled = useFlagValue(
     "remote-component-library-search",
   );
+  const shouldShowOutdatedBadge =
+    isRemoteComponentLibrarySearchEnabled && showOutdatedBadge;
 
   const popoverRef = useRef<ComponentHoverPopoverHandle>(null);
 
@@ -247,7 +251,7 @@ const ComponentMarkup = ({
               wrap="nowrap"
               blockAlign="start"
             >
-              {isRemoteComponentLibrarySearchEnabled ? (
+              {shouldShowOutdatedBadge ? (
                 <ComponentIcon
                   name={iconName}
                   className={iconClass}
