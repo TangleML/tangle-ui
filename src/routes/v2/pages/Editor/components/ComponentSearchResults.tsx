@@ -115,6 +115,7 @@ export function ComponentSearchResults({
                 matchedFields={result.matchedFields}
                 rerankScore={result.rerankScore}
                 rerankReason={result.rerankReason}
+                showOutdatedBadge={false}
               />
             ))}
           </BlockStack>
