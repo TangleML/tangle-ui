@@ -6,9 +6,10 @@ import {
 } from "@/components/shared/ReactFlow/FlowSidebar/components/ComponentItem";
 import FolderItem from "@/components/shared/ReactFlow/FlowSidebar/components/FolderItem";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
-import { Spinner } from "@/components/ui/spinner";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Paragraph, Text } from "@/components/ui/typography";
 import type { ComponentSearchSuggestion } from "@/services/componentSearchSuggestions";
 import type { UIComponentFolder } from "@/types/componentLibrary";
@@ -21,9 +22,53 @@ interface ComponentSearchResultsProps {
   browseFolders: UIComponentFolder[];
   searchSuggestions: ComponentSearchSuggestion[];
   isLoading: boolean;
+  isSearching: boolean;
   isRerankActive: boolean;
   onClearRerank: () => void;
   onSuggestedSearch: (query: string) => void;
+}
+
+function ComponentSearchResultsSkeleton() {
+  return (
+    <BlockStack
+      gap="2"
+      className="px-2 min-h-0 flex-1"
+      data-testid="search-results-skeleton"
+      aria-label="Loading search results"
+    >
+      <Text tone="subdued" data-testid="search-results-header">
+        Search Results
+      </Text>
+      <Separator />
+      <BlockStack align="stretch">
+        {Array.from({ length: 5 }, (_, index) => (
+          <InlineStack
+            key={index}
+            gap="2"
+            blockAlign="start"
+            wrap="nowrap"
+            className="px-3 py-2"
+          >
+            <Icon name="Package" size="sm" className="shrink-0 text-gray-300" />
+            <BlockStack gap="1">
+              <Skeleton
+                size="full"
+                shape="circle"
+                color="dark"
+                data-testid="component-result-title-skeleton"
+              />
+              <Skeleton
+                size="full"
+                shape="circle"
+                className="h-3.5 bg-gray-100"
+                data-testid="component-result-why-skeleton"
+              />
+            </BlockStack>
+          </InlineStack>
+        ))}
+      </BlockStack>
+    </BlockStack>
+  );
 }
 
 export function ComponentSearchResults({
@@ -32,19 +77,13 @@ export function ComponentSearchResults({
   browseFolders,
   searchSuggestions,
   isLoading,
+  isSearching,
   isRerankActive,
   onClearRerank,
   onSuggestedSearch,
 }: ComponentSearchResultsProps) {
-  if (isLoading) {
-    return (
-      <BlockStack gap="2" className="px-2">
-        <InlineStack align="start" gap="1">
-          <Text tone="subdued">Search Results </Text>
-          <Spinner />
-        </InlineStack>
-      </BlockStack>
-    );
+  if (isLoading || isSearching) {
+    return <ComponentSearchResultsSkeleton />;
   }
 
   const isEmptyQuery = query.trim().length === 0;
@@ -102,7 +141,7 @@ export function ComponentSearchResults({
         )}
       </InlineStack>
       <Separator />
-      <div className="min-h-0 w-full flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin">
+      <BlockStack className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin">
         {results.length > 0 ? (
           <BlockStack
             as="ul"
@@ -137,7 +176,7 @@ export function ComponentSearchResults({
             />
           </BlockStack>
         )}
-      </div>
+      </BlockStack>
     </BlockStack>
   );
 }

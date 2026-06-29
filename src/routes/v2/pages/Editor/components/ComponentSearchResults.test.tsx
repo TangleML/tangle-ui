@@ -42,12 +42,37 @@ const baseProps = {
     { label: "dataset", kind: "type" },
   ] satisfies ComponentSearchSuggestion[],
   isLoading: false,
+  isSearching: false,
   isRerankActive: false,
   onClearRerank: vi.fn(),
   onSuggestedSearch: vi.fn(),
 };
 
 describe("ComponentSearchResults", () => {
+  it("shows a skeleton while search is pending", () => {
+    render(
+      <ComponentSearchResults
+        {...baseProps}
+        query="csv"
+        results={[]}
+        isSearching
+      />,
+    );
+
+    expect(screen.getByTestId("search-results-skeleton")).toHaveAttribute(
+      "aria-label",
+      "Loading search results",
+    );
+    expect(
+      screen.getAllByTestId("component-result-title-skeleton"),
+    ).toHaveLength(5);
+    expect(screen.getAllByTestId("component-result-why-skeleton")).toHaveLength(
+      5,
+    );
+    expect(screen.queryByText("Why:")).not.toBeInTheDocument();
+    expect(screen.queryByText("Searching")).not.toBeInTheDocument();
+  });
+
   it("shows actionable no-results guidance with clickable suggestions", () => {
     const onSuggestedSearch = vi.fn();
     render(

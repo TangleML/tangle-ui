@@ -27,8 +27,17 @@ vi.mock("@/routes/v2/pages/Editor/hooks/useComponentSearchV2State", () => ({
 }));
 
 vi.mock("./ComponentSearchResults", () => ({
-  ComponentSearchResults: ({ query }: { query: string }) => (
-    <div data-testid="results-query">{query}</div>
+  ComponentSearchResults: ({
+    query,
+    isSearching,
+  }: {
+    query: string;
+    isSearching: boolean;
+  }) => (
+    <div>
+      <div data-testid="results-query">{query}</div>
+      <div data-testid="results-searching">{String(isSearching)}</div>
+    </div>
   ),
 }));
 
@@ -62,6 +71,7 @@ describe("ComponentSearchV2Content", () => {
 
     expect(input).toHaveValue("csv");
     expect(screen.getByTestId("results-query")).toHaveTextContent("");
+    expect(screen.getByTestId("results-searching")).toHaveTextContent("true");
 
     await act(async () => {
       vi.advanceTimersByTime(499);
@@ -74,6 +84,35 @@ describe("ComponentSearchV2Content", () => {
     });
 
     expect(screen.getByTestId("results-query")).toHaveTextContent("csv");
+    expect(screen.getByTestId("results-searching")).toHaveTextContent("false");
+  });
+
+  it("shows active AI rerank progress below the search box", async () => {
+    mocks.useComponentSearchV2State.mockImplementation(() => ({
+      results: [],
+      browseFolders: [],
+      searchSuggestions: [],
+      isLoading: false,
+      canRerank: true,
+      isReranking: true,
+      isRerankActive: false,
+      rerank: vi.fn(),
+      clearRerank: vi.fn(),
+    }));
+
+    render(<ComponentSearchV2Content />);
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Scanning component candidates with AI…",
+    );
+
+    await act(async () => {
+      vi.advanceTimersByTime(1200);
+    });
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Comparing component candidates with AI…",
+    );
   });
 
   it("tracks editor component search completions without query text", async () => {

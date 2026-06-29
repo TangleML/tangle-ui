@@ -17,7 +17,10 @@ import {
   formatComponentSearchMatchSummary,
   formatMatchedFieldsExplanation,
 } from "@/services/componentSearchExplanations";
-import type { MatchField } from "@/services/componentSearchIndex";
+import type {
+  ComponentSearchSource,
+  MatchField,
+} from "@/services/componentSearchIndex";
 import { type ComponentReference, type TaskSpec } from "@/utils/componentSpec";
 import { getComponentName } from "@/utils/getComponentName";
 import { isSubgraph } from "@/utils/subgraphUtils";
@@ -36,6 +39,7 @@ interface ComponentMarkupProps {
   matchedFields?: MatchField[];
   rerankScore?: number;
   rerankReason?: string;
+  source?: ComponentSearchSource;
 }
 
 type ComponentIconProps = {
@@ -96,6 +100,7 @@ const ComponentMarkup = ({
   matchedFields,
   rerankScore,
   rerankReason,
+  source,
 }: ComponentMarkupProps) => {
   const isRemoteComponentLibrarySearchEnabled = useFlagValue(
     "remote-component-library-search",
@@ -107,7 +112,14 @@ const ComponentMarkup = ({
   const carousel = useRef(0);
   const { notifyNode, getNodeIdsByDigest, fitNodeIntoView } = useNodesOverlay();
 
-  const { spec, digest, url, name, owned } = component;
+  const {
+    spec,
+    digest,
+    url,
+    name,
+    owned,
+    published_by: publishedBy,
+  } = component;
 
   const displayName = useMemo(
     () => name ?? getComponentName({ spec, url }),
@@ -188,9 +200,13 @@ const ComponentMarkup = ({
     "shrink-0",
     isSubgraphSpec
       ? "text-violet-500"
-      : owned
-        ? "text-orange-500"
-        : "text-blue-500",
+      : source?.kind === "published"
+        ? "text-emerald-500"
+        : source?.kind === "registered"
+          ? "text-teal-500"
+          : source?.kind === "user" || owned
+            ? "text-orange-500"
+            : "text-blue-500",
   );
 
   return (
@@ -251,6 +267,16 @@ const ComponentMarkup = ({
                 >
                   {displayName}
                 </Text>
+                {publishedBy && (
+                  <Text
+                    size="xs"
+                    tone="subdued"
+                    className="min-w-0 truncate"
+                    title={`Published by ${publishedBy}`}
+                  >
+                    Published by {publishedBy}
+                  </Text>
+                )}
                 {matchExplanation && (
                   <Text
                     size="xs"
