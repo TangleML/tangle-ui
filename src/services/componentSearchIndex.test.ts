@@ -1012,6 +1012,41 @@ describe("lexicalSearch", () => {
     expect(results[0]?.matchedFields).toContain("implementation");
   });
 
+  it("keeps implementation-only matches below intent-field matches", () => {
+    const index = buildSearchIndex([
+      makeSourced({
+        digest: "name-match",
+        spec: {
+          name: "word_counter",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+      makeSourced({
+        digest: "command-comment-match",
+        spec: {
+          name: "binarize_column",
+          inputs: [],
+          outputs: [],
+          implementation: {
+            container: {
+              image: "python:3.11",
+              args: ["# exec() takes no keyword arguments"],
+            },
+          },
+        },
+      }),
+    ]);
+
+    const results = lexicalSearch(index, "word");
+    expect(results.map((result) => result.digest)).toEqual([
+      "name-match",
+      "command-comment-match",
+    ]);
+    expect(results[1]?.matchedFields).toContain("implementation");
+  });
+
   it("preserves the source on each returned match", () => {
     const index = buildSearchIndex(fixtures);
     const results = lexicalSearch(index, "my_custom_train");

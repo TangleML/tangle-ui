@@ -22,6 +22,7 @@ import {
   buildResults,
   buildSourcedHydratedReferences,
   collectAllSourcedReferences,
+  LEXICAL_RESULT_LIMIT,
   PUBLISHED_SOURCE,
   registeredLibrariesFingerprint,
   rerankedMatches,
@@ -285,6 +286,22 @@ describe("buildLexicalMatches / buildAiCandidateMatches", () => {
 
   it("returns no AI candidates for an empty query", () => {
     expect(buildAiCandidateMatches(index, "")).toEqual([]);
+  });
+
+  it("caps displayed lexical results below the AI candidate pool", () => {
+    const broadIndex = buildSearchIndex(
+      Array.from({ length: 20 }, (_, i) => ({
+        reference: ref(`train-${i}`, `train_${i}`),
+        source: source("standard"),
+      })),
+    );
+
+    expect(buildLexicalMatches(broadIndex, "train")).toHaveLength(
+      LEXICAL_RESULT_LIMIT,
+    );
+    expect(buildAiCandidateMatches(broadIndex, "train").length).toBeGreaterThan(
+      LEXICAL_RESULT_LIMIT,
+    );
   });
 
   it("returns no AI candidates when literal search finds nothing", () => {

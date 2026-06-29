@@ -29,8 +29,8 @@ import type {
   HydratedComponentReference,
 } from "@/utils/componentSpec";
 
-/** How many lexical hits to display before the user asks for AI judgment. */
-export const LEXICAL_RESULT_LIMIT = 50;
+/** How many hits to show by default before the user asks for AI judgment. */
+export const LEXICAL_RESULT_LIMIT = 10;
 const AI_CANDIDATE_LIMIT = 80;
 const AI_LEXICAL_CANDIDATE_LIMIT = 60;
 const AI_SOURCE_DIVERSITY_CANDIDATES_PER_SOURCE = 8;
