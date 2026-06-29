@@ -30,6 +30,7 @@ describe("AiModelQuickSelect", () => {
   });
 
   it("does not render when both AI features are disabled", () => {
+    enableFlags({ "ai-assistant": false, "component-search-v2": false });
     window.localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({

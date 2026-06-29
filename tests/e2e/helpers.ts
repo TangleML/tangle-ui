@@ -5,6 +5,19 @@ import { expect, type Locator, type Page } from "@playwright/test";
  * Waits for the React Flow canvas to be fully loaded (past Suspense loading state).
  */
 export async function createNewPipeline(page: Page): Promise<void> {
+  // These shared E2E helpers cover the legacy editor until v2 has matching coverage.
+  await page.addInitScript(() => {
+    const flags = JSON.parse(
+      window.localStorage.getItem("betaFlags") ?? "{}",
+    ) as Record<string, boolean>;
+
+    window.localStorage.setItem(
+      "betaFlags",
+      JSON.stringify({ ...flags, v2_editor: false }),
+    );
+    window.localStorage.setItem("seen-editor-v2-welcome", JSON.stringify(true));
+  });
+
   await page.goto("/");
   await page.getByTestId("new-pipeline-button").click();
   await waitForFlowCanvas(page);

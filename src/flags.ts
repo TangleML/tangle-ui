@@ -67,7 +67,7 @@ export const ExistingFlags: ConfigFlags = {
     name: "Component Search",
     description:
       "Show the experimental component search that searches across standard, published, registered, and user component sources, with optional AI rerank.",
-    default: false,
+    default: true,
     category: "beta",
   },
 

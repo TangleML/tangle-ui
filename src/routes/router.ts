@@ -309,12 +309,25 @@ const editorV2Route = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.EDITOR_V2,
   component: EditorV2,
+  beforeLoad: () => {
+    if (!isFlagEnabled("v2_editor")) {
+      throw redirect({ to: APP_ROUTES.DASHBOARD_PIPELINES });
+    }
+  },
 });
 
 const editorV2PipelineRoute = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.EDITOR_V2_PIPELINE,
   component: EditorV2,
+  beforeLoad: ({ params }) => {
+    if (!isFlagEnabled("v2_editor")) {
+      throw redirect({
+        to: APP_ROUTES.PIPELINE_EDITOR,
+        params: { name: params.pipelineName },
+      });
+    }
+  },
 });
 
 const runV2Route = createRoute({

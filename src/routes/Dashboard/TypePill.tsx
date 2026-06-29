@@ -2,7 +2,8 @@ import { Icon, type IconName } from "@/components/ui/icon";
 import type { FavoriteItem } from "@/hooks/useFavorites";
 import type { RecentlyViewedItem } from "@/hooks/useRecentlyViewed";
 import { cn } from "@/lib/utils";
-import { APP_ROUTES, EDITOR_PATH, RUNS_BASE_PATH } from "@/routes/router";
+import { getDefaultEditorPath } from "@/routes/editorRoutes";
+import { APP_ROUTES, RUNS_BASE_PATH } from "@/routes/router";
 
 type ItemType = "pipeline" | "run" | "component";
 
@@ -50,12 +51,12 @@ export const TypePill = ({
 };
 
 export function getFavoriteUrl(item: FavoriteItem): string {
-  if (item.type === "pipeline") return `${EDITOR_PATH}/${item.id}`;
+  if (item.type === "pipeline") return getDefaultEditorPath(item.id);
   return `${RUNS_BASE_PATH}/${item.id}`;
 }
 
 export function getRecentlyViewedUrl(item: RecentlyViewedItem): string {
-  if (item.type === "pipeline") return `${EDITOR_PATH}/${item.id}`;
+  if (item.type === "pipeline") return getDefaultEditorPath(item.id);
   if (item.type === "run") return `${RUNS_BASE_PATH}/${item.id}`;
   return APP_ROUTES.DASHBOARD_COMPONENTS;
 }

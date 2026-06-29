@@ -1,7 +1,14 @@
 import { useLocation, useNavigate } from "@tanstack/react-router";
+import { useCallback, useRef, useState } from "react";
 
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
+import {
+  EditorV2WelcomeSpotlight,
+  hasSeenEditorV2Welcome,
+  markEditorV2WelcomeSeen,
+} from "@/components/shared/EditorV2WelcomeSpotlight";
 import { Icon } from "@/components/ui/icon";
+import { cn } from "@/lib/utils";
 import { APP_ROUTES, EDITOR_PATH } from "@/routes/router";
 
 import { useFlagValue } from "./Settings/useFlags";
@@ -14,10 +21,23 @@ const detectEditorVersion = (pathname: string): EditorVersion | null => {
   return null;
 };
 
-export const EditorVersionToggle = () => {
+interface EditorVersionToggleProps {
+  showWelcomeSpotlight?: boolean;
+}
+
+export const EditorVersionToggle = ({
+  showWelcomeSpotlight = false,
+}: EditorVersionToggleProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const isEnabled = useFlagValue("v2_editor");
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  const [welcomeSeen, setWelcomeSeen] = useState(hasSeenEditorV2Welcome);
+
+  const dismissWelcome = useCallback(() => {
+    markEditorV2WelcomeSeen();
+    setWelcomeSeen(true);
+  }, []);
 
   if (!isEnabled) return null;
 
@@ -35,14 +55,28 @@ export const EditorVersionToggle = () => {
       : `${EDITOR_PATH}/${encodeURIComponent(pipelineName)}`;
   const tooltip =
     targetVersion === "v2" ? "Switch to new editor" : "Switch to legacy editor";
+  const showWelcome = showWelcomeSpotlight && version === "v2" && !welcomeSeen;
 
   return (
-    <TooltipButton
-      tooltip={tooltip}
-      onClick={() => navigate({ to: targetPath })}
-      aria-label={tooltip}
-    >
-      <Icon name={targetVersion === "v2" ? "Sparkles" : "History"} />
-    </TooltipButton>
+    <>
+      <TooltipButton
+        ref={toggleRef}
+        tooltip={tooltip}
+        className={cn(showWelcome && "relative z-[1001]")}
+        onClick={() => {
+          if (showWelcome) dismissWelcome();
+          navigate({ to: targetPath });
+        }}
+        aria-label={tooltip}
+      >
+        <Icon name={targetVersion === "v2" ? "Zap" : "Snail"} />
+      </TooltipButton>
+      {showWelcome && (
+        <EditorV2WelcomeSpotlight
+          targetRef={toggleRef}
+          onDismiss={dismissWelcome}
+        />
+      )}
+    </>
   );
 };
