@@ -120,6 +120,11 @@ const ComponentMarkup = ({
     owned,
     published_by: publishedBy,
   } = component;
+  const componentIdentifier = publishedBy
+    ? `Published by ${publishedBy}`
+    : digest
+      ? `Digest ${digest}`
+      : undefined;
 
   const displayName = useMemo(
     () => name ?? getComponentName({ spec, url }),
@@ -267,14 +272,14 @@ const ComponentMarkup = ({
                 >
                   {displayName}
                 </Text>
-                {publishedBy && (
+                {componentIdentifier && (
                   <Text
                     size="xs"
                     tone="subdued"
                     className="min-w-0 truncate"
-                    title={`Published by ${publishedBy}`}
+                    title={componentIdentifier}
                   >
-                    Published by {publishedBy}
+                    {componentIdentifier}
                   </Text>
                 )}
                 {matchExplanation && (

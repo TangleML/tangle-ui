@@ -12,13 +12,16 @@ vi.mock(
     ComponentMarkup: ({
       component,
       matchedFields,
+      source,
     }: {
       component: { name?: string };
       matchedFields?: string[];
+      source?: { label: string };
     }) => (
       <li>
         {component.name}
         {matchedFields && <span>matched {matchedFields.join(",")}</span>}
+        {source && <span>source {source.label}</span>}
       </li>
     ),
     IONodeSidebarItem: () => <li>IO node</li>,
@@ -107,6 +110,25 @@ describe("ComponentSearchResults", () => {
     fireEvent.click(suggestion);
 
     expect(onSuggestedSearch).toHaveBeenCalledWith("csv");
+  });
+
+  it("passes source metadata through for result display", () => {
+    const results: ComponentSearchV2Result[] = [
+      {
+        reference: {
+          digest: "digest",
+          name: "Load CSV",
+          published_by: "pipeline-components@shopify.com",
+        },
+        source: { kind: "published", id: "published", label: "Published" },
+      },
+    ];
+
+    render(
+      <ComponentSearchResults {...baseProps} query="csv" results={results} />,
+    );
+
+    expect(screen.getByText("source Published")).toBeInTheDocument();
   });
 
   it("passes matched fields through for result explanations", () => {

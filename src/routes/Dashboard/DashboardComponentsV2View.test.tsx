@@ -35,6 +35,10 @@ const routeMocks = vi.hoisted(() => {
   return {
     standard: makeComponent("standard-digest", "Standard component"),
     registered: makeComponent("registered-digest", "Registered component"),
+    published: {
+      ...makeComponent("published-digest", "Published component"),
+      published_by: "pipeline-components@shopify.com",
+    },
     user: makeComponent("user-digest", "User component"),
     extraStandardComponents: [] as ComponentReference[],
     navigate: vi.fn(),
@@ -81,7 +85,7 @@ vi.mock("@tanstack/react-query", () => ({
     }
 
     if (key === "component-search-v2" && queryKey[1] === "published") {
-      return { data: [], isLoading: false };
+      return { data: [routeMocks.published], isLoading: false };
     }
 
     if (
@@ -108,6 +112,7 @@ vi.mock("@tanstack/react-query", () => ({
         data: [
           routeMocks.standard,
           routeMocks.registered,
+          routeMocks.published,
           routeMocks.user,
           ...routeMocks.extraStandardComponents,
         ],
@@ -536,13 +541,13 @@ describe("DashboardComponentsV2View", () => {
 
     expect(
       screen.getByText(
-        "Showing 100 of 108 components in selected sources. Start typing to search.",
+        "Showing 100 of 109 components in selected sources. Start typing to search.",
       ),
     ).toBeInTheDocument();
     expect(screen.getByText("Browse component 099")).toBeInTheDocument();
     expect(screen.queryByText("Browse component 100")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Show 8 more" }));
+    fireEvent.click(screen.getByRole("button", { name: "Show 9 more" }));
 
     await waitFor(() => {
       expect(screen.getByText("Browse component 104")).toBeInTheDocument();
@@ -633,6 +638,34 @@ describe("DashboardComponentsV2View", () => {
     await waitFor(() => {
       expect(screen.queryByText("GitHub library")).not.toBeInTheDocument();
     });
+  });
+
+  it("shows publisher on published component result cards", async () => {
+    render(<DashboardComponentsV2View />);
+
+    fireEvent.change(screen.getByLabelText("Search components"), {
+      target: { value: "published" },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("Published component")).toBeInTheDocument();
+    });
+    expect(
+      screen.getByText("Published by pipeline-components@shopify.com"),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps publisher visible in compact selected-result rows", async () => {
+    routeMocks.search = { component: "published-digest", q: "published" };
+
+    render(<DashboardComponentsV2View />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Published component")).toBeInTheDocument();
+    });
+    expect(
+      screen.getByText("Published by pipeline-components@shopify.com"),
+    ).toBeInTheDocument();
   });
 
   it("explains why lexical component results matched", async () => {
