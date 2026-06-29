@@ -105,12 +105,12 @@ const PipelineEditor = withSuspenseWrapper(
     useEditorEscapeShortcut();
     useDebugPanelWindow();
     useTipOfTheDayWindow();
-    useSeedInitialDockLayoutFromPreset(componentSearchV2Enabled);
 
     const aiEnabled = useFlagValue("ai-assistant");
     useAiChatWindow(aiEnabled);
 
     useComponentSearchV2Window(componentSearchV2Enabled);
+    useSeedInitialDockLayoutFromPreset(componentSearchV2Enabled);
 
     const activeSpec = navigation.activeSpec;
 

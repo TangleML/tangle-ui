@@ -23,10 +23,16 @@ describe("WindowStoreImpl view preset dock layout", () => {
       title: "Runs",
       defaultDockState: "left",
     });
+    store.openWindow(stubContent, {
+      id: "ai-assistant-chat",
+      title: "Sidekick",
+      defaultDockState: "left",
+    });
 
     expect(store.getDockAreaWindowIds("left")).toEqual([
       "component-library",
       "runs-and-submission",
+      "ai-assistant-chat",
     ]);
 
     store.seedInitialDockLayoutFromPreset(DEFAULT_VIEW_PRESET);

@@ -12,6 +12,7 @@ export interface ViewPreset {
   dockAreas?: PresetDockAreas;
 }
 
+const AI_ASSISTANT_WINDOW_ID = "ai-assistant-chat";
 const COMPONENT_SEARCH_WINDOW_ID = "component-search-v2";
 const COMPONENT_LIBRARY_WINDOW_ID = "component-library";
 
@@ -21,6 +22,7 @@ export const DEFAULT_DOCK_AREAS: PresetDockAreas = {
     "runs-and-submission",
     COMPONENT_SEARCH_WINDOW_ID,
     COMPONENT_LIBRARY_WINDOW_ID,
+    AI_ASSISTANT_WINDOW_ID,
     "pipeline-tree",
     "history",
     "debug-panel",
@@ -45,12 +47,14 @@ export function dockSideByWindowId(
 
 export const DEFAULT_VIEW_PRESET: ViewPreset = {
   label: "Default",
-  description: "Components, Runs & Submissions, Recent Runs, Pipeline Details",
+  description:
+    "Components, Runs & Submissions, Sidekick, Recent Runs, Pipeline Details",
   visible: new Set([
     "runs-and-submission",
     "recent-runs",
     "component-search-v2",
     "component-library",
+    AI_ASSISTANT_WINDOW_ID,
     "pipeline-details",
     "tip-of-the-day",
   ]),
@@ -62,11 +66,12 @@ export const VIEW_PRESETS: ViewPreset[] = [
   {
     label: "All",
     description:
-      "All windows visible, including Runs & Submissions and Recent Runs",
+      "All windows visible, including Runs & Submissions, Sidekick, and Recent Runs",
     visible: new Set([
       "runs-and-submission",
       COMPONENT_SEARCH_WINDOW_ID,
       COMPONENT_LIBRARY_WINDOW_ID,
+      AI_ASSISTANT_WINDOW_ID,
       "history",
       "pipeline-tree",
       "pipeline-details",
