@@ -154,6 +154,7 @@ export function ComponentSearchResults({
                 matchedFields={result.matchedFields}
                 rerankScore={result.rerankScore}
                 rerankReason={result.rerankReason}
+                source={result.source}
               />
             ))}
           </BlockStack>

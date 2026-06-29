@@ -372,9 +372,14 @@ const ComponentCard = ({
             </Badge>
           )}
         </InlineStack>
-        {publishedBy && !isDetailOpen && (
-          <Text size="xs" tone="subdued">
-            by {publishedBy}
+        {publishedBy && (
+          <Text
+            size="xs"
+            tone="subdued"
+            className={cn(isDetailOpen ? "pl-6" : undefined)}
+            title={`Published by ${publishedBy}`}
+          >
+            Published by {publishedBy}
           </Text>
         )}
         {matchSummary && (
