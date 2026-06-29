@@ -238,9 +238,11 @@ export function useComponentSearchV2State(
     !isEmbeddingSearchPending &&
     (rerankData?.matches.length ?? 0) > 0;
 
-  const displayedMatches = isRerankActive
-    ? rerankedMatches(rerankData, rerankBaseMatches)
-    : lexicalMatches;
+  const displayedMatches = (
+    isRerankActive
+      ? rerankedMatches(rerankData, rerankBaseMatches)
+      : lexicalMatches
+  ).slice(0, LEXICAL_RESULT_LIMIT);
 
   const buildEmbeddingMatches = async ({
     sourceIndex,
