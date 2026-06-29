@@ -54,6 +54,10 @@ export interface IndexEntry {
   source: ComponentSearchSource;
   /** Normalized searchable text, one per logical field. */
   searchable: Record<MatchField, string>;
+  /** Pre-split searchable text, built once with the index to avoid per-keystroke tokenization. */
+  searchableTokens?: Record<MatchField, string[]>;
+  /** Phrase-normalized searchable text, built once with the index to avoid per-keystroke regex work. */
+  searchablePhrases?: Record<MatchField, string>;
 }
 
 export interface LexicalMatch {
@@ -315,23 +319,25 @@ export function buildSearchIndex(sourced: SourcedReference[]): IndexEntry[] {
     const metadata = extractComponentMetadata(reference);
     if (!metadata) continue;
 
+    const searchable: Record<MatchField, string> = {
+      name: normalizeSearchText(metadata.name),
+      description: normalizeSearchText(metadata.description),
+      io: normalizeSearchText(metadata.ioText),
+      implementation: normalizeSearchText(extractImplementationText(reference)),
+      metadata: normalizeSearchText(metadata.metadataText).slice(
+        0,
+        MAX_ANNOTATION_TOTAL_TEXT_LENGTH,
+      ),
+    };
+
     entries.push({
       reference,
       digest: metadata.digest,
       name: metadata.name,
       source,
-      searchable: {
-        name: normalizeSearchText(metadata.name),
-        description: normalizeSearchText(metadata.description),
-        io: normalizeSearchText(metadata.ioText),
-        implementation: normalizeSearchText(
-          extractImplementationText(reference),
-        ),
-        metadata: normalizeSearchText(metadata.metadataText).slice(
-          0,
-          MAX_ANNOTATION_TOTAL_TEXT_LENGTH,
-        ),
-      },
+      searchable,
+      searchableTokens: buildSearchableTokenCache(searchable),
+      searchablePhrases: buildSearchablePhraseCache(searchable),
     });
   }
 
@@ -517,6 +523,42 @@ function searchableTokens(text: string): string[] {
   return text.split(/[^a-z0-9]+/).filter(isNonEmptyString);
 }
 
+function normalizePhraseSearchText(text: string): string {
+  return text.replace(/[^a-z0-9]+/g, " ");
+}
+
+function buildSearchableTokenCache(
+  searchable: Record<MatchField, string>,
+): Record<MatchField, string[]> {
+  return Object.fromEntries(
+    SEARCH_FIELDS.map((field) => [field, searchableTokens(searchable[field])]),
+  ) as Record<MatchField, string[]>;
+}
+
+function buildSearchablePhraseCache(
+  searchable: Record<MatchField, string>,
+): Record<MatchField, string> {
+  return Object.fromEntries(
+    SEARCH_FIELDS.map((field) => [
+      field,
+      normalizePhraseSearchText(searchable[field]),
+    ]),
+  ) as Record<MatchField, string>;
+}
+
+function fieldTokensFor(entry: IndexEntry, field: MatchField): string[] {
+  return (
+    entry.searchableTokens?.[field] ?? searchableTokens(entry.searchable[field])
+  );
+}
+
+function phraseTextFor(entry: IndexEntry, field: MatchField): string {
+  return (
+    entry.searchablePhrases?.[field] ??
+    normalizePhraseSearchText(entry.searchable[field])
+  );
+}
+
 function maxTypoDistance(field: MatchField, token: string): number {
   // Require length >= 5 before allowing any edits: 4-char tokens are too short
   // for distance-1 fuzziness without false positives on generic IO names
@@ -628,25 +670,13 @@ function scoreEntry(
   const matched = new Set<MatchField>();
   let score = 0;
 
-  // A field's tokenization depends only on the field, not the query token, so
-  // split it once per entry (cached) rather than re-splitting inside the
-  // per-query-token loop — that re-split is hot on every keystroke.
-  const fieldTokenCache = new Map<MatchField, string[]>();
-  const fieldTokensFor = (field: MatchField): string[] => {
-    const cached = fieldTokenCache.get(field);
-    if (cached) return cached;
-    const fieldTokens = searchableTokens(entry.searchable[field]);
-    fieldTokenCache.set(field, fieldTokens);
-    return fieldTokens;
-  };
-
   // Hard exclusion uses a whole-token match (not substring): a zero-score
   // filter removes the entire component, so a short negated token must not
   // knock one out by incidentally appearing inside an unrelated word.
   if (
     negativeTokens.some((token) =>
       NEGATIVE_SEARCH_FIELDS.some((field) =>
-        fieldTokensFor(field).includes(token),
+        fieldTokensFor(entry, field).includes(token),
       ),
     )
   ) {
@@ -669,7 +699,7 @@ function scoreEntry(
         matched.add(field);
 
         const hasPrefixMatch = matchingTokens.some((token) =>
-          fieldTokensFor(field).some((fieldToken) =>
+          fieldTokensFor(entry, field).some((fieldToken) =>
             fieldToken.startsWith(token),
           ),
         );
@@ -684,7 +714,7 @@ function scoreEntry(
       const literalToken = concept[0];
       const fuzzyTokens = hasFuzzyTokenMatch(
         field,
-        fieldTokensFor(field),
+        fieldTokensFor(entry, field),
         literalToken,
       )
         ? [literalToken]
@@ -701,10 +731,7 @@ function scoreEntry(
 
   if (phraseTokenSequences.length > 0) {
     for (const field of SEARCH_FIELDS) {
-      const normalizedField = entry.searchable[field].replace(
-        /[^a-z0-9]+/g,
-        " ",
-      );
+      const normalizedField = phraseTextFor(entry, field);
       if (
         !phraseTokenSequences.some((sequence) =>
           normalizedField.includes(sequence.join(" ")),

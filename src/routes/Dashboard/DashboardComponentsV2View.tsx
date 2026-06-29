@@ -77,10 +77,7 @@ import {
   type RerankedMatch,
 } from "@/services/naturalLanguageComponentSearchService";
 import type { ComponentFolder } from "@/types/componentLibrary";
-import type {
-  ComponentReference,
-  HydratedComponentReference,
-} from "@/utils/componentSpec";
+import type { ComponentReference } from "@/utils/componentSpec";
 import { componentMetadata } from "@/utils/componentTracking";
 import { HOURS, TOP_NAV_HEIGHT } from "@/utils/constants";
 import { getComponentName } from "@/utils/getComponentName";
@@ -200,6 +197,11 @@ export function createRegisteredLibrariesFingerprint(
 
 type ComponentLibraryFolder = Parameters<typeof flattenFolders>[0];
 type UserFolder = { components?: ComponentReference[] };
+
+interface HydratedComponentSearchData {
+  sourcedHydrated: SourcedReference[];
+  index: IndexEntry[];
+}
 
 interface ComponentCollectionMatch {
   id: string;
@@ -714,10 +716,12 @@ function DebouncedComponentSearchInput({
   onCommit,
   disabled,
   initialValue,
+  onLocalChange,
 }: {
   onCommit: (value: string) => void;
   disabled: boolean;
   initialValue: string;
+  onLocalChange?: (value: string) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [localValue, setLocalValue] = useDebouncedSearchValue(
@@ -733,7 +737,10 @@ function DebouncedComponentSearchInput({
       type="search"
       placeholder="e.g. train_test_split, pandas, clean up my data"
       value={localValue}
-      onChange={(event) => setLocalValue(event.target.value)}
+      onChange={(event) => {
+        setLocalValue(event.target.value);
+        onLocalChange?.(event.target.value);
+      }}
       aria-label="Search components"
       disabled={disabled}
       className="flex-1"
@@ -796,8 +803,9 @@ export const DashboardComponentsV2View = () => {
   const disabledSourceKeysFromUrl = readDisabledSourceKeys(dashboardSearch);
   const disabledSourceKeysParam = disabledSourceKeysFromUrl.join(",");
   const [query, setQuery] = useState(queryFromUrl);
+  const [isSearching, setIsSearching] = useState(false);
   const deferredQuery = useDeferredValue(query);
-  const [, startSearchTransition] = useTransition();
+  const [isSearchPending, startSearchTransition] = useTransition();
   const [disabledSourceKeys, setDisabledSourceKeys] = useState<string[]>(
     disabledSourceKeysFromUrl,
   );
@@ -984,17 +992,23 @@ export const DashboardComponentsV2View = () => {
   // Fingerprint of which refs are in play. Changes when the library set
   // changes, so the hydration cache invalidates appropriately.
   const referencesFingerprint = allSourced
-    .map((s) => s.reference.digest ?? s.reference.url ?? "")
+    .map(
+      (s) =>
+        `${s.source.kind}:${s.source.id}:${s.source.label}:${s.reference.digest ?? s.reference.url ?? ""}`,
+    )
     .sort()
     .join("|");
 
   // Use `isLoading` (first fetch only), not `isFetching` (any fetch). A
-  // background refetch shouldn't flip the page back to a skeleton state.
-  const { data: hydratedReferences, isLoading: hydrating } = useQuery({
+  // background refetch shouldn't flip the page back to a skeleton state. Build
+  // the pure search index inside the query as well so expensive hydration/index
+  // derivation is cached by the component fingerprint instead of repeated on
+  // every search render.
+  const { data: searchData, isLoading: hydrating } = useQuery({
     queryKey: ["component-search-v2", "hydrate-library", referencesFingerprint],
     enabled: allSourced.length > 0,
     staleTime: HOURS,
-    queryFn: async () => {
+    queryFn: async (): Promise<HydratedComponentSearchData> => {
       const results = await Promise.all(
         allSourced.map((sourced) =>
           // Reuse the same cache key as useHydrateComponentReference so
@@ -1009,30 +1023,29 @@ export const DashboardComponentsV2View = () => {
               staleTime: HOURS,
               queryFn: () => hydrateComponentReference(sourced.reference),
             })
+            .then((reference) => ({ reference, source: sourced.source }))
             .catch(() => null),
         ),
       );
-      return results.filter((r): r is HydratedComponentReference => r !== null);
+
+      const sourcedHydrated: SourcedReference[] = [];
+      for (const item of results) {
+        if (!item?.reference) continue;
+        sourcedHydrated.push({
+          reference: item.reference,
+          source: item.source,
+        });
+      }
+
+      return {
+        sourcedHydrated,
+        index: buildSearchIndex(sourcedHydrated),
+      };
     },
   });
 
-  // Pair hydrated refs back with their source by digest. Hydration preserves
-  // digests, so this is a straightforward join.
-  const sourceByDigest = new Map<string, ComponentSearchSource>();
-  for (const sourced of allSourced) {
-    if (sourced.reference.digest) {
-      sourceByDigest.set(sourced.reference.digest, sourced.source);
-    }
-  }
-  const sourcedHydrated: SourcedReference[] = [];
-  for (const reference of hydratedReferences ?? []) {
-    const source = sourceByDigest.get(reference.digest);
-    if (!source) continue;
-    sourcedHydrated.push({ reference, source });
-  }
-
-  // The search index is a pure derivation. React Compiler will memoize this.
-  const index: IndexEntry[] = buildSearchIndex(sourcedHydrated);
+  const sourcedHydrated = searchData?.sourcedHydrated ?? [];
+  const index = searchData?.index ?? [];
   const sourceFilterOptions = createSourceFilterOptions(index);
   const filteredIndex = filterIndexByDisabledSourceKeys(
     index,
@@ -1040,18 +1053,22 @@ export const DashboardComponentsV2View = () => {
   );
   const total = filteredIndex.length;
   const totalAcrossSources = index.length;
+  const isSearchUiPending = isSearching || isSearchPending;
+  const activeQuery = isSearchUiPending ? "" : deferredQuery;
 
   // Alphabetical order for the browse-all view. Predictable scrolling beats
-  // "whatever order the library happened to load in."
-  const sortedIndex = [...filteredIndex].sort((a, b) =>
-    a.name.localeCompare(b.name),
-  );
+  // "whatever order the library happened to load in." Skip it while search is
+  // pending because the skeleton is showing and sorting the full index can steal
+  // the keystroke that should reveal the skeleton.
+  const sortedIndex = isSearchUiPending
+    ? []
+    : [...filteredIndex].sort((a, b) => a.name.localeCompare(b.name));
 
   useEffect(() => {
     setBrowseResultLimit(BROWSE_RESULT_INITIAL_LIMIT);
   }, [deferredQuery, disabledSourceKeysParam, total]);
 
-  const trimmedQuery = deferredQuery.trim();
+  const trimmedQuery = activeQuery.trim();
 
   // One lexical pass at the wider AI-candidate limit; the display list is the
   // top slice of that same scored result, so we never score and sort the index
@@ -1060,7 +1077,7 @@ export const DashboardComponentsV2View = () => {
   const broadLexicalMatches: LexicalMatch[] =
     trimmedQuery.length === 0
       ? []
-      : lexicalSearch(filteredIndex, deferredQuery, {
+      : lexicalSearch(filteredIndex, activeQuery, {
           limit: AI_CANDIDATE_LIMIT,
         });
 
@@ -1070,12 +1087,8 @@ export const DashboardComponentsV2View = () => {
   );
   const collectionMatches = buildComponentCollectionMatches(
     filteredIndex,
-    deferredQuery,
+    activeQuery,
   );
-  const searchSuggestions = buildComponentSearchSuggestions(filteredIndex, {
-    query: trimmedQuery,
-  });
-
   const aiCandidateMatches: LexicalMatch[] = (() => {
     if (trimmedQuery.length === 0) return [];
     return broadLexicalMatches;
@@ -1110,6 +1123,7 @@ export const DashboardComponentsV2View = () => {
   const handleQueryCommit = (value: string) => {
     startSearchTransition(() => {
       setQuery(value);
+      setIsSearching(false);
       if (rerankedFor !== null) {
         clearRerank();
       }
@@ -1119,10 +1133,15 @@ export const DashboardComponentsV2View = () => {
   const handleSuggestedSearch = (value: string) => {
     startSearchTransition(() => {
       setQuery(value);
+      setIsSearching(false);
       if (rerankedFor !== null) {
         clearRerank();
       }
     });
+  };
+
+  const handleLocalQueryChange = (value: string) => {
+    setIsSearching(value.trim() !== query.trim());
   };
 
   const buildEmbeddingMatches = async (
@@ -1268,6 +1287,15 @@ export const DashboardComponentsV2View = () => {
         rerankScore: undefined,
       }));
 
+  const searchSuggestions =
+    lexicalMatches.length === 0 &&
+    collectionMatches.length === 0 &&
+    !rerankActive
+      ? buildComponentSearchSuggestions(filteredIndex, {
+          query: trimmedQuery,
+        })
+      : [];
+
   const trackedSearchResultCount =
     displayedResults.length + collectionMatches.length;
 
@@ -1387,7 +1415,7 @@ export const DashboardComponentsV2View = () => {
   // Render helpers — keeps the JSX below tidy. These read the closed-over
   // state from the surrounding component; React Compiler memoises them.
   const renderResults = () => {
-    if (isLoadingLibrary) {
+    if (isLoadingLibrary || isSearchUiPending) {
       return (
         <BlockStack gap="2">
           <Skeleton className="h-20 w-full" />
@@ -1572,6 +1600,7 @@ export const DashboardComponentsV2View = () => {
               onCommit={handleQueryCommit}
               disabled={isLoadingLibrary || noLibraryData}
               initialValue={query}
+              onLocalChange={handleLocalQueryChange}
             />
             <Button
               variant="secondary"

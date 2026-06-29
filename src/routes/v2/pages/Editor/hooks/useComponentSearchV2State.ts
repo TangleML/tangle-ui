@@ -27,7 +27,6 @@ import {
   buildRerankMatchByDigest,
   buildResultFolders,
   buildResults,
-  buildSourcedHydratedReferences,
   collectAllSourcedReferences,
   type ComponentSearchV2State,
   LEXICAL_RESULT_LIMIT,
@@ -49,10 +48,7 @@ import {
 } from "@/services/componentService";
 import { componentReferenceToCandidate } from "@/services/naturalLanguageComponentSearchService";
 import type { ComponentFolder } from "@/types/componentLibrary";
-import type {
-  ComponentReference,
-  HydratedComponentReference,
-} from "@/utils/componentSpec";
+import type { ComponentReference } from "@/utils/componentSpec";
 import { HOURS } from "@/utils/constants";
 
 function mergeUniqueMatches(
@@ -74,6 +70,7 @@ function mergeUniqueMatches(
 
 export function useComponentSearchV2State(
   query: string,
+  { pauseSearch = false }: { pauseSearch?: boolean } = {},
 ): ComponentSearchV2State {
   const queryClient = useQueryClient();
   const { backendUrl, configured, available } = useBackend();
@@ -160,15 +157,18 @@ export function useComponentSearchV2State(
   });
 
   const referencesFingerprint = sourcedReferences
-    .map((item) => item.reference.digest ?? item.reference.url ?? "")
+    .map(
+      (item) =>
+        `${item.source.kind}:${item.source.id}:${item.source.label}:${item.reference.digest ?? item.reference.url ?? ""}`,
+    )
     .sort()
     .join("|");
 
-  const { data: hydratedReferences = [], isLoading: isHydrating } = useQuery({
-    queryKey: ["component-search-v2", "hydrate-library", referencesFingerprint],
+  const { data: index = [], isLoading: isHydrating } = useQuery({
+    queryKey: ["component-search-v2", "search-index", referencesFingerprint],
     enabled: sourcedReferences.length > 0,
     staleTime: HOURS,
-    queryFn: async (): Promise<HydratedComponentReference[]> => {
+    queryFn: async (): Promise<IndexEntry[]> => {
       const results = await Promise.all(
         sourcedReferences.map((item) =>
           queryClient
@@ -181,23 +181,23 @@ export function useComponentSearchV2State(
               staleTime: HOURS,
               queryFn: () => hydrateComponentReference(item.reference),
             })
+            .then((reference) => ({ reference, source: item.source }))
             .catch(() => null),
         ),
       );
 
-      return results.filter(
-        (reference): reference is HydratedComponentReference =>
-          reference !== null,
-      );
+      const hydratedSourced: SourcedReference[] = [];
+      for (const item of results) {
+        if (!item?.reference) continue;
+        hydratedSourced.push({
+          reference: item.reference,
+          source: item.source,
+        });
+      }
+
+      return buildSearchIndex(hydratedSourced);
     },
   });
-
-  const index = buildSearchIndex(
-    buildSourcedHydratedReferences({
-      sourcedReferences,
-      hydratedReferences,
-    }),
-  );
 
   const [disabledSourceKeys, setDisabledSourceKeys] = useState<string[]>([]);
   const sourceFilterOptions = createSourceFilterOptions(index);
@@ -208,11 +208,10 @@ export function useComponentSearchV2State(
 
   const canUseEmbeddingSearch = aiConfig.apiBase.trim().length > 0;
   const trimmedQuery = query.trim();
-  const lexicalMatches = buildLexicalMatches(filteredIndex, trimmedQuery);
-  const aiCandidateMatches = buildAiCandidateMatches(
-    filteredIndex,
-    trimmedQuery,
-  );
+  const searchableQuery = pauseSearch ? "" : trimmedQuery;
+  const lexicalMatches = pauseSearch
+    ? []
+    : buildLexicalMatches(filteredIndex, searchableQuery);
   const {
     mutate,
     reset: resetRerank,
@@ -246,7 +245,7 @@ export function useComponentSearchV2State(
   }, []);
 
   const isRerankActive =
-    rerankedFor === trimmedQuery &&
+    rerankedFor === searchableQuery &&
     rerankBaseMatches.length > 0 &&
     !isReranking &&
     !isEmbeddingSearchPending &&
@@ -273,7 +272,7 @@ export function useComponentSearchV2State(
     try {
       return await rankComponentMatchesByEmbeddings(
         sourceIndex,
-        trimmedQuery,
+        searchableQuery,
         {
           apiBase: aiConfig.apiBase,
           apiKey: aiConfig.apiKey,
@@ -303,7 +302,7 @@ export function useComponentSearchV2State(
       limit: number;
     },
   ) => {
-    if (!trimmedQuery || !isConfigured) return;
+    if (!searchableQuery || !isConfigured) return;
 
     const canUseEmbeddings = useEmbeddings && canUseEmbeddingSearch;
     if (matches.length === 0 && !canUseEmbeddings) return;
@@ -337,11 +336,15 @@ export function useComponentSearchV2State(
 
     resetRerank();
     setRerankBaseMatches(rerankMatches);
-    setRerankedFor(trimmedQuery);
-    mutate({ query: trimmedQuery, candidates, scoreAllCandidates });
+    setRerankedFor(searchableQuery);
+    mutate({ query: searchableQuery, candidates, scoreAllCandidates });
   };
 
   const rerank = () => {
+    const aiCandidateMatches = buildAiCandidateMatches(
+      filteredIndex,
+      searchableQuery,
+    );
     void startRerank(aiCandidateMatches, {
       scoreAllCandidates: true,
       useEmbeddings: true,
@@ -371,16 +374,21 @@ export function useComponentSearchV2State(
 
   return {
     results,
-    browseFolders: buildResultFolders({
-      results,
-      standardLibrary: disabledSourceKeys.includes("standard")
-        ? undefined
-        : standardLibrary,
-    }),
-    searchSuggestions: buildComponentSearchSuggestions(filteredIndex, {
-      includeSources: false,
-      query: trimmedQuery,
-    }),
+    browseFolders: pauseSearch
+      ? []
+      : buildResultFolders({
+          results,
+          standardLibrary: disabledSourceKeys.includes("standard")
+            ? undefined
+            : standardLibrary,
+        }),
+    searchSuggestions:
+      !pauseSearch && results.length === 0
+        ? buildComponentSearchSuggestions(filteredIndex, {
+            includeSources: false,
+            query: searchableQuery,
+          })
+        : [],
     sourceFilterOptions,
     disabledSourceKeys,
     isLoading:
@@ -391,8 +399,9 @@ export function useComponentSearchV2State(
       isLoadingRegistered ||
       isHydrating,
     canRerank:
-      trimmedQuery.length > 0 &&
-      (aiCandidateMatches.length > 0 || canUseEmbeddingSearch) &&
+      !pauseSearch &&
+      searchableQuery.length > 0 &&
+      (lexicalMatches.length > 0 || canUseEmbeddingSearch) &&
       isConfigured,
     isReranking: isReranking || isEmbeddingSearchPending,
     isRerankActive,
