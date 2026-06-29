@@ -3,9 +3,19 @@ export interface ComponentRefData {
   yamlText: string;
 }
 
-export interface ChatMessage {
+interface BaseChatMessage {
   id: string;
-  role: "user" | "assistant";
   content: string;
   componentReferences?: Record<string, ComponentRefData>;
 }
+
+interface UserChatMessage extends BaseChatMessage {
+  role: "user";
+}
+
+interface AssistantChatMessage extends BaseChatMessage {
+  role: "assistant";
+  prompt: string;
+}
+
+export type ChatMessage = UserChatMessage | AssistantChatMessage;
