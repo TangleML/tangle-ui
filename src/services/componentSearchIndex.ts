@@ -477,16 +477,20 @@ const FIELD_WEIGHTS: Record<MatchField, number> = {
   name: 5,
   description: 2,
   io: 2,
-  implementation: 1,
-  metadata: 1,
+  // Keep implementation/metadata searchable for recall, but make matches there
+  // much weaker than user-facing component intent fields. A common word in a
+  // command comment should not look as relevant as the same word in a name,
+  // description, or input/output.
+  implementation: 0.25,
+  metadata: 0.5,
 };
 
 const FIELD_PHRASE_BONUS: Record<MatchField, number> = {
   name: 10,
   description: 4,
   io: 4,
-  implementation: 2,
-  metadata: 2,
+  implementation: 0.5,
+  metadata: 1,
 };
 
 const PREFIX_MATCH_BONUS_MULTIPLIER = 0.5;
