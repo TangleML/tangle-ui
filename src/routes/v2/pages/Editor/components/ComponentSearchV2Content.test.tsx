@@ -27,8 +27,17 @@ vi.mock("@/routes/v2/pages/Editor/hooks/useComponentSearchV2State", () => ({
 }));
 
 vi.mock("./ComponentSearchResults", () => ({
-  ComponentSearchResults: ({ query }: { query: string }) => (
-    <div data-testid="results-query">{query}</div>
+  ComponentSearchResults: ({
+    query,
+    isSearching,
+  }: {
+    query: string;
+    isSearching: boolean;
+  }) => (
+    <div>
+      <div data-testid="results-query">{query}</div>
+      <div data-testid="results-searching">{String(isSearching)}</div>
+    </div>
   ),
 }));
 
@@ -62,6 +71,7 @@ describe("ComponentSearchV2Content", () => {
 
     expect(input).toHaveValue("csv");
     expect(screen.getByTestId("results-query")).toHaveTextContent("");
+    expect(screen.getByTestId("results-searching")).toHaveTextContent("true");
 
     await act(async () => {
       vi.advanceTimersByTime(499);
@@ -74,6 +84,7 @@ describe("ComponentSearchV2Content", () => {
     });
 
     expect(screen.getByTestId("results-query")).toHaveTextContent("csv");
+    expect(screen.getByTestId("results-searching")).toHaveTextContent("false");
   });
 
   it("tracks editor component search completions without query text", async () => {

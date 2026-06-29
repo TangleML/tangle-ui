@@ -42,12 +42,27 @@ const baseProps = {
     { label: "dataset", kind: "type" },
   ] satisfies ComponentSearchSuggestion[],
   isLoading: false,
+  isSearching: false,
   isRerankActive: false,
   onClearRerank: vi.fn(),
   onSuggestedSearch: vi.fn(),
 };
 
 describe("ComponentSearchResults", () => {
+  it("shows a skeleton while search is pending", () => {
+    render(
+      <ComponentSearchResults
+        {...baseProps}
+        query="csv"
+        results={[]}
+        isSearching
+      />,
+    );
+
+    expect(screen.getByTestId("search-results-skeleton")).toBeInTheDocument();
+    expect(screen.getByText("Searching")).toBeInTheDocument();
+  });
+
   it("shows actionable no-results guidance with clickable suggestions", () => {
     const onSuggestedSearch = vi.fn();
     render(

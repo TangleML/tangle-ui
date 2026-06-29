@@ -8,6 +8,7 @@ import FolderItem from "@/components/shared/ReactFlow/FlowSidebar/components/Fol
 import { Button } from "@/components/ui/button";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { Paragraph, Text } from "@/components/ui/typography";
 import type { ComponentSearchSuggestion } from "@/services/componentSearchSuggestions";
@@ -21,6 +22,7 @@ interface ComponentSearchResultsProps {
   browseFolders: UIComponentFolder[];
   searchSuggestions: ComponentSearchSuggestion[];
   isLoading: boolean;
+  isSearching: boolean;
   isRerankActive: boolean;
   onClearRerank: () => void;
   onSuggestedSearch: (query: string) => void;
@@ -32,17 +34,35 @@ export function ComponentSearchResults({
   browseFolders,
   searchSuggestions,
   isLoading,
+  isSearching,
   isRerankActive,
   onClearRerank,
   onSuggestedSearch,
 }: ComponentSearchResultsProps) {
-  if (isLoading) {
+  if (isLoading || isSearching) {
     return (
-      <BlockStack gap="2" className="px-2">
-        <InlineStack align="start" gap="1">
-          <Text tone="subdued">Search Results </Text>
+      <BlockStack
+        gap="2"
+        className="px-2 min-h-0 flex-1"
+        data-testid="search-results-skeleton"
+      >
+        <InlineStack align="start" gap="1" blockAlign="center">
+          <Text tone="subdued">
+            {isSearching ? "Searching" : "Search Results"}
+          </Text>
           <Spinner />
         </InlineStack>
+        <BlockStack gap="2" className="pt-1">
+          {Array.from({ length: 5 }, (_, index) => (
+            <InlineStack key={index} gap="2" blockAlign="center">
+              <Skeleton shape="circle" className="h-4 w-4 shrink-0" />
+              <BlockStack gap="1" className="min-w-0 flex-1">
+                <Skeleton size="full" />
+                <Skeleton size="half" />
+              </BlockStack>
+            </InlineStack>
+          ))}
+        </BlockStack>
       </BlockStack>
     );
   }
