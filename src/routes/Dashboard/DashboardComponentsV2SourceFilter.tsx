@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { QuickTooltip } from "@/components/ui/tooltip";
 import { Paragraph, Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import type {
@@ -25,6 +26,16 @@ const SOURCE_FILTER_LABEL_BY_KIND: Record<
   published: "Published",
   registered: "Registered libraries",
   user: "User generated",
+};
+
+const SOURCE_FILTER_TOOLTIP_BY_KIND: Record<
+  ComponentSearchSource["kind"],
+  string
+> = {
+  standard: "Standard",
+  published: "Published",
+  registered: "Registered",
+  user: "User",
 };
 
 export interface SourceFilterOption {
@@ -79,6 +90,7 @@ interface SourceFilterBarProps {
   disabledSourceKeys: string[];
   onToggle: (sourceKey: string) => void;
   onEnableAll: () => void;
+  display?: "full" | "icons";
 }
 
 export const SourceFilterBar = ({
@@ -86,6 +98,7 @@ export const SourceFilterBar = ({
   disabledSourceKeys,
   onToggle,
   onEnableAll,
+  display = "full",
 }: SourceFilterBarProps) => {
   const disabled = new Set(disabledSourceKeys);
   const activeCount = options.filter(
@@ -103,16 +116,20 @@ export const SourceFilterBar = ({
         {options.map(({ source, count }) => {
           const key = sourceFilterKey(source);
           const active = !disabled.has(key);
-          return (
+          const label = `${source.label} source (${count} component${count === 1 ? "" : "s"})`;
+          const button = (
             <Button
               key={key}
               type="button"
-              size="xs"
+              size={display === "icons" ? "min" : "xs"}
               variant={active ? "secondary" : "outline"}
               aria-pressed={active}
-              aria-label={`${source.label} source (${count} component${count === 1 ? "" : "s"})`}
+              aria-label={label}
               onClick={() => onToggle(key)}
-              className={cn(!active && "opacity-60")}
+              className={cn(
+                display === "icons" && "h-7 w-7 rounded-full p-1.5",
+                !active && "opacity-60",
+              )}
               {...tracking("component_library.source_filter", {
                 source_kind: source.kind,
                 enabled_after_click: !active,
@@ -123,12 +140,30 @@ export const SourceFilterBar = ({
                 size="sm"
                 className={SOURCE_ICON_TONE_BY_KIND[source.kind]}
               />
-              {source.label}
-              <Text as="span" size="xs" tone="subdued">
-                {count}
-              </Text>
+              {display === "full" && (
+                <>
+                  {source.label}
+                  <Text as="span" size="xs" tone="subdued">
+                    {count}
+                  </Text>
+                </>
+              )}
             </Button>
           );
+
+          if (display === "icons") {
+            return (
+              <QuickTooltip
+                key={key}
+                content={SOURCE_FILTER_TOOLTIP_BY_KIND[source.kind]}
+                side="bottom"
+              >
+                {button}
+              </QuickTooltip>
+            );
+          }
+
+          return button;
         })}
         {activeCount < options.length && (
           <Button
