@@ -147,7 +147,7 @@
     "@vitejs/plugin-react": "^5.2.0",
     "@vitest/coverage-v8": "^4.1.9",
     "babel-plugin-react-compiler": "^1.0.0",
-    "dependency-cruiser": "^17.4.3",
+    "dependency-cruiser": "^18.0.0",
     "eslint": "^9.39.2",
     "eslint-plugin-no-relative-import-paths": "^1.6.1",
     "eslint-plugin-playwright": "^2.10.4",
