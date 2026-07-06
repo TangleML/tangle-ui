@@ -6,12 +6,10 @@ import { Paragraph } from "@/components/ui/typography";
 import TooltipButton from "./TooltipButton";
 
 type IconOrChildren =
-  | { icon: IconName; children?: never }
-  | { children: ReactNode; icon?: never };
+  { icon: IconName; children?: never } | { children: ReactNode; icon?: never };
 
 type AlwaysTooltipOrLabel =
-  | { tooltip: string; label?: string }
-  | { tooltip?: string; label: string };
+  { tooltip: string; label?: string } | { tooltip?: string; label: string };
 
 type ActionButtonOwnProps = {
   destructive?: boolean;

@@ -179,13 +179,11 @@ export function usePipelineFilters(pipelines: Map<string, ComponentFileEntry>) {
           new Date(entryB.modificationTime).getTime())
       );
     })
-    .map(
-      ([name, fileEntry]): PipelineEntry => [
-        name,
-        fileEntry,
-        getMatchMetadata(fileEntry, searchQuery, componentQuery),
-      ],
-    );
+    .map(([name, fileEntry]): PipelineEntry => [
+      name,
+      fileEntry,
+      getMatchMetadata(fileEntry, searchQuery, componentQuery),
+    ]);
 
   const filterKey = [
     searchQuery,

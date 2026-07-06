@@ -26,8 +26,7 @@ export class GoogleDriveAuthService {
     }
 
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as
-      | string
-      | undefined;
+      string | undefined;
     if (!clientId) {
       throw new Error(
         "VITE_GOOGLE_CLIENT_ID is not configured. See docs/google-drive-setup.md",

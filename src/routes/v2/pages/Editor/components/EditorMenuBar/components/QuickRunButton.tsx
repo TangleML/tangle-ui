@@ -68,8 +68,7 @@ export const QuickRunButton = observer(function QuickRunButton({
   const onlyWarnings = allIssues.length > 0 && errorCount === 0;
 
   let serializedPipelineSpec:
-    | ReturnType<typeof serializeComponentSpec>
-    | undefined;
+    ReturnType<typeof serializeComponentSpec> | undefined;
   try {
     serializedPipelineSpec = rootSpec
       ? deepClone(serializeComponentSpec(rootSpec))

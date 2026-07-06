@@ -19,11 +19,7 @@ import { expandSynonymTokens } from "./componentSearchSynonyms";
 
 /** Which field of a component matched the query. Surfaced in the UI. */
 export type MatchField =
-  | "name"
-  | "description"
-  | "io"
-  | "implementation"
-  | "metadata";
+  "name" | "description" | "io" | "implementation" | "metadata";
 
 /**
  * Where a component came from. Attached to every index entry and threaded

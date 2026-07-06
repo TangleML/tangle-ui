@@ -7,10 +7,7 @@
  */
 
 type DockAreaEventType =
-  | "window-docked"
-  | "window-expanded"
-  | "window-closing"
-  | "window-minimized";
+  "window-docked" | "window-expanded" | "window-closing" | "window-minimized";
 
 export interface DockAreaEvent {
   type: DockAreaEventType;

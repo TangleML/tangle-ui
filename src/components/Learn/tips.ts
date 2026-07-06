@@ -3,12 +3,7 @@ import type { IconName } from "@/components/ui/icon";
 import tipsData from "./tips.json";
 
 export type TipCategory =
-  | "Shortcuts"
-  | "Editor"
-  | "Library"
-  | "Runs"
-  | "System"
-  | "Advanced";
+  "Shortcuts" | "Editor" | "Library" | "Runs" | "System" | "Advanced";
 
 export interface Tip {
   id: string;
