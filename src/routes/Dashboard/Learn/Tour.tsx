@@ -11,8 +11,13 @@ import {
   getTour,
   type TourDefinition,
 } from "@/components/Learn/tours/registry";
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
+import {
+  componentWindowIdForFlag,
+  resolveComponentWindowSteps,
+} from "@/providers/TourProvider/resolveComponentWindowSteps";
 import { TourContent } from "@/providers/TourProvider/TourContent";
 import { setTourMockActive } from "@/providers/TourProvider/tourMockBackend";
 import {
@@ -30,15 +35,13 @@ import { TourTelemetryBridge } from "@/providers/TourProvider/TourTelemetryBridg
 import { APP_ROUTES } from "@/routes/router";
 import { EditorV2 } from "@/routes/v2/pages/Editor/EditorV2";
 import {
-  restoreLayout,
-  snapshotLayout,
+  clearLayout,
+  TOUR_WINDOW_LAYOUT_ID,
 } from "@/routes/v2/shared/windows/windowPersistence";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
 import { isRecord } from "@/utils/typeGuards";
 import { waitForSelector } from "@/utils/waitForSelector";
-
-const EDITOR_LAYOUT_ID = "editor";
 
 interface ResolvedPipeline {
   name: string;
@@ -76,6 +79,9 @@ function TourReactourBridge({
   onUrlStepChange: (step: number) => void;
 }) {
   const { setSteps, setCurrentStep, setIsOpen, currentStep } = useTour();
+  const componentWindowId = componentWindowIdForFlag(
+    useFlagValue("component-search-v2"),
+  );
 
   const lastSyncRef = useRef<number | null>(null);
   const initializedRef = useRef(false);
@@ -95,8 +101,12 @@ function TourReactourBridge({
       }
       initializedRef.current = true;
 
-      const lastIdx = tour.steps.length - 1;
-      const stepsWithMarkdown = tour.steps.map((step, idx) => {
+      const resolvedSteps = resolveComponentWindowSteps(
+        tour.steps,
+        componentWindowId,
+      );
+      const lastIdx = resolvedSteps.length - 1;
+      const stepsWithMarkdown = resolvedSteps.map((step, idx) => {
         const normalized =
           typeof step.content === "string"
             ? { ...step, content: <TourContent text={step.content} /> }
@@ -123,7 +133,7 @@ function TourReactourBridge({
       setIsOpen(true);
     });
     return () => controller.abort();
-  }, [tour, urlStep, setSteps, setCurrentStep, setIsOpen]);
+  }, [tour, urlStep, componentWindowId, setSteps, setCurrentStep, setIsOpen]);
 
   useEffect(() => {
     return () => {
@@ -205,9 +215,9 @@ function TourPageBody({
   const [resolved, setResolved] = useState<ResolvedPipeline | null>(null);
 
   useEffect(() => {
-    snapshotLayout(EDITOR_LAYOUT_ID);
+    clearLayout(TOUR_WINDOW_LAYOUT_ID);
     return () => {
-      restoreLayout(EDITOR_LAYOUT_ID);
+      clearLayout(TOUR_WINDOW_LAYOUT_ID);
     };
   }, []);
 

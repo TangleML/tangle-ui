@@ -91,6 +91,14 @@ describe("ComponentSearchV2Content", () => {
     expect(screen.getByTestId("results-searching")).toHaveTextContent("false");
   });
 
+  it("anchors the guided-tour library-search step to the search box", () => {
+    const { container } = render(<ComponentSearchV2Content />);
+
+    const anchor = container.querySelector('[data-tour="library-search"]');
+    expect(anchor).not.toBeNull();
+    expect(anchor).toContainElement(screen.getByLabelText("Search components"));
+  });
+
   it("shows active AI rerank progress below the search box", async () => {
     mocks.useComponentSearchV2State.mockImplementation(() => ({
       results: [],

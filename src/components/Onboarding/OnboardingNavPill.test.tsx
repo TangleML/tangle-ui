@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -14,6 +14,7 @@ let onboarding = {
   total: 4,
   shouldShowOnboarding: true,
   markDocsRead: vi.fn(),
+  dismiss: vi.fn(),
 };
 vi.mock("@/providers/OnboardingProvider/OnboardingProvider", () => ({
   useOnboarding: () => onboarding,
@@ -26,6 +27,7 @@ function resetState() {
     total: 4,
     shouldShowOnboarding: true,
     markDocsRead: vi.fn(),
+    dismiss: vi.fn(),
   };
 }
 
@@ -44,5 +46,12 @@ describe("OnboardingNavPill", () => {
     onboarding.shouldShowOnboarding = false;
     render(<OnboardingNavPill />);
     expect(pill()).toBeNull();
+  });
+
+  it("dismisses onboarding from the popover footer", () => {
+    render(<OnboardingNavPill />);
+    fireEvent.click(screen.getByText("Onboarding · 1/4"));
+    fireEvent.click(screen.getByText("Dismiss onboarding"));
+    expect(onboarding.dismiss).toHaveBeenCalledOnce();
   });
 });

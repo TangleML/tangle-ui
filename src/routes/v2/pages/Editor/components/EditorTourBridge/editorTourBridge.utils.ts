@@ -49,6 +49,20 @@ export function countSubgraphTasks(spec: ComponentSpec | null): number {
   return spec.tasks.filter((t) => t.subgraphSpec !== undefined).length;
 }
 
+export function recordNewSubgraphName(
+  seen: Set<string>,
+  tasks: readonly { $id: string; name: string; subgraphSpec?: unknown }[],
+): string | null {
+  let created: string | null = null;
+  for (const task of tasks) {
+    if (task.subgraphSpec !== undefined && !seen.has(task.$id)) {
+      seen.add(task.$id);
+      created = task.name;
+    }
+  }
+  return created;
+}
+
 export function elementFromEvent(event: Event): Element | null {
   return event.target instanceof Element ? event.target : null;
 }

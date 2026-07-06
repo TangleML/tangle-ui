@@ -15,6 +15,10 @@
   position: absolute;
 }
 
+body[data-tour-dragging="true"] .reactour-tour-mask svg rect {
+  pointer-events: none !important;
+}
+
 /* Use the proper box layout model by default, but allow elements to override */
 html {
   box-sizing: border-box;

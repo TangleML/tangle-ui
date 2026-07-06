@@ -10,6 +10,7 @@ export type TourStep = StepType &
     resetLibrarySearch?: boolean;
     ensureWindowRestored?: string;
     requiresTaskSelected?: string;
+    anchorCreatedSubgraph?: boolean;
   };
 
 export interface TourDefinition {

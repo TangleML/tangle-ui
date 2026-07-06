@@ -22,6 +22,8 @@ import type { WindowStoreImpl } from "./windowStore";
  */
 let activeLayoutId: string | null = null;
 
+export const TOUR_WINDOW_LAYOUT_ID = "tour";
+
 function getLayoutStorageKey(layoutId: string | null): string {
   if (!layoutId) return "editorV2-window-layout";
   return `window-layout-${layoutId}`;
@@ -31,50 +33,11 @@ function getStorageKey(): string {
   return getLayoutStorageKey(activeLayoutId);
 }
 
-function snapshotStorageKey(layoutId: string): string {
-  return `${getLayoutStorageKey(layoutId)}-snapshot`;
-}
-
-function snapshotActiveKey(layoutId: string): string {
-  return `${snapshotStorageKey(layoutId)}-active`;
-}
-
-// Stashes the layout aside so the next mount starts from defaults. Pair with
-// restoreLayout to roll back.
-export function snapshotLayout(layoutId: string): void {
+export function clearLayout(layoutId: string): void {
   try {
-    const key = getLayoutStorageKey(layoutId);
-    const current = localStorage.getItem(key);
-    if (current !== null) {
-      localStorage.setItem(snapshotStorageKey(layoutId), current);
-    } else {
-      localStorage.removeItem(snapshotStorageKey(layoutId));
-    }
-    localStorage.setItem(snapshotActiveKey(layoutId), "1");
-    localStorage.removeItem(key);
+    localStorage.removeItem(getLayoutStorageKey(layoutId));
   } catch (error) {
-    console.warn(`Failed to snapshot layout "${layoutId}":`, error);
-  }
-}
-
-export function restoreLayout(layoutId: string): boolean {
-  try {
-    if (localStorage.getItem(snapshotActiveKey(layoutId)) === null) {
-      return false;
-    }
-    const key = getLayoutStorageKey(layoutId);
-    const saved = localStorage.getItem(snapshotStorageKey(layoutId));
-    if (saved !== null) {
-      localStorage.setItem(key, saved);
-    } else {
-      localStorage.removeItem(key);
-    }
-    localStorage.removeItem(snapshotStorageKey(layoutId));
-    localStorage.removeItem(snapshotActiveKey(layoutId));
-    return true;
-  } catch (error) {
-    console.warn(`Failed to restore layout "${layoutId}":`, error);
-    return false;
+    console.warn(`Failed to clear layout "${layoutId}":`, error);
   }
 }
 

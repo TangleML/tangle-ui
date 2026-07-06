@@ -17,6 +17,7 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Heading, Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { useTourMode } from "@/providers/TourProvider/TourModeContext";
+import { useTourProgress } from "@/providers/TourProvider/TourProgressContext";
 
 // The Settings gear (AppMenuActions) calls this in tour mode instead of routing
 // to /settings, which would unmount the tour page and tear the tour down.
@@ -87,7 +88,8 @@ function TourSecretsManager() {
 // router links the real page relies on, so the tour never navigates away.
 export function TourSecretsDialog() {
   const tourMode = useTourMode();
-  const { steps, currentStep, isOpen: tourIsOpen } = useTour();
+  const { steps, currentStep, isOpen: tourIsOpen, setCurrentStep } = useTour();
+  const { isStepComplete } = useTourProgress();
   const [open, setOpen] = useState(false);
   const [openKey, setOpenKey] = useState(0);
 
@@ -102,11 +104,56 @@ export function TourSecretsDialog() {
   const step = steps?.[currentStep] as TourStep | undefined;
   const onSettingsStep = !!tourIsOpen && step?.tourPanel === "secrets-manager";
   const isExplainStep = onSettingsStep && !step?.interaction;
+  const isOpenSettingsStep = onSettingsStep && !!step?.interaction;
+  const isCurrentStepComplete = isStepComplete(currentStep);
+  const stepsLength = steps?.length ?? 0;
 
   useEffect(() => {
     if (isExplainStep) setOpen(true);
     else if (!onSettingsStep) setOpen(false);
   }, [isExplainStep, onSettingsStep]);
+
+  useEffect(() => {
+    if (!(open && isOpenSettingsStep && isCurrentStepComplete))
+      return undefined;
+    let done = false;
+    let fallback = 0;
+    let dialog: Element | null = null;
+    const advance = () => {
+      if (done) return;
+      done = true;
+      setCurrentStep((s: number) =>
+        Math.min(s + 1, Math.max(stepsLength - 1, 0)),
+      );
+    };
+    const waitForSettledDialog = () => {
+      if (done) return;
+      dialog = document.querySelector('[data-tour="tour-settings-dialog"]');
+      if (!dialog) {
+        requestAnimationFrame(waitForSettledDialog);
+        return;
+      }
+      dialog.addEventListener("animationend", advance, { once: true });
+      fallback = window.setTimeout(advance, 400);
+    };
+    requestAnimationFrame(waitForSettledDialog);
+    return () => {
+      done = true;
+      clearTimeout(fallback);
+      dialog?.removeEventListener("animationend", advance);
+    };
+  }, [
+    open,
+    isOpenSettingsStep,
+    isCurrentStepComplete,
+    setCurrentStep,
+    stepsLength,
+  ]);
+
+  const handleClose = () => {
+    setOpen(false);
+    if (isExplainStep) setCurrentStep(Math.max(0, currentStep - 1));
+  };
 
   if (!tourMode) return null;
 
@@ -115,7 +162,7 @@ export function TourSecretsDialog() {
       <DialogContent
         showCloseButton={false}
         data-tour="tour-settings-dialog"
-        className="sm:max-w-4xl w-[56rem] h-[80vh] p-0 gap-0 overflow-hidden"
+        className="sm:max-w-4xl w-4xl h-[80vh] p-0 gap-0 overflow-hidden"
         onInteractOutside={(event) => event.preventDefault()}
         onEscapeKeyDown={(event) => event.preventDefault()}
       >
@@ -123,6 +170,16 @@ export function TourSecretsDialog() {
         <DialogDescription className="sr-only">
           Manage your secrets.
         </DialogDescription>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleClose}
+          aria-label="Close settings"
+          className="absolute top-3 right-3 z-10"
+        >
+          <Icon name="X" size="sm" />
+        </Button>
 
         <BlockStack className="h-full">
           <div className="px-6 py-4 border-b border-border">

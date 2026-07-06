@@ -156,7 +156,7 @@ export function ComponentSearchV2Content() {
           wrap="nowrap"
           className="w-full"
         >
-          <div className="relative flex-1 min-w-0">
+          <div className="relative flex-1 min-w-0" data-tour="library-search">
             <InlineStack
               blockAlign="center"
               className="absolute inset-y-0 left-0 pl-2.5 z-10 pointer-events-none"

@@ -29,7 +29,10 @@ import {
 } from "@/routes/v2/shared/store/SharedStoreContext";
 import { DockArea } from "@/routes/v2/shared/windows/DockArea";
 import { WindowContainer } from "@/routes/v2/shared/windows/WindowContainer";
-import { useWindowPersistence } from "@/routes/v2/shared/windows/windowPersistence";
+import {
+  TOUR_WINDOW_LAYOUT_ID,
+  useWindowPersistence,
+} from "@/routes/v2/shared/windows/windowPersistence";
 import type { PipelineRef } from "@/services/pipelineStorage/types";
 
 import { createEditorAgentWorker } from "./components/AiChat/editorAgentWorker";
@@ -80,8 +83,9 @@ const PipelineEditor = withSuspenseWrapper(
       data: { spec: rootSpec, restoredUndoStore },
     } = useLoadSpec(pipelineRef);
     const { navigation } = useSharedStores();
+    const tourMode = useTourMode();
 
-    useWindowPersistence("editor");
+    useWindowPersistence(tourMode ? TOUR_WINDOW_LAYOUT_ID : "editor");
     useDockAreaAccordion();
     useSpecLifecycle(rootSpec, pipelineRef, restoredUndoStore);
     useSelectionWindowSync();
