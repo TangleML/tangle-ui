@@ -72,8 +72,7 @@ export function computeNextPosition(spec: ComponentSpec): {
   let maxY = 0;
   for (const entity of allEntities) {
     const pos = entity.annotations.get(EDITOR_POSITION_ANNOTATION) as
-      | { x: number; y: number }
-      | undefined;
+      { x: number; y: number } | undefined;
     if (pos) {
       maxX = Math.max(maxX, pos.x);
       maxY = Math.max(maxY, pos.y);

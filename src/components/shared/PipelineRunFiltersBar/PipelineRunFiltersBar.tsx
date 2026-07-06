@@ -22,10 +22,7 @@ import {
 const MAX_VISIBLE_BADGES = 4;
 
 type FilterBadgeKey =
-  | "pipeline_name"
-  | "created_by"
-  | "date_range"
-  | `annotation-${number}`;
+  "pipeline_name" | "created_by" | "date_range" | `annotation-${number}`;
 
 interface PipelineRunFiltersBarProps {
   totalCount?: number;

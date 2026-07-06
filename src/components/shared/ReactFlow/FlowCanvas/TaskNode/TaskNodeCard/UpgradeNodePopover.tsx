@@ -48,8 +48,7 @@ export const UpgradeNodePopover = ({
   const replaceWithComponent = useMemo(() => {
     if (!taskSpec) return null;
     return replaceWith.get(taskSpec.componentRef.digest ?? "") as
-      | HydratedComponentReference
-      | undefined;
+      HydratedComponentReference | undefined;
   }, [replaceWith, taskSpec]);
 
   const updatePreview = useMemo(() => {

@@ -1,9 +1,5 @@
 export type SupportedTemplate =
-  | "empty"
-  | "ruby"
-  | "python"
-  | "javascript"
-  | "bash";
+  "empty" | "ruby" | "python" | "javascript" | "bash";
 
 export interface YamlGeneratorOptions {
   baseImage?: string;

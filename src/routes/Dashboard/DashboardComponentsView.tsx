@@ -240,14 +240,12 @@ const ComponentList = ({
 
   const publishedComponents = (publishedData?.published_components ?? [])
     .filter((c) => matches(c.name, c.published_by))
-    .map(
-      (c): ComponentReference => ({
-        digest: c.digest,
-        url: c.url ?? `${backendUrl}/api/components/${c.digest}`,
-        name: c.name ?? undefined,
-        published_by: c.published_by,
-      }),
-    );
+    .map((c): ComponentReference => ({
+      digest: c.digest,
+      url: c.url ?? `${backendUrl}/api/components/${c.digest}`,
+      name: c.name ?? undefined,
+      published_by: c.published_by,
+    }));
 
   const total =
     userComponents.length +

@@ -36,9 +36,7 @@ type ClearMessage = {
 };
 
 export type NotifyMessage =
-  | HighlightMessage
-  | ClearMessage
-  | UpdateOverlayMessage;
+  HighlightMessage | ClearMessage | UpdateOverlayMessage;
 
 interface NodesOverlayContextType {
   setReactFlowInstance: (instance: ReactFlowInstance) => void;

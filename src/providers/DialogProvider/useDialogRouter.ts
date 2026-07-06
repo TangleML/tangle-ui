@@ -53,11 +53,9 @@ export function useDialogRouter({
     if (disabled) return;
 
     const dialogId = searchParams[DIALOG_SEARCH_PARAMS.DIALOG_ID] as
-      | string
-      | undefined;
+      string | undefined;
     const dialogKey = searchParams[DIALOG_SEARCH_PARAMS.DIALOG_KEY] as
-      | string
-      | undefined;
+      string | undefined;
 
     if (dialogId && pendingDialogIds.current?.has(dialogId)) {
       pendingDialogIds.current.delete(dialogId);
@@ -136,8 +134,7 @@ export function useDialogRouter({
 
     if (stack.length < previousStackLength.current) {
       const dialogIdInUrl = searchParams[DIALOG_SEARCH_PARAMS.DIALOG_ID] as
-        | string
-        | undefined;
+        string | undefined;
 
       if (
         dialogIdInUrl &&

@@ -96,10 +96,7 @@ interface IsPresentPlaceholder {
   isPresent: string;
 }
 type IfConditionArgumentType =
-  | IsPresentPlaceholder
-  | boolean
-  | string
-  | InputValuePlaceholder;
+  IsPresentPlaceholder | boolean | string | InputValuePlaceholder;
 type ListOfStringsOrPlaceholders = StringOrPlaceholder[];
 /**
  * Represents the command-line argument placeholder that will be replaced at run-time by a boolean value specifying whether the caller has passed an argument for the specified optional input.
@@ -308,8 +305,7 @@ export function isSpecOnlyComponentReference(
 }
 
 type PartialContentfulComponentReference =
-  | TextOnlyComponentReference
-  | SpecOnlyComponentReference;
+  TextOnlyComponentReference | SpecOnlyComponentReference;
 
 export function isPartialContentfulComponentReference(
   componentReference: UnknownComponentReference,
@@ -435,10 +431,7 @@ export interface DynamicDataArgument {
 }
 
 export type ArgumentType =
-  | string
-  | GraphInputArgument
-  | TaskOutputArgument
-  | DynamicDataArgument;
+  string | GraphInputArgument | TaskOutputArgument | DynamicDataArgument;
 
 /**
  * Pair of operands for a binary operation.

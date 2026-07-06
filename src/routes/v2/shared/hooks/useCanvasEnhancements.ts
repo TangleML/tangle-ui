@@ -66,8 +66,7 @@ export function useCanvasEnhancements(
   const collectedExtraNodes: Node[] = [];
   const collectedExtraEdges: Edge[] = [];
   let composedOnEdgeClick:
-    | ((event: MouseEvent, edge: { id: string }) => void)
-    | undefined;
+    ((event: MouseEvent, edge: { id: string }) => void) | undefined;
 
   for (const manifest of manifests) {
     const enhance = manifest.useCanvasEnhancement ?? NOOP_ENHANCEMENT;

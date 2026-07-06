@@ -137,12 +137,14 @@ export const FolderPipelineTable = withSuspenseWrapper(
 
       if (isItemSelected && selection.totalSelected > 1) {
         return [
-          ...Array.from(selection.selectedPipelines).map(
-            (id): DragItem => ({ type: "pipeline", id }),
-          ),
-          ...Array.from(selection.selectedFolders).map(
-            (id): DragItem => ({ type: "folder", id }),
-          ),
+          ...Array.from(selection.selectedPipelines).map((id): DragItem => ({
+            type: "pipeline",
+            id,
+          })),
+          ...Array.from(selection.selectedFolders).map((id): DragItem => ({
+            type: "folder",
+            id,
+          })),
         ];
       }
 

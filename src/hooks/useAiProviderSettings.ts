@@ -15,8 +15,7 @@ export const AI_PROVIDER_STORAGE_KEY = "tangle.aiProvider.config";
 const LEGACY_COMPONENT_SEARCH_STORAGE_KEY = "tangle.componentSearchV2.config";
 
 type StorageKey =
-  | typeof AI_PROVIDER_STORAGE_KEY
-  | typeof LEGACY_COMPONENT_SEARCH_STORAGE_KEY;
+  typeof AI_PROVIDER_STORAGE_KEY | typeof LEGACY_COMPONENT_SEARCH_STORAGE_KEY;
 
 type AiProviderSettingsStorage = Record<StorageKey, unknown>;
 
