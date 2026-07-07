@@ -40,6 +40,18 @@ export function tourActionLabel(step: TourAction): string {
       return step.targetArgumentName
         ? `Set the **${step.targetArgumentName}** value`
         : "Set the highlighted value";
+    case "navigate-into-subgraph":
+      return step.targetTaskName
+        ? `Open the **${step.targetTaskName}** subgraph`
+        : "Open the highlighted subgraph";
+    case "navigate-to-root":
+      return "Return to the top level";
+    case "unpack-subgraph":
+      return "Unpack the subgraph";
+    case "multi-select-tasks":
+      return `Select **${step.targetMinCount ?? 2}** tasks`;
+    case "create-subgraph":
+      return "Create a subgraph from the selected tasks";
     default:
       return GENERIC_LABEL;
   }
