@@ -64,11 +64,17 @@ export const inputManifestBase: ManifestPartial = {
 
   buildNodes(spec) {
     return [...spec.inputs].map((input, index) =>
-      createEntityNode(input, "input", ioDefaultPosition(index, -200), {
-        entityId: input.$id,
-        ioType: "input",
-        name: input.name,
-      } satisfies IONodeData),
+      createEntityNode(
+        input,
+        "input",
+        ioDefaultPosition(index, -200),
+        {
+          entityId: input.$id,
+          ioType: "input",
+          name: input.name,
+        } satisfies IONodeData,
+        { "data-task-name": input.name },
+      ),
     );
   },
 

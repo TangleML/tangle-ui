@@ -47,7 +47,11 @@ export const WindowsMenu = observer(function WindowsMenu() {
           Windows
         </MenuTriggerButton>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" sideOffset={2}>
+      <DropdownMenuContent
+        align="start"
+        sideOffset={2}
+        data-tour="windows-menu-content"
+      >
         {sortedWindows.map((win) => (
           <DropdownMenuCheckboxItem
             key={win.id}
@@ -77,7 +81,7 @@ export const WindowsMenu = observer(function WindowsMenu() {
             <Icon name="LayoutDashboard" size="sm" />
             Views
           </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent>
+          <DropdownMenuSubContent data-tour="windows-menu-submenu-content">
             {viewPresetsForComponentSearchMode(componentSearchV2Enabled).map(
               (preset) => (
                 <DropdownMenuItem

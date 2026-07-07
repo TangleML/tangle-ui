@@ -187,6 +187,7 @@ export const FloatingWindow = observer(function FloatingWindow() {
     <>
       <div
         ref={panelRef}
+        data-window-id={model.id}
         className={containerVariants({
           interacting: isDragging || isResizing,
           dragging: isDragging,
