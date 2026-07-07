@@ -6,6 +6,7 @@ import {
 import { useState } from "react";
 
 import logo from "/Tangle_white.png";
+import { OnboardingNavPill } from "@/components/Onboarding/OnboardingNavPill";
 import { isAuthorizationRequired } from "@/components/shared/Authentication/helpers";
 import { TopBarAuthentication } from "@/components/shared/Authentication/TopBarAuthentication";
 import { CopyText } from "@/components/shared/CopyText/CopyText";
@@ -116,7 +117,10 @@ const DefaultAppMenu = () => {
             <div className="w-px h-5 bg-stone-700" />
           </div>
 
+          <OnboardingNavPill />
+
           {showAiModelQuickSelect && <AiModelQuickSelect />}
+
           <EditorVersionToggle />
 
           {/* Settings & status */}

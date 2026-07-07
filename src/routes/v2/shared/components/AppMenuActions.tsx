@@ -1,6 +1,7 @@
 import { Link as RouterLink } from "@tanstack/react-router";
 
 import { AiModelQuickSelect } from "@/components/layout/AiModelQuickSelect";
+import { OnboardingNavPill } from "@/components/Onboarding/OnboardingNavPill";
 import { isAuthorizationRequired } from "@/components/shared/Authentication/helpers";
 import { TopBarAuthentication } from "@/components/shared/Authentication/TopBarAuthentication";
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
@@ -24,6 +25,7 @@ export function AppMenuActions() {
       className="shrink-0"
       data-testid="app-menu-actions"
     >
+      {!tourMode && <OnboardingNavPill />}
       <AiModelQuickSelect />
       <EditorVersionToggle />
       {tourMode ? (
