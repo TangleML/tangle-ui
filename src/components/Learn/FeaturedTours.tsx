@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
+import { useTourCompletion } from "@/providers/TourProvider/tourCompletion";
 import { resetAllTourPipelineState } from "@/providers/TourProvider/tourPipelineStorage/resetAllTourPipelineState";
 import { APP_ROUTES } from "@/routes/router";
 import { tracking } from "@/utils/tracking";
@@ -80,33 +81,11 @@ export function FeaturedTours() {
 
         <BlockStack gap="1">
           {featured.map((tour) => (
-            <Button
+            <FeaturedTourButton
               key={tour.id}
-              variant="ghost"
-              size="lg"
-              disabled={!tour.available}
-              onClick={() => startTour(tour.id)}
-              className="h-auto min-h-10 w-full justify-start whitespace-normal py-2 text-left"
-              {...tracking("learning_hub.tours.start", {
-                tour_id: tour.id,
-              })}
-            >
-              <InlineStack
-                gap="4"
-                align="space-between"
-                blockAlign="center"
-                wrap="nowrap"
-                fill
-              >
-                <FeaturedTourLabel tour={tour} />
-                <Icon
-                  name="Play"
-                  size="sm"
-                  className="text-muted-foreground shrink-0"
-                  aria-hidden="true"
-                />
-              </InlineStack>
-            </Button>
+              tour={tour}
+              onStart={() => startTour(tour.id)}
+            />
           ))}
         </BlockStack>
       </BlockStack>
@@ -114,7 +93,53 @@ export function FeaturedTours() {
   );
 }
 
-function FeaturedTourLabel({ tour }: { tour: FeaturedTour }) {
+function FeaturedTourButton({
+  tour,
+  onStart,
+}: {
+  tour: FeaturedTour;
+  onStart: () => void;
+}) {
+  const completed = useTourCompletion(tour.id);
+
+  return (
+    <Button
+      variant="ghost"
+      size="lg"
+      disabled={!tour.available}
+      onClick={onStart}
+      className="h-auto min-h-10 w-full justify-start whitespace-normal py-2 text-left"
+      {...tracking("learning_hub.tours.start", {
+        tour_id: tour.id,
+        is_restart: completed,
+      })}
+    >
+      <InlineStack
+        gap="4"
+        align="space-between"
+        blockAlign="center"
+        wrap="nowrap"
+        fill
+      >
+        <FeaturedTourLabel tour={tour} completed={completed} />
+        <Icon
+          name={completed ? "RotateCcw" : "Play"}
+          size="sm"
+          className="text-muted-foreground shrink-0"
+          aria-hidden="true"
+        />
+      </InlineStack>
+    </Button>
+  );
+}
+
+function FeaturedTourLabel({
+  tour,
+  completed,
+}: {
+  tour: FeaturedTour;
+  completed: boolean;
+}) {
   return (
     <BlockStack className="min-w-0">
       <InlineStack gap="2" blockAlign="center">
@@ -128,6 +153,12 @@ function FeaturedTourLabel({ tour }: { tour: FeaturedTour }) {
             className="capitalize"
           >
             {tour.tag}
+          </Badge>
+        )}
+        {completed && (
+          <Badge size="sm" variant="outline" className="text-green-600">
+            <Icon name="Check" size="xs" aria-hidden="true" />
+            Completed
           </Badge>
         )}
         {!tour.available && (

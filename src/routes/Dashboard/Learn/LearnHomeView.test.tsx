@@ -28,6 +28,10 @@ vi.mock("@/providers/AnalyticsProvider", () => ({
   useAnalytics: vi.fn().mockReturnValue({ track: vi.fn() }),
 }));
 
+vi.mock("@/providers/BackendProvider", () => ({
+  useBackend: () => ({ available: false, backendUrl: "" }),
+}));
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: { retry: false },
