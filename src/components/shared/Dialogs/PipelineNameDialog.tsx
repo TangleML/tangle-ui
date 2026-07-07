@@ -1,10 +1,4 @@
-import {
-  Activity,
-  type ChangeEvent,
-  type ReactNode,
-  useCallback,
-  useState,
-} from "react";
+import { Activity, type ChangeEvent, type ReactNode, useState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -29,9 +23,12 @@ interface PipelineNameDialogProps {
   title: string;
   description?: string;
   initialName: string;
+  excludeNames?: string[];
   submitButtonText: string;
   submitButtonIcon?: ReactNode;
   onSubmit: (name: string) => void;
+  // Receives the trimmed name — the exact value that will be submitted — so
+  // callers' equality checks stay aligned with the duplicate-name guard.
   isSubmitDisabled?: (name: string, error: string | null) => boolean;
   onOpenChange?: (open: boolean) => void;
 }
@@ -42,14 +39,15 @@ const PipelineNameDialog = ({
   title,
   description = "Please, name your pipeline.",
   initialName,
+  excludeNames,
   submitButtonText,
   submitButtonIcon,
   onSubmit,
   isSubmitDisabled,
   onOpenChange,
 }: PipelineNameDialogProps) => {
-  const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState(initialName);
+  const [touched, setTouched] = useState(false);
 
   const {
     userPipelines,
@@ -57,50 +55,49 @@ const PipelineNameDialog = ({
     refetch: refetchUserPipelines,
   } = useLoadUserPipelines();
 
-  const handleOnChange = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) => {
-      const newName = e.target.value;
-      const existingPipelineNames = new Set(
-        Array.from(userPipelines.keys()).map((name) => name.toLowerCase()),
-      );
-
-      const normalizedNewName = newName.trim().toLowerCase();
-
-      if (normalizedNewName === "") {
-        setError("Name cannot be empty");
-      } else if (existingPipelineNames.has(normalizedNewName)) {
-        setError("Name already exists");
-      } else {
-        setError(null);
-      }
-
-      setName(newName);
-    },
-    [userPipelines],
+  const normalized = name.trim().toLowerCase();
+  const excluded = new Set(
+    (excludeNames ?? []).map((n) => n.trim().toLowerCase()),
   );
+  const nameIsTaken = Array.from(userPipelines.keys()).some((n) => {
+    const lower = n.toLowerCase();
+    return lower === normalized && !excluded.has(lower);
+  });
 
-  const handleDialogOpenChange = useCallback(
-    (open: boolean) => {
-      if (!open) {
-        setError(null);
-      } else {
-        setName(initialName);
-        refetchUserPipelines();
-      }
-      onOpenChange?.(open);
-    },
-    [initialName, onOpenChange, refetchUserPipelines],
-  );
+  let error: string | null = null;
+  if (!isLoadingUserPipelines) {
+    if (normalized === "") {
+      error = "Name cannot be empty";
+    } else if (nameIsTaken) {
+      error = "Name already exists";
+    }
+  }
 
-  const handleSubmit = useCallback(() => {
-    onSubmit(name.trim());
-  }, [name, onSubmit]);
+  const handleOnChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setName(e.target.value);
+    setTouched(true);
+  };
+
+  const handleDialogOpenChange = (open: boolean) => {
+    if (open) {
+      setName(initialName);
+      setTouched(false);
+      refetchUserPipelines();
+    }
+    onOpenChange?.(open);
+  };
+
+  const trimmedName = name.trim();
+
+  const handleSubmit = () => {
+    onSubmit(trimmedName);
+  };
 
   const isDisabled =
     isLoadingUserPipelines ||
     !!error ||
-    !name ||
-    !!isSubmitDisabled?.(name, error);
+    !trimmedName ||
+    !!isSubmitDisabled?.(trimmedName, error);
 
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
@@ -112,7 +109,7 @@ const PipelineNameDialog = ({
         </DialogHeader>
         <BlockStack gap="2">
           <Input value={name} onChange={handleOnChange} />
-          <Activity mode={error ? "visible" : "hidden"}>
+          <Activity mode={error && touched ? "visible" : "hidden"}>
             <Alert variant="destructive">
               <Icon name="CircleAlert" />
               <AlertDescription>{error}</AlertDescription>

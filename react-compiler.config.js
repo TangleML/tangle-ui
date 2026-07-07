@@ -67,6 +67,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/components/shared/ReactFlow/FlowCanvas/Multiselect",
   "src/components/shared/CodeViewer/CodeEditor.tsx",
   "src/components/shared/Dialogs/MultilineTextInputDialog.tsx",
+  "src/components/shared/Dialogs/PipelineNameDialog.tsx",
   "src/components/shared/HighlightText.tsx",
   "src/components/shared/AnnouncementBanners.tsx",
   "src/components/shared/ReactFlow/FlowCanvas/TaskNode/TaskOverview/IOSection",

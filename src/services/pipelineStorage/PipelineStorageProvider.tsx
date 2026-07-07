@@ -8,7 +8,7 @@ import {
 
 import { PipelineStorageService } from "./PipelineStorageService";
 
-const PipelineStorageCtx = createRequiredContext<PipelineStorageService>(
+export const PipelineStorageCtx = createRequiredContext<PipelineStorageService>(
   "PipelineStorageContext",
 );
 

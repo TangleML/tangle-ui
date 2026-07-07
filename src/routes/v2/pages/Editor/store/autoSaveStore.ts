@@ -21,6 +21,8 @@ export class AutoSaveStore {
   private spec: ComponentSpec | null = null;
   private pipelineName: string | null = null;
   private disposeReaction: (() => void) | null = null;
+  // Last content written to disk; used to skip a redundant flush on dispose.
+  private lastSavedYaml: string | null = null;
 
   private debouncedSave = debounce((yamlText: string) => {
     void this.performSave(yamlText);
@@ -39,6 +41,9 @@ export class AutoSaveStore {
     this.pipelineName = pipelineName;
     this.isSaving = false;
     this.lastSavedAt = null;
+    // The freshly-loaded spec matches what's on disk, so seed the baseline to
+    // avoid flushing an unchanged pipeline on dispose.
+    this.lastSavedYaml = this.serializeSpec();
 
     this.disposeReaction = reaction(
       () => this.serializeSpec(),
@@ -48,9 +53,16 @@ export class AutoSaveStore {
   }
 
   @action dispose() {
+    const yaml = this.serializeSpec();
+    const file = this.pipelineFileStore.activePipelineFile;
+    if (yaml && file && yaml !== this.lastSavedYaml) {
+      void file.write(yaml).catch((error) => {
+        console.error("Auto-save flush on dispose failed:", error);
+      });
+    }
+    this.debouncedSave.cancel();
     this.disposeReaction?.();
     this.disposeReaction = null;
-    this.debouncedSave.cancel();
     this.spec = null;
     this.pipelineName = null;
   }
@@ -98,6 +110,7 @@ export class AutoSaveStore {
       try {
         await this.pipelineFileStore.activePipelineFile?.write(yamlText);
         await this.persistUndoHistory();
+        this.lastSavedYaml = yamlText;
         return new Date();
       } catch (error) {
         console.error("Auto-save failed:", error);

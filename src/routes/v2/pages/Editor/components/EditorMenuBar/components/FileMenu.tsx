@@ -58,6 +58,8 @@ export function FileMenu() {
   const canMove = activePipeline?.folder.canMoveFilesOut ?? false;
   const tourMode = useTourMode();
 
+  const isTour = !!tourMode;
+
   return (
     <>
       <DropdownMenu>
@@ -68,6 +70,7 @@ export function FileMenu() {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" sideOffset={2}>
           <DropdownMenuItem
+            disabled={isTour}
             onClick={() => {
               track("v2.pipeline_editor.file_menu.open.click");
               setOpenDialogOpen(true);
@@ -90,6 +93,7 @@ export function FileMenu() {
             Save
           </DropdownMenuItem>
           <DropdownMenuItem
+            disabled={isTour}
             onClick={() => {
               track("v2.pipeline_editor.file_menu.save_as.click");
               setSaveAsDialogOpen(true);
@@ -98,19 +102,19 @@ export function FileMenu() {
             <Icon name="SaveAll" size="sm" />
             Save as
           </DropdownMenuItem>
-          {!tourMode && (
-            <DropdownMenuItem
-              onClick={() => {
-                track("v2.pipeline_editor.file_menu.rename.click");
-                setRenameDialogOpen(true);
-              }}
-            >
-              <Icon name="Pencil" size="sm" />
-              Rename
-            </DropdownMenuItem>
-          )}
+          <DropdownMenuItem
+            disabled={isTour}
+            onClick={() => {
+              track("v2.pipeline_editor.file_menu.rename.click");
+              setRenameDialogOpen(true);
+            }}
+          >
+            <Icon name="Pencil" size="sm" />
+            Rename
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
+            disabled={isTour}
             onClick={() => {
               track("v2.pipeline_editor.file_menu.new_pipeline.click");
               void handleNewPipeline();
@@ -120,6 +124,7 @@ export function FileMenu() {
             New pipeline
           </DropdownMenuItem>
           <DropdownMenuItem
+            disabled={isTour}
             onClick={() => {
               track("v2.pipeline_editor.file_menu.import.click");
               setImportOpen(true);
@@ -151,21 +156,18 @@ export function FileMenu() {
               </DropdownMenuItem>
             </>
           )}
-          {!tourMode && (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => {
-                  track("v2.pipeline_editor.file_menu.delete_pipeline.click");
-                  setDeleteDialogOpen(true);
-                }}
-                className="text-destructive focus:text-destructive"
-              >
-                <Icon name="Trash2" size="sm" />
-                Delete pipeline
-              </DropdownMenuItem>
-            </>
-          )}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            disabled={isTour}
+            onClick={() => {
+              track("v2.pipeline_editor.file_menu.delete_pipeline.click");
+              setDeleteDialogOpen(true);
+            }}
+            className="text-destructive focus:text-destructive"
+          >
+            <Icon name="Trash2" size="sm" />
+            Delete pipeline
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -193,6 +195,7 @@ export function FileMenu() {
         onSubmit={renamePipeline}
         submitButtonText="Rename"
         isSubmitDisabled={(name) => name === getRenameInitialName()}
+        excludeNames={[getRenameInitialName()]}
       />
 
       {canMove && activePipeline && (

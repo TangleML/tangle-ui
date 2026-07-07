@@ -2,6 +2,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { type RefObject, useEffect, useRef, useState } from "react";
 
 import useToastNotification from "@/hooks/useToastNotification";
+import { useTourMode } from "@/providers/TourProvider/TourModeContext";
 import { APP_ROUTES } from "@/routes/router";
 import { usePipelineRename } from "@/routes/v2/pages/Editor/hooks/usePipelineRename";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
@@ -43,6 +44,7 @@ export function useFileMenuState(): FileMenuState {
   const { autoSave, pipelineFile: pipelineFileStore } = useEditorSession();
   const renamePipeline = usePipelineRename();
   const storage = usePipelineStorage();
+  const tourMode = useTourMode();
   const navigate = useNavigate();
   const notify = useToastNotification();
   const [importOpen, setImportOpen] = useState(false);
@@ -53,13 +55,14 @@ export function useFileMenuState(): FileMenuState {
   const importTriggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
+    if (tourMode) return;
     return keyboard.registerShortcut({
       id: "open-pipeline",
       keys: [CTRL, "O"],
       label: "Open Pipeline",
       action: () => setOpenDialogOpen(true),
     });
-  }, [keyboard]);
+  }, [keyboard, tourMode]);
 
   useEffect(() => {
     if (importOpen) {

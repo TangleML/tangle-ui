@@ -7,7 +7,7 @@ import {
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 
 const useLoadUserPipelines = () => {
-  const [isLoadingUserPipelines, setIsLoadingUserPipelines] = useState(false);
+  const [isLoadingUserPipelines, setIsLoadingUserPipelines] = useState(true);
   const [userPipelines, setUserPipelines] = useState<
     Map<string, ComponentFileEntry>
   >(new Map());
