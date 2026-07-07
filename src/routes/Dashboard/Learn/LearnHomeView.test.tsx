@@ -83,17 +83,13 @@ describe("<LearnHomeView/>", () => {
       screen.getByRole("heading", { level: 3, name: /tip of the day/i }),
     ).toBeInTheDocument();
     expect(
+      screen.getByRole("heading", { level: 3, name: /featured tours/i }),
+    ).toBeInTheDocument();
+    expect(
       screen.getByRole("heading", { level: 2, name: /example pipelines/i }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { level: 2, name: /frequently asked/i }),
-    ).toBeInTheDocument();
-  });
-
-  test.skip("renders the featured tours section", () => {
-    renderWithClient(<LearnHomeView />);
-    expect(
-      screen.getByRole("heading", { level: 3, name: /featured tours/i }),
     ).toBeInTheDocument();
   });
 });

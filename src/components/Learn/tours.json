@@ -1,0 +1,90 @@
+[
+  {
+    "id": "first-pipeline",
+    "title": "Build your first pipeline",
+    "description": "Walk through dragging components from the library, wiring tasks together, and submitting your very first run.",
+    "difficulty": "Beginner",
+    "duration": "4 min",
+    "area": "Editor"
+  },
+  {
+    "id": "navigating-the-editor",
+    "title": "Find your way around the editor",
+    "description": "Get oriented with the canvas, dockable panels, properties view, canvas tools, and the menu bar so you know where every feature lives.",
+    "difficulty": "Beginner",
+    "duration": "5 min",
+    "area": "Editor"
+  },
+  {
+    "id": "component-library-basics",
+    "title": "Browse the component library",
+    "description": "Learn how to search, filter, favorite, and inspect components before dropping them on the canvas.",
+    "difficulty": "Beginner",
+    "duration": "3 min",
+    "area": "Library"
+  },
+  {
+    "id": "submitting-and-monitoring",
+    "title": "Submit a run and watch it execute",
+    "description": "Submit a pipeline, locate it in All Runs, and step through task logs as the run progresses.",
+    "difficulty": "Beginner",
+    "duration": "4 min",
+    "area": "Runs"
+  },
+  {
+    "id": "using-secrets",
+    "title": "Use secrets without leaking credentials",
+    "description": "Create a secret, reference it from a task via the lightning-bolt menu, and confirm it never lands in the pipeline YAML.",
+    "difficulty": "Intermediate",
+    "duration": "3 min",
+    "area": "Security"
+  },
+  {
+    "id": "create-component",
+    "title": "Create a custom component in the browser",
+    "description": "Author a Python or YAML component using the in-app editor, no local development environment required.",
+    "difficulty": "Intermediate",
+    "duration": "5 min",
+    "area": "Library"
+  },
+  {
+    "id": "subgraphs",
+    "title": "Group tasks into reusable subgraphs",
+    "description": "Select related tasks, bundle them into a subgraph, and use the Pipeline Tree window to navigate nested levels.",
+    "difficulty": "Intermediate",
+    "duration": "4 min",
+    "area": "Editor"
+  },
+  {
+    "id": "templatized-run-names",
+    "title": "Templatize run names for experiment tracking",
+    "description": "Enable the beta feature and craft a name template so every submitted run gets a unique, scannable label.",
+    "difficulty": "Intermediate",
+    "duration": "3 min",
+    "area": "Runs"
+  },
+  {
+    "id": "caching",
+    "title": "Save hours with task-level caching",
+    "description": "Understand how cache keys are derived, when caches hit, and how to disable caching on a single task when you must.",
+    "difficulty": "Advanced",
+    "duration": "5 min",
+    "area": "Performance"
+  },
+  {
+    "id": "github-libraries",
+    "title": "Register a GitHub repo as a component source",
+    "description": "Point Tangle at a shared GitHub repository to pull in an entire library of team components at once.",
+    "difficulty": "Advanced",
+    "duration": "4 min",
+    "area": "Library"
+  },
+  {
+    "id": "multinode-tasks",
+    "title": "Configure a multi-node task",
+    "description": "Set the multi-node annotation, reference per-node system data, and submit a distributed run across multiple workers.",
+    "difficulty": "Advanced",
+    "duration": "6 min",
+    "area": "Compute"
+  }
+]
