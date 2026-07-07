@@ -4,6 +4,13 @@ import {
   listSecretsApiSecretsGet,
   updateSecretApiSecretsSecretNamePut,
 } from "@/api/sdk.gen";
+import {
+  isTourMockActive,
+  mockAddSecret,
+  mockListSecrets,
+  mockRemoveSecret,
+  mockUpdateSecret,
+} from "@/providers/TourProvider/tourMockBackend";
 
 import type { Secret } from "./types";
 
@@ -33,6 +40,10 @@ function parseAsUtc(dateString: string): Date {
 }
 
 export async function fetchSecretsList() {
+  if (isTourMockActive()) {
+    return mockListSecrets();
+  }
+
   const response = await listSecretsApiSecretsGet();
 
   if (response.response.status !== 200) {
@@ -60,6 +71,11 @@ export async function updateSecret(
   secretId: string,
   secret: Partial<Secret> & Pick<Secret, "value">,
 ) {
+  if (isTourMockActive()) {
+    mockUpdateSecret(secretId, secret.value);
+    return true;
+  }
+
   const response = await updateSecretApiSecretsSecretNamePut({
     path: {
       secret_name: secretId,
@@ -79,6 +95,11 @@ export async function updateSecret(
 export async function addSecret(
   secret: Partial<Secret> & Pick<Secret, "name" | "value">,
 ) {
+  if (isTourMockActive()) {
+    mockAddSecret(secret.name ?? "", secret.value);
+    return true;
+  }
+
   const response = await createSecretApiSecretsPost({
     query: {
       secret_name: secret.name ?? "",
@@ -96,6 +117,11 @@ export async function addSecret(
 }
 
 export async function removeSecret(secretId: string) {
+  if (isTourMockActive()) {
+    mockRemoveSecret(secretId);
+    return true;
+  }
+
   const response = await deleteSecretApiSecretsSecretNameDelete({
     path: {
       secret_name: secretId,

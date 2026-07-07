@@ -8,11 +8,14 @@ import { EditorVersionToggle } from "@/components/shared/EditorVersionToggle";
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
 import { Link } from "@/components/ui/link";
+import { useTourMode } from "@/providers/TourProvider/TourModeContext";
+import { openTourSettings } from "@/providers/TourProvider/TourSecretsDialog";
 import { DOCUMENTATION_URL } from "@/utils/constants";
 import { tracking } from "@/utils/tracking";
 
 export function AppMenuActions() {
   const requiresAuthorization = isAuthorizationRequired();
+  const tourMode = useTourMode();
 
   return (
     <InlineStack
@@ -23,11 +26,21 @@ export function AppMenuActions() {
     >
       <AiModelQuickSelect />
       <EditorVersionToggle />
-      <RouterLink to="/settings/backend">
-        <TooltipButton tooltip="Settings" {...tracking("v2.header.settings")}>
+      {tourMode ? (
+        <TooltipButton
+          tooltip="Settings"
+          onClick={openTourSettings}
+          {...tracking("v2.header.settings")}
+        >
           <Icon name="Settings" />
         </TooltipButton>
-      </RouterLink>
+      ) : (
+        <RouterLink to="/settings/backend">
+          <TooltipButton tooltip="Settings" {...tracking("v2.header.settings")}>
+            <Icon name="Settings" />
+          </TooltipButton>
+        </RouterLink>
+      )}
       <Link href={DOCUMENTATION_URL} target="_blank" rel="noopener noreferrer">
         <TooltipButton
           tooltip="Documentation"

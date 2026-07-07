@@ -36,6 +36,8 @@ import { Paragraph } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
 import { useBackend } from "@/providers/BackendProvider";
+import { useTourMockBackend } from "@/providers/TourProvider/tourMockBackend";
+import { useTourMode } from "@/providers/TourProvider/TourModeContext";
 import {
   fetchExecutionDetails,
   fetchPipelineRun,
@@ -66,6 +68,8 @@ export const SubmitTaskArgumentsDialog = ({
   componentSpec,
 }: SubmitTaskArgumentsDialogProps) => {
   const notify = useToastNotification();
+  const tourMode = useTourMode();
+  const mockBackend = useTourMockBackend();
   const initialArgs = getArgumentsFromInputs(componentSpec);
 
   const [runNotes, setRunNotes] = useState<string>("");
@@ -135,8 +139,16 @@ export const SubmitTaskArgumentsDialog = ({
   const hasInputs = inputs.length > 0;
 
   return (
-    <Dialog open={open} onOpenChange={handleCancel}>
-      <DialogContent className="sm:max-w-lg">
+    <Dialog open={open} onOpenChange={handleCancel} modal={!tourMode}>
+      <DialogContent
+        className="sm:max-w-lg"
+        {...(tourMode
+          ? {
+              onInteractOutside: (event) => event.preventDefault(),
+              onEscapeKeyDown: (event) => event.preventDefault(),
+            }
+          : {})}
+      >
         <DialogHeader>
           <DialogTitle>Submit Run with Arguments</DialogTitle>
           <DialogDescription className="hidden">
@@ -199,7 +211,10 @@ export const SubmitTaskArgumentsDialog = ({
           <Button variant="outline" onClick={handleCancel}>
             Cancel
           </Button>
-          <Button onClick={handleConfirm} disabled={!isValidToSubmit}>
+          <Button
+            onClick={handleConfirm}
+            disabled={!isValidToSubmit || mockBackend}
+          >
             Submit Run
           </Button>
         </DialogFooter>

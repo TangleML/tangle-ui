@@ -52,6 +52,20 @@ export function tourActionLabel(step: TourAction): string {
       return `Select **${step.targetMinCount ?? 2}** tasks`;
     case "create-subgraph":
       return "Create a subgraph from the selected tasks";
+    case "open-secret-dialog":
+      return "Open the secret picker from the ⚡ menu";
+    case "open-settings-panel":
+      return "Open Settings to manage your secrets";
+    case "open-submit-dialog":
+      return "Open the run arguments dialog";
+    case "assign-secret-argument":
+      return step.targetArgumentName
+        ? `Assign a secret to the **${step.targetArgumentName}** argument`
+        : "Assign a secret to the argument";
+    case "assign-secret-submit":
+      return step.targetArgumentName
+        ? `Bind a secret to **${step.targetArgumentName}** at submit`
+        : "Bind a secret at submit time";
     default:
       return GENERIC_LABEL;
   }

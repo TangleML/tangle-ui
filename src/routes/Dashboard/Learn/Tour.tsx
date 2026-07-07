@@ -12,10 +12,13 @@ import {
   type TourDefinition,
 } from "@/components/Learn/tours/registry";
 import useToastNotification from "@/hooks/useToastNotification";
+import { useBackend } from "@/providers/BackendProvider";
 import { TourContent } from "@/providers/TourProvider/TourContent";
+import { setTourMockActive } from "@/providers/TourProvider/tourMockBackend";
 import {
   TourModeProvider,
   type TourModeValue,
+  useTourMode,
 } from "@/providers/TourProvider/TourModeContext";
 import {
   buildTourPipelineYaml,
@@ -250,6 +253,7 @@ function TourPageBody({
         promoteToPipeline,
       }}
     >
+      <TourMockBackendController />
       {resolved && (
         <TourReactourBridge
           key={tour.id}
@@ -265,4 +269,18 @@ function TourPageBody({
       />
     </TourModeProvider>
   );
+}
+
+function TourMockBackendController() {
+  const tourMode = useTourMode();
+  const { available } = useBackend();
+  const shouldMock = !!tourMode?.tour.mockBackend && !available;
+
+  useEffect(() => {
+    setTourMockActive(shouldMock);
+  }, [shouldMock]);
+
+  useEffect(() => () => setTourMockActive(false), []);
+
+  return null;
 }

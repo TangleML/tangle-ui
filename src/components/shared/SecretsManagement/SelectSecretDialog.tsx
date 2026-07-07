@@ -16,8 +16,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/typography";
+import { useBackend } from "@/providers/BackendProvider";
+import { useTourMockBackend } from "@/providers/TourProvider/tourMockBackend";
 
 import { AddSecretForm } from "./components/AddSecretForm";
+import { SecretsBackendUnavailable } from "./components/SecretsBackendUnavailable";
 import { fetchSecretsList } from "./secretsStorage";
 import { type Secret, SecretsQueryKeys } from "./types";
 
@@ -189,6 +192,8 @@ export function SelectSecretDialog({
   onOpenChange,
   onSelect,
 }: SelectSecretDialogProps) {
+  const { available } = useBackend();
+  const mockBackend = useTourMockBackend();
   const handleSelect = (secretName: string) => {
     onSelect(secretName);
     onOpenChange(false);
@@ -198,7 +203,11 @@ export function SelectSecretDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       {open && (
         <DialogContent data-testid="select-secret-dialog">
-          <SelectSecretDialogContent onSelect={handleSelect} />
+          {available || mockBackend ? (
+            <SelectSecretDialogContent onSelect={handleSelect} />
+          ) : (
+            <SecretsBackendUnavailable />
+          )}
         </DialogContent>
       )}
     </Dialog>
