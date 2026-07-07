@@ -207,7 +207,11 @@ export default [
       "playwright/prefer-web-first-assertions": "error", // Use await expect(element).toBeVisible()
       "playwright/no-conditional-in-test": "warn", // Avoid if/else based on element state
       "playwright/no-standalone-expect": "error", // Ensure expects are awaited
-      "playwright/expect-expect": "warn", // Ensure tests have assertions
+      "playwright/expect-expect": [
+        "warn",
+        // runTour drives a guided tour and asserts every step internally.
+        { assertFunctionNames: ["runTour"] },
+      ], // Ensure tests have assertions
       "playwright/no-skipped-test": "warn", // Warn about test.skip()
       "@typescript-eslint/no-non-null-assertion": "error", // Prevent non-null assertions (!)
     },
