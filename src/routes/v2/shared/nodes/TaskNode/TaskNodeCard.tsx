@@ -246,6 +246,8 @@ export const TaskNodeCard = observer(function TaskNodeCard({
       })}
       style={cardStyle}
       onClick={onNodeClick}
+      data-tour-card="task"
+      data-tour-card-name={taskName}
     >
       <CardHeader
         className="px-4 pt-3 pb-0"

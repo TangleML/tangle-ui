@@ -68,6 +68,8 @@ export function TaskNodeSimplified({
           : {}),
       }}
       onClick={onNodeClick}
+      data-tour-card="task"
+      data-tour-card-name={taskName}
     >
       {visibleInputs.map((input) => (
         <Handle
