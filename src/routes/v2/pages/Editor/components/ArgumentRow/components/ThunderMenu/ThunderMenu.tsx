@@ -115,6 +115,7 @@ export const ThunderMenu = observer(function ThunderMenu({
           side="bottom"
           sideOffset={4}
           className="w-56 z-[9999]"
+          data-tour="thunder-menu-content"
         >
           <DropdownMenuItem
             disabled={!canReset}

@@ -31,7 +31,10 @@ export function DynamicDataSubmenu({
         <Icon name="Zap" size="sm" className="text-purple-600" />
         Dynamic Data
       </DropdownMenuSubTrigger>
-      <DropdownMenuSubContent className="w-52 z-[9999]">
+      <DropdownMenuSubContent
+        className="w-52 z-[9999]"
+        data-tour="thunder-menu-submenu-content"
+      >
         {groups.map((group, index) => (
           <DropdownMenuGroup key={group.id}>
             {index > 0 && <DropdownMenuSeparator />}
