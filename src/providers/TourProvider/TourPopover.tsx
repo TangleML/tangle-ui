@@ -36,6 +36,10 @@ export const POPOVER_STYLES = {
     ...base,
     rx: 6,
   }),
+  clickArea: (base: object) => ({
+    ...base,
+    pointerEvents: "none" as const,
+  }),
   highlightedArea: (
     base: object,
     state?: { width?: number; height?: number },
@@ -75,18 +79,28 @@ export function computeDefaultPopoverPosition(
   props: PositionProps,
 ): ResolvedPosition {
   const targetHeight = props.bottom - props.top;
+  const isTallStrip = targetHeight > props.windowHeight * 0.5;
+  const margin = 16;
 
-  const isFullHeightRightStrip =
-    props.right >= props.windowWidth - 4 &&
-    targetHeight > props.windowHeight * 0.5;
-
-  if (isFullHeightRightStrip) {
+  // Right-anchored full-height strip (e.g. right sidebar): place popover to
+  // its LEFT. Reactour's "left" fallback can swap to "top"/"bottom" for tall
+  // targets, so we return explicit coords.
+  if (isTallStrip && props.right >= props.windowWidth - 4) {
     const popoverWidth = props.width || 380;
-    const margin = 16;
     return [
       Math.max(margin, props.left - popoverWidth - margin),
       Math.max(props.top + margin, 64),
     ];
+  }
+
+  // Left-anchored full-height strip (e.g. left dock): place popover to its
+  // RIGHT. Same reason — reactour's "right" fallback drops to "top" for tall
+  // targets even when there's plenty of room horizontally. We test the
+  // target's right edge against the viewport midline rather than its left
+  // edge against zero, so a dock that isn't flush to the window edge still
+  // qualifies.
+  if (isTallStrip && props.right < props.windowWidth * 0.5) {
+    return [props.right + margin, Math.max(props.top + margin, 64)];
   }
 
   return "bottom";

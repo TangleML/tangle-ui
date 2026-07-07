@@ -1,3 +1,20 @@
+/* Tour step ring: reactour merges highlightedSelectors into one bounding rect,
+   so per-element rings need their own mechanism. EditorTourBridge applies
+   this class to elements matching a step's ringSelectors. */
+.tour-ring {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+  border-radius: 6px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Handles are absolutely positioned by React Flow — don't let .tour-ring
+   clobber that to relative, which would dump the handle into normal flow. */
+.tour-ring.react-flow__handle {
+  position: absolute;
+}
+
 /* Use the proper box layout model by default, but allow elements to override */
 html {
   box-sizing: border-box;
