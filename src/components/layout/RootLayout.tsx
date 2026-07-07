@@ -10,6 +10,7 @@ import { useSessionPipelineStats } from "@/hooks/useSessionPipelineStats";
 import { AnalyticsProvider } from "@/providers/AnalyticsProvider";
 import { BackendProvider } from "@/providers/BackendProvider";
 import { ComponentSpecProvider } from "@/providers/ComponentSpecProvider";
+import { TourProvider } from "@/providers/TourProvider/TourProvider";
 import { PipelineStorageProvider } from "@/services/pipelineStorage/PipelineStorageProvider";
 
 import AppMenu from "./AppMenu";
@@ -27,21 +28,23 @@ function RootLayoutContent() {
     <BackendProvider>
       <ComponentSpecProvider>
         <PipelineStorageProvider>
-          <SessionPipelineStatsTracker />
-          <ToastContainer />
-          <ConfirmDialogBridge />
+          <TourProvider>
+            <SessionPipelineStatsTracker />
+            <ToastContainer />
+            <ConfirmDialogBridge />
 
-          <div className="App flex flex-col min-h-screen w-full">
-            <AppMenu />
+            <div className="App flex flex-col min-h-screen w-full">
+              <AppMenu />
 
-            <main className="flex-1 grid">
-              <Outlet />
-            </main>
+              <main className="flex-1 grid">
+                <Outlet />
+              </main>
 
-            {import.meta.env.VITE_ENABLE_ROUTER_DEVTOOLS === "true" && (
-              <TanStackRouterDevtools />
-            )}
-          </div>
+              {import.meta.env.VITE_ENABLE_ROUTER_DEVTOOLS === "true" && (
+                <TanStackRouterDevtools />
+              )}
+            </div>
+          </TourProvider>
         </PipelineStorageProvider>
       </ComponentSpecProvider>
     </BackendProvider>
