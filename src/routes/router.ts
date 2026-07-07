@@ -7,6 +7,8 @@ import {
   redirect,
 } from "@tanstack/react-router";
 
+import { IndexRedirect } from "@/components/Onboarding/IndexRedirect";
+import { OnboardingWelcome } from "@/components/Onboarding/OnboardingWelcome";
 import { ErrorPage } from "@/components/shared/ErrorPage";
 import { AuthorizationResultScreen as GitHubAuthorizationResultScreen } from "@/components/shared/GitHubAuth/AuthorizationResultScreen";
 import { AuthorizationResultScreen as HuggingFaceAuthorizationResultScreen } from "@/components/shared/HuggingFaceAuth/AuthorizationResultScreen";
@@ -79,7 +81,19 @@ const dashboardRoute = createRoute({
 const dashboardIndexRoute = createRoute({
   getParentRoute: () => dashboardRoute,
   path: "/",
+  component: IndexRedirect,
+});
+
+const dashboardHomeRoute = createRoute({
+  getParentRoute: () => dashboardRoute,
+  path: APP_ROUTES.DASHBOARD,
   component: DashboardHomeView,
+});
+
+const welcomeRoute = createRoute({
+  getParentRoute: () => dashboardRoute,
+  path: APP_ROUTES.WELCOME,
+  component: OnboardingWelcome,
 });
 
 const dashboardRunsRoute = createRoute({
@@ -329,6 +343,8 @@ const artifactPreviewRoute = createRoute({
 
 const dashboardRouteTree = dashboardRoute.addChildren([
   dashboardIndexRoute,
+  dashboardHomeRoute,
+  welcomeRoute,
   dashboardRunsRoute,
   dashboardPipelinesRoute,
   dashboardComponentsRoute,

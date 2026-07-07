@@ -9,6 +9,7 @@ import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Link as UILink } from "@/components/ui/link";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
+import { useOnboarding } from "@/providers/OnboardingProvider/OnboardingProvider";
 import { APP_ROUTES } from "@/routes/appRoutes";
 import {
   ABOUT_URL,
@@ -28,7 +29,12 @@ interface SidebarItem {
 }
 
 const BASE_SIDEBAR_ITEMS: SidebarItem[] = [
-  { to: "/", label: "My Dashboard", icon: "LayoutDashboard", exact: true },
+  {
+    to: APP_ROUTES.DASHBOARD,
+    label: "My Dashboard",
+    icon: "LayoutDashboard",
+    exact: true,
+  },
   { to: "/pipelines", label: "My Pipelines", icon: "GitBranch" },
   { to: "/runs", label: "All Runs", icon: "Play" },
   { to: "/components", label: "Components", icon: "Package" },
@@ -53,13 +59,27 @@ export function DashboardLayout() {
   const requiresAuthorization = isAuthorizationRequired();
   const isComponentSearchEnabled = useFlagValue("component-search-v2");
 
-  const sidebarItems = isComponentSearchEnabled
+  const { shouldShowOnboarding } = useOnboarding();
+
+  const baseItems = isComponentSearchEnabled
     ? BASE_SIDEBAR_ITEMS.map((item) =>
         item.to === APP_ROUTES.DASHBOARD_COMPONENTS
           ? COMPONENT_SEARCH_ITEM
           : item,
       )
     : BASE_SIDEBAR_ITEMS;
+
+  const sidebarItems: SidebarItem[] = shouldShowOnboarding
+    ? [
+        {
+          to: APP_ROUTES.WELCOME,
+          label: "Get Started",
+          icon: "Rocket",
+          exact: true,
+        },
+        ...baseItems,
+      ]
+    : baseItems;
 
   return (
     <div

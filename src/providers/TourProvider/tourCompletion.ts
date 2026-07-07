@@ -95,9 +95,6 @@ export function useRecordTourCompletion() {
   const { mutate } = useMutation({
     mutationFn: async (tourId: string) => {
       const key = queryKey(backendUrl);
-      // Merge against the authoritative server map — fetching it when the query
-      // hasn't loaded yet or previously failed — so the PATCH can never replace
-      // saved completions with only the current tour.
       const current = await queryClient.ensureQueryData({
         queryKey: key,
         queryFn: () => fetchCompletions(backendUrl),
@@ -122,7 +119,6 @@ export function useRecordTourCompletion() {
       queryClient.setQueryData(queryKey(backendUrl), next);
     },
     onError: () => {
-      // Our optimistic value may be wrong; re-sync from the server.
       void queryClient.invalidateQueries({ queryKey: queryKey(backendUrl) });
     },
   });
@@ -136,8 +132,6 @@ export function useRecordTourCompletion() {
     if (available && backendUrl) {
       mutate(tourId);
     } else {
-      // No backend: nothing to clobber, so keep the optimistic local cache
-      // update so the completion is reflected for the rest of the session.
       queryClient.setQueryData<TourCompletionMap>(key, {
         ...current,
         [tourId]: { completedAt: new Date().toISOString(), completionCount },

@@ -111,6 +111,17 @@ describe("OnboardingProvider", () => {
     expect(patched()).toBe(false);
   });
 
+  it("does not show onboarding when the backend is unavailable", async () => {
+    backend = { available: false, backendUrl: "https://backend.example" };
+
+    const { result } = render();
+
+    await waitFor(() => expect(result.current.isReady).toBe(true));
+    expect(result.current.isOnboardingAvailable).toBe(false);
+    expect(result.current.shouldShowOnboarding).toBe(false);
+    expect(patched()).toBe(false);
+  });
+
   it("derives tour and run completion live without persisting them", async () => {
     tourCompletions = { "first-pipeline": { completedAt: "x" } };
     runsPayload = { pipeline_runs: [{ id: "run-1" }] };

@@ -5,12 +5,10 @@ test.describe("Navigation tracking", () => {
     page,
   }) => {
     await page.addInitScript(() => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (window as any).__analyticsEvents = [];
       window.addEventListener("tangle.analytics.track", (e) => {
         const detail = (e as CustomEvent).detail;
         if (detail.actionType === "page_view") {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (window as any).__analyticsEvents.push(detail);
         }
       });
@@ -24,26 +22,28 @@ test.describe("Navigation tracking", () => {
     await page.getByRole("link", { name: "Settings" }).click();
     await expect(page).toHaveURL(/\/settings/);
 
-    const events = await page.evaluate(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      () => (window as any).__analyticsEvents,
-    );
+    const events = await page.evaluate(() => (window as any).__analyticsEvents);
 
     expect(events.length).toBeGreaterThanOrEqual(2);
 
-    const [initial, navigation] = events;
-
-    // First page_view from landing on /
-    expect(initial.actionType).toBe("page_view");
-    expect(initial.metadata).toMatchObject({
-      to: "/",
+    const landing = events.find(
+      (e: { metadata?: { to?: string } }) =>
+        e.metadata?.to === "/welcome" || e.metadata?.to === "/dashboard",
+    );
+    expect(landing).toBeTruthy();
+    expect(landing.metadata).toMatchObject({
+      to: expect.stringMatching(/^\/(welcome|dashboard)$/),
       route_pattern: expect.any(String),
     });
 
-    // Second page_view from navigating to settings
-    expect(navigation.actionType).toBe("page_view");
+    // Navigating to settings emits a page_view.
+    const navigation = events.find(
+      (e: { metadata?: { to?: string } }) =>
+        typeof e.metadata?.to === "string" &&
+        e.metadata.to.includes("/settings"),
+    );
+    expect(navigation).toBeTruthy();
     expect(navigation.metadata).toMatchObject({
-      from: "/",
       to: expect.stringContaining("/settings"),
       route_pattern: expect.any(String),
     });
@@ -51,12 +51,10 @@ test.describe("Navigation tracking", () => {
 
   test("captures search params in page_view metadata", async ({ page }) => {
     await page.addInitScript(() => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (window as any).__analyticsEvents = [];
       window.addEventListener("tangle.analytics.track", (e) => {
         const detail = (e as CustomEvent).detail;
         if (detail.actionType === "page_view") {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (window as any).__analyticsEvents.push(detail);
         }
       });
@@ -67,10 +65,7 @@ test.describe("Navigation tracking", () => {
       page.locator("[data-testid='app-menu-actions']"),
     ).toBeVisible();
 
-    const events = await page.evaluate(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      () => (window as any).__analyticsEvents,
-    );
+    const events = await page.evaluate(() => (window as any).__analyticsEvents);
 
     expect(events.length).toBeGreaterThanOrEqual(1);
 

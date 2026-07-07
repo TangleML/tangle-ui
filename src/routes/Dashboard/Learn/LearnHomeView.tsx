@@ -11,7 +11,7 @@ import { BlockStack } from "@/components/ui/layout";
 import { useOnboarding } from "@/providers/OnboardingProvider/OnboardingProvider";
 
 export function LearnHomeView() {
-  const { dismissed } = useOnboarding();
+  const { dismissed, isOnboardingAvailable } = useOnboarding();
   return (
     <BlockStack gap="6">
       <BlockStack gap="4">
@@ -26,7 +26,9 @@ export function LearnHomeView() {
         </BlockStack>
       </BlockStack>
 
-      <OnboardingHero className={dismissed ? "order-last" : undefined} />
+      {isOnboardingAvailable && (
+        <OnboardingHero className={dismissed ? "order-last" : undefined} />
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <TipOfTheDay />

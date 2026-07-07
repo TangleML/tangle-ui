@@ -105,6 +105,7 @@ export const BackendProvider = ({ children }: { children: ReactNode }) => {
       if (!normalizedUrl) {
         if (notifyResult) notify("Backend is not configured", "error");
         if (saveAvailability) setAvailable(false);
+        setReady(true);
         return Promise.resolve(false);
       }
       return fetch(`${normalizedUrl}/services/ping`)
@@ -126,6 +127,7 @@ export const BackendProvider = ({ children }: { children: ReactNode }) => {
         .catch(() => {
           if (notifyResult) notify("Backend unavailable", "error");
           if (saveAvailability) setAvailable(false);
+          setReady(true);
           return false;
         });
     },

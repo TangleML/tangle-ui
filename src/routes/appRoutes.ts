@@ -9,7 +9,8 @@ const TOUR_BASE_PATH = "/tour";
 
 export const APP_ROUTES = {
   HOME: "/",
-  DASHBOARD: "/",
+  DASHBOARD: "/dashboard",
+  WELCOME: "/welcome",
   DASHBOARD_RUNS: "/runs",
   DASHBOARD_PIPELINES: "/pipelines",
   DASHBOARD_COMPONENTS: "/components",
