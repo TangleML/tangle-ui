@@ -18,6 +18,7 @@ import { resetAllTourPipelineState } from "@/providers/TourProvider/tourPipeline
 import { APP_ROUTES } from "@/routes/router";
 import { tracking } from "@/utils/tracking";
 
+import { TourCompletedBadge } from "./TourCompletedBadge";
 import {
   type Tour,
   TOUR_DIFFICULTY_BLURBS,
@@ -27,10 +28,8 @@ import {
   type TourDifficulty,
   tours,
 } from "./tours";
-import { getTour } from "./tours/registry";
 
 function TourCard({ tour }: { tour: Tour }) {
-  const isAvailable = getTour(tour.id) !== undefined;
   const completed = useTourCompletion(tour.id);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -44,7 +43,7 @@ function TourCard({ tour }: { tour: Tour }) {
   };
 
   return (
-    <Card className="h-full py-4 gap-2 hover:border-primary/40 hover:shadow-md transition-all duration-200">
+    <Card className="h-full py-4 gap-2">
       <CardHeader className="px-4 gap-2">
         <CardTitle className="text-sm leading-snug">{tour.title}</CardTitle>
         <CardDescription className="text-sm">
@@ -57,43 +56,27 @@ function TourCard({ tour }: { tour: Tour }) {
             <Badge size="sm" variant="secondary">
               {tour.area}
             </Badge>
-            {completed && (
-              <Badge size="sm" variant="outline" className="text-green-600">
-                <Icon name="Check" size="xs" aria-hidden="true" />
-                Completed
-              </Badge>
-            )}
+            {completed && <TourCompletedBadge />}
             <Text size="xs" tone="subdued">
               {tour.duration}
             </Text>
           </InlineStack>
-          {isAvailable ? (
-            <Button
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={startTour}
+            {...tracking("learning_hub.tours.start", {
+              tour_id: tour.id,
+              is_restart: completed,
+            })}
+          >
+            {completed ? "Restart" : "Start tour"}
+            <Icon
+              name={completed ? "RotateCcw" : "Play"}
               size="sm"
-              variant="ghost"
-              onClick={startTour}
-              {...tracking("learning_hub.tours.start", {
-                tour_id: tour.id,
-                is_restart: completed,
-              })}
-            >
-              {completed ? "Restart" : "Start tour"}
-              <Icon
-                name={completed ? "RotateCcw" : "Play"}
-                size="sm"
-                aria-hidden="true"
-              />
-            </Button>
-          ) : (
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled
-              {...tracking("learning_hub.tours.start", { tour_id: tour.id })}
-            >
-              Coming soon
-            </Button>
-          )}
+              aria-hidden="true"
+            />
+          </Button>
         </InlineStack>
       </CardContent>
     </Card>
@@ -107,10 +90,6 @@ function DifficultySection({
   difficulty: TourDifficulty;
   tours: Tour[];
 }) {
-  if (difficultyTours.length === 0) {
-    return null;
-  }
-
   return (
     <BlockStack gap="3">
       <BlockStack gap="1">
@@ -150,7 +129,9 @@ export function ToursLibrary() {
 
   return (
     <BlockStack gap="8">
-      {TOUR_DIFFICULTY_ORDER.map((difficulty) => (
+      {TOUR_DIFFICULTY_ORDER.filter(
+        (difficulty) => (buckets.get(difficulty)?.length ?? 0) > 0,
+      ).map((difficulty) => (
         <DifficultySection
           key={difficulty}
           difficulty={difficulty}

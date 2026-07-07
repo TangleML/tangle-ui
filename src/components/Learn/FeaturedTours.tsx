@@ -1,7 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -11,26 +10,24 @@ import { resetAllTourPipelineState } from "@/providers/TourProvider/tourPipeline
 import { APP_ROUTES } from "@/routes/router";
 import { tracking } from "@/utils/tracking";
 
+import { TourCompletedBadge } from "./TourCompletedBadge";
 import { tours as tourCards } from "./tours";
-import { getTour } from "./tours/registry";
 
 interface FeaturedTour {
   id: string;
   title: string;
   duration: string;
-  tag?: "new" | "popular";
-  available: boolean;
 }
 
-const FEATURED_TOUR_IDS: Array<Pick<FeaturedTour, "id" | "tag">> = [
-  { id: "navigating-the-editor", tag: "new" },
-  { id: "first-pipeline", tag: "popular" },
-  { id: "using-secrets" },
-  { id: "multinode-tasks" },
+const FEATURED_TOUR_IDS: string[] = [
+  "navigating-the-editor",
+  "first-pipeline",
+  "using-secrets",
+  "subgraphs",
 ];
 
 function buildFeaturedTours(): FeaturedTour[] {
-  return FEATURED_TOUR_IDS.flatMap(({ id, tag }) => {
+  return FEATURED_TOUR_IDS.flatMap((id) => {
     const card = tourCards.find((c) => c.id === id);
     if (!card) return [];
     return [
@@ -38,8 +35,6 @@ function buildFeaturedTours(): FeaturedTour[] {
         id,
         title: card.title,
         duration: card.duration,
-        tag,
-        available: getTour(id) !== undefined,
       },
     ];
   });
@@ -106,7 +101,6 @@ function FeaturedTourButton({
     <Button
       variant="ghost"
       size="lg"
-      disabled={!tour.available}
       onClick={onStart}
       className="h-auto min-h-10 w-full justify-start whitespace-normal py-2 text-left"
       {...tracking("learning_hub.tours.start", {
@@ -146,26 +140,7 @@ function FeaturedTourLabel({
         <Paragraph size="sm" weight="semibold" className="truncate">
           {tour.title}
         </Paragraph>
-        {tour.tag && (
-          <Badge
-            size="sm"
-            variant={tour.tag === "new" ? "default" : "secondary"}
-            className="capitalize"
-          >
-            {tour.tag}
-          </Badge>
-        )}
-        {completed && (
-          <Badge size="sm" variant="outline" className="text-green-600">
-            <Icon name="Check" size="xs" aria-hidden="true" />
-            Completed
-          </Badge>
-        )}
-        {!tour.available && (
-          <Badge size="sm" variant="outline">
-            Coming soon
-          </Badge>
-        )}
+        {completed && <TourCompletedBadge />}
       </InlineStack>
       <Text size="xs" tone="subdued">
         {tour.duration}
