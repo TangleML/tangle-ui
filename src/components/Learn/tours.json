@@ -50,9 +50,9 @@
   {
     "id": "subgraphs",
     "title": "Group tasks into reusable subgraphs",
-    "description": "Select related tasks, bundle them into a subgraph, and use the Pipeline Tree window to navigate nested levels.",
+    "description": "Step into a nested pipeline, navigate with breadcrumbs, then unpack and re-pack tasks to build your own subgraph.",
     "difficulty": "Intermediate",
-    "duration": "4 min",
+    "duration": "5 min",
     "area": "Editor"
   },
   {

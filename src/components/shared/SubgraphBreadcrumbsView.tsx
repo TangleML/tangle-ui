@@ -36,6 +36,7 @@ export const SubgraphBreadcrumbsView = ({
     <InlineStack
       align="space-between"
       className="px-4 py-2 bg-gray-50 border-b w-full z-1"
+      data-tour="subgraph-breadcrumbs"
     >
       <Breadcrumb>
         <BreadcrumbList>
@@ -53,6 +54,8 @@ export const SubgraphBreadcrumbsView = ({
                         size="sm"
                         onClick={() => onNavigate(index)}
                         className="h-6 px-2"
+                        data-tour-crumb={isRoot ? "root" : "ancestor"}
+                        data-tour-crumb-index={index}
                         {...(getCrumbTracking?.(index) ?? {})}
                       >
                         {isRoot ? (

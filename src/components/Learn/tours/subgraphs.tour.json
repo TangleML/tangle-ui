@@ -1,0 +1,170 @@
+{
+  "id": "subgraphs",
+  "displayName": "Guided Tour: Subgraphs",
+  "requiresEditor": true,
+  "starterPipelineUrl": "tour-pipelines/Subgraphs.pipeline.component.yaml",
+  "steps": [
+    {
+      "selector": "[data-tour-anchor=\"no-spotlight\"]",
+      "content": "A **subgraph** is a task that contains a whole pipeline of its own.\n\nSubgraphs help you manage complex projects: bundle a section of work into a single node, hide its internals, and reuse that bundle wherever it makes sense.\n\nThis example pipeline already contains three subgraphs for you to explore.",
+      "position": "center"
+    },
+    {
+      "selector": "[data-tour=\"editor-canvas\"]",
+      "highlightedSelectors": ["[data-tour=\"editor-canvas\"]"],
+      "ringSelectors": [
+        "[data-tour-card=\"task\"][data-tour-card-name=\"Data Preparation\"]",
+        "[data-tour-card=\"task\"][data-tour-card-name=\"Training\"]",
+        "[data-tour-card=\"task\"][data-tour-card-name=\"Evaluation\"]"
+      ],
+      "resizeObservables": ["[data-tour=\"editor-canvas\"]"],
+      "content": "The three highlighted tasks (**Data Preparation**, **Training**, and **Evaluation**) are each a subgraph.\n\nThey render like ordinary tasks on the canvas, but each one wraps an internal pipeline of its own.",
+      "position": [16, 80]
+    },
+    {
+      "selector": "[data-tour-card=\"task\"][data-tour-card-name=\"Data Preparation\"]",
+      "ringSelectors": [
+        "[data-tour-card=\"task\"][data-tour-card-name=\"Data Preparation\"]"
+      ],
+      "resizeObservables": ["[data-tour=\"editor-canvas\"]"],
+      "content": "**Double-click** the **Data Preparation** task to look inside.",
+      "position": "top",
+      "stepInteraction": true,
+      "interaction": "navigate-into-subgraph",
+      "targetTaskName": "Data Preparation"
+    },
+    {
+      "selector": "[data-tour=\"subgraph-breadcrumbs\"]",
+      "highlightedSelectors": ["[data-tour=\"subgraph-breadcrumbs\"]"],
+      "mutationObservables": ["[data-tour=\"subgraph-breadcrumbs\"]"],
+      "resizeObservables": ["[data-tour=\"subgraph-breadcrumbs\"]"],
+      "content": "You're now one level deep, inside the Data Preparation subgraph.\n\nThe **breadcrumbs** above the canvas show your current location in the pipeline tree. Clicking any crumb takes you back up to that level.",
+      "position": "bottom"
+    },
+    {
+      "selector": "[data-dock-window-content=\"pipeline-tree\"]",
+      "highlightedSelectors": [
+        "[data-dock-window=\"pipeline-tree\"]",
+        "[data-dock-window-content=\"pipeline-tree\"]"
+      ],
+      "mutationObservables": ["[data-dock-window-content=\"pipeline-tree\"]"],
+      "resizeObservables": ["[data-dock-window-content=\"pipeline-tree\"]"],
+      "content": "For broader navigation, the **Pipeline Structure** window in the left dock shows the full pipeline tree at a glance, with every subgraph expandable in place.\n\nClicking a node in the tree jumps you directly there, no double-clicking required.",
+      "position": "right",
+      "ensureWindowRestored": "pipeline-tree"
+    },
+    {
+      "selector": "[data-tour=\"editor-canvas\"]",
+      "highlightedSelectors": ["[data-tour=\"editor-canvas\"]"],
+      "ringSelectors": ["[data-tour-card=\"input\"]"],
+      "resizeObservables": ["[data-tour=\"editor-canvas\"]"],
+      "content": "**Input nodes** play a slightly different role inside a subgraph. At the top level they become pipeline parameters set at run submission, but here they become the subgraph's **arguments** on the parent task, fed by whatever the parent connects to (or sets as a static value).",
+      "position": [16, 80]
+    },
+    {
+      "selector": "[data-tour=\"editor-canvas\"]",
+      "highlightedSelectors": ["[data-tour=\"editor-canvas\"]"],
+      "ringSelectors": ["[data-tour-card=\"output\"]"],
+      "resizeObservables": ["[data-tour=\"editor-canvas\"]"],
+      "content": "**Output nodes** play the inverse role. At the top level they're the pipeline's results, captured at run completion. Inside a subgraph, they become the subgraph's **outputs** on the parent task, ready to be wired into downstream tasks at the level above.",
+      "position": [16, 80]
+    },
+    {
+      "selector": "[data-tour=\"subgraph-breadcrumbs\"]",
+      "highlightedSelectors": ["[data-tour=\"subgraph-breadcrumbs\"]"],
+      "ringSelectors": ["[data-tour-crumb=\"root\"]"],
+      "mutationObservables": ["[data-tour=\"subgraph-breadcrumbs\"]"],
+      "resizeObservables": ["[data-tour=\"subgraph-breadcrumbs\"]"],
+      "content": "Click **Root** in the breadcrumbs to return to the top level.",
+      "position": "bottom",
+      "stepInteraction": true,
+      "interaction": "navigate-to-root"
+    },
+    {
+      "selector": "[data-tour-anchor=\"no-spotlight\"]",
+      "content": "Subgraphs behave a little differently at runtime.\n\nThe subgraph itself doesn't execute any code, so it has no logs of its own. Instead, it shows an **aggregate status** that summarizes the state of its inner tasks. To inspect individual task logs in the run view, navigate into the subgraph the same way you did here.\n\nSubgraphs can also be **nested** inside other subgraphs, and the same navigation and aggregation rules apply at every level.",
+      "position": "center"
+    },
+    {
+      "selector": "[data-tour-anchor=\"no-spotlight\"]",
+      "content": "Subgraphs work in the other direction too. **Unpacking** a subgraph flattens it back into its constituent tasks at the parent level.\n\nThis is useful when you want to edit a subgraph's internals inline, or when a bundle is no longer earning its keep.",
+      "position": "center"
+    },
+    {
+      "selector": "[data-tour-card=\"task\"][data-tour-card-name=\"Data Preparation\"]",
+      "ringSelectors": [
+        "[data-tour-card=\"task\"][data-tour-card-name=\"Data Preparation\"]"
+      ],
+      "resizeObservables": ["[data-tour=\"editor-canvas\"]"],
+      "content": "Click the **Data Preparation** task once to select it.",
+      "position": "top",
+      "stepInteraction": true,
+      "interaction": "select-task",
+      "targetTaskName": "Data Preparation"
+    },
+    {
+      "selector": "[data-tour=\"node-menu-trigger\"]",
+      "highlightedSelectors": [
+        "[data-tour=\"node-menu-trigger\"]",
+        "[data-tour=\"node-menu-content\"]"
+      ],
+      "ringSelectors": ["[data-tour=\"node-menu-unpack\"]"],
+      "mutationObservables": ["[data-tour=\"node-menu-content\"]"],
+      "content": "With the subgraph selected, open the **Node** menu in the top bar and choose **Unpack Subgraph**.",
+      "position": "right",
+      "stepInteraction": true,
+      "interaction": "unpack-subgraph"
+    },
+    {
+      "selector": "[data-tour=\"editor-canvas\"]",
+      "highlightedSelectors": ["[data-tour=\"editor-canvas\"]"],
+      "ringSelectors": [
+        "[data-tour-card=\"task\"][data-tour-card-name=\"Generate\"]",
+        "[data-tour-card=\"task\"][data-tour-card-name=\"Split\"]"
+      ],
+      "resizeObservables": ["[data-tour=\"editor-canvas\"]"],
+      "content": "Data Preparation is gone. Its inner tasks, **Generate** and **Split**, are now sitting at the top level, already wired into the rest of the pipeline.",
+      "position": [16, 80]
+    },
+    {
+      "selector": "[data-tour=\"editor-canvas\"]",
+      "highlightedSelectors": ["[data-tour=\"editor-canvas\"]"],
+      "ringSelectors": [
+        "[data-tour-card=\"task\"][data-tour-card-name=\"Generate\"]",
+        "[data-tour-card=\"task\"][data-tour-card-name=\"Split\"]"
+      ],
+      "resizeObservables": ["[data-tour=\"editor-canvas\"]"],
+      "content": "Now let's repackage them.\n\nHold **Cmd** (or **Ctrl** on Windows) and click the Generate task, then the Split task to select both. Dragging a selection box across them on empty canvas works just as well.",
+      "position": [16, 80],
+      "stepInteraction": true,
+      "interaction": "multi-select-tasks",
+      "targetMinCount": 2
+    },
+    {
+      "selector": "[data-testid=\"selection-create-subgraph\"]",
+      "highlightedSelectors": [
+        "[data-testid=\"selection-toolbar\"]",
+        "[data-tour=\"create-subgraph-popover\"]"
+      ],
+      "ringSelectors": ["[data-testid=\"selection-create-subgraph\"]"],
+      "mutationObservables": [
+        "[data-testid=\"selection-toolbar\"]",
+        "[data-tour=\"create-subgraph-popover\"]"
+      ],
+      "resizeObservables": [
+        "[data-tour=\"editor-canvas\"]",
+        "[data-testid=\"selection-toolbar\"]",
+        "[data-tour=\"create-subgraph-popover\"]"
+      ],
+      "content": "A floating toolbar appears above your selection. Click **Create Subgraph**, give the new subgraph a name, and confirm.",
+      "position": "top",
+      "stepInteraction": true,
+      "interaction": "create-subgraph"
+    },
+    {
+      "selector": "[data-tour-anchor=\"no-spotlight\"]",
+      "content": "You've built a new subgraph from scratch.\n\nReach for subgraphs whenever a section of your pipeline reads as a single logical step, or you find you are often repeating combinations of tasks. They keep the top level clean and turn complex workflows into reusable building blocks.",
+      "position": [500, 60]
+    }
+  ]
+}

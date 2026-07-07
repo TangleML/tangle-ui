@@ -74,7 +74,12 @@ export const SelectionToolbar = observer(function SelectionToolbar({
                 />
               </div>
             </PopoverTrigger>
-            <PopoverContent side="bottom" align="end" className="w-64">
+            <PopoverContent
+              side="bottom"
+              align="end"
+              className="w-64"
+              data-tour="create-subgraph-popover"
+            >
               <CreateSubgraphForm
                 selectedTaskCount={selectedTaskCount}
                 onSubmit={handleCreate}
