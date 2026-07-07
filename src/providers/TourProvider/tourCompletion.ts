@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useBackend } from "@/providers/BackendProvider";
+import { USER_SETTINGS_PATH } from "@/utils/constants";
 import { fetchWithErrorHandling } from "@/utils/fetchWithErrorHandling";
 
 interface TourCompletionRecord {
@@ -10,7 +11,6 @@ interface TourCompletionRecord {
 
 type TourCompletionMap = Record<string, TourCompletionRecord>;
 
-const SETTINGS_PATH = "/api/users/me/settings";
 const COMPLETED_TOURS_KEY = "completed_tours";
 const QUERY_KEY = "tourCompletions";
 const STALE_MS = 1000 * 60 * 5;
@@ -57,7 +57,7 @@ function extractCompletedTours(payload: unknown): TourCompletionMap {
 async function fetchCompletions(
   backendUrl: string,
 ): Promise<TourCompletionMap> {
-  const url = new URL(SETTINGS_PATH, backendUrl);
+  const url = new URL(USER_SETTINGS_PATH, backendUrl);
   url.searchParams.set("setting_names", COMPLETED_TOURS_KEY);
   const payload = await fetchWithErrorHandling(url.toString());
   return extractCompletedTours(payload);
@@ -110,7 +110,7 @@ export function useRecordTourCompletion() {
         },
       };
 
-      const url = new URL(SETTINGS_PATH, backendUrl);
+      const url = new URL(USER_SETTINGS_PATH, backendUrl);
       await fetchWithErrorHandling(url.toString(), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },

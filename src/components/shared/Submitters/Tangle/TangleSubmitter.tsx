@@ -12,6 +12,7 @@ import useCooldownTimer from "@/hooks/useCooldownTimer";
 import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
 import { useBackend } from "@/providers/BackendProvider";
+import { ONBOARDING_MY_RUN_COUNT_KEY } from "@/providers/OnboardingProvider/onboardingQueryKeys";
 import { useTourMockBackend } from "@/providers/TourProvider/tourMockBackend";
 import { APP_ROUTES } from "@/routes/router";
 import { updateRunAnnotation } from "@/services/pipelineRunService";
@@ -90,6 +91,11 @@ function useSubmitPipeline() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: ["pipelineRuns"],
+      });
+      // Refresh the onboarding checklist's run-count so a first run flips
+      // `execute_run` immediately rather than after the 5-minute stale window.
+      await queryClient.invalidateQueries({
+        queryKey: ONBOARDING_MY_RUN_COUNT_KEY,
       });
     },
   });

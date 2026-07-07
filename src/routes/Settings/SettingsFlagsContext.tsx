@@ -8,9 +8,8 @@ import {
 } from "@/hooks/useRequiredContext";
 import { useBackend } from "@/providers/BackendProvider";
 import type { Flag } from "@/types/configuration";
+import { USER_SETTINGS_PATH } from "@/utils/constants";
 import { fetchWithErrorHandling } from "@/utils/fetchWithErrorHandling";
-
-const USER_SETTINGS_URL = "/api/users/me/settings";
 
 interface SettingsFlagsContextValue {
   betaFlags: Flag[];
@@ -30,7 +29,7 @@ export function SettingsFlagsProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "setFlag", payload: { key: flag, enabled } });
 
     if (available) {
-      const url = new URL(USER_SETTINGS_URL, backendUrl);
+      const url = new URL(USER_SETTINGS_PATH, backendUrl);
       fetchWithErrorHandling(url.toString(), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },

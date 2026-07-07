@@ -6,6 +6,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/components/Home",
   "src/components/Editor",
   "src/components/Learn",
+  "src/components/Onboarding",
 
   // 0 useCallback/useMemo - ready to enable
   "src/components/layout",
@@ -36,6 +37,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
   "src/hooks/useDebouncedSearchValue.ts",
   "src/hooks/useFavorites.ts",
   "src/hooks/useRecentlyViewed.ts",
+  "src/hooks/useDocsVisitTracking.ts",
   "src/components/shared/FavoriteToggle.tsx",
   "src/components/shared/ComponentLifecycleBadges.tsx",
   "src/components/shared/ComponentSearchEmptyStateSuggestions.tsx",
@@ -76,6 +78,7 @@ export const REACT_COMPILER_ENABLED_DIRS = [
 
   "src/providers/DialogProvider",
   "src/providers/TourProvider",
+  "src/providers/OnboardingProvider",
   "src/routes/EditorV2",
 
   // 11-20 useCallback/useMemo

@@ -1,0 +1,30 @@
+[
+  {
+    "id": "read_docs",
+    "label": "Read the documentation",
+    "description": "Skim the docs to get familiar with Tangle's core concepts.",
+    "icon": "BookOpen",
+    "cta": { "label": "Browse docs", "to": "/learn" }
+  },
+  {
+    "id": "complete_tour",
+    "label": "Take a guided tour",
+    "description": "Follow an interactive walkthrough right inside the editor.",
+    "icon": "Compass",
+    "cta": { "label": "Start a tour", "to": "/learn/tours" }
+  },
+  {
+    "id": "create_pipeline",
+    "label": "Create a pipeline",
+    "description": "Edit an existing pipeline or create a new one from scratch.",
+    "icon": "Workflow",
+    "cta": { "label": "Browse examples", "to": "/learn/examples" }
+  },
+  {
+    "id": "execute_run",
+    "label": "Run a pipeline",
+    "description": "Execute a pipeline and watch it run end to end.",
+    "icon": "Play",
+    "cta": { "label": "View runs", "to": "/runs" }
+  }
+]
