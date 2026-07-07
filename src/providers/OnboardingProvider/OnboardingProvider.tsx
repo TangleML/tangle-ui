@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import { useDocsVisitTracking } from "@/hooks/useDocsVisitTracking";
 import {
@@ -121,6 +121,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     isOnboardingAvailable && !isComplete && !dismissed;
 
   const [pipelineWriteCount, setPipelineWriteCount] = useState(0);
+  const pipelineCompletionFiredRef = useRef(false);
 
   useEffect(
     () =>
@@ -134,10 +135,12 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     if (
       pipelineWriteCount === 0 ||
       !progress ||
-      progress.steps.create_pipeline
+      progress.steps.create_pipeline ||
+      pipelineCompletionFiredRef.current
     ) {
       return;
     }
+    pipelineCompletionFiredRef.current = true;
     persist({
       ...progress,
       steps: { ...progress.steps, create_pipeline: true },
@@ -145,7 +148,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     track("onboarding.step.completed", { step_id: "create_pipeline" });
   }, [pipelineWriteCount, progress, persist, track]);
 
-  useStepCompletionToasts({ isResolved, desiredSteps, isComplete });
+  useStepCompletionToasts({ isOnboardingAvailable, desiredSteps, isComplete });
 
   const markDocsRead = () => {
     if (!progress || progress.steps.read_docs) return;

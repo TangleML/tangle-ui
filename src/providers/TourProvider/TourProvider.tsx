@@ -31,6 +31,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
           padding={{ mask: 0, popover: 10 }}
           position={computeDefaultPopoverPosition}
           nextButton={renderNextButton}
+          maskClassName="reactour-tour-mask"
           onClickMask={() => undefined}
         >
           <PopoverClampBridge />

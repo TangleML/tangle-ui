@@ -1,6 +1,6 @@
 import type { StepType } from "@reactour/tour";
 import { reaction } from "mobx";
-import { type Dispatch, type SetStateAction, useEffect } from "react";
+import { type Dispatch, type SetStateAction, useEffect, useRef } from "react";
 
 import type { TourStep } from "@/components/Learn/tours/registry";
 import type { TourInteraction } from "@/providers/TourProvider/tourActions";
@@ -14,6 +14,7 @@ import {
   elementFromEvent,
   followWindowPosition,
   pollForSelectorThenRefreshSteps,
+  recordNewSubgraphName,
 } from "./editorTourBridge.utils";
 
 type SetSteps = Dispatch<SetStateAction<StepType[]>> | undefined;
@@ -187,7 +188,11 @@ export function useLibraryDragGate({
     const allow = libraryDragAllow.toLowerCase();
     const handleDragStart = (event: DragEvent) => {
       const target = elementFromEvent(event);
-      if (!target?.closest('[data-dock-window-content="component-library"]')) {
+      if (
+        !target?.closest(
+          '[data-dock-window-content="component-library"], [data-dock-window-content="component-search-v2"]',
+        )
+      ) {
         return;
       }
       const item =
@@ -207,6 +212,82 @@ export function useLibraryDragGate({
       document.removeEventListener("dragstart", handleDragStart, true);
     };
   }, [isOpen, libraryDragAllow]);
+}
+
+export function useTourDragPassthrough({ isOpen }: { isOpen: boolean }): void {
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const setDragging = () => {
+      document.body.dataset.tourDragging = "true";
+    };
+    const clearDragging = () => {
+      delete document.body.dataset.tourDragging;
+    };
+    document.addEventListener("dragstart", setDragging, true);
+    document.addEventListener("dragend", clearDragging, true);
+    document.addEventListener("drop", clearDragging, true);
+    return () => {
+      document.removeEventListener("dragstart", setDragging, true);
+      document.removeEventListener("dragend", clearDragging, true);
+      document.removeEventListener("drop", clearDragging, true);
+      clearDragging();
+    };
+  }, [isOpen]);
+}
+
+interface AnchorCreatedSubgraphArgs {
+  isOpen: boolean;
+  active: boolean;
+  currentStep: number;
+  navigation: NavigationStore;
+  setSteps: SetSteps;
+}
+
+export function useAnchorCreatedSubgraph({
+  isOpen,
+  active,
+  currentStep,
+  navigation,
+  setSteps,
+}: AnchorCreatedSubgraphArgs): void {
+  const createdNameRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const subgraphIds = () =>
+      navigation.activeSpec?.tasks
+        .filter((t) => t.subgraphSpec !== undefined)
+        .map((t) => t.$id) ?? [];
+    const seen = new Set(subgraphIds());
+    const record = () => {
+      const name = recordNewSubgraphName(
+        seen,
+        navigation.activeSpec?.tasks ?? [],
+      );
+      if (name) createdNameRef.current = name;
+    };
+    return reaction(() => subgraphIds().join("|"), record);
+  }, [isOpen, navigation]);
+
+  useEffect(() => {
+    if (!isOpen || !active) return undefined;
+    const name = createdNameRef.current;
+    if (!name) return undefined;
+    const selector = `[data-tour-card="task"][data-tour-card-name="${name}"]`;
+    setSteps?.((prev) =>
+      prev.map((step, index) => {
+        if (index !== currentStep) return step;
+        const anchored: TourStep = {
+          ...step,
+          selector,
+          ringSelectors: [selector],
+          position: "top",
+        };
+        return anchored;
+      }),
+    );
+    return pollForSelectorThenRefreshSteps(selector, selector, setSteps);
+  }, [isOpen, active, currentStep, setSteps]);
 }
 
 interface ResetLibrarySearchArgs {

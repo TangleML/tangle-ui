@@ -5,12 +5,14 @@ import { useTourProgress } from "@/providers/TourProvider/TourProgressContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 import {
+  useAnchorCreatedSubgraph,
   useEnsureWindowRestored,
   useInteractionGate,
   useLibraryDragGate,
   useRequiresTaskSelected,
   useResetLibrarySearch,
   useRingSelectors,
+  useTourDragPassthrough,
   useViewportResizeDispatch,
 } from "./editorTourBridge.hooks";
 import { asTourStep } from "./editorTourBridge.utils";
@@ -54,6 +56,16 @@ export function EditorTourBridge() {
   useLibraryDragGate({
     isOpen,
     libraryDragAllow: step?.targetComponentName ?? step?.targetTaskName,
+  });
+
+  useTourDragPassthrough({ isOpen });
+
+  useAnchorCreatedSubgraph({
+    isOpen,
+    active: step?.anchorCreatedSubgraph ?? false,
+    currentStep,
+    navigation,
+    setSteps,
   });
 
   useResetLibrarySearch({

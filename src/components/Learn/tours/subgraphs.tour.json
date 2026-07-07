@@ -164,7 +164,8 @@
     {
       "selector": "[data-tour-anchor=\"no-spotlight\"]",
       "content": "You've built a new subgraph from scratch.\n\nReach for subgraphs whenever a section of your pipeline reads as a single logical step, or you find you are often repeating combinations of tasks. They keep the top level clean and turn complex workflows into reusable building blocks.",
-      "position": [500, 60]
+      "position": "center",
+      "anchorCreatedSubgraph": true
     }
   ]
 }

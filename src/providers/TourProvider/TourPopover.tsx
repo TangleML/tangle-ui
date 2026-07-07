@@ -36,10 +36,6 @@ export const POPOVER_STYLES = {
     ...base,
     rx: 6,
   }),
-  clickArea: (base: object) => ({
-    ...base,
-    pointerEvents: "none" as const,
-  }),
   highlightedArea: (
     base: object,
     state?: { width?: number; height?: number },

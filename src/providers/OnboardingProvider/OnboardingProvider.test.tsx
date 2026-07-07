@@ -184,6 +184,31 @@ describe("OnboardingProvider", () => {
     });
   });
 
+  it("tracks create_pipeline only once when progress reverts after completion", async () => {
+    const { result, queryClient } = renderWithClient();
+
+    await waitFor(() => expect(result.current.total).toBe(4));
+
+    act(() => emitUserPipelineWritten());
+    await waitFor(() =>
+      expect(completedSteps(result)).toContain("create_pipeline"),
+    );
+
+    await act(async () => {
+      await queryClient.invalidateQueries();
+    });
+    await waitFor(() =>
+      expect(completedSteps(result)).not.toContain("create_pipeline"),
+    );
+
+    const createPipelineTracks = track.mock.calls.filter(
+      ([event, payload]) =>
+        event === "onboarding.step.completed" &&
+        (payload as { step_id?: string })?.step_id === "create_pipeline",
+    );
+    expect(createPipelineTracks).toHaveLength(1);
+  });
+
   it("marks the docs step read on demand", async () => {
     settingsPayload = { onboarding: { steps: { create_pipeline: true } } };
     const { result } = render();
