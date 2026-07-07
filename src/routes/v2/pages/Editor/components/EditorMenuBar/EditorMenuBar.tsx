@@ -54,7 +54,6 @@ export const EditorMenuBar = observer(function EditorMenuBar() {
     <div
       className="relative w-full bg-stone-900 px-3 py-1 md:px-4"
       style={{ height: `${TOP_NAV_HEIGHT}px` }}
-      data-tour="editor-top-bar"
     >
       <InlineStack
         align="space-between"

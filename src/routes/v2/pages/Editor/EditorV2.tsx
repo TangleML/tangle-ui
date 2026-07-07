@@ -36,7 +36,7 @@ import { createEditorAgentWorker } from "./components/AiChat/editorAgentWorker";
 import { useDebugPanelWindow } from "./components/DebugPanel";
 import { DriverPermissionGate } from "./components/DriverPermissionGate";
 import { EditorMenuBar } from "./components/EditorMenuBar/EditorMenuBar";
-import { EditorTourBridge } from "./components/EditorTourBridge";
+import { EditorTourBridge } from "./components/EditorTourBridge/EditorTourBridge";
 import { EmptyEditorState } from "./components/EmptyEditorState";
 import { FlowCanvas } from "./components/FlowCanvas/FlowCanvas";
 import { useAiChatWindow } from "./hooks/useAiChatWindow";

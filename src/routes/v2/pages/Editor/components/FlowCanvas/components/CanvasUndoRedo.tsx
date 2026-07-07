@@ -27,10 +27,7 @@ export const CanvasUndoRedo = observer(function CanvasUndoRedo() {
   };
 
   return (
-    <div
-      className="absolute right-16 bottom-4 z-10 flex gap-1"
-      data-tour="canvas-undo-redo"
-    >
+    <div className="absolute right-16 bottom-4 z-10 flex gap-1">
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>

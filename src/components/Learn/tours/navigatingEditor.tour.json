@@ -81,8 +81,7 @@
       "stepInteraction": true,
       "interaction": "undock-window",
       "targetWindowId": "context-panel",
-      "targetWindowName": "Task Properties",
-      "fallbackContent": "Windows are flexible. Try grabbing the Task Properties header and dragging it around the canvas."
+      "targetWindowName": "Task Properties"
     },
     {
       "selector": "[data-window-id=\"context-panel\"]",
@@ -91,8 +90,7 @@
       "stepInteraction": true,
       "interaction": "redock-window",
       "targetWindowId": "context-panel",
-      "targetWindowName": "Task Properties",
-      "fallbackContent": "Windows can be docked in either sidebar. Create the perfect layout that suits you!"
+      "targetWindowName": "Task Properties"
     },
     {
       "selector": "[data-tracking-id=\"v2.pipeline_editor.windows_menu\"]",

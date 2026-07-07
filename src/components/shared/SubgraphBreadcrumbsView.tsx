@@ -55,7 +55,6 @@ export const SubgraphBreadcrumbsView = ({
                         onClick={() => onNavigate(index)}
                         className="h-6 px-2"
                         data-tour-crumb={isRoot ? "root" : "ancestor"}
-                        data-tour-crumb-index={index}
                         {...(getCrumbTracking?.(index) ?? {})}
                       >
                         {isRoot ? (

@@ -10,7 +10,6 @@ export type TourStep = StepType &
     resetLibrarySearch?: boolean;
     ensureWindowRestored?: string;
     requiresTaskSelected?: string;
-    fallbackContent?: string;
   };
 
 export interface TourDefinition {
