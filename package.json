@@ -112,7 +112,7 @@
     "openai": "^6.45.0",
     "papaparse": "^5.5.4",
     "prism-react-renderer": "^2.4.1",
-    "pyodide": "^0.29.4",
+    "pyodide": "^314.0.2",
     "random-words": "^2.0.1",
     "react": "^19.2.7",
     "react-colorful": "^5.7.0",
