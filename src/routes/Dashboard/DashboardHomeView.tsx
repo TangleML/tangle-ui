@@ -10,7 +10,8 @@ import {
 } from "@/components/ui/tooltip";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
 import {
-  type RecentlyViewedItem,
+  type RecentItem,
+  useRecentlyUsed,
   useRecentlyViewed,
 } from "@/hooks/useRecentlyViewed";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
@@ -45,7 +46,7 @@ const SectionHeader = ({
   </InlineStack>
 );
 
-const RecentlyViewedPreviewRow = ({ item }: { item: RecentlyViewedItem }) => (
+const RecentlyViewedPreviewRow = ({ item }: { item: RecentItem }) => (
   <InlineStack gap="2" className="min-w-0 overflow-hidden">
     <Link
       to={getRecentlyViewedUrl(item)}
@@ -62,7 +63,7 @@ const RecentlyViewedPreviewRow = ({ item }: { item: RecentlyViewedItem }) => (
         <TooltipContent>{item.name}</TooltipContent>
       </Tooltip>
       <Text size="xs" className="text-muted-foreground shrink-0">
-        {formatRelativeTime(new Date(item.viewedAt))}
+        {formatRelativeTime(new Date(item.timestamp))}
       </Text>
     </Link>
   </InlineStack>
@@ -70,9 +71,7 @@ const RecentlyViewedPreviewRow = ({ item }: { item: RecentlyViewedItem }) => (
 
 const RecentlyViewedPreview = () => {
   const { recentlyViewed } = useRecentlyViewed();
-  const preview = recentlyViewed
-    .filter((item) => item.type !== "component")
-    .slice(0, PREVIEW_COUNT);
+  const preview = recentlyViewed.slice(0, PREVIEW_COUNT);
 
   return (
     <BlockStack gap="4" className="min-w-0">
@@ -84,36 +83,54 @@ const RecentlyViewedPreview = () => {
         {preview.length === 0 ? (
           <div className="px-4 py-3">
             <Paragraph tone="subdued" size="sm">
-              Nothing viewed yet. Open a pipeline or run to see it here.
+              Nothing viewed yet. Open a pipeline, run, component, or tour to
+              see it here.
             </Paragraph>
           </div>
         ) : (
-          preview.map((item) => (
-            <RecentlyViewedPreviewRow
-              key={`${item.type}-${item.id}`}
-              item={item}
-            />
-          ))
+          preview.map((item) =>
+            item.type === "component" ? (
+              <RecentComponentPreviewRow
+                key={`${item.type}-${item.id}`}
+                item={item}
+                actionType="homepage.recently_viewed_pipelines.item"
+                surface="homepage_recently_viewed"
+              />
+            ) : (
+              <RecentlyViewedPreviewRow
+                key={`${item.type}-${item.id}`}
+                item={item}
+              />
+            ),
+          )
         )}
       </div>
     </BlockStack>
   );
 };
 
-const RecentComponentPreviewRow = ({ item }: { item: RecentlyViewedItem }) => {
+const RecentComponentPreviewRow = ({
+  item,
+  actionType = "homepage.recently_used_components.item",
+  surface = "homepage_recent",
+}: {
+  item: RecentItem;
+  actionType?: string;
+  surface?: string;
+}) => {
   const { track } = useAnalytics();
   return (
     <InlineStack gap="2" className="min-w-0 overflow-hidden">
       <Link
         to={APP_ROUTES.DASHBOARD_COMPONENTS}
         search={{ component: item.id }}
-        {...tracking("homepage.recently_used_components.item")}
+        {...tracking(actionType)}
         onClick={() => {
           track("component_library.row.click", {
             component_id: item.id,
             component_name: item.name,
             component_source: "unknown",
-            surface: "homepage_recent",
+            surface,
           });
         }}
         className="flex w-full items-center gap-3 px-4 py-3 hover:bg-muted/50 no-underline"
@@ -128,7 +145,7 @@ const RecentComponentPreviewRow = ({ item }: { item: RecentlyViewedItem }) => {
           <TooltipContent>{item.name}</TooltipContent>
         </Tooltip>
         <Text size="xs" className="text-muted-foreground shrink-0">
-          {formatRelativeTime(new Date(item.viewedAt))}
+          {formatRelativeTime(new Date(item.timestamp))}
         </Text>
       </Link>
     </InlineStack>
@@ -136,10 +153,8 @@ const RecentComponentPreviewRow = ({ item }: { item: RecentlyViewedItem }) => {
 };
 
 const RecentComponentsPreview = () => {
-  const { recentlyViewed } = useRecentlyViewed();
-  const preview = recentlyViewed
-    .filter((item) => item.type === "component")
-    .slice(0, PREVIEW_COUNT);
+  const { recentlyUsed } = useRecentlyUsed();
+  const preview = recentlyUsed.slice(0, PREVIEW_COUNT);
 
   return (
     <BlockStack gap="4" className="min-w-0">
@@ -152,7 +167,8 @@ const RecentComponentsPreview = () => {
         {preview.length === 0 ? (
           <div className="px-4 py-3">
             <Paragraph tone="subdued" size="sm">
-              No components viewed yet. Open a component to see it here.
+              No components used yet. Add a component to a pipeline to see it
+              here.
             </Paragraph>
           </div>
         ) : (

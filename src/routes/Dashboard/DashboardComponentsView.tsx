@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Paragraph, Text } from "@/components/ui/typography";
+import { addRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import { cn } from "@/lib/utils";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useBackend } from "@/providers/BackendProvider";
@@ -371,6 +372,13 @@ export function DashboardComponentsView() {
     useSearch({ strict: false }),
   );
   const handleSelect = (component: ComponentReference) => {
+    if (component.digest) {
+      addRecentlyViewed({
+        type: "component",
+        id: component.digest,
+        name: component.name ?? getComponentName(component),
+      });
+    }
     navigate({
       to: APP_ROUTES.DASHBOARD_COMPONENTS,
       search: { component: component.digest },

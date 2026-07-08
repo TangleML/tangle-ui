@@ -1,12 +1,12 @@
 import { Icon, type IconName } from "@/components/ui/icon";
 import type { FavoriteItem } from "@/hooks/useFavorites";
-import type { RecentlyViewedItem } from "@/hooks/useRecentlyViewed";
+import type { RecentItem } from "@/hooks/useRecentlyViewed";
 import { cn } from "@/lib/utils";
 import { getDefaultEditorPath } from "@/routes/editorRoutes";
 import { APP_ROUTES } from "@/routes/router";
 import { getDefaultRunPath } from "@/routes/runRoutes";
 
-type ItemType = "pipeline" | "run" | "component";
+type ItemType = "pipeline" | "run" | "component" | "tour";
 
 const TYPE_CONFIG: Record<
   ItemType,
@@ -28,6 +28,11 @@ const TYPE_CONFIG: Record<
     className: "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
     icon: "Package",
     label: "Component",
+  },
+  tour: {
+    className: "bg-amber-100 text-amber-700",
+    icon: "Compass",
+    label: "Tour",
   },
 };
 
@@ -58,8 +63,9 @@ export function getFavoriteUrl(item: FavoriteItem): string {
   return getDefaultRunPath(item.id);
 }
 
-export function getRecentlyViewedUrl(item: RecentlyViewedItem): string {
+export function getRecentlyViewedUrl(item: RecentItem): string {
   if (item.type === "pipeline") return getDefaultEditorPath(item.id);
   if (item.type === "run") return getDefaultRunPath(item.id);
+  if (item.type === "tour") return `${APP_ROUTES.TOUR}/${item.id}`;
   return APP_ROUTES.DASHBOARD_COMPONENTS;
 }

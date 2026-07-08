@@ -5,45 +5,61 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
-import {
-  type RecentlyViewedItem,
-  useRecentlyViewed,
-} from "@/hooks/useRecentlyViewed";
+import { type RecentItem, useRecentlyViewed } from "@/hooks/useRecentlyViewed";
+import { APP_ROUTES } from "@/routes/router";
 import { formatRelativeTime } from "@/utils/date";
 
 import { getRecentlyViewedUrl, TypePill } from "./TypePill";
 
 const PAGE_SIZE = 20;
 
-const RecentlyViewedCard = ({ item }: { item: RecentlyViewedItem }) => (
-  <Link to={getRecentlyViewedUrl(item)} className="no-underline block">
-    <BlockStack
-      gap="2"
-      className="p-3 rounded-lg transition-all shadow-sm hover:shadow-md bg-card border border-border hover:border-foreground/20 overflow-hidden"
+const RecentlyViewedCardBody = ({ item }: { item: RecentItem }) => (
+  <BlockStack
+    gap="2"
+    className="p-3 rounded-lg transition-all shadow-sm hover:shadow-md bg-card border border-border hover:border-foreground/20 overflow-hidden"
+  >
+    <InlineStack blockAlign="center" align="space-between" gap="2">
+      <TypePill type={item.type} />
+      <Text size="xs" className="text-muted-foreground">
+        {formatRelativeTime(new Date(item.timestamp))}
+      </Text>
+    </InlineStack>
+
+    <Text size="sm" weight="semibold" className="truncate leading-tight">
+      {item.name}
+    </Text>
+
+    <Text
+      size="xs"
+      className="truncate text-muted-foreground font-mono max-w-full"
     >
-      <InlineStack blockAlign="center" align="space-between">
-        <TypePill type={item.type} />
-        <Text size="xs" className="text-muted-foreground">
-          {formatRelativeTime(new Date(item.viewedAt))}
-        </Text>
-      </InlineStack>
-
-      <Text size="sm" weight="semibold" className="truncate leading-tight">
-        {item.name}
-      </Text>
-
-      <Text size="xs" className="truncate text-muted-foreground font-mono">
-        {item.id}
-      </Text>
-    </BlockStack>
-  </Link>
+      {item.id}
+    </Text>
+  </BlockStack>
 );
 
-export function DashboardRecentlyViewedView() {
-  const { recentlyViewed: allRecentlyViewed } = useRecentlyViewed();
-  const recentlyViewed = allRecentlyViewed.filter(
-    (item) => item.type !== "component",
+const RecentlyViewedCard = ({ item }: { item: RecentItem }) => {
+  if (item.type === "component") {
+    return (
+      <Link
+        to={APP_ROUTES.DASHBOARD_COMPONENTS}
+        search={{ component: item.id }}
+        className="no-underline block"
+      >
+        <RecentlyViewedCardBody item={item} />
+      </Link>
+    );
+  }
+
+  return (
+    <Link to={getRecentlyViewedUrl(item)} className="no-underline block">
+      <RecentlyViewedCardBody item={item} />
+    </Link>
   );
+};
+
+export function DashboardRecentlyViewedView() {
+  const { recentlyViewed } = useRecentlyViewed();
   const [page, setPage] = useState(0);
 
   const totalPages = Math.ceil(recentlyViewed.length / PAGE_SIZE);
@@ -59,7 +75,8 @@ export function DashboardRecentlyViewedView() {
 
       {recentlyViewed.length === 0 ? (
         <Paragraph tone="subdued" size="sm">
-          Nothing viewed yet. Open a pipeline or run to see it here.
+          Nothing viewed yet. Open a pipeline, run, component, or tour to see it
+          here.
         </Paragraph>
       ) : (
         <BlockStack gap="4">
