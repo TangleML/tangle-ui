@@ -26,11 +26,13 @@ export function useAiChatWindow(enabled: boolean) {
       />,
       {
         id: AI_CHAT_WINDOW_ID,
-        title: "AI Assistant",
+        title: "Sidekick",
         position: { x: 100, y: 80 },
         size: { width: 380, height: 520 },
         disabledActions: ["close"],
+        startVisible: true,
         persisted: true,
+        defaultDockState: "left",
       },
     );
   }, [enabled, windows, editorSession]);
