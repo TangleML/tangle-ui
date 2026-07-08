@@ -86,12 +86,7 @@ function useHasMyRun(): {
 export function OnboardingProvider({ children }: { children: ReactNode }) {
   const { track } = useAnalytics();
   const notify = useToastNotification();
-  const {
-    ready: backendReady,
-    configured,
-    available,
-    backendUrl,
-  } = useBackend();
+  const { ready: backendReady, available, backendUrl } = useBackend();
   const hasBackend = available && Boolean(backendUrl);
   const { data: progress, isLoading: progressLoading } =
     useOnboardingProgress();
@@ -115,7 +110,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   const isComplete = ONBOARDING_STEP_IDS.every((id) => desiredSteps[id]);
   const dismissed = progress?.dismissed ?? false;
   const isReady = !progressLoading && !toursLoading && !runsLoading;
-  const isResolved = (backendReady || !configured) && isReady;
+  const isResolved = backendReady && isReady;
   const isOnboardingAvailable = isResolved && hasBackend;
   const shouldShowOnboarding =
     isOnboardingAvailable && !isComplete && !dismissed;
