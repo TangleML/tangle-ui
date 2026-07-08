@@ -36,7 +36,7 @@ function ComponentSearchResultsSkeleton() {
       data-testid="search-results-skeleton"
       aria-label="Loading search results"
     >
-      <Text tone="subdued" data-testid="search-results-header">
+      <Text tone="subdued" size="sm" data-testid="search-results-header">
         Search Results
       </Text>
       <Separator />
@@ -82,11 +82,11 @@ export function ComponentSearchResults({
   onClearRerank,
   onSuggestedSearch,
 }: ComponentSearchResultsProps) {
-  if (isLoading || isSearching) {
+  const isEmptyQuery = query.trim().length === 0;
+
+  if (!isEmptyQuery && (isLoading || isSearching)) {
     return <ComponentSearchResultsSkeleton />;
   }
-
-  const isEmptyQuery = query.trim().length === 0;
 
   if (isEmptyQuery) {
     return (
@@ -125,7 +125,7 @@ export function ComponentSearchResults({
       data-testid="search-results-container"
     >
       <InlineStack align="space-between" blockAlign="center" gap="2">
-        <Text tone="subdued" data-testid="search-results-header">
+        <Text tone="subdued" size="sm" data-testid="search-results-header">
           {isRerankActive ? "AI-ranked results" : "Search Results"} (
           {results.length})
         </Text>

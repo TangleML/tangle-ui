@@ -76,6 +76,25 @@ describe("ComponentSearchResults", () => {
     expect(screen.queryByText("Searching")).not.toBeInTheDocument();
   });
 
+  it("browses immediately for an empty query even while sources are loading", () => {
+    render(
+      <ComponentSearchResults
+        {...baseProps}
+        query=""
+        results={[]}
+        browseFolders={[{ name: "Standard library" }]}
+        isLoading
+        isSearching
+      />,
+    );
+
+    expect(
+      screen.queryByTestId("search-results-skeleton"),
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId("search-results-container")).toBeInTheDocument();
+    expect(screen.getByText("Standard library")).toBeInTheDocument();
+  });
+
   it("shows actionable no-results guidance with clickable suggestions", () => {
     const onSuggestedSearch = vi.fn();
     render(

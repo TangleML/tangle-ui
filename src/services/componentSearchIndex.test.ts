@@ -66,6 +66,26 @@ describe("buildSearchIndex", () => {
     expect(index).toHaveLength(0);
   });
 
+  it("emits a name-only entry for unhydrated refs when includeNameOnly is set", () => {
+    const index = buildSearchIndex(
+      [makeSourced({ digest: "abc", name: "Upload to GCS" })],
+      { includeNameOnly: true },
+    );
+
+    expect(index).toHaveLength(1);
+    expect(index[0].name).toBe("Upload to GCS");
+    expect(index[0].searchable.description).toBe("");
+    expect(lexicalSearch(index, "upload")).toHaveLength(1);
+  });
+
+  it("still skips digest-less refs even with includeNameOnly", () => {
+    const index = buildSearchIndex(
+      [makeSourced({ digest: undefined, name: "no digest" })],
+      { includeNameOnly: true },
+    );
+    expect(index).toHaveLength(0);
+  });
+
   it("preserves the source on each indexed entry", () => {
     const index = buildSearchIndex([
       makeSourced(

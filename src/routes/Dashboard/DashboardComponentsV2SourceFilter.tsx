@@ -52,11 +52,11 @@ function sourceFilterKey(source: ComponentSearchSource): string {
  * as one source category instead of several per-library toggles.
  */
 export function createSourceFilterOptions(
-  index: IndexEntry[],
+  sourced: readonly { source: ComponentSearchSource }[],
 ): SourceFilterOption[] {
   const optionsByKey = new Map<string, SourceFilterOption>();
 
-  for (const entry of index) {
+  for (const entry of sourced) {
     const key = sourceFilterKey(entry.source);
     const option = optionsByKey.get(key);
     if (option) {
