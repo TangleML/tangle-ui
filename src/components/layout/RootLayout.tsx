@@ -3,6 +3,7 @@ import { TanStackRouterDevtools } from "@tanstack/router-devtools";
 import { ToastContainer } from "react-toastify";
 
 import { ConfirmDialogBridge } from "@/components/shared/ConfirmDialogBridge/ConfirmDialogBridge";
+import { SidekickAssistant } from "@/components/Sidekick/SidekickAssistant";
 import { useClickTracking } from "@/hooks/useClickTracking";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { usePageViewTracking } from "@/hooks/usePageViewTracking";
@@ -41,6 +42,8 @@ function RootLayoutContent() {
                 <main className="flex-1 grid">
                   <Outlet />
                 </main>
+
+                <SidekickAssistant />
 
                 {import.meta.env.VITE_ENABLE_ROUTER_DEVTOOLS === "true" && (
                   <TanStackRouterDevtools />

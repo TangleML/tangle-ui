@@ -33,6 +33,9 @@ type CreateBridge = (deps: BridgeDeps) => ToolBridgeApi;
 
 interface AiChatContentProps {
   createBridge: CreateBridge;
+  emptyMessage?: string;
+  inputPlaceholder?: string;
+  showNewThreadButton?: boolean;
 }
 
 function projectRecentRuns(runs: PipelineRun[]): RecentPipelineRun[] {
@@ -47,6 +50,9 @@ function projectRecentRuns(runs: PipelineRun[]): RecentPipelineRun[] {
 
 export const AiChatContent = observer(function AiChatContent({
   createBridge,
+  emptyMessage,
+  inputPlaceholder,
+  showNewThreadButton = true,
 }: AiChatContentProps) {
   const aiChat = useAiChatStore();
   const { track } = useAnalytics();
@@ -138,25 +144,32 @@ export const AiChatContent = observer(function AiChatContent({
 
   return (
     <BlockStack fill>
-      <InlineStack
-        className="border-b p-2 w-full"
-        align="end"
-        blockAlign="center"
-      >
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => aiChat.newThread()}
-          aria-label="New chat"
+      {showNewThreadButton && (
+        <InlineStack
+          className="border-b p-2 w-full"
+          align="end"
+          blockAlign="center"
         >
-          <Icon name="SquarePen" />
-        </Button>
-      </InlineStack>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => aiChat.newThread()}
+            aria-label="New chat"
+          >
+            <Icon name="SquarePen" />
+          </Button>
+        </InlineStack>
+      )}
       <ChatMessageList
         messages={thread.messages}
         thinkingText={thread.thinkingText}
+        emptyMessage={emptyMessage}
       />
-      <ChatInput isPending={thread.isPending} onSubmit={handleSend} />
+      <ChatInput
+        isPending={thread.isPending}
+        onSubmit={handleSend}
+        placeholder={inputPlaceholder}
+      />
     </BlockStack>
   );
 });

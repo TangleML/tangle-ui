@@ -35,7 +35,10 @@ import { fetchWithErrorHandling } from "@/utils/fetchWithErrorHandling";
 import { getComponentName } from "@/utils/getComponentName";
 import { tracking } from "@/utils/tracking";
 
-import { readSelectedComponentDigest } from "./searchParams";
+import {
+  readComponentSearchQuery,
+  readSelectedComponentDigest,
+} from "./searchParams";
 
 type ComponentRowSection = "user" | "library" | "published";
 
@@ -363,17 +366,19 @@ const ComponentList = ({
 // ─── Main View ──────────────────────────────────────────────────────────────
 
 export function DashboardComponentsView() {
-  const [query, setQuery] = useState("");
+  // useSearch strict:false is required here — this route has no validateSearch defined
+  const search = useSearch({ strict: false });
+  const [query, setQuery] = useState(() => readComponentSearchQuery(search));
   const navigate = useNavigate();
   const { backendUrl } = useBackend();
-  // useSearch strict:false is required here — this route has no validateSearch defined
-  const selectedDigest = readSelectedComponentDigest(
-    useSearch({ strict: false }),
-  );
+  const selectedDigest = readSelectedComponentDigest(search);
   const handleSelect = (component: ComponentReference) => {
     navigate({
       to: APP_ROUTES.DASHBOARD_COMPONENTS,
-      search: { component: component.digest },
+      search: {
+        component: component.digest,
+        ...(query.trim() ? { q: query } : {}),
+      },
     });
   };
 

@@ -1,9 +1,10 @@
+import { Link as RouterLink } from "@tanstack/react-router";
 import { observer } from "mobx-react-lite";
 
 import logo from "/Tangle_Icon_White.png";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
-import { Link } from "@/components/ui/link";
 import { Text } from "@/components/ui/typography";
+import { APP_ROUTES } from "@/routes/router";
 import { AppMenuActions } from "@/routes/v2/shared/components/AppMenuActions";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { TOP_NAV_HEIGHT } from "@/utils/constants";
@@ -35,19 +36,18 @@ export const RunViewMenuBar = observer(function RunViewMenuBar() {
           blockAlign="center"
           className="min-w-0"
         >
-          <Link
-            href="/"
-            aria-label="Home"
-            variant="block"
+          <RouterLink
+            to={APP_ROUTES.DASHBOARD}
+            aria-label="Go to dashboard"
             className="shrink-0"
             {...tracking("v2.run_view.menu_bar.home")}
           >
             <img
               src={logo}
-              alt="logo"
+              alt="Tangle"
               className="h-8 cursor-pointer shrink-0"
             />
-          </Link>
+          </RouterLink>
 
           <BlockStack className="min-w-0">
             <Text
