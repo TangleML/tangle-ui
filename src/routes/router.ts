@@ -112,9 +112,12 @@ const dashboardComponentsRoute = createRoute({
   getParentRoute: () => dashboardRoute,
   path: "/components",
   component: DashboardComponentsView,
-  beforeLoad: () => {
+  beforeLoad: ({ search }: { search: Record<string, unknown> }) => {
     if (isFlagEnabled("component-search-v2")) {
-      throw redirect({ to: APP_ROUTES.DASHBOARD_COMPONENTS_V2 });
+      throw redirect({
+        to: APP_ROUTES.DASHBOARD_COMPONENTS_V2,
+        search,
+      });
     }
   },
 });
@@ -123,9 +126,12 @@ const dashboardComponentsV2Route = createRoute({
   getParentRoute: () => dashboardRoute,
   path: "/components-v2",
   component: DashboardComponentsV2View,
-  beforeLoad: () => {
+  beforeLoad: ({ search }: { search: Record<string, unknown> }) => {
     if (!isFlagEnabled("component-search-v2")) {
-      throw redirect({ to: APP_ROUTES.DASHBOARD_COMPONENTS });
+      throw redirect({
+        to: APP_ROUTES.DASHBOARD_COMPONENTS,
+        search,
+      });
     }
   },
 });

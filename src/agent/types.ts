@@ -9,7 +9,8 @@
  */
 export type AgentContext =
   | { mode: "editor" }
-  | { mode: "runView"; runId: string; subgraphExecutionId?: string };
+  | { mode: "runView"; runId: string; subgraphExecutionId?: string }
+  | { mode: "general"; runId?: string };
 
 export interface AgentResponse {
   answer: string;

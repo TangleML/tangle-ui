@@ -63,6 +63,14 @@ export const ExistingFlags: ConfigFlags = {
     category: "beta",
   },
 
+  ["global-agent"]: {
+    name: "Global Agent",
+    description:
+      "Show the global Sidekick assistant on supported pages outside the V2 editor.",
+    default: false,
+    category: "beta",
+  },
+
   ["component-search-v2"]: {
     name: "Component Search",
     description:

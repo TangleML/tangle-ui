@@ -31,6 +31,10 @@ function TipCard({ tip }: { tip: Tip }) {
   );
 }
 
+function tipCategoryAnchor(category: TipCategory): string {
+  return category.toLowerCase();
+}
+
 function CategorySection({
   category,
   tips: categoryTips,
@@ -39,22 +43,24 @@ function CategorySection({
   tips: Tip[];
 }) {
   return (
-    <BlockStack gap="3">
-      <InlineStack gap="2" blockAlign="center">
-        <Icon
-          name={TIP_CATEGORY_ICONS[category]}
-          size="md"
-          className="text-primary"
-          aria-hidden="true"
-        />
-        <Heading level={3}>{category}</Heading>
-      </InlineStack>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {categoryTips.map((tip) => (
-          <TipCard key={tip.id} tip={tip} />
-        ))}
-      </div>
-    </BlockStack>
+    <section id={tipCategoryAnchor(category)} className="scroll-mt-20">
+      <BlockStack gap="3">
+        <InlineStack gap="2" blockAlign="center">
+          <Icon
+            name={TIP_CATEGORY_ICONS[category]}
+            size="md"
+            className="text-primary"
+            aria-hidden="true"
+          />
+          <Heading level={3}>{category}</Heading>
+        </InlineStack>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {categoryTips.map((tip) => (
+            <TipCard key={tip.id} tip={tip} />
+          ))}
+        </div>
+      </BlockStack>
+    </section>
   );
 }
 

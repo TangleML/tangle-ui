@@ -1,10 +1,23 @@
 import { tool } from "@openai/agents";
 import { z } from "zod";
 
+import { APP_ROUTES } from "@/routes/appRoutes";
+
 import type { AgentSession } from "../session";
 
 function asJson(value: unknown): string {
   return JSON.stringify(value);
+}
+
+function componentPageLink(
+  digest: string,
+  name: string,
+  query: string,
+): string {
+  const searchParams = new URLSearchParams({ component: digest });
+  const trimmedQuery = query.trim();
+  if (trimmedQuery) searchParams.set("q", trimmedQuery);
+  return `[${name}](${APP_ROUTES.DASHBOARD_COMPONENTS_V2}?${searchParams.toString()})`;
 }
 
 export function createComponentSearchTools(session: AgentSession) {
@@ -47,6 +60,7 @@ export function createComponentSearchTools(session: AgentSession) {
           ({ yamlText: _yamlText, ...result }) => ({
             ...result,
             componentLink: `[${result.name}](component://${result.id})`,
+            componentPageLink: componentPageLink(result.id, result.name, query),
           }),
         ),
       });

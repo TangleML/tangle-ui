@@ -18,6 +18,7 @@ import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 export function AiModelQuickSelect() {
   const componentSearchEnabled = useFlagValue("component-search-v2");
   const aiAssistantEnabled = useFlagValue("ai-assistant");
+  const globalAgentEnabled = useFlagValue("global-agent");
   const { config, update, isConfigured } = useAiProviderSettings();
   const configuredModel = config.model.trim();
   const options = getAiModelOptions();
@@ -28,7 +29,10 @@ export function AiModelQuickSelect() {
     update({ model: value });
   };
 
-  if ((!componentSearchEnabled && !aiAssistantEnabled) || !isConfigured) {
+  if (
+    (!componentSearchEnabled && !aiAssistantEnabled && !globalAgentEnabled) ||
+    !isConfigured
+  ) {
     return null;
   }
 

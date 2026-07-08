@@ -10,11 +10,13 @@ import { ThinkingMessage } from "./ThinkingMessage";
 interface ChatMessageListProps {
   messages: ChatMessageType[];
   thinkingText?: string | null;
+  emptyMessage?: string;
 }
 
 export function ChatMessageList({
   messages,
   thinkingText,
+  emptyMessage = "Ask anything about your pipeline",
 }: ChatMessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -26,7 +28,7 @@ export function ChatMessageList({
     return (
       <BlockStack align="center" inlineAlign="center" className="flex-1 p-4">
         <Text size="sm" tone="subdued">
-          Ask anything about your pipeline
+          {emptyMessage}
         </Text>
       </BlockStack>
     );
