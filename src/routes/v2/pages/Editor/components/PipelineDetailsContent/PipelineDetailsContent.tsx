@@ -5,6 +5,7 @@ import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/typography";
+import useToastNotification from "@/hooks/useToastNotification";
 import { serializeComponentSpecToYaml } from "@/models/componentSpec";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { AnnotationsBlock } from "@/routes/v2/pages/Editor/components/AnnotationsBlock/AnnotationsBlock";
@@ -30,7 +31,8 @@ export const PipelineDetailsContent = observer(
     const { track } = useAnalytics();
     const { navigation } = useSharedStores();
     const pipelineSpec = useSpec();
-    const { updatePipelineDescription, updatePipelineNotes } =
+    const notify = useToastNotification();
+    const { updatePipelineDescription, updatePipelineNotes, renameSubgraph } =
       usePipelineActions();
 
     if (!pipelineSpec) {
@@ -67,6 +69,16 @@ export const PipelineDetailsContent = observer(
       }
     };
 
+    const handleRenameSubgraph = (newName: string): boolean => {
+      const success = renameSubgraph(newName);
+      if (success) {
+        track("v2.pipeline_editor.subgraph_details.rename.completed");
+      } else {
+        notify("A subgraph with that name already exists", "error");
+      }
+      return success;
+    };
+
     return (
       <BlockStack
         className="h-full min-h-0 w-full"
@@ -79,6 +91,7 @@ export const PipelineDetailsContent = observer(
           isNestedSubgraph={isNestedSubgraph}
           pipelineName={pipelineSpec.name}
           yamlText={yamlText}
+          onRenameSubgraph={handleRenameSubgraph}
         />
 
         <Separator />
