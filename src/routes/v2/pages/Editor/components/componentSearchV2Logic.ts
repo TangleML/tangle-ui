@@ -172,6 +172,33 @@ export function collectAllSourcedReferences({
   return deduped;
 }
 
+/**
+ * Overlay a hydrated index onto an instant name-only base by digest: hydrated
+ * entries win where present, base entries fill in the rest, and hydrated-only
+ * entries are appended. Lets the panel search on names immediately and enrich
+ * as full-text hydration lands.
+ */
+export function mergeSearchIndexes(
+  base: IndexEntry[],
+  hydrated: IndexEntry[],
+): IndexEntry[] {
+  if (hydrated.length === 0) return base;
+
+  const hydratedByDigest = new Map<string, IndexEntry>();
+  for (const entry of hydrated) hydratedByDigest.set(entry.digest, entry);
+
+  const merged = base.map(
+    (entry) => hydratedByDigest.get(entry.digest) ?? entry,
+  );
+
+  const seen = new Set(base.map((entry) => entry.digest));
+  for (const entry of hydrated) {
+    if (!seen.has(entry.digest)) merged.push(entry);
+  }
+
+  return merged;
+}
+
 export function buildSourcedHydratedReferences({
   sourcedReferences,
   hydratedReferences,

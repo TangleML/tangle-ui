@@ -30,6 +30,7 @@ import {
   collectAllSourcedReferences,
   type ComponentSearchV2State,
   LEXICAL_RESULT_LIMIT,
+  mergeSearchIndexes,
   registeredLibrariesFingerprint,
   registeredSource,
   rerankedMatches,
@@ -164,9 +165,12 @@ export function useComponentSearchV2State(
     .sort()
     .join("|");
 
-  const { data: index = [], isLoading: isHydrating } = useQuery({
+  const trimmedQuery = query.trim();
+  const searchableQuery = pauseSearch ? "" : trimmedQuery;
+
+  const { data: hydratedIndex = [] } = useQuery({
     queryKey: ["component-search-v2", "search-index", referencesFingerprint],
-    enabled: sourcedReferences.length > 0,
+    enabled: sourcedReferences.length > 0 && searchableQuery.length > 0,
     staleTime: HOURS,
     queryFn: async (): Promise<IndexEntry[]> => {
       const results = await Promise.all(
@@ -199,16 +203,23 @@ export function useComponentSearchV2State(
     },
   });
 
+  const index = mergeSearchIndexes(
+    buildSearchIndex(sourcedReferences, { includeNameOnly: true }),
+    hydratedIndex,
+  );
+
   const [disabledSourceKeys, setDisabledSourceKeys] = useState<string[]>([]);
-  const sourceFilterOptions = createSourceFilterOptions(index);
+  const sourceFilterOptions = createSourceFilterOptions(sourcedReferences);
   const filteredIndex = filterIndexByDisabledSourceKeys(
     index,
     disabledSourceKeys,
   );
+  const disabled = new Set(disabledSourceKeys);
+  const browseSourcedReferences = sourcedReferences.filter(
+    (item) => !disabled.has(item.source.kind),
+  );
 
   const canUseEmbeddingSearch = aiConfig.apiBase.trim().length > 0;
-  const trimmedQuery = query.trim();
-  const searchableQuery = pauseSearch ? "" : trimmedQuery;
   const lexicalMatches = pauseSearch
     ? []
     : buildLexicalMatches(filteredIndex, searchableQuery);
@@ -377,7 +388,7 @@ export function useComponentSearchV2State(
     browseFolders: pauseSearch
       ? []
       : buildResultFolders({
-          results,
+          results: browseSourcedReferences,
           standardLibrary: disabledSourceKeys.includes("standard")
             ? undefined
             : standardLibrary,
@@ -396,8 +407,7 @@ export function useComponentSearchV2State(
       isLoadingUserComponents ||
       isLoadingPublished ||
       registeredLibraries === undefined ||
-      isLoadingRegistered ||
-      isHydrating,
+      isLoadingRegistered,
     canRerank:
       !pauseSearch &&
       searchableQuery.length > 0 &&

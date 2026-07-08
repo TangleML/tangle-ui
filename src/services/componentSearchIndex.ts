@@ -306,18 +306,58 @@ export function extractComponentMetadata(
   };
 }
 
+const EMPTY_SEARCHABLE: Record<MatchField, string> = {
+  name: "",
+  description: "",
+  io: "",
+  implementation: "",
+  metadata: "",
+};
+
+export interface BuildSearchIndexOptions {
+  /**
+   * Emit a name-only entry for references that have a digest but no hydrated
+   * spec yet, so the panel can offer instant name search before full text is
+   * fetched. Off by default: callers passing hydrated refs keep the stricter
+   * "skip specs with no useful metadata" behavior.
+   */
+  includeNameOnly?: boolean;
+}
+
 /**
- * Build the searchable index from sourced, hydrated component references.
+ * Build the searchable index from sourced component references.
  * References without a digest are skipped (can't round-trip an LLM rerank
- * without one). References with no useful spec metadata are also skipped —
- * they'd just be noise that ranks below every real result.
+ * without one). References with no useful spec metadata are skipped as noise
+ * that would rank below every real result — unless `includeNameOnly` is set,
+ * in which case they contribute a name-only entry.
  */
-export function buildSearchIndex(sourced: SourcedReference[]): IndexEntry[] {
+export function buildSearchIndex(
+  sourced: SourcedReference[],
+  { includeNameOnly = false }: BuildSearchIndexOptions = {},
+): IndexEntry[] {
   const entries: IndexEntry[] = [];
 
   for (const { reference, source } of sourced) {
     const metadata = extractComponentMetadata(reference);
-    if (!metadata) continue;
+    if (!metadata) {
+      if (!includeNameOnly || !reference.digest) continue;
+
+      const name = reference.name ?? getComponentName(reference);
+      const searchable: Record<MatchField, string> = {
+        ...EMPTY_SEARCHABLE,
+        name: normalizeSearchText(name),
+      };
+      entries.push({
+        reference,
+        digest: reference.digest,
+        name,
+        source,
+        searchable,
+        searchableTokens: buildSearchableTokenCache(searchable),
+        searchablePhrases: buildSearchablePhraseCache(searchable),
+      });
+      continue;
+    }
 
     const searchable: Record<MatchField, string> = {
       name: normalizeSearchText(metadata.name),

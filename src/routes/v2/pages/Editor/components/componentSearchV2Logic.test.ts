@@ -23,6 +23,7 @@ import {
   buildSourcedHydratedReferences,
   collectAllSourcedReferences,
   LEXICAL_RESULT_LIMIT,
+  mergeSearchIndexes,
   PUBLISHED_SOURCE,
   registeredLibrariesFingerprint,
   rerankedMatches,
@@ -164,6 +165,47 @@ describe("buildSourcedHydratedReferences", () => {
       ["b", "user"],
       ["a", "standard"],
     ]);
+  });
+});
+
+describe("mergeSearchIndexes", () => {
+  it("overlays hydrated entries by digest, keeps name-only entries, and appends hydrated-only ones", () => {
+    const base = buildSearchIndex(
+      [
+        {
+          reference: { digest: "a", name: "Alpha" },
+          source: source("standard"),
+        },
+        { reference: { digest: "b", name: "Bravo" }, source: USER_SOURCE },
+      ],
+      { includeNameOnly: true },
+    );
+    const hydrated = buildSearchIndex([
+      { reference: ref("a", "Alpha"), source: source("standard") },
+      { reference: ref("c", "Charlie"), source: PUBLISHED_SOURCE },
+    ]);
+
+    const merged = mergeSearchIndexes(base, hydrated);
+
+    const byDigest = new Map(merged.map((entry) => [entry.digest, entry]));
+    expect([...byDigest.keys()].sort()).toEqual(["a", "b", "c"]);
+    expect(byDigest.get("a")?.searchable.description).toContain("alpha");
+    expect(byDigest.get("b")?.searchable.description).toBe("");
+    expect(byDigest.get("c")?.source.kind).toBe("published");
+  });
+
+  it("returns the base untouched when there is nothing hydrated", () => {
+    const base = buildSearchIndex(
+      [
+        {
+          reference: { digest: "a", name: "Alpha" },
+          source: source("standard"),
+        },
+      ],
+      { includeNameOnly: true },
+    );
+
+    expect(mergeSearchIndexes(base, [])).toBe(base);
   });
 });
 
