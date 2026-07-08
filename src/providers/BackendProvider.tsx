@@ -41,6 +41,8 @@ type BackendContextType = {
   }) => Promise<boolean>;
 };
 
+const PING_TIMEOUT_MS = 5000;
+
 const BackendContext =
   createRequiredContext<BackendContextType>("BackendProvider");
 
@@ -108,7 +110,11 @@ export const BackendProvider = ({ children }: { children: ReactNode }) => {
         setReady(true);
         return Promise.resolve(false);
       }
-      return fetch(`${normalizedUrl}/services/ping`)
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), PING_TIMEOUT_MS);
+      return fetch(`${normalizedUrl}/services/ping`, {
+        signal: controller.signal,
+      })
         .then((res) => {
           if (notifyResult) {
             if (res.ok) notify("Backend available", "success");
@@ -129,7 +135,8 @@ export const BackendProvider = ({ children }: { children: ReactNode }) => {
           if (saveAvailability) setAvailable(false);
           setReady(true);
           return false;
-        });
+        })
+        .finally(() => clearTimeout(timeout));
     },
     [backendUrl],
   );

@@ -18,7 +18,11 @@ vi.mock("@/utils/fetchWithErrorHandling", () => ({
     fetchWithErrorHandling(url, options),
 }));
 
-let backend = { available: true, backendUrl: "https://backend.example" };
+let backend = {
+  available: true,
+  backendUrl: "https://backend.example",
+  ready: true,
+};
 vi.mock("@/providers/BackendProvider", () => ({
   useBackend: () => backend,
 }));
@@ -86,7 +90,11 @@ function patched() {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  backend = { available: true, backendUrl: "https://backend.example" };
+  backend = {
+    available: true,
+    backendUrl: "https://backend.example",
+    ready: true,
+  };
   tourCompletions = {};
   settingsPayload = {};
   runsPayload = { pipeline_runs: [] };
@@ -112,7 +120,11 @@ describe("OnboardingProvider", () => {
   });
 
   it("does not show onboarding when the backend is unavailable", async () => {
-    backend = { available: false, backendUrl: "https://backend.example" };
+    backend = {
+      available: false,
+      backendUrl: "https://backend.example",
+      ready: true,
+    };
 
     const { result } = render();
 
@@ -120,6 +132,16 @@ describe("OnboardingProvider", () => {
     expect(result.current.isOnboardingAvailable).toBe(false);
     expect(result.current.shouldShowOnboarding).toBe(false);
     expect(patched()).toBe(false);
+  });
+
+  it("stays unresolved until the backend is ready so the index route does not prematurely redirect", async () => {
+    backend = { available: false, backendUrl: "", ready: false };
+
+    const { result } = render();
+
+    await waitFor(() => expect(result.current.isReady).toBe(true));
+    expect(result.current.isResolved).toBe(false);
+    expect(result.current.shouldShowOnboarding).toBe(false);
   });
 
   it("derives tour and run completion live without persisting them", async () => {
