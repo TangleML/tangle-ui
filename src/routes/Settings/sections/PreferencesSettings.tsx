@@ -1,7 +1,9 @@
 import { Settings } from "@/components/shared/Settings/Settings";
+import { BlockStack } from "@/components/ui/layout";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 
 import { useSettingsFlags } from "../SettingsFlagsContext";
+import { ThemeSetting } from "./ThemeSetting";
 
 export function PreferencesSettings() {
   const { settings, handleSetFlag } = useSettingsFlags();
@@ -16,5 +18,10 @@ export function PreferencesSettings() {
     handleSetFlag(key, enabled);
   };
 
-  return <Settings settings={settings} onChange={handleChange} />;
+  return (
+    <BlockStack gap="6">
+      <ThemeSetting />
+      <Settings settings={settings} onChange={handleChange} />
+    </BlockStack>
+  );
 }
