@@ -29,8 +29,12 @@ describe("AiModelQuickSelect", () => {
     expect(screen.queryByRole("combobox", { name: "AI model" })).toBeNull();
   });
 
-  it("does not render when both AI features are disabled", () => {
-    enableFlags({ "ai-assistant": false, "component-search-v2": false });
+  it("does not render when all AI features are disabled", () => {
+    enableFlags({
+      "ai-assistant": false,
+      "component-search-v2": false,
+      "global-agent": false,
+    });
     window.localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -71,6 +75,24 @@ describe("AiModelQuickSelect", () => {
 
   it("shows configured model choices when the AI assistant is enabled", () => {
     enableFlags({ "ai-assistant": true });
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        apiBase: "https://api.example.com/v1",
+        apiKey: "",
+        model: "gpt-4.1-mini",
+      }),
+    );
+
+    render(<AiModelQuickSelect />);
+
+    expect(
+      screen.getByRole("combobox", { name: "AI model" }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows configured model choices when the global agent is enabled", () => {
+    enableFlags({ "global-agent": true });
     window.localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({

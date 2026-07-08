@@ -1,5 +1,5 @@
 import { useTour } from "@reactour/tour";
-import { useNavigate } from "@tanstack/react-router";
+import { Link as RouterLink, useNavigate } from "@tanstack/react-router";
 import { observer } from "mobx-react-lite";
 import { useState } from "react";
 
@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
-import { Link } from "@/components/ui/link";
 import { Text } from "@/components/ui/typography";
 import { useTourMode } from "@/providers/TourProvider/TourModeContext";
 import { APP_ROUTES } from "@/routes/router";
@@ -69,19 +68,18 @@ export const EditorMenuBar = observer(function EditorMenuBar() {
           className="min-w-0"
           data-tour="editor-top-bar-left"
         >
-          <Link
-            href="/"
-            aria-label="Home"
-            variant="block"
+          <RouterLink
+            to={APP_ROUTES.DASHBOARD}
+            aria-label="Go to dashboard"
             className="shrink-0"
             {...tracking("v2.pipeline_editor.menubar.home")}
           >
             <img
               src={logo}
-              alt="logo"
+              alt="Tangle"
               className="h-8 cursor-pointer shrink-0"
             />
-          </Link>
+          </RouterLink>
 
           {displayMenu && (
             <BlockStack className="min-w-0">

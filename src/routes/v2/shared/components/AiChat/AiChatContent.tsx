@@ -42,6 +42,9 @@ type CreateBridge = (deps: BridgeDeps) => ToolBridgeApi;
 interface AiChatContentProps {
   createBridge: CreateBridge;
   suggestedPrompts?: SuggestedPrompt[];
+  emptyMessage?: string;
+  inputPlaceholder?: string;
+  showNewThreadButton?: boolean;
 }
 
 function projectRecentRuns(runs: PipelineRun[]): RecentPipelineRun[] {
@@ -57,6 +60,9 @@ function projectRecentRuns(runs: PipelineRun[]): RecentPipelineRun[] {
 export const AiChatContent = observer(function AiChatContent({
   createBridge,
   suggestedPrompts,
+  emptyMessage,
+  inputPlaceholder,
+  showNewThreadButton = true,
 }: AiChatContentProps) {
   const aiChat = useAiChatStore();
   const { track } = useAnalytics();
@@ -152,7 +158,7 @@ export const AiChatContent = observer(function AiChatContent({
 
   return (
     <BlockStack fill>
-      {hasMessages && (
+      {showNewThreadButton && hasMessages && (
         <WindowStickyHeader className="border-b w-full">
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 p-2">
             <Text
@@ -184,8 +190,13 @@ export const AiChatContent = observer(function AiChatContent({
         thinkingText={thread.thinkingText}
         suggestedPrompts={suggestedPrompts}
         onSelectPrompt={handleSend}
+        emptyMessage={emptyMessage}
       />
-      <ChatInput isPending={thread.isPending} onSubmit={handleSend} />
+      <ChatInput
+        isPending={thread.isPending}
+        onSubmit={handleSend}
+        placeholder={inputPlaceholder}
+      />
     </BlockStack>
   );
 });

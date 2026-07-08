@@ -8,9 +8,14 @@ import { Textarea } from "@/components/ui/textarea";
 interface ChatInputProps {
   isPending: boolean;
   onSubmit: (prompt: string) => void;
+  placeholder?: string;
 }
 
-export function ChatInput({ isPending, onSubmit }: ChatInputProps) {
+export function ChatInput({
+  isPending,
+  onSubmit,
+  placeholder = "Ask about your pipeline...",
+}: ChatInputProps) {
   const [prompt, setPrompt] = useState("");
 
   function handleSubmit() {
@@ -32,7 +37,7 @@ export function ChatInput({ isPending, onSubmit }: ChatInputProps) {
       <Textarea
         className="flex-1 resize-none max-h-32 overflow-y-auto"
         rows={2}
-        placeholder="Ask about your pipeline..."
+        placeholder={placeholder}
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
         onKeyDown={handleKeyDown}

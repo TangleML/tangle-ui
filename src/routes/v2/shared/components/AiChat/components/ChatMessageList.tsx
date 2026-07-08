@@ -18,6 +18,7 @@ interface ChatMessageListProps {
   thinkingText?: string | null;
   suggestedPrompts?: SuggestedPrompt[];
   onSelectPrompt?: (prompt: string) => void;
+  emptyMessage?: string;
 }
 
 export function ChatMessageList({
@@ -25,6 +26,7 @@ export function ChatMessageList({
   thinkingText,
   suggestedPrompts,
   onSelectPrompt,
+  emptyMessage,
 }: ChatMessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -40,7 +42,10 @@ export function ChatMessageList({
           icon="Sparkles"
           spotlight
           title="How can I help?"
-          description="Ask about this pipeline, or pick a starting point below."
+          description={
+            emptyMessage ??
+            "Ask about this pipeline, or pick a starting point below."
+          }
         >
           {suggestedPrompts && suggestedPrompts.length > 0 && (
             <BlockStack gap="2">

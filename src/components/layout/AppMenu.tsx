@@ -12,6 +12,7 @@ import { TopBarAuthentication } from "@/components/shared/Authentication/TopBarA
 import { CopyText } from "@/components/shared/CopyText/CopyText";
 import { EditorVersionToggle } from "@/components/shared/EditorVersionToggle";
 import ImportPipeline from "@/components/shared/ImportPipeline";
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -42,6 +43,7 @@ const DefaultAppMenu = () => {
   const router = useRouter();
   const location = useLocation();
   const requiresAuthorization = isAuthorizationRequired();
+  const globalAgentEnabled = useFlagValue("global-agent");
   const { componentSpec } = useComponentSpec();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -53,6 +55,7 @@ const DefaultAppMenu = () => {
 
   const isOnSettingsRoute = location.pathname.startsWith("/settings");
   const showAiModelQuickSelect =
+    globalAgentEnabled ||
     location.pathname.startsWith(APP_ROUTES.DASHBOARD_COMPONENTS) ||
     location.pathname.startsWith(APP_ROUTES.DASHBOARD_COMPONENTS_V2) ||
     location.pathname.startsWith(APP_ROUTES.EDITOR_V2) ||
@@ -65,19 +68,18 @@ const DefaultAppMenu = () => {
     >
       <InlineStack align="space-between" wrap="nowrap">
         <InlineStack gap="8" wrap="nowrap" className="min-w-0 flex-1">
-          <Link
-            href="/"
-            aria-label="Home"
-            variant="block"
+          <RouterLink
+            to={APP_ROUTES.DASHBOARD}
+            aria-label="Go to dashboard"
             className="shrink-0"
             {...tracking("header.logo")}
           >
             <img
               src={logo}
-              alt="logo"
+              alt="Tangle"
               className="h-8 filter cursor-pointer shrink-0"
             />
-          </Link>
+          </RouterLink>
 
           {title && (
             <CopyText className="text-white text-md font-bold truncate max-w-32 sm:max-w-48 md:max-w-64 lg:max-w-md">
