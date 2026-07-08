@@ -1,4 +1,10 @@
-import { useDeferredValue, useEffect, useState, useTransition } from "react";
+import {
+  useDeferredValue,
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 
 import ImportComponent from "@/components/shared/ReactFlow/FlowSidebar/components/ImportComponent";
 import { Button } from "@/components/ui/button";
@@ -84,9 +90,12 @@ function DebouncedComponentSearchInput({
 export function ComponentSearchV2Content() {
   const { track } = useAnalytics();
   const [query, setQuery] = useState("");
-  const [localQuery, setLocalQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const latestLocalQueryRef = useRef(query);
+  const latestCommittedQueryRef = useRef(query);
   const deferredQuery = useDeferredValue(query);
-  const [, startSearchTransition] = useTransition();
+  const [isSearchPending, startSearchTransition] = useTransition();
+  const isSearchUiPending = isSearching || isSearchPending;
   const {
     results,
     browseFolders,
@@ -101,22 +110,39 @@ export function ComponentSearchV2Content() {
     disabledSourceKeys,
     toggleSourceFilter,
     enableAllSources,
-  } = useComponentSearchV2State(deferredQuery);
+  } = useComponentSearchV2State(deferredQuery, {
+    pauseSearch: isSearchUiPending,
+  });
 
   const handleQueryCommit = (value: string) => {
-    startSearchTransition(() => setQuery(value));
+    latestCommittedQueryRef.current = value;
+    startSearchTransition(() => {
+      setQuery(value);
+    });
+    if (latestLocalQueryRef.current.trim() === value.trim()) {
+      setIsSearching(false);
+    }
   };
 
   const handleSuggestedSearch = (value: string) => {
-    setLocalQuery(value);
-    startSearchTransition(() => setQuery(value));
+    latestLocalQueryRef.current = value;
+    latestCommittedQueryRef.current = value;
+    startSearchTransition(() => {
+      setQuery(value);
+    });
+    setIsSearching(false);
+  };
+
+  const handleLocalQueryChange = (value: string) => {
+    latestLocalQueryRef.current = value;
+    setIsSearching(value.trim() !== latestCommittedQueryRef.current.trim());
   };
 
   const trimmedDeferredQuery = deferredQuery.trim();
-  const isSearching = localQuery.trim() !== trimmedDeferredQuery;
 
   useEffect(() => {
-    if (isLoading || trimmedDeferredQuery.length === 0) return;
+    if (isLoading || isSearchUiPending || trimmedDeferredQuery.length === 0)
+      return;
 
     const timeout = window.setTimeout(() => {
       track("component_library.search.completed", {
@@ -131,7 +157,14 @@ export function ComponentSearchV2Content() {
     }, 400);
 
     return () => window.clearTimeout(timeout);
-  }, [isLoading, isRerankActive, results.length, track, trimmedDeferredQuery]);
+  }, [
+    isLoading,
+    isSearchUiPending,
+    isRerankActive,
+    results.length,
+    track,
+    trimmedDeferredQuery,
+  ]);
 
   return (
     <BlockStack className="h-full min-h-0 overflow-hidden [&_.text-sm]:text-xs!">
@@ -166,7 +199,7 @@ export function ComponentSearchV2Content() {
             <DebouncedComponentSearchInput
               initialValue={query}
               onCommit={handleQueryCommit}
-              onLocalChange={setLocalQuery}
+              onLocalChange={handleLocalQueryChange}
             />
           </div>
           <Button
@@ -202,7 +235,7 @@ export function ComponentSearchV2Content() {
         browseFolders={browseFolders}
         searchSuggestions={searchSuggestions}
         isLoading={isLoading}
-        isSearching={isSearching}
+        isSearching={isSearchUiPending}
         isRerankActive={isRerankActive}
         onClearRerank={clearRerank}
         onSuggestedSearch={handleSuggestedSearch}

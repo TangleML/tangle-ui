@@ -12,6 +12,23 @@ interface DashboardComponentsV2Search {
 }
 
 const routeMocks = vi.hoisted(() => {
+  const standardSource = {
+    kind: "standard",
+    label: "Standard",
+    id: "standard",
+  } as const;
+  const registeredSource = {
+    kind: "registered",
+    label: "GitHub library",
+    id: "github-lib",
+  } as const;
+  const publishedSource = {
+    kind: "published",
+    label: "Published",
+    id: "published",
+  } as const;
+  const userSource = { kind: "user", label: "User", id: "user" } as const;
+
   const makeComponent = (digest: string, name: string): ComponentReference => ({
     digest,
     name,
@@ -32,8 +49,40 @@ const routeMocks = vi.hoisted(() => {
   const search: DashboardComponentsV2Search = {};
   const descriptionErrorState: { current: Error | null } = { current: null };
 
+  const toIndexEntry = (
+    reference: ComponentReference,
+    source:
+      | typeof standardSource
+      | typeof registeredSource
+      | typeof publishedSource
+      | typeof userSource,
+  ): IndexEntry => ({
+    reference,
+    digest: reference.digest!,
+    name: reference.name!,
+    source,
+    searchable: {
+      name: reference.name!.toLowerCase(),
+      description: reference.spec?.description?.toLowerCase() ?? "",
+      io: [
+        ...(reference.spec?.inputs ?? []),
+        ...(reference.spec?.outputs ?? []),
+      ]
+        .map((io) => io.name)
+        .join(" ")
+        .toLowerCase(),
+      implementation: "",
+      metadata: "",
+    },
+  });
+
   return {
     standard: makeComponent("standard-digest", "Standard component"),
+    standardSource,
+    registeredSource,
+    publishedSource,
+    userSource,
+    toIndexEntry,
     registered: makeComponent("registered-digest", "Registered component"),
     published: {
       ...makeComponent("published-digest", "Published component"),
@@ -108,14 +157,29 @@ vi.mock("@tanstack/react-query", () => ({
     }
 
     if (key === "component-search-v2" && queryKey[1] === "hydrate-library") {
+      const standardSourced = [
+        routeMocks.standard,
+        ...routeMocks.extraStandardComponents,
+      ].map((reference) => ({
+        reference,
+        source: routeMocks.standardSource,
+      }));
+      const sourcedHydrated = [
+        ...standardSourced,
+        {
+          reference: routeMocks.registered,
+          source: routeMocks.registeredSource,
+        },
+        { reference: routeMocks.published, source: routeMocks.publishedSource },
+        { reference: routeMocks.user, source: routeMocks.userSource },
+      ];
       return {
-        data: [
-          routeMocks.standard,
-          routeMocks.registered,
-          routeMocks.published,
-          routeMocks.user,
-          ...routeMocks.extraStandardComponents,
-        ],
+        data: {
+          sourcedHydrated,
+          index: sourcedHydrated.map((item) =>
+            routeMocks.toIndexEntry(item.reference, item.source),
+          ),
+        },
         isLoading: false,
       };
     }
