@@ -27,7 +27,7 @@ export function AppMenuActions() {
     >
       {!tourMode && <OnboardingNavPill />}
       <AiModelQuickSelect />
-      <EditorVersionToggle />
+      <EditorVersionToggle showWelcomeSpotlight />
       {tourMode ? (
         <TooltipButton
           tooltip="Settings"

@@ -19,7 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
-import { EDITOR_PATH } from "@/routes/router";
+import { getDefaultEditorPath } from "@/routes/editorRoutes";
 import {
   importPipelineFromFile,
   importPipelineFromYaml,
@@ -63,7 +63,7 @@ const ImportPipeline = ({
       onImportComplete(importedPipeline);
     } else {
       navigate({
-        to: `${EDITOR_PATH}/${encodeURIComponent(importedPipeline.name)}`,
+        to: getDefaultEditorPath(importedPipeline.name),
       });
     }
   };

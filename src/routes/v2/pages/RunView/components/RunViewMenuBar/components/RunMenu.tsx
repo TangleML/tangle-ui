@@ -8,6 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
+import { getDefaultEditorPath } from "@/routes/editorRoutes";
 import { useRunViewActions } from "@/routes/v2/pages/RunView/hooks/useRunViewActions";
 import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButton";
 import { tracking } from "@/utils/tracking";
@@ -41,7 +42,7 @@ export function RunMenu() {
 
   const handleInspect = () => {
     if (pipelineName) {
-      navigate({ to: `/editor/${encodeURIComponent(pipelineName)}` });
+      navigate({ to: getDefaultEditorPath(pipelineName) });
     }
   };
 

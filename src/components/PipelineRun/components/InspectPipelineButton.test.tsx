@@ -16,6 +16,6 @@ describe("<InspectPipelineButton/>", () => {
     render(<InspectPipelineButton pipelineName="foo" />);
     const inspectButton = screen.getByTestId("inspect-pipeline-button");
     act(() => fireEvent.click(inspectButton));
-    expect(mockNavigate).toHaveBeenCalledWith({ to: "/editor/foo" });
+    expect(mockNavigate).toHaveBeenCalledWith({ to: "/editor-v2/foo" });
   });
 });

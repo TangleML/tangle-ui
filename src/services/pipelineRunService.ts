@@ -4,7 +4,7 @@ import type {
   BodyCreateApiPipelineRunsPost,
   ListAnnotationsApiPipelineRunsIdAnnotationsGetResponse,
 } from "@/api/types.gen";
-import { APP_ROUTES } from "@/routes/router";
+import { getDefaultEditorPath } from "@/routes/editorRoutes";
 import type { PipelineRun } from "@/types/pipelineRun";
 import { EDITOR_FLOW_DIRECTION_ANNOTATION } from "@/utils/annotations";
 import { removeCachingStrategyFromSpec } from "@/utils/cache";
@@ -161,10 +161,8 @@ export const copyRunToPipeline = async (
       componentText,
     );
 
-    const urlName = encodeURIComponent(newName);
-
     return {
-      url: APP_ROUTES.PIPELINE_EDITOR.replace("$name", urlName),
+      url: getDefaultEditorPath(newName),
       name: newName,
     };
   } catch (error) {

@@ -7,6 +7,7 @@ import {
 
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { Icon } from "@/components/ui/icon";
+import { getDefaultEditorPath } from "@/routes/editorRoutes";
 
 type InspectPipelineButtonProps = {
   pipelineName: string;
@@ -25,7 +26,7 @@ export const InspectPipelineButton = ({
 
   const handleInspect = useCallback(
     (e: MouseEvent<HTMLButtonElement>) => {
-      const clickThroughUrl = `/editor/${encodeURIComponent(pipelineName)}`;
+      const clickThroughUrl = getDefaultEditorPath(pipelineName);
 
       if (e.ctrlKey || e.metaKey) {
         window.open(clickThroughUrl, "_blank");

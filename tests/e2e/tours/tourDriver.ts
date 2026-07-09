@@ -7,6 +7,11 @@ import type {
   TourDefinition,
   TourStep,
 } from "@/components/Learn/tours/registry";
+import { ExistingFlags } from "@/flags";
+import {
+  componentWindowIdForFlag,
+  LEGACY_COMPONENT_WINDOW_ID,
+} from "@/providers/TourProvider/resolveComponentWindowSteps";
 import type { TourInteraction } from "@/providers/TourProvider/tourActions";
 
 import { fitToView, locateFlowCanvas } from "../helpers";
@@ -110,7 +115,19 @@ export function loadTour(fileName: string): TourDef {
     readFileSync(join(TOURS_DIR, fileName), "utf8"),
   );
   assertTourDef(parsed, fileName);
-  return parsed;
+
+  const componentWindowId = componentWindowIdForFlag(
+    ExistingFlags["component-search-v2"].default,
+  );
+  if (componentWindowId === LEGACY_COMPONENT_WINDOW_ID) return parsed;
+
+  return {
+    ...parsed,
+    steps: resolveTourDriverComponentWindowSteps(
+      parsed.steps,
+      componentWindowId,
+    ),
+  };
 }
 
 /**
@@ -158,6 +175,27 @@ type TourStepDef = Pick<
 export type TourDef = Pick<TourDefinition, "id" | "displayName"> & {
   steps: TourStepDef[];
 };
+
+function resolveTourDriverComponentWindowSteps(
+  steps: TourStepDef[],
+  activeWindowId: string,
+): TourStepDef[] {
+  if (activeWindowId === LEGACY_COMPONENT_WINDOW_ID) return steps;
+
+  const rewrite = (value: string) =>
+    value.replaceAll(LEGACY_COMPONENT_WINDOW_ID, activeWindowId);
+  const rewriteList = (list: string[] | undefined) => list?.map(rewrite);
+
+  return steps.map((step) => ({
+    ...step,
+    selector: rewrite(step.selector),
+    highlightedSelectors: rewriteList(step.highlightedSelectors),
+    targetWindowId:
+      typeof step.targetWindowId === "string"
+        ? rewrite(step.targetWindowId)
+        : step.targetWindowId,
+  }));
+}
 
 // Sentinel selector tours use to mean "no spotlight, center the popover". No
 // such element exists in the DOM, so anchor assertions skip it.
@@ -370,6 +408,9 @@ async function pickDropPoint(page: Page): Promise<{ x: number; y: number }> {
   if (!canvas) throw new Error("Unable to locate canvas bounding box for drop");
 
   const popover = await page.locator(POPOVER).boundingBox();
+  const minimap = await page
+    .locator('[data-testid="rf__minimap"]')
+    .boundingBox();
   const nodes = page.locator(".react-flow__node");
   const nodeCount = await nodes.count();
   const nodeBoxes: Box[] = [];
@@ -380,7 +421,7 @@ async function pickDropPoint(page: Page): Promise<{ x: number; y: number }> {
 
   const cols = [0.12, 0.32, 0.52, 0.72, 0.9];
   const rows = [0.14, 0.34, 0.54, 0.76];
-  const footprint = { w: 120, h: 90 };
+  const footprint = { w: 360, h: 180 };
 
   let best: { x: number; y: number; clear: boolean; margin: number } | null =
     null;
@@ -396,8 +437,9 @@ async function pickDropPoint(page: Page): Promise<{ x: number; y: number }> {
       };
 
       const hitsPopover = popover ? boxesIntersect(rect, popover) : false;
+      const hitsMinimap = minimap ? boxesIntersect(rect, minimap) : false;
       const hitsNode = nodeBoxes.some((n) => boxesIntersect(rect, n));
-      const clear = !hitsPopover && !hitsNode;
+      const clear = !hitsPopover && !hitsMinimap && !hitsNode;
 
       // Margin: distance to the popover edge (bigger is safer).
       const margin = popover

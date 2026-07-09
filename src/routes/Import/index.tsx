@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Spinner } from "@/components/ui/spinner";
 import { Paragraph, Text } from "@/components/ui/typography";
-import { EDITOR_PATH } from "@/routes/router";
+import { getDefaultEditorPath } from "@/routes/editorRoutes";
 import { importPipelineFromYaml } from "@/services/pipelineService";
 
 /**
@@ -202,7 +202,7 @@ export const ImportPage = () => {
         setPipelineName(result.name);
         setStep(Step.Done);
         navigate({
-          to: `${EDITOR_PATH}/${encodeURIComponent(result.name)}`,
+          to: getDefaultEditorPath(result.name),
         });
       } else {
         setError(result.errorMessage || "Failed to import pipeline from URL.");
