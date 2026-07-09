@@ -286,7 +286,18 @@ export async function runTour(page: Page, tour: TourDef): Promise<void> {
     }
 
     if (step.interaction) {
-      await performInteraction(page, tour.id, index, step);
+      // The step's popover can overlap the element the interaction targets (a
+      // task card, a connection handle) and swallow its pointer events, which
+      // stalls the gesture until the test times out. Interaction steps advance
+      // on app state, not on a popover click, so let events fall through to the
+      // canvas for the duration of the interaction, then restore them before
+      // the next step's Next button.
+      await setPopoverInteractive(page, false);
+      try {
+        await performInteraction(page, tour.id, index, step);
+      } finally {
+        await setPopoverInteractive(page, true);
+      }
     } else {
       await clickNext(page);
     }
@@ -571,6 +582,28 @@ async function panCanvasFrom(
   await page.mouse.down();
   await page.mouse.move(start.x + delta.x, start.y + delta.y, { steps: 10 });
   await page.mouse.up();
+}
+
+/**
+ * Toggles pointer events on the tour popover.
+ *
+ * A step's popover is pinned to a fixed corner where it can sit over the element
+ * an interaction targets (a task card, a connection handle) and swallow that
+ * gesture's pointer events, stalling it until the test times out. Disabling
+ * pointer events lets them fall through to the canvas; it is a no-op when the
+ * popover isn't actually covering the target.
+ */
+async function setPopoverInteractive(
+  page: Page,
+  interactive: boolean,
+): Promise<void> {
+  await page
+    .locator(POPOVER)
+    .first()
+    .evaluate((el, on) => {
+      (el as HTMLElement).style.pointerEvents = on ? "" : "none";
+    }, interactive)
+    .catch(() => {});
 }
 
 async function connectEdge(page: Page, edge: TargetEdge): Promise<void> {
