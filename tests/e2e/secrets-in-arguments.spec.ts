@@ -1,4 +1,4 @@
-import { expect, type Page, test } from "@playwright/test";
+import { expect, type Locator, type Page, test } from "@playwright/test";
 import { readFileSync } from "fs";
 
 import {
@@ -16,6 +16,32 @@ import {
  * assign secret to argument → fill other fields → submit run.
  */
 test.describe.configure({ mode: "serial" });
+
+function argumentInput(page: Page, argumentName: string): Locator {
+  return page.locator(
+    `[data-context-panel="task-overview"] [data-testid="argument-input-field"][data-argument-name="${argumentName}"] input`,
+  );
+}
+
+/**
+ * Fills a task argument and commits it before returning.
+ *
+ * Argument fields hold the typed value in local state until they blur, and a
+ * sibling field committing re-syncs every field from the stored spec. Filling
+ * several fields back-to-back therefore lets one field's commit wipe the
+ * just-typed value of another. Blurring here persists each value before the
+ * next fill so the fields can't reset each other.
+ */
+async function fillArgument(
+  page: Page,
+  argumentName: string,
+  value: string,
+): Promise<void> {
+  const input = argumentInput(page, argumentName);
+  await input.fill(value);
+  await input.blur();
+  await expect(input).toHaveValue(value);
+}
 
 test.describe("Secrets in Component Arguments", () => {
   let page: Page;
@@ -131,30 +157,15 @@ test.describe("Secrets in Component Arguments", () => {
   });
 
   test("fill other required arguments with dummy values", async () => {
-    const taskOverviewPanel = page.locator(
-      '[data-context-panel="task-overview"]',
-    );
+    await fillArgument(page, "Repository", "test-owner/test-repo");
+    await fillArgument(page, "Path", "test/path/file.txt");
+    await fillArgument(page, "Content", "Test content for commit");
 
-    const repositoryField = taskOverviewPanel.locator(
-      '[data-testid="argument-input-field"][data-argument-name="Repository"]',
-    );
-    await repositoryField.locator("input").fill("test-owner/test-repo");
-
-    const pathField = taskOverviewPanel.locator(
-      '[data-testid="argument-input-field"][data-argument-name="Path"]',
-    );
-    await pathField.locator("input").fill("test/path/file.txt");
-
-    const contentField = taskOverviewPanel.locator(
-      '[data-testid="argument-input-field"][data-argument-name="Content"]',
-    );
-    await contentField.locator("input").fill("Test content for commit");
-
-    await expect(repositoryField.locator("input")).toHaveValue(
+    await expect(argumentInput(page, "Repository")).toHaveValue(
       "test-owner/test-repo",
     );
-    await expect(pathField.locator("input")).toHaveValue("test/path/file.txt");
-    await expect(contentField.locator("input")).toHaveValue(
+    await expect(argumentInput(page, "Path")).toHaveValue("test/path/file.txt");
+    await expect(argumentInput(page, "Content")).toHaveValue(
       "Test content for commit",
     );
   });

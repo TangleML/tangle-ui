@@ -192,13 +192,19 @@ test.describe("Component Library", () => {
     await openComponentLibFolder(page, "Data manipulation");
     await openComponentLibFolder(page, "CSV");
 
-    await dropComponentFromLibraryOnCanvas(
+    const node = await dropComponentFromLibraryOnCanvas(
       page,
       "CSV",
       "Select columns using Pandas on CSV data",
     );
+    await expect(
+      node,
+      "Dropped component should be on the canvas before clicking its pin",
+    ).toBeVisible();
 
-    await page.getByTestId("input-handle-table").click();
+    const inputHandle = page.getByTestId("input-handle-table");
+    await expect(inputHandle).toBeVisible();
+    await inputHandle.click();
 
     const outputConnection = page.getByTestId(
       "output-connection-transformed_table",
@@ -241,13 +247,19 @@ test.describe("Component Library", () => {
     await openComponentLibFolder(page, "Data manipulation");
     await openComponentLibFolder(page, "CSV");
 
-    await dropComponentFromLibraryOnCanvas(
+    const node = await dropComponentFromLibraryOnCanvas(
       page,
       "CSV",
       "Select columns using Pandas on CSV data",
     );
+    await expect(
+      node,
+      "Dropped component should be on the canvas before clicking its pin",
+    ).toBeVisible();
 
-    await page.getByTestId("output-handle-transformed_table").click();
+    const outputHandle = page.getByTestId("output-handle-transformed_table");
+    await expect(outputHandle).toBeVisible();
+    await outputHandle.click();
 
     const outputConnection = page.getByTestId(
       "output-connection-transformed_table",
