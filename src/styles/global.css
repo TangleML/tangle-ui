@@ -59,48 +59,113 @@ code {
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
   --edge-selected: #5b2ef4;
+
+  /* Canvas (ReactFlow pane) — subtly distinct from card so nodes read against it. */
+  --canvas: oklch(0.985 0 0);
+
+  /* Ink for fixed-light surfaces (IO nodes, sticky notes) — dark in BOTH themes. */
+  --ink-fixed: oklch(0.205 0 0);
+
+  --io-input: oklch(0.932 0.032 255.585);
+  --io-output: oklch(0.943 0.029 294.588);
+  --io-value: oklch(1 0 0);
+
+  /* Run/execution status colours — one value per state, used for both bg and text. */
+  --status-succeeded: oklch(0.72 0.19 149);
+  --status-failed: oklch(0.64 0.24 25);
+  --status-system-error: oklch(0.51 0.22 27);
+  --status-invalid: oklch(0.58 0.24 27);
+  --status-running: oklch(0.62 0.19 260);
+  --status-pending: oklch(0.8 0.16 86);
+  --status-queued: oklch(0.77 0.16 70);
+  --status-waiting: oklch(0.55 0.03 257);
+  --status-skipped: oklch(0.65 0.02 257);
+  --status-cancelled: oklch(0.44 0.01 286);
+  --status-cancelling: oklch(0.7 0.19 42);
+  --status-uninitialized: oklch(0.85 0.16 90);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.985 0 0);
+  --background: oklch(0.205 0.004 264);
+  --foreground: oklch(0.97 0 0);
+  --card: oklch(0.241 0.004 264);
+  --card-foreground: oklch(0.97 0 0);
+  --popover: oklch(0.241 0.004 264);
+  --popover-foreground: oklch(0.97 0 0);
   --primary: oklch(0.985 0 0);
   --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
+  --secondary: oklch(0.278 0.005 264);
+  --secondary-foreground: oklch(0.97 0 0);
+  --muted: oklch(0.278 0.005 264);
+  --muted-foreground: oklch(0.72 0.006 264);
+  --accent: oklch(0.305 0.006 264);
+  --accent-foreground: oklch(0.97 0 0);
+  --destructive: oklch(0.637 0.208 25.3);
+  --destructive-foreground: oklch(0.704 0.191 22.2);
   --warning: oklch(0.85 0.2 50);
   --warning-foreground: oklch(0.145 0 0);
   --success: oklch(0.7 0.18 140);
   --success-foreground: oklch(0.145 0 0);
   --info: oklch(0.6 0.13 235);
   --info-foreground: oklch(0.145 0 0);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.439 0 0);
+  --border: oklch(0.34 0.006 264);
+  --input: oklch(0.3 0.006 264);
+  --ring: oklch(0.55 0.02 264);
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar: oklch(0.185 0.004 264);
+  --sidebar-foreground: oklch(0.97 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
+  --sidebar-primary-foreground: oklch(0.97 0 0);
+  --sidebar-accent: oklch(0.278 0.005 264);
+  --sidebar-accent-foreground: oklch(0.97 0 0);
+  --sidebar-border: oklch(0.3 0.006 264);
+  --sidebar-ring: oklch(0.55 0.02 264);
   --edge-selected: #5b2ef4;
+
+  --canvas: oklch(0.223 0.004 264);
+
+  --ink-fixed: oklch(0.205 0 0);
+
+  --io-input: oklch(0.78 0.06 255);
+  --io-output: oklch(0.79 0.055 294);
+  --io-value: oklch(0.9 0.008 264);
+
+  --status-succeeded: oklch(0.68 0.15 149);
+  --status-failed: oklch(0.62 0.19 25);
+  --status-system-error: oklch(0.54 0.17 27);
+  --status-invalid: oklch(0.58 0.18 27);
+  --status-running: oklch(0.64 0.15 260);
+  --status-pending: oklch(0.75 0.13 86);
+  --status-queued: oklch(0.72 0.13 70);
+  --status-waiting: oklch(0.62 0.025 257);
+  --status-skipped: oklch(0.6 0.02 257);
+  --status-cancelled: oklch(0.58 0.01 286);
+  --status-cancelling: oklch(0.68 0.15 42);
+  --status-uninitialized: oklch(0.76 0.13 90);
+}
+
+/*
+ * Re-point the xyflow chrome variables at our own tokens under `.dark` 
+ * so they follow the theme.
+ */
+.dark .react-flow {
+  --xy-minimap-background-color-default: var(--card);
+  --xy-minimap-mask-background-color-default: color-mix(
+    in oklch,
+    var(--background) 55%,
+    transparent
+  );
+  --xy-minimap-node-background-color-default: var(--muted-foreground);
+
+  --xy-controls-button-background-color-default: var(--card);
+  --xy-controls-button-background-color-hover-default: var(--accent);
+  --xy-controls-button-color-default: var(--foreground);
+  --xy-controls-button-color-hover-default: var(--foreground);
+  --xy-controls-button-border-color-default: var(--border);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -155,6 +220,23 @@ code {
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-edge-selected: var(--edge-selected);
+  --color-canvas: var(--canvas);
+  --color-ink-fixed: var(--ink-fixed);
+  --color-io-input: var(--io-input);
+  --color-io-output: var(--io-output);
+  --color-io-value: var(--io-value);
+  --color-status-succeeded: var(--status-succeeded);
+  --color-status-failed: var(--status-failed);
+  --color-status-system-error: var(--status-system-error);
+  --color-status-invalid: var(--status-invalid);
+  --color-status-running: var(--status-running);
+  --color-status-pending: var(--status-pending);
+  --color-status-queued: var(--status-queued);
+  --color-status-waiting: var(--status-waiting);
+  --color-status-skipped: var(--status-skipped);
+  --color-status-cancelled: var(--status-cancelled);
+  --color-status-cancelling: var(--status-cancelling);
+  --color-status-uninitialized: var(--status-uninitialized);
 
   /* Custom animations */
   --animate-revert-copied: revert-copied 0.5s ease-in-out forwards;

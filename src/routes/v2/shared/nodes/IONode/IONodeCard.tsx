@@ -19,7 +19,7 @@ export function IONodeCard({
   isHovered,
   onNodeClick,
 }: IONodeViewProps) {
-  const bgColor = isInput ? "bg-blue-100" : "bg-violet-100";
+  const bgColor = isInput ? "bg-io-input" : "bg-io-output";
   const borderColor = selected
     ? isInput
       ? "border-blue-500"
@@ -42,33 +42,38 @@ export function IONodeCard({
       data-tour-card-name={name}
     >
       <CardHeader className="p-2">
-        <CardTitle className="wrap-break-word text-sm">{name}</CardTitle>
+        <CardTitle className="wrap-break-word text-sm text-ink-fixed">
+          {name}
+        </CardTitle>
         {description && (
-          <Paragraph tone="subdued" className="italic truncate text-xs">
+          <Paragraph className="italic truncate text-xs text-ink-fixed/70">
             {description}
           </Paragraph>
         )}
       </CardHeader>
       <CardContent className="py-2 px-4 max-w-60">
         <BlockStack gap="2">
-          <Paragraph size="xs" font="mono" className="truncate text-slate-700">
+          <Paragraph
+            size="xs"
+            font="mono"
+            className="truncate text-ink-fixed/70"
+          >
             <span className="font-bold">Type:</span> {type ?? "Any"}
           </Paragraph>
 
-          <InlineStack gap="1" className="p-2 bg-white rounded-lg w-full">
+          <InlineStack gap="1" className="p-2 bg-io-value rounded-lg w-full">
             <Paragraph
               size="xs"
               font="mono"
               weight="bold"
-              className="text-slate-700"
+              className="text-ink-fixed/70"
             >
               Value:
             </Paragraph>
             <Paragraph
               size="xs"
               font="mono"
-              tone="subdued"
-              className="truncate"
+              className="truncate text-ink-fixed/70"
             >
               {isInput
                 ? (defaultValue ?? "No value")

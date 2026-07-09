@@ -38,7 +38,8 @@ const cardVariants = cva(
       {
         selected: false,
         hovered: false,
-        className: "border-black/10 hover:border-black/30",
+        className:
+          "border-black/10 hover:border-black/30 dark:border-white/10 dark:hover:border-white/25",
       },
       {
         selected: false,
@@ -47,7 +48,7 @@ const cardVariants = cva(
       },
       {
         selected: true,
-        className: "ring-4 ring-blue-500/60",
+        className: "ring-4 ring-edge-selected/60",
       },
     ],
     defaultVariants: {
@@ -57,40 +58,39 @@ const cardVariants = cva(
   },
 );
 
-const classicInputLabelVariants = cva(
-  "text-xs text-gray-800 rounded-md px-2 py-1 truncate bg-black/5 hover:bg-black/10",
-  {
-    variants: {
-      hasValue: { true: "", false: "" },
-      hasDefault: { true: "", false: "" },
-      optional: { true: "", false: "" },
+const classicInputLabelVariants = cva("text-xs rounded-md px-2 py-1 truncate", {
+  variants: {
+    hasValue: { true: "", false: "" },
+    hasDefault: { true: "", false: "" },
+    optional: { true: "", false: "" },
+  },
+  compoundVariants: [
+    {
+      hasValue: false,
+      hasDefault: true,
+      className: "opacity-50 italic",
     },
-    compoundVariants: [
-      {
-        hasValue: false,
-        hasDefault: true,
-        className: "opacity-50 italic",
-      },
-      {
-        hasValue: false,
-        hasDefault: false,
-        optional: true,
-        className: "opacity-50 italic",
-      },
-    ],
-    defaultVariants: {
+    {
       hasValue: false,
       hasDefault: false,
-      optional: false,
+      optional: true,
+      className: "opacity-50 italic",
     },
+  ],
+  defaultVariants: {
+    hasValue: false,
+    hasDefault: false,
+    optional: false,
   },
-);
+});
 
 interface ClassicInputHandleProps {
   input: TaskNodeInput;
   entityId: string;
   displayValue: string | undefined;
   hideValue?: boolean;
+  /** When true the node has no custom colour, so section chrome follows the theme. */
+  themed: boolean;
   onInputClick: (name: string, event: ReactMouseEvent) => void;
   onHandleClick: (handleId: string, event: ReactMouseEvent) => void;
 }
@@ -100,6 +100,7 @@ const ClassicInputHandle = observer(function ClassicInputHandle({
   entityId,
   displayValue,
   hideValue,
+  themed,
   onInputClick,
   onHandleClick,
 }: ClassicInputHandleProps) {
@@ -147,11 +148,16 @@ const ClassicInputHandle = observer(function ClassicInputHandle({
           )}
         >
           <div
-            className={classicInputLabelVariants({
-              hasValue: labelHasValue,
-              hasDefault: labelHasDefault,
-              optional: input.optional ?? false,
-            })}
+            className={cn(
+              classicInputLabelVariants({
+                hasValue: labelHasValue,
+                hasDefault: labelHasDefault,
+                optional: input.optional ?? false,
+              }),
+              themed
+                ? "text-foreground bg-muted hover:bg-accent"
+                : "text-gray-800 bg-black/5 hover:bg-black/10",
+            )}
             title={`${input.name}${input.type ? `: ${input.type}` : ""}`}
           >
             {input.name.replace(/_/g, " ")}
@@ -161,8 +167,12 @@ const ClassicInputHandle = observer(function ClassicInputHandle({
           <div className="flex w-fit max-w-1/2 min-w-0 items-center gap-1">
             <div
               className={cn(
-                "text-xs text-gray-800 truncate inline-block text-right pr-2",
-                !hasValue && "text-gray-400 italic",
+                "text-xs truncate inline-block text-right pr-2",
+                themed ? "text-foreground" : "text-gray-800",
+                !hasValue &&
+                  (themed
+                    ? "text-muted-foreground italic"
+                    : "text-gray-400 italic"),
               )}
             >
               {hasValue ? displayValue : input.default}
@@ -300,7 +310,7 @@ export const TaskNodeCard = observer(function TaskNodeCard({
               <CardTitle
                 className={cn(
                   "wrap-anywhere max-w-full text-left text-xs",
-                  !taskColor && "text-slate-900",
+                  !taskColor && "text-card-foreground",
                 )}
                 style={palette ? { color: palette.text } : undefined}
               >
@@ -309,8 +319,11 @@ export const TaskNodeCard = observer(function TaskNodeCard({
             </InlineStack>
             {digest && (
               <span
-                className="text-xs font-light font-mono shrink-0"
-                style={{ color: palette?.text ?? "#4b5563" }}
+                className={cn(
+                  "text-xs font-light font-mono shrink-0",
+                  !palette && "text-muted-foreground",
+                )}
+                style={palette ? { color: palette.text } : undefined}
               >
                 {trimDigest(digest)}
               </span>
@@ -324,11 +337,16 @@ export const TaskNodeCard = observer(function TaskNodeCard({
           <div
             className={cn(
               "p-2 rounded-lg",
-              !palette && "bg-gray-200/50",
+              !palette && "bg-muted",
               !isAggregator &&
                 collapsed &&
                 hiddenInputCount > 0 &&
-                "cursor-pointer hover:bg-gray-200/80",
+                "cursor-pointer",
+              !palette &&
+                !isAggregator &&
+                collapsed &&
+                hiddenInputCount > 0 &&
+                "hover:bg-accent",
             )}
             style={palette ? { backgroundColor: palette.sectionBg } : undefined}
             onClickCapture={
@@ -347,6 +365,7 @@ export const TaskNodeCard = observer(function TaskNodeCard({
                   key={input.name}
                   input={input}
                   entityId={entityId}
+                  themed={!palette}
                   displayValue={
                     showCondensedInputs
                       ? index === 0
@@ -360,7 +379,12 @@ export const TaskNodeCard = observer(function TaskNodeCard({
                 />
               ))}
               {collapsed && inputsExpanded && hiddenInputCount > 0 && (
-                <span className="text-xs text-gray-400 text-center">
+                <span
+                  className={cn(
+                    "text-xs text-center",
+                    palette ? "text-gray-400" : "text-muted-foreground",
+                  )}
+                >
                   (Click to collapse)
                 </span>
               )}
@@ -372,10 +396,12 @@ export const TaskNodeCard = observer(function TaskNodeCard({
           <div
             className={cn(
               "p-2 rounded-lg",
-              !palette && "bg-gray-200/50",
-              collapsed &&
+              !palette && "bg-muted",
+              collapsed && hiddenOutputCount > 0 && "cursor-pointer",
+              !palette &&
+                collapsed &&
                 hiddenOutputCount > 0 &&
-                "cursor-pointer hover:bg-gray-200/80",
+                "hover:bg-accent",
             )}
             style={palette ? { backgroundColor: palette.sectionBg } : undefined}
             onClickCapture={
@@ -408,13 +434,23 @@ export const TaskNodeCard = observer(function TaskNodeCard({
                 >
                   <div className="flex flex-row-reverse w-full gap-0.5 items-center justify-between">
                     {showCondensedOutputs && index === 0 && (
-                      <div className="text-xs text-gray-500 italic px-2">
+                      <div
+                        className={cn(
+                          "text-xs italic px-2",
+                          palette ? "text-gray-500" : "text-muted-foreground",
+                        )}
+                      >
                         {`+${hiddenOutputCount} more ${pluralize(hiddenOutputCount, "output")}`}
                       </div>
                     )}
                     <div className="translate-x-3 min-w-0 inline-block max-w-full">
                       <div
-                        className="text-xs text-gray-800 rounded-md px-2 py-1 truncate bg-black/5 hover:bg-black/10"
+                        className={cn(
+                          "text-xs rounded-md px-2 py-1 truncate",
+                          palette
+                            ? "text-gray-800 bg-black/5 hover:bg-black/10"
+                            : "text-foreground bg-muted hover:bg-accent",
+                        )}
                         title={`${output.name}${output.type ? `: ${output.type}` : ""}`}
                       >
                         {output.name.replace(/_/g, " ")}
@@ -431,7 +467,12 @@ export const TaskNodeCard = observer(function TaskNodeCard({
                 </div>
               ))}
               {collapsed && outputsExpanded && hiddenOutputCount > 0 && (
-                <span className="text-xs text-gray-400 text-center">
+                <span
+                  className={cn(
+                    "text-xs text-center",
+                    palette ? "text-gray-400" : "text-muted-foreground",
+                  )}
+                >
                   (Click to collapse)
                 </span>
               )}

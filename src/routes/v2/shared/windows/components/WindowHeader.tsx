@@ -50,7 +50,9 @@ export function WindowHeader({
           weight="semibold"
           className={cn(
             "truncate",
-            tone === "dark" ? "text-gray-100" : "text-gray-700",
+            tone === "dark"
+              ? "text-gray-100"
+              : "text-gray-700 dark:text-foreground",
           )}
         >
           {title}

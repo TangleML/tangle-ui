@@ -62,7 +62,7 @@ const PipelineRunPage = () => {
                 showInteractive={false}
                 pageType="pipeline_run"
               />
-              <Background gap={GRID_SIZE} className="bg-slate-50!" />
+              <Background gap={GRID_SIZE} className="bg-canvas!" />
             </FlowCanvas>
           </BlockStack>
           <CollapsibleContextPanel />

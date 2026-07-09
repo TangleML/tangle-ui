@@ -22,7 +22,8 @@ export const treeNodeIconVariants = cva(
     variants: {
       hasErrors: {
         true: "text-destructive group-hover:text-destructive/90",
-        false: "text-slate-600 group-hover:text-slate-950",
+        false:
+          "text-slate-600 group-hover:text-slate-950 dark:text-slate-300 dark:group-hover:text-slate-100",
       },
       selected: {
         true: "",
@@ -58,7 +59,7 @@ export const treeNodeLabelToneVariants = cva("transition-colors truncate", {
       error: "text-destructive group-hover:text-destructive/90",
       warning:
         "text-amber-800 group-hover:text-amber-950 dark:text-amber-200 dark:group-hover:text-amber-100",
-      none: "text-slate-700 group-hover:text-slate-950",
+      none: "text-slate-700 group-hover:text-slate-950 dark:text-slate-200 dark:group-hover:text-white",
     },
     line: {
       wrap: "min-w-0 flex-1 wrap-break-word",
@@ -73,13 +74,13 @@ export const treeNodeLabelToneVariants = cva("transition-colors truncate", {
 
 /** Leaf task status icon (Circle / CircleAlert) — includes bg-white ring. */
 export const treeNodeLeafIconToneVariants = cva(
-  "shrink-0 mt-0.5 rounded-full transition-colors bg-white",
+  "shrink-0 mt-0.5 rounded-full transition-colors bg-white dark:bg-card",
   {
     variants: {
       tone: {
         error: "text-destructive group-hover:text-destructive/90",
         warning: "text-amber-500 group-hover:text-amber-600",
-        none: "text-slate-600 group-hover:text-slate-950",
+        none: "text-slate-600 group-hover:text-slate-950 dark:text-slate-300 dark:group-hover:text-slate-100",
       },
       selected: {
         true: "",
@@ -91,17 +92,19 @@ export const treeNodeLeafIconToneVariants = cva(
         tone: "none",
         selected: true,
         className:
-          "text-primary ring-2 ring-primary/35 ring-offset-1 ring-offset-white group-hover:text-primary",
+          "text-primary ring-2 ring-primary/35 ring-offset-1 ring-offset-white dark:ring-offset-card group-hover:text-primary",
       },
       {
         tone: "warning",
         selected: true,
-        className: "ring-2 ring-primary/40 ring-offset-1 ring-offset-white",
+        className:
+          "ring-2 ring-primary/40 ring-offset-1 ring-offset-white dark:ring-offset-card",
       },
       {
         tone: "error",
         selected: true,
-        className: "ring-2 ring-primary/40 ring-offset-1 ring-offset-white",
+        className:
+          "ring-2 ring-primary/40 ring-offset-1 ring-offset-white dark:ring-offset-card",
       },
     ],
     defaultVariants: {
@@ -116,7 +119,8 @@ export const treeNodeChevronIconVariants = cva("", {
   variants: {
     hasErrors: {
       true: "text-destructive",
-      false: "text-slate-600 group-hover:text-slate-950",
+      false:
+        "text-slate-600 group-hover:text-slate-950 dark:text-slate-300 dark:group-hover:text-slate-100",
     },
   },
   defaultVariants: {

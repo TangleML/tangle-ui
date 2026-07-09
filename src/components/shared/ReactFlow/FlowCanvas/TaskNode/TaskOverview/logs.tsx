@@ -152,14 +152,16 @@ const Logs = ({
     return (
       <InfoBox title="Error loading logs" variant="error">
         <div className="mb-2">{error.message}</div>
-        <div className="text-black italic">{backendStatusString}</div>
+        <div className="text-black dark:text-muted-foreground italic">
+          {backendStatusString}
+        </div>
       </InfoBox>
     );
   }
 
   return (
     <div className="space-y-4 h-full">
-      <div className="font-mono text-sm whitespace-pre-wrap bg-gray-50 p-4 rounded-lg h-full min-h-0 flex-1">
+      <div className="font-mono text-sm whitespace-pre-wrap bg-gray-50 dark:bg-muted p-4 rounded-lg h-full min-h-0 flex-1">
         {logs && <LogDisplay logs={logs} />}
       </div>
     </div>

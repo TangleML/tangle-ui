@@ -157,7 +157,7 @@ const DebugPanelContent = observer(function DebugPanelContent() {
                       </Text>
                     </Text>
                   </InlineStack>
-                  <div className="flex flex-col h-[60vh] rounded-md overflow-hidden w-full bg-gray-50 border border-gray-200">
+                  <div className="flex flex-col h-[60vh] rounded-md overflow-hidden w-full bg-gray-50 border border-gray-200 dark:bg-muted dark:border-border">
                     <div className="flex-1 relative">
                       <div className="absolute inset-0">
                         <CodeSyntaxHighlighter
@@ -176,7 +176,7 @@ const DebugPanelContent = observer(function DebugPanelContent() {
                 </BlockStack>
               )}
               {systemClipboard.kind === "text" && (
-                <pre className="max-h-96 overflow-auto rounded-md bg-gray-50 border border-gray-200 p-3 text-xs font-mono text-gray-700 whitespace-pre-wrap break-all">
+                <pre className="max-h-96 overflow-auto rounded-md bg-gray-50 border border-gray-200 p-3 text-xs font-mono text-gray-700 dark:bg-muted dark:border-border dark:text-foreground whitespace-pre-wrap break-all">
                   {systemClipboard.text}
                 </pre>
               )}
@@ -238,7 +238,7 @@ const DebugPanelContent = observer(function DebugPanelContent() {
       </TabsContent>
 
       <TabsContent value="yaml" className="flex-1 min-h-0">
-        <div className="m-2 h-full min-h-75 rounded-md overflow-hidden bg-gray-50 border border-gray-200 relative">
+        <div className="m-2 h-full min-h-75 rounded-md overflow-hidden bg-gray-50 border border-gray-200 dark:bg-muted dark:border-border relative">
           <div className="absolute inset-0">
             <CodeSyntaxHighlighter code={specYaml} language="yaml" />
           </div>

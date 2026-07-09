@@ -388,16 +388,14 @@ export const IONodeSidebarItem = ({ nodeType }: IONodeSidebarItemProps) => {
 
   return (
     <li
-      className={cn(
-        "pl-2 py-1.5 cursor-grab hover:bg-gray-100 active:bg-gray-200",
-      )}
+      className={cn("pl-2 py-1.5 cursor-grab hover:bg-muted active:bg-accent")}
       draggable
       onDragStart={onDragStart}
       data-component-name={displayName}
     >
       <div className="flex items-center gap-2">
-        <Icon name="File" className="text-gray-400 shrink-0" />
-        <span className="truncate text-xs text-gray-800">{displayName}</span>
+        <Icon name="File" className="text-muted-foreground shrink-0" />
+        <span className="truncate text-xs text-foreground">{displayName}</span>
       </div>
     </li>
   );
@@ -421,13 +419,13 @@ export const StickyNoteSidebarItem = () => {
 
   return (
     <li
-      className="pl-2 py-1.5 cursor-grab hover:bg-gray-100 active:bg-gray-200"
+      className="pl-2 py-1.5 cursor-grab hover:bg-muted active:bg-accent"
       data-testid="sticky-note-sidebar-item"
       draggable
       onDragStart={onDragStart}
     >
       <InlineStack blockAlign="center" gap="2">
-        <Icon name="StickyNote" className="text-gray-400 shrink-0" />
+        <Icon name="StickyNote" className="text-muted-foreground shrink-0" />
         <Text size="sm" className="truncate">
           Sticky Note
         </Text>

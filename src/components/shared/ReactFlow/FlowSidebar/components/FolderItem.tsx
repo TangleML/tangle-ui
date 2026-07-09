@@ -40,7 +40,7 @@ const FolderItem = ({ folder, icon }: FolderItemProps) => {
   return (
     <div className="w-full" data-folder-name={folder.name}>
       <div
-        className="flex items-center px-4 py-1 cursor-pointer hover:bg-gray-100"
+        className="flex items-center px-4 py-1 cursor-pointer hover:bg-muted"
         onClick={toggle}
         role="button"
         aria-expanded={isOpen}
@@ -101,7 +101,7 @@ const FolderSkeleton = () => {
   return (
     <BlockStack className="w-full">
       <InlineStack
-        className="px-4 py-1 cursor-pointer hover:bg-gray-100 w-full"
+        className="px-4 py-1 cursor-pointer hover:bg-muted w-full"
         align="space-between"
         wrap="nowrap"
       >

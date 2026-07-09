@@ -34,7 +34,7 @@ export const ContextPanelContent = observer(function ContextPanelContent() {
   if (!Panel) return <ContextPanelEmptyState />;
 
   return (
-    <BlockStack className="h-full bg-white overflow-y-auto overflow-x-hidden">
+    <BlockStack className="h-full bg-card overflow-y-auto overflow-x-hidden">
       <Panel entityId={selectedNodeId} />
     </BlockStack>
   );

@@ -54,20 +54,20 @@ const CodeViewer = ({
 
   return (
     <FullscreenElement fullscreen={isFullscreen}>
-      <div className="flex flex-col transition-shadow duration-150 bg-slate-900 h-full rounded-md">
-        <div className="flex items-center justify-between gap-2 bg-slate-800 sticky top-0 z-10 rounded-t-md px-3 py-2.5">
+      <div className="flex flex-col transition-shadow duration-150 bg-card h-full rounded-md">
+        <div className="flex items-center justify-between gap-2 bg-muted sticky top-0 z-10 rounded-t-md px-3 py-2.5">
           <div className="flex items-baseline gap-2">
-            <span className="font-semibold text-base text-secondary">
+            <span className="font-semibold text-base text-foreground">
               {filename}
             </span>
-            <span className="text-sm text-secondary">(Read Only)</span>
+            <span className="text-sm text-muted-foreground">(Read Only)</span>
           </div>
           <Button
             type="button"
             variant="ghost"
             size="icon"
             onClick={handleToggleFullscreen}
-            className="text-gray-200 hover:text-black"
+            className="text-muted-foreground hover:text-foreground"
             title={isFullscreen ? "Exit fullscreen" : "View fullscreen"}
             aria-label={isFullscreen ? "Exit fullscreen" : "View fullscreen"}
           >
@@ -76,7 +76,7 @@ const CodeViewer = ({
         </div>
         <div className="flex-1 relative">
           <div
-            className="absolute inset-0 overflow-y-auto bg-slate-900"
+            className="absolute inset-0 overflow-y-auto bg-card"
             style={{
               willChange: "transform",
               minHeight: DEFAULT_CODE_VIEWER_HEIGHT,

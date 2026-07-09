@@ -76,7 +76,7 @@ const PipelineEditor = () => {
                       showInteractive={false}
                       pageType="pipeline_editor"
                     />
-                    <Background gap={GRID_SIZE} className="bg-slate-50!" />
+                    <Background gap={GRID_SIZE} className="bg-canvas!" />
                   </FlowCanvas>
 
                   <div className="absolute bottom-0 right-0 p-4">

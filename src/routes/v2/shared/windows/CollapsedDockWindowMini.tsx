@@ -62,12 +62,12 @@ export const CollapsedDockWindowMini = observer(
             } as CSSProperties
           }
         >
-          <div className="shrink-0 border-b bg-white px-2 py-1.5">
+          <div className="shrink-0 border-b bg-card px-2 py-1.5">
             <Text size="xs" weight="semibold" className="truncate">
               {model.title}
             </Text>
           </div>
-          <div className="min-h-0 flex-1 overflow-auto bg-white">
+          <div className="min-h-0 flex-1 overflow-auto bg-card">
             <WindowContextProvider value={{ model, content }}>
               {content}
             </WindowContextProvider>

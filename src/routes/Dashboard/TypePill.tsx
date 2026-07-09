@@ -13,17 +13,19 @@ const TYPE_CONFIG: Record<
   { className: string; icon: IconName; label: string }
 > = {
   pipeline: {
-    className: "bg-violet-100 text-violet-700",
+    className:
+      "bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300",
     icon: "GitBranch",
     label: "Pipeline",
   },
   run: {
-    className: "bg-emerald-100 text-emerald-700",
+    className:
+      "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
     icon: "Play",
     label: "Run",
   },
   component: {
-    className: "bg-sky-100 text-sky-700",
+    className: "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
     icon: "Package",
     label: "Component",
   },

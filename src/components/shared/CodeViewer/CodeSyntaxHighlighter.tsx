@@ -2,6 +2,8 @@ import MonacoEditor from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
 import { memo } from "react";
 
+import { useMonacoTheme } from "@/hooks/useMonacoTheme";
+
 interface CodeSyntaxHighlighterProps {
   code: string;
   language: string;
@@ -18,6 +20,8 @@ const CodeSyntaxHighlighter = memo(function CodeSyntaxHighlighter({
   language,
   scrollToBottom = false,
 }: CodeSyntaxHighlighterProps) {
+  const monacoTheme = useMonacoTheme();
+
   const handleMount = (editor: editor.IStandaloneCodeEditor) => {
     if (scrollToBottom) {
       revealLastLine(editor);
@@ -28,7 +32,7 @@ const CodeSyntaxHighlighter = memo(function CodeSyntaxHighlighter({
     <MonacoEditor
       key={code} // force re-render when code changes
       defaultLanguage={language}
-      theme="vs-dark"
+      theme={monacoTheme}
       defaultValue={code}
       onMount={handleMount}
       options={{

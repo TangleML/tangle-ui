@@ -6,14 +6,14 @@ import { useWindowContext } from "@/routes/v2/shared/windows/ContentWindowStateC
 import { tracking } from "@/utils/tracking";
 
 const lightButtonClassName =
-  "h-5 w-5 text-gray-700 hover:text-gray-900 hover:bg-white/50";
+  "h-5 w-5 text-gray-700 hover:text-gray-900 hover:bg-white/50 dark:text-muted-foreground dark:hover:text-foreground dark:hover:bg-accent";
 const darkButtonClassName =
   "h-5 w-5 text-gray-300 hover:text-white hover:bg-white/10";
 
 const lightCloseButtonClassName =
-  "h-5 w-5 text-gray-500 hover:text-red-500 hover:bg-gray-300";
+  "h-5 w-5 text-gray-500 hover:text-destructive hover:bg-gray-300 dark:text-muted-foreground dark:hover:bg-accent";
 const darkCloseButtonClassName =
-  "h-5 w-5 text-gray-300 hover:text-red-400 hover:bg-white/10";
+  "h-5 w-5 text-gray-300 hover:text-destructive hover:bg-white/10";
 
 export const WindowActions = observer(function WindowActions() {
   const { model } = useWindowContext();

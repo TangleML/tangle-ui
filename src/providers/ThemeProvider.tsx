@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useContext, useEffect, useLayoutEffect, useState } from "react";
 
 import {
   createRequiredContext,
@@ -79,3 +79,6 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
 };
 
 export const useTheme = () => useRequiredContext(ThemeContext);
+
+export const useThemeOptional = (): ThemeContextValue | null =>
+  useContext(ThemeContext) ?? null;

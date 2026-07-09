@@ -24,7 +24,11 @@ export const HistoryContent = observer(function HistoryContent() {
         className="p-3 h-full items-center justify-center"
         align="center"
       >
-        <Icon name="History" size="md" className="text-slate-300" />
+        <Icon
+          name="History"
+          size="md"
+          className="text-slate-300 dark:text-slate-600"
+        />
         <Text size="xs" tone="subdued" className="text-center">
           No history yet
         </Text>
@@ -79,7 +83,7 @@ export const HistoryContent = observer(function HistoryContent() {
                 />
               ))}
             </div>
-            <div className="border-t border-dashed border-slate-300 my-1 mx-2" />
+            <div className="border-t border-dashed border-slate-300 dark:border-border my-1 mx-2" />
           </>
         )}
 

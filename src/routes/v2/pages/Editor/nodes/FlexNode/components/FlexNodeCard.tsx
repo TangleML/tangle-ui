@@ -19,6 +19,7 @@ function FlexNodeTitle({
   fontSize,
   editing,
   locked,
+  inkClass,
   onSave,
   onCancel,
   onTab,
@@ -28,6 +29,7 @@ function FlexNodeTitle({
   fontSize: number;
   editing: boolean;
   locked: boolean;
+  inkClass: string;
   onSave: (value: string) => void;
   onCancel: () => void;
   onTab: () => void;
@@ -44,7 +46,7 @@ function FlexNodeTitle({
         onSave={onSave}
         onCancel={onCancel}
         onTab={onTab}
-        className="font-bold"
+        className={cn("font-bold", inkClass)}
       />
     );
   }
@@ -53,7 +55,7 @@ function FlexNodeTitle({
   return (
     <p
       style={{ fontSize }}
-      className="font-bold whitespace-pre-wrap w-full"
+      className={cn("font-bold whitespace-pre-wrap w-full", inkClass)}
       onDoubleClick={locked ? undefined : onDoubleClick}
     >
       {title}
@@ -65,6 +67,7 @@ function FlexNodeContent({
   content,
   fontSize,
   editing,
+  inkClass,
   onSave,
   onCancel,
   onTab,
@@ -72,6 +75,7 @@ function FlexNodeContent({
   content: string;
   fontSize: number;
   editing: boolean;
+  inkClass: string;
   onSave: (value: string) => void;
   onCancel: () => void;
   onTab: () => void;
@@ -85,13 +89,14 @@ function FlexNodeContent({
         onSave={onSave}
         onCancel={onCancel}
         onTab={onTab}
+        className={inkClass}
       />
     );
   }
 
   // Raw <p> required: user-configurable fontSize needs inline style which Text doesn't accept
   return (
-    <p style={{ fontSize }} className="whitespace-pre-wrap">
+    <p style={{ fontSize }} className={cn("whitespace-pre-wrap", inkClass)}>
       {content}
     </p>
   );
@@ -154,6 +159,10 @@ export function FlexNodeCard({
     setIsInlineEditingContent((prev) => !prev);
   };
 
+  // Filled notes keep dark ink so text never inverts against the colour fill;
+  // transparent notes sit on the canvas and follow the theme foreground.
+  const inkClass = isTransparent ? "text-foreground" : "text-ink-fixed";
+
   return (
     <>
       {!readOnly && (
@@ -201,6 +210,7 @@ export function FlexNodeCard({
               fontSize={titleFontSize}
               editing={isInlineEditingTitle}
               locked={locked}
+              inkClass={inkClass}
               onSave={(newTitle) => {
                 onUpdateProperties({ title: newTitle });
                 setIsInlineEditingTitle(false);
@@ -214,6 +224,7 @@ export function FlexNodeCard({
               content={content}
               fontSize={contentFontSize}
               editing={isInlineEditingContent}
+              inkClass={inkClass}
               onSave={(newContent) => {
                 onUpdateProperties({ content: newContent });
                 setIsInlineEditingContent(false);

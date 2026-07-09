@@ -29,7 +29,7 @@ const IOCell = ({ name, type, artifact }: IOCellProps) => {
     type ?? artifact?.type_name ?? (artifactData?.is_dir ? "Directory" : "Any");
 
   return (
-    <BlockStack gap="1" className="w-full p-2 border bg-white rounded-md">
+    <BlockStack gap="1" className="w-full p-2 border bg-card rounded-md">
       <InlineStack
         gap="2"
         blockAlign="center"

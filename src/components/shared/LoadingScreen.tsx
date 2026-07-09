@@ -10,7 +10,7 @@ export const LoadingScreen = ({
   message = "Loading content",
 }: LoadingScreenProps) => {
   return (
-    <BlockStack fill>
+    <BlockStack fill className="items-center justify-center bg-background">
       <Spinner size={32} />
       <Paragraph tone="subdued" size="sm">
         {message}

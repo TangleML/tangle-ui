@@ -28,18 +28,18 @@ export const EXECUTION_STATUS_LABELS: Record<string, string> = {
  * Centralized background color mapping for status bar segments.
  */
 export const EXECUTION_STATUS_BG_COLORS: Record<string, string> = {
-  SUCCEEDED: "bg-green-500",
-  FAILED: "bg-red-500",
-  SYSTEM_ERROR: "bg-red-700",
-  INVALID: "bg-red-600",
-  RUNNING: "bg-blue-500",
-  PENDING: "bg-yellow-500",
-  QUEUED: "bg-amber-500",
-  WAITING_FOR_UPSTREAM: "bg-slate-500",
-  SKIPPED: "bg-slate-400",
-  CANCELLED: "bg-gray-700",
-  CANCELLING: "bg-gray-500",
-  UNINITIALIZED: "bg-yellow-400",
+  SUCCEEDED: "bg-status-succeeded",
+  FAILED: "bg-status-failed",
+  SYSTEM_ERROR: "bg-status-system-error",
+  INVALID: "bg-status-invalid",
+  RUNNING: "bg-status-running",
+  PENDING: "bg-status-pending",
+  QUEUED: "bg-status-queued",
+  WAITING_FOR_UPSTREAM: "bg-status-waiting",
+  SKIPPED: "bg-status-skipped",
+  CANCELLED: "bg-status-cancelled",
+  CANCELLING: "bg-status-cancelling",
+  UNINITIALIZED: "bg-status-uninitialized",
 };
 
 /**

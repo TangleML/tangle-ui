@@ -38,7 +38,7 @@ export const StatusIndicator = ({
         </div>
       </div>
       {disabledCache && (
-        <div className="h-5.5 bg-orange-400 rounded-tr-md flex items-center px-1.5">
+        <div className="h-5.5 bg-status-cancelling rounded-tr-md flex items-center px-1.5">
           <QuickTooltip content="Cache Disabled" className="whitespace-nowrap">
             <Icon name="ZapOff" size="xs" className="text-white" />
           </QuickTooltip>
@@ -74,7 +74,7 @@ const getStatusIcon = (status: string) => {
 
 const getStatusMetadata = (status: string) => {
   return {
-    style: EXECUTION_STATUS_BG_COLORS[status] ?? "bg-slate-300",
+    style: EXECUTION_STATUS_BG_COLORS[status] ?? "bg-muted",
     text: getExecutionStatusLabel(status),
     icon: getStatusIcon(status),
   };

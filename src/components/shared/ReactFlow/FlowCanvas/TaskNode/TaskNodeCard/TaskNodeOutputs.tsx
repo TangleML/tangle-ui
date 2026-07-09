@@ -198,8 +198,8 @@ export function TaskNodeOutputs({
   return (
     <div
       className={cn(
-        "flex flex-col justify-end items-center gap-3 p-2 bg-gray-100 border border-gray-200 rounded-lg",
-        collapsed && onBackgroundClick && "hover:bg-gray-200/70 cursor-pointer",
+        "flex flex-col justify-end items-center gap-3 p-2 bg-muted border border-border rounded-lg",
+        collapsed && onBackgroundClick && "hover:bg-accent cursor-pointer",
       )}
       onClick={handleBackgroundClick}
     >
@@ -247,7 +247,7 @@ export function TaskNodeOutputs({
             />
           ))}
           {collapsed && (
-            <span className="text-xs text-gray-400 mt-1">
+            <span className="text-xs text-muted-foreground mt-1">
               (Click to collapse)
             </span>
           )}

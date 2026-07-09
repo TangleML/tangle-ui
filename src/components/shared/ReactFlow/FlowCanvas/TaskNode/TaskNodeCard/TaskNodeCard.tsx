@@ -194,8 +194,8 @@ const TaskNodeCard = () => {
   return (
     <Card
       className={cn(
-        "rounded-2xl border-gray-200 border-2 wrap-break-word p-0 drop-shadow-none gap-2 min-h-fit",
-        selected ? "border-gray-500" : "hover:border-slate-200",
+        "rounded-2xl border-border border-2 wrap-break-word p-0 drop-shadow-none gap-2 min-h-fit",
+        selected ? "border-gray-500" : "hover:border-ring",
         (highlighted || highlightedState) && "border-orange-500!",
         isConnectedToSelectedEdge &&
           "border-edge-selected! ring-2 ring-edge-selected/30",
@@ -209,7 +209,7 @@ const TaskNodeCard = () => {
       ref={nodeRef}
       onDoubleClick={handleDoubleClick}
     >
-      <CardHeader className="border-b border-slate-200 px-2 py-2.5 flex flex-row justify-between items-start">
+      <CardHeader className="border-b border-border px-2 py-2.5 flex flex-row justify-between items-start">
         <BlockStack>
           <InlineStack gap="2" wrap="nowrap">
             {isSubgraphNode && (
@@ -225,7 +225,7 @@ const TaskNodeCard = () => {
                 <Icon name="ZapOff" size="sm" className="text-orange-400" />
               </QuickTooltip>
             )}
-            <CardTitle className="wrap-anywhere max-w-full text-left text-xs text-slate-900">
+            <CardTitle className="wrap-anywhere max-w-full text-left text-xs text-card-foreground">
               {displayName}
             </CardTitle>
             {showBetaPill && (

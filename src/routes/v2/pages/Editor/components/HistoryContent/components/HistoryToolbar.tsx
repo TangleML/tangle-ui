@@ -29,7 +29,7 @@ export function HistoryToolbar({
   onClear,
 }: HistoryToolbarProps) {
   return (
-    <div className="flex items-center gap-1 px-2 py-1 border-b border-slate-200 justify-between w-full shrink-0">
+    <div className="flex items-center gap-1 px-2 py-1 border-b border-border justify-between w-full shrink-0">
       <div className="flex items-center gap-1">
         <TooltipProvider>
           <Tooltip>
@@ -78,7 +78,7 @@ export function HistoryToolbar({
             <Button
               variant="ghost"
               size="sm"
-              className="h-5 w-5 p-0 text-slate-500 hover:text-red-500"
+              className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive"
               {...tracking("v2.pipeline_editor.history.clear")}
               onClick={onClear}
             >

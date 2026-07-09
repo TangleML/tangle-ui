@@ -422,13 +422,13 @@ const ArgumentField = ({
                 className={cn(
                   isRequired && !hasValidValue && "border-red-300",
                   "group-hover:pr-8",
-                  "bg-white!",
+                  "bg-white! dark:bg-input!",
                 )}
               />
-              <InlineStack className="absolute right-0 top-1/2 -translate-y-1/2 mr-1 px-1 bg-white">
+              <InlineStack className="absolute right-0 top-1/2 -translate-y-1/2 mr-1 px-1 bg-white dark:bg-input">
                 <TooltipButton
                   onClick={() => setIsSelectSecretDialogOpen(true)}
-                  className="hover:bg-transparent hover:text-blue-500 hidden group-hover:flex"
+                  className="text-muted-foreground hover:bg-transparent hover:text-blue-500 hidden group-hover:flex"
                   variant="ghost"
                   size="xs"
                   tooltip="Use Secret"

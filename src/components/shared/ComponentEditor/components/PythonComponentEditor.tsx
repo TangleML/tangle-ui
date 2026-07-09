@@ -5,6 +5,7 @@ import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useMonacoTheme } from "@/hooks/useMonacoTheme";
 
 import { DEFAULT_MONACO_OPTIONS, handleEditorMount } from "../constants";
 import { usePythonYamlGenerator } from "../generators/python";
@@ -17,7 +18,7 @@ import { YamlGeneratorOptionsEditor } from "./YamlGeneratorOptionsEditor";
 
 const PythonComponentEditorSkeleton = () => {
   return (
-    <BlockStack className="h-full w-full p-2 bg-white" align="start" gap="2">
+    <BlockStack className="h-full w-full p-2 bg-card" align="start" gap="2">
       <InlineStack
         className="w-full h-full flex-1"
         gap="4"
@@ -65,6 +66,7 @@ export const PythonComponentEditor = withSuspenseWrapper(
 
     const yamlGenerator = usePythonYamlGenerator();
     const preservedNameRef = useRef(initialComponentName);
+    const monacoTheme = useMonacoTheme();
 
     useEffect(() => {
       preservedNameRef.current = initialComponentName;
@@ -118,7 +120,7 @@ export const PythonComponentEditor = withSuspenseWrapper(
                 <div className="absolute inset-0">
                   <MonacoEditor
                     defaultLanguage="python"
-                    theme="vs-dark"
+                    theme={monacoTheme}
                     value={pythonCode}
                     onChange={handleFunctionTextChange}
                     options={DEFAULT_MONACO_OPTIONS}
@@ -160,7 +162,7 @@ export const PythonComponentEditor = withSuspenseWrapper(
               ) : (
                 <MonacoEditor
                   defaultLanguage="yaml"
-                  theme="vs-dark"
+                  theme={monacoTheme}
                   value={componentText}
                   options={{
                     ...DEFAULT_MONACO_OPTIONS,

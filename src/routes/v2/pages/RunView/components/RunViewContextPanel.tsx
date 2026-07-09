@@ -20,7 +20,7 @@ export const RunViewContextPanel = observer(function RunViewContextPanel() {
   if (!Panel) return <ContextPanelEmptyState />;
 
   return (
-    <BlockStack className="h-full bg-white overflow-y-auto overflow-x-hidden">
+    <BlockStack className="h-full bg-card overflow-y-auto overflow-x-hidden">
       <Panel entityId={selectedNodeId} />
     </BlockStack>
   );

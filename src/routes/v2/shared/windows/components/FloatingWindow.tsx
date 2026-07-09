@@ -14,7 +14,7 @@ import { WindowHeader } from "./WindowHeader";
 const HEADER_HEIGHT = 28;
 
 const containerVariants = cva(
-  "fixed shadow-xl border overflow-hidden bg-gray-100 text-gray-900 flex flex-col border-gray-400",
+  "fixed shadow-xl border overflow-hidden bg-muted text-foreground flex flex-col border-border",
   {
     variants: {
       interacting: { true: "select-none", false: "" },
@@ -66,7 +66,7 @@ const resizeHandleClasses: Record<ResizeDirection, string> = {
   w: "absolute left-0 top-3 bottom-3 w-1 cursor-w-resize",
   ne: "absolute top-0 right-0 w-3 h-3 cursor-ne-resize",
   nw: "absolute top-0 left-0 w-3 h-3 cursor-nw-resize",
-  se: "absolute bottom-0 right-0 w-3 h-3 cursor-se-resize hover:bg-gray-300 rounded-tl-sm transition-colors",
+  se: "absolute bottom-0 right-0 w-3 h-3 cursor-se-resize hover:bg-accent rounded-tl-sm transition-colors",
   sw: "absolute bottom-0 left-0 w-3 h-3 cursor-sw-resize",
 };
 
@@ -85,7 +85,7 @@ function ResizeHandles({
         >
           {dir === "se" && (
             <svg
-              className="w-full h-full text-gray-400"
+              className="w-full h-full text-muted-foreground"
               viewBox="0 0 16 16"
               fill="currentColor"
             >
@@ -207,7 +207,7 @@ export const FloatingWindow = observer(function FloatingWindow() {
         />
 
         <div
-          className="flex-1 min-h-0 overflow-auto bg-gray-50"
+          className="flex-1 min-h-0 overflow-auto bg-background"
           style={{ height: getContentHeight(model) }}
         >
           {content}
