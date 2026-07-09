@@ -7,9 +7,15 @@ import {
   useRequiredContext,
 } from "@/hooks/useRequiredContext";
 import { useBackend } from "@/providers/BackendProvider";
-import type { Flag } from "@/types/configuration";
+import type { ConfigFlags, Flag } from "@/types/configuration";
 import { USER_SETTINGS_PATH } from "@/utils/constants";
 import { fetchWithErrorHandling } from "@/utils/fetchWithErrorHandling";
+
+declare global {
+  interface Window {
+    __TANGLE_EXTRA_FLAGS__?: ConfigFlags;
+  }
+}
 
 interface SettingsFlagsContextValue {
   betaFlags: Flag[];
@@ -21,8 +27,13 @@ const SettingsFlagsContext = createRequiredContext<SettingsFlagsContextValue>(
   "SettingsFlagsContext",
 );
 
+const allFlags: ConfigFlags = {
+  ...ExistingFlags,
+  ...(window.__TANGLE_EXTRA_FLAGS__ ?? {}),
+};
+
 export function SettingsFlagsProvider({ children }: { children: ReactNode }) {
-  const [flags, dispatch] = useFlagsReducer(ExistingFlags);
+  const [flags, dispatch] = useFlagsReducer(allFlags);
   const { backendUrl, available } = useBackend();
 
   const handleSetFlag = (flag: string, enabled: boolean) => {

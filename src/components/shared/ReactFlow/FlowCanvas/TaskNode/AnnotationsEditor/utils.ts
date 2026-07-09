@@ -1,3 +1,4 @@
+import { isFlagEnabled } from "@/components/shared/Settings/useFlags";
 import schema from "@/config/launcherTaskAnnotationSchema.json";
 import type { AnnotationConfig, AnnotationOption } from "@/types/annotations";
 
@@ -28,6 +29,7 @@ interface JSONSchemaObject {
   title?: string;
   properties: Record<string, JSONSchemaProperty>;
   "x-label"?: string;
+  "feature-flag-key"?: string;
 }
 
 interface CloudProviderSchema extends JSONSchemaProperty {
@@ -172,13 +174,18 @@ export function getCloudProviderConfig(
   if (!config.options) {
     const options: AnnotationOption[] = Object.entries(
       schema.launcher_annotation_schemas,
-    ).map(([key, launcherSchema]) => ({
-      value: key,
-      name:
-        launcherSchema["x-label"] ||
-        launcherSchema.title ||
-        key.charAt(0).toUpperCase() + key.slice(1),
-    }));
+    )
+      .filter(([, launcherSchema]) => {
+        const flagKey = launcherSchema["feature-flag-key"];
+        return !flagKey || isFlagEnabled(flagKey);
+      })
+      .map(([key, launcherSchema]) => ({
+        value: key,
+        name:
+          launcherSchema["x-label"] ||
+          launcherSchema.title ||
+          key.charAt(0).toUpperCase() + key.slice(1),
+      }));
     config.options = options;
   }
 
