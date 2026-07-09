@@ -7,6 +7,7 @@ import {
 } from "@/models/componentSpec";
 import { generateUniqueTaskName } from "@/routes/v2/pages/Editor/store/nameUtils";
 import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
+import type { NavigationStore } from "@/routes/v2/shared/store/navigationStore";
 import {
   EDITOR_POSITION_ANNOTATION,
   PIPELINE_NOTES_ANNOTATION,
@@ -24,6 +25,16 @@ export function renamePipeline(
     spec.setName(newName);
     return true;
   });
+}
+
+export function renameSubgraph(
+  undo: UndoGroupable,
+  navigation: NavigationStore,
+  newName: string,
+): boolean {
+  return undo.withGroup("Rename subgraph", () =>
+    navigation.renameCurrentSubgraph(newName),
+  );
 }
 
 export function updatePipelineDescription(

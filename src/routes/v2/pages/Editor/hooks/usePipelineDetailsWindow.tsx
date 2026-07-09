@@ -6,12 +6,15 @@ import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 const PIPELINE_DETAILS_WINDOW_ID = "pipeline-details";
 
 export function usePipelineDetailsWindow() {
-  const { windows } = useSharedStores();
+  const { windows, navigation } = useSharedStores();
+  const isNestedSubgraph = navigation.navigationDepth > 0;
+  const title = isNestedSubgraph ? "Subgraph Details" : "Pipeline Details";
+
   useEffect(() => {
     if (!windows.getWindowById(PIPELINE_DETAILS_WINDOW_ID)) {
       windows.openWindow(<PipelineDetailsContent />, {
         id: PIPELINE_DETAILS_WINDOW_ID,
-        title: "Pipeline Details",
+        title,
         position: { x: 0, y: 460 },
         size: { width: 280, height: 350 },
         disabledActions: ["close"],
@@ -19,5 +22,9 @@ export function usePipelineDetailsWindow() {
         defaultDockState: "right",
       });
     }
-  }, [windows]);
+  }, [windows, title]);
+
+  useEffect(() => {
+    windows.getWindowById(PIPELINE_DETAILS_WINDOW_ID)?.setTitle(title);
+  }, [windows, title]);
 }

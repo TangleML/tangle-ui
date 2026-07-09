@@ -225,6 +225,9 @@ export class ComponentSpec extends Model({
     if (this.tasks.some((t) => t.name === newName && t.$id !== entityId))
       return false;
     task.name = newName;
+    if (task.subgraphSpec) {
+      task.componentRef = { ...task.componentRef, name: newName };
+    }
     return true;
   }
 

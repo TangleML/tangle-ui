@@ -205,6 +205,10 @@ export class WindowModel {
     this.store.bringToFront(this.id);
   }
 
+  @action setTitle(title: string): void {
+    this.title = title;
+  }
+
   @action updatePosition(pos: Position): void {
     this.position = pos;
   }

@@ -142,6 +142,44 @@ export class NavigationStore {
   }
 
   /**
+   * Renames the subgraph at the current navigation depth (depth >= 1) by
+   * renaming the owning task in the parent spec — the same operation a regular
+   * task rename performs. Also re-syncs the nested spec name and the navigation
+   * path key so the subgraph keeps resolving via `getSpecAtDepth`.
+   *
+   * Returns false when at the root level, the name is empty or unchanged, the
+   * owning task can't be found, or the rename collides with a sibling.
+   */
+  @action renameCurrentSubgraph(newName: string): boolean {
+    const trimmed = newName.trim();
+    if (!trimmed) return false;
+
+    const depth = this.navigationDepth;
+    if (depth === 0) return false;
+
+    const oldName = this.navigationPath[depth].displayName;
+    if (oldName === trimmed) return false;
+
+    const parentSpec = this.getSpecAtDepth(depth - 1);
+    if (!parentSpec) return false;
+
+    const task = parentSpec.tasks.find((t) => t.name === oldName);
+    if (!task) return false;
+
+    const nestedSpec = this.getSpecAtDepth(depth);
+
+    if (!parentSpec.renameTask(task.$id, trimmed)) return false;
+
+    nestedSpec?.setName(trimmed);
+
+    const newPath = [...this.navigationPath];
+    newPath[depth] = { ...newPath[depth], displayName: trimmed };
+    this.navigationPath = newPath;
+
+    return true;
+  }
+
+  /**
    * Trims navigationPath to the deepest level that still resolves to a valid
    * spec. Handles cases where undo/redo removes a subgraph the user is viewing.
    */
