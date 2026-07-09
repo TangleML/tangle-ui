@@ -52,7 +52,11 @@ const PipelineRunPage = () => {
               readOnly
               fitViewOnInit={!linkedNodeId}
             >
-              <MiniMap position="bottom-left" pannable />
+              <MiniMap
+                position="bottom-left"
+                className="dark:rounded-md dark:border dark:border-border"
+                pannable
+              />
               <RunToolbar />
               <FlowControls
                 className="ml-56! mb-3!"
