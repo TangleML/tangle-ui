@@ -106,7 +106,7 @@ export const TaskArgumentsEditor = observer(function TaskArgumentsEditor({
     >
       <BlockStack
         gap="1"
-        className="basis-[40%] shrink-0 min-w-0 overflow-y-auto border-r border-gray-200 py-1"
+        className="basis-[40%] shrink-0 min-w-0 overflow-y-auto border-r border-gray-200 py-1 dark:border-border"
       >
         {argumentList}
       </BlockStack>

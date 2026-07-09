@@ -90,7 +90,7 @@ const RunOverview = ({
     <div
       onClick={handleClick}
       className={cn(
-        "flex flex-col p-2 text-sm hover:bg-gray-50 cursor-pointer",
+        "flex flex-col p-2 text-sm hover:bg-gray-50 cursor-pointer dark:hover:bg-muted",
         className,
       )}
     >

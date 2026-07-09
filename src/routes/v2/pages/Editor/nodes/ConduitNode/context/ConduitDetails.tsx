@@ -78,7 +78,7 @@ export const ConduitDetails = observer(function ConduitDetails({
         </InlineStack>
 
         <BlockStack gap="2">
-          <Label className="text-xs! text-gray-600">
+          <Label className="text-xs! text-gray-600 dark:text-muted-foreground">
             Assigned Edges ({assignedBindings.length})
           </Label>
 
@@ -93,7 +93,7 @@ export const ConduitDetails = observer(function ConduitDetails({
                   key={binding.$id}
                   gap="2"
                   blockAlign="center"
-                  className="py-1 px-2 rounded bg-gray-50 group"
+                  className="py-1 px-2 rounded bg-gray-50 group dark:bg-muted"
                 >
                   <Button
                     variant="ghost"

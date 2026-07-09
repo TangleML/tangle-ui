@@ -46,13 +46,13 @@ export function UpgradePreviewTaskNode({
       )}
       onClick={onNodeClick}
     >
-      <CardHeader className="border-b border-slate-200 px-2 py-2.5">
+      <CardHeader className="border-b border-slate-200 px-2 py-2.5 dark:border-border">
         <BlockStack>
           <InlineStack gap="2" wrap="nowrap" blockAlign="center">
             {isSubgraph && (
               <Icon name="Workflow" size="sm" className="text-blue-600" />
             )}
-            <CardTitle className="wrap-anywhere max-w-full text-left text-xs text-slate-900 flex-1">
+            <CardTitle className="wrap-anywhere max-w-full text-left text-xs text-slate-900 flex-1 dark:text-foreground">
               {taskName}
             </CardTitle>
             <Badge
@@ -60,8 +60,8 @@ export function UpgradePreviewTaskNode({
               className={cn(
                 "shrink-0 text-[10px] px-1.5 py-0",
                 hasIssues
-                  ? "bg-amber-100 text-amber-700"
-                  : "bg-blue-100 text-blue-700",
+                  ? "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300"
+                  : "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300",
               )}
             >
               <Icon
@@ -82,8 +82,8 @@ export function UpgradePreviewTaskNode({
             className={cn(
               "p-2 border rounded-lg",
               hasInputChanges
-                ? "bg-gray-50 border-blue-200"
-                : "bg-gray-100 border-gray-200",
+                ? "bg-gray-50 border-blue-200 dark:bg-muted dark:border-blue-500/40"
+                : "bg-gray-100 border-gray-200 dark:bg-muted dark:border-border",
             )}
           >
             {diffInputs.map(({ entry, status }) => (
@@ -102,8 +102,8 @@ export function UpgradePreviewTaskNode({
             className={cn(
               "p-2 border rounded-lg",
               hasOutputChanges
-                ? "bg-gray-50 border-blue-200"
-                : "bg-gray-100 border-gray-200",
+                ? "bg-gray-50 border-blue-200 dark:bg-muted dark:border-blue-500/40"
+                : "bg-gray-100 border-gray-200 dark:bg-muted dark:border-border",
             )}
           >
             {diffOutputs.map(({ entry, status }) => (

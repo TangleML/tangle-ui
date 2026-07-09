@@ -81,7 +81,7 @@ function SelectableSecretsList({
             <InlineStack
               align="space-between"
               gap="2"
-              className="w-full pr-3 py-2 hover:bg-gray-100 rounded-md cursor-pointer transition-colors"
+              className="w-full pr-3 py-2 hover:bg-gray-100 rounded-md cursor-pointer transition-colors dark:hover:bg-accent"
             >
               <InlineStack gap="2" blockAlign="center" wrap="nowrap">
                 <Icon name="Lock" size="lg" className="shrink-0" />

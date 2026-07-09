@@ -208,7 +208,7 @@ export function EditorV2({
         : null;
 
   return (
-    <div className="h-full w-full flex flex-col bg-slate-100 select-none">
+    <div className="h-full w-full flex flex-col bg-slate-100 dark:bg-background select-none">
       <SharedStoreProvider>
         <EditorSessionProvider>
           <AiChatStoreProvider

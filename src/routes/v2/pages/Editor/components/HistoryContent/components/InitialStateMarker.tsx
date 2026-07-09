@@ -18,15 +18,16 @@ export function InitialStateMarker({
       disabled={isCurrent}
       className={cn(
         "flex items-start gap-1.5 px-2 py-1 rounded w-full text-left transition-colors",
-        "hover:bg-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-400 focus:ring-inset",
-        isCurrent && "bg-green-50 border border-green-200 hover:bg-green-50",
+        "hover:bg-slate-100 dark:hover:bg-accent focus:outline-none focus:ring-1 focus:ring-blue-400 focus:ring-inset",
+        isCurrent &&
+          "bg-green-50 border border-green-200 hover:bg-green-50 dark:bg-green-500/15 dark:border-green-500/30 dark:hover:bg-green-500/15",
         !isCurrent && "border border-transparent",
       )}
     >
       <div
         className={cn(
           "w-1.5 h-1.5 rounded-full shrink-0 mt-1",
-          isCurrent ? "bg-green-500" : "bg-slate-300",
+          isCurrent ? "bg-green-500" : "bg-slate-300 dark:bg-slate-600",
         )}
       />
       <Text
@@ -34,7 +35,9 @@ export function InitialStateMarker({
         weight={isCurrent ? "semibold" : "regular"}
         className={cn(
           "min-w-0 flex-1 break-words",
-          isCurrent ? "text-green-700" : "text-slate-500",
+          isCurrent
+            ? "text-green-700 dark:text-green-300"
+            : "text-slate-500 dark:text-muted-foreground",
         )}
       >
         Initial state
@@ -48,7 +51,7 @@ export function InitialStateMarker({
         <Icon
           name="RotateCcw"
           size="xs"
-          className="shrink-0 mt-0.5 text-slate-400"
+          className="shrink-0 mt-0.5 text-slate-400 dark:text-slate-500"
         />
       )}
     </button>

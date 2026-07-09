@@ -102,11 +102,15 @@ export const MultiSelectionDetails = observer(function MultiSelectionDetails() {
   }
 
   return (
-    <BlockStack className="h-full bg-white overflow-y-auto">
+    <BlockStack className="h-full bg-card overflow-y-auto">
       <BlockStack gap="4" className="p-3">
         <InlineStack gap="2" blockAlign="center">
           <Icon name="MousePointer2" size="sm" className="text-blue-500" />
-          <Text size="sm" weight="semibold" className="text-slate-700">
+          <Text
+            size="sm"
+            weight="semibold"
+            className="text-slate-700 dark:text-foreground"
+          >
             {multiSelection.length} nodes selected
           </Text>
         </InlineStack>
@@ -120,7 +124,9 @@ export const MultiSelectionDetails = observer(function MultiSelectionDetails() {
             <Separator />
             <BlockStack gap="2">
               <InlineStack gap="2" blockAlign="center">
-                <Label className="text-gray-600">Common Arguments</Label>
+                <Label className="text-gray-600 dark:text-muted-foreground">
+                  Common Arguments
+                </Label>
                 <Badge
                   variant="secondary"
                   className="text-[10px] px-1.5 py-0 h-4"

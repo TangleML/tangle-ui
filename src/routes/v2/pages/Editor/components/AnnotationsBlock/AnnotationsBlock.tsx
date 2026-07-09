@@ -216,7 +216,7 @@ function AnnotationRow({
         gap="2"
         wrap="nowrap"
         blockAlign="center"
-        className="group w-full rounded-xs px-1 py-0.5 hover:bg-gray-50"
+        className="group w-full rounded-xs px-1 py-0.5 hover:bg-gray-50 dark:hover:bg-muted"
       >
         <BlockStack align="stretch" className="flex-1 min-w-0">
           {annotation.key ? (

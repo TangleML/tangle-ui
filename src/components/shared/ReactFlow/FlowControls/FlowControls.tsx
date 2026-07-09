@@ -108,7 +108,7 @@ export default function FlowControls({
       {!props.showInteractive && (
         <ControlButton
           onClick={handleLockChange}
-          className={cn(lockActive && "bg-gray-100!")}
+          className={cn(lockActive && "bg-gray-100! dark:bg-accent!")}
           {...tracking("pipeline_canvas.tool_bar.tool", {
             tool: "lock_unlock",
             page_type: pageType,
@@ -123,7 +123,7 @@ export default function FlowControls({
       )}
       <ControlButton
         onClick={onClickMultiSelect}
-        className={cn(multiSelectActive && "bg-gray-100!")}
+        className={cn(multiSelectActive && "bg-gray-100! dark:bg-accent!")}
         {...tracking("pipeline_canvas.tool_bar.tool", {
           tool: "area_select",
           page_type: pageType,

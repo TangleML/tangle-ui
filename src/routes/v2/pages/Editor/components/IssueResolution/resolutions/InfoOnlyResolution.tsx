@@ -7,7 +7,7 @@ export function InfoOnlyResolution({ message }: { message: string }) {
     <InlineStack
       gap="2"
       blockAlign="start"
-      className="rounded-md bg-slate-50 p-3"
+      className="rounded-md bg-slate-50 p-3 dark:bg-muted"
     >
       <Icon name="Info" size="sm" className="text-slate-500 shrink-0 mt-0.5" />
       <Text size="xs" tone="subdued">

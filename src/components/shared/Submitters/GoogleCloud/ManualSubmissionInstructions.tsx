@@ -15,7 +15,10 @@ export const ManualSubmissionInstructions = ({
   downloadUrl,
 }: ManualSubmissionInstructionsProps) => {
   return (
-    <InfoBox title="Manual Submission" className="text-xs text-gray-700">
+    <InfoBox
+      title="Manual Submission"
+      className="text-xs text-gray-700 dark:text-muted-foreground"
+    >
       Download{" "}
       <Link href={downloadUrl} download="vertex_pipeline_job.json">
         pipeline_job.json

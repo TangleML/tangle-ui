@@ -225,18 +225,22 @@ const ImportPipeline = ({
           )}
 
           {successMessage && (
-            <div className="border border-green-200 bg-green-50 p-3 rounded-md mt-4">
-              <h4 className="text-green-600 font-medium mb-1">
+            <div className="border border-green-200 bg-green-50 p-3 rounded-md mt-4 dark:border-green-500/30 dark:bg-green-500/10">
+              <h4 className="text-green-600 font-medium mb-1 dark:text-green-300">
                 Import Successful
               </h4>
-              <p className="text-green-500 text-sm">{successMessage}</p>
+              <p className="text-green-500 text-sm dark:text-green-400">
+                {successMessage}
+              </p>
             </div>
           )}
 
           {error && (
-            <div className="border border-red-200 bg-red-50 p-3 rounded-md mt-4">
-              <h4 className="text-red-600 font-medium mb-1">Import Failed</h4>
-              <p className="text-red-500 text-sm whitespace-pre-wrap">
+            <div className="border border-red-200 bg-red-50 p-3 rounded-md mt-4 dark:border-red-500/30 dark:bg-red-500/10">
+              <h4 className="text-red-600 font-medium mb-1 dark:text-red-300">
+                Import Failed
+              </h4>
+              <p className="text-red-500 text-sm whitespace-pre-wrap dark:text-red-400">
                 {error}
               </p>
             </div>

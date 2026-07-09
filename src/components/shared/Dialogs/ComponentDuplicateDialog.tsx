@@ -171,13 +171,13 @@ const ComponentDuplicateDialog = ({
             <Input
               value={existingComponent?.name ?? ""}
               readOnly
-              className="text-xs border-blue-200 bg-blue-100/50"
+              className="text-xs border-blue-200 bg-blue-100/50 dark:border-blue-500/30 dark:bg-blue-500/15"
             />
             <Label className="text-xs font-medium">Digest</Label>
             <Input
               value={existingComponent?.componentRef.digest ?? ""}
               readOnly
-              className="text-xs border-blue-200 bg-blue-100/50"
+              className="text-xs border-blue-200 bg-blue-100/50 dark:border-blue-500/30 dark:bg-blue-500/15"
             />
           </BlockStack>
         </InfoBox>

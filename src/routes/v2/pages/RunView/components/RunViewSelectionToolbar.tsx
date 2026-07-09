@@ -36,7 +36,7 @@ export const RunViewSelectionToolbar = observer(
       >
         <InlineStack
           gap="1"
-          className="rounded-md border border-blue-200 bg-white px-1 py-1 shadow-lg"
+          className="rounded-md border border-blue-200 bg-card px-1 py-1 shadow-lg"
           data-testid="runview-selection-toolbar"
         >
           <TooltipButton

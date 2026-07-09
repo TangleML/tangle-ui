@@ -175,7 +175,7 @@ export function ComponentSearchV2Content() {
               gap="1"
               blockAlign="center"
               align="center"
-              className="w-full py-1.5 cursor-pointer text-gray-500 hover:text-gray-900 transition-colors border border-dashed border-gray-300 rounded-lg hover:border-gray-400"
+              className="w-full py-1.5 cursor-pointer text-gray-500 hover:text-gray-900 transition-colors border border-dashed border-gray-300 rounded-lg hover:border-gray-400 dark:text-muted-foreground dark:hover:text-foreground dark:border-border dark:hover:border-muted-foreground"
               data-testid="import-component-button"
             >
               <Icon name="PackagePlus" size="sm" />

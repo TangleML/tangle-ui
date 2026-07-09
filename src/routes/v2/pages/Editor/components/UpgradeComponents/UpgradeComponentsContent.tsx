@@ -64,7 +64,7 @@ const UpgradeComponentsInner = observer(function UpgradeComponentsInner({
   const issueCount = candidates.filter(candidateHasIssues).length;
 
   return (
-    <BlockStack className="h-full bg-white">
+    <BlockStack className="h-full bg-card">
       <UpgradeHeader
         total={candidates.length}
         issueCount={issueCount}

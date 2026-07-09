@@ -48,7 +48,11 @@ export const MissingRequiredInputResolution = observer(
 
     return (
       <BlockStack gap="2">
-        <Text size="xs" weight="semibold" className="text-gray-700">
+        <Text
+          size="xs"
+          weight="semibold"
+          className="text-gray-700 dark:text-foreground"
+        >
           Set value for &ldquo;{inputSpec.name}&rdquo; on task &ldquo;
           {task.name}&rdquo;
         </Text>

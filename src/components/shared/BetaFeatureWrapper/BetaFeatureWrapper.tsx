@@ -37,7 +37,7 @@ export function BetaFeatureWrapper({
     >
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className="absolute -right-2 -top-2 flex size-6 cursor-help items-center justify-center rounded-full border border-amber-400 bg-amber-100">
+          <div className="absolute -right-2 -top-2 flex size-6 cursor-help items-center justify-center rounded-full border border-amber-400 bg-amber-100 dark:border-amber-500/60 dark:bg-amber-500/25">
             <Icon name="FlaskConical" size="sm" className="text-amber-600" />
           </div>
         </TooltipTrigger>

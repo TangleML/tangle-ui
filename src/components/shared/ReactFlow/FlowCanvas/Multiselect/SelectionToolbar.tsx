@@ -25,7 +25,7 @@ const SelectionToolbar = ({
   return (
     <InlineStack
       gap="1"
-      className="bg-white border border-[#0059dc66] border-b-0 rounded-xs"
+      className="bg-card border border-[#0059dc66] border-b-0 rounded-xs"
       data-testid="selection-toolbar"
     >
       <ToolbarButton

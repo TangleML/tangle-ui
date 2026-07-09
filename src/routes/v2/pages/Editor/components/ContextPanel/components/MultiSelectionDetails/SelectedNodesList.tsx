@@ -18,21 +18,26 @@ export function SelectedNodesList({ nodes, spec }: SelectedNodesListProps) {
 
   return (
     <BlockStack gap="2">
-      <Label className="text-gray-600">Selected Nodes</Label>
+      <Label className="text-gray-600 dark:text-muted-foreground">
+        Selected Nodes
+      </Label>
       <BlockStack gap="1" className="max-h-48 overflow-y-auto">
         {nodes.map((node) => (
           <InlineStack
             key={node.id}
             gap="2"
             blockAlign="center"
-            className="text-xs py-1.5 px-2 bg-slate-50 rounded border border-slate-100"
+            className="text-xs py-1.5 px-2 bg-slate-50 rounded border border-slate-100 dark:bg-muted dark:border-border"
           >
             <Icon
               name={getNodeIcon(registry, node.type) as any}
               size="xs"
               className={`shrink-0 ${getNodeIconColor(registry, node.type)}`}
             />
-            <Text size="xs" className="text-slate-700 truncate flex-1">
+            <Text
+              size="xs"
+              className="text-slate-700 dark:text-foreground truncate flex-1"
+            >
               {getNodeDisplayName(registry, node, spec)}
             </Text>
             <Text size="xs" className="text-slate-400 capitalize">
