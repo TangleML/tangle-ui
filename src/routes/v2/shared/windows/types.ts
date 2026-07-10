@@ -128,5 +128,8 @@ export const DEFAULT_DOCKED_HEIGHT = 300;
 /** Minimum height for a docked window (px) */
 export const MIN_DOCKED_HEIGHT = 50;
 
+/** Height of a docked window header (px). Used to stack sticky headers. */
+export const DOCKED_HEADER_HEIGHT = 36;
+
 /** Distance from dock area edge to trigger dock insert preview (px) */
 export const DOCK_AREA_SNAP_THRESHOLD = 40;

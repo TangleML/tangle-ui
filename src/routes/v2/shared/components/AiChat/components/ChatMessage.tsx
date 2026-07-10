@@ -15,12 +15,12 @@ export function ChatMessage({ message }: ChatMessageProps) {
   return (
     <MessageBubble variant={isUser ? "user" : "assistant"} gap="1">
       {isUser ? (
-        <Text size="sm" className="break-words">
+        <Text size="sm" className="wrap-break-word">
           {message.content}
         </Text>
       ) : (
         <>
-          <div className="text-sm break-words min-w-0 overflow-x-auto">
+          <div className="text-sm wrap-break-word min-w-0 overflow-x-auto">
             {renderMarkdown(message.content, message.componentReferences)}
           </div>
           <ResponseFeedback

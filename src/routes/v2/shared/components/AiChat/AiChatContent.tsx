@@ -7,11 +7,18 @@ import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import { useAuthLocalStorage } from "@/components/shared/Authentication/useAuthLocalStorage";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
-import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { BlockStack } from "@/components/ui/layout";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Text } from "@/components/ui/typography";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useBackend } from "@/providers/BackendProvider";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { WindowStickyHeader } from "@/routes/v2/shared/windows/components/WindowStickyHeader";
 import { fetchPipelineRuns } from "@/services/pipelineRunService";
 import type { PipelineRun } from "@/types/pipelineRun";
 
@@ -20,6 +27,7 @@ import { AiProviderSetup } from "./components/AiProviderSetup";
 import { ChatInput } from "./components/ChatInput";
 import { ChatMessageList } from "./components/ChatMessageList";
 import type { BridgeDeps } from "./toolBridge/utils";
+import type { SuggestedPrompt } from "./types";
 
 const RECENT_RUNS_LIMIT = 5;
 
@@ -33,6 +41,7 @@ type CreateBridge = (deps: BridgeDeps) => ToolBridgeApi;
 
 interface AiChatContentProps {
   createBridge: CreateBridge;
+  suggestedPrompts?: SuggestedPrompt[];
 }
 
 function projectRecentRuns(runs: PipelineRun[]): RecentPipelineRun[] {
@@ -47,6 +56,7 @@ function projectRecentRuns(runs: PipelineRun[]): RecentPipelineRun[] {
 
 export const AiChatContent = observer(function AiChatContent({
   createBridge,
+  suggestedPrompts,
 }: AiChatContentProps) {
   const aiChat = useAiChatStore();
   const { track } = useAnalytics();
@@ -136,25 +146,44 @@ export const AiChatContent = observer(function AiChatContent({
 
   if (!thread) return null;
 
+  const hasMessages = thread.messages.length > 0;
+  const threadTitle =
+    thread.messages.find((m) => m.role === "user")?.content ?? "New chat";
+
   return (
     <BlockStack fill>
-      <InlineStack
-        className="border-b p-2 w-full"
-        align="end"
-        blockAlign="center"
-      >
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => aiChat.newThread()}
-          aria-label="New chat"
-        >
-          <Icon name="SquarePen" />
-        </Button>
-      </InlineStack>
+      {hasMessages && (
+        <WindowStickyHeader className="border-b w-full">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 p-2">
+            <Text
+              size="sm"
+              weight="semibold"
+              className="truncate"
+              title={threadTitle}
+            >
+              {threadTitle}
+            </Text>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => aiChat.newThread()}
+                  aria-label="New chat"
+                >
+                  <Icon name="SquarePen" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">New chat</TooltipContent>
+            </Tooltip>
+          </div>
+        </WindowStickyHeader>
+      )}
       <ChatMessageList
         messages={thread.messages}
         thinkingText={thread.thinkingText}
+        suggestedPrompts={suggestedPrompts}
+        onSelectPrompt={handleSend}
       />
       <ChatInput isPending={thread.isPending} onSubmit={handleSend} />
     </BlockStack>

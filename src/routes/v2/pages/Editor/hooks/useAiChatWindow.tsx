@@ -3,9 +3,20 @@ import { useEffect } from "react";
 import { createEditorToolBridge } from "@/routes/v2/pages/Editor/components/AiChat/toolBridge";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { AiChatContent } from "@/routes/v2/shared/components/AiChat/AiChatContent";
+import type { SuggestedPrompt } from "@/routes/v2/shared/components/AiChat/types";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 const AI_CHAT_WINDOW_ID = "ai-assistant-chat";
+
+const SUGGESTED_PROMPTS_EDITOR: SuggestedPrompt[] = [
+  { label: "Explain what this pipeline does", icon: "FileText" },
+  { label: "Find a component I can add", icon: "Search" },
+  { label: "Fix validation issues on this pipeline", icon: "HeartPulse" },
+  {
+    label: "Fix the latest failed run of this pipeline",
+    icon: "Wrench",
+  },
+];
 
 export function useAiChatWindow(enabled: boolean) {
   const { windows } = useSharedStores();
@@ -23,6 +34,7 @@ export function useAiChatWindow(enabled: boolean) {
         createBridge={(deps) =>
           createEditorToolBridge({ ...deps, undo: editorSession.undo })
         }
+        suggestedPrompts={SUGGESTED_PROMPTS_EDITOR}
       />,
       {
         id: AI_CHAT_WINDOW_ID,
