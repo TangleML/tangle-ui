@@ -203,12 +203,12 @@ const DebugPanelContent = observer(function DebugPanelContent() {
           <StatGroup title="Actions">
             <Button
               variant="outline"
-              size="sm"
+              size="xs"
               className="w-full justify-start gap-2"
               {...tracking("v2.pipeline_editor.debug_panel.upgrade_components")}
               onClick={() => openUpgradeComponentsWindow({ useMock: true })}
             >
-              <Icon name="CircleArrowUp" size="sm" />
+              <Icon name="CircleArrowUp" size="xs" />
               Upgrade Components
             </Button>
           </StatGroup>
