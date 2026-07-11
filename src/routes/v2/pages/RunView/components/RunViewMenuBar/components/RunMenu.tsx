@@ -1,4 +1,7 @@
+import { useNavigate } from "@tanstack/react-router";
+
 import ConfirmationDialog from "@/components/shared/Dialogs/ConfirmationDialog";
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import TaskImplementation from "@/components/shared/TaskDetails/Implementation";
 import {
   DropdownMenu,
@@ -8,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Icon } from "@/components/ui/icon";
+import { APP_ROUTES } from "@/routes/appRoutes";
 import { useCancelPipelineRun } from "@/routes/v2/pages/RunView/hooks/useCancelPipelineRun";
 import { useClonePipelineRun } from "@/routes/v2/pages/RunView/hooks/useClonePipelineRun";
 import { useExportPipelineYaml } from "@/routes/v2/pages/RunView/hooks/useExportPipelineYaml";
@@ -19,7 +23,9 @@ import { MenuTriggerButton } from "@/routes/v2/shared/components/MenuTriggerButt
 import { tracking } from "@/utils/tracking";
 
 export function RunMenu() {
+  const navigate = useNavigate();
   const actions = useRunViewActions();
+  const compareEnabled = useFlagValue("compare-runs");
   const componentSpec = actions.ready ? actions.componentSpec : undefined;
   const runId = actions.ready ? actions.runId : undefined;
   const pipelineName = actions.ready ? actions.pipelineName : undefined;
@@ -36,6 +42,12 @@ export function RunMenu() {
   } = useCancelPipelineRun(runId);
   const { inspect } = useInspectPipeline(pipelineName);
   const { exportYaml } = useExportPipelineYaml(componentSpec, pipelineName);
+
+  const handleCompare = () => {
+    if (runId) {
+      navigate({ to: APP_ROUTES.COMPARE, search: { a: runId } });
+    }
+  };
 
   if (!actions.ready) {
     return (
@@ -83,6 +95,16 @@ export function RunMenu() {
             <Icon name="FileCode" size="sm" />
             View YAML
           </DropdownMenuItem>
+
+          {compareEnabled && runId && (
+            <DropdownMenuItem
+              onSelect={handleCompare}
+              {...tracking("compare_runs.run_view.compare_with_another")}
+            >
+              <Icon name="GitCompare" size="sm" />
+              Compare with another run…
+            </DropdownMenuItem>
+          )}
 
           <DropdownMenuItem
             onSelect={clone}
