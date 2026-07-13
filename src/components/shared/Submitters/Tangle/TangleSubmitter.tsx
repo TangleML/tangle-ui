@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 import { useBackend } from "@/providers/BackendProvider";
 import { ONBOARDING_MY_RUN_COUNT_KEY } from "@/providers/OnboardingProvider/onboardingQueryKeys";
 import { useTourMockBackend } from "@/providers/TourProvider/tourMockBackend";
-import { APP_ROUTES } from "@/routes/router";
+import { getDefaultRunPath } from "@/routes/runRoutes";
 import { updateRunAnnotation } from "@/services/pipelineRunService";
 import type { PipelineRun } from "@/types/pipelineRun";
 import {
@@ -142,7 +142,7 @@ const TangleSubmitter = ({
   };
 
   const handleViewRun = (runId: number, e: MouseEvent) => {
-    const href = `${APP_ROUTES.RUNS}/${runId}`;
+    const href = getDefaultRunPath(runId);
     if (e.ctrlKey || e.metaKey) {
       window.open(href, "_blank");
     } else {
@@ -183,7 +183,7 @@ const TangleSubmitter = ({
     showSuccessNotification(response.id);
 
     if (isAutoRedirect) {
-      const href = `${APP_ROUTES.RUNS}/${response.id}`;
+      const href = getDefaultRunPath(response.id);
       window.open(href, "_blank");
     }
   };

@@ -12,15 +12,14 @@ import { BlockStack } from "@/components/ui/layout";
 import { Paragraph, Text } from "@/components/ui/typography";
 import { getStorage } from "@/utils/typedStorage";
 
-interface EditorV2WelcomeStorage {
+interface V2WelcomeStorage {
   "seen-editor-v2-welcome": boolean;
+  "seen-run-v2-welcome": boolean;
 }
 
-const storage = getStorage<
-  keyof EditorV2WelcomeStorage,
-  EditorV2WelcomeStorage
->();
-const STORAGE_KEY = "seen-editor-v2-welcome";
+const storage = getStorage<keyof V2WelcomeStorage, V2WelcomeStorage>();
+const EDITOR_STORAGE_KEY = "seen-editor-v2-welcome";
+const RUN_STORAGE_KEY = "seen-run-v2-welcome";
 const SPOTLIGHT_PADDING = 16;
 const CARD_WIDTH = 320;
 const SPOTLIGHT_COLOR = "#5B35F5";
@@ -33,11 +32,19 @@ interface SpotlightRect {
 }
 
 export function hasSeenEditorV2Welcome(): boolean {
-  return storage.getItem(STORAGE_KEY) === true;
+  return storage.getItem(EDITOR_STORAGE_KEY) === true;
 }
 
 export function markEditorV2WelcomeSeen() {
-  storage.setItem(STORAGE_KEY, true);
+  storage.setItem(EDITOR_STORAGE_KEY, true);
+}
+
+export function hasSeenRunV2Welcome(): boolean {
+  return storage.getItem(RUN_STORAGE_KEY) === true;
+}
+
+export function markRunV2WelcomeSeen() {
+  storage.setItem(RUN_STORAGE_KEY, true);
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -56,9 +63,14 @@ function getSpotlightRect(target: HTMLElement): SpotlightRect {
 interface ClickBlockersProps {
   spotlight: SpotlightRect;
   onDismiss: () => void;
+  dismissLabel: string;
 }
 
-function ClickBlockers({ spotlight, onDismiss }: ClickBlockersProps) {
+function ClickBlockers({
+  spotlight,
+  onDismiss,
+  dismissLabel,
+}: ClickBlockersProps) {
   const { centerX, centerY, radius } = spotlight;
   const top = Math.max(centerY - radius, 0);
   const bottom = Math.min(centerY + radius, window.innerHeight);
@@ -69,28 +81,28 @@ function ClickBlockers({ spotlight, onDismiss }: ClickBlockersProps) {
     <>
       <button
         type="button"
-        aria-label="Dismiss new editor welcome"
+        aria-label={dismissLabel}
         className="fixed left-0 right-0 top-0 z-[1000] cursor-default bg-transparent"
         style={{ height: top }}
         onClick={onDismiss}
       />
       <button
         type="button"
-        aria-label="Dismiss new editor welcome"
+        aria-label={dismissLabel}
         className="fixed bottom-0 left-0 right-0 z-[1000] cursor-default bg-transparent"
         style={{ top: bottom }}
         onClick={onDismiss}
       />
       <button
         type="button"
-        aria-label="Dismiss new editor welcome"
+        aria-label={dismissLabel}
         className="fixed z-[1000] cursor-default bg-transparent"
         style={{ top, left: 0, width: left, height: bottom - top }}
         onClick={onDismiss}
       />
       <button
         type="button"
-        aria-label="Dismiss new editor welcome"
+        aria-label={dismissLabel}
         className="fixed z-[1000] cursor-default bg-transparent"
         style={{ top, left: right, right: 0, height: bottom - top }}
         onClick={onDismiss}
@@ -99,15 +111,23 @@ function ClickBlockers({ spotlight, onDismiss }: ClickBlockersProps) {
   );
 }
 
-interface EditorV2WelcomeSpotlightProps {
+interface WelcomeSpotlightProps {
   targetRef: RefObject<HTMLElement | null>;
   onDismiss: () => void;
+  title: string;
+  description: string;
+  titleId: string;
+  dismissLabel: string;
 }
 
-export function EditorV2WelcomeSpotlight({
+export function WelcomeSpotlight({
   targetRef,
   onDismiss,
-}: EditorV2WelcomeSpotlightProps) {
+  title,
+  description,
+  titleId,
+  dismissLabel,
+}: WelcomeSpotlightProps) {
   const [spotlight, setSpotlight] = useState<SpotlightRect | null>(null);
   const gotItRef = useRef<HTMLButtonElement>(null);
 
@@ -182,21 +202,25 @@ export function EditorV2WelcomeSpotlight({
           boxShadow: `0 0 0 4px ${SPOTLIGHT_HALO_COLOR}`,
         }}
       />
-      <ClickBlockers spotlight={spotlight} onDismiss={onDismiss} />
+      <ClickBlockers
+        spotlight={spotlight}
+        onDismiss={onDismiss}
+        dismissLabel={dismissLabel}
+      />
       <div
         role="dialog"
         aria-modal="true"
-        aria-labelledby="editor-v2-welcome-title"
+        aria-labelledby={titleId}
         className="fixed z-[1002] rounded-lg border border-border bg-card p-4 text-card-foreground shadow-lg"
         style={{ top: cardTop, left: cardLeft, width: CARD_WIDTH }}
       >
         <BlockStack gap="3">
           <BlockStack gap="1">
-            <Text id="editor-v2-welcome-title" weight="semibold">
-              Welcome to the new editor
+            <Text id={titleId} weight="semibold">
+              {title}
             </Text>
             <Paragraph size="sm" tone="subdued">
-              You can easily switch between the new and old editor here.
+              {description}
             </Paragraph>
           </BlockStack>
           <Button ref={gotItRef} size="sm" onClick={onDismiss}>

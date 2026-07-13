@@ -6,6 +6,7 @@ import { isAuthorizationRequired } from "@/components/shared/Authentication/help
 import { TopBarAuthentication } from "@/components/shared/Authentication/TopBarAuthentication";
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { EditorVersionToggle } from "@/components/shared/EditorVersionToggle";
+import { RunVersionToggle } from "@/components/shared/RunVersionToggle";
 import { Icon } from "@/components/ui/icon";
 import { InlineStack } from "@/components/ui/layout";
 import { Link } from "@/components/ui/link";
@@ -28,6 +29,7 @@ export function AppMenuActions() {
       {!tourMode && <OnboardingNavPill />}
       <AiModelQuickSelect />
       <EditorVersionToggle showWelcomeSpotlight />
+      <RunVersionToggle showWelcomeSpotlight />
       {tourMode ? (
         <TooltipButton
           tooltip="Settings"

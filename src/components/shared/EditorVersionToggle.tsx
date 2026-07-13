@@ -1,17 +1,11 @@
-import { useLocation, useNavigate } from "@tanstack/react-router";
-import { useCallback, useRef, useState } from "react";
+import { useLocation } from "@tanstack/react-router";
 
-import TooltipButton from "@/components/shared/Buttons/TooltipButton";
+import { VersionToggle } from "@/components/shared/VersionToggle";
 import {
-  EditorV2WelcomeSpotlight,
   hasSeenEditorV2Welcome,
   markEditorV2WelcomeSeen,
-} from "@/components/shared/EditorV2WelcomeSpotlight";
-import { Icon } from "@/components/ui/icon";
-import { cn } from "@/lib/utils";
+} from "@/components/shared/WelcomeSpotlight";
 import { APP_ROUTES, EDITOR_PATH } from "@/routes/router";
-
-import { useFlagValue } from "./Settings/useFlags";
 
 type EditorVersion = "v1" | "v2";
 
@@ -29,18 +23,6 @@ export const EditorVersionToggle = ({
   showWelcomeSpotlight = false,
 }: EditorVersionToggleProps) => {
   const location = useLocation();
-  const navigate = useNavigate();
-  const isEnabled = useFlagValue("v2_editor");
-  const toggleRef = useRef<HTMLButtonElement>(null);
-  const [welcomeSeen, setWelcomeSeen] = useState(hasSeenEditorV2Welcome);
-
-  const dismissWelcome = useCallback(() => {
-    markEditorV2WelcomeSeen();
-    setWelcomeSeen(true);
-  }, []);
-
-  if (!isEnabled) return null;
-
   const version = detectEditorVersion(location.pathname);
   if (!version) return null;
 
@@ -55,28 +37,23 @@ export const EditorVersionToggle = ({
       : `${EDITOR_PATH}/${encodeURIComponent(pipelineName)}`;
   const tooltip =
     targetVersion === "v2" ? "Switch to new editor" : "Switch to legacy editor";
-  const showWelcome = showWelcomeSpotlight && version === "v2" && !welcomeSeen;
 
   return (
-    <>
-      <TooltipButton
-        ref={toggleRef}
-        tooltip={tooltip}
-        className={cn(showWelcome && "relative z-[1001]")}
-        onClick={() => {
-          if (showWelcome) dismissWelcome();
-          navigate({ to: targetPath });
-        }}
-        aria-label={tooltip}
-      >
-        <Icon name={targetVersion === "v2" ? "Zap" : "Snail"} />
-      </TooltipButton>
-      {showWelcome && (
-        <EditorV2WelcomeSpotlight
-          targetRef={toggleRef}
-          onDismiss={dismissWelcome}
-        />
-      )}
-    </>
+    <VersionToggle
+      flagName="v2_editor"
+      targetVersion={targetVersion}
+      targetPath={targetPath}
+      tooltip={tooltip}
+      showWelcomeSpotlight={showWelcomeSpotlight && version === "v2"}
+      welcome={{
+        hasSeen: hasSeenEditorV2Welcome,
+        markSeen: markEditorV2WelcomeSeen,
+        title: "Welcome to the new editor",
+        description:
+          "You can easily switch between the new and old editor here.",
+        titleId: "editor-v2-welcome-title",
+        dismissLabel: "Dismiss new editor welcome",
+      }}
+    />
   );
 };
