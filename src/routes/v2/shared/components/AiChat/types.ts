@@ -1,6 +1,14 @@
+import type { IconName } from "@/components/ui/icon";
+
 export interface ComponentRefData {
   name: string;
   yamlText: string;
+}
+
+/** An example question shown in the chat's empty state. */
+export interface SuggestedPrompt {
+  label: string;
+  icon: IconName;
 }
 
 interface BaseChatMessage {

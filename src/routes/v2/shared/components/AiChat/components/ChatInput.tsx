@@ -28,7 +28,7 @@ export function ChatInput({ isPending, onSubmit }: ChatInputProps) {
   }
 
   return (
-    <InlineStack gap="2" className="border-t p-2 w-full" blockAlign="start">
+    <InlineStack gap="2" className="border-t p-2 w-full" blockAlign="center">
       <Textarea
         className="flex-1 resize-none max-h-32 overflow-y-auto"
         rows={2}

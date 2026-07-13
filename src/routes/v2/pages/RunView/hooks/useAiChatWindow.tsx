@@ -2,9 +2,17 @@ import { useEffect } from "react";
 
 import { createRunViewToolBridge } from "@/routes/v2/pages/RunView/toolBridge/runViewToolBridge";
 import { AiChatContent } from "@/routes/v2/shared/components/AiChat/AiChatContent";
+import type { SuggestedPrompt } from "@/routes/v2/shared/components/AiChat/types";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 const AI_CHAT_WINDOW_ID = "run-ai-assistant-chat";
+
+const SUGGESTED_PROMPTS_RUN: SuggestedPrompt[] = [
+  { label: "Summarize this run", icon: "FileText" },
+  { label: "Why did this run fail?", icon: "CircleAlert" },
+  { label: "Which tasks failed and why?", icon: "ListChecks" },
+  { label: "Explain the outputs of this run", icon: "ArrowUpFromLine" },
+];
 
 export function useAiChatWindow(enabled: boolean) {
   const { windows } = useSharedStores();
@@ -17,7 +25,10 @@ export function useAiChatWindow(enabled: boolean) {
     if (windows.getWindowById(AI_CHAT_WINDOW_ID)) return;
 
     windows.openWindow(
-      <AiChatContent createBridge={createRunViewToolBridge} />,
+      <AiChatContent
+        createBridge={createRunViewToolBridge}
+        suggestedPrompts={SUGGESTED_PROMPTS_RUN}
+      />,
       {
         id: AI_CHAT_WINDOW_ID,
         title: "AI Assistant",

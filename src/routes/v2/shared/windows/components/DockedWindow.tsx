@@ -14,13 +14,13 @@ import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useWindowContext } from "@/routes/v2/shared/windows/ContentWindowStateContext";
 import { useWindowDrag } from "@/routes/v2/shared/windows/hooks/useWindowDrag";
 import { SnapPreview } from "@/routes/v2/shared/windows/SnapPreview";
-import { MIN_DOCKED_HEIGHT } from "@/routes/v2/shared/windows/types";
+import {
+  DOCKED_HEADER_HEIGHT as HEADER_HEIGHT,
+  MIN_DOCKED_HEIGHT,
+} from "@/routes/v2/shared/windows/types";
 
 import { WindowActions } from "./WindowActions";
 import { WindowHeader } from "./WindowHeader";
-
-/** Height of a docked window header (px). Used to stack sticky headers. */
-const HEADER_HEIGHT = 36;
 
 export const DockedWindow = observer(function DockedWindow() {
   const { model, content, dockIndex = 0 } = useWindowContext();
