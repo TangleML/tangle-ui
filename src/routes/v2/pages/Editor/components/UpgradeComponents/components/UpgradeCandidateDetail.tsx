@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
@@ -19,16 +20,11 @@ function truncateDigest(digest: string): string {
 
 function EmptyDetail() {
   return (
-    <BlockStack className="flex-1 items-center justify-center p-4" gap="1">
-      <Icon
-        name="MousePointerClick"
-        size="md"
-        className="text-muted-foreground"
-      />
-      <Text size="xs" tone="subdued">
-        Select a component to see details
-      </Text>
-    </BlockStack>
+    <EmptyState
+      icon="MousePointerClick"
+      size="sm"
+      description="Select a component to see details"
+    />
   );
 }
 

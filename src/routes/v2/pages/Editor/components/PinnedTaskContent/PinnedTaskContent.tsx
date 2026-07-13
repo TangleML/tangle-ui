@@ -1,6 +1,7 @@
 import { observer } from "mobx-react-lite";
 
 import { TaskDetails, TaskIO } from "@/components/shared/TaskDetails";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -105,7 +106,7 @@ export const PinnedTaskContent = observer(function PinnedTaskContent({
                 }
               />
             ) : (
-              <EmptyState message="No inputs or outputs defined" />
+              <EmptyState description="No inputs or outputs defined" />
             )}
           </TabsContent>
 
@@ -116,7 +117,7 @@ export const PinnedTaskContent = observer(function PinnedTaskContent({
             {code ? (
               <CodeBlock code={code} language="yaml" showLineNumbers={false} />
             ) : (
-              <EmptyState message="No implementation code available" />
+              <EmptyState description="No implementation code available" />
             )}
           </TabsContent>
         </div>
@@ -131,28 +132,15 @@ interface NotFoundStateProps {
 
 function NotFoundState({ entityId }: NotFoundStateProps) {
   return (
-    <BlockStack className="h-full items-center justify-center p-4 bg-white">
-      <Icon name="CircleAlert" size="lg" className="text-gray-300" />
-      <Text size="sm" tone="subdued" className="text-center mt-2">
-        Task not found
-      </Text>
-      <Text size="xs" tone="subdued" className="text-center font-mono">
-        {entityId}
-      </Text>
-    </BlockStack>
-  );
-}
-
-interface EmptyStateProps {
-  message: string;
-}
-
-function EmptyState({ message }: EmptyStateProps) {
-  return (
-    <BlockStack className="items-center justify-center p-4">
-      <Text size="sm" tone="subdued">
-        {message}
-      </Text>
-    </BlockStack>
+    <EmptyState
+      icon="CircleAlert"
+      title="Task not found"
+      description={
+        <Text size="xs" tone="subdued" font="mono">
+          {entityId}
+        </Text>
+      }
+      className="bg-white"
+    />
   );
 }

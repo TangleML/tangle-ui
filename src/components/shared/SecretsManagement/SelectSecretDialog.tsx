@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -51,17 +52,13 @@ function SelectableSecretsList({
 }: SelectableSecretsListProps) {
   if (secrets.length === 0) {
     return (
-      <BlockStack
-        align="center"
-        className="py-8"
+      <EmptyState
+        icon="Lock"
+        title="No secrets configured"
+        description="Add a secret to use it in your arguments"
+        placement="start"
         data-testid="select-secret-empty-state"
-      >
-        <Icon name="Lock" size="lg" className="text-gray-300" />
-        <Text tone="subdued">No secrets configured</Text>
-        <Text size="xs" tone="subdued">
-          Add a secret to use it in your arguments
-        </Text>
-      </BlockStack>
+      />
     );
   }
 

@@ -1,14 +1,10 @@
-import { Icon } from "@/components/ui/icon";
-import { BlockStack } from "@/components/ui/layout";
-import { Text } from "@/components/ui/typography";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export function ContextPanelEmptyState() {
   return (
-    <BlockStack className="h-full items-center justify-center p-4">
-      <Icon name="MousePointerClick" size="lg" className="text-gray-300" />
-      <Text size="sm" tone="subdued" className="text-center mt-2">
-        Select a node to view details
-      </Text>
-    </BlockStack>
+    <EmptyState
+      icon="MousePointerClick"
+      description="Select a node to view details"
+    />
   );
 }
