@@ -21,6 +21,8 @@ import { submitPipelineRun } from "@/utils/submitPipeline";
 type RerunPipelineButtonProps = {
   componentSpec: ComponentSpec;
   showLabel?: boolean;
+  displayLabel?: string;
+  showTooltip?: boolean;
 } & Omit<
   ComponentPropsWithoutRef<typeof TooltipButton>,
   "onClick" | "tooltip" | "variant" | "children"
@@ -29,6 +31,8 @@ type RerunPipelineButtonProps = {
 export const RerunPipelineButton = ({
   componentSpec,
   showLabel,
+  displayLabel,
+  showTooltip = true,
   ...rest
 }: RerunPipelineButtonProps) => {
   const runNameOverride = useFlagValue("templatized-pipeline-run-name");
@@ -95,13 +99,13 @@ export const RerunPipelineButton = ({
     <TooltipButton
       variant="outline"
       onClick={() => mutate()}
-      tooltip="Rerun pipeline"
+      tooltip={showTooltip ? "Rerun pipeline" : undefined}
       disabled={isPending}
       data-testid="rerun-pipeline-button"
       {...rest}
     >
       <Icon name="RefreshCcw" />
-      {showLabel && "Rerun"}
+      {displayLabel ?? (showLabel ? "Rerun" : null)}
     </TooltipButton>
   );
 };

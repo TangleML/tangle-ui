@@ -12,6 +12,8 @@ import { cancelPipelineRun } from "@/services/pipelineRunService";
 type CancelPipelineRunButtonProps = {
   runId: string | null | undefined;
   showLabel?: boolean;
+  displayLabel?: string;
+  showTooltip?: boolean;
 } & Omit<
   ComponentPropsWithoutRef<typeof TooltipButton>,
   "onClick" | "tooltip" | "variant" | "children"
@@ -20,6 +22,8 @@ type CancelPipelineRunButtonProps = {
 export const CancelPipelineRunButton = ({
   runId,
   showLabel,
+  displayLabel,
+  showTooltip = true,
   ...rest
 }: CancelPipelineRunButtonProps) => {
   const { backendUrl, available } = useBackend();
@@ -71,9 +75,13 @@ export const CancelPipelineRunButton = ({
 
   if (isSuccess) {
     return (
-      <TooltipButton disabled tooltip="Run cancelled" {...rest}>
+      <TooltipButton
+        disabled
+        tooltip={showTooltip ? "Run cancelled" : undefined}
+        {...rest}
+      >
         <Icon name="CircleSlash" />
-        {showLabel && "Cancelled"}
+        {displayLabel ?? (showLabel ? "Cancelled" : null)}
       </TooltipButton>
     );
   }
@@ -83,7 +91,7 @@ export const CancelPipelineRunButton = ({
       <TooltipButton
         variant="destructive"
         onClick={onClick}
-        tooltip="Cancel run"
+        tooltip={showTooltip ? "Cancel run" : undefined}
         disabled={isPending || !available}
         data-testid="cancel-pipeline-run-button"
         {...rest}
@@ -95,7 +103,7 @@ export const CancelPipelineRunButton = ({
             <Icon name="CircleX" />
           </div>
         )}
-        {showLabel && "Cancel"}
+        {displayLabel ?? (showLabel ? "Cancel" : null)}
       </TooltipButton>
 
       <ConfirmationDialog

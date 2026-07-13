@@ -123,7 +123,9 @@ describe("<CancelPipelineRunButton/>", () => {
     test("successfully cancels pipeline run", async () => {
       // arrange
       cancelPipelineRun.mockResolvedValue();
-      renderWithQueryClient(<CancelPipelineRunButton runId="test-run-123" />);
+      renderWithQueryClient(
+        <CancelPipelineRunButton runId="test-run-123" displayLabel="Stop" />,
+      );
 
       // act
       const button = screen.getByTestId("cancel-pipeline-run-button");
@@ -141,6 +143,7 @@ describe("<CancelPipelineRunButton/>", () => {
         "success",
       );
       expect(button).toBeDisabled();
+      expect(button).toHaveTextContent("Stop");
     });
 
     test("handles cancellation error", async () => {
