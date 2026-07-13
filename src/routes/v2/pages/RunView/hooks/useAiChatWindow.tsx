@@ -1,11 +1,10 @@
 import { useEffect } from "react";
 
+import { RUN_AI_ASSISTANT_WINDOW_ID } from "@/routes/v2/pages/RunView/runViewWindowPresets";
 import { createRunViewToolBridge } from "@/routes/v2/pages/RunView/toolBridge/runViewToolBridge";
 import { AiChatContent } from "@/routes/v2/shared/components/AiChat/AiChatContent";
 import type { SuggestedPrompt } from "@/routes/v2/shared/components/AiChat/types";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
-
-const AI_CHAT_WINDOW_ID = "run-ai-assistant-chat";
 
 const SUGGESTED_PROMPTS_RUN: SuggestedPrompt[] = [
   { label: "Summarize this run", icon: "FileText" },
@@ -19,10 +18,10 @@ export function useAiChatWindow(enabled: boolean) {
 
   useEffect(() => {
     if (!enabled) {
-      windows.closeWindow(AI_CHAT_WINDOW_ID);
+      windows.closeWindow(RUN_AI_ASSISTANT_WINDOW_ID);
       return;
     }
-    if (windows.getWindowById(AI_CHAT_WINDOW_ID)) return;
+    if (windows.getWindowById(RUN_AI_ASSISTANT_WINDOW_ID)) return;
 
     windows.openWindow(
       <AiChatContent
@@ -30,12 +29,13 @@ export function useAiChatWindow(enabled: boolean) {
         suggestedPrompts={SUGGESTED_PROMPTS_RUN}
       />,
       {
-        id: AI_CHAT_WINDOW_ID,
+        id: RUN_AI_ASSISTANT_WINDOW_ID,
         title: "AI Assistant",
         position: { x: 100, y: 80 },
         size: { width: 380, height: 520 },
         disabledActions: ["close"],
-        startVisible: true,
+        defaultVisible: true,
+        defaultDockState: "left",
         persisted: true,
       },
     );
