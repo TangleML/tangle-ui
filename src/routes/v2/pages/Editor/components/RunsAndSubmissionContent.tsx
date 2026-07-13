@@ -2,11 +2,15 @@ import { observer } from "mobx-react-lite";
 
 import { useAwaitAuthorization } from "@/components/shared/Authentication/useAwaitAuthorization";
 import { HuggingFaceAuthButton } from "@/components/shared/HuggingFaceAuth/HuggingFaceAuthButton";
+import { PipelineRunsList } from "@/components/shared/PipelineRunDisplay/PipelineRunsList";
+import { usePipelineRuns } from "@/components/shared/PipelineRunDisplay/usePipelineRuns";
 import GoogleCloudSubmissionDialog from "@/components/shared/Submitters/GoogleCloud/GoogleCloudSubmissionDialog";
 import TangleSubmitter from "@/components/shared/Submitters/Tangle/TangleSubmitter";
+import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { Icon } from "@/components/ui/icon";
-import { BlockStack } from "@/components/ui/layout";
-import { Text } from "@/components/ui/typography";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { Separator } from "@/components/ui/separator";
+import { Heading, Text } from "@/components/ui/typography";
 import { serializeComponentSpec } from "@/models/componentSpec";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { ENABLE_GOOGLE_CLOUD_SUBMITTER } from "@/utils/constants";
@@ -61,6 +65,7 @@ export const RunsAndSubmissionContent = observer(() => {
           />
         )}
       </BlockStack>
+      <MostRecentRun pipelineName={rootSpec?.name} />
     </BlockStack>
   );
 });
@@ -75,3 +80,39 @@ function EmptyState() {
     </BlockStack>
   );
 }
+
+const MostRecentRun = withSuspenseWrapper(function MostRecentRun({
+  pipelineName,
+}: {
+  pipelineName?: string;
+}) {
+  const { data: pipelineRuns } = usePipelineRuns(pipelineName);
+
+  if (!pipelineRuns || pipelineRuns.length === 0) {
+    return null;
+  }
+
+  return (
+    <>
+      <Separator />
+      <BlockStack className="p-2">
+        <InlineStack align="space-between" className="w-full">
+          <Heading level={3}>The most recent run:</Heading>
+        </InlineStack>
+        <div className="flex-1 min-h-0 overflow-y-auto w-full">
+          <PipelineRunsList
+            pipelineName={pipelineName}
+            showTitle={false}
+            defaultShowingRuns={1}
+            showMoreButton={false}
+            overviewConfig={{
+              showName: false,
+              showDescription: true,
+              showTaskStatusBar: false,
+            }}
+          />
+        </div>
+      </BlockStack>
+    </>
+  );
+});
