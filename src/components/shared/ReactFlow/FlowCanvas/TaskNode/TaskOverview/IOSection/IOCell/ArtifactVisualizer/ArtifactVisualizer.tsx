@@ -34,6 +34,7 @@ type ArtifactVisualizerProps = {
   name: string;
   type: string;
   value?: string;
+  triggerVariant?: "ghost" | "secondary" | "outline";
 };
 
 const ArtifactVisualizer = ({
@@ -41,6 +42,7 @@ const ArtifactVisualizer = ({
   name,
   type,
   value,
+  triggerVariant = "ghost",
 }: ArtifactVisualizerProps) => {
   const { track } = useAnalytics();
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -88,7 +90,7 @@ const ArtifactVisualizer = ({
     <Dialog onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {value ? (
-          <Button variant="ghost" size="xs">
+          <Button variant={triggerVariant} size="xs">
             <Icon
               name="Maximize2"
               size="xs"
@@ -96,7 +98,7 @@ const ArtifactVisualizer = ({
             />
           </Button>
         ) : (
-          <Button variant="ghost" size="xs">
+          <Button variant={triggerVariant} size="xs">
             <Icon name="Eye" />
             Preview
           </Button>

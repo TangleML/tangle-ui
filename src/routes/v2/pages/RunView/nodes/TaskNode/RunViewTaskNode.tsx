@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { type Node, type NodeProps } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
 
@@ -5,11 +6,18 @@ import { StatusIndicator } from "@/components/shared/ReactFlow/FlowCanvas/TaskNo
 import Logs from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/TaskOverview/logs";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
-import { TaskNode } from "@/routes/v2/shared/nodes/TaskNode/TaskNode";
+import { useBackend } from "@/providers/BackendProvider";
+import { OutputActionsProvider } from "@/routes/v2/shared/nodes/TaskNode/OutputActionsContext";
+import {
+  TaskNode,
+  type TaskNodeOutput,
+} from "@/routes/v2/shared/nodes/TaskNode/TaskNode";
 import type { TaskNodeData } from "@/routes/v2/shared/nodes/types";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { getExecutionArtifacts } from "@/services/executionService";
 import { tracking } from "@/utils/tracking";
 
+import { RunViewOutputPreview } from "./RunViewOutputPreview";
 import { useTaskRunStatus } from "./useTaskRunStatus";
 
 type TaskNodeType = Node<TaskNodeData, "task">;
@@ -19,8 +27,15 @@ export const RunViewTaskNode = observer(function RunViewTaskNode(
 ) {
   const { entityId } = props.data;
   const { windows } = useSharedStores();
+  const { backendUrl } = useBackend();
   const { task, status, disabledCache, executionId, showLogsButton } =
     useTaskRunStatus(entityId);
+
+  const { data: artifacts } = useQuery({
+    queryKey: ["artifacts", executionId],
+    queryFn: () => getExecutionArtifacts(String(executionId), backendUrl),
+    enabled: !!executionId,
+  });
 
   const handleOpenLogs = () => {
     if (!task || !executionId) return;
@@ -30,6 +45,14 @@ export const RunViewTaskNode = observer(function RunViewTaskNode(
       size: { width: 500, height: 400 },
     });
   };
+
+  const renderOutputAction = (output: TaskNodeOutput) => (
+    <RunViewOutputPreview
+      artifact={artifacts?.output_artifacts?.[output.name]}
+      name={output.name}
+      type={output.type}
+    />
+  );
 
   return (
     <div className="relative">
@@ -49,7 +72,9 @@ export const RunViewTaskNode = observer(function RunViewTaskNode(
         </Button>
       )}
 
-      <TaskNode {...props} />
+      <OutputActionsProvider value={renderOutputAction}>
+        <TaskNode {...props} />
+      </OutputActionsProvider>
     </div>
   );
 });
