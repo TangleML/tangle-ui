@@ -18,11 +18,11 @@ const COMPONENT_LIBRARY_WINDOW_ID = "component-library";
 
 export const DEFAULT_DOCK_AREAS: PresetDockAreas = {
   left: [
-    "tip-of-the-day",
     "runs-and-submission",
     COMPONENT_SEARCH_WINDOW_ID,
     COMPONENT_LIBRARY_WINDOW_ID,
     AI_ASSISTANT_WINDOW_ID,
+    "tip-of-the-day",
     "pipeline-tree",
     "history",
     "debug-panel",
@@ -56,7 +56,6 @@ export const DEFAULT_VIEW_PRESET: ViewPreset = {
     "component-library",
     AI_ASSISTANT_WINDOW_ID,
     "pipeline-details",
-    "tip-of-the-day",
   ]),
   dockAreas: DEFAULT_DOCK_AREAS,
 };

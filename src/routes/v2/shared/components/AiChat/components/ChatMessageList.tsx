@@ -33,13 +33,8 @@ export function ChatMessageList({
 
   if (messages.length === 0 && !thinkingText) {
     return (
-      <BlockStack gap="5" className="flex-1 min-h-0 overflow-y-auto p-4">
-        <BlockStack
-          gap="2"
-          align="center"
-          inlineAlign="center"
-          className="pt-6"
-        >
+      <BlockStack gap="4" className="flex-1 min-h-0 overflow-y-auto p-3">
+        <BlockStack gap="2" align="center" inlineAlign="center">
           <div className="flex size-11 items-center justify-center rounded-full bg-accent">
             <Icon name="Sparkles" size="lg" className="text-muted-foreground" />
           </div>
