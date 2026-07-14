@@ -45,6 +45,22 @@ export const fetchExecutionDetails = async (
   return fetchWithErrorHandling(url);
 };
 
+export const useFetchExecutionDetails = (
+  executionId: string | undefined,
+  status: string | undefined,
+  enabled: boolean,
+) => {
+  const { backendUrl } = useBackend();
+
+  return useQuery<GetExecutionInfoResponse>({
+    queryKey: ["execution-details", executionId, status],
+    queryFn: () => fetchExecutionDetails(executionId!, backendUrl),
+    enabled: !!executionId && enabled,
+    refetchOnWindowFocus: false,
+    retry: retryUnlessAuth,
+  });
+};
+
 export const fetchPipelineRun = async (
   runId: string,
   backendUrl: string,
