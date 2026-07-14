@@ -16,7 +16,7 @@ import { RemoteAuthError } from "@/utils/fetchWithErrorHandling";
 import { tracking } from "@/utils/tracking";
 
 import { CompareRunPicker } from "./components/CompareRunPicker";
-import { GraphDiffPlaceholder } from "./components/GraphDiffPlaceholder";
+import { GraphDiffView } from "./components/GraphDiffView";
 import { StructuredDiffView } from "./components/StructuredDiffView";
 import { YamlDiffView } from "./components/YamlDiffView";
 import { useRunComparisonSide } from "./hooks/useRunComparisonSide";
@@ -45,6 +45,7 @@ export function CompareView() {
 
   const [activeTab, setActiveTab] = useState("structured");
   const [yamlMounted, setYamlMounted] = useState(false);
+  const [graphMounted, setGraphMounted] = useState(false);
 
   useEffect(() => {
     if (bothSelected) {
@@ -56,6 +57,9 @@ export function CompareView() {
     if (activeTab === "yaml") {
       setYamlMounted(true);
     }
+    if (activeTab === "graph") {
+      setGraphMounted(true);
+    }
   }, [activeTab]);
 
   const comparison = buildPipelineComparison(
@@ -63,6 +67,8 @@ export function CompareView() {
     sideB.spec,
     sideA.taskStatusMap,
     sideB.taskStatusMap,
+    sideA.taskExecutionIdMap,
+    sideB.taskExecutionIdMap,
   );
 
   const setSide = (side: "a" | "b", id: string) => {
@@ -189,6 +195,8 @@ export function CompareView() {
             comparison={comparison}
             labelA={LABEL_A}
             labelB={LABEL_B}
+            nameA={nameA}
+            nameB={nameB}
           />
         </TabsContent>
 
@@ -202,8 +210,21 @@ export function CompareView() {
           )}
         </TabsContent>
 
-        <TabsContent value="graph" className="min-h-0">
-          <GraphDiffPlaceholder />
+        <TabsContent
+          value="graph"
+          forceMount
+          className={cn("min-h-0", activeTab !== "graph" && "hidden")}
+        >
+          {graphMounted && (
+            <GraphDiffView
+              key={`${a}-${b}`}
+              comparison={comparison}
+              nameA={nameA}
+              nameB={nameB}
+              labelA={LABEL_A}
+              labelB={LABEL_B}
+            />
+          )}
         </TabsContent>
       </Tabs>
     </PageShell>

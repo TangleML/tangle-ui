@@ -14,6 +14,33 @@ import {
   getExecutionStatusLabel,
 } from "@/utils/executionStatus";
 
+type StatusTabProps = {
+  status: string;
+  label?: string;
+  className?: string;
+};
+
+export const StatusTab = ({ status, label, className }: StatusTabProps) => {
+  const { style, text, icon } = getStatusMetadata(status);
+
+  return (
+    <div
+      title={label ? `${label} · ${text}` : text}
+      className={cn(
+        "h-8.75 overflow-hidden rounded-t-md px-2.5 py-1 text-[10px]",
+        style,
+        className,
+      )}
+    >
+      <div className="flex min-w-0 items-center gap-1 font-mono whitespace-nowrap text-white">
+        {label && <span className="shrink-0 font-semibold">{label}</span>}
+        <span className="shrink-0">{icon}</span>
+        <span className="truncate">{text}</span>
+      </div>
+    </div>
+  );
+};
+
 type StatusIndicatorProps = {
   status: string;
   disabledCache?: boolean;
@@ -23,20 +50,12 @@ export const StatusIndicator = ({
   status,
   disabledCache = false,
 }: StatusIndicatorProps) => {
-  const { style, text, icon } = getStatusMetadata(status);
-
   return (
     <div className="absolute -z-1 -top-5 left-0 flex items-start">
-      <div
-        className={cn("h-8.75 rounded-t-md px-2.5 py-1 text-[10px]", style, {
-          "rounded-tr-none": disabledCache,
-        })}
-      >
-        <div className="flex items-center gap-1 font-mono text-white">
-          {icon}
-          {text}
-        </div>
-      </div>
+      <StatusTab
+        status={status}
+        className={cn({ "rounded-tr-none": disabledCache })}
+      />
       {disabledCache && (
         <div className="h-5.5 bg-status-cancelling rounded-tr-md flex items-center px-1.5">
           <QuickTooltip content="Cache Disabled" className="whitespace-nowrap">
