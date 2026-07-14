@@ -253,7 +253,7 @@ function MergedGraphCanvas({
             {selectedNode && (
               <BlockStack
                 gap="3"
-                className="max-h-96 w-80 overflow-y-auto rounded-lg border bg-background p-4 shadow-lg"
+                className="nowheel nopan max-h-96 w-80 overflow-y-auto overscroll-contain rounded-lg border bg-background p-4 shadow-lg"
               >
                 <InlineStack
                   align="space-between"

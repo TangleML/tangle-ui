@@ -1,6 +1,7 @@
 import equal from "fast-deep-equal";
 
 import type { DiffStatus } from "@/routes/v2/pages/Editor/store/actions/task.utils";
+import { isCacheDisabled } from "@/utils/cache";
 import type {
   ArgumentType,
   ComponentSpec,
@@ -12,6 +13,34 @@ import type {
 import { isGraphImplementation } from "@/utils/componentSpec";
 
 export type { DiffStatus };
+
+/**
+ * Annotation keys the editor writes for layout/presentation only. They carry no
+ * technical meaning for a run comparison and would otherwise surface as noise,
+ * so they are stripped before diffing. Duplicated as literals rather than
+ * imported from `@/utils/annotations` because that module transitively pulls in
+ * the components tree, which breaks vitest mock hoisting for this leaf util.
+ */
+const FRONTEND_ONLY_ANNOTATION_KEYS = new Set<string>([
+  "editor.position",
+  "editor.collapsed",
+  "editor.flow-direction",
+  "zIndex",
+  "flex-nodes",
+  "sdk",
+  "tangleml.com/editor/task-color",
+  "tangleml.com/editor/edge-conduits",
+]);
+
+export function stripFrontendAnnotations<T>(
+  annotations: Record<string, T> | undefined,
+): Record<string, T> {
+  const result: Record<string, T> = {};
+  for (const [key, value] of Object.entries(annotations ?? {})) {
+    if (!FRONTEND_ONLY_ANNOTATION_KEYS.has(key)) result[key] = value;
+  }
+  return result;
+}
 
 export interface KeyedDiffEntry<T> {
   key: string;
@@ -43,6 +72,9 @@ export interface TaskDiff {
   statusB?: string;
   executionIdA?: string;
   executionIdB?: string;
+  cacheDisabledA: boolean;
+  cacheDisabledB: boolean;
+  cacheChanged: boolean;
   outcomeChanged: boolean;
   argumentDiffs: KeyedDiffEntry<ArgumentType>[];
   annotationDiffs: KeyedDiffEntry<unknown>[];
@@ -70,7 +102,7 @@ export interface PipelineComparison {
  * in `b` in `b`'s order. Mirrors the ordering of the editor's diff lists so the
  * two features read consistently.
  */
-function unionKeysAFirst(
+export function unionKeysAFirst(
   a: Record<string, unknown>,
   b: Record<string, unknown>,
 ): string[] {
@@ -86,7 +118,7 @@ function unionKeysAFirst(
   return keys;
 }
 
-function diffKeyedRecords<T>(
+export function diffKeyedRecords<T>(
   a: Record<string, T> | undefined,
   b: Record<string, T> | undefined,
 ): KeyedDiffEntry<T>[] {
@@ -125,9 +157,16 @@ function buildTaskDiff(
   executionIdB: string | undefined,
 ): TaskDiff {
   const argumentDiffs = diffKeyedRecords(a?.arguments, b?.arguments);
-  const annotationDiffs = diffKeyedRecords(a?.annotations, b?.annotations);
+  const annotationDiffs = diffKeyedRecords(
+    stripFrontendAnnotations(a?.annotations),
+    stripFrontendAnnotations(b?.annotations),
+  );
   const digestA = a?.componentRef.digest;
   const digestB = b?.componentRef.digest;
+
+  const cacheDisabledA = isCacheDisabled(a);
+  const cacheDisabledB = isCacheDisabled(b);
+  const cacheChanged = Boolean(a && b && cacheDisabledA !== cacheDisabledB);
 
   let status: DiffStatus;
   if (a && !b) status = "lost";
@@ -137,7 +176,9 @@ function buildTaskDiff(
       (entry) => entry.status !== "unchanged",
     );
     status =
-      isComponentChanged(a, b) || hasFieldChanges ? "changed" : "unchanged";
+      isComponentChanged(a, b) || hasFieldChanges || cacheChanged
+        ? "changed"
+        : "unchanged";
   } else {
     status = "unchanged";
   }
@@ -154,6 +195,9 @@ function buildTaskDiff(
     statusB,
     executionIdA,
     executionIdB,
+    cacheDisabledA,
+    cacheDisabledB,
+    cacheChanged,
     outcomeChanged: (statusA ?? "") !== (statusB ?? ""),
     argumentDiffs,
     annotationDiffs,

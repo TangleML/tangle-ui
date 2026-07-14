@@ -6,6 +6,7 @@ import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import type { MergedIoNodeData } from "@/routes/v2/pages/CompareView/utils/buildMergedGraph";
 import type { DiffStatus } from "@/routes/v2/pages/CompareView/utils/comparePipelines";
+import { summarizeIoChange } from "@/routes/v2/pages/CompareView/utils/summarizeChange";
 
 import { DiffStatusBadge } from "./DiffStatusBadge";
 
@@ -21,6 +22,8 @@ type MergedIoNodeType = Node<MergedIoNodeData, "mergedIo">;
 export function MergedIoNode({ data }: NodeProps<MergedIoNodeType>) {
   const { diff } = data;
   const isInput = diff.kind === "input";
+  const changeSummary =
+    diff.status === "changed" ? summarizeIoChange(diff) : "";
 
   return (
     <BlockStack
@@ -58,6 +61,11 @@ export function MergedIoNode({ data }: NodeProps<MergedIoNodeType>) {
       <Text as="span" size="sm" weight="semibold" className="wrap-break-word">
         {diff.name}
       </Text>
+      {changeSummary && (
+        <Text as="span" size="xs" tone="subdued">
+          {changeSummary}
+        </Text>
+      )}
 
       {isInput ? (
         <Handle

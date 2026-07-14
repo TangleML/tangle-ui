@@ -82,6 +82,52 @@ describe("buildPipelineComparison()", () => {
     expect(epochs?.status).toBe("changed");
   });
 
+  test("ignores frontend-only annotation changes", () => {
+    const specA = graphSpec({
+      train: task("d1", {
+        annotations: { "editor.position": "{x:0}", zIndex: "1" },
+      }),
+    });
+    const specB = graphSpec({
+      train: task("d1", {
+        annotations: { "editor.position": "{x:999}", zIndex: "5" },
+      }),
+    });
+
+    const [diff] = buildPipelineComparison(
+      specA,
+      specB,
+      noStatus,
+      noStatus,
+    ).taskDiffs;
+
+    expect(diff.status).toBe("unchanged");
+    expect(
+      diff.annotationDiffs.some((entry) => entry.status !== "unchanged"),
+    ).toBe(false);
+  });
+
+  test("flags a cache-only change as changed and carries per-run cache state", () => {
+    const specA = graphSpec({
+      train: task("d1", {
+        executionOptions: { cachingStrategy: { maxCacheStaleness: "P0D" } },
+      }),
+    });
+    const specB = graphSpec({ train: task("d1") });
+
+    const [diff] = buildPipelineComparison(
+      specA,
+      specB,
+      noStatus,
+      noStatus,
+    ).taskDiffs;
+
+    expect(diff.status).toBe("changed");
+    expect(diff.cacheChanged).toBe(true);
+    expect(diff.cacheDisabledA).toBe(true);
+    expect(diff.cacheDisabledB).toBe(false);
+  });
+
   test("treats structurally equal object arguments as unchanged", () => {
     const arg = { taskOutput: { taskId: "prep", outputName: "data" } };
     const specA = graphSpec({ train: task("d1", { arguments: { in: arg } }) });

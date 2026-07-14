@@ -12,6 +12,7 @@ import {
 } from "@/utils/executionStatus";
 import { tracking } from "@/utils/tracking";
 
+import { ArtifactDiffSection } from "./ArtifactDiffSection";
 import { DiffStatusBadge } from "./DiffStatusBadge";
 import { FieldDiffRow } from "./FieldDiffRow";
 import { RunTags } from "./RunTag";
@@ -76,8 +77,11 @@ export function TaskDiffDetail({
     diff.status === "changed" && !diff.sameComponentVersion;
   const hasFieldChanges =
     componentChanged ||
+    diff.cacheChanged ||
     changedArguments.length > 0 ||
     changedAnnotations.length > 0;
+
+  const cacheState = (disabled: boolean) => (disabled ? "disabled" : "enabled");
 
   return (
     <BlockStack gap="4">
@@ -115,20 +119,20 @@ export function TaskDiffDetail({
         )}
       </BlockStack>
 
+      {diff.cacheChanged && (
+        <BlockStack gap="1">
+          <Text as="span" size="xs" weight="semibold" tone="subdued">
+            Cache
+          </Text>
+          <Text as="span" size="xs">
+            {cacheState(diff.cacheDisabledA)} →{" "}
+            {cacheState(diff.cacheDisabledB)}
+          </Text>
+        </BlockStack>
+      )}
+
       {!wholeTaskChange && (
         <>
-          {componentChanged && (
-            <BlockStack gap="1">
-              <Text as="span" size="xs" weight="semibold" tone="subdued">
-                Component
-              </Text>
-              <Text as="span" size="xs" className="font-mono">
-                {diff.digestA?.slice(0, 8) ?? "—"} →{" "}
-                {diff.digestB?.slice(0, 8) ?? "—"}
-              </Text>
-            </BlockStack>
-          )}
-
           {changedArguments.length > 0 && (
             <BlockStack gap="1">
               <Text as="span" size="xs" weight="semibold" tone="subdued">
@@ -170,6 +174,13 @@ export function TaskDiffDetail({
           )}
         </>
       )}
+
+      <ArtifactDiffSection
+        executionIdA={diff.executionIdA}
+        executionIdB={diff.executionIdB}
+        labelA={labelA}
+        labelB={labelB}
+      />
 
       {canCompareLogs && (
         <TaskLogComparisonDialog

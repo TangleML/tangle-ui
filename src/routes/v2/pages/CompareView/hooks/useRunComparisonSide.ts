@@ -1,4 +1,5 @@
 import { usePipelineRunData } from "@/hooks/usePipelineRunData";
+import { useFetchPipelineRunMetadata } from "@/services/executionService";
 import type { ComponentSpec } from "@/utils/componentSpec";
 import { buildTaskExecutionStatusMap } from "@/utils/executionStatus";
 
@@ -7,6 +8,10 @@ export interface RunComparisonSide {
   spec: ComponentSpec | undefined;
   taskStatusMap: Map<string, string>;
   taskExecutionIdMap: Map<string, string>;
+  createdBy?: string;
+  createdAt?: string;
+  runAnnotations?: Record<string, unknown>;
+  runArguments?: Record<string, unknown>;
   isLoading: boolean;
   error: Error | null;
 }
@@ -19,6 +24,7 @@ export interface RunComparisonSide {
  */
 export function useRunComparisonSide(runId: string): RunComparisonSide {
   const { executionData, isLoading, error } = usePipelineRunData(runId);
+  const { data: runMetadata } = useFetchPipelineRunMetadata(runId || undefined);
 
   const details = executionData?.details;
   const state = executionData?.state;
@@ -37,6 +43,11 @@ export function useRunComparisonSide(runId: string): RunComparisonSide {
     spec,
     taskStatusMap,
     taskExecutionIdMap,
+    createdBy: runMetadata?.created_by ?? undefined,
+    createdAt: runMetadata?.created_at ?? undefined,
+    runAnnotations: runMetadata?.annotations ?? undefined,
+    runArguments: (details?.task_spec.arguments ?? undefined) as
+      Record<string, unknown> | undefined,
     isLoading,
     error: error ?? null,
   };
