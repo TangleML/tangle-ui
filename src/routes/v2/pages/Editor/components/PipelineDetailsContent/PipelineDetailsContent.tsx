@@ -171,6 +171,7 @@ export const PipelineDetailsContent = observer(
                   variant="success"
                   title="No validation issues"
                   className="text-xs"
+                  width="full"
                 >
                   Pipeline is ready for submission
                 </InfoBox>

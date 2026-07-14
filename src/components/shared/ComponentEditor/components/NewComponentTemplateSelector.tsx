@@ -17,8 +17,8 @@ export const NewComponentTemplateSelector = ({
   return (
     <BlockStack gap="2" className="py-4">
       <Heading level={2}>New Component</Heading>
-      <Paragraph tone="subdued">
-        Create a new component using the in-app editor
+      <Paragraph tone="subdued" size="sm">
+        Create a new component using the in-app editor.
       </Paragraph>
       <Heading level={3}>Select a Template</Heading>
       <div className="grid grid-cols-3 border rounded-md p-2 w-full">
