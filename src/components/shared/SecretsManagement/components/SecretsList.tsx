@@ -2,6 +2,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -32,17 +33,13 @@ function SecretsListInternal({
 
   if (secrets.length === 0) {
     return (
-      <BlockStack
-        align="center"
-        className="py-8"
+      <EmptyState
+        icon="Lock"
+        title="No secrets configured"
+        description="Add a secret to get started"
+        placement="center"
         data-testid="secrets-empty-state"
-      >
-        <Icon name="Lock" size="lg" className="text-subdued" />
-        <Text tone="subdued">No secrets configured</Text>
-        <Text size="xs" tone="subdued">
-          Add a secret to get started
-        </Text>
-      </BlockStack>
+      />
     );
   }
 

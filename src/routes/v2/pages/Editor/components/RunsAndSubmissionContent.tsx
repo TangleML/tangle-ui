@@ -4,9 +4,8 @@ import { useAwaitAuthorization } from "@/components/shared/Authentication/useAwa
 import { HuggingFaceAuthButton } from "@/components/shared/HuggingFaceAuth/HuggingFaceAuthButton";
 import GoogleCloudSubmissionDialog from "@/components/shared/Submitters/GoogleCloud/GoogleCloudSubmissionDialog";
 import TangleSubmitter from "@/components/shared/Submitters/Tangle/TangleSubmitter";
-import { Icon } from "@/components/ui/icon";
+import { EmptyState } from "@/components/ui/empty-state";
 import { BlockStack } from "@/components/ui/layout";
-import { Text } from "@/components/ui/typography";
 import { serializeComponentSpec } from "@/models/componentSpec";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { ENABLE_GOOGLE_CLOUD_SUBMITTER } from "@/utils/constants";
@@ -25,7 +24,9 @@ export const RunsAndSubmissionContent = observer(() => {
     : undefined;
 
   if (!serializedRootPipelineSpec) {
-    return <EmptyState />;
+    return (
+      <EmptyState icon="FileQuestionMark" description="No pipeline loaded" />
+    );
   }
 
   return (
@@ -64,14 +65,3 @@ export const RunsAndSubmissionContent = observer(() => {
     </BlockStack>
   );
 });
-
-function EmptyState() {
-  return (
-    <BlockStack fill className="p-4" inlineAlign="center" align="center">
-      <Icon name="FileQuestionMark" size="lg" className="text-gray-300" />
-      <Text size="sm" tone="subdued" className="text-center mt-2">
-        No pipeline loaded
-      </Text>
-    </BlockStack>
-  );
-}
