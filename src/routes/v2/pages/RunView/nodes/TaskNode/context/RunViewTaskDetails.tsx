@@ -93,7 +93,7 @@ export const RunViewTaskDetails = observer(function RunViewTaskDetails({
             })
           }
         >
-          <TabsList className="mb-2">
+          <TabsList className="mb-2 w-full">
             <TabsTrigger value="artifacts" className="flex-1">
               <AmphoraIcon className="w-4 h-4" />
               Artifacts
