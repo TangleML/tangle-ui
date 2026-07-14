@@ -22,6 +22,7 @@ export function useRunViewWindows() {
         title: "Run Tools",
         defaultVisible: true,
         disabledActions: ["close", "maximize"],
+        variant: "panel",
         size: { width: 280, height: 240 },
         position: { x: 0, y: 60 },
         minSize: { width: 240, height: 180 },

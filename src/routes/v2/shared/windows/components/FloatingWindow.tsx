@@ -3,6 +3,7 @@ import { observer } from "mobx-react-lite";
 import { type CSSProperties, type MouseEventHandler, useState } from "react";
 import { createPortal } from "react-dom";
 
+import { cn } from "@/lib/utils";
 import { useWindowContext } from "@/routes/v2/shared/windows/ContentWindowStateContext";
 import { useWindowDrag } from "@/routes/v2/shared/windows/hooks/useWindowDrag";
 import { SnapPreview } from "@/routes/v2/shared/windows/SnapPreview";
@@ -20,11 +21,20 @@ const containerVariants = cva(
       interacting: { true: "select-none", false: "" },
       dragging: { true: "cursor-grabbing", false: "" },
       maximized: { true: "rounded-none", false: "rounded" },
+      panel: {
+        // Chrome-less by default; border/background/shadow fade in on hover to
+        // match a regular floating window. Uses a dedicated `group/panel` (not
+        // `group/window`) so WindowHeader's window-hover purple tint never fires.
+        // Only color/shadow transition (never position) so dragging stays smooth.
+        true: "group/panel overflow-visible border-transparent bg-transparent shadow-none transition-[background-color,border-color,box-shadow] duration-200 group-hover/panel:border-gray-400 group-hover/panel:bg-gray-100 group-hover/panel:shadow-xl",
+        false: "overflow-hidden border-gray-400 bg-gray-100 shadow-xl",
+      },
     },
     defaultVariants: {
       interacting: false,
       dragging: false,
       maximized: false,
+      panel: false,
     },
   },
 );
@@ -32,13 +42,32 @@ const containerVariants = cva(
 const headerVariants = cva("py-1 bg-gray-800 border-gray-700", {
   variants: {
     maximized: { true: "cursor-default", false: "" },
+    panel: {
+      // Chrome hidden by default but header always reserves its space (like a
+      // regular window) so hovering never shifts layout. Only opacity fades;
+      // pointer events stay on so the invisible header is still a drag handle.
+      true: "opacity-0 transition-opacity duration-200 group-hover/panel:opacity-100",
+      false: "",
+    },
   },
-  defaultVariants: { maximized: false },
+  defaultVariants: { maximized: false, panel: false },
 });
 
-function getWindowStyle(model: WindowModel): CSSProperties {
+function getWindowStyle(model: WindowModel, isPanel: boolean): CSSProperties {
   if (model.isMaximized) {
     return { left: 0, top: 0, width: "100vw", height: "100vh", zIndex: 45 };
+  }
+
+  if (isPanel) {
+    // Auto-fit to content so buttons never wrap; minWidth keeps it usable.
+    return {
+      left: model.position.x,
+      top: model.position.y,
+      width: "max-content",
+      height: "auto",
+      minWidth: model.minSize.width,
+      zIndex: 20 + model.zIndex,
+    };
   }
 
   return {
@@ -52,8 +81,12 @@ function getWindowStyle(model: WindowModel): CSSProperties {
   };
 }
 
-function getContentHeight(model: WindowModel): string | number {
+function getContentHeight(
+  model: WindowModel,
+  isPanel: boolean,
+): string | number {
   if (model.isMaximized) return `calc(100vh - ${HEADER_HEIGHT}px)`;
+  if (isPanel) return "auto";
   return model.size.height - HEADER_HEIGHT;
 }
 
@@ -113,6 +146,8 @@ function SnapPreviewPortal({
 
 export const FloatingWindow = observer(function FloatingWindow() {
   const { model, content } = useWindowContext();
+
+  const isPanel = model.variant === "panel" && !model.isMaximized;
 
   const {
     isDragging,
@@ -192,8 +227,9 @@ export const FloatingWindow = observer(function FloatingWindow() {
           interacting: isDragging || isResizing,
           dragging: isDragging,
           maximized: model.isMaximized,
+          panel: isPanel,
         })}
-        style={getWindowStyle(model)}
+        style={getWindowStyle(model, isPanel)}
         onMouseDown={handleContainerMouseDown}
         onClick={handleContainerClick}
       >
@@ -202,13 +238,19 @@ export const FloatingWindow = observer(function FloatingWindow() {
           isDragging={isDragging}
           onMouseDown={model.isMaximized ? undefined : handleHeaderMouseDown}
           actions={<WindowActions />}
-          className={headerVariants({ maximized: model.isMaximized })}
+          className={headerVariants({
+            maximized: model.isMaximized,
+            panel: isPanel,
+          })}
           tone="dark"
         />
 
         <div
-          className="flex-1 min-h-0 overflow-auto bg-background"
-          style={{ height: getContentHeight(model) }}
+          className={cn(
+            "flex-1 min-h-0 overflow-auto bg-background",
+            isPanel && "bg-transparent overflow-visible",
+          )}
+          style={{ height: getContentHeight(model, isPanel) }}
         >
           {content}
         </div>
