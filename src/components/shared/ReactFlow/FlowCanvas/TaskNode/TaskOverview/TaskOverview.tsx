@@ -9,6 +9,7 @@ import {
 import type { ContainerExecutionStatus } from "@/api/types.gen";
 import { ComponentDetailsDialog } from "@/components/shared/Dialogs";
 import { ComponentFavoriteToggle } from "@/components/shared/FavoriteComponentToggle";
+import { RemoteTroubleshootButton } from "@/components/shared/RemoteTroubleshootAction/RemoteTroubleshootButton";
 import { StatusIcon } from "@/components/shared/Status";
 import { TaskDetails } from "@/components/shared/TaskDetails";
 import TaskActions from "@/components/shared/TaskDetails/Actions";
@@ -40,6 +41,7 @@ const TaskOverview = ({ taskNode }: TaskOverviewProps) => {
 
   const executionData = useExecutionDataOptional();
   const details = executionData?.details;
+  const runId = executionData?.runId;
 
   const { readOnly, status } = state;
   const disabled = !!status;
@@ -87,6 +89,15 @@ const TaskOverview = ({ taskNode }: TaskOverviewProps) => {
           componentRef={componentRef}
           taskNode={taskNode}
           readOnly={readOnly}
+        />
+      )}
+
+      {runId && (
+        <RemoteTroubleshootButton
+          runId={runId}
+          executionId={executionId}
+          taskName={taskId}
+          status={status}
         />
       )}
 
