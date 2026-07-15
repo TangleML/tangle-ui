@@ -1,4 +1,4 @@
-import { type ComponentProps, useState } from "react";
+import { type ComponentProps, type ReactNode, useState } from "react";
 
 import RunOverview from "@/components/shared/PipelineRunDisplay/RunOverview";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
@@ -21,6 +21,7 @@ interface PipelineRunsListProps {
   defaultShowingRuns?: number;
   overviewConfig?: ComponentProps<typeof RunOverview>["config"];
   onRunClick?: (run: PipelineRun) => void;
+  emptyState?: ReactNode;
 }
 
 export const PipelineRunsList = withSuspenseWrapper(
@@ -32,6 +33,7 @@ export const PipelineRunsList = withSuspenseWrapper(
     defaultShowingRuns = DEFAULT_SHOWING_RUNS,
     overviewConfig,
     onRunClick,
+    emptyState,
   }: PipelineRunsListProps) => {
     const { data: pipelineRuns } = usePipelineRuns(pipelineName);
 
@@ -41,6 +43,17 @@ export const PipelineRunsList = withSuspenseWrapper(
 
     if (!pipelineRuns) {
       return <RecentRunsTitle pipelineName={pipelineName} runsCount={0} />;
+    }
+
+    if (pipelineRuns.length === 0 && emptyState) {
+      return (
+        <>
+          {showTitle && (
+            <RecentRunsTitle pipelineName={pipelineName} runsCount={0} />
+          )}
+          {emptyState}
+        </>
+      );
     }
 
     return (
