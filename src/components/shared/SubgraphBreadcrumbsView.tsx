@@ -35,7 +35,7 @@ export const SubgraphBreadcrumbsView = ({
   return (
     <InlineStack
       align="space-between"
-      className="px-4 py-2 bg-gray-50 border-b w-full z-1"
+      className="px-4 py-2 bg-gray-50 dark:bg-card border-b w-full z-1"
       data-tour="subgraph-breadcrumbs"
     >
       <Breadcrumb>
@@ -87,7 +87,7 @@ export const SubgraphBreadcrumbsView = ({
         </BreadcrumbList>
       </Breadcrumb>
 
-      <div className="text-xs text-gray-500">
+      <div className="text-xs text-gray-500 dark:text-muted-foreground">
         {path.length - 1} level{path.length - 1 !== 1 ? "s" : ""} deep
       </div>
     </InlineStack>

@@ -109,7 +109,7 @@ const RunRow = ({ run, onFilterByUser }: RunRowProps) => {
   return (
     <TableRow
       onClick={handleRowClick}
-      className="cursor-pointer text-gray-500 text-xs h-10"
+      className="cursor-pointer text-muted-foreground text-xs h-10"
     >
       <TableCell>
         <InlineStack gap="2" blockAlign="center" wrap="nowrap">

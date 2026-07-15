@@ -58,11 +58,13 @@ export function VersionToggle({
       <TooltipButton
         ref={toggleRef}
         tooltip={tooltip}
-        className={cn(showWelcome && "relative z-[1001]")}
+        className={cn(showWelcome && "relative z-1001")}
         onClick={() => {
           if (showWelcome) dismissWelcome();
           navigate({ to: targetPath });
         }}
+        variant="headerOutline"
+        size="icon"
         aria-label={tooltip}
         {...(trackingId
           ? tracking(trackingId, { target_version: targetVersion })

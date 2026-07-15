@@ -305,7 +305,7 @@ const PipelineRunsButton = withSuspenseWrapper(
       <Popover>
         <PopoverTrigger
           data-popover-trigger
-          className="cursor-pointer text-gray-500 border border-gray-200 rounded-md p-1 hover:bg-gray-200"
+          className="cursor-pointer text-muted-foreground border border-border rounded-md p-1 hover:bg-accent"
         >
           <Icon name="List" />
         </PopoverTrigger>

@@ -30,7 +30,7 @@ export function CollapsibleContextPanel() {
           variant="ghost"
           size="icon"
           className={cn(
-            "absolute z-0 transition-all duration-300 bg-white rounded-r-none shadow-md -translate-x-9",
+            "absolute z-0 transition-all duration-300 bg-card rounded-r-none shadow-md -translate-x-9",
             isViewingSubgraph ? "top-23.75" : "top-14",
           )}
           aria-label={open ? "Collapse context panel" : "Expand context panel"}

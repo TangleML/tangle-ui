@@ -122,7 +122,7 @@ export const FlowCanvas = observer(function FlowCanvas({
         )}
       >
         <FloatingSelectionToolbar spec={spec} />
-        <Background gap={10} className="bg-slate-50!" />
+        <Background gap={10} className="bg-canvas!" />
         <Controls
           position="bottom-right"
           onZoomIn={() => track("v2.pipeline_canvas.controls.zoom_in.click")}

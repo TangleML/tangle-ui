@@ -170,7 +170,7 @@ function IORow({ spec, value, type, actions }: IORowProps) {
       gap="1"
       align="space-between"
       blockAlign="center"
-      className="even:bg-white odd:bg-secondary px-2 py-0 rounded-xs w-full"
+      className="even:bg-card odd:bg-muted px-2 py-0 rounded-xs w-full"
       wrap="nowrap"
     >
       <div className="flex-1 min-w-0">

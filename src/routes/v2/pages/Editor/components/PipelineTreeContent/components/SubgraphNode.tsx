@@ -101,7 +101,7 @@ export const SubgraphNode = observer(function SubgraphNode({
             trackingId="v2.pipeline_editor.pipeline_tree.subgraph_nav"
           >
             <InlineStack
-              className="shrink-0 rounded-sm bg-white"
+              className="shrink-0 rounded-sm bg-white dark:bg-card"
               gap="0"
               align="center"
               blockAlign="center"
@@ -174,7 +174,7 @@ export const SubgraphNode = observer(function SubgraphNode({
           {hasChildren && (
             <BlockStack
               align="stretch"
-              className="ml-4 min-w-0 w-full border-l border-slate-200 pl-2"
+              className="ml-4 min-w-0 w-full border-l border-slate-200 dark:border-border pl-2"
             >
               <div className="-ml-3.5 min-w-0 w-full">
                 {tasks.map((childTask) => {

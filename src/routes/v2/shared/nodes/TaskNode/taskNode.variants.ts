@@ -19,13 +19,15 @@ export function createTaskNodeCardVariants(baseClasses: string) {
         selected: false,
         hovered: false,
         subgraph: false,
-        className: "border-gray-200 hover:border-gray-300",
+        className:
+          "border-gray-200 hover:border-gray-300 dark:border-white/10 dark:hover:border-white/25",
       },
       {
         selected: false,
         hovered: false,
         subgraph: true,
-        className: "border-gray-200 hover:border-gray-300",
+        className:
+          "border-gray-200 hover:border-gray-300 dark:border-white/10 dark:hover:border-white/25",
       },
       {
         selected: false,
@@ -34,7 +36,7 @@ export function createTaskNodeCardVariants(baseClasses: string) {
       },
       {
         selected: true,
-        className: "border-blue-500 ring-2 ring-blue-200",
+        className: "border-edge-selected ring-2 ring-edge-selected/60",
       },
     ],
     defaultVariants: {

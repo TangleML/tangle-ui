@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Text } from "@/components/ui/typography";
+import { useMonacoTheme } from "@/hooks/useMonacoTheme";
 import type { ComponentSpec, InputSpec, Task } from "@/models/componentSpec";
 import type { TypeSpecType } from "@/models/componentSpec/entities/types";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
@@ -76,6 +77,7 @@ export function ArgumentCodeEditor({
   }, [inputSpec.type]);
 
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const monacoTheme = useMonacoTheme();
 
   useEffect(() => {
     setEditorValue(serializeValue(currentValue));
@@ -108,9 +110,9 @@ export function ArgumentCodeEditor({
         gap="2"
         blockAlign="center"
         align="start"
-        className="shrink-0 px-2 py-1 border-b border-gray-200 bg-gray-100 w-full"
+        className="shrink-0 px-2 py-1 border-b border-border bg-muted w-full"
       >
-        <Text size="xs" weight="semibold" className="text-gray-700">
+        <Text size="xs" weight="semibold" className="text-foreground">
           {inputSpec.name}
         </Text>
         <Select
@@ -138,7 +140,7 @@ export function ArgumentCodeEditor({
       <BlockStack className="relative min-h-0 flex-1" align="stretch">
         <MonacoEditor
           language={language}
-          theme="vs-dark"
+          theme={monacoTheme}
           value={editorValue}
           onChange={handleChange}
           onMount={handleMount}

@@ -68,7 +68,7 @@ interface PipelineEditorProps {
 
 const PipelineEditorSkeleton = () => {
   return (
-    <BlockStack fill>
+    <BlockStack fill className="items-center justify-center bg-background">
       <InlineStack gap="2">
         <Spinner />
         <Text>Loading pipeline... </Text>

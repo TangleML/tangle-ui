@@ -20,24 +20,27 @@ const variantStyles: Record<
   { container: string; title: string }
 > = {
   info: {
-    container: "border-blue-200 bg-blue-50",
-    title: "text-blue-800",
+    container: "border-blue-200 bg-blue-50 dark:border-info/30 dark:bg-info/10",
+    title: "text-blue-800 dark:text-info",
   },
   error: {
-    container: "border-red-200 bg-red-50",
-    title: "text-red-800",
+    container:
+      "border-red-200 bg-red-50 dark:border-destructive/30 dark:bg-destructive/10",
+    title: "text-red-800 dark:text-destructive",
   },
   warning: {
-    container: "border-yellow-200 bg-yellow-50",
-    title: "text-yellow-800",
+    container:
+      "border-yellow-200 bg-yellow-50 dark:border-warning/30 dark:bg-warning/10",
+    title: "text-yellow-800 dark:text-warning",
   },
   success: {
-    container: "border-green-200 bg-green-50",
-    title: "text-green-800",
+    container:
+      "border-green-200 bg-green-50 dark:border-success/30 dark:bg-success/10",
+    title: "text-green-800 dark:text-success",
   },
   ghost: {
-    container: "border-gray-200 bg-none",
-    title: "text-gray-800",
+    container: "border-gray-200 bg-none dark:border-border",
+    title: "text-gray-800 dark:text-foreground",
   },
 };
 

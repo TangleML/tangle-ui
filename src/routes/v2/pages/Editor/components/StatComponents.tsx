@@ -11,10 +11,14 @@ interface StatItemProps {
 export function StatItem({ label, value }: StatItemProps) {
   return (
     <InlineStack blockAlign="center" className="justify-between py-1" gap="2">
-      <Text size="xs" className="text-gray-500">
+      <Text size="xs" className="text-gray-500 dark:text-muted-foreground">
         {label}
       </Text>
-      <Text size="xs" weight="semibold" className="font-mono text-gray-700">
+      <Text
+        size="xs"
+        weight="semibold"
+        className="font-mono text-gray-700 dark:text-foreground"
+      >
         {value}
       </Text>
     </InlineStack>
@@ -39,7 +43,7 @@ export function StatGroup({ title, children }: StatGroupProps) {
       >
         {title}
       </Text>
-      <BlockStack className="pl-2 border-l-2 border-gray-200">
+      <BlockStack className="pl-2 border-l-2 border-gray-200 dark:border-border">
         {children}
       </BlockStack>
     </BlockStack>

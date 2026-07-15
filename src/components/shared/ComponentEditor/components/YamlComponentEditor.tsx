@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { useMonacoTheme } from "@/hooks/useMonacoTheme";
 
 import { DEFAULT_MONACO_OPTIONS, handleEditorMount } from "../constants";
 import { useComponentSpecValidator } from "../useComponentSpecValidator";
@@ -22,6 +23,7 @@ export const YamlComponentEditor = withSuspenseWrapper(
     const [componentText, setComponentText] = useState(text);
     const validateComponentSpec = useComponentSpecValidator();
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
+    const monacoTheme = useMonacoTheme();
 
     const handleComponentTextChange = (value: string | undefined) => {
       const validationResult = validateComponentSpec(value ?? "");
@@ -46,7 +48,7 @@ export const YamlComponentEditor = withSuspenseWrapper(
             <div className="absolute inset-0">
               <MonacoEditor
                 defaultLanguage="yaml"
-                theme="vs-dark"
+                theme={monacoTheme}
                 value={componentText}
                 onChange={handleComponentTextChange}
                 options={DEFAULT_MONACO_OPTIONS}

@@ -2,13 +2,13 @@ import { cn } from "@/lib/utils";
 import type { TaskStatusCounts } from "@/types/pipelineRun";
 
 const STATUS_COLORS: Record<string, string> = {
-  succeeded: "text-green-500",
-  failed: "text-red-500",
-  running: "text-blue-500",
-  pending: "text-yellow-600",
-  waiting: "text-slate-600",
-  skipped: "text-gray-800",
-  cancelled: "text-gray-800",
+  succeeded: "text-status-succeeded",
+  failed: "text-status-failed",
+  running: "text-status-running",
+  pending: "text-status-pending",
+  waiting: "text-status-waiting",
+  skipped: "text-status-skipped",
+  cancelled: "text-status-cancelled",
 };
 
 const StatusText = ({
@@ -21,7 +21,7 @@ const StatusText = ({
   return (
     <div
       className={cn(
-        "text-xs text-gray-500 items-center",
+        "text-xs text-muted-foreground items-center",
         !shorthand && "flex gap-2",
       )}
     >

@@ -1,5 +1,7 @@
 import MonacoEditor from "@monaco-editor/react";
 
+import { useMonacoTheme } from "@/hooks/useMonacoTheme";
+
 interface CodeEditorProps {
   value: string;
   language: string;
@@ -8,10 +10,12 @@ interface CodeEditorProps {
 }
 
 function CodeEditor({ value, language, onChange, readOnly }: CodeEditorProps) {
+  const monacoTheme = useMonacoTheme();
+
   return (
     <MonacoEditor
       language={language}
-      theme="vs-dark"
+      theme={monacoTheme}
       value={value}
       onChange={(v) => onChange?.(v ?? "")}
       options={{

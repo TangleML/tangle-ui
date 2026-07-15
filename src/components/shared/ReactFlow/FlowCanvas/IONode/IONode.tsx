@@ -97,7 +97,7 @@ const IONode = ({ id, type, data, selected = false }: IONodeProps) => {
 
   const handleType = isInput ? "source" : "target";
   const handlePosition = isInput ? Position.Right : Position.Left;
-  const bgColor = isInput ? "bg-blue-100" : "bg-violet-100";
+  const bgColor = isInput ? "bg-io-input" : "bg-io-output";
   const selectedBorderColor = isInput ? "border-blue-500" : "border-violet-500";
   const defaultBorderColor = isInput ? "border-blue-300" : "border-violet-300";
   const edgeHighlightClasses =
@@ -209,10 +209,12 @@ const IONode = ({ id, type, data, selected = false }: IONodeProps) => {
       )}
     >
       <CardHeader className="p-2">
-        <CardTitle className="wrap-break-word text-sm">{data.label}</CardTitle>
+        <CardTitle className="wrap-break-word text-sm text-ink-fixed">
+          {data.label}
+        </CardTitle>
         {!!data.description && (
           <QuickTooltip content={data.description} className="w-full">
-            <Paragraph tone="subdued" className="italic truncate">
+            <Paragraph className="italic truncate text-ink-fixed/70">
               {data.description}
             </Paragraph>
           </QuickTooltip>
@@ -221,32 +223,38 @@ const IONode = ({ id, type, data, selected = false }: IONodeProps) => {
       <CardContent className="p-2 max-w-60">
         <BlockStack gap="2">
           {/* type */}
-          <Paragraph size="xs" font="mono" className="truncate text-slate-700">
+          <Paragraph
+            size="xs"
+            font="mono"
+            className="truncate text-ink-fixed/70"
+          >
             <span className="font-bold">Type:</span>{" "}
             {outputConnectedType ?? data.type ?? "Any"}
           </Paragraph>
 
           {!!outputConnectedTaskName && (
-            <Paragraph size="xs" weight="bold" className="text-slate-700">
+            <Paragraph size="xs" weight="bold" className="text-ink-fixed/70">
               {outputConnectedTaskName}
             </Paragraph>
           )}
 
           {/* value */}
-          <InlineStack gap="1" className="p-2 bg-white rounded-lg w-full">
+          <InlineStack gap="1" className="p-2 bg-io-value rounded-lg w-full">
             <Paragraph
               size="xs"
               font="mono"
               weight="bold"
-              className="text-slate-700"
+              className="text-ink-fixed/70"
             >
               Value:
             </Paragraph>
             <Paragraph
               size="xs"
               font="mono"
-              tone={!value ? "critical" : "subdued"}
-              className="truncate"
+              className={cn(
+                "truncate",
+                !value ? "text-destructive" : "text-ink-fixed/70",
+              )}
             >
               {value ?? "No value"}
             </Paragraph>

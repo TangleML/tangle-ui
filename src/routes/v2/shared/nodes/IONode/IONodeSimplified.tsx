@@ -22,7 +22,7 @@ export function IONodeSimplified({
   isHovered,
   onNodeClick,
 }: IONodeViewProps) {
-  const bgColor = isInput ? "bg-blue-100" : "bg-violet-100";
+  const bgColor = isInput ? "bg-io-input" : "bg-io-output";
   const borderColor = selected
     ? isInput
       ? "border-blue-500"
@@ -66,7 +66,7 @@ export function IONodeSimplified({
       <Tooltip>
         <TooltipTrigger asChild>
           <span
-            className="font-medium min-w-0 line-clamp-2 wrap-break-word text-slate-900 text-left"
+            className="font-medium min-w-0 line-clamp-2 wrap-break-word text-ink-fixed text-left"
             style={{
               fontSize: `calc(${s} * ${PERCEIVED_FONT_SIZE})`,
               lineHeight: 1.25,

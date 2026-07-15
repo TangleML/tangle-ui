@@ -33,7 +33,7 @@ export const FavoriteToggle = ({
       data-testid="favorite-toggle"
       className={cn(
         "w-fit h-fit p-1 hover:text-warning",
-        active ? "text-warning" : "text-gray-500/50",
+        active ? "text-warning" : "text-gray-500/50 dark:text-muted-foreground",
       )}
       variant="ghost"
       size="icon"

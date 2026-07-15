@@ -91,7 +91,7 @@ export const DockedWindow = observer(function DockedWindow() {
     return createPortal(
       <div
         ref={panelRef}
-        className="fixed inset-0 z-45 bg-gray-100 text-gray-900 flex flex-col rounded-none overflow-hidden"
+        className="fixed inset-0 z-45 bg-muted text-foreground flex flex-col rounded-none overflow-hidden"
         onMouseDown={handleContainerMouseDown}
         onClick={handleContainerClick}
       >
@@ -101,13 +101,15 @@ export const DockedWindow = observer(function DockedWindow() {
             <Icon
               name="PanelLeft"
               size="xs"
-              className="text-gray-400 shrink-0"
+              className="text-muted-foreground shrink-0"
             />
           }
           actions={actions}
-          className="bg-white"
+          className="bg-card"
         />
-        <div className="flex-1 min-h-0 overflow-auto bg-gray-50">{content}</div>
+        <div className="flex-1 min-h-0 overflow-auto bg-background">
+          {content}
+        </div>
       </div>,
       document.body,
     );
@@ -140,8 +142,8 @@ export const DockedWindow = observer(function DockedWindow() {
             (isDragging || isResizing) && "select-none",
             isDragging && "cursor-grabbing opacity-50",
             showCollapsedStyle
-              ? "bg-purple-50 border-b border-purple-200"
-              : "bg-white border-b border-transparent",
+              ? "bg-card bg-linear-to-b from-edge-selected/10 to-edge-selected/10 border-b border-edge-selected/30"
+              : "bg-card border-b border-transparent",
           )}
           style={{ top: stickyTop, zIndex: 20 - dockIndex }}
           onMouseDown={handleContainerMouseDown}
@@ -162,7 +164,7 @@ export const DockedWindow = observer(function DockedWindow() {
               <Icon
                 name="GripVertical"
                 size="xs"
-                className="text-gray-400 shrink-0"
+                className="text-muted-foreground shrink-0"
               />
             }
             actions={actions}
@@ -177,7 +179,7 @@ export const DockedWindow = observer(function DockedWindow() {
       >
         <div
           className={cn(
-            "w-full bg-white text-gray-900",
+            "w-full bg-card text-foreground",
             "transition-all duration-300",
             (isDragging || isResizing) && "select-none",
             isDragging && "opacity-50",
@@ -186,9 +188,9 @@ export const DockedWindow = observer(function DockedWindow() {
           onMouseDown={handleContainerMouseDown}
           onClick={handleContainerClick}
         >
-          <div className="bg-white">{content}</div>
+          <div className="bg-card">{content}</div>
           <div
-            className="h-1 cursor-ns-resize hover:bg-gray-200 transition-colors shrink-0"
+            className="h-1 cursor-ns-resize hover:bg-accent transition-colors shrink-0"
             onMouseDown={handleResizeMouseDown}
           />
         </div>

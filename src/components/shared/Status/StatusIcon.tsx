@@ -48,31 +48,36 @@ const StatusIcon = ({
 const Icon = ({ status }: { status?: string }) => {
   switch (status) {
     case "SUCCEEDED":
-      return <CircleCheck className="w-4 h-4 text-green-500" />;
+      return <CircleCheck className="w-4 h-4 text-status-succeeded" />;
     case "FAILED":
-    case "SYSTEM_ERROR":
-    case "INVALID":
     case "UPSTREAM_FAILED":
     case "UPSTREAM_FAILED_OR_SKIPPED":
-      return <CircleAlert className="w-4 h-4 text-red-500" />;
+      return <CircleAlert className="w-4 h-4 text-status-failed" />;
+    case "SYSTEM_ERROR":
+      return <CircleAlert className="w-4 h-4 text-status-system-error" />;
+    case "INVALID":
+      return <CircleAlert className="w-4 h-4 text-status-invalid" />;
     case "RUNNING":
     case "STARTING":
-      return <RefreshCw className="w-4 h-4 text-blue-500 animate-spin" />;
+      return <RefreshCw className="w-4 h-4 text-status-running animate-spin" />;
     case "PENDING":
+      return <RefreshCw className="w-4 h-4 text-status-pending animate-spin" />;
     case "QUEUED":
-      return <RefreshCw className="w-4 h-4 text-yellow-500 animate-spin" />;
+      return <RefreshCw className="w-4 h-4 text-status-queued animate-spin" />;
     case "CANCELLING":
-      return <CircleX className="w-4 h-4 text-orange-500 animate-pulse" />;
+      return (
+        <CircleX className="w-4 h-4 text-status-cancelling animate-pulse" />
+      );
     case "UNINITIALIZED":
-      return <CircleEllipsis className="w-4 h-4 text-yellow-500" />;
+      return <CircleEllipsis className="w-4 h-4 text-status-uninitialized" />;
     case "WAITING_FOR_UPSTREAM":
-      return <CircleEllipsis className="w-4 h-4 text-gray-500" />;
+      return <CircleEllipsis className="w-4 h-4 text-status-waiting" />;
     case "SKIPPED":
-      return <CircleMinus className="w-4 h-4 text-gray-500" />;
+      return <CircleMinus className="w-4 h-4 text-status-skipped" />;
     case "CANCELLED":
-      return <CircleX className="w-4 h-4 text-gray-800" />;
+      return <CircleX className="w-4 h-4 text-status-cancelled" />;
     default:
-      return <CircleHelp className="w-4 h-4 text-orange-500" />;
+      return <CircleHelp className="w-4 h-4 text-muted-foreground" />;
   }
 };
 

@@ -161,6 +161,10 @@ const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
   const isTransparent = color === "transparent";
   const isBorderTransparent = borderColor === "transparent";
 
+  // Filled notes keep dark ink so text never inverts against the colour fill;
+  // transparent notes sit on the canvas and follow the theme foreground.
+  const inkClass = isTransparent ? "text-foreground" : "text-ink-fixed";
+
   return (
     <>
       {!readOnly && (
@@ -216,12 +220,15 @@ const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
                   onSave={handleSaveTitle}
                   onCancel={() => setIsInlineEditingTitle(false)}
                   onTab={switchEditor}
-                  className="font-bold"
+                  className={cn("font-bold", inkClass)}
                 />
               ) : (
                 <p
                   style={{ fontSize: titleFontSize }}
-                  className="font-bold whitespace-pre-wrap w-full"
+                  className={cn(
+                    "font-bold whitespace-pre-wrap w-full",
+                    inkClass,
+                  )}
                   onDoubleClick={handleDoubleClickTitle}
                 >
                   {title}
@@ -236,11 +243,12 @@ const FlexNode = ({ data, id, selected }: FlexNodeProps) => {
                 onSave={handleSaveContent}
                 onCancel={() => setIsInlineEditingContent(false)}
                 onTab={switchEditor}
+                className={inkClass}
               />
             ) : (
               <p
                 style={{ fontSize: contentFontSize }}
-                className="whitespace-pre-wrap"
+                className={cn("whitespace-pre-wrap", inkClass)}
               >
                 {content}
               </p>

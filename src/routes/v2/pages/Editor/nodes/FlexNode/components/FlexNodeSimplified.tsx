@@ -47,7 +47,10 @@ export function FlexNodeSimplified({
       >
         {title && (
           <p
-            className="font-semibold whitespace-pre-wrap line-clamp-3 wrap-break-word w-full leading-tight"
+            className={cn(
+              "font-semibold whitespace-pre-wrap line-clamp-3 wrap-break-word w-full leading-tight",
+              isTransparent ? "text-foreground" : "text-ink-fixed",
+            )}
             style={{
               fontSize: `calc(${s} * ${PERCEIVED_FONT_SIZE})`,
               lineHeight: 1.25,

@@ -24,7 +24,7 @@ import { useTemplateCodeByName } from "./useTemplateCodeByName";
 const ComponentEditorDialogSkeleton = () => {
   return (
     <FullscreenElement fullscreen={true}>
-      <BlockStack className="h-full w-full p-2 bg-white" align="start" gap="2">
+      <BlockStack className="h-full w-full p-2 bg-card" align="start" gap="2">
         <InlineStack
           className="w-full h-13"
           gap="4"
@@ -216,9 +216,9 @@ export const ComponentEditorDialog = withSuspenseWrapper(
 
     return (
       <FullscreenElement fullscreen={true}>
-        <BlockStack className="h-full w-full p-2 bg-white">
+        <BlockStack className="h-full w-full p-2 bg-card">
           <InlineStack
-            className="w-full py-3 border-b-3 border-gray-100"
+            className="w-full py-3 border-b-3 border-border"
             align="space-between"
           >
             <InlineStack gap="2">

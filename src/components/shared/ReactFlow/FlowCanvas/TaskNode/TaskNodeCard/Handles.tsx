@@ -186,10 +186,15 @@ export const InputHandle = ({
           >
             <div
               className={cn(
-                "text-xs text-gray-800! rounded-md px-2 py-1 truncate",
-                onLabelClick && !selected && !highlight && "hover:bg-gray-300",
-                selected || active ? "bg-blue-200" : "bg-gray-200",
-                highlight && "bg-green-200",
+                "text-xs text-gray-800! dark:text-white! rounded-md px-2 py-1 truncate",
+                onLabelClick &&
+                  !selected &&
+                  !highlight &&
+                  "hover:bg-gray-300 dark:hover:bg-accent",
+                selected || active
+                  ? "bg-blue-200 dark:bg-blue-900"
+                  : "bg-gray-200 dark:bg-muted",
+                highlight && "bg-green-200 dark:bg-green-900",
                 !hasValue && hasDefault && "opacity-50 italic",
               )}
               onClick={handleLabelClick}
@@ -213,8 +218,8 @@ export const InputHandle = ({
                 <TooltipTrigger asChild>
                   <div
                     className={cn(
-                      "text-xs text-gray-800! truncate inline-block text-right pr-2",
-                      !hasValue && "text-gray-400! italic",
+                      "text-xs text-foreground truncate inline-block text-right pr-2",
+                      !hasValue && "text-muted-foreground italic",
                       dynamicDataInfo?.textColor,
                     )}
                   >
@@ -361,10 +366,15 @@ export const OutputHandle = ({
         >
           <div
             className={cn(
-              "text-xs text-gray-800! rounded-md px-2 py-1 truncate",
-              onLabelClick && !selected && !highlight && "hover:bg-gray-300",
-              selected || active ? "bg-blue-200" : "bg-gray-200",
-              highlight && "bg-green-200",
+              "text-xs text-gray-800! dark:text-white! rounded-md px-2 py-1 truncate",
+              onLabelClick &&
+                !selected &&
+                !highlight &&
+                "hover:bg-gray-300 dark:hover:bg-accent",
+              selected || active
+                ? "bg-blue-200 dark:bg-blue-900"
+                : "bg-gray-200 dark:bg-muted",
+              highlight && "bg-green-200 dark:bg-green-900",
             )}
             onClick={handleLabelClick}
           >
@@ -372,7 +382,7 @@ export const OutputHandle = ({
           </div>
         </div>
         {hasValue && (
-          <div className="max-w-1/2 min-w-0 text-xs text-gray-800! truncate inline-block text-left pr-2">
+          <div className="max-w-1/2 min-w-0 text-xs text-foreground truncate inline-block text-left pr-2">
             {value}
           </div>
         )}

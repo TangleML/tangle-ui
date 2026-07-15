@@ -128,7 +128,7 @@ export function TaskNodeSimplified({
             <span
               className={cn(
                 "font-medium min-w-0 line-clamp-2 wrap-break-word",
-                !taskColor && "text-slate-900",
+                !taskColor && "text-card-foreground",
               )}
               style={{
                 fontSize: `calc(${s} * ${PERCEIVED_FONT_SIZE})`,

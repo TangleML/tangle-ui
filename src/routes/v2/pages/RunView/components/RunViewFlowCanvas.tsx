@@ -98,7 +98,7 @@ export const RunViewFlowCanvas = observer(function RunViewFlowCanvas({
         deleteKeyCode={null}
       >
         <RunViewSelectionToolbar spec={spec} />
-        <Background gap={GRID_SIZE} className="!bg-slate-50" />
+        <Background gap={GRID_SIZE} className="bg-canvas!" />
         <Controls
           position="bottom-right"
           onZoomIn={() => track("v2.run_view.canvas.controls.zoom_in.click")}

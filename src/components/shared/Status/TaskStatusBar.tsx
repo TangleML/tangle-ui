@@ -33,7 +33,7 @@ const STATUS_DISPLAY_ORDER = [
 const HATCHED_SEGMENT_CLASS =
   "bg-[repeating-linear-gradient(135deg,transparent,transparent_6px,rgba(0,0,0,0.5)_6px,rgba(0,0,0,0.5)_12px)] bg-blend-multiply bg-repeat bg-[length:512px_24px] bg-[position:left_top]";
 
-const BAR_CLASS = "h-2 w-full rounded overflow-hidden bg-gray-200";
+const BAR_CLASS = "h-2 w-full rounded overflow-hidden bg-muted";
 
 const StatusSegment = ({
   status,
@@ -45,7 +45,7 @@ const StatusSegment = ({
   total: number;
 }) => {
   const label = getExecutionStatusLabel(status);
-  const colorClass = EXECUTION_STATUS_BG_COLORS[status] ?? "bg-slate-300";
+  const colorClass = EXECUTION_STATUS_BG_COLORS[status] ?? "bg-muted";
   const width = `${(count / total) * 100}%`;
 
   return (

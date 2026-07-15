@@ -26,6 +26,8 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
         "link-info": "text-info underline decoration-dotted",
         nav: "bg-stone-700 text-white text-xs font-semibold hover:bg-stone-600 hover:text-white",
+        headerOutline:
+          "border border-white/25 bg-transparent text-white hover:bg-white/10 hover:text-white",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",
