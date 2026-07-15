@@ -102,4 +102,29 @@ describe("Run View window visibility persistence", () => {
       expect(windows.getWindowById(id)?.state).toBe("hidden");
     }
   });
+
+  it("keeps hidden Run View windows hidden when the hooks remount", () => {
+    persistenceMocks.getPersistedWindowState.mockReturnValue({
+      position: { x: 0, y: 0 },
+      size: { width: 320, height: 420 },
+      dockState: "left",
+      isHidden: true,
+      isMinimized: false,
+    });
+    persistenceMocks.hasPersistedLayout.mockReturnValue(true);
+
+    const first = renderRunWindowHooks();
+    for (const id of RUN_WINDOW_IDS) {
+      expect(windows.getWindowById(id)?.state).toBe("hidden");
+    }
+
+    // Remount against the same store (StrictMode double-invoke, navigation
+    // remount). Re-opening must not un-hide a window the user hid.
+    first.unmount();
+    renderRunWindowHooks();
+
+    for (const id of RUN_WINDOW_IDS) {
+      expect(windows.getWindowById(id)?.state).toBe("hidden");
+    }
+  });
 });

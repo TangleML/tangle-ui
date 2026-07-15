@@ -50,7 +50,10 @@ function resolveInitialState(
   id: string,
 ): { state: WindowState; needsPreviousState: boolean } {
   if (persisted) {
-    const shouldStartHidden = !!persisted.isHidden && !options.startVisible;
+    // A persisted entry reflects the user's last explicit choice, so honor it on
+    // reload. `startVisible` only governs the first-visit branch below (no saved
+    // layout yet); it must not override a window the user deliberately hid.
+    const shouldStartHidden = !!persisted.isHidden;
     const shouldStartMinimized =
       !shouldStartHidden && !!persisted.isMinimized && dockState !== "none";
 
