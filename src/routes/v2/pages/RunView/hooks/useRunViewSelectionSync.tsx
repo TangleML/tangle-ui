@@ -31,6 +31,7 @@ export function useRunViewSelectionSync() {
               startVisible: true,
               persisted: true,
               fillDockHeight: true,
+              defaultDockState: "right",
             });
             // Selecting a node is an explicit request to see properties, so force
             // the panel visible even if a persisted layout restored it as hidden.
