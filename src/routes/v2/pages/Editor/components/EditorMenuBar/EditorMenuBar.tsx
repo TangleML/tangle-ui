@@ -151,7 +151,7 @@ export const EditorMenuBar = observer(function EditorMenuBar() {
             variant="ghost"
             onClick={handleExitTour}
             aria-label="Exit tour"
-            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[100001] text-background/80 hover:text-background hover:bg-transparent"
+            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[100001] text-white/80 hover:text-white hover:bg-transparent"
             {...tracking("v2.pipeline_editor.tour.exit")}
           >
             <Icon name="X" size="sm" />

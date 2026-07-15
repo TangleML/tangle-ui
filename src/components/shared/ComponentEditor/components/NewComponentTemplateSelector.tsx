@@ -38,7 +38,7 @@ export const NewComponentTemplateSelector = ({
             >
               <InlineStack
                 align="center"
-                className="bg-gray-200 rounded-md p-4 mb-2 w-full h-24"
+                className="bg-gray-200 dark:bg-muted rounded-md p-4 mb-2 w-full h-24"
               >
                 {!!template.icon && template.icon}
               </InlineStack>

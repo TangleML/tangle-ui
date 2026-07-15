@@ -67,7 +67,11 @@ const PipelineEditor = () => {
                 <FlowSidebar />
                 <BlockStack fill className="flex-1 relative">
                   <FlowCanvas ref={flowCanvasRef} {...flowConfig}>
-                    <MiniMap position="bottom-left" pannable />
+                    <MiniMap
+                      position="bottom-left"
+                      className="dark:rounded-md dark:border dark:border-border"
+                      pannable
+                    />
                     <FlowControls
                       className="ml-56! mb-3!"
                       config={flowConfig}

@@ -12,13 +12,43 @@ interface TaskColorPalette {
 /**
  * Derives a cohesive color palette from a single base hex color.
  * Returns undefined for transparent/invalid input so callers fall back to defaults.
+ *
+ * In light mode the chosen colour is used as-is for a bright card with a lighter
+ * tinted section overlay. In dark mode that treatment is inverted: the hue is
+ * folded into a dark, muted card with a darker recessed section, so coloured
+ * nodes sit in the dark canvas instead of glowing as bright pastels.
  */
-export function deriveColorPalette(hex: string): TaskColorPalette | undefined {
+export function deriveColorPalette(
+  hex: string,
+  isDark = false,
+): TaskColorPalette | undefined {
   if (!hex || hex === "transparent") return undefined;
   const rgb = parseHexToRgb(hex);
   if (!rgb) return undefined;
 
   const [h, s, l] = rgbToHsl(rgb.r, rgb.g, rgb.b);
+
+  if (isDark) {
+    // Dark, muted card derived from the hue.
+    const bgL = Math.max(l * 0.32, 0.2);
+    const bgS = Math.min(s * 0.55, 0.6);
+    const background = hslToHex(h, bgS, bgL);
+
+    // Section overlay recessed slightly darker than the card.
+    const sectionL = Math.max(bgL - 0.06, 0.12);
+    const sectionS = Math.min(s * 0.45, 0.5);
+
+    // Border a touch lighter than the card so the outline stays visible.
+    const borderL = Math.min(bgL + 0.22, 0.5);
+    const borderS = Math.min(s * 0.55, 0.6);
+
+    return {
+      background,
+      border: hslToHex(h, borderS, borderL),
+      sectionBg: hslToHex(h, sectionS, sectionL),
+      text: getContrastTextColor(background),
+    };
+  }
 
   // Border: darken by 35% of current lightness, boost saturation slightly
   const borderL = Math.max(l * 0.35, 0.12);

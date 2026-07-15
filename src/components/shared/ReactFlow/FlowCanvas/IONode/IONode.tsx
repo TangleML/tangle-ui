@@ -98,8 +98,12 @@ const IONode = ({ id, type, data, selected = false }: IONodeProps) => {
   const handleType = isInput ? "source" : "target";
   const handlePosition = isInput ? Position.Right : Position.Left;
   const bgColor = isInput ? "bg-io-input" : "bg-io-output";
-  const selectedBorderColor = isInput ? "border-blue-500" : "border-violet-500";
-  const defaultBorderColor = isInput ? "border-blue-300" : "border-violet-300";
+  const selectedBorderColor = isInput
+    ? "border-blue-500 dark:ring-2 dark:ring-blue-400/60"
+    : "border-violet-500 dark:ring-2 dark:ring-violet-400/60";
+  const defaultBorderColor = isInput
+    ? "border-blue-300 dark:border-blue-500"
+    : "border-violet-300 dark:border-violet-500";
   const edgeHighlightClasses =
     "border-edge-selected! ring-2 ring-edge-selected/30";
 

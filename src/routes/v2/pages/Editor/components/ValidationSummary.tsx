@@ -154,8 +154,8 @@ export const ValidationSummary = observer(function ValidationSummary({
                   className={cn(
                     "shrink-0 uppercase tracking-wide",
                     issue.severity === "error"
-                      ? "text-red-600"
-                      : "text-amber-600",
+                      ? "text-red-600 dark:text-red-300"
+                      : "text-amber-600 dark:text-amber-300",
                   )}
                 >
                   {issueTypeLabel(issue.type)}
@@ -164,8 +164,8 @@ export const ValidationSummary = observer(function ValidationSummary({
                   size="xs"
                   className={
                     issue.severity === "error"
-                      ? "text-red-700"
-                      : "text-amber-700"
+                      ? "text-red-700 dark:text-red-200"
+                      : "text-amber-700 dark:text-amber-200"
                   }
                 >
                   {issue.subgraphPath.length > 1 && (

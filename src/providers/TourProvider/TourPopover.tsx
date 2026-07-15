@@ -23,6 +23,9 @@ const POPOVER_DEFAULT_MAX_WIDTH = 420;
 export const POPOVER_STYLES = {
   popover: (base: object) => ({
     ...base,
+    background: "var(--popover)",
+    color: "var(--popover-foreground)",
+    border: "1px solid var(--border)",
     borderRadius: "0.75rem",
     padding: "1.25rem",
     boxShadow: "0 10px 30px rgba(0,0,0,0.12)",

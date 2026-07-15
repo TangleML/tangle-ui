@@ -14,6 +14,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { useTheme } from "@/providers/ThemeProvider";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { AGGREGATOR_ADD_INPUT_HANDLE_ID } from "@/utils/aggregatorInputs";
 import { pluralize } from "@/utils/string";
@@ -91,6 +92,8 @@ interface ClassicInputHandleProps {
   hideValue?: boolean;
   /** When true the node has no custom colour, so section chrome follows the theme. */
   themed: boolean;
+  /** Whether the app is in dark mode — used to darken coloured-node chrome. */
+  isDark: boolean;
   onInputClick: (name: string, event: ReactMouseEvent) => void;
   onHandleClick: (handleId: string, event: ReactMouseEvent) => void;
 }
@@ -101,6 +104,7 @@ const ClassicInputHandle = observer(function ClassicInputHandle({
   displayValue,
   hideValue,
   themed,
+  isDark,
   onInputClick,
   onHandleClick,
 }: ClassicInputHandleProps) {
@@ -156,7 +160,9 @@ const ClassicInputHandle = observer(function ClassicInputHandle({
               }),
               themed
                 ? "text-foreground bg-muted hover:bg-accent"
-                : "text-gray-800 bg-black/5 hover:bg-black/10",
+                : isDark
+                  ? "text-gray-100 bg-white/10 hover:bg-white/15"
+                  : "text-gray-800 bg-black/5 hover:bg-black/10",
             )}
             title={`${input.name}${input.type ? `: ${input.type}` : ""}`}
           >
@@ -168,7 +174,11 @@ const ClassicInputHandle = observer(function ClassicInputHandle({
             <div
               className={cn(
                 "text-xs truncate inline-block text-right pr-2",
-                themed ? "text-foreground" : "text-gray-800",
+                themed
+                  ? "text-foreground"
+                  : isDark
+                    ? "text-gray-100"
+                    : "text-gray-800",
                 !hasValue &&
                   (themed
                     ? "text-muted-foreground italic"
@@ -207,7 +217,8 @@ export const TaskNodeCard = observer(function TaskNodeCard({
   outputType,
   onOutputTypeChange,
 }: TaskNodeViewProps) {
-  const palette = taskColor ? deriveColorPalette(taskColor) : undefined;
+  const isDark = useTheme().resolvedTheme === "dark";
+  const palette = taskColor ? deriveColorPalette(taskColor, isDark) : undefined;
   const cardStyle = palette
     ? {
         backgroundColor: palette.background,
@@ -366,6 +377,7 @@ export const TaskNodeCard = observer(function TaskNodeCard({
                   input={input}
                   entityId={entityId}
                   themed={!palette}
+                  isDark={isDark}
                   displayValue={
                     showCondensedInputs
                       ? index === 0
@@ -437,7 +449,11 @@ export const TaskNodeCard = observer(function TaskNodeCard({
                       <div
                         className={cn(
                           "text-xs italic px-2",
-                          palette ? "text-gray-500" : "text-muted-foreground",
+                          palette
+                            ? isDark
+                              ? "text-gray-300"
+                              : "text-gray-500"
+                            : "text-muted-foreground",
                         )}
                       >
                         {`+${hiddenOutputCount} more ${pluralize(hiddenOutputCount, "output")}`}
@@ -448,7 +464,9 @@ export const TaskNodeCard = observer(function TaskNodeCard({
                         className={cn(
                           "text-xs rounded-md px-2 py-1 truncate",
                           palette
-                            ? "text-gray-800 bg-black/5 hover:bg-black/10"
+                            ? isDark
+                              ? "text-gray-100 bg-white/10 hover:bg-white/15"
+                              : "text-gray-800 bg-black/5 hover:bg-black/10"
                             : "text-foreground bg-muted hover:bg-accent",
                         )}
                         title={`${output.name}${output.type ? `: ${output.type}` : ""}`}

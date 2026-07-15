@@ -136,6 +136,7 @@ export const FlowCanvas = observer(function FlowCanvas({
         />
         <MiniMap
           position="bottom-left"
+          className="dark:rounded-md dark:border dark:border-border"
           pannable
           zoomable
           onClick={() => track("v2.pipeline_canvas.minimap.click")}

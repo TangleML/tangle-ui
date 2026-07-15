@@ -19,7 +19,9 @@ const TaskIO = ({ componentSpec }: TaskIOProps) => {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {!input.optional && (
-                    <Badge className="bg-rose-400 text-white">Required</Badge>
+                    <Badge className="bg-rose-400 text-white dark:bg-rose-500/75">
+                      Required
+                    </Badge>
                   )}
                   {input.type && <Badge>Type: {String(input.type)}</Badge>}
                 </div>

@@ -8,10 +8,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import {
-  deriveColorPalette,
-  getContrastTextColor,
-} from "@/routes/v2/shared/nodes/TaskNode/color.utils";
+import { useTheme } from "@/providers/ThemeProvider";
+import { deriveColorPalette } from "@/routes/v2/shared/nodes/TaskNode/color.utils";
 import { AGGREGATOR_ADD_INPUT_HANDLE_ID } from "@/utils/aggregatorInputs";
 
 import type { TaskNodeViewProps } from "./TaskNode";
@@ -40,10 +38,9 @@ export function TaskNodeSimplified({
   isAggregator,
   onNodeClick,
 }: TaskNodeViewProps) {
-  const palette = taskColor ? deriveColorPalette(taskColor) : undefined;
-  const headerTextColor = taskColor
-    ? getContrastTextColor(taskColor)
-    : undefined;
+  const isDark = useTheme().resolvedTheme === "dark";
+  const palette = taskColor ? deriveColorPalette(taskColor, isDark) : undefined;
+  const headerTextColor = palette?.text;
 
   const visibleInputs = isAggregator
     ? inputs.filter((input) => !AGGREGATOR_INTERNAL_INPUTS.has(input.name))
@@ -59,11 +56,11 @@ export function TaskNodeSimplified({
       style={{
         width: `calc(${s} * 240px)`,
         height: `calc(${s} * 96px)`,
-        ...(taskColor
+        ...(palette
           ? {
-              backgroundColor: taskColor,
+              backgroundColor: palette.background,
               color: headerTextColor,
-              borderColor: palette?.border,
+              borderColor: palette.border,
             }
           : {}),
       }}
@@ -114,12 +111,12 @@ export function TaskNodeSimplified({
             style={{
               width: `calc(${s} * 32px)`,
               height: `calc(${s} * 32px)`,
-              ...(taskColor ? { color: headerTextColor } : {}),
+              ...(palette ? { color: headerTextColor } : {}),
             }}
           >
             <Icon
               name="Workflow"
-              className={cn("h-full! w-full!", !taskColor && "text-blue-600")}
+              className={cn("h-full! w-full!", !palette && "text-blue-600")}
             />
           </div>
         )}
@@ -128,7 +125,7 @@ export function TaskNodeSimplified({
             <span
               className={cn(
                 "font-medium min-w-0 line-clamp-2 wrap-break-word",
-                !taskColor && "text-card-foreground",
+                !palette && "text-card-foreground",
               )}
               style={{
                 fontSize: `calc(${s} * ${PERCEIVED_FONT_SIZE})`,

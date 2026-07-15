@@ -112,6 +112,7 @@ export const RunViewFlowCanvas = observer(function RunViewFlowCanvas({
         />
         <MiniMap
           position="bottom-left"
+          className="dark:rounded-md dark:border dark:border-border"
           pannable
           zoomable
           onClick={() => track("v2.run_view.canvas.minimap.click")}

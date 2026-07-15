@@ -25,13 +25,13 @@ export function IONodeSimplified({
   const bgColor = isInput ? "bg-io-input" : "bg-io-output";
   const borderColor = selected
     ? isInput
-      ? "border-blue-500"
-      : "border-violet-500"
+      ? "border-blue-500 dark:ring-2 dark:ring-blue-400/60"
+      : "border-violet-500 dark:ring-2 dark:ring-violet-400/60"
     : isHovered
       ? "border-amber-400 ring-2 ring-amber-300"
       : isInput
-        ? "border-blue-300 hover:border-blue-400"
-        : "border-violet-300 hover:border-violet-400";
+        ? "border-blue-300 hover:border-blue-400 dark:border-blue-500 dark:hover:border-blue-600"
+        : "border-violet-300 hover:border-violet-400 dark:border-violet-500 dark:hover:border-violet-600";
 
   return (
     <Card
