@@ -54,7 +54,7 @@ function SecretsListInternal({
             key={secret.id}
             align="space-between"
             gap="2"
-            className="w-full pr-3 py-1.5 hover:bg-gray-50 rounded-md pl-1"
+            className="w-full pr-3 py-1.5 hover:bg-gray-50 rounded-md pl-1 dark:hover:bg-muted"
             data-testid="secret-item"
             data-secret-name={secret.name}
           >

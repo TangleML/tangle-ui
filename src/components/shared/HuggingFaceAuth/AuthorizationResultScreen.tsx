@@ -13,7 +13,7 @@ export function AuthorizationResultScreen() {
 
   return (
     <BlockStack
-      className="min-h-screen bg-white"
+      className="min-h-screen bg-white dark:bg-background"
       align="center"
       inlineAlign="center"
       gap="4"

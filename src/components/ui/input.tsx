@@ -11,7 +11,7 @@ const inputVariants = cva("", {
         "border-input border aria-invalid:border-destructive shadow-xs focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] rounded-md aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40",
       noBorder: "",
       readOnly:
-        "text-gray-500 bg-gray-100 cursor-not-allowed border-input border shadow-xs rounded-md",
+        "text-gray-500 bg-gray-100 cursor-not-allowed border-input border shadow-xs rounded-md dark:text-muted-foreground dark:bg-muted",
     },
   },
   defaultVariants: {

@@ -180,14 +180,20 @@ export const BatchArgumentRow = observer(function BatchArgumentRow({
     <div
       className={cn(
         "group rounded px-2 py-1 cursor-pointer transition-colors w-full",
-        editing ? "bg-blue-50 ring-1 ring-blue-200" : "hover:bg-gray-50",
+        editing
+          ? "bg-blue-50 ring-1 ring-blue-200 dark:bg-blue-500/15 dark:ring-blue-500/30"
+          : "hover:bg-gray-50 dark:hover:bg-muted",
         !hasValue && "opacity-60",
       )}
       onClick={handleClick}
     >
       <InlineStack gap="1" blockAlign="center" className="w-full min-h-6">
         <InlineStack gap="1" blockAlign="baseline" className="flex-1 min-w-0">
-          <Text size="xs" weight="semibold" className="shrink-0 text-gray-700">
+          <Text
+            size="xs"
+            weight="semibold"
+            className="shrink-0 text-gray-700 dark:text-foreground"
+          >
             {aggArg.name}
           </Text>
           {aggArg.typeLabel && (

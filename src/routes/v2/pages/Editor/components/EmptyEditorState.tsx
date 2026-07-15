@@ -33,7 +33,7 @@ export function EmptyEditorState() {
       align="center"
     >
       <BlockStack
-        className="w-full max-w-5xl mx-auto bg-white p-4 rounded-lg shadow-md"
+        className="w-full max-w-5xl mx-auto bg-card p-4 rounded-lg shadow-md"
         gap="4"
       >
         <InlineStack gap="2" blockAlign="center">

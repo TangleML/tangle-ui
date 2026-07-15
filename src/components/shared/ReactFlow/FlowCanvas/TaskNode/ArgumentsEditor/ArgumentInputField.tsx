@@ -116,7 +116,7 @@ const PlainArgumentInput = ({
                 "border-red-200",
               argument.isRemoved &&
                 argument.inputSpec.optional &&
-                "border-gray-300 text-muted-foreground",
+                "border-gray-300 text-muted-foreground dark:border-border",
               argument.isRemoved &&
                 "opacity-80 focus:opacity-100 border-dashed",
             )}

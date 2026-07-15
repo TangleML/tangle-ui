@@ -85,7 +85,7 @@ export const RootNode = observer(function RootNode({
           <BlockStack
             gap="0"
             align="stretch"
-            className="ml-2 min-w-0 w-full border-l border-slate-200"
+            className="ml-2 min-w-0 w-full border-l border-slate-200 dark:border-border"
           >
             <div className="-ml-1.5 min-w-0 w-full">
               {tasks.map((task) => {

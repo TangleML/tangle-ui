@@ -224,7 +224,7 @@ const ImportComponent = ({
                         {!selectedFileName && (
                           <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 text-center hover:border-primary/50 transition-colors">
                             <Upload className="h-8 w-8 text-gray-400 mb-2" />
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-gray-600 dark:text-muted-foreground">
                               Drop your YAML file here or click to browse
                             </p>
                             <p className="text-xs text-gray-500 mt-1">

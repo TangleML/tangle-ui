@@ -10,7 +10,11 @@ export function ComponentLibraryWindowMiniContent() {
       size="icon"
       aria-label="Components"
     >
-      <Icon name="LayoutGrid" size="sm" className="text-gray-700" />
+      <Icon
+        name="LayoutGrid"
+        size="sm"
+        className="text-gray-700 dark:text-muted-foreground"
+      />
     </TooltipButton>
   );
 }

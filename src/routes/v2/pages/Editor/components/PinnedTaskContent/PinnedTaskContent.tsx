@@ -51,7 +51,7 @@ export const PinnedTaskContent = observer(function PinnedTaskContent({
   })();
 
   return (
-    <BlockStack className="h-full w-full bg-white overflow-hidden">
+    <BlockStack className="h-full w-full bg-card overflow-hidden">
       <Tabs
         defaultValue="details"
         className="flex flex-col flex-1 min-h-0 min-w-0 w-full"
@@ -140,7 +140,7 @@ function NotFoundState({ entityId }: NotFoundStateProps) {
           {entityId}
         </Text>
       }
-      className="bg-white"
+      className="bg-card"
     />
   );
 }

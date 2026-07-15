@@ -141,7 +141,7 @@ const DefaultAppMenu = () => {
               <Icon
                 name="X"
                 size="xs"
-                className="absolute bottom-1.5 right-1.5 bg-foreground rounded-full"
+                className="absolute bottom-1.5 right-1.5 bg-stone-900 rounded-full"
               />
             </TooltipButton>
           ) : (

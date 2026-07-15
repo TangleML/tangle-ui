@@ -216,7 +216,7 @@ export function RunViewV2() {
       : undefined;
 
   return (
-    <div className="h-full w-full flex flex-col bg-slate-100 select-none">
+    <div className="h-full w-full flex flex-col bg-slate-100 dark:bg-background select-none">
       <SharedStoreProvider>
         <AiChatStoreProvider
           createWorker={createRunViewAgentWorker}

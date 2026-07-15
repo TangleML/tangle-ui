@@ -29,9 +29,13 @@ export const PipelineTreeWindowMiniContent = observer(
         className="relative"
         aria-label="Pipeline Structure"
       >
-        <Icon name="GitBranch" size="sm" className="text-gray-700" />
+        <Icon
+          name="GitBranch"
+          size="sm"
+          className="text-gray-700 dark:text-muted-foreground"
+        />
         {showValidBadge && (
-          <span className="pointer-events-none absolute -bottom-0.5 -right-0.5 flex size-3.5 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-green-200">
+          <span className="pointer-events-none absolute -bottom-0.5 -right-0.5 flex size-3.5 items-center justify-center rounded-full bg-white dark:bg-card shadow-sm ring-1 ring-green-200 dark:ring-green-500/30">
             <Icon name="CircleCheck" size="xs" className="text-green-600" />
           </span>
         )}

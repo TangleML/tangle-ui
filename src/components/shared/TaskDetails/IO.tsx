@@ -14,7 +14,7 @@ const TaskIO = ({ componentSpec }: TaskIOProps) => {
           <div className="border rounded-md divide-y">
             {componentSpec.inputs.map((input, index) => (
               <div key={index} className="flex flex-col px-3 py-2 gap-2">
-                <div className="shrink-0 font-bold text-sm text-gray-700 mb-1">
+                <div className="shrink-0 font-bold text-sm text-gray-700 mb-1 dark:text-foreground">
                   {input.name.replace(/_/g, " ")}
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -23,7 +23,7 @@ const TaskIO = ({ componentSpec }: TaskIOProps) => {
                   )}
                   {input.type && <Badge>Type: {String(input.type)}</Badge>}
                 </div>
-                <div className="text-gray-600 break-all text-xs font-bold">
+                <div className="text-gray-600 break-all text-xs font-bold dark:text-muted-foreground">
                   {input.default !== undefined && (
                     <>
                       Default:{" "}
@@ -34,7 +34,7 @@ const TaskIO = ({ componentSpec }: TaskIOProps) => {
                   )}
                 </div>
                 {input.description && (
-                  <div className="text-gray-600 wrap-break-word text-xs">
+                  <div className="text-gray-600 wrap-break-word text-xs dark:text-muted-foreground">
                     {input.description}
                   </div>
                 )}
@@ -50,7 +50,7 @@ const TaskIO = ({ componentSpec }: TaskIOProps) => {
           <div className="border rounded-md divide-y">
             {componentSpec.outputs.map((output) => (
               <div key={output.name} className="flex flex-col px-3 py-2 gap-2">
-                <div className="shrink-0 font-bold text-sm text-gray-700 mb-1">
+                <div className="shrink-0 font-bold text-sm text-gray-700 mb-1 dark:text-foreground">
                   {output.name.replace(/_/g, " ")}
                 </div>
                 {output.type && <Badge>Type: {String(output.type)}</Badge>}

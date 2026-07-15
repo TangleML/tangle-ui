@@ -60,7 +60,7 @@ function ComponentSearchResultsSkeleton() {
               <Skeleton
                 size="full"
                 shape="circle"
-                className="h-3.5 bg-gray-100"
+                className="h-3.5 bg-gray-100 dark:bg-muted"
                 data-testid="component-result-why-skeleton"
               />
             </BlockStack>

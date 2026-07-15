@@ -87,10 +87,11 @@ const ComponentIcon = withSuspenseWrapper(
 );
 
 function rerankScoreClass(score: number): string {
-  if (score >= 0.9) return "text-emerald-700 bg-emerald-50 border-emerald-200";
+  if (score >= 0.9)
+    return "text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-300 dark:bg-emerald-500/15 dark:border-emerald-500/30";
   if (score >= 0.75)
-    return "text-emerald-600 bg-emerald-50/70 border-emerald-100";
-  return "text-emerald-500 bg-white border-emerald-100";
+    return "text-emerald-600 bg-emerald-50/70 border-emerald-100 dark:text-emerald-300 dark:bg-emerald-500/10 dark:border-emerald-500/25";
+  return "text-emerald-500 bg-white border-emerald-100 dark:bg-emerald-500/15 dark:border-emerald-500/30";
 }
 
 const ComponentMarkup = ({

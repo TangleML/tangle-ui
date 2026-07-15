@@ -77,7 +77,7 @@ export function ArgumentValueDisplay({
       className={cn(
         "min-h-4 text-xs! font-mono mt-1 rounded-lg",
         isBound && "text-blue-600",
-        isUnset && "border-dashed border-gray-300",
+        isUnset && "border-dashed border-gray-300 dark:border-border",
       )}
       data-testid="argument-input"
     />

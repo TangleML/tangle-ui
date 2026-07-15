@@ -32,7 +32,10 @@ const rowVariants = cva("group rounded-lg py-2 px-1 w-full");
 
 const nameVariants = cva("shrink-0", {
   variants: {
-    unset: { true: "text-gray-400", false: "text-gray-900" },
+    unset: {
+      true: "text-gray-400 dark:text-muted-foreground",
+      false: "text-gray-900 dark:text-foreground",
+    },
   },
   defaultVariants: { unset: false },
 });

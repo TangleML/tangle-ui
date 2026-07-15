@@ -84,8 +84,8 @@ export const ValidationSummary = observer(function ValidationSummary({
           className={cn(
             "min-w-0 flex-1 justify-start gap-1.5 h-auto py-1.5",
             errorCount > 0
-              ? "text-red-700 hover:bg-red-50"
-              : "text-amber-700 hover:bg-amber-50",
+              ? "text-red-700 hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-500/15"
+              : "text-amber-700 hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-amber-500/15",
           )}
           onClick={() => setIsExpanded((prev) => !prev)}
           {...tracking(
@@ -144,8 +144,8 @@ export const ValidationSummary = observer(function ValidationSummary({
                   "flex items-baseline gap-1 py-1 px-2 rounded text-xs cursor-pointer transition-colors",
                   isSelected ? "ring-1 ring-blue-400" : "",
                   issue.severity === "error"
-                    ? "bg-red-50 text-red-800 hover:bg-red-100"
-                    : "bg-amber-50 text-amber-800 hover:bg-amber-100",
+                    ? "bg-red-50 text-red-800 hover:bg-red-100 dark:bg-red-500/15 dark:text-red-200 dark:hover:bg-red-500/25"
+                    : "bg-amber-50 text-amber-800 hover:bg-amber-100 dark:bg-amber-500/15 dark:text-amber-200 dark:hover:bg-amber-500/25",
                 )}
               >
                 <Text

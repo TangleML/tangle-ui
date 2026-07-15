@@ -37,7 +37,11 @@ export function RenameEntityResolution({
 
   return (
     <BlockStack gap="2">
-      <Text size="xs" weight="semibold" className="text-gray-700">
+      <Text
+        size="xs"
+        weight="semibold"
+        className="text-gray-700 dark:text-foreground"
+      >
         Set {label} name
       </Text>
       <InlineStack gap="2" blockAlign="end">

@@ -46,7 +46,7 @@ export const PublishedComponentBadge = withSuspenseWrapper(
                 "p-0.5",
                 isOutdated
                   ? "text-orange-500 hover:text-orange-700"
-                  : "text-muted-foreground hover:text-gray-800",
+                  : "text-muted-foreground hover:text-gray-800 dark:hover:text-foreground",
               )}
             >
               <InlineStack gap="1">

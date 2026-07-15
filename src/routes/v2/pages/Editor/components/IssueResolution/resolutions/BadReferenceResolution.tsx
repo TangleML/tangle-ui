@@ -47,7 +47,11 @@ export const BadReferenceResolution = observer(function BadReferenceResolution({
   return (
     <BlockStack gap="3">
       <BlockStack gap="2">
-        <Text size="xs" weight="semibold" className="text-gray-700">
+        <Text
+          size="xs"
+          weight="semibold"
+          className="text-gray-700 dark:text-foreground"
+        >
           Fix reference for &ldquo;{argumentName}&rdquo; on task &ldquo;
           {task.name}&rdquo;
         </Text>
@@ -70,7 +74,7 @@ export const BadReferenceResolution = observer(function BadReferenceResolution({
       </Button>
 
       {inputSpec && (
-        <div className="border-t border-slate-200 pt-2">
+        <div className="border-t border-slate-200 pt-2 dark:border-border">
           <Text size="xs" tone="subdued" className="mb-2">
             Or set a new value:
           </Text>
