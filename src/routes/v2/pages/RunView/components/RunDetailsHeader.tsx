@@ -1,8 +1,8 @@
 import { CopyText } from "@/components/shared/CopyText/CopyText";
-import { StatusBar } from "@/components/shared/Status";
-import { BlockStack, InlineStack } from "@/components/ui/layout";
-import { Text } from "@/components/ui/typography";
+import { BlockStack } from "@/components/ui/layout";
 import type { ExecutionStatusStats } from "@/utils/executionStatus";
+
+import { RunActionsBar } from "./RunActionsBar";
 
 interface RunDetailsHeaderProps {
   pipelineName: string;
@@ -24,19 +24,10 @@ export function RunDetailsHeader({
         {pipelineName}
       </CopyText>
 
-      <InlineStack
-        gap="2"
-        blockAlign="center"
-        wrap="nowrap"
-        className="w-full rounded-md border px-2 py-1"
-      >
-        <BlockStack gap="1" className="min-w-0 flex-1">
-          <Text size="xs" weight="semibold" className="truncate">
-            {statusLabel}
-          </Text>
-          <StatusBar executionStatusStats={executionStatusStats} />
-        </BlockStack>
-      </InlineStack>
+      <RunActionsBar
+        executionStatusStats={executionStatusStats}
+        statusLabel={statusLabel}
+      />
     </BlockStack>
   );
 }
