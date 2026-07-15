@@ -120,7 +120,9 @@ function serializeDockArea(
   return {
     width: config.width,
     collapsed: config.collapsed,
-    windowOrder: config.windowOrder.filter((id) => store.isWindowPersisted(id)),
+    windowOrder: store
+      .getDockedWindowOrder(side)
+      .filter((id) => store.isWindowPersisted(id)),
   };
 }
 

@@ -256,6 +256,10 @@ export class WindowStoreImpl implements WindowStoreRef {
     this.dockAreas[side].width = state.width;
     this.dockAreas[side].collapsed = state.collapsed;
     this.dockAreas[side].windowOrder = [...state.windowOrder];
+    // Reconcile against actual window state so a re-run of restore (StrictMode
+    // double-invoke, dependency change) cannot orphan windows that were already
+    // docked to this side by `use*Window` hooks.
+    this.dockAreas[side].windowOrder = this.getDockedWindowOrder(side);
   }
 
   isDockSideEnabled(side: "left" | "right"): boolean {
@@ -264,6 +268,25 @@ export class WindowStoreImpl implements WindowStoreRef {
 
   getDockAreaWindowIds(side: "left" | "right"): string[] {
     return this.dockAreas[side].windowOrder;
+  }
+
+  /**
+   * Returns the dock stack order reconciled against actual window `dockState`.
+   * `dockState` is the source of truth for membership: entries no longer docked
+   * to `side` are dropped, and any window docked to `side` but missing from the
+   * stored order is appended (using the global window order for deterministic
+   * placement). Prevents docked windows from being orphaned — and thus rendered
+   * nowhere — when the persisted order diverges from window state.
+   */
+  getDockedWindowOrder(side: "left" | "right"): string[] {
+    const existing = this.dockAreas[side].windowOrder.filter(
+      (id) => this.windows[id]?.dockState === side,
+    );
+    const seen = new Set(existing);
+    const missing = this.windowOrder.filter(
+      (id) => this.windows[id]?.dockState === side && !seen.has(id),
+    );
+    return [...existing, ...missing];
   }
 
   // -- View presets --

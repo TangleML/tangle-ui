@@ -28,7 +28,8 @@ const FOCUS_MODE_ALLOWED_WINDOW_IDS = new Set(["context-panel"]);
 export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
   const { windows } = useSharedStores();
   const dockArea = windows.getDockAreaConfig(side);
-  const { collapsed, windowOrder } = dockArea;
+  const { collapsed } = dockArea;
+  const windowOrder = windows.getDockedWindowOrder(side);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   const visibleWindows = windowOrder.filter((id) => {
