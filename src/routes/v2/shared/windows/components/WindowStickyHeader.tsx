@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 import { useOptionalWindowContext } from "@/routes/v2/shared/windows/ContentWindowStateContext";
-import { DOCKED_HEADER_HEIGHT } from "@/routes/v2/shared/windows/types";
 
 interface WindowStickyHeaderProps {
   children: ReactNode;
@@ -12,11 +11,12 @@ interface WindowStickyHeaderProps {
 /**
  * Pins content to the top of a window's scroll region.
  *
- * When docked, the whole dock column scrolls as one and each window's chrome
- * header is sticky at `dockIndex * DOCKED_HEADER_HEIGHT`, so this must stick one
- * header-height lower to sit just below it. When floating, the content lives in
- * a height-bounded scroll box, so a flex-sibling header pins on its own and no
- * offset is needed.
+ * A docked window wraps its content in its own height-bounded scroll box, so
+ * the sticky container is that per-window box (not the dock column) and its top
+ * already sits below the chrome header. Pinning at `top: 0` therefore keeps the
+ * header flush with the top of the chat's scroll area. When floating, the
+ * content likewise lives in a height-bounded scroll box, so a flex-sibling
+ * header pins on its own and no sticky positioning is needed.
  */
 export function WindowStickyHeader({
   children,
@@ -24,15 +24,9 @@ export function WindowStickyHeader({
 }: WindowStickyHeaderProps) {
   const ctx = useOptionalWindowContext();
   const isDocked = ctx?.model.isDocked ?? false;
-  const dockIndex = ctx?.dockIndex ?? 0;
 
   return (
-    <div
-      className={cn(className, isDocked && "sticky z-10 bg-white")}
-      style={
-        isDocked ? { top: (dockIndex + 1) * DOCKED_HEADER_HEIGHT } : undefined
-      }
-    >
+    <div className={cn(className, isDocked && "sticky top-0 z-10 bg-white")}>
       {children}
     </div>
   );
