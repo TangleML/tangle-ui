@@ -202,7 +202,7 @@ stateDiagram-v2
 When docking:
 
 1. `savePreDockedState()` preserves floating position/size (only if currently floating).
-2. `applyDockState(side)` sets `dockState` and defaults `dockedHeight`.
+2. `applyDockState(side)` sets `dockState`, leaving `dockedHeight` undefined so the window sizes to fit its content until the user drags the resize handle. Double-clicking the resize handle calls `resetDockedHeight()` to return to fit-to-content.
 3. The window ID is inserted into `dockAreas[side].windowOrder`.
 
 When undocking:

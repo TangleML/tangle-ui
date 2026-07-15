@@ -15,6 +15,7 @@ import { useWindowContext } from "@/routes/v2/shared/windows/ContentWindowStateC
 import { useWindowDrag } from "@/routes/v2/shared/windows/hooks/useWindowDrag";
 import { SnapPreview } from "@/routes/v2/shared/windows/SnapPreview";
 import {
+  DEFAULT_DOCKED_HEIGHT,
   DOCKED_HEADER_HEIGHT as HEADER_HEIGHT,
   MIN_DOCKED_HEIGHT,
 } from "@/routes/v2/shared/windows/types";
@@ -38,6 +39,7 @@ export const DockedWindow = observer(function DockedWindow() {
   const [isResizing, setIsResizing] = useState(false);
   const [isStuck, setIsStuck] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   const stickyTop = dockIndex * HEADER_HEIGHT;
 
@@ -60,7 +62,12 @@ export const DockedWindow = observer(function DockedWindow() {
     setIsResizing(true);
 
     const startY = e.clientY;
-    const startHeight = model.effectiveDockedHeight;
+    // In fit-to-content mode (no explicit height) measure the current rendered
+    // height so the drag continues seamlessly from where the content sits.
+    const startHeight =
+      model.dockedHeight ??
+      contentRef.current?.getBoundingClientRect().height ??
+      DEFAULT_DOCKED_HEIGHT;
 
     const onMouseMove = (moveE: MouseEvent) => {
       const newHeight = Math.max(
@@ -178,20 +185,31 @@ export const DockedWindow = observer(function DockedWindow() {
         data-dock-window-content={model.id}
       >
         <div
+          ref={contentRef}
           className={cn(
-            "w-full bg-card text-foreground",
-            "transition-all duration-300",
+            "w-full bg-card text-foreground flex flex-col overflow-hidden",
+
             (isDragging || isResizing) && "select-none",
             isDragging && "opacity-50",
           )}
-          style={{ minHeight: MIN_DOCKED_HEIGHT }}
+          style={{
+            minHeight: MIN_DOCKED_HEIGHT,
+            // undefined height => fit-to-content; a concrete value => fixed
+            // height with the inner content area scrolling.
+            height: model.dockedHeight ?? undefined,
+          }}
           onMouseDown={handleContainerMouseDown}
           onClick={handleContainerClick}
         >
-          <div className="bg-card">{content}</div>
+          <div className="flex-1 min-h-0 overflow-auto bg-card">{content}</div>
           <div
             className="h-1 cursor-ns-resize hover:bg-accent transition-colors shrink-0"
             onMouseDown={handleResizeMouseDown}
+            onDoubleClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              model.resetDockedHeight();
+            }}
           />
         </div>
       </CollapsibleContent>
