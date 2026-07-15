@@ -36,6 +36,7 @@ import {
   useComponentAiDescription,
   useNaturalLanguageComponentRerank,
 } from "@/hooks/useNaturalLanguageComponentSearch";
+import { addRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
@@ -833,6 +834,13 @@ export const DashboardComponentsV2View = () => {
       disabledSourceKeys: sourceKeys,
     });
   const selectComponent = (reference: ComponentReference) => {
+    if (reference.digest) {
+      addRecentlyViewed({
+        type: "component",
+        id: reference.digest,
+        name: getComponentName(reference),
+      });
+    }
     navigate({
       to: APP_ROUTES.DASHBOARD_COMPONENTS_V2,
       search: buildSearch({ component: reference.digest }),

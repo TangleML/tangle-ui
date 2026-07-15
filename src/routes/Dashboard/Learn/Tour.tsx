@@ -7,11 +7,13 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
+import { tours } from "@/components/Learn/tours";
 import {
   getTour,
   type TourDefinition,
 } from "@/components/Learn/tours/registry";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
+import { addRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
 import {
@@ -220,6 +222,15 @@ function TourPageBody({
       clearLayout(TOUR_WINDOW_LAYOUT_ID);
     };
   }, []);
+
+  useEffect(() => {
+    addRecentlyViewed({
+      type: "tour",
+      id: tourId,
+      name:
+        tours.find((t) => t.id === tourId)?.title ?? tour.displayName ?? tourId,
+    });
+  }, [tourId, tour]);
 
   useEffect(() => {
     setResolved(null);
