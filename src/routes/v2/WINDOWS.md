@@ -389,15 +389,26 @@ interface PersistedWindowState {
 
 ### Initial State Resolution
 
-When a persisted window is opened, `resolveInitialState` determines the starting state:
+When a persisted window is opened, `resolveInitialState` determines the starting state.
 
-| Persisted Hidden | `startVisible` | Persisted Minimized | Docked | Result                                         |
-| ---------------- | -------------- | ------------------- | ------ | ---------------------------------------------- |
-| true             | false          | -                   | -      | `"hidden"` + seed `previous*`                  |
-| true             | true           | -                   | -      | `"normal"` (override hidden)                   |
-| false            | -              | true                | yes    | `"minimized"` + seed `previous*`               |
-| false            | -              | true                | no     | `"normal"` (minimized only honored for docked) |
-| false            | -              | false               | -      | `"normal"`                                     |
+**A persisted entry always wins.** If the window has a saved entry, its `isHidden` / `isMinimized` is honored on reload. `startVisible` does **not** override a persisted hidden state -- it only forces visibility on a first visit (no saved layout for that window yet). This keeps a window the user deliberately hid hidden across reloads. Selection-driven panels that must pop open on an explicit action call `restore()` directly rather than relying on `startVisible`.
+
+Persisted entry exists:
+
+| Persisted Hidden | Persisted Minimized | Docked | Result                                         |
+| ---------------- | ------------------- | ------ | ---------------------------------------------- |
+| true             | -                   | -      | `"hidden"` + seed `previous*`                  |
+| false            | true                | yes    | `"minimized"` + seed `previous*`               |
+| false            | true                | no     | `"normal"` (minimized only honored for docked) |
+| false            | false               | -      | `"normal"`                                     |
+
+No persisted entry (first visit):
+
+| `startVisible` | In `DEFAULT_VIEW_PRESET.visible` | Result                        |
+| -------------- | -------------------------------- | ----------------------------- |
+| true           | -                                | `"normal"`                    |
+| false          | true                             | `"normal"`                    |
+| false          | false                            | `"hidden"` + seed `previous*` |
 
 ## Plugin System
 

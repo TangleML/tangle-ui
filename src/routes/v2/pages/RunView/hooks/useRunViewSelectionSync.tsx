@@ -31,6 +31,9 @@ export function useRunViewSelectionSync() {
               startVisible: true,
               persisted: true,
             });
+            // Selecting a node is an explicit request to see properties, so force
+            // the panel visible even if a persisted layout restored it as hidden.
+            windows.restoreWindow(CONTEXT_PANEL_WINDOW_ID);
           }
         } else {
           const existing = windows.getWindowById(CONTEXT_PANEL_WINDOW_ID);
