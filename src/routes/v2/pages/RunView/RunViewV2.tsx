@@ -12,6 +12,7 @@ import { RemoteAuthErrorView } from "@/components/shared/RemoteAuthErrorView";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Paragraph } from "@/components/ui/typography";
+import { useTrackRecentlyViewedRun } from "@/hooks/useTrackRecentlyViewedRun";
 import type { ComponentSpec } from "@/models/componentSpec";
 import {
   IncrementingIdGenerator,
@@ -58,11 +59,21 @@ function deserializeRunSpec(data: unknown): ComponentSpec {
   return spec;
 }
 
-const RunViewContent = observer(function RunViewContent() {
+interface RunViewContentProps {
+  runId: string;
+}
+
+const RunViewContent = observer(function RunViewContent({
+  runId,
+}: RunViewContentProps) {
   const { setComponentSpec, clearComponentSpec } = useComponentSpec();
   const { configured, available, ready } = useBackend();
 
   const { details, state, rootDetails, isLoading, error } = useExecutionData();
+  useTrackRecentlyViewedRun(
+    runId,
+    rootDetails?.task_spec.componentRef.spec?.name,
+  );
 
   const specRef = useRef<ComponentSpec | null>(null);
 
@@ -217,7 +228,7 @@ export function RunViewV2() {
                 pipelineRunId={id}
                 subgraphExecutionId={subgraphExecutionId}
               >
-                <RunViewContent />
+                <RunViewContent runId={id} />
               </ExecutionDataProvider>
             </ContextPanelProvider>
           </ReactFlowProvider>

@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Text } from "@/components/ui/typography";
 import { useBackend } from "@/providers/BackendProvider";
-import { APP_ROUTES } from "@/routes/router";
+import { getDefaultRunPath } from "@/routes/runRoutes";
 import { fetchRunAnnotations } from "@/services/pipelineRunService";
 import {
   getAnnotationValue,
@@ -65,7 +65,7 @@ const RunRow = ({ run, onFilterByUser }: RunRowProps) => {
     run.execution_status_stats ?? undefined,
   );
 
-  const clickThroughUrl = `${APP_ROUTES.RUNS}/${runId}`;
+  const clickThroughUrl = getDefaultRunPath(runId);
 
   const handleRowClick = (e: MouseEvent<HTMLElement>) => {
     if (e.target instanceof HTMLElement && e.target.closest("button")) {

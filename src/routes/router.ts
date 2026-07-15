@@ -334,12 +334,33 @@ const runV2Route = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.RUN_DETAIL_V2,
   component: RunViewV2,
+  beforeLoad: ({ params }) => {
+    if (!isFlagEnabled("v2_editor")) {
+      throw redirect({
+        to: APP_ROUTES.RUN_DETAIL,
+        params: { id: params.id },
+        search: (previous) => previous,
+      });
+    }
+  },
 });
 
 const runV2WithSubgraphRoute = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.RUN_DETAIL_V2_WITH_SUBGRAPH,
   component: RunViewV2,
+  beforeLoad: ({ params }) => {
+    if (!isFlagEnabled("v2_editor")) {
+      throw redirect({
+        to: APP_ROUTES.RUN_DETAIL_WITH_SUBGRAPH,
+        params: {
+          id: params.id,
+          subgraphExecutionId: params.subgraphExecutionId,
+        },
+        search: (previous) => previous,
+      });
+    }
+  },
 });
 
 const pipelineFoldersRoute = createRoute({

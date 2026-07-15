@@ -12,7 +12,7 @@ import { BlockStack } from "@/components/ui/layout";
 import { Paragraph } from "@/components/ui/typography";
 import { faviconManager } from "@/favicon";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
-import { addRecentlyViewed } from "@/hooks/useRecentlyViewed";
+import { useTrackRecentlyViewedRun } from "@/hooks/useTrackRecentlyViewedRun";
 import { useBackend } from "@/providers/BackendProvider";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import {
@@ -82,10 +82,7 @@ const PipelineRunContent = () => {
       `Tangle - ${componentSpec?.name || ""} - ${params.id}`,
   });
 
-  useEffect(() => {
-    if (!componentSpec?.name || !runId) return;
-    addRecentlyViewed({ type: "run", id: runId, name: componentSpec.name });
-  }, [componentSpec?.name, runId]);
+  useTrackRecentlyViewedRun(runId, componentSpec?.name);
 
   if (isLoading || !ready) {
     return <LoadingScreen message="Loading Pipeline Run" />;

@@ -12,7 +12,7 @@ import { Icon } from "@/components/ui/icon";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
 import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
-import { APP_ROUTES } from "@/routes/router";
+import { getDefaultRunPath } from "@/routes/runRoutes";
 import type { PipelineRun } from "@/types/pipelineRun";
 import { extractCanonicalName } from "@/utils/canonicalPipelineName";
 import type { ArgumentType, ComponentSpec } from "@/utils/componentSpec";
@@ -45,7 +45,7 @@ export const RerunPipelineButton = ({
   const { getToken } = useAuthLocalStorage();
 
   const onSuccess = useCallback((response: PipelineRun) => {
-    navigate({ to: `${APP_ROUTES.RUNS}/${response.id}` });
+    navigate({ to: getDefaultRunPath(response.id) });
   }, []);
 
   const onError = useCallback(

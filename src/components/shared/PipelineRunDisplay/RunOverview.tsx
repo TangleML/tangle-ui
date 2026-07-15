@@ -4,7 +4,7 @@ import type { MouseEvent } from "react";
 import { StatusBar, StatusText } from "@/components/shared/Status/";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
-import { APP_ROUTES } from "@/routes/router";
+import { getDefaultRunPath } from "@/routes/runRoutes";
 import type { PipelineRun, TaskStatusCounts } from "@/types/pipelineRun";
 import { formatDate } from "@/utils/date";
 import type { ExecutionStatusStats } from "@/utils/executionStatus";
@@ -75,7 +75,7 @@ const RunOverview = ({
     if (onClick) {
       onClick(run);
     } else {
-      const clickThroughUrl = `${APP_ROUTES.RUNS}/${run.id}`;
+      const clickThroughUrl = getDefaultRunPath(run.id);
 
       if (e.ctrlKey || e.metaKey) {
         window.open(clickThroughUrl, "_blank");

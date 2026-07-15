@@ -186,7 +186,7 @@ describe("<RerunPipelineButton/>", () => {
 
     await waitFor(() => {
       expect(navigateMock).toHaveBeenCalledWith({
-        to: "/runs/123",
+        to: "/runs-v2/123",
       });
     });
   });
