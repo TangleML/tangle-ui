@@ -20,8 +20,15 @@ import { getOutputConnectedDetails } from "../../Editor/utils/getOutputConnected
 
 const PipelineIO = ({
   taskArguments,
+  section,
 }: {
   taskArguments?: TaskSpecOutput["arguments"] | null;
+  /**
+   * When set, renders only one side (without the wrapping ContentBlock) so the
+   * caller can supply its own section header (e.g. a collapsible section).
+   * When omitted, renders both Inputs/Arguments and Outputs blocks.
+   */
+  section?: "inputs" | "outputs";
 }) => {
   const { setContent } = useContextPanel();
   const { componentSpec, graphSpec } = useComponentSpec();
@@ -71,58 +78,72 @@ const PipelineIO = ({
     },
   ];
 
+  const hasInputs = !!componentSpec.inputs && componentSpec.inputs.length > 0;
+  const hasOutputs =
+    !!componentSpec.outputs && componentSpec.outputs.length > 0;
+
+  const inputsContent = hasInputs ? (
+    <BlockStack>
+      {componentSpec.inputs?.map((input) => (
+        <IORow
+          key={input.name}
+          value={
+            getArgumentValue(taskArguments, input.name) ||
+            input.value ||
+            input.default ||
+            "—"
+          }
+          type={typeSpecToString(input?.type)}
+          spec={input}
+          actions={inputActions}
+        />
+      ))}
+    </BlockStack>
+  ) : (
+    <Paragraph tone="subdued" size="xs">
+      No inputs
+    </Paragraph>
+  );
+
+  const outputsContent = hasOutputs ? (
+    <BlockStack>
+      {componentSpec.outputs?.map((output) => {
+        const connectedOutput = getOutputConnectedDetails(
+          graphSpec,
+          output.name,
+        );
+
+        return (
+          <IORow
+            key={output.name}
+            value={connectedOutput.outputName ?? "No value"}
+            type={typeSpecToString(connectedOutput.outputType)}
+            spec={output}
+            actions={outputActions}
+          />
+        );
+      })}
+    </BlockStack>
+  ) : (
+    <Paragraph tone="subdued" size="xs">
+      No outputs
+    </Paragraph>
+  );
+
+  if (section === "inputs") {
+    return inputsContent;
+  }
+
+  if (section === "outputs") {
+    return outputsContent;
+  }
+
   return (
     <BlockStack gap="4">
       <ContentBlock title={taskArguments ? "Arguments" : "Inputs"}>
-        {componentSpec.inputs && componentSpec.inputs.length > 0 ? (
-          <BlockStack>
-            {componentSpec.inputs.map((input) => (
-              <IORow
-                key={input.name}
-                value={
-                  getArgumentValue(taskArguments, input.name) ||
-                  input.value ||
-                  input.default ||
-                  "—"
-                }
-                type={typeSpecToString(input?.type)}
-                spec={input}
-                actions={inputActions}
-              />
-            ))}
-          </BlockStack>
-        ) : (
-          <Paragraph tone="subdued" size="xs">
-            No inputs
-          </Paragraph>
-        )}
+        {inputsContent}
       </ContentBlock>
-      <ContentBlock title="Outputs">
-        {componentSpec.outputs && componentSpec.outputs.length > 0 ? (
-          <BlockStack>
-            {componentSpec.outputs.map((output) => {
-              const connectedOutput = getOutputConnectedDetails(
-                graphSpec,
-                output.name,
-              );
-
-              return (
-                <IORow
-                  key={output.name}
-                  value={connectedOutput.outputName ?? "No value"}
-                  type={typeSpecToString(connectedOutput.outputType)}
-                  spec={output}
-                  actions={outputActions}
-                />
-              );
-            })}
-          </BlockStack>
-        ) : (
-          <Paragraph tone="subdued" size="xs">
-            No outputs
-          </Paragraph>
-        )}
-      </ContentBlock>
+      <ContentBlock title="Outputs">{outputsContent}</ContentBlock>
     </BlockStack>
   );
 };
