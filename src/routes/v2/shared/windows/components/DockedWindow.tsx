@@ -145,7 +145,7 @@ export const DockedWindow = observer(function DockedWindow() {
           data-dock-window={model.id}
           data-window-id={model.id}
           className={cn(
-            "group/window w-full sticky text-left",
+            "group/window w-full sticky text-left shrink-0",
             (isDragging || isResizing) && "select-none",
             isDragging && "cursor-grabbing opacity-50",
             showCollapsedStyle
@@ -181,36 +181,44 @@ export const DockedWindow = observer(function DockedWindow() {
       </CollapsibleTrigger>
 
       <CollapsibleContent
-        className="w-full"
+        className={cn(
+          "w-full",
+          model.fillDockHeight ? "flex-1 min-h-0" : "shrink-0",
+        )}
         data-dock-window-content={model.id}
       >
         <div
           ref={contentRef}
           className={cn(
             "w-full bg-card text-foreground flex flex-col overflow-hidden",
-
+            model.fillDockHeight && "h-full",
             (isDragging || isResizing) && "select-none",
             isDragging && "opacity-50",
           )}
           style={{
             minHeight: MIN_DOCKED_HEIGHT,
-            // undefined height => fit-to-content; a concrete value => fixed
+            // fillDockHeight => grow to fill the dock column; otherwise an
+            // undefined height fits content and a concrete value fixes the
             // height with the inner content area scrolling.
-            height: model.dockedHeight ?? undefined,
+            height: model.fillDockHeight
+              ? undefined
+              : (model.dockedHeight ?? undefined),
           }}
           onMouseDown={handleContainerMouseDown}
           onClick={handleContainerClick}
         >
           <div className="flex-1 min-h-0 overflow-auto bg-card">{content}</div>
-          <div
-            className="h-1 cursor-ns-resize hover:bg-accent transition-colors shrink-0"
-            onMouseDown={handleResizeMouseDown}
-            onDoubleClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              model.resetDockedHeight();
-            }}
-          />
+          {!model.fillDockHeight && (
+            <div
+              className="h-1 cursor-ns-resize hover:bg-accent transition-colors shrink-0"
+              onMouseDown={handleResizeMouseDown}
+              onDoubleClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                model.resetDockedHeight();
+              }}
+            />
+          )}
         </div>
       </CollapsibleContent>
 

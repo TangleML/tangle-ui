@@ -42,6 +42,7 @@ export interface WindowModelInit {
   dockedHeight?: number;
   dockState: DockState;
   persisted: boolean;
+  fillDockHeight?: boolean;
   onClose?: () => void;
 }
 
@@ -68,6 +69,8 @@ export class WindowModel {
   @observable accessor dockState: DockState;
   @observable accessor persisted: boolean;
 
+  /** Static config: when docked, fill remaining dock-area height. */
+  readonly fillDockHeight: boolean;
   readonly onClose: (() => void) | undefined;
   private readonly store: WindowStoreRef;
 
@@ -88,6 +91,7 @@ export class WindowModel {
     this.dockedHeight = init.dockedHeight;
     this.dockState = init.dockState;
     this.persisted = init.persisted;
+    this.fillDockHeight = init.fillDockHeight ?? false;
     this.onClose = init.onClose;
     this.store = store;
     makeObservable(this);

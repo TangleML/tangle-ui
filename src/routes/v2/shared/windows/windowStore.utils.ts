@@ -40,6 +40,7 @@ export function buildWindowModelInit(
       : undefined,
     previousSize: initial.needsPreviousState ? { ...geo.size } : undefined,
     persisted: !!options.persisted,
+    fillDockHeight: options.fillDockHeight,
     onClose: options.onClose,
   };
 }

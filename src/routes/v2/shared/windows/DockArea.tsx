@@ -44,6 +44,12 @@ export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
     Boolean(windows.getWindowMiniContent(id)),
   );
   const isEmpty = visibleWindows.length === 0;
+  // A fill window needs the stack to have an explicit height so flex-grow can
+  // distribute free space. Without a fill window we keep `min-h-full` so a tall
+  // stack of windows overflows and scrolls instead of being squished.
+  const hasFillWindow = visibleWindows.some(
+    (id) => windows.getWindowById(id)?.fillDockHeight,
+  );
 
   useEffect(() => {
     windows.enableDockSide(side);
@@ -127,7 +133,7 @@ export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
         data-dock-scroll
         className="absolute inset-0 overflow-y-auto overflow-x-hidden hide-scrollbar"
       >
-        <BlockStack>
+        <BlockStack className={cn(hasFillWindow ? "h-full" : "min-h-full")}>
           {visibleWindows.map((windowId, index) => (
             <Window
               key={windowId}
