@@ -8,6 +8,7 @@ import ReactDOM from "react-dom/client";
 import { scan } from "react-scan";
 
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
+import { ThemeProvider } from "@/providers/ThemeProvider";
 
 import { router } from "./routes/router";
 import { initializeBugsnag } from "./services/errorManagement/bugsnag";
@@ -27,11 +28,13 @@ if (!rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement);
   root.render(
     <StrictMode>
-      <ErrorBoundary>
-        <QueryClientProvider client={queryClient}>
-          <RouterProvider router={router} />
-        </QueryClientProvider>
-      </ErrorBoundary>
+      <ThemeProvider>
+        <ErrorBoundary>
+          <QueryClientProvider client={queryClient}>
+            <RouterProvider router={router} />
+          </QueryClientProvider>
+        </ErrorBoundary>
+      </ThemeProvider>
     </StrictMode>,
   );
 }
