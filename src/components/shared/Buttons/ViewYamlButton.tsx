@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { type ComponentPropsWithoutRef, useState } from "react";
 
 import type {
   ComponentSpec,
@@ -11,17 +11,21 @@ import { ActionButton } from "./ActionButton";
 
 type ViewYamlButtonProps = {
   displayLabel?: string;
-  "data-tracking-id"?: string;
-  "data-tracking-metadata"?: string;
-} & (
-  | { componentRef: HydratedComponentReference; componentSpec?: never }
-  | { componentSpec: ComponentSpec; componentRef?: never }
-);
+  showTooltip?: boolean;
+} & Omit<
+  ComponentPropsWithoutRef<typeof ActionButton>,
+  "children" | "icon" | "label" | "onClick" | "tooltip"
+> &
+  (
+    | { componentRef: HydratedComponentReference; componentSpec?: never }
+    | { componentSpec: ComponentSpec; componentRef?: never }
+  );
 
 export const ViewYamlButton = ({
   componentRef,
   componentSpec,
   displayLabel,
+  showTooltip = true,
   ...rest
 }: ViewYamlButtonProps) => {
   const [showCodeViewer, setShowCodeViewer] = useState(false);
@@ -30,13 +34,16 @@ export const ViewYamlButton = ({
     ? getComponentName(componentRef)
     : componentSpec.name || "Component";
 
+  const tooltipOrLabel = showTooltip
+    ? { tooltip: "View YAML", label: displayLabel }
+    : { label: displayLabel ?? "View YAML" };
+
   return (
     <>
       <ActionButton
-        tooltip="View YAML"
+        {...tooltipOrLabel}
         icon="FileCodeCorner"
         onClick={() => setShowCodeViewer(true)}
-        label={displayLabel}
         {...rest}
       />
 

@@ -26,6 +26,8 @@ type ClonePipelineButtonProps = {
   componentSpec: ComponentSpec;
   runId?: string | null;
   showLabel?: boolean;
+  displayLabel?: string;
+  showTooltip?: boolean;
 } & Omit<
   ComponentPropsWithoutRef<typeof TooltipButton>,
   "onClick" | "tooltip" | "variant" | "children"
@@ -35,6 +37,8 @@ export const ClonePipelineButton = ({
   componentSpec,
   runId,
   showLabel,
+  displayLabel,
+  showTooltip = true,
   ...rest
 }: ClonePipelineButtonProps) => {
   const navigate = useNavigate();
@@ -102,13 +106,13 @@ export const ClonePipelineButton = ({
     <TooltipButton
       variant="outline"
       onClick={handleClone}
-      tooltip="Clone pipeline"
+      tooltip={showTooltip ? "Clone pipeline" : undefined}
       disabled={isPending}
       data-testid="clone-pipeline-run-button"
       {...rest}
     >
       <Icon name="CopyPlus" />
-      {showLabel && "Clone"}
+      {displayLabel ?? (showLabel ? "Clone" : null)}
     </TooltipButton>
   );
 };

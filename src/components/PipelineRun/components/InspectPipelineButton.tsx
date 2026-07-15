@@ -12,6 +12,8 @@ import { getDefaultEditorPath } from "@/routes/editorRoutes";
 type InspectPipelineButtonProps = {
   pipelineName: string;
   showLabel?: boolean;
+  displayLabel?: string;
+  showTooltip?: boolean;
 } & Omit<
   ComponentPropsWithoutRef<typeof TooltipButton>,
   "onClick" | "tooltip" | "variant" | "children"
@@ -20,6 +22,8 @@ type InspectPipelineButtonProps = {
 export const InspectPipelineButton = ({
   pipelineName,
   showLabel,
+  displayLabel,
+  showTooltip = true,
   ...rest
 }: InspectPipelineButtonProps) => {
   const navigate = useNavigate();
@@ -42,12 +46,12 @@ export const InspectPipelineButton = ({
     <TooltipButton
       variant="outline"
       onClick={handleInspect}
-      tooltip="Inspect pipeline"
+      tooltip={showTooltip ? "Inspect pipeline" : undefined}
       data-testid="inspect-pipeline-button"
       {...rest}
     >
       <Icon name="Network" className="rotate-270" />
-      {showLabel && "Inspect"}
+      {displayLabel ?? (showLabel ? "Inspect" : null)}
     </TooltipButton>
   );
 };
