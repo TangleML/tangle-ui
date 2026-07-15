@@ -81,6 +81,12 @@ export interface WindowOptions {
   persisted?: boolean;
   /** Default dock side for first-time users (no persisted state). */
   defaultDockState?: "left" | "right";
+  /**
+   * When docked, grow to fill remaining dock-area height instead of fitting
+   * content. Useful for panels whose content (e.g. logs) should expand to use
+   * all available vertical space.
+   */
+  fillDockHeight?: boolean;
   /** Callback to invoke when the window is closed */
   onClose?: () => void;
   /**

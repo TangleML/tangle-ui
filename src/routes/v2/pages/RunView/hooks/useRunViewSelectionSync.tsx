@@ -30,6 +30,7 @@ export function useRunViewSelectionSync() {
               size: { width: 300, height: 400 },
               startVisible: true,
               persisted: true,
+              fillDockHeight: true,
             });
             // Selecting a node is an explicit request to see properties, so force
             // the panel visible even if a persisted layout restored it as hidden.
