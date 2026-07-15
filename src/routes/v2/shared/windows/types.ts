@@ -75,6 +75,8 @@ export interface WindowOptions {
   disabledActions?: WindowAction[];
   /** If true, window starts visible even if persisted state was hidden. Use for selection-driven windows. */
   startVisible?: boolean;
+  /** Whether the window is visible when it has no persisted window state. */
+  defaultVisible?: boolean;
   /** If true, the window's layout (position, size, dock state) is persisted to localStorage across reloads. */
   persisted?: boolean;
   /** Default dock side for first-time users (no persisted state). */

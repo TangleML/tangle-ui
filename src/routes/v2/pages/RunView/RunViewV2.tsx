@@ -150,7 +150,7 @@ const RunViewLayout = observer(function RunViewLayout({
 }: RunViewLayoutProps) {
   useRunViewSpecLifecycle(spec);
   useShortcutListener();
-  useWindowPersistence("runview");
+  useWindowPersistence("runview-v2");
   useDockAreaAccordion();
   useRunViewWindows();
   useRunViewSelectionSync();
@@ -174,6 +174,7 @@ const RunViewLayout = observer(function RunViewLayout({
           wrap="nowrap"
           data-testid="run-view-v2"
         >
+          <DockArea side="left" />
           <div className="relative flex-1 min-w-0 h-full">
             <RunViewFlowCanvas
               key={activeSpec?.$id ?? "root"}

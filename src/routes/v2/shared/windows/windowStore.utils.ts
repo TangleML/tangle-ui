@@ -64,8 +64,13 @@ function resolveInitialState(
     };
   }
 
-  if (options.persisted && !hasPersistedLayout() && !options.startVisible) {
-    if (!DEFAULT_VIEW_PRESET.visible.has(id)) {
+  if (options.persisted && !options.startVisible) {
+    const shouldStartHidden =
+      options.defaultVisible === false ||
+      (options.defaultVisible === undefined &&
+        !hasPersistedLayout() &&
+        !DEFAULT_VIEW_PRESET.visible.has(id));
+    if (shouldStartHidden) {
       return { state: "hidden", needsPreviousState: true };
     }
   }

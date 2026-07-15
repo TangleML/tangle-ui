@@ -11,6 +11,7 @@ import { tracking } from "@/utils/tracking";
 
 import { RunMenu } from "./components/RunMenu";
 import { RunViewViewMenu } from "./components/RunViewViewMenu";
+import { RunViewWindowsMenu } from "./components/RunViewWindowsMenu";
 
 export const RunViewMenuBar = observer(function RunViewMenuBar() {
   const { navigation } = useSharedStores();
@@ -62,6 +63,7 @@ export const RunViewMenuBar = observer(function RunViewMenuBar() {
             <InlineStack wrap="nowrap" blockAlign="center">
               <RunMenu />
               <RunViewViewMenu />
+              <RunViewWindowsMenu />
             </InlineStack>
           </BlockStack>
         </InlineStack>
