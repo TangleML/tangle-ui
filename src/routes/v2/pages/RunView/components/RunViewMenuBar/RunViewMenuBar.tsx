@@ -15,8 +15,8 @@ import { RunViewWindowsMenu } from "./components/RunViewWindowsMenu";
 
 export const RunViewMenuBar = observer(function RunViewMenuBar() {
   const { navigation } = useSharedStores();
-  const spec = navigation.activeSpec;
-  const pipelineName = spec?.name ?? "Pipeline Run";
+
+  const pipelineName = navigation.rootSpec?.name ?? "Pipeline Run";
 
   return (
     <div
