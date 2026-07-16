@@ -1,5 +1,5 @@
 import { observer } from "mobx-react-lite";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { BlockStack } from "@/components/ui/layout";
 import { VerticalResizeHandle } from "@/components/ui/resize-handle";
@@ -11,6 +11,7 @@ import { CollapsedDockWindowMini } from "./CollapsedDockWindowMini";
 import { registerDockAreaElement } from "./snapUtils";
 import {
   COLLAPSED_DOCK_AREA_WIDTH,
+  DOCK_AREA_RESIZE_SNAP_THRESHOLD,
   MAX_DOCK_AREA_WIDTH,
   MIN_DOCK_AREA_WIDTH,
 } from "./types";
@@ -31,6 +32,9 @@ export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
   const { collapsed } = dockArea;
   const windowOrder = windows.getDockedWindowOrder(side);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const [snapPreview, setSnapPreview] = useState<"collapse" | "expand" | null>(
+    null,
+  );
 
   const visibleWindows = windowOrder.filter((id) => {
     const win = windows.getWindowById(id);
@@ -89,6 +93,24 @@ export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
     windows.toggleDockAreaCollapsed(side);
   };
 
+  const shouldSnap = (attemptedWidth: number) =>
+    collapsed
+      ? attemptedWidth >= DOCK_AREA_RESIZE_SNAP_THRESHOLD
+      : attemptedWidth <= DOCK_AREA_RESIZE_SNAP_THRESHOLD;
+
+  const handleResize = (attemptedWidth: number) => {
+    setSnapPreview(
+      shouldSnap(attemptedWidth) ? (collapsed ? "expand" : "collapse") : null,
+    );
+  };
+
+  const handleResizeEnd = (attemptedWidth: number) => {
+    setSnapPreview(null);
+    if (shouldSnap(attemptedWidth)) {
+      windows.toggleDockAreaCollapsed(side);
+    }
+  };
+
   const handleSide = side === "left" ? "right" : "left";
 
   if (collapsed) {
@@ -99,6 +121,18 @@ export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
         className={cn("relative shrink-0 bg-muted flex flex-col")}
         style={{ width: COLLAPSED_DOCK_AREA_WIDTH }}
       >
+        {snapPreview === "expand" && (
+          <div
+            aria-hidden="true"
+            data-dock-resize-preview="expand"
+            className={cn(
+              "absolute inset-y-0 z-10 pointer-events-none bg-card/75",
+              "border-primary/40 ring-1 ring-primary/30 shadow-2xl",
+              side === "left" ? "left-0 border-r" : "right-0 border-l",
+            )}
+            style={{ width: dockArea.width }}
+          />
+        )}
         <BlockStack
           gap="1"
           align="center"
@@ -117,6 +151,8 @@ export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
           minWidth={COLLAPSED_DOCK_AREA_WIDTH}
           maxWidth={COLLAPSED_DOCK_AREA_WIDTH}
           onDoubleClick={handleToggleCollapse}
+          onResize={handleResize}
+          onResizeEnd={handleResizeEnd}
         />
       </div>
     );
@@ -129,6 +165,20 @@ export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
       className={cn("relative shrink-0 bg-card")}
       style={{ width: dockArea.width }}
     >
+      {snapPreview === "collapse" && (
+        <div
+          aria-hidden="true"
+          data-dock-resize-preview="collapse"
+          className="absolute inset-0 z-20 pointer-events-none bg-background/60 backdrop-blur-[1px]"
+        >
+          <div
+            className={cn(
+              "absolute inset-y-0 w-9 bg-primary/15 border-primary/40 shadow-xl",
+              side === "left" ? "left-0 border-r" : "right-0 border-l",
+            )}
+          />
+        </div>
+      )}
       <div
         data-dock-scroll
         className="absolute inset-0 overflow-y-auto overflow-x-hidden hide-scrollbar"
@@ -150,6 +200,8 @@ export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
         minWidth={MIN_DOCK_AREA_WIDTH}
         maxWidth={MAX_DOCK_AREA_WIDTH}
         onDoubleClick={handleToggleCollapse}
+        onResize={handleResize}
+        onResizeEnd={handleResizeEnd}
       />
     </div>
   );
