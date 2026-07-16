@@ -8,7 +8,7 @@ import {
   STATUS_ICON,
 } from "@/routes/v2/pages/Editor/components/UpgradeComponents/components/upgradePreviewConstants";
 
-const DIFF_STATUS_LABELS: Record<DiffStatus, string> = {
+export const DIFF_STATUS_LABELS: Record<DiffStatus, string> = {
   unchanged: "Unchanged",
   lost: "Removed",
   new: "Added",

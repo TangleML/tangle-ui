@@ -4,6 +4,9 @@ import type { DiffStatus } from "@/routes/v2/pages/Editor/store/actions/task.uti
 import type {
   ArgumentType,
   ComponentSpec,
+  InputSpec,
+  OutputSpec,
+  TaskOutputArgument,
   TaskSpec,
 } from "@/utils/componentSpec";
 import { isGraphImplementation } from "@/utils/componentSpec";
@@ -17,6 +20,17 @@ export interface KeyedDiffEntry<T> {
   status: DiffStatus;
 }
 
+type IoKind = "input" | "output";
+
+export interface IoDiff {
+  name: string;
+  kind: IoKind;
+  status: DiffStatus;
+  fieldDiffs: KeyedDiffEntry<unknown>[];
+  sourceTaskIdA?: string;
+  sourceTaskIdB?: string;
+}
+
 export interface TaskDiff {
   taskId: string;
   status: DiffStatus;
@@ -27,6 +41,8 @@ export interface TaskDiff {
   sameComponentVersion: boolean;
   statusA?: string;
   statusB?: string;
+  executionIdA?: string;
+  executionIdB?: string;
   outcomeChanged: boolean;
   argumentDiffs: KeyedDiffEntry<ArgumentType>[];
   annotationDiffs: KeyedDiffEntry<unknown>[];
@@ -42,8 +58,11 @@ interface ComparisonCounts {
 
 export interface PipelineComparison {
   taskDiffs: TaskDiff[];
+  inputDiffs: IoDiff[];
+  outputDiffs: IoDiff[];
   counts: ComparisonCounts;
   hasComparableTasks: boolean;
+  hasComparableGraph: boolean;
 }
 
 /**
@@ -102,6 +121,8 @@ function buildTaskDiff(
   b: TaskSpec | undefined,
   statusA: string | undefined,
   statusB: string | undefined,
+  executionIdA: string | undefined,
+  executionIdB: string | undefined,
 ): TaskDiff {
   const argumentDiffs = diffKeyedRecords(a?.arguments, b?.arguments);
   const annotationDiffs = diffKeyedRecords(a?.annotations, b?.annotations);
@@ -131,6 +152,8 @@ function buildTaskDiff(
     sameComponentVersion: Boolean(digestA && digestB && digestA === digestB),
     statusA,
     statusB,
+    executionIdA,
+    executionIdB,
     outcomeChanged: (statusA ?? "") !== (statusB ?? ""),
     argumentDiffs,
     annotationDiffs,
@@ -144,6 +167,109 @@ function getGraphTasks(
   return spec.implementation.graph.tasks;
 }
 
+function getOutputValues(
+  spec: ComponentSpec | undefined,
+): Record<string, TaskOutputArgument> {
+  if (!spec || !isGraphImplementation(spec.implementation)) return {};
+  return spec.implementation.graph.outputValues ?? {};
+}
+
+function byName<T extends { name: string }>(
+  specs: T[] | undefined,
+): Record<string, T> {
+  const record: Record<string, T> = {};
+  for (const spec of specs ?? []) record[spec.name] = spec;
+  return record;
+}
+
+function inputFields(spec: InputSpec | undefined): Record<string, unknown> {
+  const fields: Record<string, unknown> = {};
+  if (!spec) return fields;
+  if (spec.type !== undefined) fields.type = spec.type;
+  if (spec.default !== undefined) fields.default = spec.default;
+  if (spec.value !== undefined) fields.value = spec.value;
+  if (spec.optional !== undefined) fields.optional = spec.optional;
+  if (spec.description !== undefined) fields.description = spec.description;
+  return fields;
+}
+
+function outputFields(
+  spec: OutputSpec | undefined,
+  source: TaskOutputArgument | undefined,
+): Record<string, unknown> {
+  const fields: Record<string, unknown> = {};
+  if (spec?.type !== undefined) fields.type = spec.type;
+  if (spec?.description !== undefined) fields.description = spec.description;
+  if (source) {
+    fields.source = `${source.taskOutput.taskId}.${source.taskOutput.outputName}`;
+  }
+  return fields;
+}
+
+function ioStatus(
+  inA: boolean,
+  inB: boolean,
+  fieldDiffs: KeyedDiffEntry<unknown>[],
+): DiffStatus {
+  if (inA && !inB) return "lost";
+  if (!inA && inB) return "new";
+  return fieldDiffs.some((entry) => entry.status !== "unchanged")
+    ? "changed"
+    : "unchanged";
+}
+
+function diffInputs(
+  specA: ComponentSpec | undefined,
+  specB: ComponentSpec | undefined,
+): IoDiff[] {
+  const aMap = byName(specA?.inputs);
+  const bMap = byName(specB?.inputs);
+
+  return unionKeysAFirst(aMap, bMap).map((name) => {
+    const inA = name in aMap;
+    const inB = name in bMap;
+    const fieldDiffs = diffKeyedRecords(
+      inputFields(aMap[name]),
+      inputFields(bMap[name]),
+    );
+    return {
+      name,
+      kind: "input" as const,
+      status: ioStatus(inA, inB, fieldDiffs),
+      fieldDiffs,
+    };
+  });
+}
+
+function diffOutputs(
+  specA: ComponentSpec | undefined,
+  specB: ComponentSpec | undefined,
+): IoDiff[] {
+  const aMap = byName(specA?.outputs);
+  const bMap = byName(specB?.outputs);
+  const aOut = getOutputValues(specA);
+  const bOut = getOutputValues(specB);
+
+  return unionKeysAFirst({ ...aMap, ...aOut }, { ...bMap, ...bOut }).map(
+    (name) => {
+      const inA = name in aMap || name in aOut;
+      const inB = name in bMap || name in bOut;
+      const fieldDiffs = diffKeyedRecords(
+        outputFields(aMap[name], aOut[name]),
+        outputFields(bMap[name], bOut[name]),
+      );
+      return {
+        name,
+        kind: "output" as const,
+        status: ioStatus(inA, inB, fieldDiffs),
+        fieldDiffs,
+        sourceTaskIdA: aOut[name]?.taskOutput.taskId,
+        sourceTaskIdB: bOut[name]?.taskOutput.taskId,
+      };
+    },
+  );
+}
+
 /**
  * Aligns two runs' pipeline specs by task id and produces a per-task diff of
  * component version, arguments, annotations, and execution status. Task
@@ -154,6 +280,8 @@ export function buildPipelineComparison(
   specB: ComponentSpec | undefined,
   statusMapA: Map<string, string>,
   statusMapB: Map<string, string>,
+  executionIdMapA: Map<string, string> = new Map(),
+  executionIdMapB: Map<string, string> = new Map(),
 ): PipelineComparison {
   const tasksA = getGraphTasks(specA);
   const tasksB = getGraphTasks(specB);
@@ -165,8 +293,13 @@ export function buildPipelineComparison(
       tasksB[taskId],
       statusMapA.get(taskId),
       statusMapB.get(taskId),
+      executionIdMapA.get(taskId),
+      executionIdMapB.get(taskId),
     ),
   );
+
+  const inputDiffs = diffInputs(specA, specB);
+  const outputDiffs = diffOutputs(specA, specB);
 
   const counts: ComparisonCounts = {
     added: 0,
@@ -186,7 +319,11 @@ export function buildPipelineComparison(
 
   return {
     taskDiffs,
+    inputDiffs,
+    outputDiffs,
     counts,
     hasComparableTasks: taskDiffs.length > 0,
+    hasComparableGraph:
+      taskDiffs.length > 0 || inputDiffs.length > 0 || outputDiffs.length > 0,
   };
 }

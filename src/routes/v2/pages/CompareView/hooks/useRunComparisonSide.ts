@@ -6,6 +6,7 @@ export interface RunComparisonSide {
   runId: string;
   spec: ComponentSpec | undefined;
   taskStatusMap: Map<string, string>;
+  taskExecutionIdMap: Map<string, string>;
   isLoading: boolean;
   error: Error | null;
 }
@@ -27,10 +28,15 @@ export function useRunComparisonSide(runId: string): RunComparisonSide {
 
   const taskStatusMap = buildTaskExecutionStatusMap(details, state);
 
+  const taskExecutionIdMap = new Map<string, string>(
+    Object.entries(details?.child_task_execution_ids ?? {}),
+  );
+
   return {
     runId,
     spec,
     taskStatusMap,
+    taskExecutionIdMap,
     isLoading,
     error: error ?? null,
   };
