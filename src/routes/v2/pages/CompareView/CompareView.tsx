@@ -9,14 +9,17 @@ import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Heading, Text } from "@/components/ui/typography";
+import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { APP_ROUTES } from "@/routes/appRoutes";
 import { RemoteAuthError } from "@/utils/fetchWithErrorHandling";
+import { copyToClipboard } from "@/utils/string";
 import { tracking } from "@/utils/tracking";
 
 import { CompareRunPicker } from "./components/CompareRunPicker";
 import { GraphDiffView } from "./components/GraphDiffView";
+import { RunMetadataSection } from "./components/RunMetadataSection";
 import { StructuredDiffView } from "./components/StructuredDiffView";
 import { YamlDiffView } from "./components/YamlDiffView";
 import { useRunComparisonSide } from "./hooks/useRunComparisonSide";
@@ -34,6 +37,7 @@ export function CompareView() {
   const search = useSearch({ strict: false }) as CompareSearch;
   const navigate = useNavigate();
   const { track } = useAnalytics();
+  const notify = useToastNotification();
 
   const a = search.a ?? "";
   const b = search.b ?? "";
@@ -159,16 +163,47 @@ export function CompareView() {
           </Button>
           <RunLabel label={LABEL_B} name={nameB} runId={b} tone="b" />
         </InlineStack>
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="Close comparison"
-          onClick={() => navigate({ to: APP_ROUTES.DASHBOARD_RUNS })}
-          {...tracking("compare_runs.comparison.close")}
-        >
-          <Icon name="X" size="sm" />
-        </Button>
+        <InlineStack gap="1" blockAlign="center" wrap="nowrap">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Copy link to this comparison"
+            onClick={() => {
+              copyToClipboard(window.location.href);
+              notify("Link copied to clipboard", "success");
+            }}
+            {...tracking("compare_runs.comparison.share")}
+          >
+            <Icon name="Share2" size="sm" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Close comparison"
+            onClick={() => navigate({ to: APP_ROUTES.DASHBOARD_RUNS })}
+            {...tracking("compare_runs.comparison.close")}
+          >
+            <Icon name="X" size="sm" />
+          </Button>
+        </InlineStack>
       </InlineStack>
+
+      <RunMetadataSection
+        a={{
+          createdBy: sideA.createdBy,
+          createdAt: sideA.createdAt,
+          annotations: sideA.runAnnotations,
+          arguments: sideA.runArguments,
+        }}
+        b={{
+          createdBy: sideB.createdBy,
+          createdAt: sideB.createdAt,
+          annotations: sideB.runAnnotations,
+          arguments: sideB.runArguments,
+        }}
+        labelA={LABEL_A}
+        labelB={LABEL_B}
+      />
 
       <Tabs
         value={activeTab}
