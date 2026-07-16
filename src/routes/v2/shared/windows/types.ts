@@ -124,6 +124,9 @@ export const DEFAULT_DOCK_AREA_WIDTH = 320;
 /** Minimum dock area width (px) */
 export const MIN_DOCK_AREA_WIDTH = 220;
 
+/** Resize width where dock areas preview and snap between expanded and collapsed. */
+export const DOCK_AREA_RESIZE_SNAP_THRESHOLD = MIN_DOCK_AREA_WIDTH - 20;
+
 /** Maximum dock area width (px) */
 export const MAX_DOCK_AREA_WIDTH = 600;
 
