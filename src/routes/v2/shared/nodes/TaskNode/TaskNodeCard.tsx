@@ -21,6 +21,7 @@ import { pluralize } from "@/utils/string";
 
 import { deriveColorPalette } from "./color.utils";
 import { InputAggregatorHandle } from "./InputAggregatorHandle";
+import { useOutputAction } from "./OutputActionsContext";
 import type { TaskNodeInput, TaskNodeViewProps } from "./TaskNode";
 
 const AGGREGATOR_INTERNAL_INPUTS = new Set([
@@ -217,6 +218,7 @@ export const TaskNodeCard = observer(function TaskNodeCard({
   outputType,
   onOutputTypeChange,
 }: TaskNodeViewProps) {
+  const renderOutputAction = useOutputAction();
   const isDark = useTheme().resolvedTheme === "dark";
   const palette = taskColor ? deriveColorPalette(taskColor, isDark) : undefined;
   const cardStyle = palette
@@ -459,19 +461,29 @@ export const TaskNodeCard = observer(function TaskNodeCard({
                         {`+${hiddenOutputCount} more ${pluralize(hiddenOutputCount, "output")}`}
                       </div>
                     )}
-                    <div className="translate-x-3 min-w-0 inline-block max-w-full">
-                      <div
-                        className={cn(
-                          "text-xs rounded-md px-2 py-1 truncate",
-                          palette
-                            ? isDark
-                              ? "text-gray-100 bg-white/10 hover:bg-white/15"
-                              : "text-gray-800 bg-black/5 hover:bg-black/10"
-                            : "text-foreground bg-muted hover:bg-accent",
-                        )}
-                        title={`${output.name}${output.type ? `: ${output.type}` : ""}`}
-                      >
-                        {output.name.replace(/_/g, " ")}
+                    <div className="flex items-center gap-0.5 min-w-0">
+                      {!showCondensedOutputs && renderOutputAction && (
+                        <span
+                          className="nodrag nopan"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {renderOutputAction(output)}
+                        </span>
+                      )}
+                      <div className="translate-x-3 min-w-0 inline-block max-w-full">
+                        <div
+                          className={cn(
+                            "text-xs rounded-md px-2 py-1 truncate",
+                            palette
+                              ? isDark
+                                ? "text-gray-100 bg-white/10 hover:bg-white/15"
+                                : "text-gray-800 bg-black/5 hover:bg-black/10"
+                              : "text-foreground bg-muted hover:bg-accent",
+                          )}
+                          title={`${output.name}${output.type ? `: ${output.type}` : ""}`}
+                        >
+                          {output.name.replace(/_/g, " ")}
+                        </div>
                       </div>
                     </div>
                   </div>
