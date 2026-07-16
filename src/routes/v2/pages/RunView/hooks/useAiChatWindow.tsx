@@ -5,6 +5,7 @@ import { createRunViewToolBridge } from "@/routes/v2/pages/RunView/toolBridge/ru
 import { AiChatContent } from "@/routes/v2/shared/components/AiChat/AiChatContent";
 import type { SuggestedPrompt } from "@/routes/v2/shared/components/AiChat/types";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { WindowMiniButton } from "@/routes/v2/shared/windows/WindowMiniButton";
 
 const SUGGESTED_PROMPTS_RUN: SuggestedPrompt[] = [
   { label: "Summarize this run", icon: "FileText" },
@@ -37,6 +38,13 @@ export function useAiChatWindow(enabled: boolean) {
         defaultVisible: true,
         defaultDockState: "left",
         persisted: true,
+        miniContent: (
+          <WindowMiniButton
+            tooltip="Open AI Assistant"
+            label="AI Assistant"
+            icon="Sparkles"
+          />
+        ),
       },
     );
   }, [enabled, windows]);

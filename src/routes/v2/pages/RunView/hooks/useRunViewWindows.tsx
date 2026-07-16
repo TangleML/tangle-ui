@@ -7,6 +7,7 @@ import {
   RUN_TOOLS_WINDOW_ID,
 } from "@/routes/v2/pages/RunView/runViewWindowPresets";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { WindowMiniButton } from "@/routes/v2/shared/windows/WindowMiniButton";
 
 export function useRunViewWindows() {
   const { windows } = useSharedStores();
@@ -26,6 +27,13 @@ export function useRunViewWindows() {
         minSize: { width: 240, height: 180 },
         defaultDockState: "left",
         persisted: true,
+        miniContent: (
+          <WindowMiniButton
+            tooltip="View Run Tools"
+            label="Run Tools"
+            icon="Wrench"
+          />
+        ),
       });
     }
 
@@ -36,6 +44,13 @@ export function useRunViewWindows() {
         defaultVisible: true,
         defaultDockState: "right",
         persisted: true,
+        miniContent: (
+          <WindowMiniButton
+            tooltip="View Run Details"
+            label="Run Details"
+            icon="Info"
+          />
+        ),
       });
     }
   }, [windows]);

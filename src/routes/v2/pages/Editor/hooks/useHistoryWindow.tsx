@@ -2,6 +2,7 @@ import { useEffect } from "react";
 
 import { HistoryContent } from "@/routes/v2/pages/Editor/components/HistoryContent/HistoryContent";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { WindowMiniButton } from "@/routes/v2/shared/windows/WindowMiniButton";
 
 const HISTORY_WINDOW_ID = "history";
 
@@ -17,6 +18,13 @@ export function useHistoryWindow() {
         disabledActions: ["close"],
         persisted: true,
         defaultDockState: "left",
+        miniContent: (
+          <WindowMiniButton
+            tooltip="View History"
+            label="History"
+            icon="History"
+          />
+        ),
       });
     }
   }, [windows]);

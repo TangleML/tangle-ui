@@ -5,6 +5,7 @@ import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionCo
 import { AiChatContent } from "@/routes/v2/shared/components/AiChat/AiChatContent";
 import type { SuggestedPrompt } from "@/routes/v2/shared/components/AiChat/types";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { WindowMiniButton } from "@/routes/v2/shared/windows/WindowMiniButton";
 
 const AI_CHAT_WINDOW_ID = "ai-assistant-chat";
 
@@ -45,6 +46,13 @@ export function useAiChatWindow(enabled: boolean) {
         startVisible: true,
         persisted: true,
         defaultDockState: "left",
+        miniContent: (
+          <WindowMiniButton
+            tooltip="Open Sidekick"
+            label="Sidekick"
+            icon="Sparkles"
+          />
+        ),
       },
     );
   }, [enabled, windows, editorSession]);

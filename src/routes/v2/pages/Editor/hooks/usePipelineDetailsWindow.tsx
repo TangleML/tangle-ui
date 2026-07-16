@@ -2,6 +2,7 @@ import { useEffect } from "react";
 
 import { PipelineDetailsContent } from "@/routes/v2/pages/Editor/components/PipelineDetailsContent/PipelineDetailsContent";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { WindowMiniButton } from "@/routes/v2/shared/windows/WindowMiniButton";
 
 const PIPELINE_DETAILS_WINDOW_ID = "pipeline-details";
 
@@ -20,6 +21,13 @@ export function usePipelineDetailsWindow() {
         disabledActions: ["close"],
         persisted: true,
         defaultDockState: "right",
+        miniContent: (
+          <WindowMiniButton
+            tooltip="View Pipeline Details"
+            label="Pipeline Details"
+            icon="Info"
+          />
+        ),
       });
     }
   }, [windows, title]);
