@@ -3,6 +3,7 @@ export function isEditableTarget(target: EventTarget | null): boolean {
   return (
     target.tagName === "INPUT" ||
     target.tagName === "TEXTAREA" ||
-    target.isContentEditable
+    target.isContentEditable ||
+    target.closest(".monaco-editor") !== null
   );
 }

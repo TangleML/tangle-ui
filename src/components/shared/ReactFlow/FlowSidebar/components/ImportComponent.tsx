@@ -65,6 +65,7 @@ const ImportComponent = ({
       selected_template: template,
     });
     setComponentEditorTemplateSelected(template);
+    setIsOpen(false);
   };
 
   const handleComponentEditorDialogClose = () => {
