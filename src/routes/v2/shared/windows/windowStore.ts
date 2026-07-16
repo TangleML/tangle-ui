@@ -255,11 +255,16 @@ export class WindowStoreImpl implements WindowStoreRef {
   ): void {
     this.dockAreas[side].width = state.width;
     this.dockAreas[side].collapsed = state.collapsed;
-    this.dockAreas[side].windowOrder = [...state.windowOrder];
-    // Reconcile against actual window state so a re-run of restore (StrictMode
-    // double-invoke, dependency change) cannot orphan windows that were already
-    // docked to this side by `use*Window` hooks.
-    this.dockAreas[side].windowOrder = this.getDockedWindowOrder(side);
+    // Preserve the persisted order verbatim, including ids whose windows have not
+    // been created yet (use*Window hooks run after this effect). Append any window
+    // already docked to this side but missing from the persisted order so a re-run
+    // (StrictMode double-invoke, dependency change) cannot orphan it. Stale/ghost
+    // ids are filtered out later by getDockedWindowOrder (render) and at save time.
+    const seen = new Set(state.windowOrder);
+    const extras = this.windowOrder.filter(
+      (id) => this.windows[id]?.dockState === side && !seen.has(id),
+    );
+    this.dockAreas[side].windowOrder = [...state.windowOrder, ...extras];
   }
 
   isDockSideEnabled(side: "left" | "right"): boolean {
