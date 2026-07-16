@@ -3,6 +3,7 @@ import { useEffect } from "react";
 
 import { RunViewContextPanel } from "@/routes/v2/pages/RunView/components/RunViewContextPanel";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { WindowMiniButton } from "@/routes/v2/shared/windows/WindowMiniButton";
 
 const CONTEXT_PANEL_WINDOW_ID = "context-panel";
 
@@ -32,6 +33,13 @@ export function useRunViewSelectionSync() {
               persisted: true,
               fillDockHeight: true,
               defaultDockState: "right",
+              miniContent: (
+                <WindowMiniButton
+                  tooltip="View Properties"
+                  label="Properties"
+                  icon="SlidersHorizontal"
+                />
+              ),
             });
             // Selecting a node is an explicit request to see properties, so force
             // the panel visible even if a persisted layout restored it as hidden.

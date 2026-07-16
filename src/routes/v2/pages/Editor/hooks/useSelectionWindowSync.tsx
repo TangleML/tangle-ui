@@ -7,6 +7,7 @@ import { useDeselectAll } from "@/routes/v2/shared/hooks/useDeselectAll";
 import type { EditorStore } from "@/routes/v2/shared/store/editorStore";
 import type { NavigationStore } from "@/routes/v2/shared/store/navigationStore";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { WindowMiniButton } from "@/routes/v2/shared/windows/WindowMiniButton";
 import type { WindowStoreImpl } from "@/routes/v2/shared/windows/windowStore";
 
 const CONTEXT_PANEL_WINDOW_ID = "context-panel";
@@ -102,6 +103,13 @@ function ensureContextPanelVisible(
     defaultDockState: "right",
     disabledActions: ["hide"],
     onClose: deselectAll,
+    miniContent: (
+      <WindowMiniButton
+        tooltip="View Properties"
+        label="Properties"
+        icon="SlidersHorizontal"
+      />
+    ),
   });
   scrollWindowIntoView();
 }

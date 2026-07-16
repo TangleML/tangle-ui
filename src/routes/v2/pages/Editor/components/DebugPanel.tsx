@@ -24,6 +24,7 @@ import {
 } from "@/routes/v2/shared/clipboard/clipboardEnvelope";
 import { ShortcutBadge } from "@/routes/v2/shared/components/ShortcutBadge";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { WindowMiniButton } from "@/routes/v2/shared/windows/WindowMiniButton";
 import { tracking } from "@/utils/tracking";
 
 import { getSelectedInfo, getSpecStats, getSpecYaml } from "./debugPanel.utils";
@@ -357,6 +358,13 @@ export function useDebugPanelWindow() {
         disabledActions: ["close"],
         persisted: true,
         defaultDockState: "left",
+        miniContent: (
+          <WindowMiniButton
+            tooltip="View Debug Panel"
+            label="Debug Panel"
+            icon="Bug"
+          />
+        ),
       });
     }
   }, [windows]);

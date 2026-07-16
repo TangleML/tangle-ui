@@ -2,6 +2,7 @@ import { useEffect } from "react";
 
 import { RecentRunsContent } from "@/routes/v2/pages/Editor/components/RecentRunsContent";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
+import { WindowMiniButton } from "@/routes/v2/shared/windows/WindowMiniButton";
 
 const RECENT_RUNS_WINDOW_ID = "recent-runs";
 
@@ -17,6 +18,13 @@ export function useRecentRunsWindow() {
         disabledActions: ["close"],
         persisted: true,
         defaultDockState: "left",
+        miniContent: (
+          <WindowMiniButton
+            tooltip="View Recent Runs"
+            label="Recent Runs"
+            icon="List"
+          />
+        ),
       });
     }
   }, [windows]);
