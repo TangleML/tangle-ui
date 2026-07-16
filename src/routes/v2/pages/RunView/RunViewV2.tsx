@@ -47,6 +47,7 @@ import { useAiChatWindow } from "./hooks/useAiChatWindow";
 import { useFocusTaskFromUrl } from "./hooks/useFocusTaskFromUrl";
 import { useRunViewSelectionSync } from "./hooks/useRunViewSelectionSync";
 import { useRunViewSpecLifecycle } from "./hooks/useRunViewSpecLifecycle";
+import { useRunViewSubgraphUrlSync } from "./hooks/useRunViewSubgraphUrlSync";
 import { useRunViewWindows } from "./hooks/useRunViewWindows";
 import { runViewRegistry } from "./nodes";
 import { createRunViewAgentWorker } from "./toolBridge/runViewAgentWorker";
@@ -165,6 +166,7 @@ const RunViewLayout = observer(function RunViewLayout({
   useDockAreaAccordion();
   useRunViewWindows();
   useRunViewSelectionSync();
+  useRunViewSubgraphUrlSync();
   useFocusTaskFromUrl(spec);
 
   const aiEnabled = useFlagValue("ai-assistant");
