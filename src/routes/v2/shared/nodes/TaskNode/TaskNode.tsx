@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import type {
+  ComponentReference,
   ComponentSpec,
   ComponentSpecJson,
   Task,
@@ -35,6 +36,7 @@ import { TaskNodeSimplified } from "./TaskNodeSimplified";
 type TaskNodeType = Node<TaskNodeData, "task">;
 type TaskNodeProps = NodeProps<TaskNodeType> & {
   subgraphExecutionStats?: ExecutionStatusStats | null;
+  publishedComponentBadgeReadOnly?: boolean;
 };
 
 export interface TaskNodeInput {
@@ -65,7 +67,9 @@ export interface TaskNodeViewProps {
   annotations: { key: string }[];
   taskColor?: string;
   cacheDisabled: boolean;
+  componentRef?: ComponentReference;
   digest?: string;
+  publishedComponentBadgeReadOnly?: boolean;
   inputDisplayValues: Record<string, string | undefined>;
   secretInputNames: Set<string>;
   isAggregator: boolean;
@@ -231,12 +235,16 @@ export const TaskNode = observer(function TaskNode({
   data,
   selected,
   subgraphExecutionStats,
+  publishedComponentBadgeReadOnly = false,
 }: TaskNodeProps) {
   const { entityId } = data;
   const { editor, canvasOverlay } = useSharedStores();
   const { getEdges, setEdges } = useReactFlow();
   const showContent = useIsDetailedView();
   const inputAggregatorEnabled = useFlagValue("input-aggregator");
+  const publishedComponentBadgeEnabled = useFlagValue(
+    "remote-component-library-search",
+  );
 
   const spec = useSpec();
   const task = spec?.tasks.find((t) => t.$id === entityId);
@@ -312,6 +320,10 @@ export const TaskNode = observer(function TaskNode({
     cacheDisabled:
       task.executionOptions?.cachingStrategy?.maxCacheStaleness ===
       ISO8601_DURATION_ZERO_DAYS,
+    componentRef: publishedComponentBadgeEnabled
+      ? task.componentRef
+      : undefined,
+    publishedComponentBadgeReadOnly,
     isAggregator,
     outputType: resolveAggregatorOutputType(task),
     subgraphExecutionStats,

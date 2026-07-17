@@ -55,7 +55,11 @@ export const RunViewTaskNode = observer(function RunViewTaskNode(
         </Button>
       )}
 
-      <TaskNode {...props} subgraphExecutionStats={subgraphExecutionStats} />
+      <TaskNode
+        {...props}
+        subgraphExecutionStats={subgraphExecutionStats}
+        publishedComponentBadgeReadOnly
+      />
     </div>
   );
 });

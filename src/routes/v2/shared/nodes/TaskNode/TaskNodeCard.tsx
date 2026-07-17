@@ -3,6 +3,7 @@ import { cva } from "class-variance-authority";
 import { observer } from "mobx-react-lite";
 import { type MouseEvent as ReactMouseEvent, useEffect, useState } from "react";
 
+import { PublishedComponentBadge } from "@/components/shared/ManageComponent/PublishedComponentBadge";
 import { trimDigest } from "@/components/shared/ManageComponent/utils/digest";
 import { OutputTypeSelector } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/OutputTypeSelector/OutputTypeSelector";
 import TaskStatusBar from "@/components/shared/Status/TaskStatusBar";
@@ -227,7 +228,9 @@ export const TaskNodeCard = observer(function TaskNodeCard({
   onHandleClick,
   taskColor,
   cacheDisabled,
+  componentRef,
   digest,
+  publishedComponentBadgeReadOnly,
   isAggregator,
   outputType,
   subgraphExecutionStats,
@@ -274,6 +277,17 @@ export const TaskNodeCard = observer(function TaskNodeCard({
   const showCondensedOutputs =
     collapsed && !outputsExpanded && hiddenOutputCount > 0;
   const visibleOutputs = showCondensedOutputs ? condensedOutputs : outputs;
+  const digestMarkup = digest ? (
+    <span
+      className={cn(
+        "text-xs font-light font-mono shrink-0",
+        !componentRef && !palette && "text-muted-foreground",
+      )}
+      style={!componentRef && palette ? { color: palette.text } : undefined}
+    >
+      {trimDigest(digest)}
+    </span>
+  ) : null;
 
   return (
     <Card
@@ -344,16 +358,15 @@ export const TaskNodeCard = observer(function TaskNodeCard({
                 {taskName}
               </CardTitle>
             </InlineStack>
-            {digest && (
-              <span
-                className={cn(
-                  "text-xs font-light font-mono shrink-0",
-                  !palette && "text-muted-foreground",
-                )}
-                style={palette ? { color: palette.text } : undefined}
+            {digestMarkup && componentRef ? (
+              <PublishedComponentBadge
+                componentRef={componentRef}
+                readOnly={publishedComponentBadgeReadOnly}
               >
-                {trimDigest(digest)}
-              </span>
+                {digestMarkup}
+              </PublishedComponentBadge>
+            ) : (
+              digestMarkup
             )}
           </InlineStack>
         </BlockStack>
