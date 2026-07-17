@@ -25,12 +25,15 @@ import {
   TASK_COLOR_ANNOTATION,
 } from "@/utils/annotations";
 import { ISO8601_DURATION_ZERO_DAYS } from "@/utils/constants";
+import type { ExecutionStatusStats } from "@/utils/executionStatus";
 
 import { TaskNodeCard } from "./TaskNodeCard";
 import { TaskNodeSimplified } from "./TaskNodeSimplified";
 
 type TaskNodeType = Node<TaskNodeData, "task">;
-type TaskNodeProps = NodeProps<TaskNodeType>;
+type TaskNodeProps = NodeProps<TaskNodeType> & {
+  subgraphExecutionStats?: ExecutionStatusStats | null;
+};
 
 export interface TaskNodeInput {
   name: string;
@@ -64,6 +67,7 @@ export interface TaskNodeViewProps {
   inputDisplayValues: Record<string, string | undefined>;
   isAggregator: boolean;
   outputType: AggregatorOutputType;
+  subgraphExecutionStats?: ExecutionStatusStats | null;
   onOutputTypeChange: (value: AggregatorOutputType) => void;
   onNodeClick: (event: MouseEvent) => void;
   onInputClick: (inputName: string, event: MouseEvent) => void;
@@ -208,6 +212,7 @@ export const TaskNode = observer(function TaskNode({
   id,
   data,
   selected,
+  subgraphExecutionStats,
 }: TaskNodeProps) {
   const { entityId } = data;
   const { editor, canvasOverlay } = useSharedStores();
@@ -290,6 +295,7 @@ export const TaskNode = observer(function TaskNode({
       ISO8601_DURATION_ZERO_DAYS,
     isAggregator,
     outputType: resolveAggregatorOutputType(task),
+    subgraphExecutionStats,
     onOutputTypeChange: handleOutputTypeChange,
     digest: task.componentRef.digest,
     inputDisplayValues: resolveInputDisplayValues(task, entityId, spec),

@@ -66,13 +66,19 @@ const StatusSegment = ({
   );
 };
 
+interface TaskStatusBarProps {
+  executionStatusStats?: ExecutionStatusStats | null;
+  barClassName?: string;
+}
+
 const TaskStatusBar = ({
   executionStatusStats,
-}: {
-  executionStatusStats?: ExecutionStatusStats | null;
-}) => {
+  barClassName,
+}: TaskStatusBarProps) => {
   if (!executionStatusStats) {
-    return <InlineStack wrap="nowrap" className={BAR_CLASS} />;
+    return (
+      <InlineStack wrap="nowrap" className={cn(BAR_CLASS, barClassName)} />
+    );
   }
 
   const entries = Object.entries(executionStatusStats).filter(
@@ -80,7 +86,9 @@ const TaskStatusBar = ({
   );
 
   if (entries.length === 0) {
-    return <InlineStack wrap="nowrap" className={BAR_CLASS} />;
+    return (
+      <InlineStack wrap="nowrap" className={cn(BAR_CLASS, barClassName)} />
+    );
   }
 
   const total = entries.reduce((sum, [, count]) => sum + (count ?? 0), 0);
@@ -101,7 +109,7 @@ const TaskStatusBar = ({
 
   return (
     <BlockStack className="relative">
-      <InlineStack wrap="nowrap" className={BAR_CLASS}>
+      <InlineStack wrap="nowrap" className={cn(BAR_CLASS, barClassName)}>
         {sortedEntries.map(([status, count]) => (
           <StatusSegment
             key={status}

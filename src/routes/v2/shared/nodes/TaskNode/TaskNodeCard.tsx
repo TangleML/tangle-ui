@@ -5,6 +5,7 @@ import { type MouseEvent as ReactMouseEvent, useEffect, useState } from "react";
 
 import { trimDigest } from "@/components/shared/ManageComponent/utils/digest";
 import { OutputTypeSelector } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/OutputTypeSelector/OutputTypeSelector";
+import TaskStatusBar from "@/components/shared/Status/TaskStatusBar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
@@ -215,6 +216,7 @@ export const TaskNodeCard = observer(function TaskNodeCard({
   digest,
   isAggregator,
   outputType,
+  subgraphExecutionStats,
   onOutputTypeChange,
 }: TaskNodeViewProps) {
   const isDark = useTheme().resolvedTheme === "dark";
@@ -344,6 +346,9 @@ export const TaskNodeCard = observer(function TaskNodeCard({
       </CardHeader>
 
       <CardContent className="p-2 flex flex-col gap-2">
+        {isSubgraph && subgraphExecutionStats && (
+          <TaskStatusBar executionStatusStats={subgraphExecutionStats} />
+        )}
         {showInputsSection && (
           <div
             className={cn(

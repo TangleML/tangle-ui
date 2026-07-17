@@ -19,8 +19,14 @@ export const RunViewTaskNode = observer(function RunViewTaskNode(
 ) {
   const { entityId } = props.data;
   const { windows } = useSharedStores();
-  const { task, status, disabledCache, executionId, showLogsButton } =
-    useTaskRunStatus(entityId);
+  const {
+    task,
+    status,
+    disabledCache,
+    executionId,
+    showLogsButton,
+    subgraphExecutionStats,
+  } = useTaskRunStatus(entityId);
 
   const handleOpenLogs = () => {
     if (!task || !executionId) return;
@@ -49,7 +55,7 @@ export const RunViewTaskNode = observer(function RunViewTaskNode(
         </Button>
       )}
 
-      <TaskNode {...props} />
+      <TaskNode {...props} subgraphExecutionStats={subgraphExecutionStats} />
     </div>
   );
 });
