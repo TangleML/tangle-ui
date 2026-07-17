@@ -63,7 +63,7 @@ export function VersionToggle({
           if (showWelcome) dismissWelcome();
           navigate({ to: targetPath });
         }}
-        variant="headerOutline"
+        variant="header"
         size="icon"
         aria-label={tooltip}
         {...(trackingId

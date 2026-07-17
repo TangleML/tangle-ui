@@ -61,7 +61,7 @@ export const AutoSaveIndicator = observer(function AutoSaveIndicator() {
   return (
     <TooltipButton
       tooltip={tooltipText}
-      variant="headerOutline"
+      variant="header"
       disabled={isSaving}
       onClick={handleClick}
       data-testid="auto-save-button"

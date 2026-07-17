@@ -99,7 +99,7 @@ const DefaultAppMenu = () => {
               triggerComponent={
                 <TooltipButton
                   tooltip="Import Pipeline"
-                  variant="headerOutline"
+                  variant="header"
                   {...tracking("header.import_pipeline")}
                 >
                   <Icon name="Upload" />
@@ -110,7 +110,7 @@ const DefaultAppMenu = () => {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <NewPipelineButton
-                    variant="headerOutline"
+                    variant="header"
                     {...tracking("header.new_pipeline")}
                   >
                     <Icon name="Plus" />
@@ -134,7 +134,7 @@ const DefaultAppMenu = () => {
             <TooltipButton
               tooltip="Close Settings"
               onClick={handleGoBack}
-              variant="headerOutline"
+              variant="header"
               className="relative"
             >
               <Icon name="Settings" />
@@ -146,7 +146,7 @@ const DefaultAppMenu = () => {
             </TooltipButton>
           ) : (
             <RouterLink to="/settings/backend" {...tracking("header.settings")}>
-              <TooltipButton tooltip="Settings" variant="headerOutline">
+              <TooltipButton tooltip="Settings" variant="header">
                 <Icon name="Settings" />
               </TooltipButton>
             </RouterLink>
@@ -158,7 +158,7 @@ const DefaultAppMenu = () => {
             rel="noopener noreferrer"
             {...tracking("header.documentation")}
           >
-            <TooltipButton tooltip="Documentation" variant="headerOutline">
+            <TooltipButton tooltip="Documentation" variant="header">
               <Icon name="CircleQuestionMark" />
             </TooltipButton>
           </Link>
