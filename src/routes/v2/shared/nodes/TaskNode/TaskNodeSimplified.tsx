@@ -1,5 +1,6 @@
 import { Handle, Position } from "@xyflow/react";
 
+import TaskStatusBar from "@/components/shared/Status/TaskStatusBar";
 import { Card } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
 import {
@@ -24,7 +25,7 @@ const PERCEIVED_FONT_SIZE = "32px";
 const s = "var(--simplified-scale, 1)";
 
 const simplifiedCardVariants = createTaskNodeCardVariants(
-  "flex flex-col justify-center rounded-xl border-2 p-0 drop-shadow-sm cursor-pointer select-none transition-[border-color,box-shadow]",
+  "relative flex flex-col justify-center rounded-xl border-2 p-0 drop-shadow-sm cursor-pointer select-none transition-[border-color,box-shadow]",
 );
 
 export function TaskNodeSimplified({
@@ -36,11 +37,13 @@ export function TaskNodeSimplified({
   isHovered,
   taskColor,
   isAggregator,
+  subgraphExecutionStats,
   onNodeClick,
 }: TaskNodeViewProps) {
   const isDark = useTheme().resolvedTheme === "dark";
   const palette = taskColor ? deriveColorPalette(taskColor, isDark) : undefined;
   const headerTextColor = palette?.text;
+  const showSubgraphProgress = isSubgraph && !!subgraphExecutionStats;
 
   const visibleInputs = isAggregator
     ? inputs.filter((input) => !AGGREGATOR_INTERNAL_INPUTS.has(input.name))
@@ -101,7 +104,9 @@ export function TaskNodeSimplified({
       <div
         className="flex items-center w-full h-full"
         style={{
-          padding: `calc(${s} * 14px) calc(${s} * 18px)`,
+          padding: showSubgraphProgress
+            ? `calc(${s} * 10px) calc(${s} * 18px) calc(${s} * 26px)`
+            : `calc(${s} * 14px) calc(${s} * 18px)`,
           gap: `calc(${s} * 10px)`,
         }}
       >
@@ -124,7 +129,8 @@ export function TaskNodeSimplified({
           <TooltipTrigger asChild>
             <span
               className={cn(
-                "font-medium min-w-0 line-clamp-2 wrap-break-word",
+                "font-medium min-w-0 wrap-break-word",
+                showSubgraphProgress ? "line-clamp-1" : "line-clamp-2",
                 !palette && "text-card-foreground",
               )}
               style={{
@@ -138,6 +144,22 @@ export function TaskNodeSimplified({
           <TooltipContent side="top">{taskName}</TooltipContent>
         </Tooltip>
       </div>
+
+      {showSubgraphProgress && (
+        <div
+          className="absolute"
+          style={{
+            left: `calc(${s} * 18px)`,
+            right: `calc(${s} * 18px)`,
+            bottom: `calc(${s} * 10px)`,
+          }}
+        >
+          <TaskStatusBar
+            executionStatusStats={subgraphExecutionStats}
+            barClassName="h-[calc(var(--simplified-scale,1)*8px)]"
+          />
+        </div>
+      )}
 
       {outputs.map((output) => (
         <Handle
