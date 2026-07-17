@@ -98,6 +98,11 @@ export default function FlowControls({
     }
   };
 
+  const lockLabel = lockActive ? "Unlock nodes" : "Lock nodes";
+  const areaSelectLabel = multiSelectActive
+    ? "Disable area selection"
+    : "Enable area selection";
+
   return (
     <Controls
       {...props}
@@ -109,6 +114,9 @@ export default function FlowControls({
         <ControlButton
           onClick={handleLockChange}
           className={cn(lockActive && "bg-gray-100! dark:bg-accent!")}
+          aria-label={lockLabel}
+          aria-pressed={lockActive}
+          title={lockLabel}
           {...tracking("pipeline_canvas.tool_bar.tool", {
             tool: "lock_unlock",
             page_type: pageType,
@@ -124,6 +132,9 @@ export default function FlowControls({
       <ControlButton
         onClick={onClickMultiSelect}
         className={cn(multiSelectActive && "bg-gray-100! dark:bg-accent!")}
+        aria-label={areaSelectLabel}
+        aria-pressed={multiSelectActive}
+        title={areaSelectLabel}
         {...tracking("pipeline_canvas.tool_bar.tool", {
           tool: "area_select",
           page_type: pageType,
@@ -134,7 +145,11 @@ export default function FlowControls({
       {onAutoLayout && (
         <Popover open={layoutPopoverOpen} onOpenChange={setLayoutPopoverOpen}>
           <PopoverTrigger asChild>
-            <ControlButton disabled={isLayouting}>
+            <ControlButton
+              disabled={isLayouting}
+              aria-label="Auto layout"
+              title="Auto layout"
+            >
               {isLayouting ? (
                 <Spinner className="fill-none! scale-120" />
               ) : (

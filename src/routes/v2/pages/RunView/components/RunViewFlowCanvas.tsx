@@ -1,13 +1,16 @@
 import {
   Background,
-  Controls,
   MiniMap,
   type NodeChange,
   ReactFlow,
+  type ReactFlowProps,
   useReactFlow,
 } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
+import { useState } from "react";
 
+import type { LayoutAlgorithm } from "@/components/shared/ReactFlow/FlowCanvas/utils/autolayout";
+import FlowControls from "@/components/shared/ReactFlow/FlowControls/FlowControls";
 import { BlockStack } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
 import type { ComponentSpec } from "@/models/componentSpec";
@@ -41,9 +44,14 @@ export const RunViewFlowCanvas = observer(function RunViewFlowCanvas({
   const registry = useNodeRegistry();
   const nodeTypes = registry.getNodeTypes();
   const edgeTypes = registry.getEdgeTypes();
-  const { editor } = useSharedStores();
+  const { editor, keyboard } = useSharedStores();
   const { containerRef, handleViewportChange } = useViewportScaling();
   const { setNodes: rfSetNodes } = useReactFlow();
+  const [flowConfig, setFlowConfig] = useState<ReactFlowProps>({
+    nodesDraggable: true,
+    selectionOnDrag: false,
+    panOnDrag: true,
+  });
 
   const {
     displayNodes,
@@ -73,6 +81,14 @@ export const RunViewFlowCanvas = observer(function RunViewFlowCanvas({
     editor.clearSelection();
   };
 
+  const updateFlowConfig = (config: Partial<ReactFlowProps>) => {
+    setFlowConfig((current) => ({ ...current, ...config }));
+  };
+
+  const handleAutoLayout = (algorithm: LayoutAlgorithm) => {
+    keyboard.invokeShortcut("auto-layout", { algorithm });
+  };
+
   return (
     <BlockStack
       ref={containerRef}
@@ -82,6 +98,7 @@ export const RunViewFlowCanvas = observer(function RunViewFlowCanvas({
       <SubgraphBreadcrumbs />
       <ReactFlow
         {...FLOW_CANVAS_DEFAULT_PROPS}
+        {...flowConfig}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         nodes={displayNodes}
@@ -93,23 +110,12 @@ export const RunViewFlowCanvas = observer(function RunViewFlowCanvas({
         {...doubleClickBehavior}
         onViewportChange={handleViewportChange}
         nodesConnectable={false}
-        nodesDraggable
         elementsSelectable
         deleteKeyCode={null}
+        className={cn(flowConfig.selectionOnDrag && "cursor-crosshair")}
       >
         <RunViewSelectionToolbar spec={spec} />
         <Background gap={GRID_SIZE} className="bg-canvas!" />
-        <Controls
-          position="bottom-right"
-          onZoomIn={() => track("v2.run_view.canvas.controls.zoom_in.click")}
-          onZoomOut={() => track("v2.run_view.canvas.controls.zoom_out.click")}
-          onFitView={() => track("v2.run_view.canvas.controls.fit_view.click")}
-          onInteractiveChange={(interactive) =>
-            track("v2.run_view.canvas.controls.interactive.toggle", {
-              interactive,
-            })
-          }
-        />
         <MiniMap
           position="bottom-left"
           className="dark:rounded-md dark:border dark:border-border"
@@ -117,6 +123,15 @@ export const RunViewFlowCanvas = observer(function RunViewFlowCanvas({
           zoomable
           onClick={() => track("v2.run_view.canvas.minimap.click")}
           onNodeClick={() => track("v2.run_view.canvas.minimap.node.click")}
+        />
+        <FlowControls
+          position="bottom-left"
+          className="ml-56! mb-3!"
+          config={flowConfig}
+          updateConfig={updateFlowConfig}
+          onAutoLayout={handleAutoLayout}
+          showInteractive={false}
+          pageType="pipeline_run"
         />
       </ReactFlow>
     </BlockStack>

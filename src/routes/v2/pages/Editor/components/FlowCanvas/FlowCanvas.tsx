@@ -1,14 +1,16 @@
 import {
   Background,
-  Controls,
   MiniMap,
   ReactFlow,
   type ReactFlowInstance,
+  type ReactFlowProps,
   useConnection,
 } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
 import { useState } from "react";
 
+import type { LayoutAlgorithm } from "@/components/shared/ReactFlow/FlowCanvas/utils/autolayout";
+import FlowControls from "@/components/shared/ReactFlow/FlowControls/FlowControls";
 import { BlockStack } from "@/components/ui/layout";
 import { cn } from "@/lib/utils";
 import type { ComponentSpec } from "@/models/componentSpec";
@@ -53,6 +55,11 @@ export const FlowCanvas = observer(function FlowCanvas({
   const { containerRef, handleViewportChange } = useViewportScaling();
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance | null>(null);
+  const [flowConfig, setFlowConfig] = useState<ReactFlowProps>({
+    nodesDraggable: true,
+    selectionOnDrag: false,
+    panOnDrag: true,
+  });
   const focusModeActive = focusModeStore.active;
 
   const metaKeyPressed = keyboard.pressed.has(CMDALT);
@@ -85,6 +92,14 @@ export const FlowCanvas = observer(function FlowCanvas({
   const doubleClickBehavior = useDoubleClickBehavior(spec);
   const paneClickBehavior = usePaneClickBehavior(spec, reactFlowInstance);
 
+  const updateFlowConfig = (config: Partial<ReactFlowProps>) => {
+    setFlowConfig((current) => ({ ...current, ...config }));
+  };
+
+  const handleAutoLayout = (algorithm: LayoutAlgorithm) => {
+    keyboard.invokeShortcut("auto-layout", { algorithm });
+  };
+
   return (
     <BlockStack
       ref={containerRef}
@@ -98,6 +113,7 @@ export const FlowCanvas = observer(function FlowCanvas({
       <SubgraphBreadcrumbs />
       <ReactFlow
         {...FLOW_CANVAS_DEFAULT_PROPS}
+        {...flowConfig}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         nodes={displayNodes}
@@ -117,23 +133,13 @@ export const FlowCanvas = observer(function FlowCanvas({
         connectionLineComponent={ConnectionLine}
         deleteKeyCode={["Delete", "Backspace"]}
         className={cn(
-          shiftKeyPressed && !isConnecting && "cursor-crosshair",
+          (flowConfig.selectionOnDrag || (shiftKeyPressed && !isConnecting)) &&
+            "cursor-crosshair",
           !isDetailedView && "connections-disabled",
         )}
       >
         <FloatingSelectionToolbar spec={spec} />
         <Background gap={10} className="bg-canvas!" />
-        <Controls
-          position="bottom-right"
-          onZoomIn={() => track("v2.pipeline_canvas.controls.zoom_in.click")}
-          onZoomOut={() => track("v2.pipeline_canvas.controls.zoom_out.click")}
-          onFitView={() => track("v2.pipeline_canvas.controls.fit_view.click")}
-          onInteractiveChange={(interactive) =>
-            track("v2.pipeline_canvas.controls.interactive.toggle", {
-              interactive,
-            })
-          }
-        />
         <MiniMap
           position="bottom-left"
           className="dark:rounded-md dark:border dark:border-border"
@@ -141,6 +147,15 @@ export const FlowCanvas = observer(function FlowCanvas({
           zoomable
           onClick={() => track("v2.pipeline_canvas.minimap.click")}
           onNodeClick={() => track("v2.pipeline_canvas.minimap.node.click")}
+        />
+        <FlowControls
+          position="bottom-left"
+          className="ml-56! mb-3!"
+          config={flowConfig}
+          updateConfig={updateFlowConfig}
+          onAutoLayout={handleAutoLayout}
+          showInteractive={false}
+          pageType="pipeline_editor"
         />
       </ReactFlow>
       <CanvasUndoRedo />
