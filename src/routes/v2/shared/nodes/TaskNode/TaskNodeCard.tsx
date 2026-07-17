@@ -91,6 +91,7 @@ interface ClassicInputHandleProps {
   entityId: string;
   displayValue: string | undefined;
   hideValue?: boolean;
+  isSecret: boolean;
   /** When true the node has no custom colour, so section chrome follows the theme. */
   themed: boolean;
   /** Whether the app is in dark mode — used to darken coloured-node chrome. */
@@ -104,6 +105,7 @@ const ClassicInputHandle = observer(function ClassicInputHandle({
   entityId,
   displayValue,
   hideValue,
+  isSecret,
   themed,
   isDark,
   onInputClick,
@@ -172,6 +174,15 @@ const ClassicInputHandle = observer(function ClassicInputHandle({
         </div>
         {showValueDisplay && (
           <div className="flex w-fit max-w-1/2 min-w-0 items-center gap-1">
+            {isSecret && (
+              <Icon
+                name="Lock"
+                size="xs"
+                className="shrink-0 text-amber-600"
+                aria-hidden="true"
+                data-testid={`input-secret-icon-${input.name}`}
+              />
+            )}
             <div
               className={cn(
                 "text-xs truncate inline-block text-right pr-2",
@@ -184,8 +195,10 @@ const ClassicInputHandle = observer(function ClassicInputHandle({
                   (themed
                     ? "text-muted-foreground italic"
                     : "text-gray-400 italic"),
+                isSecret && "text-amber-600",
               )}
             >
+              {isSecret && <span className="sr-only">Secret: </span>}
               {hasValue ? displayValue : input.default}
             </div>
           </div>
@@ -207,6 +220,7 @@ export const TaskNodeCard = observer(function TaskNodeCard({
   connectedInputNames,
   connectedOutputNames,
   inputDisplayValues,
+  secretInputNames,
   onNodeClick,
   onInputClick,
   onOutputClick,
@@ -391,6 +405,7 @@ export const TaskNodeCard = observer(function TaskNodeCard({
                       : inputDisplayValues[input.name]
                   }
                   hideValue={showCondensedInputs && index !== 0}
+                  isSecret={secretInputNames.has(input.name)}
                   onInputClick={onInputClick}
                   onHandleClick={onHandleClick}
                 />

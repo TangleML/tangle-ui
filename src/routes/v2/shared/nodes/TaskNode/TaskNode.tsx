@@ -2,6 +2,7 @@ import { type Node, type NodeProps, useReactFlow } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
 import type { MouseEvent, ReactElement } from "react";
 
+import { extractSecretName } from "@/components/shared/SecretsManagement/types";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Card } from "@/components/ui/card";
 import { Text } from "@/components/ui/typography";
@@ -24,6 +25,7 @@ import {
   isPipelineAggregator,
   TASK_COLOR_ANNOTATION,
 } from "@/utils/annotations";
+import { isSecretArgument } from "@/utils/componentSpec";
 import { ISO8601_DURATION_ZERO_DAYS } from "@/utils/constants";
 import type { ExecutionStatusStats } from "@/utils/executionStatus";
 
@@ -65,6 +67,7 @@ export interface TaskNodeViewProps {
   cacheDisabled: boolean;
   digest?: string;
   inputDisplayValues: Record<string, string | undefined>;
+  secretInputNames: Set<string>;
   isAggregator: boolean;
   outputType: AggregatorOutputType;
   subgraphExecutionStats?: ExecutionStatusStats | null;
@@ -83,28 +86,43 @@ function isTaskSubgraph(componentSpec: ComponentSpecJson | undefined): boolean {
   return "graph" in implementation;
 }
 
+interface InputDisplayData {
+  values: Record<string, string | undefined>;
+  secretInputNames: Set<string>;
+}
+
 /**
- * Resolve display values for task inputs by merging literal argument values
- * with binding-derived connection labels.
+ * Resolve task input display data from literal, secret, and bound arguments.
  */
-function resolveInputDisplayValues(
+export function resolveInputDisplayData(
   task: Task,
   entityId: string,
   spec: ComponentSpec | null,
-): Record<string, string | undefined> {
+): InputDisplayData {
   const values: Record<string, string | undefined> = {};
+  const secretInputNames = new Set<string>();
 
   for (const arg of task.arguments) {
     if (typeof arg.value === "string") {
       values[arg.name] = arg.value;
+      continue;
+    }
+
+    if (isSecretArgument(arg.value)) {
+      const secretName = extractSecretName(arg.value);
+      if (secretName) {
+        values[arg.name] = secretName;
+        secretInputNames.add(arg.name);
+      }
     }
   }
 
-  if (!spec) return values;
+  if (!spec) return { values, secretInputNames };
 
   for (const binding of spec.bindings) {
     if (binding.targetEntityId !== entityId) continue;
 
+    secretInputNames.delete(binding.targetPortName);
     const sourceTask = spec.tasks.find((t) => t.$id === binding.sourceEntityId);
     if (sourceTask) {
       values[binding.targetPortName] =
@@ -120,7 +138,7 @@ function resolveInputDisplayValues(
     }
   }
 
-  return values;
+  return { values, secretInputNames };
 }
 
 function resolveConnectedPortNames(
@@ -268,6 +286,7 @@ export const TaskNode = observer(function TaskNode({
   };
 
   const connectedPorts = resolveConnectedPortNames(entityId, spec);
+  const inputDisplayData = resolveInputDisplayData(task, entityId, spec);
 
   const isSelected = isEditorVisualNodeSelected(editor, id, !!selected);
 
@@ -298,7 +317,8 @@ export const TaskNode = observer(function TaskNode({
     subgraphExecutionStats,
     onOutputTypeChange: handleOutputTypeChange,
     digest: task.componentRef.digest,
-    inputDisplayValues: resolveInputDisplayValues(task, entityId, spec),
+    inputDisplayValues: inputDisplayData.values,
+    secretInputNames: inputDisplayData.secretInputNames,
     onNodeClick: handleClick,
     onInputClick: handleInputClick,
     onOutputClick: handleOutputClick,

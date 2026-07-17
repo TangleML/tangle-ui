@@ -46,6 +46,7 @@ export function buildPreviewTaskNodeViewProps(
     cacheDisabled: false,
     digest: undefined,
     inputDisplayValues: {},
+    secretInputNames: new Set(),
     isAggregator: false,
     outputType: AggregatorOutputType.JsonArray,
     onOutputTypeChange: noop,
