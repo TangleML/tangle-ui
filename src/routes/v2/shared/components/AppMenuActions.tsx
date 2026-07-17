@@ -34,7 +34,7 @@ export function AppMenuActions() {
         <TooltipButton
           tooltip="Settings"
           onClick={openTourSettings}
-          variant="headerOutline"
+          variant="header"
           {...tracking("v2.header.settings")}
         >
           <Icon name="Settings" />
@@ -43,7 +43,7 @@ export function AppMenuActions() {
         <RouterLink to="/settings/backend">
           <TooltipButton
             tooltip="Settings"
-            variant="headerOutline"
+            variant="header"
             {...tracking("v2.header.settings")}
           >
             <Icon name="Settings" />
@@ -53,7 +53,7 @@ export function AppMenuActions() {
       <Link href={DOCUMENTATION_URL} target="_blank" rel="noopener noreferrer">
         <TooltipButton
           tooltip="Documentation"
-          variant="headerOutline"
+          variant="header"
           {...tracking("v2.header.documentation")}
         >
           <Icon name="CircleQuestionMark" />

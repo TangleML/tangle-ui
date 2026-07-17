@@ -90,7 +90,7 @@ export const QuickRunButton = observer(function QuickRunButton({
       <TooltipButton
         {...tooltipButtonProps}
         tooltip={tooltip}
-        variant={isMini ? "outline" : "headerOutline"}
+        variant={isMini ? "outline" : "header"}
         size={isMini ? "icon" : undefined}
         className={isMini ? "relative size-8 shrink-0 rounded-md" : undefined}
         aria-label={isMini ? tooltip : undefined}
