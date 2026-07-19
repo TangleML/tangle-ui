@@ -81,6 +81,8 @@ export interface WindowOptions {
   persisted?: boolean;
   /** Default dock side for first-time users (no persisted state). */
   defaultDockState?: "left" | "right";
+  /** Visual variant. "panel" renders chrome-less (border/header on hover) and auto-fits content when floating. */
+  variant?: "window" | "panel";
   /**
    * When docked, grow to fill remaining dock-area height instead of fitting
    * content. Useful for panels whose content (e.g. logs) should expand to use
