@@ -18,6 +18,7 @@ import { useTourMode } from "@/providers/TourProvider/TourModeContext";
 import { TourSaveExploreDialog } from "@/providers/TourProvider/TourSaveExploreDialog";
 import { TourSecretsDialog } from "@/providers/TourProvider/TourSecretsDialog";
 import { AiChatStoreProvider } from "@/routes/v2/shared/components/AiChat/AiChatStoreContext";
+import { useCanvasControlsWindow } from "@/routes/v2/shared/components/MiniMap/useCanvasControlsWindow";
 import { useDockAreaAccordion } from "@/routes/v2/shared/hooks/useDockAreaAccordion";
 import { useFocusMode } from "@/routes/v2/shared/hooks/useFocusMode";
 import { NodeRegistryProvider } from "@/routes/v2/shared/nodes/NodeRegistryContext";
@@ -97,6 +98,7 @@ const PipelineEditor = withSuspenseWrapper(
     usePipelineDetailsWindow();
     usePipelineTreeWindow();
     useHistoryWindow();
+    useCanvasControlsWindow("v2.pipeline_canvas");
     useRecentRunsWindow();
     useRunsAndSubmissionWindow();
     useUndoRedoKeyboard();
