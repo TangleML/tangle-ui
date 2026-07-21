@@ -87,6 +87,15 @@ class MockNavigationStore {
 
 const renderSyncHook = () => renderHook(() => useRunViewSubgraphUrlSync());
 
+function expectNavigationToPreserveSearch(to: string) {
+  const options = routerMocks.navigate.mock.calls[0][0];
+  expect(options).toMatchObject({ to, search: expect.any(Function) });
+  expect(options.search({ view: "timing", debug: "true" })).toEqual({
+    view: "timing",
+    debug: "true",
+  });
+}
+
 describe("useRunViewSubgraphUrlSync", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -118,9 +127,7 @@ describe("useRunViewSubgraphUrlSync", () => {
     act(() => navigation.navigateToSubgraph("sub-task"));
 
     expect(routerMocks.navigate).toHaveBeenCalledTimes(1);
-    expect(routerMocks.navigate).toHaveBeenCalledWith({
-      to: "/runs-v2/run-1/exec-sub",
-    });
+    expectNavigationToPreserveSearch("/runs-v2/run-1/exec-sub");
   });
 
   it("does not navigate when the child execution id cannot be resolved", () => {
@@ -143,7 +150,7 @@ describe("useRunViewSubgraphUrlSync", () => {
     act(() => navigation.navigateToLevel(0));
 
     expect(routerMocks.navigate).toHaveBeenCalledTimes(1);
-    expect(routerMocks.navigate).toHaveBeenCalledWith({ to: "/runs-v2/run-1" });
+    expectNavigationToPreserveSearch("/runs-v2/run-1");
   });
 
   it("resolves the target execution id from breadcrumb segments when going shallower", () => {
@@ -161,9 +168,7 @@ describe("useRunViewSubgraphUrlSync", () => {
     act(() => navigation.navigateToLevel(1));
 
     expect(routerMocks.navigate).toHaveBeenCalledTimes(1);
-    expect(routerMocks.navigate).toHaveBeenCalledWith({
-      to: "/runs-v2/run-1/exec-a",
-    });
+    expectNavigationToPreserveSearch("/runs-v2/run-1/exec-a");
   });
 
   it("syncs the navigation store from an external subgraph URL without pushing back", () => {

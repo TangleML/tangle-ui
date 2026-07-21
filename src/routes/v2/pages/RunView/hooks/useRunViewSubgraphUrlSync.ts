@@ -87,7 +87,7 @@ export function useRunViewSubgraphUrlSync() {
         if (window.location.pathname === target) return;
 
         lastPushedExecutionId.current = executionId;
-        navigateRef.current({ to: target });
+        navigateRef.current({ to: target, search: (previous) => previous });
       },
     );
 
