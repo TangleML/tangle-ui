@@ -3,15 +3,17 @@ import { useParams, useSearch } from "@tanstack/react-router";
 import { useEffect } from "react";
 
 import {
-  inferTypeFromUri,
-  isVisualizableType,
-  normalizeRawType,
   PreviewContent,
   PreviewSkeleton,
-  resolveArtifactType,
 } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/TaskOverview/IOSection/IOCell/ArtifactVisualizer/ArtifactPreviewContent";
 import { ArtifactPreviewError } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/TaskOverview/IOSection/IOCell/ArtifactVisualizer/ArtifactPreviewError";
 import { ArtifactPreviewHeader } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/TaskOverview/IOSection/IOCell/ArtifactVisualizer/ArtifactPreviewHeader";
+import {
+  inferTypeFromUri,
+  isVisualizableType,
+  normalizeRawType,
+  resolveArtifactType,
+} from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/TaskOverview/IOSection/IOCell/ArtifactVisualizer/artifactType";
 import { SuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { Paragraph } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";

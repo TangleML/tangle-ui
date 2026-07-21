@@ -19,6 +19,7 @@ export type ParsedArtifact = {
 };
 
 export const MAX_PREVIEW_ROWS = 1000;
+export const MAX_VISUALIZABLE_SIZE_BYTES = 50 * 1024 * 1024; // 50 MB
 
 const HEADER_ROW = 1;
 const TRUNCATION_LOOKAHEAD = 1;

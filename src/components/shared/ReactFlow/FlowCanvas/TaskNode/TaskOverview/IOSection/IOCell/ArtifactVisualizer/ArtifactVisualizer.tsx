@@ -20,14 +20,16 @@ import { getArtifactPreviewUrl } from "@/utils/URL";
 
 import {
   InlineContent,
-  isVisualizableType,
-  normalizeRawType,
   PreviewContent,
   PreviewSkeleton,
-  resolveArtifactType,
 } from "./ArtifactPreviewContent";
 import { ArtifactPreviewError } from "./ArtifactPreviewError";
 import { ArtifactPreviewHeader } from "./ArtifactPreviewHeader";
+import {
+  isVisualizableType,
+  normalizeRawType,
+  resolveArtifactType,
+} from "./artifactType";
 
 type ArtifactVisualizerProps = {
   artifact: ArtifactNodeResponse;
@@ -160,6 +162,19 @@ const ArtifactVisualizer = ({
                     <ArtifactPreviewError
                       title="Artifact unavailable"
                       preamble="This artifact could not be found."
+                      variant="warning"
+                    />
+                  );
+                }
+
+                if (
+                  error instanceof ArtifactFetchError &&
+                  error.status === 413
+                ) {
+                  return (
+                    <ArtifactPreviewError
+                      title="Too large to preview"
+                      preamble={error.message}
                       variant="warning"
                     />
                   );

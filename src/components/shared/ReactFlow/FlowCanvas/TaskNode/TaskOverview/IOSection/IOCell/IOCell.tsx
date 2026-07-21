@@ -5,9 +5,13 @@ import { Text } from "@/components/ui/typography";
 import { formatBytes } from "@/utils/string";
 
 import ArtifactURI from "./ArtifactURI";
+import {
+  inferTypeFromUri,
+  normalizeRawType,
+  resolveArtifactType,
+} from "./ArtifactVisualizer/artifactType";
 import ArtifactVisualizer from "./ArtifactVisualizer/ArtifactVisualizer";
-
-const MAX_VISUALIZABLE_SIZE_BYTES = 50 * 1024 * 1024; // 50 MB
+import { MAX_VISUALIZABLE_SIZE_BYTES } from "./ArtifactVisualizer/utils";
 
 interface IOCellProps {
   name: string;
@@ -20,13 +24,20 @@ const IOCell = ({ name, type, artifact }: IOCellProps) => {
   const inlineValue = artifactData?.value;
   const hasInlineValue = canShowInlineValue(inlineValue);
   const hasDetails = Boolean(artifactData?.uri || hasInlineValue);
-  const isTooLargeToVisualize =
-    !hasInlineValue &&
-    !!artifactData?.total_size &&
-    artifactData.total_size > MAX_VISUALIZABLE_SIZE_BYTES;
 
   const artifactType =
     type ?? artifact?.type_name ?? (artifactData?.is_dir ? "Directory" : "Any");
+
+  const rawType = type ?? artifact?.type_name;
+  const detectedType = rawType
+    ? resolveArtifactType(normalizeRawType(rawType))
+    : inferTypeFromUri(artifactData?.uri);
+  const isRangeReadable = detectedType === "apacheparquet";
+  const isTooLargeToVisualize =
+    !hasInlineValue &&
+    !isRangeReadable &&
+    !!artifactData?.total_size &&
+    artifactData.total_size > MAX_VISUALIZABLE_SIZE_BYTES;
 
   return (
     <BlockStack gap="1" className="w-full p-2 border bg-card rounded-md">
