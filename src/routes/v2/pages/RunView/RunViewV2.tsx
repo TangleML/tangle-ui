@@ -200,13 +200,13 @@ const RunViewLayout = observer(function RunViewLayout({
           showModeToggle={timingEnabled}
         />
         <InlineStack
-          className="flex-1 min-h-0 w-full"
+          className="min-h-0 min-w-0 w-full flex-1 overflow-hidden"
           blockAlign="stretch"
           wrap="nowrap"
           data-testid="run-view-v2"
         >
           <DockArea side="left" excludedWindowIds={excludedWindowIds} />
-          <div className="relative flex-1 min-w-0 h-full">
+          <div className="relative h-full min-h-0 min-w-0 flex-1 overflow-hidden">
             {mode === "timing" ? (
               <RunTimingView />
             ) : (
@@ -240,7 +240,7 @@ export function RunViewV2() {
       : undefined;
 
   return (
-    <div className="h-full w-full flex flex-col bg-slate-100 dark:bg-background select-none">
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden bg-slate-100 select-none dark:bg-background">
       <SharedStoreProvider>
         <AiChatStoreProvider
           createWorker={createRunViewAgentWorker}
