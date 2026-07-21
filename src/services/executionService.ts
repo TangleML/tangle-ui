@@ -40,9 +40,10 @@ export const fetchExecutionState = async (
 export const fetchExecutionDetails = async (
   executionId: string,
   backendUrl: string,
+  options?: RequestInit,
 ): Promise<GetExecutionInfoResponse> => {
   const url = `${backendUrl}/api/executions/${executionId}/details`;
-  return fetchWithErrorHandling(url);
+  return fetchWithErrorHandling(url, options);
 };
 
 export const useFetchExecutionDetails = (
@@ -85,9 +86,10 @@ export const useFetchPipelineRunMetadata = (runId: string | undefined) => {
 export const fetchContainerExecutionState = async (
   executionId: string,
   backendUrl: string,
+  options?: RequestInit,
 ): Promise<GetContainerExecutionStateResponse> => {
   const url = `${backendUrl}/api/executions/${executionId}/container_state`;
-  return fetchWithErrorHandling(url);
+  return fetchWithErrorHandling(url, options);
 };
 
 export const fetchContainerLog = async (
