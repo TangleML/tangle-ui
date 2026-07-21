@@ -1,7 +1,6 @@
 import { InfoBox } from "@/components/shared/InfoBox";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
-import { Icon } from "@/components/ui/icon";
-import { BlockStack } from "@/components/ui/layout";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Heading, Paragraph } from "@/components/ui/typography";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
 import {
@@ -9,6 +8,8 @@ import {
   isExecutionComplete,
 } from "@/utils/executionStatus";
 
+import { RunTimingChart, RunTimingChartLegend } from "./RunTimingChart";
+import { RunTimingSummary } from "./RunTimingSummary";
 import { useRunTimingData } from "./useRunTimingData";
 
 export function RunTimingView() {
@@ -34,22 +35,32 @@ export function RunTimingView() {
     );
   }
 
+  if (!data) return null;
+
   return (
     <BlockStack
-      fill
-      gap="3"
-      className="bg-background p-6 text-center"
+      className="h-full min-h-0 w-full min-w-0 max-w-full overflow-hidden bg-background"
       data-testid="run-timing-view"
     >
-      <Icon
-        name="ChartNoAxesGantt"
-        size="xl"
-        className="text-muted-foreground"
-      />
-      <Heading level={1}>Run timing</Heading>
-      <Paragraph tone="subdued">
-        {data?.tasks.length ?? 0} tasks ready for timing analysis.
-      </Paragraph>
+      <BlockStack gap="4" className="shrink-0 border-b p-4">
+        <InlineStack align="space-between" blockAlign="end" wrap="wrap" gap="3">
+          <BlockStack gap="1">
+            <Heading level={1}>Run timing</Heading>
+            <Paragraph tone="subdued" size="sm">
+              Explore where this run spent time across task phases.
+            </Paragraph>
+          </BlockStack>
+          <RunTimingChartLegend />
+        </InlineStack>
+        <RunTimingSummary metrics={data.metrics} />
+      </BlockStack>
+
+      <BlockStack
+        align="stretch"
+        className="min-h-0 min-w-0 max-w-full flex-1 overflow-hidden p-4"
+      >
+        <RunTimingChart data={data} />
+      </BlockStack>
     </BlockStack>
   );
 }
