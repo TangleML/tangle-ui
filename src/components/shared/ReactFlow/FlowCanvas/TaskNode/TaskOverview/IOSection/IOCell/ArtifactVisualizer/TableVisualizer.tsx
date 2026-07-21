@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import {
   Table,
@@ -17,6 +18,12 @@ interface TableVisualizerProps {
   isFullscreen: boolean;
   onLoadMore?: () => void;
   onLoadAll?: () => void;
+  /** Total row count from file metadata (may exceed the previewed rows). */
+  totalRows?: number;
+  /** Total column count from file metadata. */
+  columnCount?: number;
+  /** When provided, renders a "Download schema" action in the stats header. */
+  onDownloadSchema?: () => void;
 }
 
 const getRowCountMessage = (
@@ -34,15 +41,42 @@ const TableVisualizer = ({
   isFullscreen,
   onLoadMore,
   onLoadAll,
+  totalRows,
+  columnCount,
+  onDownloadSchema,
 }: TableVisualizerProps) => {
   const limitReached = data.hasMore && !onLoadMore;
   const rowCountMessage = getRowCountMessage(data, limitReached);
+
+  const hasStats = totalRows !== undefined || columnCount !== undefined;
+  const showHeader = hasStats || !!onDownloadSchema;
 
   return (
     <BlockStack
       gap="2"
       className={isFullscreen ? "h-full min-h-0" : "max-h-100"}
     >
+      {showHeader && (
+        <InlineStack gap="4" align="space-between" blockAlign="center">
+          {hasStats && (
+            <Text size="xs" tone="subdued">
+              {[
+                totalRows !== undefined && `${totalRows.toLocaleString()} rows`,
+                columnCount !== undefined &&
+                  `${columnCount.toLocaleString()} columns`,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </Text>
+          )}
+          {onDownloadSchema && (
+            <Button variant="link" size="inline-xs" onClick={onDownloadSchema}>
+              <Icon name="Download" size="xs" />
+              Download schema
+            </Button>
+          )}
+        </InlineStack>
+      )}
       <ArtifactTable columns={data.columns} rows={data.rows} />
       <InlineStack gap="4">
         <Paragraph tone="subdued" size="xs">

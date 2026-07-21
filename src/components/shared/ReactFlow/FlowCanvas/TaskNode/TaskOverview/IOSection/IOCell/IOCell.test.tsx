@@ -200,6 +200,44 @@ describe("IOCell", () => {
     expect(screen.queryByTestId("artifact-visualizer")).not.toBeInTheDocument();
   });
 
+  const OVER_LIMIT_BYTES = 60 * 1024 * 1024; // > 50 MB
+
+  it("hides the preview for large fully-downloaded artifacts (> 50 MB)", () => {
+    renderWithQuery(
+      <IOCell
+        name="output"
+        type="CSV"
+        artifact={makeArtifact({
+          artifact_data: {
+            total_size: OVER_LIMIT_BYTES,
+            is_dir: false,
+            uri: "gs://bucket/huge.csv",
+          },
+        })}
+      />,
+    );
+
+    expect(screen.queryByTestId("artifact-visualizer")).not.toBeInTheDocument();
+  });
+
+  it("still shows the preview for large parquet artifacts (read via range requests)", () => {
+    renderWithQuery(
+      <IOCell
+        name="output"
+        type="parquet"
+        artifact={makeArtifact({
+          artifact_data: {
+            total_size: OVER_LIMIT_BYTES,
+            is_dir: false,
+            uri: "gs://bucket/huge.parquet",
+          },
+        })}
+      />,
+    );
+
+    expect(screen.getByTestId("artifact-visualizer")).toBeInTheDocument();
+  });
+
   it("defaults type to 'Any' for inline values without explicit type or type_name", () => {
     renderWithQuery(
       <IOCell
