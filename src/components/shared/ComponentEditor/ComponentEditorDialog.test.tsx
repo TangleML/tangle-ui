@@ -337,5 +337,54 @@ describe("<ComponentEditorDialog />", () => {
         expect(onCloseMock).toHaveBeenCalledTimes(1);
       });
     });
+
+    test("calls onComponentSaved instead of importing to the library when provided", async () => {
+      const onCloseMock = vi.fn();
+      const onComponentSavedMock = vi.fn();
+      const mockHydratedComponent = {
+        spec: {
+          implementation: { container: { image: "test" } },
+          metadata: { annotations: {} },
+        },
+        name: "test-component",
+        digest: "abc123",
+        text: "name: test-component",
+      };
+
+      vi.mocked(hydrateComponentReference).mockResolvedValue(
+        mockHydratedComponent,
+      );
+
+      renderWithProviders(
+        <ComponentEditorDialog
+          text="name: test-component"
+          onClose={onCloseMock}
+          onComponentSaved={onComponentSavedMock}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("button", { name: /Save/i }),
+        ).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole("button", { name: /Save/i }));
+
+      await waitFor(() => {
+        // The edited component is handed to the caller to apply.
+        expect(onComponentSavedMock).toHaveBeenCalledWith(
+          mockHydratedComponent,
+        );
+        expect(onCloseMock).toHaveBeenCalledTimes(1);
+      });
+
+      // It must NOT fall back to the library-import behavior.
+      expect(mockAddToComponentLibrary).not.toHaveBeenCalled();
+      expect(mockToast).not.toHaveBeenCalledWith(
+        expect.stringContaining("imported successfully"),
+        "success",
+      );
+    });
   });
 });
