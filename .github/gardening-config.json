@@ -1,0 +1,101 @@
+{
+  "canonicalRepo": "TangleML/tangle-ui",
+  "reviewers": ["TangleML/Tangle-dev"],
+  "prLabel": "automated-gardening",
+  "backlogLabel": "automated-gardening-backlog",
+  "churnLookback": "18 months",
+  "categories": [
+    {
+      "id": "hygiene",
+      "pillar": "hygiene",
+      "enabled": true,
+      "confidenceThreshold": 0.9,
+      "conventionSkill": "project-conventions",
+      "description": "Fix files failing Prettier or import-sort/no-relative-import lint, and remove knip-reported unused exports, files, and deps. Mechanical, fully gate-provable; runs first."
+    },
+    {
+      "id": "comments",
+      "pillar": "comments",
+      "enabled": true,
+      "confidenceThreshold": 0.85,
+      "conventionSkill": "project-conventions",
+      "description": "Remove or refine low-value narrating comments and commented-out code; keep comments that explain a non-obvious why."
+    },
+    {
+      "id": "dry",
+      "pillar": "dry",
+      "enabled": true,
+      "confidenceThreshold": 0.8,
+      "conventionSkill": "project-conventions",
+      "description": "Reuse or extract shared helpers for duplicated logic. Always prefer adopting an existing helper over creating a new one."
+    },
+    {
+      "id": "refactor",
+      "pillar": "refactor",
+      "enabled": true,
+      "confidenceThreshold": 0.8,
+      "conventionSkill": "typescript-standards",
+      "description": "Simplify verbose code, remove unsafe casts and dead defensive branches, and integrate better with the wider codebase."
+    },
+    {
+      "id": "primitives",
+      "pillar": "react",
+      "enabled": true,
+      "confidenceThreshold": 0.9,
+      "conventionSkill": "ui-primitives",
+      "requiresVisualReview": true,
+      "description": "Swap raw HTML for UI primitives (BlockStack/InlineStack/Text/Heading/Paragraph) and hardcoded color classes for the tone prop. Exact-mapping swaps only."
+    },
+    {
+      "id": "react-compiler",
+      "pillar": "react",
+      "enabled": true,
+      "confidenceThreshold": 0.95,
+      "conventionSkill": "react-patterns",
+      "promotionEnabled": false,
+      "flagOnly": true,
+      "description": "Flag React Compiler adoption gaps. Promotion of ready dirs is off by default; when enabled, only dirs annotated '0 useCallback/useMemo - ready to enable' are eligible."
+    },
+    {
+      "id": "tests",
+      "pillar": "tests",
+      "enabled": true,
+      "confidenceThreshold": 0.85,
+      "requiresBehaviorReview": true,
+      "conventionSkill": "vitest-testing",
+      "description": "Add missing unit/component tests, author e2e specs, and repair stale or skipped tests for recently-changed, under-covered code. A passing test can still assert the wrong behavior, so reviewers must confirm assertions reflect intent. Runs last."
+    }
+  ],
+  "caps": {
+    "maxFilesPerPR": 25,
+    "maxPRsPerRun": 6,
+    "maxFindingsPerFile": 8
+  },
+  "thresholds": {
+    "refactorFtaScore": 60,
+    "minSnippetLinesForDry": 3
+  },
+  "calibration": {
+    "autoRaiseThreshold": false,
+    "maxRejectRate": 0.4,
+    "step": 0.05
+  },
+  "excludeGlobs": [
+    "src/api/*.gen.ts",
+    "**/*.gen.ts",
+    "**/*.generated.*",
+    "**/__snapshots__/**",
+    "**/*.snap",
+    "public/**",
+    "src/models/**"
+  ],
+  "protectedPatterns": ["componentSpec"],
+  "conventionSkills": [
+    "ui-primitives",
+    "react-patterns",
+    "project-conventions",
+    "typescript-standards",
+    "vitest-testing",
+    "e2e-testing"
+  ]
+}
