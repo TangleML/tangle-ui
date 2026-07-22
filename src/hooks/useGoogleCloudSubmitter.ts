@@ -265,7 +265,6 @@ const authorizeGoogleCloudClient = async (
         immediate: immediate,
       },
       (authResult) => {
-        // console.debug("authorizeGoogleCloudClient: called back");
         if (authResult === undefined) {
           console.error("authorizeGoogleCloudClient failed");
           reject("gapi.auth.authorize result is undefined");
@@ -273,7 +272,6 @@ const authorizeGoogleCloudClient = async (
           console.error("authorizeGoogleCloudClient failed", authResult.error);
           reject(authResult.error);
         } else {
-          // console.debug("authorizeGoogleCloudClient: Success");
           // Working around the Google Auth bug: The request succeeds, but the returned token does not have the requested scopes.
           // See https://github.com/google/google-api-javascript-client/issues/743
           const receivedScopesString = (authResult as any).scope as
