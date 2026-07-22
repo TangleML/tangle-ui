@@ -6,6 +6,8 @@ import { CopyText } from "@/components/shared/CopyText/CopyText";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
+import { useExecutionData } from "@/providers/ExecutionDataProvider";
+import { resolveInputValue } from "@/routes/v2/shared/nodes/IONode/resolveInputValue";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { tracking } from "@/utils/tracking";
 
@@ -17,6 +19,7 @@ export const RunViewInputDetails = observer(function RunViewInputDetails({
   entityId,
 }: RunViewInputDetailsProps) {
   const spec = useSpec();
+  const { details } = useExecutionData();
   const input = spec?.inputs.find((i) => i.$id === entityId);
 
   if (!input) {
@@ -30,6 +33,7 @@ export const RunViewInputDetails = observer(function RunViewInputDetails({
   }
 
   const type = input.type ? String(input.type) : undefined;
+  const value = resolveInputValue(input, details?.task_spec.arguments);
 
   return (
     <BlockStack
@@ -75,7 +79,18 @@ export const RunViewInputDetails = observer(function RunViewInputDetails({
           </BlockStack>
         )}
 
-        {input.defaultValue && (
+        {value !== undefined && (
+          <BlockStack gap="1">
+            <Text size="xs" tone="subdued" weight="semibold">
+              Value
+            </Text>
+            <CopyText size="sm" className="font-mono whitespace-pre-wrap">
+              {value}
+            </CopyText>
+          </BlockStack>
+        )}
+
+        {input.defaultValue !== undefined && (
           <BlockStack gap="1">
             <Text size="xs" tone="subdued" weight="semibold">
               Default Value

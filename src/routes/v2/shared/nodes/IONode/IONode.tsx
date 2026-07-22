@@ -2,6 +2,7 @@ import { type Node, type NodeProps } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
 import { type MouseEvent } from "react";
 
+import { useExecutionDataOptional } from "@/providers/ExecutionDataProvider";
 import { useIsDetailedView } from "@/routes/v2/shared/hooks/useIsDetailedView";
 import type { IONodeData } from "@/routes/v2/shared/nodes/types";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
@@ -10,6 +11,7 @@ import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 import { IONodeCard } from "./IONodeCard";
 import { IONodeSimplified } from "./IONodeSimplified";
+import { resolveInputValue } from "./resolveInputValue";
 
 type IONodeType = Node<IONodeData, "input" | "output">;
 type IONodeProps = NodeProps<IONodeType>;
@@ -19,7 +21,7 @@ export interface IONodeViewProps {
   name: string;
   type?: string;
   description?: string;
-  defaultValue?: string;
+  value?: string;
   connectedValue: string | null;
   isInput: boolean;
   selected: boolean;
@@ -43,6 +45,7 @@ export const IONode = observer(function IONode({
   const showContent = useIsDetailedView();
 
   const spec = useSpec();
+  const executionData = useExecutionDataOptional();
   const isInput = ioType === "input";
 
   const entity = isInput
@@ -76,9 +79,9 @@ export const IONode = observer(function IONode({
     }
   }
 
-  const defaultValue =
+  const value =
     isInput && entity && "defaultValue" in entity
-      ? (entity.defaultValue ?? undefined)
+      ? resolveInputValue(entity, executionData?.details?.task_spec.arguments)
       : undefined;
 
   const isSelected = isEditorVisualNodeSelected(editor, id, !!selected);
@@ -88,7 +91,7 @@ export const IONode = observer(function IONode({
     name,
     type,
     description,
-    defaultValue,
+    value,
     connectedValue,
     isInput,
     selected: isSelected,
