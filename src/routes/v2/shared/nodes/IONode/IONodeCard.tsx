@@ -12,7 +12,7 @@ export function IONodeCard({
   name,
   type,
   description,
-  defaultValue,
+  value,
   connectedValue,
   isInput,
   selected,
@@ -75,9 +75,7 @@ export function IONodeCard({
               font="mono"
               className="truncate text-ink-fixed/70"
             >
-              {isInput
-                ? (defaultValue ?? "No value")
-                : (connectedValue ?? "No value")}
+              {isInput ? (value ?? "No value") : (connectedValue ?? "No value")}
             </Paragraph>
           </InlineStack>
         </BlockStack>
