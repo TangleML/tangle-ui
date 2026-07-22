@@ -20,7 +20,7 @@ const RecentlyViewedCardBody = ({ item }: { item: RecentItem }) => (
   >
     <InlineStack blockAlign="center" align="space-between" gap="2">
       <TypePill type={item.type} />
-      <Text size="xs" className="text-muted-foreground">
+      <Text size="xs" tone="subdued">
         {formatRelativeTime(new Date(item.timestamp))}
       </Text>
     </InlineStack>
@@ -97,7 +97,7 @@ export function DashboardRecentlyViewedView() {
               >
                 <Icon name="ChevronLeft" />
               </Button>
-              <Text size="sm" className="text-muted-foreground">
+              <Text size="sm" tone="subdued">
                 {safePage + 1} / {totalPages}
               </Text>
               <Button
