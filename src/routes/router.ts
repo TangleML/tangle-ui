@@ -44,6 +44,7 @@ import { BetaFeaturesSettings } from "./Settings/sections/BetaFeaturesSettings";
 import { PreferencesSettings } from "./Settings/sections/PreferencesSettings";
 import { SecretsSettings } from "./Settings/sections/SecretsSettings";
 import { SettingsLayout } from "./Settings/SettingsLayout";
+import { CompareView } from "./v2/pages/CompareView/CompareView";
 import { EditorV2 } from "./v2/pages/Editor/EditorV2";
 import { PipelineFoldersPage } from "./v2/pages/PipelineFolders/PipelineFoldersPage";
 import { RunViewV2 } from "./v2/pages/RunView/RunViewV2";
@@ -363,6 +364,17 @@ const runV2WithSubgraphRoute = createRoute({
   },
 });
 
+const compareRoute = createRoute({
+  getParentRoute: () => mainLayout,
+  path: APP_ROUTES.COMPARE,
+  component: CompareView,
+  beforeLoad: () => {
+    if (!isFlagEnabled("compare-runs")) {
+      throw redirect({ to: APP_ROUTES.DASHBOARD_RUNS });
+    }
+  },
+});
+
 const pipelineFoldersRoute = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.PIPELINE_FOLDERS,
@@ -403,6 +415,7 @@ const appRouteTree = mainLayout.addChildren([
   editorV2PipelineRoute,
   runV2Route,
   runV2WithSubgraphRoute,
+  compareRoute,
   pipelineFoldersRoute,
   artifactPreviewRoute,
   tourRoute,

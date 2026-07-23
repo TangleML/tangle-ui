@@ -1,5 +1,6 @@
 import type {
   ContainerExecutionStatus,
+  GetExecutionInfoResponse,
   GetGraphExecutionStateResponse,
 } from "@/api/types.gen";
 
@@ -169,4 +170,32 @@ export function countInProgressFromStats(stats: ExecutionStatusStats): number {
 export function isExecutionComplete(stats: ExecutionStatusStats): boolean {
   const total = Object.values(stats).reduce((sum, c) => sum + (c ?? 0), 0);
   return total > 0 && countInProgressFromStats(stats) === 0;
+}
+
+/**
+ * Build a map of task id → aggregated execution status by joining a run's
+ * task→execution id mapping against its per-execution status stats.
+ */
+export function buildTaskExecutionStatusMap(
+  details?: GetExecutionInfoResponse,
+  state?: GetGraphExecutionStateResponse,
+): Map<string, string> {
+  const taskExecutionStatusMap = new Map<string, string>();
+
+  if (!details?.child_task_execution_ids) {
+    return taskExecutionStatusMap;
+  }
+
+  for (const [taskId, executionId] of Object.entries(
+    details.child_task_execution_ids,
+  )) {
+    const statusStats = state?.child_execution_status_stats?.[executionId];
+    const aggregated = getOverallExecutionStatusFromStats(statusStats);
+
+    if (aggregated) {
+      taskExecutionStatusMap.set(taskId, aggregated);
+    }
+  }
+
+  return taskExecutionStatusMap;
 }
