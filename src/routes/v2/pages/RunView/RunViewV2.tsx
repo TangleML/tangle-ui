@@ -19,6 +19,7 @@ import {
   YamlDeserializer,
 } from "@/models/componentSpec";
 import { useBackend } from "@/providers/BackendProvider";
+import { ComponentLibraryProvider } from "@/providers/ComponentLibraryProvider";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { ContextPanelProvider } from "@/providers/ContextPanelProvider";
 import {
@@ -232,7 +233,9 @@ export function RunViewV2() {
                 pipelineRunId={id}
                 subgraphExecutionId={subgraphExecutionId}
               >
-                <RunViewContent runId={id} />
+                <ComponentLibraryProvider>
+                  <RunViewContent runId={id} />
+                </ComponentLibraryProvider>
               </ExecutionDataProvider>
             </ContextPanelProvider>
           </ReactFlowProvider>
