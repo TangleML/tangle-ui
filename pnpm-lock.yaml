@@ -186,8 +186,8 @@ importers:
         specifier: ^2.4.1
         version: 2.4.1(react@19.2.8)
       pyodide:
-        specifier: ^0.29.4
-        version: 0.29.4
+        specifier: ^314.0.2
+        version: 314.0.2
       random-words:
         specifier: ^2.0.1
         version: 2.0.1
@@ -5333,8 +5333,8 @@ packages:
     resolution: {integrity: sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==}
     engines: {node: '>=6'}
 
-  pyodide@0.29.4:
-    resolution: {integrity: sha512-tCseTsqU3kSxZIjkue5zXxTMNEwrKZwOIIEQRBA/VzHxFN1hoCxe4w41phfCdHd9it9RcCNQb5K/Re0InqMgvA==}
+  pyodide@314.0.2:
+    resolution: {integrity: sha512-rXkXOriXhzRkEV/coVGELjz4da77oNQEOu8hOf8dtBHEKOzqoIAmSJGeKuPl4wbLDv9EDibfKOchnC73CVX4DQ==}
     engines: {node: '>=18.0.0'}
 
   qs@6.15.3:
@@ -6394,18 +6394,6 @@ packages:
 
   wrappy@1.0.2:
     resolution: {integrity: sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==}
-
-  ws@8.20.1:
-    resolution: {integrity: sha512-It4dO0K5v//JtTXuPkfEOaI3uUN87iYPnqo/ZzqCoG3g8uhA66QUMs/SrM0YK7/NAu+r4LMh/9dq2A7k+rHs+w==}
-    engines: {node: '>=10.0.0'}
-    peerDependencies:
-      bufferutil: ^4.0.1
-      utf-8-validate: '>=5.0.2'
-    peerDependenciesMeta:
-      bufferutil:
-        optional: true
-      utf-8-validate:
-        optional: true
 
   ws@8.21.1:
     resolution: {integrity: sha512-+0NTnW77fFN/DjQi6k/Sq/Yvk4Sgajw7urW8V+asjXnRgDs9gyGkdb7EzgfhA4goXsRIZKE28fzIXBHEzhuiWw==}
@@ -11865,10 +11853,10 @@ snapshots:
 
   punycode@2.3.1: {}
 
-  pyodide@0.29.4:
+  pyodide@314.0.2:
     dependencies:
       '@types/emscripten': 1.41.5
-      ws: 8.20.1
+      ws: 8.21.1
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -13114,8 +13102,6 @@ snapshots:
       strip-ansi: 7.2.0
 
   wrappy@1.0.2: {}
-
-  ws@8.20.1: {}
 
   ws@8.21.1: {}
 
