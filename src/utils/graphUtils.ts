@@ -22,7 +22,6 @@ export const calculateSpecCenter = (
 
   const allPositions: XYPosition[] = [];
 
-  // Collect positions from tasks
   Object.values(graphSpec.tasks).forEach((task) => {
     const taskPosition = extractPositionFromAnnotations(task.annotations);
     if (taskPosition) {
@@ -30,7 +29,6 @@ export const calculateSpecCenter = (
     }
   });
 
-  // Collect positions from inputs
   componentSpec.inputs?.forEach((input) => {
     const inputPosition = extractPositionFromAnnotations(input.annotations);
     if (inputPosition) {
@@ -38,7 +36,6 @@ export const calculateSpecCenter = (
     }
   });
 
-  // Collect positions from outputs
   componentSpec.outputs?.forEach((output) => {
     const outputPosition = extractPositionFromAnnotations(output.annotations);
     if (outputPosition) {
