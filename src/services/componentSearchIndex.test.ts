@@ -711,6 +711,53 @@ describe("lexicalSearch", () => {
     expect(results).not.toContain("plural");
   });
 
+  it("supports per-query field boosts in bracket directives", () => {
+    const index = buildSearchIndex([
+      makeSourced({
+        digest: "title-match",
+        spec: {
+          name: "upload_file",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+      makeSourced({
+        digest: "metadata-match",
+        spec: {
+          name: "generic_component",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+          metadata: { annotations: { intent: "upload" } },
+        },
+      }),
+      makeSourced({
+        digest: "directive-noise",
+        spec: {
+          name: "metadata_helper",
+          inputs: [],
+          outputs: [],
+          implementation: { container: { image: "x" } },
+        },
+      }),
+    ]);
+
+    expect(lexicalSearch(index, "upload [metadata^20]")[0]?.digest).toBe(
+      "metadata-match",
+    );
+    expect(
+      lexicalSearch(index, "upload [metadata+10, title-5]").map(
+        (result) => result.digest,
+      ),
+    ).toEqual(["metadata-match"]);
+    expect(
+      lexicalSearch(index, "upload [metadata^20]").map(
+        (result) => result.digest,
+      ),
+    ).not.toContain("directive-noise");
+  });
+
   it("ignores natural-language filler words that would otherwise swamp intent", () => {
     const index = buildSearchIndex([
       makeSourced({
