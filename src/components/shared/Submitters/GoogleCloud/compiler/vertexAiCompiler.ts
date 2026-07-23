@@ -181,9 +181,6 @@ const typeSpecToVertexArtifactSpec = (
     artifactType: typeSpecToVertexArtifactTypeSchema(typeSpec),
   };
 };
-// const typeSpecToVertexArtifactType(typeSpec: TypeSpecType) => {
-//     return typeof typeSpec === "string" && ["String", "Integer", "Float", "Double", "Boolean", ]
-// }
 
 const stringToMlmdValue = (
   constantString: string,
