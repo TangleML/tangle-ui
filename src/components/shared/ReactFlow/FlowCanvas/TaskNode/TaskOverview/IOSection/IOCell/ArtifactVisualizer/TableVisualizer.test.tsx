@@ -118,4 +118,47 @@ describe("TableVisualizer", () => {
 
     expect(tableContainer?.contains(footer)).toBe(false);
   });
+
+  it("does not render the stats header when no stats or download handler are provided", () => {
+    const data = makeData(3);
+    render(<TableVisualizer data={data} isFullscreen={false} />);
+
+    expect(
+      screen.queryByRole("button", { name: /Download schema/ }),
+    ).toBeNull();
+    expect(screen.queryByText(/columns/)).toBeNull();
+  });
+
+  it("renders row/column stats with thousands separators when provided", () => {
+    const data = makeData(3);
+    render(
+      <TableVisualizer
+        data={data}
+        isFullscreen={false}
+        totalRows={1234567}
+        columnCount={12}
+      />,
+    );
+
+    expect(screen.getByText("1,234,567 rows · 12 columns")).toBeInTheDocument();
+  });
+
+  it("renders a Download schema button and fires the handler on click", async () => {
+    const onDownloadSchema = vi.fn();
+    const data = makeData(3);
+    render(
+      <TableVisualizer
+        data={data}
+        isFullscreen={false}
+        totalRows={3}
+        columnCount={2}
+        onDownloadSchema={onDownloadSchema}
+      />,
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /Download schema/ }),
+    );
+    expect(onDownloadSchema).toHaveBeenCalledOnce();
+  });
 });

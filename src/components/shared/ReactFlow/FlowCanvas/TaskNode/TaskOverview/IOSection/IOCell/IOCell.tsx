@@ -5,6 +5,10 @@ import { Text } from "@/components/ui/typography";
 import { formatBytes } from "@/utils/string";
 
 import ArtifactURI from "./ArtifactURI";
+import {
+  normalizeRawType,
+  resolveArtifactType,
+} from "./ArtifactVisualizer/ArtifactPreviewContent";
 import ArtifactVisualizer from "./ArtifactVisualizer/ArtifactVisualizer";
 
 const MAX_VISUALIZABLE_SIZE_BYTES = 50 * 1024 * 1024; // 50 MB
@@ -20,13 +24,20 @@ const IOCell = ({ name, type, artifact }: IOCellProps) => {
   const inlineValue = artifactData?.value;
   const hasInlineValue = canShowInlineValue(inlineValue);
   const hasDetails = Boolean(artifactData?.uri || hasInlineValue);
-  const isTooLargeToVisualize =
-    !hasInlineValue &&
-    !!artifactData?.total_size &&
-    artifactData.total_size > MAX_VISUALIZABLE_SIZE_BYTES;
 
   const artifactType =
     type ?? artifact?.type_name ?? (artifactData?.is_dir ? "Directory" : "Any");
+
+  // Parquet is read incrementally via HTTP range requests, so its preview is
+  // not bound by the download-size limit that applies to artifacts we fetch in
+  // full (text, csv, json, images).
+  const isRangeReadable =
+    resolveArtifactType(normalizeRawType(artifactType)) === "apacheparquet";
+  const isTooLargeToVisualize =
+    !hasInlineValue &&
+    !isRangeReadable &&
+    !!artifactData?.total_size &&
+    artifactData.total_size > MAX_VISUALIZABLE_SIZE_BYTES;
 
   return (
     <BlockStack gap="1" className="w-full p-2 border bg-card rounded-md">
