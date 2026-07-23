@@ -42,7 +42,6 @@ function useNameValidation() {
         return ["Name cannot be empty"];
       }
 
-      // check name uniqueness
       const hasDuplicate = nameIndex.has(newName);
 
       if (hasDuplicate) {

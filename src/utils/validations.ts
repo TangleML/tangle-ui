@@ -78,7 +78,6 @@ export const checkComponentSpecValidity = (
     return { isValid: false, errors };
   }
 
-  // Validate inputs and outputs
   errors.push(
     ...validateInputsAndOutputs(componentSpec, skipInputValueValidation),
   );
@@ -91,7 +90,6 @@ export const checkComponentSpecValidity = (
     return { isValid: errors.length === 0, errors };
   }
 
-  // Graph-specific validations
   const graphSpec = componentSpec.implementation.graph;
   errors.push(...validateGraphTasks(graphSpec, componentSpec));
   errors.push(...validateGraphOutputs(graphSpec, componentSpec));

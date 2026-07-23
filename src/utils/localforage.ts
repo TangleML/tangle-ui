@@ -4,7 +4,6 @@ import type { ComponentReference } from "./componentSpec";
 import { USER_COMPONENTS_LIST_NAME } from "./constants";
 
 const FILE_STORE_DB_TABLE_NAME_PREFIX = "file_store_";
-// Define the Component interface
 interface Component {
   id: string;
   url: string;
@@ -47,7 +46,6 @@ const settingsStore = localforage.createInstance({
   description: "Store for application settings",
 });
 
-// Function to save a component
 export async function saveComponent(component: Component): Promise<Component> {
   const now = Date.now();
   const updatedComponent = {
@@ -65,18 +63,15 @@ export async function saveComponent(component: Component): Promise<Component> {
   return updatedComponent;
 }
 
-// Function to check if a component exists by URL
 export async function componentExistsByUrl(url: string): Promise<boolean> {
   const componentId = await componentUrlStore.getItem<string>(url);
   return componentId !== null;
 }
 
-// Function to get a component by ID
 export async function getComponentById(id: string): Promise<Component | null> {
   return componentStore.getItem<Component>(id);
 }
 
-// Function to get a component by URL
 export async function getComponentByUrl(
   url: string,
 ): Promise<Component | null> {
@@ -86,7 +81,6 @@ export async function getComponentByUrl(
   return getComponentById(componentId);
 }
 
-// Function to fetch all components
 export async function getAllUserComponents(): Promise<UserComponent[]> {
   const userComponents: UserComponent[] = [];
 
