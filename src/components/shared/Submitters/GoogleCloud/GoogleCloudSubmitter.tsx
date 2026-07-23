@@ -3,6 +3,7 @@ import type { ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Link } from "@/components/ui/link";
+import { Paragraph } from "@/components/ui/typography";
 import { useGoogleCloudSubmitter } from "@/hooks/useGoogleCloudSubmitter";
 import type { ComponentSpec } from "@/utils/componentSpec";
 
@@ -39,7 +40,9 @@ const GoogleCloudSubmitter = ({ componentSpec }: GoogleCloudSubmitterProps) => {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
-        <p className="text-sm font-semibold">OAuth Client Id</p>
+        <Paragraph size="sm" weight="semibold">
+          OAuth Client Id
+        </Paragraph>
         <Input
           type="text"
           value={config.googleCloudOAuthClientId}
@@ -55,7 +58,9 @@ const GoogleCloudSubmitter = ({ componentSpec }: GoogleCloudSubmitterProps) => {
       />
       <RegionInput config={config} onChange={updateConfig} />
       <div className="flex flex-col gap-1">
-        <p className="text-sm font-semibold">Output Directory</p>
+        <Paragraph size="sm" weight="semibold">
+          Output Directory
+        </Paragraph>
         <Input
           type="text"
           value={config.gcsOutputDirectory}
