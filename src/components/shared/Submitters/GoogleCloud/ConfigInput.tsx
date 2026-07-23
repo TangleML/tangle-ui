@@ -8,6 +8,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { Paragraph } from "@/components/ui/typography";
 import type { GoogleCloudSubmitterConfiguration } from "@/hooks/useGoogleCloudSubmitter";
 import { cn } from "@/lib/utils";
 
@@ -64,7 +65,9 @@ export const ConfigInput = ({
 
   return (
     <div className="flex flex-col gap-1">
-      <p className="text-sm font-semibold">Project Id</p>
+      <Paragraph size="sm" weight="semibold">
+        Project Id
+      </Paragraph>
       <div className="flex items-center gap-2 mb-1">
         <div className="relative w-full" ref={containerRef}>
           <Command shouldFilter={false} className="w-full py-1">

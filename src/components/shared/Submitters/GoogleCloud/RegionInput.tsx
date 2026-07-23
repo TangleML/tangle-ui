@@ -7,6 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Paragraph } from "@/components/ui/typography";
 import { type GoogleCloudSubmitterConfiguration } from "@/hooks/useGoogleCloudSubmitter";
 
 const VERTEX_AI_PIPELINES_REGIONS = [
@@ -33,7 +34,9 @@ export const RegionInput = ({ config, onChange }: RegionInputProps) => {
 
   return (
     <div className="flex flex-col gap-1">
-      <p className="text-sm font-semibold">Region</p>
+      <Paragraph size="sm" weight="semibold">
+        Region
+      </Paragraph>
       <Select
         onValueChange={handleSelectChange}
         value={config.region}
