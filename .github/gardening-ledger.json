@@ -1,0 +1,4 @@
+{
+  "$comment": "Human-curated hard suppress-list for the gardening skill. The bot READS this file but never writes it. Add an entry to permanently stop the gardener from re-proposing a finding it keeps flagging that you have decided is intentional. Fingerprints come from the gardening-manifest block in a gardening PR body (use the weakKey to suppress across file renames, or the strongKey to suppress a single location).",
+  "suppressions": []
+}
