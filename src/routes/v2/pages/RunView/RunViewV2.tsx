@@ -26,7 +26,10 @@ import {
   useExecutionData,
 } from "@/providers/ExecutionDataProvider";
 import { AiChatStoreProvider } from "@/routes/v2/shared/components/AiChat/AiChatStoreContext";
-import { useCanvasControlsWindow } from "@/routes/v2/shared/components/MiniMap/useCanvasControlsWindow";
+import {
+  CANVAS_CONTROLS_WINDOW_ID,
+  useCanvasControlsWindow,
+} from "@/routes/v2/shared/components/MiniMap/useCanvasControlsWindow";
 import { useDockAreaAccordion } from "@/routes/v2/shared/hooks/useDockAreaAccordion";
 import { NodeRegistryProvider } from "@/routes/v2/shared/nodes/NodeRegistryContext";
 import { SpecProvider } from "@/routes/v2/shared/providers/SpecContext";
@@ -42,16 +45,20 @@ import { getBackendStatusString } from "@/utils/backend";
 import type { ComponentSpec as DomainComponentSpec } from "@/utils/componentSpec";
 import { RemoteAuthError } from "@/utils/fetchWithErrorHandling";
 
+import { RunTimingView } from "./components/RunTiming/RunTimingView";
 import { RunViewFlowCanvas } from "./components/RunViewFlowCanvas";
 import { RunViewMenuBar } from "./components/RunViewMenuBar/RunViewMenuBar";
 import { useAiChatWindow } from "./hooks/useAiChatWindow";
 import { useFocusTaskFromUrl } from "./hooks/useFocusTaskFromUrl";
+import { useRunViewMode } from "./hooks/useRunViewMode";
 import { useRunViewSelectionSync } from "./hooks/useRunViewSelectionSync";
 import { useRunViewSpecLifecycle } from "./hooks/useRunViewSpecLifecycle";
 import { useRunViewSubgraphUrlSync } from "./hooks/useRunViewSubgraphUrlSync";
 import { useRunViewWindows } from "./hooks/useRunViewWindows";
 import { runViewRegistry } from "./nodes";
 import { createRunViewAgentWorker } from "./toolBridge/runViewAgentWorker";
+
+const TIMING_MODE_EXCLUDED_WINDOW_IDS = new Set([CANVAS_CONTROLS_WINDOW_ID]);
 
 function deserializeRunSpec(data: unknown): ComponentSpec {
   const generator = new IncrementingIdGenerator();
@@ -174,6 +181,11 @@ const RunViewLayout = observer(function RunViewLayout({
   const aiEnabled = useFlagValue("ai-assistant");
   useAiChatWindow(aiEnabled);
 
+  const timingEnabled = useFlagValue("run-timing-rundown");
+  const { mode, setMode } = useRunViewMode(timingEnabled);
+  const excludedWindowIds =
+    mode === "timing" ? TIMING_MODE_EXCLUDED_WINDOW_IDS : undefined;
+
   const { navigation } = useSharedStores();
   const activeSpec = navigation.activeSpec;
 
@@ -182,23 +194,31 @@ const RunViewLayout = observer(function RunViewLayout({
   return (
     <NodeRegistryProvider registry={runViewRegistry}>
       <SpecProvider spec={activeSpec}>
-        <RunViewMenuBar />
+        <RunViewMenuBar
+          mode={mode}
+          onModeChange={setMode}
+          showModeToggle={timingEnabled}
+        />
         <InlineStack
           className="flex-1 min-h-0 w-full"
           blockAlign="stretch"
           wrap="nowrap"
           data-testid="run-view-v2"
         >
-          <DockArea side="left" />
+          <DockArea side="left" excludedWindowIds={excludedWindowIds} />
           <div className="relative flex-1 min-w-0 h-full">
-            <RunViewFlowCanvas
-              key={activeSpec?.$id ?? "root"}
-              spec={activeSpec}
-              className="h-full"
-            />
-            <WindowContainer />
+            {mode === "timing" ? (
+              <RunTimingView />
+            ) : (
+              <RunViewFlowCanvas
+                key={activeSpec?.$id ?? "root"}
+                spec={activeSpec}
+                className="h-full"
+              />
+            )}
+            <WindowContainer excludedWindowIds={excludedWindowIds} />
           </div>
-          <DockArea side="right" />
+          <DockArea side="right" excludedWindowIds={excludedWindowIds} />
         </InlineStack>
       </SpecProvider>
     </NodeRegistryProvider>

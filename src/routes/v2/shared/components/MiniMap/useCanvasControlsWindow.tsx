@@ -4,7 +4,7 @@ import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 import { CanvasControlsContent } from "./CanvasControlsContent";
 
-const CANVAS_CONTROLS_WINDOW_ID = "canvas-controls";
+export const CANVAS_CONTROLS_WINDOW_ID = "canvas-controls";
 const CANVAS_CONTROLS_WINDOW_HEIGHT = 150;
 const WINDOW_CHROME_HEIGHT = 30;
 
