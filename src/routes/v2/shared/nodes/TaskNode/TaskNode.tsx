@@ -23,10 +23,15 @@ import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { AggregatorOutputType } from "@/types/aggregator";
 import {
   EDITOR_COLLAPSED_ANNOTATION,
+  EDITOR_CONDITIONAL_EXECUTION_ANNOTATION,
   isPipelineAggregator,
   TASK_COLOR_ANNOTATION,
 } from "@/utils/annotations";
 import { isSecretArgument } from "@/utils/componentSpec";
+import {
+  IS_ENABLED_INPUT_LABEL,
+  IS_ENABLED_PORT_NAME,
+} from "@/utils/conditionalExecution";
 import { ISO8601_DURATION_ZERO_DAYS } from "@/utils/constants";
 import type { ExecutionStatusStats } from "@/utils/executionStatus";
 
@@ -44,6 +49,8 @@ export interface TaskNodeInput {
   type?: TypeSpecType;
   optional?: boolean;
   default?: string;
+  /** Human-readable label; falls back to the (prettified) name when unset. */
+  label?: string;
 }
 
 export interface TaskNodeOutput {
@@ -296,6 +303,24 @@ export const TaskNode = observer(function TaskNode({
   const connectedPorts = resolveConnectedPortNames(entityId, spec);
   const inputDisplayData = resolveInputDisplayData(task, entityId, spec);
 
+  // In "Conditional" execution mode a virtual "Is enabled?" input is exposed so
+  // the user can connect an upstream value that gates the task. The connection
+  // itself is an ordinary binding to the reserved port, so its display value and
+  // connected state are already resolved above.
+  const isConditionalExecution =
+    task.annotations.get(EDITOR_CONDITIONAL_EXECUTION_ANNOTATION) === "true" ||
+    connectedPorts.inputs.has(IS_ENABLED_PORT_NAME);
+  const displayInputs: TaskNodeInput[] = isConditionalExecution
+    ? [
+        ...inputs,
+        {
+          name: IS_ENABLED_PORT_NAME,
+          label: IS_ENABLED_INPUT_LABEL,
+          type: "Boolean",
+        },
+      ]
+    : inputs;
+
   const isSelected = isEditorVisualNodeSelected(editor, id, !!selected);
 
   const handleOutputTypeChange = (value: AggregatorOutputType) => {
@@ -311,7 +336,7 @@ export const TaskNode = observer(function TaskNode({
     isSubgraph: isTaskSubgraph(componentSpec),
     collapsed: isManuallyCollapsed,
     description,
-    inputs,
+    inputs: displayInputs,
     outputs,
     connectedInputNames: connectedPorts.inputs,
     connectedOutputNames: connectedPorts.outputs,

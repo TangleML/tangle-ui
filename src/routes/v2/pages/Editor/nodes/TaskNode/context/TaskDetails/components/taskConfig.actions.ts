@@ -1,11 +1,16 @@
-import type { Task } from "@/models/componentSpec";
+import type { ComponentSpec, Task } from "@/models/componentSpec";
 import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
 import type { AnnotationConfig } from "@/types/annotations";
 import {
   EDITOR_COLLAPSED_ANNOTATION,
+  EDITOR_CONDITIONAL_EXECUTION_ANNOTATION,
   TASK_COLOR_ANNOTATION,
 } from "@/utils/annotations";
+import { IS_ENABLED_PORT_NAME } from "@/utils/conditionalExecution";
 import { ISO8601_DURATION_ZERO_DAYS } from "@/utils/constants";
+
+/** The three "Enable task" choices exposed in the Config tab. */
+export type EnableTaskMode = "true" | "false" | "conditional";
 
 export function toggleCacheDisable(
   undo: UndoGroupable,
@@ -53,6 +58,33 @@ export function setCollapsed(
     } else {
       task.annotations.remove(EDITOR_COLLAPSED_ANNOTATION);
     }
+  });
+}
+
+export function setEnableTaskMode(
+  undo: UndoGroupable,
+  spec: ComponentSpec,
+  task: Task,
+  mode: EnableTaskMode,
+) {
+  undo.withGroup("Set enable task", () => {
+    if (mode === "conditional") {
+      // The connection is modelled as a binding the user draws to the virtual
+      // "Is enabled?" port; here we just enter conditional mode so the port
+      // shows. `isEnabled` is derived from that binding at serialize time.
+      task.annotations.set(EDITOR_CONDITIONAL_EXECUTION_ANNOTATION, "true");
+      task.setIsEnabled(undefined);
+      return;
+    }
+
+    // Leaving conditional mode: drop any connection to the reserved port.
+    spec.removeAllBindingsBy(
+      (b) =>
+        b.targetEntityId === task.$id &&
+        b.targetPortName === IS_ENABLED_PORT_NAME,
+    );
+    task.annotations.remove(EDITOR_CONDITIONAL_EXECUTION_ANNOTATION);
+    task.setIsEnabled(mode === "false" ? "false" : undefined);
   });
 }
 

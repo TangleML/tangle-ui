@@ -319,7 +319,7 @@ describe("unpackSubgraph roundtrip", () => {
       $id: idGen.next("spec"),
       name: "Main",
     });
-    const predicate = { "==": { op1: "a", op2: "b" } };
+    const predicate = { taskOutput: { taskId: "task1", outputName: "out1" } };
     const task = makeTask(idGen, "ConditionalTask", {
       isEnabled: predicate,
     });
