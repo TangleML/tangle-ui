@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
+import { EDITOR_CONDITIONAL_EXECUTION_ANNOTATION } from "@/utils/annotations";
+import { IS_ENABLED_PORT_NAME } from "@/utils/conditionalExecution";
+
 import { IncrementingIdGenerator } from "../../factories/idGenerator";
 import { YamlDeserializer } from "../../serialization/yamlDeserializer";
 
@@ -110,7 +113,9 @@ describe("YamlDeserializer", () => {
           tasks: {
             ConditionalTask: {
               componentRef: {},
-              isEnabled: { "==": { op1: "a", op2: "b" } },
+              isEnabled: {
+                taskOutput: { taskId: "task1", outputName: "out1" },
+              },
             },
           },
         },
@@ -120,8 +125,69 @@ describe("YamlDeserializer", () => {
     const spec = deserializer.deserialize(yaml);
 
     expect(spec.tasks.at(0)?.isEnabled).toEqual({
-      "==": { op1: "a", op2: "b" },
+      taskOutput: { taskId: "task1", outputName: "out1" },
     });
+  });
+
+  it("deserializes a reference isEnabled into a reserved-port binding", () => {
+    const yaml = {
+      name: "Pipeline",
+      implementation: {
+        graph: {
+          tasks: {
+            Producer: { componentRef: {} },
+            Consumer: {
+              componentRef: {},
+              isEnabled: {
+                taskOutput: { taskId: "Producer", outputName: "flag" },
+              },
+            },
+          },
+        },
+      },
+    };
+
+    const spec = deserializer.deserialize(yaml);
+    const consumer = spec.tasks.find((t) => t.name === "Consumer");
+    const producer = spec.tasks.find((t) => t.name === "Producer");
+
+    // Conditional mode: entity value cleared, mode annotation set.
+    expect(consumer?.isEnabled).toBeUndefined();
+    expect(
+      consumer?.annotations.get(EDITOR_CONDITIONAL_EXECUTION_ANNOTATION),
+    ).toBe("true");
+
+    // A binding to the reserved port drives the connection.
+    const binding = spec.bindings.find(
+      (b) =>
+        b.targetEntityId === consumer?.$id &&
+        b.targetPortName === IS_ENABLED_PORT_NAME,
+    );
+    expect(binding).toBeDefined();
+    expect(binding?.sourceEntityId).toBe(producer?.$id);
+    expect(binding?.sourcePortName).toBe("flag");
+  });
+
+  it("keeps literal isEnabled 'false' without a binding", () => {
+    const yaml = {
+      name: "Pipeline",
+      implementation: {
+        graph: {
+          tasks: {
+            T: { componentRef: {}, isEnabled: "false" },
+          },
+        },
+      },
+    };
+
+    const spec = deserializer.deserialize(yaml);
+    const task = spec.tasks.at(0);
+
+    expect(task?.isEnabled).toBe("false");
+    expect(
+      task?.annotations.get(EDITOR_CONDITIONAL_EXECUTION_ANNOTATION),
+    ).toBeUndefined();
+    expect(spec.bindings.length).toBe(0);
   });
 
   it("deserializes task annotations", () => {

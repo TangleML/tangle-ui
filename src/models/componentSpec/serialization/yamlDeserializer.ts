@@ -1,3 +1,9 @@
+import { EDITOR_CONDITIONAL_EXECUTION_ANNOTATION } from "@/utils/annotations";
+import {
+  IS_ENABLED_PORT_NAME,
+  isConditionalArgument,
+} from "@/utils/conditionalExecution";
+
 import { Annotations, deserializeAnnotationValue } from "../annotations";
 import { Binding } from "../entities/binding";
 import { ComponentSpec } from "../entities/componentSpec";
@@ -123,6 +129,22 @@ export class YamlDeserializer {
         }
       }
 
+      // A reference-valued `isEnabled` is the "Conditional" mode: it becomes a
+      // binding to the reserved port (see buildBindings) and the entity keeps
+      // `isEnabled` empty. Literal values (e.g. "false") stay on the entity.
+      const conditionalEnabled = isConditionalArgument(taskJson.isEnabled);
+      if (
+        conditionalEnabled &&
+        !annotationItems.some(
+          (a) => a.key === EDITOR_CONDITIONAL_EXECUTION_ANNOTATION,
+        )
+      ) {
+        annotationItems.push({
+          key: EDITOR_CONDITIONAL_EXECUTION_ANNOTATION,
+          value: "true",
+        });
+      }
+
       const args: Argument[] = [];
       if (taskJson.arguments) {
         for (const [argName, argValue] of Object.entries(taskJson.arguments)) {
@@ -149,7 +171,7 @@ export class YamlDeserializer {
         name: taskName,
         componentRef,
         subgraphSpec,
-        isEnabled: taskJson.isEnabled,
+        isEnabled: conditionalEnabled ? undefined : taskJson.isEnabled,
         executionOptions: taskJson.executionOptions,
         annotations: Annotations.from(annotationItems),
         arguments: args,
@@ -178,7 +200,21 @@ export class YamlDeserializer {
 
     for (const [taskName, taskJson] of Object.entries(graph.tasks)) {
       const targetTask = tasks.find((t) => t.name === taskName);
-      if (!targetTask || !taskJson.arguments) continue;
+      if (!targetTask) continue;
+
+      // A reference-valued `isEnabled` connects to the reserved port.
+      if (isConditionalArgument(taskJson.isEnabled)) {
+        const binding = this.createBindingFromArgument(
+          inputs,
+          tasks,
+          targetTask.$id,
+          IS_ENABLED_PORT_NAME,
+          taskJson.isEnabled as ArgumentType,
+        );
+        if (binding) bindings.push(binding);
+      }
+
+      if (!taskJson.arguments) continue;
 
       for (const [argName, argValue] of Object.entries(taskJson.arguments)) {
         const binding = this.createBindingFromArgument(

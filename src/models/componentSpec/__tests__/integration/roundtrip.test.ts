@@ -206,6 +206,58 @@ describe("Serialization Roundtrip", () => {
     });
   });
 
+  it("preserves a conditional (reference) isEnabled across a roundtrip", () => {
+    const yaml = {
+      name: "ConditionalTest",
+      inputs: [{ name: "run_it", type: "Boolean" }],
+      implementation: {
+        graph: {
+          tasks: {
+            Producer: { componentRef: {} },
+            Consumer: {
+              componentRef: {},
+              isEnabled: {
+                taskOutput: { taskId: "Producer", outputName: "flag" },
+              },
+            },
+            InputGated: {
+              componentRef: {},
+              isEnabled: { graphInput: { inputName: "run_it" } },
+            },
+          },
+        },
+      },
+    };
+
+    const json = serializer.serialize(deserializer.deserialize(yaml));
+    const tasks = getGraph(json).tasks;
+
+    expect(tasks["Consumer"].isEnabled).toEqual({
+      taskOutput: { taskId: "Producer", outputName: "flag" },
+    });
+    expect(tasks["Consumer"].arguments).toBeUndefined();
+    expect(tasks["InputGated"].isEnabled).toEqual({
+      graphInput: { inputName: "run_it" },
+    });
+  });
+
+  it("preserves literal isEnabled 'false' across a roundtrip", () => {
+    const yaml = {
+      name: "DisabledTest",
+      implementation: {
+        graph: {
+          tasks: {
+            Off: { componentRef: {}, isEnabled: "false" },
+          },
+        },
+      },
+    };
+
+    const json = serializer.serialize(deserializer.deserialize(yaml));
+
+    expect(getGraph(json).tasks["Off"].isEnabled).toBe("false");
+  });
+
   it("handles empty spec correctly", () => {
     const yaml = {
       name: "EmptySpec",

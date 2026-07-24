@@ -15,6 +15,8 @@ export const RUN_NAME_TEMPLATE_ANNOTATION = "run-name-template";
 export const RUN_SOURCE_ANNOTATION = "source";
 export const EDITOR_POSITION_ANNOTATION = "editor.position";
 export const EDITOR_COLLAPSED_ANNOTATION = "editor.collapsed";
+export const EDITOR_CONDITIONAL_EXECUTION_ANNOTATION =
+  "editor.conditional-execution";
 export const EDITOR_FLOW_DIRECTION_ANNOTATION = "editor.flow-direction";
 export const FLEX_NODES_ANNOTATION = "flex-nodes";
 export const ZINDEX_ANNOTATION = "zIndex";

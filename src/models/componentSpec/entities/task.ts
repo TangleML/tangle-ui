@@ -11,7 +11,6 @@ import type {
   ComponentReference,
   ComponentSpecJson,
   ExecutionOptionsSpec,
-  PredicateType,
 } from "./types";
 import { isGraphImplementation } from "./types";
 
@@ -21,7 +20,7 @@ export class Task extends Model({
   name: prop<string>(),
   componentRef: prop<ComponentReference>(),
   subgraphSpec: prop<ComponentSpec | undefined>(undefined),
-  isEnabled: prop<PredicateType | undefined>(undefined),
+  isEnabled: prop<ArgumentType | undefined>(undefined),
   annotations: prop<Annotations>(() => new Annotations({})),
   arguments: prop<Argument[]>(() => []),
   executionOptions: prop<ExecutionOptionsSpec | undefined>(undefined),
@@ -65,7 +64,7 @@ export class Task extends Model({
   }
 
   @modelAction
-  setIsEnabled(predicate: PredicateType | undefined) {
+  setIsEnabled(predicate: ArgumentType | undefined) {
     this.isEnabled = predicate;
   }
 

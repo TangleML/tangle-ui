@@ -9,9 +9,9 @@ import { Task } from "../entities/task";
 import type {
   Annotation,
   Argument,
+  ArgumentType,
   ComponentReference,
   ExecutionOptionsSpec,
-  PredicateType,
 } from "../entities/types";
 import type { IdGenerator } from "../factories/idGenerator";
 
@@ -31,7 +31,7 @@ interface TaskSnapshot {
   $id: string;
   name: string;
   componentRef: ComponentReference;
-  isEnabled?: PredicateType;
+  isEnabled?: ArgumentType;
   annotations: Annotation[];
   arguments: Argument[];
   executionOptions?: ExecutionOptionsSpec;
