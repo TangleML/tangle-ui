@@ -57,10 +57,12 @@ describe("Task", () => {
       $id: "task_1",
       name: "T",
       componentRef: {},
-      isEnabled: { "==": { op1: "a", op2: "b" } },
+      isEnabled: { taskOutput: { taskId: "task1", outputName: "out1" } },
     });
 
-    expect(task.isEnabled).toEqual({ "==": { op1: "a", op2: "b" } });
+    expect(task.isEnabled).toEqual({
+      taskOutput: { taskId: "task1", outputName: "out1" },
+    });
   });
 
   it("setName updates name", () => {

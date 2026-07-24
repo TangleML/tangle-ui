@@ -434,52 +434,6 @@ export type ArgumentType =
   string | GraphInputArgument | TaskOutputArgument | DynamicDataArgument;
 
 /**
- * Pair of operands for a binary operation.
- */
-interface TwoArgumentOperands {
-  op1: ArgumentType;
-  op2: ArgumentType;
-}
-/**
- * Pair of operands for a binary logical operation.
- */
-interface TwoLogicalOperands {
-  op1: PredicateType;
-  op2: PredicateType;
-}
-/**
- * Optional configuration that specifies how the task should be executed. Can be used to set some platform-specific options.
- */
-export type PredicateType =
-  | {
-      "==": TwoArgumentOperands;
-    }
-  | {
-      "!=": TwoArgumentOperands;
-    }
-  | {
-      ">": TwoArgumentOperands;
-    }
-  | {
-      ">=": TwoArgumentOperands;
-    }
-  | {
-      "<": TwoArgumentOperands;
-    }
-  | {
-      "<=": TwoArgumentOperands;
-    }
-  | {
-      and: TwoLogicalOperands;
-    }
-  | {
-      or: TwoLogicalOperands;
-    }
-  | {
-      not: PredicateType;
-    };
-
-/**
  * Optional configuration that specifies how the task should be retried if it fails.
  */
 interface RetryStrategySpec {
@@ -504,7 +458,7 @@ export interface TaskSpec {
   arguments?: {
     [k: string]: ArgumentType;
   };
-  isEnabled?: PredicateType;
+  isEnabled?: ArgumentType;
   executionOptions?: ExecutionOptionsSpec;
   annotations?: {
     [k: string]: unknown;

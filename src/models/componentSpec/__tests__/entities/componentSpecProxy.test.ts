@@ -296,14 +296,14 @@ describe("createComponentSpecProxy", () => {
           $id: "task_1",
           name: "T",
           componentRef: {},
-          isEnabled: { "==": { op1: "a", op2: "b" } },
+          isEnabled: { taskOutput: { taskId: "task1", outputName: "out1" } },
         }),
       );
 
       const graph = getGraph(createComponentSpecProxy(spec));
 
       expect(graph.tasks["T"].isEnabled).toEqual({
-        "==": { op1: "a", op2: "b" },
+        taskOutput: { taskId: "task1", outputName: "out1" },
       });
     });
 

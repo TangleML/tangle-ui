@@ -5,6 +5,11 @@ import type { AnnotationConfig, Annotations } from "@/types/annotations";
 
 import type { ComponentSpec } from "./componentSpec";
 
+// Re-exported so UI callers can keep importing it from the annotations registry,
+// while the canonical definition lives in the lightweight conditionalExecution
+// module that the model serializers can safely depend on.
+export { EDITOR_CONDITIONAL_EXECUTION_ANNOTATION } from "./conditionalExecution";
+
 export const DISPLAY_NAME_MAX_LENGTH = 100;
 export const TASK_DISPLAY_NAME_ANNOTATION = "display_name";
 export const PIPELINE_NOTES_ANNOTATION = "notes";
