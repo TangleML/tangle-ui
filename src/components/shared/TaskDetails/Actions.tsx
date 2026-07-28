@@ -56,7 +56,7 @@ const TaskActions = ({
     />
   );
   const editComponent = !readOnly && (
-    <EditComponentButton componentRef={componentRef} />
+    <EditComponentButton componentRef={componentRef} taskId={taskId} />
   );
 
   // Canvas Actions
