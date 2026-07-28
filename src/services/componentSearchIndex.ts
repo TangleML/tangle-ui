@@ -473,6 +473,8 @@ function tokenizeQuery(text: string): {
 interface ParsedSearchQuery {
   positiveText: string;
   negativeText: string;
+  fieldWeights: Record<MatchField, number>;
+  fieldPhraseBonuses: Record<MatchField, number>;
 }
 
 // Bind a negation to its term(s): capture consecutive words but stop at a
@@ -482,10 +484,81 @@ interface ParsedSearchQuery {
 const NEGATIVE_CONSTRAINT_PATTERN =
   /\b(?:without|excluding|exclude|not|no)\b\s+(?:(?:to|use|using)\s+)?([a-z0-9][a-z0-9-]*(?:\s+(?!(?:and|or|but|then|also|plus|with)\b)[a-z0-9][a-z0-9-]*)*)/gi;
 const NEGATIVE_LEADING_FILLER_PATTERN = /^(?:(?:to|use|using)\s+)+/i;
+const FIELD_BOOST_BLOCK_PATTERN = /\[([^\]]+)\]/g;
+const FIELD_BOOST_DIRECTIVE_PATTERN =
+  /^([a-z]+)(\+{1,}|-{1,}|[+-]\d+(?:\.\d+)?|\^\d+(?:\.\d+)?|=\d+(?:\.\d+)?)$/;
+
+function cloneFieldWeights(): Record<MatchField, number> {
+  return { ...FIELD_WEIGHTS };
+}
+
+function buildFieldPhraseBonuses(
+  fieldWeights: Record<MatchField, number>,
+): Record<MatchField, number> {
+  return Object.fromEntries(
+    SEARCH_FIELDS.map((field) => {
+      const baseWeight = FIELD_WEIGHTS[field];
+      const ratio = baseWeight > 0 ? fieldWeights[field] / baseWeight : 0;
+      return [field, FIELD_PHRASE_BONUS[field] * ratio];
+    }),
+  ) as Record<MatchField, number>;
+}
+
+function applyFieldBoostDirective(
+  fieldWeights: Record<MatchField, number>,
+  directive: string,
+): void {
+  const match = FIELD_BOOST_DIRECTIVE_PATTERN.exec(directive.trim());
+  if (!match) return;
+
+  const fieldName = match[1];
+  const operator = match[2];
+  if (!fieldName || !operator) return;
+
+  const field = FIELD_ALIASES[fieldName];
+  if (!field) return;
+
+  const currentWeight = fieldWeights[field];
+  let nextWeight = currentWeight;
+  if (operator.startsWith("^")) {
+    nextWeight = currentWeight * Number(operator.slice(1));
+  } else if (operator.startsWith("=")) {
+    nextWeight = Number(operator.slice(1));
+  } else if (/^\++$/.test(operator)) {
+    nextWeight = currentWeight + operator.length;
+  } else if (/^-+$/.test(operator)) {
+    nextWeight = currentWeight - operator.length;
+  } else {
+    nextWeight = currentWeight + Number(operator);
+  }
+
+  fieldWeights[field] = Number.isFinite(nextWeight)
+    ? Math.max(0, nextWeight)
+    : currentWeight;
+}
+
+function extractFieldBoosts(text: string): {
+  textWithoutBoosts: string;
+  fieldWeights: Record<MatchField, number>;
+} {
+  const fieldWeights = cloneFieldWeights();
+  const textWithoutBoosts = text.replace(
+    FIELD_BOOST_BLOCK_PATTERN,
+    (_match, block: string) => {
+      for (const directive of block.split(/[\s,]+/)) {
+        applyFieldBoostDirective(fieldWeights, directive);
+      }
+      return " ";
+    },
+  );
+
+  return { textWithoutBoosts, fieldWeights };
+}
 
 function parseSearchQuery(text: string): ParsedSearchQuery {
+  const { textWithoutBoosts, fieldWeights } = extractFieldBoosts(text);
   const negativeParts: string[] = [];
-  const positiveText = text.replace(
+  const positiveText = textWithoutBoosts.replace(
     NEGATIVE_CONSTRAINT_PATTERN,
     (_match, negativePart: string) => {
       negativeParts.push(
@@ -498,6 +571,8 @@ function parseSearchQuery(text: string): ParsedSearchQuery {
   return {
     positiveText,
     negativeText: negativeParts.join(" "),
+    fieldWeights,
+    fieldPhraseBonuses: buildFieldPhraseBonuses(fieldWeights),
   };
 }
 
@@ -533,6 +608,24 @@ const FIELD_PHRASE_BONUS: Record<MatchField, number> = {
   io: 4,
   implementation: 0.5,
   metadata: 1,
+};
+
+const FIELD_ALIASES: Record<string, MatchField> = {
+  command: "implementation",
+  commands: "implementation",
+  desc: "description",
+  description: "description",
+  implementation: "implementation",
+  impl: "implementation",
+  input: "io",
+  inputs: "io",
+  io: "io",
+  metadata: "metadata",
+  meta: "metadata",
+  name: "name",
+  output: "io",
+  outputs: "io",
+  title: "name",
 };
 
 const PREFIX_MATCH_BONUS_MULTIPLIER = 0.5;
@@ -706,6 +799,8 @@ function scoreEntry(
   phraseTokenSequences: string[][],
   negativeTokens: string[],
   tokenWeights: Map<string, number>,
+  fieldWeights: Record<MatchField, number>,
+  fieldPhraseBonuses: Record<MatchField, number>,
 ): { score: number; matchedFields: MatchField[] } {
   const matched = new Set<MatchField>();
   let score = 0;
@@ -726,7 +821,7 @@ function scoreEntry(
   for (const concept of concepts) {
     for (const field of SEARCH_FIELDS) {
       const fieldText = entry.searchable[field];
-      const fieldWeight = FIELD_WEIGHTS[field];
+      const fieldWeight = fieldWeights[field];
       const matchingTokens = concept.filter((token) =>
         fieldText.includes(token),
       );
@@ -779,7 +874,7 @@ function scoreEntry(
       ) {
         continue;
       }
-      score += FIELD_PHRASE_BONUS[field];
+      score += fieldPhraseBonuses[field];
       matched.add(field);
     }
   }
@@ -829,6 +924,8 @@ export function lexicalSearch(
       phraseTokenSequences,
       negativeTokens,
       tokenWeights,
+      parsedQuery.fieldWeights,
+      parsedQuery.fieldPhraseBonuses,
     );
     if (score === 0) continue;
     scored.push({
