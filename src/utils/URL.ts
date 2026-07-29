@@ -134,12 +134,7 @@ const buildComponentSourceUrl = ({
   return `${baseUrl}/${pathParts.join("/")}`;
 };
 
-const downloadStringAsFile = (
-  content: string,
-  filename: string,
-  contentType: string,
-) => {
-  const blob = new Blob([content], { type: contentType });
+const downloadBlobAsFile = (blob: Blob, filename: string) => {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -148,6 +143,14 @@ const downloadStringAsFile = (
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+};
+
+const downloadStringAsFile = (
+  content: string,
+  filename: string,
+  contentType: string,
+) => {
+  downloadBlobAsFile(new Blob([content], { type: contentType }), filename);
 };
 
 const downloadYamlFromComponentText = (text: string, displayName: string) => {
@@ -213,6 +216,7 @@ export {
   convertGcsUrlToBrowserUrl,
   convertGithubUrlToDirectoryUrl,
   convertHfUrlToDirectoryUrl,
+  downloadBlobAsFile,
   downloadStringAsFile,
   downloadYamlFromComponentText,
   getArtifactPreviewUrl,

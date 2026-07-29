@@ -16,28 +16,45 @@ export type ParsedArtifact = {
   columns: ArtifactColumn[];
   rows: string[][];
   truncated: boolean;
+  totalRows: number;
 };
 
-export const MAX_PREVIEW_ROWS = 1000;
 export const MAX_VISUALIZABLE_SIZE_BYTES = 50 * 1024 * 1024; // 50 MB
 
-const HEADER_ROW = 1;
-const TRUNCATION_LOOKAHEAD = 1;
+export const MAX_PREVIEW_CELLS = 50_000;
+export const MAX_PREVIEW_ROWS = 10_000;
+
+export function getPreviewRowLimit(columnCount: number): number {
+  const byCellBudget = Math.floor(MAX_PREVIEW_CELLS / Math.max(1, columnCount));
+  return Math.min(MAX_PREVIEW_ROWS, Math.max(1, byCellBudget));
+}
 
 export function parseCsv(text: string, delimiter?: string): ParsedArtifact {
-  const result = Papa.parse<string[]>(text, {
+  let headers: string[] | undefined;
+  let rowLimit = MAX_PREVIEW_ROWS;
+  const rows: string[][] = [];
+  let totalRows = 0;
+
+  Papa.parse<string[]>(text, {
     delimiter,
     header: false,
-    preview: MAX_PREVIEW_ROWS + HEADER_ROW + TRUNCATION_LOOKAHEAD,
     skipEmptyLines: true,
+    step: (result) => {
+      const row = result.data;
+      if (headers === undefined) {
+        headers = row;
+        rowLimit = getPreviewRowLimit(headers.length);
+        return;
+      }
+      totalRows++;
+      if (rows.length < rowLimit) rows.push(row);
+    },
   });
 
-  if (result.data.length === 0) {
-    return { columns: [], rows: [], truncated: false };
+  if (headers === undefined) {
+    return { columns: [], rows: [], truncated: false, totalRows: 0 };
   }
 
-  const [headers, ...rows] = result.data;
   const columns = headers.map((name) => ({ name }));
-  const truncated = rows.length > MAX_PREVIEW_ROWS;
-  return { columns, rows: rows.slice(0, MAX_PREVIEW_ROWS), truncated };
+  return { columns, rows, truncated: totalRows > rowLimit, totalRows };
 }
