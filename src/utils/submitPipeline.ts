@@ -12,7 +12,10 @@ import {
 import type { PipelineRun } from "@/types/pipelineRun";
 
 import { transformAggregatorComponentSpec } from "./aggregatorTransform";
-import { RUN_SOURCE_ANNOTATION } from "./annotations";
+import {
+  ORCHESTRATION_TARGET_CLUSTER_ANNOTATION,
+  RUN_SOURCE_ANNOTATION,
+} from "./annotations";
 import { buildAnnotationsWithCanonicalName } from "./canonicalPipelineName";
 import type {
   ArgumentType,
@@ -30,6 +33,7 @@ export async function submitPipelineRun(
     authorizationToken?: string;
     runNameOverride?: boolean;
     canonicalName?: string;
+    targetCluster?: string;
     onSuccess?: (data: PipelineRun) => void;
     onError?: (error: Error) => void;
   },
@@ -91,6 +95,14 @@ export async function submitPipelineRun(
     const payload = {
       annotations: {
         [RUN_SOURCE_ANNOTATION]: "web-app",
+        // Opt-in override selecting which execution cluster the orchestrator
+        // routes this run to. Omitted entirely when unset, so the default
+        // routing (and the run payload) is unchanged.
+        ...(options?.targetCluster
+          ? {
+              [ORCHESTRATION_TARGET_CLUSTER_ANNOTATION]: options.targetCluster,
+            }
+          : {}),
       },
       root_task: {
         componentRef: {
