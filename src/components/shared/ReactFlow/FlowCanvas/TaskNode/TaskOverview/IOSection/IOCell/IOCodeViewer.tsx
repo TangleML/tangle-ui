@@ -1,4 +1,5 @@
 import { CodeViewer } from "@/components/shared/CodeViewer";
+import { cn } from "@/lib/utils";
 import { safeJsonParse } from "@/utils/string";
 
 const MAX_LINES = 10;
@@ -8,14 +9,21 @@ const HEADER_HEIGHT = 55;
 interface IOCodeViewerProps {
   title: string;
   value: string;
+  /** Fill the available space instead of capping to a preview height. */
+  isFullscreen?: boolean;
 }
 
-const IOCodeViewer = ({ title, value }: IOCodeViewerProps) => {
+const IOCodeViewer = ({ title, value, isFullscreen }: IOCodeViewerProps) => {
   const { parsed, isValidJson } = safeJsonParse(value);
 
   if (!isValidJson) {
     return (
-      <pre className="w-full font-mono text-xs whitespace-pre-line wrap-break-word">
+      <pre
+        className={cn(
+          "w-full font-mono text-xs whitespace-pre-line wrap-break-word",
+          isFullscreen && "h-full overflow-auto",
+        )}
+      >
         {value || "No value"}
       </pre>
     );
@@ -28,7 +36,10 @@ const IOCodeViewer = ({ title, value }: IOCodeViewerProps) => {
   const lineHeight = `${maxLines * JSON_CODE_LINE_HEIGHT + HEADER_HEIGHT}px`;
 
   return (
-    <div style={{ height: lineHeight }}>
+    <div
+      className={isFullscreen ? "h-full min-h-0 w-full" : undefined}
+      style={isFullscreen ? undefined : { height: lineHeight }}
+    >
       <CodeViewer code={codeString} language="json" filename={title} />
     </div>
   );
