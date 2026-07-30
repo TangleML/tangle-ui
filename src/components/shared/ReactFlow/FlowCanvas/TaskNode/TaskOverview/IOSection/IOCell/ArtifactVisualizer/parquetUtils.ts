@@ -20,6 +20,7 @@ import {
 import { type ArtifactColumn, MAX_VISUALIZABLE_SIZE_BYTES } from "./utils";
 
 export const PARQUET_PREVIEW_ROWS = 100;
+export const PARQUET_LOAD_MORE_ROWS = 100;
 
 type ParquetSource = AsyncBuffer | ArrayBuffer;
 
@@ -66,6 +67,23 @@ export async function openParquet(signedUrl: string): Promise<OpenedParquet> {
     const source = await response.arrayBuffer();
     return { source, metadata: parquetMetadata(source) };
   }
+}
+
+export async function readParquetRows(
+  { source, metadata }: OpenedParquet,
+  columns: ArtifactColumn[],
+  rowStart: number,
+  rowEnd: number,
+): Promise<string[][]> {
+  const objects = await parquetReadObjects({
+    file: source,
+    metadata,
+    rowStart,
+    rowEnd,
+  });
+  return objects.map((obj) =>
+    columns.map((col) => obj[col.name]),
+  ) as string[][];
 }
 
 export async function readParquetPreview(
