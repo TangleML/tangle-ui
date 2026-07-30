@@ -6,6 +6,7 @@ import type { ListPipelineJobsResponse } from "@/api/types.gen";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,6 +30,7 @@ import {
   parseFilterParam,
 } from "@/utils/pipelineRunFilterUtils";
 
+import RunBulkActionsBar from "./RunBulkActionsBar";
 import RunRow from "./RunRow";
 
 const PIPELINE_RUNS_QUERY_URL = "/api/pipeline_runs/";
@@ -58,8 +60,23 @@ export const RunSection = ({
   const { pathname } = useLocation();
   const search = useSearch({ strict: false }) as RunSectionSearch;
   const isCreatedByMeDefault = useFlagValue("created-by-me-default");
+  const compareEnabled = useFlagValue("compare-runs");
   const { setFilter } = useRunSearchParams();
   const dataVersion = useRef(0);
+
+  const [selectedRuns, setSelectedRuns] = useState<Set<string>>(new Set());
+
+  const toggleRun = (runId: string) => {
+    setSelectedRuns((prev) => {
+      const next = new Set(prev);
+      if (next.has(runId)) {
+        next.delete(runId);
+      } else {
+        next.add(runId);
+      }
+      return next;
+    });
+  };
 
   const onFilterByUser = forcedFilter
     ? undefined
@@ -279,12 +296,42 @@ export const RunSection = ({
     );
   }
 
+  const pageRuns = maxItems
+    ? data.pipeline_runs?.slice(0, maxItems)
+    : data.pipeline_runs;
+
+  const allPageRunsSelected =
+    !!pageRuns?.length &&
+    pageRuns.every((run) => selectedRuns.has(`${run.id}`));
+
+  const toggleSelectAll = () => {
+    setSelectedRuns((prev) => {
+      const next = new Set(prev);
+      const pageRunIds = pageRuns?.map((run) => `${run.id}`) ?? [];
+      if (allPageRunsSelected) {
+        pageRunIds.forEach((id) => next.delete(id));
+      } else {
+        pageRunIds.forEach((id) => next.add(id));
+      }
+      return next;
+    });
+  };
+
   return (
     <BlockStack gap="4">
       {searchMarkup}
       <Table>
         <TableHeader>
           <TableRow className="text-xs">
+            {compareEnabled && (
+              <TableHead className="w-8">
+                <Checkbox
+                  checked={allPageRunsSelected}
+                  onCheckedChange={toggleSelectAll}
+                  aria-label="Select all runs on this page"
+                />
+              </TableHead>
+            )}
             <TableHead className="w-1/4">Name</TableHead>
             <TableHead className="w-1/4">Status</TableHead>
             <TableHead className="w-3/20">Date</TableHead>
@@ -293,14 +340,25 @@ export const RunSection = ({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {(maxItems
-            ? data.pipeline_runs?.slice(0, maxItems)
-            : data.pipeline_runs
-          )?.map((run) => (
-            <RunRow key={run.id} run={run} onFilterByUser={onFilterByUser} />
+          {pageRuns?.map((run) => (
+            <RunRow
+              key={run.id}
+              run={run}
+              onFilterByUser={onFilterByUser}
+              selectable={compareEnabled}
+              isSelected={selectedRuns.has(`${run.id}`)}
+              onToggleSelected={toggleRun}
+            />
           ))}
         </TableBody>
       </Table>
+
+      {compareEnabled && selectedRuns.size > 0 && (
+        <RunBulkActionsBar
+          selectedRuns={Array.from(selectedRuns)}
+          onClearSelection={() => setSelectedRuns(new Set())}
+        />
+      )}
 
       {(data.next_page_token || previousPageTokens.length > 0) && (
         <InlineStack
