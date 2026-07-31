@@ -24,7 +24,7 @@ const MEMBERSHIP_BORDER: Record<DiffStatus, string> = {
 type MergedTaskNodeType = Node<MergedTaskNodeData, "mergedTask">;
 
 export function MergedTaskNode({ data }: NodeProps<MergedTaskNodeType>) {
-  const { diff, spotlight } = data;
+  const { diff, spotlight, singleRun } = data;
 
   const spotlightSide = spotlight === "b" ? "b" : "a";
   const side = spotlight === "b" ? diff.b : diff.a;
@@ -68,6 +68,7 @@ export function MergedTaskNode({ data }: NodeProps<MergedTaskNodeType>) {
 
   const statusA = spotlight === "b" ? undefined : diff.statusA;
   const statusB = spotlight === "a" ? undefined : diff.statusB;
+  const singleStatus = diff.statusA ?? diff.statusB;
 
   return (
     <BlockStack
@@ -77,25 +78,44 @@ export function MergedTaskNode({ data }: NodeProps<MergedTaskNodeType>) {
         MEMBERSHIP_BORDER[diff.status],
       )}
     >
-      {(statusA || statusB) && (
-        <InlineStack
-          gap="1"
-          blockAlign="start"
-          wrap="nowrap"
-          className="absolute -top-5 left-0 right-0 w-full -z-1"
-        >
-          {statusA ? (
-            <StatusTab status={statusA} label="A" className="min-w-0 flex-1" />
-          ) : (
-            <div className="flex-1" />
+      {singleRun
+        ? singleStatus && (
+            <InlineStack
+              gap="1"
+              blockAlign="start"
+              wrap="nowrap"
+              className="absolute -top-5 left-0 w-full -z-1"
+            >
+              <StatusTab status={singleStatus} className="min-w-0" />
+            </InlineStack>
+          )
+        : (statusA || statusB) && (
+            <InlineStack
+              gap="1"
+              blockAlign="start"
+              wrap="nowrap"
+              className="absolute -top-5 left-0 right-0 w-full -z-1"
+            >
+              {statusA ? (
+                <StatusTab
+                  status={statusA}
+                  label="A"
+                  className="min-w-0 flex-1"
+                />
+              ) : (
+                <div className="flex-1" />
+              )}
+              {statusB ? (
+                <StatusTab
+                  status={statusB}
+                  label="B"
+                  className="min-w-0 flex-1"
+                />
+              ) : (
+                <div className="flex-1" />
+              )}
+            </InlineStack>
           )}
-          {statusB ? (
-            <StatusTab status={statusB} label="B" className="min-w-0 flex-1" />
-          ) : (
-            <div className="flex-1" />
-          )}
-        </InlineStack>
-      )}
 
       <InlineStack
         align="space-between"

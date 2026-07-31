@@ -35,6 +35,7 @@ interface StructuredDiffViewProps {
   labelB: string;
   nameA: string;
   nameB: string;
+  mode?: "empty" | "single" | "both";
 }
 
 export function StructuredDiffView({
@@ -43,10 +44,18 @@ export function StructuredDiffView({
   labelB,
   nameA,
   nameB,
+  mode = "both",
 }: StructuredDiffViewProps) {
   const [showUnchanged, setShowUnchanged] = useState(false);
 
   if (!comparison.hasComparableGraph) {
+    if (mode === "empty") {
+      return (
+        <InfoBox title="Nothing to compare" variant="info" width="full">
+          Select two runs to compare their inputs, tasks, and outputs.
+        </InfoBox>
+      );
+    }
     return (
       <InfoBox title="Nothing to compare" variant="info" width="full">
         Neither run has a graph pipeline, so there are no tasks, inputs, or
@@ -113,9 +122,15 @@ export function StructuredDiffView({
       </InlineStack>
 
       {nothingVisible ? (
-        <InfoBox title="No differences" variant="success" width="full">
-          These two runs have identical inputs, tasks, and outputs.
-        </InfoBox>
+        mode === "single" ? (
+          <InfoBox title="No differences" variant="info" width="full">
+            Select a second run to make a structured comparison.
+          </InfoBox>
+        ) : (
+          <InfoBox title="No differences" variant="success" width="full">
+            These two runs have identical inputs, tasks, and outputs.
+          </InfoBox>
+        )
       ) : (
         <BlockStack gap="5" className="w-full">
           {visibleInputs.length > 0 && (

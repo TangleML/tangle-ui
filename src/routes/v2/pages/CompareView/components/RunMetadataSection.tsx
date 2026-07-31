@@ -26,6 +26,32 @@ interface RunMetadataSectionProps {
   b: RunMetadataInput;
   labelA: string;
   labelB: string;
+  mode?: "empty" | "single" | "both";
+}
+
+function hasMetadata(input: RunMetadataInput): boolean {
+  return Boolean(
+    input.createdBy ||
+    input.createdAt ||
+    (input.annotations && Object.keys(input.annotations).length > 0) ||
+    (input.arguments && Object.keys(input.arguments).length > 0),
+  );
+}
+
+function MetadataBar({ children }: { children: React.ReactNode }) {
+  return (
+    <InlineStack
+      gap="3"
+      blockAlign="center"
+      wrap="wrap"
+      className="w-full rounded-lg border px-3 py-2"
+    >
+      <Text as="span" size="sm" weight="semibold">
+        Run metadata
+      </Text>
+      {children}
+    </InlineStack>
+  );
 }
 
 function scalarEntry(
@@ -63,7 +89,42 @@ export function RunMetadataSection({
   b,
   labelA,
   labelB,
+  mode = "both",
 }: RunMetadataSectionProps) {
+  if (mode === "empty") {
+    return (
+      <MetadataBar>
+        <Text as="span" size="sm" tone="subdued">
+          Select runs to compare.
+        </Text>
+      </MetadataBar>
+    );
+  }
+
+  if (mode === "single") {
+    const presentRun = hasMetadata(a) ? "a" : "b";
+    const present = presentRun === "a" ? a : b;
+    return (
+      <MetadataBar>
+        <RunSummary
+          run={presentRun}
+          label={presentRun === "a" ? labelA : labelB}
+          author={present.createdBy}
+          createdAt={present.createdAt}
+        />
+      </MetadataBar>
+    );
+  }
+
+  return <RunMetadataComparison a={a} b={b} labelA={labelA} labelB={labelB} />;
+}
+
+function RunMetadataComparison({
+  a,
+  b,
+  labelA,
+  labelB,
+}: Omit<RunMetadataSectionProps, "mode">) {
   const [open, setOpen] = useState(false);
   const comparison = buildRunMetadataComparison(a, b);
 

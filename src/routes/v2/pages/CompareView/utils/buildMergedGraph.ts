@@ -18,6 +18,7 @@ export type SpotlightMode = "both" | "a" | "b";
 export interface MergedTaskNodeData extends Record<string, unknown> {
   diff: TaskDiff;
   spotlight: SpotlightMode;
+  singleRun?: boolean;
 }
 
 export interface MergedIoNodeData extends Record<string, unknown> {
