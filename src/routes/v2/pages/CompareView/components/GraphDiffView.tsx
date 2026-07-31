@@ -76,6 +76,8 @@ interface GraphDiffViewProps {
   nameB: string;
   labelA: string;
   labelB: string;
+  singleRun?: boolean;
+  mode?: "empty" | "single" | "both";
 }
 
 export function GraphDiffView({
@@ -84,8 +86,17 @@ export function GraphDiffView({
   nameB,
   labelA,
   labelB,
+  singleRun,
+  mode = "both",
 }: GraphDiffViewProps) {
   if (!comparison.hasComparableGraph) {
+    if (mode === "empty") {
+      return (
+        <InfoBox title="No graph to compare" variant="info" width="full">
+          Select two runs to compare their pipeline graphs.
+        </InfoBox>
+      );
+    }
     return (
       <InfoBox title="No graph to compare" variant="info" width="full">
         Neither run has a graph pipeline, so there are no tasks to lay out. Use
@@ -102,6 +113,7 @@ export function GraphDiffView({
         nameB={nameB}
         labelA={labelA}
         labelB={labelB}
+        singleRun={singleRun}
       />
     </ReactFlowProvider>
   );
@@ -113,6 +125,7 @@ function MergedGraphCanvas({
   nameB,
   labelA,
   labelB,
+  singleRun,
 }: GraphDiffViewProps) {
   const { track } = useAnalytics();
 
@@ -150,7 +163,7 @@ function MergedGraphCanvas({
       spotlight !== "both" && !nodeInRun(node.data.diff.status, spotlight);
     const style = { ...node.style, opacity: dimmed ? 0.35 : 1 };
     return node.type === "mergedTask"
-      ? { ...node, data: { ...node.data, spotlight }, style }
+      ? { ...node, data: { ...node.data, spotlight, singleRun }, style }
       : { ...node, data: { ...node.data, spotlight }, style };
   });
 
@@ -184,26 +197,28 @@ function MergedGraphCanvas({
         className="w-full"
       >
         <InlineStack gap="3" blockAlign="center" wrap="wrap">
-          <InlineStack gap="1" blockAlign="center">
-            <Text as="span" size="sm" tone="subdued">
-              Highlight
-            </Text>
-            {modes.map(({ mode, label, title }) => (
-              <Button
-                key={mode}
-                size="sm"
-                variant={spotlight === mode ? "default" : "outline"}
-                aria-pressed={spotlight === mode}
-                title={title}
-                onClick={() => setSpotlight(mode)}
-                {...tracking("compare_runs.graph.highlight", { run: mode })}
-              >
-                {label}
-              </Button>
-            ))}
-          </InlineStack>
+          {!singleRun && (
+            <InlineStack gap="1" blockAlign="center">
+              <Text as="span" size="sm" tone="subdued">
+                Highlight
+              </Text>
+              {modes.map(({ mode, label, title }) => (
+                <Button
+                  key={mode}
+                  size="sm"
+                  variant={spotlight === mode ? "default" : "outline"}
+                  aria-pressed={spotlight === mode}
+                  title={title}
+                  onClick={() => setSpotlight(mode)}
+                  {...tracking("compare_runs.graph.highlight", { run: mode })}
+                >
+                  {label}
+                </Button>
+              ))}
+            </InlineStack>
+          )}
           <Text as="span" size="xs" tone="subdued">
-            A · {nameA} vs B · {nameB}
+            {singleRun ? nameA || nameB : `A · ${nameA} vs B · ${nameB}`}
           </Text>
         </InlineStack>
 

@@ -271,6 +271,41 @@ describe("buildPipelineComparison()", () => {
     );
   });
 
+  test("reports every task unchanged when a run is compared against itself", () => {
+    const spec = graphSpec({ train: task("d1"), evaluate: task("d2") });
+    const statuses = new Map([
+      ["train", "SUCCEEDED"],
+      ["evaluate", "FAILED"],
+    ]);
+
+    const { taskDiffs, counts, hasComparableGraph } = buildPipelineComparison(
+      spec,
+      spec,
+      statuses,
+      statuses,
+    );
+
+    expect(hasComparableGraph).toBe(true);
+    expect(taskDiffs.every((diff) => diff.status === "unchanged")).toBe(true);
+    expect(taskDiffs.every((diff) => !diff.outcomeChanged)).toBe(true);
+    expect(counts.changed).toBe(0);
+    expect(counts.added).toBe(0);
+    expect(counts.removed).toBe(0);
+    expect(counts.outcomeChanged).toBe(0);
+  });
+
+  test("reports no comparable graph when both specs are undefined", () => {
+    const { hasComparableGraph, taskDiffs } = buildPipelineComparison(
+      undefined,
+      undefined,
+      noStatus,
+      noStatus,
+    );
+
+    expect(hasComparableGraph).toBe(false);
+    expect(taskDiffs).toHaveLength(0);
+  });
+
   test("flags an output whose producing task was rewired", () => {
     const specA: ComponentSpec = {
       outputs: [{ name: "model" }],

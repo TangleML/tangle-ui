@@ -1,12 +1,12 @@
-import { Link, useNavigate, useSearch } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import { InfoBox } from "@/components/shared/InfoBox";
-import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { RemoteAuthErrorView } from "@/components/shared/RemoteAuthErrorView";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Heading, Text } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
@@ -17,9 +17,9 @@ import { RemoteAuthError } from "@/utils/fetchWithErrorHandling";
 import { copyToClipboard } from "@/utils/string";
 import { tracking } from "@/utils/tracking";
 
-import { CompareRunPicker } from "./components/CompareRunPicker";
 import { GraphDiffView } from "./components/GraphDiffView";
 import { RunMetadataSection } from "./components/RunMetadataSection";
+import { RunSwitcher } from "./components/RunSwitcher";
 import { StructuredDiffView } from "./components/StructuredDiffView";
 import { YamlDiffView } from "./components/YamlDiffView";
 import { useRunComparisonSide } from "./hooks/useRunComparisonSide";
@@ -45,17 +45,24 @@ export function CompareView() {
   const sideA = useRunComparisonSide(a);
   const sideB = useRunComparisonSide(b);
 
-  const bothSelected = Boolean(a && b && a !== b);
+  const distinctIds = Array.from(new Set([a, b].filter(Boolean)));
+  const single = distinctIds.length === 1;
+  const both = distinctIds.length === 2;
+  const mode = both ? "both" : single ? "single" : "empty";
+
+  const present = single ? (a ? sideA : sideB) : undefined;
+  const effectiveA = present ?? sideA;
+  const effectiveB = present ?? sideB;
 
   const [activeTab, setActiveTab] = useState("structured");
   const [yamlMounted, setYamlMounted] = useState(false);
   const [graphMounted, setGraphMounted] = useState(false);
 
   useEffect(() => {
-    if (bothSelected) {
+    if (both) {
       track("compare_runs.comparison.impression", { run_a: a, run_b: b });
     }
-  }, [bothSelected, a, b, track]);
+  }, [both, a, b, track]);
 
   useEffect(() => {
     if (activeTab === "yaml") {
@@ -67,13 +74,16 @@ export function CompareView() {
   }, [activeTab]);
 
   const comparison = buildPipelineComparison(
-    sideA.spec,
-    sideB.spec,
-    sideA.taskStatusMap,
-    sideB.taskStatusMap,
-    sideA.taskExecutionIdMap,
-    sideB.taskExecutionIdMap,
+    effectiveA.spec,
+    effectiveB.spec,
+    effectiveA.taskStatusMap,
+    effectiveB.taskStatusMap,
+    effectiveA.taskExecutionIdMap,
+    effectiveB.taskExecutionIdMap,
   );
+
+  const nameA = a ? (sideA.spec?.name ?? `Run #${a}`) : undefined;
+  const nameB = b ? (sideB.spec?.name ?? `Run #${b}`) : undefined;
 
   const setSide = (side: "a" | "b", id: string) => {
     navigate({
@@ -82,59 +92,27 @@ export function CompareView() {
     });
   };
 
-  if (!a) {
-    return (
-      <PageShell>
-        <CompareRunPicker
-          title="Select the first run to compare"
-          excludeRunId={b}
-          onSelect={(id) => setSide("a", id)}
-        />
-      </PageShell>
-    );
+  const clearSide = (side: "a" | "b") => {
+    navigate({
+      to: APP_ROUTES.COMPARE,
+      search: (prev: CompareSearch) => {
+        const next = { ...prev };
+        delete next[side];
+        return next;
+      },
+    });
+  };
+
+  const authError = [sideA.error, sideB.error].find(
+    (candidate) => candidate instanceof RemoteAuthError,
+  );
+  if (authError) {
+    return <RemoteAuthErrorView />;
   }
 
-  if (!b || a === b) {
-    return (
-      <PageShell>
-        {a === b && (
-          <InfoBox
-            title="Pick two different runs"
-            variant="warning"
-            width="full"
-          >
-            You selected the same run twice. Choose a different second run.
-          </InfoBox>
-        )}
-        <CompareRunPicker
-          title="Select the second run to compare"
-          excludeRunId={a}
-          onSelect={(id) => setSide("b", id)}
-        />
-      </PageShell>
-    );
-  }
-
-  const error = sideA.error ?? sideB.error;
-  if (error) {
-    if (error instanceof RemoteAuthError) {
-      return <RemoteAuthErrorView />;
-    }
-    return (
-      <PageShell>
-        <InfoBox title="Error loading runs" variant="error" width="full">
-          {error.message}
-        </InfoBox>
-      </PageShell>
-    );
-  }
-
-  if (sideA.isLoading || sideB.isLoading || !sideA.spec || !sideB.spec) {
-    return <LoadingScreen message="Loading runs to compare" />;
-  }
-
-  const nameA = sideA.spec.name ?? `Run #${a}`;
-  const nameB = sideB.spec.name ?? `Run #${b}`;
+  const contentError = sideA.error ?? sideB.error ?? null;
+  const contentLoading =
+    (Boolean(a) && sideA.isLoading) || (Boolean(b) && sideB.isLoading);
 
   return (
     <PageShell>
@@ -146,11 +124,21 @@ export function CompareView() {
       >
         <InlineStack gap="3" blockAlign="center" wrap="wrap">
           <Heading level={2}>Compare runs</Heading>
-          <RunLabel label={LABEL_A} name={nameA} runId={a} tone="a" />
+          <RunSwitcher
+            label={LABEL_A}
+            side="a"
+            tone="a"
+            runId={a || undefined}
+            name={nameA}
+            excludeRunId={b || undefined}
+            onSelect={(id) => setSide("a", id)}
+            onClear={() => clearSide("a")}
+          />
           <Button
             variant="ghost"
             size="icon"
             aria-label="Swap runs"
+            disabled={!both}
             onClick={() =>
               navigate({
                 to: APP_ROUTES.COMPARE,
@@ -161,7 +149,16 @@ export function CompareView() {
           >
             <Icon name="ArrowLeftRight" size="sm" />
           </Button>
-          <RunLabel label={LABEL_B} name={nameB} runId={b} tone="b" />
+          <RunSwitcher
+            label={LABEL_B}
+            side="b"
+            tone="b"
+            runId={b || undefined}
+            name={nameB}
+            excludeRunId={a || undefined}
+            onSelect={(id) => setSide("b", id)}
+            onClear={() => clearSide("b")}
+          />
         </InlineStack>
         <InlineStack gap="1" blockAlign="center" wrap="nowrap">
           <Button
@@ -203,65 +200,88 @@ export function CompareView() {
         }}
         labelA={LABEL_A}
         labelB={LABEL_B}
+        mode={mode}
       />
 
-      <Tabs
-        value={activeTab}
-        onValueChange={setActiveTab}
-        className="flex-1 min-h-0 w-full"
-      >
-        <TabsList>
-          <TabsTrigger
-            value="structured"
-            {...tracking("compare_runs.tab.structured")}
-          >
-            Structured
-          </TabsTrigger>
-          <TabsTrigger value="yaml" {...tracking("compare_runs.tab.yaml")}>
-            YAML
-          </TabsTrigger>
-          <TabsTrigger value="graph" {...tracking("compare_runs.tab.graph")}>
-            Graph
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="structured" className="min-h-0 overflow-auto">
-          <StructuredDiffView
-            comparison={comparison}
-            labelA={LABEL_A}
-            labelB={LABEL_B}
-            nameA={nameA}
-            nameB={nameB}
-          />
-        </TabsContent>
-
-        <TabsContent
-          value="yaml"
-          forceMount
-          className={cn("min-h-0", activeTab !== "yaml" && "hidden")}
+      {contentError ? (
+        <InfoBox title="Error loading runs" variant="error" width="full">
+          {contentError.message}
+        </InfoBox>
+      ) : contentLoading ? (
+        <InlineStack
+          align="center"
+          blockAlign="center"
+          gap="2"
+          className="w-full flex-1"
         >
-          {yamlMounted && (
-            <YamlDiffView specA={sideA.spec} specB={sideB.spec} />
-          )}
-        </TabsContent>
-
-        <TabsContent
-          value="graph"
-          forceMount
-          className={cn("min-h-0", activeTab !== "graph" && "hidden")}
+          <Spinner /> <Text>Loading runs…</Text>
+        </InlineStack>
+      ) : (
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="flex-1 min-h-0 w-full"
         >
-          {graphMounted && (
-            <GraphDiffView
-              key={`${a}-${b}`}
+          <TabsList>
+            <TabsTrigger
+              value="structured"
+              {...tracking("compare_runs.tab.structured")}
+            >
+              Structured
+            </TabsTrigger>
+            <TabsTrigger value="yaml" {...tracking("compare_runs.tab.yaml")}>
+              YAML
+            </TabsTrigger>
+            <TabsTrigger value="graph" {...tracking("compare_runs.tab.graph")}>
+              Graph
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="structured" className="min-h-0 overflow-auto">
+            <StructuredDiffView
               comparison={comparison}
-              nameA={nameA}
-              nameB={nameB}
               labelA={LABEL_A}
               labelB={LABEL_B}
+              nameA={nameA ?? LABEL_A}
+              nameB={nameB ?? LABEL_B}
+              mode={mode}
             />
-          )}
-        </TabsContent>
-      </Tabs>
+          </TabsContent>
+
+          <TabsContent
+            value="yaml"
+            forceMount
+            className={cn("min-h-0", activeTab !== "yaml" && "hidden")}
+          >
+            {yamlMounted && (
+              <YamlDiffView
+                specA={effectiveA.spec}
+                specB={effectiveB.spec}
+                single={single}
+              />
+            )}
+          </TabsContent>
+
+          <TabsContent
+            value="graph"
+            forceMount
+            className={cn("min-h-0", activeTab !== "graph" && "hidden")}
+          >
+            {graphMounted && (
+              <GraphDiffView
+                key={`${a}-${b}`}
+                comparison={comparison}
+                nameA={nameA ?? ""}
+                nameB={nameB ?? ""}
+                labelA={LABEL_A}
+                labelB={LABEL_B}
+                singleRun={single}
+                mode={mode}
+              />
+            )}
+          </TabsContent>
+        </Tabs>
+      )}
     </PageShell>
   );
 }
@@ -271,48 +291,5 @@ function PageShell({ children }: { children: React.ReactNode }) {
     <BlockStack gap="4" className="h-full w-full p-4">
       {children}
     </BlockStack>
-  );
-}
-
-interface RunLabelProps {
-  label: string;
-  name: string;
-  runId: string;
-  tone: "a" | "b";
-}
-
-function RunLabel({ label, name, runId, tone }: RunLabelProps) {
-  const toneClass =
-    tone === "a"
-      ? "border-blue-400 bg-blue-50 text-blue-800 hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200 dark:hover:bg-blue-900"
-      : "border-emerald-400 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 dark:hover:bg-emerald-900";
-
-  return (
-    <Link
-      to={APP_ROUTES.RUN_DETAIL}
-      params={{ id: runId }}
-      target="_blank"
-      rel="noopener noreferrer"
-      title={`Open ${name} in a new tab`}
-      className={`group rounded border px-2 py-1 transition-colors ${toneClass}`}
-      {...tracking("compare_runs.comparison.open_run", { side: label })}
-    >
-      <InlineStack gap="2" blockAlign="center" wrap="nowrap">
-        <Text as="span" size="sm" weight="semibold" className="text-inherit">
-          {label}
-        </Text>
-        <Text as="span" size="sm" className="truncate max-w-64 text-inherit">
-          {name}
-        </Text>
-        <Text as="span" size="xs" className="text-inherit opacity-70">
-          #{runId}
-        </Text>
-        <Icon
-          name="ExternalLink"
-          size="xs"
-          className="opacity-40 group-hover:opacity-80"
-        />
-      </InlineStack>
-    </Link>
   );
 }
