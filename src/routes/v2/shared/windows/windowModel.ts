@@ -44,6 +44,7 @@ export interface WindowModelInit {
   persisted: boolean;
   variant: "window" | "panel";
   fillDockHeight?: boolean;
+  renderMiniInline?: boolean;
   onClose?: () => void;
 }
 
@@ -73,6 +74,8 @@ export class WindowModel {
 
   /** Static config: when docked, fill remaining dock-area height. */
   readonly fillDockHeight: boolean;
+  /** Static config: render mini content inline in the collapsed dock strip. */
+  readonly renderMiniInline: boolean;
   readonly onClose: (() => void) | undefined;
   private readonly store: WindowStoreRef;
 
@@ -95,6 +98,7 @@ export class WindowModel {
     this.persisted = init.persisted;
     this.variant = init.variant;
     this.fillDockHeight = init.fillDockHeight ?? false;
+    this.renderMiniInline = init.renderMiniInline ?? false;
     this.onClose = init.onClose;
     this.store = store;
     makeObservable(this);

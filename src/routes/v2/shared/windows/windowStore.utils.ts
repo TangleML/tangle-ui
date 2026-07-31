@@ -50,6 +50,7 @@ export function buildWindowModelInit(
     persisted: !!options.persisted,
     variant: options.variant ?? "window",
     fillDockHeight: options.fillDockHeight,
+    renderMiniInline: options.renderMiniInline,
     onClose: options.onClose,
   };
 }

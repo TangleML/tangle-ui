@@ -33,6 +33,7 @@ export function useRunViewSelectionSync() {
               persisted: true,
               fillDockHeight: true,
               defaultDockState: "right",
+              onClose: () => editor.clearSelection(),
               miniContent: (
                 <WindowMiniButton
                   tooltip="View Properties"

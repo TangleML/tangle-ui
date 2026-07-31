@@ -66,6 +66,7 @@ export const QuickRunButton = observer(function QuickRunButton({
   const errorCount = allIssues.filter((i) => i.severity === "error").length;
   const hasErrors = errorCount > 0;
   const onlyWarnings = allIssues.length > 0 && errorCount === 0;
+  const hasConfigurableInputs = (rootSpec?.inputs?.length ?? 0) > 0;
 
   let serializedPipelineSpec:
     ReturnType<typeof serializeComponentSpec> | undefined;
@@ -85,25 +86,54 @@ export const QuickRunButton = observer(function QuickRunButton({
     triggerSubmitRun();
   };
 
+  const handleSubmitWithArgumentsClick = (
+    event: MouseEvent<HTMLButtonElement>,
+  ) => {
+    event.stopPropagation();
+    triggerSubmitWithArguments();
+  };
+
+  const showMiniArgumentsButton = isMini && hasConfigurableInputs && !hasErrors;
+
   return (
     <>
-      <TooltipButton
-        {...tooltipButtonProps}
-        tooltip={tooltip}
-        variant={isMini ? "outline" : "header"}
-        size={isMini ? "icon" : undefined}
-        className={isMini ? "relative size-8 shrink-0 rounded-md" : undefined}
-        aria-label={isMini ? tooltip : undefined}
-        disabled={hasErrors}
-        onClick={handleClick}
-        {...tracking(trackingKey)}
-      >
-        <Icon
-          name="Play"
-          size={isMini ? "sm" : undefined}
-          className={quickRunIconVariants({ variant, hasErrors, onlyWarnings })}
-        />
-      </TooltipButton>
+      {!showMiniArgumentsButton && (
+        <TooltipButton
+          {...tooltipButtonProps}
+          tooltip={tooltip}
+          variant={isMini ? "outline" : "header"}
+          size={isMini ? "icon" : undefined}
+          className={isMini ? "relative size-8 shrink-0 rounded-md" : undefined}
+          aria-label={isMini ? tooltip : undefined}
+          disabled={hasErrors}
+          onClick={handleClick}
+          {...tracking(trackingKey)}
+        >
+          <Icon
+            name="Play"
+            size={isMini ? "sm" : undefined}
+            className={quickRunIconVariants({
+              variant,
+              hasErrors,
+              onlyWarnings,
+            })}
+          />
+        </TooltipButton>
+      )}
+      {showMiniArgumentsButton && (
+        <TooltipButton
+          {...tooltipButtonProps}
+          tooltip="Submit run with arguments"
+          variant="outline"
+          size="icon"
+          className="relative size-8 shrink-0 rounded-md"
+          aria-label="Submit run with arguments"
+          onClick={handleSubmitWithArgumentsClick}
+          {...tracking(`${trackingKey}_with_arguments`)}
+        >
+          <Icon name="Split" size="sm" className="rotate-90" />
+        </TooltipButton>
+      )}
       {renderSubmitter && serializedPipelineSpec && isAuthorized && (
         <div data-quick-run className="sr-only">
           <TangleSubmitter

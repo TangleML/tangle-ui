@@ -28,13 +28,8 @@ export function useRunViewWindows() {
         minSize: { width: 240, height: 180 },
         defaultDockState: "left",
         persisted: true,
-        miniContent: (
-          <WindowMiniButton
-            tooltip="View Run Tools"
-            label="Run Tools"
-            icon="Wrench"
-          />
-        ),
+        renderMiniInline: true,
+        miniContent: <RunToolsContent layout="rail" />,
       });
     }
 

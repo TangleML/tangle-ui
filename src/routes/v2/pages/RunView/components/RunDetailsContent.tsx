@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { observer } from "mobx-react-lite";
 
 import type {
@@ -12,21 +13,30 @@ import { TextBlock } from "@/components/shared/ContextPanel/Blocks/TextBlock";
 import PipelineIO from "@/components/shared/Execution/PipelineIO";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
+import {
+  getRunSourceBucket,
+  getRunSourceMessage,
+  RunSourceIcon,
+} from "@/components/shared/RunSource";
 import { TagList } from "@/components/shared/Tags/TagList";
-import { BlockStack } from "@/components/ui/layout";
+import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
-import { Paragraph } from "@/components/ui/typography";
+import { Paragraph, Text } from "@/components/ui/typography";
 import { useUserDetails } from "@/hooks/useUserDetails";
 import type { ComponentSpec } from "@/models/componentSpec";
 import { useBackend } from "@/providers/BackendProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
 import { PipelineDetailsCollapsibleSection } from "@/routes/v2/shared/components/PipelineDetailsCollapsibleSection";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
+import { fetchRunAnnotations } from "@/services/pipelineRunService";
 import {
+  getAnnotationValue,
   PIPELINE_NOTES_ANNOTATION,
   PIPELINE_TAGS_ANNOTATION,
+  RUN_SOURCE_ANNOTATION,
   SYSTEM_ANNOTATIONS,
 } from "@/utils/annotations";
+import { TWENTY_FOUR_HOURS_IN_MS } from "@/utils/constants";
 import {
   flattenExecutionStatusStats,
   getExecutionStatusLabel,
@@ -184,20 +194,45 @@ function RunDetailsContentLoaded({
 }
 
 function RunInfoSection({ metadata }: { metadata: PipelineRunResponse }) {
+  const { backendUrl } = useBackend();
+  const runId = metadata.id;
+
+  const { data: runAnnotations } = useQuery({
+    queryKey: ["pipeline-run-annotations", runId],
+    queryFn: () => fetchRunAnnotations(runId, backendUrl),
+    enabled: !!runId,
+    refetchOnWindowFocus: false,
+    staleTime: TWENTY_FOUR_HOURS_IN_MS,
+  });
+
+  const runSource = getAnnotationValue(runAnnotations, RUN_SOURCE_ANNOTATION);
+  const hasKnownSource = getRunSourceBucket(runSource) !== "unknown";
+
   return (
-    <KeyValueList
-      items={[
-        { label: "Run Id", value: metadata.id },
-        { label: "Execution Id", value: metadata.root_execution_id },
-        { label: "Created by", value: metadata.created_by ?? undefined },
-        {
-          label: "Created at",
-          value: metadata.created_at
-            ? new Date(metadata.created_at).toLocaleString()
-            : undefined,
-        },
-      ]}
-    />
+    <BlockStack gap="2">
+      <KeyValueList
+        items={[
+          { label: "Run Id", value: metadata.id },
+          { label: "Execution Id", value: metadata.root_execution_id },
+          { label: "Created by", value: metadata.created_by ?? undefined },
+          {
+            label: "Created at",
+            value: metadata.created_at
+              ? new Date(metadata.created_at).toLocaleString()
+              : undefined,
+          },
+        ]}
+      />
+
+      {hasKnownSource && (
+        <InlineStack gap="1" blockAlign="center" wrap="nowrap">
+          <RunSourceIcon source={runSource} size="xs" />
+          <Text size="xs" tone="subdued">
+            {getRunSourceMessage(runSource)}
+          </Text>
+        </InlineStack>
+      )}
+    </BlockStack>
   );
 }
 
