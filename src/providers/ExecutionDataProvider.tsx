@@ -15,7 +15,7 @@ import {
 import type { BreadcrumbSegment } from "@/hooks/useSubgraphBreadcrumbs";
 import { useSubgraphBreadcrumbs } from "@/hooks/useSubgraphBreadcrumbs";
 import { useFetchPipelineRunMetadata } from "@/services/executionService";
-import { getOverallExecutionStatusFromStats } from "@/utils/executionStatus";
+import { buildTaskExecutionStatusMap } from "@/utils/executionStatus";
 
 import { useComponentSpec } from "./ComponentSpecProvider";
 
@@ -50,30 +50,6 @@ const ROOT_PATH_START_INDEX = 1;
 const isAtRootLevel = (path: string[]) => path.length <= 1;
 
 const buildPathKey = (path: string[]) => path.join(PATH_DELIMITER);
-
-const buildTaskExecutionStatusMap = (
-  details?: GetExecutionInfoResponse,
-  state?: GetGraphExecutionStateResponse,
-): Map<string, string> => {
-  const taskExecutionStatusMap = new Map<string, string>();
-
-  if (!details?.child_task_execution_ids) {
-    return taskExecutionStatusMap;
-  }
-
-  Object.entries(details.child_task_execution_ids).forEach(
-    ([taskId, executionId]) => {
-      const statusStats = state?.child_execution_status_stats?.[executionId];
-      const aggregated = getOverallExecutionStatusFromStats(statusStats);
-
-      if (aggregated) {
-        taskExecutionStatusMap.set(taskId, aggregated);
-      }
-    },
-  );
-
-  return taskExecutionStatusMap;
-};
 
 const findExecutionIdAtPath = (
   path: string[],

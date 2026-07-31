@@ -78,4 +78,12 @@ export const ExistingFlags: ConfigFlags = {
     default: false,
     category: "beta",
   },
+
+  ["compare-runs"]: {
+    name: "Compare runs",
+    description:
+      "Select two runs to compare their pipeline structure and results side by side.",
+    default: false,
+    category: "beta",
+  },
 };
