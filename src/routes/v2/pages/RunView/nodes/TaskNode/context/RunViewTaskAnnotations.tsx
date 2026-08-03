@@ -6,6 +6,7 @@ import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
 import type { Annotation } from "@/models/componentSpec";
 import type { Annotations } from "@/models/componentSpec/annotations";
+import { SYSTEM_ANNOTATIONS } from "@/utils/annotations";
 
 interface TaskAnnotationSection {
   title: string;
@@ -27,13 +28,36 @@ function formatAnnotationValue(value: unknown): string {
 export function getTaskAnnotationSections(
   annotations: Annotations,
 ): TaskAnnotationSection[] {
-  return [
-    {
+  const systemKeys = new Set<string>(SYSTEM_ANNOTATIONS);
+  const userAnnotations: Annotation[] = [];
+  const systemAnnotations: Annotation[] = [];
+
+  for (const annotation of annotations) {
+    if (systemKeys.has(annotation.key)) {
+      systemAnnotations.push(annotation);
+    } else {
+      userAnnotations.push(annotation);
+    }
+  }
+
+  const sections: TaskAnnotationSection[] = [];
+
+  if (userAnnotations.length > 0) {
+    sections.push({
       title: "Task Annotations",
-      component: <AnnotationList annotations={annotations.items} />,
+      component: <AnnotationList annotations={userAnnotations} />,
+    });
+  }
+
+  if (systemAnnotations.length > 0) {
+    sections.push({
+      title: "System annotations",
+      component: <AnnotationList annotations={systemAnnotations} />,
       isCollapsed: true,
-    },
-  ];
+    });
+  }
+
+  return sections;
 }
 
 interface AnnotationRowProps {
