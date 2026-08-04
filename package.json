@@ -108,7 +108,7 @@
     "mobx": "^6.16.1",
     "mobx-keystone": "^1.23.0",
     "mobx-react-lite": "^4.1.1",
-    "nanoid": "^5.1.16",
+    "nanoid": "^6.0.0",
     "openai": "^6.48.0",
     "papaparse": "^5.5.4",
     "prism-react-renderer": "^2.4.1",
