@@ -8,6 +8,7 @@ import {
   launcherTaskAnnotationSchema,
   parseSchemaToAnnotationConfig,
 } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/AnnotationsEditor/utils";
+import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { ColorPicker } from "@/components/ui/color";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import {
@@ -44,6 +45,7 @@ export const ConfigurationSection = observer(function ConfigurationSection({
 }: ConfigurationSectionProps) {
   const { track } = useAnalytics();
   const spec = useSpec();
+  const conditionalExecutionEnabled = useFlagValue("conditional-execution");
   const {
     toggleCacheDisable,
     saveAnnotation,
@@ -190,37 +192,41 @@ export const ConfigurationSection = observer(function ConfigurationSection({
         />
       </InlineStack>
 
-      <Separator />
+      {conditionalExecutionEnabled && (
+        <>
+          <Separator />
 
-      <BlockStack gap="1">
-        <InlineStack align="space-between" gap="2" className="w-full">
-          <Paragraph size="xs" tone="subdued">
-            Enable task
-          </Paragraph>
-          <Select value={enableMode} onValueChange={handleEnableModeChange}>
-            <SelectTrigger className="h-6 text-xs px-2 py-0 min-w-25">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="true" className="text-xs">
-                True
-              </SelectItem>
-              <SelectItem value="false" className="text-xs">
-                False
-              </SelectItem>
-              <SelectItem value="conditional" className="text-xs">
-                Conditional
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </InlineStack>
-        {isConditional && !isConditionalConnected && (
-          <Paragraph size="xs" tone="subdued">
-            Connect a task output or pipeline input to the “Is enabled?” port on
-            the node.
-          </Paragraph>
-        )}
-      </BlockStack>
+          <BlockStack gap="1">
+            <InlineStack align="space-between" gap="2" className="w-full">
+              <Paragraph size="xs" tone="subdued">
+                Enable task
+              </Paragraph>
+              <Select value={enableMode} onValueChange={handleEnableModeChange}>
+                <SelectTrigger className="h-6 text-xs px-2 py-0 min-w-25">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="true" className="text-xs">
+                    True
+                  </SelectItem>
+                  <SelectItem value="false" className="text-xs">
+                    False
+                  </SelectItem>
+                  <SelectItem value="conditional" className="text-xs">
+                    Conditional
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </InlineStack>
+            {isConditional && !isConditionalConnected && (
+              <Paragraph size="xs" tone="subdued">
+                Connect a task output or pipeline input to the “Is enabled?”
+                port on the node.
+              </Paragraph>
+            )}
+          </BlockStack>
+        </>
+      )}
 
       {!isSubgraph && (
         <>
