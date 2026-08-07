@@ -168,9 +168,9 @@ const ClassicInputHandle = observer(function ClassicInputHandle({
                   ? "text-gray-100 bg-white/10 hover:bg-white/15"
                   : "text-gray-800 bg-black/5 hover:bg-black/10",
             )}
-            title={`${input.name}${input.type ? `: ${input.type}` : ""}`}
+            title={`${input.label ?? input.name}${input.type ? `: ${input.type}` : ""}`}
           >
-            {input.name.replace(/_/g, " ")}
+            {input.label ?? input.name.replace(/_/g, " ")}
           </div>
         </div>
         {showValueDisplay && (
