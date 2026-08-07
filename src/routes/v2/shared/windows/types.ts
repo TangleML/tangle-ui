@@ -101,6 +101,12 @@ export interface WindowOptions {
    * should remain reachable while collapsed.
    */
   miniContent?: ReactNode;
+  /**
+   * When collapsed, render `miniContent` directly in the dock strip instead of
+   * behind a popover. Use for windows whose collapsed form is a compact rail of
+   * actions (e.g. icon buttons) that should be operable without expanding.
+   */
+  renderMiniInline?: boolean;
 }
 
 /** Default window dimensions */

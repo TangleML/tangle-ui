@@ -64,7 +64,7 @@ export const CopyText = ({
 
   return (
     <div
-      className="group cursor-pointer"
+      className="group max-w-full min-w-0 cursor-pointer"
       onClick={handleCopy}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}

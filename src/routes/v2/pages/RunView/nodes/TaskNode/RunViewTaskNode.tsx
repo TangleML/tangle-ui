@@ -2,7 +2,6 @@ import { type Node, type NodeProps } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
 
 import { StatusIndicator } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/StatusIndicator";
-import Logs from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/TaskOverview/logs";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { TaskNode } from "@/routes/v2/shared/nodes/TaskNode/TaskNode";
@@ -18,23 +17,19 @@ export const RunViewTaskNode = observer(function RunViewTaskNode(
   props: NodeProps<TaskNodeType>,
 ) {
   const { entityId } = props.data;
-  const { windows } = useSharedStores();
+  const { editor } = useSharedStores();
   const {
     task,
     status,
     disabledCache,
-    executionId,
     showLogsButton,
     subgraphExecutionStats,
   } = useTaskRunStatus(entityId);
 
   const handleOpenLogs = () => {
-    if (!task || !executionId) return;
-    windows.openWindow(<Logs executionId={executionId} status={status} />, {
-      id: `task-logs-${task.name}`,
-      title: `Logs: ${task.name}`,
-      size: { width: 500, height: 400 },
-    });
+    if (!task) return;
+    editor.selectNode(entityId, "task");
+    editor.setPendingTaskDetailTab("logs");
   };
 
   return (

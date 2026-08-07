@@ -26,7 +26,9 @@ export function WindowStickyHeader({
   const isDocked = ctx?.model.isDocked ?? false;
 
   return (
-    <div className={cn(className, isDocked && "sticky top-0 z-10 bg-white")}>
+    <div
+      className={cn(className, isDocked && "sticky top-0 z-10 bg-background")}
+    >
       {children}
     </div>
   );

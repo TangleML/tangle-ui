@@ -138,13 +138,19 @@ export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
           align="center"
           className="relative z-20 min-h-0 flex-1 overflow-y-auto overflow-x-hidden hide-scrollbar py-1 px-0.5"
         >
-          {visibleWindowsWithMini.map((windowId) => (
-            <CollapsedDockWindowMini
-              key={windowId}
-              windowId={windowId}
-              dockSide={side}
-            />
-          ))}
+          {visibleWindowsWithMini.map((windowId) =>
+            windows.getWindowById(windowId)?.renderMiniInline ? (
+              <div key={windowId} className="w-full shrink-0">
+                {windows.getWindowMiniContent(windowId)}
+              </div>
+            ) : (
+              <CollapsedDockWindowMini
+                key={windowId}
+                windowId={windowId}
+                dockSide={side}
+              />
+            ),
+          )}
         </BlockStack>
         <VerticalResizeHandle
           side={handleSide}

@@ -19,6 +19,7 @@ export class EditorStore {
   @observable accessor focusedArgumentName: string | null = null;
   @observable accessor hoveredEntityId: string | null = null;
   @observable accessor pendingFocusNodeId: string | null = null;
+  @observable accessor pendingTaskDetailTab: string | null = null;
   @observable.ref accessor selectedValidationIssue: ValidationIssue | null =
     null;
 
@@ -35,6 +36,7 @@ export class EditorStore {
     this.focusedArgumentName = null;
     this.hoveredEntityId = null;
     this.pendingFocusNodeId = null;
+    this.pendingTaskDetailTab = null;
     this.selectedValidationIssue = null;
   }
 
@@ -70,7 +72,12 @@ export class EditorStore {
     this.multiSelection = [];
     this.focusedArgumentName = null;
     this.hoveredEntityId = null;
+    this.pendingTaskDetailTab = null;
     this.selectedValidationIssue = null;
+  }
+
+  @action setPendingTaskDetailTab(tab: string | null) {
+    this.pendingTaskDetailTab = tab;
   }
 
   @computed get hasAnySelection(): boolean {
