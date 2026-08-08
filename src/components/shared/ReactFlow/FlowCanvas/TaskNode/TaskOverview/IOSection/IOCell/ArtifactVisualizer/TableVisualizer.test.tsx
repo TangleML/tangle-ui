@@ -32,7 +32,7 @@ describe("TableVisualizer", () => {
     expect(screen.getByText("Showing all 5 rows")).toBeInTheDocument();
   });
 
-  it("says 'Showing first N rows' when hasMore is true and load handlers are provided", () => {
+  it("says 'Showing first N rows' when more remain and rows can still be loaded", () => {
     const data = makeData(100, true);
     render(
       <TableVisualizer
@@ -46,12 +46,12 @@ describe("TableVisualizer", () => {
     expect(screen.getByText("Showing first 100 rows")).toBeInTheDocument();
   });
 
-  it("flags the preview limit when hasMore is true but no onLoadMore is provided", () => {
-    const data = makeData(10000, true);
+  it("says 'preview limit reached' when more remain but no loader is offered", () => {
+    const data = makeData(100, true);
     render(<TableVisualizer data={data} isFullscreen={false} />);
 
     expect(
-      screen.getByText("Showing first 10000 rows (preview limit reached)"),
+      screen.getByText("Showing first 100 rows (preview limit reached)"),
     ).toBeInTheDocument();
   });
 
@@ -69,13 +69,10 @@ describe("TableVisualizer", () => {
       />,
     );
 
-    const loadMore = screen.getByRole("button", { name: "Load more" });
-    const loadAll = screen.getByRole("button", { name: "Load all" });
-
-    await userEvent.click(loadMore);
+    await userEvent.click(screen.getByRole("button", { name: "Load more" }));
     expect(onLoadMore).toHaveBeenCalledOnce();
 
-    await userEvent.click(loadAll);
+    await userEvent.click(screen.getByRole("button", { name: "Load all" }));
     expect(onLoadAll).toHaveBeenCalledOnce();
   });
 
@@ -117,5 +114,48 @@ describe("TableVisualizer", () => {
     const footer = screen.getByText("Showing all 3 rows");
 
     expect(tableContainer?.contains(footer)).toBe(false);
+  });
+
+  it("renders row/column stats with thousands separators when provided", () => {
+    const data = makeData(3);
+    const totalRows = 1234567;
+    const columnCount = 12;
+    render(
+      <TableVisualizer
+        data={data}
+        isFullscreen={false}
+        totalRows={totalRows}
+        columnCount={columnCount}
+      />,
+    );
+
+    const expected = `${totalRows.toLocaleString()} rows · ${columnCount.toLocaleString()} columns`;
+    expect(screen.getByText(expected)).toBeInTheDocument();
+  });
+
+  it("does not render the stats header when no stats are provided", () => {
+    const data = makeData(3);
+    render(<TableVisualizer data={data} isFullscreen={false} />);
+
+    expect(screen.queryByText(/columns$/)).toBeNull();
+  });
+
+  it("renders a Download schema button and fires the handler on click", async () => {
+    const onDownloadSchema = vi.fn();
+    const data = makeData(3);
+    render(
+      <TableVisualizer
+        data={data}
+        isFullscreen={false}
+        totalRows={3}
+        columnCount={2}
+        onDownloadSchema={onDownloadSchema}
+      />,
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /Download schema/ }),
+    );
+    expect(onDownloadSchema).toHaveBeenCalledOnce();
   });
 });

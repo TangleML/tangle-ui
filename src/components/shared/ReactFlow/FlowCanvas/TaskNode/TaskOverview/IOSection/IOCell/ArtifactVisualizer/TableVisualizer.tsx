@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import {
   Table,
@@ -17,6 +18,9 @@ interface TableVisualizerProps {
   isFullscreen: boolean;
   onLoadMore?: () => void;
   onLoadAll?: () => void;
+  totalRows?: number;
+  columnCount?: number;
+  onDownloadSchema?: () => void;
 }
 
 const getRowCountMessage = (
@@ -34,15 +38,32 @@ const TableVisualizer = ({
   isFullscreen,
   onLoadMore,
   onLoadAll,
+  totalRows,
+  columnCount,
+  onDownloadSchema,
 }: TableVisualizerProps) => {
   const limitReached = data.hasMore && !onLoadMore;
   const rowCountMessage = getRowCountMessage(data, limitReached);
+  const hasStats = totalRows !== undefined && columnCount !== undefined;
 
   return (
     <BlockStack
       gap="2"
       className={isFullscreen ? "h-full min-h-0" : "max-h-100"}
     >
+      {hasStats && (
+        <InlineStack gap="4" align="space-between" blockAlign="center">
+          <Text size="xs" tone="subdued">
+            {`${totalRows.toLocaleString()} rows · ${columnCount.toLocaleString()} columns`}
+          </Text>
+          {onDownloadSchema && (
+            <Button variant="link" size="inline-xs" onClick={onDownloadSchema}>
+              <Icon name="Download" size="xs" aria-hidden="true" />
+              Download schema
+            </Button>
+          )}
+        </InlineStack>
+      )}
       <ArtifactTable columns={data.columns} rows={data.rows} />
       <InlineStack gap="4">
         <Paragraph tone="subdued" size="xs">
@@ -77,12 +98,12 @@ const ArtifactTable = ({ columns, rows }: ArtifactTableProps) => (
         {columns.map((col) => (
           <TableHead
             key={col.name}
-            className="bg-background sticky top-0 z-10 h-auto py-2 align-bottom text-xs"
+            className="bg-background sticky top-0 z-10 h-auto py-2 align-bottom"
           >
             <BlockStack>
-              <Text>{col.name}</Text>
+              <Text size="xs">{col.name}</Text>
               {col.type && (
-                <Text tone="subdued" className="text-[10px]">
+                <Text tone="subdued" size="xs">
                   {col.type}
                   {col.nullable ? "?" : ""}
                 </Text>

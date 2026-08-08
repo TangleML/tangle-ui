@@ -1,57 +1,58 @@
-import {
-  parquetMetadata,
-  parquetReadObjects,
-  type SchemaElement,
-} from "hyparquet";
+import { useSuspenseQuery } from "@tanstack/react-query";
 
 import { Paragraph } from "@/components/ui/typography";
+import { HOURS } from "@/utils/constants";
+import { downloadStringAsFile } from "@/utils/URL";
 
-import TableVisualizer from "./TableVisualizer";
-import { useArtifactFetch } from "./useArtifactFetch";
-import { useRowCap } from "./useRowCap";
 import {
-  type ArtifactColumn,
-  MAX_PREVIEW_ROWS,
-  type ParsedArtifact,
-} from "./utils";
+  buildSchemaJson,
+  countColumns,
+  openParquet,
+  PARQUET_PREVIEW_ROWS,
+  readParquetPreview,
+} from "./parquetUtils";
+import TableVisualizer from "./TableVisualizer";
+import { type ArtifactColumn } from "./utils";
 
 interface ParquetVisualizerProps {
   signedUrl: string;
   isFullscreen: boolean;
 }
 
+interface ParquetBase {
+  columns: ArtifactColumn[];
+  rows: string[][];
+  totalRows: number;
+  columnCount: number;
+  schemaJson: unknown;
+}
+
 const ParquetVisualizer = ({
   signedUrl,
   isFullscreen,
 }: ParquetVisualizerProps) => {
-  const parsed = useArtifactFetch<ParsedArtifact>(
-    "parquet",
-    signedUrl,
-    async (response) => {
-      const arrayBuffer = await response.arrayBuffer();
-      const metadata = parquetMetadata(arrayBuffer);
-      const objects = await parquetReadObjects({
-        file: arrayBuffer,
-        rowEnd: MAX_PREVIEW_ROWS + 1,
-      });
+  const { data: base } = useSuspenseQuery<ParquetBase>({
+    queryKey: ["artifact-parquet", signedUrl],
+    queryFn: async () => {
+      const opened = await openParquet(signedUrl);
+      const { columns, rows } = await readParquetPreview(
+        opened,
+        PARQUET_PREVIEW_ROWS,
+      );
 
-      if (objects.length === 0) {
-        return { columns: [], rows: [], truncated: false };
-      }
-
-      const columns = buildColumns(metadata.schema, objects[0]);
-      const truncated = objects.length > MAX_PREVIEW_ROWS;
-      const rows = objects
-        .slice(0, MAX_PREVIEW_ROWS)
-        .map((obj) => columns.map((col) => obj[col.name])) as string[][];
-
-      return { columns, rows, truncated };
+      return {
+        columns,
+        rows,
+        totalRows: Number(opened.metadata.num_rows),
+        columnCount: countColumns(opened.metadata),
+        schemaJson: buildSchemaJson(opened.metadata),
+      };
     },
-  );
+    staleTime: 24 * HOURS,
+    retry: false,
+  });
 
-  const { data, onLoadMore, onLoadAll } = useRowCap(parsed);
-
-  if (data.columns.length === 0) {
+  if (base.columns.length === 0) {
     return (
       <Paragraph tone="subdued" size="xs">
         No data
@@ -59,36 +60,27 @@ const ParquetVisualizer = ({
     );
   }
 
+  const handleDownloadSchema = () => {
+    downloadStringAsFile(
+      JSON.stringify(base.schemaJson, null, 2),
+      "schema.json",
+      "application/json",
+    );
+  };
+
   return (
     <TableVisualizer
-      data={data}
+      data={{
+        columns: base.columns,
+        rows: base.rows,
+        hasMore: base.rows.length < base.totalRows,
+      }}
       isFullscreen={isFullscreen}
-      onLoadMore={onLoadMore}
-      onLoadAll={onLoadAll}
+      totalRows={base.totalRows}
+      columnCount={base.columnCount}
+      onDownloadSchema={handleDownloadSchema}
     />
   );
 };
 
 export default ParquetVisualizer;
-
-function buildColumns(
-  schema: SchemaElement[],
-  firstRow: Record<string, unknown>,
-): ArtifactColumn[] {
-  const schemaByName = new Map(
-    schema.filter((el) => el.type !== undefined).map((el) => [el.name, el]),
-  );
-  return Object.keys(firstRow).map((name) => {
-    const el = schemaByName.get(name);
-    return {
-      name,
-      type: el ? formatParquetType(el) : undefined,
-      nullable: el?.repetition_type === "OPTIONAL",
-    };
-  });
-}
-
-function formatParquetType(el: SchemaElement): string {
-  if (el.logical_type) return el.logical_type.type;
-  return el.type ?? "";
-}

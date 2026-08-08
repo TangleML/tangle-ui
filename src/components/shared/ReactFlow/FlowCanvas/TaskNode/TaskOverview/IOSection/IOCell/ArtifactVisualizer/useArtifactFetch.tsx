@@ -3,11 +3,34 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { ArtifactFetchError } from "@/services/executionService";
 import { HOURS } from "@/utils/constants";
 
-/**
- * Fetches artifact content from a signed URL using suspense mode.
- * Loading and error states are handled by the nearest SuspenseWrapper.
- * Throws ArtifactFetchError on non-2xx responses so callers can branch on status.
- */
+export const fetchArtifactOrThrow: typeof fetch = async (input, init) => {
+  const response = await fetch(input, init);
+  if (!response.ok) {
+    throw new ArtifactFetchError(
+      response.status,
+      response.statusText,
+      "Failed to fetch artifact.",
+    );
+  }
+  return response;
+};
+
+export const fetchArtifactForHyparquet: typeof fetch = async (input, init) => {
+  const response = await fetch(input, init);
+  if (response.ok) return response;
+
+  const method = (init?.method ?? "GET").toUpperCase();
+  if (method === "HEAD" && response.status === 403) {
+    return response;
+  }
+
+  throw new ArtifactFetchError(
+    response.status,
+    response.statusText,
+    "Failed to fetch artifact.",
+  );
+};
+
 export function useArtifactFetch<T>(
   queryKey: string,
   signedUrl: string,
@@ -16,15 +39,7 @@ export function useArtifactFetch<T>(
   const { data } = useSuspenseQuery({
     queryKey: [`artifact-${queryKey}`, signedUrl],
     queryFn: async () => {
-      const response = await fetch(signedUrl);
-      if (!response.ok) {
-        throw new ArtifactFetchError(
-          response.status,
-          response.statusText,
-          "Failed to fetch artifact.",
-        );
-      }
-
+      const response = await fetchArtifactOrThrow(signedUrl);
       return transform(response);
     },
     staleTime: 24 * HOURS,
