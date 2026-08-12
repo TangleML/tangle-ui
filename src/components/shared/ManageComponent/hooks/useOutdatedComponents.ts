@@ -8,11 +8,14 @@ import {
   type HydratedComponentReference,
   isDiscoverableComponentReference,
 } from "@/utils/componentSpec";
+import { HOURS } from "@/utils/constants";
 
 import { checkComponentUpdates } from "../../GitHubLibrary/utils/checkComponentUpdates";
 import { hasSupersededBy } from "../types";
 import { hydrateAllComponents } from "../utils/hydrateAllComponents";
 import { useAllPublishedComponents } from "./useAllPublishedComponents";
+
+const OUTDATED_COMPONENTS_STALE_TIME = 1 * HOURS;
 
 function usedComponentsQueryKeyDigests(
   usedComponents: ComponentReference[],
@@ -23,6 +26,17 @@ function usedComponentsQueryKeyDigests(
     .sort();
 }
 
+function useMostRecentComponents() {
+  const { data: publishedComponents } = useAllPublishedComponents();
+
+  return useSuspenseQuery({
+    queryKey: ["outdated-components", "most-recent-map"],
+    staleTime: OUTDATED_COMPONENTS_STALE_TIME,
+    queryFn: () =>
+      findMostRecentComponents(publishedComponents.components ?? []),
+  });
+}
+
 /**
  * Hook to get the outdated components in the graph
  *
@@ -30,20 +44,16 @@ function usedComponentsQueryKeyDigests(
  * @returns
  */
 export function useOutdatedComponents(usedComponents: ComponentReference[]) {
-  const { data: publishedComponents } = useAllPublishedComponents();
   const { existingComponentLibraries, getComponentLibrary } =
     useComponentLibrary();
+  const { data: mostRecentComponents } = useMostRecentComponents();
 
   const usedDigestsKey = usedComponentsQueryKeyDigests(usedComponents);
 
   return useSuspenseQuery({
     queryKey: ["outdated-components", usedDigestsKey],
-    staleTime: 1000 * 60 * 5,
+    staleTime: OUTDATED_COMPONENTS_STALE_TIME,
     queryFn: async () => {
-      const mostRecentComponents = await findMostRecentComponents(
-        publishedComponents.components ?? [],
-      );
-
       const hydratedComponents = await hydrateAllComponents(usedComponents);
 
       // check for github components
@@ -63,20 +73,19 @@ export function useOutdatedComponents(usedComponents: ComponentReference[]) {
               .filter((c) => c.library)
           : [];
 
-      if (githubComponents.length > 0) {
-        for (const { component, library } of githubComponents) {
-          if (!library) {
-            continue;
-          }
+      const githubOverrides = new Map<string, HydratedComponentReference>();
+      for (const { component, library } of githubComponents) {
+        if (!library) {
+          continue;
+        }
 
-          const updatedComponent = await checkComponentUpdates(
-            component,
-            library,
-          );
+        const updatedComponent = await checkComponentUpdates(
+          component,
+          library,
+        );
 
-          if (updatedComponent) {
-            mostRecentComponents.set(component.digest, updatedComponent);
-          }
+        if (updatedComponent) {
+          githubOverrides.set(component.digest, updatedComponent);
         }
       }
 
@@ -84,13 +93,17 @@ export function useOutdatedComponents(usedComponents: ComponentReference[]) {
         .filter(
           (c) =>
             isDiscoverableComponentReference(c) &&
-            mostRecentComponents.has(c.digest),
+            (githubOverrides.has(c.digest) ||
+              mostRecentComponents.has(c.digest)),
         )
         .map(
           (c) =>
             [
               c,
-              mostRecentComponents.get(c.digest) as HydratedComponentReference,
+              (githubOverrides.get(c.digest) ??
+                mostRecentComponents.get(
+                  c.digest,
+                )) as HydratedComponentReference,
             ] as const,
         );
     },
