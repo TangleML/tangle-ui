@@ -227,6 +227,43 @@ describe("submitPipelineRun", () => {
     });
   });
 
+  describe("targetCluster handling", () => {
+    const componentSpec: ComponentSpec = {
+      name: "simple-component",
+      implementation: {
+        container: {
+          image: "test:latest",
+        },
+      },
+    };
+
+    it("adds the target_cluster annotation when targetCluster is set", async () => {
+      await submitPipelineRun(componentSpec, mockBackendUrl, {
+        targetCluster: "ml-offline-us-ce1-eo9",
+      });
+
+      expect(pipelineRunService.createPipelineRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          annotations: {
+            source: "web-app",
+            "tangleml.com/orchestration/target_cluster":
+              "ml-offline-us-ce1-eo9",
+          },
+        }),
+        mockBackendUrl,
+        undefined,
+      );
+    });
+
+    it("leaves run annotations unchanged when targetCluster is unset", async () => {
+      await submitPipelineRun(componentSpec, mockBackendUrl, {});
+
+      const payload = vi.mocked(pipelineRunService.createPipelineRun).mock
+        .calls[0][0];
+      expect(payload.annotations).toEqual({ source: "web-app" });
+    });
+  });
+
   describe("taskArguments handling", () => {
     it("should include taskArguments in payload when provided", async () => {
       // Arrange

@@ -13,6 +13,8 @@ export const PIPELINE_TAGS_ANNOTATION = "tags";
 export const PIPELINE_CANONICAL_NAME_ANNOTATION = "canonical-pipeline-name";
 export const RUN_NAME_TEMPLATE_ANNOTATION = "run-name-template";
 export const RUN_SOURCE_ANNOTATION = "source";
+export const ORCHESTRATION_TARGET_CLUSTER_ANNOTATION =
+  "tangleml.com/orchestration/target_cluster";
 export const EDITOR_POSITION_ANNOTATION = "editor.position";
 export const EDITOR_COLLAPSED_ANNOTATION = "editor.collapsed";
 export const EDITOR_FLOW_DIRECTION_ANNOTATION = "editor.flow-direction";
