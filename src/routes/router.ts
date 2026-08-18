@@ -42,6 +42,7 @@ import { AgentSettings } from "./Settings/sections/AgentSettings";
 import { BackendSettings } from "./Settings/sections/BackendSettings";
 import { BetaFeaturesSettings } from "./Settings/sections/BetaFeaturesSettings";
 import { PreferencesSettings } from "./Settings/sections/PreferencesSettings";
+import { PrototypeBannerSettings } from "./Settings/sections/PrototypeBannerSettings";
 import { SecretsSettings } from "./Settings/sections/SecretsSettings";
 import { SettingsLayout } from "./Settings/SettingsLayout";
 import { EditorV2 } from "./v2/pages/Editor/EditorV2";
@@ -232,6 +233,12 @@ const settingsSecretsRoute = createRoute({
   component: SecretsSettings,
 });
 
+const settingsPrototypeBannerRoute = createRoute({
+  getParentRoute: () => settingsLayoutRoute,
+  path: "/prototype-banner",
+  component: PrototypeBannerSettings,
+});
+
 const secretsIndexRoute = createRoute({
   getParentRoute: () => settingsSecretsRoute,
   path: "/",
@@ -302,6 +309,7 @@ const settingsRouteTree = settingsLayoutRoute.addChildren([
   settingsPreferencesRoute,
   settingsBetaFeaturesRoute,
   settingsAgentRoute,
+  settingsPrototypeBannerRoute,
   secretsRouteTree,
 ]);
 

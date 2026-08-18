@@ -50,14 +50,22 @@ const AGENT_ITEM: SidebarItem = {
   testId: "settings-nav-agent",
 };
 
+const PROTOTYPE_BANNER_ITEM: SidebarItem = {
+  to: "/settings/prototype-banner",
+  label: "Prototype Banner",
+  icon: "Megaphone",
+  testId: "settings-nav-prototype-banner",
+};
+
 export function SettingsLayout() {
   const router = useRouter();
   const componentSearchEnabled = useFlagValue("component-search-v2");
   const aiAssistantEnabled = useFlagValue("ai-assistant");
-  const sidebarItems =
-    componentSearchEnabled || aiAssistantEnabled
-      ? [...SIDEBAR_ITEMS, AGENT_ITEM]
-      : SIDEBAR_ITEMS;
+  const sidebarItems = [
+    ...SIDEBAR_ITEMS,
+    ...(componentSearchEnabled || aiAssistantEnabled ? [AGENT_ITEM] : []),
+    PROTOTYPE_BANNER_ITEM,
+  ];
 
   const handleGoBack = () => {
     router.history.back();
