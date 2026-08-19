@@ -19,6 +19,7 @@ import { Window } from "./Window";
 
 interface DockAreaProps {
   side: "left" | "right";
+  excludedWindowIds?: ReadonlySet<string>;
 }
 
 // Context panel ("Properties") is selection-driven and stays visible in
@@ -26,7 +27,10 @@ interface DockAreaProps {
 // without leaving focus mode.
 const FOCUS_MODE_ALLOWED_WINDOW_IDS = new Set(["context-panel"]);
 
-export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
+export const DockArea = observer(function DockArea({
+  side,
+  excludedWindowIds,
+}: DockAreaProps) {
   const { windows } = useSharedStores();
   const dockArea = windows.getDockAreaConfig(side);
   const { collapsed } = dockArea;
@@ -37,6 +41,7 @@ export const DockArea = observer(function DockArea({ side }: DockAreaProps) {
   );
 
   const visibleWindows = windowOrder.filter((id) => {
+    if (excludedWindowIds?.has(id)) return false;
     const win = windows.getWindowById(id);
     if (!win || win.state === "hidden") return false;
     if (focusModeStore.active && !FOCUS_MODE_ALLOWED_WINDOW_IDS.has(id)) {

@@ -4,6 +4,7 @@ import logo from "/Tangle_Icon_White.png";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Link } from "@/components/ui/link";
 import { Text } from "@/components/ui/typography";
+import type { RunViewMode } from "@/routes/v2/pages/RunView/hooks/useRunViewMode";
 import { AppMenuActions } from "@/routes/v2/shared/components/AppMenuActions";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { TOP_NAV_HEIGHT } from "@/utils/constants";
@@ -12,8 +13,19 @@ import { tracking } from "@/utils/tracking";
 import { RunMenu } from "./components/RunMenu";
 import { RunViewViewMenu } from "./components/RunViewViewMenu";
 import { RunViewWindowsMenu } from "./components/RunViewWindowsMenu";
+import { RunViewModeToggle } from "./RunViewModeToggle";
 
-export const RunViewMenuBar = observer(function RunViewMenuBar() {
+interface RunViewMenuBarProps {
+  mode: RunViewMode;
+  onModeChange: (mode: RunViewMode) => void;
+  showModeToggle: boolean;
+}
+
+export const RunViewMenuBar = observer(function RunViewMenuBar({
+  mode,
+  onModeChange,
+  showModeToggle,
+}: RunViewMenuBarProps) {
   const { navigation } = useSharedStores();
 
   const pipelineName = navigation.rootSpec?.name ?? "Pipeline Run";
@@ -68,7 +80,12 @@ export const RunViewMenuBar = observer(function RunViewMenuBar() {
           </BlockStack>
         </InlineStack>
 
-        <AppMenuActions />
+        <InlineStack gap="3" wrap="nowrap" blockAlign="center">
+          {showModeToggle && (
+            <RunViewModeToggle mode={mode} onModeChange={onModeChange} />
+          )}
+          <AppMenuActions />
+        </InlineStack>
       </InlineStack>
     </div>
   );

@@ -5,7 +5,7 @@ import { WINDOW_CHROME_HEIGHT } from "@/routes/v2/shared/windows/types";
 
 import { CanvasControlsContent } from "./CanvasControlsContent";
 
-const CANVAS_CONTROLS_WINDOW_ID = "canvas-controls";
+export const CANVAS_CONTROLS_WINDOW_ID = "canvas-controls";
 const CANVAS_CONTROLS_WINDOW_HEIGHT = 150;
 
 export function useCanvasControlsWindow(trackingSpace: string) {

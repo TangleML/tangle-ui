@@ -78,4 +78,11 @@ export const ExistingFlags: ConfigFlags = {
     default: false,
     category: "beta",
   },
+
+  ["run-timing-rundown"]: {
+    name: "Run Timing Rundown",
+    description: "Enable the experimental timing visualization in Run View V2.",
+    default: false,
+    category: "beta",
+  },
 };
