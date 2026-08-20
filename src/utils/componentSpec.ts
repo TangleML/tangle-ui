@@ -409,9 +409,6 @@ type PredicateType =
       not: PredicateType;
     };
 
-/**
- * Optional configuration that specifies how the task should be retried if it fails.
- */
 interface RetryStrategySpec {
   maxRetries?: number;
 }
@@ -477,6 +474,13 @@ export const isGraphImplementationOutput = (
   "graph" in implementation &&
   implementation.graph !== null &&
   implementation.graph !== undefined;
+
+/**
+ * The template forms an argument reference takes in hand-written YAML, which the
+ * deserializer converts into the structured `graphInput` / `taskOutput` shapes.
+ */
+export const GRAPH_INPUT_REGEX = /^\{\{inputs\.([^}]+)\}\}$/;
+export const TASK_OUTPUT_REGEX = /^\{\{tasks\.([^.]+)\.outputs\.([^}]+)\}\}$/;
 
 export const isTaskOutputArgument = (
   arg?: ArgumentType,

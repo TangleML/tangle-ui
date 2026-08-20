@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
+import {
+  IS_ENABLED_PORT_NAME,
+  RUN_CONDITION_INPUT_NAME,
+} from "@/utils/conditionalExecution";
+
 import { createSubgraph } from "../../actions/createSubgraph";
 import { Binding } from "../../entities/binding";
 import { ComponentSpec } from "../../entities/componentSpec";
@@ -86,6 +91,52 @@ describe("createSubgraph", () => {
     expect(result).not.toBeNull();
     expect(result!.subgraphSpec.inputs.length).toBe(1);
     expect(result!.subgraphSpec.inputs.at(0)?.name).toBe("data");
+  });
+
+  it("promotes an external run condition to a readable input instead of the sentinel", () => {
+    const spec = new ComponentSpec({
+      $id: idGen.next("spec"),
+      name: "Main",
+    });
+    const input = new Input({
+      $id: idGen.next("input"),
+      name: "should_run",
+    });
+    const task = new Task({
+      $id: idGen.next("task"),
+      name: "InnerTask",
+      componentRef: {},
+    });
+    spec.addInput(input);
+    spec.addTask(task);
+    spec.addBinding(
+      new Binding({
+        $id: idGen.next("binding"),
+        sourceEntityId: input.$id,
+        sourcePortName: "should_run",
+        targetEntityId: task.$id,
+        targetPortName: IS_ENABLED_PORT_NAME,
+      }),
+    );
+
+    const result = createSubgraph({
+      spec,
+      selectedTaskIds: [task.$id],
+      subgraphName: "Sub",
+      idGen,
+    });
+
+    const subgraphInput = result!.subgraphSpec.inputs.at(0);
+    expect(subgraphInput?.name).toBe(RUN_CONDITION_INPUT_NAME);
+
+    const innerBinding = result!.subgraphSpec.bindings.find(
+      (b) => b.sourceEntityId === subgraphInput?.$id,
+    );
+    expect(innerBinding?.targetPortName).toBe(IS_ENABLED_PORT_NAME);
+
+    const outerBinding = spec.bindings.at(0);
+    expect(outerBinding?.targetEntityId).toBe(result!.replacementTask.$id);
+    expect(outerBinding?.targetPortName).toBe(RUN_CONDITION_INPUT_NAME);
   });
 
   it("moves internal bindings to subgraph", () => {

@@ -1,24 +1,51 @@
 import type { ArgumentType, ComponentSpec, Task } from "@/models/componentSpec";
+import { bindingToArgumentReference } from "@/models/componentSpec/bindingReference";
 
-import { isGraphInputArgument, isTaskOutputArgument } from "./componentSpec";
+import {
+  GRAPH_INPUT_REGEX,
+  isGraphInputArgument,
+  isTaskOutputArgument,
+  TASK_OUTPUT_REGEX,
+} from "./componentSpec";
 
 /**
- * Reserved binding port name used to model the virtual "Is enabled?" input on a
- * task node. A connection to this port is serialized to `TaskSpec.isEnabled`
- * instead of `TaskSpec.arguments[...]`. The sentinel is intentionally unlikely
- * to collide with a real component input name.
+ * Reserved binding port name for a task's run condition. A connection to this
+ * port serializes to `TaskSpec.isEnabled` instead of `TaskSpec.arguments[...]`.
+ * The sentinel is intentionally unlikely to collide with a component input name.
  */
 export const IS_ENABLED_PORT_NAME = "__is_enabled__";
 
-/** Human-readable label shown for the virtual "Is enabled?" input. */
-export const IS_ENABLED_INPUT_LABEL = "Is enabled?";
+export const RUN_CONDITION_LABEL = "Run when";
 
-const GRAPH_INPUT_REGEX = /^\{\{inputs\.([^}]+)\}\}$/;
-const TASK_OUTPUT_REGEX = /^\{\{tasks\.([^.]+)\.outputs\.([^}]+)\}\}$/;
+export const RUN_CONDITION_INPUT_NAME = "run_condition";
 
 /**
- * True when an `isEnabled` value is a reference to an upstream value (a graph
- * input or a sibling task output) rather than a plain literal such as `"false"`.
+ * The runtime contract for `isEnabled` is the strings `"true"` / `"false"`, and
+ * port compatibility is an exact type-name match — a `Boolean` input would not
+ * be offered for the `String` arguments components actually declare.
+ */
+export const RUN_CONDITION_INPUT_TYPE = "String";
+
+export type ConditionLiteral = "true" | "false";
+
+export const CONDITION_LITERAL_LABELS: Record<ConditionLiteral, string> = {
+  true: "Always",
+  false: "Never",
+};
+
+/**
+ * The editor only ever writes the canonical strings, but a hand-authored or
+ * SDK-generated pipeline can carry an unquoted YAML `false` (a JS boolean at
+ * runtime, whatever the declared type says) or `"False"` — both of which the
+ * backend honours, so both have to read as the negative literal here.
+ */
+export function toConditionLiteral(value: unknown): ConditionLiteral {
+  return String(value).trim().toLowerCase() === "false" ? "false" : "true";
+}
+
+/**
+ * True when an `isEnabled` value points at an upstream value (a graph input or a
+ * sibling task output) rather than holding a literal such as `"false"`.
  */
 export function isConditionalArgument(
   value: ArgumentType | undefined,
@@ -55,10 +82,7 @@ export function isTaskConditional(
   );
 }
 
-/**
- * The upstream reference a task is gated on, in the shape it serializes to, or
- * undefined when the task is gated on a literal.
- */
+/** The upstream reference a task is gated on, in the shape it serializes to. */
 export function resolveConditionalReference(
   task: Task,
   spec: ComponentSpec | null | undefined,
@@ -66,20 +90,31 @@ export function resolveConditionalReference(
   const binding = findConditionalBinding(spec, task.$id);
   if (!binding || !spec) return undefined;
 
-  const sourceTask = spec.tasks.find((t) => t.$id === binding.sourceEntityId);
-  if (sourceTask) {
-    return {
-      taskOutput: {
-        taskId: sourceTask.name,
-        outputName: binding.sourcePortName,
-      },
-    };
-  }
+  return bindingToArgumentReference(binding, spec);
+}
 
-  const sourceInput = spec.inputs.find((i) => i.$id === binding.sourceEntityId);
-  if (sourceInput) {
-    return { graphInput: { inputName: sourceInput.name } };
+/**
+ * Handles the raw template form as well as the structured one, because a task
+ * whose reference could not be resolved to a binding on load still holds the
+ * template — and without it a dangling reference would fall back to the literal
+ * label and read as "Always".
+ */
+export function describeConditionSource(
+  reference: ArgumentType | undefined,
+): string | undefined {
+  if (isTaskOutputArgument(reference)) {
+    const { taskId, outputName } = reference.taskOutput;
+    return `→ ${taskId}.${outputName}`;
   }
+  if (isGraphInputArgument(reference)) {
+    return `→ ${reference.graphInput.inputName}`;
+  }
+  if (typeof reference === "string") {
+    const graphInput = reference.match(GRAPH_INPUT_REGEX);
+    if (graphInput) return `→ ${graphInput[1]}`;
 
+    const taskOutput = reference.match(TASK_OUTPUT_REGEX);
+    if (taskOutput) return `→ ${taskOutput[1]}.${taskOutput[2]}`;
+  }
   return undefined;
 }

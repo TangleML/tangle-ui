@@ -108,14 +108,14 @@ export class ComponentSpec extends Model({
   }
 
   /**
-   * Unlike an ordinary argument, whose literal is retained and resurfaces when a
-   * connection is removed, the conditional gate has no meaningful "previous
-   * value": resurfacing `"false"` would silently keep the task disabled after
-   * the user deleted the condition. Dropping a gate binding resets it to enabled,
-   * which also keeps the task conditional so the port stays put.
+   * An argument keeps its literal while connected and resurfaces it when the
+   * connection goes away; a run condition must not, because resurfacing
+   * `"false"` would leave the task silently disabled after the user deleted the
+   * condition. Resetting to `"true"` also keeps the task conditional, so the
+   * port stays where the user left it.
    */
   @modelAction
-  private resetGateLiteral(binding: Binding | undefined) {
+  private resetRunCondition(binding: Binding | undefined) {
     if (!binding || binding.targetPortName !== IS_ENABLED_PORT_NAME) return;
     const task = this.tasks.find((t) => t.$id === binding.targetEntityId);
     task?.setIsEnabled("true");
@@ -124,7 +124,7 @@ export class ComponentSpec extends Model({
   @modelAction
   removeBinding(index: number) {
     const removed = this.bindings.splice(index, 1)[0];
-    this.resetGateLiteral(removed);
+    this.resetRunCondition(removed);
     return removed;
   }
 
@@ -133,7 +133,7 @@ export class ComponentSpec extends Model({
     const idx = this.bindings.findIndex(predicate);
     if (idx >= 0) {
       const removed = this.bindings.splice(idx, 1)[0];
-      this.resetGateLiteral(removed);
+      this.resetRunCondition(removed);
       return removed;
     }
     return undefined;
@@ -153,7 +153,7 @@ export class ComponentSpec extends Model({
       }
     }
     for (const binding of removed) {
-      this.resetGateLiteral(binding);
+      this.resetRunCondition(binding);
     }
     return removed;
   }
@@ -227,7 +227,7 @@ export class ComponentSpec extends Model({
   deleteEdgeById(bindingId: string): boolean {
     const idx = this.bindings.findIndex((b) => b.$id === bindingId);
     if (idx < 0) return false;
-    this.resetGateLiteral(this.bindings.splice(idx, 1)[0]);
+    this.resetRunCondition(this.bindings.splice(idx, 1)[0]);
     return true;
   }
 

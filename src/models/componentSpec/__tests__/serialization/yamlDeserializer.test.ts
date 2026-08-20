@@ -140,6 +140,32 @@ describe("YamlDeserializer", () => {
     expect(binding?.sourcePortName).toBe("flag");
   });
 
+  it("keeps an unresolvable isEnabled reference rather than leaving the task ungated", () => {
+    const yaml = {
+      name: "Pipeline",
+      implementation: {
+        graph: {
+          tasks: {
+            Consumer: {
+              componentRef: {},
+              isEnabled: {
+                taskOutput: { taskId: "Missing", outputName: "flag" },
+              },
+            },
+          },
+        },
+      },
+    };
+
+    const spec = deserializer.deserialize(yaml);
+    const consumer = spec.tasks.at(0);
+
+    expect(consumer?.isEnabled).toEqual({
+      taskOutput: { taskId: "Missing", outputName: "flag" },
+    });
+    expect(spec.bindings.length).toBe(0);
+  });
+
   it("keeps literal isEnabled 'false' without a binding", () => {
     const yaml = {
       name: "Pipeline",

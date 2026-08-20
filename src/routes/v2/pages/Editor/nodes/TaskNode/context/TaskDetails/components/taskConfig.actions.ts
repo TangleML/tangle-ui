@@ -5,6 +5,7 @@ import {
   EDITOR_COLLAPSED_ANNOTATION,
   TASK_COLOR_ANNOTATION,
 } from "@/utils/annotations";
+import type { ConditionLiteral } from "@/utils/conditionalExecution";
 import { IS_ENABLED_PORT_NAME } from "@/utils/conditionalExecution";
 import { ISO8601_DURATION_ZERO_DAYS } from "@/utils/constants";
 
@@ -57,13 +58,13 @@ export function setCollapsed(
   });
 }
 
-export function setTaskConditional(
+export function setConditionalExecution(
   undo: UndoGroupable,
   spec: ComponentSpec,
   task: Task,
   conditional: boolean,
 ) {
-  undo.withGroup("Toggle conditional task", () => {
+  undo.withGroup("Toggle conditional execution", () => {
     if (conditional) {
       task.setIsEnabled("true");
       return;
@@ -78,13 +79,13 @@ export function setTaskConditional(
   });
 }
 
-export function setTaskCondition(
+export function setRunCondition(
   undo: UndoGroupable,
   task: Task,
-  enabled: boolean,
+  literal: ConditionLiteral,
 ) {
-  undo.withGroup("Set task condition", () => {
-    task.setIsEnabled(enabled ? "true" : "false");
+  undo.withGroup("Set run condition", () => {
+    task.setIsEnabled(literal);
   });
 }
 

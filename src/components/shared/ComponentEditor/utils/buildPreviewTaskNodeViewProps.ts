@@ -1,6 +1,7 @@
 import type { TaskNodeViewProps } from "@/routes/v2/shared/nodes/TaskNode/TaskNode";
 import { AggregatorOutputType } from "@/types/aggregator";
 import { isGraphImplementation } from "@/utils/componentSpec";
+import { CONDITION_LITERAL_LABELS } from "@/utils/conditionalExecution";
 import { componentSpecFromYaml } from "@/utils/yaml";
 
 const noop = () => {};
@@ -44,6 +45,8 @@ export function buildPreviewTaskNodeViewProps(
     annotations: [],
     taskColor: undefined,
     cacheDisabled: false,
+    isConditional: false,
+    conditionDisplayValue: CONDITION_LITERAL_LABELS.true,
     digest: undefined,
     inputDisplayValues: {},
     secretInputNames: new Set(),
