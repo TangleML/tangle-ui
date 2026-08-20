@@ -90,6 +90,19 @@ export function createCsomTools(bridge: ToolBridgeApi) {
     execute: async () => asJson(await bridge.getPipelineState()),
   });
 
+  const getSubgraphState = tool({
+    name: "get_subgraph_state",
+    description:
+      "Get the contents of one subgraph task — its inner tasks, bindings, and I/O — as JSON. `get_pipeline_state` reports only a subgraph task's interface, so call this for any task flagged `isSubgraph` before answering questions about what runs inside it. Inner tasks carry the same flag: call again with an inner task's $id to go deeper.",
+    parameters: z.object({
+      taskEntityId: z
+        .string()
+        .describe("$id of the subgraph task to look inside"),
+    }),
+    execute: async ({ taskEntityId }) =>
+      asJson(await bridge.getSubgraphState(taskEntityId)),
+  });
+
   const setPipelineName = tool({
     name: "set_pipeline_name",
     description: "Set the pipeline name.",
@@ -369,8 +382,10 @@ export function createCsomTools(bridge: ToolBridgeApi) {
 
   return {
     getPipelineState,
+    getSubgraphState,
     allTools: [
       getPipelineState,
+      getSubgraphState,
       setPipelineName,
       setPipelineDescription,
       addTask,

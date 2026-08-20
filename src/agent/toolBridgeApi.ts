@@ -103,8 +103,15 @@ export type ExecutionDetails = GetExecutionInfoResponse;
 export type ExecutionState = GetGraphExecutionStateResponse;
 export type ContainerState = GetContainerExecutionStateResponse;
 
+export interface SubgraphStateResult {
+  success: boolean;
+  spec?: AiSpec;
+  error?: string;
+}
+
 export interface ToolBridgeApi {
   getPipelineState(): Promise<AiSpec>;
+  getSubgraphState(taskEntityId: string): Promise<SubgraphStateResult>;
 
   setPipelineName(name: string): Promise<{ success: boolean }>;
   setPipelineDescription(description: string): Promise<{ success: boolean }>;

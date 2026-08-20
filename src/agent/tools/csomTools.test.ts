@@ -74,7 +74,7 @@ function hasAllOf(schema: JsonSchemaNode | undefined): boolean {
 }
 
 describe("createCsomTools", () => {
-  it("exposes the full 18-tool surface", () => {
+  it("exposes the full 19-tool surface", () => {
     const { allTools } = createCsomTools(makeBridge());
     const names = allTools.map((t) => t.name).sort();
     expect(names).toEqual(
@@ -89,6 +89,7 @@ describe("createCsomTools", () => {
         "delete_output",
         "delete_task",
         "get_pipeline_state",
+        "get_subgraph_state",
         "rename_input",
         "rename_output",
         "rename_task",

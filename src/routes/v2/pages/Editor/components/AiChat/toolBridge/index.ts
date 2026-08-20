@@ -16,6 +16,7 @@ import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import { createComponentSearchBridgeHandlers } from "@/routes/v2/shared/components/AiChat/toolBridge/componentSearchBridge";
 import { createDebugBridgeHandlers } from "@/routes/v2/shared/components/AiChat/toolBridge/debugBridge";
 import { createRunBridgeHandlers } from "@/routes/v2/shared/components/AiChat/toolBridge/runBridge";
+import { createSubgraphBridgeHandlers } from "@/routes/v2/shared/components/AiChat/toolBridge/subgraphBridge";
 
 import type { CsomBridgeDeps } from "./csomBridge";
 import { createCsomBridgeHandlers } from "./csomBridge";
@@ -31,6 +32,7 @@ export function createEditorToolBridge(
 ): ToolBridgeApi {
   return {
     ...createCsomBridgeHandlers(deps),
+    ...createSubgraphBridgeHandlers(deps),
     ...createComponentSearchBridgeHandlers(deps),
     ...createRunBridgeHandlers(deps),
     ...createDebugBridgeHandlers(deps),
