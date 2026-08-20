@@ -56,11 +56,28 @@ export function ProjectCard({ project }: ProjectCardProps) {
         className="group cursor-pointer rounded-xl border border-border bg-card p-4 shadow-sm transition-colors hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <BlockStack gap="3">
-          <InlineStack align="space-between" blockAlign="start" gap="2">
+          <div className="flex h-24 w-full items-center justify-center rounded-lg border border-border bg-muted/40 bg-[radial-gradient(circle,theme(colors.border)_1px,transparent_1px)] [background-size:12px_12px]">
+            <Icon
+              name="Workflow"
+              size="xl"
+              className="text-muted-foreground/40"
+            />
+          </div>
+
+          <InlineStack
+            align="space-between"
+            blockAlign="start"
+            gap="2"
+            wrap="nowrap"
+            className="w-full"
+          >
             <Text size="sm" weight="semibold" className="min-w-0 truncate">
               {project.name}
             </Text>
-            <div onClick={(event) => event.stopPropagation()}>
+            <div
+              className="shrink-0"
+              onClick={(event) => event.stopPropagation()}
+            >
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button

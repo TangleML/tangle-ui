@@ -18,7 +18,9 @@ import { Separator } from "@/components/ui/separator";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
 import { getAiModelOptions, getDefaultAiModelId } from "@/config/aiModels";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
+import { useTangentSettings } from "@/hooks/useTangentSettings";
 import useToastNotification from "@/hooks/useToastNotification";
+import { DEFAULT_TANGENT_BASE_URL } from "@/routes/v2/shared/tangent/constants";
 
 /**
  * Shared bring-your-own-provider configuration UI for AI features. Credentials
@@ -27,6 +29,11 @@ import useToastNotification from "@/hooks/useToastNotification";
  */
 export function AgentSettings() {
   const { config, update, clear, isConfigured } = useAiProviderSettings();
+  const {
+    baseUrl: tangentBaseUrl,
+    update: updateTangent,
+    reset: resetTangent,
+  } = useTangentSettings();
   const notify = useToastNotification();
 
   const [apiBase, setApiBase] = useState(config.apiBase);
@@ -39,9 +46,15 @@ export function AgentSettings() {
   const modelOptions = getAiModelOptions();
   const defaultModelId = getDefaultAiModelId();
 
+  const [tangentUrl, setTangentUrl] = useState(tangentBaseUrl);
+
   useEffect(() => {
     setModel(config.model);
   }, [config.model]);
+
+  useEffect(() => {
+    setTangentUrl(tangentBaseUrl);
+  }, [tangentBaseUrl]);
 
   const getTrimmedConfig = () => ({
     apiBase: apiBase.trim().replace(/\/+$/, ""),
@@ -144,6 +157,18 @@ export function AgentSettings() {
     setShowKey(false);
     setTesting(false);
     notify("AI provider settings cleared", "success");
+  };
+
+  const handleSaveTangentUrl = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    updateTangent({ baseUrl: tangentUrl });
+    notify("Tangent URL saved", "success");
+  };
+
+  const handleResetTangentUrl = () => {
+    resetTangent();
+    setTangentUrl(DEFAULT_TANGENT_BASE_URL);
+    notify("Tangent URL reset to default", "success");
   };
 
   return (
@@ -274,6 +299,49 @@ export function AgentSettings() {
             </Button>
             <Button type="button" variant="ghost" onClick={handleClear}>
               Clear
+            </Button>
+          </InlineStack>
+        </BlockStack>
+      </form>
+
+      <Separator />
+
+      <BlockStack gap="2">
+        <Heading level={2}>Tangent URL</Heading>
+        <Paragraph size="sm" tone="subdued">
+          The origin of the Tangent instance that powers embedded chat and the
+          Tangent Shell workspace. Stored in this browser only.
+        </Paragraph>
+      </BlockStack>
+
+      <form onSubmit={handleSaveTangentUrl}>
+        <BlockStack gap="4">
+          <BlockStack gap="1">
+            <Label htmlFor="agent-settings-tangent-url">Tangent base URL</Label>
+            <Input
+              id="agent-settings-tangent-url"
+              type="url"
+              placeholder={DEFAULT_TANGENT_BASE_URL}
+              value={tangentUrl}
+              onChange={(e) => setTangentUrl(e.target.value)}
+              aria-label="Tangent base URL"
+              aria-describedby="agent-settings-tangent-url-hint"
+              autoComplete="off"
+              spellCheck={false}
+            />
+            <Text id="agent-settings-tangent-url-hint" size="xs" tone="subdued">
+              For local development this is usually {DEFAULT_TANGENT_BASE_URL}.
+            </Text>
+          </BlockStack>
+
+          <InlineStack gap="2">
+            <Button type="submit">Save Tangent URL</Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={handleResetTangentUrl}
+            >
+              Reset to default
             </Button>
           </InlineStack>
         </BlockStack>

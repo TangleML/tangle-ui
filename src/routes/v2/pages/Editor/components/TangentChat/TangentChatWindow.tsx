@@ -1,4 +1,3 @@
-import { TangentProvider, useTangent } from "@tangent/embed-react";
 import { type KeyboardEvent, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -6,10 +5,14 @@ import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
 import { Textarea } from "@/components/ui/textarea";
 import { Text } from "@/components/ui/typography";
+import { useTangentSettings } from "@/hooks/useTangentSettings";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useTheme } from "@/providers/ThemeProvider";
 import { TANGENT_BUNDLE_ID } from "@/routes/v2/shared/tangent/constants";
-import { TANGENT_BASE_URL } from "@/utils/constants";
+import {
+  TangentEmbedProvider,
+  useTangent,
+} from "@/routes/v2/shared/tangent/TangentEmbedProvider";
 
 import { TangentSessionWorkspace } from "./TangentSessionWorkspace";
 
@@ -80,6 +83,7 @@ function TangentChatSession() {
 
 export function TangentChatWindow() {
   const { theme } = useTheme();
+  const { baseUrl } = useTangentSettings();
 
   // No `getToken`: the Tangent instance derives its user from an Oktasso JWT
   // cookie on its own origin, not a bearer token, so tangle-ui's JWT is
@@ -88,10 +92,10 @@ export function TangentChatWindow() {
   // chat/session APIs still work. Wire a real token getter here only for a
   // cross-origin production deployment that verifies bearer auth.
   return (
-    <TangentProvider baseUrl={TANGENT_BASE_URL} colorScheme={theme}>
+    <TangentEmbedProvider key={baseUrl} baseUrl={baseUrl} colorScheme={theme}>
       <BlockStack fill align="stretch" inlineAlign="start">
         <TangentChatSession />
       </BlockStack>
-    </TangentProvider>
+    </TangentEmbedProvider>
   );
 }

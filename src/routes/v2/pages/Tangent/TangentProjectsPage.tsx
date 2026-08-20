@@ -1,10 +1,9 @@
-import { TangentProvider } from "@tangent/embed-react";
-
 import { useAuthLocalStorage } from "@/components/shared/Authentication/useAuthLocalStorage";
 import { BlockStack } from "@/components/ui/layout";
 import { Heading, Text } from "@/components/ui/typography";
+import { useTangentSettings } from "@/hooks/useTangentSettings";
 import { useTheme } from "@/providers/ThemeProvider";
-import { TANGENT_BASE_URL } from "@/utils/constants";
+import { TangentEmbedProvider } from "@/routes/v2/shared/tangent/TangentEmbedProvider";
 
 import { ProjectGrid } from "./components/ProjectGrid";
 import { ProjectPromptComposer } from "./components/ProjectPromptComposer";
@@ -43,10 +42,11 @@ function TangentProjectsContent() {
 
 export function TangentProjectsPage() {
   const { theme } = useTheme();
+  const { baseUrl } = useTangentSettings();
 
   return (
-    <TangentProvider baseUrl={TANGENT_BASE_URL} colorScheme={theme}>
+    <TangentEmbedProvider key={baseUrl} baseUrl={baseUrl} colorScheme={theme}>
       <TangentProjectsContent />
-    </TangentProvider>
+    </TangentEmbedProvider>
   );
 }

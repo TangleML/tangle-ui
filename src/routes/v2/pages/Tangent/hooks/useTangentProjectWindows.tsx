@@ -37,7 +37,7 @@ const PROJECT_DOCK_WINDOWS: ProjectDockWindow[] = [
   },
   {
     id: "tangent-project-resources",
-    title: "Pipelines",
+    title: "Project resources",
     icon: "Workflow",
     content: <ResourcesWindowContent />,
   },

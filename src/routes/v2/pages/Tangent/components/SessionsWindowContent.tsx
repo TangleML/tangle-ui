@@ -17,22 +17,6 @@ export function SessionsWindowContent() {
 
   return (
     <BlockStack gap="2" className="p-2">
-      <InlineStack align="space-between" blockAlign="center">
-        <Text size="xs" weight="semibold" tone="subdued">
-          Sessions
-        </Text>
-        <Button
-          variant="ghost"
-          size="min"
-          aria-label="New session"
-          title="New session"
-          onClick={startSession}
-          disabled={isStartingSession}
-        >
-          <Icon name={isStartingSession ? "Loader" : "Plus"} size="xs" />
-        </Button>
-      </InlineStack>
-
       {sessions.length === 0 ? (
         <Text size="xs" tone="subdued">
           No sessions yet.
@@ -68,6 +52,18 @@ export function SessionsWindowContent() {
           })}
         </BlockStack>
       )}
+
+      <Button
+        variant="outline"
+        aria-label="New session"
+        title="New session"
+        onClick={startSession}
+        disabled={isStartingSession}
+        className="w-full"
+      >
+        <Icon name={isStartingSession ? "Loader" : "Plus"} size="xs" />
+        New session
+      </Button>
     </BlockStack>
   );
 }
