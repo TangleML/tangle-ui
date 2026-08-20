@@ -47,6 +47,10 @@ Every entity has a stable `$id`. Use these IDs when referencing entities in tool
 
 `get_pipeline_state` may include an `activeSubgraphPath` field — a breadcrumb of subgraph task names from the root pipeline to whatever subgraph the user is currently viewing. Treat this as a hint about where the user's attention is, but remember: every CSOM mutation always applies to the root spec. When you build new structure, prefer extending the root pipeline (or an explicit subgraph the user named) rather than the nested view the user happens to be focused on.
 
+## Looking inside a subgraph
+
+`get_pipeline_state` reports a subgraph task by its interface only — `isSubgraph: true` plus its input and output ports — so its inner tasks and bindings are not in that payload. Call `get_subgraph_state(taskEntityId)` when you need to know what a subgraph actually does before wiring into or around it. The result is the same shape as `get_pipeline_state`, and its inner tasks carry `isSubgraph` too, so call again with an inner `$id` to go deeper. Never assume a subgraph's contents from its name alone.
+
 ## When to defer to another specialist
 
 - Targeted edits to fix validation errors in an existing pipeline → defer to **pipeline-repair**.

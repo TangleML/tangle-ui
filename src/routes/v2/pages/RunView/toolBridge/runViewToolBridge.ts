@@ -13,6 +13,7 @@ import { validateSpec } from "@/models/componentSpec/validation/validateSpec";
 import { serializeSpecForAi } from "@/routes/v2/shared/components/AiChat/serializeSpecForAi";
 import { createDebugBridgeHandlers } from "@/routes/v2/shared/components/AiChat/toolBridge/debugBridge";
 import { createRunBridgeHandlers } from "@/routes/v2/shared/components/AiChat/toolBridge/runBridge";
+import { createSubgraphBridgeHandlers } from "@/routes/v2/shared/components/AiChat/toolBridge/subgraphBridge";
 import type { BridgeDeps } from "@/routes/v2/shared/components/AiChat/toolBridge/utils";
 import { requireSpec } from "@/routes/v2/shared/components/AiChat/toolBridge/utils";
 
@@ -127,6 +128,7 @@ function createReadOnlyCsomHandlers(deps: BridgeDeps): ReadOnlyCsomHandlers {
 export function createRunViewToolBridge(deps: BridgeDeps): ToolBridgeApi {
   return {
     ...createReadOnlyCsomHandlers(deps),
+    ...createSubgraphBridgeHandlers(deps),
     ...createRunBridgeHandlers(deps),
     ...createDebugBridgeHandlers(deps),
   };

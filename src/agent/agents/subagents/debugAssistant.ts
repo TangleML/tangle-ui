@@ -46,6 +46,7 @@ export function createDebugAssistantAgent(session: AgentSession): Agent {
     instructions,
     tools: [
       csom.getPipelineState,
+      csom.getSubgraphState,
       runTools.getRunStatus,
       runTools.debugPipelineRun,
       ...debugTools.allTools,
