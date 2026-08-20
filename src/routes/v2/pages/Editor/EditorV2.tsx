@@ -57,6 +57,7 @@ import { useRunsAndSubmissionWindow } from "./hooks/useRunsAndSubmissionWindow";
 import { useSeedInitialDockLayoutFromPreset } from "./hooks/useSeedInitialDockLayoutFromPreset";
 import { useSelectionWindowSync } from "./hooks/useSelectionWindowSync";
 import { useSpecLifecycle } from "./hooks/useSpecLifecycle";
+import { useTangentChatWindow } from "./hooks/useTangentChatWindow";
 import { useTipOfTheDayWindow } from "./hooks/useTipOfTheDayWindow";
 import { useUndoRedoKeyboard } from "./hooks/useUndoRedoKeyboard";
 import { editorRegistry } from "./nodes";
@@ -102,6 +103,9 @@ const PipelineEditor = withSuspenseWrapper(
 
     const aiEnabled = useFlagValue("ai-assistant");
     useAiChatWindow(aiEnabled);
+
+    const tangentChatEnabled = useFlagValue("tangent-embed-chat");
+    useTangentChatWindow(tangentChatEnabled);
 
     useComponentSearchV2Window(componentSearchV2Enabled);
     useSeedInitialDockLayoutFromPreset(componentSearchV2Enabled);

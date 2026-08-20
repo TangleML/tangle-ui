@@ -63,6 +63,14 @@ export const ExistingFlags: ConfigFlags = {
     category: "beta",
   },
 
+  ["tangent-embed-chat"]: {
+    name: "Tangent Chat",
+    description:
+      "Enable the embedded Tangent chat window in the V2 editor. Lets you start a Tangent session and chat with it in a dockable window.",
+    default: false,
+    category: "beta",
+  },
+
   ["component-search-v2"]: {
     name: "Component Search",
     description:

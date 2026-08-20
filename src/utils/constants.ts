@@ -21,6 +21,9 @@ export const DOCUMENTATION_URL =
 export const API_URL = import.meta.env.VITE_BACKEND_API_URL || "";
 export const BASE_URL = import.meta.env.VITE_BASE_URL || "/";
 
+export const TANGENT_BASE_URL =
+  import.meta.env.VITE_TANGENT_BASE_URL || "http://localhost:5173";
+
 export const USER_SETTINGS_PATH = "/api/users/me/settings";
 export const IS_GITHUB_PAGES = import.meta.env.VITE_GITHUB_PAGES === "true";
 

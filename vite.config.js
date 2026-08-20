@@ -153,7 +153,19 @@ export default defineConfig(({ mode }) => {
       },
     },
     optimizeDeps: {
-      exclude: ["lucide-react"],
+      exclude: [
+        "lucide-react",
+        "@tangent/embed-react",
+        "@tangent/remote-subagent",
+        "@tangent/shared",
+      ],
+      // `@tangent/remote-subagent` is served as source (excluded above), so
+      // Vite's dep scanner never reaches its transitive `socket.io-client`.
+      // Force-include it (and its CJS `debug` dependency) so esbuild
+      // pre-bundles them with proper CJS->ESM interop — otherwise `debug`'s
+      // browser build is served raw and its missing `default` export throws
+      // at runtime.
+      include: ["socket.io-client"],
     },
   };
 });

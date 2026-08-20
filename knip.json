@@ -1,7 +1,11 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "tags": ["-@public"],
-  "entry": ["src/agent/editorWorker.ts", "src/agent/runViewWorker.ts"],
+  "entry": [
+    "src/agent/editorWorker.ts",
+    "src/agent/runViewWorker.ts",
+    "src/agent/remoteEnvWorker.ts"
+  ],
   "ignore": [
     "src/api/**",
     "src/components/ui/**",
@@ -13,6 +17,8 @@
     "@tanstack/react-query-devtools",
     "@typescript-eslint/eslint-plugin",
     "@typescript-eslint/parser",
-    "react-scripts"
+    "react-scripts",
+    "@tangent/shared",
+    "socket.io-client"
   ]
 }
