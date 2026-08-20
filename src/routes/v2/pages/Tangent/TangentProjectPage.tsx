@@ -6,7 +6,7 @@ import { Text } from "@/components/ui/typography";
 import { DialogProvider } from "@/providers/DialogProvider/DialogProvider";
 import { useTheme } from "@/providers/ThemeProvider";
 import { SharedStoreProvider } from "@/routes/v2/shared/store/SharedStoreContext";
-import { TANGENT_BASE_URL } from "@/utils/constants";
+import { TANGENT_BASE_URL, TOP_NAV_HEIGHT } from "@/utils/constants";
 
 import { TangentProjectWorkspace } from "./components/TangentProjectWorkspace";
 import { TangentProjectProvider } from "./context/TangentProjectContext";
@@ -30,7 +30,10 @@ export function TangentProjectPage() {
   }
 
   return (
-    <div className="h-full w-full select-none bg-slate-100 dark:bg-background">
+    <div
+      className="w-full overflow-hidden bg-slate-100 dark:bg-background"
+      style={{ height: `calc(100vh - ${TOP_NAV_HEIGHT}px)` }}
+    >
       <TangentProvider baseUrl={TANGENT_BASE_URL} colorScheme={theme}>
         <SharedStoreProvider>
           <TangentProjectProvider projectId={projectId}>

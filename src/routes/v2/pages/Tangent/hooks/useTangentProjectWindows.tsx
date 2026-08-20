@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import type { IconName } from "@/components/ui/icon";
 import { AgentsWindowContent } from "@/routes/v2/pages/Tangent/components/AgentsWindowContent";
 import { AssetsWindowContent } from "@/routes/v2/pages/Tangent/components/AssetsWindowContent";
+import { MemoryWindowContent } from "@/routes/v2/pages/Tangent/components/MemoryWindowContent";
 import { ResourcesWindowContent } from "@/routes/v2/pages/Tangent/components/ResourcesWindowContent";
 import { SessionsWindowContent } from "@/routes/v2/pages/Tangent/components/SessionsWindowContent";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
@@ -40,6 +41,12 @@ const PROJECT_DOCK_WINDOWS: ProjectDockWindow[] = [
     title: "Pipelines",
     icon: "Workflow",
     content: <ResourcesWindowContent />,
+  },
+  {
+    id: "tangent-project-memory",
+    title: "Memory",
+    icon: "Brain",
+    content: <MemoryWindowContent />,
   },
 ];
 

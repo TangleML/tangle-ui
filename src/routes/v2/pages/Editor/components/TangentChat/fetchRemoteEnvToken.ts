@@ -56,16 +56,27 @@ export interface FetchRemoteEnvTokenParams {
   sessionId: string;
   /** Bearer token for the embed API, when the host has one. */
   authToken?: string;
+  /**
+   * A stable environment id to keep across token refreshes. The server routes
+   * spawns to a specific `environmentId` within a session, so a caller hosting
+   * one environment per workarea tab must pin it here rather than take a fresh
+   * server-minted id on every refresh. Omit to accept the server's id.
+   */
+  environmentId?: string;
 }
 
 export async function fetchRemoteEnvToken({
   baseUrl,
   sessionId,
   authToken,
+  environmentId,
 }: FetchRemoteEnvTokenParams): Promise<RemoteEnvToken> {
   const fallbackToken = readFallbackToken();
   if (fallbackToken) {
-    return { token: fallbackToken, environmentId: `tangle-ui-${nanoid(8)}` };
+    return {
+      token: fallbackToken,
+      environmentId: environmentId ?? `tangle-ui-${nanoid(8)}`,
+    };
   }
 
   const url = `${baseUrl.replace(/\/$/, "")}${REMOTE_ENV_TOKEN_PATH}`;
@@ -77,7 +88,10 @@ export async function fetchRemoteEnvToken({
   const response = await fetch(url, {
     method: "POST",
     headers,
-    body: JSON.stringify({ sessionId }),
+    body: JSON.stringify({
+      sessionId,
+      ...(environmentId ? { environmentId } : {}),
+    }),
   });
   if (!response.ok) {
     throw new Error(
@@ -89,5 +103,6 @@ export async function fetchRemoteEnvToken({
   if (!parsed) {
     throw new Error("Remote-env token response was malformed.");
   }
-  return parsed;
+  // Keep the caller's stable id authoritative so it survives token refreshes.
+  return environmentId ? { ...parsed, environmentId } : parsed;
 }

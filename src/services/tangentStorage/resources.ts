@@ -53,6 +53,11 @@ export async function removeResource(id: string): Promise<void> {
   await tangentDb.resources.delete(id);
 }
 
+/** Builds a session-scoped memory resource input for the embed API. */
+export function toMemoryResourceInput(content: string): HostResourceInput {
+  return { kind: "memory", scope: "session", content };
+}
+
 /** Maps a stored resource to the embed API's host-resource input shape. */
 export function toHostResourceInput(
   resource: TangentResource,

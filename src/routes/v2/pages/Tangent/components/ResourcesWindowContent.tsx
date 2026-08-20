@@ -7,9 +7,11 @@ import { convertCancelErrorTo } from "@/providers/DialogProvider/utils";
 import { AddPipelineDialog } from "@/routes/v2/pages/Tangent/components/AddPipelineDialog";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import type {
+  TangentResource,
   TangentResourceInput,
   TangentResourceType,
 } from "@/services/tangentStorage/types";
+import { getErrorMessage } from "@/utils/string";
 
 const RESOURCE_ICONS: Record<TangentResourceType, IconName> = {
   run: "Play",
@@ -17,7 +19,13 @@ const RESOURCE_ICONS: Record<TangentResourceType, IconName> = {
 };
 
 export function ResourcesWindowContent() {
-  const { resources, attachResource, detachResource } = useTangentProject();
+  const {
+    resources,
+    attachResource,
+    detachResource,
+    openWorkareaTarget,
+    onError,
+  } = useTangentProject();
   const { open } = useDialog();
 
   async function handleAddPipeline() {
@@ -29,6 +37,14 @@ export function ResourcesWindowContent() {
 
     if (!result) return;
     await attachResource(result);
+  }
+
+  async function handleOpenResource(resource: TangentResource) {
+    try {
+      await openWorkareaTarget(resource.url, resource.name);
+    } catch (error) {
+      onError(getErrorMessage(error));
+    }
   }
 
   return (
@@ -53,22 +69,31 @@ export function ResourcesWindowContent() {
           {resources.map((resource) => (
             <InlineStack
               key={resource.id}
-              gap="2"
+              gap="1"
               blockAlign="center"
               wrap="nowrap"
-              className="rounded-md px-2 py-1.5 hover:bg-accent"
+              className="rounded-md hover:bg-accent"
             >
-              <Icon name={RESOURCE_ICONS[resource.type]} size="xs" />
-              <BlockStack className="min-w-0 flex-1">
-                <Text size="sm" className="truncate">
-                  {resource.name}
-                </Text>
-                {resource.description ? (
-                  <Text size="xs" tone="subdued" className="truncate">
-                    {resource.description}
+              <Button
+                variant="ghost"
+                size="sm"
+                data-testid={`open-resource-${resource.id}`}
+                className="h-auto min-w-0 flex-1 justify-start gap-2 px-2 py-1.5"
+                title={`Open ${resource.name}`}
+                onClick={() => void handleOpenResource(resource)}
+              >
+                <Icon name={RESOURCE_ICONS[resource.type]} size="xs" />
+                <BlockStack className="min-w-0 flex-1 items-start">
+                  <Text size="sm" className="truncate">
+                    {resource.name}
                   </Text>
-                ) : null}
-              </BlockStack>
+                  {resource.description ? (
+                    <Text size="xs" tone="subdued" className="truncate">
+                      {resource.description}
+                    </Text>
+                  ) : null}
+                </BlockStack>
+              </Button>
               <Button
                 variant="ghost"
                 size="min"

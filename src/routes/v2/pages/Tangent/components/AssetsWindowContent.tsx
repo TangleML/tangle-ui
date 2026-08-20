@@ -1,3 +1,4 @@
+import type { EmbedAsset } from "@tangent/embed-react";
 import { AssetList } from "@tangent/embed-react";
 
 import { BlockStack } from "@/components/ui/layout";
@@ -5,7 +6,14 @@ import { Text } from "@/components/ui/typography";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 
 export function AssetsWindowContent() {
-  const { activeSessionId, tabs } = useTangentProject();
+  const { activeSessionId, tabs, onOpenArtifact } = useTangentProject();
+
+  function handleOpenAsset(asset: EmbedAsset) {
+    tabs.selectAsset(asset);
+    if (asset.kind !== "trigger") {
+      onOpenArtifact(asset.url, asset.title);
+    }
+  }
 
   if (!activeSessionId) {
     return (
@@ -21,7 +29,7 @@ export function AssetsWindowContent() {
     <AssetList
       sessionId={activeSessionId}
       selectedId={tabs.selectedAssetId}
-      onOpen={tabs.selectAsset}
+      onOpen={handleOpenAsset}
     />
   );
 }

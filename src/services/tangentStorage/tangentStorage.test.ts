@@ -11,6 +11,7 @@ import {
   listProjects,
   renameProject,
   setActiveSession,
+  setProjectMemory,
 } from "./projects";
 import { addSession, listProjectSessions } from "./sessions";
 
@@ -55,6 +56,16 @@ describe("project storage", () => {
 
     const updated = await getProject(project.id);
     expect(updated?.name).toBe("New name");
+  });
+
+  it("persists project memory and bumps updatedAt", async () => {
+    const project = await createProject("With memory");
+    await new Promise((resolve) => setTimeout(resolve, 2));
+    await setProjectMemory(project.id, "Prefer concise plans.");
+
+    const updated = await getProject(project.id);
+    expect(updated?.memory).toBe("Prefer concise plans.");
+    expect(updated?.updatedAt).toBeGreaterThan(project.updatedAt);
   });
 
   it("links a session and marks it active", async () => {

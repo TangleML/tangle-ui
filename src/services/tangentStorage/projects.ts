@@ -43,6 +43,13 @@ export async function renameProject(id: string, name: string): Promise<void> {
   });
 }
 
+export async function setProjectMemory(
+  id: string,
+  memory: string,
+): Promise<void> {
+  await tangentDb.projects.update(id, { memory, updatedAt: Date.now() });
+}
+
 export async function setActiveSession(
   id: string,
   sessionId: string,
