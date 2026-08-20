@@ -4,6 +4,7 @@ import { TipOfTheDay } from "@/components/Learn/TipOfTheDay";
 import { isAuthorizationRequired } from "@/components/shared/Authentication/helpers";
 import { TopBarAuthentication } from "@/components/shared/Authentication/TopBarAuthentication";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
+import { Badge } from "@/components/ui/badge";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Link as UILink } from "@/components/ui/link";
@@ -26,7 +27,15 @@ interface SidebarItem {
   label: string;
   icon: IconName;
   exact?: boolean;
+  badge?: string;
 }
+
+const TANGENT_SHELL_ITEM: SidebarItem = {
+  to: APP_ROUTES.TANGENT,
+  label: "Tangent Shell",
+  icon: "Sparkles",
+  badge: "AI",
+};
 
 const BASE_SIDEBAR_ITEMS: SidebarItem[] = [
   {
@@ -58,16 +67,21 @@ const navItemClass = (isActive: boolean) =>
 export function DashboardLayout() {
   const requiresAuthorization = isAuthorizationRequired();
   const isComponentSearchEnabled = useFlagValue("component-search-v2");
+  const isTangentShellEnabled = useFlagValue("tangent-shell");
 
   const { shouldShowOnboarding } = useOnboarding();
 
-  const baseItems = isComponentSearchEnabled
+  const componentAwareItems = isComponentSearchEnabled
     ? BASE_SIDEBAR_ITEMS.map((item) =>
         item.to === APP_ROUTES.DASHBOARD_COMPONENTS
           ? COMPONENT_SEARCH_ITEM
           : item,
       )
     : BASE_SIDEBAR_ITEMS;
+
+  const baseItems = isTangentShellEnabled
+    ? [TANGENT_SHELL_ITEM, ...componentAwareItems]
+    : componentAwareItems;
 
   const sidebarItems: SidebarItem[] = shouldShowOnboarding
     ? [
@@ -104,7 +118,7 @@ export function DashboardLayout() {
               activeProps={{ className: "is-active" }}
               activeOptions={item.exact ? { exact: true } : undefined}
             >
-              {({ isActive }) => (
+              {({ isActive }: { isActive: boolean }) => (
                 <InlineStack
                   gap="2"
                   blockAlign="center"
@@ -112,6 +126,11 @@ export function DashboardLayout() {
                 >
                   <Icon name={item.icon} size="sm" />
                   <Text size="sm">{item.label}</Text>
+                  {item.badge && (
+                    <Badge variant="secondary" size="sm" className="ml-auto">
+                      {item.badge}
+                    </Badge>
+                  )}
                 </InlineStack>
               )}
             </Link>
@@ -143,7 +162,7 @@ export function DashboardLayout() {
             </InlineStack>
           </UILink>
           <Link to={APP_ROUTES.SETTINGS_BACKEND} className="w-full">
-            {({ isActive }) => (
+            {({ isActive }: { isActive: boolean }) => (
               <InlineStack
                 gap="2"
                 blockAlign="center"

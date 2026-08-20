@@ -8,11 +8,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Text } from "@/components/ui/typography";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useTheme } from "@/providers/ThemeProvider";
+import { TANGENT_BUNDLE_ID } from "@/routes/v2/shared/tangent/constants";
 import { TANGENT_BASE_URL } from "@/utils/constants";
 
 import { TangentSessionWorkspace } from "./TangentSessionWorkspace";
-
-const TANGENT_BUNDLE_ID = "tangle";
 
 function TangentChatSession() {
   const { newSession } = useTangent();
