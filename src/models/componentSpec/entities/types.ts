@@ -11,7 +11,6 @@ export type {
   InputSpec,
   MetadataSpec,
   OutputSpec,
-  PredicateType,
   TaskOutputArgument,
   TaskSpec,
   TypeSpecType,

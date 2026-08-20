@@ -19,6 +19,7 @@ import {
 import type { ComponentSpec } from "./componentSpec";
 
 export * from "./annotationKeys";
+export { EDITOR_CONDITIONAL_EXECUTION_ANNOTATION } from "./conditionalExecution";
 
 export const DISPLAY_NAME_MAX_LENGTH = 100;
 const PIPELINE_AGGREGATOR_ANNOTATION = "is_input_aggregator";

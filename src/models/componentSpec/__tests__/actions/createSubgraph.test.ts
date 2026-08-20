@@ -189,7 +189,7 @@ describe("createSubgraph", () => {
       $id: idGen.next("task"),
       name: "ConfiguredTask",
       componentRef: { name: "MyComponent" },
-      isEnabled: { "==": { op1: "a", op2: "b" } },
+      isEnabled: { taskOutput: { taskId: "task1", outputName: "out1" } },
     });
     task.annotations.add({ key: "note", value: "test" });
     spec.addTask(task);
@@ -205,7 +205,9 @@ describe("createSubgraph", () => {
     const movedTask = result!.subgraphSpec.tasks.at(0);
     expect(movedTask?.name).toBe("ConfiguredTask");
     expect(movedTask?.componentRef).toEqual({ name: "MyComponent" });
-    expect(movedTask?.isEnabled).toEqual({ "==": { op1: "a", op2: "b" } });
+    expect(movedTask?.isEnabled).toEqual({
+      taskOutput: { taskId: "task1", outputName: "out1" },
+    });
     expect(movedTask?.annotations.length).toBe(1);
   });
 

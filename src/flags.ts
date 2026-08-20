@@ -86,4 +86,12 @@ export const ExistingFlags: ConfigFlags = {
     default: false,
     category: "beta",
   },
+
+  ["conditional-execution"]: {
+    name: "Conditional Task Execution",
+    description:
+      'Enable the "Enable task" setting in the task Config tab. Lets you disable a task or gate it on an upstream value connected to its "Is enabled?" port.',
+    default: true, //temp for demo purposes
+    category: "beta",
+  },
 };

@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
+import { IS_ENABLED_PORT_NAME } from "@/utils/conditionalExecution";
+
 import { Binding } from "../../entities/binding";
 import { ComponentSpec } from "../../entities/componentSpec";
 import { Input } from "../../entities/input";
@@ -82,15 +84,96 @@ describe("JsonSerializer", () => {
       $id: idGen.next("task"),
       name: "Process",
       componentRef: {},
-      isEnabled: { "==": { op1: "a", op2: "b" } },
+      isEnabled: { taskOutput: { taskId: "task1", outputName: "out1" } },
     });
     spec.addTask(task);
 
     const json = serializer.serialize(spec);
 
     expect(getGraph(json).tasks["Process"].isEnabled).toEqual({
-      "==": { op1: "a", op2: "b" },
+      taskOutput: { taskId: "task1", outputName: "out1" },
     });
+  });
+
+  it("serializes literal isEnabled 'false'", () => {
+    const spec = new ComponentSpec({
+      $id: idGen.next("spec"),
+      name: "Pipeline",
+    });
+    const task = new Task({
+      $id: idGen.next("task"),
+      name: "Process",
+      componentRef: {},
+      isEnabled: "false",
+    });
+    spec.addTask(task);
+
+    expect(
+      getGraph(serializer.serialize(spec)).tasks["Process"].isEnabled,
+    ).toBe("false");
+  });
+
+  it("serializes a connection to the reserved is-enabled port as isEnabled (task output)", () => {
+    const spec = new ComponentSpec({
+      $id: idGen.next("spec"),
+      name: "Pipeline",
+    });
+    const producer = new Task({
+      $id: idGen.next("task"),
+      name: "Producer",
+      componentRef: {},
+    });
+    const consumer = new Task({
+      $id: idGen.next("task"),
+      name: "Consumer",
+      componentRef: {},
+    });
+    spec.addTask(producer);
+    spec.addTask(consumer);
+    spec.addBinding(
+      new Binding({
+        $id: idGen.next("binding"),
+        sourceEntityId: producer.$id,
+        sourcePortName: "should_run",
+        targetEntityId: consumer.$id,
+        targetPortName: IS_ENABLED_PORT_NAME,
+      }),
+    );
+
+    const consumerSpec = getGraph(serializer.serialize(spec)).tasks["Consumer"];
+    expect(consumerSpec.isEnabled).toEqual({
+      taskOutput: { taskId: "Producer", outputName: "should_run" },
+    });
+    // The reserved-port binding must not leak into arguments.
+    expect(consumerSpec.arguments).toBeUndefined();
+  });
+
+  it("serializes a graph-input connection to the reserved is-enabled port", () => {
+    const spec = new ComponentSpec({
+      $id: idGen.next("spec"),
+      name: "Pipeline",
+    });
+    const input = new Input({ $id: idGen.next("input"), name: "run_it" });
+    const task = new Task({
+      $id: idGen.next("task"),
+      name: "Consumer",
+      componentRef: {},
+    });
+    spec.addInput(input);
+    spec.addTask(task);
+    spec.addBinding(
+      new Binding({
+        $id: idGen.next("binding"),
+        sourceEntityId: input.$id,
+        sourcePortName: "run_it",
+        targetEntityId: task.$id,
+        targetPortName: IS_ENABLED_PORT_NAME,
+      }),
+    );
+
+    expect(
+      getGraph(serializer.serialize(spec)).tasks["Consumer"].isEnabled,
+    ).toEqual({ graphInput: { inputName: "run_it" } });
   });
 
   it("serializes metadata from annotations", () => {

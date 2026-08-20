@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { useTheme } from "@/providers/ThemeProvider";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { AGGREGATOR_ADD_INPUT_HANDLE_ID } from "@/utils/aggregatorInputs";
+import { IS_ENABLED_PORT_NAME } from "@/utils/conditionalExecution";
 import { pluralize } from "@/utils/string";
 
 import { deriveColorPalette } from "./color.utils";
@@ -30,6 +31,9 @@ const AGGREGATOR_INTERNAL_INPUTS = new Set([
   AGGREGATOR_ADD_INPUT_HANDLE_ID,
   "output_type",
 ]);
+
+/** The conditional gate stays visible while the rest of the inputs condense. */
+const isGatePort = (inputName: string) => inputName === IS_ENABLED_PORT_NAME;
 
 const cardVariants = cva(
   "min-w-[300px] max-w-[350px] rounded-2xl border-2 p-0 drop-shadow-none cursor-pointer select-none gap-2 transition-shadow",
@@ -168,12 +172,12 @@ const ClassicInputHandle = observer(function ClassicInputHandle({
                   ? "text-gray-100 bg-white/10 hover:bg-white/15 dark:hover:bg-white/15 hover:text-gray-100"
                   : "text-gray-800 bg-black/5 hover:bg-black/10 dark:hover:bg-black/10 hover:text-gray-800",
             )}
-            title={`${input.name}${input.type ? `: ${input.type}` : ""}`}
+            title={`${input.label ?? input.name}${input.type ? `: ${input.type}` : ""}`}
             onClick={onLabelClick}
             data-input-control
             data-testid={`input-label-${input.name}`}
           >
-            {input.name.replace(/_/g, " ")}
+            {input.label ?? input.name.replace(/_/g, " ")}
           </Button>
         </div>
         {showValueDisplay && (
@@ -262,15 +266,23 @@ export const TaskNodeCard = observer(function TaskNodeCard({
     ? inputs.filter((input) => !AGGREGATOR_INTERNAL_INPUTS.has(input.name))
     : inputs;
 
-  const condensedInputs =
-    filteredInputs.length > 0 && connectedInputNames.size > 0
-      ? filteredInputs.filter((input) => connectedInputNames.has(input.name))
-      : filteredInputs.slice(0, 1);
-  const hiddenInputCount = filteredInputs.length - condensedInputs.length;
+  const gateInputs = filteredInputs.filter((input) => isGatePort(input.name));
+  const regularInputs = filteredInputs.filter(
+    (input) => !isGatePort(input.name),
+  );
+
+  const condensedInputs = regularInputs.some((input) =>
+    connectedInputNames.has(input.name),
+  )
+    ? regularInputs.filter((input) => connectedInputNames.has(input.name))
+    : regularInputs.slice(0, 1);
+  const hiddenInputCount = regularInputs.length - condensedInputs.length;
   const inputsSectionToggles =
     !isAggregator && collapsed && hiddenInputCount > 0;
   const showCondensedInputs = inputsSectionToggles && !inputsExpanded;
-  const visibleInputs = showCondensedInputs ? condensedInputs : filteredInputs;
+  const visibleInputs = showCondensedInputs
+    ? [...condensedInputs, ...gateInputs]
+    : filteredInputs;
   const showInputsSection = filteredInputs.length > 0 || isAggregator;
 
   const openInputProperties =
@@ -408,31 +420,40 @@ export const TaskNodeCard = observer(function TaskNodeCard({
           >
             <BlockStack gap="3">
               {isAggregator && <InputAggregatorHandle />}
-              {visibleInputs.map((input, index) => (
-                <ClassicInputHandle
-                  key={input.name}
-                  input={input}
-                  entityId={entityId}
-                  themed={!palette}
-                  isDark={isDark}
-                  displayValue={
-                    showCondensedInputs
-                      ? index === 0
-                        ? `+${hiddenInputCount} more ${pluralize(hiddenInputCount, "input")}`
-                        : undefined
-                      : inputDisplayValues[input.name]
-                  }
-                  hideValue={showCondensedInputs && index !== 0}
-                  isSecret={secretInputNames.has(input.name)}
-                  onRowClick={
-                    inputsSectionToggles
-                      ? undefined
-                      : openInputProperties(input.name)
-                  }
-                  onLabelClick={openInputProperties(input.name)}
-                  onHandleClick={(e) => onHandleClick(`input_${input.name}`, e)}
-                />
-              ))}
+              {visibleInputs.map((input, index) => {
+                const condensedAway =
+                  showCondensedInputs && !isGatePort(input.name);
+                const hiddenCountLabel =
+                  condensedAway && index === 0
+                    ? `+${hiddenInputCount} more ${pluralize(hiddenInputCount, "input")}`
+                    : undefined;
+
+                return (
+                  <ClassicInputHandle
+                    key={input.name}
+                    input={input}
+                    entityId={entityId}
+                    themed={!palette}
+                    isDark={isDark}
+                    displayValue={
+                      condensedAway
+                        ? hiddenCountLabel
+                        : inputDisplayValues[input.name]
+                    }
+                    hideValue={condensedAway && !hiddenCountLabel}
+                    isSecret={secretInputNames.has(input.name)}
+                    onRowClick={
+                      inputsSectionToggles
+                        ? undefined
+                        : openInputProperties(input.name)
+                    }
+                    onLabelClick={openInputProperties(input.name)}
+                    onHandleClick={(e) =>
+                      onHandleClick(`input_${input.name}`, e)
+                    }
+                  />
+                );
+              })}
               {collapsed && inputsExpanded && hiddenInputCount > 0 && (
                 <span
                   className={cn(

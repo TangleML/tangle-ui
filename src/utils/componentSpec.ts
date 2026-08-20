@@ -380,7 +380,7 @@ interface TwoLogicalOperands {
   op1: PredicateType;
   op2: PredicateType;
 }
-export type PredicateType =
+type PredicateType =
   | {
       "==": TwoArgumentOperands;
     }
@@ -409,6 +409,9 @@ export type PredicateType =
       not: PredicateType;
     };
 
+/**
+ * Optional configuration that specifies how the task should be retried if it fails.
+ */
 interface RetryStrategySpec {
   maxRetries?: number;
 }
@@ -430,7 +433,7 @@ export interface TaskSpec {
   arguments?: {
     [k: string]: ArgumentType;
   };
-  isEnabled?: PredicateType;
+  isEnabled?: ArgumentType;
   executionOptions?: ExecutionOptionsSpec;
   annotations?: {
     [k: string]: unknown;

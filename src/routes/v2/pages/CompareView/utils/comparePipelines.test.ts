@@ -5,8 +5,8 @@ import type {
   ArtifactNodeResponse,
 } from "@/api/types.gen";
 import type {
+  ArgumentType,
   ComponentSpec,
-  PredicateType,
   TaskSpec,
 } from "@/utils/componentSpec";
 
@@ -31,7 +31,9 @@ const containerSpec = (): ComponentSpec => ({
 
 const noStatus = new Map<string, string>();
 
-const enabledWhen: PredicateType = { "==": { op1: "mode", op2: "train" } };
+const enabledByFlag: ArgumentType = {
+  taskOutput: { taskId: "prep", outputName: "should_train" },
+};
 
 const side = (
   spec: ComponentSpec | undefined,
@@ -209,7 +211,9 @@ describe("buildPipelineComparison()", () => {
   });
 
   test("flags a task guarded by a condition in one run only", () => {
-    const specA = graphSpec({ train: task("d1", { isEnabled: enabledWhen }) });
+    const specA = graphSpec({
+      train: task("d1", { isEnabled: enabledByFlag }),
+    });
     const specB = graphSpec({ train: task("d1") });
 
     const [diff] = buildPipelineComparison(side(specA), side(specB)).taskDiffs;
@@ -222,7 +226,7 @@ describe("buildPipelineComparison()", () => {
 
   test("reports no setting differences when execution options match", () => {
     const options: Partial<TaskSpec> = {
-      isEnabled: enabledWhen,
+      isEnabled: enabledByFlag,
       executionOptions: { retryStrategy: { maxRetries: 2 } },
     };
     const specA = graphSpec({ train: task("d1", options) });
