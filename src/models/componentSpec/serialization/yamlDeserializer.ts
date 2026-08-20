@@ -1,5 +1,4 @@
 import {
-  EDITOR_CONDITIONAL_EXECUTION_ANNOTATION,
   IS_ENABLED_PORT_NAME,
   isConditionalArgument,
 } from "@/utils/conditionalExecution";
@@ -129,21 +128,10 @@ export class YamlDeserializer {
         }
       }
 
-      // A reference-valued `isEnabled` is the "Conditional" mode: it becomes a
-      // binding to the reserved port (see buildBindings) and the entity keeps
-      // `isEnabled` empty. Literal values (e.g. "false") stay on the entity.
+      // A reference-valued `isEnabled` becomes a binding to the reserved port
+      // (see buildBindings) and the entity keeps `isEnabled` empty. Literal
+      // values (e.g. "false") stay on the entity.
       const conditionalEnabled = isConditionalArgument(taskJson.isEnabled);
-      if (
-        conditionalEnabled &&
-        !annotationItems.some(
-          (a) => a.key === EDITOR_CONDITIONAL_EXECUTION_ANNOTATION,
-        )
-      ) {
-        annotationItems.push({
-          key: EDITOR_CONDITIONAL_EXECUTION_ANNOTATION,
-          value: "true",
-        });
-      }
 
       const args: Argument[] = [];
       if (taskJson.arguments) {
@@ -209,7 +197,7 @@ export class YamlDeserializer {
           tasks,
           targetTask.$id,
           IS_ENABLED_PORT_NAME,
-          taskJson.isEnabled as ArgumentType,
+          taskJson.isEnabled,
         );
         if (binding) bindings.push(binding);
       }
