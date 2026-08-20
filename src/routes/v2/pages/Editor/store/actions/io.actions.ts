@@ -124,18 +124,6 @@ export function setInputType(
   });
 }
 
-export function setInputDefaultValue(
-  undo: UndoGroupable,
-  spec: ComponentSpec,
-  entityId: string,
-  defaultValue: string | undefined,
-): void {
-  undo.withGroup("Set input default value", () => {
-    const input = spec.inputs.find((i) => i.$id === entityId);
-    input?.setDefaultValue(defaultValue);
-  });
-}
-
 export function setInputValue(
   undo: UndoGroupable,
   spec: ComponentSpec,
