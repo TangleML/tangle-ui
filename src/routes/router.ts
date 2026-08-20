@@ -232,7 +232,9 @@ const settingsAgentRoute = createRoute({
   beforeLoad: () => {
     if (
       !isFlagEnabled("component-search-v2") &&
-      !isFlagEnabled("ai-assistant")
+      !isFlagEnabled("ai-assistant") &&
+      !isFlagEnabled("tangent-shell") &&
+      !isFlagEnabled("tangent-embed-chat")
     ) {
       throw redirect({ to: APP_ROUTES.SETTINGS_BACKEND });
     }

@@ -1,23 +1,42 @@
-import { useTangent } from "@tangent/embed-react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 
+import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import {
   createRequiredContext,
   useRequiredContext,
 } from "@/hooks/useRequiredContext";
 import useToastNotification from "@/hooks/useToastNotification";
+import { useBackend } from "@/providers/BackendProvider";
+import {
+  type ResolvedWorkareaView,
+  resolveWorkareaTarget,
+} from "@/routes/v2/pages/Tangent/services/openWorkareaTarget";
 import { TANGENT_BUNDLE_ID } from "@/routes/v2/shared/tangent/constants";
+import { useTangent } from "@/routes/v2/shared/tangent/TangentEmbedProvider";
 import { useTangentSessionTabs } from "@/routes/v2/shared/tangent/useTangentSessionTabs";
+import type { PipelineRef } from "@/services/pipelineStorage/types";
 import { tangentDb } from "@/services/tangentStorage/db";
-import { setActiveSession } from "@/services/tangentStorage/projects";
+import {
+  clearActiveSession,
+  getProject,
+  setActiveSession,
+  setProjectMemory,
+} from "@/services/tangentStorage/projects";
 import {
   addResource,
   listProjectResources,
   removeResource,
   toHostResourceInput,
+  toMemoryResourceInput,
 } from "@/services/tangentStorage/resources";
-import { addSession } from "@/services/tangentStorage/sessions";
+import {
+  addSession,
+  getSession,
+  listProjectSessions,
+  removeSession,
+  setOpeningPrompt,
+} from "@/services/tangentStorage/sessions";
 import type {
   TangentProject,
   TangentResource,
@@ -28,6 +47,9 @@ import { getErrorMessage } from "@/utils/string";
 
 type SessionTabs = ReturnType<typeof useTangentSessionTabs>;
 
+/** An open view in the Dynamic Workarea. The `id` is the stable tab key. */
+export type WorkareaTab = ResolvedWorkareaView & { id: string };
+
 interface TangentProjectContextValue {
   projectId: string;
   project: TangentProject | undefined;
@@ -35,16 +57,55 @@ interface TangentProjectContextValue {
   activeSessionId: string | undefined;
   isStartingSession: boolean;
   resources: TangentResource[];
+  memory: string;
   selectSession: (sessionId: string) => void;
   startSession: () => void;
+  /** Persist the first human prompt so an empty session is no longer discarded. */
+  recordSessionPrompt: (content: string) => void;
+  setMemory: (content: string) => Promise<void>;
   attachResource: (input: TangentResourceInput) => Promise<void>;
   detachResource: (id: string) => Promise<void>;
   tabs: SessionTabs;
-  openArtifact: { url: string; title: string } | null;
+  workareaTabs: WorkareaTab[];
+  activeWorkareaTabId: string | null;
+  openArtifactTab: (url: string, title: string) => WorkareaTab;
+  openPipelineTab: (pipelineRef: PipelineRef, title: string) => WorkareaTab;
+  openWorkareaTarget: (target: string, title?: string) => Promise<WorkareaTab>;
+  selectWorkareaTab: (id: string) => void;
+  closeWorkareaTab: (id: string) => void;
+  /**
+   * Record the remote-env `environmentId` a pipeline tab's editor agent
+   * connected with, so the workarea tools can hand it to Prime for spawns.
+   */
+  registerTabEnvironment: (tabId: string, environmentId: string) => void;
+  /** Forget a tab's environment (on disconnect or tab close). */
+  unregisterTabEnvironment: (tabId: string) => void;
+  /** The environmentId a tab's editor agent is connected with, if any. */
+  getTabEnvironmentId: (tabId: string) => string | undefined;
+  /**
+   * Resolve once the tab's editor agent has connected an environment, or with
+   * `undefined` if it does not within `timeoutMs`.
+   */
+  waitForTabEnvironment: (
+    tabId: string,
+    timeoutMs?: number,
+  ) => Promise<string | undefined>;
+  /**
+   * Publish a pipeline tab's live `ToolBridgeApi` so the project-level editor
+   * agent (spawns not bound to a specific tab) can drive the active pipeline.
+   */
+  registerTabBridge: (tabId: string, bridge: ToolBridgeApi) => void;
+  /** Forget a tab's bridge (on disconnect or tab close). */
+  unregisterTabBridge: (tabId: string) => void;
+  /** The bridge of the active pipeline tab, if the active tab is a pipeline. */
+  getActiveTabBridge: () => ToolBridgeApi | undefined;
+  /** Alias for {@link openArtifactTab}; kept for the embed chat artifact links. */
   onOpenArtifact: (url: string, title: string) => void;
-  closeArtifact: () => void;
   onError: (message: string) => void;
 }
+
+/** How long {@link TangentProjectContextValue.waitForTabEnvironment} waits. */
+const DEFAULT_ENVIRONMENT_WAIT_MS = 15_000;
 
 const TangentProjectCtx = createRequiredContext<TangentProjectContextValue>(
   "TangentProjectContext",
@@ -60,17 +121,38 @@ export function TangentProjectProvider({
   children,
 }: TangentProjectProviderProps) {
   const notify = useToastNotification();
+  const { backendUrl } = useBackend();
   const {
     newSession,
     addResource: addSessionResource,
     removeResource: removeSessionResource,
+    deleteSession: deleteEmbedSession,
   } = useTangent();
   const tabs = useTangentSessionTabs();
   const [isStartingSession, setIsStartingSession] = useState(false);
-  const [openArtifact, setOpenArtifact] = useState<{
-    url: string;
-    title: string;
-  } | null>(null);
+  const [workareaTabs, setWorkareaTabs] = useState<WorkareaTab[]>([]);
+  const [activeWorkareaTabId, setActiveWorkareaTabId] = useState<string | null>(
+    null,
+  );
+  // Each pipeline tab's editor agent connects its own remote-env environment;
+  // we track tabId -> environmentId (plus pending waiters) in refs so the
+  // workarea tools can resolve a spawn target without triggering re-renders.
+  const tabEnvironmentsRef = useRef(new Map<string, string>());
+  const tabEnvironmentWaitersRef = useRef(
+    new Map<string, Set<(environmentId: string) => void>>(),
+  );
+  // Each pipeline tab publishes its live ToolBridgeApi here so the project-level
+  // editor agent can drive whichever pipeline is active. `activeWorkareaTabId`
+  // is mirrored to a ref because `getActiveTabBridge` is read from the worker
+  // (via a stable routing bridge) outside React's render cycle.
+  const tabBridgesRef = useRef(new Map<string, ToolBridgeApi>());
+  const activeWorkareaTabIdRef = useRef<string | null>(null);
+  // A session is kept the moment a human sends its first prompt. Tracked in a
+  // ref (not just Dexie) so `discardEmptySession` never races the async write.
+  const sessionsWithPromptRef = useRef(new Set<string>());
+  // Mirrors `activeSessionId` so the unmount cleanup can discard the session the
+  // user was last on without re-subscribing the effect on every switch.
+  const activeSessionIdRef = useRef<string | undefined>(undefined);
 
   const project = useLiveQuery(
     () => tangentDb.projects.get(projectId),
@@ -90,10 +172,35 @@ export function TangentProjectProvider({
 
   const activeSessionId = project?.activeSessionId;
 
+  useEffect(() => {
+    activeWorkareaTabIdRef.current = activeWorkareaTabId;
+  }, [activeWorkareaTabId]);
+
+  useEffect(() => {
+    activeSessionIdRef.current = activeSessionId;
+  }, [activeSessionId]);
+
+  // Keep a ref to the latest `discardEmptySession` so the unmount-only cleanup
+  // (empty deps) can run current logic without re-subscribing every render.
+  const discardEmptySessionRef = useRef(discardEmptySession);
+  useEffect(() => {
+    discardEmptySessionRef.current = discardEmptySession;
+  });
+  useEffect(
+    () => () => {
+      void discardEmptySessionRef.current(activeSessionIdRef.current);
+    },
+    [],
+  );
+
   const { resetTabs } = tabs;
   useEffect(() => {
     resetTabs();
-    setOpenArtifact(null);
+    setWorkareaTabs([]);
+    setActiveWorkareaTabId(null);
+    tabEnvironmentsRef.current.clear();
+    tabEnvironmentWaitersRef.current.clear();
+    tabBridgesRef.current.clear();
   }, [activeSessionId, resetTabs]);
 
   // Mirror the project's resources into the active session's catalog so the
@@ -112,6 +219,13 @@ export function TangentProjectProvider({
             toHostResourceInput(resource),
           );
         }
+        if (cancelled) return;
+        if (project?.memory) {
+          await addSessionResource(
+            activeSessionId,
+            toMemoryResourceInput(project.memory),
+          );
+        }
       } catch (error) {
         if (!cancelled) notify(getErrorMessage(error), "error");
       }
@@ -119,24 +233,82 @@ export function TangentProjectProvider({
     return () => {
       cancelled = true;
     };
-  }, [activeSessionId, projectId, addSessionResource, notify]);
+  }, [activeSessionId, projectId, project?.memory, addSessionResource, notify]);
 
-  function selectSession(sessionId: string) {
-    void setActiveSession(projectId, sessionId);
+  async function discardEmptySession(sessionId: string | undefined) {
+    if (!sessionId) return;
+    if (sessionsWithPromptRef.current.has(sessionId)) return;
+    const session = await getSession(sessionId);
+    if (!session || session.openingPrompt?.trim()) return;
+    try {
+      await deleteEmbedSession(sessionId);
+    } catch {
+      // Best-effort: the local row is removed regardless so the UI stays clean.
+    }
+    await removeSession(sessionId);
+    const currentProject = await getProject(projectId);
+    if (currentProject?.activeSessionId !== sessionId) return;
+    const remaining = await listProjectSessions(projectId);
+    if (remaining.length > 0) {
+      await setActiveSession(projectId, remaining[remaining.length - 1].id);
+    } else {
+      await clearActiveSession(projectId);
+    }
+  }
+
+  async function selectSession(sessionId: string) {
+    const previous = activeSessionIdRef.current;
+    await setActiveSession(projectId, sessionId);
+    if (previous && previous !== sessionId) {
+      await discardEmptySession(previous);
+    }
+  }
+
+  function recordSessionPrompt(content: string) {
+    const sessionId = activeSessionIdRef.current;
+    if (!sessionId) return;
+    const trimmed = content.trim();
+    if (!trimmed) return;
+    if (sessionsWithPromptRef.current.has(sessionId)) return;
+    sessionsWithPromptRef.current.add(sessionId);
+    void setOpeningPrompt(sessionId, trimmed).catch((error) => {
+      notify(getErrorMessage(error), "error");
+    });
+  }
+
+  async function setMemory(content: string) {
+    await setProjectMemory(projectId, content);
+    if (!activeSessionId) return;
+    try {
+      await addSessionResource(activeSessionId, toMemoryResourceInput(content));
+    } catch (error) {
+      notify(getErrorMessage(error), "error");
+    }
   }
 
   async function startSession() {
     if (isStartingSession) return;
+    const previous = activeSessionIdRef.current;
     setIsStartingSession(true);
     try {
       const projectResources = await listProjectResources(projectId);
-      const { sessionId } = await newSession(
-        "New Tangent session",
-        TANGENT_BUNDLE_ID,
-        { resources: projectResources.map(toHostResourceInput) },
-      );
+      const seededResources = [
+        ...projectResources.map(toHostResourceInput),
+        ...(project?.memory?.trim()
+          ? [toMemoryResourceInput(project.memory)]
+          : []),
+      ];
+      // Empty prompt: the embed skips the opening turn, so the human types the
+      // first message. `name` labels the session in Tangent's own session list.
+      const { sessionId } = await newSession("", TANGENT_BUNDLE_ID, {
+        name: "New Tangent session",
+        resources: seededResources,
+      });
       await addSession({ sessionId, projectId });
       await setActiveSession(projectId, sessionId);
+      if (previous && previous !== sessionId) {
+        await discardEmptySession(previous);
+      }
     } catch (error) {
       notify(getErrorMessage(error), "error");
     } finally {
@@ -165,12 +337,130 @@ export function TangentProjectProvider({
     }
   }
 
-  function onOpenArtifact(url: string, title: string) {
-    setOpenArtifact({ url, title });
+  function openArtifactTab(url: string, title: string): WorkareaTab {
+    const existing = workareaTabs.find(
+      (tab) => tab.kind === "artifact" && tab.url === url,
+    );
+    if (existing) {
+      setActiveWorkareaTabId(existing.id);
+      return existing;
+    }
+    const tab: WorkareaTab = {
+      id: crypto.randomUUID(),
+      kind: "artifact",
+      title,
+      url,
+    };
+    setWorkareaTabs((prev) => [...prev, tab]);
+    setActiveWorkareaTabId(tab.id);
+    return tab;
   }
 
-  function closeArtifact() {
-    setOpenArtifact(null);
+  function openPipelineTab(
+    pipelineRef: PipelineRef,
+    title: string,
+  ): WorkareaTab {
+    const existing = workareaTabs.find(
+      (tab) =>
+        tab.kind === "pipeline" &&
+        (pipelineRef.fileId
+          ? tab.pipelineRef.fileId === pipelineRef.fileId
+          : tab.pipelineRef.name === pipelineRef.name),
+    );
+    if (existing) {
+      setActiveWorkareaTabId(existing.id);
+      return existing;
+    }
+    const tab: WorkareaTab = {
+      id: crypto.randomUUID(),
+      kind: "pipeline",
+      title,
+      pipelineRef,
+    };
+    setWorkareaTabs((prev) => [...prev, tab]);
+    setActiveWorkareaTabId(tab.id);
+    return tab;
+  }
+
+  async function openWorkareaTarget(
+    target: string,
+    title?: string,
+  ): Promise<WorkareaTab> {
+    const view = await resolveWorkareaTarget(target, { backendUrl, title });
+    if (view.kind === "artifact") {
+      return openArtifactTab(view.url, view.title);
+    }
+    return openPipelineTab(view.pipelineRef, view.title);
+  }
+
+  function selectWorkareaTab(id: string) {
+    setActiveWorkareaTabId(id);
+  }
+
+  function closeWorkareaTab(id: string) {
+    unregisterTabEnvironment(id);
+    unregisterTabBridge(id);
+    setWorkareaTabs((prev) => {
+      const next = prev.filter((tab) => tab.id !== id);
+      setActiveWorkareaTabId((current) => {
+        if (current !== id) return current;
+        return next.length > 0 ? next[next.length - 1].id : null;
+      });
+      return next;
+    });
+  }
+
+  function registerTabEnvironment(tabId: string, environmentId: string) {
+    tabEnvironmentsRef.current.set(tabId, environmentId);
+    const waiters = tabEnvironmentWaitersRef.current.get(tabId);
+    if (!waiters) return;
+    tabEnvironmentWaitersRef.current.delete(tabId);
+    for (const resolve of waiters) resolve(environmentId);
+  }
+
+  function unregisterTabEnvironment(tabId: string) {
+    tabEnvironmentsRef.current.delete(tabId);
+  }
+
+  function getTabEnvironmentId(tabId: string): string | undefined {
+    return tabEnvironmentsRef.current.get(tabId);
+  }
+
+  function waitForTabEnvironment(
+    tabId: string,
+    timeoutMs: number = DEFAULT_ENVIRONMENT_WAIT_MS,
+  ): Promise<string | undefined> {
+    const existing = tabEnvironmentsRef.current.get(tabId);
+    if (existing) return Promise.resolve(existing);
+    return new Promise((resolve) => {
+      const waiters =
+        tabEnvironmentWaitersRef.current.get(tabId) ??
+        new Set<(environmentId: string) => void>();
+      tabEnvironmentWaitersRef.current.set(tabId, waiters);
+      const onReady = (environmentId: string) => {
+        clearTimeout(timer);
+        resolve(environmentId);
+      };
+      const timer = setTimeout(() => {
+        waiters.delete(onReady);
+        resolve(undefined);
+      }, timeoutMs);
+      waiters.add(onReady);
+    });
+  }
+
+  function registerTabBridge(tabId: string, bridge: ToolBridgeApi) {
+    tabBridgesRef.current.set(tabId, bridge);
+  }
+
+  function unregisterTabBridge(tabId: string) {
+    tabBridgesRef.current.delete(tabId);
+  }
+
+  function getActiveTabBridge(): ToolBridgeApi | undefined {
+    const activeId = activeWorkareaTabIdRef.current;
+    if (!activeId) return undefined;
+    return tabBridgesRef.current.get(activeId);
   }
 
   function onError(message: string) {
@@ -184,14 +474,29 @@ export function TangentProjectProvider({
     activeSessionId,
     isStartingSession,
     resources,
+    memory: project?.memory ?? "",
     selectSession,
     startSession,
+    recordSessionPrompt,
+    setMemory,
     attachResource,
     detachResource,
     tabs,
-    openArtifact,
-    onOpenArtifact,
-    closeArtifact,
+    workareaTabs,
+    activeWorkareaTabId,
+    openArtifactTab,
+    openPipelineTab,
+    openWorkareaTarget,
+    selectWorkareaTab,
+    closeWorkareaTab,
+    registerTabEnvironment,
+    unregisterTabEnvironment,
+    getTabEnvironmentId,
+    waitForTabEnvironment,
+    registerTabBridge,
+    unregisterTabBridge,
+    getActiveTabBridge,
+    onOpenArtifact: openArtifactTab,
     onError,
   };
 

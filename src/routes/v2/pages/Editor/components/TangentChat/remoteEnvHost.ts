@@ -25,11 +25,13 @@ import {
   type RemoteKillCommand,
   type RemoteMessageCommand,
   type RemoteSpawnCommand,
+  type RemoteToolMap,
 } from "@tangent/remote-subagent";
 import type { Remote } from "comlink";
 import { proxy } from "comlink";
 
 import type { RemoteEnvWorkerApi } from "@/agent/createRemoteEnvWorkerApi";
+import { getTangentSocketConfig } from "@/routes/v2/shared/tangent/socketConfig";
 
 const THINKING_STATUS_LABELS = new Set([
   "Thinking...",
@@ -53,6 +55,14 @@ export interface RemoteEnvHostOptions {
   worker: Remote<RemoteEnvWorkerApi>;
   /** Surface a connection/runtime error to the user. */
   onError?: (message: string) => void;
+  /**
+   * RPC tools to register on the same environment (e.g. the workarea tools), so
+   * one connection can both host sub-agents and answer tool calls. Requires
+   * {@link RemoteEnvHostOptions.sessionId}.
+   */
+  tools?: RemoteToolMap;
+  /** The session the {@link RemoteEnvHostOptions.tools} are registered for. */
+  sessionId?: string;
 }
 
 export interface RemoteEnvHost {
@@ -65,7 +75,7 @@ export interface RemoteEnvHost {
 export function createRemoteEnvHost(
   options: RemoteEnvHostOptions,
 ): RemoteEnvHost {
-  const { url, worker, onError } = options;
+  const { url, worker, onError, tools, sessionId } = options;
 
   let client: RemoteEnvironmentClient | null = null;
   const turnChains = new Map<string, Promise<void>>();
@@ -169,11 +179,17 @@ export function createRemoteEnvHost(
   return {
     connect(token, environmentId) {
       client?.disconnect();
+      // Mirror TangentEmbedProvider: split a mounted-prefix baseUrl so the
+      // namespace stays `/remote-env` and the transport path keeps the prefix
+      // (e.g. `/tangent/socket.io`) instead of hitting the host root.
+      const { socketUrl, socketPath } = getTangentSocketConfig(url);
       client = connectRemoteEnvironment({
-        url,
+        url: socketUrl,
+        socketPath,
         token,
         environmentId,
         handlers,
+        ...(tools ? { tools, sessionId } : {}),
       });
       client.socket.on("connect_error", (error: Error) => {
         onError?.(`Tangent editor control failed to connect: ${error.message}`);

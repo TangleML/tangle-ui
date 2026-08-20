@@ -13,14 +13,15 @@ import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 
 import type { RemoteEnvWorkerApi } from "@/agent/createRemoteEnvWorkerApi";
+import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import { useAuthLocalStorage } from "@/components/shared/Authentication/useAuthLocalStorage";
 import { useAiProviderSettings } from "@/hooks/useAiProviderSettings";
+import { useTangentSettings } from "@/hooks/useTangentSettings";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useBackend } from "@/providers/BackendProvider";
 import { createEditorToolBridge } from "@/routes/v2/pages/Editor/components/AiChat/toolBridge";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
-import { TANGENT_BASE_URL } from "@/utils/constants";
 import { getErrorMessage } from "@/utils/string";
 
 import { fetchRemoteEnvToken } from "./fetchRemoteEnvToken";
@@ -34,11 +35,35 @@ const MIN_TOKEN_REFRESH_MS = 5_000;
 interface TangentEditorAgentProviderProps {
   sessionId: string;
   children: ReactNode;
+  /**
+   * A stable environment id to pin across token refreshes. Required when
+   * several editor environments share one session (e.g. one per workarea tab)
+   * so the server can route spawns to this specific editor. Omit for the
+   * single-editor case, where the server-minted id is fine.
+   */
+  environmentId?: string;
+  /** Called with the connected environment id after each (re)connect. */
+  onEnvironmentReady?: (environmentId: string) => void;
+  /** Called when the host disconnects (e.g. on unmount). */
+  onEnvironmentClosed?: () => void;
+  /**
+   * Called with this editor's live `ToolBridgeApi` on mount, so a surrounding
+   * host (e.g. the Tangent project) can drive this pipeline for spawns not
+   * bound to this tab's own environment.
+   */
+  onBridgeReady?: (bridge: ToolBridgeApi) => void;
+  /** Called when this editor unmounts and its bridge is no longer live. */
+  onBridgeClosed?: () => void;
 }
 
 export function TangentEditorAgentProvider({
   sessionId,
   children,
+  environmentId,
+  onEnvironmentReady,
+  onEnvironmentClosed,
+  onBridgeReady,
+  onBridgeClosed,
 }: TangentEditorAgentProviderProps) {
   const notify = useToastNotification();
   const { navigation } = useSharedStores();
@@ -47,6 +72,7 @@ export function TangentEditorAgentProvider({
   const authStorage = useAuthLocalStorage();
   const queryClient = useQueryClient();
   const { config: aiConfig } = useAiProviderSettings();
+  const { baseUrl } = useTangentSettings();
 
   const backendUrlRef = useRef(backendUrl);
   const authToken = authStorage.getToken();
@@ -54,6 +80,11 @@ export function TangentEditorAgentProvider({
   const aiConfigRef = useRef(aiConfig);
   const notifyRef = useRef(notify);
   const workerRef = useRef<Comlink.Remote<RemoteEnvWorkerApi> | null>(null);
+  const environmentIdRef = useRef(environmentId);
+  const onEnvironmentReadyRef = useRef(onEnvironmentReady);
+  const onEnvironmentClosedRef = useRef(onEnvironmentClosed);
+  const onBridgeReadyRef = useRef(onBridgeReady);
+  const onBridgeClosedRef = useRef(onBridgeClosed);
 
   useEffect(() => {
     backendUrlRef.current = backendUrl;
@@ -64,6 +95,21 @@ export function TangentEditorAgentProvider({
   useEffect(() => {
     notifyRef.current = notify;
   }, [notify]);
+  useEffect(() => {
+    environmentIdRef.current = environmentId;
+  }, [environmentId]);
+  useEffect(() => {
+    onEnvironmentReadyRef.current = onEnvironmentReady;
+  }, [onEnvironmentReady]);
+  useEffect(() => {
+    onEnvironmentClosedRef.current = onEnvironmentClosed;
+  }, [onEnvironmentClosed]);
+  useEffect(() => {
+    onBridgeReadyRef.current = onBridgeReady;
+  }, [onBridgeReady]);
+  useEffect(() => {
+    onBridgeClosedRef.current = onBridgeClosed;
+  }, [onBridgeClosed]);
 
   // The bridge closes over the navigation/undo stores plus backend/auth
   // read lazily via refs, so a single instance survives config changes —
@@ -79,6 +125,14 @@ export function TangentEditorAgentProvider({
       undo: editorSession.undo,
     }),
   );
+
+  // Publish this editor's bridge to any surrounding host for its lifetime. The
+  // bridge instance is stable, so this registers once on mount and clears on
+  // unmount regardless of how the callbacks change.
+  useEffect(() => {
+    onBridgeReadyRef.current?.(bridge);
+    return () => onBridgeClosedRef.current?.();
+  }, [bridge]);
 
   // Push AI config into the worker whenever the user changes it, so a turn
   // uses the latest provider settings without rebuilding the connection.
@@ -101,20 +155,26 @@ export function TangentEditorAgentProvider({
     void remote.setAiConfig(aiConfigRef.current);
 
     const host = createRemoteEnvHost({
-      url: TANGENT_BASE_URL,
+      url: baseUrl,
       worker: remote,
       onError,
     });
 
     async function connectWithFreshToken(): Promise<void> {
       try {
-        const { token, environmentId, expiresAt } = await fetchRemoteEnvToken({
-          baseUrl: TANGENT_BASE_URL,
+        const {
+          token,
+          environmentId: connectedEnvironmentId,
+          expiresAt,
+        } = await fetchRemoteEnvToken({
+          baseUrl,
           sessionId,
           authToken: authTokenRef.current,
+          environmentId: environmentIdRef.current,
         });
         if (cancelled) return;
-        host.connect(token, environmentId);
+        host.connect(token, connectedEnvironmentId);
+        onEnvironmentReadyRef.current?.(connectedEnvironmentId);
         if (expiresAt) {
           const delay = Math.max(
             expiresAt - Date.now() - TOKEN_REFRESH_BUFFER_MS,
@@ -135,8 +195,9 @@ export function TangentEditorAgentProvider({
       host.disconnect();
       worker.terminate();
       workerRef.current = null;
+      onEnvironmentClosedRef.current?.();
     };
-  }, [sessionId, bridge]);
+  }, [sessionId, bridge, baseUrl]);
 
   return <>{children}</>;
 }

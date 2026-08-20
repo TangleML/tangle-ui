@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { tangentDb } from "./db";
 import {
+  clearActiveSession,
   createProject,
   deleteProject,
   deriveProjectName,
@@ -11,8 +12,15 @@ import {
   listProjects,
   renameProject,
   setActiveSession,
+  setProjectMemory,
 } from "./projects";
-import { addSession, listProjectSessions } from "./sessions";
+import {
+  addSession,
+  getSession,
+  listProjectSessions,
+  removeSession,
+  setOpeningPrompt,
+} from "./sessions";
 
 afterEach(async () => {
   await tangentDb.projects.clear();
@@ -57,6 +65,16 @@ describe("project storage", () => {
     expect(updated?.name).toBe("New name");
   });
 
+  it("persists project memory and bumps updatedAt", async () => {
+    const project = await createProject("With memory");
+    await new Promise((resolve) => setTimeout(resolve, 2));
+    await setProjectMemory(project.id, "Prefer concise plans.");
+
+    const updated = await getProject(project.id);
+    expect(updated?.memory).toBe("Prefer concise plans.");
+    expect(updated?.updatedAt).toBeGreaterThan(project.updatedAt);
+  });
+
   it("links a session and marks it active", async () => {
     const project = await createProject("With session");
     await addSession({
@@ -82,5 +100,44 @@ describe("project storage", () => {
 
     expect(await getProject(project.id)).toBeUndefined();
     expect(await listProjectSessions(project.id)).toHaveLength(0);
+  });
+
+  it("adds a session without an opening prompt", async () => {
+    const project = await createProject("Empty");
+    await addSession({ sessionId: "session-empty", projectId: project.id });
+
+    const session = await getSession("session-empty");
+    expect(session?.openingPrompt).toBeUndefined();
+  });
+
+  it("records an opening prompt on first send", async () => {
+    const project = await createProject("Prompted");
+    await addSession({ sessionId: "session-p", projectId: project.id });
+
+    await setOpeningPrompt("session-p", "Build a churn model");
+
+    const session = await getSession("session-p");
+    expect(session?.openingPrompt).toBe("Build a churn model");
+  });
+
+  it("removes a session", async () => {
+    const project = await createProject("Removable");
+    await addSession({ sessionId: "session-r", projectId: project.id });
+
+    await removeSession("session-r");
+
+    expect(await getSession("session-r")).toBeUndefined();
+    expect(await listProjectSessions(project.id)).toHaveLength(0);
+  });
+
+  it("clears the active session", async () => {
+    const project = await createProject("Deactivating");
+    await addSession({ sessionId: "session-a", projectId: project.id });
+    await setActiveSession(project.id, "session-a");
+
+    await clearActiveSession(project.id);
+
+    const updated = await getProject(project.id);
+    expect(updated?.activeSessionId).toBeUndefined();
   });
 });

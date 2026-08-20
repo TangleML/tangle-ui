@@ -20,6 +20,7 @@ import type {
   TypeSpecType,
 } from "@/models/componentSpec";
 import { isGraphImplementation } from "@/utils/componentSpec";
+import { deepClone } from "@/utils/deepClone";
 
 type AiInputSpec = Pick<Input, "$id" | "name" | "type"> & {
   description?: string;
@@ -145,14 +146,16 @@ export function serializeSpecForAi(
   spec: ComponentSpec,
   { activeSubgraphPath = [] }: SerializeSpecOptions = {},
 ): AiSpec {
-  return pickDefined({
-    name: spec.name,
-    description: spec.description || undefined,
-    inputs: spec.inputs.map(serializeInput),
-    outputs: spec.outputs.map(serializeOutput),
-    tasks: spec.tasks.map(serializeTask),
-    bindings: spec.bindings.map(serializeBinding),
-    activeSubgraphPath:
-      activeSubgraphPath.length > 0 ? activeSubgraphPath : undefined,
-  });
+  return deepClone(
+    pickDefined({
+      name: spec.name,
+      description: spec.description || undefined,
+      inputs: spec.inputs.map(serializeInput),
+      outputs: spec.outputs.map(serializeOutput),
+      tasks: spec.tasks.map(serializeTask),
+      bindings: spec.bindings.map(serializeBinding),
+      activeSubgraphPath:
+        activeSubgraphPath.length > 0 ? activeSubgraphPath : undefined,
+    }),
+  );
 }

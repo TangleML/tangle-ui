@@ -4,8 +4,13 @@ import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProj
 import { TangentChatPane } from "@/routes/v2/shared/tangent/TangentChatPane";
 
 export function ProjectChatArea() {
-  const { activeSessionId, tabs, onOpenArtifact, onError } =
-    useTangentProject();
+  const {
+    activeSessionId,
+    tabs,
+    onOpenArtifact,
+    recordSessionPrompt,
+    onError,
+  } = useTangentProject();
 
   if (!activeSessionId) {
     return (
@@ -32,6 +37,7 @@ export function ProjectChatArea() {
       onTabChange={tabs.setActiveTab}
       onCloseTab={tabs.closeTab}
       onOpenArtifact={onOpenArtifact}
+      onSendPrompt={recordSessionPrompt}
       onError={onError}
     />
   );

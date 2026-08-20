@@ -16,6 +16,7 @@ interface TangentChatPaneProps {
   onTabChange: (value: string) => void;
   onCloseTab: (id: string) => void;
   onOpenArtifact?: (url: string, title: string) => void;
+  onSendPrompt?: (content: string) => void;
   onError?: (message: string) => void;
 }
 
@@ -31,6 +32,7 @@ export function TangentChatPane({
   onTabChange,
   onCloseTab,
   onOpenArtifact,
+  onSendPrompt,
   onError,
 }: TangentChatPaneProps) {
   return (
@@ -64,6 +66,7 @@ export function TangentChatPane({
             className="h-full min-h-0"
             style={{ height: "100%" }}
             onOpenArtifact={onOpenArtifact}
+            onSendPrompt={onSendPrompt}
             onError={onError}
           />
         </TabsContent>
@@ -80,6 +83,7 @@ export function TangentChatPane({
               className="h-full min-h-0"
               style={{ height: "100%" }}
               onOpenArtifact={onOpenArtifact}
+              onSendPrompt={onSendPrompt}
               onError={onError}
             />
           </TabsContent>

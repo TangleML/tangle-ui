@@ -1,10 +1,10 @@
-import { useTangent } from "@tangent/embed-react";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
 import useToastNotification from "@/hooks/useToastNotification";
 import { APP_ROUTES } from "@/routes/appRoutes";
 import { TANGENT_BUNDLE_ID } from "@/routes/v2/shared/tangent/constants";
+import { useTangent } from "@/routes/v2/shared/tangent/TangentEmbedProvider";
 import {
   createProject,
   deriveProjectName,

@@ -1,31 +1,83 @@
 import { ArtifactViewer } from "@tangent/embed-react";
 import { useState } from "react";
 
-import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
-import { BlockStack, InlineStack } from "@/components/ui/layout";
+import { BlockStack } from "@/components/ui/layout";
 import { VerticalResizeHandle } from "@/components/ui/resize-handle";
+import { Tabs, TabsContent, TabsList } from "@/components/ui/tabs";
 import { Text } from "@/components/ui/typography";
+import { EmbeddedPipelineEditor } from "@/routes/v2/pages/Editor/EmbeddedPipelineEditor";
+import type { WorkareaTab } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
 import { useTangentProject } from "@/routes/v2/pages/Tangent/context/TangentProjectContext";
+import { CloseableTabTrigger } from "@/routes/v2/shared/tangent/CloseableTabTrigger";
 
-const DEFAULT_WIDTH = 460;
+const DEFAULT_WIDTH = 960;
 const MIN_WIDTH = 320;
-const MAX_WIDTH = 760;
+const MAX_WIDTH = 960;
+
+/** Stable, per-tab remote-env id so the server can route spawns to this editor. */
+function pipelineEnvironmentId(sessionId: string, tabId: string): string {
+  return `${sessionId}:${tabId}`;
+}
+
+function WorkareaArtifactBody({
+  tab,
+  sessionId,
+}: {
+  tab: Extract<WorkareaTab, { kind: "artifact" }>;
+  sessionId: string | undefined;
+}) {
+  if (sessionId === undefined) {
+    return (
+      <BlockStack
+        gap="1"
+        align="center"
+        className="min-h-0 flex-1 justify-center p-6 text-center"
+      >
+        <Text size="sm" tone="subdued">
+          Start a session to view this artifact.
+        </Text>
+      </BlockStack>
+    );
+  }
+  return (
+    <ArtifactViewer
+      sessionId={sessionId}
+      url={tab.url}
+      title={tab.title}
+      className="min-h-0 flex-1"
+      style={{ height: "100%" }}
+    />
+  );
+}
 
 /**
- * The right-hand "Dynamic Workarea": a tabbed surface that later phases fill
- * with an Editor canvas, an ArtifactViewer, a RunView, or other context-driven
- * views. Today it renders an opened Tangent artifact, or an empty state.
+ * The right-hand "Dynamic Workarea": a tabbed surface people and Tangent agents
+ * fill with the right view for the task. Each tab is either an embedded pipeline
+ * editor canvas or a Tangent artifact viewer.
+ *
+ * Pipeline tabs are kept mounted (via `forceMount`, hidden when inactive) so
+ * each one's per-tab editor agent stays connected even in the background —
+ * letting a Tangent agent drive several open pipelines at once. Artifact tabs
+ * mount lazily since they hold no live agent.
  */
 export function DynamicWorkarea() {
-  const { openArtifact, activeSessionId, closeArtifact } = useTangentProject();
+  const {
+    workareaTabs,
+    activeWorkareaTabId,
+    activeSessionId,
+    selectWorkareaTab,
+    closeWorkareaTab,
+    registerTabEnvironment,
+    unregisterTabEnvironment,
+    registerTabBridge,
+    unregisterTabBridge,
+  } = useTangentProject();
   const [width, setWidth] = useState(DEFAULT_WIDTH);
 
   function handleResizeEnd(attemptedWidth: number) {
     setWidth(Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, attemptedWidth)));
   }
-
-  const showArtifact = openArtifact !== null && activeSessionId !== undefined;
 
   return (
     <div
@@ -38,41 +90,64 @@ export function DynamicWorkarea() {
         maxWidth={MAX_WIDTH}
         onResizeEnd={handleResizeEnd}
       />
-      <InlineStack
-        gap="2"
-        blockAlign="center"
-        align="space-between"
-        className="h-9 shrink-0 border-b border-border px-3"
-      >
-        <Text
-          size="xs"
-          weight="semibold"
-          tone="subdued"
-          className="min-w-0 truncate"
+      {workareaTabs.length > 0 ? (
+        <Tabs
+          value={activeWorkareaTabId ?? undefined}
+          onValueChange={selectWorkareaTab}
+          className="flex h-full min-h-0 flex-col gap-1"
         >
-          {showArtifact ? openArtifact.title : "Workarea"}
-        </Text>
-        {showArtifact ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="min"
-            aria-label="Close artifact"
-            title="Close artifact"
-            onClick={closeArtifact}
-          >
-            <Icon name="X" size="xs" />
-          </Button>
-        ) : null}
-      </InlineStack>
-      {showArtifact ? (
-        <ArtifactViewer
-          sessionId={activeSessionId}
-          url={openArtifact.url}
-          title={openArtifact.title}
-          className="min-h-0 flex-1"
-          style={{ height: "100%" }}
-        />
+          <TabsList className="max-w-full shrink-0 overflow-x-auto rounded-none border-b border-border bg-card">
+            {workareaTabs.map((tab) => (
+              <CloseableTabTrigger
+                key={tab.id}
+                value={tab.id}
+                title={tab.title}
+                icon={tab.kind === "pipeline" ? "Workflow" : "FileText"}
+                onClose={() => closeWorkareaTab(tab.id)}
+              />
+            ))}
+          </TabsList>
+          {workareaTabs.map((tab) => {
+            if (tab.kind === "pipeline") {
+              return (
+                <TabsContent
+                  key={tab.id}
+                  value={tab.id}
+                  forceMount
+                  className="flex min-h-0 flex-1 flex-col data-[state=inactive]:hidden"
+                >
+                  <EmbeddedPipelineEditor
+                    pipelineRef={tab.pipelineRef}
+                    sessionId={activeSessionId}
+                    environmentId={
+                      activeSessionId
+                        ? pipelineEnvironmentId(activeSessionId, tab.id)
+                        : undefined
+                    }
+                    onEnvironmentReady={(environmentId) =>
+                      registerTabEnvironment(tab.id, environmentId)
+                    }
+                    onEnvironmentClosed={() => unregisterTabEnvironment(tab.id)}
+                    onBridgeReady={(bridge) =>
+                      registerTabBridge(tab.id, bridge)
+                    }
+                    onBridgeClosed={() => unregisterTabBridge(tab.id)}
+                  />
+                </TabsContent>
+              );
+            }
+            if (tab.id !== activeWorkareaTabId) return null;
+            return (
+              <TabsContent
+                key={tab.id}
+                value={tab.id}
+                className="flex min-h-0 flex-1 flex-col"
+              >
+                <WorkareaArtifactBody tab={tab} sessionId={activeSessionId} />
+              </TabsContent>
+            );
+          })}
+        </Tabs>
       ) : (
         <BlockStack
           gap="2"

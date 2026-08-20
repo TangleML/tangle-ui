@@ -1,18 +1,20 @@
-import { TangentProvider } from "@tangent/embed-react";
 import { useParams } from "@tanstack/react-router";
 
 import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
+import { useTangentSettings } from "@/hooks/useTangentSettings";
 import { DialogProvider } from "@/providers/DialogProvider/DialogProvider";
 import { useTheme } from "@/providers/ThemeProvider";
 import { SharedStoreProvider } from "@/routes/v2/shared/store/SharedStoreContext";
-import { TANGENT_BASE_URL } from "@/utils/constants";
+import { TangentEmbedProvider } from "@/routes/v2/shared/tangent/TangentEmbedProvider";
+import { TOP_NAV_HEIGHT } from "@/utils/constants";
 
 import { TangentProjectWorkspace } from "./components/TangentProjectWorkspace";
 import { TangentProjectProvider } from "./context/TangentProjectContext";
 
 export function TangentProjectPage() {
   const { theme } = useTheme();
+  const { baseUrl } = useTangentSettings();
   const params = useParams({ strict: false });
   const projectId =
     "projectId" in params && typeof params.projectId === "string"
@@ -30,8 +32,11 @@ export function TangentProjectPage() {
   }
 
   return (
-    <div className="h-full w-full select-none bg-slate-100 dark:bg-background">
-      <TangentProvider baseUrl={TANGENT_BASE_URL} colorScheme={theme}>
+    <div
+      className="w-full overflow-hidden bg-slate-100 dark:bg-background"
+      style={{ height: `calc(100vh - ${TOP_NAV_HEIGHT}px)` }}
+    >
+      <TangentEmbedProvider key={baseUrl} baseUrl={baseUrl} colorScheme={theme}>
         <SharedStoreProvider>
           <TangentProjectProvider projectId={projectId}>
             <DialogProvider>
@@ -39,7 +44,7 @@ export function TangentProjectPage() {
             </DialogProvider>
           </TangentProjectProvider>
         </SharedStoreProvider>
-      </TangentProvider>
+      </TangentEmbedProvider>
     </div>
   );
 }

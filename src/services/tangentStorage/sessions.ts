@@ -30,3 +30,20 @@ export function listProjectSessions(
     .equals(projectId)
     .sortBy("createdAt");
 }
+
+export function getSession(
+  sessionId: string,
+): Promise<TangentSession | undefined> {
+  return tangentDb.sessions.get(sessionId);
+}
+
+export async function setOpeningPrompt(
+  sessionId: string,
+  openingPrompt: string,
+): Promise<void> {
+  await tangentDb.sessions.update(sessionId, { openingPrompt });
+}
+
+export async function removeSession(sessionId: string): Promise<void> {
+  await tangentDb.sessions.delete(sessionId);
+}

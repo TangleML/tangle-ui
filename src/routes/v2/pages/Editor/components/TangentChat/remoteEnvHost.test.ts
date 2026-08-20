@@ -16,16 +16,22 @@ interface FakeClient {
   disconnect: ReturnType<typeof vi.fn>;
 }
 
+interface ConnectOptions {
+  url: string;
+  socketPath?: string;
+  handlers: Record<string, CommandHandler>;
+}
+
 const mockState = vi.hoisted(() => ({
   handlers: null as Record<string, CommandHandler> | null,
   client: null as FakeClient | null,
+  options: null as ConnectOptions | null,
 }));
 
 vi.mock("@tangent/remote-subagent", () => ({
-  connectRemoteEnvironment: (options: {
-    handlers: Record<string, CommandHandler>;
-  }) => {
+  connectRemoteEnvironment: (options: ConnectOptions) => {
     mockState.handlers = options.handlers;
+    mockState.options = options;
     return mockState.client;
   },
 }));
@@ -76,8 +82,30 @@ describe("createRemoteEnvHost", () => {
 
   beforeEach(() => {
     mockState.handlers = null;
+    mockState.options = null;
     client = makeClient();
     mockState.client = client;
+  });
+
+  it("splits a mounted-prefix baseUrl into origin url and prefixed socket path", () => {
+    const worker = makeWorker();
+    const host = createRemoteEnvHost({
+      url: "https://oasis-staging.shopify.io/tangent",
+      worker,
+    });
+    host.connect("token", "env-1");
+
+    expect(mockState.options?.url).toBe("https://oasis-staging.shopify.io");
+    expect(mockState.options?.socketPath).toBe("/tangent/socket.io");
+  });
+
+  it("uses the default socket path for a bare origin baseUrl", () => {
+    const worker = makeWorker();
+    const host = createRemoteEnvHost({ url: "http://localhost:5173", worker });
+    host.connect("token", "env-1");
+
+    expect(mockState.options?.url).toBe("http://localhost:5173");
+    expect(mockState.options?.socketPath).toBe("/socket.io");
   });
 
   it("spawns an agent and marks it active on onSpawn", async () => {
