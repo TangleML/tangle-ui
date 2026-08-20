@@ -98,8 +98,8 @@ const EXECUTION_STATUS_PRIORITY = [
   "WAITING_FOR_UPSTREAM",
   "QUEUED",
   "UNINITIALIZED",
-  "SKIPPED",
   "SUCCEEDED",
+  "SKIPPED",
 ] as const;
 
 export type ExecutionStatusStats = Record<string, number>;

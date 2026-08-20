@@ -130,6 +130,19 @@ describe("getOverallExecutionStatusFromStats()", () => {
     ).toBe("RUNNING");
   });
 
+  test("returns succeeded when completed tasks include intentional skips", () => {
+    expect(
+      getOverallExecutionStatusFromStats({
+        SUCCEEDED: 2,
+        SKIPPED: 1,
+      }),
+    ).toBe("SUCCEEDED");
+  });
+
+  test("returns skipped when every task was skipped", () => {
+    expect(getOverallExecutionStatusFromStats({ SKIPPED: 3 })).toBe("SKIPPED");
+  });
+
   test("returns raw status values (use getExecutionStatusLabel for display)", () => {
     expect(
       getOverallExecutionStatusFromStats({
