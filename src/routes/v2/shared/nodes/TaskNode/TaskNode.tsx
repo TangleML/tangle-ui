@@ -23,7 +23,6 @@ import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { AggregatorOutputType } from "@/types/aggregator";
 import {
   EDITOR_COLLAPSED_ANNOTATION,
-  EDITOR_CONDITIONAL_EXECUTION_ANNOTATION,
   isPipelineAggregator,
   TASK_COLOR_ANNOTATION,
 } from "@/utils/annotations";
@@ -31,6 +30,7 @@ import { isSecretArgument } from "@/utils/componentSpec";
 import {
   IS_ENABLED_INPUT_LABEL,
   IS_ENABLED_PORT_NAME,
+  isTaskConditional,
 } from "@/utils/conditionalExecution";
 import { ISO8601_DURATION_ZERO_DAYS } from "@/utils/constants";
 import type { ExecutionStatusStats } from "@/utils/executionStatus";
@@ -306,13 +306,11 @@ export const TaskNode = observer(function TaskNode({
   const connectedPorts = resolveConnectedPortNames(entityId, spec);
   const inputDisplayData = resolveInputDisplayData(task, entityId, spec);
 
-  // In "Conditional" execution mode a virtual "Is enabled?" input is exposed so
-  // the user can connect an upstream value that gates the task. The connection
-  // itself is an ordinary binding to the reserved port, so its display value and
-  // connected state are already resolved above.
-  const isConditionalExecution =
-    task.annotations.get(EDITOR_CONDITIONAL_EXECUTION_ANNOTATION) === "true" ||
-    connectedPorts.inputs.has(IS_ENABLED_PORT_NAME);
+  // A conditional task exposes a virtual "Is enabled?" input so the user can
+  // connect an upstream value that gates it. A connection is an ordinary binding
+  // to the reserved port, so its display value and connected state are already
+  // resolved above; a literal lives on the entity and is filled in here.
+  const isConditionalExecution = isTaskConditional(task, spec);
   const displayInputs: TaskNodeInput[] = isConditionalExecution
     ? [
         ...inputs,
@@ -323,6 +321,13 @@ export const TaskNode = observer(function TaskNode({
         },
       ]
     : inputs;
+  const inputDisplayValues =
+    isConditionalExecution && typeof task.isEnabled === "string"
+      ? {
+          [IS_ENABLED_PORT_NAME]: task.isEnabled,
+          ...inputDisplayData.values,
+        }
+      : inputDisplayData.values;
 
   const isSelected = isEditorVisualNodeSelected(editor, id, !!selected);
 
@@ -357,7 +362,7 @@ export const TaskNode = observer(function TaskNode({
     subgraphExecutionStats,
     onOutputTypeChange: handleOutputTypeChange,
     digest: task.componentRef.digest,
-    inputDisplayValues: inputDisplayData.values,
+    inputDisplayValues,
     secretInputNames: inputDisplayData.secretInputNames,
     onNodeClick: handleClick,
     onInputClick: handleInputClick,

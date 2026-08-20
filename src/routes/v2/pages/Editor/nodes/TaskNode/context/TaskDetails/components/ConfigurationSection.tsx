@@ -11,15 +11,9 @@ import {
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { ColorPicker } from "@/components/ui/color";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Heading, Paragraph } from "@/components/ui/typography";
 import type { Task } from "@/models/componentSpec";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
@@ -27,13 +21,14 @@ import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import type { AnnotationConfig, Annotations } from "@/types/annotations";
 import {
   EDITOR_COLLAPSED_ANNOTATION,
-  EDITOR_CONDITIONAL_EXECUTION_ANNOTATION,
   TASK_COLOR_ANNOTATION,
 } from "@/utils/annotations";
-import { IS_ENABLED_PORT_NAME } from "@/utils/conditionalExecution";
+import {
+  isTaskConditional,
+  resolveConditionalReference,
+} from "@/utils/conditionalExecution";
 import { ISO8601_DURATION_ZERO_DAYS } from "@/utils/constants";
 
-import type { EnableTaskMode } from "./taskConfig.actions";
 import { useTaskConfigActions } from "./useTaskConfigActions";
 
 interface ConfigurationSectionProps {
@@ -52,30 +47,26 @@ export const ConfigurationSection = observer(function ConfigurationSection({
     setTaskColor,
     clearProviderAnnotations,
     setCollapsed,
-    setEnableTaskMode,
+    setTaskConditional,
+    setTaskCondition,
   } = useTaskConfigActions();
   const isSubgraph = task.subgraphSpec !== undefined;
 
-  const isConditionalConnected =
-    spec?.bindings.some(
-      (b) =>
-        b.targetEntityId === task.$id &&
-        b.targetPortName === IS_ENABLED_PORT_NAME,
-    ) ?? false;
-  const isConditional =
-    task.annotations.get(EDITOR_CONDITIONAL_EXECUTION_ANNOTATION) === "true" ||
-    isConditionalConnected;
-  const enableMode: EnableTaskMode = isConditional
-    ? "conditional"
-    : task.isEnabled === "false"
-      ? "false"
-      : "true";
+  const isConditional = isTaskConditional(task, spec);
+  const conditionReference = resolveConditionalReference(task, spec);
 
-  const handleEnableModeChange = (value: string) => {
+  const handleConditionalChange = (checked: boolean) => {
     if (!spec) return;
-    const mode = value as EnableTaskMode;
-    setEnableTaskMode(spec, task, mode);
-    track("v2.pipeline_editor.task_details.enable_task.change", { mode });
+    setTaskConditional(spec, task, checked);
+    track("v2.pipeline_editor.task_details.conditional_task.toggle", {
+      conditional: checked,
+    });
+  };
+
+  const handleConditionChange = (value: string) => {
+    const enabled = value === "true";
+    setTaskCondition(task, enabled);
+    track("v2.pipeline_editor.task_details.task_condition.change", { enabled });
   };
 
   const cacheDisabled =
@@ -196,33 +187,42 @@ export const ConfigurationSection = observer(function ConfigurationSection({
         <>
           <Separator />
 
-          <BlockStack gap="1">
+          <BlockStack gap="3">
             <InlineStack align="space-between" gap="2" className="w-full">
               <Paragraph size="xs" tone="subdued">
-                Enable task
+                Conditional task
               </Paragraph>
-              <Select value={enableMode} onValueChange={handleEnableModeChange}>
-                <SelectTrigger className="h-6 text-xs px-2 py-0 min-w-25">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="true" className="text-xs">
-                    True
-                  </SelectItem>
-                  <SelectItem value="false" className="text-xs">
-                    False
-                  </SelectItem>
-                  <SelectItem value="conditional" className="text-xs">
-                    Conditional
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <Switch
+                checked={isConditional}
+                onCheckedChange={handleConditionalChange}
+              />
             </InlineStack>
-            {isConditional && !isConditionalConnected && (
-              <Paragraph size="xs" tone="subdued">
-                Connect a task output or pipeline input to the “Is enabled?”
-                port on the node.
-              </Paragraph>
+
+            {isConditional && (
+              <InlineStack align="space-between" gap="2" className="w-full">
+                <Paragraph size="xs" tone="subdued">
+                  Condition
+                </Paragraph>
+                {conditionReference ? (
+                  <code className="text-2xs font-mono bg-muted rounded px-1.5 py-0.5 overflow-x-auto whitespace-nowrap max-w-50">
+                    {JSON.stringify(conditionReference)}
+                  </code>
+                ) : (
+                  <Tabs
+                    value={task.isEnabled === "false" ? "false" : "true"}
+                    onValueChange={handleConditionChange}
+                  >
+                    <TabsList className="h-6">
+                      <TabsTrigger value="true" className="text-xs px-2.5">
+                        True
+                      </TabsTrigger>
+                      <TabsTrigger value="false" className="text-xs px-2.5">
+                        False
+                      </TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                )}
+              </InlineStack>
             )}
           </BlockStack>
         </>

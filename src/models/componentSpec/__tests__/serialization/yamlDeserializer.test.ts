@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { EDITOR_CONDITIONAL_EXECUTION_ANNOTATION } from "@/utils/annotations";
 import { IS_ENABLED_PORT_NAME } from "@/utils/conditionalExecution";
 
 import { IncrementingIdGenerator } from "../../factories/idGenerator";
@@ -127,11 +126,8 @@ describe("YamlDeserializer", () => {
     const consumer = spec.tasks.find((t) => t.name === "Consumer");
     const producer = spec.tasks.find((t) => t.name === "Producer");
 
-    // Conditional mode: entity value cleared, mode annotation set.
+    // The binding is the sole record of the reference.
     expect(consumer?.isEnabled).toBeUndefined();
-    expect(
-      consumer?.annotations.get(EDITOR_CONDITIONAL_EXECUTION_ANNOTATION),
-    ).toBe("true");
 
     // A binding to the reserved port drives the connection.
     const binding = spec.bindings.find(
@@ -160,9 +156,6 @@ describe("YamlDeserializer", () => {
     const task = spec.tasks.at(0);
 
     expect(task?.isEnabled).toBe("false");
-    expect(
-      task?.annotations.get(EDITOR_CONDITIONAL_EXECUTION_ANNOTATION),
-    ).toBeUndefined();
     expect(spec.bindings.length).toBe(0);
   });
 

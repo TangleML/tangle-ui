@@ -1,6 +1,8 @@
 import { computed } from "mobx";
 import { idProp, Model, model, modelAction, prop } from "mobx-keystone";
 
+import { IS_ENABLED_PORT_NAME } from "@/utils/conditionalExecution";
+
 import { Annotations } from "../annotations";
 import { collectValidationIssues } from "../validation/collectIssues";
 import type {
@@ -105,15 +107,35 @@ export class ComponentSpec extends Model({
     this.bindings.push(binding);
   }
 
+  /**
+   * Unlike an ordinary argument, whose literal is retained and resurfaces when a
+   * connection is removed, the conditional gate has no meaningful "previous
+   * value": resurfacing `"false"` would silently keep the task disabled after
+   * the user deleted the condition. Dropping a gate binding resets it to enabled,
+   * which also keeps the task conditional so the port stays put.
+   */
+  @modelAction
+  private resetGateLiteral(binding: Binding | undefined) {
+    if (!binding || binding.targetPortName !== IS_ENABLED_PORT_NAME) return;
+    const task = this.tasks.find((t) => t.$id === binding.targetEntityId);
+    task?.setIsEnabled("true");
+  }
+
   @modelAction
   removeBinding(index: number) {
-    return this.bindings.splice(index, 1)[0];
+    const removed = this.bindings.splice(index, 1)[0];
+    this.resetGateLiteral(removed);
+    return removed;
   }
 
   @modelAction
   removeBindingBy(predicate: (b: Binding) => boolean): Binding | undefined {
     const idx = this.bindings.findIndex(predicate);
-    if (idx >= 0) return this.bindings.splice(idx, 1)[0];
+    if (idx >= 0) {
+      const removed = this.bindings.splice(idx, 1)[0];
+      this.resetGateLiteral(removed);
+      return removed;
+    }
     return undefined;
   }
 
@@ -129,6 +151,9 @@ export class ComponentSpec extends Model({
       if (predicate(this.bindings[i])) {
         removed.push(this.bindings.splice(i, 1)[0]);
       }
+    }
+    for (const binding of removed) {
+      this.resetGateLiteral(binding);
     }
     return removed;
   }
@@ -202,7 +227,7 @@ export class ComponentSpec extends Model({
   deleteEdgeById(bindingId: string): boolean {
     const idx = this.bindings.findIndex((b) => b.$id === bindingId);
     if (idx < 0) return false;
-    this.bindings.splice(idx, 1);
+    this.resetGateLiteral(this.bindings.splice(idx, 1)[0]);
     return true;
   }
 
