@@ -6,7 +6,7 @@ import {
   TASK_COLOR_ANNOTATION,
 } from "@/utils/annotations";
 import type { ConditionLiteral } from "@/utils/conditionalExecution";
-import { IS_ENABLED_PORT_NAME } from "@/utils/conditionalExecution";
+import { clearConditionalExecution } from "@/utils/conditionalExecution";
 import { ISO8601_DURATION_ZERO_DAYS } from "@/utils/constants";
 
 export function toggleCacheDisable(
@@ -70,12 +70,7 @@ export function setConditionalExecution(
       return;
     }
 
-    spec.removeAllBindingsBy(
-      (b) =>
-        b.targetEntityId === task.$id &&
-        b.targetPortName === IS_ENABLED_PORT_NAME,
-    );
-    task.setIsEnabled(undefined);
+    clearConditionalExecution(spec, task);
   });
 }
 

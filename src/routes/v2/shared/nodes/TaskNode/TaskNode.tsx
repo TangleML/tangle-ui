@@ -31,6 +31,7 @@ import {
   CONDITION_LITERAL_LABELS,
   describeConditionSource,
   IS_ENABLED_PORT_NAME,
+  isConditionalExecutionSupported,
   isTaskConditional,
   toConditionLiteral,
 } from "@/utils/conditionalExecution";
@@ -89,14 +90,6 @@ export interface TaskNodeViewProps {
   onInputClick: (inputName: string, event: MouseEvent | KeyboardEvent) => void;
   onOutputClick: (outputName: string, event: MouseEvent) => void;
   onHandleClick: (handleId: string, event: MouseEvent) => void;
-}
-
-function isTaskSubgraph(componentSpec: ComponentSpecJson | undefined): boolean {
-  const implementation = componentSpec?.implementation;
-  if (!implementation || typeof implementation !== "object") {
-    return false;
-  }
-  return "graph" in implementation;
 }
 
 interface InputDisplayData {
@@ -322,7 +315,7 @@ export const TaskNode = observer(function TaskNode({
     taskName: task.name,
     selected: isSelected,
     isHovered: editor.hoveredEntityId === entityId,
-    isSubgraph: isTaskSubgraph(componentSpec),
+    isSubgraph: task.isSubgraph,
     collapsed: isManuallyCollapsed,
     description,
     inputs,
@@ -334,7 +327,8 @@ export const TaskNode = observer(function TaskNode({
     cacheDisabled:
       task.executionOptions?.cachingStrategy?.maxCacheStaleness ===
       ISO8601_DURATION_ZERO_DAYS,
-    isConditional: isTaskConditional(task, spec),
+    isConditional:
+      isConditionalExecutionSupported(task) && isTaskConditional(task, spec),
     conditionDisplayValue:
       conditionReferenceLabel ??
       describeConditionSource(task.isEnabled) ??

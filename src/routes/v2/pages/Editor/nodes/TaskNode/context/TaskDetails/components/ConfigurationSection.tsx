@@ -32,6 +32,7 @@ import {
 import {
   CONDITION_LITERAL_LABELS,
   describeConditionSource,
+  isConditionalExecutionSupported,
   isTaskConditional,
   resolveConditionalReference,
   RUN_CONDITION_LABEL,
@@ -60,7 +61,7 @@ export const ConfigurationSection = observer(function ConfigurationSection({
     setConditionalExecution,
     setRunCondition,
   } = useTaskConfigActions();
-  const isSubgraph = task.subgraphSpec !== undefined;
+  const isSubgraph = task.isSubgraph;
   const conditionalSwitchId = useId();
   const runConditionLabelId = useId();
 
@@ -197,7 +198,7 @@ export const ConfigurationSection = observer(function ConfigurationSection({
         />
       </InlineStack>
 
-      {conditionalExecutionEnabled && (
+      {conditionalExecutionEnabled && isConditionalExecutionSupported(task) && (
         <>
           <Separator />
 

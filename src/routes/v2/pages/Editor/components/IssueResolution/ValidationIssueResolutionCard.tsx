@@ -10,8 +10,10 @@ import type {
   ValidationIssueCode,
 } from "@/models/componentSpec";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
+import { IS_ENABLED_PORT_NAME } from "@/utils/conditionalExecution";
 
 import { BadReferenceResolution } from "./resolutions/BadReferenceResolution";
+import { ConditionalExecutionResolution } from "./resolutions/ConditionalExecutionResolution";
 import { DeleteEntityResolution } from "./resolutions/DeleteEntityResolution";
 import { DuplicateNameResolution } from "./resolutions/DuplicateNameResolution";
 import { InfoOnlyResolution } from "./resolutions/InfoOnlyResolution";
@@ -192,6 +194,21 @@ const RESOLUTION_MAP: Record<ValidationIssueCode, ResolutionResolver> = {
   NO_TASKS: () =>
     renderInfoResolution(
       "Add tasks to the pipeline from the component library.",
+    ),
+  CONDITIONAL_EXECUTION_UNSUPPORTED: (p) => (
+    <ConditionalExecutionResolution issue={p.issue} spec={p.spec} />
+  ),
+  RESERVED_INPUT_NAME: () =>
+    renderInfoResolution(
+      `The editor reserves "${IS_ENABLED_PORT_NAME}" for run conditions, so an input of that name cannot be connected — its value would be saved as the task's run condition instead. Rename the input in the component definition, or use a component that does not declare it.`,
+    ),
+  INVALID_RUN_CONDITION: () =>
+    renderInfoResolution(
+      "A run condition has to be true or false. Set it from the task's Config tab, or connect it to a value that resolves to true or false.",
+    ),
+  CONDITION_SOURCE_TYPE_MISMATCH: () =>
+    renderInfoResolution(
+      "A run condition is read as the text true or false. Connect the condition to a String or Boolean value, or gate the task on a fixed condition instead.",
     ),
 };
 

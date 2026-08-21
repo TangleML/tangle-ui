@@ -82,6 +82,29 @@ export function isTaskConditional(
   );
 }
 
+/**
+ * The backend only honours `isEnabled` on container-component tasks — a graph
+ * task carrying a run condition is rejected at run creation — so the condition
+ * controls are hidden for subgraphs and the state is flagged as a validation
+ * error where it already exists.
+ */
+export function isConditionalExecutionSupported(task: Task): boolean {
+  return !task.isSubgraph;
+}
+
+/**
+ * A run condition lives in two places: the literal on the task and the binding
+ * to the reserved port. Clearing one without the other leaves the task gated.
+ */
+export function clearConditionalExecution(spec: ComponentSpec, task: Task) {
+  spec.removeAllBindingsBy(
+    (b) =>
+      b.targetEntityId === task.$id &&
+      b.targetPortName === IS_ENABLED_PORT_NAME,
+  );
+  task.setIsEnabled(undefined);
+}
+
 /** The upstream reference a task is gated on, in the shape it serializes to. */
 export function resolveConditionalReference(
   task: Task,
