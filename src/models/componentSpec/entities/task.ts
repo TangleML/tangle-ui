@@ -65,6 +65,11 @@ export class Task extends Model({
   }
 
   @computed
+  get isSubgraph(): boolean {
+    return isGraphImplementation(this.resolvedComponentSpec?.implementation);
+  }
+
+  @computed
   get resolvedComponentRef(): ComponentReference {
     if (!this.subgraphSpec) {
       return this.componentRef;

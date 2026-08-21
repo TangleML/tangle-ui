@@ -1,16 +1,22 @@
 import { describe, expect, it } from "vitest";
 
+import { IS_ENABLED_PORT_NAME } from "@/utils/conditionalExecution";
+
 import { Binding } from "../../entities/binding";
 import { ComponentSpec } from "../../entities/componentSpec";
 import { Input } from "../../entities/input";
 import { Output } from "../../entities/output";
 import { Task } from "../../entities/task";
-import type { ComponentSpecJson } from "../../entities/types";
+import type { ComponentSpecJson, TypeSpecType } from "../../entities/types";
 import { validateSpec } from "../../validation/validateSpec";
 
 function makeSpec(name = "TestPipeline"): ComponentSpec {
   return new ComponentSpec({ $id: "spec_1", name });
 }
+
+const containerComponentSpec: ComponentSpecJson = {
+  implementation: { container: { image: "python:3.11" } },
+};
 
 function makeTask(id: string, name: string, spec?: ComponentSpecJson): Task {
   return new Task({
@@ -501,6 +507,281 @@ describe("validateSpec", () => {
         i.message.includes("requiredInput"),
       );
       expect(missingInput).toBeUndefined();
+    });
+  });
+
+  describe("conditional execution rules", () => {
+    const graphComponentSpec: ComponentSpecJson = {
+      implementation: { graph: { tasks: {} } },
+    };
+
+    const conditionalIssues = (spec: ComponentSpec) =>
+      validateSpec(spec).filter(
+        (i) => i.issueCode === "CONDITIONAL_EXECUTION_UNSUPPORTED",
+      );
+
+    it("reports error for a subgraph gated on a literal", () => {
+      const spec = makeSpec();
+      const task = makeTask("t1", "Inner", graphComponentSpec);
+      task.setIsEnabled("false");
+      spec.addTask(task);
+
+      expect(conditionalIssues(spec)).toContainEqual(
+        expect.objectContaining({
+          type: "task",
+          message: "Conditional execution is not supported on subgraphs",
+          entityId: "t1",
+          severity: "error",
+        }),
+      );
+    });
+
+    it("reports error for a subgraph gated on a connected condition", () => {
+      const spec = makeSpec();
+      spec.addTask(makeTask("t1", "Flag"));
+      spec.addTask(makeTask("t2", "Inner", graphComponentSpec));
+      spec.addBinding(
+        makeBinding("b1", "t1", "flag", "t2", IS_ENABLED_PORT_NAME),
+      );
+
+      expect(conditionalIssues(spec)).toHaveLength(1);
+    });
+
+    it("allows a container task to be conditional", () => {
+      const spec = makeSpec();
+      const task = makeTask("t1", "Greet");
+      task.setIsEnabled("false");
+      spec.addTask(task);
+
+      expect(conditionalIssues(spec)).toHaveLength(0);
+    });
+
+    it("allows a subgraph with no run condition", () => {
+      const spec = makeSpec();
+      spec.addTask(makeTask("t1", "Inner", graphComponentSpec));
+
+      expect(conditionalIssues(spec)).toHaveLength(0);
+    });
+
+    it("is the error that blocks submission", () => {
+      const spec = makeSpec();
+      const task = makeTask("t1", "Inner", graphComponentSpec);
+      task.setIsEnabled("false");
+      spec.addTask(task);
+
+      expect(spec.isValid).toBe(false);
+
+      task.setIsEnabled(undefined);
+
+      expect(spec.isValid).toBe(true);
+    });
+  });
+
+  describe("reserved input name rules", () => {
+    const componentDeclaringReservedInput: ComponentSpecJson = {
+      ...containerComponentSpec,
+      inputs: [{ name: IS_ENABLED_PORT_NAME, optional: true }],
+    };
+
+    const reservedNameIssues = (spec: ComponentSpec) =>
+      validateSpec(spec).filter((i) => i.issueCode === "RESERVED_INPUT_NAME");
+
+    it("warns when a component declares the reserved input", () => {
+      const spec = makeSpec();
+      spec.addTask(makeTask("t1", "Greet", componentDeclaringReservedInput));
+
+      expect(reservedNameIssues(spec)).toContainEqual(
+        expect.objectContaining({
+          type: "task",
+          entityId: "t1",
+          severity: "warning",
+          argumentName: IS_ENABLED_PORT_NAME,
+        }),
+      );
+    });
+
+    it("does not block submission while the reserved input is unconnected", () => {
+      const spec = makeSpec();
+      spec.addTask(makeTask("t1", "Greet", componentDeclaringReservedInput));
+
+      expect(spec.isValid).toBe(true);
+    });
+
+    it("errors once connected, because saving would drop the argument", () => {
+      const spec = makeSpec();
+      spec.addTask(makeTask("t1", "Flag", containerComponentSpec));
+      spec.addTask(makeTask("t2", "Greet", componentDeclaringReservedInput));
+      spec.addBinding(
+        makeBinding("b1", "t1", "flag", "t2", IS_ENABLED_PORT_NAME),
+      );
+
+      expect(reservedNameIssues(spec)).toContainEqual(
+        expect.objectContaining({ entityId: "t2", severity: "error" }),
+      );
+      expect(spec.isValid).toBe(false);
+    });
+
+    it("ignores components with ordinary input names", () => {
+      const spec = makeSpec();
+      spec.addTask(
+        makeTask("t1", "Greet", {
+          ...containerComponentSpec,
+          inputs: [{ name: "name", optional: true }],
+        }),
+      );
+
+      expect(reservedNameIssues(spec)).toHaveLength(0);
+    });
+  });
+
+  describe("condition source type rules", () => {
+    const componentWithFlagOutput = (
+      type?: TypeSpecType,
+    ): ComponentSpecJson => ({
+      ...containerComponentSpec,
+      outputs: [{ name: "flag", type }],
+    });
+
+    const typeIssues = (spec: ComponentSpec) =>
+      validateSpec(spec).filter(
+        (i) => i.issueCode === "CONDITION_SOURCE_TYPE_MISMATCH",
+      );
+
+    const gateOnTaskOutput = (type?: TypeSpecType) => {
+      const spec = makeSpec();
+      spec.addTask(makeTask("t1", "Flag", componentWithFlagOutput(type)));
+      spec.addTask(makeTask("t2", "Greet", containerComponentSpec));
+      spec.addBinding(
+        makeBinding("b1", "t1", "flag", "t2", IS_ENABLED_PORT_NAME),
+      );
+      return spec;
+    };
+
+    it("blocks submission when the condition comes from a numeric output", () => {
+      const spec = gateOnTaskOutput("Integer");
+
+      expect(typeIssues(spec)).toContainEqual(
+        expect.objectContaining({
+          type: "task",
+          entityId: "t2",
+          severity: "error",
+          referencedName: "Integer",
+        }),
+      );
+      expect(spec.isValid).toBe(false);
+    });
+
+    it("accepts the types a condition can actually be read from", () => {
+      expect(typeIssues(gateOnTaskOutput("String"))).toHaveLength(0);
+      expect(typeIssues(gateOnTaskOutput("Boolean"))).toHaveLength(0);
+      expect(typeIssues(gateOnTaskOutput("boolean"))).toHaveLength(0);
+      expect(typeIssues(gateOnTaskOutput("Any"))).toHaveLength(0);
+      expect(typeIssues(gateOnTaskOutput(undefined))).toHaveLength(0);
+      expect(typeIssues(gateOnTaskOutput({ Enum: "yes/no" }))).toHaveLength(0);
+    });
+
+    it("accepts the aliases a hand-written component might use", () => {
+      expect(typeIssues(gateOnTaskOutput("bool"))).toHaveLength(0);
+      expect(typeIssues(gateOnTaskOutput("str"))).toHaveLength(0);
+      expect(typeIssues(gateOnTaskOutput("Text"))).toHaveLength(0);
+    });
+
+    it("errors when the condition comes from a numeric pipeline input", () => {
+      const spec = makeSpec();
+      spec.addInput(
+        new Input({ $id: "i1", name: "threshold", type: "Integer" }),
+      );
+      spec.addTask(makeTask("t1", "Greet"));
+      spec.addBinding(
+        makeBinding("b1", "i1", "threshold", "t1", IS_ENABLED_PORT_NAME),
+      );
+
+      expect(typeIssues(spec)).toHaveLength(1);
+    });
+
+    it("stays quiet for a fixed condition, which has no source", () => {
+      const spec = makeSpec();
+      const task = makeTask("t1", "Greet");
+      task.setIsEnabled("false");
+      spec.addTask(task);
+
+      expect(typeIssues(spec)).toHaveLength(0);
+    });
+
+    it("defers to the unsupported error on subgraphs", () => {
+      const spec = makeSpec();
+      spec.addTask(makeTask("t1", "Flag", componentWithFlagOutput("Integer")));
+      spec.addTask(
+        makeTask("t2", "Inner", { implementation: { graph: { tasks: {} } } }),
+      );
+      spec.addBinding(
+        makeBinding("b1", "t1", "flag", "t2", IS_ENABLED_PORT_NAME),
+      );
+
+      expect(typeIssues(spec)).toHaveLength(0);
+    });
+  });
+
+  describe("fixed run condition rules", () => {
+    const conditionIssues = (spec: ComponentSpec) =>
+      validateSpec(spec).filter((i) => i.issueCode === "INVALID_RUN_CONDITION");
+
+    const gateOnLiteral = (condition: string) => {
+      const spec = makeSpec();
+      const task = makeTask("t1", "Greet", containerComponentSpec);
+      task.setIsEnabled(condition);
+      spec.addTask(task);
+      return spec;
+    };
+
+    it("blocks submission on a condition the runtime cannot read", () => {
+      const spec = gateOnLiteral("yes");
+
+      expect(conditionIssues(spec)).toContainEqual(
+        expect.objectContaining({
+          type: "task",
+          entityId: "t1",
+          severity: "error",
+          referencedName: "yes",
+        }),
+      );
+      expect(spec.isValid).toBe(false);
+    });
+
+    it("accepts the canonical literals however they were written", () => {
+      expect(conditionIssues(gateOnLiteral("true"))).toHaveLength(0);
+      expect(conditionIssues(gateOnLiteral("false"))).toHaveLength(0);
+      expect(conditionIssues(gateOnLiteral("False"))).toHaveLength(0);
+      expect(conditionIssues(gateOnLiteral(" TRUE\n"))).toHaveLength(0);
+    });
+
+    it("stays quiet for a task with no run condition", () => {
+      const spec = makeSpec();
+      spec.addTask(makeTask("t1", "Greet", containerComponentSpec));
+
+      expect(conditionIssues(spec)).toHaveLength(0);
+    });
+
+    it("stays quiet for a connected condition, whose value is not known yet", () => {
+      const spec = makeSpec();
+      const task = makeTask("t1", "Greet", containerComponentSpec);
+      task.setIsEnabled({
+        taskOutput: { taskId: "Flag", outputName: "flag" },
+      });
+      spec.addTask(task);
+
+      expect(conditionIssues(spec)).toHaveLength(0);
+    });
+
+    it("defers to the unsupported error on subgraphs", () => {
+      const spec = makeSpec();
+      const task = makeTask("t1", "Inner", {
+        implementation: { graph: { tasks: {} } },
+      });
+      task.setIsEnabled("yes");
+      spec.addTask(task);
+
+      expect(conditionIssues(spec)).toHaveLength(0);
     });
   });
 

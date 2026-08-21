@@ -1,5 +1,6 @@
 import type { ComponentSpec, Task } from "@/models/componentSpec";
 import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
+import { clearConditionalExecution } from "@/utils/conditionalExecution";
 
 export function deleteEntity(
   undo: UndoGroupable,
@@ -80,6 +81,16 @@ export function deleteDuplicate(
     } else {
       spec.removeOutputById(entityId);
     }
+  });
+}
+
+export function removeConditionalExecution(
+  undo: UndoGroupable,
+  spec: ComponentSpec,
+  task: Task,
+) {
+  undo.withGroup("Remove conditional execution", () => {
+    clearConditionalExecution(spec, task);
   });
 }
 

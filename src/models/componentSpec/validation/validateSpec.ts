@@ -6,13 +6,19 @@ import {
   parseSchemaToAnnotationConfig,
 } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/AnnotationsEditor/utils";
 import { isInvalidComponentReference } from "@/utils/componentSpec";
+import {
+  IS_ENABLED_PORT_NAME,
+  isConditionalArgument,
+  isConditionalExecutionSupported,
+  isTaskConditional,
+} from "@/utils/conditionalExecution";
 
 import type { Binding } from "../entities/binding";
 import type { ComponentSpec } from "../entities/componentSpec";
 import type { Input } from "../entities/input";
 import type { Output } from "../entities/output";
 import type { Task } from "../entities/task";
-import type { InputSpec } from "../entities/types";
+import type { InputSpec, TypeSpecType } from "../entities/types";
 import { isGraphInputArgument, isTaskOutputArgument } from "../entities/types";
 import { isPipelineInputMissingConfiguredValue } from "./pipelineInputValue";
 import type { ValidationIssue } from "./types";
@@ -228,8 +234,167 @@ function validateSingleTask(
   issues.push(...validateTaskArguments(task, spec));
   issues.push(...validateTaskRequiredInputs(task, spec));
   issues.push(...validateLauncherTaskAnnotations(task));
+  issues.push(...validateConditionalExecution(task, spec));
+  issues.push(...validateReservedInputName(task, spec));
+  issues.push(...validateRunConditionLiteral(task));
+  issues.push(...validateConditionSourceType(task, spec));
 
   return issues;
+}
+
+/**
+ * The editor hides the condition controls for subgraphs, so this only fires on
+ * externally-authored pipelines — where it has to block submission rather than
+ * let run creation fail with a raw backend error.
+ */
+function validateConditionalExecution(
+  task: Task,
+  spec: ComponentSpec,
+): ValidationIssue[] {
+  if (isConditionalExecutionSupported(task)) return [];
+  if (!isTaskConditional(task, spec)) return [];
+
+  return [
+    {
+      type: "task",
+      message: "Conditional execution is not supported on subgraphs",
+      entityId: task.$id,
+      severity: "error",
+      issueCode: "CONDITIONAL_EXECUTION_UNSUPPORTED",
+    },
+  ];
+}
+
+function findConditionBinding(task: Task, spec: ComponentSpec) {
+  return spec.bindings.find(
+    (b) =>
+      b.targetEntityId === task.$id &&
+      b.targetPortName === IS_ENABLED_PORT_NAME,
+  );
+}
+
+/**
+ * A run condition is a binding to a reserved pseudo-port, which shares the
+ * `targetPortName` namespace with real input ports. A component declaring an
+ * input under that name is therefore indistinguishable from a gated task: on
+ * save the connection serializes to `isEnabled` and the argument is dropped.
+ */
+function validateReservedInputName(
+  task: Task,
+  spec: ComponentSpec,
+): ValidationIssue[] {
+  const declaresReservedInput = task.resolvedComponentSpec?.inputs?.some(
+    (input) => input.name === IS_ENABLED_PORT_NAME,
+  );
+  if (!declaresReservedInput) return [];
+
+  const isConnected = findConditionBinding(task, spec) !== undefined;
+
+  return [
+    {
+      type: "task",
+      message: `Component input "${IS_ENABLED_PORT_NAME}" is reserved for run conditions`,
+      entityId: task.$id,
+      severity: isConnected ? "error" : "warning",
+      issueCode: "RESERVED_INPUT_NAME",
+      argumentName: IS_ENABLED_PORT_NAME,
+    },
+  ];
+}
+
+function isRunConditionLiteral(value: unknown): boolean {
+  if (typeof value === "boolean") return true;
+  return (
+    typeof value === "string" &&
+    ["true", "false"].includes(value.trim().toLowerCase())
+  );
+}
+
+/**
+ * The orchestrator rejects a condition that does not resolve to `true` or
+ * `false`, and it does so once it reaches the task — after everything upstream
+ * has already run. A fixed condition can be checked before submission, so it is.
+ */
+function validateRunConditionLiteral(task: Task): ValidationIssue[] {
+  if (!isConditionalExecutionSupported(task)) return [];
+
+  const condition = task.isEnabled;
+  if (condition === undefined) return [];
+  if (isConditionalArgument(condition)) return [];
+  if (isRunConditionLiteral(condition)) return [];
+
+  const shown = typeof condition === "string" ? condition : undefined;
+
+  return [
+    {
+      type: "task",
+      message: shown
+        ? `Run condition "${shown}" must be true or false`
+        : "Run condition must be true or false",
+      entityId: task.$id,
+      severity: "error",
+      issueCode: "INVALID_RUN_CONDITION",
+      referencedName: shown,
+    },
+  ];
+}
+
+/**
+ * The aliases matter: this blocks submission, so a hand-written `bool` or `str`
+ * must not be mistaken for a mismatch.
+ */
+const CONDITION_SOURCE_TYPES = [
+  "string",
+  "str",
+  "text",
+  "boolean",
+  "bool",
+  "any",
+];
+
+/**
+ * A condition that resolves to anything but `true` or `false` fails the run at
+ * the point the task is reached, so a declared type that cannot produce either
+ * is worth blocking up front. Structured and absent types make no claim about
+ * the value, and a declared type is only a claim — a `String` source can still
+ * carry something unusable, which no static check will catch.
+ */
+function validateConditionSourceType(
+  task: Task,
+  spec: ComponentSpec,
+): ValidationIssue[] {
+  if (!isConditionalExecutionSupported(task)) return [];
+
+  const binding = findConditionBinding(task, spec);
+  if (!binding) return [];
+
+  const sourceType = resolveBindingSourceType(binding, spec);
+  if (typeof sourceType !== "string") return [];
+  if (CONDITION_SOURCE_TYPES.includes(sourceType.toLowerCase())) return [];
+
+  return [
+    {
+      type: "task",
+      message: `Run condition is connected to a ${sourceType} value, which cannot be read as true or false`,
+      entityId: task.$id,
+      severity: "error",
+      issueCode: "CONDITION_SOURCE_TYPE_MISMATCH",
+      referencedName: sourceType,
+    },
+  ];
+}
+
+function resolveBindingSourceType(
+  binding: Binding,
+  spec: ComponentSpec,
+): TypeSpecType | undefined {
+  const sourceInput = spec.inputs.find((i) => i.$id === binding.sourceEntityId);
+  if (sourceInput) return sourceInput.type;
+
+  const sourceTask = spec.tasks.find((t) => t.$id === binding.sourceEntityId);
+  return sourceTask?.resolvedComponentSpec?.outputs?.find(
+    (output) => output.name === binding.sourcePortName,
+  )?.type;
 }
 
 function taskAnnotationsAsStringRecord(task: Task): Record<string, string> {

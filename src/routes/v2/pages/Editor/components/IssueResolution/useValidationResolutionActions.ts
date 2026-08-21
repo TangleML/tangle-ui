@@ -5,6 +5,7 @@ import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import {
   deleteDuplicate,
   deleteEntity,
+  removeConditionalExecution,
   renameDuplicate,
   renameEntity,
   unsetBadReference,
@@ -61,6 +62,10 @@ export function useValidationResolutionActions() {
       argumentName: string,
     ) => {
       unsetBadReference(undo, task, spec, argumentName);
+      clearIssue();
+    },
+    removeConditionalExecution: (spec: ComponentSpec, task: Task) => {
+      removeConditionalExecution(undo, spec, task);
       clearIssue();
     },
   };

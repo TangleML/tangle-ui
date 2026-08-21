@@ -22,7 +22,11 @@ export type ValidationIssueCode =
   | "EMPTY_COMPONENT_NAME"
   | "NO_TASKS"
   | "ORPHANED_BINDING_SOURCE"
-  | "ORPHANED_BINDING_TARGET";
+  | "ORPHANED_BINDING_TARGET"
+  | "CONDITIONAL_EXECUTION_UNSUPPORTED"
+  | "RESERVED_INPUT_NAME"
+  | "INVALID_RUN_CONDITION"
+  | "CONDITION_SOURCE_TYPE_MISMATCH";
 
 export interface ValidationIssue {
   type: ValidationIssueType;

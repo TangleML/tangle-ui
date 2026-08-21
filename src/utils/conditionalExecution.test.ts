@@ -3,10 +3,12 @@ import { describe, expect, it } from "vitest";
 import { Binding, ComponentSpec, Input, Task } from "@/models/componentSpec";
 
 import {
+  clearConditionalExecution,
   CONDITION_LITERAL_LABELS,
   describeConditionSource,
   IS_ENABLED_PORT_NAME,
   isConditionalArgument,
+  isConditionalExecutionSupported,
   isTaskConditional,
   resolveConditionalReference,
   toConditionLiteral,
@@ -14,6 +16,20 @@ import {
 
 function makeTask(id: string, name: string) {
   return new Task({ $id: id, name, componentRef: {} });
+}
+
+function makeGraphComponentTask(id: string, name: string) {
+  return new Task({
+    $id: id,
+    name,
+    componentRef: { spec: { implementation: { graph: { tasks: {} } } } },
+  });
+}
+
+function makeEmbeddedSubgraphTask(id: string, name: string) {
+  const task = new Task({ $id: id, name, componentRef: {} });
+  task.setSubgraphSpec(new ComponentSpec({ $id: "spec_sub", name: "Inner" }));
+  return task;
 }
 
 function makeSpec(
@@ -132,6 +148,73 @@ describe("isTaskConditional", () => {
     );
 
     expect(isTaskConditional(task, spec)).toBe(false);
+  });
+});
+
+describe("isConditionalExecutionSupported", () => {
+  it("is true for a container-component task", () => {
+    expect(isConditionalExecutionSupported(makeTask("task_1", "Greet"))).toBe(
+      true,
+    );
+  });
+
+  it("is false for an embedded subgraph", () => {
+    expect(
+      isConditionalExecutionSupported(
+        makeEmbeddedSubgraphTask("task_1", "Inner"),
+      ),
+    ).toBe(false);
+  });
+
+  it("is false for a referenced graph component", () => {
+    expect(
+      isConditionalExecutionSupported(
+        makeGraphComponentTask("task_1", "Published"),
+      ),
+    ).toBe(false);
+  });
+});
+
+describe("clearConditionalExecution", () => {
+  it("removes both the literal and the reserved-port binding", () => {
+    const task = makeTask("task_1", "Greet");
+    task.setIsEnabled("false");
+    const flag = new Input({ $id: "input_1", name: "run_greeting" });
+    const spec = makeSpec(
+      [task],
+      [flag],
+      [bindToRunCondition(flag.$id, "run_greeting", task.$id)],
+    );
+
+    clearConditionalExecution(spec, task);
+
+    expect(task.isEnabled).toBeUndefined();
+    expect(isTaskConditional(task, spec)).toBe(false);
+    expect(spec.bindings).toHaveLength(0);
+  });
+
+  it("leaves bindings to other ports alone", () => {
+    const task = makeTask("task_1", "Greet");
+    task.setIsEnabled("true");
+    const name = new Input({ $id: "input_1", name: "name" });
+    const spec = makeSpec(
+      [task],
+      [name],
+      [
+        new Binding({
+          $id: "binding_1",
+          sourceEntityId: name.$id,
+          sourcePortName: "name",
+          targetEntityId: task.$id,
+          targetPortName: "name",
+        }),
+      ],
+    );
+
+    clearConditionalExecution(spec, task);
+
+    expect(task.isEnabled).toBeUndefined();
+    expect(spec.bindings).toHaveLength(1);
   });
 });
 
