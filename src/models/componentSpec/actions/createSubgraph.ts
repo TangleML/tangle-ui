@@ -1,3 +1,7 @@
+import {
+  IS_ENABLED_PORT_NAME,
+  RUN_CONDITION_INPUT_NAME,
+} from "@/utils/conditionalExecution";
 import { deepClone } from "@/utils/deepClone";
 
 import { Annotations } from "../annotations";
@@ -128,7 +132,12 @@ export function createSubgraph({
   const usedInputNames = new Set<string>();
   for (const [, bindings] of Object.entries(incomingBySource)) {
     const first = bindings[0];
-    const inputName = deduplicatePortName(first.targetPortName, usedInputNames);
+    const inputName = deduplicatePortName(
+      first.targetPortName === IS_ENABLED_PORT_NAME
+        ? RUN_CONDITION_INPUT_NAME
+        : first.targetPortName,
+      usedInputNames,
+    );
     const input = new Input({
       $id: idGen.next("input"),
       name: inputName,

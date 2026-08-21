@@ -2,6 +2,7 @@ import { IS_ENABLED_PORT_NAME } from "@/utils/conditionalExecution";
 
 import type { Annotations } from "../annotations";
 import { serializeAnnotationValue } from "../annotations";
+import { bindingToArgumentReference } from "../bindingReference";
 import type { Binding } from "../entities/binding";
 import type { ComponentSpec } from "../entities/componentSpec";
 import type { Input } from "../entities/input";
@@ -86,13 +87,11 @@ export class JsonSerializer {
       (b) => b.targetEntityId === task.$id,
     );
 
-    // A connection to the reserved "Is enabled?" port is serialized to
-    // `isEnabled` rather than to `arguments`.
-    const conditionalBinding = taskBindings.find(
+    const runConditionBinding = taskBindings.find(
       (b) => b.targetPortName === IS_ENABLED_PORT_NAME,
     );
     const argumentBindings = taskBindings.filter(
-      (b) => b !== conditionalBinding,
+      (b) => b !== runConditionBinding,
     );
     const args = this.serializeArguments(
       task.arguments,
@@ -112,11 +111,11 @@ export class JsonSerializer {
       result.arguments = args;
     }
 
-    const conditionalArgument = conditionalBinding
-      ? this.bindingToArgument(conditionalBinding, spec)
+    const runConditionReference = runConditionBinding
+      ? bindingToArgumentReference(runConditionBinding, spec)
       : undefined;
-    if (conditionalArgument !== undefined) {
-      result.isEnabled = conditionalArgument;
+    if (runConditionReference !== undefined) {
+      result.isEnabled = runConditionReference;
     } else if (task.isEnabled !== undefined) {
       result.isEnabled = task.isEnabled;
     }
@@ -141,7 +140,7 @@ export class JsonSerializer {
     const result: Record<string, ArgumentType> = {};
 
     for (const binding of bindings) {
-      const argument = this.bindingToArgument(binding, spec);
+      const argument = bindingToArgumentReference(binding, spec);
       if (argument !== undefined) {
         result[binding.targetPortName] = argument;
       }
@@ -154,39 +153,6 @@ export class JsonSerializer {
     }
 
     return result;
-  }
-
-  /**
-   * Resolve a binding's source into the argument reference it serializes to:
-   * a task output or a graph input. Returns undefined when the source entity
-   * cannot be resolved.
-   */
-  private bindingToArgument(
-    binding: Binding,
-    spec: ComponentSpec,
-  ): ArgumentType | undefined {
-    const sourceTask = spec.tasks.find((t) => t.$id === binding.sourceEntityId);
-    if (sourceTask) {
-      return {
-        taskOutput: {
-          taskId: sourceTask.name,
-          outputName: binding.sourcePortName,
-        },
-      };
-    }
-
-    const sourceInput = spec.inputs.find(
-      (i) => i.$id === binding.sourceEntityId,
-    );
-    if (sourceInput) {
-      return {
-        graphInput: {
-          inputName: sourceInput.name,
-        },
-      };
-    }
-
-    return undefined;
   }
 
   private serializeInput(input: Input): InputSpec {

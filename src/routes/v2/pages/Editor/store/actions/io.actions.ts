@@ -13,6 +13,12 @@ import {
 import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
 import type { ParentContext } from "@/routes/v2/shared/store/navigationStore";
 import { EDITOR_POSITION_ANNOTATION } from "@/utils/annotations";
+import {
+  IS_ENABLED_PORT_NAME,
+  RUN_CONDITION_INPUT_NAME,
+  RUN_CONDITION_INPUT_TYPE,
+  toConditionLiteral,
+} from "@/utils/conditionalExecution";
 
 import {
   propagateInputDelete,
@@ -215,6 +221,7 @@ export function createConnectedIONode(
 
   undo.withGroup("Create connected IO node", () => {
     if (ioType === "input") {
+      const isRunCondition = portName === IS_ENABLED_PORT_NAME;
       const inputSpec = taskComponentSpec?.inputs?.find(
         (i) => i.name === portName,
       );
@@ -223,11 +230,24 @@ export function createConnectedIONode(
       )?.value;
       const literalArgValue =
         typeof existingArgValue === "string" ? existingArgValue : undefined;
-      const defaultValue = literalArgValue ?? inputSpec?.default;
 
-      const newInput = addInput(undo, spec, position, portName);
+      // The run condition keeps its literal on the task rather than in
+      // `arguments`, so without this the new input starts empty — and an empty
+      // condition reads as enabled, silently ungating a task set to Never.
+      const defaultValue = isRunCondition
+        ? toConditionLiteral(task.isEnabled)
+        : (literalArgValue ?? inputSpec?.default);
 
-      if (inputSpec?.type) {
+      const newInput = addInput(
+        undo,
+        spec,
+        position,
+        isRunCondition ? RUN_CONDITION_INPUT_NAME : portName,
+      );
+
+      if (isRunCondition) {
+        newInput.setType(RUN_CONDITION_INPUT_TYPE);
+      } else if (inputSpec?.type) {
         newInput.setType(inputSpec.type);
       }
       if (defaultValue !== undefined) {

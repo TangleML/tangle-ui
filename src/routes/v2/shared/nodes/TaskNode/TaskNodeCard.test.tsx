@@ -35,6 +35,8 @@ const buildProps = (
   connectedOutputNames: new Set(),
   annotations: [],
   cacheDisabled: false,
+  isConditional: false,
+  conditionDisplayValue: "Always",
   inputDisplayValues: {},
   secretInputNames: new Set(),
   isAggregator: false,
@@ -205,6 +207,81 @@ describe("TaskNodeCard", () => {
         expect.anything(),
       );
       expect(props.onInputClick).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("run condition", () => {
+    const renderConditional = (overrides: Partial<TaskNodeViewProps> = {}) => {
+      const props = buildProps({
+        isSubgraph: false,
+        inputs: [{ name: "name", type: "String" }],
+        isConditional: true,
+        onHandleClick: vi.fn((_handleId, event) => event.stopPropagation()),
+        ...overrides,
+      });
+
+      render(
+        <ReactFlowProvider>
+          <TaskNodeCard {...props} />
+        </ReactFlowProvider>,
+      );
+
+      return props;
+    };
+
+    it("is hidden for a task that is not conditional", () => {
+      renderConditional({ isConditional: false });
+
+      expect(screen.queryByText("Run when")).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("run-condition-handle"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("shows the literal for a task with no connected condition", () => {
+      renderConditional({ conditionDisplayValue: "Never" });
+
+      expect(screen.getByText("Run when")).toBeInTheDocument();
+      expect(screen.getByText("Never")).toBeInTheDocument();
+    });
+
+    it("shows the upstream reference when the condition is connected", () => {
+      renderConditional({ conditionDisplayValue: "→ Flag.flag" });
+
+      expect(screen.getByText("→ Flag.flag")).toBeInTheDocument();
+    });
+
+    it("stays out of the collapsed inputs count", () => {
+      renderConditional({
+        collapsed: true,
+        inputs: [{ name: "name" }, { name: "greeting" }, { name: "locale" }],
+      });
+
+      expect(screen.getByText("+2 more inputs")).toBeInTheDocument();
+      expect(screen.getByText("Run when")).toBeInTheDocument();
+    });
+
+    it("stays visible when the collapsed inputs are expanded", async () => {
+      renderConditional({
+        collapsed: true,
+        inputs: [{ name: "name" }, { name: "greeting" }, { name: "locale" }],
+      });
+
+      await userEvent.click(screen.getByText("+2 more inputs"));
+
+      expect(screen.getByTestId("input-label-locale")).toBeInTheDocument();
+      expect(screen.getByText("Run when")).toBeInTheDocument();
+    });
+
+    it("selects the connected edges when its handle is clicked", async () => {
+      const props = renderConditional();
+
+      await userEvent.click(screen.getByTestId("run-condition-handle"));
+
+      expect(props.onHandleClick).toHaveBeenCalledWith(
+        "input___is_enabled__",
+        expect.anything(),
+      );
     });
   });
 

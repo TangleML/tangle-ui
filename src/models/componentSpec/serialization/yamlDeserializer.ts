@@ -1,3 +1,4 @@
+import { GRAPH_INPUT_REGEX, TASK_OUTPUT_REGEX } from "@/utils/componentSpec";
 import {
   IS_ENABLED_PORT_NAME,
   isConditionalArgument,
@@ -24,9 +25,6 @@ import type {
 } from "../entities/types";
 import { isGraphImplementation } from "../entities/types";
 import type { IdGenerator } from "../factories/idGenerator";
-
-const GRAPH_INPUT_REGEX = /^\{\{inputs\.([^}]+)\}\}$/;
-const TASK_OUTPUT_REGEX = /^\{\{tasks\.([^.]+)\.outputs\.([^}]+)\}\}$/;
 
 function getGraph(implementation?: ImplementationType): GraphSpec | undefined {
   if (!implementation) return undefined;
@@ -128,11 +126,6 @@ export class YamlDeserializer {
         }
       }
 
-      // A reference-valued `isEnabled` becomes a binding to the reserved port
-      // (see buildBindings) and the entity keeps `isEnabled` empty. Literal
-      // values (e.g. "false") stay on the entity.
-      const conditionalEnabled = isConditionalArgument(taskJson.isEnabled);
-
       const args: Argument[] = [];
       if (taskJson.arguments) {
         for (const [argName, argValue] of Object.entries(taskJson.arguments)) {
@@ -159,7 +152,7 @@ export class YamlDeserializer {
         name: taskName,
         componentRef,
         subgraphSpec,
-        isEnabled: conditionalEnabled ? undefined : taskJson.isEnabled,
+        isEnabled: taskJson.isEnabled,
         executionOptions: taskJson.executionOptions,
         annotations: Annotations.from(annotationItems),
         arguments: args,
@@ -190,7 +183,6 @@ export class YamlDeserializer {
       const targetTask = tasks.find((t) => t.name === taskName);
       if (!targetTask) continue;
 
-      // A reference-valued `isEnabled` connects to the reserved port.
       if (isConditionalArgument(taskJson.isEnabled)) {
         const binding = this.createBindingFromArgument(
           inputs,
@@ -199,7 +191,13 @@ export class YamlDeserializer {
           IS_ENABLED_PORT_NAME,
           taskJson.isEnabled,
         );
-        if (binding) bindings.push(binding);
+        // The binding is the representation of a reference-valued condition, so
+        // the raw value is only dropped once one exists. An unresolvable
+        // reference keeps its value instead of leaving the task ungated.
+        if (binding) {
+          bindings.push(binding);
+          targetTask.setIsEnabled(undefined);
+        }
       }
 
       if (!taskJson.arguments) continue;

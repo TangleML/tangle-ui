@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
+import {
+  IS_ENABLED_PORT_NAME,
+  RUN_CONDITION_INPUT_NAME,
+} from "@/utils/conditionalExecution";
+
 import { createSubgraph } from "../../actions/createSubgraph";
 import { unpackSubgraph } from "../../actions/unpackSubgraph";
 import { Annotations } from "../../annotations";
@@ -330,6 +335,76 @@ describe("unpackSubgraph roundtrip", () => {
     const restored = spec.tasks.find((t) => t.name === "ConditionalTask");
     expect(restored).toBeDefined();
     expect(restored?.isEnabled).toEqual(predicate);
+  });
+
+  it("connected run condition preserved after roundtrip", () => {
+    const spec = new ComponentSpec({
+      $id: idGen.next("spec"),
+      name: "Main",
+    });
+    const input = new Input({ $id: idGen.next("input"), name: "should_run" });
+    const task = makeTask(idGen, "ConditionalTask");
+    spec.addInput(input);
+    spec.addTask(task);
+    spec.addBinding(
+      makeBinding(
+        idGen,
+        input.$id,
+        "should_run",
+        task.$id,
+        IS_ENABLED_PORT_NAME,
+      ),
+    );
+
+    expect(roundtrip(spec, [task.$id], idGen)).toBe(true);
+
+    const restored = spec.tasks.find((t) => t.name === "ConditionalTask");
+    const binding = spec.bindings.find(
+      (b) => b.targetEntityId === restored?.$id,
+    );
+    expect(binding?.sourceEntityId).toBe(input.$id);
+    expect(binding?.targetPortName).toBe(IS_ENABLED_PORT_NAME);
+  });
+
+  it("a literal on the promoted run condition port lands back on isEnabled", () => {
+    const spec = new ComponentSpec({
+      $id: idGen.next("spec"),
+      name: "Main",
+    });
+    const input = new Input({ $id: idGen.next("input"), name: "should_run" });
+    const task = makeTask(idGen, "ConditionalTask");
+    spec.addInput(input);
+    spec.addTask(task);
+    spec.addBinding(
+      makeBinding(
+        idGen,
+        input.$id,
+        "should_run",
+        task.$id,
+        IS_ENABLED_PORT_NAME,
+      ),
+    );
+
+    const created = createSubgraph({
+      spec,
+      selectedTaskIds: [task.$id],
+      subgraphName: "Subgraph",
+      idGen,
+    });
+    spec.removeBindingBy(
+      (b) => b.targetEntityId === created!.replacementTask.$id,
+    );
+    created!.replacementTask.setArgument(RUN_CONDITION_INPUT_NAME, "false");
+
+    expect(
+      unpackSubgraph({ spec, taskId: created!.replacementTask.$id, idGen }),
+    ).toBe(true);
+
+    const restored = spec.tasks.find((t) => t.name === "ConditionalTask");
+    expect(restored?.isEnabled).toBe("false");
+    expect(
+      restored?.arguments.some((a) => a.name === IS_ENABLED_PORT_NAME),
+    ).toBe(false);
   });
 
   it("static arguments preserved after roundtrip", () => {

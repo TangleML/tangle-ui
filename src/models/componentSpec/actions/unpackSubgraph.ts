@@ -1,3 +1,4 @@
+import { IS_ENABLED_PORT_NAME } from "@/utils/conditionalExecution";
 import { deepClone } from "@/utils/deepClone";
 
 import { Annotations, deserializeAnnotationValue } from "../annotations";
@@ -267,6 +268,11 @@ function transferStaticArguments(
 
       const newTask = spec.tasks.find((t) => t.$id === newTaskId);
       if (!newTask) continue;
+
+      if (innerBinding.targetPortName === IS_ENABLED_PORT_NAME) {
+        newTask.setIsEnabled(arg.value);
+        continue;
+      }
 
       newTask.setArgument(innerBinding.targetPortName, arg.value);
     }

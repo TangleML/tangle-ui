@@ -28,9 +28,11 @@ import {
 } from "@/utils/annotations";
 import { isSecretArgument } from "@/utils/componentSpec";
 import {
-  IS_ENABLED_INPUT_LABEL,
+  CONDITION_LITERAL_LABELS,
+  describeConditionSource,
   IS_ENABLED_PORT_NAME,
   isTaskConditional,
+  toConditionLiteral,
 } from "@/utils/conditionalExecution";
 import { ISO8601_DURATION_ZERO_DAYS } from "@/utils/constants";
 import type { ExecutionStatusStats } from "@/utils/executionStatus";
@@ -49,8 +51,6 @@ export interface TaskNodeInput {
   type?: TypeSpecType;
   optional?: boolean;
   default?: string;
-  /** Human-readable label; falls back to the (prettified) name when unset. */
-  label?: string;
 }
 
 export interface TaskNodeOutput {
@@ -74,6 +74,8 @@ export interface TaskNodeViewProps {
   annotations: { key: string }[];
   taskColor?: string;
   cacheDisabled: boolean;
+  isConditional: boolean;
+  conditionDisplayValue: string;
   componentRef?: ComponentReference;
   digest?: string;
   publishedComponentBadgeReadOnly?: boolean;
@@ -306,28 +308,7 @@ export const TaskNode = observer(function TaskNode({
   const connectedPorts = resolveConnectedPortNames(entityId, spec);
   const inputDisplayData = resolveInputDisplayData(task, entityId, spec);
 
-  // A conditional task exposes a virtual "Is enabled?" input so the user can
-  // connect an upstream value that gates it. A connection is an ordinary binding
-  // to the reserved port, so its display value and connected state are already
-  // resolved above; a literal lives on the entity and is filled in here.
-  const isConditionalExecution = isTaskConditional(task, spec);
-  const displayInputs: TaskNodeInput[] = isConditionalExecution
-    ? [
-        ...inputs,
-        {
-          name: IS_ENABLED_PORT_NAME,
-          label: IS_ENABLED_INPUT_LABEL,
-          type: "Boolean",
-        },
-      ]
-    : inputs;
-  const inputDisplayValues =
-    isConditionalExecution && typeof task.isEnabled === "string"
-      ? {
-          [IS_ENABLED_PORT_NAME]: task.isEnabled,
-          ...inputDisplayData.values,
-        }
-      : inputDisplayData.values;
+  const conditionReferenceLabel = inputDisplayData.values[IS_ENABLED_PORT_NAME];
 
   const isSelected = isEditorVisualNodeSelected(editor, id, !!selected);
 
@@ -344,7 +325,7 @@ export const TaskNode = observer(function TaskNode({
     isSubgraph: isTaskSubgraph(componentSpec),
     collapsed: isManuallyCollapsed,
     description,
-    inputs: displayInputs,
+    inputs,
     outputs,
     connectedInputNames: connectedPorts.inputs,
     connectedOutputNames: connectedPorts.outputs,
@@ -353,6 +334,11 @@ export const TaskNode = observer(function TaskNode({
     cacheDisabled:
       task.executionOptions?.cachingStrategy?.maxCacheStaleness ===
       ISO8601_DURATION_ZERO_DAYS,
+    isConditional: isTaskConditional(task, spec),
+    conditionDisplayValue:
+      conditionReferenceLabel ??
+      describeConditionSource(task.isEnabled) ??
+      CONDITION_LITERAL_LABELS[toConditionLiteral(task.isEnabled)],
     componentRef: publishedComponentBadgeEnabled
       ? task.resolvedComponentRef
       : undefined,
@@ -362,7 +348,7 @@ export const TaskNode = observer(function TaskNode({
     subgraphExecutionStats,
     onOutputTypeChange: handleOutputTypeChange,
     digest: task.componentRef.digest,
-    inputDisplayValues,
+    inputDisplayValues: inputDisplayData.values,
     secretInputNames: inputDisplayData.secretInputNames,
     onNodeClick: handleClick,
     onInputClick: handleInputClick,

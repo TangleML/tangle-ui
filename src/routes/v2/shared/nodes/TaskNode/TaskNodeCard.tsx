@@ -16,11 +16,22 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/providers/ThemeProvider";
+import {
+  CONDITION_CHIP_CLASSES,
+  CONDITION_HANDLE_CLASSES,
+  CONDITION_ICON_CLASSES,
+  CONDITION_ICON_NAME,
+  CONDITION_SURFACE_CLASSES,
+} from "@/routes/v2/shared/conditionalExecution.styles";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
 import { AGGREGATOR_ADD_INPUT_HANDLE_ID } from "@/utils/aggregatorInputs";
-import { IS_ENABLED_PORT_NAME } from "@/utils/conditionalExecution";
+import {
+  IS_ENABLED_PORT_NAME,
+  RUN_CONDITION_LABEL,
+} from "@/utils/conditionalExecution";
 import { pluralize } from "@/utils/string";
 
 import { deriveColorPalette } from "./color.utils";
@@ -32,8 +43,7 @@ const AGGREGATOR_INTERNAL_INPUTS = new Set([
   "output_type",
 ]);
 
-/** The conditional gate stays visible while the rest of the inputs condense. */
-const isGatePort = (inputName: string) => inputName === IS_ENABLED_PORT_NAME;
+const RUN_CONDITION_HANDLE_ID = `input_${IS_ENABLED_PORT_NAME}`;
 
 const cardVariants = cva(
   "min-w-[300px] max-w-[350px] rounded-2xl border-2 p-0 drop-shadow-none cursor-pointer select-none gap-2 transition-shadow",
@@ -172,12 +182,12 @@ const ClassicInputHandle = observer(function ClassicInputHandle({
                   ? "text-gray-100 bg-white/10 hover:bg-white/15 dark:hover:bg-white/15 hover:text-gray-100"
                   : "text-gray-800 bg-black/5 hover:bg-black/10 dark:hover:bg-black/10 hover:text-gray-800",
             )}
-            title={`${input.label ?? input.name}${input.type ? `: ${input.type}` : ""}`}
+            title={`${input.name}${input.type ? `: ${input.type}` : ""}`}
             onClick={onLabelClick}
             data-input-control
             data-testid={`input-label-${input.name}`}
           >
-            {input.label ?? input.name.replace(/_/g, " ")}
+            {input.name.replace(/_/g, " ")}
           </Button>
         </div>
         {showValueDisplay && (
@@ -216,6 +226,56 @@ const ClassicInputHandle = observer(function ClassicInputHandle({
   );
 });
 
+interface RunConditionHandleProps {
+  displayValue: string;
+  onHandleClick: (event: ReactMouseEvent) => void;
+}
+
+function RunConditionHandle({
+  displayValue,
+  onHandleClick,
+}: RunConditionHandleProps) {
+  return (
+    <div className={cn("relative p-2 rounded-lg", CONDITION_SURFACE_CLASSES)}>
+      <div className="absolute top-1/2 -translate-x-6 -translate-y-1/2 flex items-center h-3 w-3">
+        <Handle
+          type="target"
+          position={Position.Left}
+          id={RUN_CONDITION_HANDLE_ID}
+          aria-label={`Connect ${RUN_CONDITION_LABEL}`}
+          className={cn(
+            "h-full! w-full! transform-none!",
+            CONDITION_HANDLE_CLASSES,
+          )}
+          onClick={onHandleClick}
+          data-input-control
+          data-testid="run-condition-handle"
+        />
+      </div>
+      <InlineStack
+        align="space-between"
+        blockAlign="center"
+        gap="2"
+        className="w-full"
+      >
+        <Text
+          size="xs"
+          weight="medium"
+          className={cn(
+            "shrink-0 rounded-md px-2 py-1",
+            CONDITION_CHIP_CLASSES,
+          )}
+        >
+          {RUN_CONDITION_LABEL}
+        </Text>
+        <Text size="xs" className="min-w-0 truncate pr-2 text-right">
+          {displayValue}
+        </Text>
+      </InlineStack>
+    </div>
+  );
+}
+
 export const TaskNodeCard = observer(function TaskNodeCard({
   entityId,
   taskName,
@@ -235,6 +295,8 @@ export const TaskNodeCard = observer(function TaskNodeCard({
   onHandleClick,
   taskColor,
   cacheDisabled,
+  isConditional,
+  conditionDisplayValue,
   componentRef,
   digest,
   publishedComponentBadgeReadOnly,
@@ -266,23 +328,16 @@ export const TaskNodeCard = observer(function TaskNodeCard({
     ? inputs.filter((input) => !AGGREGATOR_INTERNAL_INPUTS.has(input.name))
     : inputs;
 
-  const gateInputs = filteredInputs.filter((input) => isGatePort(input.name));
-  const regularInputs = filteredInputs.filter(
-    (input) => !isGatePort(input.name),
-  );
-
-  const condensedInputs = regularInputs.some((input) =>
+  const condensedInputs = filteredInputs.some((input) =>
     connectedInputNames.has(input.name),
   )
-    ? regularInputs.filter((input) => connectedInputNames.has(input.name))
-    : regularInputs.slice(0, 1);
-  const hiddenInputCount = regularInputs.length - condensedInputs.length;
+    ? filteredInputs.filter((input) => connectedInputNames.has(input.name))
+    : filteredInputs.slice(0, 1);
+  const hiddenInputCount = filteredInputs.length - condensedInputs.length;
   const inputsSectionToggles =
     !isAggregator && collapsed && hiddenInputCount > 0;
   const showCondensedInputs = inputsSectionToggles && !inputsExpanded;
-  const visibleInputs = showCondensedInputs
-    ? [...condensedInputs, ...gateInputs]
-    : filteredInputs;
+  const visibleInputs = showCondensedInputs ? condensedInputs : filteredInputs;
   const showInputsSection = filteredInputs.length > 0 || isAggregator;
 
   const openInputProperties =
@@ -356,6 +411,22 @@ export const TaskNodeCard = observer(function TaskNodeCard({
                   <TooltipContent side="top">Subgraph</TooltipContent>
                 </Tooltip>
               )}
+              {isConditional && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <Icon
+                        name={CONDITION_ICON_NAME}
+                        size="sm"
+                        className={CONDITION_ICON_CLASSES}
+                      />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    Conditional execution
+                  </TooltipContent>
+                </Tooltip>
+              )}
               {cacheDisabled && (
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -398,6 +469,12 @@ export const TaskNodeCard = observer(function TaskNodeCard({
         {isSubgraph && subgraphExecutionStats && (
           <TaskStatusBar executionStatusStats={subgraphExecutionStats} />
         )}
+        {isConditional && (
+          <RunConditionHandle
+            displayValue={conditionDisplayValue}
+            onHandleClick={(e) => onHandleClick(RUN_CONDITION_HANDLE_ID, e)}
+          />
+        )}
         {showInputsSection && (
           <div
             className={cn(
@@ -420,40 +497,31 @@ export const TaskNodeCard = observer(function TaskNodeCard({
           >
             <BlockStack gap="3">
               {isAggregator && <InputAggregatorHandle />}
-              {visibleInputs.map((input, index) => {
-                const condensedAway =
-                  showCondensedInputs && !isGatePort(input.name);
-                const hiddenCountLabel =
-                  condensedAway && index === 0
-                    ? `+${hiddenInputCount} more ${pluralize(hiddenInputCount, "input")}`
-                    : undefined;
-
-                return (
-                  <ClassicInputHandle
-                    key={input.name}
-                    input={input}
-                    entityId={entityId}
-                    themed={!palette}
-                    isDark={isDark}
-                    displayValue={
-                      condensedAway
-                        ? hiddenCountLabel
-                        : inputDisplayValues[input.name]
-                    }
-                    hideValue={condensedAway && !hiddenCountLabel}
-                    isSecret={secretInputNames.has(input.name)}
-                    onRowClick={
-                      inputsSectionToggles
-                        ? undefined
-                        : openInputProperties(input.name)
-                    }
-                    onLabelClick={openInputProperties(input.name)}
-                    onHandleClick={(e) =>
-                      onHandleClick(`input_${input.name}`, e)
-                    }
-                  />
-                );
-              })}
+              {visibleInputs.map((input, index) => (
+                <ClassicInputHandle
+                  key={input.name}
+                  input={input}
+                  entityId={entityId}
+                  themed={!palette}
+                  isDark={isDark}
+                  displayValue={
+                    showCondensedInputs
+                      ? index === 0
+                        ? `+${hiddenInputCount} more ${pluralize(hiddenInputCount, "input")}`
+                        : undefined
+                      : inputDisplayValues[input.name]
+                  }
+                  hideValue={showCondensedInputs && index !== 0}
+                  isSecret={secretInputNames.has(input.name)}
+                  onRowClick={
+                    inputsSectionToggles
+                      ? undefined
+                      : openInputProperties(input.name)
+                  }
+                  onLabelClick={openInputProperties(input.name)}
+                  onHandleClick={(e) => onHandleClick(`input_${input.name}`, e)}
+                />
+              ))}
               {collapsed && inputsExpanded && hiddenInputCount > 0 && (
                 <span
                   className={cn(

@@ -53,6 +53,8 @@ const buildProps = (
   connectedOutputNames: new Set(),
   annotations: [],
   cacheDisabled: false,
+  isConditional: false,
+  conditionDisplayValue: "Always",
   componentRef,
   digest: componentRef.digest,
   inputDisplayValues: {},
