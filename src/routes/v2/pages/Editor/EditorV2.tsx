@@ -65,14 +65,19 @@ import { EditorSessionProvider } from "./store/EditorSessionContext";
 
 interface PipelineEditorProps {
   pipelineRef: PipelineRef;
+  /**
+   * When embedded (e.g. inside the Tangent workarea), skip the editor-owned
+   * AI and Tangent chat windows so no `AiChatStoreProvider` is required.
+   */
+  embedded?: boolean;
 }
 
 const PipelineEditorSkeleton = () => (
   <LoadingScreen message="Loading pipeline..." />
 );
 
-const PipelineEditor = withSuspenseWrapper(
-  observer(({ pipelineRef }: PipelineEditorProps) => {
+export const PipelineEditor = withSuspenseWrapper(
+  observer(({ pipelineRef, embedded = false }: PipelineEditorProps) => {
     const {
       data: { spec: rootSpec, restoredUndoStore },
     } = useLoadSpec(pipelineRef);
@@ -102,10 +107,10 @@ const PipelineEditor = withSuspenseWrapper(
     useTipOfTheDayWindow();
 
     const aiEnabled = useFlagValue("ai-assistant");
-    useAiChatWindow(aiEnabled);
+    useAiChatWindow(!embedded && aiEnabled);
 
     const tangentChatEnabled = useFlagValue("tangent-embed-chat");
-    useTangentChatWindow(tangentChatEnabled);
+    useTangentChatWindow(!embedded && tangentChatEnabled);
 
     useComponentSearchV2Window(componentSearchV2Enabled);
     useSeedInitialDockLayoutFromPreset(componentSearchV2Enabled);

@@ -25,6 +25,7 @@ import {
   type RemoteKillCommand,
   type RemoteMessageCommand,
   type RemoteSpawnCommand,
+  type RemoteToolMap,
 } from "@tangent/remote-subagent";
 import type { Remote } from "comlink";
 import { proxy } from "comlink";
@@ -53,6 +54,14 @@ export interface RemoteEnvHostOptions {
   worker: Remote<RemoteEnvWorkerApi>;
   /** Surface a connection/runtime error to the user. */
   onError?: (message: string) => void;
+  /**
+   * RPC tools to register on the same environment (e.g. the workarea tools), so
+   * one connection can both host sub-agents and answer tool calls. Requires
+   * {@link RemoteEnvHostOptions.sessionId}.
+   */
+  tools?: RemoteToolMap;
+  /** The session the {@link RemoteEnvHostOptions.tools} are registered for. */
+  sessionId?: string;
 }
 
 export interface RemoteEnvHost {
@@ -65,7 +74,7 @@ export interface RemoteEnvHost {
 export function createRemoteEnvHost(
   options: RemoteEnvHostOptions,
 ): RemoteEnvHost {
-  const { url, worker, onError } = options;
+  const { url, worker, onError, tools, sessionId } = options;
 
   let client: RemoteEnvironmentClient | null = null;
   const turnChains = new Map<string, Promise<void>>();
@@ -170,6 +179,7 @@ export function createRemoteEnvHost(
         token,
         environmentId,
         handlers,
+        ...(tools ? { tools, sessionId } : {}),
       });
       client.socket.on("connect_error", (error: Error) => {
         onError?.(`Tangent editor control failed to connect: ${error.message}`);

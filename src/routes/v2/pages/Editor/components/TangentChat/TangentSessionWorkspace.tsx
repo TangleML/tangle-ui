@@ -1,20 +1,15 @@
-import { AgentList, AssetList, Chat } from "@tangent/embed-react";
+import { AgentList, AssetList } from "@tangent/embed-react";
 
-import { Icon } from "@/components/ui/icon";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import useToastNotification from "@/hooks/useToastNotification";
+import { TangentChatPane } from "@/routes/v2/shared/tangent/TangentChatPane";
+import { useTangentSessionTabs } from "@/routes/v2/shared/tangent/useTangentSessionTabs";
 
-import { CloseableTabTrigger } from "./CloseableTabTrigger";
 import { TangentEditorAgentProvider } from "./TangentEditorAgentProvider";
-import { CHAT_TAB_VALUE, useTangentSessionTabs } from "./useTangentSessionTabs";
 
 interface TangentSessionWorkspaceProps {
   sessionId: string;
 }
-
-const FORCE_MOUNTED_TAB_PANEL =
-  "min-h-0 overflow-hidden data-[state=active]:flex data-[state=active]:flex-col data-[state=inactive]:hidden";
 
 export function TangentSessionWorkspace({
   sessionId,
@@ -42,77 +37,37 @@ export function TangentSessionWorkspace({
   return (
     <TangentEditorAgentProvider sessionId={sessionId}>
       <BlockStack fill align="stretch" inlineAlign="start">
-        <div className="h-[38%] min-h-32 shrink-0">
-          <InlineStack fill wrap="nowrap" blockAlign="stretch" align="start">
-            <div className="h-full min-h-0 min-w-0 flex-1">
-              <AgentList
-                sessionId={sessionId}
-                selectedId={selectedAgentId}
-                onOpen={openAgent}
-                onRemove={closeTab}
-              />
-            </div>
-            <div className="h-full min-h-0 min-w-0 flex-1">
-              <AssetList
-                sessionId={sessionId}
-                selectedId={selectedAssetId}
-                onOpen={selectAsset}
-              />
-            </div>
-          </InlineStack>
-        </div>
-        <div className="flex min-h-0 flex-1 flex-col">
-          <Tabs
-            value={activeTab}
-            onValueChange={setActiveTab}
-            className="flex h-full min-h-0 flex-col gap-1"
-          >
-            <TabsList className="max-w-full shrink-0 overflow-x-auto">
-              <TabsTrigger value={CHAT_TAB_VALUE}>
-                <Icon name="MessageSquare" size="xs" />
-                Chat
-              </TabsTrigger>
-              {tabs.map((tab) => (
-                <CloseableTabTrigger
-                  key={tab.id}
-                  value={tab.id}
-                  title={tab.title}
-                  onClose={() => closeTab(tab.id)}
-                />
-              ))}
-            </TabsList>
-            <TabsContent
-              value={CHAT_TAB_VALUE}
-              forceMount
-              className={FORCE_MOUNTED_TAB_PANEL}
-            >
-              <Chat
-                sessionId={sessionId}
-                className="h-full min-h-0"
-                style={{ height: "100%" }}
-                onOpenArtifact={handleOpenArtifact}
-                onError={handleError}
-              />
-            </TabsContent>
-            {tabs.map((tab) => (
-              <TabsContent
-                key={tab.id}
-                value={tab.id}
-                forceMount
-                className={FORCE_MOUNTED_TAB_PANEL}
-              >
-                <Chat
-                  sessionId={sessionId}
-                  agentId={tab.id}
-                  className="h-full min-h-0"
-                  style={{ height: "100%" }}
-                  onOpenArtifact={handleOpenArtifact}
-                  onError={handleError}
-                />
-              </TabsContent>
-            ))}
-          </Tabs>
-        </div>
+        <InlineStack
+          fill
+          wrap="nowrap"
+          blockAlign="start"
+          align="start"
+          className="min-h-0 flex-1 "
+        >
+          <BlockStack align="stretch" inlineAlign="start" className="w-[200px]">
+            <AgentList
+              sessionId={sessionId}
+              selectedId={selectedAgentId}
+              onOpen={openAgent}
+              onRemove={closeTab}
+            />
+
+            <AssetList
+              sessionId={sessionId}
+              selectedId={selectedAssetId}
+              onOpen={selectAsset}
+            />
+          </BlockStack>
+          <TangentChatPane
+            sessionId={sessionId}
+            tabs={tabs}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            onCloseTab={closeTab}
+            onOpenArtifact={handleOpenArtifact}
+            onError={handleError}
+          />
+        </InlineStack>
       </BlockStack>
     </TangentEditorAgentProvider>
   );

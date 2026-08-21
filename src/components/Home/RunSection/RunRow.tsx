@@ -32,9 +32,10 @@ import { getOverallExecutionStatusFromStats } from "@/utils/executionStatus";
 interface RunRowProps {
   run: PipelineRunResponse;
   onFilterByUser?: (createdBy: string) => void;
+  onRunSelect?: (run: PipelineRunResponse) => void;
 }
 
-const RunRow = ({ run, onFilterByUser }: RunRowProps) => {
+const RunRow = ({ run, onFilterByUser, onRunSelect }: RunRowProps) => {
   const navigate = useNavigate();
   const { backendUrl } = useBackend();
 
@@ -69,6 +70,11 @@ const RunRow = ({ run, onFilterByUser }: RunRowProps) => {
 
   const handleRowClick = (e: MouseEvent<HTMLElement>) => {
     if (e.target instanceof HTMLElement && e.target.closest("button")) {
+      return;
+    }
+
+    if (onRunSelect) {
+      onRunSelect(run);
       return;
     }
 

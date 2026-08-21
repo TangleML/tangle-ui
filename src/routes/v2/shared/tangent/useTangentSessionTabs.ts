@@ -39,6 +39,12 @@ export function useTangentSessionTabs() {
     setSelectedAssetId(asset.id);
   }
 
+  function resetTabs() {
+    setTabs([]);
+    setActiveTab(CHAT_TAB_VALUE);
+    setSelectedAssetId(undefined);
+  }
+
   const selectedAgentId =
     activeTab === CHAT_TAB_VALUE ? PRIME_AGENT_ID : activeTab;
 
@@ -51,5 +57,6 @@ export function useTangentSessionTabs() {
     closeTab,
     selectAsset,
     setActiveTab,
+    resetTabs,
   };
 }

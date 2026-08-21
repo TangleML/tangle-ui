@@ -2,7 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
-import type { ListPipelineJobsResponse } from "@/api/types.gen";
+import type {
+  ListPipelineJobsResponse,
+  PipelineRunResponse,
+} from "@/api/types.gen";
 import { InfoBox } from "@/components/shared/InfoBox";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { Button } from "@/components/ui/button";
@@ -45,6 +48,7 @@ interface RunSectionProps {
   hideFilters?: boolean;
   forcedFilter?: string;
   maxItems?: number;
+  onRunSelect?: (run: PipelineRunResponse) => void;
 }
 
 export const RunSection = ({
@@ -52,6 +56,7 @@ export const RunSection = ({
   hideFilters,
   forcedFilter,
   maxItems,
+  onRunSelect,
 }: RunSectionProps) => {
   const { backendUrl, configured, available, ready } = useBackend();
   const navigate = useNavigate();
@@ -299,7 +304,12 @@ export const RunSection = ({
             ? data.pipeline_runs?.slice(0, maxItems)
             : data.pipeline_runs
           )?.map((run) => (
-            <RunRow key={run.id} run={run} onFilterByUser={onFilterByUser} />
+            <RunRow
+              key={run.id}
+              run={run}
+              onFilterByUser={onFilterByUser}
+              onRunSelect={onRunSelect}
+            />
           ))}
         </TableBody>
       </Table>
