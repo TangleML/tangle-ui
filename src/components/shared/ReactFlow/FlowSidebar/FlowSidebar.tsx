@@ -1,6 +1,6 @@
 import { BlockStack } from "@/components/ui/layout";
 import { VerticalResizeHandle } from "@/components/ui/resize-handle";
-import { BOTTOM_FOOTER_HEIGHT, TOP_NAV_HEIGHT } from "@/utils/constants";
+import { BOTTOM_FOOTER_HEIGHT, contentHeight } from "@/utils/constants";
 
 import FileActions from "./sections/FileActions";
 import GraphComponents from "./sections/GraphComponents";
@@ -19,7 +19,7 @@ const FlowSidebar = () => {
         width: `${DEFAULT_WIDTH}px`,
         minWidth: `${MIN_WIDTH}px`,
         maxWidth: `${MAX_WIDTH}px`,
-        maxHeight: `calc(100vh - ${TOP_NAV_HEIGHT}px - ${BOTTOM_FOOTER_HEIGHT}px)`,
+        maxHeight: contentHeight(BOTTOM_FOOTER_HEIGHT),
       }}
     >
       <BlockStack fill gap="2">

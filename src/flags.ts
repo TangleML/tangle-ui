@@ -79,6 +79,14 @@ export const ExistingFlags: ConfigFlags = {
     category: "beta",
   },
 
+  ["floating-banners"]: {
+    name: "Floating banners",
+    description:
+      "Show banners as a floating card over the page instead of a strip below the top navigation.",
+    default: false,
+    category: "beta",
+  },
+
   ["compare-runs"]: {
     name: "Compare runs",
     description:

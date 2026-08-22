@@ -1,5 +1,5 @@
 import { useContextPanel } from "@/providers/ContextPanelProvider";
-import { BOTTOM_FOOTER_HEIGHT, TOP_NAV_HEIGHT } from "@/utils/constants";
+import { BOTTOM_FOOTER_HEIGHT, contentHeight } from "@/utils/constants";
 
 export const ContextPanel = () => {
   const { content } = useContextPanel();
@@ -8,7 +8,7 @@ export const ContextPanel = () => {
       data-testid="context-panel-container"
       className="h-full p-2 bg-sidebar text-sidebar-foreground overflow-y-auto"
       style={{
-        maxHeight: `calc(100vh - ${TOP_NAV_HEIGHT}px - ${BOTTOM_FOOTER_HEIGHT}px)`,
+        maxHeight: contentHeight(BOTTOM_FOOTER_HEIGHT),
       }}
     >
       {content}

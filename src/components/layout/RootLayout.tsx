@@ -2,6 +2,7 @@ import { Outlet } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/router-devtools";
 import { ToastContainer } from "react-toastify";
 
+import { BannerRegion } from "@/components/shared/BannerRegion";
 import { ConfirmDialogBridge } from "@/components/shared/ConfirmDialogBridge/ConfirmDialogBridge";
 import { useClickTracking } from "@/hooks/useClickTracking";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
@@ -37,6 +38,7 @@ function RootLayoutContent() {
 
               <div className="App flex flex-col min-h-screen w-full">
                 <AppMenu />
+                <BannerRegion />
 
                 <main className="flex-1 grid">
                   <Outlet />

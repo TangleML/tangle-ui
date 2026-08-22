@@ -81,7 +81,7 @@ import {
 import type { ComponentFolder } from "@/types/componentLibrary";
 import type { ComponentReference } from "@/utils/componentSpec";
 import { componentMetadata } from "@/utils/componentTracking";
-import { HOURS, TOP_NAV_HEIGHT } from "@/utils/constants";
+import { contentHeight, HOURS } from "@/utils/constants";
 import { getComponentName } from "@/utils/getComponentName";
 import { tracking } from "@/utils/tracking";
 
@@ -1564,7 +1564,7 @@ export const DashboardComponentsV2View = () => {
     // `min-height: auto` defaults fight against that flex chain.
     <div
       className="flex flex-col -mt-4 -mb-6 -mx-8 overflow-hidden"
-      style={{ height: `calc(100vh - ${TOP_NAV_HEIGHT}px)` }}
+      style={{ height: contentHeight() }}
     >
       {/* Header zone: page title, description, search input. shrink-0 so it
           never gets squeezed by the body below. */}
