@@ -31,7 +31,7 @@ import { fetchAndStoreComponentLibrary } from "@/services/componentService";
 import type { ComponentFolder } from "@/types/componentLibrary";
 import type { ComponentReference } from "@/utils/componentSpec";
 import { componentMetadata } from "@/utils/componentTracking";
-import { TOP_NAV_HEIGHT } from "@/utils/constants";
+import { contentHeight } from "@/utils/constants";
 import { fetchWithErrorHandling } from "@/utils/fetchWithErrorHandling";
 import { getComponentName } from "@/utils/getComponentName";
 import { tracking } from "@/utils/tracking";
@@ -389,7 +389,7 @@ export function DashboardComponentsView() {
   return (
     <div
       className="flex -mt-4 -mb-6 -mx-8 overflow-hidden border-t border-border"
-      style={{ height: `calc(100vh - ${TOP_NAV_HEIGHT}px)` }}
+      style={{ height: contentHeight() }}
     >
       {/* Left: component list */}
       <div className="w-64 shrink-0 border-r border-border flex flex-col overflow-hidden">

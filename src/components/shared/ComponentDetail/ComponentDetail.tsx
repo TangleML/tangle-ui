@@ -16,7 +16,7 @@ import type {
   InputSpec,
   OutputSpec,
 } from "@/utils/componentSpec";
-import { TOP_NAV_HEIGHT } from "@/utils/constants";
+import { contentHeight } from "@/utils/constants";
 import { getComponentName } from "@/utils/getComponentName";
 import { buildComponentSourceUrl } from "@/utils/URL";
 
@@ -337,8 +337,7 @@ export const ComponentDetail = ({
   }
 
   // ── Split layout (V1 default) ─────────────────────────────────────────
-  const splitSourceHeight =
-    sourcePanelHeight ?? `calc(100vh - ${TOP_NAV_HEIGHT + 48}px)`;
+  const splitSourceHeight = sourcePanelHeight ?? contentHeight(48);
   return (
     <InlineStack gap="6" blockAlign="start">
       <BlockStack gap="4" className="flex-2 min-w-0">

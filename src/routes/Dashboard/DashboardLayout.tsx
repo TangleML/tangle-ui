@@ -13,12 +13,12 @@ import { useOnboarding } from "@/providers/OnboardingProvider/OnboardingProvider
 import { APP_ROUTES } from "@/routes/appRoutes";
 import {
   ABOUT_URL,
+  contentHeight,
   DOCUMENTATION_URL,
   GIT_COMMIT,
   GIT_REPO_URL,
   GIVE_FEEDBACK_URL,
   PRIVACY_POLICY_URL,
-  TOP_NAV_HEIGHT,
 } from "@/utils/constants";
 
 interface SidebarItem {
@@ -84,7 +84,7 @@ export function DashboardLayout() {
   return (
     <div
       className="flex w-full overflow-hidden"
-      style={{ height: `calc(100vh - ${TOP_NAV_HEIGHT}px)` }}
+      style={{ height: contentHeight() }}
     >
       {/* Sidebar — fixed height, independent scroll */}
       <div className="w-56 shrink-0 border-r border-border flex flex-col overflow-y-auto">
