@@ -14,6 +14,7 @@ import { getAnnotationValue } from "@/utils/annotations";
 
 import { AnnotationsInput } from "./AnnotationsInput";
 import { DescriptionWithLinks } from "./DescriptionWithLinks";
+import { launcherTaskAnnotationSchema, resolveLauncherKey } from "./utils";
 
 interface ComputeResourcesEditorProps {
   annotations: Annotations;
@@ -43,7 +44,18 @@ export const ComputeResourcesEditor = ({
           <ComputeResourceField
             key={cloudProviderConfig.annotation}
             resource={cloudProviderConfig}
-            annotations={annotations}
+            annotations={{
+              ...annotations,
+              [cloudProviderConfig.annotation]:
+                resolveLauncherKey(
+                  launcherTaskAnnotationSchema,
+                  getAnnotationValue(
+                    annotations,
+                    cloudProviderConfig.annotation,
+                    "",
+                  ),
+                ) ?? "",
+            }}
             onSave={onSave}
           />
         )}
