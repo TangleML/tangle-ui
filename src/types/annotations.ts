@@ -3,6 +3,11 @@ export type Annotations = Record<string, unknown>;
 export type AnnotationOption = {
   value: string;
   name: string;
+  provider?: string;
+  project?: string;
+  cluster?: string;
+  deprecated?: boolean;
+  deprecationMessage?: string;
 };
 
 export type AnnotationConfig = {

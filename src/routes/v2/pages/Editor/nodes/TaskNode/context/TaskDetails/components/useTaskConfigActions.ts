@@ -3,6 +3,7 @@ import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionCo
 import {
   clearProviderAnnotations,
   saveAnnotation,
+  selectCluster,
   setCollapsed,
   setConditionalExecution,
   setRunCondition,
@@ -21,5 +22,6 @@ export function useTaskConfigActions() {
     setConditionalExecution: setConditionalExecution.bind(null, undo),
     setRunCondition: setRunCondition.bind(null, undo),
     clearProviderAnnotations: clearProviderAnnotations.bind(null, undo),
+    selectCluster: selectCluster.bind(null, undo),
   };
 }
