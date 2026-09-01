@@ -1,3 +1,8 @@
+import {
+  ACCELERATORS_ANNOTATION,
+  type LauncherAnnotationSchema,
+  resolveClusterSelection,
+} from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/AnnotationsEditor/utils";
 import type { ComponentSpec, Task } from "@/models/componentSpec";
 import type { UndoGroupable } from "@/routes/v2/shared/nodes/types";
 import type { AnnotationConfig } from "@/types/annotations";
@@ -92,6 +97,34 @@ export function clearProviderAnnotations(
   undo.withGroup("Clear provider annotations", () => {
     for (const res of annotations) {
       task.annotations.remove(res.annotation);
+    }
+  });
+}
+
+export function selectCluster(
+  undo: UndoGroupable,
+  task: Task,
+  schema: LauncherAnnotationSchema,
+  clusterKey: string,
+) {
+  const cloudProviderAnnotation = schema.cloud_provider?.annotation;
+  if (!cloudProviderAnnotation) return;
+
+  const existing = task.annotations.get(ACCELERATORS_ANNOTATION);
+  const selection = resolveClusterSelection(
+    schema,
+    clusterKey,
+    typeof existing === "string" ? existing : undefined,
+  );
+  if (!selection) return;
+
+  undo.withGroup("Select cluster", () => {
+    task.annotations.set(cloudProviderAnnotation, selection.cloudProviderValue);
+    if (selection.acceleratorAnnotation && selection.acceleratorValue) {
+      task.annotations.set(
+        selection.acceleratorAnnotation,
+        selection.acceleratorValue,
+      );
     }
   });
 }

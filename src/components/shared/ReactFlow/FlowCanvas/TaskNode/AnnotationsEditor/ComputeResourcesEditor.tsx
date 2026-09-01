@@ -14,12 +14,17 @@ import { getAnnotationValue } from "@/utils/annotations";
 
 import { AnnotationsInput } from "./AnnotationsInput";
 import { DescriptionWithLinks } from "./DescriptionWithLinks";
+import { launcherTaskAnnotationSchema, resolveLauncherKey } from "./utils";
 
 interface ComputeResourcesEditorProps {
   annotations: Annotations;
   resources: AnnotationConfig[];
   cloudProviderConfig: AnnotationConfig | null;
   onSave: (key: string, value: string) => void;
+  // When the backend drives the launcher schema, the parent resolves the selected
+  // cluster key against the live schema and passes it here; a legacy persisted value
+  // only maps to its current key through that schema, not the bundled static one.
+  providerValue?: string;
 }
 
 export const ComputeResourcesEditor = ({
@@ -27,6 +32,7 @@ export const ComputeResourcesEditor = ({
   resources,
   cloudProviderConfig,
   onSave,
+  providerValue,
 }: ComputeResourcesEditorProps) => {
   return (
     <BlockStack gap="2">
@@ -43,7 +49,20 @@ export const ComputeResourcesEditor = ({
           <ComputeResourceField
             key={cloudProviderConfig.annotation}
             resource={cloudProviderConfig}
-            annotations={annotations}
+            annotations={{
+              ...annotations,
+              [cloudProviderConfig.annotation]:
+                providerValue ??
+                resolveLauncherKey(
+                  launcherTaskAnnotationSchema,
+                  getAnnotationValue(
+                    annotations,
+                    cloudProviderConfig.annotation,
+                    "",
+                  ),
+                ) ??
+                "",
+            }}
             onSave={onSave}
           />
         )}

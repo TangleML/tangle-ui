@@ -2,9 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { BlockStack } from "@/components/ui/layout";
 import { Separator } from "@/components/ui/separator";
+import { useLauncherAnnotationSchema } from "@/hooks/useLauncherCapabilities";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
-import type { AnnotationConfig, Annotations } from "@/types/annotations";
+import type { Annotations } from "@/types/annotations";
 import { getAnnotationValue, HIDDEN_ANNOTATIONS } from "@/utils/annotations";
 import type { TaskSpec } from "@/utils/componentSpec";
 
@@ -12,11 +13,15 @@ import { AnnotationsEditor } from "./AnnotationsEditor";
 import { ComputeResourcesEditor } from "./ComputeResourcesEditor";
 import type { NewAnnotationRowData } from "./NewAnnotationRow";
 import {
+  ACCELERATORS_ANNOTATION,
+  clusterAnnotationDiff,
   getCloudProviderConfig,
   getCommonAnnotations,
   getProviderSchema,
-  launcherTaskAnnotationSchema,
+  type LauncherAnnotationSchema,
   parseSchemaToAnnotationConfig,
+  resolveClusterSelection,
+  resolveSelectedClusterKey,
 } from "./utils";
 
 interface AnnotationsSectionProps {
@@ -37,13 +42,14 @@ export const AnnotationsSection = ({
     ...rawAnnotations,
   });
 
-  const [cloudProviderConfig, setCloudProviderConfig] =
-    useState<AnnotationConfig | null>(null);
-  const [pinnedAnnotations, setPinnedAnnotations] = useState<
-    AnnotationConfig[]
-  >([]);
-  const [computeResources, setComputeResources] = useState<AnnotationConfig[]>(
-    [],
+  const { schema, capabilitiesActive } = useLauncherAnnotationSchema();
+  const cloudProviderConfig = useMemo(
+    () => getCloudProviderConfig(schema),
+    [schema],
+  );
+  const pinnedAnnotations = useMemo(
+    () => getCommonAnnotations(schema),
+    [schema],
   );
   const [previousProvider, setPreviousProvider] = useState<string | undefined>(
     undefined,
@@ -52,9 +58,24 @@ export const AnnotationsSection = ({
   // Track new rows separately until they have a key
   const [newRows, setNewRows] = useState<Array<NewAnnotationRowData>>([]);
 
-  const selectedProvider = cloudProviderConfig
-    ? getAnnotationValue(annotations, cloudProviderConfig.annotation)
-    : undefined;
+  const selectedProvider = !cloudProviderConfig
+    ? undefined
+    : capabilitiesActive
+      ? resolveSelectedClusterKey(schema, annotations)
+      : getAnnotationValue(annotations, cloudProviderConfig.annotation);
+
+  const computeResources = useMemo(() => {
+    if (!selectedProvider) {
+      return [];
+    }
+    const providerSchema = getProviderSchema(schema, selectedProvider);
+    if (!providerSchema) {
+      return [];
+    }
+    return parseSchemaToAnnotationConfig(providerSchema).filter(
+      (resource) => !resource.hidden,
+    );
+  }, [schema, selectedProvider]);
 
   const commonAnnotations = useMemo(() => {
     const managedAnnotationKeys = new Set([
@@ -127,6 +148,31 @@ export const AnnotationsSection = ({
         return;
       }
 
+      if (
+        capabilitiesActive &&
+        cloudProviderConfig &&
+        key === cloudProviderConfig.annotation
+      ) {
+        const selection = resolveClusterSelection(
+          schema,
+          value,
+          getAnnotationValue(annotations, ACCELERATORS_ANNOTATION),
+        );
+        if (selection) {
+          const newAnnotations = {
+            ...annotations,
+            [cloudProviderConfig.annotation]: selection.cloudProviderValue,
+          };
+          if (selection.acceleratorAnnotation && selection.acceleratorValue) {
+            newAnnotations[selection.acceleratorAnnotation] =
+              selection.acceleratorValue;
+          }
+          setAnnotations(newAnnotations);
+          onApply(newAnnotations);
+          return;
+        }
+      }
+
       const newAnnotations = {
         ...annotations,
         [key]: value,
@@ -135,80 +181,50 @@ export const AnnotationsSection = ({
       setAnnotations(newAnnotations);
       onApply(newAnnotations);
     },
-    [annotations, onApply, handleRemove],
+    [
+      annotations,
+      onApply,
+      handleRemove,
+      capabilitiesActive,
+      cloudProviderConfig,
+      schema,
+    ],
   );
 
   useEffect(() => {
     setAnnotations(rawAnnotations);
   }, [rawAnnotations]);
 
+  // Drop the previous provider's annotations when switching providers.
   useEffect(() => {
-    try {
-      const providerConfig = getCloudProviderConfig(
-        launcherTaskAnnotationSchema,
-      );
-      setCloudProviderConfig(providerConfig);
-
-      const common = getCommonAnnotations(launcherTaskAnnotationSchema);
-      setPinnedAnnotations(common);
-    } catch (error) {
-      console.error("Failed to load launcher annotation schema:", error);
+    if (selectedProvider === previousProvider) {
+      return;
     }
-  }, []);
 
-  // Provider-specific compute resources
-  useEffect(() => {
-    if (selectedProvider !== previousProvider) {
-      try {
-        // Get previous provider's annotations to remove
-        let annotationsToRemove: string[] = [];
-        if (previousProvider) {
-          const previousProviderSchema = getProviderSchema(
-            launcherTaskAnnotationSchema,
-            previousProvider,
-          );
-          if (previousProviderSchema) {
-            const previousResources = parseSchemaToAnnotationConfig(
-              previousProviderSchema,
-            );
-            annotationsToRemove = previousResources.map((r) => r.annotation);
-          }
-        }
+    if (previousProvider) {
+      const annotationsToRemove = capabilitiesActive
+        ? clusterAnnotationDiff(schema, previousProvider, selectedProvider)
+        : previousProviderAnnotationKeys(schema, previousProvider);
 
-        // Get new provider's schema
-        let newResources: AnnotationConfig[] = [];
-        if (selectedProvider) {
-          const providerSchema = getProviderSchema(
-            launcherTaskAnnotationSchema,
-            selectedProvider,
-          );
-
-          if (providerSchema) {
-            const parsedResources =
-              parseSchemaToAnnotationConfig(providerSchema);
-            newResources = parsedResources.filter((res) => !res.hidden);
-          }
-        }
-
-        setComputeResources(newResources);
-
-        // Remove old provider annotations if switching providers
-        if (annotationsToRemove.length > 0) {
-          const cleanedAnnotations = { ...annotations };
-          annotationsToRemove.forEach((key) => {
-            delete cleanedAnnotations[key];
-          });
-          setAnnotations(cleanedAnnotations);
-          onApply(cleanedAnnotations);
-        }
-
-        setPreviousProvider(selectedProvider);
-      } catch (error) {
-        console.error("Failed to load provider schema:", error);
-        setComputeResources([]);
+      if (annotationsToRemove.length > 0) {
+        const cleanedAnnotations = { ...annotations };
+        annotationsToRemove.forEach((key) => {
+          delete cleanedAnnotations[key];
+        });
+        setAnnotations(cleanedAnnotations);
+        onApply(cleanedAnnotations);
       }
     }
-  }, [selectedProvider, previousProvider, annotations, onApply]);
+
+    setPreviousProvider(selectedProvider);
+  }, [
+    selectedProvider,
+    previousProvider,
+    capabilitiesActive,
+    schema,
+    annotations,
+    onApply,
+  ]);
 
   return (
     <BlockStack gap="2" className="overflow-y-auto pr-4 overflow-visible">
@@ -217,6 +233,7 @@ export const AnnotationsSection = ({
         resources={computeResources}
         annotations={annotations}
         onSave={handleSave}
+        providerValue={capabilitiesActive ? selectedProvider : undefined}
       />
 
       <Separator className="mt-4 mb-2" />
@@ -234,3 +251,15 @@ export const AnnotationsSection = ({
     </BlockStack>
   );
 };
+
+function previousProviderAnnotationKeys(
+  schema: LauncherAnnotationSchema,
+  provider: string,
+): string[] {
+  const previousProviderSchema = getProviderSchema(schema, provider);
+  return previousProviderSchema
+    ? parseSchemaToAnnotationConfig(previousProviderSchema).map(
+        (resource) => resource.annotation,
+      )
+    : [];
+}
