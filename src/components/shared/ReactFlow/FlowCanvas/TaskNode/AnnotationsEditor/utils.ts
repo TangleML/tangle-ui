@@ -19,6 +19,8 @@ interface JSONSchemaProperty {
   "x-append"?: string;
   "x-enable-quantity"?: boolean;
   "x-enum-labels"?: Record<string, string>;
+  "x-enum-deprecated"?: Record<string, boolean>;
+  "x-enum-deprecated-messages"?: Record<string, string>;
   "x-allow-custom-value"?: boolean;
   "x-hidden"?: boolean;
   "x-type"?: string;
@@ -28,8 +30,14 @@ interface JSONSchemaObject {
   type: string;
   title?: string;
   properties: Record<string, JSONSchemaProperty>;
-  "x-label"?: string;
   "feature-flag-key"?: string;
+  "x-active"?: boolean;
+  "x-deprecated"?: boolean;
+  "x-deprecated-message"?: string;
+  "x-provider"?: string;
+  "x-project"?: string;
+  "x-cluster"?: string;
+  "x-legacy-keys"?: string[];
 }
 
 interface CloudProviderSchema extends JSONSchemaProperty {
@@ -110,11 +118,7 @@ export function parseSchemaToAnnotationConfig(
 
     // Handle enum as options
     if (property.enum) {
-      const options: AnnotationOption[] = property.enum.map((value) => ({
-        value,
-        name: property["x-enum-labels"]?.[value] || value,
-      }));
-      config.options = options;
+      config.options = enumToOptions(property);
     }
 
     // Handle custom value allowance
@@ -151,11 +155,7 @@ function parseCloudProviderConfig(
   };
 
   if (providerSchema.enum) {
-    const options: AnnotationOption[] = providerSchema.enum.map((value) => ({
-      value,
-      name: providerSchema["x-enum-labels"]?.[value] || value,
-    }));
-    config.options = options;
+    config.options = enumToOptions(providerSchema);
   }
 
   return config;
@@ -176,20 +176,62 @@ export function getCloudProviderConfig(
       schema.launcher_annotation_schemas,
     )
       .filter(([, launcherSchema]) => {
+        if (launcherSchema["x-active"] === false) {
+          return false;
+        }
         const flagKey = launcherSchema["feature-flag-key"];
         return !flagKey || isFlagEnabled(flagKey);
       })
-      .map(([key, launcherSchema]) => ({
-        value: key,
-        name:
-          launcherSchema["x-label"] ||
-          launcherSchema.title ||
-          key.charAt(0).toUpperCase() + key.slice(1),
-      }));
+      .map(([key, launcherSchema]) => {
+        const option: AnnotationOption = {
+          value: key,
+          name: launcherSchema.title || key,
+        };
+        if (launcherSchema["x-provider"]) {
+          option.provider = launcherSchema["x-provider"];
+        }
+        if (launcherSchema["x-project"]) {
+          option.project = launcherSchema["x-project"];
+        }
+        if (launcherSchema["x-cluster"]) {
+          option.cluster = launcherSchema["x-cluster"];
+        }
+        if (launcherSchema["x-deprecated"]) {
+          option.deprecated = true;
+          const message = launcherSchema["x-deprecated-message"];
+          if (message) {
+            option.deprecationMessage = message;
+          }
+        }
+        return option;
+      });
     config.options = options;
   }
 
   return config;
+}
+
+export function resolveLauncherKey(
+  schema: LauncherAnnotationSchema,
+  value: string | undefined,
+): string | undefined {
+  if (!value || !schema.launcher_annotation_schemas) {
+    return value;
+  }
+
+  if (schema.launcher_annotation_schemas[value]) {
+    return value;
+  }
+
+  for (const [key, launcherSchema] of Object.entries(
+    schema.launcher_annotation_schemas,
+  )) {
+    if (launcherSchema["x-legacy-keys"]?.includes(value)) {
+      return key;
+    }
+  }
+
+  return value;
 }
 
 export function getProviderSchema(
@@ -200,7 +242,8 @@ export function getProviderSchema(
     return null;
   }
 
-  return schema.launcher_annotation_schemas[provider] || null;
+  const resolvedKey = resolveLauncherKey(schema, provider);
+  return schema.launcher_annotation_schemas[resolvedKey ?? provider] || null;
 }
 
 export function getCommonAnnotations(
@@ -211,4 +254,25 @@ export function getCommonAnnotations(
   }
 
   return parseSchemaToAnnotationConfig(schema.common_annotations);
+}
+
+function enumToOptions(property: JSONSchemaProperty): AnnotationOption[] {
+  const labels = property["x-enum-labels"];
+  const deprecated = property["x-enum-deprecated"];
+  const messages = property["x-enum-deprecated-messages"];
+
+  return (property.enum ?? []).map((value) => {
+    const option: AnnotationOption = {
+      value,
+      name: labels?.[value] || value,
+    };
+    if (deprecated?.[value]) {
+      option.deprecated = true;
+      const message = messages?.[value];
+      if (message) {
+        option.deprecationMessage = message;
+      }
+    }
+    return option;
+  });
 }

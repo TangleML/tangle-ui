@@ -16,9 +16,13 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Paragraph } from "@/components/ui/typography";
 import { useCallbackOnUnmount } from "@/hooks/useCallbackOnUnmount";
 import { cn } from "@/lib/utils";
@@ -332,6 +336,10 @@ export const AnnotationsInput = ({
           ]
         : config.options;
 
+      const selectedOption = selectOptions.find(
+        (opt) => opt.value === currentValue,
+      );
+
       inputElement = (
         <Select
           value={currentValue}
@@ -346,7 +354,21 @@ export const AnnotationsInput = ({
         >
           <div className="relative group grow min-w-24">
             <SelectTrigger className={cn("w-full", className)}>
-              <SelectValue placeholder={"Select " + placeholder} />
+              {selectedOption ? (
+                <span className="truncate">
+                  {selectedOption.provider
+                    ? [selectedOption.provider, selectedOption.cluster]
+                        .filter(Boolean)
+                        .join(" · ")
+                    : selectedOption.name}
+                </span>
+              ) : currentValue ? (
+                <span className="truncate">{currentValue}</span>
+              ) : (
+                <span className="text-muted-foreground">
+                  {"Select " + placeholder}
+                </span>
+              )}
             </SelectTrigger>
             {!!currentValue && (
               <Button
@@ -360,11 +382,52 @@ export const AnnotationsInput = ({
             )}
           </div>
           <SelectContent>
-            {selectOptions.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.name}
-              </SelectItem>
-            ))}
+            {selectOptions.map((opt) => {
+              const deprecatedMarker = opt.deprecated ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Icon
+                      name="TriangleAlert"
+                      size="sm"
+                      className="text-warning"
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent className="z-9999">
+                    {opt.deprecationMessage ?? "Deprecated"}
+                  </TooltipContent>
+                </Tooltip>
+              ) : null;
+
+              const detail = [opt.cluster, opt.project]
+                .filter(Boolean)
+                .join(" · ");
+
+              return (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.provider ? (
+                    <span className="flex min-w-0 flex-col gap-0.5">
+                      <span className="flex items-center gap-1.5">
+                        <span className="truncate">{opt.provider}</span>
+                        {deprecatedMarker}
+                      </span>
+                      {detail && (
+                        <span
+                          className="truncate text-xs text-muted-foreground"
+                          title={detail}
+                        >
+                          {detail}
+                        </span>
+                      )}
+                    </span>
+                  ) : (
+                    <>
+                      {opt.name}
+                      {deprecatedMarker}
+                    </>
+                  )}
+                </SelectItem>
+              );
+            })}
           </SelectContent>
         </Select>
       );
