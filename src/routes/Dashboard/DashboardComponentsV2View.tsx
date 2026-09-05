@@ -87,6 +87,7 @@ import { contentHeight } from "@/utils/layout";
 import { tracking } from "@/utils/tracking";
 
 import { APP_ROUTES } from "../router";
+import { CLIPBOARD_COPY_FAILED_MESSAGE } from "../v2/shared/clipboard/clipboardMessages";
 import { copyComponentReferenceToClipboard } from "../v2/shared/clipboard/copyComponentReferenceToClipboard";
 import {
   createSourceFilterOptions,
@@ -1391,10 +1392,7 @@ export const DashboardComponentsV2View = () => {
         "success",
       );
     } catch {
-      notify(
-        "Couldn't copy to clipboard. Check browser permissions and try again.",
-        "error",
-      );
+      notify(CLIPBOARD_COPY_FAILED_MESSAGE, "error");
     }
   };
 
