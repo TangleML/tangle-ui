@@ -1,6 +1,6 @@
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "vitest";
 
-import { isEditableTarget } from "./shortcutUtils";
+import { isDialogOpen, isEditableTarget } from "./shortcutUtils";
 
 describe("isEditableTarget", () => {
   test("returns false for non-elements", () => {
@@ -26,5 +26,23 @@ describe("isEditableTarget", () => {
     expect(isEditableTarget(inner)).toBe(true);
 
     editor.remove();
+  });
+});
+
+describe("isDialogOpen", () => {
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  test("returns false when nothing is open", () => {
+    expect(isDialogOpen()).toBe(false);
+  });
+
+  test.each(["dialog", "alertdialog"])("detects an open %s", (role) => {
+    const el = document.createElement("div");
+    el.setAttribute("role", role);
+    document.body.appendChild(el);
+
+    expect(isDialogOpen()).toBe(true);
   });
 });

@@ -11,11 +11,14 @@ import type { ComponentSpec } from "@/models/componentSpec";
 import { IncrementingIdGenerator } from "@/models/componentSpec/factories/idGenerator";
 import { editorRegistry } from "@/routes/v2/pages/Editor/nodes";
 import {
-  readFromSystemClipboard,
+  readSystemClipboardInfo,
+  type SystemClipboardInfo,
   writeToSystemClipboard,
 } from "@/routes/v2/shared/clipboard/clipboardEnvelope";
-import { computeSnapshotBounds } from "@/routes/v2/shared/clipboard/copyNodesToClipboard";
-import { snapshotInternalBindings } from "@/routes/v2/shared/clipboard/snapshotBindings";
+import {
+  collectNodeSnapshots,
+  computeSnapshotBounds,
+} from "@/routes/v2/shared/clipboard/copyNodesToClipboard";
 import type {
   BindingSnapshot,
   NodeSnapshot,
@@ -42,67 +45,68 @@ export class ClipboardStore {
     return this.snapshots.length > 0;
   }
 
-  @action copy(spec: ComponentSpec, selectedNodes: SelectedNode[]) {
-    const snapshots: NodeSnapshot[] = [];
-    for (const node of selectedNodes) {
-      const manifest = editorRegistry.get(node.type);
-      const snapshot =
-        manifest?.snapshotHandler?.snapshot(spec, node.id) ??
-        manifest?.cloneHandler?.snapshot(spec, node.id);
-      if (snapshot) snapshots.push(snapshot);
-    }
-
-    const selectedIds = new Set(selectedNodes.map((n) => n.id));
-    const bindings = snapshotInternalBindings(spec, selectedIds);
-
-    this.snapshots = snapshots;
-    this.bindingSnapshots = bindings;
-    this.pasteOffsetIndex = 0;
-
-    writeToSystemClipboard(snapshots, bindings);
+  /** Rejects when the system clipboard write fails; the in-memory copy stands. */
+  async copy(
+    spec: ComponentSpec,
+    selectedNodes: SelectedNode[],
+  ): Promise<void> {
+    const { snapshots, bindings } = collectNodeSnapshots(
+      editorRegistry,
+      spec,
+      selectedNodes,
+    );
+    this.stage(snapshots, bindings);
+    await writeToSystemClipboard(snapshots, bindings);
   }
 
+  /**
+   * `pasteEventRead` is authoritative when present: skipping the async read is
+   * what avoids the clipboard-read permission prompt.
+   *
+   * Rejects when the clipboard is unreadable and nothing is staged in memory.
+   * A readable clipboard holding no nodes resolves silently — pasting ordinary
+   * text over the canvas should not nag.
+   */
   async paste(
     spec: ComponentSpec,
     centerPosition: XYPosition,
-  ): Promise<string[]> {
-    const systemData = await readFromSystemClipboard();
-    const snapshots = systemData?.snapshots ?? this.snapshots;
-    const bindings = systemData?.bindings ?? this.bindingSnapshots;
+    pasteEventRead?: SystemClipboardInfo,
+  ): Promise<void> {
+    const read =
+      !pasteEventRead || pasteEventRead.kind === "unavailable"
+        ? await readSystemClipboardInfo()
+        : pasteEventRead;
 
-    if (snapshots.length === 0) return [];
+    const envelope = read.kind === "envelope" ? read.envelope : null;
+    const snapshots = envelope?.snapshots ?? this.snapshots;
+    const bindings = envelope?.bindings ?? this.bindingSnapshots;
+
+    if (snapshots.length === 0) {
+      if (read.kind === "unavailable") {
+        throw new Error("The system clipboard could not be read.");
+      }
+      return;
+    }
 
     const offset = this.pasteOffsetIndex * PASTE_OFFSET;
-    const offsetCenter = {
+    this.cloneSnapshotsAtPosition(spec, snapshots, bindings, {
       x: centerPosition.x + offset,
       y: centerPosition.y + offset,
-    };
+    });
+
     runInAction(() => {
       this.pasteOffsetIndex += 1;
     });
-
-    return this.cloneSnapshotsAtPosition(
-      spec,
-      snapshots,
-      bindings,
-      offsetCenter,
-    );
   }
 
   duplicate(spec: ComponentSpec, selectedNodes: SelectedNode[]): string[] {
-    const snapshots: NodeSnapshot[] = [];
-    for (const node of selectedNodes) {
-      const manifest = editorRegistry.get(node.type);
-      const snapshot =
-        manifest?.snapshotHandler?.snapshot(spec, node.id) ??
-        manifest?.cloneHandler?.snapshot(spec, node.id);
-      if (snapshot) snapshots.push(snapshot);
-    }
+    const { snapshots, bindings } = collectNodeSnapshots(
+      editorRegistry,
+      spec,
+      selectedNodes,
+    );
 
     if (snapshots.length === 0) return [];
-
-    const selectedIds = new Set(selectedNodes.map((n) => n.id));
-    const bindings = snapshotInternalBindings(spec, selectedIds);
 
     return cloneSnapshotsWithBindings(
       spec,
@@ -121,6 +125,15 @@ export class ClipboardStore {
   @action clear() {
     this.snapshots = [];
     this.bindingSnapshots = [];
+    this.pasteOffsetIndex = 0;
+  }
+
+  @action private stage(
+    snapshots: NodeSnapshot[],
+    bindings: BindingSnapshot[],
+  ) {
+    this.snapshots = snapshots;
+    this.bindingSnapshots = bindings;
     this.pasteOffsetIndex = 0;
   }
 
