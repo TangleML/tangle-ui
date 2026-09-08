@@ -39,7 +39,6 @@ vi.mock("./pipelineRegistry", () => ({
   findByStorageKey: vi.fn(async (storageKey: string) =>
     [...registry.values()].find((entry) => entry.storageKey === storageKey),
   ),
-  findByRemoteStorageKey: vi.fn(async () => []),
   getAllByFolderId: vi.fn(async (folderId: string) =>
     [...registry.values()].filter((entry) => entry.folderId === folderId),
   ),

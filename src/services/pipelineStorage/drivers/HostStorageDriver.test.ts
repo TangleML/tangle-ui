@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ComponentSpec } from "@/utils/componentSpec";
 import { componentSpecFromYaml, componentSpecToYaml } from "@/utils/yaml";
@@ -10,6 +10,7 @@ import type {
   HostPipelineSummary,
   PipelineStorageHost,
 } from "../host/contract";
+import { resetStorageModeForTests } from "../storageMode";
 import type { PipelineStorageDriver } from "../types";
 import { HostStorageDriver, HostStorageError } from "./HostStorageDriver";
 
@@ -348,8 +349,13 @@ describe("HostStorageDriver error mapping", () => {
 });
 
 describe("createDriver without a detected host", () => {
+  beforeEach(() => {
+    resetStorageModeForTests();
+  });
+
   afterEach(() => {
     delete window.__TANGLE_PIPELINE_STORAGE_HOST__;
+    resetStorageModeForTests();
   });
 
   it.each([

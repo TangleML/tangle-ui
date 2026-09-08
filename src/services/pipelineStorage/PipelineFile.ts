@@ -2,11 +2,9 @@ import { action, makeObservable, observable, runInAction } from "mobx";
 
 import { emitUserPipelineWritten } from "@/utils/userPipelineWriteEvents";
 
-import { clearMirrorsOfHostKey, mirrorWriteToHost } from "./host/hostMirror";
 import { emitPipelineFileChanged } from "./pipelineFileEvents";
 import type { PipelineFolder } from "./PipelineFolder";
 import { deleteEntry, updateEntry } from "./pipelineRegistry";
-import { HOST_DRIVER_TYPE } from "./types";
 
 interface PipelineFileInit {
   id: string;
@@ -55,8 +53,6 @@ export class PipelineFile {
       });
     }
 
-    await mirrorWriteToHost(this, content);
-
     emitPipelineFileChanged({ storageKey: this.storageKey, source: "v2" });
     emitUserPipelineWritten();
   }
@@ -90,9 +86,5 @@ export class PipelineFile {
   async deleteFile(): Promise<void> {
     await this.folder.driver.delete(this.storageKey);
     await deleteEntry(this.id);
-
-    if (this.folder.driver.type === HOST_DRIVER_TYPE) {
-      await clearMirrorsOfHostKey(this.storageKey);
-    }
   }
 }

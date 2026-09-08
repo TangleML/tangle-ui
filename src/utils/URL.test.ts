@@ -12,10 +12,6 @@ import {
   toAbsoluteHttpUrl,
 } from "./URL";
 
-vi.mock("@/routes/router", () => ({
-  RUNS_BASE_PATH: "/runs",
-}));
-
 // Kept ahead of the download tests, which delete `global.URL` in their teardown.
 describe("toAbsoluteHttpUrl", () => {
   it("accepts absolute http and https urls", () => {

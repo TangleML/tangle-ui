@@ -1,4 +1,4 @@
-import { RUNS_BASE_PATH } from "@/routes/router";
+import { RUNS_BASE_PATH } from "@/routes/appRoutes";
 import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 
 const convertGcsUrlToBrowserUrl = (

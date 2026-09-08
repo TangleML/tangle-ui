@@ -4,7 +4,7 @@ import { FolderIndexDbStorageDriver } from "./drivers/FolderIndexDbStorageDriver
 import { HostStorageDriver } from "./drivers/HostStorageDriver";
 import { LocalFileSystemDriver } from "./drivers/LocalFileSystemDriver";
 import { RootFolderDbStorageDriver } from "./drivers/RootFolderDbStorageDriver";
-import { getPipelineStorageHost } from "./host/detectHost";
+import { getStorageHost } from "./storageMode";
 import type { DriverConfig, PipelineStorageDriver } from "./types";
 
 export function createDriver(config: DriverConfig): PipelineStorageDriver {
@@ -16,7 +16,7 @@ export function createDriver(config: DriverConfig): PipelineStorageDriver {
     case "local-fs":
       return new LocalFileSystemDriver(config.handle);
     case "host": {
-      const host = getPipelineStorageHost();
+      const host = getStorageHost();
       if (!host) {
         throw new Error(
           "Host-provided pipeline storage is not available on this page",

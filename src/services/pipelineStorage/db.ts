@@ -2,7 +2,7 @@ import { Dexie, type EntityTable } from "dexie";
 
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 
-import { syncHostFolder } from "./host/hostFolder";
+import { isHostStorage } from "./storageMode";
 import {
   type FolderEntry,
   type PipelineRegistryEntry,
@@ -29,12 +29,53 @@ pipelineStorageDb.version(2).stores({
   folders: "id, parentId",
 });
 
+pipelineStorageDb
+  .version(3)
+  .stores({
+    pipeline_registry: "id, &storageKey, folderId, [folderId+storageKey]",
+    folders: "id, parentId",
+  })
+  .upgrade(async (tx) => {
+    await tx
+      .table("pipeline_registry")
+      .toCollection()
+      .modify((entry: Record<string, unknown>) => {
+        delete entry.remoteStorageKey;
+      });
+
+    /**
+     * An earlier shape of this feature kept the host alongside local storage as
+     * a child folder. A row whose driver cannot be built takes the whole folder
+     * listing down with it, and the host is now the root rather than a child,
+     * so those rows have nothing left to describe.
+     */
+    const hostFolders = await tx
+      .table<FolderEntry>("folders")
+      .filter((folder) => folder.driverConfig.driverType === "host")
+      .toArray();
+
+    for (const folder of hostFolders) {
+      await tx
+        .table<PipelineRegistryEntry>("pipeline_registry")
+        .where("folderId")
+        .equals(folder.id)
+        .delete();
+      await tx.table<FolderEntry>("folders").delete(folder.id);
+    }
+  });
+
 pipelineStorageDb.on("ready", async () => {
   await seedRegistryFromLegacyList();
-  await syncHostFolder(pipelineStorageDb);
 });
 
+/**
+ * The registry indexes storage keys within the one store the app is using. In
+ * host mode those keys are the host's, so seeding it with local pipeline names
+ * would claim files the host has never heard of.
+ */
 async function seedRegistryFromLegacyList() {
+  if (isHostStorage()) return;
+
   const count = await pipelineStorageDb.pipeline_registry.count();
   if (count > 0) return;
 

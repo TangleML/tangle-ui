@@ -5,7 +5,6 @@ import type { LocalFileSystemDriverConfig } from "./drivers/LocalFileSystemDrive
 import type { RootFolderDbDriverConfig } from "./drivers/RootFolderDbStorageDriver";
 
 export const ROOT_FOLDER_ID = "__root__";
-export const HOST_FOLDER_ID = "__host__";
 export const HOST_DRIVER_TYPE = "host";
 
 export interface PipelineFileDescriptor {
@@ -50,7 +49,6 @@ export interface PipelineRegistryEntry {
   storageKey: string;
   folderId: string;
   contentVersion?: string;
-  remoteStorageKey?: string;
 }
 
 export interface FolderEntry {

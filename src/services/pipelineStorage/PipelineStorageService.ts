@@ -5,20 +5,17 @@ import { pipelineStorageDb } from "./db";
 import { PipelineFile } from "./PipelineFile";
 import { PipelineFolder } from "./PipelineFolder";
 import { findById, findByStorageKey } from "./pipelineRegistry";
-import { type PipelineStorageDriver, ROOT_FOLDER_ID } from "./types";
-
-const ROOT_DRIVER_CONFIG = {
-  driverType: "folder-indexdb",
-  folderId: ROOT_FOLDER_ID,
-} as const;
+import { resolveStorageMode, type StorageMode } from "./storageMode";
+import { ROOT_FOLDER_ID } from "./types";
 
 export class PipelineStorageService {
   @observable accessor rootFolder: PipelineFolder;
 
+  readonly mode: StorageMode;
+
   constructor() {
-    this.rootFolder = createRoot({
-      driver: createDriver(ROOT_DRIVER_CONFIG),
-    });
+    this.mode = resolveStorageMode();
+    this.rootFolder = createRoot(this.mode);
     makeObservable(this);
   }
 
@@ -50,15 +47,23 @@ export class PipelineStorageService {
       return this.rootFolder;
     }
 
+    if (this.rootFolder.isFlat) {
+      throw new Error(`Folder not available in ${this.rootFolder.name}: ${id}`);
+    }
+
     return PipelineFolder.resolveById(id);
   }
 
   async getAllFolders(): Promise<PipelineFolder[]> {
+    if (this.rootFolder.isFlat) return [];
+
     const entries = await pipelineStorageDb.folders.toArray();
     return entries.map((entry) => PipelineFolder.fromEntry(entry));
   }
 
   async getFavoriteFolders(): Promise<PipelineFolder[]> {
+    if (this.rootFolder.isFlat) return [];
+
     const entries = await pipelineStorageDb.folders
       .filter((f) => f.favorite === true)
       .toArray();
@@ -70,11 +75,24 @@ export class PipelineStorageService {
   }
 }
 
-function createRoot(options?: { driver: PipelineStorageDriver }) {
+function createRoot(mode: StorageMode): PipelineFolder {
+  if (mode.kind === "host") {
+    return new PipelineFolder({
+      id: ROOT_FOLDER_ID,
+      name: mode.label,
+      parentId: null,
+      driver: createDriver({ driverType: "host" }),
+      isFlat: true,
+    });
+  }
+
   return new PipelineFolder({
     id: ROOT_FOLDER_ID,
     name: "Root",
     parentId: null,
-    driver: options?.driver ?? createDriver({ driverType: "root-indexdb" }),
+    driver: createDriver({
+      driverType: "folder-indexdb",
+      folderId: ROOT_FOLDER_ID,
+    }),
   });
 }

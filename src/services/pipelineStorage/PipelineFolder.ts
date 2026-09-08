@@ -28,6 +28,7 @@ interface PipelineFolderInit {
   driver: PipelineStorageDriver;
   favorite?: boolean;
   createdAt?: number;
+  isFlat?: boolean;
 }
 
 class FolderNotFoundError extends Error {
@@ -60,6 +61,7 @@ export class PipelineFolder {
 
   readonly id: string;
   readonly isRoot: boolean;
+  readonly isFlat: boolean;
   readonly parentId: string | null;
   readonly driver: PipelineStorageDriver;
   readonly createdAt: number;
@@ -81,6 +83,7 @@ export class PipelineFolder {
 
   constructor(options: PipelineFolderInit) {
     this.isRoot = options.id === ROOT_FOLDER_ID;
+    this.isFlat = options.isFlat ?? false;
     this.id = options.id;
 
     this.name = options.name;
@@ -135,6 +138,8 @@ export class PipelineFolder {
   }
 
   async listSubfolders(): Promise<PipelineFolder[]> {
+    if (this.isFlat) return [];
+
     const entries = await queryChildFolders(this.id);
 
     return sortByName(entries).map((entry) => PipelineFolder.fromEntry(entry));
@@ -144,6 +149,10 @@ export class PipelineFolder {
     name: string;
     driverConfig?: DriverConfig;
   }): Promise<PipelineFolder> {
+    if (this.isFlat) {
+      throw new Error(`"${this.name}" does not support folders`);
+    }
+
     const id = crypto.randomUUID();
     const driverConfig: DriverConfig = options.driverConfig ?? {
       driverType: "folder-indexdb",
