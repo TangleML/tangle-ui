@@ -3,7 +3,10 @@ import { generate } from "random-words";
 import type { MouseEvent, ReactNode } from "react";
 
 import { Button, type ButtonProps } from "@/components/ui/button";
-import { getDefaultEditorPath } from "@/routes/editorRoutes";
+import {
+  getDefaultEditorHref,
+  getDefaultEditorTarget,
+} from "@/routes/editorRoutes";
 import { writeComponentToFileListFromText } from "@/utils/componentStore";
 import {
   defaultPipelineYamlWithName,
@@ -32,15 +35,13 @@ const NewPipelineButton = ({
       componentText,
     );
 
-    const clickThroughUrl = getDefaultEditorPath(name);
-
     if (e.ctrlKey || e.metaKey) {
-      window.open(clickThroughUrl, "_blank");
+      window.open(getDefaultEditorHref({ name }), "_blank");
       return;
     }
 
     navigate({
-      to: clickThroughUrl,
+      ...getDefaultEditorTarget({ name }),
       reloadDocument: !IS_GITHUB_PAGES,
     });
   };

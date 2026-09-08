@@ -2,7 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 
 import useToastNotification from "@/hooks/useToastNotification";
-import { getDefaultEditorPath } from "@/routes/editorRoutes";
+import { getDefaultEditorTarget } from "@/routes/editorRoutes";
 
 import { importPipelineFromUrl } from "./importPipelineFromUrl";
 
@@ -14,9 +14,7 @@ export function useImportPipeline() {
     mutationFn: async (url: string) => await importPipelineFromUrl(url),
     onSuccess: (result) => {
       notify(`Pipeline "${result.name}" created successfully`, "success");
-      navigate({
-        to: getDefaultEditorPath(result.name),
-      });
+      navigate(getDefaultEditorTarget({ name: result.name }));
     },
   });
 }

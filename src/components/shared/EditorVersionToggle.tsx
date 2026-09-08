@@ -43,6 +43,7 @@ export const EditorVersionToggle = ({
       flagName="v2_editor"
       targetVersion={targetVersion}
       targetPath={targetPath}
+      preserveSearch
       tooltip={tooltip}
       showWelcomeSpotlight={showWelcomeSpotlight && version === "v2"}
       welcome={{

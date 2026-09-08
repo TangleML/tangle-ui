@@ -30,7 +30,10 @@ import {
 import { Paragraph, Text } from "@/components/ui/typography";
 import { cn } from "@/lib/utils";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
-import { getDefaultEditorPath } from "@/routes/editorRoutes";
+import {
+  getDefaultEditorHref,
+  getDefaultEditorTarget,
+} from "@/routes/editorRoutes";
 import { deletePipeline } from "@/services/pipelineService";
 import { getPipelineTagsFromSpec } from "@/utils/annotations";
 import type { ComponentReferenceWithSpec } from "@/utils/componentStore";
@@ -111,11 +114,11 @@ const PipelineRow = withSuspenseWrapper(
 
       if (e.ctrlKey || e.metaKey) {
         rowTrack("pipeline_opened", { open_mode: "editor_new_tab" });
-        window.open(getDefaultEditorPath(name), "_blank");
+        window.open(getDefaultEditorHref({ name }), "_blank");
         return;
       }
       rowTrack("pipeline_opened", { open_mode: "editor_same_tab" });
-      navigate({ to: getDefaultEditorPath(name) });
+      navigate(getDefaultEditorTarget({ name }));
     };
 
     const handleCheckboxChange = (checked: boolean | "indeterminate") => {

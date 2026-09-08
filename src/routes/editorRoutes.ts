@@ -1,17 +1,37 @@
 import { isFlagEnabled } from "@/components/shared/Settings/useFlags";
+import type { PipelineRef } from "@/services/pipelineStorage/types";
 
 import { APP_ROUTES, EDITOR_PATH } from "./appRoutes";
 
-function getLegacyEditorPath(pipelineName: string): string {
-  return `${EDITOR_PATH}/${encodeURIComponent(pipelineName)}`;
+interface EditorSearch {
+  fileId?: string;
 }
 
-function getEditorV2Path(pipelineName: string): string {
-  return `${APP_ROUTES.EDITOR_V2}/${encodeURIComponent(pipelineName)}`;
+export interface EditorTarget {
+  to: string;
+  params: Record<string, string>;
+  search: EditorSearch;
 }
 
-export function getDefaultEditorPath(pipelineName: string): string {
+/**
+ * A pipeline's identity travels in the search params, not the path: the slug is
+ * only ever a display name, and two pipelines are allowed to share one.
+ */
+export function getDefaultEditorTarget(ref: PipelineRef): EditorTarget {
+  const search: EditorSearch = ref.fileId ? { fileId: ref.fileId } : {};
+
   return isFlagEnabled("v2_editor")
-    ? getEditorV2Path(pipelineName)
-    : getLegacyEditorPath(pipelineName);
+    ? {
+        to: APP_ROUTES.EDITOR_V2_PIPELINE,
+        params: { pipelineName: ref.name },
+        search,
+      }
+    : { to: APP_ROUTES.PIPELINE_EDITOR, params: { name: ref.name }, search };
+}
+
+export function getDefaultEditorHref(ref: PipelineRef): string {
+  const base = isFlagEnabled("v2_editor") ? APP_ROUTES.EDITOR_V2 : EDITOR_PATH;
+  const path = `${base}/${encodeURIComponent(ref.name)}`;
+
+  return ref.fileId ? `${path}?fileId=${encodeURIComponent(ref.fileId)}` : path;
 }

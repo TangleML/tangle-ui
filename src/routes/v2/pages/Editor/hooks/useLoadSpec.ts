@@ -83,20 +83,18 @@ export function useLoadSpec(ref: PipelineRef) {
   return useSuspenseQuery({
     queryKey,
     queryFn: async (): Promise<LoadedSpec> => {
-      const filePromise = storage.resolve(ref);
+      const file = await storage.resolve(ref);
+      loadedStorageKey.current = file.storageKey;
 
-      const [{ file, specData }, undoHistory] = await Promise.all([
-        filePromise.then(async (file) => {
-          loadedStorageKey.current = file.storageKey;
-          return {
-            file,
-            specData: yaml.load(await file.read(), PIPELINE_YAML_LOAD_OPTIONS),
-          };
-        }),
-        loadUndoHistory(ref.name).catch(() => null),
+      const [yamlText, undoHistory] = await Promise.all([
+        file.read(),
+        loadUndoHistory(file.id).catch(() => null),
       ]);
 
-      const loadedSpec = deserializeSpecData(specData, undoHistory);
+      const loadedSpec = deserializeSpecData(
+        yaml.load(yamlText, PIPELINE_YAML_LOAD_OPTIONS),
+        undoHistory,
+      );
       await hydrateLoadedSpecRefs(loadedSpec.spec);
 
       return { ...loadedSpec, file };

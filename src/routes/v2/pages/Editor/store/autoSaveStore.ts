@@ -146,13 +146,14 @@ export class AutoSaveStore {
   }
 
   private async persistUndoHistory() {
-    if (!this.spec || !this.pipelineName) return;
+    const fileId = this.pipelineFileStore.activePipelineFile?.id;
+    if (!this.spec || !fileId) return;
     const manager = this.undoStore.undoManager;
     if (!manager) return;
 
     try {
       const idStack = collectIdStack(this.spec);
-      await saveUndoHistory(this.pipelineName, idStack, manager);
+      await saveUndoHistory(fileId, idStack, manager);
     } catch (error) {
       console.error("Failed to persist undo history:", error);
     }

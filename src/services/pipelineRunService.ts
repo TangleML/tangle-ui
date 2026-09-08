@@ -4,7 +4,7 @@ import type {
   BodyCreateApiPipelineRunsPost,
   ListAnnotationsApiPipelineRunsIdAnnotationsGetResponse,
 } from "@/api/types.gen";
-import { getDefaultEditorPath } from "@/routes/editorRoutes";
+import { getDefaultEditorHref } from "@/routes/editorRoutes";
 import type { PipelineRun } from "@/types/pipelineRun";
 import { EDITOR_FLOW_DIRECTION_ANNOTATION } from "@/utils/annotations";
 import { removeCachingStrategyFromSpec } from "@/utils/cache";
@@ -162,7 +162,7 @@ export const copyRunToPipeline = async (
     );
 
     return {
-      url: getDefaultEditorPath(newName),
+      url: getDefaultEditorHref({ name: newName }),
       name: newName,
     };
   } catch (error) {

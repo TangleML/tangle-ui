@@ -8,7 +8,7 @@ import { useCheckComponentSpecFromPath } from "@/hooks/useCheckComponentSpecFrom
 import { useUserDetails } from "@/hooks/useUserDetails";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { useExecutionData } from "@/providers/ExecutionDataProvider";
-import { getDefaultEditorPath } from "@/routes/editorRoutes";
+import { getDefaultEditorHref } from "@/routes/editorRoutes";
 import { extractCanonicalName } from "@/utils/canonicalPipelineName";
 import type { ComponentSpec } from "@/utils/componentSpec";
 import {
@@ -81,7 +81,7 @@ export function useRunViewActions(): RunViewActions {
   const { data: currentUserDetails } = useUserDetails();
 
   const editorRoute = componentSpec?.name
-    ? getDefaultEditorPath(componentSpec.name)
+    ? getDefaultEditorHref({ name: componentSpec.name })
     : "";
 
   const canAccessEditorSpec = useCheckComponentSpecFromPath(
