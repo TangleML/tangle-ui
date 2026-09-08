@@ -1,9 +1,38 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { PipelineStorageHost } from "./host/contract";
-import { PipelineStorageService } from "./PipelineStorageService";
+import type { HostPipelineSummary, PipelineStorageHost } from "./host/contract";
+import {
+  AmbiguousPipelineNameError,
+  PipelineNotFoundError,
+  PipelineStorageService,
+} from "./PipelineStorageService";
 import { resetStorageModeForTests } from "./storageMode";
-import { HOST_DRIVER_TYPE, ROOT_FOLDER_ID } from "./types";
+import {
+  HOST_DRIVER_TYPE,
+  type PipelineRegistryEntry,
+  ROOT_FOLDER_ID,
+} from "./types";
+
+const registry = new Map<string, PipelineRegistryEntry>();
+
+vi.mock("./pipelineRegistry", () => ({
+  addEntry: async (entry: PipelineRegistryEntry) => {
+    registry.set(entry.id, entry);
+  },
+  updateEntry: async (id: string, updates: Partial<PipelineRegistryEntry>) => {
+    const entry = registry.get(id);
+    if (entry) registry.set(id, { ...entry, ...updates });
+  },
+  deleteEntry: async (id: string) => {
+    registry.delete(id);
+  },
+  findById: async (id: string) => registry.get(id),
+  findByStorageKey: async (storageKey: string) =>
+    [...registry.values()].find((entry) => entry.storageKey === storageKey),
+  getAllByFolderId: async (folderId: string) =>
+    [...registry.values()].filter((entry) => entry.folderId === folderId),
+  assertStorageKeyUnique: async () => undefined,
+}));
 
 vi.mock("./db", () => ({
   pipelineStorageDb: {
@@ -40,11 +69,20 @@ vi.mock("./db", () => ({
 
 const LABEL = "Shared storage";
 
-function installHost(): void {
+function summary(key: string, displayName: string): HostPipelineSummary {
+  return {
+    key,
+    externalId: `id-${key}`,
+    displayName,
+    contentVersion: "1",
+  };
+}
+
+function installHost(listing: HostPipelineSummary[] = []): void {
   const host: PipelineStorageHost = {
     version: 1,
     label: LABEL,
-    list: async () => [],
+    list: async () => listing,
     read: async () => {
       throw new Error("not seeded");
     },
@@ -52,7 +90,7 @@ function installHost(): void {
       throw new Error("not seeded");
     },
     delete: async () => undefined,
-    has: async () => false,
+    has: async (key) => listing.some((entry) => entry.key === key),
   };
 
   Object.defineProperty(window, "__TANGLE_PIPELINE_STORAGE_HOST__", {
@@ -63,6 +101,7 @@ function installHost(): void {
 }
 
 beforeEach(() => {
+  registry.clear();
   resetStorageModeForTests();
 });
 
@@ -129,5 +168,60 @@ describe("with a host on the page", () => {
     delete window.__TANGLE_PIPELINE_STORAGE_HOST__;
 
     expect(new PipelineStorageService().mode).toEqual(service.mode);
+  });
+});
+
+describe("resolving a route reference against a host", () => {
+  it("opens the pipeline whose key the route carries", async () => {
+    installHost([summary("opaque-key-1", "Churn model")]);
+
+    const file = await new PipelineStorageService().resolve({
+      name: "opaque-key-1",
+    });
+
+    expect(file.storageKey).toBe("opaque-key-1");
+  });
+
+  it("opens a pipeline by its displayed name when only one has it", async () => {
+    installHost([
+      summary("opaque-key-1", "Churn model"),
+      summary("opaque-key-2", "Ranking model"),
+    ]);
+
+    const file = await new PipelineStorageService().resolve({
+      name: "Ranking model",
+    });
+
+    expect(file.storageKey).toBe("opaque-key-2");
+  });
+
+  it("refuses to guess between pipelines sharing a name", async () => {
+    installHost([
+      summary("opaque-key-1", "Churn model"),
+      summary("opaque-key-2", "Churn model"),
+    ]);
+
+    await expect(
+      new PipelineStorageService().resolve({ name: "Churn model" }),
+    ).rejects.toThrow(AmbiguousPipelineNameError);
+  });
+
+  it("reports a missing pipeline rather than reaching for browser storage", async () => {
+    installHost([summary("opaque-key-1", "Churn model")]);
+
+    await expect(
+      new PipelineStorageService().resolve({ name: "Churn model v2" }),
+    ).rejects.toThrow(PipelineNotFoundError);
+  });
+
+  it("finds a pipeline the registry has never seen by its id", async () => {
+    installHost([summary("opaque-key-1", "Churn model")]);
+
+    const file = await new PipelineStorageService().resolve({
+      name: "whatever-the-link-said",
+      fileId: "id-opaque-key-1",
+    });
+
+    expect(file.storageKey).toBe("opaque-key-1");
   });
 });

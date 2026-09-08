@@ -14,6 +14,7 @@ export class TourPipelineStorageService extends PipelineStorageService {
       name: "Tour",
       parentId: null,
       driver: new SessionStoragePipelineDriver(),
+      isFlat: true,
     });
   }
 

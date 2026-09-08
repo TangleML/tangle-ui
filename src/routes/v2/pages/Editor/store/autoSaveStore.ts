@@ -117,7 +117,12 @@ export class AutoSaveStore {
 
     const savePromise = (async () => {
       try {
-        await this.pipelineFileStore.activePipelineFile?.write(yamlText);
+        const file = this.pipelineFileStore.activePipelineFile;
+        if (!file) {
+          throw new Error(`No open file to save "${pipelineName}" to.`);
+        }
+
+        await file.write(yamlText);
         await this.persistUndoHistory();
         this.lastSavedYaml = yamlText;
         return new Date();

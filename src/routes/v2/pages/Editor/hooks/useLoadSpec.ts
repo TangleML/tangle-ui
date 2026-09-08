@@ -18,19 +18,18 @@ import {
   createUndoStoreWithEvents,
   loadUndoHistory,
 } from "@/routes/v2/pages/Editor/utils/undoHistoryStorage";
-import { RootFolderDbStorageDriver } from "@/services/pipelineStorage/drivers/RootFolderDbStorageDriver";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
 import {
   getLastForeignWriteTime,
   subscribePipelineFileChanged,
 } from "@/services/pipelineStorage/pipelineFileEvents";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
-import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
 import type { PipelineRef } from "@/services/pipelineStorage/types";
 import { PIPELINE_YAML_LOAD_OPTIONS } from "@/utils/yaml";
 
 interface LoadedSpec {
   spec: ComponentSpec;
+  file: PipelineFile;
   restoredUndoStore?: MobxUndoStore;
 }
 
@@ -40,37 +39,6 @@ function deserializeSpec(data: unknown, idGen?: IdGenerator): ComponentSpec {
   const spec = deserializer.deserialize(data);
   registerRootStore(spec);
   return spec;
-}
-
-async function backfillFromLegacyStore(
-  name: string,
-  storage: PipelineStorageService,
-): Promise<PipelineFile | undefined> {
-  const legacyDriver = new RootFolderDbStorageDriver();
-
-  const existsInLegacy = await legacyDriver.hasKey(name);
-  if (!existsInLegacy) return undefined;
-
-  return storage.rootFolder.assignFile(name);
-}
-
-async function resolvePipelineFile(
-  ref: PipelineRef,
-  storage: PipelineStorageService,
-): Promise<PipelineFile> {
-  let pipelineFile = ref.fileId
-    ? await storage.findPipelineById(ref.fileId)
-    : await storage.resolvePipelineByName(ref.name);
-
-  if (!pipelineFile) {
-    pipelineFile = await backfillFromLegacyStore(ref.name, storage);
-  }
-
-  if (!pipelineFile) {
-    throw new Error(`Pipeline "${ref.name}" not found`);
-  }
-
-  return pipelineFile;
 }
 
 export const EDITOR_SPEC_QUERY_KEY = "editor-v2-spec";
@@ -115,12 +83,15 @@ export function useLoadSpec(ref: PipelineRef) {
   return useSuspenseQuery({
     queryKey,
     queryFn: async (): Promise<LoadedSpec> => {
-      const filePromise = resolvePipelineFile(ref, storage);
+      const filePromise = storage.resolve(ref);
 
-      const [specData, undoHistory] = await Promise.all([
+      const [{ file, specData }, undoHistory] = await Promise.all([
         filePromise.then(async (file) => {
           loadedStorageKey.current = file.storageKey;
-          return yaml.load(await file.read(), PIPELINE_YAML_LOAD_OPTIONS);
+          return {
+            file,
+            specData: yaml.load(await file.read(), PIPELINE_YAML_LOAD_OPTIONS),
+          };
         }),
         loadUndoHistory(ref.name).catch(() => null),
       ]);
@@ -128,7 +99,7 @@ export function useLoadSpec(ref: PipelineRef) {
       const loadedSpec = deserializeSpecData(specData, undoHistory);
       await hydrateLoadedSpecRefs(loadedSpec.spec);
 
-      return loadedSpec;
+      return { ...loadedSpec, file };
     },
     staleTime: Infinity,
     retry: false,
@@ -138,7 +109,7 @@ export function useLoadSpec(ref: PipelineRef) {
 function deserializeSpecData(
   specData: unknown,
   undoHistory: Awaited<ReturnType<typeof loadUndoHistory>> | null,
-): LoadedSpec {
+): Omit<LoadedSpec, "file"> {
   if (undoHistory) {
     try {
       const replayIdGen = new ReplayIdGenerator(undoHistory.idStack);
