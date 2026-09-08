@@ -303,6 +303,39 @@ describe("writing to a host", () => {
     expect(registry.size).toBe(0);
   });
 
+  it("renames in place rather than leaving a copy under the old name", async () => {
+    installHost();
+    const service = new PipelineStorageService();
+    const created = await service.createPipeline(
+      "Churn model",
+      PIPELINE_YAML("Churn model"),
+    );
+
+    const renamed = await service.renamePipelineByName(
+      "Churn model",
+      "Churn model v2",
+      PIPELINE_YAML("Churn model v2"),
+    );
+
+    expect(renamed.storageKey).toBe(created.storageKey);
+    const listed = await service.rootFolder.listPipelines();
+    expect(listed.map((file) => file.displayName)).toEqual(["Churn model v2"]);
+  });
+
+  it("creates the pipeline when renaming one the store does not hold", async () => {
+    installHost();
+    const service = new PipelineStorageService();
+
+    const file = await service.renamePipelineByName(
+      "Churn model",
+      "Churn model v2",
+      PIPELINE_YAML("Churn model v2"),
+    );
+
+    expect(file.displayName).toBe("Churn model v2");
+    expect(await service.rootFolder.listPipelines()).toHaveLength(1);
+  });
+
   it("leaves the store alone when asked to delete a name it does not hold", async () => {
     installHost([summary("opaque-key-1", "Churn model")]);
     const service = new PipelineStorageService();

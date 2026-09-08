@@ -1,4 +1,4 @@
-import { useLocation, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { Edit3 } from "lucide-react";
 
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
@@ -7,18 +7,16 @@ import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
 import { APP_ROUTES } from "@/routes/router";
-import { renameComponentFileInList } from "@/utils/componentStore";
-import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
+import { renamePipeline } from "@/services/pipelineStorage/pipelineOperations";
+import { getErrorMessage } from "@/utils/string";
 import { tracking } from "@/utils/tracking";
+import { componentSpecToYaml } from "@/utils/yaml";
 
 const RenamePipeline = () => {
-  const { componentSpec, saveComponentSpec } = useComponentSpec();
+  const { componentSpec } = useComponentSpec();
   const notify = useToastNotification();
   const { track } = useAnalytics();
   const navigate = useNavigate();
-
-  const location = useLocation();
-  const pathname = location.pathname;
 
   const title = componentSpec?.name;
 
@@ -32,14 +30,17 @@ const RenamePipeline = () => {
       return;
     }
 
-    await renameComponentFileInList(
-      USER_PIPELINES_LIST_NAME,
-      title ?? "",
-      name,
-      pathname,
-    );
-
-    await saveComponentSpec(name);
+    try {
+      await renamePipeline(
+        title ?? "",
+        name,
+        componentSpecToYaml({ ...componentSpec, name }),
+        "v1",
+      );
+    } catch (error) {
+      notify(`Rename failed: ${getErrorMessage(error)}`, "error");
+      return;
+    }
 
     const urlName = encodeURIComponent(name);
     const url = APP_ROUTES.PIPELINE_EDITOR.replace("$name", urlName);

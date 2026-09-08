@@ -32,7 +32,7 @@ export interface PipelineStorageDriver {
   list(): Promise<PipelineFileDescriptor[]>;
   read(storageKey: string): Promise<string>;
   write(storageKey: string, content: string): Promise<PipelineFileDescriptor>;
-  rename(oldStorageKey: string, newStorageKey: string): Promise<void>;
+  rename?(oldStorageKey: string, newStorageKey: string): Promise<void>;
   delete(storageKey: string): Promise<void>;
   hasKey(storageKey: string): Promise<boolean>;
   describe?(storageKey: string): Promise<PipelineFileDescriptor | undefined>;

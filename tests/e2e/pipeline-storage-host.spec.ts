@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
 import {
   type HostStorageOptions,
@@ -22,10 +22,11 @@ const SEED = [
   },
 ];
 
-async function installSeededHost(
-  page: Parameters<typeof installPipelineStorageHost>[0],
-  options: HostStorageOptions = {},
-) {
+async function installSeededHost(page: Page, options: HostStorageOptions = {}) {
+  await page.addInitScript(() => {
+    window.localStorage.setItem("seen-editor-v2-welcome", JSON.stringify(true));
+  });
+
   await installPipelineStorageHost(page, {
     label: LABEL,
     seed: SEED,
@@ -79,6 +80,27 @@ test.describe("host-provided pipeline storage", () => {
 
     expect(await readHostRecords(page)).toHaveLength(SEED.length + 1);
     expect(await readLocallyStoredPipelineKeys(page)).toEqual([]);
+  });
+
+  test("renaming keeps one pipeline rather than leaving the old name behind", async ({
+    page,
+  }) => {
+    await installSeededHost(page);
+
+    await page.goto(`/editor-v2/${SEED[0].key}`);
+    await expect(page.locator('[data-testid="rf__wrapper"]')).toBeVisible({
+      timeout: 30_000,
+    });
+
+    await page.locator('[data-tracking-id$="rename_pipeline"]').click();
+    await page.getByRole("textbox").fill("Churn model v2");
+    await page.getByRole("button", { name: "Rename" }).click();
+
+    await expect
+      .poll(async () =>
+        (await readHostRecords(page)).map((record) => record.displayName),
+      )
+      .toEqual(["Churn model v2", "Nightly refresh"]);
   });
 
   test("a deleted pipeline does not come back on reload", async ({ page }) => {

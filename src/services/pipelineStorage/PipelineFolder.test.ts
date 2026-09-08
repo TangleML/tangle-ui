@@ -57,6 +57,7 @@ interface FakeDriverOptions {
     storageKey: string,
     content: string,
   ) => Promise<PipelineFileDescriptor>;
+  canRename?: boolean;
 }
 
 interface FakeDriver extends PipelineStorageDriver {
@@ -87,7 +88,14 @@ function createFakeDriver(options: FakeDriverOptions = {}): FakeDriver {
         contents.set(storageKey, content);
         return { storageKey };
       }),
-    async rename() {},
+    rename:
+      options.canRename === false
+        ? undefined
+        : async (oldStorageKey: string, newStorageKey: string) => {
+            const content = contents.get(oldStorageKey);
+            contents.delete(oldStorageKey);
+            if (content !== undefined) contents.set(newStorageKey, content);
+          },
     async delete(storageKey: string) {
       contents.delete(storageKey);
     },
@@ -345,6 +353,31 @@ describe("PipelineFolder.findFile", () => {
 
     expect(found?.id).toBe(added.id);
     expect(registry.size).toBe(1);
+  });
+});
+
+describe("PipelineFile.rename", () => {
+  it("moves the key when the store names its own pipelines", async () => {
+    const driver = createFakeDriver();
+    const folder = createFolder(driver);
+    const file = await folder.addFile("Churn model", "name: Churn model");
+
+    await file.rename("Churn model v2");
+
+    expect(file.storageKey).toBe("Churn model v2");
+    expect([...driver.contents.keys()]).toEqual(["Churn model v2"]);
+    expect(await folder.findFile("Churn model")).toBeUndefined();
+  });
+
+  it("leaves the key alone when the store keys pipelines itself", async () => {
+    const driver = createFakeDriver({ canRename: false });
+    const folder = createFolder(driver);
+    const file = await folder.addFile("opaque-key", "name: Churn model");
+
+    await file.rename("Churn model v2");
+
+    expect(file.storageKey).toBe("opaque-key");
+    expect([...driver.contents.keys()]).toEqual(["opaque-key"]);
   });
 });
 

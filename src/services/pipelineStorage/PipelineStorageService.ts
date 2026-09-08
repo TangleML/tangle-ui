@@ -72,6 +72,26 @@ export class PipelineStorageService {
     return existing;
   }
 
+  /**
+   * Renaming and saving are one operation, because a store that does not key
+   * pipelines by name only learns the new one from the spec being written.
+   * Splitting them would leave that store holding the old name and the caller
+   * about to create a second pipeline under the new one.
+   */
+  async renamePipelineByName(
+    currentName: string,
+    newName: string,
+    content: string,
+    source?: PipelineFileSource,
+  ): Promise<PipelineFile> {
+    const existing = await this.findPipelineByName(currentName);
+    if (!existing) return this.savePipelineByName(newName, content, source);
+
+    await existing.rename(newName);
+    await existing.write(content, source);
+    return existing;
+  }
+
   async deletePipelineByName(name: string): Promise<void> {
     const existing = await this.findPipelineByName(name);
     await existing?.deleteFile();

@@ -2,11 +2,13 @@ import { useCallback, useEffect, useState } from "react";
 
 import { listPipelineFiles } from "@/services/pipelineStorage/pipelineOperations";
 
-const useLoadUserPipelines = () => {
-  const [isLoadingUserPipelines, setIsLoadingUserPipelines] = useState(true);
+const useLoadUserPipelines = (enabled = true) => {
+  const [isLoadingUserPipelines, setIsLoadingUserPipelines] = useState(enabled);
   const [pipelineNames, setPipelineNames] = useState<string[]>([]);
 
   const refetch = useCallback(async () => {
+    if (!enabled) return;
+
     setIsLoadingUserPipelines(true);
     try {
       const files = await listPipelineFiles();
@@ -16,7 +18,7 @@ const useLoadUserPipelines = () => {
     } finally {
       setIsLoadingUserPipelines(false);
     }
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
     void refetch();

@@ -9,7 +9,6 @@ import {
   USER_COMPONENTS_LIST_NAME,
   USER_PIPELINES_LIST_NAME,
 } from "./constants";
-import { getIdOrTitleFromPath } from "./URL";
 import { emitUserPipelineWritten } from "./userPipelineWriteEvents";
 import { componentSpecFromYaml, componentSpecToYaml } from "./yaml";
 
@@ -511,7 +510,6 @@ export const renameComponentFileInList = async (
   listName: string,
   oldFileName: string,
   newFileName: string,
-  pathname?: string,
 ) => {
   await upgradeSingleComponentListDb(listName);
   const tableName = FILE_STORE_DB_TABLE_NAME_PREFIX + listName;
@@ -520,25 +518,12 @@ export const renameComponentFileInList = async (
     storeName: tableName,
   });
 
-  let fileEntry =
+  const fileEntry =
     await componentListDb.getItem<ComponentFileEntry>(oldFileName);
   if (!fileEntry) {
-    // If the old file does not exist and a pathanme is provided, check the url for a filename
-    if (pathname) {
-      const { title } = getIdOrTitleFromPath(pathname);
-      if (title) {
-        fileEntry = await componentListDb.getItem<ComponentFileEntry>(title);
-      }
-      if (!fileEntry) {
-        throw new Error(
-          `Backup file "${title}" does not exist in list "${listName}".`,
-        );
-      }
-    } else {
-      throw new Error(
-        `File "${oldFileName}" does not exist in list "${listName}".`,
-      );
-    }
+    throw new Error(
+      `File "${oldFileName}" does not exist in list "${listName}".`,
+    );
   }
 
   const existingNewFile =

@@ -63,8 +63,15 @@ export class PipelineFile {
     emitUserPipelineWritten();
   }
 
+  /**
+   * A store that keys pipelines by their name has to move the key. One that
+   * keys them opaquely takes the displayed name from the next spec written to
+   * the same key, so there is nothing here to move.
+   */
   @action
   async rename(newName: string): Promise<void> {
+    if (!this.folder.driver.rename) return;
+
     await this.folder.driver.rename(this.storageKey, newName);
     await updateEntry(this.id, { storageKey: newName });
 

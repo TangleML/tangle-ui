@@ -16,6 +16,7 @@ import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { BlockStack } from "@/components/ui/layout";
 import useLoadUserPipelines from "@/hooks/useLoadUserPipelines";
+import { isHostStorage } from "@/services/pipelineStorage/storageMode";
 
 interface PipelineNameDialogProps {
   trigger?: ReactNode;
@@ -49,20 +50,29 @@ const PipelineNameDialog = ({
   const [name, setName] = useState(initialName);
   const [touched, setTouched] = useState(false);
 
+  /**
+   * A store that hands out its own keys can hold two pipelines under one name,
+   * so refusing a duplicate here would block a name the store itself accepts —
+   * and there is nothing to list for.
+   */
+  const namesMustBeUnique = !isHostStorage();
+
   const {
     pipelineNames,
     isLoadingUserPipelines,
     refetch: refetchUserPipelines,
-  } = useLoadUserPipelines();
+  } = useLoadUserPipelines(namesMustBeUnique);
 
   const normalized = name.trim().toLowerCase();
   const excluded = new Set(
     (excludeNames ?? []).map((n) => n.trim().toLowerCase()),
   );
-  const nameIsTaken = pipelineNames.some((n) => {
-    const lower = n.toLowerCase();
-    return lower === normalized && !excluded.has(lower);
-  });
+  const nameIsTaken =
+    namesMustBeUnique &&
+    pipelineNames.some((n) => {
+      const lower = n.toLowerCase();
+      return lower === normalized && !excluded.has(lower);
+    });
 
   let error: string | null = null;
   if (!isLoadingUserPipelines) {

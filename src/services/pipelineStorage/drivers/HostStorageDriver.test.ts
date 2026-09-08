@@ -254,12 +254,12 @@ describe("HostStorageDriver round trip", () => {
 });
 
 describe("HostStorageDriver.rename", () => {
-  it("refuses, because a key carries no name for the host", async () => {
+  it("is not offered, because a key carries no name for the host", () => {
     const driver: PipelineStorageDriver = new HostStorageDriver(
       createFakeHost(),
     );
 
-    await expect(driver.rename("key-1", "key-2")).rejects.toThrow(LABEL);
+    expect(driver.rename).toBeUndefined();
   });
 });
 

@@ -41,6 +41,20 @@ export async function savePipeline(
   return getPipelineStorageService().savePipelineByName(name, content, source);
 }
 
+export async function renamePipeline(
+  currentName: string,
+  newName: string,
+  content: string,
+  source?: PipelineFileSource,
+): Promise<PipelineFile> {
+  return getPipelineStorageService().renamePipelineByName(
+    currentName,
+    newName,
+    content,
+    source,
+  );
+}
+
 export async function deletePipelineByName(name: string): Promise<void> {
   return getPipelineStorageService().deletePipelineByName(name);
 }

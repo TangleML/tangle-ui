@@ -66,12 +66,6 @@ export class HostStorageDriver implements PipelineStorageDriver {
     return toDescriptor(summary);
   }
 
-  async rename(): Promise<void> {
-    throw new Error(
-      `Pipelines in ${this.host.label} cannot be renamed by key. Save the pipeline under a different name instead.`,
-    );
-  }
-
   async delete(storageKey: string): Promise<void> {
     await this.call(() => this.host.delete(storageKey));
   }
