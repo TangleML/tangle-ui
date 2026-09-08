@@ -6,14 +6,17 @@ import {
   useRequiredContext,
 } from "@/hooks/useRequiredContext";
 
-import { PipelineStorageService } from "./PipelineStorageService";
+import {
+  getPipelineStorageService,
+  type PipelineStorageService,
+} from "./PipelineStorageService";
 
 export const PipelineStorageCtx = createRequiredContext<PipelineStorageService>(
   "PipelineStorageContext",
 );
 
 export function PipelineStorageProvider({ children }: { children: ReactNode }) {
-  const [service] = useState(() => new PipelineStorageService());
+  const [service] = useState(getPipelineStorageService);
 
   return (
     <PipelineStorageCtx.Provider value={service}>

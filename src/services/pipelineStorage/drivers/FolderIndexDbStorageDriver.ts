@@ -44,4 +44,12 @@ export class FolderIndexDbStorageDriver extends RootFolderDbStorageDriver {
     const entry = await findByFolderAndStorageKey(this.folderId, storageKey);
     return entry != null;
   }
+
+  override async describe(
+    storageKey: string,
+  ): Promise<PipelineFileDescriptor | undefined> {
+    if (!(await this.hasKey(storageKey))) return undefined;
+
+    return super.describe(storageKey);
+  }
 }

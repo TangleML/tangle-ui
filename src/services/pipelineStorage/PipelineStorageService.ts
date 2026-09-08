@@ -160,6 +160,17 @@ async function resolveInFlatStore(
   return byName[0];
 }
 
+let sharedService: PipelineStorageService | undefined;
+
+/**
+ * For the callers that are not React — services and plain utilities — which
+ * still have to reach the same store the provider hands to components.
+ */
+export function getPipelineStorageService(): PipelineStorageService {
+  sharedService ??= new PipelineStorageService();
+  return sharedService;
+}
+
 function createRoot(mode: StorageMode): PipelineFolder {
   if (mode.kind === "host") {
     return new PipelineFolder({

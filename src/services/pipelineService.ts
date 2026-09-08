@@ -8,17 +8,18 @@ import {
   isGraphImplementation,
 } from "@/utils/componentSpec";
 import {
-  type ComponentFileEntry,
   deleteComponentFileFromList,
   fullyLoadComponentRefFromUrl,
-  getAllComponentFilesFromList,
   getComponentFileFromList,
+  loadComponentAsRefFromText,
   writeComponentToFileListFromText,
 } from "@/utils/componentStore";
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 import { componentSpecToYaml } from "@/utils/yaml";
 import { componentSpecFromYaml } from "@/utils/yaml";
 
+import type { PipelineFile } from "./pipelineStorage/PipelineFile";
+import { findPipelineFile } from "./pipelineStorage/pipelineOperations";
 import {
   deleteEntry,
   findByStorageKey,
@@ -65,12 +66,14 @@ export const loadPipelineByName = async (name: string) => {
   const appSettings = getAppSettings();
 
   try {
-    // Fetch user pipelines
-    let userPipelines: Map<string, ComponentFileEntry>;
+    /**
+     * A store that cannot answer is reported as such. Falling through to the
+     * example library would quietly serve a different pipeline that happens to
+     * share the name, and the editor would then save over the user's own.
+     */
+    let file: PipelineFile | undefined;
     try {
-      userPipelines = await getAllComponentFilesFromList(
-        USER_PIPELINES_LIST_NAME,
-      );
+      file = await findPipelineFile({ name: decodedName });
     } catch (error) {
       console.error("Failed to load user pipelines:", error);
       return {
@@ -80,11 +83,10 @@ export const loadPipelineByName = async (name: string) => {
       };
     }
 
-    // Check if pipeline exists in user pipelines
-    const pipeline = userPipelines.get(decodedName);
-    if (pipeline) {
+    if (file) {
+      const componentRef = await loadComponentAsRefFromText(await file.read());
       return {
-        experiment: pipeline,
+        experiment: { componentRef, spec: componentRef.spec },
         isLoading: false,
         error: null,
       };
@@ -290,8 +292,4 @@ export async function importPipelineFromFile(
       errorMessage,
     };
   }
-}
-
-export function getPipelineFile(pipelineName: string) {
-  return getComponentFileFromList(USER_PIPELINES_LIST_NAME, pipelineName);
 }

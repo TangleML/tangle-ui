@@ -35,6 +35,7 @@ export interface PipelineStorageDriver {
   rename(oldStorageKey: string, newStorageKey: string): Promise<void>;
   delete(storageKey: string): Promise<void>;
   hasKey(storageKey: string): Promise<boolean>;
+  describe?(storageKey: string): Promise<PipelineFileDescriptor | undefined>;
 }
 
 export type DriverConfig =

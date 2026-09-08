@@ -110,10 +110,18 @@ export class PipelineFolder {
   }
 
   async findFile(storageKey: string): Promise<PipelineFile | undefined> {
-    const hasKey = await this.driver.hasKey(storageKey);
-    if (!hasKey) return undefined;
+    const descriptor = await this.describeKey(storageKey);
+    if (!descriptor) return undefined;
 
-    return resolveOrCreateRegistryEntry({ storageKey }, this);
+    return resolveOrCreateRegistryEntry(descriptor, this);
+  }
+
+  private async describeKey(
+    storageKey: string,
+  ): Promise<PipelineFileDescriptor | undefined> {
+    if (this.driver.describe) return this.driver.describe(storageKey);
+
+    return (await this.driver.hasKey(storageKey)) ? { storageKey } : undefined;
   }
 
   async assignFile(storageKey: string): Promise<PipelineFile> {

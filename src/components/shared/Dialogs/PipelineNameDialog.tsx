@@ -50,7 +50,7 @@ const PipelineNameDialog = ({
   const [touched, setTouched] = useState(false);
 
   const {
-    userPipelines,
+    pipelineNames,
     isLoadingUserPipelines,
     refetch: refetchUserPipelines,
   } = useLoadUserPipelines();
@@ -59,7 +59,7 @@ const PipelineNameDialog = ({
   const excluded = new Set(
     (excludeNames ?? []).map((n) => n.trim().toLowerCase()),
   );
-  const nameIsTaken = Array.from(userPipelines.keys()).some((n) => {
+  const nameIsTaken = pipelineNames.some((n) => {
     const lower = n.toLowerCase();
     return lower === normalized && !excluded.has(lower);
   });

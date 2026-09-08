@@ -13,9 +13,8 @@ import { PipelineRunNameTemplateEditor } from "@/components/shared/PipelineRunNa
 import { BlockStack } from "@/components/ui/layout";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
+import { findPipelineFile } from "@/services/pipelineStorage/pipelineOperations";
 import { SYSTEM_ANNOTATIONS } from "@/utils/annotations";
-import { getComponentFileFromList } from "@/utils/componentStore";
-import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 import { tracking } from "@/utils/tracking";
 
 import PipelineIO from "../../shared/Execution/PipelineIO";
@@ -32,28 +31,21 @@ const PipelineDetails = () => {
     globalValidationIssues,
   );
 
-  // State for file metadata
   const [fileMeta, setFileMeta] = useState<{
-    creationTime?: Date;
-    modificationTime?: Date;
-    createdBy?: string;
+    createdAt?: Date;
+    modifiedAt?: Date;
   }>({});
 
-  // Fetch file metadata on mount or when componentSpec.name changes
   useEffect(() => {
     const fetchMeta = async () => {
       if (!componentSpec.name) return;
 
       try {
-        const file = await getComponentFileFromList(
-          USER_PIPELINES_LIST_NAME,
-          componentSpec.name,
-        );
+        const file = await findPipelineFile({ name: componentSpec.name });
         if (file) {
           setFileMeta({
-            creationTime: file.creationTime,
-            modificationTime: file.modificationTime,
-            createdBy: file.componentRef.spec.metadata?.annotations?.author,
+            createdAt: file.createdAt,
+            modifiedAt: file.modifiedAt,
           });
         }
       } catch (error) {
@@ -67,15 +59,15 @@ const PipelineDetails = () => {
   const metadata = [
     {
       label: "Created by",
-      value: fileMeta.createdBy,
+      value: componentSpec.metadata?.annotations?.author as string | undefined,
     },
     {
       label: "Created at",
-      value: fileMeta.creationTime?.toLocaleString(),
+      value: fileMeta.createdAt?.toLocaleString(),
     },
     {
       label: "Last updated",
-      value: fileMeta.modificationTime?.toLocaleString(),
+      value: fileMeta.modifiedAt?.toLocaleString(),
     },
   ];
 

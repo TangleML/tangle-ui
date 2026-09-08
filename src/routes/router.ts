@@ -16,6 +16,7 @@ import { AddSecretView } from "@/components/shared/SecretsManagement/components/
 import { ReplaceSecretView } from "@/components/shared/SecretsManagement/components/ReplaceSecretView";
 import { SecretsListView } from "@/components/shared/SecretsManagement/components/SecretsListView";
 import { isFlagEnabled } from "@/components/shared/Settings/useFlags";
+import { isHostStorage } from "@/services/pipelineStorage/storageMode";
 import { BASE_URL, IS_GITHUB_PAGES } from "@/utils/constants";
 
 import RootLayout from "../components/layout/RootLayout";
@@ -103,10 +104,18 @@ const dashboardRunsRoute = createRoute({
   component: DashboardRunsView,
 });
 
+// The dashboard list reads the browser's own pipeline store directly and
+// filters on spec contents a host listing does not carry, so a host-backed
+// store gets the folder table, which goes through the storage driver.
 const dashboardPipelinesRoute = createRoute({
   getParentRoute: () => dashboardRoute,
   path: "/pipelines",
   component: DashboardPipelinesView,
+  beforeLoad: () => {
+    if (isHostStorage()) {
+      throw redirect({ to: APP_ROUTES.PIPELINE_FOLDERS });
+    }
+  },
 });
 
 const dashboardComponentsRoute = createRoute({

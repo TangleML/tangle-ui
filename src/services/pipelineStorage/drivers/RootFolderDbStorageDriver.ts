@@ -63,4 +63,17 @@ export class RootFolderDbStorageDriver implements PipelineStorageDriver {
     const entry = await getComponentFileFromList(LIST_NAME, storageKey);
     return entry != null;
   }
+
+  async describe(
+    storageKey: string,
+  ): Promise<PipelineFileDescriptor | undefined> {
+    const entry = await getComponentFileFromList(LIST_NAME, storageKey);
+    if (!entry) return undefined;
+
+    return {
+      storageKey,
+      createdAt: entry.creationTime,
+      modifiedAt: entry.modificationTime,
+    };
+  }
 }
