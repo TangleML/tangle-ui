@@ -4,6 +4,7 @@ import { createDriver } from "./createDriver";
 import { pipelineStorageDb } from "./db";
 import { RootFolderDbStorageDriver } from "./drivers/RootFolderDbStorageDriver";
 import { PipelineFile } from "./PipelineFile";
+import type { PipelineFileSource } from "./pipelineFileEvents";
 import { PipelineFolder } from "./PipelineFolder";
 import { findById, findByStorageKey } from "./pipelineRegistry";
 import { resolveStorageMode, type StorageMode } from "./storageMode";
@@ -37,13 +38,43 @@ export class PipelineStorageService {
   async resolve(ref: PipelineRef): Promise<PipelineFile> {
     if (ref.fileId) return this.findPipelineById(ref.fileId);
 
-    const byName = await this.resolvePipelineByName(ref.name);
-    if (byName) return byName;
-
-    const adopted = await this.adoptFromLegacyStore(ref.name);
-    if (adopted) return adopted;
+    const found = await this.findPipelineByName(ref.name);
+    if (found) return found;
 
     throw new PipelineNotFoundError(`Pipeline "${ref.name}" not found`);
+  }
+
+  async findPipelineByName(name: string): Promise<PipelineFile | undefined> {
+    return (
+      (await this.resolvePipelineByName(name)) ??
+      (await this.adoptFromLegacyStore(name))
+    );
+  }
+
+  async createPipeline(name: string, content: string): Promise<PipelineFile> {
+    return this.rootFolder.addFile(name, content);
+  }
+
+  /**
+   * The write path for callers that only ever knew a name — the v1 editor, the
+   * save buttons, import. Saving under an existing name updates that pipeline
+   * wherever it lives, rather than laying a second copy in the root store.
+   */
+  async savePipelineByName(
+    name: string,
+    content: string,
+    source?: PipelineFileSource,
+  ): Promise<PipelineFile> {
+    const existing = await this.findPipelineByName(name);
+    if (!existing) return this.createPipeline(name, content);
+
+    await existing.write(content, source);
+    return existing;
+  }
+
+  async deletePipelineByName(name: string): Promise<void> {
+    const existing = await this.findPipelineByName(name);
+    await existing?.deleteFile();
   }
 
   async findPipelineById(id: string): Promise<PipelineFile> {

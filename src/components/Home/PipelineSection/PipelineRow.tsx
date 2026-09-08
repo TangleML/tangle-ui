@@ -28,16 +28,18 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Paragraph, Text } from "@/components/ui/typography";
+import useToastNotification from "@/hooks/useToastNotification";
 import { cn } from "@/lib/utils";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import {
   getDefaultEditorHref,
   getDefaultEditorTarget,
 } from "@/routes/editorRoutes";
-import { deletePipeline } from "@/services/pipelineService";
+import { deletePipelineByName } from "@/services/pipelineStorage/pipelineOperations";
 import { getPipelineTagsFromSpec } from "@/utils/annotations";
 import type { ComponentReferenceWithSpec } from "@/utils/componentStore";
 import { formatDate } from "@/utils/date";
+import { getErrorMessage } from "@/utils/string";
 import { tracking } from "@/utils/tracking";
 
 import type { MatchedField } from "./usePipelineFilters";
@@ -89,6 +91,7 @@ const PipelineRow = withSuspenseWrapper(
     analyticsTrackingPrefix = DEFAULT_PIPELINE_ROW_ANALYTICS_PREFIX,
   }: PipelineRowProps) => {
     const navigate = useNavigate();
+    const notify = useToastNotification();
     const { track } = useAnalytics();
 
     const rowTrack = (suffix: string, metadata?: Record<string, unknown>) => {
@@ -130,11 +133,15 @@ const PipelineRow = withSuspenseWrapper(
     const confirmPipelineDelete = async () => {
       if (!name) return;
 
-      const deleteCallback = () => {
+      try {
+        await deletePipelineByName(name);
         onDelete?.();
-      };
-
-      await deletePipeline(name, deleteCallback);
+      } catch (error) {
+        notify(
+          `Failed to delete "${name}": ${getErrorMessage(error)}`,
+          "error",
+        );
+      }
     };
 
     const handleClick = (e: MouseEvent) => {

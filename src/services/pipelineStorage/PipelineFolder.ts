@@ -129,7 +129,12 @@ export class PipelineFolder {
   }
 
   async addFile(storageKey: string, content: string): Promise<PipelineFile> {
-    await assertStorageKeyUnique(storageKey);
+    /**
+     * A flat store hands back its own key, so the caller's is a suggestion the
+     * write upserts on — there is nothing to collide with, and asking would
+     * cost a round trip to learn that.
+     */
+    if (!this.isFlat) await assertStorageKeyUnique(storageKey);
 
     // Writing before registering means a rejected write leaves no registry row
     // pointing at a file that was never created.

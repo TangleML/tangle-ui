@@ -2,7 +2,10 @@ import { action, makeObservable, observable, runInAction } from "mobx";
 
 import { emitUserPipelineWritten } from "@/utils/userPipelineWriteEvents";
 
-import { emitPipelineFileChanged } from "./pipelineFileEvents";
+import {
+  emitPipelineFileChanged,
+  type PipelineFileSource,
+} from "./pipelineFileEvents";
 import type { PipelineFolder } from "./PipelineFolder";
 import { deleteEntry, updateEntry } from "./pipelineRegistry";
 
@@ -44,7 +47,10 @@ export class PipelineFile {
     return this.folder.driver.read(this.storageKey);
   }
 
-  async write(content: string): Promise<void> {
+  async write(
+    content: string,
+    source: PipelineFileSource = "v2",
+  ): Promise<void> {
     const descriptor = await this.folder.driver.write(this.storageKey, content);
 
     if (descriptor.contentVersion !== undefined) {
@@ -53,7 +59,7 @@ export class PipelineFile {
       });
     }
 
-    emitPipelineFileChanged({ storageKey: this.storageKey, source: "v2" });
+    emitPipelineFileChanged({ storageKey: this.storageKey, source });
     emitUserPipelineWritten();
   }
 

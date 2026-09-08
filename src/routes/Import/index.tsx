@@ -201,7 +201,9 @@ export const ImportPage = () => {
         importedRef.current = true;
         setPipelineName(result.name);
         setStep(Step.Done);
-        navigate(getDefaultEditorTarget({ name: result.name }));
+        navigate(
+          getDefaultEditorTarget({ name: result.name, fileId: result.fileId }),
+        );
       } else {
         setError(result.errorMessage || "Failed to import pipeline from URL.");
       }

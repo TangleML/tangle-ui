@@ -157,26 +157,27 @@ const downloadYamlFromComponentText = (text: string, displayName: string) => {
   downloadStringAsFile(text, `${displayName}.yaml`, "text/yaml");
 };
 
+/**
+ * A run path names an execution; every other path names a pipeline. Guessing
+ * from the shape of the segment instead used to mistake any 20-hex pipeline
+ * name for an id, and the editor then loaded nothing at all.
+ */
 const getIdOrTitleFromPath = (
   pathname: string,
 ): {
   id?: string;
   title?: string;
 } => {
-  const isRunPath = pathname.includes(RUNS_BASE_PATH);
-
   const lastPathSegment = pathname.split("/").pop() || "";
-  const isId = lastPathSegment.match(/^[0-9a-fA-F]{20}$/) || isRunPath;
   const decodedSegment = decodeURIComponent(lastPathSegment);
 
   if (decodedSegment === "") {
     return { id: undefined, title: undefined };
   }
 
-  return {
-    id: isId ? decodedSegment : undefined,
-    title: isId ? undefined : decodedSegment,
-  };
+  return pathname.includes(RUNS_BASE_PATH)
+    ? { id: decodedSegment, title: undefined }
+    : { id: undefined, title: decodedSegment };
 };
 
 const MAX_URL_LENGTH = 2048;

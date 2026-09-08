@@ -6,7 +6,7 @@ import { PipelineNameDialog } from "@/components/shared/Dialogs";
 import useToastNotification from "@/hooks/useToastNotification";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { useComponentSpec } from "@/providers/ComponentSpecProvider";
-import { EDITOR_PATH } from "@/routes/router";
+import { getDefaultEditorTarget } from "@/routes/editorRoutes";
 import { useSavePipeline } from "@/services/pipelineService";
 import { tracking } from "@/utils/tracking";
 
@@ -31,14 +31,12 @@ export const SavePipelineAsButton = ({
 
   const handleSavePipelineAs = useCallback(
     async (name: string) => {
-      await savePipeline(name);
+      const file = await savePipeline(name);
       track("pipeline_editor.pipeline_actions.save_pipeline_as_completed");
       notify(`Pipeline saved as "${name}"`, "success");
       onSaveComplete?.(name);
 
-      navigate({
-        to: `${EDITOR_PATH}/${encodeURIComponent(name)}`,
-      });
+      navigate(getDefaultEditorTarget({ name, fileId: file?.id }));
     },
     [navigate, savePipeline, notify, onSaveComplete, track],
   );

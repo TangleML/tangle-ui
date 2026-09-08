@@ -3,7 +3,7 @@ import { FloatingSelectionBar } from "@/components/shared/FloatingSelectionBar";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import useToastNotification from "@/hooks/useToastNotification";
-import { deletePipeline } from "@/services/pipelineService";
+import { deletePipelineByName } from "@/services/pipelineStorage/pipelineOperations";
 import { getErrorMessage, pluralize } from "@/utils/string";
 
 interface BulkActionsBarProps {
@@ -21,7 +21,7 @@ const BulkActionsBar = ({
 
   const handleBulkDelete = async () => {
     const deletePromises = selectedPipelines.map((pipelineName) =>
-      deletePipeline(pipelineName),
+      deletePipelineByName(pipelineName),
     );
 
     try {

@@ -14,7 +14,9 @@ export function useImportPipeline() {
     mutationFn: async (url: string) => await importPipelineFromUrl(url),
     onSuccess: (result) => {
       notify(`Pipeline "${result.name}" created successfully`, "success");
-      navigate(getDefaultEditorTarget({ name: result.name }));
+      navigate(
+        getDefaultEditorTarget({ name: result.name, fileId: result.fileId }),
+      );
     },
   });
 }

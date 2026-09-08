@@ -8,38 +8,26 @@ import {
   isGraphImplementation,
 } from "@/utils/componentSpec";
 import {
-  deleteComponentFileFromList,
   fullyLoadComponentRefFromUrl,
-  getComponentFileFromList,
   loadComponentAsRefFromText,
-  writeComponentToFileListFromText,
 } from "@/utils/componentStore";
-import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 import { componentSpecToYaml } from "@/utils/yaml";
 import { componentSpecFromYaml } from "@/utils/yaml";
 
 import type { PipelineFile } from "./pipelineStorage/PipelineFile";
-import { findPipelineFile } from "./pipelineStorage/pipelineOperations";
 import {
-  deleteEntry,
-  findByStorageKey,
-} from "./pipelineStorage/pipelineRegistry";
-
-export const deletePipeline = async (name: string, onDelete?: () => void) => {
-  try {
-    await deleteComponentFileFromList(USER_PIPELINES_LIST_NAME, name);
-    const entry = await findByStorageKey(name);
-    if (entry) await deleteEntry(entry.id);
-    onDelete?.();
-  } catch (error) {
-    console.error("Error deleting pipeline:", error);
-  }
-};
+  findPipelineFile,
+  listPipelineFiles,
+  savePipeline as savePipelineToStore,
+} from "./pipelineStorage/pipelineOperations";
+import { usePipelineStorage } from "./pipelineStorage/PipelineStorageProvider";
 
 export const useSavePipeline = (componentSpec: ComponentSpec) => {
+  const storage = usePipelineStorage();
+
   const savePipeline = async (name?: string) => {
     if (!componentSpec) {
-      return;
+      return undefined;
     }
 
     const componentSpecWithNewName = {
@@ -47,12 +35,9 @@ export const useSavePipeline = (componentSpec: ComponentSpec) => {
       name: name ?? componentSpec.name ?? "Untitled Pipeline",
     };
 
-    const componentSpecAsYaml = componentSpecToYaml(componentSpecWithNewName);
-
-    await writeComponentToFileListFromText(
-      USER_PIPELINES_LIST_NAME,
+    return storage.savePipelineByName(
       componentSpecWithNewName.name,
-      componentSpecAsYaml,
+      componentSpecToYaml(componentSpecWithNewName),
     );
   };
 
@@ -142,38 +127,26 @@ export const loadPipelineByName = async (name: string) => {
 
 export interface ImportResult {
   name: string;
+  fileId?: string;
   overwritten: boolean;
   successful: boolean;
   errorMessage?: string;
 }
 
-/**
- * Generates a unique pipeline name by adding a numbered suffix when a collision occurs
- * @param baseName The original pipeline name
- * @returns A promise resolving to a unique pipeline name
- */
-async function generateUniquePipelineName(baseName: string): Promise<string> {
-  // First check if the base name is available
-  const existingPipeline = await getComponentFileFromList(
-    USER_PIPELINES_LIST_NAME,
-    baseName,
-  );
-
-  if (!existingPipeline) {
-    return baseName; // Base name is available
+function generateUniquePipelineName(
+  baseName: string,
+  taken: ReadonlySet<string>,
+): string {
+  if (!taken.has(baseName)) {
+    return baseName;
   }
 
-  // Base name exists, try adding numbers
   let counter = 1;
-  let newName = `${baseName} (${counter})`;
-
-  // Keep checking until we find an available name
-  while (await getComponentFileFromList(USER_PIPELINES_LIST_NAME, newName)) {
+  while (taken.has(`${baseName} (${counter})`)) {
     counter++;
-    newName = `${baseName} (${counter})`;
   }
 
-  return newName;
+  return `${baseName} (${counter})`;
 }
 
 /**
@@ -210,16 +183,15 @@ export async function importPipelineFromYaml(
     let pipelineName = componentSpec.name || "Imported Pipeline";
     let wasRenamed = false;
 
-    // Check if a pipeline with this name already exists
-    const existingPipeline = await getComponentFileFromList(
-      USER_PIPELINES_LIST_NAME,
-      pipelineName,
+    const taken = new Set(
+      (await listPipelineFiles()).map((file) => file.displayName),
     );
+    const nameExists = taken.has(pipelineName);
 
     // If exists and we're not overwriting, generate a unique name
-    if (existingPipeline && !overwrite) {
+    if (nameExists && !overwrite) {
       const originalName = pipelineName;
-      pipelineName = await generateUniquePipelineName(pipelineName);
+      pipelineName = generateUniquePipelineName(pipelineName, taken);
       wasRenamed = pipelineName !== originalName;
 
       // Update the component spec name to match the new name
@@ -230,16 +202,12 @@ export async function importPipelineFromYaml(
     // This also ensures the ComponentSpec is valid
     const standardizedYaml = componentSpecToYaml(componentSpec);
 
-    // Save the pipeline to IndexedDB
-    await writeComponentToFileListFromText(
-      USER_PIPELINES_LIST_NAME,
-      pipelineName,
-      standardizedYaml,
-    );
+    const file = await savePipelineToStore(pipelineName, standardizedYaml);
 
     return {
-      name: pipelineName,
-      overwritten: Boolean(existingPipeline && overwrite),
+      name: file.displayName,
+      fileId: file.id,
+      overwritten: nameExists && overwrite,
       successful: true,
       errorMessage: wasRenamed
         ? `Pipeline was renamed to "${pipelineName}" to avoid name conflict.`

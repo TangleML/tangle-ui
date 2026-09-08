@@ -63,4 +63,40 @@ test.describe("host-provided pipeline storage", () => {
     await expect(page.getByText("Churn model")).toBeHidden();
     expect(await readLocallyStoredPipelineKeys(page)).toEqual([]);
   });
+
+  test("creates a new pipeline in the host and nowhere else", async ({
+    page,
+  }) => {
+    await installSeededHost(page);
+
+    await page.goto("/pipeline-folders");
+    await expect(page.getByText("Churn model")).toBeVisible();
+
+    await page.getByTestId("new-pipeline-button").click();
+    await expect(page.locator('[data-testid="rf__wrapper"]')).toBeVisible({
+      timeout: 30_000,
+    });
+
+    expect(await readHostRecords(page)).toHaveLength(SEED.length + 1);
+    expect(await readLocallyStoredPipelineKeys(page)).toEqual([]);
+  });
+
+  test("a deleted pipeline does not come back on reload", async ({ page }) => {
+    await installSeededHost(page);
+
+    await page.goto("/pipeline-folders");
+    const row = page.getByRole("row").filter({ hasText: "Churn model" });
+    await row.locator("[data-checkbox]").click();
+
+    await page.getByRole("button", { name: "Delete", exact: true }).click();
+    await page.getByRole("button", { name: "Continue" }).click();
+
+    await expect(page.getByText("Churn model")).toBeHidden();
+
+    await page.reload();
+    await expect(page.getByText("Nightly refresh")).toBeVisible();
+    await expect(page.getByText("Churn model")).toBeHidden();
+
+    expect(await readHostRecords(page)).toHaveLength(SEED.length - 1);
+  });
 });

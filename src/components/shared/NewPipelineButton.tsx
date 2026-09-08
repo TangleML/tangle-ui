@@ -7,11 +7,10 @@ import {
   getDefaultEditorHref,
   getDefaultEditorTarget,
 } from "@/routes/editorRoutes";
-import { writeComponentToFileListFromText } from "@/utils/componentStore";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import {
   defaultPipelineYamlWithName,
   IS_GITHUB_PAGES,
-  USER_PIPELINES_LIST_NAME,
 } from "@/utils/constants";
 
 const randomName = () => (generate(4) as string[]).join(" ");
@@ -25,23 +24,23 @@ const NewPipelineButton = ({
   ...buttonProps
 }: NewPipelineButtonProps) => {
   const navigate = useNavigate();
+  const storage = usePipelineStorage();
 
   const handleCreate = async (e: MouseEvent<HTMLButtonElement>) => {
     const name = randomName();
-    const componentText = defaultPipelineYamlWithName(name);
-    await writeComponentToFileListFromText(
-      USER_PIPELINES_LIST_NAME,
+    const file = await storage.createPipeline(
       name,
-      componentText,
+      defaultPipelineYamlWithName(name),
     );
+    const ref = { name: file.displayName, fileId: file.id };
 
     if (e.ctrlKey || e.metaKey) {
-      window.open(getDefaultEditorHref({ name }), "_blank");
+      window.open(getDefaultEditorHref(ref), "_blank");
       return;
     }
 
     navigate({
-      ...getDefaultEditorTarget({ name }),
+      ...getDefaultEditorTarget(ref),
       reloadDocument: !IS_GITHUB_PAGES,
     });
   };

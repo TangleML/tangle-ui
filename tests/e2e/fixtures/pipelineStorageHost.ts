@@ -35,30 +35,50 @@ declare global {
 
 const DEFAULT_LABEL = "Shared storage";
 
+const STATE_KEY = "__tangle_test_host_state__";
+
 /**
  * Stands in for the page that embeds this app. It has to be installed with
  * `addInitScript` rather than `evaluate`, because storage mode is decided while
  * the app boots and never revisited.
+ *
+ * Its contents outlive a reload — creating a pipeline navigates with a document
+ * load, and a store that forgot everything at that point could not show that
+ * the write reached it.
  */
 export async function installPipelineStorageHost(
   page: Page,
   options: HostStorageOptions = {},
 ): Promise<void> {
   await page.addInitScript(
-    (config: Required<HostStorageOptions>) => {
-      const store = new Map<string, HostRecord>();
-      let revision = 0;
+    (config: Required<HostStorageOptions> & { stateKey: string }) => {
+      const saved = window.sessionStorage.getItem(config.stateKey);
+      const store = new Map<string, HostRecord>(
+        saved ? (JSON.parse(saved) as [string, HostRecord][]) : [],
+      );
+      let revision = store.size;
 
-      for (const seeded of config.seed) {
-        revision += 1;
-        store.set(seeded.key, {
-          key: seeded.key,
-          externalId: `external-${revision}`,
-          displayName: seeded.displayName,
-          contentVersion: `v${revision}`,
-          spec: seeded.spec,
-        });
+      if (!saved) {
+        for (const seeded of config.seed) {
+          revision += 1;
+          store.set(seeded.key, {
+            key: seeded.key,
+            externalId: `external-${revision}`,
+            displayName: seeded.displayName,
+            contentVersion: `v${revision}`,
+            spec: seeded.spec,
+          });
+        }
       }
+
+      function persist(): void {
+        window.sessionStorage.setItem(
+          config.stateKey,
+          JSON.stringify([...store.entries()]),
+        );
+      }
+
+      persist();
 
       async function gate(): Promise<void> {
         if (config.latencyMs > 0) {
@@ -112,11 +132,13 @@ export async function installPipelineStorageHost(
             spec,
           };
           store.set(key, record);
+          persist();
           return summaryOf(record);
         },
         async delete(key: string) {
           await gate();
           store.delete(key);
+          persist();
         },
         async has(key: string) {
           await gate();
@@ -133,7 +155,8 @@ export async function installPipelineStorageHost(
       seed: options.seed ?? [],
       failMode: options.failMode ?? "none",
       latencyMs: options.latencyMs ?? 0,
-    } satisfies Required<HostStorageOptions>,
+      stateKey: STATE_KEY,
+    } satisfies Required<HostStorageOptions> & { stateKey: string },
   );
 }
 

@@ -78,19 +78,39 @@ function summary(key: string, displayName: string): HostPipelineSummary {
   };
 }
 
-function installHost(listing: HostPipelineSummary[] = []): void {
+/**
+ * Mirrors the two host behaviours the write paths are built on: `write` upserts
+ * on the caller's key, and the displayed name comes from the written spec.
+ */
+function installHost(
+  listing: HostPipelineSummary[] = [],
+): Map<string, unknown> {
+  const summaries = new Map(listing.map((entry) => [entry.key, entry]));
+  const specs = new Map<string, unknown>();
+
   const host: PipelineStorageHost = {
     version: 1,
     label: LABEL,
-    list: async () => listing,
-    read: async () => {
-      throw new Error("not seeded");
+    list: async () => [...summaries.values()],
+    read: async (key) => {
+      const found = summaries.get(key);
+      if (!found) throw new Error(`not seeded: ${key}`);
+      return { ...found, spec: specs.get(key) };
     },
-    write: async () => {
-      throw new Error("not seeded");
+    write: async (key, spec) => {
+      specs.set(key, spec);
+      const written = {
+        ...summary(key, (spec as { name?: string }).name ?? "Untitled"),
+        contentVersion: String(summaries.size + 1),
+      };
+      summaries.set(key, written);
+      return written;
     },
-    delete: async () => undefined,
-    has: async (key) => listing.some((entry) => entry.key === key),
+    delete: async (key) => {
+      summaries.delete(key);
+      specs.delete(key);
+    },
+    has: async (key) => summaries.has(key),
   };
 
   Object.defineProperty(window, "__TANGLE_PIPELINE_STORAGE_HOST__", {
@@ -98,7 +118,12 @@ function installHost(listing: HostPipelineSummary[] = []): void {
     configurable: true,
     writable: true,
   });
+
+  return specs;
 }
+
+const PIPELINE_YAML = (name: string) =>
+  `name: ${name}\nimplementation:\n  graph:\n    tasks: {}\n`;
 
 beforeEach(() => {
   registry.clear();
@@ -223,5 +248,68 @@ describe("resolving a route reference against a host", () => {
     });
 
     expect(file.storageKey).toBe("opaque-key-1");
+  });
+});
+
+describe("writing to a host", () => {
+  it("creates a pipeline and registers the identity the store reported", async () => {
+    installHost();
+    const service = new PipelineStorageService();
+
+    const file = await service.createPipeline(
+      "Churn model",
+      PIPELINE_YAML("Churn model"),
+    );
+
+    expect(file.id).toBe("id-Churn model");
+    expect(file.displayName).toBe("Churn model");
+    expect(await service.rootFolder.listPipelines()).toHaveLength(1);
+  });
+
+  it("saves over the pipeline that already has the name", async () => {
+    const specs = installHost();
+    const service = new PipelineStorageService();
+
+    await service.createPipeline("Churn model", PIPELINE_YAML("Churn model"));
+    await service.savePipelineByName(
+      "Churn model",
+      PIPELINE_YAML("Churn model"),
+    );
+
+    expect(await service.rootFolder.listPipelines()).toHaveLength(1);
+    expect(specs.size).toBe(1);
+  });
+
+  it("creates a pipeline when saving a name the store has never held", async () => {
+    installHost();
+    const service = new PipelineStorageService();
+
+    const file = await service.savePipelineByName(
+      "Ranking model",
+      PIPELINE_YAML("Ranking model"),
+    );
+
+    expect(file.displayName).toBe("Ranking model");
+  });
+
+  it("deletes through the driver so the store loses the pipeline too", async () => {
+    installHost();
+    const service = new PipelineStorageService();
+
+    await service.createPipeline("Churn model", PIPELINE_YAML("Churn model"));
+    await service.deletePipelineByName("Churn model");
+
+    expect(await service.rootFolder.listPipelines()).toEqual([]);
+    expect(registry.size).toBe(0);
+  });
+
+  it("leaves the store alone when asked to delete a name it does not hold", async () => {
+    installHost([summary("opaque-key-1", "Churn model")]);
+    const service = new PipelineStorageService();
+
+    await expect(
+      service.deletePipelineByName("Ranking model"),
+    ).resolves.toBeUndefined();
+    expect(await service.rootFolder.listPipelines()).toHaveLength(1);
   });
 });

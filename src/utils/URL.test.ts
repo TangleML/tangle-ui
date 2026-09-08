@@ -248,6 +248,13 @@ describe("getIdOrTitleFromPath", () => {
     expect(id).toBe("some id");
   });
 
+  it("treats an opaque hex-looking editor segment as a title", () => {
+    const path = "/editor/0123456789abcdef0123";
+    const { id, title } = getIdOrTitleFromPath(path);
+    expect(id).toBe(undefined);
+    expect(title).toBe("0123456789abcdef0123");
+  });
+
   it("returns undefined if path ends with slash", () => {
     const path = "/foo/bar/runs/";
     const { id, title } = getIdOrTitleFromPath(path);

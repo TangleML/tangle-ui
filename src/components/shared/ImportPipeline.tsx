@@ -26,7 +26,6 @@ import {
   importPipelineFromYaml,
   type ImportResult,
 } from "@/services/pipelineService";
-import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import type { PipelineRef } from "@/services/pipelineStorage/types";
 
 interface ImportPipelineProps {
@@ -49,7 +48,6 @@ const ImportPipeline = ({
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
-  const storage = usePipelineStorage();
 
   const navigateToPipeline = () => {
     if (!importedPipeline) return;
@@ -63,7 +61,7 @@ const ImportPipeline = ({
     if (onImportComplete) {
       onImportComplete(importedPipeline);
     } else {
-      navigate(getDefaultEditorTarget({ name: importedPipeline.name }));
+      navigate(getDefaultEditorTarget(importedPipeline));
     }
   };
 
@@ -81,8 +79,7 @@ const ImportPipeline = ({
       setSuccessMessage(`Pipeline "${result.name}" imported successfully.`);
     }
 
-    const file = await storage.rootFolder.assignFile(result.name);
-    setImportedPipeline({ name: result.name, fileId: file.id });
+    setImportedPipeline({ name: result.name, fileId: result.fileId });
   };
 
   const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {

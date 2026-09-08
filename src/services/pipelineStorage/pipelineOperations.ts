@@ -1,4 +1,5 @@
 import type { PipelineFile } from "./PipelineFile";
+import type { PipelineFileSource } from "./pipelineFileEvents";
 import {
   getPipelineStorageService,
   PipelineNotFoundError,
@@ -23,4 +24,23 @@ export async function findPipelineFile(
     if (error instanceof PipelineNotFoundError) return undefined;
     throw error;
   }
+}
+
+export async function createPipeline(
+  name: string,
+  content: string,
+): Promise<PipelineFile> {
+  return getPipelineStorageService().createPipeline(name, content);
+}
+
+export async function savePipeline(
+  name: string,
+  content: string,
+  source?: PipelineFileSource,
+): Promise<PipelineFile> {
+  return getPipelineStorageService().savePipelineByName(name, content, source);
+}
+
+export async function deletePipelineByName(name: string): Promise<void> {
+  return getPipelineStorageService().deletePipelineByName(name);
 }
