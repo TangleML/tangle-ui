@@ -40,6 +40,7 @@ export class AutoSaveStore {
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
   private retryAttempt = 0;
   private disposeRecovery: (() => void) | null = null;
+  private closed = false;
 
   private debouncedSave = debounce((yamlText: string) => {
     void this.performSave(yamlText);
@@ -62,6 +63,7 @@ export class AutoSaveStore {
     this.hasPendingChanges = false;
     this.pendingYaml = null;
     this.retryAttempt = 0;
+    this.closed = false;
     // The freshly-loaded spec matches what's on disk, so seed the baseline to
     // avoid flushing an unchanged pipeline on dispose.
     this.lastSavedYaml = this.serializeSpec();
@@ -76,13 +78,20 @@ export class AutoSaveStore {
   }
 
   @action dispose() {
+    /**
+     * The parting write goes through the queue rather than straight to the
+     * file. Sent on its own it would race whatever write is already running,
+     * and a slow store finishing them out of order would leave the older text
+     * as the stored one.
+     */
+    this.closed = true;
+
     const yaml = this.serializeSpec();
-    const file = this.pipelineFileStore.activePipelineFile;
-    if (yaml && file && yaml !== this.lastSavedYaml) {
-      void file.write(yaml).catch((error) => {
-        console.error("Auto-save flush on dispose failed:", error);
-      });
+    if (yaml && yaml !== this.lastSavedYaml) {
+      this.pendingYaml = yaml;
+      void this.flushPending();
     }
+
     this.debouncedSave.cancel();
     this.clearRetry();
     this.disposeRecovery?.();
@@ -206,6 +215,7 @@ export class AutoSaveStore {
 
   private scheduleRetry() {
     this.clearRetry();
+    if (this.closed) return;
 
     const delay =
       RETRY_DELAYS_MS[Math.min(this.retryAttempt, RETRY_DELAYS_MS.length - 1)];

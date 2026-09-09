@@ -124,6 +124,79 @@ describe("AutoSaveStore when the store cannot be reached", () => {
     expect(write).not.toHaveBeenCalled();
   });
 
+  it("retries with the newest edit, never the one that was refused", async () => {
+    const written: string[] = [];
+    let reachable = false;
+    const store = createStore({
+      write: async (yamlText: string) => {
+        if (!reachable) throw new Error("unreachable");
+        written.push(yamlText);
+      },
+    } as unknown as PipelineFile);
+
+    const spec = createSpec("Churn model");
+    store.init(spec, "Churn model");
+    await store.save();
+
+    spec.name = "Churn model v2";
+    reachable = true;
+    await store.save();
+
+    expect(written).toEqual(["name: Churn model v2"]);
+    store.dispose();
+  });
+
+  it("does not let a retry land on top of a save that already succeeded", async () => {
+    const written: string[] = [];
+    let reachable = false;
+    const store = createStore({
+      write: async (yamlText: string) => {
+        if (!reachable) throw new Error("unreachable");
+        written.push(yamlText);
+      },
+    } as unknown as PipelineFile);
+
+    const spec = createSpec("Churn model");
+    store.init(spec, "Churn model");
+    await store.save();
+
+    reachable = true;
+    spec.name = "Churn model v2";
+    await store.save();
+
+    window.dispatchEvent(new Event("focus"));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    expect(written).toEqual(["name: Churn model v2"]);
+    store.dispose();
+  });
+
+  it("waits for the write in flight before the parting one", async () => {
+    const written: string[] = [];
+    let release: (() => void) | undefined;
+    const store = createStore({
+      write: async (yamlText: string) => {
+        if (!release) {
+          await new Promise<void>((resolve) => (release = resolve));
+        }
+        written.push(yamlText);
+      },
+    } as unknown as PipelineFile);
+
+    const spec = createSpec("Churn model");
+    store.init(spec, "Churn model");
+
+    const saving = store.save();
+    spec.name = "Churn model v2";
+    store.dispose();
+
+    release?.();
+    await saving;
+    await vi.waitFor(() =>
+      expect(written).toEqual(["name: Churn model", "name: Churn model v2"]),
+    );
+  });
+
   it("lands overlapping saves in order instead of racing them", async () => {
     const written: string[] = [];
     let release: (() => void) | undefined;

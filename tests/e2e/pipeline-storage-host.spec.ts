@@ -7,6 +7,7 @@ import {
   readHostRecords,
   readLocallyStoredPipelineKeys,
   seedLocallyStoredPipeline,
+  setHostFailMode,
 } from "./fixtures/pipelineStorageHost";
 
 const LABEL = "Shared storage";
@@ -175,6 +176,42 @@ test.describe("host-provided pipeline storage", () => {
         (await readHostRecords(page)).map((record) => record.displayName),
       )
       .toEqual(["Churn model v2", "Nightly refresh"]);
+  });
+
+  test("says the list could not be read rather than showing an empty library", async ({
+    page,
+  }) => {
+    await installSeededHost(page, { failMode: "unavailable" });
+
+    await page.goto("/pipelines");
+
+    await expect(page.getByTestId("pipeline-storage-error")).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(page.getByText(/don't have any pipelines yet/i)).toBeHidden();
+  });
+
+  test("says so in the editor when a save is refused, and stops once it lands", async ({
+    page,
+  }) => {
+    await installSeededHost(page);
+
+    await page.goto(`/editor-v2/${SEED[0].key}`);
+    await expect(page.locator('[data-testid="rf__wrapper"]')).toBeVisible({
+      timeout: 30_000,
+    });
+
+    await setHostFailMode(page, "unavailable");
+    await page.getByTestId("auto-save-button").click();
+
+    const banner = page.getByTestId("unsaved-work-banner");
+    await expect(banner).toBeVisible();
+    await expect(banner).toContainText(LABEL);
+
+    await setHostFailMode(page, "none");
+    await banner.getByRole("button", { name: "Try now" }).click();
+
+    await expect(banner).toBeHidden();
   });
 
   test("a deleted pipeline does not come back on reload", async ({ page }) => {

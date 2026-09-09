@@ -26,6 +26,7 @@ interface HostRecord {
 interface HostTestState {
   records(): HostRecord[];
   readKeys(): string[];
+  setFailMode(mode: HostFailMode): void;
 }
 
 declare global {
@@ -65,6 +66,8 @@ export async function installPipelineStorageHost(
        */
       const readKeys: string[] = [];
 
+      let failMode = config.failMode;
+
       if (!saved) {
         for (const seeded of config.seed) {
           revision += 1;
@@ -92,9 +95,9 @@ export async function installPipelineStorageHost(
           await new Promise((resolve) => setTimeout(resolve, config.latencyMs));
         }
 
-        if (config.failMode !== "none") {
-          throw Object.assign(new Error(`host is ${config.failMode}`), {
-            code: config.failMode,
+        if (failMode !== "none") {
+          throw Object.assign(new Error(`host is ${failMode}`), {
+            code: failMode,
           });
         }
       }
@@ -157,6 +160,9 @@ export async function installPipelineStorageHost(
       window.__TANGLE_TEST_HOST__ = {
         records: () => [...store.values()],
         readKeys: () => [...readKeys],
+        setFailMode: (mode) => {
+          failMode = mode;
+        },
       };
     },
     {
@@ -248,6 +254,20 @@ export async function seedLocallyStoredPipeline(
 
     database.close();
   }, name);
+}
+
+/**
+ * Takes the store away, or gives it back, without reloading — the failure that
+ * matters is the one that arrives while someone is working.
+ */
+export async function setHostFailMode(
+  page: Page,
+  mode: HostFailMode,
+): Promise<void> {
+  await page.evaluate(
+    (value) => window.__TANGLE_TEST_HOST__?.setFailMode(value),
+    mode,
+  );
 }
 
 export async function readHostRecords(page: Page): Promise<HostRecord[]> {

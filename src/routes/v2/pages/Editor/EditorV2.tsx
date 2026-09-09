@@ -43,6 +43,7 @@ import { EditorMenuBar } from "./components/EditorMenuBar/EditorMenuBar";
 import { EditorTourBridge } from "./components/EditorTourBridge/EditorTourBridge";
 import { EmptyEditorState } from "./components/EmptyEditorState";
 import { FlowCanvas } from "./components/FlowCanvas/FlowCanvas";
+import { UnsavedWorkBanner } from "./components/UnsavedWorkBanner";
 import { useAiChatWindow } from "./hooks/useAiChatWindow";
 import { useComponentLibraryWindow } from "./hooks/useComponentLibraryWindow";
 import { useComponentSearchV2Window } from "./hooks/useComponentSearchV2Window";
@@ -168,6 +169,7 @@ function EditorV2Content({ pipelineRef }: { pipelineRef: PipelineRef | null }) {
       <ComponentEditorProvider>
         <ReactFlowProvider>
           <EditorMenuBar />
+          <UnsavedWorkBanner />
           <EditorTourBridge />
           <TourSaveExploreDialog />
           <TourSecretsDialog />

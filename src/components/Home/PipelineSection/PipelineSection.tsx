@@ -5,6 +5,7 @@ import { ExamplePipelines } from "@/components/Learn/ExamplePipelines";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import NewPipelineButton from "@/components/shared/NewPipelineButton";
 import { PaginationControls } from "@/components/shared/PaginationControls";
+import { PipelineStorageError } from "@/components/shared/PipelineStorageError";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -65,7 +66,7 @@ export const PipelineSection = withSuspenseWrapper(
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
     const storage = usePipelineStorage();
-    const { entries, isLoading, pendingCount, refetch } =
+    const { entries, isLoading, error, pendingCount, refetch } =
       usePipelineListEntries();
 
     const migration = useHostMigration(refetch);
@@ -112,6 +113,10 @@ export const PipelineSection = withSuspenseWrapper(
 
     if (isLoading || migration.phase === "checking") {
       return <LoadingScreen message="Loading Pipelines" />;
+    }
+
+    if (error) {
+      return <PipelineStorageError error={error} onRetry={() => refetch()} />;
     }
 
     if (entries.length === 0) {

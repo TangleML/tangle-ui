@@ -8,6 +8,7 @@ import {
   writeCachedSpec,
 } from "@/services/pipelineStorage/pipelineSpecCache";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
+import { isRetriableStorageError } from "@/services/pipelineStorage/storageErrors";
 import { FoldersQueryKeys } from "@/services/pipelineStorage/types";
 import type { ComponentSpec } from "@/utils/componentSpec";
 import { runWithConcurrency } from "@/utils/concurrency";
@@ -32,10 +33,12 @@ export function usePipelineListEntries() {
   const {
     data: files,
     isPending,
+    error,
     refetch,
   } = useQuery({
     queryKey: FoldersQueryKeys.AllPipelines(),
     queryFn: () => storage.listAllPipelines(),
+    retry: isRetriableStorageError,
   });
 
   const [specs, setSpecs] = useState<ReadonlyMap<string, ComponentSpec>>(
@@ -78,7 +81,7 @@ export function usePipelineListEntries() {
     spec: specs.get(file.storageKey),
   }));
 
-  return { entries, isLoading: isPending, pendingCount, refetch };
+  return { entries, isLoading: isPending, error, pendingCount, refetch };
 }
 
 async function hydrate(
