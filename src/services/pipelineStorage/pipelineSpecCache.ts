@@ -1,7 +1,10 @@
+import { Dexie } from "dexie";
+
 import type { ComponentSpec } from "@/utils/componentSpec";
 
 import { pipelineStorageDb } from "./db";
 import type { PipelineFile } from "./PipelineFile";
+import { currentStorageKind } from "./storageMode";
 
 /**
  * A listing says what pipelines exist but not what is in them, and the pipeline
@@ -28,9 +31,10 @@ export async function readCachedSpecs(
 
   if (wanted.size === 0) return new Map();
 
-  const cached = await pipelineStorageDb.pipeline_specs.bulkGet([
-    ...wanted.keys(),
-  ]);
+  const storage = currentStorageKind();
+  const cached = await pipelineStorageDb.pipeline_specs.bulkGet(
+    [...wanted.keys()].map((storageKey) => [storage, storageKey]),
+  );
 
   return new Map(
     cached.flatMap((entry) =>
@@ -49,6 +53,7 @@ export async function writeCachedSpec(
   if (!version) return;
 
   await pipelineStorageDb.pipeline_specs.put({
+    storage: currentStorageKind(),
     storageKey: file.storageKey,
     version,
     spec,
@@ -58,10 +63,12 @@ export async function writeCachedSpec(
 export async function forgetUnlistedSpecs(
   listedKeys: Set<string>,
 ): Promise<void> {
+  const storage = currentStorageKind();
   const stored = await pipelineStorageDb.pipeline_specs
-    .toCollection()
+    .where("[storage+storageKey]")
+    .between([storage, Dexie.minKey], [storage, Dexie.maxKey])
     .primaryKeys();
-  const gone = stored.filter((key) => !listedKeys.has(key));
+  const gone = stored.filter(([, storageKey]) => !listedKeys.has(storageKey));
 
   if (gone.length > 0) {
     await pipelineStorageDb.pipeline_specs.bulkDelete(gone);

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { RootFolderDbStorageDriver } from "./drivers/RootFolderDbStorageDriver";
 import type { HostPipelineSummary, PipelineStorageHost } from "./host/contract";
+import type { NewPipelineRegistryEntry } from "./pipelineRegistry";
 import {
   AmbiguousPipelineNameError,
   PipelineNotFoundError,
@@ -17,14 +18,15 @@ import {
 const registry = new Map<string, PipelineRegistryEntry>();
 
 vi.mock("./pipelineRegistry", () => ({
-  claimEntry: async (entry: PipelineRegistryEntry) => {
+  claimEntry: async (entry: NewPipelineRegistryEntry) => {
     const existing = [...registry.values()].find(
       (candidate) => candidate.storageKey === entry.storageKey,
     );
     if (existing) return existing;
 
-    registry.set(entry.id, entry);
-    return entry;
+    const row = { storage: "local" as const, ...entry };
+    registry.set(row.id, row);
+    return row;
   },
   updateEntry: async (id: string, updates: Partial<PipelineRegistryEntry>) => {
     const entry = registry.get(id);
@@ -221,6 +223,7 @@ describe("the flat list of everything", () => {
     );
     registry.set("filed", {
       id: "filed",
+      storage: "local",
       storageKey: "Filed away",
       folderId: "folder-1",
     });

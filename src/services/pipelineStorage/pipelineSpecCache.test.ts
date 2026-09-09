@@ -92,6 +92,6 @@ describe("the pipeline spec cache", () => {
 
     expect(
       await pipelineStorageDb.pipeline_specs.toCollection().primaryKeys(),
-    ).toEqual(["key-2"]);
+    ).toEqual([["local", "key-2"]]);
   });
 });

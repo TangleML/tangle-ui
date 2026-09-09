@@ -1,20 +1,21 @@
-import { Dexie, type EntityTable } from "dexie";
+import { Dexie, type EntityTable, type Table } from "dexie";
 
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 
-import { isHostStorage } from "./storageMode";
+import { currentStorageKind } from "./storageMode";
 import {
   type CachedPipelineSpec,
   type FolderEntry,
   type HostMigrationRecord,
   type PipelineRegistryEntry,
+  type PipelineStorageKind,
   ROOT_FOLDER_ID,
 } from "./types";
 
 export type PipelineStorageDb = Dexie & {
   pipeline_registry: EntityTable<PipelineRegistryEntry, "id">;
   folders: EntityTable<FolderEntry, "id">;
-  pipeline_specs: EntityTable<CachedPipelineSpec, "storageKey">;
+  pipeline_specs: Table<CachedPipelineSpec, [PipelineStorageKind, string]>;
   host_migration: EntityTable<HostMigrationRecord, "id">;
 };
 
@@ -81,6 +82,41 @@ pipelineStorageDb.version(5).stores({
   host_migration: "id",
 });
 
+/**
+ * The spec cache is keyed by store as well, and a primary key cannot be changed
+ * in place, so the table is dropped here and remade in the next version. It
+ * holds nothing that is not re-readable.
+ */
+pipelineStorageDb.version(6).stores({ pipeline_specs: null });
+
+pipelineStorageDb
+  .version(7)
+  .stores({
+    pipeline_registry:
+      "id, storage, folderId, &[storage+storageKey], [storage+folderId], [storage+folderId+storageKey]",
+    folders: "id, parentId",
+    pipeline_specs: "[storage+storageKey]",
+    host_migration: "id",
+  })
+  .upgrade(async (tx) => {
+    /**
+     * Rows predating this version do not say which store they describe, and
+     * both stores used the same root folder id. Only a host-provided store
+     * reports a `contentVersion`, which makes the two tellable apart where it
+     * matters; a row filed in a folder can only be the browser's, because a
+     * store that keys pipelines itself has no folders.
+     */
+    await tx
+      .table<PipelineRegistryEntry>("pipeline_registry")
+      .toCollection()
+      .modify((entry) => {
+        const isHostRow =
+          entry.folderId === ROOT_FOLDER_ID &&
+          entry.contentVersion !== undefined;
+        entry.storage = isHostRow ? "host" : "local";
+      });
+  });
+
 pipelineStorageDb.on("ready", async () => {
   await seedRegistryFromLegacyList();
 });
@@ -91,10 +127,13 @@ pipelineStorageDb.on("ready", async () => {
  * would claim files the host has never heard of.
  */
 async function seedRegistryFromLegacyList() {
-  if (isHostStorage()) return;
+  if (currentStorageKind() === "host") return;
 
-  const count = await pipelineStorageDb.pipeline_registry.count();
-  if (count > 0) return;
+  const seeded = await pipelineStorageDb.pipeline_registry
+    .where("storage")
+    .equals("local")
+    .count();
+  if (seeded > 0) return;
 
   const { getAllComponentFilesFromList } =
     await import("@/utils/componentStore");
@@ -104,23 +143,12 @@ async function seedRegistryFromLegacyList() {
 
   if (knownPipelines.size === 0) return;
 
-  const pipelineForRegistry = [...knownPipelines.entries()].map(
-    ([storageKey]) => ({
+  await pipelineStorageDb.pipeline_registry.bulkAdd(
+    [...knownPipelines.keys()].map((storageKey) => ({
       id: crypto.randomUUID(),
+      storage: "local" as const,
       storageKey,
       folderId: ROOT_FOLDER_ID,
-    }),
+    })),
   );
-
-  try {
-    /**
-     * This code may be revisited to ensure stability and performance.
-     */
-    pipelineForRegistry.forEach(async (row) => {
-      await pipelineStorageDb.pipeline_registry.upsert(row.id, row);
-    });
-  } catch (e) {
-    console.error(e);
-    throw e;
-  }
 }

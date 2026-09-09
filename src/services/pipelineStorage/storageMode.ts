@@ -1,5 +1,6 @@
 import type { PipelineStorageHost } from "./host/contract";
 import { getPipelineStorageHost } from "./host/detectHost";
+import type { PipelineStorageKind } from "./types";
 
 export type StorageMode =
   | { kind: "local" }
@@ -50,6 +51,15 @@ export function getStorageHost(): PipelineStorageHost | undefined {
 
 export function isHostStorage(): boolean {
   return resolveStorageMode().kind === "host";
+}
+
+/**
+ * Which store the cached rows written on this page load describe. A deployment
+ * that requires a host still belongs to the host's world while that host is
+ * unreachable — nothing may be written, and browser rows must stay invisible.
+ */
+export function currentStorageKind(): PipelineStorageKind {
+  return resolveStorageMode().kind === "local" ? "local" : "host";
 }
 
 /**

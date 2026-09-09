@@ -47,7 +47,17 @@ export type DriverConfig =
   | HostDriverConfig
   | GoogleDriveDriverConfig; // google-drive
 
+/**
+ * Which store a cached row describes. Storage keys are only unique within one
+ * store, and browser storage keys a pipeline on its name — a name a
+ * host-provided store may well be holding too — so a row that did not say which
+ * store it came from would be found by the other one and answer for a pipeline
+ * it has never seen.
+ */
+export type PipelineStorageKind = "local" | "host";
+
 export interface CachedPipelineSpec {
+  storage: PipelineStorageKind;
   storageKey: string;
   version: string;
   spec: ComponentSpec;
@@ -64,6 +74,7 @@ export interface HostMigrationRecord {
 
 export interface PipelineRegistryEntry {
   id: string;
+  storage: PipelineStorageKind;
   storageKey: string;
   folderId: string;
   contentVersion?: string;
