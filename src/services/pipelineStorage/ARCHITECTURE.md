@@ -1,6 +1,6 @@
 # Pipeline Storage Architecture
 
-Pipeline file storage behind one driver interface, over browser storage (IndexedDB, local file system) or over a store the embedding page provides. Every pipeline file lives inside a folder; every folder owns a driver that does the I/O.
+Pipeline file storage behind one driver interface, over browser storage (IndexedDB, local file system) or over the backend the app is configured against. Every pipeline file lives inside a folder; every folder owns a driver that does the I/O.
 
 Which store the app uses is decided once, as it boots, and never revisited — see [Storage mode](#storage-mode).
 
@@ -18,18 +18,24 @@ pipelineStorage/
 ├── PipelineStorageProvider.tsx     # React context provider + usePipelineStorage hook
 ├── storageMode.ts                  # Which store this page load uses; decided once
 ├── storageErrors.ts                # Which failures are worth another attempt
+├── storageHealth.ts                # Whether the backend is answering; no React, no provider
+├── backendEndpoint.ts              # Where the backend is, for non-React callers
+├── pendingWrites.ts                # Edits the backend refused, kept and sent on recovery
 ├── pipelineSpecCache.ts            # Pipeline contents, keyed by the store's own version
-├── hostMigration.ts                # One-time copy of browser pipelines into a host store
-├── host/
-│   ├── contract.ts                 # The window global an embedding page provides
-│   └── detectHost.ts               # Reads and version-checks that global
+├── pipelineFileEvents.ts           # "This file changed" between editors
+├── pipelineOperations.ts           # Thin non-React binding onto the singleton service
+├── hostMigration.ts                # One-time copy of browser pipelines into the backend
+├── devReset.ts                     # Empties the backend so the copy can be tried again
 └── drivers/
     ├── RootFolderDbStorageDriver.ts    # Legacy IndexedDB component list
     ├── FolderIndexDbStorageDriver.ts   # Folder-scoped IndexedDB (extends Root driver)
     ├── LocalFileSystemDriver.ts        # File System Access API (local directory)
-    ├── HostStorageDriver.ts            # The store the embedding page provides
-    └── UnavailableStorageDriver.ts     # Refuses everything; see host-missing below
+    └── BackendStorageDriver.ts         # The configured backend's pipeline routes
 ```
+
+The `host` in `hostMigration.ts`, `HostMigrationNotice` and the `host_migration` table is left over
+from an earlier design in which an embedding page provided the store through a window global. There
+is no host: it is the configured backend, and the names are the only thing still saying otherwise.
 
 ```mermaid
 graph TD
@@ -56,6 +62,7 @@ graph TD
         RootDriver["RootFolderDbStorageDriver"]
         FolderDriver["FolderIndexDbStorageDriver"]
         LocalDriver["LocalFileSystemDriver"]
+        BackendDriver["BackendStorageDriver"]
     end
 
     Provider --> Service
@@ -73,6 +80,7 @@ graph TD
     Factory --> RootDriver
     Factory --> FolderDriver
     Factory --> LocalDriver
+    Factory --> BackendDriver
     FolderDriver --> RootDriver
     FolderDriver --> Registry
 ```
@@ -110,7 +118,8 @@ type DriverConfig =
   | { driverType: "root-indexdb" }
   | { driverType: "folder-indexdb"; folderId: string }
   | { driverType: "local-fs"; handle: FileSystemDirectoryHandle }
-  | { driverType: "host" };
+  | { driverType: "backend" }
+  | { driverType: "google-drive"; folderId: string };
 ```
 
 ### Driver Implementations
@@ -120,7 +129,7 @@ type DriverConfig =
 | `RootFolderDbStorageDriver`  | `root-indexdb`   | Legacy `localforage` component list                | `true`         | `true`          | none                |
 | `FolderIndexDbStorageDriver` | `folder-indexdb` | Same backing store, scoped via `pipeline_registry` | `true`         | `true`          | none                |
 | `LocalFileSystemDriver`      | `local-fs`       | File System Access API directory handle            | `false`        | `false`         | `DriverPermissions` |
-| `HostStorageDriver`          | `host`           | `window.__TANGLE_PIPELINE_STORAGE_HOST__`          | `false`        | `false`         | none                |
+| `BackendStorageDriver`       | `backend`        | The configured backend's pipeline routes           | `false`        | `false`         | none                |
 
 ### Class Hierarchy
 
@@ -183,63 +192,126 @@ classDiagram
 
 ## Storage mode
 
-A deployment declares whether pipelines live outside the browser. It is not
-inferred from whether a host happens to be present, because a page that failed
-to install one would otherwise read as "browser storage" and quietly strand a
-user's work where nobody else can see it.
+A deployment declares whether pipelines live outside the browser. It is a
+build-time flag rather than something inferred at runtime, because a store that
+looked absent for a moment would otherwise read as "browser storage" and quietly
+strand a user's work where nobody else can see it.
 
 ```
-VITE_PIPELINE_STORAGE_BETA = "true"   → a host is required
+VITE_PIPELINE_STORAGE_BETA = "true"   → pipelines live on the configured backend
 anything else, or unset               → browser storage (the open-source build)
 ```
 
-`storageMode.ts` resolves this once per page load and freezes the answer,
-holding the host object itself rather than re-reading the global:
+`storageMode.ts` resolves this once per page load and freezes the answer:
 
-| `StorageMode`              | When                  | Root folder                                   |
-| -------------------------- | --------------------- | --------------------------------------------- |
-| `{ kind: "local" }`        | flag off              | `folder-indexdb` on `ROOT_FOLDER_ID`, folders |
-| `{ kind: "host", label }`  | flag on, host present | `HostStorageDriver`, `isFlat`, no folders     |
-| `{ kind: "host-missing" }` | flag on, no host      | `UnavailableStorageDriver`; the app blocks    |
+| `StorageMode`                | When     | Root folder                                   |
+| ---------------------------- | -------- | --------------------------------------------- |
+| `{ kind: "local" }`          | flag off | `folder-indexdb` on `ROOT_FOLDER_ID`, folders |
+| `{ kind: "backend", label }` | flag on  | `BackendStorageDriver`, `isFlat`, no folders  |
 
-In host mode the root folder **is** the host-backed folder, so every existing
-`folderId === null ? rootFolder : findFolderById(id)` branch lands on the host
-unchanged. `isFlat` is the property to test for "this store has no folders" —
-it is what hides folder creation, the parent row, and move-to-folder.
+Only the _mode_ is fixed for the page. The backend's **address** is read per
+request, so changing it in Settings takes effect without a reload.
 
-`host-missing` renders `PipelineStorageUnavailable` in place of the whole app.
-Nothing can be read or written, and a blank library would be a lie.
+In backend mode the root folder **is** the backend-backed folder, so every
+existing `folderId === null ? rootFolder : findFolderById(id)` branch lands on
+the backend unchanged. `isFlat` is the property to test for "this store has no
+folders" — it is what hides folder creation, the parent row, and move-to-folder.
 
-### The host contract
+### The backend contract
 
-`window.__TANGLE_PIPELINE_STORAGE_HOST__`, version-checked against
-`PIPELINE_STORAGE_HOST_VERSION`. Five methods: `list`, `read`, `write`,
-`delete`, `has`. Three properties of it shape the code above:
+Pipelines are read and written over the configured backend, the same one
+`BackendProvider` and `/settings/backend` point at. There is no separate seam
+and nothing is injected into the page: the app calls documented routes, and a
+deployment that serves them — including one an open-source user runs themselves
+— can hold pipelines for this editor.
 
-- **`write(key, spec)` upserts on the caller's key.** The app chooses the key —
-  a new pipeline is written under its name — and the host returns its own
-  `externalId`, which becomes the pipeline's id and the editor url.
+| Route                                                  | Purpose                                    |
+| ------------------------------------------------------ | ------------------------------------------ |
+| `GET /api/users/me/pipelines/all?page_size&page_token` | List, paged; `file_path` filters by prefix |
+| `GET /api/users/me/pipelines?file_path=KEY`            | Read one, spec included                    |
+| `PUT /api/users/me/pipelines?file_path=KEY`            | Upsert on the caller's key                 |
+| `DELETE /api/users/me/pipelines?file_path=KEY`         | Delete one                                 |
+
+A row comes back as `{id, file_path, pipeline_name, current_version,
+created_at, updated_at, root_pipeline_task.componentRef.spec}`. Three
+properties of the contract shape the code above:
+
+- **`PUT` upserts on the caller's key.** The app chooses the key — a new
+  pipeline is written under its name — and the backend returns its own `id`,
+  which becomes the pipeline's identity and the editor url.
 - **Renaming is a write.** A store that does not key on the name only learns a
   new one from the spec, so `rename` and `write` are one operation
   (`renamePipelineByName`).
-- **Writes are last-write-wins**; the host does not reject on conflict.
-  `contentVersion` still detects "changed since we listed it" on the next
+- **Writes are last-write-wins**; the backend does not reject on conflict.
+  `current_version` still detects "changed since we listed it" on the next
   listing, which is what invalidates the spec cache.
 
-Errors cross a window boundary, where `instanceof` does not survive, so
-`HostStorageDriver` duck-types a `code` off the rejection and turns it into a
-`HostStorageError` carrying prose that names the store. `storageErrors.ts`
-decides what is worth another attempt: an expired session or an ambiguous name
-will answer the same way next time; an unreachable store may not.
+`BackendStorageDriver` turns every failure into a `BackendStorageError` with a
+`StorageErrorCode` — `unauthenticated`, `not_found`, `conflict`,
+`rate_limited`, `unavailable`. Two answers are not plain status codes: an
+expired session arrives as a cross-origin redirect, read as `opaqueredirect`
+because the request sets `redirect: "manual"`; and a body that is not JSON means
+the request never reached the API at all, most likely a single-page-app fallback
+serving the index document, which is reported as `unavailable` rather than
+parsed. `storageErrors.ts` decides what is worth another attempt: an expired
+session or an ambiguous name will answer the same way next time; an unreachable
+store may not.
+
+Non-React callers get the address from `backendEndpoint.ts`. `BackendProvider`
+publishes into it whenever the setting changes, so there is still one place that
+decides. Its fallback is load-bearing rather than defensive: a provider
+publishes from an effect and effects run child-first, so the first listing can
+happen before the provider above it has said anything.
+
+### Knowing whether the backend is there
+
+`storageHealth.ts` holds one boolean and a subscription, and is deliberately
+free of React and of the provider — the driver reports into it without dragging
+either into its module graph. Only `unavailable` counts as an outage: "no such
+pipeline" is an answer.
+
+`useStorageUnavailable()` is how the UI reads it, and combines two sources
+because either alone leaves a hole. The calls the app already makes are the
+cheapest and most direct signal, but a page nobody is touching makes none — an
+editor left open through a restart would look healthy until the next keystroke —
+so the backend is also pinged on mount, on return to the tab, and on a slow
+interval. Both report to the same place.
+
+It is rendered **ahead of a listing already in hand**: a store that cannot be
+reached must not be represented by the last answer it gave. `BackendUnavailable`
+takes the place of the pipeline list and the folders page; in the editor the
+same signal turns the auto-save indicator red, and `UnsavedWorkBanner` says the
+work is held. An `unauthenticated` failure is the exception — that needs the
+person, not a retry, so `ExpiredSessionDialog` offers a download before the
+reload that would discard the work.
+
+### Edits the backend refused
+
+`pendingWrites.ts` is a durable outbox in Dexie, keyed by store and storage key.
+An edit the backend would not take has to outlive the editor that made it: the
+most likely next thing someone does is leave the page to go and fix the
+connection, and that must not be what loses the work. The flusher is started
+with the app rather than with an editor, and sends what it holds on every
+transition from silent to answering.
+
+Browser storage does not use it — it does not go away between one write and the
+next. `autoSaveStore` records into it on a refused write and forgets on a
+successful one, and stands down if a reopened editor has since claimed the same
+file, so an older held text can never land on top of a newer one.
 
 ### Copying browser pipelines in
 
-`hostMigration.ts` copies everything in browser storage into the host once,
-keyed on each pipeline's local name. Nothing local is deleted — a build with no
-host still has to find its pipelines. The claim is a Dexie transaction, honoured
-only while its holder keeps making progress, so two tabs cannot both copy and a
-tab that died does not block the next one. It starts wherever the app opens;
-the pipeline list reports progress and offers to retry anything that failed.
+`hostMigration.ts` copies everything in browser storage into the backend once,
+keyed on each pipeline's local name. Nothing local is deleted — a build with the
+flag off still has to find its pipelines. The claim is a Dexie transaction,
+honoured only while its holder keeps making progress, so two tabs cannot both
+copy and a tab that died does not block the next one. It starts wherever the app
+opens; the pipeline list reports progress and offers to retry anything failed.
+
+Trying it more than once means emptying the backend first, which no user ever
+needs to do. `devReset.ts` does that, behind a development-only button on the
+pipeline list, and leaves for the dashboard afterwards because the copy starts
+from the list and would begin again the moment it finished.
 
 ---
 
@@ -251,10 +323,10 @@ Dexie database name: `tangle_pipelines`
 erDiagram
     pipeline_registry {
         string id PK
-        string storage "local | host"
+        string storage "local | backend"
         string storageKey UK "unique within one store"
         string folderId FK
-        string contentVersion "optional, host only"
+        string contentVersion "optional, backend only"
     }
 
     pipeline_specs {
@@ -262,6 +334,13 @@ erDiagram
         string storageKey PK
         string version
         json spec
+    }
+
+    pending_writes {
+        string storage PK
+        string storageKey PK
+        string yaml
+        number recordedAt
     }
 
     host_migration {
@@ -294,18 +373,31 @@ erDiagram
 | `folders`           | `id`                   | `parentId`                                                                                            | Folder tree with `driverConfig`; local only  |
 | `pipeline_specs`    | `[storage+storageKey]` | —                                                                                                     | Cached contents, validated by `version`      |
 | `host_migration`    | `id`                   | —                                                                                                     | One row, `"v1"`: the copy's claim and result |
+| `pending_writes`    | `[storage+storageKey]` | —                                                                                                     | Edits refused by the backend, awaiting it    |
 
 ### Migrations
 
 - **v1**: Creates `pipeline_registry` and `folders`.
-- **v2**: Adds `remoteStorageKey`, for an earlier design where the host was a folder beside browser storage.
-- **v3**: Drops it again, and deletes the host folder and its rows — the host is the root now, not a child.
+- **v2**: Adds `remoteStorageKey`, for an earlier design where the outside store was a folder beside browser storage.
+- **v3**: Drops it again, and deletes that folder and its rows — the outside store is the root now, not a child.
 - **v4**: Adds `pipeline_specs`.
 - **v5**: Adds `host_migration`.
 - **v6**: Drops `pipeline_specs`; a primary key cannot be changed in place and it is about to gain one.
-- **v7**: Remakes `pipeline_specs` keyed by store, and scopes `pipeline_registry` the same way. Rows written before this do not say which store they describe: only a host reports a `contentVersion`, and a row filed in a folder can only be the browser's, which is enough to attribute them.
+- **v7**: Remakes `pipeline_specs` keyed by store, and scopes `pipeline_registry` the same way. Rows written before this do not say which store they describe: only a store outside the browser reports a `contentVersion`, and a row filed in a folder can only be the browser's, which is enough to attribute them.
+- **v8**: Renames the persisted store value `"host"` to `"backend"`. A row under the old name is invisible to every lookup, which scopes itself to the store in use — but its id still occupies the primary key, so the next listing tries to add the same pipeline again and the collision takes the whole page down rather than one row. Where a `"backend"` row already claims the key, the older one is dropped.
+- **v9**: Adds `pending_writes`.
 
-On open (not in a migration), `seedRegistryFromLegacyList` claims every pipeline in the legacy list that has no local row. It is skipped in host mode, where those names mean nothing.
+Pipelines predating the registry are indexed separately by
+`ensureBrowserPipelinesIndexed()`, awaited by the folder listing that needs the
+rows. It claims only keys with no row yet, inside a transaction, so a listing
+running at the same time cannot collide with it on the unique index.
+
+**It must never move back into Dexie's `on("ready")` handler.** That handler
+gates `open()`, and it has to read the legacy list out of another database
+first; once it has yielded to a non-Dexie promise it can never touch this one
+again, because every call queues behind the open it is itself holding up. Not
+even a `count()` returns. The symptom is the whole app hanging on a spinner with
+no error anywhere.
 
 ---
 
@@ -335,11 +427,11 @@ unique **within** that store (`&[storage+storageKey]`). The scope is read from
 the life of the page and a caller that could get it wrong eventually does.
 
 This matters because the two stores share a namespace by nature: browser storage
-keys a pipeline on its name, and the key sent to a host is that same name. An
-unscoped row was therefore found by whichever store asked first — a link to a
-host pipeline, opened in the browser-storage build, paired the host's identity
-with the browser's driver and read, then saved over, whatever pipeline happened
-to share the name.
+keys a pipeline on its name, and the key sent to the backend is that same name.
+An unscoped row was therefore found by whichever store asked first — a link to a
+backend pipeline, opened in the browser-storage build, paired the backend's
+identity with the browser's driver and read, then saved over, whatever pipeline
+happened to share the name.
 
 Within browser storage, pipeline names remain globally unique across folders;
 `assertStorageKeyUnique` must still be called before creating a pipeline there.
@@ -470,9 +562,10 @@ function usePipelineStorage(): PipelineStorageService;
 ```
 
 The provider hands out the module singleton, so React and non-React callers
-share one instance. It is mounted in `RootLayout.tsx`, and is also where the
-one-time copy into a host store is started. `TourPipelineStorageProvider`
-supplies its own service over the same context for the guided tours.
+share one instance. It is mounted in `RootLayout.tsx`, and in backend mode is
+also where the one-time copy and the pending-write flusher are started.
+`TourPipelineStorageProvider` supplies its own service over the same context for
+the guided tours.
 
 ### Consumer Map
 
@@ -813,4 +906,6 @@ sequenceDiagram
 - See [Migrations](#migrations) for what each version did.
 - New migrations must follow Dexie's versioning rules: increment the version number and never modify existing version schemas.
 - A primary key cannot be changed in place. Drop the table in one version (`{ table: null }`) and remake it in the next, and only for a table that can be rebuilt.
+- **Never touch this database from `on("ready")` after awaiting anything outside Dexie.** See [Migrations](#migrations) — the open deadlocks and the app hangs with no error.
+- Renaming a persisted value that lookups are scoped by is a migration, not an edit. Rows under the old name go invisible while their ids still hold the primary key, and the next write collides — see v8.
 - Everything in this database is a cache of what a store already holds, with one exception: `folders`, and the `folderId` on each registry row, are the **only** record of which folder a pipeline is in. Never clear the registry wholesale to fix something.
