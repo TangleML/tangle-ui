@@ -253,6 +253,29 @@ export async function seedLocallyStoredPipeline(
     });
 
     database.close();
+
+    /**
+     * The app copies browser-stored pipelines into the host once, on whichever
+     * page it first opens, and records that it has. Seeding has to go through a
+     * running page, which is necessarily after that — so the record goes, which
+     * puts the app back where a user with pipelines and a new host starts.
+     */
+    const registry = await new Promise<IDBDatabase | undefined>((resolve) => {
+      const request = indexedDB.open("tangle_pipelines");
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => resolve(undefined);
+    });
+
+    if (registry?.objectStoreNames.contains("host_migration")) {
+      await new Promise<void>((resolve) => {
+        const transaction = registry.transaction("host_migration", "readwrite");
+        transaction.objectStore("host_migration").clear();
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => resolve();
+      });
+    }
+
+    registry?.close();
   }, name);
 }
 

@@ -101,6 +101,27 @@ test.describe("host-provided pipeline storage", () => {
     ).toContain(localName);
   });
 
+  test("copies them even when the pipeline list is never opened", async ({
+    page,
+  }) => {
+    const localName = "Never opened the list";
+
+    await installSeededHost(page);
+    await page.goto("/");
+    await seedLocallyStoredPipeline(page, localName);
+
+    await page.goto("/pipeline-folders");
+    await expect(page.getByText("Churn model")).toBeVisible();
+
+    await expect
+      .poll(
+        async () =>
+          (await readHostRecords(page)).map((record) => record.displayName),
+        { timeout: 15_000 },
+      )
+      .toContain(localName);
+  });
+
   test("opens a pipeline at a url that is only its id", async ({ page }) => {
     await installSeededHost(page);
 

@@ -98,6 +98,20 @@ export async function dismissHostMigration(): Promise<void> {
 }
 
 /**
+ * Starts the copy wherever the app happens to open, so someone who never visits
+ * the pipeline list still finds their pipelines in the host. Nothing is shown
+ * from here: progress belongs where the pipelines are, and a copy running in
+ * the background must not interrupt whatever the user came to do. Anything that
+ * fails is recorded, and the list offers to retry it when it is next opened.
+ */
+export async function startHostMigration(
+  target: PipelineFolder,
+): Promise<void> {
+  if ((await claimHostMigration()) !== "claimed") return;
+  await runHostMigration(target);
+}
+
+/**
  * Copies everything in browser storage into the host, keyed on the name it has
  * locally. Host writes upsert on the key they are given, so a pipeline copied
  * twice is overwritten rather than duplicated, and a run that died halfway can
