@@ -1,10 +1,6 @@
 import { pipelineStorageDb } from "./db";
 import { type PipelineRegistryEntry, ROOT_FOLDER_ID } from "./types";
 
-export async function addEntry(entry: PipelineRegistryEntry): Promise<void> {
-  await pipelineStorageDb.pipeline_registry.add(entry);
-}
-
 /**
  * Two listings running at once both find no row for a storage key and both try
  * to add one, and the unique index fails the loser — taking down a whole

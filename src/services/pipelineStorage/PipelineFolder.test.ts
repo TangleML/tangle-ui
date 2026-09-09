@@ -23,9 +23,6 @@ vi.mock("./createDriver", () => ({
 }));
 
 vi.mock("./pipelineRegistry", () => ({
-  addEntry: vi.fn(async (entry: PipelineRegistryEntry) => {
-    registry.set(entry.id, entry);
-  }),
   claimEntry: vi.fn(async (entry: PipelineRegistryEntry) => {
     const existing = [...registry.values()].find(
       (candidate) => candidate.storageKey === entry.storageKey,

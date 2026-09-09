@@ -22,10 +22,13 @@ import {
 import { Paragraph, Text } from "@/components/ui/typography";
 import { usePagination } from "@/hooks/usePagination";
 import { APP_ROUTES } from "@/routes/router";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 
 import BulkActionsBar from "./BulkActionsBar";
+import { HostMigrationNotice } from "./HostMigrationNotice";
 import { PipelineFiltersBar } from "./PipelineFiltersBar";
 import PipelineRow from "./PipelineRow";
+import { useHostMigration } from "./useHostMigration";
 import { usePipelineFilters } from "./usePipelineFilters";
 import { usePipelineListEntries } from "./usePipelineListEntries";
 
@@ -61,8 +64,11 @@ export const PipelineSection = withSuspenseWrapper(
   ({ onPipelineClick }: PipelineSectionProps) => {
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
+    const storage = usePipelineStorage();
     const { entries, isLoading, pendingCount, refetch } =
       usePipelineListEntries();
+
+    const migration = useHostMigration(refetch);
 
     const { filteredPipelines, filterBarProps, filterKey } = usePipelineFilters(
       entries,
@@ -95,7 +101,18 @@ export const PipelineSection = withSuspenseWrapper(
       setSelectedIds(next);
     };
 
-    if (isLoading) return <LoadingScreen message="Loading Pipelines" />;
+    if (migration.phase === "copying" || migration.phase === "incomplete") {
+      return (
+        <HostMigrationNotice
+          migration={migration}
+          storageLabel={storage.rootFolder.name}
+        />
+      );
+    }
+
+    if (isLoading || migration.phase === "checking") {
+      return <LoadingScreen message="Loading Pipelines" />;
+    }
 
     if (entries.length === 0) {
       return (
@@ -159,6 +176,7 @@ export const PipelineSection = withSuspenseWrapper(
               <PipelineRow
                 key={entry.file.id}
                 name={entry.file.displayName}
+                fileId={entry.file.id}
                 spec={entry.spec}
                 modificationTime={entry.file.modifiedAt}
                 onDelete={refetch}

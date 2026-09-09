@@ -17,9 +17,6 @@ import {
 const registry = new Map<string, PipelineRegistryEntry>();
 
 vi.mock("./pipelineRegistry", () => ({
-  addEntry: async (entry: PipelineRegistryEntry) => {
-    registry.set(entry.id, entry);
-  },
   claimEntry: async (entry: PipelineRegistryEntry) => {
     const existing = [...registry.values()].find(
       (candidate) => candidate.storageKey === entry.storageKey,

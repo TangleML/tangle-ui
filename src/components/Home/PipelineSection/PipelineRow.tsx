@@ -53,6 +53,7 @@ interface PipelineRowProps {
   url?: string;
   spec?: ComponentSpec;
   name?: string;
+  fileId?: string;
   modificationTime?: Date;
   onDelete?: () => void;
   isSelected?: boolean;
@@ -73,6 +74,7 @@ interface PipelineRowProps {
 const PipelineRow = withSuspenseWrapper(
   ({
     name,
+    fileId,
     spec,
     modificationTime,
     onDelete,
@@ -115,11 +117,11 @@ const PipelineRow = withSuspenseWrapper(
 
       if (e.ctrlKey || e.metaKey) {
         rowTrack("pipeline_opened", { open_mode: "editor_new_tab" });
-        window.open(getDefaultEditorHref({ name }), "_blank");
+        window.open(getDefaultEditorHref({ name, fileId }), "_blank");
         return;
       }
       rowTrack("pipeline_opened", { open_mode: "editor_same_tab" });
-      navigate(getDefaultEditorTarget({ name }));
+      navigate(getDefaultEditorTarget({ name, fileId }));
     };
 
     const handleCheckboxChange = (checked: boolean | "indeterminate") => {

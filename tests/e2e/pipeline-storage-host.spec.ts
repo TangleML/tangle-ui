@@ -7,6 +7,7 @@ import {
   readHostRecords,
   readLocallyStoredPipelineKeys,
 } from "./fixtures/pipelineStorageHost";
+import { createNewPipeline } from "./helpers";
 
 const LABEL = "Shared storage";
 
@@ -78,6 +79,25 @@ test.describe("host-provided pipeline storage", () => {
     await page.reload();
     await expect(page.getByText(CHURN_TAG)).toBeVisible();
     expect(await readHostReadKeys(page)).toEqual([]);
+  });
+
+  test("copies pipelines already in the browser into the host", async ({
+    page,
+  }) => {
+    await createNewPipeline(page);
+    const localName = decodeURIComponent(
+      new URL(page.url()).pathname.split("/").pop() ?? "",
+    );
+
+    await installSeededHost(page);
+    await page.goto("/pipelines");
+
+    await expect(page.getByText(localName)).toBeVisible();
+    await expect(page.getByText("Churn model")).toBeVisible();
+
+    expect(
+      (await readHostRecords(page)).map((record) => record.displayName),
+    ).toContain(localName);
   });
 
   test("keeps the browser's own pipeline store empty", async ({ page }) => {

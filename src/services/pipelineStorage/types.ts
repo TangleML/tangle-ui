@@ -53,6 +53,15 @@ export interface CachedPipelineSpec {
   spec: ComponentSpec;
 }
 
+export interface HostMigrationRecord {
+  id: string;
+  startedAt: number;
+  completedAt?: number;
+  dismissedAt?: number;
+  copied: string[];
+  failed: string[];
+}
+
 export interface PipelineRegistryEntry {
   id: string;
   storageKey: string;

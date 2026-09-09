@@ -6,6 +6,7 @@ import { isHostStorage } from "./storageMode";
 import {
   type CachedPipelineSpec,
   type FolderEntry,
+  type HostMigrationRecord,
   type PipelineRegistryEntry,
   ROOT_FOLDER_ID,
 } from "./types";
@@ -14,6 +15,7 @@ export type PipelineStorageDb = Dexie & {
   pipeline_registry: EntityTable<PipelineRegistryEntry, "id">;
   folders: EntityTable<FolderEntry, "id">;
   pipeline_specs: EntityTable<CachedPipelineSpec, "storageKey">;
+  host_migration: EntityTable<HostMigrationRecord, "id">;
 };
 
 export const pipelineStorageDb = new Dexie(
@@ -70,6 +72,13 @@ pipelineStorageDb.version(4).stores({
   pipeline_registry: "id, &storageKey, folderId, [folderId+storageKey]",
   folders: "id, parentId",
   pipeline_specs: "storageKey",
+});
+
+pipelineStorageDb.version(5).stores({
+  pipeline_registry: "id, &storageKey, folderId, [folderId+storageKey]",
+  folders: "id, parentId",
+  pipeline_specs: "storageKey",
+  host_migration: "id",
 });
 
 pipelineStorageDb.on("ready", async () => {

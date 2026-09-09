@@ -5,7 +5,6 @@ import { pipelineStorageDb } from "./db";
 import { PipelineFile } from "./PipelineFile";
 import { emitPipelineFileChanged } from "./pipelineFileEvents";
 import {
-  addEntry,
   assertStorageKeyUnique,
   claimEntry,
   deleteEntry,
@@ -139,15 +138,8 @@ export class PipelineFolder {
     // Writing before registering means a rejected write leaves no registry row
     // pointing at a file that was never created.
     const descriptor = await this.driver.write(storageKey, content);
-    const id = descriptor.externalId ?? crypto.randomUUID();
-    await addEntry({
-      id,
-      storageKey: descriptor.storageKey,
-      folderId: this.id,
-      contentVersion: descriptor.contentVersion,
-    });
 
-    return new PipelineFile({ id, folder: this, ...descriptor });
+    return resolveOrCreateRegistryEntry(descriptor, this);
   }
 
   async listSubfolders(): Promise<PipelineFolder[]> {

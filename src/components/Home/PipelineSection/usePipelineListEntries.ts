@@ -10,6 +10,7 @@ import {
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import { FoldersQueryKeys } from "@/services/pipelineStorage/types";
 import type { ComponentSpec } from "@/utils/componentSpec";
+import { runWithConcurrency } from "@/utils/concurrency";
 import { componentSpecFromYaml } from "@/utils/yaml";
 
 const HYDRATION_CONCURRENCY = 3;
@@ -85,26 +86,17 @@ async function hydrate(
   isStale: () => boolean,
   onSpec: (file: PipelineFile, spec: ComponentSpec) => void,
 ): Promise<void> {
-  const queue = [...files];
+  await runWithConcurrency(files, HYDRATION_CONCURRENCY, async (file) => {
+    if (isStale()) return;
 
-  const worker = async () => {
-    for (let file = queue.shift(); file && !isStale(); file = queue.shift()) {
-      try {
-        const spec = componentSpecFromYaml(await file.read());
-        if (isStale()) return;
+    try {
+      const spec = componentSpecFromYaml(await file.read());
+      if (isStale()) return;
 
-        onSpec(file, spec);
-        void writeCachedSpec(file, spec);
-      } catch (error) {
-        console.error(`Failed to read pipeline "${file.displayName}":`, error);
-      }
+      onSpec(file, spec);
+      void writeCachedSpec(file, spec);
+    } catch (error) {
+      console.error(`Failed to read pipeline "${file.displayName}":`, error);
     }
-  };
-
-  await Promise.all(
-    Array.from(
-      { length: Math.min(HYDRATION_CONCURRENCY, queue.length) },
-      worker,
-    ),
-  );
+  });
 }
