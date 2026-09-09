@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { Icon } from "@/components/ui/icon";
 import { Spinner } from "@/components/ui/spinner";
+import { useStorageBackendUnavailable } from "@/hooks/useStorageBackendUnavailable";
 import { cn } from "@/lib/utils";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
 import { tracking } from "@/utils/tracking";
@@ -46,7 +47,13 @@ function getTooltipText(
   lastSavedAt: Date | null,
   saveError: string | null,
   hasPendingChanges: boolean,
+  backendUnavailable: boolean,
 ): string {
+  if (backendUnavailable) {
+    return hasPendingChanges
+      ? "Backend not available. Your changes are kept here and will be saved when it is back."
+      : "Backend not available. Nothing can be saved until it is back.";
+  }
   if (isSaving) return "Saving...";
   if (saveError) {
     return hasPendingChanges
@@ -62,12 +69,22 @@ function getTooltipText(
 export const AutoSaveIndicator = observer(function AutoSaveIndicator() {
   const { autoSave } = useEditorSession();
   const { isSaving, lastSavedAt, saveError, hasPendingChanges } = autoSave;
+  const backendUnavailable = useStorageBackendUnavailable();
   const tooltipText = getTooltipText(
     isSaving,
     lastSavedAt,
     saveError,
     hasPendingChanges,
+    backendUnavailable,
   );
+
+  /**
+   * Saying "auto-save enabled" while nothing can be saved is the one thing this
+   * must not do, so the state is taken from whether the store is answering and
+   * not only from a write that has already been refused. Clicking it would ask
+   * for a save that cannot happen, so it does not invite one.
+   */
+  const cannotSave = backendUnavailable || Boolean(saveError);
 
   const handleClick = () => {
     void autoSave.save();
@@ -77,7 +94,7 @@ export const AutoSaveIndicator = observer(function AutoSaveIndicator() {
     <TooltipButton
       tooltip={tooltipText}
       variant="header"
-      disabled={isSaving}
+      disabled={isSaving || backendUnavailable}
       onClick={handleClick}
       data-testid="auto-save-button"
       {...tracking("v2.pipeline_editor.auto_save_indicator")}
@@ -90,7 +107,7 @@ export const AutoSaveIndicator = observer(function AutoSaveIndicator() {
           <Spinner size={16} />
         </SavingLayer>
         <IdleLayer>
-          {saveError ? (
+          {cannotSave ? (
             <Icon name="CloudOff" className="text-destructive" />
           ) : (
             <Icon name="CloudCheck" />

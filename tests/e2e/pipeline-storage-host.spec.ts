@@ -266,6 +266,29 @@ test.describe("host-provided pipeline storage", () => {
     await expect(page.getByText(/don't have any pipelines yet/i)).toBeHidden();
   });
 
+  test("shows auto-save as off in the editor while the backend is away", async ({
+    page,
+  }) => {
+    await installSeededHost(page);
+    await page.route(/\/services\/ping/, (route) =>
+      route.fulfill({ status: 503, body: "down" }),
+    );
+
+    await page.goto(`/editor-v2/${SEED[0].key}`);
+    await expect(page.locator('[data-testid="rf__wrapper"]')).toBeVisible({
+      timeout: 30_000,
+    });
+
+    const indicator = page.getByTestId("auto-save-button");
+    await expect(indicator).toBeDisabled();
+    await expect(indicator.locator(".text-destructive")).toBeVisible();
+
+    // Recovers on the next ping rather than needing the editor reopened.
+    await page.unroute(/\/services\/ping/);
+    await expect(indicator).toBeEnabled({ timeout: 60_000 });
+    await expect(indicator.locator(".text-destructive")).toBeHidden();
+  });
+
   test("says so in the editor when a save is refused, and stops once it lands", async ({
     page,
   }) => {
