@@ -228,6 +228,31 @@ test.describe("host-provided pipeline storage", () => {
       .toEqual(["Churn model v2", "Nightly refresh"]);
   });
 
+  test("says the backend is not available, even holding a listing it could show", async ({
+    page,
+  }) => {
+    await installSeededHost(page);
+
+    await page.goto("/pipelines");
+    await expect(page.getByText("Churn model")).toBeVisible();
+
+    await page.route(/\/services\/ping/, (route) =>
+      route.fulfill({ status: 503, body: "down" }),
+    );
+    await page.reload();
+
+    await expect(page.getByTestId("info-box-warning")).toContainText(
+      "Backend not available",
+    );
+    await expect(page.getByText("Churn model")).toBeHidden();
+
+    await page.goto("/pipeline-folders");
+    await expect(page.getByTestId("info-box-warning")).toContainText(
+      "Backend not available",
+    );
+    await expect(page.getByText("Churn model")).toBeHidden();
+  });
+
   test("says the list could not be read rather than showing an empty library", async ({
     page,
   }) => {

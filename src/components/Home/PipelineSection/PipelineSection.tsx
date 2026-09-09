@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { ExamplePipelines } from "@/components/Learn/ExamplePipelines";
+import { BackendUnavailable } from "@/components/shared/BackendUnavailable";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import NewPipelineButton from "@/components/shared/NewPipelineButton";
 import { PaginationControls } from "@/components/shared/PaginationControls";
@@ -22,6 +23,7 @@ import {
 } from "@/components/ui/table";
 import { Paragraph, Text } from "@/components/ui/typography";
 import { usePagination } from "@/hooks/usePagination";
+import { useStorageBackendUnavailable } from "@/hooks/useStorageBackendUnavailable";
 import { APP_ROUTES } from "@/routes/router";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 
@@ -66,6 +68,7 @@ export const PipelineSection = withSuspenseWrapper(
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
     const storage = usePipelineStorage();
+    const backendUnavailable = useStorageBackendUnavailable();
     const { entries, isLoading, error, pendingCount, refetch } =
       usePipelineListEntries();
 
@@ -101,6 +104,12 @@ export const PipelineSection = withSuspenseWrapper(
       else next.delete(id);
       setSelectedIds(next);
     };
+
+    /**
+     * Ahead of everything else, including a listing already in hand: a store
+     * that cannot be reached must not be represented by the last answer it gave.
+     */
+    if (backendUnavailable) return <BackendUnavailable />;
 
     if (migration.phase === "copying" || migration.phase === "incomplete") {
       return (
