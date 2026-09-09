@@ -169,6 +169,87 @@ export async function installPipelineStorageHost(
   );
 }
 
+/**
+ * Puts a pipeline in the browser's own store without going through the UI. The
+ * app cannot be asked to make one here: this page has host storage turned on,
+ * so there is no local mode to create it in — which is the very situation the
+ * migration exists for.
+ */
+export async function seedLocallyStoredPipeline(
+  page: Page,
+  name: string,
+): Promise<void> {
+  await page.evaluate(async (pipelineName) => {
+    const FILES = "file_store_user_pipelines";
+    const DATA = "digest_to_component_data";
+    const SETTINGS = "component_store_settings";
+    const STORES = [FILES, DATA, SETTINGS];
+
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const probe = indexedDB.open("components");
+      probe.onerror = () => reject(probe.error);
+      probe.onsuccess = () => {
+        const opened = probe.result;
+        const missing = STORES.filter(
+          (store) => !opened.objectStoreNames.contains(store),
+        );
+        if (missing.length === 0) return resolve(opened);
+
+        const nextVersion = opened.version + 1;
+        opened.close();
+        const upgrade = indexedDB.open("components", nextVersion);
+        upgrade.onupgradeneeded = () => {
+          for (const store of missing) upgrade.result.createObjectStore(store);
+        };
+        upgrade.onerror = () => reject(upgrade.error);
+        upgrade.onsuccess = () => resolve(upgrade.result);
+      };
+    });
+
+    const text = `name: ${pipelineName}\nimplementation:\n  graph:\n    tasks: {}\n`;
+    const data = new TextEncoder().encode(text).buffer;
+    const hash = await crypto.subtle.digest("SHA-256", data);
+    const digest = [...new Uint8Array(hash)]
+      .map((byte) => byte.toString(16).padStart(2, "0"))
+      .join("");
+
+    await new Promise<void>((resolve, reject) => {
+      const transaction = database.transaction(STORES, "readwrite");
+
+      transaction.objectStore(DATA).put(data, digest);
+      /**
+       * Claims the current format so the legacy store's own upgrade does not
+       * run over a hand-written entry and reject it as corrupt.
+       */
+      transaction
+        .objectStore(SETTINGS)
+        .put(4, "component_list_format_version_user_pipelines");
+      transaction.objectStore(FILES).put(
+        {
+          name: pipelineName,
+          data,
+          componentRef: {
+            text,
+            digest,
+            spec: {
+              name: pipelineName,
+              implementation: { graph: { tasks: {} } },
+            },
+          },
+          creationTime: new Date(),
+          modificationTime: new Date(),
+        },
+        pipelineName,
+      );
+
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+
+    database.close();
+  }, name);
+}
+
 export async function readHostRecords(page: Page): Promise<HostRecord[]> {
   return page.evaluate(() => window.__TANGLE_TEST_HOST__?.records() ?? []);
 }

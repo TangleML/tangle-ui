@@ -6,8 +6,8 @@ import {
   readHostReadKeys,
   readHostRecords,
   readLocallyStoredPipelineKeys,
+  seedLocallyStoredPipeline,
 } from "./fixtures/pipelineStorageHost";
-import { createNewPipeline } from "./helpers";
 
 const LABEL = "Shared storage";
 
@@ -84,12 +84,12 @@ test.describe("host-provided pipeline storage", () => {
   test("copies pipelines already in the browser into the host", async ({
     page,
   }) => {
-    await createNewPipeline(page);
-    const localName = decodeURIComponent(
-      new URL(page.url()).pathname.split("/").pop() ?? "",
-    );
+    const localName = "Left behind in the browser";
 
     await installSeededHost(page);
+    await page.goto("/");
+    await seedLocallyStoredPipeline(page, localName);
+
     await page.goto("/pipelines");
 
     await expect(page.getByText(localName)).toBeVisible();

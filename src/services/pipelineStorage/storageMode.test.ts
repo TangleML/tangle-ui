@@ -39,48 +39,49 @@ afterEach(() => {
   resetStorageModeForTests();
 });
 
-describe("a deployment that requires a host-provided store", () => {
-  it("uses it when the page provides one", () => {
-    vi.stubEnv("VITE_PIPELINE_STORAGE", "host");
+describe("a deployment with the beta on", () => {
+  it("uses the store the page provides", () => {
+    vi.stubEnv("VITE_PIPELINE_STORAGE_BETA", "true");
     installHost();
 
     expect(resolveStorageMode()).toEqual({ kind: "host", label: LABEL });
   });
 
   it("refuses to fall back to browser storage when the page provides none", () => {
-    vi.stubEnv("VITE_PIPELINE_STORAGE", "host");
+    vi.stubEnv("VITE_PIPELINE_STORAGE_BETA", "true");
 
     expect(resolveStorageMode()).toEqual({ kind: "host-missing" });
     expect(isHostStorageMissing()).toBe(true);
     expect(isHostStorage()).toBe(false);
   });
 
-  it("treats a host it cannot drive as no host at all", () => {
-    vi.stubEnv("VITE_PIPELINE_STORAGE", "host");
+  it("treats a store it cannot drive as none at all", () => {
+    vi.stubEnv("VITE_PIPELINE_STORAGE_BETA", "true");
     installHost({ version: 99 });
 
     expect(resolveStorageMode()).toEqual({ kind: "host-missing" });
   });
 });
 
-describe("a deployment pinned to browser storage", () => {
-  it("ignores a host the page provides anyway", () => {
-    vi.stubEnv("VITE_PIPELINE_STORAGE", "local");
+describe("a deployment with the beta off", () => {
+  it("ignores a store the page provides anyway", () => {
+    vi.stubEnv("VITE_PIPELINE_STORAGE_BETA", "false");
     installHost();
 
     expect(resolveStorageMode()).toEqual({ kind: "local" });
   });
-});
 
-describe("a deployment that says nothing", () => {
-  it("uses a host if the page provides one", () => {
+  it("is what an unset flag means", () => {
     installHost();
 
-    expect(resolveStorageMode()).toEqual({ kind: "host", label: LABEL });
-  });
-
-  it("uses browser storage otherwise", () => {
     expect(resolveStorageMode()).toEqual({ kind: "local" });
     expect(isHostStorageMissing()).toBe(false);
+  });
+
+  it("is what any other value means", () => {
+    vi.stubEnv("VITE_PIPELINE_STORAGE_BETA", "1");
+    installHost();
+
+    expect(resolveStorageMode()).toEqual({ kind: "local" });
   });
 });

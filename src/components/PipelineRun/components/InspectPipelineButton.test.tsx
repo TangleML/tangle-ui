@@ -19,7 +19,6 @@ describe("<InspectPipelineButton/>", () => {
     expect(mockNavigate).toHaveBeenCalledWith({
       to: "/editor-v2/$pipelineName",
       params: { pipelineName: "foo" },
-      search: {},
     });
   });
 });

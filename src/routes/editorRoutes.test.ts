@@ -19,13 +19,12 @@ afterEach(() => {
 });
 
 describe("where a store hands out its own ids", () => {
-  it("puts the id in the path and nothing in the query", () => {
+  it("puts the id in the path and nothing else anywhere", () => {
     hostStorage.mockReturnValue(true);
 
     expect(getDefaultEditorTarget(REF)).toEqual({
       to: "/editor-v2/$pipelineName",
       params: { pipelineName: "ab420234-a05f" },
-      search: {},
     });
     expect(getDefaultEditorHref(REF)).toBe("/editor-v2/ab420234-a05f");
   });
@@ -40,14 +39,11 @@ describe("where a store hands out its own ids", () => {
 });
 
 describe("where names are the identity", () => {
-  it("keeps the name in the path and the id alongside it", () => {
+  it("puts the name in the path and never mentions the id", () => {
     expect(getDefaultEditorTarget(REF)).toEqual({
       to: "/editor-v2/$pipelineName",
       params: { pipelineName: "Churn model" },
-      search: { fileId: "ab420234-a05f" },
     });
-    expect(getDefaultEditorHref(REF)).toBe(
-      "/editor-v2/Churn%20model?fileId=ab420234-a05f",
-    );
+    expect(getDefaultEditorHref(REF)).toBe("/editor-v2/Churn%20model");
   });
 });

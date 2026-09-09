@@ -10,20 +10,14 @@ let resolved: StorageMode | undefined;
 let resolvedHost: PipelineStorageHost | undefined;
 
 /**
- * A deployment says which store it runs on; it is not guessed from whether a
- * host happens to have loaded. `host` without one is an error rather than a
- * quiet fall back to browser storage, which would strand a user's work
- * somewhere nobody else can see it.
- *
- * Unset keeps the old behaviour — a host if one is there, browser storage
- * otherwise — because that is what a build nobody configured wants, and the
- * open-source build never has a host to find.
+ * A deployment says whether it stores pipelines outside the browser; it is not
+ * guessed from whether a host happens to have loaded. Off is the default and
+ * the only thing the open-source build can be. On without a host is an error
+ * rather than a quiet fall back to browser storage, which would strand a user's
+ * work somewhere nobody else can see it.
  */
-function configuredStorage(): "host" | "local" | "detect" {
-  const configured = import.meta.env.VITE_PIPELINE_STORAGE;
-  return configured === "host" || configured === "local"
-    ? configured
-    : "detect";
+function hostStorageEnabled(): boolean {
+  return import.meta.env.VITE_PIPELINE_STORAGE_BETA === "true";
 }
 
 /**
@@ -35,22 +29,16 @@ function configuredStorage(): "host" | "local" | "detect" {
 export function resolveStorageMode(): StorageMode {
   if (resolved) return resolved;
 
-  const configured = configuredStorage();
-
-  if (configured === "local") {
+  if (!hostStorageEnabled()) {
     resolvedHost = undefined;
     resolved = { kind: "local" };
     return resolved;
   }
 
   resolvedHost = getPipelineStorageHost();
-
-  if (resolvedHost) {
-    resolved = { kind: "host", label: resolvedHost.label };
-  } else {
-    resolved =
-      configured === "host" ? { kind: "host-missing" } : { kind: "local" };
-  }
+  resolved = resolvedHost
+    ? { kind: "host", label: resolvedHost.label }
+    : { kind: "host-missing" };
 
   return resolved;
 }

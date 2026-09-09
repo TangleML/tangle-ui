@@ -8,6 +8,7 @@ import {
   runHostMigration,
 } from "@/services/pipelineStorage/hostMigration";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
+import { getErrorMessage } from "@/utils/string";
 
 type HostMigrationPhase = "checking" | "copying" | "incomplete" | "settled";
 
@@ -15,6 +16,7 @@ export interface HostMigration {
   phase: HostMigrationPhase;
   progress: HostMigrationProgress;
   failed: string[];
+  error: string | null;
   retry: () => void;
   skip: () => void;
 }
@@ -38,6 +40,7 @@ export function useHostMigration(onFinished: () => void): HostMigration {
   );
   const [progress, setProgress] = useState<HostMigrationProgress>(NOTHING);
   const [failed, setFailed] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
@@ -49,6 +52,7 @@ export function useHostMigration(onFinished: () => void): HostMigration {
     const settle = (failedKeys: string[]) => {
       if (!watching) return;
       setFailed(failedKeys);
+      setError(null);
       setPhase(failedKeys.length > 0 ? "incomplete" : "settled");
       if (failedKeys.length === 0) onFinished();
     };
@@ -88,7 +92,17 @@ export function useHostMigration(onFinished: () => void): HostMigration {
       pollTimer = setTimeout(() => void pump(), POLL_MS);
     };
 
-    void pump();
+    /**
+     * Whatever goes wrong, this has to stop looking like it is still working.
+     * A copy that throws — an unreadable local pipeline, a store refusing the
+     * whole listing — would otherwise leave the page on "starting…" forever.
+     */
+    void pump().catch((thrown: unknown) => {
+      console.error("Could not copy pipelines into the host store:", thrown);
+      if (!watching) return;
+      setError(getErrorMessage(thrown));
+      setPhase("incomplete");
+    });
 
     return () => {
       watching = false;
@@ -100,6 +114,7 @@ export function useHostMigration(onFinished: () => void): HostMigration {
     phase,
     progress,
     failed,
+    error,
     retry: () => setAttempt((previous) => previous + 1),
     skip: () => {
       void dismissHostMigration().then(() => {

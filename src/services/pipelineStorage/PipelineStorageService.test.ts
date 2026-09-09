@@ -88,10 +88,15 @@ function summary(key: string, displayName: string): HostPipelineSummary {
 /**
  * Mirrors the two host behaviours the write paths are built on: `write` upserts
  * on the caller's key, and the displayed name comes from the written spec.
+ *
+ * A host is only used when the deployment asks for one, so turning the beta on
+ * is part of installing it.
  */
 function installHost(
   listing: HostPipelineSummary[] = [],
 ): Map<string, unknown> {
+  vi.stubEnv("VITE_PIPELINE_STORAGE_BETA", "true");
+
   const summaries = new Map(listing.map((entry) => [entry.key, entry]));
   const specs = new Map<string, unknown>();
 
@@ -139,6 +144,7 @@ beforeEach(() => {
 
 afterEach(() => {
   delete window.__TANGLE_PIPELINE_STORAGE_HOST__;
+  vi.unstubAllEnvs();
   resetStorageModeForTests();
   vi.restoreAllMocks();
 });

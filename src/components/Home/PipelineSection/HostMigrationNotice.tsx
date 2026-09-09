@@ -14,7 +14,7 @@ export function HostMigrationNotice({
   migration: HostMigration;
   storageLabel: string;
 }) {
-  const { phase, progress, failed, retry, skip } = migration;
+  const { phase, progress, failed, error, retry, skip } = migration;
 
   if (phase === "copying") {
     return (
@@ -37,14 +37,19 @@ export function HostMigrationNotice({
       <InlineStack gap="2" blockAlign="center">
         <Icon name="CircleAlert" className="text-destructive" />
         <Text>
-          {failed.length} {pluralize(failed.length, "pipeline")} could not be
-          copied to {storageLabel}
+          {error
+            ? `Your pipelines could not be moved to ${storageLabel}`
+            : `${failed.length} ${pluralize(failed.length, "pipeline")} could not be copied to ${storageLabel}`}
         </Text>
       </InlineStack>
       <Paragraph size="sm" tone="subdued">
-        {failed.slice(0, 5).join(", ")}
-        {failed.length > 5 && ` and ${failed.length - 5} more`}. They are still
-        in this browser and nothing has been deleted.
+        {error ?? (
+          <>
+            {failed.slice(0, 5).join(", ")}
+            {failed.length > 5 && ` and ${failed.length - 5} more`}.
+          </>
+        )}{" "}
+        They are still in this browser and nothing has been deleted.
       </Paragraph>
       <InlineStack gap="2">
         <Button onClick={retry}>Retry</Button>

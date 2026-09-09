@@ -144,7 +144,6 @@ describe("ImportPage", () => {
       expect(mockNavigate).toHaveBeenCalledWith({
         to: "/editor-v2/$pipelineName",
         params: { pipelineName: "Test Pipeline" },
-        search: {},
       });
     });
   });

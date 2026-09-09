@@ -138,6 +138,9 @@ export default defineConfig(({ mode }) => {
       environment: "jsdom",
       setupFiles: ["./vitest-setup.js"],
       include: ["src/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
+      // Pinned so a developer's own .env cannot change what the suite tests.
+      // Anything covering the beta turns it on with vi.stubEnv.
+      env: { VITE_PIPELINE_STORAGE_BETA: "false" },
       coverage: {
         provider: "v8",
         reporter: ["text", "json", "html"],
