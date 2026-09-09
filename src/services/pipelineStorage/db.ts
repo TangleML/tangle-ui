@@ -56,7 +56,7 @@ pipelineStorageDb
      */
     const hostFolders = await tx
       .table<FolderEntry>("folders")
-      .filter((folder) => folder.driverConfig.driverType === "host")
+      .filter((folder) => folder.driverConfig.driverType === "backend")
       .toArray();
 
     for (const folder of hostFolders) {
@@ -110,10 +110,10 @@ pipelineStorageDb
       .table<PipelineRegistryEntry>("pipeline_registry")
       .toCollection()
       .modify((entry) => {
-        const isHostRow =
+        const isBackendRow =
           entry.folderId === ROOT_FOLDER_ID &&
           entry.contentVersion !== undefined;
-        entry.storage = isHostRow ? "host" : "local";
+        entry.storage = isBackendRow ? "backend" : "local";
       });
   });
 
@@ -127,7 +127,7 @@ pipelineStorageDb.on("ready", async () => {
  * would claim files the host has never heard of.
  */
 async function seedRegistryFromLegacyList() {
-  if (currentStorageKind() === "host") return;
+  if (currentStorageKind() === "backend") return;
 
   const seeded = await pipelineStorageDb.pipeline_registry
     .where("storage")

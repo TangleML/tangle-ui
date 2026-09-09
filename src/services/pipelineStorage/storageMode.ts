@@ -1,77 +1,47 @@
-import type { PipelineStorageHost } from "./host/contract";
-import { getPipelineStorageHost } from "./host/detectHost";
 import type { PipelineStorageKind } from "./types";
 
 export type StorageMode =
-  | { kind: "local" }
-  | { kind: "host"; label: string }
-  | { kind: "host-missing" };
+  { kind: "local" } | { kind: "backend"; label: string };
+
+const BACKEND_STORAGE_LABEL = "Backend";
 
 let resolved: StorageMode | undefined;
-let resolvedHost: PipelineStorageHost | undefined;
 
 /**
- * A deployment says whether it stores pipelines outside the browser; it is not
- * guessed from whether a host happens to have loaded. Off is the default and
- * the only thing the open-source build can be. On without a host is an error
- * rather than a quiet fall back to browser storage, which would strand a user's
- * work somewhere nobody else can see it.
+ * A deployment says whether pipelines are stored outside the browser. Off is
+ * the default and what a build with no backend of its own can do; on, they are
+ * read and written through the backend the app is configured against, which
+ * has to serve the pipeline routes.
  */
-function hostStorageEnabled(): boolean {
+function backendStorageEnabled(): boolean {
   return import.meta.env.VITE_PIPELINE_STORAGE_BETA === "true";
 }
 
 /**
- * Decided once and then frozen for the life of the page, holding on to the host
- * itself rather than re-reading the global — a host whose global is removed or
- * whose getter starts throwing must not read as "no host" and quietly send the
- * next write to browser storage.
+ * Decided once and then frozen for the life of the page: which store holds the
+ * pipelines cannot change under an open editor. *Where* that backend is may
+ * change — that is a setting, and the driver reads it per request.
  */
 export function resolveStorageMode(): StorageMode {
-  if (resolved) return resolved;
-
-  if (!hostStorageEnabled()) {
-    resolvedHost = undefined;
-    resolved = { kind: "local" };
-    return resolved;
-  }
-
-  resolvedHost = getPipelineStorageHost();
-  resolved = resolvedHost
-    ? { kind: "host", label: resolvedHost.label }
-    : { kind: "host-missing" };
+  resolved ??= backendStorageEnabled()
+    ? { kind: "backend", label: BACKEND_STORAGE_LABEL }
+    : { kind: "local" };
 
   return resolved;
 }
 
-export function getStorageHost(): PipelineStorageHost | undefined {
-  resolveStorageMode();
-  return resolvedHost;
-}
-
-export function isHostStorage(): boolean {
-  return resolveStorageMode().kind === "host";
+export function isBackendStorage(): boolean {
+  return resolveStorageMode().kind === "backend";
 }
 
 /**
- * Which store the cached rows written on this page load describe. A deployment
- * that requires a host still belongs to the host's world while that host is
- * unreachable — nothing may be written, and browser rows must stay invisible.
+ * Which store the cached rows written on this page load describe. Storage keys
+ * are only unique within one store, so a row must never be read by the other.
  */
 export function currentStorageKind(): PipelineStorageKind {
-  return resolveStorageMode().kind === "local" ? "local" : "host";
-}
-
-/**
- * The deployment requires a host-provided store and the page did not supply
- * one. Nothing can be read or written, so this is worth saying rather than
- * rendering an empty library.
- */
-export function isHostStorageMissing(): boolean {
-  return resolveStorageMode().kind === "host-missing";
+  return resolveStorageMode().kind === "local" ? "local" : "backend";
 }
 
 export function resetStorageModeForTests(): void {
   resolved = undefined;
-  resolvedHost = undefined;
 }

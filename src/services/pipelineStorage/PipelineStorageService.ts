@@ -3,7 +3,6 @@ import { makeObservable, observable } from "mobx";
 import { createDriver } from "./createDriver";
 import { pipelineStorageDb } from "./db";
 import { RootFolderDbStorageDriver } from "./drivers/RootFolderDbStorageDriver";
-import { UnavailableStorageDriver } from "./drivers/UnavailableStorageDriver";
 import { PipelineFile } from "./PipelineFile";
 import type { PipelineFileSource } from "./pipelineFileEvents";
 import { PipelineFolder } from "./PipelineFolder";
@@ -261,22 +260,12 @@ export function getPipelineStorageService(): PipelineStorageService {
 }
 
 function createRoot(mode: StorageMode): PipelineFolder {
-  if (mode.kind === "host") {
+  if (mode.kind === "backend") {
     return new PipelineFolder({
       id: ROOT_FOLDER_ID,
       name: mode.label,
       parentId: null,
-      driver: createDriver({ driverType: "host" }),
-      isFlat: true,
-    });
-  }
-
-  if (mode.kind === "host-missing") {
-    return new PipelineFolder({
-      id: ROOT_FOLDER_ID,
-      name: "Pipeline storage",
-      parentId: null,
-      driver: new UnavailableStorageDriver(),
+      driver: createDriver({ driverType: "backend" }),
       isFlat: true,
     });
   }

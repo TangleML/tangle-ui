@@ -4,7 +4,13 @@ import { defineConfig, devices } from "@playwright/test";
  * Host-provided storage is a build-time switch, so it cannot be turned on per
  * test — those specs need a server of their own with the flag set.
  */
-const HOST_STORAGE_TESTS = "**/pipeline-storage-host.spec.ts";
+const HOST_STORAGE_TESTS = "**/pipeline-storage-backend.spec.ts";
+
+/**
+ * Pinned so the pipeline routes are answered by the test and never by whatever
+ * a developer happens to be running.
+ */
+const BACKEND_STUB_URL = "http://backend.test";
 const HOST_STORAGE_PORT = 3010;
 const HOST_STORAGE_URL = `http://localhost:${HOST_STORAGE_PORT}`;
 
@@ -86,7 +92,7 @@ export default defineConfig({
       timeout: 120 * 1000,
     },
     {
-      command: `VITE_PIPELINE_STORAGE_BETA=true vite --port ${HOST_STORAGE_PORT}`,
+      command: `VITE_PIPELINE_STORAGE_BETA=true VITE_BACKEND_API_URL=${BACKEND_STUB_URL} vite --port ${HOST_STORAGE_PORT}`,
       url: HOST_STORAGE_URL,
       reuseExistingServer: !process.env.CI,
       timeout: 120 * 1000,

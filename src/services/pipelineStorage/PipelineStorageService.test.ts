@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { setBackendEndpoint } from "./backendEndpoint";
 import { RootFolderDbStorageDriver } from "./drivers/RootFolderDbStorageDriver";
-import type { HostPipelineSummary, PipelineStorageHost } from "./host/contract";
 import type { NewPipelineRegistryEntry } from "./pipelineRegistry";
 import {
   AmbiguousPipelineNameError,
@@ -10,7 +10,7 @@ import {
 } from "./PipelineStorageService";
 import { resetStorageModeForTests } from "./storageMode";
 import {
-  HOST_DRIVER_TYPE,
+  BACKEND_DRIVER_TYPE,
   type PipelineRegistryEntry,
   ROOT_FOLDER_ID,
 } from "./types";
@@ -76,62 +76,96 @@ vi.mock("./db", () => ({
   },
 }));
 
-const LABEL = "Shared storage";
+const LABEL = "Backend";
 
-function summary(key: string, displayName: string): HostPipelineSummary {
+interface StoredRow {
+  id: string;
+  file_path: string;
+  pipeline_name: string;
+  current_version: string;
+  root_pipeline_task: { componentRef: { spec: unknown } };
+}
+
+function summary(key: string, displayName: string): StoredRow {
   return {
-    key,
-    externalId: `id-${key}`,
-    displayName,
-    contentVersion: "1",
+    id: `id-${key}`,
+    file_path: key,
+    pipeline_name: displayName,
+    current_version: "1",
+    root_pipeline_task: { componentRef: { spec: {} } },
   };
 }
 
+const ENDPOINT = "https://backend.test";
+
 /**
- * Mirrors the two host behaviours the write paths are built on: `write` upserts
- * on the caller's key, and the displayed name comes from the written spec.
+ * Answers the pipeline routes out of a map, mirroring the two behaviours the
+ * write paths are built on: a write upserts on the key it is given, and the
+ * displayed name comes from the spec that was written.
  *
- * A host is only used when the deployment asks for one, so turning the beta on
- * is part of installing it.
+ * The backend holds pipelines only when the deployment asks it to, so turning
+ * the beta on is part of installing this.
  */
-function installHost(
-  listing: HostPipelineSummary[] = [],
-): Map<string, unknown> {
+function installBackend(listing: StoredRow[] = []): Map<string, unknown> {
   vi.stubEnv("VITE_PIPELINE_STORAGE_BETA", "true");
+  setBackendEndpoint(ENDPOINT);
 
-  const summaries = new Map(listing.map((entry) => [entry.key, entry]));
-  const specs = new Map<string, unknown>();
+  const rows = new Map(listing.map((row) => [row.file_path, row]));
+  const specs = new Map<string, unknown>(
+    listing.map((row) => [
+      row.file_path,
+      row.root_pipeline_task.componentRef.spec,
+    ]),
+  );
 
-  const host: PipelineStorageHost = {
-    version: 1,
-    label: LABEL,
-    list: async () => [...summaries.values()],
-    read: async (key) => {
-      const found = summaries.get(key);
-      if (!found) throw new Error(`not seeded: ${key}`);
-      return { ...found, spec: specs.get(key) };
-    },
-    write: async (key, spec) => {
-      specs.set(key, spec);
-      const written = {
-        ...summary(key, (spec as { name?: string }).name ?? "Untitled"),
-        contentVersion: String(summaries.size + 1),
-      };
-      summaries.set(key, written);
-      return written;
-    },
-    delete: async (key) => {
-      summaries.delete(key);
-      specs.delete(key);
-    },
-    has: async (key) => summaries.has(key),
-  };
+  const answer = (body: unknown, status = 200) =>
+    Promise.resolve(
+      new Response(status === 204 ? null : JSON.stringify(body), { status }),
+    );
 
-  Object.defineProperty(window, "__TANGLE_PIPELINE_STORAGE_HOST__", {
-    value: host,
-    configurable: true,
-    writable: true,
-  });
+  vi.spyOn(globalThis, "fetch").mockImplementation(
+    async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(String(input));
+      const key = url.searchParams.get("file_path") ?? "";
+      const isList = url.pathname.endsWith("/all");
+
+      if (isList) {
+        const matched = [...rows.values()].filter(
+          (row) => !key || row.file_path === key,
+        );
+        return answer({ pipelines: matched, next_page_token: null });
+      }
+
+      switch (init?.method) {
+        case "PUT": {
+          const sent = JSON.parse(String(init.body)) as {
+            root_pipeline_task: { componentRef: { spec: { name?: string } } };
+          };
+          const spec = sent.root_pipeline_task.componentRef.spec;
+          specs.set(key, spec);
+          const written: StoredRow = {
+            ...summary(key, spec.name ?? "Untitled"),
+            current_version: String(rows.size + 1),
+            root_pipeline_task: { componentRef: { spec } },
+          };
+          rows.set(key, written);
+          return answer(written);
+        }
+        case "DELETE":
+          rows.delete(key);
+          specs.delete(key);
+          return answer(null, 204);
+        default: {
+          const found = rows.get(key);
+          if (!found) return answer({ detail: "not found" }, 404);
+          return answer({
+            ...found,
+            root_pipeline_task: { componentRef: { spec: specs.get(key) } },
+          });
+        }
+      }
+    },
+  );
 
   return specs;
 }
@@ -145,18 +179,18 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  delete window.__TANGLE_PIPELINE_STORAGE_HOST__;
+  setBackendEndpoint("");
   vi.unstubAllEnvs();
   resetStorageModeForTests();
   vi.restoreAllMocks();
 });
 
-describe("with no host on the page", () => {
+describe("with the beta off", () => {
   it("keeps browser storage as the root", () => {
     const service = new PipelineStorageService();
 
     expect(service.mode).toEqual({ kind: "local" });
-    expect(service.rootFolder.driver.type).not.toBe(HOST_DRIVER_TYPE);
+    expect(service.rootFolder.driver.type).not.toBe(BACKEND_DRIVER_TYPE);
     expect(service.rootFolder.isFlat).toBe(false);
   });
 
@@ -168,17 +202,17 @@ describe("with no host on the page", () => {
   });
 });
 
-describe("with a host on the page", () => {
+describe("with the beta on", () => {
   beforeEach(() => {
-    installHost();
+    installBackend();
   });
 
-  it("makes the host the only store, under the host's own label", () => {
+  it("makes the backend the only store", () => {
     const service = new PipelineStorageService();
 
-    expect(service.mode).toEqual({ kind: "host", label: LABEL });
+    expect(service.mode).toEqual({ kind: "backend", label: LABEL });
     expect(service.rootFolder.id).toBe(ROOT_FOLDER_ID);
-    expect(service.rootFolder.driver.type).toBe(HOST_DRIVER_TYPE);
+    expect(service.rootFolder.driver.type).toBe(BACKEND_DRIVER_TYPE);
     expect(service.rootFolder.name).toBe(LABEL);
   });
 
@@ -206,7 +240,7 @@ describe("with a host on the page", () => {
 
   it("stays on the host even if the host global disappears mid-session", () => {
     const service = new PipelineStorageService();
-    delete window.__TANGLE_PIPELINE_STORAGE_HOST__;
+    setBackendEndpoint("");
 
     expect(new PipelineStorageService().mode).toEqual(service.mode);
   });
@@ -237,8 +271,8 @@ describe("the flat list of everything", () => {
     expect(registry.get("filed")?.folderId).toBe("folder-1");
   });
 
-  it("asks a host for its listing rather than the browser store", async () => {
-    installHost([summary("opaque-key-1", "Churn model")]);
+  it("asks the backend for its listing rather than the browser store", async () => {
+    installBackend([summary("opaque-key-1", "Churn model")]);
     const listed = vi.spyOn(RootFolderDbStorageDriver.prototype, "list");
 
     const files = await new PipelineStorageService().listAllPipelines();
@@ -250,7 +284,7 @@ describe("the flat list of everything", () => {
 
 describe("resolving a route reference against a host", () => {
   it("opens the pipeline whose key the route carries", async () => {
-    installHost([summary("opaque-key-1", "Churn model")]);
+    installBackend([summary("opaque-key-1", "Churn model")]);
 
     const file = await new PipelineStorageService().resolve({
       name: "opaque-key-1",
@@ -260,7 +294,7 @@ describe("resolving a route reference against a host", () => {
   });
 
   it("opens a pipeline by its displayed name when only one has it", async () => {
-    installHost([
+    installBackend([
       summary("opaque-key-1", "Churn model"),
       summary("opaque-key-2", "Ranking model"),
     ]);
@@ -273,7 +307,7 @@ describe("resolving a route reference against a host", () => {
   });
 
   it("refuses to guess between pipelines sharing a name", async () => {
-    installHost([
+    installBackend([
       summary("opaque-key-1", "Churn model"),
       summary("opaque-key-2", "Churn model"),
     ]);
@@ -284,7 +318,7 @@ describe("resolving a route reference against a host", () => {
   });
 
   it("reports a missing pipeline rather than reaching for browser storage", async () => {
-    installHost([summary("opaque-key-1", "Churn model")]);
+    installBackend([summary("opaque-key-1", "Churn model")]);
 
     await expect(
       new PipelineStorageService().resolve({ name: "Churn model v2" }),
@@ -292,7 +326,7 @@ describe("resolving a route reference against a host", () => {
   });
 
   it("opens a pipeline from a path that carries only its id", async () => {
-    installHost([summary("opaque-key-1", "Churn model")]);
+    installBackend([summary("opaque-key-1", "Churn model")]);
 
     const file = await new PipelineStorageService().resolve({
       name: "id-opaque-key-1",
@@ -303,7 +337,7 @@ describe("resolving a route reference against a host", () => {
   });
 
   it("still opens an older link whose path carries a name", async () => {
-    installHost([summary("opaque-key-1", "Churn model")]);
+    installBackend([summary("opaque-key-1", "Churn model")]);
 
     const file = await new PipelineStorageService().resolve({
       name: "Churn model",
@@ -314,7 +348,7 @@ describe("resolving a route reference against a host", () => {
   });
 
   it("refuses a link whose id is gone rather than opening a namesake", async () => {
-    installHost([summary("opaque-key-1", "Churn model")]);
+    installBackend([summary("opaque-key-1", "Churn model")]);
 
     await expect(
       new PipelineStorageService().resolve({
@@ -325,7 +359,7 @@ describe("resolving a route reference against a host", () => {
   });
 
   it("finds a pipeline the registry has never seen by its id", async () => {
-    installHost([summary("opaque-key-1", "Churn model")]);
+    installBackend([summary("opaque-key-1", "Churn model")]);
 
     const file = await new PipelineStorageService().resolve({
       name: "whatever-the-link-said",
@@ -338,7 +372,7 @@ describe("resolving a route reference against a host", () => {
 
 describe("writing to a host", () => {
   it("creates a pipeline and registers the identity the store reported", async () => {
-    installHost();
+    installBackend();
     const service = new PipelineStorageService();
 
     const file = await service.createPipeline(
@@ -352,7 +386,7 @@ describe("writing to a host", () => {
   });
 
   it("saves over the pipeline that already has the name", async () => {
-    const specs = installHost();
+    const specs = installBackend();
     const service = new PipelineStorageService();
 
     await service.createPipeline("Churn model", PIPELINE_YAML("Churn model"));
@@ -366,7 +400,7 @@ describe("writing to a host", () => {
   });
 
   it("creates a pipeline when saving a name the store has never held", async () => {
-    installHost();
+    installBackend();
     const service = new PipelineStorageService();
 
     const file = await service.savePipelineByName(
@@ -378,7 +412,7 @@ describe("writing to a host", () => {
   });
 
   it("deletes through the driver so the store loses the pipeline too", async () => {
-    installHost();
+    installBackend();
     const service = new PipelineStorageService();
 
     await service.createPipeline("Churn model", PIPELINE_YAML("Churn model"));
@@ -389,7 +423,7 @@ describe("writing to a host", () => {
   });
 
   it("renames in place rather than leaving a copy under the old name", async () => {
-    installHost();
+    installBackend();
     const service = new PipelineStorageService();
     const created = await service.createPipeline(
       "Churn model",
@@ -408,7 +442,7 @@ describe("writing to a host", () => {
   });
 
   it("creates the pipeline when renaming one the store does not hold", async () => {
-    installHost();
+    installBackend();
     const service = new PipelineStorageService();
 
     const file = await service.renamePipelineByName(
@@ -422,7 +456,7 @@ describe("writing to a host", () => {
   });
 
   it("leaves the store alone when asked to delete a name it does not hold", async () => {
-    installHost([summary("opaque-key-1", "Churn model")]);
+    installBackend([summary("opaque-key-1", "Churn model")]);
     const service = new PipelineStorageService();
 
     await expect(

@@ -1,16 +1,15 @@
 import { expect, type Page, test } from "@playwright/test";
 
 import {
-  type HostStorageOptions,
-  installPipelineStorageHost,
-  readHostReadKeys,
-  readHostRecords,
+  type BackendStorageOptions,
+  forgetBackendReadKeys,
+  installPipelineStorageBackend,
+  readBackendReadKeys,
+  readBackendRecords,
   readLocallyStoredPipelineKeys,
   seedLocallyStoredPipeline,
-  setHostFailMode,
-} from "./fixtures/pipelineStorageHost";
-
-const LABEL = "Shared storage";
+  setBackendFailMode,
+} from "./fixtures/pipelineStorageBackend";
 
 const CHURN_TAG = "quarterly";
 
@@ -31,21 +30,20 @@ const SEED = [
   },
 ];
 
-async function installSeededHost(page: Page, options: HostStorageOptions = {}) {
+async function installSeededBackend(
+  page: Page,
+  options: BackendStorageOptions = {},
+) {
   await page.addInitScript(() => {
     window.localStorage.setItem("seen-editor-v2-welcome", JSON.stringify(true));
   });
 
-  await installPipelineStorageHost(page, {
-    label: LABEL,
-    seed: SEED,
-    ...options,
-  });
+  await installPipelineStorageBackend(page, { seed: SEED, ...options });
 }
 
-test.describe("host-provided pipeline storage", () => {
+test.describe("backend pipeline storage", () => {
   test("lists what the host holds", async ({ page }) => {
-    await installSeededHost(page);
+    await installSeededBackend(page);
 
     await page.goto("/pipeline-folders");
 
@@ -56,7 +54,7 @@ test.describe("host-provided pipeline storage", () => {
   test("offers nothing to file pipelines into a store that has no folders", async ({
     page,
   }) => {
-    await installSeededHost(page);
+    await installSeededBackend(page);
 
     await page.goto("/pipeline-folders");
     await expect(page.getByText("Churn model")).toBeVisible();
@@ -72,7 +70,7 @@ test.describe("host-provided pipeline storage", () => {
   test("keeps the pipeline table at /pipelines, contents and all", async ({
     page,
   }) => {
-    await installSeededHost(page);
+    await installSeededBackend(page);
 
     await page.goto("/pipelines");
 
@@ -85,25 +83,26 @@ test.describe("host-provided pipeline storage", () => {
   test("reads each pipeline once and serves the next visit from cache", async ({
     page,
   }) => {
-    await installSeededHost(page);
+    await installSeededBackend(page);
 
     await page.goto("/pipelines");
     await expect(page.getByText(CHURN_TAG)).toBeVisible();
-    expect((await readHostReadKeys(page)).sort()).toEqual(
+    expect([...readBackendReadKeys(page)].sort()).toEqual(
       SEED.map((entry) => entry.key).sort(),
     );
 
+    forgetBackendReadKeys(page);
     await page.reload();
     await expect(page.getByText(CHURN_TAG)).toBeVisible();
-    expect(await readHostReadKeys(page)).toEqual([]);
+    expect(readBackendReadKeys(page)).toEqual([]);
   });
 
-  test("copies pipelines already in the browser into the host", async ({
+  test("copies pipelines already in the browser into the backend", async ({
     page,
   }) => {
     const localName = "Left behind in the browser";
 
-    await installSeededHost(page);
+    await installSeededBackend(page);
     await page.goto("/");
     await seedLocallyStoredPipeline(page, localName);
 
@@ -113,7 +112,7 @@ test.describe("host-provided pipeline storage", () => {
     await expect(page.getByText("Churn model")).toBeVisible();
 
     expect(
-      (await readHostRecords(page)).map((record) => record.displayName),
+      readBackendRecords(page).map((record) => record.displayName),
     ).toContain(localName);
   });
 
@@ -122,7 +121,7 @@ test.describe("host-provided pipeline storage", () => {
   }) => {
     const localName = "Never opened the list";
 
-    await installSeededHost(page);
+    await installSeededBackend(page);
     await page.goto("/");
     await seedLocallyStoredPipeline(page, localName);
 
@@ -132,14 +131,14 @@ test.describe("host-provided pipeline storage", () => {
     await expect
       .poll(
         async () =>
-          (await readHostRecords(page)).map((record) => record.displayName),
+          readBackendRecords(page).map((record) => record.displayName),
         { timeout: 15_000 },
       )
       .toContain(localName);
   });
 
   test("opens a pipeline at a url that is only its id", async ({ page }) => {
-    await installSeededHost(page);
+    await installSeededBackend(page);
 
     await page.goto("/pipelines");
     await page.getByText("Churn model").click();
@@ -149,7 +148,7 @@ test.describe("host-provided pipeline storage", () => {
     });
 
     const url = new URL(page.url());
-    const [record] = (await readHostRecords(page)).filter(
+    const [record] = readBackendRecords(page).filter(
       (entry) => entry.displayName === "Churn model",
     );
     expect(url.pathname).toBe(`/editor-v2/${record.externalId}`);
@@ -159,7 +158,7 @@ test.describe("host-provided pipeline storage", () => {
   test("says a link to a pipeline it does not hold cannot be opened", async ({
     page,
   }) => {
-    await installSeededHost(page);
+    await installSeededBackend(page);
 
     await page.goto("/editor-v2/0f8c1a2b-0000-4000-8000-00000000dead");
 
@@ -170,19 +169,19 @@ test.describe("host-provided pipeline storage", () => {
   });
 
   test("keeps the browser's own pipeline store empty", async ({ page }) => {
-    await installSeededHost(page);
+    await installSeededBackend(page);
 
     await page.goto("/pipeline-folders");
     await expect(page.getByText("Churn model")).toBeVisible();
 
     expect(await readLocallyStoredPipelineKeys(page)).toEqual([]);
-    expect(await readHostRecords(page)).toHaveLength(SEED.length);
+    expect(readBackendRecords(page)).toHaveLength(SEED.length);
   });
 
-  test("writes nothing locally when the host cannot be reached", async ({
+  test("writes nothing locally when the backend cannot be reached", async ({
     page,
   }) => {
-    await installSeededHost(page, { failMode: "unavailable" });
+    await installSeededBackend(page, { failMode: "unavailable" });
 
     await page.goto("/pipeline-folders");
 
@@ -190,10 +189,10 @@ test.describe("host-provided pipeline storage", () => {
     expect(await readLocallyStoredPipelineKeys(page)).toEqual([]);
   });
 
-  test("creates a new pipeline in the host and nowhere else", async ({
+  test("creates a new pipeline in the backend and nowhere else", async ({
     page,
   }) => {
-    await installSeededHost(page);
+    await installSeededBackend(page);
 
     await page.goto("/pipeline-folders");
     await expect(page.getByText("Churn model")).toBeVisible();
@@ -203,14 +202,14 @@ test.describe("host-provided pipeline storage", () => {
       timeout: 30_000,
     });
 
-    expect(await readHostRecords(page)).toHaveLength(SEED.length + 1);
+    expect(readBackendRecords(page)).toHaveLength(SEED.length + 1);
     expect(await readLocallyStoredPipelineKeys(page)).toEqual([]);
   });
 
   test("renaming keeps one pipeline rather than leaving the old name behind", async ({
     page,
   }) => {
-    await installSeededHost(page);
+    await installSeededBackend(page);
 
     await page.goto(`/editor-v2/${SEED[0].key}`);
     await expect(page.locator('[data-testid="rf__wrapper"]')).toBeVisible({
@@ -223,7 +222,7 @@ test.describe("host-provided pipeline storage", () => {
 
     await expect
       .poll(async () =>
-        (await readHostRecords(page)).map((record) => record.displayName),
+        readBackendRecords(page).map((record) => record.displayName),
       )
       .toEqual(["Churn model v2", "Nightly refresh"]);
   });
@@ -231,13 +230,13 @@ test.describe("host-provided pipeline storage", () => {
   test("says the backend is not available, even holding a listing it could show", async ({
     page,
   }) => {
-    await installSeededHost(page);
+    await installSeededBackend(page);
 
     await page.goto("/pipelines");
     await expect(page.getByText("Churn model")).toBeVisible();
 
     // Not a reload: the listing is already in hand and would otherwise render.
-    await setHostFailMode(page, "unavailable");
+    setBackendFailMode(page, "unavailable");
     await page.getByRole("button", { name: "Refresh" }).click();
 
     await expect(page.getByTestId("info-box-warning")).toContainText(
@@ -249,7 +248,7 @@ test.describe("host-provided pipeline storage", () => {
   test("says the backend is not available on the folders page too", async ({
     page,
   }) => {
-    await installSeededHost(page, { failMode: "unavailable" });
+    await installSeededBackend(page, { failMode: "unavailable" });
 
     await page.goto("/pipeline-folders");
 
@@ -261,7 +260,7 @@ test.describe("host-provided pipeline storage", () => {
   test("says a store that refuses could not be read, not that it is empty", async ({
     page,
   }) => {
-    await installSeededHost(page, { failMode: "unauthenticated" });
+    await installSeededBackend(page, { failMode: "unauthenticated" });
 
     await page.goto("/pipelines");
 
@@ -274,7 +273,7 @@ test.describe("host-provided pipeline storage", () => {
   test("shows auto-save as off in the editor while the backend is away", async ({
     page,
   }) => {
-    await installSeededHost(page);
+    await installSeededBackend(page);
 
     await page.goto(`/editor-v2/${SEED[0].key}`);
     await expect(page.locator('[data-testid="rf__wrapper"]')).toBeVisible({
@@ -284,14 +283,14 @@ test.describe("host-provided pipeline storage", () => {
     const indicator = page.getByTestId("auto-save-button");
     await expect(indicator).toBeEnabled();
 
-    await setHostFailMode(page, "unavailable");
+    setBackendFailMode(page, "unavailable");
     await indicator.click();
 
     await expect(indicator).toBeDisabled();
     await expect(indicator.locator(".text-destructive")).toBeVisible();
 
     // Comes back on its own: the held edit is retried and the store answers.
-    await setHostFailMode(page, "none");
+    setBackendFailMode(page, "none");
     await expect(indicator).toBeEnabled({ timeout: 30_000 });
     await expect(indicator.locator(".text-destructive")).toBeHidden();
   });
@@ -299,21 +298,22 @@ test.describe("host-provided pipeline storage", () => {
   test("says so in the editor when a save is refused, and stops once it lands", async ({
     page,
   }) => {
-    await installSeededHost(page);
+    await installSeededBackend(page);
 
     await page.goto(`/editor-v2/${SEED[0].key}`);
     await expect(page.locator('[data-testid="rf__wrapper"]')).toBeVisible({
       timeout: 30_000,
     });
 
-    await setHostFailMode(page, "unavailable");
+    setBackendFailMode(page, "unavailable");
     await page.getByTestId("auto-save-button").click();
 
     const banner = page.getByTestId("unsaved-work-banner");
     await expect(banner).toBeVisible();
-    await expect(banner).toContainText(LABEL);
+    // Carries what the backend said, not a message invented here.
+    await expect(banner).toContainText("unavailable");
 
-    await setHostFailMode(page, "none");
+    setBackendFailMode(page, "none");
     await banner.getByRole("button", { name: "Try now" }).click();
 
     await expect(banner).toBeHidden();
@@ -322,14 +322,14 @@ test.describe("host-provided pipeline storage", () => {
   test("offers a copy before asking for a sign-in that would discard it", async ({
     page,
   }) => {
-    await installSeededHost(page);
+    await installSeededBackend(page);
 
     await page.goto(`/editor-v2/${SEED[0].key}`);
     await expect(page.locator('[data-testid="rf__wrapper"]')).toBeVisible({
       timeout: 30_000,
     });
 
-    await setHostFailMode(page, "unauthenticated");
+    setBackendFailMode(page, "unauthenticated");
     await page.getByTestId("auto-save-button").click();
 
     const dialog = page.getByTestId("expired-session");
@@ -340,7 +340,7 @@ test.describe("host-provided pipeline storage", () => {
   });
 
   test("a deleted pipeline does not come back on reload", async ({ page }) => {
-    await installSeededHost(page);
+    await installSeededBackend(page);
 
     await page.goto("/pipeline-folders");
     const row = page.getByRole("row").filter({ hasText: "Churn model" });
@@ -355,6 +355,6 @@ test.describe("host-provided pipeline storage", () => {
     await expect(page.getByText("Nightly refresh")).toBeVisible();
     await expect(page.getByText("Churn model")).toBeHidden();
 
-    expect(await readHostRecords(page)).toHaveLength(SEED.length - 1);
+    expect(readBackendRecords(page)).toHaveLength(SEED.length - 1);
   });
 });

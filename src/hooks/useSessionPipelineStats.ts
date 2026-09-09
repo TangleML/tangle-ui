@@ -2,7 +2,7 @@ import { useEffect } from "react";
 
 import { useAnalytics } from "@/providers/AnalyticsProvider";
 import { listPipelineFiles } from "@/services/pipelineStorage/pipelineOperations";
-import { isHostStorage } from "@/services/pipelineStorage/storageMode";
+import { isBackendStorage } from "@/services/pipelineStorage/storageMode";
 import type { ComponentSpec, TaskSpec } from "@/utils/componentSpec";
 import { isGraphImplementation } from "@/utils/componentSpec";
 import { getAllComponentFilesFromList } from "@/utils/componentStore";
@@ -116,7 +116,7 @@ export function useSessionPipelineStats(): void {
        * every pipeline once a day just for analytics. The total is worth that
        * much less than the request storm, so the distribution is left out.
        */
-      if (isHostStorage()) {
+      if (isBackendStorage()) {
         try {
           total_pipelines = (await listPipelineFiles()).length;
         } catch {

@@ -33,7 +33,7 @@ const POLL_MS = 1_000;
  */
 export function useHostMigration(onFinished: () => void): HostMigration {
   const storage = usePipelineStorage();
-  const isHost = storage.mode.kind === "host";
+  const isHost = storage.mode.kind === "backend";
 
   const [phase, setPhase] = useState<HostMigrationPhase>(
     isHost ? "checking" : "settled",

@@ -13,10 +13,8 @@ import { ComponentSpecProvider } from "@/providers/ComponentSpecProvider";
 import { OnboardingProvider } from "@/providers/OnboardingProvider/OnboardingProvider";
 import { TourProvider } from "@/providers/TourProvider/TourProvider";
 import { PipelineStorageProvider } from "@/services/pipelineStorage/PipelineStorageProvider";
-import { isHostStorageMissing } from "@/services/pipelineStorage/storageMode";
 
 import AppMenu from "./AppMenu";
-import { PipelineStorageUnavailable } from "./PipelineStorageUnavailable";
 
 function SessionPipelineStatsTracker() {
   useSessionPipelineStats();
@@ -26,10 +24,6 @@ function SessionPipelineStatsTracker() {
 function RootLayoutContent() {
   usePageViewTracking();
   useClickTracking();
-
-  if (isHostStorageMissing()) {
-    return <PipelineStorageUnavailable />;
-  }
 
   return (
     <BackendProvider>

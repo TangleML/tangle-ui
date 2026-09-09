@@ -1,17 +1,15 @@
 import { useSyncExternalStore } from "react";
 
-import type { HostErrorCode } from "./host/contract";
-import { isHostStorage } from "./storageMode";
+import { isBackendStorage } from "./storageMode";
+import type { StorageErrorCode } from "./types";
 
 /**
  * Whether the store holding the pipelines is answering, learned from the calls
  * the app already makes rather than from a health check against something else.
  *
- * A host-provided store is not the execution backend: it is served by the page
- * that embeds this app, from its own endpoint and session, and stays up when
- * the configured backend is switched off. Pinging that backend to decide
- * whether pipelines can be saved reports an outage while saves are landing, and
- * says nothing when the store itself is the thing that has gone.
+ * The configured backend serves more than pipelines, and a health check
+ * against it says nothing about whether the pipeline routes are answering —
+ * which is the only thing the pipeline list and the save indicator are about.
  *
  * An error is only an outage if the store failed to answer at all. "No such
  * pipeline" is an answer.
@@ -30,7 +28,7 @@ export function reportStorageAnswered(): void {
   set(true);
 }
 
-export function reportStorageFailed(code: HostErrorCode): void {
+export function reportStorageFailed(code: StorageErrorCode): void {
   if (code !== "unavailable") {
     set(true);
     return;
@@ -51,5 +49,5 @@ export function useStorageUnavailable(): boolean {
     () => true,
   );
 
-  return isHostStorage() && !answering;
+  return isBackendStorage() && !answering;
 }

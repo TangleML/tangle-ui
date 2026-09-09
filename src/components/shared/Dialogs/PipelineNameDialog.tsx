@@ -16,7 +16,7 @@ import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { BlockStack } from "@/components/ui/layout";
 import useLoadUserPipelines from "@/hooks/useLoadUserPipelines";
-import { isHostStorage } from "@/services/pipelineStorage/storageMode";
+import { isBackendStorage } from "@/services/pipelineStorage/storageMode";
 
 interface PipelineNameDialogProps {
   trigger?: ReactNode;
@@ -55,7 +55,7 @@ const PipelineNameDialog = ({
    * so refusing a duplicate here would block a name the store itself accepts —
    * and there is nothing to list for.
    */
-  const namesMustBeUnique = !isHostStorage();
+  const namesMustBeUnique = !isBackendStorage();
 
   const {
     pipelineNames,

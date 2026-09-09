@@ -6,8 +6,8 @@ export function BackendUnavailable() {
 
   return (
     <InfoBox title="Backend not available" variant="warning">
-      {mode.kind === "host" ? mode.label : "Pipeline storage"} is not answering.
-      Pipelines cannot be read or saved until it is back.
+      {mode.kind === "backend" ? mode.label : "Pipeline storage"} is not
+      answering. Pipelines cannot be read or saved until it is back.
     </InfoBox>
   );
 }

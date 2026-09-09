@@ -1,4 +1,4 @@
-import { HostStorageError } from "./drivers/HostStorageDriver";
+import { BackendStorageError } from "./drivers/BackendStorageDriver";
 import {
   AmbiguousPipelineNameError,
   PipelineNotFoundError,
@@ -25,7 +25,7 @@ export function isRetriableStorageError(
     return false;
   }
 
-  if (error instanceof HostStorageError) {
+  if (error instanceof BackendStorageError) {
     return error.code === "unavailable" || error.code === "rate_limited";
   }
 
@@ -38,7 +38,7 @@ export function isRetriableStorageError(
  * comes back is how work sits unsaved with nobody told why.
  */
 export function isWriteWorthRetrying(error: unknown): boolean {
-  if (error instanceof HostStorageError) {
+  if (error instanceof BackendStorageError) {
     return error.code !== "unauthenticated" && error.code !== "conflict";
   }
 
@@ -46,5 +46,7 @@ export function isWriteWorthRetrying(error: unknown): boolean {
 }
 
 export function isExpiredSession(error: unknown): boolean {
-  return error instanceof HostStorageError && error.code === "unauthenticated";
+  return (
+    error instanceof BackendStorageError && error.code === "unauthenticated"
+  );
 }

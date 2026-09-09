@@ -1,21 +1,20 @@
 import type { Page } from "@playwright/test";
 
-type HostFailMode = "none" | "unavailable" | "unauthenticated" | "rate_limited";
+type BackendFailMode =
+  "none" | "unavailable" | "unauthenticated" | "rate_limited";
 
-interface HostSeedPipeline {
+interface SeedPipeline {
   key: string;
   displayName: string;
   spec: unknown;
 }
 
-export interface HostStorageOptions {
-  label?: string;
-  seed?: HostSeedPipeline[];
-  failMode?: HostFailMode;
-  latencyMs?: number;
+export interface BackendStorageOptions {
+  seed?: SeedPipeline[];
+  failMode?: BackendFailMode;
 }
 
-interface HostRecord {
+export interface StoredPipeline {
   key: string;
   externalId: string;
   displayName: string | null;
@@ -23,156 +22,161 @@ interface HostRecord {
   spec: unknown;
 }
 
-interface HostTestState {
-  records(): HostRecord[];
-  readKeys(): string[];
-  setFailMode(mode: HostFailMode): void;
+interface BackendStore {
+  records: StoredPipeline[];
+  readKeys: string[];
+  failMode: BackendFailMode;
+  revision: number;
 }
 
-declare global {
-  interface Window {
-    __TANGLE_TEST_HOST__?: HostTestState;
-  }
+const PIPELINES_PATH = "**/api/users/me/pipelines**";
+
+const STATUS_FOR: Record<Exclude<BackendFailMode, "none">, number> = {
+  unavailable: 503,
+  unauthenticated: 401,
+  rate_limited: 429,
+};
+
+const stores = new WeakMap<Page, BackendStore>();
+
+function storeFor(page: Page): BackendStore {
+  const store = stores.get(page);
+  if (!store) throw new Error("No pipeline backend installed for this page");
+  return store;
 }
 
-const DEFAULT_LABEL = "Shared storage";
+function rowOf(record: StoredPipeline, withSpec: boolean) {
+  return {
+    id: record.externalId,
+    file_path: record.key,
+    pipeline_name: record.displayName,
+    current_version: record.contentVersion,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-02T00:00:00Z",
+    ...(withSpec
+      ? { root_pipeline_task: { componentRef: { spec: record.spec } } }
+      : {}),
+  };
+}
 
-const STATE_KEY = "__tangle_test_host_state__";
+function nameOf(spec: unknown): string | null {
+  if (typeof spec !== "object" || spec === null) return null;
+  const name: unknown = Reflect.get(spec, "name");
+  return typeof name === "string" ? name : null;
+}
 
 /**
- * Stands in for the page that embeds this app. It has to be installed with
- * `addInitScript` rather than `evaluate`, because storage mode is decided while
- * the app boots and never revisited.
- *
- * Its contents outlive a reload — creating a pipeline navigates with a document
- * load, and a store that forgot everything at that point could not show that
- * the write reached it.
+ * Serves the pipeline routes the storage driver calls. The store lives in the
+ * test process rather than the page, so it survives a reload the way a real
+ * backend does — creating a pipeline navigates with a document load, and a
+ * store that forgot everything there could not show that the write landed.
  */
-export async function installPipelineStorageHost(
+export async function installPipelineStorageBackend(
   page: Page,
-  options: HostStorageOptions = {},
+  options: BackendStorageOptions = {},
 ): Promise<void> {
-  await page.addInitScript(
-    (config: Required<HostStorageOptions> & { stateKey: string }) => {
-      const saved = window.sessionStorage.getItem(config.stateKey);
-      const store = new Map<string, HostRecord>(
-        saved ? (JSON.parse(saved) as [string, HostRecord][]) : [],
-      );
-      let revision = store.size;
+  const seed = options.seed ?? [];
 
-      /**
-       * Deliberately not persisted: a test asserting that a reload served the
-       * pipeline contents from cache needs the count for this page load alone.
-       */
-      const readKeys: string[] = [];
+  stores.set(page, {
+    records: seed.map((entry, index) => ({
+      key: entry.key,
+      externalId: `external-${index + 1}`,
+      displayName: entry.displayName,
+      contentVersion: `v${index + 1}`,
+      spec: entry.spec,
+    })),
+    readKeys: [],
+    failMode: options.failMode ?? "none",
+    revision: seed.length,
+  });
 
-      let failMode = config.failMode;
+  await page.route(PIPELINES_PATH, async (route) => {
+    const store = storeFor(page);
 
-      if (!saved) {
-        for (const seeded of config.seed) {
-          revision += 1;
-          store.set(seeded.key, {
-            key: seeded.key,
-            externalId: `external-${revision}`,
-            displayName: seeded.displayName,
-            contentVersion: `v${revision}`,
-            spec: seeded.spec,
-          });
-        }
+    if (store.failMode !== "none") {
+      return route.fulfill({
+        status: STATUS_FOR[store.failMode],
+        contentType: "application/json",
+        body: JSON.stringify({ detail: `backend is ${store.failMode}` }),
+      });
+    }
+
+    const url = new URL(route.request().url());
+    const key = url.searchParams.get("file_path") ?? "";
+    const isListing = url.pathname.endsWith("/all");
+    const json = (body: unknown, status = 200) =>
+      route.fulfill({
+        status,
+        contentType: "application/json",
+        body: JSON.stringify(body),
+      });
+
+    if (isListing) {
+      const matched = store.records.filter((row) => !key || row.key === key);
+      return json({
+        pipelines: matched.map((row) => rowOf(row, false)),
+        next_page_token: null,
+      });
+    }
+
+    switch (route.request().method()) {
+      case "PUT": {
+        const sent = route.request().postDataJSON() as {
+          root_pipeline_task: { componentRef: { spec: unknown } };
+        };
+        const spec = sent.root_pipeline_task.componentRef.spec;
+        const existing = store.records.find((row) => row.key === key);
+        store.revision += 1;
+
+        const written: StoredPipeline = {
+          key,
+          externalId: existing?.externalId ?? `external-${store.revision}`,
+          displayName: nameOf(spec),
+          contentVersion: `v${store.revision}`,
+          spec,
+        };
+
+        // Keeps its place in the listing, as a store keyed by id would.
+        store.records = existing
+          ? store.records.map((row) => (row.key === key ? written : row))
+          : [...store.records, written];
+        return json(rowOf(written, true));
       }
-
-      function persist(): void {
-        window.sessionStorage.setItem(
-          config.stateKey,
-          JSON.stringify([...store.entries()]),
-        );
+      case "DELETE":
+        store.records = store.records.filter((row) => row.key !== key);
+        return route.fulfill({ status: 204, body: "" });
+      default: {
+        store.readKeys.push(key);
+        const found = store.records.find((row) => row.key === key);
+        if (!found) return json({ detail: `no pipeline for ${key}` }, 404);
+        return json(rowOf(found, true));
       }
+    }
+  });
+}
 
-      persist();
+/**
+ * Takes the backend away, or gives it back, without reloading — the failure
+ * that matters is the one that arrives while someone is working.
+ */
+export function setBackendFailMode(page: Page, mode: BackendFailMode): void {
+  storeFor(page).failMode = mode;
+}
 
-      async function gate(): Promise<void> {
-        if (config.latencyMs > 0) {
-          await new Promise((resolve) => setTimeout(resolve, config.latencyMs));
-        }
+export function readBackendRecords(page: Page): StoredPipeline[] {
+  return [...storeFor(page).records];
+}
 
-        if (failMode !== "none") {
-          throw Object.assign(new Error(`host is ${failMode}`), {
-            code: failMode,
-          });
-        }
-      }
+/**
+ * Which pipelines were fetched in full. Reset per install rather than per page
+ * load, so a test can assert that a revisit read none of them.
+ */
+export function readBackendReadKeys(page: Page): string[] {
+  return [...storeFor(page).readKeys];
+}
 
-      function summaryOf(record: HostRecord) {
-        const { spec: _spec, ...summary } = record;
-        return summary;
-      }
-
-      function nameOf(spec: unknown): string | null {
-        if (typeof spec !== "object" || spec === null) return null;
-        const name: unknown = Reflect.get(spec, "name");
-        return typeof name === "string" ? name : null;
-      }
-
-      window.__TANGLE_PIPELINE_STORAGE_HOST__ = {
-        version: 1,
-        label: config.label,
-        async list() {
-          await gate();
-          return [...store.values()].map(summaryOf);
-        },
-        async read(key: string) {
-          await gate();
-          readKeys.push(key);
-          const found = store.get(key);
-          if (!found) {
-            throw Object.assign(new Error(`no pipeline for ${key}`), {
-              code: "not_found",
-            });
-          }
-          return found;
-        },
-        async write(key: string, spec: unknown) {
-          await gate();
-          const existing = store.get(key);
-          revision += 1;
-          const record: HostRecord = {
-            key,
-            externalId: existing?.externalId ?? `external-${revision}`,
-            displayName: nameOf(spec),
-            contentVersion: `v${revision}`,
-            spec,
-          };
-          store.set(key, record);
-          persist();
-          return summaryOf(record);
-        },
-        async delete(key: string) {
-          await gate();
-          store.delete(key);
-          persist();
-        },
-        async has(key: string) {
-          await gate();
-          return store.has(key);
-        },
-      };
-
-      window.__TANGLE_TEST_HOST__ = {
-        records: () => [...store.values()],
-        readKeys: () => [...readKeys],
-        setFailMode: (mode) => {
-          failMode = mode;
-        },
-      };
-    },
-    {
-      label: options.label ?? DEFAULT_LABEL,
-      seed: options.seed ?? [],
-      failMode: options.failMode ?? "none",
-      latencyMs: options.latencyMs ?? 0,
-      stateKey: STATE_KEY,
-    } satisfies Required<HostStorageOptions> & { stateKey: string },
-  );
+export function forgetBackendReadKeys(page: Page): void {
+  storeFor(page).readKeys = [];
 }
 
 /**
@@ -306,30 +310,8 @@ export async function seedLocallyStoredPipeline(
 }
 
 /**
- * Takes the store away, or gives it back, without reloading — the failure that
- * matters is the one that arrives while someone is working.
- */
-export async function setHostFailMode(
-  page: Page,
-  mode: HostFailMode,
-): Promise<void> {
-  await page.evaluate(
-    (value) => window.__TANGLE_TEST_HOST__?.setFailMode(value),
-    mode,
-  );
-}
-
-export async function readHostRecords(page: Page): Promise<HostRecord[]> {
-  return page.evaluate(() => window.__TANGLE_TEST_HOST__?.records() ?? []);
-}
-
-export async function readHostReadKeys(page: Page): Promise<string[]> {
-  return page.evaluate(() => window.__TANGLE_TEST_HOST__?.readKeys() ?? []);
-}
-
-/**
- * The negative assertion host mode exists for: with a host present, nothing may
- * reach the browser's own pipeline store, whatever the host does.
+ * The negative assertion backend storage exists for: with the beta on, nothing
+ * may reach the browser's own pipeline store, whatever the backend does.
  */
 export async function readLocallyStoredPipelineKeys(
   page: Page,

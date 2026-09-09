@@ -1,5 +1,5 @@
 import { isFlagEnabled } from "@/components/shared/Settings/useFlags";
-import { isHostStorage } from "@/services/pipelineStorage/storageMode";
+import { isBackendStorage } from "@/services/pipelineStorage/storageMode";
 import type { PipelineRef } from "@/services/pipelineStorage/types";
 
 import { APP_ROUTES, EDITOR_PATH } from "./appRoutes";
@@ -17,7 +17,7 @@ export interface EditorTarget {
  * and being the identity, it cannot go stale when one is renamed.
  */
 function editorSegment(ref: PipelineRef): string {
-  return isHostStorage() && ref.fileId ? ref.fileId : ref.name;
+  return isBackendStorage() && ref.fileId ? ref.fileId : ref.name;
 }
 
 export function getDefaultEditorTarget(ref: PipelineRef): EditorTarget {

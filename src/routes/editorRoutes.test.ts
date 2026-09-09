@@ -2,10 +2,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { getDefaultEditorHref, getDefaultEditorTarget } from "./editorRoutes";
 
-const { hostStorage } = vi.hoisted(() => ({ hostStorage: vi.fn(() => false) }));
+const { backendStorage } = vi.hoisted(() => ({
+  backendStorage: vi.fn(() => false),
+}));
 
 vi.mock("@/services/pipelineStorage/storageMode", () => ({
-  isHostStorage: hostStorage,
+  isBackendStorage: backendStorage,
 }));
 
 vi.mock("@/components/shared/Settings/useFlags", () => ({
@@ -15,12 +17,12 @@ vi.mock("@/components/shared/Settings/useFlags", () => ({
 const REF = { name: "Churn model", fileId: "ab420234-a05f" };
 
 afterEach(() => {
-  hostStorage.mockReturnValue(false);
+  backendStorage.mockReturnValue(false);
 });
 
 describe("where a store hands out its own ids", () => {
   it("puts the id in the path and nothing else anywhere", () => {
-    hostStorage.mockReturnValue(true);
+    backendStorage.mockReturnValue(true);
 
     expect(getDefaultEditorTarget(REF)).toEqual({
       to: "/editor-v2/$pipelineName",
@@ -30,7 +32,7 @@ describe("where a store hands out its own ids", () => {
   });
 
   it("falls back to the name for a pipeline with no id yet", () => {
-    hostStorage.mockReturnValue(true);
+    backendStorage.mockReturnValue(true);
 
     expect(getDefaultEditorHref({ name: "Churn model" })).toBe(
       "/editor-v2/Churn%20model",

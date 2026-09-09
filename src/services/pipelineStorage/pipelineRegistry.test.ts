@@ -4,7 +4,6 @@ import { Dexie } from "dexie";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { pipelineStorageDb } from "./db";
-import type { PipelineStorageHost } from "./host/contract";
 import {
   assertStorageKeyUnique,
   claimEntry,
@@ -15,27 +14,11 @@ import {
 import { resetStorageModeForTests } from "./storageMode";
 import { ROOT_FOLDER_ID } from "./types";
 
-const summary = {
-  key: "",
-  externalId: "",
-  displayName: null,
-  contentVersion: "1",
-};
-
-const host: PipelineStorageHost = {
-  version: 1,
-  label: "Shared storage",
-  list: async () => [],
-  read: async () => ({ ...summary, spec: {} }),
-  write: async () => summary,
-  delete: async () => undefined,
-  has: async () => false,
-};
-
-function useStore(kind: "local" | "host") {
-  vi.stubEnv("VITE_PIPELINE_STORAGE_BETA", kind === "host" ? "true" : "false");
-  if (kind === "host") window.__TANGLE_PIPELINE_STORAGE_HOST__ = host;
-  else delete window.__TANGLE_PIPELINE_STORAGE_HOST__;
+function useStore(kind: "local" | "backend") {
+  vi.stubEnv(
+    "VITE_PIPELINE_STORAGE_BETA",
+    kind === "backend" ? "true" : "false",
+  );
   resetStorageModeForTests();
 }
 
@@ -45,13 +28,12 @@ beforeEach(async () => {
 
 afterEach(() => {
   vi.unstubAllEnvs();
-  delete window.__TANGLE_PIPELINE_STORAGE_HOST__;
   resetStorageModeForTests();
 });
 
 describe("registry rows belong to the store that wrote them", () => {
-  it("hides a host row from browser storage, and the other way round", async () => {
-    useStore("host");
+  it("hides a backend row from browser storage, and the other way round", async () => {
+    useStore("backend");
     await claimEntry({
       id: "external-1",
       storageKey: "Churn model",
@@ -69,7 +51,7 @@ describe("registry rows belong to the store that wrote them", () => {
       folderId: ROOT_FOLDER_ID,
     });
 
-    useStore("host");
+    useStore("backend");
     expect(await findById("local-1")).toBeUndefined();
     expect((await findByStorageKey("Churn model"))?.id).toBe("external-1");
   });
@@ -82,7 +64,7 @@ describe("registry rows belong to the store that wrote them", () => {
       folderId: ROOT_FOLDER_ID,
     });
 
-    useStore("host");
+    useStore("backend");
     await expect(
       claimEntry({
         id: "external-1",
@@ -95,7 +77,7 @@ describe("registry rows belong to the store that wrote them", () => {
   });
 
   it("does not refuse a name only the other store is using", async () => {
-    useStore("host");
+    useStore("backend");
     await claimEntry({
       id: "external-1",
       storageKey: "Churn model",
@@ -146,7 +128,7 @@ describe("attributing rows written before rows said which store", () => {
     host_migration: "id",
   };
 
-  it("reads a host row by its reported version and a filed row by its folder", async () => {
+  it("reads a backend row by its reported version and a filed row by its folder", async () => {
     await pipelineStorageDb.close();
     await Dexie.delete("tangle_pipelines");
 
@@ -173,7 +155,7 @@ describe("attributing rows written before rows said which store", () => {
     expect(
       Object.fromEntries(attributed.map((row) => [row.id, row.storage])),
     ).toEqual({
-      "external-1": "host",
+      "external-1": "backend",
       "local-1": "local",
       "filed-1": "local",
     });

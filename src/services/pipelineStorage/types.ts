@@ -1,13 +1,16 @@
 import type { ComponentSpec } from "@/utils/componentSpec";
 
 import type { GoogleDriveDriverConfig } from "../googleDrive/types"; // google-drive
+import type { BackendDriverConfig } from "./drivers/BackendStorageDriver";
 import type { FolderIndexDbDriverConfig } from "./drivers/FolderIndexDbStorageDriver";
-import type { HostDriverConfig } from "./drivers/HostStorageDriver";
 import type { LocalFileSystemDriverConfig } from "./drivers/LocalFileSystemDriver";
 import type { RootFolderDbDriverConfig } from "./drivers/RootFolderDbStorageDriver";
 
 export const ROOT_FOLDER_ID = "__root__";
-export const HOST_DRIVER_TYPE = "host";
+export const BACKEND_DRIVER_TYPE = "backend";
+
+export type StorageErrorCode =
+  "unauthenticated" | "not_found" | "rate_limited" | "conflict" | "unavailable";
 
 export interface PipelineFileDescriptor {
   storageKey: string;
@@ -44,7 +47,7 @@ export type DriverConfig =
   | RootFolderDbDriverConfig
   | FolderIndexDbDriverConfig
   | LocalFileSystemDriverConfig
-  | HostDriverConfig
+  | BackendDriverConfig
   | GoogleDriveDriverConfig; // google-drive
 
 /**
@@ -54,7 +57,7 @@ export type DriverConfig =
  * store it came from would be found by the other one and answer for a pipeline
  * it has never seen.
  */
-export type PipelineStorageKind = "local" | "host";
+export type PipelineStorageKind = "local" | "backend";
 
 export interface CachedPipelineSpec {
   storage: PipelineStorageKind;

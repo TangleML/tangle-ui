@@ -20,7 +20,7 @@ export function PipelineStorageProvider({ children }: { children: ReactNode }) {
   const [service] = useState(getPipelineStorageService);
 
   useEffect(() => {
-    if (service.mode.kind !== "host") return;
+    if (service.mode.kind !== "backend") return;
 
     void startHostMigration(service.rootFolder).catch((error: unknown) => {
       console.error("Could not copy pipelines into the host store:", error);

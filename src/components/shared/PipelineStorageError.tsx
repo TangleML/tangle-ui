@@ -23,7 +23,8 @@ export function PipelineStorageError({
   onRetry?: () => void;
 }) {
   const { mode } = getPipelineStorageService();
-  const storageLabel = mode.kind === "host" ? mode.label : "Pipeline storage";
+  const storageLabel =
+    mode.kind === "backend" ? mode.label : "Pipeline storage";
 
   const headline =
     error instanceof PipelineNotFoundError ||
