@@ -438,4 +438,31 @@ test.describe("backend pipeline storage", () => {
 
     expect(readBackendRecords(page)).toHaveLength(SEED.length - 1);
   });
+
+  test("emptying the backend leaves the list, and copies up again next load", async ({
+    page,
+  }) => {
+    const localName = "Waiting in the browser";
+
+    await installSeededBackend(page);
+    await page.goto("/");
+    await seedLocallyStoredPipeline(page, localName);
+
+    await page.goto("/pipelines");
+    await expect(page.getByText(localName)).toBeVisible();
+
+    await page
+      .getByRole("button", { name: /reset backend pipelines/i })
+      .click();
+    await page.getByRole("button", { name: "Continue" }).click();
+
+    await expect(page).toHaveURL(/\/dashboard$/);
+    expect(readBackendRecords(page)).toEqual([]);
+
+    await page.goto("/pipelines");
+    await expect(page.getByText(localName)).toBeVisible();
+    expect(
+      readBackendRecords(page).map((record) => record.displayName),
+    ).toEqual([localName]);
+  });
 });

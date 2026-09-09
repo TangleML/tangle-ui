@@ -31,6 +31,7 @@ import BulkActionsBar from "./BulkActionsBar";
 import { HostMigrationNotice } from "./HostMigrationNotice";
 import { PipelineFiltersBar } from "./PipelineFiltersBar";
 import PipelineRow from "./PipelineRow";
+import { ResetBackendPipelinesButton } from "./ResetBackendPipelinesButton";
 import { useHostMigration } from "./useHostMigration";
 import { usePipelineFilters } from "./usePipelineFilters";
 import { usePipelineListEntries } from "./usePipelineListEntries";
@@ -158,7 +159,12 @@ export const PipelineSection = withSuspenseWrapper(
       <BlockStack gap="4" className="w-full">
         <PipelineFiltersBar
           filters={filterBarProps}
-          actions={<ExamplePipelineButton />}
+          actions={
+            <>
+              <ResetBackendPipelinesButton />
+              <ExamplePipelineButton />
+            </>
+          }
         />
 
         <Table className="text-sm">
