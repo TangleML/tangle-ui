@@ -64,5 +64,89 @@ describe("AutoSaveStore.save", () => {
     await store.save();
 
     expect(store.saveError).toContain("could not be reached");
+    store.dispose();
+  });
+});
+
+describe("AutoSaveStore when the store cannot be reached", () => {
+  it("holds on to the rejected edit rather than dropping it", async () => {
+    const store = createStore({
+      write: async () => {
+        throw new Error("unreachable");
+      },
+    } as unknown as PipelineFile);
+
+    store.init(createSpec("Churn model"), "Churn model");
+    await store.save();
+
+    expect(store.hasPendingChanges).toBe(true);
+    store.dispose();
+  });
+
+  it("saves the held edit as soon as the store takes writes again", async () => {
+    let reachable = false;
+    const written: string[] = [];
+    const store = createStore({
+      write: async (yamlText: string) => {
+        if (!reachable) throw new Error("unreachable");
+        written.push(yamlText);
+      },
+    } as unknown as PipelineFile);
+
+    store.init(createSpec("Churn model"), "Churn model");
+    await store.save();
+    expect(written).toEqual([]);
+
+    reachable = true;
+    window.dispatchEvent(new Event("focus"));
+    await vi.waitFor(() => expect(store.hasPendingChanges).toBe(false));
+
+    expect(written).toEqual(["name: Churn model"]);
+    expect(store.saveError).toBeNull();
+    expect(store.lastSavedAt).toBeInstanceOf(Date);
+    store.dispose();
+  });
+
+  it("stops retrying once the editor is closed", async () => {
+    const write = vi.fn(async () => {
+      throw new Error("unreachable");
+    });
+    const store = createStore({ write } as unknown as PipelineFile);
+
+    store.init(createSpec("Churn model"), "Churn model");
+    await store.save();
+    store.dispose();
+
+    write.mockClear();
+    window.dispatchEvent(new Event("focus"));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    expect(write).not.toHaveBeenCalled();
+  });
+
+  it("lands overlapping saves in order instead of racing them", async () => {
+    const written: string[] = [];
+    let release: (() => void) | undefined;
+    const store = createStore({
+      write: async (yamlText: string) => {
+        if (!release) {
+          await new Promise<void>((resolve) => (release = resolve));
+        }
+        written.push(yamlText);
+      },
+    } as unknown as PipelineFile);
+
+    const spec = createSpec("Churn model");
+    store.init(spec, "Churn model");
+
+    const first = store.save();
+    spec.name = "Churn model v2";
+    const second = store.save();
+
+    release?.();
+    await Promise.all([first, second]);
+
+    expect(written).toEqual(["name: Churn model", "name: Churn model v2"]);
+    store.dispose();
   });
 });

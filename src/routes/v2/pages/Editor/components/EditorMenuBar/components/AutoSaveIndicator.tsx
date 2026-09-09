@@ -45,9 +45,14 @@ function getTooltipText(
   isSaving: boolean,
   lastSavedAt: Date | null,
   saveError: string | null,
+  hasPendingChanges: boolean,
 ): string {
   if (isSaving) return "Saving...";
-  if (saveError) return saveError;
+  if (saveError) {
+    return hasPendingChanges
+      ? `${saveError} Your changes are still here and will be saved as soon as it can be reached — click to try now.`
+      : saveError;
+  }
   if (lastSavedAt) {
     return `Last saved at ${lastSavedAt.toLocaleTimeString()}`;
   }
@@ -56,8 +61,13 @@ function getTooltipText(
 
 export const AutoSaveIndicator = observer(function AutoSaveIndicator() {
   const { autoSave } = useEditorSession();
-  const { isSaving, lastSavedAt, saveError } = autoSave;
-  const tooltipText = getTooltipText(isSaving, lastSavedAt, saveError);
+  const { isSaving, lastSavedAt, saveError, hasPendingChanges } = autoSave;
+  const tooltipText = getTooltipText(
+    isSaving,
+    lastSavedAt,
+    saveError,
+    hasPendingChanges,
+  );
 
   const handleClick = () => {
     void autoSave.save();

@@ -31,6 +31,27 @@ export async function readHostMigration(): Promise<
   return pipelineStorageDb.host_migration.get(RECORD_ID);
 }
 
+/**
+ * Testing the migration means running it more than once, and the whole point of
+ * the record is that it only runs again if something is wrong. Exposed on the
+ * window in development so it can be reset without hand-editing IndexedDB —
+ * pipelines already copied stay in the store, so clear them there too for a
+ * genuinely clean run.
+ */
+if (import.meta.env.DEV && typeof window !== "undefined") {
+  window.resetPipelineStorageMigration = async () => {
+    await pipelineStorageDb.host_migration.clear();
+    await pipelineStorageDb.pipeline_specs.clear();
+    console.info("Migration reset. Reload to run it again.");
+  };
+}
+
+declare global {
+  interface Window {
+    resetPipelineStorageMigration?: () => Promise<void>;
+  }
+}
+
 function isHostMigrationSettled(
   record: HostMigrationRecord | undefined,
 ): boolean {

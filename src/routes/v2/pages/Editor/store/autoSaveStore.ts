@@ -15,16 +15,31 @@ import type { UndoStore } from "./undoStore";
 
 const AUTOSAVE_MIN_SAVING_INDICATOR_MS = 600;
 
+const RETRY_DELAYS_MS = [5_000, 15_000, 30_000, 60_000];
+
 export class AutoSaveStore {
   @observable accessor isSaving = false;
   @observable accessor lastSavedAt: Date | null = null;
   @observable accessor saveError: string | null = null;
+  @observable accessor hasPendingChanges = false;
 
   private spec: ComponentSpec | null = null;
   private pipelineName: string | null = null;
   private disposeReaction: (() => void) | null = null;
   // Last content written to disk; used to skip a redundant flush on dispose.
   private lastSavedYaml: string | null = null;
+
+  /**
+   * Edits that storage has not accepted yet. A rejected write leaves them here
+   * rather than dropping them, because the editor is then the only copy: the
+   * store is retried until it takes them, and a user who stops editing after a
+   * failure is not quietly left with unsaved work.
+   */
+  private pendingYaml: string | null = null;
+  private inFlight: Promise<void> | null = null;
+  private retryTimer: ReturnType<typeof setTimeout> | null = null;
+  private retryAttempt = 0;
+  private disposeRecovery: (() => void) | null = null;
 
   private debouncedSave = debounce((yamlText: string) => {
     void this.performSave(yamlText);
@@ -44,6 +59,9 @@ export class AutoSaveStore {
     this.isSaving = false;
     this.lastSavedAt = null;
     this.saveError = null;
+    this.hasPendingChanges = false;
+    this.pendingYaml = null;
+    this.retryAttempt = 0;
     // The freshly-loaded spec matches what's on disk, so seed the baseline to
     // avoid flushing an unchanged pipeline on dispose.
     this.lastSavedYaml = this.serializeSpec();
@@ -53,6 +71,8 @@ export class AutoSaveStore {
       (yamlText) => this.scheduleAutoSave(yamlText),
       { fireImmediately: false },
     );
+
+    this.watchForRecovery();
   }
 
   @action dispose() {
@@ -64,6 +84,9 @@ export class AutoSaveStore {
       });
     }
     this.debouncedSave.cancel();
+    this.clearRetry();
+    this.disposeRecovery?.();
+    this.disposeRecovery = null;
     this.disposeReaction?.();
     this.disposeReaction = null;
     this.spec = null;
@@ -92,6 +115,10 @@ export class AutoSaveStore {
     this.isSaving = false;
   }
 
+  @action private setPending(value: boolean) {
+    this.hasPendingChanges = value;
+  }
+
   private serializeSpec(): string | null {
     if (!this.spec) return null;
     try {
@@ -110,9 +137,46 @@ export class AutoSaveStore {
   }
 
   private async performSave(yamlText: string) {
-    const pipelineName = this.pipelineName;
-    if (!pipelineName) return;
+    if (!this.pipelineName) return;
 
+    this.pendingYaml = yamlText;
+    this.setPending(true);
+    this.clearRetry();
+
+    // A second save starting mid-write would race the first one to the store,
+    // and the loser is whichever the store happens to finish last. Later edits
+    // wait and are picked up by the write already running.
+    if (this.inFlight) return this.inFlight;
+
+    this.inFlight = this.drainPending();
+    try {
+      await this.inFlight;
+    } finally {
+      this.inFlight = null;
+    }
+  }
+
+  private async drainPending(): Promise<void> {
+    while (this.pendingYaml !== null) {
+      const yamlText = this.pendingYaml;
+      const outcome = await this.writeOnce(yamlText);
+
+      if (typeof outcome === "string") {
+        this.setSaveError(outcome);
+        this.scheduleRetry();
+        return;
+      }
+
+      this.setSaved(outcome);
+      this.retryAttempt = 0;
+      if (this.pendingYaml === yamlText) this.pendingYaml = null;
+    }
+
+    this.setPending(false);
+  }
+
+  private async writeOnce(yamlText: string): Promise<Date | string> {
+    const pipelineName = this.pipelineName;
     this.setSaving(true);
 
     const savePromise = (async () => {
@@ -137,12 +201,51 @@ export class AutoSaveStore {
     );
 
     const [outcome] = await Promise.all([savePromise, minDisplayPromise]);
+    return outcome;
+  }
 
-    if (outcome instanceof Date) {
-      this.setSaved(outcome);
-    } else {
-      this.setSaveError(outcome);
+  private scheduleRetry() {
+    this.clearRetry();
+
+    const delay =
+      RETRY_DELAYS_MS[Math.min(this.retryAttempt, RETRY_DELAYS_MS.length - 1)];
+    this.retryAttempt += 1;
+    this.retryTimer = setTimeout(() => void this.flushPending(), delay);
+  }
+
+  private clearRetry() {
+    if (this.retryTimer === null) return;
+    clearTimeout(this.retryTimer);
+    this.retryTimer = null;
+  }
+
+  private async flushPending(): Promise<void> {
+    if (this.pendingYaml === null || this.inFlight) return;
+
+    this.inFlight = this.drainPending();
+    try {
+      await this.inFlight;
+    } finally {
+      this.inFlight = null;
     }
+  }
+
+  /**
+   * Coming back online or back to the tab is the cheapest signal that a store
+   * that refused a write a moment ago might take it now, and it beats waiting
+   * out the backoff.
+   */
+  private watchForRecovery() {
+    if (typeof window === "undefined") return;
+
+    const retryNow = () => void this.flushPending();
+    window.addEventListener("online", retryNow);
+    window.addEventListener("focus", retryNow);
+
+    this.disposeRecovery = () => {
+      window.removeEventListener("online", retryNow);
+      window.removeEventListener("focus", retryNow);
+    };
   }
 
   private async persistUndoHistory() {
