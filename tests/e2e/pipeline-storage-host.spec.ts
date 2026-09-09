@@ -100,6 +100,24 @@ test.describe("host-provided pipeline storage", () => {
     ).toContain(localName);
   });
 
+  test("opens a pipeline at a url that is only its id", async ({ page }) => {
+    await installSeededHost(page);
+
+    await page.goto("/pipelines");
+    await page.getByText("Churn model").click();
+
+    await expect(page.locator('[data-testid="rf__wrapper"]')).toBeVisible({
+      timeout: 30_000,
+    });
+
+    const url = new URL(page.url());
+    const [record] = (await readHostRecords(page)).filter(
+      (entry) => entry.displayName === "Churn model",
+    );
+    expect(url.pathname).toBe(`/editor-v2/${record.externalId}`);
+    expect(url.search).toBe("");
+  });
+
   test("keeps the browser's own pipeline store empty", async ({ page }) => {
     await installSeededHost(page);
 

@@ -282,6 +282,39 @@ describe("resolving a route reference against a host", () => {
     ).rejects.toThrow(PipelineNotFoundError);
   });
 
+  it("opens a pipeline from a path that carries only its id", async () => {
+    installHost([summary("opaque-key-1", "Churn model")]);
+
+    const file = await new PipelineStorageService().resolve({
+      name: "id-opaque-key-1",
+      fileId: "id-opaque-key-1",
+    });
+
+    expect(file.storageKey).toBe("opaque-key-1");
+  });
+
+  it("still opens an older link whose path carries a name", async () => {
+    installHost([summary("opaque-key-1", "Churn model")]);
+
+    const file = await new PipelineStorageService().resolve({
+      name: "Churn model",
+      fileId: "Churn model",
+    });
+
+    expect(file.storageKey).toBe("opaque-key-1");
+  });
+
+  it("refuses a link whose id is gone rather than opening a namesake", async () => {
+    installHost([summary("opaque-key-1", "Churn model")]);
+
+    await expect(
+      new PipelineStorageService().resolve({
+        name: "Churn model",
+        fileId: "id-of-a-deleted-pipeline",
+      }),
+    ).rejects.toThrow(PipelineNotFoundError);
+  });
+
   it("finds a pipeline the registry has never seen by its id", async () => {
     installHost([summary("opaque-key-1", "Churn model")]);
 

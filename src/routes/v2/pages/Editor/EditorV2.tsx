@@ -201,7 +201,7 @@ export function EditorV2({
     pipelineRefProp !== undefined
       ? pipelineRefProp
       : pipelineName
-        ? { name: pipelineName, fileId }
+        ? { name: pipelineName, fileId: fileId ?? pipelineName }
         : null;
 
   return (

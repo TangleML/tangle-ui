@@ -3,6 +3,7 @@ import { makeObservable, observable } from "mobx";
 import { createDriver } from "./createDriver";
 import { pipelineStorageDb } from "./db";
 import { RootFolderDbStorageDriver } from "./drivers/RootFolderDbStorageDriver";
+import { UnavailableStorageDriver } from "./drivers/UnavailableStorageDriver";
 import { PipelineFile } from "./PipelineFile";
 import type { PipelineFileSource } from "./pipelineFileEvents";
 import { PipelineFolder } from "./PipelineFolder";
@@ -36,7 +37,26 @@ export class PipelineStorageService {
    * happens to share it.
    */
   async resolve(ref: PipelineRef): Promise<PipelineFile> {
-    if (ref.fileId) return this.findPipelineById(ref.fileId);
+    if (ref.fileId) {
+      const found = await this.findPipelineById(ref.fileId).catch(
+        (error: unknown) => {
+          /**
+           * A route that carries one segment offers it as both, because what a
+           * path means depends on the store and links outlive that. A `fileId`
+           * given *alongside* a different name is still taken at its word: a
+           * miss there means the pipeline is gone, not that some namesake
+           * should be opened in its place.
+           */
+          const isSameSegment = ref.name === ref.fileId;
+          if (isSameSegment && error instanceof PipelineNotFoundError) {
+            return undefined;
+          }
+          throw error;
+        },
+      );
+
+      if (found) return found;
+    }
 
     const found = await this.findPipelineByName(ref.name);
     if (found) return found;
@@ -247,6 +267,16 @@ function createRoot(mode: StorageMode): PipelineFolder {
       name: mode.label,
       parentId: null,
       driver: createDriver({ driverType: "host" }),
+      isFlat: true,
+    });
+  }
+
+  if (mode.kind === "host-missing") {
+    return new PipelineFolder({
+      id: ROOT_FOLDER_ID,
+      name: "Pipeline storage",
+      parentId: null,
+      driver: new UnavailableStorageDriver(),
       isFlat: true,
     });
   }
