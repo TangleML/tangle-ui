@@ -8,6 +8,7 @@ import { type ReactNode, useEffect } from "react";
 
 import { ComponentEditorProvider } from "@/components/shared/ComponentEditor/ComponentEditorProvider";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
+import { PipelineStorageError } from "@/components/shared/PipelineStorageError";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { InlineStack } from "@/components/ui/layout";
@@ -142,6 +143,15 @@ const PipelineEditor = withSuspenseWrapper(
     );
   }),
   PipelineEditorSkeleton,
+  /**
+   * A pipeline that cannot be read is not a component that failed to render,
+   * and the generic retry icon says neither which pipeline nor why. It matters
+   * most for a link written against a store the app is no longer using, which
+   * is a miss rather than a fault.
+   */
+  ({ error, resetErrorBoundary }) => (
+    <PipelineStorageError error={error} onRetry={resetErrorBoundary} />
+  ),
 );
 
 function EditorV2Content({ pipelineRef }: { pipelineRef: PipelineRef | null }) {

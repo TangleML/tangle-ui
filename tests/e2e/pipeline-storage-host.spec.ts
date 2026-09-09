@@ -156,6 +156,19 @@ test.describe("host-provided pipeline storage", () => {
     expect(url.search).toBe("");
   });
 
+  test("says a link to a pipeline it does not hold cannot be opened", async ({
+    page,
+  }) => {
+    await installSeededHost(page);
+
+    await page.goto("/editor-v2/0f8c1a2b-0000-4000-8000-00000000dead");
+
+    await expect(page.getByTestId("pipeline-storage-error")).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(page.getByText(/could not be opened/i)).toBeVisible();
+  });
+
   test("keeps the browser's own pipeline store empty", async ({ page }) => {
     await installSeededHost(page);
 

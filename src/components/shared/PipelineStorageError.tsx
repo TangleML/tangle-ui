@@ -2,7 +2,11 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { BlockStack } from "@/components/ui/layout";
 import { Text } from "@/components/ui/typography";
-import { getPipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
+import {
+  AmbiguousPipelineNameError,
+  getPipelineStorageService,
+  PipelineNotFoundError,
+} from "@/services/pipelineStorage/PipelineStorageService";
 import { getErrorMessage } from "@/utils/string";
 
 /**
@@ -21,6 +25,12 @@ export function PipelineStorageError({
   const { mode } = getPipelineStorageService();
   const storageLabel = mode.kind === "host" ? mode.label : "Pipeline storage";
 
+  const headline =
+    error instanceof PipelineNotFoundError ||
+    error instanceof AmbiguousPipelineNameError
+      ? "This pipeline could not be opened"
+      : `${storageLabel} could not be read`;
+
   return (
     <BlockStack
       align="center"
@@ -29,7 +39,7 @@ export function PipelineStorageError({
       data-testid="pipeline-storage-error"
     >
       <Icon name="DatabaseZap" size="lg" className="text-subdued" />
-      <Text tone="subdued">{storageLabel} could not be read</Text>
+      <Text tone="subdued">{headline}</Text>
       <Text size="xs" tone="subdued">
         {getErrorMessage(error)}
       </Text>
