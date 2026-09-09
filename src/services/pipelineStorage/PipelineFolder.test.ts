@@ -26,6 +26,15 @@ vi.mock("./pipelineRegistry", () => ({
   addEntry: vi.fn(async (entry: PipelineRegistryEntry) => {
     registry.set(entry.id, entry);
   }),
+  claimEntry: vi.fn(async (entry: PipelineRegistryEntry) => {
+    const existing = [...registry.values()].find(
+      (candidate) => candidate.storageKey === entry.storageKey,
+    );
+    if (existing) return existing;
+
+    registry.set(entry.id, entry);
+    return entry;
+  }),
   updateEntry: vi.fn(
     async (id: string, changes: Partial<PipelineRegistryEntry>) => {
       const existing = registry.get(id);

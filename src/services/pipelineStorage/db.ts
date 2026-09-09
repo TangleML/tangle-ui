@@ -4,6 +4,7 @@ import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 
 import { isHostStorage } from "./storageMode";
 import {
+  type CachedPipelineSpec,
   type FolderEntry,
   type PipelineRegistryEntry,
   ROOT_FOLDER_ID,
@@ -12,6 +13,7 @@ import {
 export type PipelineStorageDb = Dexie & {
   pipeline_registry: EntityTable<PipelineRegistryEntry, "id">;
   folders: EntityTable<FolderEntry, "id">;
+  pipeline_specs: EntityTable<CachedPipelineSpec, "storageKey">;
 };
 
 export const pipelineStorageDb = new Dexie(
@@ -63,6 +65,12 @@ pipelineStorageDb
       await tx.table<FolderEntry>("folders").delete(folder.id);
     }
   });
+
+pipelineStorageDb.version(4).stores({
+  pipeline_registry: "id, &storageKey, folderId, [folderId+storageKey]",
+  folders: "id, parentId",
+  pipeline_specs: "storageKey",
+});
 
 pipelineStorageDb.on("ready", async () => {
   await seedRegistryFromLegacyList();

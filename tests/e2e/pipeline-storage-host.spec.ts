@@ -3,17 +3,24 @@ import { expect, type Page, test } from "@playwright/test";
 import {
   type HostStorageOptions,
   installPipelineStorageHost,
+  readHostReadKeys,
   readHostRecords,
   readLocallyStoredPipelineKeys,
 } from "./fixtures/pipelineStorageHost";
 
 const LABEL = "Shared storage";
 
+const CHURN_TAG = "quarterly";
+
 const SEED = [
   {
     key: "0f8c1a2b-0000-4000-8000-000000000001",
     displayName: "Churn model",
-    spec: { name: "Churn model", implementation: { graph: { tasks: {} } } },
+    spec: {
+      name: "Churn model",
+      metadata: { annotations: { tags: CHURN_TAG } },
+      implementation: { graph: { tasks: {} } },
+    },
   },
   {
     key: "0f8c1a2b-0000-4000-8000-000000000002",
@@ -42,6 +49,35 @@ test.describe("host-provided pipeline storage", () => {
 
     await expect(page.getByText("Churn model")).toBeVisible();
     await expect(page.getByText("Nightly refresh")).toBeVisible();
+  });
+
+  test("keeps the pipeline table at /pipelines, contents and all", async ({
+    page,
+  }) => {
+    await installSeededHost(page);
+
+    await page.goto("/pipelines");
+
+    await expect(page.getByText("Churn model")).toBeVisible();
+    await expect(page.getByText("Nightly refresh")).toBeVisible();
+    await expect(page.getByText(CHURN_TAG)).toBeVisible();
+    await expect(page.getByPlaceholder(/search/i).first()).toBeVisible();
+  });
+
+  test("reads each pipeline once and serves the next visit from cache", async ({
+    page,
+  }) => {
+    await installSeededHost(page);
+
+    await page.goto("/pipelines");
+    await expect(page.getByText(CHURN_TAG)).toBeVisible();
+    expect((await readHostReadKeys(page)).sort()).toEqual(
+      SEED.map((entry) => entry.key).sort(),
+    );
+
+    await page.reload();
+    await expect(page.getByText(CHURN_TAG)).toBeVisible();
+    expect(await readHostReadKeys(page)).toEqual([]);
   });
 
   test("keeps the browser's own pipeline store empty", async ({ page }) => {

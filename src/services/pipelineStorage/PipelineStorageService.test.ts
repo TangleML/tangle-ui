@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { RootFolderDbStorageDriver } from "./drivers/RootFolderDbStorageDriver";
 import type { HostPipelineSummary, PipelineStorageHost } from "./host/contract";
 import {
   AmbiguousPipelineNameError,
@@ -18,6 +19,15 @@ const registry = new Map<string, PipelineRegistryEntry>();
 vi.mock("./pipelineRegistry", () => ({
   addEntry: async (entry: PipelineRegistryEntry) => {
     registry.set(entry.id, entry);
+  },
+  claimEntry: async (entry: PipelineRegistryEntry) => {
+    const existing = [...registry.values()].find(
+      (candidate) => candidate.storageKey === entry.storageKey,
+    );
+    if (existing) return existing;
+
+    registry.set(entry.id, entry);
+    return entry;
   },
   updateEntry: async (id: string, updates: Partial<PipelineRegistryEntry>) => {
     const entry = registry.get(id);
@@ -133,6 +143,7 @@ beforeEach(() => {
 afterEach(() => {
   delete window.__TANGLE_PIPELINE_STORAGE_HOST__;
   resetStorageModeForTests();
+  vi.restoreAllMocks();
 });
 
 describe("with no host on the page", () => {
@@ -193,6 +204,41 @@ describe("with a host on the page", () => {
     delete window.__TANGLE_PIPELINE_STORAGE_HOST__;
 
     expect(new PipelineStorageService().mode).toEqual(service.mode);
+  });
+});
+
+describe("the flat list of everything", () => {
+  it("reads the whole browser store, not just the pipelines left in the root", async () => {
+    const listed = vi.fn(async () => [
+      { storageKey: "In the root" },
+      { storageKey: "Filed away" },
+    ]);
+    vi.spyOn(RootFolderDbStorageDriver.prototype, "list").mockImplementation(
+      listed,
+    );
+    registry.set("filed", {
+      id: "filed",
+      storageKey: "Filed away",
+      folderId: "folder-1",
+    });
+
+    const files = await new PipelineStorageService().listAllPipelines();
+
+    expect(files.map((file) => file.storageKey)).toEqual([
+      "In the root",
+      "Filed away",
+    ]);
+    expect(registry.get("filed")?.folderId).toBe("folder-1");
+  });
+
+  it("asks a host for its listing rather than the browser store", async () => {
+    installHost([summary("opaque-key-1", "Churn model")]);
+    const listed = vi.spyOn(RootFolderDbStorageDriver.prototype, "list");
+
+    const files = await new PipelineStorageService().listAllPipelines();
+
+    expect(files.map((file) => file.displayName)).toEqual(["Churn model"]);
+    expect(listed).not.toHaveBeenCalled();
   });
 });
 

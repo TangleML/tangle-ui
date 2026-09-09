@@ -37,7 +37,7 @@ import {
 } from "@/routes/editorRoutes";
 import { deletePipelineByName } from "@/services/pipelineStorage/pipelineOperations";
 import { getPipelineTagsFromSpec } from "@/utils/annotations";
-import type { ComponentReferenceWithSpec } from "@/utils/componentStore";
+import type { ComponentSpec } from "@/utils/componentSpec";
 import { formatDate } from "@/utils/date";
 import { getErrorMessage } from "@/utils/string";
 import { tracking } from "@/utils/tracking";
@@ -51,7 +51,7 @@ const DEFAULT_PIPELINE_ROW_ANALYTICS_PREFIX = "pipeline_home.table";
 
 interface PipelineRowProps {
   url?: string;
-  componentRef?: ComponentReferenceWithSpec;
+  spec?: ComponentSpec;
   name?: string;
   modificationTime?: Date;
   onDelete?: () => void;
@@ -73,7 +73,7 @@ interface PipelineRowProps {
 const PipelineRow = withSuspenseWrapper(
   ({
     name,
-    componentRef,
+    spec,
     modificationTime,
     onDelete,
     isSelected = false,
@@ -98,9 +98,7 @@ const PipelineRow = withSuspenseWrapper(
       track(`${analyticsTrackingPrefix}.${suffix}`, metadata);
     };
 
-    const componentSpec = componentRef?.spec;
-
-    const tags = getPipelineTagsFromSpec(componentSpec);
+    const tags = getPipelineTagsFromSpec(spec);
 
     const handleRowClick = (e: MouseEvent) => {
       if ((e.target as HTMLElement).closest("[data-popover-trigger]")) {

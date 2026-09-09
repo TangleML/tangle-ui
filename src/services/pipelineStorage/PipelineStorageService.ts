@@ -44,6 +44,24 @@ export class PipelineStorageService {
     throw new PipelineNotFoundError(`Pipeline "${ref.name}" not found`);
   }
 
+  /**
+   * The flat pipeline list shows everything the user has, wherever they filed
+   * it. A store that hands out its own keys has no folders and its listing is
+   * already that; browser storage keeps one list behind however many folders
+   * point into it, so the whole list is read rather than the root folder's
+   * share of it.
+   */
+  async listAllPipelines(): Promise<PipelineFile[]> {
+    if (this.rootFolder.isFlat) return this.rootFolder.listPipelines();
+
+    return new PipelineFolder({
+      id: ROOT_FOLDER_ID,
+      name: this.rootFolder.name,
+      parentId: null,
+      driver: new RootFolderDbStorageDriver(),
+    }).listPipelines();
+  }
+
   async findPipelineByName(name: string): Promise<PipelineFile | undefined> {
     return (
       (await this.resolvePipelineByName(name)) ??

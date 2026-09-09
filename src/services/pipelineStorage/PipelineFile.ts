@@ -14,12 +14,14 @@ interface PipelineFileInit {
   storageKey: string;
   folder: PipelineFolder;
   displayName?: string;
+  contentVersion?: string;
   createdAt?: Date;
   modifiedAt?: Date;
 }
 
 export class PipelineFile {
   readonly id: string;
+  readonly contentVersion?: string;
   readonly createdAt?: Date;
   readonly modifiedAt?: Date;
 
@@ -37,6 +39,7 @@ export class PipelineFile {
     this.storageKey = options.storageKey;
     this.folder = options.folder;
     this.assignedDisplayName = options.displayName;
+    this.contentVersion = options.contentVersion;
     this.createdAt = options.createdAt;
     this.modifiedAt = options.modifiedAt;
 

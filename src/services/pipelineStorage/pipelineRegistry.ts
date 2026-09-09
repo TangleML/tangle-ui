@@ -5,6 +5,28 @@ export async function addEntry(entry: PipelineRegistryEntry): Promise<void> {
   await pipelineStorageDb.pipeline_registry.add(entry);
 }
 
+/**
+ * Two listings running at once both find no row for a storage key and both try
+ * to add one, and the unique index fails the loser — taking down a whole
+ * listing over a row that already says what it wanted to say. Claiming inside a
+ * transaction makes the second one find the first one's row instead.
+ */
+export async function claimEntry(
+  entry: PipelineRegistryEntry,
+): Promise<PipelineRegistryEntry> {
+  return pipelineStorageDb.transaction(
+    "rw",
+    pipelineStorageDb.pipeline_registry,
+    async () => {
+      const existing = await findByStorageKey(entry.storageKey);
+      if (existing) return existing;
+
+      await pipelineStorageDb.pipeline_registry.add(entry);
+      return entry;
+    },
+  );
+}
+
 export async function updateEntry(
   id: string,
   updates: Partial<Omit<PipelineRegistryEntry, "id">>,

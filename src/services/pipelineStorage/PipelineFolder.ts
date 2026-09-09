@@ -7,9 +7,9 @@ import { emitPipelineFileChanged } from "./pipelineFileEvents";
 import {
   addEntry,
   assertStorageKeyUnique,
+  claimEntry,
   deleteEntry,
   deleteFoldersAndDetachEntries,
-  findByStorageKey,
   getAllByFolderId,
   updateEntry,
 } from "./pipelineRegistry";
@@ -272,20 +272,14 @@ async function resolveOrCreateRegistryEntry(
   descriptor: PipelineFileDescriptor,
   folder: PipelineFolder,
 ): Promise<PipelineFile> {
-  const existing = await findByStorageKey(descriptor.storageKey);
-
-  if (existing) {
-    return new PipelineFile({ id: existing.id, folder, ...descriptor });
-  }
-
-  const id = descriptor.externalId ?? crypto.randomUUID();
-  await addEntry({
-    id,
+  const claimed = await claimEntry({
+    id: descriptor.externalId ?? crypto.randomUUID(),
     storageKey: descriptor.storageKey,
     folderId: folder.id,
     contentVersion: descriptor.contentVersion,
   });
-  return new PipelineFile({ id, folder, ...descriptor });
+
+  return new PipelineFile({ id: claimed.id, folder, ...descriptor });
 }
 
 /**

@@ -1,3 +1,5 @@
+import type { ComponentSpec } from "@/utils/componentSpec";
+
 import type { GoogleDriveDriverConfig } from "../googleDrive/types"; // google-drive
 import type { FolderIndexDbDriverConfig } from "./drivers/FolderIndexDbStorageDriver";
 import type { HostDriverConfig } from "./drivers/HostStorageDriver";
@@ -45,6 +47,12 @@ export type DriverConfig =
   | HostDriverConfig
   | GoogleDriveDriverConfig; // google-drive
 
+export interface CachedPipelineSpec {
+  storageKey: string;
+  version: string;
+  spec: ComponentSpec;
+}
+
 export interface PipelineRegistryEntry {
   id: string;
   storageKey: string;
@@ -72,5 +80,6 @@ export const FoldersQueryKeys = {
     ["pipeline-folders", "breadcrumbs", folderId] as const,
   Pipelines: (folderId: string | null) =>
     ["pipeline-folders", "pipelines", folderId] as const,
+  AllPipelines: () => ["pipeline-folders", "pipelines", "all"] as const,
   Favorites: () => ["pipeline-folders", "favorites"] as const,
 } as const;

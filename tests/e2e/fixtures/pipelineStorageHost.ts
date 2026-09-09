@@ -25,6 +25,7 @@ interface HostRecord {
 
 interface HostTestState {
   records(): HostRecord[];
+  readKeys(): string[];
 }
 
 declare global {
@@ -57,6 +58,12 @@ export async function installPipelineStorageHost(
         saved ? (JSON.parse(saved) as [string, HostRecord][]) : [],
       );
       let revision = store.size;
+
+      /**
+       * Deliberately not persisted: a test asserting that a reload served the
+       * pipeline contents from cache needs the count for this page load alone.
+       */
+      const readKeys: string[] = [];
 
       if (!saved) {
         for (const seeded of config.seed) {
@@ -112,6 +119,7 @@ export async function installPipelineStorageHost(
         },
         async read(key: string) {
           await gate();
+          readKeys.push(key);
           const found = store.get(key);
           if (!found) {
             throw Object.assign(new Error(`no pipeline for ${key}`), {
@@ -148,6 +156,7 @@ export async function installPipelineStorageHost(
 
       window.__TANGLE_TEST_HOST__ = {
         records: () => [...store.values()],
+        readKeys: () => [...readKeys],
       };
     },
     {
@@ -162,6 +171,10 @@ export async function installPipelineStorageHost(
 
 export async function readHostRecords(page: Page): Promise<HostRecord[]> {
   return page.evaluate(() => window.__TANGLE_TEST_HOST__?.records() ?? []);
+}
+
+export async function readHostReadKeys(page: Page): Promise<string[]> {
+  return page.evaluate(() => window.__TANGLE_TEST_HOST__?.readKeys() ?? []);
 }
 
 /**
