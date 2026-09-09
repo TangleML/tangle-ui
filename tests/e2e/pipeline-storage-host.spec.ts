@@ -251,6 +251,26 @@ test.describe("host-provided pipeline storage", () => {
     await expect(banner).toBeHidden();
   });
 
+  test("offers a copy before asking for a sign-in that would discard it", async ({
+    page,
+  }) => {
+    await installSeededHost(page);
+
+    await page.goto(`/editor-v2/${SEED[0].key}`);
+    await expect(page.locator('[data-testid="rf__wrapper"]')).toBeVisible({
+      timeout: 30_000,
+    });
+
+    await setHostFailMode(page, "unauthenticated");
+    await page.getByTestId("auto-save-button").click();
+
+    const dialog = page.getByTestId("expired-session");
+    await expect(dialog).toBeVisible();
+    await expect(
+      dialog.getByRole("button", { name: "Download a copy" }),
+    ).toBeVisible();
+  });
+
   test("a deleted pipeline does not come back on reload", async ({ page }) => {
     await installSeededHost(page);
 

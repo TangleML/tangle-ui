@@ -31,3 +31,20 @@ export function isRetriableStorageError(
 
   return true;
 }
+
+/**
+ * A write the store will refuse again for the same reason. An expired session
+ * needs the person, not another attempt, and quietly retrying one until it
+ * comes back is how work sits unsaved with nobody told why.
+ */
+export function isWriteWorthRetrying(error: unknown): boolean {
+  if (error instanceof HostStorageError) {
+    return error.code !== "unauthenticated" && error.code !== "conflict";
+  }
+
+  return true;
+}
+
+export function isExpiredSession(error: unknown): boolean {
+  return error instanceof HostStorageError && error.code === "unauthenticated";
+}

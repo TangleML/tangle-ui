@@ -42,6 +42,7 @@ import { DriverPermissionGate } from "./components/DriverPermissionGate";
 import { EditorMenuBar } from "./components/EditorMenuBar/EditorMenuBar";
 import { EditorTourBridge } from "./components/EditorTourBridge/EditorTourBridge";
 import { EmptyEditorState } from "./components/EmptyEditorState";
+import { ExpiredSessionDialog } from "./components/ExpiredSessionDialog";
 import { FlowCanvas } from "./components/FlowCanvas/FlowCanvas";
 import { UnsavedWorkBanner } from "./components/UnsavedWorkBanner";
 import { useAiChatWindow } from "./hooks/useAiChatWindow";
@@ -170,6 +171,7 @@ function EditorV2Content({ pipelineRef }: { pipelineRef: PipelineRef | null }) {
         <ReactFlowProvider>
           <EditorMenuBar />
           <UnsavedWorkBanner />
+          <ExpiredSessionDialog />
           <EditorTourBridge />
           <TourSaveExploreDialog />
           <TourSecretsDialog />

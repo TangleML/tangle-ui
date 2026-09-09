@@ -6,6 +6,10 @@ import {
   serializePipelineDocumentToText,
 } from "@/models/componentSpec";
 import { saveUndoHistory } from "@/routes/v2/pages/Editor/utils/undoHistoryStorage";
+import {
+  isExpiredSession,
+  isWriteWorthRetrying,
+} from "@/services/pipelineStorage/storageErrors";
 import { AUTOSAVE_DEBOUNCE_TIME_MS } from "@/utils/constants";
 import { debounce } from "@/utils/debounce";
 import { getErrorMessage } from "@/utils/string";
@@ -22,6 +26,7 @@ export class AutoSaveStore {
   @observable accessor lastSavedAt: Date | null = null;
   @observable accessor saveError: string | null = null;
   @observable accessor hasPendingChanges = false;
+  @observable accessor sessionExpired = false;
 
   private spec: ComponentSpec | null = null;
   private pipelineName: string | null = null;
@@ -61,6 +66,7 @@ export class AutoSaveStore {
     this.lastSavedAt = null;
     this.saveError = null;
     this.hasPendingChanges = false;
+    this.sessionExpired = false;
     this.pendingYaml = null;
     this.retryAttempt = 0;
     this.closed = false;
@@ -117,10 +123,12 @@ export class AutoSaveStore {
     this.lastSavedAt = date;
     this.isSaving = false;
     this.saveError = null;
+    this.sessionExpired = false;
   }
 
-  @action private setSaveError(message: string) {
-    this.saveError = message;
+  @action private setSaveError(error: Error) {
+    this.saveError = getErrorMessage(error);
+    this.sessionExpired = isExpiredSession(error);
     this.isSaving = false;
   }
 
@@ -170,9 +178,9 @@ export class AutoSaveStore {
       const yamlText = this.pendingYaml;
       const outcome = await this.writeOnce(yamlText);
 
-      if (typeof outcome === "string") {
+      if (outcome instanceof Error) {
         this.setSaveError(outcome);
-        this.scheduleRetry();
+        if (isWriteWorthRetrying(outcome)) this.scheduleRetry();
         return;
       }
 
@@ -184,7 +192,7 @@ export class AutoSaveStore {
     this.setPending(false);
   }
 
-  private async writeOnce(yamlText: string): Promise<Date | string> {
+  private async writeOnce(yamlText: string): Promise<Date | Error> {
     const pipelineName = this.pipelineName;
     this.setSaving(true);
 
@@ -201,7 +209,7 @@ export class AutoSaveStore {
         return new Date();
       } catch (error) {
         console.error("Auto-save failed:", error);
-        return getErrorMessage(error);
+        return error instanceof Error ? error : new Error(String(error));
       }
     })();
 
