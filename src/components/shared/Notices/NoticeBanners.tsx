@@ -1,6 +1,10 @@
 import { NoticeCard } from "@/components/shared/Notices/NoticeCard";
+import { InlineStack } from "@/components/ui/layout";
 import { useHiddenNotices } from "@/hooks/useHiddenNotices";
 import { useNotices } from "@/hooks/useNotices";
+
+const NOTICE_BANNER_LAYOUT_CLASSES =
+  "w-full *:min-w-0 *:grow *:basis-full md:*:basis-[calc((100%-1.5rem)/2)] lg:*:basis-[calc((100%-3rem)/3)]";
 
 export const NoticeBanners = () => {
   const { notices } = useNotices();
@@ -11,8 +15,11 @@ export const NoticeBanners = () => {
   if (banners.length === 0) return null;
 
   return (
-    <div
-      className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start"
+    <InlineStack
+      gap="6"
+      blockAlign="start"
+      wrap="wrap"
+      className={NOTICE_BANNER_LAYOUT_CLASSES}
       data-testid="notice-banners"
     >
       {banners.map((notice) => (
@@ -23,6 +30,6 @@ export const NoticeBanners = () => {
           onHide={() => hide(notice)}
         />
       ))}
-    </div>
+    </InlineStack>
   );
 };

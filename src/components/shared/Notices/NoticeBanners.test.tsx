@@ -88,22 +88,6 @@ describe("<NoticeBanners />", () => {
     ).toEqual(["Everything is broken", "Heads up", "Worked", "Nice to know"]);
   });
 
-  it("gives each notice a column of the page grid rather than the full width", () => {
-    installSource([
-      { id: "a", title: "One", body: "", variant: "error" },
-      { id: "b", title: "Two", body: "", variant: "warning" },
-    ]);
-
-    const { container } = render(<NoticeBanners />);
-
-    const className = screen.getByTestId("notice-banners").className;
-    expect(className).toContain("grid-cols-1");
-    expect(className).toContain("md:grid-cols-2");
-    expect(className).toContain("lg:grid-cols-3");
-    expect(container.querySelector(".overflow-x-auto")).toBeNull();
-    expect(screen.getByTestId("info-box-error").className).toContain("w-full");
-  });
-
   it("leaves clearing the banners and opening the full list to the header", () => {
     installSource([{ id: "a", title: "Only notice", body: "" }]);
 
@@ -215,10 +199,11 @@ describe("<NoticeBanners />", () => {
     expect(screen.queryByLabelText("Dismiss")).not.toBeInTheDocument();
   });
 
-  it("takes one notice off the banners while leaving the rest in place", () => {
+  it("keeps the remaining banners when notices are hidden", () => {
     installSource([
       { id: "a", title: "First", body: "", variant: "error" },
       { id: "b", title: "Second", body: "", variant: "warning" },
+      { id: "c", title: "Third", body: "", variant: "info" },
     ]);
 
     render(<NoticeBanners />);
@@ -226,7 +211,11 @@ describe("<NoticeBanners />", () => {
 
     expect(
       screen.getAllByTestId("info-box-title").map((el) => el.textContent),
-    ).toEqual(["Second"]);
+    ).toEqual(["Second", "Third"]);
+
+    fireEvent.click(screen.getAllByLabelText("Hide notice")[0]!);
+
+    expect(screen.getByTestId("info-box-title")).toHaveTextContent("Third");
   });
 
   it("keeps a hidden dismissible notice off the banners across a remount", () => {
