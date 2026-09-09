@@ -236,27 +236,32 @@ test.describe("host-provided pipeline storage", () => {
     await page.goto("/pipelines");
     await expect(page.getByText("Churn model")).toBeVisible();
 
-    await page.route(/\/services\/ping/, (route) =>
-      route.fulfill({ status: 503, body: "down" }),
-    );
-    await page.reload();
+    // Not a reload: the listing is already in hand and would otherwise render.
+    await setHostFailMode(page, "unavailable");
+    await page.getByRole("button", { name: "Refresh" }).click();
 
-    await expect(page.getByTestId("info-box-warning")).toContainText(
-      "Backend not available",
-    );
-    await expect(page.getByText("Churn model")).toBeHidden();
-
-    await page.goto("/pipeline-folders");
     await expect(page.getByTestId("info-box-warning")).toContainText(
       "Backend not available",
     );
     await expect(page.getByText("Churn model")).toBeHidden();
   });
 
-  test("says the list could not be read rather than showing an empty library", async ({
+  test("says the backend is not available on the folders page too", async ({
     page,
   }) => {
     await installSeededHost(page, { failMode: "unavailable" });
+
+    await page.goto("/pipeline-folders");
+
+    await expect(page.getByTestId("info-box-warning")).toContainText(
+      "Backend not available",
+    );
+  });
+
+  test("says a store that refuses could not be read, not that it is empty", async ({
+    page,
+  }) => {
+    await installSeededHost(page, { failMode: "unauthenticated" });
 
     await page.goto("/pipelines");
 
@@ -270,9 +275,6 @@ test.describe("host-provided pipeline storage", () => {
     page,
   }) => {
     await installSeededHost(page);
-    await page.route(/\/services\/ping/, (route) =>
-      route.fulfill({ status: 503, body: "down" }),
-    );
 
     await page.goto(`/editor-v2/${SEED[0].key}`);
     await expect(page.locator('[data-testid="rf__wrapper"]')).toBeVisible({
@@ -280,12 +282,17 @@ test.describe("host-provided pipeline storage", () => {
     });
 
     const indicator = page.getByTestId("auto-save-button");
+    await expect(indicator).toBeEnabled();
+
+    await setHostFailMode(page, "unavailable");
+    await indicator.click();
+
     await expect(indicator).toBeDisabled();
     await expect(indicator.locator(".text-destructive")).toBeVisible();
 
-    // Recovers on the next ping rather than needing the editor reopened.
-    await page.unroute(/\/services\/ping/);
-    await expect(indicator).toBeEnabled({ timeout: 60_000 });
+    // Comes back on its own: the held edit is retried and the store answers.
+    await setHostFailMode(page, "none");
+    await expect(indicator).toBeEnabled({ timeout: 30_000 });
     await expect(indicator.locator(".text-destructive")).toBeHidden();
   });
 

@@ -23,9 +23,9 @@ import {
 } from "@/components/ui/table";
 import { Paragraph, Text } from "@/components/ui/typography";
 import { usePagination } from "@/hooks/usePagination";
-import { useStorageBackendUnavailable } from "@/hooks/useStorageBackendUnavailable";
 import { APP_ROUTES } from "@/routes/router";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
+import { useStorageUnavailable } from "@/services/pipelineStorage/storageHealth";
 
 import BulkActionsBar from "./BulkActionsBar";
 import { HostMigrationNotice } from "./HostMigrationNotice";
@@ -68,7 +68,7 @@ export const PipelineSection = withSuspenseWrapper(
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
     const storage = usePipelineStorage();
-    const backendUnavailable = useStorageBackendUnavailable();
+    const storeUnavailable = useStorageUnavailable();
     const { entries, isLoading, error, pendingCount, refetch } =
       usePipelineListEntries();
 
@@ -109,7 +109,7 @@ export const PipelineSection = withSuspenseWrapper(
      * Ahead of everything else, including a listing already in hand: a store
      * that cannot be reached must not be represented by the last answer it gave.
      */
-    if (backendUnavailable) return <BackendUnavailable />;
+    if (storeUnavailable) return <BackendUnavailable />;
 
     if (migration.phase === "copying" || migration.phase === "incomplete") {
       return (

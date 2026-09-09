@@ -7,6 +7,7 @@ import type {
   HostPipelineSummary,
   PipelineStorageHost,
 } from "../host/contract";
+import { reportStorageAnswered, reportStorageFailed } from "../storageHealth";
 import {
   HOST_DRIVER_TYPE,
   type PipelineFileDescriptor,
@@ -74,11 +75,20 @@ export class HostStorageDriver implements PipelineStorageDriver {
     return this.call(() => this.host.has(storageKey));
   }
 
+  /**
+   * Every call to the store passes through here, which makes it the one place
+   * that knows whether the store is answering — no separate health check, and
+   * nothing to go stale between calls.
+   */
   private async call<T>(operation: () => Promise<T>): Promise<T> {
     try {
-      return await operation();
+      const answer = await operation();
+      reportStorageAnswered();
+      return answer;
     } catch (error) {
-      throw this.toStorageError(error);
+      const failure = this.toStorageError(error);
+      reportStorageFailed(failure.code);
+      throw failure;
     }
   }
 

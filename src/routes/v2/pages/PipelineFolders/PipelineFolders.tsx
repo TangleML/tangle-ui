@@ -5,8 +5,8 @@ import { BackendUnavailable } from "@/components/shared/BackendUnavailable";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useStorageBackendUnavailable } from "@/hooks/useStorageBackendUnavailable";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
+import { useStorageUnavailable } from "@/services/pipelineStorage/storageHealth";
 import {
   type PipelineRef,
   ROOT_FOLDER_ID,
@@ -45,14 +45,14 @@ export const PipelineFolders = withSuspenseWrapper(
     };
     const [localFolderId, setLocalFolderId] = useState<string | null>(null);
     const hasFolders = !usePipelineStorage().rootFolder.isFlat;
-    const backendUnavailable = useStorageBackendUnavailable();
+    const storeUnavailable = useStorageUnavailable();
 
     const isEmbedded = onPipelineClick !== undefined;
     const currentFolderId = isEmbedded
       ? localFolderId
       : (routeFolderId ?? ROOT_FOLDER_ID);
 
-    const content = backendUnavailable ? (
+    const content = storeUnavailable ? (
       <BlockStack className="p-6">
         <BackendUnavailable />
       </BlockStack>
