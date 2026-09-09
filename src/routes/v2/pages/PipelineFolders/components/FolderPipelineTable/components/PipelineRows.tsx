@@ -42,7 +42,7 @@ export function PipelineRows({
   return (
     <>
       {pipelines.map((file) => {
-        const name = file.storageKey;
+        const name = file.displayName;
         const pipelineItem: DragItem = { type: "pipeline", id: file.id };
         const items = getDragItems(pipelineItem);
 
@@ -55,9 +55,9 @@ export function PipelineRows({
             onDelete={onDelete}
             isSelected={selectedPipelines.has(file.id)}
             onSelect={(checked) => onSelectPipeline(file.id, checked)}
-            onPipelineClick={(clickedName: string) =>
+            onPipelineClick={() =>
               folderNav?.onPipelineClick!({
-                name: clickedName,
+                name: file.storageKey,
                 fileId: file.id,
               })
             }

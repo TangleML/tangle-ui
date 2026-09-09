@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 
 import { useAnalytics } from "@/providers/AnalyticsProvider";
+import { listPipelineFiles } from "@/services/pipelineStorage/pipelineOperations";
+import { isBackendStorage } from "@/services/pipelineStorage/storageMode";
 import type { ComponentSpec, TaskSpec } from "@/utils/componentSpec";
 import { isGraphImplementation } from "@/utils/componentSpec";
 import { getAllComponentFilesFromList } from "@/utils/componentStore";
@@ -108,6 +110,22 @@ export function useSessionPipelineStats(): void {
         "90_to_233": 0,
         "234_plus": 0,
       };
+
+      /**
+       * A remote store lists summaries, so counting nodes would mean fetching
+       * every pipeline once a day just for analytics. The total is worth that
+       * much less than the request storm, so the distribution is left out.
+       */
+      if (isBackendStorage()) {
+        try {
+          total_pipelines = (await listPipelineFiles()).length;
+        } catch {
+          return;
+        }
+
+        track("session.pipeline_stats.start", { total_pipelines });
+        return;
+      }
 
       try {
         const pipelines = await getAllComponentFilesFromList(

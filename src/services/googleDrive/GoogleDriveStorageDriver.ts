@@ -74,6 +74,7 @@ export class GoogleDriveStorageDriver implements PipelineStorageDriver {
       .filter((f) => PIPELINE_YAML_PATTERN.test(f.name))
       .map((f) => ({
         storageKey: f.name,
+        externalId: f.id,
         modifiedAt: f.modifiedTime ? new Date(f.modifiedTime) : undefined,
         createdAt: f.createdTime ? new Date(f.createdTime) : undefined,
       }));
@@ -89,15 +90,20 @@ export class GoogleDriveStorageDriver implements PipelineStorageDriver {
     return response.text();
   }
 
-  async write(storageKey: string, content: string): Promise<void> {
+  async write(
+    storageKey: string,
+    content: string,
+  ): Promise<PipelineFileDescriptor> {
     const fileName = toFileName(storageKey);
     const existingId = await this.resolveFileId(storageKey);
 
     if (existingId) {
       await this.updateFileContent(existingId, content);
-    } else {
-      await this.createFile(fileName, content);
+      return { storageKey, externalId: existingId };
     }
+
+    const createdId = await this.createFile(fileName, content);
+    return { storageKey, ...(createdId ? { externalId: createdId } : {}) };
   }
 
   async rename(oldStorageKey: string, newStorageKey: string): Promise<void> {
@@ -149,7 +155,10 @@ export class GoogleDriveStorageDriver implements PipelineStorageDriver {
     return data.files?.[0]?.id ?? null;
   }
 
-  private async createFile(fileName: string, content: string): Promise<void> {
+  private async createFile(
+    fileName: string,
+    content: string,
+  ): Promise<string | undefined> {
     const metadata = {
       name: fileName,
       parents: [this.folderId],
@@ -185,6 +194,11 @@ export class GoogleDriveStorageDriver implements PipelineStorageDriver {
     if (!response.ok) {
       throw new Error(`Google Drive upload failed: ${response.status}`);
     }
+
+    const created = (await response.json().catch(() => null)) as {
+      id?: string;
+    } | null;
+    return created?.id;
   }
 
   private async updateFileContent(

@@ -1,10 +1,12 @@
 import { Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { ExamplePipelines } from "@/components/Learn/ExamplePipelines";
+import { BackendUnavailable } from "@/components/shared/BackendUnavailable";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import NewPipelineButton from "@/components/shared/NewPipelineButton";
 import { PaginationControls } from "@/components/shared/PaginationControls";
+import { PipelineStorageError } from "@/components/shared/PipelineStorageError";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -21,21 +23,20 @@ import {
 } from "@/components/ui/table";
 import { Paragraph, Text } from "@/components/ui/typography";
 import { usePagination } from "@/hooks/usePagination";
+import { useStorageUnavailable } from "@/hooks/useStorageUnavailable";
 import { APP_ROUTES } from "@/routes/router";
-import {
-  type ComponentFileEntry,
-  getAllComponentFilesFromList,
-} from "@/utils/componentStore";
-import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 
 import BulkActionsBar from "./BulkActionsBar";
+import { HostMigrationNotice } from "./HostMigrationNotice";
 import { PipelineFiltersBar } from "./PipelineFiltersBar";
 import PipelineRow from "./PipelineRow";
+import { ResetBackendPipelinesButton } from "./ResetBackendPipelinesButton";
+import { useHostMigration } from "./useHostMigration";
 import { usePipelineFilters } from "./usePipelineFilters";
+import { usePipelineListEntries } from "./usePipelineListEntries";
 
 const DEFAULT_PAGE_SIZE = 10;
-
-type Pipelines = Map<string, ComponentFileEntry>;
 
 const PipelineSectionSkeleton = () => (
   <BlockStack className="h-full" gap="3">
@@ -65,14 +66,19 @@ interface PipelineSectionProps {
 
 export const PipelineSection = withSuspenseWrapper(
   ({ onPipelineClick }: PipelineSectionProps) => {
-    const [pipelines, setPipelines] = useState<Pipelines>(new Map());
-    const [isLoading, setIsLoading] = useState(false);
-    const [selectedPipelines, setSelectedPipelines] = useState<Set<string>>(
-      new Set(),
-    );
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-    const { filteredPipelines, filterBarProps, filterKey } =
-      usePipelineFilters(pipelines);
+    const storage = usePipelineStorage();
+    const storeUnavailable = useStorageUnavailable();
+    const { entries, isLoading, error, pendingCount, refetch } =
+      usePipelineListEntries();
+
+    const migration = useHostMigration(refetch);
+
+    const { filteredPipelines, filterBarProps, filterKey } = usePipelineFilters(
+      entries,
+      pendingCount,
+    );
 
     const {
       paginatedItems: paginatedPipelines,
@@ -85,39 +91,45 @@ export const PipelineSection = withSuspenseWrapper(
       resetPage,
     } = usePagination(filteredPipelines, DEFAULT_PAGE_SIZE, filterKey);
 
-    const fetchUserPipelines = async () => {
-      setIsLoading(true);
-      try {
-        setPipelines(
-          await getAllComponentFilesFromList(USER_PIPELINES_LIST_NAME),
-        );
-      } catch (error) {
-        console.error("Failed to load user pipelines:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     const handleSelectAll = (checked: boolean) => {
-      setSelectedPipelines(
-        checked ? new Set(filteredPipelines.map(([name]) => name)) : new Set(),
+      setSelectedIds(
+        checked
+          ? new Set(filteredPipelines.map(({ entry }) => entry.file.id))
+          : new Set(),
       );
     };
 
-    const handleSelectPipeline = (name: string, checked: boolean) => {
-      const next = new Set(selectedPipelines);
-      if (checked) next.add(name);
-      else next.delete(name);
-      setSelectedPipelines(next);
+    const handleSelectPipeline = (id: string, checked: boolean) => {
+      const next = new Set(selectedIds);
+      if (checked) next.add(id);
+      else next.delete(id);
+      setSelectedIds(next);
     };
 
-    useEffect(() => {
-      fetchUserPipelines();
-    }, []);
+    /**
+     * Ahead of everything else, including a listing already in hand: a store
+     * that cannot be reached must not be represented by the last answer it gave.
+     */
+    if (storeUnavailable) return <BackendUnavailable />;
 
-    if (isLoading) return <LoadingScreen message="Loading Pipelines" />;
+    if (migration.phase === "copying" || migration.phase === "incomplete") {
+      return (
+        <HostMigrationNotice
+          migration={migration}
+          storageLabel={storage.rootFolder.name}
+        />
+      );
+    }
 
-    if (pipelines.size === 0) {
+    if (isLoading || migration.phase === "checking") {
+      return <LoadingScreen message="Loading Pipelines" />;
+    }
+
+    if (error) {
+      return <PipelineStorageError error={error} onRetry={() => refetch()} />;
+    }
+
+    if (entries.length === 0) {
       return (
         <BlockStack gap="4" align="center">
           <BlockStack gap="2">
@@ -135,15 +147,24 @@ export const PipelineSection = withSuspenseWrapper(
       );
     }
 
+    const selectedFiles = entries
+      .filter(({ file }) => selectedIds.has(file.id))
+      .map(({ file }) => file);
+
     const isAllSelected =
       filteredPipelines.length > 0 &&
-      filteredPipelines.every(([name]) => selectedPipelines.has(name));
+      filteredPipelines.every(({ entry }) => selectedIds.has(entry.file.id));
 
     return (
       <BlockStack gap="4" className="w-full">
         <PipelineFiltersBar
           filters={filterBarProps}
-          actions={<ExamplePipelineButton />}
+          actions={
+            <>
+              <ResetBackendPipelinesButton />
+              <ExamplePipelineButton />
+            </>
+          }
         />
 
         <Table className="text-sm">
@@ -171,19 +192,22 @@ export const PipelineSection = withSuspenseWrapper(
                 </TableCell>
               </TableRow>
             )}
-            {paginatedPipelines.map(([name, fileEntry, matchMetadata]) => (
+            {paginatedPipelines.map(({ entry, match }) => (
               <PipelineRow
-                key={fileEntry.componentRef.digest}
-                name={name}
-                componentRef={fileEntry.componentRef}
-                modificationTime={fileEntry.modificationTime}
-                onDelete={fetchUserPipelines}
-                isSelected={selectedPipelines.has(name)}
-                onSelect={(checked) => handleSelectPipeline(name, checked)}
-                searchQuery={matchMetadata.searchQuery}
-                matchedFields={matchMetadata.matchedFields}
-                componentQuery={matchMetadata.componentQuery}
-                matchedComponentNames={matchMetadata.matchedComponentNames}
+                key={entry.file.id}
+                name={entry.file.displayName}
+                fileId={entry.file.id}
+                spec={entry.spec}
+                modificationTime={entry.file.modifiedAt}
+                onDelete={refetch}
+                isSelected={selectedIds.has(entry.file.id)}
+                onSelect={(checked) =>
+                  handleSelectPipeline(entry.file.id, checked)
+                }
+                searchQuery={match.searchQuery}
+                matchedFields={match.matchedFields}
+                componentQuery={match.componentQuery}
+                matchedComponentNames={match.matchedComponentNames}
                 onPipelineClick={onPipelineClick}
               />
             ))}
@@ -200,18 +224,18 @@ export const PipelineSection = withSuspenseWrapper(
           onReset={resetPage}
         />
 
-        <Button onClick={fetchUserPipelines} className="mt-6 max-w-96">
+        <Button onClick={() => refetch()} className="mt-6 max-w-96">
           Refresh
         </Button>
 
-        {selectedPipelines.size > 0 && (
+        {selectedFiles.length > 0 && (
           <BulkActionsBar
-            selectedPipelines={Array.from(selectedPipelines)}
+            selectedPipelines={selectedFiles}
             onDeleteSuccess={() => {
-              setSelectedPipelines(new Set());
-              fetchUserPipelines();
+              setSelectedIds(new Set());
+              refetch();
             }}
-            onClearSelection={() => setSelectedPipelines(new Set())}
+            onClearSelection={() => setSelectedIds(new Set())}
           />
         )}
       </BlockStack>

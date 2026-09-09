@@ -1,9 +1,12 @@
 import { useSearch } from "@tanstack/react-router";
 import { useState } from "react";
 
+import { BackendUnavailable } from "@/components/shared/BackendUnavailable";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useStorageUnavailable } from "@/hooks/useStorageUnavailable";
+import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import {
   type PipelineRef,
   ROOT_FOLDER_ID,
@@ -41,13 +44,19 @@ export const PipelineFolders = withSuspenseWrapper(
       folderId?: string;
     };
     const [localFolderId, setLocalFolderId] = useState<string | null>(null);
+    const hasFolders = !usePipelineStorage().rootFolder.isFlat;
+    const storeUnavailable = useStorageUnavailable();
 
     const isEmbedded = onPipelineClick !== undefined;
     const currentFolderId = isEmbedded
       ? localFolderId
       : (routeFolderId ?? ROOT_FOLDER_ID);
 
-    const content = (
+    const content = storeUnavailable ? (
+      <BlockStack className="p-6">
+        <BackendUnavailable />
+      </BlockStack>
+    ) : (
       <BlockStack
         gap="4"
         className="p-6"
@@ -55,19 +64,23 @@ export const PipelineFolders = withSuspenseWrapper(
         inlineAlign="start"
         align="start"
       >
-        <FolderGrid />
+        {hasFolders && (
+          <>
+            <FolderGrid />
 
-        <InlineStack
-          align="space-between"
-          blockAlign="center"
-          className="w-full"
-        >
-          <FolderBreadcrumb folderId={currentFolderId} />
-          <InlineStack gap="2">
-            <ConnectFolderButton />
-            <CreateFolderDialog parentId={currentFolderId} />
-          </InlineStack>
-        </InlineStack>
+            <InlineStack
+              align="space-between"
+              blockAlign="center"
+              className="w-full"
+            >
+              <FolderBreadcrumb folderId={currentFolderId} />
+              <InlineStack gap="2">
+                <ConnectFolderButton />
+                <CreateFolderDialog parentId={currentFolderId} />
+              </InlineStack>
+            </InlineStack>
+          </>
+        )}
 
         <FolderPipelineTable folderId={currentFolderId} />
       </BlockStack>

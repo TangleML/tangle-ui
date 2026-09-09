@@ -4,6 +4,7 @@ import { exportPipeline } from "@/components/shared/ReactFlow/FlowSidebar/sectio
 import {
   serializeComponentSpec,
   serializeComponentSpecToYaml,
+  toPortablePipelineSpec,
 } from "@/models/componentSpec";
 import type { NavigationStore } from "@/routes/v2/shared/store/navigationStore";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
@@ -28,10 +29,10 @@ export async function savePipelineAs(
   const componentSpec = navigation.rootSpec;
   if (!componentSpec) return undefined;
 
-  const serialized = {
+  const serialized = toPortablePipelineSpec({
     ...serializeComponentSpec(componentSpec),
     name: newName,
-  };
+  });
   const componentText = componentSpecToYaml(serialized);
 
   return storage.rootFolder.addFile(newName, componentText);

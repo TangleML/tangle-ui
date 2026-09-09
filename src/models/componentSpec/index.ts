@@ -15,6 +15,8 @@ export {
   serializeComponentSpec,
   serializeComponentSpecToText,
   serializeComponentSpecToYaml,
+  serializePipelineDocumentToText,
+  toPortablePipelineSpec,
   YamlDeserializer,
 } from "./serialization";
 

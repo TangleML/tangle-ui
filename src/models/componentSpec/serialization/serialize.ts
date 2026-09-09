@@ -3,6 +3,7 @@ import { componentSpecToText, componentSpecToYaml } from "@/utils/yaml";
 import type { ComponentSpec } from "../entities/componentSpec";
 import type { ComponentSpecJson } from "../entities/types";
 import { JsonSerializer } from "./jsonSerializer";
+import { toPortablePipelineSpec } from "./portablePipelineSpec";
 
 const serializer = new JsonSerializer();
 
@@ -19,4 +20,11 @@ export function serializeComponentSpecToYaml(spec: ComponentSpec): string {
 /** Serialize a ComponentSpec model to a display-friendly text string. */
 export function serializeComponentSpecToText(spec: ComponentSpec): string {
   return componentSpecToText(serializeComponentSpec(spec));
+}
+
+/** Serialize a ComponentSpec model to the document persisted for a pipeline. */
+export function serializePipelineDocumentToText(spec: ComponentSpec): string {
+  return componentSpecToText(
+    toPortablePipelineSpec(serializeComponentSpec(spec)),
+  );
 }

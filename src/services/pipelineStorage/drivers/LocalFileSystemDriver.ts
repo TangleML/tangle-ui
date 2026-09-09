@@ -71,7 +71,10 @@ export class LocalFileSystemDriver implements PipelineStorageDriver {
     return file.text();
   }
 
-  async write(storageKey: string, content: string): Promise<void> {
+  async write(
+    storageKey: string,
+    content: string,
+  ): Promise<PipelineFileDescriptor> {
     const fileName = toFileName(storageKey);
     const fileHandle = await this.dirHandle.getFileHandle(fileName, {
       create: true,
@@ -79,6 +82,7 @@ export class LocalFileSystemDriver implements PipelineStorageDriver {
     const writable = await fileHandle.createWritable();
     await writable.write(content);
     await writable.close();
+    return { storageKey };
   }
 
   async rename(oldStorageKey: string, newStorageKey: string): Promise<void> {

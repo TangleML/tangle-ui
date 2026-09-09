@@ -10,8 +10,7 @@ import {
 
 import { type UndoRedo, useUndoRedo } from "@/hooks/useUndoRedo";
 import { loadPipelineByName } from "@/services/pipelineService";
-import { emitPipelineFileChanged } from "@/services/pipelineStorage/pipelineFileEvents";
-import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
+import { savePipeline } from "@/services/pipelineStorage/pipelineOperations";
 import { prepareComponentRefForEditor } from "@/utils/prepareComponentRefForEditor";
 import {
   getSubgraphComponentSpec,
@@ -37,7 +36,6 @@ import {
 import {
   type ComponentReferenceWithSpec,
   generateDigest,
-  writeComponentToFileListFromText,
 } from "../utils/componentStore";
 
 const EMPTY_GRAPH_SPEC: GraphSpec = {
@@ -209,13 +207,7 @@ export const ComponentSpecProvider = ({
 
       const specWithName = { ...componentSpec, name };
 
-      const componentText = componentSpecToYaml(specWithName);
-      await writeComponentToFileListFromText(
-        USER_PIPELINES_LIST_NAME,
-        name,
-        componentText,
-      );
-      emitPipelineFileChanged({ storageKey: name, source: "v1" });
+      await savePipeline(name, componentSpecToYaml(specWithName), "v1");
     },
     [componentSpec, readOnly],
   );

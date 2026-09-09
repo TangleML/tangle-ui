@@ -28,6 +28,7 @@ interface VersionToggleProps {
   welcome: VersionToggleWelcome;
   showWelcomeSpotlight?: boolean;
   trackingId?: string;
+  preserveSearch?: boolean;
 }
 
 export function VersionToggle({
@@ -38,6 +39,7 @@ export function VersionToggle({
   welcome,
   showWelcomeSpotlight = false,
   trackingId,
+  preserveSearch = false,
 }: VersionToggleProps) {
   const navigate = useNavigate();
   const isEnabled = useFlagValue(flagName);
@@ -61,7 +63,11 @@ export function VersionToggle({
         className={cn(showWelcome && "relative z-1001")}
         onClick={() => {
           if (showWelcome) dismissWelcome();
-          navigate({ to: targetPath });
+          navigate(
+            preserveSearch
+              ? { to: targetPath, search: (previous) => previous }
+              : { to: targetPath },
+          );
         }}
         variant="header"
         size="icon"

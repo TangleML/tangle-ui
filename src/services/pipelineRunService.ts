@@ -4,7 +4,7 @@ import type {
   BodyCreateApiPipelineRunsPost,
   ListAnnotationsApiPipelineRunsIdAnnotationsGetResponse,
 } from "@/api/types.gen";
-import { getDefaultEditorPath } from "@/routes/editorRoutes";
+import { getDefaultEditorHref } from "@/routes/editorRoutes";
 import type { PipelineRun } from "@/types/pipelineRun";
 import { EDITOR_FLOW_DIRECTION_ANNOTATION } from "@/utils/annotations";
 import { removeCachingStrategyFromSpec } from "@/utils/cache";
@@ -12,17 +12,14 @@ import {
   type ComponentSpec,
   isGraphImplementation,
 } from "@/utils/componentSpec";
-import {
-  getComponentFileFromList,
-  writeComponentToFileListFromText,
-} from "@/utils/componentStore";
-import {
-  DB_NAME,
-  PIPELINE_RUNS_STORE_NAME,
-  USER_PIPELINES_LIST_NAME,
-} from "@/utils/constants";
+import { DB_NAME, PIPELINE_RUNS_STORE_NAME } from "@/utils/constants";
 import { fetchWithErrorHandling } from "@/utils/fetchWithErrorHandling";
 import { componentSpecToYaml } from "@/utils/yaml";
+
+import {
+  createPipeline,
+  listPipelineFiles,
+} from "./pipelineStorage/pipelineOperations";
 
 export const createPipelineRun = async (
   payload: BodyCreateApiPipelineRunsPost,
@@ -131,39 +128,29 @@ export const copyRunToPipeline = async (
 
     // Generate a name for the copied pipeline
     const originalName = cleanComponentSpec.name || "Unnamed Pipeline";
-    let newName = name || originalName;
+    const taken = new Set(
+      (await listPipelineFiles()).map((file) => file.displayName),
+    );
 
-    // Check if the name already exists and append a number if needed
-    let nameExists = true;
+    let newName = name || originalName;
     let counter = 1;
 
-    while (nameExists) {
-      const existingFile = await getComponentFileFromList(
-        USER_PIPELINES_LIST_NAME,
-        newName,
-      );
-
-      if (existingFile === null) {
-        nameExists = false;
-      } else {
-        const countNumber = counter > 1 ? " " + counter : "";
-        newName = `${originalName} (Copy${countNumber})`;
-        counter++;
-      }
+    while (taken.has(newName)) {
+      const countNumber = counter > 1 ? " " + counter : "";
+      newName = `${originalName} (Copy${countNumber})`;
+      counter++;
     }
 
     cleanComponentSpec.name = newName;
 
-    const componentText = componentSpecToYaml(cleanComponentSpec);
-    await writeComponentToFileListFromText(
-      USER_PIPELINES_LIST_NAME,
+    const file = await createPipeline(
       newName,
-      componentText,
+      componentSpecToYaml(cleanComponentSpec),
     );
 
     return {
-      url: getDefaultEditorPath(newName),
-      name: newName,
+      url: getDefaultEditorHref({ name: file.displayName, fileId: file.id }),
+      name: file.displayName,
     };
   } catch (error) {
     console.error("Error cloning pipeline:", error);

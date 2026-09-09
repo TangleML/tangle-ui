@@ -211,7 +211,7 @@ export function FileMenu() {
       <ConfirmationDialog
         isOpen={deleteDialogOpen}
         title="Delete pipeline?"
-        description={`"${activePipeline?.storageKey ?? "This pipeline"}" will be permanently deleted. This action cannot be undone.`}
+        description={`"${activePipeline?.displayName ?? "This pipeline"}" will be permanently deleted. This action cannot be undone.`}
         onConfirm={() => {
           void handleDeletePipeline();
           setDeleteDialogOpen(false);
