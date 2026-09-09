@@ -1,6 +1,7 @@
 import { getComponentFileFromList } from "@/utils/componentStore";
 import { USER_PIPELINES_LIST_NAME } from "@/utils/constants";
 
+import { ensureBrowserPipelinesIndexed } from "../db";
 import {
   findByFolderAndStorageKey,
   getAllByFolderId,
@@ -23,6 +24,8 @@ export class FolderIndexDbStorageDriver extends RootFolderDbStorageDriver {
   }
 
   override async list(): Promise<PipelineFileDescriptor[]> {
+    await ensureBrowserPipelinesIndexed();
+
     const entries = await getAllByFolderId(this.folderId);
     const descriptors: PipelineFileDescriptor[] = [];
 

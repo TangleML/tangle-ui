@@ -163,38 +163,71 @@ pipelineStorageDb.version(9).stores({
   pending_writes: "[storage+storageKey]",
 });
 
-pipelineStorageDb.on("ready", async () => {
-  await seedRegistryFromLegacyList();
-});
+let indexing: Promise<void> | undefined;
 
 /**
- * The registry indexes storage keys within the one store the app is using. In
- * host mode those keys are the host's, so seeding it with local pipeline names
- * would claim files the host has never heard of.
+ * Pipelines predating the registry live in the legacy list and have no row
+ * saying which folder they are in, so a folder listing cannot see them.
+ *
+ * Deliberately not run from `on("ready")`: that handler gates `open()`, and it
+ * has to read another database first — once it has yielded to anything outside
+ * Dexie it can never touch this one again, because every call would queue
+ * behind the open it is itself holding up.
  */
-async function seedRegistryFromLegacyList() {
-  if (currentStorageKind() === "backend") return;
+export function ensureBrowserPipelinesIndexed(): Promise<void> {
+  indexing ??= indexPipelinesAlreadyInThisBrowser();
+  return indexing;
+}
 
-  const seeded = await pipelineStorageDb.pipeline_registry
-    .where("storage")
-    .equals("local")
-    .count();
-  if (seeded > 0) return;
+/**
+ * The registry indexes storage keys within the one store the page is using, and
+ * in backend mode those keys are the backend's — indexing local pipeline names
+ * there would claim files it has never heard of.
+ */
+async function indexPipelinesAlreadyInThisBrowser() {
+  if (currentStorageKind() === "backend") return;
 
   const { getAllComponentFilesFromList } =
     await import("@/utils/componentStore");
   const knownPipelines = await getAllComponentFilesFromList(
     USER_PIPELINES_LIST_NAME,
   );
-
   if (knownPipelines.size === 0) return;
 
-  await pipelineStorageDb.pipeline_registry.bulkAdd(
-    [...knownPipelines.keys()].map((storageKey) => ({
-      id: crypto.randomUUID(),
-      storage: "local" as const,
-      storageKey,
-      folderId: ROOT_FOLDER_ID,
-    })),
-  );
+  try {
+    /**
+     * A listing running at the same time claims the same keys, and the unique
+     * index would fail whichever got there second. Both claim inside a
+     * transaction over this table, which the browser will not interleave.
+     */
+    await pipelineStorageDb.transaction(
+      "rw",
+      pipelineStorageDb.pipeline_registry,
+      async () => {
+        const indexed = new Set(
+          (
+            await pipelineStorageDb.pipeline_registry
+              .where("storage")
+              .equals("local")
+              .toArray()
+          ).map((row) => row.storageKey),
+        );
+
+        const missing = [...knownPipelines.keys()]
+          .filter((storageKey) => !indexed.has(storageKey))
+          .map((storageKey) => ({
+            id: crypto.randomUUID(),
+            storage: "local" as const,
+            storageKey,
+            folderId: ROOT_FOLDER_ID,
+          }));
+
+        if (missing.length > 0) {
+          await pipelineStorageDb.pipeline_registry.bulkAdd(missing);
+        }
+      },
+    );
+  } catch (error) {
+    console.error("Could not index the pipelines in this browser", error);
+  }
 }
