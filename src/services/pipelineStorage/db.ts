@@ -7,6 +7,7 @@ import {
   type CachedPipelineSpec,
   type FolderEntry,
   type HostMigrationRecord,
+  type PendingPipelineWrite,
   type PipelineRegistryEntry,
   type PipelineStorageKind,
   ROOT_FOLDER_ID,
@@ -17,6 +18,7 @@ export type PipelineStorageDb = Dexie & {
   folders: EntityTable<FolderEntry, "id">;
   pipeline_specs: Table<CachedPipelineSpec, [PipelineStorageKind, string]>;
   host_migration: EntityTable<HostMigrationRecord, "id">;
+  pending_writes: Table<PendingPipelineWrite, [PipelineStorageKind, string]>;
 };
 
 export const pipelineStorageDb = new Dexie(
@@ -150,6 +152,15 @@ pipelineStorageDb.version(8).upgrade(async (tx) => {
     await registry.update(row.id, { storage: "backend" });
     claimed.add(row.storageKey);
   }
+});
+
+/**
+ * Edits a store would not take have to outlive the editor that made them: the
+ * most likely next thing someone does is leave the page to go and fix the
+ * connection, and that must not be what loses the work.
+ */
+pipelineStorageDb.version(9).stores({
+  pending_writes: "[storage+storageKey]",
 });
 
 pipelineStorageDb.on("ready", async () => {

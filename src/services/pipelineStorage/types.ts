@@ -66,6 +66,13 @@ export interface CachedPipelineSpec {
   spec: ComponentSpec;
 }
 
+export interface PendingPipelineWrite {
+  storage: PipelineStorageKind;
+  storageKey: string;
+  yaml: string;
+  recordedAt: number;
+}
+
 export interface HostMigrationRecord {
   id: string;
   startedAt: number;

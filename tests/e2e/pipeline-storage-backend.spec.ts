@@ -368,6 +368,38 @@ test.describe("backend pipeline storage", () => {
     ).not.toBe(before);
   });
 
+  test("sends it even when the editor was left to go and fix the connection", async ({
+    page,
+  }) => {
+    await installSeededBackend(page);
+
+    await page.goto(`/editor-v2/${SEED[0].key}`);
+    await expect(page.locator('[data-testid="rf__wrapper"]')).toBeVisible({
+      timeout: 30_000,
+    });
+
+    setBackendFailMode(page, "unavailable");
+    await page.getByTestId("auto-save-button").click();
+    await expect(page.getByTestId("unsaved-work-banner")).toBeVisible();
+
+    const before = readBackendRecords(page).find(
+      (record) => record.key === SEED[0].key,
+    )?.contentVersion;
+
+    // Leaving the editor is exactly what someone does to go and turn it back on.
+    await page.goto("/settings/backend");
+    setBackendFailMode(page, "none");
+
+    await expect
+      .poll(
+        () =>
+          readBackendRecords(page).find((record) => record.key === SEED[0].key)
+            ?.contentVersion,
+        { timeout: 60_000 },
+      )
+      .not.toBe(before);
+  });
+
   test("offers a copy before asking for a sign-in that would discard it", async ({
     page,
   }) => {

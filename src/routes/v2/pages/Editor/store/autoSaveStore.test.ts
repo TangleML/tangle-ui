@@ -136,21 +136,57 @@ describe("AutoSaveStore when the store cannot be reached", () => {
     store.dispose();
   });
 
-  it("stops retrying once the editor is closed", async () => {
-    const write = vi.fn(async () => {
-      throw new Error("unreachable");
-    });
-    const store = createStore({ write } as unknown as PipelineFile);
+  it("keeps trying after the editor is closed, and sends it when the store returns", async () => {
+    let reachable = false;
+    const written: string[] = [];
+    const file = {
+      storageKey: "Churn model",
+      write: async (yamlText: string) => {
+        if (!reachable) throw new Error("unreachable");
+        written.push(yamlText);
+      },
+    } as unknown as PipelineFile;
+    const store = createStore(file);
 
     store.init(createSpec("Churn model"), "Churn model");
     await store.save();
+    reportStorageFailed("unavailable");
+
+    // Going to fix the connection closes the editor.
     store.dispose();
+    expect(written).toEqual([]);
 
-    write.mockClear();
-    window.dispatchEvent(new Event("focus"));
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    reachable = true;
+    reportStorageAnswered();
 
-    expect(write).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(written).toEqual(["name: Churn model"]));
+  });
+
+  it("stands down rather than putting its older text over a reopened pipeline", async () => {
+    const written: string[] = [];
+    const file = {
+      storageKey: "Churn model",
+      write: async (yamlText: string) => {
+        if (yamlText.includes("v1")) throw new Error("unreachable");
+        written.push(yamlText);
+      },
+    } as unknown as PipelineFile;
+
+    const closing = createStore(file);
+    closing.init(createSpec("Churn model v1"), "Churn model");
+    await closing.save();
+    reportStorageFailed("unavailable");
+    closing.dispose();
+
+    const reopened = createStore(file);
+    reopened.init(createSpec("Churn model v2"), "Churn model");
+    await reopened.save();
+
+    reportStorageAnswered();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(written).toEqual(["name: Churn model v2"]);
+    reopened.dispose();
   });
 
   it("retries with the newest edit, never the one that was refused", async () => {

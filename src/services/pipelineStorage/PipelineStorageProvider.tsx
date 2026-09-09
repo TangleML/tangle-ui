@@ -7,6 +7,7 @@ import {
 } from "@/hooks/useRequiredContext";
 
 import { startHostMigration } from "./hostMigration";
+import { startPendingWriteFlusher } from "./pendingWrites";
 import {
   getPipelineStorageService,
   type PipelineStorageService,
@@ -23,8 +24,10 @@ export function PipelineStorageProvider({ children }: { children: ReactNode }) {
     if (service.mode.kind !== "backend") return;
 
     void startHostMigration(service.rootFolder).catch((error: unknown) => {
-      console.error("Could not copy pipelines into the host store:", error);
+      console.error("Could not copy pipelines into the backend:", error);
     });
+
+    return startPendingWriteFlusher();
   }, [service]);
 
   return (

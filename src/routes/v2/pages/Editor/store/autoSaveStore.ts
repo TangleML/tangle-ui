@@ -7,6 +7,10 @@ import {
 } from "@/models/componentSpec";
 import { saveUndoHistory } from "@/routes/v2/pages/Editor/utils/undoHistoryStorage";
 import {
+  forgetPendingWrite,
+  recordPendingWrite,
+} from "@/services/pipelineStorage/pendingWrites";
+import {
   isExpiredSession,
   isWriteWorthRetrying,
 } from "@/services/pipelineStorage/storageErrors";
@@ -24,6 +28,14 @@ import type { UndoStore } from "./undoStore";
 const AUTOSAVE_MIN_SAVING_INDICATOR_MS = 600;
 
 const RETRY_DELAYS_MS = [5_000, 15_000, 30_000, 60_000];
+
+/**
+ * Which editor session speaks for a pipeline right now. A session that closes
+ * holding work the store refused keeps trying, and this is what stops it
+ * putting that older text back over a session that has since reopened the same
+ * pipeline and saved something newer.
+ */
+const speakingFor = new Map<string, AutoSaveStore>();
 
 export class AutoSaveStore {
   @observable accessor isSaving = false;
@@ -104,12 +116,23 @@ export class AutoSaveStore {
 
     this.debouncedSave.cancel();
     this.clearRetry();
-    this.disposeRecovery?.();
-    this.disposeRecovery = null;
     this.disposeReaction?.();
     this.disposeReaction = null;
     this.spec = null;
     this.pipelineName = null;
+
+    /**
+     * Work the store has not taken outlives the editor that made it: leaving
+     * the page to go and fix the connection is the most likely thing someone
+     * does next, and it must not be what loses the edit.
+     */
+    if (this.pendingYaml === null) this.stopWatching();
+  }
+
+  private stopWatching() {
+    this.clearRetry();
+    this.disposeRecovery?.();
+    this.disposeRecovery = null;
   }
 
   async save() {
@@ -182,6 +205,11 @@ export class AutoSaveStore {
       const yamlText = this.pendingYaml;
       const outcome = await this.writeOnce(yamlText);
 
+      if (outcome === "stood-down") {
+        this.pendingYaml = null;
+        break;
+      }
+
       if (outcome instanceof Error) {
         this.setSaveError(outcome);
         if (isWriteWorthRetrying(outcome)) this.scheduleRetry();
@@ -194,25 +222,44 @@ export class AutoSaveStore {
     }
 
     this.setPending(false);
+    if (this.closed) this.stopWatching();
   }
 
-  private async writeOnce(yamlText: string): Promise<Date | Error> {
+  private async writeOnce(
+    yamlText: string,
+  ): Promise<Date | Error | "stood-down"> {
     const pipelineName = this.pipelineName;
+    const open = this.pipelineFileStore.activePipelineFile;
+
+    if (open) {
+      if (this.closed && speakingFor.get(open.storageKey) !== this) {
+        return "stood-down";
+      }
+      speakingFor.set(open.storageKey, this);
+    }
+
     this.setSaving(true);
 
     const savePromise = (async () => {
+      const file = this.pipelineFileStore.activePipelineFile;
+
       try {
-        const file = this.pipelineFileStore.activePipelineFile;
         if (!file) {
           throw new Error(`No open file to save "${pipelineName}" to.`);
         }
 
         await file.write(yamlText);
+        await forgetPendingWrite(file);
         await this.persistUndoHistory();
         this.lastSavedYaml = yamlText;
         return new Date();
       } catch (error) {
         console.error("Auto-save failed:", error);
+        /**
+         * Held where a reload cannot lose it. The in-memory retry below is the
+         * fast path; this is what survives the tab.
+         */
+        if (file) void recordPendingWrite(file, yamlText);
         return error instanceof Error ? error : new Error(String(error));
       }
     })();
@@ -227,7 +274,6 @@ export class AutoSaveStore {
 
   private scheduleRetry() {
     this.clearRetry();
-    if (this.closed) return;
 
     const delay =
       RETRY_DELAYS_MS[Math.min(this.retryAttempt, RETRY_DELAYS_MS.length - 1)];
