@@ -10,6 +10,10 @@ import {
   isExpiredSession,
   isWriteWorthRetrying,
 } from "@/services/pipelineStorage/storageErrors";
+import {
+  isStorageAnswering,
+  subscribeStorageHealth,
+} from "@/services/pipelineStorage/storageHealth";
 import { AUTOSAVE_DEBOUNCE_TIME_MS } from "@/utils/constants";
 import { debounce } from "@/utils/debounce";
 import { getErrorMessage } from "@/utils/string";
@@ -249,9 +253,10 @@ export class AutoSaveStore {
   }
 
   /**
-   * Coming back online or back to the tab is the cheapest signal that a store
-   * that refused a write a moment ago might take it now, and it beats waiting
-   * out the backoff.
+   * The backoff is the floor, not the plan. A store that is answering again is
+   * the direct signal that a refused write can go now, and waiting out a ladder
+   * that has grown to a minute leaves work unsaved for no reason. Coming back
+   * online or back to the tab count for the same reason.
    */
   private watchForRecovery() {
     if (typeof window === "undefined") return;
@@ -260,9 +265,18 @@ export class AutoSaveStore {
     window.addEventListener("online", retryNow);
     window.addEventListener("focus", retryNow);
 
+    let wasAnswering = isStorageAnswering();
+    const unsubscribe = subscribeStorageHealth(() => {
+      const answering = isStorageAnswering();
+      const recovered = answering && !wasAnswering;
+      wasAnswering = answering;
+      if (recovered) retryNow();
+    });
+
     this.disposeRecovery = () => {
       window.removeEventListener("online", retryNow);
       window.removeEventListener("focus", retryNow);
+      unsubscribe();
     };
   }
 

@@ -2,6 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { ComponentSpec } from "@/models/componentSpec";
 import type { PipelineFile } from "@/services/pipelineStorage/PipelineFile";
+import {
+  reportStorageAnswered,
+  reportStorageFailed,
+} from "@/services/pipelineStorage/storageHealth";
 
 import { AutoSaveStore } from "./autoSaveStore";
 import { PipelineFileStore } from "./pipelineFileStore";
@@ -104,6 +108,31 @@ describe("AutoSaveStore when the store cannot be reached", () => {
     expect(written).toEqual(["name: Churn model"]);
     expect(store.saveError).toBeNull();
     expect(store.lastSavedAt).toBeInstanceOf(Date);
+    store.dispose();
+  });
+
+  it("saves the held edit the moment the store answers again", async () => {
+    let reachable = false;
+    const written: string[] = [];
+    const store = createStore({
+      write: async (yamlText: string) => {
+        if (!reachable) throw new Error("unreachable");
+        written.push(yamlText);
+      },
+    } as unknown as PipelineFile);
+
+    store.init(createSpec("Churn model"), "Churn model");
+    await store.save();
+    reportStorageFailed("unavailable");
+    expect(written).toEqual([]);
+
+    reachable = true;
+    reportStorageAnswered();
+
+    await vi.waitFor(() => {
+      expect(written).toEqual(["name: Churn model"]);
+      expect(store.saveError).toBeNull();
+    });
     store.dispose();
   });
 

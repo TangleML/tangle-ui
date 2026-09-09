@@ -339,6 +339,35 @@ test.describe("backend pipeline storage", () => {
     await expect(banner).toBeHidden();
   });
 
+  test("sends the edit it was holding as soon as the backend answers", async ({
+    page,
+  }) => {
+    await installSeededBackend(page);
+
+    await page.goto(`/editor-v2/${SEED[0].key}`);
+    await expect(page.locator('[data-testid="rf__wrapper"]')).toBeVisible({
+      timeout: 30_000,
+    });
+
+    setBackendFailMode(page, "unavailable");
+    await page.getByTestId("auto-save-button").click();
+    await expect(page.getByTestId("unsaved-work-banner")).toBeVisible();
+
+    const before = readBackendRecords(page).find(
+      (record) => record.key === SEED[0].key,
+    )?.contentVersion;
+
+    setBackendFailMode(page, "none");
+
+    await expect(page.getByTestId("unsaved-work-banner")).toBeHidden({
+      timeout: 60_000,
+    });
+    expect(
+      readBackendRecords(page).find((record) => record.key === SEED[0].key)
+        ?.contentVersion,
+    ).not.toBe(before);
+  });
+
   test("offers a copy before asking for a sign-in that would discard it", async ({
     page,
   }) => {
