@@ -267,6 +267,32 @@ export async function seedLocallyStoredPipeline(
     });
 
     if (registry?.objectStoreNames.contains("host_migration")) {
+      const settled = () =>
+        new Promise<boolean>((resolve) => {
+          const request = registry
+            .transaction("host_migration", "readonly")
+            .objectStore("host_migration")
+            .get("v1");
+          request.onsuccess = () => {
+            const record = request.result as
+              { completedAt?: number; dismissedAt?: number } | undefined;
+            resolve(
+              record?.completedAt !== undefined ||
+                record?.dismissedAt !== undefined,
+            );
+          };
+          request.onerror = () => resolve(false);
+        });
+
+      /**
+       * The copy this page load already started would otherwise write its own
+       * record back over the cleared one, and the next load would read it as
+       * done.
+       */
+      for (let attempt = 0; attempt < 50 && !(await settled()); attempt++) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+
       await new Promise<void>((resolve) => {
         const transaction = registry.transaction("host_migration", "readwrite");
         transaction.objectStore("host_migration").clear();

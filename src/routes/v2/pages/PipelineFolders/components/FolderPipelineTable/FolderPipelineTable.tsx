@@ -219,7 +219,7 @@ export const FolderPipelineTable = withSuspenseWrapper(
                 </TableCell>
               </TableRow>
 
-              {folderId !== null && (
+              {folderId !== null && !currentFolder.isFlat && (
                 <ParentFolderRow breadcrumbPath={breadcrumbPath} />
               )}
 

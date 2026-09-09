@@ -53,6 +53,22 @@ test.describe("host-provided pipeline storage", () => {
     await expect(page.getByText("Nightly refresh")).toBeVisible();
   });
 
+  test("offers nothing to file pipelines into a store that has no folders", async ({
+    page,
+  }) => {
+    await installSeededHost(page);
+
+    await page.goto("/pipeline-folders");
+    await expect(page.getByText("Churn model")).toBeVisible();
+
+    await expect(
+      page.getByRole("button", { name: /new folder/i }),
+    ).toBeHidden();
+    await expect(
+      page.getByRole("button", { name: /connect folder/i }),
+    ).toBeHidden();
+  });
+
   test("keeps the pipeline table at /pipelines, contents and all", async ({
     page,
   }) => {
