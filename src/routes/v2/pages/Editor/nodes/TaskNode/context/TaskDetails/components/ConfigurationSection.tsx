@@ -3,10 +3,11 @@ import { useEffect, useId, useState } from "react";
 
 import { ComputeResourcesEditor } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/AnnotationsEditor/ComputeResourcesEditor";
 import {
+  clusterAnnotationDiff,
   getCloudProviderConfig,
   getProviderSchema,
-  launcherTaskAnnotationSchema,
   parseSchemaToAnnotationConfig,
+  resolveSelectedClusterKey,
 } from "@/components/shared/ReactFlow/FlowCanvas/TaskNode/AnnotationsEditor/utils";
 import { useFlagValue } from "@/components/shared/Settings/useFlags";
 import { ColorPicker } from "@/components/ui/color";
@@ -16,6 +17,7 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Heading, Paragraph, Text } from "@/components/ui/typography";
+import { useLauncherAnnotationSchema } from "@/hooks/useLauncherCapabilities";
 import { cn } from "@/lib/utils";
 import type { Task } from "@/models/componentSpec";
 import { useAnalytics } from "@/providers/AnalyticsProvider";
@@ -24,7 +26,7 @@ import {
   CONDITION_SURFACE_CLASSES,
 } from "@/routes/v2/shared/conditionalExecution.styles";
 import { useSpec } from "@/routes/v2/shared/providers/SpecContext";
-import type { AnnotationConfig, Annotations } from "@/types/annotations";
+import type { Annotations } from "@/types/annotations";
 import {
   EDITOR_COLLAPSED_ANNOTATION,
   TASK_COLOR_ANNOTATION,
@@ -57,6 +59,7 @@ export const ConfigurationSection = observer(function ConfigurationSection({
     saveAnnotation,
     setTaskColor,
     clearProviderAnnotations,
+    selectCluster,
     setCollapsed,
     setConditionalExecution,
     setRunCondition,
@@ -95,66 +98,58 @@ export const ConfigurationSection = observer(function ConfigurationSection({
     }
   }
 
-  const [cloudProviderConfig, setCloudProviderConfig] =
-    useState<AnnotationConfig | null>(null);
-  const [computeResources, setComputeResources] = useState<AnnotationConfig[]>(
-    [],
-  );
+  const { schema, capabilitiesActive } = useLauncherAnnotationSchema();
+  const cloudProviderConfig = getCloudProviderConfig(schema);
   const [previousProvider, setPreviousProvider] = useState<string | undefined>(
     undefined,
   );
 
-  const selectedProvider = cloudProviderConfig
-    ? String(annotationsRecord[cloudProviderConfig.annotation])
-    : undefined;
+  const selectedProvider = !cloudProviderConfig
+    ? undefined
+    : capabilitiesActive
+      ? resolveSelectedClusterKey(schema, annotationsRecord)
+      : String(annotationsRecord[cloudProviderConfig.annotation]);
 
-  useEffect(() => {
-    try {
-      const providerConfig = getCloudProviderConfig(
-        launcherTaskAnnotationSchema,
-      );
-      setCloudProviderConfig(providerConfig);
-    } catch (error) {
-      console.error("Failed to load launcher annotation schema:", error);
-    }
-  }, []);
+  const providerSchema = getProviderSchema(schema, selectedProvider);
+  const computeResources = providerSchema
+    ? parseSchemaToAnnotationConfig(providerSchema).filter(
+        (resource) => !resource.hidden,
+      )
+    : [];
 
+  // Drop the previous provider's annotations when switching providers.
   useEffect(() => {
     if (selectedProvider === previousProvider) return;
 
-    try {
-      if (previousProvider) {
+    if (previousProvider) {
+      if (capabilitiesActive) {
+        const staleKeys = clusterAnnotationDiff(
+          schema,
+          previousProvider,
+          selectedProvider,
+        );
+        if (staleKeys.length > 0) {
+          clearProviderAnnotations(
+            task,
+            staleKeys.map((annotation) => ({ annotation, label: annotation })),
+          );
+        }
+      } else {
         const previousProviderSchema = getProviderSchema(
-          launcherTaskAnnotationSchema,
+          schema,
           previousProvider,
         );
         if (previousProviderSchema) {
-          const previousResources = parseSchemaToAnnotationConfig(
-            previousProviderSchema,
+          clearProviderAnnotations(
+            task,
+            parseSchemaToAnnotationConfig(previousProviderSchema),
           );
-          clearProviderAnnotations(task, previousResources);
         }
       }
-
-      let newResources: AnnotationConfig[] = [];
-      if (selectedProvider) {
-        const providerSchema = getProviderSchema(
-          launcherTaskAnnotationSchema,
-          selectedProvider,
-        );
-        if (providerSchema) {
-          const parsedResources = parseSchemaToAnnotationConfig(providerSchema);
-          newResources = parsedResources.filter((res) => !res.hidden);
-        }
-      }
-
-      setComputeResources(newResources);
-      setPreviousProvider(selectedProvider);
-    } catch (error) {
-      console.error("Failed to load provider schema:", error);
-      setComputeResources([]);
     }
-  }, [selectedProvider, previousProvider, task.annotations]);
+
+    setPreviousProvider(selectedProvider);
+  }, [selectedProvider, previousProvider, capabilitiesActive, schema, task]);
 
   const handleDisableCacheChange = (checked: boolean) => {
     toggleCacheDisable(task, checked);
@@ -164,6 +159,15 @@ export const ConfigurationSection = observer(function ConfigurationSection({
   };
 
   const handleSave = (key: string, value: string | undefined) => {
+    if (
+      capabilitiesActive &&
+      cloudProviderConfig &&
+      key === cloudProviderConfig.annotation &&
+      value
+    ) {
+      selectCluster(task, schema, value);
+      return;
+    }
     saveAnnotation(task, key, value);
   };
 
@@ -287,6 +291,7 @@ export const ConfigurationSection = observer(function ConfigurationSection({
         resources={computeResources}
         annotations={annotationsRecord}
         onSave={handleSave}
+        providerValue={capabilitiesActive ? selectedProvider : undefined}
       />
     </BlockStack>
   );

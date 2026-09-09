@@ -32,6 +32,9 @@ export const GIT_COMMIT = import.meta.env.VITE_GIT_COMMIT || "master";
 export const ENABLE_GOOGLE_CLOUD_SUBMITTER =
   import.meta.env.VITE_ENABLE_GOOGLE_CLOUD_SUBMITTER === "true";
 
+export const LAUNCHER_CAPABILITIES =
+  import.meta.env.VITE_LAUNCHER_CAPABILITIES === "true";
+
 export const USER_PIPELINES_LIST_NAME = "user_pipelines";
 
 export const defaultPipelineYamlWithName = (name: string) => `
