@@ -1,26 +1,21 @@
-import { useSyncExternalStore } from "react";
-
-import { isBackendStorage } from "./storageMode";
 import type { StorageErrorCode } from "./types";
 
 /**
- * Whether the store holding the pipelines is answering, learned from the calls
- * the app already makes rather than from a health check against something else.
+ * Whether the backend holding the pipelines is answering, learned from the
+ * calls the app already makes. An error is only an outage if the backend failed
+ * to answer at all: "no such pipeline" is an answer.
  *
- * The configured backend serves more than pipelines, and a health check
- * against it says nothing about whether the pipeline routes are answering —
- * which is the only thing the pipeline list and the save indicator are about.
- *
- * An error is only an outage if the store failed to answer at all. "No such
- * pipeline" is an answer.
+ * Kept free of React and of the provider that knows the backend's address, so
+ * that the driver reporting into it does not drag either into its own module
+ * graph. `useStorageUnavailable` is the way to read it.
  */
-let reachable = true;
+let answering = true;
 
 const listeners = new Set<() => void>();
 
 function set(next: boolean): void {
-  if (reachable === next) return;
-  reachable = next;
+  if (answering === next) return;
+  answering = next;
   for (const listener of listeners) listener();
 }
 
@@ -29,25 +24,14 @@ export function reportStorageAnswered(): void {
 }
 
 export function reportStorageFailed(code: StorageErrorCode): void {
-  if (code !== "unavailable") {
-    set(true);
-    return;
-  }
-
-  set(false);
+  set(code !== "unavailable");
 }
 
-function subscribe(listener: () => void): () => void {
+export function subscribeStorageHealth(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
 }
 
-export function useStorageUnavailable(): boolean {
-  const answering = useSyncExternalStore(
-    subscribe,
-    () => reachable,
-    () => true,
-  );
-
-  return isBackendStorage() && !answering;
+export function isStorageAnswering(): boolean {
+  return answering;
 }

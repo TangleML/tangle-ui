@@ -120,6 +120,71 @@ describe("registry rows belong to the store that wrote them", () => {
   });
 });
 
+describe("rows left by an earlier name for the same store", () => {
+  const V7_SCHEMA = {
+    pipeline_registry:
+      "id, storage, folderId, &[storage+storageKey], [storage+folderId], [storage+folderId+storageKey]",
+    folders: "id, parentId",
+    pipeline_specs: "[storage+storageKey]",
+    host_migration: "id",
+  };
+
+  async function openAtV7() {
+    await pipelineStorageDb.close();
+    await Dexie.delete("tangle_pipelines");
+    const old = new Dexie("tangle_pipelines");
+    old.version(7).stores(V7_SCHEMA);
+    await old.open();
+    return old;
+  }
+
+  it("reads them as the store they always described", async () => {
+    const old = await openAtV7();
+    await old.table("pipeline_registry").bulkAdd([
+      {
+        id: "external-1",
+        storage: "host",
+        storageKey: "Churn model",
+        folderId: ROOT_FOLDER_ID,
+      },
+    ]);
+    old.close();
+
+    await pipelineStorageDb.open();
+
+    expect(
+      (await pipelineStorageDb.pipeline_registry.get("external-1"))?.storage,
+    ).toBe("backend");
+  });
+
+  it("keeps the newer row when a listing had already claimed the key", async () => {
+    const old = await openAtV7();
+    await old.table("pipeline_registry").bulkAdd([
+      {
+        id: "stale",
+        storage: "host",
+        storageKey: "Churn model",
+        folderId: ROOT_FOLDER_ID,
+      },
+      {
+        id: "fresh",
+        storage: "backend",
+        storageKey: "Churn model",
+        folderId: ROOT_FOLDER_ID,
+      },
+    ]);
+    old.close();
+
+    await pipelineStorageDb.open();
+
+    expect(
+      (await pipelineStorageDb.pipeline_registry.toArray()).map(
+        (row) => row.id,
+      ),
+    ).toEqual(["fresh"]);
+  });
+});
+
 describe("attributing rows written before rows said which store", () => {
   const OLD_SCHEMA = {
     pipeline_registry: "id, &storageKey, folderId, [folderId+storageKey]",

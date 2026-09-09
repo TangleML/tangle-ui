@@ -117,6 +117,41 @@ pipelineStorageDb
       });
   });
 
+/**
+ * The value naming the store changed when pipelines moved onto the configured
+ * backend. A row still saying "host" is invisible to every lookup, which scopes
+ * itself to the store in use — but its id still occupies the primary key, so
+ * the next listing tries to add the same pipeline again and the collision takes
+ * the whole page down rather than one row.
+ */
+pipelineStorageDb.version(8).upgrade(async (tx) => {
+  await tx.table("pipeline_specs").clear();
+
+  const registry = tx.table<PipelineRegistryEntry>("pipeline_registry");
+  const rows = await registry.toArray();
+  const claimed = new Set(
+    rows
+      .filter((row) => row.storage === "backend")
+      .map((row) => row.storageKey),
+  );
+
+  for (const row of rows) {
+    if ((row.storage as string) !== "host") continue;
+
+    /**
+     * A listing that got part way through before the collision left rows under
+     * both names. The one written since is the one the backend just described.
+     */
+    if (claimed.has(row.storageKey)) {
+      await registry.delete(row.id);
+      continue;
+    }
+
+    await registry.update(row.id, { storage: "backend" });
+    claimed.add(row.storageKey);
+  }
+});
+
 pipelineStorageDb.on("ready", async () => {
   await seedRegistryFromLegacyList();
 });

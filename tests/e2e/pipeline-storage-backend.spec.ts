@@ -295,6 +295,26 @@ test.describe("backend pipeline storage", () => {
     await expect(indicator.locator(".text-destructive")).toBeHidden();
   });
 
+  test("turns auto-save red in an open editor nobody is touching", async ({
+    page,
+  }) => {
+    await installSeededBackend(page);
+
+    await page.goto(`/editor-v2/${SEED[0].key}`);
+    await expect(page.locator('[data-testid="rf__wrapper"]')).toBeVisible({
+      timeout: 30_000,
+    });
+
+    const indicator = page.getByTestId("auto-save-button");
+    await expect(indicator).toBeEnabled();
+
+    // No edit, no click: the page has to notice on its own.
+    setBackendFailMode(page, "unavailable");
+
+    await expect(indicator).toBeDisabled({ timeout: 60_000 });
+    await expect(indicator.locator(".text-destructive")).toBeVisible();
+  });
+
   test("says so in the editor when a save is refused, and stops once it lands", async ({
     page,
   }) => {

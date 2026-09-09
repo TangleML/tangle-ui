@@ -31,6 +31,8 @@ interface BackendStore {
 
 const PIPELINES_PATH = "**/api/users/me/pipelines**";
 
+const PING_PATH = "**/services/ping";
+
 const STATUS_FOR: Record<Exclude<BackendFailMode, "none">, number> = {
   unavailable: 503,
   unauthenticated: 401,
@@ -88,6 +90,17 @@ export async function installPipelineStorageBackend(
     readKeys: [],
     failMode: options.failMode ?? "none",
     revision: seed.length,
+  });
+
+  /**
+   * One deployment serves both, so the health check answers exactly when the
+   * pipeline routes do.
+   */
+  await page.route(PING_PATH, (route) => {
+    const store = storeFor(page);
+    return store.failMode === "none"
+      ? route.fulfill({ status: 200, body: "ok" })
+      : route.fulfill({ status: STATUS_FOR[store.failMode], body: "down" });
   });
 
   await page.route(PIPELINES_PATH, async (route) => {

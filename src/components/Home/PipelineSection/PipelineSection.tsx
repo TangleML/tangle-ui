@@ -23,9 +23,9 @@ import {
 } from "@/components/ui/table";
 import { Paragraph, Text } from "@/components/ui/typography";
 import { usePagination } from "@/hooks/usePagination";
+import { useStorageUnavailable } from "@/hooks/useStorageUnavailable";
 import { APP_ROUTES } from "@/routes/router";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
-import { useStorageUnavailable } from "@/services/pipelineStorage/storageHealth";
 
 import BulkActionsBar from "./BulkActionsBar";
 import { HostMigrationNotice } from "./HostMigrationNotice";

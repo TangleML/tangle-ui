@@ -5,8 +5,8 @@ import { BackendUnavailable } from "@/components/shared/BackendUnavailable";
 import { withSuspenseWrapper } from "@/components/shared/SuspenseWrapper";
 import { BlockStack, InlineStack } from "@/components/ui/layout";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useStorageUnavailable } from "@/hooks/useStorageUnavailable";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
-import { useStorageUnavailable } from "@/services/pipelineStorage/storageHealth";
 import {
   type PipelineRef,
   ROOT_FOLDER_ID,

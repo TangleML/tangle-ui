@@ -3,11 +3,14 @@ import { getPipelineStorageService } from "@/services/pipelineStorage/PipelineSt
 
 export function BackendUnavailable() {
   const { mode } = getPipelineStorageService();
+  const errorMessage =
+    mode.kind === "backend"
+      ? "The configured backend is currently unavailable."
+      : "Pipeline storage is currently unavailable.";
 
   return (
     <InfoBox title="Backend not available" variant="warning">
-      {mode.kind === "backend" ? mode.label : "Pipeline storage"} is not
-      answering. Pipelines cannot be read or saved until it is back.
+      {errorMessage}
     </InfoBox>
   );
 }

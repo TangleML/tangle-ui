@@ -4,9 +4,9 @@ import type { ReactNode } from "react";
 import TooltipButton from "@/components/shared/Buttons/TooltipButton";
 import { Icon } from "@/components/ui/icon";
 import { Spinner } from "@/components/ui/spinner";
+import { useStorageUnavailable } from "@/hooks/useStorageUnavailable";
 import { cn } from "@/lib/utils";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
-import { useStorageUnavailable } from "@/services/pipelineStorage/storageHealth";
 import { tracking } from "@/utils/tracking";
 
 const LAYER_BASE_CLASS =
