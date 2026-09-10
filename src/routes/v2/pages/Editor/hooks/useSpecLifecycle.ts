@@ -4,7 +4,9 @@ import { isRootStore, unregisterRootStore } from "mobx-keystone";
 import { useEffect, useRef } from "react";
 
 import type { ComponentSpec } from "@/models/componentSpec";
+import { collectIdStack } from "@/models/componentSpec";
 import { useEditorSession } from "@/routes/v2/pages/Editor/store/EditorSessionContext";
+import { saveIdStack } from "@/routes/v2/pages/Editor/utils/undoHistoryStorage";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 import { usePipelineStorage } from "@/services/pipelineStorage/PipelineStorageProvider";
 import type { PipelineStorageService } from "@/services/pipelineStorage/PipelineStorageService";
@@ -51,6 +53,9 @@ export function useSpecLifecycle(
         const file = await resolvePipelineFile(pipelineRef, storage);
         pipelineFileStore.init(file ?? null);
         autoSave.init(rootSpec, saveName);
+        // Persist the id ordering up front so a reload replays the same `$id`s
+        // even if the user never edits — keeps chat entity links resolvable.
+        await saveIdStack(saveName, collectIdStack(rootSpec)).catch(() => {});
       }
     })();
 

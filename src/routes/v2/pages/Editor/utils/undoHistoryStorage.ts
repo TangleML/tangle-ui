@@ -55,9 +55,30 @@ export async function loadUndoHistory(
 
   if (!data) return null;
   if (data.version !== CURRENT_VERSION) return null;
-  if (!data.idStack?.length || !data.undoEvents?.length) return null;
+  // An idStack alone is enough to replay stable `$id`s on load; undo events are
+  // optional (a pipeline opened but never edited has none).
+  if (!data.idStack?.length) return null;
+  if (!data.undoEvents) return null;
 
   return data;
+}
+
+/**
+ * Persists just the entity `$id` ordering for a pipeline, preserving any stored
+ * undo events. Called when a spec is first loaded so `$id`s stay stable across
+ * reloads even before the first edit — chat `entity://` links stay resolvable.
+ */
+export async function saveIdStack(
+  pipelineName: string,
+  idStack: string[],
+): Promise<void> {
+  const existing = await UndoHistoryDB.entries.get(pipelineName);
+  await UndoHistoryDB.entries.put({
+    pipelineName,
+    version: CURRENT_VERSION,
+    idStack,
+    undoEvents: existing?.undoEvents ?? [],
+  });
 }
 
 export function createUndoStoreWithEvents(events: UndoEvent[]): UndoStore {
