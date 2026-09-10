@@ -1,10 +1,12 @@
 import { NodeToolbar, useReactFlow } from "@xyflow/react";
 import { observer } from "mobx-react-lite";
 
+import useToastNotification from "@/hooks/useToastNotification";
 import type { ComponentSpec } from "@/models/componentSpec";
 import { getSelectedEdgesFromInstance } from "@/routes/v2/pages/Editor/components/FlowCanvas/canvasDeleteSelection";
 import { usePipelineActions } from "@/routes/v2/pages/Editor/store/actions/usePipelineActions";
 import { useTaskActions } from "@/routes/v2/pages/Editor/store/actions/useTaskActions";
+import { CLIPBOARD_COPY_FAILED_MESSAGE } from "@/routes/v2/shared/clipboard/clipboardMessages";
 import { useSharedStores } from "@/routes/v2/shared/store/SharedStoreContext";
 
 import { SelectionToolbar } from "./SelectionToolbar";
@@ -16,6 +18,7 @@ export const FloatingSelectionToolbar = observer(
     const { createSubgraph } = usePipelineActions();
     const { multiSelection } = editor;
     const reactFlow = useReactFlow();
+    const notify = useToastNotification();
 
     if (multiSelection.length <= 1) return null;
 
@@ -28,7 +31,9 @@ export const FloatingSelectionToolbar = observer(
 
     const handleCopy = () => {
       if (!spec) return;
-      copySelectedNodes(spec, multiSelection);
+      copySelectedNodes(spec, multiSelection).catch(() =>
+        notify(CLIPBOARD_COPY_FAILED_MESSAGE, "error"),
+      );
     };
 
     const handleDelete = () => {
