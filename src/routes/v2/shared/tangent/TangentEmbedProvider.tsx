@@ -1,10 +1,14 @@
 import type {
+  AnchorProtocolMap,
   ColorScheme,
   EmbedResource,
   HostResourceInput,
+  HostUIComponentMap,
   NewSessionOptions,
   NewSessionResult,
+  TangentContextValue,
 } from "@tangent/embed-react";
+import { TangentContext } from "@tangent/embed-react";
 import {
   createContext,
   type ReactNode,
@@ -42,6 +46,10 @@ interface TangentProviderElementLike extends HTMLElement {
     colorScheme?: ColorScheme;
     tokens?: Record<string, string>;
   };
+  hostExtensions: {
+    uiNames: string[];
+    anchorProtocols: string[];
+  };
   runtime?: EmbedRuntimeHandle | null;
 }
 
@@ -68,14 +76,6 @@ function loadEmbedRuntime(url: string): Promise<void> {
   );
   runtimeLoaders.set(url, loading);
   return loading;
-}
-
-function applyProviderConfig(
-  element: TangentProviderElementLike | null,
-  config: TangentProviderElementLike["config"],
-) {
-  if (!element) return;
-  element.config = config;
 }
 
 function useTangentEmbedContext(): TangentEmbedContextValue {
@@ -138,20 +138,32 @@ interface TangentEmbedProviderProps {
   colorScheme?: ColorScheme;
   getToken?: () => string | undefined | Promise<string | undefined>;
   instance?: string;
+  /** Host-owned UI components that replace bundle components, keyed by name. */
+  uiComponents?: HostUIComponentMap;
+  /** Host-owned anchor components, keyed by protocol scheme (no `://`). */
+  anchorProtocols?: AnchorProtocolMap;
   children?: ReactNode;
 }
 
 /**
- * Tangle-ui wrapper around the embed runtime provider. Applies API and socket
- * config synchronously during render so Socket.IO reads the Tangent origin
- * before descendant chat elements subscribe (embed-react sets config in
- * useEffect, which is too late).
+ * Tangle-ui wrapper around the embed runtime provider. Applies API/socket
+ * config, theme, and host extensions synchronously during render so Socket.IO
+ * reads the Tangent origin (and the runtime knows which slots the host owns)
+ * before descendant chat elements subscribe — embed-react's `TangentProvider`
+ * sets these in `useEffect`, which is too late.
+ *
+ * It also populates embed-react's own `TangentContext` so `<Chat>` can project
+ * host-owned UI (`uiComponents`) and anchor (`anchorProtocols`) slots into the
+ * host React tree, while `useTangent` keeps reading this sync-configured
+ * element for session/resource calls.
  */
 export function TangentEmbedProvider({
   baseUrl,
   colorScheme,
   getToken,
   instance,
+  uiComponents,
+  anchorProtocols,
   children,
 }: TangentEmbedProviderProps) {
   const channelUrl = defaultChannelUrl(baseUrl);
@@ -167,6 +179,17 @@ export function TangentEmbedProvider({
     getToken,
   };
   const theme = { colorScheme };
+  const hostExtensions = {
+    uiNames: Object.keys(uiComponents ?? {}),
+    anchorProtocols: Object.keys(anchorProtocols ?? {}),
+  };
+
+  function applyProviderProps(element: TangentProviderElementLike | null) {
+    if (!element) return;
+    element.config = config;
+    element.theme = theme;
+    element.hostExtensions = hostExtensions;
+  }
 
   useEffect(() => {
     let active = true;
@@ -179,34 +202,42 @@ export function TangentEmbedProvider({
   }, [readyPromise]);
 
   if (ready) {
-    applyProviderConfig(
-      ref.current as TangentProviderElementLike | null,
-      config,
-    );
-    const element = ref.current as TangentProviderElementLike | null;
-    if (element) element.theme = theme;
+    applyProviderProps(ref.current as TangentProviderElementLike | null);
   }
 
   useLayoutEffect(() => {
     if (!ready) return;
-    applyProviderConfig(
-      ref.current as TangentProviderElementLike | null,
-      config,
-    );
-    const element = ref.current as TangentProviderElementLike | null;
-    if (element) element.theme = theme;
-  }, [ready, baseUrl, socketUrl, socketPath, getToken, colorScheme]);
+    applyProviderProps(ref.current as TangentProviderElementLike | null);
+  }, [
+    ready,
+    baseUrl,
+    socketUrl,
+    socketPath,
+    getToken,
+    colorScheme,
+    uiComponents,
+    anchorProtocols,
+  ]);
 
   const context: TangentEmbedContextValue = {
     getProvider: () => ref.current as TangentProviderElementLike | null,
     ready: readyPromise,
   };
 
+  const embedContext: TangentContextValue = {
+    getProvider: () => ref.current as TangentProviderElementLike | null,
+    ready: readyPromise,
+    uiComponents: uiComponents ?? {},
+    anchorProtocols: anchorProtocols ?? {},
+  };
+
   return (
     <TangentEmbedContext.Provider value={context}>
-      <tangent-provider ref={ref} instance={instance}>
-        {ready ? children : null}
-      </tangent-provider>
+      <TangentContext.Provider value={embedContext}>
+        <tangent-provider ref={ref} instance={instance}>
+          {ready ? children : null}
+        </tangent-provider>
+      </TangentContext.Provider>
     </TangentEmbedContext.Provider>
   );
 }

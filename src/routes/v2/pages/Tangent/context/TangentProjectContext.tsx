@@ -1,4 +1,5 @@
 import { useLiveQuery } from "dexie-react-hooks";
+import { when } from "mobx";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
@@ -12,6 +13,9 @@ import {
   type ResolvedWorkareaView,
   resolveWorkareaTarget,
 } from "@/routes/v2/pages/Tangent/services/openWorkareaTarget";
+import { resolveChatEntity } from "@/routes/v2/shared/components/AiChat/components/resolveChatEntity";
+import { navigateToEntity } from "@/routes/v2/shared/store/focus.actions";
+import type { SharedUIStore } from "@/routes/v2/shared/store/SharedStoreContext";
 import { TANGENT_BUNDLE_ID } from "@/routes/v2/shared/tangent/constants";
 import { useTangent } from "@/routes/v2/shared/tangent/TangentEmbedProvider";
 import { useTangentSessionTabs } from "@/routes/v2/shared/tangent/useTangentSessionTabs";
@@ -89,6 +93,26 @@ interface TangentProjectContextValue {
   unregisterTabBridge: (tabId: string) => void;
   /** The bridge of the active pipeline tab, if the active tab is a pipeline. */
   getActiveTabBridge: () => ToolBridgeApi | undefined;
+  /** Publish a pipeline tab's live shared store so chat chips can focus it. */
+  registerTabStore: (tabId: string, store: SharedUIStore) => void;
+  /** Forget a tab's shared store (on tab close/unmount). */
+  unregisterTabStore: (tabId: string) => void;
+  /**
+   * Resolve once the tab's shared store has been published, or with `undefined`
+   * if it does not within `timeoutMs`.
+   */
+  waitForTabStore: (
+    tabId: string,
+    timeoutMs?: number,
+  ) => Promise<SharedUIStore | undefined>;
+  /** The shared store of the active pipeline tab, if the active tab is one. */
+  activeTabStore: SharedUIStore | undefined;
+  /**
+   * Reveal an `entity://` chip target: focus it in whichever open pipeline tab
+   * contains it, or open the project's last pipeline and navigate once loaded.
+   * Resolves `true` when the entity was navigated to.
+   */
+  revealEntity: (entityId: string, label: string) => Promise<boolean>;
   /** Alias for {@link openArtifactTab}; kept for the embed chat artifact links. */
   onOpenArtifact: (url: string, title: string) => void;
   onError: (message: string) => void;
@@ -96,6 +120,52 @@ interface TangentProjectContextValue {
 
 /** How long {@link TangentProjectContextValue.waitForTabEnvironment} waits. */
 const DEFAULT_ENVIRONMENT_WAIT_MS = 15_000;
+
+/** How long {@link TangentProjectContextValue.waitForTabStore} waits. */
+const DEFAULT_STORE_WAIT_MS = 15_000;
+
+/** How long we wait for a freshly opened tab's spec to finish loading. */
+const SPEC_LOAD_WAIT_MS = 15_000;
+
+const PIPELINE_PROTOCOL = "pipeline://";
+
+function lastPipelineStorageKey(projectId: string): string {
+  return `tangent:lastPipeline:${projectId}`;
+}
+
+function readLastPipelineRef(projectId: string): PipelineRef | undefined {
+  try {
+    const raw = sessionStorage.getItem(lastPipelineStorageKey(projectId));
+    if (!raw) return undefined;
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      typeof parsed === "object" &&
+      parsed !== null &&
+      "name" in parsed &&
+      typeof parsed.name === "string"
+    ) {
+      const fileId =
+        "fileId" in parsed && typeof parsed.fileId === "string"
+          ? parsed.fileId
+          : undefined;
+      return { name: parsed.name, fileId };
+    }
+  } catch {
+    // Ignore malformed/unavailable storage; fall back to resource inference.
+  }
+  return undefined;
+}
+
+function writeLastPipelineRef(projectId: string, ref: PipelineRef): void {
+  try {
+    sessionStorage.setItem(
+      lastPipelineStorageKey(projectId),
+      JSON.stringify(ref),
+    );
+  } catch {
+    // Best-effort only.
+  }
+}
 
 const TangentProjectCtx = createRequiredContext<TangentProjectContextValue>(
   "TangentProjectContext",
@@ -136,6 +206,15 @@ export function TangentProjectProvider({
   // (via a stable routing bridge) outside React's render cycle.
   const tabBridgesRef = useRef(new Map<string, ToolBridgeApi>());
   const activeWorkareaTabIdRef = useRef<string | null>(null);
+  // Each pipeline tab surfaces its isolated SharedUIStore here so the embedded
+  // chat's entity chips navigate/focus the active canvas. Kept in state (not a
+  // ref) so the chat re-wraps when the active tab or its store changes.
+  const [tabStores, setTabStores] = useState<Record<string, SharedUIStore>>({});
+  // Waiters resolved when a tab's store is (re)published, so `revealEntity` can
+  // navigate a freshly opened tab once its editor mounts and registers.
+  const tabStoreWaitersRef = useRef(
+    new Map<string, Set<(store: SharedUIStore) => void>>(),
+  );
 
   const project = useLiveQuery(
     () => tangentDb.projects.get(projectId),
@@ -167,6 +246,8 @@ export function TangentProjectProvider({
     tabEnvironmentsRef.current.clear();
     tabEnvironmentWaitersRef.current.clear();
     tabBridgesRef.current.clear();
+    tabStoreWaitersRef.current.clear();
+    setTabStores({});
   }, [activeSessionId, resetTabs]);
 
   // Mirror the project's resources into the active session's catalog so the
@@ -284,6 +365,7 @@ export function TangentProjectProvider({
     pipelineRef: PipelineRef,
     title: string,
   ): WorkareaTab {
+    writeLastPipelineRef(projectId, pipelineRef);
     const existing = workareaTabs.find(
       (tab) =>
         tab.kind === "pipeline" &&
@@ -324,6 +406,7 @@ export function TangentProjectProvider({
   function closeWorkareaTab(id: string) {
     unregisterTabEnvironment(id);
     unregisterTabBridge(id);
+    unregisterTabStore(id);
     setWorkareaTabs((prev) => {
       const next = prev.filter((tab) => tab.id !== id);
       setActiveWorkareaTabId((current) => {
@@ -387,6 +470,126 @@ export function TangentProjectProvider({
     return tabBridgesRef.current.get(activeId);
   }
 
+  function registerTabStore(tabId: string, store: SharedUIStore) {
+    setTabStores((prev) =>
+      prev[tabId] === store ? prev : { ...prev, [tabId]: store },
+    );
+    const waiters = tabStoreWaitersRef.current.get(tabId);
+    if (!waiters) return;
+    tabStoreWaitersRef.current.delete(tabId);
+    for (const resolve of waiters) resolve(store);
+  }
+
+  function unregisterTabStore(tabId: string) {
+    setTabStores((prev) => {
+      if (!(tabId in prev)) return prev;
+      const next = { ...prev };
+      delete next[tabId];
+      return next;
+    });
+  }
+
+  function waitForTabStore(
+    tabId: string,
+    timeoutMs: number = DEFAULT_STORE_WAIT_MS,
+  ): Promise<SharedUIStore | undefined> {
+    const existing = tabStores[tabId];
+    if (existing) return Promise.resolve(existing);
+    return new Promise((resolve) => {
+      const waiters =
+        tabStoreWaitersRef.current.get(tabId) ??
+        new Set<(store: SharedUIStore) => void>();
+      tabStoreWaitersRef.current.set(tabId, waiters);
+      const onReady = (store: SharedUIStore) => {
+        clearTimeout(timer);
+        resolve(store);
+      };
+      const timer = setTimeout(() => {
+        waiters.delete(onReady);
+        resolve(undefined);
+      }, timeoutMs);
+      waiters.add(onReady);
+    });
+  }
+
+  function getLastPipelineRef(): PipelineRef | undefined {
+    const stored = readLastPipelineRef(projectId);
+    if (stored) return stored;
+
+    const pipelineResources = resources.filter(
+      (resource) => resource.type === "pipeline",
+    );
+    if (pipelineResources.length !== 1) return undefined;
+
+    const only = pipelineResources[0];
+    if (!only.url.startsWith(PIPELINE_PROTOCOL)) return undefined;
+    return {
+      name: only.name,
+      fileId: only.url.slice(PIPELINE_PROTOCOL.length),
+    };
+  }
+
+  function focusEntityInStore(
+    store: SharedUIStore,
+    entityId: string,
+    label: string,
+  ): boolean {
+    const resolved = resolveChatEntity(
+      store.navigation.rootSpec,
+      entityId,
+      label,
+    );
+    if (!resolved) return false;
+    const rootName = store.navigation.rootSpec?.name;
+    navigateToEntity(
+      store.editor,
+      store.navigation,
+      rootName ? [rootName] : [],
+      resolved.entityId,
+      resolved.kind,
+    );
+    return true;
+  }
+
+  async function focusEntityInTab(
+    tabId: string,
+    entityId: string,
+    label: string,
+  ): Promise<boolean> {
+    const store = tabStores[tabId] ?? (await waitForTabStore(tabId));
+    if (!store) return false;
+    if (!store.navigation.rootSpec) {
+      await when(() => store.navigation.rootSpec != null, {
+        timeout: SPEC_LOAD_WAIT_MS,
+      }).catch(() => undefined);
+    }
+    return focusEntityInStore(store, entityId, label);
+  }
+
+  async function revealEntity(
+    entityId: string,
+    label: string,
+  ): Promise<boolean> {
+    for (const tab of workareaTabs) {
+      if (tab.kind !== "pipeline") continue;
+      const store = tabStores[tab.id];
+      if (store && focusEntityInStore(store, entityId, label)) {
+        selectWorkareaTab(tab.id);
+        return true;
+      }
+    }
+
+    const pipelineRef = getLastPipelineRef();
+    if (!pipelineRef) return false;
+    const tab = openPipelineTab(pipelineRef, pipelineRef.name);
+    selectWorkareaTab(tab.id);
+    return focusEntityInTab(tab.id, entityId, label);
+  }
+
+  const activeTabStore = activeWorkareaTabId
+    ? tabStores[activeWorkareaTabId]
+    : undefined;
+
   function onError(message: string) {
     notify(message, "error");
   }
@@ -419,6 +622,11 @@ export function TangentProjectProvider({
     registerTabBridge,
     unregisterTabBridge,
     getActiveTabBridge,
+    registerTabStore,
+    unregisterTabStore,
+    waitForTabStore,
+    activeTabStore,
+    revealEntity,
     onOpenArtifact: openArtifactTab,
     onError,
   };

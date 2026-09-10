@@ -5,6 +5,7 @@ import { Text } from "@/components/ui/typography";
 import { useTangentSettings } from "@/hooks/useTangentSettings";
 import { DialogProvider } from "@/providers/DialogProvider/DialogProvider";
 import { useTheme } from "@/providers/ThemeProvider";
+import { chatAnchorProtocols } from "@/routes/v2/shared/components/AiChat/components/chatAnchorProtocols";
 import { SharedStoreProvider } from "@/routes/v2/shared/store/SharedStoreContext";
 import { TangentEmbedProvider } from "@/routes/v2/shared/tangent/TangentEmbedProvider";
 import { TOP_NAV_HEIGHT } from "@/utils/constants";
@@ -36,7 +37,12 @@ export function TangentProjectPage() {
       className="w-full overflow-hidden bg-slate-100 dark:bg-background"
       style={{ height: `calc(100vh - ${TOP_NAV_HEIGHT}px)` }}
     >
-      <TangentEmbedProvider key={baseUrl} baseUrl={baseUrl} colorScheme={theme}>
+      <TangentEmbedProvider
+        key={baseUrl}
+        baseUrl={baseUrl}
+        colorScheme={theme}
+        anchorProtocols={chatAnchorProtocols}
+      >
         <SharedStoreProvider>
           <TangentProjectProvider projectId={projectId}>
             <DialogProvider>
