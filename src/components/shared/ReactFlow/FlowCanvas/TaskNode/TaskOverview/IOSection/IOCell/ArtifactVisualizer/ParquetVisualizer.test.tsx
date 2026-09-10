@@ -163,6 +163,14 @@ const mockWideDataset = (columnCount: number, numRows: number) => {
   );
 };
 
+/** A `Range: bytes=0-0` probe answered with the total size, as object stores do. */
+const mockRangeProbe = (totalSize: number) =>
+  vi.spyOn(globalThis, "fetch").mockResolvedValue({
+    ok: true,
+    status: 206,
+    headers: new Headers({ "Content-Range": `bytes 0-0/${totalSize}` }),
+  } as unknown as Response);
+
 beforeEach(() => {
   queryClient.clear();
   lastDownloadFull = undefined;
@@ -179,14 +187,6 @@ beforeEach(() => {
     slice: vi.fn(),
   } as unknown as Awaited<ReturnType<typeof asyncBufferFromUrl>>);
 });
-
-/** A `Range: bytes=0-0` probe answered with the total size, as object stores do. */
-const mockRangeProbe = (totalSize: number) =>
-  vi.spyOn(globalThis, "fetch").mockResolvedValue({
-    ok: true,
-    status: 206,
-    headers: new Headers({ "Content-Range": `bytes 0-0/${totalSize}` }),
-  } as unknown as Response);
 
 describe("ParquetVisualizer", () => {
   it("opens the file at the reported size without any size request", async () => {

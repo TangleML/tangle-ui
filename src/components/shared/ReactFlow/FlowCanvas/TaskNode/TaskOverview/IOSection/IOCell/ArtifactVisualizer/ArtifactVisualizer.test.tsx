@@ -108,8 +108,18 @@ vi.mock("./UrlVisualizer", () => ({
 }));
 
 vi.mock("./ParquetVisualizer", () => ({
-  default: ({ signedUrl }: { signedUrl: string }) => (
-    <div data-testid="parquet-visualizer" data-signed-url={signedUrl} />
+  default: ({
+    signedUrl,
+    byteLength,
+  }: {
+    signedUrl: string;
+    byteLength?: number;
+  }) => (
+    <div
+      data-testid="parquet-visualizer"
+      data-signed-url={signedUrl}
+      data-byte-length={byteLength}
+    />
   ),
 }));
 
@@ -353,7 +363,7 @@ describe("ArtifactVisualizer", () => {
       });
     });
 
-    it("renders ParquetVisualizer for apacheparquet type", async () => {
+    it("renders ParquetVisualizer for apacheparquet type with the reported size", async () => {
       renderWithQuery(
         <ArtifactVisualizer
           artifact={makeArtifact()}
@@ -365,7 +375,28 @@ describe("ArtifactVisualizer", () => {
       await userEvent.click(screen.getByText("Preview"));
 
       await waitFor(() => {
-        expect(screen.getByTestId("parquet-visualizer")).toBeInTheDocument();
+        expect(screen.getByTestId("parquet-visualizer")).toHaveAttribute(
+          "data-byte-length",
+          "1024",
+        );
+      });
+    });
+
+    it("renders ParquetVisualizer without a size when the artifact reports none", async () => {
+      renderWithQuery(
+        <ArtifactVisualizer
+          artifact={makeArtifact({ artifact_data: undefined })}
+          name="data"
+          type="Apache Parquet"
+        />,
+      );
+
+      await userEvent.click(screen.getByText("Preview"));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("parquet-visualizer")).not.toHaveAttribute(
+          "data-byte-length",
+        );
       });
     });
   });

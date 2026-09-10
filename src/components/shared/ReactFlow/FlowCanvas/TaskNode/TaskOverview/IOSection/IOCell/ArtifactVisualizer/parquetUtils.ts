@@ -12,10 +12,7 @@ import {
 
 import { ArtifactFetchError } from "@/services/executionService";
 
-import {
-  fetchArtifactForHyparquet,
-  fetchArtifactOrThrow,
-} from "./useArtifactFetch";
+import { fetchArtifactOrThrow } from "./useArtifactFetch";
 import {
   type ArtifactCell,
   type ArtifactColumn,
@@ -44,7 +41,7 @@ export async function openParquet(
           typeof byteLength === "number" && byteLength > 0
             ? byteLength
             : await byteLengthFromRangedGet(signedUrl),
-        fetch: fetchArtifactForHyparquet,
+        fetch: fetchArtifactOrThrow,
       }),
     );
     const metadata = await parquetMetadataAsync(source);
@@ -56,11 +53,12 @@ export async function openParquet(
 }
 
 /**
- * Signed object-store URLs reject HEAD (the method is part of the signature),
+ * Signed object-store URLs reject HEAD — the method is part of the signature —
  * and a bucket's CORS policy need not allow it either, so a blocked HEAD
  * surfaces as an opaque network error rather than a 403 the caller could fall
- * back from. A ranged GET is signed, CORS-safelisted, and reports the total
- * size in `Content-Range`.
+ * back from. A ranged GET is signed and needs no preflight, but reading the
+ * total size back requires the bucket to expose `Content-Range`; where it does
+ * not, this throws and the caller downloads the whole object instead.
  */
 async function byteLengthFromRangedGet(url: string): Promise<number> {
   const controller = new AbortController();

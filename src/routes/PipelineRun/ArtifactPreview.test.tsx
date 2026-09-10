@@ -58,11 +58,13 @@ vi.mock(
         artifactId,
         name,
         isFullscreen,
+        totalSize,
       }: {
         type: string;
         artifactId: string;
         name: string;
         isFullscreen: boolean;
+        totalSize?: number;
       }) => (
         <div
           data-testid="preview-content"
@@ -70,6 +72,7 @@ vi.mock(
           data-artifact-id={artifactId}
           data-name={name}
           data-fullscreen={isFullscreen}
+          data-total-size={totalSize}
         />
       ),
     };
@@ -114,6 +117,7 @@ describe("ArtifactPreviewPage", () => {
       expect(preview).toHaveAttribute("data-artifact-id", "abc");
       expect(preview).toHaveAttribute("data-name", "output");
       expect(preview).toHaveAttribute("data-fullscreen", "true");
+      expect(preview).toHaveAttribute("data-total-size", "100");
     });
   });
 

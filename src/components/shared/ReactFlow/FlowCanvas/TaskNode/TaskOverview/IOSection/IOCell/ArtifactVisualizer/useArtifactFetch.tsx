@@ -15,22 +15,6 @@ export const fetchArtifactOrThrow: typeof fetch = async (input, init) => {
   return response;
 };
 
-export const fetchArtifactForHyparquet: typeof fetch = async (input, init) => {
-  const response = await fetch(input, init);
-  if (response.ok) return response;
-
-  const method = (init?.method ?? "GET").toUpperCase();
-  if (method === "HEAD" && response.status === 403) {
-    return response;
-  }
-
-  throw new ArtifactFetchError(
-    response.status,
-    response.statusText,
-    "Failed to fetch artifact.",
-  );
-};
-
 export function useArtifactFetch<T>(
   queryKey: string,
   signedUrl: string,
