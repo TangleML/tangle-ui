@@ -72,6 +72,8 @@ export function DynamicWorkarea() {
     unregisterTabEnvironment,
     registerTabBridge,
     unregisterTabBridge,
+    registerTabStore,
+    unregisterTabStore,
   } = useTangentProject();
   const [width, setWidth] = useState(DEFAULT_WIDTH);
 
@@ -132,6 +134,8 @@ export function DynamicWorkarea() {
                       registerTabBridge(tab.id, bridge)
                     }
                     onBridgeClosed={() => unregisterTabBridge(tab.id)}
+                    onStoreReady={(store) => registerTabStore(tab.id, store)}
+                    onStoreClosed={() => unregisterTabStore(tab.id)}
                   />
                 </TabsContent>
               );

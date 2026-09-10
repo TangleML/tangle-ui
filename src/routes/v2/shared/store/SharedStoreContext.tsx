@@ -12,7 +12,7 @@ import { EditorStore } from "./editorStore";
 import { KeyboardStore } from "./keyboardStore";
 import { NavigationStore } from "./navigationStore";
 
-class SharedUIStore {
+export class SharedUIStore {
   readonly editor: EditorStore;
   readonly keyboard: KeyboardStore;
   readonly navigation: NavigationStore;
@@ -31,11 +31,26 @@ class SharedUIStore {
 const SharedStoreCtx =
   createRequiredContext<SharedUIStore>("SharedStoreContext");
 
-export function SharedStoreProvider({ children }: { children: ReactNode }) {
-  const [store] = useState(() => new SharedUIStore());
+interface SharedStoreProviderProps {
+  children: ReactNode;
+  /**
+   * Re-provide an existing store instead of creating one. Used to surface a
+   * pipeline tab's live store to sibling UI (e.g. embedded chat chips) so they
+   * navigate/focus the open canvas rather than an empty page-level store.
+   */
+  store?: SharedUIStore;
+}
+
+export function SharedStoreProvider({
+  children,
+  store,
+}: SharedStoreProviderProps) {
+  const [ownStore] = useState(() => store ?? new SharedUIStore());
 
   return (
-    <SharedStoreCtx.Provider value={store}>{children}</SharedStoreCtx.Provider>
+    <SharedStoreCtx.Provider value={store ?? ownStore}>
+      {children}
+    </SharedStoreCtx.Provider>
   );
 }
 

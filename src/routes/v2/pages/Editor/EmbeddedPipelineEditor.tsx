@@ -2,13 +2,17 @@ import "@xyflow/react/dist/style.css";
 import "@/styles/editor.css";
 
 import { ReactFlowProvider } from "@xyflow/react";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 
 import type { ToolBridgeApi } from "@/agent/toolBridgeApi";
 import { ComponentLibraryProvider } from "@/providers/ComponentLibraryProvider";
 import { ForcedSearchProvider } from "@/providers/ComponentLibraryProvider/ForcedSearchProvider";
 import { DialogProvider } from "@/providers/DialogProvider/DialogProvider";
-import { SharedStoreProvider } from "@/routes/v2/shared/store/SharedStoreContext";
+import {
+  SharedStoreProvider,
+  type SharedUIStore,
+  useSharedStores,
+} from "@/routes/v2/shared/store/SharedStoreContext";
 import type { PipelineRef } from "@/services/pipelineStorage/types";
 
 import { DriverPermissionGate } from "./components/DriverPermissionGate";
@@ -36,6 +40,41 @@ interface EmbeddedPipelineEditorProps {
   onBridgeReady?: (bridge: ToolBridgeApi) => void;
   /** Called when this tab's bridge is no longer live. */
   onBridgeClosed?: () => void;
+  /** Called with this tab's live shared store so host chat chips can focus it. */
+  onStoreReady?: (store: SharedUIStore) => void;
+  /** Called when this tab's shared store is no longer live. */
+  onStoreClosed?: () => void;
+}
+
+/**
+ * Surfaces this editor's isolated {@link SharedUIStore} to the surrounding
+ * project (via callbacks) so sibling UI — the embedded chat's entity chips —
+ * can navigate and focus this tab's live canvas. Callbacks are read through
+ * refs so registration keys off the stable store instance, not callback
+ * identity.
+ */
+function SharedStoreRegistrar({
+  onReady,
+  onClosed,
+}: {
+  onReady?: (store: SharedUIStore) => void;
+  onClosed?: () => void;
+}) {
+  const store = useSharedStores();
+  const onReadyRef = useRef(onReady);
+  const onClosedRef = useRef(onClosed);
+
+  useEffect(() => {
+    onReadyRef.current = onReady;
+    onClosedRef.current = onClosed;
+  });
+
+  useEffect(() => {
+    onReadyRef.current?.(store);
+    return () => onClosedRef.current?.();
+  }, [store]);
+
+  return null;
 }
 
 /**
@@ -93,10 +132,13 @@ export function EmbeddedPipelineEditor({
   onEnvironmentClosed,
   onBridgeReady,
   onBridgeClosed,
+  onStoreReady,
+  onStoreClosed,
 }: EmbeddedPipelineEditorProps) {
   return (
     <div className="h-full w-full flex flex-col bg-slate-100 dark:bg-background select-none">
       <SharedStoreProvider>
+        <SharedStoreRegistrar onReady={onStoreReady} onClosed={onStoreClosed} />
         <EditorSessionProvider>
           <EmbeddedEditorAgentBoundary
             sessionId={sessionId}
