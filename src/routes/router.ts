@@ -47,6 +47,8 @@ import { SettingsLayout } from "./Settings/SettingsLayout";
 import { EditorV2 } from "./v2/pages/Editor/EditorV2";
 import { PipelineFoldersPage } from "./v2/pages/PipelineFolders/PipelineFoldersPage";
 import { RunViewV2 } from "./v2/pages/RunView/RunViewV2";
+import { TangentProjectPage } from "./v2/pages/Tangent/TangentProjectPage";
+import { TangentProjectsPage } from "./v2/pages/Tangent/TangentProjectsPage";
 
 // Re-exported so existing `@/routes/router` import paths keep working after the
 // constants moved to the dependency-free `./appRoutes` leaf module.
@@ -142,6 +144,17 @@ const dashboardRecentlyViewedRoute = createRoute({
   component: DashboardRecentlyViewedView,
 });
 
+const tangentProjectsRoute = createRoute({
+  getParentRoute: () => dashboardRoute,
+  path: APP_ROUTES.TANGENT,
+  component: TangentProjectsPage,
+  beforeLoad: () => {
+    if (!isFlagEnabled("tangent-shell")) {
+      throw redirect({ to: APP_ROUTES.DASHBOARD });
+    }
+  },
+});
+
 const learnIndexRoute = createRoute({
   getParentRoute: () => dashboardRoute,
   path: APP_ROUTES.LEARN,
@@ -219,7 +232,9 @@ const settingsAgentRoute = createRoute({
   beforeLoad: () => {
     if (
       !isFlagEnabled("component-search-v2") &&
-      !isFlagEnabled("ai-assistant")
+      !isFlagEnabled("ai-assistant") &&
+      !isFlagEnabled("tangent-shell") &&
+      !isFlagEnabled("tangent-embed-chat")
     ) {
       throw redirect({ to: APP_ROUTES.SETTINGS_BACKEND });
     }
@@ -363,6 +378,17 @@ const runV2WithSubgraphRoute = createRoute({
   },
 });
 
+const tangentProjectRoute = createRoute({
+  getParentRoute: () => mainLayout,
+  path: APP_ROUTES.TANGENT_PROJECT,
+  component: TangentProjectPage,
+  beforeLoad: () => {
+    if (!isFlagEnabled("tangent-shell")) {
+      throw redirect({ to: APP_ROUTES.DASHBOARD });
+    }
+  },
+});
+
 const pipelineFoldersRoute = createRoute({
   getParentRoute: () => mainLayout,
   path: APP_ROUTES.PIPELINE_FOLDERS,
@@ -385,6 +411,7 @@ const dashboardRouteTree = dashboardRoute.addChildren([
   dashboardComponentsV2Route,
   dashboardFavoritesRoute,
   dashboardRecentlyViewedRoute,
+  tangentProjectsRoute,
   learnIndexRoute,
   learnExamplesRoute,
   learnTipsRoute,
@@ -403,6 +430,7 @@ const appRouteTree = mainLayout.addChildren([
   editorV2PipelineRoute,
   runV2Route,
   runV2WithSubgraphRoute,
+  tangentProjectRoute,
   pipelineFoldersRoute,
   artifactPreviewRoute,
   tourRoute,

@@ -71,6 +71,14 @@ export const ExistingFlags: ConfigFlags = {
     category: "beta",
   },
 
+  ["tangent-shell"]: {
+    name: "Tangent Shell",
+    description:
+      "Enable the Tangent Shell workspace: a projects area where you collaborate with Tangent on building, improving, and debugging ML pipelines.",
+    default: false,
+    category: "beta",
+  },
+
   ["component-search-v2"]: {
     name: "Component Search",
     description:

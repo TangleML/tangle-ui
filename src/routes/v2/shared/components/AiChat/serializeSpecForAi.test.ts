@@ -186,4 +186,27 @@ describe("serializeSpecForAi", () => {
 
     expect(ai.activeSubgraphPath).toBeUndefined();
   });
+
+  it("returns a structured-cloneable (worker-safe) object", () => {
+    const spec = new ComponentSpec({ $id: "spec_1", name: "P" });
+    spec.addInput(
+      new Input({ $id: "in_1", name: "cfg", type: { TypeName: "JsonObject" } }),
+    );
+    spec.addTask(
+      new Task({
+        $id: "task_1",
+        name: "T",
+        componentRef: { name: "t", url: "https://x/t.yaml" },
+        arguments: [
+          {
+            name: "in",
+            value: { taskOutput: { taskId: "task_0", outputName: "out" } },
+          },
+        ],
+      }),
+    );
+
+    const ai = serializeSpecForAi(spec);
+    expect(() => structuredClone(ai)).not.toThrow();
+  });
 });

@@ -10,6 +10,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AgentSettings } from "./AgentSettings";
 
 const STORAGE_KEY = "tangle.aiProvider.config";
+const TANGENT_STORAGE_KEY = "tangle.tangent.config";
+const DEFAULT_TANGENT_BASE_URL = "http://localhost:5173";
 const mockNotify = vi.fn();
 const mockFetch = vi.fn();
 
@@ -246,6 +248,57 @@ describe("AgentSettings", () => {
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
     expect(mockNotify).toHaveBeenCalledWith(
       "AI provider settings cleared",
+      "success",
+    );
+  });
+
+  it("defaults the Tangent URL field and saves a normalized value", () => {
+    render(<AgentSettings />);
+
+    const input = screen.getByLabelText("Tangent base URL");
+    expect(input).toHaveValue(DEFAULT_TANGENT_BASE_URL);
+
+    fireEvent.change(input, {
+      target: { value: "https://tangent.example.com/" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save Tangent URL" }));
+
+    expect(
+      JSON.parse(window.localStorage.getItem(TANGENT_STORAGE_KEY) ?? ""),
+    ).toEqual({ baseUrl: "https://tangent.example.com" });
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
+    expect(mockNotify).toHaveBeenCalledWith("Tangent URL saved", "success");
+  });
+
+  it("resets the Tangent URL without touching AI provider settings", () => {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        apiBase: "https://api.example.com/v1",
+        apiKey: "sk-test",
+        model: "gpt-5",
+      }),
+    );
+    window.localStorage.setItem(
+      TANGENT_STORAGE_KEY,
+      JSON.stringify({ baseUrl: "https://tangent.example.com" }),
+    );
+
+    render(<AgentSettings />);
+
+    expect(screen.getByLabelText("Tangent base URL")).toHaveValue(
+      "https://tangent.example.com",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset to default" }));
+
+    expect(window.localStorage.getItem(TANGENT_STORAGE_KEY)).toBeNull();
+    expect(screen.getByLabelText("Tangent base URL")).toHaveValue(
+      DEFAULT_TANGENT_BASE_URL,
+    );
+    expect(window.localStorage.getItem(STORAGE_KEY)).not.toBeNull();
+    expect(mockNotify).toHaveBeenCalledWith(
+      "Tangent URL reset to default",
       "success",
     );
   });

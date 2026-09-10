@@ -6,6 +6,7 @@ const RUNS_V2_BASE_PATH = "/runs-v2";
 const SETTINGS_PATH = "/settings";
 const IMPORT_PATH = "/app/editor/import-pipeline";
 const TOUR_BASE_PATH = "/tour";
+const TANGENT_BASE_PATH = "/tangent";
 
 export const APP_ROUTES = {
   HOME: "/",
@@ -43,6 +44,8 @@ export const APP_ROUTES = {
   RUNS_V2: RUNS_V2_BASE_PATH,
   RUN_DETAIL_V2: `${RUNS_V2_BASE_PATH}/$id`,
   RUN_DETAIL_V2_WITH_SUBGRAPH: `${RUNS_V2_BASE_PATH}/$id/$subgraphExecutionId`,
+  TANGENT: TANGENT_BASE_PATH,
+  TANGENT_PROJECT: `${TANGENT_BASE_PATH}/$projectId`,
   PIPELINE_FOLDERS: "/pipeline-folders",
   PLAYGROUND: "/playground",
   ARTIFACT_PREVIEW: "/artifact/$artifactId",
